@@ -1,21 +1,24 @@
 # f-Divergences
 :label:`sec_mdl-divergences-distances`
 
-Every model in this book that was fitted by maximum likelihood was compared
-with its data through one number, the KL divergence.
-:numref:`sec_mdl-information_theory` ended on its weak point: it is infinite as
-soon as the model gives zero probability to something that occurs. A classifier
-rarely notices, because a softmax never outputs an exact zero. A network that
-turns a low-dimensional noise vector into an image notices at once, because its
-samples lie on a thin surface in image space that can miss the data altogether.
-How else can two distributions be compared, and which comparisons can tell a
-model that is close from one that is far off?
+Throughout this book, whenever we fit a model by maximum likelihood, we measure
+how well it matches the data with a single number: the KL divergence. As we saw
+at the end of :numref:`sec_mdl-information_theory`, however, KL divergence has a
+glaring blind spot: it jumps to infinity the moment a model assigns zero
+probability to an event that actually occurs. A classifier rarely runs into this
+problem, because a softmax layer never outputs an exact zero. A generative
+network that maps a low-dimensional noise vector into image space runs into it
+immediately, because its samples lie on a thin surface in image space that can
+miss the real data altogether. How else can we compare two distributions, and
+which comparisons can still distinguish a model that is nearly right from one
+that is far off?
 
-The smallest case already shows what can go wrong. Let the data sit at a single
-point, $P = \delta_0$, and the model's samples at a single point a distance $d$
-away, $Q = \delta_d$. A model at $d = 0.01$ is nearly right and one at
-$d = 100$ is far off, so a useful loss should tell them apart.
-:numref:`tab_mdl-point-mass-table` shows what five common comparisons report.
+The simplest possible example already reveals what can go wrong. Suppose the
+data sit at a single point, $P = \delta_0$, while the model places all its mass
+at a single point a distance $d$ away, $Q = \delta_d$. Intuitively, a model at
+$d = 0.01$ is nearly right and one at $d = 100$ is far off, so a useful loss
+should tell them apart. :numref:`tab_mdl-point-mass-table` shows what five
+standard comparisons report.
 
 :Five comparisons of the point masses $\delta_0$ and $\delta_d$. The MMD row uses the RBF kernel with length scale $1$.
 :label:`tab_mdl-point-mass-table`
@@ -28,31 +31,36 @@ $d = 100$ is far off, so a useful loss should tell them apart.
 | maximum mean discrepancy $\textrm{MMD}^2$ | $0.0001$ | $0.79$ | $2.00$ |
 | Wasserstein distance $W_1$ | $0.01$ | $1$ | $100$ |
 
-Three of the five rows do not change with $d$ at all. A model trained on any of
-them receives the same loss at $d = 0.01$ as at $d = 100$, hence no gradient in
-$d$. The original generative adversarial network (GAN) of :numref:`chap_gans`
-was in this position: its loss is the Jensen--Shannon row up to constants.
+Look closely at the table: three of the five rows do not budge as $d$ varies. A
+model trained with any of those three receives the same loss at $d = 0.01$ as at
+$d = 100$, and therefore zero gradient with respect to $d$. The original
+generative adversarial network (GAN) of :numref:`chap_gans` sat in this
+predicament, since its objective reduces to the Jensen--Shannon row up to
+constants.
 
-The three rows that do not move are of one kind. KL compares $P$ and $Q$
-through the ratio $p/q$ of their densities, and if we keep the ratio and change
-the function applied to it we obtain a family, the *f-divergences*. Its members
-share one proof of non-negativity, one way of being estimated from samples, and
-one reason for being blind to $d$. The two rows that move are built without the
-ratio and wait for :numref:`sec_mdl-test-functions-transport`.
+Those three frozen rows belong to a single family. KL divergence compares $P$
+and $Q$ through the ratio $p/q$ of their densities. If we keep that density
+ratio and vary the convex function applied to it, we obtain a broad family
+called the *f-divergences*. All of its members share one proof of
+non-negativity, one method for estimation from samples, and one structural
+reason for being blind to the distance $d$. The remaining two rows, which do
+move with $d$, avoid the density ratio altogether; we will study them in
+:numref:`sec_mdl-test-functions-transport`.
 
-Once the family is built we ask three questions that the main text keeps
-meeting. Does it matter which distribution comes first in KL, the data as in
-maximum likelihood or the model as in variational inference
-(:numref:`sec_mdl-fwd-vs-rev-kl`)? What does a small divergence promise to
-someone who tries to tell $P$ from $Q$ (:numref:`sec_mdl-tv-pinsker`)? And what
-can be computed when both distributions are known only through samples
-(:numref:`sec_mdl-f-gan-dual`)? :numref:`sec_mdl-coding-compression` ended on
-this last question, and adversarial training rests on its answer.
+Once the family is in place, we will address three questions that recur
+throughout deep learning. First, does it matter which distribution comes first
+in KL, the data as in maximum likelihood or the model as in variational
+inference (:numref:`sec_mdl-fwd-vs-rev-kl`)? Second, what does a small
+divergence actually guarantee to someone trying to tell $P$ from $Q$
+(:numref:`sec_mdl-tv-pinsker`)? Third, what can we still compute when both
+distributions are known only through samples (:numref:`sec_mdl-f-gan-dual`)?
+:numref:`sec_mdl-coding-compression` ended on that last question, and adversarial
+training rests on its answer.
 
-All logarithms are natural, so KL and Jensen--Shannon are in nats. Throughout,
-$P$ is the data or the target and $Q$ the model, $p$ and $q$ are their
-probability mass functions or densities, and $u = p/q$ is their *density
-ratio*.
+Throughout this section, all logarithms are natural, so KL and Jensen--Shannon
+divergences are measured in nats. We write $P$ for the data or target
+distribution and $Q$ for the model, $p$ and $q$ for their probability mass
+functions or densities, and $u = p/q$ for their *density ratio*.
 
 ```{.python .input #divergences-distances-imports}
 #@tab mxnet
@@ -97,10 +105,11 @@ from d2l import jax as d2l
 from scipy import integrate, optimize
 ```
 
-The table is computed. The next cell treats $\delta_0$ and $\delta_d$ as the
-probability vectors $(1, 0)$ and $(0, 1)$ on the two points $\{0, d\}$ and
-evaluates each row from its definition. Three of the definitions follow in this
-section and two in the next.
+We can check every entry of :numref:`tab_mdl-point-mass-table` directly in code.
+The next cell represents $\delta_0$ and $\delta_d$ as the probability vectors
+$(1, 0)$ and $(0, 1)$ on the two-point support $\{0, d\}$ and evaluates each
+comparison from its definition. Three of these definitions follow in this
+section and the other two in the next.
 
 ```{.python .input #mdl-divergences-distances-divergences-and-distances-between-distributions-1}
 def kl_div(p, q):
@@ -126,30 +135,32 @@ for d in (0.01, 1.0, 100.0):
 
 ## The f-Divergence Family
 
-Before we generalize KL we fix what a comparison of two distributions has to
-satisfy. The family then comes from asking what the proof that KL is never
-negative used.
+Before generalizing KL divergence, let us pin down the minimum properties that
+any comparison between two distributions should satisfy. The f-divergence
+family then emerges naturally when we ask which ingredients the non-negativity
+proof of KL truly uses.
 
 ### Divergences and Metrics
 :label:`sec_mdl-what-is-a-divergence`
 
-The least that a "distance between distributions" must do is to be zero for
-equal distributions and positive for unequal ones. A **divergence** is a
-function of two distributions with this property:
+At a minimum, a "distance between distributions" should vanish when the two
+distributions coincide and stay strictly positive when they differ. A
+**divergence** is any function of two distributions with this property:
 
 $$
 D(P, Q) \geq 0, \qquad D(P, Q) = 0 \quad \textrm{if and only if} \quad P = Q.
 $$
 
-Nothing else is required. A **metric**, like the distance
+Nothing else is required. A **metric**, like the Euclidean distance
 $\|\mathbf{x} - \mathbf{y}\|$ between two vectors
-(:numref:`sec_linear-algebra`), must in addition be symmetric,
-$D(P, Q) = D(Q, P)$, and satisfy the triangle inequality,
-$D(P, R) \leq D(P, Q) + D(Q, R)$. The KL divergence is a divergence: Gibbs'
-inequality (:numref:`sec_mdl-information_theory`) says that
-$D_{\textrm{KL}}(P\|Q) \geq 0$, with equality only for $P = Q$. It fails both
-extra conditions, and two Gaussians on the line show the failures with numbers.
-That section gave the KL divergence between them,
+(:numref:`sec_linear-algebra`), must additionally be symmetric,
+$D(P, Q) = D(Q, P)$, and obey the triangle inequality,
+$D(P, R) \leq D(P, Q) + D(Q, R)$. KL divergence is a divergence: Gibbs'
+inequality (:numref:`sec_mdl-information_theory`) guarantees that
+$D_{\textrm{KL}}(P\|Q) \geq 0$, with equality only when $P = Q$. It fails both
+metric axioms, however, and a pair of univariate Gaussians shows both failures
+immediately. As we computed in that section, the KL divergence between two
+Gaussians is
 
 $$
 D_{\textrm{KL}}\big(\mathcal{N}(\mu_1, \sigma_1^2) \,\big\|\, \mathcal{N}(\mu_2, \sigma_2^2)\big)
@@ -157,30 +168,32 @@ D_{\textrm{KL}}\big(\mathcal{N}(\mu_1, \sigma_1^2) \,\big\|\, \mathcal{N}(\mu_2,
 $$
 :eqlabel:`eq_mdl-dd-gaussian-kl`
 
-For $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(0, 4)$ it gave
-$D_{\textrm{KL}}(P\|Q) \approx 0.318$ nats but
-$D_{\textrm{KL}}(Q\|P) \approx 0.807$ nats, so KL is not symmetric. The
-triangle inequality fails for a different reason. For
-unit-variance Gaussians centered at $0$, $1$ and $2$ the formula gives
-$D_{\textrm{KL}} = \tfrac{1}{2}$ for each adjacent pair but $2$ for the outer
-pair, and $2 > \tfrac{1}{2} + \tfrac{1}{2}$. KL grows like the *square* of the
-distance between the means, and squared distances do not satisfy the triangle
-inequality.
+For $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(0, 4)$, this formula gives
+$D_{\textrm{KL}}(P\|Q) \approx 0.318$ nats in one direction and
+$D_{\textrm{KL}}(Q\|P) \approx 0.807$ nats in the other, so KL is not
+symmetric. The triangle inequality fails for a different reason. Take three
+unit-variance Gaussians centered at $0$, $1$, and $2$: the formula gives
+$D_{\textrm{KL}} = \tfrac{1}{2}$ for each adjacent pair, yet $2$ for the outer
+pair, and $2 > \tfrac{1}{2} + \tfrac{1}{2}$. Because KL grows like the *square*
+of the distance between the means, it behaves like a squared Euclidean distance
+rather than a true length.
 
-Neither failure needs repair. Minimizing a divergence uses neither property,
-and the asymmetry turns out to be a modeling decision
-(:numref:`sec_mdl-fwd-vs-rev-kl`). A proof that has to chain two comparisons,
-from $P$ to $Q$ and from $Q$ to $R$, does need the triangle inequality, and for
-it the family we are about to build also contains metrics.
+Neither failure needs repair. Minimizing a divergence uses neither symmetry nor
+the triangle inequality, and the asymmetry of KL turns out to be a genuine
+modeling choice (:numref:`sec_mdl-fwd-vs-rev-kl`). Still, whenever a proof
+needs to chain comparisons from $P$ to $Q$ and from $Q$ to $R$, the triangle
+inequality becomes essential. Fortunately, the family we are about to construct
+includes true metrics as well.
 
 ### The f-Divergence Template
 :label:`sec_mdl-f-divergences`
 
-Gibbs' inequality is the reason KL is a divergence. Which properties of KL did
-its proof use, and what else has them?
+Gibbs' inequality is what makes KL a valid divergence. Let us inspect its proof
+closely, because any other function that shares the same two properties will
+yield a divergence too.
 
-First, we write KL as an average under $Q$ of a function of the ratio
-$u(x) = p(x)/q(x)$:
+First, rewrite KL as an expectation under $Q$ of a function of the density
+ratio $u(x) = p(x)/q(x)$:
 
 $$
 D_{\textrm{KL}}(P\|Q) = \sum_x p(x) \log\frac{p(x)}{q(x)}
@@ -188,44 +201,47 @@ D_{\textrm{KL}}(P\|Q) = \sum_x p(x) \log\frac{p(x)}{q(x)}
 = \mathbb{E}_{x \sim Q}\big[u(x) \log u(x)\big].
 $$
 
-KL weighs each outcome by $Q$ and gives it the penalty $u \log u$. Our running
-pair is the one that :numref:`sec_mdl-information_theory` carried through its
-examples, $P = (0.6, 0.3, 0.1)$ and $Q = (0.2, 0.5, 0.3)$. Its ratios are
-$u = 3$, $0.6$ and $\tfrac13$, with weights $0.2$, $0.5$ and $0.3$:
+Viewed this way, KL weights each outcome by $Q$ and penalizes its density ratio
+through the function $u \log u$. Let us check this formula on our running
+example from :numref:`sec_mdl-information_theory`, the discrete pair
+$P = (0.6, 0.3, 0.1)$ and $Q = (0.2, 0.5, 0.3)$. Here the ratios are $u = 3$,
+$0.6$, and $\tfrac13$, weighted by $0.2$, $0.5$, and $0.3$:
 
 $$
 0.2\,(3 \log 3) + 0.5\,(0.6 \log 0.6) + 0.3\,\big(\tfrac13 \log \tfrac13\big)
 = 0.659 - 0.153 - 0.110 = 0.396 \textrm{ nats},
 $$
 
-the KL divergence computed in that section.
+matching the KL divergence we found earlier.
 
-Second, we look at the proof. :numref:`sec_mdl-information_theory` applied
-Jensen's inequality once, to $-\log(q/p)$ under $P$. Run instead under $Q$, on
-the function $u \log u$, the same one-step argument needs only two facts about
-that function: it is convex, and it is zero at $u = 1$. Third, we replace
-$u \log u$ by any function with these two properties. Let
-$f : (0, \infty) \to \mathbb{R}$ be convex with $f(1) = 0$, and set
-$f(0) = \lim_{u \downarrow 0} f(u)$, which may be $+\infty$. Assume for now
-that $p(x) = 0$ wherever $q(x) = 0$, which we write $P \ll Q$, so that an
-average under $Q$ sees all of $P$. The **f-divergence** of $P$ with respect to
-$Q$ is :cite:`Csiszar.1967`
+Second, look at the proof of non-negativity. In
+:numref:`sec_mdl-information_theory`, we applied Jensen's inequality once to
+$-\log(q/p)$ under $P$. Run instead under $Q$ on the function $u \log u$, that
+same one-step argument uses only two facts: the function is convex, and it
+equals zero at $u = 1$. Nothing stops us from replacing $u \log u$ by any
+function with those two properties. Let $f : (0, \infty) \to \mathbb{R}$ be
+convex with $f(1) = 0$, and define $f(0) = \lim_{u \downarrow 0} f(u)$, which
+may be $+\infty$. Assume for now that $p(x) = 0$ wherever $q(x) = 0$, written
+$P \ll Q$, so that an expectation under $Q$ sees all of $P$. The
+**f-divergence** of $P$ with respect to $Q$ is :cite:`Csiszar.1967`
 
 $$
 D_f(P\|Q) = \mathbb{E}_{x \sim Q}\!\left[ f\!\left( \frac{p(x)}{q(x)} \right) \right].
 $$
 :eqlabel:`eq_mdl-f-div-def`
 
-The ratio says, point by point, how much $P$ over- or under-represents $x$
-relative to $Q$, and $f$ sets the penalty, which is zero at $u = 1$. We call
-$f$ the *divergence function*. The literature calls it the generator of the
-divergence, and the code below keeps the functions in a dictionary named
-`generators`. In the text, as in :numref:`sec_gan_objectives`, a generator is
-always a network that produces samples.
+Point by point, the ratio $u = p/q$ measures how much $P$ over- or
+under-represents $x$ relative to $Q$, and $f$ assigns a penalty that vanishes
+when $u = 1$. We call $f$ the *divergence function*. Much of the literature
+calls it the generator of the divergence, and our code below stores these
+functions in a dictionary named `generators`. In the prose, however, we reserve
+the word *generator* for a network that produces samples, as in
+:numref:`sec_gan_objectives`.
 
-One more definition is needed to say when the divergence vanishes. We call $f$
-*strictly convex at $1$* if some line through $(1, 0)$ lies strictly below $f$
-away from $1$: $f(u) > c\,(u - 1)$ for all $u \neq 1$ and some slope $c$.
+To pin down when the divergence equals zero, we need one mild refinement of
+convexity: we call $f$ *strictly convex at $1$* if some line through $(1, 0)$
+lies strictly below $f$ everywhere else, meaning $f(u) > c\,(u - 1)$ for all
+$u \neq 1$ and some slope $c$.
 
 **Proposition (non-negativity).** *For any convex $f$ with $f(1) = 0$ and
 $P \ll Q$,*
@@ -237,60 +253,65 @@ $$
 *and if $f$ is strictly convex at $1$, then $D_f(P\|Q) = 0$ if and only if
 $P = Q$.*
 
-**Proof.** Jensen's inequality (:numref:`subsec_mdl-jensen`) says that
-$\mathbb{E}[f(U)] \geq f(\mathbb{E}[U])$ for a convex $f$ and a random variable
-$U$. Apply it to $U = u(x)$ with $x \sim Q$. Everything rests on one fact: the
-ratio averages to one under $Q$,
-$\mathbb{E}_Q[u] = \sum_x q(x)\, p(x)/q(x) = \sum_x p(x) = 1$. Hence
+**Proof.** Jensen's inequality (:numref:`subsec_mdl-jensen`) states that
+$\mathbb{E}[f(U)] \geq f(\mathbb{E}[U])$ for any convex $f$ and random variable
+$U$. Apply it to $U = u(x)$ with $x \sim Q$. Everything rests on a single
+identity: the density ratio averages to one under $Q$, since
+$\mathbb{E}_Q[u] = \sum_x q(x)\, p(x)/q(x) = \sum_x p(x) = 1$. Therefore
 
 $$
 D_f(P\|Q) = \mathbb{E}_Q[f(u)] \geq f(\mathbb{E}_Q[u]) = f(1) = 0.
 $$
 
-For the equality case, take the line $c\,(u-1)$ below $f$. Then
-$D_f(P\|Q) \geq \mathbb{E}_Q[c\,(u - 1)] = 0$, and the gap is the average of
-$f(u) - c\,(u - 1)$, which is positive wherever $u \neq 1$. So $D_f = 0$ forces
-$u(x) = 1$ at every $x$ with $q(x) > 0$, that is, $P = Q$. $\blacksquare$
+For the equality case, take the supporting line $c\,(u - 1)$ lying strictly
+below $f$ away from $1$. Then $D_f(P\|Q) \geq \mathbb{E}_Q[c\,(u - 1)] = 0$,
+and the gap is the expectation of $f(u) - c\,(u - 1)$, which is strictly
+positive wherever $u \neq 1$. Hence $D_f(P\|Q) = 0$ forces $u(x) = 1$ at every
+$x$ with $q(x) > 0$, meaning $P = Q$. $\blacksquare$
 
-The fact that carried the proof, $\mathbb{E}_Q[u] = 1$, has a second
-consequence that we shall use several times. Adding a multiple $c\,(u - 1)$ to
-$f$ changes no divergence, because $\mathbb{E}_Q[c\,(u - 1)] = 0$. The
-functions $u \log u$ and $u \log u - u + 1$, for instance, both define KL.
+The identity $\mathbb{E}_Q[u] = 1$ that powered this proof has a second handy
+consequence we will use repeatedly: adding any multiple $c\,(u - 1)$ to $f$
+leaves every divergence unchanged, because $\mathbb{E}_Q[c\,(u - 1)] = 0$. The
+functions $u \log u$ and $u \log u - u + 1$, for example, define the same KL
+divergence.
 
-The definition assumed $P \ll Q$, and the point masses of the opening violate
-it. A generative model begins training in just this regime, with its samples
-and the data in disjoint regions, so we must say what $D_f$ means there.
-Outcomes with $p(x) = q(x) = 0$ contribute nothing. Where $p(x) = 0 < q(x)$,
-the term is $q(x)\, f(0)$, as the definition already says. Where
-$q(x) = 0 < p(x)$ the ratio is infinite, and we take the term to be the limit
-of $q\, f(p/q)$ as $q \downarrow 0$. With $t = p/q$ the term is $p\, f(t)/t$,
-so the limit is $p(x)\, f'(\infty)$ with
-$f'(\infty) := \lim_{t \to \infty} f(t)/t$. For a convex $f$ the ratio $f(t)/t$
-and the slope $f'(t)$ have the same limit, hence the notation. Both $f(0)$ and
-$f'(\infty)$ may be $+\infty$.
+So far we have assumed $P \ll Q$, yet our opening point-mass example violates
+that condition. A generative model starts training in the same regime, with its
+samples and the data occupying disjoint regions, so we must extend $D_f$ to
+handle zeros in $q$. Outcomes with $p(x) = q(x) = 0$ contribute nothing. Where
+$p(x) = 0 < q(x)$, the contribution is simply $q(x)\, f(0)$, as the definition
+already says. Where $q(x) = 0 < p(x)$, the ratio blows up, so we define the
+contribution as the limit of $q\, f(p/q)$ as $q \downarrow 0$. Substituting
+$t = p/q$ rewrites this as $p\, f(t)/t$, whose limit is $p(x)\, f'(\infty)$
+with $f'(\infty) := \lim_{t \to \infty} f(t)/t$. For a convex function $f$, the
+secant $f(t)/t$ and the derivative $f'(t)$ share the same limit at infinity,
+which explains the notation. Either $f(0)$ or $f'(\infty)$ may be $+\infty$.
 
-On the point masses $\delta_0$ and $\delta_d$ with $d \neq 0$, the outcome $0$
-has $q = 0 < p = 1$ and the outcome $d$ has $p = 0 < q = 1$, so
+Now apply this rule to the point masses $\delta_0$ and $\delta_d$ for any
+$d \neq 0$. At $x = 0$ we have $q = 0 < p = 1$, and at $x = d$ we have
+$p = 0 < q = 1$, so
 
 $$
 D_f(\delta_0 \| \delta_d) = f(0) + f'(\infty) \qquad \textrm{for every } d \neq 0.
 $$
 
-The distance $d$ does not appear on the right, and this says more than the
-table did: every f-divergence is constant on disjoint supports. It cannot tell
-a near miss from a distant one, and a model trained on it receives no gradient
-from the distance between the supports. For KL, $u \log u$ has $f(0) = 0$ and
-$f'(\infty) = \lim_{t \to \infty} \log t = \infty$, the first row of
-:numref:`tab_mdl-point-mass-table`. The other two rows that do not move follow
-as soon as we have their functions.
+Notice that $d$ has vanished from the right-hand side. This tells us something
+far stronger than :numref:`tab_mdl-point-mass-table` alone showed: *every*
+f-divergence is constant on disjoint supports. It cannot distinguish a near
+miss from a distant one, so a model trained on it gets zero gradient from the
+distance separating the supports. For KL, $f(u) = u \log u$ gives $f(0) = 0$
+and $f'(\infty) = \lim_{t \to \infty} \log t = \infty$, reproducing the first
+row of :numref:`tab_mdl-point-mass-table`. The other two frozen rows follow as
+soon as we write down their divergence functions.
 
 ### Common Divergence Functions
 
-Each row of :numref:`tab_mdl-f-div-generators` is one choice of $f$, and
-:numref:`fig_mdl-f-div-generators` plots the curves. The column $f''(1)$, the
-curvature at $u = 1$, is needed in the next subsection.
+Each row of :numref:`tab_mdl-f-div-generators` corresponds to one choice of
+$f$, and :numref:`fig_mdl-f-div-generators` plots six of these curves side by
+side. The column $f''(1)$, recording the curvature at $u = 1$, will play a
+central role in the next subsection.
 
-:Common divergence functions. Each row gives the function $f$ of one divergence, its curvature at $u = 1$, and whether the divergence is symmetric and whether it, or its square root, is a metric.
+:Common divergence functions. Each row gives the function $f$ of one divergence, its curvature at $u = 1$, whether the divergence is symmetric, and whether it (or its square root) is a metric.
 :label:`tab_mdl-f-div-generators`
 
 | Divergence | $f(u)$ | $f''(1)$ | Symmetric? | Metric? |
@@ -303,35 +324,36 @@ curvature at $u = 1$, is needed in the next subsection.
 | Jensen--Shannon | $\tfrac{u}{2} \log u - \tfrac{u+1}{2} \log \tfrac{u+1}{2}$ | $\tfrac14$ | yes | $\sqrt{\textrm{JS}}$ is a metric |
 | $\alpha$-divergence ($\alpha \neq 0, 1$) | $\dfrac{u^\alpha-\alpha u+\alpha-1}{\alpha(\alpha-1)}$ | $1$ | only at $\alpha = \tfrac{1}{2}$ | square root at $\alpha = \tfrac{1}{2}$ |
 
-![Six divergence functions, the smooth ones shifted by the multiple $f'(1)(u-1)$, which changes no divergence. Every curve is non-negative and zero at $u=1$. The smooth ones are tangent to zero there, with the curvatures $1, 1, 2, \tfrac12, \tfrac14$ of the table, and total variation has a corner instead. Far from $u=1$ the functions penalize over- and under-representation very differently: reverse KL diverges as $u \to 0$, KL and $\chi^2$ grow superlinearly, and total variation grows linearly.](../img/mdl-it-f-div-generators.svg)
+![Six divergence functions, with the smooth curves shifted by $f'(1)(u-1)$ so that each touches zero tangentially at $u=1$ without changing its divergence. Near $u=1$ the smooth curves are parabolas with the curvatures $1, 1, 2, \tfrac12, \tfrac14$ listed in the table, while total variation has a sharp corner instead. Away from $u=1$ they penalize disagreement very differently: reverse KL blows up as $u \to 0$, KL and $\chi^2$ grow superlinearly, and total variation grows linearly.](../img/mdl-it-f-div-generators.svg)
 :label:`fig_mdl-f-div-generators`
 
-**Reverse KL** uses $f(u) = -\log u$, since
+**Reverse KL** uses $f(u) = -\log u$, because
 $\mathbb{E}_Q[-\log(p/q)] = \mathbb{E}_Q[\log(q/p)] = D_{\textrm{KL}}(Q\|P)$.
-The asymmetry of KL is therefore a choice of $f$, and the two directions are
-two rows of the table. Exercise
+Swapping the arguments of KL is therefore just another choice of $f$, so both
+directions sit side by side in the same table. Exercise
 :exref:`ex_mdl-divergences-distances-recover-kl-reverse-kl`a gives the general
-rule for swapping arguments.
+recipe for swapping the arguments of any f-divergence.
 
-**Total variation** uses $f(u) = \tfrac{1}{2}|u - 1|$, and
+**Total variation** uses $f(u) = \tfrac{1}{2}|u - 1|$, which simplifies to
 $\sum_x q(x)\, \tfrac12 |p(x)/q(x) - 1| = \tfrac{1}{2}\sum_x |p(x) - q(x)|$.
-We write it $\textrm{TV}(P, Q)$. It is half the $\ell_1$ distance between the
-probability vectors, and on the running pair
-$\textrm{TV} = \tfrac12(0.4 + 0.2 + 0.2) = 0.4$. What this number means for
-anyone who tries to tell $P$ from $Q$ is the subject of
-:numref:`sec_mdl-tv-pinsker`. On the point masses its function gives
-$f(0) + f'(\infty) = \tfrac12 + \tfrac12 = 1$, the third row of
+We write it as $\textrm{TV}(P, Q)$. It is half the $\ell_1$ distance between
+the probability vectors; on our running pair,
+$\textrm{TV} = \tfrac12(0.4 + 0.2 + 0.2) = 0.4$. We will unpack what this
+number means for distinguishing $P$ from $Q$ in :numref:`sec_mdl-tv-pinsker`.
+On the point masses, its divergence function gives
+$f(0) + f'(\infty) = \tfrac12 + \tfrac12 = 1$, accounting for the third row of
 :numref:`tab_mdl-point-mass-table`.
 
-**Pearson's $\chi^2$ divergence** uses the parabola $f(u) = (u - 1)^2$, so
-that $\chi^2(P\|Q) = \sum_x q(x)\,\big(p(x)/q(x) - 1\big)^2
-= \sum_x (p(x) - q(x))^2 / q(x)$. On the running pair it is
-$0.16/0.2 + 0.04/0.5 + 0.04/0.3 = 1.0133$. A disagreement counts for more where
-$Q$ is small, and the first outcome, with $q = 0.2$, contributes $0.8$ of the
-total.
+**Pearson's $\chi^2$ divergence** uses the parabola $f(u) = (u - 1)^2$, giving
+$\chi^2(P\|Q) = \sum_x q(x)\,\big(p(x)/q(x) - 1\big)^2
+= \sum_x (p(x) - q(x))^2 / q(x)$. On the running pair, it evaluates to
+$0.16/0.2 + 0.04/0.5 + 0.04/0.3 = 1.0133$. Notice how heavily a mismatch is
+weighted where $Q$ is small: the first outcome alone, where $q = 0.2$,
+contributes $0.8$ of the total.
 
-The **Jensen--Shannon divergence** :cite:`Lin.1991` symmetrizes KL through the
-even mixture $M = \tfrac{1}{2}(P + Q)$, with mass function $m$:
+The **Jensen--Shannon divergence** :cite:`Lin.1991` symmetrizes KL by comparing
+both distributions against their even mixture $M = \tfrac{1}{2}(P + Q)$ (with
+mass function $m$):
 
 $$
 \textrm{JS}(P, Q)
@@ -340,46 +362,49 @@ $$
 $$
 :eqlabel:`eq_mdl-js-def`
 
-Each distribution is compared with the mixture, which has mass wherever either
-one does. Since $p/m = 2p/(p + q) \leq 2$, each KL term is at most $\log 2$. So
-JS is symmetric and bounded, $0 \leq \textrm{JS}(P, Q) \leq \log 2$, and it
-reaches $\log 2$ only when $P$ and $Q$ have disjoint supports, where $p/m = 2$
-wherever $p > 0$. Its square root is a metric :cite:`Endres.Schindelin.2003`.
-Expanding :eqref:`eq_mdl-js-def` in the ratio $u$ gives the function in the
-table (Exercise :exref:`ex_mdl-divergences-distances-recover-kl-reverse-kl`c).
-That function has $f(0) = f'(\infty) = \tfrac12 \log 2$, and the sum is the
-second row of :numref:`tab_mdl-point-mass-table`. The one identity
-$D_f(\delta_0\|\delta_d) = f(0) + f'(\infty)$ has now accounted for all three
-rows that do not move.
+Because $M$ puts mass wherever either $P$ or $Q$ does, the ratios $p/m$ and
+$q/m$ can never blow up: $p/m = 2p/(p + q) \leq 2$, so each KL term is at most
+$\log 2$. Hence JS is symmetric and bounded, $0 \leq \textrm{JS}(P, Q) \leq \log 2$,
+and it hits its ceiling $\log 2$ only when $P$ and $Q$ have disjoint supports
+(where $p/m = 2$ wherever $p > 0$). Remarkably, its square root is a true
+metric :cite:`Endres.Schindelin.2003`. Writing :eqref:`eq_mdl-js-def` in terms
+of the ratio $u$ yields the divergence function in the table (Exercise
+:exref:`ex_mdl-divergences-distances-recover-kl-reverse-kl`c), which satisfies
+$f(0) = f'(\infty) = \tfrac12 \log 2$. Their sum is $\log 2$, the second row of
+:numref:`tab_mdl-point-mass-table`. Our single identity
+$D_f(\delta_0\|\delta_d) = f(0) + f'(\infty)$ has now explained all three
+frozen rows.
 
 The **squared Hellinger divergence** is
-$d_{\mathrm{H}}^2(P, Q) = \sum_x \big(\sqrt{p(x)} - \sqrt{q(x)}\big)^2$. So
-$d_{\mathrm{H}}$ is the Euclidean distance between the vectors $\sqrt{p}$ and
-$\sqrt{q}$, which is why it is a metric (Exercise
+$d_{\mathrm{H}}^2(P, Q) = \sum_x \big(\sqrt{p(x)} - \sqrt{q(x)}\big)^2$. Its
+square root $d_{\mathrm{H}}$ is simply the Euclidean distance between the
+vectors $\sqrt{p}$ and $\sqrt{q}$, which immediately makes $d_{\mathrm{H}}$ a
+metric (Exercise
 :exref:`ex_mdl-divergences-distances-prove-that-total-variation`b).
 
-The table's last row is a family within the family, the
-**$\alpha$-divergences** :cite:`Amari.2016`, with
+The final row of the table is a continuous family inside the family, the
+**$\alpha$-divergences** :cite:`Amari.2016`, generated by
 
 $$
-f_\alpha(u)=\frac{u^\alpha-\alpha u+\alpha-1}{\alpha(\alpha-1)},
+f_\alpha(u)=\frac{u^\alpha-\alpha u+\alpha-1}{\alpha(\alpha-1)}.
 $$
 :eqlabel:`eq_mdl-alpha-generator`
 
-which is convex with $f_\alpha(1) = 0$ and curvature $1$ at $u = 1$ for every
-$\alpha \neq 0, 1$. As $\alpha \to 1$ it tends to $u\log u - u + 1$ and as
-$\alpha \to 0$ to $-\log u + u - 1$. A multiple of $u - 1$ changes no
-divergence, so the two ends are forward and reverse KL. Halfway, at
-$\alpha = \tfrac12$, the function is $2(\sqrt{u} - 1)^2$, twice squared
-Hellinger, and $\alpha = 2$ gives half of $\chi^2$. One parameter thus leads
-from reverse KL through Hellinger to forward KL, and on to $\chi^2$ (Exercise
-:exref:`ex_mdl-divergences-distances-recover-kl-reverse-kl`d relates the
+For every $\alpha \neq 0, 1$, this function is convex with $f_\alpha(1) = 0$
+and curvature $f_\alpha''(1) = 1$. As $\alpha \to 1$ it approaches
+$u\log u - u + 1$, and as $\alpha \to 0$ it approaches $-\log u + u - 1$. Since
+adding a multiple of $u - 1$ changes no divergence, the two limits recover
+forward and reverse KL. Halfway between them, at $\alpha = \tfrac12$, we get
+$2(\sqrt{u} - 1)^2$ (twice squared Hellinger), while $\alpha = 2$ gives half of
+$\chi^2$. A single parameter $\alpha$ therefore interpolates smoothly from
+reverse KL through Hellinger to forward KL and on to $\chi^2$ (Exercise
+:exref:`ex_mdl-divergences-distances-recover-kl-reverse-kl`d connects this
 family to Rényi's divergence).
 
-We now evaluate the first six rows on the running pair, in both argument
-orders. KL should print $0.396$ and $0.365$ nats, the two values of
-:numref:`sec_mdl-information_theory`, and TV and $\chi^2(P\|Q)$ the values just
-found by hand.
+Let us evaluate the first six rows on our running pair in both argument orders.
+KL should print $0.396$ and $0.365$ nats, matching
+:numref:`sec_mdl-information_theory`, while TV and $\chi^2(P\|Q)$ should match
+the hand calculations above.
 
 ```{.python .input #divergences-distances-f-table}
 def f_divergence(f, p, q):
@@ -402,30 +427,33 @@ for name, f in generators.items():
           f'D_f(Q||P) = {f_divergence(f, q, p):.4f}')
 ```
 
-The KL row is asymmetric, and the reverse-KL row is the KL row with its columns
-swapped. The $\chi^2$ row is asymmetric too ($1.0133$ against $0.8000$).
-Squared Hellinger ($0.1862$), TV ($0.4$) and JS are symmetric, and JS, at
-$0.0911$ nats, sits far below its ceiling of $\log 2 \approx 0.693$. Six
-divergences have looked at one pair of distributions and returned values from
-$0.09$ to $1.01$. Multiply KL by $2$, squared Hellinger by $4$ and JS by $8$,
-however, and the three products are $0.79$, $0.74$ and $0.73$. Why should
-three different functions of the ratio nearly agree, and where do the factors
-come from?
+As expected, the KL row is asymmetric, and the reverse-KL row is simply the KL
+row with its columns swapped. The $\chi^2$ row is asymmetric too ($1.0133$
+against $0.8000$). By contrast, squared Hellinger ($0.1862$), TV ($0.4$), and
+JS are symmetric, with JS at $0.0911$ nats sitting well below its ceiling of
+$\log 2 \approx 0.693$. Six divergences have looked at the same pair of
+distributions and returned values spanning an order of magnitude, from $0.09$
+to $1.01$. Yet if we multiply KL by $2$, squared Hellinger by $4$, and JS by
+$8$, the three rescaled values are $0.79$, $0.74$, and $0.73$. Why would three
+quite different functions of the density ratio nearly agree, and where did the
+factors $2$, $4$, and $8$ come from?
 
 ### The Local Quadratic
 
-The functions in :numref:`fig_mdl-f-div-generators` differ greatly away from
-$u = 1$. Near $u = 1$ they turn out to be one function up to a constant, which
-is perhaps the most surprising fact about the family. The rest of the section
-does not depend on this subsection, and it can be skipped on a first reading.
+The curves in :numref:`fig_mdl-f-div-generators` behave very differently far
+from $u = 1$. Near $u = 1$, however, they collapse into a single function up to
+a constant factor, which is perhaps the most surprising property of the entire
+family. Nothing later in this section depends on this subsection, so you can
+skip it on a first reading.
 
-A multiple of $u - 1$ changes no divergence, so the value $f(1) = 0$ and the
-slope $f'(1)$ carry no information, and the first property that distinguishes
-one divergence function from another is the curvature $f''(1)$. Near $u = 1$
-every smooth $f$ looks like the parabola
-$\tfrac12 f''(1)(u - 1)^2$, and the average of $(u-1)^2$ under $Q$ is the
-$\chi^2$ divergence, $\mathbb{E}_Q[(u - 1)^2] = \sum_x (p(x) - q(x))^2/q(x)$.
-Let $r = \max_x |u(x) - 1|$ measure how far the ratio strays from $1$.
+Because adding a linear term $c\,(u - 1)$ leaves every divergence unchanged,
+neither the value $f(1) = 0$ nor the slope $f'(1)$ affects $D_f$. The first
+property that distinguishes one smooth divergence function from another is its
+curvature $f''(1)$. Near $u = 1$, every smooth $f$ looks like the parabola
+$\tfrac12 f''(1)(u - 1)^2$, and the expectation of $(u - 1)^2$ under $Q$ is
+none other than the $\chi^2$ divergence,
+$\mathbb{E}_Q[(u - 1)^2] = \sum_x (p(x) - q(x))^2/q(x)$. Let
+$r = \max_x |u(x) - 1|$ measure how far the density ratio strays from $1$.
 
 **Proposition (local quadratic).** *Let $P \ll Q$, let $0 < r < 1$, let $f$ be
 three times differentiable on $[1 - r, 1 + r]$ with $|f'''| \leq B$ there, and
@@ -437,27 +465,27 @@ $$
 $$
 :eqlabel:`eq_mdl-f-div-local`
 
-**Proof.** Taylor's theorem with remainder gives
+**Proof.** Since $f(1) = 0$, Taylor's theorem with remainder gives
 $f(u) = f'(1)(u - 1) + \tfrac12 f''(1)(u - 1)^2 + R(u)$ with
-$|R(u)| \leq B |u - 1|^3 / 6$, since $f(1) = 0$. Take $\mathbb{E}_Q$ term by
-term. The linear term vanishes because $\mathbb{E}_Q[u - 1] = 0$, and with it
-the only first-order difference between one $f$ and another. The quadratic term
-is $\tfrac12 f''(1)\, \chi^2(P\|Q)$. The remainder obeys
+$|R(u)| \leq B |u - 1|^3 / 6$. Take $\mathbb{E}_Q$ term by term. The linear
+term vanishes because $\mathbb{E}_Q[u - 1] = 0$, eliminating the only
+first-order difference between one $f$ and another. The quadratic term becomes
+$\tfrac12 f''(1)\, \chi^2(P\|Q)$, and the remainder satisfies
 $\mathbb{E}_Q|R| \leq \tfrac{B}{6}\,\mathbb{E}_Q|u - 1|^3 \leq \tfrac{B r}{6}\, \mathbb{E}_Q(u - 1)^2 = \tfrac{B r}{6}\,\chi^2$.
 $\blacksquare$
 
-So $D_f \approx \tfrac12 f''(1)\, \chi^2$ with a relative error proportional to
-$r$: close to $Q$, all smooth f-divergences are multiples of one another. The
-factors $2$, $4$ and $8$ that we applied to KL, squared Hellinger and JS are
-$2/f''(1)$, and the number that the three products approximate is
-$\chi^2(P\|Q) = 1.013$. They fall about a quarter short of it, which does
-not contradict the proposition: the running pair has $r = 2$, because its
-largest ratio is $3$, and the hypothesis asks for $r < 1$. To see the
-approximation take hold, we move the running pair's $P$ toward $Q$ along the
-segment $P_t = Q + t\,(P - Q)$, which multiplies every $u - 1$ by $t$, so that
-$r = 2t$. For four divergences we print the ratio
+In short, $D_f \approx \tfrac12 f''(1)\, \chi^2$ with a relative error
+proportional to $r$: whenever $P$ is close to $Q$, all smooth f-divergences are
+scalar multiples of one another. The factors $2$, $4$, and $8$ we applied to
+KL, squared Hellinger, and JS are simply $2/f''(1)$, and the target all three
+products approximate is $\chi^2(P\|Q) = 1.013$. On our running pair they still
+fall about a quarter short, which is no surprise: the largest ratio is $3$, so
+$r = 2$, outside the proposition's hypothesis $r < 1$. To watch the quadratic
+approximation tighten, let us slide $P$ toward $Q$ along the line segment
+$P_t = Q + t\,(P - Q)$. This scales every $u - 1$ by $t$, giving $r = 2t$. For
+four smooth divergences, we print the ratio
 $D_f(P_t\|Q) / \big(\tfrac12 f''(1)\, \chi^2(P_t\|Q)\big)$, which should
-approach $1$ at a rate proportional to $t$.
+converge to $1$ at a rate proportional to $t$.
 
 ```{.python .input #mdl-divergences-distances-the-local-quadratic}
 curvature = {'KL': 1.0, 'reverse KL': 1.0, 'Hellinger^2': 0.5, 'JS': 0.25}
@@ -470,96 +498,103 @@ for t in (0.5, 0.1, 0.01):
                                      for name, r in zip(curvature, ratios)))
 ```
 
-At $t = 0.5$ the four divergences are about $75\%$ to $85\%$ of their
-quadratics, at $t = 0.1$ more than $91\%$, and at $t = 0.01$ more than $99\%$.
-Between the last two rows $t$ falls tenfold and so, nearly, does each
-shortfall, as the proposition's factor $r$ predicts. The bound itself is a
-worst case. For KL at $t = 0.1$ we have $r = 0.2$ and
-$|f'''(u)| = 1/u^2 \leq 1/0.8^2$, so it allows a relative error of about
-$10\%$, and the cell shows $4\%$. Smooth f-divergences disagree only about distant
-distributions, which is the regime early in training, when the model is far
-from the data.
+At $t = 0.5$, the four divergences sit at roughly $75\%$ to $85\%$ of their
+quadratic approximations; at $t = 0.1$ they exceed $91\%$, and at $t = 0.01$
+they exceed $99\%$. Between the last two rows $t$ drops tenfold and each
+shortfall drops nearly tenfold too, matching the linear factor $r$ in the
+proposition. The bound itself is conservative: for KL at $t = 0.1$ we have
+$r = 0.2$ and $|f'''(u)| = 1/u^2 \leq 1/0.8^2$, which allows a relative error
+of about $10\%$, whereas the actual gap is only $4\%$. The takeaway for
+optimization is practical: smooth f-divergences disagree meaningfully only on
+distant distributions, which is the regime early in training when the model is
+still far from the data.
 
-On a parametric family the common quadratic is the Fisher information
+Inside a parametric family, this common local quadratic is governed by the
+Fisher information matrix
 $\mathbf{I}(\boldsymbol{\theta}) = \mathbb{E}\big[\nabla_{\boldsymbol{\theta}}
 \log q_{\boldsymbol{\theta}}\, \nabla_{\boldsymbol{\theta}} \log
 q_{\boldsymbol{\theta}}^\top\big]$ of :numref:`sec_mdl-maximum_likelihood`. For
-a small step $\mathbf{h}$ the ratio of $q_{\boldsymbol{\theta} + \mathbf{h}}$
-to $q_{\boldsymbol{\theta}}$ is
-$u \approx 1 + \mathbf{h}^\top \nabla_{\boldsymbol{\theta}} \log q_{\boldsymbol{\theta}}$,
-so $\chi^2(q_{\boldsymbol{\theta} + \mathbf{h}}\| q_{\boldsymbol{\theta}}) =
+a small parameter step $\mathbf{h}$, the density ratio of
+$q_{\boldsymbol{\theta} + \mathbf{h}}$ to $q_{\boldsymbol{\theta}}$ expands as
+$u \approx 1 + \mathbf{h}^\top \nabla_{\boldsymbol{\theta}} \log q_{\boldsymbol{\theta}}$.
+Therefore
+$\chi^2(q_{\boldsymbol{\theta} + \mathbf{h}}\| q_{\boldsymbol{\theta}}) =
 \mathbb{E}[(u - 1)^2] \approx \mathbf{h}^\top \mathbf{I}(\boldsymbol{\theta})\,
-\mathbf{h}$, and every smooth $D_f$ has Hessian
+\mathbf{h}$, so every smooth $D_f$ has Hessian
 $f''(1)\, \mathbf{I}(\boldsymbol{\theta})$ at $\mathbf{h} = \mathbf{0}$. The
-natural gradient of :numref:`sec_mdl-adaptive-stochastic-methods`, which
-measures steps by KL, would therefore be the same method under any other
-smooth f-divergence. Total variation is the exception. Its divergence function
-has a corner at $u = 1$ and no curvature, and Exercise
-:exref:`ex_mdl-divergences-distances-sharpness-pinsker-coins-biases`b shows
-what that changes when $P$ approaches $Q$.
+natural gradient of :numref:`sec_mdl-adaptive-stochastic-methods`, though
+usually motivated by KL divergence, would yield the same update under any
+smooth f-divergence. Total variation is the lone exception in our table: its
+divergence function has a corner at $u = 1$ and no second derivative there, and
+Exercise :exref:`ex_mdl-divergences-distances-sharpness-pinsker-coins-biases`b
+explores how that changes its behavior as $P$ approaches $Q$.
 
 ## Forward and Reverse KL
 :label:`sec_mdl-fwd-vs-rev-kl`
 
-Maximum likelihood, the criterion behind most models in this book, minimizes
-KL with the data in the first argument. Variational inference minimizes KL with
-the model in the first argument. The two orders are the two KL rows of
-:numref:`tab_mdl-f-div-generators`, and when we fit a model
-$Q_{\boldsymbol{\theta}}$, with density $q_{\boldsymbol{\theta}}$, to a target
-$P$ that it cannot match, they ask for different things:
+Maximum likelihood, the training criterion behind most models in this book,
+minimizes KL divergence with the data in the first argument. Variational
+inference minimizes KL divergence with the model in the first argument. Both
+orders appear as separate rows in :numref:`tab_mdl-f-div-generators`, and when
+we fit a model $Q_{\boldsymbol{\theta}}$ (with density $q_{\boldsymbol{\theta}}$)
+to a target $P$ that lies outside the model family, they push the model in
+opposite directions:
 
 * **Forward KL**, $D_{\textrm{KL}}(P \,\|\, Q_{\boldsymbol{\theta}}) = \mathbb{E}_P[\log(p/q_{\boldsymbol{\theta}})]$,
-  averages over the *truth*. If $q_{\boldsymbol{\theta}}(x) \to 0$ while
-  $p(x) > 0$, the divergence blows up. Forward KL is *zero-avoiding*, or
-  *mode-covering*: the model must cover every mode of the data, that is,
-  every region where $p$ is concentrated, even if that smears mass over
-  regions $P$ never visits.
+  takes its expectation over the *truth*. Whenever $q_{\boldsymbol{\theta}}(x) \to 0$
+  at a point where $p(x) > 0$, the divergence blows up. Forward KL is therefore
+  *zero-avoiding*, or *mode-covering*: the model must stretch to cover every
+  mode of the data, that is, every region where $p$ concentrates, even if that
+  forces it to spill mass across empty regions $P$ never visits.
 * **Reverse KL**, $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}} \,\|\, P) = \mathbb{E}_{Q_{\boldsymbol{\theta}}}[\log(q_{\boldsymbol{\theta}}/p)]$,
-  averages over the *model*. The model is punished for putting mass where
-  the truth has none, while modes it never visits leave the objective
-  untouched. Reverse KL is *zero-forcing*, or *mode-seeking*: the model
-  concentrates on the mass it can explain.
+  takes its expectation over the *model*. Here the model is penalized heavily
+  for placing mass where the truth has none, while any mode the model ignores
+  contributes nothing to the objective. Reverse KL is therefore *zero-forcing*,
+  or *mode-seeking*: the model locks onto the portion of the target it can
+  explain well.
 
-Which direction to use is seldom a free choice, because each needs something
-different. Forward KL needs samples from $P$ and the density of the model, and
-minimizing it is maximum likelihood: :numref:`subsec_mdl-nll-crossentropy`
-shows that the average negative log-likelihood is the cross-entropy from the
-empirical distribution to the model, which differs from forward KL by a
-constant. Reverse KL needs samples from the model and the density of the
-target, and a density known only up to its normalizing constant will do.
-Variational inference (:numref:`sec_mdl-latent-em-elbo`) is in that position.
-Its target $P$ is a posterior whose normalizing constant is unknown, and it
-minimizes $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}}\|P)$ over approximations
+In practice, the choice of direction is often settled by what we can actually
+compute. Forward KL requires samples from $P$ and the density of the model, and
+minimizing it is just maximum likelihood: :numref:`subsec_mdl-nll-crossentropy`
+shows that the average negative log-likelihood equals the cross-entropy from
+the empirical distribution to the model, which differs from forward KL only by
+a constant independent of $\boldsymbol{\theta}$. Reverse KL requires samples
+from the model and the density of the target, and it works even when the target
+density is known only up to a normalizing constant. Variational inference
+(:numref:`sec_mdl-latent-em-elbo`) sits in this setting: its target $P$ is a
+posterior with an intractable normalizer, so it minimizes
+$D_{\textrm{KL}}(Q_{\boldsymbol{\theta}}\|P)$ over tractable approximations
 $Q_{\boldsymbol{\theta}}$.
 
-Where samples and densities are available on both sides, the direction is a
-decision. A student network distilled from a teacher
-(:numref:`sec_lm_distillation`) spreads over everything the teacher might say
-when the teacher comes first, and keeps to the teacher's likeliest outputs when
-the student does. The KL penalty of :numref:`sec_regularized` puts the policy
-first, which keeps it away from actions that the reference policy never takes.
+When samples and densities are available on both sides, however, the direction
+becomes a genuine design choice. A student network distilled from a teacher
+(:numref:`sec_lm_distillation`) spreads out to cover everything the teacher
+might say when the teacher comes first, and concentrates on the teacher's
+likeliest outputs when the student comes first. Similarly, the KL penalty in
+:numref:`sec_regularized` places the learned policy first, keeping it away from
+actions that the reference policy never takes.
 
-When the model family contains the target, both directions agree on the answer.
-They differ for a *misspecified* family, and the simplest instance is a single
-Gaussian fitted to a bimodal target. The forward fit needs no computation.
-Forward KL is a constant minus $\mathbb{E}_P[\log q(X)]$, so its minimizer is
-the maximum-likelihood Gaussian with $P$ in place of the empirical
-distribution, and maximum likelihood in an exponential family matches the
-expected sufficient statistics (:numref:`subsec_mdl-moment-matching`):
+If the model family contains $P$, both directions recover $P$. They part ways
+when the model is *misspecified*, and the clearest illustration is fitting a
+single Gaussian to a bimodal mixture. For forward KL, no optimization is even
+needed. Because forward KL equals a constant minus $\mathbb{E}_P[\log q(X)]$,
+its minimizer is the maximum-likelihood Gaussian with $P$ replacing the
+empirical distribution, and maximum likelihood in an exponential family matches
+the expected sufficient statistics (:numref:`subsec_mdl-moment-matching`):
 $\mu^* = \mathbb{E}_P[X]$ and $(\sigma^*)^2 = \textrm{Var}_P(X)$, provided the
-variance is finite. The reverse direction has no such closed form, and it can
-have one local optimum per mode.
+variance is finite. Reverse KL has no such closed-form solution, and it can
+have a separate local minimum near each mode.
 
-For the mixture $P = 0.7\,\mathcal{N}(-2, 0.6^2) + 0.3\,\mathcal{N}(2, 0.6^2)$
-we can therefore predict the forward fit. Its mean is
-$0.7(-2) + 0.3(2) = -0.8$. Its variance is the variance within a component
-plus the variance of the component means, which for weights $w_1$, $w_2$ and
-means $\Delta$ apart is $w_1 w_2 \Delta^2$:
-$0.36 + 0.7 \cdot 0.3 \cdot 4^2 = 3.72$. The reverse fit we leave to a
-derivative-free optimizer over $\boldsymbol{\theta} = (\mu, \log\sigma)$,
-started once at the origin and once near the minor mode, with each KL evaluated
-by quadrature on a grid. For every fit the cell prints the mean, the standard
-deviation and both divergences.
+For the bimodal mixture
+$P = 0.7\,\mathcal{N}(-2, 0.6^2) + 0.3\,\mathcal{N}(2, 0.6^2)$, we can predict
+the forward fit in advance. Its mean is $0.7(-2) + 0.3(2) = -0.8$. Its variance
+is the within-component variance plus the between-component variance, which for
+weights $w_1$, $w_2$ and means separated by $\Delta$ equals $w_1 w_2 \Delta^2$,
+giving $0.36 + 0.7 \cdot 0.3 \cdot 4^2 = 3.72$. For the reverse fit, we run a
+derivative-free optimizer over $\boldsymbol{\theta} = (\mu, \log\sigma)$ from
+two starting points, once at the origin and once near the smaller mode,
+evaluating each KL by numerical quadrature on a grid. For each fit, the next
+cell reports the mean, standard deviation, and both divergences.
 
 ```{.python .input #divergences-distances-fwd-rev-kl}
 w, mus, sigmas = np.array([0.7, 0.3]), np.array([-2.0, 2.0]), np.array([0.6, 0.6])
@@ -607,53 +642,56 @@ d2l.plot(x, [np.exp(log_p(x)), np.exp(log_q(x, th_fwd)),
          figsize=(6, 3))
 ```
 
-The forward fit lands on the prediction, $\mu = -0.800$ and
-$\sigma = 1.929 \approx \sqrt{3.72}$. It is a broad Gaussian draped across both
-modes, with substantial mass in the valley between them where $P$ has almost
-none. The reverse fit lands at $\mu = -1.998$, $\sigma = 0.603$: it matches the
-dominant component and assigns little mass to the minor one. Its reverse KL,
-$0.356$ nats, is close to $\log(1/0.7) \approx 0.357$, the divergence of
-treating the $70\%$ component as the whole distribution. Started near the minor
-mode, the optimizer converges instead to $\mu = +1.995$, where the reverse KL
-is $1.202$ nats, close to $\log(1/0.3) \approx 1.204$. Which optimum a
-variational method finds therefore depends on its initialization.
+The forward fit matches our calculation: $\mu = -0.800$ and
+$\sigma = 1.929 \approx \sqrt{3.72}$. It is a broad bell curve draped over both
+modes, putting substantial mass in the valley between them where $P$ has almost
+none. The first reverse fit lands at $\mu = -1.998$, $\sigma = 0.603$: it hugs
+the dominant component and leaves almost no mass on the minor one. Its reverse
+KL, $0.356$ nats, is close to $\log(1/0.7) \approx 0.357$, the cost of treating
+the $70\%$ component as if it were the entire distribution. When started near
+the minor mode, the optimizer settles instead on $\mu = +1.995$, with reverse
+KL $1.202$ nats, close to $\log(1/0.3) \approx 1.204$. Which mode a variational
+approximation captures therefore depends on its initialization.
 
-Reverse KL is an average under the model, so a mode that the model never
-visits is never inspected. All that the objective registers is that the mode it
-does visit carries weight $0.7$, or $0.3$, in place of $1$. This is why
-variational posteriors tend to be too narrow: here the reverse fit has width
-$0.60$ where the target has standard deviation $1.93$.
+Because reverse KL averages under the model, any mode the model fails to visit
+is never inspected. The objective only notices that the chosen mode carries
+weight $0.7$ (or $0.3$) instead of $1$. That is why variational posteriors
+notoriously underestimate uncertainty: here the reverse fit has standard
+deviation $0.60$, whereas the target's is $1.93$.
 
-The last two columns show how differently the two criteria judge the same
-omission. Forward KL, the criterion of maximum likelihood, puts the fit on the
-dominant mode at $5.98$ nats, more than ten times the $0.558$ of the broad fit,
-and the fit on the minor mode at $14.5$. In both, the dropped mode lies more
-than six of the model's standard deviations from its mean, where $\log q$ is
-very negative (Exercise
+The last two columns highlight how sharply the two criteria disagree on the
+same model. Forward KL, the maximum-likelihood criterion, penalizes the
+dominant-mode fit at $5.98$ nats (more than ten times the $0.558$ nats of the
+broad fit) and the minor-mode fit at $14.5$ nats. In both cases, the dropped
+mode sits more than six of the model's standard deviations away from its mean,
+where $\log q$ is deeply negative (Exercise
 :exref:`ex_mdl-divergences-distances-mode-dropping`c). Reverse KL ranks the
-first two fits the other way, $0.356$ nats against $1.27$: what it penalizes
-is the broad fit's mass in the valley, where $P$ has almost none.
+first two fits in the opposite order, $0.356$ nats against $1.27$: what it
+cannot forgive is the broad fit's mass sitting in the empty valley between the
+modes.
 
-The conventions for vanishing densities say the same in the limit. The function
-$u \log u$ has $f'(\infty) = \infty$, which gives any mass of $P$ where $Q$ has
-none an infinite penalty, and $f(0) = 0$, so that mass of $Q$ where $P$ has
-none adds no term at all. For $-\log u$ the two values are exchanged.
+Our boundary rules for vanishing densities capture this contrast in the limit.
+For forward KL, $f(u) = u \log u$ has $f'(\infty) = \infty$, so placing zero
+model mass where $P$ has positive mass costs infinity, while $f(0) = 0$ means
+placing model mass where $P$ has none adds no boundary term at all. For
+reverse KL, $f(u) = -\log u$, those two values swap places.
 
 ## Total Variation, Pinsker's Inequality, and Data Processing
 :label:`sec_mdl-tv-pinsker`
 
-A divergence of $0.4$ says little until we know what it permits and what it
-forbids. For total variation the answer is plain, and KL inherits a share of it
-through an inequality.
+Knowing that a divergence equals $0.4$ tells us very little on its own until we
+know what that number actually guarantees. For total variation, the operational
+meaning is completely transparent, and Pinsker's inequality passes much of that
+meaning on to KL divergence.
 
 ### Total Variation
 
-The function $\tfrac12|u - 1|$ is the plainest in
-:numref:`tab_mdl-f-div-generators`: its penalty is the distance of the ratio
-from $1$ and nothing else. Its divergence, half the $\ell_1$ distance between
-$p$ and $q$, has a second form that says what the number means. Total variation
-is the largest disagreement between $P$ and $Q$ about the probability of any
-event $A$:
+The divergence function $\tfrac12|u - 1|$ is the simplest entry in
+:numref:`tab_mdl-f-div-generators`: it penalizes only the absolute distance of
+the ratio from $1$. Its divergence, half the $\ell_1$ distance between $p$ and
+$q$, admits a second, equivalent form that makes the number immediately
+interpretable. Total variation is the largest gap between the probabilities
+that $P$ and $Q$ assign to any event $A$:
 
 $$
 \textrm{TV}(P, Q) = \frac{1}{2} \sum_x \lvert p(x) - q(x) \rvert
@@ -661,51 +699,55 @@ $$
 $$
 :eqlabel:`eq_mdl-tv-def`
 
-If $\textrm{TV}(P, Q) = 0.03$, then no event distinguishes the two
-distributions by more than three percentage points. The supremum is attained at
-$A^\star = \{x : p(x) > q(x)\}$, the outcomes that $P$ favors. To see this,
-take any event $A$. Then
+If $\textrm{TV}(P, Q) = 0.03$, no event whatsoever can separate the two
+distributions by more than three percentage points. The supremum is achieved by
+the event $A^\star = \{x : p(x) > q(x)\}$ of outcomes that $P$ favors over $Q$.
+To verify this, pick any event $A$. Then
 $P(A) - Q(A) = \sum_{x \in A} (p(x) - q(x)) \leq \sum_{x \in A^\star} (p(x) - q(x))$,
-since passing from $A$ to $A^\star$ adds only non-negative terms and removes
-only non-positive ones. Because $\sum_x (p(x) - q(x)) = 0$, the positive part
-of $p - q$ equals the negative part in magnitude, so the right side is
-$\tfrac12 \sum_x |p(x) - q(x)|$, and the same bound holds for $Q(A) - P(A)$.
+because switching from $A$ to $A^\star$ only adds non-negative terms and drops
+non-positive ones. Since $\sum_x (p(x) - q(x)) = 0$, the positive and negative
+parts of $p - q$ have equal total magnitude, so the right-hand side equals
+$\tfrac12 \sum_x |p(x) - q(x)|$; the same bound applies to $Q(A) - P(A)$.
 
-On the running pair $A^\star$ is the first outcome and
-$\textrm{TV} = 0.6 - 0.2 = 0.4$, as before. :numref:`fig_mdl-tv-area` shows the
-same for two densities. TV is a metric: both forms are symmetric, and the
-triangle inequality follows from the first (Exercise
+On our running pair, $A^\star$ consists of the first outcome alone, giving
+$\textrm{TV} = 0.6 - 0.2 = 0.4$, as we found earlier. :numref:`fig_mdl-tv-area`
+illustrates the same geometry for two continuous densities. Total variation is
+also a true metric: both forms are manifestly symmetric, and the triangle
+inequality follows directly from the $\ell_1$ formula (Exercise
 :exref:`ex_mdl-divergences-distances-prove-that-total-variation`a).
 
-![Two equal-variance densities and the regions where they disagree. The lobe where $p > q$ and the lobe where $q > p$ have the same area, and each equals the total variation distance. The event that attains the supremum is $A^\star = \{p > q\}$, here the half-line left of the crossing: betting on $P$ there and on $Q$ elsewhere is the best single-sample test.](../img/mdl-it-tv-area.svg)
+![Two equal-variance densities and the regions where they disagree. The lobe where $p > q$ and the lobe where $q > p$ have equal area, and that common area is the total variation distance. The event attaining the supremum is $A^\star = \{p > q\}$, here the half-line left of the crossing: guessing $P$ there and $Q$ elsewhere is the optimal single-sample test.](../img/mdl-it-tv-area.svg)
 :label:`fig_mdl-tv-area`
 
-The second form gives TV its operational meaning. Hand a tester one sample,
-drawn from $P$ or from $Q$ with probability $\tfrac12$ each, and ask which
-distribution produced it. A test that answers "$P$" when the sample lands in an
-event $A$, and "$Q$" otherwise, is right with probability
+The supremum form gives TV a concrete statistical meaning. Imagine handing a
+tester a single sample, drawn with equal probability $\tfrac12$ from $P$ or
+from $Q$, and asking which distribution generated it. Any deterministic test
+answers "$P$" when the sample falls in some region $A$, and "$Q$" otherwise,
+succeeding with probability
 
 $$
 \tfrac12 P(A) + \tfrac12 \big(1 - Q(A)\big)
 = \tfrac12 \big(1 + P(A) - Q(A)\big) \leq \tfrac12 \big(1 + \textrm{TV}(P, Q)\big),
 $$
 
-with equality at $A = A^\star$. Every test is of this form for some $A$ (a
-randomized test averages such tests and does no better), so the best possible
-test beats coin flipping by $\textrm{TV}/2$. On the running pair the best test
-answers "$P$" on the first outcome and is right $70\%$ of the time. The
-discriminator of a GAN, a network trained to tell data from generated samples,
-and a detector of generated text are testers of this kind, and TV limits what
-either can achieve from one sample.
+with equality at $A = A^\star$. Every test takes this form for some $A$ (a
+randomized test merely averages deterministic ones and cannot do better), so
+even the optimal tester beats a fair coin flip by at most $\textrm{TV}/2$. On
+our running pair, the optimal test answers "$P$" on the first outcome and is
+right $70\%$ of the time. Both the discriminator of a GAN (trying to tell real
+data from generated samples) and a detector of machine-generated text are
+testers of this kind, and total variation sets a hard ceiling on how accurate
+either can be from a single sample.
 
 ### Pinsker's Inequality
 
-TV limits every test, and KL is what we can usually compute or bound, because
-it is built from log-probabilities, as losses are. Pinsker's inequality
-connects the two: a small KL divergence certifies that no test can tell the
-distributions apart well. The trust regions of :numref:`sec_ppo` are a case in
-point. The guarantee that a policy update improves the return is proved for
-total variation and stated as a limit on KL.
+Total variation bounds every statistical test, while KL divergence is what we
+can usually compute or control in practice because neural network losses are
+built from log-probabilities. Pinsker's inequality bridges the two: a small KL
+divergence certifies that no test can reliably tell $P$ from $Q$. Policy trust
+regions in :numref:`sec_ppo` are a classic example: the monotonic improvement
+guarantee is proved in terms of total variation, yet enforced through a bound
+on KL.
 
 **Proposition (Pinsker's inequality).** :cite:`Pinsker.1964,Csiszar.1967`
 *For distributions $P$ and $Q$ on a finite or countable set,*
@@ -715,37 +757,38 @@ $$
 $$
 :eqlabel:`eq_mdl-pinsker`
 
-**Proof.** *Step 1: two outcomes.* Write $\textrm{Ber}(a)$ for a coin that
-shows heads with probability $a$. For $a \in [0, 1]$ and $b \in (0, 1)$ the KL
-divergence is
+**Proof.** *Step 1: two outcomes.* Write $\textrm{Ber}(a)$ for a coin with
+heads probability $a$. For $a \in [0, 1]$ and $b \in (0, 1)$, we have
 $D_{\textrm{KL}}(\textrm{Ber}(a)\|\textrm{Ber}(b)) = a \log\frac{a}{b} + (1-a) \log\frac{1-a}{1-b}$
-and the TV distance is $|a - b|$, so we must show that
+and $\textrm{TV}(\textrm{Ber}(a), \textrm{Ber}(b)) = |a - b|$. We therefore
+need to show that
 $\rho(a) = D_{\textrm{KL}}(\textrm{Ber}(a)\|\textrm{Ber}(b)) - 2(a - b)^2$ is
-non-negative. Fix $b$. Then $\rho(b) = 0$, the derivative
-$\rho'(a) = \log\frac{a}{b} - \log\frac{1-a}{1-b} - 4(a - b)$ vanishes at
-$a = b$, and for $0 < a < 1$
+non-negative. Fix $b$. Clearly $\rho(b) = 0$, the first derivative
+$\rho'(a) = \log\frac{a}{b} - \log\frac{1-a}{1-b} - 4(a - b)$ also vanishes at
+$a = b$, and for $0 < a < 1$ the second derivative is
 
 $$
 \rho''(a) = \frac{1}{a(1-a)} - 4 \geq 0,
 $$
 
-since $a(1-a) \leq \tfrac{1}{4}$. A convex function with value and slope zero
-at $a = b$ is non-negative, and by continuity (with $0 \log 0 = 0$) also at the
-endpoints $a = 0$ and $a = 1$. If $b$ is $0$ or $1$, the divergence is infinite
-unless $a = b$, and there is nothing to prove.
+because $a(1-a) \leq \tfrac{1}{4}$. A convex function with both value and slope
+zero at $a = b$ is non-negative everywhere on $(0, 1)$, and by continuity (with
+$0 \log 0 = 0$) at the endpoints $a = 0$ and $a = 1$ as well. If $b$ is $0$ or
+$1$, the KL divergence is infinite unless $a = b$, so the inequality holds
+trivially.
 
 *Step 2: reduction to two outcomes.* Let $A^\star = \{p > q\}$, and set
-$a = P(A^\star)$, $b = Q(A^\star)$, so that $\textrm{TV}(P, Q) = a - b$.
-Merging the outcomes inside $A^\star$ and inside its complement can only
-*decrease* KL, by the log-sum inequality: for non-negative numbers $v_i$ and
-$w_i$,
+$a = P(A^\star)$ and $b = Q(A^\star)$, so that $\textrm{TV}(P, Q) = a - b$.
+Coarsening the space by merging all outcomes inside $A^\star$ into one bucket
+and all outcomes outside $A^\star$ into another can only *decrease* KL. That
+follows from the log-sum inequality: for non-negative numbers $v_i$ and $w_i$,
 
 $$
 \sum_i v_i \log\frac{v_i}{w_i} \geq \big(\sum_i v_i\big) \log \frac{\sum_i v_i}{\sum_i w_i},
 $$
 
-itself one application of Jensen to $t \mapsto t\log t$. Applied separately to
-the terms in $A^\star$ and in its complement,
+which is itself one application of Jensen's inequality to $t \mapsto t\log t$.
+Applying it separately to $A^\star$ and its complement gives
 
 $$
 D_{\textrm{KL}}(P\|Q) \;\geq\; D_{\textrm{KL}}(\textrm{Ber}(a)\|\textrm{Ber}(b)) \;\geq\; 2(a - b)^2
@@ -754,28 +797,28 @@ $$
 
 which rearranges to :eqref:`eq_mdl-pinsker`. $\blacksquare$
 
-On the running pair the inequality reads $0.4 \leq \sqrt{0.396/2} = 0.445$,
-and Step 2 can be followed by hand. Merging the second and third outcomes
-leaves the coins $(0.6, 0.4)$ and $(0.2, 0.8)$. Their TV distance is still
-$0.4$, their KL divergence has fallen from $0.396$ to
-$0.6 \log 3 + 0.4 \log \tfrac12 = 0.382$ nats, and Step 1 promises at least
-$2\,(0.4)^2 = 0.32$.
+On our running pair, Pinsker's inequality reads
+$0.4 \leq \sqrt{0.396/2} = 0.445$, and we can trace Step 2 by hand. Merging the
+second and third outcomes collapses the pair to two coins, $(0.6, 0.4)$ and
+$(0.2, 0.8)$. Their TV distance remains $0.4$, their KL divergence drops from
+$0.396$ to $0.6 \log 3 + 0.4 \log \tfrac12 = 0.382$ nats, and Step 1 lower
+bounds that by $2\,(0.4)^2 = 0.32$.
 
-For a coin of bias $0.6$ against a fair coin the KL divergence is
-$0.6 \log 1.2 + 0.4 \log 0.8 = 0.0201$ nats, and Step 1 promises at least
-$2\,(0.1)^2 = 0.02$: for nearly equal coins the inequality is nearly an
-equality. It has no useful converse, however. A model that assigns $q = 0$ to a
-rare event has infinite KL at tiny TV. The bound also goes slack for distant
-pairs, since TV is at most $1$: two unit-variance Gaussians $50$ apart have
-$\textrm{TV} \approx 1$ but, by :eqref:`eq_mdl-dd-gaussian-kl`, KL
-$= 50^2/2 = 1250$ nats.
+For a coin of bias $0.6$ compared with a fair coin, KL is
+$0.6 \log 1.2 + 0.4 \log 0.8 = 0.0201$ nats, while $2\,(0.1)^2 = 0.02$: for
+nearly equal coins, Pinsker's inequality is almost tight. Crucially, however,
+there is no useful converse. A model that puts $q = 0$ on a single rare outcome
+has infinite KL even when its TV distance is tiny. The bound also becomes
+vacuous for well-separated distributions, since TV can never exceed $1$: two
+unit-variance Gaussians separated by $50$ have $\textrm{TV} \approx 1$, whereas
+:eqref:`eq_mdl-dd-gaussian-kl` gives KL $= 50^2/2 = 1250$ nats.
 
-How tight is the bound for typical pairs, and can the constant $\tfrac12$ be
-improved? For the first question we draw $10{,}000$ pairs of distributions on
-five outcomes, uniformly from all such distributions. For the second we let
-two coins approach each other. Step 1 lost nothing to second order at
-$a = b = \tfrac12$, so the ratio $\textrm{TV}/\sqrt{\textrm{KL}/2}$ should
-approach $1$ there.
+How tight is Pinsker's bound on typical distributions, and can the constant
+$\tfrac12$ be improved? To check the first question, we sample $10{,}000$
+random pairs of distributions on five outcomes uniformly from the simplex. To
+check the second, we let two coins approach each other at $a = b = \tfrac12$:
+Step 1 lost nothing to second order there, so the ratio
+$\textrm{TV}/\sqrt{\textrm{KL}/2}$ should climb all the way to $1$.
 
 ```{.python .input #divergences-distances-pinsker}
 rng = np.random.default_rng()
@@ -795,26 +838,27 @@ d2l.plot([kl_pq[:2000], grid], [tv[:2000], np.sqrt(grid / 2)], 'KL (nats)',
          xlim=[0, 3], figsize=(4.5, 3))
 ```
 
-In the scatter plot every pair lies below the curve $\sqrt{\textrm{KL}/2}$. The
-median pair reaches nearly $0.8$ of the bound, and the largest ratio among the
-$10{,}000$ comes within a few hundredths of $1$. Beyond $\textrm{KL} = 2$ the
-curve exceeds $1$ and the bound says nothing. For nearly fair coins the ratio
-climbs to $0.9899$, $0.9999$ and $0.999999$, so the constant $\tfrac{1}{2}$
-cannot be improved (Exercise
+Every point in the scatter plot falls beneath the curve $\sqrt{\textrm{KL}/2}$.
+The median pair sits near $0.8$ of the bound, and the tightest of the $10{,}000$
+random pairs comes within a few hundredths of $1$. Once $\textrm{KL} > 2$, the
+curve rises above $1$ and the bound becomes vacuous. For nearly fair coins, the
+ratio climbs through $0.9899$, $0.9999$, and $0.999999$, confirming that the
+constant $\tfrac{1}{2}$ cannot be tightened further (Exercise
 :exref:`ex_mdl-divergences-distances-sharpness-pinsker-coins-biases`c).
-Pinsker's own constant was weaker. The sharp one is due to
-:citet:`Csiszar.1967` and, independently, to Kullback and to Kemperman.
+Pinsker's original proof had a weaker constant; the sharp factor $\tfrac{1}{2}$
+is due to :citet:`Csiszar.1967` and, independently, to Kullback and Kemperman.
 
 ### Data Processing
 :label:`subsec_mdl-f-div-data-processing`
 
-Can a feature extractor, a quantizer, or any other processing make two
-distributions easier to tell apart? Pinsker's proof merged outcomes and found
-that KL can only fall. The same holds for every f-divergence and every kind of
-processing. A *channel* $\kappa(y \mid x)$ is any rule, deterministic or
-random, that turns an outcome $x$ into an outcome $y$. It maps $P$ to the
-output distribution $(P\kappa)(y) = \sum_x \kappa(y \mid x)\, p(x)$, and $Q$
-likewise.
+Can a feature extractor, a quantizer, or any other post-processing step make
+two distributions easier to tell apart? In Pinsker's proof, merging outcomes
+could only decrease KL. The same principle holds for every f-divergence and
+every form of processing. A *channel* $\kappa(y \mid x)$ is any rule,
+deterministic or randomized, that transforms an input $x$ into an output $y$.
+Passing $P$ through the channel produces the output distribution
+$(P\kappa)(y) = \sum_x \kappa(y \mid x)\, p(x)$, and passing $Q$ produces
+$Q\kappa$ analogously.
 
 **Proposition (data processing for f-divergences).** *For any channel $\kappa$,
 convex $f$ with $f(1) = 0$, and $P \ll Q$ on a finite or countable set,*
@@ -824,73 +868,80 @@ D_f(P\kappa \,\|\, Q\kappa) \;\leq\; D_f(P\|Q).
 $$
 :eqlabel:`eq_mdl-f-div-dpi`
 
-**Proof.** Since $\sum_y \kappa(y \mid x) = 1$,
+**Proof.** Since $\sum_y \kappa(y \mid x) = 1$, we can expand
 $D_f(P\|Q) = \sum_y \sum_x \kappa(y \mid x)\, q(x)\, f\big(p(x)/q(x)\big)$. Fix
-$y$ with $(Q\kappa)(y) > 0$. The weights
+an output $y$ with $(Q\kappa)(y) > 0$. The normalized weights
 $\kappa(y \mid x)\, q(x) / (Q\kappa)(y)$ sum to one over $x$, and averaging the
-ratios $p(x)/q(x)$ with these weights gives $(P\kappa)(y)/(Q\kappa)(y)$.
-Jensen's inequality therefore bounds the inner sum below by
+density ratios $p(x)/q(x)$ under these weights yields
+$(P\kappa)(y)/(Q\kappa)(y)$. Applying Jensen's inequality to the inner sum
+therefore bounds it below by
 $(Q\kappa)(y)\, f\big((P\kappa)(y)/(Q\kappa)(y)\big)$, which is the $y$-th term
-of $D_f(P\kappa\|Q\kappa)$. An outcome $y$ with $(Q\kappa)(y) = 0$ has
-$\kappa(y \mid x) = 0$ wherever $q(x) > 0$, hence also $(P\kappa)(y) = 0$, and
-contributes nothing to either side. Summing over $y$ finishes the proof.
+of $D_f(P\kappa\|Q\kappa)$. Any output $y$ with $(Q\kappa)(y) = 0$ must have
+$\kappa(y \mid x) = 0$ wherever $q(x) > 0$, hence $(P\kappa)(y) = 0$ as well,
+contributing nothing to either side. Summing over $y$ completes the proof.
 $\blacksquare$
 
-No processing of the data, whatever the divergence function, makes two
-distributions easier to tell apart. In deep learning the inequality is mostly
-read from right to left: a divergence measured on features, on quantized values
-or on any other function of the data is a lower bound on the divergence between
-the inputs. Merging outcomes, as in Pinsker's proof, is the deterministic
-channel $x \mapsto \mathbf{1}(x \in A^\star)$. On the running pair it lowered
-KL from $0.396$ to $0.382$, and it lowers $\chi^2$ from $1.013$ to
-$0.16/0.2 + 0.16/0.8 = 1$. The case of KL is what :numref:`subsec_mdl-dpi` uses
-for mutual information.
+No matter which divergence function we pick, processing data can never make two
+distributions more distinguishable. In deep learning, this inequality is often
+read in reverse: a divergence measured on learned features, quantized outputs,
+or any other summary of the data is always a lower bound on the divergence
+between the raw inputs. Merging outcomes in Pinsker's proof is simply the
+deterministic channel $x \mapsto \mathbf{1}(x \in A^\star)$. On our running
+pair, it lowered KL from $0.396$ to $0.382$, and it lowers $\chi^2$ from
+$1.013$ to $0.16/0.2 + 0.16/0.8 = 1$. The KL special case is also the engine
+behind the data-processing inequality for mutual information in
+:numref:`subsec_mdl-dpi`.
 
-A map that can be undone is a channel in both directions, so for it the
-inequality is an equality: an f-divergence does not change when the outcomes
-are relabeled or the axis is rescaled. The last two rows of
-:numref:`tab_mdl-point-mass-table` do change with the scale. What they gain in
-sensitivity to distance they lose in this guarantee.
+An invertible transformation acts as a channel in both directions, forcing
+equality in :eqref:`eq_mdl-f-div-dpi`: every f-divergence is invariant to
+relabeling outcomes or rescaling the axes. By contrast, the last two rows of
+:numref:`tab_mdl-point-mass-table` do change when you rescale the axis. What
+those distances gain in geometric sensitivity to $d$, they give up in scale
+invariance.
 
 ## The Fenchel Conjugate and the Critic Bound
 :label:`sec_mdl-f-gan-dual`
 
-A network that generates samples gives us draws from its distribution $Q$, and
-we hold draws from the data distribution $P$. Neither set of draws tells us the
-ratio $p(x)/q(x)$ that the definition :eqref:`eq_mdl-f-div-def` needs. Can
-$D_f$ be computed from samples alone? It can be bounded from below, and the
-bound turns a divergence into a training objective.
+Suppose we have a generative network that produces samples from a distribution
+$Q$, alongside a dataset of samples from the true distribution $P$. Neither
+collection of samples gives us access to the density ratio $p(x)/q(x)$ required
+by :eqref:`eq_mdl-f-div-def`. Can we still estimate $D_f$ from samples alone?
+As it turns out, we can lower-bound any f-divergence using only expectations
+under $P$ and $Q$, and that lower bound turns any divergence into an
+adversarial training objective.
 
 ### Derivation of the Bound
 
-The tool is the convex conjugate of :numref:`subsec_mdl-convex-conjugate`. For
-a convex $f$ it is
+The key tool is the convex conjugate from :numref:`subsec_mdl-convex-conjugate`.
+For a convex function $f$, its conjugate is defined by
 
 $$
 f^*(t) = \sup_{u}\, \big( ut - f(u) \big),
 $$
 
-so that $-f^*(t)$ is the intercept of the tangent line to $f$ with slope $t$
-(:numref:`fig_mdl-f-gan-tangent-bound`). For $f(u) = u \log u$ the supremum is
-attained where $\log u + 1 = t$, and $f^*(t) = e^{t-1}$. A convex function lies
-above each of its tangents, which is the Fenchel--Young inequality
+so that $-f^*(t)$ is the vertical intercept of the tangent line to $f$ with
+slope $t$ (:numref:`fig_mdl-f-gan-tangent-bound`). For $f(u) = u \log u$, the
+supremum occurs where $\log u + 1 = t$, giving $f^*(t) = e^{t-1}$. Because a
+convex function always lies above every one of its tangent lines, we obtain the
+Fenchel--Young inequality:
 
 $$
 f(u) \geq ut - f^*(t) \quad \textrm{for all } t,
 $$
 :eqlabel:`eq_mdl-fenchel-young`
 
-with equality when $t$ is the slope of $f$ at $u$, that is, $t = f'(u)$.
+with equality whenever $t$ matches the slope of $f$ at $u$, namely
+$t = f'(u)$.
 
-![A convex divergence function, here $f(u)=u\log u$, is the upper envelope of its tangent lines. The tangent of slope $t$ has the intercept $-f^*(t)$, here $-e^{t-1}$. Keeping one tangent gives the Fenchel--Young lower bound, and taking the supremum over slopes recovers the function. Applied at every point to the density ratio, the same inequality gives the critic bound.](../img/mdl-it-f-gan-tangent-bound.svg)
+![A convex divergence function, here $f(u)=u\log u$, is the upper envelope of its tangent lines. The tangent of slope $t$ has vertical intercept $-f^*(t)$, here $-e^{t-1}$. Keeping a single tangent gives the Fenchel--Young lower bound, and taking the supremum over slopes recovers $f(u)$. Applying this inequality pointwise to the density ratio yields the critic bound.](../img/mdl-it-f-gan-tangent-bound.svg)
 :label:`fig_mdl-f-gan-tangent-bound`
 
-We now apply the inequality *pointwise inside the divergence* and let the slope
-vary with $x$. We choose a function $T(x)$, the **critic**, and apply
-:eqref:`eq_mdl-fenchel-young` at $u = p(x)/q(x)$ and $t = T(x)$.
+Now apply :eqref:`eq_mdl-fenchel-young` *pointwise inside the divergence*,
+letting the slope vary with $x$. Specifically, pick any function $T(x)$, called
+the **critic**, and substitute $u = p(x)/q(x)$ and $t = T(x)$.
 
-**Proposition (critic bound).** *Let $f$ be convex and
-differentiable with $f(1) = 0$, let $P \ll Q$, and let $T$ be any critic with
+**Proposition (critic bound).** *Let $f$ be convex and differentiable with
+$f(1) = 0$, let $P \ll Q$, and let $T$ be any critic with
 $\mathbb{E}_P|T| < \infty$ and $\mathbb{E}_Q|f^*(T)| < \infty$. Then*
 
 $$
@@ -898,11 +949,12 @@ D_f(P\|Q) \;\geq\; \mathbb{E}_{x \sim P}[T(x)] - \mathbb{E}_{x \sim Q}[f^*(T(x))
 $$
 :eqlabel:`eq_mdl-f-gan-bound`
 
-*The supremum of the right side over critics equals $D_f(P\|Q)$, and it is
-attained by $T^\star(x) = f'\big(p(x)/q(x)\big)$ wherever $T^\star$ is finite*
+*Moreover, the supremum of the right-hand side over all critics equals
+$D_f(P\|Q)$, and it is attained by $T^\star(x) = f'\big(p(x)/q(x)\big)$
+wherever $T^\star$ is finite*
 :cite:`Nguyen.Wainwright.Jordan.2010,Nowozin.Cseke.Tomioka.2016`.
 
-**Proof.** Multiply :eqref:`eq_mdl-fenchel-young` at $u = p(x)/q(x)$,
+**Proof.** Multiply :eqref:`eq_mdl-fenchel-young` at $u = p(x)/q(x)$ and
 $t = T(x)$ by $q(x) \geq 0$:
 
 $$
@@ -910,62 +962,65 @@ q(x)\, f\!\left(\frac{p(x)}{q(x)}\right)
 \;\geq\; p(x)\, T(x) - q(x)\, f^*(T(x)).
 $$
 
-Summing (or integrating) over $x$ gives :eqref:`eq_mdl-f-gan-bound`. Since
-Fenchel--Young holds with equality at $t = f'(u)$, the choice
-$T^\star(x) = f'(p(x)/q(x))$ makes the inequality an equality at every $x$,
-hence in expectation. $\blacksquare$
+Summing (or integrating) over $x$ yields :eqref:`eq_mdl-f-gan-bound`. Because
+Fenchel--Young holds with equality at $t = f'(u)$, choosing
+$T^\star(x) = f'(p(x)/q(x))$ turns the inequality into an equality at every
+$x$, and therefore in expectation as well. $\blacksquare$
 
-Both expectations on the right of :eqref:`eq_mdl-f-gan-bound` are averages, of
-$T$ over the data and of $f^*(T)$ over the model's samples, and neither needs a
-density. A neural network $T$ can therefore be trained on minibatches to
-maximize the bound. For KL the bound reads
+Both terms on the right-hand side of :eqref:`eq_mdl-f-gan-bound` are simple
+expectations, of $T$ over real data and of $f^*(T)$ over generated samples,
+requiring no explicit densities at all. We can therefore parameterize $T$ as a
+neural network and train it on minibatches to maximize the bound. For KL
+divergence, the bound reads
 $D_{\textrm{KL}}(P\|Q) \geq \mathbb{E}_P[T] - \mathbb{E}_Q[e^{T - 1}]$ for
-every critic. The **f-GAN** of :citet:`Nowozin.Cseke.Tomioka.2016`, after
-which the bound is also called the f-GAN bound, makes a game of it. The critic
-maximizes the bound, which equals the divergence at the optimal critic, while
-the generator, the network that produces the samples of $Q$, minimizes it.
-:numref:`sec_gan_objectives` trains such pairs.
+every critic $T$. The **f-GAN** of :citet:`Nowozin.Cseke.Tomioka.2016` (after
+which :eqref:`eq_mdl-f-gan-bound` is also called the f-GAN bound) turns this
+variational form into a two-player game: the critic maximizes the bound so that
+it tracks the divergence, while the generator producing $Q$ minimizes it.
+:numref:`sec_gan_objectives` implements and trains such pairs.
 
 ### The Original GAN
 
-The original GAN of :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` is the case
-$f(u) = u\log u - (u+1)\log(u+1)$. Its conjugate is $f^*(t) = -\log(1 - e^t)$
-for $t < 0$, and writing the critic as the logarithm of a discriminator $D$
-with values in $(0, 1)$, $T = \log D$, turns the bound into the familiar
-objective
+The original GAN of :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` falls right
+out of this framework when we choose $f(u) = u\log u - (u+1)\log(u+1)$. Its
+convex conjugate is $f^*(t) = -\log(1 - e^t)$ for $t < 0$. If we write the
+critic as the logarithm of a discriminator $D(x) \in (0, 1)$, setting
+$T = \log D$, the critic bound becomes the familiar binary cross-entropy game:
 
 $$
 \mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]
 = \mathbb{E}_{x \sim P}[\log D(x)] + \mathbb{E}_{x \sim Q}[\log(1 - D(x))].
 $$
 
-The optimal critic $f'(p/q) = \log\big(p/(p+q)\big)$ is the discriminator
-$D^\star = p/(p + q)$. With $f_{\textrm{JS}}$ the Jensen--Shannon function of
-:numref:`tab_mdl-f-div-generators`, this $f$ equals
-$2 f_{\textrm{JS}}(u) - (u - 1)\log 2 - \log 4$: twice the Jensen--Shannon
-function, a multiple of $u - 1$, which changes no divergence, and the constant
-$f(1) = -\log 4$, which only shifts the value. At $D^\star$ the game is
-therefore worth $2\,\textrm{JS}(P, Q) - \log 4$, on the running pair
-$2(0.0911) - 1.386 = -1.204$.
+The optimal critic $T^\star = f'(p/q) = \log\big(p/(p+q)\big)$ corresponds to
+the Bayes-optimal discriminator $D^\star = p/(p + q)$. Comparing with the
+Jensen--Shannon divergence function $f_{\textrm{JS}}$ in
+:numref:`tab_mdl-f-div-generators`, we find that
+$f(u) = 2 f_{\textrm{JS}}(u) - (u - 1)\log 2 - \log 4$: twice the
+Jensen--Shannon function, plus a linear term in $u - 1$ (which changes no
+divergence) and the constant $f(1) = -\log 4$ (which only shifts the value). At
+$D^\star$, the minimax game therefore achieves $2\,\textrm{JS}(P, Q) - \log 4$,
+which on our running pair equals $2(0.0911) - 1.386 = -1.204$.
 
 ### Limits of the Bound
 
-The bound has two limits in practice, and the first can be measured. It is
-tight only at the optimal critic, so a critic that is not fully trained reports
-less than the divergence. To see how much less, we train one.
+In practice, the critic bound runs into two limitations, and we can measure the
+first one directly. Because the bound is tight only at $T^\star$, an
+undertrained critic reports less than the true divergence. Let us watch how a
+critic closes that gap as it trains.
 
-On the running pair expectations are sums, and a critic is three numbers, one
-per outcome. We take $\chi^2$, with $f(u) = (u-1)^2$, conjugate
-$f^*(t) = t + t^2/4$ and optimal critic $T^\star = 2(p/q - 1)$. (The conjugate
-takes the supremum over all real $u$; Exercise
-:exref:`ex_mdl-divergences-distances-derive-convex-conjugate`a derives it and
-shows that this loses nothing at $T^\star$.) The critic starts at $T = 0$,
-where the bound is $0$, and takes gradient ascent steps of size $1$ on the
-bound, whose derivative with respect to $T(x)$ is
-$p(x) - q(x)\,\big(1 + T(x)/2\big)$. The proposition says where the run must
-end: at $\chi^2(P\|Q) = 1.0133$, approached from below. The last line of the
-cell evaluates a critic that points the right way and is twice too confident,
-$2T^\star$.
+On our discrete running pair, expectations are simple sums and a critic is just
+a vector of three numbers, one per outcome. Take the $\chi^2$ divergence, with
+$f(u) = (u-1)^2$, conjugate $f^*(t) = t + t^2/4$, and optimal critic
+$T^\star = 2(p/q - 1)$. (Here the conjugate takes the supremum over all real
+$u$; Exercise :exref:`ex_mdl-divergences-distances-derive-convex-conjugate`a
+derives it and checks that this loses nothing at $T^\star$.) Starting from
+$T = 0$, where the bound is $0$, we run gradient ascent with step size $1$ on
+the bound, whose derivative with respect to $T(x)$ is
+$p(x) - q(x)\,\big(1 + T(x)/2\big)$. By the proposition, the ascent must climb
+from below toward $\chi^2(P\|Q) = 1.0133$. As a sanity check, the final line
+also evaluates an overconfident critic $2T^\star$ that points in the right
+direction but overshoots by a factor of two.
 
 ```{.python .input #divergences-distances-f-gan-bound}
 def fgan_bound(T, p, q, f_star):
@@ -989,49 +1044,54 @@ d2l.plot(np.arange(51), [bounds, [exact] * 51], 'ascent steps', 'value',
          legend=['bound', 'chi^2(P||Q)'], figsize=(4.5, 2.8))
 ```
 
-After five steps the critic certifies $0.70$ of the $1.01$, about $70\%$ of the
-divergence, after ten steps $90\%$, and after twenty $99\%$. At no step does
-the bound exceed the exact value. The overconfident critic reports zero, no
-more than the untrained one. With exact expectations, as here, an adversarial
-estimate of a divergence is therefore an underestimate, by an amount that the
-estimate itself does not reveal. With averages over samples it remains one, on
-average, only for samples that the critic was not trained on (Exercise
-:exref:`ex_mdl-divergences-distances-restricted-critics`d).
+After five steps, the critic certifies $0.70$ out of $1.01$ (about $70\%$ of
+the true divergence); after ten steps it reaches $90\%$, and after twenty
+steps $99\%$. At no point does the bound overshoot the true value. Even the
+overconfident critic $2T^\star$ reports zero, no better than an untrained
+critic. With exact expectations, any adversarial divergence estimate is an
+underestimate, and the number itself never reveals how much is missing. When
+expectations are replaced by finite-sample averages, it remains a valid lower
+bound (in expectation) only on fresh samples that were not used to train the
+critic (Exercise :exref:`ex_mdl-divergences-distances-restricted-critics`d).
 
-The update also tells us where the missing part hides. It moves $T(x)$ at a
-rate proportional to $q(x)$, so the critic is slowest to learn where the
-model's samples are rare. On the running pair that is the first outcome, where
-the ratio is largest and most of the divergence lies (Exercise
-:exref:`ex_mdl-divergences-distances-derive-convex-conjugate`b).
+The gradient update also reveals where the missing divergence hides. Because
+$T(x)$ moves at a rate proportional to $q(x)$, the critic learns slowest where
+the model's samples are rarest. On our running pair, that is the first outcome,
+where the density ratio is largest and most of the divergence lives
+(Exercise :exref:`ex_mdl-divergences-distances-derive-convex-conjugate`b).
 
-The second limit is the constancy on disjoint supports, now seen from the
-critic's side. If we extend $T^\star = f'(p/q)$ formally beyond the
-proposition's hypothesis $P \ll Q$, the ratio is $\infty$ on the data and $0$
-on the model's samples, so $T^\star$ is the constant $f'(\infty)$ on one
-support and $f'(0)$ on the other. The generator is updated through the
-gradient of the critic at the generated samples, and a critic that is constant
-there has gradient zero. The generator learns nothing about which way to move.
+The second limitation brings us back to disjoint supports, now viewed from the
+critic's perspective. Extending $T^\star = f'(p/q)$ formally beyond the
+hypothesis $P \ll Q$, the ratio equals $\infty$ on the data support and $0$ on
+the model support, so $T^\star$ takes the constant value $f'(\infty)$ on one
+and $f'(0)$ on the other. Because the generator updates its parameters using
+the gradient of the critic evaluated at its own samples, a critic that is
+locally constant there provides zero gradient. The generator receives no signal
+telling it which way to move.
 
-Both limits have one source, the ratio $p/q$. Samples do not supply it, and
-where the supports separate it is $0$ or $\infty$ and keeps no trace of the
-distance between them. :numref:`sec_mdl-test-functions-transport` asks what can
-be compared without it.
+Both limitations stem from the same root: the density ratio $p/q$. Finite
+samples never hand us $p/q$ directly, and whenever the supports separate, the
+ratio collapses to $0$ or $\infty$ and erases all trace of how far apart the
+distributions sit. In :numref:`sec_mdl-test-functions-transport`, we turn to
+comparisons that do not rely on density ratios at all.
 
 ## Summary
 
-The KL divergence is one member of a family: an f-divergence averages a convex
-function of the density ratio $p/q$ under $Q$. Jensen's inequality makes every
-member non-negative, near $P = Q$ all smooth members agree up to the curvature
-$f''(1)$, and none of them grows when the data are processed. The direction of
-KL is a modeling decision: forward KL, which maximum likelihood minimizes,
-covers every mode, and reverse KL, which variational inference minimizes, can
-settle on one. The best test that sees one sample is right with probability
-$\tfrac12(1 + \textrm{TV})$, and TV is at most $\sqrt{D_{\textrm{KL}}/2}$. A
-critic bounds any f-divergence from below by two averages, one over each
-distribution, which is how adversarial training estimates a divergence without
-densities. The weakness of the family is the ratio itself: on disjoint supports
-every f-divergence is the constant $f(0) + f'(\infty)$, however near or far
-the supports are.
+KL divergence is one member of a broad family: an f-divergence averages a
+convex function of the density ratio $p/q$ under $Q$. Jensen's inequality
+guarantees non-negativity for every member, all smooth members agree up to
+their curvature $f''(1)$ when $P$ and $Q$ are close, and no post-processing of
+the data can increase any f-divergence. Choosing the direction of KL is a
+modeling decision: forward KL (maximum likelihood) stretches to cover every
+mode, whereas reverse KL (variational inference) can lock onto a single one.
+Operationally, the best single-sample test distinguishing $P$ from $Q$ succeeds
+with probability $\tfrac12(1 + \textrm{TV})$, and Pinsker's inequality bounds
+TV by $\sqrt{D_{\textrm{KL}}/2}$. Using the convex conjugate, any critic
+lower-bounds $D_f$ via expectations over $P$ and $Q$ alone, which is how
+adversarial training estimates divergences from samples. Yet every member
+shares the same blind spot of the density ratio: on disjoint supports, $D_f$
+freezes at the constant $f(0) + f'(\infty)$, regardless of how near or far the
+supports lie.
 
 ## Exercises
 

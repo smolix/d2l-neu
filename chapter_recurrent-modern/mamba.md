@@ -903,17 +903,19 @@ d2l.plot(jnp.arange(X.shape[1]), [c / c.max() for c in
 
 For S4D, the contributions rise smoothly toward the query, and the most
 recent inputs dominate, whatever they are. The size of a write depends on
-the token, but its decay does not, so a symbol hundreds of steps back
-contributes far less than the last few fillers. Unless a symbol happens to
-sit among the last few positions, the windows at the symbols supply only a
-few percent of the state, about their share of the positions.
+the token, so a symbol may stand out from its neighbors as a narrow bump.
+Its decay does not depend on the token, so a symbol hundreds of steps back
+still contributes far less than the last few fillers. Unless a symbol
+happens to sit among the last few positions, the windows at the symbols
+supply only a few percent of the state, the same order as the 1.6% of
+the positions they cover.
 
 For Mamba, the contributions spike at the four symbols, many times higher
 than the fillers next to them, wherever the symbols sit: the selective SSM
-writes the symbols and lets the fillers pass. The Mamba curves also jump at
-the first position, where no symbol sits. There the convolution
-sees zero padding instead of three earlier fillers, so to the layer the
-first filler does not look like a filler.
+writes the symbols and lets the fillers pass. A Mamba curve can also jump
+in the first two positions, where no symbol sits. There the convolution
+sees zero padding in place of earlier fillers, so to the layer the first
+fillers do not look like fillers.
 
 One sequence may be a lucky draw, so let us count the spikes on 64 new
 sequences. For every symbol that does not sit at the first position, the

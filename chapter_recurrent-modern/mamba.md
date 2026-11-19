@@ -205,7 +205,7 @@ of one in eight. The minGRU answers most of them, but how many depends on
 the run: over the executions of this notebook so far, single runs have
 scored from about three quarters of the queries to 97%. Its decay is chosen
 by each input, so it can keep a symbol and let the fillers pass, and it
-nearly solves the task. That it learns this at all is a small surprise. On
+goes most of the way to solving the task. That it learns this at all is a small surprise. On
 the long-range recall task of :numref:`sec_ssm`, one symbol followed by
 1,000 identical fillers, the minGRU could not keep the symbol unless its
 gates were initialized with long memories. A likely reason for the
@@ -743,10 +743,9 @@ executions of this notebook, so two runs of it say little about the next.
 They do agree on two things. They beat S4D in the runs shown, so the parts
 around the SSM recover some of the answer; and every one of them is at
 least 30 points below every Mamba run. Selectivity, not the block around
-it, solves the task. :citet:`Gu.Dao.2023`
-report the same comparison on their larger version of the task: the Mamba
-block reaches about 56% around a state space layer with fixed dynamics and
-99.8% around the selective one.
+it, solves the task. :citet:`Gu.Dao.2023` report the same comparison on
+their larger version of the task: the Mamba block reaches about 56% around
+a state space layer with fixed dynamics and 99.8% around the selective one.
 
 The minGRU, which is selective but starts with short memories and holds one
 number per channel, answered most queries too, though every Mamba run is
@@ -920,8 +919,8 @@ One sequence may be a lucky draw, so let us count the spikes on 64 new
 sequences. For every symbol that does not sit at the first position, the
 *spike ratio* divides the largest contribution in the symbol's window by
 the contribution of the filler just before the symbol. A layer that wrote
-and decayed every token alike would give a ratio not far above one. We print the median over all
-symbols, for S4D and for both Mamba runs.
+and decayed every token alike would give a ratio not far above one. We
+print the median over all symbols, for S4D and for both Mamba runs.
 
 ```{.python .input #mamba-contributions-to-the-state-3}
 %%tab pytorch
@@ -1035,9 +1034,9 @@ Mamba ends at about 1.30 nats per byte in both runs, about 0.05 below the
 minGRU of the same width and about 0.08 below attention. Part of the first
 gap is size: the expansion to $H = 2d$ channels of 16 states gives the
 Mamba model 44% more parameters than the minGRU model and 21% more than the
-attention model. The widened minGRU closes about two fifths of the gap and
-still ends about 0.03 nats per byte behind, ten times more than two runs of
-any model in the table differ. At equal size, then, the Mamba layer models
+attention model. The widened minGRU closes a third to two fifths of the
+gap and still ends about 0.03 nats per byte behind, about ten times more
+than two runs of any model in the table differ. At equal size, then, the Mamba layer models
 this text better than the minGRU.
 
 The bands say what kind of lead this is. Every model in the table gains
@@ -1152,7 +1151,7 @@ training step.
        $\mathbf{B}$ and $\mathbf{C}$, and fixed step sizes with
        input-dependent $\mathbf{B}_t$ and $\mathbf{C}_t$. Train both,
        twice each. Which of them solve the task? Relate the result to the
-       contributions to the state measured above.
+       spike ratios measured above.
     1. In the trained Mamba model, set the step sizes of the first layer to
        their median over filler positions at the four positions starting
        at each symbol (the windows measured above), so that the layer cannot write the symbols with a large

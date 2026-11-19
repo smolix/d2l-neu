@@ -1,44 +1,54 @@
 # Concentration Inequalities
 :label:`sec_mdl-concentration-generalization`
 
-A test accuracy is a measurement, and :numref:`sec_mdl-statistics` put an
-error bar on it. That error bar, $\pm1.96\,\hat\sigma/\sqrt n$, comes from a
-Gaussian approximation to the sampling distribution, which is exact only as
-$n\to\infty$. :numref:`sec_mdl-random_variables` gave a bound that holds at
-every $n$, Chebyshev's inequality, but it is weak. How far can a test-set
-error be from the truth, with a guarantee that holds at the sample size we
-actually have and stays useful when we demand that it almost never fails?
+Whenever we report a model's test accuracy, we are reporting a measurement made
+on a finite sample. In :numref:`sec_mdl-statistics`, we attached an error bar to
+that measurement, $\pm1.96\,\hat\sigma/\sqrt n$, by invoking the central limit
+theorem. That Gaussian approximation is convenient and often accurate, but it is
+exact only in the limit $n\to\infty$, and it relies on plugging in an estimated
+standard deviation $\hat\sigma$. Earlier, in :numref:`sec_mdl-random_variables`,
+we saw a bound that holds with no approximations at every finite $n$, Chebyshev's
+inequality, yet it turned out to be painfully weak. This leaves us with a natural
+question: how far can a test-set error stray from the truth if we want a
+guarantee that holds at the sample size we actually have, and remains useful
+even when we demand that it almost never fail?
 
-Take a classifier that makes 830 mistakes on 10,000 test images, an error
-rate of 8.3%. Chebyshev's inequality bounds the chance that the average of
-$n$ independent draws misses its mean by $t$ or more by $\sigma^2/(nt^2)$,
-and a 0/1 outcome has variance $\sigma^2\leq\tfrac14$. So the true error
-lies within $\pm2.2\%$ of 8.3% with 95% confidence. Ask for a guarantee that
-fails only once in a million, and Chebyshev answers $\pm500\%$, which says
-nothing. Yet the exact probability that an average of 0/1 outcomes strays
-far falls exponentially in $n$, and a bound that captures this answers
-$\pm1.4\%$ and $\pm2.7\%$ for the same two questions.
+To make the gap concrete, consider a classifier that makes 830 mistakes on
+10,000 test images, giving an observed error rate of 8.3%. Chebyshev's
+inequality bounds the probability that the average of $n$ independent draws
+misses its mean by $t$ or more by $\sigma^2/(nt^2)$. Because a 0/1 outcome has
+variance at most $\sigma^2\leq\tfrac14$, Chebyshev guarantees that the true
+error lies within $\pm2.2\%$ of 8.3% with 95% confidence. That is already wider
+than the Gaussian interval, and worse still, it collapses when we demand high
+reliability: ask for a guarantee that fails only once in a million, and
+Chebyshev answers $\pm500\%$, which tells us nothing at all. Yet the true
+probability that an average of 0/1 outcomes strays far from its mean decays
+*exponentially* in $n$, not like $1/n$. A bound that captures this exponential
+decay answers $\pm1.4\%$ at 95% confidence and $\pm2.7\%$ at one in a million.
 
-The idea behind such bounds is to apply Markov's inequality not to the
-average but to its exponential, which turns a sum of independent terms into
-a product. Sergei Bernstein found bounds of this kind in the 1920s, Herman
-Chernoff used the method in 1952 to measure how fast statistical tests
-become reliable, and Wassily Hoeffding gave in 1963 the form used
-throughout machine learning :cite:`Hoeffding.1963`.
+The key trick behind these sharper bounds is surprisingly simple: apply Markov's
+inequality not to the average itself, but to its exponential, which turns a sum
+of independent terms into a product. Sergei Bernstein developed bounds of this
+kind in the 1920s, Herman Chernoff used the method in 1952 to measure how
+rapidly statistical tests become reliable, and Wassily Hoeffding gave in 1963
+the clean form used throughout machine learning :cite:`Hoeffding.1963`.
 
-Why ask for one failure in a million? A learner that compares many models and
-keeps the best needs a guarantee for all of them at once, and only a tail that
-shrinks exponentially gives one at a practical sample size; that is the
-subject of :numref:`sec_mdl-generalization-bounds`. This section sizes a test
-set from a required precision. The same calculation, applied to the
-coordinates of a random vector, shows that a standard Gaussian vector in
-$\mathbb{R}^{784}$ has a length within a few percent of 28 and that two random
-directions are nearly orthogonal. Initialization scales and embeddings rest on
-both facts.
+Why would a practitioner ever ask for a guarantee that fails only once in a
+million? In practice, we rarely evaluate just one model: a learner compares many
+candidates and keeps the best. Guaranteeing that *none* of them looks good by
+chance requires a tiny failure probability for each one, and only an
+exponentially shrinking tail makes that affordable at a realistic sample size, a
+theme we will develop fully in :numref:`sec_mdl-generalization-bounds`. In this
+section, we first use exponential tail bounds to size a test set for a desired
+precision. We then apply the exact same machinery to the coordinates of a random
+vector in $\mathbb{R}^d$, revealing two striking geometric facts: a standard
+Gaussian vector in $\mathbb{R}^{784}$ almost always has length within a few
+percent of 28, and two independent random directions are nearly orthogonal. Both
+facts underpin neural network initialization and high-dimensional embeddings.
 
-Three results are worth remembering: the Chernoff method
-:eqref:`eq_mdl-chernoff`, Hoeffding's interval
-:eqref:`eq_mdl-hoeffding-interval`, and the concentration of the norm
+Three results from this section are worth committing to memory: the Chernoff
+method :eqref:`eq_mdl-chernoff`, Hoeffding's confidence interval
+:eqref:`eq_mdl-hoeffding-interval`, and the concentration of the Euclidean norm
 :eqref:`eq_mdl-norm-concentration`.
 
 ```{.python .input #mdl-concentration-generalization-concentration-and-generalization}
@@ -86,31 +96,36 @@ rng = np.random.default_rng()
 
 ## Exponential Tail Bounds
 
-The Gaussian interval is narrow because Gaussian tails fall like $e^{-z^2/2}$,
-a rate it takes from the central limit theorem and that therefore holds only
-in the limit. We want a rate of this kind together with a guarantee at every
-finite $n$. First we measure how far Chebyshev's bound is from the truth.
+The Gaussian confidence interval is narrow because Gaussian tails decay like
+$e^{-z^2/2}$, a rate inherited from the central limit theorem and therefore
+guaranteed only in the limit of large $n$. We want that same rapid decay
+combined with a guarantee that holds at every finite sample size. Before
+building such a bound, let us see just how far Chebyshev's inequality falls
+short of the truth.
 
 ### Chebyshev's Rate
 
-Chebyshev's bound is Markov's inequality :eqref:`eq_mdl-markov` applied to a
-squared deviation. Here the deviation is that of $\bar X$, the mean of $n$
-independent draws with mean $\mu$ and finite variance $\sigma^2$. The
-expectation of $(\bar X-\mu)^2$ is $\textrm{Var}(\bar X)=\sigma^2/n$, so
+Chebyshev's bound is simply Markov's inequality :eqref:`eq_mdl-markov` applied
+to a squared deviation. Consider the sample mean $\bar X$ of $n$ independent
+draws, each with mean $\mu$ and finite variance $\sigma^2$. Because the
+expected squared deviation is $\mathbb{E}[(\bar X-\mu)^2]=\textrm{Var}(\bar
+X)=\sigma^2/n$, Markov's inequality yields
 
 $$
 P\bigl(|\bar X-\mu|\geq t\bigr)\leq\frac{\sigma^2}{nt^2}.
 $$
 
-The miss probability falls like $1/n$. To push it from $1$ to $10^{-6}$ at a
-fixed deviation $t$, the sample must grow a million-fold.
+Here the miss probability shrinks only like $1/n$. To push the failure
+probability from $1$ down to $10^{-6}$ at a fixed deviation $t$, we must grow
+the sample size a million-fold.
 
-How small is the true miss probability? The smallest case where we can
-compute it exactly is a fair coin. Let $\hat p$ be the fraction of heads in
-$n$ flips, and ask for the probability that it misses $\tfrac12$ by $t=0.1$ or more. A
-flip has variance $\tfrac14$, so Chebyshev's bound is
-$0.25/(0.01\,n)=25/n$. The exact probability is a binomial sum, which we
-evaluate in log space so that $n=5{,}000$ does not underflow.
+How small is the actual miss probability? The simplest setting where we can
+compute it exactly is a fair coin. Let $\hat p$ denote the fraction of heads in
+$n$ independent flips, and ask for the probability that $\hat p$ misses
+$\tfrac12$ by $t=0.1$ or more. Each flip has variance $\tfrac14$, so
+Chebyshev's bound is $0.25/(0.01\,n)=25/n$. The exact probability is a sum of
+binomial probabilities, which we evaluate in log space so that $n=5{,}000$ does
+not underflow to zero.
 
 ```{.python .input #mdl-concentration-generalization-chebyshev-s-rate-1}
 def exact_tail(n, t):
@@ -133,51 +148,56 @@ for n in (10, 100, 1000, 5000):
     print(f'{n:6d} {exact_tail(n, t):10.2e} {0.25 / (n * t**2):10.2e}')
 ```
 
-At $n=10$ the exact tail is $0.75$ and the bound, $2.5$, says nothing. At
-$n=100$ the bound is $0.25$, about four times the exact $0.057$. Beyond that
-the two part ways. At $n=1{,}000$ the exact tail is $2.7\times10^{-10}$
-while Chebyshev allows $0.025$, eight orders of magnitude more, and at
-$n=5{,}000$ the gap is forty-two orders. Each tenfold increase of $n$
-divides Chebyshev's bound by ten, while the exact tail loses a fixed number
-of decimal places per hundred flips: on a log scale it falls along a
-straight line.
+At $n=10$ the exact tail is $0.75$ while the bound, $2.5$, is trivial. At
+$n=100$ the bound drops to $0.25$, roughly four times the exact $0.057$. Beyond
+that point the two curves part ways dramatically. At $n=1{,}000$ the exact tail
+is $2.7\times10^{-10}$ whereas Chebyshev still allows $0.025$, eight orders of
+magnitude larger; by $n=5{,}000$ the gap has widened to forty-two orders of
+magnitude. Every tenfold increase in $n$ merely divides Chebyshev's bound by
+ten, while the exact tail sheds a fixed number of decimal places for every
+hundred flips: on a logarithmic scale it descends along a straight line.
 
-Chebyshev's bound cannot be tightened without more information about the
-distribution. :numref:`sec_mdl-random_variables` showed that it holds with
-equality for a distribution on three points, so no bound that uses only the mean and the
-variance can improve on it for every distribution.
-The coin has more structure than two moments: it is bounded, so all its
-moments are small. A bound that uses all moments at once needs the moment
-generating function.
+Unfortunately, Chebyshev's bound cannot be tightened without assuming more about
+the distribution. As we saw in :numref:`sec_mdl-random_variables`, it holds with
+equality for a distribution supported on three points, so no bound relying
+solely on the mean and variance can improve upon it in general. A coin flip,
+however, has far more structure than two finite moments: its values are bounded,
+which keeps all of its higher moments small as well. To harness all moments at
+once, we turn to the moment generating function.
 
 ### The Chernoff Method
 
-To use more than two moments, look at what Markov's and Chebyshev's
-inequalities have in common. If a function $g$ lies above the indicator
-$\mathbf 1\{x\geq t\}$ everywhere, a *majorant* of the indicator, then
+To see how to use higher moments, look at what Markov's and Chebyshev's
+inequalities have in common. Suppose a function $g$ lies everywhere above the
+indicator $\mathbf 1\{x\geq t\}$, a *majorant* of the indicator. Taking
+expectations immediately gives
 $P(X\geq t)=\mathbb{E}[\mathbf 1\{X\geq t\}]\leq\mathbb{E}[g(X)]$. Markov's
-inequality uses $g(x)=x/t$ for a nonnegative $X$. Chebyshev's uses
-$g(x)=(x/t)^2$, in practice with the deviation $X-\mu$ in place of $X$. The
-exponential $e^{\lambda(x-t)}$, for any $\lambda>0$, lies above the indicator
-on the whole real line. Panel (a) of :numref:`fig_mdl-conc-majorants` draws
-the three functions for one nonnegative $X$. The bound is the expectation of
-$g$, so what matters is the value of $g$ where the mass of $X$ sits.
+inequality chooses the linear majorant $g(x)=x/t$ for a nonnegative $X$, while
+Chebyshev's chooses the quadratic $g(x)=(x/t)^2$ (applied to the centered
+deviation $X-\mu$). Now notice that for any $\lambda>0$, the exponential
+$e^{\lambda(x-t)}$ also lies above the indicator across the entire real line.
+Panel (a) of :numref:`fig_mdl-conc-majorants` compares all three majorants for a
+nonnegative $X$. Since the bound is simply the average of $g(X)$, what determines
+its tightness is how small $g$ stays where the probability mass of $X$ actually
+sits.
 
 ![A tail bound is the expectation of a function lying above the indicator. (a) For a threshold $t=2$, the indicator $\mathbf{1}\{x\geq t\}$ (black) and three functions above it: Markov's $x/t$, Chebyshev's $(x/t)^2$, and Chernoff's $e^{\lambda(x-t)}$ with $\lambda=1.5$. The shaded bump marks where the mass of $X$ sits; each bound is the average of its function under that mass, and raising $\lambda$ makes the exponential small there. (b) The Chernoff exponent $-\lambda nt+n\lambda^2/8$ for the mean of $n=100$ fair coins at $t=0.1$. Every $\lambda>0$ gives a valid bound; the best, at the minimum $\lambda=4t$ of the parabola, is $e^{-2}$.](../img/mdl-prob-conc-majorants.svg)
 :label:`fig_mdl-conc-majorants`
 
-The expectation of the exponential has a name. The *moment generating
-function* of $X$ is $\mathbb{E}[e^{\lambda X}]$, as a function of $\lambda$,
-wherever the expectation is finite. For a fair coin centered at zero,
-$Z\in\{-\tfrac12,\tfrac12\}$, it is $\tfrac12(e^{\lambda/2}+e^{-\lambda/2})
-=\cosh(\lambda/2)$. It is finite for every $\lambda$ when $X$ is bounded,
-and infinite for every $\lambda>0$ when the right tail falls only
-polynomially, as for a Student-$t$ variable; for such variables the method
-below gives nothing.
+The expectation of this exponential has a standard name. The *moment generating
+function* (MGF) of $X$ is $\mathbb{E}[e^{\lambda X}]$, viewed as a function of
+$\lambda$ wherever the expectation is finite. For a fair coin centered at zero,
+$Z\in\{-\tfrac12,\tfrac12\}$, it is simply
+$\tfrac12(e^{\lambda/2}+e^{-\lambda/2})=\cosh(\lambda/2)$. The MGF is finite for
+every $\lambda$ whenever $X$ is bounded, but it is infinite for every
+$\lambda>0$ when the right tail decays only polynomially, as with a Student-$t$
+variable; for such heavy-tailed variables, the exponential method below does not
+apply.
 
-Markov's inequality applied to the nonnegative variable $e^{\lambda X}$
-gives the bound. The map $x\mapsto e^{\lambda x}$ is increasing, so the
-event is unchanged, and for every $\lambda>0$
+Applying Markov's inequality to the nonnegative random variable $e^{\lambda X}$
+gives the bound in one line. Because $x\mapsto e^{\lambda x}$ is strictly
+increasing for $\lambda>0$, the event $\{X\geq t\}$ is identical to
+$\{e^{\lambda X}\geq e^{\lambda t}\}$, so
 
 $$
 P(X \geq t)
@@ -189,47 +209,50 @@ P(X \geq t) \leq \inf_{\lambda > 0}\, e^{-\lambda t}\,
 $$
 :eqlabel:`eq_mdl-chernoff`
 
-Every $\lambda>0$ gives a valid bound, and we keep the best one. This is the
-*Chernoff method*.
+Every choice of $\lambda>0$ yields a valid upper bound; taking the infimum
+simply keeps the tightest one. This two-step recipe is the *Chernoff method*.
 
-The exponential is the right majorant for a second reason. If
-$S=X_1+\cdots+X_n$ is a sum of independent terms, then
-$e^{\lambda S}=\prod_ie^{\lambda X_i}$ is a product of independent factors,
-and the expectation of such a product is the product of the expectations:
+There is a second, equally decisive reason why the exponential is the right
+majorant. When $S=X_1+\cdots+X_n$ is a sum of independent random variables,
+$e^{\lambda S}=\prod_{i=1}^n e^{\lambda X_i}$ becomes a product of independent
+factors, and the expectation of a product of independent variables is the
+product of their expectations:
 
 $$
 \mathbb{E}\bigl[e^{\lambda S}\bigr]=\prod_{i=1}^n\mathbb{E}\bigl[e^{\lambda X_i}\bigr].
 $$
 
-The moment generating function of a sum is the product of those of its
-terms, so the logarithm of the Chernoff bound for a sum has $n$ terms and
-grows in proportion to $n$. No polynomial majorant factorizes this way:
-$\mathbb{E}[S^4]$ is not the product of the fourth moments. What remains is
-to bound the moment generating function of one summand.
+Thus the moment generating function of a sum factorizes into the product of the
+MGFs of its terms, so the logarithm of the Chernoff bound splits into a sum of
+$n$ pieces and scales linearly with $n$. No polynomial majorant enjoys this
+property: $\mathbb{E}[S^4]$ does not factor into a product of fourth moments.
+All that remains is to bound the MGF of a single summand.
 
 ### The Fair Coin
 
-The fair coin is the smallest case, and working it to the end shows every
-step of the general proof. A centered flip $Z=X-\tfrac12$ takes the values
-$\pm\tfrac12$ with probability $\tfrac12$ each, so
-$\mathbb{E}[e^{\lambda Z}]=\cosh(\lambda/2)$. Compare the Taylor series of
-$\cosh u$ and of $e^{u^2/2}$ term by term:
+Let us work through the fair coin all the way to the end, since this simplest
+case already contains every step of the general proof. A centered flip
+$Z=X-\tfrac12$ takes the values $\pm\tfrac12$ with equal probability, so its MGF
+is $\mathbb{E}[e^{\lambda Z}]=\cosh(\lambda/2)$. Comparing the Taylor series of
+$\cosh u$ and $e^{u^2/2}$ term by term gives
 
 $$
 \cosh u=\sum_{k\geq0}\frac{u^{2k}}{(2k)!}
 \leq\sum_{k\geq0}\frac{(u^2/2)^k}{k!}=e^{u^2/2},
 $$
 
-because $(2k)!\geq2\cdot4\cdots(2k)=2^kk!$: the even factors of $(2k)!$
-alone give $2^kk!$, and the odd ones are at least $1$. With $u=\lambda/2$,
-one centered flip has $\mathbb{E}[e^{\lambda Z}]\leq e^{\lambda^2/8}$ for
-every $\lambda$. A Gaussian $\mathcal N(0,\sigma^2)$ has
-$\mathbb{E}[e^{\lambda X}]=e^{\lambda^2\sigma^2/2}$ (complete the square in
-the integral), so a flip's moment generating function is no larger than that
-of a Gaussian with standard deviation $\tfrac12$.
+because $(2k)!\geq2\cdot4\cdots(2k)=2^kk!$: the even factors of $(2k)!$ alone
+already produce $2^kk!$, and every odd factor is at least $1$. Setting
+$u=\lambda/2$, we see that a single centered flip satisfies
+$\mathbb{E}[e^{\lambda Z}]\leq e^{\lambda^2/8}$ for every $\lambda$. By
+comparison, a Gaussian $\mathcal N(0,\sigma^2)$ has
+$\mathbb{E}[e^{\lambda X}]=e^{\lambda^2\sigma^2/2}$ (found by completing the
+square in the integral), so a centered coin's MGF is never larger than that of a
+Gaussian with standard deviation $\tfrac12$.
 
-For $n$ independent flips, the event $\hat p-\tfrac12\geq t$ is the event
-$\sum_iZ_i\geq nt$. The Chernoff method and the product rule give
+Now consider $n$ independent flips. The event $\hat p-\tfrac12\geq t$ is the
+same as $\sum_{i=1}^n Z_i\geq nt$, so the Chernoff method and the product rule
+give
 
 $$
 P\bigl(\hat p-\tfrac12\geq t\bigr)
@@ -237,60 +260,66 @@ P\bigl(\hat p-\tfrac12\geq t\bigr)
 \leq\exp\Bigl(-\lambda nt+\frac{n\lambda^2}{8}\Bigr).
 $$
 
-The exponent is a parabola in $\lambda$. Panel (b) of
-:numref:`fig_mdl-conc-majorants` draws it for $n=100$ and $t=0.1$, where it
-reads $-10\lambda+12.5\lambda^2$. Any $\lambda>0$ gives a bound, for instance
-$e^{-0.875}\approx0.42$ at $\lambda=0.1$. The best one sits at the minimum,
-$\lambda=4t$, where the exponent is $-4nt^2+2nt^2=-2nt^2$. The lower tail is
-the same by symmetry, and adding the two tails gives
+The exponent is a simple parabola in $\lambda$. Panel (b) of
+:numref:`fig_mdl-conc-majorants` plots it for $n=100$ and $t=0.1$, where it
+equals $-10\lambda+12.5\lambda^2$. Any $\lambda>0$ gives a valid bound, for
+example $e^{-0.875}\approx0.42$ at $\lambda=0.1$. The tightest bound sits at the
+vertex of the parabola, $\lambda=4t$, where the exponent simplifies to
+$-4nt^2+2nt^2=-2nt^2$. By symmetry the lower tail obeys the same bound, and
+adding the two tails yields
 
 $$
 P\bigl(|\hat p-\tfrac12|\geq t\bigr)\leq2e^{-2nt^2}.
 $$
 
-The probability of missing by $t$ falls exponentially in $nt^2$. At $n=100$
-and $t=0.1$ the bound is $2e^{-2}\approx0.27$. At $n=1{,}000$ it is
-$2e^{-20}\approx4.1\times10^{-9}$, where Chebyshev allowed $0.025$.
+The probability of straying by $t$ now decays exponentially in $nt^2$. At
+$n=100$ and $t=0.1$ this gives $2e^{-2}\approx0.27$, and at $n=1{,}000$ it drops
+to $2e^{-20}\approx4.1\times10^{-9}$, a dramatic improvement over Chebyshev's
+$0.025$.
 
-Why is the exponential majorant so effective? The function $e^{\lambda(S-nt)}$
-equals $1$ at the threshold, but at the mean of the sum, where the mass is, it
-equals $e^{-\lambda nt}$, exponentially small in $n$. What limits $\lambda$ is
-that the function grows with $S$, so outcomes above the mean count for more
-than $e^{-\lambda nt}$. The product of the moment generating functions, at
-most $e^{n\lambda^2/8}$, measures by how much, and the best $\lambda$ balances
-the two factors.
+Why does the exponential majorant work so well? At the threshold $S=nt$, the
+function $e^{\lambda(S-nt)}$ equals $1$, while at the mean $S=0$, where almost
+all the probability mass sits, it shrinks to $e^{-\lambda nt}$, exponentially
+small in $n$. What prevents us from pushing $\lambda$ to infinity is that the
+function grows steeply for $S>0$, so upward fluctuations carry disproportionate
+weight. The product of the MGFs, bounded by $e^{n\lambda^2/8}$, measures that
+penalty, and the optimal $\lambda=4t$ strikes the exact balance between the two.
 
-The proof used one fact about the coin: the moment generating function of a
-centered flip is at most $e^{\lambda^2/8}$, that of a Gaussian with standard
-deviation $\tfrac12$. The $\tfrac12$ is half the range of a flip. Hoeffding's
-lemma says that every variable confined to an interval of length $b-a$
-satisfies the same bound with $(b-a)/2$ in place of $\tfrac12$.
+Notice that the entire derivation relied on just one property of the coin: the
+MGF of a centered flip is bounded by $e^{\lambda^2/8}$, the MGF of a Gaussian
+with standard deviation $\tfrac12$, which is half the coin's range. Hoeffding's
+lemma generalizes this single step, showing that *every* random variable
+confined to an interval $[a,b]$ obeys the same bound with $(b-a)/2$ in place of
+$\tfrac12$.
 
 ### Hoeffding's Lemma and Hoeffding's Inequality
 
-A test-set loss is rarely a fair coin. An error rate of 8.3% is a biased coin,
-and a clipped loss takes many values. We want the coin's bound for every
-bounded variable. The lemma that gives it is the hard step of this section,
-and its proof rests on one fact about variances.
+A test-set loss is rarely a fair coin. An error rate of 8.3% behaves like a
+heavily biased coin, and a clipped loss takes a continuum of values rather than
+just $0$ and $1$. We would like the fair coin's exponential bound to hold for
+*any* bounded random variable. The lemma that delivers this is the main
+technical step of the section, and its proof rests on one elementary fact about
+variances.
 
 **Proposition (variance of a bounded variable).** *If $Y$ takes values in
 $[a,b]$, then $\textrm{Var}(Y)\leq(b-a)^2/4$, with equality when $Y$ takes
 the values $a$ and $b$ with probability $\tfrac12$ each.*
 
 **Proof.** The mean minimizes the expected squared deviation, since
-$\mathbb{E}[(Y-c)^2]=\textrm{Var}(Y)+(\mathbb{E}[Y]-c)^2$ for every center
-$c$. Take $c$ to be the midpoint. Every point of $[a,b]$ lies within
-$(b-a)/2$ of it, so
+$\mathbb{E}[(Y-c)^2]=\textrm{Var}(Y)+(\mathbb{E}[Y]-c)^2$ for every choice of
+center $c$. Taking $c=(a+b)/2$, every point of $[a,b]$ lies within $(b-a)/2$ of
+the midpoint, so
 
 $$
 \textrm{Var}(Y)\leq\mathbb{E}\Bigl[\Bigl(Y-\frac{a+b}{2}\Bigr)^2\Bigr]
 \leq\Bigl(\frac{b-a}{2}\Bigr)^2.
 $$
 
-Both inequalities are equalities for the distribution with equal mass at
-$a$ and $b$. $\blacksquare$
+Both inequalities become equalities when $Y$ places equal mass at the two
+endpoints $a$ and $b$. $\blacksquare$
 
-The fair coin is this extreme case, with variance $\tfrac14$ on $[0,1]$.
+The fair coin on $[0,1]$ is precisely this extreme case, with variance
+$\tfrac14$. With this variance bound in hand, we can prove Hoeffding's lemma.
 
 **Proposition (Hoeffding's lemma).** *Let $X$ be a random variable with
 $\mathbb{E}[X]=0$ taking values in $[a,b]$. Then for every
@@ -301,10 +330,11 @@ $$
 $$
 :eqlabel:`eq_mdl-hoeffding-lemma`
 
-**Proof.** We show that $\psi(\lambda)=\log\mathbb{E}[e^{\lambda X}]$ grows
-no faster than the parabola $\lambda^2(b-a)^2/8$. Since $X$ is bounded,
-$\psi$ is finite and smooth, and we may differentiate under the
-expectation. At zero, $\psi(0)=0$, and
+**Proof.** We want to show that the log-MGF
+$\psi(\lambda)=\log\mathbb{E}[e^{\lambda X}]$ grows no faster than the
+parabola $\lambda^2(b-a)^2/8$. Because $X$ is bounded, $\psi$ is finite and
+smooth everywhere, allowing us to differentiate under the expectation. At
+$\lambda=0$, we have $\psi(0)=\log 1=0$ and
 
 $$
 \psi'(\lambda) = \frac{\mathbb{E}[X e^{\lambda X}]}{\mathbb{E}[e^{\lambda X}]},
@@ -312,11 +342,11 @@ $$
 \psi'(0) = \mathbb{E}[X] = 0 .
 $$
 
-The second derivative is a variance, as it is for the log-partition function
-of an exponential family (:numref:`sec_mdl-exponential-family`); $\psi$ is
-one. Let $q_\lambda$ be the *tilted* distribution, which reweights that of $X$ by
-$e^{\lambda x}$ and renormalizes. Then $\psi'(\lambda)$ is the mean of $X$
-under $q_\lambda$, and
+Just as for the log-partition function of an exponential family
+(:numref:`sec_mdl-exponential-family`), the second derivative of $\psi$ is a
+variance. Define the *tilted* distribution $q_\lambda$ by reweighting the
+distribution of $X$ by $e^{\lambda x}$ and normalizing. Under $q_\lambda$,
+$\psi'(\lambda)$ is the mean of $X$, and differentiating once more gives
 
 $$
 \psi''(\lambda)
@@ -325,9 +355,10 @@ $$
  = \textrm{Var}_{q_\lambda}(X).
 $$
 
-The tilt moves no mass outside $[a,b]$, so the variance bound applies at
-every $\lambda$: $\psi''(\lambda)\leq(b-a)^2/4$. Taylor's theorem with the
-Lagrange remainder finishes the proof. For some $\xi$ between $0$ and
+Crucially, exponential tilting only reweights points; it never moves mass
+outside $[a,b]$. Our variance bound therefore holds for $q_\lambda$ at every
+$\lambda$, giving $\psi''(\lambda)\leq(b-a)^2/4$. Taylor's theorem with the
+Lagrange remainder now finishes the proof: for some $\xi$ between $0$ and
 $\lambda$,
 
 $$
@@ -336,13 +367,15 @@ $$
  \leq \frac{\lambda^2 (b-a)^2}{8},
 $$
 
-and exponentiating gives :eqref:`eq_mdl-hoeffding-lemma`. $\blacksquare$
+and exponentiating both sides yields :eqref:`eq_mdl-hoeffding-lemma`.
+$\blacksquare$
 
-A bounded, centered variable has a moment generating function no larger
-than that of a Gaussian with standard deviation $(b-a)/2$. For the centered
-coin, $b-a=1$, and the lemma returns the bound $\cosh(\lambda/2)\leq
-e^{\lambda^2/8}$ that we proved by series. The proof of the coin's tail now
-goes through for every bounded variable.
+In words, any bounded, centered random variable has a moment generating function
+no larger than that of a Gaussian with standard deviation $(b-a)/2$. For a
+centered coin, $b-a=1$, so the lemma immediately recovers the bound
+$\cosh(\lambda/2)\leq e^{\lambda^2/8}$ that we proved by Taylor series. With
+that single ingredient in place, our coin proof carries over verbatim to any
+average of independent bounded variables.
 
 **Proposition (Hoeffding's inequality).** *Let $X_1,\ldots,X_n$ be
 independent random variables with $X_i\in[a,b]$, and let
@@ -354,9 +387,9 @@ P\bigl(|\bar X - \mathbb{E}[\bar X]| \geq t\bigr)
 $$
 :eqlabel:`eq_mdl-hoeffding`
 
-**Proof.** Write $Z_i = X_i - \mathbb{E}[X_i]$. Each $Z_i$ is centered and
-lies in an interval of length $b-a$, so the lemma applies. For any
-$\lambda>0$, the Chernoff method :eqref:`eq_mdl-chernoff` and the product
+**Proof.** Let $Z_i = X_i - \mathbb{E}[X_i]$. Each $Z_i$ has mean zero and lies
+in an interval of length $b-a$, so Hoeffding's lemma applies to every term. For
+any $\lambda>0$, the Chernoff method :eqref:`eq_mdl-chernoff` and the product
 rule give
 
 $$
@@ -366,21 +399,24 @@ P(\bar X - \mathbb{E}[\bar X] \geq t)
  \leq \exp\!\left(-\lambda n t + \frac{n\lambda^2 (b-a)^2}{8}\right).
 $$
 
-This is the coin's parabola with $(b-a)^2$ in place of $1$. It is minimized at
-$\lambda = 4t/(b-a)^2$, where its value is $-2nt^2/(b-a)^2$. The same argument
-applied to $-Z_i$ bounds the lower tail, and adding the two tails gives the
-factor $2$. $\blacksquare$
+This is the same parabola we minimized for the coin, with $(b-a)^2$ in place of
+$1$. Its minimum occurs at $\lambda = 4t/(b-a)^2$, where the exponent equals
+$-2nt^2/(b-a)^2$. Applying the same argument to $-Z_i$ bounds the lower tail by
+the same quantity, and adding the two tails produces the factor of $2$.
+$\blacksquare$
 
-The mean of $n$ independent bounded terms misses its expectation by $t$ with a
-probability that falls exponentially in $nt^2$, with $t$ measured in units of
-the range. The bound needs no Gaussianity, no variance estimate and no
-asymptotics. It needs only boundedness and independence, and it holds at every
-finite $n$. Independence is a real restriction: the bound does not cover the
-correlated draws of a Markov chain.
+Thus the sample mean of $n$ independent bounded variables strays from its
+expectation by $t$ with a probability that decays exponentially in $nt^2$,
+where $t$ is measured in units of the range $b-a$. Notice what the bound does
+*not* require: no Gaussianity, no variance estimate, and no asymptotic limit. It
+asks only for boundedness and independence, and it holds at every finite $n$.
+Independence, however, is a genuine requirement: the bound does not apply to
+the correlated samples of a Markov chain.
 
-The proof never used that the ranges agree. For independent centered
-$Y_i\in[a_i,b_i]$, the product of the lemma's bounds has $\sum_i(b_i-a_i)^2$
-where it had $n(b-a)^2$, and the same optimization gives for the sum
+Look back at the proof and you will notice we never actually needed all the
+intervals to have the same length. If the independent centered variables satisfy
+$Y_i\in[a_i,b_i]$, the product of Hoeffding's lemma bounds replaces $n(b-a)^2$
+by $\sum_i(b_i-a_i)^2$, and the same quadratic minimization gives
 
 $$
 P\Bigl(\Bigl|\sum_iY_i\Bigr|\geq s\Bigr)
@@ -388,18 +424,20 @@ P\Bigl(\Bigl|\sum_iY_i\Bigr|\geq s\Bigr)
 $$
 :eqlabel:`eq_mdl-hoeffding-unequal`
 
-We need this form for random directions below.
+We will put this unequal-range version to work shortly when we analyze random
+directions in high dimensions.
 
-For losses in $[0,1]$, $b-a=1$, and the bound is at most $\delta$ once
-$n\geq\log(2/\delta)/(2t^2)$. To estimate an error rate within $t=0.01$ with
-failure probability $\delta=0.05$, this gives
-$\log 40/(2\cdot10^{-4})=18{,}444.4$, so $18{,}445$ examples. This is the
-number that :numref:`chap_classification_generalization` quoted, about twice
-the 9,604 examples that the Gaussian approximation asks for.
+Let us translate Hoeffding's inequality into a practical test-set size. For
+losses in $[0,1]$, we have $b-a=1$, so the failure probability is at most
+$\delta$ once $n\geq\log(2/\delta)/(2t^2)$. To estimate an error rate within
+$t=0.01$ with failure probability $\delta=0.05$, we need
+$n\geq\log 40/(2\cdot10^{-4})=18{,}444.4$, or $18{,}445$ test examples. This is
+the figure quoted in :numref:`chap_classification_generalization`, roughly twice
+the 9,604 examples suggested by the asymptotic Gaussian approximation.
 
-Setting the right-hand side of :eqref:`eq_mdl-hoeffding` equal to $\delta$
-and solving for $t$ gives the form used in practice: with probability at
-least $1-\delta$,
+Equivalently, setting the right-hand side of :eqref:`eq_mdl-hoeffding` equal to
+$\delta$ and solving for $t$ gives the confidence-interval form used in
+practice: with probability at least $1-\delta$,
 
 $$
 \bigl|\bar X - \mathbb{E}[\bar X]\bigr|
@@ -407,30 +445,30 @@ $$
 $$
 :eqlabel:`eq_mdl-hoeffding-interval`
 
-This is a confidence interval whose half-width shrinks like $1/\sqrt n$, the
-same rate as the Gaussian interval $\hat\mu\pm1.96\,\hat\sigma/\sqrt n$, but
-it is valid at every $n$.
+Just like the Gaussian interval $\hat\mu\pm1.96\,\hat\sigma/\sqrt n$, the
+half-width shrinks at the $1/\sqrt n$ rate, but it comes with a strict
+finite-sample guarantee.
 
-For the classifier with 830 errors on 10,000 images, at $\delta=0.05$,
-Hoeffding gives $\pm1.36\%$ and the Gaussian interval
-$\pm1.96\sqrt{0.083\cdot0.917/10^4}=\pm0.54\%$. The two differ in their
-constants. Hoeffding's half-width is the Gaussian one with $\hat\sigma$
-replaced by its worst case $(b-a)/2=0.5$ and the quantile $1.96$ replaced by
-$\sqrt{2\log(2/\delta)}=2.72$. With $\hat\sigma=0.28$ the ratio is $2.5$.
-When the spread of the data is much smaller than their range, Hoeffding is
-conservative, and Bernstein's inequality below repairs this.
+Returning to our classifier with 830 errors on 10,000 images at $\delta=0.05$,
+Hoeffding gives $\pm1.36\%$, compared with the Gaussian interval
+$\pm1.96\sqrt{0.083\cdot0.917/10^4}=\pm0.54\%$. The two differ only in their
+constants: Hoeffding replaces the empirical standard deviation $\hat\sigma=0.28$
+by its worst-case value $(b-a)/2=0.5$, and replaces the Gaussian quantile $1.96$
+by $\sqrt{2\log(2/\delta)}=2.72$, making the interval $2.5$ times wider. Whenever
+the actual spread of the data is much smaller than their range, Hoeffding is
+inevitably conservative, a gap that Bernstein's inequality will close below.
 
-The constant $\tfrac18$ in Hoeffding's lemma cannot be improved for all
-bounded variables: a variable with mass $\tfrac12$ at each endpoint of its
-interval attains it to second order in $\lambda$ (Exercise
+One might wonder whether the constant $\tfrac18$ in Hoeffding's lemma can be
+sharpened. It cannot: a variable placing probability $\tfrac12$ at each endpoint
+of $[a,b]$ attains $\tfrac18$ to second order in $\lambda$ (Exercise
 :exref:`ex_mdl-concentration-generalization-random-signs`).
 
 ### The Fair Coin in Numbers
 :label:`subsec_mdl-tail-bounds-numerical`
 
-We set Hoeffding's bound $2e^{-2nt^2}$ next to the exact tail of the fair
-coin at $t=0.1$, with their ratio, and plot both together with Chebyshev's
-bound against $n$ on a log scale.
+Let us see how close Hoeffding's bound $2e^{-2nt^2}$ comes to the exact tail of
+the fair coin at $t=0.1$. We print both alongside their ratio, and plot them
+together with Chebyshev's bound against $n$ on a logarithmic scale.
 
 ```{.python .input #mdl-concentration-generalization-the-tail-race-in-code}
 print(f'{"n":>6} {"exact":>10} {"Hoeffding":>10} {"ratio":>8}')
@@ -446,33 +484,34 @@ d2l.plot(ns, [np.array([exact_tail(n, t) for n in ns]),
          legend=['exact', 'Chebyshev', 'Hoeffding'], yscale='log')
 ```
 
-At $n=10$ both bounds exceed $1$. At $n=100$ Chebyshev's $0.25$ is a shade
-tighter than Hoeffding's $0.27$: at small $n$ the constants decide, and
-Chebyshev uses the true variance $\tfrac14$. For large $n$ the rate decides,
-and Hoeffding stays within a factor of 15 of the exact tail at $n=1{,}000$ and
-of 57 at $n=5{,}000$.
+At $n=10$ both bounds exceed $1$ and are uninformative. At $n=100$, Chebyshev's
+$0.25$ is actually a touch tighter than Hoeffding's $0.27$: at small sample
+sizes the leading constants decide, and Chebyshev benefits from knowing the
+exact variance $\tfrac14$. Once $n$ grows, however, the exponential rate takes
+over completely. Hoeffding stays within a factor of 15 of the exact tail at
+$n=1{,}000$ and within a factor of 57 at $n=5{,}000$.
 
-On the log plot the exact tail and Hoeffding's bound are nearly parallel
-lines. The logarithm of Hoeffding's bound falls by
-$2t^2=0.02$ per flip, and that of the exact tail by about $0.0201$. The
-second number is the Kullback–Leibler divergence
-$D_{\textrm{KL}}(0.6\|0.5)=0.6\log1.2+0.4\log0.8$ between a coin of bias
-$0.6$ and the fair coin (:numref:`sec_mdl-divergences-distances`), and the
-Chernoff method with the exact moment generating function of a coin attains
-this rate (Exercise :exref:`ex_mdl-concentration-generalization-chernoff-coins`).
+On the logarithmic plot, the exact tail and Hoeffding's bound trace nearly
+parallel straight lines. The logarithm of Hoeffding's bound drops by
+$2t^2=0.02$ per flip, while the exact tail drops by roughly $0.0201$ per flip.
+That sharper slope is the Kullback–Leibler divergence
+$D_{\textrm{KL}}(0.6\|0.5)=0.6\log1.2+0.4\log0.8$ between a biased coin with
+probability $0.6$ and a fair coin (:numref:`sec_mdl-divergences-distances`).
+Applying the Chernoff method with the exact MGF of a Bernoulli variable recovers
+this exact rate (Exercise :exref:`ex_mdl-concentration-generalization-chernoff-coins`).
 
-At small $n$ no bound helps. The coin of the chapter introduction landed heads
-9 times in 13 flips, a deviation of $t=2.5/13$ from $\tfrac12$. Hoeffding's
-bound on a deviation that large is
-$2e^{-2\cdot13\cdot(2.5/13)^2}=2e^{-0.96}\approx0.77$, which rules out
-nothing. The exact two-sided probability is $0.27$, so with 13 flips not even
-the exact tail rules out a fair coin.
+Of course, when $n$ is tiny, no inequality can create evidence that is not
+there. Recall the coin from the chapter introduction that landed heads 9 times
+in 13 flips, a deviation of $t=2.5/13$ from $\tfrac12$. Hoeffding's bound on
+such a deviation is $2e^{-2\cdot13\cdot(2.5/13)^2}=2e^{-0.96}\approx0.77$,
+which rules out nothing. Even the exact two-sided binomial probability is
+$0.27$: thirteen flips simply cannot rule out a fair coin.
 
 ### Sub-Gaussian and Sub-Exponential Variables
 
-Hoeffding's interval for the 8.3% classifier was 2.5 times wider than the
-Gaussian one because it uses the range of a 0/1 outcome and ignores its
-spread. Bernstein's inequality uses both.
+Hoeffding's interval for our 8.3% classifier was 2.5 times wider than the
+Gaussian interval because it knows only the range of a 0/1 loss and ignores its
+small variance. *Bernstein's inequality* incorporates both.
 
 **Proposition (Bernstein's inequality).** *Let $X_1,\ldots,X_n$ be
 independent with $\textrm{Var}(X_i)\leq\sigma^2$ and
@@ -484,21 +523,25 @@ P\bigl(|\bar X - \mathbb{E}[\bar X]| \geq t\bigr)
 $$
 :eqlabel:`eq_mdl-bernstein`
 
-The proof is the Chernoff method once more
-:cite:`Boucheron.Lugosi.Massart.2013`, with a bound on the moment generating
-function that uses the variance as well as the range; Exercise
-:exref:`ex_mdl-concentration-generalization-bernstein` carries it out. For
-small $t$ the denominator is close to $2\sigma^2$, and the bound is the
-Gaussian tail with the *true* variance. For large $t$ the term $Mt/3$ takes
-over and the bound decays only exponentially in $t$.
+Once again, the proof is the Chernoff method
+:cite:`Boucheron.Lugosi.Massart.2013`, paired with an MGF bound that tracks both
+the variance and the range (worked out in Exercise
+:exref:`ex_mdl-concentration-generalization-bernstein`). Look at the two regimes
+in the denominator. When $t$ is small, $\sigma^2$ dominates $Mt/3$ and the bound
+behaves like a Gaussian tail with the *true* variance $\sigma^2$. When $t$ is
+large, the linear term $Mt/3$ takes over and the tail decays only exponentially
+in $t$ rather than as a Gaussian in $t^2$.
 
-How much does the variance help? A classifier with an error rate of 2% on
-$n=10{,}000$ examples has per-example variance $\sigma^2=0.02\cdot0.98$, and
-its centered losses satisfy $M=1$. Setting the bound equal to $\delta$ gives
-$nt^2/(2(\sigma^2+t/3))=\log(2/\delta)$, a quadratic in $t$. We solve it at
-$\delta=0.05$ for both error rates we have met, next to Hoeffding and the
-Gaussian interval, first with the measured rate in the variance (plug-in)
-and then in the form that is a guarantee, explained below.
+How much does accounting for the variance help in practice? Consider a
+classifier with a 2% error rate on $n=10{,}000$ test examples: each 0/1 loss has
+variance $\sigma^2=0.02\cdot0.98$, while its centered deviation satisfies $M=1$.
+Setting the right-hand side of :eqref:`eq_mdl-bernstein` equal to $\delta$
+produces a quadratic equation in $t$, namely
+$nt^2/(2(\sigma^2+t/3))=\log(2/\delta)$. Below, we solve this quadratic at
+$\delta=0.05$ for both our 8.3% and 2% error rates alongside Hoeffding and the
+Gaussian interval, computing both the plug-in estimate (using the observed rate
+in the variance) and a fully guaranteed version that we explain right after the
+output.
 
 ```{.python .input #mdl-concentration-generalization-sub-gaussian-and-sub-exponential-variables}
 def half_widths(p, n, delta=0.05, z=1.96):
@@ -521,30 +564,32 @@ for p in (0.083, 0.02):
           f'Gaussian ±{gauss:.2%}')
 ```
 
-At an error rate of 2%, Bernstein's half-width is $\pm0.39\%$ against
-Hoeffding's $\pm1.36\%$, three and a half times tighter, and within a factor
-of $1.4$ of the asymptotic Gaussian $\pm0.27\%$. At 8.3% the gain is smaller,
-$\pm0.76\%$ against $\pm1.36\%$.
+At a 2% error rate, Bernstein's plug-in half-width shrinks to $\pm0.39\%$,
+compared with Hoeffding's $\pm1.36\%$: roughly three and a half times tighter,
+and within a factor of $1.4$ of the asymptotic Gaussian $\pm0.27\%$. At 8.3%
+error the improvement is smaller but still substantial, narrowing $\pm1.36\%$
+down to $\pm0.76\%$.
 
-These two half-widths are not yet guarantees. The cell put the measured rate
-into the variance $p(1-p)$, whereas Bernstein's inequality asks for a bound on
-the true variance: the substitution of $\hat\sigma$ for $\sigma$ that we held
-against the Gaussian interval. The repair is cheap. The true rate is at most
-$\hat p+t$, so we solve the same equation with variance $(\hat p+t)(1-\hat
-p-t)$, a fixed-point equation in $t$ that the cell solves by iteration. It
-gives the guaranteed $0.43\%$ and $0.79\%$ in place of $0.39\%$ and
-$0.76\%$.
-This answers the opening question for the classifier with 830 errors: with 95%
-confidence its true error lies within about $0.8\%$ of the measured 8.3%.
-Error rates of a few percent are where practitioners work, and there the
-variance-aware bound matters most.
+Strictly speaking, those two plug-in numbers ($\pm0.39\%$ and $\pm0.76\%$) are
+not yet true finite-sample guarantees. The code substituted the observed rate
+$\hat p$ into the variance $p(1-p)$, whereas Bernstein's inequality requires an
+upper bound on the *true* variance, the exact same plug-in objection we raised
+against the Gaussian interval. Fortunately, fixing this is inexpensive. Whenever
+the bound holds, the true error rate is at most $\hat p+t$, so we simply solve
+the same equation with the worst-case variance $(\hat p+t)(1-\hat p-t)$.
+Iterating this fixed-point equation (as the cell does) nudges the half-widths
+only slightly, to the fully guaranteed $\pm0.43\%$ and $\pm0.79\%$. This gives a
+sharp answer to our opening question: for the classifier with 830 errors on
+10,000 images, its true error rate lies within about $0.8\%$ of 8.3% with 95%
+confidence. Because practical models typically operate at error rates of a few
+percent, variance-aware bounds make a real difference.
 
-Hoeffding's proof used one property of the summands: a moment generating
-function bounded by a Gaussian's. Giving that property a name lets us apply
-the proof to unbounded variables, and shows where it stops working. A random
-variable $X$ is **sub-Gaussian** with *variance proxy* $\sigma^2$ if its
-centered moment generating function is no larger than that of $\mathcal
-N(0,\sigma^2)$:
+Stepping back, Hoeffding's proof relied on just one property of the summands:
+their moment generating functions were bounded by that of a Gaussian. Naming
+this property lets us extend the same proof to unbounded random variables, and
+clarifies exactly where it stops working. A random variable $X$ is
+**sub-Gaussian** with *variance proxy* $\sigma^2$ if its centered MGF never
+exceeds that of $\mathcal N(0,\sigma^2)$:
 
 $$
 \mathbb{E}\bigl[e^{\lambda (X - \mathbb{E}[X])}\bigr] \leq \exp\!\left(\frac{\lambda^2\sigma^2}{2}\right)
@@ -552,39 +597,42 @@ $$
 $$
 :eqlabel:`eq_mdl-subgaussian`
 
-The tails of such a variable are no heavier than a Gaussian's: the Chernoff
-method with $\lambda=t/\sigma^2$ gives $P(|X-\mathbb{E}[X]|\geq
-t)\leq2e^{-t^2/(2\sigma^2)}$. Here $\sigma^2$ is the proxy and not the
-variance. The proxy is never smaller than the variance (compare the two sides
-of :eqref:`eq_mdl-subgaussian` to second order in $\lambda$), and it can be
-much larger: a 0/1 outcome with error rate 2% has variance $0.0196$, while
-Hoeffding's lemma supplies the proxy $\tfrac14$. That is why Hoeffding's
-interval was wide.
+Any sub-Gaussian variable has tails at least as light as a Gaussian's: applying
+the Chernoff method with $\lambda=t/\sigma^2$ yields
+$P(|X-\mathbb{E}[X]|\geq t)\leq2e^{-t^2/(2\sigma^2)}$. Keep in mind that
+$\sigma^2$ here is a *proxy*, not necessarily the true variance. Comparing both
+sides of :eqref:`eq_mdl-subgaussian` to second order in $\lambda$ shows that the
+proxy is never smaller than $\textrm{Var}(X)$, and it can be far larger: a 0/1
+outcome with 2% error has variance $0.0196$, yet Hoeffding's lemma supplies the
+proxy $\tfrac14$, which is precisely why Hoeffding's interval was so wide.
 
-A Gaussian $\mathcal N(\mu,\sigma^2)$ has proxy $\sigma^2$, with equality. A
-variable on $[a,b]$ has proxy $(b-a)^2/4$ by Hoeffding's lemma. A random sign
-$\xi\in\{-1,+1\}$ has proxy $1$, since
-$\mathbb{E}[e^{\lambda\xi}]=\cosh\lambda\leq e^{\lambda^2/2}$ by the series
-comparison above. Sub-Gaussianity also survives averaging: if $X_1,\ldots,X_n$
-are independent with proxy $\sigma^2$, the product rule gives $\bar X$ the
-proxy $\sigma^2/n$, and hence $P(|\bar X-\mathbb{E}\bar X|\geq
-t)\leq2e^{-nt^2/(2\sigma^2)}$.
+Three standard families are sub-Gaussian. A Gaussian $\mathcal N(\mu,\sigma^2)$
+has proxy $\sigma^2$ with equality; any variable on $[a,b]$ has proxy
+$(b-a)^2/4$ by Hoeffding's lemma; and a uniform random sign $\xi\in\{-1,+1\}$
+has proxy $1$, since $\mathbb{E}[e^{\lambda\xi}]=\cosh\lambda\leq e^{\lambda^2/2}$
+by our earlier series comparison. Best of all, sub-Gaussianity is preserved by
+averaging: if $X_1,\ldots,X_n$ are independent with proxy $\sigma^2$, the
+product rule gives $\bar X$ the proxy $\sigma^2/n$, and therefore
+$P(|\bar X-\mathbb{E}\bar X|\geq t)\leq2e^{-nt^2/(2\sigma^2)}$.
 
-Not every variable with all moments finite is sub-Gaussian, and the one we
-need next is not. The squared length of a Gaussian vector is a sum of squares
-of standard Gaussians, and the square of a standard Gaussian $x$ has
+Not every well-behaved random variable is sub-Gaussian, however, and the very
+next quantity we need is not. The squared length of a Gaussian vector is a sum
+of squares of standard Gaussians, and for a single standard Gaussian $x$,
+completing the square gives
 
 $$
 \mathbb{E}\bigl[e^{\lambda(x^2-1)}\bigr]=\frac{e^{-\lambda}}{\sqrt{1-2\lambda}}
 \qquad\textrm{for }\lambda<\tfrac12,
 $$
 
-and the expectation is infinite for $\lambda\geq\tfrac12$. So
-:eqref:`eq_mdl-subgaussian` fails for $x^2$ at every variance proxy. Its right
-tail falls like $e^{-t/2}$, too slowly for a Gaussian bound.
+while the expectation diverges to infinity for every $\lambda\geq\tfrac12$.
+Because the MGF blows up at $\lambda=\tfrac12$, :eqref:`eq_mdl-subgaussian`
+cannot hold for $x^2$ at any variance proxy: its right tail decays like
+$e^{-t/2}$, too slowly for a Gaussian bound.
 
-A Gaussian-type bound does hold on a window of $\lambda$ around zero. A random
-variable $X$ is **sub-exponential** with parameters $(\nu,\alpha)$ if
+Even so, a Gaussian-shaped MGF bound *does* hold on a restricted window around
+$\lambda=0$. We say that a random variable $X$ is **sub-exponential** with
+parameters $(\nu,\alpha)$ if
 
 $$
 \mathbb{E}\bigl[e^{\lambda (X - \mathbb{E}[X])}\bigr] \leq \exp\!\left(\frac{\lambda^2\nu^2}{2}\right)
@@ -592,13 +640,13 @@ $$
 $$
 :eqlabel:`eq_mdl-subexponential`
 
-Here $\nu^2$ plays the part of the variance proxy near $\lambda=0$, and
-$1/\alpha$ is the half-width of the window, which limits how large a $\lambda$
-the Chernoff method may use. :numref:`subsec_mdl-thin-shell` shows that $x^2$
-is sub-exponential with $\nu=2$ and $\alpha=4$. For an average of such
-variables, the Chernoff optimization splits at the edge of the window. The
-proof can be skipped on a first reading; the next part uses only the
-statement.
+Here $\nu^2$ acts as a local variance proxy near $\lambda=0$, while $1/\alpha$
+sets the half-width of the admissible window, capping how large a $\lambda$ the
+Chernoff method may choose. In :numref:`subsec_mdl-thin-shell` we will see that
+$x^2$ is sub-exponential with $\nu=2$ and $\alpha=4$. When we apply the Chernoff
+method to an average of sub-exponential variables, the optimization naturally
+splits at the boundary of this window. You may skip the proof on a first
+reading; the next subsection uses only the statement.
 
 **Proposition (sub-exponential tail bound).** *Let $X_1,\ldots,X_n$ be
 independent and $(\nu,\alpha)$-sub-exponential. Then for every $t>0$,*
@@ -609,45 +657,51 @@ P\bigl(|\bar X-\mathbb{E}[\bar X]|\geq t\bigr)
 $$
 :eqlabel:`eq_mdl-subexponential-tail`
 
-**Proof.** For $0<\lambda\leq1/\alpha$, the Chernoff method and the product
+**Proof.** For any $0<\lambda\leq1/\alpha$, the Chernoff method and the product
 rule bound $P(\bar X-\mathbb{E}[\bar X]\geq t)$ by
-$\exp(-\lambda nt+n\lambda^2\nu^2/2)$. If $t\leq\nu^2/\alpha$, the
-parabola's minimizer $\lambda=t/\nu^2$ lies in the window and gives
-$e^{-nt^2/(2\nu^2)}$. If $t>\nu^2/\alpha$, the minimizer lies outside the
-window, and we take the largest admissible value, $\lambda=1/\alpha$. The
-exponent becomes $-nt/\alpha+n\nu^2/(2\alpha^2)$, and since
-$\nu^2/\alpha<t$ it is at most $-nt/\alpha+nt/(2\alpha)=-nt/(2\alpha)$. In
-both cases the exponent is at most $-\tfrac n2\min(t^2/\nu^2,t/\alpha)$. The lower
-tail follows in the same way from $\lambda\in[-1/\alpha,0)$. $\blacksquare$
+$\exp(-\lambda nt+n\lambda^2\nu^2/2)$. When $t\leq\nu^2/\alpha$, the
+unconstrained minimizer $\lambda=t/\nu^2$ falls inside the window and yields
+$e^{-nt^2/(2\nu^2)}$. When $t>\nu^2/\alpha$, that minimizer lies outside the
+window, so we clamp $\lambda$ to the largest admissible value,
+$\lambda=1/\alpha$. The exponent becomes $-nt/\alpha+n\nu^2/(2\alpha^2)$, which
+is at most $-nt/\alpha+nt/(2\alpha)=-nt/(2\alpha)$ because $\nu^2/\alpha<t$.
+Combining both regimes gives an exponent of at most
+$-\tfrac n2\min(t^2/\nu^2,t/\alpha)$. The lower tail follows identically using
+$\lambda\in[-1/\alpha,0)$. $\blacksquare$
 
-Averages of bounded or sub-Gaussian terms have tails $e^{-ct^2}$ at every
-scale. A sub-exponential average has such a tail only for deviations below
-$\nu^2/\alpha$, and an exponential tail, $e^{-nt/(2\alpha)}$, beyond it.
+The contrast with sub-Gaussian averages is now crystal clear. Averages of
+bounded or sub-Gaussian variables enjoy Gaussian-type tails $e^{-ct^2}$ at every
+scale. A sub-exponential average has that same Gaussian tail for moderate
+deviations below $\nu^2/\alpha$, and then transitions to a slower exponential
+tail $e^{-nt/(2\alpha)}$ farther out.
 
 ## Probability in High Dimension
 
-The bounds so far protect a single average. A random vector in $\mathbb{R}^d$
-has $d$ independent coordinates, and its length and its angles with other
-vectors are averages over those coordinates. Concentration therefore governs
-the geometry of high-dimensional random vectors. A reader who starts here
-needs two results from above: the sub-exponential tail bound
-:eqref:`eq_mdl-subexponential-tail` for squared lengths and Hoeffding's
-inequality in the form :eqref:`eq_mdl-hoeffding-unequal` for inner products.
+Up to now, our bounds have protected a single sample average. Now consider a
+random vector in $\mathbb{R}^d$ with $d$ independent coordinates: both its
+squared length and its inner products with other vectors are sums over those $d$
+coordinates. Concentration inequalities therefore govern the geometry of
+high-dimensional space. If you are jumping in here, you only need two results
+from the first half of the section: the sub-exponential tail bound
+:eqref:`eq_mdl-subexponential-tail` for squared lengths, and the unequal-range
+Hoeffding bound :eqref:`eq_mdl-hoeffding-unequal` for inner products.
 
 ### The Thin Shell
 :label:`subsec_mdl-thin-shell`
 
-Draw $\mathbf x\sim\mathcal N(\mathbf 0,\mathbf I_{784})$, a Gaussian vector
-with as many coordinates as a $28\times28$ image. Its density is largest at
-the origin. Yet the probability that $\mathbf x$ lands within distance 14 of
-the origin, half its typical length, is about $10^{-110}$, the probability
-that a sum of 784 squared standard Gaussians is at most 196. No sample we
-could ever draw will contain such a point. A typical draw has norm $28.0\pm0.7$.
+Draw a standard Gaussian vector $\mathbf x\sim\mathcal N(\mathbf 0,\mathbf
+I_{784})$, which has as many coordinates as a $28\times28$ image. Its
+probability density is highest at the origin. Surprisingly, however, the
+probability that $\mathbf x$ lands within distance 14 of the origin (half its
+typical length) is roughly $10^{-110}$, the chance that a sum of 784 squared
+standard Gaussians is at most 196. No sample you could ever draw on a computer
+will contain a point anywhere near the mode. Instead, a typical draw has norm
+$28.0\pm0.7$.
 
-The reason is that $\|\mathbf x\|^2=\sum_{i=1}^dx_i^2$ is a sum of $d$
-independent terms with mean $1$, so $\|\mathbf x\|^2/d$ is a sample mean. Its
-terms are unbounded, so Hoeffding's inequality does not apply, but they are
-sub-exponential.
+The explanation is that $\|\mathbf x\|^2=\sum_{i=1}^d x_i^2$ is a sum of $d$
+independent terms, each with mean $1$, so $\|\mathbf x\|^2/d$ is simply a sample
+mean. Because $x_i^2$ is unbounded, Hoeffding's inequality does not apply, but
+our sub-exponential bound handles it cleanly.
 
 **Proposition (norm concentration).** *Let
 $\mathbf x\sim\mathcal N(\mathbf 0,\mathbf I_d)$. For every
@@ -659,19 +713,19 @@ P\!\left(\Bigl|\frac{\|\mathbf x\|}{\sqrt d} - 1\Bigr| \geq \varepsilon\right)
 $$
 :eqlabel:`eq_mdl-norm-concentration`
 
-**Proof.** The proof has three steps. First, the moment generating function
-of a centered square, $e^{-\lambda}/\sqrt{1-2\lambda}$, satisfies
+**Proof.** The argument proceeds in three short steps. First, a power-series
+comparison (Exercise :exref:`ex_mdl-concentration-generalization-chi-square-tail`)
+shows that the MGF of a centered square, $e^{-\lambda}/\sqrt{1-2\lambda}$,
+satisfies
 
 $$
 \mathbb{E}\bigl[e^{\lambda (x_i^2 - 1)}\bigr] \leq e^{2\lambda^2}
-\qquad\textrm{for } |\lambda| \leq \tfrac14 ,
+\qquad\textrm{for } |\lambda| \leq \tfrac14 .
 $$
 :eqlabel:`eq_mdl-chi2-mgf`
 
-by a series comparison (Exercise
-:exref:`ex_mdl-concentration-generalization-chi-square-tail`). In the
-language of :eqref:`eq_mdl-subexponential`, $x_i^2$ is sub-exponential with
-$\nu=2$ and $\alpha=4$. Second, the sub-exponential tail bound
+In the terminology of :eqref:`eq_mdl-subexponential`, $x_i^2$ is sub-exponential
+with $\nu=2$ and $\alpha=4$. Second, applying the sub-exponential tail bound
 :eqref:`eq_mdl-subexponential-tail` with $n=d$ and $t=\varepsilon$ gives
 
 $$
@@ -681,69 +735,73 @@ P\Bigl(\Bigl|\frac{\|\mathbf x\|^2}{d}-1\Bigr|\geq\varepsilon\Bigr)
 \qquad\textrm{for }\varepsilon\leq1.
 $$
 
-Third, we pass from squares to norms. Write $z=\|\mathbf x\|/\sqrt d\geq0$.
-If $|z-1|\geq\varepsilon$, then $|z^2-1|=|z-1|\,(z+1)\geq\varepsilon$,
-because $z+1\geq1$. So the event for the norm is contained in the event for
-the squared norm and inherits its bound. $\blacksquare$
+Third, we pass from the squared norm to the norm itself. Let
+$z=\|\mathbf x\|/\sqrt d\geq0$. Whenever $|z-1|\geq\varepsilon$, we also have
+$|z^2-1|=|z-1|\,(z+1)\geq\varepsilon$, since $z+1\geq1$. Thus the event for the
+norm is contained in the event for the squared norm and inherits its upper
+bound. $\blacksquare$
 
-The norm of a standard Gaussian vector misses $\sqrt d$ by a fixed fraction
-with a probability that falls exponentially in $d$. The restriction
-$\varepsilon\leq1$ matters only for the squared norm, whose tail beyond
-$\varepsilon=1$ is exponential, $e^{-d\varepsilon/8}$ (Exercise
-:exref:`ex_mdl-concentration-generalization-chi-square-tail`). The norm keeps
-its Gaussian tail at every scale: a norm above $(1+\varepsilon)\sqrt d$ means
-a squared norm above $(1+2\varepsilon+\varepsilon^2)d$, which has probability
+In short, the probability that the length of a standard Gaussian vector misses
+$\sqrt d$ by a fixed fraction decays exponentially in the dimension $d$. Note
+that the restriction $\varepsilon\leq1$ is an artifact of bounding the *squared*
+norm, whose upper tail beyond $\varepsilon=1$ decays only exponentially as
+$e^{-d\varepsilon/8}$ (Exercise
+:exref:`ex_mdl-concentration-generalization-chi-square-tail`). The norm itself
+keeps a Gaussian tail at every scale: exceeding $(1+\varepsilon)\sqrt d$ forces
+the squared norm above $(1+2\varepsilon+\varepsilon^2)d$, whose probability is
 at most $e^{-d(2\varepsilon+\varepsilon^2)/8}\leq e^{-d\varepsilon^2/8}$.
 
-How thick is the shell? Since $\mathbb{E}[x^4]=3$, each square has
-$\textrm{Var}(x^2)=3-1=2$, so $\textrm{Var}(\|\mathbf x\|^2)=2d$. The tangent
-line of the square root at $d$ gives $\|\mathbf x\|\approx\sqrt d+(\|\mathbf
-x\|^2-d)/(2\sqrt d)$, so the standard deviation of $\|\mathbf x\|$ is about
-$\sqrt{2d}/(2\sqrt d)=1/\sqrt2\approx0.71$, whatever the dimension. A standard
-Gaussian in $\mathbb{R}^d$ is a shell of radius $\sqrt d$ and thickness of
-order one.
+How thick is this shell of typical norms? Since $\mathbb{E}[x^4]=3$, each
+coordinate square has $\textrm{Var}(x^2)=3-1=2$, giving
+$\textrm{Var}(\|\mathbf x\|^2)=2d$. Linearizing the square root around $d$ gives
+$\|\mathbf x\|\approx\sqrt d+(\|\mathbf x\|^2-d)/(2\sqrt d)$, so the standard
+deviation of $\|\mathbf x\|$ is approximately $\sqrt{2d}/(2\sqrt d)=1/\sqrt2
+\approx0.71$, independent of the dimension. Remarkably, a standard Gaussian in
+$\mathbb{R}^d$ concentrates on a thin shell of radius $\sqrt d$ whose thickness
+stays of order one no matter how large $d$ becomes.
 
-Why is the mass so far from the mode? The density
-$(2\pi)^{-d/2}e^{-\|\mathbf x\|^2/2}$ depends on $\mathbf x$ only through
-$r=\|\mathbf x\|$, and the sphere of radius $r$ has a surface area
-proportional to $r^{d-1}$. The density of $\|\mathbf x\|$ is therefore
-proportional to $r^{d-1}e^{-r^2/2}$. The first factor grows with $r$, the
-second falls, and their product peaks where the derivative of
-$(d-1)\log r-r^2/2$ vanishes, at $r=\sqrt{d-1}$. Panel (a) of
-:numref:`fig_mdl-conc-shell` shows the two factors and their product at
-$d=20$.
+Why does all the probability mass sit so far from the mode? The joint density
+$(2\pi)^{-d/2}e^{-\|\mathbf x\|^2/2}$ depends on $\mathbf x$ solely through its
+radius $r=\|\mathbf x\|$, while the surface area of a sphere of radius $r$ grows
+like $r^{d-1}$. Multiplying density by surface area, the distribution of the
+radius $\|\mathbf x\|$ is proportional to $r^{d-1}e^{-r^2/2}$. As $r$ grows, the
+volume factor $r^{d-1}$ explodes while the density $e^{-r^2/2}$ plummets; their
+product peaks where the derivative of $(d-1)\log r-r^2/2$ vanishes, namely at
+$r=\sqrt{d-1}$. Panel (a) of :numref:`fig_mdl-conc-shell` illustrates this
+competition between volume and density at $d=20$.
 
-At a typical point, of norm $\sqrt d$, the density is $e^{-d/2}$
-times its value at the origin, $10^{-170}$ at $d=784$, but there are vastly
-more such points. Panel (b) shows the exact density of $\|\mathbf x\|$ for
-$d$ from 2 to 512. The centers move out like $\sqrt d$ while the widths stay
-near $1/\sqrt2$.
+At a typical point of norm $\sqrt d$, the pointwise density is $e^{-d/2}$ times
+its value at the origin (a tiny $10^{-170}$ when $d=784$), yet there is so much
+more surface area at radius $\sqrt d$ that virtually all the mass lives there.
+Panel (b) displays the exact density of
+$\|\mathbf x\|$ from $d=2$ to $d=512$: the peaks march outward like $\sqrt d$
+while their widths stay pinned near $1/\sqrt2$.
 
 ![The thin shell. (a) At $d=20$ the Gaussian density $e^{-r^2/2}$ falls with the radius $r$, the volume $r^{d-1}$ of the shell at radius $r$ grows, and their product, the density of $\|\mathbf{x}\|$, peaks at $\sqrt{d-1}$, far from the origin where the density is largest; each curve is scaled to maximum 1. (b) The exact density of $\|\mathbf{x}\|$ for $\mathbf{x}\sim\mathcal{N}(\mathbf{0},\mathbf{I}_d)$ and $d=2,8,32,128,512$. The centers move out like $\sqrt{d}$; the widths stay near $1/\sqrt{2}$.](../img/mdl-prob-conc-shell.svg)
 :label:`fig_mdl-conc-shell`
 
-The bound captures the form of the number we started from, but not its
-size. A norm below 14 at $d=784$ means $\varepsilon=\tfrac12$, and
-:eqref:`eq_mdl-norm-concentration` gives
-$2e^{-784/32}=2e^{-24.5}\approx5\times10^{-11}$, against the exact
-$10^{-110}$. The constant 8 in the exponent is loose; the exponential
-dependence on $d$ is right.
+Notice that our bound captures the exponential scaling in $d$, though not the
+exact numerical value. A norm below 14 at $d=784$ corresponds to
+$\varepsilon=\tfrac12$, for which :eqref:`eq_mdl-norm-concentration` gives
+$2e^{-784/32}=2e^{-24.5}\approx5\times10^{-11}$, compared with the exact
+$10^{-110}$. The constant $8$ in the denominator is loose, but the qualitative
+conclusion, exponential decay in $d$, is right on target.
 
 ### Near-Orthogonality of Random Directions
 
-:numref:`sec_mdl-geometry-linear-algebraic-ops` showed that the cosine between
-a fixed unit vector and a random direction in $\mathbb{R}^d$ has variance
-$1/d$, which with Chebyshev's inequality gives a tail of order
-$1/(d\varepsilon^2)$. Concentration replaces it by an exponential tail, and
-with that tail we can count how many random directions are nearly orthogonal
-at once.
+In :numref:`sec_mdl-geometry-linear-algebraic-ops`, we saw that the cosine of
+the angle between a fixed unit vector and a random direction in $\mathbb{R}^d$
+has variance $1/d$. Paired with Chebyshev's inequality, that gave a weak tail of
+order $1/(d\varepsilon^2)$. Concentration sharpens this to an exponential tail,
+which in turn lets us count how many random directions can be simultaneously
+nearly orthogonal.
 
-Vectors of random signs are the cleanest case. Fix a unit vector $\mathbf u$
-and let the $x_i\in\{-1,+1\}$ be independent uniform signs. Each term $u_ix_i$
-of $\langle\mathbf x,\mathbf u\rangle$ is centered and lies in
-$[-|u_i|,|u_i|]$, an interval of length $2|u_i|$. In
-:eqref:`eq_mdl-hoeffding-unequal` the denominator is then $4\sum_iu_i^2=4$,
-and
+Random sign vectors provide the cleanest calculation. Fix any unit vector
+$\mathbf u$ and draw independent uniform signs $x_i\in\{-1,+1\}$. Each term
+$u_ix_i$ of the inner product $\langle\mathbf x,\mathbf u\rangle$ has mean zero
+and lies in $[-|u_i|,|u_i|]$, an interval of length $2|u_i|$. Substituting these
+ranges into our unequal-range Hoeffding bound :eqref:`eq_mdl-hoeffding-unequal`,
+the denominator becomes $4\sum_i u_i^2=4$, leaving
 
 $$
 P\bigl(|\langle\mathbf x,\mathbf u\rangle| \geq s\bigr)
@@ -751,46 +809,52 @@ P\bigl(|\langle\mathbf x,\mathbf u\rangle| \geq s\bigr)
 $$
 :eqlabel:`eq_mdl-inner-product-tail`
 
-The inner product of a random sign vector with any fixed unit vector is of
-order one, with a Gaussian tail: each coordinate contributes $\pm|u_i|$, and
-the signs cancel. The norm, meanwhile, is exactly $\sqrt d$, so with
-$s=\varepsilon\sqrt d$ we get $P(|\cos(\mathbf x,\mathbf
-u)|\geq\varepsilon)\leq2e^{-d\varepsilon^2/2}$. For a Gaussian $\mathbf x$ the
-same rate holds approximately: $\langle\mathbf x,\mathbf u\rangle$ is a
-standard Gaussian whatever $\mathbf u$ is, with the same tail $2e^{-s^2/2}$
-(Exercise :exref:`ex_mdl-concentration-generalization-unequal-ranges`), and
-the norm is within a few percent of $\sqrt d$ by the thin shell.
+The inner product of a random sign vector with any fixed unit vector stays of
+order one with a Gaussian tail, because the $\pm|u_i|$ contributions largely
+cancel. Meanwhile, the norm of $\mathbf x$ is $\sqrt d$. Setting
+$s=\varepsilon\sqrt d$ immediately gives
+$P(|\cos(\mathbf x,\mathbf u)|\geq\varepsilon)\leq2e^{-d\varepsilon^2/2}$. For a
+standard Gaussian vector $\mathbf x$, the same behavior holds: the inner product
+$\langle\mathbf x,\mathbf u\rangle$ is itself a standard Gaussian for every unit
+vector $\mathbf u$, so it obeys the exact same tail $2e^{-s^2/2}$ (Exercise
+:exref:`ex_mdl-concentration-generalization-unequal-ranges`), and the thin shell
+keeps $\|\mathbf x\|$ within a few percent of $\sqrt d$.
 
-The exponential tail lets us count, and the count needs one more tool. The
-*union bound* says that the probability that at least one of several events
-occurs is at most the sum of their probabilities, whether or not the events
-are independent. Take $m$ independent sign vectors. They form $m(m-1)/2<m^2/2$
-pairs, and for each pair the cosine exceeds $\varepsilon$ in absolute value
-with probability at most $2e^{-d\varepsilon^2/2}$. By the union bound, the
-probability that any pair does is below $m^2e^{-d\varepsilon^2/2}$. So with
-probability at least $1-\delta$ all pairwise cosines are below $\varepsilon$
-whenever $m\leq\sqrt\delta\,e^{d\varepsilon^2/4}$, a number that grows
-exponentially in $d$.
+With an exponential tail in hand, we can control *many* pairs at once using one
+extra tool: the *union bound*, which states that the probability that at least
+one of several events occurs is at most the sum of their individual
+probabilities, regardless of whether those events are independent. Take $m$
+independent random sign vectors. They form $m(m-1)/2<m^2/2$ distinct pairs, and
+any single pair has $|\cos|\geq\varepsilon$ with probability at most
+$2e^{-d\varepsilon^2/2}$. By the union bound, the probability that *any* pair
+exceeds $\varepsilon$ is at most $m^2e^{-d\varepsilon^2/2}$. Consequently, with
+probability at least $1-\delta$, all pairwise cosines stay below $\varepsilon$
+whenever $m\leq\sqrt\delta\,e^{d\varepsilon^2/4}$. In high dimensions, you can
+pack *exponentially* many nearly orthogonal vectors into $\mathbb{R}^d$.
 
-At $d=784$ and $\delta=0.05$ this guarantees about 570 directions with all
-pairwise $|\cos|<0.2$, and about $10^7$ with $|\cos|<0.3$. These are
-guarantees from a loose bound, not estimates of how many such directions
-exist. A typical $|\cos|$ is much smaller, $\sqrt{2/(\pi d)}\approx0.028$, the
-mean absolute value of a Gaussian with standard deviation $1/\sqrt d$.
+Let us plug in $d=784$ and $\delta=0.05$. Even this loose bound guarantees
+roughly 570 directions with all pairwise $|\cos|<0.2$, and roughly $10^7$
+directions with all pairwise $|\cos|<0.3$. And those are worst-case guarantees
+over all pairs; a single typical pair has $|\cos|$ much smaller, around
+$\sqrt{2/(\pi d)}\approx0.028$, the mean absolute value of a Gaussian with
+standard deviation $1/\sqrt d$.
 
-Trained embeddings are not independent random directions. A cosine of $0.3$ at
-$d=784$ lies more than eight standard deviations ($1/\sqrt{784}=0.036$) above
-what independent directions produce, so they serve as the null model against
-which structure in embeddings is measured.
+Of course, learned neural network embeddings are not independent random
+vectors, and that is precisely why this calculation is useful. At $d=784$, a
+cosine similarity of $0.3$ sits more than eight standard deviations
+($1/\sqrt{784}=0.036$) above what independent random directions produce. Random
+directions thus serve as the null model against which genuine geometric
+structure in trained embeddings is measured.
 
 ### The Thin Shell in Numbers
 :label:`subsec_mdl-measuring-shell`
 
-The bounds above have loose constants, so we measure. The tangent-line
-calculation predicts a standard deviation of the norm near $1/\sqrt2$ at every
-$d$, and a Gaussian with standard deviation $1/\sqrt d$ predicts a mean
-$|\cos|$ of $\sqrt{2/(\pi d)}$. We draw 10,000 pairs of vectors at
-$d=2,20,200,2000$; one row will not fit.
+Because our theoretical bounds have loose constants, let us measure the true
+numbers directly. Our tangent-line argument predicts that the standard deviation
+of $\|\mathbf x\|$ stays near $1/\sqrt2\approx0.71$ at every dimension $d$,
+while the Gaussian approximation predicts a mean $|\cos|$ of
+$\sqrt{2/(\pi d)}$. Below, we draw 10,000 pairs of standard Gaussian vectors at
+$d=2,20,200,2000$ to test both predictions; notice that one row will not match.
 
 ```{.python .input #mdl-distributions-multivariate-gaussian-1}
 for d in (2, 20, 200, 2000):
@@ -802,19 +866,21 @@ for d in (2, 20, 200, 2000):
           f' vs {np.sqrt(2 / (np.pi * d)):.4f}')
 ```
 
-The standard deviation of the norm is about $0.65$ at $d=2$ and about $0.7$
-after that, while the norm itself grows from about 1.3 to about 45. The row
-that does not fit is $d=2$: its mean $|\cos|$ is about $0.64$. That is
-$2/\pi$, the mean of $|\cos\theta|$ for a uniform angle; the formula
-$\sqrt{2/(\pi d)}$ describes high dimensions only. From $d=20$ on, the
-measured values, about $0.18$, $0.057$ and $0.018$, agree with it to within a
-few percent.
+As predicted, the standard deviation of the norm sits near $0.65$ at $d=2$ and
+settles right around $0.7$ thereafter, even as the norm itself climbs from
+roughly 1.3 to 45. The one row that does not match the asymptotic formula is
+$d=2$, where the mean $|\cos|$ is about $0.64$: in the plane, the angle between
+two isotropic vectors is uniform, giving $\mathbb{E}|\cos\theta|=2/\pi$, whereas
+$\sqrt{2/(\pi d)}$ is a high-dimensional approximation. From $d=20$ onward, the
+measured values (about $0.18$, $0.057$, and $0.018$) agree with the formula to
+within a few percent.
 
-Two further questions. How much of the mass lies within 10% of the typical
-norm, in the shell $(1\pm0.1)\sqrt d$? And do distances still separate near
-points from far ones? We measure the second by the *contrast* of a query
-point, $(d_{\max}-d_{\min})/d_{\min}$ over its distances to 200 random points,
-and report the median over 100 queries.
+Two follow-up questions make the geometry even more vivid. First, what fraction
+of the probability mass lies within 10% of the typical norm, inside the shell
+$(1\pm0.1)\sqrt d$? Second, do Euclidean distances still separate nearby points
+from distant ones? To measure separation, we compute the *contrast* of a query
+point, $(d_{\max}-d_{\min})/d_{\min}$ across its distances to 200 random points,
+and report the median contrast over 100 queries.
 
 ```{.python .input #mdl-concentration-generalization-measuring-the-shell}
 eps = 0.1
@@ -829,88 +895,96 @@ for d in (2, 20, 200, 2000):
           f'median contrast = {np.median(contrast):.3f}')
 ```
 
-At $d=2$ the shell holds about 15% of the mass, at $d=20$ about 47%, and at
-$d=200$ about 95%. The last number is what the tangent-line calculation
-predicts: the ratio $\|\mathbf x\|/\sqrt d$ has standard deviation
-$1/\sqrt{2d}=0.05$ at $d=200$, so the shell spans two standard deviations on
-either side. At $d=2000$ every one of the 10,000 draws lies in the shell. The
-median contrast falls from about 30 at $d=2$ (between roughly 25 and 40 from
-run to run) to about 1.2, 0.27 and 0.08. At $d=2000$ the farthest of 200
-random points is, for a typical query, less than 10% farther from it than the
-nearest.
+At $d=2$, the 10% shell captures only about 15% of the mass; by $d=20$ it
+captures roughly 47%, and by $d=200$ roughly 95%. That 95% matches our
+tangent-line estimate: at $d=200$, the ratio $\|\mathbf x\|/\sqrt d$ has
+standard deviation $1/\sqrt{2d}=0.05$, so $\pm0.1$ spans two standard
+deviations on either side of the mean. By $d=2000$, all 10,000 draws land
+inside the shell. Meanwhile, the median distance contrast collapses from around
+30 at $d=2$ (fluctuating between roughly 25 and 40 from run to run) down to
+about 1.2, 0.27, and finally 0.08. At $d=2000$, for a typical query, the
+farthest of 200 random points is less than 10% farther away than the nearest.
 
 ### Consequences for Deep Learning
 :label:`subsec_mdl-concentration-dl`
 
-Three practices in deep learning rest on these facts.
+Three standard practices in deep learning rest directly on this high-dimensional
+geometry.
 
 **Initialization.** LeCun initialization :cite:`LeCun.Bottou.Orr.ea.1998`
-draws the entries of a $d\times d$ weight matrix independently with variance
-$1/d$, and He initialization :cite:`He.Zhang.Ren.ea.2015` uses $2/d$ for ReLU
-networks (:numref:`sec_numerical_stability`). The argument for these scales
-computes an expectation over all draws of the weights: at LeCun's scale each
-pre-activation $\langle\mathbf w,\mathbf x\rangle$ has variance $\|\mathbf
-x\|^2/d$, which norm concentration puts close to $1$ for inputs with
-coordinates of unit variance. We train one draw. Concentration says when the
-expectation describes it.
+samples the entries of a $d\times d$ weight matrix independently with variance
+$1/d$, and He initialization :cite:`He.Zhang.Ren.ea.2015` uses variance $2/d$
+for ReLU networks (:numref:`sec_numerical_stability`). The classical derivation
+of these scales works in expectation over all random draws of the weights: at
+LeCun's scale, each pre-activation $\langle\mathbf w,\mathbf x\rangle$ has
+variance $\|\mathbf x\|^2/d$, which norm concentration keeps close to $1$ for
+inputs with unit-variance coordinates. In practice, however, we initialize and
+train a *single* network, not an average over infinitely many. Concentration
+tells us when that expectation actually describes our one draw.
 
-For one He-initialized ReLU layer of width $d$, the ratio
-$\rho=\|\mathbf h_k\|^2/\|\mathbf h_{k-1}\|^2$ of squared activation norms
-has mean $1$ and variance $5/d$ (Exercise
-:exref:`ex_mdl-concentration-generalization-depth-norms`), so one layer
-changes the squared norm by about $\sqrt{5/d}$, 10% at $d=512$. Through $K$
-layers the fluctuations add up in the logarithm, and
-$\log(\|\mathbf h_K\|^2/\|\mathbf h_0\|^2)$ has variance about $5K/d$. The
-variance calculation therefore describes a typical network only while
-$K\ll d$. At $K=50$ and $d=512$ the log-variance is about $0.5$, so the
-squared norm of a typical network is off by a factor of two in either
-direction.
+For a single He-initialized ReLU layer of width $d$, the ratio
+$\rho=\|\mathbf h_k\|^2/\|\mathbf h_{k-1}\|^2$ of squared activation norms has
+mean $1$ and variance $5/d$ (Exercise
+:exref:`ex_mdl-concentration-generalization-depth-norms`), so one layer perturbs
+the squared norm by roughly $\sqrt{5/d}$, or about 10% at $d=512$. Across $K$
+layers, these multiplicative fluctuations add on a logarithmic scale, giving
+$\log(\|\mathbf h_K\|^2/\|\mathbf h_0\|^2)$ a variance of roughly $5K/d$. The
+expected-variance heuristic therefore describes a typical network only while
+$K\ll d$. At $K=50$ and $d=512$, the log-variance reaches about $0.5$, meaning
+the squared norm of a typical initialized network is already off by a factor of
+two in either direction.
 
-**Distances and nearest neighbors.** For two independent draws, $\mathbf
-x-\mathbf y\sim\mathcal N(\mathbf 0,2\mathbf I)$, so norm concentration
-applies to $(\mathbf x-\mathbf y)/\sqrt2$: each distance lies in
-$(1\pm\varepsilon)\sqrt{2d}$ except with probability $2e^{-d\varepsilon^2/8}$.
-The pair count used for directions then puts all distances among $n$ points in
-that band at once when $d\geq(8/\varepsilon^2)\log(n^2/\delta)$, a dimension
-that grows only with the logarithm of the number of points. When all distances
-are nearly equal, the nearest and the farthest neighbors of a query differ by
-a small relative margin, as the contrast measured above shows. Real embeddings
-keep their contrast because their data lie near a set of low intrinsic
-dimension. The same calculation also gives a construction: a random projection
-to $k$ dimensions preserves all pairwise distances among $n$ points once $k$
-is of order $\log n$, whatever the original dimension (Exercise
+**Distances and nearest neighbors.** For two independent standard Gaussian
+draws, the difference satisfies
+$\mathbf x-\mathbf y\sim\mathcal N(\mathbf 0,2\mathbf I)$, so norm concentration
+applies directly to $(\mathbf x-\mathbf y)/\sqrt2$: each pairwise distance falls
+in $(1\pm\varepsilon)\sqrt{2d}$ except with probability $2e^{-d\varepsilon^2/8}$.
+Applying the same union bound we used for directions places *all* pairwise
+distances among $n$ points inside that narrow band simultaneously once
+$d\geq(8/\varepsilon^2)\log(n^2/\delta)$, a threshold that grows only
+logarithmically with $n$. When every distance is nearly the same, nearest and
+farthest neighbors differ by only a small relative margin, just as our contrast
+experiment showed. Real learned embeddings retain meaningful distance contrast
+only because real data lie near a much lower-dimensional structure. On the
+flip side, this same calculation yields a powerful tool: a random projection
+down to $k$ dimensions preserves all pairwise distances among $n$ points once
+$k$ is of order $\log n$, regardless of the ambient dimension (Exercise
 :exref:`ex_mdl-concentration-generalization-johnson-lindenstrauss`).
 
-**Latent codes.** A decoder trained on codes
-$\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$ sees inputs of norm close
-to $\sqrt d$. The prior mean, of norm $0$, and the midpoint of the chord
-between two codes, of norm close to $\sqrt{d/2}$, are inputs it never saw
-during training. For this reason, latent codes are usually interpolated
-along the sphere rather than the chord (Exercise
+**Latent codes.** A generative decoder trained on latent codes
+$\mathbf z\sim\mathcal N(\mathbf 0,\mathbf I_d)$ almost exclusively sees inputs
+whose norm is close to $\sqrt d$. Both the prior mean (norm $0$) and the
+midpoint of the straight chord connecting two independent codes (norm close to
+$\sqrt{d/2}$) lie deep in the empty interior where the decoder was never
+trained. For this reason, practitioners typically interpolate between latent
+codes along a spherical arc rather than a straight line (Exercise
 :exref:`ex_mdl-concentration-generalization-latent-interpolation`).
 
-Every bound in this section protects a quantity fixed *before* the data were
-drawn. A learner picks the best of many candidates *after* seeing the data,
-and the best of many fair coins looks biased.
-:numref:`sec_mdl-generalization-bounds` shows how to account for that choice.
+One crucial limitation remains. Every bound in this section protects a single
+quantity fixed *before* the data are drawn. A learning algorithm, by contrast,
+inspects the data and picks the best model among many candidates *after* the
+fact, and the best of many fair coins will always look biased. In
+:numref:`sec_mdl-generalization-bounds`, we show how to extend concentration
+inequalities to account for that selection.
 
 ## Summary
 
-How far can an average of $n$ independent terms be from its expectation, at
-the $n$ we have? Chebyshev's inequality answers with a probability that falls
-like $1/n$, too slowly for a guarantee that must almost never fail. The
-Chernoff method applies Markov's inequality to $e^{\lambda X}$, where
-independence turns the moment generating function of a sum into a product, and
-optimizes over $\lambda$. With Hoeffding's lemma it gives, for losses in
-$[0,1]$, the tail $2e^{-2nt^2}$ and an interval of half-width
-$\sqrt{\log(2/\delta)/(2n)}$ that is valid at every $n$; Bernstein's
-inequality tightens it when the variance is small. Applied to the $d$
-coordinates of a random vector, the same calculation shows that a Gaussian
-vector lies in a shell of radius $\sqrt d$ and thickness about $1/\sqrt2$, and
-that exponentially many random directions are pairwise nearly orthogonal.
-These results size test sets, tell when an initialization scale computed in
-expectation describes the one network we train, and give the null model for
-cosines between embeddings.
+How far can an average of $n$ independent terms stray from its expectation at a
+finite sample size $n$? Chebyshev's inequality gives a tail probability that
+decays only like $1/n$, far too slowly when we need a guarantee that almost
+never fails. The Chernoff method applies Markov's inequality to $e^{\lambda X}$,
+turning the moment generating function of an independent sum into a product, and
+then optimizes over $\lambda$. Combined with Hoeffding's lemma, this yields the
+exponential tail $2e^{-2nt^2}$ for losses in $[0,1]$ and a finite-sample
+confidence interval of half-width $\sqrt{\log(2/\delta)/(2n)}$; Bernstein's
+inequality tightens this interval substantially whenever the variance is small
+relative to the range. Applied to the $d$ coordinates of a random vector, the
+same ideas show that a standard Gaussian concentrates on a thin shell of radius
+$\sqrt d$ and thickness about $1/\sqrt2$, and that exponentially many random
+directions are pairwise nearly orthogonal. Together, these results tell us how
+to size test sets, when initialization heuristics hold for a single trained
+network, and how to judge cosine similarities and distances in high-dimensional
+embeddings.
 
 ## Exercises
 

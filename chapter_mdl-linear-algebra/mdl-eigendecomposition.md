@@ -2,18 +2,20 @@
 :label:`sec_mdl-eigendecompositions`
 
 In :numref:`sec_mdl-linear-maps` we asked what a matrix does to space when it
-is applied once. Many computations apply the same matrix again and again. A
-deep linear network with equal layers computes $\mathbf A^{50}\mathbf x$
-after 50 layers, and gradient descent on a quadratic multiplies its error by
-one fixed matrix per step. In each case we want to know whether the signal
-grows, dies out, or settles, and how quickly. Multiplying out the powers gives
-the numbers but does not explain them.
+is applied once. Many computations in machine learning, however, apply the same
+matrix over and over. A deep linear network with identical layers computes
+$\mathbf A^{50}\mathbf x$ after 50 layers, and gradient descent on a quadratic
+objective multiplies its error by the same fixed matrix at every step. In each
+case we want to know whether the signal grows, dies out, or settles down, and
+how quickly that happens. Multiplying out the matrix powers gives us the
+numbers, but it does not explain them.
 
-A random walk between two web pages is the smallest instance of the question.
-From page 1 a surfer clicks to page 1 or to page 2 with probability $1/2$
-each; from page 2 she stays with probability $3/4$ and returns to page 1 with
-probability $1/4$. Let $\mathbf p_k$ hold the probabilities of being on each
-page after $k$ clicks. One click multiplies it by a fixed matrix,
+A random walk between two web pages is the smallest version of this question.
+Suppose a surfer on page 1 stays on page 1 or clicks to page 2 with
+probability $1/2$ each; from page 2 she stays with probability $3/4$ and
+returns to page 1 with probability $1/4$. Let $\mathbf p_k$ hold the
+probabilities of being on each page after $k$ clicks. Each click multiplies
+this vector by a fixed matrix,
 
 $$
 \mathbf p_{k+1}=\mathbf P\mathbf p_k,
@@ -21,37 +23,38 @@ $$
 \mathbf P=\begin{pmatrix}1/2&1/4\\1/2&3/4\end{pmatrix},
 $$
 
-whose columns are the click probabilities from each page, so each column sums
-to one. Starting on page 1, $\mathbf p_0=(1,0)$, the distribution reads
-$(0.5,0.5)$, $(0.375,0.625)$, $(0.344,0.656)$, $(0.336,0.664)$. The changes
-shrink from click to click, as if the walk were settling on a fixed
-distribution. Where is the surfer after 50 clicks, and how fast does the
-answer settle? PageRank asks the same question of the whole web.
+whose columns record the click probabilities from each page and therefore sum
+to one. Starting on page 1 with $\mathbf p_0=(1,0)$, the first few
+distributions are $(0.5,0.5)$, $(0.375,0.625)$, $(0.344,0.656)$, and
+$(0.336,0.664)$. The changes shrink with every click, as if the walk were
+settling onto a fixed distribution. Where is the surfer after 50 clicks, and
+how fast does the distribution converge? PageRank asks the very same question
+of the entire web.
 
-The answer is to write the starting vector in the coordinates of a few
-special directions, the eigenvectors, along which the matrix acts as
-multiplication by a number. Each coordinate then evolves by its own scalar
-power $\lambda^k$.
+The key is to rewrite the starting vector in the coordinates of a few special
+directions—the eigenvectors—along which the matrix acts simply as
+multiplication by a number. In those coordinates, each component evolves on its
+own as a scalar power $\lambda^k$.
 
-In :numref:`sec_linear-algebra` we met eigenvectors as the directions that a
-matrix only stretches: the symmetric
+In :numref:`sec_linear-algebra` we already met eigenvectors as the directions
+that a matrix only stretches: the symmetric matrix
 $\mathbf S=\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$
-stretches $(1,1)$ by 3 and $(1,-1)$ by 1, and for a symmetric matrix
-$\mathbf A^k\mathbf x=\sum_i c_i\lambda_i^k\mathbf v_i$. This section drops
-the symmetry. We find the eigenvalues of any square matrix, see when a full
-set of eigenvectors exists and what replaces it when it does not, and then
-prove what symmetry guarantees.
+stretches $(1,1)$ by 3 and $(1,-1)$ by 1, and for any symmetric matrix we had
+$\mathbf A^k\mathbf x=\sum_i c_i\lambda_i^k\mathbf v_i$. Here we drop the
+symmetry requirement. We learn how to find the eigenvalues of an arbitrary
+square matrix, see when a full set of eigenvectors exists and what replaces it
+when one does not, and then prove why symmetry guarantees so much more.
 
-Three results matter most: the expansion
-:eqref:`eq_mdl-eig-power-expansion` of $\mathbf A^k\mathbf x$ in eigenvectors,
-the spectral theorem, and the quadratic form as a weighted sum of squares,
-:eqref:`eq_mdl-quadform`. A reader in a hurry can go from
+Three results carry the most weight: the eigenvector expansion
+:eqref:`eq_mdl-eig-power-expansion` of $\mathbf A^k\mathbf x$, the spectral
+theorem, and the quadratic form written as a weighted sum of squares,
+:eqref:`eq_mdl-quadform`. A reader in a hurry can jump from
 :numref:`subsec_mdl-diagonalization` straight to
-:numref:`subsec_mdl-spectral-theorem`. Two things are left to
-:numref:`sec_mdl-spectra-in-practice`: how eigenvalues are located and
-computed when a matrix is large, and the cases in which they mislead. We
-compute with NumPy throughout; its `eig` returns complex eigenvalues when a
-real matrix has them.
+:numref:`subsec_mdl-spectral-theorem`. We leave two practical questions to
+:numref:`sec_mdl-spectra-in-practice`: how to locate and compute eigenvalues
+when a matrix is large, and the situations in which eigenvalues can mislead us.
+Throughout this section we compute with NumPy, whose `eig` function returns
+complex eigenvalues whenever a real matrix has them.
 
 ```{.python .input #eigendecomposition-imports}
 #@tab mxnet
@@ -78,56 +81,63 @@ import numpy as np
 ### Eigenvectors and Eigenvalues
 :label:`subsec_mdl-eigen-definition`
 
-Some inputs are only rescaled by $\mathbf P$, as if it were a number. The
-vector $(1,2)$ is mapped to
-$\mathbf P(1,2)=(\tfrac12+\tfrac12,\ \tfrac12+\tfrac32)=(1,2)$, and $(1,-1)$
-is mapped to $(\tfrac12-\tfrac14,\ \tfrac12-\tfrac34)=\tfrac14(1,-1)$. Along
-the first direction $\mathbf P$ multiplies by 1, along the second by $1/4$.
+Certain input vectors are only rescaled by $\mathbf P$, as though the matrix
+were a single number. Applying $\mathbf P$ to $(1,2)$ gives
+$\mathbf P(1,2)=(\tfrac12+\tfrac12,\ \tfrac12+\tfrac32)=(1,2)$, leaving it
+completely unchanged, while applying $\mathbf P$ to $(1,-1)$ gives
+$(\tfrac12-\tfrac14,\ \tfrac12-\tfrac34)=\tfrac14(1,-1)$. Along the first
+direction $\mathbf P$ multiplies by $1$; along the second it multiplies by
+$1/4$.
 
-In general, a nonzero vector $\mathbf v$ is an *eigenvector* of a square
-matrix $\mathbf A$, with *eigenvalue* $\lambda$, if
+In general, a nonzero vector $\mathbf v$ is called an *eigenvector* of a square
+matrix $\mathbf A$, with corresponding *eigenvalue* $\lambda$, if
 
 $$
 \mathbf{A}\mathbf{v} = \lambda \mathbf{v}.
 $$
 :eqlabel:`eq_mdl-eigpair`
 
-The matrix only stretches an eigenvector by the factor $\lambda$, and reverses
-it when $\lambda<0$. For $\mathbf P$, the pairs are $(1,(1,2))$ and
-$(\tfrac14,(1,-1))$. The zero vector is excluded as an eigenvector because it
-satisfies :eqref:`eq_mdl-eigpair` for every $\lambda$. All solutions of
-$\mathbf A\mathbf v=\lambda\mathbf v$ for one $\lambda$, together with
-$\mathbf 0$, form a subspace, the *eigenspace* of $\lambda$.
+In geometric terms, $\mathbf A$ only stretches an eigenvector by the factor
+$\lambda$, reversing its direction when $\lambda<0$. For the surfer's matrix
+$\mathbf P$, the eigenpairs $(\lambda,\mathbf v)$ are $(1,(1,2))$ and
+$(\tfrac14,(1,-1))$. We exclude the zero vector from being an eigenvector
+because it trivially satisfies :eqref:`eq_mdl-eigpair` for every $\lambda$.
+However, all solutions of $\mathbf A\mathbf v=\lambda\mathbf v$ for a fixed
+$\lambda$, together with $\mathbf 0$, form a linear subspace called the
+*eigenspace* of $\lambda$.
 
-The eigenvalue $\lambda=0$ is allowed. It means
-$\mathbf A\mathbf v=\mathbf 0$ for some $\mathbf v\neq\mathbf 0$, so a square
-matrix is singular if and only if 0 is one of its eigenvalues. Not every real
-matrix has a real eigenvector: a rotation by $90^\circ$ turns every direction.
-Its eigenvalues are complex, and we return to them in
-:numref:`subsec_mdl-complex-rotation`.
+The eigenvalue $\lambda=0$, on the other hand, is perfectly valid. It means
+that $\mathbf A\mathbf v=\mathbf 0$ for some nonzero $\mathbf v$, so a square
+matrix is singular if and only if $0$ is one of its eigenvalues. Notice also
+that a real matrix need not have any real eigenvectors: a rotation by
+$90^\circ$ turns every nonzero direction in the plane. Its eigenvalues turn out
+to be complex, a case we take up in :numref:`subsec_mdl-complex-rotation`.
 
-A $2\times2$ invertible matrix maps the unit circle to an ellipse. Are the
-axes of that ellipse the eigenvectors? :numref:`fig_mdl-la-eig-ellipse`
-compares two matrices. For the symmetric $\mathbf S$ the eigenvectors lie on
-the axes. For the upper-triangular
-$\left(\begin{smallmatrix}1&1\\0&2\end{smallmatrix}\right)$ they do not: its
-eigenvectors are $(1,0)$ with $\lambda=1$ and $(1,1)$ with $\lambda=2$, while
-the ellipse axes point at $58^\circ$ and $-32^\circ$
+It is tempting to confuse eigenvectors with the axes of the ellipse produced
+when an invertible $2\times2$ matrix acts on the unit circle.
+:numref:`fig_mdl-la-eig-ellipse` shows why the two concepts are distinct. For
+the symmetric matrix $\mathbf S$, the eigenvectors do lie along the ellipse
+axes. For the upper-triangular matrix
+$\left(\begin{smallmatrix}1&1\\0&2\end{smallmatrix}\right)$, however, they do
+not: its eigenvectors are $(1,0)$ with $\lambda=1$ and $(1,1)$ with
+$\lambda=2$, whereas the ellipse axes point at $58^\circ$ and $-32^\circ$
 (:numref:`sec_mdl-svd-low-rank` shows how to compute them). The ellipse axes
-are the directions of largest and smallest stretch; the eigenvectors are the
-directions that are not turned. For symmetric matrices the two coincide, as
-the spectral theorem of :numref:`subsec_mdl-spectral-theorem` proves. For
-other matrices they need not.
+mark the directions of largest and smallest stretch, while the eigenvectors
+mark the directions that are not rotated at all. For symmetric matrices these
+two sets of directions always coincide, as the spectral theorem of
+:numref:`subsec_mdl-spectral-theorem` proves; for general matrices they need
+not.
 
-![The unit circle (dashed) and its image (blue). Left: the symmetric $\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$; its unit eigenvectors (green) are the ellipse axes, and their images (red) are scaled by 3 and 1 (for $\lambda=1$ the two arrows coincide). Right: the upper-triangular $\left(\begin{smallmatrix}1&1\\0&2\end{smallmatrix}\right)$; its eigenvectors $(1,0)$ and $(1,1)$ are not the ellipse axes (grey).](../img/mdl-la-eig-ellipse.svg)
+![The unit circle (dashed) and its image (blue). Left: for the symmetric matrix $\left(\begin{smallmatrix}2&1\\1&2\end{smallmatrix}\right)$, the unit eigenvectors (green) lie along the ellipse axes, and their images (red) are scaled by 3 and 1 (for $\lambda=1$ the two arrows coincide). Right: for the upper-triangular matrix $\left(\begin{smallmatrix}1&1\\0&2\end{smallmatrix}\right)$, the eigenvectors $(1,0)$ and $(1,1)$ do not align with the ellipse axes (grey).](../img/mdl-la-eig-ellipse.svg)
 :label:`fig_mdl-la-eig-ellipse`
 
 ### The Characteristic Polynomial
 :label:`subsec_mdl-finding-eigenvalues`
 
-We found the eigenvectors of $\mathbf P$ by inspection. To find the
-eigenvalues of any matrix, move $\lambda\mathbf v$ to the left side of
-:eqref:`eq_mdl-eigpair` and factor out the vector:
+We spotted the eigenvectors of $\mathbf P$ by inspection, which does not take
+us far on larger matrices. To find the eigenvalues of any square matrix
+systematically, move $\lambda\mathbf v$ to the left-hand side of
+:eqref:`eq_mdl-eigpair` and factor out $\mathbf v$:
 
 $$
 (\mathbf{A} - \lambda \mathbf{I})\mathbf{v} = \mathbf 0.
@@ -135,34 +145,38 @@ $$
 :eqlabel:`eq_mdl-eigvalue_der`
 
 A nonzero solution $\mathbf v$ exists if and only if
-$\mathbf A-\lambda\mathbf I$ has a nontrivial null space, that is, if and only
-if it is singular and $\det(\mathbf A-\lambda\mathbf I)=0$. Expanding the
-determinant gives a polynomial of degree $n$ in $\lambda$, the
+$\mathbf A-\lambda\mathbf I$ has a nontrivial null space—that is, if and only
+if it is singular, so that $\det(\mathbf A-\lambda\mathbf I)=0$. Expanding
+this determinant yields a polynomial of degree $n$ in $\lambda$, called the
 *characteristic polynomial* $p(\lambda)=\det(\mathbf A-\lambda\mathbf I)$.
-Its roots are the eigenvalues. For each root, solving
-:eqref:`eq_mdl-eigvalue_der` gives the eigenspace.
+Its roots are precisely the eigenvalues of $\mathbf A$. Once a root $\lambda$
+is known, solving the homogeneous linear system :eqref:`eq_mdl-eigvalue_der`
+gives its eigenspace.
 
-For the surfer's matrix,
+Let us run this recipe on the surfer's matrix:
 
 $$
 \det(\mathbf P-\lambda\mathbf I)
 =\Bigl(\tfrac12-\lambda\Bigr)\Bigl(\tfrac34-\lambda\Bigr)-\tfrac14\cdot\tfrac12
 =\lambda^2-\tfrac54\lambda+\tfrac14
-=(\lambda-1)\Bigl(\lambda-\tfrac14\Bigr),
+=(\lambda-1)\Bigl(\lambda-\tfrac14\Bigr).
 $$
 
-so the eigenvalues are 1 and $1/4$, the two factors we found by inspection.
-The eigenvectors follow from one row of each singular system. For $\lambda=1$
-the first row of $\mathbf P-\mathbf I$ reads $-\tfrac12v_1+\tfrac14v_2=0$, so
-$v_2=2v_1$ and $\mathbf v=(1,2)$. For $\lambda=\tfrac14$ the first row of
-$\mathbf P-\tfrac14\mathbf I$ reads $\tfrac14v_1+\tfrac14v_2=0$, so
-$\mathbf v=(1,-1)$. Each eigenvector is determined only up to a nonzero
-factor: if $\mathbf v$ is an eigenvector, so is $c\mathbf v$ for any
-$c\neq0$, since both sides of :eqref:`eq_mdl-eigpair` scale by $c$.
+The roots are $1$ and $1/4$, matching the two scaling factors we noticed
+earlier. Because $\mathbf P-\lambda\mathbf I$ is singular at each root, a
+single row suffices to find the eigenvector. For $\lambda=1$, the first row of
+$\mathbf P-\mathbf I$ gives $-\tfrac12v_1+\tfrac14v_2=0$, so $v_2=2v_1$ and we
+may choose $\mathbf v=(1,2)$. For $\lambda=\tfrac14$, the first row of
+$\mathbf P-\tfrac14\mathbf I$ gives $\tfrac14v_1+\tfrac14v_2=0$, yielding
+$\mathbf v=(1,-1)$. Keep in mind that every eigenvector is determined only up
+to a nonzero scalar factor: if $\mathbf v$ is an eigenvector, then so is
+$c\mathbf v$ for any $c\neq0$, since both sides of :eqref:`eq_mdl-eigpair`
+scale by $c$.
 
-In practice a library does this work. NumPy's `eig` returns the eigenvalues
-and, as the columns of a matrix, one eigenvector for each; the last line of
-the cell checks :eqref:`eq_mdl-eigpair` for all pairs at once.
+In practice we leave this algebra to a numerical library. NumPy's `eig`
+returns the eigenvalues together with a matrix whose columns are the
+corresponding eigenvectors; the last line below checks
+:eqref:`eq_mdl-eigpair` for all pairs at once.
 
 ```{.python .input #eigendecomposition-an-example}
 P = np.array([[0.5, 0.25], [0.5, 0.75]])
@@ -172,26 +186,30 @@ print('eigenvectors (columns):\n', V)
 print('max |P V - V diag(lam)|:', np.abs(P @ V - V * lam).max())
 ```
 
-Order, scale and sign are the library's choice: the eigenvalues come as $1/4$
-and 1, and the columns are parallel to $(1,-1)$ and $(1,2)$, scaled to length
-one.
+Order, scale, and sign are all at the library's discretion: here `eig` returns
+the eigenvalues as $1/4$ and $1$, and the columns are unit-length vectors
+parallel to $(1,-1)$ and $(1,2)$.
 
-Libraries do not solve the characteristic polynomial. For $n\ge5$ there is
-no general formula for its roots in radicals, and the roots are highly
-sensitive to rounding errors in the coefficients. Instead, `eig` applies a
-sequence of orthogonal changes of basis that drives the matrix to triangular
-form without changing its eigenvalues. A triangular matrix shows its
-eigenvalues on its diagonal: subtracting $\lambda\mathbf I$ leaves it
-triangular, and the determinant of a triangular matrix is the product of its
-diagonal entries (:numref:`subsec_mdl-determinant-general`). For matrices too large to factor at all, power iteration
-(:numref:`subsec_mdl-power-iteration`) needs only matrix--vector products.
+Numerical libraries do not actually form and solve the characteristic
+polynomial. For $n\ge5$ there is no general closed-form formula for polynomial
+roots in radicals, and even for moderate $n$ the roots are notoriously
+sensitive to tiny rounding errors in the polynomial coefficients. Instead,
+`eig` applies a sequence of orthogonal changes of basis that gradually drive
+the matrix into triangular form without altering its eigenvalues. A triangular
+matrix displays its eigenvalues right on its diagonal: subtracting
+$\lambda\mathbf I$ keeps it triangular, and the determinant of a triangular
+matrix is simply the product of its diagonal entries
+(:numref:`subsec_mdl-determinant-general`). For matrices far too large to
+factor at all, power iteration (:numref:`subsec_mdl-power-iteration`) extracts
+dominant eigenvalues using only matrix--vector products.
 
 ### Diagonalization
 :label:`subsec_mdl-diagonalization`
 
-We return to the opening question, $\mathbf P^{50}\mathbf p_0$. Collect the two
-eigenvectors as the columns of $\mathbf V$ and the eigenvalues on the diagonal
-of $\boldsymbol\Lambda$:
+We can now answer our opening question about $\mathbf P^{50}\mathbf p_0$.
+Collect the two eigenvectors of $\mathbf P$ as the columns of a matrix
+$\mathbf V$, and place their eigenvalues on the diagonal of
+$\boldsymbol\Lambda$:
 
 $$
 \mathbf V=\begin{pmatrix}1&1\\2&-1\end{pmatrix},
@@ -199,39 +217,40 @@ $$
 \boldsymbol\Lambda=\begin{pmatrix}1&0\\0&1/4\end{pmatrix}.
 $$
 
-The two eigenvector equations $\mathbf P\mathbf v_i=\lambda_i\mathbf v_i$,
-written side by side as columns, read
-$\mathbf P\mathbf V=\mathbf V\boldsymbol\Lambda$. Since
+Written side by side as columns, the two eigenvector equations
+$\mathbf P\mathbf v_i=\lambda_i\mathbf v_i$ compactly read
+$\mathbf P\mathbf V=\mathbf V\boldsymbol\Lambda$. Because
 $\det\mathbf V=-1-2=-3\neq0$, the matrix $\mathbf V$ is invertible, with
-$\mathbf V^{-1}=\tfrac13\left(\begin{smallmatrix}1&1\\2&-1\end{smallmatrix}\right)$,
-and multiplying by $\mathbf V^{-1}$ on the right gives
+$\mathbf V^{-1}=\tfrac13\left(\begin{smallmatrix}1&1\\2&-1\end{smallmatrix}\right)$.
+Multiplying on the right by $\mathbf V^{-1}$ yields
 
 $$
 \mathbf{P} = \mathbf{V} \boldsymbol{\Lambda} \mathbf{V}^{-1}.
 $$
 :eqlabel:`eq_mdl-eig_decomp`
 
-In words: change to eigenvector coordinates ($\mathbf V^{-1}$), scale each
-coordinate by its eigenvalue ($\boldsymbol\Lambda$), and change back
-($\mathbf V$). A square matrix $\mathbf A$ that can be written as
-$\mathbf A=\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$, with an invertible
-$\mathbf V$ and a diagonal $\boldsymbol\Lambda$, is called *diagonalizable*;
-the factorization is its *eigendecomposition*. It exists if and only if the
-matrix has $n$ linearly independent eigenvectors to fill the columns of
-$\mathbf V$.
+Read this factorization from right to left as three steps: change to
+eigenvector coordinates ($\mathbf V^{-1}$), scale each coordinate independently
+by its eigenvalue ($\boldsymbol\Lambda$), and change back to the original
+coordinates ($\mathbf V$). A square matrix $\mathbf A$ that can be written as
+$\mathbf A=\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$, with $\mathbf V$
+invertible and $\boldsymbol\Lambda$ diagonal, is called *diagonalizable*, and
+the factorization itself is its *eigendecomposition*. Such a factorization
+exists if and only if $\mathbf A$ has $n$ linearly independent eigenvectors to
+fill the columns of $\mathbf V$.
 
-Powers of a diagonalizable matrix reduce to powers of numbers. In a product of
-$k$ copies of
-$\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$, each inner pair
-$\mathbf V^{-1}\mathbf V$ cancels:
+Taking powers of a diagonalizable matrix now becomes effortless. In a product
+of $k$ copies of $\mathbf V\boldsymbol\Lambda\mathbf V^{-1}$, every adjacent
+pair $\mathbf V^{-1}\mathbf V$ cancels out:
 
 $$
 \mathbf{A}^k = \overbrace{(\mathbf{V}\boldsymbol{\Lambda} \mathbf{V}^{-1})\cdots(\mathbf{V}\boldsymbol{\Lambda} \mathbf{V}^{-1})}^{\textrm{$k$ times}} =  \mathbf{V}\overbrace{\boldsymbol{\Lambda}\cdots\boldsymbol{\Lambda}}^{\textrm{$k$ times}}\mathbf{V}^{-1} = \mathbf{V}\boldsymbol{\Lambda}^k \mathbf{V}^{-1}.
 $$
 
-Applied to a vector $\mathbf x$, with $\mathbf c=\mathbf V^{-1}\mathbf x$
-the coordinates of $\mathbf x$ in the eigenbasis, so that
-$\mathbf x=\sum_i c_i\mathbf v_i$, this reads
+Powers of a diagonalizable matrix thus reduce to powers of scalars. Applying
+$\mathbf A^k$ to a vector $\mathbf x$, and writing
+$\mathbf c=\mathbf V^{-1}\mathbf x$ for the coordinates of $\mathbf x$ in the
+eigenbasis (so that $\mathbf x=\sum_i c_i\mathbf v_i$), we obtain
 
 $$
 \mathbf A^k\mathbf x=\mathbf V\boldsymbol\Lambda^k\mathbf c
@@ -239,9 +258,10 @@ $$
 $$
 :eqlabel:`eq_mdl-eig-power-expansion`
 
-Each eigen-coordinate evolves on its own, as the scalar sequence
-$c_i\lambda_i^k$. For the surfer, $\mathbf c=\mathbf V^{-1}\mathbf p_0
-=\tfrac13(1,2)=(\tfrac13,\tfrac23)$, and therefore
+Each eigen-coordinate evolves independently as the geometric sequence
+$c_i\lambda_i^k$. For the surfer starting on page 1,
+$\mathbf c=\mathbf V^{-1}\mathbf p_0=\tfrac13(1,2)=(\tfrac13,\tfrac23)$, which
+gives the closed-form distribution after any number of clicks $k$:
 
 $$
 \mathbf p_k=\mathbf P^k\mathbf p_0
@@ -250,24 +270,25 @@ $$
 $$
 :eqlabel:`eq_mdl-markov-closed-form`
 
-This answers the opening question. The distribution approaches
-$\boldsymbol\pi=(1/3,2/3)$: in the long run the surfer spends twice as much
-time on page 2 as on page 1. The error is $\tfrac23\,4^{-k}$ in each entry and
-points along the eigenvector $(1,-1)$. Every click divides it by 4, so after
-10 clicks it is $6\times10^{-7}$ and after 50 clicks below $10^{-30}$. At
-$k=3$ the formula gives
-$(\tfrac13+\tfrac1{96},\ \tfrac23-\tfrac1{96})=(0.34375,0.65625)$, the third
-iterate of the opening. :numref:`fig_mdl-la-markov-iterates` shows the
-geometry: every $\mathbf p_k$ has entries summing to one, so the iterates
-slide along the line $x+y=1$ toward the point where the eigenvector of
-$\lambda=1$ meets it.
+This completely settles the opening question. As $k$ grows, the second term
+vanishes and the distribution approaches $\boldsymbol\pi=(1/3,2/3)$: in the
+long run, the surfer spends twice as much time on page 2 as on page 1. The
+remaining error is $\tfrac23\,4^{-k}$ in each entry and always points along the
+eigenvector $(1,-1)$. Every click divides that error by $4$, so after 10 clicks
+it has dropped to $6\times10^{-7}$, and after 50 clicks it is below $10^{-30}$.
+As a sanity check, setting $k=3$ gives
+$(\tfrac13+\tfrac1{96},\ \tfrac23-\tfrac1{96})=(0.34375,0.65625)$, matching
+the third iterate we computed at the start.
+:numref:`fig_mdl-la-markov-iterates` illustrates the geometry: because the
+entries of every $\mathbf p_k$ sum to one, the iterates slide along the line
+$x+y=1$ toward the point where the eigenvector of $\lambda=1$ intersects it.
 
 ![The surfer's distributions $\mathbf p_k$ slide along $x+y=1$ toward $\boldsymbol\pi=(1/3,2/3)$, where the eigenvector $(1,2)$ of $\lambda=1$ meets the line. The error points along the eigenvector $(1,-1)$ of $\lambda=1/4$ and shrinks by a factor of 4 per click.](../img/mdl-la-markov-iterates.svg)
 :label:`fig_mdl-la-markov-iterates`
 
-Fifty matrix multiplications and the two eigen-coordinates must give the same
-$\mathbf p_{50}$. The cell computes both and prints the ratio of consecutive
-errors.
+Let us verify that fifty matrix multiplications and the two-term
+eigen-expansion produce the same $\mathbf p_{50}$, and check the ratio of
+consecutive errors.
 
 ```{.python .input #mdl-eigendecomposition-diagonalization}
 p0 = np.array([1.0, 0.0])
@@ -280,29 +301,31 @@ errs = np.array([np.abs(np.linalg.matrix_power(P, k) @ p0 - pi).max()
 print('error ratios:', np.round(errs[1:] / errs[:-1], 4))
 ```
 
-The two computations agree, and every error ratio is $0.25$. The eigenvalue 1
-belongs to the part of $\mathbf p_0$ that survives, the eigenvalue $1/4$ to
-the part that dies out.
+The two computations agree, and every consecutive error ratio is $0.25$. The
+eigenvalue $1$ governs the part of $\mathbf p_0$ that survives, while the
+eigenvalue $1/4$ governs the part that dies out.
 
-The same recipe handles other functions of a diagonalizable matrix. If no
+The same recipe applies to other functions of a diagonalizable matrix. When no
 eigenvalue is zero, $\mathbf A^{-1}=\mathbf V\boldsymbol\Lambda^{-1}\mathbf V^{-1}$:
-invert each eigenvalue. The matrix exponential
-$e^{\mathbf A t}=\mathbf V e^{\boldsymbol\Lambda t}\mathbf V^{-1}$, which solves
-the differential equation $\dot{\mathbf x}=\mathbf A\mathbf x$, is obtained in
-the same way; :numref:`sec_mdl-odes-solvers` develops it.
+simply invert each eigenvalue on the diagonal. Similarly, the matrix
+exponential $e^{\mathbf A t}=\mathbf V e^{\boldsymbol\Lambda t}\mathbf V^{-1}$,
+which solves the linear differential equation $\dot{\mathbf x}=\mathbf A\mathbf x$,
+is built by exponentiating each eigenvalue; :numref:`sec_mdl-odes-solvers`
+develops it in detail.
 
-**Similarity.** The eigendecomposition says that $\mathbf P$ and
-$\boldsymbol\Lambda$ are the same map written in two bases. Two matrices
-related by $\mathbf A'=\mathbf B\mathbf A\mathbf B^{-1}$ for an invertible
-$\mathbf B$ are called *similar*. The next proposition shows that a change of
-basis cannot change the eigenvalues. It uses the multiplicativity of the
-determinant from :numref:`sec_mdl-linear-maps`,
+**Similarity.** The eigendecomposition tells us that $\mathbf P$ and
+$\boldsymbol\Lambda$ represent the very same linear map written in two
+different bases. In general, two matrices related by
+$\mathbf A'=\mathbf B\mathbf A\mathbf B^{-1}$ for some invertible
+$\mathbf B$ are called *similar*. The next proposition confirms that changing
+basis cannot alter a matrix's eigenvalues. It relies on the multiplicativity of
+the determinant from :numref:`sec_mdl-linear-maps`,
 
 $$
 \det(\mathbf X\mathbf Y)=\det\mathbf X\,\det\mathbf Y,
 $$
 
-which also gives $\det(\mathbf B^{-1})=1/\det\mathbf B$ from
+which in particular gives $\det(\mathbf B^{-1})=1/\det\mathbf B$ from
 $\mathbf B\mathbf B^{-1}=\mathbf I$.
 
 **Proposition (similar matrices share the characteristic polynomial).** *For
@@ -313,17 +336,17 @@ $$
 $$
 :eqlabel:`eq_mdl-similar-charpoly`
 
-**Proof.** Write $\lambda\mathbf I=\mathbf B(\lambda\mathbf I)\mathbf B^{-1}$
-and factor:
+**Proof.** Rewrite $\lambda\mathbf I=\mathbf B(\lambda\mathbf I)\mathbf B^{-1}$
+and factor out $\mathbf B$ and $\mathbf B^{-1}$:
 $\det(\mathbf B\mathbf A\mathbf B^{-1}-\lambda\mathbf I)
 =\det\bigl(\mathbf B(\mathbf A-\lambda\mathbf I)\mathbf B^{-1}\bigr)
 =\det\mathbf B\,\det(\mathbf A-\lambda\mathbf I)\,\det\mathbf B^{-1}
 =\det(\mathbf A-\lambda\mathbf I)$. $\blacksquare$
 
 Similar matrices therefore have the same eigenvalues with the same
-multiplicities as roots, and every quantity computed from the characteristic
-polynomial is a *similarity invariant*. The two most useful ones are the
-determinant and the trace. For a diagonalizable matrix,
+multiplicities as roots, and any quantity determined by the characteristic
+polynomial is a *similarity invariant*. The two most useful invariants are the
+determinant and the trace. For any diagonalizable matrix,
 
 $$
 \det(\mathbf{A}) = \det(\mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^{-1})
@@ -333,18 +356,18 @@ $$
 $$
 :eqlabel:`eq_mdl-det-eig`
 
-The determinant is the product of the eigenvalues: whatever $\mathbf V$ does
-to volumes, $\mathbf V^{-1}$ undoes, so only the scaling by
-$\boldsymbol\Lambda$ remains. The trace is cyclic
+Thus the determinant is the product of the eigenvalues: whatever volume
+distortion $\mathbf V$ introduces, $\mathbf V^{-1}$ undoes, leaving only the
+axis scaling of $\boldsymbol\Lambda$. For the trace, we use its cyclic property
 (:numref:`subsec_mdl-einsum`),
 
 $$
 \operatorname{tr}(\mathbf X\mathbf Y)=\operatorname{tr}(\mathbf Y\mathbf X),
 $$
 
-for any $\mathbf X$ and $\mathbf Y$ whose products are square. With
-$\mathbf X=\mathbf V$ and
-$\mathbf Y=\boldsymbol\Lambda\mathbf V^{-1}$,
+which holds for any $\mathbf X$ and $\mathbf Y$ whose products are square.
+Setting $\mathbf X=\mathbf V$ and
+$\mathbf Y=\boldsymbol\Lambda\mathbf V^{-1}$ gives
 
 $$
 \operatorname{tr}(\mathbf{A})
@@ -355,116 +378,125 @@ $$
 $$
 :eqlabel:`eq_mdl-tr-eig`
 
-The trace is the sum of the eigenvalues. On the surfer's matrix both identities
-check by eye: $\operatorname{tr}\mathbf P=\tfrac12+\tfrac34=\tfrac54=1+\tfrac14$
-and $\det\mathbf P=\tfrac38-\tfrac18=\tfrac14=1\cdot\tfrac14$. For a $2\times2$
-matrix the two numbers determine both eigenvalues, as the roots of
+Thus the trace is the sum of the eigenvalues. On the surfer's matrix we can
+check both identities at a glance:
+$\operatorname{tr}\mathbf P=\tfrac12+\tfrac34=\tfrac54=1+\tfrac14$ and
+$\det\mathbf P=\tfrac38-\tfrac18=\tfrac14=1\cdot\tfrac14$. For any $2\times2$
+matrix, these two numbers fix both eigenvalues directly as the roots of
 $\lambda^2-(\operatorname{tr})\lambda+\det$.
 
-Both identities hold for every square matrix, diagonalizable or not, if the
-eigenvalues are counted over $\mathbb C$ with their multiplicity as roots. The
-*fundamental theorem of algebra*, which we use without proof, says that a
-polynomial of degree $n$ factors completely over $\mathbb C$:
+In fact, both identities hold for *every* square matrix, diagonalizable or not,
+provided we count the eigenvalues over $\mathbb C$ with their multiplicities as
+roots. By the *fundamental theorem of algebra* (which we take as given), every
+degree-$n$ polynomial factors completely over $\mathbb C$:
 
 $$
 \det(\mathbf A-\lambda\mathbf I)=\prod_{i=1}^n(\lambda_i-\lambda).
 $$
 
-Setting $\lambda=0$ gives $\det\mathbf A=\prod_i\lambda_i$. For the trace,
-compare the coefficients of $\lambda^{n-1}$. On the right it is
-$(-1)^{n-1}\sum_i\lambda_i$. On the left, only the product of the diagonal
-entries of $\mathbf A-\lambda\mathbf I$ reaches degree $n-1$, so the
-coefficient is $(-1)^{n-1}\sum_i a_{ii}$. Hence
-$\operatorname{tr}\mathbf A=\sum_i\lambda_i$. The complex eigenvalues of a
-real matrix come in conjugate pairs, so the product and the sum are real.
+Setting $\lambda=0$ immediately yields $\det\mathbf A=\prod_i\lambda_i$. For
+the trace, compare the coefficients of $\lambda^{n-1}$ on both sides. On the
+right-hand side the coefficient is $(-1)^{n-1}\sum_i\lambda_i$. On the
+left-hand side, only the product of the diagonal entries of
+$\mathbf A-\lambda\mathbf I$ reaches degree $n-1$, giving
+$(-1)^{n-1}\sum_i a_{ii}$. Hence $\operatorname{tr}\mathbf A=\sum_i\lambda_i$.
+Because any non-real eigenvalues of a real matrix come in complex conjugate
+pairs, both the sum and the product remain real.
 
-Finally, the rank of a diagonalizable matrix is the number of its nonzero
-eigenvalues, counted with multiplicity: multiplying by the invertible
-$\mathbf V$ and $\mathbf V^{-1}$ changes no dimensions, so
+Finally, the rank of a diagonalizable matrix equals its number of nonzero
+eigenvalues, counted with multiplicity: multiplying by the invertible matrices
+$\mathbf V$ and $\mathbf V^{-1}$ preserves dimensions, so
 $\operatorname{rank}\mathbf A=\operatorname{rank}\boldsymbol\Lambda$.
-Exercise :exref:`ex_mdl-eigendecomposition-rank-zero-eigenvalues` treats the
-general case.
+Exercise :exref:`ex_mdl-eigendecomposition-rank-zero-eigenvalues` examines what
+happens when a matrix is not diagonalizable.
 
 ### Algebraic and Geometric Multiplicity
 :label:`subsec_mdl-multiplicity`
 
-The surfer's matrix had two distinct eigenvalues and two independent
-eigenvectors. The second fact follows from the first.
+The surfer's matrix had two distinct eigenvalues and yielded two linearly
+independent eigenvectors. That was no coincidence: distinct eigenvalues always
+produce independent eigenvectors.
 
 **Proposition (distinct eigenvalues give independent eigenvectors).**
 *Eigenvectors belonging to distinct eigenvalues are linearly independent. In
-particular, an $n\times n$ matrix with $n$ distinct eigenvalues is
+particular, any $n\times n$ matrix with $n$ distinct eigenvalues is
 diagonalizable.*
 
-**Proof.** Suppose, for contradiction, that some eigenvectors
+**Proof.** Suppose, for the sake of contradiction, that some eigenvectors
 $\mathbf{v}_1,\ldots,\mathbf{v}_m$ with distinct eigenvalues
-$\lambda_1,\ldots,\lambda_m$ are dependent, and take a dependence relation
-$\sum_{i=1}^{m} c_i\mathbf{v}_i = \mathbf 0$ with the fewest nonzero
-coefficients; relabel so that $c_m\neq0$. Such a relation has at least two
-nonzero coefficients, because $c_m\mathbf{v}_m=\mathbf 0$ alone would force
-$\mathbf{v}_m=\mathbf 0$. Apply $\mathbf{A}$ to the relation and subtract
-$\lambda_m$ times the relation:
+$\lambda_1,\ldots,\lambda_m$ are linearly dependent. Among all nontrivial
+dependence relations, choose one with the fewest nonzero coefficients,
+$\sum_{i=1}^{m} c_i\mathbf{v}_i = \mathbf 0$, and relabel if needed so that
+$c_m\neq0$. Such a relation must have at least two nonzero coefficients, since
+$c_m\mathbf{v}_m=\mathbf 0$ alone would force $\mathbf{v}_m=\mathbf 0$. Now
+apply $\mathbf{A}$ to the relation and subtract $\lambda_m$ times the original
+relation:
 
 $$
 \mathbf 0 = \mathbf{A}\!\sum_i c_i\mathbf{v}_i - \lambda_m\!\sum_i c_i\mathbf{v}_i
    = \sum_{i=1}^{m-1} c_i(\lambda_i-\lambda_m)\,\mathbf{v}_i .
 $$
 
-The $\mathbf{v}_m$ term cancels, so this relation is shorter. It is still
-nontrivial: the second nonzero coefficient $c_i$, $i<m$, survives as
+The $\mathbf{v}_m$ term drops out, leaving a shorter relation. Yet it is still
+nontrivial: any other nonzero coefficient $c_i$ ($i<m$) survives as
 $c_i(\lambda_i-\lambda_m)\neq0$ because the eigenvalues are distinct. This
-contradicts minimality. With $n$ distinct eigenvalues we obtain $n$
-independent eigenvectors, a basis of $\mathbb C^n$ (of $\mathbb R^n$ when the
-eigenvalues are real), so $\mathbf{V}$ is invertible. $\blacksquare$
+contradicts the minimality of our chosen relation. When $\mathbf A$ has $n$
+distinct eigenvalues, its $n$ independent eigenvectors form a basis of
+$\mathbb C^n$ (or of $\mathbb R^n$ when all eigenvalues are real), so
+$\mathbf{V}$ is invertible. $\blacksquare$
 
-With repeated eigenvalues there are two counts. The number of times
-$\lambda$ appears as a root of the characteristic polynomial is its
-*algebraic multiplicity* $a(\lambda)$. The dimension of its eigenspace, the
-number of independent eigenvectors it contributes, is its *geometric
+When eigenvalues repeat, we have to keep track of two different counts. The
+number of times $\lambda$ appears as a root of the characteristic polynomial is
+its *algebraic multiplicity* $a(\lambda)$. The dimension of its eigenspace—the
+number of linearly independent eigenvectors it contributes—is its *geometric
 multiplicity* $g(\lambda)$.
 
 **Proposition.** *For every eigenvalue $\lambda$ of a square matrix,
 $1\le g(\lambda)\le a(\lambda)$.*
 
-**Proof.** Since $\mathbf A-\lambda\mathbf I$ is singular, its null space is
-not zero, so $g\ge1$. For the upper bound, take a basis
+**Proof.** Because $\mathbf A-\lambda\mathbf I$ is singular, its null space is
+nontrivial, which gives $g\ge1$. For the upper bound, pick a basis
 $\mathbf v_1,\ldots,\mathbf v_g$ of the eigenspace, extend it to a basis of
-$\mathbb C^n$, and collect the basis as the columns of $\mathbf B$. The first
-$g$ columns of $\mathbf A\mathbf B$ are $\lambda\mathbf v_1,\ldots,\lambda\mathbf v_g$,
-so in this basis the matrix is block upper triangular,
+$\mathbb C^n$, and place these basis vectors as the columns of $\mathbf B$.
+The first $g$ columns of $\mathbf A\mathbf B$ are simply
+$\lambda\mathbf v_1,\ldots,\lambda\mathbf v_g$, so in this new basis the matrix
+takes a block upper-triangular form:
 
 $$
 \mathbf B^{-1}\mathbf A\mathbf B=\begin{pmatrix}\lambda\mathbf I_g&\mathbf X\\\mathbf 0&\mathbf Y\end{pmatrix}.
 $$
 
-By :eqref:`eq_mdl-similar-charpoly` it has the characteristic polynomial $p$
-of $\mathbf A$. We write the variable of $p$ as $t$, because $\lambda$ now
-denotes the fixed eigenvalue. Subtracting $t\mathbf I$ keeps the matrix block
-upper triangular, with the diagonal blocks $(\lambda-t)\mathbf I_g$ and
-$\mathbf Y-t\mathbf I$. The determinant of such a matrix is the product of
-the determinants of its diagonal blocks
-(:numref:`subsec_mdl-determinant-general`), so
-$p(t)=(\lambda-t)^g\det(\mathbf Y-t\mathbf I)$. Hence $(\lambda-t)^g$ divides
-the characteristic polynomial, and $a\ge g$. $\blacksquare$
+By :eqref:`eq_mdl-similar-charpoly`, this matrix has the same characteristic
+polynomial $p$ as $\mathbf A$. Let us write the polynomial variable as $t$,
+since $\lambda$ now stands for our fixed eigenvalue. Subtracting $t\mathbf I$
+preserves the block upper-triangular structure, with diagonal blocks
+$(\lambda-t)\mathbf I_g$ and $\mathbf Y-t\mathbf I$. Because the determinant
+of a block upper-triangular matrix is the product of the determinants of its
+diagonal blocks (:numref:`subsec_mdl-determinant-general`), we get
+$p(t)=(\lambda-t)^g\det(\mathbf Y-t\mathbf I)$. Thus $(\lambda-t)^g$ divides
+the characteristic polynomial, which means $a\ge g$. $\blacksquare$
 
-An eigenvalue can never have more independent eigenvectors than its count as
-a root, but it can have fewer. Now choose a basis of every eigenspace. The
-chosen vectors are jointly independent: if a combination of them vanishes,
-group it by eigenvalue; each group is zero or an eigenvector, and the
-proposition on distinct eigenvalues forces every group to be zero. A matrix
-therefore has $\sum_\lambda g(\lambda)$ independent eigenvectors and no more.
-Over $\mathbb C$ the algebraic multiplicities add up to $n$, and
-$g\le a$, so *the eigenvectors of $\mathbf A$ span $\mathbb C^n$ if and only
-if $g(\lambda)=a(\lambda)$ for every complex eigenvalue $\lambda$*.
+An eigenvalue can never supply more independent eigenvectors than its
+multiplicity as a root, though it can supply fewer. Now pick a basis for each
+eigenspace and pool all the chosen vectors together. They are jointly
+independent: if a linear combination of them equals zero, group the terms by
+eigenvalue; each group is either zero or an eigenvector, and the proposition on
+distinct eigenvalues forces every group to vanish. A matrix therefore possesses
+at most $\sum_\lambda g(\lambda)$ linearly independent eigenvectors. Over
+$\mathbb C$, the algebraic multiplicities sum to $n$ and $g(\lambda)\le a(\lambda)$
+for every $\lambda$, which gives a crisp criterion: *the eigenvectors of
+$\mathbf A$ span $\mathbb C^n$ if and only if $g(\lambda)=a(\lambda)$ for every
+complex eigenvalue $\lambda$*.
 
-A real matrix has a basis of real eigenvectors if and only if, in addition,
-all of its eigenvalues are real. The rotation by $90^\circ$,
-$\mathbf R_{90}=\left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$,
-shows that the second condition is needed: its eigenvalues $\pm i$ each have
-$g=a=1$, so it has a complex eigenbasis, but no real eigenvector.
+For a real matrix to have a basis of *real* eigenvectors, all of its
+eigenvalues must also be real. The $90^\circ$ rotation
+$\mathbf R_{90}=\left(\begin{smallmatrix}0&-1\\1&0\end{smallmatrix}\right)$
+shows why that extra requirement is essential: its eigenvalues $\pm i$ each
+satisfy $g=a=1$, so it has a full complex eigenbasis, yet no real eigenvector
+at all.
 
-When eigenvalues repeat, diagonalizability can fail. The simplest example is
-the *shear* of :numref:`subsec_mdl-composition`,
+When eigenvalues repeat, diagonalizability can fail altogether. The simplest
+counterexample is the *shear* from :numref:`subsec_mdl-composition`:
 
 $$
 \mathbf{T} = \begin{pmatrix}
@@ -475,35 +507,35 @@ $$
 :eqlabel:`eq_mdl-defective-shear`
 
 Its characteristic polynomial is $(1-\lambda)^2$, so $\lambda=1$ has algebraic
-multiplicity 2. But $(\mathbf{T}-\mathbf{I})\mathbf{v}=\mathbf 0$ reads
+multiplicity $2$. Yet $(\mathbf{T}-\mathbf{I})\mathbf{v}=\mathbf 0$ becomes
 $\left(\begin{smallmatrix}0&1\\0&0\end{smallmatrix}\right)\mathbf v=\mathbf 0$,
-that is, $v_2=0$, so the eigenspace is the line spanned by $(1,0)$. The geometric
-multiplicity is 1, there is no eigenbasis, and the shear is not
-diagonalizable. A matrix with $g(\lambda)<a(\lambda)$ for some eigenvalue is
-called *defective*. :numref:`fig_mdl-la-defective-shear` shows the shortage:
-the shear slides every horizontal line sideways by an amount proportional to
-its height, and the horizontal axis is the only line through the origin that
-keeps its direction. A diagonalizable $2\times2$ matrix with a repeated
-eigenvalue $\lambda$ would be $\lambda\mathbf I$ and would keep every
-direction.
+which forces $v_2=0$. The eigenspace is only the line spanned by $(1,0)$, so
+the geometric multiplicity is $1$. There is no eigenbasis, and the shear is not
+diagonalizable. Any matrix with $g(\lambda)<a(\lambda)$ for some eigenvalue is
+called *defective*. :numref:`fig_mdl-la-defective-shear` makes the shortage
+visible: the shear slides every horizontal line sideways in proportion to its
+height, leaving the horizontal axis as the sole line through the origin that
+keeps its direction. (By contrast, a diagonalizable $2\times2$ matrix with a
+repeated eigenvalue $\lambda$ would have to be $\lambda\mathbf I$, which
+preserves every direction.)
 
-![The defective shear acting on the plane. Every horizontal line slides to the right by an amount proportional to its height, so the grid tilts, but the $x$-axis (green) is carried to itself: $\mathbf{T}\mathbf{e}_1=\mathbf{e}_1$, the only eigendirection, with $\lambda=1$. The other basis vector picks up a horizontal component, $\mathbf{T}\mathbf{e}_2=(1,1)$, and no second direction is preserved: geometric multiplicity 1 against algebraic multiplicity 2.](../img/mdl-la-defective-shear.svg)
+![The defective shear acting on the plane. Every horizontal line slides to the right by an amount proportional to its height, tilting the grid, while the $x$-axis (green) maps to itself: $\mathbf{T}\mathbf{e}_1=\mathbf{e}_1$ is the only eigendirection, with $\lambda=1$. The other basis vector picks up a horizontal component, $\mathbf{T}\mathbf{e}_2=(1,1)$, so no second direction is preserved: geometric multiplicity 1 against algebraic multiplicity 2.](../img/mdl-la-defective-shear.svg)
 :label:`fig_mdl-la-defective-shear`
 
-Powers of the shear show what defectiveness does to iteration:
-$\mathbf T^k=\left(\begin{smallmatrix}1&k\\0&1\end{smallmatrix}\right)$, so
-$\mathbf T^k\mathbf e_2=(k,1)$ grows without bound although the only
-eigenvalue is 1. No eigen-expansion can produce the factor $k$; the next
-subsection explains where it comes from.
+Iterating the shear shows how defectiveness changes the behavior of matrix
+powers: $\mathbf T^k=\left(\begin{smallmatrix}1&k\\0&1\end{smallmatrix}\right)$,
+so $\mathbf T^k\mathbf e_2=(k,1)$ grows without bound even though the only
+eigenvalue is $1$. No pure eigen-expansion can produce that linear factor $k$.
+The next subsection explains where it comes from.
 
 ### The Jordan Normal Form
 :label:`subsec_mdl-jordan`
 
-When the geometric multiplicity falls short, no eigenbasis exists. What
-structure remains? Later text needs one consequence of the answer: a
+When geometric multiplicity falls short, no eigenbasis exists. What structure
+takes its place? For what follows in this book, one consequence matters most: a
 defective eigenvalue multiplies $\lambda^k$ by a polynomial in $k$. Over the
 complex numbers, every square matrix is similar to a block-diagonal matrix
-whose diagonal blocks are *Jordan blocks*
+built from *Jordan blocks*
 
 $$
 \mathbf{J}_m(\lambda) =
@@ -515,38 +547,41 @@ $$
 \end{pmatrix},
 $$
 
-$m\times m$ blocks with one eigenvalue $\lambda$ repeated down the diagonal and
-1s just above it. This is the *Jordan normal form* :cite:`Horn.Johnson.2012`,
-which we use without proof. By :eqref:`eq_mdl-similar-charpoly` it carries the
-same eigenvalues as the original matrix.
+which are $m\times m$ blocks carrying a single eigenvalue $\lambda$ down the
+diagonal and $1$s on the superdiagonal immediately above it. This
+factorization is the *Jordan normal form* :cite:`Horn.Johnson.2012`, which we
+use without proof. By :eqref:`eq_mdl-similar-charpoly`, it has the same
+eigenvalues as the original matrix.
 
-Each block contributes one eigenvector, its first basis vector. The
-geometric multiplicity of $\lambda$ is therefore the number of blocks
-carrying $\lambda$, the algebraic multiplicity is their total size, and a
-matrix is diagonalizable if and only if every block is $1\times1$. The shear
-$\mathbf T$ of :eqref:`eq_mdl-defective-shear` is the single block
-$\mathbf{J}_2(1)$.
+Each Jordan block supplies exactly one eigenvector, namely its first basis
+vector. The geometric multiplicity of $\lambda$ is therefore the number of
+blocks carrying $\lambda$, while its algebraic multiplicity is the sum of
+their sizes. In particular, a matrix is diagonalizable if and only if every
+Jordan block has size $1\times1$. The shear $\mathbf T$ of
+:eqref:`eq_mdl-defective-shear` is the single block $\mathbf{J}_2(1)$.
 
-Under iteration a Jordan block does more than scale. Write
+Under repeated application, a Jordan block does more than simply scale. Write
 $\mathbf{J}_m(\lambda)=\lambda\mathbf{I}+\mathbf{N}$, where $\mathbf{N}$ has
-1s just above the diagonal and zeros elsewhere. $\mathbf N$ is a shift: it
-sends each basis vector to the previous one, so $\mathbf N^m=\mathbf 0$ (a
-matrix with a vanishing power is called *nilpotent*). Because $\mathbf{I}$ and
-$\mathbf{N}$ commute, the binomial theorem applies, and for $m=2$ every term
-beyond the first two contains $\mathbf{N}^2=\mathbf 0$:
+$1$s just above the diagonal and zeros everywhere else. Geometrically,
+$\mathbf N$ acts as a shift, sending each basis vector to the previous one, so
+$\mathbf N^m=\mathbf 0$ (any matrix with a vanishing power is called
+*nilpotent*). Because $\mathbf{I}$ and $\mathbf{N}$ commute, we can expand
+powers with the binomial theorem. For $m=2$, every term beyond the first two
+contains $\mathbf{N}^2=\mathbf 0$, leaving
 
 $$
 \mathbf{J}_2(\lambda)^k = (\lambda\mathbf{I}+\mathbf{N})^k
   = \lambda^k\mathbf{I} + k\lambda^{k-1}\mathbf{N}.
 $$
 
-The eigenvalue still decides between growth and decay in the long run, but it
-is multiplied by a polynomial in $k$ (of degree $m-1$ for a block of size $m$).
-With $|\lambda|=1$, as for the shear, the iterates drift linearly. With
-$|\lambda|$ slightly below 1, the corner entry $k\lambda^{k-1}$ first grows,
-peaks near $k\approx-1/\log|\lambda|$, and only then decays. For $\lambda=0.99$
-this puts the peak near $k\approx100$, where the corner entry is
-$100\cdot0.99^{99}\approx37$. The cell checks the prediction.
+In the long run, the eigenvalue still decides between growth and decay, but it
+is now multiplied by a polynomial in $k$ (of degree $m-1$ for an $m\times m$
+block). When $|\lambda|=1$, as in the shear, the iterates drift linearly. When
+$|\lambda|$ is slightly below $1$, something more surprising happens: the
+upper-right entry $k\lambda^{k-1}$ initially grows, peaks near
+$k\approx-1/\log|\lambda|$, and only then decays toward zero. For
+$\lambda=0.99$ this puts the peak near $k\approx100$, where the entry reaches
+$100\cdot0.99^{99}\approx37$. Let us check this prediction numerically.
 
 ```{.python .input #mdl-eigendecomposition-jordan-power}
 J = np.array([[0.99, 1.], [0., 0.99]])   # the Jordan block J_2(0.99)
@@ -557,15 +592,16 @@ for k in [1, 50, 100, 200, 800]:
           f'k * 0.99^(k-1) = {pred:8.3f}')
 ```
 
-Every eigenvalue of $\mathbf{J}$ is $0.99$, yet the norm of its powers climbs to
-about 37 at $k=100$ and is still 27 at $k=200$ before the factor $0.99^k$
-dominates. The eigenvalues alone do not reveal this transient growth, to which
-:numref:`subsec_mdl-transient-growth` returns.
+Every eigenvalue of $\mathbf{J}$ is $0.99$, yet the norm of its powers climbs
+to about $37$ at $k=100$ and is still $27$ at $k=200$ before the exponential
+factor $0.99^k$ finally takes over. Eigenvalues alone do not warn us about this
+transient growth, a phenomenon we revisit in
+:numref:`subsec_mdl-transient-growth`.
 
-Jordan blocks are one way in which a real matrix falls short of a real
-eigenbasis: it has too few eigenvectors. The second way is different in kind.
-A real matrix can have no real eigenvector at all in some plane, because it
-rotates that plane.
+Jordan blocks represent one way a real matrix can lack a real eigenbasis: it
+simply has too few eigenvectors. The second way is quite different in nature.
+A real matrix can lack any real eigenvector in a plane because it *rotates*
+that plane.
 
 ### Complex Eigenvalues
 :label:`subsec_mdl-complex-rotation`
@@ -578,25 +614,26 @@ $$
                             \sin\theta & \phantom{-}\cos\theta\end{pmatrix}.
 $$
 
-If $\theta$ is not a multiple of $\pi$, $\mathbf{R}_\theta$ turns every nonzero
-real vector, so it has no real eigenvector. Its characteristic polynomial
+Whenever $\theta$ is not a multiple of $\pi$, $\mathbf{R}_\theta$ turns every
+nonzero real vector, leaving no real eigenvector. Its characteristic polynomial
 $\lambda^2-2\cos\theta\,\lambda+1$ has the complex conjugate roots
-$\lambda=\cos\theta\pm i\sin\theta=e^{\pm i\theta}$. The modulus
-$|\lambda|=1$ records that $\mathbf{R}_\theta$ preserves lengths, and the
-argument $\pm\theta$ records the angle.
+$\lambda=\cos\theta\pm i\sin\theta=e^{\pm i\theta}$. Here the modulus
+$|\lambda|=1$ reflects that $\mathbf{R}_\theta$ preserves lengths, while the
+argument $\pm\theta$ records the rotation angle.
 
-The chapter's running $2\times2$ matrix has no visible rotation in its
-entries:
+Now look at the chapter's running $2\times2$ matrix, which shows no obvious
+rotation in its entries:
 
 $$
 \mathbf A=\begin{pmatrix}1&2\\-1&3\end{pmatrix},
 \qquad \operatorname{tr}\mathbf A=4,\quad \det\mathbf A=5 .
 $$
 
-Its characteristic polynomial is $\lambda^2-4\lambda+5$, with roots
-$\lambda=2\pm i=\sqrt5\,e^{\pm i\theta}$ and $\theta=\arctan\tfrac12\approx26.6^\circ$.
-The eigenvector for $2+i$ comes from the second row of
-$\mathbf A-(2+i)\mathbf I$, which reads $-w_1+(1-i)w_2=0$. With $w_2=1$,
+Its characteristic polynomial is $\lambda^2-4\lambda+5$, whose roots are
+$\lambda=2\pm i=\sqrt5\,e^{\pm i\theta}$ with
+$\theta=\arctan\tfrac12\approx26.6^\circ$. To find an eigenvector for $2+i$,
+read off the second row of $\mathbf A-(2+i)\mathbf I$, which gives
+$-w_1+(1-i)w_2=0$. Setting $w_2=1$ yields
 
 $$
 \mathbf w=\begin{pmatrix}1-i\\1\end{pmatrix}
@@ -604,11 +641,12 @@ $$
 +i\underbrace{\begin{pmatrix}-1\\0\end{pmatrix}}_{\mathbf v}.
 $$
 
-Where is the rotation hidden? Take any real matrix with an eigenpair
-$\mathbf{A}\mathbf{w}=\lambda\mathbf{w}$, $\lambda=a+ib$, $b\neq0$, and split
-the eigenvector into real and imaginary parts, $\mathbf{w}=\mathbf{u}+i\mathbf{v}$.
-Expanding $\mathbf{A}(\mathbf{u}+i\mathbf{v})=(a+ib)(\mathbf{u}+i\mathbf{v})$
-and matching real and imaginary parts gives
+Where is the rotation hiding? Take any real matrix $\mathbf{A}$ with a complex
+eigenpair $\mathbf{A}\mathbf{w}=\lambda\mathbf{w}$, where $\lambda=a+ib$ and
+$b\neq0$, and separate the eigenvector into its real and imaginary parts,
+$\mathbf{w}=\mathbf{u}+i\mathbf{v}$. Expanding
+$\mathbf{A}(\mathbf{u}+i\mathbf{v})=(a+ib)(\mathbf{u}+i\mathbf{v})$ and
+equating real and imaginary parts gives
 
 $$
 \mathbf{A}\mathbf{u} = a\mathbf{u} - b\mathbf{v},
@@ -616,15 +654,17 @@ $$
 \mathbf{A}\mathbf{v} = b\mathbf{u} + a\mathbf{v}.
 $$
 
-Both images land back in $\operatorname{span}\{\mathbf{u},\mathbf{v}\}$, so
-this span is an invariant subspace. It is a plane. If $\mathbf u$ and
-$\mathbf v$ were dependent, their span would be a line (not zero, since
-$\mathbf w\neq\mathbf 0$) mapped into itself, on which $\mathbf A$ multiplies by
-a real number $\mu$. Then $\mathbf A\mathbf w=\mu\mathbf w$, and $\lambda=\mu$
-would be real, contradicting $b\neq0$. Collecting the two identities as
-columns with $\mathbf{B}=[\mathbf{v}\;\;\mathbf{u}]$ gives
+Both images stay inside $\operatorname{span}\{\mathbf{u},\mathbf{v}\}$, so
+this subspace is invariant under $\mathbf{A}$. Moreover, it is a genuine
+two-dimensional plane. If $\mathbf u$ and $\mathbf v$ were linearly dependent,
+their span would be a single line (not zero, because $\mathbf w\neq\mathbf 0$)
+mapped into itself, on which $\mathbf A$ would act by multiplying by some real
+scalar $\mu$. That would force $\mathbf A\mathbf w=\mu\mathbf w$, making
+$\lambda=\mu$ real and contradicting $b\neq0$. Placing $\mathbf{v}$ and
+$\mathbf{u}$ as the columns of $\mathbf{B}=[\mathbf{v}\;\;\mathbf{u}]$ turns
+the two identities into
 $\mathbf{A}\mathbf{B}=\mathbf{B}\left(\begin{smallmatrix}a & -b\\ b & \phantom{-}a\end{smallmatrix}\right)$,
-that is,
+or equivalently,
 
 $$
 \mathbf{B}^{-1}\mathbf{A}\mathbf{B}
@@ -635,20 +675,22 @@ $$
 $$
 :eqlabel:`eq_mdl-rotation-scaling-block`
 
-In the basis $(\mathbf v,\mathbf u)$ of its invariant plane, the matrix is a
-rotation--scaling block $r\mathbf R_\theta$: it scales by the modulus and
-rotates by the argument. The block does not depend on the scale or phase of
-$\mathbf w$, since the derivation used only $\mathbf A\mathbf w=\lambda\mathbf w$.
-The correspondence also reads from right to left. Identify
-$(x,y)\in\mathbb{R}^2$ with the complex number $x+iy$. The block maps
-$(x,y)$ to $(ax-by,\,bx+ay)$, which is multiplication by $a+ib$.
+In the basis $(\mathbf v,\mathbf u)$ of its invariant plane, $\mathbf{A}$ acts
+as a rotation--scaling block $r\mathbf R_\theta$: it scales by the modulus $r$
+and rotates by the argument $\theta$. Because the derivation used only
+$\mathbf A\mathbf w=\lambda\mathbf w$, this block is independent of how
+$\mathbf w$ is scaled or rotated in phase. The connection also works in
+reverse: if we identify $(x,y)\in\mathbb{R}^2$ with the complex number
+$x+iy$, then the block maps $(x,y)$ to $(ax-by,\,bx+ay)$, which is simply
+complex multiplication by $a+ib$.
 
-For the running matrix, $\mathbf B=\left(\begin{smallmatrix}-1&1\\0&1\end{smallmatrix}\right)$
-and $\mathbf B^{-1}\mathbf A\mathbf B=\left(\begin{smallmatrix}2&-1\\1&2\end{smallmatrix}\right)$:
-scale by $\sqrt5$ and rotate by $26.6^\circ$. If that were the whole
-description, every step would lengthen a vector by the factor
-$\sqrt5\approx2.24$. We compute the block from the eigenvector that `eig`
-returns and then follow the lengths of the iterates $\mathbf A^k(1,0)$.
+For our running matrix $\mathbf A$, we have
+$\mathbf B=\left(\begin{smallmatrix}-1&1\\0&1\end{smallmatrix}\right)$ and
+$\mathbf B^{-1}\mathbf A\mathbf B=\left(\begin{smallmatrix}2&-1\\1&2\end{smallmatrix}\right)$,
+which scales by $\sqrt5$ and rotates by $26.6^\circ$. One might expect every
+step to lengthen a vector by the factor $\sqrt5\approx2.24$. Let us compute
+the block from the eigenvector returned by `eig` and track the actual lengths
+of the iterates $\mathbf A^k(1,0)$.
 
 ```{.python .input #mdl-eigendecomposition-complex-eigenvalues-are-rotations-1}
 A = np.array([[1., 2.], [-1., 3.]])
@@ -668,33 +710,36 @@ x20 = np.linalg.matrix_power(A, 20) @ np.array([1., 0.])
 print(f'average rate ||A^20 x||^(1/20) = {np.linalg.norm(x20) ** (1 / 20):.3f}')
 ```
 
-The block is $\left(\begin{smallmatrix}2&-1\\1&2\end{smallmatrix}\right)$,
-whatever eigenvector `eig` returned. The lengths, however, do not grow by
-2.24 per step. Along the iterates
-$(1,0)\to(1,-1)\to(-1,-4)\to(-9,-11)\to(-31,-24)$ the ratios swing between
-about 1.4 and 3.5. The scaling is uniform only in
-the coordinates $(\mathbf v,\mathbf u)$, which are not orthonormal. In the
-original coordinates the iterates spiral outward along stretched ellipses,
-and a full turn takes $2\pi/\theta\approx13.6$ steps. Only the average rate
-$\|\mathbf A^k\mathbf x\|^{1/k}$ settles at $\sqrt5$ (it is 2.25 at $k=20$).
-The motion is a rigid rotation and scaling only when the matrix is normal, a
-property defined in :numref:`subsec_mdl-normal-matrices`.
+Regardless of which eigenvector `eig` chooses, the resulting block is
+$\left(\begin{smallmatrix}2&-1\\1&2\end{smallmatrix}\right)$. Yet the vector
+lengths do *not* grow by a steady factor of $2.24$ at each step. Along the
+trajectory $(1,0)\to(1,-1)\to(-1,-4)\to(-9,-11)\to(-31,-24)$, the per-step
+norm ratios swing between roughly $1.4$ and $3.5$. The reason is that the
+scaling is uniform only in the coordinates $(\mathbf v,\mathbf u)$, which are
+not orthonormal. Back in standard coordinates, the iterates spiral outward
+along stretched ellipses, completing a full turn roughly every
+$2\pi/\theta\approx13.6$ steps. Only the long-run geometric average
+$\|\mathbf A^k\mathbf x\|^{1/k}$ settles at $\sqrt5$ (reaching $2.25$ by
+$k=20$). The motion is a rigid rotation and uniform scaling in standard
+coordinates only when the matrix is *normal*, a property we define in
+:numref:`subsec_mdl-normal-matrices`.
 
-Every real square matrix is built, up to a real change of basis, from the
-three behaviours we have now seen, alone or combined: stretch along a line,
-shear within a Jordan block, and rotation with scaling in a plane. This is
-the *real Jordan form* :cite:`Horn.Johnson.2012`.
+Up to a real change of basis, every real square matrix is built from the three
+elementary behaviors we have now uncovered, alone or in combination: stretching
+along a line, shearing within a Jordan block, and rotating with scaling in a
+plane. This decomposition is known as the *real Jordan form*
+:cite:`Horn.Johnson.2012`.
 
 ## Symmetric Matrices and Quadratic Forms
 
 ### The Spectral Theorem
 :label:`subsec_mdl-spectral-theorem`
 
-For which matrices is a real, orthonormal eigenbasis guaranteed? Symmetry
-rules out both failures we have met, too few eigenvectors and complex ones.
-The symmetric $\mathbf S$ of :numref:`sec_linear-algebra` shows what to
-expect. Its unit eigenvectors
-$(1,1)/\sqrt2$ and $(1,-1)/\sqrt2$ are perpendicular, and with them
+Which matrices guarantee a real, orthonormal eigenbasis? Symmetry eliminates
+both obstacles we just encountered: it rules out complex eigenvalues as well as
+shortages of eigenvectors. The symmetric matrix $\mathbf S$ from
+:numref:`sec_linear-algebra` shows what happens. Its unit eigenvectors
+$(1,1)/\sqrt2$ and $(1,-1)/\sqrt2$ are perpendicular, giving
 
 $$
 \mathbf S=\begin{pmatrix}2&1\\1&2\end{pmatrix}
@@ -703,11 +748,11 @@ $$
 \underbrace{\frac1{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}}_{\mathbf V^\top}.
 $$
 
-The eigenvector matrix is orthogonal, $\mathbf V^\top\mathbf V=\mathbf I$, so
-its inverse is its transpose. The spectral theorem states that this holds for
-every symmetric matrix. It is the theorem of this chapter: positive
-definiteness, the Rayleigh quotient, and all of
-:numref:`sec_mdl-svd-low-rank` rest on it.
+Because the eigenvector matrix $\mathbf V$ is orthogonal
+($\mathbf V^\top\mathbf V=\mathbf I$), its inverse is simply its transpose. The
+spectral theorem guarantees that this holds for *every* real symmetric matrix.
+It is the central theorem of this chapter: positive definiteness, the Rayleigh
+quotient, and all of :numref:`sec_mdl-svd-low-rank` rest on it.
 
 **Theorem (spectral theorem).** *Every real symmetric matrix $\mathbf{A}$ has
 real eigenvalues and an orthonormal basis of real eigenvectors. Equivalently,*
@@ -720,20 +765,21 @@ $$
 *where $\boldsymbol{\Lambda}=\operatorname{diag}(\lambda_1,\ldots,\lambda_n)$
 is real and $\mathbf{V}$ is orthogonal.*
 
-We prove three claims in turn: the eigenvalues are real, eigenvectors of
-distinct eigenvalues are orthogonal, and an orthonormal eigenbasis exists. For
-complex vectors we use the inner product
-$\langle\mathbf x,\mathbf y\rangle=\mathbf x^*\mathbf y$, where $\mathbf x^*$
-is the conjugate transpose; on real vectors it is the dot product. The only
-fact we borrow is that the characteristic polynomial has at least one complex
-root (the fundamental theorem of algebra), so at least one eigenpair exists
-over $\mathbb{C}$. Parts (i) and (ii) are two-line computations; the work is
-in part (iii).
+We prove this in three steps: first, every eigenvalue is real; second,
+eigenvectors for distinct eigenvalues are orthogonal; third, a full orthonormal
+eigenbasis always exists. For complex vectors we use the Hermitian inner
+product $\langle\mathbf x,\mathbf y\rangle=\mathbf x^*\mathbf y$, where
+$\mathbf x^*$ is the conjugate transpose (which reduces to the ordinary dot
+product on real vectors). The only external fact we borrow is that the
+characteristic polynomial has at least one complex root (the fundamental
+theorem of algebra), ensuring that at least one eigenpair exists over
+$\mathbb{C}$. Parts (i) and (ii) take only two lines each; the real work is in
+part (iii).
 
-**Proof, part (i): the eigenvalues are real.** Let
-$\mathbf{A}\mathbf{v}=\lambda\mathbf{v}$ with $\mathbf{v}\neq\mathbf 0$, allowing
-complex entries. Since $\mathbf{A}$ is real and symmetric,
-$\mathbf A^*=\mathbf A^\top=\mathbf A$, so
+**Proof, part (i): the eigenvalues are real.** Suppose
+$\mathbf{A}\mathbf{v}=\lambda\mathbf{v}$ with $\mathbf{v}\neq\mathbf 0$,
+allowing complex entries for the moment. Because $\mathbf{A}$ is real and
+symmetric, $\mathbf A^*=\mathbf A^\top=\mathbf A$, and therefore
 
 $$
 \lambda\,\mathbf{v}^*\mathbf{v}
@@ -742,32 +788,34 @@ $$
    = \bar\lambda\,\mathbf{v}^*\mathbf{v}.
 $$
 
-Because $\mathbf{v}^*\mathbf{v}=\|\mathbf v\|^2>0$, we may divide by it and
-obtain $\lambda=\bar\lambda$: the eigenvalue is real. The eigenvector can then
-be taken real as well, since it solves the real system
-$(\mathbf A-\lambda\mathbf I)\mathbf v=\mathbf 0$. $\blacksquare$
+Since $\mathbf{v}^*\mathbf{v}=\|\mathbf v\|^2>0$, we can divide both sides by
+it to obtain $\lambda=\bar\lambda$: the eigenvalue must be real. Its
+eigenvector can then be chosen real as well, because it solves the real
+homogeneous system $(\mathbf A-\lambda\mathbf I)\mathbf v=\mathbf 0$.
+$\blacksquare$
 
 **Proof, part (ii): eigenvectors of distinct eigenvalues are orthogonal.** Let
 $\mathbf{A}\mathbf{u}=\lambda\mathbf{u}$ and
-$\mathbf{A}\mathbf{v}=\mu\mathbf{v}$ with $\lambda\neq\mu$, both real by (i),
-and $\mathbf u$, $\mathbf v$ real. Using $\mathbf{A}=\mathbf{A}^\top$ to move
-$\mathbf{A}$ from one side of the inner product to the other,
+$\mathbf{A}\mathbf{v}=\mu\mathbf{v}$ with $\lambda\neq\mu$, where both
+eigenvalues and both eigenvectors are real by part (i). Using
+$\mathbf{A}=\mathbf{A}^\top$ to move $\mathbf{A}$ across the inner product,
 
 $$
 \lambda\langle\mathbf{u},\mathbf{v}\rangle
   = \langle\mathbf{A}\mathbf{u},\mathbf{v}\rangle
   = \langle\mathbf{u},\mathbf{A}\mathbf{v}\rangle
-  = \mu\langle\mathbf{u},\mathbf{v}\rangle,
+  = \mu\langle\mathbf{u},\mathbf{v}\rangle.
 $$
 
-so $(\lambda-\mu)\langle\mathbf{u},\mathbf{v}\rangle=0$, and since
-$\lambda\neq\mu$, $\langle\mathbf{u},\mathbf{v}\rangle=0$. $\blacksquare$
+Thus $(\lambda-\mu)\langle\mathbf{u},\mathbf{v}\rangle=0$. Because
+$\lambda\neq\mu$, we must have $\langle\mathbf{u},\mathbf{v}\rangle=0$.
+$\blacksquare$
 
-**Proof, part (iii): an orthonormal eigenbasis.** We induct on $n$; for $n=1$
-there is nothing to prove. For $n>1$, part (i) gives a real eigenpair
-$(\lambda_1,\mathbf{v}_1)$ with $\|\mathbf{v}_1\|=1$. Let
-$U=\mathbf{v}_1^{\perp}$ be the orthogonal complement, of dimension $n-1$. The
-matrix maps $U$ into itself: for any $\mathbf{x}\in U$,
+**Proof, part (iii): an orthonormal eigenbasis.** We argue by induction on $n$;
+for $n=1$ the claim is immediate. For $n>1$, part (i) supplies a real
+eigenpair $(\lambda_1,\mathbf{v}_1)$ with $\|\mathbf{v}_1\|=1$. Consider the
+$(n-1)$-dimensional orthogonal complement $U=\mathbf{v}_1^{\perp}$. Symmetry
+ensures that $\mathbf{A}$ maps $U$ back into itself: for any $\mathbf{x}\in U$,
 
 $$
 \langle\mathbf{A}\mathbf{x},\mathbf{v}_1\rangle
@@ -775,56 +823,60 @@ $$
   = \lambda_1\langle\mathbf{x},\mathbf{v}_1\rangle = 0 .
 $$
 
-Let the columns of $\mathbf Q\in\mathbb R^{n\times(n-1)}$ be an orthonormal
-basis of $U$. Since the columns of $\mathbf A\mathbf Q$ lie in $U$, we can write
-$\mathbf A\mathbf Q=\mathbf Q\mathbf C$ with
-$\mathbf C=\mathbf Q^\top\mathbf A\mathbf Q$, the matrix of $\mathbf A$
-restricted to $U$. It is symmetric,
-$\mathbf C^\top=\mathbf Q^\top\mathbf A^\top\mathbf Q=\mathbf C$, and of size
-$n-1$, so by the inductive hypothesis
-$\mathbf C=\mathbf V'\boldsymbol\Lambda'\mathbf V'^\top$ with $\mathbf V'$
-orthogonal. The columns of $\mathbf Q\mathbf V'$ are orthonormal, since
-$(\mathbf Q\mathbf V')^\top\mathbf Q\mathbf V'=\mathbf V'^\top\mathbf V'=\mathbf I$.
-They lie in $U$, hence are orthogonal to $\mathbf v_1$. They are also
-eigenvectors, since
+Choose an orthonormal basis of $U$ and assemble its vectors as the columns of
+$\mathbf Q\in\mathbb R^{n\times(n-1)}$. Because every column of
+$\mathbf A\mathbf Q$ lies in $U$, we can write
+$\mathbf A\mathbf Q=\mathbf Q\mathbf C$ where
+$\mathbf C=\mathbf Q^\top\mathbf A\mathbf Q$ represents $\mathbf A$ restricted
+to $U$. Notice that $\mathbf C$ is symmetric,
+$\mathbf C^\top=\mathbf Q^\top\mathbf A^\top\mathbf Q=\mathbf C$, and has size
+$(n-1)\times(n-1)$. By the inductive hypothesis,
+$\mathbf C=\mathbf V'\boldsymbol\Lambda'\mathbf V'^\top$ for an orthogonal
+matrix $\mathbf V'$. Now look at the columns of $\mathbf Q\mathbf V'$: they
+are orthonormal because
+$(\mathbf Q\mathbf V')^\top\mathbf Q\mathbf V'=\mathbf V'^\top\mathbf V'=\mathbf I$;
+they lie in $U$, so they are orthogonal to $\mathbf v_1$; and they are
+eigenvectors of $\mathbf A$, because
 $\mathbf A\mathbf Q\mathbf V'=\mathbf Q\mathbf C\mathbf V'=\mathbf Q\mathbf V'\boldsymbol\Lambda'$.
-Together with $\mathbf v_1$ they form the orthogonal matrix
-$\mathbf V=[\mathbf v_1\;\mathbf Q\mathbf V']$, and
+Appending them to $\mathbf v_1$ gives the orthogonal matrix
+$\mathbf V=[\mathbf v_1\;\mathbf Q\mathbf V']$ satisfying
 $\mathbf A\mathbf V=\mathbf V\boldsymbol\Lambda$. $\blacksquare$
 
-The factorization :eqref:`eq_mdl-spectral` reads as three steps. First
-$\mathbf V^\top$ turns the orthonormal eigenvectors onto the coordinate axes.
-This is a rotation, possibly combined with a reflection; for $\mathbf S$
-above, $\mathbf V$ has determinant $-1$. Then $\boldsymbol\Lambda$ stretches
-each axis by its eigenvalue, and $\mathbf V$ turns the axes back. This is the
-left panel of :numref:`fig_mdl-la-eig-ellipse`, now proved for every symmetric
-matrix.
+Geometrically, :eqref:`eq_mdl-spectral` breaks any symmetric linear map into
+three clean actions. First, $\mathbf V^\top$ aligns the orthonormal
+eigenvectors with the coordinate axes—a pure rotation, possibly combined with
+a reflection (for $\mathbf S$ above, $\det\mathbf V=-1$). Next,
+$\boldsymbol\Lambda$ stretches each coordinate axis by its eigenvalue. Finally,
+$\mathbf V$ turns the axes back. This proves what the left panel of
+:numref:`fig_mdl-la-eig-ellipse` illustrated for $\mathbf S$, now for every
+symmetric matrix.
 
-Every matrix $\mathbf A$, square or not, yields a symmetric matrix
+Every matrix $\mathbf A$, rectangular or square, produces a symmetric matrix
 $\mathbf A^\top\mathbf A$. Its quadratic form
-$\mathbf x^\top\mathbf A^\top\mathbf A\mathbf x=\|\mathbf A\mathbf x\|^2$ is
-never negative, a property that the next subsection names and tests.
+$\mathbf x^\top\mathbf A^\top\mathbf A\mathbf x=\|\mathbf A\mathbf x\|^2$ can
+never be negative—a property that we name, test, and exploit next.
 
 ### Positive Definiteness
 :label:`subsec_mdl-psd`
 
-Is the quadratic form $\mathbf{x}^\top\mathbf{A}\mathbf{x}$ ever negative?
-The question decides whether a critical point of a loss is a minimum, whether
-a matrix can be a covariance, and whether a least-squares problem has a
-unique solution. A symmetric matrix $\mathbf{A}$ is *positive semidefinite*
-(PSD), written $\mathbf{A}\succeq0$, if
+Can the quadratic form $\mathbf{x}^\top\mathbf{A}\mathbf{x}$ ever turn
+negative? This single question decides whether a critical point of a loss
+surface is a minimum, whether a matrix is a valid covariance, and whether a
+least-squares problem has a unique solution. A symmetric matrix $\mathbf{A}$
+is *positive semidefinite* (PSD), written $\mathbf{A}\succeq0$, if
 
 $$
 \mathbf{x}^\top\mathbf{A}\mathbf{x} \ge 0 \quad\textrm{for all } \mathbf{x},
 $$
 
 and *positive definite* (PD), written $\mathbf{A}\succ0$, if the inequality
-is strict for every $\mathbf{x}\neq\mathbf 0$. For example,
+is strict for every nonzero $\mathbf{x}$. For instance,
 $\mathbf x^\top\mathbf S\mathbf x=2x_1^2+2x_1x_2+2x_2^2=x_1^2+x_2^2+(x_1+x_2)^2$
-is positive unless $\mathbf x=\mathbf 0$, so $\mathbf S\succ0$, while
-$\left(\begin{smallmatrix}1&0\\0&-1\end{smallmatrix}\right)$ is neither, since
-$\mathbf e_2$ gives $-1$. Completing squares by hand does not scale, but the
-eigenvalues decide the question for every symmetric matrix.
+is strictly positive whenever $\mathbf x\neq\mathbf 0$, so $\mathbf S\succ0$,
+whereas $\left(\begin{smallmatrix}1&0\\0&-1\end{smallmatrix}\right)$ is
+neither PD nor PSD because $\mathbf e_2$ gives $-1$. Completing the square by
+hand quickly becomes impractical in higher dimensions, but the eigenvalues
+settle the question cleanly for any symmetric matrix.
 
 **Proposition (definiteness from eigenvalues).** *For symmetric $\mathbf{A}$,*
 
@@ -834,10 +886,10 @@ $$
 \mathbf{A}\succ0 \iff \lambda_i>0\ \textrm{for all } i .
 $$
 
-**Proof.** Write $\mathbf{A}=\mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^\top$ by
-the spectral theorem and change variables to the eigen-coordinates
-$\mathbf{y}=\mathbf{V}^\top\mathbf{x}$, a rotation (possibly with a
-reflection) that preserves lengths. Then
+**Proof.** Apply the spectral theorem to write
+$\mathbf{A}=\mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^\top$, and switch to
+eigenvector coordinates $\mathbf{y}=\mathbf{V}^\top\mathbf{x}$—an orthogonal
+change of basis that preserves lengths. Then
 
 $$
 \mathbf{x}^\top\mathbf{A}\mathbf{x}
@@ -848,64 +900,66 @@ $$
 $$
 :eqlabel:`eq_mdl-quadform`
 
-The quadratic form is a weighted sum of squares with the eigenvalues as
-weights. If every $\lambda_i\ge0$, the sum is non-negative. Conversely,
-$\mathbf{x}=\mathbf{v}_j$ gives $\mathbf y=\mathbf e_j$ and
-$\mathbf{v}_j^\top\mathbf{A}\mathbf{v}_j=\lambda_j$, which forces
-$\lambda_j\ge0$. The PD statement is the same argument with strict
-inequalities, using that $\mathbf y\neq\mathbf 0$ whenever
-$\mathbf x\neq\mathbf 0$. $\blacksquare$
+In eigenvector coordinates, the quadratic form is simply a weighted sum of
+squares whose weights are the eigenvalues. If every $\lambda_i\ge0$, this sum
+is clearly non-negative. Conversely, plugging in $\mathbf{x}=\mathbf{v}_j$
+gives $\mathbf y=\mathbf e_j$ and
+$\mathbf{v}_j^\top\mathbf{A}\mathbf{v}_j=\lambda_j$, forcing $\lambda_j\ge0$.
+The positive definite case follows by the same argument with strict
+inequalities, since $\mathbf y\neq\mathbf 0$ whenever $\mathbf x\neq\mathbf 0$.
+$\blacksquare$
 
-For $\mathbf S$ and $\mathbf x=\mathbf e_1$, the eigen-coordinates are
-$\mathbf y=\mathbf V^\top\mathbf e_1=(1/\sqrt2,1/\sqrt2)$, and
-:eqref:`eq_mdl-quadform` gives $3\cdot\tfrac12+1\cdot\tfrac12=2$, which is
-$\mathbf e_1^\top\mathbf S\mathbf e_1=s_{11}$. Three consequences cover most
-places where definiteness appears in deep learning.
+Let us check :eqref:`eq_mdl-quadform` on $\mathbf S$ with $\mathbf x=\mathbf e_1$:
+the eigen-coordinates are $\mathbf y=\mathbf V^\top\mathbf e_1=(1/\sqrt2,1/\sqrt2)$,
+and the weighted sum gives $3\cdot\tfrac12+1\cdot\tfrac12=2$, matching
+$\mathbf e_1^\top\mathbf S\mathbf e_1=s_{11}$. Three consequences account for
+most appearances of positive definiteness in deep learning:
 
 * **PD implies invertible.** If $\mathbf{A}\succ0$ and
   $\mathbf{A}\mathbf{x}=\mathbf 0$, then
   $\mathbf{x}^\top\mathbf{A}\mathbf{x}=0$, which forces $\mathbf{x}=\mathbf 0$.
 * **Gram and covariance matrices are PSD.** For any matrix $\mathbf{X}$,
   $\mathbf{x}^\top\mathbf{X}^\top\mathbf{X}\mathbf{x}=\|\mathbf{X}\mathbf{x}\|^2\ge0$,
-  so $\mathbf X^\top\mathbf X\succeq0$, and it is PD if and only if
+  so $\mathbf X^\top\mathbf X\succeq0$. It is strictly PD if and only if
   $\mathbf{X}$ has full column rank (so that $\mathbf{X}\mathbf{x}=\mathbf 0$
-  forces $\mathbf{x}=\mathbf 0$). The sample covariance of centred data is
-  such a Gram matrix divided by the number of samples, so it is always PSD.
-* **A PD Hessian gives a strict local minimum.** Let $f$ be twice
-  continuously differentiable with $\nabla f(\mathbf x^*)=\mathbf 0$, and let
-  its Hessian $\nabla^2 f(\mathbf x^*)$, the symmetric matrix of second
-  partial derivatives, be PD. For a small displacement $\boldsymbol\delta$,
-  the second-order Taylor expansion of
-  :numref:`subsec_mdl-second-order-taylor` gives
-  $f(\mathbf x^*+\boldsymbol\delta)=f(\mathbf x^*)+\tfrac12\boldsymbol\delta^\top\nabla^2 f(\mathbf x^*)\boldsymbol\delta+o(\|\boldsymbol\delta\|^2)$,
-  and by :eqref:`eq_mdl-quadform` the quadratic term is at least
-  $\tfrac12\lambda_{\min}\|\boldsymbol\delta\|^2>0$. So $\mathbf x^*$ is a
-  strict local minimum. The condition is sufficient, not necessary:
-  $f(x)=x^4$ has a strict minimum at 0 with Hessian 0.
+  implies $\mathbf{x}=\mathbf 0$). Because the sample covariance of centered
+  data is a Gram matrix divided by the number of samples, it is always PSD.
+* **A PD Hessian guarantees a strict local minimum.** Suppose $f$ is twice
+  continuously differentiable with $\nabla f(\mathbf x^*)=\mathbf 0$, and its
+  Hessian $\nabla^2 f(\mathbf x^*)$ (the symmetric matrix of second partial
+  derivatives) is PD. For any small step $\boldsymbol\delta$, the second-order
+  Taylor expansion (:numref:`subsec_mdl-second-order-taylor`) reads
+  $f(\mathbf x^*+\boldsymbol\delta)=f(\mathbf x^*)+\tfrac12\boldsymbol\delta^\top\nabla^2 f(\mathbf x^*)\boldsymbol\delta+o(\|\boldsymbol\delta\|^2)$.
+  By :eqref:`eq_mdl-quadform`, the quadratic term is at least
+  $\tfrac12\lambda_{\min}\|\boldsymbol\delta\|^2>0$, so $\mathbf x^*$ is a
+  strict local minimum. Note that this condition is sufficient rather than
+  necessary: $f(x)=x^4$ has a strict minimum at $0$ even though its second
+  derivative there is $0$.
 
-Positive definiteness also has an algorithmic certificate, the *Cholesky
+Positive definiteness also admits a fast algorithmic test, the *Cholesky
 factorization*: $\mathbf{A}\succ0$ if and only if
-$\mathbf{A}=\mathbf{L}\mathbf{L}^\top$ for a lower-triangular $\mathbf{L}$ with
-positive diagonal. One direction is immediate: such an $\mathbf{L}$ is
-invertible, so $\mathbf{x}^\top\mathbf{A}\mathbf{x}=\|\mathbf{L}^\top\mathbf{x}\|^2>0$
-for $\mathbf{x}\neq\mathbf 0$. Attempting the factorization is the standard
-numerical test for definiteness, and it is cheaper than computing the
-eigenvalues. The same factor turns independent standard Gaussian samples
-$\mathbf z$ into samples $\mathbf L\mathbf z$ with covariance
-$\mathbf L\mathbf L^\top=\mathbf A$.
+$\mathbf{A}=\mathbf{L}\mathbf{L}^\top$ for a lower-triangular matrix
+$\mathbf{L}$ with positive diagonal entries. One direction is immediate: such
+an $\mathbf{L}$ is invertible, so
+$\mathbf{x}^\top\mathbf{A}\mathbf{x}=\|\mathbf{L}^\top\mathbf{x}\|^2>0$ for
+every nonzero $\mathbf{x}$. Attempting a Cholesky factorization is the standard
+numerical way to test positive definiteness, and it is considerably cheaper
+than computing all eigenvalues. As a bonus, the same factor $\mathbf{L}$
+transforms independent standard Gaussian samples $\mathbf z$ into samples
+$\mathbf L\mathbf z$ with covariance $\mathbf L\mathbf L^\top=\mathbf A$.
 
-Geometrically, the signs of the eigenvalues set the shape of the surface
+Geometrically, the signs of the eigenvalues govern the shape of the surface
 $z=\mathbf{x}^\top\mathbf{A}\mathbf{x}$ (:numref:`fig_mdl-la-psd`): a bowl when
-all are positive, a trough that is flat along the eigenvector of a zero
-eigenvalue, and a saddle for mixed signs.
+all eigenvalues are positive, a trough that is flat along any zero-eigenvalue
+direction, and a saddle when signs are mixed.
 
 ![The quadratic-form surface $z=\mathbf{x}^\top\mathbf{A}\mathbf{x}$ for three diagonal matrices takes its shape from the eigenvalue signs: a bowl when all $\lambda_i>0$ (positive definite), a trough when one $\lambda_i=0$ (positive semidefinite), and a saddle for mixed signs (indefinite).](../img/mdl-la-psd.svg)
 :label:`fig_mdl-la-psd`
 
-The rank condition for Gram matrices can be read off their eigenvalues. Take
-a tall $\mathbf{X}$ with independent columns, whose
-$\mathbf X^\top\mathbf X$ should be PD, and one whose second column is twice
-the first, for which it should be PSD with a zero eigenvalue.
+We can see the rank condition for Gram matrices directly in their eigenvalues.
+Below we compare a tall matrix $\mathbf{X}$ with independent columns—whose
+$\mathbf X^\top\mathbf X$ should be PD—against one whose second column is twice
+the first, which should yield a PSD matrix with a zero eigenvalue.
 
 ```{.python .input #eigendecomposition-psd-gram}
 X_full = np.array([[1., 0.], [1., 1.], [0., 1.], [2., 1.]])  # rank 2
@@ -916,26 +970,26 @@ for X, name in [(X_full, 'full column rank'), (X_dep, 'dependent columns')]:
     print(f'{name}: eigenvalues of X^T X = {eigvals}')
 ```
 
-Both eigenvalues are positive in the first case. In the second, one is
-zero: the form vanishes along $(2,-1)$, the direction that $\mathbf X$ maps
-to zero.
+Both eigenvalues are strictly positive in the full-rank case. In the dependent
+case, one drops to zero: the quadratic form vanishes along $(2,-1)$, the very
+direction that $\mathbf X$ maps to zero.
 
 ### The Rayleigh Quotient
 :label:`subsec_mdl-rayleigh`
 
-Identity :eqref:`eq_mdl-quadform` does more than test signs: it identifies the
-largest and smallest eigenvalues as the solutions of optimization problems.
-Define the *Rayleigh quotient* of a symmetric $\mathbf{A}$,
+Identity :eqref:`eq_mdl-quadform` does more than test signs: it turns the
+largest and smallest eigenvalues into the solutions of optimization problems.
+For a symmetric matrix $\mathbf{A}$, define the *Rayleigh quotient*
 
 $$
 R(\mathbf{x}) = \frac{\mathbf{x}^\top\mathbf{A}\mathbf{x}}{\mathbf{x}^\top\mathbf{x}},
 \qquad \mathbf{x}\neq\mathbf 0 .
 $$
 
-It is the value of the quadratic form per unit squared length, and on an
-eigenvector it equals the eigenvalue. In this subsection the eigenvalues are
-ordered by their signed values, $\lambda_1\ge\cdots\ge\lambda_n$, not by
-modulus.
+This measures the quadratic form per unit squared length, and whenever
+$\mathbf{x}$ is an eigenvector, $R(\mathbf{x})$ equals its eigenvalue.
+Throughout this subsection we order the eigenvalues by their signed values,
+$\lambda_1\ge\cdots\ge\lambda_n$, rather than by magnitude.
 
 **Proposition (Rayleigh).** *For symmetric $\mathbf{A}$ with eigenvalues
 $\lambda_1\ge\cdots\ge\lambda_n$,*
@@ -946,78 +1000,85 @@ $$
 \lambda_n = \min_{\mathbf{x}\neq\mathbf 0} R(\mathbf{x}),
 $$
 
-*attained at the corresponding eigenvectors.*
+*with the maximum and minimum attained at the corresponding eigenvectors.*
 
-**Proof.** Scaling $\mathbf{x}$ leaves $R$ unchanged, so restrict to unit
-vectors. With $\mathbf{y}=\mathbf{V}^\top\mathbf{x}$ we have
-$\|\mathbf y\|=\|\mathbf x\|=1$ and, by :eqref:`eq_mdl-quadform`,
-$R(\mathbf x)=\sum_i\lambda_i y_i^2$: an average of the eigenvalues with
-non-negative weights $y_i^2$ that sum to 1. An average lies between the
-smallest and the largest value, so $\lambda_n\le R(\mathbf x)\le\lambda_1$,
-and the bounds are attained by putting all weight on one coordinate, at
-$\mathbf x=\mathbf v_1$ or $\mathbf x=\mathbf v_n$. $\blacksquare$
+**Proof.** Rescaling $\mathbf{x}$ leaves $R(\mathbf{x})$ unchanged, so we may
+restrict attention to unit vectors. Setting $\mathbf{y}=\mathbf{V}^\top\mathbf{x}$
+preserves the norm ($\|\mathbf y\|=\|\mathbf x\|=1$) and turns
+:eqref:`eq_mdl-quadform` into $R(\mathbf x)=\sum_i\lambda_i y_i^2$. This is a
+weighted average of the eigenvalues with non-negative weights $y_i^2$ summing
+to $1$. Every average lies between its smallest and largest values, so
+$\lambda_n\le R(\mathbf x)\le\lambda_1$. Putting all the weight onto a single
+coordinate—at $\mathbf x=\mathbf v_1$ or $\mathbf x=\mathbf v_n$—attains the
+two bounds. $\blacksquare$
 
-For $\mathbf S$ this means that $R$ ranges over $[1,3]$, with the maximum at
-the eigenvector direction $45^\circ$ and the minimum at $135^\circ$.
-Every direction between the two extremes mixes the eigenvalues 1 and 3 in
-proportion to its squared eigen-coordinates.
+For our running symmetric matrix $\mathbf S$, this tells us that $R(\mathbf x)$
+ranges over $[1,3]$, peaking along the eigenvector at $45^\circ$ and reaching
+its minimum along the eigenvector at $135^\circ$. Every intermediate direction
+blends the eigenvalues $1$ and $3$ in proportion to its squared
+eigen-coordinates.
 
-Maximizing over subspaces recovers every eigenvalue in between: the
+Maximizing over subspaces recovers all intermediate eigenvalues as well: the
 *Courant--Fischer theorem* states that
 $\lambda_j=\max_{\dim U=j}\ \min_{\mathbf 0\neq\mathbf x\in U}R(\mathbf x)$,
-the best guaranteed stretch over all $j$-dimensional subspaces $U$
-(Exercise :exref:`ex_mdl-eigendecomposition-computed-eigenvalue-accuracy`d
-asks for the proof and gives a hint).
+the highest guaranteed Rayleigh quotient across all $j$-dimensional subspaces
+$U$ (Exercise :exref:`ex_mdl-eigendecomposition-computed-eigenvalue-accuracy`d
+guides you through the proof).
 
-Two uses of the extreme case recur in the book. First, for every
-matrix $\mathbf A$, the largest Rayleigh quotient of $\mathbf A^\top\mathbf A$
-is $\max_{\mathbf x\neq\mathbf 0}\|\mathbf A\mathbf x\|^2/\|\mathbf x\|^2$, the
-square of the largest factor by which $\mathbf A$ stretches a vector. Second,
-gradient descent on a convex quadratic $f(\mathbf x)=\tfrac12\mathbf x^\top\mathbf A\mathbf x$
-with $\mathbf A\succ0$ updates $\mathbf x\leftarrow(\mathbf I-\eta\mathbf A)\mathbf x$.
-By :eqref:`eq_mdl-eig-power-expansion` each eigen-coordinate is multiplied by
-$1-\eta\lambda_i$ per step, so the iteration converges from every start if and
-only if $|1-\eta\lambda_i|<1$ for all $i$, that is, $0<\eta<2/\lambda_{\max}$.
-The largest eigenvalue limits the step size (it is the smoothness constant
-$L$ of :numref:`sec_mdl-gradient-based-optimization`), and at step sizes
-$\eta\le1/\lambda_{\max}$ the smallest sets the slowest rate,
-$1-\eta\lambda_{\min}$. Their ratio $\lambda_{\max}/\lambda_{\min}$ is the
-condition number of $\mathbf A$, which :numref:`subsec_mdl-condition-number`
-defines for every matrix.
+Two applications of the extreme eigenvalues recur throughout this book. First,
+for any matrix $\mathbf A$, the largest Rayleigh quotient of
+$\mathbf A^\top\mathbf A$ is
+$\max_{\mathbf x\neq\mathbf 0}\|\mathbf A\mathbf x\|^2/\|\mathbf x\|^2$, the
+square of the largest factor by which $\mathbf A$ can stretch a vector.
+Second, consider gradient descent on a convex quadratic
+$f(\mathbf x)=\tfrac12\mathbf x^\top\mathbf A\mathbf x$ with
+$\mathbf A\succ0$, whose update is
+$\mathbf x\leftarrow(\mathbf I-\eta\mathbf A)\mathbf x$. By
+:eqref:`eq_mdl-eig-power-expansion`, each eigen-coordinate is multiplied by
+$1-\eta\lambda_i$ at every step, so the iteration converges from every starting
+point if and only if $|1-\eta\lambda_i|<1$ for all $i$—that is,
+$0<\eta<2/\lambda_{\max}$. The largest eigenvalue thus caps the step size (it
+is the smoothness constant $L$ of :numref:`sec_mdl-gradient-based-optimization`),
+and for step sizes $\eta\le1/\lambda_{\max}$ the smallest eigenvalue dictates
+the slowest contraction rate, $1-\eta\lambda_{\min}$. Their ratio
+$\lambda_{\max}/\lambda_{\min}$ is the condition number of $\mathbf A$, which
+:numref:`subsec_mdl-condition-number` generalizes to arbitrary matrices.
 
 ### Sample Covariance and the Marchenko--Pastur Law
 :label:`subsec_mdl-sample-covariance-mp`
 
-When we look for structure in data, we look at the large eigenvalues of its
-sample covariance. To tell which eigenvalues are large, we need to know what
-they are when the data have no structure at all. Draw $n$ samples of pure
-noise in $d$ dimensions, with independent coordinates of mean 0 and
-variance 1, so that the true covariance is $\mathbf I$, and stack them as
-the rows of $\mathbf X\in\mathbb R^{n\times d}$.
-Do the eigenvalues of the sample covariance
-$\mathbf C=\tfrac1n\mathbf X^\top\mathbf X$ sit near 1? For a unit vector
-$\mathbf w$, the Rayleigh quotient $\mathbf w^\top\mathbf C\mathbf w$ is the
-sample variance of the data along $\mathbf w$. The extreme eigenvalues of
-$\mathbf C$ are therefore the sample variances of the most and the least
-variable directions, the quantities that principal component analysis reads
-as structure (:numref:`subsec_mdl-pca`).
+When we look for structure in high-dimensional data, we inspect the largest
+eigenvalues of the sample covariance matrix. To judge which eigenvalues are
+genuinely large, however, we first need a baseline: what do the eigenvalues
+look like when the data contain no structure at all? Suppose we draw $n$
+samples of pure noise in $d$ dimensions, with independent coordinates of mean
+$0$ and variance $1$ (so the true covariance is $\mathbf I$), and stack them as
+the rows of $\mathbf X\in\mathbb R^{n\times d}$. Do the eigenvalues of the
+sample covariance $\mathbf C=\tfrac1n\mathbf X^\top\mathbf X$ cluster near $1$?
+For any unit vector $\mathbf w$, the Rayleigh quotient
+$\mathbf w^\top\mathbf C\mathbf w$ is the sample variance of the data projected
+onto $\mathbf w$. The extreme eigenvalues of $\mathbf C$ are therefore the
+sample variances along the most and least variable directions—the very
+quantities that principal component analysis interprets as structure
+(:numref:`subsec_mdl-pca`).
 
-They do not sit near 1. Let $d,n\to\infty$ with the *aspect ratio*
-$c=d/n\le1$ fixed. Then the histogram of the eigenvalues of $\mathbf C$
-converges to a fixed density supported on the interval
+Surprisingly, they do *not* cluster near $1$. Let $d,n\to\infty$ while holding
+the *aspect ratio* $c=d/n\le1$ fixed. Then the histogram of eigenvalues of
+$\mathbf C$ converges to a deterministic density supported on the interval
 
 $$
 \bigl[(1-\sqrt c)^2,\ (1+\sqrt c)^2\bigr],
 $$
 
-the *Marchenko--Pastur bulk* :cite:`Marchenko.Pastur.1967`, and with a
-finite fourth moment the extreme eigenvalues converge to its edges. For
-$c>1$ the matrix has rank at most $n<d$, so in addition at least $d-n$
-eigenvalues are zero. With four samples per dimension,
-$c=1/4$, the noise eigenvalues already spread over $[0.25,2.25]$: the sample
-variance along the most variable direction is more than twice the true
-variance, along the least variable one a quarter of it. At $n=4000$ and
-$d=1000$ the limit is already accurate.
+known as the *Marchenko--Pastur bulk* :cite:`Marchenko.Pastur.1967`, and
+provided the noise has a finite fourth moment, the extreme eigenvalues converge
+right to its edges. When $c>1$, the matrix $\mathbf C$ has rank at most $n<d$,
+so at least $d-n$ eigenvalues are identically zero in addition to the bulk. Even
+with four samples per dimension ($c=1/4$), pure-noise eigenvalues spread all
+the way across $[0.25,2.25]$: the sample variance along the loudest random
+direction is more than double the true variance, while along the quietest it is
+only a quarter. At $n=4000$ and $d=1000$, this asymptotic limit is already
+strikingly accurate. Let us test it.
 
 ```{.python .input #mdl-eigendecomposition-sample-covariance-and-the-marchenko-pastur-law}
 n, d = 4000, 1000                       # aspect ratio c = d / n = 1/4
@@ -1029,33 +1090,35 @@ print(f'Marchenko-Pastur edges: {(1 - c ** 0.5) ** 2:.3f}, '
       f'{(1 + c ** 0.5) ** 2:.3f}')
 ```
 
-On every run the smallest and largest eigenvalues land within a few
-hundredths of the predicted edges 0.25 and 2.25. An eigenvalue inside the
-bulk is therefore indistinguishable from noise. Only an eigenvalue clearly
-above the upper edge indicates a direction of real structure. How strong a
-direction must be to show up is the subject of Exercise
-:exref:`ex_mdl-eigendecomposition-spiked-covariance`.
+On every run, the smallest and largest eigenvalues land within a few
+hundredths of the predicted edges $0.25$ and $2.25$. Any eigenvalue falling
+inside this bulk is indistinguishable from pure noise; only an eigenvalue
+clearly above the upper edge provides evidence of genuine structure. Exercise
+:exref:`ex_mdl-eigendecomposition-spiked-covariance` explores how strong a
+signal must be before its eigenvalue escapes the bulk.
 
-Two things were taken for granted throughout this section: that the
-eigenvalues of a matrix can be computed, and that they say what its powers do
-after a few steps as well as after many. For large matrices, and for matrices
-far from symmetric, neither is safe.
+Throughout this section we took two things for granted: that we can actually
+compute the eigenvalues of a matrix, and that those eigenvalues tell us what
+its powers do after a handful of steps just as well as after many. For large
+matrices and for matrices far from symmetric, neither assumption is safe.
 :numref:`sec_mdl-spectra-in-practice` takes up both.
 
 ## Summary
 
-In eigenvector coordinates a matrix acts as a list of numbers,
-$\mathbf A^k\mathbf x=\sum_i c_i\lambda_i^k\mathbf v_i$, which explains
-repeated application in a Markov chain, a deep linear network, or gradient
-descent on a quadratic. An eigenbasis exists over $\mathbb C$ if and only if
-every eigenvalue has as many independent eigenvectors as its multiplicity as
-a root; otherwise Jordan blocks add polynomial factors in $k$. Symmetric
-matrices always have real eigenvalues and an orthonormal eigenbasis. Their
-quadratic forms are weighted sums of squares, so the eigenvalue signs decide
-definiteness and the extreme eigenvalues are the extremes of the Rayleigh
-quotient. The eigenvalues of a sample covariance of pure noise spread over
-the Marchenko--Pastur interval, so only an eigenvalue above its upper edge is
-evidence of structure.
+In eigenvector coordinates, a diagonalizable matrix acts as a list of scalars,
+$\mathbf A^k\mathbf x=\sum_i c_i\lambda_i^k\mathbf v_i$, explaining repeated
+application in Markov chains, deep linear networks, and gradient descent on
+quadratics. A full eigenbasis exists over $\mathbb C$ if and only if every
+eigenvalue's geometric multiplicity matches its algebraic multiplicity;
+otherwise Jordan blocks introduce polynomial factors in $k$ that can cause
+transient growth, while complex conjugate pairs correspond to rotation and
+scaling in an invariant plane. Real symmetric matrices avoid both pitfalls:
+they always have real eigenvalues and an orthonormal eigenbasis. Their
+quadratic forms become weighted sums of squares, so eigenvalue signs determine
+positive definiteness and the extreme eigenvalues are the extremes of the
+Rayleigh quotient. Finally, the eigenvalues of a pure-noise sample covariance
+spread across the Marchenko--Pastur interval, meaning that only eigenvalues
+above the upper bulk edge signal real structure.
 
 ## Exercises
 

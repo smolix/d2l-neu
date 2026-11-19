@@ -745,6 +745,11 @@ class CompactResNet(d2l.Classifier):
         return self.net(X)
 ```
 
+A comparison needs a yardstick for how much a run can move by chance, so we
+train the CNN twice from fresh weights, as we trained each ViT arm twice.
+`compact_cnn` builds a fresh model, and the training cell after it prints
+both CNN runs next to the two learned-position ViT runs.
+
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-4}
 %%tab pytorch
 compact_cnn = lambda: CompactResNet(num_steps, lr=1e-3)  # A fresh CNN
@@ -786,8 +791,20 @@ d2l.plot(list(range(1, 11)), [vit_history['val_acc'], cnn_history['val_acc']],
 The CNN leads from the first epoch. The gap is widest in the first three
 epochs, where it reaches seven to ten points, and narrows to about five by
 the end. Both curves flatten at the end because the cosine schedule takes
-the learning rate to zero, so these runs cannot say whether the ViT would
-catch up on a longer schedule; the published results below can.
+the learning rate to zero.
+
+The losses tell more than the accuracies. In the progress plot of the
+CNN's first run, above, the training loss falls almost to zero, and the
+validation loss stops falling after four to six epochs and then creeps up
+while the accuracy still rises, a sign that the network grows more
+confident everywhere, also on the images it still gets wrong. Ten epochs
+are enough for the CNN to fit its 60,000 training images almost perfectly.
+The ViT's training loss in :numref:`subsec_vit-first-run` ends well above
+zero and not far below its validation loss, although dropout, which only
+the ViT uses, accounts for part of that. A longer schedule would leave the
+CNN little to fit and the ViT probably a good deal. How much of that would
+reach the validation set, and whether the ViT would catch up, these runs
+cannot say; the published results below can.
 
 At the same parameter count, data, recipe, and number of epochs, and at
 about the same computational cost, the CNN wins. The experiment measures
@@ -859,7 +876,8 @@ patches drops it from about 89% to below one half. Yet a ViT with no
 position information at all ends only one to two points lower, so at this
 scale most of the accuracy comes from what the patches contain. Matched
 with a CNN in parameters, computation, data, and recipe, the ViT trails by
-about five points. Long training with augmentation closes the gap, and
+about five points, while two runs of either model agree to a tenth of a
+point. Long training with augmentation closes the gap, and
 pretraining on far more data reverses it, which is why ViTs are mostly used
 pretrained.
 
@@ -888,7 +906,7 @@ pretrained.
        pooling, and compare them with those of the ViT.
     1. Train the ViT with $p = 8$, with the protocol of
        :numref:`subsec_vit-first-run`, and compare its validation accuracy
-       with `vit_acc` and `cnn_acc`. Which of the two comparisons with the
+       with `learned_runs` and `cnn_runs`. Which of the two comparisons with the
        CNN, at equal parameters or at equal computation, does this run
        inform? Then resize the images to $48 \times 48$ instead and keep
        $p = 8$, which restores the $6 \times 6$ grid with each patch covering
@@ -1388,6 +1406,8 @@ more?
   ($p = 8$), 95% ($p = 4$); ResNet-18 (11M) 94.8%.
 - Our CNN reached about 94% in ten epochs, our ViT about 89%: the
   transformer gains far more, and the gap closes.
+- Our runs hint at it: after ten epochs the CNN's training loss is near
+  zero, the ViT's is not.
 
 [Hassani et al., 2021]{.small}
 :::
@@ -1412,7 +1432,8 @@ Small data, from scratch: train a CNN, or fine-tune a pretrained ViT.
 - Learned position embeddings: the cosine of neighbors about 0.1 higher,
   against a flat random reference.
 - Matched in parameters, FLOPs, data, and recipe, the CNN leads by about
-  five points; long recipes close the gap, and far more data reverses it.
+  five points, against a run-to-run range of a tenth of a point; long
+  recipes close the gap, and far more data reverses it.
 
 **Next:** Scaling Laws, sizing a model before the run.
 :::

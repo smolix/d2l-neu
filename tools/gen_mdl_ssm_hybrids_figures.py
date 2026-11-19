@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Generate the illustrative figures for the hybrid-architectures section of
-``chapter_recurrent-modern`` (12.7 "Hybrid Architectures") in the shared house
+``chapter_recurrent-modern`` ("Hybrid Architectures") in the shared house
 style defined in ``gen_mdl_figures.py``.
 
 One figure (the "hybrid stacks" schematic was dropped with the 2026-10
 chapter rewrite, which no longer references it; see git history):
 
-  * the hybrid cache curve -- persistent decode state against context length
-    for a 32-layer model at production width: a pure transformer's KV cache
-    grows linearly (32 GB at 256K), a pure recurrent stack is flat (64 MB),
-    and a 4-of-32 hybrid pays exactly the attention fraction of the
-    transformer bill.  All three curves are computed from the KV-cache byte
-    formula of the transformers chapter plus the Mamba-2 state-size
-    accounting.
+  * the hybrid cache curve -- memory per sequence during generation against
+    context length for a 32-layer model at production width: a pure
+    transformer's KV cache grows linearly (32 GB at 256K), a pure recurrent
+    stack is flat (64 MB), and a 4-of-32 hybrid holds exactly the attention
+    fraction of the transformer's cache.  All three curves are computed from
+    the KV-cache byte formula of the transformers chapter plus the Mamba-2
+    state-size accounting.
 
 Run with the repo's pytorch venv:
 
@@ -83,7 +83,7 @@ def fig_hybrid_cache():
     ax.minorticks_off()
     ax.tick_params(colors="black")
     ax.set_xlabel("context length (tokens)", fontsize=13, color="black")
-    ax.set_ylabel("persistent decode state", fontsize=13, color="black")
+    ax.set_ylabel("memory per sequence", fontsize=13, color="black")
     for spine in ("left", "bottom"):
         ax.spines[spine].set_color("black")
     ax.grid(True, which="major", linestyle="--", color=LIGHT, lw=0.8)

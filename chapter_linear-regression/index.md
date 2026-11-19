@@ -1,47 +1,60 @@
 # Linear Regression
 :label:`chap_regression`
 
-Looking at a house for sale, most of us estimate its price by comparison.
-We recall what similar houses sold for, and adjust for a larger or older
-house. A learning method does the same with numbers, finding in past sales
-a rule that maps area, age and other measurements to a price. How should we
-find the rule, and how far can we trust it for a house that has not been
-sold?
+Before we worry about making our neural networks deep, it pays to build shallow
+ones in which the inputs connect directly to the outputs. Starting here has two
+big advantages. First, without complex architectures to distract us, we can focus
+squarely on the universal machinery of neural network training—parameterizing a
+model, feeding it data, choosing a loss function, optimizing its parameters, and
+judging whether it will generalize to new examples. Second, this family of
+single-layer networks turns out to coincide with classical linear models, which
+remain workhorses of statistics and machine learning and serve as essential
+baselines whenever we want to justify a fancier architecture.
 
-Linear regression answers with the simplest rule: the prediction is a
-weighted sum of the measurements plus a constant, with weights that make the
-squared errors on past sales small. Each weight is one adjustment, such as
-the price per square meter. The method comes from astronomy. Legendre
-published it in 1805 to compute the orbits of comets. Gauss, whose orbit for
-the lost asteroid Ceres let astronomers find it again in 1801, published his
-account in 1809 and said he had used the method since 1795
-:cite:`Legendre.1805,Gauss.1809`. Simple as it is, linear regression is a
-complete learning method, with a model, a loss, an algorithm that improves
-the parameters, and predictions for examples the model has not seen.
+To make things concrete, imagine you are looking at a house for sale and trying
+to judge whether the asking price is fair. Intuitively, you recall what similar
+homes in the neighborhood recently sold for and adjust up or down for a larger
+floor plan or an older roof. *Linear regression* formalizes this intuition with
+numbers: it predicts a continuous target as a weighted sum of the input
+measurements plus a constant offset, choosing the weights to keep the squared
+prediction errors small on past sales. Each weight represents a single
+adjustment, such as the price per square meter. The method itself originated in
+astronomy at the turn of the nineteenth century: Adrien-Marie Legendre published
+the method of least squares in 1805 to compute comet orbits, and Carl Friedrich
+Gauss—who famously used it to recover the lost dwarf planet Ceres in 1801—published
+his probabilistic derivation in 1809, noting that he had been using the technique
+since 1795 :cite:`Legendre.1805,Gauss.1809`.
 
-:numref:`chap_preliminaries` supplied the tools; this chapter assembles them
-into a learning procedure and asks what can go wrong. A model can fit its
-training data well and still predict new data badly, and an implementation
-can be wrong without raising an error. Neither failure announces itself,
-and both recur in every later chapter, so we study them here, where the
-model is simple enough to analyze.
+:numref:`chap_preliminaries` gave us our mathematical and computational tools;
+this chapter assembles them into our first complete learning pipeline and asks
+what can go wrong along the way. Two silent failure modes appear here that will
+recur throughout the rest of the book: a buggy implementation can run cleanly
+without raising an error while learning the wrong parameters, and a model can fit
+its training data near-perfectly while predicting badly on unseen examples. Both
+are far easier to dissect while the model itself is still linear.
 
-The mathematics comes first and takes one section:
-:numref:`sec_linear_regression` derives the model, its loss, and minibatch
-stochastic gradient descent, the algorithm that trains it. The next four
-sections turn it into code that we can trust, written first by hand and
-checked against data whose true parameters we know
-(:numref:`sec_synthetic-regression-data`, :numref:`sec_linear_scratch`).
-We then package that code into a few classes that every later chapter
-reuses (:numref:`sec_oo-design`), and replace our parts with those of a
-framework (:numref:`sec_linear_concise`). The last two sections return to
-the question of trust: when a model that fits its training data predicts
-new data well (:numref:`sec_generalization_basics`), and how to limit its
-flexibility by degrees rather than by dropping features
+We start with the mathematical foundations in :numref:`sec_linear_regression`,
+deriving the linear model, squared-error loss, its closed-form solution, its
+probabilistic interpretation under Gaussian noise, and minibatch stochastic
+gradient descent—the optimization engine behind nearly every model in this book.
+The next four sections turn these equations into trustworthy software. First, we
+generate synthetic data whose true parameters we know
+(:numref:`sec_synthetic-regression-data`) and implement the entire training loop
+from scratch so we can verify that our optimizer recovers the ground truth
+(:numref:`sec_linear_scratch`). We then organize this boilerplate into a clean
+set of reusable object-oriented abstractions—`Module`, `DataModule`, and
+`Trainer`—that every subsequent chapter builds upon (:numref:`sec_oo-design`),
+before seeing how high-level framework APIs let us rewrite linear regression in
+just a few lines of code (:numref:`sec_linear_concise`). Finally, we confront the
+central statistical challenge of machine learning: understanding when a good fit
+on training data translates to accurate predictions on new data
+(:numref:`sec_generalization_basics`), and controlling a model's complexity
+smoothly through *weight decay* rather than dropping features outright
 (:numref:`sec_weight_decay`).
 
-The next chapter applies the same procedure to classification, and the one
-after replaces the linear model by a multilayer network.
+In :numref:`chap_classification`, we will apply this exact same recipe to
+classification problems; in :numref:`chap_perceptrons`, we will stack multiple
+layers with nonlinear activations to build our first truly deep networks.
 
 ```toc
 :maxdepth: 2

@@ -6,43 +6,54 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Documentation
 :label:`sec_lookup_api`
 
-The sections of this chapter explained every function that they used. This
-courtesy cannot last. Every project soon needs a function that the book
-never mentions, or uses a familiar one in an unfamiliar way, and no book can
-keep up: the main module of a deep learning framework defines several
-hundred to a thousand public names, and new releases add names and deprecate
-others. What the book can teach instead is how to find out for ourselves,
-reliably, what a function does.
+Throughout this chapter, we have explained every framework function before calling
+it. That convenience cannot last forever: in any real project you will quickly
+need a function this book never mentions, or need to pass an unfamiliar option to
+a function you already know. Nor could any textbook possibly document an entire
+framework—the top-level modules of PyTorch, TensorFlow, JAX, and MXNet each expose
+hundreds to thousands of public names, with new APIs arriving and old ones being
+deprecated in every release. Rather than trying to memorize an ever-shifting API,
+what we can learn once and for all is a reliable habit for finding out *ourselves*
+what any function actually does.
 
-Reliably is the operative word, because a call can look harmless and still
-do something other than what we meant. Suppose that we need samples from a
-gamma distribution, a distribution of positive numbers often used for
-waiting times, with shape $k = 2$ and rate $\beta = 3$. Its mean is
-$k / \beta = 2/3$ and its variance $k / \beta^2 = 2/9$. Libraries disagree
-on how such a distribution is described: some take the rate $\beta$, others
-the scale $1/\beta$, and some neither. A call that passes the numbers 2 and
-3 runs either way, but its samples have mean $2/3$ under one reading and
-$2 \cdot 3 = 6$ under the other. Nothing in the call tells us which reading
-applies. The function's signature and documentation do.
+*Reliably* is the key word here, because a function call can look completely
+innocent and run without raising an error while silently doing something other
+than what we intended. Suppose we want to draw samples from a gamma distribution
+(a continuous distribution over positive numbers often used to model waiting
+times) with shape parameter $k = 2$ and rate $\beta = 3$, which has theoretical
+mean $k / \beta = 2/3$ and variance $k / \beta^2 = 2/9$. Scientific libraries
+notoriously disagree on how they parameterize the gamma distribution: some take
+the rate $\beta$, others take the scale $1 / \beta$, and still others fix the rate
+to $1$ and expect you to rescale the samples yourself. Passing the numbers `2` and
+`3` succeeds under both conventions, yet yields samples with mean $2/3$ under one
+and mean $2 \cdot 3 = 6$ under the other! Nothing in the call syntax itself warns
+us which convention is in force; only the function's signature, documentation, and
+a quick sanity check do.
 
-Instead of a list of functions, this section gives a procedure of four
-steps, shown in :numref:`fig_lookup_loop`. We discover the names that a
-library offers, inspect the arguments and the documentation of a candidate,
-read the reference pages or the source code when the documentation leaves a
-question open, and verify the behavior with a small example whose result we
-predicted. All four steps work inside a notebook, and by the end of the
-section they have drawn our gamma samples, with the right mean.
+Instead of listing APIs, this section walks through a four-step workflow
+(:numref:`fig_lookup_loop`) that works right inside a notebook:
+
+1. **Discover** what names a module exposes;
+2. **Inspect** a candidate's call signature and docstring;
+3. **Read** the official API reference or underlying source code when the
+   docstring leaves a detail ambiguous;
+4. **Verify** your understanding on a small test case whose outcome you predicted
+   before running the code.
+
+By the end of the section, these four steps will have given us gamma samples with
+the exact mean and variance we wanted.
 
 ![Four steps for finding out what a function does: discover the names that a module defines, inspect the signature and docstring of a candidate, read the reference documentation or the source code, and verify the behavior with a small example. A result that contradicts the prediction, or answers a question that the prediction left open, sends us back to read further.](../img/lookup-api-discovery-loop.svg)
 :label:`fig_lookup_loop`
 
-Besides the framework, we import three helpers from Python's standard
-library: `pprint` prints long lists compactly, `inspect` reads the
-signature of a function, and `textwrap` wraps long lines.
+Alongside our deep learning framework, we import three handy utilities from
+Python's standard library: `pprint` for printing long lists compactly, `inspect`
+for extracting function signatures and docstrings, and `textwrap` for wrapping
+long signature lines cleanly.
 
 :begin_tab:`mxnet`
-MXNet's array module is imported under the name `mnp`, so that `np` can keep
-meaning NumPy.
+As throughout this book, we import MXNet's NumPy-compatible array module under the
+alias `mnp`, reserving `np` for standard NumPy.
 :end_tab:
 
 ```{.python .input #lookup-api-documentation}
@@ -81,16 +92,17 @@ import jax
 
 ## Discovering Names
 
-Our first question is whether the library can sample from a gamma
-distribution at all, and under which name. We know roughly where to look,
-in the module for random numbers, but not what its functions are called.
-The built-in function `dir` lists the names that a module defines. Names that begin with an underscore
-belong to the internals of the module, so we drop them and print the first
-twenty of the rest:
+Our first question is simple: does the library provide a gamma sampler at all, and
+what is it called? We know roughly where to look—the random-number or
+distributions module—even if we do not know the exact name. Python's built-in
+`dir` function lists every attribute defined in a module. By convention, names
+beginning and ending with `__` are special Python objects and names starting with
+a single `_` are private internals, so we filter those out and inspect the first
+twenty public names:
 
 :begin_tab:`pytorch`
-PyTorch keeps its probability distributions in the module
-`torch.distributions`.
+PyTorch organizes its parametric probability distributions inside the
+`torch.distributions` module.
 :end_tab:
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module}
@@ -118,58 +130,61 @@ pprint([name for name in dir(jax.random)
 ```
 
 :begin_tab:`mxnet`
-Almost every name is a sampler. Draws from classical distributions, such as
-`beta`, `gamma`, `multinomial`, and `normal`, stand next to the NumPy
-conveniences `rand`, `randint`, and `randn`.
+Almost every entry here is a random sampler: classical distributions such as
+`beta`, `gamma`, `multinomial`, and `normal` sit alongside NumPy-style shorthand
+helpers like `rand`, `randint`, and `randn`.
 :end_tab:
 
 :begin_tab:`pytorch`
-The names are distribution classes, such as `Bernoulli`, `Categorical`, and
-`Gamma`. Each class is created with the parameters of its distribution and
-then sampled from. Names that end in `Transform` are invertible maps, which
-`TransformedDistribution` applies to an existing distribution to build a new
-one.
+Here the public names are distribution *classes*—such as `Bernoulli`,
+`Categorical`, and `Gamma`—which you instantiate with their distribution
+parameters before calling `.sample()`. Names ending in `Transform` represent
+invertible mappings that `TransformedDistribution` can apply to construct new
+distributions from existing ones.
 :end_tab:
 
 :begin_tab:`tensorflow`
-We see samplers such as `gamma`, `normal`, and `poisson`, next to
-`Generator` and `set_seed`, which manage the state of the random number
-generator.
+Here we find samplers such as `gamma`, `normal`, and `poisson` alongside
+`Generator` and `set_seed`, which manage random-number generator state.
 :end_tab:
 
 :begin_tab:`jax`
-The names are samplers, such as `bernoulli`, `beta`, `cauchy`,
-`exponential`, and `gamma`, along with `Key`, the type of a random key, and
-`PRNGKey`, an older function that creates the key every JAX sampler takes.
-This book uses its successor, `jax.random.key`, which comes later in the
-alphabet.
+Here we find functional samplers such as `bernoulli`, `beta`, `cauchy`,
+`exponential`, and `gamma`, alongside `Key` (the random key type) and `PRNGKey`
+(an older constructor for the explicit keys JAX samplers require; this book uses
+its newer replacement `jax.random.key`, which appears further down the alphabet).
 :end_tab:
 
-A notebook offers the same list while we type: writing the name of a module
-followed by a dot and pressing Tab lists the names that the module defines,
-narrowed to those that match the letters typed next. When we do not know
-which module to look in, the search box of the framework's online reference
-searches all of them.
+In an interactive notebook or IDE, Tab completion provides the same discovery
+mechanism on the fly: typing a module name followed by a dot and pressing `Tab`
+brings up all public attributes, narrowing the list as you type. And when you are
+not even sure which module to look in, the search bar on the framework's online
+API reference searches across the entire library at once.
 
 ## Reading Documentation
 
-The list has an entry for the gamma distribution. To find out how to call
-it, the built-in function `help` prints its *docstring*, the documentation
-written into its code. A docstring says what the function does, what each
-argument means, and what the function returns, and it often ends with
-examples. The first lines show the function's *signature*, the list of
-arguments that it accepts. Three conventions of Python are all we need to
-read one. An argument written as `name=value` has a default value and may be
-omitted. Arguments that follow a lone `*` can be passed only by keyword. An
-argument written as `*name` collects any number of positional arguments;
-our sampler has none of these, but the exercises meet one.
+Our listing confirms that the framework has a gamma distribution. To learn how to
+invoke it properly, Python's built-in `help` function displays its *docstring*—the
+documentation embedded directly in the code. A well-written docstring explains
+what the function computes, what each parameter represents, what it returns, and
+often includes short usage examples.
 
-The whole docstring is worth reading once in a notebook, but it is long, and
-our question is narrow: does the sampler take a rate or a scale? We
-therefore print the signature, which `inspect.signature` returns, and only
-those lines of the docstring that mention a rate or a scale. Since we print
-single lines, a sentence may arrive cut off; the whole of it is one `help`
-call away.
+At the top of the docstring sits the function's *signature*, showing the exact
+arguments it accepts. Just three Python signature conventions cover almost every
+library call you will ever read:
+
+* `name=value` marks an optional argument with a default value;
+* arguments appearing after a bare `*` are *keyword-only* and must be passed by
+  name;
+* `*name` collects any number of positional arguments into a tuple (our gamma
+  sampler does not use this form, though you will encounter it in the exercises).
+
+While reading the full docstring once with `help` is always good practice,
+docstrings can span several screens, and right now we have one laser-focused
+question: *does the sampler expect a rate or a scale?* Below, we write a tiny
+helper that prints the formatted signature alongside only those docstring lines
+mentioning `rate` or `scale`. (Individual lines may wrap mid-sentence, of course;
+the complete text is always one `help(...)` call away.)
 
 ```{.python .input #lookup-api-reading-documentation-1}
 def doc_lines(f, *words):
@@ -201,100 +216,103 @@ doc_lines(tf.random.gamma, 'rate', 'scale')
 doc_lines(jax.random.gamma, 'rate', 'scale')
 ```
 
-With the signature and these lines, we can predict what a call does before
-we run it:
+Equipped with the signature and these lines, we can form a concrete prediction
+*before* running any sampling code:
 
 :begin_tab:`mxnet`
-The signature `gamma(shape, scale=1.0, size=None, ...)` holds a trap. The
-argument named `shape` is the shape parameter $k$ of the distribution, not
-the shape of the output, which is `size`. The second argument is a scale,
-$1/\beta$. We predict that `mnp.random.gamma(2, 1 / 3, size=10000)` draws
-10,000 samples with mean $2/3$ and variance $2/9$, and that
-`mnp.random.gamma(2, 3)` would draw samples with mean 6.
+Look closely at `gamma(shape, scale=1.0, size=None, ...)`: there is a subtle trap
+in the naming! Here `shape` refers to the distribution's shape parameter $k$—not
+the shape of the output array, which is controlled by `size`. Meanwhile, the
+second argument `scale` is the scale $1 / \beta$. We therefore predict that
+`mnp.random.gamma(2, 1 / 3, size=10000)` will yield $10{,}000$ samples with mean
+$2/3$ and variance $2/9$ (whereas calling `mnp.random.gamma(2, 3)` would
+mistakenly produce mean $6$).
 :end_tab:
 
 :begin_tab:`pytorch`
-`Gamma` is a class with the arguments `concentration`, which the docstring
-calls the shape parameter $k$, and `rate`, the rate $\beta$ itself, which
-it also states as $1 / \textrm{scale}$. One of the printed lines is an
-example from the end of the docstring, in which `m` is a `Gamma(1, 1)`; it
-confirms the vocabulary. We predict that samples of `Gamma(2.0, 3.0)` have
+`Gamma` is a class taking `concentration` (the shape parameter $k$) and `rate`
+(the rate $\beta = 1 / \textrm{scale}$ directly). One of the matching lines comes
+from the docstring's own usage example (`m = Gamma(1, 1)`), confirming the
+convention. We therefore predict that sampling from `Gamma(2.0, 3.0)` will give
 mean $2/3$ and variance $2/9$.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The signature `(shape, alpha, beta=None, ...)` holds a trap. (Its name is
-printed as `random_gamma`, the name of the function in its own module;
-`tf.random.gamma` is the public alias.) Here the first argument, `shape`, is
-the shape of the output, while the shape parameter $k$ of the distribution
-is `alpha`. The docstring calls `beta` the inverse scale, which is the rate.
-We predict that `tf.random.gamma([10000], alpha=2.0, beta=3.0)` draws
-10,000 samples with mean $2/3$ and variance $2/9$.
+Notice the signature `(shape, alpha, beta=None, ...)` (printed under its internal
+name `random_gamma`, of which `tf.random.gamma` is the public alias): here `shape`
+*is* the output tensor shape, while the distribution's shape parameter $k$ is
+named `alpha`! The docstring specifies that `beta` is the inverse scale—that is,
+the rate $\beta$. We therefore predict that
+`tf.random.gamma([10000], alpha=2.0, beta=3.0)` will yield $10{,}000$ samples with
+mean $2/3$ and variance $2/9$.
 :end_tab:
 
 :begin_tab:`jax`
-The signature `gamma(key, a, shape=None, ...)`, printed with its type
-hints, has neither a rate nor a scale. The sampler draws from the gamma
-distribution with shape parameter `a` and rate 1, and the docstring tells
-us to divide the samples by the rate. We predict that
-`jax.random.gamma(key, 2.0, (10000,)) / 3` has mean $2/3$ and variance
-$2/9$.
+Look at the signature `gamma(key, a, shape=None, ...)` (shown with its type
+annotations): it accepts *neither* a rate nor a scale! As the docstring explains,
+`jax.random.gamma` always draws from a unit-rate ($\beta = 1$) gamma distribution
+with shape parameter `a`, and instructs us to divide the output by the desired
+rate. We therefore predict that `jax.random.gamma(key, 2.0, (10000,)) / 3` will
+yield samples with mean $2/3$ and variance $2/9$.
 :end_tab:
 
-In a notebook, two shortcuts show the same documentation. Appending `?` to
-a name shows the docstring in a separate pane, and appending `??` also
-shows the source code of the function. The source answers
-questions that a docstring leaves open, such as how an argument is converted
-or checked. Unfortunately, only functions written in Python have source code
-to show. Many core functions are compiled from C++, and for those `??` shows
-the docstring alone.
+In Jupyter notebooks, two quick shortcuts make inspecting documentation
+effortless: appending a single question mark (e.g., `list?`) opens the docstring
+in a side pane, while appending two question marks (`list??`) displays the
+function's actual Python source code as well. Reading the source resolves subtle
+questions a docstring may omit—such as how inputs are cast or validated—and
+studying well-crafted library code is one of the best ways to become a stronger
+engineer as well as a better scientist. (Note, however, that performance-critical
+primitives implemented in C++ or CUDA have no Python body to display, so `??`
+falls back to showing the docstring alone.)
 
-When the docstring is not enough, the framework's reference documentation
-describes every public function on a page of its own, and its tutorials show
-the functions in use.
+When in-notebook docstrings are not enough, the framework's official online
+documentation provides dedicated reference pages for every public API alongside
+in-depth tutorials:
 
 :begin_tab:`mxnet`
-The Apache Software Foundation retired MXNet in 2023, but the project's
-website still serves the documentation of its development version, MXNet
-2.0, whose NumPy-style interface this book uses: the
-[reference of `mxnet.np`](https://mxnet.apache.org/versions/master/api/python/docs/api/np/index.html)
+Although the Apache Software Foundation retired MXNet in 2023, the project
+website still hosts the documentation for its development branch, MXNet 2.0—the
+NumPy-compatible interface used in this book—including the
+[`mxnet.np` API reference](https://mxnet.apache.org/versions/master/api/python/docs/api/np/index.html)
 and the
 [tutorials](https://mxnet.apache.org/versions/master/api/python/docs/tutorials/index.html).
-The pages of version 1.9.1, the last formal release, describe the older
-`mx.nd` interface instead. Where the documentation is thin, the steps of
-this section, carried out in a notebook, are the more reliable reference.
+(Be aware that the docs for version 1.9.1, the last formal release, cover the
+older `mx.nd` API instead.) Whenever online documentation is sparse, the
+interactive notebook workflow in this section is the most dependable guide.
 :end_tab:
 
 :begin_tab:`pytorch`
-For PyTorch, these are the
-[API reference](https://docs.pytorch.org/docs/stable/index.html) and the
+For PyTorch, consult the official
+[API reference](https://docs.pytorch.org/docs/stable/index.html) and
 [tutorials](https://docs.pytorch.org/tutorials/beginner/basics/intro.html).
 :end_tab:
 
 :begin_tab:`tensorflow`
-For TensorFlow, these are the
-[API reference](https://www.tensorflow.org/api_docs/python/tf) and the
+For TensorFlow, consult the official
+[API reference](https://www.tensorflow.org/api_docs/python/tf) and
 [tutorials](https://www.tensorflow.org/tutorials).
 :end_tab:
 
 :begin_tab:`jax`
-For JAX, these are the
-[API reference](https://docs.jax.dev/en/latest/jax.html) and the
+For JAX, consult the official
+[API reference](https://docs.jax.dev/en/latest/jax.html) and
 [tutorials](https://docs.jax.dev/en/latest/tutorials.html).
 :end_tab:
 
 ## Verifying Behavior
 
-Our reading of a docstring can be wrong, and occasionally the docstring
-itself is out of date. A small example settles the question, provided that
-we predict its result before we run it, so that the run could prove us
-wrong. A run that merely completes without an error proves little. Our
-prediction can fail: had we read the rate as a scale, the samples would have
-mean 6 instead of $2/3$. We draw 10,000 samples and compare their mean and
-variance with $2/3 \approx 0.667$ and $2/9 \approx 0.222$. The mean of
-10,000 independent draws has standard error $\sqrt{(2/9) / 10{,}000}
-\approx 0.005$ (:numref:`sec_prob`), so the sample mean should lie within
-about $0.01$ of $2/3$:
+Even careful readers misread docstrings from time to time—and occasionally a
+docstring itself has drifted out of sync with the code. The fastest way to settle
+any lingering doubt is to run a minimal test whose numerical outcome you predicted
+*in advance*. Notice why a prediction is essential: code that merely runs without
+crashing proves almost nothing, whereas a test with a falsifiable prediction can
+actually catch a mistake! Here, confusing rate with scale would shift the mean
+from $2/3 \approx 0.667$ all the way to $6$. Drawing $10{,}000$ independent
+samples gives a standard error on the sample mean of
+$\sqrt{(2/9) / 10{,}000} \approx 0.005$ (:numref:`sec_prob`), so our empirical
+mean should land within roughly $0.01$ of $2/3$ and the variance close to
+$2/9 \approx 0.222$:
 
 ```{.python .input #lookup-api-verifying-behavior}
 %%tab mxnet
@@ -321,38 +339,38 @@ samples = jax.random.gamma(key, 2.0, (10000,)) / 3  # k = 2, then rate 3
 samples.mean(), samples.var()
 ```
 
-The prediction holds: the mean lies close to $2/3$ and the variance close to
-$2/9$, far from the values that the other reading would give. When a result
-contradicts the prediction, or answers a question that the prediction left
-open, we go around the loop again: we read further, in the reference
-documentation or the source, and test the new prediction.
+The numbers confirm our prediction: the sample mean sits right near $2/3$ and the
+sample variance near $2/9$, ruling out the scale interpretation completely. Whenever
+a test contradicts your prediction—or exposes an edge case you had not considered—loop
+back to the documentation or source code, refine your hypothesis, and test again.
 
-Coding assistants answer many such questions directly. Asked for gamma
-samples with a given rate, an assistant proposes a call, and the call
-usually looks plausible. Such a suggestion is a candidate, and it goes
-through the same steps as a name we found ourselves: we check that the name
-exists, for example with `dir` or `hasattr`, read its signature, predict the
-result, and run a small example. The last step matters most, because a
-wrong suggestion need not fail: it can name a function that exists, fit
-its signature, and run, yet compute something else.
+This same four-step habit is doubly valuable when working with AI coding
+assistants. Asked how to draw gamma samples with a given rate, an assistant will
+readily suggest a plausible-looking call—but treat every suggestion as an
+unverified *candidate*, not ground truth. Check that the function name actually
+exists (with `dir` or `hasattr`), inspect its signature, predict what it should
+return, and verify it on a tiny input. That final verification step is critical:
+a subtly wrong suggestion can invoke a real function with valid argument types
+and still silently compute the wrong distribution.
 
-With this procedure the tools of the chapter are complete: tensors, tables,
-linear algebra, derivatives, probability, and a way to find what the book
-leaves out. :numref:`chap_regression` uses them to build and train a first
-model.
+With this workflow in place, we have assembled our complete preliminary toolkit:
+tensors, tabular preprocessing, linear algebra, calculus, automatic
+differentiation, probability, and a reliable method for navigating framework APIs.
+In :numref:`chap_regression`, we put these tools to work to build and train our
+first real deep learning models.
 
 ## Summary
 
-No text can record the details of every function in a deep learning framework,
-and a call that looks harmless may read its arguments differently than we
-assume: the same two numbers describe a gamma distribution by its rate in
-one library and by its scale in another. Four steps settle such questions from within a notebook. `dir` and
-Tab completion discover the names that a module defines, and `help` and `?`
-show the docstring of a candidate and its signature, which says what each
-argument means. The reference documentation and `??` supply
-the details that the docstring omits, and a small example whose result we
-predicted verifies our reading. Suggestions from coding assistants are
-candidates that go through the same steps.
+* No book can cover every function in a rapidly evolving deep learning framework,
+  and valid-looking calls can silently follow different conventions across
+  libraries (such as rate vs. scale for a gamma distribution).
+* A four-step loop settles API questions reliably inside a notebook: (i) *discover*
+  public names with `dir` or Tab completion, (ii) *inspect* signatures and
+  docstrings with `help` or `?`, (iii) *read* the online API reference or Python
+  source code (`??`) when details remain unclear, and (iv) *verify* your reading
+  on a small test whose outcome you predicted beforehand.
+* Treat code snippets proposed by coding assistants as candidates that must pass
+  the exact same discovery, inspection, and verification checks.
 
 ## Exercises
 

@@ -128,33 +128,66 @@ design, since a matrix multiplication reads its operands in large tiles.
 Sparse and gather-heavy workloads do not, and a dataset that is read in
 shuffled order is best shuffled in large blocks.
 
-### Measured Memory Bandwidth
+<!-- WRITER: the "Measured Memory Bandwidth" subsection and its cell
+(hardware-where-bytes-live, x * 2.0 on 1 GiB, 0.92/0.90 TB/s) are retired:
+they repeated 13.1's elementwise measurement. Cite 13.1's measured beta of
+about 0.9 TB/s where the section needs it. The gather below replaces the cell.
+Prediction to state before the cell: the identity gather streams the vector,
+the index and the output, 16 B per element with int64 indices (PyTorch) or
+12 B with int32 (JAX), about 4-5 ms at 0.9 TB/s; a random permutation fetches
+a whole 32-byte sector for each 4-byte element, 44 (PyTorch) or 40 (JAX) B per
+element, so if sector traffic alone set the time it would take about three
+times as long. -->
 
-The number from this hierarchy that matters most for the roofline is the
-bandwidth that our card achieves in practice. A large elementwise
-operation measures it: multiplying a 1 GB vector by 2 reads and writes every element
-once, so we know the bytes moved, and the arithmetic is negligible.
-
-```{.python .input #hardware-where-bytes-live}
+```{.python .input #hardware-bandwidth-and-latency}
 %%tab pytorch
-x = torch.randn(256 * 1024 * 1024, device=d2l.try_gpu())  # 1 GB fp32
-t = d2l.Benchmark(lambda: x * 2.0).time
-print(f'measured {2 * x.nbytes / t / 1e12:.2f} TB/s '
-      f'(spec: about 1.0 TB/s)')
+n = 256 * 1024 * 1024
+x = torch.randn(n, device=d2l.try_gpu())  # 1 GiB fp32
+times = {}
+for desc in ('identity', 'random'):
+    idx = (torch.arange(n, device=x.device) if desc == 'identity' else
+           torch.randperm(n, device=x.device))
+    # Bytes per element: the index and the output stream; x is read as
+    # 4 bytes in order, or as a whole 32-byte sector at a random address
+    nbytes = idx.dtype.itemsize + 4 + (4 if desc == 'identity' else 32)
+    times[desc] = d2l.Benchmark(lambda: x[idx]).time
+    print(f'{desc:8s}: {1e3 * times[desc]:5.1f} ms, '
+          f'{nbytes * n / times[desc] / 1e12:.2f} TB/s at {nbytes} B/element')
+    del idx  # Free the 2 GiB index before making the next one
+print(f'random / identity: {times["random"] / times["identity"]:.1f}x')
 ```
 
-```{.python .input #hardware-where-bytes-live}
+```{.python .input #hardware-bandwidth-and-latency}
 %%tab jax
-x = jax.random.normal(d2l.get_key(), (256 * 1024 * 1024,))  # 1 GB fp32
-t = d2l.Benchmark(lambda: x * 2.0).time
-print(f'measured {2 * x.nbytes / t / 1e12:.2f} TB/s '
-      f'(spec: about 1.0 TB/s)')
+n = 256 * 1024 * 1024
+x = jax.random.normal(d2l.get_key(), (n,))  # 1 GiB fp32
+gather = jax.jit(lambda x, idx: x[idx])
+times = {}
+for desc in ('identity', 'random'):
+    idx = (jnp.arange(n) if desc == 'identity' else
+           jax.random.permutation(d2l.get_key(), n))
+    # Bytes per element: the index and the output stream; x is read as
+    # 4 bytes in order, or as a whole 32-byte sector at a random address
+    nbytes = idx.dtype.itemsize + 4 + (4 if desc == 'identity' else 32)
+    times[desc] = d2l.Benchmark(lambda: gather(x, idx)).time
+    print(f'{desc:8s}: {1e3 * times[desc]:5.1f} ms, '
+          f'{nbytes * n / times[desc] / 1e12:.2f} TB/s at {nbytes} B/element')
+print(f'random / identity: {times["random"] / times["identity"]:.1f}x')
 ```
 
-The kernel streams about 0.9 TB/s, within about ten percent of the
-specification. Every large elementwise operation in a network runs at this
-rate, whatever it computes, because its bytes and not its arithmetic set
-its time.
+<!-- WRITER: measured on GPU 2 of the build machine (dev, 2026-11-19, not
+captured): identity 4.6 ms (PyTorch) and 3.5 ms (JAX), both 0.92-0.94 TB/s at
+the counted bytes, i.e. the identity gather streams at the full measured beta.
+The random gather takes about 37 ms in both tabs (the time is set by the random
+reads of x, not by the index and output streams): 0.29-0.32 TB/s even when
+every random read is charged a whole 32-byte sector. Ratio random/identity
+about 8x (PyTorch) and 10.5x (JAX), far above the factor of about 3 that
+sector traffic alone predicts. Reading: the sector is not the only cost; a
+random read also opens a DRAM row, the burst model's latency, so a random
+access stream reaches about a third of beta even counted generously. This
+gives the block-size advice its size (shuffle in blocks of at least latency x
+bandwidth, about 100 ns x 1 TB/s = 100 KB). Do not compare the two tabs'
+ratios in shared prose (they differ through the index width). -->
 
 ## Compute and Memory Bandwidth
 :label:`subsec_hw-shoreline`
@@ -521,53 +554,20 @@ that raises the compute roof.
 
 ### Batched Decoding
 
+<!-- WRITER: the batch sweep (cell hardware-batched-decoding) moved to
+13.1 (performance-model.md, new subsection subsec_perf-roofline-test once that
+step lands; cite that label instead of sec_perf_model). This paragraph is a
+placeholder that keeps the section true; rewrite it as the one paragraph the
+design asks for, ending at "keep the caches small". -->
 Batching moves decode up the roofline. A step for $B$ sequences reads the
-weights once and produces $B$ tokens, while every sequence still reads its
-own key–value cache (:numref:`subsec_kv-cache-batching`). The measurement
-of :numref:`sec_kv-cache` stopped at 64 sequences, where the step is still
-bandwidth-bound. Here we follow the weights alone past the ridge point. We
-time one bf16 weight matrix of a large model, $16{,}384 \times 16{,}384$
-(0.54 GB), multiplied by a batch of $B$ activation vectors, one row per
-sequence, for $B$ from 1 to 1,024.
-
-```{.python .input #hardware-batched-decoding}
-%%tab pytorch
-d = 16384
-W = torch.randn(d, d, dtype=torch.bfloat16, device=d2l.try_gpu())  # 0.54 GB
-for B in (1, 4, 16, 64, 256, 1024):
-    X = torch.randn(B, d, dtype=torch.bfloat16, device=W.device)
-    t = d2l.Benchmark(lambda: X @ W).time
-    print(f'B = {B:4d}: {1e3 * t:5.2f} ms, {B / t:9,.0f} rows/s, '
-          f'{2 * B * d * d / t / 1e12:5.1f} TFLOP/s')
-```
-
-```{.python .input #hardware-batched-decoding}
-%%tab jax
-d = 16384
-W = jax.random.normal(d2l.get_key(), (d, d), dtype=jnp.bfloat16)  # 0.54 GB
-for B in (1, 4, 16, 64, 256, 1024):
-    X = jax.random.normal(d2l.get_key(), (B, d), dtype=jnp.bfloat16)
-    t = d2l.Benchmark(lambda: X @ W).time
-    print(f'B = {B:4d}: {1e3 * t:5.2f} ms, {B / t:9,.0f} rows/s, '
-          f'{2 * B * d * d / t / 1e12:5.1f} TFLOP/s')
-```
-
-The product performs $2Bd^2$ FLOPs on $2d^2$ bytes of weights, an
-intensity of about $B$ FLOPs per byte. For $B = 1$ it is bandwidth-bound
-and takes about 0.6 ms, the time to read 0.54 GB. Up to a batch of 64 the
-time barely changes, so the rows per second through this matrix grow
-almost in proportion to the batch. The roofline puts the crossover where
-the intensity reaches the ridge point, at a batch of about 164. Beyond it
-the time grows in proportion to the batch, and the arithmetic rate levels
-off near the 165 TFLOP/s peak. One matrix on one card
-covers both ends of :numref:`fig_roofline`.
-
-In a whole model the
-key–value caches add bytes that batching does not share, so the crossover
-moves to larger batches, and for long contexts it never comes. Inference
-servers therefore batch the requests of many users and keep the caches
-small. The systems that do so, with their schedulers, paged caches, and
-speculative decoding, belong to the Language Models part.
+weights once and produces $B$ tokens, an intensity of about $B$ FLOPs per
+byte of weights, so the step time stays flat while $B$ lies below the ridge
+point and grows in proportion to $B$ beyond it, as :numref:`sec_perf_model`
+measured on one bf16 weight matrix. In a whole model every sequence still
+reads its own key–value cache (:numref:`subsec_kv-cache-batching`), bytes
+that batching does not share, so the crossover moves to larger batches, and
+for long contexts it never comes. Inference servers therefore batch the
+requests of many users and keep the caches small.
 
 ### Rules of Thumb
 
@@ -616,6 +616,13 @@ for a 1B-parameter GPT on an RTX 4090. Batching raises the intensity of
 decode in proportion to the batch until it reaches the ridge point.
 
 ## Exercises
+
+<!-- WRITER: three exercises now point at moved or retired code. Ex. 1a
+uses "x * 2.0 of subsec_hw-bytes" and "the code of that subsection": that
+cell is retired; point to 13.1's elementwise cell (the measured beta). Ex. 3b
+cites the "batch sweep of subsec_hw-two-workloads": the sweep now lives in
+13.1 (subsec_perf-roofline-test). Ex. 9 parts 1-2 are now the body's gather
+cell; keep part 3 (the block-size sweep) only. -->
 
 1. [code] **Latency and bandwidth, measured.** A transfer of $n$ bytes
    over a path with latency $\alpha$ and bandwidth $\beta$ takes about
@@ -923,11 +930,13 @@ Registers and caches: ~0.1 GB at tens of TB/s. GPU memory: 24–288 GB at
 [GPU latencies: RTX 4090 microbenchmarks (Luo et al., 2024)]{.small}
 :::
 
-::: {.slide title="A Large Elementwise Operation Measures Bandwidth"}
-@hardware-where-bytes-live
+::: {.slide title="Random Reads Cost Far More Than Their Bytes"}
+@!hardware-bandwidth-and-latency
 
-Bytes known exactly (read 1 GB, write 1 GB), arithmetic negligible:
-about 0.9 of the specified 1.0 TB/s.
+Gather from a 1 GiB fp32 vector through the identity and through a random
+permutation. Each random 4-byte read fetches a 32-byte sector, so sector
+traffic alone predicts about 3× slower; the random gather is several
+times worse still. Stream, or shuffle in large blocks.
 :::
 
 ::: {.slide title="Check: How Long Does Reading All of GPU Memory Take?"}
@@ -1051,10 +1060,12 @@ $$\textrm{tokens/s} \lesssim \frac{\beta}{2N + \textrm{KV bytes}}$$
 :::
 
 ::: {.slide title="Batching Moves Decode up the Roofline until the Ridge Point"}
-@!hardware-batched-decoding
+A step for $B$ sequences reads the weights once: $I \approx B$ FLOP/B.
 
-$16{,}384^2$ bf16 weights (0.54 GB), batch $B$: $I \approx B$ FLOP/B.
-Time flat while $B \ll 164$ (the ridge point), then linear in $B$.
+- Measured in the previous deck on $16{,}384^2$ bf16 weights (0.54 GB):
+  time flat while $B \ll 164$ (the ridge point), then linear in $B$.
+- Each sequence still reads its own KV cache, which batching does not
+  share: the crossover moves to larger $B$.
 :::
 
 ::: {.slide title="Check: Decoding an 8B Model"}

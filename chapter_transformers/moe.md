@@ -930,11 +930,15 @@ d2l.plot(list(range(every, num_steps + 1, every)),
          'validation loss (nats)', legend=['dense', 'MoE'], fmts=('-', '--'))
 ```
 
-The mixture starts behind, as predicted. The dense curve then flattens
-sooner, and the first measurement at which the mixture is ahead falls
-between steps 1,000 and 2,000 in every run. The mixture ends with a lower
-validation loss than the dense model in every run, by about five
-hundredths of a nat (0.04 to 0.06), with nothing dropped.
+The mixture starts behind, as predicted, by about a tenth of a nat at the
+first measurement of the plotted run. The deficit closes fast, and the
+first measurement at which the mixture is ahead falls between steps 1,000
+and 2,000 in every run. From there the dense curve flattens sooner, and
+the gap keeps widening for several thousand steps, until the cosine
+schedule takes the learning rate toward zero and both curves come to rest
+together. The mixture ends with a lower validation loss than the dense
+model in every run, by about five hundredths of a nat (0.04 to 0.06), with
+nothing dropped.
 
 Is that more than luck? The two runs of the dense model end within a
 hundredth of each other, as the run-to-run spread measured in
@@ -1515,8 +1519,11 @@ experts, top-1, auxiliary loss $\lambda_\textrm{bal} = 0.01$:
 ::: {.slide title="The Mixture Overtakes the Dense Model by Step 2,000"}
 @!moe-a-mixture-of-experts-gpt
 
-- Behind until step 1,000 to 2,000, then ahead: about 0.05 nats lower
-  (0.04–0.06) at the end in every run, nothing dropped.
+- Behind at first (about 0.1 nats in the plotted run), ahead from step
+  1,000 to 2,000 on in every run.
+- The gap widens until the decaying learning rate stops both curves:
+  about 0.05 nats lower (0.04–0.06) at the end in every run, nothing
+  dropped.
 :::
 
 ::: {.slide title="An Expert Parameter Is Worth Less Stored, More per Operation"}

@@ -805,7 +805,7 @@ The prediction of :numref:`subsec_moe-init-load` holds. Before any
 training, the busiest expert of a layer receives about three to four times
 its share (2.9 to 3.8 in the table), and the buffers drop a quarter to
 three tenths of the assignments. The plot shows how lopsided that is: in
-the fresh models, as in every unbalanced one, the three busiest experts
+the fresh model, as in both unbalanced ones, the three busiest experts
 take about three quarters of the tokens and the idlest receive a small
 fraction of their share. This is the end state that the feedback loop was
 supposed to produce, and a fresh byte-level model starts there.

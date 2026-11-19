@@ -1181,15 +1181,13 @@ Width $d = 256$; always 65,536 tokens per call; $T$ from 512 to 16,384.
 :::
 :::
 
-::: {.slide title="Beyond a Few Thousand Tokens Attention Grows With T; the Scan Does Not"}
+::: {.slide title="At Long Lengths Attention Grows With T; the Scan Does Not"}
 @!linear-recurrence-cost-against-attention-2
 
-Forward and backward, milliseconds per 65,536 tokens. The count's turn is
-at 1,024; the measured one comes a little later, because time per token
-that the FLOPs leave out dilutes the quadratic term.
-
 ::: {.d2l-note}
-GRU slowest everywhere; attention about 1.7× per doubling from 4,096 on.
+Forward and backward, ms per 65,536 tokens. Attention turns later than the
+count's 1,024: time per token that the FLOPs leave out dilutes the
+quadratic term. From 4,096 on, about 1.7× per doubling; GRU slowest.
 :::
 :::
 

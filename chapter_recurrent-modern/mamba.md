@@ -1377,12 +1377,10 @@ Selectivity, not the block, solves the task.
 ::: {.slide title="Mamba's State Spikes at the Symbols; S4D's Follows Distance"}
 @!mamba-where-the-state-comes-from-2
 
-- Size of each position's term in the first layer's state at the query.
-- S4D: the most recent inputs dominate. Mamba: spikes at the four symbols.
-- The symbols' share of the whole state varies from run to run.
-
 ::: {.d2l-note}
-The measure shows what the state holds, not what $\mathbf{C}_t$ reads.
+Size of each position's term in the first layer's state at the query: what
+the state holds, not what $\mathbf{C}_t$ reads. The symbols' share of the
+state varies from run to run.
 :::
 :::
 

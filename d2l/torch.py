@@ -2014,7 +2014,7 @@ def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
                    blank_fillers=False):
     """A symbol, then num_steps - 1 fillers; the target is the symbol.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     Y = rng.integers(0, num_symbols, (batch_size, 1))  # One query, at the end
     X = rng.integers(num_symbols, 2 * num_symbols, (batch_size, num_steps))
     if blank_fillers:  # The same filler token at every step
@@ -2026,7 +2026,7 @@ def init_lecun(module):
     """LeCun normal weights and zero biases for all linear, convolutional,
     and recurrent layers.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     for layer in module.modules():
         if isinstance(layer, (nn.Linear, nn.Conv1d)):
             fan_in = layer.weight[0].numel()  # Inputs of one output unit
@@ -2044,7 +2044,7 @@ def init_lecun(module):
 class Recurrent(nn.Module):
     """A batch-first recurrent layer that returns only its outputs.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, rnn):
         super().__init__()
         self.rnn = rnn
@@ -2055,7 +2055,7 @@ class Recurrent(nn.Module):
 class RecallModel(nn.Module):
     """Embedding, a sequence layer, and a classifier at every position.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
                  num_outputs=8):
         super().__init__()
@@ -2071,7 +2071,7 @@ def train_queries(model, batch, num_steps, optimizer,
                   scheduler=None):
     """Train on fresh batches; the queries are the last Y.shape[1] steps.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     device = next(model.parameters()).device
     for step in range(num_steps):
         X, Y = (torch.as_tensor(A, device=device) for A in batch(step))
@@ -2087,7 +2087,7 @@ def train_queries(model, batch, num_steps, optimizer,
 def query_accuracy(model, X, Y):
     """Fraction of queries answered correctly.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     device = next(model.parameters()).device
     X, Y = (torch.as_tensor(A, device=device) for A in (X, Y))
     with torch.inference_mode():
@@ -2097,7 +2097,7 @@ def train_delayed_recall(model, num_steps, blank_fillers=False):
     """Train with Adam at rate 0.003 on 1,500 fresh batches of 128 sequences
     of delayed recall; return the accuracy on 2,048 new sequences.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     task = lambda rng, n: delayed_recall(rng, n, num_steps,
                                          blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
@@ -2109,7 +2109,7 @@ def train_delayed_recall(model, num_steps, blank_fillers=False):
 class SeqLM(nn.Module):
     """A language model of residual blocks: a sequence mixer, then an MLP.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, vocab_size, num_hiddens, mixers):
         super().__init__()
         d = num_hiddens
@@ -2144,7 +2144,7 @@ class AttentionMixer(d2l.CausalAttention):
     channel first mixes each query, key, and value with those of the
     previous steps.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, num_hiddens, num_heads, conv_width=None, rope=True):
         super().__init__(num_hiddens, num_heads, rope=rope)
         d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
@@ -2167,7 +2167,7 @@ class AttentionMixer(d2l.CausalAttention):
 def loss_by_position(model, data):
     """Mean validation loss in nats at each position of the window.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     device = next(model.parameters()).device
     total, count = 0, 0
     for X, Y in data.val_dataloader():
@@ -2181,17 +2181,41 @@ def train_text(model, data, lr=2e-3, num_steps=1000):
     """Train a language model with LMOptimizer; return its validation loss
     in nats at each position and its milliseconds per training step.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     optimizer = d2l.LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
     # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
     bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
                           warmup=1, repeats=num_steps // 50 - 1)
     return loss_by_position(model, data), 1000 * bench.time / 50
 
+def text_table(make_model, arms, data, num_runs=2):
+    """Train num_runs fresh models make_model(*args) for each arm (a name
+    and its args); print the parameters, the validation loss of every run,
+    its losses at early, middle, and late positions of the window, and the
+    milliseconds per step. Return the trained models of each arm.
+
+    Defined in :numref:`sec_gated-training`"""
+    T = data.num_steps
+    bands = [(0, T // 8), (T // 8, T // 2), (T // 2, T)]
+    width = max(len(name) for name in arms)
+    header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
+    print(' ' * (width + 12), *(f'{h:>11}' for h in header), '  ms/step')
+    trained = {}
+    for name, args in arms.items():
+        models = [make_model(*args) for _ in range(num_runs)]
+        runs = [train_text(model, data) for model in models]  # (losses, ms)
+        columns = [[np.mean(loss) for loss, _ in runs]] + [
+            [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
+        print(f'{name:{width}s} {d2l.num_params(models[0]):11,d}',
+              *('/'.join(f'{v:.3f}' for v in column) for column in columns),
+              '/'.join(f'{ms:.0f}' for _, ms in runs))
+        trained[name] = models
+    return trained
+
 def chrf(pred, label, n=6, beta=2):
     """chrF (Popovic, 2015): character n-gram F-score.
 
-    Defined in :numref:`sec_encoder-decoder`"""
+    Defined in :numref:`sec_translation-scoring`"""
     def ngrams(s, k):
         s = s.replace(' ', '')
         return collections.Counter(s[i:i + k] for i in range(len(s) - k + 1))
@@ -2210,7 +2234,7 @@ def chrf(pred, label, n=6, beta=2):
 def bleu(pred_seq, label_seq, k):
     """Compute the BLEU.
 
-    Defined in :numref:`sec_encoder-decoder`"""
+    Defined in :numref:`sec_translation-scoring`"""
     pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
     len_pred, len_label = len(pred_tokens), len(label_tokens)
     score = math.exp(min(0, 1 - len_label / len_pred))
@@ -2457,19 +2481,15 @@ class GatedLinearAttention(nn.Module):
         self.W_qkv = nn.Linear(d, 3 * d, bias=False)
         self.conv = nn.Conv1d(3 * d, 3 * d, conv_width, groups=3 * d,
                               padding=conv_width - 1)  # One filter per channel
-        self.W_a = self.decay_gate(d)
+        self.W_a = nn.Linear(d, num_heads)  # Decay gate, one per head
         self.W_g = nn.Linear(d, d)  # Output gate
         self.W_o = nn.Linear(d, d, bias=False)
         d2l.init_lecun(self)
         self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
-    def decay_gate(self, d):
-        """One gate per head; init_decays sets the bias of its last layer."""
-        return nn.Sequential(nn.Linear(d, self.num_heads))
-
     def init_decays(self, tau_min, tau_max):
         """Start the decays at exp(-1/tau), tau log-uniform in range."""
-        b = self.W_a[-1].bias
+        b = self.W_a.bias
         tau = torch.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
         with torch.no_grad():  # log sigmoid(b) = -1 / tau
             b.copy_(-torch.log(torch.expm1(1 / tau)))
@@ -2543,9 +2563,10 @@ def associative_recall(rng, batch_size, num_pairs, num_keys=512,
     return X, np.take_along_axis(latest, order, 1), order < r
 
 def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,
-                 batch_size=256, lr=1e-2, **task):
+                 **task):
     """Train on associative recall (task: options of associative_recall)
-    with a cycling number of pairs; return the accuracy per number.
+    with a cycling number of pairs, 256 sequences per update, AdamW at peak
+    rate 0.01; return the accuracy per number of pairs.
 
     Defined in :numref:`sec_matrix-state`"""
     rng = np.random.default_rng()
@@ -2554,11 +2575,12 @@ def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,
     data = lambda n, size: associative_recall(
         rng, size, n, num_steps=length(n), **task)[:2]
     model.to(d2l.try_gpu())
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-2,
+                                  weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda t: (
         d2l.cosine_warmup(t, num_updates, num_updates // 10)))
     d2l.train_queries(model, lambda step: data(pairs[step % len(pairs)],
-                      batch_size), num_updates, optimizer, scheduler)
+                      256), num_updates, optimizer, scheduler)
     return {n: float(d2l.query_accuracy(model, *data(n, 1024)))
             for n in pairs}
 

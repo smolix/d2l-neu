@@ -128,11 +128,13 @@ note, not the shared text. -->
 %%tab pytorch
 torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
 
-def train_copy(model, num_steps=1500, lr=3e-3):
-    """Train on fresh batches of selective copying; return test accuracy."""
+def train_copy(model):
+    """Train for 1,500 steps on fresh batches of selective copying; return
+    the test accuracy."""
+    num_steps = 1500
     device = d2l.try_gpu()
     model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=3e-3)
     d2l.train_queries(model, lambda step: copy_batch(64, device=device),
                       num_steps, optimizer)
     X, Y = copy_batch(1024, device=device)
@@ -143,10 +145,12 @@ def train_copy(model, num_steps=1500, lr=3e-3):
 
 ```{.python .input #mamba-selective-copying-2}
 %%tab jax
-def train_copy(model, num_steps=1500, lr=3e-3):
-    """Train on fresh batches of selective copying; return test accuracy."""
+def train_copy(model):
+    """Train for 1,500 steps on fresh batches of selective copying; return
+    the test accuracy."""
+    num_steps = 1500
     optimizer = nnx.Optimizer(model, optax.chain(
-        optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
+        optax.clip_by_global_norm(1.0), optax.adam(3e-3)), wrt=nnx.Param)
     key = d2l.get_key()  # New data every run
     d2l.train_queries(model, lambda step: copy_batch(
         jax.random.fold_in(key, step), 64), num_steps, optimizer)
@@ -812,47 +816,46 @@ in the PyTorch tab's note, not in the shared text. -->
 
 ```{.python .input #mamba-language-modeling-4}
 %%tab pytorch, jax
-data = d2l.WikiText103(batch_size=64, num_steps=128)  # As in sec_lstm
+data = d2l.WikiText103(batch_size=64, num_steps=128)
 ```
 
 ```{.python .input #mamba-language-modeling-3}
 %%tab pytorch
-d = 256  # The width of every model; each has four blocks
-mixers = {'Mamba': lambda: torch.compile(Mamba(d)),  # As in the copying
-          'minGRU': lambda: d2l.MinGRU(d, d),
-          'attention': lambda: d2l.AttentionMixer(d, num_heads=8)}
+def text_model(mixer, d):  # 256 byte values; four blocks of width d
+    return d2l.SeqLM(256, d, [mixer(d) for _ in range(4)]).to(d2l.try_gpu())
 
-def text_model(mixer):  # 256 byte values; fresh weights, on the GPU
-    return d2l.SeqLM(256, d, [mixer() for _ in range(4)]).to(d2l.try_gpu())
+mamba = lambda d: torch.compile(Mamba(d))  # Compiled, as in the copying
+min_gru = lambda d: d2l.MinGRU(d, d)
+attention = lambda d: d2l.AttentionMixer(d, num_heads=8)
+arms = {'Mamba': (mamba, 256), 'minGRU': (min_gru, 256),
+        'attention': (attention, 256),
+        'minGRU, d=309': (min_gru, 309)}  # As many parameters as Mamba
 ```
 
 ```{.python .input #mamba-language-modeling-3}
 %%tab jax
-d = 256  # The width of every model; each has four blocks
-mixers = {'Mamba': lambda rngs: Mamba(d, rngs=rngs),
-          'minGRU': lambda rngs: d2l.MinGRU(d, d, rngs=rngs),
-          'attention': lambda rngs: d2l.AttentionMixer(d, num_heads=8,
-                                                       rngs=rngs)}
-
-def text_model(mixer):  # 256 byte values; fresh random weights
+def text_model(mixer, d):  # 256 byte values; four blocks of width d
     rngs = nnx.Rngs(d2l.get_key())
-    return d2l.SeqLM(256, d, [mixer(rngs) for _ in range(4)], rngs=rngs)
+    return d2l.SeqLM(256, d, [mixer(d, rngs) for _ in range(4)], rngs=rngs)
+
+mamba = lambda d, rngs: Mamba(d, rngs=rngs)
+min_gru = lambda d, rngs: d2l.MinGRU(d, d, rngs=rngs)
+attention = lambda d, rngs: d2l.AttentionMixer(d, num_heads=8, rngs=rngs)
+arms = {'Mamba': (mamba, 256), 'minGRU': (min_gru, 256),
+        'attention': (attention, 256),
+        'minGRU, d=309': (min_gru, 309)}  # As many parameters as Mamba
 ```
 
 ```{.python .input #mamba-language-modeling-2}
 %%tab pytorch, jax
-bands = [(0, 16), (16, 64), (64, 128)]  # Early, middle, and late positions
-header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
-print(' ' * 21, *(f'{h:>11}' for h in header), '  ms/step')
-for name, mixer in mixers.items():
-    lms = [text_model(mixer) for _ in range(2)]
-    runs = [d2l.train_text(lm, data) for lm in lms]  # (losses, ms) each
-    columns = [[np.mean(loss) for loss, _ in runs]] + [
-        [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
-    print(f'{name:9s} {d2l.num_params(lms[0]):11,d}',
-          *('/'.join(f'{v:.3f}' for v in column) for column in columns),
-          '/'.join(f'{ms:.0f}' for _, ms in runs))
+trained = d2l.text_table(text_model, arms, data)
 ```
+
+<!-- WRITER: the table has a fourth arm, 'minGRU, d=309': the minGRU widened
+to the Mamba model's parameter count (3.99 M), so the text can say whether
+Mamba's gain over the minGRU survives at equal size (lib-review F2). The trained
+models are kept in `trained` (the step-size exercise reads `trained['Mamba']`).
+The claims file has the new numbers. -->
 
 <!-- WRITER: the reading below is false now (no PTB, no perplexity, no LSTM
 row). Measured (width 256, four blocks, 1,000 steps of 64 x 128 bytes; four

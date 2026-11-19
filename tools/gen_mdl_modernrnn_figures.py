@@ -7,10 +7,11 @@ Ten figures, by section:
 
   * "Gated Recurrent Networks" (sec_lstm) -- the LSTM memory cell and the GRU
     cell (house-style redraws of the old ``img/lstm-*.svg``/``gru-*.svg``).
-  * "Linear Recurrences and State Space Models" (sec_ssm) -- the parallel
-    prefix (doubling) scan, zero-order-hold discretization (rate lambda ->
-    decay exp(Delta lambda), and the half-life per step size), and the three
-    equivalent views of a linear SSM.
+  * "Linear Recurrences and Parallel Scans" (sec_linear-recurrence) -- the
+    parallel prefix (doubling) scan.
+  * "State Space Models" (sec_ssm) -- zero-order-hold discretization (rate
+    lambda -> decay exp(Delta lambda), and the half-life per step size), and
+    the three equivalent views of a linear SSM.
   * "Selective State Space Models" (sec_mamba) -- the selective copying task
     and the Mamba layer.
   * "Matrix-State Recurrences" -- the semiseparable mask lives in
@@ -417,10 +418,10 @@ def fig_seq2seq():
 
 
 # =========================================================================== #
-# "Linear Recurrences and State Space Models" (sec_ssm): the parallel        #
-# prefix (doubling) scan, zero-order-hold discretization, the three         #
-# equivalent views of a linear SSM (continuous-time ODE, unrolled          #
-# recurrence, convolution with the materialized kernel).                     #
+# The parallel prefix (doubling) scan ("Linear Recurrences and Parallel       #
+# Scans", sec_linear-recurrence); zero-order-hold discretization and the      #
+# three equivalent views of a linear SSM (continuous-time ODE, unrolled       #
+# recurrence, convolution with the kernel) ("State Space Models", sec_ssm).   #
 # =========================================================================== #
 
 def fig_scan_tree():

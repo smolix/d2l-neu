@@ -436,6 +436,8 @@ and the plain recurrent network about 3.1.
 
 ```{.python .input #linear-recurrence-a-linear-recurrent-language-model-1}
 %%tab pytorch
+torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
+
 def text_model(mixer, d):  # 256 byte values; four blocks of width d
     return d2l.SeqLM(256, d, [mixer(d) for _ in range(4)]).to(d2l.try_gpu())
 
@@ -462,20 +464,8 @@ arms = {'GRU': (gru, 256), 'minGRU': (min_gru, 256),
 ```{.python .input #linear-recurrence-a-linear-recurrent-language-model-2}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
-bands = [(0, 16), (16, 64), (64, 128)]  # Early, middle, and late positions
-header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
-print(' ' * 25, *(f'{h:>11}' for h in header), '  ms/step')
-trained = {}
-for name, (mixer, d) in arms.items():
-    models = [text_model(mixer, d) for _ in range(2)]
-    runs = [d2l.train_text(model, data) for model in models]  # (losses, ms)
-    columns = [[np.mean(loss) for loss, _ in runs]] + [
-        [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
-    print(f'{name:13s} {d2l.num_params(models[0]):11,d}',
-          *('/'.join(f'{v:.3f}' for v in column) for column in columns),
-          '/'.join(f'{ms:.0f}' for _, ms in runs))
-    trained[name] = models[0]
-model = trained['minGRU']  # The model we look inside below
+trained = d2l.text_table(text_model, arms, data)
+model = trained['minGRU'][0]  # The model we look inside below
 ```
 
 <!-- WRITER: the reading below is false (PTB numbers). Measured in development, three executions

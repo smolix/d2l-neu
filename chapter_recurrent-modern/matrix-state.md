@@ -555,7 +555,7 @@ parts surround the memory; the experiments below and in
   be written as one key and one value.
 - *Unit queries and keys,* the setting of :eqref:`eq_ms-capacity-law`.
 <!-- WRITER: the layer now has one decay per head (D4): a_t = sigmoid(w^T x_t + b) per head, from
-`decay_gate` = one linear map to num_heads; no rank-16 projection, no exponent 1/16, no `gate_scale`; the biases
+`W_a` = one linear map to num_heads (no `decay_gate` method any more); no rank-16 projection, no exponent 1/16, no `gate_scale`; the biases
 start the heads at memories tau log-spaced in `timescales` (log sigmoid(b) = -1/tau). The bullet below and the
 deck slide "Gated Linear Attention: One Layer of This Memory" describe the old gate. -->
 - *A decay per key coordinate*, $\boldsymbol{\alpha}_t =
@@ -581,19 +581,15 @@ class GatedLinearAttention(nn.Module):  #@save
         self.W_qkv = nn.Linear(d, 3 * d, bias=False)
         self.conv = nn.Conv1d(3 * d, 3 * d, conv_width, groups=3 * d,
                               padding=conv_width - 1)  # One filter per channel
-        self.W_a = self.decay_gate(d)
+        self.W_a = nn.Linear(d, num_heads)  # Decay gate, one per head
         self.W_g = nn.Linear(d, d)  # Output gate
         self.W_o = nn.Linear(d, d, bias=False)
         d2l.init_lecun(self)
         self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
-    def decay_gate(self, d):
-        """One gate per head; init_decays sets the bias of its last layer."""
-        return nn.Sequential(nn.Linear(d, self.num_heads))
-
     def init_decays(self, tau_min, tau_max):
         """Start the decays at exp(-1/tau), tau log-uniform in range."""
-        b = self.W_a[-1].bias
+        b = self.W_a.bias
         tau = torch.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
         with torch.no_grad():  # log sigmoid(b) = -1 / tau
             b.copy_(-torch.log(torch.expm1(1 / tau)))
@@ -611,18 +607,14 @@ class GatedLinearAttention(nnx.Module):  #@save
         self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),  # Causal, one
                              feature_group_count=3 * d,  # filter per channel
                              padding=((conv_width - 1, 0),), rngs=rngs)
-        self.W_a = self.decay_gate(d, rngs)
+        self.W_a = nnx.Linear(d, num_heads, rngs=rngs)  # Decay, per head
         self.W_g = nnx.Linear(d, d, rngs=rngs)  # Output gate
         self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)
         self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
-    def decay_gate(self, d, rngs):
-        """One gate per head; init_decays sets the bias of its last layer."""
-        return nnx.Sequential(nnx.Linear(d, self.num_heads, rngs=rngs))
-
     def init_decays(self, tau_min, tau_max):
         """Start the decays at exp(-1/tau), tau log-uniform in range."""
-        b = self.W_a.layers[-1].bias
+        b = self.W_a.bias
         tau = jnp.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
         b[...] = -jnp.log(jnp.expm1(1 / tau))  # log sigmoid(b) = -1 / tau
 ```
@@ -791,20 +783,22 @@ learning rate of `d2l.cosine_warmup` (:numref:`sec_batch_norm`).
 ```{.python .input #hybrids-the-recall-sweep-1}
 %%tab pytorch
 def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,  #@save
-                 batch_size=256, lr=1e-2, **task):
+                 **task):
     """Train on associative recall (task: options of associative_recall)
-    with a cycling number of pairs; return the accuracy per number."""
+    with a cycling number of pairs, 256 sequences per update, AdamW at peak
+    rate 0.01; return the accuracy per number of pairs."""
     rng = np.random.default_rng()
     length = lambda n: 32 * math.ceil(
         (3 * n + 2 * task.get('num_rebound', 0)) / 32)
     data = lambda n, size: associative_recall(
         rng, size, n, num_steps=length(n), **task)[:2]
     model.to(d2l.try_gpu())
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-2,
+                                  weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda t: (
         d2l.cosine_warmup(t, num_updates, num_updates // 10)))
     d2l.train_queries(model, lambda step: data(pairs[step % len(pairs)],
-                      batch_size), num_updates, optimizer, scheduler)
+                      256), num_updates, optimizer, scheduler)
     return {n: float(d2l.query_accuracy(model, *data(n, 1024)))
             for n in pairs}
 ```
@@ -812,21 +806,22 @@ def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,  #@save
 ```{.python .input #hybrids-the-recall-sweep-1}
 %%tab jax
 def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,  #@save
-                 batch_size=256, lr=1e-2, **task):
+                 **task):
     """Train on associative recall (task: options of associative_recall)
-    with a cycling number of pairs; return the accuracy per number."""
+    with a cycling number of pairs, 256 sequences per update, AdamW at peak
+    rate 0.01; return the accuracy per number of pairs."""
     rng = np.random.default_rng()
     length = lambda n: 32 * math.ceil(
         (3 * n + 2 * task.get('num_rebound', 0)) / 32)
     data = lambda n, size: associative_recall(
         rng, size, n, num_steps=length(n), **task)[:2]
-    schedule = lambda t: lr * d2l.cosine_warmup(t, num_updates,
-                                                num_updates // 10)
+    schedule = lambda t: 1e-2 * d2l.cosine_warmup(t, num_updates,
+                                                  num_updates // 10)
     optimizer = nnx.Optimizer(model, optax.chain(
         optax.clip_by_global_norm(1.0),
         optax.adamw(schedule, weight_decay=0.01)), wrt=nnx.Param)
     d2l.train_queries(model, lambda step: data(pairs[step % len(pairs)],
-                      batch_size), num_updates, optimizer)
+                      256), num_updates, optimizer)
     return {n: float(d2l.query_accuracy(model, *data(n, 1024)))
             for n in pairs}
 ```

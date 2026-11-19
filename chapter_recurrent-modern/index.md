@@ -127,6 +127,6 @@ keep** in a fixed size.
 | how to overwrite a pair? | the delta rule |
 | what can no fixed state do? | exact recall; add a few attention layers |
 
-**Running examples:** character-level Penn Treebank for every model;
+**Running examples:** byte-level WikiText-103 for every language model;
 delayed recall, selective copying, and associative recall for memory.
 :::

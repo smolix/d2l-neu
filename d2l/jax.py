@@ -2183,7 +2183,7 @@ def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
                    blank_fillers=False):
     """A symbol, then num_steps - 1 fillers; the target is the symbol.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     Y = rng.integers(0, num_symbols, (batch_size, 1))  # One query, at the end
     X = rng.integers(num_symbols, 2 * num_symbols, (batch_size, num_steps))
     if blank_fillers:  # The same filler token at every step
@@ -2194,7 +2194,7 @@ def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
 class RecallModel(nnx.Module):
     """Embedding, a sequence layer, and a classifier at every position.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
                  num_outputs=8, *, rngs):
         # d2l.Embed computes its gradient by a matrix product: no atomic adds
@@ -2211,7 +2211,7 @@ class RecallModel(nnx.Module):
 def query_step(model, optimizer, X, Y):
     """One optimizer step on the cross-entropy at the last Y.shape[1] steps.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def loss_fn(model):
         logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
         return optax.softmax_cross_entropy_with_integer_labels(
@@ -2223,7 +2223,7 @@ def query_step(model, optimizer, X, Y):
 def train_queries(model, batch, num_steps, optimizer):
     """Train on fresh batches; the queries are the last Y.shape[1] steps.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     step = nnx.cached_partial(query_step, model, optimizer)  # Compile once
     for i in range(num_steps):
         step(*batch(i))
@@ -2232,14 +2232,14 @@ def train_queries(model, batch, num_steps, optimizer):
 def query_accuracy(model, X, Y):
     """Fraction of queries answered correctly.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).mean()
 
 def train_delayed_recall(model, num_steps, blank_fillers=False):
     """Train with Adam at rate 0.003 on 1,500 fresh batches of 128 sequences
     of delayed recall; return the accuracy on 2,048 new sequences.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     task = lambda rng, n: delayed_recall(rng, n, num_steps,
                                          blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
@@ -2251,7 +2251,7 @@ def train_delayed_recall(model, num_steps, blank_fillers=False):
 class SeqLM(nnx.Module):
     """A language model of residual blocks: a sequence mixer, then an MLP.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, vocab_size, num_hiddens, mixers, *, rngs):
         d = num_hiddens
         self.embedding = d2l.Embed(vocab_size, d, rngs=rngs,  # Unit length
@@ -2285,7 +2285,7 @@ class AttentionMixer(d2l.CausalAttention):
     channel first mixes each query, key, and value with those of the
     previous steps.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, num_hiddens, num_heads, conv_width=None, rope=True,
                  *, rngs):
         super().__init__(num_hiddens, num_heads, rope=rope, rngs=rngs)
@@ -2312,13 +2312,13 @@ class AttentionMixer(d2l.CausalAttention):
 def position_loss_sum(model, X, Y):
     """Loss in nats at each position, summed over the batch.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum(0)
 
 def loss_by_position(model, data):
     """Mean validation loss in nats at each position of the window.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     total, count = 0, 0
     for X, Y in data.val_dataloader():
         total += position_loss_sum(model, jnp.asarray(X), jnp.asarray(Y))
@@ -2329,17 +2329,41 @@ def train_text(model, data, lr=2e-3, num_steps=1000):
     """Train a language model with LMOptimizer; return its validation loss
     in nats at each position and its milliseconds per training step.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     optimizer = d2l.LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
     # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
     bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
                           warmup=1, repeats=num_steps // 50 - 1)
     return loss_by_position(model, data), 1000 * bench.time / 50
 
+def text_table(make_model, arms, data, num_runs=2):
+    """Train num_runs fresh models make_model(*args) for each arm (a name
+    and its args); print the parameters, the validation loss of every run,
+    its losses at early, middle, and late positions of the window, and the
+    milliseconds per step. Return the trained models of each arm.
+
+    Defined in :numref:`sec_gated-training`"""
+    T = data.num_steps
+    bands = [(0, T // 8), (T // 8, T // 2), (T // 2, T)]
+    width = max(len(name) for name in arms)
+    header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
+    print(' ' * (width + 12), *(f'{h:>11}' for h in header), '  ms/step')
+    trained = {}
+    for name, args in arms.items():
+        models = [make_model(*args) for _ in range(num_runs)]
+        runs = [train_text(model, data) for model in models]  # (losses, ms)
+        columns = [[np.mean(loss) for loss, _ in runs]] + [
+            [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
+        print(f'{name:{width}s} {d2l.num_params(models[0]):11,d}',
+              *('/'.join(f'{v:.3f}' for v in column) for column in columns),
+              '/'.join(f'{ms:.0f}' for _, ms in runs))
+        trained[name] = models
+    return trained
+
 def chrf(pred, label, n=6, beta=2):
     """chrF (Popovic, 2015): character n-gram F-score.
 
-    Defined in :numref:`sec_encoder-decoder`"""
+    Defined in :numref:`sec_translation-scoring`"""
     def ngrams(s, k):
         s = s.replace(' ', '')
         return collections.Counter(s[i:i + k] for i in range(len(s) - k + 1))
@@ -2358,7 +2382,7 @@ def chrf(pred, label, n=6, beta=2):
 def bleu(pred_seq, label_seq, k):
     """Compute the BLEU.
 
-    Defined in :numref:`sec_encoder-decoder`"""
+    Defined in :numref:`sec_translation-scoring`"""
     pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
     len_pred, len_label = len(pred_tokens), len(label_tokens)
     score = math.exp(min(0, 1 - len_label / len_pred))
@@ -2594,18 +2618,14 @@ class GatedLinearAttention(nnx.Module):
         self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),  # Causal, one
                              feature_group_count=3 * d,  # filter per channel
                              padding=((conv_width - 1, 0),), rngs=rngs)
-        self.W_a = self.decay_gate(d, rngs)
+        self.W_a = nnx.Linear(d, num_heads, rngs=rngs)  # Decay, per head
         self.W_g = nnx.Linear(d, d, rngs=rngs)  # Output gate
         self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)
         self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
-    def decay_gate(self, d, rngs):
-        """One gate per head; init_decays sets the bias of its last layer."""
-        return nnx.Sequential(nnx.Linear(d, self.num_heads, rngs=rngs))
-
     def init_decays(self, tau_min, tau_max):
         """Start the decays at exp(-1/tau), tau log-uniform in range."""
-        b = self.W_a.layers[-1].bias
+        b = self.W_a.bias
         tau = jnp.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
         b[...] = -jnp.log(jnp.expm1(1 / tau))  # log sigmoid(b) = -1 / tau
 
@@ -2681,9 +2701,10 @@ def associative_recall(rng, batch_size, num_pairs, num_keys=512,
     return X, np.take_along_axis(latest, order, 1), order < r
 
 def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,
-                 batch_size=256, lr=1e-2, **task):
+                 **task):
     """Train on associative recall (task: options of associative_recall)
-    with a cycling number of pairs; return the accuracy per number.
+    with a cycling number of pairs, 256 sequences per update, AdamW at peak
+    rate 0.01; return the accuracy per number of pairs.
 
     Defined in :numref:`sec_matrix-state`"""
     rng = np.random.default_rng()
@@ -2691,13 +2712,13 @@ def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,
         (3 * n + 2 * task.get('num_rebound', 0)) / 32)
     data = lambda n, size: associative_recall(
         rng, size, n, num_steps=length(n), **task)[:2]
-    schedule = lambda t: lr * d2l.cosine_warmup(t, num_updates,
-                                                num_updates // 10)
+    schedule = lambda t: 1e-2 * d2l.cosine_warmup(t, num_updates,
+                                                  num_updates // 10)
     optimizer = nnx.Optimizer(model, optax.chain(
         optax.clip_by_global_norm(1.0),
         optax.adamw(schedule, weight_decay=0.01)), wrt=nnx.Param)
     d2l.train_queries(model, lambda step: data(pairs[step % len(pairs)],
-                      batch_size), num_updates, optimizer)
+                      256), num_updates, optimizer)
     return {n: float(d2l.query_accuracy(model, *data(n, 1024)))
             for n in pairs}
 

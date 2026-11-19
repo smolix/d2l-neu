@@ -87,6 +87,7 @@ wiring as practiced today, with masks and cross-attention, is built in
 al. 2014 with LSTMs and the reversed source; Cho et al.). -->
 
 ## Scoring Translations
+:label:`sec_translation-scoring`
 
 By what number do we call one translation better than another? For decades the
 default answer was BLEU (below), which counts matching word $n$-grams. The modern
@@ -198,14 +199,14 @@ string shifted right behind a start token (the teacher forcing of
 
 ```{.python .input #seq2seq-the-fixed-state-bottleneck-1}
 %%tab pytorch
-V = 16  # Letters; the decoder's start token is V
-
 class Reversal:
     """Fresh batches of random strings and their reversals."""
-    def __init__(self, length, batch_size=128):
+    def __init__(self, length, batch_size=128, num_letters=16):
         self.length, self.batch_size = length, batch_size
+        self.num_letters = num_letters
 
     def batch(self, batch_size):
+        V = self.num_letters  # Letters 0 to V - 1; V is the start token
         src = torch.randint(0, V, (batch_size, self.length),
                             device=d2l.try_gpu())
         tgt = src.flip(1)
@@ -219,14 +220,14 @@ class Reversal:
 
 ```{.python .input #seq2seq-the-fixed-state-bottleneck-1}
 %%tab jax
-V = 16  # Letters; the decoder's start token is V
-
 class Reversal:
     """Fresh batches of random strings and their reversals."""
-    def __init__(self, length, batch_size=128):
+    def __init__(self, length, batch_size=128, num_letters=16):
         self.length, self.batch_size = length, batch_size
+        self.num_letters = num_letters
 
     def batch(self, batch_size, key):
+        V = self.num_letters  # Letters 0 to V - 1; V is the start token
         src = jax.random.randint(key, (batch_size, self.length), 0, V)
         tgt = src[:, ::-1]
         dec_in = jnp.concatenate([jnp.full_like(tgt[:, :1], V),
@@ -257,13 +258,13 @@ A linear layer maps each decoder state to scores for the 16 letters.
 %%tab pytorch
 class Reverser(nn.Module):
     """A GRU encoder whose final state starts and conditions a GRU decoder."""
-    def __init__(self, num_hiddens, num_inputs=32):
-        super().__init__()
-        self.embedding = nn.Embedding(V + 1, num_inputs)
+    def __init__(self, num_letters, num_hiddens, num_inputs=32):
+        super().__init__()  # One more embedding: the start token
+        self.embedding = nn.Embedding(num_letters + 1, num_inputs)
         self.encoder = nn.GRU(num_inputs, num_hiddens, batch_first=True)
         self.decoder = nn.GRU(num_inputs + num_hiddens, num_hiddens,
                               batch_first=True)
-        self.head = nn.Linear(num_hiddens, V)
+        self.head = nn.Linear(num_hiddens, num_letters)
         d2l.init_lecun(self)
         nn.init.normal_(self.embedding.weight, std=num_inputs ** -0.5)
 
@@ -279,15 +280,15 @@ class Reverser(nn.Module):
 %%tab jax
 class Reverser(nnx.Module):
     """A GRU encoder whose final state starts and conditions a GRU decoder."""
-    def __init__(self, num_hiddens, num_inputs=32, *, rngs):
+    def __init__(self, num_letters, num_hiddens, num_inputs=32, *, rngs):
         lecun = {'recurrent_kernel_init': nnx.initializers.lecun_normal()}
-        self.embedding = nnx.Embed(V + 1, num_inputs, rngs=rngs,
+        self.embedding = nnx.Embed(num_letters + 1, num_inputs, rngs=rngs,
             embedding_init=nnx.initializers.normal(num_inputs ** -0.5))
         self.encoder = nnx.RNN(nnx.GRUCell(
             num_inputs, num_hiddens, rngs=rngs, **lecun), return_carry=True)
         self.decoder = nnx.RNN(nnx.GRUCell(
             num_inputs + num_hiddens, num_hiddens, rngs=rngs, **lecun))
-        self.head = nnx.Linear(num_hiddens, V, rngs=rngs)
+        self.head = nnx.Linear(num_hiddens, num_letters, rngs=rngs)
 
     def __call__(self, X):  # X: the source, then the decoder input
         src, dec_in = jnp.split(X, 2, axis=1)
@@ -311,13 +312,13 @@ the reversal model of :numref:`sec_transformer`, and is then scored on
 
 ```{.python .input #seq2seq-the-fixed-state-bottleneck-3}
 %%tab pytorch
-def reversal_accuracy(num_hiddens, length, num_steps=1000):
-    """Train a fresh model; return its per-letter accuracy."""
-    model = Reverser(num_hiddens).to(d2l.try_gpu())
+def reversal_accuracy(num_hiddens, length):
+    """Train a fresh model for 1,000 steps; return its per-letter accuracy."""
     data = Reversal(length)
-    optimizer = d2l.LMOptimizer(model, lr=3e-3, num_steps=num_steps,
-                                warmup=0, weight_decay=0.0)
-    d2l.train_steps(model, data, optimizer, num_steps)
+    model = Reverser(data.num_letters, num_hiddens).to(d2l.try_gpu())
+    optimizer = d2l.LMOptimizer(model, lr=3e-3, num_steps=1000, warmup=0,
+                                weight_decay=0.0)
+    d2l.train_steps(model, data, optimizer, 1000)
     X, Y = data.batch(1000)
     with torch.inference_mode():
         return (model(X).argmax(-1) == Y).float().mean().item()
@@ -325,13 +326,14 @@ def reversal_accuracy(num_hiddens, length, num_steps=1000):
 
 ```{.python .input #seq2seq-the-fixed-state-bottleneck-3}
 %%tab jax
-def reversal_accuracy(num_hiddens, length, num_steps=1000):
-    """Train a fresh model; return its per-letter accuracy."""
-    model = Reverser(num_hiddens, rngs=nnx.Rngs(d2l.get_key()))
+def reversal_accuracy(num_hiddens, length):
+    """Train a fresh model for 1,000 steps; return its per-letter accuracy."""
     data = Reversal(length)
-    optimizer = d2l.LMOptimizer(model, lr=3e-3, num_steps=num_steps,
-                                warmup=0, weight_decay=0.0)
-    d2l.train_steps(model, data, optimizer, num_steps)
+    model = Reverser(data.num_letters, num_hiddens,
+                     rngs=nnx.Rngs(d2l.get_key()))
+    optimizer = d2l.LMOptimizer(model, lr=3e-3, num_steps=1000, warmup=0,
+                                weight_decay=0.0)
+    d2l.train_steps(model, data, optimizer, 1000)
     X, Y = data.batch(1000, d2l.get_key())
     return float((model(X).argmax(-1) == Y).mean())
 ```

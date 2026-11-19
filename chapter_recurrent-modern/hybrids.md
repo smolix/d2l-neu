@@ -389,42 +389,32 @@ data = d2l.WikiText103(batch_size=64, num_steps=128)
 
 ```{.python .input #hybrids-language-modeling-4}
 %%tab pytorch
-d = 256  # The width of every model; each has four blocks
-text_mixers = {'G': lambda: d2l.GatedDeltaNet(d, num_heads=4),
-               'A': lambda: d2l.AttentionMixer(d, num_heads=8)}
+torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
+text_mixers = {'G': lambda d: d2l.GatedDeltaNet(d, num_heads=4),
+               'A': lambda d: d2l.AttentionMixer(d, num_heads=8)}
 
-def text_model(layout):  # 256 byte values; fresh weights, on the GPU
-    return d2l.SeqLM(256, d, [text_mixers[c]() for c in layout]).to(
+def text_model(layout, d):  # 256 byte values; one block per letter
+    return d2l.SeqLM(256, d, [text_mixers[c](d) for c in layout]).to(
         d2l.try_gpu())
 ```
 
 ```{.python .input #hybrids-language-modeling-4}
 %%tab jax
-d = 256  # The width of every model; each has four blocks
 text_mixers = {
-    'G': lambda rngs: d2l.GatedDeltaNet(d, num_heads=4, rngs=rngs),
-    'A': lambda rngs: d2l.AttentionMixer(d, num_heads=8, rngs=rngs)}
+    'G': lambda d, rngs: d2l.GatedDeltaNet(d, num_heads=4, rngs=rngs),
+    'A': lambda d, rngs: d2l.AttentionMixer(d, num_heads=8, rngs=rngs)}
 
-def text_model(layout):  # 256 byte values; fresh random weights
+def text_model(layout, d):  # 256 byte values; one block per letter
     rngs = nnx.Rngs(d2l.get_key())
-    return d2l.SeqLM(256, d, [text_mixers[c](rngs) for c in layout],
+    return d2l.SeqLM(256, d, [text_mixers[c](d, rngs) for c in layout],
                      rngs=rngs)
 ```
 
 ```{.python .input #hybrids-language-modeling-5}
 %%tab pytorch, jax
-bands = [(0, 16), (16, 64), (64, 128)]  # Early, middle, and late positions
-header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
-print(' ' * 25, *(f'{h:>11}' for h in header), '  ms/step')
-for name, layout in {'Gated DeltaNet': 'GGGG', 'hybrid': 'GGGA',
-                     'attention': 'AAAA'}.items():
-    models = [text_model(layout) for _ in range(2)]
-    runs = [d2l.train_text(model, data) for model in models]  # (losses, ms)
-    columns = [[np.mean(loss) for loss, _ in runs]] + [
-        [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
-    print(f'{name:14s} {d2l.num_params(models[0]):10,d}',
-          *('/'.join(f'{v:.3f}' for v in column) for column in columns),
-          '/'.join(f'{ms:.0f}' for _, ms in runs))
+arms = {'Gated DeltaNet': ('GGGG', 256), 'hybrid': ('GGGA', 256),
+        'attention': ('AAAA', 256)}  # Width 256, four blocks each
+trained = d2l.text_table(text_model, arms, data)
 ```
 
 <!-- WRITER: reading, replacing the paragraph below (its perplexities and the TinyLM comparison are gone; "A
@@ -589,7 +579,7 @@ or for width 64. -->
        the comparison suggest about combining windows with recurrence?
 
 <!-- WRITER: Exercise 6 moves to WikiText bytes (structure): `d2l.WikiText103`, the text models of the section
-(`text_model('GGGG')`, `text_model('GGGA')`, `text_model('AAAA')`), `d2l.train_text`; positions whose byte completes
+(`trained`, or `text_model('GGGG', 256)` and the other layouts), `d2l.train_text`; positions whose byte completes
 a string of at least eight bytes that already occurred earlier in the same 128-byte window. `d2l.TinyLM` and Penn
 Treebank are no longer used in the section. -->
 1. [code] **Recall in text.** In the Penn Treebank validation text, mark

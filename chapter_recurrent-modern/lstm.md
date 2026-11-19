@@ -363,6 +363,7 @@ Writing the GRU from scratch would repeat `LSTMScratch` with three gated
 layers in place of four; an exercise asks for it.
 
 ## Training Gated Networks
+:label:`sec_gated-training`
 
 ### Delayed Recall
 :label:`subsec_delayed-recall`
@@ -871,6 +872,28 @@ def train_text(model, data, lr=2e-3, num_steps=1000):  #@save
     bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
                           warmup=1, repeats=num_steps // 50 - 1)
     return loss_by_position(model, data), 1000 * bench.time / 50
+
+def text_table(make_model, arms, data, num_runs=2):  #@save
+    """Train num_runs fresh models make_model(*args) for each arm (a name
+    and its args); print the parameters, the validation loss of every run,
+    its losses at early, middle, and late positions of the window, and the
+    milliseconds per step. Return the trained models of each arm."""
+    T = data.num_steps
+    bands = [(0, T // 8), (T // 8, T // 2), (T // 2, T)]
+    width = max(len(name) for name in arms)
+    header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
+    print(' ' * (width + 12), *(f'{h:>11}' for h in header), '  ms/step')
+    trained = {}
+    for name, args in arms.items():
+        models = [make_model(*args) for _ in range(num_runs)]
+        runs = [train_text(model, data) for model in models]  # (losses, ms)
+        columns = [[np.mean(loss) for loss, _ in runs]] + [
+            [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
+        print(f'{name:{width}s} {d2l.num_params(models[0]):11,d}',
+              *('/'.join(f'{v:.3f}' for v in column) for column in columns),
+              '/'.join(f'{ms:.0f}' for _, ms in runs))
+        trained[name] = models
+    return trained
 ```
 
 <!-- WRITER: the benchmark paragraph: byte-level WikiText-103 (d2l.WikiText103 of :numref:`sec_test_models`), windows of 128 bytes, 64 per step, as in :numref:`sec_gpt`; why WikiText bytes and not Penn Treebank (no model reads the same passage twice, so nothing overfits; the same yardstick as the GPT); nats per byte (divide by ln 2 for bits per byte). Every model has width 256 and four blocks; only the mixer differs. -->
@@ -882,32 +905,36 @@ data = d2l.WikiText103(batch_size=64, num_steps=128)
 
 ```{.python .input #lstm-gated-networks-on-text-5}
 %%tab pytorch
-d = 256  # The width of every model; each has four blocks
-mixers = {
-    'RNN': lambda: Recurrent(init_lecun(nn.RNN(d, d, batch_first=True))),
-    'LSTM': lambda: Recurrent(init_lecun(nn.LSTM(d, d, batch_first=True))),
-    'GRU': lambda: Recurrent(init_lecun(nn.GRU(d, d, batch_first=True))),
-    'attention': lambda: AttentionMixer(d, num_heads=8)}
+torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
 
-def text_model(mixer):  # 256 byte values; fresh weights, on the GPU
-    return SeqLM(256, d, [mixer() for _ in range(4)]).to(d2l.try_gpu())
+def text_model(mixer, d):  # 256 byte values; four blocks of width d
+    return SeqLM(256, d, [mixer(d) for _ in range(4)]).to(d2l.try_gpu())
+
+rnn = lambda d: Recurrent(init_lecun(nn.RNN(d, d, batch_first=True)))
+lstm = lambda d: Recurrent(init_lecun(nn.LSTM(d, d, batch_first=True)))
+gru = lambda d: Recurrent(init_lecun(nn.GRU(d, d, batch_first=True)))
+attention = lambda d: AttentionMixer(d, num_heads=8)
+arms = {'RNN': (rnn, 256), 'LSTM': (lstm, 256), 'GRU': (gru, 256),
+        'attention': (attention, 256),
+        'RNN, d=302': (rnn, 302)}  # As many parameters as the GRU
 ```
 
 ```{.python .input #lstm-gated-networks-on-text-5}
 %%tab jax
-d = 256  # The width of every model; each has four blocks
-mixers = {
-    'RNN': lambda rngs: nnx.RNN(nnx.SimpleCell(d, d, rngs=rngs, **lecun),
-                                unroll=8),
-    'LSTM': lambda rngs: nnx.RNN(nnx.LSTMCell(d, d, rngs=rngs, **lecun),
-                                 unroll=8),
-    'GRU': lambda rngs: nnx.RNN(nnx.GRUCell(d, d, rngs=rngs, **lecun),
-                                unroll=8),
-    'attention': lambda rngs: AttentionMixer(d, num_heads=8, rngs=rngs)}
-
-def text_model(mixer):  # 256 byte values; fresh random weights
+def text_model(mixer, d):  # 256 byte values; four blocks of width d
     rngs = nnx.Rngs(d2l.get_key())
-    return SeqLM(256, d, [mixer(rngs) for _ in range(4)], rngs=rngs)
+    return SeqLM(256, d, [mixer(d, rngs) for _ in range(4)], rngs=rngs)
+
+rnn = lambda d, rngs: nnx.RNN(nnx.SimpleCell(d, d, rngs=rngs, **lecun),
+                              unroll=8)
+lstm = lambda d, rngs: nnx.RNN(nnx.LSTMCell(d, d, rngs=rngs, **lecun),
+                               unroll=8)
+gru = lambda d, rngs: nnx.RNN(nnx.GRUCell(d, d, rngs=rngs, **lecun),
+                              unroll=8)
+attention = lambda d, rngs: AttentionMixer(d, num_heads=8, rngs=rngs)
+arms = {'RNN': (rnn, 256), 'LSTM': (lstm, 256), 'GRU': (gru, 256),
+        'attention': (attention, 256),
+        'RNN, d=302': (rnn, 302)}  # As many parameters as the GRU
 ```
 
 :begin_tab:`jax`
@@ -923,18 +950,10 @@ positions of the window, and the time per training step.
 
 ```{.python .input #lstm-gated-networks-on-text-6}
 %%tab pytorch, jax
-bands = [(0, 16), (16, 64), (64, 128)]  # Early, middle, and late positions
-header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
-print(' ' * 21, *(f'{h:>11}' for h in header), '  ms/step')
-for name, mixer in mixers.items():
-    models = [text_model(mixer) for _ in range(2)]
-    runs = [train_text(model, data) for model in models]  # (losses, ms) each
-    columns = [[np.mean(loss) for loss, _ in runs]] + [
-        [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
-    print(f'{name:9s} {d2l.num_params(models[0]):11,d}',
-          *('/'.join(f'{v:.3f}' for v in column) for column in columns),
-          '/'.join(f'{ms:.0f}' for _, ms in runs))
+trained = text_table(text_model, arms, data)
 ```
+
+<!-- WRITER: the table has a fifth arm, 'RNN, d=302': the plain RNN widened to the GRU model's parameter count (3.82 M), the control for "the gain is not the parameter count" (lib-review F1). The loop is now the saved helper `text_table`, which the later sections of the chapter call; the claims file has the new numbers. -->
 
 <!-- WRITER: reading (written against the stored table). Measured in development, both tabs agree (width 256, four blocks, 1,000 steps of 64 x 128 bytes; two runs each): RNN 2.76 M parameters, 1.347 to 1.349 nats per byte; LSTM 4.34 M, 1.293 to 1.295; GRU 3.81 M, 1.297 to 1.300; attention 3.29 M, 1.378 to 1.394. Runs of the same model agree within 0.003 for the recurrent models and within about 0.01 for attention. Firm lessons: (1) gates help: LSTM and GRU end about 0.05 nats below the plain RNN, more than ten times the run-to-run range, and the GRU, with half a million fewer parameters than the LSTM, matches it, so the gain is not the parameter count; (2) the gain is there at every band, already in the first 16 bytes (RNN about 1.51, LSTM/GRU about 1.49 in JAX at 0-15; at 64-127 RNN 1.325 against LSTM 1.265), and no model gains much beyond byte 16 (bands 16-63 and 64-127 within 0.01 of each other); (3) at this budget the attention stack of the same width and depth is behind every recurrent stack, by about 0.04 nats against the plain RNN and 0.09 against the gated ones, at every band; it is also behind the GPT of :numref:`sec_gpt` (1.34 to 1.35 with six blocks and 4.79 M parameters), and a four-block GPT measured in development landed near it (1.376 at 512-byte windows), so the attention baseline is not faulty: at 8 M training bytes the recurrent stacks learn faster. Do not claim that attention keeps improving to the end of the window: it does not at 128 (or at 512, where at 1,000 and 2,000 steps its late band 384-511 was only 0.004 to 0.006 below its 16-127 band, within its run-to-run range). The plain RNN in this stack (1.35) matches the GPT, unlike the single wide RNN of chapter 11 (1.40 to 1.44): the stack with MLPs closes most of chapter 11's gap before gates do. ms/step (direct notebook runs, mostly idle GPU): PyTorch RNN 13, LSTM 32, GRU 31 to 32, attention 18 to 21 (eager, not compiled); JAX (unroll=8) RNN 11 to 12, LSTM 26 to 27, GRU 17, attention 9. Step times differ between the tabs; any reading of them goes in tab notes, and the shared prose may say only what holds in both (the LSTM step costs about two to three times the RNN step). -->
 
@@ -1140,8 +1159,8 @@ pass through the same product.
 - explain why gates must **start near one** to learn long memories;
 - train the chapter's shared language model.
 
-**Running example:** character-level Penn Treebank (5 M characters,
-windows of 128); perplexity per character for every model of the chapter.
+**Running example:** byte-level WikiText-103 (windows of 128 bytes, as for
+the GPT); validation loss in nats per byte for every model of the chapter.
 
 **Idea:** multiply the memory by a learned number in $(0, 1)$, chosen per
 unit and per step, instead of by a fixed matrix.

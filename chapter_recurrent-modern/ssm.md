@@ -661,6 +661,11 @@ just below S4D's smallest initial step size.
 :::
 :::
 
+<!-- DECK: the Penn Treebank bullet on this slide and the PTB column of the recap table describe runs
+that no longer exist (the section trains no language model; the text comparisons are in sec_lstm,
+sec_linear-recurrence and sec_mamba, on WikiText bytes). Replace the bullet by the recall result of
+this section, and drop the PTB column or fill it from those sections in nats per byte. -->
+
 ::: {.slide title="S4D Weighs an Input by Its Distance, Not Its Content"}
 - Penn Treebank: S4D about 3.35, behind the minGRU (3.2), with 16 times
   the state.

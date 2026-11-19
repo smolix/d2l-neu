@@ -195,11 +195,14 @@ rounds. The rest of the regret comes from greedy pulls of worse arms. The
 cost of the random pulls does not shrink as the estimates improve, so the
 regret of a fixed $\epsilon$ grows linearly in $t$.
 
-A natural remedy lowers $\epsilon$ over time. If $\epsilon_u = k/u$ in round
-$u$, the expected number of random pulls in the first $t$ rounds is
-$\sum_{u=1}^{t} k/u \approx k \ln t$, since the harmonic sum
-$\sum_{u \leq t} 1/u$ grows like $\ln t$. Their cost then grows like $\ln t$
-as well, much more slowly than $t$.
+A natural remedy lowers $\epsilon$ over time. If
+$\epsilon_u = \min(1, k/u)$ in round $u$ for a constant $k \geq 1$, the
+expected number of random pulls in the first $t > k$ rounds is
+$\sum_{u=1}^{t} \min(1, k/u)$. The terms with $u \leq k$ are one, and the
+others add up to about $k \ln(t/k)$, since the harmonic sum
+$\sum_{u \leq t} 1/u$ grows like $\ln t$. The expected number of random
+pulls, and with it their cost, therefore grows like $k \ln t$, much more
+slowly than $t$.
 :citet:`Auer.CesaBianchi.Fischer.2002` proved that the schedule
 $\epsilon_t = \min\big(1, c\, m / (d^2 t)\big)$ gives a regret that grows
 logarithmically in $t$ if, for example, $c > 5$ and $d$ is at most the
@@ -298,7 +301,8 @@ outcomes, the *posterior*, is the Beta distribution
 $\mathrm{Beta}(1 + w, 1 + n - w)$. Its density at $x$ is proportional to
 $x^w (1 - x)^{n - w}$, the probability of the observed outcomes if the mean
 were $x$ (:eqref:`eq_mdl-beta_posterior`). Its mean is $(1 + w)/(2 + n)$,
-and its standard deviation shrinks like $1/\sqrt{n}$. In each round,
+and its standard deviation is at most $1/(2\sqrt{n + 3})$, so it shrinks at
+least as fast as $1/\sqrt{n}$. In each round,
 Thompson sampling draws one sample from the posterior of each arm and pulls
 the arm whose sample is largest.
 
@@ -316,8 +320,8 @@ arm has the largest mean (exercise :exref:`ex_exploration-thompson`). As
 pulls accumulate, the posteriors narrow, and an arm whose posterior puts
 little probability above the mean of the best arm rarely produces the
 largest sample. The expected regret of Thompson sampling also grows
-logarithmically in $t$ :cite:`Agrawal.Goyal.2012`, and the only choice it
-requires is the prior.
+logarithmically in $t$ :cite:`Agrawal.Goyal.2012`. For rewards in
+$\{0, 1\}$, the only choice it requires is the prior.
 
 ### Comparing the Rules
 
@@ -372,7 +376,9 @@ logarithmic growth looks like.
 
 :citet:`Lai.Robbins.1985` showed that no rule can have an expected regret
 that grows more slowly than $\ln t$ on every bandit of a family such as the
-family of all bandits whose arms have rewards in $\{0, 1\}$. The words
+family of all bandits whose arms have rewards in $\{0, 1\}$ and means
+strictly between $0$ and $1$. (With a best arm of mean $1$, the divergence
+below would be infinite and the bound empty.) The words
 "every bandit" matter. The rule that always pulls arm $1$ has no regret on
 the bandits whose best arm is arm $1$, but its regret grows linearly on all
 the others. The theorem therefore considers rules that do reasonably well on
@@ -384,9 +390,9 @@ $$\liminf_{t \to \infty} \frac{\mathbb{E}[n_t(a)]}{\ln t} \geq \frac{1}{D(\mu_a 
 
 where $D(p \,\|\, q)$ is the KL divergence between the distributions on
 $\{0, 1\}$ with means $p$ and $q$ (:numref:`sec_mdl-information_theory`).
-The $\liminf$ is the smallest value that the ratio keeps returning to as $t$
-grows, so for large $t$, every worse arm must be pulled at least about
-$\ln t / D(\mu_a \,\|\, \mu^*)$ times by round $t$. Roughly, the divergence
+In words, for large $t$, every worse arm must be pulled at least
+$\ln t / D(\mu_a \,\|\, \mu^*)$ times by round $t$, up to a factor that
+tends to one. Roughly, the divergence
 appears because each pull of arm $a$ changes the log-likelihood ratio
 between the hypotheses "the mean of arm $a$ is $\mu_a$" and "it is $\mu^*$"
 by $D(\mu_a \,\|\, \mu^*)$ on average, and telling the two hypotheses apart
@@ -398,7 +404,8 @@ $D(0.25 \,\|\, 0.90) \approx 1.19$, so the lower bound for the arm with mean
 $0.60$ is about four times that for the arm with mean $0.25$.
 
 By :eqref:`eq_regret`, the expected regret of such a rule therefore grows at
-least like $\ln t$. For our arms,
+least like $\ln t$ on every bandit of the family that has a worse arm. For
+our arms,
 $\sum_{a:\, \Delta_a > 0} \Delta_a / D(\mu_a \,\|\, \mu^*) \approx 6.6$, so
 the ratio of the expected regret to $\ln t$ must eventually be at least
 about $6.6$. The bound concerns the regret as $t \to \infty$, and terms of
@@ -542,8 +549,9 @@ solves the estimated MDP by value iteration (:numref:`sec_valueiter`).
 
 For episodic MDPs whose episodes have a fixed length $T$, the regret adds up,
 over the episodes, how much less each episode returns in expectation than an
-optimal policy. Q-learning with count-based bonuses has a regret that grows
-at most like the square root of the total number of steps, up to factors
+optimal policy. Q-learning with count-based bonuses and a suitable schedule
+of step sizes has a regret that grows at most like the square root of the
+total number of steps, up to factors
 polynomial in $T$ and in the numbers of states and actions and up to
 logarithmic factors :cite:`Jin.AllenZhu.Bubeck.ea.2018`. Unlike the $\ln t$
 rates of the bandit, this bound holds for every MDP of the class and does not
@@ -591,8 +599,9 @@ empirical mean a bonus that shrinks with the number of pulls, and Thompson
 sampling draws each mean from its posterior. Both direct exploration toward
 arms that could still be the best, and their regret grows like $\ln t$, the
 rate that Lai and Robbins showed no rule can beat on every bandit of a family
-such as all bandits with rewards in $\{0, 1\}$. In an MDP, random actions find a required sequence of actions with a
-probability that falls exponentially in its length, while optimistic initial
+such as all bandits with rewards in $\{0, 1\}$ and means strictly between $0$
+and $1$. In an MDP, random actions find a required sequence of actions with
+a probability that falls exponentially in its length, while optimistic initial
 values make a greedy agent seek out untried pairs. Count-based bonuses and
 learned measures of novelty extend this optimism to stochastic MDPs and to
 neural networks.
@@ -606,8 +615,11 @@ neural networks.
    Derive this bound. The tool is Hoeffding's inequality: the mean
    $\hat{\mu}_n$ of $n$ independent rewards in $[0, 1]$ with expected value
    $\mu$ satisfies $P(\hat{\mu}_n \geq \mu + h) \leq e^{-2 n h^2}$ and
-   $P(\hat{\mu}_n \leq \mu - h) \leq e^{-2 n h^2}$.
-    1. Fix a worse arm $a$ and let $\ell = \lceil 8 \ln t / \Delta_a^2 \rceil$.
+   $P(\hat{\mu}_n \leq \mu - h) \leq e^{-2 n h^2}$. For $t = 1$ the bound
+   holds trivially, so let $t \geq 2$.
+    1. Fix a worse arm $a$ and let $\ell = \lceil 8 \ln t / \Delta_a^2 \rceil$,
+       so that $\ell \geq 6$ and every arm has been pulled once before arm
+       $a$ reaches $\ell$ pulls.
        Show that if arm $a$ is pulled in a round $u \leq t$ after at least
        $\ell$ pulls, then the index of a best arm is at most $\mu^*$, or the
        empirical mean of arm $a$ exceeds $\mu_a$ by more than its bonus.

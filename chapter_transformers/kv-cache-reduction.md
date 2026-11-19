@@ -924,9 +924,9 @@ heads of width 64, 72 KiB per token in fp32).
 ::: {.col}
 | section | adds |
 |---|---|
-| The Transformer Block | attention + FFN on a residual stream |
+| The Transformer Block | attention + FFN, residual stream |
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
-| The KV Cache | reuse keys and values while sampling |
+| The KV Cache | reuse past keys and values |
 | **Shrinking the KV Cache** | **fewer heads, narrower or shorter caches** |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |

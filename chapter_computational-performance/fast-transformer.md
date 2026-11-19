@@ -33,7 +33,12 @@ training run checks that the fastest step still trains the model.
 ```{.python .input #fast-transformer-setup}
 %%tab jax
 # Let XLA overlap collectives with computation. JAX reads XLA_FLAGS once,
-# when it starts, so this cell runs before the imports.
+# when it starts, so this cell runs before the imports. The notebook also
+# runs with --xla_gpu_enable_triton_gemm=false in XLA_FLAGS, so that XLA
+# calls cuBLAS for the matrix products (the Triton kernels it would generate
+# run the products of the large minibatches more slowly on the RTX 4090),
+# and with NCCL_LOCAL_REGISTER=0: NCCL's buffer registration fails on GPUs
+# without peer-to-peer access and would print a warning at every collective.
 import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_enable_latency_hiding_scheduler=true')
@@ -62,17 +67,22 @@ from d2l import jax as d2l
 
 ```{.python .input #fast-transformer-case-study-optimizing-a-transformer-1}
 %%tab jax
+import re
 from jax.sharding import NamedSharding, PartitionSpec as P
 ```
 
 ```{.python .input #fast-transformer-case-study-optimizing-a-transformer-1}
 %%tab pytorch
+import re
 from torch.utils.checkpoint import checkpoint
 ```
 
 ```{.python .input #fast-transformer-case-study-optimizing-a-transformer-2}
 %%tab pytorch
 torch.set_float32_matmul_precision('high')  # fp32 products on tf32 cores
+# The notebook runs with TEARDOWN_CUPTI=1 in the environment, so that the
+# profiler of the cells below detaches from the GPU when a profile ends;
+# without it, every later kernel launch of the process stays slower
 ```
 
 ## Experimental Setup
@@ -181,21 +191,39 @@ prints its ratio to the previous one.
 
 ```{.python .input #fast-transformer-the-subject-2}
 %%tab pytorch, jax
-def tokens_per_second(step, batches, warmup=20, repeats=50):
-    """Training throughput of `step` on minibatches drawn from `batches`."""
+def tokens_per_second(step, batches, warmup=20, repeats=50, num_windows=3):
+    """Median training throughput of `step` on minibatches drawn from
+    `batches`, over `num_windows` timed windows of `repeats` steps each, and
+    the spread of the windows (largest minus smallest) relative to it."""
     X, _ = next(batches)
-    seconds = d2l.Benchmark(lambda: step(*next(batches)), warmup,
-                            repeats).time
-    return math.prod(X.shape) / seconds
+    speeds = [math.prod(X.shape) / d2l.Benchmark(
+                  lambda: step(*next(batches)), warmup if i == 0 else 0,
+                  repeats).time for i in range(num_windows)]
+    return np.median(speeds), np.ptp(speeds) / np.median(speeds)
 
-results = {}
-def record(name, speed):
-    """Store a throughput and print it with its ratio to the previous one."""
+results, branches = {}, {}
+def record(name, measured, kept=True):
+    """Store a measured throughput and print it with its ratio to the last
+    kept configuration and the spread of its windows; a configuration that
+    is not kept is stored in `branches`."""
+    speed, spread = measured
     previous = list(results.values())[-1] if results else speed
-    results[name] = speed
-    print(f'{name}: {speed:,.0f} tokens/s ({speed / previous:.2f}x)')
-    return speed
+    (results if kept else branches)[name] = speed
+    print(f'{name}: {speed:,.0f} tokens/s ({speed / previous:.2f}x), '
+          f'windows within {spread:.1%}')
 ```
+
+<!-- WRITER: `tokens_per_second` now times three windows of 50 steps after
+the warm-up and returns their median and their spread (largest minus
+smallest, relative to the median); `record` prints the spread beside each
+ratio, and `record(..., kept=False)` stores a configuration that the later
+ones do not build on (checkpointing) apart from the cumulative sequence.
+The sentence "One timed window of 50 steps varies by a few percent" must
+read the printed spreads instead (two dev runs on an idle GPU: 0.0 to 0.4%
+for every configuration after the first; the baselines 2.6 to 4.5% in
+PyTorch and 9.5 to 11.5% in JAX, whose host work sits near the margin),
+and the measurement-rules table's timing row should say three windows of 50
+steps, median. -->
 
 One timed window of 50 steps varies by a few percent from run to run, so
 we read ratios to one decimal place.
@@ -223,6 +251,9 @@ subsections. The notebook runs with the environment variable
 `TEARDOWN_CUPTI=1`, which detaches the profiler of the next cells from the
 GPU when a profile ends; without it, every later kernel launch of the
 process stays slower.
+<!-- WRITER: the TEARDOWN_CUPTI sentences are now a code comment in the
+cell after the extras (`fast-transformer-case-study-optimizing-a-transformer-2`);
+cut them here (FT-3) or move them to the one "Running this notebook" note. -->
 :end_tab:
 
 :begin_tab:`jax`
@@ -233,6 +264,9 @@ from fp32 logits. The notebook runs with `--xla_gpu_enable_triton_gemm=false`
 in the environment variable `XLA_FLAGS`, so that XLA calls cuBLAS for the
 matrix products: the Triton kernels it would otherwise generate run the
 products of the large minibatches more slowly on our GPU.
+<!-- WRITER: the Triton GEMM flag (and NCCL_LOCAL_REGISTER=0) are now a
+comment in the setup cell `fast-transformer-setup`; cut them here (S5) or
+move them to the one "Running this notebook" note. -->
 :end_tab:
 
 ```{.python .input #fast-transformer-rung-0-baseline-profiled}
@@ -253,7 +287,7 @@ def make_step(model, forward=None, bf16=False):  #@save
     return step
 
 step = make_step(model)
-speed = record('baseline', tokens_per_second(step, windows(corpus, 64)))
+record('baseline', tokens_per_second(step, windows(corpus, 64)))
 ```
 
 ```{.python .input #fast-transformer-rung-0-baseline-profiled}
@@ -272,7 +306,7 @@ adamw = optax.adamw(1e-3, weight_decay=0.01)
 optimizer = nnx.Optimizer(model, adamw, wrt=nnx.Param)
 jit_step = nnx.jit(train_step)
 step = lambda X, Y: jit_step(model, optimizer, X, Y)
-speed = record('baseline', tokens_per_second(step, windows(corpus, 64)))
+record('baseline', tokens_per_second(step, windows(corpus, 64)))
 ```
 
 A profile shows where the time of the step goes. `profile` records five
@@ -284,15 +318,24 @@ attention kernels among them, and the kernels that take the most time.
 
 ```{.python .input #fast-transformer-the-baseline-2}
 %%tab pytorch, jax
-def profile(step, batches, speed):
-    """Kernel profile of `step` on minibatches drawn from `batches`, at a
-    measured throughput of `speed` tokens per second."""
+profiles = {}
+def profile(step, batches):
+    """Kernel profile of `step`, the configuration recorded last, on
+    minibatches drawn from `batches`: printed against the throughput that
+    `record` measured, and stored in `profiles` under the same name."""
+    name, speed = list(results.items())[-1]
     X, _ = next(batches)
     kernels = d2l.kernel_times(lambda: step(*next(batches)), steps=5)
     d2l.show_profile(kernels, 1e3 * math.prod(X.shape) / speed, rows=4)
+    profiles[name] = kernels
 
-profile(step, windows(corpus, 64), speed)
+profile(step, windows(corpus, 64))
 ```
+
+<!-- WRITER: `profile` now takes no throughput argument: it profiles the
+configuration that `record` stored last, prints against its measured
+(median) throughput, and keeps the kernel times in `profiles`, which the
+account at the end of the section reads (`subsec_ft-account`). -->
 
 :begin_tab:`pytorch`
 The device runs kernels for nearly the whole step, so the host keeps up
@@ -366,9 +409,9 @@ X, _ = next(windows(corpus, 64))
 high = model(X)
 error = ((compiled(X) - high).norm() / high.norm()).item()
 print(f'relative difference of the compiled logits: {error:.1e}')
-assert error < 0.01
+assert error < 1e-4
 step = make_step(model, compiled)
-speed = record('+ compile', tokens_per_second(step, windows(corpus, 64)))
+record('+ compile', tokens_per_second(step, windows(corpus, 64)))
 ```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-1}
@@ -386,10 +429,16 @@ for name, call in (('nnx.jit', lambda: walk(model, optimizer)),
 ```
 
 :begin_tab:`pytorch`
+<!-- WRITER: the check now asserts a relative difference below 1e-4 (dev
+and store: about 5e-06): "five significant digits or more", not "three or
+more" (FT-7). -->
 The logits agree to three or more significant digits. They are not
 identical, because the fused fp32 kernels round in a different order than
 the separate ones, and the tf32 products carry the difference forward.
 Throughput rises by about a tenth.
+<!-- WRITER: two dev runs: baseline busy 93 to 94% (store 97%), device
+time 23.8 → 21.6 ms per step (fusion), busy 100% after (replay); "+ compile"
+1.17 and 1.18 (store 1.13). -->
 :end_tab:
 
 :begin_tab:`jax`
@@ -417,10 +466,17 @@ gap = max(float(g) for g in jax.tree.leaves(gaps))
 print(f'losses {loss:.4f} and {twin_loss:.4f}, largest difference of the '
       f'updated weights {gap:.1e}')
 assert gap < 1e-6
-speed = record('+ jit_partial', tokens_per_second(step, windows(corpus, 64)))
+record('+ jit_partial', tokens_per_second(step, windows(corpus, 64)))
 ```
 
 :begin_tab:`jax`
+<!-- WRITER: the gain of binding depends on how busy the host is. Two dev
+runs on an idle GPU: baseline busy 95% and 99% of the step, "+ jit_partial"
+1.04 and 1.01 (store, under load: busy 85%, 1.17). The prediction (the
+gain is at most the idle share of the first profile) held in all three; the
+prose must state it as that bound, read from the captured profile, not as
+"a little more than a tenth" (FT-4, FT-6). The no-op call through `nnx.jit`
+measured 8.6 to 8.7 ms (store 9.55). -->
 Throughput rises by as much as the idle time of the first profile
 allowed, a little more than a tenth when the device waited a tenth of the
 step.
@@ -430,7 +486,7 @@ A second profile shows where the bottleneck has moved:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-5}
 %%tab pytorch, jax
-profile(step, windows(corpus, 64), speed)
+profile(step, windows(corpus, 64))
 ```
 
 The device is now busy for nearly the whole step, and the matrix products
@@ -488,32 +544,7 @@ compute in fp32, so the stream stays in fp32, and the output layer, which
 reuses the embedding table and takes under 1% of the FLOPs, computes in
 fp32 as well. The gradients arrive in fp32, because the derivative of a
 cast to bf16 is a cast back.
-
-`FusedGPT` changes two details of `d2l.GPT`. First, `d2l.GPT` leaves
-the choice of attention kernel to `jax.nn.dot_product_attention`, whose
-default is XLA's own implementation, and that implementation builds the
-attention weights of all query–key pairs in device memory
-(:numref:`sec_attention-at-scale`); `d2l.GPT` only keeps them out of the
-backward pass, which computes them again. `FusedGPT` overrides `attend`
-to select cuDNN's fused kernel instead, which accepts only 16-bit inputs,
-so in this configuration the attention becomes fused as well. Second,
-`FusedGPT` returns its logits in fp32, so that the loss is computed in
-fp32.
 :end_tab:
-
-```{.python .input #fast-transformer-rungs-each-one-measured-9}
-%%tab jax
-class FusedGPT(d2l.GPT):
-    """d2l.GPT with cuDNN's fused attention and fp32 logits."""
-    class CausalAttention(d2l.GPT.CausalAttention):
-        @staticmethod
-        def attend(q, k, v):  # cuDNN takes 16-bit inputs only
-            return jax.nn.dot_product_attention(q, k, v, is_causal=True,
-                                                implementation='cudnn')
-
-    def __call__(self, X):
-        return super().__call__(X).astype(jnp.float32)
-```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-2}
 %%tab pytorch
@@ -523,26 +554,34 @@ with torch.autocast('cuda', torch.bfloat16):
 high = compiled(X)
 error = ((low - high).norm() / high.norm()).item()
 print(f'relative difference of the bf16 logits: {error:.1e}')
-assert error < 0.05
+assert error < 0.01
 step = make_step(model, compiled, bf16=True)
-speed = record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
+record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
 ```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-2}
 %%tab jax
-model16 = FusedGPT(len(data.vocab), num_hiddens=512,
-                   rngs=nnx.Rngs(d2l.get_key()))
-nnx.update(model16, nnx.state(model, nnx.Param))  # The same weights
-d2l.to_bf16(model16)
+xla16 = d2l.GPT(len(data.vocab), num_hiddens=512,
+                rngs=nnx.Rngs(d2l.get_key()))
+nnx.update(xla16, nnx.state(model, nnx.Param))  # The same weights
+d2l.to_bf16(xla16)
 X, _ = next(windows(corpus, 64))
-low, high = model16(X), model(X)
-error = float(jnp.linalg.norm(low - high) / jnp.linalg.norm(high))
+high = model(X)
+error = float(jnp.linalg.norm(xla16(X) - high) / jnp.linalg.norm(high))
 print(f'relative difference of the bf16 logits: {error:.1e}')
-assert error < 0.05
-optimizer16 = nnx.Optimizer(model16, adamw, wrt=nnx.Param)
-step = nnx.jit_partial(train_step, model16, optimizer16, graph=False)
-speed = record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
+assert error < 0.01
+step = nnx.jit_partial(train_step, xla16,
+                       nnx.Optimizer(xla16, adamw, wrt=nnx.Param), graph=False)
+record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
 ```
+
+<!-- WRITER: the bf16 check now asserts a relative difference below 0.01
+(it was 0.05; FT-7). In the JAX tab this row is now `d2l.GPT` under
+`d2l.to_bf16` with XLA's attention (FT-8, option a); the fused attention
+is the next row, "+ fused attention", after the moved FusedGPT paragraph.
+Two dev runs: "+ bf16" 1.45 and 1.44, "+ fused attention" 1.36 and 1.36
+(product 1.97, the store's combined row 1.96); logits 1.7e-03 to 1.9e-03
+in both rows; PyTorch "+ bf16" 1.74 twice, logits 1.8e-03 to 2.0e-03. -->
 
 The logits agree to within one percent.
 
@@ -555,12 +594,59 @@ update still reads and writes fp32 weights and moment estimates.
 :end_tab:
 
 :begin_tab:`jax`
+<!-- WRITER: the paragraph below described the old combined row; "+ bf16"
+is now bf16 alone with XLA's attention, and the fused attention follows
+as its own row. Rewrite from the measured split (report). The FusedGPT
+paragraph after it was moved here from before the bf16 cell; its "Second,
+`FusedGPT` returns its logits in fp32" is gone: `d2l.GPT` under
+`d2l.to_bf16` already returns fp32 logits (the output layer reuses the fp32
+embedding table), so the override was a no-op and was removed. -->
 Throughput about doubles. Faster matrix products alone could not do this,
 since they took a little under two thirds of the step. The fused attention
 no longer stores the weights of all query–key pairs, and the activations
 between the linear layers, those of SwiGLU among them, take half the bytes.
 The normalizations, the residual stream, and the optimizer update still
 move fp32 values.
+
+`FusedGPT` changes one detail of `d2l.GPT`. `d2l.GPT` leaves
+the choice of attention kernel to `jax.nn.dot_product_attention`, whose
+default is XLA's own implementation, and that implementation builds the
+attention weights of all query–key pairs in device memory
+(:numref:`sec_attention-at-scale`); `d2l.GPT` only keeps them out of the
+backward pass, which computes them again. `FusedGPT` overrides `attend`
+to select cuDNN's fused kernel instead, which accepts only 16-bit inputs,
+so the fused attention can follow only once the products run in bf16.
+:end_tab:
+
+```{.python .input #fast-transformer-rungs-each-one-measured-9}
+%%tab jax
+class FusedGPT(d2l.GPT):
+    """d2l.GPT with cuDNN's fused attention."""
+    class CausalAttention(d2l.GPT.CausalAttention):
+        @staticmethod
+        def attend(q, k, v):  # cuDNN takes 16-bit inputs only
+            return jax.nn.dot_product_attention(q, k, v, is_causal=True,
+                                                implementation='cudnn')
+```
+
+```{.python .input #fast-transformer-fused-attention}
+%%tab jax
+model16 = FusedGPT(len(data.vocab), num_hiddens=512,
+                   rngs=nnx.Rngs(d2l.get_key()))
+nnx.update(model16, nnx.state(model, nnx.Param))  # The same weights
+d2l.to_bf16(model16)
+error = float(jnp.linalg.norm(model16(X) - high) / jnp.linalg.norm(high))
+print(f'relative difference of the bf16 logits: {error:.1e}')
+assert error < 0.01
+step = nnx.jit_partial(train_step, model16,
+                       nnx.Optimizer(model16, adamw, wrt=nnx.Param),
+                       graph=False)
+record('+ fused attention', tokens_per_second(step, windows(corpus, 64)))
+```
+
+:begin_tab:`jax`
+<!-- WRITER: one sentence on the measured ratio of "+ fused attention"
+(report); the two JAX ratios multiply to about the old combined 1.96. -->
 :end_tab:
 
 ### Larger Minibatches
@@ -591,7 +677,7 @@ inputs and outputs (:numref:`subsec_mp-measuring`).
 %%tab pytorch
 torch.cuda.reset_peak_memory_stats()
 start = torch.cuda.memory_allocated()
-speed = record('+ batch 512', tokens_per_second(step, windows(corpus, 512)))
+record('+ batch 512', tokens_per_second(step, windows(corpus, 512)))
 memory = (torch.cuda.max_memory_allocated() - start) / 2**30
 print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 ```
@@ -600,7 +686,7 @@ print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 %%tab jax
 batches = windows(corpus, 512)
 plan = step.lower(*next(batches)).compile().memory_analysis()
-speed = record('+ batch 512', tokens_per_second(step, batches))
+record('+ batch 512', tokens_per_second(step, batches))
 memory = plan.temp_size_in_bytes / 2**30
 print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 ```
@@ -624,7 +710,7 @@ step at batch 512:
 
 ```{.python .input #fast-transformer-larger-minibatches-1}
 %%tab pytorch, jax
-profile(step, windows(corpus, 512), speed)
+profile(step, windows(corpus, 512))
 ```
 
 The device is busy for the whole step, and the matrix products, those
@@ -688,8 +774,8 @@ step = make_step(remat, torch.compile(remat, dynamic=False,
                                       mode='reduce-overhead'), bf16=True)
 torch.cuda.reset_peak_memory_stats()
 start = torch.cuda.memory_allocated()
-speed = record('+ checkpointing',
-               tokens_per_second(step, windows(corpus, 512)))
+record('+ checkpointing', tokens_per_second(step, windows(corpus, 512)),
+       kept=False)
 memory = (torch.cuda.max_memory_allocated() - start) / 2**30
 print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 ```
@@ -715,11 +801,14 @@ optimizer = nnx.Optimizer(remat, adamw, wrt=nnx.Param)
 step = nnx.jit_partial(train_step, remat, optimizer, graph=False)
 batches = windows(corpus, 512)
 plan = step.lower(*next(batches)).compile().memory_analysis()
-speed = record('+ checkpointing', tokens_per_second(step, batches))
+record('+ checkpointing', tokens_per_second(step, batches), kept=False)
 memory = plan.temp_size_in_bytes / 2**30
 print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 ```
 
+<!-- WRITER: checkpointing is now recorded with `kept=False`: its ratio is
+still to batch 512, and the cumulative table prints it below a rule as
+"(not kept)", outside the running total (FT-12). -->
 Checkpointing lowers throughput by a tenth to a quarter and cuts the
 memory of the step to less than half. It is the right change for a model
 or a minibatch that would not fit otherwise. For this step it is the wrong
@@ -801,6 +890,12 @@ that the single-GPU step is measured under the same conditions. The
 script's first process runs on GPU 0, where the CUDA graphs of the
 notebook's own compiled steps still hold memory, so the notebook releases
 that memory before the first launch.
+<!-- WRITER: the release of the CUDA-graph memory and `compile_threads` are
+code comments in the cell below; cut the last sentence here (FT-17, S5).
+The cell is unchanged. Before it, state the prediction of the allreduce
+from beta_link of sec_multi_gpu_concise: S/beta_link for 76 MB at about
+2.5 GB/s, about 31 ms at k = 2, and 1.5 S/beta_link, about 46 ms at k = 4
+(store: 27 to 31 and 42 to 49 ms; FT-14). -->
 :end_tab:
 
 :begin_tab:`jax`
@@ -819,6 +914,10 @@ lives. The time of the allreduce comes from a `psum` over the mesh, as in
 :numref:`sec_multi_gpu`. The notebook runs with `NCCL_LOCAL_REGISTER=0`:
 NCCL's buffer registration fails on GPUs without peer-to-peer access and
 would print a warning at every collective.
+<!-- WRITER: NCCL_LOCAL_REGISTER=0 is now a comment in the setup cell
+`fast-transformer-setup`; cut the last sentence here (S5). `data_parallel`
+takes the median of three windows from `tokens_per_second`; otherwise the
+cell is unchanged. -->
 :end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-7}
@@ -876,7 +975,7 @@ def data_parallel(k, bf16, batch_size):
     step = nnx.jit_partial(train_step, net, optimizer, graph=False)
     batches = windows(jax.device_put(corpus, copy), k * batch_size,
                       sharding=split)
-    speed = tokens_per_second(step, batches)
+    speed, _ = tokens_per_second(step, batches)
     grads = jnp.zeros((k, num_params), device=split)  # All gradients per GPU
     psum = jax.jit(jax.shard_map(lambda g: jax.lax.psum(g, 'data'),
                                  mesh=mesh, in_specs=P('data'),
@@ -933,14 +1032,30 @@ arithmetic with the count of six FLOPs per parameter and token.
 ```{.python .input #fast-transformer-the-waterfall}
 %%tab pytorch, jax
 flops = 6 * num_params  # Per token, without the attention scores
-print(f'{"configuration":16}{"tokens/s":>11}{"step":>7}{"total":>7}'
-      f'{"TFLOP/s":>9}')
+peak = {'tf32': 82.6e12, 'bf16': 165.2e12}  # FLOP/s of the RTX 4090
+print(f'{"configuration":18}{"tokens/s":>10}{"step":>7}{"total":>7}'
+      f'{"TFLOP/s":>9}{"MFU":>6}')
 first = previous = next(iter(results.values()))
 for name, speed in results.items():
-    print(f'{name:16}{speed:11,.0f}{speed / previous:6.2f}x'
-          f'{speed / first:6.2f}x{speed * flops / 1e12:9.1f}')
+    print(f'{name:18}{speed:10,.0f}{speed / previous:6.2f}x'
+          f'{speed / first:6.2f}x{speed * flops / 1e12:9.1f}'
+          f'{speed * flops / peak["bf16"]:6.0%}')
     previous = speed
+print('-' * 57)
+for name, speed in branches.items():  # Measured on top of the last row
+    print(f'{name:18}{speed:10,.0f}{speed / previous:6.2f}x{"":7}'
+          f'{speed * flops / 1e12:9.1f}{speed * flops / peak["bf16"]:6.0%}'
+          '  (not kept)')
 ```
+
+<!-- WRITER: the table's `total` now stops at batch 512; checkpointing is
+printed below a rule as "(not kept)", with its ratio to batch 512 (FT-12).
+The new last column, MFU (model FLOPs utilization), is the TFLOP/s column
+over the bf16 peak of 165.2 TFLOP/s, for every row (FR-2; cite
+chowdhery2022palm). "The three changes before checkpointing together raise
+throughput about twofold or more" becomes "by a factor of two to two and a
+half" (dev totals at batch 512: PyTorch 2.04 and 2.07, JAX 2.17 and 2.10;
+MFU at batch 512: PyTorch 46%, JAX 49 to 50%). -->
 
 The three changes before checkpointing together raise throughput about
 twofold or more. At batch 512 the step performs roughly half of the
@@ -968,36 +1083,116 @@ learning-rate schedule.
 ```{.python .input #fast-transformer-the-waterfall-1}
 %%tab pytorch
 learner = d2l.GPT(len(data.vocab), num_hiddens=512).to(device)
-step = make_step(learner, torch.compile(learner, dynamic=False,
-                                        mode='reduce-overhead'), bf16=True)
+reference = d2l.GPT(len(data.vocab), num_hiddens=512).to(device)
+reference.load_state_dict(learner.state_dict())  # One initialization
+steps = {'baseline': make_step(reference),
+         'final': make_step(learner, torch.compile(
+             learner, dynamic=False, mode='reduce-overhead'), bf16=True)}
 batches = windows(corpus, 512)
-losses = torch.stack([step(*next(batches)).detach()
-                      for _ in range(300)]).tolist()
-validation = math.log(d2l.lm_perplexity(learner, data.val_dataloader()))
-print(f'training loss {losses[0]:.2f} at the first step, '
-      f'{sum(losses[-20:]) / 20:.2f} over the last 20 steps; '
-      f'validation loss {validation:.2f}')
-assert validation < 2.45  # Better than the bigram model
+minibatches = [next(batches) for _ in range(200)]  # The same for both
+losses = {name: torch.stack([step(X, Y).detach()
+                             for X, Y in minibatches]).tolist()
+          for name, step in steps.items()}
+validation = {name: math.log(d2l.lm_perplexity(net, data.val_dataloader()))
+              for name, net in (('baseline', reference), ('final', learner))}
 ```
 
 ```{.python .input #fast-transformer-the-waterfall-1}
 %%tab jax
 learner = d2l.to_bf16(FusedGPT(len(data.vocab), num_hiddens=512,
-                           rngs=nnx.Rngs(d2l.get_key())))
-optimizer = nnx.Optimizer(learner, adamw, wrt=nnx.Param)
-step = nnx.jit_partial(train_step, learner, optimizer, graph=False)
+                               rngs=nnx.Rngs(d2l.get_key())))
+reference = d2l.GPT(len(data.vocab), num_hiddens=512,
+                    rngs=nnx.Rngs(d2l.get_key()))
+nnx.update(reference, nnx.state(learner, nnx.Param))  # One initialization
+reference_optimizer = nnx.Optimizer(reference, adamw, wrt=nnx.Param)
+steps = {'baseline': lambda X, Y: jit_step(reference, reference_optimizer,
+                                           X, Y),
+         'final': nnx.jit_partial(train_step, learner, nnx.Optimizer(
+             learner, adamw, wrt=nnx.Param), graph=False)}
 batches = windows(corpus, 512)
-losses = jnp.stack([step(*next(batches)) for _ in range(300)]).tolist()
-validation = math.log(d2l.lm_perplexity(learner, data.val_dataloader()))
-print(f'training loss {losses[0]:.2f} at the first step, '
-      f'{sum(losses[-20:]) / 20:.2f} over the last 20 steps; '
-      f'validation loss {validation:.2f}')
-assert validation < 2.45  # Better than the bigram model
+minibatches = [next(batches) for _ in range(200)]  # The same for both
+losses = {name: jnp.stack([step(X, Y) for X, Y in minibatches]).tolist()
+          for name, step in steps.items()}
+validation = {name: math.log(d2l.lm_perplexity(net, data.val_dataloader()))
+              for name, net in (('baseline', reference), ('final', learner))}
 ```
+
+```{.python .input #fast-transformer-training-check}
+%%tab pytorch, jax
+checkpoints = (1, 50, 100, 200)
+print(f'{"loss at step":14}' + ''.join(f'{i:>7}' for i in checkpoints)
+      + f'{"last 20 steps":>18}{"validation":>12}')
+for name, curve in losses.items():
+    last = curve[-20:]
+    print(f'{name:14}' + ''.join(f'{curve[i - 1]:7.2f}' for i in checkpoints)
+          + f'{min(last):10.2f} to {max(last):.2f}{validation[name]:12.2f}')
+    assert validation[name] < 2.45  # Better than the bigram model
+```
+
+<!-- WRITER: the training check is redesigned (FT-19): from one
+initialization, the baseline configuration (PyTorch: eager, tf32; JAX:
+`nnx.jit`, tf32, XLA attention) and the final one (PyTorch: compiled, bf16;
+JAX: bound, bf16, fused attention) train on the same 200 minibatches of
+512 windows, drawn once. The shared cell prints the loss of both at steps
+1, 50, 100, 200, the range of each over its last 20 steps, and both
+validation losses; the bigram threshold stays as an assert only. 300 steps
+and "a fresh model with the final configuration" are false; the paragraph
+after the cell reads the agreement of the two curves against the printed
+ranges. Dev runs (validation baseline/final): PyTorch 2.02/1.97 and
+2.19/2.17; JAX 2.05/2.11 and 1.99/2.05; last-20 ranges about 0.07 to 0.13
+wide and overlapping in every run. A seed sweep (report) shows that two
+runs from one initialization that differ only in numerics (fp32 'highest'
+against tf32) already differ by up to 0.05 at step 200, so the two
+configurations agree to within what numerics alone produce. The level
+after 200 steps varies with the initialization (2.0 to 2.2), so quote no
+single value. The deck's training-check slide now
+shows `@!fast-transformer-training-check`. -->
 
 The training loss starts near $\log 256 \approx 5.55$, the loss of a
 uniform guess over the 256 bytes, and the validation loss ends well below
 the bigram level. The faster step trains the model.
+
+### Where the Time Goes
+:label:`subsec_ft-account`
+
+<!-- WRITER: new subsection, the chapter's ending (structure.md 3.9,
+"Account of the final step"). Predict in words from the third profile
+before the cell; the cell prints, per 8,192 tokens, the step, its
+arithmetic at the peak of its format (6N per token), the device time of the
+matrix products (the same kernel names as `d2l.show_profile`, cuDNN's
+fused attention included through "sdpa"), and of all other kernels, for
+the baseline (tf32) and for batch 512 (bf16). Dev runs, ms per 8,192
+tokens (step, at peak, products, other): PyTorch baseline 25.3 to 25.6,
+11.3, 15.1, 8.7; batch 512 12.4, 5.7, 7.0, 5.4. JAX baseline 23.5 to
+24.9, 11.3, 14.9 to 15.3, 8.3; batch 512 11.2 to 11.4, 5.7, 6.5 to 6.8,
+4.7. The
+paragraph that follows ("The fastest configuration still leaves ...") is
+the old ending; merge it into this one ending. -->
+
+```{.python .input #fast-transformer-account}
+%%tab pytorch, jax
+def account(kernels, tokens, speed):
+    """Milliseconds per 8,192 tokens of a step of `tokens` tokens that runs
+    at `speed` tokens/s: the step, its matrix products, and all its other
+    kernels."""
+    per_step = 8192 / tokens  # Steps per 8,192 tokens
+    # Products are named as in d2l.show_profile: cuBLAS and CUTLASS kernels,
+    # PyTorch's fused attention (fmha_cutlass...), cuDNN's (...sdpa...)
+    products = per_step * sum(
+        ms for name, ms in kernels.items()
+        if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+    other = per_step * sum(kernels.values()) - products
+    return 1e3 * 8192 / speed, products, other
+
+print(f'{"ms per 8,192 tokens":24}{"step":>6}{"at peak":>9}'
+      f'{"products":>10}{"other":>7}')
+for name, tokens, fmt in (('baseline', 64 * 128, 'tf32'),
+                          ('+ batch 512', 512 * 128, 'bf16')):
+    wall, products, other = account(profiles[name], tokens, results[name])
+    arithmetic = 1e3 * 8192 * flops / peak[fmt]  # At the peak of the format
+    print(f'{name + " (" + fmt + ")":24}{wall:6.1f}{arithmetic:9.1f}'
+          f'{products:10.1f}{other:7.1f}')
+```
 
 The fastest configuration still leaves about half of the card's bf16
 peak unused. What remains lies in the memory-bound kernels between the
@@ -1031,6 +1226,15 @@ gains little for a short step and most of the linear speedup for a long
 one.
 
 ## Exercises
+
+<!-- WRITER: exercise 1 says each throughput comes from a single window of
+50 steps; it is now the median of three windows with the spread printed,
+so the exercise extends the body (ten windows, mean and relative standard
+deviation, drift design). Exercise 4: the training check now also compares
+the final configuration with the baseline on the same minibatches; the
+statement that a bigram threshold misses a causal leak still holds, but
+"accepts the final configuration when its validation loss lies below that
+of a bigram model" must name the new check. -->
 
 1. [code] **Noise floor.** Each throughput in
    :numref:`subsec_ft-waterfall` comes from a single window of 50 steps.
@@ -1289,7 +1493,7 @@ A window varies by a few percent: read ratios to one decimal.
 compiled = torch.compile(model, dynamic=False, mode='reduce-overhead')
 high = model(X)
 error = ((compiled(X) - high).norm() / high.norm()).item()
-assert error < 0.01      # same answer first
+assert error < 1e-4      # same answer first
 step = make_step(model, compiled)
 ```
 
@@ -1453,7 +1657,7 @@ second GPU helps only if the allreduce is shorter than a step.
 :::
 
 ::: {.slide title="The Optimized Step Still Trains the Model"}
-@!fast-transformer-the-waterfall-1
+@!fast-transformer-training-check
 
 - 300 steps of bf16 at batch 512 from a fresh model.
 - Starts near $\log 256 \approx 5.55$; validation below the bigram level

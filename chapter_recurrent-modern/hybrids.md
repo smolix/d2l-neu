@@ -241,15 +241,16 @@ for name, r in runs.items():
     print(f'{name:25s}', ''.join(f'{a:6.2f}/{b:.2f}' for a, b in r.T))
 ```
 
-Both predictions hold. With 4 pairs every model recalls nearly every
-value. From there Gated DeltaNet loses pairs as the load grows, to about
-two thirds of 32 pairs and about half of 64. The model with four times the
-state falls later: it recalls 0.91 to 0.95 of 64 pairs, about as well as
-the small state recalls 8 to 16, and every one of its runs is above every
-run of the small state from 16 pairs on. Four times the entries hold at
-least four times the pairs, so what :numref:`sec_matrix-state` found for
-gated linear attention holds for the delta rule as well. The two runs of
-each model differ far less than the models do.
+Both predictions hold, and the first with room to spare. With 4 pairs
+every model recalls nearly every value. From there Gated DeltaNet loses
+pairs as the load grows, to about two thirds of 32 pairs and about half of
+64. The model with four times the state falls later and less than we
+guessed: it recalls 0.93 to 0.97 of 64 pairs, about as well as the small
+state recalls 8, not 16, and every one of its runs is above every run of
+the small state from 16 pairs on. Four times the entries hold at least
+four times the pairs, so what :numref:`sec_matrix-state` found for gated
+linear attention holds for the delta rule as well. The two runs of each
+model differ far less than the models do.
 
 The hybrid recalls every pair at every load in every run, and so does
 attention behind the same convolution. Attention was built to keep every
@@ -300,7 +301,7 @@ for name, (a, b) in [('Gated DeltaNet', recall['Gated DeltaNet']),
 ```
 
 Every run without the convolution recalls fewer pairs than every run with
-it, at every load, by 0.06 to 0.36, and the difference is largest at 8 to
+it, at every load, by 0.06 to 0.38, and the difference is largest at 8 to
 16 pairs. Even 4 pairs, which fit easily into the state, are no longer
 recalled reliably. The model still does better than guessing at every
 load, so its two layers find some other way to bring a value together with
@@ -367,17 +368,20 @@ trained = d2l.text_table(text_model, arms, data)
 
 Gated DeltaNet ends 0.05 to 0.06 nats per byte below attention over the
 whole window. The gap is smallest over the first 16 bytes, about 0.04, and
-about 0.06 from byte 16 to the end, far more than the two runs of either
+0.05 to 0.06 from byte 16 to the end, far more than the two runs of either
 model differ. Attention does not catch up at the late positions, where the
-prediction said it should. The hybrid ends within 0.01 of Gated DeltaNet
-in every band: on this benchmark one attention layer in four changes
-little. Nor do the late positions help any model much: every model's loss
-falls by at most 0.004 from bytes 16 to 63 to bytes 64 to 127. On these
-windows the next byte depends on the bytes just before it, and almost
-never on a pair stored a hundred bytes earlier. With larger models and
-longer contexts, :citet:`Arora.Eyuboglu.Timalsina.ea.2024` traced most of
-the gap in perplexity between attention and the gated convolution models
-they studied to recall of this kind. On our windows of 128 bytes there is
+prediction said it should. The hybrid lands between the two and much
+nearer to Gated DeltaNet: every hybrid run ends behind every Gated DeltaNet
+run, in every band, but by about 0.01 or less, a small fraction of
+attention's gap. On this benchmark one attention layer in four costs a
+little and buys nothing. Nor do the late positions help any model much:
+every model's loss falls by at most 0.004 from bytes 16 to 63 to bytes
+64 to 127. On these windows the next byte depends on the bytes just
+before it, and almost never on a pair stored a hundred bytes earlier.
+With larger models and longer contexts,
+:citet:`Arora.Eyuboglu.Timalsina.ea.2024` traced most of the gap in
+perplexity between attention and the gated convolution models they studied
+to recall of this kind. On our windows of 128 bytes there is
 no such gap to explain. Attention is the model that is behind.
 
 Gated DeltaNet, the model that recalls the fewest pairs, thus has the
@@ -500,11 +504,11 @@ recurrent layer recalls every pair at every load, as attention does.
 Without the short convolution that brings each key to its value, the
 recurrent model recalls fewer pairs at every load. On windows of 128 bytes
 of text none of this shows: Gated DeltaNet is ahead of attention, and the
-hybrid is within 0.01 of it. During generation only the attention layers
-keep a cache that grows with the context, so a hybrid needs the
-transformer's cache times its fraction of attention layers, an eighth for
-one attention layer in eight, plus a constant. Most recent large models
-with recurrent layers are hybrids built this way.
+hybrid trails it by about 0.01 or less. During generation only the
+attention layers keep a cache that grows with the context, so a hybrid
+needs the transformer's cache times its fraction of attention layers, an
+eighth for one attention layer in eight, plus a constant. Most recent
+large models with recurrent layers are hybrids built this way.
 
 ## Exercises
 
@@ -753,12 +757,12 @@ each trained twice.
 @!hybrids-the-recall-sweep-3
 :::
 
-::: {.slide title="4× State Recalls 64 Pairs as the Small State Recalls 8 to 16"}
+::: {.slide title="4× State Recalls 64 Pairs as Well as the Small State Recalls 8"}
 [Recall]{.kicker}
 
 - Gated DeltaNet: about two thirds of 32 pairs, half of 64.
-- 4× state: 0.91–0.95 of 64, like the small state at 8–16: at least 4×
-  the pairs.
+- 4× state: 0.93–0.97 of 64, like the small state at 8 (0.93–0.96),
+  better than the guess of 16: at least 4× the pairs.
 - Hybrid, attention: every pair, every load, every run.
 - At 64 pairs the attention cache holds 192 tokens, 12,288 numbers: 24×
   the larger state. A little attention saves memory only at long
@@ -782,7 +786,7 @@ A memory can hold only what reaches it.
 :::
 :::
 
-::: {.slide title="On Text, Attention Is Behind and the Hybrid Matches Gated DeltaNet"}
+::: {.slide title="On Text, Attention Is Behind; the Hybrid Trails Slightly"}
 [Text]{.kicker}
 
 @!hybrids-language-modeling-5
@@ -812,7 +816,7 @@ up.
 [Check]{.kicker}
 
 Every model's loss falls by at most 0.004 from bytes 16–63 to bytes
-64–127, and attention stays about 0.06 behind Gated DeltaNet. What does
+64–127, and attention stays 0.05 to 0.06 behind Gated DeltaNet. What does
 that say about this benchmark?
 
 ::: {.fragment .fade-up}
@@ -891,9 +895,10 @@ Mamba channels, $h$ heads, $T$ tokens read.
 ::: {.slide title="Recap"}
 - Recall $\le Mb/\log_2 V$ tokens; a matrix memory far less, since more
   than $d_k$ keys must overlap.
-- 64 pairs: Gated DeltaNet half; 4× state 0.91–0.95; one attention
+- 64 pairs: Gated DeltaNet half; 4× state 0.93–0.97; one attention
   layer, all.
-- 128-byte text: attention behind; hybrid ≈ Gated DeltaNet.
+- 128-byte text: attention 0.05–0.06 behind Gated DeltaNet; hybrid about
+  0.01 behind, in every run.
 - 128K tokens, 32 layers: 16 GB of cache; 2.1 GB with 4 attention layers.
 
 Next: what models cost on real hardware, and how to make them fast.

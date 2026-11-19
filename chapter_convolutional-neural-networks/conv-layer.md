@@ -6,32 +6,27 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Convolutions for Images
 :label:`sec_conv_layer`
 
-:numref:`sec_why-conv` derived the convolutional layer on paper, from two
-requirements on a fully connected layer: that a shifted input produce a
-shifted output, and that each output depend only on a small neighborhood.
-The derivation ended with a formula. What does that formula compute on an
-actual image, and can a network find good weights for it by itself?
+In :numref:`sec_why-conv`, we derived the convolutional layer on paper from two
+geometric principles: translation equivariance and locality. Now let's see what
+that formula actually computes on an image—and whether gradient descent can
+discover useful kernels automatically from data.
 
-Finding the vertical edges in a grayscale image, the places where a bright
-region meets a dark one, is about the simplest instance of both questions.
-Picture a small white image with a black vertical band down its middle. If we
-subtract from each pixel its right-hand neighbor, the difference is zero
-inside flat regions and nonzero where the brightness changes, positive where
-white turns to black and negative where black turns to white. An edge can
-occur in any row and any column, so the same detector, the two weights
-$(1, -1)$, must be applied at every position. Sliding it over the image gives
-one output for every position at which it fits, and these outputs form a map
-of the edges. This is the operation that a convolutional layer computes: a
-small array of weights, the kernel, is compared with every window of the
-image, and each comparison yields one output.
+Consider one of the simplest computer vision tasks: locating vertical edges
+where a bright region meets a dark one. Imagine a white grayscale image with a
+black vertical stripe down its center. Subtracting each pixel's right-hand
+neighbor yields zero inside uniform regions, $+1$ where white transitions to
+black, and $-1$ where black returns to white. Because an edge can appear in any
+row or column, we sweep the exact same two-weight detector $(1, -1)$ across
+every valid position, producing an *edge map*. That sliding weighted sum is the
+core computation of a convolutional layer.
 
-Designing a detector by hand works for vertical edges. A network, however,
-needs thousands of detectors, and nobody knows in advance which patterns they
-should match. We therefore define the operation, implement it, apply it to
-the edge example, and then let gradient descent find the kernel $(1, -1)$
-from the image and its edge map alone. Two shorter topics follow: how the
-operation is computed efficiently, and how much of the image a unit in a
-stack of such layers sees.
+Hand-crafting $(1, -1)$ works nicely for vertical edges, yet a real vision
+network needs thousands of detectors for patterns nobody knows how to write down
+in advance. In this section, we define and implement two-dimensional
+cross-correlation, test our hand-crafted edge detector, and then let gradient
+descent *learn* $(1, -1)$ solely from the input image and its edge map. We close
+by showing how frameworks accelerate convolutions via matrix multiplication
+(*im2col*) and how stacking layers widens a unit's receptive field.
 
 ```{.python .input #conv-layer-convolutions-for-images}
 %%tab mxnet
@@ -76,35 +71,30 @@ from d2l import jax as d2l
 
 ### The Operation
 
-The edge detector uses a single kernel of shape $1\times 2$. Let us first
-state the operation for any input and any kernel, omitting channels for now:
-the input $\mathbf{X}$ is a matrix of height $n_\textrm{h}$ and width
-$n_\textrm{w}$, and the kernel $\mathbf{K}$ is a
-matrix of height $k_\textrm{h}$ and width $k_\textrm{w}$. The kernel's shape
-is also the shape of the *window*, the part of the input that the kernel
-covers at one position. Place the window with its upper-left corner at input
-position $(i, j)$, multiply the input elements under it elementwise with the
-kernel, and sum. The result is the output at position $(i, j)$:
+Leaving channels aside for the moment, let the input $\mathbf{X}$ be an
+$n_\textrm{h} \times n_\textrm{w}$ matrix and the kernel $\mathbf{K}$ be a
+$k_\textrm{h} \times k_\textrm{w}$ matrix. The kernel defines a sliding
+*window* of shape $k_\textrm{h} \times k_\textrm{w}$. Placing the window's
+upper-left corner at $(i, j)$, we multiply the covered input patch elementwise
+with $\mathbf{K}$ and sum the products to produce the output entry at $(i, j)$:
 
 $$[\mathbf{Y}]_{i, j} = \sum_{a=0}^{k_\textrm{h}-1} \sum_{b=0}^{k_\textrm{w}-1} [\mathbf{K}]_{a, b}\, [\mathbf{X}]_{i+a, j+b}.$$
 :eqlabel:`eq_corr2d`
 
 This is the *two-dimensional cross-correlation* of $\mathbf{X}$ with
-$\mathbf{K}$, which we write $\mathbf{Y} = \mathbf{X} \star \mathbf{K}$.
-Indices start at 0 here, as in code. The layer of
-:numref:`sec_why-conv` indexed the window by offsets from $-\Delta$ to
-$\Delta$ around its center instead. The two conventions differ only by a
-shift of the output by $\Delta$ positions, but the corner is the more
-convenient anchor: it also serves kernels that have no center, such as the
-$2 \times 2$ kernel of the next figure and the $1 \times 2$ edge detector.
+$\mathbf{K}$, written $\mathbf{Y} = \mathbf{X} \star \mathbf{K}$ with
+zero-based indices matching code. Whereas :numref:`sec_why-conv` centered
+offsets symmetrically from $-\Delta$ to $\Delta$, anchoring at the upper-left
+corner differs only by a fixed shift of $\Delta$ while naturally handling
+even-sized kernels—such as a $2 \times 2$ kernel or our $1 \times 2$ edge
+detector—that have no center pixel.
 
 ![Two-dimensional cross-correlation. The shaded portions are the first output element and the input and kernel elements used to compute it: $0\times0+1\times1+3\times2+4\times3=19$.](../img/correlation.svg)
 :label:`fig_correlation`
 
-In :numref:`fig_correlation` the input has shape $3 \times 3$ and the kernel
-has shape $2 \times 2$. The window starts at the upper-left corner of the input
-and slides one element at a time, from left to right and from top to bottom.
-The window fits at four positions, which give the four outputs
+In :numref:`fig_correlation`, we slide a $2 \times 2$ kernel across a
+$3 \times 3$ input one pixel at a time, left to right and top to bottom. The
+window fits cleanly at four positions, yielding the $2 \times 2$ output:
 
 $$
 \begin{aligned}
@@ -115,23 +105,23 @@ $$
 \end{aligned}
 $$
 
-Note that the output is smaller than the input, since the window must lie
-inside the input. Along each axis it fits at $n - k + 1$ positions, so the
-output has shape
+Notice that the output shrinks slightly along each axis because the kernel must
+stay wholly inside the input. Fitting a width-$k$ window into length $n$ leaves
+$n - k + 1$ valid positions, so the output shape is
 
 $$(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\textrm{w}+1).$$
 
-The $3 \times 3$ input with a $2 \times 2$ kernel gives $2 \times 2$, the
-$6 \times 8$ edge image with a $1 \times 2$ kernel gives $6 \times 7$, and a
-$28 \times 28$ Fashion-MNIST image with a $5 \times 5$ kernel gives
-$24 \times 24$. If the shrinking is unwelcome, a border of zeros around the
-input, called *padding*, undoes it; :numref:`sec_padding` treats it together
-with other ways to control the output shape.
+Thus a $3 \times 3$ input with a $2 \times 2$ kernel yields $2 \times 2$, a
+$6 \times 8$ image with a $1 \times 2$ kernel yields $6 \times 7$, and a
+$28 \times 28$ Fashion-MNIST image with a $5 \times 5$ kernel yields
+$24 \times 24$. Whenever we want to preserve spatial dimensions, we surround the
+input with a border of zeros (*padding*), which we examine alongside strides and
+dilation in :numref:`sec_padding`.
 
 ### Implementation
 
-The function `corr2d` computes :eqref:`eq_corr2d` in the plainest way
-possible, with two loops over the output positions.
+We implement :eqref:`eq_corr2d` directly in `corr2d` using a pair of loops over
+every output coordinate.
 
 ```{.python .input #conv-layer-the-cross-correlation-operation-1}
 %%tab mxnet
@@ -181,8 +171,7 @@ def corr2d(X, K):  #@save
     return Y
 ```
 
-Does `corr2d` reproduce the four outputs of :numref:`fig_correlation`? We
-construct its input and kernel and compare.
+Let's verify `corr2d` against our hand calculation from :numref:`fig_correlation`:
 
 ```{.python .input #conv-layer-the-cross-correlation-operation-2}
 X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
@@ -190,33 +179,30 @@ K = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
 corr2d(X, K)
 ```
 
-The output matches the figure, number for number.
+The output reproduces :numref:`fig_correlation` entry for entry.
 
 ### Convolution and Cross-Correlation
 
-Strictly speaking, `corr2d` does not compute a convolution. The mathematical
-*convolution* flips the kernel horizontally and vertically before sliding it
-(:numref:`sec_why-conv`). The numbers show how little is at stake. For the
-input of :numref:`fig_correlation`, a layer that computes true convolutions
-produces the same outputs 19, 25, 37, and 43 with the kernel
-$\mathbf{K}' = \begin{bmatrix} 3 & 2 \\ 1 & 0 \end{bmatrix}$, and since
-kernels are learned from data, it would simply learn $\mathbf{K}'$ in place
-of $\mathbf{K}$. From now on we say convolution for both, as the libraries
-do.
+Recall from :numref:`sec_why-conv` that mathematical *convolution* flips the
+kernel both horizontally and vertically before sliding it across the input. On
+the $3 \times 3$ input in :numref:`fig_correlation`, strict convolution with the
+flipped kernel $\mathbf{K}' = \begin{bmatrix} 3 & 2 \\ 1 & 0 \end{bmatrix}$
+produces the exact same values 19, 25, 37, and 43. Because kernels are learned
+from data, a layer performing strict convolution simply learns $\mathbf{K}'$
+instead of $\mathbf{K}$ with no change to its outputs. Following deep learning
+convention, we use "convolution" for cross-correlation from here on.
 
 
 ## Convolutional Layers
 
 ### The Layer
 
-A convolutional layer cross-correlates its input with a kernel and adds a
-scalar bias. Its two parameters are the kernel and the bias. The kernel
-starts from random values, drawn from $\mathcal{N}(0, 0.01^2)$ like the
-weights of the MLP in :numref:`chap_perceptrons`, and the bias starts at
-zero. The class `Conv2D` declares the two parameters in its
-constructor, and its forward method calls `corr2d` and adds the bias. A layer
-whose kernel has height $h$ and width $w$ is called an $h \times w$
-convolutional layer.
+A two-dimensional convolutional layer cross-correlates its input with a learned
+kernel and adds a scalar bias. Just like our MLP weights in
+:numref:`chap_perceptrons`, we initialize the kernel from
+$\mathcal{N}(0, 0.01^2)$ and the bias to zero. Below, `Conv2D` registers both
+parameters and invokes `corr2d` in its forward pass; a layer with a kernel of
+height $h$ and width $w$ is called an $h \times w$ convolutional layer.
 
 ```{.python .input #conv-layer-convolutional-layers}
 %%tab mxnet
@@ -270,11 +256,11 @@ class Conv2D(nnx.Module):
         return corr2d(x, self.weight) + self.bias
 ```
 
-Unlike a fully connected layer, this layer is not tied to one input size,
-since its parameters belong to the kernel alone. One $2 \times 2$ layer with
-its five parameters applies to the $3 \times 3$ input `X` and to a
-$6 \times 8$ image alike, and returns outputs of shape $2 \times 2$ and
-$5 \times 7$.
+Unlike a dense layer, a convolutional layer is not locked to a fixed input
+resolution because its parameters depend only on the kernel size. The exact same
+$2 \times 2$ layer (5 parameters total) processes both our $3 \times 3$ tensor
+`X` and a $6 \times 8$ image, returning outputs of shapes $2 \times 2$ and
+$5 \times 7$:
 
 ```{.python .input #conv-layer-the-layer-1}
 %%tab mxnet
@@ -292,9 +278,9 @@ layer(X).shape, layer(d2l.ones((6, 8))).shape
 ### Edge Detection
 :label:`subsec_edge_detection`
 
-It is time to run the edge detector of the opening. The image has
-$6 \times 8$ pixels; its middle four columns are black (0) and the rest is
-white (1).
+Now let's test the vertical edge detector from the introduction on a
+$6 \times 8$ synthetic image whose middle four columns are black (`0`) and outer
+columns are white (`1`).
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-1}
 %%tab mxnet, pytorch
@@ -317,55 +303,51 @@ X = X.at[:, 2:6].set(0)
 X
 ```
 
-The kernel has height 1 and width 2:
+We define the $1 \times 2$ kernel
 
 $$\mathbf{K} = \begin{bmatrix} 1 & -1 \end{bmatrix}.$$
 :eqlabel:`eq_edge_kernel`
 
-At position $(i, j)$ it computes
-$[\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$, the difference between two
-horizontally adjacent pixels, which is 0 wherever they are equal. This is a
-*finite difference*: up to sign, it approximates the derivative of the
-brightness along the row. A derivative vanishes where nothing changes, which
-is why the kernel responds only where the brightness does.
+At every position $(i, j)$, this computes the horizontal *finite difference*
+$[\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$—a discrete approximation (up to sign)
+of the horizontal derivative of brightness, which vanishes across flat regions
+and spikes wherever intensity jumps.
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-2}
 K = d2l.tensor([[1.0, -1.0]])
 ```
 
-Cross-correlating `X` with `K` gives the edge map `Y`.
+Cross-correlating `X` with `K` produces the edge map `Y`:
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-3}
 Y = corr2d(X, K)
 Y
 ```
 
-The output is 1 in the column where white turns to black, $-1$ in the column
-where black turns to white, and 0 everywhere else. The same kernel applied to
-the transposed image, whose band is horizontal, should find nothing.
+Sure enough, `Y` fires `+1` along the white-to-black boundary, `-1` along the
+black-to-white boundary, and `0` everywhere else. Applying the exact same kernel
+to the transposed image (turning the vertical stripe into a horizontal one)
+yields all zeros:
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-4}
 corr2d(d2l.transpose(X), K)
 ```
 
-The output is zero everywhere: $(1, -1)$ detects only vertical edges. Edges in
-other directions need other kernels, and so do corners, textures, and every
-other pattern a network may need.
+Clearly `[1, -1]` responds strictly to vertical edges. Detecting horizontal
+edges, diagonals, corners, or textures requires different kernels altogether.
 
 ### Learning a Kernel
 :label:`subsec_learning_kernel`
 
-We cannot design all of these by hand, least of all for the intermediate
-layers of a stack, where we do not even know which patterns to ask for. Can
-gradient descent find a kernel from the input `X` and the desired output `Y`
-alone? Let us try it on the one kernel whose answer we know. We start from a
-small random $1 \times 2$ kernel, drawn as before, measure the squared error
-between the layer's output and `Y`, summed over all 42 output positions, and
-take 10 gradient steps with learning rate 0.03. Instead of `Conv2D` we use
-the built-in convolutional layer, which computes the same cross-correlation
-fast. It expects two more axes, one for the examples of a minibatch and one
-for channels (:numref:`sec_channels`), so we reshape `X` and `Y`
-accordingly. We omit the bias, which the edge map does not need.
+Hand-crafting `[1, -1]` is easy when we know the exact feature we want, yet no
+engineer can specify thousands of intermediate filters across a deep network by
+hand. Can gradient descent recover the kernel `[1, -1]` from the input–output
+pair `(X, Y)` alone? Let's test this using each framework's built-in 2D
+convolutional layer (with bias omitted and weights initialized from
+$\mathcal{N}(0, 0.01^2)$), minimizing squared error summed across all 42 output
+entries over 10 gradient steps at learning rate $0.03$. Because built-in layers
+expect 4D tensors including batch and channel axes (:numref:`sec_channels`), we
+reshape `X` and `Y` accordingly.
 
 ```{.python .input #conv-layer-learning-a-kernel-1}
 %%tab mxnet
@@ -444,10 +426,9 @@ for i in range(10):
         print(f'step {i}, loss {l:.3f}')
 ```
 
-Before the first step the loss is close to 12: the small random kernel
-outputs nearly 0 everywhere, so each of the 12 edge positions misses its
-target $\pm 1$ by about 1. After nine steps the loss is below 0.01. The
-learned kernel is close to $(1, -1)$:
+Initially the loss sits near 12 (the near-zero random kernel misses all 12
+$\pm 1$ edge pixels by roughly 1), and within just nine steps it drops below
+0.01. Let's inspect the learned kernel:
 
 ```{.python .input #conv-layer-learning-a-kernel-2}
 %%tab mxnet
@@ -469,35 +450,32 @@ d2l.reshape(conv2d.kernel, (1, 2))
 conv2d.kernel[...].reshape((1, 2))
 ```
 
-Both weights are within about 0.02 of the hand-designed detector. Nothing in
-the training procedure was specific to edges: given the outputs it should
-produce, gradient descent finds the kernel. Admittedly, we made its task easy
-by supplying the edge map. In a deep network nobody supplies the intermediate
-outputs, and the kernels of every layer are learned from the loss at the end
-of the network.
+Both entries land within roughly 0.02 of `[1, -1]`! Nothing in this loop knew
+anything about edges: given a loss signal, gradient descent discovered the
+filter on its own. Here we supervised the single layer directly with `Y`; in a
+deep CNN, backpropagation learns every layer's kernels end to end from the final
+task loss alone.
 
 
 ## Convolution as Matrix Multiplication
 :label:`subsec_conv_matmul`
 
-The two loops of `corr2d` are easy to read and far too slow for real images
-and networks, since they visit one output position at a time. A standard
-remedy is to turn the whole computation into one large matrix product, the
-operation that GPUs execute best. Every output element in
-:numref:`fig_correlation` is a dot product: the kernel, flattened into a
-vector of length $k_\textrm{h} k_\textrm{w}$, times the input patch under
-the window, flattened the same way. If we extract each
-of the $(n_\textrm{h}-k_\textrm{h}+1)(n_\textrm{w}-k_\textrm{w}+1)$ patches
-that the window visits, flatten it into a row, and stack the rows, we obtain a
-matrix with one row per output position. The whole cross-correlation then
-becomes a single product of this patch matrix with the flattened kernel. The
-rearrangement is called *im2col*, since it turns image patches into the
-columns (here rows) of a matrix.
+While the nested loops in `corr2d` make the math transparent, visiting one
+output pixel at a time in Python is far too slow for real workloads. In
+practice, frameworks recast cross-correlation as a single large matrix
+multiplication—the exact operation GPUs execute at peak speed. Notice that every
+output entry in :numref:`fig_correlation` is simply the dot product of the
+flattened $k_\textrm{h} k_\textrm{w}$-element kernel with the corresponding
+flattened input window. Extracting all
+$(n_\textrm{h}-k_\textrm{h}+1)(n_\textrm{w}-k_\textrm{w}+1)$ windows and
+stacking them as rows yields a patch matrix; multiplying it by the flattened
+kernel computes the entire cross-correlation in one shot. This standard layout
+transformation is called *im2col* ("image to columns"—or rows here).
 
-The patch matrix takes memory, since each input element is copied into up
-to $k_\textrm{h} k_\textrm{w}$ rows. We build it for the input and kernel
-of :numref:`fig_correlation` and check that one matrix product reproduces
-`corr2d`.
+The trade-off is extra workspace memory, since each interior pixel is duplicated
+into up to $k_\textrm{h} k_\textrm{w}$ patches. Let's verify on
+:numref:`fig_correlation` that this single matrix multiply matches `corr2d`
+exactly:
 
 ```{.python .input #conv-layer-convolution-as-matrix-multiplication-1}
 X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
@@ -510,88 +488,79 @@ Y_mat = d2l.reshape(d2l.matmul(patches, d2l.reshape(K, (-1, 1))), (h_o, w_o))
 Y_mat, d2l.reduce_sum(d2l.abs(Y_mat - corr2d(X, K)))
 ```
 
-The sum of absolute differences is zero: the single matrix product and the
-loops of `corr2d` compute the same output.
+The discrepancy is identically zero: one matrix product reproduces `corr2d`
+perfectly.
 
-We could equally well unroll the kernel instead of the input. The result is
-a sparse, banded matrix $\mathbf{W}$ that multiplies the flattened image, and
-we have met it before: it is the two-dimensional counterpart of panel (c) of
-:numref:`fig_why_conv_weight_sharing`, in which every row holds the same few
-weights. A convolution is a fully connected layer whose weight matrix has
-this pattern, which is where the derivation of :numref:`sec_why-conv`
-started. The exercises construct $\mathbf{W}$ explicitly.
+Equivalently, we can unroll the *kernel* instead of the input into a sparse
+banded matrix $\mathbf{W}$ multiplying the flattened image—the exact 2D analog
+of panel (c) in :numref:`fig_why_conv_weight_sharing`, where every row repeats
+the same handful of kernel weights. Seeing a convolution as a structured dense
+layer brings us full circle to the derivation of :numref:`sec_why-conv` (and the
+exercises build $\mathbf{W}$ explicitly).
 
 ## Feature Maps and Receptive Fields
 
-A single layer sees only a window the size of its kernel. Recognizing an
-object requires seeing much more of the image, so we need a way to measure
-how much of the input a unit sees. The output of a convolutional layer is a
-feature map (:numref:`subsec_why-conv-channels`); the edge map `Y` is one,
-for vertical edges. For an element $x$ of a feature map, its *receptive
-field* is the set of input pixels that can affect $x$ during forward
-propagation. Relative to an earlier layer, it is the set of that layer's
-elements that can affect $x$. The term comes from neurophysiology, where it
-names the part of the visual field to which a neuron responds
-(:numref:`field_visual`).
+A single convolutional layer sees only a patch the size of its kernel, whereas
+recognizing whole objects demands integrating context across much wider areas.
+Recall from :numref:`subsec_why-conv-channels` that a convolutional layer's
+output is called a *feature map* (like our vertical edge map `Y`). For any
+element $x$ in a feature map, its *receptive field* is the region of the input
+image (or of an earlier layer) whose values can influence $x$ during forward
+propagation—borrowing the neurophysiology term from :numref:`field_visual`.
 
 ### Stacked Layers
 
-In :numref:`fig_correlation` the receptive field of the shaded output 19 is
-the four shaded input elements. Call the $2 \times 2$ output $\mathbf{Y}$, and
-add a second $2 \times 2$ convolutional layer that takes $\mathbf{Y}$ as input
-and outputs a single element $z$. The receptive field of $z$ on $\mathbf{Y}$
-is all four elements of $\mathbf{Y}$, and on the input it is all nine input
-elements. Stacking layers lets an element respond to a larger region of the
-input.
+In :numref:`fig_correlation`, the shaded output `19` has a $2 \times 2$ receptive
+field covering the top-left four pixels of $\mathbf{X}$. Now stack a *second*
+$2 \times 2$ convolutional layer on top of the $2 \times 2$ output $\mathbf{Y}$
+to produce a single scalar $z$: $z$ depends on all four elements of $\mathbf{Y}$,
+which together depend on all nine elements of $\mathbf{X}$. Stacking layers
+expands the receptive field smoothly with depth.
 
-How fast does the region grow? A layer with a $k \times k$ kernel reaches
-$k - 1$ positions beyond a single position of its input, so each layer widens
-the receptive field by $k - 1$. Starting from one pixel, an element at the top
-of a stack of $L$ layers with kernel sizes $k_1, \ldots, k_L$ has a receptive
-field of side length
+How quickly does it grow? Each $k \times k$ convolutional layer reaches $k - 1$
+pixels farther than a single element of its input, so stacking $L$ layers with
+kernel sizes $k_1, \ldots, k_L$ yields a receptive field of side length
 
 $$r = 1 + \sum_{i=1}^{L} (k_i - 1).$$
 
-For $L$ stacked $3 \times 3$ layers each layer adds 2, so the stack sees
-$(2L + 1) \times (2L + 1)$ input pixels: two layers cover $5 \times 5$ and
-three cover $7 \times 7$ (:numref:`fig_conv_receptive_field`). This slow,
-linear growth is no reason to prefer large kernels. Three $3 \times 3$
-layers match the receptive field of one $7 \times 7$ layer with fewer
-parameters, $27$ weights instead of $49$ per pair of input and output
-channels, and with three nonlinearities instead of one.
+For a stack of $L$ consecutive $3 \times 3$ layers, each layer adds 2 pixels,
+covering $(2L + 1) \times (2L + 1)$ inputs—$5 \times 5$ after two layers and
+$7 \times 7$ after three (:numref:`fig_conv_receptive_field`). This linear
+growth is actually a blessing rather than a reason to reach for huge kernels:
+three stacked $3 \times 3$ layers achieve the same $7 \times 7$ receptive field
+as a single $7 \times 7$ layer using far fewer parameters ($3 \times 9 = 27$
+weights vs. 49 per channel pair) while interleaving three nonlinearities instead
+of one.
 
 ![Receptive field of one unit after three one-dimensional layers with kernel size 3. Shaded cells are the units that the top unit depends on, and the lines connect each of them to its inputs. Each layer widens the receptive field by 2, to 7 inputs.](../img/conv-receptive-field.svg)
 :label:`fig_conv_receptive_field`
 
 ### Effective Receptive Fields
 
-The count $r$ is generous. It gives the theoretical receptive field, the set
-of inputs that can affect an activation at all, and says nothing about how
-much each of them does. :citet:`Luo.Li.Urtasun.ea.2016` measured the
-*effective* receptive field through gradients: in both randomly initialized
-and trained networks it concentrates near the center of the theoretical
-region, with a roughly Gaussian profile. A unit at the top of a deep stack
-can see far, but it looks mostly at the middle.
+Keep in mind that $r$ measures the *theoretical* receptive field—every input
+pixel with *any* path to an output unit—without saying how strongly each pixel
+actually contributes. Measuring input gradients directly,
+:citet:`Luo.Li.Urtasun.ea.2016` showed that the *effective* receptive field
+decays sharply away from the center in a roughly Gaussian bell curve, in both
+untrained and trained networks. Deep units can theoretically see far across the
+image, but their sensitivity concentrates heavily near the center.
 
-Two defects of the layer are left to repair. Every layer shrinks the image
-and uses the pixels near its border less often than those in the middle, and
-a single-channel kernel detects only one pattern.
-:numref:`sec_padding` takes up the first and :numref:`sec_channels` the
-second.
+Two practical gaps remain in our basic layer: every unpadded convolution shrinks
+spatial dimensions while under-sampling border pixels, and a single kernel
+detects only one pattern. We address spatial sizing and borders next in
+:numref:`sec_padding`, and multi-channel feature maps in :numref:`sec_channels`.
 
 ## Summary
 
-A convolutional layer cross-correlates its input with a small kernel and adds
-a bias: every output element is the sum of the elementwise product of the
-kernel with one window of the input, and the window visits every position
-where it fits. The same two weights $(1, -1)$ then find a vertical edge
-wherever it occurs, and gradient descent recovers these weights from an image
-and its edge map, as it learns the kernels of every layer of a CNN from the
-loss. Mathematical convolution flips the kernel, which makes no difference
-when the kernel is learned. The operation can be written as one matrix
-product, which accelerators execute efficiently. Stacking layers
-enlarges the region of the input that each unit sees, by $k - 1$ pixels per
-layer with a $k \times k$ kernel.
+A convolutional layer applies two-dimensional cross-correlation with a learned
+kernel plus a scalar bias, sliding the kernel across every valid window of the
+input. A simple $1 \times 2$ finite-difference kernel `[1, -1]` detects vertical
+edges anywhere in an image—and gradient descent recovers those exact weights
+from input–output data alone, just as deep CNNs learn entire hierarchies of
+filters end to end. Mathematical convolution flips the kernel, making no
+difference once kernels are learned. Hardware libraries evaluate convolutions
+efficiently as matrix multiplications (*im2col*), and stacking $L$ convolutional
+layers widens each unit's receptive field linearly by $k_i - 1$ per layer.
 
 ## Exercises
 

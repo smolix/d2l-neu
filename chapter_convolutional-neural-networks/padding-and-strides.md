@@ -6,32 +6,38 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Padding, Stride, and Dilation
 :label:`sec_padding`
 
-The convolutional layer of :numref:`sec_conv_layer` evaluates its kernel only
-where the kernel fits inside the input, so its output is smaller than its
-input by one less than the kernel size along each axis. For a single layer
-this hardly matters. In a deep network the size of every output becomes a
-design decision, and two needs pull in opposite directions. How do we keep a
-stack of layers from cutting away the border of the image? And how do we
-shrink the image on purpose, so that a unit near the top can see all of it
-without a network of hundreds of layers?
+In :numref:`sec_conv_layer`, our convolutional layer evaluated its kernel only
+at positions where the entire kernel fits inside the input. As a result, the
+output shrinks by one less than the kernel size along each axis. For a single
+layer, losing a pixel or two barely registers, but in a deep network the
+spatial dimensions of every feature map become a central design choice, with
+two competing demands pulling in opposite directions. On the one hand, we want
+to prevent a deep stack of layers from steadily whittling away the borders of
+the image. On the other hand, we often want to shrink the spatial resolution
+deliberately so that units near the top of the network can see the whole image
+without requiring hundreds of layers.
 
-Ten layers with $5\times 5$ kernels are enough to show the first problem.
-Each layer trims two pixels from every side of its input, so a
-$240\times 240$ image comes out as $200\times 200$. The stack has removed 30%
-of the image's area, all of it at the border. The second problem is the
-reverse. A network that never shrinks its input computes a full-resolution
-output in every layer, and its units see only a few pixels farther with each
-layer. Occasionally we want it both ways, a wide view and an output at every
-pixel, without the weights of a large kernel.
+To see the first issue concretely, consider starting with a $240\times 240$
+image and passing it through ten layers of $5\times 5$ convolutions. Because
+each layer shaves two pixels off every side, the feature map shrinks to
+$200\times 200$---slicing away roughly 30% of the image area and discarding
+any useful information near the borders. The second issue is the mirror image:
+if a network keeps every layer at full resolution, it must evaluate the kernel
+at every pixel in every layer, while each unit's view expands by only a few
+pixels per layer. In yet other settings, such as pixel-level labeling, we want
+both a wide field of view and a full-resolution output, without paying the
+parameter cost of a huge kernel.
 
-Three settings of a convolutional layer address these needs. *Padding* adds a
-border of extra pixels around the input, so that the kernel can be placed at
-the edge. *Stride* moves the window by more than one pixel at a time.
-*Dilation* spaces the kernel's weights apart. The formulas for the output
-shape, which we derive below, are a matter of counting window positions. The
-more interesting question is how far a unit in a deep network sees, and here
-the three settings differ a great deal. We stay with single-channel inputs,
-as in :numref:`sec_conv_layer`, and add channels in :numref:`sec_channels`.
+Three geometric controls on a convolutional layer let us navigate these
+tradeoffs. *Padding* adds a border of extra pixels around the input so that
+the kernel can be centered even on edge pixels. *Stride* advances the sliding
+window by more than one pixel at a time, downsampling the output. *Dilation*
+spaces the kernel's weights apart so a small kernel spans a wider footprint.
+Deriving the resulting output shapes is largely a matter of counting valid
+window positions; the deeper consequence is how quickly the receptive field
+grows with depth, where these three mechanisms behave quite differently. As in
+:numref:`sec_conv_layer`, we focus here on single-channel inputs and introduce
+multiple channels in :numref:`sec_channels`.
 
 ```{.python .input #padding-and-strides-padding-and-stride}
 %%tab mxnet
@@ -76,13 +82,15 @@ from d2l import jax as d2l
 
 ### Boundary Pixels
 
-Pixels near the border are underused even before a layer cuts them away.
-:numref:`img_conv_reuse` counts the windows that contain each pixel. With a
-$k\times k$ kernel, a pixel at least $k-1$ pixels away from every border lies
-in $k^2$ windows, a pixel on an edge in at most $k$, and a corner pixel in a
-single one. A $5\times 5$ kernel covers each interior pixel in 25 windows but
-a corner pixel in only one, so an object near the corner of an image barely
-reaches the next layer. Each layer thus draws most of its evidence from the
+Even before successive layers trim away the perimeter of an image, pixels near
+the border are heavily underutilized. :numref:`img_conv_reuse` counts how many
+sliding windows cover each pixel for an unpadded convolution. With a
+$k\times k$ kernel, any interior pixel at least $k-1$ steps from every border
+participates in $k^2$ windows, whereas an edge pixel appears in at most $k$
+windows and a corner pixel in only one. For a $5\times 5$ kernel, an interior
+pixel contributes to 25 output locations while a corner pixel contributes to
+just one, meaning that an object near the corner barely registers in the next
+layer. Without intervention, each layer draws disproportionately from the
 center of its input.
 
 ![Number of windows that contain each pixel when a $1\times 1$, $2\times 2$, or $3\times 3$ kernel slides over a large input without padding. Interior pixels are covered $k^2$ times, corner pixels once. Each stretched cell stands for all pixels at that distance from the border, however many there are.](../img/conv-reuse.svg)
@@ -90,44 +98,49 @@ center of its input.
 
 ### Zero Padding
 
-The remedy is to enlarge the input by a border of extra pixels before applying
-the kernel, usually pixels of value zero. This is called *padding*. In
-:numref:`img_conv_pad`, one row of zeros above and below and one column on
-either side turn the $3\times 3$ input into a $5\times 5$ one, and the
-$2\times 2$ kernel now produces a $4\times 4$ output instead of a
-$2\times 2$ one. The shaded first output element is computed entirely from
-padding and the input's corner: $0\times0+0\times1+0\times2+0\times3=0$.
+The simplest remedy is to surround the input with a border of extra filler
+pixels—typically zeros—before sliding the kernel across it, a technique known
+as *padding*. In :numref:`img_conv_pad`, adding one row of zeros to the top
+and bottom and one column to the left and right expands a $3\times 3$ input
+into a $5\times 5$ grid, allowing a $2\times 2$ kernel to produce a
+$4\times 4$ output rather than a $2\times 2$ one. The shaded upper-left output
+element combines three padded zeros with the corner of the original input:
+$0\times0+0\times1+0\times2+0\times3=0$.
 
 ![Two-dimensional cross-correlation with one pixel of zero padding on every side.](../img/conv-pad.svg)
 :label:`img_conv_pad`
 
-We count padding per side, as the code will: $p_\textrm{h}$ rows are added
-above the input and $p_\textrm{h}$ below it, and $p_\textrm{w}$ columns on
-the left and on the right. The padded input then has shape
-$(n_\textrm{h}+2p_\textrm{h})\times(n_\textrm{w}+2p_\textrm{w})$, and the
-output has shape
+Following the convention used in deep learning frameworks, we count padding
+per side: $p_\textrm{h}$ rows added above and $p_\textrm{h}$ below the input,
+and $p_\textrm{w}$ columns added to the left and to the right. The padded
+input then has shape
+$(n_\textrm{h}+2p_\textrm{h})\times(n_\textrm{w}+2p_\textrm{w})$, yielding
+an output of shape
 
 $$(n_\textrm{h}+2p_\textrm{h}-k_\textrm{h}+1)\times(n_\textrm{w}+2p_\textrm{w}-k_\textrm{w}+1).$$
 
-Each row of padding adds one row to the output, and each column adds one
-column. The kernel removed $k_\textrm{h}-1$ rows, so padding
-$p_\textrm{h}=(k_\textrm{h}-1)/2$ rows on each side, and likewise
-$p_\textrm{w}=(k_\textrm{w}-1)/2$ columns, gives the output the shape of
-the input. This is the usual choice: a stack of such layers keeps its
-resolution however deep it is.
+Each row of padding on either side adds one row to the output, and each column
+adds one column. Because the kernel removes $k_\textrm{h}-1$ rows and
+$k_\textrm{w}-1$ columns, setting $p_\textrm{h}=(k_\textrm{h}-1)/2$ and
+$p_\textrm{w}=(k_\textrm{w}-1)/2$ preserves the exact input height and width.
+This is by far the most common choice in practice: a stack of shape-preserving
+layers maintains the same spatial resolution at every depth, making network
+architectures much easier to design and reason about.
 
-The division by two is the reason why CNNs almost always use odd kernels,
-of size 1, 3, 5, or 7 with padding 0, 1, 2, or 3. For an odd kernel the
-window that computes the output `Y[i, j]` is centered on the input
-`X[i, j]`, so the output is aligned with the input. An even kernel has
-$k_\textrm{h}-1$ odd, and keeping the shape then takes one more row on one
-side than on the other. The kernel has no center pixel, and the output is
-shifted by half a pixel.
+Notice that dividing $k-1$ by two explains why CNNs almost always use odd
+kernel sizes---such as 1, 3, 5, or 7, paired with paddings of 0, 1, 2, or 3.
+An odd kernel has a well-defined center pixel, so symmetric padding places the
+window computing output `Y[i, j]` directly centered on input pixel `X[i, j]`,
+keeping the input and output grids aligned. For an even kernel, $k_\textrm{h}-1$
+is odd, so preserving the spatial dimensions requires asymmetric padding (one
+extra row on one side compared to the other) and shifts the output grid by
+half a pixel relative to the input.
 
-To check the formula in code, we need a small helper. Convolutional layers
-expect a minibatch of examples with several channels, so `comp_conv2d` adds
-two dimensions of size 1 to a two-dimensional input, applies the layer, and
-removes them again.
+To verify these output-shape formulas in code, we first define a small helper.
+Because built-in convolutional layers expect four-dimensional inputs carrying
+batch and channel axes, `comp_conv2d` inserts two singleton dimensions around
+a 2D input, applies the layer, and strips those extra dimensions from the
+result.
 
 ```{.python .input #padding-and-strides-zero-padding-1}
 %%tab mxnet
@@ -162,8 +175,9 @@ def comp_conv2d(conv2d, X):
     return Y.reshape(Y.shape[1:3])
 ```
 
-A $3\times 3$ kernel needs $p = (3-1)/2 = 1$, which is `padding=1` in code.
-On an $8\times 8$ input it should give an $8\times 8$ output.
+For a $3\times 3$ kernel, shape-preserving padding requires $p = (3-1)/2 = 1$
+(`padding=1` in code). Applying this layer to an $8\times 8$ input should
+leave the spatial shape unchanged at $8\times 8$.
 
 ```{.python .input #padding-and-strides-padding-1}
 %%tab mxnet
@@ -215,13 +229,14 @@ wanted. Its inputs are channels-last: (example, height, width, channel).
 ### Padding Values
 :label:`subsec_padding_values`
 
-Zero padding treats the image as if it were black outside its frame. This is
-a *boundary condition*: a choice of values beyond the border, which the image
-itself does not provide. To see its effect, we cross-correlate a uniformly
-bright $5\times 5$ image of ones, padded by one pixel of zeros on every side,
-with a $3\times 3$ kernel of ones, using `corr2d` from
-:numref:`sec_conv_layer`. Each output then counts the image pixels in its
-window.
+Zero padding implicitly assumes that the image is surrounded by black pixels
+outside its frame. More formally, padding specifies a *boundary condition*---a
+rule for supplying values beyond the image border where no measurement exists.
+To see how zero padding affects the output, let us pad a uniform $5\times 5$
+image of all ones with one pixel of zeros on each side and cross-correlate it
+with a $3\times 3$ kernel of all ones using `corr2d` from
+:numref:`sec_conv_layer`. Each output entry then counts how many true image
+pixels fall inside its window.
 
 ```{.python .input #padding-and-strides-padding-values}
 %%tab mxnet
@@ -247,65 +262,74 @@ img = d2l.ones((5, 5))
 d2l.corr2d(jnp.pad(img, 1), d2l.ones((3, 3)))
 ```
 
-The interior outputs are 9, those along the edges 6, and those in the corners
-4: the layer sees a dark frame around an image that has none. The frame
-travels inward through later layers, which can learn to detect it, and the
-resulting artifacts near the border can leave parts of the input to which the
-network barely responds :cite:`Alsallakh.Kokhlikyan.Miglani.ea.2020`. Two
-other boundary conditions are common. *Reflect padding* mirrors the rows and
-columns next to the border, and *replicate padding* repeats the border pixels
-themselves. Both keep a uniform image uniform, and image-generation networks
-often use them because a dark frame would be visible in their output. Zero
-padding remains the default in classifiers: it is cheap, and libraries apply
-it without building a larger tensor.
+The interior outputs equal 9, edge outputs drop to 6, and corner outputs drop
+to 4: even though the original image is completely uniform, the layer sees a
+dark frame around it. That artificial frame propagates inward through
+subsequent layers, which can learn to use it as an implicit positional cue; at
+the same time, boundary artifacts can create blind spots near the edges where
+the network responds weakly :cite:`Alsallakh.Kokhlikyan.Miglani.ea.2020`. Two
+common alternatives avoid introducing zeros: *reflect padding* mirrors pixels
+across the border, while *replicate padding* repeats the border values
+outward. Both map a constant image to a constant output, making them popular
+in image-generation and restoration networks where border darkening would
+appear directly in the generated pixels. In classification networks, however,
+zero padding remains the standard choice because it is simple and can be
+applied implicitly by fast kernels without allocating a larger padded tensor.
 
 ## Stride
 
 ### Strided Convolution
 
-A network that keeps a $224\times 224$ image at full resolution computes
-50,176 outputs per channel in every layer. Since each $3\times 3$ layer widens
-the region a unit sees by only two pixels, such a network would need more than
-100 layers before a single unit could see the whole image, as a classifier
-must. Moving the window in larger steps reduces both the number of outputs
-and the number of layers.
+Keeping a $224\times 224$ image at full resolution throughout a network is
+both expensive and slow to aggregate global context: every channel contains
+50,176 spatial positions per layer, and since each $3\times 3$ convolution
+expands a unit's view by only two pixels, more than 100 layers would be needed
+before a single unit could see the entire image. Stepping the convolution
+window across the input in larger increments solves both problems at once,
+reducing the spatial resolution and shrinking the depth needed for global
+context.
 
-So far the window has moved one pixel at a time, to the right and then down.
-The number of rows and columns it moves per step is the *stride*. With stride
-$s_\textrm{h}$ along the height and $s_\textrm{w}$ along the width, the layer
-evaluates only every $s_\textrm{h}$-th row and every $s_\textrm{w}$-th column
-of window positions, so it computes about $s_\textrm{h} s_\textrm{w}$ times
-fewer outputs. :numref:`img_conv_stride` uses stride 3 along the height and 2
-along the width on the padded input of :numref:`img_conv_pad`, an unusual
-pair that keeps the two axes easy to tell apart. Each shaded
-output has the color of its window. The blue one is
-$0\times0+0\times1+1\times2+2\times3=8$, whose window lies two columns to
-the right of the first window, and the orange one is
-$0\times0+6\times1+0\times2+0\times3=6$, whose window lies three rows below
-it. Moving two more columns to the right would put the window partly
-outside the padded input, so each row has two outputs.
+Until now, our sliding window has advanced one pixel at a time across each
+row and down each column. We call the step size along the height and width the
+*stride*. With vertical stride $s_\textrm{h}$ and horizontal stride
+$s_\textrm{w}$, the layer evaluates the kernel only at every $s_\textrm{h}$-th
+row and every $s_\textrm{w}$-th column, cutting the number of output elements
+by roughly a factor of $s_\textrm{h} s_\textrm{w}$. :numref:`img_conv_stride`
+illustrates a vertical stride of 3 and a horizontal stride of 2 on the padded
+input from :numref:`img_conv_pad` (an asymmetric choice that makes the two
+axes easy to distinguish). Each shaded output matches the color of the window
+that produced it: the blue entry equals
+$0\times0+0\times1+1\times2+2\times3=8$ from a window shifted two columns to
+the right of the first, and the orange entry equals
+$0\times0+6\times1+0\times2+0\times3=6$ from a window shifted three rows down.
+Stepping two more columns to the right would push the window past the right
+edge of the padded input, leaving two outputs per row.
 
 ![Cross-correlation with strides of 3 and 2 for height and width, respectively. Each shaded output has the color of the window that produces it.](../img/conv-stride.svg)
 :label:`img_conv_stride`
 
-To count the outputs along the height, note that the window starts in row 0 of
-the padded input and that its last row must stay inside the
-$n_\textrm{h}+2p_\textrm{h}$ rows. The possible starting rows are
-$0, s_\textrm{h}, 2s_\textrm{h}, \ldots$, up to $n_\textrm{h}+2p_\textrm{h}-k_\textrm{h}$,
-so with the same count for the width the output shape is
+To determine the output height in general, note that the window starts at row 0
+of the padded input and must fit entirely within the
+$n_\textrm{h}+2p_\textrm{h}$ padded rows. Its valid starting rows are
+$0, s_\textrm{h}, 2s_\textrm{h}, \ldots$ up to
+$n_\textrm{h}+2p_\textrm{h}-k_\textrm{h}$. Applying the same reasoning to
+the width gives an output shape of
 
 $$\left(\left\lfloor\frac{n_\textrm{h}+2p_\textrm{h}-k_\textrm{h}}{s_\textrm{h}}\right\rfloor+1\right)\times\left(\left\lfloor\frac{n_\textrm{w}+2p_\textrm{w}-k_\textrm{w}}{s_\textrm{w}}\right\rfloor+1\right).$$
 
-The fraction counts the steps the window can take and the $+1$ counts its
-starting position. For :numref:`img_conv_stride` this gives
-$\lfloor 3/3\rfloor+1=2$ rows and $\lfloor 3/2\rfloor+1=2$ columns, and at
-stride 1 it is the padding formula. With shape-preserving padding,
-$2p_\textrm{h}=k_\textrm{h}-1$, the number of rows is
+Here the floor term counts how many full steps the window can take after its
+initial placement, and the $+1$ accounts for that starting position. Checking
+:numref:`img_conv_stride` yields $\lfloor 3/3\rfloor+1=2$ rows and
+$\lfloor 3/2\rfloor+1=2$ columns, and setting $s_\textrm{h}=s_\textrm{w}=1$
+recovers our earlier padding formula. When we pair stride with
+shape-preserving padding ($2p_\textrm{h}=k_\textrm{h}-1$), the output height
+simplifies to
 $\lfloor (n_\textrm{h}-1)/s_\textrm{h}\rfloor+1=\lceil n_\textrm{h}/s_\textrm{h}\rceil$:
-stride $s$ divides the resolution by $s$, rounding up.
+a stride of $s$ divides the spatial resolution by $s$, rounding up.
 
-The most common strided layer has a $3\times 3$ kernel, padding 1, and
-stride 2. It halves an $8\times 8$ input to $4\times 4$.
+By far the most common downsampling layer in modern CNNs uses a $3\times 3$
+kernel with padding 1 and stride 2. Applied to our $8\times 8$ input, it
+halves both spatial dimensions to $4\times 4$.
 
 ```{.python .input #padding-and-strides-stride-1}
 %%tab mxnet
@@ -341,19 +365,20 @@ is centered on input pixel $2i+1$ rather than $2i$. `ZeroPadding2D(1)`
 followed by `padding='valid'` pads both sides by 1.
 :end_tab:
 
-Height and width may use different kernel sizes, paddings, and strides; the
-formula applies to each axis separately.
+Height and width need not share the same kernel size, padding, or stride; the
+output-shape formula applies independently to each axis.
 
-When the stride equals the kernel size and there is no padding, the windows
-tile the input without overlap. A $16\times 16$ kernel with stride 16 cuts a
-$224\times 224$ image into a $14\times 14$ grid of patches and maps each patch
-to one output per channel. This *patchify* layer is how vision transformers
-turn an image into a sequence of patches, and some convolutional networks
-begin the same way.
+An important special case occurs when the stride equals the kernel size and
+padding is zero: the windows then partition the input into non-overlapping
+tiles. For instance, a $16\times 16$ convolution with stride 16 splits a
+$224\times 224$ image into a $14\times 14$ grid of patches and projects each
+patch to a vector of channel outputs. This *patchify* stem is how vision
+transformers convert images into sequences of tokens, and several modern CNNs
+open with the same operation.
 
-When height and width use the same setting, we drop the subscripts and write
-$p$ and $s$. A layer that is given neither setting uses stride 1 and no
-padding.
+When height and width share the same settings, we drop the subscripts and
+simply write $p$ and $s$. Unless specified otherwise, a convolutional layer
+defaults to stride 1 and zero padding ($p=0$).
 
 :begin_tab:`jax`
 `nnx.Conv` is the exception: its default is `padding='SAME'`.
@@ -362,71 +387,76 @@ padding.
 ### Stride and the Receptive Field
 :label:`subsec_stride_rf`
 
-We saw in :numref:`sec_conv_layer` that at stride 1 each $k\times k$ layer
-widens the receptive field by $k-1$ pixels along each axis, so that it grows
-only linearly with depth. Stride changes this. After a layer with stride 2,
-neighboring positions of its output lie two input pixels apart, and a
-$3\times 3$ kernel applied to that output reaches $(3-1)\cdot 2=4$ input
-pixels further instead of 2. In general, one step
-in the input of layer $i$ spans $\prod_{j<i} s_j$ pixels of the original
-input, and the top unit of a stack of $L$ layers with kernel sizes $k_i$ and
-strides $s_i$ has a receptive field of side
+In :numref:`sec_conv_layer`, we saw that at stride 1 each $k\times k$ layer
+expands the receptive field by $k-1$ pixels per axis, producing only linear
+growth with depth. Stride accelerates this growth dramatically. After a layer
+with stride 2, adjacent entries in its output correspond to locations two
+pixels apart in the original image; consequently, a subsequent $3\times 3$
+kernel widens the receptive field by $(3-1)\cdot 2=4$ input pixels rather than
+2. More generally, a single step in the input to layer $i$ spans
+$\prod_{j<i} s_j$ pixels of the original image, so a unit at the top of an
+$L$-layer stack with kernel sizes $k_i$ and strides $s_i$ has a receptive
+field of width
 
 $$r = 1 + \sum_{i=1}^{L} (k_i - 1) \prod_{j=1}^{i-1} s_j,$$
 :eqlabel:`eq_receptive_field`
 
-where the empty product for $i = 1$ equals 1. Each layer adds the extent of
-its kernel, measured in pixels of the original input; at stride 1 every term
-is $k_i-1$, and we recover the count of :numref:`sec_conv_layer`. Padding
-does not appear, because it changes which outputs exist, not how far each one
-sees. For three $3\times 3$ layers, stride 1 everywhere gives
-$r = 1+2+2+2 = 7$, while strides 2, 2, 1 give $r = 1+2+4+8 = 15$.
+where the empty product for $i = 1$ is defined as 1. Each layer contributes
+the span of its kernel measured in original image pixels; setting all strides
+to 1 reduces every term to $k_i-1$, recovering the linear count from
+:numref:`sec_conv_layer`. Notice that padding does not enter the formula:
+padding determines which output locations exist, not how wide a patch each
+unit observes. Comparing two three-layer stacks of $3\times 3$ convolutions,
+strides $(1, 1, 1)$ give $r = 1+2+2+2 = 7$, whereas strides $(2, 2, 1)$ more
+than double the reach to $r = 1+2+4+8 = 15$.
 
-Every stride multiplies the reach of all later kernels, so the receptive
-field grows geometrically for as long as the network keeps striding. After
-five halvings, common in classifiers for $224\times 224$ images, a kernel
-reaches 32 times further than it would at the bottom, and no unit needs
-hundreds of layers to see the whole image.
+Because each stride multiplies the effective reach of every layer above it,
+the receptive field grows geometrically whenever downsampling continues. After
+five stride-2 stages---typical in image classifiers operating on
+$224\times 224$ inputs---a single step in the feature map spans 32 input
+pixels, enabling top-level units to view the entire image in only a handful of
+layers.
 
 ## Dilation
 :label:`sec_dilation`
 
 ### Dilated Convolution
 
-Stride lets a unit see far by giving up resolution. Some tasks need both: a
-wide view of the image and an output at every pixel. A large kernel would
-give the wide view, but its weights and its computation grow with the square
-of its size. Padding and stride change where the kernel is applied. Dilation
-changes the kernel's footprint itself: a *dilated convolution* :cite:`yu2016dilated`
-places the kernel's weights $d$ pixels apart instead of at adjacent pixels,
-where $d$ is the *dilation*. A $k\times k$ kernel with dilation $d$ still
-has $k^2$ weights, but along each axis they now span
+Strided convolutions buy a wide receptive field at the expense of spatial
+resolution. For some tasks, however, we want both a wide context and an output
+at every input pixel. Simply enlarging the kernel would give a wider view, but
+its parameter count and compute cost grow quadratically with kernel size.
+Whereas padding and stride control *where* the kernel is placed, dilation
+modifies the *spacing of the kernel itself*: a *dilated convolution*
+:cite:`yu2016dilated` inserts gaps between adjacent weights so that they are
+evaluated $d$ pixels apart, where $d$ is the *dilation* rate. A $k\times k$
+kernel with dilation $d$ still contains only $k^2$ learnable weights, yet
+spans an *effective kernel size* of
 
 $$k' = k + (k-1)(d-1) = d(k-1)+1$$
 
-pixels, the *effective kernel size*. Along each axis, $d-1$ pixels are
-skipped between neighboring weights, and $d=1$, the default, is the ordinary
-convolution.
-:numref:`fig_conv_dilation` shows a $3\times 3$ kernel at dilations 1 and 2.
-At dilation 2 the nine weights spread over a $5\times 5$ footprint, skipping
-every other pixel, while each output still takes nine multiplications.
+pixels along each axis, skipping $d-1$ pixels between consecutive taps. Setting
+$d=1$ recovers the ordinary dense convolution. :numref:`fig_conv_dilation`
+contrasts a $3\times 3$ kernel at $d=1$ and $d=2$: at dilation 2, the same
+nine weights cover a $5\times 5$ footprint by sampling every other pixel,
+while still requiring only nine multiplications per output location.
 
 ![A $3\times 3$ kernel at dilation 1 and dilation 2. At dilation 2 its nine weights span a $5\times 5$ footprint.](../img/arch-conv-dilation.svg)
 :label:`fig_conv_dilation`
 
-For output shapes there is nothing new to learn: a dilated kernel behaves
-like a dense kernel of its effective size. Substituting $k' = d(k-1)+1$ for
-$k$ in the strided formula gives the number of outputs along one axis for
-padding, stride, and dilation together,
+As far as output dimensions are concerned, a dilated kernel behaves identically
+to a dense kernel of size $k'$. Replacing $k$ with $k' = d(k-1)+1$ in our
+strided formula yields a single unified expression for the output size along
+an axis with arbitrary padding, stride, and dilation:
 
 $$\left\lfloor\frac{n+2p-d(k-1)-1}{s}\right\rfloor+1,$$
 :eqlabel:`eq_conv_output_shape`
 
-and the same holds for the other axis with its own $n$, $k$, $p$, $s$, and
-$d$. With dilation 1 this is the strided formula, and with stride 1 and no
-padding it is the $n-k+1$ rule we started from. On our $8\times 8$ input, a
-$3\times 3$ kernel at dilation 2 and a dense $5\times 5$ kernel should
-both give a $4\times 4$ output.
+which applies independently to height and width with their respective
+parameters $n$, $k$, $p$, $s$, and $d$. Setting $d=1$ reproduces the strided
+formula, and setting $s=1$ and $p=0$ brings us all the way back to $n-k+1$.
+On our $8\times 8$ input, a $3\times 3$ kernel with dilation 2 should therefore
+produce the same $4\times 4$ output shape as a dense $5\times 5$ kernel.
 
 ```{.python .input #padding-and-strides-dilation}
 %%tab mxnet
@@ -460,50 +490,55 @@ comp_conv2d(conv2d, X).shape, comp_conv2d(conv5, X).shape
 
 ### Dilation and the Receptive Field
 
-A dilated layer at stride 1 widens the receptive field by $k'-1 = d(k-1)$
-pixels, so :eqref:`eq_receptive_field` holds with each $k_i$ replaced by its
-effective size. Doubling the dilation from layer to layer,
-$d_i = 1, 2, 4, \ldots, 2^{L-1}$, gives $L$ layers of $3\times 3$ kernels a
-receptive field of side
-$1 + 2(1 + 2 + \cdots + 2^{L-1}) = 2^{L+1}-1$. It grows exponentially with
-depth, like that of a strided stack, but every layer keeps the resolution of
-the input.
+At stride 1, a dilated layer widens the receptive field by $k'-1 = d(k-1)$
+pixels, so :eqref:`eq_receptive_field` still holds once each $k_i$ is replaced
+by its effective size $k'_i$. If we double the dilation rate at each layer,
+$d_i = 1, 2, 4, \ldots, 2^{L-1}$, a stack of $L$ layers with $3\times 3$
+kernels attains a receptive field of width
+$1 + 2(1 + 2 + \cdots + 2^{L-1}) = 2^{L+1}-1$. Just like a strided stack, its
+receptive field grows exponentially with depth, yet every layer retains the
+full spatial resolution of the input.
 
-:numref:`fig_conv_rf_towers` compares the two ways to reach far. Panel (a)
-is the strided stack computed above: with strides 2, 2, 1 the three layers
-add $2$, $4$, and $8$ pixels to the single pixel at the top, 15 in all.
-Panel (b) reaches the same 15 pixels with dilations 1, 2, 4, and the top
-unit depends on the input through the same connections. The strided stack keeps only every fourth position; the dilated
-stack computes all of them. Without padding and with the same weights, the
-strided stack returns every fourth output of the dilated stack, even
-with nonlinearities between the layers. In other words, the dilated stack is
-the strided stack with nothing discarded. This matters for *dense prediction*
-tasks such as semantic segmentation, which assigns a label to every pixel and
-thus needs both wide context and full resolution, and dilated convolutions
-are widely used there :cite:`yu2016dilated`. Their cost is that every layer
-computes its outputs at full resolution. A network that downsamples with
-strides can instead restore the resolution at its end with learned
-upsampling.
+:numref:`fig_conv_rf_towers` illustrates these two strategies side by side.
+Panel (a) shows our strided stack with strides $(2, 2, 1)$: the three layers
+add $2$, $4$, and $8$ pixels to the top unit's view, reaching 15 input pixels
+in total. Panel (b) achieves the exact same 15-pixel receptive field using
+stride 1 and dilations $(1, 2, 4)$, wiring the top unit to the input through
+the identical pattern of connections. The sole difference is spatial density:
+the strided stack retains only every fourth spatial position, whereas the
+dilated stack evaluates all of them. Indeed, without padding and with shared
+weights, the strided stack's output is simply every fourth entry of the
+dilated stack's output, even when elementwise nonlinearities are applied after
+every layer. That makes dilated convolutions especially valuable for *dense
+prediction* tasks such as semantic segmentation, where we must assign a class
+label to every pixel while still drawing on broad surrounding context
+:cite:`yu2016dilated`. The tradeoff is computation and memory, because every
+layer must process full-resolution feature maps; an alternative is to
+downsample with strides and later recover spatial resolution using learned
+upsampling layers.
 
 ![Receptive field of the top unit of three stacked layers with kernel size 3, in one dimension. Cells are the positions each layer computes, shaded cells those the top unit depends on, and lines the kernel's taps. (a) Strides 2, 2, 1: layer 1 keeps every second position, layers 2 and 3 every fourth. (b) Stride 1 with dilations 1, 2, 4: every layer keeps all positions. Both top units see the same 15 input pixels.](../img/conv-rf-towers.svg)
 :label:`fig_conv_rf_towers`
 
-Throughout this section the input had a single channel and the layer a
-single kernel. Real images have several channels, and a useful layer detects
-more than one pattern. :numref:`sec_channels` removes both restrictions.
+So far, every example in this section has operated on a single-channel input
+with a single kernel. Real-world images contain multiple color channels, and
+useful hidden layers detect dozens or hundreds of distinct patterns at once.
+We lift both restrictions in :numref:`sec_channels`.
 
 ## Summary
 
-A convolution shrinks its input by $k-1$ pixels along each axis and uses
-border pixels in fewer windows than interior ones. Padding $(k-1)/2$ pixels
-on each side of an odd kernel keeps the shape and centers each output on its
-input pixel; zero padding imposes a boundary condition that the network can
-detect. Stride $s$ evaluates every $s$-th window, divides the resolution and
-the cost by about $s$ along each axis, and makes the receptive field of later
-layers grow geometrically. Dilation $d$ spreads a kernel's weights to an
-effective size $d(k-1)+1$, which enlarges the receptive field at full
-resolution and at constant cost per output. One formula,
-:eqref:`eq_conv_output_shape`, gives the output shape for all three.
+Without padding, a convolution shrinks its input by $k-1$ pixels along each
+axis and samples border pixels in far fewer windows than interior ones. Adding
+$(k-1)/2$ pixels of padding to each side of an odd kernel preserves the input
+shape and keeps each output centered on its corresponding input pixel, though
+zero padding introduces a boundary condition that deep layers can detect.
+Using a stride $s > 1$ evaluates only every $s$-th window position, reducing
+spatial resolution and computation by roughly a factor of $s$ per axis while
+causing the receptive field of higher layers to grow geometrically. Finally,
+dilation $d$ spaces a kernel's weights across an effective footprint of
+$d(k-1)+1$, expanding the receptive field exponentially at full resolution
+without adding parameters. All three mechanisms are captured by a single
+output-shape formula, :eqref:`eq_conv_output_shape`.
 
 ## Exercises
 

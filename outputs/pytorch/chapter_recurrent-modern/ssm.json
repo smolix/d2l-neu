@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d1486713d6d75b9a7886e4adc554d6461d980067f338a83823a7424f841f9551",
+    "d2l_lib_fingerprint": "sha256:db81c518c804ccf63f86505b1fddc5179265ba5c09d0da0d76e0b9397489f202",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,100 +13,34 @@
       "kind": "text",
       "outputs": []
     },
-    "ssm-implementation-1": {
-      "code_fingerprint": "sha256:1eb1b7d64d1016c2d89b750e0da0fdf5f01c6e1144e7bc8e12a1b9c98b5ae6ae",
-      "kind": "text",
-      "outputs": []
-    },
-    "ssm-implementation-2": {
-      "code_fingerprint": "sha256:dd9601137969d834ed1fff0abbaa99d911729d12b7f5fdbcc0374ae727a0d4bf",
+    "ssm-what-the-continuous-time-view-adds": {
+      "code_fingerprint": "sha256:284fdb5f2d884bcfa89f3e5f3b86e05fa7a103900750335937e6a90e44aa8835",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max deviation: 7.2e-07\n"
-        }
-      ]
-    },
-    "ssm-implementation-3": {
-      "code_fingerprint": "sha256:ba3b7b1ceee6244703f79313c5128d2c25de9051fef8c486c5b4a7ec5da984ea",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 30156,
-          "sha256": "sha256:c11659d93a25046052d68909f0b224ab212c977d7abbf337d8591b04c88a1e2b"
-        }
-      ]
-    },
-    "ssm-a-linear-recurrent-language-model-1": {
-      "code_fingerprint": "sha256:9e06e890162717be7a889e1100a22f687de48f14bb29a1ef8269cb7ceb6ad1c5",
-      "kind": "text",
-      "outputs": []
-    },
-    "ssm-a-linear-recurrent-language-model-2": {
-      "code_fingerprint": "sha256:2e31adb0869f7d6eb615c61f6cdb1c64ed4e93e528b6e51a14a799f9b63d2167",
-      "kind": "text",
-      "outputs": []
-    },
-    "ssm-a-linear-recurrent-language-model-3": {
-      "code_fingerprint": "sha256:3e4bf871b273c8c998eab764fab858d87bc4db48332e3196713810843f1fc68e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "minGRU perplexity: 3.17\n"
-        }
-      ]
-    },
-    "ssm-a-linear-recurrent-language-model-4": {
-      "code_fingerprint": "sha256:f3eb426e6dd01b3c7d987b1619d167804f424ecc4f964f6c411794c4020a8597",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "perplexity with the state reset: 10.77\n"
-        }
-      ]
-    },
-    "ssm-a-linear-recurrent-language-model-5": {
-      "code_fingerprint": "sha256:20f5f12a5546227e54f44796a3dc5e8a881663b2a5d0e29971fdfd7c39043c56",
-      "kind": "text",
-      "outputs": []
-    },
-    "ssm-a-linear-recurrent-language-model-6": {
-      "code_fingerprint": "sha256:e6bed25b46a1f18b22de5318583a5dbcb338d770155c474a4139740783c81cc4",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "gates above 0.5: 53%, above 0.9: 24%\n"
+          "text": " N  peak  largest |c|  spike residual  bump residual\n 1     0        7e-01            0.99           0.90\n 4    17        1e+02            0.97           0.55\n16    20        2e+11            0.89           0.03\n"
         }
       ]
     },
     "ssm-the-s4d-layer-1": {
-      "code_fingerprint": "sha256:441b48c541a716319b8bc36e8130f49d707b70f2f7a13d98bb547125141fcc2b",
+      "code_fingerprint": "sha256:ef790b9634e17f17d449d257557912bf52e3f8dac4da4668412abcdd2d81f7b0",
       "kind": "text",
       "outputs": []
     },
     "ssm-the-s4d-layer-2": {
-      "code_fingerprint": "sha256:b55069366773d8daab7c934fc7663cec4186a31e53a151bc15be31cd46e73993",
+      "code_fingerprint": "sha256:9fadfa60ece73eecda3ed4984973e3a3f4ef33454e8ea26e8037296ced383f67",
       "kind": "text",
       "outputs": []
     },
     "ssm-the-s4d-layer-3": {
-      "code_fingerprint": "sha256:80d8b1beafda15a413141e80dfc0fa81c9925755474d93810f68fa2fe99b1c9c",
+      "code_fingerprint": "sha256:38e80a08e90b3ee2edc745aec7f904cb47aedb570a977e1320252835cefaef96",
       "kind": "text",
       "outputs": []
     },
     "ssm-the-s4d-layer-4": {
-      "code_fingerprint": "sha256:37786160c768d2e413c46eeba670dba6401173c7cc10261e63120b8db32f4473",
+      "code_fingerprint": "sha256:ffb4020d03a6134c20b929327d2b89c122ec09fe86387658bb61c18b0567b7ac",
       "kind": "text",
       "outputs": [
         {
@@ -117,54 +51,38 @@
       ]
     },
     "ssm-long-range-recall-1": {
-      "code_fingerprint": "sha256:bbca875498a68d513a2aefacdcb4af7ebe75180d3e8449feb8a5f6c436e5683c",
+      "code_fingerprint": "sha256:28b09f63174181300b4596d6608870a2d6029d674ad0550b2dcfa461282d7079",
       "kind": "text",
       "outputs": []
     },
     "ssm-long-range-recall-2": {
-      "code_fingerprint": "sha256:1f9b64ac45770fc112c949e65bf5b34757daf6462c186719e300e1a812d98da1",
+      "code_fingerprint": "sha256:101451f7fb2cb7616f03b5321691f7d4d226acfc7597ae4f8dc53d9cf32b910b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                          T=100  T=1000\n"
+          "text": "                           T=100       T=1000   \n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM                      0.12   0.12\n"
+          "text": "minGRU                   0.12  0.12   0.13  0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "minGRU                    0.14   0.12\n"
+          "text": "S4D                      1.00  1.00   1.00  1.00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D                       1.00   1.00\n"
+          "text": "S4D, short timescales    1.00  1.00   0.12  0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D, short timescales     1.00   0.12\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "minGRU, S4D timescales    1.00   1.00\n"
-        }
-      ]
-    },
-    "ssm-language-modeling": {
-      "code_fingerprint": "sha256:3564b4e4525cfcd9df2b2f347dfeb915115cd2f962e5761ed3dbe3eac8e2d475",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "S4D perplexity: 3.34\n"
+          "text": "minGRU, S4D timescales   1.00  1.00   1.00  1.00\n"
         }
       ]
     }

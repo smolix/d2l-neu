@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:41a5873b9f8e1610b058539e8b27225a59286b6c501246023e4c110a902e66c3",
+    "d2l_lib_fingerprint": "sha256:f264b33805b00b1479454ada3f2894dd91e6eaf04a6b5f83583f677f7232c5e4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,13 +13,8 @@
       "kind": "text",
       "outputs": []
     },
-    "deltanet-the-delta-rule-2": {
-      "code_fingerprint": "sha256:52aee88c35115f27d8cdb3221366f641404567963306590125d28c4fd429484b",
-      "kind": "text",
-      "outputs": []
-    },
     "deltanet-a-key-written-twice-1": {
-      "code_fingerprint": "sha256:de80d91b3961c8af502fe7a84319e9a57ca5f60fc1e79844a2a97d524c7e0930",
+      "code_fingerprint": "sha256:c01bc58e1961ebf8a2ff621a590b950decf625592c85f74e45b97c873199e1d2",
       "kind": "text",
       "outputs": [
         {
@@ -29,34 +24,39 @@
         }
       ]
     },
-    "deltanet-the-delta-rule-1": {
-      "code_fingerprint": "sha256:7b03df05183c1ee6e9be941a1feb0a487f3ffe30fbbf8bd0fbf4001f814cc44f",
+    "deltanet-what-correction-costs-1": {
+      "code_fingerprint": "sha256:8aac701b8a9682c9e957708023fae66df0ac909654cbc6a573d769701f0d83a4",
+      "kind": "text",
+      "outputs": []
+    },
+    "deltanet-what-correction-costs-2": {
+      "code_fingerprint": "sha256:67ebde95a9ab4e10e135cf3f1db7e0424c41b4cfa09fbf15b76decc253ebb32d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "delta:    1.00 1.00 1.00 1.00\n"
+          "text": "squared read error                  additive   delta, β = 1 delta, β = 0.5  least squares\n8 orthonormal keys, 4 writes            2.98           0.00           0.33           0.74\n32 keys                                 0.49           0.29           0.37           0.00\n64 keys                                 0.98           0.60           0.49           0.00\n128 keys                                1.99           1.06           0.67           0.50\n256 keys                                3.94           1.49           0.89           0.75\n64 keys, ρ = 0.5                        5.82           0.76           0.61           0.00\nrecall                              additive   delta, β = 1 delta, β = 0.5  least squares\n8 orthonormal keys, 4 writes            0.28           1.00           1.00           0.28\n32 keys                                 1.00           1.00           1.00           1.00\n64 keys                                 1.00           0.89           0.99           1.00\n128 keys                                0.96           0.53           0.82           1.00\n256 keys                                0.73           0.26           0.45           0.86\n64 keys, ρ = 0.5                        0.54           0.77           0.89           1.00\n"
         }
       ]
     },
     "deltanet-chunked-computation-1": {
-      "code_fingerprint": "sha256:9c64636dc411a265f29ae8f7f9ae529674574851e9827ed6f99cc84208d2d769",
+      "code_fingerprint": "sha256:155cf7dfebf440821aecd253da5733776b63faa96d3965b08dbbe38472bea957",
       "kind": "text",
       "outputs": []
     },
     "deltanet-chunked-computation-2": {
-      "code_fingerprint": "sha256:02c536c077848166f88f172173fc299c6cbb1ddb8cc9e149d154605731a3ec6d",
+      "code_fingerprint": "sha256:018c9dea9c3c446a67557d60ae251ca7d0e3d9a043c061b358b292f47a70d5f8",
       "kind": "text",
       "outputs": []
     },
     "deltanet-chunked-computation-4": {
-      "code_fingerprint": "sha256:1dcf615a57186af6a90c36a333452598d55439ea0e282699ffe95c3aca3b1dbc",
+      "code_fingerprint": "sha256:158872437fe784a467c9a638e2af32c15ac070b5678dc21c1fea80ca6a59b16c",
       "kind": "text",
       "outputs": []
     },
     "deltanet-chunked-computation-3": {
-      "code_fingerprint": "sha256:b5cf768338aa88d6fa85b2da5c1c092f82b2297a425721853cb076279c120039",
+      "code_fingerprint": "sha256:7a57e17247eda70e8bd4b89c59cc531cd5fd732c3da53a1bfa2fc2b212bb8d3e",
       "kind": "text",
       "outputs": [
         {
@@ -72,23 +72,33 @@
       ]
     },
     "deltanet-the-layer": {
-      "code_fingerprint": "sha256:d36053e3235c24bf2a9a61d4953a8587ae1ee06a947a7f94af307cd7bc243117",
+      "code_fingerprint": "sha256:56794719ba372e998e11161bb41f5f1eabf60a173ec6cdb2e3fa59b34f19bc7f",
       "kind": "text",
       "outputs": []
     },
-    "deltanet-language-modeling-1": {
-      "code_fingerprint": "sha256:27998c60c20c5ed98c0d43d05f6b7a1025bbd6054ac17337ec591bed7caef328",
+    "deltanet-rebinding-1": {
+      "code_fingerprint": "sha256:29d24abcd19a0fd32947544d413e7ce0de3d5970eb481f80633d13e5a53b96a5",
       "kind": "text",
       "outputs": []
     },
-    "deltanet-language-modeling-2": {
-      "code_fingerprint": "sha256:86d59f5faf6d5291f202610ae2bd7d275f841b788b35ef1c0070b9f737d3d833",
+    "deltanet-rebinding-2": {
+      "code_fingerprint": "sha256:c935a3c8c74142e413b87930d410b5d32f8f5121170ec67961bed8c612c1cf00",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Gated DeltaNet perplexity: 3.11\n"
+          "text": "                          parameters   written twice    written once\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gated linear attention        73,941      0.893 0.870      0.974 0.970\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gated DeltaNet                74,201      0.976 0.993      0.991 0.995\n"
         }
       ]
     }

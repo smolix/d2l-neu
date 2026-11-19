@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c04d28f3b06fb3ffd9b6bbdcc8d4b7f18e94dce72cb296057f42273b4ca4fd83",
+    "d2l_lib_fingerprint": "sha256:1ac523a98c0e95d2f1924493df6e9c368ac3dcb4effb2efbf515e0a51128fa16",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -23,7 +23,7 @@
       "outputs": []
     },
     "bert-config": {
-      "code_fingerprint": "sha256:87b22748a92c0b922a1878c4a9345f5fd3f0e58e1f2130128571a116142ee5e8",
+      "code_fingerprint": "sha256:d98229d347f1126872a04ab9b734ecec2a9fe30af626176dc19d0d29e9d54abc",
       "kind": "text",
       "outputs": [
         {
@@ -34,22 +34,22 @@
       ]
     },
     "bert-revisions": {
-      "code_fingerprint": "sha256:006df9810a6da71293f09fc41d8c446696e9cbf6c74391e82d372042746d87f9",
+      "code_fingerprint": "sha256:87b17388fad97cf05433c76b8f5bfbcf75a03943fbb2c5d164695b858c77cc03",
       "kind": "text",
       "outputs": []
     },
     "bert-data-hub": {
-      "code_fingerprint": "sha256:d9327aad60c46c07a7cd8a4cbca6ba0ee4c099c947fa5cf133ebbbb62b4a5200",
+      "code_fingerprint": "sha256:9e7e7c42ace913b6e9982aeafa5657d3c3ab5255cd9cda47da8a59d61f96dda6",
       "kind": "text",
       "outputs": []
     },
     "bert-load-encoder": {
-      "code_fingerprint": "sha256:4a1c12b6c90e5b763e6ac56666e48379839f9eabee72bbb3b78bb05571a457ae",
+      "code_fingerprint": "sha256:40e998f2f5bb81ee8752642476402e75887bf1373298af49b16088fe2547a2ba",
       "kind": "text",
       "outputs": []
     },
     "bert-opening": {
-      "code_fingerprint": "sha256:965cf855e228cf48fbae77104b144e359df39b0b9664a9b3aa60a78b0a337ed4",
+      "code_fingerprint": "sha256:deda57bd8ad0dc4bb755307eebdf64d6f429523cf456b7f99cdfc59428313d95",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +60,7 @@
       ]
     },
     "bert-raw": {
-      "code_fingerprint": "sha256:8c1f228a03c5abf26b664982e7518d628c6cbf58e2f8395b18ae48abe88a79de",
+      "code_fingerprint": "sha256:affbf4a76eeb31dd337f4a525f215bafc89f0bd4839ef0019c461bb1941b4438",
       "kind": "text",
       "outputs": [
         {
@@ -71,28 +71,38 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hidden states: (1, 16, 768)\nembedding modules: ['tok_embeddings', 'norm', 'drop']\nlayers                             22\nwidth                             768\nheads                              12\npositions                        8192\nglobal attention every              3\nlocal window                      128\nvocabulary                      50368\nclassifier pooling               mean\nparameters                149,014,272\ncos(bank, river / bank, shore): embedding layer 1.00, last layer 0.81\ncos(bank, check / bank, rate): embedding layer 1.00, last layer 0.85\ncos(bank, river / bank, check): embedding layer 1.00, last layer 0.68\ncos(bank, river / bank, rate): embedding layer 1.00, last layer 0.65\ncos(bank, shore / bank, check): embedding layer 1.00, last layer 0.72\ncos(bank, river / the, river): embedding layer 0.01, last layer 0.32\n"
+          "text": "hidden states: (1, 16, 768)\nembedding modules: ['tok_embeddings', 'norm', 'drop']\nlayers                             22\nwidth                             768\nheads                              12\npositions                        8192\nglobal attention every              3\nlocal window                      128\nvocabulary                      50368\nclassifier pooling               mean\nparameters                149,014,272\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cos(bank, river / bank, shore): embedding layer 1.00, last layer 0.81\ncos(bank, check / bank, rate): embedding layer 1.00, last layer 0.85\ncos(bank, river / bank, check): embedding layer 1.00, last layer 0.68\ncos(bank, river / bank, rate): embedding layer 1.00, last layer 0.65\ncos(bank, shore / bank, check): embedding layer 1.00, last layer 0.72\ncos(bank, river / the, river): embedding layer 0.01, last layer 0.32\n"
         }
       ]
     },
     "bert-mlm-fill": {
-      "code_fingerprint": "sha256:2be81681f0687a2f40ea56a5486ba20b60ea015fc0d7a1e04abab8bfd6ffb3a4",
+      "code_fingerprint": "sha256:68a7b63266a7c26a7fbc442153501ea4580d50dcfe719a8a0f3c739fb0d269d7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertForMaskedLM\n    torch.float32, cuda, attention sdpa\nThe capital of France is [MASK].\n    Paris 0.92, Lyon 0.04, Nancy 0.02, Nice 0.01, Orleans 0.00\nHe drank a cup of [MASK] before work.\n    coffee 0.61, tea 0.21, water 0.08, milk 0.04, wine 0.01\nThe encoder reads the words on [MASK] sides of the gap.\n    both 0.94, the 0.03, opposite 0.01, two 0.01, all 0.01\n"
+          "text": "answerdotai/ModernBERT-base@8949b909ec90: ModernBertForMaskedLM\n    torch.float32, cuda, attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "The capital of France is [MASK].\n    Paris 0.92, Lyon 0.04, Nancy 0.02, Nice 0.01, Orleans 0.00\nHe drank a cup of [MASK] before work.\n    coffee 0.61, tea 0.21, water 0.08, milk 0.04, wine 0.01\nThe encoder reads the words on [MASK] sides of the gap.\n    both 0.94, the 0.03, opposite 0.01, two 0.01, all 0.01\n"
         }
       ]
     },
     "bert-mlm-corrupt": {
-      "code_fingerprint": "sha256:7a5349fc7436f2f3088beea813ca8db7ab2944ca0d347a457fdf51da82c7c08c",
+      "code_fingerprint": "sha256:147e808a83e6914dea97ad2632deb458ee40c2163baf1d31037b9914db22c81c",
       "kind": "text",
       "outputs": []
     },
     "bert-mlm-stats": {
-      "code_fingerprint": "sha256:137e2ffded61c3330e0f4516829c3ede1d0d07e634cb872d5a45367d0269fcf9",
+      "code_fingerprint": "sha256:80b86c40041fce25436a7fdac8037f77560c48d8dbddfc871d6b09968e5eb39b",
       "kind": "text",
       "outputs": [
         {
@@ -103,7 +113,7 @@
       ]
     },
     "bert-attention-cost": {
-      "code_fingerprint": "sha256:e178efd79c2059d1802ea18d65dc98d41b7bca1650ecca3c39ac424fd7b21a6a",
+      "code_fingerprint": "sha256:2bacbfb3396fe8332183272283fdec1e8a27bfe277855684fc2bcb9ca9f397b9",
       "kind": "text",
       "outputs": [
         {
@@ -119,12 +129,12 @@
       ]
     },
     "bert-pooled-classifier": {
-      "code_fingerprint": "sha256:16245a0103805afb6713ee20b309a7a33cdb9d1f75760289c25795be5a30deaa",
+      "code_fingerprint": "sha256:abc9fa90ce3c150f60b0b514e00a6e13becb8904ab3ab5f0d9cbd82a3a26a615",
       "kind": "text",
       "outputs": []
     },
     "bert-head-check": {
-      "code_fingerprint": "sha256:d22e9df7163fabd55c7bf93933fcbd9fe1896d44f11d28cdcc8ca961673e14f2",
+      "code_fingerprint": "sha256:e800188c53f952fdc77f41c9bde90c84fb39dfd17f4f96e5f5cdf8d2cfee8b1d",
       "kind": "text",
       "outputs": [
         {
@@ -140,12 +150,12 @@
       ]
     },
     "bert-finetune": {
-      "code_fingerprint": "sha256:2a74949cb6eac1c91286a29b7780f39bfae0be83afc7741d0496cd4ff1a119b7",
+      "code_fingerprint": "sha256:61d016c717fc6c8879207a8f9ebe7df517adadfb239dbcd5c1f4d0b8e37f031d",
       "kind": "text",
       "outputs": []
     },
     "bert-data": {
-      "code_fingerprint": "sha256:f3c7ad99bb526805982c861e425827202744b52f2150cb1c309e1ff9bd440e14",
+      "code_fingerprint": "sha256:4cbb69d74be83ce9910467d90471dcbe8012dd227c0078a9164bcf5ff890c36d",
       "kind": "text",
       "outputs": [
         {
@@ -156,12 +166,12 @@
       ]
     },
     "bert-run-defs": {
-      "code_fingerprint": "sha256:6ba3055d003d3073ba8fd88b2e1197fd63eb983cce881a4ee015a2da66de1f3e",
+      "code_fingerprint": "sha256:7aa94990fd8f31c1f4adef9f082d31a9c40436b3dad093e21e3c9a8c0685ca1d",
       "kind": "text",
       "outputs": []
     },
     "bert-sweep": {
-      "code_fingerprint": "sha256:3c1ee9dee4e5c7864e7b085c0c09cc06499729a760c039e1b09ee584eb0b5d3d",
+      "code_fingerprint": "sha256:30495fdda9b27b2e475277528d0c7af271a469395c4ce7081f275e7851ffd3bf",
       "kind": "text",
       "outputs": [
         {
@@ -172,18 +182,18 @@
       ]
     },
     "bert-sweep-live": {
-      "code_fingerprint": "sha256:69a9591697118d059563aba335d4a58a59a66ef032293eded6338d7e79df6152",
+      "code_fingerprint": "sha256:ff96d55698dcf4a6534bccd7817890690cb5124afed21912f69f0a74ec85c881",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n = 1000, seed 0, 2000 items: accuracy 0.645 live, 0.645 stored\n  (bound on the difference 0.022); same prediction on 1.000; 26 s\n"
+          "text": "n = 1000, seed 0, 2000 items: accuracy 0.645 live, 0.645 stored\n  (bound on the difference 0.022); same prediction on 1.000; 76 s\n"
         }
       ]
     },
     "bert-ckpt-live": {
-      "code_fingerprint": "sha256:373598624c4cb88482e6c68b8306b7f14196a9d3c2164abbf8cd26dbf861bc5f",
+      "code_fingerprint": "sha256:1392c67740dd112d546b4d2052d046617cffa107f2620d3472e019cf1147ed00",
       "kind": "text",
       "outputs": [
         {
@@ -194,7 +204,7 @@
       ]
     },
     "bert-hypothesis-only": {
-      "code_fingerprint": "sha256:d722376efdb7650cdeeba4aabcfab9e77b6c6a466b39421b6110c436dc5cee78",
+      "code_fingerprint": "sha256:2501925ff3e66c952f99dd5ae60e96a0d579b5b1e37597e26f963a87b34bf6e6",
       "kind": "text",
       "outputs": [
         {
@@ -205,12 +215,12 @@
       ]
     },
     "bert-align": {
-      "code_fingerprint": "sha256:1d035be689941e1841d85c1a1527865185fcbbe0c0f8653f633d4ff604df8d52",
+      "code_fingerprint": "sha256:3a8a205af3603a2bcee80a129500f2ff477b884ed26aaeb47281317ad8013f8d",
       "kind": "text",
       "outputs": []
     },
     "bert-conll-data": {
-      "code_fingerprint": "sha256:2c1839ae9b80ad4d315139d7337df747c8a5b6d5cc45936b27f65f301207632e",
+      "code_fingerprint": "sha256:5241c88c44bdd112fb59bb127a1600e97f4dd167f93904069173ac4ce812be83",
       "kind": "text",
       "outputs": [
         {
@@ -221,12 +231,23 @@
       ]
     },
     "bert-span-f1": {
-      "code_fingerprint": "sha256:cfecb9b335f31b282d10a4dd6941048b8542409adef747d81de25424920386d9",
+      "code_fingerprint": "sha256:c11cfc0d5f11f4e0c9b5e883661fe2ebd7b58432019d0072fc2b519d09e13703",
       "kind": "text",
       "outputs": []
     },
+    "bert-conll-context": {
+      "code_fingerprint": "sha256:1ba8d311ba7b71dec0ee20893a46bd348cb885d2c05fa06eb8b9c192226a08b3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tokens per input, training set: sentence 22, context 246\nvalidation sentence 1840: a window of 250 tokens, sentences 1835 to 1844\n   Brian Giles and Jim Thome homered for Cleveland .\n   Cleveland 's lead over the White Sox in the American League Central dropped to nine games .\n>> Texas 's lead over Seattle in the West increased to six .\n   At California , Tino Martinez 's two-run homer keyed a three-run first and Andy Pettitte\n    became the league 's first 19-game winner as the New York Yankees beat the Angels 6-2 .\n"
+        }
+      ]
+    },
     "bert-tagging": {
-      "code_fingerprint": "sha256:8c727b26fa85b4eb5ea65823e0815fe594650a520b428c4c6b5bc2b88fd09ea3",
+      "code_fingerprint": "sha256:6083581c9096488217a95e7999979213f7d221bb432ae6574c64ac8a793bae00",
       "kind": "text",
       "outputs": [
         {
@@ -237,12 +258,33 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live, seed 0, 3250 sentences: precision 0.939, recall 0.951, F1 0.9450; seqeval F1 0.9450\n             LOC   MISC    ORG    PER\nprecision  0.974  0.852  0.912  0.969\nrecall     0.973  0.898  0.925  0.975\nf1         0.973  0.874  0.919  0.972\nthe 1341 gold ORG names, as tagged: ORG 1241, boundaries missed 45, MISC 22, LOC 19, PER 14\n  Kent as LOC: By stumps Kent had reached 108 for three .\n  Lancashire as PER: Hove : Sussex 363 -LPR- W. Athey 111 , V. Drakes 52 ; I. Austin 4-37 -RPR-\n    , Lancashire 197-8 -LPR- W. Hegg 54 -RPR-\n  NFL as MISC: NFL AMERICAN FOOTBALL-RANDALL CUNNINGHAM RETIRES .\nstored, 3 seeds: F1 0.945 to 0.951, seed 0 0.9450 (bound on the live difference 0.010)\n  peak 5.7 GiB (5.8 GiB reserved)\n"
+          "text": "live, seed 0, 3250 sentences: precision 0.953, recall 0.966, F1 0.9592; seqeval F1 0.9592\n             LOC   MISC    ORG    PER\nprecision  0.974  0.875  0.936  0.984\nrecall     0.980  0.918  0.953  0.985\nf1         0.977  0.896  0.945  0.985\nthe 1341 gold ORG names, as tagged: ORG 1278, boundaries missed 31, MISC 19, LOC 11, PER 2\n  NFL as MISC: NFL AMERICAN FOOTBALL-RANDALL CUNNINGHAM RETIRES .\n  National Football League as MISC: Randall Cunningham , the National Football League 's all-\n    time leading rusher as a quarterback and one of the most athletic players ever to line up\n    over centre , retired Thursday .\n  Philadelphia as LOC: \" I would like to thank the Eagles organisation and the wonderful fans of\n    Philadelphia for supporting me throughout my career , \" Cunningham said .\nstored, 3 seeds, with neighbours, learning rate 8e-05: F1 0.9578 to 0.9584,\n  seed 0 0.9584 (bound on the live difference 0.010)\n  peak 7.6 GiB (7.7 GiB reserved)\n"
+        }
+      ]
+    },
+    "bert-tagging-ablation": {
+      "code_fingerprint": "sha256:a368996248a3ab347a41a9d17714e99c60f387793584defc26a3e22bda89b29d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "with neighbours, trained on 12,041 sentences, 3 seeds per rate:\n  span F1 on the 2,000 carved sentences and on the validation set\n        carve_f1                f1            \n            mean   min   max  mean   min   max\nlr                                            \n0.00002    0.918 0.914 0.924 0.931 0.927 0.932\n0.00005    0.938 0.935 0.939 0.949 0.947 0.950\n0.00008    0.941 0.938 0.943 0.955 0.951 0.959\n0.00015    0.940 0.936 0.945 0.955 0.952 0.956\n\ntrained on all 14,041 sentences: validation span F1 over 3 seeds\n                                   mean   min   max\ncontext, rate 8e-05               0.958 0.958 0.958\nsentence, rate 8e-05              0.952 0.951 0.952\nsentence, rate 5e-05 (first runs) 0.949 0.945 0.951\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "context: gold ORG names given another type, 34 to 36\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sentence: gold ORG names given another type, 46 to 52\ngold names right in every run with neighbours and in no run on sentences alone: 30; the reverse: 7\n  GREATER MILWAUKEE OPEN is MISC, alone missed: GOLF - LEADING SCORES AT GREATER MILWAUKEE OPEN\n    .\n  Jamaica is LOC, alone ORG: Jamaica 's Michael Green was second with 10.09 with Bailey\n    finishing in 10.13 .\n  STANDARD LIEGE is ORG, alone missed: SOCCER - THREE STANDARD LIEGE PLAYERS BANNED , CLUB FINED\n    .\n  ATALANTA is ORG, alone LOC: SOCCER - MILAN 'S LENTINI MOVES TO ATALANTA .\n  Chicago Purchasing Managers is ORG, alone missed: UNITED STATES - Prices of U.S. Treasury\n    securities were trading sharply lower near midday after a surprisingly strong Chicago\n    Purchasing Managers ' report shook the markets ahead of the long Labour Day weekend .\n"
         }
       ]
     },
     "bert-decoder": {
-      "code_fingerprint": "sha256:bcdbe649d7b40bc268055a94c6aba1fc7ec00ce0a472f332aaa20546c8028a6f",
+      "code_fingerprint": "sha256:5297218575568990d274e742bd652058c83a7b3f096cf4731c3cd8d57634a779",
       "kind": "text",
       "outputs": [
         {
@@ -263,7 +305,7 @@
       ]
     },
     "bert-naive-bayes": {
-      "code_fingerprint": "sha256:2c8076efd434ababfbdf36fd04694927d13961b493310c7b27bb57dfc8e4a6d6",
+      "code_fingerprint": "sha256:7103e77fc3180cb81f407326ce5f1aae9cbcc68be69f70a4f21cf43157db332a",
       "kind": "text",
       "outputs": [
         {
@@ -274,23 +316,23 @@
       ]
     },
     "bert-cost": {
-      "code_fingerprint": "sha256:c3b005bc849a152fadd32549a6020503ba79a2f9d6f51171c3ac57ecd0dd3215",
+      "code_fingerprint": "sha256:05f3f6757d673d42eb3984f347d88117455c3c85915b550e3dfcce08d94074b0",
       "kind": "text",
       "outputs": []
     },
     "bert-timing": {
-      "code_fingerprint": "sha256:15342d5e3eb82ecf0753f05c5aab74317b3f06f37dc994d762071666d0dbed58",
+      "code_fingerprint": "sha256:36b8ae4a34ba8cae0fdfad366ae4975507606ac4bd641bd9d4be9ae0eaa5e3d5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, stored\nencoder                40.3                 8.9               431.7                 445.9\ndecoder              1543.1              4349.8             47335.2               48036.6\ndecoder / encoder: measured 110x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\nencoder: the batch is padded to 87 tokens, 2.2x the tokens counted per pair\ndecoder, the query alone with one label word: 49 tokens, FLOPs 16x the encoder\nstored, mnli: encoder 446, decoder 48,037 ms per 1,000; decoder / encoder 108x\nstored, sst2: encoder 426, decoder 12,410 ms per 1,000; decoder / encoder 29x\n"
+          "text": "         tokens per example  GFLOPs per example  ms per 1,000, live  ms per 1,000, stored\nencoder                40.3                 8.9               950.0                 445.9\ndecoder              1543.1              4349.8             92593.1               48036.6\ndecoder / encoder: measured 97x, FLOPs 486x; NVIDIA GeForce RTX 4090, attention sdpa\nencoder: the batch is padded to 87 tokens, 2.2x the tokens counted per pair\ndecoder, the query alone with one label word: 49 tokens, FLOPs 16x the encoder\nstored, mnli: encoder 446, decoder 48,037 ms per 1,000; decoder / encoder 108x\nstored, sst2: encoder 426, decoder 12,410 ms per 1,000; decoder / encoder 29x\n"
         }
       ]
     },
     "bert-curve": {
-      "code_fingerprint": "sha256:87589ec67132ca0f761d2ac3dd5b7ef1b9d3e32ad2ba9cc61282d7d25b6d4de9",
+      "code_fingerprint": "sha256:a81e0b077488af6a9c4c54a710e4c704b6a8137c18a1a7072d3d82ac96da4927",
       "kind": "asset",
       "outputs": [
         {
@@ -303,7 +345,7 @@
       ]
     },
     "bert-crossing": {
-      "code_fingerprint": "sha256:a1c642d31bb48bed913b6edde1ecc00f995e48075b9fb05cb9d91034ed9033d4",
+      "code_fingerprint": "sha256:0ea79bb9a1c80d7bd064ea89825ecae5dc43e477b5c54f04ec7814e598fcf9d3",
       "kind": "text",
       "outputs": [
         {

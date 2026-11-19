@@ -67,7 +67,7 @@ The encoder is ModernBERT-base :cite:`Warner.Chaffin.Clavie.ea.2024`,
 released in 2024, and the decoder is Qwen3-1.7B, the instruct model of
 :numref:`sec_lm_prompting`. The next four cells are setup and can be
 skimmed. As in the previous chapter, the expensive results were computed
-once and stored, here in about half an hour on one RTX 4090. A run of the
+once and stored, here in about an hour on one RTX 4090. A run of the
 notebook reads them and recomputes a small piece of each as a check. The
 environment variable `D2L_RERUN` names results to recompute in full.
 
@@ -79,7 +79,7 @@ SMALL = not GPU  # the CPU path: stored results, shorter live checks
 ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
     'bert-sweep': ('lm-enc-bert-sweep-v2', 'lm-enc-bert-sweep.json'),
     'bert-ckpt': ('lm-enc-modernbert-mnli-v1', 'lm-enc-modernbert-mnli.zip'),
-    'bert-tagging': ('lm-enc-bert-tagging-v1', 'lm-enc-bert-tagging.json'),
+    'bert-tagging': ('lm-enc-bert-tagging-v2', 'lm-enc-bert-tagging.json'),
     'bert-decoder': ('lm-enc-bert-decoder-v1', 'lm-enc-bert-decoder.json')}
 RERUN = d2l.lm_rerun(ARTIFACTS)  # D2L_RERUN: the results to regenerate
 assert 'bert-ckpt' not in RERUN or 'bert-sweep' in RERUN, \
@@ -98,7 +98,7 @@ LABELS = {'mnli': ('entailment', 'neutral', 'contradiction'),
 LIVE = (dict(n=250, items=200, dec_items=8, tag_train=1000, tag_items=500)
         if SMALL else dict(n=1000, items=2000, dec_items=2000,
                            tag_train=None, tag_items=None))  # None: all
-TAG_LR = 5e-5  # the tagger's learning rate, fixed (not tuned)
+CONTEXT = 256  # tokens of a tagging window: a sentence and its neighbours
 VERBAL = {'mnli': ('yes', 'maybe', 'no'), 'sst2': ('negative', 'positive')}
 FMT = {'mnli': '{x}\nAnswer: {y}', 'sst2': 'Review: {x}\nSentiment: {y}'}
 DRAWS = {0: 1, 4: 1, 8: 3}  # demonstration sets per shot count
@@ -110,7 +110,10 @@ CONFIG = {  # what each result is made with; reading one checks it
                        n_carve=N_CARVE,
                        n_hyp=N_HYP, head='pretrained dense and norm'),
     'bert-tagging': dict(model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC],
-                         lr=TAG_LR, epochs=EPOCHS, batch=BATCH),
+                         context=CONTEXT, lrs=LRS, seeds=SEEDS,
+                         n_carve=N_CARVE, epochs=EPOCHS, batch=BATCH,
+                         lr='best mean span F1 of the seeds on the carve, '
+                         'with neighbours; then trained on all'),
     'bert-decoder': dict(model=DEC, revision=d2l.HF_REVISIONS[DEC],
                          shots=SHOTS, draws=DRAWS, fmt=FMT, verbal=VERBAL,
                          norm='token', n_pool=N_POOL, min_words=MIN_WORDS,
@@ -192,9 +195,12 @@ d2l.DATA_HUB['lm-enc-bert-sweep-v2'] = (  # at least 300 steps per run
 d2l.DATA_HUB['lm-enc-modernbert-mnli-v1'] = (  # its MNLI checkpoint, bf16
     d2l.LM_DATA_URL + 'lm-enc-modernbert-mnli-v1.zip',
     '36365804df9df70b812f52595ee6d092639285c1')
-d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # D2L_RERUN=bert-tagging
+d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # sentences alone, lr 5e-5
     d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v1.json',
     'f0f0f41d18ed997462891d0c6dece556ad57b680')
+d2l.DATA_HUB['lm-enc-bert-tagging-v2'] = (  # D2L_RERUN=bert-tagging
+    d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v2.json',
+    'f527097b8650ace236226a4cda001fd99b5fce79')
 d2l.DATA_HUB['lm-enc-bert-decoder-v1'] = (  # D2L_RERUN=bert-decoder
     d2l.LM_DATA_URL + 'lm-enc-bert-decoder-v1.json',
     '22b140629d3aa486a601068dce61b8a0f0301beb')
@@ -640,7 +646,7 @@ the head change (:numref:`tab_lm_bert_heads` and
 |---|---|---|---|
 | sentence (SST-2) | `[CLS] sentence [SEP]` | the mean over tokens | 2 logits |
 | pair (MNLI) | `[CLS] premise [SEP] hypothesis [SEP]` | the mean over tokens | 3 logits |
-| tagging (CoNLL-2003) | `[CLS] sentence [SEP]` | each word's first token | 9 logits per word |
+| tagging (CoNLL-2003) | `[CLS]` sentence among its neighbours `[SEP]` | each word's first token | 9 logits per word |
 
 ![One pretrained encoder and three heads, each fine-tuned on its own task. A sentence (top) and a sentence pair (middle) are averaged over their tokens and passed through dense, GELU, norm and linear layers to two or three logits. The pair is read jointly, and the separator alone marks where its second text begins. A tagging head (bottom) applies the same layers at every token; each word's label sits on its first token, and tokens that carry $-100$ are not scored. Ġ marks a token that starts with a space.](../img/mdl-lm-encoders-encoder-heads.svg)
 :label:`fig_lm_encoder_heads`
@@ -1290,36 +1296,123 @@ def span_f1(pred_tags, gold_tags, id2label):
 ### The Token Head
 
 Transformers' token classifier applies the sentence head's dense layer, GELU
-and norm at every position, then a linear map to the nine tags. We fine-tune
-it with the same function for two epochs at a fixed learning rate of
-$5 \times 10^{-5}$. The cell trains seed 0 live and compares its span F1
-with the three stored seeds and with `seqeval`.
+and norm at every position, then a linear map to the nine tags. A sentence
+alone is not all that BERT's tagger read, however. Its authors fed each
+sentence together with the text around it in the same news article, the
+"maximal document context" :cite:`Devlin.Chang.Lee.ea.2018`, so that a
+name could draw on what the article said about it earlier. Our copy of
+CoNLL-2003 does not mark where one article ends, so we place each sentence
+among its neighbours in the file, adding one before and one after in turn
+until the window holds 256 tokens. Only the sentence in the middle carries
+labels; its neighbours get $-100$ and are read but not scored.
+
+```{.python .input #bert-conll-context}
+%%tab pytorch
+def with_neighbours(df, budget=CONTEXT):
+    """Each sentence of df among its neighbours, added alternately before
+    and after while the window stays within budget tokens; only the
+    sentence itself is labeled, its neighbours get -100."""
+    sents, tags = df.tokens.tolist(), df.tags.tolist()
+    n_tok = [len(tok(' '.join(w), add_special_tokens=False)['input_ids'])
+             for w in sents]
+    windows = []
+    for i in range(len(sents)):
+        lo, hi, total = i, i + 1, n_tok[i] + 2  # with [CLS] and [SEP]
+        grown = True
+        while grown:
+            grown = False
+            if lo > 0 and total + n_tok[lo - 1] <= budget:
+                lo, total, grown = lo - 1, total + n_tok[lo - 1], True
+            if hi < len(sents) and total + n_tok[hi] <= budget:
+                hi, total, grown = hi + 1, total + n_tok[hi], True
+        words = [w for k in range(lo, hi) for w in sents[k]]
+        labels = [t if k == i else -100 for k in range(lo, hi)
+                  for t in tags[k]]
+        windows.append((*encode_words(words, labels), (lo, hi)))
+    return windows
+
+INPUTS = {'sentence': TAGGED, 'context': {
+    s: with_neighbours(df) for s, df in conll.items()}}
+assert all(sum(l != -100 for l in w[2]) == len(t) for s, df in conll.items()
+           for w, t in zip(INPUTS['context'][s], df.tags))  # labels: middle
+print('tokens per input, training set: ' + ', '.join(
+    f'{k} {np.mean([len(w[0]) for w in v["train"]]):.0f}'
+    for k, v in INPUTS.items()))
+words = conll['valid'].tokens.tolist()
+i = next(i for i, w in enumerate(words) if w[:5] == [
+    'Texas', "'s", 'lead', 'over', 'Seattle'])
+x, _, _, (lo, hi) = INPUTS['context']['valid'][i]
+print(f'validation sentence {i}: a window of {len(x)} tokens, sentences '
+      f'{lo} to {hi - 1}')
+for k in range(i - 2, i + 2):
+    d2l.print_wrapped(('>> ' if k == i else '   ') + ' '.join(words[k]),
+                      width=96)
+```
+
+A window holds about 250 tokens against 22 for a sentence alone, so in
+each epoch a sentence is read about eleven times: once as the labeled
+middle of its own window and otherwise as context for its neighbours. The
+printed window shows what the neighbours offer. Read alone, "Texas 's lead
+over Seattle in the West increased to six" could be about two cities. One
+sentence earlier Cleveland leads the White Sox in the American League
+Central, and Seattle is a baseball team.
+
+We fine-tune with the same function for two epochs. The learning rate is
+chosen as for the sentence tasks, among the same four rates, on 2,000
+sentences carved from the training set, never on the validation items.
+The runs that choose it train on the other 12,041 sentences. One seed per
+rate decided the sweep above; here each rate is scored by the mean span F1
+of three seeds. At the chosen rate the tagger is then trained on all 14,041
+sentences. The cell trains seed 0 live and compares its span F1 with the
+three stored seeds and with `seqeval`.
 
 ```{.python .input #bert-tagging}
 %%tab pytorch
-def train_tagger(seed, train, valid):
+def train_tagger(seed, train, valid, lr):
     torch.manual_seed(seed)  # the new token head
     tagger, _ = d2l.load_encoder(ENC, head='token_cls', num_labels=len(
         id2label), dtype=torch.float32)
-    r = d2l.finetune_classifier(tagger, [(x, l) for x, _, l in train],
-                                [(x, l) for x, _, l in valid], TAG_LR,
-                                EPOCHS, BATCH, seed)
+    r = d2l.finetune_classifier(tagger, [(w[0], w[2]) for w in train],
+                                [(w[0], w[2]) for w in valid], lr, EPOCHS,
+                                BATCH, seed)
     del tagger
     d2l.lm_free()
     return r
 
 gold = conll['valid'].tags.tolist()
 if 'bert-tagging' in RERUN:
-    tagging = []
-    for seed in SEEDS:
-        r = train_tagger(seed, TAGGED['train'], TAGGED['valid'])
-        tagging.append(dict(seed=seed, seconds=r['seconds'], peak_gib=r[
-            'peak_gib'], **d2l.span_f1(r['eval_pred'], gold, id2label)))
-    d2l.lm_save_rerun(ARTIFACTS['bert-tagging'][1], write_json(
-        {'config': CONFIG['bert-tagging'], 'runs': tagging}))
+    t0, out = time.perf_counter(), {'config': CONFIG['bert-tagging'],
+                                    'carve': [], 'runs': []}
+    carve = conll['train'].tags.tolist()[:N_CARVE]
+    def run(inp, lr, seed, n_carve):  # the validation items ride along
+        D = INPUTS[inp]
+        r = train_tagger(seed, D['train'][n_carve:], D['train'][:n_carve] +
+                         D['valid'], lr)
+        p = r['eval_pred'][n_carve:]
+        return dict(input=inp, lr=lr, seed=seed, seconds=r['seconds'],
+                    peak_gib=r['peak_gib'], carve_f1=d2l.span_f1(
+                        r['eval_pred'][:n_carve], carve, id2label)['f1']
+                    if n_carve else None, **d2l.span_f1(p, gold, id2label),
+                    pred=p)
+    for lr in LRS:  # the rate, trained on all but the carve
+        for seed in SEEDS:
+            out['carve'].append(run('context', lr, seed, N_CARVE))
+            del out['carve'][-1]['pred']
+    out['lr'] = float(pd.DataFrame(out['carve']).groupby('lr').carve_f1
+                      .mean().idxmax())  # the mean over the seeds
+    for inp in ('context', 'sentence'):  # at that rate, all 14,041
+        for seed in SEEDS:
+            out['runs'].append(run(inp, out['lr'], seed, 0))
+    out['minutes'] = (time.perf_counter() - t0) / 60
+    d2l.lm_save_rerun(ARTIFACTS['bert-tagging'][1], write_json(out))
 TAGGING = read_result('bert-tagging')
-r = train_tagger(0, TAGGED['train'][:LIVE['tag_train']],
-                 TAGGED['valid'][:LIVE['tag_items']])
+LR_TAG = TAGGING['lr']
+if 'bert-tagging' in RERUN:  # seed 0 was just trained: its predictions
+    r = {'eval_pred': next(x['pred'] for x in TAGGING['runs'] if (
+        x['input'], x['seed']) == ('context', 0))}
+else:
+    r = train_tagger(0, INPUTS['context']['train'][:LIVE['tag_train']],
+                     INPUTS['context']['valid'][:LIVE['tag_items']], LR_TAG)
 gold = gold[:LIVE['tag_items']]
 f1 = d2l.span_f1(r['eval_pred'], gold, id2label)
 def names(seqs):
@@ -1354,34 +1447,118 @@ print(f'the {len(found)} gold ORG names, as tagged: ' + ', '.join(
     f'{k} {n}' for k, n in pd.Series(found).value_counts().items()))
 for name, k, s in other[:3]:  # the first three tagged as another type
     d2l.print_wrapped(f'  {name} as {k}: {" ".join(words[s])}', width=96)
-seeds_f1 = {x['seed']: x['f1'] for x in TAGGING['runs']}
+seeds_f1 = {x['seed']: x['f1'] for x in TAGGING['runs']
+            if (x['input'], x['lr']) == ('context', LR_TAG)}
 bound = max(0.01, np.ptp(list(seeds_f1.values())))  # the seeds' spread
-print(f'stored, {len(seeds_f1)} seeds: F1 {min(seeds_f1.values()):.3f} '
-      f'to {max(seeds_f1.values()):.3f}, seed 0 {seeds_f1[0]:.4f} (bound on '
+print(f'stored, {len(seeds_f1)} seeds, with neighbours, learning rate '
+      f'{LR_TAG:g}: F1 {min(seeds_f1.values()):.4f} '
+      f'to {max(seeds_f1.values()):.4f},\n  seed 0 {seeds_f1[0]:.4f} (bound on '
       f'the live difference {bound:.3f})\n  {d2l.lm_peak()}')
 assert abs(f1['f1'] - oracle) < 1e-9
 assert SMALL or abs(f1['f1'] - seeds_f1[0]) <= bound
 ```
 
-The tagger finds 95% of the names, 94% of the names it predicts are right,
-and its span F1 of about 0.95 equals `seqeval`'s. The three stored seeds lie
-within 0.01 of one another. Locations and persons are nearly solved, at
-0.97. Organizations reach 0.92, and the catch-all MISC of nationalities,
-events and titles 0.87. All of this comes from a small head on one vector
-per token, fine-tuned together with the encoder. Nobody wrote a rule about
-capital letters or a list of cities.
+The rule chose a rate of $8 \times 10^{-5}$ (we return to the choice
+below). The tagger finds about 96% of the names, 95% of the names it
+predicts are right, and its span F1 of about 0.96 equals `seqeval`'s. The
+three stored seeds agree to the third decimal. Persons and locations are
+nearly solved, at about 0.98. Organizations stay a little below 0.95, and
+the catch-all MISC of nationalities, events and titles is at about 0.9. All
+of this comes from a small head on one vector per token, fine-tuned together
+with the encoder. Nobody wrote a rule about capital letters or a list of cities.
 
 What goes wrong with organizations? The cell follows each of the 1,341 gold
-organizations of the validation set. The tagger finds about 1,240 of them,
-and of the hundred it misses, nearly half have no predicted name with the
-same two ends: the name was cut too short or too long, or not tagged at all.
-The other half are given another type, and the printed examples
-show why. In the sports pages a county is also a cricket club, and in "By
-stumps Kent had reached 108 for three" Kent is a team, not a place. In a
-scorecard *Lancashire 197-8* sits among players' names that are also followed
-by scores, and the tagger calls it a person. A headline in capital letters,
-"NFL AMERICAN FOOTBALL-RANDALL CUNNINGHAM RETIRES", gives little context of
-any kind. These are errors that a reader new to cricket would make too.
+organizations of the validation set. The tagger finds about 1,280 of them.
+Of the sixty or so it misses, roughly half have no predicted name with the
+same two ends: the name was cut too short or too long, or not tagged at
+all. The rest are given another type, and the printed examples show why.
+All three come from one report on an American football player's retirement.
+The annotators tagged the league as an organization, and the tagger calls
+it a miscellaneous name; "the wonderful fans of Philadelphia" are the
+team's fans to the annotators and the city's to the tagger. A careful
+reader could make these calls either way.
+
+### Context and the Learning Rate
+
+BERT's paper reports a span F1 of 96.4 for its base model on this
+validation set :cite:`Devlin.Chang.Lee.ea.2018`. What do the neighbours and
+the choice of the learning rate contribute to ours? The stored runs answer
+both questions without training anything new.
+
+```{.python .input #bert-tagging-ablation}
+%%tab pytorch
+tag_runs = pd.DataFrame(TAGGING['runs'])
+by_lr = pd.DataFrame(TAGGING['carve']).groupby('lr')[['carve_f1', 'f1']]
+print(f'with neighbours, trained on {len(conll["train"]) - N_CARVE:,} '
+      f'sentences, {len(SEEDS)} seeds per rate:\n  span F1 on the {N_CARVE:,} '
+      'carved sentences and on the validation set')
+print(by_lr.agg(['mean', 'min', 'max']).to_string(
+    float_format='{:.3f}'.format))
+with open(d2l.lm_registered('lm-enc-bert-tagging-v1')) as f:  # first runs:
+    v1 = json.load(f)  # sentences alone, a fixed rate
+at = tag_runs[tag_runs.lr == LR_TAG].groupby('input').f1.agg(
+    ['mean', 'min', 'max'])
+at.index = [f'{k}, rate {LR_TAG:g}' for k in at.index]
+at.loc[f'sentence, rate {v1["config"]["lr"]:g} (first runs)'] = \
+    pd.Series([x['f1'] for x in v1['runs']]).agg(['mean', 'min', 'max'])
+print(f'\ntrained on all {len(conll["train"]):,} sentences: validation '
+      f'span F1 over {len(SEEDS)} seeds')
+print(at.to_string(float_format='{:.3f}'.format))
+
+def typed(pred):
+    """Each gold name of the validation set as (its type, the type of a
+    predicted name with the same two ends or None, sentence, start, end)."""
+    return [(k, {(a, b): t for a, b, t in names_of(p)}.get((a, b)), s, a, b)
+            for s, (g, p) in enumerate(zip(conll['valid'].tags, pred))
+            for a, b, k in names_of(g)]
+
+hit, typ = {}, {}
+for inp, g in tag_runs[tag_runs.lr == LR_TAG].groupby('input'):
+    typ[inp] = [typed(p) for p in g.pred]
+    hit[inp] = np.array([[k == t for k, t, *_ in run] for run in typ[inp]])
+    other = [sum(k == 'ORG' and t not in (None, 'ORG') for k, t, *_ in run)
+             for run in typ[inp]]
+    print(f'{inp}: gold ORG names given another type, {min(other)} to '
+          f'{max(other)}')
+fixed = hit['context'].all(0) & ~hit['sentence'].any(0)
+lost = hit['sentence'].all(0) & ~hit['context'].any(0)
+print(f'gold names right in every run with neighbours and in no run on '
+      f'sentences alone: {fixed.sum()}; the reverse: {lost.sum()}')
+for j in np.flatnonzero(fixed)[:5]:
+    k, t, s, a, b = typ['sentence'][0][j]
+    d2l.print_wrapped(f'  {" ".join(words[s][a:b])} is {k}, alone '
+                      f'{t or "missed"}: '
+                      f'{" ".join(words[s])}', width=96)
+```
+
+The upper table is the choice of the rate. On the carved sentences the two
+higher rates are level, 0.941 and 0.940, and on the validation set they are
+level too. The lowest rate, $2 \times 10^{-5}$, is more than two points
+behind, and $5 \times 10^{-5}$, a common default for BERT, about half a
+point on the validation set. The mean over three seeds picked
+$8 \times 10^{-5}$, the rate the sweep chose for both sentence tasks. Since
+the two higher rates are level, another run of this code may pick the other
+one, at no cost that the validation set can see.
+
+The lower table separates the two changes; all three rows train on the full
+14,041 sentences. The better rate alone moves span F1 from 0.945 to 0.951
+up to about 0.952. Reading each sentence among its neighbours adds about 0.6
+points more, to 0.958, and the three seeds agree. Organizations gain most:
+with neighbours about 35 of them get another type, without about 50. Thirty
+names are right in every run with neighbours and in no run without, and
+seven the other way round. The printed names are ones that the sentence
+alone leaves open. ATALANTA, in a headline about a transfer, could be a
+place; two sentences further on, the article calls it a Serie A club.
+Jamaica, in a list of sprint times, may be a team or a country.
+
+Our first runs, then, fell short of BERT for two reasons. They read each
+sentence without the article around it, which BERT's tagger had,
+and they trained at a rate fixed in advance rather than chosen. The missing
+context cost the more of the two. That leaves about 0.6 points to BERT's
+96.4, which this section does not explain. Our windows can run across the
+end of an article, since this copy does not mark it; the two are different
+models, pretrained on different text; and a single reported figure also
+carries the luck of its own runs.
 
 ## Encoder or Prompted Decoder
 :label:`subsec_lm_encoder_vs_decoder`
@@ -1818,6 +1995,10 @@ sentiment, which the decoder largely knew already, it only caught up. Two
 cautions go with such numbers: a fine-tuning run on few examples needs
 enough optimizer steps before its seeds mean anything, and a model that
 never reads the premise labels more than half of MNLI correctly.
+A token head tagged names at a span F1 of about 0.96, nearly a point above
+what it reached on sentences read alone at a fixed rate; the gain came from
+reading each sentence among its neighbours, as BERT's authors did, and from
+choosing the learning rate.
 Prompting suits few labels and changing tasks, and a fine-tuned encoder a
 fixed task with thousands of labels and many items.
 
@@ -1936,8 +2117,8 @@ fixed task with thousands of labels and many items.
    conditional random field on top of the logits at first tokens, train it
    jointly by maximizing the log-likelihood of the gold tag sequence, and
    decode with the Viterbi algorithm. Measure the change in span F1 over
-   three seeds against the stored range of 0.945 to 0.951, and count the
-   invalid tag transitions with and without the CRF.
+   three seeds against the stored seeds of the tagger with neighbours, and
+   count the invalid tag transitions with and without the CRF.
 
 <!-- slides -->
 
@@ -2133,7 +2314,7 @@ texts: half the pairs at 512 tokens.
 |---|---|---|---|
 | sentence (SST-2) | `[CLS] sentence [SEP]` | mean over tokens | 2 logits |
 | pair (MNLI) | `[CLS] premise [SEP] hypothesis [SEP]` | mean over tokens | 3 logits |
-| tagging (CoNLL-2003) | `[CLS] sentence [SEP]` | each word's first token | 9 logits per word |
+| tagging (CoNLL-2003) | `[CLS]` sentence among its neighbours `[SEP]` | each word's first token | 9 logits per word |
 
 ::: {.d2l-note}
 Each head: dense, GELU and norm taken from the pretrained masked-token
@@ -2210,7 +2391,7 @@ Report an inference score beside a hypothesis-only baseline.
 :::
 :::
 
-::: {.slide title="A Small Head on Token Vectors Tags Names at a Span F1 of 0.95"}
+::: {.slide title="A Small Head on Token Vectors Tags Names at a Span F1 of 0.96"}
 [Token tagging]{.kicker}
 
 | token | `[CLS]` | `Peter` | `ĠBlack` | `burn` | `[SEP]` |
@@ -2221,13 +2402,35 @@ Report an inference score beside a hypothesis-only baseline.
   types (PER, LOC, ORG, MISC), 9 tags.
 - A word's tag goes to its first token. A name counts only if its type and
   both ends match.
-- Precision 0.94, recall 0.95, span F1 about 0.95, equal to `seqeval`'s.
-- By type: LOC 0.97, PER 0.97, ORG 0.92, MISC 0.87.
-- Missed organizations: nearly half with wrong ends, the rest another type
-  (a county cricket club, "Kent had reached 108", read as a place).
+- Each sentence is read among its neighbours (256 tokens); only it is scored.
+- Precision 0.95, recall 0.96, span F1 about 0.96, equal to `seqeval`'s.
+- By type: PER and LOC about 0.98, ORG just under 0.95, MISC about 0.9.
+- Missed organizations: roughly half with wrong ends, the rest another
+  type (NFL as MISC).
 
 ::: {.d2l-note}
 Nobody wrote a rule about capital letters or a list of cities.
+:::
+:::
+
+::: {.slide title="Neighbouring Sentences and a Chosen Rate Close More than Half the Gap to BERT"}
+[Token tagging]{.kicker}
+
+| trained on 14,041 sentences, three seeds | span F1 |
+|---|---|
+| sentence alone, rate $5 \times 10^{-5}$ | 0.945 to 0.951 |
+| sentence alone, rate $8 \times 10^{-5}$ | 0.952 |
+| with neighbours, rate $8 \times 10^{-5}$ | 0.958 |
+| BERT-base, as reported | 0.964 |
+
+- Rate chosen on 2,000 held-out training sentences (mean of three seeds).
+- With neighbours about 35 organizations get another type, without about 50.
+- 30 names right in every run with neighbours and in none without; 7 the
+  other way.
+
+::: {.d2l-note}
+Tag a sentence with its article around it, as BERT's authors did, and
+choose the rate rather than fix it.
 :::
 :::
 
@@ -2296,22 +2499,22 @@ remove. SST-2: about 30 times on the clock.
 
 ::: {.slide title="The Encoder Draws Level with 8 Shots on MNLI at 1,000 Labels and Leads from 4,000"}
 ::: {.cols .vc}
-::: {.col .fig .big}
+::: {.col .fig}
 @!bert-curve
 :::
 
-::: {.col .narrow}
+::: {.col}
 - Ahead = every seed × every set of examples agrees, and the gap exceeds
   both spreads.
 - MNLI, gap to 8 shots: $-0.20$ at 250; zero at 1,000; $+0.13$ at 4,000;
   $+0.21$ at 16,000.
 - SST-2: level only at 8,000.
-:::
-:::
 
 ::: {.d2l-note}
 Where the line runs depends on how much of the task the decoder already
 knows.
+:::
+:::
 :::
 :::
 
@@ -2336,7 +2539,7 @@ even with a cached prompt.
 - A masked-token encoder gives one vector per token from both sides; a
   fine-tuned head turns them into a label per sentence, pair or word.
 - ModernBERT-base: 0.84 on MNLI (16,000 pairs), 0.93 on SST-2 (8,000), span
-  F1 about 0.95 on CoNLL-2003.
+  F1 about 0.96 on CoNLL-2003 (sentences read among their neighbours).
 - Too few steps look like seed noise: seed range 0.16 with 64 steps, 0.02
   with 320, at 1,000 MNLI pairs.
 - Hypothesis only: 0.53 on MNLI; majority rate 0.36.

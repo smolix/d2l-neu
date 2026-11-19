@@ -149,18 +149,30 @@ d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
 d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
     d2l.LM_DATA_URL + 'lm-rag-gen-base-v1.jsonl',
     '78065bff472577631de5d7cac287323e77427e7f')
+d2l.DATA_HUB['lm-rag-gen-base-v2'] = (  # v1 with the model card's task
+    d2l.LM_DATA_URL + 'lm-rag-gen-base-v2.jsonl',
+    '9701221a6ec07e4c524b1ebd063af3dbdf5101f4')
 d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
     d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
     '7c08b175e12fe3138742f46e14720df1ab45e277')
 d2l.DATA_HUB['lm-rag-gen-stages-v2'] = (  # v1 and the control fixed-over
     d2l.LM_DATA_URL + 'lm-rag-gen-stages-v2.jsonl',
     'bfd5ba324efcc683b06ded6d96c04b56ca806cb0')
+d2l.DATA_HUB['lm-rag-gen-stages-v3'] = (  # v2 with the model card's task
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v3.jsonl',
+    '350230216f0f4a43c34b55bf6af720e537392b61')
 d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
     d2l.LM_DATA_URL + 'lm-rag-gen-fix-v1.jsonl',
     'd94ed6b1f942ea5ca0df0292c5e7cc81bd834d50')
+d2l.DATA_HUB['lm-rag-gen-fix-v2'] = (  # card's task: fix-unsupported
+    d2l.LM_DATA_URL + 'lm-rag-gen-fix-v2.jsonl',
+    '2a980b4961883ecdd3eac2a4a31b8de2d621f004')
 d2l.DATA_HUB['lm-rag-cards-v1'] = (  # 31 base failures, labelled by a model
     d2l.LM_DATA_URL + 'lm-rag-cards-v1.jsonl',
     'dd66f91cc44070f7e2256c63d5e5caf912c4054e')
+d2l.DATA_HUB['lm-rag-cards-v2'] = (  # 26 base failures with the card's task
+    d2l.LM_DATA_URL + 'lm-rag-cards-v2.jsonl',
+    'ed510addb6e39fe5c54cab40a6283be4d908a80d')
 d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
     d2l.LM_DATA_URL + 'lm-rag-judge-v1.jsonl',
     '8e128dbe149cf3f22b3d0979368c679c5d43c371')
@@ -185,6 +197,15 @@ d2l.DATA_HUB['lm-rag-judge-v4'] = (  # v3 and the verdicts on fixed-over
 d2l.DATA_HUB['lm-rag-judge-cache-v4'] = (  # v3 and those replies
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v4.zip',
     'cf57712b285710ee87c0a7c56aab0600d13dac7a')
+d2l.DATA_HUB['lm-rag-judge-v5'] = (  # card's task: base and stages
+    d2l.LM_DATA_URL + 'lm-rag-judge-v5.jsonl',
+    '664337072badcb67b147684cd7935c77b4169ab0')
+d2l.DATA_HUB['lm-rag-judge-v6'] = (  # v5 and the verdicts on the fix run
+    d2l.LM_DATA_URL + 'lm-rag-judge-v6.jsonl',
+    '16fe5b4040697906e84fc99476e42c151fc93dd7')
+d2l.DATA_HUB['lm-rag-judge-cache-v6'] = (  # every reply with the card's task
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v6.zip',
+    '3f6a32485e092cb233ab4fc5dec761843c8ba68a')
 ```
 
 Each item holds
@@ -1308,8 +1329,9 @@ print(f'judged again: with {RETRY_TOKENS:,} new tokens, once\nunjudged: '
       'still no verdict on correctness (left out of accuracy)')
 ```
 
-The replayed verdicts match the recorded ones. Every baseline answer has a
-verdict; the oracle leaves one answer unjudged and `base-repeat` two.
+The replayed verdicts match the recorded ones. The baseline and the oracle
+each leave one answer unjudged; every answer of the other two arms has a
+verdict.
 
 The judge itself was chosen by measurement. Two frontier models from other
 families, Claude Opus 5.5 and Gemini 4 Argon, labeled 200 answers of
@@ -1470,9 +1492,9 @@ Without passages the generator invents a plausible mechanism, a `shuffle`
 argument that the caller sets, and never mentions `is_train`; the judge
 marks the answer wrong. With the five retrieved chunks it says that
 `is_train` is passed to the `DataLoader` as `shuffle`, which is the book's
-answer. This is the system doing what it was built for, apart from the
-citations it was told to give and left out: the judge calls the answer
-correct and faithful, but not supported.
+answer, and it cites the passage it took this from. This is the system
+doing what it was built for: the judge calls the answer correct, faithful
+and supported.
 
 In the report each rate carries a 95% interval that resamples documents,
 since questions drafted from one document share its difficulty, and each
@@ -1554,7 +1576,7 @@ print('* fewer than 100 questions (documents resampled)\n+ fewer than 30 '
       'narrow')
 ```
 
-Not one of the 240 contexts changed, yet 108 of the 240 answers did: 45%.
+Not one of the 240 contexts changed, yet 95 of the 240 answers did: 40%.
 Accuracy did not move; the difference is $-0.004$, with an interval from
 $-0.03$ to +0.02. Nothing is broken. When the padding of a prompt's batch
 changes, so does the shape of every matrix product, and the GPU may add the
@@ -1570,7 +1592,7 @@ compares alike, or count re-batching as noise (:numref:`sec_lm_scoring`).
 Here re-batching moves accuracy by less than 0.03, and a change to the
 pipeline has to do better than that before we believe it. The judge's
 server batches its requests too, so the same effect reaches the verdicts:
-judged again with twice as many requests in flight, 5 of 54 answers changed
+judged again with twice as many requests in flight, 2 of 51 answers changed
 a verdict. Every arm was judged at the same concurrency, so this noise
 widens the paired intervals rather than favoring one arm.
 
@@ -1585,25 +1607,25 @@ questions correctly, and without them 0.30, a gain of about 0.6. The
 closed-book score is not zero, nor should it be: the book is public, and
 some questions ask for general knowledge. On the 145 answerable questions
 that the checker marked as specific to the book, closed-book accuracy falls
-to 0.12, against 0.90 with retrieval. That pair of numbers is the case for
+to 0.12, against 0.89 with retrieval. That pair of numbers is the case for
 retrieval. Nor do the passages merely jog the generator's memory: the
 baseline answers about nine in ten answerable questions correctly, both
 where the closed-book arm was right and where it was wrong.
 
-The answers mostly come from their passages. The judge calls 0.92 of them
-faithful and finds the cited passages sufficient for 0.82. Citation
-precision is 0.72 and recall 0.85; precision from gold spans is strict,
+The answers mostly come from their passages. The judge calls 0.90 of them
+faithful and finds the cited passages sufficient for 0.84. Citation
+precision is 0.72 and recall 0.88; precision from gold spans is strict,
 since a citation of a supporting passage that is not gold counts against
-it. The baseline abstains on 18 of the 20 unanswerable questions and on 2%
+it. The baseline abstains on 19 of the 20 unanswerable questions and on 1%
 of the answerable ones.
 
-The oracle arm answers 0.92 of all questions. Its context holds a relevant
+The oracle arm answers 0.93 of all questions. Its context holds a relevant
 chunk for every answerable question, which is why its citation precision
 is 1.00 by construction, and its Recall@5 and coverage are `n/a`: it
 bypasses the retriever. Nor are its answers more faithful: 0.89 against
-the baseline's 0.92, a difference whose interval runs from $-0.08$ to
-+0.03. On the answerable questions its gain over the baseline is +0.04,
-with an interval from $-0.01$ to +0.09, and cannot be told from zero. Why
+the baseline's 0.90, a difference whose interval runs from $-0.06$ to
++0.04. On the answerable questions its gain over the baseline is +0.04,
+with an interval from $-0.01$ to +0.10, and cannot be told from zero. Why
 so little? Call a question a *hit*
 when its context holds a relevant chunk. Let $h$ be the share of hits among
 the answerable questions, and $a_1$ and $a_0$ the accuracy on hits and on
@@ -1614,10 +1636,10 @@ $$\textrm{accuracy} = h\, a_1 + (1 - h)\, a_0.$$
 
 Accuracy is a mixture of how often retrieval succeeds and how well the
 generator does in each case. Here 213 of 220 contexts hold a relevant chunk,
-$h = 213/220$, with $a_1 = 0.91$, and $a_0 = 0.29$ on the seven misses. A
+$h = 213/220$, with $a_1 = 0.90$, and $a_0 = 0.43$ on the seven misses. A
 perfect retriever can only turn those seven misses into hits. If the
 accuracy on hits stayed at $a_1$, it would add
-$(1 - h)(a_1 - a_0) \approx 0.032 \times 0.62 \approx 0.02$: there is no
+$(1 - h)(a_1 - a_0) \approx 0.032 \times 0.47 \approx 0.02$: there is no
 room left for retrieval to show a gain, and the oracle's +0.04 lies within
 noise of that estimate. The bold step is the assumption that $a_1$ stays
 put. The oracle passes only the gold chunks, about 480 context tokens
@@ -1628,10 +1650,10 @@ questions cannot tell.
 Of everything in this section, the decomposition :eqref:`eq_lm_rag_hit` is
 the result to remember. Before a single change has been tried, it says
 which stage to improve first, and here it points at the generator: of the
-24 errors on answerable questions, 19 were made with a relevant passage in
+25 errors on answerable questions, 21 were made with a relevant passage in
 the context.
 
-The wrong answer that opened this section is one of those nineteen: its
+The wrong answer that opened this section is one of those twenty-one: its
 passage was in the context, ranked first. Which stage lost each of them,
 and would another chunking, query or context have saved some?
 :numref:`sec_lm_rag_fixes` changes one stage at a time and sorts the
@@ -1651,7 +1673,7 @@ without passages. Retrieval is nearly solved, the decomposition
 $h\,a_1 + (1-h)\,a_0$ leaves a perfect retriever almost nothing to add, and
 most wrong answers had a relevant passage in the context: the generator
 limits accuracy. Greedy decoding in bf16 also depends on the batch, which
-changed 45% of the answers and not accuracy.
+changed 40% of the answers and not accuracy.
 
 ## Exercises
 
@@ -1802,7 +1824,7 @@ question; Qwen3.5-9B answers, Qwen3.8-27B judges.
 
 - Item: question, reference, **key facts**, **gold spans** (character
   ranges), alternative spans, flags.
-- Split by **document**: 168 `train`, 32 `dev`, 32 `test`, so a system
+- Split by **document**: 166 `train`, 32 `dev`, 32 `test`, so a system
   tuned on `train` never saw the passage of a `dev` answer.
 - A chunk is relevant if it overlaps half a span, or half of itself.
 
@@ -1935,11 +1957,11 @@ Labels by models, on answers of another, smaller generator (Qwen3-4B).
 | context | answer, abridged | judge |
 |---|---|---|
 | none | "relies on the `shuffle` argument passed to the `DataLoader` constructor" | wrong |
-| five chunks, the right one first | "`is_train` ... is passed directly to the `DataLoader` constructor as the `shuffle` parameter" | correct, faithful, not supported |
+| five chunks, the right one first | "passes this `is_train` value directly to the `DataLoader` constructor as the `shuffle` parameter ... [1]" | correct, faithful, supported |
 
 ::: {.d2l-note}
-Retrieval turns a plausible invention into the book's answer. The
-citations the prompt asked for are missing.
+Retrieval turns a plausible invention into the book's answer, and the
+answer cites the passage it came from.
 :::
 :::
 
@@ -1950,11 +1972,11 @@ citations the prompt asked for are missing.
 neighbors in each batch of 8 differ.
 
 ::: {.fragment .fade-up}
-- 0 of 240 contexts differ; 108 of 240 answers differ.
+- 0 of 240 contexts differ; 95 of 240 answers differ.
 - Accuracy: $-0.004$, interval [$-0.03$, +0.02].
 - bf16: another padding changes the order of the sums; the logits move by
   a few rounding steps and flip near-ties.
-- The judge's server batches too: 5 of 54 answers changed a verdict.
+- The judge's server batches too: 2 of 51 answers changed a verdict.
 :::
 
 ::: {.d2l-note .rule}
@@ -1968,11 +1990,11 @@ kernel. Batch alike, or count re-batching as noise.
 
 | 240 `dev` questions | closed book | baseline | oracle |
 |---|---|---|---|
-| accuracy | 0.30 | 0.89 | 0.92 |
+| accuracy | 0.30 | 0.89 | 0.93 |
 | citation precision | | 0.72 | 1.00 (by construction) |
-| abstains, unanswerable | 10 of 20 | 18 of 20 | 17 of 20 |
+| abstains, unanswerable | 10 of 20 | 19 of 20 | 18 of 20 |
 
-- Baseline − closed: +0.59 [+0.53, +0.66]; book-specific: 0.12 → 0.90.
+- Baseline − closed: +0.59 [+0.53, +0.66]; book-specific: 0.12 → 0.89.
 - Oracle − baseline, all questions: +0.03 [$-0.02$, +0.08]. Retrieval
   has no room left to show a gain.
 :::
@@ -1984,14 +2006,14 @@ Accuracy on answerable questions:
 $$\textrm{accuracy} = h\, a_1 + (1 - h)\, a_0$$
 
 $h = 213/220$: share of answerable questions whose context holds a relevant
-chunk (a *hit*); accuracy $a_1 = 0.91$ on hits, $a_0 = 0.29$ on the seven
+chunk (a *hit*); accuracy $a_1 = 0.90$ on hits, $a_0 = 0.43$ on the seven
 misses.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** If $a_1$ stays put, $(1 - h)(a_1 - a_0) \approx 0.032 \times
-0.62 \approx 0.02$. The oracle measures +0.04 [$-0.01$, +0.09], within
-noise of 0.02. 19 of 24 errors had a relevant passage in the context.
+0.47 \approx 0.02$. The oracle measures +0.04 [$-0.01$, +0.10], within
+noise of 0.02. 21 of 25 errors had a relevant passage in the context.
 :::
 :::
 :::
@@ -2005,14 +2027,14 @@ noise of 0.02. 19 of 24 errors had a relevant passage in the context.
   found with them.
 - Judge vs each labeler: κ 0.71 and 0.83; the labelers vs each other:
   0.81.
-- Re-batching changed 45% of answers in bf16, not accuracy.
-- Closed 0.30, baseline 0.89, oracle 0.92: the generator limits accuracy.
+- Re-batching changed 40% of answers in bf16, not accuracy.
+- Closed 0.30, baseline 0.89, oracle 0.93: the generator limits accuracy.
 :::
 
 ::: {.slide title="Next: Which Stage Lost Each Wrong Answer?"}
 [Next]{.kicker}
 
-The baseline leaves 26 `dev` answers wrong, 19 of the 24 answerable ones
+The baseline leaves 26 `dev` answers wrong, 21 of the 25 answerable ones
 with a relevant passage in the context. The next section changes one stage
 at a time, sorts the failures by stage and tests a fix chosen in advance.
 :::

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2614adf54025b4638c7b17d2cdf618cde8fbd22ab901d034298a770febf00450",
+    "d2l_lib_fingerprint": "sha256:4d8ec5b3aaa033bed9b7a7a0c50928f67ce72467ca2cf68775da5e0496d9d73b",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -23,7 +23,7 @@
       "outputs": []
     },
     "text-embeddings-config": {
-      "code_fingerprint": "sha256:ab575b46952a6134cbc08342f0eb3e1356beb2a8307e5bfab3f5d3909afa4edf",
+      "code_fingerprint": "sha256:817bffecce60a0bda6c0c57dfef7f511e0a2a02f353148a8d771a3a887cac069",
       "kind": "text",
       "outputs": [
         {
@@ -34,32 +34,32 @@
       ]
     },
     "text-embeddings-revisions": {
-      "code_fingerprint": "sha256:1a34720364c2481892bdb1ee478906ab1ec4130ea688af4317a0fb002beb9f2d",
+      "code_fingerprint": "sha256:5a0ed9d09e19f43689311a2c22d7b1d20a0e34cc9d0a51c63fa8de23c035e4e8",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-data-hub": {
-      "code_fingerprint": "sha256:884fc85ddcee4d99d00182a37702cea3fd75523db6ad01df1db758e9e3af892c",
+      "code_fingerprint": "sha256:005ec556d30e48d5ee0129ef159e4fa7c6827a41ccde1278eb9ec4037980925a",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-pool-def": {
-      "code_fingerprint": "sha256:4fbc6bec8ada5f91a35fd7b33b1bbee70ae54a6ee28e69052c57b32f6f2dcbd0",
+      "code_fingerprint": "sha256:0682954455d3de51964926449b8259ae4881076e3fa00b3ca85f7992462fd975",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-embed-def": {
-      "code_fingerprint": "sha256:6fc6d24af1544d245a2e7887b11c0c0545ee5dcd9b04eebaaa42b9302b38c4a9",
+      "code_fingerprint": "sha256:e11f100d362ee02bf014d8a85e07f29e0d4495aa045a48a11a33bb9b84667149",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-metrics-def": {
-      "code_fingerprint": "sha256:5ab8aed6cbf5ffe2425a7849cb79cefedfbceb127f91537b36de4dc2967bf68a",
+      "code_fingerprint": "sha256:95682ca0878f5f022c623ae16672745892254120da2eeee26bfaa70b57040a0c",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-book": {
-      "code_fingerprint": "sha256:8fa14d1164a6264792c08915de81031461c63f88a0274bab836918536ad4e0d5",
+      "code_fingerprint": "sha256:420788d14b8479923c48d7ff372354e931b47f1a17f9d069733b10be41197bd4",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +70,7 @@
       ]
     },
     "text-embeddings-opening": {
-      "code_fingerprint": "sha256:9131cc2acba95161211fde73ac8c1186d6eaf1a5af93100aff94da2957518dec",
+      "code_fingerprint": "sha256:c4af9fe2800d863990b04607207833d5d39bf8bc2faabea593a940d310b9f1c4",
       "kind": "text",
       "outputs": [
         {
@@ -86,12 +86,12 @@
       ]
     },
     "text-embeddings-geometry-def": {
-      "code_fingerprint": "sha256:a78080a52fb71739496b1016613d372424b053ed2ff771468a381284e39c39d5",
+      "code_fingerprint": "sha256:9b6854d97f6787ccd054bd9b32f5bf306ebd5a114f171510b9ba0571df297579",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-anisotropy": {
-      "code_fingerprint": "sha256:cfd7d698ce10735140e706f6a002db847198a4eed0dc666327cddc412e17c7e0",
+      "code_fingerprint": "sha256:3d035e078d1d15e318307f3a34cf196c3def7909822be16abb3bad06480a5c62",
       "kind": "text",
       "outputs": [
         {
@@ -102,12 +102,12 @@
       ]
     },
     "text-embeddings-infonce-def": {
-      "code_fingerprint": "sha256:827f650cf861d29822425e4dae9651045dbf06b61388e977294a80f006d08411",
+      "code_fingerprint": "sha256:87fe08ef67011c63b2cea81d578f9eef0325e4a12bf0c33fb0ec9be546106e1c",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-infonce-grad": {
-      "code_fingerprint": "sha256:c77e719fabae6714addf106ca6b8193393b99947d40c7d9d6566d1554d2b28ca",
+      "code_fingerprint": "sha256:d10ea4dd77a65aea78aa9e6e1e40b9c8cf9a7973777d1b667ffd345d6f83a617",
       "kind": "text",
       "outputs": [
         {
@@ -118,7 +118,7 @@
       ]
     },
     "text-embeddings-uniformity": {
-      "code_fingerprint": "sha256:ea6297916c87051c7c28527c1bc79d38f51ed22fc20a505c0cdd245940009c6c",
+      "code_fingerprint": "sha256:7f938b3ad49161066696a5c57dcff92f5349900ffe3152805996494ab9b78b85",
       "kind": "text",
       "outputs": [
         {
@@ -129,12 +129,12 @@
       ]
     },
     "text-embeddings-train-def": {
-      "code_fingerprint": "sha256:15e569ad14e7d24f440b11add019f37a039c783e8cfd43c5cb6028eec1ec8a7c",
+      "code_fingerprint": "sha256:cde956c628417bd2fcde81cb7a1f892db3bf5f258efa6b4ae5048041062bc62e",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-nq": {
-      "code_fingerprint": "sha256:ee1aca497200db2d1ed5b2d754e5cc13d855af57044351ea565d7e382d9fe7bd",
+      "code_fingerprint": "sha256:0715f859d12181368faba962eab541b478268f5004ba1341432fea5a097f6b24",
       "kind": "text",
       "outputs": [
         {
@@ -145,27 +145,27 @@
       ]
     },
     "text-embeddings-run-defs": {
-      "code_fingerprint": "sha256:65d1959c3d3f0542749239f477b82af267583381d694f92785e0fb1afcff5953",
+      "code_fingerprint": "sha256:0253b8c4169733c11f501048b56736caa3720eed0904a443dd0ace0b9c06de8f",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-train": {
-      "code_fingerprint": "sha256:082405c98035f50e79ab7e60f94466446eb0bda8343454f13b847279df81a3bc",
+      "code_fingerprint": "sha256:17011e93a7ac4e07e71b9c326453ca7c9eb8cb69bbdc26a0f2424e8c7bb6cc23",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-mine": {
-      "code_fingerprint": "sha256:b2db0b9e944c2009ed210b4956e1619a6e502e75f319e9611abca2840847290c",
+      "code_fingerprint": "sha256:33dc2043a23a2b2d9eb6876dc3eac6ed1c079707eb34bf533ed06d9cdd18e82f",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-train-variants": {
-      "code_fingerprint": "sha256:4a18f90aba0113cb0fe64fe913c113f0505b840b7c0a8ba8991cbaa0d56f5b0d",
+      "code_fingerprint": "sha256:c87575855ce73d6a055a3bef7306a22ffd1a563cd9a920a0af316655d389b823",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-train-read": {
-      "code_fingerprint": "sha256:c6f88f56ae2fbc41f914b00ac31bb4bcfcc2449a7620d4333267ddd0d966c18e",
+      "code_fingerprint": "sha256:20fcd318219d7e2ec0dff402f1d5e0441d18b410f7bab7877b5ed4dbf0482c53",
       "kind": "text",
       "outputs": [
         {
@@ -181,7 +181,7 @@
       ]
     },
     "text-embeddings-ladder": {
-      "code_fingerprint": "sha256:3cd1cc29a1f60dbcc972552234d786524e79e26114abe8773b960a4859f85e89",
+      "code_fingerprint": "sha256:1b6811d5bc21868b7d59ec4cbc20bdd57094ab980ad4c95160f07ec59cc7edc7",
       "kind": "text",
       "outputs": [
         {
@@ -202,28 +202,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                              recall@1 recall@5 recall@10 mrr@10          ndcg@10 [CI] anisotropy\nBM25                             0.759    0.950     0.959  0.838  0.822 [0.777, 0.863]        n/a\nraw CLS                          0.000    0.000     0.000  0.000  0.000 [0.000, 0.000]      0.948\nraw mean                         0.036    0.055     0.064  0.043  0.040 [0.019, 0.067]      0.940\nraw centered mean                0.032    0.045     0.050  0.036  0.033 [0.012, 0.060]      0.001\ncontrastive seed 0               0.386    0.641     0.764  0.500  0.524 [0.469, 0.579]      0.522\nMatryoshka                       0.391    0.664     0.741  0.508  0.518 [0.458, 0.578]      0.566\nQwen3-Embedding                  0.700    0.927     0.995  0.798  0.805 [0.765, 0.841]      0.283\nQwen3-Embedding + instruction    0.668    0.914     0.982  0.772  0.786 [0.746, 0.823]      0.283\nQwen3-Embedding + card task      0.705    0.945     0.991  0.805  0.813 [0.774, 0.848]      0.283\ncontrastive seed 1               0.409    0.641     0.777  0.513  0.528 [0.475, 0.582]        n/a\ncontrastive seed 2               0.359    0.618     0.732  0.474  0.495 [0.434, 0.557]        n/a\ncontrastive + hard negatives     0.423    0.695     0.795  0.542  0.557 [0.497, 0.617]        n/a\ndistinct passages at rank 1: BM25 210, raw mean 73, contrastive seed 0 188, Qwen3-Embedding 208\nlive contrastive seed 0 model against its stored ranking:\n  same top 10 for 0.327 of the questions, same Recall@10 for 0.995\nlive Matryoshka model against its stored ranking:\n  same top 10 for 0.318 of the questions, same Recall@10 for 1.000\n"
+          "text": "                             recall@1 recall@5 recall@10 mrr@10          ndcg@10 [CI] anisotropy\nBM25                            0.759    0.950     0.959  0.838  0.822 [0.777, 0.863]        n/a\nraw CLS                         0.000    0.000     0.000  0.000  0.000 [0.000, 0.000]      0.948\nraw mean                        0.036    0.055     0.064  0.043  0.040 [0.019, 0.067]      0.940\nraw centered mean               0.032    0.045     0.050  0.036  0.033 [0.012, 0.060]      0.001\ncontrastive seed 0              0.386    0.641     0.764  0.500  0.524 [0.469, 0.579]      0.522\nMatryoshka                      0.391    0.664     0.741  0.508  0.518 [0.458, 0.578]      0.566\nQwen3-Embedding                 0.700    0.927     0.995  0.798  0.805 [0.765, 0.841]      0.283\nQwen3-Embedding + our task      0.668    0.914     0.982  0.772  0.786 [0.746, 0.823]      0.283\nQwen3-Embedding + card task     0.705    0.945     0.991  0.805  0.813 [0.774, 0.848]      0.283\ncontrastive seed 1              0.409    0.641     0.777  0.513  0.528 [0.475, 0.582]        n/a\ncontrastive seed 2              0.359    0.618     0.732  0.474  0.495 [0.434, 0.557]        n/a\ncontrastive + hard negatives    0.423    0.695     0.795  0.542  0.557 [0.497, 0.617]        n/a\ndistinct passages at rank 1: BM25 210, raw mean 73, contrastive seed 0 188, Qwen3-Embedding 208\nlive contrastive seed 0 model against its stored ranking:\n  same top 10 for 0.327 of the questions, same Recall@10 for 0.995\nlive Matryoshka model against its stored ranking:\n  same top 10 for 0.318 of the questions, same Recall@10 for 1.000\n"
         }
       ]
     },
     "text-embeddings-ladder-compare": {
-      "code_fingerprint": "sha256:36c79dd767394c9fd35f3a79ea855c539483ebc99543dea8041be5e9b5aef625",
+      "code_fingerprint": "sha256:b6ed032962f201436f364b9ad93a488e3eeb34971511cb2fc56a31f380f81abf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "              from                            to  delta    low  high  excl. 0  beyond seeds\n          raw mean                          BM25  0.895  0.854 0.934     True          True\n          raw mean            contrastive seed 0  0.700  0.640 0.761     True          True\n raw centered mean            contrastive seed 0  0.714  0.656 0.771     True          True\ncontrastive seed 0  contrastive + hard negatives  0.032 -0.005 0.069    False         False\ncontrastive seed 0 Qwen3-Embedding + instruction  0.218  0.161 0.276     True          True\n   Qwen3-Embedding Qwen3-Embedding + instruction -0.014 -0.028 0.000    False         False\nRecall@10 of the three seeds: [0.764 0.777 0.732], range 0.045; best raw pooling: raw mean\n\npaired differences, to - from, on three measures:\n"
+          "text": "              from                           to  delta    low  high  excl. 0  beyond seeds\n          raw mean                         BM25  0.895  0.854 0.934     True          True\n          raw mean           contrastive seed 0  0.700  0.640 0.761     True          True\n raw centered mean           contrastive seed 0  0.714  0.656 0.771     True          True\ncontrastive seed 0 contrastive + hard negatives  0.032 -0.005 0.069    False         False\ncontrastive seed 0  Qwen3-Embedding + card task  0.227  0.164 0.291     True          True\n   Qwen3-Embedding  Qwen3-Embedding + card task -0.005 -0.015 0.000    False         False\nRecall@10 of the three seeds: [0.764 0.777 0.732], range 0.045; best raw pooling: raw mean\n\npaired differences, to - from, on three measures:\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                          recall@1                   mrr@10                recall@10\nQwen3 - BM25               -0.059 [-0.132, +0.015]  -0.040 [-0.091, +0.011]  +0.036 [+0.013, +0.063]\nQwen3 + instr. - BM25      -0.091 [-0.175, -0.010]  -0.065 [-0.124, -0.010]  +0.023 [-0.004, +0.053]\nQwen3 + instr. - Qwen3     -0.032 [-0.068, +0.000]  -0.026 [-0.048, -0.004]  -0.014 [-0.028, +0.000]\nQwen3 + card task - Qwen3  +0.005 [-0.025, +0.034]  +0.007 [-0.012, +0.027]  -0.005 [-0.015, +0.000]\n"
+          "text": "                                        recall@1                   mrr@10                recall@10\nQwen3 - BM25             -0.059 [-0.132, +0.015]  -0.040 [-0.091, +0.011]  +0.036 [+0.013, +0.063]\nQwen3+card - BM25        -0.055 [-0.121, +0.013]  -0.033 [-0.081, +0.014]  +0.032 [+0.005, +0.060]\nQwen3+ours - BM25        -0.091 [-0.175, -0.010]  -0.065 [-0.124, -0.010]  +0.023 [-0.004, +0.053]\nQwen3+ours - Qwen3       -0.032 [-0.068, +0.000]  -0.026 [-0.048, -0.004]  -0.014 [-0.028, +0.000]\nQwen3+card - Qwen3       +0.005 [-0.025, +0.034]  +0.007 [-0.012, +0.027]  -0.005 [-0.015, +0.000]\nQwen3+card - Qwen3+ours  +0.036 [+0.000, +0.072]  +0.033 [+0.012, +0.053]  +0.009 [-0.009, +0.026]\n"
         }
       ]
     },
     "text-embeddings-alignment": {
-      "code_fingerprint": "sha256:a7851f4cf7a27a397438357e972b4a05dc73c6949253d0657615a7cd227557ca",
+      "code_fingerprint": "sha256:7299bdf3ff5638c1749595cbe83e82d801c9a8543497644694f517bfb75b353c",
       "kind": "mixed",
       "outputs": [
         {
@@ -234,53 +234,53 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                               alignment  uniformity\nraw mean                           0.191      -0.234\ncontrastive seed 0                 0.596      -1.815\nQwen3-Embedding + instruction      0.606      -2.779\n"
+          "text": "                             alignment  uniformity\nraw mean                         0.191      -0.234\ncontrastive seed 0               0.596      -1.815\nQwen3-Embedding + card task      0.610      -2.779\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-alignment-1.svg",
           "bytes": 464013,
-          "sha256": "sha256:447b821be3da79bc570150afecab6e2c3513d6d1e854ac6acf73a9cb0ef67057"
+          "sha256": "sha256:d056704ab329070027b41b8d833378c3021760ea489e79b77a524944bfd082fe"
         }
       ]
     },
     "text-embeddings-compress-def": {
-      "code_fingerprint": "sha256:5ec9a81ac044de4a6e916f17579bc2ff1fe49fb2cfa72dd61d5ed972f3ed0156",
+      "code_fingerprint": "sha256:bb49bb97f9aeb5a901955a6186d8e5cb851cc1af1ad5007844179de21571e194",
       "kind": "text",
       "outputs": []
     },
     "text-embeddings-compress": {
-      "code_fingerprint": "sha256:d4c035124da2d3ea953ca45be71f5f2784178fdb39d35c60fb18ad260788e314",
+      "code_fingerprint": "sha256:d15b498468dc29e115b4dcfa11d6eb37f03fcfeaa411bee928eac15f6d91547e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          model                   format  bytes  recall@10  GB per 10^8 vectors\n    contrastive             float32, 768   3072      0.764                307.2\n    contrastive             float32, 512   2048      0.768                204.8\n    contrastive             float32, 256   1024      0.718                102.4\n    contrastive             float32, 128    512      0.686                 51.2\n    contrastive              float32, 64    256      0.595                 25.6\n    contrastive              float32, 32    128      0.414                 12.8\n    contrastive              float32, 16     64      0.141                  6.4\n    contrastive                int8, 768    768      0.759                 76.8\n    contrastive              binary, 768     96      0.668                  9.6\n    contrastive  binary + rescoring, 768     96      0.718                  9.6\n     Matryoshka             float32, 768   3072      0.741                307.2\n     Matryoshka             float32, 512   2048      0.759                204.8\n     Matryoshka             float32, 256   1024      0.736                102.4\n     Matryoshka             float32, 128    512      0.659                 51.2\n     Matryoshka              float32, 64    256      0.582                 25.6\n     Matryoshka              float32, 32    128      0.400                 12.8\n     Matryoshka              float32, 16     64      0.159                  6.4\n     Matryoshka                int8, 768    768      0.741                 76.8\n     Matryoshka              binary, 768     96      0.695                  9.6\n     Matryoshka  binary + rescoring, 768     96      0.723                  9.6\nQwen3-Embedding            float32, 1024   4096      0.982                409.6\nQwen3-Embedding             float32, 512   2048      0.968                204.8\nQwen3-Embedding             float32, 256   1024      0.927                102.4\nQwen3-Embedding             float32, 128    512      0.900                 51.2\nQwen3-Embedding              float32, 64    256      0.841                 25.6\nQwen3-Embedding              float32, 32    128      0.623                 12.8\nQwen3-Embedding              float32, 16     64      0.241                  6.4\nQwen3-Embedding               int8, 1024   1024      0.982                102.4\nQwen3-Embedding             binary, 1024    128      0.955                 12.8\nQwen3-Embedding binary + rescoring, 1024    128      0.964                 12.8\n"
+          "text": "          model                   format  bytes  recall@10  GB per 10^8 vectors\n    contrastive             float32, 768   3072      0.764                307.2\n    contrastive             float32, 512   2048      0.768                204.8\n    contrastive             float32, 256   1024      0.718                102.4\n    contrastive             float32, 128    512      0.686                 51.2\n    contrastive              float32, 64    256      0.595                 25.6\n    contrastive              float32, 32    128      0.414                 12.8\n    contrastive              float32, 16     64      0.141                  6.4\n    contrastive                int8, 768    768      0.759                 76.8\n    contrastive              binary, 768     96      0.668                  9.6\n    contrastive  binary + rescoring, 768     96      0.718                  9.6\n     Matryoshka             float32, 768   3072      0.741                307.2\n     Matryoshka             float32, 512   2048      0.759                204.8\n     Matryoshka             float32, 256   1024      0.736                102.4\n     Matryoshka             float32, 128    512      0.659                 51.2\n     Matryoshka              float32, 64    256      0.582                 25.6\n     Matryoshka              float32, 32    128      0.400                 12.8\n     Matryoshka              float32, 16     64      0.159                  6.4\n     Matryoshka                int8, 768    768      0.741                 76.8\n     Matryoshka              binary, 768     96      0.695                  9.6\n     Matryoshka  binary + rescoring, 768     96      0.723                  9.6\nQwen3-Embedding            float32, 1024   4096      0.991                409.6\nQwen3-Embedding             float32, 512   2048      0.982                204.8\nQwen3-Embedding             float32, 256   1024      0.950                102.4\nQwen3-Embedding             float32, 128    512      0.923                 51.2\nQwen3-Embedding              float32, 64    256      0.877                 25.6\nQwen3-Embedding              float32, 32    128      0.682                 12.8\nQwen3-Embedding              float32, 16     64      0.364                  6.4\nQwen3-Embedding               int8, 1024   1024      0.991                102.4\nQwen3-Embedding             binary, 1024    128      0.964                 12.8\nQwen3-Embedding binary + rescoring, 1024    128      0.977                 12.8\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "text-embeddings/text-embeddings-compress-1.svg",
           "bytes": 48985,
-          "sha256": "sha256:cacc5d668d6f81776a8e918a3170a9ef62050be98646981f50b43ffb40e553b3"
+          "sha256": "sha256:7a4d69893defb626a7be5b349ac54bf223b97b56e8d4df1c72bb0efe1081076b"
         }
       ]
     },
     "text-embeddings-compress-compare": {
-      "code_fingerprint": "sha256:83ae8628b6e32a676804776d4e896cb71c9c1032590e3b5311cfc306b658c1f3",
+      "code_fingerprint": "sha256:8ce5eef13c1d6f9764f6872813381e1e4284104f8756bed3f281d5a465198261",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                 comparison  delta    low   high  CI excludes 0 beyond seed range\n              Matryoshka - contrastive, 128 -0.027 -0.075  0.017          False             False\n               Matryoshka - contrastive, 64 -0.014 -0.048  0.022          False             False\n               Matryoshka - contrastive, 32 -0.014 -0.072  0.041          False             False\n               Matryoshka - contrastive, 16  0.018 -0.023  0.064          False             False\n    contrastive: binary + rescoring - float -0.045 -0.085 -0.009           True                  \n     Matryoshka: binary + rescoring - float -0.018 -0.055  0.017          False                  \nQwen3-Embedding: binary + rescoring - float -0.018 -0.037  0.000          False                  \nseed range of Recall@10 at full width (a proxy for the training noise\n  at smaller widths): 0.045\n"
+          "text": "                                 comparison  delta    low   high  CI excludes 0 beyond seed range\n              Matryoshka - contrastive, 128 -0.027 -0.075  0.017          False             False\n               Matryoshka - contrastive, 64 -0.014 -0.048  0.022          False             False\n               Matryoshka - contrastive, 32 -0.014 -0.072  0.041          False             False\n               Matryoshka - contrastive, 16  0.018 -0.023  0.064          False             False\n    contrastive: binary + rescoring - float -0.045 -0.085 -0.009           True                  \n     Matryoshka: binary + rescoring - float -0.018 -0.055  0.017          False                  \nQwen3-Embedding: binary + rescoring - float -0.014 -0.033  0.005          False                  \nseed range of Recall@10 at full width (a proxy for the training noise\n  at smaller widths): 0.045\n"
         }
       ]
     },
     "text-embeddings-compress-nq": {
-      "code_fingerprint": "sha256:2bd607645f78b7d27b08849cb3a5220913d2d75eaf977d713a8e5213d87b79ce",
+      "code_fingerprint": "sha256:9463c8f4cf992577f5b4efede5b241c92d2bdfb8024c2d77d86632c306fd2584",
       "kind": "text",
       "outputs": [
         {
@@ -311,7 +311,7 @@
       ]
     },
     "text-embeddings-compress-160": {
-      "code_fingerprint": "sha256:ec4e2b5873963a1aaccafaf4d4701107e37c4a3caf30af015c55f3da42124d70",
+      "code_fingerprint": "sha256:c24804a52c35fda438df84c16da6649fce32b0244f192c36425a079018708f00",
       "kind": "text",
       "outputs": [
         {
@@ -342,13 +342,13 @@
       ]
     },
     "text-embeddings-production": {
-      "code_fingerprint": "sha256:dae9c9a8ab5cfa081ef012253941db9655aa4594a784e7f7137037cae2f960c6",
+      "code_fingerprint": "sha256:a57f34d0da6d2ad5c4c5e0c9ac516546a8b166c978e970fbef8a240793db9929",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "smallest cosine, sentence-transformers against embed_texts: 0.9983; |MNRL - InfoNCE| = 3.7e-06\n"
+          "text": "smallest cosine, sentence-transformers against embed_texts: 0.9986; |MNRL - InfoNCE| = 6.7e-06\n"
         }
       ]
     }

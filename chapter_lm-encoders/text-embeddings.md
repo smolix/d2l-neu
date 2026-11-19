@@ -92,6 +92,8 @@ QWEN = d2l._EMBEDDERS[EMB_QWEN]  # pooling, padding side, query format
 INSTRUCT = QWEN['query_format']  # from the model card
 CARD_TASK = ('Given a web search query, retrieve relevant passages that '
              'answer the query')  # the model card's default task
+OUR_TASK = 'Given a question about the book, retrieve passages that answer it'
+assert d2l.BOOK_TASK == CARD_TASK  # the task the chapter's retriever uses
 CONFIG = dict(  # what the results are made with; reading them checks it
     model=ENC, revision=d2l.HF_ENCODER_REVISIONS[ENC], corpus=d2l.R3_VERSION,
     pairs=N_PAIRS, held=N_HELD, cands=N_CAND, batch=B, tau=TAU, lrs=LRS,
@@ -1130,8 +1132,9 @@ negatives, so that false negatives are dropped rather than pushed away.
 Qwen3-Embedding-0.6B starts from a pretrained decoder of the Qwen3 family
 and keeps its causal attention. Three conventions follow, and a model used
 against any of them loads and runs without complaint. The wrong pooling or
-padding reads the state of the wrong token. A missing instruction changes
-what the query vector encodes, in a direction that has to be measured.
+padding reads the state of the wrong token. The wording of the instruction
+changes what the query vector encodes, in a direction that has to be
+measured.
 
 - **Last-token pooling.** Under causal attention only the last position has
   seen the whole text.
@@ -1140,8 +1143,10 @@ what the query vector encodes, in a direction that has to be measured.
 - **An instruction on the query side.** A question enters as
   `Instruct: {task}\nQuery:{query}`. Passages are encoded without it, so one
   passage index serves many tasks. The task is free text. The model card's
-  default is a task about web search queries; for the book we wrote
-  `Given a question about the book, retrieve passages that answer it`.
+  default, `Given a web search query, retrieve relevant passages that
+  answer the query`, is the one this chapter uses. The wording we first
+  wrote for the book, `Given a question about the book, retrieve passages
+  that answer it`, is measured against it below.
 
 Last-token pooling is not the only way out of causal attention. Some
 recipes remove the causal mask instead and fine-tune the decoder with
@@ -1171,7 +1176,7 @@ X5 = d2l.BookRetriever(FULL, dense=EMB_QWEN).chunk_vectors().float().cpu()[
     [FULL_INDEX[c] for c in CORPUS.ids]]
 for name, fmt, task in (
         ('Qwen3-Embedding', '{query}', None),
-        ('Qwen3-Embedding + instruction', INSTRUCT, d2l.BOOK_TASK),
+        ('Qwen3-Embedding + our task', INSTRUCT, OUR_TASK),
         ('Qwen3-Embedding + card task', INSTRUCT, CARD_TASK)):
     ROWS[name] = (d2l.embed_texts(emb, emb_tok, [fmt.format(
         task=task, query=q) for q in QUESTIONS], QWEN['pooling'],
@@ -1241,8 +1246,8 @@ D = pd.DataFrame([delta(a, b) for a, b in dict.fromkeys((  # no repeats
     ('raw centered mean', 'contrastive seed 0'),
     (best_raw, 'contrastive seed 0'),
     ('contrastive seed 0', 'contrastive + hard negatives'),
-    ('contrastive seed 0', 'Qwen3-Embedding + instruction'),
-    ('Qwen3-Embedding', 'Qwen3-Embedding + instruction')))])
+    ('contrastive seed 0', 'Qwen3-Embedding + card task'),
+    ('Qwen3-Embedding', 'Qwen3-Embedding + card task')))])
 D['CI excludes 0'] = (D.low > 0) | (D.high < 0)
 D['beyond seed range'] = D.delta.abs() > seed_range
 print(D.round(3).rename(columns={'CI excludes 0': 'excl. 0',
@@ -1252,13 +1257,18 @@ print(f'Recall@10 of the three seeds: {np.round(seed_r10, 3)}, range '
       f'{seed_range:.3f}; best raw pooling: {best_raw}')
 fmt = lambda d: f'{d["delta"]:+.3f} [{d["low"]:+.3f}, {d["high"]:+.3f}]'
 print('\npaired differences, to - from, on three measures:')
-print(pd.DataFrame({f'{t} - {f}'.replace('Qwen3-Embedding', 'Qwen3')
-                    .replace('instruction', 'instr.'): {
+short = lambda n: (n.replace('Qwen3-Embedding', 'Qwen3')  # the page's width
+                   .replace(' + card task', '+card').replace(' + our task',
+                                                             '+ours'))
+print(pd.DataFrame({f'{short(t)} - {short(f)}': {
     m: fmt(delta(f, t, m)) for m in ('recall@1', 'mrr@10', 'recall@10')}
     for f, t in (('BM25', 'Qwen3-Embedding'),
-                 ('BM25', 'Qwen3-Embedding + instruction'),
-                 ('Qwen3-Embedding', 'Qwen3-Embedding + instruction'),
-                 ('Qwen3-Embedding', 'Qwen3-Embedding + card task'))}).T
+                 ('BM25', 'Qwen3-Embedding + card task'),
+                 ('BM25', 'Qwen3-Embedding + our task'),
+                 ('Qwen3-Embedding', 'Qwen3-Embedding + our task'),
+                 ('Qwen3-Embedding', 'Qwen3-Embedding + card task'),
+                 ('Qwen3-Embedding + our task',
+                  'Qwen3-Embedding + card task'))}).T
       .to_string())
 gain = D[(D['from'] == best_raw) & (D['to'] == 'contrastive seed 0')].iloc[0]
 assert SMALL or gain.low > 0, 'no gain from contrastive training: a bug'
@@ -1275,7 +1285,7 @@ several causes. Qwen3-Embedding has a larger backbone, pretrained on far
 more text. It saw far more training pairs, many of them written by a
 language model. And it may have read this book, which has been on the web
 for years. The run cannot separate these causes, and the last one makes the
-0.98 optimistic by an amount we cannot measure. ModernBERT's pretraining
+0.99 optimistic by an amount we cannot measure. ModernBERT's pretraining
 text :cite:`Warner.Chaffin.Clavie.ea.2024` may have included the book too,
 but the raw encoder's 0.06 shows that such exposure alone retrieves
 nothing; the 0.76 measures what generic pairs transfer.
@@ -1290,34 +1300,46 @@ than harder ones. Settling the question takes several seeds of the variant
 and a control with one random extra negative per question; we have not run
 them.
 
-Finally, the instruction we wrote for the book made Qwen3-Embedding worse.
-Every measure of order came out lower with it: MRR@10 by about 0.03, with an
-interval that excludes zero, Recall@1 by 3 points and nDCG@10 by 2.
+Finally, the instruction we first wrote for the book made Qwen3-Embedding
+worse. Every measure of order came out lower with it: MRR@10 by about 0.03,
+with an interval that excludes zero, Recall@1 by 3 points and nDCG@10 by 2.
 Recall@10 moved by $-0.014$, an interval that reaches zero. This runs
 against the model card, which reports gains of 1% to 5% from instructions
-and recommends writing one for the task at hand.
+and recommends writing one for the task at hand. When a measurement
+contradicts a technique this well established, the first suspect is our
+own setup.
 
-Is the fault in instructions as such, or in ours? The format is the card's, as the library
-check below confirms, and the last row of the second table answers the
-question. The card's own task, a sentence about web search queries in the
-same format, is level with no instruction on all three measures, every
-interval containing zero. So the damage comes from our wording, not from
-the instruction format. The card's task brings no gain here either; on
-questions that copy their passages' rare words there may be little left for
-an instruction to add. The wording of an instruction is a parameter like
-any other, and it has to be chosen on questions other than those it is
-evaluated on; Exercise :exref:`ex_lm_emb-instruction` does this with the
-training questions. The rest of the chapter keeps our wording, at the cost
-just measured.
+Is the fault in instructions as such, or in ours? The format is the card's,
+as the library check below confirms, and the last two rows of the second
+table answer the question. The card's own task, a sentence about web search
+queries in the same format, is level with no instruction on all three
+measures, every interval containing zero, and ahead of our wording by 0.033
+in MRR@10, an interval from 0.012 to 0.053. The fault lies in our wording.
+A sentence that describes the task well to a human reader pushed relevant
+passages down the model's ranking, and only a measurement against no
+instruction showed it. The card's task brings no
+gain here either; on questions that copy their passages' rare words there
+may be little left for an instruction to add.
+
+The rest of the chapter therefore uses the card's task, which the library
+stores as `d2l.BOOK_TASK`. We take it because it is the card's default, not
+because it came out ahead here: a wording picked on these questions would
+carry their noise into every later measurement on them. A wording of one's
+own is a parameter like any other, and it has to be chosen on questions
+other than those it is evaluated on; Exercise :exref:`ex_lm_emb-instruction`
+does this with the training questions.
 
 The second table also settles the comparison with BM25. Without an
 instruction, Qwen3-Embedding finds a relevant passage within ten for about
 4 points more of the questions than BM25, an interval from 1 to 6 points,
-and the two cannot be told apart at the first rank or by MRR@10. With our
-instruction, BM25 puts a relevant passage first more often: by 9 points of
-Recall@1 and by 0.065 in MRR@10, both intervals excluding zero. On questions
-that repeat the rare words of their passages, counting those words remains
-a strong way to pick the top passage.
+and the two cannot be told apart at the first rank or by MRR@10. With the
+card's task the picture is the same: about 3 points more within ten, an
+interval from 0.5 to 6 points, and no difference at the first rank that the
+intervals resolve. With our first wording, BM25 put a relevant passage
+first more often: by 9 points of Recall@1 and by 0.065 in MRR@10, both
+intervals excluding zero. On questions that repeat the rare words of their
+passages, counting those words remains a strong way to pick the top
+passage.
 
 ### Geometry after Training
 
@@ -1338,7 +1360,7 @@ print(f'alignment over {len(qi)} (question, relevant chunk) pairs, '
 print(pd.DataFrame({name: dict(zip(('alignment', 'uniformity'), (
     d2l.align_uniform(Q[qi], X[cj], Zu=X[SAMPLE])))) for name, (Q, X) in (
         (n, ROWS[n]) for n in ('raw mean', 'contrastive seed 0',
-                               'Qwen3-Embedding + instruction'))}).T.round(3))
+                               'Qwen3-Embedding + card task'))}).T.round(3))
 _, axes = d2l.plt.subplots(1, 2, figsize=(7, 3.6))
 circle = np.linspace(0, 2 * np.pi, 200)
 for ax, name in zip(axes, ('raw mean', 'contrastive seed 0')):
@@ -1370,7 +1392,7 @@ anisotropy. The table sets the two distances side by side
 |---|---|---|---|
 | raw mean pooling | 0.19 | $2 - 2 \times 0.940 = 0.12$ | 0.6 |
 | contrastive, seed 0 | 0.60 | $2 - 2 \times 0.522 \approx 0.96$ | 1.6 |
-| Qwen3-Embedding + instruction | 0.61 | $2 - 2 \times 0.283 \approx 1.43$ | 2.4 |
+| Qwen3-Embedding, card's task | 0.61 | $2 - 2 \times 0.283 \approx 1.43$ | 2.4 |
 
 Before training, a question lies farther from its own passage than two
 random passages lie from each other. Training moved everything apart, and
@@ -1391,7 +1413,7 @@ So far each passage vector of Qwen3-Embedding has been 1,024 numbers. In
 float32 that is 4 KB per passage (our stored copy uses float16, half that),
 and for the book about 22 MB, which no machine notices. An index of $10^8$ web passages would need about 400 GB,
 and an exact search reads all of it for every question. How much of the
-0.98 survives with fewer bytes? We can keep fewer coordinates, or fewer
+0.99 survives with fewer bytes? We can keep fewer coordinates, or fewer
 bits per coordinate.
 
 ### Truncation and Quantization
@@ -1468,7 +1490,7 @@ def recall10(S):
     return d2l.retrieval_metrics(top10(S), GOLD, ks=(10,))['recall@10']
 
 MODELS = {'contrastive': 'contrastive seed 0', 'Matryoshka': 'Matryoshka',
-          'Qwen3-Embedding': 'Qwen3-Embedding + instruction'}
+          'Qwen3-Embedding': 'Qwen3-Embedding + card task'}
 R10, rows = {}, []
 gen = torch.Generator().manual_seed(0)  # breaks ties of equal bit counts
 for label, name in MODELS.items():
@@ -1508,14 +1530,14 @@ d2l.plot([t.bytes.tolist() for t in lines + points],
 d2l.plt.gca().legend(labels, loc='upper left', bbox_to_anchor=(1, 1));
 ```
 
-For Qwen3-Embedding, int8 costs nothing we can see: Recall@10 stays at 0.98
-at a quarter of the bytes. Binary vectors keep about 0.96, with or without
-rescoring, at 1/32 of the bytes. Truncation costs more: 0.90 at 128 of
-1,024 coordinates, 0.84 at 64, and below that recall collapses, to 0.62 at
-32 coordinates, the smallest width the model card allows, and 0.24 at 16,
+For Qwen3-Embedding, int8 costs nothing we can see: Recall@10 stays at 0.99
+at a quarter of the bytes. Binary vectors keep 0.96, and 0.98 with
+rescoring, at 1/32 of the bytes. Truncation costs more: 0.92 at 128 of
+1,024 coordinates, 0.88 at 64, and below that recall collapses, to 0.68 at
+32 coordinates, the smallest width the model card allows, and 0.36 at 16,
 below it. Compare two formats of
 the same size. The signs of all 1,024 coordinates fill 128 bytes, and so do
-32 coordinates in float32; the first keeps 0.96, the second 0.62. At equal
+32 coordinates in float32; the first keeps 0.96, the second 0.68. At equal
 bytes, many coarse coordinates rank far better than a few precise ones.
 That is the fact to remember from this subsection; the formats themselves
 are details to look up when needed.
@@ -1546,7 +1568,7 @@ print(f'seed range of Recall@10 at full width (a proxy for the training '
 ```
 
 Binary vectors with rescoring cost Qwen3-Embedding and the Matryoshka model
-about 2 points, with intervals that reach zero, and the plain model about 4
+1 to 2 points, with intervals that reach zero, and the plain model about 4
 points, an interval that excludes zero. These are two formats of one set of
 trained weights on the same questions, so training noise plays no part, and
 the paired interval alone decides. The seed range matters only when two
@@ -1684,7 +1706,7 @@ theirs = torch.cat([st.encode(texts, prompt=p, normalize_embeddings=True,
                     for texts, p in ((CHUNKS[:16], ''),
                                      (QUESTIONS[:4], prompt))])
 cos = (ours * theirs).sum(-1).min().item()
-q16, d16 = ROWS['Qwen3-Embedding + instruction'][0][:16], X5[[
+q16, d16 = ROWS['Qwen3-Embedding + card task'][0][:16], X5[[
     CIDX[min(g)] for g in GOLD[:16]]]
 gap = abs(MultipleNegativesRankingLoss(st, scale=1 / TAU)
           .compute_loss_from_embeddings([q16, d16], None).item()
@@ -1698,9 +1720,9 @@ d2l.lm_free()
 
 The two encodings agree to a cosine of at least 0.998, the difference bf16
 arithmetic leaves, and the library's loss equals :eqref:`eq_lm_infonce` to
-$4 \times 10^{-6}$. The library reads the conventions from the repository,
+$7 \times 10^{-6}$. The library reads the conventions from the repository,
 and the method underneath is the one derived above. What the library cannot
-check is whether the task we wrote into the instruction suits the model;
+check is whether the task written into the instruction suits the model;
 that, as we saw, has to be measured.
 
 ### Choosing an Embedder
@@ -1745,9 +1767,9 @@ and kept nearly all of its recall at one bit per coordinate. Mined
 negatives must come from below the top ranks, where a reranker judged
 nearly a third of them to be answers. Every other choice, from the wording
 of an instruction to the width of a vector, had to be measured on our own
-questions: the instruction we wrote lowered the first ranks, while the
-model card's own wording cost nothing, and Matryoshka training kept its
-advantage on its own data but not on the book.
+questions. The instruction we first wrote lowered the first ranks, while the
+model card's own wording cost nothing and is the one the chapter uses.
+Matryoshka training kept its advantage on its own data but not on the book.
 
 ## Exercises
 
@@ -1809,13 +1831,14 @@ advantage on its own data but not on the book.
        damage be smaller than you expected?
    :exlabel:`ex_lm_emb-padding`
 
-1. [code] **Choosing an instruction.** ● The instruction we wrote lowered
-   Qwen3-Embedding's order measures on the dev questions, and the model
-   card's default task left them level with no instruction.
+1. [code] **Choosing an instruction.** ● The instruction we first wrote
+   lowered Qwen3-Embedding's order measures on the dev questions, and the
+   model card's default task left them level with no instruction.
     1. Take 200 answerable questions from `d2l.book_qa('train')` and search
        the whole book for each. Compare MRR@10 without an instruction, with
-       our task, with the model card's default task (the string
-       `CARD_TASK` of the setup cell) and with two wordings of your own,
+       our first task (`OUR_TASK` of the setup cell), with the model
+       card's default task (`CARD_TASK`, the chapter's `d2l.BOOK_TASK`)
+       and with two wordings of your own,
        using paired, document-clustered intervals.
     1. Choose the best wording on these training questions alone, then
        evaluate it once on the dev questions. Does its advantage survive?
@@ -2191,10 +2214,10 @@ pad on the left.
 | raw mean pooling | 0.04 | 0.06 | 0.04 | 0.94 |
 | contrastive, 3 seeds | 0.36 to 0.41 | 0.73 to 0.78 | 0.50 to 0.53 | 0.52 (seed 0) |
 | contrastive + 1 hard negative | 0.42 | 0.80 | 0.56 | |
-| Qwen3-Embedding + instruction | 0.67 | 0.98 | 0.79 | 0.28 |
+| Qwen3-Embedding, card's task | 0.70 | 0.99 | 0.81 | 0.28 |
 
 Paired: raw $\to$ contrastive +0.70 Recall@10, 15 times the seed spread;
-contrastive $\to$ Qwen3-Embedding +0.22.
+contrastive $\to$ Qwen3-Embedding +0.23.
 
 ::: {.d2l-note .warn}
 The questions borrow their passages' rare words: no embedder here beats
@@ -2214,11 +2237,15 @@ web search queries.
 | our task | $-0.032$ [$-0.068$, 0.000] | $-0.026$ [$-0.048$, $-0.004$] | $-0.014$ [$-0.028$, 0.000] |
 | the card's task | +0.005 [$-0.025$, +0.034] | +0.007 [$-0.012$, +0.027] | $-0.005$ [$-0.015$, 0.000] |
 
-The card reports +1 to 5% from instructions. Here neither wording gains.
+The card reports +1 to 5% from instructions. Here neither wording gains:
+ours lowers the first ranks, and the card's task leads it by 0.033 MRR@10
+[0.012, 0.053]. The chapter uses the card's task from here on
+(`d2l.BOOK_TASK`).
 
 ::: {.d2l-note .rule}
-An instruction's wording is a parameter: choose it on training questions,
-never on the questions you report.
+Start from the card's wording and test any other against no instruction.
+A wording is a parameter: choose it on training questions, never on the
+questions you report.
 :::
 :::
 
@@ -2246,11 +2273,11 @@ Retrieval depends on the ratio.
 
 | Qwen3-Embedding stored as | bytes | Recall@10 | GB per $10^8$ |
 |---|---|---|---|
-| float32, 1,024 coordinates | 4,096 | 0.98 | 410 |
-| int8, 1,024 | 1,024 | 0.98 | 102 |
-| float32, first 128 | 512 | 0.90 | 51 |
-| float32, first 32 | 128 | 0.62 | 12.8 |
-| binary + rescoring, 1,024 | 128 | 0.96 | 12.8 |
+| float32, 1,024 coordinates | 4,096 | 0.99 | 410 |
+| int8, 1,024 | 1,024 | 0.99 | 102 |
+| float32, first 128 | 512 | 0.92 | 51 |
+| float32, first 32 | 128 | 0.68 | 12.8 |
+| binary + rescoring, 1,024 | 128 | 0.98 | 12.8 |
 
 ::: {.d2l-note}
 At equal bytes, many coarse coordinates rank far better than a few precise
@@ -2270,10 +2297,10 @@ ones.
 |---|---|---|
 | contrastive, plain | 0.76 | 0.72 |
 | contrastive, Matryoshka | 0.74 | 0.72 |
-| Qwen3-Embedding | 0.98 | 0.96 |
+| Qwen3-Embedding | 0.99 | 0.98 |
 
 ::: {.d2l-note}
-A loss of about 2 to 4 points at 1/32 of the bytes.
+A loss of about 1 to 4 points at 1/32 of the bytes.
 :::
 :::
 
@@ -2305,9 +2332,9 @@ excluding 0. On the book: within noise, even with its passages cut to the
 - Compare with paired differences, intervals over documents, and the seed
   range.
 - On the book the embedder finds more within ten (+0.04 Recall@10 without
-  an instruction, interval excludes 0). At rank 1 the two are level, and
-  BM25 leads once our instruction is added. Keep both, the embedder in int8
-  or binary + rescoring.
+  an instruction, +0.03 with the card's task; intervals exclude 0). At rank
+  1 the two are level, and BM25 leads once our first wording is added. Keep
+  both, the embedder in int8 or binary + rescoring.
 
 ::: {.d2l-note .rule}
 A library loads a model's pooling and prompts. Check them against the card.
@@ -2323,7 +2350,7 @@ Qwen3-Embedding, binary: one bit per coordinate, $10^8$ passages.
 ::: {.d2l-note}
 **Answer.** 1,024 bits are 128 bytes, and $128 \times 10^8$ bytes are
 12.8 GB, against 410 GB in float32. With rescoring, Recall@10 stays at
-0.96 of 0.98.
+0.98 of 0.99.
 :::
 :::
 :::
@@ -2337,8 +2364,9 @@ Qwen3-Embedding, binary: one bit per coordinate, $10^8$ passages.
   $e^{\Delta/\tau}$; large-batch limit = alignment + uniformity.
 - 20,000 pairs, one minute: +0.70 Recall@10. A reranker calls 30% of the
   top-5 mined passages answers: mine below them.
-- Qwen3-Embedding: 0.98, possibly having read the book; 0.96 at 128 bytes.
-  Our instruction wording cost MRR@10 0.03; the card's cost nothing.
+- Qwen3-Embedding: 0.99, possibly having read the book; 0.98 at 128 bytes.
+  Our first instruction wording cost MRR@10 0.03; the card's cost nothing,
+  and the chapter uses it.
 
 **Next:** a flat scan is one matrix product for 5,324 passages. Millions of
 passages, and questions about exact identifiers, need an index and a word

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b7afc11e33ce66b8eb386f1448b7344ba4bd06f92d15ec542661ba84dd9d2de9",
+    "d2l_lib_fingerprint": "sha256:3649d61136f7bb71f8be1c727f63c0e3bb6c3451e008ef67e60ac996cdd4204d",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -39,17 +39,17 @@
       ]
     },
     "rag-data-hub": {
-      "code_fingerprint": "sha256:74e48279ac8d7f92e173f1001fa4273809c8963369407c388bb0c7ef7f1cccba",
+      "code_fingerprint": "sha256:e1cabf37fb230f28a3ae745719c58dc4849d28febffe4e4ecdb8ceaa29ae8906",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-def": {
-      "code_fingerprint": "sha256:901e4d8910c2fefb109e4457bca6a1113f853a1dbd7ec8cc2aaa1e983f56434b",
+      "code_fingerprint": "sha256:7f98a404147346530fbef5051a1276bbb83d7a6e5b44782490218f8982c2a05a",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-stats": {
-      "code_fingerprint": "sha256:3e94d317f5f8a89d417aa4cf679b48cee5e734028138413ce1bbe02f1f611970",
+      "code_fingerprint": "sha256:21428299c2677dde1cfa7beb97296bb6325a326aa13bcfe91ae6805b8b9f1343",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +60,7 @@
       ]
     },
     "rag-qa-examples": {
-      "code_fingerprint": "sha256:095a0f369ec2100f90eeb72f86319ebce2030269cca1f588200031a814f5f4ab",
+      "code_fingerprint": "sha256:5a60ca2ed94addceb8be13fcd326da2b164b31f79032a1638431eb2b8f1ddfca",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +71,7 @@
       ]
     },
     "rag-qa-leakage": {
-      "code_fingerprint": "sha256:0cf4eeb88530ec31a57128e928f6b118234d6de78dbef41096a857b517e1f912",
+      "code_fingerprint": "sha256:c308399e05a1ddd64861cd9e92d739e74c974c7c04dcf2dc2b4ce765d7240b1c",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "rag-qa-gold": {
-      "code_fingerprint": "sha256:e86549022a3b29b7689e181eb8c343d36018c8c83f144e0dfca830fd47fb4b40",
+      "code_fingerprint": "sha256:624b3999da73622c58e261621b75f75eeb635d5162f0a9b1bb37e57b25199bd3",
       "kind": "text",
       "outputs": [
         {
@@ -93,27 +93,27 @@
       ]
     },
     "rag-stage-defs": {
-      "code_fingerprint": "sha256:5ccfbde0ab5d94910338f7c0c9669bdcfb55aaad70b6f594493421e9d174325e",
+      "code_fingerprint": "sha256:145c547c4200e1527910a74ad138b9c6d32a8e56638bf0f537246c04d962732d",
       "kind": "text",
       "outputs": []
     },
     "rag-prompt-defs": {
-      "code_fingerprint": "sha256:e3d25eb557908214a46f64cc347607fbc26eb19a65b8d5f6ef3371fde3e4f5bb",
+      "code_fingerprint": "sha256:e690d315785467f5b4eee0394b79c296b05fa3049d23f3612e91112dad53bd90",
       "kind": "text",
       "outputs": []
     },
     "rag-pipeline-def": {
-      "code_fingerprint": "sha256:59ce754e0987e7e957e93a739cb43407497806ee274abcba091b92454456b92b",
+      "code_fingerprint": "sha256:af1e487f1e5c862d083659a171059028b7d24b32bb38d647b515dc260eef1347",
       "kind": "text",
       "outputs": []
     },
     "rag-judge-defs": {
-      "code_fingerprint": "sha256:7ac523e3a944f82b5fe97e5b7f82a442ccd3462ba418d45774bc220fc0f2912e",
+      "code_fingerprint": "sha256:b30146aa69cf01b8a27c67b1f3d82f42f20c1c344a63c7fc88691af5ba24a2fb",
       "kind": "text",
       "outputs": []
     },
     "rag-memory": {
-      "code_fingerprint": "sha256:ae45ad0ebd2386e91adcc8b52859339c6edf2f9186ca81d6fde49adc7fad7022",
+      "code_fingerprint": "sha256:0986b252f5171fa8965ed13aaae8341e50d57fab9cfb1ec267b52666892fa800",
       "kind": "text",
       "outputs": [
         {
@@ -124,13 +124,13 @@
       ]
     },
     "rag-baseline": {
-      "code_fingerprint": "sha256:9d3ba45dc6cbfe795591eadfbfdc43cb4f8d495c77121713077a363ab7b71841",
+      "code_fingerprint": "sha256:a16760b02eff008453d972debd60529894b889f8caf6302bd83d41a3e069b862",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "             answers  context_tokens  prompt_tokens  new_tokens\nconfig                                                         \nclosed           240               0             90         100\nbase             240            1697           1933         110\noracle           240             477            628         102\nbase-repeat      240            1697           1933         111\n"
+          "text": "             answers  context_tokens  prompt_tokens  new_tokens\nconfig                                                         \nclosed           240               0             90         100\nbase             240            1701           1937         111\noracle           240             479            630         102\nbase-repeat      240            1701           1937         111\n"
         },
         {
           "type": "stream",
@@ -145,7 +145,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live generation: peak 20.4 GiB (20.4 GiB reserved)\n8 base answers generated again: 8 with the recorded context, 8 identical answers\n  tokens agreeing before the first difference: 1.000\n"
+          "text": "live generation: peak 20.7 GiB (20.8 GiB reserved)\n8 base answers generated again: 8 with the recorded context, 8 identical answers\n  tokens agreeing before the first difference: 1.000\n"
         },
         {
           "type": "stream",
@@ -155,18 +155,18 @@
       ]
     },
     "rag-judge": {
-      "code_fingerprint": "sha256:3c24be69c5c8118e3f11808c9d7d9d08b5f820502b26d77a6c20856d907b933a",
+      "code_fingerprint": "sha256:4b53b6c39a906d9cc5d34a6a88215899cef3570b2180a17f62ca7075e4f095a0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "8 base judgments with 3,000 new tokens replayed from the judge cache: identical\n4 base judgments with 6,000 new tokens replayed from the judge cache: identical\n             answers  judged  judged again  unjudged\nconfig                                              \nclosed           240     240             1         0\nbase             240     240             9         0\noracle           240     240             9         1\nbase-repeat      240     240             8         2\njudged again: with 6,000 new tokens, once\nunjudged: still no verdict on correctness (left out of accuracy)\n"
+          "text": "8 base judgments with 3,000 new tokens replayed from the judge cache: identical\n4 base judgments with 6,000 new tokens replayed from the judge cache: identical\n             answers  judged  judged again  unjudged\nconfig                                              \nclosed           240     240             1         0\nbase             240     240             9         1\noracle           240     240             8         1\nbase-repeat      240     240            11         0\njudged again: with 6,000 new tokens, once\nunjudged: still no verdict on correctness (left out of accuracy)\n"
         }
       ]
     },
     "rag-judge-validation": {
-      "code_fingerprint": "sha256:295c38f59803915cff4bdb012c6d504c24e6e9644fb5fb1b683e1172ff663a97",
+      "code_fingerprint": "sha256:b7a6f37cdfe6d3d0fb34a8c8ba3d12f73474934808b0534249b2fdbfa2389a08",
       "kind": "text",
       "outputs": [
         {
@@ -182,34 +182,34 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "judged again at concurrency 16 (first run 8): 5 of 54 answers changed a verdict\n  (of 60 drawn, 6 abstentions are decided by rule and 0 were judged again with more tokens)\n"
+          "text": "judged again at concurrency 16 (first run 8): 2 of 51 answers changed a verdict\n  (of 60 drawn, 6 abstentions are decided by rule and 3 were judged again with more tokens)\n"
         }
       ]
     },
     "rag-load-array": {
-      "code_fingerprint": "sha256:be46fe3bf29730f743b099129bba506687a537f4616802d019471fc9c32fdb37",
+      "code_fingerprint": "sha256:af59bb25f6e34a2d04b27beccb3973de3dc7fd10b897edbfaad07685dceb4e7f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "question: In the book's legacy PyTorch helper `load_array`, how does the returned `DataLoader`\n    decide whether to shuffle the data?\nreference: It passes `shuffle=is_train`, so shuffling is enabled exactly when `is_train` is\n    true.\n\nclosed, 0 passages; judge: correct False\n    The `load_array` function in the legacy PyTorch helper does not automatically shuffle the\n    data by default. Instead, it relies on the `shuffle` argument passed to the\n    `torch.utils.data.DataLoader` constructor when the dataset is created. If the `shuffle`\n    parameter is set to `True`, the returned `DataLoader` will randomize the order of the data\n    batches during each epoch. Otherwise, if `shuffle` is `False` or not specified, the data\n    will be returned in the original order defined by the dataset.\n\nbase, 5 passages; judge: correct True, faithful True, supported False\n    The `load_array` function accepts an optional argument `is_train` which defaults to `True`.\n    This argument is passed directly to the `DataLoader` constructor as the `shuffle` parameter.\n    Consequently, the data is shuffled if `is_train` is `True` and remains in its original order\n    if `is_train` is `False`.\n"
+          "text": "question: In the book's legacy PyTorch helper `load_array`, how does the returned `DataLoader`\n    decide whether to shuffle the data?\nreference: It passes `shuffle=is_train`, so shuffling is enabled exactly when `is_train` is\n    true.\n\nclosed, 0 passages; judge: correct False\n    The `load_array` function in the legacy PyTorch helper does not automatically shuffle the\n    data by default. Instead, it relies on the `shuffle` argument passed to the\n    `torch.utils.data.DataLoader` constructor when the dataset is created. If the `shuffle`\n    parameter is set to `True`, the returned `DataLoader` will randomize the order of the data\n    batches during each epoch. Otherwise, if `shuffle` is `False` or not specified, the data\n    will be returned in the original order defined by the dataset.\n\nbase, 5 passages; judge: correct True, faithful True, supported True\n    The `load_array` function accepts an optional argument `is_train` which defaults to `True`.\n    It passes this `is_train` value directly to the `DataLoader` constructor as the `shuffle`\n    parameter. Consequently, the data is shuffled if `is_train` is `True` and remains in its\n    original order if `is_train` is `False`. This behavior is defined in the function signature\n    and implementation within the provided code [1].\n"
         }
       ]
     },
     "rag-baseline-report": {
-      "code_fingerprint": "sha256:f58d7a28a2957b0b75b3f1ae0c518ff2db5923f4e6c792d429e9023b8a6cccc4",
+      "code_fingerprint": "sha256:c684067af5b193ccd5ab0a52a2892a67390dfcf5c96164409df3cc5eb772d26c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.941, 0.991]                    n/a\ncov@3000                                 n/a   0.982 [0.957, 1.000]                    n/a\naccuracy                0.300 [0.234, 0.363]   0.892 [0.849, 0.927]   0.921 [0.891, 0.948]\nfaithful                                 n/a   0.917 [0.876, 0.952]   0.892 [0.847, 0.934]\ncite_precision                           n/a   0.719 [0.667, 0.767]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.849 [0.803, 0.892]   0.914 [0.874, 0.950]\nsupported                                n/a   0.817 [0.767, 0.862]   0.824 [0.770, 0.878]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.900 [0.750, 1.000]+  0.850 [0.700, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.018 [0.004, 0.037]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 0, oracle 1, base-repeat 2\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.592 [+0.526, +0.655]\n     oracle - base                       all +0.029 [-0.016, +0.078]\n     oracle - base                answerable +0.037 [-0.013, +0.088]\n     base - closed book-specific, answerable +0.786 [+0.710, +0.858]\nbase-repeat - base  all (other batches only) -0.004 [-0.026, +0.018]\noracle - base on faithful: -0.028 [-0.078, +0.027]\nbook-specific answerable questions (145): closed book 0.117 [0.062, 0.183],\n  base 0.903 [0.852, 0.948]\nbase accuracy, a relevant chunk in the context (213): 0.911 [0.866, 0.948]\nbase accuracy, no relevant chunk in the context (7): 0.286 [0.000, 0.571]+\n"
+          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.942, 0.990]                    n/a\ncov@3000                                 n/a   0.986 [0.969, 1.000]                    n/a\naccuracy                0.300 [0.234, 0.363]   0.891 [0.845, 0.931]   0.925 [0.897, 0.950]\nfaithful                                 n/a   0.899 [0.858, 0.937]   0.891 [0.846, 0.933]\ncite_precision                           n/a   0.716 [0.663, 0.766]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.879 [0.841, 0.913]   0.914 [0.874, 0.950]\nsupported                                n/a   0.835 [0.790, 0.877]   0.828 [0.770, 0.884]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.950 [0.850, 1.000]+  0.900 [0.750, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.009 [0.000, 0.024]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 1, oracle 1, base-repeat 0\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.594 [+0.532, +0.656]\n     oracle - base                       all +0.034 [-0.015, +0.084]\n     oracle - base                answerable +0.041 [-0.013, +0.096]\n     base - closed book-specific, answerable +0.772 [+0.702, +0.840]\nbase-repeat - base  all (other batches only) -0.004 [-0.028, +0.017]\noracle - base on faithful: -0.009 [-0.059, +0.044]\nbook-specific answerable questions (145): closed book 0.117 [0.062, 0.183],\n  base 0.890 [0.840, 0.936]\nbase accuracy, a relevant chunk in the context (213): 0.901 [0.852, 0.942]\nbase accuracy, no relevant chunk in the context (7): 0.429 [0.143, 0.714]+\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "base accuracy, closed-book arm correct (62): 0.871 [0.774, 0.952]+\nbase accuracy, closed-book arm wrong (158): 0.899 [0.848, 0.944]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (the query embeddings were batched differently too);\n  with the same context 108 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
+          "text": "base accuracy, closed-book arm correct (62): 0.934 [0.869, 0.984]+\nbase accuracy, closed-book arm wrong (158): 0.867 [0.806, 0.923]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (the query embeddings were batched differently too);\n  with the same context 95 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
         }
       ]
     }

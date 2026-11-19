@@ -68,7 +68,7 @@ SMALL = not GPU  # the CPU path: fewer questions embedded and reranked live
 DTYPE, DEVICE = (torch.bfloat16, 'cuda') if GPU else (torch.float32, 'cpu')
 ARTIFACTS = {  # name: (stored key, the file a regeneration writes)
     'ret-stress-emb': ('lm-enc-r3-stress-emb-v1', 'lm-enc-r3-stress-emb.npz'),
-    'ret-rerank': ('lm-enc-ret-rerank-v1', 'lm-enc-ret-rerank.json'),
+    'ret-rerank': ('lm-enc-ret-rerank-v2', 'lm-enc-ret-rerank.json'),
     'ret-ann': ('lm-enc-ann-v1', 'lm-enc-ann.json')}
 RERUN = d2l.lm_rerun(ARTIFACTS)
 assert GPU or not RERUN & {'ret-stress-emb', 'ret-rerank'}, \
@@ -207,6 +207,9 @@ d2l.DATA_HUB['lm-enc-r3-stress-emb-v1'] = (  # D2L_RERUN=ret-stress-emb
 d2l.DATA_HUB['lm-enc-ret-rerank-v1'] = (  # D2L_RERUN=ret-rerank
     d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v1.json',
     '93299ee93a052d3e21f4ed49d8b259400382dc81')
+d2l.DATA_HUB['lm-enc-ret-rerank-v2'] = (  # v1 with the model card's task
+    d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v2.json',
+    '4ff13c3c0493e15313feda407b0dc20680539014')
 d2l.DATA_HUB['lm-enc-ann-v1'] = (  # D2L_RERUN=ret-ann, AMD EPYC 7502
     d2l.LM_DATA_URL + 'lm-enc-ann-v1.json',
     'aadf07c143fa936ca556c105644c35052c30bf18')
@@ -255,24 +258,23 @@ for win, lose in (('bm25', 'dense'), ('dense', 'bm25')):
         print(f'  {m}: first relevant chunk at rank {rank or "> 10"}')
 ```
 
-They do not. The embedder succeeds on 0.98 of the questions and BM25 on
-0.96, a gap within the noise of 220 questions, yet on 13 of the 220, about
-6%, exactly one of the two succeeds: BM25 alone on 4, the embedder alone
-on 9. The cell prints the first question of each kind.
+They do not. The embedder succeeds on 0.99 of the questions and BM25 on
+0.96, a gap of about 3 points, yet on 11 of the 220, 5%, exactly one of the
+two succeeds: BM25 alone on 2, the embedder alone on 9. The cell prints the
+first question of each kind.
 
-The first asks about the verifier task of the reinforcement-learning
-chapter, and its passage repeats the question's own words: the verifier
-task, the arithmetic prompts, a baseline that "must be per prompt". BM25
-counts those words and ranks the passage second. The embedder reads the
-question as being about the verifier task, which it is, and fills its first
-ten places with passages that describe that task; the passage that answers,
-a subsection on rewards compared within a group of responses, comes after
-them. The second question asks how accuracy is "computed" where its passage
-says "calculated based on correctness ... for all the pixels", a paraphrase
-that the embedder sees through and a word count does not. One retriever
-matches words and the other matches topics, and each is fooled where the
-other is not. The question that names a function, the case that worried
-us above, waits at the end of the section.
+The first is the case that worried us above: a question that names a
+function. It asks what the attention chapter's `softmax_weights` returns
+after multiplying the scores by `scale`, and BM25, which matches the rare
+name, ranks the passage that holds the function first. The embedder reads
+the question as being about attention scores and their scale, which it is,
+and fills its first ten places with passages on that subject, two of them
+from the very subsection that holds the function; the chunk with the code
+itself is not among them. The second question asks how accuracy is
+"computed" where its passage says "calculated based on correctness ... for
+all the pixels", a paraphrase that the embedder sees through, ranking the
+passage first, and a word count does not. One retriever matches words and
+the other matches topics, and each is fooled where the other is not.
 
 ## The Book as a Corpus
 :label:`subsec_lm_book_corpus`
@@ -803,7 +805,7 @@ for name in ('BM25', 'dense'):
 
 The re-encoded chunks agree with the stored vectors to a cosine of 0.9998.
 With the 220 dev questions encoded in one batch, dense retrieval takes about
-0.9 ms per question, and both retrievers reproduce the Recall@10 of the
+1 ms per question, and both retrievers reproduce the Recall@10 of the
 opening cell. How much of that is the scan? We time the scan alone, for one
 question and for all 220 at once, on two matrices. The book's, 11 MB, fits
 in the GPU's 72 MB second-level cache; a synthetic matrix of $2^{17}$ random
@@ -850,7 +852,7 @@ del MATRICES
 
 For the book the scan is negligible. One question takes about 0.05 ms, mostly
 the fixed cost of launching the kernels and waiting for them, and all 220
-together about 0.1 ms. Nearly all of the 0.9 ms above is the encoder's
+together about 0.1 ms. Nearly all of the millisecond above is the encoder's
 forward pass over the questions, and no index could make dense search over
 the book noticeably faster.
 
@@ -952,9 +954,9 @@ print(f'found by exactly one of BM25 and dense: '
 ```
 
 The weight chosen is $\lambda = 0.7$, mostly dense. Both fusions keep the
-embedder's Recall@10 of 0.98 and rank at least as well as the better of the
-two lists: nDCG@10 is 0.85 for RRF and 0.87 for the weighted sum, against
-0.82 for BM25 and 0.79 for the embedder. The weighted sum is a little ahead
+embedder's Recall@10 of 0.99 and rank at least as well as the better of the
+two lists: nDCG@10 is 0.86 for RRF and 0.88 for the weighted sum, against
+0.82 for BM25 and 0.81 for the embedder. The weighted sum is a little ahead
 of RRF, but only with a weight tuned on training questions; RRF needs none,
 which is why the retriever at the end of this section uses it. The oracle
 shows how much the two lists hold together: it finds a relevant chunk among the first ten for every
@@ -1010,12 +1012,17 @@ def rerank_yes_no(model, tokenizer, query, docs, instruction=None,
     return torch.exp(lp[:, 0]).numpy()
 ```
 
-The reranker reads each question with the embedder's instruction and each
-chunk in the dense view. We rerank the first 20 and the first 100 fused
-chunks; the scores for 100, which take minutes to compute, come stored. A
-reranker only permutes the chunks it is given, so reranking the first 20
-leaves Recall@20 and Recall@100 where they were. A table in which reranking
-the first 20 raises Recall@100 has measured something else.
+The reranker reads each chunk in the dense view and each question with the
+embedder's task, `d2l.BOOK_TASK`, the sentence about web search queries that
+both model cards give as their default. We wrote no task of our own for it:
+the instruction we first wrote for the book made the embedder rank worse
+(:numref:`subsec_lm_emb_llm`), and a wording for the reranker would have to
+be chosen on training questions in the same way. We rerank the first 20 and
+the first 100 fused chunks; the scores for 100, which take minutes to
+compute, come stored. A reranker only permutes the chunks it is given, so
+reranking the first 20 leaves Recall@20 and Recall@100 where they were. A
+table in which reranking the first 20 raises Recall@100 has measured
+something else.
 
 ```{.python .input #retrieval-rerank}
 %%tab pytorch
@@ -1078,7 +1085,7 @@ d2l.lm_free()
 ```
 
 Reranking 20 chunks takes about a quarter of a second per question on the
-GPU, and 100 chunks about 1.1 s. That makes the reranker the expensive stage by far:
+GPU, and 100 chunks about 1.2 s. That makes the reranker the expensive stage by far:
 BM25, the embedder and fusion together took about a millisecond per
 question, with the questions encoded in one batch. The stored scores match
 a live run to the printed digits.
@@ -1149,29 +1156,33 @@ for ax, k in zip(axes, ('recall@10', 'ndcg@10')):
                        f'dev {k}', axes=ax)
 ```
 
-Over all questions BM25 and the embedder are within noise of each other,
-in Recall@10 and in nDCG@10 alike. On the identifier questions they find a
-relevant chunk about equally often (BM25 one question more), but BM25
-ranks it higher, by about 0.12 in nDCG@10, a difference the sign-flip test
-rejects as chance (p 0.001). The demo at the end of this section shows why
-in a single question: the embedder places the passage about a function
-among other passages on the same subject, while the function's exact name
-lifts it to the top for BM25.
+Over all questions the embedder finds a relevant chunk among the first ten
+for about 3 points more of the questions than BM25, an interval from 0.5 to
+6 points, and the two rank equally well: their nDCG@10 differ by 0.01,
+within noise. The split shows where each is stronger. On the other
+questions the embedder finds 6 points more, an interval that excludes zero.
+On the identifier questions the two find a relevant chunk about equally
+often (BM25 two questions more), but BM25 ranks it higher, by about 0.09 in
+nDCG@10, a difference the sign-flip test rejects as chance (p 0.007). The
+opening cell showed why in a single question: the embedder places the
+passage about a function among other passages on the same subject, while
+the function's exact name lifts it to the top for BM25.
 
-Fusion keeps the embedder's recall and ranks at least as well as BM25. It
-beats the embedder by about 0.07 in nDCG@10 and BM25 by 0.03, a gain within
-the noise, and it puts a relevant chunk first for 78% of the questions,
-against 76% for BM25 and 67% for the embedder. Reranking the first 20 is
-the first step that clearly improves on both lists. It adds about 0.05 to
-fusion's nDCG@10, a third of the remaining distance to a perfect ranking,
-and lifts that 78% to 87%. The plot shows the same: the retrievers differ
-little in Recall@10 (left) and more in nDCG@10 (right).
+Fusion keeps the embedder's recall and ranks better than either list. It
+beats the embedder by about 0.05 in nDCG@10 and BM25 by 0.04, both
+intervals excluding zero, and it puts a relevant chunk first for 80% of
+the questions, against 76% for BM25 and 70% for the embedder. Reranking the
+first 20 improves the ranking again. It adds about 0.03 to fusion's
+nDCG@10, an interval from 0.005 to 0.05 and a fifth of the remaining
+distance to a perfect ranking, and lifts that 80% to 84%. The plot shows
+the same: the retrievers differ little in Recall@10 (left) and more in
+nDCG@10 (right).
 
 Two changes gained nothing, and both had no room to gain. Tuning BM25 did
 not change dev Recall@10 on a single question, as the flat grid predicted.
 Reranking
 100 chunks instead of 20 did not move nDCG@10 and took five times as long,
-because for all but two questions the first 20 fused chunks already hold a
+because for all but one question the first 20 fused chunks already hold a
 relevant one.
 
 "Dense retrieval beats BM25" is a claim about a corpus, a question set and a
@@ -1831,14 +1842,14 @@ vectors in :numref:`subsec_lm_emb_compress` was a cheaper cousin: it used
 the exact question but kept the passages at one bit.)
 
 The graph wins at this size. HNSW returns 0.97 of the exact neighbors at
-$\mathit{efSearch} = 32$ in about 0.3 ms, and 0.998 at 256 in about 1.5 ms, for
+$\mathit{efSearch} = 32$ in about 0.3 ms, and 0.998 at 256 in under 2 ms, for
 272 bytes per vector beyond the vector itself, nearly all of it links, and
 about 15 s of building with eight threads.
 
 Task recall drops far less, because it needs one relevant chunk among ten
 where recall against exact search counts all ten neighbors. IVF-Flat at 16
 probes misses 15% of the exact neighbors and loses only about 0.02 of task
-recall. IVF-PQ64 misses 40% and loses between 0.06 and 0.11, depending on
+recall. IVF-PQ64 misses 40% and loses between 0.05 and 0.09, depending on
 the k-means seed. Recall against exact search measures the index, and task
 recall what a user notices.
 
@@ -1863,7 +1874,7 @@ for ax, col, label in zip(axes, ('recall', 'task_recall'), (
 In the left panel HNSW lies above every other curve at every latency it
 reaches, and IVF-PQ, with the smallest markers, flattens out at low recall.
 In the right panel most curves climb to within a few points of the flat
-scan's 0.98 at a fraction of its latency. The last cell picks, among the
+scan's 0.99 at a fraction of its latency. The last cell picks, among the
 one-thread searches, the fastest that returns at least 0.95 of the exact
 neighbors, and sets it against the flat scan.
 
@@ -2124,17 +2135,17 @@ retriever.release()
 ```
 
 Fusion puts the relevant chunk first: the training utilities in the book's
-section of utility functions. This one question is the identifier gap of
-the comparison in miniature. BM25 ranks the chunk first by a wide margin, a
+section of utility functions. All three rankings put it first, but with
+very different margins, and the difference is the identifier gap of the
+comparison in miniature. BM25 ranks the chunk first by a wide margin, a
 score of 25 against at most 15 for any other chunk, because the question
-names `load_array` and `DataLoader`. The embedder does what the opening of
-this section feared: it puts first "A Loader for Every Epoch", a chunk
-about data loaders in general, less than 0.01 ahead in cosine, and the
-relevant chunk second. One list alone gives a fused score of at most
-$1/61 \approx 0.016$. This chunk's 0.033 is exactly what a first and a
-second place give, $1/61 + 1/62$, and nearly the $2/61$ of two first
-places. The other four hits are about loading data elsewhere in the book:
-on topic, and no use for this question.
+names `load_array` and `DataLoader`. The embedder puts it first by 0.001 in
+cosine, just ahead of "A Loader for Every Epoch", a chunk about data
+loaders in general: the near miss that the opening of this section feared.
+One list alone gives a fused score of at most $1/61 \approx 0.016$. This
+chunk's 0.033 is the $2/61$ of two first places. The other four hits are
+about loading, of data or of saved weights, elsewhere in the book: on the
+subject, and no use for this question.
 
 A relevant chunk among the first ten is not yet an answer. Which chunks
 should a language model read, in which order and how many of their tokens,
@@ -2147,7 +2158,7 @@ stage of the system on its own.
 A retriever has to find the few passages that answer a question, quickly,
 in a collection of any size. A word index ranked by BM25, which weighs
 words by their rarity, and a vector index fail on different questions: on
-the book, exactly one of the two succeeded on about 6% of the questions.
+the book, exactly one of the two succeeded on 5% of the questions.
 On questions that involve code, BM25 ranked the relevant chunk higher.
 Reciprocal-rank fusion merges the two lists from their ranks alone, and a
 cross-encoder that reads question and chunk together reorders the top of
@@ -2285,14 +2296,14 @@ Sparse, Dense and Approximate Retrieval<br>**the book corpus · BM25 · the flat
 | retriever | Recall@10 |
 |---|---|
 | BM25: weighted word counts | 0.96 |
-| Qwen3-Embedding-0.6B: one vector per text | 0.98 |
+| Qwen3-Embedding-0.6B: one vector per text | 0.99 |
 | either of the two | 1.00 |
 
-Exactly one of the two succeeds on 13 of the 220 questions, about 6%: BM25
-alone on 4, the embedder alone on 9.
+Exactly one of the two succeeds on 11 of the 220 questions, 5%: BM25
+alone on 2, the embedder alone on 9.
 
-- BM25 alone: the passage repeats the question's words; the embedder
-  ranks ten other passages on the same topic above it.
+- BM25 alone: the question names a function, `softmax_weights`; the
+  embedder ranks ten other passages on the same topic above it.
 - Embedder alone: the question says "computed", the passage "calculated".
 
 ::: {.d2l-note .warn}
@@ -2464,7 +2475,7 @@ Batch 220: about 220 operations per byte, past the ridge, so arithmetic
 sets the bound; 0.003 ms per question.
 
 ::: {.d2l-note}
-For the book, encoding the questions (0.9 ms each in a batch of 220) costs
+For the book, encoding the questions (about 1 ms each in a batch of 220) costs
 more than the scan.
 :::
 :::
@@ -2493,7 +2504,7 @@ near-optimal but not critical.*
 | reads | question and chunk apart | the pair together |
 | chunk work | once, before any question | once per question |
 | cost per question | one encoding, one scan | one forward pass per candidate |
-| ms per question, book | 0.9 (batched) | about 250 for 20, 1,100 for 100 |
+| ms per question, book | about 1 (batched) | about 230 for 20, 1,200 for 100 |
 
 Qwen3-Reranker-0.6B: $P(\text{yes}) = e^{z_\text{yes}} / (e^{z_\text{yes}} + e^{z_\text{no}})$
 for "Does this chunk meet the query?"
@@ -2524,17 +2535,17 @@ its depth.
 | dev, 220 questions | Recall@1 | Recall@10 | nDCG@10 | ms |
 |---|---|---|---|---|
 | BM25 | 0.76 | 0.96 | 0.82 | about 0.2 |
-| embedder | 0.67 | 0.98 | 0.79 | about 1 |
-| RRF | 0.78 | 0.98 | 0.85 | about 1 |
-| RRF + rerank@20 | 0.87 | 0.99 | 0.91 | about 250 |
-| RRF + rerank@100 | 0.87 | 1.00 | 0.91 | about 1,100 |
+| embedder | 0.70 | 0.99 | 0.81 | about 1 |
+| RRF | 0.80 | 0.99 | 0.86 | about 1 |
+| RRF + rerank@20 | 0.84 | 0.99 | 0.89 | about 230 |
+| RRF + rerank@100 | 0.84 | 0.99 | 0.89 | about 1,200 |
 
 Paired on the same questions: fusion ranks better than the embedder
-(nDCG@10 +0.07) and at least as well as BM25 (+0.03, within noise);
-reranking 20 adds 0.05 more; reranking 100 adds nothing.
+(nDCG@10 +0.05) and than BM25 (+0.04), both intervals excluding 0;
+reranking 20 adds 0.03 more; reranking 100 adds nothing.
 
 ::: {.d2l-note}
-No room beyond 20: for all but two questions the first 20 fused chunks
+No room beyond 20: for all but one question the first 20 fused chunks
 already hold a relevant one.
 :::
 :::
@@ -2547,9 +2558,9 @@ such as a dotted name or a call.
 
 | embedder − BM25 | Recall@10 | nDCG@10 |
 |---|---|---|
-| all, 220 | within noise | within noise |
-| identifier, 80 | within noise (BM25 one more) | **BM25 ahead by 0.12** (p 0.001) |
-| other, 140 | +0.04, interval reaches 0 | within noise |
+| all, 220 | +0.03, interval excludes 0 | within noise |
+| identifier, 80 | within noise (BM25 two more) | **BM25 ahead by 0.09** (p 0.007) |
+| other, 140 | +0.06, interval excludes 0 | within noise |
 
 Identifier questions come from 28 documents. Sign-flip test: flip each
 document's mean difference at random; p is how often the total is as large.
@@ -2662,9 +2673,9 @@ dev Recall@10 of the book's questions.
 
 | index, one CPU thread | against exact search | dev Recall@10 |
 |---|---|---|
-| flat scan | 1.00 | 0.98 |
-| IVF-Flat, 16 probes | 0.85 | 0.96 |
-| IVF-PQ, 64 bytes, 16 probes | 0.59–0.60 | 0.87–0.92 |
+| flat scan | 1.00 | 0.99 |
+| IVF-Flat, 16 probes | 0.85 | 0.97 |
+| IVF-PQ, 64 bytes, 16 probes | 0.59–0.60 | 0.90–0.94 |
 
 IVF-PQ: ranges over three k-means seeds.
 
@@ -2689,8 +2700,8 @@ user notices.
 | "How does `load_array` decide whether to shuffle?" | rank of the passage |
 |---|---|
 | BM25: the name matches, score 25 against at most 15 | 1 |
-| embedder: "A Loader for Every Epoch" is 0.01 closer | 2 |
-| fusion, $1/61 + 1/62 = 0.033$ | 1 |
+| embedder: 0.001 ahead of "A Loader for Every Epoch" | 1 |
+| fusion, $1/61 + 1/61 = 0.033$ | 1 |
 :::
 
 ::: {.slide title="Check: A Billion Vectors and 128 GB of Memory. Which Index?"}
@@ -2710,15 +2721,15 @@ since 64-byte codes found only about 0.6 of the exact neighbors here.
 ::: {.slide title="Recap"}
 [Recap]{.kicker}
 
-- BM25 0.96, embedder 0.98 Recall@10; 6% found by only one; both together
+- BM25 0.96, embedder 0.99 Recall@10; 5% found by only one; both together
   find all 220.
-- BM25 ranks identifier questions higher: nDCG@10 by 0.12. The `load_array`
-  question: BM25 first, embedder second, fusion first.
-- RRF: nDCG@10 +0.07 over the embedder, at least BM25's ranking;
-  rerank@20: +0.05 more, about a quarter of a second per question.
+- BM25 ranks identifier questions higher: nDCG@10 by 0.09. The `load_array`
+  question: BM25 first by a wide margin, the embedder first by 0.001.
+- RRF: nDCG@10 +0.05 over the embedder, +0.04 over BM25;
+  rerank@20: +0.03 more, about a quarter of a second per question.
 - 67,853 vectors: HNSW 0.97 of the exact neighbors, about 50 times faster
   than one thread's scan; IVF-PQ 64 bytes per vector at recall about 0.6
-  against exact search, task recall 0.87 to 0.92 across k-means seeds.
+  against exact search, task recall 0.90 to 0.94 across k-means seeds.
 - Offsets coded in more cells: smaller errors (0.41 → 0.30), fewer
   neighbors found (0.70 → 0.63).
 

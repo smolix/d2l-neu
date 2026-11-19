@@ -211,15 +211,14 @@ hundred steps.
 generator on questions shown with the relevant document among distractors,
 toward chain-of-thought answers that quote the relevant passage. It targets
 the `ignored` failures of :numref:`sec_lm_rag_fixes`, where a relevant
-passage was in the context and the answer missed it. The fix chosen in
-advance there asked for the same quoting by prompt alone, and it failed
-because the quoting format crowded out the sentence that declares a
-question unanswerable. RAFT trains the quoting into the weights instead, at
-the cost of a fine-tuning run per domain, with distractors drawn from one's
-own retriever. Its training examples without the relevant document still
-target the answer, which teaches answering from memory rather than
-abstaining, so whether RAFT avoids the failure that our prompt created is a
-question for the procedure of :numref:`sec_lm_rag_fixes`.
+passage was in the context and the answer missed it. The fix written down
+in advance for that class asks for the same quoting by prompt alone. RAFT
+trains the quoting into the weights instead, at the cost of a fine-tuning
+run per domain, with distractors drawn from one's own retriever. Its
+training examples without the relevant document still target the answer,
+which teaches answering from memory rather than abstaining, so whether
+RAFT keeps the abstentions intact is a question for the procedure of
+:numref:`sec_lm_rag_fixes`.
 
 **Reflection tokens.** Self-RAG :cite:`Asai.Wu.Wang.ea.2024` trains the
 generator to emit special tokens that decide whether to retrieve, judge

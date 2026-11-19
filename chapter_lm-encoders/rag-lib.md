@@ -342,12 +342,12 @@ read from, and the generator, loaded once per process.
 RAG_GENERATOR = 'Qwen/Qwen3.5-9B'  # revision pinned in the notebooks
 RAG_RERANKER = 'Qwen/Qwen3-Reranker-0.6B'
 RAG_ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
-    'rag-gen-base': ('lm-rag-gen-base-v1', 'lm-rag-gen-base.jsonl'),
-    'rag-gen-stages': ('lm-rag-gen-stages-v2', 'lm-rag-gen-stages.jsonl'),
-    'rag-gen-fix': ('lm-rag-gen-fix-v1', 'lm-rag-gen-fix.jsonl'),
-    'rag-judge': ('lm-rag-judge-v4', 'lm-rag-judge.jsonl'),
-    'rag-judge-cache': ('lm-rag-judge-cache-v4', 'lm-rag-judge-cache.zip'),
-    'rag-cards': ('lm-rag-cards-v1', 'lm-rag-cards.jsonl')}
+    'rag-gen-base': ('lm-rag-gen-base-v2', 'lm-rag-gen-base.jsonl'),
+    'rag-gen-stages': ('lm-rag-gen-stages-v3', 'lm-rag-gen-stages.jsonl'),
+    'rag-gen-fix': ('lm-rag-gen-fix-v2', 'lm-rag-gen-fix.jsonl'),
+    'rag-judge': ('lm-rag-judge-v6', 'lm-rag-judge.jsonl'),
+    'rag-judge-cache': ('lm-rag-judge-cache-v6', 'lm-rag-judge-cache.zip'),
+    'rag-cards': ('lm-rag-cards-v2', 'lm-rag-cards.jsonl')}
 
 #@save
 # The baseline: section chunks, hybrid retrieval, the first five chunks in
@@ -405,7 +405,8 @@ def _rag_rerun():
 def _rag_settings(name):
     """What the answers of configuration name are made with (JSON): its
     entry of RAG_CONFIGS, the models at their revisions, the corpus, the
-    BM25 parameters and the question set. Reading the records checks it."""
+    BM25 parameters, the embedder's task and the question set. Reading the
+    records checks it."""
     gen, emb, rr = d2l.RAG_GENERATOR, d2l.DEFAULT_EMBEDDER, d2l.RAG_RERANKER
     rev = {gen: d2l.HF_REVISIONS[gen],
            **{m: d2l.HF_ENCODER_REVISIONS[m] for m in (emb, rr)}}
@@ -413,7 +414,7 @@ def _rag_settings(name):
         d2l.RAG_CONFIGS[name], generator=f'{gen}@{rev[gen]}',
         corpus=d2l.R3_VERSION, embedder=f'{emb}@{rev[emb]}',
         reranker=f'{rr}@{rev[rr]}', bm25=d2l.BookRetriever.BM25_PARAMS,
-        qa='lm-book-qa-v2'), sort_keys=True)
+        task=d2l.BOOK_TASK, qa='lm-book-qa-v2'), sort_keys=True)
 
 def _rag_run_path(name, rerun):
     """The file of RAG artifact name that this run regenerates (name in

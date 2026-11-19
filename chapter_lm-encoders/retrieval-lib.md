@@ -762,7 +762,12 @@ _EMBEDDERS = {
     'Qwen/Qwen3-Embedding-0.6B': dict(
         pooling='last', padding_side='left',
         query_format='Instruct: {task}\nQuery:{query}')}
-BOOK_TASK = 'Given a question about the book, retrieve passages that answer it'
+# The task in the book's query instruction: the model cards' default. Our
+# own wording, 'Given a question about the book, retrieve passages that
+# answer it', lowered the embedder's MRR@10 on the dev questions, where
+# this one is level with no instruction (sec_lm_text_embeddings)
+BOOK_TASK = ('Given a web search query, retrieve relevant passages that '
+             'answer the query')
 # Registered chunk vectors (sec512 chunks, 'dense' view, float16) by embedder
 _R3_EMB_KEYS = {
     'Qwen/Qwen3-Embedding-0.6B': 'lm-enc-r3-emb-qwen3emb06b-sec512-v1'}

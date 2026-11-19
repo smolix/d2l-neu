@@ -7655,6 +7655,9 @@ d2l.DATA_HUB['lm-enc-r3-stress-emb-v1'] = (  # D2L_RERUN=ret-stress-emb
 d2l.DATA_HUB['lm-enc-ret-rerank-v1'] = (  # D2L_RERUN=ret-rerank
     d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v1.json',
     '93299ee93a052d3e21f4ed49d8b259400382dc81')
+d2l.DATA_HUB['lm-enc-ret-rerank-v2'] = (  # v1 with the model card's task
+    d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v2.json',
+    '4ff13c3c0493e15313feda407b0dc20680539014')
 d2l.DATA_HUB['lm-enc-ann-v1'] = (  # D2L_RERUN=ret-ann, AMD EPYC 7502
     d2l.LM_DATA_URL + 'lm-enc-ann-v1.json',
     'aadf07c143fa936ca556c105644c35052c30bf18')
@@ -8121,18 +8124,30 @@ d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
 d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
     d2l.LM_DATA_URL + 'lm-rag-gen-base-v1.jsonl',
     '78065bff472577631de5d7cac287323e77427e7f')
+d2l.DATA_HUB['lm-rag-gen-base-v2'] = (  # v1 with the model card's task
+    d2l.LM_DATA_URL + 'lm-rag-gen-base-v2.jsonl',
+    '9701221a6ec07e4c524b1ebd063af3dbdf5101f4')
 d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
     d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
     '7c08b175e12fe3138742f46e14720df1ab45e277')
 d2l.DATA_HUB['lm-rag-gen-stages-v2'] = (  # v1 and the control fixed-over
     d2l.LM_DATA_URL + 'lm-rag-gen-stages-v2.jsonl',
     'bfd5ba324efcc683b06ded6d96c04b56ca806cb0')
+d2l.DATA_HUB['lm-rag-gen-stages-v3'] = (  # v2 with the model card's task
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v3.jsonl',
+    '350230216f0f4a43c34b55bf6af720e537392b61')
 d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
     d2l.LM_DATA_URL + 'lm-rag-gen-fix-v1.jsonl',
     'd94ed6b1f942ea5ca0df0292c5e7cc81bd834d50')
+d2l.DATA_HUB['lm-rag-gen-fix-v2'] = (  # card's task: fix-unsupported
+    d2l.LM_DATA_URL + 'lm-rag-gen-fix-v2.jsonl',
+    '2a980b4961883ecdd3eac2a4a31b8de2d621f004')
 d2l.DATA_HUB['lm-rag-cards-v1'] = (  # 31 base failures, labelled by a model
     d2l.LM_DATA_URL + 'lm-rag-cards-v1.jsonl',
     'dd66f91cc44070f7e2256c63d5e5caf912c4054e')
+d2l.DATA_HUB['lm-rag-cards-v2'] = (  # 26 base failures with the card's task
+    d2l.LM_DATA_URL + 'lm-rag-cards-v2.jsonl',
+    'ed510addb6e39fe5c54cab40a6283be4d908a80d')
 d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
     d2l.LM_DATA_URL + 'lm-rag-judge-v1.jsonl',
     '8e128dbe149cf3f22b3d0979368c679c5d43c371')
@@ -8157,6 +8172,15 @@ d2l.DATA_HUB['lm-rag-judge-v4'] = (  # v3 and the verdicts on fixed-over
 d2l.DATA_HUB['lm-rag-judge-cache-v4'] = (  # v3 and those replies
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v4.zip',
     'cf57712b285710ee87c0a7c56aab0600d13dac7a')
+d2l.DATA_HUB['lm-rag-judge-v5'] = (  # card's task: base and stages
+    d2l.LM_DATA_URL + 'lm-rag-judge-v5.jsonl',
+    '664337072badcb67b147684cd7935c77b4169ab0')
+d2l.DATA_HUB['lm-rag-judge-v6'] = (  # v5 and the verdicts on the fix run
+    d2l.LM_DATA_URL + 'lm-rag-judge-v6.jsonl',
+    '16fe5b4040697906e84fc99476e42c151fc93dd7')
+d2l.DATA_HUB['lm-rag-judge-cache-v6'] = (  # every reply with the card's task
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v6.zip',
+    '3f6a32485e092cb233ab4fc5dec761843c8ba68a')
 
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):
@@ -14674,7 +14698,12 @@ _EMBEDDERS = {
     'Qwen/Qwen3-Embedding-0.6B': dict(
         pooling='last', padding_side='left',
         query_format='Instruct: {task}\nQuery:{query}')}
-BOOK_TASK = 'Given a question about the book, retrieve passages that answer it'
+# The task in the book's query instruction: the model cards' default. Our
+# own wording, 'Given a question about the book, retrieve passages that
+# answer it', lowered the embedder's MRR@10 on the dev questions, where
+# this one is level with no instruction (sec_lm_text_embeddings)
+BOOK_TASK = ('Given a web search query, retrieve relevant passages that '
+             'answer the query')
 # Registered chunk vectors (sec512 chunks, 'dense' view, float16) by embedder
 _R3_EMB_KEYS = {
     'Qwen/Qwen3-Embedding-0.6B': 'lm-enc-r3-emb-qwen3emb06b-sec512-v1'}
@@ -14982,12 +15011,12 @@ def _rag_records(paths, on=('config', 'qid')):
 RAG_GENERATOR = 'Qwen/Qwen3.5-9B'  # revision pinned in the notebooks
 RAG_RERANKER = 'Qwen/Qwen3-Reranker-0.6B'
 RAG_ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
-    'rag-gen-base': ('lm-rag-gen-base-v1', 'lm-rag-gen-base.jsonl'),
-    'rag-gen-stages': ('lm-rag-gen-stages-v2', 'lm-rag-gen-stages.jsonl'),
-    'rag-gen-fix': ('lm-rag-gen-fix-v1', 'lm-rag-gen-fix.jsonl'),
-    'rag-judge': ('lm-rag-judge-v4', 'lm-rag-judge.jsonl'),
-    'rag-judge-cache': ('lm-rag-judge-cache-v4', 'lm-rag-judge-cache.zip'),
-    'rag-cards': ('lm-rag-cards-v1', 'lm-rag-cards.jsonl')}
+    'rag-gen-base': ('lm-rag-gen-base-v2', 'lm-rag-gen-base.jsonl'),
+    'rag-gen-stages': ('lm-rag-gen-stages-v3', 'lm-rag-gen-stages.jsonl'),
+    'rag-gen-fix': ('lm-rag-gen-fix-v2', 'lm-rag-gen-fix.jsonl'),
+    'rag-judge': ('lm-rag-judge-v6', 'lm-rag-judge.jsonl'),
+    'rag-judge-cache': ('lm-rag-judge-cache-v6', 'lm-rag-judge-cache.zip'),
+    'rag-cards': ('lm-rag-cards-v2', 'lm-rag-cards.jsonl')}
 
 # The baseline: section chunks, hybrid retrieval, the first five chunks in
 # rank order within 3,000 tokens, the fixed prompt, 300 new tokens, batches
@@ -15044,7 +15073,8 @@ def _rag_rerun():
 def _rag_settings(name):
     """What the answers of configuration name are made with (JSON): its
     entry of RAG_CONFIGS, the models at their revisions, the corpus, the
-    BM25 parameters and the question set. Reading the records checks it."""
+    BM25 parameters, the embedder's task and the question set. Reading the
+    records checks it."""
     gen, emb, rr = d2l.RAG_GENERATOR, d2l.DEFAULT_EMBEDDER, d2l.RAG_RERANKER
     rev = {gen: d2l.HF_REVISIONS[gen],
            **{m: d2l.HF_ENCODER_REVISIONS[m] for m in (emb, rr)}}
@@ -15052,7 +15082,7 @@ def _rag_settings(name):
         d2l.RAG_CONFIGS[name], generator=f'{gen}@{rev[gen]}',
         corpus=d2l.R3_VERSION, embedder=f'{emb}@{rev[emb]}',
         reranker=f'{rr}@{rev[rr]}', bm25=d2l.BookRetriever.BM25_PARAMS,
-        qa='lm-book-qa-v2'), sort_keys=True)
+        task=d2l.BOOK_TASK, qa='lm-book-qa-v2'), sort_keys=True)
 
 def _rag_run_path(name, rerun):
     """The file of RAG artifact name that this run regenerates (name in

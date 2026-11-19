@@ -742,6 +742,11 @@ class RunTables(unittest.TestCase):
         self.assertEqual((s['over'], s['qa'], s['corpus']),
                          (255, 'lm-book-qa-v2', d2l.R3_VERSION))
         self.assertTrue(s['reranker'].startswith(d2l.RAG_RERANKER + '@'))
+        self.assertEqual(s['task'], d2l.BOOK_TASK)  # the embedder's task
+        with unittest.mock.patch.dict(d2l.HF_REVISIONS, self.GEN_REV), \
+                unittest.mock.patch.object(d2l, 'BOOK_TASK', 'other'):
+            self.assertNotEqual(json.loads(d2l._rag_settings('fixed-over')),
+                                s)  # another task: other answers
         self.assertEqual(list(s), sorted(s))  # sorted keys: one string
 
     def test_answer_key(self):

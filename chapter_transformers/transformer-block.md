@@ -440,7 +440,7 @@ where the tokens are still distinct, the query projections receive
 gradients of about $10^{-2}$, several times below those of the pre-norm
 stack. From there the curve falls smoothly, block by block, as the spread
 does, until it levels off at a few times $10^{-9}$ in the top few blocks.
-The backward pass reaches the bottom of the stack through thirty
+The backward pass reaches the bottom of the stack through twenty
 blocks of collapsed tokens and arrives in good shape. The starvation is
 local: a block's query and key weights receive almost no gradient because
 its own input tokens are alike, not because the gradient vanished on its

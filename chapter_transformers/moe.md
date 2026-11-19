@@ -82,12 +82,12 @@ def moe_accounting(name, d, width, num_experts, num_active, num_layers,
     active = num_layers * ((num_active + shared) * per_expert
                            + d * num_experts)      # + the router
     tag = 'B' if unit == 1e9 else 'M'
-    print(f'{name:>12}: {store/unit:6.1f}{tag} in experts, '
-          f'{active/unit:5.1f}{tag} active per token, '
+    print(f'{name:>12}: {store/unit:5.3g}{tag} in experts, '
+          f'{active/unit:5.3g}{tag} active per token, '
           f'ratio {store/active:4.1f}x')
     return store, active
 
-moe_accounting('ours', 256, 683, 8, 1, 6, unit=1e6)
+moe_accounting('ours', 128, 341, 8, 1, 2, unit=1e6)
 moe_accounting('DeepSeek-V3', 7168, 2048, 256, 8, 58, shared=1)
 store, active = moe_accounting('Mixtral 8x7B', 4096, 14336, 8, 2, 32)
 attn = 32 * (2 * 4096 * 4096 + 2 * 4096 * 1024)  # GQA: 32 Q, 8 KV heads
@@ -108,6 +108,14 @@ active parameters. The name "8x7B" thus describes what the model stores,
 not the work per token: a token uses less than two sevenths of the
 parameters. Our configuration has Mixtral's eight experts per layer but
 sends each token to one of them, so it stores eight times what it uses.
+<!-- WRITER (MOE-1): the "ours" row is now the model trained in this section
+(width 128, SwiGLU width 341, two blocks): 2.1M in experts, 0.264M active, ratio
+7.9x (the router weights are active, hence below 8). The DeepSeek-V3 line prints
+656B and 23.1B (3 significant digits now). MOE-3, if wanted in prose: with
+MLA attention (11.4B over 61 layers), the three dense layers (1.19B) and the
+untied embedding and head (1.85B), the count gives 671.0B stored and 37.6B
+active; the model card says 37B. Not printed, because 37.6 against the card's
+37 would need its own explanation. -->
 
 The count rests on two assumptions. First, it counts only computation.
 All $E$ experts must sit in accelerator memory, and during training each
@@ -192,19 +200,36 @@ $EC \approx cnk$ rows, a fraction $ck/E$ of running every expert on every
 token. Fixed shapes come with dropping: a balanced router loses few
 assignments, an unbalanced one many.
 
-Besides its output, the layer keeps four things for the experiments
-below, which its method `record` updates for every batch: `expert_bias`,
-a vector added to the probabilities for the top-$k$ selection only, which
-stays zero until we need it; `load`, the number of assignments each expert
-has received, dropped or not; `dropped`, the number of dropped
-assignments; and `aux_loss`, a measure of imbalance that we derive when we
-use it.
+<!-- WRITER: the paragraph on `record`'s four attributes is now code comments in
+`MoELayer.__init__` (MOE-6); the slot count is `S` in the code (structure §2
+notation: $S$ slots, capacity factor $c$), so the $C$ of the two dispatch
+paragraphs and of the tab notes becomes $S$. NEW cell before the layer: the
+six-token example of MOE-4, experts (2, 0, 2, 2, 1, 2), E = 3, S = 3. It prints
+the one-hot rows, their cumulative sums, the places (0, 0, 1, 2, 0, 3, counted
+from zero: the code subtracts one from the cumulative count) and the slots
+(6, 0, 7, 8, 3, 9); slot 9 = E S is the overflow, so the last token's assignment
+is dropped. Introduce it before the cell; "tokens late in the flattened
+minibatch are dropped first" follows from it. -->
+
+```{.python .input #moe-dispatching-tokens-to-experts-2}
+%%tab pytorch, jax
+E, S = 3, 3                         # three experts, three slots each
+e = np.array([2, 0, 2, 2, 1, 2])    # the expert of each assignment
+onehot = np.eye(E, dtype=int)[e]    # (6, E)
+counts = onehot.cumsum(0)           # assignments to each expert so far
+rank = (counts * onehot).sum(1) - 1   # place in its expert's queue
+slot = np.where(rank < S, e * S + rank, E * S)  # E S: dropped
+print('expert  one-hot  cumulative  place  slot')
+for ei, oh, cs, r, sl in zip(e, onehot, counts, rank, slot):
+    note = '  dropped' if sl == E * S else ''
+    print(f'{ei:6}  {oh}  {cs!s:10}  {r:5}  {sl:4}{note}')
+```
 
 ```{.python .input #moe-a-mixture-of-experts-layer-1}
 %%tab pytorch
 class MoELayer(nn.Module):
     """Token-choice top-k mixture of SwiGLU d2l.FeedForward experts, each
-    with a buffer of C = capacity_factor * n k / E slots for n tokens."""
+    with a buffer of S = capacity_factor * n k / E slots for n tokens."""
     def __init__(self, num_hiddens, num_experts, num_active,
                  capacity_factor=1.25):
         super().__init__()
@@ -213,38 +238,42 @@ class MoELayer(nn.Module):
         self.router = nn.Linear(num_hiddens, num_experts, bias=False)
         self.experts = nn.ModuleList([d2l.FeedForward(num_hiddens)
                                       for _ in range(num_experts)])
+        # Added to the probabilities for the selection only; zero until a
+        # balancing method moves it
         self.register_buffer('expert_bias', torch.zeros(num_experts))
+        # Assignments per expert, dropped or not, and the dropped ones,
+        # counted by record() until reset_stats()
         self.register_buffer('load', torch.zeros(num_experts))
         self.register_buffer('dropped', torch.zeros(()))
 
     def forward(self, X):
         x = X.reshape(-1, X.shape[-1])                 # (n, d): the tokens
         (n, d), E, k = x.shape, self.num_experts, self.num_active
-        C = math.ceil(self.capacity_factor * n * k / E)  # slots per expert
+        S = math.ceil(self.capacity_factor * n * k / E)  # slots per expert
         P = F.softmax(self.router(x), -1)              # (n, E)
         idx = (P + self.expert_bias).topk(k).indices   # (n, k)
         e = idx.flatten()                              # expert of each pair
         onehot = F.one_hot(e, E)                       # (n k, E)
         rank = (onehot.cumsum(0) * onehot).sum(1) - 1  # place in its queue
-        slot = torch.where(rank < C, e * C + rank, E * C)  # E C: dropped
-        buf = x.new_zeros(E * C + 1, d)                # + an overflow row
+        slot = torch.where(rank < S, e * S + rank, E * S)  # E S: dropped
+        buf = x.new_zeros(E * S + 1, d)                # + an overflow row
         buf[slot] = x.repeat_interleave(k, 0)
-        Y = self.run_experts(buf[:-1].reshape(E, C, d)).reshape(E * C, d)
+        Y = self.run_experts(buf[:-1].reshape(E, S, d)).reshape(E * S, d)
         Y = torch.cat([Y, Y.new_zeros(1, d)])[slot]    # dropped: zeros
         weights = P.gather(-1, idx)                    # (n, k): the p_i
         out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
-        self.record(onehot.sum(0), (rank >= C).sum(), P)
+        self.record(onehot.sum(0), (rank >= S).sum(), P)
         return out.reshape(X.shape)
 
     def run_experts(self, H):
-        """Each expert's SwiGLU on its own buffer: (E, C, d) -> (E, C, d)."""
+        """Each expert's SwiGLU on its own buffer: (E, S, d) -> (E, S, d)."""
         W = lambda name: torch.stack(  # (E, d_in, d_out): one per expert
             [getattr(e, name).weight for e in self.experts]).mT
         return (F.silu(H @ W('W_g')) * (H @ W('W_1'))) @ W('W_2')
 
     def record(self, counts, num_dropped, P):
         """Add a batch's assignments per expert and drops to the totals,
-        and keep its balancing loss."""
+        and keep its balancing loss, a measure of imbalance."""
         self.load += counts
         self.dropped += num_dropped
         f = counts / counts.sum()                      # this batch's shares
@@ -259,7 +288,7 @@ class MoELayer(nn.Module):
 %%tab jax
 class MoELayer(nnx.Module):
     """Token-choice top-k mixture of SwiGLU d2l.FeedForward experts, each
-    with a buffer of C = capacity_factor * n k / E slots for n tokens."""
+    with a buffer of S = capacity_factor * n k / E slots for n tokens."""
     def __init__(self, num_hiddens, num_experts, num_active,
                  capacity_factor=1.25, *, rngs):
         self.num_experts, self.num_active = num_experts, num_active
@@ -268,7 +297,12 @@ class MoELayer(nnx.Module):
                                  rngs=rngs)
         self.experts = nnx.List([d2l.FeedForward(num_hiddens, rngs=rngs)
                                  for _ in range(num_experts)])
+        # Added to the probabilities for the selection only; zero until a
+        # balancing method moves it
         self.expert_bias = nnx.Variable(jnp.zeros(num_experts))
+        # Assignments per expert, dropped or not, and the dropped ones,
+        # counted by record() until reset_stats(); the last batch's
+        # balancing loss
         self.load = nnx.Variable(jnp.zeros(num_experts))
         self.dropped = nnx.Variable(jnp.zeros(()))
         self.aux_loss = nnx.Variable(jnp.zeros(()))
@@ -276,31 +310,31 @@ class MoELayer(nnx.Module):
     def __call__(self, X):
         x = X.reshape(-1, X.shape[-1])                 # (n, d): the tokens
         (n, d), E, k = x.shape, self.num_experts, self.num_active
-        C = math.ceil(self.capacity_factor * n * k / E)  # slots per expert
+        S = math.ceil(self.capacity_factor * n * k / E)  # slots per expert
         P = jax.nn.softmax(self.router(x), -1)         # (n, E)
         _, idx = jax.lax.top_k(P + self.expert_bias[...], k)  # (n, k)
         e = idx.ravel()                                # expert of each pair
         onehot = jax.nn.one_hot(e, E, dtype=jnp.int32)  # (n k, E)
         rank = (onehot.cumsum(0) * onehot).sum(1) - 1  # place in its queue
-        slot = jnp.where(rank < C, e * C + rank, E * C)  # E C: dropped
-        buf = jnp.zeros((E * C, d), x.dtype).at[slot].set(
+        slot = jnp.where(rank < S, e * S + rank, E * S)  # E S: dropped
+        buf = jnp.zeros((E * S, d), x.dtype).at[slot].set(
             jnp.repeat(x, k, 0), mode='drop')
-        Y = self.run_experts(buf.reshape(E, C, d)).reshape(E * C, d)
+        Y = self.run_experts(buf.reshape(E, S, d)).reshape(E * S, d)
         Y = Y.at[slot].get(mode='fill', fill_value=0)  # dropped: zeros
         weights = jnp.take_along_axis(P, idx, -1)      # (n, k): the p_i
         out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
-        self.record(onehot.sum(0), (rank >= C).sum(), P)
+        self.record(onehot.sum(0), (rank >= S).sum(), P)
         return out.reshape(X.shape)
 
     def run_experts(self, H):
-        """Each expert's SwiGLU on its own buffer: (E, C, d) -> (E, C, d)."""
+        """Each expert's SwiGLU on its own buffer: (E, S, d) -> (E, S, d)."""
         W = lambda name: jnp.stack(  # (E, d_in, d_out): one per expert
             [getattr(e, name).kernel[...] for e in self.experts])
         return (jax.nn.silu(H @ W('W_g')) * (H @ W('W_1'))) @ W('W_2')
 
     def record(self, counts, num_dropped, P):
         """Add a batch's assignments per expert and drops to the totals,
-        and keep its balancing loss."""
+        and keep its balancing loss, a measure of imbalance."""
         self.load[...] += counts
         self.dropped[...] += num_dropped
         f = counts / counts.sum()                      # this batch's shares
@@ -374,37 +408,33 @@ argument, which builds the feed-forward module of the block. We check
 shapes on 400 random tokens, count parameters for eight experts with two
 active, and look at how the router of the fresh layer spreads the 800
 assignments over buffers of $\lceil 1.25 \cdot 800/8 \rceil = 125$ slots:
+<!-- WRITER: the cell no longer prints the shares of random tokens (MOE-8):
+it checks the block's output shape on 400 random tokens and prints the
+parameter counts only (4198400 stored, 1051136 active). Drop "and look at how
+the router ... 125 slots". -->
 
 ```{.python .input #moe-a-mixture-of-experts-layer-2}
 %%tab pytorch
-moe = MoELayer(256, num_experts=8, num_active=2)
-X = torch.randn(4, 100, 256)
-d2l.check_shape(moe(X), X.shape)
 blk = d2l.TransformerBlock(256, num_heads=8,
                            ffn_factory=lambda: MoELayer(256, 8, 2))
-d2l.check_shape(blk(X), X.shape)
+X = torch.randn(4, 100, 256)
+d2l.check_shape(blk(X), X.shape)  # The expert layer fits into the block
+moe = MoELayer(256, num_experts=8, num_active=2)
 print(f'{d2l.num_params(moe)} parameters stored, '
       f'{active_params(moe)} active per token')
-print('shares of the assignments:',
-      ' '.join(f'{s:.2f}' for s in (moe.load / moe.load.sum()).tolist()))
-print(f'{float(moe.dropped) / float(moe.load.sum()):.0%} of them dropped')
 ```
 
 ```{.python .input #moe-a-mixture-of-experts-layer-2}
 %%tab jax
-moe = MoELayer(256, num_experts=8, num_active=2,
-               rngs=nnx.Rngs(d2l.get_key()))
-X = jax.random.normal(d2l.get_key(), (4, 100, 256))
-d2l.check_shape(moe(X), X.shape)
 blk = d2l.TransformerBlock(
     256, num_heads=8, rngs=nnx.Rngs(d2l.get_key()),
     ffn_factory=lambda rngs: MoELayer(256, 8, 2, rngs=rngs))
-d2l.check_shape(blk(X), X.shape)
+X = jax.random.normal(d2l.get_key(), (4, 100, 256))
+d2l.check_shape(blk(X), X.shape)  # The expert layer fits into the block
+moe = MoELayer(256, num_experts=8, num_active=2,
+               rngs=nnx.Rngs(d2l.get_key()))
 print(f'{d2l.num_params(moe)} parameters stored, '
       f'{active_params(moe)} active per token')
-print('shares of the assignments:',
-      ' '.join(f'{s:.2f}' for s in (moe.load / moe.load.sum()).tolist()))
-print(f'{float(moe.dropped) / float(moe.load.sum()):.0%} of them dropped')
 ```
 
 Each expert holds $3 \cdot 256 \cdot 683 = 524{,}544$ parameters, so the
@@ -414,6 +444,10 @@ share is far from the even share of $1/8$, and the buffers, a quarter
 larger than an even share, drop almost no assignments. Random vectors are
 not text, however, and the router has yet to be trained. The next part
 follows the shares inside a language model.
+<!-- WRITER: the random-vector shares are gone from the cell (MOE-8); the
+sentences from "A fresh router spreads random tokens" to "has yet to be
+trained" no longer have a printed number. Cut them; the next part's prediction
+(first-block router sees the current byte) takes over. -->
 
 ## Routing Collapse and Load Balancing
 
@@ -600,15 +634,20 @@ def evaluate_moe(model, data):
         float(l.load.sum()) for l in layers)
     return loss, shares, dropped
 
-def report(name, model, data):
-    """Print the validation loss, the busiest expert's load in units of the
-    even share, and the drops; return the shares."""
+def measure(model, data):
+    """The validation loss, the same with buffers that drop nothing, the
+    busiest expert's load in units of the even share, and the fraction
+    dropped; and the shares."""
+    layers = moe_layers(model)
     val, shares, dropped = evaluate_moe(model, data)
-    peak = max(l.num_experts * s[0]
-               for l, s in zip(moe_layers(model), shares))
-    print(f'{name:>15}: validation loss {val:.2f}, busiest expert at '
-          f'{peak:.1f} times its share, {dropped:.0%} dropped')
-    return shares
+    peak = max(l.num_experts * s[0] for l, s in zip(layers, shares))
+    capacity = [l.capacity_factor for l in layers]
+    for l in layers:  # S = n k slots: room for every assignment
+        l.capacity_factor = l.num_experts
+    val_all = evaluate_moe(model, data)[0]
+    for l, c in zip(layers, capacity):
+        l.capacity_factor = c
+    return (val, val_all, peak, dropped), shares
 ```
 
 The experiments use the data and the training recipe of
@@ -626,6 +665,19 @@ of 1.25. We first read a fresh model, then train three models for 800
 steps each. The runs differ only in balancing: none, the auxiliary loss at
 $\alpha = 0.01$, or the bias controller at $u = 0.01$. Each model draws
 its own initialization.
+<!-- WRITER: the cell now trains four arms twice each (structure §3.8 item 4):
+no balancing, frozen router (NEW: `freeze_router` keeps W_r at its initial
+values; PyTorch turns off its gradient, so AdamW skips it; JAX makes the kernel
+a plain Variable, which neither nnx.grad nor the optimizer touches; checked: the
+router stays bit-identical), auxiliary loss, bias controller; plus the fresh
+model, measured twice. Each row prints two runs. Columns: validation loss; the
+same loss with buffers that drop nothing (capacity factor temporarily E, so
+S = n k); the busiest expert's load in units of the even share; the fraction
+dropped. Say "the runs differ only in balancing" for the four trained arms, and
+put the prediction (MOE-12) before the cell: a byte-level model's first-block
+router sees little but the current byte, and the space alone is 18.9% of the
+validation bytes (measured), more than the 1.25/8 = 15.6% of the assignments
+that a buffer holds. -->
 
 ```{.python .input #moe-balancing-methods-compared-1}
 %%tab pytorch
@@ -638,6 +690,11 @@ def small_gpt(vocab_size, capacity_factor=None):
     model = d2l.GPT(vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
                     ffn_factory=None if capacity_factor is None else experts)
     return model.to(d2l.try_gpu())
+
+def freeze_router(model):
+    """Keep every router at its initial weights: no gradient, no update."""
+    for l in moe_layers(model):
+        l.router.weight.requires_grad_(False)
 ```
 
 ```{.python .input #moe-balancing-methods-compared-1}
@@ -652,23 +709,53 @@ def small_gpt(vocab_size, capacity_factor=None):
     return d2l.GPT(vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
                    ffn_factory=None if capacity_factor is None else experts,
                    rngs=nnx.Rngs(d2l.get_key()))
+
+def freeze_router(model):
+    """Keep every router at its initial weights: a Variable that is not a
+    Param gets no gradient and no update."""
+    for l in moe_layers(model):
+        l.router.kernel = nnx.Variable(l.router.kernel[...])
 ```
 
 `small_gpt` builds this model, and without a capacity factor the dense
 GPT of the same size, which :numref:`subsec_moe-gpt` uses. Each line of the
 output reads one model: the fresh one, then the three trained ones.
+<!-- WRITER: "Each line ... three trained ones" is false now: each row is one
+arm with two runs, five rows (fresh, no balancing, frozen router, auxiliary
+loss, bias controller). `freeze_router` (in the cell above, per tab) and
+`balancing_run` (the shared cell after it) need one sentence each. -->
+
+```{.python .input #moe-balancing-methods-compared-2}
+%%tab pytorch, jax
+def balancing_run(data, num_steps=800, frozen=False, aux_weight=0.0,
+                  bias_rate=0.0):
+    """Measure a fresh small MoE GPT after num_steps steps of training with
+    one balancing setting."""
+    model = small_gpt(len(data.vocab), capacity_factor=1.25)
+    if frozen:
+        freeze_router(model)
+    if num_steps:
+        optimizer = d2l.LMOptimizer(model, lr=2e-3, num_steps=num_steps,
+                                    warmup=100)
+        train_moe_lm(model, data, optimizer, num_steps, aux_weight,
+                     bias_rate)
+    return measure(model, data)
+```
 
 ```{.python .input #moe-three-runs-one-budget-3}
 %%tab pytorch, jax
-shares = {'initialization': report(
-    'initialization', small_gpt(len(data.vocab), capacity_factor=1.25), data)}
-for name, aux_weight, bias_rate in (('no balancing', 0.0, 0.0),
-                                    ('auxiliary loss', 0.01, 0.0),
-                                    ('bias controller', 0.0, 0.01)):
-    model = small_gpt(len(data.vocab), capacity_factor=1.25)
-    optimizer = d2l.LMOptimizer(model, lr=2e-3, num_steps=800, warmup=100)
-    train_moe_lm(model, data, optimizer, 800, aux_weight, bias_rate)
-    shares[name] = report(name, model, data)
+arms = {'initialization': dict(num_steps=0), 'no balancing': {},
+        'frozen router': dict(frozen=True),
+        'auxiliary loss': dict(aux_weight=0.01),
+        'bias controller': dict(bias_rate=0.01)}
+print(f'{"two runs each":>15}  {"loss":^9}  {"no drops":^9}  '
+      f'{"busiest":^9}  {"dropped":^7}')
+shares = {}  # The first run's shares
+for name, kwargs in arms.items():
+    (a, shares[name]), (b, _) = [balancing_run(data, **kwargs)
+                                 for _ in range(2)]
+    print(f'{name:>15}  {a[0]:.2f} {b[0]:.2f}  {a[1]:.2f} {b[1]:.2f}  '
+          f'{a[2]:3.1f}x {b[2]:3.1f}x  {a[3]:3.0%} {b[3]:3.0%}')
 ```
 
 The plot shows the shares of the eight experts, sorted from the busiest to
@@ -682,7 +769,8 @@ mean_shares = [[sum(rank) / len(rank) for rank in zip(*s)]
                for s in shares.values()]  # Mean over the layers
 d2l.plot(ranks, mean_shares + [[1 / 8] * 8], 'expert, busiest first',
          'share of tokens', legend=list(shares) + ['even share'],
-         fmts=('C7x:', 'C0o-', 'C1s--', 'C2^-.', 'k-'), legend_loc='outside')
+         fmts=('C7x:', 'C0o-', 'C4v:', 'C1s--', 'C2^-.', 'k-'),
+         legend_loc='outside')
 ```
 
 The fresh model is unbalanced before it has seen any data, unlike the
@@ -709,6 +797,41 @@ difference shows in larger models: :citet:`Wang.Gao.Zeng.ea.2024` trained models
 billion parameters both ways, and the controller balanced the load much
 more evenly than the auxiliary loss while reaching a slightly lower
 validation perplexity.
+<!-- WRITER: the reading of the new table (MOE S1, S2, MOE-9, MOE-13), from the
+direct runs of both tabs (two runs per arm in the cell; 3 more per arm in dev
+runs, 5 per framework in all; ranges below are over all of them):
+- fresh model: busiest expert 2.4x to 3.9x its share, 17% to 34% dropped,
+  before any training (the skew comes from the bytes, as predicted).
+- no balancing, trained 800 steps: 2.4x to 4.9x, 20% to 50% dropped;
+  validation loss 1.68 to 1.84.
+- frozen router: 2.2x to 4.0x, 22% to 42% dropped; loss 1.73 to 1.84.
+  Indistinguishable from the trained router within the run-to-run range, in
+  both tabs. So in these runs the router's own gradient does not visibly add
+  to the skew: the feedback loop of subsec_moe-feedback is not what the runs
+  show; the skew at initialization, carried by the inputs, persists. Teach the
+  feedback loop as what training *can* add (protected passage), and say the
+  small runs do not show it; drop "routing reinforces itself" as a finding
+  (Summary) and the "Training without balancing does not undo ... about twice
+  its even share or more" sentence (numbers above).
+- no-drop column (S2): evaluating the unbalanced models without dropping
+  lowers their loss by 0.05 to 0.09 nats (e.g. 1.79 -> 1.72, 1.84 -> 1.75);
+  they still stay 0.1 or more above the balanced runs (no-drop 1.63 to 1.77
+  against 1.51 to 1.64). So skipped computation at evaluation explains part of
+  the gap, and the rest is capacity that training left unused (the busy
+  experts' overflow also never trained on the dropped tokens). For the
+  balanced arms the column equals the loss (0% to 1% dropped).
+- auxiliary loss 1.51 to 1.64, bias controller 1.54 to 1.61; busiest 1.1x to
+  1.4x; 0% to 1% dropped. The spread within one balanced arm reaches 0.09
+  nats (PyTorch auxiliary loss 1.55 and 1.64 in the cell), so the remedies are
+  not ranked (keep). Balanced against unbalanced: every balanced run is below
+  every unbalanced run (1.64 at most against 1.68 at least), a gap of about
+  0.15 to 0.2 nats in the middle of the ranges.
+- delete "the further that run has collapsed, the wider the gap" (MOE-13).
+- JAX bias controller (worklist 0.2 item 8): stored 1.63 against PyTorch
+  1.56. Three dev reruns per framework plus the two in the cell: JAX 1.54,
+  1.58, 1.58, 1.58, 1.59; PyTorch 1.55, 1.56, 1.56, 1.57, 1.61. Same range; the
+  stored 1.63 was one run at the top of the run-to-run spread. No fault; no
+  code change. -->
 
 ## Mixture-of-Experts Language Models
 
@@ -747,11 +870,33 @@ the mixture's final lead over the dense model, which ranged from almost
 nothing to five hundredths of a nat. At $c = 2$ a buffer holds a quarter
 of the assignments, and after the first few hundred steps almost no
 assignment is dropped.
+<!-- WRITER (decision 9 took the FALLBACK; MOE-14, S3): the default (bias
+controller at c = 1.25) failed its acceptance test in development. Dev runs, two
+per framework, 6,000 steps: in PyTorch run 1 the first block dropped 20% of its
+assignments in the first 250 steps and still 5% to 12% in every later 250-step
+window to the end (1.305 against dense 1.321: a gain of 0.016); in JAX run 1 the
+first block dropped 6% falling to 1% over the run (gain 0.029); the other two
+runs fell below 1% after 500 steps (gains 0.041 and 0.042). The cause is the
+space byte: 18.9% of the bytes (measured on the validation split), more than
+the 15.6% of the assignments that a buffer holds at c = 1.25; the first block
+sees little but the byte, so no bias can split the spaces between experts.
+So the cell keeps the auxiliary loss at c = 2 (the previous design). Cut this
+paragraph to two sentences: why c = 2 (a buffer holds a quarter of the
+assignments, more than the 19% that are spaces), and that at c = 2 the blocks
+drop 1% to 8% of their assignments in the first 250 steps and nothing
+afterwards (dev: both tabs, all four runs; the cell prints 0.0% dropped at the
+end). State the doubled
+buffer rows once: the experts run on 2n rows against the dense model's n, so
+"the same computation per token" holds for the parameters a token passes
+through, not for the rows computed. The "In our runs at c = 1.25 ... five
+hundredths of a nat" sentences have no cell behind them; if the writer keeps
+one clause on c = 1.25, the numbers above are the evidence. -->
 
 ```{.python .input #moe-a-mixture-of-experts-gpt-1}
 %%tab pytorch, jax
-models = {'dense': small_gpt(len(data.vocab)),
-          'MoE': small_gpt(len(data.vocab), capacity_factor=2)}
+capacity = {'dense': None, 'MoE': 2}  # The dense model has no buffers
+models = {name: small_gpt(len(data.vocab), capacity_factor=c)
+          for name, c in capacity.items()}
 for name, model in models.items():
     print(f'{name:>5}: {d2l.num_params(model) / 1e6:5.2f}M parameters, '
           f'{active_params(model) / 1e6:.2f}M active per token')
@@ -765,19 +910,26 @@ every 250 steps:
 ```{.python .input #moe-a-mixture-of-experts-gpt}
 %%tab pytorch, jax
 num_steps, every = 6000, 250
-curves = {}
-for name, model in models.items():
-    optimizer = d2l.LMOptimizer(model, lr=2e-3, num_steps=num_steps,
-                                warmup=100)
-    curves[name] = []
-    for _ in range(num_steps // every):
-        train_moe_lm(model, data, optimizer, every, aux_weight=0.01)
-        curves[name].append(
-            math.log(d2l.lm_perplexity(model, data.val_dataloader())))
-    print(f'{name:>5}: validation loss {curves[name][-1]:.2f} nats')
-d2l.plot(list(range(every, num_steps + 1, every)), list(curves.values()),
-         'step', 'validation loss (nats)', legend=list(curves),
-         fmts=('-', '--'))
+curves = {name: [] for name in capacity}  # Validation loss every 250 steps
+for run in range(2):
+    for name, c in capacity.items():  # Dense first, then MoE
+        model = small_gpt(len(data.vocab), capacity_factor=c)
+        optimizer = d2l.LMOptimizer(model, lr=2e-3, num_steps=num_steps,
+                                    warmup=100)
+        curve = []
+        for _ in range(num_steps // every):  # Dense: no aux loss to add
+            train_moe_lm(model, data, optimizer, every, aux_weight=0.01)
+            curve.append(
+                math.log(d2l.lm_perplexity(model, data.val_dataloader())))
+        curves[name].append(curve)
+    dense, moe = curves['dense'][-1], curves['MoE'][-1]
+    ahead = next(i for i, (m, d) in enumerate(zip(moe, dense)) if m < d)
+    print(f'run {run + 1}: dense {dense[-1]:.3f}, MoE {moe[-1]:.3f}; '
+          f'MoE ahead from step {every * (ahead + 1)}, '
+          f'{evaluate_moe(model, data)[2]:.1%} dropped at the end')
+d2l.plot(list(range(every, num_steps + 1, every)),
+         [curves['dense'][0], curves['MoE'][0]], 'step',
+         'validation loss (nats)', legend=['dense', 'MoE'], fmts=('-', '--'))
 ```
 
 Early in training the mixture trails the dense model: each fresh
@@ -788,6 +940,19 @@ runs out of capacity, its curve flattens, while the mixture keeps
 improving. Its validation loss falls below the dense model's within the
 first two thousand steps and stays below it to the end, by a few hundredths
 of a nat.
+<!-- WRITER (MOE-15, MOE-16): the cell now trains each model twice and prints
+both runs. Direct runs: PyTorch dense 1.319, 1.318, MoE 1.273, 1.268; JAX dense
+1.323, 1.319, MoE 1.274, 1.277. Two more dev runs per framework: PyTorch dense
+1.322, 1.324, MoE 1.278, 1.272; JAX dense 1.318, 1.323, MoE 1.267, 1.266. Gain
+0.042 to 0.056 nats in every pair (0.04 to 0.05 in the cell); over all four
+runs per framework, the range is at most 0.006 (dense) and 0.011 (MoE). The
+gain is about five times the spread and passes the standard; quote "about 0.05
+nats" with "runs of one model differ by under 0.01". The crossover printed
+("MoE ahead from step"): 2,000 and 1,250 (PyTorch), 1,250 and 1,500 (JAX); dev
+runs 1,750 and about 1,500 to 1,750. So "after 1,250 to 2,000 steps, in every
+run". The slow start: link to the raw-probability weight (MOE-16). Compare the
+0.05 nats with the scaling grid of sec_scaling-laws (what roughly tripling a
+dense model buys at a fixed budget; read it off the grid there). -->
 At the same computation per token, the stored experts make a better
 model. Large studies report the same effect. The Switch transformer reached the quality of a dense T5
 model several times faster at the same number of operations per token, and
@@ -851,27 +1016,10 @@ only a configurable width, and a shared expert is one more feed-forward
 network whose output is added to the routed mixture. The exercises build
 both.
 
-Released models make different choices along these axes, as
-:numref:`tab_moe-experts` shows.
-
-:Routed-expert configurations of released MoE language models.
-:label:`tab_moe-experts`
-
-| Model | Experts per layer | Active $k$ | Expert width / $d$ | Shared expert |
-|---|---|---|---|---|
-| Mixtral 8x7B :cite:`Jiang.Sablayrolles.Roux.ea.2024` | 8 | 2 | 3.5 | none |
-| DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024` | 256 | 8 | 0.29 | 1 |
-| Qwen3-235B :cite:`Yang.Li.Yang.ea.2025` | 128 | 8 | 0.38 | none |
-| gpt-oss-120b :cite:`OpenAI.2025` | 128 | 4 | 1.0 | none |
-
-The three later models use many more experts than Mixtral and between 4
-and 8 active per token, and most of them make each expert narrower than
-the model itself. They disagree on the shared expert: DeepSeek's models
-have used shared experts since DeepSeekMoE, two in DeepSeek-V2
-:cite:`DeepSeek-AI.2024` and one in DeepSeek-V3, whereas Qwen3 uses none.
-How many experts a model should have, how wide, and how many tokens it
-needs before its stored parameters help are questions of scaling, of the
-kind that :numref:`sec_scaling-laws` asks for dense models.
+<!-- WRITER: the table `tab_moe-experts` and its two paragraphs moved to
+`modern-recipe.md` (structure §3.8 item 6, MOE-20); the text is kept in the
+code-moe report's scratch copy. This subsection now ends with the
+fine-grained/shared-expert idea and the figure. -->
 
 ## Summary
 
@@ -883,7 +1031,13 @@ computation per token with $k$. An efficient layer copies each token into
 a fixed-size buffer of each of its experts and runs all experts at once on
 their buffers, at the cost of dropping the assignments that do not fit.
 Left alone, routing concentrates on a few experts, both because similar
-tokens go to the same expert and because routing reinforces itself. An auxiliary loss
+tokens go to the same expert and because routing reinforces itself.
+<!-- WRITER: "and because routing reinforces itself" is not what the runs show
+(frozen router as skewed as the trained one, both tabs); the measured causes
+are the byte skew at initialization and the drops it causes (see the marker
+after the balancing plot). The GPT comparison now ends about 0.05 nats lower
+(two runs each, ranges under 0.01). Exercise 4 part 1 (freeze the router) is
+now body: drop it, keep part 2. --> An auxiliary loss
 on the product of load and probability, or a controller that biases only
 the selection, evens out the load. With balanced experts, a GPT with eight
 experts per block and one active per token reaches a lower validation loss
@@ -1122,11 +1276,12 @@ small byte-level GPT.
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
-| Generation and the KV Cache | reuse keys and values while sampling |
+| The KV Cache | reuse keys and values while sampling |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
-| **Mixture of Experts** | **more parameters per FLOP** |
 | Scaling Laws | loss against parameters, data, compute |
+| **Mixture of Experts** | **more parameters per FLOP** |
 :::
 
 ::: {.col .narrow}
@@ -1184,16 +1339,27 @@ Same operations per token; 4.2 times the parameters in memory.
   router would then learn nothing from the loss.
 :::
 
-::: {.slide title="Each Expert Gets a Fixed Buffer of C Slots"}
+::: {.slide title="Each Expert Gets a Fixed Buffer of S Slots"}
 - The number of tokens an expert receives changes from batch to batch;
   matrix products need fixed shapes.
-- Buffer of $C = \lceil c\, nk/E \rceil$ slots per expert; Switch trains
+- Buffer of $S = \lceil c\, nk/E \rceil$ slots per expert; Switch trains
   with capacity factor $c = 1.25$.
-- Number each expert's assignments in token order; number $r \geq C$ is
+- Number each expert's assignments in token order; number $r \geq S$ is
   *dropped* (the token keeps its residual stream).
 - All experts run at once on $(E, C, d)$: about $c\,nk$ rows, a fraction
   $ck/E$ of running every expert on every token.
 - Balanced router: few drops. Unbalanced: many.
+:::
+
+::: {.slide title="Six Assignments, Three Experts, Three Slots: The Last One Is Dropped"}
+@!moe-dispatching-tokens-to-experts-2
+
+- The cumulative sum counts, row by row, each expert's assignments so far;
+  its entry at the row's own expert, minus one, is the place in the queue.
+- Slot $= eS + \text{place}$; place $\geq S$ goes to the overflow slot
+  $ES = 9$.
+- Expert 2 receives four assignments for three slots: the latest one is
+  dropped. Late tokens of a minibatch are dropped first.
 :::
 
 ::: {.slide title="Dispatch: Number, Copy Into Buffers, Run, Gather Back" only="pytorch"}
@@ -1201,10 +1367,10 @@ Same operations per token; 4.2 times the parameters in memory.
 e = idx.flatten()                              # expert of each pair
 onehot = F.one_hot(e, E)                       # (n k, E)
 rank = (onehot.cumsum(0) * onehot).sum(1) - 1  # place in its queue
-slot = torch.where(rank < C, e * C + rank, E * C)  # E C: dropped
-buf = x.new_zeros(E * C + 1, d)                # + an overflow row
+slot = torch.where(rank < S, e * S + rank, E * S)  # E S: dropped
+buf = x.new_zeros(E * S + 1, d)                # + an overflow row
 buf[slot] = x.repeat_interleave(k, 0)
-Y = self.run_experts(buf[:-1].reshape(E, C, d)).reshape(E * C, d)
+Y = self.run_experts(buf[:-1].reshape(E, S, d)).reshape(E * S, d)
 Y = torch.cat([Y, Y.new_zeros(1, d)])[slot]    # dropped: zeros
 weights = P.gather(-1, idx)                    # (n, k): the p_i
 out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
@@ -1218,10 +1384,10 @@ out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
 e = idx.ravel()                                # expert of each pair
 onehot = jax.nn.one_hot(e, E, dtype=jnp.int32)  # (n k, E)
 rank = (onehot.cumsum(0) * onehot).sum(1) - 1  # place in its queue
-slot = jnp.where(rank < C, e * C + rank, E * C)  # E C: dropped
-buf = jnp.zeros((E * C, d), x.dtype).at[slot].set(
+slot = jnp.where(rank < S, e * S + rank, E * S)  # E S: dropped
+buf = jnp.zeros((E * S, d), x.dtype).at[slot].set(
     jnp.repeat(x, k, 0), mode='drop')
-Y = self.run_experts(buf.reshape(E, C, d)).reshape(E * C, d)
+Y = self.run_experts(buf.reshape(E, S, d)).reshape(E * S, d)
 Y = Y.at[slot].get(mode='fill', fill_value=0)  # dropped: zeros
 weights = jnp.take_along_axis(P, idx, -1)      # (n, k): the p_i
 out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
@@ -1234,8 +1400,7 @@ Every shape follows from $n$: one compilation, whatever the routing.
 @!moe-a-mixture-of-experts-layer-2
 
 - One expert: $3 \cdot 256 \cdot 683 = 524{,}544$ parameters.
-- A fresh router spreads *random* tokens roughly evenly; buffers of 125
-  slots for 100 assignments on average drop almost none.
+- Stored: 8 experts and the router. Active: 2 experts and the router.
 :::
 
 ::: {.slide title="Check: What Fraction of a Layer Does One Token Use?"}
@@ -1283,30 +1448,34 @@ $$\mathcal{E}_k = \operatorname{argtop}_k(p_i + b_i), \qquad b_i \leftarrow b_i 
   $u = 0.01$.
 :::
 
-::: {.slide title="Three Runs That Differ Only in Balancing"}
-Two blocks of width 128, 8 experts, top-1, 800 steps on the bytes of
-Wikipedia articles (WikiText-103); first a fresh model:
-
-@!moe-three-runs-one-budget-3
-:::
-
-::: {.slide title="Why Text Is Unbalanced Before Any Training"}
+::: {.slide title="Prediction: Bytes Are Unbalanced Before Any Training"}
 - Block 1: the residual stream is little more than the byte's
   embedding, so a byte's occurrences go to one expert.
-- Bytes are far from equally frequent: nearly one in five is a space.
+- Bytes are far from equally frequent: 18.9% of them are spaces, more than
+  the $1.25/8 = 15.6\%$ of the assignments that one buffer holds.
 - Block 2: attention adds to every position nearly the same average of
   the earlier bytes; the common offset tilts most tokens toward one
   expert.
-- Busy experts overflow their buffers: the fresh model drops many
-  assignments.
+- So even a fresh model should overflow its busiest buffers.
+:::
+
+::: {.slide title="Frozen Router, No Balancing, Two Remedies: Two Runs Each"}
+Two blocks of width 128, 8 experts, top-1, $c = 1.25$, 800 steps on the
+bytes of WikiText-103; "no drops": the same model evaluated with buffers
+that drop nothing.
+
+@!moe-three-runs-one-budget-3
 :::
 
 ::: {.slide title="Both Remedies Even Out the Load; No Balancing Stays Skewed"}
 @!moe-three-runs-one-budget-4
 
-- No balancing: the busiest expert keeps about twice its share or more.
-- Both remedies: shares near $1/8$, few drops, validation loss at or below
-  the unbalanced run's.
+- The skew is there at initialization; freezing the router changes little,
+  so in these runs it comes from the bytes, not from feedback.
+- Without dropping, the unbalanced models gain 0.05 to 0.09 nats and still
+  trail the balanced ones: idle experts cost the rest.
+- Both remedies: shares near $1/8$, at most 1% dropped, every balanced run
+  below every unbalanced one; the two are not ranked at this scale.
 :::
 
 ::: {.slide title="Check: What Is the Balancing Loss Here?"}
@@ -1324,20 +1493,26 @@ $\mathcal{L}_{\mathrm{balance}}$?
 :::
 :::
 
-::: {.slide title="Same Computation per Token, 5.3 Times the Parameters"}
+::: {.slide title="Same Active Parameters per Token, 5.3 Times the Stored Ones"}
 The small GPT of the balancing runs, two blocks of width 128, dense and
 with each FFN replaced by 8 experts, top-1, auxiliary loss
-$\alpha = 0.01$, capacity factor 2 (one byte in five is a space):
+$\alpha = 0.01$:
 
 @!moe-a-mixture-of-experts-gpt-1
+
+- Capacity factor 2: a buffer holds a quarter of the assignments, more
+  than the 19% that are spaces; at 1.25 it would hold 15.6%.
+- Price: the experts compute $2n$ rows for $n$ tokens.
 :::
 
-::: {.slide title="The MoE GPT Reaches a Lower Validation Loss Than the Dense GPT"}
+::: {.slide title="The Mixture Overtakes the Dense Model after 1,250 to 2,000 Steps"}
 @!moe-a-mixture-of-experts-gpt
 
 - 6,000 steps, about 50M bytes, more than 100 per dense parameter.
-- The mixture starts behind, crosses within the first 2,000 steps, and
-  stays below.
+- Two runs each: the mixture ends about 0.05 nats lower; runs of one
+  model differ by under 0.01.
+- It starts behind (each expert's output is scaled by $p_i \approx 1/8$),
+  then crosses in every run and stays below.
 :::
 
 ::: {.slide title="Check: How Much Text Does One Expert See?"}
@@ -1361,19 +1536,9 @@ data, which is why mixtures need plenty of distinct text.
 ::: {.slide title="Narrow and Shared Experts: Same Budget, Far More Combinations"}
 @fig:mdl-transformers-moe-fine
 
-Same stored and active parameters in every row (DeepSeekMoE).
-:::
-
-::: {.slide title="Released Models Use Many Narrow Experts"}
-| Model | Experts | $k$ | width$/d$ | shared |
-|---|--:|--:|--:|---|
-| Mixtral 8x7B | 8 | 2 | 3.5 | none |
-| DeepSeek-V3 | 256 | 8 | 0.29 | 1 |
-| Qwen3-235B | 128 | 8 | 0.38 | none |
-| gpt-oss-120b | 128 | 4 | 1.0 | none |
-
-- DeepSeekMoE at 2B stored parameters: loss 1.81 against 1.87 for GShard
-  at equal stored and active size.
+Same stored and active parameters in every row (DeepSeekMoE). At 2B
+stored parameters: loss 1.81 against 1.87 for GShard at equal stored and
+active size.
 :::
 
 ::: {.slide title="Wrap-up"}
@@ -1382,12 +1547,13 @@ Same stored and active parameters in every row (DeepSeekMoE).
   521M/124M.
 - Dispatch copies tokens into fixed buffers of $\lceil c\,nk/E \rceil$
   slots per expert and runs all experts at once; overflow is dropped.
-- Routing feeds on itself; an auxiliary loss or a selection bias keeps
-  the load even.
-- Balanced, our MoE GPT beats the dense GPT at equal computation per
-  token, given enough distinct text.
+- Byte routing is skewed from the start; an auxiliary loss or a selection
+  bias keeps the load even and the drops near zero.
+- Balanced, our MoE GPT ends about 0.05 nats below the dense GPT at equal
+  active parameters, given enough distinct text.
 - Narrow experts and a shared expert: more combinations, common
   processing stored once.
 
-**Next:** how loss scales with parameters, data, and compute.
+**Next:** the modern recipe: released models as settings of this
+chapter's block.
 :::

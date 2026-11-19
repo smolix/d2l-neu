@@ -90,7 +90,7 @@ def census(model):
     emb = d2l.num_params(model.token_emb) + (
         d2l.num_params(model.pos_emb) if model.pos == 'learned' else 0)
     total = d2l.num_params(model)
-    print(f'embedding {emb / 1e6:6.2f}M ({emb / total:4.0%}),  '
+    print(f'embedding {emb / 1e6:6.2f}M ({emb / total:5.1%}),  '
           f'blocks {(total - emb) / 1e6:6.2f}M '
           f'= {(total - emb) / (L * d ** 2):.2f} L d^2,  '
           f'total {total / 1e6:.2f}M')
@@ -270,6 +270,10 @@ largest budget reads about 6% of the training text, so every budget
 consists of fresh text, and the grid varies the amount of data without
 repeating any of it.
 
+<!-- WRITER: the warmup is now a tenth of the steps but at least 100 steps,
+so the 500-step runs warm up over 100 steps instead of 50 (see the marker
+after the plot cell for the measured reason). -->
+
 The training recipe is that of :numref:`sec_gpt` (`d2l.LMOptimizer`):
 AdamW with weight decay 0.1 on the weight matrices, a linear warmup over
 the first tenth of the steps, a cosine decay of the learning rate to zero,
@@ -300,7 +304,7 @@ for d, num_blks, num_heads in sizes:
                     num_blks=num_blks)
         optimizer = d2l.LMOptimizer(model, lr=2e-3 * 256 / d,
                                     num_steps=num_steps,
-                                    warmup=num_steps // 10)
+                                    warmup=max(100, num_steps // 10))
         losses = d2l.train_steps(model, data, optimizer, num_steps)
         val[num_steps].append(
             math.log(d2l.lm_perplexity(model, data.val_dataloader())))
@@ -315,6 +319,10 @@ for d, num_blks, num_heads in sizes:
 
 ### Reading the Curves
 
+<!-- WRITER: the plot no longer has a dashed power law; the paragraphs below
+(dashed line, "fall short of its extension", "floor") describe the removed
+line and the dropped bend reading (structure.md section 3.7, SL-7, SL-8). -->
+
 The plot shows the validation loss against $N$ on log--log axes, one curve
 per data budget. The dashed line is a power law fitted to the three
 smallest models at the largest budget and extended over the whole range:
@@ -322,16 +330,51 @@ the prediction that a pure power law would make for the two larger models.
 
 ```{.python .input #scaling-laws-five-sizes-one-diet-2}
 %%tab pytorch, jax
-x = np.log(np.array(Ns))
-slope, intercept = np.polyfit(x[:3], np.log(val[budgets[-1]][:3]), 1)
-line = np.exp(intercept + slope * x)
-d2l.plot(Ns, [val[s] for s in budgets] + [line],
-         'non-embedding parameters N', 'validation loss (nats)',
-         legend=[f'D = {s * 64 * 128 / 1e6:.1f}M' for s in budgets]
-         + ['power law'], xscale='log', yscale='log',
-         fmts=('C0o-', 'C1s-', 'C2^-', 'k--'), legend_loc='outside')
-print(f'slope {slope:.3f}; the largest model lies '
-      f'{val[budgets[-1]][-1] - line[-1]:.3f} nats above the line')
+tokens = {s: s * 64 * 128 for s in budgets}  # Tokens read in s steps
+d2l.plot(Ns, [val[s] for s in budgets], 'non-embedding parameters N',
+         'validation loss (nats)',
+         legend=[f'D = {tokens[s] / 1e6:.1f}M' for s in budgets],
+         xscale='log', yscale='log', fmts=('C0o-', 'C1s-', 'C2^-'),
+         legend_loc='outside')
+```
+
+<!-- WRITER: the dashed three-point power law and its printed slope are gone
+(SL-7); the plot shows the three budget curves only. The new cell below reads
+the same fifteen runs at equal compute. The warmup is now
+max(100, num_steps // 10) steps, so the 500-step runs warm up over 100 steps:
+with a 50-step warmup to the peak rate
+5.3e-3, the d = 96, 500-step run ended stuck at 1.90 to 2.06 in both
+frameworks (PyTorch 1 of 22 runs, JAX 2 of 23 plus the stored 2.06; the other
+runs 1.65 to 1.73); with 100 steps, 18 runs (8 PyTorch, 10 JAX) gave 1.62 to
+1.65 and none failed; the longer warmup also lowers the other 500-step points
+by 0.02 to 0.05. Final direct runs (PyTorch / JAX), validation at 500 / 1,000 /
+2,000 steps: d = 96 1.64/1.49/1.38 and 1.64/1.48/1.38; 128 1.58/1.45/1.36 and
+1.59/1.45/1.35; 192 1.51/1.38/1.29 and 1.49/1.38/1.29; 256 1.46/1.35/1.25 and
+1.45/1.34/1.25; 384 1.42/1.32/1.23 and 1.42/1.32/1.22. Equal-compute cell:
+1.29 / 1.35 / 1.42 (PyTorch), 1.29 / 1.34 / 1.42 (JAX) at C = 1.7, 2.3 and
+3.5e14 FLOPs; gaps 0.05 to 0.06 and 0.13. Repeats of these three runs (three
+per framework and point) span 1.285-1.290, 1.340-1.347, 1.414-1.422, so
+under 0.01: the smaller model trained longer wins by 5 to 15 times the
+range. A fixed 100 steps for every run raised the 2,000-step points
+by about 0.01, so the 1,000- and 2,000-step runs keep a tenth. The prose "a
+linear warmup over the first tenth of the steps" needs "but at least 100
+steps". -->
+
+Read along lines of equal compute, the same fifteen runs answer the question
+of the section. The cell plots each size's three runs against their
+training compute $C = 6ND$, and prints three runs of nearly equal compute.
+
+```{.python .input #scaling-laws-equal-compute}
+%%tab pytorch, jax
+d2l.plot([[6 * N * tokens[s] for s in budgets] for N in Ns],
+         [[val[s][i] for s in budgets] for i in range(len(Ns))],
+         'training compute C = 6ND (FLOPs)', 'validation loss (nats)',
+         legend=[f'N = {N / 1e6:.2f}M' for N in Ns], xscale='log',
+         fmts=('C0o-', 'C1s-', 'C2^-', 'C3v-', 'C4D-'), legend_loc='outside')
+for i, s in ((2, 2000), (3, 1000), (4, 500)):  # Larger N, fewer tokens
+    print(f'N = {Ns[i] / 1e6:5.2f}M, D = {tokens[s] / 1e6:4.1f}M tokens: '
+          f'C = {6 * Ns[i] * tokens[s]:.1e} FLOPs, '
+          f'validation {val[s][i]:.2f}')
 ```
 
 At every budget the validation loss falls as the model grows, and more
@@ -430,6 +473,14 @@ direction crosses to higher loss.
 ![Loss contours of the Chinchilla law with the refit constants of Besiroglu et al. (2024), over parameters and training tokens. Dashed: budgets of equal compute $C = 6ND$; dots: the compute-optimal model of each budget; orange: the compute-optimal path. Chinchilla lies on the path; Llama 3 8B, on a budget about a quarter larger, lies far above it.](../img/mdl-transformers-chinchilla.svg)
 :label:`fig_mdl-transformers-chinchilla`
 
+<!-- WRITER: figure fixed (labels clear of every line: the 5.76e23 budget is
+labelled past the right end of its line, "Llama 3 8B" sits up and right of
+its square). Llama 3 8B's own budget line (7.2e23, a tenth of a decade above
+Chinchilla's) is not drawn, so the caption's "on a budget about a quarter
+larger" has nothing to point at: move the remark out of the caption (for
+example "Llama 3 8B, on a budget close to Chinchilla's, lies far above it";
+the point sits just above the dashed line). -->
+
 The constants come from fits, and the fits disagree.
 :citet:`hoffmann2022training` report $E = 1.69$, $A = 406.4$, $B = 410.7$,
 $\alpha = 0.34$, $\beta = 0.28$. :citet:`Besiroglu.Erdil.Barnett.ea.2024`
@@ -447,7 +498,7 @@ billion parameters on 1.4 trillion tokens, 20 tokens per parameter:
 fits = {'Hoffmann et al.': (1.69, 406.4, 410.7, 0.34, 0.28),
         'Besiroglu et al.': (1.82, 482.0, 2085.4, 0.348, 0.366)}
 
-def optimum(C, E, A, B, alpha, beta):
+def optimum(C, L_inf, A, B, alpha, beta):
     G = (alpha * A / (beta * B)) ** (1 / (alpha + beta))
     N = G * (C / 6) ** (beta / (alpha + beta))
     return N, C / (6 * N)
@@ -480,13 +531,13 @@ budget, and the extra loss that the law predicts for the difference:
 
 ```{.python .input #scaling-laws-training-past-the-optimum}
 %%tab pytorch, jax
-E, A, B, alpha, beta = fits['Besiroglu et al.']
-loss = lambda N, D: E + A / N ** alpha + B / D ** beta
+L_inf, A, B, alpha, beta = fits['Besiroglu et al.']
+loss = lambda N, D: L_inf + A / N ** alpha + B / D ** beta
 reported = {'Chinchilla': (70e9, 1.4e12), 'Llama 3 8B': (8e9, 15e12),
             'Llama 3 405B': (405e9, 15.6e12), 'OLMo 2 7B': (7e9, 4.05e12),
             'Gemma 3 27B': (27e9, 14e12)}
 for name, (N, D) in reported.items():
-    N_opt, D_opt = optimum(6 * N * D, E, A, B, alpha, beta)
+    N_opt, D_opt = optimum(6 * N * D, L_inf, A, B, alpha, beta)
     print(f'{name:12s} {D / N:5.0f} tokens per parameter, '
           f'{N / N_opt:4.2f} x optimal size, '
           f'loss +{loss(N, D) - loss(N_opt, D_opt):.3f}')
@@ -507,84 +558,17 @@ experts (:numref:`sec_moe`) does not fit this accounting: its training
 cost follows its active parameters, its capacity all of them, and the law
 above was fitted to dense models only.
 
-## Configurations of Deployed Models
-
-The models trained on such budgets are built from the components of this
-chapter. :numref:`tab_modern-recipe` compiles the architecture sections of
-seven open-weights families: Mistral 7B
-:cite:`Jiang.Sablayrolles.Mensch.ea.2023`, Llama 3
-:cite:`Grattafiori.Dubey.Jauhri.ea.2024`, Qwen3
-:cite:`Yang.Li.Yang.ea.2025`, OLMo 2 and 3 :cite:`OLMo.2025,OLMo3.2025`,
-DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024`, Gemma 3
-:cite:`Gemma.Team.2025`, and GPT-OSS :cite:`OpenAI.2025`.
-
-:Architectures of seven open-weights model families, as reported in their technical reports (2023–2025). Attention and cache: :numref:`sec_kv-cache`. Normalization: :numref:`sec_transformer-block`. Positions: :numref:`sec_positional-information`. Mixture of experts: :numref:`sec_moe`.
-:label:`tab_modern-recipe`
-
-| model | attention and cache | normalization | positions | FFN | dense or MoE |
-|:--|:--|:--|:--|:--|:--|
-| Mistral 7B (2023) | GQA $32{:}8$; sliding window 4096 | RMSNorm, pre | RoPE, $\theta = 10^4$ | SwiGLU | dense |
-| Llama 3 (2024) | GQA $32{:}8$ (8B), $64{:}8$ (70B), $128{:}8$ (405B) | RMSNorm, pre | RoPE, $\theta = 5 \times 10^5$ | SwiGLU | dense |
-| Qwen3 (2025) | GQA: $64{:}8$ dense (32B), $64{:}4$ MoE (235B-A22B) | RMSNorm, pre; QK-norm | RoPE, $\theta = 10^6$; YaRN for long context | SwiGLU | dense, and MoE: 128 experts, 8 active |
-| OLMo 2/3 (2024/25) | MHA (7B), GQA (32B); OLMo 3: window 4096 on 3 of 4 layers | RMSNorm on sublayer outputs; QK-norm | RoPE | SwiGLU | dense |
-| DeepSeek-V3 (2024) | MLA: KV compressed to a 512-dim latent | RMSNorm, pre | RoPE on a decoupled 64-dim slice per head | SwiGLU | MoE: 256 experts plus 1 shared, 8 active |
-| Gemma 3 (2025) | GQA; local:global $5{:}1$, window 1024 | RMSNorm, pre and post; QK-norm | RoPE, $\theta = 10^6$ global, $10^4$ local | GeGLU | dense |
-| GPT-OSS (2025) | GQA $64{:}8$; window 128 on alternate layers; learned sinks | RMSNorm, pre | RoPE; YaRN | SwiGLU, clamped | MoE: 128 or 32 experts, 4 active |
-
-Every row is the block of :numref:`sec_transformer-block` in the causal
-wiring of :numref:`sec_gpt`, and the rows agree on most of its settings: a
-gated feed-forward network, RoPE, RMSNorm with an unnormalized residual
-stream, no biases in most rows, and no dropout in any. (OLMo normalizes each
-sublayer's output before it joins the stream rather than its input, which
-also leaves the stream itself unnormalized.) The absence of dropout is a
-consequence of scale: a model that reads trillions of tokens about once has nothing to
-memorize. The rows differ on two axes. The first is the size of the KV
-cache: grouped-query attention in most rows, sliding windows on some
-layers, and a compressed latent in DeepSeek-V3, all from
-:numref:`sec_kv-cache`.
-The second is capacity per FLOP: three of the seven families use a mixture
-of experts (:numref:`sec_moe`). The newest designs depart further. Hybrid
-models replace most attention layers with the linear recurrences of
-:numref:`chap_modern_rnn` :cite:`Kimi.Team.2025b`, and Llama 4 removes
-positional encoding from some of its attention layers :cite:`Meta.2025`.
-
-At width 256 and six blocks, three rows of the table become calls of our
-constructor. The modern rows need only the number of key--value heads,
-because the defaults of `d2l.GPT` are the recipe the table shares. Llama 3
-8B shares each key--value head among 4 query heads, Qwen3-32B among 8. The
-cell prints the parameter count and the bytes of KV cache per token in
-32-bit floats:
-
-```{.python .input #scaling-laws-recipe-rows-as-constructor-calls}
-%%tab pytorch, jax
-recipes = {'GPT-2': dict(pos='learned', norm='layer', act='gelu',
-                         bias=True),
-           'Llama 3 8B': dict(num_kv_heads=2),
-           'Qwen3-32B': dict(num_kv_heads=1)}
-for name, cfg in recipes.items():
-    model = gpt(1024, num_hiddens=256, num_heads=8, num_blks=6, **cfg)
-    d2l.check_shape(model(d2l.zeros((2, 16), dtype=d2l.int32)),
-                    (2, 16, 1024))
-    print(f'{name:10s} {d2l.num_params(model) / 1e6:.2f}M parameters, '
-          f'{d2l.kv_cache_bytes(model, 1) / 1024:4.1f} KiB of cache '
-          'per token')
-```
-
-Sharing key--value heads removes part of the key and value projections, a
-tenth of the parameters or so at this width, but it shrinks the cache by
-the full factor of the sharing, 4 and 8. The settings the flags do not
-reach would enter as new attention modules. QK-norm
-(:numref:`subsec_qk-norm`) enters through the `attn_factory` hook of
-`TransformerBlock`, as in an exercise of :numref:`sec_transformer-block`.
-A sliding window is a mask (:numref:`sec_windowed-linear-attention`,
-:numref:`sec_kv-cache`). A learned latent cache replaces the stored
-keys and values, which :numref:`sec_kv-cache` sketches with a fixed basis.
-The expert layers of the MoE rows enter through `ffn_factory`
-(:numref:`sec_moe`). Deployed models are thus
-configurations of the chapter's one block, trained at budgets that the law
-of this section helps to plan.
+<!-- WRITER: "Configurations of Deployed Models" (prose, tab_modern-recipe and
+the cell scaling-laws-recipe-rows-as-constructor-calls) moved to
+modern-recipe.md (sec_modern-recipe). The paragraph above now ends the body;
+its last sentences should close the section with the MoE question
+(structure.md section 3.7). -->
 
 ## Summary
+
+<!-- WRITER: the floor sentence goes (replaced by the equal-compute finding),
+and so does the closing clause on configurations, which moved to
+modern-recipe.md. -->
 
 Training a dense transformer with $N$ parameters on $D$ tokens costs
 about $6ND$ FLOPs, two per parameter and token in the forward pass and
@@ -686,7 +670,8 @@ experts.
    :numref:`subsec_scaling-laws-five-sizes` has width 512, ten blocks, and
    eight heads, about 31.5M non-embedding parameters.
     1. Before training it, predict its validation loss at the largest
-       budget twice: by extending the dashed power law, and by assuming
+       budget twice: by extending the dashed power law,<!-- WRITER: the plot
+       has no dashed power law any more; the reader fits one. --> and by assuming
        that the corpus allows no improvement over the largest measured
        model. Estimate the run's cost with :eqref:`eq_six_nd`.
     1. Train it with the same recipe at all three budgets. Which
@@ -775,11 +760,11 @@ experts.
 [Dive into Deep Learning · §12.7]{.kicker}
 
 Scaling laws<br>
-**the cost of a run · a miniature scaling study · the compute-optimal split · deployed configurations**
+**the cost of a run · a miniature scaling study · the compute-optimal split · training past the optimum**
 :::
 :::
 
-::: {.slide title="A 3.8×10²⁵-FLOP Run Must Be Planned from Runs a Million Times Smaller"}
+::: {.slide title="A 3.8×10²⁵-FLOP Run Must Be Planned Before It Starts"}
 [The problem]{.kicker}
 
 | run | training FLOPs |
@@ -799,7 +784,7 @@ must be decided before it starts.
 
 - estimate the training cost of a transformer as $6ND$ and say what it
   leaves out;
-- read a grid of small runs: where a power law holds, and where it bends;
+- read a grid of small runs along lines of equal compute;
 - derive the compute-optimal split of a budget between parameters and
   tokens;
 - explain why smaller deployed models train far past 20 tokens per
@@ -818,18 +803,18 @@ on the bytes of WikiText-103.
 |---|---|
 | The Transformer Block | attention + FFN on a residual stream |
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
-| Generation and the KV Cache | reuse keys and values while sampling |
+| The KV Cache | reuse keys and values while sampling |
+| Shrinking the KV Cache | fewer heads, fewer dimensions, fewer tokens |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
-| Mixture of Experts | more parameters per FLOP |
 | **Scaling Laws** | **loss against parameters, data, compute** |
+| Mixture of Experts | more parameters per FLOP |
 :::
 
 ::: {.col .narrow}
-- **Uses:** `d2l.GPT`, the training recipe of the GPT section, learning
-  rate $\propto 1/\textrm{width}$.
-- **Skips:** data curation, budgets beyond the compute optimum
-  (Language Models part).
+- **Uses:** `d2l.GPT` and its recipe, learning rate
+  $\propto 1/\textrm{width}$.
+- **Skips:** data curation, repeated data (Language Models part).
 :::
 :::
 :::
@@ -907,6 +892,9 @@ no dropout.
   rate and overstates the loss (Hoffmann et al., 2022).
 - **Learning rate:** the stable Adam step shrinks like $1/d$, so the peak
   rate is $2 \times 10^{-3} \cdot 256/d$.
+- **Warmup:** a tenth of the steps, at least 100. With 50, the smallest
+  model's 500-step run (peak $5.3 \times 10^{-3}$) gets stuck near 2 nats
+  in about one run of ten.
 
 ::: {.d2l-note}
 A study is only as good as the tuning of its worst point.
@@ -919,27 +907,29 @@ A study is only as good as the tuning of its worst point.
 - Read down a column: $N$ grows. Read along a line: $D$ grows.
 :::
 
-::: {.slide title="With the Data Fixed, Loss Flattens Toward a Floor"}
-@!scaling-laws-five-sizes-one-diet-2
+::: {.slide title="At Equal Compute, the Smaller Model Trained Longer Wins"}
+@!scaling-laws-equal-compute
 
-- Small models follow a power law (dashed); larger ones fall short.
-- At every budget the largest model gains only a few hundredths over
-  the next. More data lowers the floor.
+- Loss falls with $N$ at every $D$ and with $D$ at every $N$.
+- Near equal compute, the 1.8M model on 16.4M tokens beats the 14.2M model
+  on 4.1M tokens, which spent twice the FLOPs.
+- The gaps are many times the run-to-run spread of about 0.01 nats.
 :::
 
 ::: {.slide title="The Chinchilla Law Separates Three Limits"}
-$$L(N, D) = E + \frac{A}{N^{\alpha}} + \frac{B}{D^{\beta}}$$
+$$\mathcal{L}(N, D) = \mathcal{L}_\infty + \frac{A}{N^{\alpha}} + \frac{B}{D^{\beta}}$$
 
-- $E$: the entropy of the text, which no budget removes.
+- $\mathcal{L}_\infty$: the entropy of the text, which no budget removes.
 - $A/N^{\alpha}$: the excess loss of finite parameters.
 - $B/D^{\beta}$: the excess loss of finite data.
-- $D$ fixed: $E + B/D^{\beta}$ is the floor of the grid's curves.
+- A fixed budget trades the second term against the third, the trade the
+  grid showed at equal compute.
 
 [Fitted to 400+ runs, 70M–16B parameters, 5–500B tokens (Hoffmann et al., 2022); $N$ counts all parameters.]{.small}
 :::
 
 ::: {.slide title="At the Optimum, Both Shrinkable Terms Fall at Equal Rates"}
-Under $C \approx 6ND$, substitute $D = C/(6N)$ and set $\partial L/\partial N = 0$:
+Under $C \approx 6ND$, substitute $D = C/(6N)$ and set $\partial \mathcal{L}/\partial N = 0$:
 
 $$\alpha \frac{A}{N^{\alpha}} = \beta \frac{B}{D^{\beta}}
 \quad\Rightarrow\quad
@@ -988,46 +978,25 @@ read?
 ::: {.slide title="Smaller Models Train Far Past the Optimum to Make Generation Cheap"}
 @!scaling-laws-training-past-the-optimum
 
-- Generating a token costs $2N$: a 10× smaller model is 10× cheaper to
-  serve, for life.
-- The refit predicts about 0.05 nats of extra loss for Llama 3 8B
-  (Sardana et al., 2024).
-:::
-
-::: {.slide title="Open Models Share One Block and Differ in the Cache and the FFN"}
-| model | attention + cache | norm | FFN / experts |
-|:--|:--|:--|:--|
-| Mistral 7B | GQA 32:8, window 4096 | RMS pre | SwiGLU, dense |
-| Llama 3 8B | GQA 32:8 | RMS pre | SwiGLU, dense |
-| Qwen3 | GQA 64:8 dense, 64:4 MoE | RMS pre + QK | SwiGLU, dense & MoE 128/8 |
-| DeepSeek-V3 | MLA: 512-d latent | RMS pre | SwiGLU, MoE 256+1/8 |
-| Gemma 3 | GQA, local:global 5:1 | RMS pre+post + QK | GeGLU, dense |
-| GPT-OSS | GQA 64:8, window 128 alt., sinks | RMS pre | SwiGLU, MoE 128/4 |
-
-All: RoPE, **no dropout**: a model that reads its tokens about once has
-nothing to memorize.
-:::
-
-::: {.slide title="At Equal Width, the Rows Differ by Their Cache"}
-@!scaling-laws-recipe-rows-as-constructor-calls
-
-- The modern rows need one flag: the defaults of `d2l.GPT` are the shared
-  recipe.
-- Key--value sharing shrinks the cache 4× and 8×, the parameters by about
-  a tenth.
+- Generating a token costs $2N$, for the model's whole life.
+- Llama 3 8B: a tenth of the compute-optimal size for its budget, about
+  0.05 nats of extra loss under the refit (Sardana et al., 2024).
 :::
 
 ::: {.slide title="Check: The Cost of a Generated Token"}
 [Check]{.kicker}
 
-For its budget, the compute-optimal model of Llama 3 8B has about 81B
-parameters. How much more does each generated token cost with it?
+Under the refit, the compute-optimal model with Llama 3 8B's predicted
+loss has about 34B parameters and reads 0.64T tokens. Compare the training
+costs and the cost of a generated token.
 
 . . .
 
-- $2N$ per token: $81/8 \approx$ **10×** more.
-- The 8B model is 10× cheaper on every served token, for 0.05 nats of
-  loss.
+- Training: $6 \cdot 8\textrm{B} \cdot 15\textrm{T}$ against
+  $6 \cdot 34\textrm{B} \cdot 0.64\textrm{T}$, **about 5.5×** more for the 8B
+  model.
+- Generation: $2N$ per token, **about 4×** cheaper with the 8B model; it
+  pays back after about 11T generated tokens.
 :::
 
 ::: {.slide title="Wrap-up"}
@@ -1035,13 +1004,13 @@ parameters. How much more does each generated token cost with it?
 
 - Training costs $\approx 6ND$; attention adds $n/(6d)$, 8% for our
   models, confirmed by the framework counts.
-- With $D$ fixed, loss follows a power law in $N$ and then flattens toward
-  $E + B/D^{\beta}$.
+- At equal compute, the smaller model trained on more tokens reached the
+  lower loss, by 0.05 to 0.16 nats.
 - Compute-optimal: $N^*, D^* \propto C^{1/2}$, about 20 tokens per
   parameter (refit).
 - Deployed models train up to 100× longer per parameter to make
-  generation cheaper; they share one block and differ in the cache and the FFN.
+  generation cheaper.
 
-**Next:** budgets beyond the compute optimum, data, and pretraining at
-scale, in the Language Models part.
+**Next:** a mixture of experts, whose training cost follows only the
+parameters each token uses.
 :::

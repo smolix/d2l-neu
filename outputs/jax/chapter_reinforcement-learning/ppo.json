@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/ppo.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:2f659d49f408be07d841a73d21edf9b520c819616265b6ed1d79ce97101bb1bc",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ppo-trust-regions-and-proximal-policy-optimization-1": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-trust-regions-and-proximal-policy-optimization-2": {
+      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-implementation-4": {
+      "code_fingerprint": "sha256:b3ddf8b954126e0ad63c05b662477985ef26035448844465409754afc895391d",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-implementation-5": {
+      "code_fingerprint": "sha256:b8c0ab2201031eb54f9fccbcf627ef34a5365cea8ba7c123a1ff3ae3d68fbf5c",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-the-ablation-1": {
+      "code_fingerprint": "sha256:5d4445fc3163bf3a07f8a768999e1336ffc84d5fa7238b374d4e270306ce2d0b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ppo/ppo-the-ablation-1-1.svg",
+          "bytes": 35165,
+          "sha256": "sha256:af0bea67668eb2bb61ace2a3b589a83ecb4c3161ded64a651e58ccd2fc1be2e0"
+        }
+      ]
+    },
+    "ppo-the-ablation-3": {
+      "code_fingerprint": "sha256:0574752e7a1818c5691489a82c57fd77a7fc21f09a3ca91c41f3d7a7a2370df8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "clipped (PPO): final return per seed [500. 500. 500. 500. 500. 500. 500. 500.]\n               final entropy per seed [0.27 0.39 0.25 0.24 0.25 0.27 0.26 0.24]\n      no clip: final return per seed [500. 224.  58.   9.  10.  85.   9.   9.]\n               final entropy per seed [0.16 0.1  0.02 0.   0.   0.03 0.   0.  ]\n"
+        }
+      ]
+    },
+    "ppo-how-to-know-your-rl-is-broken-1": {
+      "code_fingerprint": "sha256:f56dfab865838b6799e98ec57e7ae32f3647be97efd725ce89b6c24b84df5592",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "clipped (PPO): ratios outside [1 - eps, 1 + eps] after 19 steps: 17%\n      no clip: ratios outside [1 - eps, 1 + eps] after 19 steps: 93%\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ppo/ppo-how-to-know-your-rl-is-broken-1-1.svg",
+          "bytes": 34858,
+          "sha256": "sha256:1801905728faec018190230fdb2020304b63c1ef85d30be645cd013f331d3a95"
+        }
+      ]
+    }
+  }
+}

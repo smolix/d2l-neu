@@ -536,7 +536,7 @@ Where samples and densities are available on both sides, the direction is a
 decision. A student network distilled from a teacher
 (:numref:`sec_lm_distillation`) spreads over everything the teacher might say
 when the teacher comes first, and keeps to the teacher's likeliest outputs when
-the student does. The KL penalty of :numref:`sec_regularized` puts the policy
+the student does. The KL penalty of :numref:`sec_rl_sequences` puts the policy
 first, which keeps it away from actions that the reference policy never takes.
 
 When the model family contains the target, both directions agree on the answer.

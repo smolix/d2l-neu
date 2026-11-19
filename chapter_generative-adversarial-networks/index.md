@@ -1,7 +1,7 @@
 # Generative Adversarial Networks
 :label:`chap_gans`
 
-Almost every model in this book was trained by likelihood: a classifier raises the probability of the correct label, a language model that of the next token. The reward model of :numref:`sec_regularized` learned differently, from which of two answers a judge preferred, through the Bradley--Terry model, which turns the difference of two scores into the probability that one answer wins. Now consider a network that turns a hundred random numbers into an image in one forward pass. Nothing in it computes the probability of the image it returns, so there is no likelihood to raise. Can a learned comparison take its place?
+Almost every model in this book was trained by likelihood: a classifier raises the probability of the correct label, a language model that of the next token. The reward model of :numref:`sec_rl_sequences` learned differently, from which of two answers a judge preferred, through the Bradley--Terry model, which turns the difference of two scores into the probability that one answer wins. Now consider a network that turns a hundred random numbers into an image in one forward pass. Nothing in it computes the probability of the image it returns, so there is no likelihood to raise. Can a learned comparison take its place?
 
 :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` proposed that it can. A second network, the critic, learns to tell generated samples from real ones, and the generator learns to make that hard. The critic's output tells the generator where its samples are too dense and where too sparse, although neither density is ever written down.
 

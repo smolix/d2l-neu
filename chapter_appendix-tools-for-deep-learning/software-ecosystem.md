@@ -234,7 +234,7 @@ prefer safetensors, review remote code, and record its license and parent.
 ## Exercises
 
 1. **Rating gaps on the Arena.** Arena (formerly LMArena) fits the Bradley-Terry model
-   :eqref:`eq_bradley_terry` of :numref:`sec_regularized` to pairwise votes
+   :eqref:`eq_bradley_terry` of :numref:`sec_rl_sequences` to pairwise votes
    :cite:`Chiang.Zheng.Sheng.ea.2024` and reports the scores on the Elo
    scale. Ignoring ties, model A then beats model B with probability
    $$P(A \succ B) = \frac{1}{1 + 10^{-(R_A - R_B)/400}},$$

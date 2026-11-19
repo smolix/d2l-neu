@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2321bcb8078044f6906446cbf87a27830df30af08ef982f8a88e2216ea297493",
+    "d2l_lib_fingerprint": "sha256:a9368eaa69e4be9f7c831c346d422ff2dc428327262e642c8aec22c2e2df4929",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,125 +13,70 @@
       "kind": "text",
       "outputs": []
     },
-    "qlearning-temporal-difference-learning-1": {
+    "qlearning-q-learning-1": {
       "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
       "kind": "text",
       "outputs": []
     },
-    "qlearning-the-implementation-1": {
-      "code_fingerprint": "sha256:d535d08c5078aeba85b1d5b7a61c520bace1661e6bf9e03dbf932b75689f180e",
+    "qlearning-the-implementation-2": {
+      "code_fingerprint": "sha256:8fef02a975afe124ea8110c17c1ff682ec40a403e399a2e69b980344ae00cae2",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-3": {
-      "code_fingerprint": "sha256:440f268f3aba9e6c03bef178f6466349efe47d5400bfe0c747bfc904571d283c",
+      "code_fingerprint": "sha256:907c84ee0de66cb46491e4b97fd6d812f1f5ad38666978cded42462a556f8a77",
       "kind": "text",
       "outputs": []
     },
-    "qlearning-the-implementation-2": {
-      "code_fingerprint": "sha256:d250033a4d6337f38632329997c67bc2dbb766beb00fa54b2840f4e486534fdf",
+    "qlearning-the-implementation-1": {
+      "code_fingerprint": "sha256:e5592f2ae6f43342c300ea599ff7e5cf187a76a9aac74aec3e6f6e9e2ae1f0d2",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-4": {
-      "code_fingerprint": "sha256:a52459b871c1cebcac04dfb911c1192c35f226dfcf50b179d95c72f47f063dff",
+      "code_fingerprint": "sha256:c788d986e677c08f67111d266cc5e5e20ee64fe265001e1769b831647c0774b1",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-5": {
-      "code_fingerprint": "sha256:90d55f5ef1f532f3459790151497cf53496292b96304b03b97b23af06cb33f9d",
+      "code_fingerprint": "sha256:cd25c91b0331271694a2545ce2add2d8271a3c130df6f8f48cb147b817650dac",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
-          "bytes": 247670,
-          "sha256": "sha256:70d3d97e0b81187b15a1e264091b49b697567a0a28321e78576725a6f391a92c"
+          "bytes": 36012,
+          "sha256": "sha256:f1224de1d8835fbdb89b1e04b4b589611265373e6ed03ebb5d7880ee4d99a966"
         }
       ]
     },
+    "qlearning-measuring-a-policy-by-simulation": {
+      "code_fingerprint": "sha256:4a281022c4f502cf280df7715467e69cc17163323affcb2643ee290d8028ba85",
+      "kind": "text",
+      "outputs": []
+    },
     "qlearning-reading-the-curve-honestly-1": {
-      "code_fingerprint": "sha256:b701fcce3506abdd4d78fa087280d1dd15ad553606e9d52bf378daa769f660bb",
+      "code_fingerprint": "sha256:377115c1451a4457790797a66df1627e48a3c8874d1419161fec034f88a165a3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  max_s |V_Qhat(s) - V*(s)|: [0.019 0.012 0.021 0.008 0.006]\n      max_(s,a) |Qhat - Q*|: [0.131 0.079 0.113 0.087 0.075]\nmax_s V*(s) - Q*(s, greedy): [0. 0. 0. 0. 0.]\ngreedy success in 100 steps: [0.73 0.73 0.73 0.73 0.73]\nsuccess of pi* 0.730, of pi* at epsilon = 0.05 0.537; median environment steps 95,569\n"
+          "text": "greedy return per seed: [0.7738 0.7738 0.7738 0.7738 0.7738 0.7738 0.7738 0.7738 0.7738 0.7738]\ngamma^5 = 0.7738\nlargest |Q - Q*| on the greedy path: [0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]\nlargest |Q - Q*| over all pairs:     [0.857 0.857 0.774 0.857 0.902 0.902 0.95  0.857 0.95  0.95 ]\n"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-2": {
-      "code_fingerprint": "sha256:21d0f7c879d9b3a39ed8aacdd8a478d55e916bb74393db37548bd9140f3c3740",
+      "code_fingerprint": "sha256:893a35e97a7d367118f19c12e3d15786275eb82e96da813ecd65e794d9c82275",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
-          "bytes": 49420,
-          "sha256": "sha256:a76afea4d1e96f63d7f3b3fa50a94fff9b11c4529aab6eb728e88f2aee5ae93d"
-        }
-      ]
-    },
-    "qlearning-reading-the-curve-honestly-3": {
-      "code_fingerprint": "sha256:7be50e841242120ca0692e9b79ee5735d19c203252df6b8bda5bb50233378d9a",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "calm ice, 512 episodes (3,658 steps), alpha = 0.9: greedy policy succeeds 100%\n"
-        }
-      ]
-    },
-    "qlearning-reading-the-curve-honestly-4": {
-      "code_fingerprint": "sha256:255fefd442b63aa82de8b202e43236d5aba310df7a24e5a02ec91907d79bed92",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "alpha = 0.9 (constant): final estimates [0.056 0.221 0.206 0.265 0.236]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "alpha =  1/(1 + 0.1 n): final estimates [0.19  0.186 0.195 0.184 0.18 ]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "alpha =      1/(1 + n): final estimates [0.003 0.024 0.008 0.009 0.002]\npeak of each 1/(1 + 0.1 n) run:  [0.228 0.291 0.262 0.324 0.205]\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
-          "bytes": 707108,
-          "sha256": "sha256:59fc3013b32fcd5ef9830c9a87cc76fbd5a3801d6244f422c330b75985091a3a"
-        }
-      ]
-    },
-    "qlearning-planning-in-a-learned-model-1": {
-      "code_fingerprint": "sha256:1ce0ee28687ee750dd59ed07e1076de1b9be7c24c8cddef03d34881cff2287d3",
-      "kind": "text",
-      "outputs": []
-    },
-    "qlearning-planning-in-a-learned-model-2": {
-      "code_fingerprint": "sha256:0fbcbe769445a7e0edb35607220b1276589cffd01ddd46fcfb84f50a60ef7b90",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "500 episodes, median 9,984 steps (medians over 5 seeds)\n  Q-learning:        max |V - V*| 0.084, success 0.486\n  planning in model: max |V - V*| 0.096, success 0.639\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "2000 episodes, median 47,282 steps (medians over 5 seeds)\n  Q-learning:        max |V - V*| 0.023, success 0.730\n  planning in model: max |V - V*| 0.011, success 0.730\n"
+          "bytes": 50565,
+          "sha256": "sha256:5f415fc4a66591b523bb71fc3fad853f1c3fa7d08a7ac58b098b3130dde1b1cd"
         }
       ]
     }

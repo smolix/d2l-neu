@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/dqn.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e5a07725594749f9eca7a56d18779bf0104b8ea4bb3bd7a2d1dbebf3c1733762",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dqn-deep-q-networks-1": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-deep-q-networks-3": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-deadly-triad": {
+      "code_fingerprint": "sha256:7c09175ed7ae069fdb6f0507aacfb3b9e05e58dff4143cafb9a9e9202e04a6f4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest |w| after 500 and 1000 sweeps: 77, 335\nvalue estimate of state 7: 677 (true value 0)\n"
+        }
+      ]
+    },
+    "dqn-replay-and-the-off-policy-licence": {
+      "code_fingerprint": "sha256:bf9f1770f77673442b1bb3dc7493b339698acb65f00b6eba439198047c3843cf",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-deep-q-networks-2": {
+      "code_fingerprint": "sha256:749fcd64be755c10c161d6c9e357db53feb33e06a075093e72dc925457ed7df0",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-target-network-1": {
+      "code_fingerprint": "sha256:c5f92ef2c4fd73a20a5db315b58c6aa2d8028328ce29cdbd9c5f978cc2b9b906",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-target-network-3": {
+      "code_fingerprint": "sha256:1209dfe6eab486e74683f0bf740d5e26fb5fb1240d24354cb609d24309234beb",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-ablation-1": {
+      "code_fingerprint": "sha256:7d180bd68cfb1e8f0629c244789b75683edc87b5858a729768cbd0a4be4a365d",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-the-ablation-2": {
+      "code_fingerprint": "sha256:c55b496007c7cafb1e5d765e86db139f5b2aeec1170917ca5ff5ae813bb00b6f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dqn/dqn-the-ablation-2-1.svg",
+          "bytes": 33794,
+          "sha256": "sha256:77ecc3cd7f323c855cfb3e0e3078eb11d3b7482e5f52b58d9da3ae65f1999088"
+        }
+      ]
+    },
+    "dqn-the-ablation-4": {
+      "code_fingerprint": "sha256:5a425224726520eb96dd0ca2792ca23cb85c7157b877dddd22f4456a0db20c46",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "              DQN: mean greedy return per seed [500. 500. 107.]\nno target network: mean greedy return per seed [10.  9.  9.]\n"
+        }
+      ]
+    },
+    "dqn-the-ablation-5": {
+      "code_fingerprint": "sha256:4cbe1c584cd15bea54620bc196faede6591bfd51d6f1a162ebe6bf13b533c6cb",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "              DQN: final estimate of max_a Q(s0, a) per seed: 98, 98.1, 102\nno target network: final estimate of max_a Q(s0, a) per seed: 1.39e+08, 1.47e+08, 1.45e+08\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dqn/dqn-the-ablation-5-1.svg",
+          "bytes": 30282,
+          "sha256": "sha256:69df7d7141bad01d0236bea4f308c6c9b875b5a301ffd0f7837cacb117e8c941"
+        }
+      ]
+    },
+    "dqn-the-max-bias-measured": {
+      "code_fingerprint": "sha256:db313b61dd3ec76382237e94b665dd85c75c2da37124b30daee9a70a3c1c3ca4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single estimator: +1.031\ndouble estimator: -0.006\n"
+        }
+      ]
+    },
+    "dqn-double-dqn-in-three-lines-1": {
+      "code_fingerprint": "sha256:cd68c0d0a19b0b991747e7f498ce7e703c90f25af9a93f85f64dc36c33b1573a",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

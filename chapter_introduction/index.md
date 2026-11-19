@@ -1002,7 +1002,7 @@ classifier, opens the Basics with :numref:`chap_regression` and
 component of the recipe to the scale of the assistant: optimization in
 :numref:`chap_optimization`, the attention and transformer architectures in
 :numref:`chap_attention` and :numref:`chap_transformers`, learning from
-rewards in :numref:`chap_reinforcement_learning` and :numref:`chap_deep_rl`,
+rewards in :numref:`chap_reinforcement_learning`,
 and generative models in :numref:`chap_gans` and :numref:`chap_diffusion`.
 The Language Models part follows :numref:`fig_pretrain_adapt` from left to
 right: pretraining in :numref:`chap_lm_pretraining`, fine-tuning in

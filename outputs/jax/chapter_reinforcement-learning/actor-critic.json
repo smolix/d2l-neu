@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/actor-critic.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:e21872c33e960a367c7913b9bf4e59890f430bfac00e9c051d056a561203c54f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "actor-critic-actor-critic-methods-and-multi-step-returns": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-actor-critic-methods-1": {
+      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-the-td-error": {
+      "code_fingerprint": "sha256:fcd24470fc9c7036825210ec85190bf295d635282269cb7c52d307b6ed74127f",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-gae-in-one-old-function-1": {
+      "code_fingerprint": "sha256:66ef9ea681161a8b6befd103a1f310829c4972a0d56f97ea72fa4497be5d4d4d",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-gae-in-one-old-function-2": {
+      "code_fingerprint": "sha256:94c5043c2d1fabc867268445d5e50f4057555297a5f7bb6d5007aa12c051ebef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "all episodes terminated: True\nlambda = 0 gives the TD errors: True\nlambda = 1 gives G_t - V(s_t): True\n"
+        }
+      ]
+    },
+    "actor-critic-a2c-by-name-1": {
+      "code_fingerprint": "sha256:8b105171f2be44c292bbcd4be4266f234f2ff2244b8023ef8e206fe56ceafce0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "actor-critic/actor-critic-a2c-by-name-1-1.svg",
+          "bytes": 50401,
+          "sha256": "sha256:a7b04880344d9af425b33423a8ea11c16e60e597fb407a7a362393d241368d01"
+        }
+      ]
+    },
+    "actor-critic-a2c-by-name-2": {
+      "code_fingerprint": "sha256:495ced4b25ef0dfe55a163c3b69f3fd969a45d9fa3ee31e92104f2ed1c87685e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " lambda = 0.0: mean return over the last 20 updates, per seed: [214. 176. 491.]\nlambda = 0.95: mean return over the last 20 updates, per seed: [500. 500. 500.]\n lambda = 1.0: mean return over the last 20 updates, per seed: [500. 499. 500.]\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/sac.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:93087d25c2a7b9d50b064ae8d37439eebada9a8c7e2b1675aa7b09b2825a21b8",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sac-soft-actor-critic": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-soft-actor-critic-1": {
+      "code_fingerprint": "sha256:54c0582204b8019e4fcd754d5354649e5f81dcf6bc9846d995c95df9324d4492",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-a-squashed-gaussian-actor": {
+      "code_fingerprint": "sha256:06d9b93a13045035120337de3f0338c8ff5847cfe0e0750e535f57edcfc072ce",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mu = 0.0, std = 0.5: integral 1.000000 with the log-determinant, 1.653 without\nmu = 0.7, std = 0.8: integral 1.000000 with the log-determinant, 1.132 without\n"
+        }
+      ]
+    },
+    "sac-the-update-1": {
+      "code_fingerprint": "sha256:349dba6681c6da77d0b3bbcdf80b87311fb873ed65b75af93b52a3f917a9c3b2",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-the-update-2": {
+      "code_fingerprint": "sha256:77f17d71e9d4f40ef78f167ba0b680d1bd4bba7e1b9c7ebbe2a3a019de10b017",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-the-update-3": {
+      "code_fingerprint": "sha256:fe971856f23ae0340ce886515ec7e4a63ce65a317e705b56beab5ea74e6d08e4",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-the-update-4": {
+      "code_fingerprint": "sha256:b3910db29d4066b999a5ca05881befa0ad3766196b5d140bcc03801e7fa0012f",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-the-task": {
+      "code_fingerprint": "sha256:e0d9ce3559ab6ae24d818fcf2dfd827be1c1afde63e6dd642f7c8f8b100735cc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    no torque: mean return -1189\nrandom torque: mean return -1228\n"
+        }
+      ]
+    },
+    "sac-learning-to-swing-up-1": {
+      "code_fingerprint": "sha256:bd35f630f7850e0425e958e87022e2e42a2c412d63079eb533225ddff0ae9523",
+      "kind": "text",
+      "outputs": []
+    },
+    "sac-learning-to-swing-up-2": {
+      "code_fingerprint": "sha256:36bb2f01dd7fa9c9129fc690f673843eeac91d4211e4ceef2ce84e66297a64ca",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "two critics: steps to -200 per seed [5200, 4800, 5400], final beta [0.013 0.034 0.012]\n one critic: steps to -200 per seed [5000, 4800, 5400], final beta [0.021 0.027 0.044]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sac/sac-learning-to-swing-up-2-1.svg",
+          "bytes": 47057,
+          "sha256": "sha256:a53dc517f9c6f01f3daef91665d681d77561187416bd49d9a075ba00f90c1686"
+        }
+      ]
+    },
+    "sac-what-the-second-critic-changes": {
+      "code_fingerprint": "sha256:13266b3846870f52065ec23900c8a512ca6ef949bb169df1d813597e835015c8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "two critics, seed 0: predicted  -140.9, realized  -142.5, gap  +1.7 (s.e. 5.2)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "two critics, seed 1: predicted  -134.1, realized  -146.6, gap +12.5 (s.e. 5.8)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "two critics, seed 2: predicted  -138.1, realized  -143.0, gap  +4.9 (s.e. 5.6)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " one critic, seed 0: predicted  -122.5, realized  -142.4, gap +19.9 (s.e. 5.7)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " one critic, seed 1: predicted  -114.6, realized  -147.9, gap +33.2 (s.e. 5.2)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " one critic, seed 2: predicted  -116.0, realized  -145.9, gap +29.9 (s.e. 5.2)\n"
+        }
+      ]
+    }
+  }
+}

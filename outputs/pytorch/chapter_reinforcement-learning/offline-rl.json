@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/offline-rl.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:f0542a9e6126d85c815464088fd6635f54f90f22d30ee495f4eff0d4a17563a5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "offline-rl-which-data-may-drive-which-update": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-offline-reinforcement-learning-1": {
+      "code_fingerprint": "sha256:7f4aa20dbdc7776942b13737f665c4e3eb46a10e69ff40204b638619eac92f74",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-the-experiment-1": {
+      "code_fingerprint": "sha256:eb3a22d941509edf912ccb3aa50f3eb78f8132dab6a179af494bb760d0ceec9c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "random behavior policy: value 0.008\nmostly expert behavior policy: value 0.124\noptimal value V*(s0) = 0.180\n"
+        }
+      ]
+    },
+    "offline-rl-the-experiment-2": {
+      "code_fingerprint": "sha256:a09bd0b95189e50e8d2696dc551d715a29ced6f52be8cdcad886c121e4c7b8a5",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-the-experiment-3": {
+      "code_fingerprint": "sha256:e0b93d55e6715f87f7cdad84fb1d89b3a22c0958cc2c88d09fba5eab23918124",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-overestimation": {
+      "code_fingerprint": "sha256:5d8036c4b6c6985bc0a5f82cbd96659e8c1437f595aee0e26f4cfd8f19ca170e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "random data: cloning 0.008, offline Q-learning 0.124, predicted 0.227 (medians)\n  prediction above the true value on 15 and above V*(s0) on 12 of 15 datasets\nmostly expert data: cloning 0.124, offline Q-learning 0.151, predicted 0.201 (medians)\n  prediction above the true value on 15 and above V*(s0) on 14 of 15 datasets\n"
+        }
+      ]
+    },
+    "offline-rl-distribution-shift": {
+      "code_fingerprint": "sha256:69f340d9967d7e0ccc0a8df54899c3d2522f1ae6e9720caeaf28c8dcadf52702",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "random data: 37 suboptimal choices\n  the data contain the chosen action 9 times and an optimal action 10 times (medians)\nmostly expert data: 32 suboptimal choices\n  the data contain the chosen action 10 times and an optimal action 351 times (medians)\n"
+        }
+      ]
+    },
+    "offline-rl-pessimism": {
+      "code_fingerprint": "sha256:6022b5d52c2f173dd837f95e9f993af72fcb0f350a297c01b792f3086af1d050",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "random data: pessimistic offline Q-learning 0.115, predicted 0.053 (medians)\n  prediction above the true value on 3 and above V*(s0) on 2 of 15 datasets\n  better than naive on 1, worse on 8 datasets; 54 suboptimal choices\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mostly expert data: pessimistic offline Q-learning 0.175, predicted 0.156 (medians)\n  prediction above the true value on 3 and above V*(s0) on 1 of 15 datasets\n  better than naive on 12, worse on 0 datasets; 12 suboptimal choices\n"
+        }
+      ]
+    }
+  }
+}

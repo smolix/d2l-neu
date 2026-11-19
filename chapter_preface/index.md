@@ -317,8 +317,8 @@ yet train on all positions of a sequence at once.
 :numref:`chap_performance` asks what limits the speed
 of a training step on one GPU and on several,
 using a transformer as its running example.
-:numref:`chap_reinforcement_learning` and :numref:`chap_deep_rl`
-turn to agents that learn from rewards rather than labels,
+:numref:`chap_reinforcement_learning`
+turns to agents that learn from rewards rather than labels,
 first on problems small enough to solve exactly,
 then with neural networks.
 Finally, :numref:`chap_gans` and :numref:`chap_diffusion`

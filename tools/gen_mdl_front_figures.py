@@ -108,8 +108,8 @@ def fig_book_org():
     # ---------------- Tools: one tall box beside Basics -------------------- #
     # A one-chapter part needs no panel: the box spans the Basics panel.
     t_x0, t_x1 = basics_right + PANEL_GAP, _x(4) + BOX_W + PAD
-    B[39] = _box(ax, t_x0, basics_top, t_x1 - t_x0, basics_bot - basics_top,
-                 "39 Tools for\nDeep Learning", ACCENT["tools"])
+    B[38] = _box(ax, t_x0, basics_top, t_x1 - t_x0, basics_bot - basics_top,
+                 "38 Tools for\nDeep Learning", ACCENT["tools"])
 
     # ---------------- Advanced: rows 0-1, columns 0-4 --------------------- #
     adv_top = basics_bot + PANEL_GAP
@@ -118,11 +118,10 @@ def fig_book_org():
             (9, 0, 0, "9 Optimization\nAlgorithms"),
             (10, 1, 0, "10 Attention"), (11, 2, 0, "11 Transformers"),
             (14, 3, 0, "14 Reinforcement\nLearning"),
-            (16, 4, 0, "16 Generative\nAdversarial\nNetworks"),
+            (15, 4, 0, "15 Generative\nAdversarial\nNetworks"),
             (12, 1, 1, "12 State Space\nModels"),
             (13, 2, 1, "13 Computational\nPerformance"),
-            (15, 3, 1, "15 Deep\nReinforcement\nLearning"),
-            (17, 4, 1, "17 Diffusion\nModels")]:
+            (16, 4, 1, "16 Diffusion\nModels")]:
         B[key] = _box(ax, _x(col), rows_a[row], BOX_W, BOX_H, text,
                       ACCENT["advanced"])
     _panel(ax, -PAD, adv_top, _x(4) + BOX_W + PAD, adv_bot, "Advanced")
@@ -133,10 +132,10 @@ def fig_book_org():
     n, gap = 6, 0.14
     w6 = (width - (n - 1) * gap) / n
     for i, text in enumerate([
-            "33 Linear\nAlgebra", "34 Calculus", "35 Optimization",
-            "36 Probability\nand Statistics", "37 Information\nTheory",
-            "38 Dynamics"]):
-        B[33 + i] = _box(ax, i * (w6 + gap), app_top + HEAD, w6, BOX_H, text,
+            "32 Linear\nAlgebra", "33 Calculus", "34 Optimization",
+            "35 Probability\nand Statistics", "36 Information\nTheory",
+            "37 Dynamics"]):
+        B[32 + i] = _box(ax, i * (w6 + gap), app_top + HEAD, w6, BOX_H, text,
                          ACCENT["appendix"])
     _panel(ax, -PAD, app_top, width + PAD, app_bot,
            "Mathematics for Deep Learning")
@@ -170,8 +169,7 @@ def fig_book_org():
     _arrow(ax, [(B[9]["cx"], B[9]["b"]), (B[9]["cx"], lane),
                 (B[13]["cx"] + 0.25 * BOX_W, lane),
                 (B[13]["cx"] + 0.25 * BOX_W, B[13]["b"])])
-    down(14, 15)
-    down(16, 17)
+    down(15, 16)                      # GANs -> diffusion models
 
     fl.save(fig, "front-book-org")
 

@@ -296,6 +296,14 @@ equal and approaches 1 when a single weight dominates. Clipping the largest
 weights raises $n_\textrm{eff}$ but introduces a bias: examples in the
 clipped region count less than the target distribution says they should.
 
+The same idea applies when the data change gradually over time.
+Instead of comparing one source distribution with one target
+distribution, :citet:`fakoor2024time` compare the distribution at each past
+time with the present one. The resulting time-varying propensity score puts
+more weight on past data collected when the distribution was similar to the
+present one, so that training on all past data approximates training on the
+present distribution.
+
 ### A Two-Dimensional Example
 
 We now run the four steps on the running example, where we know the true

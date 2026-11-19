@@ -2872,59 +2872,8 @@ class TabularMDP:
         return cls(P, r, gamma)
 
     def backup(self, V):
-        """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s') for every
-        state-action pair: the bracket of the Bellman equations.
-
-        Defined in :numref:`sec_valueiter`"""
+        """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s')."""
         return self.r + self.gamma * self.P @ V
-
-    def policy_value(self, pi):
-        """V^pi = (I - gamma P_pi)^{-1} r_pi exactly, for pi[s, a] the
-        probability of action a at state s (one-hot rows: deterministic).
-        Needs gamma < 1 here: from_gym's terminal states loop on themselves.
-
-        Defined in :numref:`sec_valueiter`"""
-        P_pi = np.einsum('sa,sat->st', pi, self.P)
-        r_pi = (pi * self.r).sum(axis=1)
-        return np.linalg.solve(np.eye(self.num_states) - self.gamma * P_pi,
-                               r_pi)
-
-class VerifierTask:
-    """Four prompts, nine candidate responses shared by all of them, an
-    exact-match verifier, and a reference policy that rarely hedges.
-
-    Defined in :numref:`sec_mdp`"""
-    prompts = ['2+2', '3*4', '8*8', '9*9']
-    answers = ['4', '12', '64', '81']
-    resp = ['1', '3', '4', '7', '12', '19', '23', '35',
-            'one of 4, 12, 64 or 81']          # the last one is the hedge
-
-    def __init__(self):
-        self.theta_ref = np.zeros((len(self.prompts), len(self.resp)))
-        self.theta_ref[:, -1] = -4.0           # the reference rarely hedges
-        self.pi_ref = self.policy(self.theta_ref)
-        self.R = self.reward_table(self.verify)   # R[x, y] = r(x, y)
-
-    def verify(self, x, y):
-        """The verifier: reward 1 iff response y is prompt x's answer."""
-        return float(self.resp[y] == self.answers[x])
-
-    def reward_table(self, reward):
-        """reward(x, y) for every prompt x (rows) and response y (columns)."""
-        return np.array([[reward(x, y) for y in range(len(self.resp))]
-                         for x in range(len(self.prompts))])
-
-    @staticmethod
-    def policy(theta):
-        """pi(y | x): a softmax over each prompt's row of preferences."""
-        z = np.exp(theta - theta.max(1, keepdims=True))
-        return z / z.sum(1, keepdims=True)
-
-    def success(self, pi, reward=None):
-        """E r(x, y), y ~ pi(. | x), averaged over the prompts; r = verify
-        unless another reward function is given."""
-        R = self.R if reward is None else self.reward_table(reward)
-        return (pi * R).sum(1).mean()
 
 def value_iteration(mdp, num_iters):
     """Sweep V <- max_a backup(V); return the whole history of iterates.
@@ -2946,13 +2895,24 @@ def policy_evaluation(mdp, pi, num_iters):
         history.append(V)
     return np.array(history)
 
+def linear_schedule(start, end, num_steps):
+    """step -> value, interpolated from start to end, then held at end.
+
+    Defined in :numref:`sec_qlearning`"""
+    return lambda step: end + (start - end) * max(0.0, 1.0 - step / num_steps)
+
+def epsilon_greedy(q, epsilon, rng):
+    """Explore with probability epsilon, else act greedily on the values q.
+
+    Defined in :numref:`sec_qlearning`"""
+    if rng.random() < epsilon:
+        return int(rng.integers(len(q)))
+    return int(rng.choice(np.flatnonzero(q == q.max())))  # random tie-break
+
 def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
-    """Mean discounted return of an acting policy over Monte Carlo episodes.
+    """Mean discounted return of `policy(obs, rng) -> action` over episodes.
 
-    A policy is any function `policy(obs, rng) -> action`; a deterministic
-    policy ignores `rng`, a stochastic one draws from it.
-
-    Defined in :numref:`sec_valueiter`"""
+    Defined in :numref:`sec_qlearning`"""
     total = 0.0
     for _ in range(num_episodes):
         obs, done, discount = env.reset()[0], False, 1.0
@@ -2962,142 +2922,35 @@ def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
             total, discount = total + discount * reward, discount * gamma
     return total / num_episodes
 
-def epsilon_greedy(q, epsilon, rng):
-    """Explore with probability epsilon, else act greedily on the values q.
-
-    Defined in :numref:`sec_qlearning`"""
-    if rng.random() < epsilon:
-        return int(rng.integers(len(q)))
-    # Ties are coin flips: np.argmax would always pick action 0 on a zero
-    # table, and an agent that only ever moves left never finds the goal.
-    return int(rng.choice(np.flatnonzero(q == q.max())))
-
-def linear_schedule(start, end, num_steps):
-    """step -> value, interpolated from start to end, then held at end.
-
-    Defined in :numref:`sec_qlearning`"""
-    return lambda step: end + (start - end) * max(0.0, 1.0 - step / num_steps)
-
-def q_learning(seed, Q, visits, env, num_episodes, gamma,
-               alpha=lambda n: 1 / (1 + 0.1 * n), epsilon=None):
-    """Tabular Q-learning; updates Q in place, yields each episode's return.
-    `alpha(n)` is the step size at the n-th visit of a pair; `epsilon(k)` is
-    the exploration rate in episode k (default: 1 to 0.05 over the first
-    half of the episodes, then held).
-
-    Defined in :numref:`sec_qlearning`"""
-    rng = np.random.default_rng(seed)
-    if epsilon is None:
-        epsilon = linear_schedule(1.0, 0.05, num_episodes // 2)
-    env.reset(seed=seed)
-    for episode in range(num_episodes):
-        s, done, ret = env.reset()[0], False, 0.0
-        while not done:
-            a = epsilon_greedy(Q[s], epsilon(episode), rng)
-            s_next, r, terminated, truncated, _ = env.step(a)
-            visits[s, a] += 1
-            delta = r + gamma * (1 - terminated) * Q[s_next].max() - Q[s, a]
-            Q[s, a] += alpha(visits[s, a]) * delta
-            s, done, ret = s_next, terminated or truncated, ret + r
-        yield ret
-
-class seeded:
-    """In a `with seeded(seed):` block, PyTorch's CPU generator starts from
-    seed; on exit it resumes its previous state, so the seed affects only
-    the draws inside the block. seed=None draws from the global stream.
-
-    Defined in :numref:`sec_imitation`"""
-    def __init__(self, seed):
-        self.seed = seed
-
-    def __enter__(self):
-        if self.seed is not None:
-            self.state = torch.get_rng_state()
-            torch.default_generator.manual_seed(self.seed)
-
-    def __exit__(self, *exc):
-        if self.seed is not None:
-            torch.set_rng_state(self.state)
-
-class Policy(nn.Module):
-    """A policy network and its optimizer; pi(.|s) is the softmax of the
-    network's outputs at s.
-
-    Defined in :numref:`sec_imitation`"""
-    def __init__(self, policy, lr=1e-2):
-        super().__init__()
-        self.policy = policy
-        self.opt_pi = torch.optim.Adam(policy.parameters(), lr=lr)
-
-    def log_prob(self, obs, act):
-        """log pi(a|s) for a batch of states and the actions taken there."""
-        return torch.log_softmax(self.policy(obs), dim=-1) \
-                    .gather(-1, act[:, None]).squeeze(-1)
-
-    @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
-        """One preference theta_{s,a} per state-action pair: an embedding."""
-        with seeded(seed):
-            policy = nn.Embedding(num_states, num_actions)
-        nn.init.zeros_(policy.weight)
-        return cls(policy, lr)
-
-    def act(self, obs, rng):
-        """Sample an action; numpy in, int out, the acting protocol of evaluate.
-
-        Defined in :numref:`sec_imitation`"""
-        with torch.inference_mode():
-            probs = torch.softmax(self.policy(torch.as_tensor(obs)), -1).numpy()
-        return int(rng.choice(len(probs), p=probs))
-
-    def act_greedy(self, obs, rng=None):
-        """The most probable action; the same protocol as act.
-
-        Defined in :numref:`sec_imitation`"""
-        with torch.inference_mode():
-            return int(self.policy(torch.as_tensor(obs)).argmax())
-
-    def log_prob_np(self, obs, act):
-        """log pi(a|s) for numpy batches of states and actions, as numpy.
-
-        Defined in :numref:`sec_imitation`"""
-        with torch.inference_mode():
-            return self.log_prob(torch.as_tensor(obs),
-                                 torch.as_tensor(act)).numpy()
-
-    def probs(self, num_states, num_actions):
-        """pi(a|s) for every pair, as a (num_states, num_actions) numpy array.
-
-        Defined in :numref:`sec_imitation`"""
-        s, a = np.divmod(np.arange(num_states * num_actions), num_actions)
-        return np.exp(self.log_prob_np(s, a)).reshape(num_states, num_actions)
-
-def policy_step(ac, obs, act, weight):
-    """One ascent step on (1/n) sum_t w_t log pi(a_t|s_t) over a batch of
-    n states and actions; the weights w arrive as numpy, that is, as data.
-
-    Defined in :numref:`sec_imitation`"""
-    w = torch.as_tensor(weight)
-    loss = -(w * ac.log_prob(torch.as_tensor(obs),
-                             torch.as_tensor(act))).mean()
-    ac.opt_pi.zero_grad()
-    loss.backward()
-    ac.opt_pi.step()
-    return loss.item()
-
-def verifier_step(task, theta, K, reward, rng, weighting, lr=2.0):
-    """One REINFORCE step on a VerifierTask: K responses per prompt, each
-    score e_y - pi(.|x) (eq_softmax_score) weighted by weighting(rewards of
-    the prompt's K responses), averaged over the K, one ascent step.
+class SoftmaxTable:
+    """A tabular softmax policy with one preference theta[s, a] per pair.
 
     Defined in :numref:`sec_policygradient`"""
-    pi, g = task.policy(theta), np.zeros_like(theta)
-    eye = np.eye(len(task.resp))
-    for x in range(len(task.prompts)):         # one group of K per prompt
-        ys = rng.choice(len(task.resp), K, p=pi[x])
-        w = weighting(np.array([reward(x, y) for y in ys]))
-        g[x] = (eye[ys] - pi[x]).T @ w / K
-    return theta + lr * g
+    def __init__(self, num_states, num_actions):
+        self.theta = np.zeros((num_states, num_actions))
+
+    def probs(self, s):
+        """pi(.|s) for one state or for an array of states."""
+        z = self.theta[s] - self.theta[s].max(axis=-1, keepdims=True)
+        e = np.exp(z)
+        return e / e.sum(axis=-1, keepdims=True)
+
+    def act(self, s, rng):
+        """Sample an action; the acting protocol `policy(obs, rng)`."""
+        p = self.probs(s)
+        return int(rng.choice(len(p), p=p))
+
+    def gradient(self, batch, weights):
+        """(1/n) sum_t w_t * grad log pi(a_t | s_t) over n episodes."""
+        score = -self.probs(batch.obs)                     # -pi(b | s_t)
+        score[np.arange(len(batch.act)), batch.act] += 1   # + 1(b = a_t)
+        g = np.zeros_like(self.theta)
+        np.add.at(g, batch.obs, weights[:, None] * score)
+        return g / len(batch.ep_ends)
+
+    def step(self, batch, weights, lr):
+        """One gradient ascent step: theta += lr * gradient."""
+        self.theta += lr * self.gradient(batch, weights)
 
 class Batch:
     """A flat batch of transitions, plus the episode boundaries.
@@ -3123,10 +2976,6 @@ class Batch:
         return np.array([(gamma ** np.arange(ep.stop - ep.start)
                           * self.rew[ep]).sum() for ep in self.episodes()])
 
-    def per_step(self, values):
-        """Repeat one value per episode over that episode's steps."""
-        return np.repeat(values, np.diff(self.ep_ends, prepend=0))
-
     def backward_scan(self, x, factor):
         """y_t = x_t + factor * y_{t+1}, restarted at every episode boundary.
 
@@ -3145,19 +2994,8 @@ class Batch:
         Defined in :numref:`sec_baselines`"""
         return self.backward_scan(self.rew, gamma)
 
-    def truncation_bootstrap(self, gamma, V):
-        """gamma^(T-t) (1 - term_T) V(s_T) for every step t of each episode:
-        the discounted value of the future that a time-limit cut did not see.
-        V maps a batch of numpy states to numpy values.
-
-        Defined in :numref:`sec_deeprl`"""
-        tail = np.zeros_like(self.rew)
-        last = self.ep_ends - 1
-        tail[last] = gamma * (1 - self.term[last]) * V(self.next_obs[last])
-        return self.backward_scan(tail, gamma)
-
     def td_target(self, bootstrap, gamma):
-        """r_t + gamma (1 - terminated) V(s'), by a numpy bootstrap.
+        """r_t + gamma (1 - terminated) V(s'), with V given as a numpy function.
 
         Defined in :numref:`sec_actorcritic`"""
         return self.rew + gamma * (1 - self.term) * bootstrap(self.next_obs)
@@ -3169,17 +3007,9 @@ class Batch:
         delta = self.td_target(value_fn, gamma) - value_fn(self.obs)
         return self.backward_scan(delta, gamma * lam)
 
-    def lambda_return(self, value_fn, gamma, lam):
-        """The critic's target for GAE: the advantage plus the value it is
-        measured from.
-
-        Defined in :numref:`sec_actorcritic`"""
-        return self.gae(value_fn, gamma, lam) + value_fn(self.obs)
-
 def rollout(env, policy, num_episodes, rng):
     """Collect complete episodes from `policy(obs, rng) -> action` as a
-    Batch. `term` records `terminated`, never `truncated`: a time-limit cut
-    is not a terminal state. All sampling runs through the numpy `rng`.
+    Batch; `term` records `terminated`, never `truncated`.
 
     Defined in :numref:`sec_policygradient`"""
     cols, ep_ends = [[] for _ in range(5)], []
@@ -3198,99 +3028,72 @@ def rollout(env, policy, num_episodes, rng):
     return Batch(obs, act, rew.astype(np.float32), next_obs,
                  term.astype(np.float32), np.asarray(ep_ends))
 
-def train_reinforce_tabular(ac, env, gamma, seed, num_updates=256,
-                            batch_episodes=16):
-    """REINFORCE: a fresh batch from the current policy, every step of a
-    trajectory weighted by that trajectory's return, one ascent step.
-    Yields the batch's mean return and its number of steps.
-
-    Defined in :numref:`sec_policygradient`"""
-    rng = np.random.default_rng(seed)      # one stream for all sampling
-    env.reset(seed=seed)
-    for _ in range(num_updates):
-        batch = rollout(env, ac.act, batch_episodes, rng)
-        R = batch.episode_returns(gamma)
-        d2l.policy_step(ac, batch.obs, batch.act, batch.per_step(R))
-        yield float(R.mean()), len(batch)
-
-def policy_objective(theta, P, r, gamma):
-    """J(theta) = V(s0) of the softmax policy, a differentiable linear solve.
-
-    Defined in :numref:`sec_policygradient`"""
-    pi = torch.softmax(theta, -1)
-    P_pi = torch.einsum('sa,sat->st', pi, P)
-    return torch.linalg.solve(torch.eye(len(P)) - gamma * P_pi,
-                              (pi * r).sum(-1))[0]
-
-def tabular_score(obs, act, w, pi):
-    """sum_t w_t (e_{a_t} - pi(.|s_t)), each term added into row s_t: the
-    weighted softmax score (eq_softmax_score) of a batch, the shape of pi.
-
-    Defined in :numref:`sec_policygradient`"""
-    u = np.zeros(pi.shape)
-    np.add.at(u, obs, w[:, None] * (np.eye(pi.shape[1])[act] - pi[obs]))
-    return u
-
-def standardize(x, eps=1e-8):
-    """Center a NumPy batch of weights and divide by its standard deviation
-    (NumPy's std, which divides by the batch size).
+def normalize(x, eps=1e-8):
+    """Center a batch of weights and rescale them to unit spread.
 
     Defined in :numref:`sec_baselines`"""
     return (x - x.mean()) / (x.std() + eps)
 
-def group_step(task, theta, K, reward, rng, lr=2.0):
-    """verifier_step with the group-normalized weight (GRPO): the rewards
-    of each prompt's K responses, standardized within the group.
-
-    Defined in :numref:`sec_baselines`"""
-    return d2l.verifier_step(task, theta, K, reward, rng, standardize, lr)
-
-class ActorCritic(d2l.Policy):
-    """A policy and a value function, each with its own optimizer.
+class ActorCritic(nn.Module):
+    """A policy network and a value network, each with its own optimizer.
 
     Defined in :numref:`sec_deeprl`"""
     def __init__(self, policy, value, lr=1e-2):
-        super().__init__(policy, lr)
-        self.value = value
+        super().__init__()
+        self.policy, self.value = policy, value
+        self.opt_pi = torch.optim.Adam(policy.parameters(), lr=lr)
         self.opt_v = torch.optim.Adam(value.parameters(), lr=lr)
 
+    @classmethod
+    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
+        """Policy and value networks with one hidden layer each."""
+        def net(out):
+            return nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
+                                 nn.Linear(hidden, out))
+        return cls(net(num_actions), net(1), lr)
+
+    def log_prob(self, obs, act):
+        """log pi(a|s) for a batch of states and the actions taken there."""
+        logp = torch.log_softmax(self.policy(obs), dim=-1)
+        return logp.gather(-1, act[:, None]).squeeze(-1)
+
     def V(self, obs):
-        """V(s) for a batch of states, as a tensor."""
         return self.value(obs).squeeze(-1)
 
+    def act(self, obs, rng):
+        """Sample an action: a numpy state in, an int out."""
+        with torch.no_grad():
+            logits = self.policy(torch.as_tensor(obs))
+            probs = torch.softmax(logits.double(), -1).numpy()
+        return int(rng.choice(len(probs), p=probs))
+
+    def act_greedy(self, obs, rng=None):
+        with torch.no_grad():
+            return int(self.policy(torch.as_tensor(obs)).argmax())
+
     def value_np(self, obs):
-        """V(s) for a numpy batch of states, as numpy."""
-        with torch.inference_mode():
+        with torch.no_grad():
             return self.V(torch.as_tensor(obs)).numpy()
 
-    @classmethod
-    def tabular(cls, num_states, num_actions, lr=0.1, seed=None):
-        """Preference and value tables: two zero-initialized embeddings."""
-        with d2l.seeded(seed):
-            policy, value = (nn.Embedding(num_states, num_actions),
-                             nn.Embedding(num_states, 1))
-        nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
-        return cls(policy, value, lr)
+    def log_prob_np(self, obs, act):
+        with torch.no_grad():
+            return self.log_prob(torch.as_tensor(obs),
+                                 torch.as_tensor(act)).numpy()
 
-    @classmethod
-    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, seed=None):
-        """The same container with the tables replaced by one-hidden-layer nets.
-
-        Defined in :numref:`sec_deeprl`"""
-        with d2l.seeded(seed):
-            policy, value = (tanh_mlp(obs_dim, hidden, num_actions),
-                             tanh_mlp(obs_dim, hidden, 1))
-        return cls(policy, value, lr)
-
-def tanh_mlp(in_dim, hidden, out_dim):
-    """A network with one tanh hidden layer.
+def policy_step(ac, batch, advantage):
+    """One ascent step on the mean of A_t log pi(a_t|s_t); A_t is data.
 
     Defined in :numref:`sec_deeprl`"""
-    return nn.Sequential(nn.Linear(in_dim, hidden), nn.Tanh(),
-                         nn.Linear(hidden, out_dim))
+    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
+    adv = torch.as_tensor(advantage)
+    loss = -(adv * ac.log_prob(obs, act)).mean()
+    ac.opt_pi.zero_grad()
+    loss.backward()
+    ac.opt_pi.step()
+    return loss.item()
 
 def fit_value(ac, obs, target, num_steps=1):
-    """Regress the value head on a fixed target: eq_value_baseline for nets.
+    """Regress the value network on fixed targets by squared error.
 
     Defined in :numref:`sec_deeprl`"""
     obs, target = torch.as_tensor(obs), torch.as_tensor(target)
@@ -3301,107 +3104,31 @@ def fit_value(ac, obs, target, num_steps=1):
         ac.opt_v.step()
     return loss.item()
 
-class GaussianHead(nn.Module):
-    """A Gaussian over actions: a trunk of hidden features, a linear mean,
-    and a log standard deviation that is one learned vector or, with
-    `state_std=True`, a second linear head clamped to [-5, 2]. The default
-    trunk is one tanh layer; any module with `hidden` outputs will do.
-    `zero_mean=True` sets the mean layer to zero, so that mu = 0 at first.
-
-    Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden, state_std=False, trunk=None,
-                 zero_mean=False):
-        super().__init__()
-        self.trunk = trunk if trunk is not None else nn.Sequential(
-            nn.Linear(obs_dim, hidden), nn.Tanh())
-        self.mean = nn.Linear(hidden, act_dim)
-        if zero_mean:
-            nn.init.zeros_(self.mean.weight), nn.init.zeros_(self.mean.bias)
-        self.state_std = state_std
-        self.log_std = (nn.Linear(hidden, act_dim) if state_std
-                        else nn.Parameter(torch.zeros(act_dim)))
-
-    def forward(self, obs):
-        h = self.trunk(obs)
-        if self.state_std:
-            return self.mean(h), self.log_std(h).clamp(-5, 2).exp()
-        return self.mean(h), self.log_std.exp()
-
-class GaussianPolicy(ActorCritic):
-    """The same interface over a Normal instead of a softmax; nothing that
-    consumes the interface changes. `head_args` go to GaussianHead.
-
-    Defined in :numref:`sec_deeprl`"""
-    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, seed=None,
-                 **head_args):
-        with d2l.seeded(seed):
-            policy = GaussianHead(obs_dim, act_dim, hidden, **head_args)
-            value = tanh_mlp(obs_dim, hidden, 1)
-        super().__init__(policy, value, lr)
-
-    def log_prob(self, obs, act):
-        """log pi(a|s): the Normal density, summed over action dimensions."""
-        mean, std = self.policy(obs)
-        return torch.distributions.Normal(mean, std).log_prob(act).sum(-1)
-
-    def act(self, obs, rng):
-        """Sample mu(s) + sigma(s) z, z ~ N(0, I) from the numpy rng."""
-        with torch.inference_mode():
-            mean, std = self.policy(torch.as_tensor(obs))
-        return mean.numpy() + std.numpy() * rng.standard_normal(
-            mean.shape, dtype=np.float32)
-
-    def act_greedy(self, obs, rng=None):
-        """The mean action mu(s)."""
-        with torch.inference_mode():
-            return self.policy(torch.as_tensor(obs))[0].numpy()
-
-def steps_to(run, level, window):
-    """Env steps at which the mean return of the last `window` rows of
-    run = [(env step, return, ...), ...] first reaches `level`; inf if it
-    never does.
-
-    Defined in :numref:`sec_actorcritic`"""
-    mean = np.convolve(run[:, 1], np.ones(window) / window, 'valid')
-    hit = np.flatnonzero(mean >= level)
-    return run[hit[0] + window - 1, 0] if len(hit) else np.inf
-
-def clipped_surrogate(rho, adv, epsilon):
-    """PPO's per-sample objective eq_ppo_clip: min(rho A, clip(rho) A).
+def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,
+               entropy_coef=0.01, use_clip=True):
+    """num_epochs steps on the surrogate for one fixed batch, clipped if
+    use_clip; returns, measured before each step: fraction of ratios
+    outside [1-eps, 1+eps], approximate KL divergence, and mean entropy.
 
     Defined in :numref:`sec_ppo`"""
-    return torch.minimum(rho * adv,
-                         rho.clamp(1 - epsilon, 1 + epsilon) * adv)
-
-def plain_surrogate(rho, adv, epsilon):
-    """The unclipped per-sample objective rho A.
-
-    Defined in :numref:`sec_ppo`"""
-    return rho * adv
-
-def ppo_epochs(ac, obs, act, adv, logp_old, epsilon, num_epochs,
-               entropy_coef=0.01, surrogate=clipped_surrogate):
-    """num_epochs passes on the mean surrogate plus an entropy bonus, on one
-    frozen batch of states and actions; returns [num_epochs, 3] numpy
-    diagnostics, recorded before each pass: fraction of ratios outside the
-    band, approximate KL, mean policy entropy.
-
-    Defined in :numref:`sec_ppo`"""
-    obs, act, adv, logp_old = (torch.as_tensor(x)
-                               for x in (obs, act, adv, logp_old))
+    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
+    adv, logp_old = torch.as_tensor(adv), torch.as_tensor(logp_old)
     diag = []
     for _ in range(num_epochs):
         logp_all = torch.log_softmax(ac.policy(obs), dim=-1)
         logp = logp_all.gather(-1, act[:, None]).squeeze(-1)
         rho = torch.exp(logp - logp_old)
+        surr = rho * adv
+        if use_clip:
+            surr = torch.min(surr, rho.clamp(1 - epsilon, 1 + epsilon) * adv)
         entropy = -(logp_all.exp() * logp_all).sum(-1).mean()
-        loss = -surrogate(rho, adv, epsilon).mean() - entropy_coef * entropy
+        loss = -surr.mean() - entropy_coef * entropy
         ac.opt_pi.zero_grad()
         loss.backward()
         ac.opt_pi.step()
-        diag.append(torch.stack([((rho - 1).abs() > epsilon).float().mean(),
-                                 (logp_old - logp).mean(), entropy]).detach())
-    return torch.stack(diag).numpy()
+        diag.append((((rho - 1).abs() > epsilon).float().mean().item(),
+                     (logp_old - logp).mean().item(), entropy.item()))
+    return np.array(diag)
 
 class ReplayBuffer:
     """A ring of transitions in preallocated numpy; sample() returns a Batch.
@@ -3426,73 +3153,10 @@ class ReplayBuffer:
         return self.size
 
     def sample(self, batch_size, rng):
-        """batch_size transitions drawn uniformly, each a one-step
-        fragment: ep_ends marks every transition as its own episode."""
         i = rng.integers(self.size, size=batch_size)
         return d2l.Batch(self.obs[i], self.act[i], self.rew[i],
                          self.next_obs[i], self.term[i],
-                         np.arange(1, batch_size + 1))
-
-class SquashedGaussianPolicy(nn.Module):
-    """d2l.GaussianHead with SAC's network (two ReLU layers and a
-    state-dependent standard deviation), squashed through
-    a = scale * tanh(u).
-
-    Defined in :numref:`sec_sac`"""
-    def __init__(self, obs_dim, act_dim, hidden=64, scale=2.0, seed=None):
-        super().__init__()
-        with d2l.seeded(seed):
-            trunk = nn.Sequential(nn.Linear(obs_dim, hidden), nn.ReLU(),
-                                  nn.Linear(hidden, hidden), nn.ReLU())
-            self.policy = d2l.GaussianHead(obs_dim, act_dim, hidden,
-                                           state_std=True, trunk=trunk)
-        self.scale = scale
-
-    def log_prob_u(self, u, mean, std):
-        """log pi at a = scale tanh(u), from the pre-squash u the sampler
-        keeps."""
-        logdet = 2 * (np.log(2) - u - nn.functional.softplus(-2 * u))
-        return (torch.distributions.Normal(mean, std).log_prob(u)
-                - logdet - np.log(self.scale)).sum(-1)
-
-    def sample(self, obs):
-        """A reparameterized action and its log-probability, differentiable."""
-        mean, std = self.policy(obs)
-        u = mean + std * torch.randn_like(std)
-        return self.scale * torch.tanh(u), self.log_prob_u(u, mean, std)
-
-    @torch.inference_mode()
-    def _draw(self, obs, rng):
-        """A pre-squash sample u with the head's mean and std, from numpy
-        states and the noise of rng."""
-        mean, std = self.policy(torch.as_tensor(obs))
-        noise = rng.standard_normal(mean.shape, dtype=np.float32)
-        return mean + std * torch.as_tensor(noise), mean, std
-
-    def act(self, obs, rng):
-        """A sampled action, numpy in and out."""
-        return self.scale * np.tanh(self._draw(obs, rng)[0].numpy())
-
-    @torch.inference_mode()
-    def act_logp(self, obs, rng):
-        """A sampled action and its log-probability, numpy in and out."""
-        u, mean, std = self._draw(obs, rng)
-        return (self.scale * np.tanh(u.numpy()),
-                self.log_prob_u(u, mean, std).numpy())
-
-    @torch.inference_mode()
-    def act_greedy(self, obs, rng=None):
-        """The squashed mean scale * tanh(mean), numpy in and out."""
-        mean = self.policy(torch.as_tensor(obs))[0].numpy()
-        return self.scale * np.tanh(mean)
-
-class ReplayBufferC(d2l.ReplayBuffer):
-    """d2l.ReplayBuffer with the action column widened to float vectors.
-
-    Defined in :numref:`sec_sac`"""
-    def __init__(self, capacity, obs_dim, act_dim):
-        super().__init__(capacity, obs_dim)
-        self.act = np.zeros((capacity, act_dim), np.float32)
+                         np.array([batch_size]))
 
 def update_D(X, Z, net_D, net_G, trainer_D):
     """Update the critic; return the summed log loss, halved.

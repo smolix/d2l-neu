@@ -2362,7 +2362,7 @@ second judge from the other family and a crossed design, which Exercise
 :label:`subsec_lm_rankings`
 
 Six pairwise results are awkward to report, and nothing forces them to be
-transitive. The Bradley-Terry model of :numref:`sec_regularized` turns them
+transitive. The Bradley-Terry model of :numref:`sec_rl_sequences` turns them
 into one number per model. It assigns each model $i$ a strength $\theta_i$ and
 assumes that $i$ beats $j$ with probability $\sigma(\theta_i - \theta_j)$,
 which is logistic regression on comparisons. In these terms the judge's

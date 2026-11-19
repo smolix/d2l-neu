@@ -32,8 +32,8 @@ layers stack into a deep model that trains reliably.
 all positions at once, and what it can store. :numref:`chap_performance`
 asks what limits the speed of a training step on one GPU and on several.
 :numref:`chap_reinforcement_learning` asks how an agent learns when its
-actions change the data it sees, and :numref:`chap_deep_rl` asks how to keep
-that learning stable with neural networks. :numref:`chap_gans` asks how to
+actions change the data it sees, first on problems small enough to solve
+exactly and then with neural networks. :numref:`chap_gans` asks how to
 train a generator that offers samples but no density, and
 :numref:`chap_diffusion` asks how to generate data by learning to remove
 noise.

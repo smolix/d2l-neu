@@ -1,18 +1,88 @@
 # Reinforcement Learning
 :label:`chap_reinforcement_learning`
 
-Every model in this book so far was trained on a dataset that sat still: nothing the model predicted changed which example came next. Now consider a language model working through a mathematics problem. It writes a thousand tokens of reasoning, and only at the end does a checker say whether the answer is right. No token has a label of its own, and each one changes what the model can write next. A controller balancing a pole on a moving cart is in the same position: each push changes the angle it must correct next, and the only reward is the time the pole stays up. :numref:`fig_rl_agent_env` draws the loop between the decision maker, the *agent*, and the world it acts on, the *environment*.
+In supervised learning, a prediction typically does not affect which test example is observed next. In reinforcement learning, an action can change the state of the environment and thereby affect subsequent observations and rewards. The agent consequently influences both its performance and the data from which it learns.
 
-![The loop between an agent and its environment. At step $t$ the agent, following its policy $\pi$, chooses an action $a_t$ (blue); the environment, governed by its transition probabilities $P$ and reward $r$, returns a reward $r_t$ and the next state $s_{t+1}$ (orange). Repeating the exchange produces the trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$.](../img/mdl-rl-agent-env.svg)
+:numref:`fig_rl_agent_env` shows this interaction. Unrolling the agent--environment loop over time produces a *trajectory* $\tau=(s_0,a_0,r_0,s_1,\ldots)$. This feedback introduces the central difficulties studied in this chapter: exploration determines which data are collected, errors alter later state distributions, and policy updates change the distribution used for subsequent learning. The same formulation also applies to language-model generation, where the context is a state and the next token is an action; :numref:`sec_rl_sequences` develops that correspondence.
+
+![At time $t$, the agent selects action $a_t$ (blue), and the environment returns reward $r_t$ and next state $s_{t+1}$ (orange). Unrolling this interaction produces the trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$.](../img/mdl-rl-agent-env.svg)
 :label:`fig_rl_agent_env`
 
-Two questions follow. Which decisions deserve credit for a reward that arrives late? And how can a learner find good decisions when nobody shows it what they are? Richard Bellman answered the first in the 1950s for problems whose rules are known: score each situation by the reward still to come, and a long problem becomes a chain of one-step problems :cite:`BellmanDPBook`. In the 1980s Andrew Barto, Richard Sutton and Chris Watkins learned the same scores by trial and error, with the pole on a cart as an early test :cite:`Barto.Sutton.Anderson.1983,Sutton.1988,Watkins.1989`. Ronald Williams showed how to improve the rule that picks decisions, the *policy*, directly from the rewards its attempts earn :cite:`Williams.1992`. Because the learner collects its own data, its mistakes change what it learns from next.
+The chapter has three parts. The first part works with small, finite problems. :numref:`sec_mdp` defines the Markov decision process, :numref:`sec_valueiter` solves a known MDP by dynamic programming, and :numref:`sec_qlearning` learns optimal action values from sampled transitions, without a model. :numref:`sec_policygradient` optimizes a policy directly by following the gradient of its expected return, and :numref:`sec_baselines` reduces the variance of the gradient estimates. The second part uses neural networks. :numref:`sec_deeprl` represents the policy and the value function as networks, :numref:`sec_actorcritic` replaces the sampled remainder of each trajectory by the value estimate, :numref:`sec_ppo` reuses each batch of data for several updates while limiting how far the policy moves, :numref:`sec_dqn` carries Q-learning over to networks, and :numref:`sec_sac` replaces the maximum over actions by an actor, for actions that vary continuously, and adds the entropy of the policy to the reward. The third part asks where the data come from: :numref:`sec_offline` learns from a fixed dataset without any interaction, and :numref:`sec_rl_sequences` applies the methods of the chapter to language models. Most experiments use two small environments, FrozenLake and CartPole, so that results can be compared with exact solutions where these exist and repeated over several random seeds on a CPU; :numref:`sec_sac` adds Pendulum, whose action is a torque.
 
-These ideas train controllers, game players and, after pretraining, language models that reason toward answers a checker accepts. They also explain why imitation is not enough: a model fine-tuned on an expert's text never practices recovering from its own mistakes.
+:numref:`fig_rl_roadmap` organizes the methods of the chapter by what they learn and which data they use, and :numref:`tab_rl_map` lists them with the sections that introduce them.
 
-:numref:`sec_mdp` asks how to write such a problem down. :numref:`sec_valueiter` asks how to find the best policy when the rules are known. :numref:`sec_qlearning` asks what can be learned from seeing only where each action leads. :numref:`sec_exploration` asks how often to try actions that look worse. :numref:`sec_imitation` asks what an expert's demonstrations teach, and why copying them fails over a long task. :numref:`sec_policygradient` asks how a policy can improve from its own attempts. :numref:`sec_baselines` asks how to make that estimate less noisy, the question behind the group-based updates that train language models. :numref:`sec_deeprl` asks what changes when a neural network replaces the table, and it ends with a map of the methods of this chapter and the next.
+![The main methods of this chapter, organized by what they learn and by which data may drive their updates. The methods in the top two rows learn a policy, and those in the top row also learn a bootstrapped critic; a value function that REINFORCE fits to sampled returns is only a baseline. The methods in the bottom row learn action values and act greedily on them. The arrow marks the use of importance ratios, which let policy-gradient methods reuse data from other policies. Dynamic programming is not shown, since it uses a model of the environment rather than data.](../img/mdl-rl-roadmap.svg)
+:label:`fig_rl_roadmap`
 
-The code is in PyTorch and JAX, and most examples are small enough to solve exactly, so that every estimate can be checked against the exact answer. :numref:`chap_deep_rl` continues with value networks inside the update, reuse of past experience and fixed datasets. Problems with several agents are left out, and hidden state and learned models of the environment appear only briefly. The Language Models part treats post-training, including learning from human preferences, in more depth.
+:The methods of this chapter. "Named in" marks methods that a section describes without running them.
+:label:`tab_rl_map`
+
+| algorithm | what it learns | which data may drive the update | where |
+|:--|:--|:--|:--|
+| value iteration, policy iteration | $V^*$ and an optimal policy | none: they use the transition probabilities and rewards | :numref:`sec_valueiter` |
+| Q-learning | $Q^*$ from sampled transitions | transitions of any policy (off-policy) | :numref:`sec_qlearning` |
+| SARSA | the action values of the behavior policy | its own transitions (on-policy) | named in :numref:`sec_qlearning` |
+| UCB | the means of the arms and their uncertainty | its own pulls of a bandit | named in :numref:`sec_qlearning` |
+| REINFORCE | a policy, by the score-function gradient | trajectories of the current policy | :numref:`sec_policygradient` |
+| REINFORCE with baselines | the same gradient with lower variance | trajectories of the current policy | :numref:`sec_baselines` |
+| group baseline, as in GRPO | a policy, with the mean return of trajectories from the same start state as the baseline and the division by the standard deviation of these returns | trajectories of the current policy | :numref:`sec_baselines` |
+| REINFORCE with a learned baseline | a policy network and a value network | trajectories of the current policy | :numref:`sec_deeprl` |
+| actor-critic | a policy and a bootstrapped critic | trajectories of the current policy | :numref:`sec_actorcritic` |
+| PPO | a policy under a clipped probability ratio, and a critic | a batch of the current policy, reused for several epochs | :numref:`sec_ppo` |
+| TRPO | a policy under a bound on the KL divergence | a batch of the current policy | named in :numref:`sec_ppo` |
+| DQN | $Q^*$ with a network | a replay buffer of past transitions | :numref:`sec_dqn` |
+| Double DQN | the same, with a smaller maximization bias | a replay buffer of past transitions | named in :numref:`sec_dqn` |
+| Rainbow | DQN with six extensions | a replay buffer | named in :numref:`sec_dqn` |
+| DDPG, TD3 | one critic (DDPG) or two (TD3), and a deterministic actor, for continuous actions | a replay buffer | named in :numref:`sec_deeprl` and :numref:`sec_sac` |
+| SAC | two critics, a stochastic actor, and a temperature, for a return with the entropy of the policy | a replay buffer | :numref:`sec_sac` |
+| behavior cloning | the policy that generated the data | a fixed dataset | :numref:`sec_offline` |
+| DAgger | the policy of an expert | the learner's own states, labeled by the expert | named in :numref:`sec_offline` |
+| offline Q-learning with pessimism | the optimal values of the empirical MDP, lowered where data are scarce | a fixed dataset | :numref:`sec_offline` |
+| BCQ, CQL, IQL, TD3+BC, CDC | a critic and a policy, with the policy or the values kept close to the data | a fixed dataset | named in :numref:`sec_offline` |
+| Decision Transformer | a return-conditioned sequence model | a fixed dataset | named in :numref:`sec_offline` |
+| PPO for language models | a policy that maximizes a reward with a KL penalty, and a critic | responses of the current policy | named in :numref:`sec_rl_sequences` |
+| GRPO | a policy, with group-normalized rewards instead of a critic and a per-token KL estimate in the loss | responses of the current policy | named in :numref:`sec_rl_sequences` |
+| DPO | a policy, fitted directly to preferences, with the reward written in terms of the policy | a fixed dataset of preferences | named in :numref:`sec_rl_sequences` |
+
+:numref:`tab_rl_notation` collects the symbols of the chapter with the section that defines each.
+
+:Notation of this chapter.
+:label:`tab_rl_notation`
+
+| symbol | meaning | defined in |
+|:--|:--|:--|
+| $\mathcal{S}$, $\mathcal{A}$ | the sets of states and actions | :numref:`sec_mdp` |
+| $s_t$, $a_t$, $r_t$ | the state, action, and reward at step $t$ | :numref:`sec_mdp` |
+| $P(s' \mid s, a)$, $r(s, a)$ | the transition kernel; the expected reward | :numref:`sec_mdp` |
+| $\gamma$ | the discount factor | :numref:`sec_mdp` |
+| $T$, $T^\pi$ | the length of an episode; the Bellman optimality operator; the Bellman operator of a fixed policy $\pi$ | :numref:`sec_mdp`, :numref:`sec_valueiter` |
+| $\tau$, $R(\tau)$ | a trajectory; its discounted return | :numref:`sec_mdp` |
+| $\pi(a \mid s)$ | a policy | :numref:`sec_valueiter` |
+| $V^\pi$, $Q^\pi$, $A^\pi$ | the state values, action values, and advantages of $\pi$ | :numref:`sec_valueiter` |
+| $V^*$, $Q^*$ | the value functions of an optimal policy | :numref:`sec_valueiter` |
+| $\alpha$ | a step size | :numref:`sec_qlearning` |
+| $\delta$, $\delta_t$ | the temporal-difference error | :numref:`sec_qlearning`, :numref:`sec_actorcritic` |
+| $\epsilon$ | the exploration rate of $\epsilon$-greedy action selection; in :numref:`sec_ppo` and :numref:`sec_rl_sequences`, the clipping parameter | :numref:`sec_qlearning`, :numref:`sec_ppo` |
+| $\eta$ | the temperature of the softmax policy | :numref:`sec_qlearning` |
+| $n(a)$, $n(s, a)$ | the number of times an arm was chosen; the number of times a pair occurs in the data (in an exercise of :numref:`sec_qlearning`, the number of updates of a pair) | :numref:`sec_qlearning`, :numref:`sec_offline` |
+| $\pi_\theta$, $J(\theta)$ | a policy with parameters $\theta$; its expected return | :numref:`sec_policygradient` |
+| $G_t$ | the reward-to-go | :numref:`sec_baselines` |
+| $b$, $\hat{V}$ | a baseline; a learned estimate of $V^\pi$ | :numref:`sec_baselines` |
+| $K$, $\bar{R}$, $s_R$ | the number of trajectories in a group; the mean and the standard deviation of their returns | :numref:`sec_baselines` |
+| $w_t$; $w$ | the weight of the score at step $t$; the parameters of a value network | :numref:`sec_policygradient`, :numref:`sec_actorcritic` |
+| $\hat{A}_i$, $\hat{A}_t$ | the weight of the score: a group-normalized return; an advantage estimate | :numref:`sec_baselines`, :numref:`sec_deeprl` |
+| $\lambda$ | the parameter of the $\lambda$-return and of GAE | :numref:`sec_actorcritic` |
+| $d_{t+1}$, $d'$ | one if the next state is terminal and zero otherwise; $d(s)$ is the smallest number of moves from $s$ to the goal in :numref:`sec_valueiter`, and the discounted number of visits to $s$ in :numref:`sec_baselines` ($d_{\textrm{old}}$, of the old policy, in :numref:`sec_ppo`) | :numref:`sec_actorcritic`, :numref:`sec_dqn` |
+| $\rho_t(\theta)$ | the probability ratio of the new and the old policy | :numref:`sec_ppo` |
+| $\sigma$, $\sigma_\theta(s)$ | the sigmoid function; a standard deviation that the actor outputs | :numref:`sec_ppo`, :numref:`sec_sac` |
+| $w^-$, $C$ | the parameters of a target network; the synchronization period of DQN | :numref:`sec_dqn` |
+| $\beta$, $\bar{H}$ | the temperature, the weight of the entropy; the target entropy. In :numref:`sec_rl_sequences`, $\beta$ weighs the KL penalty | :numref:`sec_sac` |
+| $\nu$ | the rate of Polyak averaging | :numref:`sec_sac` |
+| $\mathcal{D}$, $\pi_\beta$, $\kappa$ | a fixed dataset; the behavior policy that collected it; the strength of the count-based penalty | :numref:`sec_offline` |
+| $x$, $y$, $\pi_{\textrm{ref}}$ | a prompt; a response (in :numref:`sec_qlearning`, :numref:`sec_dqn`, and :numref:`sec_sac`, $y$ is a regression target); the reference policy | :numref:`sec_rl_sequences` |
+
+This chapter does not cover multi-agent, meta-, hierarchical, or goal-conditioned reinforcement learning, or model-based reinforcement learning beyond the empirical MDP of :numref:`sec_offline`, and it treats partial observability only briefly.
 
 ```toc
 :maxdepth: 2
@@ -20,11 +90,15 @@ The code is in PyTorch and JAX, and most examples are small enough to solve exac
 mdp
 value-iter
 qlearning
-exploration
-imitation
 policy-gradient
 baselines
 deep-rl
+actor-critic
+ppo
+dqn
+sac
+offline-rl
+rl-sequences
 ```
 
 ## Resources and Further Reading {.unnumbered}
@@ -33,308 +107,27 @@ The following freely available resources provide theoretical treatments, courses
 
 **Textbooks**
 
-- Sutton and Barto, *Reinforcement Learning: An Introduction* :cite:`Sutton.Barto.2018` provides a comprehensive introduction to value methods, policy methods, planning, and function approximation. Sutton and Barto received the 2024 Turing Award for their foundational contributions to reinforcement learning.
-- Szepesvári, *Algorithms for Reinforcement Learning* :cite:`Szepesvari.2010` states this chapter's algorithms and their guarantees in under a hundred pages.
-- Bertsekas, *A Course in Reinforcement Learning* :cite:`Bertsekas.2025` develops reinforcement learning from the perspective of optimal control and dynamic programming.
-- Agarwal, Jiang, Kakade, and Sun, *Reinforcement Learning: Theory and Algorithms* :cite:`Agarwal.Jiang.Kakade.ea.2019` supplies the sample-complexity rates this chapter states qualitatively.
-- Lattimore and Szepesvári, *Bandit Algorithms* :cite:`Lattimore.Szepesvari.2020` is the full theory behind :numref:`sec_exploration`.
+- Sutton and Barto, *Reinforcement Learning: An Introduction* :cite:`Sutton.Barto.2018`, introduces value methods, policy methods, planning, and function approximation. Sutton and Barto received the 2024 ACM A.M. Turing Award "for developing the conceptual and algorithmic foundations of reinforcement learning".
+- Szepesvári, *Algorithms for Reinforcement Learning* :cite:`Szepesvari.2010`, is a concise treatment of dynamic programming, temporal-difference learning, bandits, Q-learning, and actor-critic methods, and of their guarantees.
+- Bertsekas, *A Course in Reinforcement Learning* :cite:`Bertsekas.2025`, develops reinforcement learning from the perspective of optimal control and dynamic programming.
+- Agarwal, Jiang, Kakade, and Sun, *Reinforcement Learning: Theory and Algorithms* :cite:`Agarwal.Jiang.Kakade.ea.2019`, develops the theory of reinforcement learning, including bounds on the number of samples that learning requires.
+- Lattimore and Szepesvári, *Bandit Algorithms* :cite:`Lattimore.Szepesvari.2020`, treats the bandit problems of :numref:`sec_qlearning` in depth.
 
 **Courses**
 
-- [Berkeley CS285: Deep Reinforcement Learning](https://rail.eecs.berkeley.edu/deeprlcourse/) covers policy gradients, value methods, model-based learning, and offline reinforcement learning at the graduate level.
-- [Stanford CS234: Reinforcement Learning](https://web.stanford.edu/class/cs234/) is the course closest in scope to this chapter: foundations, exploration, and policy gradients with their guarantees.
-- [Stanford CS224R: Deep Reinforcement Learning](https://cs224r.stanford.edu/) covers the practice, imitation and offline methods included.
-- [CMU 10-703: Deep Reinforcement Learning and Control](https://cmudeeprl.github.io/703website/) pairs the algorithms with control and physical embodiment.
-- [MIT 6.7920: Reinforcement Learning: Foundations and Methods](https://web.mit.edu/6.7920/www/) develops the dynamic-programming theory introduced in :numref:`sec_valueiter`.
+- [Berkeley CS 185/285: Deep Reinforcement Learning](https://rail.eecs.berkeley.edu/deeprlcourse/) covers policy gradients, value methods, model-based learning, and offline reinforcement learning.
+- [Stanford CS234: Reinforcement Learning](https://web.stanford.edu/class/cs234/) covers the foundations of reinforcement learning, policy gradients, and exploration.
+- [Stanford CS224R: Deep Reinforcement Learning](https://cs224r.stanford.edu/) covers deep reinforcement learning, including imitation and offline learning.
+- [MIT 6.7920: Reinforcement Learning: Foundations and Methods](https://web.mit.edu/6.7920/www/) treats the foundations of reinforcement learning, starting from dynamic programming.
+- [David Silver: Reinforcement Learning](https://davidstarsilver.wordpress.com/teaching/) (2015) offers video lectures and slides on Markov decision processes, dynamic programming, model-free prediction and control, value function approximation, policy gradients, integrating learning and planning, and exploration.
 
-**Annotated implementations**
+**Implementations**
 
-- [CleanRL](https://github.com/vwxyzjn/cleanrl) :cite:`Huang.Dossa.Ye.ea.2022` provides single-file, benchmarked implementations of the major deep reinforcement learning algorithms discussed after :numref:`sec_deeprl`.
-- [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) :cite:`Raffin.Hill.Gleave.ea.2021` provides library implementations of the same algorithms, with tuned hyperparameters in its accompanying zoo.
-- [Gymnasium](https://gymnasium.farama.org/) :cite:`Towers.Kwiatkowski.Terry.ea.2024` documents the environment interface used throughout these chapters.
+- [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) :cite:`Raffin.Hill.Gleave.ea.2021` provides library implementations of the main deep reinforcement learning algorithms, with tuned hyperparameters in its accompanying zoo.
+- [Gymnasium](https://gymnasium.farama.org/) :cite:`Towers.Kwiatkowski.Terry.ea.2024` documents the environment interface used throughout this chapter.
+- [FeynRL](https://github.com/FeynRL-project/FeynRL) :cite:`Fakoor.Aubry.2026` implements the post-training methods of :numref:`sec_rl_sequences` for language models: reinforcement learning (PPO, GRPO, DAPO, P3O, and others), DPO, and supervised fine-tuning.
 
 **Empirical practice**
 
-- [Spinning Up in Deep RL](https://spinningup.openai.com/) :cite:`Achiam.2018` is a short curriculum from the score function to SAC, written to be read beside running code.
+- [Spinning Up in Deep RL](https://spinningup.openai.com/) :cite:`Achiam.2018` introduces deep reinforcement learning with documented implementations of its main algorithms.
 - [The 37 Implementation Details of Proximal Policy Optimization](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/) :cite:`Huang.Dossa.Raffin.ea.2022` documents how implementation choices omitted from algorithm descriptions affect PPO performance and reproducibility.
-
-<!-- slides -->
-
-::: {.slide}
-::: {.cover}
-[Dive into Deep Learning · §14]{.kicker}
-
-Learning to act from rewards<br>
-**decision processes · dynamic programming · temporal differences · exploration · imitation · policy gradient · baselines · function approximation**
-:::
-:::
-
-::: {.slide title="A Thousand Tokens Earn One Verdict, and No Token Has a Label"}
-[The problem]{.kicker}
-
-- So far every dataset sat still: no prediction chose the next example.
-- A language model solving a mathematics problem writes about 1,000 tokens;
-  a checker says right or wrong once, at the end.
-- No token has a label of its own, and each changes what can come next.
-- A pole on a cart: each push changes the angle to correct next, and the
-  reward is the time the pole stays up.
-
-::: {.d2l-note}
-Which decisions earn the credit for a late reward? How does a learner find
-good decisions that nobody shows it?
-:::
-:::
-
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
-
-- write a problem of acting over time as an MDP, and solve a known one;
-- learn values from sampled transitions, and price the cost of exploring;
-- clone an expert, and measure what its own errors cost;
-- estimate a policy gradient, check it against the exact one, cut its noise;
-- train network policies on CartPole and Pendulum.
-
-**Running examples:** a 16-cell frozen lake; four prompts and a verifier.
-
-**Idea:** score states by the reward still to come; improve the policy from
-its attempts.
-:::
-
-::: {.slide title="This Chapter Learns from Data the Learner Collects Itself"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| part or chapter | the learner learns from |
-|---|---|
-| Basics | a fixed dataset, a label for every example |
-| **Reinforcement Learning** | **its own attempts and their rewards, on problems solved exactly** |
-| Deep Reinforcement Learning | value networks in the update; reused and fixed data |
-| Language Models | post-training at scale, preferences |
-:::
-
-::: {.col .narrow}
-- **Uses:** softmax regression, cross-entropy, gradient ascent,
-  expectations.
-- **Skips:** several agents; hidden state and learned models, except
-  briefly.
-:::
-:::
-:::
-
-::: {.slide title="The Agent's Own Actions Decide Which Data It Sees"}
-![](../img/mdl-rl-agent-env.svg){width=90%}
-
-- $\pi(a \mid s)$: the policy, the agent's rule for choosing $a$ in state $s$.
-- $P(s' \mid s, a)$, $r(s, a)$: the environment's transition kernel and reward.
-- The agent's choices decide which trajectory $\tau$, so which data, it sees.
-:::
-
-::: {.slide title="On Slippery Ice a Command Is One of Three Equally Likely Moves"}
-[Running example 1]{.kicker}
-
-![](../img/mdl-rl-gridworld.svg){width=92%}
-
-- S start, H hole, G goal, which pays 1; a hole or the goal ends the episode.
-- Calm ice moves as commanded; slippery ice, as commanded or sideways, $1/3$ each.
-:::
-
-::: {.slide title="A Reward Six Moves Away Counts 0.77 at a Discount of 0.95"}
-$$R(\tau) = r_0 + \gamma r_1 + \gamma^2 r_2 + \cdots = \sum_{t \geq 0} \gamma^t r_t$$
-
-| discount $\gamma$ | horizon $1/(1-\gamma)$ | goal after six moves, $\gamma^5$ |
-|---|---|---|
-| 0.5 | 2 steps | 0.031 |
-| 0.9 | 10 steps | 0.590 |
-| 0.95 | 20 steps | 0.774 |
-| 0.99 | 100 steps | 0.951 |
-
-::: {.d2l-note}
-The discount is part of the task. The weights fall by about $e$ per
-horizon; this chapter uses $\gamma = 0.95$.
-:::
-:::
-
-::: {.slide title="The Best Policy on Ice Beats the Shortest Path Sixteen to One"}
-| policy on slippery ice | reaches the goal within 100 steps |
-|---|---|
-| a random command at every step | 0.014 |
-| the shortest path of calm ice | 0.045 |
-| the optimal policy $\pi^*$ | 0.730 |
-
-- $\pi^*$ picks the command with the least risk of a hole, and in four
-  cells that command points away from the goal.
-- Computed exactly from the model; simulation agrees to within a point.
-
-::: {.d2l-note}
-On ice the shortest route is not the best policy.
-:::
-:::
-
-::: {.slide title="Check: Weigh the Commands at Cell 9"}
-[Check]{.kicker}
-
-At cell 9, three of the four commands can slide the agent into the hole at 5.
-
-1. Which command cannot, and where does it land?
-2. At $\gamma = 0.95$, what is a reward 20 steps away worth?
-3. Which $\gamma$ gives an effective horizon of 50 steps?
-
-::: {.fragment .fade-up}
-1. *Down*: cell 13, 8 or 10, $1/3$ each, so it slides sideways 2 times in 3.
-2. $0.95^{20} \approx 0.36$.
-3. $1/(1-\gamma) = 50$ gives $\gamma = 0.98$.
-:::
-:::
-
-::: {.slide title="A Response Is a Trajectory with Deterministic Moves and One Reward"}
-[Running example 2]{.kicker}
-
-- State: the prompt plus the tokens so far. Action: the next token.
-- Transition: append the token, with probability 1. All randomness is the
-  policy's.
-- Reward: once, at the end, from a *verifier* that checks the answer.
-- No state recurs: the states form a tree rooted at the prompt.
-- So a whole response $y$ can be one action at the prompt $x$, with reward
-  $r(x, y)$: a one-step MDP.
-
-::: {.d2l-note}
-Methods for language models can score and update whole responses.
-:::
-:::
-
-::: {.slide title="The Reference Passes 6.2% of the Time; the Ceiling Is 50%"}
-| prompt $x$ | `2+2` | `3*4` | `8*8` | `9*9` |
-|---|---|---|---|---|
-| answer | 4 | 12 | 64 | 81 |
-
-- Nine candidates shared by all prompts: 1, 3, 4, 7, 12, 19, 23, 35 and the
-  *hedge* "one of 4, 12, 64 or 81".
-- Verifier: reward 1 if the response equals the answer, else 0. No candidate
-  solves `8*8` or `9*9`, so success is at most 0.5.
-- Policy: a softmax over a table, $\pi(y \mid x) \propto \exp \theta_{xy}$;
-  the reference $\theta$ is 0, except $-4$ for the hedge.
-- A response sampled from the reference passes with probability 0.062.
-:::
-
-::: {.slide title="A Reward That Pays for the Wrong Thing Gets Exploited"}
-- The exact-match verifier rejects the hedge; a lenient checker that accepts
-  any response containing the answer pays it on every prompt.
-- The reference hedges 0.2% of the time; training raises whatever pays.
-- On the lake, a bonus for approaching the goal pays the agent for going in
-  circles.
-- A bonus that is a difference of potentials cannot be collected around a
-  loop.
-
-::: {.d2l-note}
-The reward states the task; whoever writes it decides what the agent
-maximizes.
-:::
-:::
-
-::: {.slide title="Check: Score the Verifier Task by Hand"}
-[Check]{.kicker}
-
-1. Why does a response sampled from the reference pass with probability
-   about 0.062?
-2. What does a policy that always hedges score under the exact verifier, and
-   under the lenient checker?
-3. In this MDP, what is random and what is not?
-
-::: {.fragment .fade-up}
-1. About $1/8$ on `2+2` and on `3*4`, 0 on `8*8` and `9*9`: an average of
-   about $1/16$.
-2. 0 under exact match; 1 under the lenient checker, twice the true ceiling.
-3. The prompt and the policy's response are random; the transitions and the
-   verifier's score are not.
-:::
-:::
-
-::: {.slide title="Values Answer the Credit Question, Trial and Error the Search"}
-- **Credit:** which decisions deserve credit for a reward that arrives late?
-- **Search:** how can a learner find good decisions nobody shows it?
-- Bellman, 1950s: score each situation by the reward still to come, and a
-  long problem becomes a chain of one-step problems.
-- Barto, Sutton and Watkins, 1980s: learn those scores by trial and error,
-  with the pole on a cart as an early test.
-- Williams, 1992: improve the policy directly from the rewards its attempts
-  earn.
-
-::: {.d2l-note}
-The learner collects its own data, so its mistakes change what it learns
-from next.
-:::
-:::
-
-::: {.slide title="Eight Sections, One Question Each"}
-[Chapter map]{.kicker}
-
-| section | question |
-|---|---|
-| Markov Decision Processes | how do we write a problem of acting over time down? |
-| Dynamic Programming | what is the best policy when the rules are known? |
-| Temporal-Difference Learning | what can be learned from seeing only where actions lead? |
-| Exploration | how often should the agent try actions that look worse? |
-| Learning from Demonstrations | what does an expert teach, and why does copying fail? |
-| Policy Gradient | how can a policy improve from its own attempts? |
-| Baselines and Variance Reduction | how can that estimate be made less noisy? |
-| Function Approximation | what changes when a network replaces the table? |
-:::
-
-::: {.slide title="Most Examples Are Small Enough to Solve Exactly"}
-[Running examples]{.kicker}
-
-| section | running example |
-|---|---|
-| Markov Decision Processes | the lake as arrays; the verifier task |
-| Dynamic Programming | the slippery lake, solved exactly |
-| Temporal-Difference Learning | the slippery lake, from sampled transitions |
-| Exploration | a ten-armed bandit; a chain of states; groups of responses |
-| Learning from Demonstrations | the calm lake and the expert's six-move path |
-| Policy Gradient | the verifier task; the calm lake |
-| Baselines and Variance Reduction | the calm lake; groups of responses per prompt |
-| Function Approximation | CartPole; Pendulum, with a continuous torque |
-:::
-
-::: {.slide title="Check: Which Section Answers Each Finding?"}
-[Check]{.kicker}
-
-1. Forced to act at random one step in twenty, even $\pi^*$ reaches the goal
-   about 54% of the time instead of 73%.
-2. A clone of the expert leaves the expert's path in 17% of its episodes.
-3. With four episodes per batch, one gradient estimate missed by more than
-   three times the gradient's length.
-
-::: {.fragment .fade-up}
-1. Exploration: can a different rule learn as much while losing less?
-2. Learning from Demonstrations: its own errors carry it where the expert never was.
-3. Baselines and Variance Reduction: remove noise without moving the mean.
-:::
-:::
-
-::: {.slide title="The Chapter's Last Agent Needs Hundreds of Thousands of Steps"}
-- Pendulum: a torque in $[-2, 2]$ swings a pendulum up and holds it there;
-  a return of about $-200$ or better balances it, doing nothing gives $-1200$.
-- REINFORCE with a learned baseline gets there after a few hundred thousand
-  steps: it waits for whole episodes and uses each batch once.
-- Next, Deep Reinforcement Learning: value networks in the update, reused
-  experience, fixed data; its soft actor-critic crosses $-200$ after 5,000 to 11,000 steps.
-- The Language Models part treats post-training, including learning from
-  human preferences, in more depth.
-:::
-
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
-
-- An MDP $(\mathcal{S}, \mathcal{A}, P, r)$ and a discount $\gamma$; at
-  $\gamma = 0.95$ the horizon is 20 steps.
-- The lake: on slippery ice the best policy reaches the goal 0.73 of the
-  time, the shortest path 0.045.
-- The verifier task: a token MDP in one step; the reference passes 0.062,
-  the ceiling is 0.5.
-- The reward is a design choice: a lenient checker pays the hedge.
-- Two questions: credit for a late reward, search without a teacher.
-
-**Next:** the lake and the verifier task written down as a Markov decision
-process.
-:::

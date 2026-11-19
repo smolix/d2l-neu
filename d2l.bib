@@ -45,7 +45,7 @@
 }
 
 @Misc{	  Achiam.2018,
-  title		= {Spinning Up in Deep {RL}},
+  title		= {Spinning Up in Deep Reinforcement Learning},
   author	= {Achiam, Joshua},
   year		= {2018},
   howpublished	= {Online, {O}pen{AI}; {P}y{T}orch rewrite {J}an 2020,
@@ -1312,6 +1312,7 @@
   author	= {Barto, Andrew G and Sutton, Richard S and Anderson,
 		  Charles W},
   journal	= {IEEE Transactions on Systems, Man, and Cybernetics},
+  volume	= {SMC-13},
   number	= {5},
   pages		= {834--846},
   year		= {1983},
@@ -1975,7 +1976,6 @@ publisher	= {University of Chicago Press},
   number	= {3/4},
   pages		= {324--345},
   year		= {1952},
-  publisher	= {JSTOR},
   doi		= {10.1093/biomet/39.3-4.324}
 }
 
@@ -2955,13 +2955,15 @@ publisher	= {University of Chicago Press},
 }
 
 @Article{	  DeepSeekAI.2025,
-  title		= {{DeepSeek-R1}: Incentivizing reasoning capability in {LLM}s
-		  via reinforcement learning},
-  author	= {{DeepSeek-AI}},
+  title		= {{DeepSeek-R1} incentivizes reasoning in {LLM}s through
+		  reinforcement learning},
+  author	= {Guo, Daya and Yang, Dejian and Zhang, Haowei and others},
   journal	= {Nature},
+  volume	= {645},
+  number	= {8081},
+  pages		= {633--638},
   year		= {2025},
-  doi		= {10.1038/s41586-025-09422-z},
-  url		= {https://arxiv.org/abs/2501.12948}
+  doi		= {10.1038/s41586-025-09422-z}
 }
 
 @InProceedings{	  Defazio.Bach.Lacoste-Julien.2014,
@@ -8633,7 +8635,7 @@ pages ={45--77},
 
 @article{mnih2015human,
   title={Human-level control through deep reinforcement learning},
-  author={Mnih, Volodymyr and Kavukcuoglu, Koray and Silver, David and Rusu, Andrei A and Veness, Joel and Bellemare, Marc G and Graves, Alex and Riedmiller, Martin and Fidjeland, Andreas K and Ostrovski, Georg and et al.},
+  author={Mnih, Volodymyr and Kavukcuoglu, Koray and Silver, David and Rusu, Andrei A and Veness, Joel and Bellemare, Marc G and Graves, Alex and Riedmiller, Martin and Fidjeland, Andreas K and Ostrovski, Georg and others},
   journal={{N}ature},
   volume={518},
   number={7540},
@@ -9248,12 +9250,13 @@ pages = {1559--1568},
   url		= {https://arxiv.org/abs/2406.03736}
 }
 
-@article{ouyang2022training,
+@inproceedings{ouyang2022training,
   title={Training language models to follow instructions with human feedback},
-  author={Ouyang, Long and Wu, Jeff and Jiang, Xu and Almeida, Diogo and Wainwright, Carroll L and Mishkin, Pamela and Zhang, Chong and Agarwal, Sandhini and Slama, Katarina and Ray, Alex and et al.},
-  journal={Ar{X}iv:2203.02155},
-  year={2022},
-  url		= {https://arxiv.org/abs/2203.02155}
+  author={Ouyang, Long and Wu, Jeff and Jiang, Xu and Almeida, Diogo and Wainwright, Carroll L and Mishkin, Pamela and Zhang, Chong and Agarwal, Sandhini and Slama, Katarina and Ray, Alex and others},
+  booktitle={Advances in Neural Information Processing Systems},
+  volume={35},
+  pages={27730--27744},
+  year={2022}
 }
 
 @Article{	  Paley.Wiener.Zygmund.1933,
@@ -9951,7 +9954,7 @@ pages={329--348},
   title		= {Direct preference optimization: Your language model is
 		  secretly a reward model},
   author	= {Rafailov, Rafael and Sharma, Archit and Mitchell, Eric and
-		  Ermon, Stefano and Manning, Christopher D and Finn,
+		  Manning, Christopher D and Ermon, Stefano and Finn,
 		  Chelsea},
   booktitle	= {Advances in Neural Information Processing Systems},
   volume	= {36},
@@ -17233,4 +17236,56 @@ year = {2018},
   pages		= {6086--6096},
   year		= {2019},
   url		= {https://aclanthology.org/P19-1612/}
+}
+
+@Misc{	  Fakoor.Aubry.2026,
+  title		= {{FeynRL}: A modular and scalable {LLM} post-training
+		  framework},
+  author	= {Fakoor, Rasool and Aubry, Murdock and {FeynRL Contributors}},
+  year		= {2026},
+  howpublished	= {\url{https://github.com/FeynRL-project/FeynRL}}
+}
+
+@Article{	  Fakoor.Aubry.Stranges.ea.2026,
+  title		= {Let the batch decide, on- or off-policy: Effective
+		  sample size for {RL} post-training},
+  author	= {Fakoor, Rasool and Aubry, Murdock and Stranges, Nicholas and
+		  Smola, Alexander J},
+  journal	= {arXiv preprint arXiv:2605.12380},
+  year		= {2026}
+}
+
+@InProceedings{	  Fakoor.Chaudhari.Smola.2019,
+  title		= {{P3O}: Policy-on policy-off policy optimization},
+  author	= {Fakoor, Rasool and Chaudhari, Pratik and Smola, Alexander J},
+  booktitle	= {Uncertainty in Artificial Intelligence},
+  pages		= {1017--1027},
+  year		= {2019}
+}
+
+@InProceedings{	  Fakoor.Chaudhari.Soatto.ea.2020,
+  title		= {Meta-{Q}-learning},
+  author	= {Fakoor, Rasool and Chaudhari, Pratik and Soatto, Stefano and
+		  Smola, Alexander J},
+  booktitle	= {International Conference on Learning Representations},
+  year		= {2020}
+}
+
+@Article{	  Lambert.Morrison.Pyatkin.ea.2024,
+  title		= {{T}{\"u}lu 3: Pushing frontiers in open language model
+		  post-training},
+  author	= {Lambert, Nathan and Morrison, Jacob and Pyatkin, Valentina
+		  and Huang, Shengyi and Ivison, Hamish and Brahman, Faeze and
+		  others},
+  journal	= {arXiv preprint arXiv:2411.15124},
+  year		= {2024}
+}
+
+@InProceedings{	  fakoor2024time,
+  title		= {Time-varying propensity score to bridge the gap between
+		  the past and present},
+  author	= {Fakoor, Rasool and Mueller, Jonas and Lipton, Zachary C
+		  and Chaudhari, Pratik and Smola, Alexander J},
+  booktitle	= {International Conference on Learning Representations},
+  year		= {2024}
 }

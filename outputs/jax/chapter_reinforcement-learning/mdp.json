@@ -19,44 +19,23 @@
       "outputs": []
     },
     "mdp-states-actions-and-the-transition-kernel-1": {
-      "code_fingerprint": "sha256:75ed54ea8876280d7e5300f6fbcaf98cedffb1577d6aa0d414f49efb22a24998",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "[(0.33333333333333337, 8, 0, False),\n (0.3333333333333333, 13, 0, False),\n (0.33333333333333337, 10, 0, False)]"
-        }
-      ]
-    },
-    "mdp-return-discount-and-horizon": {
-      "code_fingerprint": "sha256:c48aacee35b3221e98dc18aa00bafc502abc5825d37ac2b3edc6703d00971721",
+      "code_fingerprint": "sha256:3ac3f9ea002f9396381c5bc8492a60fa1e24af5f0de48236d91db9aee08f0a9d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t= 0  s= 0  a=>  s'= 0  r=0\nt= 1  s= 0  a=v  s'= 0  r=0\nt= 2  s= 0  a=<  s'= 4  r=0\nt= 3  s= 4  a=^  s'= 4  r=0\nt= 4  s= 4  a=<  s'= 4  r=0\nt= 5  s= 4  a=v  s'= 8  r=0\nt= 6  s= 8  a=>  s'= 9  r=0\nt= 7  s= 9  a=^  s'=10  r=0\nt= 8  s=10  a=>  s'=11  r=0\nterminated=True, truncated=False, total reward=0\n"
-        }
-      ]
-    },
-    "mdp-the-geometric-bound-and-the-effective-horizon": {
-      "code_fingerprint": "sha256:88a4809ed2faae75936ea55f6801969bed1812cd9446de4b930618596d8bebdf",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " gamma  horizon 1/(1-gamma)  t: gamma^t < 0.05  gamma^5\n   0.5                    2                  5    0.031\n   0.9                   10                 29    0.590\n  0.95                   20                 59    0.774\n  0.99                  100                299    0.951\n"
+          "text": "slippery: [(0.333, 8, 0, False), (0.333, 13, 0, False), (0.333, 10, 0, False)]\n    calm: [(1.0, 13, 0, False)]\n"
         }
       ]
     },
     "mdp-states-actions-and-the-transition-kernel-2": {
-      "code_fingerprint": "sha256:0cba078064a98f4b0248fff761b483684d6b07858ea8ab5ff6c5d55f849d81a3",
+      "code_fingerprint": "sha256:b1b03d088faa0bfe66a7c5537fd56272533ac9a3fb9d179ee06c9f172907be41",
       "kind": "text",
       "outputs": []
     },
     "mdp-states-actions-and-the-transition-kernel-3": {
-      "code_fingerprint": "sha256:349da58d4f814f8fed582101b53eb99e6da52edefe0e80cb60f938c808bcc115",
+      "code_fingerprint": "sha256:24c21d59a68efb224f48100177a6459931ca1f7ea0ea29622b1be9b82b965e5b",
       "kind": "text",
       "outputs": [
         {
@@ -67,24 +46,24 @@
       ]
     },
     "mdp-states-actions-and-the-transition-kernel-4": {
-      "code_fingerprint": "sha256:5179ac2e5fa594f116fe4a0f65614e25ec87274030dea4e15948ee06927a1dc6",
+      "code_fingerprint": "sha256:847b1ce565724d43ebedc0b8f658c578918323ecd5805148e0d6f1e669460d36",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest |row sum - 1|: 0.0e+00\nr(s=14, a=v) = 0.333\nr(s=14, a=>) = 0.333\nr(s=14, a=^) = 0.333\n"
+          "text": "r(s=14, a=v) = 0.333\nr(s=14, a=>) = 0.333\nr(s=14, a=^) = 0.333\n"
         }
       ]
     },
-    "mdp-the-degenerate-mdp-deterministic-transitions-terminal-reward": {
-      "code_fingerprint": "sha256:9b109aae98b4c89715958202f445b56c21e19f89a83fab8c37517914814e2e25",
+    "mdp-return-discount-and-horizon": {
+      "code_fingerprint": "sha256:83fbb41db73bf35e7b27e0ece07b002c23eacfdcee7ab37bbd1594be7fad2180",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "success of a response sampled from the reference: 0.062\n"
+          "text": "t= 0  s= 0  a=>  r=0\nt= 1  s= 0  a=v  r=0\nt= 2  s= 0  a=<  r=0\nt= 3  s= 4  a=^  r=0\nt= 4  s= 4  a=<  r=0\nt= 5  s= 4  a=v  r=0\nt= 6  s= 8  a=>  r=0\nt= 7  s= 9  a=^  r=0\nt= 8  s=10  a=>  r=0\nterminated=True, truncated=False\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:8494d81ec524d9f46627440a149705ce7de7305d7ed1d6388d6b500e1bde2ecc",
+    "d2l_lib_fingerprint": "sha256:1231bbe97c6cc7421adad6756d473cd1d07b3863c5f1c8da1609d8e401008d7e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,123 +19,43 @@
       "outputs": []
     },
     "policy-gradient-the-score-function": {
-      "code_fingerprint": "sha256:75e429e75367ba49e9fe409572ac0b5d3cb0c6dc37f2dc4464ac6e0e92537305",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "True\n"
-        }
-      ]
-    },
-    "policy-gradient-the-reinforce-estimator-4": {
-      "code_fingerprint": "sha256:396e9124082241950c5df54d6650e2d8d77b418ea72c521b8ffe1999ecde93ae",
-      "kind": "text",
-      "outputs": []
-    },
-    "policy-gradient-the-reinforce-estimator-5": {
-      "code_fingerprint": "sha256:2362f0571bfa31c54bbdcb6bb9ad2eb3601d72db11da89eeee75963b88f77f54",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "one K=16 estimate is off by 0.66 of the gradient (RMS)\nthe mean of M of them: M=10: 0.126, M=100: 0.061, M=1000: 0.047, M=10000: 0.009\ngroups without a success, per prompt: [0.12 0.12 1.   1.  ]\nsuccess 0.062; one step with lr = 2 gives 0.077 (exact gradient), median 0.077 (sampled)\n"
-        }
-      ]
-    },
-    "policy-gradient-parameterizing-the-policy": {
-      "code_fingerprint": "sha256:ee7de0b8b210f1e9cf86a535bc61a3a8d0466bcc6a664fb4b1ae65bbb861a257",
+      "code_fingerprint": "sha256:ba5bfffb192d944013f04345c61f65208a7783583e0f72ecd0309314f48bc0fc",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-an-optimization-problem-over-trajectories-1": {
-      "code_fingerprint": "sha256:c7bcb48e8886f638d8ede36f47c24826083ca87730a229d5d80d69d494bd140f",
+      "code_fingerprint": "sha256:f88651d9c92149e4c742a81e247f069285255ba66b6f065d419ea05a71010036",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-an-optimization-problem-over-trajectories-2": {
-      "code_fingerprint": "sha256:60a16f3c406cb6d8dd317a40da0a4083167745cf5c7fc4b6448ccc42e6a5226a",
+      "code_fingerprint": "sha256:6c87cdedcb73fc7213265117a60c91affbaf00d37d8aac74cbd49585ee90b821",
       "kind": "text",
       "outputs": []
     },
-    "policy-gradient-the-reinforce-estimator-1": {
-      "code_fingerprint": "sha256:1e69624486ac66a0b83b7cd98ba50b5d2bd31688d204c93141d72a94e628228c",
-      "kind": "text",
-      "outputs": []
+    "policy-gradient-the-reinforce-estimator": {
+      "code_fingerprint": "sha256:2af4a3fc97607845a6c862c4272042739f0002ad923594a3fd66a0fe50b5e736",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-1.svg",
+          "bytes": 46685,
+          "sha256": "sha256:34a685e7ec0c8c36ef44416dcf5481e112b10eb8c00e09d6bfce8c036ff37eef"
+        }
+      ]
     },
     "policy-gradient-the-reinforce-estimator-2": {
-      "code_fingerprint": "sha256:c5c24508ce66895dd26833490caf3e69a6cd276edf28c00dd8a4e695edaf8d29",
+      "code_fingerprint": "sha256:a35b84a8d860c93762ded7afb7777563b326fee14298f709831d3a3d31415e55",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
-          "bytes": 46674,
-          "sha256": "sha256:55addaa5e4c731e140edee77ac7e3a41bf17cc1fadfc5cee8c6b94162af1a3a8"
-        }
-      ]
-    },
-    "policy-gradient-the-reinforce-estimator-3": {
-      "code_fingerprint": "sha256:6fbe86c68c0833c5f8cc24d9203f120e4616737fa1cc9f8e52bca3a725d3b8bb",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
-          "bytes": 25513,
-          "sha256": "sha256:a556fa28032ab48d4342b7f40d20d850899849616728d44eb2808abb2fc22277"
-        }
-      ]
-    },
-    "policy-gradient-on-policy-fresh-data-after-every-update": {
-      "code_fingerprint": "sha256:277dbb37f3a412b9019cc8b38b625fd170789163ae86d63753dcc426bf50ff14",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "batches until a batch mean reaches 0.7: median     32, range 25 to 49\n          environment steps until then: median  4,313, range 3,210 to 6,191\n     environment steps of the full run: median 27,049, range 26,058 to 28,383\n"
-        }
-      ]
-    },
-    "policy-gradient-unbiasedness-and-variance-1": {
-      "code_fingerprint": "sha256:f4b07ca2f5f4a9c7898a4445961a0161f5bfe70bc507579d58226f9ec983e013",
-      "kind": "text",
-      "outputs": []
-    },
-    "policy-gradient-unbiased-and-how-noisy-1": {
-      "code_fingerprint": "sha256:6f89e4b2943f23edaef1ae04ea24fed0873a923d5adda5b4724f1abe9d706542",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "J(theta) after 16 updates = 0.313, against the ceiling gamma^5 = 0.774\n"
-        }
-      ]
-    },
-    "policy-gradient-unbiased-and-how-noisy-2": {
-      "code_fingerprint": "sha256:7ec6a3b5d70c2fea8ce884779eaa760f89169978d7543f0fbd74042a2732a460",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n= 4:  3/50 zero; one draw off by 3.85, the mean of 50 by 0.48 (if unbiased: 0.54)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n=16:  0/50 zero; one draw off by 1.78, the mean of 50 by 0.24 (if unbiased: 0.25)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n=64:  0/50 zero; one draw off by 0.96, the mean of 50 by 0.10 (if unbiased: 0.14)\n"
+          "bytes": 25458,
+          "sha256": "sha256:21c96638599b92e6723cb83c76c9831760d5bf3cd586855ee13c197e0f7d3e1c"
         }
       ]
     }

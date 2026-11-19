@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/rl-sequences.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:71f23eff288cdfc510d64d9e0a5b0d7d2805ef58e06c7cbbebe8caa44317c605",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rl-sequences-sequences-are-trajectories": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "rl-sequences-a-reward-model-that-can-be-exploited": {
+      "code_fingerprint": "sha256:5be74717fc2c9798b8a6dcc3f573cda4a8d5fda9c21d6160dbebe89779c57834",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "reference policy: true quality 0.58\nbest: beta = 0.35, true quality 0.73\nbeta = 0.1: true quality 0.01, probability of the overrated response 0.99\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "rl-sequences/rl-sequences-a-reward-model-that-can-be-exploited-1.svg",
+          "bytes": 37527,
+          "sha256": "sha256:0d76a9b8d66d0a85a6c2a48c855b55c3912928263b1f041e9249a68c659aed4b"
+        }
+      ]
+    }
+  }
+}

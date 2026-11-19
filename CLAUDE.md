@@ -92,12 +92,12 @@ shape on the **preliminaries** and **linear-neural-networks** chapters.
 
 - **Framework coverage policy (2026-07-17, per Alex):** the Basics part
   (ch. 1–8) and the math appendix carry all four frameworks; the **Advanced
-  part (ch. 9–17) carries PyTorch and JAX only**. New or rewritten Advanced
+  part (ch. 9–16) carries PyTorch and JAX only**. New or rewritten Advanced
   content must not add TensorFlow/MXNet tabs, and existing TF/MXNet material
   there is slated for removal as chapters are touched. Per-chapter framework
   subsets are already supported by the pipeline (the RL chapter ships
-  PyTorch-only: coverage follows per-cell tabs, and `outputs/` simply has no
-  tf/mxnet trees for it).
+  PyTorch and JAX only: coverage follows per-cell tabs, and `outputs/` simply
+  has no tf/mxnet trees for it).
 - **Code teaches; it does not draw.** Every notebook code cell must *compute or
   demonstrate* something the prose discusses (fit a model, decompose a matrix,
   verify an identity, classify data). Code whose only purpose is to draw an
@@ -313,19 +313,23 @@ when that directory is missing.
   Recurrence"), 13 Computational Performance (rebuilt 2026-07-20:
   roofline/regimes method, hardware, compilation, memory/precision, from-
   scratch + practical multi-GPU, transformer case study; PyTorch+JAX only),
-  14 RL, 15 Deep RL (the RL chapter was split in two, 2026-07), 16 GANs
+  14 RL (one chapter of 12 sections: mdp, value-iter, qlearning,
+  policy-gradient, baselines, deep-rl, actor-critic, ppo, dqn, sac,
+  offline-rl, rl-sequences; the former ch. 15 Deep RL was merged into it in
+  2026-11, and its imitation, exploration, regularized, model-based and
+  further-reading pages were cut; PyTorch+JAX only), 15 GANs
   (rebuilt 2026-08: closed-form objectives, relativistic/R3GAN, gradient
-  penalties, six sections; PyTorch+JAX only), 17 Diffusion Models
+  penalties, six sections; PyTorch+JAX only), 16 Diffusion Models
   (eight sections plus further reading; it cites the math appendix's
-  ch. 38 Dynamics for the long derivations) | **Language Models** = 18–31 (14 skeleton chapters
+  ch. 37 Dynamics for the long derivations) | **Language Models** = 17–30 (14 skeleton chapters
   `chapter_lm-*`, generated 2026-11 from the plan in
   `docs/llm/language_models_part_plan.md`: each file holds its title, label
   and the plan entry as a hidden author brief) | **Image Models** (formerly
-  "Computer Vision") = 32 | math appendix 33–38 | Tools 39 | **Attic** =
-  40 GP, 41 HPO, 42 RecSys (GP leads the Attic: it is the
+  "Computer Vision") = 31 | math appendix 32–37 | Tools 38 | **Attic** =
+  39 GP, 40 HPO, 41 RecSys (GP leads the Attic: it is the
   Bayesian-optimization background HPO builds on). The two NLP
   Pretraining/Applications chapters were deleted on 2026-11-14 (PR #188):
-  ch. 19 (`chapter_lm-encoders`) replaces them, and their `seq2seq.md` moved
+  ch. 18 (`chapter_lm-encoders`) replaces them, and their `seq2seq.md` moved
   to ch. 12 as §12.2 with its labels (kept mainly for history; the ch. 12
   pass will likely cut most of it). The Attic moved to the very end, after Tools, on
   2026-11-11; the PDFs number every chapter as the HTML does (no appendix
@@ -344,14 +348,14 @@ when that directory is missing.
   `docs/build-system.md` §4.1).
 - The **"Mathematics for Deep Learning"** part (branch
   `math-for-deep-learning-appendix`) is now the **default math appendix**: a
-  single part of 6 numbered chapters under `chapter_mdl-*` — **33** Linear
-  Algebra, **34** Calculus, **35** Optimization, **36** Probability & Statistical
-  Learning, **37** Information Theory, **38** Dynamics (seven sections since
-  the 2026-11 split of ODEs and solvers into §38.1 Ordinary Differential
-  Equations and §38.2 Numerical Solvers; Tools for Deep Learning is now **39**) — with `mdl-`-prefixed labels. All six chapters are now fully
+  single part of 6 numbered chapters under `chapter_mdl-*` — **32** Linear
+  Algebra, **33** Calculus, **34** Optimization, **35** Probability & Statistical
+  Learning, **36** Information Theory, **37** Dynamics (seven sections since
+  the 2026-11 split of ODEs and solvers into §37.1 Ordinary Differential
+  Equations and §37.2 Numerical Solvers; Tools for Deep Learning is now **38**) — with `mdl-`-prefixed labels. All six chapters are now fully
   written; the appendix gained two new sections (`mdl-adaptive-stochastic-methods`
-  = §35.4, `mdl-concentration-generalization` = §36.7) and the probability
-  chapter was reordered (naive Bayes moved to the end, §36.9). The branch `math-appendix-polish` carries a
+  = §34.4, `mdl-concentration-generalization` = §35.7) and the probability
+  chapter was reordered (naive Bayes moved to the end, §35.9). The branch `math-appendix-polish` carries a
   full review-driven quality pass over all six chapters with pytorch-only
   recaptured outputs; the tf/jax/mxnet stores for the edited files still need
   re-execution on the GPU box.

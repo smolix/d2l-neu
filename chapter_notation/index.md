@@ -173,7 +173,7 @@ These symbols belong to :numref:`chap_modern_rnn`.
 
 ## Reinforcement Learning
 
-These symbols belong to :numref:`chap_reinforcement_learning` and :numref:`chap_deep_rl`; :numref:`tab_rl_notation` lists them all with the section that defines each.
+These symbols belong to :numref:`chap_reinforcement_learning`; :numref:`tab_rl_notation` lists them all with the section that defines each.
 
 * $\mathcal{S}$, $\mathcal{A}$: the sets of states and actions
 * $s_t$, $a_t$, $r_t$: the state, action, and reward at step $t$

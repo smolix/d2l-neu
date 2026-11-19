@@ -89,6 +89,6 @@ The chapter taught one idea on problems small enough to check: a network that pr
 
 ## Post-Training by Reward and Preference
 
-**Policy gradients.** After pretraining, a reward can replace the regression target, with the reverse steps as actions. DDPO :cite:`Black.Janner.Du.ea.2024` applies the clipped policy-gradient update of :numref:`sec_rl_sequences` to the Gaussian reverse steps, and Flow-GRPO :cite:`Liu.Liu.Liang.ea.2025` brings the group-relative update to flow models through a stochastic sampler with the same marginals.
+**Policy gradients.** After pretraining, a reward can replace the regression target, with the reverse steps as actions. DDPO :cite:`Black.Janner.Du.ea.2024` applies the clipped policy-gradient update of :numref:`sec_ppo` to the Gaussian reverse steps, and Flow-GRPO :cite:`Liu.Liu.Liang.ea.2025` brings the group-relative update to flow models through a stochastic sampler with the same marginals.
 
-**Preferences.** Diffusion-DPO :cite:`Wallace.Dang.Rafailov.ea.2024` adapts direct preference optimization, built on the Bradley--Terry model of :numref:`sec_regularized`, by replacing the intractable log-likelihood with the variational bound of :numref:`sec_diffusion-design-space`.
+**Preferences.** Diffusion-DPO :cite:`Wallace.Dang.Rafailov.ea.2024` adapts direct preference optimization, built on the Bradley--Terry model of :numref:`sec_rl_sequences`, by replacing the intractable log-likelihood with the variational bound of :numref:`sec_diffusion-design-space`.

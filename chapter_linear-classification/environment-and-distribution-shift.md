@@ -6,32 +6,41 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Environment and Distribution Shift
 :label:`sec_environment-and-distribution-shift`
 
-The test error of :numref:`chap_classification_generalization` tells us how
-well a classifier will do on new data, provided the new data come from the
-distribution of the test set. After deployment this condition often fails,
-even when the model has no influence on the data: a hospital buys a new
-scanner, an epidemic changes which diseases patients have, and the meaning
-of words drifts. The test set then gives no warning. Can we still predict,
-or even improve, how the model does on the data it now sees?
+So far we have treated our datasets as gifts from heaven, focusing on how
+to fit models and measure their held-out accuracy without asking where the
+data came from or what happens once our predictions are acted upon. Too
+many failed machine learning deployments trace right back to that blind
+spot. The test error of :numref:`chap_classification_generalization`
+certifies future performance *only* when deployment data come from the
+exact same distribution as the test set. In the real world that condition
+breaks constantly, even when our model is a passive observer: a hospital
+upgrades its MRI scanner, a flu epidemic alters disease prevalence
+overnight, or everyday slang shifts the meaning of words. When the
+distribution shifts, a pristine offline test set gives zero warning. Can we
+still detect the change—or even adapt our model to handle it?
 
-The model can also change the data itself. Suppose that a bank trains a
-model to predict which loan applicants will repay, and the model finds that
-applicants who wear Oxfords tend to repay while applicants who wear sneakers
-tend to default. The model scores well on held-out applications, so the bank
-approves everyone in Oxfords and declines everyone in sneakers. Applicants
-soon notice, everyone starts wearing Oxfords, and the fraction who repay
-stays what it was. The model was accurate on the data it was tested on and
-is useless on the data it now sees, because using it changed the data. This
-is an instance of *Goodhart's law*: when a measure becomes a target, it
-ceases to be a good measure.
+More insidiously, deploying a model can *itself* alter the data it sees.
+Suppose a bank trains a classifier to predict loan repayment and discovers
+a quirky pattern in historical data: applicants wearing Oxfords almost
+always repay, whereas applicants in sneakers tend to default. The model
+shines on held-out test records, so the bank starts approving everyone in
+Oxfords and rejecting everyone in sneakers. Applicants quickly catch on,
+shoe stores sell out of Oxfords, and before long *everyone* applies in
+Oxfords while the underlying default rate never budges. An ill-considered
+leap from pattern recognition to decision-making broke the very pattern
+the model relied on—a classic instance of *Goodhart's law*: when a measure
+becomes a target, it ceases to be a good measure.
 
-We first show that nothing carries over from the old distribution to the new
-one unless we assume something about how the two are related, and we sort the
-common assumptions by which part of the joint distribution of inputs and
-labels they keep fixed. Under two of them, unlabeled examples from the new
-distribution suffice to correct training by reweighting the training examples;
-the third needs new labels. We end with models whose decisions change their
-own data, where statistical correction stops and questions of policy begin.
+In this section, we first show why nothing can carry over from training to
+deployment unless we make an explicit structural assumption about how the
+two distributions relate, organizing the three canonical types of shift by
+which factor of the joint distribution stays invariant. Under two of them
+(*covariate shift* and *label shift*), unlabeled deployment inputs alone
+suffice to estimate importance weights and adapt our classifier; under the
+third (*concept shift*), only fresh labels can help. Finally, we examine
+feedback loops where a model's own decisions reshape its environment—the
+boundary where passive statistical correction ends and policy, fairness,
+and reinforcement learning begin.
 
 ```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-1}
 %%tab pytorch
@@ -74,32 +83,34 @@ npx.set_np()
 
 ## Types of Distribution Shift
 
-Let us start by naming the two distributions. We train on labeled examples
-drawn from a *source distribution* with density $p_S(\mathbf{x}, y)$ and
-deploy the model on examples drawn from a *target distribution* with density
-$p_T(\mathbf{x}, y)$, whose inputs we observe but, at least at first, not
-their labels.
+Let us begin in the passive prediction setting and establish clean
+notation. Our labeled training examples come from a *source distribution*
+$p_S(\mathbf{x}, y)$, while at deployment we encounter examples drawn from
+a *target distribution* $p_T(\mathbf{x}, y)$—where we observe unlabeled
+inputs $\mathbf{x}$, but (at least initially) no labels $y$.
 
-Without an assumption that links $p_S$ and $p_T$, the source data tell us
-nothing about the target. This is more than a formal caveat. Consider
-telling cats from dogs, and suppose that the target keeps the inputs of
-the source, $p_T(\mathbf{x}) = p_S(\mathbf{x})$, but swaps the labels:
-whatever the source calls a cat, the target calls a dog, so that
+Right away we face a sobering impossibility: without *some* assumption
+linking $p_S$ and $p_T$, adapting to the target is mathematically
+impossible. This is no mere technicality. Imagine classifying cats versus
+dogs when the input distribution stays completely unchanged,
+$p_T(\mathbf{x}) = p_S(\mathbf{x})$, yet overnight the labels swap so that
+every cat is now called a dog and vice versa:
 $p_T(y = \textrm{cat} \mid \mathbf{x}) = p_S(y = \textrm{dog} \mid \mathbf{x})$.
-The unlabeled target inputs have exactly the distribution of the source
-inputs, so no statistic computed from them can tell this world from one
-without any shift. Yet a classifier that is always right on the source is
-always wrong on the target. Every method in this section therefore starts
-from an assumption about which part of the distribution stays fixed.
+Because unlabeled target images look statistically identical to source
+images, no algorithm on earth can distinguish this flipped world from a
+world with zero shift—yet a classifier with 100% source accuracy scores 0%
+on the target. Every adaptation method therefore rests on an explicit
+assumption about *which part* of the joint distribution remains invariant.
 
-The joint density factors in two ways,
+Recall that any joint distribution factors in two ways:
 
 $$p(\mathbf{x}, y) = p(\mathbf{x})\, p(y \mid \mathbf{x}) = p(y)\, p(\mathbf{x} \mid y).$$
 
-The first factorization describes data generated by drawing an input and
-then labeling it; the second describes data generated by drawing a class and
-then producing an input of that class. The three common kinds of shift each
-let one factor change and keep another fixed:
+The first factorization mirrors generating an input $\mathbf{x}$ and then
+labeling it; the second mirrors picking a class $y$ and then generating an
+input characteristic of that class. The three classical forms of
+distribution shift correspond to letting one factor drift while holding
+another fixed:
 
 | Shift | Changes | Stays fixed | Natural when |
 |:--|:--|:--|:--|
@@ -107,24 +118,26 @@ let one factor change and keep another fixed:
 | label shift | $p(y)$ | $p(\mathbf{x} \mid y)$ | the label causes the input |
 | concept shift | $p(y \mid \mathbf{x})$ | often $p(\mathbf{x})$ | the meaning of the label changes |
 
-:numref:`fig_mdl-clf-shift-types` draws the three cases for a scalar input
-and two classes.
+:numref:`fig_mdl-clf-shift-types` illustrates all three regimes for a
+one-dimensional input and two classes.
 
 ![Three kinds of distribution shift for a scalar input $x$ and two classes. Each panel plots $p(x, y = 0)$ and $p(x, y = 1)$, whose sum $p(x)$ is the gray outline; the top row is the source, the bottom row the target, and the dotted line marks the decision boundary, where both classes are equally likely. Covariate shift moves the inputs but not the boundary. Label shift keeps the shape of each class but changes the class proportions, which moves the boundary. Concept shift keeps $p(x)$ and moves the boundary.](../img/mdl-clf-shift-types.svg)
 :label:`fig_mdl-clf-shift-types`
 
 ### Covariate Shift
 
-Under *covariate shift* the distribution of the inputs changes while the
-labeling rule $p(y \mid \mathbf{x})$ stays the same. (Statisticians call the
-inputs covariates.) The assumption is natural when the input causes the
-label: an image shows a cat because a cat was photographed or drawn. A
-classifier trained on photographs of cats and dogs
-(:numref:`fig_cat-dog-train`) and deployed on cartoons
-(:numref:`fig_cat-dog-test`) faces covariate shift. A drawn cat is still a
-cat, but cartoons occupy a region of image space that the training data
-barely visit. Training fits the model where the source data lie, and
-errors where only the target lies barely affect the training loss.
+Under *covariate shift*—named after statisticians' term *covariates* for
+input features—the input distribution $p(\mathbf{x})$ changes while the
+conditional labeling rule $p(y \mid \mathbf{x})$ remains invariant. This
+assumption fits naturally whenever $\mathbf{x}$ causes $y$: an image
+depicts a cat because a cat was photographed or drawn. A classic example is
+training a cat-versus-dog classifier on photographs
+(:numref:`fig_cat-dog-train`) and deploying it on cartoons
+(:numref:`fig_cat-dog-test`). A cartoon cat is still unmistakably a cat, so
+$p(y \mid \mathbf{x})$ has not changed, yet cartoons inhabit a corner of
+image space that training photographs scarcely touch. Standard training
+focuses its capacity where $p_S(\mathbf{x})$ puts mass, leaving errors in
+target-only regions largely unchecked.
 
 ![Source data for telling cats from dogs: photographs (illustrations: Lafeez Hossain / 500px / Getty Images; ilkermetinkursova / iStock / Getty Images Plus; GlobalP / iStock / Getty Images Plus; Musthafa Aboobakuru / 500px / Getty Images).](../img/cat-dog-train.png)
 :label:`fig_cat-dog-train`
@@ -134,66 +147,70 @@ errors where only the target lies barely affect the training loss.
 
 ### Label Shift
 
-Under *label shift* the class proportions $p(y)$ change while each class
-keeps its appearance, $p(\mathbf{x} \mid y)$. The assumption is natural when
-the label causes the input. Diseases cause symptoms: during an influenza
-epidemic the fraction of patients who have influenza rises, but the symptoms
-of influenza stay what they were. Similarly, a classifier trained on equally
-many images of every class may be deployed where some classes are far more
-common than others.
+*Label shift* flips the roles: the class proportions $p(y)$ shift, while
+the class-conditional appearance $p(\mathbf{x} \mid y)$ of every class
+stays fixed. This assumption is natural whenever the label $y$ causes the
+input $\mathbf{x}$. Diseases cause symptoms: during a winter flu surge, the
+fraction of clinic visitors with influenza climbs sharply, yet the symptoms
+of influenza itself do not change. Likewise, a benchmark classifier trained
+on perfectly balanced classes may be deployed in a marketplace where one
+category accounts for half of all traffic.
 
-Label shift changes the labeling rule as well. By Bayes' theorem,
-$p(y \mid \mathbf{x}) \propto p(\mathbf{x} \mid y)\, p(y)$, so a classifier
-trained on the source has the source class proportions built into it; in
-the middle column of :numref:`fig_mdl-clf-shift-types` the boundary moves
-toward the class that became rarer. Correcting label shift requires
-estimating only one number per class, not a density over inputs with
-thousands or millions of dimensions. It is the easier of the two shifts to
-correct.
+Do not let the fixed $p(\mathbf{x} \mid y)$ fool you into thinking the
+optimal classifier stays unchanged: by Bayes' theorem,
+$p(y \mid \mathbf{x}) \propto p(\mathbf{x} \mid y)\, p(y)$, so a model
+trained on the source has the source class priors baked directly into its
+decision boundary (notice how the boundary slides toward the rarer class in
+the middle panel of :numref:`fig_mdl-clf-shift-types`). Happily,
+correcting label shift only requires estimating *one scalar per class*
+rather than a density ratio over thousands or millions of image dimensions,
+making it far easier to handle than general covariate shift.
 
 ### Concept Shift
 
-Under *concept shift* the labeling rule itself changes: the same input
-receives a different label. Categories defined by people drift in this way.
-Diagnostic criteria for mental illnesses are revised every few years, so the
-same patient record can receive a different diagnosis. Labels also vary by
-place: the name for a sweetened carbonated drink depends on where in the
-United States one asks (:numref:`fig_popvssoda`), so a system that names the
-drink in a photograph faces concept shift as it moves across the country.
+Under *concept shift*, the very definition of the labels—the conditional
+rule $p(y \mid \mathbf{x})$—drifts over time or geography. While a cat
+remains a cat, human-defined categories shift constantly: psychiatric
+diagnostic criteria are periodically revised so the exact same patient
+history earns a different label, job titles evolve, and even the word for a
+sweetened carbonated beverage changes across counties in the United States
+(:numref:`fig_popvssoda`), confronting a beverage-labeling system with
+geographic concept shift.
 
 ![The most common name for soft drinks in each county of the United States: "pop" (yellow), "soda" (cyan), or "coke" (magenta) (CC-BY: Alan McConchie, PopVsSoda.com).](../img/popvssoda.png)
 :label:`fig_popvssoda`
 
-Concept shift is often gradual. A recommender trained in winter that keeps
-suggesting Santa hats in January has missed a change in what users want
-given the same browsing history. When the inputs keep their distribution, as
-in the right column of :numref:`fig_mdl-clf-shift-types`, unlabeled target
-data cannot reveal such a change: it is a partial version of the label swap
-with which we started.
+Often concept shift unfolds gradually as a *nonstationary distribution*—for
+instance, a product recommender trained through December that keeps pushing
+Santa hats in mid-January misses how user intent changed given the exact
+same browsing history. Whenever $p(\mathbf{x})$ stays fixed while
+$p(y \mid \mathbf{x})$ drifts (right panel of
+:numref:`fig_mdl-clf-shift-types`), unlabeled target inputs alone cannot
+detect the shift—just a milder version of the cat/dog label swap we began
+with.
 
 ## Covariate Shift Correction
 :label:`subsec_covariate-shift-correction`
 
-In :numref:`subsec_empirical-risk-and-risk` we defined the risk of a model
-$f$ as its expected loss $l(f(\mathbf{x}), y)$ on a new example, estimated by
-the average loss on the training examples, the empirical risk. Under shift
-we must say which distribution the expectation is over. We care about the
-*target risk*
+Recall from :numref:`subsec_empirical-risk-and-risk` that a model's risk is
+its expected loss on a fresh example, which training approximates by
+averaging over the training set (*empirical risk*). Once distributions
+shift, we must specify *which* distribution the expectation averages over.
+At deployment we want to minimize the *target risk*
 
 $$R_T[f] = \mathbb{E}_{(\mathbf{x}, y) \sim p_T}\left[l(f(\mathbf{x}), y)\right],$$
 
-the expected loss in deployment. The training examples are drawn from
-$p_S$, so their empirical risk estimates the source risk $R_S[f]$ instead.
-Under covariate shift, labeled source examples and unlabeled target inputs
-suffice to estimate $R_T$, and therefore to train for the target.
+whereas plain training minimizes an empirical estimate of the source risk
+$R_S[f]$. Under covariate shift, labeled source data paired with unlabeled
+target inputs suffice to turn the target risk into a tractable source
+expectation.
 
 ### Importance Weights
 
-Under covariate shift the source and the target share the labeling rule,
-which we write $p(y \mid \mathbf{x})$ without a subscript, and differ only in
-the density of the inputs. The trick is to multiply and divide by
-$p_S(\mathbf{x})$ inside the target risk, which turns it into an expectation
-over the source :cite:`Shimodaira.2000`:
+Because covariate shift keeps the conditional labeling rule
+$p(y \mid \mathbf{x})$ identical across domains, multiplying and dividing
+the target risk integrand by $p_S(\mathbf{x})$ rewrites $R_T[f]$ as a
+weighted expectation over the source :cite:`Shimodaira.2000`:
 
 $$
 \begin{aligned}
@@ -204,112 +221,114 @@ R_T[f] &= \sum_{y} \int l(f(\mathbf{x}), y)\, p(y \mid \mathbf{x})\, p_T(\mathbf
 $$
 :eqlabel:`eq_covariate-shift-identity`
 
-where
+where the density ratio
 
 $$\beta(\mathbf{x}) = \frac{p_T(\mathbf{x})}{p_S(\mathbf{x})}$$
 
-is the *importance weight* of the input $\mathbf{x}$. The last step uses the
-covariate shift assumption: $p(y \mid \mathbf{x})\, p_S(\mathbf{x})$ is the
-source density $p_S(\mathbf{x}, y)$ because the labeling rule is shared.
-The target risk is thus a source expectation in which each example counts in
-proportion to how much more likely its input is under the target than under
-the source. Replacing the expectation by an average over the $n$ training
-examples gives *weighted empirical risk minimization*:
+is the *importance weight* of input $\mathbf{x}$. The final equality uses
+covariate shift directly: $p(y \mid \mathbf{x})\,p_S(\mathbf{x})$ equals
+$p_S(\mathbf{x}, y)$ precisely because the labeling rule did not change.
+Intuitively, each source example is weighted by how much more likely it is
+to appear in deployment than in training. Replacing the expectation with
+an empirical average over our $n$ labeled source examples yields *weighted
+empirical risk minimization*:
 
 $$\mathop{\mathrm{minimize}}_f \; \frac{1}{n} \sum_{i=1}^n \beta_i\, l(f(\mathbf{x}^{(i)}), y^{(i)}), \quad \textrm{where } \beta_i = \beta(\mathbf{x}^{(i)}).$$
 :eqlabel:`eq_weighted-empirical-risk-min`
 
-For a number, take the running example of this section. The inputs lie in
-the plane; the source is a standard Gaussian centered at the origin, and the
-target is the same Gaussian centered at $(2, 0)$. Then
+Let us plug in concrete numbers from our upcoming 2D running example, where
+the source is a standard Gaussian centered at the origin and the target is
+the exact same Gaussian shifted to $(2, 0)$:
 
-$$\beta(\mathbf{x}) = \frac{\exp\left(-\frac{1}{2}\|\mathbf{x} - (2, 0)\|^2\right)}{\exp\left(-\frac{1}{2}\|\mathbf{x}\|^2\right)} = \exp(2x_1 - 2),$$
+$$\beta(\mathbf{x}) = \frac{\exp\left(-\frac{1}{2}\|\mathbf{x} - (2, 0)\|^2\right)}{\exp\left(-\frac{1}{2}\|\mathbf{x}\|^2\right)} = \exp(2x_1 - 2).$$
 
-which depends only on the coordinate along which the distribution moved. An
-input at the origin, typical of the source, has weight $e^{-2} \approx 0.14$.
-An input at $(2, 0)$, typical of the target, has weight $e^{2} \approx 7.4$,
-and an input at $(3, 0)$, which the source rarely produces, has weight
-$e^{4} \approx 55$ (:numref:`fig_mdl-clf-density-ratio`). One such input
-counts as much as 400 at the origin.
+The ratio depends solely on the shifted coordinate $x_1$. A typical source
+point at the origin receives weight $e^{-2} \approx 0.14$; a typical target
+point at $(2, 0)$ receives weight $e^{2} \approx 7.4$; and a rare right-tail
+source point at $(3, 0)$ receives weight $e^{4} \approx 55$
+(:numref:`fig_mdl-clf-density-ratio`)—counting as much as 400 points at the
+origin!
 
 ![Importance weights for the running example along $x_1$. Top: the source density $p_S$, a standard Gaussian, and the target density $p_T$, centered at 2. Bottom, on a logarithmic scale: $\beta = p_T/p_S = e^{2x_1 - 2}$, which equals 1 where the densities cross and grows by a factor of $e^2 \approx 7.4$ per unit of $x_1$ where the source thins out. The dashed line clips the weight at $c = 5$.](../img/mdl-clf-density-ratio.svg)
 :label:`fig_mdl-clf-density-ratio`
 
-The identity divides by $p_S(\mathbf{x})$, so it holds only if
-$p_S(\mathbf{x}) > 0$ wherever $p_T(\mathbf{x}) > 0$: every input that the
-target can produce must be possible, if rare, under the source. Where the
-target has mass and the source has none, there are no examples to reweight.
-A startup that some of us worked with ran into this problem. It developed
-a blood test for a disease of older men, using blood from patients with the
-disease and, as healthy controls, from university students. A classifier
-separated the two groups almost perfectly, but it could do so by age,
-hormone levels, and diet rather than by the disease. The test was meant for
-older men, and the training data contained no healthy older men; no
-weighting of the students' samples can stand in for them.
+Notice a critical prerequisite hidden in that division by $p_S(\mathbf{x})$:
+we need *support overlap*, meaning $p_S(\mathbf{x}) > 0$ wherever
+$p_T(\mathbf{x}) > 0$. Every deployment input must at least be *possible*
+under the training distribution; if the target populates a region where the
+source has zero examples, no reweighting can conjure data out of thin air.
+A medical startup that some of us worked with learned this lesson the hard
+way. Building a blood test for a disease affecting older men, they easily
+collected blood from sick older patients—but struggling to recruit healthy
+older controls, they collected healthy blood donations from university
+students instead. A classifier separated the two cohorts with near-perfect
+accuracy, simply by picking up on age, hormone levels, and diet rather than
+disease. Because the training set contained *zero* healthy older men, no
+reweighting of twenty-year-old students could ever salvage the test.
 
 ### Estimating Weights with a Domain Classifier
 
-The weights seem to require both densities, and estimating a density over
-images is much harder than classifying images. Luckily we need only their
-ratio, and a ratio is something a classifier can estimate. We pool the $n$
-source inputs with $m$ unlabeled target inputs and give each a *domain
-label* $z$, with $z = 1$ for a target input and $z = 0$ for a source input. A
-classifier trained to predict $z$ from $\mathbf{x}$ estimates
-$P(z = 1 \mid \mathbf{x})$. By Bayes' theorem, with prior probability
-$m/(n + m)$ for the target,
+At first glance, computing $\beta(\mathbf{x}) = p_T(\mathbf{x})/p_S(\mathbf{x})$
+looks daunting: estimating high-dimensional densities like $p(\mathbf{x})$
+over images is vastly harder than classification itself. Remarkably, we do
+not need either density individually—we only need their *ratio*, and a
+simple binary classifier can estimate a density ratio directly! Pool our
+$n$ source inputs (assigned *domain label* $z = 0$) with $m$ unlabeled
+target inputs (assigned $z = 1$), and train a classifier to predict $z$
+from $\mathbf{x}$. By Bayes' theorem, with target prior $m/(n + m)$,
 
 $$P(z = 1 \mid \mathbf{x}) = \frac{m\, p_T(\mathbf{x})}{m\, p_T(\mathbf{x}) + n\, p_S(\mathbf{x})}, \quad \textrm{so} \quad \frac{P(z = 1 \mid \mathbf{x})}{P(z = 0 \mid \mathbf{x})} = \frac{m}{n}\, \beta(\mathbf{x}).$$
 
-The odds that an input came from the target are its importance weight, up
-to the ratio of the sample sizes: inputs that the classifier confidently
-assigns to the target get large weights.
+In other words, the predicted odds that an input came from the target
+rather than the source equal the importance weight up to the constant ratio
+$m/n$: inputs that look unmistakably target-like earn large weights, while
+indistinguishable inputs earn equal weights.
 
-Logistic regression models these odds directly. As we saw in
-:numref:`sec_softmax`, softmax regression with two classes predicts
-$P(z = 1 \mid \mathbf{x}) = \sigma(h(\mathbf{x}))$, where
-$\sigma(o) = 1/(1 + \exp(-o))$ is the logistic sigmoid and
-$h(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$ is the logarithm of the
-odds. The odds are therefore $\exp(h(\mathbf{x}))$, and
+Logistic regression (:numref:`sec_softmax`) parameterizes those log-odds
+directly: $P(z = 1 \mid \mathbf{x}) = \sigma(h(\mathbf{x}))$ where
+$\sigma(o) = 1/(1 + \exp(-o))$ and $h(\mathbf{x}) = \mathbf{w}^\top \mathbf{x} + b$
+is the logit. Hence the odds are simply $\exp(h(\mathbf{x}))$, giving
 
 $$\beta(\mathbf{x}) = \frac{n}{m} \exp(h(\mathbf{x})).$$
 
-The factor $n/m$ multiplies all weights by the same number and does not
-change the minimizer of :eqref:`eq_weighted-empirical-risk-min`, so we drop
-it. The domain classifier never sees a label $y$. The correction thus takes
-four steps:
+Because the constant factor $n/m$ scales every term identically without
+moving the minimizer of :eqref:`eq_weighted-empirical-risk-min`, we can
+drop it. Notice that the domain classifier never touches a single label
+$y$. Putting everything together yields a clean four-step recipe:
 
-1. Pool the source inputs, with $z = 0$, and the unlabeled target inputs, with $z = 1$.
-1. Train a logistic regression classifier $h$ to predict $z$ from $\mathbf{x}$.
-1. Give each training example the weight $\beta_i = \exp(h(\mathbf{x}^{(i)}))$, or the clipped weight $\beta_i = \min(\exp(h(\mathbf{x}^{(i)})), c)$ for a constant $c$.
-1. Train the model $f$ on the labeled source examples by minimizing the weighted empirical risk :eqref:`eq_weighted-empirical-risk-min`.
+1. Pool the source inputs (labeled $z = 0$) with the unlabeled target inputs (labeled $z = 1$).
+1. Train a binary logistic regression domain classifier $h$ to predict $z$ from $\mathbf{x}$.
+1. Assign each labeled source example the weight $\beta_i = \exp(h(\mathbf{x}^{(i)}))$, or a clipped weight $\beta_i = \min(\exp(h(\mathbf{x}^{(i)})), c)$ for some cap $c$.
+1. Train the task model $f$ on the labeled source set via weighted empirical risk minimization :eqref:`eq_weighted-empirical-risk-min`.
 
-Clipping limits the influence of the few examples with the largest weights,
-which make the weighted average noisy. How noisy? If the losses of the $n$
-examples are independent with equal variance, the weighted average
-$\sum_i \beta_i l_i / \sum_i \beta_i$ has the variance of an unweighted
-average over
+Why consider clipping weights at $c$? Because a handful of extreme
+right-tail weights can drown out the rest of the dataset, inflating
+estimation variance. Specifically, for $n$ independent losses with equal
+variance, the weighted mean $\sum_i \beta_i l_i / \sum_i \beta_i$ has the
+same variance as an unweighted mean over only
 
 $$n_\textrm{eff} = \frac{\left(\sum_{i=1}^n \beta_i\right)^2}{\sum_{i=1}^n \beta_i^2}$$
 
-examples, its *effective sample size*. It equals $n$ when all weights are
-equal and approaches 1 when a single weight dominates. Clipping the largest
-weights raises $n_\textrm{eff}$ but introduces a bias: examples in the
-clipped region count less than the target distribution says they should.
+examples—the *effective sample size*. When all weights are equal,
+$n_\textrm{eff} = n$; when one weight dwarfs the others, $n_\textrm{eff}$
+collapses toward 1. Clipping trades a small amount of bias in the tail for
+a dramatic jump in effective sample size.
 
 ### A Two-Dimensional Example
 
-We now run the four steps on the running example, where we know the true
-weights. Both domains share one labeling rule: $y = 1$ above the parabola
-$x_2 = \frac{1}{2}x_1^2 - 1$ and $y = 0$ below it, so this is covariate
-shift by construction. Since the boundary is curved, no linear classifier
-fits it everywhere: the best line near the origin, where the source lies,
-differs from the best line near $(2, 0)$, where the target lies. The
-computation needs only NumPy.
+Let us watch all four steps in action on our shifted-Gaussian running
+example, where we know the exact density ratio $e^{2x_1 - 2}$. Both domains
+share the exact same nonlinear labeling rule: $y = 1$ above the parabola
+$x_2 = \frac{1}{2}x_1^2 - 1$ and $y = 0$ below it, guaranteeing covariate
+shift by construction. Because the true boundary is curved, no linear
+classifier can fit it globally: the best straight line near the origin (the
+source cloud) slopes very differently from the best straight line near
+$(2, 0)$ (the target cloud). Plain NumPy suffices for the entire experiment.
 
-We draw 1,000 source examples with their labels and 1,000 target examples,
-whose labels we use only to measure accuracy. The generator is not seeded,
-so your numbers will differ from ours. How much they differ turns out to be
-part of the result.
+We generate 1,000 labeled source points and 1,000 target points (holding
+back the target labels strictly for evaluation). We intentionally leave the
+random generator unseeded—seeing how much the numbers fluctuate from run to
+run is itself part of the lesson.
 
 ```{.python .input #environment-and-distribution-shift-covariate-shift-correction-1}
 rng = np.random.default_rng()
@@ -320,13 +339,11 @@ label = lambda X: (X[:, 1] > 0.5 * X[:, 0]**2 - 1).astype(float)
 y_src, y_tgt = label(X_src), label(X_tgt)   # one labeling rule for both
 ```
 
-The one learning algorithm we need is logistic regression, trained by
-gradient descent with an optional weight per example. By
-:numref:`subsec_softmax_and_derivatives`, the gradient of the cross-entropy
-loss with respect to the logit is the predicted probability minus the label,
-$\sigma(\mathbf{w}^\top \mathbf{x} + b) - y$, so the gradient with respect
-to $\mathbf{w}$ is this error times the input. A weight $\beta_i$ scales
-the error of example $i$.
+Our sole learning primitive is weighted logistic regression trained by
+gradient descent. By :numref:`subsec_softmax_and_derivatives`, the
+cross-entropy gradient with respect to the logit is the residual
+$\sigma(\mathbf{w}^\top \mathbf{x} + b) - y$, so weighting example $i$ by
+$\beta_i$ simply multiplies its residual by $\beta_i$.
 
 ```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-2}
 def fit_logreg(X, y, weights=None, lr=0.1, steps=2000):
@@ -340,12 +357,12 @@ def fit_logreg(X, y, weights=None, lr=0.1, steps=2000):
     return w, b
 ```
 
-Steps 1 and 2 train the domain classifier on the pooled inputs. For two
-Gaussians with the same covariance, the logarithm of the density ratio is
-linear in $\mathbf{x}$, here $2x_1 - 2$, so logistic regression can
-represent the true weights and we can check what it learns. The cell also
-reports the largest weight and the effective sample size, with and without
-clipping at $c = 5$.
+First, we pool source and target inputs and train the domain classifier $h$
+(steps 1 and 2). Because the log density ratio of two equal-covariance
+Gaussians is strictly linear ($2x_1 - 2$), logistic regression is properly
+specified here and can recover the true weights directly. Let us inspect
+the learned $h$, the peak weight, and the effective sample size before and
+after clipping at $c = 5$.
 
 ```{.python .input #environment-and-distribution-shift-covariate-shift-correction-2}
 z = np.concatenate([np.zeros(n), np.ones(n)])      # domain label: 1 = target
@@ -358,20 +375,19 @@ print(f'largest weight: {beta.max():.0f}; effective sample size: '
       f'{ess(beta):.0f} of {n}, {ess(np.minimum(beta, 5)):.0f} if clipped at 5')
 ```
 
-The learned $h$ is close to $2x_1 - 2$, so the domain classifier has found
-the true weights. They spread over several orders of magnitude, and the
-1,000 source examples are worth far fewer: a few dozen, in an unlucky draw
-barely ten. Clipping at $c = 5$ raises the effective sample size to about
-200. Rerun the cell and the largest weight jumps between a few dozen and
-several hundred, taking the unclipped effective sample size with it: a
-handful of points in the right tail of the source carry most of the weight,
-and how far that tail reaches is a matter of luck. Importance weights are
-high-variance quantities, and this is where we see it.
+Sure enough, the learned $h(\mathbf{x})$ lands close to $2x_1 - 2$. Look,
+however, at what happens to sample efficiency: because the weights span
+orders of magnitude, our 1,000 source examples collapse to an effective
+sample size of only a few dozen—and on an unlucky draw, barely ten!
+Clipping at $c = 5$ lifts $n_\textrm{eff}$ back to around 200. Re-run the
+cell a few times and watch the maximum weight swing wildly from dozens to
+hundreds, dragging the unclipped effective sample size along with it: a
+handful of lucky right-tail source points dominate the entire weighted sum,
+exposing the notorious high variance of importance weighting.
 
-Step 4 trains the classifier three times on the labeled source data:
-without weights, with the weights $\beta_i$, and with the weights clipped at
-$c = 5$. We evaluate each model on the target and on the source, and
-compare with always predicting the most common target class.
+Next, step 4 trains three task classifiers on the labeled source set—unweighted,
+importance-weighted, and clipped at $c = 5$—and compares their target and
+source accuracies against a trivial majority-class baseline on the target.
 
 ```{.python .input #environment-and-distribution-shift-covariate-shift-correction-3}
 acc = lambda wb, X, y: ((X @ wb[0] + wb[1] > 0) == (y == 1)).mean()
@@ -384,19 +400,18 @@ print(f'always predicting the most common target class: '
       f'{max(y_tgt.mean(), 1 - y_tgt.mean()):.3f}')
 ```
 
-On the target, the unweighted model does worse than no model at all: it is
-right on only 45% to 65% of the examples, while always predicting the most
-common target class gets about 70%. Reweighting raises target accuracy to
-about 95% and lowers source accuracy by a few points. The model gives up a
-little where the source lies to gain a great deal where the target lies, as
-:eqref:`eq_covariate-shift-identity` prescribes. Clipping changes almost
-nothing here, a point or two of target accuracy in either direction: a line
-has only three parameters, and even a dozen effective examples suffice to
-place it. Exercise
-:exref:`ex_environment-and-distribution-shift-when-reweighting-fails` moves
-the target farther away. What did reweighting change? We plot the two
-decision boundaries with the data, drawing each source point with an area
-proportional to its weight.
+On the shifted target, the unweighted classifier performs *worse* than
+blindly guessing the majority class: only 45%–65% accuracy versus ~70% for
+the trivial baseline! Importance reweighting rockets target accuracy up to
+roughly 95% while sacrificing only a few points on the source—trading away
+a tiny bit of fit near the origin to excel where deployment actually lives,
+just as :eqref:`eq_covariate-shift-identity` promises. Clipping makes
+hardly a dent here (within a point or two), because a 2D line has only
+three parameters and even a dozen effective points pin it down (exercise
+:exref:`ex_environment-and-distribution-shift-when-reweighting-fails`
+pushes the target farther out to see where reweighting breaks down). Let us
+plot both decision boundaries over the two clouds, sizing each source dot
+in proportion to its importance weight.
 
 ```{.python .input #environment-and-distribution-shift-a-two-dimensional-example-3}
 x1 = np.linspace(-2.5, 4.5, 50)
@@ -412,77 +427,78 @@ d2l.plt.xlabel('$x_1$'), d2l.plt.ylabel('$x_2$'), d2l.plt.ylim(-3, 5)
 d2l.plt.legend();
 ```
 
-The unweighted boundary is a nearly horizontal line at about $x_2 = -0.6$,
-the best line for the bottom of the parabola, where most source examples
-lie. Near $(2, 0)$ the parabola rises steeply, and this line assigns $y = 1$
-to the many target points above it but below the parabola. The weighted
-boundary climbs to the right instead, with a slope of roughly 1 and
-sometimes steeper, along the right arm of the parabola. The large dots at
-the right edge of the source cloud determine it. The points near the origin,
-which is to say most of the sample, have almost no say.
+The picture makes the geometry unmistakable. The unweighted boundary settles
+into a nearly horizontal line around $x_2 = -0.6$—ideal for the flat trough
+of the parabola where most source points sit, yet disastrous near $(2, 0)$
+where the parabola shoots upward and leaves swarms of target points on the
+wrong side. Reweighting tilts the boundary sharply upward along the right
+arm of the parabola, anchored almost entirely by the oversized dots along
+the right edge of the source cloud while the dense cluster near the origin
+barely whispers.
 
 ## Label Shift Correction
 :label:`subsec_label-shift-correction`
 
-Under label shift it is $p(\mathbf{x} \mid y)$ that the two domains share.
-The argument that gave :eqref:`eq_covariate-shift-identity`, with the weight
-now on the label, gives
+Under label shift, the class-conditional distribution
+$p(\mathbf{x} \mid y)$ stays invariant while class proportions $p(y)$
+change. Running the exact same importance-weighting derivation—now
+multiplying and dividing by $p_S(y)$—yields
 
 $$R_T[f] = \sum_{y} p_T(y) \int l(f(\mathbf{x}), y)\, p(\mathbf{x} \mid y) \;d\mathbf{x} = \mathbb{E}_{(\mathbf{x}, y) \sim p_S}\left[\frac{p_T(y)}{p_S(y)}\, l(f(\mathbf{x}), y)\right].$$
 
-Each training example is weighted by $\beta_i = p_T(y^{(i)})/p_S(y^{(i)})$,
-the ratio of how common its class is in the target and in the source, and
-the model is again trained by weighted empirical risk minimization. The
-source proportions $p_S(y)$ are the class frequencies of the training
-labels. The target proportions $p_T(y)$ are the difficulty: the target comes
-without labels, so we cannot simply count.
+Each training example now carries the weight
+$\beta_i = p_T(y^{(i)})/p_S(y^{(i)})$, the ratio of target-to-source
+prevalence for its class, and weighted empirical risk minimization proceeds
+just as before. Reading off the source frequencies $p_S(y)$ from training
+labels is trivial; the catch is estimating the target proportions $p_T(y)$
+when target data arrive *without labels*.
 
 ### Estimating the Target Class Proportions
 
-Any classifier trained on the source can estimate the target proportions,
-provided we know how it errs. That knowledge is the column-normalized
-confusion matrix $\mathbf{C}$ of :numref:`sec_softmax_scratch`, with entries
-$C_{ij} = P(\hat{c} = i \mid y = j)$ for the predicted class $\hat{c}$,
-which we estimate on a labeled validation set from the source.
+Remarkably, any reasonably accurate source classifier can recover
+$\mathbf{p}_T$ from unlabeled target inputs alone—without ever touching the
+ambient image dimension—as long as we characterize its error pattern. That
+error profile is precisely the column-normalized confusion matrix
+$\mathbf{C}$ from :numref:`sec_softmax_scratch`, whose entry
+$C_{ij} = P(\hat{c} = i \mid y = j)$ is estimated on a labeled source
+validation split.
 
-The key observation is that under label shift $\mathbf{C}$ is the same on
-the target: the prediction $\hat{c}$ depends only on $\mathbf{x}$, and the
-inputs of each class have the same distribution in both domains. Let
-$\mu_i$ be the fraction of target inputs that the classifier assigns to
-class $i$, which needs no labels. By the law of total probability,
+Here is the crucial insight: because $\hat{c}$ depends only on $\mathbf{x}$
+and $p(\mathbf{x} \mid y)$ is unchanged under label shift, the exact same
+confusion matrix $\mathbf{C}$ governs the classifier's behavior on the
+target domain! Let $\mu_i$ be the fraction of unlabeled target inputs that
+our classifier predicts as class $i$. By the law of total probability,
 
 $$\mu_i = \sum_{j=1}^q P(\hat{c} = i \mid y = j)\, p_T(y = j) = \sum_{j=1}^q C_{ij}\, p_T(y = j), \quad \textrm{that is,} \quad \mathbf{C}\, \mathbf{p}_T = \boldsymbol{\mu},$$
 :eqlabel:`eq_label-shift-system`
 
-where the vectors $\mathbf{p}_T$ and $\boldsymbol{\mu}$ collect the $q$
-target class proportions and prediction frequencies. This is the reason
-the confusion matrix of :numref:`sec_softmax_scratch` keeps the true
-classes in its columns. The predictions we observe on the target are the
-true target proportions mixed by the classifier's errors, and if
-$\mathbf{C}$ is invertible, $\mathbf{p}_T = \mathbf{C}^{-1} \boldsymbol{\mu}$
-undoes the mixing.
+where $\mathbf{p}_T$ and $\boldsymbol{\mu}$ are the $q$-dimensional vectors
+of true target class proportions and predicted target frequencies. (Now you
+see why we placed true classes along the *columns* of $\mathbf{C}$ back in
+:numref:`sec_softmax_scratch`!) The predicted frequencies we observe at
+deployment are simply the true target class proportions scrambled by
+$\mathbf{C}$; whenever $\mathbf{C}$ is invertible, solving
+$\mathbf{p}_T = \mathbf{C}^{-1} \boldsymbol{\mu}$ cleanly unscrambles them.
 
-Take the screening test of :numref:`sec_classification`, which detects 90%
-of the sick and wrongly flags 5% of the healthy, and suppose it was
-validated on a source sample with equally many healthy ($y = 0$) and sick
-($y = 1$) patients. With rows and columns ordered (healthy, sick),
+Try this by hand on our screening test from :numref:`sec_classification`
+(90% recall, 5% false-alarm rate), validated on a balanced 50/50 source
+sample of healthy ($y = 0$) and sick ($y = 1$) patients:
 
 $$\mathbf{C} = \begin{pmatrix} 0.95 & 0.10 \\ 0.05 & 0.90 \end{pmatrix}.$$
 
-In the target population the test flags 13.5% of patients,
-$\boldsymbol{\mu} = (0.865, 0.135)$. Writing $p$ for the target fraction
-of sick patients, the second row of :eqref:`eq_label-shift-system` reads
-$0.05\,(1 - p) + 0.90\,p = 0.135$, so $p = 0.085/0.85 = 0.10$. The 13.5%
-flagged overstates the prevalence: of all patients, $0.05 \times 0.9 = 4.5\%$
-are false alarms and only $0.10 \times 0.1 = 1\%$ are missed cases, and
-the solve trades the one against the other. Retraining then weights each
-sick training example by $0.1/0.5 = 0.2$ and each healthy one by
-$0.9/0.5 = 1.8$.
+Suppose in deployment the test flags 13.5% of patients, so
+$\boldsymbol{\mu} = (0.865, 0.135)$. Letting $p$ denote the unknown target
+prevalence of disease, the second row of :eqref:`eq_label-shift-system`
+says $0.05\,(1 - p) + 0.90\,p = 0.135$, giving $p = 0.085/0.85 = 0.10$.
+Notice why raw predictions (13.5%) overstated the true 10% prevalence:
+false alarms ($0.05 \times 0.90 = 4.5\%$) outnumbered missed cases
+($0.10 \times 0.10 = 1\%$), and inverting $\mathbf{C}$ cancelled both
+effects exactly. To retrain for the target, we weight sick training
+examples by $0.1/0.5 = 0.2$ and healthy ones by $0.9/0.5 = 1.8$.
 
-We check the estimator on Fashion-MNIST, with the softmax regression of
-:numref:`sec_softmax_concise` as the classifier. We train it as there and
-keep its logits and the labels of the 10,000 validation images as NumPy
-arrays.
+Let us test this linear-system estimator on Fashion-MNIST using our concise
+`SoftmaxRegression` model from :numref:`sec_softmax_concise`, saving its
+validation logits and labels as NumPy arrays.
 
 ```{.python .input #environment-and-distribution-shift-label-shift-on-fashion-mnist}
 data = d2l.FashionMNIST(batch_size=256)
@@ -498,11 +514,12 @@ O, y = np.concatenate(O), np.concatenate(y)
 pred = O.argmax(axis=1)
 ```
 
-Half of the validation images, chosen at random, serve as the labeled
-source validation set on which we estimate $\mathbf{C}$. The source is
-balanced: every class has the proportion 0.1. From the other half we draw a
-target sample in which half of the images are shirts: 400 shirts and 45
-images of each other class. Its labels serve only to check the estimate.
+We split the 10,000 validation images randomly in half: the first half
+serves as our labeled source validation set to estimate $\mathbf{C}$ (where
+all 10 classes appear equally at proportion 0.1), while from the second
+half we draw a heavily skewed target set where half of all images are
+shirts (400 shirts and 45 of each other garment). Target labels are hidden
+from the estimator and used only to verify its accuracy.
 
 ```{.python .input #environment-and-distribution-shift-label-shift-on-fashion-mnist-2}
 perm = rng.permutation(len(y))
@@ -522,21 +539,21 @@ for j, name in enumerate(data.text_labels(range(10))):
           f'estimated {p_hat[j]:.3f}')
 ```
 
-The classifier predicts shirts for well under half of the target images,
-between about a quarter and two fifths of them in our runs: shirts are the class it recognizes least often, and their errors
-spread over the other tops. Solving $\mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}$
-undoes most of this mixing. The estimated fraction of shirts comes out near
-0.5, and the estimates of the other classes lie within a few hundredths of
-the truth.
+Look at the raw predictions first: because shirts are the hardest garment
+for softmax regression to recognize, the classifier predicts "shirt" on
+only about a quarter to two-fifths of the target images, spilling the rest
+into T-shirts, pullovers, and coats. Solving
+$\mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}$ neatly reverses that
+leakage—putting the estimated shirt share right back near 0.50 and every
+other class within a few hundredths of its true frequency!
 
-With the estimate we can adapt the classifier to the target without
-retraining it. By Bayes' theorem, multiplying the predicted probability of
-each class by $p_T(y)/p_S(y)$ and renormalizing turns probabilities for the
-source into probabilities for the target, provided the former are
-calibrated, which :numref:`sec_classification` found nearly true for this
-model. Multiplying a probability by a weight adds the logarithm of the
-weight to the logit, and the renormalization does not change which class is
-largest.
+Even better, once we have $\hat{\mathbf{p}}_T$, we can adapt a *calibrated*
+classifier on the fly without retraining a single weight. By Bayes'
+theorem, multiplying class $y$'s predicted source probability by
+$p_T(y)/p_S(y)$ and renormalizing yields the exact target posterior
+(recall from :numref:`sec_classification` that our softmax regression is
+already well calibrated). In logit space, multiplying probabilities by
+$p_T(y)/p_S(y)$ simply *adds* $\log(p_T(y)/p_S(y))$ to each class's logit!
 
 ```{.python .input #environment-and-distribution-shift-label-shift-on-fashion-mnist-3}
 log_w = np.log(np.maximum(p_hat, 1e-6) / 0.1)  # log p_T(y) - log p_S(y)
@@ -545,100 +562,112 @@ print(f'target accuracy: {accuracy(O[tgt]):.3f} as trained, '
       f'{accuracy(O[tgt] + log_w):.3f} adapted to the estimated proportions')
 ```
 
-The adapted classifier predicts shirts more readily, and its accuracy on the
-target rises by several points, without a single target label.
+Simply adding that log-prior shift boosts target accuracy by several
+percentage points—using zero target labels and zero gradient steps!
 
-The estimate needs the label shift assumption, no target class that is
-absent from the source, and an invertible $\mathbf{C}$. Invertibility holds
-when the classifier gets the majority of each class right,
-$C_{jj} > \frac{1}{2}$ for every $j$ (exercise
-:exref:`ex_environment-and-distribution-shift-label-shift-system`); when
-$\mathbf{C}$ is nearly singular, small sampling errors in $\boldsymbol{\mu}$
-and in the estimated $\mathbf{C}$ become large errors in $\mathbf{p}_T$.
-For a rare class the solution can even come out negative. In the screening
-example the estimate is $(\mu_1 - 0.05)/0.85$, where $\mu_1$ is the
-fraction predicted sick. At a prevalence of 1% we expect
-$\mu_1 \approx 0.0585$, with a standard error of about 0.0074 on 1,000
-target inputs, so $\mu_1$ falls below 0.05, and the estimate below 0, in
-about one sample in eight. In practice one sets negative estimates to 0
-and rescales the others to sum to 1, or solves a least-squares problem
-restricted to proportions. Adjusting a classifier to new class proportions
-goes back at least to :citet:`Saerens.Latinne.Decaestecker.2002`;
-:citet:`Lipton.Wang.Smola.2018` showed that the confusion-matrix estimate is
-consistent for any fixed classifier with invertible $\mathbf{C}$.
+Keep three caveats in mind when applying this method: label shift must
+actually hold, no brand-new class absent from the source may appear in the
+target, and $\mathbf{C}$ must be invertible. Invertibility is guaranteed
+whenever the classifier gets more than half of every class right
+($C_{jj} > \frac{1}{2}$ for all $j$; see exercise
+:exref:`ex_environment-and-distribution-shift-label-shift-system`), yet if
+$\mathbf{C}$ is ill-conditioned, small sampling fluctuations in
+$\boldsymbol{\mu}$ or $\mathbf{C}$ magnify into noisy estimates of
+$\mathbf{p}_T$. For very rare classes, raw linear inversion can even dip
+below zero: in our screening example, $\hat{p} = (\mu_1 - 0.05)/0.85$, and
+at 1% true prevalence ($\mathbb{E}[\mu_1] = 0.0585$, standard error
+$0.0074$ on 1,000 patients), roughly one sample in eight sees
+$\mu_1 < 0.05$ and produces a negative estimate! In practice, one clips
+negative entries to zero and renormalizes—or solves a simplex-constrained
+least-squares problem. Prior-shift adjustment dates back at least to
+:citet:`Saerens.Latinne.Decaestecker.2002`, and
+:citet:`Lipton.Wang.Smola.2018` proved that confusion-matrix inversion is
+statistically consistent for any fixed classifier with invertible
+$\mathbf{C}$.
 
-Classes are not the only groups whose proportions can change. Under
-*subpopulation shift* it is groups such as hospitals, or birds photographed
-on water and on land, that are mixed differently in training and in
-deployment, and a classifier that leans on the background behind a bird can
-be accurate on average and fail on the few birds whose background and label
-disagree :cite:`Sagawa.Koh.Hashimoto.ea.2020`. When the groups are known,
-weighting the training examples by group, as we weighted them by class, is
-the first remedy, and benchmarks of such shifts report the lowest accuracy
-over the groups rather than the average :cite:`Koh.Sagawa.Marklund.ea.2021`.
+Finally, class labels are not the only proportions that can shift. Under
+*subpopulation shift*, demographic groups, hospital sites, or spurious
+background contexts (such as waterbirds photographed on land versus water)
+appear in different mixes at test time; a classifier that relies on
+background shortcuts can boast high *average* accuracy while failing badly
+on minority subgroups :cite:`Sagawa.Koh.Hashimoto.ea.2020`. Whenever
+subgroups are annotated, group reweighting mirrors class reweighting, and
+modern shift benchmarks evaluate *worst-group* accuracy alongside average
+accuracy :cite:`Koh.Sagawa.Marklund.ea.2021`.
 
 ## Concept Shift and Feedback
 
-Two cases remain, and reweighting helps in neither: the labeling rule itself
-may change, and the model's own decisions may change the data.
+Two deployment hazards remain where no amount of importance reweighting can
+save us: when the labeling rule itself drifts, and when our model's own
+actions reshape the world around it.
 
 ### Updating with Fresh Labels
 
-Concept shift changes $p(y \mid \mathbf{x})$, the very relation that the
-model estimates. Reweighting old examples cannot repair it, because their
-labels are no longer right. Only new labeled data help. When the change
-is gradual, as with news whose topics change from week to week, a common
-response is to keep the current parameters and continue training on recent
-labeled examples. When the change is
-abrupt, as when new diagnostic criteria take effect, examples labeled under
-the old definition describe a different task, and the model must be
-retrained on data labeled under the new one. Either way, we notice the
-change only by monitoring the model's accuracy on freshly labeled examples.
+Because concept shift alters $p(y \mid \mathbf{x})$ itself, historical
+source labels become stale—reweighting outdated answers cannot teach a
+model the new definitions. Only fresh labeled data can repair it. When
+concept shift is gradual (as in evolving news topics or seasonal shopping
+trends), teams typically keep existing weights and continue fine-tuning on
+recent labeled streams. When shift is abrupt (such as revised medical
+diagnostic standards), legacy labels describe a different task altogether
+and retraining from scratch on freshly labeled data is required. Either
+way, you will never catch concept shift without continuously monitoring
+accuracy on a trickle of freshly annotated examples.
 
 ### Decisions That Change the Data
 
-Deploying a model turns its predictions into decisions, and decisions can
-change the data that the model sees next. The footwear model of the opening
-changed how applicants dressed. In predictive policing the effect acts on
-the labels (:numref:`fig_mdl-clf-feedback-loop`). Patrols are sent where the
-model forecasts crime, more patrols record more of the crimes committed
-there, and the retrained model sends still more patrols. Recorded crime
-measures where the police looked as well as where crimes happened, so the
-loop can widen a small initial difference between two neighborhoods with the
-same crime rate.
+Deploying a predictive model turns probabilities into real-world *actions*,
+and actions can alter the very stream of data the model receives tomorrow.
+Our loan-scoring footwear story showed applicants gaming features
+directly; in predictive policing, the feedback acts on the *observed
+labels* (:numref:`fig_mdl-clf-feedback-loop`). Dispatching extra patrols to
+neighborhoods with high forecasted crime leads officers to record more
+incidents there; feeding those newly logged incidents back into the
+training pipeline convinces the retrained model to send even more patrols,
+creating a *runaway feedback loop*. Because recorded arrests reflect where
+police looked as much as where crimes occurred, the loop can rapidly
+amplify a tiny initial discrepancy between two otherwise identical
+neighborhoods.
 
 ![A feedback loop in predictive policing. Predictions decide where patrols go, patrols decide which crimes are recorded, and the records become the next training data.](../img/mdl-clf-feedback-loop.svg)
 :label:`fig_mdl-clf-feedback-loop`
 
-None of the corrections in this section applies here: reweighting assumes a
-target distribution that exists independently of the model, while here the
-model helps produce it. Detecting the loop requires data that the model's
-decisions did not select, for instance from patrols sent to randomly chosen
-neighborhoods. Beyond detection lie questions that statistics cannot
-settle: whether the decision system serves an appropriate goal, and whether
-its errors fall unequally on different groups. A medical classifier must be
-judged by the costs of its errors in each population it serves, not by its
-average accuracy. Tuning its thresholds to those costs does not by itself
-make it fair: when a disease is more common in one group than in another,
-an imperfect test cannot have the same false positive rate, false negative
-rate, and precision in both.
-Problems in which a learner's actions determine what it observes next are
-the subject of reinforcement learning (:numref:`chap_reinforcement_learning`).
+None of our passive shift corrections applies here, because importance
+weighting presupposes an external target distribution independent of our
+model. Breaking or even detecting such a loop requires data collected
+independently of the model's policy—for example, sending a fraction of
+patrols to randomly selected areas. And beyond statistical detection lie
+value judgments that mathematics alone cannot settle: deciding whether an
+automated system pursues a legitimate objective and weighing how its errors
+distribute across populations. A clinical classifier must be evaluated by
+the real-world cost of its mistakes within *every* patient subgroup, not
+just its global average—and as a fundamental impossibility result shows,
+when disease prevalence differs across two groups, no imperfect test can
+simultaneously equalize false-positive rate, false-negative rate, and
+precision across both. When a learner's actions continually reshape its
+environment and future observations, we cross out of passive supervised
+learning into *reinforcement learning*
+(:numref:`chap_reinforcement_learning`).
 
 ## Summary
 
-A test set predicts performance in deployment only when deployment data come
-from the same distribution, and nothing transfers without an assumption
-about what stays fixed. Under covariate shift the labeling rule stays fixed,
-and weighting each training example by $p_T(\mathbf{x})/p_S(\mathbf{x})$,
-estimated by a classifier that tells target inputs from source inputs,
-corrects training; in our example it raised target accuracy from about half
-to about 95%. It requires the source to cover the target and loses
-effective sample size as the weights spread. Under label shift each class
-keeps its appearance, and the weights $p_T(y)/p_S(y)$ come from solving
-$\mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}$. Concept shift requires fresh
-labels, and when a model's decisions change its own data, statistical
-correction must be complemented by an analysis of the decisions.
+A held-out test set guarantees deployment performance only when test and
+deployment data share the same distribution—and without an explicit
+structural assumption about what stays fixed, nothing can transfer across a
+shift. Under *covariate shift* ($p(y \mid \mathbf{x})$ invariant),
+reweighting source training examples by the density ratio
+$p_T(\mathbf{x})/p_S(\mathbf{x})$—estimated via a binary domain classifier
+without target labels—aligns training with the target risk (boosting target
+accuracy from roughly 50% to 95% in our 2D parabola example), provided
+source support covers the target and extreme weights do not collapse the
+effective sample size. Under *label shift* ($p(\mathbf{x} \mid y)$
+invariant), inverting the source confusion matrix
+$\mathbf{C}\,\mathbf{p}_T = \boldsymbol{\mu}$ recovers target class
+proportions from unlabeled target predictions alone, enabling either
+reweighted retraining or instant Bayes logit adjustment. *Concept shift*
+demands ongoing fresh labels, and whenever a model's decisions feed back
+into its own data stream, passive statistical fixes must give way to active
+monitoring, ethical scrutiny, and sequential decision-making.
 
 ## Exercises
 

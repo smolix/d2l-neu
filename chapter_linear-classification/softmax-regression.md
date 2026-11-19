@@ -1,68 +1,81 @@
 # Softmax Regression
 :label:`sec_softmax`
 
-The linear regression of :numref:`sec_linear_regression` predicts a number,
-such as the price of a house. Many questions ask instead to which of several
-categories, or classes, an example belongs. Problems of this kind are called
-*classification*. A spam filter chooses between two classes, a diagnostic
-system among a handful of diseases, and a language model, which predicts the
-next word, among the tens of thousands of words of its vocabulary. How can a
-linear model answer such a question, and which loss should train it?
+Regression is the hammer we reach for when answering *how much?* or *how
+many?* questions, such as predicting the sale price of a house in
+:numref:`sec_linear_regression`. Many supervised learning problems,
+however, put aside *how much?* and ask *which category?* instead. Problems
+of this kind are called *classification*. A spam filter sorts email into two
+classes, a diagnostic tool chooses among a handful of diseases, and a
+language model predicts the next token from a vocabulary of tens of
+thousands of words. How can a linear model answer such a question, and what
+loss function should guide its training?
 
-Consider an online store that files each product photo under one of ten
-categories: T-shirt, trouser, pullover, dress, coat, sandal, shirt, sneaker,
-bag, or ankle boot. Nothing stops us from coding the categories as 1 to 10
-and reusing the linear regression we already have. The trouble is that the
-codes are names, not quantities. A prediction of 5.5 would place a photo
-halfway between a coat and a sandal, whatever that might be. Worse, the
-squared loss would charge 81 times more for mistaking a T-shirt (code 1) for
-an ankle boot (code 10) than for a trouser (code 2), although nothing makes
-the first mistake worse. Usually we also want more than a decision. A spam
-filter should remove an email from the inbox only when it is nearly certain,
-and a doctor needs to know how likely a diagnosis is, not just which one is
-most likely. So the model should output a probability for every class.
+Consider an online retailer sorting product photos into ten apparel
+categories: T-shirt, trouser, pullover, dress, coat, sandal, shirt,
+sneaker, bag, and ankle boot. We could assign those categories the integers
+1 through 10 and apply linear regression right out of the box—but the
+result would be nonsensical, because those integers are arbitrary names
+rather than numeric quantities. A prediction of 5.5 would place a photo
+halfway between a coat and a sandal, whatever that could possibly mean.
+Worse still, squared error would penalize mistaking a T-shirt (1) for an
+ankle boot (10) 81 times more heavily than mistaking it for a trouser (2),
+even though nothing makes the first error inherently worse than the second.
 
-Softmax regression computes one linear score per class and turns the scores
-into probabilities. To train it, we reuse the recipe of
-:numref:`sec_linear_regression`: describe how the labels are generated and
-minimize the negative log-likelihood of the observed labels. There, Gaussian
-noise gave the squared loss. Here, a categorical model of the label gives the
-cross-entropy loss. Throughout the chapter, each example belongs to exactly
-one class and the classes have no order. The following sections train the
-model on images of clothing and ask how well it predicts images that it has
-not seen.
+Practitioners also use the word *classification* to cover two subtly
+different goals: *hard assignments* (committing to a single class) and
+*soft assignments* (estimating the probability of each class). Even when we
+ultimately need a hard decision, we nearly always prefer models that output
+probabilities: a spam filter should quarantine an email only when it is
+nearly certain, and a clinician needs to know how probable each diagnosis
+is, not merely which one edged out the rest.
+
+*Softmax regression* solves both problems cleanly: it computes one linear
+score per class and transforms those scores into a valid probability
+distribution. To train it, we follow the exact maximum-likelihood recipe of
+:numref:`sec_linear_regression`—specify a probabilistic model for the
+labels and minimize the negative log-likelihood of what we observe. Whereas
+Gaussian noise produced the squared loss for regression, a categorical
+label model produces the *cross-entropy loss*. Throughout this chapter,
+every example belongs to exactly one class from an unordered set of
+categories. In the sections that follow, we will train this model on real
+clothing images and examine how well it generalizes to unseen data.
 
 ## The Model
 
 ### Class Labels
 :label:`subsec_classification-problem`
 
-We start with a problem small enough to write out in full. Each input is a
-$2\times2$ grayscale image, so it has four features, the pixel values
-$x_1, x_2, x_3, x_4$, and each image shows a cat, a chicken, or a dog. We
-number the classes 1, 2, 3 in this order. In general there are $q$ classes,
-and the label $y$ of an example is its class, an integer in
+To get our feet wet, let us begin with a problem small enough to write out
+in full. Suppose every input is a $2\times2$ grayscale image, giving us
+four scalar pixel features $x_1, x_2, x_3, x_4$, and every image depicts a
+cat, a chicken, or a dog. We number these classes 1, 2, 3 in that order; in
+general, with $q$ classes, the label $y$ of an example is an integer in
 $\{1, \ldots, q\}$.
 
-Regressing on these integers would impose an order that the classes do not
-have, as the clothing codes showed. Instead we encode the label as a
-*one-hot vector* $\mathbf{y} \in \{0, 1\}^q$, which has a 1 in the position
-of the true class and 0 everywhere else. A chicken is
-$\mathbf{y} = (0, 1, 0)$, and in general entry $y_j$ is 1 if the example
-belongs to class $j$ and 0 otherwise. Every class gets its own coordinate,
-and any two classes are equally far apart. The one-hot vector is also a
-probability distribution over the classes, the one that puts all its mass on
-the true class, so we can compare it directly with the probabilities that the
-model predicts. In formulas, the class $y$ serves as an index and the one-hot
-vector $\mathbf{y}$ as a vector over the classes. In code, a label is stored
-as the integer index of its class, counting from 0 as Python does.
+Because these categories carry no natural ordering, regressing directly on
+the integers 1, 2, 3 would inject a spurious geometry just as with the
+clothing codes above. Instead, statisticians represent unordered categories
+using a *one-hot encoding*: a vector $\mathbf{y} \in \{0, 1\}^q$ with a 1
+in the coordinate of the true class and 0 everywhere else. Thus a chicken
+becomes $\mathbf{y} = (0, 1, 0)$, and in general $y_j = 1$ if the example
+belongs to class $j$ and $0$ otherwise. Every class now gets its own axis,
+making all pairs of distinct classes equidistant. Better yet, a one-hot
+vector is itself a probability distribution—the degenerate distribution
+placing all its mass on the true class—so we can compare it directly with
+the probability vector predicted by our model. Throughout our equations,
+$y$ denotes the integer class index while $\mathbf{y}$ denotes its one-hot
+vector; in Python code, we store the integer index directly, zero-based as
+Python conventions dictate.
 
 ### Linear Scores
 
-Softmax regression gives every class its own linear model. Class $j$
-receives a score $o_j$, a weighted sum of the features plus a bias, with
-weights and a bias of its own. We write $w_{kj}$ for the weight of feature
-$k$ in the score of class $j$. For the $2\times2$ images the three scores are
+To estimate conditional probabilities for all $q$ classes simultaneously,
+softmax regression assigns every class its own affine function of the
+inputs. Class $j$ receives a score $o_j$ formed as a weighted sum of the
+features plus a bias, with its own dedicated parameters. Writing $w_{kj}$
+for the weight connecting feature $k$ to class $j$, our $2\times2$ image
+classifier computes three scores:
 
 $$
 \begin{aligned}
@@ -72,110 +85,117 @@ o_3 &= x_1 w_{13} + x_2 w_{23} + x_3 w_{33} + x_4 w_{43} + b_3.
 \end{aligned}
 $$
 
-Each line is a linear regression of the kind we met in
-:numref:`sec_linear_regression`, so the model has 12 weights and 3 biases. A
-larger score will mean a more probable class. The scores $o_j$ are called
-*logits*, a name explained below. Drawn as a network
-(:numref:`fig_softmaxreg`), the model has one output unit per class, and
-every output depends on every input: it is a single fully connected layer,
-like linear regression, but with $q$ outputs instead of one.
+Each equation is an ordinary linear regression of the sort we built in
+:numref:`sec_linear_regression`, giving 12 weights and 3 biases in total.
+Higher scores $o_j$ will correspond to more probable classes; these raw
+unnormalized scores are called *logits*, for a reason we explain shortly.
+Viewed as a neural network (:numref:`fig_softmaxreg`), softmax regression
+is again a single-layer network, now with $q$ output units instead of one.
+Because every output depends on every input, this output layer is a *fully
+connected layer*.
 
 ![Softmax regression as a network with one fully connected layer. Each input $x_k$ feeds each output $o_j$ through its own weight $w_{kj}$; the weights into $o_1$ form the first column of $\mathbf{W}$.](../img/softmaxreg.svg)
 :label:`fig_softmaxreg`
 
-We collect the weights in a matrix $\mathbf{W} \in \mathbb{R}^{4 \times 3}$,
-with one row per feature and one column per class, and the biases in a
-vector $\mathbf{b} \in \mathbb{R}^3$. Column $j$ of $\mathbf{W}$, which we
-write $\mathbf{w}_j$, holds the weights of class $j$, so that
-$o_j = \mathbf{w}_j^\top \mathbf{x} + b_j$. All the scores together are
+In matrix notation, we collect the weights into
+$\mathbf{W} \in \mathbb{R}^{4 \times 3}$ (one row per feature, one column
+per class) and the biases into $\mathbf{b} \in \mathbb{R}^3$. Denoting
+column $j$ of $\mathbf{W}$ by $\mathbf{w}_j$, class $j$'s score is
+$o_j = \mathbf{w}_j^\top \mathbf{x} + b_j$, and all scores together read
 
 $$\mathbf{o} = \mathbf{W}^\top \mathbf{x} + \mathbf{b}.$$
 
-Entry $j$ of $\mathbf{W}^\top \mathbf{x}$ is the dot product of column
-$\mathbf{w}_j$ with $\mathbf{x}$, the weighted sum for class $j$. With $d$
-features and $q$ classes, $\mathbf{W} \in \mathbb{R}^{d \times q}$ and
-$\mathbf{o}, \mathbf{b} \in \mathbb{R}^q$. The layout is a convention and
-nothing more: storing the features along the rows of $\mathbf{W}$ matches
-the minibatch form below and the code of this chapter. For the
-$28 \times 28$ clothing images that we will classify, $d = 784$ and
-$q = 10$, so the model has $7{,}840$ weights and 10 biases.
+Here entry $j$ of $\mathbf{W}^\top \mathbf{x}$ is simply the inner product
+$\mathbf{w}_j^\top \mathbf{x}$. For general $d$-dimensional inputs and $q$
+classes, $\mathbf{W} \in \mathbb{R}^{d \times q}$ and
+$\mathbf{o}, \mathbf{b} \in \mathbb{R}^q$. Placing features along rows and
+classes along columns is purely a notational convention chosen to match the
+minibatch equations and code below. On the $28 \times 28$ clothing images
+we will soon classify, $d = 784$ and $q = 10$, giving $7{,}840$ weights and
+10 biases.
 
 ### The Softmax
 :label:`subsec_softmax_operation`
 
-Suppose that for some image the model computes the logits
-$\mathbf{o} = (1.0, 2.2, 0.3)$. The chicken has the largest score, but the
-scores are not probabilities: they sum to 3.5, not 1, and nothing prevents a
-score from being negative or from exceeding 1. Could we not simply fit the
-scores to the one-hot labels by least squares, as if this were regression
-with $q$ outputs? Unfortunately not. A linear function of $\mathbf{x}$ grows
-without bound, so for inputs far from the training data it would predict
-"probabilities" above 1 or below 0.
+Suppose that for some image our linear layer outputs the logits
+$\mathbf{o} = (1.0, 2.2, 0.3)$. Clearly the chicken has the highest score,
+yet these numbers are not valid probabilities: they sum to 3.5 rather than
+1, and in general nothing stops a raw linear score from turning negative or
+exceeding 1. Why not simply fit $\mathbf{o}$ directly to the one-hot labels
+by least squares, as a vector-valued regression? While that crude approach
+can occasionally work, linear functions grow without bound: if bedroom
+count enters linearly into the probability of buying a house, the model
+will happily predict a "probability" greater than 1 for a mansion and less
+than 0 for a studio.
 
-We need a map from any vector of $q$ real scores to a probability
-distribution over $q$ classes: $q$ nonnegative numbers that sum to 1, with a
-larger score giving a larger probability. Two steps achieve this.
-Exponentiating each score makes it positive and keeps the order, and
-dividing by the sum makes the results sum to 1. Why the exponential, when
-any positive, increasing function would pass this test? Because it turns
-sums into products. Adding a constant to a score multiplies its exponential
-by a constant, so differences of scores become ratios of probabilities, and
-we will see that the gradient of the loss then takes the simplest form one
-could hope for. The two steps together form the *softmax* function,
+We therefore need a smooth mapping that converts any real vector
+$\mathbf{o} \in \mathbb{R}^q$ into a valid probability distribution—$q$
+nonnegative numbers summing to 1—while preserving the ordering of scores.
+Two simple operations do the job: exponentiate every score so that all
+values become strictly positive while preserving order, and then *normalize*
+by dividing each exponential by their sum. Why choose the exponential over
+some other positive, increasing function? Because exponentials turn
+addition into multiplication: shifting scores by a constant rescales
+exponentials by a constant, differences of logits correspond directly to
+ratios of probabilities, and—as we will soon see—the gradient of the loss
+collapses to the cleanest conceivable expression. Together, these two steps
+define the *softmax* function:
 
 $$\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o}) \quad \textrm{where} \quad \hat{y}_j = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)}.$$
 :eqlabel:`eq_softmax_y_and_o`
 
-Each probability is proportional to the exponential of its score. For
-$\mathbf{o} = (1.0, 2.2, 0.3)$ the exponentials are $(2.72, 9.03, 1.35)$,
-their sum is $13.09$, and $\hat{\mathbf{y}} = (0.21, 0.69, 0.10)$: the model
-gives the chicken a probability of 0.69. Since the exponential is
-increasing, the softmax keeps the order of the scores, and the most probable
-class is the one with the largest logit,
+Every predicted probability is proportional to the exponential of its
+logit. Returning to $\mathbf{o} = (1.0, 2.2, 0.3)$, the exponentials are
+$(2.72, 9.03, 1.35)$ with sum $13.09$, yielding
+$\hat{\mathbf{y}} = (0.21, 0.69, 0.10)$: the model assigns the chicken a
+69% probability. Because $\exp$ is strictly increasing, softmax preserves
+the ranking of the logits, so the most probable class is always the one
+with the largest logit:
 
 $$\operatorname*{argmax}_j \hat{y}_j = \operatorname*{argmax}_j o_j.$$
 
-To predict a class, we can skip the softmax and read off the largest logit.
+When we only need a hard class prediction at inference time, we can bypass
+the softmax altogether and simply read off the largest logit.
 
-Let us look more closely at what the exponential has given us. Only the
-differences between logits matter. Adding the same constant $c$ to
-every logit multiplies the numerator and the denominator of
-:eqref:`eq_softmax_y_and_o` by $\exp(c)$, which cancels, so
+Look a bit closer at what exponentiation buys us: *only differences
+between logits matter*. Adding any constant $c$ to every entry of
+$\mathbf{o}$ multiplies both numerator and denominator of
+:eqref:`eq_softmax_y_and_o` by $\exp(c)$, which cancels out identically:
 $\mathrm{softmax}(\mathbf{o} + c\mathbf{1}) = \mathrm{softmax}(\mathbf{o})$.
-Equivalently, the difference of two logits is the logarithm of the ratio of
-their probabilities,
+Equivalently, the difference between any two logits equals the
+log-ratio of their predicted probabilities:
 
 $$o_i - o_j = \log \frac{\hat{y}_i}{\hat{y}_j}.$$
 
-In the example, the logit of the chicken exceeds that of the cat by 1.2, so
-the chicken is $e^{1.2} \approx 3.3$ times as probable as the cat
-($0.69 / 0.21$). The $q$ logits therefore carry one redundant degree of
-freedom. We could fix the score of one class at 0 without changing any
-prediction, but we keep all $q$ so that every class is treated alike. The
-redundancy has a practical use as well: subtracting the largest logit before
-exponentiating keeps $\exp$ from overflowing in floating point
+In our example, the chicken's logit exceeds the cat's by 1.2, so the
+chicken is $e^{1.2} \approx 3.3$ times as probable as the cat
+($0.69 / 0.21$). Consequently, the $q$ logits carry one redundant degree of
+freedom: we could clamp one class's score to 0 without changing any
+prediction, though keeping all $q$ outputs preserves symmetry across
+classes. Better yet, this shift invariance hands us a vital numerical
+trick: subtracting $\max_k o_k$ from every logit before exponentiating
+prevents floating-point overflow without altering the output
 (:numref:`sec_softmax_scratch`).
 
-For two classes, the probabilities depend only on the difference
-$o = o_1 - o_2$:
+In the special case of two classes ($q = 2$), the probabilities depend only
+on the single difference $o = o_1 - o_2$:
 
 $$\hat{y}_1 = \frac{\exp(o_1)}{\exp(o_1) + \exp(o_2)} = \frac{1}{1 + \exp(-o)} = \sigma(o).$$
 :eqlabel:`eq_softmax_to_sigmoid`
 
-The function $\sigma$ is the *logistic sigmoid*, which maps the real line
-onto the interval $(0, 1)$. Softmax regression with two classes is thus
-nothing new. It is logistic regression, the standard model for binary
-classification in statistics. As we just saw,
-$o = \log(\hat{y}_1/\hat{y}_2)$ is the logarithm of the odds of class 1,
-which statisticians call its logit. Machine learning has extended the name,
-somewhat loosely, to the scores of any classifier.
+Here $\sigma$ is the *logistic sigmoid*, mapping the real line smoothly
+into $(0, 1)$. Two-class softmax regression is therefore identical to
+*logistic regression*, the classic binary classifier of statistics. Because
+$o = \log(\hat{y}_1/\hat{y}_2)$ is the log-odds of class 1, statisticians
+named this quantity the *logit*; machine learning later adopted the term, a
+bit more loosely, for the raw pre-softmax scores of any classifier.
 
 ### Minibatches
 :label:`subsec_softmax_vectorization`
 
-As in linear regression, we compute the predictions for a minibatch of
-examples with one matrix product. We stack the $n$ examples of a minibatch
-as the rows of $\mathbf{X} \in \mathbb{R}^{n \times d}$. Then
+Just as in linear regression, we accelerate training and inference by
+vectorizing computations over minibatches. Stacking $n$ examples into the
+rows of $\mathbf{X} \in \mathbb{R}^{n \times d}$, we compute
 
 $$
 \begin{aligned}
@@ -185,107 +205,111 @@ $$
 $$
 :eqlabel:`eq_minibatch_softmax_reg`
 
-where row $i$ of $\mathbf{O} \in \mathbb{R}^{n \times q}$ holds the logits
-of example $i$ and the bias vector is added to every row by broadcasting.
-The softmax acts *rowwise*: it exponentiates each row of $\mathbf{O}$ and
-divides it by its own sum, so row $i$ of $\hat{\mathbf{Y}}$ is the predicted
-distribution for example $i$. Most of the work is the product
-$\mathbf{X}\mathbf{W}$. For a minibatch of 256 clothing images it multiplies
-a $256 \times 784$ matrix by a $784 \times 10$ matrix, about two million
-multiply-adds, in a single call.
+where row $i$ of $\mathbf{O} \in \mathbb{R}^{n \times q}$ contains the
+logits for example $i$ and $\mathbf{b}$ is added to every row via
+broadcasting. The softmax is applied *rowwise*: each row of $\mathbf{O}$ is
+exponentiated and normalized by its own row sum, so row $i$ of
+$\hat{\mathbf{Y}}$ is the predicted class distribution for example $i$. The
+bulk of the computation collapses into the single matrix--matrix product
+$\mathbf{X}\mathbf{W}$—for a minibatch of 256 clothing images, multiplying
+a $256 \times 784$ matrix by a $784 \times 10$ matrix executes roughly two
+million multiply-adds in one vectorized call.
 
 ### Decision Regions
 
-Since the predicted class has the largest logit and every logit is affine in
-$\mathbf{x}$, the decisions of the model have a simple geometry
-(:numref:`fig_mdl-clf-decision-regions`). Class $j$ is predicted wherever
-$o_j \geq o_k$ for every other class $k$. Each of these $q - 1$ conditions,
-$(\mathbf{w}_j - \mathbf{w}_k)^\top \mathbf{x} + b_j - b_k \geq 0$, is a
-linear inequality that holds on one side of a hyperplane. The region of
-class $j$ is the intersection of these half-spaces, a convex polyhedron, and
-two neighboring regions meet on the hyperplane where their scores tie.
+Because we pick the class with the largest logit and every logit is affine
+in $\mathbf{x}$, softmax regression carves input space into remarkably
+simple regions (:numref:`fig_mdl-clf-decision-regions`). Class $j$ wins
+wherever $o_j \geq o_k$ for all $k \neq j$. Each of these $q - 1$
+inequalities,
+$(\mathbf{w}_j - \mathbf{w}_k)^\top \mathbf{x} + b_j - b_k \geq 0$, defines
+a closed half-space bounded by a hyperplane. Intersecting those half-spaces
+produces a convex polyhedron for each class, with neighboring classes
+meeting along the flat hyperplane where their scores tie.
 
-With two classes, $\hat{y}_1 = \sigma(o)$ depends on $\mathbf{x}$ only
+With two classes, $\hat{y}_1 = \sigma(o)$ depends on $\mathbf{x}$ solely
 through $o = (\mathbf{w}_1 - \mathbf{w}_2)^\top \mathbf{x} + b_1 - b_2$.
-Inputs with the same predicted probability lie on a hyperplane perpendicular
-to $\mathbf{w}_1 - \mathbf{w}_2$, and the decision boundary is the hyperplane
-on which $\hat{y}_1 = \frac{1}{2}$. The softmax bends the probabilities, but
-the boundaries between classes stay flat. This is a real limitation. Four
-points at the corners of a square, with each class occupying two opposite
-corners, cannot be separated by any line. Such classes are beyond the reach
-of this model, and remain so until :numref:`chap_perceptrons` adds hidden
-layers.
+Contours of constant predicted probability form parallel hyperplanes
+perpendicular to $\mathbf{w}_1 - \mathbf{w}_2$, with the decision boundary
+at $\hat{y}_1 = \frac{1}{2}$. Notice the key geometric limitation: although
+the softmax curves the probabilities into an S-shape, the boundaries
+between classes remain completely flat. Four points placed at the corners
+of a square, with one class on each diagonal pair (the XOR pattern), can
+never be separated by a single line. Capturing curved or disconnected
+decision regions requires hidden layers, which we introduce in
+:numref:`chap_perceptrons`.
 
 ![Decision regions of softmax regression in the plane. Left: with three classes, the plane splits into three convex regions, one per class, bounded by the lines on which two scores tie; the three lines meet where all scores are equal. Right: with two classes, inputs of equal predicted probability $\hat{y}_1 = \sigma(o)$ lie on parallel lines perpendicular to $\mathbf{w}_1 - \mathbf{w}_2$, and the decision boundary is the line $\hat{y}_1 = \frac{1}{2}$.](../img/mdl-clf-decision-regions.svg)
 :label:`fig_mdl-clf-decision-regions`
 
-Note, however, that all of this rests on the assumption we made at the start:
-every example belongs to exactly one class, and the classes have no order.
-Two common kinds of problems do not satisfy it. In *multi-label
-classification*, several labels can apply to the same example, as when a news
-article covers both business and space flight. Such problems use a separate
-sigmoid for every label instead of one softmax, because the labels do not
-compete for probability :cite:`Tsoumakas.Katakis.2007`. In ordinal regression, the classes are
-ordered, as age groups from infant to senior are, and a loss that ignores the
-order discards information :cite:`Moon.Smola.Chang.ea.2010`.
+Before moving on, keep in mind our modeling assumption: every example
+belongs to *exactly one* class from an *unordered* set. Two important
+variants relax these conditions. In *multi-label classification*, several
+categories may apply simultaneously—for example, a news article covering
+both business and space flight—so we use an independent sigmoid for each
+label rather than a competing softmax :cite:`Tsoumakas.Katakis.2007`. In
+*ordinal regression*, categories follow an intrinsic order (such as age
+brackets from infant to senior), and ignoring that order throws away
+valuable structure :cite:`Moon.Smola.Chang.ea.2010`.
 
 ## The Cross-Entropy Loss
 :label:`subsec_softmax-regression-loss-func`
 
-We now need a loss that measures how well the predicted probabilities
-$\hat{\mathbf{y}}$ fit the labels. We could invent one, but there is no
-need. The squared loss of :numref:`sec_linear_regression` was not chosen for
-convenience alone: it fell out of a model of how the labels arise, as the
-negative log-likelihood of the observed labels. Let us see what the same
-recipe produces for class labels.
+Now that we can map features $\mathbf{x}$ to class probabilities
+$\hat{\mathbf{y}}$, we need a loss function to measure how well those
+probabilities match the observed labels. Rather than inventing one ad hoc,
+we invoke the same maximum-likelihood principle that gave us squared error
+in :numref:`sec_linear_regression`: specify how labels are generated from
+our predictions and minimize the negative log-likelihood of the dataset.
 
 ### Maximum Likelihood
 
-The softmax output is a probability distribution over the classes, so it
-defines a model of the labels: given features $\mathbf{x}$, an example
-belongs to class $j$ with probability $\hat{y}_j$. The probability of the
-observed label $y$ is $\hat{y}_y$, the entry of $\hat{\mathbf{y}}$ at the
-true class. With the one-hot vector we can write it as a product over all
-classes,
+The softmax vector $\hat{\mathbf{y}}$ directly defines a probabilistic
+model of the label: given features $\mathbf{x}$, the example belongs to
+class $j$ with probability $\hat{y}_j$. The probability assigned to the
+observed label $y$ is therefore $\hat{y}_y$, which we can write neatly as a
+product over all classes using the one-hot vector $\mathbf{y}$:
 
 $$P(y \mid \mathbf{x}) = \hat{y}_y = \prod_{j=1}^q \hat{y}_j^{y_j},$$
 
-since every factor other than the one for the true class is raised to the
-power 0. This is the *categorical distribution*, which plays the role that
-the Gaussian noise model played for linear regression.
+because every factor other than the true class is raised to the zeroth
+power. This *categorical distribution* plays the exact role here that
+Gaussian observation noise played in linear regression.
 
-If the labels of different examples are drawn independently, the
-probability of all $n$ labels is the product of these probabilities. As in
-linear regression, we take the negative logarithm, which turns the product
-into a sum and the maximization into a minimization:
+Assuming that the $n$ training labels are drawn independently given their
+features, the likelihood of the entire dataset factors into the product of
+per-example probabilities. Taking the negative logarithm turns that product
+into a sum and converts maximization into minimization:
 
 $$-\log \prod_{i=1}^n P(y^{(i)} \mid \mathbf{x}^{(i)}) = \sum_{i=1}^n l(\mathbf{y}^{(i)}, \hat{\mathbf{y}}^{(i)}),$$
 
-where the loss of one example is
+where the per-example loss is
 
 $$l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \hat{y}_y.$$
 :eqlabel:`eq_l_cross_entropy`
 
-The loss is minus the logarithm of the probability that the model assigns to
-the true class. It is called the *cross-entropy loss*, for a reason we give
-below. For the logits $(1.0, 2.2, 0.3)$ and an image of a chicken, the loss is
-$-\log 0.69 \approx 0.37$. Had the image shown a dog, to which the model
-gives probability 0.10, the loss would be $-\log 0.10 \approx 2.3$, about
-six times as much.
+In words, the loss is simply the negative logarithm of the probability our
+model assigns to the true class—known as the *cross-entropy loss* for an
+information-theoretic reason we unpack shortly. With logits
+$(1.0, 2.2, 0.3)$ on an image of a chicken ($\hat{y}_2 = 0.69$), the loss
+is $-\log 0.69 \approx 0.37$. If the image were actually a dog
+($\hat{y}_3 = 0.10$), the loss jumps to $-\log 0.10 \approx 2.3$, more than
+six times as large.
 
-Since every $\hat{y}_j$ lies between 0 and 1, the loss is never negative. It
-is 0 only if the model gives the true class probability 1, which finite
-logits never do, since every exponential is positive. At the other extreme,
-a confident mistake costs without limit: as $\hat{y}_y \to 0$, the loss
-grows to infinity.
+Because every probability $\hat{y}_j$ lies in $(0, 1)$, the loss is always
+nonnegative. It vanishes only when the model assigns probability 1 to the
+true class—something finite logits can approach arbitrarily closely but
+never actually attain, since $\exp(o_k) > 0$ for every class. Conversely,
+a confident blunder incurs an unbounded penalty: as $\hat{y}_y \to 0$,
+$-\log \hat{y}_y \to \infty$.
 
 ### The Gradient
 :label:`subsec_softmax_and_derivatives`
 
-Training by minibatch SGD needs the gradient of the loss with respect to the
-parameters. We first differentiate with respect to the logits. Substituting
-the softmax :eqref:`eq_softmax_y_and_o` into the loss and using
-$\sum_j y_j = 1$, we obtain
+To optimize this objective with minibatch SGD, let us differentiate the
+loss with respect to the logits $\mathbf{o}$. Substituting
+:eqref:`eq_softmax_y_and_o` into :eqref:`eq_l_cross_entropy` and using
+$\sum_j y_j = 1$ gives
 
 $$
 \begin{aligned}
@@ -295,38 +319,42 @@ l(\mathbf{y}, \hat{\mathbf{y}}) &= -\sum_{j=1}^q y_j \log \frac{\exp(o_j)}{\sum_
 \end{aligned}
 $$
 
-The loss is the *log-sum-exp* of all logits minus the logit of the true
-class. Log-sum-exp is a smooth version of the maximum: it exceeds the largest
-logit by at most $\log q$ (exercise :exref:`ex_softmax-regression-realsoftmax`),
-so the loss is small when the true class leads all others by a wide margin.
-The derivative of log-sum-exp with respect to $o_j$ is
-$\exp(o_j) / \sum_k \exp(o_k)$, the softmax itself. Therefore
+Thus the cross-entropy loss equals the *log-sum-exp* of all logits minus
+the true class's logit. Because log-sum-exp is a smooth upper approximation
+to the maximum—exceeding $\max_k o_k$ by at most $\log q$ (exercise
+:exref:`ex_softmax-regression-realsoftmax`)—the loss becomes small whenever
+the true class's logit leads every rival by a comfortable margin.
+Differentiating $\log \sum_k \exp(o_k)$ with respect to $o_j$ yields
+$\exp(o_j) / \sum_k \exp(o_k)$, the softmax itself, so
 
 $$\frac{\partial l}{\partial o_j} = \mathrm{softmax}(\mathbf{o})_j - y_j, \quad \textrm{that is,} \quad \nabla_{\mathbf{o}}\, l = \hat{\mathbf{y}} - \mathbf{y}.$$
 
-This is the simplicity that the exponential promised: the gradient is the
-predicted distribution minus the observed one. For the
-chicken it is $(0.21, 0.69, 0.10) - (0, 1, 0) = (0.21, -0.31, 0.10)$. A
-gradient step raises the logit of the true class and lowers the others, each
-in proportion to the probability that it received by mistake. The entries
-sum to zero, as they must, since adding a constant to all logits leaves the
-loss unchanged.
+Here is the payoff promised by the exponential: the gradient is simply the
+difference between the model's predicted probabilities and what actually
+happened. For our chicken image,
+$\nabla_{\mathbf{o}}\, l = (0.21, 0.69, 0.10) - (0, 1, 0) = (0.21, -0.31, 0.10)$.
+A gradient descent step therefore boosts the true class's logit while
+pushing down every rival logit in exact proportion to the probability mass
+it wrongly claimed. Notice too that the gradient components sum to zero, as
+they must given the shift invariance of the softmax.
 
-Since $o_j = \mathbf{w}_j^\top \mathbf{x} + b_j$, the chain rule gives the
-gradients for the parameters,
-$\partial l / \partial \mathbf{w}_j = (\hat{y}_j - y_j)\,\mathbf{x}$ and
-$\partial l / \partial b_j = \hat{y}_j - y_j$. A step moves the weights of
-the true class toward $\mathbf{x}$ and those of every other class away from
-it. For a minibatch whose one-hot labels are the rows of
-$\mathbf{Y} \in \{0, 1\}^{n \times q}$, the gradient of the average loss with
-respect to $\mathbf{W}$ is
-$\frac{1}{n}\mathbf{X}^\top(\hat{\mathbf{Y}} - \mathbf{Y})$, a $d \times q$
-matrix like $\mathbf{W}$.
+Applying the chain rule through $o_j = \mathbf{w}_j^\top \mathbf{x} + b_j$
+gives $\partial l / \partial \mathbf{w}_j = (\hat{y}_j - y_j)\,\mathbf{x}$
+and $\partial l / \partial b_j = \hat{y}_j - y_j$: each update pulls the
+true class's weight vector toward $\mathbf{x}$ and nudges every other
+class's weights away from it. Over a minibatch with one-hot label rows
+$\mathbf{Y} \in \{0, 1\}^{n \times q}$, the average gradient with respect to
+$\mathbf{W}$ is cleanly
+$\frac{1}{n}\mathbf{X}^\top(\hat{\mathbf{Y}} - \mathbf{Y})$, matching the
+$d \times q$ shape of $\mathbf{W}$.
 
-Linear regression has a gradient of the same form: the derivative of
-$\frac{1}{2}(\hat{y} - y)^2$ with respect to the prediction is the error
-$\hat{y} - y$. This is no coincidence, and :numref:`subsec_mdl-glm` explains
-it. It is instructive to set the two models side by side:
+Notice the uncanny parallel with linear regression, where the derivative of
+$\frac{1}{2}(\hat{y} - y)^2$ with respect to $\hat{y}$ was also prediction
+minus observation, $\hat{y} - y$. This is no coincidence: in every
+exponential-family generalized linear model, the gradient of the negative
+log-likelihood with respect to the natural parameters takes this exact
+residual form (:numref:`subsec_mdl-glm`). Placing both models side by side
+highlights the unity:
 
 | | Linear regression | Softmax regression |
 |:--|:--|:--|
@@ -336,171 +364,187 @@ it. It is instructive to set the two models side by side:
 | loss (negative log-likelihood) | $\frac{1}{2}(\hat{y} - y)^2$ | $-\log \hat{y}_y$ |
 | gradient | $\hat{y} - y$ with respect to $\hat{y}$ | $\hat{\mathbf{y}} - \mathbf{y}$ with respect to $\mathbf{o}$ |
 
-The loss is also convex in the logits. With two classes this is easy to
-check: with $o = o_1 - o_2$ as before, the loss of an example of class 1 is
-$\log(1 + \exp(-o))$, and its second derivative is
-$\sigma(o)(1 - \sigma(o)) > 0$, the variance of a coin that shows heads
-with probability $\sigma(o)$.
-With $q$ classes the variance becomes the covariance matrix of the predicted
-distribution, which is positive semidefinite (exercise
-:exref:`ex_softmax-regression-hessian`). Since the logits are affine in
-$\mathbf{W}$ and $\mathbf{b}$, the training loss is convex in the parameters,
-and every local minimum is a global one. Gradient descent cannot get stuck in
-a poor one, a comfort that the deeper models of later chapters do not offer.
+Better still, the cross-entropy loss is *convex* in the logits. For two
+classes ($o = o_1 - o_2$), the loss for class 1 is $\log(1 + \exp(-o))$,
+whose second derivative is $\sigma(o)(1 - \sigma(o)) > 0$—the variance of a
+Bernoulli trial with success probability $\sigma(o)$. With $q$ classes,
+this second derivative generalizes to the covariance matrix of the
+predicted categorical distribution, which is always positive semidefinite
+(exercise :exref:`ex_softmax-regression-hessian`). Because the logits are
+affine functions of $(\mathbf{W}, \mathbf{b})$, the training objective is
+convex in all parameters, ensuring that every local minimum is a global
+minimum—a mathematical luxury we will have to leave behind once we build
+deep nonlinear networks in later chapters.
 
 ### Entropy and Cross-Entropy
 :label:`subsec_info_theory_basics`
 
-The name of the loss comes from information theory, which measures
-information by surprise. An outcome of probability $p$ carries the
-*surprisal* $-\log p$. An outcome that was certain ($p = 1$) does not
-surprise us at all, and the rarer an outcome, the larger its surprisal. Our
-loss is the surprisal of the true label under the prediction of the model.
+The term *cross-entropy* originates in information theory, the discipline
+founded by Claude Shannon to study compression and communication. Why does
+compression connect to prediction? Think of compressing a stream of
+symbols: if you can predict the next symbol with certainty, you need send
+no information at all; easy to predict means easy to compress. When an
+event of probability $p$ occurs, Shannon defined its *surprisal* as
+$-\log p$: a certain outcome ($p = 1$) causes zero surprise, while rarer
+events cause greater surprise. Our loss $-\log \hat{y}_y$ is literally the
+surprisal of the true label under our model's predicted probabilities.
 
-Suppose that outcomes are drawn from a distribution $\mathbf{p}$ over $q$
-classes. The *entropy* of $\mathbf{p}$ is the expected surprisal of an
-observer who knows $\mathbf{p}$,
+For a true distribution $\mathbf{p}$ over $q$ classes, the *entropy*
+$H(\mathbf{p})$ is the expected surprisal of an observer who knows
+$\mathbf{p}$ exactly:
 
 $$H(\mathbf{p}) = -\sum_{j=1}^q p_j \log p_j.$$
 
-It is 0 when one outcome is certain and largest, $\log q$, when all outcomes
-are equally likely. With the natural logarithm it is measured in *nats*;
-with $\log_2$ it is measured in bits, and one nat is $1/\log 2 \approx 1.44$
-bits.
+Entropy equals 0 when one outcome is certain and reaches its maximum,
+$\log q$, when all $q$ outcomes are equally likely. Using natural
+logarithms measures entropy in *nats* rather than base-2 bits, where one
+nat equals $1/\log 2 \approx 1.44$ bits.
 
-An observer who predicts the same outcomes with a distribution
-$\hat{\mathbf{p}}$ instead has the expected surprisal
+If an observer instead models the same data stream with an approximate
+distribution $\hat{\mathbf{p}}$, their expected surprisal becomes the
+*cross-entropy* of $\hat{\mathbf{p}}$ relative to $\mathbf{p}$:
 
-$$H(\mathbf{p}, \hat{\mathbf{p}}) = -\sum_{j=1}^q p_j \log \hat{p}_j,$$
+$$H(\mathbf{p}, \hat{\mathbf{p}}) = -\sum_{j=1}^q p_j \log \hat{p}_j.$$
 
-the *cross-entropy* of $\hat{\mathbf{p}}$ relative to $\mathbf{p}$. The loss
-:eqref:`eq_l_cross_entropy` is the cross-entropy $H(\mathbf{y}, \hat{\mathbf{y}})$
-between the one-hot label and the prediction, hence its name. One fact about
-these quantities tells us what minimizing the loss achieves: predicting with
-the wrong distribution can only increase the average surprise,
+Comparing this with :eqref:`eq_l_cross_entropy`, our classification loss is
+precisely $H(\mathbf{y}, \hat{\mathbf{y}})$—the cross-entropy between the
+one-hot label and the predicted distribution. A cornerstone result, Gibbs'
+inequality (proved in :numref:`sec_mdl-information_theory`), shows that
+misstating the true probabilities can only increase average surprise:
 
 $$H(\mathbf{p}, \hat{\mathbf{p}}) \geq H(\mathbf{p}), \quad \textrm{with equality if and only if } \hat{\mathbf{p}} = \mathbf{p}.$$
 
-This is Gibbs' inequality, proved in :numref:`sec_mdl-information_theory`.
-That the entropy is also the average length of the shortest code for the
-outcomes is shown in :numref:`sec_mdl-coding-compression`.
+In compression terms, $H(\mathbf{p})$ is the shortest average code length
+achievable (:numref:`sec_mdl-coding-compression`), and cross-entropy
+measures how many nats we spend when encoding outcomes from $\mathbf{p}$
+using a code tailored to $\hat{\mathbf{p}}$. Thus we can interpret
+cross-entropy training in two equivalent ways: (i) maximizing the
+likelihood of the observed labels, or (ii) minimizing the average
+surprisal—and code length—needed to communicate them.
 
-Labels are often uncertain even when the features are known. A small,
-blurry photo may show a shirt with probability 0.6 and a T-shirt with
-probability 0.4. If photos like it carry these labels at random according to
-$\mathbf{p} = (0.6, 0.4)$, the expected loss of a prediction
-$\hat{\mathbf{y}}$ is $H(\mathbf{p}, \hat{\mathbf{y}})$. Predicting
-$(0.6, 0.4)$ costs $H(\mathbf{p}) = 0.67$ nats on average, while the more
-confident $(0.9, 0.1)$ costs $0.98$ nats. By Gibbs' inequality, the expected
-loss is smallest when the model reports the true probabilities, so
-cross-entropy rewards honest probabilities rather than exaggerated ones. For
-the same reason the loss accepts labels that are themselves distributions,
-such as the fractions of annotators who chose each class: the first form of
-:eqref:`eq_l_cross_entropy`, $-\sum_j y_j \log \hat{y}_j$, applies
-unchanged with a probability vector in place of the one-hot $\mathbf{y}$
-(the second form, $-\log \hat{y}_y$, needs a one-hot label).
+This perspective shines whenever labels are inherently uncertain even given
+the input. Suppose a tiny, blurry photo could plausibly be a shirt (60%) or
+a T-shirt (40%), so examples like it carry random labels drawn from
+$\mathbf{p} = (0.6, 0.4)$. A model's expected loss is then
+$H(\mathbf{p}, \hat{\mathbf{y}})$: reporting the honest probabilities
+$(0.6, 0.4)$ incurs $H(\mathbf{p}) = 0.67$ nats, whereas overconfidently
+guessing $(0.9, 0.1)$ drives the expected loss up to $0.98$ nats. By Gibbs'
+inequality, cross-entropy uniquely rewards calibrated, honest probabilities
+rather than exaggerated certainty. Better still, the general sum
+$-\sum_j y_j \log \hat{y}_j$ works unchanged when targets $\mathbf{y}$ are
+themselves *soft* probability vectors—for instance, the fraction of human
+annotators voting for each class—whereas the shorthand $-\log \hat{y}_y$
+applies specifically to hard one-hot labels.
 
 ## Accuracy and Confidence
 
-A classifier is usually judged by its *accuracy*, the fraction of examples
-on which the class with the largest logit is the true class, or by its error
-rate, one minus the accuracy. Yet accuracy is not what we train for. We
-minimize cross-entropy, and it is worth understanding why, and what this
-choice does to the confidence of the model.
+In practice, classifiers are most often evaluated by *accuracy*—the
+fraction of examples where the top-scoring class matches the true label—or
+equivalently by *error rate* ($1 - \text{accuracy}$). Yet we do not train
+by minimizing the error rate directly; we minimize cross-entropy instead.
+Understanding why—and how this choice shapes the model's confidence—prevents
+several common misconceptions.
 
 ### The Error Rate
 
-Why not minimize the number of training errors directly? Whether an example
-is classified correctly depends on its *margin*, the logit of the true class
-minus the largest other logit,
+Whether an example is classified correctly hinges on its *margin*, defined
+as the true class's logit minus the highest competing logit:
 
 $$m = o_y - \max_{j \neq y} o_j.$$
 
-The example is classified correctly if $m > 0$ and wrongly if $m < 0$. Its
-error, 1 for a mistake and 0 otherwise, is a step function of the margin
-(:numref:`fig_mdl-clf-margin-losses`). Wherever the step has a derivative,
-the derivative is zero. A small change of the weights either changes no
-decision, so the number of errors stays the same, or it flips a decision, so
-the number jumps. Gradient descent gets no direction from it.
+The prediction is right whenever $m > 0$ and wrong whenever $m < 0$. The
+zero-one classification error (1 for a mistake, 0 for a correct prediction)
+is therefore a discontinuous step function of $m$
+(:numref:`fig_mdl-clf-margin-losses`). Everywhere the step function is
+differentiable, its derivative is zero: a tiny tweak to the weights either
+flips no decisions (zero change in error) or suddenly flips one (an abrupt
+jump). Gradient descent receives no usable signal from it at all.
 
-Cross-entropy is a smooth function of the margin. With two classes, the
-probability of the true class is $\sigma(m)$ by :eqref:`eq_softmax_to_sigmoid`,
-so the loss is
+Cross-entropy replaces that flat, jagged step with a smooth, convex
+surrogate in the margin. For two classes, the true class has probability
+$\sigma(m)$ by :eqref:`eq_softmax_to_sigmoid`, giving
 
 $$l = -\log \sigma(m) = \log\left(1 + \exp(-m)\right).$$
 
-With $q$ classes, the loss
+For $q$ classes,
 $\log \sum_k \exp(o_k) - o_y = \log\left(1 + \sum_{j \neq y} \exp(o_j - o_y)\right)$
-is at least as large, since the sum contains the term $\exp(-m)$.
-:numref:`fig_mdl-clf-margin-losses` shows the two-class loss. It decreases
-everywhere, so every example contributes a gradient that pushes its margin
-up, and the misclassified examples push hardest. It also lies above the
-error: at $m \leq 0$ the loss is at least $\log 2$, so the sum of the losses
-divided by $\log 2$ bounds the number of training errors. A model with an
-average training loss of 0.07 nats misclassifies at most
-$0.07 / \log 2 \approx 10\%$ of its training examples. The bound is crude,
-though. At an average loss of 0.45 nats it allows 65% errors, and a model
-with such a loss typically makes far fewer, since the examples that it
-classifies correctly contribute loss as well. What the bound does guarantee
-is that driving the loss toward zero cannot leave the error rate high, and
-the loss, unlike the step, is a function that gradient descent can follow.
+is at least as large, because the sum contains $\exp(-m)$. As
+:numref:`fig_mdl-clf-margin-losses` illustrates, this surrogate decreases
+monotonically across the entire real line, so every example supplies a
+nonzero gradient pushing its margin upward—with misclassified examples
+pushing hardest. Moreover, cross-entropy upper-bounds the error rate:
+whenever $m \leq 0$, the loss is at least $\log 2$, so dividing the total
+loss by $\log 2$ upper-bounds the number of training mistakes. For example,
+an average training loss of 0.07 nats guarantees at most
+$0.07 / \log 2 \approx 10\%$ training errors. Although this bound is loose
+(at 0.45 nats it permits up to 65% errors, whereas real models err far less
+often because correctly classified examples also contribute positive loss),
+it ensures that driving cross-entropy down cannot leave the error rate
+high—while giving gradient descent a smooth slope to follow.
 
 ![The error and the cross-entropy loss of an example as functions of its margin $m$, the logit of the true class minus the largest other logit. The error is a step: 1 for a misclassified example ($m < 0$) and 0 otherwise. The two-class cross-entropy $\log(1 + e^{-m})$, divided by $\log 2$ so that it is measured in bits, is smooth and decreasing, equals 1 at $m = 0$, and lies above the error everywhere.](../img/mdl-clf-margin-losses.svg)
 :label:`fig_mdl-clf-margin-losses`
 
-The loss never reaches zero. It keeps decreasing after the margin turns
-positive, so it keeps rewarding the model for raising its confidence in
-decisions that are already right. Raising the probability of the true class
-from 0.51 to 0.99 changes no decision, but lowers the loss from 0.67 to
-0.01.
+Crucially, cross-entropy never bottoms out at zero: even after the margin
+turns positive and the decision is already right, it keeps rewarding larger
+margins. Pushing $\hat{y}_y$ from 0.51 to 0.99 changes not a single class
+prediction, yet cuts the loss from 0.67 down to 0.01.
 
 ### Calibration and Temperature
 
-Taken to its limit, this reward for confidence has a curious consequence.
-Suppose that some parameters classify every training example correctly.
-Multiplying $\mathbf{W}$ and $\mathbf{b}$ by a constant larger than 1
-multiplies every margin by it and lowers every loss, so the training loss
-has no minimum, and gradient descent keeps growing the weights (exercise
-:exref:`ex_softmax-regression-separable`). The decisions stay as they were.
-Only the probabilities move, toward 0 and 1.
+Pushed to its logical extreme, this relentless reward for confidence has a
+striking consequence. Whenever a dataset is linearly separable—meaning some
+$(\mathbf{W}, \mathbf{b})$ classifies every training example without error—scaling
+those parameters up by any factor $c > 1$ scales every margin by $c$ and
+strictly lowers the training loss. Consequently, the unregularized training
+loss has *no finite minimum*, and gradient descent will grow the weights
+without bound (exercise :exref:`ex_softmax-regression-separable`). The
+decision boundaries never budge; only the predicted probabilities march
+steadily toward 0 and 1.
 
-The scale of the logits thus sets the confidence of a prediction and
-nothing else. Dividing all logits by a *temperature* $T > 0$ before the
+The overall scale of the logits therefore governs *confidence* alone.
+Dividing all logits by a positive *temperature* $T > 0$ prior to the
 softmax,
 
 $$\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o} / T),$$
 
-sharpens the distribution for $T < 1$ and flattens it for $T > 1$
-(:numref:`fig_mdl-clf-temperature`), but it keeps the order of the logits,
-so the predicted class, and with it the accuracy, does not change. The name
-comes from statistical physics, where the same formula gives the occupation
-of energy states at temperature $T$
+sharpens the predicted distribution when $T < 1$ and flattens it toward
+uniformity when $T > 1$ (:numref:`fig_mdl-clf-temperature`), all while
+leaving the ranking of the logits—and hence the predicted class and
+accuracy—completely untouched. Both the softmax formula and the term
+*temperature* trace back to Boltzmann and Gibbs in statistical physics,
+where the probability of occupying a physical state of energy $E$ at
+temperature $T$ is proportional to $\exp(-E / kT)$
 (:numref:`subsec_mdl-softmax-origins`).
 
 ![Softmax probabilities of the logits $\mathbf{o} = (1.0, 2.2, 0.3)$ for cat, chicken, and dog at three temperatures. At $T = 0.25$ nearly all probability goes to the chicken, $T = 1$ is the plain softmax, and at $T = 4$ the distribution is close to uniform. The order of the bars is the same in all three panels.](../img/mdl-clf-temperature.svg)
 :label:`fig_mdl-clf-temperature`
 
-A low loss, then, does not certify the probabilities. Whether a prediction
-made with confidence 0.9 is right nine times out of ten is something we
-have to measure, and :numref:`sec_classification` measures it for the model
-we are about to train. Nor does a low training loss tell us how well the
-model classifies images that it has not seen. For that we need data.
+A low training loss therefore does not automatically vouch for a model's
+probabilities. Whether predictions made with 90% confidence are actually
+correct nine times out of ten is an empirical question we must test on
+held-out data—a check we carry out in :numref:`sec_classification`. First,
+however, we need a real image classification dataset to train and test on.
 
 ## Summary
 
-Softmax regression computes one linear score, or logit, per class,
-$\mathbf{o} = \mathbf{W}^\top\mathbf{x} + \mathbf{b}$, and turns the scores
-into probabilities with the softmax, which exponentiates and normalizes
-them; only differences between logits matter, and the boundaries between
-classes are hyperplanes. Reading the output as a categorical distribution
-of the label and maximizing the likelihood of the observed labels gives the
-cross-entropy loss $-\log \hat{y}_y$, just as Gaussian noise gave the
-squared loss for regression. The loss is convex, and its gradient with
-respect to the logits is again prediction minus label,
-$\hat{\mathbf{y}} - \mathbf{y}$. It bounds the number of errors, if loosely,
-by a function that gradient descent can follow, and it keeps rewarding
-confidence in decisions that are already right, so the probabilities of a
-trained model have to be checked before they are trusted.
+Softmax regression generalizes linear regression to unordered multi-class
+classification by computing one linear logit per class,
+$\mathbf{o} = \mathbf{W}^\top\mathbf{x} + \mathbf{b}$, and converting those
+logits into a valid probability distribution via the softmax operation
+$\hat{y}_j = \exp(o_j) / \sum_k \exp(o_k)$. Because only differences
+between logits affect the output, the model reduces to logistic regression
+for two classes and partitions input space along flat hyperplane decision
+boundaries. Modeling the observed label as a draw from the predicted
+categorical distribution and minimizing its negative log-likelihood yields
+the convex cross-entropy loss $-\log \hat{y}_y$—equivalently, the
+information-theoretic surprisal of the true class—whose gradient with
+respect to the logits takes the clean residual form
+$\hat{\mathbf{y}} - \mathbf{y}$. Unlike the discontinuous zero-one error
+rate, cross-entropy provides a smooth, convex upper bound that gradient
+descent can optimize, though its continual push toward higher margins means
+that predicted probabilities should always be checked for calibration on
+held-out data.
 
 ## Exercises
 

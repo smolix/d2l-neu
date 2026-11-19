@@ -6,18 +6,21 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Concise Implementation
 :label:`sec_softmax_concise`
 
-In :numref:`sec_softmax_scratch` we wrote every part of softmax regression by
-hand. In practice nobody does. We use the building blocks of a deep learning
-framework instead, as :numref:`sec_linear_concise` did for linear regression:
-a fully connected layer that holds the weights and the bias, and a
-cross-entropy loss. If saving lines of code were all there is to it, this
-section could be very short. The framework's loss, however, differs from ours
-in one respect that matters: it takes the logits rather than the
-probabilities. Recall that the softmax we wrote by hand returns `NaN` once a
-logit grows large, and that the floor under its probabilities kept the loss
-finite only by cutting off the gradient. How can the loss be computed so that
-it stays finite, and keeps its gradient, for every value of the logits? The
-answer, it turns out, is never to form the probabilities at all.
+Just as high-level deep learning APIs simplified linear regression in
+:numref:`sec_linear_concise`, they make softmax regression dramatically
+cleaner and safer to implement. In :numref:`sec_softmax_scratch` we built
+every piece by hand; here we delegate the parameters to a built-in fully
+connected layer and the objective to the framework's cross-entropy loss.
+
+If trimming boilerplate were the whole story, this section would take five
+lines. Yet the framework's loss introduces one crucial design difference:
+*it accepts raw logits rather than probabilities*. Recall from
+:numref:`sec_softmax_scratch` that our naive softmax explodes to `NaN` on
+large logits, while clamping tiny probabilities in the loss prevents
+$-\infty$ only by killing the gradient. How can we compute cross-entropy so
+that both the loss and its gradient stay finite for *any* logit vector? As
+we are about to see, the secret is never to materialize the probabilities
+at all.
 
 ```{.python .input #softmax-regression-concise-concise-implementation-of-softmax-regression}
 %%tab mxnet
@@ -60,38 +63,41 @@ from d2l import jax as d2l
 
 ## The Model
 
-As in :numref:`sec_linear_concise`, a fully connected layer of the framework
-holds the weights $\mathbf{W}$ and the bias $\mathbf{b}$ and computes
-$\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$. It has 10 outputs, one per
-class. The model flattens each image into a vector of 784 pixel values
-before the layer, as the scratch implementation did, and its `forward`
-returns the logits. Note that we set the initial values ourselves: the
-weights start from a normal distribution with mean 0 and standard deviation
-0.01 and the biases at 0, again as in the scratch implementation. Each
-framework's layer would otherwise draw its weights from a default
-distribution of its own, and the four tabs would train different models.
+As in :numref:`sec_linear_concise`, a single built-in fully connected layer
+stores $\mathbf{W}$ and $\mathbf{b}$ and evaluates
+$\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$ with 10 outputs—one per
+garment class. Just as before, we flatten each four-dimensional image batch
+into rows of 784 pixels before the linear layer, and `forward` returns the
+unnormalized logits directly. To keep all four frameworks aligned with our
+from-scratch baseline, we explicitly initialize weights from
+$\mathcal{N}(0, 0.01^2)$ and biases to 0; otherwise, each framework would
+apply its own default initializer and train slightly different models.
 
 :begin_tab:`mxnet`
-The `Dense` layer flattens its input itself, so the $(n, 1, 28, 28)$ images
-become $n \times 784$ inputs. Gluon creates the weights at the first forward
-pass, once the number of inputs is known, and draws them as `initialize`
-prescribes.
+Gluon's `Dense` layer automatically flattens higher-order inputs while
+preserving the leading batch dimension, converting $(n, 1, 28, 28)$ tensors
+directly into $n \times 784$ matrices. It allocates its weights on the
+first forward pass once the input width is known and populates them
+according to `initialize`.
 :end_tab:
 
 :begin_tab:`pytorch`
-As in :numref:`sec_linear_concise`, the lazy layer learns its input size at
-the first forward pass, and the `Trainer` calls `weight_init` after it.
+We precede `nn.LazyLinear` with `nn.Flatten()` to collapse the channel,
+height, and width axes into a single feature dimension. As in
+:numref:`sec_linear_concise`, `LazyLinear` infers its input dimension on
+the first forward pass, after which `Trainer` invokes `weight_init`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Keras creates the weights of `Dense` at the first forward pass, once the
-number of inputs is known, and draws them from the `kernel_initializer`.
+A `Flatten` layer converts the four-dimensional batch into two dimensions
+while preserving the batch axis. Keras materializes the `Dense` weights on
+the first forward pass using `kernel_initializer`.
 :end_tab:
 
 :begin_tab:`jax`
-NNX layers create their parameters when they are constructed, so
-`nnx.Linear` needs the number of inputs up front: $28 \times 28 = 784$ by
-default, and `num_inputs` for images of another size.
+Because Flax NNX layers allocate parameters upon construction, `nnx.Linear`
+takes the flattened input size up front—784 by default for $28 \times 28$
+images, or a custom `num_inputs` when resizing is enabled.
 :end_tab:
 
 ```{.python .input #softmax-regression-concise-defining-the-model}
@@ -167,37 +173,40 @@ class SoftmaxRegression(d2l.Classifier):  #@save
 
 ### Overflow and Underflow
 
-The scratch implementation computes the probabilities first and takes the
-logarithm afterwards, and each step can fail in floating point. Single
-precision stores numbers up to about $3.4 \times 10^{38}$, so $\exp(o)$
-overflows to infinity once $o$ exceeds about 88, which is what turned the
-softmax of $(1000, 0, 0)$ into `NaN` in :numref:`sec_softmax_scratch`. This
-failure is the easy one. A common shift of all logits leaves the softmax
-unchanged, so subtracting the largest logit, $o_{\max} = \max_k o_k$, from
-each of them removes it, as we saw there. Unfortunately, the shift does
-nothing for the lower end. For the logits $(0, -200, 0)$ the probability of
-the second class is about $e^{-200}/2$, smaller than any positive
-single-precision number, and so it is stored as 0; this happens to every
-logit that lies more than about 104 below the largest one. The logarithm of
-this 0 is $-\infty$, and backpropagation through it produces `NaN`. The
-floor of the scratch loss hides the infinity and discards the gradient with
-it. Both failures have the same cause: we formed a probability that the
-loss never needed.
+Our scratch implementation computes probabilities first and takes their
+logarithm afterward—a two-step pipeline that looks harmless on paper yet
+invites floating-point disaster at both extremes. Single-precision floats
+top out around $3.4 \times 10^{38}$, so $\exp(o)$ overflows to $\infty$
+whenever $o > 88$; that is precisely what turned `softmax([1000, 0, 0])`
+into `NaN` in :numref:`sec_softmax_scratch`. Overflow is the easy bug to
+patch: because softmax is shift-invariant, subtracting the row maximum
+$o_{\max} = \max_k o_k$ ensures every exponent is $\leq 0$.
+
+Unfortunately, shifting does nothing to rescue the lower end. Given logits
+$(0, -200, 0)$, the second class has probability roughly $e^{-200}/2$—far
+smaller than the smallest positive float32 value—so it *underflows* cleanly
+to exact `0.0` (this happens to any logit more than about 104 below
+$o_{\max}$). Taking the logarithm of `0.0` yields $-\infty$, and
+backpropagating through it unleashes the dreaded screenful of `NaN`s. The
+scratch loss's `1e-12` clamp merely swept that infinity under the rug at
+the cost of zeroing out the gradient. Both hazards stem from the exact same
+mistake: computing intermediate probabilities that the loss never actually
+needs.
 
 ### The Log-Sum-Exp Form
 
-What does the loss need? Only the logarithm of one probability, and the
-logarithm of a quotient is a difference. Taking the logarithm of the softmax
-on paper, before anything is computed, removes the division:
+What does cross-entropy genuinely need? Only the *logarithm* of one
+probability—and by combining softmax and the logarithm algebraically *before*
+evaluating any exponentials, the division turns into a simple subtraction:
 
 $$
 \log \hat{y}_j = o_j - \log \sum_k \exp (o_k).
 $$
 
-This is the key step. For an example of true class $y$, the loss
-$l = -\log \hat y_y$ becomes a function of the logits alone, with no
-probability in between. As it stands the sum can still overflow, so we pull
-the factor $\exp(o_{\max})$ out of it:
+For an example with true class $y$, the loss $l = -\log \hat y_y$ becomes a
+direct function of the logits, bypassing probabilities altogether. To keep
+the sum itself from overflowing, we factor $\exp(o_{\max})$ out of the
+logarithm (the classic [LogSumExp trick](https://en.wikipedia.org/wiki/LogSumExp)):
 
 $$
 l(y, \mathbf{o}) = \log \sum_{k} \exp(o_k) - o_y =
@@ -205,48 +214,51 @@ o_{\max} + \log \sum_{k} \exp(o_k - o_{\max}) - o_y.
 $$
 :eqlabel:`eq_softmax-concise-lse-loss`
 
-The two sides are equal, but only the right side should be handed to a
-computer. All its exponents are at most 0, and one of them is equal to 0, so
-the sum lies between 1 and $q$ and its logarithm between 0 and $\log q$.
-Every term is an ordinary number, whatever the logits. For $(0, -200, 0)$
-with the second class as the true one, the loss is
-$\log 2 + 200 \approx 200.7$: large, as it should be for so wrong a
-prediction, but finite. The first term, $\log \sum_k \exp(o_k)$, is the
-*log-sum-exp* of the logits that :numref:`subsec_softmax_and_derivatives`
-differentiated.
+Mathematically both sides are identical, yet numerically they are worlds
+apart. On the right-hand side, every exponent $o_k - o_{\max}$ is at most
+$0$ and at least one equals $0$, pinning the sum strictly inside $[1, q]$
+and its logarithm inside $[0, \log q]$. No overflow, no underflow, no
+$\log 0$: every term stays finite for arbitrary logits. On $(0, -200, 0)$
+with true class 1 (the second class), the loss evaluates smoothly to
+$\log 2 + 200 \approx 200.7$—appropriately steep for a confident blunder,
+yet completely well-behaved. Notice that the leading term
+$\log \sum_k \exp(o_k)$ is the exact *log-sum-exp* we differentiated in
+:numref:`subsec_softmax_and_derivatives`.
 
 ### The Framework Loss
 
-The cross-entropy losses of the frameworks compute
-:eqref:`eq_softmax-concise-lse-loss` when they are given logits. They never
-form the probabilities, so neither the exponential of a large number nor the
-logarithm of 0 occurs. Their gradient is the gradient of this expression,
-$\partial l / \partial o_j = \mathrm{softmax}(\mathbf{o})_j - y_j$
-(:numref:`subsec_softmax_and_derivatives`), with no floor to cut it off.
+Every deep learning framework fuses softmax and cross-entropy via
+:eqref:`eq_softmax-concise-lse-loss` whenever you pass it raw logits.
+Because probabilities are never materialized in between, neither overflow
+nor $\log 0$ can occur, and automatic differentiation yields the exact
+gradient $\partial l / \partial o_j = \mathrm{softmax}(\mathbf{o})_j - y_j$
+(:numref:`subsec_softmax_and_derivatives`) with no artificial clamp cutting
+it off.
 
-We install the framework's loss as the method `loss` of `Classifier`, so that
-every classification model in the book inherits it. The method takes
-logits and integer labels. It first flattens all leading axes of both, since
-later models predict one class for each position of a sequence, and returns
-the mean loss, or with `averaged=False` the loss of every example.
+Let us install this fused loss once on `d2l.Classifier` so every classifier
+in the book inherits it automatically. The method accepts logits and
+integer class labels, flattens any extra leading axes (preparing for later
+sequence models that classify every token position), and returns either the
+batch mean or—when `averaged=False`—per-example losses.
 
 :begin_tab:`pytorch`
-In PyTorch the loss is `F.cross_entropy`.
+PyTorch exposes the fused loss as `F.cross_entropy`.
 :end_tab:
 
 :begin_tab:`mxnet`
-In Gluon the loss is `SoftmaxCrossEntropyLoss`. With its default setting
-`from_logits=False` it computes the logarithms of the probabilities from the
-logits itself.
+Gluon provides `SoftmaxCrossEntropyLoss`. Despite its counterintuitive
+parameter name, its default `from_logits=False` expects raw logits and
+computes log-softmax internally.
 :end_tab:
 
 :begin_tab:`tensorflow`
-In Keras the loss is `SparseCategoricalCrossentropy`. It assumes
-probabilities unless we pass `from_logits=True`.
+Keras provides `SparseCategoricalCrossentropy`; we must pass
+`from_logits=True` so it expects raw logits rather than pre-normalized
+probabilities.
 :end_tab:
 
 :begin_tab:`jax`
-In Optax the loss is `softmax_cross_entropy_with_integer_labels`.
+Optax provides the fused loss as `softmax_cross_entropy_with_integer_labels`.
 :end_tab:
 
 ```{.python .input #softmax-regression-concise-softmax-revisited}
@@ -293,16 +305,19 @@ def loss(self, Y_hat, Y, averaged=True):
     return fn(Y_hat, Y).mean() if averaged else fn(Y_hat, Y)
 ```
 
-The loss takes logits, not probabilities. A model whose `forward` ended
-with a softmax would hand it probabilities, and the loss would apply a second
-softmax to them. No error message appears, and the model still trains, but
-its loss can no longer come near 0. This is why the `forward` of
-`SoftmaxRegression` returns the logits.
+A subtle bug to watch out for: because `loss` expects *raw logits*, adding
+a softmax at the end of `forward` would apply softmax *twice*. Nothing
+crashes and training even appears to run, yet the loss gets trapped above a
+strictly positive floor and can never approach zero. That is why
+`SoftmaxRegression.forward` returns logits directly (we keep a separate
+softmax handy only when we explicitly want to display predicted
+probabilities).
 
-We put the loss to the test on the logits $(1000, 0, 0)$ that broke the
-softmax of the previous section, once with label 0 and once with label 1.
-By :eqref:`eq_softmax-concise-lse-loss` the losses are
-$\log(1 + 2e^{-1000}) \approx 0$ and $1000 + \log(1 + 2e^{-1000}) \approx 1000$.
+Let us stress-test our fused loss on the exact extreme logits
+$(1000, 0, 0)$ that broke our scratch implementation, paired once with true
+label 0 and once with true label 1. By :eqref:`eq_softmax-concise-lse-loss`,
+the exact answers are $\log(1 + 2e^{-1000}) \approx 0$ and
+$1000 + \log(1 + 2e^{-1000}) \approx 1000$.
 
 ```{.python .input #softmax-regression-concise-the-framework-loss}
 O = d2l.tensor([[1000.0, 0.0, 0.0], [1000.0, 0.0, 0.0]])
@@ -310,17 +325,18 @@ y = d2l.tensor([0, 1])
 SoftmaxRegression(num_outputs=3, lr=0.1).loss(O, y, averaged=False)
 ```
 
-Both losses are finite and exact: the first example is classified correctly
-with certainty, and the second is wrong by a margin of 1000.
+Both values come back completely finite and exact: zero loss for the
+certain correct prediction, and 1000 for the confident mistake.
 
 :begin_tab:`pytorch`
-The first loss prints as `-0.`, a zero with its sign bit set, which equals 0.
+PyTorch prints the first entry as `-0.`, IEEE-754 negative zero, which is
+numerically identical to 0.
 :end_tab:
 
 ## Training
 
-We train with the same data, minibatch size, learning rate, and number of
-epochs as in :numref:`sec_softmax_scratch`.
+Now we train `SoftmaxRegression` using the exact same dataset, minibatch
+size, learning rate, and epoch count as in :numref:`sec_softmax_scratch`.
 
 ```{.python .input #softmax-regression-concise-training}
 data = d2l.FashionMNIST(batch_size=256)
@@ -329,26 +345,30 @@ trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 
-After ten epochs the validation accuracy is about 83%, as for the
-implementation from scratch, and the loss curves look alike. This is as it
-should be. The framework's components change how the model is computed, not
-the model. We now have a classifier, a loss that cannot blow up, and a
-number, 83%. The rest of the chapter asks what the number is worth,
-beginning with the probabilities behind it: can they be taken at face
-value?
+Ten epochs bring us right back to roughly 83% validation accuracy with
+virtually identical loss curves—only with far fewer lines of code and rock-solid
+numerical stability. That is exactly what we expect: switching to framework
+primitives changes *how* the computation runs, not the mathematical model.
+We now have a clean classifier, a loss that cannot blow up, and a headline
+number of 83%. The rest of this chapter interrogates what that number is
+truly worth, starting with the probabilities behind it: can we take them at
+face value?
 
 ## Summary
 
-Softmax regression with framework components is a fully connected layer on
-flattened images whose forward pass returns logits, trained with the
-framework's cross-entropy loss. The loss takes logits because computing it
-from probabilities fails in floating point, by overflow of the exponential
-or by the logarithm of a probability that has underflowed to 0. Written as
-$l = \log \sum_k \exp(o_k) - o_y$ and evaluated after subtracting the
-largest logit, the loss stays finite for any logits and keeps its gradient,
-$\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$. `Classifier.loss` installs this
-loss for every classifier in the book. Trained for ten epochs, the model
-reaches about 83% validation accuracy, like the version from scratch.
+High-level deep learning APIs let us define softmax regression in a handful
+of lines—a flattening step followed by a single fully connected layer
+returning logits—while quietly protecting us from numerical hazards like
+overflow and underflow. That convenience is both a blessing and a mild
+curse: it makes deep learning immediately accessible, yet hiding the sharp
+edges can make bugs harder to diagnose when you eventually build custom
+losses or components outside the framework's safety rails. That is why we
+work through both from-scratch and concise implementations side by side.
+Here, fusing softmax and cross-entropy via the shifted log-sum-exp identity
+$l = o_{\max} + \log \sum_k \exp(o_k - o_{\max}) - o_y$ guarantees finite
+losses and intact gradients $\mathrm{softmax}(\mathbf{o}) - \mathbf{y}$ for
+arbitrary logits, and installing it on `Classifier.loss` equips every
+classifier in the rest of the book with the same stability.
 
 ## Exercises
 

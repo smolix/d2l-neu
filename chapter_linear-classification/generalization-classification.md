@@ -7,44 +7,49 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 :label:`chap_classification_generalization`
 
-The softmax regression of :numref:`sec_softmax_concise` labels about 83% of
-its 10,000 validation images correctly. We would like to read that number
-as the accuracy the model will have on clothing images it has never seen,
-and two things stand in the way. First, the 10,000 images are a sample:
-another 10,000 from the same source would give a somewhat different
-accuracy. Second, a high score on data the model has seen proves little. A
-sufficiently expressive model can attain perfect training accuracy by
-memorizing the label of each training input and returning that label whenever
-the same input appears again. Memorization provides no rule for a new input,
-on which such a model can only guess.
+Our softmax regression model in :numref:`sec_softmax_concise` classifies
+roughly 83% of the 10,000 Fashion-MNIST validation images correctly. We
+would naturally like to interpret that number as how accurately the model
+will classify unseen garments in the wild, yet two obstacles stand in our
+way. First, 10,000 images are only a finite sample: drawing another 10,000
+from the exact same source would yield a slightly different accuracy.
+Second, high accuracy on data seen during development proves very little on
+its own. Whenever every input image is unique—as is true in almost every
+high-dimensional dataset—a sufficiently expressive model can score 100% on
+the training set simply by memorizing a lookup table of every training
+image and its label. Memorization gives us no rule whatsoever for a brand-new
+input, leaving such a model to guess at random.
 
-This raises three questions:
+Three urgent questions follow immediately:
 
-1. How many test examples do we need to give a good estimate of the accuracy
-   of our classifiers on the underlying population?
-1. What happens if we keep evaluating models on the same test set
-   repeatedly?
-1. Why should fitting our linear models to the training set fare any better
-   than memorizing it?
+1. How many test examples do we need to estimate a classifier's true
+   population accuracy reliably?
+1. What goes wrong when we evaluate model after model on the very same test
+   set?
+1. Why should fitting a linear classifier to training data generalize any
+   better than simply memorizing it?
 
-A word on names. The 10,000 images are Fashion-MNIST's test split, and
-this section speaks of them as a test set, as the theory does. Since we
-chose the learning rate and the number of epochs by looking at them, the
-83% is strictly a validation score in the sense of
-:numref:`sec_generalization_basics`; the answer to the second question
-says what that shortcut costs, and exercise
-:exref:`ex_generalization-classification-validation-split` repairs it.
+A brief note on terminology before we dive in. Those 10,000 images are
+officially Fashion-MNIST's test split, and throughout this section we refer
+to them as a *test set* to match the statistical theory. Strictly speaking,
+because we looked at them while choosing our learning rate and epoch count,
+that 83% is a *validation* score in the sense of
+:numref:`sec_generalization_basics`. Answering our second question will
+reveal what that shortcut costs, and exercise
+:exref:`ex_generalization-classification-validation-split` shows how to
+keep a true untouched test split.
 
-:numref:`sec_generalization_basics` estimated the error of a model on new
-data with held-out examples and kept the test set out of model selection.
-This section makes both ideas quantitative for classification. The first two
-questions have precise answers in terms of the size of the test set and the
-number of times we consult it. The third asks for a guarantee that holds
-before we see any test data, whatever the distribution of the data. Such
-guarantees explain why fitting a linear model differs from memorizing. For
-deep networks they are far too loose to be useful, which is why deep
-learning relies on test sets, and on the answers to the first two
-questions.
+Where :numref:`sec_generalization_basics` introduced overfitting,
+validation sets, and test sets qualitatively for regression, this section
+makes those ideas quantitative for classification. The first two questions
+yield concrete formulas tied to the test set size and the number of times
+we consult it. The third leads us into *statistical learning theory*, which
+seeks *a priori* guarantees that bound the generalization gap before we
+ever touch a test set, regardless of the underlying data distribution. As
+we will see, those guarantees cleanly explain why linear models generalize
+whereas memorizers cannot—yet for deep neural networks they become far too
+loose to guide practice, which is why deep learning still relies heavily on
+careful empirical test-set evaluation.
 
 ```{.python .input #generalization-classification-the-test-set-1}
 %%tab pytorch
@@ -87,122 +92,123 @@ npx.set_np()
 
 ## The Test Set
 
-A test set measures one classifier. We first ask how precise that
-measurement is, as a function of the number of test examples.
+Since held-out test sets remain our gold standard for assessing
+generalization, let us begin by asking how precisely a single test set of
+size $n$ measures one fixed classifier.
 
 ### Empirical and Population Error
 
-Consider a fixed classifier $f$, without worrying about how it was obtained,
-and a *fresh* dataset
-$\mathcal{D} = \{(\mathbf{x}^{(i)}, y^{(i)})\}_{i=1}^n$ of examples that
-played no part in obtaining $f$. The *empirical error* of $f$ on
-$\mathcal{D}$ is the fraction of examples whose label it gets wrong:
+Fix a classifier $f$—without worrying for the moment about how it was
+trained—and suppose we hold a *fresh* test set
+$\mathcal{D} = \{(\mathbf{x}^{(i)}, y^{(i)})\}_{i=1}^n$ that played zero
+role in producing $f$. The *empirical error* of $f$ on $\mathcal{D}$ is
+the fraction of examples it misclassifies:
 
 $$\epsilon_\mathcal{D}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}\left(f(\mathbf{x}^{(i)}) \neq y^{(i)}\right).$$
 
-The *population error* is the probability that $f$ gets the label wrong on a
-new example drawn from the distribution $P(X, Y)$ that generates the data:
+The *population error* is the true probability that $f$ misclassifies a new
+example drawn from the underlying data-generating distribution $P(X, Y)$:
 
 $$\epsilon(f) = \mathbb{E}_{(\mathbf{x}, y) \sim P}\left[\mathbf{1}\left(f(\mathbf{x}) \neq y\right)\right] = P\left(f(X) \neq Y\right).$$
 
-These are the empirical risk and the risk of
-:numref:`sec_generalization_basics` for the *0--1 loss*, which charges 1 for
-a wrong label and 0 for a correct one. We want $\epsilon(f)$, but since we do
-not know $P$, we can compute only $\epsilon_\mathcal{D}(f)$.
+Notice that these are simply the empirical risk and true risk of
+:numref:`sec_generalization_basics` under the *0--1 loss* (1 for a mistake,
+0 for a match). Just as we cannot know a nation's exact average height
+without measuring every citizen, we can never observe $\epsilon(f)$
+directly; we can only estimate it via $\epsilon_\mathcal{D}(f)$.
 
-Each term $\mathbf{1}(f(\mathbf{x}^{(i)}) \neq y^{(i)})$ equals 1 with
-probability $\epsilon(f)$ and 0 otherwise, like a coin that comes up heads
-with probability $\epsilon(f)$. The test examples are drawn independently,
-and $f$ was fixed before they were drawn, so $\epsilon_\mathcal{D}(f)$ is
-the frequency of heads in $n$ independent tosses of this coin. Two facts
-from :numref:`sec_prob` follow. The estimate is unbiased:
-$\mathbb{E}[\epsilon_\mathcal{D}(f)] = \epsilon(f)$. And the average of $n$
-independent draws has a standard error equal to the standard deviation of a
-single draw divided by $\sqrt{n}$. A variable that equals 1 with probability
-$\epsilon$ and 0 otherwise has variance $\epsilon(1 - \epsilon)$, so the
-standard error of $\epsilon_\mathcal{D}(f)$ is
-$\sqrt{\epsilon(f)(1 - \epsilon(f))/n}$.
+Because $f$ was fixed *before* the test examples were drawn independently
+from $P$, each indicator $\mathbf{1}(f(\mathbf{x}^{(i)}) \neq y^{(i)})$
+behaves like an independent coin toss—a Bernoulli random variable that
+lands on 1 with probability $\epsilon(f)$ and 0 otherwise. Estimating
+$\epsilon(f)$ from $\epsilon_\mathcal{D}(f)$ is therefore classic mean
+estimation (:numref:`sec_prob`), giving us two immediate facts. First, the
+test error is unbiased: $\mathbb{E}[\epsilon_\mathcal{D}(f)] = \epsilon(f)$.
+Second, because a Bernoulli($\epsilon$) variable has variance
+$\epsilon(1 - \epsilon)$, the average of $n$ independent draws has standard
+error $\sqrt{\epsilon(f)(1 - \epsilon(f))/n}$.
 
-For a classifier with population error $0.15$, about that of softmax
-regression on Fashion-MNIST, and $n = 10{,}000$ test images, the standard
-error is $\sqrt{0.15 \cdot 0.85 / 10{,}000} \approx 0.0036$, about a third of
-a percentage point. The product $\epsilon(1 - \epsilon)$ is largest at
-$\epsilon = 1/2$, where it equals $1/4$, so the standard error never
-exceeds $0.5/\sqrt{n}$, whatever the classifier. Halving it takes four times
-as many test examples. More test data does not change the error of the
-classifier, only our uncertainty about it.
+Plug in realistic numbers: for a classifier with population error $0.15$
+(roughly our Fashion-MNIST softmax regression) evaluated on $n = 10{,}000$
+test images, the standard error is
+$\sqrt{0.15 \cdot 0.85 / 10{,}000} \approx 0.0036$—about a third of a
+percentage point. Since $\epsilon(1 - \epsilon)$ peaks at $1/4$ when
+$\epsilon = 1/2$, the standard error is *always* at most $0.5/\sqrt{n}$, no
+matter the classifier. That $1/\sqrt{n}$ rate is a hard statistical tax:
+cutting your measurement uncertainty in half requires *four times* as many
+test examples, and collecting more test data never improves the classifier
+itself—it only narrows our uncertainty about how good it is.
 
 ### Confidence Intervals
 
-A standard error tells us how large deviations typically are, but not how
-often a deviation of a given size occurs. The *central limit theorem* fills
-this gap: when $n$ is large, the average of $n$ independent draws of a
-random variable with finite variance is approximately normally distributed,
-with the true mean as its mean and the standard error as its standard
-deviation (:numref:`subsec_mdl-gaussian-clt` states the theorem precisely). A
-normal random variable lies within 1.96 standard deviations of its mean with
-probability 0.95. For the test error this gives
+A standard error tells us the typical size of fluctuations, but how often
+does a fluctuation exceed a given threshold? By the *central limit theorem*
+(:numref:`subsec_mdl-gaussian-clt`), for large $n$ the sample average
+$\epsilon_\mathcal{D}(f)$ is approximately normally distributed around
+$\epsilon(f)$ with standard deviation equal to its standard error. Since a
+normal variable falls within $1.96$ standard deviations of its mean 95% of
+the time, we obtain
 
 $$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \leq 1.96\sqrt{\frac{\epsilon(f)(1 - \epsilon(f))}{n}}\right) \approx 0.95.$$
 
-Turned around, the interval of 1.96 standard errors around
-$\epsilon_\mathcal{D}(f)$ contains the population error for 95% of test
-sets. It is called a 95% *confidence interval*, and we call its half-width
-the *radius*. The radius contains the unknown $\epsilon(f)$, of course; in
-practice $\epsilon_\mathcal{D}(f)$ takes its place. For softmax regression
-on the 10,000
-Fashion-MNIST test images the radius is about
-$1.96 \cdot 0.0036 \approx 0.007$: its accuracy is known to within about
-0.7 percentage points.
+Equivalently, the 95% *confidence interval* extending $1.96$ standard
+errors on either side of $\epsilon_\mathcal{D}(f)$—whose half-width we call
+its *radius*—captures the true population error for 95% of fresh test sets.
+In practice we plug the observed $\epsilon_\mathcal{D}(f)$ in for the
+unknown $\epsilon(f)$ inside the square root. For softmax regression on
+Fashion-MNIST's 10,000 test images, the radius is
+$1.96 \cdot 0.0036 \approx 0.007$, meaning we know its true accuracy to
+within roughly $\pm 0.7$ percentage points.
 
-How many test examples give a radius of $0.01$ at 95%, whatever the error of
-the classifier? In the worst case $\epsilon = 1/2$ we need
-$1.96 \cdot 0.5/\sqrt{n} \leq 0.01$, that is, $n \geq 9{,}604$. Many
-benchmark test sets have about 10,000 examples, Fashion-MNIST's among them,
-so the accuracy of a single model on them is known to within about one
-percentage point. An accuracy reported as 84.37% has more digits than such a
-test set supports.
+How large a test set do we need to guarantee a 95% radius of at most $0.01$
+in the worst case ($\epsilon = 1/2$)? Solving
+$1.96 \cdot 0.5 / \sqrt{n} \leq 0.01$ yields $n \geq 9{,}604$. It is no
+accident that so many iconic benchmarks—including MNIST, Fashion-MNIST, and
+CIFAR-10—feature 10,000-image test sets: that pins a single model's
+accuracy down to roughly $\pm 1$ percentage point. Keep that in mind the
+next time you see a paper boasting about improving accuracy from 84.31% to
+84.37% on a 10,000-example benchmark—those trailing decimal places are pure
+sampling noise.
 
 ### Finite-Sample Guarantees
 
-The central limit theorem describes the limit of large $n$. At any finite
-$n$ the normal distribution only approximates the distribution of
-$\epsilon_\mathcal{D}(f)$, and the approximation is poor when the classifier
-makes few errors, for example when $\epsilon(f) = 0.001$ and $n = 1{,}000$,
-so that we expect a single error. Luckily, each term of the empirical error
-lies between 0 and 1, and this alone suffices: an inequality due to
-:citet:`Hoeffding.1963` gives a bound that holds at every $n$ and for every
-distribution:
+The central limit theorem is strictly asymptotic—useful for ballpark
+sizing, yet not a guarantee you can take to court at finite $n$. In
+particular, the normal approximation breaks down badly when a classifier
+makes very few errors (say $\epsilon(f) = 0.001$ on $n = 1{,}000$ examples,
+where we expect only a single mistake). Fortunately, because every 0--1
+error indicator is bounded in $[0, 1]$, an inequality due to
+:citet:`Hoeffding.1963` delivers an exact finite-sample guarantee that
+holds for *every* $n$ and *every* data distribution:
 
 $$
 P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \geq t\right) \leq 2\exp\left(-2nt^2\right).
 $$
 :eqlabel:`eq_generalization-classification-hoeffding`
 
-The probability that the test error misses the population error by $t$ or
-more falls exponentially in $nt^2$
-(:numref:`sec_mdl-concentration-generalization` proves the inequality).
-Setting the right-hand side
-to $\delta = 0.05$ and solving for $t$ gives the 95% *Hoeffding radius*
-$\sqrt{\log(2/\delta)/(2n)}$. A radius of $0.01$ then requires
-$n \geq \log(40)/(2 \cdot 0.01^2) \approx 18{,}445$ examples, roughly
-18,500, about twice the 9,604 of the normal approximation. Hoeffding's bound
-is more conservative because it holds at every $n$ and uses only the range of
-each term, not its variance.
+Thus the probability that the test error strays from the population error
+by $t$ or more decays exponentially in $nt^2$ (proved in
+:numref:`sec_mdl-concentration-generalization`). Setting the right-hand
+side to $\delta = 0.05$ and solving for $t$ yields the 95% *Hoeffding
+radius* $\sqrt{\log(2/\delta)/(2n)}$. Achieving a radius of $0.01$ now
+calls for $n \geq \log(40)/(2 \cdot 0.01^2) \approx 18{,}445$ examples—roughly
+18,500, or nearly twice the 9,604 prescribed by the normal approximation.
+As is common in statistics, finite-sample guarantees pay for their
+distribution-free rigor by being more conservative: Hoeffding uses only the
+$[0, 1]$ range of each error term, ignoring its potentially much smaller
+variance.
 
 ### Simulated Test Sets
 
-Does each interval contain the population error as often as it promises?
-We check by simulation, for two classifiers: one with population error
-$\epsilon(f) = 0.15$, close to that of our softmax regression, and one with
-$\epsilon(f) = 0.01$, which rarely errs. For each of several test set sizes
-$n$ we draw 10,000 test sets. The number of errors on a test set is a sum of
-$n$ independent 0--1 variables, which has a binomial distribution, so we
-draw it directly. For each test set we form the interval of the normal
-approximation, with $\epsilon_\mathcal{D}(f)$ in place of the unknown
-$\epsilon(f)$ as in practice, and the Hoeffding interval, and we record the
-fraction of test sets whose interval contains $\epsilon(f)$, its
-*coverage*.
+How faithful are these two intervals in practice? Let us test both by
+simulation on two classifiers: one with population error
+$\epsilon(f) = 0.15$ (like our Fashion-MNIST linear model) and a much more
+accurate one with $\epsilon(f) = 0.01$. Across a range of test sizes $n$,
+we draw 10,000 independent test sets (sampling total error counts directly
+from a binomial distribution), compute both the plug-in normal interval and
+the Hoeffding interval on each draw, and measure their empirical
+*coverage*—the fraction of intervals that actually contain the true
+$\epsilon(f)$.
 
 ```{.python .input #generalization-classification-the-test-set-2}
 rng = np.random.default_rng()
@@ -223,60 +229,72 @@ d2l.plot(ns, curves + [[0.95] * len(ns)], 'test set size n', 'coverage',
          fmts=('C0-', 'C0--', 'C1-', 'C1--', 'k:'), figsize=(4.5, 3))
 ```
 
-At $\epsilon(f) = 0.15$ the normal interval contains the population error
-for 93% to 95% of the test sets at every size, close to its promise. At
-$\epsilon(f) = 0.01$ it falls short: on 100 test examples it covers only
-about 63% of the test sets, since a test set with no errors reports the
-interval $[0, 0]$, and it needs about 2,000 examples, some 20 expected
-errors, to reach 95%.
-The Hoeffding interval covers nearly all test sets at both error rates and
-every size. It keeps its promise without our checking whether an
-approximation holds, and the cost of that certainty is width: the
-Hoeffding interval is about twice as wide as the normal one, and at
-$\epsilon = 0.15$ the ratio of the two radii is $1.94$ for every $n$.
+At $\epsilon(f) = 0.15$, the plug-in normal interval captures the true
+error on 93%–95% of test sets across every sample size—right on target. At
+$\epsilon(f) = 0.01$, however, it stumbles badly for small $n$: with 100
+test examples it achieves only ~63% coverage (because every zero-error test
+set collapses the interval to $[0, 0]$), and it needs roughly 2,000
+examples—about 20 expected errors—before climbing back to 95%. Hoeffding's
+interval, by contrast, keeps its promise at every sample size and error
+rate without requiring any asymptotic faith, paying for that insurance with
+roughly double the width (at $\epsilon = 0.15$, the ratio of radii is
+$1.94$ for all $n$).
 
 ## Test Set Reuse
 
-The guarantees so far concern one classifier, fixed before the test set was
-drawn. In practice a test set is consulted again and again: to compare
-architectures, to tune hyperparameters, and, for a public benchmark, by every
-paper that reports on it. Choosing the best of many classifiers inflates its
-score, and when the scores guide the design of the next classifier, the test
-set is no longer independent of the classifiers it evaluates.
+Suppose you follow every rule above to the letter. You size a pristine test
+set, tune all hyperparameters of your first model $f_1$ strictly on a
+validation split, evaluate $f_1$ once on the test set, and report a valid
+confidence interval. That very night, however, you wake up at 3 a.m. with a
+brilliant new architecture $f_2$. The next morning you train $f_2$, tune it
+on validation data, and prepare for final evaluation—only to realize a
+sinking truth: *you no longer have a fresh test set*.
+
+In real research, test sets get consulted over and over again—to compare
+architectures, pick hyperparameters, and rank thousands of papers on public
+leaderboards. Reusing a test set undermines our statistical guarantees in
+two distinct ways: *selection bias* from picking the winner among many
+candidates, and *adaptive overfitting* whenever past test scores steer our
+next design choice.
 
 ### Selection Among Many Classifiers
 
-Suppose that we evaluate $k$ classifiers $f_1, \ldots, f_k$, all fixed before
-the test set is drawn, and report the one with the lowest test error. On its
-own, each test error lies within the Hoeffding radius with probability at
-least 0.95. The probability that at least one of them misses by more grows
-with $k$, and the classifier with the lowest test error is likely to be one
-whose error was underestimated. To guarantee all $k$ estimates at once, we
-use the *union bound*: the probability that at least one of several events
-occurs is at most the sum of their probabilities. We apply it to the $k$
-events "the test error of $f_j$ misses by $t$ or more", each of which has
-probability at most $2\exp(-2nt^2)$ by
-:eqref:`eq_generalization-classification-hoeffding`:
+First, suppose we evaluate $k$ classifiers $f_1, \ldots, f_k$ that were all
+fixed *before* the test set was drawn, and report the winner with the
+lowest test error. Individually, each estimate falls inside its 95%
+Hoeffding radius with probability at least 0.95—leaving a 5% chance of a
+fluke. Yet across $k$ candidates, the chance that *at least one* gets lucky
+grows rapidly, and picking the lowest test error specifically cherry-picks
+whichever classifier benefited most from random noise (a classic case of
+multiple hypothesis testing).
+
+To bound all $k$ estimates simultaneously, we apply the *union bound*: the
+probability that at least one of several bad events happens is at most the
+sum of their individual probabilities. Summing
+:eqref:`eq_generalization-classification-hoeffding` across all $k$
+classifiers gives
 
 $$
 P\left(\max_{j=1,\ldots,k} |\epsilon_\mathcal{D}(f_j) - \epsilon(f_j)| \geq t\right) \leq 2k\exp\left(-2nt^2\right).
 $$
 :eqlabel:`eq_generalization-classification-union`
 
-Setting the right-hand side to $\delta$ shows that, with probability at least
-$1 - \delta$, all $k$ test errors lie within $\sqrt{\log(2k/\delta)/(2n)}$ of
-their population errors simultaneously. The radius grows only with the
-logarithm of $k$. On $10{,}000$ test examples at $\delta = 0.05$ it grows from
-$0.014$ for one classifier to $0.023$ for a thousand and $0.030$ for a
-million.
+Setting the right-hand side to $\delta$ guarantees that, with probability at
+least $1 - \delta$, *all* $k$ test errors stay within
+$\sqrt{\log(2k/\delta)/(2n)}$ of their true population errors
+simultaneously. Happily, this penalty grows only logarithmically in $k$: on
+$10{,}000$ test examples at $\delta = 0.05$, the radius widens gently from
+$0.014$ for a single model to $0.023$ for a thousand models and $0.030$ for
+a million.
 
-To see the selection effect at work, we take the purest case: a test set of
-$n = 1{,}000$ examples whose binary labels are coin flips, and $k = 10{,}000$
-classifiers that ignore their inputs and guess each label by a coin flip of
-their own. Every classifier has population accuracy 0.5, and no classifier
-can do better, because the labels carry no information about the inputs. We
-plot the best test accuracy among the first $k$ classifiers as $k$ grows,
-together with the reference curve $0.5 + \sqrt{\log(k)/(2n)}$.
+To see pure selection bias in action, consider the starkest possible
+experiment: a test set of $n = 1{,}000$ examples whose binary labels are
+fair coin flips, scored by $k = 10{,}000$ utterly mindless classifiers that
+ignore all inputs and flip their own coins. Every single classifier has
+true population accuracy exactly 0.5, and no algorithm on earth can beat
+0.5. Yet let us plot the *highest* test accuracy observed among the first
+$k$ guessers alongside the theoretical reference curve
+$0.5 + \sqrt{\log(k)/(2n)}$.
 
 ```{.python .input #generalization-classification-test-set-reuse-1}
 n, k = 1000, 10000
@@ -291,33 +309,34 @@ d2l.plot(ks, [np.maximum.accumulate(accuracy),
          ylim=(0.4, 0.6))
 ```
 
-The best test accuracy climbs to about 0.56 after 10,000 classifiers and
-stays close to the curve, mostly just below it. Why this curve? Each of the
-two directions of the deviation in
-:eqref:`eq_generalization-classification-hoeffding` has probability at most
-$\exp(-2nt^2)$, so the best of $k$ accuracies exceeds $0.5 + t$ with
-probability at most $k\exp(-2nt^2)$, which equals 1 on the curve and falls
-quickly above it. No classifier learned anything; the climb comes from
-selection alone. Whenever we keep the best of
-many models by their score on one test set, part of its apparent advantage is
-of this kind, and the union bound says how large that part can be.
+Sure enough, by 10,000 random guessers the best test accuracy climbs to
+roughly 0.56, hugging just below the theoretical curve (each one-sided tail
+in :eqref:`eq_generalization-classification-hoeffding` is at most
+$\exp(-2nt^2)$, so the union bound $k\exp(-2nt^2)$ hits 1 right along the
+curve and plunges above it). Not a single classifier learned anything; that
+six-point surge came purely from cherry-picking the luckiest coin flipper.
+Whenever we select a winning model by comparing many candidates on the same
+evaluation set, some fraction of its apparent lead is pure selection
+artifact—and the union bound tells us how large that artifact can grow.
 
 ### Adaptive Overfitting
 
-The union bound requires the $k$ classifiers to be fixed before the test set
-is drawn. Model development rarely works that way: we train a model, look at
-its test score, and let the score guide the next model. Each new model then
-depends on the test set, and the bound no longer applies. The test score of
-a model chosen with the help of earlier scores on the same test set can
-overestimate its population accuracy far more than selection alone does.
-This is called *adaptive overfitting* :cite:`Dwork.Feldman.Hardt.ea.2015`.
+Even worse is what happens when our choice of candidate *depends* on
+previous test scores. The union bound assumed all $k$ models were locked in
+before anyone peeked at the test set. In practice, we inspect $f_1$'s test
+score, tweak our ideas, build $f_2$, inspect its score, and repeat. Once
+information from the test set leaks back into the modeling loop, the test
+set is no longer independent of the models it scores, and optimism can blow
+right past the $\sqrt{\log k / (2n)}$ selection rate. This phenomenon is
+called *adaptive overfitting* :cite:`Dwork.Feldman.Hardt.ea.2015`.
 
-A simple strategy shows how large the effect can be, using nothing but test
-scores :cite:`Blum.Hardt.2015`. We take the first 1,000 random guessers from
-above and keep those whose test accuracy exceeds 0.5. A new classifier then
-predicts, for each test input, the label that the majority of the kept
-guessers predict. On a new input, the kept guessers still flip coins, so their
-majority vote is again a coin flip, with population accuracy 0.5.
+A deviously simple construction demonstrates how dramatic this leakage can
+be using *only* scalar test accuracies :cite:`Blum.Hardt.2015`. Take just
+the first 1,000 random guessers from above, filter to those that happened
+to score above 0.5 on the test set, and form a new classifier that predicts
+their majority vote on each test example. On any *fresh* example, those
+kept guessers are still just independent coin flips, so their majority vote
+still has true population accuracy 0.5. Watch what happens on the test set:
 
 ```{.python .input #generalization-classification-adaptive-overfitting}
 kept = guesses[:1000][accuracy[:1000] > 0.5]  # guessers that scored above 0.5
@@ -326,205 +345,217 @@ print(f'majority vote: {(vote == labels).mean():.3f}, '
       f'best single guesser: {accuracy[:1000].max():.3f}')
 ```
 
-The majority vote scores about 0.7 on the test set, far above the best of the
-1,000 guessers it combines (between 0.54 and 0.57) and the best of all 10,000
-(about 0.56). It never saw a label. Each test score revealed a little about
-which guesses agree with the labels, and the vote added up this information
-over a thousand scores. Exercise
-:exref:`ex_generalization-classification-leaking-test-set` takes the idea to
-its end: about $n$ well-chosen scores reveal every label of the test set.
+The majority vote skyrockets to roughly 0.70 on the test set—trouncing both
+the luckiest single guesser among the 1,000 (0.54–0.57) and the luckiest
+among all 10,000 (~0.56)—without ever seeing a single test label! Every
+scalar test score leaked a tiny bit of information about which random
+vectors aligned with the hidden labels, and majority voting aggregated
+those leaks across a thousand queries. Exercise
+:exref:`ex_generalization-classification-leaking-test-set` pushes this
+attack to its logical extreme: roughly $n$ well-chosen accuracy queries
+suffice to reconstruct *every single label* in the test set.
 
-The remedy is the division of labor of :numref:`sec_generalization_basics`:
-a validation set absorbs model selection and the tuning of hyperparameters,
-and the test set is consulted once, for the final model. Public benchmarks
-are reused anyway. When :citet:`Recht.Roelofs.Schmidt.ea.2019` collected new
-test sets for CIFAR-10 and ImageNet following the original procedures,
-accuracies dropped by 3 to 15 percentage points, but the models largely kept
-their ranking, and slight differences between the old and the new images
-explained the drops better than years of adaptive reuse. The worst case is
-therefore rare for large benchmarks, but real for small test sets that are
-queried often, such as the public leaderboards of competitions.
+The practical safeguard is the strict division of labor from
+:numref:`sec_generalization_basics`: absorb all architecture exploration
+and hyperparameter tuning on a validation set, consult the test set once at
+the very end, and—in recurring benchmark competitions—periodically retire
+old test sets into validation sets and introduce fresh ones. Public
+benchmarks inevitably get reused anyway, yet encouragingly the worst case
+is rarer on large benchmarks than theory fears. When
+:citet:`Recht.Roelofs.Schmidt.ea.2019` collected brand-new test sets for
+CIFAR-10 and ImageNet following the original protocols, accuracies did fall
+by 3 to 15 percentage points, yet model rankings remained remarkably intact,
+and subtle distribution shifts between old and new images explained the
+drops far better than years of leaderboard reuse. Still, when stakes are
+high or test sets are small, adaptive overfitting is a very real hazard.
 
 ## Statistical Learning Theory
 
-A test set certifies a classifier after training. It does not explain why
-training should produce a classifier that generalizes, and it cannot tell us
-in advance how much training data a model needs. Statistical learning theory
-answers these questions by reasoning about the training error. This is a
-rather optimistic estimate: after all, training picked the classifier
-precisely because it made this number small. From the point of view of the
-training set, the learner is a modeler who evaluated every classifier it
-could choose on the same data and kept the best: selection among many
-classifiers, taken to the extreme.
+Held-out test sets are the bedrock of empirical machine learning, yet
+relying on them exclusively feels strangely incomplete. Unless you curated
+the dataset yourself, someone has probably already peeked at the test set,
+and even a pristine test set only certifies generalization *post hoc*—it
+cannot explain *why* fitting a model to training data should generalize in
+the first place, nor tell us *a priori* how much training data a model
+class needs. *Statistical learning theory* tackles those questions directly
+by analyzing the training error itself. Because training explicitly picks
+whichever classifier minimizes training error, the learner acts like a
+modeler who evaluated every candidate in the entire model class on the
+training set and kept the best—selection bias pushed to the limit.
 
-We should say at the outset that this part is more abstract than the rest of
-the chapter and that its main result is stated without proof. It can be
-skipped on a first reading.
+A fair warning: this final part of the section is more abstract than the
+rest of the chapter, and we state its main theorem without proof. Feel free
+to skim it on a first pass and return when you want the deeper theory.
 
 ### Uniform Convergence
 
-Let $\mathcal{F}$ be the set of classifiers the learner can choose from,
-called its *hypothesis class*. We restrict ourselves to binary classifiers
-with labels $\pm 1$, where the theory is simplest to state. For binary linear
-classification, $\mathcal{F}$ is the set of all classifiers
-$f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$. Let
-$\mathcal{S}$ be a training set of $n$ examples, $\epsilon_\mathcal{S}(f)$
-the empirical error of $f$ on it, and $f_\mathcal{S}$ the classifier that the
-learner picks.
+Let $\mathcal{F}$ denote the *hypothesis class*—the family of classifiers
+available to our learner. To state the theory cleanly, consider binary
+classifiers with labels in $\{-1, +1\}$; for linear classification,
+$\mathcal{F}$ consists of all halfspaces
+$f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$.
+Write $\mathcal{S}$ for a training set of $n$ examples,
+$\epsilon_\mathcal{S}(f)$ for the empirical error of $f$ on $\mathcal{S}$,
+and $f_\mathcal{S} \in \mathcal{F}$ for the classifier our learner selects.
 
-Let us start with a case that we can already handle, a finite class. The
-union bound :eqref:`eq_generalization-classification-union` applies with
-$k = |\mathcal{F}|$ and the training set in place of the test set, because
-the class, unlike $f_\mathcal{S}$, was fixed before the training data were
-drawn. With probability at least $1 - \delta$,
+Begin with the warm-up case where $\mathcal{F}$ is *finite*. Because the
+class $\mathcal{F}$ itself—unlike the learned model $f_\mathcal{S}$—was
+fixed before $\mathcal{S}$ was drawn, the union bound
+:eqref:`eq_generalization-classification-union` applies directly with
+$k = |\mathcal{F}|$ and $\mathcal{S}$ in place of $\mathcal{D}$. With
+probability at least $1 - \delta$ over the random draw of $\mathcal{S}$,
 
 $$
 |\epsilon_\mathcal{S}(f) - \epsilon(f)| \leq \sqrt{\frac{\log(2|\mathcal{F}|/\delta)}{2n}} \quad \textrm{for every } f \in \mathcal{F}.
 $$
 :eqlabel:`eq_generalization-classification-finite`
 
-Because the bound holds for every member of the class at once, it holds in
-particular for $f_\mathcal{S}$, however the learner made its choice. This is
-the key step. A guarantee of this kind is called *uniform convergence*. It
-makes the training error a trustworthy estimate of the population error once
-$n$ is large compared with $\log|\mathcal{F}|$.
+Because this bound holds *simultaneously* for every $f \in \mathcal{F}$, it
+automatically holds for whichever $f_\mathcal{S}$ the learning algorithm
+chooses! That simultaneous guarantee—called *uniform convergence*—ensures
+that training error tracks population error reliably as soon as $n$ dwarfs
+$\log|\mathcal{F}|$.
 
-Unfortunately, the bound does not yet apply to linear classifiers. Their
-weights and bias are real numbers, so $\mathcal{F}$ is infinite, and so is
-the right-hand side. Could a better proof remove the size of the class from
-the bound altogether? Memorization shows that it could not. A memorizer has
-training error 0 on every training set, yet when the labels are coin flips
-its population error is $1/2$, so no bound on its gap can shrink as $n$
-grows. The way forward is to count not the classifiers but the different
-ways in which they can label the data.
+Unfortunately, linear classifiers have continuous real-valued parameters,
+making $|\mathcal{F}| = \infty$ and turning
+:eqref:`eq_generalization-classification-finite` vacuous. Could a cleverer
+proof eliminate the size of $\mathcal{F}$ altogether? No: a memorizer
+attains zero training error on every dataset while still suffering
+population error $1/2$ on random coin-flip labels, no matter how huge $n$
+grows. What separates a well-behaved infinite class like linear halfspaces
+from an unconstrained memorizer is not the number of functions it contains,
+but how many distinct *labelings* those functions can induce on $n$ data
+points.
 
 ### The VC Dimension
 
-Two classifiers that label the training points alike have the same training
-error; as far as the training set can tell, they are one classifier. And on
-$n$ points a class of binary classifiers can produce at most $2^n$ labelings,
-however many classifiers it contains. A class *shatters* a set of points if
-it produces all $2^n$ labelings: for every assignment of labels $\pm 1$ to
-the points, some $f \in \mathcal{F}$ agrees with it. The
-*Vapnik--Chervonenkis dimension*, or *VC dimension*, of $\mathcal{F}$ is the
-size of the largest set of points that $\mathcal{F}$ shatters
-:cite:`Vapnik.Chervonenkis.1971`. It measures flexibility by the number of
-points on which the class can fit arbitrary labels. A memorizer shatters
-every finite set of distinct points, so its VC dimension is infinite.
+Any two classifiers that assign the exact same labels to our $n$ training
+points share the exact same training error; as far as $\mathcal{S}$ is
+concerned, they are indistinguishable. Moreover, on $n$ points, *any*
+binary hypothesis class can realize at most $2^n$ distinct labelings, no
+matter how uncountably many functions it holds. We say that $\mathcal{F}$
+*shatters* a set of $n$ points if it can realize all $2^n$ possible
+$\pm 1$ labelings of them. The *Vapnik--Chervonenkis (VC) dimension* of
+$\mathcal{F}$ is the size of the largest set of points that $\mathcal{F}$
+can shatter :cite:`Vapnik.Chervonenkis.1971`. It captures a model class's
+effective flexibility: a lookup-table memorizer shatters every finite set
+of distinct points and therefore has infinite VC dimension.
 
-It is instructive to work out the VC dimension of lines in the plane
-(:numref:`fig_mdl-clf-shattering`). Three points that do not lie on a line
-can be shattered: the figure shows a separating line for each of their eight
-labelings. Four points cannot, wherever we place them, because a halfplane
-that contains some points also contains the segments and triangles they
-span. If the four points form a convex quadrilateral, no line gives the ends
-of each diagonal their own label, since the diagonals cross. If one point
-lies inside the triangle of the other three, no line separates it from them,
-and if three lie on a line, no line separates the middle one from the outer
-two. The VC dimension of lines in the plane is therefore 3.
+Let us check the VC dimension of lines in the 2D plane
+(:numref:`fig_mdl-clf-shattering`). Three non-collinear points can be
+shattered: all $2^3 = 8$ labelings are separable by a straight line. Four
+points, however, can *never* be shattered regardless of arrangement, because
+a halfplane is convex—any halfplane containing a set of points must also
+contain the line segments and triangles they span. If the four points form
+a convex quadrilateral, no line can separate opposite corners (their
+diagonals cross); if one point sits inside the triangle of the other three,
+no line can isolate it from the three vertices; and if three lie on a line,
+no line can isolate the middle one. Lines in the plane therefore have VC
+dimension 3.
 
 ![Lines in the plane shatter three points but no four. Left: a separating line for each of the $2^3 = 8$ labelings of three points not on a line. Middle and right: the two ways four points can lie when no three are on a line, each with a labeling that no line produces. The dashed diagonals of a convex quadrilateral cross, and a halfplane that contains the corners of a triangle contains every point inside it.](../img/mdl-clf-shattering.svg)
 :label:`fig_mdl-clf-shattering`
 
-The same holds in every dimension: linear classifiers
-$\operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on $\mathbb{R}^d$ have
-VC dimension $d + 1$. That some $d + 1$ points can be shattered is easy to
-see. Take $\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d$, the origin and
-the standard unit vectors: the bias $b$ alone decides the label of
-$\mathbf{0}$, and then each weight $w_i$ decides the label of
-$\mathbf{e}_i$. That no $d + 2$ points can be shattered takes more work,
-which we leave to Exercise
-:exref:`ex_generalization-classification-linear-vc`. For linear classifiers
-the VC dimension thus equals the number of parameters. It is tempting to
-take this for a rule, and it is not one: the classifiers
-$\operatorname{sign}(\sin(\omega x))$ on $\mathbb{R}$ have the single
-parameter $\omega$ and infinite VC dimension.
+The same geometry extends cleanly to any dimension $d$: linear classifiers
+$\operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on $\mathbb{R}^d$
+have VC dimension $d + 1$. Shattering $d + 1$ points is easy to verify on
+the origin $\mathbf{0}$ and the standard basis vectors
+$\mathbf{e}_1, \ldots, \mathbf{e}_d$: the bias $b$ sets the label of
+$\mathbf{0}$, and each weight $w_i$ independently sets the label of
+$\mathbf{e}_i$. Proving that no $d + 2$ points can be shattered is a nice
+exercise in linear dependence (Exercise
+:exref:`ex_generalization-classification-linear-vc`). Notice that for
+linear models, VC dimension happens to equal the number of parameters—but
+beware treating that as a universal rule: the one-parameter sine family
+$\operatorname{sign}(\sin(\omega x))$ on $\mathbb{R}$ has *infinite* VC
+dimension!
 
 ### The VC Bound
 
-What does a finite VC dimension give us? It limits how fast the number of
-labelings grows with the number of points. For points of which no three lie
-on a line, lines in the plane produce all 8 labelings of three points, 14 of
-the 16 labelings of four, and, in general, $n^2 - n + 2$ of the $2^n$
-labelings of $n$ points: 92 of 1,024 for ten points, and fewer than $10^4$ of
-about $10^{30}$ for a hundred. Beyond the VC dimension the count grows
-polynomially in $n$, not exponentially. *Sauer's lemma* states this for
-every class: a class of VC dimension $v$ produces at most $(en/v)^v$
-labelings of any $n \geq v$ points.
+Why does a finite VC dimension matter so much? Because it forces a sudden
+phase transition in how fast the number of realizable labelings grows with
+$n$. For points in general position in the plane, lines achieve all 8
+labelings of 3 points, 14 of 16 for 4 points, and in general only
+$n^2 - n + 2$ of the $2^n$ labelings of $n$ points—just 92 out of 1,024 at
+$n = 10$, and fewer than $10^4$ out of roughly $10^{30}$ at $n = 100$. Past
+the VC dimension, the labeling count shifts from exponential to polynomial.
+*Sauer's lemma* makes this universal: any class of VC dimension $v$ induces
+at most $(en/v)^v$ distinct labelings on any $n \geq v$ points.
 
-:citet:`Vapnik.Chervonenkis.1971` showed that the union bound can be taken
-over these labelings instead of over the classifiers. This is the hard step
-of the theory, and we report its outcome without proof
-(:numref:`sec_mdl-generalization-bounds` gives one). The term
-$\log|\mathcal{F}|$ in :eqref:`eq_generalization-classification-finite` is
-replaced by roughly $\log\left((en/v)^v\right) = v \log(en/v)$, and a finer
-analysis removes the logarithm. The result is the *VC bound*: there is a
-constant $c$, the same for every class and every distribution, such that
-with probability at least $1 - \delta$ over the draw of the training set,
+In a landmark breakthrough, :citet:`Vapnik.Chervonenkis.1971` showed how to
+run a union bound over those finitely many labelings instead of the
+infinitely many classifiers (proved in
+:numref:`sec_mdl-generalization-bounds`). Effectively replacing
+$\log|\mathcal{F}|$ in :eqref:`eq_generalization-classification-finite`
+with $v \log(en/v)$—and sharpening the argument to eliminate the extra
+logarithmic factor—yields the famous *VC bound*: there exists a universal
+constant $c$ (independent of both the class and the data distribution) such
+that with probability at least $1 - \delta$ over the training draw,
 
 $$
 \epsilon(f) \leq \epsilon_\mathcal{S}(f) + c\sqrt{\frac{v + \log(1/\delta)}{n}} \quad \textrm{for every } f \in \mathcal{F}.
 $$
 :eqlabel:`eq_generalization-classification-vc`
 
-The population error of every classifier in the class, the trained one
-included, exceeds its training error by at most a term that shrinks like
-$\sqrt{v/n}$. This is the rate $1/\sqrt{n}$ of a single test set, and the
-class enters only through its VC dimension.
+Every classifier in $\mathcal{F}$—including the trained model $f_\mathcal{S}$—has
+its population error tethered to its training error up to a gap shrinking
+as $\sqrt{v/n}$: the familiar $1/\sqrt{n}$ rate, scaled solely by the VC
+dimension.
 
-This answers the third question. A linear classifier on $d$ features has VC
-dimension $d + 1$, so once $n$ is large compared with $d$, a small training
-error carries over to new data, whatever their distribution. A memorizer has
-infinite VC dimension, and the bound says nothing about it, as it must.
+Here, at last, is the answer to our third question. Because linear
+classifiers in $\mathbb{R}^d$ have VC dimension $d + 1$, once $n \gg d$ a
+low training error genuinely certifies a low population error for *any*
+data distribution. A memorizer, by contrast, has infinite VC dimension, so
+no such guarantee can exist.
 
-How much does the guarantee promise in numbers? Not much, it turns out. The
-bound treats binary classifiers, whereas our model tells ten classes apart,
-so let us take a binary problem on the same images, say telling shirts from
-everything else. With $d = 784$ pixels as features and $n = 60{,}000$
-training images, the square-root term alone is
-$\sqrt{785/60{,}000} \approx 0.11$, before the constant $c$ multiplies it,
-and for ten classes the bound only gets looser. Now set this beside what
-happened. In :numref:`sec_softmax_scratch` the model reached about 84% on
-its training images and about 83% on the test images: a gap of one or two
-points, where the bound allows $0.11c$. The bound has to cover the worst
-distribution the data could have, and real data are rarely that
-adversarial. A test set of 10,000 images, by comparison, pins the error of
-the trained classifier down to about $\pm 0.01$. This is how to hold a
-worst-case bound: it tells us which quantities govern the gap, $v$ and
-$n$, and not how large the gap will be.
+Still, how tight is this bound numerically? Quite loose, as it turns out.
+Consider a binary Fashion-MNIST task (say, distinguishing shirts from
+everything else) with $d = 784$ pixels and $n = 60{,}000$ training images:
+even before multiplying by $c$, the square-root term is
+$\sqrt{785/60{,}000} \approx 0.11$, and moving to ten classes widens it
+further. Contrast that with reality: in :numref:`sec_softmax_scratch`, our
+ten-class linear model hit ~84% on training data and ~83% on test data—a
+gap of just one or two percentage points, whereas the worst-case bound
+leaves room for $0.11c$. Because the VC bound must hold simultaneously for
+the most adversarial distribution imaginable, it vastly overstates the gap
+on natural images, whereas a 10,000-image test set pins the error down to
+$\pm 0.01$. Think of worst-case bounds as qualitative compasses: they tell
+us *which* quantities control generalization ($v$ and $n$), not the exact
+numerical gap on real data.
 
 ### Limits of Worst-Case Bounds
 
-For deep networks the VC bound guarantees nothing at all. Deep networks can
-fit essentially any labeling of their training set, random labels included
-:cite:`zhang2021understanding`, so their VC dimension is at least the size of
-the training set. Yet, trained on real labels, the same networks generalize
-well, and often better as they grow larger. Bounds that depend on the data
-and on the training algorithm, not only on the class, are an active area of
-research. :numref:`sec_mdl-generalization-bounds` proves the finite-class
-bound of this section and develops one such tool, Rademacher complexity,
-which measures how well a class can fit random signs on the actual data.
-None of these bounds is sharp yet. Why deep networks generalize at all is
-the question that :numref:`sec_generalization_deep` takes up.
+Once we step up to deep neural networks, classical VC bounds go from loose
+to completely vacuous. Modern networks with millions of parameters can
+easily memorize completely random labels on their entire training set
+:cite:`zhang2021understanding`, proving that their VC dimension is at least
+$n$. Yet trained on real labels, those very same networks generalize
+remarkably well—and frequently generalize *better* as they grow larger and
+deeper! Explaining why requires moving beyond class-only worst-case bounds
+toward data- and algorithm-dependent complexity measures (such as the
+Rademacher complexity developed alongside our proof of the finite-class
+bound in :numref:`sec_mdl-generalization-bounds`). None of these theories
+yet delivers sharp practical numbers for deep networks; we revisit the
+puzzle of deep learning generalization in :numref:`sec_generalization_deep`.
 
 ## Summary
 
-The test error of a classifier fixed before the test set is drawn is an
-unbiased estimate of its population error, with a standard error of at most
-$0.5/\sqrt{n}$. About 10,000 test examples determine it to within $\pm 0.01$
-at 95% confidence by the central limit theorem, and about 18,500 do so with
-Hoeffding's inequality, which holds at every $n$. Reusing a test set weakens
-these guarantees: keeping the best of $k$ fixed classifiers inflates its score
-by up to about $\sqrt{\log(k)/(2n)}$, and choices guided by earlier scores
-can inflate it much more, so model selection belongs on a validation set.
-Statistical learning theory extends the union bound from $k$ classifiers to a
-whole class by counting labelings: the VC dimension, the size of the largest
-set of points a class shatters, takes the place of $\log|\mathcal{F}|$.
-Binary linear classifiers on $\mathbb{R}^d$ have VC dimension $d + 1$, so
-their
-training error approaches their population error at the rate $\sqrt{d/n}$.
-No memorizer has this guarantee, and for deep networks it is vacuous, so
-their generalization is certified with held-out data.
+A fresh test set of size $n$ provides an unbiased estimate of a fixed
+classifier's population error with standard error at most $0.5/\sqrt{n}$:
+pinning accuracy within $\pm 1$ percentage point at 95% confidence takes
+roughly 10,000 examples under the central limit theorem (or ~18,500 under
+Hoeffding's exact finite-sample inequality, which stays valid even at tiny
+error rates). Reusing the same test set erodes those guarantees: picking
+the best of $k$ fixed models inflates scores by up to
+$\sqrt{\log(k)/(2n)}$, and adaptive decisions informed by past test scores
+can leak the test set far more severely, underscoring why model selection
+belongs on a validation split. Statistical learning theory extends uniform
+convergence to infinite model classes via the *VC dimension*—the largest
+number of points a class can shatter. Binary linear classifiers in
+$\mathbb{R}^d$ have VC dimension $d + 1$, guaranteeing a generalization gap
+scaling as $\sqrt{d/n}$ (unlike unconstrained memorizers). Because such
+worst-case bounds become vacuous for overparameterized deep networks,
+empirical held-out evaluation remains indispensable.
 
 ## Exercises
 

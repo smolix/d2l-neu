@@ -640,18 +640,18 @@ with jax.default_matmul_precision('highest'):  # Full float32, not TF32
               f'{jnp.abs(Y_chunked - Y).max() / jnp.abs(Y).max():.1e}')
 ```
 
-At both chunk sizes the chunked outputs match the step-by-step ones to a
-few parts in ten million, the rounding error of 32-bit floats: the
-triangular solves and the scan over chunks compute the same memory as the
-loop.
+At both chunk sizes the chunked outputs match the loop to a few parts in
+ten million. The triangular solves and the scan over chunks are therefore
+no approximation: they compute the memory of the loop, only grouped
+differently.
 
 ### The Layer
 
 A Gated DeltaNet layer is the gated linear attention layer of
 :numref:`sec_matrix-state` with a different write, and everything else is
-inherited. It adds one projection, which computes a write strength
-$\beta_t = \sigma(\mathbf{w}^\top \mathbf{x}_t + b)$ for every head, and
-replaces the method `memory` by the chunked delta rule. The decay stays as it was, one
+inherited. It adds one projection, which computes a write strength $\beta_t =
+\sigma(\mathbf{w}^\top \mathbf{x}_t + b)$ for every head, and replaces the
+method `memory` by the chunked delta rule. The decay stays as it was, one
 number per head computed from the input, as in
 :citet:`Yang.Kautz.Hatamizadeh.2024`. So do the short convolution, the unit
 queries and keys that the transition needs, and the output norm and gate; by

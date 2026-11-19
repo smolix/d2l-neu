@@ -5,11 +5,10 @@ The recurrent networks of :numref:`chap_rnn` read a text the way we do,
 one token after another, and carry what they have read in a summary of
 fixed size, their *state*. Generating the millionth token therefore costs
 as much as generating the tenth. The transformers of
-:numref:`chap_transformers` keep every token instead. When a chat
-assistant answers a question about a long report, it holds a key and a
-value for every token of the report (:numref:`sec_kv-cache`), so its
-memory, and the work for each word of the answer, grow with the length of
-the report. The recurrent way is cheap, but is it good enough? In
+:numref:`chap_transformers` keep every token instead. A chat assistant
+that answers a question about a long report holds a key and a value for
+every token of the report (:numref:`sec_kv-cache`), so its memory, and the
+work for each word of the answer, grow with the length of the report. The recurrent way is cheap, but is it good enough? In
 :numref:`sec_gpt` a plain recurrent network as large as the GPT fell
 behind it after the first few bytes of context and never caught up. Can a
 better recurrent network close that gap, and at what length does the
@@ -27,35 +26,34 @@ softmax :cite:`Katharopoulos.Vyas.Pappas.ea.2020`. The three meet in
 recurrent layers that train in parallel and compute a form of attention.
 Every recurrent layer in the chapter has a state, an *update* that folds
 in each token, and a *readout* that computes the output. Control engineers
-call such a system a *state space model*; the chapter's title uses the
-name in this wide sense.
+call such a system a *state space model*. The chapter's title uses the
+name in this wide sense, and :numref:`sec_ssm` in the narrow one, a linear
+system in continuous time.
 
-We begin with gates, which let a network learn what to keep, and look back
-at the encoder–decoder of 2014, whose single state is a bottleneck. Next
-we make the update linear, so that it can be computed at every position at
-once and timed against attention
-(:numref:`subsec_linear-recurrence-cost`). Treating the update as a
-continuous-time system sampled at each token tells us how fast each
-channel should forget. Then each token decides how much it writes and
-forgets, so that the state can keep a name and let the commas pass. That
-step is the hardest of the chapter. The state turns out to be a memory of
-key–value pairs whose capacity we can calculate and whose write rule we
-can improve. Finally a little attention restores the recall that no fixed
-state has (:numref:`sec_hybrids`), and several recent large models keep
-one attention layer in every four to eight
-:cite:`Lieber.Lenz.Bata.ea.2024,Qwen.Team.2025`.
+We begin with gates, which let a network learn what to keep, and with the
+encoder–decoder of 2014, whose single state is a bottleneck we can
+measure. Three changes then make the state fast and selective: an update
+that is linear, so that it can be computed at every position at once and
+timed against attention (:numref:`subsec_linear-recurrence-cost`); decays
+read off a system in continuous time, which say how fast each channel
+should forget; and a token that decides how much it writes and forgets, so
+that the state can keep a name and let the commas pass. That last change is the hardest step of the chapter. The state then
+turns out to be a memory of key–value pairs, whose capacity we can
+calculate and whose write rule we can improve. Finally a little attention
+restores the recall that no fixed state has, which is where practice has
+arrived: several recent large models keep one attention layer in every
+four to eight :cite:`Lieber.Lenz.Bata.ea.2024,Qwen.Team.2025`.
 
-The sections build on one another and are best read in order, although
-:numref:`sec_seq2seq`, the derivation from continuous time in
-:numref:`sec_ssm` and the chunked algorithms of :numref:`sec_matrix-state`
-and :numref:`sec_deltanet` can wait on a first reading. Small synthetic
-tasks, each built to need one mechanism, test the memories; the byte-level
-text of :numref:`sec_gpt` checks that a layer still learns language.
-Besides recurrent networks and attention, we assume linear attention
-(:numref:`sec_windowed-linear-attention`). Our models are small; how these
-layers fare at scale is left to the papers we cite. The chapter teaches
-mechanisms rather than a ranking of current models, and algorithms rather
-than GPU kernels.
+On a first reading, :numref:`sec_seq2seq`, the derivation from continuous
+time in :numref:`sec_ssm` and the chunked algorithms of
+:numref:`sec_matrix-state` and :numref:`sec_deltanet` can wait. Small
+synthetic tasks, each built to need one mechanism, test the memories, and
+the byte-level text of :numref:`sec_gpt` checks that a layer still learns
+language. We assume linear attention
+(:numref:`sec_windowed-linear-attention`). Our models are small, and how
+these layers fare at scale is left to the papers we cite: the chapter
+teaches mechanisms and algorithms, not a ranking of current models or
+their GPU kernels.
 
 ```toc
 :maxdepth: 2

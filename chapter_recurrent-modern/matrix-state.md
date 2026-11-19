@@ -577,11 +577,11 @@ for name, Y_form in forms.items():
           f'{jnp.abs(Y_form - Y).max() / jnp.abs(Y).max():.1e}')
 ```
 
-All three agree to a few millionths of the output or better, the rounding
-error of 32-bit floats, for every chunk size. The chunk size divides the
-work between matrix products and the scan and leaves the result alone, so
-choosing it is a matter of hardware alone. Exercise
-:exref:`ex_ms-operations` asks which size is fastest.
+All three agree to a few millionths of the largest output at every chunk
+size, as closely as 32-bit sums taken in different orders can agree. The
+chunk size divides the work between matrix products and the scan and
+leaves the result alone; choosing it is a question of hardware, and
+Exercise :exref:`ex_ms-operations` asks which size is fastest.
 
 ## A Gated Linear Attention Layer
 

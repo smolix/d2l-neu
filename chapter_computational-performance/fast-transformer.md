@@ -959,7 +959,7 @@ Throughput says nothing about whether the faster step still trains the
 model. We therefore train a fresh model with the final configuration,
 bf16 at batch 512, for 300 steps or about 20 million tokens, and then
 compute its loss on the validation text with `d2l.lm_perplexity`
-(:numref:`sec_lstm`), in nats per byte. Two numbers from
+(:numref:`sec_test_models`), in nats per byte. Two numbers from
 :numref:`sec_gpt` set the scale. A bigram model, which predicts each byte
 from the previous one, reaches 2.45 nats per byte; the GPT of width 256
 reached about 1.35 after 1,000 steps of 8,192 tokens with a tuned

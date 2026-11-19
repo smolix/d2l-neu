@@ -6,19 +6,17 @@ put next to attention, and the LSTM they descend from, and you have
 measured where a state of fixed size runs out. Most of the literature
 behind these layers is less than five years old, and not all of it will
 last. This section points to the topics the chapter had no room for and
-says, where it can, what has held up. Each topic states the problem it
-addresses and what it changes relative to the chapter.
+says, where it can, what has held up.
 
 If you have one evening, spend it on the papers behind two entries:
 "Hybrid Models in Practice", where the question of :numref:`sec_hybrids`
 is being decided at scale, and "Expressivity of Fixed-State Models", on
 what a model with a fixed state can compute at all. With a second evening,
-read "Memory by Polynomial Projection", the derivation of the rates $-(n +
-1)$ of S4D that the chapter cut short. The applications at the end are
-pointers for readers who work with images, audio, or DNA. Implementations,
-tutorials, and courses for what the chapter does teach are listed in
-:numref:`chap_modern_rnn`. Nothing else in the book depends on this
-section.
+read "Memory by Polynomial Projection", the derivation of the rates of S4D
+that the chapter cut short. The applications at the end are pointers for
+readers who work with images, audio, or DNA. Implementations, tutorials,
+and courses for what the chapter does teach are listed in
+:numref:`chap_modern_rnn`.
 
 ## Recurrence and Attention Together
 
@@ -189,8 +187,8 @@ keys and values that a matrix cannot, but whether this recalls more per
 byte of state than a matrix of the same size is a current research
 question. The chapter sets a bar and says how to read it. By the capacity
 law of :numref:`sec_matrix-state`, a memory that adds its pairs reads with
-squared error $(n - 1)/d_k$ after $n$ pairs with random keys, so the pairs
-it holds at a given error grow in proportion to the key dimension. And
+squared error $(n - 1)/d_k$ after $n$ pairs with random keys, and the pairs
+it recalls grow in proportion to its $d_k d_v$ entries. And
 :numref:`sec_deltanet` found that a smaller error need not mean more pairs
 recalled. A network memory has to recall more pairs than a matrix with the
 same number of parameters.
@@ -202,8 +200,8 @@ came from, what became of Mamba, and two other routes to a long memory.
 
 ### Memory by Polynomial Projection
 
-:numref:`sec_ssm` initialized the rates of S4D as $\lambda_n = -(n + 1)$ and
-gave one sentence of justification. The full argument asks what a
+:numref:`sec_ssm` initialized the rates of S4D as $\lambda_n = -n$, $n = 1,
+\ldots, N$, and gave one sentence of justification. The full argument asks what a
 fixed-size state should remember about the history $x(s)$, $s \le t$, of an
 input, a history that keeps growing. HiPPO :cite:`Gu.Dao.Ermon.ea.2020`
 answers: the coefficients of the best approximation of the history by a
@@ -227,8 +225,8 @@ convolution kernel can be computed quickly.
 
 That correction was the hardest part of S4 and the first to go. Within a
 year, S4D :cite:`Gu.Gupta.Goel.Re.2022` kept only a diagonal: either the
-eigenvalues of the normal part, which are complex, or the real rates $-(n +
-1)$ on the diagonal of the HiPPO matrix itself, the choice of
+eigenvalues of the normal part, which are complex, or the real rates $-1,
+\ldots, -N$ on the diagonal of the HiPPO matrix itself, the choice of
 :numref:`sec_ssm`. In that paper's ablations the complex variants come
 close to the full matrix, and the real rates, simpler to implement and to
 explain, lose some accuracy. S5 :cite:`Smith.Warrington.Linderman.2023`

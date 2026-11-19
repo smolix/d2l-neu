@@ -60,13 +60,13 @@ that lead to the same state receive the same answer. This requires
 $$M b \ge k \log_2 V.$$
 :eqlabel:`eq_hy-counting`
 
-The state must hold $\log_2 V$ bits per token to be recalled, and the number
-of tokens it can recall grows in proportion to its size and not at all with
-the length of the context. A transformer's cache grows by one key and one
-value per token, so it never runs out. :citet:`Jelassi.Brandfonbrener.Kakade.ea.2024`
+The state must hold $\log_2 V$ bits per token to be recalled, and the number of
+tokens it can recall grows in proportion to its size and not at all with the
+length of the context. A transformer's cache grows by one key and one value per
+token, so it never runs out. :citet:`Jelassi.Brandfonbrener.Kakade.ea.2024`
 turn this argument into a lower bound on the state size needed to copy, and
-show that small transformers learn to copy strings far longer than
-recurrent models of the same size can.
+show that small transformers learn to copy strings far longer than recurrent
+models of the same size can.
 
 The bound counts the bits that a perfect encoding would use, and for the
 small recurrent model of this section it is far from tight. Its two Gated
@@ -153,11 +153,9 @@ one should not lose pairs at all, however many there are.
 
 ### Four Models
 
-We use the multi-query associative recall task of
-:numref:`sec_matrix-state`. A sequence holds $n$ pairs, each a key token
-followed by a value token, with distinct keys drawn from 128 and values
-from 4. Then every key appears once more, in random order, as a query, and
-the answer is the value that followed it; guessing is right one time in
+The task is the multi-query associative recall of
+:numref:`sec_matrix-state` with the sizes above: up to 64 pairs, keys
+drawn from 128 and values from 4, so that guessing is right one time in
 four. All four models are `d2l.SeqLM` with two blocks of width 32, and they
 differ only in their mixers. Two use Gated DeltaNet in both blocks, either
 with 8 heads of size 4, a state of $8 \cdot 4^2 = 128$ entries per layer, or
@@ -205,12 +203,9 @@ def recall_model(layout, num_heads=8, conv_width=4, num_hiddens=32):
 
 ### The Recall Sweep
 
-`d2l.train_recall` trains each model as in :numref:`sec_matrix-state`:
-2,000 updates of 256 sequences whose number of pairs cycles through 4, 8,
-16, 32, and 64, with AdamW and the schedule `d2l.cosine_warmup` of
-:numref:`sec_alexnet`, whose learning rate rises linearly over the first
-tenth of the updates and then falls along a half-cosine. It then measures
-recall at each number of pairs on 1,024 new sequences. Each model is
+`d2l.train_recall` trains each model as in :numref:`sec_matrix-state`,
+for 2,000 updates on loads that cycle through 4, 8, 16, 32, and 64 pairs,
+and then measures recall at each load on new sequences. Each model is
 trained twice, from fresh weights on fresh data, and the table prints both
 runs.
 
@@ -382,7 +377,7 @@ earlier. With larger models and longer contexts,
 :citet:`Arora.Eyuboglu.Timalsina.ea.2024` traced most of the gap in
 perplexity between attention and the gated convolution models they studied
 to recall of this kind. On our windows of 128 bytes there is no such gap to
-explain. Attention is the model that is behind.
+explain; here attention is the model that trails.
 
 Gated DeltaNet, the model that recalls the fewest pairs, thus has the
 lowest loss on text of the three. A low average loss on short windows is
@@ -845,7 +840,7 @@ Crossover near 500 tokens; at 128K tokens, 512 MB against 2 MB.
 
 Jamba, 4 attention layers of 32: 4 GB at 256K tokens, against 32 GB.
 Qwen3-Next: Gated DeltaNet and attention, three to one; Kimi Linear: a
-per-channel-decay variant, also three to one.
+variant that decays each key coordinate, also three to one.
 :::
 
 ::: {.slide title="Check: Memory of a Hybrid"}

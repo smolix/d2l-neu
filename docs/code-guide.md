@@ -189,7 +189,7 @@ already in the book:
 - Hessian–vector products: forward-over-reverse in one line in JAX and
   `torch.func`, nested tapes in TensorFlow (`mdl-matrix-calculus-autodiff.md:992`).
 - A doubling scan in PyTorch against `lax.associative_scan` in JAX
-  (`ssm.md:222`).
+  (`linear-recurrence.md:317`).
 - Muon as a `torch.optim.Optimizer` subclass and as an
   `optax.GradientTransformation` (`muon.md:314`, `:333`).
 - A straight-through estimator as `autograd.Function` and as `custom_vjp`

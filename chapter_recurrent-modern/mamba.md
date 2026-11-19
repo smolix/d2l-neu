@@ -200,19 +200,19 @@ for name, mixer in (('S4D', lambda: d2l.S4D(48, rngs=rngs)),
         10, 48, [mixer() for _ in range(2)], rngs=rngs))
 ```
 
-S4D answers at most one query in five, at or a little above the chance rate
-of one in eight. The minGRU answers most of them, but how many depends on
-the run: over the executions of this notebook so far, single runs have
-scored from about three quarters of the queries to 97%. Its decay is chosen
-by each input, so it can keep a symbol and let the fillers pass, and it
-goes most of the way to solving the task. That it learns this at all is a small surprise. On
-the long-range recall task of :numref:`sec_ssm`, one symbol followed by
-1,000 identical fillers, the minGRU could not keep the symbol unless its
-gates were initialized with long memories. A likely reason for the
-difference is that in selective copying a symbol sometimes sits close to a
-query, and the short-range gradients from such sequences can teach the
-gates to keep symbols longer and longer. Exercise
-:exref:`ex_mamba-short-memories` puts this explanation to a test.
+S4D answers at most one query in five, at or a little above the chance rate of
+one in eight. The minGRU answers most of them, but how many depends on the run:
+over the executions of this notebook so far, single runs have scored from about
+three quarters of the queries to 97%. Its decay is chosen by each input, so it
+can keep a symbol and let the fillers pass, and it goes most of the way to
+solving the task. That it learns this at all is a small surprise. On the
+long-range recall task of :numref:`sec_ssm`, one symbol followed by 1,000
+identical fillers, the minGRU could not keep the symbol unless its gates were
+initialized with long memories. A likely reason for the difference is that in
+selective copying a symbol sometimes sits close to a query, and the short-range
+gradients from such sequences can teach the gates to keep symbols longer and
+longer. Exercise :exref:`ex_mamba-short-memories` puts this explanation to a
+test.
 
 ## Selective Dynamics
 
@@ -224,19 +224,18 @@ because several things change at once. We take it in two moves. The first
 changes only where the step size comes from, and it turns out to produce an
 object we already know. The second adds what that object lacks.
 
-Recall the zero-order hold of :numref:`sec_ssm`. A state that obeys
-$h'(t) = \lambda h(t) + x(t)$ with rate $\lambda < 0$, read at steps of
-length $\Delta$, decays by $e^{\Delta\lambda}$ per step, and the input enters
-with weight $(e^{\Delta\lambda} - 1)/\lambda$. A small step keeps the state
-and admits little of the input; a large step forgets the state and admits
-much. Let us start with the simplest case, one channel with one state and
-$\lambda = -1$, where the update reads $h_t = e^{-\Delta} h_{t-1} + (1 -
-e^{-\Delta}) x_t$; here $x_t$ is the input of this one channel. In S4D,
-$\Delta$ was a learned constant of each channel. Suppose instead that we
-compute it from the whole token $\mathbf{x}_t$, as $\Delta_t = \textrm{softplus}(s_t)$
-with $s_t = \mathbf{w}^\top \mathbf{x}_t + b$, where $\textrm{softplus}(s) =
-\log(1 + e^s)$ keeps the step positive. The decay is then a function we
-have met many times:
+Recall the zero-order hold of :numref:`sec_ssm`. A state that obeys $h'(t) =
+\lambda h(t) + x(t)$ with rate $\lambda < 0$, read at steps of length $\Delta$,
+decays by $e^{\Delta\lambda}$ per step, and the input enters with weight
+$(e^{\Delta\lambda} - 1)/\lambda$. A small step keeps the state and admits
+little of the input; a large step forgets the state and admits much. Let us
+start with the simplest case, one channel with one state and $\lambda = -1$,
+where the update reads $h_t = e^{-\Delta} h_{t-1} + (1 - e^{-\Delta}) x_t$;
+here $x_t$ is the input of this one channel. In S4D, $\Delta$ was a learned
+constant of each channel. Suppose instead that we compute it from the whole
+token $\mathbf{x}_t$, as $\Delta_t = \textrm{softplus}(s_t)$ with $s_t =
+\mathbf{w}^\top \mathbf{x}_t + b$, where $\textrm{softplus}(s) = \log(1 + e^s)$
+keeps the step positive. The decay is then a function we have met many times:
 
 $$
 e^{-\Delta_t} = e^{-\log(1 + e^{s_t})} = \frac{1}{1 + e^{s_t}} = \sigma(-s_t).
@@ -330,9 +329,8 @@ The timescales have two sources. Within a channel the $N$ rates
 span a factor of $N$: the state with $\lambda = -1$ is the slowest, and the
 one with $\lambda = -N$ forgets $N$ times faster. Across channels the step
 sizes start log-uniformly between 0.001 and 0.1, a factor of 100. Together,
-as in S4D, the layer starts with time constants from under one step to
-1,000 steps, and the slowest state of each channel carries its longest
-memory.
+as in S4D, the layer starts with half-lives from under one step to 693
+steps, and the slowest state of each channel carries its longest memory.
 
 One detail of :eqref:`eq_selective_ssm` departs from the zero-order hold.
 The paper of :citet:`Gu.Dao.2023` states the exact hold, but its reference
@@ -360,15 +358,15 @@ the three before it, and a SiLU prepare the input of the SSM. The output of
 the SSM is multiplied by the SiLU of the second branch, and an output
 projection returns to width $d$.
 
-Why would a recurrent layer need a convolution in front of it and a gate
-behind it? The SSM computes its step sizes and write vectors from a single
-position. The convolution lets that position carry a summary of the last
-few tokens, so the decision to keep or skip can depend on a short context,
-whether a byte ends a word, say, rather than on one token alone. The gate acts on what the SSM returns. The SSM reports
-what the past holds; the gate, computed from the current token alone,
-decides for each channel how much of that report reaches the output. The
-SwiGLU feed-forward network of :numref:`sec_transformer-block` multiplies
-two branches in the same way, with the same SiLU.
+Why would a recurrent layer need a convolution in front of it and a gate behind
+it? The SSM computes its step sizes and write vectors from a single position.
+The convolution lets that position carry a summary of the last few tokens, so
+the decision to keep or skip can depend on a short context, whether a byte ends
+a word, say, rather than on one token alone. The gate acts on what the SSM
+returns. The SSM reports what the past holds; the gate, computed from the
+current token alone, decides for each channel how much of that report reaches
+the output. The SwiGLU feed-forward network of :numref:`sec_transformer-block`
+multiplies two branches in the same way, with the same SiLU.
 
 ![The Mamba layer. The input is projected to two branches of width $H = 2d$; one passes through a short causal convolution, a SiLU, and the selective SSM, whose step sizes and write and read vectors are computed from its input; the other, through a SiLU, gates the result. A final projection returns to width $d$.](../img/mdl-modernrnn-mamba-block.svg)
 :label:`fig_mamba_block`
@@ -973,9 +971,7 @@ the printed share changes from run to run, sometimes widely.
 The measure shows what the state is made of, not what the output reads
 from it. A state that draws only a few percent of its size from the
 symbols can still copy them, because the read vector $\mathbf{C}_t$ can
-pick a small part out of a large state. The S4D of :numref:`sec_ssm` with
-time constants of at most ten steps did the same when it recalled a symbol
-100 steps back, from a weight far smaller than that of the last fillers.
+pick a small part out of a large state.
 
 ### Language Modeling
 :label:`subsec_mamba-lm`
@@ -1035,13 +1031,13 @@ trained = d2l.text_table(text_model, arms, data)
 ```
 
 Mamba ends at about 1.30 nats per byte in both runs, about 0.05 below the
-minGRU of the same width and about 0.08 below attention. Part of the first
-gap is size: the expansion to $H = 2d$ channels of 16 states gives the
-Mamba model 44% more parameters than the minGRU model and 21% more than the
-attention model. The widened minGRU closes a third to two fifths of the
-gap and still ends about 0.03 nats per byte behind, about ten times more
-than two runs of any model in the table differ. At equal size, then, the Mamba layer models
-this text better than the minGRU.
+minGRU of the same width and about 0.08 below attention. Part of the first gap
+is size: the expansion to $H = 2d$ channels of 16 states gives the Mamba model
+44% more parameters than the minGRU model and 21% more than the attention
+model. The widened minGRU closes a third to two fifths of the gap and still
+ends about 0.03 nats per byte behind, about ten times more than two runs of any
+model in the table differ. At equal size, then, the Mamba layer models this
+text better than the minGRU.
 
 The bands say what kind of lead this is. Every model in the table gains
 little beyond byte 16, so at windows of 128 bytes this benchmark asks
@@ -1070,16 +1066,16 @@ a context of 8,192 tokens, the attention layer's cache is more than 400
 times larger. :numref:`subsec_linear-recurrence-cost` compares these costs
 with those of attention as the context grows.
 
-Selective state space models did not, in the end, replace attention. Most
-large models that use such layers interleave them with a few attention
-layers. Mamba itself was followed by Mamba-2 :cite:`Dao.Gu.2024`, which
-gives up the separate decays of states and channels so that almost all of
-its training work becomes matrix products. That step starts from a second
-look at the state of the layer. It is an $H \times N$ matrix to
-which every token adds one outer product, its step-scaled input
-$\boldsymbol{\Delta}_t \odot \mathbf{x}_t$ times the write vector
-$\mathbf{B}_t$, and which $\mathbf{C}_t$ reads. How many such writes can a matrix hold, and can each
-be read back? :numref:`sec_matrix-state` takes up these questions.
+Selective state space models did not, in the end, replace attention. Most large
+models that use such layers interleave them with a few attention layers. Mamba
+itself was followed by Mamba-2 :cite:`Dao.Gu.2024`, which gives up the separate
+decays of states and channels so that almost all of its training work becomes
+matrix products. That step starts from a second look at the state of the layer.
+It is an $H \times N$ matrix to which every token adds one outer product, its
+step-scaled input $\boldsymbol{\Delta}_t \odot \mathbf{x}_t$ times the write
+vector $\mathbf{B}_t$, and which $\mathbf{C}_t$ reads. How many such writes can
+a matrix hold, and can each be read back? :numref:`sec_matrix-state` takes up
+these questions.
 
 ## Summary
 
@@ -1105,10 +1101,10 @@ training step.
    $(e^{\Delta\lambda} - 1)/\lambda$.
     1. For $\lambda = -1$, find the largest $\Delta$ for which the two
        weights differ by less than 10%.
-    1. For one state with $\lambda = -1$, write vector 1, and the exact
-       weight, show that a state that starts at zero stays within the
-       interval spanned by zero and the inputs it has seen. Find a sequence of inputs in $[-1, 1]$ for
-       which the state with weight $\Delta$ leaves that interval. What
+    1. For one state with $\lambda = -1$, write vector 1, and the exact weight,
+       show that a state that starts at zero stays within the interval spanned
+       by zero and the inputs it has seen. Find a sequence of inputs in $[-1,
+       1]$ for which the state with weight $\Delta$ leaves that interval. What
        keeps the values of a trained Mamba model in range?
 
 1. **Memory of the scan.** For a Mamba layer with $H$ channels and $N$
@@ -1157,11 +1153,11 @@ training step.
        twice each. Which of them solve the task? Relate the result to the
        spike ratios measured above.
     1. In the trained Mamba model, set the step sizes of the first layer to
-       their median over filler positions at the four positions starting
-       at each symbol (the windows measured above), so that the layer cannot write the symbols with a large
-       step. How much does the accuracy drop? Repeat with the step sizes
-       set to their median over these positions everywhere else, so that
-       the layer cannot skip the fillers.
+       their median over filler positions at the four positions starting at
+       each symbol (the windows measured above), so that the layer cannot write
+       the symbols with a large step. How much does the accuracy drop? Repeat
+       with the step sizes set to their median over these positions everywhere
+       else, so that the layer cannot skip the fillers.
 
 1. [code] **Generation.** Add a method `step` to `SelectiveSSM` and to
    `Mamba` that processes one token, given the state of the SSM and the
@@ -1315,12 +1311,12 @@ With $N = 1$ and $\mathbf{B}_t = \mathbf{C}_t = 1$: the gate of the previous sli
 
 ::: {.slide title="Check: How Long Can a Fresh Layer Remember?"}
 $\Delta$ log-uniform in $[0.001, 0.1]$ across channels; rates $\lambda_n =
--1, \ldots, -16$. Time constant: $1/(\Delta|\lambda|)$ steps. What range
+-1, \ldots, -16$. Half-life: $\ln 2/(\Delta|\lambda|)$ steps. What range
 does a fresh layer cover?
 
 ::: {.fragment .fade-up}
-$1/(0.1 \cdot 16) \approx 0.6$ to $1/0.001 = 1{,}000$ steps: a factor of
-16 from the rates, 100 from the step sizes.
+$\ln 2/(0.1 \cdot 16) \approx 0.43$ to $\ln 2/0.001 = 693$ steps: a factor
+of 16 from the rates, 100 from the step sizes.
 :::
 :::
 

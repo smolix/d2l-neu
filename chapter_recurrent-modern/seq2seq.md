@@ -1,17 +1,16 @@
 # Sequence-to-Sequence Learning
 :label:`sec_seq2seq`
 
-The language models of the previous chapters continue a sequence: they
-read text and predict the next token. Many tasks have a different shape.
-A translator reads an English sentence and writes a French one; a speech recognizer
-listens to a clip and writes down the words. Input and output are both
-sequences, but their lengths differ, and the third French word need not
-render the third English one. Translation was the problem on which, in
-2014, neural networks first rivalled the statistical systems that then
-dominated the field
-:cite:`Sutskever.Vinyals.Le.2014,Cho.Van-Merrienboer.Gulcehre.ea.2014`.
-The design was simple. One recurrent network reads the source, a second
-writes the target, and a single state passes between them.
+The language models of the previous chapters continue a sequence: they read
+text and predict the next token. Many tasks have a different shape. A
+translator reads an English sentence and writes a French one; a speech
+recognizer listens to a clip and writes down the words. Input and output are
+both sequences, but their lengths differ, and the third French word need not
+render the third English one. Translation was the problem on which, in 2014,
+neural networks first rivalled the statistical systems that then dominated the
+field :cite:`Sutskever.Vinyals.Le.2014,Cho.Van-Merrienboer.Gulcehre.ea.2014`.
+The design was simple. One recurrent network reads the source, a second writes
+the target, and a single state passes between them.
 
 You have met the successors of this design before the design itself. The
 attention of :numref:`chap_attention` was invented to repair its weakness,
@@ -300,14 +299,14 @@ class Reversal:
 ```
 
 Counting tells us what to expect, up to a point. One of 16 equally likely
-letters carries $\log_2 16 = 4$ bits, so a string of $T$ letters carries
-$4T$ bits: 32 bits at $T = 8$, 256 bits at $T = 64$. A state of fixed size
-holds only so many bits, so beyond some length the accuracy must fall, and
-a wider state should hold out longer. Counting says only that the fall
-must begin before the string outgrows the state. A state of 64 numbers stored as 32-bit floats has
-room for 2,048 bits, enough for 512 letters. Will a trained network
-reverse 500 letters through it? A hundred? Make a guess before you read
-the table.
+letters carries $\log_2 16 = 4$ bits, so a string of $T$ letters carries $4T$
+bits: 32 bits at $T = 8$, 256 bits at $T = 64$. A state of fixed size holds
+only so many bits, so beyond some length the accuracy must fall, and a wider
+state should hold out longer. Counting says only that the fall must begin
+before the string outgrows the state. A state of 64 numbers stored as 32-bit
+floats has room for 2,048 bits, enough for 512 letters. Will a trained network
+reverse 500 letters through it? A hundred? Make a guess before you read the
+table.
 
 The model follows :numref:`fig_seq2seq_details`. A GRU encoder
 (:numref:`sec_gru`) reads the source. Its final state $\mathbf{c}$ starts
@@ -372,17 +371,17 @@ class Reverser(nnx.Module):
         return self.head(self.decoder(dec_X, initial_carry=c))
 ```
 
-Each model trains for 1,000 steps of 128 fresh strings with AdamW and a
-cosine schedule that takes the learning rate from $3 \times 10^{-3}$ to
-zero, without warmup or weight decay, as for the reversal model of
-:numref:`sec_transformer`. `d2l.LMOptimizer` packages this optimizer, and
-`d2l.train_steps` (:numref:`sec_test_models`) runs the steps. We then
-score the model on 1,000 fresh strings by the fraction of letters it
-predicts correctly, still given the correct previous letters. We keep the
-correct letters for a simple reason. The letters are independent, so the
-previous letters alone reveal nothing about the next one, and whatever the
-decoder knows about it came through the state. Had the decoder fed back its own guesses,
-its early mistakes would mix into the measurement.
+Each model trains for 1,000 steps of 128 fresh strings with AdamW and a cosine
+schedule that takes the learning rate from $3 \times 10^{-3}$ to zero, without
+warmup or weight decay, as for the reversal model of :numref:`sec_transformer`.
+`d2l.LMOptimizer` packages this optimizer, and `d2l.train_steps`
+(:numref:`sec_test_models`) runs the steps. We then score the model on 1,000
+fresh strings by the fraction of letters it predicts correctly, still given the
+correct previous letters. We keep the correct letters for a simple reason. The
+letters are independent, so the previous letters alone reveal nothing about the
+next one, and whatever the decoder knows about it came through the state. Had
+the decoder fed back its own guesses, its early mistakes would mix into the
+measurement.
 
 ```{.python .input #seq2seq-the-fixed-state-bottleneck-3}
 %%tab pytorch
@@ -447,11 +446,11 @@ for four times the letters loses about 0.2 of accuracy, so a longer string
 is harder even when the state grows with it.
 
 The limit is not the precision of the floats. It lies in the code that the
-network finds: a way to write the letters into its state through a long
-chain of gated updates and to read them back out in reverse order. The
-table cannot tell which of three things limits that code: the GRU's
-architecture, the optimizer, or the budget of 1,000 steps. It is a
-measurement at a fixed budget, and an exercise asks how far longer training moves it.
+network finds: a way to write the letters into its state through a long chain
+of gated updates and to read them back out in reverse order. The table cannot
+tell which of three things limits that code: the GRU's architecture, the
+optimizer, or the budget of 1,000 steps. It is a measurement at a fixed budget,
+and an exercise asks how far longer training moves it.
 
 Translation ran into the same wall.
 :citet:`Cho.Van-Merrienboer.Bahdanau.ea.2014` found that the BLEU score of

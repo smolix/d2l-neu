@@ -218,9 +218,10 @@ SHARED_DATA_NOTEBOOKS = {
     "chapter_transformers/kv-cache-reduction.ipynb",
     "chapter_transformers/scaling-laws.ipynb",
     # chapter_recurrent-modern/lstm.md trains its text models on WikiText-103
-    # bytes, the data of gpt.md; mamba.md and hybrids.md train on the same
-    # bytes.
+    # bytes, the data of gpt.md; linear-recurrence.md, mamba.md and hybrids.md
+    # train on the same bytes.
     "chapter_recurrent-modern/lstm.ipynb",
+    "chapter_recurrent-modern/linear-recurrence.ipynb",
     "chapter_recurrent-modern/mamba.ipynb",
     "chapter_recurrent-modern/hybrids.ipynb",
 }
@@ -275,6 +276,10 @@ FULL_CARD_NOTEBOOKS = {
     # milliseconds per training step of recurrent and attention language
     # models side by side; co-tenants slow them unevenly (dev, 2026-11-19).
     "chapter_recurrent-modern/lstm.ipynb": 1,
+    # The linear-recurrence section times one GRU, minGRU and attention layer
+    # against sequence length (the cost of attention is its lesson) and
+    # prints milliseconds per training step of GRU and minGRU models.
+    "chapter_recurrent-modern/linear-recurrence.ipynb": 1,
     # The selective-SSM section prints milliseconds per training step of
     # Mamba, minGRU and attention language models; a co-tenant on the card
     # doubled the PyTorch Mamba step (69 to 135 ms, dev, 2026-11-19).

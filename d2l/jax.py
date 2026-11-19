@@ -2383,6 +2383,7 @@ def linear_scan(a, b, h0=None):
     def combine(earlier, later):
         (a1, b1), (a2, b2) = earlier, later
         return a1 * a2, a2 * b1 + b2
+    # Autograd keeps the intermediate results of the scan for the backward pass
     return jax.lax.associative_scan(combine, (a, b), axis=1)[1]
 
 class MinGRU(nnx.Module):

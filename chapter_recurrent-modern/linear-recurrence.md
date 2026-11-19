@@ -278,6 +278,7 @@ linear total work.
 def associative_scan(combine, elems):  #@save
     """All prefixes of elems under an associative combine; time is axis 1."""
     s = 1
+    # Autograd keeps the tensors of every round for the backward pass
     while s < elems[0].shape[1]:  # Combine every position with the one s back
         earlier = tuple(x[:, :-s] for x in elems)
         later = tuple(x[:, s:] for x in elems)
@@ -307,6 +308,7 @@ def linear_scan(a, b, h0=None):  #@save
     def combine(earlier, later):
         (a1, b1), (a2, b2) = earlier, later
         return a1 * a2, a2 * b1 + b2
+    # Autograd keeps the intermediate results of the scan for the backward pass
     return jax.lax.associative_scan(combine, (a, b), axis=1)[1]
 ```
 
@@ -337,7 +339,7 @@ def sequential_scan(a, b):
     ab = (jnp.swapaxes(a, 0, 1), jnp.swapaxes(b, 0, 1))
     return jnp.swapaxes(jax.lax.scan(step, jnp.zeros_like(b[:, 0]), ab)[1], 0, 1)
 
-key_a, key_b = jax.random.split(jax.random.key(0))
+key_a, key_b = jax.random.split(d2l.get_key())
 a = jax.random.uniform(key_a, (4, 100, 8))
 b = jax.random.normal(key_b, (4, 100, 8))
 print(f'max deviation: '
@@ -348,42 +350,19 @@ The two agree to the rounding error of 32-bit floating point. The scan
 groups the multiplications and additions differently from the loop, so the
 results differ in the last digits; they are the same computation.
 
+<!-- WRITER: the scan-against-loop timing cell (ssm-implementation-3) is retired (SSM-10); the
+cost subsection "Cost against Attention" below replaces it. The paragraph above ("How much faster
+is the scan? ...", which also introduces d2l.Benchmark) and the reading below ("The loop's time grows
+...") go or move there; keep "The scan changes how we train, not how we generate: at inference the
+model still applies eq_affine_recurrence once per token, in constant memory." (SSM-23: reflow). New
+fact for this subsection: autograd through the scan keeps the tensors of every round for the backward
+pass (a comment in both tabs now says so); 12.5 needs that fact. -->
+
 How much faster is the scan? We time both on a GPU for sequences of 256 to
 16,384 steps, with a batch of 32 sequences of 128 coordinates each.
 `d2l.Benchmark`, which :numref:`sec_perf_model` introduces, calls a function
 a few times after a warm-up call and reports the average time, waiting for
 the GPU to finish before it stops the clock.
-
-```{.python .input #ssm-implementation-3}
-%%tab pytorch
-device = d2l.try_gpu()
-lengths, times = [256, 1024, 4096, 16384], [[], []]
-for T in lengths:
-    a = torch.rand(32, T, 128, device=device)
-    b = torch.randn(32, T, 128, device=device)
-    for i, scan in enumerate([linear_scan, sequential_scan]):
-        bench = d2l.Benchmark(lambda: scan(a, b), warmup=1, repeats=3)
-        times[i].append(1e3 * bench.time)
-d2l.plot(lengths, times, 'sequence length', 'milliseconds per call',
-         legend=['parallel scan', 'loop'], xscale='log', yscale='log',
-         figsize=(4.5, 3))
-```
-
-```{.python .input #ssm-implementation-3}
-%%tab jax
-lengths, times = [256, 1024, 4096, 16384], [[], []]
-scans = [jax.jit(linear_scan), jax.jit(sequential_scan)]
-for T in lengths:
-    key_a, key_b = jax.random.split(jax.random.key(T))
-    a = jax.random.uniform(key_a, (32, T, 128))
-    b = jax.random.normal(key_b, (32, T, 128))
-    for i, scan in enumerate(scans):
-        bench = d2l.Benchmark(lambda: scan(a, b), warmup=1, repeats=3)
-        times[i].append(1e3 * bench.time)
-d2l.plot(lengths, times, 'sequence length', 'milliseconds per call',
-         legend=['parallel scan', 'loop'], xscale='log', yscale='log',
-         figsize=(4.5, 3))
-```
 
 The loop's time grows in proportion to the length: each step is a separate
 small computation that must finish before the next one starts. The scan is
@@ -440,30 +419,90 @@ class MinGRU(nnx.Module):  #@save
         return linear_scan(*self.coefficients(X))
 ```
 
+<!-- WRITER: the Penn Treebank paragraph below is false. New setup: the text benchmark of
+:numref:`sec_lstm` (byte-level WikiText-103, windows of 128 bytes, 64 per step, 1,000 steps of
+d2l.LMOptimizer through d2l.train_text; validation loss in nats per byte, by position bands 0-15,
+16-63, 64-127; ms per training step). Three arms in d2l.SeqLM with four blocks, each trained twice:
+the GRU of 12.1 at width 256, the minGRU at the same width (fewer parameters: 2d^2 against 6d^2 per
+mixer, read the totals from the table), and the minGRU at width 302, where its model has the GRU
+model's parameter count. The only change between GRU and minGRU is that the gates and the candidate
+read only the input. -->
+
 We train it with the recipe of :numref:`sec_lstm`: character-level Penn
 Treebank in windows of 128 characters, two blocks of width 128, and 3,000
 steps of AdamW, all wrapped in `d2l.fit_lm`, which returns the validation
 perplexity. With the same recipe, the GRU reached a perplexity of about 3.0
 and the plain recurrent network about 3.1.
 
-```{.python .input #ssm-a-linear-recurrent-language-model-2}
-%%tab pytorch, jax
-data = d2l.PennTreebank(batch_size=64, num_steps=128)
-```
-
-```{.python .input #ssm-a-linear-recurrent-language-model-3}
+```{.python .input #linear-recurrence-a-linear-recurrent-language-model-1}
 %%tab pytorch
-model = d2l.SeqLM(len(data.vocab), 128, [MinGRU(128, 128) for _ in range(2)])
-print(f'minGRU perplexity: {d2l.fit_lm(model, data):.2f}')
+def text_model(mixer, d):  # 256 byte values; four blocks of width d
+    return d2l.SeqLM(256, d, [mixer(d) for _ in range(4)]).to(d2l.try_gpu())
+
+gru = lambda d: d2l.Recurrent(d2l.init_lecun(nn.GRU(d, d, batch_first=True)))
+min_gru = lambda d: MinGRU(d, d)
+arms = {'GRU': (gru, 256), 'minGRU': (min_gru, 256),
+        'minGRU, d=302': (min_gru, 302)}  # As many parameters as the GRU
 ```
 
-```{.python .input #ssm-a-linear-recurrent-language-model-3}
+```{.python .input #linear-recurrence-a-linear-recurrent-language-model-1}
 %%tab jax
-rngs = nnx.Rngs(d2l.get_key())
-model = d2l.SeqLM(len(data.vocab), 128,
-                  [MinGRU(128, 128, rngs=rngs) for _ in range(2)], rngs=rngs)
-print(f'minGRU perplexity: {d2l.fit_lm(model, data):.2f}')
+def text_model(mixer, d):  # 256 byte values; four blocks of width d
+    rngs = nnx.Rngs(d2l.get_key())
+    return d2l.SeqLM(256, d, [mixer(d, rngs) for _ in range(4)], rngs=rngs)
+
+lecun = nnx.initializers.lecun_normal()  # For the recurrent matrices
+gru = lambda d, rngs: nnx.RNN(
+    nnx.GRUCell(d, d, recurrent_kernel_init=lecun, rngs=rngs), unroll=8)
+min_gru = lambda d, rngs: MinGRU(d, d, rngs=rngs)
+arms = {'GRU': (gru, 256), 'minGRU': (min_gru, 256),
+        'minGRU, d=302': (min_gru, 302)}  # As many parameters as the GRU
 ```
+
+```{.python .input #linear-recurrence-a-linear-recurrent-language-model-2}
+%%tab pytorch, jax
+data = d2l.WikiText103(batch_size=64, num_steps=128)
+bands = [(0, 16), (16, 64), (64, 128)]  # Early, middle, and late positions
+header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
+print(' ' * 25, *(f'{h:>11}' for h in header), '  ms/step')
+trained = {}
+for name, (mixer, d) in arms.items():
+    models = [text_model(mixer, d) for _ in range(2)]
+    runs = [d2l.train_text(model, data) for model in models]  # (losses, ms)
+    columns = [[np.mean(loss) for loss, _ in runs]] + [
+        [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
+    print(f'{name:13s} {d2l.num_params(models[0]):11,d}',
+          *('/'.join(f'{v:.3f}' for v in column) for column in columns),
+          '/'.join(f'{ms:.0f}' for _, ms in runs))
+    trained[name] = models[0]
+model = trained['minGRU']  # The model we look inside below
+```
+
+<!-- WRITER: the reading below is false (PTB numbers). Measured in development, three executions
+of the cell in PyTorch and two in JAX, each training every arm twice; both tabs agree, and two runs
+of one cell differ by at most 0.004 nats per byte:
+  GRU, width 256: 3.82 M parameters, validation 1.296 to 1.300 nats per byte; bands 0-15 1.488 to
+  1.492, 16-63 1.269 to 1.274, 64-127 1.267 to 1.271.
+  minGRU, width 256: 2.76 M parameters, 1.345 to 1.349; bands 1.519 to 1.522, 1.320 to 1.325,
+  1.319 to 1.325.
+  minGRU, width 302: 3.82 M parameters (the GRU model's count), 1.326 to 1.332; bands 1.506 to
+  1.511, 1.301 to 1.307, 1.300 to 1.306.
+Firm lessons (every difference below is more than five times the largest two-run range):
+(1) At the GRU model's parameter count the minGRU ends about 0.03 nats per byte behind the GRU
+(0.026 to 0.036 over all runs). Taking the state out of the gates costs something on text; the
+design's guess "little or nothing" is not what the run shows.
+(2) At the same width the minGRU is about 0.05 behind, exactly as far as the plain RNN of
+:numref:`sec_lstm` (1.346 to 1.349 there), and it has exactly the plain RNN's parameter count
+(2,764,544: both mixers hold 2d^2 + 2d numbers). So, at equal size, the minGRU's input-only gates
+buy none of the gain that state-reading gates give (0.05); widening it to the GRU's count recovers
+about a third of that gain.
+(3) The gap is smallest in the first 16 bytes (0.014 to 0.023 at equal parameters) and larger after
+byte 64 (0.029 to 0.039): what the minGRU gives up shows mostly where longer context matters.
+(4) ms per training step at 128 bytes: the minGRU step is cheaper than the GRU step in both tabs
+(PyTorch, uncompiled: GRU 32 to 35, minGRU 26 to 30; JAX: GRU 16, minGRU 9 to 10). Any reading of
+the speed beyond "cheaper" belongs in tab notes; the length dependence is the cost subsection's.
+"With a third of the GRU's weights per layer" stays true per mixer (2d^2 against 6d^2), but the
+model totals are 2.76 M against 3.82 M (the MLPs, embedding and head are shared). -->
 
 The minGRU reaches a perplexity of about 3.2, a little behind the GRU's 3.0,
 with a third of the GRU's weights per layer. On this task, taking
@@ -489,10 +528,12 @@ class StateReset(nn.Module):
         return self.layer.coefficients(X)[1]
 
 layers = model.mixers
+loss = np.mean(d2l.loss_by_position(model, data))
 model.mixers = nn.ModuleList([StateReset(layer) for layer in layers])
-ppl = d2l.lm_perplexity(model, data.val_dataloader())
-print(f'perplexity with the state reset: {ppl:.2f}')
+reset = np.mean(d2l.loss_by_position(model, data))
 model.mixers = layers
+print(f'validation loss: {loss:.3f} nats per byte, '
+      f'with the state reset at every step: {reset:.3f}')
 ```
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-4}
@@ -506,11 +547,20 @@ class StateReset(nnx.Module):
         return self.layer.coefficients(X)[1]
 
 layers = model.mixers
+loss = np.mean(d2l.loss_by_position(model, data))
 model.mixers = nnx.List([StateReset(layer) for layer in layers])
-ppl = d2l.lm_perplexity(model, data.val_dataloader())
-print(f'perplexity with the state reset: {ppl:.2f}')
+reset = np.mean(d2l.loss_by_position(model, data))
 model.mixers = layers
+print(f'validation loss: {loss:.3f} nats per byte, '
+      f'with the state reset at every step: {reset:.3f}')
 ```
+
+<!-- WRITER: the reading below is false (PTB perplexities). Repose it as SSM-11 asks ("How much of
+the model's skill is memory? Without it the model predicts from one byte."); the reset loss is an
+upper bound, since the model was never trained that way. Measured (both tabs, all executions):
+validation loss 1.346 to 1.347 nats per byte with its memory, 2.481 to 2.485 with the state reset
+at every step (perplexity 3.8 against 12; or 1.94 against 3.58 bits per byte). "Character" becomes
+"byte" in the paragraph that poses the question. -->
 
 Resetting the state raises the perplexity from about 3.2 to more than 10, so
 the model relies heavily on what it remembers: the next character is hard
@@ -534,17 +584,30 @@ X, _ = next(iter(data.val_dataloader()))
 X = X.to(next(model.parameters()).device)
 with torch.inference_mode():  # Gates of the first layer on validation text
     Z = layers[0].coefficients(model.first_mixer_input(X))[0]
-print(f'gates above 0.5: {(Z > 0.5).float().mean():.0%}, '
-      f'above 0.9: {(Z > 0.9).float().mean():.0%}')
+print('gate above  half-life in steps  share of gates')
+for g in (0.5, 0.9, 0.99):
+    print(f'{g:10}  {math.log(2) / -math.log(g):17.0f}  '
+          f'{(Z > g).float().mean():14.1%}')
 ```
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-6}
 %%tab jax
 X, _ = next(iter(data.val_dataloader()))  # Gates of the first layer
-Z = layers[0].coefficients(model.first_mixer_input(X))[0]
-print(f'gates above 0.5: {(Z > 0.5).mean():.0%}, '
-      f'above 0.9: {(Z > 0.9).mean():.0%}')
+Z = layers[0].coefficients(model.first_mixer_input(jnp.asarray(X)))[0]
+print('gate above  half-life in steps  share of gates')
+for g in (0.5, 0.9, 0.99):
+    print(f'{g:10}  {math.log(2) / -math.log(g):17.0f}  '
+          f'{(Z > g).mean():14.1%}')
 ```
+
+<!-- WRITER: the reading below quotes the old PTB gate fractions; the cell now prints three
+thresholds (0.5, 0.9, 0.99: half-lives of 1, 7 and 69 steps) for the first layer on one validation
+batch of 64 x 128 bytes. Measured (both tabs, all executions): above 0.5: 51.7 to 53.2%; above 0.9:
+17.1 to 18%; above 0.99: 0.0 to 0.1%. So about half the gates keep more than half the state, one in
+six keeps it with a half-life of 7 steps or more, and almost none holds it for 69 steps: after
+training, the first layer still forgets within tens of bytes. That is the lead-in to the closing
+question (how fast should a linear state forget, and how should it start: 12.4). "character"
+becomes "byte". -->
 
 About half of the gate values in the first layer exceed 0.5, and about a
 quarter exceed 0.9, which keeps the state with a half-life of 7 steps or
@@ -553,6 +616,12 @@ the current character, so how long an input survives depends on the
 characters that follow it, as :eqref:`eq_lr-unrolled-gated` describes;
 an exercise asks how much the gates of a unit vary from character to
 character.
+
+<!-- WRITER: closing paragraph (worklist Part 4 B.7): the bridge "The rest of the section derives
+the decay from a continuous-time model ..." goes; the minGRU's gates start at one half, a half-life
+of one step; how fast should a linear state forget, and how should it start? That is 12.4. The
+closing comes after the cost subsection, at the end of the section. "at a small cost in perplexity"
+is false now: read the E5 table. -->
 
 The minGRU shows that a gated recurrence can be linear in its state, and
 therefore trained with a scan, at a small cost in perplexity. It leaves two
@@ -563,6 +632,131 @@ model offers longer memories from the start. And its memory holds only one
 number per hidden unit. The rest of the section derives the decay from a
 continuous-time model, which gives stable decays with a spread of timescales
 from the first step of training, and a larger state at little extra cost.
+
+## Cost against Attention
+:label:`subsec_linear-recurrence-cost`
+
+<!-- WRITER: new subsection (worklist Part 4 B.6). The table (rows: gated RNN as a loop, linear
+recurrence by scan, SSM by FFT (one row, forward pointer to :numref:`sec_ssm`), attention; columns:
+training work per layer, sequential depth, memory carried at generation; T, d, N restated), the
+prediction from the table before the cell, then the measurement and its reading. The setup of the
+cell: one layer of width 256, forward and backward pass, 65,536 tokens per call (128 sequences of
+512 down to 4 of 16,384), everything in float16 (bfloat16 was the plan, but PyTorch's cuDNN GRU
+cannot pack bfloat16 weights into one buffer: it warns and repacks them at every call); the GRU through cuDNN (PyTorch) or a loop of
+lax.scan (JAX), the minGRU through linear_scan, causal attention with 4 heads of width 64 through a
+fused kernel. Numbers and the reading: code report (E6). d2l.Benchmark is introduced here now (the
+sentence that introduced it went with the retired timing cell). -->
+
+:begin_tab:`pytorch`
+`nn.GRU` runs cuDNN's recurrent kernel, which still takes one step after
+another. The minGRU is compiled with `torch.compile`, as
+:numref:`sec_gpt` compiles the GPT: uncompiled, every round of the
+doubling scan launches several kernels that each read and write the whole
+sequence.
+:end_tab:
+
+:begin_tab:`jax`
+The GRU is `nnx.RNN` with eight steps per loop iteration, as in
+:numref:`sec_lstm`. Attention calls `jax.nn.dot_product_attention` with
+`implementation='cudnn'`, cuDNN's fused kernel, which never stores the
+$T \times T$ attention scores; the default implementation forms them, a
+matrix of 4 GiB at $T = 16{,}384$ in 16-bit floats.
+:end_tab:
+
+```{.python .input #linear-recurrence-cost-against-attention-1}
+%%tab pytorch
+d, tokens = 256, 65536  # Width; tokens per call, in sequences of length T
+device, half = d2l.try_gpu(), torch.float16  # 16-bit floats throughout
+timed = {'GRU': d2l.Recurrent(nn.GRU(d, d, batch_first=True)),
+         'minGRU': torch.compile(MinGRU(d, d)),
+         'attention': d2l.CausalAttention(d, num_heads=4)}
+for layer in timed.values():
+    layer.to(device, half)
+
+def time_call(layer, T):
+    """Milliseconds for a forward and backward pass over tokens / T
+    sequences of length T."""
+    X = torch.randn(tokens // T, T, d, device=device, dtype=half,
+                    requires_grad=True)
+    return 1000 * d2l.Benchmark(lambda: layer(X).float().sum().backward(),
+                                warmup=1, repeats=3).time
+```
+
+```{.python .input #linear-recurrence-cost-against-attention-1}
+%%tab jax
+class FusedAttention(d2l.CausalAttention):
+    """Causal attention through cuDNN's fused kernel."""
+    @staticmethod
+    def attend(q, k, v):
+        return jax.nn.dot_product_attention(q, k, v, is_causal=True,
+                                            implementation='cudnn')
+
+d, tokens = 256, 65536  # Width; tokens per call, in sequences of length T
+half, rngs = jnp.float16, nnx.Rngs(d2l.get_key())  # 16-bit floats
+timed = {'GRU': nnx.RNN(nnx.GRUCell(d, d, recurrent_kernel_init=lecun,
+                                    param_dtype=half, rngs=rngs), unroll=8),
+         'minGRU': MinGRU(d, d, rngs=rngs),
+         'attention': FusedAttention(d, num_heads=4, rngs=rngs)}
+for layer in timed.values():  # Every weight in 16 bits
+    params = nnx.state(layer, nnx.Param)
+    nnx.update(layer, jax.tree.map(lambda p: p.astype(half), params))
+
+@nnx.jit
+def forward_backward(layer, X):
+    loss = lambda layer, X: layer(X).astype(jnp.float32).sum()
+    return nnx.grad(loss, argnums=(0, 1))(layer, X)
+
+def time_call(layer, T):
+    """Milliseconds for a forward and backward pass over tokens / T
+    sequences of length T."""
+    X = jax.random.normal(d2l.get_key(), (tokens // T, T, d), half)
+    return 1000 * d2l.Benchmark(lambda: forward_backward(layer, X),
+                                warmup=1, repeats=3).time
+```
+
+```{.python .input #linear-recurrence-cost-against-attention-2}
+%%tab pytorch, jax
+lengths = [512, 1024, 2048, 4096, 8192, 16384]
+times = {name: [time_call(layer, T) for T in lengths]
+         for name, layer in timed.items()}
+print('T        ', *(f'{T:>7d}' for T in lengths))
+for name, ms in times.items():
+    print(f'{name:9s}', *(f'{t:7.1f}' for t in ms))
+d2l.plot(lengths, list(times.values()), 'sequence length',
+         'milliseconds per call', legend=list(times), xscale='log',
+         yscale='log', figsize=(4.5, 3))
+```
+
+<!-- WRITER: reading of the cost table and plot, then the section's closing (see the marker above
+the old closing paragraph). Measured (ms per call, forward and backward, 65,536 tokens, float16;
+PyTorch three executions (one in bfloat16, the same within 5%), JAX two):
+                  T = 512        T = 4,096       T = 16,384
+  PyTorch GRU     19.9 to 20.4   105 to 113      405 to 424
+  PyTorch minGRU  3.9 to 4.1     4.9 to 5.0      5.5 to 5.7
+  PyTorch attn    2.0 to 2.1     4.7 to 5.0      13.9 to 14.6
+  JAX GRU         11.3 to 11.6   57.4 to 57.8    201 to 206
+  JAX minGRU      1.1            1.2             1.2 to 1.3
+  JAX attn        2.5 to 2.6     5.9             17.2
+What holds in both tabs (the shared prose may say this):
+(1) The GRU is the slowest layer at every length, by 4.5 to 10 times at 512 and 12 to 170 times at
+16,384, and its time grows almost in proportion to T (about 20x for 32x the length): at a fixed
+number of tokens, a longer sequence means more steps in a row, each on fewer sequences.
+(2) The scan's time hardly moves with T (within a factor 1.5 from 512 to 16,384).
+(3) Attention's time is nearly flat up to about 2,048 (the projections dominate) and from about
+4,096 on grows by about 1.7 times with each doubling of T (5.0, 8.4, 14.6 and 5.9, 9.8, 17.2): its
+quadratic term takes over at a few thousand tokens on this GPU. That is the answer to chapter 11's second question.
+(4) At 16,384 the order is scan < attention < GRU in both tabs.
+What differs (acceptance test "same ordering at both ends" NOT met at T = 512): at 512 the PyTorch
+scan (3.9 to 4.1) is slower than attention (2.0 to 2.1); in JAX the scan (1.1) is faster (2.5).
+Root cause, not a fault: the PyTorch tab runs the doubling schedule of fig_scan_tree, whose
+ceil(log2 T) rounds each read and write the whole sequence (compiled, about 0.35 ms per round at
+this size, 9 rounds at 512, 14 at 16,384: the scan alone takes 3.4 ms at 512 and 4.9 at 16,384);
+JAX's lax.associative_scan does about 2T combines in all. So in PyTorch the scan and attention cross
+near 4,096 tokens, while in JAX the scan is below attention at every length. In the shared prose
+say it by schedule, not by framework: "how early the scan overtakes attention depends on how much
+work the scan does: a doubling scan pays log2 T passes over the sequence, a work-efficient one about
+two", and let each tab note say which schedule it runs (the PyTorch implementation paragraph and the
+JAX one already name them). Quote only rough factors; the timings vary by about 5% between runs. -->
 
 ## Summary
 
@@ -604,8 +798,8 @@ its state shows that it relies on its memory.
        weights are nonnegative and sum to at most one, and derive a bound on
        $|\mathbf{h}_t|$ that holds at every length, with and without the
        $\tanh$.
-    1. Remove the $\tanh$, retrain with `d2l.fit_lm`, and compare the
-       perplexity with that of `MinGRU`. Relate what you observe to your
+    1. Remove the $\tanh$, retrain with `d2l.train_text`, and compare the
+       validation loss with that of `MinGRU`. Relate what you observe to your
        bound.
 
 1. [code] **A minimal LSTM.** Apply the same two cuts to the LSTM of
@@ -614,8 +808,8 @@ its state shows that it relies on its memory.
    $\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot
    \tilde{\mathbf{c}}_t$.
     1. Show that only the cell needs a scan. Implement the layer as a mixer,
-       train it with `d2l.fit_lm`, and compare its perplexity with that of
-       `MinGRU`.
+       train it with `d2l.train_text`, and compare its validation loss with
+       that of `MinGRU`.
     1. Unlike the minGRU, this layer does not tie its input gate to its
        forget gate. Show that if $|\tilde{\mathbf{c}}_t| < 1$ and every
        forget gate stays below $f_\textrm{max} < 1$, the cell stays below
@@ -654,6 +848,9 @@ its state shows that it relies on its memory.
        used above. Does the ratio of times follow the ratio of combines?
        Explain why it might not at short lengths.
 
+<!-- WRITER: exercises 2 and 3: fit_lm is gone; d2l.train_text of 12.1 returns the validation
+losses by position (their mean is the validation loss in nats per byte); "characters" become bytes
+in exercise 5. -->
 
 [Discussions](https://d2l.discourse.group/)
 
@@ -687,6 +884,7 @@ $\log_2 4096 = 12$ rounds suffice.
 - compose affine steps and run a scan in $\log_2 T$ rounds;
 - turn a GRU into a minGRU whose gates read only the input.
 
+<!-- DECK: the running example is now the GRU against the minGRU on WikiText bytes (E5). -->
 **Running example:** the Penn Treebank results (GRU 3.0, RNN 3.1).
 :::
 
@@ -748,8 +946,12 @@ while s < T:  # Combine each position with the one s steps back
 $\lceil\log_2 T\rceil$ rounds, about $T\log_2 T$ combines.
 :::
 
+<!-- DECK: the scan-against-loop timing cell is retired; this slide now shows the cost cell
+(GRU, minGRU, attention against length). Replace it with the cost table and the timing plot, with
+titles and text from the new subsection (worklist Part 4 Deck). -->
+
 ::: {.slide title="The Scan Beats the Loop at Every Length"}
-@!ssm-implementation-3
+@!linear-recurrence-cost-against-attention-2
 
 Batch of 32 sequences of 128 coordinates. More positions cost little until
 the GPU is busy; then the total work sets the time.
@@ -767,6 +969,9 @@ $T = 4096$.
    12 times the work, in 340 times fewer rounds.
 :::
 :::
+
+<!-- DECK: the PTB numbers on this slide are false; the cells now print nats per byte on WikiText
+bytes and three gate thresholds (code report E5). -->
 
 ::: {.slide title="The minGRU Uses Its Memory Selectively"}
 Penn Treebank: minGRU about 3.2, GRU 3.0.

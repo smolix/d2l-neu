@@ -2230,6 +2230,7 @@ def associative_scan(combine, elems):
 
     Defined in :numref:`sec_linear-recurrence`"""
     s = 1
+    # Autograd keeps the tensors of every round for the backward pass
     while s < elems[0].shape[1]:  # Combine every position with the one s back
         earlier = tuple(x[:, :-s] for x in elems)
         later = tuple(x[:, s:] for x in elems)

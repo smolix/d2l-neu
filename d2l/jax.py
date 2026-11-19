@@ -2813,6 +2813,9 @@ def show_profile(kernels, step_ms, rows=6):
 
     Defined in :numref:`sec_perf_model`"""
     busy = sum(kernels.values())
+    # Names that mark a matrix product: cuBLAS and CUTLASS kernels (gemm,
+    # xmma, cutlass, which also names PyTorch's fused attention), XLA's
+    # fused products (gemm_fusion_dot), and matmul or sdpa kernels
     products = sum(ms for name, ms in kernels.items()
                    if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
     print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '

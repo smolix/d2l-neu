@@ -46,7 +46,14 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #performance-model-the-performance-model-1}
-%%tab pytorch, jax
+%%tab pytorch
+import re
+import time
+```
+
+```{.python .input #performance-model-the-performance-model-1}
+%%tab jax
+import collections
 import re
 import time
 ```
@@ -146,29 +153,14 @@ trillion FLOP/s. That is less than a six-hundredth of the compute roof.
 ![The roofline of the RTX 4090. Attainable throughput is the smaller of the compute roof $P$ and the arithmetic intensity times the memory bandwidth $\beta$. The points mark the examples of the text: $x + 1$ in bf16, a linear layer of width 2048 applied to one token, and the same layer applied to a minibatch of 8,192 tokens. The ridge point lies near 164 FLOP/byte.](../img/mdl-perf-roofline.svg)
 :label:`fig_roofline`
 
-### The Ridge Point of the RTX 4090
+### The Ridge Point
 
-The peak throughput of the tensor cores cannot be queried from the device,
-so we take $P$ and $\beta$ from the specification sheet and print the name
-of the GPU that the code runs on. On another GPU, replace the two constants
-with the values from its specification.
-
-```{.python .input #performance-model-the-ridge-point-of-the-rtx-4090-1}
-%%tab pytorch
-print(torch.cuda.get_device_name())
-```
-
-```{.python .input #performance-model-the-ridge-point-of-the-rtx-4090-1}
-%%tab jax
-print(jax.devices()[0].device_kind)
-```
-
-```{.python .input #performance-model-counting-flops-bytes-and-arithmetic-intensity}
-%%tab pytorch, jax
-peak_tflops = 165.2    # RTX 4090: dense bf16 on the tensor cores
-bandwidth_tbs = 1.008  # RTX 4090: GDDR6X memory
-print(f'ridge point = {peak_tflops / bandwidth_tbs:.0f} FLOP/byte')
-```
+<!-- WRITER: the two ridge-point cells are gone (PM-17). P = 165.2 TFLOP/s and
+beta = 1.008 TB/s are now defined, with the GPU name and the ridge printed, at
+the top of the cell `hardware-batched-decoding` in "The Bandwidth Roof and the
+Compute Roof" below. State P/beta = 164 FLOP/byte in prose here; the paragraph
+"we take P and beta from the specification sheet and print the name of the
+GPU" no longer has a cell here. -->
 
 A ridge point of 164 FLOP/byte means that an operation must perform about
 164 FLOPs for every byte it moves before the arithmetic units, rather than
@@ -191,16 +183,10 @@ each operation is placed in the device's queue and Python moves on: 32
 products of $4096 \times 4096$ matrices are issued in a small fraction of
 the time the GPU needs to compute them. A clock read right after a call
 therefore measures how long Python took to queue the work, not how long the
-GPU took to do it (:numref:`fig_async_timeline`). A correct measurement
+GPU took to do it. A correct measurement
 runs the operation once before timing it, waits for the device before it
 starts and before it stops the clock, and divides the time of many
 repetitions by their number.
-
-![Asynchronous dispatch. Python enqueues kernels and moves on, and the GPU
-executes them behind it. A timer read without a barrier stops when the last
-kernel has been *enqueued*; only a synchronization point waits until the
-work is *done*.](../img/mdl-perf-async-timeline.svg)
-:label:`fig_async_timeline`
 
 ### Synchronization Points
 
@@ -360,6 +346,140 @@ program's *regime*. Two experiments locate the three regimes on the
 RTX 4090: matrix products of growing size, and elementwise operations on a
 large tensor.
 
+<!-- WRITER: "Two experiments locate the three regimes ... matrix products of
+growing size, and elementwise operations" is now three, in this order: the
+skinny product across the ridge, elementwise operations, the square sweep. -->
+
+### The Bandwidth Roof and the Compute Roof
+:label:`subsec_perf-roofline-test`
+
+<!-- WRITER: new subsection (moved cell `hardware-batched-decoding`, id kept).
+Prediction to state before the cell: a 16,384 x 16,384 bf16 weight times B rows
+moves b(d^2 + 2Bd) bytes, 0.54 GB, 0.53 ms at 1.008 TB/s whatever B is, until
+its 2Bd^2 FLOPs at 165 TFLOP/s take longer, from B near I* = 164; beyond, time
+grows in proportion to B (bound 0.83 ms at B = 256, 3.33 ms at 1,024). The
+cell prints, per B, the bound, which roof sets it, the measured time and the
+TFLOP/s; its first line prints the GPU name and the ridge. Numbers from the
+dev run are in reports/code-performance-model.md; read the captured store. -->
+
+```{.python .input #hardware-batched-decoding}
+%%tab pytorch
+peak_tflops = 165.2    # RTX 4090: dense bf16 on the tensor cores
+bandwidth_tbs = 1.008  # RTX 4090: GDDR6X memory
+print(f'{torch.cuda.get_device_name()}: ridge point '
+      f'{peak_tflops / bandwidth_tbs:.0f} FLOP/byte')
+d, b = 16384, 2  # Width and bytes per bf16 number
+W = torch.randn(d, d, dtype=torch.bfloat16, device=d2l.try_gpu())  # 0.54 GB
+for B in (1, 4, 16, 64, 128, 256, 1024):
+    X = torch.randn(B, d, dtype=torch.bfloat16, device=W.device)
+    t = d2l.Benchmark(lambda: X @ W).time
+    flops, nbytes = 2 * B * d * d, b * (B * d + d * d + B * d)
+    t_mem, t_comp = nbytes / bandwidth_tbs / 1e12, flops / peak_tflops / 1e12
+    roof = 'memory' if t_mem > t_comp else 'compute'
+    print(f'B = {B:4d}: bound {1e3 * max(t_mem, t_comp):4.2f} ms ({roof:7s}), '
+          f'measured {1e3 * t:4.2f} ms, {flops / t / 1e12:5.1f} TFLOP/s')
+```
+
+```{.python .input #hardware-batched-decoding}
+%%tab jax
+peak_tflops = 165.2    # RTX 4090: dense bf16 on the tensor cores
+bandwidth_tbs = 1.008  # RTX 4090: GDDR6X memory
+print(f'{jax.devices()[0].device_kind}: ridge point '
+      f'{peak_tflops / bandwidth_tbs:.0f} FLOP/byte')
+d, b = 16384, 2  # Width and bytes per bf16 number
+W = jax.random.normal(d2l.get_key(), (d, d), dtype=jnp.bfloat16)  # 0.54 GB
+for B in (1, 4, 16, 64, 128, 256, 1024):
+    X = jax.random.normal(d2l.get_key(), (B, d), dtype=jnp.bfloat16)
+    t = d2l.Benchmark(lambda: matmul(X, W)).time
+    flops, nbytes = 2 * B * d * d, b * (B * d + d * d + B * d)
+    t_mem, t_comp = nbytes / bandwidth_tbs / 1e12, flops / peak_tflops / 1e12
+    roof = 'memory' if t_mem > t_comp else 'compute'
+    print(f'B = {B:4d}: bound {1e3 * max(t_mem, t_comp):4.2f} ms ({roof:7s}), '
+          f'measured {1e3 * t:4.2f} ms, {flops / t / 1e12:5.1f} TFLOP/s')
+```
+
+<!-- WRITER: read the output: one matrix on one card reaches both roofs; the
+time stays flat at the bandwidth roof up to B = 64-128 and grows in proportion
+to B at the compute roof from 256 on. -->
+
+### Elementwise Operations
+
+<!-- WRITER: this subsection now comes before the square sweep (structure
+3.2 order: roofline test, elementwise, host overhead). "Products large enough
+to escape the overhead regime lie above the ridge point, so the sweep never
+shows the bandwidth-bound regime" refers to a sweep the reader has not yet
+seen; rewrite the lead-in. -->
+
+Products large enough to escape the overhead regime lie above the ridge
+point, so the sweep never shows the bandwidth-bound regime. To see it, we
+apply single elementwise operations of very different arithmetic cost to a
+tensor of $8192 \times 8192$ numbers in fp32, 256 MiB: an addition, a
+multiplication, a sine, and a sigmoid. Each reads the tensor once and
+writes a result of the same size.
+
+```{.python .input #performance-model-three-regimes-1}
+%%tab pytorch
+x = torch.randn(8192, 8192, device=d2l.try_gpu())  # 256 MiB in fp32
+for desc, f in [('add', lambda x: x + 1), ('mul', lambda x: x * 1.5),
+                ('sin', torch.sin), ('sigmoid', torch.sigmoid)]:
+    print(d2l.Benchmark(lambda: f(x), desc=desc))
+```
+
+```{.python .input #performance-model-three-regimes-1}
+%%tab jax
+x = jax.random.normal(d2l.get_key(), (8192, 8192))  # 256 MiB in fp32
+for desc, f in [('add', lambda x: x + 1), ('mul', lambda x: x * 1.5),
+                ('sin', jnp.sin), ('sigmoid', jax.nn.sigmoid)]:
+    f = jax.jit(f)
+    print(d2l.Benchmark(lambda: f(x), desc=desc))
+```
+
+All four operations take the same time, a little over half a millisecond.
+Each moves 512 MiB, $5.4 \times 10^8$ bytes, which amounts to about
+0.9 TB/s, close to the 1.008 TB/s of the specification. A sine costs many
+more FLOPs than an addition, yet it runs no slower, because the bytes each
+kernel moves set its time. This is the defining behavior of a
+bandwidth-bound operation: additional arithmetic costs no time until the
+intensity approaches the ridge point.
+
+Activation functions and normalization layers chain several elementwise
+operations. The function below is the tanh approximation of the GELU
+activation $z\,\Phi(z)$ (:numref:`subsec_activation-functions`) with
+rounded constants, and it applies eight elementwise operations to its
+input. Executed one operation at a time, each operation is a kernel of its
+own, which reads its inputs from memory and writes its result back.
+
+```{.python .input #performance-model-three-regimes-2}
+%%tab pytorch
+def gelu_ish(x):  #@save
+    """The tanh approximation of GELU with rounded constants: a chain of
+    eight elementwise operations."""
+    return 0.5 * x * (1 + torch.tanh(0.8 * (x + 0.04 * x**3)))
+
+print(d2l.Benchmark(lambda: x + 1, desc='1 op'))
+print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))  # Eager: 8 kernels
+```
+
+```{.python .input #performance-model-three-regimes-2}
+%%tab jax
+def gelu_ish(x):  #@save
+    """The tanh approximation of GELU with rounded constants: a chain of
+    eight elementwise operations."""
+    return 0.5 * x * (1 + jnp.tanh(0.8 * (x + 0.04 * x**3)))
+
+print(d2l.Benchmark(lambda: x + 1, desc='1 op'))
+print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))  # No jit: 8 kernels
+```
+
+The chain takes eight to nine times as long as the single addition, and
+the bytes explain the factor. The addition reads one tensor and writes one. The
+eight operations of the chain read and write 18 tensors of the same size
+between them. Each of the six operations with one tensor input moves two;
+the sum $x + 0.04x^3$ and the final product combine two tensors and move
+three each. One kernel that read `x` once and wrote the result once would
+move 2 tensors instead of 18. Merging operations into such a kernel is
+called *fusion*, and a compiler can do it automatically.
+
 ### Matrix Products across Sizes
 :label:`subsec_perf-sweep`
 
@@ -446,11 +566,35 @@ depend on the product. A compiled function that only adds one to a small
 array takes about as long per call:
 :end_tab:
 
+<!-- WRITER: the control now runs in both tabs (PM-8). It times the n = 256
+product and x + 1 on a 256 x 256 tensor, and prints for each the wall-clock
+time per call (Benchmark) and the device-busy time per call (the profiler's
+kernel times, d2l.kernel_times, defined in subsec_perf-profiler; one clause
+says so). The device is busy a few microseconds of each call, so the rest of
+the floor is host time h; the shared prose reads h off this output in each
+tab. The JAX tab block above becomes shared prose; numbers in the report. -->
+
+```{.python .input #performance-model-matrix-products-across-sizes-3}
+%%tab pytorch
+a = torch.randn(256, 256, device=d2l.try_gpu(), dtype=torch.bfloat16)
+for desc, f in [('256 x 256 product', lambda: torch.mm(a, a)),
+                ('x + 1 on 256 x 256', lambda: a + 1)]:
+    wall = d2l.Benchmark(f, repeats=100).time
+    busy = sum(d2l.kernel_times(f, steps=100).values()) / 1e3  # Seconds
+    print(f'{desc:18s}: {1e6 * wall:5.1f} us per call, '
+          f'device busy {1e6 * busy:4.1f} us')
+```
+
 ```{.python .input #performance-model-matrix-products-across-sizes-3}
 %%tab jax
 add_one = jax.jit(lambda x: x + 1)
-small = jnp.zeros((256, 256), dtype=jnp.bfloat16)
-d2l.Benchmark(lambda: add_one(small), repeats=100, desc='x + 1 on 256 x 256')
+a = jax.random.normal(d2l.get_key(), (256, 256), dtype=jnp.bfloat16)
+for desc, f in [('256 x 256 product', lambda: matmul(a, a)),
+                ('x + 1 on 256 x 256', lambda: add_one(a))]:
+    wall = d2l.Benchmark(f, repeats=100).time
+    busy = sum(d2l.kernel_times(f, steps=100).values()) / 1e3  # Seconds
+    print(f'{desc:18s}: {1e6 * wall:5.1f} us per call, '
+          f'device busy {1e6 * busy:4.1f} us')
 ```
 
 :begin_tab:`jax`
@@ -476,78 +620,6 @@ tiles and gives each SM one tile at a time. A product whose output has
 fewer tiles than the GPU has SMs leaves some SMs idle, however fast the
 host issues it. The share of the peak that it can reach is then at most
 the share of SMs that hold a tile.
-
-### Elementwise Operations
-
-Products large enough to escape the overhead regime lie above the ridge
-point, so the sweep never shows the bandwidth-bound regime. To see it, we
-apply single elementwise operations of very different arithmetic cost to a
-tensor of $8192 \times 8192$ numbers in fp32, 256 MiB: an addition, a
-multiplication, a sine, and a sigmoid. Each reads the tensor once and
-writes a result of the same size.
-
-```{.python .input #performance-model-three-regimes-1}
-%%tab pytorch
-x = torch.randn(8192, 8192, device=d2l.try_gpu())  # 256 MiB in fp32
-for desc, f in [('add', lambda x: x + 1), ('mul', lambda x: x * 1.5),
-                ('sin', torch.sin), ('sigmoid', torch.sigmoid)]:
-    print(d2l.Benchmark(lambda: f(x), desc=desc))
-```
-
-```{.python .input #performance-model-three-regimes-1}
-%%tab jax
-x = jax.random.normal(d2l.get_key(), (8192, 8192))  # 256 MiB in fp32
-for desc, f in [('add', lambda x: x + 1), ('mul', lambda x: x * 1.5),
-                ('sin', jnp.sin), ('sigmoid', jax.nn.sigmoid)]:
-    f = jax.jit(f)
-    print(d2l.Benchmark(lambda: f(x), desc=desc))
-```
-
-All four operations take the same time, a little over half a millisecond.
-Each moves 512 MiB, $5.4 \times 10^8$ bytes, which amounts to about
-0.9 TB/s, close to the 1.008 TB/s of the specification. A sine costs many
-more FLOPs than an addition, yet it runs no slower, because the bytes each
-kernel moves set its time. This is the defining behavior of a
-bandwidth-bound operation: additional arithmetic costs no time until the
-intensity approaches the ridge point.
-
-Activation functions and normalization layers chain several elementwise
-operations. The function below is the tanh approximation of the GELU
-activation $z\,\Phi(z)$ (:numref:`subsec_activation-functions`) with
-rounded constants, and it applies eight elementwise operations to its
-input. Executed one operation at a time, each operation is a kernel of its
-own, which reads its inputs from memory and writes its result back.
-
-```{.python .input #performance-model-three-regimes-2}
-%%tab pytorch
-def gelu_ish(x):  #@save
-    """The tanh approximation of GELU with rounded constants: a chain of
-    eight elementwise operations."""
-    return 0.5 * x * (1 + torch.tanh(0.8 * (x + 0.04 * x**3)))
-
-print(d2l.Benchmark(lambda: x + 1, desc='1 op'))
-print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))  # Eager: 8 kernels
-```
-
-```{.python .input #performance-model-three-regimes-2}
-%%tab jax
-def gelu_ish(x):  #@save
-    """The tanh approximation of GELU with rounded constants: a chain of
-    eight elementwise operations."""
-    return 0.5 * x * (1 + jnp.tanh(0.8 * (x + 0.04 * x**3)))
-
-print(d2l.Benchmark(lambda: x + 1, desc='1 op'))
-print(d2l.Benchmark(lambda: gelu_ish(x), desc='chain'))  # No jit: 8 kernels
-```
-
-The chain takes eight to nine times as long as the single addition, and
-the bytes explain the factor. The addition reads one tensor and writes one. The
-eight operations of the chain read and write 18 tensors of the same size
-between them. Each of the six operations with one tensor input moves two;
-the sum $x + 0.04x^3$ and the final product combine two tensors and move
-three each. One kernel that read `x` once and wrote the result once would
-move 2 tensors instead of 18. Merging operations into such a kernel is
-called *fusion*, and a compiler can do it automatically.
 
 ### Diagnosis and Fixes
 
@@ -655,7 +727,6 @@ def kernel_times(f, steps=10):  #@save
 
 ```{.python .input #performance-model-the-profiler}
 %%tab jax
-import collections  # Already imported by the d2l library
 #@save
 import glob
 import tempfile
@@ -706,6 +777,9 @@ def show_profile(kernels, step_ms, rows=6):  #@save
     """Busy device time against the wall-clock time step_ms of a step, the
     share of the matrix products, and the kernels with the most time."""
     busy = sum(kernels.values())
+    # Names that mark a matrix product: cuBLAS and CUTLASS kernels (gemm,
+    # xmma, cutlass, which also names PyTorch's fused attention), XLA's
+    # fused products (gemm_fusion_dot), and matmul or sdpa kernels
     products = sum(ms for name, ms in kernels.items()
                    if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
     print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '
@@ -1062,7 +1136,8 @@ arithmetic costs no time. Above it: **compute-bound**, fewer bytes do not help.
 :::
 
 ::: {.slide title="The RTX 4090 Needs 164 FLOPs per Byte"}
-@performance-model-counting-flops-bytes-and-arithmetic-intensity
+$$I^* = \frac{P}{\beta} = \frac{165.2 \textrm{ TFLOP/s}}{1.008 \textrm{ TB/s}}
+\approx 164 \textrm{ FLOP/byte}$$
 
 - Other current GPUs: about 120 (RTX 5090), about 300 (H100, B200).
 - Square bf16 product, $B = D = F = n$: $I = n/3$, compute-bound from
@@ -1126,6 +1201,16 @@ seconds_per_call = (time.perf_counter() - t0) / repeats
 @!performance-model-measuring-without-lying-4
 
 $2 \cdot 4096^3 = 1.4 \times 10^{11}$ FLOPs in under 1 ms: over 150 TFLOP/s.
+:::
+
+::: {.slide title="One Matrix Reaches Both Roofs"}
+$16{,}384 \times 16{,}384$ bf16 weight (0.54 GB) times $B$ rows; bound
+$\max(\textrm{bytes}/\beta,\ \textrm{FLOPs}/P)$ next to the measured time:
+
+@!hardware-batched-decoding
+
+- Up to $B \approx 128$: the weights' bytes set the time, whatever $B$ is.
+- From $B = 256$: the FLOPs set it, and time grows with $B$.
 :::
 
 ::: {.slide title="Small Products Run at the Host's Pace"}

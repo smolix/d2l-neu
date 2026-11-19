@@ -2,13 +2,13 @@
 
 ## Preface to the Second Edition
 
-Looking back, the first edition feels like it was written in a different world. Text, images and code were produced by hand, style guides were zealously enforced by coauthors, and the addition of a new framework required the talented hand of an expert, in this case Anirudh Dagar (PyTorch and JAX) and Yuan Tang (TensorFlow). As the book grew beyond 1,000 pages and attracted hundreds of GitHub issues, PRs and Discourse comments, keeping it all up to date became a full-time job. Consequently, when all of the authors moved on to different places, the book sat there for half a decade. Many of its premises, such as accessible code, teaching by example, and the notebook-based format, have stood the test of time. They are as fresh as they were in 2020. Approximately half of its content has aged well, while other parts have since been superseded by much more exciting problems, techniques and applications. Very little of the code, beyond the D2L library format, survived particularly well, since we have seen tremendous progress in hardware and the associated software tooling.
+Looking back, the first edition feels like it was written in a different world. Text, images, and code were produced by hand, style guides were zealously enforced by coauthors, and the addition of a new framework required the talented hands of experts, in this case Anirudh Dagar (PyTorch and JAX) and Yuan Tang (TensorFlow). As the book grew beyond 1,000 pages and attracted hundreds of GitHub issues, PRs, and Discourse comments, keeping it all up to date became a full-time job. Consequently, when all of the authors moved on to different places, the book sat there for half a decade. Many of its premises, such as accessible code, teaching by example, and the notebook-based format, have stood the test of time. They are as fresh as they were in 2020. Approximately half of its content has aged well, while other parts have since been superseded by much more exciting problems, techniques, and applications. Very little of the code, beyond the D2L library format, survived particularly well, since we have seen tremendous progress in hardware and the associated software tooling.
 
-Two things happened in 2026 that compelled me to pick up this project again and see whether D2L could be 'refurbished'. Firstly, I received a request from a Greek publisher asking whether I would consent to the book being translated and printed in Greek. This told me that, even five years after we last improved it, the book still had value to the point of someone wanting to print a genuinely new copy. Secondly, as we have all seen with the rapid progress of agentic AI, the tools from Anthropic, OpenAI, and Google have made it dramatically easier to perform broad updates and repairs that would have been unaffordable previously. They allowed me to bring the code up to date relative to modern frameworks, incorporate the GitHub issues and PRs that were pending, review the bug reports and comments in the Discourse threads, and check and fix the consistency of the code, language, experiments and math. The build system was revamped, the book now uses [Quarto](https://quarto.org) and [uv](https://docs.astral.sh/uv/), the fora are on [Discourse](https://d2l.discourse.group)'s own servers, and the content format was improved to separate code execution from editing. Having agents also allowed me to ensure that all frameworks perform similarly on the same problems, i.e., no more performance regressions due to poorly used JIT compilation, differences in initialization, optimization schedules, or the use of 'magic' random seeds. This is a luxury that would have been unaffordable previously, yet I believe that it significantly improves the teaching quality, as it shows best practice for using each framework throughout.
+Two things happened in 2026 that compelled me to pick up this project again and see whether D2L could be "refurbished". First, I received a request from a Greek publisher asking whether I would consent to the book being translated and printed in Greek. This told me that, even five years after we last improved it, the book still had value to the point of someone wanting to print a genuinely new copy. Second, as we have all seen with the rapid progress of agentic AI, the tools from Anthropic, OpenAI, and Google have made it dramatically easier to perform broad updates and repairs that would have been unaffordable previously. They allowed me to bring the code up to date relative to modern frameworks, incorporate the GitHub issues and PRs that were pending, review the bug reports and comments in the Discourse threads, and check and fix the consistency of the code, language, experiments, and math. The build system was revamped: the book now uses [Quarto](https://quarto.org) and [uv](https://docs.astral.sh/uv/), the fora are hosted on [Discourse](https://d2l.discourse.group)'s own servers, and the content format was improved to separate code execution from editing. Having agents also allowed me to ensure that all frameworks perform similarly on the same problems, i.e., no more performance regressions due to poorly used JIT compilation, differences in initialization, optimization schedules, or the use of "magic" random seeds. This is a luxury we could not have afforded before, yet I believe that it significantly improves the teaching quality, as it demonstrates best practices for each framework throughout.
 
-Besides all the necessary plumbing improvements, the content has gone through a number of changes. The book is too long to be viewed as one piece (it weighs in at over 3,000 pages as a PDF). The solution was to break it up into multiple pieces. [Basics](../chapter_basics/index.qmd) covers, well, the basics of deep learning and is a great companion for an introductory course. [Advanced](../chapter_advanced/index.qmd) takes you close to the current state of the art in many areas, including [optimization](../chapter_optimization/index.qmd), [state space models](../chapter_recurrent-modern/index.qmd), [transformers](../chapter_transformers/index.qmd), [reinforcement learning](../chapter_reinforcement-learning/index.qmd), [GANs](../chapter_generative-adversarial-networks/index.qmd) and [diffusion models](../chapter_diffusion-models/index.qmd), without going into too much depth in any one of them. Going into depth would be impossible, given the information explosion in each of the fields. [Mathematics for Deep Learning](../chapter_mathematics-for-deep-learning/index.qmd) has grown significantly to cover more about [diffusion and flows](../chapter_mdl-dynamics/index.qmd), [information theory](../chapter_mdl-information-theory/index.qmd) and [optimization](../chapter_mdl-optimization/index.qmd). It could serve well as a textbook for an introductory math course in this field, and it helps cover the necessary background that is often taken for granted when reading papers (or some of the chapters of this book). I am grateful to Rasool Fakoor for contributing the reinforcement learning and diffusion chapters.
+Besides all the necessary plumbing improvements, the content has gone through a number of changes. The book is too long to be viewed as one piece (it weighs in at over 3,000 pages as a PDF). The solution was to break it up into multiple pieces. [Basics](../chapter_basics/index.qmd) covers, well, the basics of deep learning and is a great companion for an introductory course. [Advanced](../chapter_advanced/index.qmd) takes you close to the current state of the art in many areas, including [optimization](../chapter_optimization/index.qmd), [state space models](../chapter_recurrent-modern/index.qmd), [transformers](../chapter_transformers/index.qmd), [reinforcement learning](../chapter_reinforcement-learning/index.qmd), [GANs](../chapter_generative-adversarial-networks/index.qmd), and [diffusion models](../chapter_diffusion-models/index.qmd), without going into too much depth in any one of them. Going into depth would be impossible, given the information explosion in each of these fields. [Mathematics for Deep Learning](../chapter_mathematics-for-deep-learning/index.qmd) has grown significantly to cover more about [diffusion and flows](../chapter_mdl-dynamics/index.qmd), [information theory](../chapter_mdl-information-theory/index.qmd), and [optimization](../chapter_mdl-optimization/index.qmd). It could serve well as a textbook for an introductory math course in this field, and it helps cover the necessary background that is often taken for granted when reading papers (or some of the chapters of this book). I am grateful to Rasool Fakoor for contributing the reinforcement learning and diffusion chapters.
 
-A lot of work remains to be done. The [Language Models](../chapter_language-models/index.qmd) part is still unwritten, and the book does not yet cover computer vision, graphics, audio, speech, or semi-supervised learning, nor does it provide a detailed treatment of agents. With a bit of time, plenty of tokens and generous amounts of curation, the latter (the agents) will aid me in completing the former (the book). This should also help keep the book up to date whenever new scientific discoveries happen and new techniques are invented.
+A lot of work remains to be done. The [Language Models](../chapter_language-models/index.qmd) part is still unwritten, and the book does not yet cover computer vision, graphics, audio, speech, or semi-supervised learning, nor does it provide a detailed treatment of agents. With a bit of time, plenty of tokens, and generous amounts of curation, the latter (the agents) will aid me in completing the former (the book). This should also help keep the book up to date whenever new scientific discoveries happen and new techniques are invented.
 
 *Alex Smola, November 2026*
 
@@ -58,367 +58,71 @@ and playing a growing role in basic sciences---from astrophysics, to climate mod
 
 ## About This Book
 
-This book represents our attempt to make deep learning approachable,
-teaching you the *concepts*, the *context*, and the *code*.
+This book is our attempt to make deep learning approachable by teaching you the *concepts*, the *context*, and the *code* in one place.
 
 ### One Medium Combining Code, Math, and HTML
 
-For any computing technology to reach its full impact,
-it must be well understood, well documented, and supported by
-mature, well-maintained tools.
-The key ideas should be clearly distilled,
-minimizing the onboarding time needed
-to bring new practitioners up to date.
-Mature libraries should automate common tasks,
-and exemplar code should make it easy for practitioners
-to modify, apply, and extend common applications to suit their needs.
+For any computing technology to reach its full impact, it must be well understood, well documented, and supported by mature, well-maintained tools. The key ideas should be clearly distilled, minimizing the time it takes to bring new practitioners up to date. Mature libraries should automate common tasks, and exemplar code should make it easy for practitioners to modify, apply, and extend standard models to suit their needs.
 
+Dynamic web applications offer a clear parallel. Although companies such as Amazon developed successful database-driven web applications in the 1990s, the broader potential of this technology to aid creative entrepreneurs was unlocked only when powerful, well-documented web frameworks emerged over the following decade.
 
-As an example, take dynamic web applications.
-Despite a large number of companies, such as Amazon,
-developing successful database-driven web applications in the 1990s,
-the potential of this technology to aid creative entrepreneurs
-was realized to a far greater degree only in the past ten years,
-owing in part to the development of powerful, well-documented frameworks.
+Realizing the potential of deep learning presents unique challenges because any single application brings together several disciplines. Applying deep learning requires simultaneously understanding (i) the motivation for casting a problem in a particular way; (ii) the mathematical form of a given model; (iii) the optimization algorithms that fit the model to data; (iv) the statistical principles that tell us when we should expect our models to generalize to unseen data, along with practical methods for certifying that they have, in fact, generalized; and (v) the engineering techniques required to train models efficiently, navigating the pitfalls of numerical computing and getting the most out of available hardware. Teaching the critical thinking skills required to formulate problems, the mathematics to solve them, and the software tools to implement those solutions all in one place is a formidable challenge. Our goal in this book is to provide a unified resource that brings aspiring practitioners up to speed.
 
+When we started this book project, no single resource simultaneously (i) remained up to date, (ii) covered the breadth of modern machine learning with sufficient technical depth, and (iii) interleaved the rigorous exposition expected of a textbook with the clean, runnable code expected of a hands-on tutorial. We found plenty of code examples illustrating how to use a particular deep learning framework (for instance, basic matrix computations in TensorFlow) or how to implement specific architectures (such as LeNet, AlexNet, or ResNet) scattered across blog posts and GitHub repositories. However, these examples typically showed *how* to implement a method while leaving out *why* certain algorithmic design choices were made. Interactive articles, such as those published on [Distill](http://distill.pub) or on personal blogs, explored selected topics visually, but covered only isolated corners of the field and often lacked accompanying code. Meanwhile, the deep learning textbooks that had appeared---such as :citet:`Goodfellow.Bengio.Courville.2016`, which offers a comprehensive survey of the foundations of deep learning---did not connect their mathematical descriptions to working implementations, often leaving readers unsure how to bridge the gap from theory to code. Moreover, too many learning resources remained locked behind the paywalls of commercial course providers.
 
-Testing the potential of deep learning presents unique challenges
-because any single application brings together various disciplines.
-Applying deep learning requires simultaneously understanding
-(i) the motivations for casting a problem in a particular way;
-(ii) the mathematical form of a given model;
-(iii) the optimization algorithms for fitting the models to data;
-(iv) the statistical principles that tell us
-when we should expect our models
-to generalize to unseen data
-and practical methods for certifying
-that they have, in fact, generalized;
-and (v) the engineering techniques
-required to train models efficiently,
-navigating the pitfalls of numerical computing
-and getting the most out of available hardware.
-Teaching the critical thinking skills
-required to formulate problems,
-the mathematics to solve them,
-and the software tools to implement those solutions
-all in one place presents formidable challenges.
-Our goal in this book is to present a unified resource
-to bring would-be practitioners up to speed.
+We set out to create a resource that would (i) be freely available to everyone; (ii) offer enough technical depth to serve as a springboard toward becoming an applied machine learning scientist; (iii) include runnable code showing readers *how* to solve problems in practice; (iv) allow rapid updates, both by us and by the community at large; and (v) be complemented by a [discussion forum](https://d2l.discourse.group/c/5) for interactive exchange on technical details and open questions.
 
-When we started this book project,
-there were no resources that simultaneously
-(i) remained up to date;
-(ii) covered the breadth of modern machine learning practices
-with sufficient technical depth;
-and (iii) interleaved exposition of
-the quality one expects of a textbook
-with the clean runnable code
-that one expects of a hands-on tutorial.
-We found plenty of code examples illustrating
-how to use a given deep learning framework
-(e.g., how to do basic numerical computing with matrices in TensorFlow)
-or for implementing particular techniques
-(e.g., code snippets for LeNet, AlexNet, ResNet, etc.)
-scattered across various blog posts and GitHub repositories.
-However, these examples typically focused on
-*how* to implement a given approach,
-but left out the discussion of
-*why* certain algorithmic decisions are made.
-While some interactive resources
-have popped up sporadically
-to address a particular topic,
-e.g., the engaging blog posts
-published on the website [Distill](http://distill.pub), or personal blogs,
-they only covered selected topics in deep learning,
-and often lacked associated code.
-On the other hand, while several deep learning textbooks
-have emerged---e.g., :citet:`Goodfellow.Bengio.Courville.2016`,
-which offers a comprehensive survey
-on the basics of deep learning---these
-resources do not marry the descriptions
-to realizations of the concepts in code,
-sometimes leaving readers clueless
-as to how to implement them.
-Moreover, too many resources
-are hidden behind the paywalls
-of commercial course providers.
-
-We set out to create a resource that could
-(i) be freely available for everyone;
-(ii) offer sufficient technical depth
-to provide a starting point on the path
-to actually becoming an applied machine learning scientist;
-(iii) include runnable code, showing readers
-*how* to solve problems in practice;
-(iv) allow for rapid updates, both by us
-and also by the community at large;
-and (v) be complemented by a [forum](https://d2l.discourse.group/c/5)
-for interactive discussion of technical details and to answer questions.
-
-These goals were often in conflict.
-Equations, theorems, and citations
-are best managed and laid out in LaTeX.
-Code is best described in Python.
-And webpages are native in HTML and JavaScript.
-Furthermore, we want the content to be
-accessible both as executable code, as a physical book,
-as a downloadable PDF, and on the Internet as a website.
-No workflows seemed suited to these demands,
-so we decided to assemble our own (:numref:`sec_how_to_contribute`).
-We settled on GitHub to share the source
-and to facilitate community contributions;
-Markdown sources, from which we generate Jupyter notebooks,
-for mixing code, equations and text;
-Quarto as a rendering engine;
-and Discourse as a discussion platform.
-While our system is not perfect,
-these choices strike a compromise
-among the competing concerns.
-We believe that *Dive into Deep Learning*
-might be the first book published
-using such an integrated workflow.
+These goals were often in conflict. Equations, theorems, and citations are best written and typeset in LaTeX. Code is most naturally expressed in Python. And web pages live natively in HTML and JavaScript. Furthermore, we wanted the content to be equally accessible as executable notebooks, a printed book, a downloadable PDF, and an interactive website. Because no existing publishing workflow met all of these demands, we assembled our own (:numref:`sec_how_to_contribute`). We settled on GitHub to host the source and coordinate community contributions; Markdown as the single source format mixing prose, equations, and code, from which Jupyter notebooks are generated automatically; Quarto as our rendering engine; and Discourse as our discussion platform. While no system is perfect, these choices strike an effective balance among competing demands. We believe that *Dive into Deep Learning* was the first book published using such an integrated workflow.
 
 
 ### Learning by Doing
 
-Many textbooks present concepts in succession,
-covering each in exhaustive detail.
-For example,
-the excellent textbook of
-:citet:`Bishop.2006`
-teaches each topic so thoroughly
-that getting to the chapter
-on linear regression requires
-a nontrivial amount of work.
-While experts love this book
-precisely for its thoroughness,
-for true beginners, this property limits
-its usefulness as an introductory text.
+Many textbooks present concepts in strict succession, covering each topic in exhaustive detail before moving on. For example, the classic textbook by :citet:`Bishop.2006` treats each subject so thoroughly that simply reaching the chapter on linear regression requires a nontrivial investment of effort. While experts prize that book precisely for its thoroughness, this structure limits its accessibility as an introductory text for beginners.
 
-In this book, we teach most concepts *just in time*.
-In other words, you will learn concepts at the very moment
-that they are needed to accomplish some practical end.
-While we take some time at the outset to teach
-fundamental preliminaries, like linear algebra and probability,
-we want you to taste the satisfaction of training your first model
-before worrying about more esoteric concepts.
+In this book, we teach most concepts *just in time*. In other words, you encounter new ideas at the very moment they are needed to accomplish a concrete, practical goal. While we devote a brief opening chapter to essential preliminaries such as linear algebra and probability---and provide a comprehensive mathematical appendix for deeper study---we want you to experience the satisfaction of training your first working model before worrying about more abstract theory.
 
-Aside from a few preliminary notebooks that provide a crash course
-in the basic mathematical background,
-each subsequent chapter both introduces a reasonable number of new concepts
-and provides several self-contained working examples, using real datasets.
-This presented an organizational challenge.
-Some models might logically be grouped together in a single notebook.
-And some ideas might be best taught
-by executing several models in succession.
-By contrast, there is a big advantage to adhering
-to a policy of *one working example, one notebook*:
-This makes it as easy as possible for you to
-start your own research projects by leveraging our code.
-Just copy a notebook and start modifying it.
+Aside from a few preliminary notebooks that provide a crash course in the basic mathematical background, each subsequent chapter introduces a manageable set of new concepts alongside self-contained working examples on real datasets. This approach presented an organizational challenge: some models might logically be grouped together in a single notebook, while other ideas are best taught by running several models in succession. Even so, adhering to a policy of *one working example, one notebook* offers a major practical advantage: it makes it as easy as possible for you to launch your own research or engineering projects by building directly on our code. Simply copy a notebook and start modifying it.
 
-Throughout, we interleave the runnable code
-with background material as needed.
-In general, we err on the side of making tools
-available before explaining them fully
-(often filling in the background later).
-For instance, we might use *stochastic gradient descent*
-before explaining why it is useful
-or offering some intuition for why it works.
-This helps to give practitioners the necessary
-ammunition to solve problems quickly,
-at the expense of requiring the reader
-to trust us with some curatorial decisions.
+Throughout the book, we interleave runnable code with theoretical background as needed. As a rule, we err on the side of putting a tool in your hands before explaining every detail of how it works, filling in the deeper background once you have seen it in action. For instance, we use *stochastic gradient descent* to train early models well before we analyze why it works so effectively. This approach gives practitioners the tools they need to solve problems quickly, at the modest cost of asking you to trust a few of our pedagogical choices along the way.
 
-This book teaches deep learning concepts from scratch.
-Sometimes, we delve into fine details about models
-that would typically be hidden from users
-by modern deep learning frameworks.
-This comes up especially in the basic tutorials,
-where we want you to understand everything
-that happens in a given layer or optimizer.
-In these cases, we often present
-two versions of the example:
-one where we implement everything from scratch,
-relying only on NumPy-like functionality
-and automatic differentiation,
-and a more practical example,
-where we write succinct code
-using the high-level APIs of deep learning frameworks.
-After explaining how some component works,
-we rely on the high-level API in subsequent tutorials.
+We also teach core deep learning concepts from scratch. Often, we look under the hood at fine details of models that modern deep learning frameworks normally hide from users. This comes up especially in the foundational chapters, where we want you to understand everything that happens inside a layer, a loss function, or an optimizer. In these cases, we regularly present two implementations side by side: one built from scratch relying only on basic tensor operations and automatic differentiation, and a second, concise version written with the high-level APIs of a deep learning framework. Once we have explained how a component works from the ground up, we rely on its high-level framework implementation in subsequent chapters.
 
 
 ### Content and Structure
 
-Three short chapters come first.
-:numref:`chap_installation` sets up an environment
-for running the code,
-:numref:`chap_notation` collects the notation,
-and :numref:`chap_introduction`
-gives an overview of deep learning.
-The rest of the book is organized in parts,
-the two largest being Basics and Advanced
-(:numref:`fig_book_org`).
+The book opens with three short introductory chapters: :numref:`chap_installation` walks through setting up an environment to run the code, :numref:`chap_notation` summarizes our mathematical conventions, and :numref:`chap_introduction` surveys the landscape of deep learning. The remainder of the book is organized into six parts, with the two core parts---Basics and Advanced---mapped out in :numref:`fig_book_org`.
 
 ![Structure of the book. An arrow from one chapter to another means that the second builds on the first; the arrow from the Basics to the Advanced part means that every Advanced chapter builds on the Basics. The Language Models, Image Models, and Attic parts are not shown.](../img/front-book-org.svg)
 :label:`fig_book_org`
 
 
 * **Basics**.
-In :numref:`chap_preliminaries`,
-we quickly bring you up to speed
-on the prerequisites for hands-on deep learning:
-how to store and manipulate data as tensors,
-how to differentiate with them,
-and how to reason about uncertainty.
-:numref:`chap_regression` and :numref:`chap_classification`
-fit linear models to data
-and introduce the ingredients
-of nearly every model in this book:
-a model with parameters,
-a loss that measures its errors,
-and an algorithm that reduces the loss.
-:numref:`chap_perceptrons` adds hidden layers
-and asks why a network with many parameters
-can still generalize.
-:numref:`chap_computation` shows how models
-are assembled from modules,
-initialized, saved, and run on a GPU.
-The last three chapters build what we know about the data into the model.
-The convolutional neural networks (CNNs)
-of :numref:`chap_cnn` and :numref:`chap_modern_cnn`
-exploit the spatial structure of images,
-and the sequence models of :numref:`chap_rnn`
-the order of the words in a text.
-The first five chapters are best read in order.
-After them, the chapters on images and on sequences
-do not depend on each other.
+In :numref:`chap_preliminaries`, we quickly bring you up to speed on the practical prerequisites for hands-on deep learning: storing and manipulating data as tensors, computing derivatives automatically, and reasoning about probability and uncertainty. Next, :numref:`chap_regression` and :numref:`chap_classification` fit linear models to data and introduce the three basic ingredients of nearly every method in this book: a parameterized model, a loss function that measures its errors, and an optimization algorithm that reduces that loss. :numref:`chap_perceptrons` adds hidden layers to build deep networks and asks why models with so many parameters can still generalize to new data. :numref:`chap_computation` then turns to the mechanics of deep learning software: how models are assembled from reusable modules, initialized, saved, and accelerated on GPUs. The final three chapters of the part build domain structure directly into the architecture: the convolutional neural networks (CNNs) of :numref:`chap_cnn` and :numref:`chap_modern_cnn` exploit the spatial symmetries of images, while the recurrent sequence models of :numref:`chap_rnn` capture the sequential order of text and time series. The first five chapters are best read in order; after that, the chapters on images and sequences can be read independently of one another.
 
 * **Advanced**.
-These chapters take the tools of the Basics
-to the models in use today.
-They can be read in several orders;
-the arrows in :numref:`fig_book_org`
-show which chapters build on which.
-The Basics use optimizers, learning rate schedules,
-and batch sizes as recipes.
-:numref:`chap_optimization` explains why they work
-and what must change as models grow.
-:numref:`chap_attention` introduces *attention*,
-which lets each position in a sequence
-retrieve what it needs from any other,
-and :numref:`chap_transformers` stacks attention layers
-into the transformers behind most large language models.
-:numref:`chap_modern_rnn` returns to recurrence
-with state space models,
-which keep a state of fixed size
-yet train on all positions of a sequence at once.
-:numref:`chap_performance` asks what limits the speed
-of a training step on one GPU and on several,
-using a transformer as its running example.
-:numref:`chap_reinforcement_learning` and :numref:`chap_deep_rl`
-turn to agents that learn from rewards rather than labels,
-first on problems small enough to solve exactly,
-then with neural networks.
-Finally, :numref:`chap_gans` and :numref:`chap_diffusion`
-generate new data:
-by a game between a generator and a critic,
-and by learning to remove noise.
+These chapters build on the foundations of the Basics part to develop the architectures and training methods used at the frontier today. They can be read in several orders, with the arrows in :numref:`fig_book_org` indicating dependencies between chapters. Where the Basics part treats optimizers, learning rate schedules, and batch sizes largely as working recipes, :numref:`chap_optimization` examines why they work and how they must adapt as models scale. :numref:`chap_attention` introduces *attention* mechanisms, which allow each position in a sequence to retrieve information directly from any other position, and :numref:`chap_transformers` stacks these layers into the transformer architectures that power modern large language models. :numref:`chap_modern_rnn` revisits recurrence through state space models, which maintain a fixed-size state while still training across all positions of a sequence in parallel. :numref:`chap_performance` investigates what limits the speed of a training step on a single GPU and across multiple GPUs, using a transformer as its running example. :numref:`chap_reinforcement_learning` and :numref:`chap_deep_rl` shift from supervised learning to agents that learn from rewards through interaction with an environment, starting with tabular problems small enough to solve exactly before scaling up with neural networks. Finally, :numref:`chap_gans` and :numref:`chap_diffusion` tackle generative modeling: synthesizing new data either through a minimax game between a generator and a discriminator, or by learning to iteratively reverse a corruption process.
 
 * **Language Models and Image Models**.
-Language Models, a part still being written,
-takes the recipe of the Advanced part to large language models:
-encoders, embeddings, and retrieval (:numref:`chap_lm_encoders`),
-pretraining (:numref:`chap_lm_pretraining`),
-fine-tuning (:numref:`chap_lm_finetuning`),
-learning from preferences and verifiable rewards (:numref:`chap_lm_rl`),
-agents (:numref:`chap_lm_agents`),
-and serving (:numref:`chap_lm_serving`).
-Image Models (:numref:`chap_cv`)
-covers object detection, segmentation, and style transfer;
-it is carried over from the first edition, and we plan to rewrite it.
+The Language Models part, currently in preparation, extends the methods of the Advanced part to modern large language models: encoders, embeddings, and retrieval (:numref:`chap_lm_encoders`), pretraining (:numref:`chap_lm_pretraining`), fine-tuning (:numref:`chap_lm_finetuning`), alignment via preferences and verifiable rewards (:numref:`chap_lm_rl`), agents (:numref:`chap_lm_agents`), and efficient serving (:numref:`chap_lm_serving`). The Image Models part (:numref:`chap_cv`) covers object detection, semantic segmentation, and neural style transfer; it is carried over from the first edition and is slated for an upcoming rewrite.
 
 * **Mathematics for Deep Learning**.
-This appendix collects the mathematics behind the main text,
-which states each result with its intuition
-and points here for proofs and derivations.
-:numref:`chap_mdl-linear-algebra` covers projections,
-eigendecompositions, and the singular value decomposition,
-and :numref:`chap_mdl-calculus` the gradient
-and how automatic differentiation computes it.
-:numref:`chap_mdl-optimization` proves what :numref:`chap_optimization`
-shows by experiment, such as why the learning rate has a ceiling.
-:numref:`chap_mdl-probability-statistics` covers estimation, Bayesian inference,
-and generalization bounds,
-:numref:`chap_mdl-information-theory` what a cross-entropy measures
-and how else two distributions can be compared,
-and :numref:`chap_mdl-dynamics` the differential equations
-behind diffusion and flow models.
-If you already know a topic, you can skip its chapter;
-if you do not, the appendix serves as a first textbook.
+This appendix develops the mathematical foundations underlying the main text. While the main chapters state each mathematical result alongside its intuition, they point here for complete proofs, derivations, and deeper context. :numref:`chap_mdl-linear-algebra` covers geometric projections, eigendecompositions, and the singular value decomposition; :numref:`chap_mdl-calculus` develops multivariable derivatives, gradients, and the mechanics of automatic differentiation. :numref:`chap_mdl-optimization` provides the theoretical guarantees behind the empirical behaviors observed in :numref:`chap_optimization`, such as why curvature places an upper bound on the learning rate. :numref:`chap_mdl-probability-statistics` covers statistical estimation, Bayesian inference, and generalization bounds; :numref:`chap_mdl-information-theory` explains what cross-entropy measures and how probability distributions can be compared via divergences and optimal transport; and :numref:`chap_mdl-dynamics` develops the differential equations and stochastic processes behind diffusion and flow-based generative models. Readers already comfortable with a topic can skip its chapter or use it as a reference; for everyone else, the appendix is designed to serve as a self-contained introductory textbook.
 
 * **Tools for Deep Learning**.
-:numref:`chap_appendix_tools` covers the practical side:
-running the notebooks locally or in a hosted environment,
-renting or buying hardware,
-scaling training, serving models,
-and contributing to this book.
-It also documents the `d2l` library (:numref:`sec_d2l`).
+:numref:`chap_appendix_tools` covers practical engineering workflows: running the book's notebooks locally or in hosted cloud environments, selecting and provisioning GPU hardware, scaling distributed training, serving models in production, and contributing to this book. It also provides the API reference for the `d2l` library (:numref:`sec_d2l`).
 
 * **Attic**.
-The last part keeps chapters that this edition no longer develops:
-Gaussian processes, hyperparameter optimization, and recommender systems
-(:numref:`chap_gp` through :numref:`chap_recsys`).
+The final part preserves chapters from the first edition that are no longer actively expanded in this edition, covering Gaussian processes, hyperparameter optimization, and recommender systems (:numref:`chap_gp` through :numref:`chap_recsys`).
 
 
 ### Code
 :label:`sec_code`
 
-Most sections of this book feature executable code.
-We believe that some intuitions are best developed
-via trial and error,
-tweaking the code in small ways and observing the results.
-Ideally, an elegant mathematical theory might tell us
-precisely how to tweak our code to achieve a desired result.
-However, deep learning practitioners today
-must often tread where no solid theory provides guidance.
-Despite our best attempts, formal explanations
-for the efficacy of various techniques are
-still lacking, for a variety of reasons: the mathematics to characterize these models
-can be so difficult;
-the explanation likely depends on properties
-of the data that currently lack clear definitions;
-and serious inquiry on these topics
-has only recently kicked into high gear.
-We are hopeful that as the theory of deep learning progresses,
-each future edition of this book will provide insights
-that eclipse those presently available.
+Most sections of this book feature executable code. We believe that many key intuitions in deep learning are best developed through hands-on experimentation: tweaking the code in small ways and observing how the results change. Ideally, an overarching mathematical theory would tell us ahead of time how every architectural or hyperparameter adjustment behaves. In practice, however, deep learning practitioners must often operate ahead of formal theory. Despite rapid progress, complete theoretical explanations for the effectiveness of many techniques remain elusive: the mathematics required to characterize highly nonlinear networks is challenging, generalization often hinges on structural properties of real-world data that resist simple formalization, and systematic theoretical inquiry into modern architectures is still catching up with empirical discovery. As the theory of deep learning matures, we look forward to incorporating deeper formal insights into future editions of this book.
 
-The code comes in up to four frameworks,
-each shown in its own tab.
-The Basics part and the mathematics appendix
-are implemented in PyTorch, JAX, TensorFlow, and MXNet,
-and the Advanced part in PyTorch and JAX.
-:numref:`chap_installation` helps you choose a framework
-and set up an environment for it.
-Every notebook begins with the same cell of standard imports,
-which :numref:`sec_preamble` explains.
-The book shows that cell only there,
-so each section can start with the code that is particular to it.
+Our code is provided in up to four deep learning frameworks, each presented in its own interactive tab. The Basics part and the Mathematics for Deep Learning appendix are implemented in PyTorch, JAX, TensorFlow, and MXNet, while the Advanced part is implemented in PyTorch and JAX. :numref:`chap_installation` helps you choose a framework and set up a working environment. Every notebook begins with a standard cell of shared imports, explained in :numref:`sec_preamble`. To keep the text focused, we display that preamble cell only once there, allowing subsequent sections to jump straight into the code relevant to the topic at hand.
 
-To avoid unnecessary repetition, we collect
-the functions and classes that later sections reuse
-in the `d2l` library.
-Throughout, we mark blocks of code
-(such as functions, classes,
-or collections of import statements) with `#@save`.
-Such a block is defined and explained once,
-and later sections call it through `d2l`
-instead of defining it again.
-We document these classes and functions in :numref:`sec_d2l`.
-The `d2l` library is lightweight.
-Its framework-independent part needs only the following imports:
+To avoid repeating boilerplate across chapters, we collect reusable functions and classes into the lightweight `d2l` library. Throughout the book, code blocks marked with `#@save` (such as helper functions, base classes, or standard imports) are defined and explained once in the text, and simultaneously saved into the `d2l` package so that later chapters can call them directly via `d2l`. A complete listing of these functions and classes appears in :numref:`sec_d2l`. The framework-independent core of the `d2l` library requires only the following standard Python imports:
 
 ```{.python .input #preface-code-1}
 #@save
@@ -448,59 +152,19 @@ d2l = sys.modules[__name__]
 ```
 
 :begin_tab:`mxnet`
-You are reading the MXNet version of this book.
-MXNet code is available for the Basics part
-and the mathematics appendix.
-The Advanced part, beginning with :numref:`chap_optimization`,
-is implemented in PyTorch and JAX,
-so switch to one of their tabs there.
-We run the code with the MXNet 2.0 build
-pinned in the environments of :numref:`chap_installation`.
-If some code fails with another version,
-please use that environment.
-The MXNet version of the `d2l` library adds the following imports.
+You are reading the MXNet edition of this book. MXNet implementations are available for the Basics part and the Mathematics for Deep Learning appendix. The Advanced part, beginning with :numref:`chap_optimization`, is implemented in PyTorch and JAX, so you can switch to either of those tabs when reading the advanced chapters. We execute the MXNet code using the MXNet 2.0 build pinned in the environment configuration of :numref:`chap_installation`; if you encounter version incompatibilities, please use that pinned environment. The MXNet backend of the `d2l` library adds the following imports:
 :end_tab:
 
 :begin_tab:`pytorch`
-You are reading the PyTorch version of this book,
-which covers every chapter.
-We run the code with the PyTorch version
-pinned in the environments of :numref:`chap_installation`.
-Deep learning frameworks change quickly,
-so if some code fails with a newer version,
-please use that environment.
-The PyTorch version of the `d2l` library adds the following imports.
+You are reading the PyTorch edition of this book, which provides implementations across every chapter. We execute the code using the PyTorch version pinned in the environment configuration of :numref:`chap_installation`. Because deep learning frameworks evolve rapidly, we recommend using that pinned environment if you encounter any incompatibilities with a newer release. The PyTorch backend of the `d2l` library adds the following imports:
 :end_tab:
 
 :begin_tab:`tensorflow`
-You are reading the TensorFlow version of this book.
-TensorFlow code is available for the Basics part
-and the mathematics appendix.
-The Advanced part, beginning with :numref:`chap_optimization`,
-is implemented in PyTorch and JAX,
-so switch to one of their tabs there.
-We run the code with the TensorFlow version
-pinned in the environments of :numref:`chap_installation`.
-Deep learning frameworks change quickly,
-so if some code fails with a newer version,
-please use that environment.
-The TensorFlow version of the `d2l` library adds the following imports.
+You are reading the TensorFlow edition of this book. TensorFlow implementations are available for the Basics part and the Mathematics for Deep Learning appendix. The Advanced part, beginning with :numref:`chap_optimization`, is implemented in PyTorch and JAX, so you can switch to either of those tabs when reading the advanced chapters. We execute the code using the TensorFlow version pinned in the environment configuration of :numref:`chap_installation`; because deep learning frameworks evolve rapidly, we recommend using that pinned environment if you encounter any incompatibilities with a newer release. The TensorFlow backend of the `d2l` library adds the following imports:
 :end_tab:
 
 :begin_tab:`jax`
-You are reading the JAX version of this book,
-which covers the Basics part, the Advanced part,
-and the mathematics appendix.
-JAX transforms ordinary numerical Python functions:
-it differentiates them, compiles them, and vectorizes them.
-We define models with the `nnx` module of Flax
-and train them with the optimizers of Optax.
-We run the code with the JAX version
-pinned in the environments of :numref:`chap_installation`.
-Deep learning frameworks change quickly,
-so if some code fails with a newer version,
-please use that environment.
-The JAX version of the `d2l` library adds the following imports.
+You are reading the JAX edition of this book, which provides implementations for the Basics part, the Advanced part, and the Mathematics for Deep Learning appendix. JAX operates by transforming pure numerical Python functions---automatically differentiating, compiling, and vectorizing them. Throughout the book, we define neural network models using Flax's `nnx` module and train them with optimizers from Optax. We execute the code using the JAX ecosystem versions pinned in the environment configuration of :numref:`chap_installation`; because these libraries evolve rapidly, we recommend using that pinned environment if you encounter any incompatibilities with a newer release. The JAX backend of the `d2l` library adds the following imports:
 :end_tab:
 
 ```{.python .input #preface-code-2}
@@ -546,47 +210,14 @@ from typing import Any, Callable
 
 ### Target Audience
 
-This book is for students (undergraduate or graduate),
-engineers, and researchers, who seek a solid grasp
-of the practical techniques of deep learning.
-Because we explain every concept from scratch,
-no previous background in deep learning or machine learning is required.
-Fully explaining the methods of deep learning
-requires some mathematics and programming,
-but we will only assume that you enter with some basics,
-including modest amounts of linear algebra,
-calculus, probability, and Python programming.
-Just in case you have forgotten anything,
-the [Mathematics for Deep Learning](../chapter_mathematics-for-deep-learning/index.qmd) appendix provides a refresher
-on most of the mathematics
-you will find in this book.
-Usually, we will prioritize
-intuition and ideas
-over mathematical rigor.
-If you would like to extend these foundations
-beyond the prerequisites to understand our book,
-we happily recommend some other terrific resources:
-*Linear Analysis* by :citet:`Bollobas.1999`
-covers linear algebra and functional analysis in great depth.
-*All of Statistics* :cite:`Wasserman.2013`
-provides a marvelous introduction to statistics.
-Joe Blitzstein's [books](https://www.amazon.com/Introduction-Probability-Chapman-Statistical-Science/dp/1138369918)
-and [courses](https://projects.iq.harvard.edu/stat110/home)
-on probability and inference are pedagogical gems.
-And if you have not used Python before,
-you may want to peruse this [Python tutorial](http://learnpython.org/).
+This book is written for undergraduate and graduate students, software engineers, and researchers who want a solid, hands-on grasp of modern deep learning. Because we develop every concept from the ground up, no prior background in deep learning or machine learning is required. Explaining the methods of deep learning thoroughly requires both mathematics and programming, though we assume only a modest foundation in linear algebra, calculus, probability, and Python. Should you need a refresher on any of the mathematical prerequisites---or want to explore the theory in greater depth---the [Mathematics for Deep Learning](../chapter_mathematics-for-deep-learning/index.qmd) appendix covers nearly all of the mathematics used in this book. In the main chapters, we consistently prioritize clear intuition and core ideas over formal mathematical generality.
+
+If you would like to go even further into the mathematical foundations, we warmly recommend several classic texts: *Linear Analysis* by :citet:`Bollobas.1999` covers linear algebra and functional analysis in depth; *All of Statistics* :cite:`Wasserman.2013` offers a concise, lucid introduction to statistical inference; and Joe Blitzstein's [textbook](https://www.amazon.com/Introduction-Probability-Chapman-Statistical-Science/dp/1138369918) and [course](https://projects.iq.harvard.edu/stat110/home) on probability are pedagogical gems. Finally, if you are new to Python, we recommend working through an interactive [Python tutorial](http://learnpython.org/) before diving into the code.
 
 
 ### Notebooks, Website, GitHub, and Forum
 
-All our notebooks can be downloaded
-from the [D2L.ai website](https://d2l.ai)
-and from [GitHub](https://github.com/smolix/d2l-neu).
-Associated with this book we have launched a discussion forum
-at [d2l.discourse.group](https://d2l.discourse.group/c/5).
-Whenever you have questions on any section of the book,
-you can find a link to the associated discussion page
-at the end of each notebook.
+All of the executable notebooks for this book can be downloaded from the [D2L.ai website](https://d2l.ai) and from our [GitHub repository](https://github.com/smolix/d2l-neu). We also host an active community discussion forum at [d2l.discourse.group](https://d2l.discourse.group/c/5); whenever you have questions about any section of the book, you will find a direct link to the corresponding discussion thread at the bottom of the notebook.
 
 
 

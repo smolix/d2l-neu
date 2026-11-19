@@ -731,7 +731,7 @@ what to keep.
        is the smallest $k_\textrm{max}$ that solves the task? Relate it to
        the weight with which the first token reaches the last position at
        initialization, and to the short-timescale S4D, which recalled after
-       100 steps with half-lives of at most 7.
+       100 steps although its half-lives started at no more than 7.
     1. Train the short-timescale S4D at 100 steps again, this time with
        `log_dt` and `log_neg_rate` held fixed, so that the dynamics cannot
        change and everything else still learns. Does it still recall the
@@ -1004,8 +1004,8 @@ Can one layer have the minGRU's choice and S4D's timescales?
 |---|---|---|---|---|
 | minGRU | from the input, starts near 1/2 | scan | chance | chance |
 | minGRU, S4D decays | from the input, long | scan | 1.00 | 1.00 |
-| S4D, short timescales | fixed, half-lives ≤ 7 | FFT or scan | 1.00 | chance |
-| S4D | fixed, half-lives to 693 | FFT or scan | 1.00 | 1.00 |
+| S4D, short timescales | fixed, half-lives ≤ 7 at the start | FFT or scan | 1.00 | chance |
+| S4D | fixed, half-lives to 693 at the start | FFT or scan | 1.00 | 1.00 |
 
 **Next:** let the input set the step size, keeping $N$ states and S4D's
 timescales.

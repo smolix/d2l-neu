@@ -291,9 +291,9 @@ error on the bump down to 0.55. Sixteen states put the peak at 20 and
 match the bump to an error of 0.03, while the sharp delay stays out of
 reach at 0.89.
 
-The column of weights tells us not to celebrate yet. The weights of the
-spike fit reach $2 \times 10^{11}$, and those of the bump fit are of the
-same order. Real exponentials with nearby rates look much alike, and least
+The columns of weights tell us not to celebrate yet. The weights of the
+spike fit reach $2 \times 10^{11}$, and those of the bump fit, at
+$8 \times 10^{10}$, are hardly more modest. Real exponentials with nearby rates look much alike, and least
 squares tells them apart only with enormous weights of opposite sign that
 cancel almost perfectly. Gradient descent from small weights has no
 reasonable path to such a solution. With weights of ordinary size, the
@@ -525,8 +525,10 @@ at the last position, trained with Adam at a learning rate of 0.003 on
 1,500 fresh batches of 128 sequences. S4D keeps the width of its input, so
 its model embeds tokens in 64 dimensions; the minGRUs map 32 to 64, like
 the recurrent layers of :numref:`sec_lstm`. Every model is trained twice
-from fresh random weights, and both test accuracies are printed. A
-prediction first: if the architecture decides, the two S4D rows will agree
+from fresh random weights, and both test accuracies are printed. For the
+two S4D layers the cell also prints the slowest half-life after training,
+$\ln 2 / \min_n (\Delta |\lambda_n|)$ over all channels, which tells us
+whether training has moved the timescales. A prediction first: if the architecture decides, the two S4D rows will agree
 with each other and so will the two minGRU rows; if the timescales decide,
 the controls will change sides.
 
@@ -611,12 +613,17 @@ symbol after 100 steps, although none of its half-lives exceeds 7 steps at
 the start. After 99 steps its slowest state holds the symbol with a weight
 of about $e^{-0.1 \cdot 99} \approx 5 \times 10^{-5}$. That is small, but
 it is not nothing: the trace still carries a gradient to the step sizes
-and the rates, and training uses it to lengthen the slowest half-lives
-until the symbol survives the delay. After 999 steps the weight is
-$e^{-100}$, about $10^{-44}$, far below the rounding error of the numbers
-it is added to. No gradient reaches the dynamics, and nothing moves.
-Exercise 5 lets you watch the half-lives grow, and asks what happens when
-they are not allowed to. A memory does not end at its half-life. A faint
+and the rates, and training uses it to lengthen the slowest half-lives.
+The second block of the table shows by how much: from at most 7 steps to
+between 100 and 200, enough for the symbol to survive the delay. After 999
+steps the weight is $e^{-100}$, about $10^{-44}$, far below the rounding
+error of the numbers it is added to. The gradient that would lengthen the
+half-lives never arrives, and they end within a few steps of where they
+began, two orders of magnitude short of the delay. S4D itself shows the
+same pull from a better start: its slowest half-lives grow from at most
+693 steps to more than 1,000 at a delay of 100, and to more than 2,000 at
+a delay of 1,000. Exercise 5 asks what happens when the half-lives are not
+allowed to move at all. A memory does not end at its half-life. A faint
 trace is enough to teach a layer to remember longer; what ends a memory is
 a trace too faint to teach anything.
 
@@ -724,12 +731,12 @@ what to keep.
        the weight with which the first token reaches the last position at
        initialization, and to the short-timescale S4D, which recalled after
        100 steps with half-lives of at most 7.
-    1. Train the short-timescale S4D at 100 steps and print its longest
-       half-life, $\ln 2 / \min_n (\Delta |\lambda_n|)$ over all channels,
-       before and after training. Then train it again with `log_dt` and
-       `log_neg_rate` held fixed, so that the dynamics cannot change and
-       everything else still learns. What does a trace of $5 \times 10^{-5}$
-       need in order to be useful?
+    1. Train the short-timescale S4D at 100 steps again, this time with
+       `log_dt` and `log_neg_rate` held fixed, so that the dynamics cannot
+       change and everything else still learns. Does it still recall the
+       symbol? Compare with the slowest half-lives that the experiment
+       printed after training. What does a trace of $5 \times 10^{-5}$ need
+       in order to be useful?
 
 [Discussions](https://d2l.discourse.group/t/36781)
 
@@ -916,7 +923,7 @@ Targets: a spike at $k = 20$; a bump $e^{-(k-20)^2/32}$.
 
 ::: {.d2l-note .rule}
 One exponential peaks at $k = 0$. Sixteen match the bump (0.03), not the
-spike (0.89), and only with weights up to $2 \times 10^{11}$ that cancel.
+spike (0.89), and both fits need weights near $10^{11}$ that cancel.
 With ordinary weights: roughly when, not exactly when.
 :::
 :::
@@ -966,9 +973,9 @@ Why does the short-timescale S4D still recall after 100 steps?
 ::: {.fragment .fade-up}
 - The symbol's weight after 99 steps: $e^{-9.9} \approx 5 \times 10^{-5}$.
 - Small, but it carries a gradient to the step sizes and rates: training
-  lengthens the slowest half-lives.
+  lengthens the slowest half-lives from 7 to **100–200 steps**.
 - After 999 steps: $e^{-100} \approx 10^{-44}$, below rounding error. No
-  gradient, nothing moves.
+  gradient from the symbol: the half-lives stay within a few steps of 7.
 :::
 :::
 

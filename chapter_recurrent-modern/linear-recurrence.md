@@ -569,11 +569,11 @@ print(f'validation loss: {loss:.3f} nats per byte, '
 Without its memory the model's loss rises from just under 1.35 to about
 2.48 nats per byte, from a perplexity of about 3.8 to about 12. The model
 was never trained to predict from one byte, so the reset loss overstates
-what a one-byte model could reach. It cannot overstate it by much, though. A model
-that sees one byte is a bigram model, and the bigram model of WikiText-103's
-training bytes, counted in :numref:`sec_gpt`, scores 2.45 nats per byte
-even on the bytes it was counted on. More than a nat per byte of the
-minGRU's skill comes from what it remembers.
+what a one-byte model could reach. It cannot overstate it by much, though.
+A model that sees one byte is a bigram model, and the bigram model of
+WikiText-103's training bytes, counted in :numref:`sec_gpt`, scores 2.45
+nats per byte even on the bytes it was counted on. More than a nat per byte
+of the minGRU's skill comes from what it remembers.
 
 How long, then, does the first layer hold its state? A gate value $g$ keeps
 a fraction $g$ of the state per step, which by the half-life of

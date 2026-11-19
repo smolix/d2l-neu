@@ -1,33 +1,35 @@
 # Uniform Convergence and Generalization
 :label:`sec_mdl-generalization-bounds`
 
-The previous section put an error bar on a number computed from data. A
-classifier scored on 10,000 held-out images has a true error within about 1.4
-percentage points of its test error, with 95% confidence. The guarantee rests
-on a hypothesis that is easy to overlook: the classifier was fixed before the
-test images were drawn. Little of what we report is like that. We train many
-configurations, look at their validation scores, and keep the best one. The
-reported score belongs to the winner of a contest, and the winner is partly
-the configuration whose luck was best.
+The previous section showed how to put an error bar on an average computed
+from data. A classifier evaluated on 10,000 held-out images has a true error
+within about 1.4 percentage points of its test error, with 95% confidence.
+That guarantee rests on a condition that is easy to overlook: the classifier
+must be fixed *before* the test images are drawn. In practice, we rarely work
+that way. We train many configurations, inspect their validation scores, and
+keep the best one. The score we report belongs to the winner of a contest,
+and the winner is partly the configuration that got luckiest on the sample.
 
-:numref:`chap_classification_generalization` met this problem and gave the
-remedy of Vapnik and Chervonenkis :cite:`Vapnik.Chervonenkis.1971`: ask for
-a guarantee that holds for every candidate function at once, so that it also
-holds for whichever one the learner picks. For a finite list of candidates
-the guarantee widens only with the logarithm of their number. We only recall
-that result
-here, with one experiment that shows how much luck there is to choose from:
-flip each of 1,000 fair coins 100 times and keep the coin with the most
-heads. How many does it show?
+:numref:`chap_classification_generalization` introduced this problem together
+with the remedy of Vapnik and Chervonenkis :cite:`Vapnik.Chervonenkis.1971`:
+demand a guarantee that holds for every candidate function simultaneously, so
+that it automatically covers whichever one the learner selects. When the list
+of candidates is finite, the bound widens only with the logarithm of the
+number of candidates. We briefly recall that finite-class result here and
+pair it with a concrete experiment that shows just how much luck there is to
+pick from: flip each of 1,000 fair coins 100 times and keep the coin with
+the most heads. How many heads does it show?
 
-The main work of the section is the infinite classes that we actually train.
-For them a later idea measures a class by how well it can fit labels that are
-pure coin flips, its Rademacher complexity. It explains why the capacity of
-a linear model depends on its weight norm rather than on its number of
-parameters, and it shows where this way of arguing stops: at models that fit
-random labels, as the networks of the main text do. The last part repeats the
-double-descent experiment of :numref:`subsec_double_descent` in a model small
-enough that its mechanism can be computed.
+The heart of this section, however, is the infinite function classes we
+actually train. For them, a later idea measures the richness of a class by
+how well it can fit pure coin-flip labels, its *Rademacher complexity*. This
+measure explains why the capacity of a linear model depends on its weight
+norm rather than its parameter count, and it also reveals where uniform
+convergence reaches its limit: at models flexible enough to fit random
+labels, such as the deep networks of the main text. In the final part, we
+revisit the double-descent experiment of :numref:`subsec_double_descent` in a
+model simple enough that we can compute every piece of the mechanism in
+closed form.
 
 ```{.python .input #mdl-generalization-bounds-uniform-convergence-and-generalization}
 #@tab mxnet
@@ -74,47 +76,51 @@ rng = np.random.default_rng()
 
 ## Uniform Convergence
 
-A test-set certificate and a learner differ only in the order of two events:
-choosing the function and drawing the sample. This part measures how much
-choosing after the sample distorts the score, and how much more data a
-guarantee needs once the order is reversed.
+Evaluating a fixed model on a test set and training a learner differ only in
+the order of two events: choosing the function and drawing the sample. Here
+we measure how much reversing that order distorts the score, and how much
+more data we need once the choice depends on the sample.
 
 ### The Best of Many Coins
 :label:`subsec_mdl-best-of-many-coins`
 
-We first state the guarantee for one function in the notation used below.
-A sample $S=\{(\mathbf x_1,y_1),\ldots,(\mathbf x_n,y_n)\}$ consists of $n$
-independent draws from an unknown distribution. A loss $\ell$ with values in
-$[0,1]$ scores a prediction, for instance the 0-1 loss, which is $1$ for a
-mistake and $0$ otherwise.
+Let us first state the single-function guarantee in the notation we will use
+throughout this section. A sample
+$S=\{(\mathbf x_1,y_1),\ldots,(\mathbf x_n,y_n)\}$ consists of $n$
+independent draws from an unknown distribution, and a loss $\ell$ taking
+values in $[0,1]$ scores each prediction, for instance the 0-1 loss, which is
+$1$ for a mistake and $0$ otherwise.
 
 The *empirical risk* of a function $f$ is its average loss on the sample,
-$\hat R(f)=\frac1n\sum_{i=1}^n\ell(f(\mathbf x_i),y_i)$, and its *risk* is the
-expected loss on a fresh draw, $R(f)=\mathbb{E}[\ell(f(\mathbf x),y)]$. (For
-the 0-1 loss these are the empirical error $\epsilon_\mathcal{S}(f)$ and the
-population error $\epsilon(f)$ of the main text.) If $f$ is fixed before $S$
-is drawn, $\hat R(f)$ is an average of $n$ independent terms in $[0,1]$ with
-mean $R(f)$, and Hoeffding's inequality
-(:numref:`sec_mdl-concentration-generalization`) bounds
-$P(|\hat R(f)-R(f)|\ge t)$ by $2e^{-2nt^2}$. Setting this to $\delta=0.05$
-and solving for $t$ gives the half-width $\sqrt{\log(2/\delta)/(2n)}$, which
-the main text calls the Hoeffding radius. For $n=10{,}000$ it is $0.0136$,
-the 1.4 points above.
+$\hat R(f)=\frac1n\sum_{i=1}^n\ell(f(\mathbf x_i),y_i)$, while its *risk* is
+its expected loss on a fresh draw, $R(f)=\mathbb{E}[\ell(f(\mathbf x),y)]$.
+(For the 0-1 loss, these are the empirical error $\epsilon_\mathcal{S}(f)$
+and population error $\epsilon(f)$ of the main text.) When $f$ is fixed
+before $S$ is drawn, $\hat R(f)$ is an average of $n$ independent terms in
+$[0,1]$ with mean $R(f)$. Hoeffding's inequality
+(:numref:`sec_mdl-concentration-generalization`) therefore bounds
+$P(|\hat R(f)-R(f)|\ge t)$ by $2e^{-2nt^2}$. Setting this failure
+probability to $\delta=0.05$ and solving for $t$ yields the half-width
+$\sqrt{\log(2/\delta)/(2n)}$, which the main text calls the Hoeffding
+radius. For $n=10{,}000$ this gives $0.0136$, the 1.4 percentage points
+quoted above.
 
-A learner reverses the order. It searches a class $\mathcal F$ of functions
-and returns the $\hat f$ with the smallest $\hat R$ on the sample it saw. Each
-$\hat R(f)$ fluctuates around its own $R(f)$, and the learner keeps the
-function whose fluctuation was most favorable. The empirical risk
-$\hat R(\hat f)$ is therefore a minimum of fluctuating quantities, and an
-inequality that holds for each $f$ separately does not cover it.
+A learner reverses the order of events. It searches a class $\mathcal F$ of
+functions and returns the predictor $\hat f$ with the smallest empirical risk
+$\hat R$ on the observed sample. Each $\hat R(f)$ fluctuates around its true
+risk $R(f)$, and the learner naturally picks a function whose random
+fluctuation happened to be favorable. Because $\hat R(\hat f)$ is the
+minimum of many fluctuating quantities, an inequality that holds for each
+fixed $f$ individually no longer covers it.
 
-The coins show by how much. Let $k=1{,}000$ fair coins each be flipped
-$m=100$ times. For one coin named in advance, Hoeffding at $\delta=0.05$
-allows a deviation of $\sqrt{\log 40/200}=0.136$ in the fraction of heads, so
-the coin shows between 37 and 63 heads with probability at least 95% (the
-exact probability is 99.3%). The best of the 1,000 coins has no such
-promise. We repeat the experiment 2,000 times and record how far the best
-coin strays and how often it leaves the single-coin band.
+Our coin-flipping experiment shows just how large this selection effect can
+be. Suppose we flip each of $k=1{,}000$ fair coins $m=100$ times. For a
+single coin named in advance, Hoeffding's inequality at $\delta=0.05$ allows
+a deviation of $\sqrt{\log 40/200}=0.136$ in the fraction of heads, so that
+coin lands between 37 and 63 heads with probability at least 95% (the exact
+probability is 99.3%). The best of the 1,000 coins carries no such
+guarantee. Let us repeat the experiment 2,000 times and measure how far the
+winning coin strays and how often it escapes the single-coin band.
 
 ```{.python .input #mdl-generalization-bounds-the-best-of-many-coins}
 k, m, repeats = 1000, 100, 2000          # coins, flips per coin, experiments
@@ -128,51 +134,58 @@ print(f'experiments in which the best coin leaves the one-coin band: '
       f'{np.mean(best > 0.5 + one):.0%}')
 ```
 
-The best coin shows 66 heads in a typical experiment and between 64 and 69 in
-nine experiments out of ten. It leaves the single-coin band in 96 to 97% of
-the experiments, so a guarantee that is valid for every coin named in advance
-fails almost always for the coin chosen afterwards. No coin is biased. The
-selected coin is off by 16 points because we looked at 1,000 fluctuations and
-reported the largest.
+In a typical experiment, the best coin shows 66 heads, and in nine
+experiments out of ten it lands between 64 and 69. It escapes the
+single-coin band in 96% to 97% of runs, so a guarantee that holds for every
+coin named in advance fails almost every time for the coin chosen
+afterwards. None of the coins is biased. The winner is off by 16 percentage
+points simply because we inspected 1,000 random fluctuations and kept the
+largest.
 
-:numref:`fig_mdl-gen-best-of-many` shows why. Each coin leaves the band with
-probability $0.0033$ on the upper side, a rare event, but among 1,000 coins
-about $3.3$ are expected to do so. The tail that one coin almost never
-reaches is populated when a thousand coins are drawn.
+:numref:`fig_mdl-gen-best-of-many` makes the reason visible. Any individual
+coin crosses the upper edge of the band with probability $0.0033$, a rare
+event on its own; among 1,000 coins, however, about $3.3$ are expected to do
+so. A tail that one coin almost never reaches becomes well populated once a
+thousand coins are tossed.
 
-![The expected histogram of the fraction of heads of 1,000 fair coins flipped 100 times each, on a logarithmic scale. The single-coin 95% band from Hoeffding's inequality covers 99% of the coins, yet about 3.3 coins are expected beyond its upper edge, and the best coin lies near 0.66 in a typical experiment. The band of the union bound for all 1,000 coins is wider and covers the best coin.](../img/mdl-prob-gen-best-of-many.svg)
+![Expected histogram of the fraction of heads for 1,000 fair coins flipped 100 times each, shown on a logarithmic scale. Although the single-coin 95% Hoeffding band covers 99% of the coins, about 3.3 coins are expected above its upper edge, and the best coin typically lands near 0.66. The wider union-bound band for all 1,000 coins covers the best coin.](../img/mdl-prob-gen-best-of-many.svg)
 :label:`fig_mdl-gen-best-of-many`
 
-A validation set is the same experiment with the roles renamed: each
-configuration is a coin, each example a flip. Its configurations share their
-examples and differ in their true errors, but the bound below needs neither
-independence nor equal means.
+Model selection on a validation set is the exact same experiment with
+different labels: each configuration is a coin, and each validation example
+is a flip. Validation configurations share the same examples and have
+different true errors, unlike our independent fair coins, yet the bound we
+derive next requires neither independence across candidates nor equal means.
 
-What would cover the chosen function? If the largest deviation over the whole
-class,
+How, then, can we obtain a guarantee that still covers the chosen function?
+Suppose the largest deviation across the entire class,
 
 $$
 \sup_{f\in\mathcal F}\ \bigl|\hat R(f) - R(f)\bigr|,
 $$
 
-is at most $t$, then every function's empirical risk is within $t$ of its
-risk, including the one the learner picked. Bounds on this supremum are
-called *uniform convergence* bounds :cite:`Vapnik.Chervonenkis.1971`.
-Choosing after seeing the data is safe if the guarantee was made for all
-candidates before seeing it, because the one we pick is one of them.
+is at most $t$. Then every function's empirical risk lies within $t$ of its
+true risk, and in particular so does the function the learner picked. Bounds
+on this supremum are called *uniform convergence* bounds
+:cite:`Vapnik.Chervonenkis.1971`. Choosing after seeing the data becomes
+safe once the guarantee holds for all candidates before the data arrive,
+because whichever candidate we pick is already covered.
 
 ### Finite Classes and the Union Bound
 :label:`subsec_mdl-finite-class`
 
-The simplest class is a finite list of candidates fixed in advance, such as a
-grid of hyperparameter configurations. For it the main text already has the
-bound, :eqref:`eq_generalization-classification-finite`, and its proof takes
-two steps. Hoeffding's inequality bounds the probability that one fixed $f$
-deviates by $t$ or more by $2e^{-2nt^2}$, and the union bound
-(:numref:`sec_mdl-concentration-generalization`) over the $|\mathcal F|$ such
-events gives $2|\mathcal F|e^{-2nt^2}$. Setting this to $\delta$ and solving
-for $t$: for a loss with values in $[0,1]$ and an i.i.d. sample of size $n$,
-with probability at least $1-\delta$,
+The simplest setting is a finite list of candidates fixed in advance, such
+as a pre-specified grid of hyperparameter configurations. For this case the
+main text already stated the result in
+:eqref:`eq_generalization-classification-finite`, and its proof takes only
+two lines. Hoeffding's inequality bounds the probability that a single fixed
+$f$ deviates by $t$ or more by $2e^{-2nt^2}$. Applying the union bound
+(:numref:`sec_mdl-concentration-generalization`) across all $|\mathcal F|$
+candidates bounds the probability that *any* of them deviates by $t$ or more
+by $2|\mathcal F|e^{-2nt^2}$. Setting this total failure probability equal
+to $\delta$ and solving for $t$ gives our first uniform convergence theorem:
+for a loss taking values in $[0,1]$ and an i.i.d. sample of size $n$, with
+probability at least $1-\delta$,
 
 $$
 \bigl|\hat R(f) - R(f)\bigr|
@@ -181,82 +194,88 @@ $$
 $$
 :eqlabel:`eq_mdl-finite-class`
 
-Compared with one function, choosing among $|\mathcal F|$ candidates adds
-$\log|\mathcal F|$ under the square root, and nothing else.
+Compared with evaluating a single fixed function, choosing among
+$|\mathcal F|$ candidates adds $\log|\mathcal F|$ inside the square root and
+nothing more.
 
-On the coins, $|\mathcal F|=1{,}000$ and $n=100$ give the half-width
-$\sqrt{\log(2{,}000/0.05)/200}=0.230$, so with probability at least 95% every
-coin, the best one included, shows between 27 and 73 heads. The bound is
-rather conservative: the exact probability that some coin falls outside 27 to
-73 heads is about 0.17%, against the 5% the bound allows. Almost all of this
-factor of 30 is lost in Hoeffding's inequality for the single coin, which
-leaves that range with probability $1.7\times10^{-6}$ where the inequality
-allows $5\times10^{-5}$. The union bound is nearly exact for rare independent
-events. Conservative or not, the bound is valid, which the single-coin band
-was not.
+On our coin experiment, setting $|\mathcal F|=1{,}000$ and $n=100$ produces
+a half-width of $\sqrt{\log(2{,}000/0.05)/200}=0.230$, so with probability
+at least 95% every coin, the winning coin included, falls between 27 and 73
+heads. The bound is admittedly conservative: the true probability that some
+coin falls outside 27 to 73 heads is about 0.17%, well below the 5% budget.
+Almost all of this factor-of-30 slack comes from Hoeffding's inequality on a
+single coin, which leaves that range with probability $1.7\times10^{-6}$
+where Hoeffding allows $5\times10^{-5}$; the union bound itself is nearly
+tight for rare independent events. Conservative or not, the band is valid,
+whereas the single-coin band was not.
 
-For a validation set of 10,000 examples the main text lists the half-widths:
-$0.014$ for one function and $0.030$ for a million. Solving the bound for the
-sample size shows the dependence more directly:
+For a validation set of 10,000 examples, the main text records the
+half-widths: $0.014$ for a single function and $0.030$ for a million.
+Solving :eqref:`eq_mdl-finite-class` for the sample size $n$ makes the cost
+of searching more transparent:
 
 $$
 n=\frac{\log(2/\delta)+\log|\mathcal F|}{2t^2}.
 $$
 
-Each additional unit of $\log|\mathcal F|$ adds $1/(2t^2)$ examples. At a
-tolerance of $t=0.01$, doubling the number of candidates costs
-$\log 2/(2\cdot 10^{-4})\approx3{,}500$ more validation examples.
+Each additional unit of $\log|\mathcal F|$ requires $1/(2t^2)$ more
+examples. At a tolerance of $t=0.01$, doubling the number of candidate
+models costs $\log 2/(2\cdot 10^{-4})\approx3{,}500$ extra validation
+examples.
 
-It is the exponential tail of Hoeffding's inequality that makes the
-dependence logarithmic. With Chebyshev's inequality in its place (a
-$[0,1]$-valued loss has variance at most $\tfrac14$), the same union bound
-gives $t=\sqrt{|\mathcal F|/(4n\delta)}$. For 2,000 configurations on 10,000
-examples at $\delta=0.05$ this is $t=1$, the whole range of the loss, where
-Hoeffding gives $t=0.024$.
+This logarithmic dependence is a direct gift of Hoeffding's exponential
+tail. If we used Chebyshev's inequality instead (noting that a $[0,1]$-valued
+loss has variance at most $\tfrac14$), the same union bound would yield
+$t=\sqrt{|\mathcal F|/(4n\delta)}$. For 2,000 configurations on 10,000
+examples at $\delta=0.05$, Chebyshev gives $t=1$, spanning the entire range
+of the loss and telling us nothing, whereas Hoeffding gives $t=0.024$.
 
-The proof uses one hypothesis, in its first step: the class is fixed before
-the sample is drawn. A public leaderboard breaks it, because each submission
-is chosen after seeing the scores of earlier ones on the same test set
-:cite:`Dwork.Feldman.Hardt.ea.2015`. The guarantee then degrades from a
-deviation of order $\sqrt{\log k/n}$ for a fixed list of $k$ candidates to
-one of order $\sqrt{k/n}$ for the majority vote that the main text builds
-from $k$ random guessers (exercise
+The proof relies on one crucial hypothesis in its very first step: the
+candidate class $\mathcal F$ must be fixed before the sample is drawn. A
+public benchmark leaderboard violates this assumption whenever each new
+submission is chosen after inspecting the test scores of earlier ones
+:cite:`Dwork.Feldman.Hardt.ea.2015`. Once the candidates adapt to the
+holdout set, the error guarantee degrades from order $\sqrt{\log k/n}$ for
+$k$ fixed candidates to order $\sqrt{k/n}$ for an adaptive majority vote
+built from $k$ random guessers (exercise
 :exref:`ex_mdl-concentration-generalization-leaderboard-attack`).
 
 ## Rademacher Complexity
 
-The classes we train are infinite. Every weight vector
-$\mathbf w\in\mathbb{R}^d$ defines a different linear classifier, and a union
-bound over infinitely many events is vacuous. The classical remedies
-either replace the class by finitely many representatives (covering numbers)
-or count the labelings it can produce on $n$ points (the VC dimension,
-sketched in :numref:`chap_classification_generalization`). The tool of this
-part :cite:`Bartlett.Mendelson.2002` asks a question a practitioner can act
-on: how well can the class fit pure noise?
+The function classes we actually train are infinite. Every weight vector
+$\mathbf w\in\mathbb{R}^d$ defines a distinct linear classifier, and a union
+bound over infinitely many events is vacuous. Classical learning theory gets
+around this either by approximating the class with finitely many
+representatives (covering numbers) or by counting how many distinct labelings
+it can realize on $n$ points (the VC dimension, sketched in
+:numref:`chap_classification_generalization`). Here we take a more direct
+approach :cite:`Bartlett.Mendelson.2002` that asks an operational question
+any practitioner can test: how well can the class fit pure noise?
 
-The two results of the section that are worth remembering are in this part:
-the uniform convergence theorem :eqref:`eq_mdl-rademacher-bound` and the
-complexity $Br/\sqrt n$ of a norm-bounded linear class,
-:eqref:`eq_mdl-linear-rademacher`. The one hard step is the symmetrization
-in the proof of the first.
+The two central results of this section live in this part: the uniform
+convergence theorem :eqref:`eq_mdl-rademacher-bound` and the complexity
+bound $Br/\sqrt n$ for norm-bounded linear models,
+:eqref:`eq_mdl-linear-rademacher`. The one genuinely tricky step is the
+symmetrization argument in the proof of the first.
 
 ### Correlation with Random Signs
 :label:`subsec_mdl-rademacher-definition`
 
-If a class can fit labels that carry no information, it can also fit the
-noise in real labels, and then its empirical risks say little about its
-risks. To measure this we feed the class fictitious labels. Let
+If a function class can fit labels that carry no signal at all, it can just
+as easily fit the noise in real labels, and its empirical risk then tells us
+very little about its true risk. To test a class's capacity for memorizing
+noise, we feed it fictitious random labels. Let
 $\varepsilon_1,\ldots,\varepsilon_n$ be independent fair random signs, each
-$+1$ or $-1$ with probability $\tfrac12$; they are called *Rademacher
-variables*. For a sign vector $\boldsymbol\varepsilon$, the quantity
-$\frac1n\sum_i\varepsilon_if(\mathbf x_i)$ is the correlation of $f$ with the
-signs on the sample, and the best a class can do is its supremum over the
-class.
+taking the value $+1$ or $-1$ with probability $\tfrac12$; these are called
+*Rademacher variables*. For a given sign vector $\boldsymbol\varepsilon$, the
+average $\frac1n\sum_i\varepsilon_if(\mathbf x_i)$ measures how well $f$
+correlates with those signs on the sample, and the supremum over $f\in\mathcal F$
+measures the best correlation the class can achieve.
 
 **Definition.** The *empirical Rademacher complexity* of a class
-$\mathcal F$ of real-valued functions on the points
-$S=(\mathbf x_1,\ldots,\mathbf x_n)$ is the expected best correlation the class
-achieves with random signs,
+$\mathcal F$ of real-valued functions on the sample points
+$S=(\mathbf x_1,\ldots,\mathbf x_n)$ is the expected best correlation the
+class achieves with random signs,
 
 $$
 \widehat{\mathfrak R}_S(\mathcal F)
@@ -266,71 +285,78 @@ $$
 $$
 :eqlabel:`eq_mdl-rademacher`
 
-and its *Rademacher complexity* $\mathfrak R_n(\mathcal F)=\mathbb{E}_S[\widehat{\mathfrak R}_S(\mathcal F)]$
-is its average over samples of size $n$.
+and its *Rademacher complexity*
+$\mathfrak R_n(\mathcal F)=\mathbb{E}_S[\widehat{\mathfrak R}_S(\mathcal F)]$
+is the average of this quantity over random samples of size $n$.
 
-A class that can match any sign pattern scores high; a class that cannot
-choose scores zero. The scale is set by the range of the functions. For a
-class with values in $[-1,1]$ each correlation is at most $1$, and the value
-$1$ is reached by the class of all functions into $[-1,1]$, which contains
-$f(\mathbf x_i)=\varepsilon_i$ for every pattern (when the points are
-distinct). For a class with values in $[0,1]$ the largest possible value is
-$\tfrac12$: the best choice is $f(\mathbf x_i)=1$ exactly where
-$\varepsilon_i=+1$, which scores the fraction of plus signs, $\tfrac12$ on
-average. An unbounded class, such as the linear class below, has no such
-ceiling: if it fits every sign pattern on the sample, its complexity is at
-least $1$, and it can be larger.
+A class that can match any sign pattern scores high, whereas a class with
+little freedom scores near zero. The exact ceiling depends on the range of
+the functions. If every $f\in\mathcal F$ takes values in $[-1,1]$, then
+every correlation is at most $1$, and the class of *all* functions into
+$[-1,1]$ achieves $1$ on distinct points by setting
+$f(\mathbf x_i)=\varepsilon_i$ for every sign pattern. For a class taking
+values in $[0,1]$, the maximum possible complexity is $\tfrac12$: the best
+choice sets $f(\mathbf x_i)=1$ wherever $\varepsilon_i=+1$ and $0$
+elsewhere, scoring the fraction of plus signs, which averages to $\tfrac12$.
+An unbounded class, such as the linear functions we study shortly, has no
+such ceiling: if it can interpolate every sign pattern on the sample, its
+complexity is at least $1$, and can be larger still.
 
-The smallest case with something to choose is the class of the two constant
-functions $\{+1,-1\}$. Its best correlation with a sign vector is
-$\max(\bar\varepsilon,-\bar\varepsilon)=|\bar\varepsilon|$, where
-$\bar\varepsilon$ is the average of the signs. For $n=2$ the four patterns
-$(+,+),(+,-),(-,+),(-,-)$ give $|\bar\varepsilon|=1,0,0,1$, so
-$\widehat{\mathfrak R}_S=\tfrac12$. For $n=4$ the sum of the signs is $\pm4$
-with probability $\tfrac2{16}$, $\pm2$ with probability $\tfrac8{16}$ and $0$
-otherwise, which gives $\widehat{\mathfrak R}_S=\tfrac38$. For large $n$ the
-average $\bar\varepsilon$ is approximately normal with variance $1/n$, so
-$\widehat{\mathfrak R}_S\approx\sqrt{2/(\pi n)}$; at $n=100$ the exact value is
-$0.0796$ against $0.0798$. Even a class with only two members correlates with
-noise at the rate $1/\sqrt n$, because the average of $n$ signs has that
-spread. A class with one member has complexity $0$: with nothing to choose,
-$\mathbb{E}[\frac1n\sum_i\varepsilon_if(\mathbf x_i)]=0$.
+To get a feel for the numbers, consider the simplest nontrivial class: the
+two constant functions $\{+1,-1\}$. Its best correlation with a sign vector
+is $\max(\bar\varepsilon,-\bar\varepsilon)=|\bar\varepsilon|$, where
+$\bar\varepsilon$ is the sample average of the signs. For $n=2$, the four
+equally likely patterns $(+,+),(+,-),(-,+),(-,-)$ give
+$|\bar\varepsilon|=1,0,0,1$, so $\widehat{\mathfrak R}_S=\tfrac12$. For
+$n=4$, the sum of the signs is $\pm4$ with probability $\tfrac2{16}$, $\pm2$
+with probability $\tfrac8{16}$, and $0$ otherwise, giving
+$\widehat{\mathfrak R}_S=\tfrac38$. For large $n$, $\bar\varepsilon$ is
+approximately normal with mean $0$ and variance $1/n$, so
+$\widehat{\mathfrak R}_S\approx\sqrt{2/(\pi n)}$; at $n=100$, the exact
+value is $0.0796$ compared with $0.0798$ from the normal approximation. Even
+a class with just two functions correlates with noise at rate $1/\sqrt n$,
+simply because the average of $n$ random signs fluctuates at that scale. By
+contrast, a singleton class $\{f\}$ has complexity $0$: with nothing to
+choose from, $\mathbb{E}[\frac1n\sum_i\varepsilon_if(\mathbf x_i)]=0$.
 
-For a linear class the best correlation has a geometric meaning, which
-:numref:`fig_mdl-gen-rademacher` previews: it is the length of a signed sum
-of the inputs, divided by $n$. :numref:`subsec_mdl-linear-class` proves this.
+For a linear class, the best correlation has a clean geometric
+interpretation, previewed in :numref:`fig_mdl-gen-rademacher`: it is the
+length of a signed sum of the input vectors, divided by $n$. We prove this
+shortly in :numref:`subsec_mdl-linear-class`.
 
-![Rademacher complexity of a linear class, for eight unit vectors in the plane and the class of unit-norm linear functions. (a) For one sign pattern, filled dots are $+1$ and hollow dots $-1$. The best correlation is attained by the weight vector $\mathbf w^*$ aligned with the signed sum $\mathbf s=\sum_i\varepsilon_i\mathbf x_i$, and equals $\|\mathbf s\|/n=0.27$. (b) The exact distribution of the best correlation over all 256 sign patterns. Its mean, the empirical Rademacher complexity, is 0.316, against the bound $Br/\sqrt n=0.354$ proved in the text.](../img/mdl-prob-gen-rademacher.svg)
+![Rademacher complexity of a linear class for eight unit vectors in the plane and the class of unit-norm linear functions. (a) For a single sign pattern, filled dots denote $+1$ and hollow dots $-1$. The best correlation is achieved by the unit weight vector $\mathbf w^*$ aligned with the signed sum $\mathbf s=\sum_i\varepsilon_i\mathbf x_i$, and equals $\|\mathbf s\|/n=0.27$. (b) The exact distribution of the best correlation across all 256 sign patterns. Its mean, the empirical Rademacher complexity, is 0.316, compared with the bound $Br/\sqrt n=0.354$ proved in the text.](../img/mdl-prob-gen-rademacher.svg)
 :label:`fig_mdl-gen-rademacher`
 
-A finite class with values in $[-1,1]$ obeys *Massart's lemma*,
+A finite class taking values in $[-1,1]$ satisfies *Massart's lemma*,
 $\widehat{\mathfrak R}_S(\mathcal F)\le\sqrt{2\log|\mathcal F|/n}$ (exercise
 :exref:`ex_mdl-concentration-generalization-massart-l1`), so its complexity
-grows only logarithmically with its size. Rademacher complexity measures
-how freely the class can vary on the actual sample points, whatever the
-number of its parameters or members.
+grows only logarithmically with the number of functions. More generally,
+Rademacher complexity captures how freely a class can vary on the actual
+sample points, regardless of how many parameters or members it has.
 
 ### The Uniform Convergence Theorem
 :label:`subsec_mdl-rademacher-theorem`
 
-We now show that the Rademacher complexity bounds the largest deviation
-between empirical risk and risk. One distinction must be made first, because
-the predictions and the losses live in different classes. The predictor class
-$\mathcal F$ contains the functions we fit. The functions whose averages we
-compare are the losses, so define the *loss class*
+We are now ready to show that Rademacher complexity controls the largest
+gap between empirical risk and true risk across the entire class. One small
+bookkeeping distinction comes first, because predictions and losses belong
+to different function classes. The *predictor class* $\mathcal F$ contains
+the models we fit, whereas the quantities whose averages we compare are the
+losses. We therefore define the *loss class*
 
 $$
 \mathcal G=\bigl\{(\mathbf x,y)\mapsto\ell(f(\mathbf x),y):f\in\mathcal F\bigr\},
 $$
 
-with values in $[0,1]$. For $g\in\mathcal G$ write $z=(\mathbf x,y)$,
-$R(g)=\mathbb{E}[g(z)]$ and $\hat R_S(g)=\frac1n\sum_ig(z_i)$. The risk of a
-predictor is the risk of its loss.
+whose functions take values in $[0,1]$. Writing $z=(\mathbf x,y)$ for a
+labeled example, let $R(g)=\mathbb{E}[g(z)]$ and
+$\hat R_S(g)=\frac1n\sum_ig(z_i)$ for $g\in\mathcal G$. The risk of a
+predictor is simply the risk of its corresponding loss function.
 
 **Proposition (uniform convergence via Rademacher complexity)**
 :cite:`Bartlett.Mendelson.2002`. *Let $S=(z_1,\ldots,z_n)$ be an i.i.d.
-sample and let $\mathcal G$ be a class of functions with values in $[0,1]$.
-Then with probability at least $1-\delta$,*
+sample and let $\mathcal G$ be a class of functions taking values in
+$[0,1]$. Then with probability at least $1-\delta$,*
 
 $$
 R(g) \le \hat R_S(g) + 2\,\mathfrak R_n(\mathcal G)
@@ -339,18 +365,21 @@ R(g) \le \hat R_S(g) + 2\,\mathfrak R_n(\mathcal G)
 $$
 :eqlabel:`eq_mdl-rademacher-bound`
 
-The bound has the shape of the finite-class one: an empirical risk, a term
-for the richness of the class, and a confidence term that would be there for
-a single function. The richness term is twice the class's ability to fit
-random signs.
+Notice that this bound has the exact same three-part anatomy as the
+finite-class bound: the empirical risk on the training sample, a complexity
+term measuring the richness of the class, and a confidence term that would
+appear even for a single fixed function. Here, the richness term is twice
+the class's ability to fit random signs.
 
-**Proof.** We show
-$\mathbb{E}_S\bigl[\sup_g(R(g)-\hat R_S(g))\bigr]\le2\mathfrak R_n(\mathcal G)$
-in three steps; the high-probability form follows afterwards.
+**Proof.** We first bound the expected worst-case gap,
+$\mathbb{E}_S\bigl[\sup_g(R(g)-\hat R_S(g))\bigr]\le2\mathfrak R_n(\mathcal G)$,
+in three steps; the high-probability statement follows from concentration.
 
-I. *Ghost sample.* Let $S'=(z'_1,\ldots,z'_n)$ be an independent copy of $S$,
-used only inside the proof. Since $R(g)=\mathbb{E}_{S'}[\hat R_{S'}(g)]$, and a
-supremum of expectations is at most the expectation of the supremum,
+I. *Ghost sample.* Introduce an independent copy
+$S'=(z'_1,\ldots,z'_n)$ of the sample $S$, which serves purely as an
+analytical device inside the proof. Because
+$R(g)=\mathbb{E}_{S'}[\hat R_{S'}(g)]$, and because the supremum of an
+expectation is always at most the expectation of the supremum, we obtain
 
 $$
 \mathbb{E}_S\Bigl[\sup_{g\in\mathcal G}\bigl(R(g)-\hat R_S(g)\bigr)\Bigr]
@@ -359,16 +388,17 @@ $$
 $$
 :eqlabel:`eq_mdl-symmetrization`
 
-The unknown risk has been replaced by a second sample.
+The unknown population risk has been replaced by the empirical risk on a
+fresh sample.
 
-II. *Sign swap.* Exchanging $z_i$ with $z'_i$ leaves the joint distribution of
-$(S,S')$ unchanged, because the two points are independent draws from the
-same distribution. The exchange flips the sign of the $i$-th difference
-$g(z'_i)-g(z_i)$ for every $g$ at once. So for any fixed signs
-$\varepsilon_1,\ldots,\varepsilon_n$ the right-hand side of
-:eqref:`eq_mdl-symmetrization` does not change if the $i$-th difference is
-multiplied by $\varepsilon_i$. Nor does it change when the signs are drawn at
-random:
+II. *Sign swap.* Swapping $z_i$ with $z'_i$ leaves the joint distribution of
+$(S,S')$ completely unchanged, since both points are independent draws from
+the same distribution. Yet that swap negates the $i$-th difference
+$g(z'_i)-g(z_i)$ for every $g\in\mathcal G$ simultaneously. Consequently,
+for any fixed choice of signs $\varepsilon_1,\ldots,\varepsilon_n\in\{-1,+1\}$,
+multiplying the $i$-th difference by $\varepsilon_i$ does not change the
+right-hand side of :eqref:`eq_mdl-symmetrization`. Averaging over random
+signs leaves it unchanged as well:
 
 $$
 \mathbb{E}_{S,S'}\Bigl[\sup_{g}\ \frac1n\sum_i\bigl(g(z'_i)-g(z_i)\bigr)\Bigr]
@@ -376,8 +406,8 @@ $$
  \varepsilon_i\bigl(g(z'_i)-g(z_i)\bigr)\Bigr].
 $$
 
-III. *Split.* The supremum of a sum is at most the sum of the suprema, so the
-right-hand side is at most
+III. *Split.* Since the supremum of a sum is at most the sum of the suprema,
+the right-hand side is bounded above by
 
 $$
 \mathbb{E}_{S',\boldsymbol\varepsilon}\Bigl[\sup_{g}\ \frac1n\sum_i
@@ -388,74 +418,87 @@ $$
 $$
 
 because $-\boldsymbol\varepsilon$ has the same distribution as
-$\boldsymbol\varepsilon$, so each term is $\mathfrak R_n(\mathcal G)$. The
-split produces the factor $2$.
+$\boldsymbol\varepsilon$, making both expectations equal to
+$\mathfrak R_n(\mathcal G)$. This split is where the factor of $2$ comes
+from.
 
-For the high-probability form, consider
-$\Phi(S)=\sup_g(R(g)-\hat R_S(g))$. Changing one sample point changes each
-$\hat R_S(g)$ by at most $1/n$, and therefore changes $\Phi$ by at most $1/n$.
-*McDiarmid's inequality* :cite:`McDiarmid.1989`, the extension of Hoeffding's
-inequality from sums to functions that no single input can move much, then
-gives $P(\Phi-\mathbb{E}\Phi\ge t)\le e^{-2nt^2}$ (exercise
-:exref:`ex_mdl-concentration-generalization-mcdiarmid-s-inequality`). Setting
-the right-hand side to $\delta$ and combining with the bound on
-$\mathbb{E}\Phi$ gives :eqref:`eq_mdl-rademacher-bound`. $\blacksquare$
+To pass from the expectation to a high-probability bound, define
+$\Phi(S)=\sup_g(R(g)-\hat R_S(g))$. Replacing a single sample point $z_i$
+changes each empirical risk $\hat R_S(g)$ by at most $1/n$ (since $g$ takes
+values in $[0,1]$), and therefore changes the supremum $\Phi(S)$ by at most
+$1/n$. *McDiarmid's inequality* :cite:`McDiarmid.1989`, which generalizes
+Hoeffding's inequality from sums to any function that no single input can
+shift by much, then gives $P(\Phi-\mathbb{E}\Phi\ge t)\le e^{-2nt^2}$
+(exercise :exref:`ex_mdl-concentration-generalization-mcdiarmid-s-inequality`).
+Setting the right-hand side to $\delta$ and combining with
+$\mathbb{E}\Phi\le2\mathfrak R_n(\mathcal G)$ yields
+:eqref:`eq_mdl-rademacher-bound`. $\blacksquare$
 
-The intuition is that the ghost sample stands in for the population.
-Swapping a real point with its ghost changes nothing, because the two are
-exchangeable, and after the swaps only coin flips remain: the deviation of
-the class from the truth is controlled by how well it can follow random signs.
+The intuition behind this *symmetrization* argument is remarkably clean. The
+ghost sample stands in for the population. Because real and ghost points are
+exchangeable, swapping any pair changes nothing in distribution, and once
+those swaps are randomized, only coin flips remain: the worst-case gap
+between training and population risk is governed by how well the class can
+chase random signs.
 
-The theorem uses the expected complexity $\mathfrak R_n$, whereas what we can
-compute is $\widehat{\mathfrak R}_S$ on the sample at hand. Changing one
-sample point moves $\widehat{\mathfrak R}_S(\mathcal G)$ by at most $1/n$
-too, so a second use of McDiarmid's inequality gives
-:eqref:`eq_mdl-rademacher-bound` with $\widehat{\mathfrak R}_S(\mathcal G)$
-in place of $\mathfrak R_n(\mathcal G)$ and the confidence term
-$3\sqrt{\log(2/\delta)/(2n)}$. The computations below rely on this form.
+One practical detail remains. The theorem states the bound in terms of the
+expected complexity $\mathfrak R_n(\mathcal G)$, whereas on a real dataset
+we can only evaluate the empirical complexity $\widehat{\mathfrak R}_S(\mathcal G)$
+on the sample at hand. Because changing one sample point also moves
+$\widehat{\mathfrak R}_S(\mathcal G)$ by at most $1/n$, a second application
+of McDiarmid's inequality lets us substitute
+$\widehat{\mathfrak R}_S(\mathcal G)$ for $\mathfrak R_n(\mathcal G)$ in
+:eqref:`eq_mdl-rademacher-bound` at the cost of widening the confidence term
+to $3\sqrt{\log(2/\delta)/(2n)}$. Our numerical checks below use this
+empirical form.
 
-The theorem can be checked at its ends. For a class with one member,
-$\mathfrak R_n=0$ and :eqref:`eq_mdl-rademacher-bound` is one-sided
-Hoeffding. For a finite class, Massart's lemma turns it into
-:eqref:`eq_mdl-finite-class` with larger constants: for 2,000 configurations
-on 10,000 examples the complexity term alone is $2\sqrt{2\log 2000/n}=0.078$,
-against the union bound's whole half-width of $0.024$. The Rademacher route
-is weaker for finite classes, but it also applies to infinite ones. For
-classes of binary classifiers, counting the labelings the class can realize
-on $n$ points bounds $\mathfrak R_n$ by a constant times
-$\sqrt{d_{\mathrm{VC}}\log n/n}$ :cite:`boucheron2005theory`. Here
-$d_{\mathrm{VC}}$ is the VC dimension of the main text, the largest number of
-points on which the class realizes every labeling.
+It is always worth checking a theorem at its extremes. For a singleton
+class, $\mathfrak R_n=0$ and :eqref:`eq_mdl-rademacher-bound` reduces
+directly to one-sided Hoeffding. For a finite class, Massart's lemma
+recovers the shape of :eqref:`eq_mdl-finite-class`, though with looser
+constants: for 2,000 configurations on 10,000 examples, the complexity term
+alone is $2\sqrt{2\log 2000/n}=0.078$, compared with the union bound's
+entire half-width of $0.024$. Rademacher complexity pays a constant-factor
+penalty on finite classes, in exchange for handling infinite classes
+effortlessly. For binary classifiers, counting the labelings realizable on
+$n$ points bounds $\mathfrak R_n$ by a constant times
+$\sqrt{d_{\mathrm{VC}}\log n/n}$ :cite:`boucheron2005theory`, where
+$d_{\mathrm{VC}}$ is the VC dimension from the main text, the largest number
+of points on which the class can realize every possible labeling.
 
-At the other end, a loss class with values in $[0,1]$ has
+At the opposite extreme, any loss class taking values in $[0,1]$ satisfies
 $\mathfrak R_n(\mathcal G)\le\tfrac12$. When equality holds, the complexity
-term is $1$ and the bound allows any risk whatever. For classifiers with the
-0-1 loss, the two complexities stand in a fixed ratio. Let the predictors
-take values in $\{-1,+1\}$ and use the 0-1
-loss, $g(\mathbf x,y)=(1-yf(\mathbf x))/2$. Then
+term $2\mathfrak R_n(\mathcal G)$ equals $1$, and the bound becomes vacuous,
+allowing any risk up to 100%. For binary classifiers taking values in
+$\{-1,+1\}$ under the 0-1 loss $g(\mathbf x,y)=(1-yf(\mathbf x))/2$, the
+loss complexity and predictor complexity stand in an exact factor-of-two
+ratio. Expanding the correlation gives
 $\sum_i\varepsilon_ig(z_i)=\tfrac12\sum_i\varepsilon_i+\tfrac12\sum_i(-\varepsilon_iy_i)f(\mathbf x_i)$.
-The first sum has mean zero and does not depend on $f$, and for fixed labels
-$-\varepsilon_iy_i$ is again a fair random sign, so
+The first sum has mean zero and does not depend on $f$, while for fixed
+labels $y_i\in\{-1,+1\}$, the products $-\varepsilon_iy_i$ are again
+independent fair random signs. Taking the supremum and expectation yields
 
 $$
 \widehat{\mathfrak R}_S(\mathcal G)=\tfrac12\,\widehat{\mathfrak R}_S(\mathcal F).
 $$
 
-Such a predictor class, if it fits every sign pattern on the sample, has
-$\widehat{\mathfrak R}_S(\mathcal F)=1$. Twice the loss complexity is then
-$1$, and the theorem promises only an error rate below 100%.
+Therefore, if a binary predictor class can fit every sign pattern on the
+sample, we have $\widehat{\mathfrak R}_S(\mathcal F)=1$, twice the loss
+complexity is $1$, and the uniform convergence theorem promises nothing
+better than an error rate below 100%.
 
 ### The Linear Class
 :label:`subsec_mdl-linear-class`
 
-The theorem is useful only if the complexity can be computed for a class we
-care about. For linear functions with a bounded weight norm the computation
-takes four lines, and its answer does not involve the dimension.
+A generalization theorem is only as useful as our ability to evaluate its
+complexity term on classes we actually care about. For linear predictors
+with a bounded weight norm, the calculation takes just four lines, and its
+answer is surprisingly independent of the input dimension.
 
 **Proposition (Rademacher complexity of a norm-bounded linear class).** *Let
 $\mathcal F=\{\mathbf x\mapsto\langle\mathbf w,\mathbf x\rangle :
-\|\mathbf w\|_2\le B\}$ and suppose the sample satisfies
-$\|\mathbf x_i\|_2\le r$ for all $i$. Then*
+\|\mathbf w\|_2\le B\}$ and suppose every sample input satisfies
+$\|\mathbf x_i\|_2\le r$. Then*
 
 $$
 \widehat{\mathfrak R}_S(\mathcal F)
@@ -464,8 +507,10 @@ $$
 $$
 :eqlabel:`eq_mdl-linear-rademacher`
 
-**Proof.** The supremum is explicit. By linearity and Cauchy--Schwarz, with
-equality at $\mathbf w$ of length $B$ aligned with the signed sum,
+**Proof.** The inner supremum has a closed form. By linearity of the inner
+product and the Cauchy--Schwarz inequality, the maximum is attained by the
+weight vector $\mathbf w$ of length $B$ pointing in the direction of the
+signed sum:
 
 $$
 \sup_{\|\mathbf w\|\le B}\ \frac1n\sum_{i=1}^n
@@ -475,9 +520,10 @@ $$
  = \frac Bn\,\Bigl\|\sum_{i=1}^n \varepsilon_i\mathbf x_i\Bigr\| .
 $$
 
-Taking the expectation gives the equality in the proposition. For the bound,
-the square root is concave, so $\mathbb{E}\|\cdot\|\le\sqrt{\mathbb{E}\|\cdot\|^2}$,
-and expanding the square,
+Taking the expectation over $\boldsymbol\varepsilon$ yields the equality in
+the proposition. To obtain the upper bound, invoke the concavity of the
+square root ($\mathbb{E}\|\cdot\|\le\sqrt{\mathbb{E}\|\cdot\|^2}$) and
+expand the squared norm:
 
 $$
 \mathbb{E}_{\boldsymbol\varepsilon}\Bigl\|\sum_i\varepsilon_i\mathbf x_i\Bigr\|
@@ -487,52 +533,60 @@ $$
  \le r\sqrt n .
 $$
 
-The cross terms vanish because independent signs have
-$\mathbb{E}[\varepsilon_i\varepsilon_j]=0$ for $i\ne j$. Multiplying by $B/n$
-gives $Br/\sqrt n$. $\blacksquare$
+All cross terms vanish because independent fair signs satisfy
+$\mathbb{E}[\varepsilon_i\varepsilon_j]=0$ for $i\ne j$. Multiplying by
+$B/n$ gives $Br/\sqrt n$. $\blacksquare$
 
-Panel (a) of :numref:`fig_mdl-gen-rademacher` draws the first step of this
-proof: the best weight vector points along the signed sum.
+Panel (a) of :numref:`fig_mdl-gen-rademacher` illustrates the first step of
+this proof: for any sign pattern, the optimal weight vector simply aligns
+with the signed sum of the inputs.
 
-Only one step of the proof loses anything. The identity
-$\mathbb{E}\|\sum_i\varepsilon_i\mathbf x_i\|^2=\sum_i\|\mathbf x_i\|^2$ is
-exact, so the slack is all in the step from the mean length of the signed sum
-to its root-mean-square length. That step is tight when the length varies
-little from one sign pattern to the next. For the eight points of the figure
-the slack is 11% ($0.316$ against $0.354$). In the plane, a signed sum of many
-unit vectors in spread-out directions is approximately a two-dimensional
-Gaussian vector, whose length has mean $\sqrt\pi/2\approx0.89$ times its
-root-mean-square, so the slack stays near 11% however many points there are.
-In twenty dimensions the length of the signed sum concentrates, by the thin
-shell of :numref:`subsec_mdl-thin-shell`, and the slack falls to about 1%.
+Remarkably, only one step in this proof introduces any slack. Because the
+identity $\mathbb{E}\|\sum_i\varepsilon_i\mathbf x_i\|^2=\sum_i\|\mathbf x_i\|^2$
+is exact, the entire gap comes from replacing the mean length of the signed
+sum by its root-mean-square length. That inequality is tight whenever the
+length varies little across sign patterns. For the eight points in the
+figure, the slack is 11% ($0.316$ versus $0.354$). In two dimensions, a
+signed sum of many well-spread unit vectors behaves like a two-dimensional
+Gaussian vector, whose mean length is $\sqrt\pi/2\approx0.89$ times its
+root-mean-square length, so the slack stays near 11% regardless of $n$. In
+twenty dimensions, however, the length of the signed sum concentrates
+tightly around its root-mean-square by the thin-shell phenomenon of
+:numref:`subsec_mdl-thin-shell`, and the slack drops to about 1%.
 
-The dimension $d$ does not appear in :eqref:`eq_mdl-linear-rademacher`: it
-matters only through its effect on $B$ and $r$. In this bound the capacity of
-a linear model is set by the product of its weight norm and its input radius,
-whether it acts on ten features or on a million. Weight decay
-(:numref:`sec_weight_decay`) keeps $\|\mathbf w\|$ small, and so keeps the
-class that contains the fitted model small. Nor is this confined to linear
-models: a two-layer ReLU network with output weights of $\ell_1$ norm at most
-$B_1$ and hidden weight vectors of norm at most $B_2$ has complexity at most
-$2B_1B_2r/\sqrt n$, whatever its width (exercise
+Notice what is missing from :eqref:`eq_mdl-linear-rademacher`: the input
+dimension $d$ does not appear at all. It enters only indirectly through $B$
+and $r$. In this bound, the capacity of a linear model is governed by the
+product of its weight norm and its input radius, whether it operates on ten
+features or on a million. This gives a clean theoretical motivation for
+weight decay (:numref:`sec_weight_decay`): keeping $\|\mathbf w\|$ small
+shrinks the function class that contains the trained model. Nor is this
+dimension-free behavior restricted to linear models: a two-layer ReLU
+network whose output weights have $\ell_1$ norm at most $B_1$ and whose
+hidden weight vectors have $\ell_2$ norm at most $B_2$ has Rademacher
+complexity at most $2B_1B_2r/\sqrt n$, regardless of its width (exercise
 :exref:`ex_mdl-generalization-bounds-two-layer-norm-bound`).
 
-A reader may object that the proposition needs $B$ fixed before the data,
-while the norm of a trained weight vector is known only afterwards. The
-objection is right, and a union bound over radii answers it. Apply the bound
-to each radius $B_j=2^j$ with failure probability $\delta_j=\delta/(j(j+1))$,
-which sum to $\delta$, and use the smallest radius that contains the fitted
-vector. For $\|\mathbf w\|>1$ this loses at most a factor $2$ in the
-complexity term and adds a term of order $\sqrt{\log\log\|\mathbf w\|/n}$
-(exercise
+A careful reader may raise a natural objection: the proposition requires
+fixing the radius $B$ *before* seeing the data, whereas the norm of a
+trained weight vector is known only *after* training. That objection is
+valid, and a union bound over a ladder of radii resolves it. Apply the
+theorem to each radius $B_j=2^j$ with failure probability
+$\delta_j=\delta/(j(j+1))$ (which sum to $\delta$), and evaluate the bound
+at the smallest $B_j$ containing the fitted weight vector. For
+$\|\mathbf w\|>1$, this costs at most a factor of $2$ in the complexity
+term and adds a mild $\sqrt{\log\log\|\mathbf w\|/n}$ penalty (exercise
 :exref:`ex_mdl-concentration-generalization-margin-bound`).
 
-The theorem needs the complexity of the loss class, and the proposition
-computes that of the predictor class. A Lipschitz loss connects them.
+One link remains before we can turn :eqref:`eq_mdl-linear-rademacher` into a
+generalization bound for linear classifiers. The uniform convergence theorem
+requires the complexity of the *loss* class $\mathcal G$, whereas our
+proposition bounded the *predictor* class $\mathcal F$. A Lipschitz loss
+bridges the two.
 
 **Lemma (contraction)** :cite:`Boucheron.Lugosi.Massart.2013`. *Let
-$\phi_1,\ldots,\phi_n:\mathbb{R}\to\mathbb{R}$ each be $L$-Lipschitz. Then for
-any class $\mathcal F$ and points $\mathbf x_1,\ldots,\mathbf x_n$,*
+$\phi_1,\ldots,\phi_n:\mathbb{R}\to\mathbb{R}$ each be $L$-Lipschitz. Then
+for any function class $\mathcal F$ and points $\mathbf x_1,\ldots,\mathbf x_n$,*
 
 $$
 \mathbb{E}_{\boldsymbol\varepsilon}\Bigl[\sup_{f\in\mathcal F}\sum_{i=1}^n
@@ -542,33 +596,38 @@ $$
 $$
 :eqlabel:`eq_mdl-contraction`
 
-Composing with a function that stretches distances by at most $L$ multiplies
-the complexity by at most $L$. Each $\phi_i$ may differ, which is what a loss
-needs: at the point $i$ the loss is the function $u\mapsto\ell(u,y_i)$ of the
-prediction, with the label $y_i$ fixed. No centering is required, since adding
-a constant $c$ to $\phi_i$ adds $c\,\varepsilon_i$, whose expectation is zero.
-We state the lemma without proof.
+In plain terms, composing a function class with transformations that stretch
+distances by at most $L$ can multiply its Rademacher complexity by at most
+$L$. Allowing each $\phi_i$ to be different is precisely what a supervised
+loss requires: at example $i$, $\phi_i$ is the map $u\mapsto\ell(u,y_i)$
+with the label $y_i$ held fixed. No centering condition is needed, because
+adding a constant $c$ to $\phi_i$ shifts the sum by $c\,\varepsilon_i$,
+which has expectation zero. We state the contraction lemma without proof.
 
-The theorem also needs losses in $[0,1]$. The hinge and logistic losses are
-not bounded by $1$: on the class they reach about $1+Br$, so they must be
-divided by that maximum before the theorem applies, and the result is a
-bound on the rescaled loss. A cleaner route is a loss that is bounded from
-the start, the *ramp loss* on the margin $u=yf(\mathbf x)$,
+The uniform convergence theorem also requires losses bounded in $[0,1]$.
+Common training losses such as hinge and logistic loss are unbounded: on our
+norm-bounded linear class they can reach roughly $1+Br$, so applying the
+theorem directly would require dividing by that maximum and bounding a
+rescaled loss. A cleaner choice for analysis is a loss that is bounded from
+the outset: the *ramp loss* applied to the classification margin
+$u=yf(\mathbf x)$,
 
 $$
-\phi_\gamma(u)=\min\bigl\{1,\max\{0,\,1-u/\gamma\}\bigr\},
+\phi_\gamma(u)=\min\bigl\{1,\max\{0,\,1-u/\gamma\}\bigr\}.
 $$
 
-which is $1$ for a mistake, $0$ for a correct prediction with margin at least
-$\gamma$, and linear in between. It lies above the 0-1 loss and is
-$(1/\gamma)$-Lipschitz.
+The ramp loss equals $1$ on a mistake ($u\le0$), drops to $0$ once a
+prediction is correct by at least the margin $\gamma$ ($u\ge\gamma$), and
+interpolates linearly in between. It upper-bounds the 0-1 loss everywhere
+and is $(1/\gamma)$-Lipschitz.
 
-Write $\hat R_\gamma(\mathbf w)$ for the average of the ramp loss
-$\frac1n\sum_i\phi_\gamma(y_i\langle\mathbf w,\mathbf x_i\rangle)$ on the
-sample. With $\|\mathbf x\|\le r$ for every input, the contraction lemma and
-the linear-class proposition give a loss-class complexity of at most
-$Br/(\gamma\sqrt n)$, and the theorem gives, with probability at least
-$1-\delta$, for every $\mathbf w$ with $\|\mathbf w\|\le B$,
+Write $\hat R_\gamma(\mathbf w)=\frac1n\sum_i\phi_\gamma(y_i\langle\mathbf w,\mathbf x_i\rangle)$
+for the empirical ramp loss on the sample. When every input satisfies
+$\|\mathbf x\|\le r$, combining the contraction lemma with our linear-class
+proposition bounds the loss-class complexity by $Br/(\gamma\sqrt n)$.
+Plugging this into :eqref:`eq_mdl-rademacher-bound` yields a *margin bound*:
+with probability at least $1-\delta$, simultaneously for every $\mathbf w$
+with $\|\mathbf w\|\le B$,
 
 $$
 P\bigl(y\langle\mathbf w,\mathbf x\rangle\le0\bigr)
@@ -577,25 +636,30 @@ P\bigl(y\langle\mathbf w,\mathbf x\rangle\le0\bigr)
 $$
 :eqlabel:`eq_mdl-margin-bound`
 
-The left side is the true error rate of the linear classifier; the right side
-is its training ramp loss plus two terms we can evaluate. As an illustration
-(the ratio is chosen, not measured), take $Br/\gamma=10$, $n=50{,}000$ and
-$\delta=0.05$. The complexity term is $0.089$ and the confidence term
-$0.005$, together $0.095$. With $B=10\gamma/r$ fixed in advance, a linear
-classifier in the class that separates its training data with margin $\gamma$
-has, with probability at least 95%, a true error below $9.5\%$. Fitting random labels with a margin
-forces $Br/\gamma$ up. Once it passes about $10.6$ the two terms exceed
-$0.1$, and near $Br/\gamma\approx110$ the complexity term alone reaches $1$.
+The left-hand side is the true classification error rate, while the
+right-hand side is the training ramp loss plus two computable terms. To see
+the scale of these numbers, take an illustrative setting with
+$Br/\gamma=10$, $n=50{,}000$, and $\delta=0.05$ (choosing the ratio rather
+than measuring it on a specific dataset). The complexity term is $0.089$ and
+the confidence term is $0.005$, totaling $0.095$. Thus, with $B=10\gamma/r$
+fixed in advance, any linear classifier in the class that separates its
+training set with margin $\gamma$ is guaranteed, with 95% confidence, to
+have a true error rate below $9.5\%$. By contrast, forcing a linear model to
+fit random labels with margin $\gamma$ drives $Br/\gamma$ upward: past
+$Br/\gamma\approx10.6$ the two penalty terms exceed $0.1$, and near
+$Br/\gamma\approx110$ the complexity term alone reaches $1$, rendering the
+bound vacuous.
 
 ### Rademacher Complexity in Numbers
 :label:`subsec_mdl-coin-flips-code`
 
-The proposition gives the complexity of the linear class as an expected
-length, and the expectation can be estimated by averaging over random sign
-vectors. We do this for 50 unit-norm points in $d=2$, $20$ and $1{,}000$
-dimensions. The slack analysis above predicts an estimate about 11% below
-the bound $Br/\sqrt n=1/\sqrt{50}$ in the plane and about 1% below it in
-twenty dimensions.
+Because :eqref:`eq_mdl-linear-rademacher` expresses the empirical Rademacher
+complexity of a linear class as an expected Euclidean norm, we can estimate
+it directly by averaging over random sign vectors. Below we do this for 50
+unit-norm points in $d=2$, $20$, and $1{,}000$ dimensions. Our slack
+analysis predicts an estimate roughly 11% below the bound
+$Br/\sqrt n=1/\sqrt{50}$ in two dimensions, and within about 1% of the bound
+once we reach twenty dimensions.
 
 ```{.python .input #mdl-concentration-generalization-coin-flips-in-code}
 n, B, num_signs = 50, 1.0, 2000
@@ -608,26 +672,29 @@ for d in (2, 20, 1000):
           f'bound B r / sqrt(n) = {B / np.sqrt(n):.3f}')
 ```
 
-The estimate is about $0.125$ in the plane and $0.139$ to $0.141$ in 20 and
-1,000 dimensions, against the bound $0.141$, as predicted. Going from 20 to
-1,000 dimensions leaves the complexity unchanged.
+The Monte Carlo estimate lands around $0.125$ in the plane and between
+$0.139$ and $0.141$ in 20 and 1,000 dimensions, right against the bound of
+$0.141$, just as predicted. Increasing the dimension fifty-fold from 20 to
+1,000 leaves the complexity unchanged.
 
-The other end of the scale is a class rich enough to *interpolate*, that is,
-to reproduce any labels exactly on the sample. Least squares on $p=2n$
-Gaussian features, fit with the pseudoinverse of
-:numref:`subsec_mdl-pseudoinverse`, returns for every sign vector the
-interpolant $\mathbf w=\boldsymbol\Phi^+\boldsymbol\varepsilon$ of smallest
-norm, where $\boldsymbol\Phi\in\mathbb{R}^{n\times p}$ holds the features of
-the points as rows. Its correlation with the signs is $1$ for every pattern,
-by construction. What the proposition tells us is how large a ball of
-weights this takes: a class that interpolates every sign pattern has
-$\widehat{\mathfrak R}_S\ge1$, the proposition gives
-$\widehat{\mathfrak R}_S\le Br/\sqrt n$, hence any ball that contains all the
-interpolants has $Br/\sqrt n\ge1$. How close to this minimum do actual fits
-come? The cell fits 2,000 sign vectors and prints their norms (the predicted
-mean $\sqrt{n/(p-n-1)}$ is derived in exercise
-:exref:`ex_mdl-concentration-generalization-fitting-random-signs`) and the
-value of $Br/\sqrt n$ for the smallest ball that contains them.
+At the opposite end of the spectrum lies a class rich enough to
+*interpolate*, meaning it can reproduce any assignment of labels on the
+training sample exactly. Consider least squares on $p=2n$ standard Gaussian
+features, where the feature matrix $\boldsymbol\Phi\in\mathbb{R}^{n\times p}$
+holds the feature vectors of the $n$ points as rows. Using the pseudoinverse
+from :numref:`subsec_mdl-pseudoinverse`, the solution
+$\mathbf w=\boldsymbol\Phi^+\boldsymbol\varepsilon$ returns the minimum-norm
+interpolant for every sign vector $\boldsymbol\varepsilon$, achieving a
+correlation of $1$ on every pattern by construction. Our proposition tells
+us how large a weight ball is needed to hold all of these fits: any class
+that interpolates every sign pattern must have $\widehat{\mathfrak R}_S\ge1$,
+while :eqref:`eq_mdl-linear-rademacher` bounds it by $Br/\sqrt n$, so any
+ball containing all the interpolants must satisfy $Br/\sqrt n\ge1$. How
+close to this lower limit do actual fits come? Next, we fit 2,000 random
+sign vectors, compare their weight norms with the theoretical prediction
+$\sqrt{n/(p-n-1)}$ (derived in exercise
+:exref:`ex_mdl-concentration-generalization-fitting-random-signs`), and
+evaluate $Br/\sqrt n$ for the smallest ball enclosing them.
 
 ```{.python .input #mdl-generalization-bounds-rademacher-complexity-in-numbers-1}
 p = 2 * n                                     # more features than points
@@ -644,60 +711,66 @@ print(f'r = {r:.1f}, B r / sqrt(n) with B = largest ||w||: '
       f'{w_norm.max() * r / np.sqrt(n):.1f}')
 ```
 
-The fits have norm about $1$ and the rows of $\boldsymbol\Phi$ length about
-$\sqrt p=10$, so a typical fit sits at
-$\|\mathbf w\|r/\sqrt n\approx1.4$. The largest of the 2,000 norms is 1.3 to
-1.8 and the longest row 11 to 12.5, which puts the ball around all the fits
-at 2 to 3. Interpolating noise therefore takes a norm only one and a half
-to three times the minimum that the proposition allows: the bound
-$Br/\sqrt n$ is nearly tight for this class, even at a complexity where it
-has stopped being useful.
+Each fit has a weight norm near $1$, and the rows of $\boldsymbol\Phi$ have
+average length near $\sqrt p=10$, placing a typical fit at
+$\|\mathbf w\|r/\sqrt n\approx1.4$. Across 2,000 sign patterns, the largest
+weight norm falls between $1.3$ and $1.8$ and the longest row between $11$
+and $12.5$, so the ball enclosing all 2,000 fits has $Br/\sqrt n$ between
+$2$ and $3$. Interpolating pure noise therefore requires a norm only 1.5 to
+3 times the theoretical floor: the linear-class bound $Br/\sqrt n$ remains
+nearly tight even in the regime where it ceases to be informative.
 
-The same arithmetic applies to networks. Take the class of all classifiers
-that an architecture can represent. If training on labels
-$\boldsymbol\varepsilon$ returns a member that agrees with them at nearly
-every point, the supremum in :eqref:`eq_mdl-rademacher` is close to $1$ for
-that $\boldsymbol\varepsilon$, and if this happens for typical sign vectors,
-so is the complexity. In :numref:`subsec_random_labels` an MLP fit random
-labels of its training images exactly, as the image classifiers of
-:citet:`zhang2021understanding` did. (These experiments tried a few
-labelings with ten classes, so they are evidence, not a proof.) Twice the
-complexity of the loss class is then about $1$, and
-:eqref:`eq_mdl-rademacher-bound` allows any error rate. Yet the same network
-generalizes on real labels. What decides its test error is therefore
-invisible to a bound over the whole class: the data, the optimizer, and the
-solution it reached. The next part examines a model in which the solution
-can be computed in closed form.
+The same arithmetic applies directly to neural networks. Consider the class
+of all classifiers a given architecture can represent. Whenever training on
+random signs $\boldsymbol\varepsilon$ finds a function matching them at
+nearly every point, the supremum in :eqref:`eq_mdl-rademacher` is close to
+$1$ for that $\boldsymbol\varepsilon$; if this happens for typical sign
+vectors, the Rademacher complexity itself is close to $1$. In
+:numref:`subsec_random_labels`, an MLP fit random labels on its training
+images with zero error, mirroring the image-classification experiments of
+:citet:`zhang2021understanding`. (Those experiments tested a few labelings
+with ten classes, so they are empirical evidence rather than a formal
+proof.) Twice the loss-class complexity is then close to $1$, and
+:eqref:`eq_mdl-rademacher-bound` allows any test error whatsoever. Yet the
+very same network generalizes well when trained on real labels. Whatever
+governs its test error is therefore invisible to any worst-case bound over
+the entire function class: it depends on the data, the optimizer, and the
+specific solution training reaches. To see how that works, we turn to a
+model where the learned solution can be analyzed in closed form.
 
 ## Interpolation and Double Descent
 
-:numref:`subsec_double_descent` swept the width $h$ of a network whose hidden
-layer stayed frozen at its random initialization. The test error peaked at
-$h=n$, where an exact fit first became possible and the smallest singular
-value of the hidden representation was tiny, and fell again beyond it. Here
-we repeat the construction on synthetic data, where every quantity in the
-mechanism can be computed, and add two things to the main text's account: a
-formula for the fit in terms of singular values, and a split of the test
-error into the part due to the target and the part due to label noise. The
-features are $\boldsymbol\phi(\mathbf x)=\mathrm{ReLU}(\mathbf V\mathbf x)$
-with a frozen random matrix $\mathbf V$, a *random-features* model
-:cite:`Rahimi.Recht.2007`, and only the linear head $\mathbf w$ is fit.
-This part can be skipped on a first reading.
+In :numref:`subsec_double_descent`, we swept the width $h$ of a network
+whose hidden layer remained frozen at its random initialization. The test
+error spiked at $h=n$, the exact threshold where interpolation first became
+possible and the smallest singular value of the hidden representation
+collapsed, and then descended again as $h$ grew further. Here we recreate
+that construction on synthetic data where every piece of the mechanism can
+be computed explicitly, adding two ingredients to the main text's account:
+a closed-form formula for the fitted weights in terms of singular values,
+and a decomposition of the test error into the part caused by the true
+target and the part caused by label noise. The features are
+$\boldsymbol\phi(\mathbf x)=\mathrm{ReLU}(\mathbf V\mathbf x)$ with a
+frozen random matrix $\mathbf V$, known as a *random-features* model
+:cite:`Rahimi.Recht.2007`, and we fit only the linear output head
+$\mathbf w$. Readers on a first pass may skip this part without losing the
+thread of the chapter.
 
 ### The Minimum-Norm Interpolant
 :label:`subsec_mdl-min-norm-interpolant`
 
-To see why the threshold is special we need the solution in closed form. With
-$p$ features and $n$ points, the feature matrix
-$\boldsymbol\Phi\in\mathbb{R}^{n\times p}$ has the feature vectors of the
-training points as rows, and we fit $\mathbf w=\boldsymbol\Phi^+\mathbf y$:
-least squares below $p=n$, the interpolant of smallest norm above it.
+To understand why the interpolation threshold $p=n$ behaves so dramatically,
+let us write the solution in closed form. With $p$ features and $n$ training
+points, stack the training feature vectors as the rows of
+$\boldsymbol\Phi\in\mathbb{R}^{n\times p}$, and fit
+$\mathbf w=\boldsymbol\Phi^+\mathbf y$. Below $p=n$, this is ordinary least
+squares; above $p=n$, it is the interpolant of smallest Euclidean norm.
 
-The singular value decomposition shows what happens below, at and above the
-threshold. Let
-$\boldsymbol\Phi$ have full rank $q=\min(n,p)$ and singular value
-decomposition $\boldsymbol\Phi=\sum_{i=1}^q\sigma_i\mathbf u_i\mathbf v_i^\top$,
-with $\sigma_1\ge\cdots\ge\sigma_q>0$. Then
+The singular value decomposition illuminates all three regimes: below, at,
+and above the threshold. Suppose $\boldsymbol\Phi$ has full rank
+$q=\min(n,p)$ and singular value decomposition
+$\boldsymbol\Phi=\sum_{i=1}^q\sigma_i\mathbf u_i\mathbf v_i^\top$, with
+$\sigma_1\ge\cdots\ge\sigma_q>0$. Then the pseudoinverse solution is
 
 $$
 \mathbf w=\boldsymbol\Phi^+\mathbf y=\sum_{i=1}^{q}
@@ -705,58 +778,62 @@ $$
 $$
 :eqlabel:`eq_mdl-svd-interpolant`
 
-Every component of $\mathbf y$ along a left singular vector is divided by its
-singular value, so the smallest singular value $\sigma_{\min}=\sigma_q$
-amplifies most. Whatever part of $\mathbf y$ lies along $\mathbf u_q$ enters
-the solution with the factor $1/\sigma_{\min}$. This holds for label noise
-and equally for the part of the target that the features represent badly.
+Each component of $\mathbf y$ along a left singular vector $\mathbf u_i$ is
+divided by its singular value $\sigma_i$, so the smallest singular value
+$\sigma_{\min}=\sigma_q$ acts as the strongest amplifier. Whatever component
+of $\mathbf y$ falls along $\mathbf u_q$ enters $\mathbf w$ magnified by
+$1/\sigma_{\min}$, and this amplification hits both label noise and the
+part of the true target that the features approximate poorly.
 
-For $p<n$ the fit $\boldsymbol\Phi\mathbf w$ is the projection of $\mathbf y$
-onto the $p$ directions $\mathbf u_i$, and the rest of $\mathbf y$ is left as
-residual. At $p=n$ there are $n$ directions, the fit is exact, and nothing is
-left over to absorb the badly represented part. A random square ReLU-feature
-matrix is almost always invertible, but rarely *well* invertible: its
-smallest singular value is small, and the condition-number analysis of
-:numref:`subsec_mdl-condition-number` says that the solution then moves far
-in the direction $\mathbf v_q$. Adding features beyond $n$ gives the matrix
-more room, and its smallest singular value grows again.
+When $p<n$, the fitted predictions $\boldsymbol\Phi\mathbf w$ simply project
+$\mathbf y$ onto the $p$-dimensional span of the $\mathbf u_i$, leaving the
+remainder as training residual. At $p=n$, however, those $n$ directions
+span all of $\mathbb{R}^n$: the fit becomes exact, and no residual is left
+to absorb the poorly represented component. A square random ReLU-feature
+matrix is almost surely invertible, yet rarely *well* conditioned: its
+smallest singular value is typically tiny, and by the condition-number
+analysis of :numref:`subsec_mdl-condition-number`, the solution shoots far
+out along $\mathbf v_q$. Adding features beyond $p=n$ gives the matrix
+extra room to span $\mathbb{R}^n$, and $\sigma_{\min}$ climbs back up.
 
-Past the threshold the norm of the solution can only fall as features are
-added, provided the features are nested (the model with $p+1$ features uses
-the features of the model with $p$, plus one more). This is the padding
-argument of :numref:`subsec_double_descent`: give the new feature zero
-weight, and the minimum-norm interpolant with $p$ features becomes an
-interpolant with $p+1$ features of the same norm. The argument needs exact
-interpolation. Below $p=n$ the least-squares solution is not an interpolant,
-and its norm grows with $p$: in the sweep below it rises from about $0.5$ at
-$p=2$ to nearly $2$ at $p=15$.
+Past the threshold, the solution norm can only decrease as we add features,
+provided the feature sets are nested (the $(p+1)$-feature model keeps all
+$p$ previous features and appends one more). This follows from the padding
+argument of :numref:`subsec_double_descent`: assigning weight zero to the
+new feature turns the minimum-norm $p$-feature interpolant into a valid
+$(p+1)$-feature interpolant of identical norm, so the new minimum norm can
+be no larger. Notice that this monotonicity relies on exact interpolation.
+Below $p=n$, the least-squares fit does not interpolate, and its norm
+actually *grows* with $p$: in the sweep below, it climbs from roughly $0.5$
+at $p=2$ to nearly $2$ at $p=15$.
 
-The linear-class bound suggests a quantity to track along the sweep: the
-*capacity product*
-$\|\mathbf w\|\cdot\max_i\|\boldsymbol\phi(\mathbf x_i)\|/\sqrt n$, which is
-$Br/\sqrt n$ for the smallest ball that contains the fitted head. It is
-borrowed from classification. The sweep is a regression with squared loss on
-unbounded targets, which no theorem of this section covers, so the product
-is a diagnostic and not a bound. The feature radius grows like $\sqrt p$
-while the norm of the solution falls past the threshold, so the product
-could go either way.
+Our linear-class bound suggests a natural quantity to monitor along the
+sweep: the *capacity product*
+$\|\mathbf w\|\cdot\max_i\|\boldsymbol\phi(\mathbf x_i)\|/\sqrt n$, which
+corresponds to $Br/\sqrt n$ for the smallest ball containing the fitted
+weights. We borrow it purely as a diagnostic, not as a formal bound, because
+this sweep uses squared loss on unbounded regression targets rather than a
+bounded classification loss. Past the threshold, the feature radius grows
+like $\sqrt p$ while $\|\mathbf w\|$ shrinks, so the product's net behavior
+is not obvious in advance.
 
 ### A Double-Descent Sweep
 :label:`subsec_mdl-double-descent-example`
 
-The data are forty training points from a linear teacher
-$y=\langle\boldsymbol\beta,\mathbf x\rangle$ in fifteen dimensions, with
-$\|\boldsymbol\beta\|=1$ and label noise of standard deviation $0.1$. The
-features are ReLU random features with nested columns, and the head is fit
-by `pinv`: least squares below the threshold, the minimum-norm
-interpolant above it. We sweep $p$ from $2$ to $400$ through $p=n=40$, with
-the neighbours $p=39$ and $41$ included so that the peak is resolved. For
-every fit we record the test error, the training error, $\|\mathbf w\|$,
-$\sigma_{\min}$ and the capacity product, and also the two parts of the test
-error that :numref:`subsec_mdl-benign-overfitting` separates: the clean part,
-the error of the same fit made to noise-free labels, and the noise part, the
-extra error that the label noise adds. Medians over 20 independent runs keep
-the curve readable.
+Let us watch these quantities move together on a concrete problem. We draw
+$n=40$ training points from a linear teacher
+$y=\langle\boldsymbol\beta,\mathbf x\rangle$ in $d=15$ dimensions, with
+$\|\boldsymbol\beta\|=1$ and Gaussian label noise of standard deviation
+$0.1$. We construct nested ReLU random features and fit the linear head via
+`pinv`, giving least squares below $p=40$ and the minimum-norm interpolant
+above it. We sweep $p$ from $2$ to $400$, including $p=39$, $40$, and $41$
+so the threshold peak is sharply resolved. At each $p$, we log the test
+MSE, training MSE, $\|\mathbf w\|$, $\sigma_{\min}$, and the capacity
+product, along with the two components of test error analyzed in
+:numref:`subsec_mdl-benign-overfitting`: the *clean part* (the test error
+of fitting noise-free labels) and the *noise part* (the additional test
+error injected by label noise). Taking medians across 20 independent trials
+keeps the curves readable.
 
 ```{.python .input #mdl-concentration-generalization-double-descent-in-twenty-five-lines}
 n, n_test, d_in, p_max, trials, noise = 40, 500, 15, 400, 20, 0.1
@@ -795,7 +872,7 @@ for tr in range(trials):
 med = dict(zip(keys, np.median(stats, axis=1)))
 ```
 
-The plot shows the medians of the test error, the solution norm and the
+The figure below plots the medians of test MSE, solution norm, and the
 capacity product on logarithmic axes.
 
 ```{.python .input #mdl-generalization-bounds-a-double-descent-sweep-1}
@@ -806,9 +883,10 @@ d2l.plot([p_grid] * 3 + [[n, n]],
          yscale='log', fmts=('-', 'm--', 'g-.', 'k:'), figsize=(6, 3.5))
 ```
 
-The table gives the numbers at seven feature counts. Its last two columns
-belong to :numref:`subsec_mdl-benign-overfitting`, and its last line is the
-classical model that fits the raw inputs.
+The table below prints the full breakdown at seven representative feature
+counts. Its final two columns belong to
+:numref:`subsec_mdl-benign-overfitting`, and the last line reports the
+classical baseline that fits least squares directly on the raw inputs.
 
 ```{.python .input #mdl-generalization-bounds-a-double-descent-sweep-2}
 print('   p ' + ' '.join(f'{key:>8}' for key in keys))
@@ -818,87 +896,91 @@ for p in (15, 38, 40, 42, 50, 80, 400):
 print(f'least squares on the {d_in} raw inputs: test MSE {np.median(ols):.4f}')
 ```
 
-The table is best read in three stretches: below the threshold, at it, and
-beyond it.
+The table reads best in three regimes: below the threshold, at the
+threshold, and beyond it.
 
-*Below the threshold* the model is a classical one, with fewer parameters
-than points. Its test error first falls, from about $1$ at $p=2$ to roughly
-$0.6$ to $0.8$ near $p=15$, and then rises again as $p$ approaches $40$.
-This is the U-curve that the classical account leads us to expect. Two
-things must be said about this regime before anything is compared with it.
-First, it is weak. The targets have variance $1$, so a test error of $1$ is
-what predicting zero achieves, and the best fit here removes only a quarter
-to a third of it. Second, a far better classical model exists. The teacher
-is linear in the fifteen raw inputs, and least squares on those inputs has
-an expected test error of $0.01\cdot15/(40-15-1)\approx0.006$, the noise
-variance times $d/(n-d-1)$ for $d=15$. The last line of the table confirms
-it. The random features were handicapped by construction: they have to
-assemble a linear function out of ReLU ridges, and forty points are too few
-for that.
+*Below the threshold*, the model behaves classically, with fewer parameters
+than training points. Its test error first drops from roughly $1$ at $p=2$
+to about $0.6$–$0.8$ near $p=15$, and then climbs again as $p$ approaches
+$40$, tracing the familiar classical U-curve. Two caveats are essential
+before we compare anything against this regime. First, even at its best,
+this classical fit is weak: the targets have variance $1$ (the error of
+always predicting zero), so the minimum of the U-curve removes only a
+quarter to a third of the variance. Second, a far better classical model
+exists. Because the true teacher is linear in the 15 raw inputs, ordinary
+least squares on those raw inputs has expected test error
+$0.01\cdot15/(40-15-1)\approx0.006$ (the noise variance times $d/(n-d-1)$
+for $d=15$), confirmed by the last line of the output. The random-features
+model is handicapped by design: it must reconstruct a linear function from
+ReLU ridges, and forty points are far too few for that.
 
-*At the threshold* three columns move together. The training error drops
-from a few times $10^{-3}$ at $p=38$ to about $10^{-28}$, which is exact
-interpolation up to floating point. The smallest singular value falls to
-about $0.01$ to $0.04$, several times below its values at $p=38$ and $p=42$
-on either side. And since :eqref:`eq_mdl-svd-interpolant` divides by it, the
-solution is inflated: the norm jumps to between about $6$ and $20$, and the
-test error to somewhere between $5$ and $50$, one to two orders of magnitude
-above the minimum of the first stretch. These ranges are wide because the
-peak is heavy-tailed, as it is for a square Gaussian matrix, where
-$\mathbb{E}[1/\sigma_{\min}^2]$ is infinite. Even a median over 20 trials
-moves from one run of the cell to the next.
+*At the threshold*, three columns move in lockstep. The training error
+plummets from a few times $10^{-3}$ at $p=38$ to roughly $10^{-28}$, exact
+interpolation up to floating-point precision. Simultaneously, the smallest
+singular value drops to around $0.01$–$0.04$, several times smaller than at
+$p=38$ or $p=42$. Because :eqref:`eq_mdl-svd-interpolant` divides by
+$\sigma_{\min}$, the solution explodes: $\|\mathbf w\|$ jumps to between
+$6$ and $20$, and test MSE spikes to between $5$ and $50$, one to two
+orders of magnitude above the U-curve minimum. Those ranges are wide because
+the peak is heavy-tailed, just as for a square Gaussian matrix where
+$\mathbb{E}[1/\sigma_{\min}^2]=\infty$; even a median over 20 trials
+fluctuates noticeably from run to run.
 
-*Beyond the threshold* everything that rose comes down again. The smallest
-singular value recovers, to about $2.8$ at $p=400$. The norm falls steadily,
-as nesting requires (in every trial, not only in the medians), down to about
-$0.4$. The test error follows: about $0.2$ at $p=80$, and $0.04$ to $0.07$
-at $p=400$. One column has nothing more to tell us. The training error is
-zero up to floating point everywhere past the threshold, so no criterion
-based on it can separate $p=42$ from $p=400$, whose test errors differ by
-well over an order of magnitude. The norm, the smallest singular value and the
-capacity product all can.
+*Beyond the threshold*, everything that spiked comes back down. The smallest
+singular value recovers to roughly $2.8$ at $p=400$. As the padding argument
+guarantees, $\|\mathbf w\|$ declines monotonically in every trial (not just
+in the medians), reaching roughly $0.4$. Test MSE follows it downward, to
+about $0.2$ at $p=80$ and $0.04$–$0.07$ at $p=400$. Meanwhile, one column
+goes completely silent: training error sits at zero (up to floating point)
+everywhere past $p=40$, so no criterion based on training loss can tell
+$p=42$ apart from $p=400$, even though their test errors differ by more than
+an order of magnitude. The solution norm, $\sigma_{\min}$, and the capacity
+product all distinguish them clearly.
 
-What, then, has the sweep shown? Less than its plot suggests. The widest
-model beats every narrower model of its own family, the best one below the
-threshold included, by roughly a factor of ten. It still loses to least
-squares on the raw inputs by about another factor of ten. Within one nested
-family of random features, more features are better, even far past the
-point where the model fits its noise. That is a real and surprising fact.
-Whether interpolation can beat a well-specified small model is a different
-question, and in this experiment the answer is no.
+What, then, does this sweep actually prove? Less than the dramatic curve
+might suggest at first glance. Within the nested family of random features,
+the widest model beats every narrower one, including the best underparameterized
+model, by roughly a factor of ten, even far past the point where it memorizes
+all label noise. That is a genuine and surprising phenomenon. Yet it still
+loses to ordinary least squares on the raw inputs by another factor of ten.
+Whether an interpolating model can outperform a well-specified small model
+is a separate question, and here the answer is no.
 
-The capacity product peaks at the threshold with values of about 8 to 25,
-falls past it, and reaches about $1.2$ to $1.3$ at $p=400$. It follows the
-shape of the test curve, but it is no guarantee: no theorem here covers this
-loss, the product changes when the targets are rescaled, and its $B$ was
-read off the fit rather than fixed in advance.
+The capacity product peaks near 8 to 25 at $p=40$ and drops back to roughly
+$1.2$–$1.3$ at $p=400$. It mirrors the shape of the test curve, but we
+should not mistake it for a generalization certificate: no theorem in this
+section covers unbounded squared loss, the product is not invariant to
+rescaling the targets, and $B$ was read off the fitted solution rather than
+fixed before seeing the data.
 
-The peak is not caused by the label noise. Rerunning the sweep with
-`noise = 0` leaves a peak of the same size, and the table shows why. At
-$p=40$ the clean part of the test error is larger than the noise part,
-usually several times larger. The linear teacher is not a combination of
-finitely many ReLU features, and the part of the target that the features
-represent badly is what $\sigma_{\min}$ divides. With a target that is an
-exact combination of the first ten features and no noise, there is no peak
-at all (exercise :exref:`ex_mdl-generalization-bounds-square-case`).
+Finally, notice that label noise is *not* what causes the peak. Rerunning
+the sweep with `noise = 0` produces a peak of almost the same height, and
+the table shows why: at $p=40$, the clean part of the test error is already
+larger than the noise part, typically several times larger. Because a linear
+teacher cannot be written as a finite combination of ReLU features, the
+approximation error along $\mathbf u_q$ is what $\sigma_{\min}$ divides. If
+we replace the teacher with an exact linear combination of the first ten
+features and remove the noise, the peak disappears altogether (exercise
+:exref:`ex_mdl-generalization-bounds-square-case`).
 
 ### Benign Overfitting
 :label:`subsec_mdl-benign-overfitting`
 
-One puzzle remains. The $p=400$ model reproduces every noisy training label
-exactly, yet it is the best of the sweep. Why does fitting the noise cost so
-little there?
+One puzzle remains. At $p=400$, the model interpolates every noisy training
+label with zero residual, yet it achieves the lowest test error in the
+sweep. Why does fitting the noise do so little damage there?
 
-The test error separates into two parts we can compute. Write the training
-labels as $\mathbf y=\mathbf y_0+\boldsymbol\xi$, with $\mathbf y_0$ the
-noise-free labels and $\boldsymbol\xi$ independent noise of variance
-$\sigma_\xi^2=0.01$ per label. Then
-$\mathbf w=\boldsymbol\Phi^+\mathbf y_0+\boldsymbol\Phi^+\boldsymbol\xi$, and the
-predictions at the test points are
+We can answer this by splitting the test error into two computable parts.
+Write the noisy training labels as $\mathbf y=\mathbf y_0+\boldsymbol\xi$,
+where $\mathbf y_0$ are the noise-free labels and $\boldsymbol\xi$ is
+independent noise with variance $\sigma_\xi^2=0.01$ per example. By
+linearity of the pseudoinverse,
+$\mathbf w=\boldsymbol\Phi^+\mathbf y_0+\boldsymbol\Phi^+\boldsymbol\xi$,
+so the test predictions split into
 $\boldsymbol\Phi_{\mathrm{te}}\boldsymbol\Phi^+\mathbf y_0+\boldsymbol\Phi_{\mathrm{te}}\boldsymbol\Phi^+\boldsymbol\xi$.
-In the squared test error, the cross term between these two parts has mean
-zero because $\boldsymbol\xi$ does. Averaged over
-the noise, the test error over $n_{\mathrm{te}}$ test points is
+Because $\boldsymbol\xi$ has mean zero, the cross term vanishes in
+expectation, leaving an exact decomposition of the expected test MSE over
+$n_{\mathrm{te}}$ test points:
 
 $$
 \mathbb{E}_{\boldsymbol\xi}\bigl[\textrm{test error}\bigr]
@@ -906,22 +988,24 @@ $$
  + \underbrace{\frac{\sigma_\xi^2}{n_{\mathrm{te}}}\bigl\|\boldsymbol\Phi_{\mathrm{te}}\boldsymbol\Phi^+\bigr\|_F^2}_{\textrm{noise part}} .
 $$
 
-The last two columns of the table print the two parts. At $p=40$ the noise
-part is about $1$ to $4$, a hundred times or more the noise variance $0.01$,
-and the clean part is larger still. At $p=42$ the noise part is a few
-tenths, at $p=80$ about $0.02$, and at $p=400$ just under $0.01$. The clean
-part falls from roughly 4 to 20 at the peak to about $0.05$ at
-$p=400$, so most of the gain past the threshold comes from a better
-approximation of the target.
+The `clean` and `noise` columns of our table print these two terms. At
+$p=40$, the noise part is roughly $1$ to $4$ (a hundred times or more the
+label-noise variance of $0.01$), and the clean part is larger still. By
+$p=42$ the noise part drops to a few tenths, at $p=80$ to about $0.02$, and
+at $p=400$ to just under $0.01$. Over the same stretch, the clean part
+falls from roughly 4–20 at the peak to about $0.05$ at $p=400$, so most of
+the improvement past the threshold comes from approximating the target
+better.
 
-Why does the division by small singular values, which produced the peak, do
-so little harm at $p=400$? By :eqref:`eq_mdl-svd-interpolant` a noise
-component along $\mathbf u_i$ enters the weights with the factor $1/\sigma_i$
-along $\mathbf v_i$, and it moves a test prediction by that weight times the
-component of the test feature vector along $\mathbf v_i$. Since
+Why does dividing by small singular values, the very mechanism that created
+the spike at $p=40$, become nearly harmless at $p=400$? By
+:eqref:`eq_mdl-svd-interpolant`, a noise component along $\mathbf u_i$
+enters the weights scaled by $1/\sigma_i$ along $\mathbf v_i$, and shifts a
+test prediction in proportion to the test feature's component along
+$\mathbf v_i$. Using
 $\|\boldsymbol\Phi_{\mathrm{te}}\boldsymbol\Phi^+\|_F^2=\sum_i\|\boldsymbol\Phi_{\mathrm{te}}\mathbf v_i\|^2/\sigma_i^2$
-and $\sigma_i^2=\|\boldsymbol\Phi\mathbf v_i\|^2$, the noise part is, for
-$p\ge n$,
+together with $\sigma_i^2=\|\boldsymbol\Phi\mathbf v_i\|^2$, the noise part
+for $p\ge n$ takes the illuminating form
 
 $$
 \sigma_\xi^2\cdot\frac1n\sum_{i=1}^{n}
@@ -929,49 +1013,54 @@ $$
       {\|\boldsymbol\Phi\mathbf v_i\|^2/n} ,
 $$
 
-the noise variance times the average over directions of the ratio of the
-mean squared test feature to the mean squared training feature along
-$\mathbf v_i$. A small $\sigma_i$ hurts only if the test features are not
-small in the same direction. At $p=n$ the smallest singular value is small
-by an accident of the forty training points: along $\mathbf v_q$ the test
-features are typically thousands of times larger in mean square than the
-training features. At $p=400$ a small $\sigma_i$ marks a direction in which
-the features vary little for training and test points alike. The table's
-last two columns show it: the ratio along $\mathbf v_q$ (`ratio_q`) is about
-$2$, and the average over all directions (`ratio`) is just below $1$, so the
-small singular value in the denominator is cancelled by a small test feature
-in the numerator. Overfitting is called *benign* in this sense. Benign means
-bounded here, not vanishing: at $p=400$ the predictions still carry about as
-much noise as a single training label.
+the noise variance multiplied by the average ratio of mean-squared test
+feature energy to mean-squared training feature energy along each right
+singular direction $\mathbf v_i$. A tiny singular value $\sigma_i$ only
+causes trouble when test inputs carry substantial energy in that same
+direction. At $p=n$, a tiny $\sigma_{\min}$ is an accident of the forty
+training points: along $\mathbf v_q$, the test features are typically
+thousands of times larger in mean square than the training features. At
+$p=400$, by contrast, a small $\sigma_i$ marks a direction where the
+features are genuinely small for training and test points alike. The final
+two columns of the table confirm this: `ratio_q` (along $\mathbf v_q$) is
+only about $2$, and `ratio` (averaged over all directions) sits just below
+$1$, so the small denominator is cancelled by a small numerator. This is
+the sense in which overfitting is called *benign*. Notice that benign means
+*bounded*, not zero: at $p=400$, the predictions still carry roughly the
+variance of a single noisy training label.
 
-:citet:`Bartlett.Long.Lugosi.Tsigler.2020` make this precise for linear
-regression, through two effective ranks of the covariance of the inputs, and
-exercise :exref:`ex_mdl-concentration-generalization-benign-spectra` measures
-them. In deep networks the features are learned and change the spectrum
-during training, and a theory that predicts a given network's test error from
-first principles is still open. Every bound in this section covers the
-worst function in a class fixed before the data, while the function we use
-is the one an algorithm reached. A guarantee that depends on the algorithm
-and the data, rather than on the class alone, is the open question this
-section leaves.
+:citet:`Bartlett.Long.Lugosi.Tsigler.2020` make this phenomenon precise for
+linear regression through two effective ranks of the input covariance
+matrix, which exercise
+:exref:`ex_mdl-concentration-generalization-benign-spectra` computes directly.
+In deep neural networks, the features themselves are learned and their
+spectrum evolves throughout training, so a first-principles theory that
+predicts a trained network's test error remains out of reach. Every formal
+bound in this section covers the worst function in a class chosen before
+seeing the data, whereas the predictor we deploy is the specific solution an
+optimizer finds. Bridging that gap, with guarantees that depend on the
+algorithm and the data rather than on the function class alone, is the central open
+question this section leaves behind.
 
 ## Summary
 
-A guarantee for one function fixed before the data does not cover the
-function chosen because it looked best on the data. Uniform convergence
-repairs this by bounding the deviation of every function in the class at
-once. For a finite class, Hoeffding's inequality and the union bound do so
-with $\log|\mathcal F|/(2t^2)$ additional examples at tolerance
-$t$. For infinite classes, symmetrization with a ghost sample turns the
-unknown risk into a correlation with random signs, and the bound adds twice
-the Rademacher complexity of the loss class. For the linear class with
-weight norm $B$ and inputs of norm $r$ this complexity is at most
-$Br/\sqrt n$, whatever the dimension. The argument stops at classes that fit
-every sign pattern, such as a network that fits random labels: for them the
-bound allows any error rate. In the random-features sweep the test error
-peaks where $\sigma_{\min}$ is smallest and falls as the minimum-norm
-solution shrinks, and these quantities belong to the solution rather than to
-the class.
+A concentration bound for a single function fixed before the data does not
+cover a model chosen because it scored best on the sample. Uniform
+convergence closes that gap by bounding the estimation error of every
+function in the class simultaneously. For a finite class $\mathcal F$,
+Hoeffding's inequality and the union bound achieve this at a cost of
+$\log|\mathcal F|/(2t^2)$ additional examples at tolerance $t$. For
+infinite classes, symmetrization with a ghost sample reduces the worst-case
+gap to correlation with random signs, adding twice the Rademacher
+complexity of the loss class to the empirical risk. For norm-bounded linear
+models ($\|\mathbf w\|_2\le B$, $\|\mathbf x_i\|_2\le r$), this complexity
+is at most $Br/\sqrt n$, independent of dimension. Uniform convergence
+reaches its boundary on classes flexible enough to interpolate arbitrary
+sign patterns, such as deep networks that fit random labels, where the bound
+becomes vacuous. Our random-features sweep illustrates why generalization
+can still succeed in that regime: test error spikes where $\sigma_{\min}$
+collapses and falls as the minimum-norm interpolant shrinks, properties of
+the learned solution rather than of the whole function class.
 
 ## Exercises
 

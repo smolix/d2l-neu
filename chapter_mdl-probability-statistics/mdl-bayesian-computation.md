@@ -1,45 +1,52 @@
 # Bayesian Computation
 :label:`sec_mdl-bayesian-computation`
 
-The Basics part trains each model to a single parameter vector, by maximum
-likelihood or, with a penalty, by the maximum a posteriori (MAP) estimate,
-the peak of the posterior. :numref:`sec_mdl-maximum_likelihood` put an
-error bar on such a vector. The predictions, however, still came from that
-one vector, although many others fit the data almost as well. How much do
-they disagree, and what should we predict when they do?
+Throughout the Basics part of this book, we trained each model to a single
+parameter vector, either by maximum likelihood or, with a regularizer, by the
+maximum a posteriori (MAP) estimate at the peak of the posterior. In
+:numref:`sec_mdl-maximum_likelihood`, we went a step further and placed an error
+bar on that estimate. Even then, our predictions still came from that single
+vector, despite the fact that many other parameter vectors explain the training
+data almost as well. How much do those plausible models disagree, and what
+should we predict when they do?
 
-Take logistic regression with an intercept and a slope, fitted to twenty
-labeled points whose inputs lie between 0 and 4. At an input of $-3$, far
-below the data, the fitted model gives the label 1 a probability of four in a
-thousand. Vectors that fit the data almost as well disagree there by orders
-of magnitude. Their average, with each vector weighted by how plausible it is
-given the data, is almost five times larger. At an input of 2, inside the
-data, the two answers agree to within $0.01$. For a rare
-outcome, such as a fraud flag or a diagnosis, a factor of several in its
-probability can decide what we do.
+Consider a concrete example: logistic regression with an intercept and a slope,
+fitted to twenty labeled points whose inputs lie between $0$ and $4$. At a test
+input of $-3$, well below the training data, the fitted MAP line assigns the
+label $1$ a probability of about four in a thousand. Yet other parameter
+vectors that fit the twenty points nearly as well disagree there by orders of
+magnitude. If we average their predictions, weighting each vector by how
+plausible it is given the data, the resulting probability is almost five times
+larger. At an input of $2$, right inside the training data, the single-vector
+and averaged predictions agree to within $0.01$. For a rare event, such as a
+fraud alert or a medical diagnosis, a factor of five in the predicted
+probability can change the decision we make.
 
-The weighted average is the Bayesian prediction, and computing it is as old a
-problem as Bayes' rule: the posterior divides by the evidence, an integral
-over all parameter vectors that rarely has a closed form. Laplace, in 1774,
-replaced the posterior of a proportion by the Gaussian that matches its peak.
-Metropolis and his colleagues, in 1953, let a random walk visit states in
-proportion to a distribution whose normalizer they did not know
-:cite:`Metropolis.Rosenbluth.Rosenbluth.ea.1953`. In the 1990s the integral
-became an optimization problem. One idea runs through all of these methods:
-we can average over a distribution known only up to a constant, because each
-method uses only ratios of it, and the constant cancels in a ratio.
+That weighted average is the Bayesian prediction, and computing it is a problem
+as old as Bayes' rule itself. The posterior distribution divides by the
+evidence, an integral over all parameter vectors that rarely has a closed form.
+In 1774, Laplace bypassed the integral by replacing the posterior of a
+proportion with the Gaussian that matches its peak. In 1953, Metropolis and his
+colleagues showed how to let a random walk visit states in proportion to a
+distribution whose normalizing constant is unknown
+:cite:`Metropolis.Rosenbluth.Rosenbluth.ea.1953`. By the 1990s, researchers had
+also turned the integration problem into an optimization problem. One unifying
+trick runs through all of these methods: we can average over a distribution
+known only up to a normalizing constant because every method relies solely on
+ratios of densities, where the unknown constant cancels.
 
-We ask four questions in turn. Can we replace the posterior by the Gaussian
-that matches its peak? Can we draw from a simpler distribution and correct
-each draw? Can a random walk spend its time in each region in proportion to
-the posterior? Can we optimize a simple distribution to be as close to the
-posterior as possible? Each of the first three answers repairs a failure of
-the one before; the fourth replaces sampling by optimization. A small
-posterior is the cleanest case of a distribution known only up to a constant;
-the book meets others, and :numref:`sec_mdl-bayes-decision-map` says where
-each idea returns. All four methods compute the **posterior predictive**
-distribution of a label $y_\star$ at a new input
-$\mathbf x_\star$,
+In this section, we develop four approaches by asking four questions in turn.
+First, can we approximate the posterior by the Gaussian that matches its peak?
+Second, can we draw from a simpler distribution and correct each draw? Third,
+can a random walk spend time in each region in proportion to its posterior
+mass? Fourth, can we optimize a simple distribution to be as close to the
+posterior as possible? Each of the first three methods remedies a limitation of
+the one before it, while the fourth replaces sampling with optimization. A
+low-dimensional posterior is the cleanest setting for a distribution known only
+up to a constant, though the same ideas reappear across the book;
+:numref:`sec_mdl-bayes-decision-map` maps out where each returns. All four
+methods aim to compute the **posterior predictive** distribution of a label
+$y_\star$ at a new input $\mathbf x_\star$,
 
 $$
 p(y_\star\mid\mathbf x_\star,\mathcal D)
@@ -48,7 +55,7 @@ p(y_\star\mid\mathbf x_\star,\mathcal D)
 $$
 :eqlabel:`eq_mdl-bayes-predictive`
 
-which averages the predictions of all parameter vectors, each weighted by its
+which averages the predictions of every parameter vector, weighted by its
 posterior density given the data $\mathcal D$.
 
 ```{.python .input #bayesian-computation-imports}
@@ -93,18 +100,20 @@ from d2l import jax as d2l
 ## The Posterior of Bayesian Logistic Regression
 :label:`sec_mdl-bayes-target`
 
-To compare approximations we need a posterior that has no closed form but
-that we can still check. A prior is *conjugate* to a likelihood when the
-posterior stays in the prior's family, as a Beta prior on a coin stays Beta
-after any number of flips (:numref:`sec_mdl-exponential-family`). A Gaussian
-prior is not conjugate to the logistic likelihood: the posterior can be
-evaluated at any point but not integrated in closed form. With only two
-parameters, a fine grid still gives a reference for every approximation.
+To compare approximation methods fairly, we need a posterior that has no closed
+form yet can still be checked against the exact answer. Recall that a prior is
+*conjugate* to a likelihood when the posterior stays in the same family as the
+prior, just as a Beta prior on a coin stays Beta after any number of flips
+(:numref:`sec_mdl-exponential-family`). A Gaussian prior is not conjugate to
+the logistic likelihood: we can evaluate the unnormalized posterior at any
+parameter vector, but we cannot integrate it analytically. Because our running
+example has only two parameters, however, a fine two-dimensional grid still
+gives an exact reference against which every approximation can be judged.
 
 ### The Model and Its Unnormalized Posterior
 
-Logistic regression gives each binary label $y_i\in\{0,1\}$ a probability
-that depends on the input $x_i$ through a line,
+In one-dimensional logistic regression, each binary label $y_i\in\{0,1\}$ has a
+probability determined by a linear function of the input $x_i$,
 
 $$
 P(y_i=1\mid x_i,\boldsymbol\theta)
@@ -114,12 +123,12 @@ P(y_i=1\mid x_i,\boldsymbol\theta)
 \operatorname{sigmoid}(z)=\frac{1}{1+e^{-z}},
 $$
 
-where $\mathbf z_i=(1,x_i)^\top$. The probability crosses $\tfrac12$ where the
-line crosses zero, at $x=-\theta_0/\theta_1$, and the slope $\theta_1$ sets
-how sharply it rises there. We give the intercept and the slope independent
-Gaussian priors $\theta_j\sim\mathcal N(0,\tau^2)$, where $\tau$ is the prior
-standard deviation. Bayes' rule multiplies the likelihood of the $n$ labels by
-the prior:
+where $\mathbf z_i=(1,x_i)^\top$. The predicted probability crosses $\tfrac12$
+where the linear function crosses zero, at $x=-\theta_0/\theta_1$, while the
+slope $\theta_1$ controls how sharply the curve rises there. We place
+independent Gaussian priors $\theta_j\sim\mathcal N(0,\tau^2)$ on the intercept
+and slope, with prior standard deviation $\tau$. By Bayes' rule, the posterior
+is proportional to the likelihood of the $n$ labels times the prior:
 
 $$
 p(\boldsymbol\theta\mid\mathcal D)
@@ -131,30 +140,28 @@ p(\boldsymbol\theta\mid\mathcal D)
 $$
 :eqlabel:`eq_mdl-bayes-logistic-posterior`
 
-The bracket is the likelihood and the exponential is the prior. The missing
-constant is the **evidence** $p(\mathcal D)=\int p(\mathcal
-D,\boldsymbol\theta)\,d\boldsymbol\theta$, an integral over all parameter
-vectors that we cannot do in closed form. We write
-$\widetilde p(\boldsymbol\theta)=p(\mathcal D,\boldsymbol\theta)$ for the
-product on the right, the *unnormalized posterior*, so that the posterior is
+The bracketed product is the likelihood and the exponential factor is the
+prior. The missing normalizing constant is the **evidence**
+$p(\mathcal D)=\int p(\mathcal D,\boldsymbol\theta)\,d\boldsymbol\theta$, an
+integral over all parameter vectors that has no closed form. We denote the
+right-hand side by $\widetilde p(\boldsymbol\theta)=p(\mathcal D,\boldsymbol\theta)$,
+the *unnormalized posterior*, so that the normalized posterior is simply
 $\widetilde p/p(\mathcal D)$.
 
-The running data have $n=20$ inputs drawn uniformly from $[0,4]$ and labels
-drawn from the line with $\boldsymbol\theta^\star=(-3,1.5)$, which crosses
-$\tfrac12$ at $x=2$ and rises from $\operatorname{sigmoid}(-3)\approx0.05$ at
-$x=0$ to $\operatorname{sigmoid}(3)\approx0.95$ at $x=4$. The prior has
-$\tau^2=4$. Twenty points leave the posterior wide enough for each effect in
-this section to be visible. The twenty points are listed in the cell rather
-than drawn afresh, so that the numbers below can be quoted, and they were
-chosen with some care. We simulated 1,500 data sets from this recipe and kept
-the one closest to the medians of the quantities this section measures: the
-widths and the correlation of the posterior, the offset of its mean from its
-mode, and the ratio of the two predictions far from the data. What follows is
-therefore the typical case and neither a lucky nor an unlucky one. The data
-are fixed, but every sampler below still draws fresh random numbers, so
-their outputs are quoted as ranges. In the
-code, `log_joint` is $\log\widetilde p$; it uses `logaddexp(0, z)` for
-$\log(1+e^z)$ so that large logits do not overflow.
+For our running dataset, we take $n=20$ inputs drawn uniformly from $[0,4]$ and
+generate labels from the true parameter vector $\boldsymbol\theta^\star=(-3,1.5)$,
+whose probability curve crosses $\tfrac12$ at $x=2$ and rises from
+$\operatorname{sigmoid}(-3)\approx0.05$ at $x=0$ to
+$\operatorname{sigmoid}(3)\approx0.95$ at $x=4$. We set the prior variance to
+$\tau^2=4$. With twenty data points, the posterior remains wide enough for
+every approximation effect in this section to stand out clearly. Rather than
+drawing a fresh dataset on each run, we fix one representative draw of twenty
+points (selected as the most typical among 1,500 simulated datasets on the
+posterior summaries measured below) so that we can quote concrete reference
+numbers. Every sampler we run still uses fresh random numbers, so sampler
+results are reported as typical ranges. In code, `log_joint` evaluates
+$\log\widetilde p$, using `logaddexp(0, z)` for $\log(1+e^z)$ to prevent
+overflow at large logits.
 
 ```{.python .input #bayesian-computation-model}
 rng = np.random.default_rng()
@@ -180,17 +187,19 @@ print(f'{n} points, {y.sum()} of them labeled 1')
 
 ### The Gradient and the Hessian
 
-Several methods below also use the slope and the curvature of
-$\log\widetilde p$, so we derive them once. Differentiating
+Several methods below rely on the slope and curvature of $\log\widetilde p$, so
+it pays to derive them once up front. Differentiating each log-likelihood term
 $y_i\,\mathbf z_i^\top\boldsymbol\theta-\log(1+e^{\mathbf z_i^\top\boldsymbol\theta})$
-gives $(y_i-p_i)\,\mathbf z_i$ with $p_i=\operatorname{sigmoid}(\mathbf
-z_i^\top\boldsymbol\theta)$, and the prior contributes
-$-\boldsymbol\theta/\tau^2$. Collecting the rows $\mathbf z_i^\top$ into the
-$n\times2$ matrix $\mathbf Z$, the gradient is
-$\nabla\log\widetilde p(\boldsymbol\theta)=\mathbf Z^\top(\mathbf y-\mathbf
-p)-\boldsymbol\theta/\tau^2$: each point pushes $\boldsymbol\theta$ along
-$\mathbf z_i$ by its residual, and the prior pulls toward zero.
-Differentiating once more gives the negative Hessian
+gives $(y_i-p_i)\,\mathbf z_i$, where
+$p_i=\operatorname{sigmoid}(\mathbf z_i^\top\boldsymbol\theta)$, while the
+Gaussian prior contributes $-\boldsymbol\theta/\tau^2$. Stacking the input rows
+$\mathbf z_i^\top$ into the $n\times2$ matrix $\mathbf Z$, we obtain the
+gradient
+$\nabla\log\widetilde p(\boldsymbol\theta)=\mathbf Z^\top(\mathbf y-\mathbf p)-\boldsymbol\theta/\tau^2$.
+Its geometry is transparent: each training point nudges $\boldsymbol\theta$
+along $\mathbf z_i$ in proportion to its prediction residual $y_i-p_i$, and the
+prior gently pulls the parameters back toward the origin. Differentiating a
+second time yields the negative Hessian
 
 $$
 \mathbf H(\boldsymbol\theta)
@@ -200,14 +209,15 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-hessian`
 
-The data term is a Gram matrix of the inputs, each point weighted by
-$p_i(1-p_i)\le\tfrac14$, so the points the model is unsure about count most.
-The prior adds $\tau^{-2}$ to every eigenvalue, so $\mathbf H$ is positive
-definite for every $\boldsymbol\theta$. The log posterior is therefore
-strictly concave, with a single maximum. The maximum is finite even when the
-data are linearly separable, because the
-log-likelihood is never positive while the prior term falls without bound in
-every direction.
+Here the data term is a weighted Gram matrix of the inputs. Because each weight
+$p_i(1-p_i)\le\tfrac14$ peaks at $p_i=\tfrac12$, the points the model is most
+uncertain about contribute the most curvature. Adding the prior term
+$\tau^{-2}\mathbf I$ lifts every eigenvalue by at least $\tau^{-2}$, so
+$\mathbf H(\boldsymbol\theta)$ is strictly positive definite everywhere. Thus
+the log posterior is strictly concave and has a unique maximum. Even when the
+training data are linearly separable, that maximum stays finite, because the
+log-likelihood is never positive while the quadratic prior penalty drops
+without bound in every direction.
 
 ```{.python .input #mdl-bayesian-computation-the-gradient-and-the-hessian-1}
 def grad_log_joint(theta, Z=Z, y=y, prior_var=prior_var):
@@ -221,26 +231,27 @@ def neg_hessian(theta, Z=Z, y=y, prior_var=prior_var):
     return Z.T @ (Z * (p * (1 - p))[:, None]) + np.eye(2) / prior_var
 ```
 
-For two parameters these derivatives are easy by hand. For a larger model we
-would write only $\log\widetilde p$ and leave its gradient and Hessian to
-automatic differentiation.
+With only two parameters, writing these derivatives by hand is painless. For
+larger models, we would implement only $\log\widetilde p$ and let automatic
+differentiation supply the gradient and Hessian.
 
-Every method in this section touches the posterior only through
-$\widetilde p$: its values, its gradient, or its Hessian.
+Notice that every method in this section accesses the posterior solely through
+$\widetilde p$, whether via its values, its gradient, or its Hessian.
 
 ### The Posterior Mode and the Laplace Approximation
 :label:`subsec_mdl-bayes-laplace`
 
-The cheapest approximation reuses an optimization we already know how to run.
-The peak of the posterior is the MAP estimate, the penalized fit of
-:numref:`sec_mdl-maximum_likelihood`, and Newton's method
-$\boldsymbol\theta\leftarrow\boldsymbol\theta+\mathbf
-H(\boldsymbol\theta)^{-1}\nabla\log\widetilde p(\boldsymbol\theta)$ reaches it
-in a few steps. One more Hessian turns the peak into a Gaussian.
+Our first and cheapest approximation builds directly on an optimization we
+already know how to run. The peak of the posterior is the MAP estimate, the
+penalized fit from :numref:`sec_mdl-maximum_likelihood`, and Newton's method,
+$\boldsymbol\theta\leftarrow\boldsymbol\theta+\mathbf H(\boldsymbol\theta)^{-1}\nabla\log\widetilde p(\boldsymbol\theta)$,
+reaches it in just a few iterations. One extra Hessian evaluation then turns
+that point estimate into a Gaussian distribution.
 
-We look for a Gaussian centered at the mode. Expanding $\log\widetilde p$ to
-second order around $\boldsymbol\theta_{\mathrm{MAP}}$, with $\mathbf
-H=\mathbf H(\boldsymbol\theta_{\mathrm{MAP}})$, gives
+Specifically, we fit a Gaussian centered at the mode
+$\boldsymbol\theta_{\mathrm{MAP}}$. Expanding $\log\widetilde p$ to second
+order around $\boldsymbol\theta_{\mathrm{MAP}}$, with
+$\mathbf H=\mathbf H(\boldsymbol\theta_{\mathrm{MAP}})$, gives
 
 $$
 \log\widetilde p(\boldsymbol\theta)
@@ -250,10 +261,10 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-laplace-taylor`
 
-The linear term is missing because the gradient vanishes at the mode. The
-right side is, up to a constant, the log density of a Gaussian with mean
-$\boldsymbol\theta_{\mathrm{MAP}}$ and covariance $\mathbf H^{-1}$, so
-exponentiating gives the **Laplace approximation**
+There is no linear term because the gradient vanishes at the mode. Up to an
+additive constant, the right-hand side is simply the log density of a Gaussian
+with mean $\boldsymbol\theta_{\mathrm{MAP}}$ and covariance $\mathbf H^{-1}$.
+Exponentiating therefore gives the **Laplace approximation**,
 
 $$
 p(\boldsymbol\theta\mid\mathcal D)
@@ -261,46 +272,52 @@ p(\boldsymbol\theta\mid\mathcal D)
 $$
 :eqlabel:`eq_mdl-bayes-laplace`
 
-It needs $\log\widetilde p$ to be twice differentiable at a mode in the
-interior of the parameter space, and $\mathbf H$ to be positive definite
-there; both hold here. A sharp peak, with large curvature, gives a small
-variance. The Gaussian matches the position and the curvature of the
-posterior's peak, and nothing else.
+For this approximation to be well defined, $\log\widetilde p$ must be twice
+differentiable at an interior mode with a positive definite negative Hessian
+$\mathbf H$, both of which hold here. Intuitively, a sharp peak has large
+curvature and therefore produces a narrow Gaussian with small variance. The
+Gaussian matches the location and local curvature of the posterior's peak, and
+nothing else.
 
-The smallest case is one-dimensional. Take the posterior
-$\mathrm{Gamma}(4,1)$, with density proportional to $\theta^3e^{-\theta}$ on
-$\theta>0$. Its log, $3\log\theta-\theta$, has derivative $3/\theta-1$, which
-vanishes at the mode $\theta=3$, and curvature $3/\theta^2=\tfrac13$ there. The
-Laplace approximation is $\mathcal N(3,3)$, with standard deviation $1.73$.
-The true posterior has mean 4 and variance 4, so the Gaussian sits too far
-left, is too narrow, and puts $\Phi(-\sqrt3)\approx4.2\%$ of its mass below
-$\theta=0$, where the posterior is zero
-(:numref:`fig_mdl-prob-bayes-laplace`).
+A one-dimensional example makes the behavior immediately visible. Consider the
+skewed posterior $\mathrm{Gamma}(4,1)$, whose unnormalized density is
+$\theta^3e^{-\theta}$ for $\theta>0$. Its log density, $3\log\theta-\theta$,
+has derivative $3/\theta-1$, which vanishes at the mode $\theta=3$, and
+negative second derivative $3/\theta^2=\tfrac13$ there. The Laplace
+approximation is therefore $\mathcal N(3,3)$, with standard deviation
+$\sqrt{3}\approx1.73$. Because the exact posterior has mean $4$ and variance
+$4$, the Gaussian sits too far to the left, is too narrow, and even places
+$\Phi(-\sqrt3)\approx4.2\%$ of its mass below $\theta=0$, where the true
+density is zero (:numref:`fig_mdl-prob-bayes-laplace`).
 
-For the coin with 9 heads and 4 tails under a uniform prior, the same
-computation returns the maximum likelihood estimate $9/13$ and its standard
-error $0.128$ from :numref:`subsec_mdl-coin-error-bar`: under a flat prior
-the Laplace approximation is the MLE with its error bar (Exercise
+Applying the same calculation to a coin that landed 9 heads and 4 tails under a
+uniform prior recovers the maximum likelihood estimate $9/13$ and its standard
+error $0.128$ from :numref:`subsec_mdl-coin-error-bar`. Under a flat prior, in
+fact, the Laplace approximation is simply the MLE paired with its asymptotic
+error bar (Exercise
 :exref:`ex_mdl-bayesian-computation-laplace-parameterization`).
 
-![The Laplace approximation for a skewed one-dimensional posterior, the Gamma(4,1) density with mode 3. Left: the quadratic fit to the log density matches its value, slope and curvature at the mode and nothing else. Right: after exponentiating, the Laplace Gaussian $\mathcal{N}(3,3)$ has the right peak but misses the skew. It puts 4.2% of its mass (shaded orange) below the support edge $\theta=0$, where the posterior is zero, and drops tail mass on the right; the true mean is 4.](../img/mdl-prob-bayes-laplace.svg)
+![The Laplace approximation for a skewed one-dimensional posterior, the Gamma(4,1) density with mode 3. Left: the quadratic fit to the log density matches its value, slope, and curvature at the mode and nothing else. Right: after exponentiating, the Laplace Gaussian $\mathcal{N}(3,3)$ matches the peak but misses the skew, placing 4.2% of its mass (shaded orange) below the support boundary $\theta=0$ where the posterior is zero, while underestimating the right tail; the true mean is 4.](../img/mdl-prob-bayes-laplace.svg)
 :label:`fig_mdl-prob-bayes-laplace`
 
-The evidence never enters: $\log p(\mathcal D)$ is an additive constant in
-$\log p(\boldsymbol\theta\mid\mathcal D)$, so it drops out of the curvature.
-Integrating the exponential of the right side of
-:eqref:`eq_mdl-bayes-laplace-taylor` even estimates that constant,
-$p(\mathcal D)\approx\widetilde p(\boldsymbol\theta_{\mathrm{MAP}})(2\pi)^{d/2}\det(\mathbf
-H)^{-1/2}$ for $d$ parameters (Exercise
-:exref:`ex_mdl-bayesian-computation-evidence`).
+Notice that the unknown evidence never enters the calculation:
+$\log p(\mathcal D)$ is an additive constant in
+$\log p(\boldsymbol\theta\mid\mathcal D)$, so it vanishes upon differentiation.
+Better still, integrating the exponential of the right-hand side of
+:eqref:`eq_mdl-bayes-laplace-taylor` even yields an estimate of the evidence
+itself,
+$p(\mathcal D)\approx\widetilde p(\boldsymbol\theta_{\mathrm{MAP}})(2\pi)^{d/2}\det(\mathbf H)^{-1/2}$
+in $d$ dimensions (Exercise :exref:`ex_mdl-bayesian-computation-evidence`).
 
-The approximation is local. It sees no skew, no heavy tail, no boundary and
-no second mode, and its center is the mode, not the mean. For a network with
-$d$ parameters $\mathbf H$ has $d^2$ entries, so in practice one keeps only
-its diagonal, or only the Hessian of the last layer.
+Because the Laplace approximation uses only local derivatives at a single peak,
+it is blind to skewness, heavy tails, parameter boundaries, and additional
+modes, and it centers the distribution at the mode rather than the mean.
+Scaling is also an issue: for a neural network with $d$ parameters, $\mathbf H$
+has $d^2$ entries, so practical applications typically keep only its diagonal
+or restrict the approximation to the last layer.
 
-In code, ten Newton steps from zero find the mode, and one matrix inverse
-gives the covariance.
+In code, ten Newton steps starting from the origin locate the mode, and a
+single matrix inverse yields the Laplace covariance.
 
 ```{.python .input #bayesian-computation-map-predictive}
 theta_map = np.zeros(2)
@@ -315,22 +332,24 @@ print('Laplace sd         :', laplace_sd.round(3))
 print('Laplace correlation:', round(laplace_rho, 3))
 ```
 
-The mode is $(-2.14,\,1.12)$, a shallower line than the one that generated
-the data. The Laplace standard deviations are $1.00$ for the intercept and
-$0.46$ for the slope, so the generating values $(-3,1.5)$ lie a little under
-one standard deviation away in each coordinate. The correlation is strongly
-negative, $-0.86$: a steeper line must start lower to pass through the same
-points.
+The posterior mode lies at $(-2.14,\,1.12)$, a shallower line than the
+generating parameters $(-3,1.5)$. The Laplace standard deviations are $1.00$
+for the intercept and $0.46$ for the slope, placing the true values a little
+less than one standard deviation away in each coordinate. Notice also the
+strong negative correlation, $-0.86$: a steeper line must start lower to pass
+through the same cloud of points.
 
 ### A Grid Reference
 
-To judge the Laplace approximation we need the exact answer. With two
-parameters we can evaluate $\log\widetilde p$ on an $m\times m$ grid,
-exponentiate after subtracting the maximum, and normalize the sum. In $d$
-dimensions such a grid needs $m^d$ evaluations, so it serves only as a check
-in low dimension. Even the grid must know where to look. We center it at the
-MAP and extend it seven Laplace standard deviations in each direction, which
-leaves a negligible part of the posterior outside.
+To see how accurate the Laplace approximation really is, we need the exact
+posterior as a benchmark. With only two parameters, we can evaluate
+$\log\widetilde p$ on a fine $m\times m$ grid, subtract the maximum for
+numerical stability, exponentiate, and normalize the weights to sum to one. In
+$d$ dimensions, such a lattice requires $m^d$ evaluations, so grid integration
+is purely a low-dimensional reference. Even in two dimensions we must know
+where to place the box: we center the grid at $\boldsymbol\theta_{\mathrm{MAP}}$
+and span seven Laplace standard deviations in each direction, leaving only a
+negligible tail outside.
 
 ```{.python .input #bayesian-computation-grid}
 k, m = 7, 241                    # half-width in Laplace sds, points per axis
@@ -352,24 +371,25 @@ print('grid correlation:', round(post_rho, 3))
 print('(mean - MAP)/sd :', ((post_mean - theta_map) / post_sd).round(2))
 ```
 
-The slope's posterior mean, $1.24$, lies above its MAP, $1.12$, by a quarter
-of a posterior standard deviation, and the intercept's mean, $-2.35$, lies
-below its MAP by a fifth. The Laplace standard deviations are $4$ to $5\%$
-too small, and the correlation agrees to two digits. The widths are a minor
-matter. More serious is that the center of the Laplace Gaussian is in the
-wrong place: the posterior is skewed toward steep lines, and its mean is not
-its mode.
+The grid exposes the skewness that Laplace missed. The posterior mean of the
+slope, $1.24$, sits a quarter of a posterior standard deviation above the MAP
+estimate of $1.12$, while the intercept's mean, $-2.35$, sits a fifth of a
+standard deviation below its MAP. The Laplace standard deviations are $4$ to
+$5\%$ too narrow, and the correlation agrees to two digits. Those width errors
+are modest; the more consequential discrepancy is that the posterior is skewed
+toward steeper lines, so its mean and its mode do not coincide.
 
 ### The Plug-in and the Posterior Predictive
 
-We return to the question of the opening. The *plug-in* prediction
+We can now answer our opening question directly. The *plug-in* prediction
 $\operatorname{sigmoid}(\mathbf z_\star^\top\boldsymbol\theta_{\mathrm{MAP}})$
-uses the mode alone. The posterior predictive
+relies on the mode alone, whereas the posterior predictive
 :eqref:`eq_mdl-bayes-predictive` averages
-$\operatorname{sigmoid}(\mathbf z_\star^\top\boldsymbol\theta)$ over the grid,
-with the grid weights. We evaluate both at $x_\star\in\{-3,2,7\}$, below,
-inside and above the data, together with the range that holds the middle 90%
-of the posterior's predictions.
+$\operatorname{sigmoid}(\mathbf z_\star^\top\boldsymbol\theta)$ across the grid
+using the posterior weights. Let us compare both predictions at three test
+inputs, $x_\star\in\{-3,2,7\}$, lying below, inside, and above the training
+data, alongside the interval containing the middle 90% of predictions across
+plausible parameter vectors.
 
 ```{.python .input #mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-1}
 x_new = np.array([-3.0, 2.0, 7.0])
@@ -392,16 +412,16 @@ print(f'                 log E[e^a] {np.log(grid_weight @ np.exp(a)):.2f}, '
       f'predictive {np.log(predictive[0]):.2f}')
 ```
 
-At $x_\star=2$ the two predictions, $0.524$ and $0.529$, agree to within
-$0.01$, and the plausible vectors keep their predictions between $0.32$ and
-$0.74$. At $x_\star=-3$ the middle 90% of the predictions run from
-$4\times10^{-5}$ to $0.09$, more than three orders of magnitude, and the
-posterior predictive, $0.019$, is $4.6$ times the plug-in, $0.0041$. At
-$x_\star=7$ the same holds for the probability of a 0 label, $0.017$ against
-$0.003$. Probabilities
-this close to 0 and 1 are easiest to compare as log-odds
-$\log\frac{P}{1-P}$, so the plot shows both predictions on that scale over a
-wider range than the data, with the training inputs marked along the bottom.
+Inside the training range at $x_\star=2$, the two predictions ($0.524$ and
+$0.529$) agree to within $0.01$, and the plausible parameter vectors span a
+moderate range from $0.32$ to $0.74$. Far outside the data at $x_\star=-3$, the
+middle 90% of plausible predictions stretch across more than three orders of
+magnitude, from $4\times10^{-5}$ to $0.09$, and the posterior predictive
+($0.019$) is $4.6$ times the plug-in value ($0.0041$). At $x_\star=7$, the same
+amplification occurs for the probability of label $0$ ($0.017$ versus $0.003$).
+Because probabilities this close to $0$ or $1$ are easiest to compare on the
+log-odds scale $\log\frac{P}{1-P}$, we plot both curves across a wider range
+with the training inputs marked along the bottom.
 
 ```{.python .input #mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-2}
 def log_odds(p):
@@ -418,125 +438,122 @@ d2l.plot([xs, xs, x], [plug_xs, pred_xs, rug],
          figsize=(5, 3))
 ```
 
-On the log-odds scale the plug-in is the straight line
-$\theta_0+\theta_1x$. Inside the data the posterior predictive lies on top of
-it; outside $[0,4]$ it bends away from the line toward 0. Two effects produce
-the gap, and they point in opposite directions. First, the mode is not the
-mean. The posterior mean has a steeper slope than the MAP, and a steeper line
-moves the prediction away from $\tfrac12$ far out on either side. Second,
-averaging $\operatorname{sigmoid}$ over a spread of logits moves the
-prediction toward $\tfrac12$, because the sigmoid flattens at its ends. On the
-far side of the data the plausible vectors with a shallow slope give
-probabilities that are large compared with the typical one, and they dominate
-the average.
+On the log-odds scale, the plug-in prediction is simply the straight line
+$\theta_0+\theta_1x$. Inside $[0,4]$, the posterior predictive hugs that line;
+outside the training data, it bends back toward zero. Two competing effects
+create this gap. First, the posterior mean has a steeper slope than the MAP
+estimate, which pushes extreme predictions *away* from $\tfrac12$. Second,
+averaging the sigmoid over a spread of logits pulls predictions *toward*
+$\tfrac12$: far from the data, plausible parameter vectors with shallower
+slopes produce much larger probabilities than the typical vector, and those
+larger probabilities dominate the average.
 
-Which effect wins, and by how much? A short calculation gives the size of the
-second. Where the probability is small, $\operatorname{sigmoid}(a)\approx
-e^a$, so the predictive is roughly the average of $e^a$ over the posterior of
-the logit $a=\mathbf z_\star^\top\boldsymbol\theta$. If $a$ were Gaussian
-with mean $\mu$ and variance $s^2$, that average would be
-$\mathbb{E}[e^a]=e^{\mu+s^2/2}$: averaging would lift the log-probability
-by $s^2/2$ above its value at the mean logit. At $x_\star=-3$ the grid gives
-$s^2/2=2.87$, which promises a factor of $e^{2.87}\approx18$. We measured
-$4.6$, a rise of only $1.51$ on the log scale. The formula is wrong by almost
-a factor of two in the exponent, and it is worth seeing where the other
-$1.36$ went. The last two lines of the cell walk from the plug-in to the
-predictive one step at a time:
+Which effect wins, and by how much? A quick back-of-the-envelope calculation
+estimates the size of the averaging effect. Where the probability is small,
+$\operatorname{sigmoid}(a)\approx e^a$, so the predictive probability is
+roughly the posterior average of $e^a$ for the logit
+$a=\mathbf z_\star^\top\boldsymbol\theta$. If $a$ were Gaussian with mean $\mu$
+and variance $s^2$, its moment generating function would give
+$\mathbb{E}[e^a]=e^{\mu+s^2/2}$, raising the log-probability by $s^2/2$ above
+the value at the mean logit. At $x_\star=-3$, the grid gives $s^2/2=2.87$,
+which would predict a factor of $e^{2.87}\approx18$. Yet the actual factor is
+$4.6$, a rise of only $1.51$ on the log scale. Where did the missing $1.36$
+nats go? The last two lines of the code above walk from the plug-in to the
+posterior predictive one step at a time:
 
 | step at $x_\star=-3$ | log-probability | change |
-|:--|--:|--:|
+|:--|:--:|--:|
 | plug-in: the logit at the mode | $-5.49$ | |
 | the posterior mean of the logit | $-6.06$ | $-0.57$ |
 | add $s^2/2$, as for a Gaussian logit | $-3.19$ | $+2.87$ |
 | average $e^a$ over the logit's actual distribution | $-3.66$ | $-0.47$ |
 | average $\operatorname{sigmoid}(a)$ instead of $e^a$: the predictive | $-3.98$ | $-0.32$ |
 
-Three corrections, all downward, separate $2.87$ from $1.51$. The first is
-the first effect above. The rise of $s^2/2$ starts from the mean logit, not
-from the plug-in's, and the mean logit lies $0.57$ lower, because the
-posterior mean has the steeper slope. The second is that the logit is not
-Gaussian. The skew of the posterior gives it a long tail toward very negative
-values and a short one toward zero, and the average of $e^a$ is made almost
-entirely by the tail toward zero; with less of that tail than a Gaussian
-would have, the average is lower by $0.47$. The third is the approximation
-$\operatorname{sigmoid}(a)\approx e^a$ itself. The vectors that dominate the
-average are the ones whose probabilities at $x_\star$ are no longer small,
-and there the sigmoid has begun to flatten and lies below $e^a$, which takes
-another $0.32$. Together, $2.87-0.57-0.47-0.32=1.51$.
+Three downward corrections account for the entire difference between $2.87$ and
+$1.51$. First, the $s^2/2$ boost starts from the mean logit rather than the
+plug-in logit, and the steeper posterior mean sits $0.57$ lower. Second, the
+logit is skewed rather than Gaussian: it has a long tail toward very negative
+values and a shorter tail toward zero, where the average of $e^a$ gets almost
+all of its mass, trimming another $0.47$. Third, the vectors that dominate the
+average have probabilities at $x_\star=-3$ that are no longer tiny, so the
+sigmoid bends below $e^a$ and subtracts the final $0.32$. Altogether,
+$2.87-0.57-0.47-0.32=1.51$.
 
-So the Gaussian formula is a guide and no more: it gives the direction of the
-effect and its order of magnitude. It also gives the scaling, and that part
-survives. The logit
-$\mathbf z_\star^\top\boldsymbol\theta$ has variance
-$\textrm{Var}(\theta_0)+2x_\star\textrm{Cov}(\theta_0,\theta_1)+x_\star^2\textrm{Var}(\theta_1)$,
-which grows quadratically with the distance from the data, while the shift
-of the mean grows only linearly. So the second effect wins far out, and
-inside the data both effects are small (Exercise
+The Gaussian calculation is therefore a useful guide rather than an exact law:
+it gets the direction, the rough scale, and the asymptotic dependence on
+$x_\star$ right. Specifically, the logit variance
+$\textrm{Var}(\theta_0)+2x_\star\textrm{Cov}(\theta_0,\theta_1)+x_\star^2\textrm{Var}(\theta_1)$
+grows quadratically with distance from the data, whereas the mean shift grows
+only linearly. Far from the training inputs, the variance term inevitably wins,
+while inside the data both effects remain negligible (Exercise
 :exref:`ex_mdl-bayesian-computation-moderated-predictions`).
 
-The larger number is not necessarily closer to the truth. The line that
-generated these data gives $\operatorname{sigmoid}(-3-1.5\cdot3)=
-\operatorname{sigmoid}(-7.5)\approx0.0006$ at $x_\star=-3$, below both
-numbers: twenty points cannot pin the slope down, and the prior pulls it
-toward zero. That value does lie inside the printed 90% range, as it should
-for a typical data set. The posterior predictive is the probability that the model
-and the prior assign to the label once the disagreement among plausible
-vectors is counted. It is exact in one sense: if nature draws the parameters
-from the prior and the labels from the model, then among all the worlds that
-produce these twenty points the label at $x_\star$ is 1 with this
-probability. The rest of the section asks how to compute such averages when
-no grid is possible.
+Notice that the larger predictive probability is not necessarily closer to the
+data-generating truth. The true line gives
+$\operatorname{sigmoid}(-3-1.5\cdot3)=\operatorname{sigmoid}(-7.5)\approx0.0006$
+at $x_\star=-3$, which lies below both the plug-in and the posterior predictive
+because twenty points cannot pin down the slope and the prior shrinks it toward
+zero. That true probability does fall comfortably inside the 90% posterior
+interval, as expected for a typical dataset. The posterior predictive does not
+claim to know the true parameter; rather, it gives the exact probability of
+$y_\star=1$ averaged over all parameter vectors consistent with the prior and
+the twenty observations. The rest of this section asks how to compute such
+averages when the parameter space is too large for a grid.
 
 ## Rejection and Importance Sampling
 :label:`sec_mdl-bayes-importance`
 
-The Laplace Gaussian is centered at the mode and has no skew. Draws from the
-exact posterior would get every moment right at once, because their average
-estimates any posterior expectation. The two methods of this section turn
-draws from a simple distribution $q$, the *proposal*, into draws or weighted
-draws from the posterior, and they use only the ratio $\widetilde p/q$.
+The Laplace approximation is fast, but it centers on the mode and ignores
+skewness. If we could draw samples directly from the exact posterior, their
+empirical average would estimate any posterior expectation cleanly, capturing
+skewness and tails automatically. The two methods in this section turn draws
+from a tractable *proposal* distribution $q$ into exact or weighted draws from
+the posterior, relying only on the ratio $\widetilde p/q$.
 
 ### Rejection Sampling
 :label:`subsec_mdl-bayes-rejection`
 
-The simplest exact sampler keeps some draws and discards the rest. Choose a
-proposal $q$ that we can sample and evaluate, and a constant $M$ with
-$Mq(\boldsymbol\theta)\ge\widetilde p(\boldsymbol\theta)$ for every
-$\boldsymbol\theta$, so that $Mq$ is an envelope over the unnormalized
-posterior. Draw $\boldsymbol\theta\sim q$ and keep it with probability
+The simplest exact sampler draws candidates from $q$, keeps some, and discards
+the rest. Choose a proposal $q$ that is easy to sample and evaluate, along with
+a constant $M$ such that $Mq(\boldsymbol\theta)\ge\widetilde p(\boldsymbol\theta)$
+for every $\boldsymbol\theta$, forming an envelope above the unnormalized
+posterior. For each draw $\boldsymbol\theta\sim q$, we keep it with probability
 
 $$
 a(\boldsymbol\theta)=\frac{\widetilde p(\boldsymbol\theta)}{M\,q(\boldsymbol\theta)}.
 $$
 :eqlabel:`eq_mdl-bayes-rejection`
 
-The acceptance probability is the height of the target as a fraction of the
-height of the envelope at the drawn point. The kept draws then have density
-$p(\boldsymbol\theta\mid\mathcal D)$, and a draw is kept with probability
-$p(\mathcal D)/M$. To see this, note that a draw lands in a small region $d\boldsymbol\theta$ around
-$\boldsymbol\theta$ with probability $q(\boldsymbol\theta)\,d\boldsymbol\theta$
-and is kept with probability $a(\boldsymbol\theta)$, so it lands there and is
-kept with probability $\widetilde p(\boldsymbol\theta)\,d\boldsymbol\theta/M$.
-Integrating over $\boldsymbol\theta$, a draw is kept with probability
-$\int\widetilde p/M=p(\mathcal D)/M$. Dividing the first probability by the
-second, a kept draw has density $\widetilde p(\boldsymbol\theta)/p(\mathcal
-D)=p(\boldsymbol\theta\mid\mathcal D)$.
+Geometrically, the acceptance probability is the ratio of the target height to
+the envelope height at the proposed point. Every accepted draw is an exact
+sample from $p(\boldsymbol\theta\mid\mathcal D)$, and the overall acceptance
+rate is $p(\mathcal D)/M$. The verification takes two lines: a proposal lands
+in an infinitesimal region $d\boldsymbol\theta$ around $\boldsymbol\theta$ with
+probability $q(\boldsymbol\theta)\,d\boldsymbol\theta$ and is accepted with
+probability $a(\boldsymbol\theta)$, so the joint probability of landing there
+and being kept is $\widetilde p(\boldsymbol\theta)\,d\boldsymbol\theta/M$.
+Integrating over all $\boldsymbol\theta$ yields the marginal acceptance
+probability $\int\widetilde p/M=p(\mathcal D)/M$, and dividing the joint
+density by this marginal gives the conditional density of a kept draw,
+$\widetilde p(\boldsymbol\theta)/p(\mathcal D)=p(\boldsymbol\theta\mid\mathcal D)$.
 
-The evidence appears only in the acceptance rate, never in the decision to
-keep a draw. With the prior as the proposal, the ratio $\widetilde p/q$ is the
-likelihood and $M$ is its maximum, and the rule reads: draw parameters from the
-prior, and keep each with probability likelihood over best likelihood.
+Crucially, the unknown evidence appears only in the acceptance rate, never in
+the accept-or-reject rule itself. If we choose the prior as the proposal $q$,
+then $\widetilde p/q$ is simply the likelihood and $M$ is its maximum value: we
+draw parameter vectors from the prior and keep each with probability equal to
+its likelihood divided by the maximum likelihood.
 
-On the coin with 9 heads and 4 tails under a uniform prior, the likelihood
-$\theta^9(1-\theta)^4$ is largest at $\theta=9/13$, where it equals
-$M=(9/13)^9(4/13)^4\approx3.3\times10^{-4}$. The evidence is
+To see how quickly rejection sampling degrades as data accumulate, consider the
+coin with 9 heads and 4 tails under a uniform prior. The likelihood
+$\theta^9(1-\theta)^4$ peaks at $\theta=9/13$ with height
+$M=(9/13)^9(4/13)^4\approx3.3\times10^{-4}$, while the evidence is
 $p(\mathcal D)=\int_0^1\theta^9(1-\theta)^4\,d\theta=9!\,4!/14!\approx1.0\times10^{-4}$,
-so the acceptance rate is $0.305$. With ten times the data, 90 heads and 40
-tails, it is $0.10$, and with a hundred times it is $0.03$. The rate falls
-like $1/\sqrt n$ because the posterior's width does, while the prior's stays
-fixed. In $d$ dimensions the posterior's volume shrinks like $n^{-d/2}$, and
-so does the acceptance rate. A simulation of the coin with 100,000 draws from
-the prior agrees.
+giving an acceptance rate of $0.305$. Multiply the data by ten (90 heads and 40
+tails) and the acceptance rate falls to $0.10$; multiply by a hundred and it
+drops to $0.03$. Because the posterior width shrinks like $1/\sqrt n$ while the
+prior stays fixed, the acceptance rate decays as $1/\sqrt n$ in one dimension
+and as $n^{-d/2}$ in $d$ dimensions. A quick simulation with 100,000 draws from
+the uniform prior confirms the calculation.
 
 ```{.python .input #mdl-bayesian-computation-rejection-sampling}
 N = 100_000
@@ -548,16 +565,18 @@ print(f'acceptance {len(kept) / N:.3f}, mean {kept.mean():.3f}, '
       f'sd {kept.std():.3f}')
 ```
 
-Two limits remain. The bound $M$ must be known, which it rarely is beyond
-toy models, and for a fixed amount of data per parameter the acceptance rate
-falls at least exponentially with the dimension.
+Two serious obstacles limit rejection sampling in practice. First, we must know
+a valid upper bound $M$, which is rarely available outside simple models.
+Second, even with a fixed number of observations per parameter, the acceptance
+rate decays at least exponentially with the dimension $d$.
 
 ### Importance Weights
 
-Rejection sampling discards most of its draws. We can keep every draw instead
-and give it the weight $w=\widetilde p/q$ that rejection sampling used to flip
-a coin. To see that this works, write a posterior expectation as a ratio of
-two integrals and multiply and divide by $q$ inside both:
+Rejection sampling throws away most of the draws it generates. Rather than
+using the ratio $w=\widetilde p/q$ to flip a coin and discard candidates, we
+can keep every draw and weight it by $w$. To see why this works, express any
+posterior expectation as a ratio of two integrals and multiply and divide by
+$q$ inside both:
 
 $$
 \mathbb{E}_{p(\cdot\mid\mathcal D)}[h(\boldsymbol\theta)]
@@ -573,32 +592,38 @@ $$
 :eqlabel:`eq_mdl-bayes-importance`
 
 The denominator $\mathbb{E}_q[w]$ equals the unknown evidence
-$p(\mathcal D)=\int\widetilde p$, and we never need its value, because the
-same constant scales the numerator. Replacing both
-expectations by averages over draws $\boldsymbol\theta_1,\ldots,\boldsymbol\theta_N\sim q$
-gives **self-normalized importance sampling**,
-$\sum_sw_sh(\boldsymbol\theta_s)/\sum_sw_s$. By the law of large numbers it
-converges to the posterior expectation; at finite $N$ it is slightly biased,
-because it is a ratio of two random averages. Products of many likelihood
-terms underflow, so the weights are computed in log space with the largest
-log-weight subtracted, as in the log-sum-exp trick. With the prior as the
-proposal the weight is the likelihood: each draw from the prior counts by
-how well it explains the data.
+$p(\mathcal D)=\int\widetilde p$, and we never need to compute it explicitly
+because the same normalizing constant scales both numerator and denominator.
+Replacing the two expectations with sample averages over draws
+$\boldsymbol\theta_1,\ldots,\boldsymbol\theta_N\sim q$ gives
+**self-normalized importance sampling**,
+$\sum_sw_sh(\boldsymbol\theta_s)/\sum_sw_s$. By the law of large numbers, this
+ratio converges to the exact posterior expectation as $N\to\infty$, though at
+finite $N$ it carries a small bias because it is a ratio of two random
+averages. Since products of many likelihood terms quickly underflow in floating
+point, we always compute log-weights and subtract the largest log-weight before
+exponentiating, just as in the log-sum-exp trick. When $q$ is the prior, the
+importance weight reduces to the likelihood: every prior draw is weighted by
+how well it explains the observed data.
 
 ### The Effective Sample Size
 
-A weighted sample in which one draw carries all the weight is worth one draw,
-whatever $N$ is. The **effective sample size** (ESS) of the normalized weights
-$\bar w_s=w_s/\sum_rw_r$,
+Keeping every draw does not mean every draw helps equally. A weighted sample in
+which a single draw carries nearly all the weight is effectively worth just one
+draw, no matter how large $N$ is. To quantify this, we define the
+**effective sample size** (ESS) from the normalized weights
+$\bar w_s=w_s/\sum_rw_r$:
 
 $$
-N_{\mathrm{eff}}=\frac{1}{\sum_{s=1}^N\bar w_s^2},
+N_{\mathrm{eff}}=\frac{1}{\sum_{s=1}^N\bar w_s^2}.
 $$
 :eqlabel:`eq_mdl-bayes-is-ess`
 
-equals $N$ when all weights are equal and $1$ when a single draw carries all
-of them. It estimates, roughly, the number of independent posterior draws that
-the weighted sample is worth, and we shall see two ways in which it misleads.
+When all weights are equal ($\bar w_s=1/N$), $N_{\mathrm{eff}}=N$; when one
+draw takes all the weight, $N_{\mathrm{eff}}=1$. Roughly speaking, the ESS
+estimates how many independent draws from the exact posterior the weighted
+sample is worth. As we will soon see, however, it can still mislead in two
+important ways.
 
 **Proposition.** As $N\to\infty$,
 
@@ -610,24 +635,27 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-ess-limit`
 
-where $p$ is the normalized posterior. With the same proposal, this limit is
-at least the acceptance rate $p(\mathcal D)/M$ of rejection sampling.
+where $p$ is the normalized posterior. For the same proposal $q$, this limiting
+efficiency is always at least the acceptance rate $p(\mathcal D)/M$ of
+rejection sampling.
 
-**Proof.** Multiplying numerator and denominator of the definition by $1/N^2$
-gives $N_{\mathrm{eff}}/N=(\frac1N\sum_sw_s)^2/(\frac1N\sum_sw_s^2)$, and the
-law of large numbers applies to both averages. Writing $w=p(\mathcal D)\,p/q$
-gives $\mathbb{E}_q[w^2]=p(\mathcal D)^2\int p^2/q$ and
-$\mathbb{E}_q[w]=p(\mathcal D)$, hence the $\chi^2$ form. Finally, $w\le M$
-gives $\mathbb{E}_q[w^2]\le M\,\mathbb{E}_q[w]$, so the limit is at least
-$\mathbb{E}_q[w]/M=p(\mathcal D)/M$. $\blacksquare$
+**Proof.** Dividing numerator and denominator of :eqref:`eq_mdl-bayes-is-ess`
+by $N^2$ gives
+$N_{\mathrm{eff}}/N=(\frac1N\sum_sw_s)^2/(\frac1N\sum_sw_s^2)$, and the law
+of large numbers applies to both averages. Substituting $w=p(\mathcal D)\,p/q$
+yields $\mathbb{E}_q[w^2]=p(\mathcal D)^2\int p^2/q$ and
+$\mathbb{E}_q[w]=p(\mathcal D)$, giving the $\chi^2$-divergence expression.
+Finally, since $w\le M$, we have $\mathbb{E}_q[w^2]\le M\,\mathbb{E}_q[w]$, so
+the limit is at least $\mathbb{E}_q[w]/M=p(\mathcal D)/M$. $\blacksquare$
 
-The ESS is therefore a sample estimate of how far $q$ is from $p$. For large
-$N$, importance sampling keeps at least as many effective draws as rejection
-sampling would accept, and it needs no bound $M$. On the coin with the
-uniform prior as the proposal,
-$\mathbb{E}_q[w^2]=\int_0^1\theta^{18}(1-\theta)^8\,d\theta$, and the limit is
-$0.42$, against the acceptance rate $0.305$. We reweight the draws that the
-rejection sampler made, instead of discarding two thirds of them.
+The ESS is therefore an empirical measure of how closely $q$ matches $p$. In
+the large-$N$ limit, importance sampling retains at least as many effective
+draws as rejection sampling accepts, without ever needing an envelope bound $M$.
+Returning to the coin with a uniform prior proposal,
+$\mathbb{E}_q[w^2]=\int_0^1\theta^{18}(1-\theta)^8\,d\theta$, which gives a
+limiting ESS fraction of $0.42$ compared with the rejection acceptance rate of
+$0.305$. We can reuse the exact same draws from the rejection cell and simply
+reweight them instead of discarding two-thirds of them.
 
 ```{.python .input #mdl-bayesian-computation-the-effective-sample-size}
 w = lik / lik.sum()                           # normalized weights
@@ -636,30 +664,34 @@ print(f'ESS fraction {1 / (w @ w) / N:.3f}, mean {post_coin:.3f}, '
       f'sd {np.sqrt(w @ (theta_coin - post_coin)**2):.3f}')
 ```
 
-The limit also shows how badly a proposal can fail. For a Gaussian target with standard deviation $s_p$ and a Gaussian
-proposal at the same center with standard deviation $s_q=rs_p$, the limit is
-$\sqrt{2r^2-1}/r^2$ (Exercise :exref:`ex_mdl-bayesian-computation-weight-ess`).
-It is $0.83$ at $r=0.8$, $1$ at $r=1$, $0.66$ at $r=2$ and $0.46$ at $r=3$, and
-it is zero for $r\le1/\sqrt2$, where $\mathbb{E}_q[w^2]=\infty$. A proposal
-that is too narrow fails far more abruptly than one that is too wide.
+The limiting formula also exposes how sharply a poorly scaled proposal can
+fail. For a one-dimensional Gaussian target with standard deviation $s_p$ and a
+centered Gaussian proposal with standard deviation $s_q=rs_p$, the limiting ESS
+fraction is $\sqrt{2r^2-1}/r^2$ (Exercise
+:exref:`ex_mdl-bayesian-computation-weight-ess`). That curve equals $0.83$ at
+$r=0.8$, peaks at $1$ when $r=1$, and declines gently to $0.66$ at $r=2$ and
+$0.46$ at $r=3$. For $r\le1/\sqrt2$, however, it collapses abruptly to zero
+because $\mathbb{E}_q[w^2]=\infty$. A proposal that is too narrow fails far
+more catastrophically than one that is too wide.
 
-Two conditions make the identity :eqref:`eq_mdl-bayes-importance` hold:
-$q(\boldsymbol\theta)>0$ wherever $\widetilde p(\boldsymbol\theta)>0$, and
-$\mathbb{E}_q|wh|<\infty$. A central limit theorem for the estimator, and
-with it error bars of order $1/\sqrt N$, holds when $\mathbb{E}_q[w^2]$ and
-$\mathbb{E}_q[w^2h^2]$ are also finite. Even then the ESS can mislead, as
-:numref:`fig_mdl-prob-bayes-importance` shows.
+Two conditions guarantee that the importance identity
+:eqref:`eq_mdl-bayes-importance` holds: $q(\boldsymbol\theta)>0$ everywhere
+$\widetilde p(\boldsymbol\theta)>0$, and $\mathbb{E}_q|wh|<\infty$. For a
+central limit theorem, and hence $O(1/\sqrt N)$ error bars, we additionally need
+$\mathbb{E}_q[w^2]$ and $\mathbb{E}_q[w^2h^2]$ to be finite. Even when those
+conditions hold, the finite-sample ESS can be dangerously optimistic, as
+:numref:`fig_mdl-prob-bayes-importance` illustrates.
 
-![Importance sampling of a two-mode target with two proposals; stems show the normalized weights of 24 draws. Left: a narrow proposal never reaches the right-hand mode. Its weights are nearly equal (ESS 23 of 24), and its estimate is wrong. Right: a broader proposal samples both modes. Its weights are less equal (ESS 17 of 24), yet its estimate is far better. The ESS measures how unequal the weights are, not whether the proposal found the mass.](../img/mdl-prob-bayes-importance.svg)
+![Importance sampling of a two-mode target using two different proposals; stems show the normalized weights of 24 draws. Left: a narrow proposal never visits the right-hand mode, so its weights look nearly uniform (ESS 23 of 24) even though its estimate is badly wrong. Right: a broader proposal covers both modes; its weights are less uniform (ESS 17 of 24), yet its estimate is far more accurate. The ESS measures weight inequality, not whether the proposal found all of the posterior mass.](../img/mdl-prob-bayes-importance.svg)
 :label:`fig_mdl-prob-bayes-importance`
 
 ### Proposals for the Logistic Posterior
 
-Which proposal should we use on the logistic posterior? We compare two
-Gaussians, the prior with 20,000 draws and the Laplace approximation with
-5,000, by the ESS as a fraction of the draws, the largest normalized weight,
-and the error of the estimated posterior mean in units of posterior standard
-deviations, measured against the grid.
+How should we choose a proposal for our logistic regression posterior? Let us
+compare two Gaussians, the prior with 20,000 draws and the Laplace approximation
+with 5,000 draws, by recording the ESS as a fraction of the draws, the largest
+normalized weight, and the error in the estimated posterior mean relative to
+the grid reference, measured in units of posterior standard deviations.
 
 ```{.python .input #bayesian-computation-importance}
 def gaussian_logpdf(samples, mean, cov):
@@ -684,50 +716,58 @@ for name, mean, cov, N in [('prior', np.zeros(2), prior_var * np.eye(2), 20000),
           f'{w_max:.4f}, error in sds {error.round(3)}')
 ```
 
-With the prior as the proposal, the ESS is between about 1% and 10% of the
-draws, because most draws land where the likelihood is negligible. The
-Laplace proposal, aimed at the posterior, keeps most of its draws as
-effective, typically between about 55% and 95%. Both estimates usually agree
-with the grid mean to within a few hundredths of a posterior standard
-deviation, and rarely miss by more than about $0.15$.
+Using the prior as the proposal yields an ESS of only about 1% to 10% of the
+draws, because most prior samples land where the likelihood is negligible.
+Aiming the proposal at the posterior with the Laplace Gaussian raises the ESS
+dramatically, typically keeping between 55% and 95% of the draws effective.
+Both proposals usually estimate the posterior mean within a few hundredths of a
+posterior standard deviation of the grid reference, and rarely err by more than
+$0.15$.
 
-The Laplace proposal has a defect that the printed ESS does not show. Far
-out, the posterior's tails are those of the prior: along any ray
-$\boldsymbol\theta=t\mathbf v$ the log-likelihood falls at most linearly in
-$t$ (Exercise :exref:`ex_mdl-bayesian-computation-posterior-tails`), while the
-log prior falls like $t^2/(2\tau^2)$. The integral
-$\mathbb{E}_q[w^2]=\int\widetilde p^2/q$ for a Gaussian proposal
-$\mathcal N(\mathbf m,\mathbf S)$ is then infinite as soon as one eigenvalue
-of $\mathbf S$ lies below $\tau^2/2=2$. Both eigenvalues of the Laplace
-covariance, about $1.17$ and $0.05$, are far below 2, so its weights have infinite variance in every direction, not along
-one thin axis.
+Yet the Laplace proposal hides a subtle defect that a typical ESS printout
+never reveals. Far from the origin, the posterior's tails are governed by the
+prior: along any ray $\boldsymbol\theta=t\mathbf v$, the log-likelihood decays
+at most linearly in $t$ (Exercise
+:exref:`ex_mdl-bayesian-computation-posterior-tails`), whereas the log prior
+decays quadratically as $-t^2/(2\tau^2)$. Consequently, for a Gaussian proposal
+$\mathcal N(\mathbf m,\mathbf S)$, the integral
+$\mathbb{E}_q[w^2]=\int\widetilde p^2/q$ diverges whenever any eigenvalue of
+$\mathbf S$ falls below $\tau^2/2=2$. Here both eigenvalues of the Laplace
+covariance (roughly $1.17$ and $0.05$) lie well below $2$, so the importance
+weights have infinite variance in *every* direction, not just along a single
+thin axis.
 
-The region where the weights blow up lies many Laplace standard deviations
-out, and most runs of 5,000 draws never visit it. In a few runs out of a
-hundred a single far draw takes a large share of the weight, and the ESS
-drops far below its usual value. A single run cannot reveal the defect;
-repeated runs, or the analysis of the tails, can. A Student-$t$ proposal,
-whose tails are heavier than any Gaussian's, removes the defect (Exercise
-:exref:`ex_mdl-bayesian-computation-posterior-tails`). So does the defensive
-mixture $q=0.9\,\mathcal N(\boldsymbol\theta_{\mathrm{MAP}},\mathbf
-H^{-1})+0.1\,\text{prior}$: since $q$ is at least a tenth of the prior, every
-weight is at most ten times the likelihood, which is at most one.
+Why did our 5,000-draw run look so healthy? Because the region where the
+weights blow up sits many Laplace standard deviations away, so most runs of
+5,000 draws never stumble into it. In a few runs out of a hundred, however, a
+single distant draw captures a huge share of the total weight and the ESS
+plummets. A single run cannot expose this instability; only repeated runs or a
+tail analysis can. Two simple fixes restore finite weight variance: replacing
+the Gaussian with a heavier-tailed Student-$t$ proposal (Exercise
+:exref:`ex_mdl-bayesian-computation-posterior-tails`), or using a *defensive
+mixture* such as
+$q=0.9\,\mathcal N(\boldsymbol\theta_{\mathrm{MAP}},\mathbf H^{-1})+0.1\,\text{prior}$.
+Because the mixture density is always at least one-tenth of the prior density,
+every weight is bounded above by ten times the likelihood, which never exceeds
+$1$.
 
-The evidence cancelled in the ratio of the two averages. What remains is the
-need for one global proposal that covers the whole posterior, and in high
-dimension no simple distribution does (Exercise
+Importance sampling cancels the unknown evidence automatically, but it still
+demands a single global proposal $q$ that covers the entire posterior. In high
+dimensions, no simple global distribution can do that (Exercise
 :exref:`ex_mdl-bayesian-computation-higher-dimension`).
 
 ## Markov Chain Monte Carlo
 :label:`sec_mdl-bayes-mcmc`
 
-Instead of one proposal for the whole posterior, we can make local moves and
-let a random walk spend time in each region in proportion to its posterior
-mass. The walk is a Markov chain. Its next state depends on the current
-state only, through a *transition rule* $T(\boldsymbol\theta'\mid\boldsymbol\theta)$,
-the probability of moving from $\boldsymbol\theta$ to $\boldsymbol\theta'$. A
-distribution $\pi$ is *stationary* for the chain if states distributed as
-$\pi$ are still distributed as $\pi$ after one step:
+Rather than searching for one global proposal that blankets the whole
+posterior, we can explore the parameter space through local moves, designing a
+random walk that spends time in each region in proportion to its posterior
+mass. Such a walk is a *Markov chain*: its next state depends only on its
+current state through a *transition rule*
+$T(\boldsymbol\theta'\mid\boldsymbol\theta)$, the probability of moving from
+$\boldsymbol\theta$ to $\boldsymbol\theta'$. A distribution $\pi$ is
+*stationary* for the chain if drawing the current state from $\pi$ leaves the
+next state distributed as $\pi$ as well:
 
 $$
 \sum_{\boldsymbol\theta}\pi(\boldsymbol\theta)\,
@@ -736,30 +776,33 @@ T(\boldsymbol\theta'\mid\boldsymbol\theta)=\pi(\boldsymbol\theta')
 $$
 :eqlabel:`eq_mdl-bayes-stationary`
 
-with an integral in place of the sum for continuous parameters. We want a
-chain whose stationary distribution is the posterior.
+where the sum becomes an integral for continuous parameters. Our goal is to
+construct a simple transition rule whose stationary distribution is the
+posterior.
 
 ### The Metropolis Rule
 
-The Metropolis rule builds such a chain from any symmetric proposal
+The Metropolis algorithm builds such a chain from any symmetric proposal
 $g(\boldsymbol\theta'\mid\boldsymbol\theta)=g(\boldsymbol\theta\mid\boldsymbol\theta')$,
-such as a Gaussian step $\boldsymbol\theta'=\boldsymbol\theta+\mathbf
-L\boldsymbol\epsilon$. From the current state $\boldsymbol\theta$, propose
-$\boldsymbol\theta'\sim g(\cdot\mid\boldsymbol\theta)$. If
-$\widetilde p(\boldsymbol\theta')\ge\widetilde p(\boldsymbol\theta)$, move to
-$\boldsymbol\theta'$. Otherwise move with probability
-$\widetilde p(\boldsymbol\theta')/\widetilde p(\boldsymbol\theta)$, and stay
-at $\boldsymbol\theta$ with the remaining probability. A rejection repeats
-the current state, and the repeat counts as a state of the chain
-(:numref:`fig_mdl-prob-bayes-metropolis`).
+such as a local Gaussian step
+$\boldsymbol\theta'=\boldsymbol\theta+\mathbf L\boldsymbol\epsilon$. From the
+current state $\boldsymbol\theta$, we propose a candidate
+$\boldsymbol\theta'\sim g(\cdot\mid\boldsymbol\theta)$. If the candidate has
+higher or equal posterior density,
+$\widetilde p(\boldsymbol\theta')\ge\widetilde p(\boldsymbol\theta)$, we always
+move to $\boldsymbol\theta'$. If it moves downhill, we accept it with
+probability $\widetilde p(\boldsymbol\theta')/\widetilde p(\boldsymbol\theta)$
+and otherwise remain at $\boldsymbol\theta$. Crucially, a rejected proposal
+repeats the current state, and that repeat counts as the next state in the
+chain (:numref:`fig_mdl-prob-bayes-metropolis`).
 
-![A Metropolis random walk on posterior contours. From the starting square, each step proposes a local move; uphill moves are always accepted (path), downhill moves only sometimes, and a rejected proposal (crosses) leaves the chain in place for another step. In the long run the time the walk spends in a region is proportional to its posterior mass.](../img/mdl-prob-bayes-metropolis.svg)
+![A Metropolis random walk on posterior contours. From the starting square, each step proposes a local move: uphill moves are always accepted (path), downhill moves are accepted probabilistically, and rejected proposals (crosses) leave the chain in place for another step. In the long run, the fraction of time spent in any region matches its posterior mass.](../img/mdl-prob-bayes-metropolis.svg)
 :label:`fig_mdl-prob-bayes-metropolis`
 
-Hastings :cite:`Hastings.1970` extended the rule to asymmetric proposals. The
-only change is a factor,
+Hastings :cite:`Hastings.1970` generalized the rule to asymmetric proposals by
+multiplying the density ratio by a correction factor,
 $g(\boldsymbol\theta\mid\boldsymbol\theta')/g(\boldsymbol\theta'\mid\boldsymbol\theta)$,
-that corrects for a proposal that favors one direction. A proposal is then
+that compensates for any directional bias in the proposal. A candidate is then
 accepted with probability
 
 $$
@@ -772,15 +815,17 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-mh`
 
-A move toward a state the proposal rarely offers is accepted more readily, and
-for a symmetric proposal the factor is 1. The evidence cancels in the ratio of
-the two values of $\widetilde p$.
+Moves toward states that the proposal rarely visits are accepted more readily,
+and when $g$ is symmetric the correction factor equals $1$. Once again, the
+unknown evidence cancels in the ratio of $\widetilde p$ values.
 
-The smallest case has two states, with target $\pi=(\tfrac14,\tfrac34)$, and a
-proposal that always names the other state. From state 1 the ratio is 3, so
-the chain always moves. From state 2 the ratio is $\tfrac13$, so it moves with
-probability $\tfrac13$ and stays otherwise. The transition matrix, with rows
-for the current state, and the check that $\pi$ is stationary are
+The smallest possible chain illustrates why counting rejections is essential.
+Consider two states with target distribution $\pi=(\tfrac14,\tfrac34)$, and a
+symmetric proposal that always suggests the *other* state. From state $1$, the
+target ratio is $3$, so the chain always jumps to state $2$. From state $2$,
+the ratio is $\tfrac13$, so it jumps to state $1$ with probability $\tfrac13$
+and stays at state $2$ with probability $\tfrac23$. Writing the transition
+matrix with rows for the current state, we can check stationarity directly:
 
 $$
 \mathbf T=\begin{pmatrix}0&1\\\tfrac13&\tfrac23\end{pmatrix},
@@ -790,23 +835,25 @@ $$
 =\left(\tfrac14,\,\tfrac34\right).
 $$
 
-If we counted only accepted states, the sequence would alternate 2, 1, 2, 1
-and give $(\tfrac12,\tfrac12)$. The repeated 2s after rejections give
-state 2 its correct weight
+If we discarded rejections and recorded only accepted moves, the sequence would
+simply alternate $2, 1, 2, 1$, yielding $(\tfrac12,\tfrac12)$ instead of
+$(\tfrac14,\tfrac34)$. It is precisely the repeated visits to state $2$ after
+rejections that give state $2$ its proper weight
 (:numref:`fig_mdl-prob-bayes-two-state`).
 
-![The two-state Metropolis chain with target $\pi=(1/4,3/4)$. The flow from state 1 to state 2 is $\frac14\cdot1$ and the flow back is $\frac34\cdot\frac13$; both are $1/4$, so the occupation $(1/4,3/4)$ does not change from step to step. The self-loop carries the rejected moves from state 2; counting only accepted states would give $(1/2,1/2)$.](../img/mdl-prob-bayes-two-state.svg)
+![The two-state Metropolis chain with target $\pi=(1/4,3/4)$. The probability flow from state 1 to state 2 is $\frac14\cdot1$ and the return flow is $\frac34\cdot\frac13$; both equal $1/4$, so the occupation $(1/4,3/4)$ is preserved at every step. The self-loop represents rejected moves from state 2; recording only accepted moves would give $(1/2,1/2)$.](../img/mdl-prob-bayes-two-state.svg)
 :label:`fig_mdl-prob-bayes-two-state`
 
 ### Detailed Balance and Stationarity
 
-The figure shows why the chain keeps its distribution: the probability that
-flows from state 1 to state 2 in one step equals the probability that flows
-back, so no state gains or loses mass. This balance of flows holds for every
-pair of states, and it is the reason Metropolis works. If the reader keeps
-one result of this section, it should be this one.
+:numref:`fig_mdl-prob-bayes-two-state` captures the core mechanism behind
+Metropolis–Hastings: in one step, the probability mass flowing from state $1$
+to state $2$ equals the probability mass flowing back, so neither state gains
+nor loses probability. When this pairwise equilibrium holds for every pair of
+states, the target distribution is guaranteed to be stationary. If you remember
+one theoretical result from this section, make it this one.
 
-**Proposition.** If
+**Proposition.** If a transition rule satisfies *detailed balance*,
 
 $$
 \pi(\boldsymbol\theta)\,T(\boldsymbol\theta'\mid\boldsymbol\theta)
@@ -815,17 +862,18 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-detailed-balance`
 
-a condition called *detailed balance*, then $\pi$ is stationary. The
-Metropolis–Hastings chain satisfies detailed balance with
-$\pi\propto\widetilde p$.
+then $\pi$ is stationary for the chain. Moreover, the Metropolis–Hastings chain
+satisfies detailed balance with $\pi\propto\widetilde p$.
 
-**Proof.** Sum both sides over $\boldsymbol\theta$. The left side becomes the
-left side of :eqref:`eq_mdl-bayes-stationary`, and the right side is
-$\pi(\boldsymbol\theta')\sum_{\boldsymbol\theta}T(\boldsymbol\theta\mid\boldsymbol\theta')=\pi(\boldsymbol\theta')$,
-because the chain moves somewhere from $\boldsymbol\theta'$. For the second
-claim, detailed balance is trivial when $\boldsymbol\theta'=\boldsymbol\theta$.
-When $\boldsymbol\theta'\ne\boldsymbol\theta$, a move happens only if it is
-proposed and accepted, so
+**Proof.** Summing both sides of :eqref:`eq_mdl-bayes-detailed-balance` over
+$\boldsymbol\theta$ yields the left-hand side of
+:eqref:`eq_mdl-bayes-stationary`, while the right-hand side simplifies to
+$\pi(\boldsymbol\theta')\sum_{\boldsymbol\theta}T(\boldsymbol\theta\mid\boldsymbol\theta')=\pi(\boldsymbol\theta')$
+because the transition probabilities from $\boldsymbol\theta'$ sum to $1$. For
+the second claim, detailed balance is automatic when
+$\boldsymbol\theta'=\boldsymbol\theta$. When
+$\boldsymbol\theta'\ne\boldsymbol\theta$, a move occurs if and only if
+$\boldsymbol\theta'$ is proposed and accepted, so
 
 $$
 \pi(\boldsymbol\theta)\,T(\boldsymbol\theta'\mid\boldsymbol\theta)
@@ -835,22 +883,24 @@ $$
 \pi(\boldsymbol\theta')\,g(\boldsymbol\theta\mid\boldsymbol\theta')\big\},
 $$
 
-which is symmetric in the two states. The normalizer of $\pi$ cancels inside
-$\alpha$, so $\widetilde p$ may be used in place of $\pi$. $\blacksquare$
+which is visibly symmetric in $\boldsymbol\theta$ and $\boldsymbol\theta'$.
+Because the normalizing constant of $\pi$ cancels inside $\alpha$, we can
+substitute $\widetilde p$ for $\pi$. $\blacksquare$
 
-The one step that is not routine is multiplying $\pi g$ into the minimum,
-which turns the acceptance rule into a symmetric expression. For continuous
-parameters the rejection mass needs care (Exercise
+The key algebraic step is pulling $\pi g$ inside the minimum, which reveals the
+symmetry at a glance. On a continuous state space, the point mass of rejected
+moves requires slightly more care (Exercise
 :exref:`ex_mdl-bayesian-computation-mh-acceptance`).
 
-Stationarity alone does not make a chain converge to $\pi$ from any start.
-The chain must also be able to reach every region of positive posterior mass,
-and it must not cycle deterministically between regions. Under these two
-conditions the long-run fraction of time it spends in a region equals the
-posterior mass of the region.
+Stationarity alone does not guarantee that a chain converges to $\pi$ from an
+arbitrary starting point. The chain must also be able to reach every region of
+positive posterior mass, and it must not cycle deterministically between
+regions. Under these two mild conditions, the long-run fraction of time the
+chain spends in any region converges to its posterior probability.
 
-The rule takes a few lines of code. The Gaussian step has the shape of the
-Laplace covariance, $\mathbf L\mathbf L^\top=\mathbf H^{-1}$.
+Implementing Metropolis takes only a few lines. Below we shape the Gaussian
+proposal using the Cholesky factor of the Laplace covariance,
+$\mathbf L\mathbf L^\top=\mathbf H^{-1}$.
 
 ```{.python .input #bayesian-computation-metropolis}
 def metropolis(log_target, start, proposal_chol, n_steps):
@@ -867,11 +917,12 @@ def metropolis(log_target, start, proposal_chol, n_steps):
     return states, accepted / n_steps
 ```
 
-We run four chains of 12,000 steps from starts scattered twice as widely as
-the Laplace Gaussian, $\boldsymbol\theta_{\mathrm{MAP}}+2\mathbf
-L\boldsymbol\epsilon$, and propose steps $1.1\,\mathbf
-L\boldsymbol\epsilon$. The first states of a chain still depend on where it
-started, so we discard the first 2,000 of each chain, the *warm-up*.
+We launch four independent chains of 12,000 steps each from over-dispersed
+starting points scattered twice as widely as the Laplace Gaussian,
+$\boldsymbol\theta_{\mathrm{MAP}}+2\mathbf L\boldsymbol\epsilon$, proposing
+steps of size $1.1\,\mathbf L\boldsymbol\epsilon$. Because early states still
+remember where each chain began, we discard the first 2,000 iterations of each
+chain, the *warm-up* period, before computing averages.
 
 ```{.python .input #mdl-bayesian-computation-detailed-balance-and-stationarity-1}
 def run_chains(scale, n_chains=4, n_steps=12000, warmup=2000):
@@ -888,64 +939,72 @@ chains, rates = run_chains(1.1)
 print('acceptance rates:', rates.round(3))
 ```
 
-About half of the proposals are accepted in every chain. The acceptance
-rule, not the Gaussian, fixes the stationary distribution, so a poorly shaped
-proposal would slow the chain down but not bias it.
+Roughly half of all proposals are accepted across every chain. Remember that
+the Metropolis acceptance rule, not the Gaussian proposal, determines the
+stationary distribution, so a badly shaped proposal would slow the chain down
+without introducing bias.
 
 ### Diagnostics for Markov Chain Mixing
 :label:`subsec_mdl-bayes-mcmc-diagnostics`
 
-Consecutive states of a chain are correlated, and a chain starts wherever we
-put it. Before averaging its states we ask three questions and answer each
-with one tool.
+Unlike independent samples, consecutive states in a Markov chain are
+correlated, and every chain begins wherever we initialize it. Before trusting
+any average computed from a chain, we ask three diagnostic questions and answer
+each with a concrete metric.
 
-*Have the chains lost their starts and agreed?* A trace plot of each chain
-shows sticking and drift, and $\widehat R$ puts a number on the disagreement.
-For several chains of $N$ states each, let $W$ be the average of their
-variances and $B$ be $N$ times the variance of their means. Then
+*Have the chains forgotten their starting points and converged to the same
+distribution?* Visually, a trace plot of each chain exposes sticking or drift,
+while $\widehat R$ quantifies disagreement across chains. Given multiple chains
+of $N$ states each, let $W$ denote the average within-chain variance and $B$
+denote $N$ times the variance of the chain means. Then
 
 $$
 \widehat R^2=\frac{\frac{N-1}{N}W+\frac1NB}{W}.
 $$
 :eqlabel:`eq_mdl-bayes-split-rhat`
 
-The numerator estimates the posterior variance and overstates it while the
-chains still disagree, whereas $W$ understates it while each chain has seen
-only part of the posterior. So $\widehat R$ compares two estimates of the
-same variance, and it falls toward 1 as the chains come to agree. The
-**split $\widehat R$** applies the formula to the
-two halves of every chain, so that a single chain that drifts looks like two
-chains that disagree. A value within $0.01$ of 1 is necessary for trusting the
-chains, but not sufficient: chains that all miss the same mode agree with
-each other.
+The numerator estimates the total posterior variance and tends to overestimate
+it while the chains remain separated, whereas $W$ underestimates it while each
+chain has explored only a piece of the posterior. Thus $\widehat R$ compares
+two variance estimates and approaches $1$ as the chains mix together. In
+practice, we compute **split $\widehat R$** by splitting every chain into two
+halves first, so that even a single drifting chain registers as two disagreeing
+chains. Staying within $0.01$ of $1$ is necessary before trusting the output,
+though never sufficient on its own: chains that all miss the same distant mode
+will happily agree with one another.
 
-*How many independent draws are the states worth?* Let $\rho_k$ be the
-correlation between states $k$ steps apart. The integrated autocorrelation
-time $\kappa=1+2\sum_{k\ge1}\rho_k$ is the number of states that carry as much
-information as one independent draw, so $c$ chains of $N$ states each are
-worth $N_{\mathrm{eff}}=cN/\kappa$ draws, the same symbol and the same
-meaning as for the importance weights.
+*How many independent draws are these correlated states actually worth?* Let
+$\rho_k$ be the autocorrelation between states $k$ steps apart. The integrated
+autocorrelation time $\kappa=1+2\sum_{k\ge1}\rho_k$ counts how many chain
+steps carry the same information as a single independent draw. Consequently,
+$c$ chains of $N$ states each yield an effective sample size of
+$N_{\mathrm{eff}}=cN/\kappa$, carrying the same meaning and symbol as in
+importance sampling.
 
-The smallest case is the autoregressive sequence of order one, AR(1),
-$x_t=\phi x_{t-1}+\varepsilon_t$ with independent noise $\varepsilon_t$ and
-$|\phi|<1$: each state keeps a fraction $\phi$ of the previous one. Its
-autocorrelations are $\rho_k=\phi^k$, so
+The simplest model of serial correlation is the first-order autoregressive
+process, AR(1), given by $x_t=\phi x_{t-1}+\varepsilon_t$ with independent
+noise $\varepsilon_t$ and $|\phi|<1$: at each step the chain retains a fraction
+$\phi$ of its previous value. Its lag-$k$ autocorrelation is $\rho_k=\phi^k$,
+which gives
 
 $$
 \kappa=1+2\sum_{k\ge1}\phi^k=\frac{1+\phi}{1-\phi}.
 $$
 
-With $\phi=0.9$, $\kappa=19$, and 10,000 states are worth about 530
-independent draws; with $\phi=0.99$, $\kappa=199$, and they are worth about 50.
+At $\phi=0.9$, we get $\kappa=19$, meaning 10,000 states are worth only about
+530 independent draws; at $\phi=0.99$, $\kappa=199$, leaving barely 50
+independent draws.
 
-In practice the estimated far autocorrelations are mostly noise, so the code
-sums them in pairs $\rho_{2k}+\rho_{2k+1}$ and stops at the first negative
-pair. Production software refines both tools, with rank-normalized
-$\widehat R$ and separate effective sample sizes for the bulk and the tails.
+Because estimated autocorrelations at very large lags are dominated by noise,
+our implementation groups them into consecutive pairs $\rho_{2k}+\rho_{2k+1}$
+and truncates the sum at the first negative pair. Production inference packages
+refine both diagnostics further, using rank-normalized $\widehat R$ and
+separate effective sample sizes for the bulk and tails of the distribution.
 
-*How wrong is the estimated mean?* By the central limit theorem for the
-chain, the **Monte Carlo standard error** (MCSE) of a posterior mean is the
-posterior standard deviation divided by $\sqrt{N_{\mathrm{eff}}}$.
+*How accurate is our estimated posterior mean?* By the Markov chain central
+limit theorem, the **Monte Carlo standard error** (MCSE) of an estimated
+posterior mean is the posterior standard deviation divided by
+$\sqrt{N_{\mathrm{eff}}}$.
 
 ```{.python .input #bayesian-computation-mcmc-diagnostics}
 def split_rhat(chains):
@@ -977,10 +1036,11 @@ def chain_ess(chains):
     return ess
 ```
 
-Now the test. If the error bar is right, the MCMC mean of our four chains
-should differ from the grid mean by about one MCSE. We also compare the
-measured $\kappa$ of the slope with the AR(1) formula evaluated at the lag-1
-autocorrelation $\rho_1$.
+Let us put these diagnostics to the test. If our error bar is calibrated, the
+MCMC mean from our four chains should sit within roughly one MCSE of the exact
+grid mean. We also check how closely the measured autocorrelation time $\kappa$
+of the slope matches the AR(1) formula evaluated at the lag-1 autocorrelation
+$\rho_1$.
 
 ```{.python .input #mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-1}
 flat = chains.reshape(-1, 2)
@@ -995,27 +1055,28 @@ print(f'slope: rho_1 {rho1:.2f}, AR(1) kappa {(1 + rho1) / (1 - rho1):.1f},'
       f' measured kappa {len(flat) / ess[1]:.1f}')
 ```
 
-A trace plot of the slope's first 600 states after warm-up completes the
-checks.
+A trace plot of the first 600 post-warm-up iterations for the slope rounds out
+our diagnostic checks.
 
 ```{.python .input #mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-2}
 d2l.plot(np.arange(600), [chain[:600, 1] for chain in chains],
          xlabel='iteration', ylabel='slope', figsize=(6, 2.5))
 ```
 
-The split $\widehat R$ is within $0.01$ of 1, and the four traces overlap.
-The ESS is about a tenth of the 40,000 states, so $\kappa\approx10$: the
-lag-1 autocorrelation is about $0.8$, and the AR(1) formula predicts a
-$\kappa$ close to the measured one. The MCMC mean differs from the grid mean
-by about one MCSE. This is the strongest check in the section,
-because it tests the error bar against the truth.
+The diagnostics look clean: split $\widehat R$ sits within $0.01$ of $1$, and
+the four trace plots interleave closely. The ESS is roughly one-tenth of the
+40,000 kept states, giving $\kappa\approx10$, right in line with the AR(1)
+prediction from the lag-1 autocorrelation $\rho_1\approx0.8$. Most reassuringly,
+the MCMC mean differs from the exact grid mean by roughly one MCSE, verifying
+that our uncertainty estimate actually matches the true estimation error.
 
 ### Proposal Scale and Mixing Failures
 
-The acceptance rate is the number a sampler reports most readily, and on its
-own it says little. We rerun the chains with the proposal scale set to 0.05
-and to 10 in place of 1.1. Before reading the output, guess which of the two
-runs is worth fewer draws.
+The acceptance rate is the easiest number to print from a Metropolis run, yet
+by itself it tells us very little. Let us rerun the four chains with the
+proposal scale set to $0.05$ and to $10$ instead of $1.1$. Before looking at
+the numbers, pause and guess which of the two extremes produces fewer effective
+draws.
 
 ```{.python .input #mdl-bayesian-computation-proposal-scale-and-mixing-failures}
 for scale in [0.05, 10]:
@@ -1025,37 +1086,40 @@ for scale in [0.05, 10]:
           f'min ESS {chain_ess(bad_chains).min():.0f}')
 ```
 
-With tiny steps almost every proposal is accepted, about 97%. Yet
-$\widehat R$ is well above $1.01$ and the 40,000 states are worth a few dozen
-draws, because each accepted step moves the chain only a short distance. With
-huge steps about 2% of the proposals are accepted, and the chain repeats each
-state many times, so the ESS is a few hundred. The best scale lies between
-(Exercise :exref:`ex_mdl-bayesian-computation-proposal-scale`). A random walk moves
-uphill only by chance, whereas a proposal that follows the gradient of
-$\log\widetilde p$ moves uphill by construction. Such proposals come from
-Langevin dynamics (:numref:`sec_mdl-langevin-sampling`), and their
-Metropolis-adjusted version is Exercise
-:exref:`ex_mdl-bayesian-computation-mala`.
+With tiny steps (scale $0.05$), roughly 97% of proposals are accepted, yet
+$\widehat R$ rises well above $1.01$ and 40,000 iterations yield only a few
+dozen effective draws because each step barely moves. With huge steps (scale
+$10$), only about 2% of proposals are accepted and the chain gets stuck
+repeating states for long stretches, though it still achieves a few hundred
+effective draws. The optimal step size lies comfortably between these two
+extremes (Exercise :exref:`ex_mdl-bayesian-computation-proposal-scale`). More
+fundamentally, a blind random walk moves uphill only by luck, whereas a
+proposal guided by the gradient of $\log\widetilde p$ drifts uphill by design.
+Such gradient-informed moves arise from Langevin dynamics
+(:numref:`sec_mdl-langevin-sampling`), and their Metropolis-adjusted version is
+developed in Exercise :exref:`ex_mdl-bayesian-computation-mala`.
 
 ## Variational Inference
 :label:`sec_mdl-bayes-approximations`
 
-Sampling estimates each expectation anew and carries its Monte Carlo error.
-*Variational inference* replaces the integration by one optimization. It
-chooses a simple family of distributions $q_\psi$ with parameters $\psi$ and
-optimizes $\psi$ so that $q_\psi$ is as close to the posterior as possible.
-Expectations are then computed under $q_\psi$, in closed form or by cheap
-sampling.
+Sampling methods estimate each posterior expectation anew and always carry
+Monte Carlo noise. *Variational inference* takes a fundamentally different
+route, turning integration into optimization. We choose a tractable family of
+distributions $q_\psi$ indexed by variational parameters $\psi$, optimize
+$\psi$ so that $q_\psi$ approximates the posterior as closely as possible, and
+then compute expectations under $q_\psi$ either in closed form or by fast
+independent sampling.
 
 ### The Evidence Lower Bound
 
-We need an objective that measures closeness to the posterior although the
-posterior's normalizer is unknown. We already have one. In
-:numref:`sec_mdl-latent-em-elbo` a guess $q$ about a latent variable gave a
-lower bound on the log evidence, and the gap was a KL divergence
-:eqref:`eq_mdl-elbo-gap`. Let the parameters $\boldsymbol\theta$ play the
-role of the latent variable and the data set $\mathcal D$ that of the
-observation. The identity then reads
+To optimize $q_\psi$, we need an objective that measures closeness to the
+posterior without requiring the unknown normalizing constant $p(\mathcal D)$.
+Fortunately, we already derived such an objective in
+:numref:`sec_mdl-latent-em-elbo`, where an approximating distribution $q$ over a
+latent variable gave a lower bound on the log evidence whose gap was a KL
+divergence :eqref:`eq_mdl-elbo-gap`. Treating the parameter vector
+$\boldsymbol\theta$ as the latent variable and the dataset $\mathcal D$ as the
+observation yields the exact same identity:
 
 $$
 \log p(\mathcal D)
@@ -1065,7 +1129,7 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-elbo-gap`
 
-Because the KL divergence is non-negative, $\mathcal L$ is the
+Since the KL divergence is always non-negative, $\mathcal L(\psi)$ is the
 **evidence lower bound** (ELBO) of $q_\psi$,
 
 $$
@@ -1076,42 +1140,48 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-vi-elbo`
 
-Raising $\mathcal L$ lowers the KL divergence by the same amount, because
-their sum is the constant $\log p(\mathcal D)$. Maximizing the ELBO over
-$\psi$ therefore minimizes the KL divergence, and the unknown normalizer
-drops out as an additive constant. Every term inside the expectation can be
-evaluated pointwise, and the expectation can be estimated by sampling from
-$q_\psi$.
+Because the two terms on the right-hand side of
+:eqref:`eq_mdl-bayes-elbo-gap` sum to the fixed constant $\log p(\mathcal D)$,
+every unit increase in $\mathcal L(\psi)$ decreases
+$D_{\textrm{KL}}(q_\psi\,\|\,p(\cdot\mid\mathcal D))$ by exactly one unit.
+Maximizing the ELBO over $\psi$ is therefore equivalent to minimizing the KL
+divergence, with the unknown evidence dropping out as an additive constant.
+Every term inside the expectation can be evaluated pointwise, and the
+expectation itself can be estimated easily using draws from $q_\psi$.
 
 ### The Direction of the KL Divergence
 
-Variational inference minimizes $D_{\textrm{KL}}(q\|p)=\int q\log(q/p)$, the
-*reverse* KL divergence, with $q$ first. Its integrand is large wherever
-$q>0$ and $p\approx0$, so $q$ retreats from regions the posterior does not
-cover and tends to settle on one mode: reverse KL is *mode-seeking*. The
-*forward* divergence $D_{\textrm{KL}}(p\|q)=\int p\log(p/q)$ is large wherever
-$p>0$ and $q\approx0$, so it pushes $q$ to cover all of the posterior's mass:
-forward KL is *mass-covering*. For a Gaussian family its minimizer matches the
-posterior's mean and covariance, but it takes its expectation under the
-posterior, which we cannot sample; the reverse direction needs only draws
-from $q$.
-:numref:`fig_mdl-prob-bayes-kl-modes` shows both on a target with two modes.
+Notice the order of arguments in :eqref:`eq_mdl-bayes-elbo-gap`: variational
+inference minimizes $D_{\textrm{KL}}(q\|p)=\int q\log(q/p)$, the *reverse* KL
+divergence, with $q$ in the first slot. Because its integrand blows up wherever
+$q>0$ while $p\approx0$, reverse KL penalizes $q$ heavily for placing mass
+where the posterior has none. As a result, $q$ shrinks away from low-density
+regions and tends to lock onto a single mode: reverse KL is *mode-seeking*. By
+contrast, the *forward* divergence $D_{\textrm{KL}}(p\|q)=\int p\log(p/q)$
+penalizes regions where $p>0$ and $q\approx0$, forcing $q$ to stretch across
+all of the posterior's mass: forward KL is *mass-covering*. For a Gaussian
+family, minimizing forward KL simply matches the posterior's exact mean and
+covariance, but computing it requires expectations under the intractable
+posterior $p$, whereas reverse KL needs only expectations under $q$.
+:numref:`fig_mdl-prob-bayes-kl-modes` contrasts the two behaviors on a bimodal
+target.
 
-![The direction of the KL divergence decides how a too-simple approximation fails. For a two-mode target, the best reverse-KL Gaussian, the one variational inference finds, settles on a single mode and understates the uncertainty; the best forward-KL Gaussian covers the mass of both modes and puts its bulk where the target is small.](../img/mdl-prob-bayes-kl-modes.svg)
+![The direction of the KL divergence determines how an overly simple approximation fails. On a two-mode target, the reverse-KL Gaussian found by variational inference locks onto a single mode and underestimates uncertainty, whereas the forward-KL Gaussian covers both modes and places its peak in the low-density valley between them.](../img/mdl-prob-bayes-kl-modes.svg)
 :label:`fig_mdl-prob-bayes-kl-modes`
 
 ### A Mean-Field Gaussian Fit
 
-The simplest family is the *mean-field* Gaussian
-$q=\mathcal N(\mathbf m,\operatorname{diag}(\mathbf s^2))$, which treats the
-coordinates as independent. To follow the gradient of the ELBO we write a draw
-as $\boldsymbol\theta=\mathbf m+\mathbf s\odot\boldsymbol\epsilon$ with
-$\boldsymbol\epsilon\sim\mathcal N(\mathbf 0,\mathbf I)$. The distribution of
-$\boldsymbol\epsilon$ does not depend on $\mathbf m$ and $\mathbf s$, so the
-gradient moves inside the expectation
-(:numref:`subsec_mdl-stochastic-gradient-estimators`). The entropy term
-$-\mathbb{E}_q[\log q]$ equals $\sum_j\log s_j$ plus a constant, and the
-gradients are
+The simplest variational family is the *mean-field* Gaussian
+$q=\mathcal N(\mathbf m,\operatorname{diag}(\mathbf s^2))$, which models the
+parameters as independent. To compute gradients of the ELBO with respect to
+$\mathbf m$ and $\log\mathbf s$, we reparameterize a draw as
+$\boldsymbol\theta=\mathbf m+\mathbf s\odot\boldsymbol\epsilon$ with
+$\boldsymbol\epsilon\sim\mathcal N(\mathbf 0,\mathbf I)$. Because the noise
+distribution does not depend on the variational parameters, we can move the
+gradient inside the expectation
+(:numref:`subsec_mdl-stochastic-gradient-estimators`). The entropy
+$-\mathbb{E}_q[\log q]$ equals $\sum_j\log s_j$ up to an additive constant,
+giving the unbiased gradient formulas
 
 $$
 \nabla_{\mathbf m}\mathcal L
@@ -1123,48 +1193,56 @@ $$
 $$
 :eqlabel:`eq_mdl-bayes-vi-gradients`
 
-where $\mathbf 1$ is the derivative of the entropy $\sum_j\log s_j$ with
-respect to $\log\mathbf s$. The first gradient moves the mean uphill on
-average; the second widens $q$ until the entropy's push is balanced by the
-posterior's curvature. Before running it, we can predict the answer on a
-Gaussian target.
+where $\mathbf 1$ comes from differentiating the entropy $\sum_j\log s_j$ with
+respect to $\log\mathbf s$. The first gradient shifts the mean uphill on
+average; the second expands $q$ until the entropy's outward push balances the
+posterior's downward curvature. Before running the optimizer on our logistic
+posterior, we can predict what will happen by solving the Gaussian target case
+exactly.
 
-**Proposition.** For the target $p=\mathcal N(\boldsymbol\mu,\boldsymbol\Lambda^{-1})$
-with precision matrix $\boldsymbol\Lambda$, the mean-field Gaussian that
-minimizes $D_{\textrm{KL}}(q\|p)$ has mean $\boldsymbol\mu$ and variances
-$s_j^2=1/\Lambda_{jj}$, the *conditional* variances of the target. For two
-coordinates with correlation $\rho$, each $s_j$ is $\sqrt{1-\rho^2}$ times the
-marginal standard deviation.
+**Proposition.** For a Gaussian target
+$p=\mathcal N(\boldsymbol\mu,\boldsymbol\Lambda^{-1})$ with precision matrix
+$\boldsymbol\Lambda$, the mean-field Gaussian minimizing
+$D_{\textrm{KL}}(q\|p)$ has mean $\boldsymbol\mu$ and variances
+$s_j^2=1/\Lambda_{jj}$, the *conditional* variances of the target. In two
+dimensions with correlation $\rho$, each $s_j$ is $\sqrt{1-\rho^2}$ times the
+true marginal standard deviation.
 
-**Proof.** Up to a constant,
+**Proof.** Dropping constants independent of $q$,
 $D_{\textrm{KL}}(q\|p)=-\sum_j\log s_j+\tfrac12\mathbb{E}_q[(\boldsymbol\theta-\boldsymbol\mu)^\top\boldsymbol\Lambda(\boldsymbol\theta-\boldsymbol\mu)]$.
-Under $q$ the coordinates are independent with means $m_j$ and variances
-$s_j^2$, so the cross terms of the fluctuations have mean zero and the
-expectation is $\sum_j\Lambda_{jj}s_j^2+(\mathbf m-\boldsymbol\mu)^\top\boldsymbol\Lambda(\mathbf m-\boldsymbol\mu)$.
-The part in $\mathbf m$ is a positive definite quadratic, minimized at
-$\mathbf m=\boldsymbol\mu$. Setting the derivative in $s_j$ to zero,
-$-1/s_j+\Lambda_{jj}s_j=0$, gives $s_j^2=1/\Lambda_{jj}$. For $d=2$,
-inverting the covariance gives
+Because the coordinates are independent under $q$ with means $m_j$ and
+variances $s_j^2$, all cross terms in the fluctuations vanish in expectation,
+leaving
+$\sum_j\Lambda_{jj}s_j^2+(\mathbf m-\boldsymbol\mu)^\top\boldsymbol\Lambda(\mathbf m-\boldsymbol\mu)$.
+Since $\boldsymbol\Lambda$ is positive definite, the quadratic in $\mathbf m$
+is minimized at $\mathbf m=\boldsymbol\mu$. Setting the derivative with respect
+to $s_j$ to zero, $-1/s_j+\Lambda_{jj}s_j=0$, gives $s_j^2=1/\Lambda_{jj}$.
+For $d=2$, inverting the $2\times2$ covariance matrix yields
 $1/\Lambda_{jj}=\sigma_j^2(1-\rho^2)$, where $\sigma_j$ is the marginal
 standard deviation. $\blacksquare$
 
-A factorized $q$ cannot tilt its axes to follow a correlation, and under the
-reverse KL it also shrinks to the width of a slice through the posterior
-rather than the width of the whole posterior
-(:numref:`fig_mdl-prob-bayes-mean-field`). The shrinkage is a
-property of the mean-field family under the reverse KL: a full-covariance
-Gaussian fitted by the same objective to a Gaussian target is exact. In the
-running example $\rho=-0.86$, so the mean-field standard deviations
-should be about $\sqrt{1-0.86^2}=0.51$ times the true ones, about half.
+A diagonal Gaussian cannot rotate its axes to align with a correlated
+posterior, and under reverse KL it pays a steep penalty for spilling into
+low-density corners. It therefore contracts to the width of a conditional slice
+through the posterior rather than the full marginal width
+(:numref:`fig_mdl-prob-bayes-mean-field`). Notice that this contraction is
+specifically a consequence of combining a factorized family with reverse KL: a
+full-covariance Gaussian fitted by the exact same ELBO objective to a Gaussian
+target recovers it without error. In our logistic regression example,
+$\rho=-0.86$, so the proposition predicts that mean-field standard deviations
+will be roughly $\sqrt{1-0.86^2}=0.51$ times the true marginal standard
+deviations, about half as wide.
 
-![Diagonal Gaussians fitted to a correlated Gaussian posterior with standard deviations $(1,0.5)$ and correlation $\rho=-0.85$, drawn as 2-sd ellipses. A factorized family cannot tilt. Under the reverse KL (orange) it also shrinks to the conditional width, $\sqrt{1-\rho^2}\approx0.53$ times the marginal standard deviation; under the forward KL (green) it keeps the marginal width and covers mass the posterior does not have.](../img/mdl-prob-bayes-mean-field.svg)
+![Diagonal Gaussians fitted to a correlated Gaussian posterior with standard deviations $(1,0.5)$ and correlation $\rho=-0.85$, shown as 2-sd ellipses. Because a factorized family cannot tilt, reverse KL (orange) contracts to the conditional width, $\sqrt{1-\rho^2}\approx0.53$ times the marginal standard deviation, whereas forward KL (green) preserves the marginal width while spilling into low-density regions.](../img/mdl-prob-bayes-mean-field.svg)
 :label:`fig_mdl-prob-bayes-mean-field`
 
-The fit starts at the Laplace Gaussian and takes 3,000 steps of stochastic
-gradient ascent on :eqref:`eq_mdl-bayes-vi-gradients`, with 256 draws per
-step and a step size that decays like $1/\sqrt t$. We report the average of
-the last 1,000 iterates, which removes most of the optimization noise, next
-to the prediction of the proposition from the grid's own $\rho$.
+Let us check this prediction numerically. We initialize at the Laplace
+approximation and run 3,000 iterations of stochastic gradient ascent using
+:eqref:`eq_mdl-bayes-vi-gradients`, with 256 reparameterized draws per step and
+a learning rate decaying as $1/\sqrt t$. Averaging the final 1,000 iterates
+smooths out optimization noise, letting us compare the fitted standard
+deviations directly against the proposition's prediction using the grid
+correlation $\rho$.
 
 ```{.python .input #bayesian-computation-variational}
 m_vi, log_s_vi = theta_map.copy(), np.log(laplace_sd)
@@ -1189,22 +1267,25 @@ print('predicted sd, grid sd * sqrt(1 - rho^2):',
       (post_sd * np.sqrt(1 - post_rho**2)).round(3))
 ```
 
-The mean-field mean lies within about a tenth of a posterior standard
-deviation of the grid mean. Its standard deviations are about half the grid's
-and match the predicted values, $0.54$ and $0.25$, to within about $2\%$. The
-optimization has converged, and the remaining error comes from the family.
-Richer families remove it at a higher cost: full-covariance Gaussians
-(Exercise :exref:`ex_mdl-bayesian-computation-variational-families`),
-mixtures, and normalizing flows. A converged ELBO shows that the optimization
-within the family has stopped; it does not show that the family fits the
+The mean-field mean lands within roughly a tenth of a posterior standard
+deviation of the grid mean, while its standard deviations shrink to about half
+the true widths, matching our analytical predictions ($0.54$ and $0.25$) to
+within $2\%$. The optimizer has converged cleanly, so the remaining discrepancy
+comes entirely from the restrictive variational family. Richer families, such as
+full-covariance Gaussians (Exercise
+:exref:`ex_mdl-bayesian-computation-variational-families`), mixtures, or
+normalizing flows, close that gap at higher computational cost. Keep in mind
+that a converged ELBO only confirms that optimization has finished *within the
+chosen family*; by itself, it never certifies that the family actually fits the
 posterior.
 
 ## Comparison of the Methods
 :label:`sec_mdl-bayes-decision-map`
 
-We now have four answers for the same posterior, and one plot compares them
-on a single marginal, the density of the slope $\theta_1$: the exact density
-from the grid, the two Gaussians, and a histogram of the Metropolis states.
+We now have four distinct approximations to the exact same posterior. A single
+plot brings them side by side on the marginal density of the slope $\theta_1$:
+the exact grid curve, the Laplace and mean-field Gaussians, and a histogram of
+the Metropolis samples.
 
 ```{.python .input #bayesian-computation-comparison-plot}
 def gauss_pdf(t, mean, sd):
@@ -1221,11 +1302,11 @@ d2l.plot([b1, b1, b1, (edges[:-1] + edges[1:]) / 2],
          legend=['grid (exact)', 'Laplace', 'mean-field', 'Metropolis'])
 ```
 
-The Metropolis histogram follows the exact curve, skew included. The Laplace
-curve is centered at the mode, to the left of the exact mean, and slightly too
-narrow. The mean-field curve is about half as wide as the exact one, and the
-mean-field fit also reports a correlation of zero against the grid's
-$\rho=-0.86$.
+The Metropolis histogram tracks the exact posterior faithfully, skewness and
+all. The Laplace curve sits centered at the mode to the left of the true mean
+and is slightly too narrow. The mean-field Gaussian is roughly half as wide as
+the exact marginal, and by construction it reports a correlation of zero
+against the true $\rho=-0.86$.
 
 | Method | Representation | Main diagnostic | Characteristic failure |
 |----|----|----|----|
@@ -1236,51 +1317,58 @@ $\rho=-0.86$.
 | MCMC | correlated posterior draws | traces, split $\widehat R$, ESS, MCSE | slow mixing, unvisited modes |
 | Variational inference | optimized member of a family | comparison with samples | family too narrow; factorized $q$ too confident |
 
-Which one should we use? With a handful of parameters, a grid. For a smooth
-posterior with one mode, the Laplace approximation is the fast first answer
-and a good proposal. An expectation that needs an error bar calls for MCMC
-with its three diagnostics. Variational inference suits a fit that sits
-inside a training loop, provided we remember that its widths are too small.
-The two Gaussian approximations carry no check of their own, so their answers
-should be compared with a sampler whose error bar we trust.
+Which method should you reach for in practice? With only a handful of
+parameters, use a grid. For a smooth, unimodal posterior, the Laplace
+approximation gives a fast first answer and a strong starting proposal. When an
+expectation requires a trustworthy error bar, turn to MCMC paired with its
+three diagnostics. Variational inference shines when posterior approximation
+must sit inside a larger optimization loop, provided you remember that
+factorized families underestimate uncertainty. Because neither Gaussian
+approximation provides a self-contained accuracy check, both should be
+validated against a sampler whenever feasible.
 
-None of the four scales cleanly to the posterior of a large neural network.
-Importance weights degenerate as the dimension grows (Exercise
-:exref:`ex_mdl-bayesian-computation-higher-dimension`), a random walk needs
-more steps per independent draw, the Hessian has $d^2$ entries, and a
-factorized $q$ is too narrow by the factor computed here. A network's
-symmetries also copy every mode of its posterior, once for every permutation
-and sign flip of its hidden units (Exercise
-:exref:`ex_mdl-bayesian-computation-two-modes`). The book uses the ideas all
-the same, for other distributions known only up to a constant. The evidence
-lower bound trains the variational autoencoder :cite:`Kingma.Welling.2014`
-of :numref:`sec_diffusion-latent`, where an encoder network produces $q$,
-and discrete diffusion (:numref:`sec_diffusion-discrete`). Importance weights
-and their effective sample size let a policy gradient reuse old data
-(:numref:`sec_ppo`). The gradient-following proposal, without its accept
-step, is the Langevin sampler of score-based models
-(:numref:`sec_diffusion-denoising`). The sampling methods return averages
-over finitely many draws, and the next section asks how far such an average
-can be trusted when the draws are independent.
+It is worth being candid about scale: none of these four methods scales cleanly
+to the full parameter posterior of a large neural network. Importance weights
+collapse as dimension grows (Exercise
+:exref:`ex_mdl-bayesian-computation-higher-dimension`), random-walk MCMC needs
+progressively more steps per independent draw, the full Hessian has $d^2$
+entries, and mean-field $q$ understates uncertainty by the correlation factor
+we just derived. Worse still, a neural network's architectural symmetries
+duplicate every posterior mode for every permutation and sign flip of its
+hidden units (Exercise :exref:`ex_mdl-bayesian-computation-two-modes`). Even
+so, the core ideas of this section reappear throughout deep learning wherever a
+distribution is known only up to a normalizing constant. The evidence lower
+bound trains variational autoencoders :cite:`Kingma.Welling.2014`
+(:numref:`sec_diffusion-latent`), where an encoder network outputs $q$, as well
+as discrete diffusion models (:numref:`sec_diffusion-discrete`). Importance
+weights and effective sample size allow policy-gradient methods to reuse past
+trajectories (:numref:`sec_ppo`). And gradient-guided proposals, stripped of
+their accept–reject step, become the Langevin samplers powering score-based
+generative models (:numref:`sec_diffusion-denoising`). Finally, every sampling
+method returns an empirical average over finitely many draws; the next section
+asks how tightly such finite-sample averages concentrate around their
+expectations when the draws are independent.
 
 ## Summary
 
-A model trained to one parameter vector predicts as if that vector were
-certain. Far from the data the plausible vectors disagree by orders of
-magnitude, and the posterior predictive, which averages them, can give a
-rare label several times the plug-in probability. The average is an integral
-over a posterior known only up to its normalizer, and four methods compute it
-from quantities in which the normalizer cancels: the curvature of
-$\log\widetilde p$ at the mode (Laplace), the weight $\widetilde p/q$
-(rejection and importance sampling), the acceptance ratio
+Training a model to a single parameter vector treats that point estimate as if
+it were known with certainty. Far from the training data, plausible parameter
+vectors can disagree by orders of magnitude, and averaging over them in the
+posterior predictive can shift rare-event probabilities by a factor of several.
+Computing that average requires integrating against a posterior known only up
+to its normalizing constant. All four methods in this section sidestep the
+unknown constant by working only with ratios or differences where it cancels:
+local curvature at the mode (Laplace), density ratios $\widetilde p/q$
+(rejection and importance sampling), acceptance ratios
 $\widetilde p(\boldsymbol\theta')/\widetilde p(\boldsymbol\theta)$
-(Metropolis), and an objective that differs from a KL divergence by a
-constant (variational inference). The samplers carry their own checks (the
-weight ESS; the split $\widehat R$, $\kappa$ and the MCSE), and the two
-Gaussian approximations are checked against samples. None of the four
-reaches the posterior of a large network, but the evidence lower bound,
-importance weights and Langevin steps return in the book for other
-distributions known only up to a constant.
+(Metropolis–Hastings), and an optimization objective that differs from reverse
+KL divergence by a constant (variational inference). The samplers bring built-in
+diagnostics (weight ESS for importance sampling, and split $\widehat R$,
+autocorrelation time $\kappa$, and MCSE for MCMC), while Gaussian approximations
+must be checked against samples. Although full Bayesian inference remains
+intractable for large neural networks, the evidence lower bound, importance
+weights, and Langevin dynamics return across the book whenever we work with
+unnormalized distributions.
 
 ## Exercises
 

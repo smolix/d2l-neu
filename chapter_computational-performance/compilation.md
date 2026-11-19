@@ -485,8 +485,7 @@ and changes nothing but the parameters. The usual sequence of `zero_grad`,
 
 :begin_tab:`jax`
 The step is a pure function: it takes the parameters and the data and
-returns the loss and the updated parameters. The weights and biases are
-drawn uniformly from $[-1/\sqrt{1024}, 1/\sqrt{1024}]$.
+returns the loss and the updated parameters.
 :end_tab:
 
 We compile the step and time its first call, which includes the
@@ -505,6 +504,8 @@ t_compiled = d2l.Benchmark(lambda: compiled_step(net, X, Y)).time
 print(f'first call: {t_first:.1f} s\n'
       f'eager: {1000 * t_eager:.2f} ms, compiled: {1000 * t_compiled:.2f} ms\n'
       f'break-even: {t_first / (t_eager - t_compiled):.0f} steps')
+# explain is internal to torch; it clears the compile cache and recompiles
+print('graphs:', torch._dynamo.explain(train_step)(net, X, Y).graph_count)
 ```
 
 ```{.python .input #compilation-whole-step-compilation-measured}
@@ -577,21 +578,29 @@ read by the CPU.
 
 ```{.python .input #compilation-the-overhead-regime-capture-and-replay}
 %%tab pytorch
-deep = nn.Sequential(*[m for _ in range(60)  # 120 small kernels per call
+deep = nn.Sequential(*[m for _ in range(60)  # 120 operations per call
                        for m in (nn.Linear(256, 256, bias=False), nn.Tanh())])
 deep = deep.to(d2l.try_gpu())
 x = torch.randn(64, 256, device=d2l.try_gpu())
 
-replayed = torch.compile(deep, mode='reduce-overhead')
+fused = torch.compile(deep)  # Inductor kernels, launched one at a time
+replayed = torch.compile(deep, mode='reduce-overhead')  # As a CUDA graph
 with torch.no_grad():  # Inference: every call is a complete step
-    replayed(x)        # Compiles and warms up; the next call records
-    print(d2l.Benchmark(lambda: deep(x), desc='eager'))
-    print(d2l.Benchmark(lambda: replayed(x), desc='reduce-overhead'))
+    fused(x)
+    replayed(x)  # Compiles and warms up; the next call records
+    for desc, f in (('eager', deep), ('compiled', fused),
+                    ('reduce-overhead', replayed)):
+        t = d2l.Benchmark(lambda: f(x), repeats=100).time
+        print(f'{desc}: {1000 * t:.2f} ms/call, '
+              f'{1e6 * t / 120:.1f} µs per operation')
+replayed_step = torch.compile(train_step, mode='reduce-overhead')
+print(d2l.Benchmark(lambda: replayed_step(net, X, Y),
+                    desc='training step, reduce-overhead'))
 ```
 
 ```{.python .input #compilation-the-overhead-regime-capture-and-replay}
 %%tab jax
-def init_deep(key, depth=60, width=256):  # 120 small kernels per call
+def init_deep(key, depth=60, width=256):  # 120 operations per call
     return list(jax.random.uniform(key, (depth, width, width),
                                    minval=-width**-0.5, maxval=width**-0.5))
 
@@ -604,8 +613,10 @@ params = init_deep(d2l.get_key())
 x = jax.random.normal(d2l.get_key(), (64, 256))
 jitted = jax.jit(deep)
 jitted(params, x)  # First call compiles
-print(d2l.Benchmark(lambda: deep(params, x), desc='eager'))
-print(d2l.Benchmark(lambda: jitted(params, x), desc='jit'))
+for desc, f in (('eager', deep), ('jit', jitted)):
+    t = d2l.Benchmark(lambda: f(params, x), repeats=100).time
+    print(f'{desc}: {1000 * t:.2f} ms/call, '
+          f'{1e6 * t / 120:.1f} µs per operation')
 ```
 
 Without Python in the loop, the stack runs many times faster, at

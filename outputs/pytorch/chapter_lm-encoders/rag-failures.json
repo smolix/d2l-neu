@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b2fc490ec010b5bc53db89c1f0290e5d41158977c2188c0f3393f40cf9a7da54",
+    "d2l_lib_fingerprint": "sha256:c88890d6c303b5d24a88322d591ec30114236fc8e218a9339ec7040abfe310d9",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -23,12 +23,12 @@
       "outputs": []
     },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-3": {
-      "code_fingerprint": "sha256:3bd4f6f07d21d9d12fd00ad4ba45e295db74941d2c43e25a5602b7318aae8473",
+      "code_fingerprint": "sha256:5fec3365a44fb518dc7e32fff388dfee1ead9aa6f27834913ecff0387ad514f2",
       "kind": "text",
       "outputs": []
     },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-4": {
-      "code_fingerprint": "sha256:54d9e85bd6075d5f5072d663bcfcf5ab3a676a1dca41f465290a0aa9b6a6c0d9",
+      "code_fingerprint": "sha256:43d49bb067ad027388d4fac220ecb3d08b62eae27ff9629114843596a83c5af4",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "rag-failures-failures-and-fixes-in-retrieval-augmented-generation-6": {
-      "code_fingerprint": "sha256:585525fb13baf5cb8803d2eff4592e2b81b6c00039c987dc58b88e2c3696036b",
+      "code_fingerprint": "sha256:fccc81e454890352060b3c38c31e0c47018f55027ad01e0832057407b9266adc",
       "kind": "text",
       "outputs": [
         {
@@ -50,7 +50,7 @@
       ]
     },
     "rag-coverage": {
-      "code_fingerprint": "sha256:515ec1f0cd7c009bd7a1e166005977caab9577e7d006058d7ff80b8816819cdb",
+      "code_fingerprint": "sha256:93ad783d956fc9107dfd0e95ff45e5a18523f476093fabad16cdcb11e48ffd90",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +71,7 @@
       ]
     },
     "rag-stages": {
-      "code_fingerprint": "sha256:5b553e2bdf245a256b0e042d3e501fab0704cadd790a06505ac17219fda1fef4",
+      "code_fingerprint": "sha256:35d6c465d1d8b67a477e61776c2c25a9a54edc35eaec2a78fae6bf886a6e07fd",
       "kind": "text",
       "outputs": [
         {
@@ -82,34 +82,34 @@
       ]
     },
     "rag-failures-failures-by-stage-1": {
-      "code_fingerprint": "sha256:c6e02364794bedaacd79912fc1324ba512250d65afa1acc97c3007d2f8173d96",
+      "code_fingerprint": "sha256:ffab7027649f31dffacbbfb1b266a30f86bd6acb55b86ce16943bc422e083dd0",
       "kind": "text",
       "outputs": []
     },
     "rag-failures": {
-      "code_fingerprint": "sha256:0d1cfd518957383fc5547f32381ff2c74591331b1fff0f69196750043d86f7ce",
+      "code_fingerprint": "sha256:a2d7d4142436762c1b23ce82bfa85ca7e013b1cdd0a45d1f735a168f9b14df90",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "26 of 240 judged base answers on dev are not correct (0 unjudged, left out)\n               count              share\nnot_retrieved    0.0  0.00 [0.00, 0.00]\nranked_low       5.0  0.19 [0.04, 0.35]\nignored         12.0  0.46 [0.27, 0.65]\nunsupported      6.0  0.23 [0.08, 0.38]\nfalse_answer     2.0  0.08 [0.00, 0.19]\nfalse_abstain    1.0  0.04 [0.00, 0.12]\nthe largest class: ignored (the intervals overlap, next unsupported)\nits fix, written down before counting: {'order': 'edges', 'prompt': 'quote', 'max_new_tokens': 500}\n\n[ignored] dev-0000 (single): On unified-memory machines, how does the book say large mixture-of-\n    experts models compare in fitting and decoding speed to dense models with about the same\n    total size?\n  answer: On unified-memory machines, large models fit but decode slowly due to the lower\n    bandwidth of system RAM compared to VRAM [1]. However, a mixture-of-experts (MoE) model runs\n    only a few of its expert networks for each token, so it reads only its active parameters\n    [1]. Consequently, an MoE model decode\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ignored] dev-0008 (single): In PyTorch, what happens to modules that are placed in a plain\n    Python list rather than in a registered container such as `nn.Sequential` or\n    `nn.ModuleList`?\n  answer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the fo\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ranked_low] dev-0014 (single): When the book trains its fully convolutional network for\n    semantic segmentation, on what basis is the accuracy computed?\n  answer: The provided passages do not contain information about the specific basis on which\n    accuracy is computed when training the fully convolutional network. While the text explains\n    that semantic segmentation involves classifying images at the pixel level [2] and that the\n    input image and label correspond o\n  relevant chunk in the context: False\n  verdicts: {'correct': False, 'faithful': True, 'supported': None}\n\n[unsupported] dev-0021 (single): What two weights make up the hand-designed vertical edge\n    detector that subtracts each pixel's right-hand neighbor in a grayscale image?\n  answer: The hand-designed vertical edge detector uses the weights $(1, -1)$ [1]. This kernel\n    subtracts the value of each pixel from its right-hand neighbor to detect edges [1].\n    Specifically, it computes the difference between horizontally adjacent pixels, where the\n    first weight is 1 and the second is -1 [3]\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\n[unsupported] dev-0033 (single): In the masked diffusion variational lower bound, what\n    coefficient multiplies the expectation of the summed negative log-likelihood over positions\n    that remain masked at step t?\n  answer: Under the linear schedule, the coefficient that multiplies the negative log-likelihood\n    is $1/t$ [2]. This weight $w_t$ is derived from the formula $(1 - \\bar{\\alpha}_t)/(1 -\n    \\bar{\\alpha}_t - (1 - \\bar{\\alpha}_{t-1}))$, which simplifies to $1/t$ when $\\bar{\\alpha}_t\n    = 1 - t/T$ [2]. The text explicitl\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\nthe agent (claude-opus-5.5) against the rule on 31 cards: agreement 0.58\nagent          correct  ignored  ranked_low  unsupported\nrule                                                    \ncorrect              5        0           0            0\nfalse_abstain        0        0           1            0\nfalse_answer         2        0           0            0\nignored              4        7           1            0\nranked_low           0        0           5            0\nunsupported          3        1           1            1\n"
+          "text": "26 of 240 judged base answers on dev are not correct (0 unjudged, left out)\n               count              share  cites a relevant passage\nnot_retrieved      0  0.00 [0.00, 0.00]                         0\nranked_low         5  0.19 [0.04, 0.35]                         0\nignored           12  0.46 [0.27, 0.65]                        10\nunsupported        6  0.23 [0.08, 0.38]                         6\nfalse_answer       2  0.08 [0.00, 0.19]                         0\nfalse_abstain      1  0.04 [0.00, 0.12]                         0\nthe largest class: ignored (the intervals overlap, next unsupported)\nits fix, written down before counting: {'order': 'edges', 'prompt': 'quote', 'max_new_tokens': 500}\n\n[ignored] dev-0000 (single): On unified-memory machines, how does the book say large mixture-of-\n    experts models compare in fitting and decoding speed to dense models with about the same\n    total size?\n  answer: On unified-memory machines, large models fit but decode slowly due to the lower\n    bandwidth of system RAM compared to VRAM [1]. However, a mixture-of-experts (MoE) model runs\n    only a few of its expert networks for each token, so it reads only its active parameters\n    [1]. Consequently, an MoE model decode\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ignored] dev-0008 (single): In PyTorch, what happens to modules that are placed in a plain\n    Python list rather than in a registered container such as `nn.Sequential` or\n    `nn.ModuleList`?\n  answer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the fo\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ranked_low] dev-0014 (single): When the book trains its fully convolutional network for\n    semantic segmentation, on what basis is the accuracy computed?\n  answer: The provided passages do not contain information about the specific basis on which\n    accuracy is computed when training the fully convolutional network. While the text explains\n    that semantic segmentation involves classifying images at the pixel level [2] and that the\n    input image and label correspond o\n  relevant chunk in the context: False\n  verdicts: {'correct': False, 'faithful': True, 'supported': None}\n\n[unsupported] dev-0021 (single): What two weights make up the hand-designed vertical edge\n    detector that subtracts each pixel's right-hand neighbor in a grayscale image?\n  answer: The hand-designed vertical edge detector uses the weights $(1, -1)$ [1]. This kernel\n    subtracts the value of each pixel from its right-hand neighbor to detect edges [1].\n    Specifically, it computes the difference between horizontally adjacent pixels, where the\n    first weight is 1 and the second is -1 [3]\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\n[unsupported] dev-0033 (single): In the masked diffusion variational lower bound, what\n    coefficient multiplies the expectation of the summed negative log-likelihood over positions\n    that remain masked at step t?\n  answer: Under the linear schedule, the coefficient that multiplies the negative log-likelihood\n    is $1/t$ [2]. This weight $w_t$ is derived from the formula $(1 - \\bar{\\alpha}_t)/(1 -\n    \\bar{\\alpha}_t - (1 - \\bar{\\alpha}_{t-1}))$, which simplifies to $1/t$ when $\\bar{\\alpha}_t\n    = 1 - t/T$ [2]. The text explicitl\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\nthe agent (claude-opus-5.5) against the rule on 31 cards: agreement 0.58\nagent          correct  ignored  ranked_low  unsupported\nrule                                                    \ncorrect              5        0           0            0\nfalse_abstain        0        0           1            0\nfalse_answer         2        0           0            0\nignored              4        7           1            0\nranked_low           0        0           5            0\nunsupported          3        1           1            1\non the 26 failures: the agent agrees with the rule on 13,\n  calls 9 correct and blames another stage on 4\n"
         }
       ]
     },
     "rag-opening-item": {
-      "code_fingerprint": "sha256:71b12f3589af268e400c7cf81f3dcdb475812a55a008e0c399d3bf56ee2ba42b",
+      "code_fingerprint": "sha256:92aef18e191c553aec472b7484e696af3e7cf018c9bc0c4459d7f22f187b6041",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "8 base answers qualify: dev-0008 (ignored), dev-0033 (unsupported), dev-0100 (ignored), dev-0133\n    (ignored), dev-0150 (ignored), dev-0152 (ignored), dev-0156 (ignored), dev-0209 (ignored)\n\ndev-0008 (single): In PyTorch, what happens to modules that are placed in a plain Python list\n    rather than in a registered container such as `nn.Sequential` or `nn.ModuleList`?\nreference: They stay unregistered, and no warning is given.\nkey facts: ['modules in a plain list stay unregistered', 'no warning is issued']\nfirst relevant chunk at rank 1; context:\n  [1] chapter_builders-guide/model-construction#012 (relevant)\n  [2] chapter_builders-guide/model-construction#004\n  [3] chapter_builders-guide/model-construction#005\n  [4] chapter_builders-guide/model-construction#001\n  [5] chapter_builders-guide/model-construction#002\nlast sentence of [1]: Modules in a plain list stay unregistered, without any warning.\nanswer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the forward pass may still execute if the code\n    explicitly loops over the list, the optimizer will not receive their parameters for gradient\n    updates [3]. This results in a \"partly registered\" model where only the weights of\n    registered outer layers change during training, causing the model to learn incorrectly or\n    fail on GPU devices [3].\nverdicts: {'correct': False, 'faithful': True, 'supported': True}\nclass: ignored, by the rule and by the second labeller\n"
+          "text": "8 base answers qualify: dev-0008 (ignored), dev-0033 (unsupported), dev-0100 (ignored), dev-0133\n    (ignored), dev-0150 (ignored), dev-0152 (ignored), dev-0156 (ignored), dev-0209 (ignored)\n\ndev-0008 (single): In PyTorch, what happens to modules that are placed in a plain Python list\n    rather than in a registered container such as `nn.Sequential` or `nn.ModuleList`?\nreference: They stay unregistered, and no warning is given.\nkey facts: ['modules in a plain list stay unregistered', 'no warning is issued']\nfirst relevant chunk at rank 1; context:\n  [1] chapter_builders-guide/model-construction#012 (relevant)\n  [2] chapter_builders-guide/model-construction#004\n  [3] chapter_builders-guide/model-construction#005\n  [4] chapter_builders-guide/model-construction#001\n  [5] chapter_builders-guide/model-construction#002\nlast sentence of [1]: Modules in a plain list stay unregistered, without any warning.\nanswer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the forward pass may still execute if the code\n    explicitly loops over the list, the optimizer will not receive their parameters for gradient\n    updates [3]. This results in a \"partly registered\" model where only the weights of\n    registered outer layers change during training, causing the model to learn incorrectly or\n    fail on GPU devices [3].\nverdicts: {'correct': False, 'faithful': True, 'supported': True}\nclass: ignored, by the rule and by the second labeler\n"
         }
       ]
     },
     "rag-fix": {
-      "code_fingerprint": "sha256:3928d29a363d85c2da895e87c4918dede1aed2140f42012dcade8d73be4afe0b",
+      "code_fingerprint": "sha256:3ff4c231f9e708280b31687d99579b5635479e05b826be78e4e8155d2b19ddc0",
       "kind": "text",
       "outputs": [
         {
@@ -120,25 +120,30 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "split  configuration         accuracy - base   cite precision - base\n  dev    fix-ignored -0.083 [-0.122, -0.045] -0.055 [-0.086, -0.025]\n  dev rewrite-rerank +0.004 [-0.028, +0.038] -0.021 [-0.052, +0.012]\n test    fix-ignored -0.075 [-0.121, -0.030] -0.027 [-0.075, +0.022]\n test rewrite-rerank -0.004 [-0.045, +0.037] -0.014 [-0.046, +0.016]\n               base  fix-ignored\ncls                             \nnot_retrieved     0            0\nranked_low        5            4\nignored          12           19\nunsupported       6            7\nfalse_answer      2           15\nfalse_abstain     1            1\ncorrect         214          194\nunjudged          0            0\n"
+          "text": "split  configuration         accuracy - base   cite precision - base\n  dev    fix-ignored -0.083 [-0.122, -0.045] -0.055 [-0.086, -0.025]\n  dev rewrite-rerank +0.004 [-0.028, +0.038] -0.021 [-0.052, +0.012]\n test    fix-ignored -0.075 [-0.121, -0.030] -0.027 [-0.075, +0.022]\n test rewrite-rerank -0.004 [-0.045, +0.037] -0.014 [-0.046, +0.016]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "accuracy:\n                                 dev                  test\nbase            0.892 [0.849, 0.927]  0.867 [0.825, 0.904]\nrewrite-rerank  0.899 [0.858, 0.936]  0.863 [0.822, 0.899]\nfix-ignored     0.808 [0.761, 0.852]  0.792 [0.742, 0.835]\n\n13 answerable dev questions right in base, wrong with the fix\n(by class: ignored 9, unsupported 3, ranked_low 1); the first:\ndev-0037: In the discrete diffusion experiment, where does the sampler that takes only one step\n    concentrate probability mass relative to the data?\n  base: In the discrete diffusion experiment, the one-step sampler puts mass where the column of\n    one mode crosses the row of another, where the data has none [1]. This occurs because the\n    sampler draws from a mixture of the joint distribution and the product of marginals, leading\n    to an error proportional to ...\n  fix-ignored: In the discrete diffusion experiment, the one-step sampler concentrates\n    probability mass at the intersection of the columns of one mode and the rows of another, a\n    location where the actual data has no presence [1]. This behavior occurs because the sampler\n    effectively places every starting point on t ...\n               base  fix-ignored\ncls                             \nnot_retrieved     0            0\nranked_low        5            4\nignored          12           19\nunsupported       6            7\nfalse_answer      2           15\nfalse_abstain     1            1\ncorrect         214          194\nunjudged          0            0\n"
         }
       ]
     },
     "rag-failure-plot": {
-      "code_fingerprint": "sha256:b623795a0123dd2e084d832ec3eb318734579433e126a12ec94dd7d5e8e2853f",
+      "code_fingerprint": "sha256:b7343437cc0c2f4f4b51d0a6a2ac086f39bd0c60bf4e9e710dd1cb2fc9c4317b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rag-failures/rag-failure-plot-1.svg",
-          "bytes": 64380,
-          "sha256": "sha256:540911a118626696828ad2135bd78645692ead8db8d64a7994e1aad1793b584b"
+          "bytes": 64370,
+          "sha256": "sha256:19ed010c43ebea41cdf83dc87d9e318bd463977ddda5d2c54bc184ffa6e0db56"
         }
       ]
     },
     "rag-marginal": {
-      "code_fingerprint": "sha256:fa82871048c3b7ab65996a82868963fd8db412465bbeab22cdc775f843ad6a75",
+      "code_fingerprint": "sha256:a43bc309f52c09e8bfc2e4b5b195e0e63bbc6d1dce12ad06928f83cd829baa97",
       "kind": "text",
       "outputs": [
         {
@@ -149,7 +154,7 @@
       ]
     },
     "rag-cost": {
-      "code_fingerprint": "sha256:1c06b17577e0afbf6d39ecb3d012e80bb2623a966bcd342ecf4dea1827d16a92",
+      "code_fingerprint": "sha256:f09242ce326500d456c21922639046f4901367e6fe169069779a634c12b1b849",
       "kind": "text",
       "outputs": [
         {
@@ -170,7 +175,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 536 ms (50 questions)\n"
+          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 535 ms (50 questions)\n"
         }
       ]
     }

@@ -1,45 +1,69 @@
 # Encoders, Embeddings and Retrieval
 :label:`chap_lm_encoders`
 
-The decoders of :numref:`chap_lm_pretrained` answer questions, and with a
-few solved examples in the prompt they label text as well. Two ordinary jobs
-strain them. Ask one how this book's old `load_array` helper decides whether
-to shuffle its data, and it answers from whatever it absorbed in training,
-although the paragraph that says so is somewhere in the book. Ask it to sort
-the messages of a support desk by topic, ten thousand of them an hour, and
-it reads its solved examples again for every message. The first job needs a
-way to find the passage. The second needs a model that learns from labels
-once and then labels cheaply.
+The previous chapter left us able to do a good deal with a released
+language model. We can load one, check that it computes on our machine what
+its authors computed on theirs, prompt it, and put an error bar on its
+score. Two ordinary requests still defeat it. Ask it how this book's old
+`load_array` helper decides whether to shuffle its data, and it answers from
+whatever it absorbed in training. The answer we will meet is fluent and
+wrong, although the paragraph that says so is somewhere in the book. Ask
+it to sort the messages of a support desk by topic, ten thousand of them an
+hour, and it reads its solved examples again for every message. The first
+request needs a way to find a passage. The second needs a model that learns
+from labels once and then labels cheaply.
 
-Both jobs are done by models that turn text into vectors, so that texts with
-similar meanings lie close together. The idea is old. Linguists of the 1950s
-proposed that a word is known by the company it keeps, and word2vec made
-vectors built on that idea cheap to learn from billions of words. BERT
-computed a vector for every token from the words on both sides of it, and a
-small layer on top turned those vectors into labels. Contrastive training
-then taught such *encoders* to place a question next to the passage that
-answers it. The word indexes of search engines still find the exact terms
-that vectors miss. Encoders do much of the routine work of search, filtering
-and tagging, and once they find the passage, a decoder can answer from
-documents it never saw in training.
+Both requests are met by models that turn text into vectors, so that texts with
+similar meanings lie close together. The idea is older than neural networks.
+Linguists of the 1950s proposed that a word is known by the company it
+keeps, and word2vec made vectors built on that idea cheap to learn from
+billions of words. BERT computed a vector for every token from the words on
+both sides of it, and a small layer on top turned those vectors into labels.
+Contrastive training then taught such *encoders* to place a question next to
+the passage that answers it. Encoders still do much of the routine work of
+search, filtering and tagging, and once they have found the passage, a
+decoder can answer from documents it never saw in training. One old tool
+holds its ground through all of this. The word index of a search engine,
+which does little more than count the words a question shares with a
+passage, turns out to be the hardest baseline to beat on this book.
 
-The chapter moves in three steps. The first builds vectors for words from
-co-occurrence counts (:numref:`sec_lm_word_embeddings`), for tokens in
-context from a pretrained encoder that we fine-tune and set against a
-prompted decoder (:numref:`sec_lm_bert`), and for whole texts by contrastive
-training (:numref:`sec_lm_text_embeddings`). The second finds passages with
-a word index and a vector index together, and asks what an approximate index
-gives up for speed (:numref:`sec_lm_retrieval`). The third hands what was
-found to a generator and asks, when an answer comes back wrong, which stage
-failed (:numref:`sec_lm_rag` and :numref:`sec_lm_rag_fixes`). Everything is measured on this book, cut into
-passages and paired with questions whose answers and sources we know.
-Language models, not people, drafted and checked those questions, and later
-chapters of this part reuse both.
+The chapter moves in three steps. First we compute vectors: for words, from
+co-occurrence counts (:numref:`sec_lm_word_embeddings`); for tokens in
+context, from a pretrained encoder that we fine-tune and set against a
+prompted decoder (:numref:`sec_lm_bert`); and for whole texts, by
+contrastive training (:numref:`sec_lm_text_embeddings`). Then we find
+passages with a word index and a vector index together, and ask what an
+approximate index gives up for speed (:numref:`sec_lm_retrieval`). Last we
+hand what was found to a generator, and when an answer comes back wrong, we
+ask which stage lost it (:numref:`sec_lm_rag`, :numref:`sec_lm_rag_fixes`).
 
-We start from released encoders rather than pretraining one
-(:numref:`sec_transformer` shows how that works). Agents that decide when to
-search belong to :numref:`chap_lm_agents`, and the retrieval of images to
-:numref:`chap_cv`.
+From the third section on, every experiment runs on one collection: this
+book without the Language Models part, cut into passages and paired with
+questions whose answers and source passages we know. Language models, not
+people, drafted and checked those questions, and :numref:`sec_lm_rag` says
+what that can miss. The `load_array` question is one of them. We follow it
+from a search that misses its passage, through a retriever that ranks the
+passage first, to a generator that answers it from the page. The corpus,
+the retriever and the questions return later in this part; the agents of
+:numref:`chap_lm_agents`, for instance, search the book with this retriever
+and decide for themselves when to do so.
+
+We start from released encoders and do not pretrain one;
+:numref:`sec_transformer` showed on a small scale how that works. Images,
+which the same contrastive methods can place in one space with text, are
+left out.
+
+We assume the transformer of :numref:`chap_transformers` and the prompting,
+scoring and paired error bars of :numref:`chap_lm_pretrained`. We ran the
+notebooks on one GPU with 24 GB of memory and the judge that grades answers
+on two, but no notebook requires a GPU. The long computations were done once
+and their results published with the book. Each notebook fetches them and
+recomputes a small part of each as a check; without a GPU it takes a
+cheaper path, with fewer examples or a smaller search, and its output says
+which. The questions were drafted and checked
+through a paid API, and the generator's answers and the judge's verdicts
+took hours of GPU time. All of these were recorded once, so the notebooks
+replay them and call no API.
 
 ```toc
 :maxdepth: 2
@@ -49,28 +73,33 @@ bert
 text-embeddings
 retrieval
 rag
+rag-failures
 further-reading
 ```
 
 ## Resources and Further Reading {.unnumbered}
 
 The resources below accompany the sections of this chapter, and each names
-the section it goes with. All are freely accessible online. Methods that
-build on the chapter without being taught in it, such as learned sparse
-retrieval, late interaction and the many ways of improving a
-retrieval-augmented pipeline, are collected in :numref:`sec_lm_encoders_fr`.
+the section it goes with. All are freely accessible online. If you read
+only three, read the training overview of Sentence Transformers, the Faiss
+wiki and Jason Liu's essay on improving a RAG system: between them they
+cover how an embedder is trained, how an index is chosen, and how to decide
+what to fix next. Methods that build on the chapter without being taught in
+it, such as learned sparse retrieval, late interaction and the many ways of
+improving a retrieval-augmented pipeline, are collected in
+:numref:`sec_lm_encoders_fr`.
 
 **Courses**
 
 - [Stanford CS224N: Natural Language Processing with Deep Learning](https://web.stanford.edu/class/cs224n/) opens with word vectors and a first assignment on them, the material of :numref:`sec_lm_word_embeddings`. Its pretraining lecture covers the masked-token encoders of :numref:`sec_lm_bert`, and its lecture on agents, tool use and retrieval-augmented generation the system of :numref:`sec_lm_rag`.
-- [Berkeley CS288](https://cal-cs288.github.io/sp26) has lectures on text classification, the task of :numref:`sec_lm_bert`, on retrieval and RAG, and on experimental design, which frames the stage-by-stage measurement of :numref:`sec_lm_rag`.
+- [Berkeley CS288](https://cal-cs288.github.io/sp26) has lectures on text classification, the task of :numref:`sec_lm_bert`, on retrieval and RAG, and on experimental design, which frames the one-change-at-a-time measurements of :numref:`sec_lm_rag_fixes`.
 - [CMU 11-711: Advanced Natural Language Processing](https://cmu-l3.github.io/anlp-spring2026) gives a lecture to retrieval and RAG, with readings on retrieval-based language models that extend :numref:`sec_lm_retrieval` and :numref:`sec_lm_rag`.
 
 **Illustrated introductions**
 
 - Jay Alammar's [The Illustrated Word2vec](https://jalammar.github.io/illustrated-word2vec/) draws the sliding window and the negative samples of skip-gram, a picture to read beside :numref:`sec_lm_word_embeddings`.
 - His [The Illustrated BERT](https://jalammar.github.io/illustrated-bert/) draws the input layout and the task heads of a masked-token encoder, as :numref:`sec_lm_bert` uses them.
-- The [ModernBERT announcement](https://huggingface.co/blog/modernbert) by the model's authors explains the design choices that :numref:`sec_lm_bert` describes: alternating local and global attention, unpadding and long inputs.
+- The [ModernBERT announcement](https://huggingface.co/blog/modernbert) by the model's authors explains the design of the encoder that :numref:`sec_lm_bert` uses, including two choices the section leaves out: unpadding and its attention kernels.
 
 **Libraries and their documentation**
 
@@ -80,7 +109,7 @@ retrieval-augmented pipeline, are collected in :numref:`sec_lm_encoders_fr`.
 
 **Building retrieval-augmented systems**
 
-- Jason Liu's [Systematically Improving Your RAG](https://jxnl.co/writing/2024/05/22/systematically-improving-your-rag/) and Eugene Yan's [Patterns for Building LLM-based Systems and Products](https://eugeneyan.com/writing/llm-patterns/) separate the retrieval and the generation of a pipeline and measure each, the decomposition that :numref:`sec_lm_rag` carries out on the book.
+- Jason Liu's [Systematically Improving Your RAG](https://jxnl.co/writing/2024/05/22/systematically-improving-your-rag/) and Eugene Yan's [Patterns for Building LLM-based Systems and Products](https://eugeneyan.com/writing/llm-patterns/) separate the retrieval and the generation of a pipeline and measure each, the decomposition that :numref:`sec_lm_rag` and :numref:`sec_lm_rag_fixes` carry out on the book.
 - The Hugging Face cookbook's [Advanced RAG](https://huggingface.co/learn/cookbook/advanced_rag) builds a complete pipeline in one notebook, to set beside the pipeline of :numref:`sec_lm_rag` and compare stage by stage.
 
 <!-- slides -->
@@ -97,16 +126,14 @@ Encoders, Embeddings and Retrieval<br>
 ::: {.slide title="Finding a Passage and Labeling a Stream Are Jobs for Encoders"}
 [The problem]{.kicker}
 
-- A decoder asked about this book answers from its weights, right or
-  wrong; the paragraph that answers sits among thousands of passages.
-- A prompted decoder reads its solved examples again for every message;
-  a support desk sorts ten thousand messages an hour.
-- Both jobs need vectors: related texts close together, and a label read
-  off by a small head.
+| request | a prompted decoder |
+|---|---|
+| how does the book's `load_array` decide whether to shuffle? | without the book, Qwen3.5-9B invents a `shuffle` argument; the answer is one paragraph among 5,324 passages |
+| label 10,000 support messages an hour | re-reads its 8 solved examples for every item: about 1,500 tokens per item, against 40 for a fine-tuned encoder |
 
 ::: {.d2l-note}
-How do we compute such vectors, search them fast, and tell which stage
-failed when an answer built on them is wrong?
+Both jobs need vectors that put related texts close together: one per
+passage to search, one per token for a small labeling head.
 :::
 :::
 
@@ -114,8 +141,8 @@ failed when an answer built on them is wrong?
 [Goals]{.kicker}
 
 - say which statistic of a text a word vector factorizes, and check it;
-- fine-tune an encoder for sentences, pairs and tags, and decide when it
-  beats a prompted decoder;
+- fine-tune an encoder for sentences, pairs and tags, and say when it
+  beats a prompt;
 - train a text embedder contrastively, and explain why raw pooled vectors
   retrieve poorly;
 - build BM25 and dense retrieval, fuse their rankings and rerank;
@@ -123,8 +150,9 @@ failed when an answer built on them is wrong?
 - measure a retrieval-augmented generator stage by stage, and locate its
   failures.
 
-**Running example:** this book, cut into passages, with questions drafted
-and checked by language models, not people.
+**Running example:** this book, 5,324 passages, and 220 questions with
+known sources, drafted and checked by models; the `load_array` question
+travels through the decks.
 
 **Idea:** turn text into vectors that place related texts close together,
 then find the close ones fast.
@@ -142,7 +170,6 @@ then find the close ones fast.
 | using what is found | Retrieval-Augmented Generation | how is each stage of the system measured? |
 | | Failures and Fixes in RAG | which stage lost each wrong answer, and does a fix chosen in advance help? |
 
-- **Uses:** transformers, cross-entropy, the evaluation tools of the
-  previous chapter.
-- **Skips:** pretraining at scale, agents, the retrieval of images.
+- **Uses:** transformers; prompting, scoring and error bars.
+- **Skips:** pretraining an encoder, agents that search, images.
 :::

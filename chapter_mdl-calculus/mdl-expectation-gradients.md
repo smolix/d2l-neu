@@ -1,43 +1,47 @@
 # Expectations and Their Gradients
 :label:`sec_mdl-expectation-gradients`
 
-Every loss we have minimized was an average: over a minibatch, over the
-masks of dropout, over the noise added to an input. As long as the
-randomness does not depend on the parameters, such an average is easy to
-differentiate. The derivative of an average is the average of the
-derivatives, and minibatch gradient descent computes it without a second
-thought. The difficulty begins when the parameters control the distribution
-itself. A variational autoencoder draws its latent code from a distribution
-that its encoder outputs. A policy-gradient method
-(:numref:`sec_policygradient`) draws actions from the very policy it is
-trying to improve. The loss is then an expectation over samples whose
-distribution moves with the parameters, and a sample, once drawn, is just a
-number: it does not remember the parameter that produced it.
+Almost every loss we have minimized so far is an average: over a minibatch of
+examples, over random dropout masks, or over noise injected into an input. As
+long as the source of randomness does not depend on the model parameters,
+differentiating such an average is straightforward. The derivative of an
+average equals the average of the derivatives, so minibatch gradient descent
+computes it directly without any extra machinery. The difficulty arises when
+the parameters control the probability distribution itself. A variational
+autoencoder draws its latent code from a distribution whose mean and variance
+are produced by its encoder; a policy-gradient agent
+(:numref:`sec_policygradient`) samples actions from the very policy it is
+trying to improve. In both cases, the objective is an expectation over samples
+whose distribution shifts with the parameters, yet a sample, once drawn, is
+just a number. It carries no memory of the parameter that generated it.
 
-Here is the smallest such problem. Let $X\sim\mathcal N(\theta,1)$, a normal
-variable with mean $\theta$, and let the loss be
+Consider the simplest problem of this kind. Let $X\sim\mathcal N(\theta,1)$ be
+a normal random variable with mean $\theta$ and unit variance, and take the
+expected squared loss
 
 $$
 \ell(\theta)=\mathbb{E}\bigl[X^2\bigr]=\theta^2+1 .
 $$
 
-The value follows by writing $X=\theta+Z$ with $Z$ standard normal:
+The closed form follows immediately by writing $X=\theta+Z$ with $Z$ standard
+normal:
 $\mathbb{E}[(\theta+Z)^2]=\theta^2+2\theta\,\mathbb{E}[Z]+\mathbb{E}[Z^2]$,
 where $\mathbb{E}[Z]=0$ by symmetry and $\mathbb{E}[Z^2]=1$
-(:numref:`subsec_mdl-integration-by-parts`). At $\theta=1.5$ the derivative
-is $\ell'(1.5)=3$. A real model can draw samples of $X$, but it cannot write
-$\ell$ in closed form. How do we estimate $\ell'(\theta)$ from samples?
+(:numref:`subsec_mdl-integration-by-parts`). At $\theta=1.5$, the exact
+derivative is $\ell'(1.5)=3$. In practice, however, a model can draw samples of
+$X$ but cannot evaluate $\ell(\theta)$ in closed form. How, then, can we
+estimate $\ell'(\theta)$ from samples alone?
 
-Calculus gives two answers, and they differ in kind. Both write the
-expectation as an integral (:numref:`sec_mdl-integral_calculus`) and move
-the derivative inside it. The *score-function* estimator then differentiates
-the density and leaves the samples alone. The *pathwise* estimator
-differentiates the samples and leaves the density alone. Neither always
-wins, and comparing the two
-(:numref:`subsec_mdl-stochastic-gradient-estimators`) is the main business
-of this section. Before that we recall what an expectation is, and settle
-when a derivative may be moved inside an integral, which is the step that
-needs care.
+Calculus offers two fundamentally different answers. Both express the
+expectation as an integral (:numref:`sec_mdl-integral_calculus`) and pass the
+derivative inside it. From there they diverge: the *score-function* estimator
+differentiates the probability density while leaving the samples untouched,
+whereas the *pathwise* estimator differentiates the samples while leaving the
+noise density untouched. Neither method dominates in every setting, and
+comparing them (:numref:`subsec_mdl-stochastic-gradient-estimators`) is the
+central goal of this section. First, we briefly recall how expectations are
+written as integrals and establish when passing a derivative inside an integral
+is valid, because that step is where subtle errors can creep in.
 
 ```{.python .input #mdl-expectation-gradients-expectations-and-their-gradients}
 #@tab mxnet
@@ -81,27 +85,29 @@ from d2l import jax as d2l
 ## Expectations as Integrals
 :label:`subsec_mdl-integration-in-probability`
 
-Before anything is differentiated we fix what an expectation is. The
-probability chapter treats the two definitions below at length
-(:numref:`sec_mdl-random_variables`); here they are a recall, in the
-language of the previous section. A probability **density** on a set
-$\mathcal X$ is a nonnegative function whose total integral is $1$:
+Before differentiating anything, let us fix our notation for densities and
+expectations. The probability chapter develops both notions in detail
+(:numref:`sec_mdl-random_variables`); here we restate them in the integral
+language of the preceding section. A probability **density** on a domain
+$\mathcal X$ is a nonnegative function whose total integral equals $1$:
 
 $$
 p(x)\ge 0, \qquad \int_{\mathcal X} p(x)\,dx = 1 .
 $$
 :eqlabel:`eq_mdl-density`
 
-A random variable $X$ with density $p$ falls in an interval with probability
-equal to the area above it, $P(a\le X\le b)=\int_a^bp(x)\,dx$
-(:eqref:`eq_mdl-pdf_int_int`). Being a probability per unit length and not a
-probability, a density can exceed $1$: the uniform density on $[0,\tfrac12]$
-equals $2$. Our standard example is the **standard normal** $\mathcal N(0,1)$
-with density $p(z)=e^{-z^2/2}/\sqrt{2\pi}$, whose constant is the Gaussian
-integral of :numref:`sec_mdl-integral_calculus`.
+The probability that a random variable $X$ with density $p$ lands in an
+interval $[a, b]$ is the area under $p$ over that interval,
+$P(a\le X\le b)=\int_a^b p(x)\,dx$ (:eqref:`eq_mdl-pdf_int_int`). Because a
+density measures probability per unit length rather than probability itself,
+its value can exceed $1$; for example, the uniform density on $[0,\tfrac12]$
+equals $2$ everywhere on its support. Our main running example is the
+**standard normal** distribution $\mathcal N(0,1)$, whose density
+$p(z)=e^{-z^2/2}/\sqrt{2\pi}$ is normalized by the Gaussian integral of
+:numref:`sec_mdl-integral_calculus`.
 
-An **expectation** averages a function of $X$, weighting each value by its
-density:
+An **expectation** computes the weighted average of $X$, or of a function
+$g(X)$, weighting each outcome by its probability density:
 
 $$
 \mathbb{E}[X] = \int_{\mathcal X} x\,p(x)\,dx,
@@ -110,31 +116,35 @@ $$
 $$
 :eqlabel:`eq_mdl-expectation`
 
-The expectation $\mathbb{E}[g(X)]$ is defined when
-$\int_{\mathcal X}|g(x)|\,p(x)\,dx<\infty$; the Cauchy density of exercise
-:exref:`ex_mdl-integral-calculus-heavy-tails` has no mean for this reason.
+The expectation $\mathbb{E}[g(X)]$ is well defined whenever the integral
+converges absolutely, $\int_{\mathcal X}|g(x)|\,p(x)\,dx<\infty$. Heavy-tailed
+distributions can violate this condition; the Cauchy density in exercise
+:exref:`ex_mdl-integral-calculus-heavy-tails`, for instance, has no finite
+mean.
 
-Most expectations in deep learning have no closed form, and many are over
-thousands of dimensions, where no grid is affordable. They are estimated by
-drawing samples $x_1,\ldots,x_n$ from $p$ and averaging,
-$\frac1n\sum_ig(x_i)$. This is the *Monte Carlo* estimate. If one sample
-$g(X)$ has standard deviation $\sigma$, the estimate has root-mean-square
-error $\sigma/\sqrt n$, whatever the dimension
-(:numref:`subsec_mdl-monte-carlo`). The gradient estimators of this section
-are Monte Carlo estimates of this kind. Two unbiased estimators of the same
-gradient differ only in the spread of a single sample, so its standard
-deviation $\sigma$ is what we compare.
+In deep learning, expectations rarely have closed-form expressions, and they
+often live in thousands of dimensions where numerical quadrature on a grid is
+out of the question. Instead, we draw independent samples $x_1,\ldots,x_n$ from
+$p$ and form the sample average $\frac1n\sum_{i=1}^n g(x_i)$, known as the
+*Monte Carlo* estimate. If a single sample $g(X)$ has standard deviation
+$\sigma$, the Monte Carlo average has root-mean-square error $\sigma/\sqrt n$,
+regardless of the dimension (:numref:`subsec_mdl-monte-carlo`). Both gradient
+estimators in this section are Monte Carlo averages of this form. Because both
+are unbiased for the same true gradient, they differ only in the spread of a
+single sample, making the single-sample standard deviation $\sigma$ the natural
+yardstick for comparing them.
 
 ## Differentiation under the Integral Sign
 
 ### The Swap
 
-The loss $\ell(\theta)=\mathbb{E}[X^2]$ is an integral that depends on a
-parameter. A parameter can enter an integral in two places: through the
-limits of integration, which the fundamental theorem :eqref:`eq_mdl-ftc`
-handles, or through the integrand.
+Our toy loss $\ell(\theta)=\mathbb{E}[X^2]$ is an integral that varies with a
+parameter $\theta$. In general, a parameter can affect an integral in two
+places: through the limits of integration, which the fundamental theorem of
+calculus :eqref:`eq_mdl-ftc` handles, or through the integrand itself.
 
-For the integrand, the derivative passes inside the integral:
+When the limits of integration are fixed and only the integrand depends on
+$\theta$, we differentiate by passing the derivative inside the integral:
 
 $$
 \frac{d}{d\theta} \int f(x, \theta)\,dx
@@ -142,24 +152,26 @@ $$
 $$
 :eqlabel:`eq_mdl-diff-under-integral`
 
-The rate of change of the area is the integral of the rate of change of the
-height. We call this exchange of derivative and integral the *swap*, and
-both gradient estimators rest on it. It looks innocent, since a derivative
-is a limit of difference quotients and an integral a limit of sums, and
-finite sums and differences commute. But two limits are being exchanged, and
-that needs a hypothesis. On a bounded range of $x$ it
-holds when $\partial_\theta f$ is continuous in both variables. On an
-infinite range it needs in addition an integrable function of $x$ that
-bounds $|\partial_\theta f(x,\theta')|$ for all $\theta'$ near $\theta$ (a
-consequence of dominated convergence, quoted without proof from
-:cite:`Folland.1999`). For $f(x,\theta)=x^2p_\theta(x)$ with the normal
-density such a bound exists, because the Gaussian factor dominates every
-polynomial.
+Geometrically, the rate of change of the total area equals the integral of the
+pointwise rate of change of the height. We will refer to this exchange of
+derivative and integral as the *swap*; both gradient estimators depend on it.
+At first glance the identity looks harmless, since a derivative is a limit of
+difference quotients, an integral is a limit of sums, and finite sums and
+differences always commute. Yet exchanging two limits is never automatic and
+requires regularity conditions. On a bounded interval of $x$, continuity of
+$\partial_\theta f$ in both variables is enough. On an unbounded domain, we
+also need an integrable function of $x$ that dominates
+$|\partial_\theta f(x,\theta')|$ for all $\theta'$ near $\theta$ (an immediate
+consequence of the dominated convergence theorem, quoted without proof from
+:cite:`Folland.1999`). For our running example $f(x,\theta)=x^2p_\theta(x)$
+with a normal density, such a dominating bound always exists because the
+Gaussian tail decays faster than any polynomial grows.
 
 ### The Leibniz Rule
 
-The swap alone is wrong when the limits of integration move with the
-parameter. The Leibniz rule supplies the correction: the two effects add
+When the limits of integration also move with $\theta$, the plain swap is
+incomplete and gives the wrong answer. The Leibniz rule supplies the missing
+boundary terms: the interior change and the sweeping boundaries simply add
 (:numref:`fig_mdl-leibniz-boundary`).
 
 **Proposition (Leibniz rule).** *Let $f$ and $\partial_\theta f$ be continuous
@@ -174,79 +186,87 @@ $$
 $$
 :eqlabel:`eq_mdl-leibniz`
 
-**Proof.** Let $H(\alpha,\beta,\theta)=\int_\alpha^\beta f(x,\theta)\,dx$. By
-the fundamental theorem, $\partial_\beta H=f(\beta,\theta)$ and
-$\partial_\alpha H=-f(\alpha,\theta)$. By the swap on the bounded range
-$[\alpha,\beta]$, $\partial_\theta H=\int_\alpha^\beta\partial_\theta f\,dx$.
-All three partial derivatives are continuous, so the chain rule of
-:numref:`sec_mdl-chain-rule-graphs` applies to
-$\theta\mapsto H(a(\theta),b(\theta),\theta)$ and adds the three
-contributions, weighted by $a'(\theta)$, $b'(\theta)$ and $1$. $\blacksquare$
+**Proof.** Define $H(\alpha,\beta,\theta)=\int_\alpha^\beta f(x,\theta)\,dx$.
+By the fundamental theorem of calculus, $\partial_\beta H=f(\beta,\theta)$ and
+$\partial_\alpha H=-f(\alpha,\theta)$, while the swap on the bounded interval
+$[\alpha,\beta]$ gives $\partial_\theta H=\int_\alpha^\beta\partial_\theta f\,dx$.
+Since all three partial derivatives are continuous, the multivariable chain
+rule (:numref:`sec_mdl-chain-rule-graphs`) applies to the composition
+$\theta\mapsto H(a(\theta),b(\theta),\theta)$ and combines the three terms
+weighted by $a'(\theta)$, $b'(\theta)$, and $1$. $\blacksquare$
 
-![The Leibniz rule for $f(x,\theta)=x/\theta$ on $[0,\theta]$, the uniform example. When $\theta$ grows by $d\theta$ the curve changes to $f(\cdot,\theta+d\theta)$ (dashed; here it falls, so the hatched band between the curves is lost area), and the right edge moves, sweeping in the strip of height $f(b,\theta)$ and width $b'\,d\theta$.](../img/mdl-cal-leibniz-boundary.svg)
+![The Leibniz rule for $f(x,\theta)=x/\theta$ on $[0,\theta]$, the uniform example. When $\theta$ increases by $d\theta$, the integrand curve shifts to $f(\cdot,\theta+d\theta)$ (dashed; here it drops, so the hatched region represents lost area), while the right boundary moves outward and sweeps in a strip of height $f(b,\theta)$ and width $b'\,d\theta$.](../img/mdl-cal-leibniz-boundary.svg)
 :label:`fig_mdl-leibniz-boundary`
 
-Dropping the boundary term gives a wrong answer. Let $X$ be uniform on
-$[0,\theta]$, with density $1/\theta$ there. Then
-$\mathbb{E}[X]=\int_0^\theta\frac x\theta\,dx=\frac\theta2$, with derivative
-$+\tfrac12$. Differentiating only the integrand gives
-$\int_0^\theta-\frac{x}{\theta^2}\,dx=-\tfrac12$, the wrong sign. The boundary
-term $f(\theta,\theta)\,b'(\theta)=\frac\theta\theta\cdot1=1$ restores
-$-\tfrac12+1=+\tfrac12$. Whenever the support of a density moves with the
-parameter, the plain swap is not enough (exercise
-:exref:`ex_mdl-integral-calculus-moving-support` does $\mathbb{E}[X^2]$).
+Ignoring the boundary term is not a minor inaccuracy; it can flip the sign of
+the derivative. Suppose $X$ is uniform on $[0,\theta]$, with density $1/\theta$
+on that interval. Its mean is
+$\mathbb{E}[X]=\int_0^\theta\frac x\theta\,dx=\frac\theta2$, whose derivative
+is $+\tfrac12$. Differentiating only the integrand gives
+$\int_0^\theta-\frac{x}{\theta^2}\,dx=-\tfrac12$, which has the wrong sign.
+Adding the upper boundary contribution
+$f(\theta,\theta)\,b'(\theta)=\frac\theta\theta\cdot1=1$ restores the true
+derivative, $-\tfrac12+1=+\tfrac12$. Whenever the support of a distribution
+depends on the parameter, the plain swap alone is not valid (exercise
+:exref:`ex_mdl-integral-calculus-moving-support` works out $\mathbb{E}[X^2]$).
 
 ### Log-Integral-Exp
 
-The swap also gives the continuous version of this chapter's log-sum-exp. Differentiating $\log\int e^{\theta x}p(x)\,dx$ with
-the chain rule and :eqref:`eq_mdl-diff-under-integral` gives
+The swap also produces the continuous counterpart of the log-sum-exp function.
+Applying the chain rule and :eqref:`eq_mdl-diff-under-integral` to
+$\log\int e^{\theta x}p(x)\,dx$ yields
 
 $$
-\frac{d}{d\theta}\log\int e^{\theta x}p(x)\,dx=\frac{\int x\,e^{\theta x}p(x)\,dx}{\int e^{\theta x}p(x)\,dx},
+\frac{d}{d\theta}\log\int e^{\theta x}p(x)\,dx=\frac{\int x\,e^{\theta x}p(x)\,dx}{\int e^{\theta x}p(x)\,dx}.
 $$
 
-the mean of $x$ under the *tilted* density
-$e^{\theta x}p(x)/\int e^{\theta x}p$. For the standard normal, completing the
-square, $\theta z-\tfrac12z^2=\tfrac12\theta^2-\tfrac12(z-\theta)^2$, shows
-that the tilted density is $\mathcal N(\theta,1)$ and that
+The right-hand side is the mean of $x$ under the exponentially *tilted* density
+proportional to $e^{\theta x}p(x)$. For the standard normal density, completing
+the square via $\theta z-\tfrac12z^2=\tfrac12\theta^2-\tfrac12(z-\theta)^2$
+shows that the tilted density is $\mathcal N(\theta,1)$ and that
 $\log\mathbb{E}[e^{\theta Z}]=\theta^2/2$, whose derivative $\theta$ is indeed
-the tilted mean. The gradient of log-sum-exp is the softmax; the gradient of
-log-integral-exp is an expectation. This is the derivative $A'(\eta)$ of the
-log-partition function in :numref:`sec_mdl-exponential-family`.
+the tilted mean. Just as the gradient of log-sum-exp is the softmax vector, the
+gradient of log-integral-exp is an expectation. We will encounter this identity
+again as the derivative $A'(\eta)$ of the log-partition function in
+:numref:`sec_mdl-exponential-family`.
 
 ## Score-Function and Pathwise Gradients
 :label:`subsec_mdl-stochastic-gradient-estimators`
 
-By the swap, the derivative of an expectation is an integral,
-$\int g(x)\,\partial_\theta p_\theta(x)\,dx$. Unfortunately it is not an
-expectation: $\partial_\theta p_\theta$ is not a density, and we cannot draw
-samples from it. Two identities turn the integral into an expectation that
-samples can estimate.
+Applying the swap to an expected loss gives the integral
+$\int g(x)\,\partial_\theta p_\theta(x)\,dx$. Unfortunately, we cannot estimate
+this integral directly by Monte Carlo sampling: $\partial_\theta p_\theta$ is
+not a probability density (it takes both positive and negative values and
+integrates to zero), so we cannot draw samples from it. Two simple identities
+rewrite this integral back into an expectation that samples can estimate.
 
 ### The Score-Function Estimator
 
-Write $p_{\boldsymbol\theta}$ for a density that
-depends on parameters $\boldsymbol\theta$. The chain rule for $\log$ gives the
-**log-derivative identity**
+Let $p_{\boldsymbol\theta}$ be a density parameterized by
+$\boldsymbol\theta$. Applying the chain rule to $\log p_{\boldsymbol\theta}(x)$
+yields the **log-derivative identity**:
 
 $$
 \nabla_{\boldsymbol\theta}\,p_{\boldsymbol\theta}(x)=p_{\boldsymbol\theta}(x)\,\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}(x).
 $$
 :eqlabel:`eq_mdl-log-derivative`
 
-The gradient of a density is the density times the gradient of its logarithm,
-the **score** $\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}$. When the
-swap is valid and the support of $p_{\boldsymbol\theta}$ does not move with
-$\boldsymbol\theta$, the score has mean zero:
+In words, the gradient of a density equals the density itself multiplied by the
+gradient of its logarithm, a vector known as the **score**
+$\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}$. Whenever the swap is
+valid and the support of $p_{\boldsymbol\theta}$ does not move with
+$\boldsymbol\theta$, the score has expectation zero:
 $\mathbb{E}[\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}(X)]=\int\nabla_{\boldsymbol\theta}p_{\boldsymbol\theta}\,dx=\nabla_{\boldsymbol\theta}\int p_{\boldsymbol\theta}\,dx=\nabla_{\boldsymbol\theta}1=\mathbf 0$.
-The uniform density on $[0,\theta]$ shows why the support matters: its score
-is $\partial_\theta\log(1/\theta)=-1/\theta$, whose mean is $-1/\theta\ne0$,
-because differentiating $\int_0^\theta p_\theta=1$ also produces the boundary
-term $p_\theta(\theta)=1/\theta$. The mean-zero score is the starting point of
-Fisher information (:numref:`sec_mdl-maximum_likelihood`).
+The uniform density on $[0,\theta]$ shows why fixed support is essential: its
+score is $\partial_\theta\log(1/\theta)=-1/\theta$, whose expectation is
+$-1/\theta\ne0$, because differentiating $\int_0^\theta p_\theta(x)\,dx=1$ also
+picks up the boundary term $p_\theta(\theta)=1/\theta$. The mean-zero property
+of the score is also the starting point for Fisher information
+(:numref:`sec_mdl-maximum_likelihood`).
 
-Multiplying the identity by $g$ and integrating gives the **score-function
-identity**, for $g$ that does not depend on $\boldsymbol\theta$:
+Multiplying :eqref:`eq_mdl-log-derivative` by a function $g(x)$ that does not
+depend on $\boldsymbol\theta$ and integrating gives the **score-function
+identity**:
 
 $$
 \nabla_{\boldsymbol{\theta}}\,\mathbb{E}_{X\sim p_{\boldsymbol{\theta}}}[g(X)]
@@ -256,27 +276,31 @@ p_{\boldsymbol{\theta}}(X)\bigr].
 $$
 :eqlabel:`eq_mdl-score-function-gradient`
 
-The gradient of an expected loss is the average loss, weighted by how much the
-parameter raises the log-probability of each sample. It is estimated by Monte
-Carlo: sample $x_i$, average $g(x_i)\nabla\log p_{\boldsymbol\theta}(x_i)$.
-This is the REINFORCE estimator of policy-gradient methods
-:cite:`Williams.1992`. If $g$ also depends on $\boldsymbol\theta$, add
-$\mathbb{E}[\nabla_{\boldsymbol\theta}g(X,\boldsymbol\theta)]$.
+This identity turns the gradient of an expected loss back into an expectation
+under $p_{\boldsymbol\theta}$: each sample's loss $g(x)$ is weighted by how
+strongly $\boldsymbol\theta$ increases that sample's log-probability. To
+estimate it by Monte Carlo, we draw samples $x_i\sim p_{\boldsymbol\theta}$ and
+average $g(x_i)\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}(x_i)$. In
+reinforcement learning, this is the REINFORCE estimator of policy-gradient
+methods :cite:`Williams.1992`. (If $g$ also depends directly on
+$\boldsymbol\theta$, the product rule simply adds the term
+$\mathbb{E}[\nabla_{\boldsymbol\theta}g(X,\boldsymbol\theta)]$.)
 
-Because the score has mean zero, any **baseline** $b$ that does not depend on
-$x$ can be subtracted from $g$ without changing the mean:
-$\mathbb{E}[(g(X)-b)\nabla\log
-p_{\boldsymbol\theta}(X)]=\mathbb{E}[g(X)\nabla\log p_{\boldsymbol\theta}(X)]$.
-A good $b$ lowers the variance.
+Because the score has mean zero, we may subtract any constant **baseline** $b$
+(independent of $x$) from $g(X)$ without biasing the estimator:
+$\mathbb{E}[(g(X)-b)\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}(X)]=\mathbb{E}[g(X)\nabla_{\boldsymbol\theta}\log p_{\boldsymbol\theta}(X)]$.
+Choosing $b$ well can substantially reduce the variance of the estimate.
 
 ### The Pathwise Estimator
 
-The second identity gives the sample its memory back. Often a sample can be
-produced by transforming noise that does not depend on $\boldsymbol\theta$: $x=T_{\boldsymbol\theta}(\mathbf z)$
-with $\mathbf z\sim q$. The normal $\mathcal N(\mu,\sigma^2)$ is $\mu+\sigma z$
-with $z\sim\mathcal N(0,1)$. Then the expectation is an integral over
-$\mathbf z$, whose density $q$ does not move, and the swap gives the **pathwise
-identity**
+The second identity restores the sample's memory of $\boldsymbol\theta$. Often,
+a sample from $p_{\boldsymbol\theta}$ can be generated by applying a
+deterministic transformation $x=T_{\boldsymbol\theta}(\mathbf z)$ to an
+auxiliary noise variable $\mathbf z\sim q$ whose distribution does not depend
+on $\boldsymbol\theta$. A normal random variable $\mathcal N(\mu,\sigma^2)$,
+for instance, is simply $\mu+\sigma z$ with $z\sim\mathcal N(0,1)$. Rewriting
+the expectation as an integral over $\mathbf z$ removes $\boldsymbol\theta$
+from the density entirely, so the swap yields the **pathwise identity**:
 
 $$
 \nabla_{\boldsymbol\theta}\,
@@ -288,58 +312,69 @@ $$
 $$
 :eqlabel:`eq_mdl-pathwise-gradient`
 
-The estimator differentiates the sample itself: automatic differentiation
-follows the path from $\boldsymbol\theta$ through $T_{\boldsymbol\theta}$ to
-$g$. This *reparameterization* is how variational autoencoders backpropagate
-through a Gaussian latent variable :cite:`Kingma.Welling.2014`. It needs $T$
-differentiable in $\boldsymbol\theta$, $g$ differentiable along the path (a
-Lipschitz $g$ suffices when $X$ has a density), and a dominating bound for the
-swap. No boundary term appears, even when the support of $X$ moves, because the
-integral is over $\mathbf z$ and $q$ stays put.
+Instead of differentiating the density, this estimator differentiates right
+through the sample: automatic differentiation traces the path from
+$\boldsymbol\theta$ through $T_{\boldsymbol\theta}$ into $g$. Known as the
+*reparameterization trick*, this is how variational autoencoders backpropagate
+through Gaussian latent variables :cite:`Kingma.Welling.2014`. Valid use
+requires $T_{\boldsymbol\theta}$ to be differentiable in $\boldsymbol\theta$,
+$g$ to be differentiable along the path (a Lipschitz $g$ suffices when $X$ has
+a continuous density), and an integrable dominating bound for the swap. Notice
+that no boundary term ever appears, even if the support of $X$ moves with
+$\boldsymbol\theta$, because the integral is taken over $\mathbf z$ whose
+density $q$ stays fixed.
 
-The hypothesis on $g$ cannot be dropped. Take $g(x)=\mathbf{1}(x>0)$, which is
-$1$ for positive $x$ and $0$ otherwise, and $X=\theta+z$. Then
+The differentiability requirement on $g$ is not a technicality we can ignore.
+Consider the step function $g(x)=\mathbf{1}(x>0)$, which equals $1$ for
+positive $x$ and $0$ otherwise, with $X=\theta+z$. The true expectation
 $\mathbb{E}[g(X)]=P(z>-\theta)$ has derivative
-$\varphi(\theta)=e^{-\theta^2/2}/\sqrt{2\pi}$, which is $0.13$ at $\theta=1.5$.
-The pathwise sample $\partial_\theta\mathbf{1}(\theta+z>0)$ is $0$ for every
-$z$ except $z=-\theta$, an event of probability zero, so the pathwise estimator
-returns $0$. The score sample $\mathbf{1}(x>0)\,z$ has mean
-$\int_{-\theta}^\infty
-z\,\varphi(z)\,dz=\bigl[-\varphi(z)\bigr]_{-\theta}^\infty=\varphi(\theta)$,
-the right answer. The score estimator never differentiates through the sample,
-which is why it also covers Bernoulli and categorical choices, where no
-differentiable path from $\boldsymbol\theta$ to the sample exists.
+$\varphi(\theta)=e^{-\theta^2/2}/\sqrt{2\pi}$, which evaluates to about $0.13$
+at $\theta=1.5$. Yet the pathwise sample $\partial_\theta\mathbf{1}(\theta+z>0)$
+is $0$ for every $z$ except the single point $z=-\theta$ (an event of
+probability zero), so the pathwise estimator returns $0$ with probability $1$.
+By contrast, the score-function sample $\mathbf{1}(x>0)\,z$ has expectation
+$\int_{-\theta}^\infty z\,\varphi(z)\,dz=\bigl[-\varphi(z)\bigr]_{-\theta}^\infty=\varphi(\theta)$,
+recovering the exact derivative. Because the score-function estimator never
+differentiates through $g$ or the sampling step, it applies equally well to
+discontinuous losses and to discrete distributions such as Bernoulli or
+categorical choices, where no differentiable path from $\boldsymbol\theta$ to
+the sample exists.
 
 ### The Two Estimators Compared
 
-We now have two unbiased estimators of the same derivative, and the smallest
-problem is simple enough to compute the variance of both by hand. For
-$\ell(\theta)=\mathbb{E}[X^2]$ with $X=\theta+z$, one sample contributes $2X$
-to the pathwise estimator, with variance $\textrm{Var}(2X)=4$. The score of the normal location family
-is $\partial_\theta\log p_\theta(X)=X-\theta=z$, so one sample contributes
-$X^2z$ to the score-function estimator, and $(X^2-b)z$ with a baseline. The
-variance of $X^2z$ needs the Gaussian moments $\mathbb{E}[z^2]=1$,
-$\mathbb{E}[z^4]=3$ and $\mathbb{E}[z^6]=15$, all from Stein's identity
-$\mathbb{E}[g'(Z)]=\mathbb{E}[Z\,g(Z)]$
-(:numref:`subsec_mdl-integration-by-parts`). The odd powers of $z$ drop out of the second moment,
+We now have two unbiased estimators of the same derivative, and our running
+example $\ell(\theta)=\mathbb{E}[X^2]$ with $X=\theta+z$ is simple enough to
+compute the variance of both by hand. For the pathwise estimator, a single
+sample contributes $\partial_\theta(\theta+z)^2 = 2X$, whose variance is
+$\textrm{Var}(2X)=4$. For the score-function estimator, the score of the normal
+location family is $\partial_\theta\log p_\theta(X)=X-\theta=z$, so one sample
+contributes $X^2z$, or $(X^2-b)z$ when using a baseline $b$. To find the
+variance of $X^2z$, we use the standard normal moments $\mathbb{E}[z^2]=1$,
+$\mathbb{E}[z^4]=3$, and $\mathbb{E}[z^6]=15$, all of which follow from Stein's
+identity $\mathbb{E}[g'(Z)]=\mathbb{E}[Z\,g(Z)]$
+(:numref:`subsec_mdl-integration-by-parts`). By symmetry, all odd powers of $z$
+vanish in the second moment:
 
 $$
-\mathbb{E}\bigl[(\theta+z)^4z^2\bigr]=\theta^4\,\mathbb{E}[z^2]+6\theta^2\,\mathbb{E}[z^4]+\mathbb{E}[z^6]=\theta^4+18\theta^2+15,
+\mathbb{E}\bigl[(\theta+z)^4z^2\bigr]=\theta^4\,\mathbb{E}[z^2]+6\theta^2\,\mathbb{E}[z^4]+\mathbb{E}[z^6]=\theta^4+18\theta^2+15.
 $$
 
-and subtracting the squared mean $(2\theta)^2$ leaves the variance
-$\theta^4+14\theta^2+15$. The variance-minimizing constant baseline is
-$b^\star=\theta^2+3$, and it leaves $8\theta^2+6$ (exercise
-:exref:`ex_mdl-integral-calculus-quartic-estimators`). At $\theta=1.5$ the
-three standard deviations are $2$ for the pathwise estimator, $7.18$ for the
-score function, and $4.90$ with the baseline. The baseline helps, but it
-cannot close the gap for this $g$, since $8\theta^2+6>4$ for every $\theta$.
+Subtracting the squared mean $(2\theta)^2$ leaves a variance of
+$\theta^4+14\theta^2+15$. The variance-minimizing constant baseline turns out
+to be $b^\star=\theta^2+3$, reducing the variance to $8\theta^2+6$ (exercise
+:exref:`ex_mdl-integral-calculus-quartic-estimators`). At $\theta=1.5$, the
+three single-sample standard deviations are $2$ for the pathwise estimator,
+$7.18$ for the plain score-function estimator, and $4.90$ for the
+score-function estimator with the optimal baseline. Although the baseline
+helps noticeably, it cannot close the gap for this loss, since $8\theta^2+6>4$
+for every $\theta$.
 
-A simulation can test all of this at once. The pathwise sample is
-$\partial_\theta(\theta+z_i)^2=2x_i$, so no automatic differentiation is
-needed. If the closed forms are right, the three sample standard deviations
-should come out near $2$, $7.18$ and $4.90$, and each mean should lie within
-a few standard errors $\mathrm{sd}/\sqrt n$ of $3$.
+Let us test all three closed-form predictions in a single Monte Carlo
+simulation. Because the pathwise derivative is simply $2x_i$, we do not even
+need automatic differentiation here. If our algebra is right, the three sample
+standard deviations should land near $2$, $7.18$, and $4.90$, and each sample
+mean should fall within a few standard errors $\mathrm{sd}/\sqrt n$ of the
+true derivative $3$.
 
 ```{.python .input #mdl-integral-calculus-score-function-and-pathwise-gradients-1}
 theta, n = 1.5, 200_000
@@ -356,21 +391,24 @@ for name, s in zip(exact_sd, [pathwise, score, baseline]):
           f'(exact {exact_sd[name]:.3f})  se={s.std() / math.sqrt(n):.4f}')
 ```
 
-In most runs the three means lie within about two standard errors of $3$, and
-the sample standard deviations match the closed forms to within a few
-percent. With the same number of samples, the pathwise estimate is about
-$3.6$ times more precise than the plain score estimate. Put differently, the
-score estimate needs about thirteen times as many samples for the same
-precision.
+In typical runs, all three means lie within a couple of standard errors of $3$,
+and the empirical standard deviations match the closed-form predictions to
+within a few percent. For a fixed sample budget, the pathwise estimate is about
+$3.6$ times more accurate than the plain score-function estimate; equivalently,
+the plain score-function estimator needs roughly thirteen times as many samples
+to reach the same precision.
 
-It would be wrong to conclude that the pathwise estimator always has the
-smaller variance. Take $g(x)=\sin(\omega x)$, for which the derivative of the
-mean is $\omega\cos(\omega\theta)e^{-\omega^2/2}$. The pathwise sample
-$\omega\cos(\omega X)$ has standard deviation close to $\omega/\sqrt2$, while
-the score sample $\sin(\omega X)\,z$ has standard deviation at most
-$\sqrt{\mathbb{E}[z^2]}=1$, because $|\sin|\le1$. An oscillating integrand has
-large derivatives but bounded values. We compare the two at $\omega=1$ and
-$\omega=3$, reusing the samples.
+It would be a mistake, however, to conclude that the pathwise estimator always
+has lower variance. Consider an oscillating loss $g(x)=\sin(\omega x)$, for
+which the true derivative of the expectation is
+$\omega\cos(\omega\theta)e^{-\omega^2/2}$. The pathwise sample
+$\omega\cos(\omega X)$ scales with the frequency $\omega$ and has standard
+deviation close to $\omega/\sqrt2$, whereas the score-function sample
+$\sin(\omega X)\,z$ has standard deviation at most
+$\sqrt{\mathbb{E}[z^2]}=1$ because $|\sin|\le1$. Whenever an integrand
+oscillates rapidly, its derivative can be huge even while its values remain
+bounded. Let us compare the two estimators at $\omega=1$ and $\omega=3$,
+reusing the samples already drawn.
 
 ```{.python .input #integral-score-wins}
 for omega in [1, 3]:
@@ -380,32 +418,35 @@ for omega in [1, 3]:
           f'(sd {path.std():.2f})  score {score.mean():+.4f} (sd {score.std():.2f})')
 ```
 
-At $\omega=1$ the score estimator already has the smaller spread, about $0.5$
-against $0.7$; at $\omega=3$ it wins by a factor of three, about $0.7$
-against $2.1$. Both means agree with the true values within a few standard
-errors.
+Even at $\omega=1$, the score-function estimator already has the smaller spread
+(about $0.5$ versus $0.7$), and at $\omega=3$ it wins by a factor of three
+(about $0.7$ versus $2.1$). Both sample means agree with the exact derivatives
+within a few standard errors.
 
-Neither estimator wins everywhere, then. The pathwise estimator
-differentiates $g$ and suffers where $g'$ is large; the score-function
-estimator multiplies $g$ by noise and suffers where $g$ itself is large. In
-both, the standard deviation $\sigma$ of a single sample decides how many
-samples are needed. It depends on the distribution the samples are drawn
-from, and choosing that distribution to make $\sigma$ small, which is called
-importance sampling, is taken up in :numref:`sec_mdl-bayesian-computation`.
+Neither estimator dominates in every problem. The pathwise estimator
+differentiates $g$, so its variance grows whenever $g'$ is large; the
+score-function estimator multiplies $g$ by the score, so its variance grows
+whenever $g$ itself is large. In both cases, the single-sample standard
+deviation $\sigma$ governs how many samples are needed for a given accuracy.
+Because $\sigma$ also depends on the distribution from which we draw samples,
+choosing a proposal distribution that makes $\sigma$ small leads directly to
+importance sampling, which we take up in :numref:`sec_mdl-bayesian-computation`.
 
 ## Summary
 
-When a parameter moves the distribution of the samples, the gradient of an
-expected loss has to be rewritten as an expectation before samples can
-estimate it. Both ways of doing so move the derivative inside the integral,
-which needs a dominating bound and, when the limits move with the parameter,
-the boundary term of the Leibniz rule. The score-function identity
-differentiates the density. It works for any $g$, including discrete
-choices, but its samples scale with $g$ and can have high variance. The
-pathwise identity differentiates the sample. It needs a differentiable $g$
-and often, though not always, has the lower variance. Either estimate has
-root-mean-square error $\sigma/\sqrt n$ (:numref:`subsec_mdl-monte-carlo`),
-so the standard deviation $\sigma$ of one sample is the quantity to compare.
+When a model's parameters govern the distribution of its samples, the gradient
+of an expected loss must be rewritten as an expectation before Monte Carlo
+sampling can estimate it. Both ways of doing so pass the derivative inside the
+integral, a step that requires an integrable dominating bound and, whenever the
+limits of integration move with the parameter, the boundary terms of the
+Leibniz rule. The score-function identity differentiates the log-density; it
+works for arbitrary losses $g$ and discrete random variables, though its
+samples scale with the magnitude of $g$ and can be noisy without a good
+baseline. The pathwise identity differentiates through a reparameterized
+sample; it requires a differentiable $g$ and often, though not always, achieves
+much lower variance. Because both estimators have root-mean-square error
+$\sigma/\sqrt n$ (:numref:`subsec_mdl-monte-carlo`), the single-sample standard
+deviation $\sigma$ decides which one is preferable for a given problem.
 
 ## Exercises
 

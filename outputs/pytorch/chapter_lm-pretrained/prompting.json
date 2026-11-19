@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6dca33d7de35aa2281275ff4c3e12173296e1655e815fb13e31e203b19cea690",
+    "d2l_lib_fingerprint": "sha256:934c1667b75008913df0580705fb61d6caf782c58439fa8026bfe9acc605b180",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -329,7 +329,7 @@
           "mime": "image/svg+xml",
           "asset": "prompting/prompting-order-plot-1.svg",
           "bytes": 34624,
-          "sha256": "sha256:5215767bffc5a6ba7e7afafcb508bbb1141f14210f647c7bfc8006ab47c66f72"
+          "sha256": "sha256:45acf18619e6a8db7391133f5b1e7ed069ad3ee5dca25c6f063d08623df85882"
         }
       ]
     },
@@ -353,7 +353,7 @@
           "mime": "image/svg+xml",
           "asset": "prompting/prompting-labels-plot-1.svg",
           "bytes": 37876,
-          "sha256": "sha256:03a7f1f969a19ad21d7c8b3174203b8d94767005c66a59c509ac6b80778f1ec2"
+          "sha256": "sha256:07b0a37dac93acf635797c2a5b0f1a4e86357bba1c6472338c1ae2a24d5dea65"
         }
       ]
     },
@@ -420,7 +420,7 @@
           "mime": "image/svg+xml",
           "asset": "prompting/prompting-icl-vs-probe-plot-1.svg",
           "bytes": 42779,
-          "sha256": "sha256:3ab1128a3d563fce05f327a3256d382a21c0af253a9fdf0951c6905c76b6d160"
+          "sha256": "sha256:b6b6cd46738e10512231d1469ab583a7ff2f354f2a627fa2ce36ac48c4e00ee6"
         }
       ]
     },

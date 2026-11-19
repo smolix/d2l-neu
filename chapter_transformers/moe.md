@@ -936,7 +936,7 @@ hundredths of a nat (0.04 to 0.06), with nothing dropped.
 Is that more than luck? The two runs of the dense model end within a
 hundredth of each other, as the run-to-run spread measured in
 :numref:`subsec_gpt-run-to-run` leads us to expect, and the two runs of the
-mixture within a hundredth and a half. The gain is about three times the
+mixture within a hundredth and a half. The gain is at least three times the
 larger of these ranges. Two runs per model are few, but they leave no doubt
 about the sign of the gain, and its size is known to about a hundredth.
 

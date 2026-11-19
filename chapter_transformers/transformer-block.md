@@ -369,10 +369,9 @@ a straight line on the logarithmic axis, which is what geometric decay looks
 like, and by block 32 the tokens agree to about one part in ten thousand.
 The measured spread is about 0.3, 0.02 and $10^{-4}$ at blocks 8, 16 and
 32, below the prediction at every depth but by less than a factor of two.
-Here the FFN we set aside comes back:
-GELU of a zero-mean input has a positive mean, so the FFN, too, adds a
-component that all tokens share. With GPT-2's standard deviation the same
-post-norm stack keeps its tokens apart: its spread is still 0.97 after 32
+Here the FFN we set aside comes back: GELU of a zero-mean input has a
+positive mean, so the FFN, too, adds a component that all tokens share.
+With GPT-2's standard deviation the same post-norm stack keeps its tokens apart: its spread is still 0.97 after 32
 blocks.
 
 The collapse needs two things, post-norm and weights large enough that
@@ -440,14 +439,15 @@ The post-norm curve says more than its endpoint. In the lowest blocks,
 where the tokens are still distinct, the query projections receive
 gradients of about $10^{-2}$, several times below those of the pre-norm
 stack. From there the curve falls smoothly, block by block, as the spread
-does. The backward pass reaches the bottom of the stack through thirty
+does, until it levels off at a few times $10^{-9}$ in the top few blocks.
+The backward pass reaches the bottom of the stack through thirty
 blocks of collapsed tokens and arrives in good shape. The starvation is
 local: a block's query and key weights receive almost no gradient because
 its own input tokens are alike, not because the gradient vanished on its
-way down. The pre-norm curve falls as well, by a factor of 20 to 30 over 32
-blocks, because its tokens also grow more alike with depth, only slowly. With GPT-2's standard deviation
-the curve is flat at about $4 \times 10^{-4}$: small weights give small
-gradients, but no block is starved more than another.
+way down. The pre-norm curve falls as well, by a factor of 20 to 30 over
+32 blocks, because its tokens also grow more alike with depth, only slowly.
+With GPT-2's standard deviation the curve is flat at about
+$4 \times 10^{-4}$: small weights give small gradients, but no block is starved more than another.
 
 These measurements show one way in which a post-norm stack can start
 badly. Whether it also trains badly only training can tell.

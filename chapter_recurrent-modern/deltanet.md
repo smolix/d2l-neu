@@ -44,11 +44,6 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #deltanet-the-delta-rule-2}
-%%tab jax
-import random
-```
-
 ## Additive Writes
 
 ### A Key Written Twice
@@ -83,7 +78,8 @@ rule as an argument, so that we can compare rules.
 %%tab pytorch, jax
 def overwrite_recall(write, num_writes, d=64, num_keys=8, num_values=32,
                      trials=200, seed=0):
-    """Recall of the latest value after every key is written num_writes times."""
+    """Recall of the latest value after every key is written num_writes
+    times."""
     rng = np.random.default_rng(seed)
     codebook = rng.standard_normal((num_values, d))
     codebook /= np.linalg.norm(codebook, axis=1, keepdims=True)
@@ -164,15 +160,64 @@ the memory for aligning its read with the value but never penalizes it for
 overshooting. Aligning gives superposition; minimizing the error gives
 correction. We repeat the measurement with the delta rule at $\beta = 1$.
 
-```{.python .input #deltanet-the-delta-rule-1}
+<!-- WRITER: the cell that printed "delta: 1.00 1.00 1.00 1.00" (deltanet-the-delta-rule-1, a check that could not fail) is gone; its result is now the first row of the table below ("8 orthonormal keys, 4 writes": delta 1.00 at both write strengths). The lead-in sentence above and the sentence "The delta rule recalls the latest value every time, however often the key was rewritten." must be rewritten into the new subsection. -->
+
+### What Correction Costs
+
+<!-- WRITER: the cell below compares four memories in width d = 64 with a codebook of 256 random unit values, 20 trials (NumPy, seeded; identical in both tabs): the additive write, the delta rule at beta = 1 and at beta = 0.5, and least squares (the best fit of all written pairs, np.linalg.lstsq). Rows: 8 orthonormal keys each written 4 times (rebinding); n = 32, 64, 128, 256 random unit keys written once; 64 keys sharing a direction with weight rho = 0.5 (the correlated keys of :numref:`sec_matrix-state`). Measured (squared read error / recall of the latest value), additive | delta 1 | delta 0.5 | least squares: rebinding 2.98/0.28 | 0.00/1.00 | 0.33/1.00 | 0.74/0.28; n=32 0.49/1.00 | 0.29/1.00 | 0.37/1.00 | 0.00/1.00; n=64 0.98/1.00 | 0.60/0.89 | 0.49/0.99 | 0.00/1.00; n=128 1.99/0.96 | 1.06/0.53 | 0.67/0.82 | 0.50/1.00; n=256 3.94/0.73 | 1.49/0.26 | 0.89/0.45 | 0.75/0.86; rho=0.5, n=64 5.82/0.54 | 0.76/0.77 | 0.61/0.89 | 0.00/1.00. Readings the numbers carry: (1) on rebinding the delta rule recalls every latest value; least squares, the best fit of all pairs, returns the mean of a key's values and recalls no better than addition (0.28): the best fit and the latest value are different goals (Exercise 6). (2) With random keys written once, the delta rule at beta = 1 roughly halves the squared error of addition and still recalls fewer pairs once n >= d (0.53 against 0.96 at n = 128): each write removes the component along its key from every stored pair, so old reads shrink toward zero, signal with noise. beta = 0.5 loses less (0.82). (3) With correlated keys correction wins (0.77 and 0.89 against 0.54): it removes the shared component that addition piles up. (4) Least squares beats every one-pass rule on keys written once: the delta rule is one gradient step per pair, not a fit. Hence learned write strengths, and decay and correction as separate gates. Identical output in both tabs (two executions each). About 0.6 s at 4 threads; longer when BLAS uses every core of a loaded machine. -->
+
+```{.python .input #deltanet-what-correction-costs-1}
 %%tab pytorch, jax
-delta = lambda S, k, v: S + np.outer(v - S @ k, k)
-print('delta:   ', ' '.join(f'{overwrite_recall(delta, R):.2f}'
-                            for R in writes))
+def delta_rule(beta):
+    """The memory after writing the pairs in order with the delta rule."""
+    def fit(K, V):
+        S = np.zeros((V.shape[1], K.shape[1]))
+        for k, v in zip(K, V):
+            S = S + beta * np.outer(v - S @ k, k)
+        return S
+    return fit
+
+def correction_cost(memories, num_keys, writes=1, orthonormal=False, rho=0,
+                    d=64, num_values=256, trials=20, seed=0):
+    """Squared read error and recall of the latest value when each of
+    num_keys keys is written `writes` times, for each memory."""
+    rng = np.random.default_rng(seed)
+    unit = lambda X: X / np.linalg.norm(X, axis=-1, keepdims=True)
+    codebook = unit(rng.standard_normal((num_values, d)))
+    error, recall = dict.fromkeys(memories, 0), dict.fromkeys(memories, 0)
+    for _ in range(trials):
+        if orthonormal:
+            keys = np.linalg.qr(rng.standard_normal((d, num_keys)))[0].T
+        else:  # Random unit keys that share one direction with weight rho
+            keys = unit(np.sqrt(1 - rho**2) * unit(rng.standard_normal(
+                (num_keys, d))) + rho * unit(rng.standard_normal(d)))
+        ids = rng.integers(0, num_values, (writes, num_keys))  # Row = round
+        K, V = np.tile(keys, (writes, 1)), codebook[ids.ravel()]
+        for name, fit in memories.items():
+            reads = keys @ fit(K, V).T  # Row j is S k_j
+            error[name] += ((reads - codebook[ids[-1]]) ** 2).sum(1).mean()
+            recall[name] += ((reads @ codebook.T).argmax(1) == ids[-1]).mean()
+    return ({name: e / trials for name, e in error.items()},
+            {name: r / trials for name, r in recall.items()})
 ```
 
-The delta rule recalls the latest value every time, however often the key
-was rewritten.
+```{.python .input #deltanet-what-correction-costs-2}
+%%tab pytorch, jax
+memories = {'additive': lambda K, V: V.T @ K,  # Sum of the v k^T
+            'delta, β = 1': delta_rule(1), 'delta, β = 0.5': delta_rule(0.5),
+            'least squares': lambda K, V: np.linalg.lstsq(K, V)[0].T}
+cases = {'8 orthonormal keys, 4 writes': dict(num_keys=8, writes=4,
+                                              orthonormal=True),
+         **{f'{n} keys': dict(num_keys=n) for n in (32, 64, 128, 256)},
+         '64 keys, ρ = 0.5': dict(num_keys=64, rho=0.5)}
+results = {case: correction_cost(memories, **args)
+           for case, args in cases.items()}
+for i, measure in enumerate(['squared read error', 'recall']):
+    print(f'{measure:28s}', ''.join(f'{name:>15s}' for name in memories))
+    for case, result in results.items():
+        print(f'{case:28s}', ''.join(f'{result[i][name]:15.2f}'
+                                     for name in memories))
+```
 
 ### The Transition
 
@@ -428,7 +473,8 @@ for m in [16, 64]:
 %%tab jax
 T, d_k, d_v = 256, 32, 32
 keys = jax.random.split(jax.random.key(0), 5)
-Q, V = jax.random.normal(keys[0], (T, d_k)), jax.random.normal(keys[1], (T, d_v))
+Q = jax.random.normal(keys[0], (T, d_k))
+V = jax.random.normal(keys[1], (T, d_v))
 K = jax.random.normal(keys[2], (T, d_k))
 K = K / jnp.linalg.norm(K, axis=-1, keepdims=True)
 beta = jax.random.uniform(keys[3], (T,))
@@ -445,6 +491,8 @@ with jax.default_matmul_precision('highest'):  # Full float32, not TF32
 The chunked outputs agree with the recurrence to rounding error.
 
 ### The Layer
+
+<!-- WRITER: `GatedDeltaNet` no longer overrides `decay_gate` and `decays` (nor sets `gate_scale`): since the layer of :numref:`sec_matrix-state` now has one input-dependent decay per head (D4), the two layers share the decay and differ only in `memory` and the write-strength projection `W_beta`. The sentences "Its decay is one number per head ... because the chunked delta rule above takes one decay per step; the method `decays` changes accordingly" are false now (DN-13: "Its decay is the same"). The heads still start with memories of 4 to 256 steps (the parent's default timescales). -->
 
 A Gated DeltaNet layer is the gated linear attention layer of
 :numref:`sec_matrix-state` with a different memory. It adds one projection,
@@ -463,24 +511,13 @@ below $-1$, and the memory can grow without bound.
 ```{.python .input #deltanet-the-layer}
 %%tab pytorch
 class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
-    """Gated linear attention with one decay per head, whose memory is
-    written by the delta rule."""
-    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
-
+    """Gated linear attention whose memory is written by the delta rule."""
     def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
                  timescales=(4, 256)):
         super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
                          timescales)
         self.W_beta = nn.Linear(num_hiddens, num_heads)  # Write strength
         d2l.init_lecun(self.W_beta)
-
-    def decay_gate(self, d):  # One gate per head
-        # Sequential, so that init_decays finds the bias at W_a[-1]
-        return nn.Sequential(nn.Linear(d, self.num_heads))
-
-    def decays(self, X):  # (batch_size * num_heads, T)
-        return d2l.heads_to_batch(F.logsigmoid(self.W_a(X)),
-                                  self.num_heads).squeeze(-1)
 
     def memory(self, X, Q, K, V, log_a):
         beta = d2l.heads_to_batch(torch.sigmoid(self.W_beta(X)),
@@ -491,23 +528,12 @@ class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
 ```{.python .input #deltanet-the-layer}
 %%tab jax
 class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
-    """Gated linear attention with one decay per head, whose memory is
-    written by the delta rule."""
-    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
-
+    """Gated linear attention whose memory is written by the delta rule."""
     def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
                  timescales=(4, 256), *, rngs):
         super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
                          timescales, rngs=rngs)
         self.W_beta = nnx.Linear(num_hiddens, num_heads, rngs=rngs)
-
-    def decay_gate(self, d, rngs):  # One gate per head
-        # Sequential, so that init_decays finds the bias at W_a.layers[-1]
-        return nnx.Sequential(nnx.Linear(d, self.num_heads, rngs=rngs))
-
-    def decays(self, X):  # (batch_size * num_heads, T)
-        return d2l.heads_to_batch(jax.nn.log_sigmoid(self.W_a(X)),
-                                  self.num_heads)[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
         beta = d2l.heads_to_batch(jax.nn.sigmoid(self.W_beta(X)),
@@ -515,37 +541,62 @@ class GatedDeltaNet(d2l.GatedLinearAttention):  #@save
         return chunked_delta_rule(Q, K, V, beta, log_a, self.chunk_size)
 ```
 
-We train it as the mixer of `d2l.SeqLM` with the recipe of the chapter:
-character-level Penn Treebank, two blocks of width 128 with four heads, and
-`d2l.fit_lm`. The gated linear attention layer reached a perplexity of
-about 3.1 with the same recipe.
+<!-- WRITER: the Penn Treebank paragraph, its two cells (deltanet-language-modeling-1/-2, retired) and the reading after them ("Gated DeltaNet reaches a perplexity of about 3.1 ... the recall experiments of the next section") are gone. The new subsection below replaces them (E14, structure 3.8 "Rebinding"); the measured facts are in the WRITER note after its last cell. -->
 
-```{.python .input #deltanet-language-modeling-1}
-%%tab pytorch, jax
-data = d2l.PennTreebank(batch_size=64, num_steps=128)
-```
+### Rebinding
 
-```{.python .input #deltanet-language-modeling-2}
+<!-- WRITER: setup (for the lead-in). The associative recall task of :numref:`sec_matrix-state` (`d2l.associative_recall`, `d2l.train_recall`) with 16 pairs, 8 of whose keys are written a second time with a new value; every query asks for the latest value. Keys from 128, values from 16. Each rewrite comes two writes after its key's first write (`gap=2`): the rewrite follows soon, as a correction usually does (`rate = 0.05`, then `rate = 0.07` a few lines later). Sequences are 64 tokens, no filler. The two models are `d2l.SeqLM` with ONE block of width 64 and 4 heads of size 16, chunk size 16, initial memories of 256 to 2,048 steps (longer than the 64-token sequence, as in the recall experiment of :numref:`sec_matrix-state`; with 64 to 1,024 the gated linear attention runs varied more), the same in both: they differ only in the write rule (`GatedLinearAttention` against `GatedDeltaNet`, whose only extra parameters are the 260 of the write-strength projection). One block, because with two blocks the first layer can read the old value for the second, which can then write a correction: a learned delta rule across layers (dev: with two blocks both layers reach 0.97 to 0.99 on rewritten keys). Training: `d2l.train_recall` defaults (2,000 updates of 256 sequences, AdamW, peak rate 0.01). Prediction from "A Key Written Twice": an additive memory returns the sum of the two values; a learned decay can favor the newer one only by its age, and two writes apart the two values have nearly the same age. -->
+
+```{.python .input #deltanet-rebinding-1}
 %%tab pytorch
-model = d2l.SeqLM(len(data.vocab), 128,
-                  [GatedDeltaNet(128, num_heads=4) for _ in range(2)])
-print(f'Gated DeltaNet perplexity: {d2l.fit_lm(model, data):.2f}')
+def rebinding_model(layer, num_hiddens=64, num_heads=4,
+                    vocab_size=16 + 128 + 1):
+    """One block of `layer`; tokens: 16 values, 128 keys, the filler."""
+    return d2l.SeqLM(vocab_size, num_hiddens, [layer(
+        num_hiddens, num_heads, chunk_size=16, timescales=(256, 2048))])
 ```
 
-```{.python .input #deltanet-language-modeling-2}
+```{.python .input #deltanet-rebinding-1}
 %%tab jax
-rngs = nnx.Rngs(random.getrandbits(32))
-model = d2l.SeqLM(len(data.vocab), 128, [GatedDeltaNet(
-    128, num_heads=4, rngs=rngs) for _ in range(2)], rngs=rngs)
-print(f'Gated DeltaNet perplexity: {d2l.fit_lm(model, data):.2f}')
+def rebinding_model(layer, num_hiddens=64, num_heads=4,
+                    vocab_size=16 + 128 + 1):
+    """One block of `layer`; tokens: 16 values, 128 keys, the filler."""
+    rngs = nnx.Rngs(d2l.get_key())  # A new initialization each call
+    return d2l.SeqLM(vocab_size, num_hiddens, [layer(
+        num_hiddens, num_heads, chunk_size=16, timescales=(256, 2048),
+        rngs=rngs)], rngs=rngs)
 ```
 
-Gated DeltaNet reaches a perplexity of about 3.1, the same as gated linear
-attention. On this task the write rule matters little: most predictions
-depend on the last few characters, and few keys need to be rebound within a
-window of 128 characters. The difference shows where a task requires it, in
-the overwrite measurement above and in the recall experiments of the next
-section.
+```{.python .input #deltanet-rebinding-2}
+%%tab pytorch, jax
+def recall_by_kind(model, X, Y, rebound):
+    """Recall on the queries for keys written twice and for keys written
+    once; a label of -1 matches no prediction."""
+    accuracy = lambda mask: float(d2l.query_accuracy(
+        model, X, np.where(mask, Y, -1))) / mask.mean()
+    return accuracy(rebound), accuracy(~rebound)
+
+task = dict(num_keys=128, num_values=16, num_rebound=8, gap=2)
+test = d2l.associative_recall(np.random.default_rng(1), 2048, 16,
+                              num_steps=64, **task)
+print(f'{"":24s}{"parameters":>12s}{"written twice":>16s}'
+      f'{"written once":>16s}')
+for name, layer in (('gated linear attention', d2l.GatedLinearAttention),
+                    ('Gated DeltaNet', d2l.GatedDeltaNet)):
+    models = [rebinding_model(layer) for _ in range(2)]  # Two runs
+    for model in models:
+        d2l.train_recall(model, pairs=(16,), **task)
+    twice, once = zip(*[recall_by_kind(model, *test) for model in models])
+    print(f'{name:24s}{d2l.num_params(models[0]):12,d}'
+          f'{twice[0]:11.3f} {twice[1]:.3f}{once[0]:11.3f} {once[1]:.3f}')
+```
+
+<!-- WRITER: measured (E14). Seven executions of this cell (two notebook runs per tab plus three dev runs with identical code and settings), two training runs each, so 14 runs per layer. Recall of the latest value on 2,048 test sequences (16,384 queries, half of them for rewritten keys):
+gated linear attention: written twice 0.83 to 0.92 (PyTorch 0.83 to 0.92, JAX 0.87 to 0.92); written once 0.93 to 0.98.
+Gated DeltaNet: written twice 0.96 to 0.99; written once 0.98 to 1.00.
+Parameters 73,941 and 74,201 (the 260 of W_beta). Last executions: PyTorch GLA 0.922/0.870 twice, 0.980/0.964 once; GDN 0.992/0.985, 0.997/0.995. JAX GLA 0.871/0.907, 0.976/0.976; GDN 0.993/0.984, 0.998/0.994.
+Firm readings: (1) in every run, Gated DeltaNet recalls rewritten keys better than gated linear attention (lowest GDN run 0.96 against highest GLA run 0.92); in every execution the difference is larger than the two-run range of either layer, and in four of seven it is more than three times that range (gated linear attention varies by up to 0.05 between two runs). (2) The gap is specific to rewritten keys: gated linear attention recalls keys written once at 0.93 to 0.98, six to eleven points better than its rewritten keys; Gated DeltaNet loses at most two points on rewritten keys. (3) It is not "the sum of two values" (0.51 in the hand-set measurement): the trained additive layer gets about nine in ten right, because its learned decay weights the newer value a little more. The delta rule needs no such trick.
+What the dev runs showed and the cell does not print (for the writer's understanding and for exercises; do not quote these numbers in the text): with rewrites at any later position (gap=None) gated linear attention recalls rewritten keys at about 0.95 and nearly matches Gated DeltaNet, because the two values then differ in age; with its decay switched off (log decay 0) it recalls 0.61 of rewritten keys and 0.996 of single keys, against 1.00 for Gated DeltaNet with its decay (dev recipe: random spacing, 4 values, keys from 64, 3,000 updates at rate 0.003): the decay is what lets an additive memory rebind at all. With two blocks instead of one both layers reach 0.97 to 0.99 on rewritten keys: the first layer can read the old value and the second write a correction. Exercise candidates: rerun with gap=None; with two blocks; with the decay of the gated linear attention layer fixed at one. -->
 
 ## Memory as Regression
 
@@ -731,6 +782,7 @@ at query time.
        $\mathbf{k}_1^\top\mathbf{k}_2$? What does it encourage the network
        to do with the keys of different facts?
 
+<!-- WRITER: Exercise 9 below calls `PlainLinearAttention` (retired from :numref:`sec_matrix-state` with its Penn Treebank run) and `d2l.fit_lm` (removed with Penn Treebank); the worklist drops it here (its home is 12.6). -->
 1. [code] **The parts around the memory.** Write a subclass of
    `GatedDeltaNet` without the short convolution, the SiLU, and the output
    gate, as `PlainLinearAttention` of :numref:`sec_matrix-state` does for
@@ -773,6 +825,7 @@ The memory has room for every key; it cannot **replace** a value.
 - combine decay and correction (Gated DeltaNet) and train it in chunks;
 - place every memory of the chapter in one regression table.
 
+<!-- WRITER (deck): the Penn Treebank run is gone; the running examples are now the overwrite test, the correction-cost table (deltanet-what-correction-costs-2) and the trained rebinding run (deltanet-rebinding-2). -->
 **Running example:** the overwrite test above; the Penn Treebank
 results (gated linear attention 3.1).
 :::
@@ -790,13 +843,14 @@ Unit key, $\beta = 1$: the read returns $\mathbf{v}_t$; directions
 orthogonal to $\mathbf{k}_t$ are untouched.
 :::
 
+<!-- WRITER (deck): the cell this slide showed (deltanet-the-delta-rule-1, delta 1.00 x4) is retired; the slide now shows the correction-cost table. Title, the display block (it still shows the old one-line `delta` lambda; the cell now defines `delta_rule(beta)` and memories as fits of all pairs) and the reading (rebinding row: delta 1.00, additive and least squares 0.28; random keys n >= d: delta at beta = 1 recalls fewer than addition, 0.53 against 0.96 at n = 128; correlated keys: delta wins, 0.77/0.89 against 0.54; least squares beats every one-pass rule on keys written once) need rewriting. -->
 ::: {.slide title="The Delta Rule Rebinds Every Key"}
 ```{.python #deltanet-exercises}
 additive = lambda S, k, v: S + np.outer(v, k)
 delta = lambda S, k, v: S + np.outer(v - S @ k, k)
 ```
 
-@!deltanet-the-delta-rule-1
+@!deltanet-what-correction-costs-2
 
 Additive writes ascend $\mathbf{v}^\top\mathbf{S}\mathbf{k}$ and never
 penalize overshoot; the delta rule minimizes the error.
@@ -854,12 +908,12 @@ chunks.
 @!deltanet-chunked-computation-3
 :::
 
-::: {.slide title="On Text, the Write Rule Matters Little"}
-@!deltanet-language-modeling-2
+<!-- WRITER (deck): the Penn Treebank slide is replaced by the trained rebinding result (deltanet-rebinding-2); title and bullets below are placeholders to rewrite from the WRITER note after that cell. -->
+::: {.slide title="A Trained Layer Rebinds with the Delta Rule"}
+@!deltanet-rebinding-2
 
-- Gated linear attention: about 3.1 with the same recipe.
-- Few keys need rebinding within 128 characters; the overwrite test and the
-  recall tasks of the next deck show the difference.
+- One block, the same layer except the write rule; each rewrite comes two
+  writes after the first.
 :::
 
 ::: {.slide title="Every Memory Fits a Regression"}

@@ -2511,9 +2511,10 @@ def batch_to_heads(Y, batch_size):
     return Y.reshape(batch_size, -1, T, e).transpose(1, 2).flatten(2)
 
 def associative_recall(rng, batch_size, num_pairs, num_keys=512,
-                       num_values=4, num_steps=256, num_rebound=0):
+                       num_values=4, num_steps=256, num_rebound=0, gap=None):
     """Key-value pairs, filler, then every key again as a query. The first
-    num_rebound keys are written twice, the second time with a new value.
+    num_rebound keys are written twice, the second time with a new value,
+    at any later write or, given gap, gap writes after the first one.
     Returns the tokens (values, then keys, then the filler), the latest
     value of each query's key, and a mask of the queries for rebound keys.
 
@@ -2523,9 +2524,14 @@ def associative_recall(rng, batch_size, num_pairs, num_keys=512,
     values = rng.integers(0, num_values, (batch_size, n + r))
     values[:, n:] = (values[:, :r] + rng.integers(  # A new value
         1, num_values, (batch_size, r))) % num_values
-    slots = np.argsort(rng.random((batch_size, n + r)), 1)  # Write order
-    slots[:, :r], slots[:, n:] = (np.minimum(slots[:, :r], slots[:, n:]),
-                                  np.maximum(slots[:, :r], slots[:, n:]))
+    if gap is None:  # Random write order, each second write after the first
+        slots = np.argsort(rng.random((batch_size, n + r)), 1)
+        slots[:, :r], slots[:, n:] = (np.minimum(slots[:, :r], slots[:, n:]),
+                                      np.maximum(slots[:, :r], slots[:, n:]))
+    else:  # First writes in random order, second ones gap first writes later
+        first = np.argsort(rng.random((batch_size, n)), 1)
+        times = np.concatenate([first, first[:, :r] + gap - 0.5], 1)
+        slots = np.argsort(np.argsort(times, 1), 1)
     X = np.full((batch_size, num_steps), num_values + num_keys)  # Filler
     rows = np.arange(batch_size)[:, None]
     X[rows, 2 * slots] = num_values + np.concatenate([keys, keys[:, :r]], 1)
@@ -2596,26 +2602,15 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     return Y.reshape(B, T, -1)
 
 class GatedDeltaNet(d2l.GatedLinearAttention):
-    """Gated linear attention with one decay per head, whose memory is
-    written by the delta rule.
+    """Gated linear attention whose memory is written by the delta rule.
 
     Defined in :numref:`sec_deltanet`"""
-    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
-
     def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
                  timescales=(4, 256)):
         super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
                          timescales)
         self.W_beta = nn.Linear(num_hiddens, num_heads)  # Write strength
         d2l.init_lecun(self.W_beta)
-
-    def decay_gate(self, d):  # One gate per head
-        # Sequential, so that init_decays finds the bias at W_a[-1]
-        return nn.Sequential(nn.Linear(d, self.num_heads))
-
-    def decays(self, X):  # (batch_size * num_heads, T)
-        return d2l.heads_to_batch(F.logsigmoid(self.W_a(X)),
-                                  self.num_heads).squeeze(-1)
 
     def memory(self, X, Q, K, V, log_a):
         beta = d2l.heads_to_batch(torch.sigmoid(self.W_beta(X)),

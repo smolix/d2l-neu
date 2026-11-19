@@ -738,9 +738,10 @@ section uses this option.
 ```{.python .input #hybrids-associative-recall-1}
 %%tab pytorch, jax
 def associative_recall(rng, batch_size, num_pairs, num_keys=512,  #@save
-                       num_values=4, num_steps=256, num_rebound=0):
+                       num_values=4, num_steps=256, num_rebound=0, gap=None):
     """Key-value pairs, filler, then every key again as a query. The first
-    num_rebound keys are written twice, the second time with a new value.
+    num_rebound keys are written twice, the second time with a new value,
+    at any later write or, given gap, gap writes after the first one.
     Returns the tokens (values, then keys, then the filler), the latest
     value of each query's key, and a mask of the queries for rebound keys."""
     n, r = num_pairs, num_rebound
@@ -748,9 +749,14 @@ def associative_recall(rng, batch_size, num_pairs, num_keys=512,  #@save
     values = rng.integers(0, num_values, (batch_size, n + r))
     values[:, n:] = (values[:, :r] + rng.integers(  # A new value
         1, num_values, (batch_size, r))) % num_values
-    slots = np.argsort(rng.random((batch_size, n + r)), 1)  # Write order
-    slots[:, :r], slots[:, n:] = (np.minimum(slots[:, :r], slots[:, n:]),
-                                  np.maximum(slots[:, :r], slots[:, n:]))
+    if gap is None:  # Random write order, each second write after the first
+        slots = np.argsort(rng.random((batch_size, n + r)), 1)
+        slots[:, :r], slots[:, n:] = (np.minimum(slots[:, :r], slots[:, n:]),
+                                      np.maximum(slots[:, :r], slots[:, n:]))
+    else:  # First writes in random order, second ones gap first writes later
+        first = np.argsort(rng.random((batch_size, n)), 1)
+        times = np.concatenate([first, first[:, :r] + gap - 0.5], 1)
+        slots = np.argsort(np.argsort(times, 1), 1)
     X = np.full((batch_size, num_steps), num_values + num_keys)  # Filler
     rows = np.arange(batch_size)[:, None]
     X[rows, 2 * slots] = num_values + np.concatenate([keys, keys[:, :r]], 1)
@@ -761,6 +767,7 @@ def associative_recall(rng, batch_size, num_pairs, num_keys=512,  #@save
     return X, np.take_along_axis(latest, order, 1), order < r
 ```
 
+<!-- WRITER (added by the deltanet code step, which uses it): `associative_recall` has a `gap` option. With gap=None (the default, used in this section) the second write of a rebound key comes at a random later write; with an integer gap it comes gap first-writes after the key's first write (gap=2: one other key's first write in between). :numref:`sec_deltanet` uses gap=2: a learned decay tells an old value from a new one only by age, so a rewrite that follows soon is what separates the delta rule from additive writes. One clause here ("the next section uses these options") is enough. -->
 One sequence with four pairs, the first of them written twice, shows the
 layout. Token ids 0 to 3 are the values, 4 to 515 the keys, and 516 the
 filler (the default of 512 possible keys).

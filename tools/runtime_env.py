@@ -338,9 +338,6 @@ HEAVY_GPU_NOTEBOOKS = {
     # A5's fused-vs-naive timing cell transiently allocates ~4 GiB inside the
     # XLA arena; fine solo, OOMs when sharing a GPU at 2 slots. Run exclusive.
     ("jax", "chapter_attention/attention-at-scale.ipynb"): 2,
-    # 12.5's Gated-DeltaNet LM + chunked-WY cells peak ~8 GiB in the XLA
-    # arena; green solo, RESOURCE_EXHAUSTED at 2-slot sharing. Run exclusive.
-    ("jax", "chapter_recurrent-modern/deltanet.ipynb"): 2,
     # 11.3's batched decoding at b=64 compiles a ~5.5 GiB program and XLA
     # autotuning then OOMs a 1-slot (~7.5 GiB) arena. Run exclusive.
     ("jax", "chapter_transformers/kv-cache.ipynb"): 2,

@@ -501,7 +501,7 @@ most of them within a few thousandths, so the differences between the
 models are not noise. At the GRU's parameter count the minGRU ends about
 0.03 nats per byte behind the GRU, and at the same width about 0.05 behind.
 The gap is not spread evenly over the window. At equal parameter counts it
-is about 0.015 in the first 16 bytes and about 0.03 from byte 16 on. The
+is about 0.02 in the first 16 bytes and about 0.03 from byte 16 on. The
 minGRU falls behind once there is context to manage, which is where a gate
 that can see the state should help.
 
@@ -580,9 +580,9 @@ a fraction $g$ of the state per step, which by the half-life of
 :eqref:`eq_lr-unrolled` is one step for $g = 0.5$, 7 for $0.9$, and 69 for
 $0.99$. Before training, the gates spread around one half: their biases
 start at zero, so most gates keep the state for a step or two. To read the
-trained gates, we need the input of the first layer: the token embeddings,
-normalized as the first block normalizes them. We give `SeqLM` a method for
-it.
+gates, of the trained model and of an untrained one for comparison, we need
+the input of the first layer: the token embeddings, normalized as the first
+block normalizes them. We give `SeqLM` a method for it.
 
 ```{.python .input #ssm-a-linear-recurrent-language-model-5}
 %%tab pytorch, jax
@@ -623,10 +623,13 @@ for g in (0.5, 0.9, 0.99):
           f'{(Z_init > g).mean():23.1%}  {(Z > g).mean():7.1%}')
 ```
 
-About half of the gate values exceed 0.5, and almost none reaches 0.99. In
-between, training has moved about one gate in six past 0.9, from a memory
-of a byte or two to a half-life of about 7 bytes or more. Nothing in
-training asked for much more: the windows are 128 bytes long. Each gate
+Training has left the two ends of the table alone. About half of the gate
+values exceed 0.5, before training and after, and almost none reaches 0.99.
+All the change is in between. At initialization about one gate in a hundred
+exceeds 0.9; after training about one in six does, and for those the
+memory has grown from a byte or two to a half-life of about 7 bytes or
+more. Nothing in training asked for much more: the windows are 128 bytes
+long. Each gate
 value is computed from the current byte, so how long an input survives
 depends on the bytes that follow it, as :eqref:`eq_lr-unrolled-gated`
 describes; an exercise asks how much the gates of a unit vary from byte to
@@ -778,7 +781,7 @@ d2l.plot(lengths, list(times.values()), 'sequence length',
 ```
 
 The curves have the shapes the counts predict. The GRU is the slowest layer
-at every length, and its time grows by 1.6 to 2 times with every doubling
+at every length, and its time grows by 1.6 to 2.1 times with every doubling
 of the length, more than fifteen times from 512 to 16,384 tokens. That is
 not quite in proportion, because its input products are part of every call
 and cost the same at every length. The scan's time hardly moves; it grows
@@ -1120,7 +1123,7 @@ $T = 4096$.
 
 - Two runs each, nats per byte. At 2.76M parameters the minGRU is level
   with a plain tanh RNN of the same size (about 1.35).
-- The gap is about 0.015 in the first 16 bytes, about 0.03 from byte 16 on.
+- The gap is about 0.02 in the first 16 bytes, about 0.03 from byte 16 on.
 
 ::: {.d2l-note}
 Input-only gates do no better than no gates. But the plain RNN's $\tanh$
@@ -1142,7 +1145,8 @@ chain cannot be scanned: the minGRU's case is speed at long lengths.
 
 - Gate value $g$: half-life $\ln 2/\ln(1/g)$ steps.
 - First layer, one validation batch, after 1,000 steps of training.
-- Gates start near $1/2$, a half-life of about one step.
+- Gates start near $1/2$, a half-life of about one step: before training
+  about 1% exceed 0.9, after training about 18%.
 
 ::: {.d2l-note}
 Windows of 128 bytes never ask for a memory of thousands; whether training

@@ -293,20 +293,20 @@ reach at 0.89.
 
 The columns of weights tell us not to celebrate yet. The weights of the
 spike fit reach $2 \times 10^{11}$, and those of the bump fit, at
-$8 \times 10^{10}$, are hardly more modest. Real exponentials with nearby rates look much alike, and least
-squares tells them apart only with enormous weights of opposite sign that
-cancel almost perfectly. Gradient descent from small weights has no
-reasonable path to such a solution. With weights of ordinary size, the
-peak of the kernel can still be moved away from zero, but the kernel stays
-broad; exercise 2 measures how much of the bump survives. A sum of decaying
-exponentials can remember roughly when something happened, not exactly
-when, and with a readout of ordinary size the "roughly" is rough indeed.
-For a language model the lost precision matters less than it sounds: a
-word usually needs the subject a few words back, not the token exactly 20
-positions ago. The poor conditioning is another matter, and it is where
-complex rates help. Their oscillating terms differ from one another far
-more than decays with nearby rates do, and exercise 3 repeats the fit with
-them.
+$8 \times 10^{10}$, are hardly more modest. Real exponentials with nearby
+rates look much alike, and least squares tells them apart only with
+enormous weights of opposite sign that cancel almost perfectly. Gradient
+descent from small weights has no reasonable path to such a solution. With
+weights of ordinary size, the peak of the kernel can still be moved away
+from zero, but the kernel stays broad; exercise 2 measures how much of the
+bump survives. A sum of decaying exponentials can remember roughly when
+something happened, not exactly when, and with a readout of ordinary size
+the "roughly" is rough indeed. For a language model the lost precision
+matters less than it sounds: a word usually needs the subject a few words
+back, not the token exactly 20 positions ago. The poor conditioning is
+another matter, and it is where complex rates help. Their oscillating terms
+differ from one another far more than decays with nearby rates do, and
+exercise 3 repeats the fit with them.
 
 ## A Diagonal State Space Layer
 :label:`subsec_s4d`
@@ -528,9 +528,10 @@ the recurrent layers of :numref:`sec_lstm`. Every model is trained twice
 from fresh random weights, and both test accuracies are printed. For the
 two S4D layers the cell also prints the slowest half-life after training,
 $\ln 2 / \min_n (\Delta |\lambda_n|)$ over all channels, which tells us
-whether training has moved the timescales. A prediction first: if the architecture decides, the two S4D rows will agree
-with each other and so will the two minGRU rows; if the timescales decide,
-the controls will change sides.
+whether training has moved the timescales. A prediction first: if the
+architecture decides, the two S4D rows will agree with each other and so
+will the two minGRU rows; if the timescales decide, the controls will
+change sides.
 
 ```{.python .input #ssm-long-range-recall-2}
 %%tab pytorch
@@ -612,16 +613,16 @@ One entry deserves a second look. The short-timescale S4D recalls the
 symbol after 100 steps, although none of its half-lives exceeds 7 steps at
 the start. After 99 steps its slowest state holds the symbol with a weight
 of about $e^{-0.1 \cdot 99} \approx 5 \times 10^{-5}$. That is small, but
-it is not nothing: the trace still carries a gradient to the step sizes
-and the rates, and training uses it to lengthen the slowest half-lives.
-The second block of the table shows by how much: from at most 7 steps to
+it is not nothing: the trace still carries a gradient to the step sizes and
+the rates, and training uses it to lengthen the slowest half-lives. The
+second block of the table shows by how much: from at most 7 steps to
 between 100 and 200, enough for the symbol to survive the delay. After 999
 steps the weight is $e^{-100}$, about $10^{-44}$, far below the rounding
 error of the numbers it is added to. The gradient that would lengthen the
-half-lives never arrives, and they end within a few steps of where they
-began, two orders of magnitude short of the delay. S4D itself shows the
-same pull from a better start: its slowest half-lives grow from at most
-693 steps to more than 1,000 at a delay of 100, and to more than 2,000 at
+half-lives never arrives, and the slowest ends within a few steps of where
+it began, two orders of magnitude short of the delay. S4D itself shows the
+same pull from a better start: its slowest half-lives grow from at most 693
+steps to about 1,000 or more at a delay of 100, and to more than 2,000 at
 a delay of 1,000. Exercise 5 asks what happens when the half-lives are not
 allowed to move at all. A memory does not end at its half-life. A faint
 trace is enough to teach a layer to remember longer; what ends a memory is

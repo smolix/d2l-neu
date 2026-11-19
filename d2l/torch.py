@@ -2340,38 +2340,52 @@ def adjoint_scan(a, b):
     return AdjointScan.apply(a.expand_as(b), b)
 
 class SelectiveSSM(nn.Module):
-    """A diagonal SSM whose step sizes and write and read vectors depend on
-    the input: N states for each of num_channels channels.
+    """A diagonal SSM with N states for each of num_channels channels. Its
+    step sizes and write and read vectors depend on the input, or, with
+    selective=False, are learned constants of each channel.
 
     Defined in :numref:`sec_mamba`"""
-    def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1):
+    def __init__(self, num_channels, dt_rank, num_states=16, dt_min=1e-3,
+                 dt_max=1e-1, selective=True):
         super().__init__()
-        H, N, R = num_channels, num_states, math.ceil(num_channels / 16)
+        H, N, R = num_channels, num_states, dt_rank
+        self.selective = selective
         self.log_neg_rate = nn.Parameter(  # Rates -1, ..., -N in every channel
             torch.log(torch.arange(1., N + 1)).repeat(H, 1))
-        self.W_dt = nn.Sequential(  # Step size per channel, through rank R
-            nn.Linear(H, R, bias=False), nn.Linear(R, H))
-        self.W_B = nn.Linear(H, N, bias=False)  # Write vector
-        self.W_C = nn.Linear(H, N, bias=False)  # Read vector
-        d2l.init_lecun(self)
         dt = dt_min * (dt_max / dt_min) ** torch.rand(H)
-        with torch.no_grad():  # Small up-projection, softplus(bias) = dt
-            nn.init.uniform_(self.W_dt[1].weight, -R ** -0.5, R ** -0.5)
-            self.W_dt[1].bias.copy_(dt + torch.log(-torch.expm1(-dt)))
+        dt_bias = dt + torch.log(-torch.expm1(-dt))  # softplus(dt_bias) = dt
+        if selective:
+            self.W_dt = nn.Sequential(  # Step size per channel, rank R
+                nn.Linear(H, R, bias=False), nn.Linear(R, H))
+            self.W_B = nn.Linear(H, N, bias=False)  # Write vector
+            self.W_C = nn.Linear(H, N, bias=False)  # Read vector
+            d2l.init_lecun(self)
+            with torch.no_grad():  # Small up-projection, step sizes dt
+                nn.init.uniform_(self.W_dt[1].weight, -R ** -0.5, R ** -0.5)
+                self.W_dt[1].bias.copy_(dt_bias)
+        else:  # Fixed dynamics: S4D with a learned write vector
+            self.dt_bias = nn.Parameter(dt_bias)
+            self.B = nn.Parameter(torch.ones(H, N))
+            self.C = nn.Parameter(torch.randn(H, N) / math.sqrt(N))
         self.D = nn.Parameter(torch.ones(H))
 
     def log_coefficients(self, U):
         """Log-decays and writes, each of shape (batch_size, T, H, N).
 
         Defined in :numref:`sec_mamba`"""
-        dt = F.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
+        if self.selective:  # Step sizes (batch_size, T, H), write vectors
+            dt, B = F.softplus(self.W_dt(U)), self.W_B(U).unsqueeze(-2)
+        else:  # One step size and one write vector per channel
+            dt, B = F.softplus(self.dt_bias), self.B
+        b = (dt * U).unsqueeze(-1) * B
         log_a = dt.unsqueeze(-1) * -torch.exp(self.log_neg_rate)
-        return log_a, (dt * U).unsqueeze(-1) * self.W_B(U).unsqueeze(-2)
+        return log_a.expand_as(b), b
 
     def forward(self, U):  # U: (batch_size, num_steps, num_channels)
         log_a, b = self.log_coefficients(U)
         H = adjoint_scan(torch.exp(log_a), b)  # States, (batch_size, T, H, N)
-        return (H * self.W_C(U).unsqueeze(-2)).sum(-1) + self.D * U
+        C = self.W_C(U).unsqueeze(-2) if self.selective else self.C  # Read
+        return torch.einsum('...n,...n->...', H, C) + self.D * U  # Sum over n
 
 class Mamba(nn.Module):
     """The Mamba layer: a gated selective SSM between two projections.
@@ -2385,8 +2399,9 @@ class Mamba(nn.Module):
         self.conv = nn.Conv1d(H, H, conv_width, groups=H,  # One per channel
                               padding=conv_width - 1)
         self.W_out = nn.Linear(H, num_hiddens, bias=False)
-        d2l.init_lecun(self)
-        self.ssm = SelectiveSSM(H, num_states, **ssm_args)  # Has its own init
+        d2l.init_lecun(self)  # The SSM, built next, has its own init
+        self.ssm = SelectiveSSM(H, math.ceil(num_hiddens / 16), num_states,
+                                **ssm_args)
 
     def ssm_input(self, X):
         """The input of the SSM and the gate branch."""

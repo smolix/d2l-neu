@@ -2478,39 +2478,53 @@ def adjoint_scan(a, b):  #@save
     return _adjoint_scan(jnp.broadcast_to(a, b.shape), b)
 
 class SelectiveSSM(nnx.Module):
-    """A diagonal SSM whose step sizes and write and read vectors depend on
-    the input: N states for each of num_channels channels.
+    """A diagonal SSM with N states for each of num_channels channels. Its
+    step sizes and write and read vectors depend on the input, or, with
+    selective=False, are learned constants of each channel.
 
     Defined in :numref:`sec_mamba`"""
-    def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1,
-                 *, rngs):
-        H, N, R = num_channels, num_states, math.ceil(num_channels / 16)
+    def __init__(self, num_channels, dt_rank, num_states=16, dt_min=1e-3,
+                 dt_max=1e-1, selective=True, *, rngs):
+        H, N, R = num_channels, num_states, dt_rank
+        self.selective = selective
         self.log_neg_rate = nnx.Param(  # Rates -1, ..., -N in every channel
             jnp.tile(jnp.log(jnp.arange(1., N + 1)), (H, 1)))
         def dt_bias(key, shape, dtype=jnp.float32):  # softplus(bias) = dt
             dt = dt_min * (dt_max / dt_min) ** jax.random.uniform(key, shape)
             return (dt + jnp.log(-jnp.expm1(-dt))).astype(dtype)
-        def small(key, shape, dtype=jnp.float32):  # U(-R^-1/2, R^-1/2)
-            return jax.random.uniform(key, shape, dtype, -R ** -0.5, R ** -0.5)
-        self.W_dt = nnx.Sequential(  # Step size per channel, through rank R
-            nnx.Linear(H, R, use_bias=False, rngs=rngs),
-            nnx.Linear(R, H, kernel_init=small, bias_init=dt_bias, rngs=rngs))
-        self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Write vector
-        self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Read vector
+        if selective:
+            def small(key, shape, dtype=jnp.float32):  # U(-R^-1/2, R^-1/2)
+                return jax.random.uniform(key, shape, dtype, -R ** -0.5,
+                                          R ** -0.5)
+            self.W_dt = nnx.Sequential(  # Step size per channel, rank R
+                nnx.Linear(H, R, use_bias=False, rngs=rngs),
+                nnx.Linear(R, H, kernel_init=small, bias_init=dt_bias,
+                           rngs=rngs))
+            self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Write
+            self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Read
+        else:  # Fixed dynamics: S4D with a learned write vector
+            self.dt_bias = nnx.Param(dt_bias(rngs.params(), (H,)))
+            self.B = nnx.Param(jnp.ones((H, N)))
+            self.C = nnx.Param(rngs.params.normal((H, N)) / math.sqrt(N))
         self.D = nnx.Param(jnp.ones(H))
 
     def log_coefficients(self, U):
         """Log-decays and writes, each of shape (batch_size, T, H, N).
 
         Defined in :numref:`sec_mamba`"""
-        dt = jax.nn.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
+        if self.selective:  # Step sizes (batch_size, T, H), write vectors
+            dt, B = jax.nn.softplus(self.W_dt(U)), self.W_B(U)[..., None, :]
+        else:  # One step size and one write vector per channel
+            dt, B = jax.nn.softplus(self.dt_bias[...]), self.B[...]
+        b = (dt * U)[..., None] * B
         log_a = dt[..., None] * -jnp.exp(self.log_neg_rate[...])
-        return log_a, (dt * U)[..., None] * self.W_B(U)[..., None, :]
+        return jnp.broadcast_to(log_a, b.shape), b
 
     def __call__(self, U):  # U: (batch_size, num_steps, num_channels)
         log_a, b = self.log_coefficients(U)
         H = adjoint_scan(jnp.exp(log_a), b)  # States, (batch_size, T, H, N)
-        return (H * self.W_C(U)[..., None, :]).sum(-1) + self.D[...] * U
+        C = self.W_C(U)[..., None, :] if self.selective else self.C[...]  # Read
+        return jnp.einsum('...n,...n->...', H, C) + self.D[...] * U  # Sum over n
 
 class Mamba(nnx.Module):
     """The Mamba layer: a gated selective SSM between two projections.
@@ -2521,8 +2535,10 @@ class Mamba(nnx.Module):
         H = expand * num_hiddens
         self.W_in = nnx.Linear(num_hiddens, 2 * H, use_bias=False, rngs=rngs)
         self.conv = nnx.Conv(H, H, (conv_width,), feature_group_count=H,
-                             padding=((conv_width - 1, 0),), rngs=rngs)  # Causal
-        self.ssm = SelectiveSSM(H, num_states, rngs=rngs, **ssm_args)
+                             padding=((conv_width - 1, 0),),  # Causal
+                             rngs=rngs)
+        self.ssm = SelectiveSSM(H, math.ceil(num_hiddens / 16), num_states,
+                                rngs=rngs, **ssm_args)
         self.W_out = nnx.Linear(H, num_hiddens, use_bias=False, rngs=rngs)
 
     def ssm_input(self, X):

@@ -657,7 +657,7 @@ cells = {'RNN': lambda rngs: nnx.SimpleCell(32, 64, rngs=rngs, **lecun),
 
 def recall_model(cell):  # Fresh random weights for every model
     rngs = nnx.Rngs(d2l.get_key())
-    return RecallModel(nnx.RNN(cell(rngs)), 64, rngs=rngs)
+    return RecallModel(nnx.RNN(cell(rngs), unroll=8), 64, rngs=rngs)
 
 delays = [20, 50, 100, 200]
 print(' ' * 18, ' '.join(f'{T:>9d}' for T in delays))
@@ -892,15 +892,25 @@ def text_model(mixer):  # 256 byte values; fresh weights, on the GPU
 %%tab jax
 d = 256  # The width of every model; each has four blocks
 mixers = {
-    'RNN': lambda rngs: nnx.RNN(nnx.SimpleCell(d, d, rngs=rngs, **lecun)),
-    'LSTM': lambda rngs: nnx.RNN(nnx.LSTMCell(d, d, rngs=rngs, **lecun)),
-    'GRU': lambda rngs: nnx.RNN(nnx.GRUCell(d, d, rngs=rngs, **lecun)),
+    'RNN': lambda rngs: nnx.RNN(nnx.SimpleCell(d, d, rngs=rngs, **lecun),
+                                unroll=8),
+    'LSTM': lambda rngs: nnx.RNN(nnx.LSTMCell(d, d, rngs=rngs, **lecun),
+                                 unroll=8),
+    'GRU': lambda rngs: nnx.RNN(nnx.GRUCell(d, d, rngs=rngs, **lecun),
+                                unroll=8),
     'attention': lambda rngs: AttentionMixer(d, num_heads=8, rngs=rngs)}
 
 def text_model(mixer):  # 256 byte values; fresh random weights
     rngs = nnx.Rngs(d2l.get_key())
     return SeqLM(256, d, [mixer(rngs) for _ in range(4)], rngs=rngs)
 ```
+
+:begin_tab:`jax`
+`nnx.RNN` runs its cell in a `jax.lax.scan`, one loop iteration per time
+step. With `unroll=8` each iteration computes eight steps, so XLA launches
+fewer and larger kernels; the steps still run one after another. For the
+models below this makes a training step two to three times faster.
+:end_tab:
 
 Each model is trained twice. The table prints the parameters, the
 validation loss of both runs, their losses at early, middle, and late

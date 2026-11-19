@@ -49,6 +49,7 @@ which are the subject of :numref:`chap_performance`, and
 
 lstm
 seq2seq
+linear-recurrence
 ssm
 mamba
 matrix-state

@@ -762,10 +762,12 @@ does a router that learns make it worse? The first row measures fresh
 models without any training. The trained models differ only in how the
 router is kept in check: not at all, frozen at its initial weights, by the
 auxiliary loss at $\lambda_\textrm{bal} = 0.01$, or by the bias controller
-at $u = 0.01$. Each row holds two runs from fresh random weights, and its
-columns give the validation loss, the same loss with nothing dropped, the
-busiest expert's load in units of the even share, and the fraction of
-assignments dropped:
+at $u = 0.01$. The cell first prints the share of spaces in the
+validation text, the number on which the prediction rests. Each row of the
+table then holds two runs from fresh random weights, and its columns give
+the validation loss, the same loss with nothing dropped, the busiest
+expert's load in units of the even share, and the fraction of assignments
+dropped:
 
 ```{.python .input #moe-three-runs-one-budget-3}
 %%tab pytorch, jax
@@ -1476,8 +1478,8 @@ $\mathcal{L}_{\mathrm{balance}}$?
 
 ::: {.slide title="A Fresh Model Is Already Skewed, and a Frozen Router Stays So"}
 Two blocks of width 128, 8 experts, top-1, $c = 1.25$, 800 steps on
-WikiText-103 bytes. "no drops": the same model with room for every
-assignment.
+WikiText-103 bytes. First line: the spaces' share of the bytes. "no
+drops": the same model with room for every assignment.
 
 @!moe-three-runs-one-budget-3
 

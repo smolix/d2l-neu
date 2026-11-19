@@ -243,14 +243,14 @@ for name, r in runs.items():
 
 Both predictions hold, and the first with room to spare. With 4 pairs
 every model recalls nearly every value. From there Gated DeltaNet loses
-pairs as the load grows, to about two thirds of 32 pairs and about half of
-64. The model with four times the state does better than we guessed: it
-recalls 0.93 to 0.97 of 64 pairs, about as well as the small state recalls
-8, not 16, and every one of its runs is above every run of the small state
-from 16 pairs on. Four times the entries hold at least four times the
-pairs, so what :numref:`sec_matrix-state` found for gated linear attention
-holds for the delta rule as well. The two runs of each model differ far
-less than the models do.
+pairs as the load grows, to two thirds or a little less of 32 pairs and
+about half of 64. The model with four times the state does better than we
+guessed: it recalls 0.93 to 0.97 of 64 pairs, about as well as the small
+state recalls 8, not 16, and every one of its runs is above every run of
+the small state from 16 pairs on. Four times the entries hold at least
+four times the pairs, so what :numref:`sec_matrix-state` found for gated
+linear attention holds for the delta rule as well. The two runs of each
+model differ far less than the models do.
 
 The hybrid recalls every pair at every load in every run, and so does
 attention behind the same convolution. Attention was built to keep every
@@ -464,7 +464,7 @@ executions of the same model.
 | S4D | $dN$ | convolution or scan | recalls after 1,000 steps; at most one in five on selective copying | not trained |
 | Mamba | $HN$ | scan | 0.99 to 1.00 on selective copying | 1.30 (4.0 M) |
 | gated linear attention | $d^2/h$ | chunks | about half of 64 pairs with 128 entries, more with 512 | not trained |
-| Gated DeltaNet | $d^2/h$ | chunks with a triangular solve | 0.95 to 0.99 of rewritten keys, against 0.86 to 0.89 for gated linear attention | 1.32 to 1.33 (3.6 M) |
+| Gated DeltaNet | $d^2/h$ | chunks with a triangular solve | 0.95 or more of rewritten keys, against about 0.83 to 0.92 for gated linear attention | 1.32 to 1.33 (3.6 M) |
 | attention | $2dT$ | fused attention over all positions | every pair at every load | 1.37 to 1.39 (3.3 M) |
 | hybrid | recurrent states plus $2dT$ per attention layer | both | every pair, with attention in one of two blocks | 1.33 to 1.34 (3.5 M) |
 
@@ -760,7 +760,7 @@ each trained twice.
 ::: {.slide title="4× State Recalls 64 Pairs as Well as the Small State Recalls 8"}
 [Recall]{.kicker}
 
-- Gated DeltaNet: about two thirds of 32 pairs, half of 64.
+- Gated DeltaNet: two thirds or a little less of 32 pairs, half of 64.
 - 4× state: 0.93–0.97 of 64, like the small state at 8 (0.93–0.96),
   better than the guess of 16: at least 4× the pairs.
 - Hybrid, attention: every pair, every load, every run.

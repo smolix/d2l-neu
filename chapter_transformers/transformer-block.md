@@ -353,6 +353,8 @@ for name, (pre_norm, std) in arms.items():
         f'{n} {g:.1e}' for n, g in s['proj'].items()))
 ```
 
+The next cell plots the spread at every depth, with the predictions dotted:
+
 ```{.python .input #transformer-block-signal-propagation-at-initialization-3}
 %%tab pytorch, jax
 d2l.plot(list(range(1, 33)), [s['spread'] for s in stats.values()]
@@ -1115,8 +1117,8 @@ alone. Both map $(n, d)$ to $(n, d)$, so blocks stack.
 :::
 
 ::: {.slide title="Post-Norm Normalizes the Stream; Pre-Norm Normalizes What Each Branch Reads"}
-Token vectors $\mathbf{x} \in \mathbb{R}^d$ on the residual stream (also
-called post-LN and pre-LN, after layer normalization):
+Token vectors $\mathbf{x} \in \mathbb{R}^d$ on the residual stream. The
+literature also says post-LN and pre-LN, after layer normalization:
 
 $$\textrm{post-norm (2017):}\quad \mathbf{h} = \mathrm{Norm}_1(\mathbf{x} + \mathrm{Attn}(\mathbf{x})), \quad \mathbf{y} = \mathrm{Norm}_2(\mathbf{h} + \mathrm{FFN}(\mathbf{h}))$$
 

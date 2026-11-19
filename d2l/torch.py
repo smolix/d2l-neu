@@ -2014,7 +2014,7 @@ def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
                    blank_fillers=False):
     """A symbol, then num_steps - 1 fillers; the target is the symbol.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     Y = rng.integers(0, num_symbols, (batch_size, 1))  # One query, at the end
     X = rng.integers(num_symbols, 2 * num_symbols, (batch_size, num_steps))
     if blank_fillers:  # The same filler token at every step
@@ -2026,7 +2026,7 @@ def init_lecun(module):
     """LeCun normal weights and zero biases for all linear, convolutional,
     and recurrent layers.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     for layer in module.modules():
         if isinstance(layer, (nn.Linear, nn.Conv1d)):
             fan_in = layer.weight[0].numel()  # Inputs of one output unit
@@ -2044,7 +2044,7 @@ def init_lecun(module):
 class Recurrent(nn.Module):
     """A batch-first recurrent layer that returns only its outputs.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, rnn):
         super().__init__()
         self.rnn = rnn
@@ -2055,7 +2055,7 @@ class Recurrent(nn.Module):
 class RecallModel(nn.Module):
     """Embedding, a sequence layer, and a classifier at every position.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
                  num_outputs=8):
         super().__init__()
@@ -2071,7 +2071,7 @@ def train_queries(model, batch, num_steps, optimizer,
                   scheduler=None):
     """Train on fresh batches; the queries are the last Y.shape[1] steps.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     device = next(model.parameters()).device
     for step in range(num_steps):
         X, Y = (torch.as_tensor(A, device=device) for A in batch(step))
@@ -2087,29 +2087,29 @@ def train_queries(model, batch, num_steps, optimizer,
 def query_accuracy(model, X, Y):
     """Fraction of queries answered correctly.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     device = next(model.parameters()).device
     X, Y = (torch.as_tensor(A, device=device) for A in (X, Y))
     with torch.inference_mode():
         return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).float().mean()
 
-def train_delayed_recall(model, num_steps, blank_fillers=False,
-                         num_updates=1500, lr=3e-3):
-    """Train on fresh batches of delayed recall; return the test accuracy.
+def train_delayed_recall(model, num_steps, blank_fillers=False):
+    """Train with Adam at rate 0.003 on 1,500 fresh batches of 128 sequences
+    of delayed recall; return the accuracy on 2,048 new sequences.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     task = lambda rng, n: delayed_recall(rng, n, num_steps,
                                          blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
     model.to(d2l.try_gpu())
-    train_queries(model, lambda step: task(rng, 128), num_updates,
-                  torch.optim.Adam(model.parameters(), lr=lr))
+    train_queries(model, lambda step: task(rng, 128), 1500,
+                  torch.optim.Adam(model.parameters(), lr=3e-3))
     return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 
 class SeqLM(nn.Module):
     """A language model of residual blocks: a sequence mixer, then an MLP.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, vocab_size, num_hiddens, mixers):
         super().__init__()
         d = num_hiddens
@@ -2135,218 +2135,87 @@ class SeqLM(nn.Module):
     def first_mixer_input(self, X):
         """What the first mixer reads: the normalized token embeddings.
 
-        Defined in :numref:`sec_ssm`"""
+        Defined in :numref:`sec_linear-recurrence`"""
         return self.norms[0](self.embedding(X))
 
-d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
-                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
+class AttentionMixer(d2l.CausalAttention):
+    """Causal multi-head attention, with rotary positions unless rope is
+    False, as a sequence mixer; with conv_width, a causal convolution per
+    channel first mixes each query, key, and value with those of the
+    previous steps.
 
-class PennTreebank(d2l.DataModule):
-    """Character-level Penn Treebank, cut into windows of num_steps.
+    Defined in :numref:`sec_gated-training`"""
+    def __init__(self, num_hiddens, num_heads, conv_width=None, rope=True):
+        super().__init__(num_hiddens, num_heads, rope=rope)
+        d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
+        self.conv = None if conv_width is None else nn.Conv1d(
+            d, d, conv_width, groups=d, padding=conv_width - 1)
+        init_lecun(self)  # Like every mixer of the chapter
 
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, batch_size, num_steps):
-        super().__init__()
-        self.save_hyperparameters()
-        data_dir = d2l.download_extract('ptb')
-        def read(split):
-            with open(os.path.join(data_dir, f'ptb.{split}.txt')) as f:
-                return f.read()
-        train, val = read('train'), read('valid')
-        self.vocab = d2l.Vocab(list(train))
-        self.train, self.val = self.windows(train), self.windows(val)
+    def qkv(self, X, offset=0, tables=None):
+        B, T, _ = X.shape
+        QKV = self.W_qkv(X)
+        if self.conv is not None:  # Causal: drop the last conv_width - 1 steps
+            QKV = self.conv(QKV.mT)[..., :T].mT
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+                   for u in QKV.chunk(3, -1))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 
-    def windows(self, text):
-        corpus = d2l.tensor(self.vocab[list(text)])
-        n = (len(corpus) - 1) // self.num_steps * self.num_steps
-        return (corpus[:n].reshape(-1, self.num_steps),  # Inputs
-                corpus[1:n + 1].reshape(-1, self.num_steps))  # Next tokens
+@torch.inference_mode()
+def loss_by_position(model, data):
+    """Mean validation loss in nats at each position of the window.
 
-    def get_dataloader(self, train):
-        return self.get_tensorloader(self.train if train else self.val, train)
+    Defined in :numref:`sec_gated-training`"""
+    device = next(model.parameters()).device
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        logits = model(X.to(device))  # (batch, T, V)
+        total += F.cross_entropy(logits.transpose(1, 2), Y.to(device),
+                                 reduction='none').sum(0)
+        count += len(X)
+    return (total / count).tolist()
 
-def fit_lm(model, data, num_steps=3000, lr=2e-3):
-    """Train with AdamW for num_steps steps; return validation perplexity.
+def train_text(model, data, lr=2e-3, num_steps=1000):
+    """Train a language model with LMOptimizer; return its validation loss
+    in nats at each position and its milliseconds per training step.
 
-    Defined in :numref:`sec_gru`"""
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr,
-                                  weight_decay=0.01)
-    d2l.train_steps(model, data, optimizer, num_steps)
-    return d2l.lm_perplexity(model, data.val_dataloader())
+    Defined in :numref:`sec_gated-training`"""
+    optimizer = d2l.LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
+    # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
+    bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
+                          warmup=1, repeats=num_steps // 50 - 1)
+    return loss_by_position(model, data), 1000 * bench.time / 50
 
-class Encoder(nn.Module):
-    """The base encoder interface for the encoder-decoder architecture.
+def text_table(make_model, arms, data, num_runs=2):
+    """Train num_runs fresh models make_model(*args) for each arm (a name
+    and its args); print the parameters, the validation loss of every run,
+    its losses at early, middle, and late positions of the window, and the
+    milliseconds per step. Return the trained models of each arm.
 
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self):
-        super().__init__()
-
-    # Later there can be additional arguments (e.g., length excluding padding)
-    def forward(self, X, *args):
-        raise NotImplementedError
-
-class Decoder(nn.Module):
-    """The base decoder interface for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self):
-        super().__init__()
-
-    def init_state(self, enc_all_outputs, *args):
-        raise NotImplementedError
-
-    def forward(self, X, state):
-        raise NotImplementedError
-
-class EncoderDecoder(d2l.Classifier):
-    """The base class for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args)
-        dec_state = self.decoder.init_state(enc_all_outputs, *args)
-        # Return decoder output only
-        return self.decoder(dec_X, dec_state)[0]
-
-    def predict_step(self, batch, device, num_steps,
-                     save_attention_weights=False):
-        self.eval()
-        batch = [d2l.to(a, device) for a in batch]
-        src, tgt, src_valid_len, _ = batch
-        enc_all_outputs = self.encoder(src, src_valid_len)
-        dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
-        outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
-        for _ in range(num_steps):
-            Y, dec_state = self.decoder(outputs[-1], dec_state)
-            outputs.append(d2l.argmax(Y, 2))
-            if save_attention_weights:
-                attention_weights.append(self.decoder.attention_weights)
-        return d2l.concat(outputs[1:], 1), attention_weights
-
-class MTFraEng(d2l.DataModule):
-    """The English-French dataset, tokenized with a shared byte-level BPE.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, batch_size, num_steps=20, num_train=1024, num_val=128,
-                 vocab_size=4000):
-        super().__init__()
-        self.save_hyperparameters()
-        pairs = self._pairs(self._preprocess(self._download()))
-        # Train ONE shared byte-level BPE over both languages.
-        m = min(5000, len(pairs))
-        self.tokenizer = d2l.BPETokenizer(
-            vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
-        self.tokenizer.train('\n'.join([p[0] for p in pairs[:m]] +
-                                       [p[1] for p in pairs[:m]]))
-        # src_vocab / tgt_vocab both refer to the shared tokenizer.
-        self.src_vocab = self.tgt_vocab = self.tokenizer
-        pairs = pairs[:num_train + num_val]
-        self.src_sents = [p[0] for p in pairs]
-        self.tgt_sents = [p[1] for p in pairs]
-        self.arrays = self._encode(pairs)
-
-    def _download(self):
-        d2l.extract(d2l.download(
-            d2l.DATA_URL + 'fra-eng.zip', self.root,
-            '94646ad1522d915e7b0f9296181140edcf86a4f5'))
-        with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
-            return f.read()
-
-    def _preprocess(self, text):
-        # Normalize spaces, lowercase, and put a space before punctuation.
-        text = text.replace(' ', ' ').replace('\xa0', ' ').lower()
-        no_space = lambda c, prev: c in ',.!?' and prev != ' '
-        return ''.join([' ' + c if i > 0 and no_space(c, text[i - 1]) else c
-                        for i, c in enumerate(text)])
-
-    def _pairs(self, text):
-        return [ln.split('\t') for ln in text.split('\n') if ln.count('\t') == 1]
-
-    def _encode(self, pairs):
-        tok, t = self.tokenizer, self.num_steps
-        def row(sent, is_tgt):
-            ids = tok.encode(sent)
-            ids = (ids[:t - 1] + [tok.eos] if len(ids) >= t else
-                   ids + [tok.eos] + [tok.pad] * (t - 1 - len(ids)))
-            return [tok.bos] + ids if is_tgt else ids
-        src = d2l.tensor([row(s, False) for s, _ in pairs])
-        tgt = d2l.tensor([row(t, True) for _, t in pairs])
-        valid_len = d2l.reduce_sum(d2l.astype(src != tok.pad, d2l.int32), 1)
-        return src, tgt[:, :-1], valid_len, tgt[:, 1:]
-
-    def build(self, src_sentences, tgt_sentences):
-        return self._encode([(self._preprocess(s), self._preprocess(t))
-                             for s, t in zip(src_sentences, tgt_sentences)])
-
-    def get_dataloader(self, train):
-        idx = slice(0, self.num_train) if train else slice(self.num_train, None)
-        return self.get_tensorloader(self.arrays, train, idx)
-
-def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
-    """Plot the histogram for list length pairs.
-
-    Defined in :numref:`sec_machine_translation`"""
-    d2l.set_figsize()
-    _, _, patches = d2l.plt.hist(
-        [[len(l) for l in xlist], [len(l) for l in ylist]])
-    d2l.plt.xlabel(xlabel)
-    d2l.plt.ylabel(ylabel)
-    for patch in patches[1].patches:
-        patch.set_hatch('/')
-    d2l.plt.legend(legend)
-
-def init_seq2seq(module):
-    """Initialize weights for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    if type(module) == nn.Linear:
-        nn.init.xavier_uniform_(module.weight)
-    if type(module) == nn.GRU:
-        for param in module._flat_weights_names:
-            if "weight" in param:
-                nn.init.xavier_uniform_(module._parameters[param])
-
-class Seq2SeqEncoder(d2l.Encoder):
-    """The RNN encoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
-        self.apply(init_seq2seq)
-
-    def forward(self, X, *args):
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        outputs, state = self.rnn(embs)
-        # outputs: (num_steps, batch_size, num_hiddens)
-        # state: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-
-class Seq2Seq(d2l.EncoderDecoder):
-    """The RNN encoder-decoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, encoder, decoder, tgt_pad, lr):
-        super().__init__(encoder, decoder)
-        self.save_hyperparameters()
-
-    def validation_step(self, batch):
-        return self.loss(self(*batch[:-1]), batch[-1])
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+    Defined in :numref:`sec_gated-training`"""
+    T = data.num_steps
+    bands = [(0, T // 8), (T // 8, T // 2), (T // 2, T)]
+    width = max(len(name) for name in arms)
+    header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
+    print(' ' * (width + 12), *(f'{h:>11}' for h in header), '  ms/step')
+    trained = {}
+    for name, args in arms.items():
+        models = [make_model(*args) for _ in range(num_runs)]
+        runs = [train_text(model, data) for model in models]  # (losses, ms)
+        columns = [[np.mean(loss) for loss, _ in runs]] + [
+            [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
+        print(f'{name:{width}s} {d2l.num_params(models[0]):11,d}',
+              *('/'.join(f'{v:.3f}' for v in column) for column in columns),
+              '/'.join(f'{ms:.0f}' for _, ms in runs))
+        trained[name] = models
+    return trained
 
 def chrf(pred, label, n=6, beta=2):
     """chrF (Popovic, 2015): character n-gram F-score.
 
-    Defined in :numref:`sec_seq2seq_training`"""
+    Defined in :numref:`sec_translation-scoring`"""
     def ngrams(s, k):
         s = s.replace(' ', '')
         return collections.Counter(s[i:i + k] for i in range(len(s) - k + 1))
@@ -2365,7 +2234,7 @@ def chrf(pred, label, n=6, beta=2):
 def bleu(pred_seq, label_seq, k):
     """Compute the BLEU.
 
-    Defined in :numref:`sec_seq2seq_training`"""
+    Defined in :numref:`sec_translation-scoring`"""
     pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
     len_pred, len_label = len(pred_tokens), len(label_tokens)
     score = math.exp(min(0, 1 - len_label / len_pred))
@@ -2383,8 +2252,9 @@ def bleu(pred_seq, label_seq, k):
 def associative_scan(combine, elems):
     """All prefixes of elems under an associative combine; time is axis 1.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     s = 1
+    # Autograd keeps the tensors of every round for the backward pass
     while s < elems[0].shape[1]:  # Combine every position with the one s back
         earlier = tuple(x[:, :-s] for x in elems)
         later = tuple(x[:, s:] for x in elems)
@@ -2396,7 +2266,7 @@ def associative_scan(combine, elems):
 def linear_scan(a, b, h0=None):
     """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     a = a.expand_as(b)  # Decays may omit axes on which they do not vary
     if h0 is not None:  # Fold the initial state into the first step
         b = torch.cat([a[:, :1] * h0.unsqueeze(1) + b[:, :1], b[:, 1:]], 1)
@@ -2408,7 +2278,7 @@ def linear_scan(a, b, h0=None):
 class MinGRU(nn.Module):
     """The minimal GRU: its gate and candidate read only the input.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     def __init__(self, num_inputs, num_hiddens):
         super().__init__()
         self.W_z = nn.Linear(num_inputs, num_hiddens)  # Update gate (decay)
@@ -2430,7 +2300,7 @@ class S4D(nn.Module):
     def __init__(self, num_hiddens, num_states=16, dt_min=1e-3, dt_max=1e-1):
         super().__init__()
         d, N = num_hiddens, num_states
-        # Rates lambda_n = -(n + 1), stored as log(-lambda) to stay negative
+        # lambda_n = -n for n = 1..N, stored as log(-lambda) to stay negative
         self.log_neg_rate = nn.Parameter(
             torch.log(torch.arange(1., N + 1)).repeat(d, 1))
         self.log_dt = nn.Parameter(  # Log-uniform in [dt_min, dt_max]
@@ -2447,6 +2317,7 @@ class S4D(nn.Module):
     def forward(self, X):  # X: (batch_size, num_steps, d)
         T = X.shape[1]
         a_bar, b_bar = self.discretize()
+        # All powers a_bar^k for k < T: d * N * T numbers held in memory
         powers = a_bar.unsqueeze(-1) ** torch.arange(T, device=X.device)
         K = ((self.C * b_bar).unsqueeze(-1) * powers).sum(1)  # Kernel, (d, T)
         Y = torch.fft.irfft(torch.fft.rfft(X, n=2 * T, dim=1) *
@@ -2496,38 +2367,52 @@ def adjoint_scan(a, b):
     return AdjointScan.apply(a.expand_as(b), b)
 
 class SelectiveSSM(nn.Module):
-    """A diagonal SSM whose step sizes and write and read vectors depend on
-    the input: N states for each of num_channels channels.
+    """A diagonal SSM with N states for each of num_channels channels. Its
+    step sizes and write and read vectors depend on the input, or, with
+    selective=False, are learned constants of each channel.
 
     Defined in :numref:`sec_mamba`"""
-    def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1):
+    def __init__(self, num_channels, dt_rank, num_states=16, dt_min=1e-3,
+                 dt_max=1e-1, selective=True):
         super().__init__()
-        H, N, R = num_channels, num_states, math.ceil(num_channels / 16)
+        H, N, R = num_channels, num_states, dt_rank
+        self.selective = selective
         self.log_neg_rate = nn.Parameter(  # Rates -1, ..., -N in every channel
             torch.log(torch.arange(1., N + 1)).repeat(H, 1))
-        self.W_dt = nn.Sequential(  # Step size per channel, through rank R
-            nn.Linear(H, R, bias=False), nn.Linear(R, H))
-        self.W_B = nn.Linear(H, N, bias=False)  # Write vector
-        self.W_C = nn.Linear(H, N, bias=False)  # Read vector
-        d2l.init_lecun(self)
         dt = dt_min * (dt_max / dt_min) ** torch.rand(H)
-        with torch.no_grad():  # Small up-projection, softplus(bias) = dt
-            nn.init.uniform_(self.W_dt[1].weight, -R ** -0.5, R ** -0.5)
-            self.W_dt[1].bias.copy_(dt + torch.log(-torch.expm1(-dt)))
+        dt_bias = dt + torch.log(-torch.expm1(-dt))  # softplus(dt_bias) = dt
+        if selective:
+            self.W_dt = nn.Sequential(  # Step size per channel, rank R
+                nn.Linear(H, R, bias=False), nn.Linear(R, H))
+            self.W_B = nn.Linear(H, N, bias=False)  # Write vector
+            self.W_C = nn.Linear(H, N, bias=False)  # Read vector
+            d2l.init_lecun(self)
+            with torch.no_grad():  # Small up-projection, step sizes dt
+                nn.init.uniform_(self.W_dt[1].weight, -R ** -0.5, R ** -0.5)
+                self.W_dt[1].bias.copy_(dt_bias)
+        else:  # Fixed dynamics: S4D with a learned write vector
+            self.dt_bias = nn.Parameter(dt_bias)
+            self.B = nn.Parameter(torch.ones(H, N))
+            self.C = nn.Parameter(torch.randn(H, N) / math.sqrt(N))
         self.D = nn.Parameter(torch.ones(H))
 
     def log_coefficients(self, U):
         """Log-decays and writes, each of shape (batch_size, T, H, N).
 
         Defined in :numref:`sec_mamba`"""
-        dt = F.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
+        if self.selective:  # Step sizes (batch_size, T, H), write vectors
+            dt, B = F.softplus(self.W_dt(U)), self.W_B(U).unsqueeze(-2)
+        else:  # One step size and one write vector per channel
+            dt, B = F.softplus(self.dt_bias), self.B
+        b = (dt * U).unsqueeze(-1) * B
         log_a = dt.unsqueeze(-1) * -torch.exp(self.log_neg_rate)
-        return log_a, (dt * U).unsqueeze(-1) * self.W_B(U).unsqueeze(-2)
+        return log_a.expand_as(b), b
 
     def forward(self, U):  # U: (batch_size, num_steps, num_channels)
         log_a, b = self.log_coefficients(U)
         H = adjoint_scan(torch.exp(log_a), b)  # States, (batch_size, T, H, N)
-        return (H * self.W_C(U).unsqueeze(-2)).sum(-1) + self.D * U
+        C = self.W_C(U).unsqueeze(-2) if self.selective else self.C  # Read
+        return torch.einsum('...n,...n->...', H, C) + self.D * U  # Sum over n
 
 class Mamba(nn.Module):
     """The Mamba layer: a gated selective SSM between two projections.
@@ -2541,8 +2426,9 @@ class Mamba(nn.Module):
         self.conv = nn.Conv1d(H, H, conv_width, groups=H,  # One per channel
                               padding=conv_width - 1)
         self.W_out = nn.Linear(H, num_hiddens, bias=False)
-        d2l.init_lecun(self)
-        self.ssm = SelectiveSSM(H, num_states, **ssm_args)  # Has its own init
+        d2l.init_lecun(self)  # The SSM, built next, has its own init
+        self.ssm = SelectiveSSM(H, math.ceil(num_hiddens / 16), num_states,
+                                **ssm_args)
 
     def ssm_input(self, X):
         """The input of the SSM and the gate branch."""
@@ -2565,37 +2451,28 @@ def decay_mask(log_a):
     return torch.exp(log_L.masked_fill(~causal, -torch.inf))
 
 def chunked_linear_attention(Q, K, V, log_a, chunk_size):
-    """y_t = S_t q_t with S_t = S_{t-1} diag(a_t) + v_t k_t^T, in chunks.
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
 
-    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size,
-    T, d_k) for a decay per key coordinate, or (batch_size, T) for one per step
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
 
     Defined in :numref:`sec_matrix-state`"""
     B, T, m = Q.shape[0], Q.shape[1], chunk_size
-    if log_a.dim() == 2:  # The same decay for every key coordinate
-        log_a = log_a.unsqueeze(-1)
-    Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
-    # 1. Within chunks: the dual form, with one mask per key coordinate
-    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
-    if L.shape[2] == 1:  # One mask for all coordinates: a masked Q K^T
-        Y = (L[:, :, 0] * (Q @ K.mT)) @ V
-    else:
-        Y = (L * Q.mT.unsqueeze(-1) * K.mT.unsqueeze(-2)).sum(2) @ V
-    # 2. Across chunks: the writes of each chunk, decayed to its end, and
-    #    a scan over chunks for the state at every chunk's end
-    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
+    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
+    log_a = log_a.reshape(B, T // m, m)
+    # 1. Within chunks: the dual form, one m x m mask per chunk
+    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    # 2. Across chunks: S^(c) = gamma^(c) S^(c-1) + sum_t L_mt v_t k_t^T
+    cum = log_a.cumsum(-1).unsqueeze(-1)  # Log decay from the chunk's start
     writes = V.mT @ (K * torch.exp(cum[:, :, -1:] - cum))
-    S = d2l.linear_scan(torch.exp(cum[:, :, -1:]), writes)
-    S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the start
+    S = d2l.linear_scan(torch.exp(cum[:, :, -1:]), writes)  # At chunk ends
+    S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the starts
     # 3. Every step reads the state at its chunk's start, decayed to it
     return (Y + (Q * torch.exp(cum)) @ S.mT).reshape(B, T, -1)
 
 class GatedLinearAttention(nn.Module):
-    """Multi-head linear attention with a gated decay per key coordinate.
+    """Multi-head linear attention with one input-dependent decay per head.
 
     Defined in :numref:`sec_matrix-state`"""
-    gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
-
     def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
                  timescales=(4, 256)):
         super().__init__()
@@ -2604,29 +2481,24 @@ class GatedLinearAttention(nn.Module):
         self.W_qkv = nn.Linear(d, 3 * d, bias=False)
         self.conv = nn.Conv1d(3 * d, 3 * d, conv_width, groups=3 * d,
                               padding=conv_width - 1)  # One filter per channel
-        self.W_a = self.decay_gate(d)
+        self.W_a = nn.Linear(d, num_heads)  # Decay gate, one per head
         self.W_g = nn.Linear(d, d)  # Output gate
         self.W_o = nn.Linear(d, d, bias=False)
         d2l.init_lecun(self)
         self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
-    def decay_gate(self, d, rank=16):
-        """Low-rank projection to one gate per key coordinate."""
-        return nn.Sequential(nn.Linear(d, rank, bias=False), nn.Linear(rank, d))
-
     def init_decays(self, tau_min, tau_max):
-        """Start the gates at decays exp(-1/tau), tau log-uniform in range."""
-        b = self.W_a[-1].bias
+        """Start the decays at exp(-1/tau), tau log-uniform in range."""
+        b = self.W_a.bias
         tau = torch.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
-        with torch.no_grad():  # log sigmoid(b) / gate_scale = -1 / tau
-            b.copy_(-torch.log(torch.expm1(self.gate_scale / tau)))
+        with torch.no_grad():  # log sigmoid(b) = -1 / tau
+            b.copy_(-torch.log(torch.expm1(1 / tau)))
 
     def decays(self, X):
-        """Log decays, (batch_size * num_heads, T, d_k).
+        """Log decays, (batch_size * num_heads, T).
 
         Defined in :numref:`sec_matrix-state`"""
-        return heads_to_batch(F.logsigmoid(self.W_a(X)) / self.gate_scale,
-                              self.num_heads)
+        return heads_to_batch(F.logsigmoid(self.W_a(X)), self.num_heads)[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
         """Outputs of the decayed matrix memory of every head. X is unused here;
@@ -2659,6 +2531,59 @@ def batch_to_heads(Y, batch_size):
     _, T, e = Y.shape
     return Y.reshape(batch_size, -1, T, e).transpose(1, 2).flatten(2)
 
+def associative_recall(rng, batch_size, num_pairs, num_keys=512,
+                       num_values=4, num_steps=256, num_rebound=0, gap=None):
+    """Key-value pairs, filler, then every key again as a query. The first
+    num_rebound keys are written twice, the second time with a new value,
+    at any later write or, given gap, gap writes after the first one.
+    Returns the tokens (values, then keys, then the filler), the latest
+    value of each query's key, and a mask of the queries for rebound keys.
+
+    Defined in :numref:`sec_matrix-state`"""
+    n, r = num_pairs, num_rebound
+    keys = np.argsort(rng.random((batch_size, num_keys)), 1)[:, :n]
+    values = rng.integers(0, num_values, (batch_size, n + r))
+    values[:, n:] = (values[:, :r] + rng.integers(  # A new value
+        1, num_values, (batch_size, r))) % num_values
+    if gap is None:  # Random write order, each second write after the first
+        slots = np.argsort(rng.random((batch_size, n + r)), 1)
+        slots[:, :r], slots[:, n:] = (np.minimum(slots[:, :r], slots[:, n:]),
+                                      np.maximum(slots[:, :r], slots[:, n:]))
+    else:  # First writes in random order, second ones gap first writes later
+        first = np.argsort(rng.random((batch_size, n)), 1)
+        times = np.concatenate([first, first[:, :r] + gap - 0.5], 1)
+        slots = np.argsort(np.argsort(times, 1), 1)
+    X = np.full((batch_size, num_steps), num_values + num_keys)  # Filler
+    rows = np.arange(batch_size)[:, None]
+    X[rows, 2 * slots] = num_values + np.concatenate([keys, keys[:, :r]], 1)
+    X[rows, 2 * slots + 1] = values
+    order = np.argsort(rng.random((batch_size, n)), 1)  # Queries
+    X[:, -n:] = num_values + np.take_along_axis(keys, order, 1)
+    latest = np.concatenate([values[:, n:], values[:, r:n]], 1)
+    return X, np.take_along_axis(latest, order, 1), order < r
+
+def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,
+                 **task):
+    """Train on associative recall (task: options of associative_recall)
+    with a cycling number of pairs, 256 sequences per update, AdamW at peak
+    rate 0.01; return the accuracy per number of pairs.
+
+    Defined in :numref:`sec_matrix-state`"""
+    rng = np.random.default_rng()
+    length = lambda n: 32 * math.ceil(
+        (3 * n + 2 * task.get('num_rebound', 0)) / 32)
+    data = lambda n, size: associative_recall(
+        rng, size, n, num_steps=length(n), **task)[:2]
+    model.to(d2l.try_gpu())
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-2,
+                                  weight_decay=0.01)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda t: (
+        d2l.cosine_warmup(t, num_updates, num_updates // 10)))
+    d2l.train_queries(model, lambda step: data(pairs[step % len(pairs)],
+                      256), num_updates, optimizer, scheduler)
+    return {n: float(d2l.query_accuracy(model, *data(n, 1024)))
+            for n in pairs}
+
 def delta_rule_writes(K, V, beta, log_a):
     """W and Z with corrected values U = W - Z S_0^T, for every chunk.
 
@@ -2686,7 +2611,7 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    # Each chunk maps the memory at its start to S A + W_end at its end
+    # Each chunk maps the memory S at its start to S A + W^T D K at its end
     to_end = torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
     I = torch.eye(K.shape[-1], device=K.device)
     A = torch.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
@@ -2700,26 +2625,15 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     return Y.reshape(B, T, -1)
 
 class GatedDeltaNet(d2l.GatedLinearAttention):
-    """Gated linear attention with one decay per head, whose memory is
-    written by the delta rule.
+    """Gated linear attention whose memory is written by the delta rule.
 
     Defined in :numref:`sec_deltanet`"""
-    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
-
     def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
                  timescales=(4, 256)):
         super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
                          timescales)
         self.W_beta = nn.Linear(num_hiddens, num_heads)  # Write strength
         d2l.init_lecun(self.W_beta)
-
-    def decay_gate(self, d):  # One gate per head
-        # Sequential, so that init_decays finds the bias at W_a[-1]
-        return nn.Sequential(nn.Linear(d, self.num_heads))
-
-    def decays(self, X):  # (batch_size * num_heads, T)
-        return d2l.heads_to_batch(F.logsigmoid(self.W_a(X)),
-                                  self.num_heads).squeeze(-1)
 
     def memory(self, X, Q, K, V, log_a):
         beta = d2l.heads_to_batch(torch.sigmoid(self.W_beta(X)),
@@ -10477,16 +10391,6 @@ class CTRDataset(torch.utils.data.Dataset):
         feat = torch.tensor([self.feat_mapper[i + 1].get(v, self.defaults[i + 1])
                              for i, v in enumerate(self.data[idx]['x'])])
         return feat + self.offsets, torch.tensor(self.data[idx]['y'])
-
-class GRU(d2l.RNN):
-    """The multilayer GRU model implemented with high-level APIs.
-
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
-                          dropout=dropout)
 
 class Timer:
     """Record multiple running times.

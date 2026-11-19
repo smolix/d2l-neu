@@ -1,37 +1,29 @@
-# Linear Recurrences and State Space Models
+# State Space Models
 :label:`sec_ssm`
 
-The gated networks of :numref:`sec_lstm` can keep information for hundreds
-of steps, but they still read a sequence one token after another, and each
-update needs the result of the one before. That order is natural when a
-model generates text, but during training the whole sequence is known in
-advance. Take a sequence of 4,096 tokens. A gated network performs 4,096
-updates in a row. A GPU can carry out tens of thousands of multiply-adds at
-the same time, but it cannot start step 2,000 until step 1,999 has
-finished, so most of it waits. A transformer layer has
-no such chain: it processes all 4,096 positions in a few large matrix
-products. This difference in training speed, more than any difference in
-what the two kinds of model can represent, was a main reason why
-transformers replaced recurrent networks for large-scale language modeling.
-Can a recurrent network be trained on all positions at once?
+How long should a memory last? The subject of a sentence matters for a few
+words, the topic of a paragraph for a few hundred, and the name of the
+murderer in a detective novel for the whole book. The minGRU of
+:numref:`sec_linear-recurrence` can in principle learn any of these, but
+it starts from gates near one half. A memory of a thousand steps needs a
+decay near 0.999, which halves a stored symbol only every 693 steps.
+Gradient descent has to get there from one half, and a gradient carried
+back a thousand steps through decays of one half is multiplied by
+$2^{-1000}$. In single precision that number is not small but zero. Nor
+does anything in the layer suggest which lengths to try.
 
-The chain has a single cause. The gates of :numref:`sec_lstm` read the
-previous state, and the state passes through a nonlinearity, so step $t$
-cannot be computed until step $t-1$ is known. If the gates read only the
-current input, the update becomes linear in the state. Linear updates can be
-grouped like the terms of a sum, and the states at all 4,096 positions can
-then be computed in $\log_2 4096 = 12$ rounds of batched arithmetic. When
-the model generates text, it still updates its state once per token, in
-constant memory, like any recurrent network.
-
-A linear recurrence still has to decide how fast to forget, and a gate
-learned from scratch starts with a memory of about one step. The second half
-of the section borrows an answer from physics: write the recurrence as a
-differential equation that is sampled at discrete steps. Such a recurrence
-is stable for every value of its parameters, and it starts with memories
-that range from a step to a thousand steps. When its dynamics are the same
-at every position, it can also be computed as a convolution. These are the
-*state space models*. The next section makes their dynamics depend on the input.
+Physics has long described systems that forget at a known rate. A cup of
+coffee cools toward room temperature, and the gap shrinks by the same
+fraction every minute, at a rate that belongs to the cup. A state space
+model treats the memory of a layer as such a system, with many rates, and
+reads it at discrete steps. The result is again a linear recurrence, but
+every decay now comes from a rate and a step size, so we can choose the
+timescales before training starts, give every feature memories of many
+lengths at once, and gain a second way to train, as a convolution. We
+derive the recurrence, build the S4D layer of
+:citet:`Gu.Gupta.Goel.Re.2022`, and test on the delayed recall task of
+:numref:`sec_lstm` whether the right starting timescales are what a
+recurrence needs to remember for a thousand steps.
 
 ```{.python .input #ssm-linear-recurrence-and-state-space-models}
 %%tab pytorch
@@ -54,548 +46,15 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #ssm-linear-recurrences-and-state-space-models-1}
-%%tab jax
-import random
-```
-
-## Linear Recurrences
-:label:`subsec_linear-recurrences`
-
-### A Single Decaying Number
-
-To see what a linear update gives us, we start with the smallest one.
-Consider a state $h_t$, a single number, that keeps a fraction $a$ of its
-value at every step and adds the new input $x_t$:
-
-$$h_t = a\, h_{t-1} + x_t, \qquad h_0 = 0.$$
-:eqlabel:`eq_lr-scalar`
-
-This is the gated memory of :numref:`sec_lstm` with both gates held fixed.
-With $a = 0.9$ and a single input $x_1 = 1$ followed by zeros, the state
-reads $1, 0.9, 0.81, 0.729, \ldots$: an input from $k$ steps ago survives
-with weight $a^k$. Substituting the recurrence into itself shows that this
-holds for any input sequence,
-
-$$h_t = \sum_{s=1}^{t} a^{t-s} x_s.$$
-:eqlabel:`eq_lr-unrolled`
-
-The state is a weighted sum of all past inputs, with weights that shrink
-geometrically with age. Two consequences follow. First, the sum does not
-mention $h_{t-1}$: every $h_t$ is determined by the inputs alone, so in
-principle all of them can be computed at once. Second, $a$ sets the length
-of the memory, and it sets the length of learning too. The weight of an
-input halves every $\ln 2 / \ln(1/a)$ steps, about 7 steps for $a = 0.9$
-and 693 for $a = 0.999$, and the gradient of $h_t$ with respect to $x_s$ is
-the same weight $a^{t-s}$. The decay that forgets an input also weakens the
-signal that would teach the model to use it. This is the vanishing
-gradient of :numref:`sec_lstm`, a product of $t-s$ Jacobians, except that
-the product is now a power of one number that we can read off directly.
-
-### Input-Dependent Decay
-
-A memory of one number is too small for language. With a state
-$\mathbf{h}_t \in \mathbb{R}^d$ we can give each coordinate its own decay,
-collected in a vector $\mathbf{a} \in (0, 1)^d$ that multiplies the state
-elementwise ($\odot$):
-
-$$\mathbf{h}_t = \mathbf{a} \odot \mathbf{h}_{t-1} + \mathbf{b}_t.$$
-
-Nothing new happens here. The coordinates do not interact, so this is $d$
-copies of :eqref:`eq_lr-scalar` side by side, each with its own half-life. We
-have also renamed the input term $\mathbf{b}_t$, because it will soon be a
-learned function of the input.
-
-A fixed decay forgets at the same rate whatever the input says. The gates of
-:numref:`sec_lstm` exist to make the rate a decision: keep the state through
-a run of uninformative tokens, and overwrite it when something important
-arrives. We can keep that ability, and keep the update linear in the state,
-by letting the decay depend on the current input:
-
-$$
-\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t,
-\qquad \mathbf{a}_t = \mathbf{a}(\mathbf{x}_t), \quad
-\mathbf{b}_t = \mathbf{b}(\mathbf{x}_t).
-$$
-:eqlabel:`eq_affine_recurrence`
-
-Unrolling as before, the power $a^{t-s}$ becomes the product of the decays
-met along the way:
-
-$$
-\mathbf{h}_t = \sum_{s=1}^{t} \Big( \prod_{r=s+1}^{t} \mathbf{a}_r \Big)
-\odot \mathbf{b}_s.
-$$
-:eqlabel:`eq_lr-unrolled-gated`
-
-An input survives for as long as the inputs after it choose to keep it.
-Because every $\mathbf{a}_r$ lies in $(0, 1)$, the products can shrink but
-never grow: no past input is ever amplified, however long the sequence. Because
-$\mathbf{a}_t$ and $\mathbf{b}_t$ depend only on $\mathbf{x}_t$, they can be
-computed for all positions in one batched matrix product before the
-recurrence starts. What remains is the recurrence itself, an update that is
-*affine* in $\mathbf{h}_{t-1}$: an elementwise multiplication followed by an
-addition.
-
-### The Minimal GRU
-:label:`subsec_mingru`
-
-The GRU of :numref:`sec_gru` almost has this form. Its update gate
-$\mathbf{z}_t$, reset gate $\mathbf{r}_t$, and candidate state
-$\tilde{\mathbf{h}}_t$ are
-
-$$
-\begin{aligned}
-\mathbf{z}_t &= \sigma(\mathbf{W}_{\textrm{xz}} \mathbf{x}_t + \mathbf{W}_{\textrm{hz}} \mathbf{h}_{t-1} + \mathbf{b}_\textrm{z}),\\
-\mathbf{r}_t &= \sigma(\mathbf{W}_{\textrm{xr}} \mathbf{x}_t + \mathbf{W}_{\textrm{hr}} \mathbf{h}_{t-1} + \mathbf{b}_\textrm{r}),\\
-\tilde{\mathbf{h}}_t &= \tanh\big(\mathbf{W}_{\textrm{xh}} \mathbf{x}_t + \mathbf{W}_{\textrm{hh}} (\mathbf{r}_t \odot \mathbf{h}_{t-1}) + \mathbf{b}_\textrm{h}\big),
-\end{aligned}
-$$
-
-and the new state is a blend of the old state and the candidate,
-
-$$
-\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t)
-\odot \tilde{\mathbf{h}}_t.
-$$
-
-The blend is already affine in $\mathbf{h}_{t-1}$, with decay
-$\mathbf{z}_t$. What stands in the way are the three places where
-$\mathbf{h}_{t-1}$ enters a gate or the candidate.
-:citet:`Feng.Tung.Ahmed.ea.2024` removed them: the update gate and the
-candidate read only the input, and the reset gate, which no longer has a
-previous state to filter, disappears. The result is the *minimal GRU*, or
-*minGRU* (we keep a $\tanh$ on the candidate, which
-:citet:`Feng.Tung.Ahmed.ea.2024` drop; an exercise compares the two):
-
-$$
-\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z} \mathbf{x}_t + \mathbf{b}_\textrm{z}), \qquad
-\tilde{\mathbf{h}}_t = \tanh(\mathbf{W}_\textrm{h} \mathbf{x}_t + \mathbf{b}_\textrm{h}), \qquad
-\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t.
-$$
-:eqlabel:`eq_mingru`
-
-This is :eqref:`eq_affine_recurrence` with decay $\mathbf{a}_t =
-\mathbf{z}_t$ and write $\mathbf{b}_t = (1 - \mathbf{z}_t) \odot
-\tilde{\mathbf{h}}_t$. The update gate is now the decay of a linear
-recurrence: a gate value of 0.9 keeps 90% of the state and admits 10% of
-the candidate. The layer is also smaller. With input and hidden width $d$,
-a GRU layer has $6d^2$ weights, three input matrices and three state
-matrices, and the minGRU has $2d^2$.
-
-The minGRU gives something up. A GRU can decide to keep its state because of
-what the state contains; the minGRU decides only from the current token, and
-between tokens its state can only be scaled and added to. Stacking layers
-gives some of this back: the outputs of one layer, passed through a
-nonlinearity, are the inputs of the next, and nonlinearities between layers
-do not block parallel evaluation.
-
-## Parallel Scans
-:label:`subsec_parallel-scans`
-
-### Composing Affine Steps
-
-Computing $\mathbf{h}_1, \ldots, \mathbf{h}_T$ from the coefficients
-$(\mathbf{a}_t, \mathbf{b}_t)$ is a relative of a familiar problem: compute
-all running totals $s_t = x_1 + \cdots + x_t$ of a sequence, its *prefix
-sums*. Prefix sums look sequential, yet they can be computed in parallel,
-because addition is associative: the total $(x_1 + x_2) + (x_3 + x_4)$ can be
-split into two halves that are computed independently and combined at the
-end. Any associative operation allows the same trick, and composing the
-steps of an affine recurrence is one.
-
-Represent step $t$ by its coefficient pair $(\mathbf{a}_t, \mathbf{b}_t)$,
-which stands for the map $\mathbf{h} \mapsto \mathbf{a}_t \odot \mathbf{h} +
-\mathbf{b}_t$. Applying step 1 and then step 2 gives
-$\mathbf{a}_2 \odot (\mathbf{a}_1 \odot \mathbf{h} + \mathbf{b}_1) +
-\mathbf{b}_2$, which is again a map of the same form. We write the
-composition as
-
-$$
-(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) =
-(\mathbf{a}_1 \odot \mathbf{a}_2,\ \mathbf{a}_2 \odot \mathbf{b}_1 +
-\mathbf{b}_2).
-$$
-:eqlabel:`eq_scan_combine`
-
-Read from left to right, $\bullet$ means "this step, then that one". It is
-associative because composing functions is associative, and the composite of
-any run of steps is again a single pair. This matters as much as
-associativity: a block of a thousand steps costs no more to store or to
-combine than a single step. As an example, two steps with $a_1 = a_2 = 0.5$,
-$b_1 = 1$, and $b_2 = 2$ combine into $(0.25,\ 0.5 \cdot 1 + 2) = (0.25,
-2.5)$. Running them one after the other from $h_0 = 0$ gives $h_1 = 1$ and
-$h_2 = 0.5 \cdot 1 + 2 = 2.5$, as the composite says.
-
-Composing the first $t$ pairs gives the map that carries $\mathbf{h}_0$ to
-$\mathbf{h}_t$. With $\mathbf{h}_0 = \mathbf{0}$ the state $\mathbf{h}_t$ is
-the $\mathbf{b}$-component of that composite, so all states together are the
-prefix "sums" of the pairs under $\bullet$. Computing all prefixes of a
-sequence under an associative operation is called a *scan*.
-
-### The Doubling Schedule
-
-:numref:`fig_scan_tree` shows a parallel schedule for eight steps. In the
-first round, every position combines with its predecessor, so it holds the
-composite of two steps. In the second round, every position combines with
-the position two back and then holds four steps; in the third, with the
-position four back, and then holds eight. After $\lceil \log_2 T \rceil$
-rounds every position holds its full prefix. Each round is one elementwise
-multiply-add over the whole sequence, the kind of work a GPU does well.
-
-![A parallel scan on eight steps. Each box shows which steps its value
-combines, $(1{:}4)$ meaning steps 1 to 4. In every round each position
-combines with the position a fixed stride back (blue arrows), and the stride
-doubles from round to round; dashed arrows copy a value unchanged. Teal
-boxes hold complete prefixes. After $\log_2 8 = 3$ rounds every position
-does.](../img/mdl-modernrnn-scan-tree.svg)
-:label:`fig_scan_tree`
-
-This schedule, due to :citet:`Hillis.Steele.1986`, performs about
-$T \log_2 T$ combines, a factor $\log_2 T$ more than the $T - 1$ steps of a
-loop, in exchange for $\log_2 T$ rounds instead of $T - 1$. A schedule of
-:citet:`Blelloch.1990` needs only about $2T$ combines in about $2 \log_2 T$
-rounds. The difference in total work matters once a sequence is long enough
-to keep the whole GPU busy.
-
-### Implementation
-
-`linear_scan` implements the doubling schedule. The writes $\mathbf{b}_t$
-have shape (batch size, number of steps, ...), with time along the second
-axis. The decays are broadcast to the same shape, so decays that are the
-same at every step can be passed once, without the batch and time axes. An
-optional initial state is folded into the first step, since
-$\mathbf{h}_1 = \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$.
-
-:begin_tab:`pytorch`
-PyTorch has no scan primitive in its stable interface, so we write one,
-`associative_scan`, with the interface of JAX's: it takes the combine as a
-function and a tuple of tensors with time along the second axis. Each round
-of the doubling schedule combines the sequence with a copy of itself
-shifted by the stride, a few tensor operations per round. `linear_scan`
-passes it the combine :eqref:`eq_scan_combine`; the delta rule of
-:numref:`sec_deltanet` will pass it another.
-:end_tab:
-
-:begin_tab:`jax`
-JAX provides scans as a primitive, `jax.lax.associative_scan`, which takes
-the combine :eqref:`eq_scan_combine` as a function and uses a schedule with
-linear total work.
-:end_tab:
-
-```{.python .input #ssm-implementation-1}
-%%tab pytorch
-def associative_scan(combine, elems):  #@save
-    """All prefixes of elems under an associative combine; time is axis 1."""
-    s = 1
-    while s < elems[0].shape[1]:  # Combine every position with the one s back
-        earlier = tuple(x[:, :-s] for x in elems)
-        later = tuple(x[:, s:] for x in elems)
-        elems = tuple(torch.cat([x[:, :s], y], 1)
-                      for x, y in zip(elems, combine(earlier, later)))
-        s *= 2
-    return elems
-
-def linear_scan(a, b, h0=None):  #@save
-    """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis."""
-    a = a.expand_as(b)  # Decays may omit axes on which they do not vary
-    if h0 is not None:  # Fold the initial state into the first step
-        b = torch.cat([a[:, :1] * h0.unsqueeze(1) + b[:, :1], b[:, 1:]], 1)
-    def combine(earlier, later):
-        (a1, b1), (a2, b2) = earlier, later
-        return a1 * a2, a2 * b1 + b2
-    return associative_scan(combine, (a, b))[1]
-```
-
-```{.python .input #ssm-implementation-1}
-%%tab jax
-def linear_scan(a, b, h0=None):  #@save
-    """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis."""
-    a = jnp.broadcast_to(a, b.shape)  # Decays may omit axes; broadcast them
-    if h0 is not None:  # Fold the initial state into the first step
-        b = b.at[:, 0].add(a[:, 0] * h0)
-    def combine(earlier, later):
-        (a1, b1), (a2, b2) = earlier, later
-        return a1 * a2, a2 * b1 + b2
-    return jax.lax.associative_scan(combine, (a, b), axis=1)[1]
-```
-
-We check the scan against a loop that applies the recurrence one step at a
-time, on random decays in $(0, 1)$ and a length that is not a power of two.
-
-```{.python .input #ssm-implementation-2}
-%%tab pytorch
-def sequential_scan(a, b):
-    h, states = torch.zeros_like(b[:, 0]), []
-    for a_t, b_t in zip(a.unbind(1), b.unbind(1)):
-        h = a_t * h + b_t
-        states.append(h)
-    return torch.stack(states, 1)
-
-a, b = torch.rand(4, 100, 8), torch.randn(4, 100, 8)
-print(f'max deviation: '
-      f'{(linear_scan(a, b) - sequential_scan(a, b)).abs().max():.1e}')
-```
-
-```{.python .input #ssm-implementation-2}
-%%tab jax
-def sequential_scan(a, b):
-    def step(h, ab):
-        h = ab[0] * h + ab[1]
-        return h, h
-    # lax.scan steps through the leading axis, so time goes first
-    ab = (jnp.swapaxes(a, 0, 1), jnp.swapaxes(b, 0, 1))
-    return jnp.swapaxes(jax.lax.scan(step, jnp.zeros_like(b[:, 0]), ab)[1], 0, 1)
-
-key_a, key_b = jax.random.split(jax.random.key(0))
-a = jax.random.uniform(key_a, (4, 100, 8))
-b = jax.random.normal(key_b, (4, 100, 8))
-print(f'max deviation: '
-      f'{jnp.abs(linear_scan(a, b) - sequential_scan(a, b)).max():.1e}')
-```
-
-The two agree to the rounding error of 32-bit floating point. The scan
-groups the multiplications and additions differently from the loop, so the
-results differ in the last digits; they are the same computation.
-
-How much faster is the scan? We time both on a GPU for sequences of 256 to
-16,384 steps, with a batch of 32 sequences of 128 coordinates each.
-`d2l.Benchmark`, which :numref:`sec_perf_model` introduces, calls a function
-a few times after a warm-up call and reports the average time, waiting for
-the GPU to finish before it stops the clock.
-
-```{.python .input #ssm-implementation-3}
-%%tab pytorch
-device = d2l.try_gpu()
-lengths, times = [256, 1024, 4096, 16384], [[], []]
-for T in lengths:
-    a = torch.rand(32, T, 128, device=device)
-    b = torch.randn(32, T, 128, device=device)
-    for i, scan in enumerate([linear_scan, sequential_scan]):
-        bench = d2l.Benchmark(lambda: scan(a, b), warmup=1, repeats=3)
-        times[i].append(1e3 * bench.time)
-d2l.plot(lengths, times, 'sequence length', 'milliseconds per call',
-         legend=['parallel scan', 'loop'], xscale='log', yscale='log',
-         figsize=(4.5, 3))
-```
-
-```{.python .input #ssm-implementation-3}
-%%tab jax
-lengths, times = [256, 1024, 4096, 16384], [[], []]
-scans = [jax.jit(linear_scan), jax.jit(sequential_scan)]
-for T in lengths:
-    key_a, key_b = jax.random.split(jax.random.key(T))
-    a = jax.random.uniform(key_a, (32, T, 128))
-    b = jax.random.normal(key_b, (32, T, 128))
-    for i, scan in enumerate(scans):
-        bench = d2l.Benchmark(lambda: scan(a, b), warmup=1, repeats=3)
-        times[i].append(1e3 * bench.time)
-d2l.plot(lengths, times, 'sequence length', 'milliseconds per call',
-         legend=['parallel scan', 'loop'], xscale='log', yscale='log',
-         figsize=(4.5, 3))
-```
-
-The loop's time grows in proportion to the length: each step is a separate
-small computation that must finish before the next one starts. The scan is
-faster at every length, by a factor between a few and about a hundred,
-depending on the length. Its time does not follow the length: while its rounds of
-arithmetic are too small to keep the GPU busy, more positions cost little
-extra time, and once the GPU is full, the total amount of work sets the
-time. Where this happens depends on how the scan is compiled. The scan
-changes how we train,
-not how we generate: at inference the model still applies
-:eqref:`eq_affine_recurrence` once per token, in constant memory.
-
-### A Linear Recurrent Language Model
-
-The minGRU :eqref:`eq_mingru` is a few lines around `linear_scan`. It maps
-a minibatch of sequences to the states at every step, so it can serve as
-the sequence mixer of `d2l.SeqLM`, the residual language model of
-:numref:`sec_lstm`: an embedding, a stack of blocks that each apply a mixer
-and a position-wise MLP, and a prediction head.
-
-```{.python .input #ssm-a-linear-recurrent-language-model-1}
-%%tab pytorch
-class MinGRU(nn.Module):  #@save
-    """The minimal GRU: its gate and candidate read only the input."""
-    def __init__(self, num_inputs, num_hiddens):
-        super().__init__()
-        self.W_z = nn.Linear(num_inputs, num_hiddens)  # Update gate (decay)
-        self.W_h = nn.Linear(num_inputs, num_hiddens)  # Candidate state
-        d2l.init_lecun(self)
-
-    def coefficients(self, X):
-        """Decays a_t and writes b_t of the linear recurrence."""
-        Z = torch.sigmoid(self.W_z(X))
-        return Z, (1 - Z) * torch.tanh(self.W_h(X))
-
-    def forward(self, X):  # X: (batch_size, num_steps, num_inputs)
-        return linear_scan(*self.coefficients(X))
-```
-
-```{.python .input #ssm-a-linear-recurrent-language-model-1}
-%%tab jax
-class MinGRU(nnx.Module):  #@save
-    """The minimal GRU: its gate and candidate read only the input."""
-    def __init__(self, num_inputs, num_hiddens, *, rngs):
-        self.W_z = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)  # Decay
-        self.W_h = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
-
-    def coefficients(self, X):
-        """Decays a_t and writes b_t of the linear recurrence."""
-        Z = jax.nn.sigmoid(self.W_z(X))
-        return Z, (1 - Z) * jnp.tanh(self.W_h(X))
-
-    def __call__(self, X):  # X: (batch_size, num_steps, num_inputs)
-        return linear_scan(*self.coefficients(X))
-```
-
-We train it with the recipe of :numref:`sec_lstm`: character-level Penn
-Treebank in windows of 128 characters, two blocks of width 128, and 3,000
-steps of AdamW, all wrapped in `d2l.fit_lm`, which returns the validation
-perplexity. With the same recipe, the GRU reached a perplexity of about 3.0
-and the plain recurrent network about 3.1.
-
-```{.python .input #ssm-a-linear-recurrent-language-model-2}
-%%tab pytorch, jax
-data = d2l.PennTreebank(batch_size=64, num_steps=128)
-```
-
-```{.python .input #ssm-a-linear-recurrent-language-model-3}
-%%tab pytorch
-model = d2l.SeqLM(len(data.vocab), 128, [MinGRU(128, 128) for _ in range(2)])
-print(f'minGRU perplexity: {d2l.fit_lm(model, data):.2f}')
-```
-
-```{.python .input #ssm-a-linear-recurrent-language-model-3}
-%%tab jax
-rngs = nnx.Rngs(random.getrandbits(32))
-model = d2l.SeqLM(len(data.vocab), 128,
-                  [MinGRU(128, 128, rngs=rngs) for _ in range(2)], rngs=rngs)
-print(f'minGRU perplexity: {d2l.fit_lm(model, data):.2f}')
-```
-
-The minGRU reaches a perplexity of about 3.2, a little behind the GRU's 3.0,
-with a third of the GRU's weights per layer. On this task, taking
-the state out of the gates costs a few percent.
-
-Because the minGRU's decay is its update gate, we can look inside the
-trained model. Two questions are easy to answer. First, does the model use
-its memory at all? We compare its perplexity with that of the same model
-whose layers reset their state to zero before every step, so that
-$\mathbf{h}_t = (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$ and each
-prediction sees only the current character, as transformed by the layers.
-Second, how often does a gate hold the state rather than overwrite it?
-
-```{.python .input #ssm-a-linear-recurrent-language-model-4}
-%%tab pytorch
-class StateReset(nn.Module):
-    """A minGRU layer whose state is reset to zero before every step."""
-    def __init__(self, layer):
-        super().__init__()
-        self.layer = layer
-
-    def forward(self, X):
-        return self.layer.coefficients(X)[1]
-
-layers = model.mixers
-model.mixers = nn.ModuleList([StateReset(layer) for layer in layers])
-ppl = d2l.lm_perplexity(model, data.val_dataloader())
-print(f'perplexity with the state reset: {ppl:.2f}')
-model.mixers = layers
-```
-
-```{.python .input #ssm-a-linear-recurrent-language-model-4}
-%%tab jax
-class StateReset(nnx.Module):
-    """A minGRU layer whose state is reset to zero before every step."""
-    def __init__(self, layer):
-        self.layer = layer
-
-    def __call__(self, X):
-        return self.layer.coefficients(X)[1]
-
-layers = model.mixers
-model.mixers = nnx.List([StateReset(layer) for layer in layers])
-ppl = d2l.lm_perplexity(model, data.val_dataloader())
-print(f'perplexity with the state reset: {ppl:.2f}')
-model.mixers = layers
-```
-
-Resetting the state raises the perplexity from about 3.2 to more than 10, so
-the model relies heavily on what it remembers: the next character is hard
-to predict from the current one alone.
-
-To read the gates, we need the input of the first layer: the token
-embeddings, normalized as the first block normalizes them. We give
-`SeqLM` a method for it, since the next section reads it again.
-
-```{.python .input #ssm-a-linear-recurrent-language-model-5}
-%%tab pytorch, jax
-@d2l.add_to_class(d2l.SeqLM)  #@save
-def first_mixer_input(self, X):
-    """What the first mixer reads: the normalized token embeddings."""
-    return self.norms[0](self.embedding(X))
-```
-
-```{.python .input #ssm-a-linear-recurrent-language-model-6}
-%%tab pytorch
-X, _ = next(iter(data.val_dataloader()))
-X = X.to(next(model.parameters()).device)
-with torch.inference_mode():  # Gates of the first layer on validation text
-    Z = layers[0].coefficients(model.first_mixer_input(X))[0]
-print(f'gates above 0.5: {(Z > 0.5).float().mean():.0%}, '
-      f'above 0.9: {(Z > 0.9).float().mean():.0%}')
-```
-
-```{.python .input #ssm-a-linear-recurrent-language-model-6}
-%%tab jax
-X, _ = next(iter(data.val_dataloader()))  # Gates of the first layer
-Z = layers[0].coefficients(model.first_mixer_input(X))[0]
-print(f'gates above 0.5: {(Z > 0.5).mean():.0%}, '
-      f'above 0.9: {(Z > 0.9).mean():.0%}')
-```
-
-About half of the gate values in the first layer exceed 0.5, and about a
-quarter exceed 0.9, which keeps the state with a half-life of 7 steps or
-more. Each gate value is computed from
-the current character, so how long an input survives depends on the
-characters that follow it, as :eqref:`eq_lr-unrolled-gated` describes;
-an exercise asks how much the gates of a unit vary from character to
-character.
-
-The minGRU shows that a gated recurrence can be linear in its state, and
-therefore trained with a scan, at a small cost in perplexity. It leaves two
-questions open. Its gates start near $\sigma(0) = 1/2$, a half-life of one
-step, so an input 20 steps back initially reaches the state, and sends its
-gradient back, with weight $2^{-20}$, about one in a million; nothing in the
-model offers longer memories from the start. And its memory holds only one
-number per hidden unit. The rest of the section derives the decay from a
-continuous-time model, which gives stable decays with a spread of timescales
-from the first step of training, and a larger state at little extra cost.
-
-## State Space Models
-:label:`subsec_state-space`
-
-The minGRU trains in parallel, but like the gated networks of
-:numref:`sec_lstm` it must learn from scratch how long to remember. A
-linear recurrence holds a value for a thousand steps only if its decay stays
-within about 0.001 of one for all thousand steps: a decay of 0.999
-has a half-life of 693 steps. The minGRU starts with decays near one half
-and must find such values by gradient descent, from gradients that, at the
-start, have been halved a thousand times. Nothing in the recurrence says
-which memory lengths a model will need, either. The subject of a sentence
-matters for a few words, the topic of a paragraph for hundreds. Physics and
-control theory have long described systems whose state changes
-continuously in time, such as a cooling cup of coffee or the charge on a
-capacitor. Reading such a system at discrete steps gives a linear
-recurrence whose decays are stable for every value of the parameters and
-can be initialized to cover many timescales at once.
+## From Continuous Time to a Recurrence
 
 ### Continuous-Time Dynamics
+:label:`subsec_state-space`
 
-The smallest case is one number $h(t)$ that changes at a rate proportional
-to its own value, driven by an input $x(t)$:
+General systems of this kind are hard to think about all at once, so let
+us start, as with the coffee, with a single number. Let $h(t)$ be a state
+that changes at a rate proportional to its own value and is driven by an
+input $x(t)$:
 
 $$h'(t) = \lambda\, h(t) + x(t).$$
 :eqlabel:`eq_ssm_scalar`
@@ -603,8 +62,9 @@ $$h'(t) = \lambda\, h(t) + x(t).$$
 Without input, the solution is $h(t) = e^{\lambda t} h(0)$. For $\lambda <
 0$ the state decays to zero, faster for larger $|\lambda|$; with $\lambda =
 -1$, a fraction $e^{-1} \approx 0.37$ remains after one unit of time. For
-$\lambda > 0$ it grows without bound. The parameter $\lambda$ is a rate: it
-says how fast the state forgets per unit of time, not per step.
+$\lambda > 0$ it grows without bound, which no memory should do. The
+parameter $\lambda$ is a rate: it says how fast the state forgets per unit
+of time, not per step. This distinction will matter in a moment.
 
 A *state space model* (SSM) generalizes this to a vector state
 $\mathbf{h}(t) \in \mathbb{R}^N$ that is driven by a scalar input $x(t)$ and
@@ -617,25 +77,53 @@ y(t) = \mathbf{C}\, \mathbf{h}(t) + D\, x(t).
 $$
 :eqlabel:`eq_ssm_cont`
 
-The *state matrix* $\mathbf{A} \in \mathbb{R}^{N \times N}$ sets the
-dynamics, $\mathbf{B} \in \mathbb{R}^N$ says how the input enters the state,
-$\mathbf{C} \in \mathbb{R}^{1 \times N}$ reads the state, and $D$ passes the
-input straight through. Control engineers use such models for motors and
-circuits; the name says that the system is described by the space of its
-states. We take $\mathbf{A} = \textrm{diag}(\lambda_1, \ldots, \lambda_N)$
+The input enters the state through $\mathbf{B} \in \mathbb{R}^N$, the
+*state matrix* $\mathbf{A} \in \mathbb{R}^{N \times N}$ moves the state
+along, $\mathbf{C} \in \mathbb{R}^{1 \times N}$ reads it, and $D$ passes the
+input straight to the output.
+
+We take $\mathbf{A} = \textrm{diag}(\lambda_1, \ldots, \lambda_N)$
 diagonal, so that the model is $N$ independent copies of
 :eqref:`eq_ssm_scalar`, each with its own rate, read out together by
-$\mathbf{C}$. A sequence of $d$-dimensional vectors gets one such SSM per
-coordinate, or *channel*, so the state of a layer holds $d \times N$
-numbers, $N$ times as many as a minGRU of the same width.
+$\mathbf{C}$. The reason is cost. With a full $\mathbf{A}$, every step
+multiplies the state by an $N \times N$ matrix, and a parallel scan
+multiplies such matrices with each other, $N^3$ multiply-adds per combine;
+with a diagonal $\mathbf{A}$, a step is $N$ scalar multiplications.
+
+The diagonal is less of a restriction than it looks. In exact arithmetic
+almost every matrix can be diagonalized over the complex numbers, and
+$\mathbf{B}$ and $\mathbf{C}$ absorb the change of basis, so a complex
+diagonal loses almost nothing in what the layer can represent; that such
+layers also train well was found by experiment
+:cite:`Gu.Gupta.Goel.Re.2022`. A *real* diagonal does give something up,
+namely oscillation. A complex rate $\lambda = -\alpha + i\omega$ makes a
+state decay while it rotates, whereas a real rate can only decay. The S4D
+layer of that paper uses complex rates by default. We build its variant
+with real rates, because it is the simplest, and will see below what the
+simplification costs; complex rates are left to an exercise.
+
+A layer reads a sequence of $d$-dimensional vectors and runs one such SSM
+for each coordinate, or *channel*. Picture channel 7 of the input. It
+drives its own 16 states, each a leaky copy of the input that forgets at
+its own rate, and channel 7 of the output is a learned combination of those
+16 through $\mathbf{C}$. Channel 8 has 16 states of its own, and the two
+channels never mix inside the layer. The state of a layer therefore holds
+$d \times N$ numbers, $N$ times as many as a minGRU of the same width.
 
 ### Discretization
 :label:`subsec_zoh`
 
 To process a sequence, we read the continuous system at steps of length
-$\Delta$. If the input stays constant during each step, a rule called the
-*zero-order hold*, then :eqref:`eq_ssm_scalar` can be solved exactly over
-one step, and the result is a linear recurrence:
+$\Delta$, so that step $t$ ends at time $t\Delta$. Between two readings the
+input must have some value, and the simplest choice is to hold it at $x_t$
+throughout the step that ends at $t$. With this rule, called the
+*zero-order hold*, :eqref:`eq_ssm_scalar` can be solved exactly over one
+step. The trick is to shift the state. With the input held at $x_t$, the
+quantity $h + x_t/\lambda$ has the derivative $\lambda h + x_t = \lambda(h +
+x_t/\lambda)$, so it obeys the equation without input and shrinks by the
+factor $e^{\Delta\lambda}$ over the step: $h_t + x_t/\lambda =
+e^{\Delta\lambda}(h_{t-1} + x_t/\lambda)$. Rearranged, this is a linear
+recurrence:
 
 $$
 h_t = \bar{a}\, h_{t-1} + \bar{b}\, x_t, \qquad
@@ -644,29 +132,34 @@ h_t = \bar{a}\, h_{t-1} + \bar{b}\, x_t, \qquad
 $$
 :eqlabel:`eq_zoh`
 
-The state decays by $e^{\Delta\lambda}$ over the step, and the input, which
-enters continuously during the step, contributes $\int_0^\Delta
-e^{\lambda\tau}\,d\tau = \bar{b}$ times its value
-(:numref:`subsec_mdl-ode-driven-linear` derives the step, also for a full
-matrix $\mathbf{A}$). For $\lambda = -1$ the
-two coefficients are $\bar{a}$ and $1 - \bar{a}$, so the update reads
-$h_t = \bar{a}\, h_{t-1} + (1 - \bar{a})\, x_t$: the blend of the GRU,
-with $\bar{a}$ in the role of the update gate. The step size decides the
-gate. With $\Delta = 0.01$ the state keeps $\bar{a} = 0.990$ of its value,
-a half-life of 69 steps, and admits 1% of the input; with $\Delta = 0.1$ it
-keeps 0.905, a half-life of 7 steps; with $\Delta = 1$ it keeps 0.37 and is
-mostly overwritten. A small step size means a long memory.
+Over one step the state keeps the fraction $\bar{a}$ of its value, and the
+input enters with the weight $\bar{b}$. Nothing was approximated: at the
+step boundaries, the recurrence and the differential equation agree.
 
-The same formula guarantees stability. For every $\lambda < 0$ and every
-$\Delta > 0$, the decay $\bar{a} = e^{\Delta\lambda}$ lies in $(0, 1)$. If we
-store the rate as $\lambda = -e^{\theta}$ and learn $\theta$, then no value
-of the parameters, and no gradient step, can produce a recurrence that
-grows. :numref:`fig_ssm_discretization` shows the map from rates to decays.
-Rates may also be complex, $\lambda = -\alpha + i\omega$, in which case the
-state decays while it rotates, a damped oscillation; the models of this
-chapter use real rates.
+For $\lambda = -1$ the two coefficients are $\bar{a}$ and $1 - \bar{a}$,
+so the update reads $h_t = \bar{a}\, h_{t-1} + (1 - \bar{a})\, x_t$: the
+blend of the GRU, with $\bar{a}$ in the role of the update gate. The step
+size decides the gate. With $\Delta = 0.01$ the state keeps $\bar{a} =
+0.990$ of its value, a half-life of 69 steps, and admits 1% of the input;
+with $\Delta = 0.1$ it keeps 0.905, a half-life of 7 steps; with $\Delta =
+1$ it keeps 0.37 and is mostly overwritten. A small step size means a long
+memory.
 
-![Zero-order hold maps a rate $\lambda$ to a decay per step $\bar{a} = e^{\Delta\lambda}$. Left and middle: every rate with negative real part (shaded) lands inside the unit circle, for every step size. The curves trace $\lambda = -1 \pm 4i$ for $\Delta$ from 0 to 1, with dots at $\Delta = 0.1, 0.3, 1$; the orange dots show $\lambda = -1$ at the same step sizes. Right: for real rates, the decay as a function of $\Delta|\lambda|$, labeled with the half-life in steps.](../img/mdl-modernrnn-discretization.svg)
+Is a decay obtained this way better behaved than a gate? Not in the values
+it can take. If we store the rate as $\lambda = -e^{\theta}$ and learn
+$\theta$, then for every $\theta$ and every $\Delta > 0$ the decay $\bar{a}
+= e^{\Delta\lambda}$ lies in $(0, 1)$, and no gradient step can make the
+recurrence grow; but the sigmoid gate of the minGRU cannot leave $(0, 1)$
+either. What is new is the form of the parameter. A state forgets half of
+its content every $\ln 2 / (\Delta|\lambda|)$ steps, and this half-life is
+set by a product of two factors with separate jobs. The rates tell the
+states of a channel apart; the step size, one number per channel, slows or
+speeds all of them at once. A gate has one independent number per unit and
+nothing that moves a group of units together.
+:numref:`fig_ssm_discretization` shows the map from
+$\Delta|\lambda|$ to the decay and its half-life.
+
+![Zero-order hold turns a real rate $\lambda < 0$ into a decay per step $\bar{a} = e^{-\Delta|\lambda|}$, which depends only on the product $\Delta|\lambda|$. The labels give the half-life in steps, $\ln 2 / (\Delta|\lambda|)$. The shaded band is the range that the S4D initialization covers, with $\Delta$ between 0.001 and 0.1 and $|\lambda|$ between 1 and 16.](../img/mdl-modernrnn-discretization.svg)
 :label:`fig_ssm_discretization`
 
 With a diagonal $\mathbf{A}$, the zero-order hold applies to each state
@@ -674,29 +167,36 @@ separately: $\bar{a}_n = e^{\Delta \lambda_n}$ and $\bar{b}_n =
 (e^{\Delta \lambda_n} - 1) b_n / \lambda_n$. (For small $\Delta\lambda_n$,
 the difference $e^{\Delta\lambda_n} - 1$ loses digits in floating point, so
 the code computes it with `expm1`, which evaluates $e^x - 1$ accurately.)
+For a full matrix the step is $\bar{\mathbf{A}} = e^{\Delta\mathbf{A}}$,
+derived in :numref:`subsec_mdl-ode-driven-linear`. (The appendix writes the
+state as $\mathbf{x}$, the input as $\mathbf{u}$ and the step as $h$, and it
+indexes the held input by the step that it starts, one less than ours.)
 
-Discretization also tells us how to initialize. State $n$ forgets with a
-time constant of $1 / (\Delta |\lambda_n|)$ steps. The S4D model of
-:citet:`Gu.Gupta.Goel.Re.2022`, in the variant with real rates that we
-build below, sets $\lambda_n = -(n + 1)$ for $n = 0, \ldots, N-1$ and draws one step size per channel,
-log-uniformly between 0.001 and 0.1. With $N = 16$ states, the time
-constants then range from under one step ($\Delta = 0.1$, $\lambda = -16$)
-to 1,000 steps ($\Delta = 0.001$, $\lambda = -1$): before training, the
-layer already holds memories of every length in between. These rates come
-from the HiPPO theory of :citet:`Gu.Dao.Ermon.ea.2020`, which designs
-$\mathbf{A}$ so that the state stores the coefficients of a polynomial
-approximation of the input's history; the diagonal rates above
-approximate that design.
+The rates also tell us how to initialize. S4D, in the variant with real
+rates that we build below, sets $\lambda_n = -n$ for $n = 1, \ldots, N$ and
+draws one step size per channel, log-uniformly between 0.001 and
+0.1. With $N = 16$ states, the half-lives then range from under half a step
+($\Delta = 0.1$, $\lambda = -16$) to 693 steps ($\Delta = 0.001$, $\lambda =
+-1$), the shaded band of :numref:`fig_ssm_discretization`. Before training,
+every channel already holds memories of many lengths, each channel at its
+own scale. The rates come from the HiPPO theory of
+:citet:`Gu.Dao.Ermon.ea.2020`, which designs $\mathbf{A}$ so that the state
+stores the coefficients of a polynomial approximation of the input's
+history; the rates above keep the diagonal of that matrix. The theory is
+elegant, and for what follows it can be forgotten: what the initialization
+contributes is a wide spread of timescales.
 
 ### The Convolutional Form
 :label:`subsec_ssm-conv`
 
-The scan is one way to compute all states at once, and dynamics that do not
-change along the sequence allow a second. When $\bar{a}_n$, $\bar{b}_n$,
-and $\mathbf{C}$ are the same at every step, the model is *linear time-invariant*, and unrolling it gives the outputs
-directly in terms of the inputs. State $n$ holds
-$\sum_{k \ge 0} \bar{a}_n^k \bar{b}_n x_{t-k}$, as in :eqref:`eq_lr-unrolled`,
-and the readout adds the states with weights $c_n$:
+The parallel scan of :numref:`sec_linear-recurrence` computes all states of
+a linear recurrence at once, by composing affine steps in about $\log_2 T$
+rounds. Dynamics that do not change along the sequence allow a second way.
+When $\bar{a}_n$, $\bar{b}_n$, and $\mathbf{C}$ are the same at every step,
+the model is *linear time-invariant*, and unrolling it gives the outputs
+directly in terms of the inputs. State $n$ holds $\sum_{k \ge 0}
+\bar{a}_n^k \bar{b}_n x_{t-k}$, every input weighted by the decay raised to
+its age, and the readout adds the states with weights $c_n$:
 
 $$
 y_t = \sum_{k=0}^{t-1} K_k\, x_{t-k} + D x_t, \qquad
@@ -713,31 +213,117 @@ $\lambda = -1$, $\Delta = 0.1$, and $c = 1$ gives $K_k = 0.095 \cdot
 
 One model therefore has three equivalent forms
 (:numref:`fig_ssm_views`). The differential equation is where we choose the
-parameters and see that they are stable. The recurrence is how the model
+parameters and read them as timescales. The recurrence is how the model
 generates, one step at a time in constant memory. The convolution is a
 second way to train in parallel: the convolution of two sequences of
 length $T$ can be computed with the fast Fourier transform (FFT) in
 $O(T \log T)$ operations, by transforming both, multiplying them, and
-transforming back. The S4 model of :citet:`Gu.Goel.Re.2022` trained this
-way on sequences of tens of thousands of steps, and it solved benchmarks
-whose dependencies span thousands of steps. The convolution requires
+transforming back. S4D's predecessor S4 :cite:`Gu.Goel.Re.2022`, whose
+state matrix is not diagonal, trained this way, and it was the first model
+to do better than chance on Path-X, a benchmark that shows an image of
+$128 \times 128$ pixels one pixel at a time, 16,384 steps in all, and asks
+whether two marked points are joined by a path. The convolution requires
 dynamics that are the same at every step; the scan does not.
 
 ![Three forms of one state space model. Left: the continuous-time state responds to an input pulse. Middle: the discretized system is a linear recurrence, one step per token. Right: unrolled, the same system is a causal convolution whose kernel is the response to a single pulse.](../img/mdl-modernrnn-ssm-views.svg)
 :label:`fig_ssm_views`
 
-## S4D
+### Timescales and Learned Kernels
+
+A reader may object at this point. The gates of the minGRU are decays in
+$(0, 1)$ as well, and nothing stops us from setting their biases so that
+they start at the decays of S4D; the experiment at the end of this section
+does that. What does the differential equation give that a gate bias does
+not? Less than it seems, and one thing that matters. Writing a half-life
+down as a rate and a step size is a convenience, and a minor one: for a
+gate we solve $\sigma(b) = e^{-\Delta}$ for the bias $b$, which takes one
+line. The convolutional form comes from dynamics that stay the same along
+the sequence, not from calculus; any linear recurrence whose decays do not
+depend on the input has it. The learned kernel comes from the size of the
+state. The readout $\mathbf{C}$ combines the $N$ states of a channel, so
+the memory of a channel is a weighted sum of $N$ exponentials of its own; a
+unit of the minGRU holds a single one, and only the layer after it can mix
+units. What does come from writing a decay as a rate times a step is the
+step size, one number per channel that stretches or shrinks all $N$
+timescales of the channel together. It is the part of this section that
+the rest of the chapter builds on.
+
+The kernel is the main gain in what a channel can represent, so let us
+see how far it goes. How well can $N$ exponentials imitate a memory that is
+not exponential? Suppose a channel should report the input from exactly 20
+steps ago, a kernel that is zero except for $K_{20} = 1$. One prediction is
+safe before any computation: a single state cannot do it, because one
+decaying exponential is largest at $k = 0$. The cell fits the readout
+$\mathbf{c}$ of one channel by least squares, with $N$ states at S4D's
+rates and a fixed step $\Delta = 0.05$ (half-lives from 14 steps down to
+under one; exercise 2 varies $\Delta$), to two targets over 100 steps: the
+exact delay, and a smooth bump that remembers "about 20 steps ago, give or
+take 4". The question is how close $N$ states come, measured by the
+relative error $\|\mathbf{K} - \textrm{target}\| / \|\textrm{target}\|$, and
+how large a readout they need to get there.
+
+```{.python .input #ssm-what-the-continuous-time-view-adds}
+%%tab pytorch, jax
+def fit_kernel(N, target, dt=0.05):
+    """Fit the readout c of N states at S4D's rates to a target kernel."""
+    rate = -np.arange(1., N + 1)
+    a_bar, b_bar = np.exp(dt * rate), np.expm1(dt * rate) / rate
+    basis = a_bar ** np.arange(len(target))[:, None] * b_bar  # K = basis @ c
+    c = np.linalg.lstsq(basis, target, rcond=None)[0]
+    K = basis @ c
+    return K, c, np.linalg.norm(K - target) / np.linalg.norm(target)
+
+k = np.arange(100)
+spike = (k == 20).astype(float)      # Exactly the input 20 steps back
+bump = np.exp(-(k - 20) ** 2 / 32)   # About 20 steps back, give or take 4
+print(' N  peak  spike |c|  spike residual  bump |c|  bump residual')
+for N in [1, 4, 16]:
+    K, c, spike_error = fit_kernel(N, spike)
+    _, c_bump, bump_error = fit_kernel(N, bump)
+    print(f'{N:2d}  {K.argmax():4d}  {np.abs(c).max():9.0e}  '
+          f'{spike_error:14.2f}  {np.abs(c_bump).max():8.0e}  '
+          f'{bump_error:13.2f}')
+```
+
+With one state the kernel peaks at 0, as predicted, and misses both
+targets almost entirely. Four states move the peak to 17 and bring the
+error on the bump down to 0.55. Sixteen states put the peak at 20 and
+match the bump to an error of 0.03, while the sharp delay stays out of
+reach at 0.89.
+
+The columns of weights tell us not to celebrate yet. The weights of the
+spike fit reach $2 \times 10^{11}$, and those of the bump fit, at
+$8 \times 10^{10}$, are hardly more modest. Real exponentials with nearby
+rates look much alike, and least squares tells them apart only with
+enormous weights of opposite sign that cancel almost perfectly. Gradient
+descent from small weights has no reasonable path to such a solution. With
+weights of ordinary size, the peak of the kernel can still be moved away
+from zero, but the kernel stays broad; exercise 2 measures how much of the
+bump survives. A sum of decaying exponentials can remember roughly when
+something happened, not exactly when, and with a readout of ordinary size
+the "roughly" is rough indeed. For a language model the lost precision
+matters less than it sounds: a word usually needs the subject a few words
+back, not the token exactly 20 positions ago. The poor conditioning is
+another matter, and it is where complex rates help. Their oscillating terms
+differ from one another far more than decays with nearby rates do, and
+exercise 3 repeats the fit with them.
+
+## A Diagonal State Space Layer
 :label:`subsec_s4d`
 
 ### The S4D Layer
 
 The `S4D` layer runs one diagonal SSM with $N$ states per channel. It
-stores the rates as $\lambda_n = -e^{\theta_n}$ and one step size per
-channel as $\log \Delta$, initialized as described above. Following
-:citet:`Gu.Gupta.Goel.Re.2022`, it fixes $\mathbf{B} = \mathbf{1}$ and lets
-the learned readout $\mathbf{C}$ absorb its scale. We start with the
-parameters and the method `discretize`, which applies the zero-order hold
-:eqref:`eq_zoh` to every state of every channel.
+stores the rates as $\lambda_n = -e^{\theta_n}$, so that they stay
+negative, and one step size per channel as $\log \Delta$, both initialized
+as described above. It fixes $\mathbf{B} = \mathbf{1}$: only the products
+$b_n c_n$ enter the kernel :eqref:`eq_ssm_kernel`, so the learned readout
+$\mathbf{C}$ can absorb any scale that $\mathbf{B}$ would carry. We start
+with the parameters and the method `discretize`, which applies the
+zero-order hold :eqref:`eq_zoh` to every state of every channel. Its two
+lines are the whole of the continuous-time view in code; the rest of the
+class works with $\bar{a}$ and $\bar{b}$ alone, as any linear recurrence
+would.
 
 ```{.python .input #ssm-the-s4d-layer-1}
 %%tab pytorch
@@ -746,7 +332,7 @@ class S4D(nn.Module):  #@save
     def __init__(self, num_hiddens, num_states=16, dt_min=1e-3, dt_max=1e-1):
         super().__init__()
         d, N = num_hiddens, num_states
-        # Rates lambda_n = -(n + 1), stored as log(-lambda) to stay negative
+        # lambda_n = -n for n = 1..N, stored as log(-lambda) to stay negative
         self.log_neg_rate = nn.Parameter(
             torch.log(torch.arange(1., N + 1)).repeat(d, 1))
         self.log_dt = nn.Parameter(  # Log-uniform in [dt_min, dt_max]
@@ -768,7 +354,7 @@ class S4D(nnx.Module):  #@save
     def __init__(self, num_hiddens, num_states=16, dt_min=1e-3, dt_max=1e-1,
                  *, rngs):
         d, N = num_hiddens, num_states
-        # Rates lambda_n = -(n + 1), stored as log(-lambda) to stay negative
+        # lambda_n = -n for n = 1..N, stored as log(-lambda) to stay negative
         self.log_neg_rate = nnx.Param(
             jnp.tile(jnp.log(jnp.arange(1., N + 1)), (d, 1)))
         self.log_dt = nnx.Param(  # Log-uniform in [dt_min, dt_max]
@@ -784,7 +370,8 @@ class S4D(nnx.Module):  #@save
         return jnp.exp(dt_rate), jnp.expm1(dt_rate) / rate
 ```
 
-For training, `forward` computes the kernel :eqref:`eq_ssm_kernel` of every
+The forward pass, used in training, holds no new idea, only an efficient
+way to convolve. It computes the kernel :eqref:`eq_ssm_kernel` of every
 channel from the discretized parameters and convolves it with the input by
 the FFT. Both sequences are padded to twice their length, because the FFT
 computes a *circular* convolution, in which the end of a sequence would
@@ -796,6 +383,7 @@ otherwise wrap around and leak into its beginning.
 def forward(self, X):  # X: (batch_size, num_steps, d)
     T = X.shape[1]
     a_bar, b_bar = self.discretize()
+    # All powers a_bar^k for k < T: d * N * T numbers held in memory
     powers = a_bar.unsqueeze(-1) ** torch.arange(T, device=X.device)
     K = ((self.C * b_bar).unsqueeze(-1) * powers).sum(1)  # Kernel, (d, T)
     Y = torch.fft.irfft(torch.fft.rfft(X, n=2 * T, dim=1) *
@@ -809,6 +397,7 @@ def forward(self, X):  # X: (batch_size, num_steps, d)
 def __call__(self, X):  # X: (batch_size, num_steps, d)
     T = X.shape[1]
     a_bar, b_bar = self.discretize()
+    # All powers a_bar^k for k < T: d * N * T numbers held in memory
     powers = a_bar[..., None] ** jnp.arange(T)
     K = ((self.C[...] * b_bar)[..., None] * powers).sum(1)  # Kernel, (d, T)
     Y = jnp.fft.irfft(jnp.fft.rfft(X, n=2 * T, axis=1) *
@@ -841,7 +430,7 @@ def step(self, x, h):
 ```
 
 We check that the three forms agree on a random layer: the FFT convolution
-of `forward`, the parallel scan of the recurrence, and the recurrence run
+of the forward pass, the parallel scan of the recurrence, and the recurrence run
 one step at a time with `step`.
 
 ```{.python .input #ssm-the-s4d-layer-4}
@@ -850,15 +439,16 @@ layer = S4D(8, num_states=4)
 X = torch.randn(2, 50, 8)  # (batch_size, num_steps, d)
 with torch.no_grad():
     a_bar, b_bar = layer.discretize()
-    H = linear_scan(a_bar, b_bar * X.unsqueeze(-1))  # (batch, T, d, N)
+    H = d2l.linear_scan(a_bar, b_bar * X.unsqueeze(-1))  # (batch, T, d, N)
     Y_scan = (H * layer.C).sum(-1) + layer.D * X
     h, Y_step = torch.zeros(2, 8, 4), []
     for x in X.unbind(1):
         y, h = layer.step(x, h)
         Y_step.append(y)
     Y_conv = layer(X)
+Y_step = torch.stack(Y_step, 1)
 print(f'convolution vs scan: {(Y_conv - Y_scan).abs().max():.1e}, '
-      f'convolution vs steps: {(Y_conv - torch.stack(Y_step, 1)).abs().max():.1e}')
+      f'convolution vs steps: {(Y_conv - Y_step).abs().max():.1e}')
 ```
 
 ```{.python .input #ssm-the-s4d-layer-4}
@@ -866,38 +456,48 @@ print(f'convolution vs scan: {(Y_conv - Y_scan).abs().max():.1e}, '
 layer = S4D(8, num_states=4, rngs=nnx.Rngs(0))
 X = jax.random.normal(jax.random.key(1), (2, 50, 8))  # (batch, T, d)
 a_bar, b_bar = layer.discretize()
-H = linear_scan(a_bar, b_bar * X[..., None])  # (batch, T, d, N)
+H = d2l.linear_scan(a_bar, b_bar * X[..., None])  # (batch, T, d, N)
 Y_scan = (H * layer.C[...]).sum(-1) + layer.D[...] * X
 h, Y_step = jnp.zeros((2, 8, 4)), []
 for x in jnp.unstack(X, axis=1):
     y, h = layer.step(x, h)
     Y_step.append(y)
 Y_conv = layer(X)
+Y_step = jnp.stack(Y_step, 1)
 print(f'convolution vs scan: {jnp.abs(Y_conv - Y_scan).max():.1e}, '
-      f'convolution vs steps: {jnp.abs(Y_conv - jnp.stack(Y_step, 1)).max():.1e}')
+      f'convolution vs steps: {jnp.abs(Y_conv - Y_step).max():.1e}')
 ```
 
-The three forms agree to rounding error. The FFT and the scan both train in
-parallel; for the time-invariant S4D, the FFT does so without storing the
-$d \times N$ state at every position, only the kernel of length $T$ per
-channel.
+The outputs differ by a few parts in ten million, the rounding error of
+single precision, so the three forms compute the same function. For
+training, the FFT needs less memory than the scan. The scan stores the
+$d \times N$ state at every position of every sequence; the FFT stores the
+$d \times N \times T$ powers that build the kernels once for the whole
+batch.
 
 ### Long-Range Recall
 
-Do the timescales of the initialization matter? We return to the delayed
-recall task of :numref:`sec_lstm`: a sequence starts with one of eight
-symbols, and after $T - 1$ filler tokens the model must name it. There, no
-network with gates that start near one half kept the symbol for 50 steps.
-Here the fillers are all the same token, and the delays are 100 and 1,000
-steps. Identical fillers isolate the question of timescales: a model with
-fixed dynamics cannot ignore random fillers, which the next section
-addresses, but identical ones add only a constant to its state. We compare
-an LSTM and a minGRU whose gates start near one half, one S4D layer with
-64 channels of 16 states, and two controls. The first is an S4D layer whose
-step sizes start between 0.1 and 1, so that its time constants are at most
-about 10 steps. The second is a minGRU whose gate biases are set so that its
-decays start at the values $e^{-\Delta}$ of the slowest state of S4D, with
-$\Delta$ log-uniform between 0.001 and 0.1.
+Does the range of timescales matter when a model has to remember? We
+return to the delayed recall task of :numref:`sec_lstm`: a sequence starts
+with one of eight symbols, and after $T - 1$ filler tokens the model must
+name it; chance is 1/8. There, the LSTM and the GRU with gates that start
+near one half lost the symbol by 50 steps, while the same networks with
+their forget and update gates started near one held it for 200. Here the
+delays are 100 and 1,000 steps, and the fillers are all the same token, so
+the symbol's trace is the only thing that differs from one sequence to the
+next. The task then asks about timescales and nothing else. Which tokens
+deserve to be kept is a separate question, and :numref:`sec_mamba` takes
+it up.
+
+We compare four layers. The minGRU starts with gates near one half. S4D
+has 64 channels of 16 states, initialized as above. Two controls separate
+the timescales from the rest of the layer. The first is an S4D whose step
+sizes start between 0.1 and 1, so that none of its half-lives exceeds 7
+steps. The second is a minGRU whose gates start at the decays of the
+slowest state of S4D, $e^{-\Delta}$ with $\Delta$ log-uniform between
+0.001 and 0.1, half-lives from 7 to 693 steps. A sigmoid gate $\sigma(b)$
+equals $e^{-\Delta}$ when $b = -\log(e^\Delta - 1)$, which is what
+`init_timescales` computes.
 
 ```{.python .input #ssm-long-range-recall-1}
 %%tab pytorch
@@ -921,199 +521,149 @@ def init_timescales(layer, dt_min=1e-3, dt_max=1e-1, *, rngs):  #@save
 
 We reuse the model and the training function `d2l.train_delayed_recall` of
 :numref:`sec_lstm`: an embedding, the sequence layer, and a classifier read
-at the last position, trained with Adam on fresh batches. Here the learning
-rate is 0.01.
+at the last position, trained with Adam at a learning rate of 0.003 on
+1,500 fresh batches of 128 sequences. S4D keeps the width of its input, so
+its model embeds tokens in 64 dimensions; the minGRUs map 32 to 64, like
+the recurrent layers of :numref:`sec_lstm`. Every model is trained twice
+from fresh random weights, and both test accuracies are printed. For the
+two S4D layers the cell also prints the slowest half-life after training,
+$\ln 2 / \min_n (\Delta |\lambda_n|)$ over all channels, which tells us
+whether training has moved the timescales. A prediction first: if the
+architecture decides, the two S4D rows will agree with each other and so
+will the two minGRU rows; if the timescales decide, the controls will
+change sides.
 
 ```{.python .input #ssm-long-range-recall-2}
 %%tab pytorch
-# (layer, embedding width): S4D keeps its width; the others map 32 to 64
+# (layer, embedding width): S4D keeps its width; the minGRUs map 32 to 64
 layers = {
-    'LSTM': lambda: (d2l.Recurrent(d2l.init_lecun(
-        nn.LSTM(32, 64, batch_first=True))), 32),
-    'minGRU': lambda: (MinGRU(32, 64), 32),
+    'minGRU': lambda: (d2l.MinGRU(32, 64), 32),
     'S4D': lambda: (S4D(64), 64),
     'S4D, short timescales': lambda: (S4D(64, dt_min=0.1, dt_max=1.0), 64),
-    'minGRU, S4D timescales': lambda: (init_timescales(MinGRU(32, 64)), 32)}
-print(' ' * 23, '  T=100  T=1000')
-for name, layer in layers.items():
-    accuracy = []
-    for T in [100, 1000]:
-        layer_T, num_inputs = layer()
-        model = d2l.RecallModel(layer_T, 64, num_inputs=num_inputs)
-        accuracy.append(d2l.train_delayed_recall(model, T, blank_fillers=True,
-                                                 lr=1e-2))
-    print(f'{name:23s}', ' '.join(f'{a:6.2f}' for a in accuracy))
+    'minGRU, S4D timescales': lambda: (
+        init_timescales(d2l.MinGRU(32, 64)), 32)}
+
+def recall(make_layer, T):
+    """Train a fresh model at delay T; return its test accuracy and layer."""
+    layer, num_inputs = make_layer()
+    model = d2l.RecallModel(layer, 64, num_inputs=num_inputs)
+    return d2l.train_delayed_recall(model, T, blank_fillers=True), layer
+
+def slowest_half_life(layer):  # ln 2 / min(dt |lambda|), in steps
+    rates = torch.exp(layer.log_dt + layer.log_neg_rate).detach()
+    return math.log(2) / rates.min().item()
+
+runs = {name: {T: [recall(make_layer, T) for _ in range(2)]  # Two runs each
+               for T in [100, 1000]} for name, make_layer in layers.items()}
+print(f"{'accuracy':23s} {'T=100':^11s}  {'T=1000':^11s}")
+for name, by_T in runs.items():
+    print(f'{name:23s}', '  '.join(' '.join(f'{acc:5.2f}' for acc, _ in r)
+                                   for r in by_T.values()))
+print('slowest half-life after training, in steps')
+for name in ['S4D', 'S4D, short timescales']:
+    print(f'{name:23s}', '  '.join(' '.join(
+        f'{slowest_half_life(layer):5.0f}' for _, layer in r)
+        for r in runs[name].values()))
 ```
 
 ```{.python .input #ssm-long-range-recall-2}
 %%tab jax
-# (layer, embedding width): S4D keeps its width; the others map 32 to 64
+# (layer, embedding width): S4D keeps its width; the minGRUs map 32 to 64
 layers = {
-    'LSTM': lambda rngs: (nnx.RNN(nnx.LSTMCell(
-        32, 64, rngs=rngs,
-        recurrent_kernel_init=nnx.initializers.lecun_normal())), 32),
-    'minGRU': lambda rngs: (MinGRU(32, 64, rngs=rngs), 32),
+    'minGRU': lambda rngs: (d2l.MinGRU(32, 64, rngs=rngs), 32),
     'S4D': lambda rngs: (S4D(64, rngs=rngs), 64),
     'S4D, short timescales': lambda rngs: (
         S4D(64, dt_min=0.1, dt_max=1.0, rngs=rngs), 64),
     'minGRU, S4D timescales': lambda rngs: (init_timescales(
-        MinGRU(32, 64, rngs=rngs), rngs=rngs), 32)}
-print(' ' * 23, '  T=100  T=1000')
-for name, layer in layers.items():
-    accuracy = []
-    for T in [100, 1000]:
-        rngs = nnx.Rngs(random.getrandbits(32))
-        layer_T, num_inputs = layer(rngs)
-        model = d2l.RecallModel(layer_T, 64, num_inputs=num_inputs, rngs=rngs)
-        accuracy.append(d2l.train_delayed_recall(model, T, blank_fillers=True,
-                                                 lr=1e-2))
-    print(f'{name:23s}', ' '.join(f'{a:6.2f}' for a in accuracy))
+        d2l.MinGRU(32, 64, rngs=rngs), rngs=rngs), 32)}
+
+def recall(make_layer, T):
+    """Train a fresh model at delay T; return its test accuracy and layer."""
+    rngs = nnx.Rngs(d2l.get_key())
+    layer, num_inputs = make_layer(rngs)
+    model = d2l.RecallModel(layer, 64, num_inputs=num_inputs, rngs=rngs)
+    return d2l.train_delayed_recall(model, T, blank_fillers=True), layer
+
+def slowest_half_life(layer):  # ln 2 / min(dt |lambda|), in steps
+    rates = jnp.exp(layer.log_dt[...] + layer.log_neg_rate[...])
+    return math.log(2) / rates.min().item()
+
+runs = {name: {T: [recall(make_layer, T) for _ in range(2)]  # Two runs each
+               for T in [100, 1000]} for name, make_layer in layers.items()}
+print(f"{'accuracy':23s} {'T=100':^11s}  {'T=1000':^11s}")
+for name, by_T in runs.items():
+    print(f'{name:23s}', '  '.join(' '.join(f'{acc:5.2f}' for acc, _ in r)
+                                   for r in by_T.values()))
+print('slowest half-life after training, in steps')
+for name in ['S4D', 'S4D, short timescales']:
+    print(f'{name:23s}', '  '.join(' '.join(
+        f'{slowest_half_life(layer):5.0f}' for _, layer in r)
+        for r in runs[name].values()))
 ```
 
-The LSTM and the minGRU, with gates that start near one half, are at chance
-already after 100 steps. S4D recalls the symbol after 1,000 steps. The two
-controls show where its advantage comes from. With short time constants,
-S4D recalls the symbol after 100 steps but not after 1,000; given the time
-constants of S4D, the minGRU recalls it after 1,000 steps too. On this task
-the initialization decides: memories of many lengths, present from the first
-step of training. The continuous-time view supplies them, together with
-decays that are stable for every value of the parameters, while the
-convolution makes training fast but is not needed for the result.
+The controls change sides. The minGRU with gates near one half is at
+chance already after 100 steps, and S4D recalls the symbol after 1,000
+steps in every run. With short half-lives, S4D still recalls it after 100
+steps but is at chance after 1,000; given the decays of S4D, the minGRU
+recalls it after 1,000 steps too. At 1,000 steps the initialization
+decides, as the forget and update gates started near one decided in
+:numref:`sec_lstm`, there over two hundred steps of random fillers.
 
-### Language Modeling
+One entry deserves a second look. The short-timescale S4D recalls the
+symbol after 100 steps, although none of its half-lives exceeds 7 steps at
+the start. After 99 steps its slowest state holds the symbol with a weight
+of about $e^{-0.1 \cdot 99} \approx 5 \times 10^{-5}$. That is small, but
+it is not nothing: the trace still carries a gradient to the step sizes and
+the rates, and training uses it to lengthen the slowest half-lives. The
+second block of the table shows by how much: from at most 7 steps to
+between 100 and 200, enough for the symbol to survive the delay. After 999
+steps the weight is $e^{-100}$, about $10^{-44}$, far below the rounding
+error of the numbers it is added to. The gradient that would lengthen the
+half-lives never arrives, and the slowest ends within a few steps of where
+it began, two orders of magnitude short of the delay. S4D itself shows the
+same pull from a better start: its slowest half-lives grow from at most 693
+steps to about 1,000 or more at a delay of 100, and to more than 2,000 at
+a delay of 1,000. Exercise 5 asks what happens when the half-lives are not
+allowed to move at all. A memory does not end at its half-life. A faint
+trace is enough to teach a layer to remember longer; what ends a memory is
+a trace too faint to teach anything.
 
-An S4D layer is linear and mixes no information across channels. In
-`d2l.SeqLM` each S4D layer is followed by the position-wise MLP, which
-mixes the channels and supplies the nonlinearity. We train two such blocks
-with 16 states per channel, with the recipe of the minGRU above.
+The experiment answers the objection raised earlier, and not in favor of
+the differential equation: to start with long memories, a recurrence needs
+the right decays, and a gate bias supplies them as well as a rate does.
+What a layer keeps from the state space view is the rest: $N$ states per
+channel, read out as a learned kernel, and, from continuous time, the step
+size, one number per channel that scales all $N$ decays together.
 
-```{.python .input #ssm-language-modeling}
-%%tab pytorch
-model = d2l.SeqLM(len(data.vocab), 128, [S4D(128) for _ in range(2)])
-print(f'S4D perplexity: {d2l.fit_lm(model, data):.2f}')
-```
-
-```{.python .input #ssm-language-modeling}
-%%tab jax
-rngs = nnx.Rngs(random.getrandbits(32))
-model = d2l.SeqLM(len(data.vocab), 128, [S4D(128, rngs=rngs) for _ in range(2)],
-                  rngs=rngs)
-print(f'S4D perplexity: {d2l.fit_lm(model, data):.2f}')
-```
-
-S4D reaches a perplexity of about 3.35, behind the minGRU's 3.2 and the
-GRU's 3.0, although each of its layers holds 16 times as many numbers in
-its state as a minGRU layer. Its dynamics are the same at every step, so
-an input's weight in the state depends only on how many steps ago it
-arrived. Whether the character four steps back ended a word or sat in its
-middle, its influence on the present is the same fixed number $K_4$.
-The minGRU, whose decays are chosen by each input, can hold its state
-through some characters and overwrite it at others; S4D cannot.
+The fixed dynamics that make S4D a convolution are also its limit. An
+input's weight in the output depends only on how many steps ago it
+arrived. In a text, whether the character four steps back ended a word or
+sat in its middle, its influence on the present is the same fixed number
+$K_4$. The minGRU chooses its decays from each input and can hold its
+state through some characters and overwrite it at others; S4D cannot.
+Whether one layer can have both, the choice of the minGRU and the
+timescales of S4D, is the question of :numref:`sec_mamba`, which hands the
+step size to the input.
 
 ## Summary
 
-A recurrence whose update is linear in its state, $\mathbf{h}_t =
-\mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$, keeps a weighted sum of
-its past inputs, with weights that are products of decays. Because affine
-steps compose into affine steps, a parallel scan computes all states in
-about $\log_2 T$ rounds of batched arithmetic. The minGRU obtains such a
-recurrence from the GRU by letting its gate and candidate read only the
-input; it comes within a few percent of the GRU's perplexity, and resetting
-its state shows that it relies on its memory.
-A state space model derives the decays from a continuous-time system read
-at steps of size $\Delta$: the decays $e^{\Delta\lambda}$ are stable for
-every value of the parameters, and the initialization of S4D gives every
-layer memories from one step to a thousand. With fixed dynamics the model is
-also a convolution, which the FFT computes. On long-range recall, this
-initialization lets S4D, and a minGRU with the same timescales, keep a
-token for 1,000 steps where gates that start at one half fail. The weights
-of S4D, however, depend only on distance, so it cannot choose what to keep;
-the next section lets the dynamics depend on the input.
+A state space model obtains the decays of a linear recurrence from a
+continuous-time system with rates $\lambda$, read at steps of size
+$\Delta$. Holding the input fixed over each step gives an exact recurrence
+with decay $e^{\Delta\lambda}$. A state's half-life is
+$\ln 2/(\Delta|\lambda|)$ steps, and one step size per channel scales all
+the half-lives of the channel together; S4D starts every layer with
+half-lives from under a step to about 700. With $N$ states per channel and
+fixed dynamics, each channel's memory is a learned kernel, a sum of $N$
+exponentials whose peak can be moved later but which cannot be made sharp,
+and the layer trains as a convolution with the FFT. On delayed recall
+over 1,000 steps the starting timescales decide: S4D and a
+minGRU given the same decays recall the symbol, while gates that start
+near one half and an S4D with short half-lives fail. Because its dynamics
+are fixed, S4D weighs an input by its distance alone and cannot choose
+what to keep.
 
 ## Exercises
-
-1. **Closure under composition.** A parallel scan needs more than
-   associativity: the composite of any run of steps must be described by as
-   many numbers as a single step, so that every combine costs the same.
-    1. Generalize :eqref:`eq_scan_combine` to the recurrence
-       $\mathbf{h}_t = \mathbf{A}_t \mathbf{h}_{t-1} + \mathbf{b}_t$ with
-       dense matrices $\mathbf{A}_t \in \mathbb{R}^{d \times d}$, keeping
-       the factors of each product in the right order. Count the
-       multiply-adds of one combine and of one sequential step. Compare the
-       total work of the doubling scan, about $T \log_2 T$ combines, with
-       that of the loop at $T = 4096$ and $d = 64$. What does the
-       comparison suggest about dense transition matrices?
-    1. For the scalar step $h \mapsto \tanh(w_t h + c_t)$, show that the
-       composite of two steps with $w_1, w_2 \neq 0$ is not of the form
-       $h \mapsto \tanh(w h + c)$ for any $w$ and $c$. What would a scan
-       have to store to represent the composite of $k$ steps?
-
-1. [code] **Candidate nonlinearity.** `MinGRU` keeps a $\tanh$ on the
-   candidate $\tilde{\mathbf{h}}_t$, whereas
-   :citet:`Feng.Tung.Ahmed.ea.2024` use a linear candidate.
-    1. Starting from $\mathbf{h}_0 = \mathbf{0}$, write each coordinate of
-       $\mathbf{h}_t$ as a weighted sum of the candidates
-       $\tilde{\mathbf{h}}_1, \ldots, \tilde{\mathbf{h}}_t$. Show that the
-       weights are nonnegative and sum to at most one, and derive a bound on
-       $|\mathbf{h}_t|$ that holds at every length, with and without the
-       $\tanh$.
-    1. Remove the $\tanh$, retrain with `d2l.fit_lm`, and compare the
-       perplexity with that of `MinGRU`. Relate what you observe to your
-       bound.
-
-1. [code] **A minimal LSTM.** Apply the same two cuts to the LSTM of
-   :numref:`sec_lstm`: compute its input, forget, and output gates and its
-   input node from $\mathbf{x}_t$ alone, and keep its cell update
-   $\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot
-   \tilde{\mathbf{c}}_t$.
-    1. Show that only the cell needs a scan. Implement the layer as a mixer,
-       train it with `d2l.fit_lm`, and compare its perplexity with that of
-       `MinGRU`.
-    1. Unlike the minGRU, this layer does not tie its input gate to its
-       forget gate. Show that if $|\tilde{\mathbf{c}}_t| < 1$ and every
-       forget gate stays below $f_\textrm{max} < 1$, the cell stays below
-       $1 / (1 - f_\textrm{max})$ in magnitude, and give gate values under
-       which it approaches this bound. What bound holds if the gates are
-       replaced by $\mathbf{f}_t / (\mathbf{f}_t + \mathbf{i}_t)$ and
-       $\mathbf{i}_t / (\mathbf{f}_t + \mathbf{i}_t)$, as
-       :citet:`Feng.Tung.Ahmed.ea.2024` propose?
-
-1. [code] **State passing.** `linear_scan` accepts an initial state, so a
-   long sequence can be processed in pieces.
-    1. Split a sequence of length $T$ into chunks of length $\tau$, run the
-       scan on each chunk starting from the final state of the previous
-       one, and check that the concatenated states match a single call on
-       the whole sequence.
-    1. Now stop gradients through the carried state at every chunk
-       boundary. The states do not change. Which contributions to the
-       gradient of the loss at step $t$ disappear, and which dependencies
-       can the trained model still use when it generates text? Compare with
-       truncated backpropagation through time (:numref:`sec_bptt`).
-
-1. [code] **How long must memories start?** `init_timescales` starts the
-   minGRU's gates at half-lives of up to about 700 steps.
-    1. What bias $b$ gives a gate $\sigma(b)$ with a half-life of $k$ steps?
-    1. Initialize the gates with half-lives log-uniform between 1 and
-       $k_\textrm{max}$ steps and repeat the long-range recall experiment
-       at 1,000 steps for $k_\textrm{max} \in \{10, 30, 100, 300\}$. What
-       is the smallest $k_\textrm{max}$ that solves the task? Relate it to
-       the size of the gradient that reaches the first token at
-       initialization.
-    1. Measure how much the gates of each unit vary across the characters
-       of a validation window in the trained language model. Do some units
-       hold their state on some characters and overwrite it on others?
-
-1. [code] **Work-efficient scans.** ● A recursive schedule does less work
-   than the doubling schedule: combine adjacent pairs, which halves the
-   sequence; scan the half-length sequence recursively, which yields every
-   second prefix; then obtain each remaining prefix with one more combine.
-    1. For $T = 2^k$, count the combines and the rounds of combines of each
-       schedule, and compare both with the $T - 1$ steps of the loop at
-       $T = 16384$.
-    1. Implement the recursive schedule with slicing, check it against
-       `sequential_scan`, and time it against `linear_scan` at the lengths
-       used above. Does the ratio of times follow the ratio of combines?
-       Explain why it might not at short lengths.
 
 1. [code] **Discretization rules.** The zero-order hold is one of several
    ways to turn :eqref:`eq_ssm_scalar` into a recurrence. The forward Euler
@@ -1133,8 +683,38 @@ the next section lets the dynamics depend on the input.
        $\lambda = -1$ and $\Delta \in \{0.1, 1, 3\}$, and compare with the
        exact solution $1 - e^{-t}$.
 
-1. [code] **Convolution by the FFT.** `S4D.forward` pads the sequence and
-   the kernel to length $2T$ before the FFT.
+1. [code] **Delays and kernels.** Use `fit_kernel` to study which memories
+   $N$ real exponentials can represent.
+    1. Fit a unit spike at delays 5, 20, and 50 with $N = 16$ states and
+       $\Delta = 0.05$. How does the error change with the delay? Relate
+       your answer to the half-lives of the slowest and the fastest state.
+    1. Fit the spike at delay 20 for step sizes $\Delta$ between 0.01 and
+       0.2. Which $\Delta$ fits best? What does this suggest about how a
+       trained S4D should set the step size of a channel that needs a
+       memory of a particular length?
+    1. Fit $\mathbf{c}$ by gradient descent from zero (Adam, a few thousand
+       steps) instead of least squares. How close do you come to the
+       least-squares error for the bump, and for the spike? What do the
+       weights of the least-squares fits predict?
+
+1. [code] **Complex rates.** A state with the complex rate $\lambda =
+   -\alpha + i\omega$, $\alpha > 0$, decays while it rotates.
+    1. Show that the zero-order hold gives $\bar{a} = e^{-\alpha\Delta}
+       e^{i\omega\Delta}$, and that two states with conjugate rates, input
+       weights, and readout weights contribute a real kernel $K_k = r\,
+       e^{-\alpha\Delta k} \cos(\omega\Delta k + \varphi)$ for some $r \ge 0$
+       and $\varphi$. How many real parameters does such a pair have, and
+       how many does a pair of real states have?
+    1. Which kernels can such pairs represent that real rates cannot? Think
+       of an input that repeats with a fixed period.
+    1. Change `fit_kernel` to use the complex rates $\lambda_m = -1/2 + i\pi
+       m$ for $m = 0, \ldots, N-1$ (the S4D-Lin initialization of
+       :citet:`Gu.Gupta.Goel.Re.2022`) and to fit the real part of the
+       kernel. For the spike at delay 20, compare the error and the size of
+       the weights with the fit of real rates, and explain the difference.
+
+1. [code] **Convolution by the FFT.** The forward pass of `S4D` pads the
+   sequence and the kernel to length $2T$ before the FFT.
     1. Remove the padding, so that the FFT has length $T$, and compare the
        outputs with those of `step`. Which outputs are wrong, and what has
        been added to them?
@@ -1142,7 +722,22 @@ the next section lets the dynamics depend on the input.
        convolution? Why do implementations often round it up to a power of
        two?
 
-[Discussions](https://d2l.discourse.group/)
+1. [code] **How long must memories start?** `init_timescales` starts the
+   minGRU's gates at half-lives of up to about 700 steps.
+    1. What bias $b$ gives a gate $\sigma(b)$ with a half-life of $k$ steps?
+    1. Initialize the gates with half-lives log-uniform between 1 and
+       $k_\textrm{max}$ steps and repeat the long-range recall experiment
+       at 1,000 steps for $k_\textrm{max} \in \{10, 30, 100, 300\}$. What
+       is the smallest $k_\textrm{max}$ that solves the task? Relate it to
+       the weight with which the first token reaches the last position at
+       initialization, and to the short-timescale S4D, which recalled after
+       100 steps although its half-lives started at no more than 7.
+    1. Train the short-timescale S4D at 100 steps again, this time with
+       `log_dt` and `log_neg_rate` held fixed, so that the dynamics cannot
+       change and everything else still learns. Does it still recall the
+       symbol? Compare with the slowest half-lives that the experiment
+       printed after training. What does a trace of $5 \times 10^{-5}$ need
+       in order to be useful?
 
 [Discussions](https://d2l.discourse.group/t/36781)
 
@@ -1150,195 +745,155 @@ the next section lets the dynamics depend on the input.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.3]{.kicker}
+[Dive into Deep Learning · §12.4]{.kicker}
 
-Linear recurrences and state space models<br>
-**affine steps compose · parallel scans · the minGRU · the step size is a gate · S4D as a convolution**
+State Space Models<br>
+**a rate and a step size give a decay · N states make a learned kernel · fixed dynamics make a convolution · timescales decide long recall**
 :::
 :::
 
-::: {.slide title="A GRU Waits 4,095 Times on a 4,096-Token Sequence"}
+::: {.slide title="Gates That Start at One Half Forget in One Step"}
 [The problem]{.kicker}
 
-- A GPU does tens of thousands of multiply-adds at once.
-- A gated network cannot start step 2,000 before step 1,999 is done.
-- A transformer layer processes all 4,096 positions in a few matrix products.
+- Keep a symbol for 1,000 steps: a decay near **0.999**, half-life 693
+  steps.
+- A learned gate starts near $\sigma(0) = 1/2$: half-life **one step**.
+- A gradient carried back 1,000 steps through decays of 1/2 is multiplied
+  by $2^{-1000}$: in single precision, zero.
 
-::: {.d2l-note}
-The chain has one cause: the gates read $\mathbf{h}_{t-1}$ through a
-nonlinearity. Make the update **linear in the state**, and
-$\log_2 4096 = 12$ rounds suffice.
+::: {.d2l-note .warn}
+Can we choose how long each memory lasts before training starts?
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
-- unroll a linear recurrence into a weighted sum of inputs;
-- compose affine steps and run a scan in $\log_2 T$ rounds;
-- read the **step size** of a discretized ODE as a gate;
-- compute a time-invariant SSM as a **convolution**;
-- say how the initialization of S4D affects long-range recall.
+[Goals]{.kicker}
 
-**Running example:** the Penn Treebank results (GRU 3.0, RNN 3.1), and
-delayed recall over 1,000 steps.
+- turn $h' = \lambda h + x$ into an exact recurrence and read the step
+  size as a gate;
+- set half-lives from under a step to 693 steps by initialization;
+- say what $N$ states per channel add: a learned kernel, not one
+  exponential;
+- compute a time-invariant SSM as a convolution with the FFT;
+- read a recall experiment whose controls separate timescales from
+  architecture.
+
+**Running example:** delayed recall of one of eight symbols after 100 and
+1,000 identical fillers.
 :::
 
-::: {.slide title="A Linear Recurrence Is a Weighted Sum of Its Inputs"}
-$$h_t = a\,h_{t-1} + x_t \quad\Longrightarrow\quad h_t = \sum_{s \le t} a^{t-s} x_s$$
+::: {.slide title="Decays From a Rate Sit Between Linear Recurrences and Selection"}
+[Where this fits]{.kicker}
 
-- $a = 0.9$, one input $x_1 = 1$: the state reads $1, 0.9, 0.81, \ldots$
-- No $h_{t-1}$ on the right: every state follows from the inputs alone.
-- The gradient $\partial h_t / \partial x_s = a^{t-s}$: forgetting and
-  vanishing gradients are the same number.
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Gated Recurrent Networks | gates as learned decay |
+| Sequence-to-Sequence Learning | one state between two networks |
+| Linear Recurrences and Parallel Scans | $h_t = a_t h_{t-1} + b_t$, the scan, the minGRU |
+| **State Space Models** | **decays from rates; kernels; convolution** |
+| Selective State Space Models | the input sets the step size |
+| Matrix-State Recurrences | a state of key and value pairs |
+| The Delta Rule | correct a pair instead of adding |
+| Hybrid Architectures | a little attention back |
 :::
 
-::: {.slide title="Input-Chosen Decays Keep the Update Affine"}
-$$\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t,
-\qquad \mathbf{a}_t = \mathbf{a}(\mathbf{x}_t),\ \mathbf{b}_t = \mathbf{b}(\mathbf{x}_t)$$
-
-$$\mathbf{h}_t = \sum_{s \le t} \Big(\prod_{r=s+1}^{t} \mathbf{a}_r\Big) \odot \mathbf{b}_s$$
-
-- An input survives as long as the inputs after it choose to keep it.
-- All $\mathbf{a}_t, \mathbf{b}_t$ come from one batched matrix product
-  before the recurrence starts.
-:::
-
-::: {.slide title="The minGRU Is a GRU Whose Gates Read Only the Input"}
-$$\mathbf{z}_t = \sigma(\mathbf{W}_\textrm{z}\mathbf{x}_t + \mathbf{b}_\textrm{z}),\quad
-\tilde{\mathbf{h}}_t = \tanh(\mathbf{W}_\textrm{h}\mathbf{x}_t + \mathbf{b}_\textrm{h}),\quad
-\mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t$$
-
-- Decay $\mathbf{a}_t = \mathbf{z}_t$, write $\mathbf{b}_t = (1 - \mathbf{z}_t)\odot\tilde{\mathbf{h}}_t$.
-- No reset gate; $2d^2$ weights instead of the GRU's $6d^2$.
-- Gives up: deciding to keep the state *because of what it contains*.
-:::
-
-::: {.slide title="Affine Steps Compose Into Affine Steps"}
-A step is the pair $(\mathbf{a}, \mathbf{b})$: the map
-$\mathbf{h} \mapsto \mathbf{a} \odot \mathbf{h} + \mathbf{b}$.
-
-$$(\mathbf{a}_1, \mathbf{b}_1) \bullet (\mathbf{a}_2, \mathbf{b}_2) =
-(\mathbf{a}_1 \odot \mathbf{a}_2,\ \mathbf{a}_2 \odot \mathbf{b}_1 + \mathbf{b}_2)$$
-
-Example: $(0.5, 1) \bullet (0.5, 2) = (0.25,\ 2.5)$; stepping from
-$h_0 = 0$ gives $h_1 = 1$, $h_2 = 2.5$.
-
-::: {.d2l-note}
-Associative, and a block of a thousand steps is still **one pair**.
+::: {.col .narrow}
+- **Uses:** the linear recurrence and its scan, the minGRU, delayed
+  recall.
+- **Skips:** complex rates, the HiPPO theory behind the rates.
 :::
 :::
-
-::: {.slide title="A Scan Combines With a Doubling Stride"}
-![](../img/mdl-modernrnn-scan-tree.svg){width=60%}
-
-```{.python #ssm-exercises}
-s = 1
-while s < T:  # Combine each position with the one s steps back
-    a, b = (cat(a[:s], a[:-s] * a[s:]),
-            cat(b[:s], a[s:] * b[:-s] + b[s:]))
-    s *= 2
-```
-$\lceil\log_2 T\rceil$ rounds, about $T\log_2 T$ combines.
-:::
-
-::: {.slide title="The Scan Beats the Loop at Every Length"}
-@!ssm-implementation-3
-
-Batch of 32 sequences of 128 coordinates. More positions cost little until
-the GPU is busy; then the total work sets the time.
-:::
-
-::: {.slide title="Check: Rounds and Work"}
-$T = 4096$.
-
-1. How many rounds does the doubling scan need?
-2. About how many combines, against the loop's steps?
-
-::: {.fragment .fade-up}
-1. $\log_2 4096 = 12$ rounds.
-2. About $4096 \cdot 12 \approx 49{,}000$ combines against 4,095 steps:
-   12 times the work, in 340 times fewer rounds.
-:::
-:::
-
-::: {.slide title="The minGRU Uses Its Memory Selectively"}
-Penn Treebank: minGRU about 3.2, GRU 3.0.
-
-@!ssm-a-linear-recurrent-language-model-4
-@!ssm-a-linear-recurrent-language-model-6
-
-- Reset the state at every step: perplexity jumps to more than 10.
-- About a quarter of the gates exceed 0.9 (half-life of 7 steps or more);
-  each is chosen by the current character.
 :::
 
 ::: {.slide title="Continuous Time Gives a Decay a Rate"}
 $$h'(t) = \lambda h(t) + x(t), \qquad h(t) = e^{\lambda t} h(0) \textrm{ without input}$$
 
-A state space model, one per channel, with $N$ states:
+- $\lambda = -1$: $e^{-1} \approx 0.37$ remains after one unit of time.
+- $\lambda$ is a rate **per unit of time**, not per step.
+
+A state space model with $N$ states:
 
 $$\mathbf{h}'(t) = \mathbf{A}\mathbf{h}(t) + \mathbf{B}x(t), \qquad y(t) = \mathbf{C}\mathbf{h}(t) + D x(t)$$
 
-$\mathbf{A} = \textrm{diag}(\lambda_1, \ldots, \lambda_N)$: $N$ rates per
-channel, a $d \times N$ state per layer.
+$\mathbf{B}$: input in · $\mathbf{A}$: dynamics · $\mathbf{C}$: readout ·
+$D$: skip.
+:::
+
+::: {.slide title="Each Channel Drives Its Own N Leaky Integrators"}
+- $\mathbf{A} = \textrm{diag}(\lambda_1, \ldots, \lambda_N)$: $N$
+  independent scalar equations.
+- Channel 7 drives its own 16 states; output 7 is a learned mix of them.
+  Channels never mix.
+- State per layer: $d \times N$, $N$ times a minGRU of width $d$.
+- Diagonal: a scan combine costs $N$, not $N^3$.
+
+::: {.d2l-note}
+A complex diagonal loses almost nothing; a real one loses oscillation
+($-\alpha + i\omega$ decays while it rotates). We build the real variant.
+:::
+:::
+
+::: {.slide title="Holding the Input Over a Step Gives an Exact Recurrence"}
+Hold $x$ at $x_t$ on the step of length $\Delta$ that ends at $t$
+(zero-order hold).
+
+I. $h + x_t/\lambda$ obeys the equation without input:
+$\;(h + x_t/\lambda)' = \lambda\,(h + x_t/\lambda)$.
+
+II. So it shrinks by $e^{\Delta\lambda}$:
+$\;h_t + x_t/\lambda = e^{\Delta\lambda}(h_{t-1} + x_t/\lambda)$.
+
+III. Rearrange:
+
+$$\boxed{h_t = \bar a\, h_{t-1} + \bar b\, x_t, \qquad \bar a = e^{\Delta\lambda},\ \bar b = \frac{e^{\Delta\lambda} - 1}{\lambda}}$$
+
+No approximation at the step boundaries.
 :::
 
 ::: {.slide title="The Step Size Is a Gate"}
-Hold the input fixed over a step of length $\Delta$ (zero-order hold):
-
-$$h_t = \bar a\, h_{t-1} + \bar b\, x_t, \qquad \bar a = e^{\Delta\lambda},\ \bar b = \frac{e^{\Delta\lambda} - 1}{\lambda}$$
+For $\lambda = -1$: $h_t = \bar a\,h_{t-1} + (1 - \bar a)\,x_t$, the GRU's
+blend.
 
 | $\lambda = -1$ | $\Delta = 0.01$ | $\Delta = 0.1$ | $\Delta = 1$ |
 |---|---|---|---|
 | keeps $\bar a$ | 0.990 | 0.905 | 0.37 |
-| half-life | 69 | 7 | 0.7 |
-
-For $\lambda = -1$: $h_t = \bar a\,h_{t-1} + (1 - \bar a)\,x_t$, the GRU's blend.
-:::
-
-::: {.slide title="Every Negative Rate Gives a Stable Decay"}
-![](../img/mdl-modernrnn-discretization.svg){width=100%}
-
-Store $\lambda = -e^\theta$: no parameter value and no gradient step can
-make the recurrence grow.
-:::
-
-::: {.slide title="S4D Starts With Memories From One Step to a Thousand"}
-- Rates $\lambda_n = -(n+1)$, $n = 0, \ldots, 15$.
-- One step size per channel, log-uniform in $[0.001, 0.1]$.
-- Time constant $1/(\Delta|\lambda_n|)$: from $1/(0.1 \cdot 16) = 0.6$ to
-  $1/(0.001 \cdot 1) = 1000$ steps.
-
-::: {.d2l-note}
-The rates approximate HiPPO, a design that makes the state hold a
-polynomial summary of the input's history.
-:::
-:::
-
-::: {.slide title="Fixed Dynamics Make the Model a Convolution"}
-$$y_t = \sum_{k=0}^{t-1} K_k\, x_{t-k} + D x_t, \qquad K_k = \sum_n c_n\, \bar a_n^k\, \bar b_n$$
-
-![](../img/mdl-modernrnn-ssm-views.svg){width=95%}
-
-The FFT computes the convolution in $O(T \log T)$; pad to $2T$ so it does
-not wrap around.
-:::
-
-::: {.slide title="Convolution, Scan, and Steps Agree"}
-@!ssm-the-s4d-layer-4
-
-- Train with the FFT (or the scan): all positions in parallel.
-- Generate with `step`: a $d \times N$ state, whatever the length.
-:::
-
-::: {.slide title="Timescales From the Start Decide Long Recall"}
-Name the first token after $T - 1$ identical fillers.
-
-@!ssm-long-range-recall-2
+| half-life (steps) | 69 | 7 | 0.7 |
 
 ::: {.d2l-note .rule}
-The minGRU **with S4D's time constants** succeeds; S4D **with short ones**
-fails at 1,000. The initialization decides, not the convolution.
+A small step size means a long memory.
 :::
+:::
+
+::: {.slide title="A Rate Makes the Half-Life a Number You Set and Read"}
+::: {.cols .vc}
+::: {.col .fig .big}
+![](../img/mdl-modernrnn-discretization.svg)
+:::
+
+::: {.col .narrow}
+- $\lambda = -e^\theta$: $\bar a \in (0, 1)$ for every $\theta$, as for a
+  sigmoid gate. Nothing new.
+- New: half-life $= \ln 2 / (\Delta|\lambda|)$ steps. The rates tell the
+  states apart; one $\Delta$ per channel scales all of them at once.
+:::
+:::
+:::
+
+::: {.slide title="S4D Starts With Half-Lives From Under a Step to 693"}
+- S4D: a diagonal state space layer, $N = 16$ real states per channel.
+- Rates $\lambda_n = -n$, $n = 1, \ldots, 16$.
+- One step size per channel, log-uniform in $[0.001, 0.1]$.
+- Half-life $\ln 2/(\Delta|\lambda_n|)$: from $\ln 2/(0.1 \cdot 16) =
+  0.43$ to $\ln 2/(0.001 \cdot 1) = 693$ steps.
+
+::: {.d2l-note}
+The rates are the diagonal of the HiPPO matrix, designed so that the state
+holds a polynomial summary of the input's history.
+:::
+
+[Gu, Dao, Ermon, Rudra, Ré, 2020 (HiPPO); Gu, Gupta, Goel, Ré, 2022 (S4D)]{.small}
 :::
 
 ::: {.slide title="Check: A Thousand-Step Memory"}
@@ -1351,21 +906,107 @@ just below S4D's smallest initial step size.
 :::
 :::
 
+::: {.slide title="Fixed Dynamics Make the Model a Convolution"}
+$$y_t = \sum_{k=0}^{t-1} K_k\, x_{t-k} + D x_t, \qquad K_k = \sum_n c_n\, \bar a_n^k\, \bar b_n$$
+
+![](../img/mdl-modernrnn-ssm-views.svg){width=95%}
+
+- One kernel per channel: a sum of $N$ decaying exponentials.
+- FFT: $O(T \log T)$. It convolves circularly, so pad to $2T$ and the end
+  cannot wrap around.
+:::
+
+::: {.slide title="Real Exponentials Peak Late Only by Cancelling"}
+Fit the readout $\mathbf{c}$ by least squares, $\Delta = 0.05$, 100 steps.
+Targets: a spike at $k = 20$; a bump $e^{-(k-20)^2/32}$.
+
+@!ssm-what-the-continuous-time-view-adds
+
+::: {.d2l-note .rule}
+One exponential peaks at $k = 0$. Sixteen match the bump (0.03), not the
+spike (0.89), and both fits need weights near $10^{11}$ that cancel.
+With ordinary weights: roughly when, not exactly when.
+:::
+:::
+
+::: {.slide title="Convolution, Scan, and Steps Agree"}
+@!ssm-the-s4d-layer-4
+
+::: {.d2l-note .rule}
+Differences of $10^{-7}$ are single-precision rounding: one function,
+three forms.
+:::
+
+- Train with the FFT: no state stored per position per sequence; the
+  $d \times N \times T$ powers once per batch.
+- Generate with `step`: a $d \times N$ state, whatever the length.
+:::
+
+::: {.slide title="Four Layers Separate Timescales From Architecture"}
+Name the first of eight symbols after $T - 1$ identical fillers; chance
+1/8. Identical fillers: the symbol's trace is the only difference between
+sequences.
+
+| layer | half-lives at the start |
+|---|---|
+| minGRU | about one step (gates near 1/2) |
+| S4D | under one to 693 steps |
+| S4D, short timescales | at most 7 steps |
+| minGRU, S4D timescales | 7 to 693 steps |
+
+::: {.fragment .fade-up}
+Predict: if the timescales decide, the two controls change sides.
+:::
+:::
+
+::: {.slide title="Timescales, Not Architecture, Decide Long Recall"}
+@!ssm-long-range-recall-2
+
+::: {.d2l-note .rule}
+The minGRU **with S4D's decays** recalls at 1,000; S4D **with short
+half-lives** fails there. At 1,000 steps the initialization decides.
+:::
+:::
+
+::: {.slide title="Check: Half-Lives of 7 Steps, Recall After 100"}
+Why does the short-timescale S4D still recall after 100 steps?
+
+::: {.fragment .fade-up}
+- The symbol's weight after 99 steps: $e^{-9.9} \approx 5 \times 10^{-5}$.
+- Small, but it carries a gradient to the step sizes and rates: training
+  lengthens the slowest half-lives from 7 to **100–200 steps**.
+- After 999 steps: $e^{-100} \approx 10^{-44}$, below rounding error. No
+  gradient from the symbol: the half-lives stay within a few steps of 7.
+:::
+:::
+
+::: {.slide title="The SSM Adds a Kernel and a Step Size"}
+- One $\Delta$ per channel scales all $N$ timescales together: the knob
+  the next deck makes input-dependent.
+- $N$ states per channel: a learned kernel, not one exponential.
+- Fixed dynamics: train as a convolution.
+- The decays themselves: a gate bias does as well,
+  $b = -\log(e^\Delta - 1)$.
+:::
+
 ::: {.slide title="S4D Weighs an Input by Its Distance, Not Its Content"}
-- Penn Treebank: S4D about 3.35, behind the minGRU (3.2), with 16 times
-  the state.
 - $K_4$ is the same number whether the character four steps back ended a
   word or sat in its middle.
-- The minGRU chooses its decays from the input; S4D cannot.
+- The minGRU chooses its decays from each input; S4D cannot.
+
+::: {.d2l-note .warn}
+Can one layer have the minGRU's choice and S4D's timescales?
+:::
 :::
 
 ::: {.slide title="Recap"}
-| | decay | trains by | long recall at 1,000 | PTB |
+| | decay | trains by | recall at 100 | recall at 1,000 |
 |---|---|---|---|---|
-| minGRU | from the input, starts at 1/2 | scan | fails | 3.2 |
-| minGRU, S4D init | from the input, long | scan | succeeds | |
-| S4D | fixed, rates × step sizes | FFT or scan | succeeds | 3.35 |
+| minGRU | from the input, starts near 1/2 | scan | chance | chance |
+| minGRU, S4D decays | from the input, long | scan | 1.00 | 1.00 |
+| S4D, short timescales | fixed, half-lives ≤ 7 at the start | FFT or scan | 1.00 | chance |
+| S4D | fixed, half-lives to 693 at the start | FFT or scan | 1.00 | 1.00 |
 
-**Next:** combine both: decays chosen by the input, with S4D's timescales
-and $N$ states per channel.
+**Next:** let the input set the step size, keeping $N$ states and S4D's
+timescales.
 :::

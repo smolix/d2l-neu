@@ -1,231 +1,315 @@
 # Further Reading
 :label:`sec_ssm-further-reading`
 
-The sections of this chapter teach one representative of each idea. This
-section points to topics they had no room for: the theory behind the
-initialization of state space models, other ways to build and write to a
-fixed-size state, results on what such models can compute, other ways to
-combine recurrence and attention, and applications beyond language. Each
-topic states the problem it addresses and what it changes relative to the
-chapter. Implementations, tutorials, and courses for the material that the
-chapter does teach are listed in its introduction,
-:numref:`chap_modern_rnn`. Nothing else in the book depends on this section.
+By now you have built the recurrent layers that recent long-context models
+put next to attention, and the LSTM they descend from, and you have
+measured where a state of fixed size runs out. Most of the literature
+behind these layers is less than five years old, and not all of it will
+last. This section points to the topics the chapter had no room for and
+says, where it can, what has held up.
+
+If you have one evening, spend it on the papers behind two entries:
+"Hybrid Models in Practice", where the question of :numref:`sec_hybrids`
+is being decided at scale, and "Expressivity of Fixed-State Models", on
+what a model with a fixed state can compute at all. With a second evening,
+read "Memory by Polynomial Projection", the derivation of the rates of S4D
+that the chapter cut short. The applications at the end are pointers for
+readers who work with images, audio, or DNA. Implementations, tutorials,
+and courses for what the chapter does teach are listed in
+:numref:`chap_modern_rnn`.
+
+## Recurrence and Attention Together
+
+This is the group to read first. The designs of released models are being
+decided here, and none of its questions is settled.
+
+### Hybrid Models in Practice
+
+:numref:`sec_hybrids` ended on three questions: how few attention layers are
+enough, where in the stack they belong, and whether attention over a window of
+recent tokens can replace some of them. The matched comparison of
+:citet:`Waleffe.Byeon.Riach.ea.2024`, which that section cited, gives the most
+careful answer to the first two. Their hybrid of 8B parameters mixes tokens
+with 24 Mamba-2 layers and 4 attention layers, one attention layer in seven.
+They chose it with small hybrids trained at different shares, whose
+validation loss was lowest when about 8% of all layers, the MLP layers
+included, were attention. They put a Mamba-2 layer first, so that the model
+needs no position embeddings, and spread the attention layers evenly through
+the rest of the stack. At this share the hybrid exceeded a transformer trained
+on the same data on all twelve standard tasks of the study, while the pure
+Mamba models fell behind on five-shot MMLU and on looking up a number in a
+phone book.
+
+Released models do not agree on the share. Qwen3-Next :cite:`Qwen.Team.2025`
+and Kimi Linear :cite:`Kimi.Team.2025b` use one attention layer in four, Jamba
+:cite:`Lieber.Lenz.Bata.ea.2024,Jamba.Team.2024` one in eight, and nobody has
+yet shown which share is best for which task. Nor do they agree on the
+recurrent layer: the first two build on the delta rule of
+:numref:`sec_deltanet`, while Nemotron-H :cite:`NVIDIA.2025` keeps the Mamba-2
+layers of Waleffe et al. The third question has its boldest answer in Griffin
+:cite:`De.Smith.Fernando.ea.2024`, which has no global attention at all: it
+interleaves two layers of a gated diagonal recurrence with one layer of the
+sliding-window attention of :numref:`sec_windowed-linear-attention`. Its
+authors report what the experiment of :numref:`sec_hybrids` predicts: lookup
+in a phone book degrades once the book is longer than the window.
+
+### Distillation from Transformers
+
+Training a large recurrent model from scratch costs as much as training a
+transformer. It is cheaper to convert a trained transformer: initialize the
+recurrent layers from its attention weights, using the correspondence
+between linear attention and a matrix state of :numref:`sec_matrix-state`,
+and train them to match the transformer's outputs.
+:citet:`Wang.Paliotta.May.ea.2024` keep some of the attention layers and
+obtain a hybrid. :citet:`Bick.Li.Xing.ea.2024` match three things in turn:
+first the attention matrices, the weights each token gives the others,
+then the hidden states, then the outputs. Their distilled models need 3B
+to 5B tokens of training, which they put at less than 1% of what training
+from scratch uses.
+
+### Between a Fixed State and a Full Cache
+
+A recurrent layer stores a fixed amount, and attention stores every token. Two
+designs sit in between. Based :cite:`Arora.Eyuboglu.Zhang.ea.2024` addresses
+the weakness on recall that :numref:`sec_windowed-linear-attention` noted in
+linear attention. It combines linear attention, whose feature map approximates
+$\exp(\mathbf{q}^\top\mathbf{k})$ by its Taylor expansion to second order (an
+exercise of that section works out this truncation), with exact attention over
+a short window of recent tokens. The size of the feature map and of the window
+then set how much the layer stores. The authors find that recall grows with
+the size of the state for every model of this kind, and that Based, by
+changing these two sizes, traces the best trade-off between state size and
+recall among the models they compare. Log-linear attention
+:cite:`Guo.Yang.Goel.ea.2025` keeps one matrix state per block of the past,
+with blocks that double in length the further back they lie, so the memory
+grows with the logarithm of the length. It applies to Mamba-2 and to Gated
+DeltaNet. Both designs turn the choice between a fixed state and a full cache
+into a dial.
+
+## Writing to a Matrix Memory
+
+The first entry says what no fixed state of this chapter can compute, and
+why the delta rule comes closer than the others. The other three change how
+the memory is written, or what the memory is.
+
+### Expressivity of Fixed-State Models
+
+Some tasks are hard for the linear recurrences of this chapter whatever the
+size of their state. Take the shell game: five cups are swapped many times,
+and the model must say where the ball ended up. Following the ball means
+composing the swaps, that is, composing permutations of five objects.
+:citet:`Merrill.Petty.Sabharwal.2024` show that state space models whose
+transitions are diagonal or fixed, S4 and Mamba among them, compute only
+functions in the circuit class $\mathsf{TC}^0$, as transformers do.
+Roughly, $\mathsf{TC}^0$ holds what a network of threshold units can
+compute with a number of layers fixed in advance, however long the input.
+Composing permutations of five objects is among the hardest problems of a
+larger class, $\mathsf{NC}^1$, which allows a number of layers that grows
+with the logarithm of the length. It therefore lies outside
+$\mathsf{TC}^0$ unless $\mathsf{TC}^0 = \mathsf{NC}^1$, which complexity
+theorists conjecture is false. Surprisingly, the number of cups matters:
+with three or four cups the permutations form what group theory calls a
+solvable group, and the shell game stays inside $\mathsf{TC}^0$; five is
+the smallest number of cups for which it does not. Under the conjecture no
+such model of fixed depth can follow the ball over arbitrary lengths. A
+nonlinear recurrent network can, and so can a linear recurrence whose
+transition is non-diagonal and depends on the input.
+
+The delta rule's transition $\mathbf{I} - \beta_t
+\mathbf{k}_t\mathbf{k}_t^\top$ is of that kind, so this result does not
+rule it out. A second result does, for the layer of
+:numref:`sec_deltanet`. The shell game contains parity: let a swap of the
+first two cups stand for a one and a swap of the last two for a zero, and
+the ball, which starts under the first cup, is back there exactly when the
+number of ones is even. :citet:`Grazzi.Siems.Franke.ea.2025` show that in
+finite precision a linear recurrence whose transitions have eigenvalues
+only between zero and one cannot compute parity at arbitrary lengths. The
+`GatedDeltaNet` we built, whose $\beta_t$ comes from a sigmoid, is such a
+recurrence, so it cannot play the shell game over arbitrary lengths either.
+Once $\beta_t$ may reach 2, neither result applies, and the delta rule can
+follow the ball: with $\beta_t = 2$ and the key $(\mathbf{e}_i -
+\mathbf{e}_j)/\sqrt{2}$, its transition is the swap of cups $i$ and $j$, so
+one delta step per token can carry out one swap (Exercise
+:exref:`ex_dn-parity` doubles the range of $\beta_t$ for parity). These
+two results are the most likely to last in this section: they are proofs,
+not benchmarks, though the first rests on a conjecture.
+
+### Generalized Delta Rules
+
+The delta rule ties three choices together: it removes along the key, it
+writes along the same key, and one strength $\beta_t$ serves every
+coordinate. RWKV-7 :cite:`Peng.Zhang.Goldstein.ea.2025`, released as a
+family of language models, unties them. It decays each coordinate of the
+memory at its own rate, removes along the key by a different amount in
+each coordinate, and writes along a second, adjusted key. Its transition is
+then no longer symmetric, and its authors show that the layer can track
+states and recognize every regular language, that is, every language a
+finite automaton recognizes, the shell game among them. Under the
+conjecture of the previous entry, transformers cannot. DeltaProduct
+:cite:`Siems.Carstensen.Zela.ea.2025` keeps the delta rule and takes
+several of its steps per token, so that each transition is a product of
+several factors $\mathbf{I} - \beta\mathbf{k}\mathbf{k}^\top$. At $\beta =
+2$ each factor is a reflection, which reverses the component along its key
+(:numref:`sec_deltanet`). A swap of two cups is one reflection and a cycle
+of three cups is two, so several steps per token let one token apply any
+rearrangement of the cups, not only a swap. Each step adds the work of one
+delta-rule update.
+
+### Exponential Gates
+
+A sigmoid gate writes a token with weight at most one, while the memory
+holds the sum of everything before it, so a single important token cannot
+overrule what is stored. The mLSTM of xLSTM
+:cite:`Beck.Poppel.Spanring.ea.2024` keeps a matrix memory with an
+exponential input gate, whose weight has no such ceiling. With exponential
+gates the scale of the memory is arbitrary, so the layer divides each read
+by a second state, the sum of the gated keys, which cancels that scale as
+the denominator of the softmax does. To keep the exponentials from
+overflowing, it carries a running maximum of the logarithms of the gates,
+decayed by the forget gates, and rescales both states by it, the device of
+the online softmax in :numref:`sec_attention-at-scale`. The same group has
+since trained an xLSTM language model of 7B parameters
+:cite:`Beck.Poppel.Lippe.ea.2025`, so the gate has been tried at scale, but
+it has not spread to the other released models of this section.
+
+### Memories That Are Networks
+
+Nothing in the delta rule requires the memory to be a matrix. In
+:numref:`sec_deltanet` it was one, fitted to the pairs of the current
+sequence by one gradient step per token. TTT layers
+:cite:`Sun.Li.Dalal.ea.2024` keep the gradient steps and make the memory
+and its update rule design choices: the memory is a linear model or a
+small multilayer perceptron. Titans :cite:`Behrouz.Zhong.Mirrokni.2025`
+add two things to the steps: momentum, so that a surprising token keeps
+influencing the next few updates, and a forgetting term like the decay of
+Gated DeltaNet. A network can represent nonlinear associations between
+keys and values that a matrix cannot, but whether this recalls more per
+byte of state than a matrix of the same size is a current research
+question. The chapter sets a bar and says how to read it. By the capacity
+law of :numref:`sec_matrix-state`, a memory that adds its pairs reads with
+squared error $(n - 1)/d_k$ after $n$ pairs with random keys, and the pairs
+it recalls grow in proportion to its $d_k d_v$ entries. And
+:numref:`sec_deltanet` found that a smaller error need not mean more pairs
+recalled. A network memory has to recall more pairs than a matrix with the
+same number of parameters.
 
 ## State Space Models
 
+This group is history and engineering: where the S4D of :numref:`sec_ssm`
+came from, what became of Mamba, and two other routes to a long memory.
+
 ### Memory by Polynomial Projection
 
-:numref:`sec_ssm` initialized the rates of S4D as $\lambda_n = -(n + 1)$ and
-gave one sentence of justification. The full argument asks what a fixed-size
-state should remember about an input $x(s)$, $s \le t$, that keeps growing.
-HiPPO :cite:`Gu.Dao.Ermon.ea.2020` answers: the coefficients of the best
-approximation of the history by a polynomial of degree $N - 1$, measured
-with a weight that spreads uniformly over the whole past. These coefficients
-obey a linear differential equation, $\mathbf{h}'(t) =
-\frac{1}{t}\big(\mathbf{A}\mathbf{h}(t) + \mathbf{B}x(t)\big)$, whose matrix
-$\mathbf{A}$, the HiPPO matrix, is lower triangular and fixed by the choice
-of polynomials and weight. S4 :cite:`Gu.Goel.Re.2022` dropped the factor
-$1/t$, initialized an SSM with this matrix, and made it trainable by writing
-it as a normal matrix plus a low-rank correction, which allows its
-convolution kernel to be computed quickly. S4D :cite:`Gu.Gupta.Goel.Re.2022`
-uses a diagonal matrix instead: either the normal part without the
-correction, whose eigenvalues are complex, or the real rates $-(n + 1)$ on
-the diagonal of the HiPPO matrix itself, the choice of :numref:`sec_ssm`.
-Both work nearly as well as the full matrix.
-:citet:`Gu.Johnson.Timalsina.ea.2023` explain what the model without the
-factor $1/t$ remembers, a projection of the history onto polynomials under a
-weight that decays exponentially into the past, and interpret the
-convolution kernels of these models as projections onto orthogonal bases.
-Gu's thesis :cite:`Gu.2023` develops the whole line, including the
-control-theoretic view of SSMs as linear systems with inputs, states, and
-outputs.
+:numref:`sec_ssm` initialized the rates of S4D as $\lambda_n = -n$, $n = 1,
+\ldots, N$, and gave one sentence of justification. The full argument asks what a
+fixed-size state should remember about the history $x(s)$, $s \le t$, of an
+input, a history that keeps growing. HiPPO :cite:`Gu.Dao.Ermon.ea.2020`
+answers: the coefficients of the best approximation of the history by a
+polynomial of degree $N - 1$, measured with a weight that spreads uniformly
+over the whole past. These coefficients obey a linear differential
+equation, $\mathbf{h}'(t) = \frac{1}{t}\big(\mathbf{A}\mathbf{h}(t) +
+\mathbf{B}x(t)\big)$, whose matrix $\mathbf{A}$, the HiPPO matrix, is lower
+triangular and fixed by the choice of polynomials and weight.
+
+S4 :cite:`Gu.Goel.Re.2022` dropped the factor $1/t$. Without it the system is
+the same at every step, so it has the convolutional form of
+:numref:`subsec_ssm-conv`. :citet:`Gu.Johnson.Timalsina.ea.2023` later worked
+out what it then remembers: the projection of the history onto Legendre
+polynomials in the warped time $e^{-(t-s)}$, which resolve the recent past
+finely and the distant past coarsely. The uniform window over all the past
+became an exponentially fading one. S4 then had to train an SSM started at
+this matrix. Diagonalizing it outright fails, because its eigenvectors have
+entries that grow exponentially with $N$, so S4 wrote it as a normal matrix,
+which has orthogonal eigenvectors, plus a low-rank correction, a form whose
+convolution kernel can be computed quickly.
+
+That correction was the hardest part of S4 and the first to go. Within a
+year, S4D :cite:`Gu.Gupta.Goel.Re.2022` kept only a diagonal: either the
+eigenvalues of the normal part, which are complex, or the real rates $-1,
+\ldots, -N$ on the diagonal of the HiPPO matrix itself, the choice of
+:numref:`sec_ssm`. In that paper's ablations the complex variants come
+close to the full matrix, and the real rates, simpler to implement and to
+explain, lose some accuracy. S5 :cite:`Smith.Warrington.Linderman.2023`
+replaces the independent SSMs of an S4D layer by one SSM with vector input
+and output, still discretized from continuous time and started from the
+normal part of the HiPPO matrix, and computes it with a parallel scan
+(:numref:`subsec_parallel-scans`) rather than a convolution. The selective
+models of :numref:`sec_mamba` also use the scan, but keep one SSM per
+channel. Gu's thesis :cite:`Gu.2023` develops the whole line.
+
+### Successors of Mamba
+
+Two later versions changed the layer of :numref:`sec_mamba`. Mamba-2
+:cite:`Dao.Gu.2024` gives each head one decay so that most of the work becomes
+the matrix products of :numref:`sec_matrix-state`; it is the recurrent layer
+of the hybrids of Waleffe et al. and of Nemotron-H. Mamba-3
+:cite:`Lahoti.Li.Chen.ea.2026` changes three things. Where the zero-order hold
+of :numref:`sec_ssm` keeps the input constant over a step, its trapezoidal
+discretization combines the current and the previous input in each update. Its
+state is complex, so it can rotate and track parity, which a positive real
+decay cannot. And its update takes several inputs and outputs at once, which
+does more arithmetic per byte of state read during generation, where reading
+the state, not the arithmetic, limits the speed. It is too recent to say which
+of the three will last.
 
 ### Recurrences Without a Differential Equation
 
 The continuous-time view is one way to arrive at stable, well-initialized
 linear recurrences, not the only one. The linear recurrent unit
-:cite:`Orvieto.Smith.Gu.ea.2023` starts from a plain diagonal recurrence
-with complex decays, parameterizes the decays so that their magnitude stays
-below one, initializes the magnitudes close to one, and normalizes the input
-so that the state does not grow. It matches S4 on long
-sequence benchmarks without discretization. S5
-:cite:`Smith.Warrington.Linderman.2023` replaces the $d$ independent SSMs of
-an S4D layer by one SSM with vector input and output, computed with a
-parallel scan rather than a convolution, which is the route the selective
-models of :numref:`sec_mamba` take.
+:cite:`Orvieto.Smith.Gu.ea.2023` takes a diagonal recurrence with complex
+decays, keeps their magnitudes below one and starts them close to one, and
+scales the input by $\sqrt{1 - |\lambda|^2}$, so that the state keeps its
+size as the magnitude $|\lambda|$ of a decay approaches one. With no
+discretization at all it matches deep state space models on the Long Range
+Arena, a set of classification tasks on sequences of one to sixteen
+thousand elements. It agrees with the recall experiment of
+:numref:`sec_ssm`, where a minGRU started at the decays of S4D recalled a
+symbol after 1,000 steps as S4D did: the decays and their initialization
+matter more than the differential equation they came from. With gates
+computed from the input and real decays in place of complex ones, the
+linear recurrent unit became the recurrence of Griffin.
 
 ### Long Convolutions
 
-The kernel of S4D in :numref:`sec_ssm` is a sum of $N$ decaying
-exponentials, one per state dimension, which is what gives the layer a
-recurrent form with a small state. H3 :cite:`Fu.Dao.Saab.ea.2023` kept such
-kernels and chained two SSMs, with elementwise products of input projections
-between them in the roles of queries, keys, and values. The first SSM only
-shifts its input, which pairs each token with its predecessor, and the
-second, diagonal SSM accumulates these pairs. A layer can then compare a
-token with earlier ones and recall what followed them, and H3 closed much of
-the gap to attention on language. Hyena
-:cite:`Poli.Massaroli.Nguyen.ea.2023` drops the constraint on the kernel: a
-small network maps each position to the kernel value there, the convolution
-over the whole sequence is computed with the FFT in $O(T \log T)$
-time, and elementwise gates sit between the convolutions. Such kernels have
-no recurrent form with a small state, so generation either recomputes the
-convolution or approximates the kernel by a recurrence afterwards.
-
-### Kernels for Selective Scans
-
-The selective scan of :numref:`sec_mamba` produces a state of $H \times N$
-numbers at every position, too much to write to GPU memory for long
-sequences. The Mamba kernel :cite:`Gu.Dao.2023` loads the inputs into fast
-on-chip memory, discretizes and scans there, writes only the outputs, and
-recomputes the states during the backward pass instead of storing them, the
-trade that :numref:`sec_memory_precision` discusses as activation
-checkpointing. Mamba-2 :cite:`Dao.Gu.2024` restricts the decay to one
-scalar per head so that most of the work becomes the matrix products of
-:numref:`sec_matrix-state`, which GPUs perform much faster than elementwise
-scans. Mamba-3 :cite:`Lahoti.Li.Chen.ea.2026` makes three changes to the
-selective model: a trapezoidal discretization, which combines the current
-and the previous input in each update instead of the current one alone; a
-complex-valued state, which lets the state rotate and track quantities such
-as parity; and a multi-input, multi-output update, which raises the
-arithmetic work per byte of state read during generation.
-
-## Writing to a Matrix Memory
-
-### Exponential Gates
-
-The LSTM's gates are sigmoids, so a forget gate can keep at most all of the
-state and an input gate can write at most the full candidate. The mLSTM of
-xLSTM :cite:`Beck.Poppel.Spanring.ea.2024` uses a matrix memory with an
-exponential input gate, which lets a single important token outweigh
-everything stored before it, and keeps a second state, the sum of the
-gated keys, by which it divides each read. Exponentials overflow quickly,
-so the layer carries the logarithm of the largest gate seen so far and
-rescales both states by it, the same device that the online softmax of
-fused attention kernels uses.
-
-### Generalized Delta Rules
-
-The delta rule of :numref:`sec_deltanet` removes from the memory the
-component along the key it is about to write, by the same amount
-$\beta_t$ for every coordinate. RWKV-7 :cite:`Peng.Zhang.Goldstein.ea.2025`
-decouples these choices: it decays each coordinate of the memory at its own
-rate, removes along one vector, and writes along another, so that its
-transition is no longer symmetric. DeltaProduct
-:cite:`Siems.Carstensen.Zela.ea.2025` applies several delta-rule steps per
-token, so that each transition is a product of several reflections or
-projections and can rotate the memory, which helps on tasks that require
-tracking a state through permutations.
-
-### Memories That Are Networks
-
-In :numref:`sec_deltanet` the memory was a matrix fitted to the pairs of the
-current sequence by one gradient step per token. TTT layers
-:cite:`Sun.Li.Dalal.ea.2024` replace the matrix by a small multilayer
-perceptron and fit it by gradient steps as the sequence is read. Titans
-:cite:`Behrouz.Zhong.Mirrokni.2025` add momentum to these steps, so that a
-surprising token keeps influencing the next few updates, and a forgetting
-term like the decay of Gated DeltaNet. A network can represent nonlinear
-associations between keys and values that a matrix cannot, but whether
-this recalls more per byte of state than a matrix of the same size is a
-current research question.
-
-### Expressivity of Fixed-State Models
-
-Some tasks are hard for the linear recurrences of this chapter,
-independently of memory size. :citet:`Merrill.Petty.Sabharwal.2024` show
-that linear recurrences with diagonal transitions, like transformers, fall
-in a class of parallel computations that cannot track the state of a general
-finite automaton over arbitrary lengths, for instance the result of a long
-sequence of permutations. Nonlinear recurrent networks and recurrences with
-non-diagonal transitions can. :citet:`Grazzi.Siems.Franke.ea.2025` show that
-allowing negative eigenvalues, as the delta rule with $\beta_t > 1$ does, is
-enough for parity and helps on related tasks, and DeltaProduct extends the
-range further.
-
-## Recurrence and Attention Together
-
-### Hybrid Models in Practice
-
-:numref:`sec_hybrids` showed that one attention layer next to a
-recurrent one restores recall. Released models make different choices
-for the ratio and the kind of attention. Griffin
-:cite:`De.Smith.Fernando.ea.2024` alternates a gated diagonal recurrence
-with the sliding-window attention of :numref:`sec_windowed-linear-attention`. Jamba
-:cite:`Lieber.Lenz.Bata.ea.2024,Jamba.Team.2024` uses one attention layer
-for every seven Mamba layers, together with mixture-of-experts MLPs.
-:citet:`Waleffe.Byeon.Riach.ea.2024` trained matched transformers, Mamba
-models, and hybrids on the same data and found that hybrids with a small
-fraction of attention layers matched or exceeded the transformer on most
-tasks, including recall. Samba :cite:`Ren.Liu.Lu.ea.2024` combines Mamba
-layers with sliding-window attention, and Zamba
-:cite:`Glorioso.Anthony.Tokpanov.ea.2024` shares the weights of one
-attention block among several positions in the stack. More recent models
-build their recurrent layers on the delta rule: Qwen3-Next
-:cite:`Qwen.Team.2025` interleaves Gated DeltaNet layers with full attention
-layers, three to one, and Kimi Linear :cite:`Kimi.Team.2025b` does the same
-with a Gated DeltaNet variant whose decay acts on each key coordinate.
-
-### Between a Fixed State and a Full Cache
-
-A recurrent layer stores a fixed amount, and attention stores every token.
-Two designs sit in between. Based :cite:`Arora.Eyuboglu.Zhang.ea.2024`
-combines linear attention, whose feature map approximates the exponential of
-the softmax by its Taylor expansion, with exact attention over a short
-window of recent tokens. The size of the feature map and of the window then
-set how much the layer stores, and the authors trace how recall improves as
-the state grows. Log-linear attention :cite:`Guo.Yang.Goel.ea.2025` keeps
-one matrix state per block of the past, with blocks that double in length
-the further back they lie, so the memory grows with the logarithm of the
-length rather than staying fixed or growing linearly. The construction
-applies to the gated recurrences of this chapter, Mamba-2 and Gated DeltaNet
-among them.
-
-### Distillation from Transformers
-
-Training a large recurrent model from scratch is as expensive as training a
-transformer. An alternative is to convert one: initialize the recurrent
-layers from the attention weights of a trained transformer, using the
-correspondence between linear attention and matrix-state recurrences of
-:numref:`sec_matrix-state`, and train the result to match the transformer's
-outputs. :citet:`Wang.Paliotta.May.ea.2024` do this to turn a transformer
-into a hybrid that keeps some of its attention layers, and
-:citet:`Bick.Li.Xing.ea.2024` distill in stages, first matching the mixing
-matrices of attention, then the hidden states, then the outputs.
+The kernel of S4D is a sum of $N$ decaying exponentials, which is what
+gives the layer a recurrent form with a small state. Long convolutions drop
+that constraint, and the step toward them was H3
+:cite:`Fu.Dao.Saab.ea.2023`. It chained two SSMs of the recurrent kind,
+with elementwise products between them. The first only shifts its input,
+pairing each token with its predecessor, the job of the short convolution
+in front of every layer of :numref:`sec_matrix-state`; the second
+accumulates the pairs, so a layer can find an earlier occurrence of a token
+and recall what followed it. H3 came within 0.4 points of a transformer's
+perplexity on OpenWebText, and a hybrid that kept two attention layers beat
+the transformer by 1.0, an early sign of the result of
+:numref:`sec_hybrids`. Hyena :cite:`Poli.Massaroli.Nguyen.ea.2023` keeps
+H3's chain of convolutions and elementwise products and drops the
+constraint on the kernel: a small network maps each position to the kernel
+value there, and the convolution over the whole sequence is computed with
+the FFT in $O(T \log T)$ time. Such a kernel has no recurrent form with a
+small state, so generation recomputes the convolution or approximates it by
+a recurrence afterwards. A long convolution sees the whole past, but it has
+to look at it again for every new token. Released language models have
+mostly taken the recurrent route, and the best-known uses of long
+convolutions are in genomics.
 
 ## Beyond Language
 
-### Images
-
-An image has no natural order. If it is flattened into a sequence of patches
-and scanned causally, as a language model scans text, each patch sees only
-the patches above it and to its left. Vision Mamba
-:cite:`Zhu.Liao.Zhang.ea.2024` scans the sequence of patches forward and
-backward and adds the two outputs. VMamba :cite:`Liu.Tian.Zhao.ea.2024`
-scans the grid of patches along rows and along columns, each in both
-directions, and merges the four results, so that every patch receives
-information from the whole image.
-
-### Audio
-
-Raw audio has tens of thousands of samples per second, far too many for
-attention over a recording of any length. SaShiMi
-:cite:`Goel.Gu.Donahue.ea.2022` stacks S4 layers in a multiscale network
-that pools the sequence to coarser rates and upsamples it again, and
-generates waveforms one sample at a time with the recurrent form of each
-layer.
-
-### Genomics
-
-A stretch of DNA can regulate a gene tens of thousands of bases away, and a
-strand and its reverse complement encode the same information. HyenaDNA
-:cite:`Nguyen.Poli.Faizi.ea.2023` trains Hyena on contexts of up to a
-million bases with one token per nucleotide. Caduceus
-:cite:`Schiff.Kao.Gokaslan.ea.2024` builds on Mamba, scans in both
-directions, and makes each layer equivariant to taking the reverse
-complement, so that a sequence and its reverse complement receive consistent
-predictions.
-
-[Discussions](https://d2l.discourse.group/)
+The same layers have been applied wherever sequences are long, and each
+field added one idea of its own. An image has no natural order, and a
+causal scan over its patches would let each patch see only those above it
+and to its left. Vision Mamba :cite:`Zhu.Liao.Zhang.ea.2024` therefore
+scans the patches forward and backward, and VMamba
+:cite:`Liu.Tian.Zhao.ea.2024` scans along rows and columns in both
+directions. Raw audio has tens of thousands of samples per second. SaShiMi
+:cite:`Goel.Gu.Donahue.ea.2022` stacks S4 layers in a network that pools to
+coarser rates and upsamples again, and generates one sample at a time with
+the recurrent form. In DNA, a stretch can regulate a gene tens of thousands
+of bases away, and a strand and its reverse complement carry the same
+information. HyenaDNA :cite:`Nguyen.Poli.Faizi.ea.2023` trains Hyena on
+contexts of up to a million single nucleotides, and Caduceus
+:cite:`Schiff.Kao.Gokaslan.ea.2024` makes each layer of a bidirectional
+Mamba equivariant to the reverse complement, so that both strands receive
+consistent predictions.
 
 [Discussions](https://d2l.discourse.group/t/36786)

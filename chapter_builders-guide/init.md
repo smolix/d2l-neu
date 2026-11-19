@@ -327,9 +327,8 @@ factors multiply.
 
 :begin_tab:`pytorch`
 This pattern is the whole interface. Later chapters package it as helper
-functions, `init_cnn` for convolutional networks and `init_seq2seq` for
-encoder-decoder models, but each is a function like `init_he` handed to
-`apply`.
+functions, such as `init_cnn` for convolutional networks, but each is a
+function like `init_he` handed to `apply`.
 :end_tab:
 
 ### Truncated Normals

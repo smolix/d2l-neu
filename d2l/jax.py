@@ -2183,7 +2183,7 @@ def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
                    blank_fillers=False):
     """A symbol, then num_steps - 1 fillers; the target is the symbol.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     Y = rng.integers(0, num_symbols, (batch_size, 1))  # One query, at the end
     X = rng.integers(num_symbols, 2 * num_symbols, (batch_size, num_steps))
     if blank_fillers:  # The same filler token at every step
@@ -2194,9 +2194,11 @@ def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
 class RecallModel(nnx.Module):
     """Embedding, a sequence layer, and a classifier at every position.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
                  num_outputs=8, *, rngs):
+        # d2l.Embed computes its gradient by a matrix product: no atomic adds
+        # that wait on one another when a few filler tokens fill every row
         self.embedding = d2l.Embed(vocab_size, num_inputs, rngs=rngs,
             embedding_init=nnx.initializers.normal(num_inputs ** -0.5))
         self.layer = layer
@@ -2209,7 +2211,7 @@ class RecallModel(nnx.Module):
 def query_step(model, optimizer, X, Y):
     """One optimizer step on the cross-entropy at the last Y.shape[1] steps.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def loss_fn(model):
         logits = model(X)[:, -Y.shape[1]:]  # Predictions at the queries
         return optax.softmax_cross_entropy_with_integer_labels(
@@ -2221,7 +2223,7 @@ def query_step(model, optimizer, X, Y):
 def train_queries(model, batch, num_steps, optimizer):
     """Train on fresh batches; the queries are the last Y.shape[1] steps.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     step = nnx.cached_partial(query_step, model, optimizer)  # Compile once
     for i in range(num_steps):
         step(*batch(i))
@@ -2230,26 +2232,26 @@ def train_queries(model, batch, num_steps, optimizer):
 def query_accuracy(model, X, Y):
     """Fraction of queries answered correctly.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).mean()
 
-def train_delayed_recall(model, num_steps, blank_fillers=False,
-                         num_updates=1500, lr=3e-3):
-    """Train on fresh batches of delayed recall; return the test accuracy.
+def train_delayed_recall(model, num_steps, blank_fillers=False):
+    """Train with Adam at rate 0.003 on 1,500 fresh batches of 128 sequences
+    of delayed recall; return the accuracy on 2,048 new sequences.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     task = lambda rng, n: delayed_recall(rng, n, num_steps,
                                          blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
     optimizer = nnx.Optimizer(model, optax.chain(
-        optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
-    train_queries(model, lambda step: task(rng, 128), num_updates, optimizer)
+        optax.clip_by_global_norm(1.0), optax.adam(3e-3)), wrt=nnx.Param)
+    train_queries(model, lambda step: task(rng, 128), 1500, optimizer)
     return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 
 class SeqLM(nnx.Module):
     """A language model of residual blocks: a sequence mixer, then an MLP.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, vocab_size, num_hiddens, mixers, *, rngs):
         d = num_hiddens
         self.embedding = d2l.Embed(vocab_size, d, rngs=rngs,  # Unit length
@@ -2274,203 +2276,94 @@ class SeqLM(nnx.Module):
     def first_mixer_input(self, X):
         """What the first mixer reads: the normalized token embeddings.
 
-        Defined in :numref:`sec_ssm`"""
+        Defined in :numref:`sec_linear-recurrence`"""
         return self.norms[0](self.embedding(X))
 
-d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
-                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
+class AttentionMixer(d2l.CausalAttention):
+    """Causal multi-head attention, with rotary positions unless rope is
+    False, as a sequence mixer; with conv_width, a causal convolution per
+    channel first mixes each query, key, and value with those of the
+    previous steps.
 
-class PennTreebank(d2l.DataModule):
-    """Character-level Penn Treebank, cut into windows of num_steps.
+    Defined in :numref:`sec_gated-training`"""
+    def __init__(self, num_hiddens, num_heads, conv_width=None, rope=True,
+                 *, rngs):
+        super().__init__(num_hiddens, num_heads, rope=rope, rngs=rngs)
+        lecun = nnx.initializers.lecun_normal()
+        for layer in (self.W_qkv, self.W_o):  # Like every mixer of the chapter
+            layer.kernel[...] = lecun(rngs.params(), layer.kernel.shape)
+        d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
+        self.conv = None if conv_width is None else nnx.Conv(
+            d, d, (conv_width,), feature_group_count=d,
+            padding=((conv_width - 1, 0),), rngs=rngs)
 
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, batch_size, num_steps):
-        super().__init__()
-        self.save_hyperparameters()
-        data_dir = d2l.download_extract('ptb')
-        def read(split):
-            with open(os.path.join(data_dir, f'ptb.{split}.txt')) as f:
-                return f.read()
-        train, val = read('train'), read('valid')
-        self.vocab = d2l.Vocab(list(train))
-        self.train, self.val = self.windows(train), self.windows(val)
+    def qkv(self, X, offset=0, tables=None):
+        B, T, _ = X.shape
+        QKV = self.W_qkv(X)
+        if self.conv is not None:  # Causal: padded on the left only
+            QKV = self.conv(QKV)
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
+                   for u in jnp.split(QKV, 3, -1))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 
-    def windows(self, text):
-        corpus = d2l.tensor(self.vocab[list(text)])
-        n = (len(corpus) - 1) // self.num_steps * self.num_steps
-        return (corpus[:n].reshape(-1, self.num_steps),  # Inputs
-                corpus[1:n + 1].reshape(-1, self.num_steps))  # Next tokens
+@nnx.jit
+def position_loss_sum(model, X, Y):
+    """Loss in nats at each position, summed over the batch.
 
-    def get_dataloader(self, train):
-        return self.get_tensorloader(self.train if train else self.val, train)
+    Defined in :numref:`sec_gated-training`"""
+    return optax.softmax_cross_entropy_with_integer_labels(model(X), Y).sum(0)
 
-def fit_lm(model, data, num_steps=3000, lr=2e-3):
-    """Train with AdamW for num_steps steps; return validation perplexity.
+def loss_by_position(model, data):
+    """Mean validation loss in nats at each position of the window.
 
-    Defined in :numref:`sec_gru`"""
-    optimizer = nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.01),
-                              wrt=nnx.Param)
-    d2l.train_steps(model, data, optimizer, num_steps)
-    return d2l.lm_perplexity(model, data.val_dataloader())
+    Defined in :numref:`sec_gated-training`"""
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        total += position_loss_sum(model, jnp.asarray(X), jnp.asarray(Y))
+        count += len(X)
+    return (total / count).tolist()
 
-class Encoder(nnx.Module):
-    """The base encoder interface for the encoder-decoder architecture.
+def train_text(model, data, lr=2e-3, num_steps=1000):
+    """Train a language model with LMOptimizer; return its validation loss
+    in nats at each position and its milliseconds per training step.
 
-    Defined in :numref:`sec_encoder-decoder`"""
-    # Later there can be additional arguments (e.g., length excluding padding)
-    def __call__(self, X, *args):
-        raise NotImplementedError
+    Defined in :numref:`sec_gated-training`"""
+    optimizer = d2l.LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
+    # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
+    bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
+                          warmup=1, repeats=num_steps // 50 - 1)
+    return loss_by_position(model, data), 1000 * bench.time / 50
 
-class Decoder(nnx.Module):
-    """The base decoder interface for the encoder-decoder architecture.
+def text_table(make_model, arms, data, num_runs=2):
+    """Train num_runs fresh models make_model(*args) for each arm (a name
+    and its args); print the parameters, the validation loss of every run,
+    its losses at early, middle, and late positions of the window, and the
+    milliseconds per step. Return the trained models of each arm.
 
-    Defined in :numref:`sec_encoder-decoder`"""
-    def init_state(self, enc_all_outputs, *args):
-        raise NotImplementedError
-
-    def __call__(self, X, state):
-        raise NotImplementedError
-
-class EncoderDecoder(d2l.Classifier):
-    """The base class for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args)
-        dec_state = self.decoder.init_state(enc_all_outputs, *args)
-        # Return decoder output only
-        return self.decoder(dec_X, dec_state)[0]
-
-    def predict_step(self, batch, num_steps, save_attention_weights=False):
-        model = nnx.view(self, deterministic=True, use_running_average=True,
-                         raise_if_not_found=False)
-        src, tgt, src_valid_len, _ = batch
-        enc_all_outputs = model.encoder(src, src_valid_len)
-        enc_attention_weights = (getattr(model.encoder, 'attention_weights', [])
-                                 if save_attention_weights else [])
-        dec_state = model.decoder.init_state(enc_all_outputs, src_valid_len)
-        outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
-        for _ in range(num_steps):
-            Y, dec_state = model.decoder(outputs[-1], dec_state)
-            outputs.append(d2l.argmax(Y, 2))
-            if save_attention_weights:
-                attention_weights.append(model.decoder.attention_weights)
-        return d2l.concat(outputs[1:], 1), (attention_weights,
-                                            enc_attention_weights)
-
-class MTFraEng(d2l.DataModule):
-    """The English-French dataset, tokenized with a shared byte-level BPE.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, batch_size, num_steps=20, num_train=1024, num_val=128,
-                 vocab_size=4000):
-        super().__init__()
-        self.save_hyperparameters()
-        pairs = self._pairs(self._preprocess(self._download()))
-        # Train ONE shared byte-level BPE over both languages.
-        m = min(5000, len(pairs))
-        self.tokenizer = d2l.BPETokenizer(
-            vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
-        self.tokenizer.train('\n'.join([p[0] for p in pairs[:m]] +
-                                       [p[1] for p in pairs[:m]]))
-        # src_vocab / tgt_vocab both refer to the shared tokenizer.
-        self.src_vocab = self.tgt_vocab = self.tokenizer
-        pairs = pairs[:num_train + num_val]
-        self.src_sents = [p[0] for p in pairs]
-        self.tgt_sents = [p[1] for p in pairs]
-        self.arrays = self._encode(pairs)
-
-    def _download(self):
-        d2l.extract(d2l.download(
-            d2l.DATA_URL + 'fra-eng.zip', self.root,
-            '94646ad1522d915e7b0f9296181140edcf86a4f5'))
-        with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
-            return f.read()
-
-    def _preprocess(self, text):
-        # Normalize spaces, lowercase, and put a space before punctuation.
-        text = text.replace(' ', ' ').replace('\xa0', ' ').lower()
-        no_space = lambda c, prev: c in ',.!?' and prev != ' '
-        return ''.join([' ' + c if i > 0 and no_space(c, text[i - 1]) else c
-                        for i, c in enumerate(text)])
-
-    def _pairs(self, text):
-        return [ln.split('\t') for ln in text.split('\n') if ln.count('\t') == 1]
-
-    def _encode(self, pairs):
-        tok, t = self.tokenizer, self.num_steps
-        def row(sent, is_tgt):
-            ids = tok.encode(sent)
-            ids = (ids[:t - 1] + [tok.eos] if len(ids) >= t else
-                   ids + [tok.eos] + [tok.pad] * (t - 1 - len(ids)))
-            return [tok.bos] + ids if is_tgt else ids
-        src = d2l.tensor([row(s, False) for s, _ in pairs])
-        tgt = d2l.tensor([row(t, True) for _, t in pairs])
-        valid_len = d2l.reduce_sum(d2l.astype(src != tok.pad, d2l.int32), 1)
-        return src, tgt[:, :-1], valid_len, tgt[:, 1:]
-
-    def build(self, src_sentences, tgt_sentences):
-        return self._encode([(self._preprocess(s), self._preprocess(t))
-                             for s, t in zip(src_sentences, tgt_sentences)])
-
-    def get_dataloader(self, train):
-        idx = slice(0, self.num_train) if train else slice(self.num_train, None)
-        return self.get_tensorloader(self.arrays, train, idx)
-
-def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
-    """Plot the histogram for list length pairs.
-
-    Defined in :numref:`sec_machine_translation`"""
-    d2l.set_figsize()
-    _, _, patches = d2l.plt.hist(
-        [[len(l) for l in xlist], [len(l) for l in ylist]])
-    d2l.plt.xlabel(xlabel)
-    d2l.plt.ylabel(ylabel)
-    for patch in patches[1].patches:
-        patch.set_hatch('/')
-    d2l.plt.legend(legend)
-
-class Seq2SeqEncoder(d2l.Encoder):
-    """The RNN encoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0, rngs=None):
-        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None else rngs
-        self.embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
-        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout,
-                           rngs=rngs)
-
-    def __call__(self, X, *args):
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        outputs, state = self.rnn(embs)
-        # outputs: (num_steps, batch_size, num_hiddens)
-        # state: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-
-class Seq2Seq(d2l.EncoderDecoder):
-    """The RNN encoder-decoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, encoder, decoder, tgt_pad, lr):
-        super().__init__(encoder, decoder)
-        self.tgt_pad, self.lr = tgt_pad, lr
-
-    def validation_step(self, batch):
-        return self.loss(self(*batch[:-1]), batch[-1])
-
-    def configure_optimizers(self):
-        return optax.adam(learning_rate=self.lr)
+    Defined in :numref:`sec_gated-training`"""
+    T = data.num_steps
+    bands = [(0, T // 8), (T // 8, T // 2), (T // 2, T)]
+    width = max(len(name) for name in arms)
+    header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
+    print(' ' * (width + 12), *(f'{h:>11}' for h in header), '  ms/step')
+    trained = {}
+    for name, args in arms.items():
+        models = [make_model(*args) for _ in range(num_runs)]
+        runs = [train_text(model, data) for model in models]  # (losses, ms)
+        columns = [[np.mean(loss) for loss, _ in runs]] + [
+            [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
+        print(f'{name:{width}s} {d2l.num_params(models[0]):11,d}',
+              *('/'.join(f'{v:.3f}' for v in column) for column in columns),
+              '/'.join(f'{ms:.0f}' for _, ms in runs))
+        trained[name] = models
+    return trained
 
 def chrf(pred, label, n=6, beta=2):
     """chrF (Popovic, 2015): character n-gram F-score.
 
-    Defined in :numref:`sec_seq2seq_training`"""
+    Defined in :numref:`sec_translation-scoring`"""
     def ngrams(s, k):
         s = s.replace(' ', '')
         return collections.Counter(s[i:i + k] for i in range(len(s) - k + 1))
@@ -2489,7 +2382,7 @@ def chrf(pred, label, n=6, beta=2):
 def bleu(pred_seq, label_seq, k):
     """Compute the BLEU.
 
-    Defined in :numref:`sec_seq2seq_training`"""
+    Defined in :numref:`sec_translation-scoring`"""
     pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
     len_pred, len_label = len(pred_tokens), len(label_tokens)
     score = math.exp(min(0, 1 - len_label / len_pred))
@@ -2507,19 +2400,20 @@ def bleu(pred_seq, label_seq, k):
 def linear_scan(a, b, h0=None):
     """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     a = jnp.broadcast_to(a, b.shape)  # Decays may omit axes; broadcast them
     if h0 is not None:  # Fold the initial state into the first step
         b = b.at[:, 0].add(a[:, 0] * h0)
     def combine(earlier, later):
         (a1, b1), (a2, b2) = earlier, later
         return a1 * a2, a2 * b1 + b2
+    # Autograd keeps the intermediate results of the scan for the backward pass
     return jax.lax.associative_scan(combine, (a, b), axis=1)[1]
 
 class MinGRU(nnx.Module):
     """The minimal GRU: its gate and candidate read only the input.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     def __init__(self, num_inputs, num_hiddens, *, rngs):
         self.W_z = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)  # Decay
         self.W_h = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
@@ -2539,7 +2433,7 @@ class S4D(nnx.Module):
     def __init__(self, num_hiddens, num_states=16, dt_min=1e-3, dt_max=1e-1,
                  *, rngs):
         d, N = num_hiddens, num_states
-        # Rates lambda_n = -(n + 1), stored as log(-lambda) to stay negative
+        # lambda_n = -n for n = 1..N, stored as log(-lambda) to stay negative
         self.log_neg_rate = nnx.Param(
             jnp.tile(jnp.log(jnp.arange(1., N + 1)), (d, 1)))
         self.log_dt = nnx.Param(  # Log-uniform in [dt_min, dt_max]
@@ -2557,6 +2451,7 @@ class S4D(nnx.Module):
     def __call__(self, X):  # X: (batch_size, num_steps, d)
         T = X.shape[1]
         a_bar, b_bar = self.discretize()
+        # All powers a_bar^k for k < T: d * N * T numbers held in memory
         powers = a_bar[..., None] ** jnp.arange(T)
         K = ((self.C[...] * b_bar)[..., None] * powers).sum(1)  # Kernel, (d, T)
         Y = jnp.fft.irfft(jnp.fft.rfft(X, n=2 * T, axis=1) *
@@ -2611,39 +2506,53 @@ def adjoint_scan(a, b):  #@save
     return _adjoint_scan(jnp.broadcast_to(a, b.shape), b)
 
 class SelectiveSSM(nnx.Module):
-    """A diagonal SSM whose step sizes and write and read vectors depend on
-    the input: N states for each of num_channels channels.
+    """A diagonal SSM with N states for each of num_channels channels. Its
+    step sizes and write and read vectors depend on the input, or, with
+    selective=False, are learned constants of each channel.
 
     Defined in :numref:`sec_mamba`"""
-    def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1,
-                 *, rngs):
-        H, N, R = num_channels, num_states, math.ceil(num_channels / 16)
+    def __init__(self, num_channels, dt_rank, num_states=16, dt_min=1e-3,
+                 dt_max=1e-1, selective=True, *, rngs):
+        H, N, R = num_channels, num_states, dt_rank
+        self.selective = selective
         self.log_neg_rate = nnx.Param(  # Rates -1, ..., -N in every channel
             jnp.tile(jnp.log(jnp.arange(1., N + 1)), (H, 1)))
         def dt_bias(key, shape, dtype=jnp.float32):  # softplus(bias) = dt
             dt = dt_min * (dt_max / dt_min) ** jax.random.uniform(key, shape)
             return (dt + jnp.log(-jnp.expm1(-dt))).astype(dtype)
-        def small(key, shape, dtype=jnp.float32):  # U(-R^-1/2, R^-1/2)
-            return jax.random.uniform(key, shape, dtype, -R ** -0.5, R ** -0.5)
-        self.W_dt = nnx.Sequential(  # Step size per channel, through rank R
-            nnx.Linear(H, R, use_bias=False, rngs=rngs),
-            nnx.Linear(R, H, kernel_init=small, bias_init=dt_bias, rngs=rngs))
-        self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Write vector
-        self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Read vector
+        if selective:
+            def small(key, shape, dtype=jnp.float32):  # U(-R^-1/2, R^-1/2)
+                return jax.random.uniform(key, shape, dtype, -R ** -0.5,
+                                          R ** -0.5)
+            self.W_dt = nnx.Sequential(  # Step size per channel, rank R
+                nnx.Linear(H, R, use_bias=False, rngs=rngs),
+                nnx.Linear(R, H, kernel_init=small, bias_init=dt_bias,
+                           rngs=rngs))
+            self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Write
+            self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)  # Read
+        else:  # Fixed dynamics: S4D with a learned write vector
+            self.dt_bias = nnx.Param(dt_bias(rngs.params(), (H,)))
+            self.B = nnx.Param(jnp.ones((H, N)))
+            self.C = nnx.Param(rngs.params.normal((H, N)) / math.sqrt(N))
         self.D = nnx.Param(jnp.ones(H))
 
     def log_coefficients(self, U):
         """Log-decays and writes, each of shape (batch_size, T, H, N).
 
         Defined in :numref:`sec_mamba`"""
-        dt = jax.nn.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
+        if self.selective:  # Step sizes (batch_size, T, H), write vectors
+            dt, B = jax.nn.softplus(self.W_dt(U)), self.W_B(U)[..., None, :]
+        else:  # One step size and one write vector per channel
+            dt, B = jax.nn.softplus(self.dt_bias[...]), self.B[...]
+        b = (dt * U)[..., None] * B
         log_a = dt[..., None] * -jnp.exp(self.log_neg_rate[...])
-        return log_a, (dt * U)[..., None] * self.W_B(U)[..., None, :]
+        return jnp.broadcast_to(log_a, b.shape), b
 
     def __call__(self, U):  # U: (batch_size, num_steps, num_channels)
         log_a, b = self.log_coefficients(U)
         H = adjoint_scan(jnp.exp(log_a), b)  # States, (batch_size, T, H, N)
-        return (H * self.W_C(U)[..., None, :]).sum(-1) + self.D[...] * U
+        C = self.W_C(U)[..., None, :] if self.selective else self.C[...]  # Read
+        return jnp.einsum('...n,...n->...', H, C) + self.D[...] * U  # Sum over n
 
 class Mamba(nnx.Module):
     """The Mamba layer: a gated selective SSM between two projections.
@@ -2654,8 +2563,10 @@ class Mamba(nnx.Module):
         H = expand * num_hiddens
         self.W_in = nnx.Linear(num_hiddens, 2 * H, use_bias=False, rngs=rngs)
         self.conv = nnx.Conv(H, H, (conv_width,), feature_group_count=H,
-                             padding=((conv_width - 1, 0),), rngs=rngs)  # Causal
-        self.ssm = SelectiveSSM(H, num_states, rngs=rngs, **ssm_args)
+                             padding=((conv_width - 1, 0),),  # Causal
+                             rngs=rngs)
+        self.ssm = SelectiveSSM(H, math.ceil(num_hiddens / 16), num_states,
+                                rngs=rngs, **ssm_args)
         self.W_out = nnx.Linear(H, num_hiddens, use_bias=False, rngs=rngs)
 
     def ssm_input(self, X):
@@ -2677,67 +2588,53 @@ def decay_mask(log_a):
     return jnp.exp(jnp.where(causal, log_L, -jnp.inf))
 
 def chunked_linear_attention(Q, K, V, log_a, chunk_size):
-    """y_t = S_t q_t with S_t = S_{t-1} diag(a_t) + v_t k_t^T, in chunks.
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
 
-    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size,
-    T, d_k) for a decay per key coordinate, or (batch_size, T) for one per step
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
 
     Defined in :numref:`sec_matrix-state`"""
     B, T, m = Q.shape[0], Q.shape[1], chunk_size
-    if log_a.ndim == 2:  # The same decay for every key coordinate
-        log_a = log_a[..., None]
-    Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
-    # 1. Within chunks: the dual form, with one mask per key coordinate
-    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
-    if L.shape[2] == 1:  # One mask for all coordinates: a masked Q K^T
-        Y = (L[:, :, 0] * (Q @ K.mT)) @ V
-    else:
-        Y = (L * Q.mT[..., None] * K.mT[..., None, :]).sum(2) @ V
-    # 2. Across chunks: the writes of each chunk, decayed to its end, and
-    #    a scan over chunks for the state at every chunk's end
-    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
+    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
+    log_a = log_a.reshape(B, T // m, m)
+    # 1. Within chunks: the dual form, one m x m mask per chunk
+    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    # 2. Across chunks: S^(c) = gamma^(c) S^(c-1) + sum_t L_mt v_t k_t^T
+    cum = log_a.cumsum(-1)[..., None]  # Log decay from the chunk's start
     writes = V.mT @ (K * jnp.exp(cum[:, :, -1:] - cum))
-    S = d2l.linear_scan(jnp.exp(cum[:, :, -1:]), writes)
-    S = jnp.concatenate([jnp.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At start
+    S = d2l.linear_scan(jnp.exp(cum[:, :, -1:]), writes)  # At chunk ends
+    S = jnp.concatenate([jnp.zeros_like(S[:, :1]), S[:, :-1]], 1)  # Starts
     # 3. Every step reads the state at its chunk's start, decayed to it
     return (Y + (Q * jnp.exp(cum)) @ S.mT).reshape(B, T, -1)
 
 class GatedLinearAttention(nnx.Module):
-    """Multi-head linear attention with a gated decay per key coordinate.
+    """Multi-head linear attention with one input-dependent decay per head.
 
     Defined in :numref:`sec_matrix-state`"""
-    gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
-
     def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
                  timescales=(4, 256), *, rngs):
         d = num_hiddens
         self.num_heads, self.chunk_size = num_heads, chunk_size
         self.W_qkv = nnx.Linear(d, 3 * d, use_bias=False, rngs=rngs)
-        self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),
-                             feature_group_count=3 * d,  # One filter each
-                             padding=((conv_width - 1, 0),), rngs=rngs)  # Causal
-        self.W_a = self.decay_gate(d, rngs)
+        self.conv = nnx.Conv(3 * d, 3 * d, (conv_width,),  # Causal, one
+                             feature_group_count=3 * d,  # filter per channel
+                             padding=((conv_width - 1, 0),), rngs=rngs)
+        self.W_a = nnx.Linear(d, num_heads, rngs=rngs)  # Decay, per head
         self.W_g = nnx.Linear(d, d, rngs=rngs)  # Output gate
         self.W_o = nnx.Linear(d, d, use_bias=False, rngs=rngs)
         self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
-    def decay_gate(self, d, rngs, rank=16):
-        """Low-rank projection to one gate per key coordinate."""
-        return nnx.Sequential(nnx.Linear(d, rank, use_bias=False, rngs=rngs),
-                              nnx.Linear(rank, d, rngs=rngs))
-
     def init_decays(self, tau_min, tau_max):
-        """Start the gates at decays exp(-1/tau), tau log-uniform in range."""
-        b = self.W_a.layers[-1].bias
-        tau = jnp.logspace(math.log10(tau_min), math.log10(tau_max), b.shape[0])
-        b[...] = -jnp.log(jnp.expm1(self.gate_scale / tau))
+        """Start the decays at exp(-1/tau), tau log-uniform in range."""
+        b = self.W_a.bias
+        tau = jnp.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
+        b[...] = -jnp.log(jnp.expm1(1 / tau))  # log sigmoid(b) = -1 / tau
 
     def decays(self, X):
-        """Log decays, (batch_size * num_heads, T, d_k).
+        """Log decays, (batch_size * num_heads, T).
 
         Defined in :numref:`sec_matrix-state`"""
-        return heads_to_batch(jax.nn.log_sigmoid(self.W_a(X)) / self.gate_scale,
-                              self.num_heads)
+        return heads_to_batch(jax.nn.log_sigmoid(self.W_a(X)),
+                              self.num_heads)[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
         """Outputs of the decayed matrix memory of every head. X is unused here;
@@ -2772,6 +2669,59 @@ def batch_to_heads(Y, batch_size):
     return Y.reshape(batch_size, -1, T, e).swapaxes(1, 2).reshape(
         batch_size, T, -1)
 
+def associative_recall(rng, batch_size, num_pairs, num_keys=512,
+                       num_values=4, num_steps=256, num_rebound=0, gap=None):
+    """Key-value pairs, filler, then every key again as a query. The first
+    num_rebound keys are written twice, the second time with a new value,
+    at any later write or, given gap, gap writes after the first one.
+    Returns the tokens (values, then keys, then the filler), the latest
+    value of each query's key, and a mask of the queries for rebound keys.
+
+    Defined in :numref:`sec_matrix-state`"""
+    n, r = num_pairs, num_rebound
+    keys = np.argsort(rng.random((batch_size, num_keys)), 1)[:, :n]
+    values = rng.integers(0, num_values, (batch_size, n + r))
+    values[:, n:] = (values[:, :r] + rng.integers(  # A new value
+        1, num_values, (batch_size, r))) % num_values
+    if gap is None:  # Random write order, each second write after the first
+        slots = np.argsort(rng.random((batch_size, n + r)), 1)
+        slots[:, :r], slots[:, n:] = (np.minimum(slots[:, :r], slots[:, n:]),
+                                      np.maximum(slots[:, :r], slots[:, n:]))
+    else:  # First writes in random order, second ones gap first writes later
+        first = np.argsort(rng.random((batch_size, n)), 1)
+        times = np.concatenate([first, first[:, :r] + gap - 0.5], 1)
+        slots = np.argsort(np.argsort(times, 1), 1)
+    X = np.full((batch_size, num_steps), num_values + num_keys)  # Filler
+    rows = np.arange(batch_size)[:, None]
+    X[rows, 2 * slots] = num_values + np.concatenate([keys, keys[:, :r]], 1)
+    X[rows, 2 * slots + 1] = values
+    order = np.argsort(rng.random((batch_size, n)), 1)  # Queries
+    X[:, -n:] = num_values + np.take_along_axis(keys, order, 1)
+    latest = np.concatenate([values[:, n:], values[:, r:n]], 1)
+    return X, np.take_along_axis(latest, order, 1), order < r
+
+def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,
+                 **task):
+    """Train on associative recall (task: options of associative_recall)
+    with a cycling number of pairs, 256 sequences per update, AdamW at peak
+    rate 0.01; return the accuracy per number of pairs.
+
+    Defined in :numref:`sec_matrix-state`"""
+    rng = np.random.default_rng()
+    length = lambda n: 32 * math.ceil(
+        (3 * n + 2 * task.get('num_rebound', 0)) / 32)
+    data = lambda n, size: associative_recall(
+        rng, size, n, num_steps=length(n), **task)[:2]
+    schedule = lambda t: 1e-2 * d2l.cosine_warmup(t, num_updates,
+                                                  num_updates // 10)
+    optimizer = nnx.Optimizer(model, optax.chain(
+        optax.clip_by_global_norm(1.0),
+        optax.adamw(schedule, weight_decay=0.01)), wrt=nnx.Param)
+    d2l.train_queries(model, lambda step: data(pairs[step % len(pairs)],
+                      256), num_updates, optimizer)
+    return {n: float(d2l.query_accuracy(model, *data(n, 1024)))
+            for n in pairs}
+
 def delta_rule_writes(K, V, beta, log_a):
     """W and Z with corrected values U = W - Z S_0^T, for every chunk.
 
@@ -2799,7 +2749,7 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    # Each chunk maps the memory at its start to S A + W_end at its end
+    # Each chunk maps the memory S at its start to S A + W^T D K at its end
     to_end = jnp.exp(cum[..., -1:] - cum)[..., None]
     I = jnp.eye(K.shape[-1])
     A = jnp.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
@@ -2814,25 +2764,14 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     return Y.reshape(B, T, -1)
 
 class GatedDeltaNet(d2l.GatedLinearAttention):
-    """Gated linear attention with one decay per head, whose memory is
-    written by the delta rule.
+    """Gated linear attention whose memory is written by the delta rule.
 
     Defined in :numref:`sec_deltanet`"""
-    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
-
     def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
                  timescales=(4, 256), *, rngs):
         super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
                          timescales, rngs=rngs)
         self.W_beta = nnx.Linear(num_hiddens, num_heads, rngs=rngs)
-
-    def decay_gate(self, d, rngs):  # One gate per head
-        # Sequential, so that init_decays finds the bias at W_a.layers[-1]
-        return nnx.Sequential(nnx.Linear(d, self.num_heads, rngs=rngs))
-
-    def decays(self, X):  # (batch_size * num_heads, T)
-        return d2l.heads_to_batch(jax.nn.log_sigmoid(self.W_a(X)),
-                                  self.num_heads)[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
         beta = d2l.heads_to_batch(jax.nn.sigmoid(self.W_beta(X)),
@@ -6033,34 +5972,6 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
             return []
         sorted_rung = sorted(rung, key=lambda x: x[1])
         return [x[0] for x in sorted_rung[:n]]
-
-class GRU(d2l.RNN):
-    """The multilayer GRU model implemented with high-level APIs.
-
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0,
-                 rngs=None):
-        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
-        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
-        self.num_layers = num_layers
-        self.rnns = nnx.List([
-            nnx.RNN(nnx.GRUCell(num_inputs if i == 0 else num_hiddens,
-                                num_hiddens, rngs=rngs),
-                    time_major=True, return_carry=True, rngs=rngs)
-            for i in range(num_layers)])
-        self.dropouts = nnx.List([
-            nnx.Dropout(dropout, rngs=rngs) for _ in range(num_layers - 1)])
-
-    def __call__(self, X, state=None):
-        outputs = X
-        state = [None] * self.num_layers if state is None else state
-        new_state = []
-        for i, rnn in enumerate(self.rnns):
-            carry, outputs = rnn(outputs, initial_carry=state[i])
-            new_state.append(carry)
-            if i < self.num_layers - 1:
-                outputs = self.dropouts[i](outputs)
-        return outputs, new_state
 
 class Timer:
     """Record multiple running times.

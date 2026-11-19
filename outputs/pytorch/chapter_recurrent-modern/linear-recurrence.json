@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/linear-recurrence.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:a1914d49cf983a6e976e52478605cd6c5e7ba80370af53aa3250fc54f5e59ab3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "linear-recurrence-linear-recurrences-and-parallel-scans": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-implementation-1": {
+      "code_fingerprint": "sha256:41060f1f2dd550c81708a1e902673dcd3cc4331c2b713697c8125ef479507bdb",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-implementation-2": {
+      "code_fingerprint": "sha256:f6f1574f8553d4dac705867e95e3c369fab9cc99e08aa38c588e529bdc8381e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max deviation: 4.8e-07\n"
+        }
+      ]
+    },
+    "ssm-a-linear-recurrent-language-model-1": {
+      "code_fingerprint": "sha256:e072acd35d32c11f763dff12e179d2fce942a06c0f218044a106d34b44f2ea30",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-a-linear-recurrent-language-model-1": {
+      "code_fingerprint": "sha256:c88eb95995b01c2aca7612cf84e39dd0519386e4a04fdebc0eb56cbe8f9bdccb",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-a-linear-recurrent-language-model-2": {
+      "code_fingerprint": "sha256:f40073be49c21d4addfeabf40f5d91e389bece1a399ecec61ed885503a995473",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                           validation        0-15       16-63      64-127   ms/step\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GRU             3,817,216 1.299/1.298 1.490/1.489 1.272/1.273 1.271/1.270 36/37\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "minGRU          2,764,544 1.348/1.345 1.521/1.522 1.323/1.321 1.323/1.319 27/27\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "minGRU, d=302   3,816,932 1.328/1.333 1.508/1.509 1.303/1.308 1.303/1.308 27/33\n"
+        }
+      ]
+    },
+    "ssm-a-linear-recurrent-language-model-4": {
+      "code_fingerprint": "sha256:cb0d9bf2d84b08829feaa6494541a03aa7f21fea5b83d9980b7c7c0895c5f13b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation loss: 1.348 nats per byte, with the state reset at every step: 2.482\n"
+        }
+      ]
+    },
+    "ssm-a-linear-recurrent-language-model-5": {
+      "code_fingerprint": "sha256:b9705d9fb60eff2d2d3d52044a07fcfe3e75ebe4a7c357d23a822494d4643c19",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-a-linear-recurrent-language-model-6": {
+      "code_fingerprint": "sha256:8235a22684bc5ae18050d1bd325db4d0452510e91b7d96fa7606dcb890789837",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gate above  half-life in steps  share at initialization  trained\n       0.5                  1                    50.6%    51.4%\n       0.9                  7                     1.2%    17.9%\n      0.99                 69                     0.0%     0.0%\n"
+        }
+      ]
+    },
+    "linear-recurrence-cost-against-attention-1": {
+      "code_fingerprint": "sha256:a715a4f042143cbcdedb2d2069a37915651c85537c1be14ad0a5dd1d25766086",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-recurrence-cost-against-attention-2": {
+      "code_fingerprint": "sha256:c70df0eeb1327403c29490278b31b12f4f19aa250bf166fd37dbeb0018e6ad10",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T             512    1024    2048    4096    8192   16384\nGRU          19.9    34.7    67.9   112.3   199.4   405.5\nminGRU        3.9     4.2     4.4     4.9     5.1     5.6\nattention     2.1     2.5     3.3     5.0     8.4    14.6\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-recurrence/linear-recurrence-cost-against-attention-2-1.svg",
+          "bytes": 31277,
+          "sha256": "sha256:60aadda928e2051111d1b5836f314075280305db2e8922d97d80480c4bd6f5a7"
+        }
+      ]
+    }
+  }
+}

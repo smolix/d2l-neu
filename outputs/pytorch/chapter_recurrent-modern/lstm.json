@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:17c08a641adc988bbfdcffb0bbe25049d2d4ee74054532235bfbb2767ba8e532",
+    "d2l_lib_fingerprint": "sha256:65cee89b8ab60571006a3b8fffac67d1fa5771eeb96d8e174b3834ef1190ed8d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,18 +13,13 @@
       "kind": "text",
       "outputs": []
     },
-    "lstm-gated-recurrent-networks-1": {
-      "code_fingerprint": "sha256:c4f5511ebe6c45040e2a9ffa10193eb0e0b4e320c894c379752f4c189d19eae7",
-      "kind": "text",
-      "outputs": []
-    },
     "lstm-implementation-1": {
-      "code_fingerprint": "sha256:b074ecc6205b853e7bfdfad9bd1df10632b39a0eada66224ed2cbe887e57bdb2",
+      "code_fingerprint": "sha256:c031833e7d3b0646b668df700b3ff1bebf8024d6a66a5f7eac636fc0d08c82c2",
       "kind": "text",
       "outputs": []
     },
     "lstm-implementation-2": {
-      "code_fingerprint": "sha256:ca91e572a31583ad209a0a9b713f432f196db3fa580810ee571e8adca01082cc",
+      "code_fingerprint": "sha256:eeeac8e1a25930cf49670a8c0e7d5418304840d8f193b2d6d2540bee307b6aab",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +30,7 @@
       ]
     },
     "lstm-delayed-recall-1": {
-      "code_fingerprint": "sha256:8f57a8d0042a5f7fad6f44dad76c7f0a245230e06b6f9221a89e0b6bb890a5d3",
+      "code_fingerprint": "sha256:fd73c80e24afc05a4da1a3da13bd9413ca218e33ad94fb5ec06b6eb7d0849b77",
       "kind": "text",
       "outputs": [
         {
@@ -46,110 +41,135 @@
       ]
     },
     "lstm-delayed-recall-6": {
-      "code_fingerprint": "sha256:5186ba0e91b9576f3840aa12ce3b613f618796551d9ed6d6fef60cfd83621b96",
+      "code_fingerprint": "sha256:7a800355795f6e58971942ae3e48765920b7c92f38e009fe0baa44afe85c1a26",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-2": {
-      "code_fingerprint": "sha256:6c66566010a48ae693641bf24aae8b3b50b235f75e926fa3721a31315531225f",
-      "kind": "text",
-      "outputs": []
-    },
-    "lstm-delayed-recall-3": {
-      "code_fingerprint": "sha256:2b350cb7f3f9316ebc88ac4dfb9c83f6bc2e5f147784a77ec54575c028999bf8",
+      "code_fingerprint": "sha256:84bc54c234955b12441444b2fa72567610dc4b367c60afb8045b29b82f50b326",
       "kind": "text",
       "outputs": []
     },
     "lstm-delayed-recall-4": {
-      "code_fingerprint": "sha256:abffbfa14d50b02cd20d276ff5271c2347d6be5168c5ab7cfa53270acf7d8dd0",
+      "code_fingerprint": "sha256:672dd4e7078d057f7d725bc88376c443e55326071e8b373f06d334a014ad8f7b",
       "kind": "text",
       "outputs": []
     },
-    "lstm-delayed-recall-7": {
-      "code_fingerprint": "sha256:b3f18f5bba64c6e63d647c4bdf097d05b76326b1def8242669198354f9944092",
-      "kind": "text",
-      "outputs": []
-    },
-    "lstm-delayed-recall-5": {
-      "code_fingerprint": "sha256:68f7e1c486c29312677a4d3f6dec09ed93a716123272e58681798fbcb80d8a44",
+    "lstm-delayed-recall-8": {
+      "code_fingerprint": "sha256:9f7a0d5ac340ec2799c3cf9508f1b0af3827cb9654e34bf13efa25b0830a67c8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                     5    10    20    50   100   200\n"
+          "text": " LeCun normal: spectral radius 1.02, largest singular value 2.01\ndefault scale: spectral radius 0.62, largest singular value 1.10\n"
+        }
+      ]
+    },
+    "lstm-delayed-recall-5": {
+      "code_fingerprint": "sha256:ceef8680b4abc9cc11b92bb97a7516ef60ee94021c258f1e305cb1d2569ac4b5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                          20        50       100       200\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN               1.00  1.00  1.00  0.48  0.25  0.24\n"
+          "text": "RNN                0.24/1.00 1.00/1.00 0.26/0.64 0.12/0.64\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM              1.00  1.00  0.61  0.12  0.13  0.12\n"
+          "text": "RNN, default scale 0.26/1.00 0.12/0.13 0.12/0.12 0.25/0.13\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU               1.00  1.00  1.00  0.12  0.13  0.13\n"
+          "text": "LSTM               0.25/0.37 0.12/0.12 0.12/0.12 0.13/0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM, keep gate   1.00  1.00  1.00  1.00  1.00  1.00\n"
+          "text": "GRU                1.00/1.00 0.12/0.12 0.13/0.13 0.12/0.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GRU, keep gate    1.00  1.00  1.00  1.00  1.00  1.00\n"
+          "text": "LSTM, keep gate    1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GRU, keep gate     1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00\n"
         }
       ]
     },
     "lstm-deep-recurrent-networks-1": {
-      "code_fingerprint": "sha256:7161c97b06e9ad94a1540a8467523f80f03c8954f6181f3ac1d1202f9f81573d",
+      "code_fingerprint": "sha256:8a95039962222e01e789fac51bd110ea68a82ea06f5b64d74357f635b214b7c6",
       "kind": "text",
       "outputs": []
     },
-    "lstm-ptb-data-hub": {
-      "code_fingerprint": "sha256:7d110d97f72b2b32fec1332104d62aca8afa7cb3cd0e5d23575be8fdf98794b0",
+    "lstm-gated-networks-on-text-1": {
+      "code_fingerprint": "sha256:d2c20da6706bfca1fc9f20f15e4530daebb61e1a8708512368db6260f5dd6c5d",
       "kind": "text",
       "outputs": []
     },
-    "lstm-character-level-language-modeling-1": {
-      "code_fingerprint": "sha256:cf84c8ab28f1d3388e148df66426c848b8c6a3e1f16a8174659b0585ff445d09",
+    "lstm-gated-networks-on-text-2": {
+      "code_fingerprint": "sha256:95ac66ade3944192b1ade7c47012865d649d79ba94adc829052c0cf5d9e51883",
       "kind": "text",
       "outputs": []
     },
-    "lstm-character-level-language-modeling-2": {
-      "code_fingerprint": "sha256:4c4b2f326b0cd02cc6522746d2625cbe8f091c495ea7057f453a4caa8fb59f22",
+    "lstm-gated-networks-on-text-3": {
+      "code_fingerprint": "sha256:e5a5aaf555b2b0283a031d4e664f214986e6d4d2b629d1de44414ea50ed32efd",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-gated-networks-on-text-4": {
+      "code_fingerprint": "sha256:2a96aa52c0cf03bfc097251715d4b991463e3e2a33eded634a7cd340c3129dac",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-gated-networks-on-text-5": {
+      "code_fingerprint": "sha256:98a981df952613ac255b4a85ed322bb1a43b9f814f7858726afde1e44d070b96",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-gated-networks-on-text-6": {
+      "code_fingerprint": "sha256:4f547f758574617732f56ad66fbb9b03a11e3a2eb73b5842ab6567198f4787a6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "51 characters, 39856 training and 3123 validation windows\n"
-        }
-      ]
-    },
-    "lstm-character-level-language-modeling-4": {
-      "code_fingerprint": "sha256:52ddc5845c3f12ac6fb68b42c4bbf60b7e289586422274ae8638a687307c9b5c",
-      "kind": "text",
-      "outputs": []
-    },
-    "lstm-character-level-language-modeling-5": {
-      "code_fingerprint": "sha256:5352f5141287c91dc5dc83da30a7745b88dd68b672833f81bcc2379b25afeb55",
-      "kind": "text",
-      "outputs": []
-    },
-    "lstm-character-level-language-modeling-6": {
-      "code_fingerprint": "sha256:c2a16d015a814aa7148a4f09b5619c9b95832b31c6eb718a672ffb5fe920f063",
-      "kind": "text",
-      "outputs": [
+          "text": "                        validation        0-15       16-63      64-127   ms/step\n"
+        },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN     343,859 parameters   perplexity 3.13\nLSTM    542,003 parameters   perplexity 2.96\nGRU     475,955 parameters   perplexity 2.98\n"
+          "text": "RNN          2,764,544 1.346/1.349 1.512/1.514 1.323/1.325 1.323/1.325 13/13\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "LSTM         4,343,552 1.294/1.296 1.491/1.491 1.267/1.270 1.265/1.268 32/32\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GRU          3,817,216 1.299/1.300 1.491/1.490 1.274/1.275 1.270/1.272 38/38\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "attention    3,286,784 1.378/1.382 1.558/1.559 1.353/1.358 1.351/1.356 21/20\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RNN, d=302   3,816,932 1.335/1.332 1.501/1.500 1.312/1.309 1.311/1.308 21/21\n"
         }
       ]
     }

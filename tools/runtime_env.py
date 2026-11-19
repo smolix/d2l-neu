@@ -14,7 +14,7 @@ from pathlib import Path
 # Keywords that indicate a notebook/slide needs GPU access.
 GPU_KEYWORDS = ("gpu(", "cuda", "GPU", "num_gpus", "try_gpu", "try_all_gpus",
                 "device(", "/GPU:", "/device:GPU",
-                "Trainer(", "d2l.train", "fit_lm(")
+                "Trainer(", "d2l.train")
 
 # Notebooks that mention GPU-related terms in prose or discussion but whose
 # executable cells are CPU-only. Keep these out of the GPU scheduler bucket.
@@ -217,6 +217,13 @@ SHARED_DATA_NOTEBOOKS = {
     "chapter_transformers/gpt.ipynb",
     "chapter_transformers/kv-cache-reduction.ipynb",
     "chapter_transformers/scaling-laws.ipynb",
+    # chapter_recurrent-modern/lstm.md trains its text models on WikiText-103
+    # bytes, the data of gpt.md; linear-recurrence.md, mamba.md and hybrids.md
+    # train on the same bytes.
+    "chapter_recurrent-modern/lstm.ipynb",
+    "chapter_recurrent-modern/linear-recurrence.ipynb",
+    "chapter_recurrent-modern/mamba.ipynb",
+    "chapter_recurrent-modern/hybrids.ipynb",
 }
 
 MULTI_GPU_NOTEBOOKS = {
@@ -265,6 +272,22 @@ FULL_CARD_NOTEBOOKS = {
     # 11.5 times a self-attention encoder against a Perceiver as N doubles;
     # a shared card tripled the PyTorch time at N = 8192 (2026-11-18).
     "chapter_transformers/encoders-decoders.ipynb": 1,
+    # The gated-network section of the state space chapter prints
+    # milliseconds per training step of recurrent and attention language
+    # models side by side; co-tenants slow them unevenly (dev, 2026-11-19).
+    "chapter_recurrent-modern/lstm.ipynb": 1,
+    # The linear-recurrence section times one GRU, minGRU and attention layer
+    # against sequence length (the cost of attention is its lesson) and
+    # prints milliseconds per training step of GRU and minGRU models.
+    "chapter_recurrent-modern/linear-recurrence.ipynb": 1,
+    # The selective-SSM section prints milliseconds per training step of
+    # Mamba, minGRU and attention language models; a co-tenant on the card
+    # doubled the PyTorch Mamba step (69 to 135 ms, dev, 2026-11-19).
+    "chapter_recurrent-modern/mamba.ipynb": 1,
+    # The hybrid section prints milliseconds per training step of Gated
+    # DeltaNet, hybrid and attention language models, and its recall sweep
+    # trains ten small models; co-tenants slow both (dev, 2026-11-19).
+    "chapter_recurrent-modern/hybrids.ipynb": 1,
     # 13.1-13.5 quote timings, bandwidths and peak memory measured on whole
     # cards (13.5 on two); another tenant on a card skews them.
     "chapter_computational-performance/performance-model.ipynb": 1,
@@ -326,9 +349,6 @@ HEAVY_GPU_NOTEBOOKS = {
     # A5's fused-vs-naive timing cell transiently allocates ~4 GiB inside the
     # XLA arena; fine solo, OOMs when sharing a GPU at 2 slots. Run exclusive.
     ("jax", "chapter_attention/attention-at-scale.ipynb"): 2,
-    # 12.5's Gated-DeltaNet LM + chunked-WY cells peak ~8 GiB in the XLA
-    # arena; green solo, RESOURCE_EXHAUSTED at 2-slot sharing. Run exclusive.
-    ("jax", "chapter_recurrent-modern/deltanet.ipynb"): 2,
     # 11.3's batched decoding at b=64 compiles a ~5.5 GiB program and XLA
     # autotuning then OOMs a 1-slot (~7.5 GiB) arena. Run exclusive.
     ("jax", "chapter_transformers/kv-cache.ipynb"): 2,

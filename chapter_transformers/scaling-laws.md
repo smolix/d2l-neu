@@ -1005,7 +1005,7 @@ costs and the cost of a generated token.
 - Training costs $\approx 6ND$; attention adds $n/(6d)$, 8% for our
   models, confirmed by the framework counts.
 - At equal compute, the smaller model trained on more tokens reached the
-  lower loss, by 0.05 to 0.16 nats.
+  lower loss, by 0.05 to 0.13 nats.
 - Compute-optimal: $N^*, D^* \propto C^{1/2}$, about 20 tokens per
   parameter (refit).
 - Deployed models train up to 100× longer per parameter to make

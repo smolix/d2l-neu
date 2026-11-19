@@ -6,33 +6,35 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # LeNet
 :label:`sec_lenet`
 
-The preceding sections supplied the parts: the convolutional layer
-(:numref:`sec_conv_layer`), padding and stride (:numref:`sec_padding`),
-channels (:numref:`sec_channels`), and pooling (:numref:`sec_pooling`). None
-of them has classified anything yet. We now assemble them into a complete
-classifier and ask the obvious question: is it any better than the MLP?
+We now have all the building blocks of a convolutional neural network in hand:
+convolutional layers (:numref:`sec_conv_layer`), padding and stride
+(:numref:`sec_padding`), multiple channels (:numref:`sec_channels`), and
+pooling (:numref:`sec_pooling`). It is time to assemble them into a complete
+image classifier and put our earlier arguments to the test: does respecting
+two-dimensional spatial structure actually outperform a standard MLP?
 
-The number to beat is that of the MLP of :numref:`sec_mlp-implementation`,
-about 87% validation accuracy on Fashion-MNIST after 30 epochs. Recall that
-the MLP reads an image as 784 numbers in no particular order
-(:numref:`sec_why-conv`), whereas convolutional layers keep the spatial
-layout and use the same kernel at every position. To keep the comparison
-fair, we train the convolutional classifier with the same loss, optimizer,
-and number of epochs as the MLP and compare their validation accuracy. One
-number will not settle the matter, however. We therefore also look at what
-the first layer has learned, and we repeat the comparison on images whose
-pixels have been shuffled.
+Our baseline is the MLP from :numref:`sec_mlp-implementation`, which reaches
+roughly 87% validation accuracy on Fashion-MNIST after 30 epochs. Whereas the
+MLP flattens each image into 784 unordered numbers (:numref:`sec_why-conv`),
+a CNN preserves the pixel grid and applies shared local kernels across every
+spatial position. To compare the two architectures fairly, we train our CNN
+with the same cross-entropy loss, SGD optimizer, and 30-epoch budget. Because
+a single accuracy number never tells the whole story, we will also inspect
+the filters learned by the first convolutional layer and run a controlled
+experiment on pixel-shuffled images to verify where the CNN's advantage
+originates.
 
-The network we build is *LeNet*, after Yann LeCun, who developed it with his
-colleagues at AT&T Bell Labs to recognize handwritten digits
-:cite:`LeCun.Bottou.Bengio.ea.1998`. It was the result of a decade of work
-that began with an early convolutional network for images trained end to
-end by backpropagation :cite:`LeCun.Boser.Denker.ea.1989`. LeNet-5, the
-version of 1998, reached an error rate below 1% on handwritten digits, on
-par with the support vector machines of the time, and variants of it read
-the handwritten amounts on bank checks in commercial systems. It showed that
-a network trained from examples could replace a hand-engineered recognition
-pipeline.
+The architecture we implement is *LeNet*, named after Yann LeCun, who
+developed it with colleagues at AT&T Bell Labs to recognize handwritten digits
+:cite:`LeCun.Bottou.Bengio.ea.1998`. It marked the culmination of a decade of
+research that began with one of the earliest end-to-end convolutional networks
+trained by backpropagation :cite:`LeCun.Boser.Denker.ea.1989`. By 1998,
+LeNet-5 achieved error rates below 1% on handwritten digits—rivaling the
+support vector machines that dominated machine learning at the time—and
+variants of it were deployed commercially to read handwritten amounts on bank
+checks and ATM deposits. LeNet provided early, compelling proof that an
+end-to-end learned network could replace carefully hand-engineered vision
+pipelines.
 
 ```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab mxnet
@@ -75,17 +77,17 @@ from d2l import jax as d2l
 
 ## The LeNet Architecture
 
-LeNet consists of two parts, shown in :numref:`img_lenet`: a convolutional
-encoder with two convolutional layers, and a dense block with three fully
+At a high level, LeNet divides cleanly into two stages, illustrated in
+:numref:`img_lenet`: a *convolutional encoder* built from two convolutional
+blocks, followed by a *dense classification head* consisting of three fully
 connected layers.
 
 ![Data flow in LeNet on one $28\times28$ Fashion-MNIST image, with the feature maps drawn to scale. Each shaded window produces the dark unit it points to in the next layer. The three fully connected layers have 120, 84, and 10 outputs.](../img/lenet.svg)
 :label:`img_lenet`
 
-Each convolutional block consists of a convolutional layer with a
-$5\times5$ kernel, a sigmoid activation, and $2\times2$ average pooling with
-stride 2. The first convolutional layer has 6 output channels and the second
-has 16.
+Each convolutional block pairs a $5\times5$ convolutional layer and a sigmoid
+activation with a $2\times2$ average-pooling layer of stride 2. The first
+convolutional layer outputs 6 channels and the second outputs 16.
 
 :begin_tab:`mxnet`
 The encoder's output has shape (batch size, channels, height, width).
@@ -103,24 +105,27 @@ The encoder's output has shape (batch size, height, width, channels).
 The encoder's output has shape (batch size, height, width, channels).
 :end_tab:
 
-The dense block needs one vector per example, so we first flatten the
-encoder's output into a matrix with one row per example. Its three fully
-connected layers have 120, 84, and 10 outputs. The last layer has one output
-per class, as in softmax regression.
+To connect the convolutional encoder to the dense block, we flatten each
+example's spatial feature maps into a single vector, producing a
+two-dimensional matrix with one row per minibatch example. Three fully
+connected layers then project this vector through 120 and 84 hidden units to
+10 output logits---one per class, just as in softmax regression.
 
-This is the common teaching version of LeNet-5, not an exact reproduction.
-The network of 1998 had the same alternating convolutions and pooling and
-the same widths of 6, 16, 120, and 84. It differed in
-details that need not concern us: a scaled tanh as activation, pooling with
-a trainable weight and bias, partial connections between the two
-convolutional layers, and radial-basis output units. One difference does
-leave a trace in our code. The original took $32\times32$ images, so our
-first convolutional layer pads its $28\times28$ input by two pixels on each
-side, which gives it the same extent and the same $28\times28$ output.
+Note that this is the standard pedagogical version of LeNet-5 rather than a
+bit-for-bit historical replica. It preserves the 1998 network's alternating
+convolutions and pooling as well as its layer widths (6, 16, 120, and 84),
+while simplifying legacy details that are rarely used today (such as a scaled
+$\tanh$ activation, learnable pooling scales and biases, sparse channel wiring
+between the two convolutions, and radial-basis-function output units). One
+historical detail does remain visible in our code: the original LeNet-5 took
+$32\times32$ inputs, whereas MNIST and Fashion-MNIST images are $28\times28$
+(originally cropped by two pixels on every side to save storage). Adding two
+pixels of padding to our first convolutional layer restores the same
+$28\times28$ output dimensions after the first $5\times5$ convolution.
 
-In a framework, LeNet is a `Sequential` container of these layers. We use
-Xavier initialization (:numref:`subsec_xavier`) for the weights and zero
-biases.
+With modern deep learning frameworks, assembling LeNet requires only a single
+`Sequential` block. We initialize all layer weights with Xavier initialization
+(:numref:`subsec_xavier`) and set biases to zero.
 
 :begin_tab:`mxnet`
 `initialize(init.Xavier())` draws the weights from Xavier's uniform
@@ -252,14 +257,15 @@ class LeNet(d2l.Classifier):  #@save
 
 ## Layer Shapes
 
-A wrong padding or a missing flattening step changes the shape of every
-layer that follows it, so we check the shapes before training.
-:numref:`img_lenet_vert` lists the layers in compressed notation, with the
-shape of the tensor that passes between them. Does the code build this
-network? To find out, we pass a single-channel $28 \times 28$ image through
-it and print the output shape after each layer. The method `layer_summary`
-does this for any classifier whose layers sit in a sequential container
-`net`; the next chapter uses it for larger networks.
+Because a single mismatched padding value or a forgotten flatten layer shifts
+every downstream tensor shape, it is good practice to verify intermediate
+shapes before starting training. :numref:`img_lenet_vert` diagrams LeNet in
+compressed notation alongside the expected tensor shape at each boundary. To
+check that our implementation matches this diagram, we pass a single-channel
+$28 \times 28$ dummy tensor through the model and print the output shape after
+each layer. We package this diagnostic as a `layer_summary` method on
+`d2l.Classifier` so that we can reuse it for deeper architectures in the next
+chapter.
 
 ![Compressed notation for LeNet. Beside each arrow is the shape of the tensor it carries, as channels@height×width.](../img/lenet-vert.svg)
 :label:`img_lenet_vert`
@@ -307,25 +313,27 @@ model = LeNet()
 model.layer_summary((1, 28, 28, 1))
 ```
 
-It does, and the shapes follow the rules of :numref:`sec_padding`. A
-$5\times5$ kernel without padding shrinks the height and the width by 4. The
-first convolutional layer, with its padding of 2, keeps $28\times28$; the
-second has none and turns $14\times14$ into $10\times10$. Each pooling
-layer halves the height and the width, from 28 to 14 and from 10 to 5.
-Meanwhile the number of channels grows from 1 to 6 to 16, so the encoder
-trades spatial resolution for channels. The flattened output has $16 \times
-5 \times 5 = 400$ entries, which the dense block reduces to one output per
-class.
+The printed shapes match :numref:`img_lenet_vert` exactly and follow our
+output-shape rules from :numref:`sec_padding`. An unpadded $5\times5$ kernel
+reduces height and width by 4: our first convolutional layer adds 2 pixels of
+padding per side to preserve the $28\times28$ resolution, whereas the second
+uses no padding and shrinks $14\times14$ to $10\times10$. Each $2\times2$
+average-pooling layer halves both spatial dimensions ($28 \to 14$ and
+$10 \to 5$). Meanwhile, channel depth expands from 1 to 6 to 16 as the encoder
+trades spatial resolution for richer feature representations. Flattening the
+final $16 \times 5 \times 5$ tensor yields a 400-dimensional vector, which the
+dense block progressively compresses down to 10 class logits.
 
 ## Parameters and Multiply-Adds
 
-With the shapes in hand we can say what every layer costs. Recall from
-:numref:`subsec_multi-output-channels` that a convolutional layer with
-$c_\textrm{i}$ input channels, $c_\textrm{o}$ output channels, and a
-$k\times k$ kernel has $c_\textrm{i} c_\textrm{o} k^2$ weights and
-$c_\textrm{o}$ biases, and that it applies each weight once at every output
-position. A fully connected layer uses each of its weights only once per
-example. :numref:`tab_lenet_cost` applies these counts to LeNet.
+With every layer's output shape verified, we can tally both parameter memory
+and arithmetic cost. Recall from :numref:`subsec_multi-output-channels` that a
+convolutional layer with $c_\textrm{i}$ input channels, $c_\textrm{o}$ output
+channels, and a $k\times k$ kernel stores $c_\textrm{i} c_\textrm{o} k^2$
+weights plus $c_\textrm{o}$ biases, and reuses every weight once per output
+spatial location. By contrast, a fully connected layer uses each weight only
+once per example. :numref:`tab_lenet_cost` breaks down these figures across
+LeNet.
 
 :Parameters and multiply-adds per example of the layers of LeNet. Pooling and activation layers have no parameters.
 :label:`tab_lenet_cost`
@@ -339,30 +347,31 @@ example. :numref:`tab_lenet_cost` applies these counts to LeNet.
 | fully connected, 84 to 10 | 10 | $840 + 10 = 850$ | $840$ |
 | total | | $61{,}706$ | $416{,}520$ |
 
-The two kinds of layers divide the work in opposite ways. The convolutional
-layers hold 4% of the parameters and perform 86% of the multiply-adds,
-because each of their weights is used at every position of a feature map.
-The first fully connected layer holds 78% of the parameters and performs 12%
-of the multiply-adds. Compared with the MLP, which has 203,530 parameters and
-performs about 203,000 multiply-adds per image, LeNet has fewer than a third
-of the parameters and performs about twice the arithmetic.
+The breakdown highlights a striking division between memory and computation
+that recurs throughout CNN design. The two convolutional layers account for
+just 4% of LeNet's parameters yet perform 86% of its multiply-adds, because
+every kernel weight is evaluated across an entire spatial grid. Conversely,
+the first fully connected layer alone holds 78% of the parameters while
+contributing only 12% of the arithmetic. Compared with our earlier Fashion-MNIST
+MLP (203,530 parameters and roughly 203,000 multiply-adds per image), LeNet
+uses fewer than a third as many parameters while performing roughly twice as
+much computation.
 
 ## Training
 
-As for the MLP, we minimize the cross-entropy by minibatch stochastic
-gradient descent for 30 epochs. The minibatches hold 128 images, half the
-MLP's 256. Unfortunately, the learning rate cannot stay where it was. The trouble is
-the sigmoid, which passes back at most $1/4$ of the gradient
-(:numref:`subsec_activation-functions`). The gradient that reaches the
-weights of the first convolutional layer has passed backward through four
-sigmoids, one after each of the four hidden layers. At the MLP's learning
-rate of 0.1, LeNet learns slowly: its validation accuracy stays at chance
-for the first two to four epochs and reaches only about 73% after 10. We use
-a learning rate of 2.0 instead. The factor of twenty is empirical: the
-argument says only that the rate must grow.
+Just as with the MLP, we train LeNet by minimizing cross-entropy loss with
+minibatch SGD for 30 epochs, using a minibatch size of 128 (half the MLP's
+256). One hyperparameter, however, must change substantially: the learning
+rate. Because the derivative of the sigmoid activation never exceeds $1/4$
+(:numref:`subsec_activation-functions`), gradients flowing back to the first
+convolutional layer are attenuated by four successive sigmoids. At the MLP's
+learning rate of 0.1, training crawls: validation accuracy lingers near chance
+for the first two to four epochs and climbs only to about 73% after 10 epochs.
+We therefore raise the learning rate to 2.0 (an empirically tuned factor of
+twenty, reflecting the smaller gradient scale).
 
-As in :numref:`subsec_device_aware_trainer`, the `Trainer` runs on the GPU
-if there is one.
+As in :numref:`subsec_device_aware_trainer`, `d2l.Trainer` automatically
+dispatches training to a GPU when one is available.
 
 ```{.python .input #lenet-training}
 trainer = d2l.Trainer(max_epochs=30, num_gpus=1)
@@ -371,31 +380,32 @@ model = LeNet(lr=2.0)
 trainer.fit(model, data)
 ```
 
-After 30 epochs LeNet reaches a validation accuracy of about 88--90%,
-against about 87% for the MLP.
+After 30 epochs, LeNet achieves roughly 88--90% validation accuracy,
+improving on the MLP's ~87% despite having less than a third as many
+parameters.
 
-The start of the curve deserves a second look. In some runs the accuracy
-rises at once. In others it sits at chance, 10%, for a few epochs, rarely
-more, with the loss stuck near $\ln 10 \approx 2.3$, and then takes
-off. Nothing distinguishes these runs but their random initial weights.
-While the loss stays at $\ln 10$ the network gives every image the same
-ten probabilities: after four sigmoids, the part of its output that depends
-on the input is still too small to matter. An exercise measures this, and
-the plateau will return below.
+Look closely at the beginning of the training curve, too. Depending purely on
+the random initialization, accuracy sometimes climbs immediately, while in
+other runs it hovers at chance (10%) with the loss pinned near
+$\ln 10 \approx 2.3$ for a few epochs before suddenly taking off. During that
+initial plateau, the network predicts nearly identical uniform probabilities
+for every image: after passing through four sigmoid layers, input-dependent
+variations in the logits are initially too tiny to separate the classes. We
+quantify this vanishing-signal effect in an exercise below, and we will see
+the same plateau resurface in our pixel-shuffling experiment.
 
 ### The Learned Features
 
-For softmax regression the weights were ten templates, one blurred garment
-per class (:numref:`sec_softmax_scratch`), and the hidden units of the MLP
-weighed regions of the image (:numref:`sec_mlp-implementation`). Both could
-be drawn as $28\times28$ pictures, because every weight belonged to one
-pixel. A kernel of LeNet belongs to no pixel in particular. It is a
-$5\times5$ array of weights, too small to tell the eye much, so we look at
-what it does as well as at what it is. We take a sneaker and a shirt from
-the validation set and draw the six kernels of the first convolutional layer
-in the top row, and below each kernel the feature map that it produces for
-the two garments, after the sigmoid. Every image has its own gray scale,
-from its smallest value (black) to its largest (white).
+For softmax regression, we could visualize each class's weights directly as a
+$28\times28$ template image (:numref:`sec_softmax_scratch`), and similarly
+each hidden unit of an MLP weighted fixed pixel locations
+(:numref:`sec_mlp-implementation`). A convolutional kernel, by contrast, is
+not tied to any particular pixel—it is just a $5\times5$ patch of weights that
+is hard to interpret in isolation. To understand what the first convolutional
+layer has discovered, we visualize both the six learned $5\times5$ kernels
+(top row) and the resulting post-sigmoid feature maps for a validation sneaker
+and shirt (rows below), scaling each panel independently from its minimum
+(black) to its maximum (white).
 
 ```{.python .input #lenet-the-learned-features-1}
 X, y = trainer.prepare_batch(next(iter(data.val_dataloader())))
@@ -444,29 +454,31 @@ axes = d2l.show_images(
 axes[0].set_visible(False)  # No kernel above the input images
 ```
 
-Two kinds of channels appear, and they appear in every run. Some reproduce
-the silhouette of the garment, filled in, either bright on a dark background
-or inverted. Such a channel reports, roughly, whether its neighborhood is
-bright or dark. The others light up only along the outline, most of them on
-its left or on its right side. They respond to vertical edges, and several
-of their kernels show how: a column of bright weights beside a column of
-dark ones, a wider relative of the kernel $(1, -1)$ of
-:numref:`subsec_edge_detection`. There we had to hand gradient descent the
-edge map before it found the detector. Here nobody asked for edges. The
-network was given garments and their labels, and found that edges help to
-tell them apart. Which channel does what changes from run to run.
+Across training runs, two distinct families of feature maps consistently
+emerge. Some channels act as local brightness or foreground detectors,
+reproducing the filled silhouette of the garment (either bright on dark or
+inverted). The remaining channels light up selectively along the garment's
+contours—especially its left or right boundaries. Examining their $5\times5$
+kernels reveals how they do it: bright columns paired beside dark columns,
+forming learned, multi-row relatives of the hand-crafted $(1, -1)$ vertical
+edge kernel from :numref:`subsec_edge_detection`. Earlier, we had to supply
+an explicit target edge map for gradient descent to learn an edge filter; here,
+given nothing but raw garment pixels and class labels, LeNet discovers on its
+own that edges and silhouettes are useful building blocks for visual
+classification. (The exact assignment of roles across the six channels varies
+from run to run.)
 
 ### Shuffled Pixels
 
-How much should we read into LeNet's gain of one to three points over the
-MLP? Not too much. The MLP's own accuracy moves by about a point from one
-epoch to the next (:numref:`sec_mlp-implementation`), and LeNet differs from
-the MLP in its depth, its activation function, and its learning rate as well
-as in its convolutions. A sharper test removes the one thing that only the
-convolutions know about, namely which pixels are neighbors. This is the
-shuffling that the chapter introduction imagined: we fix one random order of
-the 784 pixel positions and rearrange every image, for training and
-validation alike, into that order.
+How much weight should we put on a 1--3 percentage point gain over the MLP?
+Taken alone, that margin could be noisy: the MLP's validation accuracy
+fluctuates by roughly a point from epoch to epoch
+(:numref:`sec_mlp-implementation`), and LeNet also differs in depth,
+activation function, and learning rate. A cleaner controlled experiment
+strips away the single piece of information that only convolutions exploit:
+spatial adjacency. Returning to the thought experiment from the chapter
+introduction, we draw one fixed random permutation of the 784 pixel positions
+and apply that exact same reordering to every training and validation image.
 
 ```{.python .input #lenet-shuffled-pixels-1}
 perm = np.random.permutation(28 * 28)  # One fixed order for every image
@@ -500,20 +512,21 @@ data_shuffled.train, data_shuffled.val = [
     for images, labels in (data_shuffled.train, data_shuffled.val)]
 ```
 
-To us the shuffled images are noise.
+To human eyes, the permuted garments look like pure static.
 
 ```{.python .input #lenet-shuffled-pixels-3}
 data_shuffled.visualize(next(iter(data_shuffled.val_dataloader())))
 ```
 
-The MLP cannot tell the difference, and we need not train it again to know
-this. Shuffling the pixels only reorders the inputs of its first layer, so
-training on shuffled images is training on the original ones with the
-columns of $\mathbf{W}^{(1)}$ reordered. Since every weight starts from the
-same distribution, it is the same random experiment, and the MLP would again
-reach about 87%. LeNet, however, now applies its kernels to $5\times5$
-windows of pixels that were never neighbors. We train it with the same
-settings as before and plot both validation curves.
+An MLP is completely blind to this permutation, and we do not even need to
+retrain it to prove why: permuting the input coordinates merely reorders the
+columns of its first weight matrix $\mathbf{W}^{(1)}$. Since every weight is
+initialized identically and independently, training on shuffled pixels is
+statistically identical to training on the original images, yielding the same
+~87% accuracy. For LeNet, however, shuffling destroys spatial locality: every
+$5\times5$ kernel now reads 25 pixels scattered randomly across the original
+garment. Let us retrain LeNet with the exact same settings on the shuffled
+dataset and plot both validation curves side by side.
 
 ```{.python .input #lenet-shuffled-pixels-4}
 curves = {'pixels in place': trainer.history['val_acc']}
@@ -526,63 +539,62 @@ for name, acc in curves.items():  # A single epoch can land a point low
     print(f'{name}: {sum(acc[-5:]) / 5:.3f} averaged over the last 5 epochs')
 ```
 
-On shuffled pixels LeNet ends several points lower than on the ordered
-images, at about 85 or 86% in a typical run, which is at or a little below
-the MLP. Its advantage is gone, and so is the doubt about where the
-advantage came from: it was the advantage of knowing which pixels are
-adjacent.
+On shuffled pixels, LeNet drops several percentage points to around 85--86% in
+a typical run—at or slightly below the MLP. Once spatial neighborhood
+structure is destroyed, LeNet's advantage vanishes, confirming that its edge
+over the MLP comes directly from its convolutional inductive bias.
 
-The plateau at chance is back as well, and it is as unpredictable as before.
-On ordered pixels it lasted at most a few epochs. On shuffled pixels it
-usually does the same, but once in a while it takes up most of the thirty
-epochs, and such a run ends lower still. A reader who repeats the
-experiment may well meet one. The plateau is a weakness of this network of
-sigmoids and does not affect the comparison: in none of our runs, however
-short its plateau, did LeNet on shuffled pixels end above the MLP.
+Notice that the initial chance-level plateau can reappear here as well, and
+just as unpredictably. While it rarely exceeds a few epochs on ordered images,
+on shuffled images an unlucky initialization can occasionally leave the model
+stuck near chance for much of the 30-epoch run, depressing final accuracy even
+further. That instability stems from stacking four sigmoid activations rather
+than from the pixel ordering itself; even in runs that escape the plateau
+immediately, LeNet on shuffled pixels never surpasses the MLP.
 
-One more observation ties LeNet back to the derivation. The network of
-:numref:`sec_why-conv` was to be equivariant in its layers and invariant in
-its answer, and LeNet is neither. Its convolutions follow a shift only away
-from the border, and its pooling layers absorb some one-pixel shifts and
-pass on others (:numref:`sec_pooling`). Its head then flattens the
-$5\times5$ maps and gives every position weights of its own, so nothing
-makes the answer invariant. What tolerance to shifts LeNet has is partial,
-and Fashion-MNIST, whose garments are all centered, never asks for more.
+Finally, let us connect LeNet back to the symmetry principles of
+:numref:`sec_why-conv`. Idealized image classifiers would have strictly
+translation-equivariant feature layers and a strictly translation-invariant
+output, yet LeNet achieves neither exactly: padded convolutions break
+equivariance near borders, pooling absorbs only shifts that stay within a
+pooling block (:numref:`sec_pooling`), and flattening the final $5\times5$
+maps assigns distinct dense weights to every spatial cell. LeNet's shift
+tolerance is therefore only partial—sufficient for Fashion-MNIST, where every
+garment is neatly centered, though inadequate for unconstrained scenes.
 
-The two runs together show that the accuracy of the MLP can be had, and
-slightly improved on, with fewer than a third of its parameters, and that
-the improvement comes from the convolutions' knowledge of the grid. A kernel
-learns a local pattern once and detects it at every position, whereas the
-MLP must learn it anew wherever it occurs. On $28\times28$ images little
-is at stake. On the megapixel photographs of :numref:`sec_why-conv`, where a
-single fully connected layer needs a billion weights or more, the same idea
-decides whether the network can be built at all. Whether such a network can
-also be trained is another matter, and the four sigmoids above give a first
-hint of the difficulty.
+Taken together, our two experiments demonstrate that a CNN can match and
+outperform an MLP using less than a third as many parameters, precisely
+because weight sharing lets each kernel learn a local visual pattern once and
+detect it anywhere on the grid. On tiny $28\times28$ images, that efficiency
+is a modest bonus; on the megapixel photographs discussed in
+:numref:`sec_why-conv`, where a single dense layer demands a billion weights,
+the same principle determines whether a model can be built at all. Making deep
+convolutional networks *easy to train* at scale is the next challenge—and the
+sluggish, erratic convergence of LeNet's four sigmoid layers already hints at
+why modern architectures had to evolve far beyond 1998.
 
 ## Summary
 
-LeNet combines a convolutional encoder, in which the resolution shrinks while
-the number of channels grows, with a small fully connected head. Its
-convolutional layers hold few parameters and do most of the arithmetic; the
-first fully connected layer holds most of the parameters. Trained like the
-MLP of :numref:`sec_mlp-implementation`, it reaches about 88--90% validation
-accuracy on Fashion-MNIST, against about 87% for the MLP, with fewer than a
-third of its parameters. Its first layer learns silhouettes and vertical
-edges from the labels alone. When the pixels are shuffled, the advantage
-over the MLP disappears, so it came from the convolutions' knowledge of the
-grid. The four sigmoids, each passing back at most $1/4$ of the gradient,
-call for a much larger learning rate, 2.0 against 0.1, and they make the
-start of training erratic.
+LeNet pairs a convolutional encoder—which progressively trades spatial
+resolution for deeper channel representations—with a three-layer fully
+connected classifier head. Its convolutional layers hold just 4% of the
+parameters yet perform 86% of the multiply-adds, whereas the first dense layer
+alone accounts for 78% of the parameters. Trained under the same 30-epoch SGD
+setup as the MLP of :numref:`sec_mlp-implementation`, LeNet reaches ~88--90%
+validation accuracy on Fashion-MNIST (versus ~87% for the MLP) with fewer than
+a third of the parameters, automatically learning silhouette and vertical-edge
+filters from class labels alone. Shuffling pixel positions erases that gain,
+isolating spatial locality as its source. At the same time, propagating
+gradients through four sigmoid layers forces a much larger learning rate (2.0
+rather than 0.1) and causes unpredictable early training plateaus.
 
-The encoder followed by a classifier head remains the organization of most
-convolutional networks, but nearly every component of LeNet has since been
-replaced: the sigmoid by the ReLU, average pooling by max-pooling or strided
-convolutions, and the dense head by global average pooling and a single
-linear layer, with normalization layers added throughout. The next chapter
-makes these changes one at a time, starting with AlexNet
-(:numref:`sec_alexnet`), and asks what each one contributes as networks grow
-much deeper.
+While the overall encoder-plus-head blueprint remains foundational, almost
+every individual component of LeNet has since been modernized: ReLUs replaced
+sigmoids, max-pooling and strided convolutions replaced average pooling,
+global average pooling followed by a single linear layer replaced heavy dense
+heads, and normalization layers stabilized deep training. In the next chapter,
+beginning with AlexNet (:numref:`sec_alexnet`), we trace these architectural
+advances one by one as networks scale up in depth, width, and resolution.
 
 ## Exercises
 

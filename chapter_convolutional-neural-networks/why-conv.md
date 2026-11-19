@@ -1,326 +1,312 @@
 # From Fully Connected Layers to Convolutions
 :label:`sec_why-conv`
 
-As the chapter introduction noted, the MLP of :numref:`chap_perceptrons`
-treats an image as a list of numbers in no particular order. For tabular
-data, whose columns have no natural order, this is appropriate. For images it
-discards the most useful thing we know about them: which pixels are
-neighbors.
+As we noted in the chapter introduction, the multilayer perceptrons of
+:numref:`chap_perceptrons` flatten every image into an unordered vector of
+numbers. For tabular data—where columns have no intrinsic spatial layout—that
+symmetry is completely appropriate. For images, however, flattening throws away
+the single richest structural clue we have: which pixels sit next to one
+another.
 
-The waste shows up in the number of parameters. Consider a classifier that
-tells cats from dogs in one-megapixel grayscale photographs. Each input
-has $10^6$ dimensions, so even a hidden layer of only 1000 units needs
-$10^6 \times 10^3 = 10^9$ weights. That is 4 GB in 32-bit floating point,
-and far more than any collection of labeled pet photographs could determine.
-People nevertheless tell cats from dogs with ease, because photographs are
-far from arbitrary vectors: nearby pixels are related, and a whisker looks
-like a whisker wherever it appears in the photograph.
+The cost shows up immediately in parameter counts. Imagine building a cat-versus-dog
+classifier on one-megapixel grayscale photographs. Each input vector has $10^6$
+entries, so even a modest hidden layer of 1,000 units demands
+$10^6 \times 10^3 = 10^9$ weights—4 GB in fp32—and far more parameters than any
+realistic dataset of pet photos could pin down. Yet humans tell cats from dogs
+effortlessly because natural images are nothing like arbitrary million-dimensional
+vectors: neighboring pixels are strongly correlated, and a whisker looks like a
+whisker wherever it sits in the frame.
 
-Which layer do these two observations leave us with? To find out, we turn
-them into constraints on a fully connected layer. The hidden units of an MLP
-have no location, so we first give the hidden layer one unit per pixel, a map
-of responses the size of the image. For a $1000 \times 1000$ image this
-layer has $10^{12}$ weights, which looks like a step in the wrong direction.
-Requiring that a shifted input produce a shifted output reduces this to about
-$4 \times 10^6$ weights. Requiring that each hidden unit look only at a small
-neighborhood reduces it to a few hundred. The layer that remains is a
-convolution.
+What architecture emerges if we build those two observations directly into a
+fully connected layer? Because standard MLP hidden units carry no spatial
+coordinates, let's first arrange the hidden layer as a two-dimensional map
+matching the image's resolution—one hidden unit per pixel. On a
+$1000 \times 1000$ image, an unconstrained dense map requires $10^{12}$ weights,
+which at first looks like a massive leap in the *wrong* direction! Yet enforcing
+that a shifted input produce a shifted output slashes those $10^{12}$ weights
+down to roughly $4 \times 10^6$, and restricting each hidden unit to look only
+at a small neighborhood cuts them further to a few hundred. What survives both
+constraints is a *convolutional layer*.
 
 
 ## Equivariance and Invariance
 
-The children's game "Where's Waldo" (:numref:`img_waldo`) shows what a vision
-system needs. Each picture contains a crowd of people and activities, and
-somewhere among them is Waldo. What Waldo looks like does not depend on where
-he stands. A detector can therefore scan the scene and give every patch a
-score for how likely it is to contain Waldo, using the same scoring rule for
-every patch. Many object detection :cite:`Girshick.Donahue.Darrell.ea.2014`
-and semantic segmentation :cite:`Long.Shelhamer.Darrell.2015` systems work in
-this way.
+The children's game "Where's Waldo" (:numref:`img_waldo`) captures the exact
+challenge of visual perception. Each busy scene teems with distractions, with
+Waldo hiding somewhere unexpected—yet *what Waldo looks like* does not depend on
+*where he stands*. We can therefore sweep a single Waldo detector across the
+image, scoring every patch by how strongly it matches Waldo using the exact same
+rule at every position. Modern object detection
+:cite:`Girshick.Donahue.Darrell.ea.2014` and semantic segmentation
+:cite:`Long.Shelhamer.Darrell.2015` pipelines build directly on this idea.
 
 ![Can you find Waldo (image courtesy of William Murphy (Infomatique))?](../img/waldo-football.jpg)
 :width:`400px`
 :label:`img_waldo`
 
-This suggests two requirements for the earliest layers of a vision network:
+This intuition points to two guiding principles for the early layers of a vision
+network:
 
-1. They should respond in the same way to the same patch, wherever it
-   appears, so that a shifted input gives a shifted output.
-1. They should look only at small regions and ignore the content of distant
-   ones. This is the *locality* principle.
+1. They should respond identically to the same local patch regardless of where
+   it appears, so shifting the input shifts the output by the same amount.
+1. They should attend only to small local neighborhoods without worrying about
+   distant parts of the image—the *locality* principle.
 
-Deeper layers can then combine these local responses into features of longer
-range, and eventually into a prediction for the whole image.
+Subsequent layers can then compose these local responses into progressively
+larger, more abstract patterns, culminating in a whole-image prediction.
 
-To state the first requirement precisely, let $T_v$ shift an image by an
-offset $v = (v_1, v_2)$, so that the pixel at $(i, j)$ moves to
-$(i + v_1, j + v_2)$: $[T_v \mathbf{X}]_{i,j} = [\mathbf{X}]_{i-v_1, j-v_2}$.
-A function $f$ that maps an image to an image is *translation equivariant* if
-shifting its input shifts its output by the same amount. A function that maps
-an image to a prediction is *translation invariant* if shifting its input
-leaves the output unchanged:
+To formalize the first principle, let $T_v$ denote the shift operator that
+translates an image by an offset $v = (v_1, v_2)$, moving pixel $(i, j)$ to
+$(i + v_1, j + v_2)$ so that
+$[T_v \mathbf{X}]_{i,j} = [\mathbf{X}]_{i-v_1, j-v_2}$. An image-to-image
+mapping $f$ is *translation equivariant* if shifting its input shifts its output
+by the exact same vector, whereas an image-to-label mapping is *translation
+invariant* if shifting its input leaves its output completely unchanged:
 
 $$
 \begin{aligned} f(T_v \mathbf{X}) &= T_v f(\mathbf{X}) && \textrm{(equivariance)},\\ f(T_v \mathbf{X}) &= f(\mathbf{X}) && \textrm{(invariance)}.\end{aligned}
 $$
 :eqlabel:`eq_equivariance_invariance`
 
-:numref:`fig_why_conv_equivariance` draws the first condition as a square
-of four images. Its $f$ compares a small pattern with every window of the
-image, which is the kind of layer this section will arrive at. Whether we
-shift first and compare afterwards, or compare first and shift the result,
-we end in the same corner.
+:numref:`fig_why_conv_equivariance` illustrates translation equivariance as a
+commuting diagram. Here $f$ matches a small template against every window of the
+image—the exact operation we are about to derive. Shifting first and matching
+second produces the identical map as matching first and shifting second.
 
 ![Translation equivariance. The input holds a $2\times 2$ patch of ones, and $f$ compares every $2\times 2$ window with that patch, so the response is 4 where a window covers the whole patch. Shifting the input by $v = (3, 2)$ and then applying $f$ (bottom row) gives the same map as applying $f$ and then shifting the response (right column).](../img/why-conv-equivariance.svg)
 :label:`fig_why_conv_equivariance`
 
-Equivariance keeps track of *where* a pattern is, and invariance discards it.
-A Waldo detector should be equivariant: its map of scores should move with
-Waldo. The answer to the question "is Waldo in the scene?" should be
-invariant. We obtain it in a final step that aggregates the equivariant map
-over all locations, for instance by taking its maximum.
+Notice the clean division of labor: *equivariance* preserves *where* a pattern
+appears, whereas *invariance* discards location. A Waldo detector should be
+equivariant so its score map tracks Waldo across the scene; answering the
+yes-or-no question "is Waldo in this picture?" should be invariant, achieved at
+the end by aggregating the equivariant map across space (for instance, taking
+its maximum).
 
 
 ## Constraints on the Fully Connected Layer
 
-Both constraints are easiest to see in one dimension, where a weight matrix
-is something we can draw. Take a signal of eight samples $x_0, \ldots, x_7$
-and a fully connected layer with one hidden unit per sample,
-$h_i = u_i + \sum_k W_{i,k} x_k$. Its weights form an $8 \times 8$ matrix
-with 64 free entries, panel (a) of :numref:`fig_why_conv_weight_sharing`.
+Both constraints become crystal clear in one dimension, where we can draw the
+entire weight matrix. Consider an eight-sample signal $x_0, \ldots, x_7$ mapped
+by a fully connected layer to eight hidden units,
+$h_i = u_i + \sum_k W_{i,k} x_k$. Its $8 \times 8$ weight matrix has 64
+independent entries, shown in panel (a) of :numref:`fig_why_conv_weight_sharing`.
 
 ![Weights of a linear layer that maps a one-dimensional signal of 8 samples (columns) to 8 hidden units (rows). Equal colors are equal weights; white is zero. (a) Fully connected: every weight is free. (b) Translation equivariant: a weight depends only on the offset between input and output, so the matrix is constant along each diagonal. (c) Equivariant and local: only the offsets $-1$, $0$, and $1$ have nonzero weights.](../img/why-conv-weight-sharing.svg)
 :label:`fig_why_conv_weight_sharing`
 
-What does equivariance demand of this matrix? Set the biases aside (the proof
-below shows that they must all be equal) and feed the layer a signal with a
-single 1 at sample $k$. The response is column $k$ of $\mathbf{W}$. Move the
-1 to sample $k+1$, and the response is column $k+1$. Equivariance requires
-the second response to be the first one moved down by one unit. Every column
-is therefore its left neighbor moved down by one, $W_{i+1,k+1} = W_{i,k}$,
-and the matrix is constant along each diagonal, as in panel (b). A diagonal
-holds the weights with one offset $a = k - i$ between sample and hidden unit,
-so a weight depends only on this offset. Eight samples allow offsets from
-$-7$ to $7$, and 15 weights remain of 64.
+What does translation equivariance impose on $\mathbf{W}$? Ignoring biases for a
+moment (our proof below shows all biases must coincide), feed in a unit impulse
+with a single 1 at sample $k$: the layer outputs column $k$ of $\mathbf{W}$.
+Shift that impulse to $k + 1$, and the layer outputs column $k + 1$.
+Equivariance insists that column $k + 1$ must equal column $k$ shifted down by
+one row, i.e., $W_{i+1, k+1} = W_{i, k}$. Consequently, $\mathbf{W}$ must be
+constant along every diagonal (a *Toeplitz* matrix), as in panel (b). Each
+diagonal corresponds to a single relative offset $a = k - i$, collapsing 64 free
+weights down to just 15 (offsets $-7$ through $7$).
 
-Locality removes most of the 15. If a hidden unit may depend only on samples
-within distance 1, every offset other than $-1$, $0$, and $1$ gets weight
-zero. Panel (c) has 3 weights, the same three in every row: the layer
-compares one small pattern with the signal at every position. This is the
-whole derivation. The rest of the section repeats it with more indices.
+Locality prunes almost all of those remaining 15 weights. Restricting each
+hidden unit to look only at neighbors within distance 1 zeroes out every offset
+outside $\{-1, 0, 1\}$, leaving just 3 shared weights repeated across every row
+in panel (c). The layer now sweeps one tiny 3-weight template across the entire
+signal. That is the entire derivation in miniature; moving to 2D images simply
+adds a second spatial index.
 
-For images nothing changes except that positions and offsets become pairs.
-Let the input image $\mathbf{X}$ and the hidden representation $\mathbf{H}$
-be matrices of the same shape, with pixel $[\mathbf{X}]_{k,l}$ at location
-$(k,l)$ and hidden unit $[\mathbf{H}]_{i,j}$ at location $(i,j)$. A weight
-now needs four indices, two for the hidden unit and two for the pixel, so the
-weights form a fourth-order tensor $\mathsf{W}$. With a matrix of biases
-$\mathbf{U}$, the layer computes
+For images, both the input $\mathbf{X}$ and the hidden representation
+$\mathbf{H}$ are two-dimensional grids, with input pixel $[\mathbf{X}]_{k,l}$ at
+$(k, l)$ and hidden unit $[\mathbf{H}]_{i,j}$ at $(i, j)$. Connecting every
+hidden unit to every pixel turns the weights into a fourth-order tensor
+$\mathsf{W}$ alongside a bias matrix $\mathbf{U}$:
 
 $$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_k \sum_l [\mathsf{W}]_{i, j, k, l}  [\mathbf{X}]_{k, l}.$$
 
-Both constraints concern where a pixel lies *relative to* the hidden unit.
-It is therefore convenient to name each weight by its offsets $a = k - i$
-and $b = l - j$ from the hidden unit, and to write
+Because both constraints depend on where a pixel sits *relative* to hidden unit
+$(i, j)$, let's re-index by offsets $a = k - i$ and $b = l - j$, defining
 $[\mathsf{V}]_{i, j, a, b} = [\mathsf{W}]_{i, j, i+a, j+b}$:
 
 $$[\mathbf{H}]_{i, j} = [\mathbf{U}]_{i, j} + \sum_a \sum_b [\mathsf{V}]_{i, j, a, b}  [\mathbf{X}]_{i+a, j+b}.$$
 :eqlabel:`eq_mlp_fourth_order`
 
-The offsets take positive and negative values. Nothing has been computed
-here: the layer is the same, and we have only read its weights along the
-diagonals, as in the one-dimensional case. With one hidden unit for each of
-the $10^6$ pixels of a $1000 \times 1000$ image, this single layer has
+Here $a$ and $b$ span both positive and negative offsets. This re-indexing is
+purely cosmetic—we are simply reading $\mathsf{W}$ along its diagonals without
+reducing parameters yet. On a $1000 \times 1000$ image mapped to a
+$1000 \times 1000$ hidden grid, this single layer still demands
 $10^6 \times 10^6 = 10^{12}$ weights.
 
 ### Translation Equivariance
 
-The argument with a single 1 carries over to images: a layer of the form
-:eqref:`eq_mlp_fourth_order` is equivariant exactly when its weights and its
-bias do not depend on the location $(i, j)$ of the hidden unit. That shared
-weights give equivariance is a one-line check. The converse matters more:
-equivariance leaves no other choice.
+Just as in one dimension, a layer of the form :eqref:`eq_mlp_fourth_order` is
+translation equivariant if and only if its weights and bias are independent of
+location $(i, j)$. Checking that shared weights yield equivariance takes one
+line; the converse is what makes convolution unavoidable—equivariance leaves no
+other linear option.
 
-To state this precisely we must say what a shift does at the border of an
-image, where content leaves the frame and nothing enters it. We avoid the
-question by placing the image on an infinite grid of pixels, with zeros
-everywhere outside the image, so that a shift loses nothing. On a finite
-image equivariance holds only away from the border, a point to which
-:numref:`sec_padding` returns.
+To handle boundaries cleanly (where a shift pushes pixels off the edge of a
+finite frame), we embed the image on an infinite grid padded with zeros outside
+its support so no information ever leaves the grid. On finite images,
+equivariance holds strictly away from borders, a detail we address in
+:numref:`sec_padding`.
 
-**Proposition.** Let the input, with finitely many nonzero pixels, and the
+**Proposition.** Let the input (with finitely many nonzero pixels) and the
 hidden representation live on the infinite grid. The layer
-:eqref:`eq_mlp_fourth_order` is translation equivariant for every shift $v$
-if and only if there are a
-scalar $u$ and a matrix $\mathbf{K}$ such that $[\mathbf{U}]_{i,j} = u$ and
-$[\mathsf{V}]_{i,j,a,b} = [\mathbf{K}]_{a,b}$ for all $i, j, a, b$.
+:eqref:`eq_mlp_fourth_order` is translation equivariant for every shift $v$ if
+and only if there exist a scalar $u$ and a matrix $\mathbf{K}$ such that
+$[\mathbf{U}]_{i,j} = u$ and $[\mathsf{V}]_{i,j,a,b} = [\mathbf{K}]_{a,b}$ for
+all $i, j, a, b$.
 
-**Proof.** If neither the weights nor the bias depend on $(i, j)$, shifting the
-input by $v$ shifts the output by $v$:
+**Proof.** If neither weights nor bias depend on $(i, j)$, then shifting the
+input by $v$ directly shifts the output by $v$:
 
 $$[f(T_v \mathbf{X})]_{i,j} = u + \sum_a \sum_b [\mathbf{K}]_{a,b} [\mathbf{X}]_{i - v_1 + a, j - v_2 + b} = [f(\mathbf{X})]_{i - v_1, j - v_2} = [T_v f(\mathbf{X})]_{i,j}.$$
 
-Conversely, suppose that the layer is equivariant. The all-zero image is
-unchanged by every shift, and the layer maps it to $\mathbf{U}$. Hence
-$\mathbf{U} = T_v \mathbf{U}$ for every $v$, and the bias is a constant $u$.
-Subtracting $u$ from both sides of the equivariance condition shows that the
-weighted sum alone is equivariant too. Now feed it the image with a single 1
-at pixel $(k, l)$ and zeros elsewhere. Its response at $(i, j)$ is the weight
-$[\mathsf{W}]_{i,j,k,l}$. Shifting this image by $v$ moves the 1 to
-$(k + v_1, l + v_2)$, and equivariance requires the response to shift by $v$
-as well: $[\mathsf{W}]_{i, j, k+v_1, l+v_2} = [\mathsf{W}]_{i-v_1, j-v_2, k, l}$.
-Choosing $(k, l) = (a, b)$ and $v = (i, j)$ gives
+Conversely, assume the layer is equivariant. The all-zero image is invariant
+under every shift and maps to $\mathbf{U}$, forcing $\mathbf{U} = T_v \mathbf{U}$
+for all $v$, so the bias must be a constant $u$. Subtracting $u$ from both sides
+shows that the linear part alone is also equivariant. Feed in an image with a
+single 1 at $(k, l)$ and zeros elsewhere: its response at $(i, j)$ is
+$[\mathsf{W}]_{i,j,k,l}$. Shifting that impulse by $v$ moves it to
+$(k + v_1, l + v_2)$, and equivariance requires
+$[\mathsf{W}]_{i, j, k+v_1, l+v_2} = [\mathsf{W}]_{i-v_1, j-v_2, k, l}$.
+Setting $(k, l) = (a, b)$ and $v = (i, j)$ yields
 $[\mathsf{V}]_{i,j,a,b} = [\mathsf{W}]_{i,j,i+a,j+b} = [\mathsf{W}]_{0,0,a,b}$,
-which does not depend on $(i, j)$. $\blacksquare$
+which is independent of $(i, j)$. $\blacksquare$
 
-In words, a single bright pixel reveals the weights, as the single 1 did in
-one dimension, and a tensor $\mathsf{V}$ that does not depend on $(i, j)$ is
-the matrix that is constant along its diagonals. With shared weights the
-layer simplifies to
+In short, probing the layer with a single bright pixel forces every location to
+share the exact same weights, collapsing the layer to
 
 $$[\mathbf{H}]_{i, j} = u + \sum_a\sum_b [\mathbf{K}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$
 
-Every hidden unit computes the same weighted sum of the pixels around it, so
-the layer compares one pattern, $\mathbf{K}$, with the image at every
-location. For a $1000 \times 1000$ image surrounded by zeros, only the
-offsets $a$ and $b$ from $-999$ to $999$ ever meet a nonzero pixel, so
-$\mathbf{K}$ has $1999^2 \approx 4 \times 10^6$ weights instead of
-$10^{12}$.
+Every hidden unit now applies the same pattern $\mathbf{K}$ centered at its own
+coordinates. On a $1000 \times 1000$ zero-padded image, only offsets
+$a, b \in [-999, 999]$ ever touch a nonzero pixel, slashing $10^{12}$ weights
+down to $1999^2 \approx 4 \times 10^6$.
 
 ### Locality
 
-Four million weights are still too many for one pattern, and most of them
-tie a hidden unit to distant pixels. We therefore impose locality: the hidden
-unit at $(i, j)$ should depend only on pixels within distance $\Delta$ of
-$(i, j)$ along each axis. This means
-$[\mathbf{K}]_{a, b} = 0$ whenever $|a| > \Delta$ or $|b| > \Delta$, and the
-layer becomes
+Four million weights for a single filter is still far too many, and most of
+those weights link a hidden unit to pixels clear across the image. Enforcing
+*locality*—requiring $[\mathbf{H}]_{i,j}$ to depend only on pixels within
+distance $\Delta$ along each axis—sets $[\mathbf{K}]_{a, b} = 0$ whenever
+$|a| > \Delta$ or $|b| > \Delta$, giving
 
 $$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathbf{K}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$
 :eqlabel:`eq_conv-layer`
 
-Each hidden unit is a weighted sum of the $(2\Delta+1) \times (2\Delta+1)$
-window of pixels centered at its own location, with the same weights at every
-location. The layer has $(2\Delta+1)^2$ weights and one bias: 9 weights for
-$\Delta = 1$ and 121 for $\Delta = 5$. Typical values of $\Delta$ are below
-10, so at most a few hundred weights replace the $4 \times 10^6$ of the
-shared layer, while the hidden representation keeps the size of the image.
+Each hidden unit now computes a weighted sum over a
+$(2\Delta+1) \times (2\Delta+1)$ local window centered at $(i, j)$, using just
+$(2\Delta+1)^2$ shared weights and one bias: 9 weights for $\Delta = 1$ (a
+$3 \times 3$ window), or 121 for $\Delta = 5$. Because $\Delta$ is typically
+well below 10, a few dozen or hundred weights replace $4 \times 10^6$ while
+preserving the full spatial resolution of the hidden map.
 
-Equation :eqref:`eq_conv-layer` defines a *convolutional layer*. Networks that
-contain convolutional layers are called *convolutional neural networks*
-(CNNs). The matrix $\mathbf{K}$ is the layer's *convolution kernel*, also
-called its *filter*, and its entries are the layer's weights. Among the first
-models to share weights across positions in this way were time-delay neural
-networks for speech recognition :cite:`Waibel.Hanazawa.Hinton.ea.1989` and
-the shift-invariant networks of :citet:`Zhang.ea.1988`.
+Equation :eqref:`eq_conv-layer` defines a *convolutional layer*, the building
+block of *convolutional neural networks* (CNNs). The shared matrix $\mathbf{K}$
+is called the *convolution kernel* or *filter*. Early pioneers of spatial and
+temporal weight sharing included time-delay neural networks for speech
+recognition :cite:`Waibel.Hanazawa.Hinton.ea.1989` and the shift-invariant
+networks of :citet:`Zhang.ea.1988`.
 
-The reduction from $10^{12}$ to a few hundred parameters comes from
-restricting the class of functions, not from a more economical way to
-represent the same functions. A convolutional layer can represent a mapping
-only if that mapping is local and translation equivariant. Such assumptions,
-made before any data are seen, are the layer's inductive bias
-(:numref:`sec_generalization_deep`). When they match the data, as they do for
-edges and textures in natural images, the model needs far fewer examples and
-generalizes better. When they do not, the model may fail even to fit its
-training data. In a passport photograph, a dark blob in the upper half is an
-eye and a similar one lower down is a nostril, yet a convolutional layer must
-respond to both alike. A single layer also sees only a window of width
-$2\Delta + 1$. Stacking convolutional layers with nonlinearities between them
-lets deeper units depend on larger regions of the image and represent larger
-structures.
+Keep in mind *why* the parameter count shrank from $10^{12}$ to a handful: not
+through lossless compression of an arbitrary linear map, but by restricting the
+hypothesis class to local, translation-equivariant mappings. This built-in
+*inductive bias* (:numref:`sec_generalization_deep`) is a huge win whenever it
+matches the domain—edges and textures in natural photos—delivering dramatic
+gains in sample efficiency and generalization. When the assumption fails, the
+layer can struggle even on the training set: in a tightly cropped passport
+photo, a dark circle near the top is an eye while a similar circle lower down is
+a nostril, yet a single translation-equivariant layer must treat both patches
+identically. And while one layer sees only a $(2\Delta + 1)$-wide patch,
+stacking multiple convolutional layers with nonlinearities allows deeper units
+to integrate information across progressively wider regions of the image.
 
 
 ## Convolution and Cross-Correlation
 
-The name comes from mathematics, and it does not quite fit. The
-*convolution* of two functions on the integers is
-$(f * g)(i) = \sum_a f(a) g(i-a)$ (for functions on $\mathbb{R}^d$ an
-integral takes the place of the sum). It measures the overlap between $f$ and
-a copy of $g$ that is flipped and shifted by $i$. For functions on a
-two-dimensional grid it becomes
+Strictly speaking, the name "convolution" in deep learning is a slight misnomer.
+In mathematics, the discrete *convolution* of two 1D functions is
+$(f * g)(i) = \sum_a f(a) g(i-a)$ (with an integral on $\mathbb{R}^d$),
+measuring the overlap between $f$ and a *flipped*, shifted copy of $g$. In two
+dimensions,
 
 $$(f * g)(i, j) = \sum_a\sum_b f(a, b) g(i-a, j-b).$$
 :eqlabel:`eq_2d-conv-discrete`
 
-The layer :eqref:`eq_conv-layer` reads the image at $(i+a, j+b)$ rather than
-at $(i-a, j-b)$. Substituting $-a$ for $a$ and $-b$ for $b$ in its sum shows
-that it computes the convolution of the image with the flipped kernel
+Compare this with :eqref:`eq_conv-layer`, which indexes $\mathbf{X}$ at
+$(i + a, j + b)$ rather than $(i - a, j - b)$. Substituting $-a$ for $a$ and
+$-b$ for $b$ reveals that :eqref:`eq_conv-layer` is the mathematical
+convolution of $\mathbf{X}$ with the flipped kernel
 $[\mathbf{K}']_{a,b} = [\mathbf{K}]_{-a,-b}$:
 
 $$\sum_{a}\sum_{b} [\mathbf{K}]_{a, b}  [\mathbf{X}]_{i+a, j+b} = \sum_{a}\sum_{b} [\mathbf{K}']_{a, b}  [\mathbf{X}]_{i-a, j-b} = (\mathbf{K}' * \mathbf{X})(i, j).$$
 
-The operation without the flip is called *cross-correlation*. Does the
-difference matter? For a learned kernel it does not: a layer that
-cross-correlates with $\mathbf{K}$ and a layer that convolves with
-$\mathbf{K}'$ represent the same functions. Deep learning libraries compute
-cross-correlation and call it convolution, and this book follows that usage.
+The unflipped operation is properly called *cross-correlation*. Because CNN
+kernels are learned from data, the distinction has no effect on expressive
+power: a layer that cross-correlates with $\mathbf{K}$ learns the exact same
+family of functions as one that convolves with $\mathbf{K}'$. Deep learning
+frameworks compute cross-correlation and call it convolution, and we follow
+that standard convention throughout this book.
 
 
 ## Channels
 :label:`subsec_why-conv-channels`
 
-So far the input and the hidden representation were single matrices. A color
-image has three values per pixel, its red, green, and blue intensities. It is
-therefore a third-order tensor $\mathsf{X}$ of shape 3 × height × width,
-with entries $[\mathsf{X}]_{c,i,j}$. The first axis is the *channel* axis,
-and the other two are spatial, so every location carries a vector of values.
-A kernel for such an input has one weight for every input channel and every
-offset, and the hidden unit at $(i, j)$ sums over all input channels and
-over the window.
+So far we treated both inputs and hidden maps as single grayscale grids. Real
+color photographs have three intensity values per pixel—red, green, and blue—so
+an image is a third-order tensor $\mathsf{X}$ of shape
+$3 \times \textrm{height} \times \textrm{width}$ with entries
+$[\mathsf{X}]_{c,i,j}$. The leading *channel* axis attaches a feature vector to
+every spatial pixel, and a kernel sums over both the local spatial window and
+all input channels.
 
-One kernel produces one map of responses and detects one kind of pattern. A
-kernel that matches Waldo's appearance yields a map that peaks where he
-stands (:numref:`fig_waldo_mask`). A useful layer detects many patterns at
-once: edges in different directions, textures, colors. The hidden
-representation therefore becomes a third-order tensor $\mathsf{H}$ as well, a
-stack of maps with one *output channel* per pattern. Each output channel $o$
-has its own kernel and its own bias $u_o$, which gives the kernel a fourth
-index:
+Just as importantly, a single kernel produces only a single response map—like
+the Waldo score map in :numref:`fig_waldo_mask`—capturing just one visual
+pattern. Rich visual representations require detecting many patterns in
+parallel (oriented edges, corners, color contrasts, textures), so the hidden
+representation $\mathsf{H}$ also becomes a third-order tensor stacked along an
+*output channel* axis. Each output channel $o$ has its own learned kernel slice
+and bias $u_o$, turning $\mathsf{K}$ into a fourth-order tensor:
 
 $$[\mathsf{H}]_{o,i,j} = u_o + \sum_c \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathsf{K}]_{o, c, a, b} [\mathsf{X}]_{c, i+a, j+b}.$$
 :eqlabel:`eq_conv-layer-channels`
 
-Here $c$ runs over the input channels and $o$ names the output channel. We
-write the channel indices first, the output channel before the input channel,
-and keep this order for the rest of the chapter. Each output channel is a
-spatial map of one learned feature, which is why the channels of a hidden
-representation are also called *feature maps*. The next layer takes the whole
-stack as its input. With $c_\textrm{i}$ input channels
-and $c_\textrm{o}$ output channels the layer has
-$(2\Delta+1)^2 c_\textrm{i} c_\textrm{o}$ weights and $c_\textrm{o}$ biases.
-A layer with a $3 \times 3$ kernel from an RGB image to 64 channels has
-$9 \cdot 3 \cdot 64 + 64 = 1{,}792$ parameters, whatever the size of the
-image.
+Here $c$ indexes input channels and $o$ indexes output channels; we keep this
+output-before-input channel convention throughout the chapter. Because each
+output channel maps where a particular learned feature occurs across the grid,
+hidden channels are also called *feature maps*, and the entire stack feeds into
+the next layer. With $c_\textrm{i}$ input channels and $c_\textrm{o}$ output
+channels, the layer requires $(2\Delta+1)^2 c_\textrm{i} c_\textrm{o}$ weights
+and $c_\textrm{o}$ biases. A $3 \times 3$ layer mapping an RGB image to 64
+feature maps therefore has just $9 \cdot 3 \cdot 64 + 64 = 1{,}792$
+parameters—completely independent of the image's resolution!
 
 ![A Waldo detector: the response of a kernel that matches Waldo peaks at his location (image courtesy of William Murphy (Infomatique)).](../img/waldo-mask.jpg)
 :width:`400px`
 :label:`fig_waldo_mask`
 
-Nothing in this derivation depends on the grid having two axes. For the
-samples of an audio signal or the tokens of a text the kernel slides along
-one axis, and for the frames of a video or a medical scan along three.
+Nothing in this derivation is tied to two dimensions: the exact same logic
+yields 1D convolutions sliding across audio samples or text tokens, and 3D
+convolutions sliding across video frames or volumetric medical scans.
 
-Equation :eqref:`eq_conv-layer-channels` is the convolutional layer on which
-the rest of the chapter builds. The derivation was carried out on an infinite
-grid with a single window, and it has left three matters unsettled. A finite
-image has borders, where the window does not fit. Deeper units should see
-more of the image than one window. And the network must eventually turn its
-maps into a single answer, such as whether Waldo is *anywhere* in the scene.
-Before we take these up, we should compute :eqref:`eq_conv-layer` once by
-hand and in code.
+Equation :eqref:`eq_conv-layer-channels` is the foundation for the rest of this
+chapter. Because we derived it on an idealized infinite grid, three practical
+issues remain: handling finite image borders, expanding how much of the image
+deeper units can see, and aggregating spatial feature maps into a single
+image-level decision (like whether Waldo appears *anywhere* in the scene).
+First, however, let's bring :eqref:`eq_conv-layer` to life in code.
 
 ## Summary
 
-Treating an image as an unordered vector makes a fully connected layer
-enormous: mapping a megapixel image to a hidden representation of the same
-size takes $10^{12}$ weights. Two assumptions about images reduce this to a
-few hundred. Translation equivariance forces every location to use the same
-kernel, as we proved for layers of this form on an infinite grid, and
-locality restricts the kernel to a small window. The resulting layer computes
-a cross-correlation, which deep learning calls a convolution, and channels
-let one layer detect many patterns at once. The savings come from restricting
-the function class: a convolutional layer cannot give the same local pattern
-different responses at different locations.
+Flattening an image into an unstructured vector makes dense layers intractably
+large—$10^{12}$ weights to map a megapixel image to an equal-sized hidden grid.
+Two natural assumptions about images collapse that count to a few hundred:
+*translation equivariance* forces every spatial position to share one kernel
+(as proved on the infinite grid), and *locality* restricts that kernel to a
+small window. The resulting layer computes cross-correlation (universally called
+convolution in deep learning), and stacking multiple input and output channels
+lets a single layer detect many visual patterns simultaneously while keeping
+parameter counts independent of image size. Those gains stem directly from
+inductive bias: a convolutional layer trades away arbitrary position-dependent
+mappings for strong generalization on spatially structured data.
 
 ## Exercises
 

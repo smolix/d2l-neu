@@ -1,47 +1,56 @@
 # Computation
 :label:`chap_computation`
 
-So far each model has been a few lines of code: a class with some layers, a
-loss, and a call to `fit`. When we trained the multilayer perceptron of
-:numref:`sec_mlp-implementation`, the framework handed its four parameter
-arrays to the optimizer, kept them on a device of its choosing, and discarded
-them when the notebook closed. We never had to ask how. Once a model grows,
-we have to. Take a language model with 8 billion parameters, to which most
-sections of this chapter return. Its weights alone take 32 GB in the 32-bit
-format we have used so far. Does the model fit in the memory of a GPU? Can
-its training resume after a crash? What if it needs a layer that the library
-lacks?
+So far, every model we have built fit into a handful of lines: a class holding a
+few layers, a loss function, and a call to `fit`. When we trained the multilayer
+perceptron in :numref:`sec_mlp-implementation`, the framework silently handed
+its four parameter arrays to the optimizer, placed them on a device of its
+choosing, and discarded them when the notebook closed. To move fast, we relied
+on the libraries without looking inside them. Once models grow to real-world
+scale, however, we have to peel back the curtain. Consider an 8-billion-parameter
+language model—a running example we return to throughout this chapter. Its
+weights alone consume 32 GB in the 32-bit floating-point format we have used so
+far. Will the model even fit in GPU memory? Can a week-long training run resume
+cleanly after a crash? And what if your architecture calls for a layer that the
+library does not yet provide?
 
-Early neural network programs derived and coded the gradients of each model
-by hand. Around 1990 Léon Bottou and Yann LeCun built their network simulator
-from *modules* instead, each computing its outputs forward and its gradients
-backward, so that a new architecture is a new arrangement of existing
-modules. Torch and then PyTorch kept this design, and every framework in this
-book organizes a model as a tree of modules that own their parameters. The
-optimizer, the initializer, the checkpoint, and the move to a GPU all walk
-this tree. This is the one idea to take from the chapter. Knowing the tree
-lets us change the defaults when they fail, and they do fail: the badly
-initialized network of :numref:`sec_numerical_stability` did not train, and
-a model that is saved incompletely cannot resume its training.
+In the early days of neural networks, practitioners derived and coded the
+gradients of each architecture by hand. Around 1990, Léon Bottou and Yann LeCun
+transformed that workflow by assembling their network simulator out of
+composable *modules*—each computing its outputs in the forward pass and its
+gradients in the backward pass—so that designing a new architecture meant
+rewiring existing building blocks rather than rewriting derivatives from scratch.
+Torch, PyTorch, and every framework in this book follow this same blueprint,
+organizing a model as a tree of modules that own their parameters and buffers.
+The optimizer, initializer, checkpoint saver, and GPU transfer routines all
+operate by walking that tree. Understanding this module tree is the central idea
+of the chapter, moving you from *end user* to *power user*: it lets you override
+defaults whenever they break—whether a poorly initialized network fails to learn
+(:numref:`sec_numerical_stability`) or an incomplete checkpoint fails to resume
+training properly.
 
-The chapter builds a model, then chooses the numbers it computes in, then
-runs it. Building takes four sections: how a model is assembled from modules
-(:numref:`sec_model_construction`), what state it holds and how much memory
-training it needs (:numref:`sec_parameters`), how to set that state before
-training (:numref:`sec_init_param`, which continues the analysis of
-:numref:`sec_numerical_stability`), and how to add a layer that the library
-lacks (:numref:`sec_custom_layer`). :numref:`sec_numerics` is about number
-formats: what a model saves by computing in 16 bits instead of 32, and what
-it can lose without any error message. The last three sections run the model.
-We save it and load weights trained by others (:numref:`sec_read_write`),
-place it on a GPU and account for the memory (:numref:`sec_use_gpu`), and ask
-when two runs of the same code give the same result (:numref:`sec_repro`).
+The chapter unfolds in three stages: constructing a model, choosing its
+numerical precision, and running it reliably. The first four sections cover
+model construction: assembling models from modules and configurations
+(:numref:`sec_model_construction`), inspecting model state and accounting for
+training memory (:numref:`sec_parameters`), initializing parameters—extending
+the analysis of :numref:`sec_numerical_stability` to deep residual networks
+(:numref:`sec_init_param`), and writing custom layers and gradients when library
+primitives fall short (:numref:`sec_custom_layer`). Next, :numref:`sec_numerics`
+examines floating-point formats—what 16-bit mixed precision saves in memory and
+speed, and how small updates can silently vanish if handled carelessly. The
+final three sections bring models into practice: saving, resuming, and safely
+loading pretrained weights (:numref:`sec_read_write`), managing GPUs,
+asynchronous execution, and activation memory (:numref:`sec_use_gpu`), and
+ensuring reproducibility while inspecting live activations and gradients
+(:numref:`sec_repro`).
 
-The chapter introduces no new models and no new datasets, which makes it
-tempting to skip. We advise against that: later chapters rely on it
-throughout. Parts of it are reference material, however, and the sections
-say which of their parts can be read quickly and consulted later. The
-chapter covers one device at a time; training on several devices follows in
+Because this chapter introduces no new architectures or datasets, it can be
+tempting to skim or skip it. Resist that urge: every modeling chapter that
+follows builds directly on these tools. Parts of the chapter double as practical
+reference material, and individual sections note which details you can skim on a
+first pass and revisit as needed. Throughout, we focus on computation on a
+single device, deferring multi-GPU and distributed training to
 :numref:`chap_performance`.
 
 ```toc

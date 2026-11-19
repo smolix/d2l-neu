@@ -3,26 +3,26 @@
 
 Every model in this chapter improved how a fixed-size state is written,
 from gates to selective dynamics to the delta rule, but none of them can
-make the state hold more than its size allows. Does that size limit what a
-model can recall from its context? Consider a user who pastes a table of 64
-product codes and prices into a prompt and asks for the prices of 20 of
-them. A transformer answers such a request by looking back: every earlier
-token is still in its cache, and attention finds the ones that match. A
-model with a fixed-size state has only what it chose to store when the
-tokens went by, before it knew which of them would be asked for. Retrieval
-from the context is a large part of how language models are used, in
-few-shot prompts, in answers grounded in retrieved documents, and in
-editing code, where a programmer may ask for a 2,000-token function to be
-copied with one line changed. This limit therefore matters in practice.
+make the state hold more than its size allows. How much can a state of
+fixed size recall from its context, and when does that matter? Consider a
+user who pastes a table of 64 product codes and prices into a prompt and
+asks for the prices of 20 of them. A transformer answers such a request by
+looking back: every earlier token is still in its cache, and attention
+finds the ones that match. A model with a fixed-size state has only what it
+chose to store when the tokens went by, before it knew which of them would
+be asked for. Retrieval from the context is a large part of how language
+models are used, in few-shot prompts, in answers grounded in retrieved
+documents, and in editing code, where a programmer may ask for a
+2,000-token function to be copied with one line changed.
 
-This section measures the limit and shows the remedy that most recent large
-recurrent models adopt. We first count how much a fixed state can hold. We
-then train four small models on a recall task with a growing number of
-pairs: two built from the recurrent layers of the previous sections, one
-built from attention, and a *hybrid* in which one of its two layers is
-attention. We ask whether this one layer is enough to recall as well as a
-transformer, and what the hybrid saves in memory, by counting that memory
-for models of realistic size.
+The remedy that most recent large recurrent models adopt is modest: keep a
+few attention layers among the recurrent ones. Before we trust it, we want
+to know how much a fixed state can hold, and where a small one should start
+to fail. We then train small models with and without one attention layer,
+on a recall task and on text, and count what a transformer, a recurrent
+model, and a hybrid of production size keep in memory while they generate.
+Since this section closes the chapter, it ends by setting the chapter's
+memories side by side and asking which one to use.
 
 ```{.python .input #hybrids-hybrid-architectures}
 %%tab pytorch
@@ -49,14 +49,15 @@ from d2l import jax as d2l
 
 ### Counting Bits
 
-The simplest limit comes from counting: a state cannot tell apart more
-inputs than it has configurations. A state of $N$ numbers stored with $b$
-bits each can be in at most $2^{Nb}$ different configurations. Suppose a model reads $k$ tokens, each
-drawn from a vocabulary of $V$ tokens, and must later reproduce all of them.
-The $V^k$ possible inputs must then lead to $V^k$ different states, since two
-inputs that lead to the same state receive the same answer. This requires
+Let us start with the crudest argument, which needs nothing but counting: a
+state cannot tell apart more inputs than it has configurations. A state of
+$M$ numbers stored with $b$ bits each can be in at most $2^{Mb}$ different
+configurations. Suppose a model reads $k$ tokens, each drawn from a
+vocabulary of $V$ tokens, and must later reproduce all of them. The $V^k$
+possible inputs must then lead to $V^k$ different states, since two inputs
+that lead to the same state receive the same answer. This requires
 
-$$N b \ge k \log_2 V.$$
+$$M b \ge k \log_2 V.$$
 :eqlabel:`eq_hy-counting`
 
 The state must hold $\log_2 V$ bits per token to be recalled, and the number
@@ -67,142 +68,109 @@ turn this argument into a lower bound on the state size needed to copy, and
 show that small transformers learn to copy strings far longer than
 recurrent models of the same size can.
 
-<!-- WRITER: the run below now draws keys from 128, not 512 (as :numref:`sec_matrix-state`). HY-2 then reads:
-recording which 64 of 128 keys were seen takes log2 C(128, 64) = 124 bits, plus 2 bits for each of the 64 values:
-about 250 bits in all (with 512 keys it would be 402). The recurrent models still have 2 layers x 8 heads x 4 x 4 =
-256 numbers of 32 bits = 8,192 bits, so "many times" stays true. The paragraph "The task below draws its keys from
-512 possible ones, and the recurrent models have 256 numbers of state ..." is false in its numbers and goes with the
-slots. -->
-The bound counts bits that a perfect encoding would use, and it is far from
-tight for the models below. Their two recurrent layers hold 128 numbers
-each, eight heads with a state of $4 \times 4$, so 256 numbers of 32 bits in
-all, many times the 128 bits that 64 values of 2 bits take. A matrix memory
-cannot pack bits like that: it writes by adding outer products and reads
-with a linear map, and the pairs it holds interfere.
-:numref:`sec_matrix-state` showed that after $n$ writes with random unit
-keys of dimension $d_k$, the expected squared read error is $(n-1)/d_k$. A
-trained model chooses its keys and values, however, and it can do much
-better than random ones.
+The bound counts the bits that a perfect encoding would use, and for the
+small recurrent model of this section it is far from tight. Its two Gated
+DeltaNet layers have eight heads each, every head with a $4 \times 4$
+state, so the two layers hold 256 numbers, or 8,192 bits at 32 bits per
+number. We will train it on the associative recall task of
+:numref:`sec_matrix-state`, in which a sequence stores up to 64 pairs, with
+keys drawn from 128 possible ones and values from 4. Every query asks for a
+key that was seen, so a table of 2 bits for each of the 128 possible keys,
+256 bits in all, answers every query, and the 64 values alone need 128
+bits. The state therefore has more than thirty times the bits that the task
+needs. If bits were all that mattered, it would recall every pair. A matrix
+memory, however, is a poor encoder of bits, and the reason is geometric.
 
-### Slots and Overlapping Keys
+### Overlapping Keys
 
-How much better? Suppose that a value needs one number, as a value from a
-small set does. A head with a $d_v \times d_k$ state can then give each key
-a slot of its own: the key's value goes into one row of the state, along a
-key direction orthogonal to those of the other keys assigned to that row.
-Reading with the key returns its value and nothing else. A row has room for
-$d_k$ orthogonal directions, so a state of $N$ numbers has $N$ slots, and a
-model whose task draws keys from at most $N$ possible ones can store any
-pairs without interference. With more possible keys than slots, some row
-must host more keys than it has dimensions, and these keys overlap,
-whatever training does. The next proposition says by how much.
+A matrix memory writes by adding outer products $\mathbf{v}\mathbf{k}^\top$
+and reads with a linear map, so the pairs it holds interfere. As
+:numref:`sec_matrix-state` showed, a read with one unit key returns the
+value stored under it plus the values of all other stored keys, each
+weighted by the overlap of the two keys. For random unit keys of dimension
+$d_k$ the mean squared overlap of two keys is $1/d_k$, and what such a
+memory holds grows with the number of entries of its state, $d_k d_v$ for
+each head.
+
+The delta rule of :numref:`sec_deltanet` does not simply add. It moves the
+memory toward the least-squares fit of the pairs, and for linearly
+independent keys, of which a head holds at most $d_k$, that fit returns
+every value exactly. With more keys than dimensions it cannot. The keys are
+then linearly dependent: some key is a combination of the others, and a
+linear read must return the same combination of their values, whatever value
+was stored under that key. So both write rules let the pairs interfere once
+the keys outnumber the dimensions, and the overlap of the keys says how
+much. A trained model chooses its keys, however. Could it choose them so
+that they hardly overlap?
+
+Not when there are more keys than dimensions. A head of dimension $d_k$ has
+room for only $d_k$ orthogonal keys, and the next proposition says how much
+any larger set of keys must overlap, however it is chosen.
 
 **Proposition.** Let $\mathbf{k}_1, \ldots, \mathbf{k}_m$ be unit vectors
-in $\mathbb{R}^d$, with $m > d$. Then the mean of $(\mathbf{k}_i^\top
+in $\mathbb{R}^{d_k}$, with $m > d_k$. Then the mean of $(\mathbf{k}_i^\top
 \mathbf{k}_j)^2$ over all pairs $i \neq j$ is at least
 
-$$\frac{m - d}{d\,(m - 1)}.$$
+$$\frac{m - d_k}{d_k\,(m - 1)}.$$
 :eqlabel:`eq_hy-welch`
 
 **Proof.** Let $\mathbf{G} = \sum_{i=1}^m \mathbf{k}_i \mathbf{k}_i^\top$.
-Its trace is $\sum_i \|\mathbf{k}_i\|^2 = m$, so its $d$ eigenvalues sum to
-$m$, and by the Cauchy–Schwarz inequality their squares sum to at least
-$m^2/d$. The sum of the squared eigenvalues of the symmetric matrix
+Its trace is $\sum_i \|\mathbf{k}_i\|^2 = m$, so its $d_k$ eigenvalues sum
+to $m$, and by the Cauchy–Schwarz inequality their squares sum to at least
+$m^2/d_k$. The sum of the squared eigenvalues of the symmetric matrix
 $\mathbf{G}$ is $\|\mathbf{G}\|_F^2 = \sum_{i,j} (\mathbf{k}_i^\top
 \mathbf{k}_j)^2$, and the $m$ terms with $i = j$ equal one. The other $m(m -
-1)$ terms therefore sum to at least $m^2/d - m$. $\blacksquare$
+1)$ terms therefore sum to at least $m^2/d_k - m$. $\blacksquare$
 
-This is a bound of :citet:`Welch.1974`. For $m \gg d$ it approaches $1/d$,
-the mean squared overlap of random unit keys in the proof of
-:eqref:`eq_ms-capacity-law`. When a row hosts $m > d$ possible keys, a read
-of one of them picks up the values of the other stored keys of that row,
-as in :eqref:`eq_ms-retrieval-error`, with weights whose mean square is at
-least the bound. The more pairs a sequence stores, the more stored keys
-share a row, and the larger the interference.
+This is a bound of :citet:`Welch.1974`. It is instructive to put in the
+sizes of our models. Sixty-four keys in a head of dimension 4 have a mean
+squared overlap of at least $60/(4 \cdot 63) \approx 0.24$, while random
+keys have $1/4$. Once the keys far outnumber the dimensions, the best keys
+that training can find are hardly better than random ones. In a head of
+dimension 16 the floor drops to $48/(16 \cdot 63) \approx 0.05$. The bound
+grows toward $1/d_k$ as $m$ grows, so a head that stores more pairs than it
+has dimensions reads each of them with interference from the others, and no
+training removes it.
 
-The task below draws its keys from 512 possible ones, and the recurrent
-models have 256 numbers of state, so on average two possible keys share each
-slot. With a few pairs, the stored keys rarely meet in a row; with 64,
-many of them do. We therefore expect the recurrent models to recall nearly
-every pair when there are few, and to lose more and more of them as the
-number of pairs grows, since no training removes the overlap. Attention has
-no such limit, because its cache holds every pair it has read.
+The bound is severe. With 63 other keys, each overlapping the one we read by
+about 0.24 in square on average, an additive read in a head of dimension 4
+picks up far more interference than signal. Yet a read need only pick the
+right one of four values, not reproduce it, and the eight heads of a layer
+each have keys of their own and a slice of every value. The bound does not
+say how a trained network spreads its pairs over heads and layers, so it
+predicts a trend, not a recall rate.
 
-### Associative Recall
-
-To measure recall we use *multi-query associative recall*
-:cite:`Arora.Eyuboglu.Timalsina.ea.2024`. A sequence begins with $n$ pairs,
-each a key token followed by a value token, for distinct keys drawn from
-512 and values drawn from 4. Filler tokens follow, and the sequence ends
-with every key once more, in random order, as a query. At each query, the
-model must output the value that followed that key. Sequences have 256
-tokens, so they hold up to 64 pairs with their queries.
-:citet:`Arora.Eyuboglu.Timalsina.ea.2024` found that this kind of recall
-accounts for most of the gap in perplexity on natural text between attention
-and the gated convolution models they studied. The 512 keys exceed the 256
-slots of the recurrent models; the 4 values let one number hold a value.
-
-<!-- WRITER: the task and its harness now live in :numref:`sec_matrix-state` (`d2l.associative_recall`,
-`d2l.train_recall`, saved there; the old cell `hybrids-associative-recall-1` moved with its id). Restate the task
-here in one sentence with that pointer. Facts of this section's run that differ from the paragraph above: keys
-are drawn from 128, as in :numref:`sec_matrix-state` (`num_keys=128`; with 512 keys the run-to-run spread of the
-larger-state arm was twice as wide, up to 0.18 at 64 pairs, see the results note), values from 4; every sequence is as short as its pairs and queries allow (a multiple of 32 tokens, at most 192, no block
-of filler), so "Filler tokens follow" and "Sequences have 256 tokens" are false. The "slots" sentence goes with
-the slot construction (structure, HY-3). -->
+What should we expect, then, when we train such models? First, recall
+should fall as the number of stored pairs grows, and a state with four
+times the entries should fall later. :numref:`sec_matrix-state` found that
+what gated linear attention holds roughly doubles when its state doubles.
+If the delta rule behaves the same way, a model with four times the state
+should recall 64 pairs about as well as the small one recalls 16. Second, an
+attention layer keeps every pair it reads in its cache, so a model that has
+one should not lose pairs at all, however many there are.
 
 ## Recall with One Attention Layer
 
 ### Four Models
 
-To see whether a single attention layer gives a recurrent model the recall
-of a transformer, we compare a hybrid with models built from one kind of
-layer. All four models are instances of `d2l.SeqLM` with two blocks of
-width 32; only the mixers differ. Two use the recurrent layers of the
-previous sections, gated linear attention (:numref:`sec_matrix-state`) and
-Gated DeltaNet (:numref:`sec_deltanet`), with eight heads, so that keys and
-values have 4 dimensions. The third uses causal softmax attention in both
-blocks, and the fourth, the hybrid, replaces the second of its two Gated
-DeltaNet layers by attention. The attention mixer is computed like the
-multi-head attention of :numref:`chap_attention`, with the fused attention
-function of each framework, behind the same short convolution as the
-recurrent layers, so that the mixers differ only in their memory. The
-attention mixer has no position encoding of its own, like the NoPE layers
-of :numref:`sec_positional-information`, and the convolution gives it all
-the order it needs here: it brings each key into the position of the value
-that follows it, and a query then finds that position by content. Without
-it, two layers of attention with rotary position embeddings
-(:numref:`subsec_pos-rope`) must form an *induction head*, the first
-copying each key into the position after it and the second looking the
-query up there. They learn this too, but only after a plateau of a few
-thousand training steps whose length varies from run to run, and some runs
-are still on it at the end of training. Attention gets two heads of
-dimension 16: its cache grows with the context and has no slots to count,
-so the size of its heads does not change the comparison.
+We use the multi-query associative recall task of
+:numref:`sec_matrix-state`. A sequence holds $n$ pairs, each a key token
+followed by a value token, with distinct keys drawn from 128 and values
+from 4. Then every key appears once more, in random order, as a query, and
+the answer is the value that followed it; guessing is right one time in
+four. All four models are `d2l.SeqLM` with two blocks of width 32, and they
+differ only in their mixers. Two use Gated DeltaNet in both blocks, either
+with 8 heads of size 4, a state of $8 \cdot 4^2 = 128$ entries per layer, or
+with 2 heads of size 16, four times the state at about the same parameter
+count. The third uses attention in both blocks, and the fourth, the hybrid,
+uses Gated DeltaNet and then attention.
 
-<!-- WRITER: the four models are now: Gated DeltaNet (two blocks, 8 heads of size 4: 8 x 4 x 4 = 128 entries of
-state per layer, 37,989 parameters), attention (two blocks, 34,821), the hybrid (Gated DeltaNet, then attention;
-36,405), and Gated DeltaNet with four times the state (2 heads of size 16: 2 x 16 x 16 = 512 entries per layer,
-37,197 parameters, so the state grows at an equal parameter count, as in the head-size experiment of
-:numref:`sec_matrix-state`). Gated linear attention is no longer an arm (:numref:`sec_deltanet` compares the write
-rules); every sentence about it, and the plateau/induction-head passage (HY-6), goes. The attention mixer is
-`d2l.AttentionMixer(32, num_heads=2, conv_width=4, rope=False)` of :numref:`sec_lstm`: the old `ConvAttention`
-(a short convolution over queries, keys and values, then fused causal attention, no position encoding). So the
-NoPE sentence stays true. Measured reason for rope=False (one clause at most, or a code comment): with rotary
-positions the two-layer attention model stayed on a plateau (about 0.4 recall at 64 pairs) in 3 of 18 PyTorch dev
-runs; without them in 0 of 10, and in every run since. -->
-
-<!-- WRITER: the decay gates now start with memories of 256 to 2,048 steps, as in
-:numref:`sec_matrix-state` (longer than any sequence, at most 192 tokens); "must survive up to 256 steps" and "64 to
-1,024" are false. The last sentence of this paragraph (shorter start, gated linear attention markedly slower) is a
-claim no cell prints: cut it. `recall_model(layout, num_heads=8, conv_width=4)`: one letter per block, G or A;
-num_heads sets the Gated DeltaNet head count (2 gives the larger state); conv_width=1 is the ablation below. -->
-A string describes the mixers of a model, one letter per block. The pairs
-must survive up to 256 steps, so the decay gates of the recurrent layers
-start with memories of 64 to 1,024 steps rather than the 4 to 256 steps of
-:numref:`sec_matrix-state`. As the long-range recall experiment of
-:numref:`sec_ssm` showed, memories that start short are slow to learn to
-last: with the shorter start, the recurrent models below learn the task
-more slowly, gated linear attention markedly so.
+The attention mixer is `d2l.AttentionMixer` of :numref:`sec_lstm`, placed
+behind the same short convolution as the recurrent layers and without a
+position encoding. We return to the convolution once the results are in.
+In `recall_model` a string names the mixers, one letter per block. As in
+:numref:`sec_matrix-state`, the decays of the recurrent layers start with
+memories of 256 to 2,048 steps, longer than any sequence of the task.
 
 ```{.python .input #hybrids-four-models-2}
 %%tab pytorch
@@ -237,21 +205,14 @@ def recall_model(layout, num_heads=8, conv_width=4, num_hiddens=32):
 
 ### The Recall Sweep
 
-Each model is trained once on fresh batches whose number of pairs cycles
-through 4, 8, 16, 32, and 64, with the loss computed at the query positions
-only by `d2l.train_queries` of :numref:`subsec_delayed-recall`, and is then
-tested separately at each number of pairs. Training uses AdamW for 16,000
-steps of 256 sequences, with gradients clipped to norm 1 and the learning
-rate of :numref:`sec_batch_norm` (`d2l.cosine_warmup`): a linear warmup
-over 800 steps to 0.006, then a half-cosine down to zero.
-
-<!-- WRITER: training is now `d2l.train_recall` with its defaults (:numref:`sec_matrix-state`): 2,000 updates of
-256 sequences whose number of pairs cycles through 4, 8, 16, 32, 64, AdamW, gradients clipped to norm 1, peak
-learning rate 0.01 reached after a tenth of the updates, then a half-cosine (`d2l.cosine_warmup`: cite
-:eqref:`eq_cosine_warmup`, defined in `chapter_convolutional-modern/alexnet.md`, not `sec_batch_norm`, HY-8);
-recall is measured on 1,024 new sequences per load. Each of the four models is trained twice, from fresh weights
-on fresh data, and the table prints both runs. "16,000 steps", "800 steps", "0.006" are false. Cost on one RTX 4090:
-the sweep and the ablation take about 8 minutes in either framework; the whole notebook 10 to 13. -->
+`d2l.train_recall` trains each model as in :numref:`sec_matrix-state`:
+2,000 updates of 256 sequences whose number of pairs cycles through 4, 8,
+16, 32, and 64, with AdamW and the schedule `d2l.cosine_warmup` of
+:numref:`sec_alexnet`, whose learning rate rises linearly over the first
+tenth of the updates and then falls along a half-cosine. It then measures
+recall at each number of pairs on 1,024 new sequences. Each model is
+trained twice, from fresh weights on fresh data, and the table prints both
+runs.
 
 ```{.python .input #hybrids-the-recall-sweep-2}
 %%tab pytorch, jax
@@ -280,53 +241,53 @@ for name, r in runs.items():
     print(f'{name:25s}', ''.join(f'{a:6.2f}/{b:.2f}' for a, b in r.T))
 ```
 
-With 4 pairs, all four models recall nearly every value. Beyond that Gated
-DeltaNet loses pairs, and the more pairs a sequence holds, the more it
-loses: it recalls about nine tenths of 32 pairs and about three quarters
-of 64. Gated linear attention recalls fewer from 8 pairs on, and its curve
-varies more from run to run. It first sits on a plateau, recalling about
-half of 4 pairs, for a number of training steps that varies from a few
-thousand to more than ten thousand, and only then learns the task. The
-reference implementation of the layer, from the flash-linear-attention
-library of its authors :cite:`Yang.Wang.Shen.ea.2024`, trained on the same
-task with the same recipe, sits on the same plateau for as long, in one of
-three runs for all 16,000 steps, so the plateau belongs to the model and
-not to our code. The hybrid recalls every pair at every load, although one
-of its two layers is recurrent, and so does attention in almost every run.
-The attention layer of the hybrid looks up the pairs that the recurrent
-state cannot hold.
+Both predictions hold. With 4 pairs every model recalls nearly every
+value. From there Gated DeltaNet loses pairs as the load grows, to about
+two thirds of 32 pairs and about half of 64. The model with four times the
+state falls later: it recalls 0.91 to 0.95 of 64 pairs, about as well as
+the small state recalls 8 to 16, and every one of its runs is above every
+run of the small state from 16 pairs on. Four times the entries hold at
+least four times the pairs, so what :numref:`sec_matrix-state` found for
+gated linear attention holds for the delta rule as well. The two runs of
+each model differ far less than the models do.
 
-The recurrent curves still rise slowly at the end of training. Trained
-twice as long, Gated DeltaNet recalls about 95% of 32 pairs and 80 to 90%
-of 64, and gated linear attention still recalls fewer. With keys drawn
-from 128 possible ones, fewer than the slots, the same long training
-brings Gated DeltaNet to 90% or more of 64 pairs; the gap to the task with 512 keys is the part of the
-curve that the slots explain. The delta rule pays off as the regression
-view of :numref:`sec_deltanet` suggests. An additive memory returns, with
-every value it reads, the values of all stored keys that overlap the query,
-while the corrected writes fit the stored pairs and remove much of that
-interference. Keys that share a slot overlap, so the correction matters
-most when the slots fill up.
+The hybrid recalls every pair at every load in every run, and so does
+attention behind the same convolution. Attention was built to keep every
+pair, so its row is no surprise. The hybrid's row is the result that
+matters: one attention layer in place of the second recurrent layer removes
+the fall altogether. That layer can look up every pair, so what the
+recurrent layer loses no longer matters. At these lengths, however, the
+attention layer is not cheap. At the last query of a sequence with 64 pairs
+its cache holds the keys and values of 192 tokens, 12,288 numbers, 24 times
+the larger recurrent state. A little attention saves memory only when the
+context is long and most layers are recurrent, which is the count we make at
+the end of this section.
 
-<!-- WRITER: results, replacing the two paragraphs above (they read a one-run 16,000-step table with a
-gated-linear-attention row; the plateau, reference-implementation, doubled-training, 128-key and "delta rule pays
-off" passages report runs no cell prints: cut, HY-9 to HY-11). Measured (two runs per cell; three notebook executions per tab and dev runs of the
-same code and settings: 12 runs per arm for Gated DeltaNet and its 4x arm, 8 to 10 for the others; chance 0.25),
-recall at 4 / 8 / 16 / 32 / 64 pairs: Gated DeltaNet 0.98-1.00 / 0.91-0.96 / 0.74-0.86 / 0.58-0.68 / 0.47-0.55;
-Gated DeltaNet with 4x state 1.00 / 1.00 / 0.99-1.00 / 0.96-1.00 / 0.86-0.99; attention 1.00 at every load in every
-run; hybrid 1.00 at every load in every run. Two runs of one cell differ by at most 0.08 for Gated DeltaNet and 0.11
-for the 4x arm (both at 64 pairs). Firm lessons, both tabs: (1) the fixed state loses pairs as the load grows, from
-nearly all of 4 to about half of 64; (2) one attention layer in place of the second Gated DeltaNet layer removes the
-fall entirely (the hybrid equals attention: every pair, every load, every run); (3) four times the state, at the same
-parameter count, moves the curve right: at 64 pairs 0.86 to 0.99 against 0.47 to 0.55, every 4x run above every
-base run from 16 pairs on, and in each cell by more than three times the larger two-run range (the acceptance test:
-in the last executions 0.96/0.99 against 0.55/0.47 in PyTorch, 0.93/0.98 against 0.51/0.50 in JAX). Prediction
-from :numref:`sec_matrix-state`'s capacity in entries: the 4x arm at 64 pairs (about 0.95) recalls about as well
-as the base arm at 8 to 16 pairs (0.91 to 0.96, 0.74 to 0.86), so "the curve moves right roughly in proportion to
-the state" holds loosely; do not claim an exact factor. Say plainly that the models are tiny on purpose (a state of
-256 numbers) so that 64 pairs overload them; the experiment shows the mechanism, not the size of the effect in a
-real model (evidence at scale: :citet:`Waleffe.Byeon.Riach.ea.2024`). "Attention behind the same convolution"
-once in this paragraph (HY-7): it is not the transformer of chapter 11. No sentence on the write rule (HY-11). -->
+These models are small on purpose. A matrix memory of 256 numbers is
+overloaded by 64 pairs, while a large model has about a million numbers of
+state in each layer and meets its limit only at far longer contexts. The
+experiment therefore shows the mechanism, not the size of the effect in a
+real model.
+That evidence comes from :citet:`Waleffe.Byeon.Riach.ea.2024`, who trained
+transformers, Mamba models, and hybrids with billions of parameters on the
+same data: the pure Mamba models fell behind the transformer on tasks that
+copy from the context or look things up in it, and a hybrid with a small
+fraction of attention layers matched or exceeded the transformer.
+
+### The Short Convolution
+
+Every mixer in the sweep reads its input through a short causal
+convolution, and the attention layer was given one deliberately. A value
+arrives one token after its key, but a matrix memory writes one key and
+one value per position. Without a view of the token before it, the
+position of a value does not know which key it belongs to. A convolution of
+width 4 lets each position draw on the three tokens before it, so one write
+can store a key together with its value. Attention gains the same thing:
+the convolution brings each key into the position of the value that follows
+it, a query then finds that position by content, and the lookup needs no
+position encoding. To see how much this matters, we train the Gated
+DeltaNet model with a convolution of width 1, which only scales and shifts
+each channel and mixes nothing across steps.
 
 ```{.python .input #hybrids-the-recall-sweep-4}
 %%tab pytorch, jax
@@ -338,49 +299,36 @@ for name, (a, b) in [('Gated DeltaNet', recall['Gated DeltaNet']),
     print(f'{name:25s}', ''.join(f'{a[n]:6.2f}/{b[n]:.2f}' for n in pairs))
 ```
 
-<!-- WRITER: the ablation cell (new, S2/HY-12): the same Gated DeltaNet model with a convolution of width 1, which
-only scales each channel and so mixes nothing across steps; two runs, printed beside the two runs of the sweep.
-Measured (same runs as the sweep, both tabs; 8 runs without the convolution), recall at 4 / 8 / 16 / 32
-/ 64 pairs without the convolution: 0.65-0.90 / 0.54-0.74 / 0.45-0.58 / 0.39-0.46 / 0.35-0.40, against Gated
-DeltaNet 0.98-1.00 / 0.91-0.96 / 0.74-0.86 / 0.58-0.68 / 0.47-0.55. Every run without the convolution is below every
-run with it at every load; the gap is largest at few pairs (4: about 0.1 to 0.35; 64: about 0.1). Its two runs can
-differ by up to 0.23 at 4 pairs (JAX dev 0.65/0.88), so quote a range, not a value. Last executions: PyTorch
-0.85/0.89 ... 0.38/0.40, JAX 0.79/0.80 ... 0.37/0.36. The paragraph below keeps its judgment and the mechanism (the value follows its key one token
-later; the convolution brings the two together for one write); everything after "Gated DeltaNet learns more slowly
-and recalls fewer pairs at every load" (gated linear attention, unit keys, output gate, SiLU) reports runs no cell
-prints: cut, or one clause on unit keys with its reason from :numref:`sec_deltanet`. "learns more slowly" is not
-measured; "recalls fewer pairs at every load" is. -->
+Every run without the convolution recalls fewer pairs than every run with
+it, at every load, by 0.06 to 0.36, and the difference is largest at 8 to
+16 pairs. Even 4 pairs, which fit easily into the state, are no longer
+recalled reliably. The model still does better than guessing at every
+load, so its two layers find some other way to bring a value together with
+its key, but not one as good as a convolution over four tokens. A memory
+can hold only what reaches it.
 
-The parts around the memory matter as much as the write rule. The value
-follows its key one token later, and the short convolution is what brings
-the two together for a single write. Without it, gated linear attention
-recalls barely more than chance even with 4 pairs, which fit easily into
-its state, and Gated DeltaNet learns more slowly and recalls fewer pairs at
-every load. Without unit keys, Gated DeltaNet does not learn the task at
-all. Without the output gate, Gated DeltaNet recalls several points less at
-16 pairs and more; for gated linear attention the change stays within its
-spread from run to run. The SiLU after the convolution is the exception:
-it makes no difference on text, and on this task it costs Gated DeltaNet a
-few points at the highest loads.
+## Language Modeling at Equal Size
 
-### Language Modeling
+Does the difference show on ordinary text? In :numref:`sec_lstm` and
+:numref:`sec_mamba`, a stack of attention layers ended behind every
+recurrent stack of the same width and depth. The recall sweep suggests
+where attention might win instead: if predicting a byte requires a pair
+stored long before, attention and the hybrid should gain at the late
+positions of a window, where more has been stored. We therefore use the
+text benchmark of :numref:`sec_lstm`, byte-level WikiText-103 in windows of
+128 bytes, and look at the loss by position in the window. Each model
+trains for 1,000 steps of `d2l.train_text` on 64 windows per step, and
+`d2l.text_table` reports the validation loss in nats per byte over the
+whole window and at bytes 0 to 15, 16 to 63, and 64 to 127.
 
-<!-- WRITER: setup now (the Penn Treebank / `d2l.TinyLM` run is retired, S4/HY-7): the text benchmark of
-:numref:`sec_lstm` (byte-level WikiText-103, windows of 128 bytes, 64 per step, `d2l.train_text`: LMOptimizer at
-peak 2e-3 for 1,000 steps), `d2l.SeqLM` of width 256 with four blocks, three models that differ only in their
-mixers: Gated DeltaNet in all four blocks (4 heads of size 64), the hybrid (Gated DeltaNet in the first three,
-attention in the fourth), and attention in all four (`d2l.AttentionMixer(256, num_heads=8)`, with rotary positions,
-the attention model of :numref:`sec_lstm` and :numref:`sec_mamba`). Two runs each; the table prints parameters,
-validation loss in nats per byte, the loss at positions 0-15, 16-63 and 64-127, and ms per training step. The
-question from :numref:`sec_mamba`: on real text, does the fixed state fall behind, and does one attention layer
-close the gap? -->
-Does the difference show on ordinary text? We train two more models on the
-character-level Penn Treebank with the recipe of :numref:`sec_lstm`: the
-transformer `d2l.TinyLM` of :numref:`sec_test_models`, two blocks of width 128
-with learned position embeddings, and a hybrid `d2l.SeqLM` of the same width
-whose first block is Gated DeltaNet and second block attention, as in the
-recall experiment. With this recipe, Gated DeltaNet alone reached a perplexity
-of about 3.1.
+All three models are `d2l.SeqLM` with four blocks of width 256, and their
+parameter counts lie within a tenth of each other. One has Gated DeltaNet
+in every block, with 4 heads of size 64, and the hybrid replaces the
+fourth of these by attention. The third is the attention model of
+:numref:`sec_lstm`, with 8 heads and rotary positions in every block.
+These attention layers, the hybrid's included, have no short convolution:
+they are the layers that the earlier sections trained on this benchmark,
+not those of the recall sweep.
 
 ```{.python .input #hybrids-language-modeling-3}
 %%tab pytorch, jax
@@ -417,39 +365,47 @@ arms = {'Gated DeltaNet': ('GGGG', 256), 'hybrid': ('GGGA', 256),
 trained = d2l.text_table(text_model, arms, data)
 ```
 
-<!-- WRITER: reading, replacing the paragraph below (its perplexities and the TinyLM comparison are gone; "A
-comparison by perplexity alone can therefore miss what a model cannot recall" is not supported by this run: cut,
-or keep as the motivation of Exercise 6). Measured (two runs per cell, three notebook executions per tab plus a dev run in
-JAX; width 256, four blocks, 1,000 steps of 64 x 128 bytes): Gated DeltaNet 3,573,536 parameters, 1.325 to 1.331
-nats per byte; hybrid 3,501,848, 1.329 to 1.335; attention 3,286,784, 1.377 to 1.386. Bands 0-15 / 16-63 / 64-127:
-Gated DeltaNet 1.518-1.523 / 1.299-1.305 / 1.297-1.303; hybrid 1.523-1.528 / 1.303-1.310 / 1.300-1.307; attention
-1.554-1.562 / 1.353-1.362 / 1.350-1.360. Both tabs agree. Firm lessons: (1) on 128-byte windows the fixed state does
-not fall behind: Gated DeltaNet is about 0.05 nats per byte ahead of attention at the same width and depth, in every
-band, more than five times any two-run range (at most 0.008); (2) one attention layer in four changes the loss by
-less than 0.01 (the hybrid is 0.002 to 0.008 behind Gated DeltaNet in every pair of runs, with overlapping ranges
-over all runs: do not claim it is worse, say it is the same to within 0.01); (3) no model gains after byte 16
-(16-63 and 64-127 within 0.004 for each). So the recall gap of the sweep does not show in the average loss on
-128-byte windows, where few predictions need a pair stored long before; Exercise 6 measures where text repeats.
-Place: the other mixers of the chapter on this benchmark, from their sections: LSTM 1.29 to 1.30, GRU about 1.30,
-Mamba 1.295 to 1.299, minGRU and RNN about 1.35, attention 1.38 (:numref:`sec_lstm`, :numref:`sec_mamba`). Cost per
-training step (tab notes only, never compared across tabs in the shared text): PyTorch (eager) Gated DeltaNet 50 to
-52 ms, hybrid 42 to 45, attention 20 to 22; JAX (jitted) 17 to 18, 14 to 15, 9. In both tabs the Gated DeltaNet
-step costs about two to two and a half times the attention step at this length, and the hybrid sits between. -->
-The hybrid reaches a perplexity of about 3.15, close to Gated DeltaNet
-alone, and the transformer between about 3.25 and 3.4, depending on the
-run. Language modeling at this scale barely
-registers the difference in recall, because predicting the next character
-of ordinary text rarely requires looking up a pair stored long before. A
-comparison by perplexity alone can therefore miss what a model cannot
-recall.
+Gated DeltaNet ends 0.05 to 0.06 nats per byte below attention over the
+whole window. The gap is smallest over the first 16 bytes, about 0.04, and
+about 0.06 from byte 16 to the end, far more than the two runs of either
+model differ. Attention does not catch up at the late positions, where the
+prediction said it should. The hybrid ends within 0.01 of Gated DeltaNet
+in every band: on this benchmark one attention layer in four changes
+little. Nor do the late positions help any model much: every model's loss
+falls by at most 0.004 from bytes 16 to 63 to bytes 64 to 127. On these
+windows the next byte depends on the bytes just before it, and almost
+never on a pair stored a hundred bytes earlier. With larger models and
+longer contexts, :citet:`Arora.Eyuboglu.Timalsina.ea.2024` traced most of
+the gap in perplexity between attention and the gated convolution models
+they studied to recall of this kind. On our windows of 128 bytes there is
+no such gap to explain. Attention is the model that is behind.
+
+Gated DeltaNet, the model that recalls the fewest pairs, thus has the
+lowest loss on text of the three. A low average loss on short windows is
+no evidence that a model can look things up. Where text does repeat
+itself, as with a name or a number seen earlier in the window, the
+difference should appear, and an exercise measures it there.
+
+At this length the recurrent model does not train faster either. A Gated
+DeltaNet step takes about two to two and a half times as long as an
+attention step (the last column of the table), and the hybrid lies between
+them. The reason is most likely the number of separate GPU operations, not
+the amount of arithmetic: at 128 tokens the quadratic work of attention is
+small and runs in one fused kernel, while the chunked delta rule runs a
+sequence of small matrix products and a triangular solve. The advantages of
+a fixed state lie elsewhere: at long contexts, where the work of attention
+per token grows with the length (:numref:`subsec_linear-recurrence-cost`),
+and above all in the memory it needs while it generates.
 
 ## Inference Memory
 
 During generation a model keeps, for every sequence it is serving, what it
-needs to compute the next token. For an attention layer this is the
-key–value cache of :numref:`sec_kv-cache`: one key and one value per past
-token for each of the $n_\textrm{kv}$ key–value heads of dimension
-$d_\textrm{head}$, that is,
+needs to compute the next token. This memory per sequence decides how many
+sequences a GPU can serve at once, and because generating a token reads all
+of it from memory, it also sets how fast each token is generated. For an
+attention layer it is the key–value cache of :numref:`sec_kv-cache`: one
+key and one value per past token for each of the $n_\textrm{kv}$ key–value
+heads of dimension $d_\textrm{head}$, that is,
 
 $$2 \cdot n_\textrm{kv} \cdot d_\textrm{head} \cdot (\textrm{bytes per number})$$
 
@@ -458,76 +414,109 @@ of dimension 128 in 16-bit numbers, that is 4 KB per token. A recurrent
 layer keeps its state, whose size does not depend on the length: a Mamba-2
 layer in a model of width 4,096 has 8,192 channels with 128 states each,
 about one million numbers, or 2 MB. The attention layer's cache overtakes
-this state after about 500 tokens, and at 128,000 tokens it holds 512 MB,
-256 times as much.
+this state after about 500 tokens, and at a context of 128K tokens it holds
+512 MB, 256 times as much.
 
 Only the attention layers of a hybrid have caches that grow, so its memory
 per sequence is the transformer's times the fraction of layers that are
-attention, plus a constant. This is the accounting of windowed layers
-interleaved with global ones in :numref:`sec_windowed-linear-attention`, with a
-state of fixed size in place of each window's cache.
-:numref:`fig_hy-cache` shows the effect for a model of 32 layers. Jamba
-:cite:`Lieber.Lenz.Bata.ea.2024`, with 4 attention layers among 32, reports a cache of 4 GB at a context of 256,000 tokens,
-against 32 GB for a transformer of similar size. Memory per sequence decides
-how many sequences a GPU can serve at once, and because generating a token
-reads the whole cache from memory (:numref:`sec_kv-cache`), it also sets
-how fast each token is generated.
+attention, plus a constant. :numref:`sec_windowed-linear-attention` did the
+same sum for windowed attention layers interleaved with global ones; here a
+state of fixed size takes the place of each window's cache.
+:numref:`fig_hy-cache` shows the effect for a model of 32 layers.
+
+Released hybrids bear this out. Jamba :cite:`Lieber.Lenz.Bata.ea.2024`,
+with 4 attention layers among 32, reports a cache of 4 GB at a context of
+256,000 tokens, against 32 GB for a transformer of similar size. Later
+hybrids build their recurrent layers on the delta rule of
+:numref:`sec_deltanet`: Qwen3-Next :cite:`Qwen.Team.2025` interleaves
+Gated DeltaNet layers with full attention layers, three to one, and Kimi
+Linear :cite:`Kimi.Team.2025b` does the same with a variant of Gated
+DeltaNet whose decay acts on each key coordinate.
 
 ![Memory held per sequence during generation, against context length, for a 32-layer model with grouped-query attention (8 key–value heads of dimension 128) and Mamba-2-sized recurrent states, in 16-bit numbers. A transformer's cache reaches 32 GB at 256K tokens; a purely recurrent model stays at 64 MB at every length; a hybrid with 4 attention layers holds an eighth of the transformer's cache.](../img/mdl-modernrnn-hybrid-cache.svg)
 :label:`fig_hy-cache`
 
-The chapter asked how to build a memory of fixed size that trains in
-parallel, forgets the right things, stores many associations, and can
-overwrite them. Its answers, gated linear recurrences computed by scans,
-selective state space models, matrix memories trained in chunks, and the
-delta rule, make the fixed state as useful as possible. The answer of
-practice adds a small memory that grows: a few attention layers, which
-retrieve exactly what the fixed state cannot hold. How few, where to place
-them, and whether some of them can attend to a window of recent tokens
-(:numref:`sec_windowed-linear-attention`) instead of the whole context are
-questions that current models answer differently;
-:numref:`sec_ssm-further-reading` lists some of their choices.
+## The Chapter's Memories Compared
+:label:`subsec_hy-memories`
+
+:numref:`tab_hy-memories` sets the memories of this chapter side by side,
+with attention and the hybrid for comparison. For each it gives what a
+layer keeps while it generates, how it is trained, what the synthetic task
+of its section showed, and its loss on the text benchmark of
+:numref:`sec_lstm`, where every model has four blocks of width $d = 256$.
+The table writes $N$ for the states per channel of S4D and Mamba,
+$H = 2d$ for the channels of a Mamba layer, $h$ for the number of heads,
+and $T$ for the number of tokens read so far. Losses from different
+sections that differ by less than about 0.02 are within the spread between
+executions of the same model.
+
+:The memories of this chapter. Text: validation loss in nats per byte on byte-level WikiText-103, windows of 128 bytes, two runs per model; parameters in parentheses.
+:label:`tab_hy-memories`
+
+| Memory | State per layer at generation | Training | Synthetic task | Text |
+| :-- | :-- | :-- | :-- | :-- |
+| LSTM, GRU | $2d$, $d$ | one step after another | gates that start near one keep a symbol for 200 steps; started at one half, they lose it by 50 | 1.29 to 1.30 (4.3 M, 3.8 M) |
+| minGRU | $d$ | scan | at chance after 100 steps; with the timescales of S4D, recalls after 1,000 | 1.34 to 1.35 (2.8 M) |
+| S4D | $dN$ | convolution or scan | recalls after 1,000 steps; at most one in five on selective copying | not trained |
+| Mamba | $HN$ | scan | 0.99 to 1.00 on selective copying | 1.30 (4.0 M) |
+| gated linear attention | $d^2/h$ | chunks | about half of 64 pairs with 128 entries, more with 512 | not trained |
+| Gated DeltaNet | $d^2/h$ | chunks with a triangular solve | 0.95 to 0.99 of rewritten keys, against 0.86 to 0.89 for gated linear attention | 1.32 to 1.33 (3.6 M) |
+| attention | $2dT$ | fused attention over all positions | every pair at every load | 1.37 to 1.39 (3.3 M) |
+| hybrid | recurrent states plus $2dT$ per attention layer | both | every pair, with attention in one of two blocks | 1.33 to 1.34 (3.5 M) |
+
+Read down the last column, and the chapter's newest layers do not win: on
+windows of 128 bytes no layer beats the LSTM of 1997, Mamba is level with
+it, and Gated DeltaNet is about 0.03 behind. Read across the rows, and the
+reason for the newer layers appears. They train in parallel, by scans or by
+chunks of matrix products, and the matrix states of gated linear attention
+and Gated DeltaNet hold pairs that can be looked up and, with the delta
+rule, rewritten. A benchmark of short windows tests neither.
+
+Which memory, then, should one use? For a model that generates long texts,
+the answer of practice is a hybrid: delta-rule layers for most of the
+depth, with one attention layer in every four to eight, so that the cache
+is a fraction of a transformer's and recall stays close to a transformer's.
+For a small model that processes a stream, such as speech or sensor
+readings, where nothing from the distant past has to be reproduced exactly,
+a gated recurrence still serves well, and its state is all the memory it
+needs. What nobody knows yet is how few attention layers are enough, where
+in the stack they belong, and whether attention over a window of recent
+tokens (:numref:`sec_windowed-linear-attention`) can replace some of them.
+Released models answer these questions differently
+(:numref:`sec_ssm-further-reading`).
 
 ## Summary
 
-<!-- WRITER: rewrite from the new results (structure: no slots). False now: "every key needs a slot of its own",
-"about three quarters of 64" (Gated DeltaNet recalls about half of 64 pairs at this budget), the gated-linear-attention
-sentence, "both curves still rise with longer training" (no cell prints it), "Language-modeling perplexity barely
-shows the difference" (replace with the text result). True and measured: the hybrid and attention recall every pair
-at every load in every run; four times the state at an equal parameter count recalls more at every load from 8
-pairs on; without the short convolution Gated DeltaNet recalls fewer pairs at every load. -->
-
-A state of fixed size holds a fixed number of bits, so a recurrent model can
-recall only as many items from its context as its state can store, while an
-attention layer keeps every token and can always look back. A matrix memory,
-which writes by adding outer products and reads linearly, holds at best about
-one value per number of its state: every key needs a slot of its own. When
-the task can ask about more keys than the state has slots, keys that share a
-slot overlap, by at least Welch's bound, and recall falls as the number of
-stored pairs grows. On multi-query associative recall, Gated DeltaNet
-recalls nearly every pair when there are few and about three quarters of 64,
-and gated linear attention, whose writes only add, recalls fewer; both
-curves still rise with longer training. Without the short convolution,
-which brings each key together with its value, both recall far less.
-A hybrid whose second layer is attention recalls every pair, and so does
-attention in almost every run.
-Language-modeling perplexity barely shows the difference. During generation
-only the attention layers keep a cache that grows with the context, so a
-hybrid needs the transformer's cache times its fraction of attention layers,
-an eighth for a model with one attention layer in eight. Most recent large
-models with recurrent layers are hybrids for this reason.
+A state of fixed size holds a fixed number of bits, so a recurrent model
+can recall only as many items from its context as its state can store,
+while an attention layer keeps every token and can look back. A matrix
+memory falls far short even of this count. By Welch's bound, more keys than
+dimensions must overlap however they are chosen, and overlapping keys make
+the stored pairs interfere, under additive writes and under the delta rule
+alike. On multi-query associative recall, a small Gated DeltaNet model
+recalls about half of 64 pairs, and four times the entries hold at least
+four times the pairs. A hybrid with attention in place of the second
+recurrent layer recalls every pair at every load, as attention does.
+Without the short convolution that brings each key to its value, the
+recurrent model recalls fewer pairs at every load. On windows of 128 bytes
+of text none of this shows: Gated DeltaNet is ahead of attention, and the
+hybrid is within 0.01 of it. During generation only the attention layers
+keep a cache that grows with the context, so a hybrid needs the
+transformer's cache times its fraction of attention layers, an eighth for
+one attention layer in eight, plus a constant. Most recent large models
+with recurrent layers are hybrids built this way.
 
 ## Exercises
 
 1. **The counting bound.** A model reads a string of $k$ tokens from a
    vocabulary of $V$ and must then reproduce it.
     1. Prove :eqref:`eq_hy-counting` for a model whose state between reading
-       and writing has $N$ numbers of $b$ bits and whose output is a
+       and writing has $M$ numbers of $b$ bits and whose output is a
        deterministic function of that state.
     1. Suppose instead that the model may output a wrong string with
-       probability $\epsilon$ when the string is drawn uniformly. Show that
-       $Nb \ge (1 - \epsilon)\, k \log_2 V - 1$. (Hint: count the strings
-       that each state can decode correctly.)
+       probability at most $\epsilon$ when the string is drawn uniformly.
+       Show that $Mb \ge k \log_2 V + \log_2(1 - \epsilon)$. (Hint: count
+       the strings that each state can decode correctly.)
     1. How many tokens of a vocabulary of 50,000 can a model with 48 layers
        of Mamba-2 state, 2 MB each in 16-bit numbers, copy at most? Why does
        no model of this size come close in practice?
@@ -535,29 +524,31 @@ models with recurrent layers are hybrids for this reason.
 1. **Memory for many users.** A GPU with 80 GB serves a model of 32
    layers, with the cache sizes of :numref:`fig_hy-cache`, after 16 GB of
    the GPU's memory are taken by the weights.
-    1. How many sequences of 128,000 tokens can the GPU serve at once with
-       the transformer, the hybrid with 4 attention layers, and the
-       recurrent model?
+    1. How many sequences of 128K tokens can the GPU serve at once with the
+       transformer, the hybrid with 4 attention layers, and the recurrent
+       model?
     1. Grouped-query attention with fewer key–value heads, and 8-bit
        numbers for the cache, each halve the cache. Apply both to the
-       transformer and to the hybrid, and repeat the count. Which change
-       matters more for the hybrid?
+       transformer and to the hybrid, and repeat the count. Which of the two
+       changes could also shrink the hybrid's recurrent states, and what
+       share of the hybrid's memory do those states take after both
+       changes?
 
-<!-- WRITER: Exercise 3 rewritten without slots (structure): "16,000 and 32,000 steps" no longer match the
-recipe (2,000 updates, `d2l.train_recall(model, num_updates=...)`); keys from 512 vs 128 is `num_keys=128`; part 2
-(width 64) is close to the 4x-state arm now in the text (2 heads of 16 at width 32): ask instead for 1 head of 32,
-or for width 64. -->
-1. [code] **Keys and slots.** The recurrent models of the recall sweep
-   have 256 slots and the task draws keys from 512.
-    1. Train Gated DeltaNet for 16,000 and for 32,000 steps, once with keys
-       drawn from 512 and once from 128, fewer than the slots. Where do the
-       four curves differ? Which differences come from training time and
-       which from the number of slots?
-    1. Keep 512 keys and double the width to 64, with eight heads. How many
-       slots does the model have now, and how does its recall curve move?
-    1. Compute the bound :eqref:`eq_hy-welch` for a row of dimension 4 that
-       hosts 8 possible keys, and estimate how often two stored keys share a
-       row in a sequence of 64 pairs.
+1. **Overlap and training.**
+    1. How much better than random keys can training make the keys of a
+       head? Divide the bound :eqref:`eq_hy-welch` by $1/d_k$, the mean
+       squared overlap of random unit keys, and evaluate the ratio for 64
+       keys in dimensions 4, 8, 16, and 32. In which of these heads can
+       trained keys be clearly better than random ones?
+    1. [code] Train the small Gated DeltaNet model of the sweep with 4,000
+       and 8,000 updates (`num_updates` of `d2l.train_recall`). Does its
+       recall of 32 and 64 pairs approach the hybrid's? What does the
+       answer say about whether the small model lacks training or
+       capacity?
+    1. [code] Draw the keys from 64 and from 512 possible ones (`num_keys`,
+       with the vocabulary of `recall_model` changed to match). A sequence
+       still stores at most 64 pairs. Why can the number of possible keys
+       change recall at all?
 
 1. [code] **Where and how much attention?**
     1. Train the hybrid `AG`, with attention in the first block, and
@@ -565,9 +556,9 @@ or for width 64. -->
        attention layer matter? Consider which layer can bring each key
        together with the value that follows it.
     1. Train four-block models `GGGG`, `GGGA`, and `GAGA` of the same
-       width. Do two more recurrent layers add as many slots as the
-       section's count predicts, and does one attention layer among four
-       still recall every pair?
+       width. Do two more recurrent layers move the recall curve as far as
+       four times the state per layer did, and does one attention layer
+       among four still recall every pair?
 
 1. [code] **A window instead.** Replace the attention mixer by attention
    that sees only the last $w$ tokens, by masking the scores of earlier
@@ -578,18 +569,30 @@ or for width 64. -->
     1. How large is the cache of this layer during generation? What does
        the comparison suggest about combining windows with recurrence?
 
-<!-- WRITER: Exercise 6 moves to WikiText bytes (structure): `d2l.WikiText103`, the text models of the section
-(`trained`, or `text_model('GGGG', 256)` and the other layouts), `d2l.train_text`; positions whose byte completes
-a string of at least eight bytes that already occurred earlier in the same 128-byte window. `d2l.TinyLM` and Penn
-Treebank are no longer used in the section. -->
-1. [code] **Recall in text.** In the Penn Treebank validation text, mark
-   the positions whose character completes a string of at least eight
-   characters that already occurred earlier in the same window. Compare
-   the loss of Gated DeltaNet, the hybrid, and `d2l.TinyLM` at the marked
-   positions and at all other positions. Does the hybrid's advantage on
-   recall show up where text repeats itself?
+1. [code] **Recall in text.** In the validation windows of byte-level
+   WikiText-103, mark the positions whose byte completes a string of at
+   least eight bytes that already occurred earlier in the same window.
+    1. Compare the loss of the trained Gated DeltaNet, hybrid, and
+       attention models (`trained`) at the marked positions and at all
+       other positions. Does attention's advantage on recall show up where
+       text repeats itself?
+    1. Repeat with windows of 512 bytes (`num_steps=512`, with fewer
+       windows per step). How does the share of marked positions change,
+       and with it the difference between the models?
 
-[Discussions](https://d2l.discourse.group/)
+1. [code] **Rewritten keys and attention.** Train the four models of the
+   sweep on the task in which some keys are written twice, so that the
+   answer is the newer of two values
+   (`pairs=(16, 32, 64), num_keys=128, num_rebound=8, gap=2` in
+   `d2l.train_recall`, since the default loads start at 4 pairs, too few
+   to rewrite 8 keys). The third array returned by
+   `d2l.associative_recall` marks the queries of rewritten keys; score
+   them as `recall_by_kind` in :numref:`sec_deltanet` does.
+    1. Attention keeps both values in its cache, and our attention mixer
+       has no position encoding. How could it tell the newer value from the
+       older? Measure its recall of rewritten keys.
+    1. Compare attention, the hybrid, and Gated DeltaNet on rewritten keys.
+       Which of the two memories of the hybrid answers these queries?
 
 [Discussions](https://d2l.discourse.group/t/36785)
 
@@ -597,10 +600,10 @@ Treebank are no longer used in the section. -->
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §12.7]{.kicker}
+[Dive into Deep Learning · §12.8]{.kicker}
 
 Hybrid architectures<br>
-**a fixed state holds fixed bits · slots and overlapping keys · associative recall · one attention layer · memory per sequence**
+**counting bits · overlapping keys · associative recall · one attention layer · memory per sequence · the chapter's memories**
 :::
 :::
 
@@ -610,158 +613,217 @@ Hybrid architectures<br>
 A prompt lists 64 product codes and prices, then asks for 20 of them.
 
 - A transformer looks back: every token is still in its cache.
-- A recurrent model has only what it wrote into its state as the tokens
-  went by, before it knew which would be asked for.
+- A recurrent model has only what it stored, before it knew the question.
 
 ::: {.d2l-note}
-Better writes (gates, selectivity, the delta rule) do not make a state
-hold more than its size allows.
+Better writes do not make a state hold more than its size allows.
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
-- bound the recall of a fixed state by counting bits;
-- measure recall of four models as the number of stored pairs grows;
-- compute the memory per sequence of attention, recurrent, and hybrid
-  models.
+[Goals]{.kicker}
 
-**Running example:** a Mamba-2 layer's state of about 2 MB against a
-grouped-query attention cache of 4 KB per token.
+- bound the recall of a fixed state by counting bits;
+- predict where a small state loses pairs;
+- measure one attention layer on recall and on text;
+- compute memory per sequence, and choose a memory.
+
+**Running example:** a Mamba-2 layer, 2 MB of state, against a
+grouped-query cache of 4 KB per token.
+:::
+
+::: {.slide title="The Last Step of the Chapter Puts Back a Little Attention"}
+[Where we are]{.kicker}
+
+Gates → linear recurrences and scans → state space models → selectivity →
+matrix memories → the delta rule → **hybrids**.
+
+- Here: what no fixed state can do, and the cheapest repair.
+- Not here: hybrids at scale, windowed attention, GPU kernels.
 :::
 
 ::: {.slide title="Recalling k Tokens Needs k log₂ V Bits"}
+[Counting bits]{.kicker}
+
 $V^k$ possible inputs must reach $V^k$ different states:
 
-$$N b \ge k \log_2 V$$
+$$M b \ge k \log_2 V$$
 
-$N$ numbers of $b$ bits; $k$ tokens from a vocabulary of $V$.
+$M$ numbers of $b$ bits; $k$ tokens from a vocabulary of $V$.
 
 - Recall grows with the state, not with the context.
 - A KV cache grows by one key and one value per token: it never runs out.
 :::
 
-::: {.slide title="A Matrix Memory Holds About One Value per Number"}
-- Our recurrent models: 2 layers × 8 heads × 4 × 4 = 256 numbers of
-  32 bits; 64 values of 2 bits take only 128 bits.
-- But the memory adds outer products and reads linearly.
-- Best case, one *slot* per number: a value goes into one row, along a
-  key direction orthogonal to the other keys of that row.
-- At most $N$ possible keys: every pair stored without interference.
-- More possible keys than slots: keys that share a row must overlap.
+::: {.slide title="The Small Recall Model Has 30× the Bits That 64 Pairs Need"}
+[Counting bits]{.kicker}
+
+Recall task below: up to 64 pairs, keys from 128, values from 4.
+Model: two Gated DeltaNet layers, 8 heads of $4 \times 4$ state each.
+
+| | bits |
+|---|---|
+| state: 2 layers × 8 heads × 4 × 4 numbers × 32 bits | 8,192 |
+| a table of 2 bits per possible key: 128 × 2 | 256 |
+| the 64 values alone: 64 × 2 | 128 |
+
+::: {.d2l-note}
+Bits are not the limit: a matrix memory is a poor encoder of bits.
+:::
 :::
 
-::: {.slide title="Keys That Share a Row Must Overlap"}
-For unit vectors $\mathbf{k}_1, \ldots, \mathbf{k}_m \in \mathbb{R}^d$,
-$m > d$ (Welch):
+::: {.slide title="Pairs in a Matrix Memory Interfere"}
+[Overlapping keys]{.kicker}
+
+Write $\mathbf{S} \leftarrow \mathbf{S} + \mathbf{v}\mathbf{k}^\top$; read with unit key $\mathbf{k}_j$:
+
+$$\mathbf{S}\mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j}
+(\mathbf{k}_i^\top \mathbf{k}_j)\, \mathbf{v}_i$$
+
+- Random unit keys of dimension $d_k$: mean squared overlap $1/d_k$.
+- What the memory holds grows with its entries: $d_k d_v$ per head, keys
+  of size $d_k$, values of size $d_v$.
+- Delta rule: fits the pairs, but $m > d_k$ keys are linearly dependent,
+  so no linear read returns every value.
+- Can training pick keys that hardly overlap?
+:::
+
+::: {.slide title="More Keys Than Dimensions Must Overlap"}
+[Welch's bound]{.kicker}
+
+Unit $\mathbf{k}_1, \ldots, \mathbf{k}_m \in \mathbb{R}^{d_k}$, $m > d_k$:
 
 $$\operatorname{mean}_{i \neq j} (\mathbf{k}_i^\top \mathbf{k}_j)^2 \ge
-\frac{m - d}{d\,(m - 1)}$$
+\frac{m - d_k}{d_k\,(m - 1)}$$
 
-- Proof: $\mathbf{G} = \sum_i \mathbf{k}_i\mathbf{k}_i^\top$ has trace
-  $m$ and rank $\le d$, so $\|\mathbf{G}\|_F^2 \ge m^2/d$.
-- $m \gg d$: about $1/d$, as for random keys. Training cannot avoid it.
-- Task: 512 possible keys, 256 slots. More stored pairs, more stored keys
-  sharing a row, more interference.
+Proof: $\mathbf{G} = \sum_i \mathbf{k}_i\mathbf{k}_i^\top$ has trace $m$
+and rank $\le d_k$, so $\|\mathbf{G}\|_F^2 \ge m^2/d_k$.
+
+| 64 keys | floor | random |
+|---|---|---|
+| $d_k = 4$ | 0.24 | 0.25 |
+| $d_k = 16$ | 0.05 | 0.06 |
+
+::: {.d2l-note}
+Once keys far outnumber dimensions, the best keys are hardly better than
+random ones.
+:::
+:::
+
+::: {.slide title="Check: Predict Before We Train"}
+[Check]{.kicker}
+
+1. The state grows 4× at the same parameter count. Where should recall
+   of 64 pairs land?
+2. One of two layers becomes attention. What happens to recall?
+
+::: {.fragment .fade-up}
+1. About where the small state recalls 16 pairs, if pairs grow in
+   proportion to entries, as they did for gated linear attention.
+2. No fall: the cache holds every pair it has read.
+:::
 :::
 
 ::: {.slide title="Multi-Query Associative Recall"}
-$n$ pairs, each a key token (one of 512) followed by a value token (one of
-4); fillers up to 256 tokens; then every key again, in random order. Answer
-each query with the value that followed its key.
+[The task]{.kicker}
 
-<!-- DECK: the example cell moved to the matrix-state section with its id (a placeholder cannot reach another
-file); show the layout in text, e.g. `k1 v1 k2 v2 ... | k2 k1 ...`, or drop this slide and restate the task on the
-next one. Sequences are now as short as pairs and queries allow (at most 192 tokens, no filler). -->
+`k₁ v₁  k₂ v₂  …  kₙ vₙ  |  k₂ kₙ k₁ …`
 
-Chance: 1/4. Up to 64 pairs per sequence.
+- $n$ distinct keys from 128, each followed by a value from 4.
+- Then every key again, in random order: answer the value that followed.
+- $n$ from 4 to 64. Guessing: 1 in 4.
 :::
 
-<!-- DECK: four models now: Gated DeltaNet G G (8 heads of 4), attention A A (2 heads of 16, no position
-encoding), hybrid G A, and Gated DeltaNet with 4x state G G (2 heads of 16); no gated-linear-attention row, no
-induction head; memories start at 256 to 2,048 steps; trained twice each with `d2l.train_recall` (2,000 updates of
-256 sequences). -->
 ::: {.slide title="Four Models Differ Only in Their Mixers"}
-`d2l.SeqLM`, two blocks of width 32:
+[Four models]{.kicker}
 
-| model | mixers |
-|---|---|
-| gated linear attention | L L (8 heads of 4) |
-| Gated DeltaNet | G G (8 heads of 4) |
-| attention | A A (2 heads of 16) |
-| **hybrid** | G **A** |
+| model | mixers | state per recurrent layer |
+|---|---|---|
+| Gated DeltaNet | G G, 8 heads of 4 | 128 entries |
+| Gated DeltaNet, 4× state | G G, 2 heads of 16 | 512 entries |
+| attention | A A | cache of every pair |
+| **hybrid** | G **A** | 128 entries + cache |
 
-- Every mixer starts with the same short convolution: it moves each key
-  into its value's position, and attention finds it there by content.
-- Without it, attention must form an induction head over two layers,
-  after a plateau of varying length.
-- Decay gates start with memories of 64 to 1,024 steps.
-- Trained once with 4 to 64 pairs, 16,000 steps of 256 sequences; tested
-  at each number of pairs.
+Two blocks of width 32, 35,000 to 38,000 parameters; the same short
+convolution before every mixer; attention without a position encoding;
+each trained twice.
 :::
 
-::: {.slide title="One Attention Layer Restores Recall"}
+::: {.slide title="One Attention Layer Removes the Fall; 4× State Moves It Right"}
 @!hybrids-the-recall-sweep-3
 :::
 
-<!-- DECK: rewrite from the new table (two runs, four arms; numbers in the WRITER note of the results); no
-plateau, no reference implementation, no doubled training, no 128-key run, no slots. -->
-::: {.slide title="Recall Falls with the Number of Pairs, Except with Attention"}
-- Gated DeltaNet: nearly all of 4 pairs, about nine tenths of 32, about
-  three quarters of 64.
-- Gated linear attention: fewer from 8 pairs on; it first sits on a plateau
-  (about half of 4 pairs) for a varying number of steps, as does the
-  reference implementation.
-- The hybrid: every pair at every load; attention in almost every run.
-- Twice as long: Gated DeltaNet about 95% of 32 and 80–90% of 64;
-  with 128 possible keys (fewer than the 256 slots), 90% or more of 64.
-- Corrected writes fit the stored pairs and remove much of the
-  interference of overlapping keys.
-:::
+::: {.slide title="4× State Recalls 64 Pairs as the Small State Recalls 8 to 16"}
+[Recall]{.kicker}
 
-<!-- DECK: from the ablation cell only (`@!hybrids-the-recall-sweep-4`): with and without the short
-convolution, two runs each; drop the other three rows and "worth about 0.1 in perplexity". -->
-::: {.slide title="The Parts Around the Memory Matter"}
-| without | gated linear attention | Gated DeltaNet |
-|---|---|---|
-| short convolution | near chance | fewer pairs at every load |
-| unit queries and keys | no consistent change | does not learn |
-| output gate | within the spread | several points less |
-| SiLU | no consistent change | a few points more at 32–64 pairs |
-
-The value follows its key one token later: the convolution brings the two
-together for one write. On text, the convolution, SiLU, and output gate
-together are worth about 0.1 in perplexity.
-:::
-
-::: {.slide title="Check: Bits Against Pairs"}
-The two recurrent layers hold 256 numbers of 32 bits.
-
-1. By the counting bound, how many 2-bit values could they hold?
-2. Why do they already lose pairs at 32?
-
-::: {.fragment .fade-up}
-1. $256 \cdot 32 / 2 = 4{,}096$ values.
-2. A linear read gives about one slot per number: 256 slots for 512
-   possible keys, 64 rows of dimension 4. Among 32 stored keys, some share
-   a row, and keys that share a row overlap.
-:::
-:::
-
-::: {.slide title="Perplexity Barely Shows the Gap"}
-<!-- DECK: was the Penn Treebank cell (retired); now the text table on WikiText bytes. Title and bullets must
-follow the new reading (no perplexity 3.1; see the WRITER note after the text cell). -->
-@!hybrids-language-modeling-5
-
-- Gated DeltaNet alone: about 3.1.
-- The next character rarely depends on a pair stored long before.
+- Gated DeltaNet: about two thirds of 32 pairs, half of 64.
+- 4× state: 0.91–0.95 of 64, like the small state at 8–16: at least 4×
+  the pairs.
+- Hybrid, attention: every pair, every load, every run.
+- At 64 pairs the attention cache holds 192 tokens, 12,288 numbers: 24×
+  the larger state. A little attention saves memory only at long
+  contexts, among mostly recurrent layers.
 
 ::: {.d2l-note .warn}
-Benchmark what you need: perplexity alone can miss what a model cannot
-recall.
+Tiny on purpose (256 numbers): the mechanism, not the effect at scale.
+:::
+:::
+
+::: {.slide title="Without the Short Convolution, Every Run Recalls Less"}
+[The convolution]{.kicker}
+
+@!hybrids-the-recall-sweep-4
+
+A value comes one token after its key; a convolution of width 4 lets one
+write store both. Width 1 only scales and shifts each channel.
+
+::: {.d2l-note}
+A memory can hold only what reaches it.
+:::
+:::
+
+::: {.slide title="On Text, Attention Is Behind and the Hybrid Matches Gated DeltaNet"}
+[Text]{.kicker}
+
+@!hybrids-language-modeling-5
+
+Byte-level WikiText-103, windows of 128 bytes; four blocks of width 256;
+loss in nats per byte, overall and by position in the window; last column:
+time per training step. Attention here: 8 heads, rotary positions, no
+convolution.
+:::
+
+::: {.slide title="The Model That Recalls Least Has the Lowest Text Loss"}
+[Text]{.kicker}
+
+| mixers | recall of 64 pairs | text, nats per byte |
+|---|---|---|
+| Gated DeltaNet | about half | 1.32 to 1.33 |
+| hybrid | all | 1.33 to 1.34 |
+| attention | all | 1.37 to 1.39 |
+
+::: {.d2l-note .warn}
+A low loss on short windows is no evidence that a model can look things
+up.
+:::
+:::
+
+::: {.slide title="Check: Why Does No Model Gain Much After Byte 16?"}
+[Check]{.kicker}
+
+Every model's loss falls by at most 0.004 from bytes 16–63 to bytes
+64–127, and attention stays about 0.06 behind Gated DeltaNet. What does
+that say about this benchmark?
+
+::: {.fragment .fade-up}
+The next byte depends on the bytes just before it. A pair stored a hundred
+bytes back rarely matters, so the benchmark does not test recall.
 :::
 :::
 
 ::: {.slide title="Attention Stores 4 KB per Token, Mamba-2 About 2 MB in All"}
+[Inference memory]{.kicker}
+
 Per layer, per sequence, 16-bit numbers:
 
 | layer | memory |
@@ -769,17 +831,23 @@ Per layer, per sequence, 16-bit numbers:
 | GQA, 8 KV heads × 128 | $2 \cdot 8 \cdot 128 \cdot 2$ B = 4 KB per token |
 | Mamba-2, width 4,096 | $8192 \cdot 128 \cdot 2$ B ≈ 2 MB, any length |
 
-Crossover near 500 tokens; at 128 K tokens, 512 MB against 2 MB.
+Crossover near 500 tokens; at 128K tokens, 512 MB against 2 MB.
 :::
 
 ::: {.slide title="Only the Attention Layers of a Hybrid Keep a Cache"}
-![](../img/mdl-modernrnn-hybrid-cache.svg){width=85%}
+[Inference memory]{.kicker}
 
-Jamba, 4 attention layers of 32: 4 GB at 256 K tokens, against 32 GB.
+![](../img/mdl-modernrnn-hybrid-cache.svg){width=80%}
+
+Jamba, 4 attention layers of 32: 4 GB at 256K tokens, against 32 GB.
+Qwen3-Next: Gated DeltaNet and attention, three to one; Kimi Linear: a
+per-channel-decay variant, also three to one.
 :::
 
 ::: {.slide title="Check: Memory of a Hybrid"}
-32 layers, 4 of them attention, 128 K tokens, numbers as above.
+[Check]{.kicker}
+
+32 layers, 4 of them attention, 128K tokens, numbers as above.
 
 1. Memory per sequence of the hybrid?
 2. Of the transformer?
@@ -790,19 +858,43 @@ Jamba, 4 attention layers of 32: 4 GB at 256 K tokens, against 32 GB.
 :::
 :::
 
-<!-- DECK: the PTB column is gone with Penn Treebank; the closing table takes the text loss at equal size on
-WikiText bytes from 12.1, 12.3, 12.5 and this section (Gated DeltaNet about 1.33, the hybrid about 1.33, attention
-about 1.38 nats per byte). -->
-::: {.slide title="Recap: One Template, Six Memories"}
-| | state per layer | update | recall | PTB |
-|---|---|---|---|---|
-| LSTM, GRU | vector | nonlinear, sequential | short | 3.0 |
-| minGRU | vector | $\mathbf{a}_t\odot\mathbf{h} + \mathbf{b}_t$, scan | | 3.2 |
-| S4D | $d \times N$ | fixed decays, FFT | by distance | 3.35 |
-| Mamba | $H \times N$ | selective decays, scan | selective | 3.0 |
-| gated linear attention | $d_v \times d_k$ | $\mathbf{S}\,\textrm{diag}(\boldsymbol{\alpha}_t) + \mathbf{v}\mathbf{k}^\top$, chunks | interference | 3.1 |
-| Gated DeltaNet | $d_v \times d_k$ | delta rule, chunks | rebinds | 3.1 |
-| + one attention layer | + KV cache | | exact | |
+::: {.slide title="The Chapter's Memories Side by Side"}
+[The chapter]{.kicker}
+
+| memory | state per layer | training | text |
+|---|---|---|---|
+| LSTM, GRU | $2d$, $d$ | step by step | 1.29–1.30 |
+| minGRU | $d$ | scan | 1.34–1.35 |
+| S4D | $dN$ | convolution or scan | |
+| Mamba | $HN$ | scan | 1.30 |
+| gated linear attention | $d^2/h$ | chunks | |
+| Gated DeltaNet | $d^2/h$ | chunks + solve | 1.32–1.33 |
+| attention | $2dT$ | fused, all positions | 1.37–1.39 |
+| hybrid | states + $2dT$ per attention layer | both | 1.33–1.34 |
+
+Text: nats per byte, width $d = 256$; $N$ states per channel, $H = 2d$
+Mamba channels, $h$ heads, $T$ tokens read.
+:::
+
+::: {.slide title="On Short Windows No Layer Beats the 1997 LSTM"}
+[The chapter]{.kicker}
+
+- Newer layers train in parallel and store pairs to look up or rewrite;
+  short windows test neither.
+- Long-context generation: delta-rule layers, one attention layer in four
+  to eight.
+- A small streaming model: a gated recurrence.
 
 **Open:** how few attention layers, where, and whether windows suffice.
+:::
+
+::: {.slide title="Recap"}
+- Recall $\le Mb/\log_2 V$ tokens; a matrix memory far less, since more
+  than $d_k$ keys must overlap.
+- 64 pairs: Gated DeltaNet half; 4× state 0.91–0.95; one attention
+  layer, all.
+- 128-byte text: attention behind; hybrid ≈ Gated DeltaNet.
+- 128K tokens, 32 layers: 16 GB of cache; 2.1 GB with 4 attention layers.
+
+Next: what models cost on real hardware, and how to make them fast.
 :::

@@ -1132,8 +1132,9 @@ negatives, so that false negatives are dropped rather than pushed away.
 Qwen3-Embedding-0.6B starts from a pretrained decoder of the Qwen3 family
 and keeps its causal attention. Three conventions follow, and a model used
 against any of them loads and runs without complaint. The wrong pooling or
-padding reads the state of the wrong token. A missing instruction changes
-what the query vector encodes, in a direction that has to be measured.
+padding reads the state of the wrong token. The wording of the instruction
+changes what the query vector encodes, in a direction that has to be
+measured.
 
 - **Last-token pooling.** Under causal attention only the last position has
   seen the whole text.
@@ -1142,8 +1143,10 @@ what the query vector encodes, in a direction that has to be measured.
 - **An instruction on the query side.** A question enters as
   `Instruct: {task}\nQuery:{query}`. Passages are encoded without it, so one
   passage index serves many tasks. The task is free text. The model card's
-  default is a task about web search queries; for the book we first wrote
-  `Given a question about the book, retrieve passages that answer it`.
+  default, `Given a web search query, retrieve relevant passages that
+  answer the query`, is the one this chapter uses. The wording we first
+  wrote for the book, `Given a question about the book, retrieve passages
+  that answer it`, is measured against it below.
 
 Last-token pooling is not the only way out of causal attention. Some
 recipes remove the causal mask instead and fine-tune the decoder with
@@ -1298,28 +1301,33 @@ and a control with one random extra negative per question; we have not run
 them.
 
 Finally, the instruction we first wrote for the book made Qwen3-Embedding
-worse.
-Every measure of order came out lower with it: MRR@10 by about 0.03, with an
-interval that excludes zero, Recall@1 by 3 points and nDCG@10 by 2.
+worse. Every measure of order came out lower with it: MRR@10 by about 0.03,
+with an interval that excludes zero, Recall@1 by 3 points and nDCG@10 by 2.
 Recall@10 moved by $-0.014$, an interval that reaches zero. This runs
 against the model card, which reports gains of 1% to 5% from instructions
-and recommends writing one for the task at hand.
+and recommends writing one for the task at hand. When a measurement
+contradicts a technique this well established, the first suspect is our
+own setup.
 
-Is the fault in instructions as such, or in ours? The format is the card's, as the library
-check below confirms, and the last two rows of the second table answer the
-question. The card's own task, a sentence about web search queries in the
-same format, is level with no instruction on all three measures, every
-interval containing zero, and ahead of our wording by 0.033 in MRR@10, an
-interval from 0.012 to 0.053. So the damage comes from our wording, not
-from the instruction format. The card's task brings no gain here either; on
-questions that copy their passages' rare words there may be little left for
-an instruction to add. The wording of an instruction is a parameter like
-any other, and it has to be chosen on questions other than those it is
-evaluated on; Exercise :exref:`ex_lm_emb-instruction` does this with the
-training questions. The rest of the chapter uses the card's task, which the
-library stores as `d2l.BOOK_TASK`. We take it because it is the card's
-default, not because it came out ahead here: a wording picked on these
-questions would carry their noise into every later measurement on them.
+Is the fault in instructions as such, or in ours? The format is the card's,
+as the library check below confirms, and the last two rows of the second
+table answer the question. The card's own task, a sentence about web search
+queries in the same format, is level with no instruction on all three
+measures, every interval containing zero, and ahead of our wording by 0.033
+in MRR@10, an interval from 0.012 to 0.053. The fault lies in our wording.
+A sentence that describes the task well to a human reader pushed relevant
+passages down the model's ranking, and only a measurement against no
+instruction showed it. The card's task brings no
+gain here either; on questions that copy their passages' rare words there
+may be little left for an instruction to add.
+
+The rest of the chapter therefore uses the card's task, which the library
+stores as `d2l.BOOK_TASK`. We take it because it is the card's default, not
+because it came out ahead here: a wording picked on these questions would
+carry their noise into every later measurement on them. A wording of one's
+own is a parameter like any other, and it has to be chosen on questions
+other than those it is evaluated on; Exercise :exref:`ex_lm_emb-instruction`
+does this with the training questions.
 
 The second table also settles the comparison with BM25. Without an
 instruction, Qwen3-Embedding finds a relevant passage within ten for about
@@ -1759,9 +1767,9 @@ and kept nearly all of its recall at one bit per coordinate. Mined
 negatives must come from below the top ranks, where a reranker judged
 nearly a third of them to be answers. Every other choice, from the wording
 of an instruction to the width of a vector, had to be measured on our own
-questions: the instruction we first wrote lowered the first ranks, while the
-model card's own wording cost nothing, and Matryoshka training kept its
-advantage on its own data but not on the book.
+questions. The instruction we first wrote lowered the first ranks, while the
+model card's own wording cost nothing and is the one the chapter uses.
+Matryoshka training kept its advantage on its own data but not on the book.
 
 ## Exercises
 
@@ -2206,7 +2214,7 @@ pad on the left.
 | raw mean pooling | 0.04 | 0.06 | 0.04 | 0.94 |
 | contrastive, 3 seeds | 0.36 to 0.41 | 0.73 to 0.78 | 0.50 to 0.53 | 0.52 (seed 0) |
 | contrastive + 1 hard negative | 0.42 | 0.80 | 0.56 | |
-| Qwen3-Embedding, card's task | 0.71 | 0.99 | 0.81 | 0.28 |
+| Qwen3-Embedding, card's task | 0.70 | 0.99 | 0.81 | 0.28 |
 
 Paired: raw $\to$ contrastive +0.70 Recall@10, 15 times the seed spread;
 contrastive $\to$ Qwen3-Embedding +0.23.
@@ -2229,13 +2237,15 @@ web search queries.
 | our task | $-0.032$ [$-0.068$, 0.000] | $-0.026$ [$-0.048$, $-0.004$] | $-0.014$ [$-0.028$, 0.000] |
 | the card's task | +0.005 [$-0.025$, +0.034] | +0.007 [$-0.012$, +0.027] | $-0.005$ [$-0.015$, 0.000] |
 
-The card reports +1 to 5% from instructions. Here neither wording gains,
-and the card's task leads ours by 0.033 MRR@10 [0.012, 0.053]. The chapter
-uses the card's task from here on (`d2l.BOOK_TASK`).
+The card reports +1 to 5% from instructions. Here neither wording gains:
+ours lowers the first ranks, and the card's task leads it by 0.033 MRR@10
+[0.012, 0.053]. The chapter uses the card's task from here on
+(`d2l.BOOK_TASK`).
 
 ::: {.d2l-note .rule}
-An instruction's wording is a parameter: choose it on training questions,
-never on the questions you report.
+Start from the card's wording and test any other against no instruction.
+A wording is a parameter: choose it on training questions, never on the
+questions you report.
 :::
 :::
 

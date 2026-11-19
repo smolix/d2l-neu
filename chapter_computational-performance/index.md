@@ -51,6 +51,7 @@ compilation
 memory-precision
 multiple-gpus
 multi-gpu-practice
+sharding
 fast-transformer
 further-reading
 ```

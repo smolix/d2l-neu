@@ -2235,17 +2235,17 @@ def query_accuracy(model, X, Y):
     Defined in :numref:`sec_gru`"""
     return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).mean()
 
-def train_delayed_recall(model, num_steps, blank_fillers=False,
-                         num_updates=1500, lr=3e-3):
-    """Train on fresh batches of delayed recall; return the test accuracy.
+def train_delayed_recall(model, num_steps, blank_fillers=False):
+    """Train with Adam at rate 0.003 on 1,500 fresh batches of 128 sequences
+    of delayed recall; return the accuracy on 2,048 new sequences.
 
     Defined in :numref:`sec_gru`"""
     task = lambda rng, n: delayed_recall(rng, n, num_steps,
                                          blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
     optimizer = nnx.Optimizer(model, optax.chain(
-        optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
-    train_queries(model, lambda step: task(rng, 128), num_updates, optimizer)
+        optax.clip_by_global_norm(1.0), optax.adam(3e-3)), wrt=nnx.Param)
+    train_queries(model, lambda step: task(rng, 128), 1500, optimizer)
     return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 
 class SeqLM(nnx.Module):

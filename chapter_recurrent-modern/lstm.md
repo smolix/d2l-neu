@@ -553,15 +553,15 @@ def query_accuracy(model, X, Y):  #@save
     with torch.inference_mode():
         return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).float().mean()
 
-def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
-                         num_updates=1500, lr=3e-3):
-    """Train on fresh batches of delayed recall; return the test accuracy."""
+def train_delayed_recall(model, num_steps, blank_fillers=False):  #@save
+    """Train with Adam at rate 0.003 on 1,500 fresh batches of 128 sequences
+    of delayed recall; return the accuracy on 2,048 new sequences."""
     task = lambda rng, n: delayed_recall(rng, n, num_steps,
                                          blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
     model.to(d2l.try_gpu())
-    train_queries(model, lambda step: task(rng, 128), num_updates,
-                  torch.optim.Adam(model.parameters(), lr=lr))
+    train_queries(model, lambda step: task(rng, 128), 1500,
+                  torch.optim.Adam(model.parameters(), lr=3e-3))
     return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 ```
 
@@ -589,15 +589,15 @@ def query_accuracy(model, X, Y):
     """Fraction of queries answered correctly."""
     return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).mean()
 
-def train_delayed_recall(model, num_steps, blank_fillers=False,  #@save
-                         num_updates=1500, lr=3e-3):
-    """Train on fresh batches of delayed recall; return the test accuracy."""
+def train_delayed_recall(model, num_steps, blank_fillers=False):  #@save
+    """Train with Adam at rate 0.003 on 1,500 fresh batches of 128 sequences
+    of delayed recall; return the accuracy on 2,048 new sequences."""
     task = lambda rng, n: delayed_recall(rng, n, num_steps,
                                          blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
     optimizer = nnx.Optimizer(model, optax.chain(
-        optax.clip_by_global_norm(1.0), optax.adam(lr)), wrt=nnx.Param)
-    train_queries(model, lambda step: task(rng, 128), num_updates, optimizer)
+        optax.clip_by_global_norm(1.0), optax.adam(3e-3)), wrt=nnx.Param)
+    train_queries(model, lambda step: task(rng, 128), 1500, optimizer)
     return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 ```
 
@@ -667,7 +667,7 @@ for name, cell in cells.items():
     print(f'{name:18s}', ' '.join(f'{a:.2f}/{b:.2f}' for a, b in runs))
 ```
 
-<!-- WRITER: the reading below describes the old one-run table with delays 5 to 200 and is now false in parts. Measured in development (two runs per entry, both tabs; numbers in the stored output will differ run to run): LSTM and GRU with keep gates: 1.00/1.00 at every delay 20 to 200 in both tabs. Default LSTM: partial already at 20 (0.36 to 0.49), at chance (0.12) from 50 in every run. Default GRU: 1.00/1.00 at 20, at chance from 50 in every run. RNN (LeCun normal, spectral radius about 1): erratic at every delay, from chance to 1.00 between the two runs of the same delay (0.24/1.00 at 20 in both tabs); in six extra dev runs per tab it recalled perfectly at 50 in 5 of 6 runs and varied from 0.12 to 1.00 at 100. RNN at default scale (radius about 0.6, the control): 1.00/1.00 at 20 in both tabs; at 50 mostly at chance (in six extra runs per tab, 5 of 6 at 0.12 to 0.13, one at 0.50 or 0.71), so the acceptance test "at chance by 50 in both runs" does not hold reliably; at 100 it was at chance in all 6 + 2 dev runs per tab (0.11 to 0.27 in the two-run table: one PyTorch run reached 0.27). So the control supports: a smaller recurrent matrix loses the symbol by 100 steps where the LeCun one sometimes still carries it; the radius-1 network is unreliable in both directions. "The plain RNN is erratic" stays true; "training never finds" -> "within 1,500 updates training does not find" (LSTM-12). -->
+<!-- WRITER: the reading below describes the old one-run table with delays 5 to 200 and is now false in parts. Measured in development (two runs per entry, both tabs; numbers in the stored output will differ run to run): LSTM and GRU with keep gates: 1.00/1.00 at every delay 20 to 200 in both tabs. Default LSTM: partial already at 20 (0.36 to 0.49), at chance (0.12) from 50 in every run. Default GRU: 1.00/1.00 at 20, at chance from 50 in every run. RNN (LeCun normal, spectral radius about 1): erratic at every delay, from chance to 1.00 between the two runs of the same delay (0.24/1.00 at 20 in both tabs); in six extra dev runs per tab it recalled perfectly at 50 in 5 of 6 runs and varied from 0.12 to 1.00 at 100. RNN at default scale (radius about 0.6, the control): 1.00/1.00 at 20 in both tabs; at 50 mostly at chance (in six extra runs per tab, 5 of 6 at 0.12 to 0.13, one at 0.50 or 0.71), so the acceptance test "at chance by 50 in both runs" does not hold reliably; at 100 it was at chance in all 6 + 2 dev runs per tab (0.11 to 0.27 in the two-run table: one PyTorch run reached 0.27). So the control supports: a smaller recurrent matrix loses the symbol by 100 steps where the LeCun one sometimes still carries it; the radius-1 network is unreliable in both directions. "The plain RNN is erratic" stays true; "training never finds" -> "within 1,500 updates training does not find" (LSTM-12). Direct notebook runs (two runs per entry): PyTorch RNN 1.00/1.00 0.50/0.87 1.00/1.00 0.26/0.24, default scale 1.00/1.00 0.50/0.12 0.12/0.12 0.25/0.13, LSTM 1.00/0.35 then chance; JAX RNN 1.00/1.00 1.00/1.00 1.00/1.00 0.90/0.14, default scale 1.00/0.75 0.13/0.12 0.12/0.12 0.13/0.13, LSTM 1.00/0.76 then chance. A third pair of runs: PyTorch RNN 0.24/1.00 1.00/1.00 0.27/0.27 0.25/0.24, default scale 1.00/0.26 0.24/0.12 0.12/0.12 0.13/0.13; JAX RNN 1.00/1.00 1.00/0.25 0.26/0.51 0.26/0.26, default scale 0.24/0.24 0.12/0.12 0.13/0.12 0.12/0.13. Over all dev and notebook runs: the default-scale RNN is below 1.00 in 4 of 14 runs at 20, at most 0.24 in 22 of 26 runs at 50 (the others 0.48 to 0.71), and at most 0.27 in every run at 100 and 200; the LeCun RNN recalls perfectly at 50 in 17 of 26 runs and is at most 0.27 in most runs at 200. Write the control's lesson at that strength. Gate readout (dev, PyTorch, keep-gate LSTM trained at delays 100 and 200, two runs each): the input gate does not open much for the symbol (mean 0.02 to 0.04 at the symbol, at most 0.14 for any unit, against 0.007 at initialization; the mean at fillers is as high or higher, 0.04 to 0.10); the units that carry the symbol keep forget gates of 0.99 to 1.00 at the fillers. So do not write that the network learns to open the input gate for the symbol and close it for fillers: it keeps its forget gates near one and writes faintly; the symbol, written first, persists. -->
 With their gates starting near one half, the LSTM and the GRU recall the
 symbol after 10 steps and are at chance after 50; in some runs the LSTM
 recalls only part of the symbols already at 20. The plain RNN is erratic:
@@ -931,7 +931,7 @@ for name, mixer in mixers.items():
           '/'.join(f'{ms:.0f}' for _, ms in runs))
 ```
 
-<!-- WRITER: reading (written against the stored table). Measured in development, both tabs agree (width 256, four blocks, 1,000 steps of 64 x 128 bytes; two runs each): RNN 2.76 M parameters, 1.347 to 1.349 nats per byte; LSTM 4.34 M, 1.293 to 1.295; GRU 3.81 M, 1.297 to 1.300; attention 3.29 M, 1.378 to 1.394. Runs of the same model agree within 0.003 for the recurrent models and within about 0.01 for attention. Firm lessons: (1) gates help: LSTM and GRU end about 0.05 nats below the plain RNN, more than ten times the run-to-run range, and the GRU, with half a million fewer parameters than the LSTM, matches it, so the gain is not the parameter count; (2) the gain is there at every band, already in the first 16 bytes (RNN about 1.51, LSTM/GRU about 1.49 in JAX at 0-15; at 64-127 RNN 1.325 against LSTM 1.265), and no model gains much beyond byte 16 (bands 16-63 and 64-127 within 0.01 of each other); (3) at this budget the attention stack of the same width and depth is behind every recurrent stack, by about 0.04 nats against the plain RNN and 0.09 against the gated ones, at every band; it is also behind the GPT of :numref:`sec_gpt` (1.34 to 1.35 with six blocks and 4.79 M parameters), and a four-block GPT measured in development landed near it (1.376 at 512-byte windows), so the attention baseline is not faulty: at 8 M training bytes the recurrent stacks learn faster. Do not claim that attention keeps improving to the end of the window: it does not at 128 (or at 512, where at 1,000 and 2,000 steps its late band 384-511 was only 0.004 to 0.006 below its 16-127 band, within its run-to-run range). The plain RNN in this stack (1.35) matches the GPT, unlike the single wide RNN of chapter 11 (1.40 to 1.44): the stack with MLPs closes most of chapter 11's gap before gates do. ms/step (dev, shared GPU): PyTorch RNN about 19, LSTM 32 to 42, GRU about 34, attention about 24; JAX attention 9 to 13, recurrent 41 to 69. -->
+<!-- WRITER: reading (written against the stored table). Measured in development, both tabs agree (width 256, four blocks, 1,000 steps of 64 x 128 bytes; two runs each): RNN 2.76 M parameters, 1.347 to 1.349 nats per byte; LSTM 4.34 M, 1.293 to 1.295; GRU 3.81 M, 1.297 to 1.300; attention 3.29 M, 1.378 to 1.394. Runs of the same model agree within 0.003 for the recurrent models and within about 0.01 for attention. Firm lessons: (1) gates help: LSTM and GRU end about 0.05 nats below the plain RNN, more than ten times the run-to-run range, and the GRU, with half a million fewer parameters than the LSTM, matches it, so the gain is not the parameter count; (2) the gain is there at every band, already in the first 16 bytes (RNN about 1.51, LSTM/GRU about 1.49 in JAX at 0-15; at 64-127 RNN 1.325 against LSTM 1.265), and no model gains much beyond byte 16 (bands 16-63 and 64-127 within 0.01 of each other); (3) at this budget the attention stack of the same width and depth is behind every recurrent stack, by about 0.04 nats against the plain RNN and 0.09 against the gated ones, at every band; it is also behind the GPT of :numref:`sec_gpt` (1.34 to 1.35 with six blocks and 4.79 M parameters), and a four-block GPT measured in development landed near it (1.376 at 512-byte windows), so the attention baseline is not faulty: at 8 M training bytes the recurrent stacks learn faster. Do not claim that attention keeps improving to the end of the window: it does not at 128 (or at 512, where at 1,000 and 2,000 steps its late band 384-511 was only 0.004 to 0.006 below its 16-127 band, within its run-to-run range). The plain RNN in this stack (1.35) matches the GPT, unlike the single wide RNN of chapter 11 (1.40 to 1.44): the stack with MLPs closes most of chapter 11's gap before gates do. ms/step (direct notebook runs, mostly idle GPU): PyTorch RNN 13, LSTM 32, GRU 31 to 32, attention 18 to 21 (eager, not compiled); JAX (unroll=8) RNN 11 to 12, LSTM 26 to 27, GRU 17, attention 9. Step times differ between the tabs; any reading of them goes in tab notes, and the shared prose may say only what holds in both (the LSTM step costs about two to three times the RNN step). -->
 
 The gates solved the memory problem, but not the speed problem. Every gate
 reads $\mathbf{h}_{t-1}$, so step $t$ cannot begin until step $t-1$ has

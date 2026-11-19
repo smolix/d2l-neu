@@ -2093,17 +2093,17 @@ def query_accuracy(model, X, Y):
     with torch.inference_mode():
         return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).float().mean()
 
-def train_delayed_recall(model, num_steps, blank_fillers=False,
-                         num_updates=1500, lr=3e-3):
-    """Train on fresh batches of delayed recall; return the test accuracy.
+def train_delayed_recall(model, num_steps, blank_fillers=False):
+    """Train with Adam at rate 0.003 on 1,500 fresh batches of 128 sequences
+    of delayed recall; return the accuracy on 2,048 new sequences.
 
     Defined in :numref:`sec_gru`"""
     task = lambda rng, n: delayed_recall(rng, n, num_steps,
                                          blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
     model.to(d2l.try_gpu())
-    train_queries(model, lambda step: task(rng, 128), num_updates,
-                  torch.optim.Adam(model.parameters(), lr=lr))
+    train_queries(model, lambda step: task(rng, 128), 1500,
+                  torch.optim.Adam(model.parameters(), lr=3e-3))
     return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 
 class SeqLM(nn.Module):

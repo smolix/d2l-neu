@@ -393,8 +393,8 @@ The first blocks add much less, because the attention of a fresh block
 averages many unrelated tokens, which nearly cancel. Deeper blocks, whose
 tokens have grown more alike, add about as much as the premise assumes or a
 little more, and their outputs are not quite uncorrelated with the stream.
-The late blocks make up most of the early shortfall, though not all of it:
-the measured RMS ends near 5, somewhat below $\sqrt{33}$. For so rough a
+The two errors pull in opposite directions and do not quite cancel: the
+measured RMS ends near 5, somewhat below $\sqrt{33}$. For so rough a
 premise that is close enough, and the point survives: the stream grows,
 and what a late block adds is small against it.
 
@@ -442,7 +442,7 @@ does. The backward pass reaches the bottom of the stack through thirty
 blocks of collapsed tokens and arrives in good shape. The starvation is
 local: a block's query and key weights receive almost no gradient because
 its own input tokens are alike, not because the gradient vanished on its
-way down. The pre-norm curve falls as well, by a factor of 20 to 25 over 32
+way down. The pre-norm curve falls as well, by a factor of 20 to 30 over 32
 blocks, because its tokens also grow more alike with depth, only slowly. With GPT-2's standard deviation
 the curve is flat at about $4 \times 10^{-4}$: small weights give small
 gradients, but no block is starved more than another.

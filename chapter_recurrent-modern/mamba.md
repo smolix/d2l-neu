@@ -204,11 +204,12 @@ long memories. Selective copying is easier in this respect, because a symbol
 sometimes sits close to a query, and the short-range gradients from such
 sequences teach the gates to keep symbols longer and longer.
 
-<!-- WRITER: measured now (1,500 steps, two runs per cell; five notebook
-executions over both tabs): S4D 0.16 to 0.19 (dev runs down to 0.13), above
-chance 0.125; minGRU 0.80 to 0.99, the two runs of one cell differing by up to
-0.14 (one dev run 0.67): "nine in ten in most runs, rarely fewer than eight"
-is roughly right, but say that two runs can differ by a tenth or more. Counts
+<!-- WRITER: measured now (1,500 steps, two runs per cell; seven notebook
+executions over both tabs): S4D 0.12 to 0.19, at or a little above chance
+0.125; minGRU 0.72 to 0.99, the two runs of one cell differing by up to 0.24
+(one dev run 0.67): "nine in ten or more in most runs, rarely fewer than
+eight" no longer holds; say that it answers most queries and that two runs
+can differ by a fifth. Counts
 printed: S4D model 42,058 parameters, minGRU model 48,202. -->
 
 ## Selective Dynamics
@@ -614,7 +615,7 @@ as in the minGRU, and memories of many lengths from the start, as in S4D.
 The minGRU, which has only the first, nearly solves the task; S4D, which
 has only the second, does not come close.
 
-<!-- WRITER: measured now (same five executions): Mamba 0.98 to 1.00 in every
+<!-- WRITER: measured now (same seven executions): Mamba 0.98 to 1.00 in every
 run, 71,242 parameters; the same block with selectivity switched off
 (selective=False: step size, write and read vectors are learned constants of
 each channel, an S4D with a learned B inside the Mamba block; 70,090
@@ -626,7 +627,7 @@ part of the answer from a position code (S4D alone stays at 0.16 to 0.19).
 This matches Table 1 of Gu.Dao.2023 (the Mamba architecture with an S4 layer
 reaches 56%, with the selective layer 99.8%), which the text may cite. The
 claim that Mamba needs "both properties" is not shown: the minGRU, selective
-but with short initial memories, reaches 0.80 to 0.99 (MAMBA-15). The harder
+but with short initial memories, reaches 0.72 to 0.99 (MAMBA-15). The harder
 variant (E10) failed its acceptance test and is not in the notebook (see the
 code-mamba report). -->
 
@@ -780,8 +781,9 @@ to run.
 
 <!-- WRITER: measured now: the symbol windows cover 1.4 to 1.6% of the
 positions. S4D's share from them 0.01 to 0.03 in every run. Mamba's share,
-printed for both trained runs: PyTorch 0.22/0.43 and 0.33/0.03, JAX 0.73/0.86,
-0.19/0.31 and 0.43/0.04, so the share does change widely from run to run
+printed for both trained runs: PyTorch 0.22/0.43, 0.33/0.03 and 0.47/0.72,
+JAX 0.73/0.86, 0.19/0.31, 0.43/0.04 and 0.39/0.69, so the share does change
+widely from run to run
 (F5: the protected sentence holds) and both runs of one cell can differ by
 0.3 to 0.4. A run that copies at 0.99 can draw only 3% of its first-layer state
 from the symbols (its filler baseline sits high, the spikes are small): the
@@ -853,7 +855,7 @@ for name, mixer in mixers.items():
 ```
 
 <!-- WRITER: the reading below is false now (no PTB, no perplexity, no LSTM
-row). Measured (width 256, four blocks, 1,000 steps of 64 x 128 bytes; three
+row). Measured (width 256, four blocks, 1,000 steps of 64 x 128 bytes; four
 executions per tab, two runs each, both tabs agree to 0.005): Mamba 3,989,248
 parameters, validation 1.295 to 1.299 nats per byte (bands 0-15: 1.486 to
 1.488, 16-63: 1.269 to 1.273, 64-127: 1.266 to 1.271); minGRU 2,764,544,
@@ -866,8 +868,9 @@ attention model (the expansion to H = 2d and N = 16 states per channel), so
 the comparison is at equal width and depth, not equal size (read counts
 against the minGRU's and attention's, not the LSTM's). Like every model here,
 Mamba gains little beyond byte 16 (16-63 vs 64-127 within 0.005). Cost per
-training step on a shared GPU: Mamba 35 to 74 ms (JAX) and 72 to 135 ms
-(PyTorch, compiled); minGRU 10 to 33 ms, attention 9 to 22 ms: the H x N state
+training step (shared GPU; uncontended run in brackets): Mamba 35 to 74 ms
+[35] in JAX and 69 to 135 ms [69] in PyTorch (compiled); minGRU 10 to 33 ms
+[10 JAX, 28 PyTorch], attention 9 to 22 ms [9 JAX, 21 PyTorch]: the H x N state
 at every position is the price (pointer to the cost table of
 sec_linear-recurrence); quote ratios only roughly ("several times slower").
 The sentence "The low-rank step sizes make the difference" goes: with the

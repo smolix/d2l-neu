@@ -1712,7 +1712,7 @@ d2l.lm_free()
 
 The two encodings agree to a cosine of at least 0.998, the difference bf16
 arithmetic leaves, and the library's loss equals :eqref:`eq_lm_infonce` to
-$4 \times 10^{-6}$. The library reads the conventions from the repository,
+$7 \times 10^{-6}$. The library reads the conventions from the repository,
 and the method underneath is the one derived above. What the library cannot
 check is whether the task written into the instruction suits the model;
 that, as we saw, has to be measured.

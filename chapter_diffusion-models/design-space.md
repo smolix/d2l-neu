@@ -493,7 +493,7 @@ for (width, name), (r0, r1) in rows.items():
 print(f'data {"":36}{mix.nll(test):7.3f}{mix.summary(test)["stray"]:14.3f}')
 ```
 
-At full width the weighting matters little. All four models lie within two hundredths of a nat of the exact field on both measures, and their samples cannot be told apart, with stray fractions close to the data's. Each weighting is already ahead on its own measure, though, by two to three thousandths of a nat on the bound and by half a hundredth to a hundredth on the flow. At 32 units the split grows and reaches the samples. The bound-weighted model has the lower bound, by about a hundredth of a nat. The simple loss, which is no bound on the likelihood, nonetheless gives the better flow likelihood, its negative log-likelihood lower by one to two hundredths, and the better samples: a sample negative log-likelihood lower by a few hundredths and fewer strays, about 1.5 to 1.8% against 2.0 to 2.3%. On this mixture, training on the bound did not give the small network its best likelihood. A likely reason is where the draws go. Uniform $\lambda$ on $[-10.05, 9.12]$ puts about $7/19$, more than a third, of the bound's draws above $\lambda = 2$, where the point is nearly clean; uniform $t$ on our VP path puts about a tenth there. A small network trained on the bound thus has less left for the noisier levels that every sample and every flow trajectory passes through. So the answer to the opening question is no, with a qualification. The simple loss is not the likelihood bound but the bound's integrand under another weight. With capacity to spare the weight moves either likelihood by about a hundredth of a nat at most; with little capacity it decides between a better bound on one side and a better flow likelihood and better samples on the other.
+At full width the weighting matters little. All four models lie within two hundredths of a nat of the exact field on both measures, and their samples cannot be told apart, with stray fractions close to the data's. Each weighting is already ahead on its own measure, though, by two to three thousandths of a nat on the bound and by half a hundredth to a hundredth on the flow. At 32 units the split grows and reaches the samples. The bound-weighted model has the lower bound, by one to one and a half hundredths of a nat. The simple loss, which is no bound on the likelihood, nonetheless gives the better flow likelihood, its negative log-likelihood lower by one to two hundredths, and the better samples: a sample negative log-likelihood lower by two to five hundredths and fewer strays, about 1.5 to 1.8% against 2.0 to 2.3%. On this mixture, training on the bound did not give the small network its best likelihood. A likely reason is where the draws go. Uniform $\lambda$ on $[-10.05, 9.12]$ puts about $7/19$, more than a third, of the bound's draws above $\lambda = 2$, where the point is nearly clean; uniform $t$ on our VP path puts about a tenth there. A small network trained on the bound thus has less left for the noisier levels that every sample and every flow trajectory passes through. So the answer to the opening question is no, with a qualification. The simple loss is not the likelihood bound but the bound's integrand under another weight. With capacity to spare the weight moves either likelihood by about a hundredth of a nat at most; with little capacity it decides between a better bound on one side and a better flow likelihood and better samples on the other.
 
 ## Objectives as Weightings
 
@@ -755,7 +755,7 @@ We can now test the choices on images, one at a time. The base is the recipe of 
 | `t at EDM's levels` | EDM's log-normal noise levels, a control for the next row |
 | `EDM, clean image` | EDM's preconditioned clean image, with its levels and weight |
 
-Each model is an unconditional 64-channel `d2l.UNet`, trained for 5,000 updates, a third of the budget of :numref:`sec_diffusion-images`, from two seeds; the base, the control and EDM, whose comparison is the hardest to read, get four. All are sampled from the same 5,000 noise images by Heun's method and scored by the Fréchet distance (FD) against 5,000 test images. The sampler raises a question of fairness. EDM's own paper samples on its $\rho = 7$ grid, but for a model trained with uniform times :numref:`sec_diffusion-samplers` found that grid a little worse than the linear one at this budget, and suggested that it suits models trained at EDM's levels. A comparison on one grid could thus favour one recipe, so every model is sampled on both, EDM's grid (49 evaluations) and the linear grid (48). The cell first measures the pixels, for EDM's $\sigma_{\mathrm{data}}$, and the floor of :numref:`subsec_diffusion-fd-reference`, the FD between two sets of real images.
+Each model is an unconditional 64-channel `d2l.UNet`, trained for 5,000 updates, a third of the budget of :numref:`sec_diffusion-images`, from two seeds; the base, the control and EDM, whose comparison is the hardest to read, get four. All are sampled from the same 5,000 noise images by Heun's method and scored by the Fréchet distance (FD) against 5,000 test images. The sampler raises a question of fairness. EDM's own paper samples on its $\rho = 7$ grid, but for a model trained with uniform times :numref:`sec_diffusion-samplers` found that grid no better than the linear one at this budget, and suggested that it suits models trained at EDM's levels. A comparison on one grid could thus favour one recipe, so every model is sampled on both, EDM's grid (49 evaluations) and the linear grid (48). The cell first measures the pixels, for EDM's $\sigma_{\mathrm{data}}$, and the floor of :numref:`subsec_diffusion-fd-reference`, the FD between two sets of real images.
 
 ```{.python .input #design-space-a-recipe-ablation}
 %%tab pytorch
@@ -779,7 +779,7 @@ floor = d2l.fid_score(f_test, d2l.fd_features(cnn, X_test[5000:]))
 print(f'FD, real against real: {floor:.2f}')
 ```
 
-Fashion-MNIST is mostly black background: the pixels have a mean of $-0.43$ and a root mean square of $0.83$, well above the paper's $0.5$, and the cell passes the measured value to `EDM`. Two sets of 5,000 real images score about $0.17$ against each other.
+Fashion-MNIST is mostly black background: the pixels have a mean of $-0.43$ and a root mean square of $0.83$, well above the paper's $0.5$, and the cell passes the measured value to `EDM`. Two sets of 5,000 real images score $0.17$ to $0.18$ against each other.
 
 `logit_normal_loss` is `regression_loss` with logit-normal times in place of uniform ones. On the linear path $\bar\sigma = t/(1 - t)$, so $\log \bar\sigma = m + s n$: with $m = -1.2$ and $s = 1.2$ the velocity model trains at EDM's log-normal levels, and the row of that name differs from EDM's only in the parameterization and the weight. It is also a logit-normal centred further toward the data than the $m = -0.5$ row, at $t \approx 0.23$.
 
@@ -896,13 +896,13 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
     print(f'{name:27} {edm:24} {lin}')
 ```
 
-Every model is 12 to 32 times the floor, while the full recipe of :numref:`sec_diffusion-images` reaches about 0.8 after its 15,000 updates, so the table ranks how quickly each recipe learns, not where it would end. We read it against the spread between each row's seeds, and start with the column we added for fairness.
+Every model is 12 to 32 times the floor, while the full recipe of :numref:`sec_diffusion-images` reaches about 0.8 after its 15,000 updates, so the table ranks how quickly each recipe learns, not where it would end. We read it against the spread between each row's seeds, beginning with the column we added for fairness.
 
-Start with the grid. Every run of every model trained on the velocity of the linear path, the control included, scores lower on the linear grid than on EDM's, by 0.1 to 1.4 (the base by 0.5 to 0.7), and $\mathbf{v}$ on the cosine path does too, by less. EDM's own model shows no consistent preference; its runs move by up to 0.4 in either direction. So the suggestion of :numref:`sec_diffusion-samplers` does not survive the test: a velocity model trained at EDM's levels still prefers the linear grid. If something in EDM's recipe makes its grid harmless, the comparison points to the parameterization and the weight, not to the levels.
+Every run of every model trained on the velocity of the linear path, the control included, scores lower on the linear grid than on EDM's, by 0.1 to 1.4 (the base by 0.5 to 0.7), and $\mathbf{v}$ on the cosine path does too, by less. EDM's own model shows no consistent preference; its runs move by up to 0.4 in either direction. So the suggestion of :numref:`sec_diffusion-samplers` does not survive the test: a velocity model trained at EDM's levels still prefers the linear grid. If something in EDM's recipe makes its grid harmless, the comparison points to the parameterization and the weight, not to the levels.
 
 The clearest result about training is a warning against centring the training times at the middle of the path for images this small. On EDM's grid the centred logit-normal row is worse than the base in every run, by about 1.1 to 1.3 FD on average; on the linear grid the loss shrinks to about 0.5 to 0.75. Moved toward the data, the same distribution wins all of that back: every run of the $m = -0.5$ row beats every centred run on both grids, and none lies above the base's range. Whether it also beats uniform times, two runs cannot settle: its gain over the base is at most about the spread between its own two runs. The control row, a logit-normal moved further still, likewise lies within or below the base's range on both grids, and, as predicted, $\mathbf{v}$ on the cosine path does no worse than the base.
 
-EDM's whole recipe, its levels, preconditioning and weight together, beats the base in every run on its own grid. On the linear grid, the one the base prefers, their runs overlap and neither recipe is ahead by more than its seed spread. Part of what looked like EDM's win was a comparison of samplers. How its gain on its own grid divides between the levels and the preconditioning, four seeds do not settle either: the control's runs alone spread over 0.8 to 1.6 FD and overlap EDM's.
+EDM's whole recipe, its levels, preconditioning and weight together, beats the base in every run on its own grid. On the linear grid, the one the base prefers, their runs overlap and neither recipe is ahead by more than its seed spread. Part of what looked like EDM's win was a comparison of samplers. How its gain on its own grid divides between the levels and the preconditioning, four seeds do not settle either: the control's runs alone spread over 0.8 to 1.7 FD and overlap EDM's.
 
 The samples of the first seed on EDM's grid, one row per recipe in the order of the table, from the same ten noise images:
 
@@ -951,7 +951,7 @@ for t in (0.01, 0.03, 0.1, 0.5, 0.9, 0.98):
           f'{loss[1]:6.1f} (logit-normal)')
 ```
 
-At $t = \tfrac12$, where most of its training times fall, the logit-normal model is slightly better than the base (a loss of 127 against 131); at $t = 0.01$ it is far worse (about 670 to 700 against 420 to 435). It draws fewer than one training time in three thousand below $t = 0.03$, where uniform times draw three in a hundred, and the last steps of every sampler use these levels to fix the fine detail. Esser et al. chose the centre for the latents of much larger images; by the scale argument above, a $28 \times 28$ image decides its structure at less noise, and the shifted row moves the training levels there.
+At $t = \tfrac12$, where most of its training times fall, the logit-normal model is slightly better than the base (a loss of 127 against 131); at $t = 0.01$ it is far worse (about 670 to 700 against 420 to 440). It draws fewer than one training time in three thousand below $t = 0.03$, where uniform times draw three in a hundred, and the last steps of every sampler use these levels to fix the fine detail. Esser et al. chose the centre for the latents of much larger images; by the scale argument above, a $28 \times 28$ image decides its structure at less noise, and the shifted row moves the training levels there.
 
 ### Choosing a Recipe
 
@@ -1400,7 +1400,7 @@ curve of the schedule figure).
 ::: {.slide title="Centred Times Lose; EDM Wins Only on Its Own Grid"}
 Base: velocity, linear path, $t$ uniform; one change per row; 64-channel
 U-Net, 5,000 updates, two seeds (four for base, EDM's levels, EDM); Heun on two
-grids; FD of 5,000 samples (real about 0.17):
+grids; FD of 5,000 samples (real 0.17 to 0.18):
 
 @!design-space-a-recipe-ablation-2
 
@@ -1438,7 +1438,7 @@ skip.
   shifted by the log pixel ratio when larger.
 - **Weighting:** the bound's for the bound; less on clean points for
   samples.
-- **Sampler:** more than one; EDM's grid cost the base half an FD point.
+- **Sampler:** more than one; EDM's grid cost the base about half an FD point.
 
 ::: {.d2l-note}
 The book's default, velocity on the linear path with $t$ uniform, is the

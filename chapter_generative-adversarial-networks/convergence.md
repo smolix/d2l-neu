@@ -148,6 +148,11 @@ def dirac_field(theta, psi, gamma=0.0):
 def euler_step(x, h, gamma):                     # one simultaneous step
     return x + h * dirac_field(*x, gamma)
 
+def alt_step(x, h, gamma):                       # critic first, then generator
+    theta, psi = x
+    psi = psi + h * dirac_field(theta, psi, gamma)[1]
+    return np.array([theta + h * dirac_field(theta, psi, gamma)[0], psi])
+
 def rk4_step(x, h, gamma):                       # one RK4 step of the ODE
     k1 = dirac_field(*x, gamma)
     k2 = dirac_field(*(x + h / 2 * k1), gamma)
@@ -162,28 +167,33 @@ def trajectory(step, x0, h, steps, gamma=0.0):
     return np.stack(xs)
 ```
 
+<!-- WRITER: the portrait changed. The middle panel no longer draws the flow's dashed circle; it shows 300 simultaneous steps and 2,000 alternating steps (new alt_step: critic first, then the generator against the updated critic), both at h = 0.2. The cell prints each path's distance to the equilibrium: simultaneous 1.41 -> 2.87 in 300 steps (doubled, as the text says); alternating stays in [1.34, 1.42] over its second 1,000 steps (bounded, not convergent: CONV-4); gamma = 0.3 reaches 6.5e-4 and gamma = 1 7e-12 after 300 steps; RK4 flow stays at 1.41. NumPy, identical in both tabs. -->
 All panels start at $(\theta, \psi) = (1, 1)$, in red; the cross marks the equilibrium. They show the flow, 300 simultaneous steps of size $h = 0.2$ against the flow's circle (dashed), and the same steps with the penalty at $\gamma = 0.3$, in the underdamped regime, and at the critical $\gamma = 1$.
 
 ```{.python .input #convergence-phase-portraits-1}
 %%tab pytorch, jax
-def phase_panel(ax, paths, title, lim, legend=None, fmts=('C0-', 'C1-')):
-    """Draw paths in the (theta, psi) plane, with start and equilibrium."""
-    X = [P[:, 0] for P in paths] + [[paths[0][0, 0]], [0.0]]
-    Y = [P[:, 1] for P in paths] + [[paths[0][0, 1]], [0.0]]
-    d2l.plot(X, Y, r'$\theta$', r'$\psi$', legend, xlim=(-lim, lim),
-             ylim=(-lim, lim), fmts=fmts[:len(paths)] + ('C3o', 'k+'), axes=ax)
+x0 = np.array([1.0, 1.0])
+panels = {'flow': {'RK4': trajectory(rk4_step, x0, 0.05, 800)},
+          'steps': {'simultaneous': trajectory(euler_step, x0, 0.2, 300),
+                    'alternating': trajectory(alt_step, x0, 0.2, 2000)},
+          'penalized': {
+              'gamma = 0.3': trajectory(euler_step, x0, 0.2, 300, gamma=0.3),
+              'gamma = 1': trajectory(euler_step, x0, 0.2, 300, gamma=1.0)}}
+fig, axes = d2l.plt.subplots(1, 3, figsize=(9.5, 3.4))
+for ax, (title, paths) in zip(axes, panels.items()):
+    for name, P in paths.items():
+        r = np.linalg.norm(P, axis=1)            # distance to the equilibrium
+        late = r[len(r) // 2:]
+        print(f'{title}, {name}: {r[0]:.3g} -> {r[-1]:.3g} in {len(r) - 1} '
+              f'steps; second half in [{late.min():.3g}, {late.max():.3g}]')
+    lim = 1.25 * max(np.abs(P).max() for P in paths.values())
+    d2l.plot([P[:, 0] for P in paths.values()] + [x0[:1], [0.0]],
+             [P[:, 1] for P in paths.values()] + [x0[1:], [0.0]],
+             r'$\theta$', r'$\psi$', list(paths) if len(paths) > 1 else None,
+             xlim=(-lim, lim), ylim=(-lim, lim), axes=ax,
+             fmts=('C0-', 'C1-')[:len(paths)] + ('C3o', 'k+'))
     ax.set_title(title)
     ax.set_aspect('equal')
-
-x0, t = (1.0, 1.0), np.linspace(0, 2 * np.pi, 200)
-circle = np.sqrt(2) * np.stack([np.cos(t), np.sin(t)], axis=1)
-fig, axes = d2l.plt.subplots(1, 3, figsize=(9.5, 3.4))
-phase_panel(axes[0], [trajectory(rk4_step, x0, 0.05, 800)], 'flow', 1.6)
-phase_panel(axes[1], [trajectory(euler_step, x0, 0.2, 300), circle], 'steps',
-            3.2, fmts=('C0-', 'k--'))
-phase_panel(axes[2], [trajectory(euler_step, x0, 0.2, 300, gamma=0.3),
-                      trajectory(euler_step, x0, 0.2, 300, gamma=1.0)],
-            'penalized', 1.6, legend=[r'$\gamma = 0.3$', r'$\gamma = 1$'])
 fig.tight_layout()
 ```
 
@@ -277,14 +287,19 @@ def penalized_value(p, q, gamma, x, newton_steps=30):
     value = -(p * np.logaddexp(0, -D) + q * np.logaddexp(0, D)).sum() * dx
     return value - D @ K @ D / 2 + 2 * np.log(2)       # minus 2 l(0)
 
-x, mu = np.linspace(-8, 8, 401), 0.2
-p, q = [np.exp(-(x - c) ** 2 / 2) / np.sqrt(2 * np.pi) for c in (0, mu)]
-for gamma in (0, 0.01, 1, 10):
-    large = mu ** 2 / (16 * gamma) if gamma else np.inf
-    print(f'gamma {gamma:>5}: exact {penalized_value(p, q, gamma, x):.3e}, '
-          f'local {mu ** 2 / (4 + 16 * gamma):.3e}, large-gamma {large:.3e}')
+x = np.linspace(-8, 8, 401)
+for mu in (0.2, 1, 3):
+    p, q = [np.exp(-(x - c) ** 2 / 2) / np.sqrt(2 * np.pi) for c in (0, mu)]
+    for gamma in (0, 0.01, 1, 10):
+        exact = penalized_value(p, q, gamma, x)
+        local = mu ** 2 / (4 + 16 * gamma)
+        large = mu ** 2 / (16 * gamma) if gamma else np.inf
+        print(f'mu {mu:>3}, gamma {gamma:>4}: exact {exact:.3e}, local '
+              f'{local:.3e} ({local / exact:.2f}x), large-gamma {large:.3e} '
+              f'({large / exact:.2f}x)')
 ```
 
+<!-- WRITER: the cell now loops over mu in {0.2, 1, 3}; quote the printed ratios. Store-to-be (CPU NumPy, deterministic): mu = 0.2 local/exact 1.00-1.01 at every gamma (as before); mu = 1: 1.12x at gamma = 0, 1.04x at gamma = 1, 1.00x at gamma = 10; mu = 3: exact 1.054 at gamma = 0 (2 log 2 = 1.386), local 2.25 = 2.14x too large, 1.15x at gamma = 1, and 0.80x (local now too SMALL) at gamma = 10. Large-gamma form: 26x too large at mu = 0.2, gamma = 0.01; 1.03x at mu = 0.2, gamma = 10; 0.82x at mu = 3, gamma = 10. Lesson per design: saturation ends the approximation. -->
 The local formula matches the exact value to within one percent at every $\gamma$. The large-$\gamma$ form holds only when the penalty dominates: at $\gamma = 0.01$ it gives $0.25$ against the exact $0.0096$, 26 times too large, and at $\gamma = 10$ it is within three percent.
 
 ### A Low-Pass Filter
@@ -304,24 +319,15 @@ R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024` puts the pieces together. Its crit
 
 ### The Loss in Code
 
+<!-- WRITER: rpgan_loss_D/G are no longer defined in this cell; they are saved in sec_gan_relativistic and called here as d2l.rpgan_loss_D/G. The cell now holds only gan_loss_D/G (docstring: sum of two batch means, 2 log 2 at equilibrium, as update_D). Reword this paragraph so it introduces gan_loss_* and points to the pairing losses of sec_gan_relativistic. -->
 The implementation keeps the losses and the penalties apart. For aligned pairs of a real sample $x$ and a generated sample $x'$, the critic minimizes $\mathrm{softplus}(D(x') - D(x)) = -\log \sigma(D(x) - D(x'))$ and the generator the reversed $\mathrm{softplus}(D(x) - D(x'))$. The functions `gan_loss_D` and `gan_loss_G` give the logistic critic loss and the non-saturating generator loss of :numref:`sec_basic_gan` with the same arguments, so a training loop can take either pair.
 
 ```{.python .input #convergence-the-loss-in-code}
 %%tab pytorch
 #@save
-def rpgan_loss_D(critic, real, fake):
-    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))]."""
-    return F.softplus(critic(fake) - critic(real)).mean()
-
-#@save
-def rpgan_loss_G(critic, real, fake):
-    """Non-saturating pairing loss for the generator."""
-    return F.softplus(critic(real) - critic(fake)).mean()
-
-#@save
 def gan_loss_D(critic, real, fake):
     """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(x'))]: the
-    batch means, where update_D reports the halved sum."""
+    sum of two batch means, 2 log 2 at equilibrium, as update_D."""
     return F.softplus(-critic(real)).mean() + F.softplus(critic(fake)).mean()
 
 #@save
@@ -333,19 +339,9 @@ def gan_loss_G(critic, real, fake):
 ```{.python .input #convergence-the-loss-in-code}
 %%tab jax
 #@save
-def rpgan_loss_D(critic, real, fake):
-    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))]."""
-    return jax.nn.softplus(critic(fake) - critic(real)).mean()
-
-#@save
-def rpgan_loss_G(critic, real, fake):
-    """Non-saturating pairing loss for the generator."""
-    return jax.nn.softplus(critic(real) - critic(fake)).mean()
-
-#@save
 def gan_loss_D(critic, real, fake):
     """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(x'))]: the
-    batch means, where update_D reports the halved sum."""
+    sum of two batch means, 2 log 2 at equilibrium, as update_D."""
     return (jax.nn.softplus(-critic(real)).mean()
             + jax.nn.softplus(critic(fake)).mean())
 
@@ -484,102 +480,10 @@ def sample_modes(key, centers, n, width=0.05):
     return centers[idx] + width * jax.random.normal(k2, (n, 2))
 ```
 
-The training function takes the two losses and $\gamma$ as arguments and alternates `critic_step` and `generator_step`, each on a fresh batch. Both networks use Adam with $\beta_1 = 0$ and $\beta_2 = 0.99$, as R3GAN does, and a learning rate that decays from $2 \cdot 10^{-3}$ to $2 \cdot 10^{-4}$ along a cosine over 10,000 steps with batches of 1,024. It returns the generator and $\mathbb{E}_q\|\nabla_x D\|^2$ from the last critic step, which at $\gamma = 0$ is the only use of the penalties.
+<!-- WRITER: mode_stats is now its own cell here, before train_grid, because the trace uses it. Introduce it in one sentence (the paragraph above already defines the three statistics). -->
+The function `mode_stats` computes the three sample statistics.
 
-```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
-%%tab pytorch
-def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
-               batch=1024, latent=64, seed=0):
-    torch.manual_seed(seed)
-    dev = centers.device
-    net_G = d2l.make_mlp([latent, 256, 256, 2], nn.ReLU()).to(dev)
-    net_D = d2l.make_mlp([2, 256, 256, 1], nn.LeakyReLU(0.2)).to(dev)
-    opt_G, opt_D = [torch.optim.Adam(net.parameters(), lr, betas=(0.0, 0.99))
-                    for net in (net_G, net_D)]
-    scheds = [torch.optim.lr_scheduler.CosineAnnealingLR(opt, steps, lr / 10)
-              for opt in (opt_G, opt_D)]
-    for _ in range(steps):
-        real = sample_modes(centers, batch)
-        with torch.no_grad():
-            fake = net_G(torch.randn(batch, latent, device=dev))
-        _, _, grad_q = critic_step(net_D, opt_D, loss_D, real, fake, gamma)
-        z = torch.randn(batch, latent, device=dev)
-        generator_step(net_G, opt_G, loss_G, net_D,
-                       sample_modes(centers, batch), z)
-        for sched in scheds:
-            sched.step()
-    return net_G, grad_q.item()            # E_q ||grad_x D||^2
-```
-
-```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
-%%tab jax
-def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
-               batch=1024, latent=64, seed=0):
-    rngs = nnx.Rngs(seed)
-    net_G = d2l.make_mlp([latent, 256, 256, 2], nnx.relu, rngs=rngs)
-    net_D = d2l.make_mlp([2, 256, 256, 1], lambda x: nnx.leaky_relu(x, 0.2),
-                         rngs=rngs)
-    adam = optax.adam(optax.cosine_decay_schedule(lr, steps, alpha=0.1),
-                      b1=0.0, b2=0.99)
-    opt_G, opt_D = (nnx.Optimizer(net, adam, wrt=nnx.Param)
-                    for net in (net_G, net_D))
-
-    @nnx.jit
-    def step(net_G, net_D, opt_G, opt_D, key):
-        k1, k2 = jax.random.split(key)
-        z = jax.random.normal(k1, (2, batch, latent))    # critic, generator
-        real = sample_modes(k2, centers, 2 * batch).reshape(2, batch, 2)
-        fake = net_G(z[0])
-        _, _, grad_q = critic_step(net_D, opt_D, loss_D, real[0], fake, gamma)
-        generator_step(net_G, opt_G, loss_G, net_D, real[1], z[1])
-        return grad_q                      # E_q ||grad_x D||^2
-
-    step = nnx.cached_partial(step, net_G, net_D, opt_G, opt_D)
-    for key in jax.random.split(rngs(), steps):
-        grad_q = step(key)
-    return net_G, float(grad_q)
-```
-
-:begin_tab:`jax`
-One compiled function draws the batches and calls both saved steps. `nnx.cached_partial` binds the networks and optimizers to it once, so the loop does not split and merge the model state at every step.
-:end_tab:
-
-We train three runs from the same initialization: the classical GAN without a penalty, and the R3GAN loss at $\gamma = 1$ and at $\gamma = 10$. The low-pass filter predicts how the last two differ. The grid repeats every 2 units, a component with wavenumber $\omega = \pi$, which the penalty damps about 40-fold at $\gamma = 1$ and about 400-fold at $\gamma = 10$. With a ten times weaker signal about where the modes sit, the $\gamma = 10$ generator should resolve the grid less sharply within the same budget.
-
-```{.python .input #convergence-mode-coverage-on-25-gaussians-4}
-%%tab pytorch
-centers = grid_centers().to(d2l.try_gpu())
-arms = {'GAN': (gan_loss_D, gan_loss_G, 0.0),
-        'R3GAN, gamma=1': (rpgan_loss_D, rpgan_loss_G, 1.0),
-        'R3GAN, gamma=10': (rpgan_loss_D, rpgan_loss_G, 10.0)}
-latent, samples, grad_q = 64, {}, {}
-for name, (loss_D, loss_G, gamma) in arms.items():
-    net_G, grad_q[name] = train_grid(centers, loss_D, loss_G, gamma,
-                                     latent=latent)
-    with torch.no_grad():
-        z = torch.randn(10000, latent, device=centers.device)
-        samples[name] = net_G(z).cpu().numpy()
-grid = centers.cpu().numpy()
-```
-
-```{.python .input #convergence-mode-coverage-on-25-gaussians-4}
-%%tab jax
-centers = grid_centers()
-arms = {'GAN': (gan_loss_D, gan_loss_G, 0.0),
-        'R3GAN, gamma=1': (rpgan_loss_D, rpgan_loss_G, 1.0),
-        'R3GAN, gamma=10': (rpgan_loss_D, rpgan_loss_G, 10.0)}
-latent, samples, grad_q = 64, {}, {}
-for name, (loss_D, loss_G, gamma) in arms.items():
-    net_G, grad_q[name] = train_grid(centers, loss_D, loss_G, gamma,
-                                     latent=latent)
-    z = jax.random.normal(jax.random.key(1), (10000, latent))
-    samples[name] = np.asarray(net_G(z))
-grid = np.asarray(centers)
-```
-
-Each panel shows 3,000 generated samples in orange and the 25 centers in blue.
-
-```{.python .input #convergence-mode-coverage-on-25-gaussians-2}
+```{.python .input #convergence-mode-coverage-on-25-gaussians-5}
 %%tab pytorch, jax
 def mode_stats(x, centers, width=0.05):
     """Modes covered (each holds a fifth of an even share of the on-mode
@@ -590,20 +494,165 @@ def mode_stats(x, centers, width=0.05):
     counts = np.bincount(idx[on], minlength=len(centers))
     covered = (counts >= on.sum() / len(centers) / 5).sum()
     return covered, on.mean(), near.mean()
+```
 
-fig, axes = d2l.plt.subplots(1, 3, figsize=(9.5, 3.4))
-for ax, (name, x) in zip(axes, samples.items()):
-    modes, on, dist = mode_stats(x, grid)
-    print(f'{name}: {modes}/25 modes, on-mode {on:.2f}, '
-          f'distance {dist:.2f}, E_q|grad D|^2 {grad_q[name]:.1e}')
-    # Centers drawn last, on top of the samples
-    d2l.plot([x[:3000, 0], grid[:, 0]], [x[:3000, 1], grid[:, 1]],
+<!-- WRITER: the train_grid paragraph below is false in its numbers: 4,000 steps (cosine decay over 4,000), batches of 2,048 (the step cost is launch-bound, so a larger batch is free; the 6,000-step, batch-512 design of structure 3.5 took 13 min in PyTorch and left every arm unfitted), and train_grid returns the generator and a trace: at 8 checkpoints (every 500 steps) the on-mode fraction of 2,000 samples, and the critic loss and E_q|grad_x D|^2 averaged over the 500 steps since the previous checkpoint. The reason for beta_1 = 0 is CONV-18 (momentum averages a rotating field; exercise ex_convergence-momentum-rotating-game), not "as R3GAN does". -->
+The training function takes the two losses and $\gamma$ as arguments and alternates `critic_step` and `generator_step`, each on a fresh batch. Both networks use Adam with $\beta_1 = 0$ and $\beta_2 = 0.99$, as R3GAN does, and a learning rate that decays from $2 \cdot 10^{-3}$ to $2 \cdot 10^{-4}$ along a cosine over 10,000 steps with batches of 1,024. It returns the generator and $\mathbb{E}_q\|\nabla_x D\|^2$ from the last critic step, which at $\gamma = 0$ is the only use of the penalties.
+
+```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
+%%tab pytorch
+def train_grid(centers, loss_D, loss_G, gamma, steps=4000, lr=2e-3,
+               batch=2048, latent=64, seed=0, checkpoints=8):
+    """Alternate critic and generator steps; at each checkpoint record the
+    on-mode fraction of 2,000 samples, and the critic loss and E_q|grad D|^2
+    averaged over the steps since the previous checkpoint."""
+    torch.manual_seed(seed)
+    dev, grid = centers.device, centers.cpu().numpy()
+    net_G = d2l.make_mlp([latent, 256, 256, 2], nn.ReLU()).to(dev)
+    net_D = d2l.make_mlp([2, 256, 256, 1], nn.LeakyReLU(0.2)).to(dev)
+    opt_G, opt_D = [torch.optim.Adam(net.parameters(), lr, betas=(0.0, 0.99),
+                                     fused=True) for net in (net_G, net_D)]
+    scheds = [torch.optim.lr_scheduler.CosineAnnealingLR(opt, steps, lr / 10)
+              for opt in (opt_G, opt_D)]
+    trace, logs, every = [], torch.zeros(2, device=dev), steps // checkpoints
+    for t in range(1, steps + 1):
+        real = sample_modes(centers, batch)
+        with torch.no_grad():
+            fake = net_G(torch.randn(batch, latent, device=dev))
+        loss, _, grad_q = critic_step(net_D, opt_D, loss_D, real, fake, gamma)
+        logs += torch.stack([loss, grad_q])  # summed on the device
+        z = torch.randn(batch, latent, device=dev)
+        generator_step(net_G, opt_G, loss_G, net_D,
+                       sample_modes(centers, batch), z)
+        for sched in scheds:
+            sched.step()
+        if t % every == 0:                   # checkpoint
+            with torch.no_grad():
+                x = net_G(torch.randn(2000, latent, device=dev)).cpu().numpy()
+            trace.append((mode_stats(x, grid)[1], *(logs / every).tolist()))
+            logs.zero_()
+    return net_G, trace
+```
+
+```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
+%%tab jax
+def train_grid(centers, loss_D, loss_G, gamma, steps=4000, lr=2e-3,
+               batch=2048, latent=64, seed=0, checkpoints=8):
+    """Alternate critic and generator steps; at each checkpoint record the
+    on-mode fraction of 2,000 samples, and the critic loss and E_q|grad D|^2
+    averaged over the steps since the previous checkpoint."""
+    rngs = nnx.Rngs(seed)
+    net_G = d2l.make_mlp([latent, 256, 256, 2], nnx.relu, rngs=rngs)
+    net_D = d2l.make_mlp([2, 256, 256, 1], lambda x: nnx.leaky_relu(x, 0.2),
+                         rngs=rngs)
+    adam = optax.adam(optax.cosine_decay_schedule(lr, steps, alpha=0.1),
+                      b1=0.0, b2=0.99)
+    opt_G, opt_D = (nnx.Optimizer(net, adam, wrt=nnx.Param)
+                    for net in (net_G, net_D))
+
+    @nnx.jit
+    def step(net_G, net_D, opt_G, opt_D, key, logs):
+        k1, k2 = jax.random.split(key)
+        z = jax.random.normal(k1, (2, batch, latent))    # critic, generator
+        real = sample_modes(k2, centers, 2 * batch).reshape(2, batch, 2)
+        fake = net_G(z[0])
+        loss, _, grad_q = critic_step(net_D, opt_D, loss_D, real[0], fake,
+                                      gamma)
+        generator_step(net_G, opt_G, loss_G, net_D, real[1], z[1])
+        return logs + jnp.stack([loss, grad_q])          # summed on the device
+
+    step = nnx.cached_partial(step, net_G, net_D, opt_G, opt_D)
+    trace, every, grid = [], steps // checkpoints, np.asarray(centers)
+    keys = jax.random.split(rngs(), steps).reshape(checkpoints, every)
+    for chunk in keys:                                   # one checkpoint each
+        logs = jnp.zeros(2)
+        for key in chunk:
+            logs = step(key, logs)
+        x = np.asarray(net_G(jax.random.normal(rngs(), (2000, latent))))
+        trace.append((mode_stats(x, grid)[1], *(logs / every).tolist()))
+    return net_G, trace
+```
+
+:begin_tab:`jax`
+One compiled function draws the batches and calls both saved steps. `nnx.cached_partial` binds the networks and optimizers to it once, so the loop does not split and merge the model state at every step.
+:end_tab:
+
+<!-- WRITER: the experiment is now the 2 x 2 design: losses {NS (gan_loss_*), pairing (d2l.rpgan_loss_*)} x penalty {none, R1 + R2 at gamma = 1}, three runs each with seeds 0, 1, 2 (a seed gives the same initialization in every arm), plus one run of pairing + R1 + R2 at gamma = 10 (seed 0), kept as an observation. Rewrite the paragraph below and its gamma = 10 prediction (structure 3.5: the low-pass prediction is outside its hypotheses; state gamma = 10 as an observation). -->
+We train three runs from the same initialization: the classical GAN without a penalty, and the R3GAN loss at $\gamma = 1$ and at $\gamma = 10$. The low-pass filter predicts how the last two differ. The grid repeats every 2 units, a component with wavenumber $\omega = \pi$, which the penalty damps about 40-fold at $\gamma = 1$ and about 400-fold at $\gamma = 10$. With a ten times weaker signal about where the modes sit, the $\gamma = 10$ generator should resolve the grid less sharply within the same budget.
+
+```{.python .input #convergence-mode-coverage-on-25-gaussians-4}
+%%tab pytorch
+centers, latent = grid_centers().to(d2l.try_gpu()), 64
+ns, pairing = (gan_loss_D, gan_loss_G), (d2l.rpgan_loss_D, d2l.rpgan_loss_G)
+arms = {'NS': (*ns, 0.0, 3), 'NS + R1 + R2': (*ns, 1.0, 3),
+        'pairing': (*pairing, 0.0, 3), 'pairing + R1 + R2': (*pairing, 1.0, 3),
+        'pairing + R1 + R2, gamma=10': (*pairing, 10.0, 1)}
+runs = {name: [] for name in arms}               # per run: samples, trace
+for name, (loss_D, loss_G, gamma, n_runs) in arms.items():
+    for seed in range(n_runs):
+        net_G, trace = train_grid(centers, loss_D, loss_G, gamma,
+                                  latent=latent, seed=seed)
+        with torch.no_grad():
+            z = torch.randn(10000, latent, device=centers.device)
+            runs[name].append((net_G(z).cpu().numpy(), trace))
+grid = centers.cpu().numpy()
+```
+
+```{.python .input #convergence-mode-coverage-on-25-gaussians-4}
+%%tab jax
+centers, latent = grid_centers(), 64
+ns, pairing = (gan_loss_D, gan_loss_G), (d2l.rpgan_loss_D, d2l.rpgan_loss_G)
+arms = {'NS': (*ns, 0.0, 3), 'NS + R1 + R2': (*ns, 1.0, 3),
+        'pairing': (*pairing, 0.0, 3), 'pairing + R1 + R2': (*pairing, 1.0, 3),
+        'pairing + R1 + R2, gamma=10': (*pairing, 10.0, 1)}
+runs, key = {name: [] for name in arms}, jax.random.key(1)  # samples, trace
+for name, (loss_D, loss_G, gamma, n_runs) in arms.items():
+    for seed in range(n_runs):
+        net_G, trace = train_grid(centers, loss_D, loss_G, gamma,
+                                  latent=latent, seed=seed)
+        key, subkey = jax.random.split(key)
+        z = jax.random.normal(subkey, (10000, latent))
+        runs[name].append((np.asarray(net_G(z)), trace))
+grid = np.asarray(centers)
+```
+
+<!-- WRITER: the cell below prints one row per run (modes covered, on-mode fraction, mean distance, and E_q|grad_x D|^2 averaged over the last 500 critic steps) and draws one row of four panels, run 0 of each of the four arms (gamma = 10 is printed, not drawn). Direct runs of the final code (not the store; the scheduler run will recapture):
+  PyTorch: NS 17/20/18 modes, on-mode 0.30-0.48, E_q 3.5-15; NS+R1+R2 25/24/24, on-mode 0.07-0.28, E_q 0.008-0.017; pairing 18/21/18, on-mode 0.29-0.38, E_q 2.5-6.3; pairing+R1+R2 22/22/22, on-mode 0.15-0.24, E_q 0.007-0.012; gamma = 10: 24/25, on-mode 0.04, distance 0.67, E_q 2.7e-4.
+  JAX: NS 19/25/18, on-mode 0.38-0.54, E_q 4.9-7.2; NS+R1+R2 24/23/25, on-mode 0.20-0.32, E_q 0.006-0.010; pairing 23/16/14, on-mode 0.28-0.46, E_q 3.8-6.3; pairing+R1+R2 23/24/22, on-mode 0.11-0.15, E_q 0.010-0.015; gamma = 10: 25/25, on-mode 0.04, distance 0.65.
+Firm lessons (both tabs, every run): (1) the penalized critic is flat at the generated samples, E_q|grad D|^2 about 1e-2 against 2.5-15 without the penalty (two to three orders of magnitude; at gamma = 10, 2.5e-4); (2) every penalized run covers 22-25 modes, while the unpenalized runs scatter from 14 to 25 (JAX) or 17 to 21 (PyTorch): the penalty makes coverage reliable; the averages differ (about 23.5 against 19), but in JAX one unpenalized run covered all 25, so do not claim the penalty always covers more; (3) the unpenalized arms are sharper at this budget (on-mode 0.28-0.54 against 0.07-0.32): the penalty spreads mass over the lattice first and sharpens later; (4) pairing shows no effect beyond the run-to-run range in either tab, with or without the penalty ("pairing's coverage benefit is not visible in our runs", D9). No arm fits the grid at this budget (perfect fit: on-mode 0.989, distance about 0.06). The scatter shows samples strung along the lattice lines between neighbouring centers. A JAX sweep outside the notebook (not for prose) showed the trade-off moves with batch size: at batch 4,096 and 6,000 steps all four arms covered 21-25 modes. -->
+Each panel shows 3,000 generated samples in orange and the 25 centers in blue.
+
+```{.python .input #convergence-mode-coverage-on-25-gaussians-2}
+%%tab pytorch, jax
+print(f'{"arm":28} run  modes  on-mode  distance  E_q|grad D|^2')
+for name, results in runs.items():
+    for seed, (x, trace) in enumerate(results):
+        modes, on, dist = mode_stats(x, grid)
+        print(f'{name:28} {seed:3}  {modes:2}/25  {on:7.2f}  {dist:8.2f}'
+              f'  {trace[-1][2]:13.1e}')
+fig, axes = d2l.plt.subplots(1, 4, figsize=(10, 2.9))
+for ax, name in zip(axes, list(runs)[:4]):
+    x = runs[name][0][0][:3000]               # run 0; centers drawn last
+    d2l.plot([x[:, 0], grid[:, 0]], [x[:, 1], grid[:, 1]],
              fmts=('C1.', 'C0x'), xlim=(-5, 5), ylim=(-5, 5), axes=ax)
     ax.set_title(name)
     ax.set_aspect('equal')
 fig.tight_layout()
 ```
 
+<!-- WRITER: the trace cell below is new. For run 0 of every arm it prints the on-mode fraction (2,000 samples) and the critic loss (mean over each 500-step window) at steps 500 to 4,000. Equilibrium values differ: 2 log 2 = 1.39 for NS (gan_loss_D is the sum of two means), log 2 = 0.69 for pairing. Measured (PyTorch; JAX alike): unpenalized critic losses fall steadily below equilibrium (NS 1.37 -> 1.02, JAX 1.21; pairing 0.68 -> 0.54, JAX 0.55): the critic keeps winning and steepening, the grid analogue of the undamped slope psi. Penalized critic losses stay at equilibrium throughout (1.35-1.39; 0.66-0.69). On-mode fractions rise monotonically in every arm: no oscillation is visible at 500-step resolution, so do not claim the unpenalized runs oscillate. -->
+The trace shows how each arm got there.
+
+```{.python .input #convergence-mode-coverage-on-25-gaussians-6}
+%%tab pytorch, jax
+traces = {name: np.array(results[0][1]) for name, results in runs.items()}
+for col, stat in enumerate(['on-mode fraction', 'critic loss']):
+    print(f'{stat} of run 0 at every 500 steps')
+    for name, trace in traces.items():         # trace: (checkpoint, stat)
+        print(f'  {name:28}', ' '.join(f'{v:4.2f}' for v in trace[:, col]))
+```
+
+<!-- WRITER: this paragraph is false against the new cells: "sixteen runs", "about 150 runs", "fits the grid" and the gamma = 10 ranges are not printed by any cell; rewrite from the per-run table and trace (numbers in the WRITER notes above and in reports/code-convergence.md). -->
 The R3GAN loss at $\gamma = 1$ fits the grid. Over sixteen runs with different seeds it covered all 25 modes in every run but one, which covered 24, and put most of its samples within three widths of a center. The classical GAN also puts most of its samples on a mode but spreads them less evenly. Over about 150 runs it covered all 25 modes in only about two runs out of five, and in more than a quarter of them it left a whole row or column of the grid nearly empty. The two losses differ more reliably in the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends about three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the grid is blurred, as predicted: only an eighth to three fifths of the samples lie on a mode, and their mean distance to the nearest center is 1.5 to 6 times that at $\gamma = 1$. The blur also thins out some modes, mostly near the center of the grid, so the strict count finds between 21 and 25 covered. The equilibrium is still $q = p$; the larger $\gamma$ slows the approach to it (exercise :exref:`ex_convergence-penalty-length`).
 
 ## The Games of This Chapter
@@ -647,7 +696,7 @@ Gradient training of an adversarial game need not reach its equilibrium. On the 
        $\gamma < 2\ell'(0)$ the iteration converges locally if and only if
        $h < \gamma / \ell'(0)^2$.
     1. Check the threshold of (b) at $\gamma = 0.3$: run
-       `trajectory((0.1, 0.1), h, 3000, gamma=0.3)` for $h = 1.1$ and
+       `trajectory(euler_step, (0.1, 0.1), h, 3000, gamma=0.3)` for $h = 1.1$ and
        $h = 1.3$ and plot the distance from the equilibrium. What does the
        iteration do above the threshold?
    :exlabel:`ex_convergence-discrete-simultaneous-update-dirac`
@@ -711,9 +760,9 @@ Gradient training of an adversarial game need not reach its equilibrium. On the 
        Jacobian of the combined update has determinant one, with
        eigenvalues on the unit circle if and only if $h\, \ell'(0) \leq 2$.
        What does this imply about linear convergence and divergence?
-    1. Write an alternating `trajectory` and run it at $\gamma = 0$ from
-       $(0.1, 0.1)$ for $10^5$ steps with $h \in \{0.2, 1, 3, 5\}$. Record
-       the smallest and largest distance from the equilibrium over the
+    1. Run the alternating update at $\gamma = 0$,
+       `trajectory(alt_step, (0.1, 0.1), h, 10**5)`, with
+       $h \in \{0.2, 1, 3, 5\}$. Record the smallest and largest distance from the equilibrium over the
        last $10^4$ steps, and explain the wide spread at $h = 3$. Repeat at
        $h = 0.2$ with $\gamma = 0.3$.
    :exlabel:`ex_convergence-alternating-updates`
@@ -775,7 +824,7 @@ Gradient training of an adversarial game need not reach its equilibrium. On the 
     1. Redefine `dirac_field` with the non-saturating weight, run
        `trajectory` from $(1, 1)$ and from $(0.05, 0.05)$ for $4000/h$
        steps with $h \in \{0.01, 0.05, 0.2\}$, and compare the late
-       distance with $r^\star$. Check (b) with `flow=True`.
+       distance with $r^\star$. Check (b) with `trajectory(rk4_step, ...)`.
    :exlabel:`ex_convergence-non-saturating-dynamics`
 
 [Discussions](https://d2l.discourse.group/t/36811)

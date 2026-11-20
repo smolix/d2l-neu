@@ -103,12 +103,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 2.487\n"
+          "text": "lr 0.1: final loss 2.485\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.5: final loss 2.146\n"
+          "text": "lr 0.5: final loss 2.131\n"
         },
         {
           "type": "stream",
@@ -119,8 +119,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "test-models/test-models-a-first-run-with-minibatch-sgd-2-1.svg",
-          "bytes": 92379,
-          "sha256": "sha256:03459594c1214c5eced314b75d08edeac27c7221ff7f3be79218c2c40397cba0"
+          "bytes": 92435,
+          "sha256": "sha256:df2c7c09b122fb40ea0c2e44e953f591f0ab30a1fa815202111e58c29b8f41ab"
         }
       ]
     },
@@ -131,28 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.3: final loss 0.212, test accuracy 0.908\n"
-        }
-      ]
-    },
-    "test-models-comparing-two-runs-1": {
-      "code_fingerprint": "sha256:8f6d656fafa588ce152a605bc946a82c5aa0d0358ca8b7edcf5a88cd99d19ca8",
-      "kind": "text",
-      "outputs": []
-    },
-    "test-models-comparing-two-runs-2": {
-      "code_fingerprint": "sha256:298a2563c86ee1aaaba626adc4497b7513e36729ae8bb93e016b19e0089b6867",
-      "kind": "text",
-      "outputs": []
-    },
-    "test-models-comparing-two-runs-3": {
-      "code_fingerprint": "sha256:d15760ffc208e78a4d3871a837a5e36ea8402bcbba7f0fa63dbb842caba98c75",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "TinyLM, training loss      1.583 1.582 1.615 1.589 1.586   range 0.033\nTinyLM, validation loss    1.563 1.567 1.598 1.563 1.563   range 0.034\nFashionCNN, training loss  0.214 0.217 0.224 0.238 0.221   range 0.023\nFashionCNN, test accuracy  0.897 0.901 0.904 0.899 0.876   range 0.028\n"
+          "text": "lr 0.3: final loss 0.216, test accuracy 0.900\n"
         }
       ]
     }

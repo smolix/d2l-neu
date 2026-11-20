@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-sweep-1.svg",
-          "bytes": 31281,
-          "sha256": "sha256:6b8c33ff0e544668640ab461f3aaa7047d2d61768de72d4dd5f50d3e52ea7dc7"
+          "bytes": 31262,
+          "sha256": "sha256:9e3cc829c744c1e6a90da7d3789ad589e5618d9d1149299bf9ee64f19fe73ac0"
         }
       ]
     },
@@ -75,7 +75,7 @@
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
           "bytes": 37427,
-          "sha256": "sha256:506146ee948f127f9c2c52d9d0e27102eb6f04cd8a50369c279d9e1688eb44aa"
+          "sha256": "sha256:5615625f65348127c0020157ffb403ba2512c22f2aa7835b2cbad289194322f9"
         }
       ]
     },
@@ -87,8 +87,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
-          "bytes": 37450,
-          "sha256": "sha256:b2677a3c776eba2a25b10d2e91b31543c12baed156560bab33f336baad333075"
+          "bytes": 37454,
+          "sha256": "sha256:9f1439972370d96eb68eb4c8da8b88feaea879586aa3b68fb31eaeac4aeff909"
         }
       ]
     },
@@ -105,8 +105,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-learning-rate-transfer-1.svg",
-          "bytes": 31084,
-          "sha256": "sha256:d197fd23947b205aef3d49c35bd3874d0ae7bb40215f92d57ff3b3627130dc91"
+          "bytes": 31098,
+          "sha256": "sha256:57e8feaa3e21e2ee17cd2e9e82185b3bb0405b5faf58e1a4618cd648560d325e"
         }
       ]
     },
@@ -117,7 +117,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SP  best loss per width: 0.326  0.302  0.262  0.231\n    width 8192 at the width-128 lr 0.326  (seeds 0.315  0.337)\n    width 8192 at its own lr       0.231  (seeds 0.226  0.236)\nmuP best loss per width: 0.332  0.263  0.238  0.231\n    width 8192 at the width-128 lr 0.231  (seeds 0.226  0.236)\n    width 8192 at its own lr       0.231  (seeds 0.226  0.236)\n"
+          "text": "SP  best loss per width: 0.321  0.294  0.260  0.221\n    width 8192 at the width-128 lr 0.324  (seeds 0.317  0.331)\n    width 8192 at its own lr       0.221  (seeds 0.221  0.221)\nmuP best loss per width: 0.324  0.262  0.232  0.221\n    width 8192 at the width-128 lr 0.221  (seeds 0.221  0.221)\n    width 8192 at its own lr       0.221  (seeds 0.221  0.221)\n"
         }
       ]
     }

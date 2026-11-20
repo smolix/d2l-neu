@@ -20,12 +20,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant        budget  300.0, final rate 0.1, mean squared distance 0.279\n"
+          "text": "constant        budget  300.0, final rate 0.1, mean squared distance 0.276\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exponential     budget   20.0, final rate 1.9e-27, mean squared distance 0.124\n"
+          "text": "exponential     budget   20.0, final rate 1.9e-27, mean squared distance 0.131\n"
         },
         {
           "type": "stream",
@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "polynomial 1    budget   48.2, final rate 0.0033, mean squared distance 0.012\n"
+          "text": "polynomial 1    budget   48.2, final rate 0.0033, mean squared distance 0.011\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-four-schedules-on-the-valley-1.svg",
-          "bytes": 98695,
-          "sha256": "sha256:38953f3483eb738d48adacc139d9d4a49edb7158eb476380fc8f5a4a48cf4da0"
+          "bytes": 99110,
+          "sha256": "sha256:b6550af151ac45c5b1f2cbedf12a7def5b1b345fd0922516c5b35b39d64fe8c0"
         }
       ]
     },
@@ -68,24 +68,24 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant               6.00   1.608 1.627    1.559 1.575\n"
+          "text": "constant               6.00   1.609 1.606    1.563 1.564\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine                 3.00   1.582 1.599    1.556 1.573\n"
+          "text": "cosine                 3.00   1.576 1.591    1.551 1.565\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "stable, then decay     5.40   1.603 1.628    1.503 1.516\n"
+          "text": "stable, then decay     5.40   1.610 1.615    1.506 1.514\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-decay-on-a-language-model-1-1.svg",
-          "bytes": 33413,
-          "sha256": "sha256:bcc7d3d4b39f88f75f4aceb2a9cb85733812c6f95f93683845945fdddd551894"
+          "bytes": 33334,
+          "sha256": "sha256:18d5de43fda1c77f6c56bdd52e9847a5dff9ea2e7d96fba475746a8980c43300"
         }
       ]
     },
@@ -106,12 +106,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cold start     0.67 0.15 0.02 0.01   training 2.751, validation 2.771\n"
+          "text": "cold start     0.67 0.15 0.02 0.01   training 2.795, validation 2.788\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "20-step ramp   0.03 0.09 0.06 0.01   training 1.777, validation 1.755\n"
+          "text": "20-step ramp   0.03 0.10 0.05 0.01   training 1.829, validation 1.766\n"
         }
       ]
     },
@@ -127,7 +127,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step  plateau  branch\n 750    1.750   1.716\n1250    1.631   1.579\n1750    1.576   1.523\n"
+          "text": "step  plateau  branch\n 750    1.739   1.706\n1250    1.629   1.581\n1750    1.579   1.527\n"
         },
         {
           "type": "stream",
@@ -138,8 +138,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-branching-2-1.svg",
-          "bytes": 23907,
-          "sha256": "sha256:90efb37a4c9f4a69da4b2fc12ee224e5abdf169b6a03733c184d94090fd39805"
+          "bytes": 23909,
+          "sha256": "sha256:b2778c5f2de7271df10361981adb1b1f6cb90ce7124b8690d0f5f7a77941bf6c"
         }
       ]
     }

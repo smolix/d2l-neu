@@ -710,14 +710,26 @@ are too tight, with a spread of 0.31 to 0.34 after one jump and 0.37 to
 0.38 after two and four. That is also why its four jumps stray less often
 than the data themselves.
 
+Two runs per student are few, so we retrained each two-time student with
+seeds 2 to 7 (outside the notebook, same code). One jump kept the weights
+within 0.007 in every run. After four jumps the distilled student stayed
+within 0.006 in all six, while one or two MeanFlow students in six ended
+0.013 to 0.023 off, three to five times the miss of a fresh draw. So
+MeanFlow's weights after several jumps depend on the training run, and a
+single run is no guide to them; its one-jump weights and its tight modes
+recur in every run.
+
+:begin_tab:`pytorch`
+In this tab both MeanFlow runs of the table are among the steady ones:
+0.005 off after four jumps.
+:end_tab:
+
 :begin_tab:`jax`
-In this tab the MeanFlow run with seed 3 drifts after more jumps: its
+In this tab the MeanFlow run with seed 3 is one of the drifting ones: its
 weights are 0.012 off after two jumps and 0.020 after four, so about 2% of
-its samples sit on the wrong mode, while one jump keeps them within 0.005.
-The drift belongs to the training run, not to the sampler. Retrained with
-seeds 2 to 7, two MeanFlow students in six end 0.013 to 0.020 off after
-four jumps, while the distilled two-time student stays within 0.006 in all
-six.
+its samples sit on the wrong mode, while its one jump stays within 0.005.
+A Python loop over the same jumps gives the same weights as the compiled
+sampler, so the drift belongs to the training run, not to the sampler.
 :end_tab:
 
 The comparison locates the defect. The two-time students share the
@@ -881,8 +893,8 @@ d2l.plot([ns_teacher, ns_student, [1, 50]],
 ```
 
 The teacher's FD falls from about 150 to 170 at one Euler step and about
-80 to 85 at two, to about 7 at ten and 2.6 to 2.7 at fifty, against a floor of
-about 0.8. The student lies far below this curve at small budgets: one
+80 to 85 at two, to about 7 at ten and 2.6 to 2.7 at fifty, against a
+floor of about 0.8. The student lies far below this curve at small budgets: one
 jump scores 11 to 12, between four and five times the teacher's
 fifty-step FD, two jumps nearly twice it, and four within about 1.5 times.
 Read across the plot, two evaluations of the student are worth about

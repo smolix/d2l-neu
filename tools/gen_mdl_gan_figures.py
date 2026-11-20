@@ -5,7 +5,7 @@ chapter (ch. 16) in the one shared house style defined in ``gen_mdl_figures.py``
 Four figures:
 
   * ``mdl-gan-architecture`` -- the adversarial loop: a latent draw through the
-    generator, the generated and real batches meeting at the discriminator, and
+    generator, the generated and real batches meeting at the critic, and
     the two updates with their opposite goals (replaces the legacy hand-drawn
     ``img/gan.svg``, now deleted);
   * ``mdl-gan-template`` -- the two knobs of the adversarial-objective template
@@ -91,7 +91,7 @@ def _batch(ax, cx, cy, w, h, pts, color, fontsize=12.5, label=None,
 
 def fig_architecture():
     """The game of :numref:`fig_gan`: a latent draw z through the generator G
-    makes a batch of generated samples; the discriminator D sees it alongside a
+    makes a batch of generated samples; the critic D sees it alongside a
     batch of real data and scores every sample; the two updates push in
     opposite directions."""
     fig, ax = plt.subplots(figsize=(11.8, 5.2))
@@ -125,10 +125,10 @@ def fig_architecture():
     _batch(ax, 8.10, y_r, 2.4, 2.0, real, BLUE, label_below=False,
            label=r"real batch $x \sim p_{\mathrm{data}}$")
 
-    # --- both batches into the discriminator --------------------------------
+    # --- both batches into the critic ---------------------------------------
     _curved(ax, (9.35, y_r), (10.66, 4.28), 0.12, "black", lw=1.6)
     _curved(ax, (9.35, y_g), (10.66, 3.62), -0.12, "black", lw=1.6)
-    _network(12.00, 3.95, 2.62, r"$D$", "discriminator", GREEN)
+    _network(12.00, 3.95, 2.62, r"$D$", "critic", GREEN)
 
     # --- the score it produces ----------------------------------------------
     xs = 14.35

@@ -54,37 +54,8 @@ Training alternates between the two networks, as :numref:`fig_gan` shows. The cr
 ![Adversarial training. The generator $G$ turns latent draws $z$ into generated samples, and the critic $D$ scores them and a batch of real data. The critic raises its scores on data and lowers them on generated samples; the generator, through the critic's gradients, makes the two batches harder to tell apart.](../img/mdl-gan-architecture.svg)
 :label:`fig_gan`
 
-### Notation
-
-:numref:`tab_gan_notation` collects the chapter's symbols, each with one meaning throughout; letters defined inside an exercise are local to it.
-
-:Notation of this chapter.
-:label:`tab_gan_notation`
-
-| symbol | meaning | first used | papers write |
-|:--|:--|:--|:--|
-| $p$, $q$, $m = \tfrac12(p + q)$ | data, generator and mixture densities | :numref:`sec_basic_gan` | |
-| $x \sim p$, $x' \sim q$; $y$ | a real and a generated sample; the source label, $1$ for real | :numref:`sec_basic_gan` | $y$ or $\hat x$ for $x'$ |
-| $z$, $G$, $d_z$; $d_x$ | latent variable, generator, latent dimension; data dimension | :numref:`sec_basic_gan` | $k$ for $d_z$, $d$ for $d_x$ |
-| $D$, $V$, $V_\ell$ | the critic's realness logit; the value of the log-loss game, of the game with payoff $\ell$ | :numref:`sec_basic_gan` | discriminator; $-D$ in :citet:`Huang.Gokaslan.Kuleshov.ea.2024` |
-| $\rho = p/q$, $\lambda = \log \rho$ | density ratio and its logarithm | :numref:`sec_basic_gan` | |
-| $\mu$; $b$; $\delta_\theta$; $d(p, q)$ | a mean; an additive shift; a point mass at $\theta$; a discrepancy | :numref:`sec_basic_gan` | $\delta$ for a separation of means |
-| $w_{\textrm{sat}}$, $w_{\textrm{ns}}$, $w_{\textrm{Rp}}$ | per-sample weights of the generator update | :numref:`sec_basic_gan` | not named |
-| $\eta = p/(p + q)$ | class posterior | :numref:`sec_gan_objectives` | $\eta$ for a step size, $h$ here |
-| $\ell$, $L$, $\Delta_\ell$ | payoff of a score, its conditional Bayes risk, its Bayes-risk gap | :numref:`sec_gan_objectives` | the loss $-\ell$ |
-| $T \in \mathcal{T}$, $\ell_p$, $\ell_q$; $\mathcal{F}$ | a critic and its class, scores of real and generated samples; the class of an integral probability metric | :numref:`sec_gan_objectives` | $f$ for its test functions |
-| $f$, $D_f$; $k$, $s$ | divergence function, $f$-divergence; kernel, bandwidth | :numref:`sec_gan_objectives` | $\sigma$ or $\ell$ for $s$ |
-| $\Phi$, $d_{\textrm{Rp}}$ | pairing objective, its value at the optimal critic | :numref:`sec_gan_relativistic` | $2\, d_{\textrm{Rp}}$ |
-| $(a_1, a_2)$, $P$, $Q$, $\pi$ | a real--generated pair, its orderings $p \otimes q$ and $q \otimes p$, a pairing permutation | :numref:`sec_gan_relativistic` | |
-| $\mathcal{E}_{\mathrm{GAN}}$, $\mathcal{E}_{\mathrm{diag}}$, $\mathcal{E}_{\mathrm{all}}$ | classical, paired and all-pairs losses at the best response | :numref:`sec_gan_relativistic` | not named |
-| $v$, $\epsilon$ | direction and size of a change $q = p\,(1 + \epsilon v)$ | :numref:`sec_gan_relativistic` | $h$ for $v$ |
-| $\gamma$, $R_1$, $R_2$ | penalty weight, zero-centered gradient penalties | :numref:`sec_gan_convergence` | |
-| $h$, $\nu_{1,2}$, $\psi$, $\mathbf{u}$; $\omega$ | Dirac-GAN step size, eigenvalues, critic slope, field; a wavenumber | :numref:`sec_gan_convergence` | $\lambda_{1,2}$, $v$; $k$ |
-| $\phi$ | a feature map | :numref:`sec_dcgan` | |
-| $c$, $e_c$, $a(c)$, $\psi_0$, $\zeta_c$ | condition, its embedding, modulation scale, unconditional head, per-class constant | :numref:`sec_gan_conditional` | $\gamma(c)$, $\beta(c)$ for scale and shift |
-| $g$; $\xi$; $\vartheta$ | predictor of $x$ from $c$; standard normal noise; a phase | :numref:`sec_gan_beyond` | $f$; $\epsilon$; $\varphi$ |
-
-Divergences and entropies follow the appendix and are in nats: $D_{\textrm{KL}}$ is the Kullback--Leibler divergence, $D_{\mathrm{J}} = D_{\textrm{KL}}(p \,\|\, q) + D_{\textrm{KL}}(q \,\|\, p)$ its symmetrized form, $\mathrm{JS}$ the Jensen--Shannon divergence, $H$ an entropy and $H_b(t)$ that of a coin with bias $t$.
+<!-- WRITER: the notation table moved to index.md (giving half of the tab_gan_notation move); this pointer sentence is a placeholder (worklist Part 2 (B) item 9). -->
+The chapter's symbols, and the appendix conventions for divergences and entropies, are collected in :numref:`tab_gan_notation`.
 
 ## The Log-Loss Game
 
@@ -209,7 +180,10 @@ That divergence inherits the asymmetry of its first term, the reverse Kullback--
 
 A critic away from its best response shows a second blindness. Both weights read a sample's own score $D(x')$ against the zero level that the log-loss game fixes, and nothing in them compares the sample with real data. A generator whose samples all score above zero receives little push, whatever the data's other modes do. Later in the chapter, a critic that ranks a generated sample against a real one replaces this threshold with a comparison.
 
-## The Game on Fashion-MNIST
+## The Game on a Gaussian
+
+<!-- WRITER: cell order changed (design 3.2: Gaussian before garments, update rules at the start of the Gaussian part). The next paragraph still opens from "the garments", which now come last; rewrite it as the opening of the Gaussian part. The paragraph after it (moved from the old garments heading) says the updates are used "to train a generator of images"; they are now first used on the Gaussian. Since update_D returns the sum of two batch means (D5), the critic's printed loss approaches 2 log 2 at the fixed point, the generator's non-saturating loss log 2. -->
+The garments cannot be scored in nats: neither density can be evaluated, so we can say neither how far $q$ is from $p$ nor whether the critic computes $\lambda$. We therefore return to a case where the densities are known. With Gaussian data and a linear generator, $p$, $q$ and $\lambda$ have closed forms, and three predictions can be checked exactly: the critic's loss approaches $\log 2$ near the fixed point, a trained critic approximates $\lambda$, and a confidently rejected generator keeps learning with the non-saturating loss but stalls with the saturating one.
 
 In practice both players are networks, updated in turn by gradient steps on minibatches. We write these updates once and use them to train a generator of images.
 
@@ -221,7 +195,8 @@ One training iteration is two half-steps, one per player. The critic's update as
 %%tab pytorch
 #@save
 def update_D(X, Z, net_D, net_G, trainer_D):
-    """Update the critic; return the summed log loss, halved."""
+    """Update the critic; return its log loss summed over both batches
+    (per sample, the sum of two means: 2 log 2 at equilibrium)."""
     trainer_D.zero_grad()
     real_Y = net_D(X)
     # The generator is the fixed player here: detach its output
@@ -229,7 +204,7 @@ def update_D(X, Z, net_D, net_G, trainer_D):
     loss_D = (F.binary_cross_entropy_with_logits(
                   real_Y, torch.ones_like(real_Y), reduction='sum') +
               F.binary_cross_entropy_with_logits(
-                  fake_Y, torch.zeros_like(fake_Y), reduction='sum')) / 2
+                  fake_Y, torch.zeros_like(fake_Y), reduction='sum'))
     loss_D.backward()
     trainer_D.step()
     return loss_D
@@ -240,7 +215,8 @@ def update_D(X, Z, net_D, net_G, trainer_D):
 #@save
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update the critic; return the summed log loss, halved."""
+    """Update the critic; return its log loss summed over both batches
+    (per sample, the sum of two means: 2 log 2 at equilibrium)."""
     batch_size = X.shape[0]
     fake_X = net_G(Z)  # computed outside the loss: no gradient to net_G
     def loss_D_fn(model_D):
@@ -249,7 +225,7 @@ def update_D(X, Z, net_D, net_G, optimizer_D):
         return (jnp.sum(optax.sigmoid_binary_cross_entropy(
                     real_Y, jnp.ones(batch_size))) +
                 jnp.sum(optax.sigmoid_binary_cross_entropy(
-                    fake_Y, jnp.zeros(batch_size)))) / 2
+                    fake_Y, jnp.zeros(batch_size))))
     loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
     optimizer_D.update(net_D, grads_D)
     return loss_D
@@ -295,10 +271,12 @@ The loop `train_gan` alternates the two half-steps over minibatches, drawing a f
 %%tab pytorch
 #@save
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None, on_epoch=None):
+              step_G=update_G, seed=None, on_epoch=None, ema=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
-    return the per-sample (loss_D, loss_G) of each epoch."""
+    (beta_1 = 0.5), calling ema.update(net_G) after every generator step
+    and on_epoch(epoch) after each epoch if given; return each epoch's
+    per-sample losses (loss_D, the sum of the critic's two batch means,
+    and loss_G)."""
     if seed is not None:
         torch.manual_seed(seed)
     trainer_D = torch.optim.Adam(net_D.parameters(), lr=lr_D,
@@ -312,6 +290,8 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             Z = torch.randn(X.shape[0], latent_dim, device=X.device)
             loss_D += update_D(X, Z, net_D, net_G, trainer_D).detach()
             loss_G += step_G(Z, net_D, net_G, trainer_G).detach()
+            if ema is not None:
+                ema.update(net_G)
             n += X.shape[0]
         history.append(torch.stack([loss_D, loss_G]) / n)
         if on_epoch is not None:
@@ -323,10 +303,12 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
 %%tab jax
 #@save
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None, on_epoch=None):
+              step_G=update_G, seed=None, on_epoch=None, ema=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
-    return the per-sample (loss_D, loss_G) of each epoch."""
+    (beta_1 = 0.5), calling ema.update(net_G) after every generator step
+    and on_epoch(epoch) after each epoch if given; return each epoch's
+    per-sample losses (loss_D, the sum of the critic's two batch means,
+    and loss_G)."""
     key = d2l.get_key() if seed is None else jax.random.key(seed)
     optimizer_D = nnx.Optimizer(net_D, optax.adam(lr_D, b1=0.5),
                                 wrt=nnx.Param)
@@ -340,114 +322,14 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             Z = jax.random.normal(subkey, (X.shape[0], latent_dim))
             loss_D += update_D(X, Z, net_D, net_G, optimizer_D)
             loss_G += step_G(Z, net_D, net_G, optimizer_G)
+            if ema is not None:
+                ema.update(net_G)
             n += X.shape[0]
         history.append((loss_D / n, loss_G / n))
         if on_epoch is not None:
             on_epoch(epoch)
     return np.array(history)
 ```
-
-### Garments from Noise
-:label:`subsec_gan_fashion_mnist`
-
-Fashion-MNIST, the $28 \times 28$ grayscale images of ten kinds of clothing from :numref:`sec_fashion_mnist`, gives a first test on images. Both players are multilayer perceptrons with leaky ReLU units, which pass negative inputs with slope 0.2 instead of zeroing them. The generator maps 100 latent numbers through hidden layers of 256 and 512 units to 784 pixels, with a final tanh for the range $[-1, 1]$ to which we scale the images. The critic mirrors it, from 784 inputs through 512 and 256 units to one logit.
-
-The function `make_mlp` builds such a perceptron from its list of layer widths, with the activation `act` between consecutive linear layers. Its weights start uniform in $\pm 1/\sqrt{n_{\mathrm{in}}}$ for a layer with $n_{\mathrm{in}}$ inputs, and its offsets at zero. It is saved for the small networks of later sections.
-
-```{.python .input #gan-garments-from-noise-5}
-%%tab pytorch
-#@save
-def make_mlp(sizes, act):
-    """Linear layers of the given widths with the activation module act
-    between them; weights uniform in +-1/sqrt(fan_in), zero biases."""
-    layers = []
-    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
-        linear = nn.Linear(d_in, d_out)  # weights uniform by default
-        nn.init.zeros_(linear.bias)
-        layers += [linear, act]
-    return nn.Sequential(*layers[:-1])
-```
-
-```{.python .input #gan-garments-from-noise-5}
-%%tab jax
-#@save
-def make_mlp(sizes, act, *, rngs):
-    """Linear layers of the given widths with the activation function act
-    between them; weights uniform in +-1/sqrt(fan_in), zero biases."""
-    init = nnx.initializers.variance_scaling(1 / 3, 'fan_in', 'uniform')
-    layers = []
-    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
-        layers += [nnx.Linear(d_in, d_out, kernel_init=init, rngs=rngs), act]
-    return nnx.Sequential(*layers[:-1])
-```
-
-```{.python .input #gan-garments-from-noise-1}
-%%tab pytorch
-torch.manual_seed(0)
-fmnist = d2l.FashionMNIST()
-# All 60,000 training images as rows of 784 pixels in [-1, 1]
-images = fmnist.train.data.reshape(-1, 784).float() / 127.5 - 1
-image_iter = d2l.load_array((images,), batch_size=64)
-leaky = nn.LeakyReLU(0.2)
-net_G_img = nn.Sequential(make_mlp([100, 256, 512, 784], leaky), nn.Tanh())
-net_D_img = make_mlp([784, 512, 256, 1], leaky)
-```
-
-```{.python .input #gan-garments-from-noise-1}
-%%tab jax
-fmnist = d2l.FashionMNIST()
-# All 60,000 training images as rows of 784 pixels in [-1, 1]
-images = fmnist.train[0].reshape(-1, 784).astype(np.float32) / 127.5 - 1
-image_iter = d2l.ArrayLoader((images,), batch_size=64, shuffle=True,
-                             key=jax.random.key(3))
-rngs = nnx.Rngs(0)
-leaky = lambda x: nnx.leaky_relu(x, 0.2)
-net_G_img = nnx.Sequential(make_mlp([100, 256, 512, 784], leaky, rngs=rngs),
-                           jnp.tanh)
-net_D_img = make_mlp([784, 512, 256, 1], leaky, rngs=rngs)
-```
-
-Both players learn at the DCGAN's rate of $2 \cdot 10^{-4}$, on minibatches of 64, for twenty epochs (almost 19,000 iterations).
-
-```{.python .input #gan-garments-from-noise-2}
-%%tab pytorch, jax
-history_img = train_gan(net_D_img, net_G_img, image_iter, num_epochs=20,
-                        latent_dim=100, lr_D=2e-4, lr_G=2e-4, seed=1)
-print(f'last epoch: critic loss {history_img[-1, 0]:.2f}, '
-      f'generator loss {history_img[-1, 1]:.2f}')
-```
-
-Thirty samples from fresh latent draws:
-
-```{.python .input #gan-garments-from-noise-3}
-%%tab pytorch
-with torch.no_grad():
-    fake_img = net_G_img(torch.randn(30, 100))
-d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray');
-```
-
-```{.python .input #gan-garments-from-noise-3}
-%%tab jax
-fake_img = net_G_img(jax.random.normal(jax.random.key(2), (30, 100)))
-d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray');
-```
-
-The samples are recognizable garments: shirts and other tops, dresses and shoes. Most outlines are clear, but the interiors are grainy and speckled rather than blurred; neither network knows that neighboring pixels belong together, which the convolutional networks of :numref:`sec_dcgan` add. The two losses show how far the game is from its end.
-
-```{.python .input #gan-garments-from-noise-4}
-%%tab pytorch, jax
-epochs = list(range(1, len(history_img) + 1))
-d2l.plot(epochs, [history_img[:, 0], history_img[:, 1],
-                  [math.log(2)] * len(epochs)],
-         'epoch', 'per-sample loss', legend=['critic', 'generator', 'log 2'],
-         fmts=('-', '--', 'k:'), figsize=(4.5, 3))
-```
-
-Within the first epoch the critic pulls ahead: its per-sample loss falls well below $\log 2$ and the generator's rises well above it. Both then drift slowly toward $\log 2$, but after twenty epochs the critic's loss is still about 0.5 and the generator's about 1.4. The critic still tells real from generated garments with some confidence, so at this budget the game has not reached its equilibrium, where both losses would sit at $\log 2$.
-
-## The Game on a Gaussian
-
-The garments cannot be scored in nats: neither density can be evaluated, so we can say neither how far $q$ is from $p$ nor whether the critic computes $\lambda$. We therefore return to a case where the densities are known. With Gaussian data and a linear generator, $p$, $q$ and $\lambda$ have closed forms, and three predictions can be checked exactly: the critic's loss approaches $\log 2$ near the fixed point, a trained critic approximates $\lambda$, and a confidently rejected generator keeps learning with the non-saturating loss but stalls with the saturating one.
 
 ### A Linear Generator with Known Densities
 :label:`subsec_gan_training`
@@ -529,20 +411,24 @@ history = train_gan(net_D, net_G, data_iter, num_epochs=20, latent_dim=2,
 fake = net_G(jax.random.normal(jax.random.key(4), (200, 2)))
 ```
 
+<!-- WRITER: the loss plot now draws two dotted lines, each in its player's color: the critic's equilibrium 2 log 2 (update_D returns the sum of two batch means, D5) and the generator's log 2. -->
 The left panel tracks both losses against the dotted line at $\log 2$; the right panel overlays generated samples on the data.
 
 ```{.python .input #gan-training-3}
 %%tab pytorch, jax
 fig, axes = d2l.plt.subplots(1, 2, figsize=(9, 3.2))
 epochs = list(range(1, len(history) + 1))
-d2l.plot(epochs, [history[:, 0], history[:, 1], [math.log(2)] * len(epochs)],
-         'epoch', 'per-sample loss', legend=['critic', 'generator', 'log 2'],
-         fmts=('-', '--', 'k:'), axes=axes[0])
+d2l.plot(epochs, [history[:, 0], history[:, 1], [2 * math.log(2)] * len(epochs),
+                  [math.log(2)] * len(epochs)],
+         'epoch', 'per-sample loss',
+         legend=['critic', 'generator', '2 log 2', 'log 2'],
+         fmts=('C0-', 'C1--', 'C0:', 'C1:'), axes=axes[0])
 d2l.plot([data[:100, 0], fake[:100, 0]], [data[:100, 1], fake[:100, 1]],
          legend=['real', 'generated'], fmts=('C0.', 'C1.'), axes=axes[1])
 fig.tight_layout()
 ```
 
+<!-- WRITER: the garments now come after this run, so "Unlike on the garments" no longer reads in order. The critic's printed loss is now the sum of two means: it rises to about 2 log 2 (1.39), and the best critic's value on that scale is 2 log 2 - 2 JS(p, q); the generator approaches log 2. See reports/code-gan.md for the measured values (GAN-11: no printed number shows an "occasional epoch" jump; cut it). -->
 Unlike on the garments, the critic's loss rises to $\log 2$ within about ten epochs and then stays near it, apart from an occasional epoch in which both losses jump above it and fall back. That is what it should do if $\mathrm{JS}$ approaches zero, since the best critic's per-sample loss is $\log 2 - \mathrm{JS}(p, q)$. The generator's loss approaches the same level from above, the minimum of the non-saturating loss by :eqref:`eq_gan_ns_value`, and the generated samples fill the data's ellipse. Still, a critic loss of $\log 2$ shows only that this critic can no longer separate the samples, not that $q = p$, so we check the fit independently.
 
 ### The Fit in Nats
@@ -721,50 +607,53 @@ def update_G_saturating(Z, net_D, net_G, optimizer_G):
     return loss_G
 ```
 
+<!-- WRITER: the cell now trains each arm three times (train seeds 1, 2, 3 in PyTorch; 10, 11, 12 in JAX), the two arms sharing minibatches and latent draws run by run, and prints the three final KL values per arm; the plot shows the first run. GAN-13: lr_G is 0.01 here against 0.005 in the main run because the generator starts about 8.5 units from the data and Adam moves the bias by at most about lr_G per step: at 0.005 the non-saturating arm (PyTorch sweep, 6 runs) is still 15 to 42 nats away at epoch 5 and ends at 0.22 to 0.41 nats with the critic loss at 1.19 to 1.28, against 0.38 to 0.60 nats at epoch 5 and 0.015 to 0.062 at epoch 20 at lr_G 0.01; the saturating arm stalls at 334 to 343 nats at both rates. See reports/code-gan.md. -->
 Two arms start from the same initialization, see the same minibatches and latent draws, and differ only in the generator loss. After every epoch the callback `on_epoch` records the generator's samples at one fixed set of latent draws.
 
 ```{.python .input #gan-saturating-versus-non-saturating-training-1}
 %%tab pytorch
 torch.manual_seed(3)
 Z_show = torch.randn(200, 2)  # one latent sample for every snapshot
-runs = {}
+runs = {}  # name: (losses, snapshots) of the first run, for the plot
 for name, step in [('non-saturating', update_G),
                    ('saturating', update_G_saturating)]:
-    net_G_ab, net_D_ab = make_nets()
-    with torch.no_grad():
-        net_G_ab[0].bias += torch.tensor([-6.0, 6.0])
-    snaps = {}  # epoch: generated samples
-    hist = train_gan(net_D_ab, net_G_ab, data_iter, num_epochs=20,
-                     latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
-                     seed=1,  # the same minibatches and latent draws
-                     on_epoch=lambda epoch: snaps.update(
-                         {epoch: net_G_ab(Z_show).detach()}))
-    runs[name] = (hist, snaps)
-    mu_q, Sigma_q = generator_gaussian(net_G_ab)
-    print(f'{name}: final KL(q || p) = '
-          f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.2f} nats')
+    kls = []
+    for seed in (1, 2, 3):  # both arms see the same minibatches and draws
+        net_G_ab, net_D_ab = make_nets()
+        with torch.no_grad():
+            net_G_ab[0].bias += torch.tensor([-6.0, 6.0])
+        snaps = {}  # epoch: generated samples
+        hist = train_gan(net_D_ab, net_G_ab, data_iter, num_epochs=20,
+                         latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
+                         seed=seed, on_epoch=lambda epoch: snaps.update(
+                             {epoch: net_G_ab(Z_show).detach()}))
+        runs.setdefault(name, (hist, snaps))
+        mu_q, Sigma_q = generator_gaussian(net_G_ab)
+        kls.append(f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.2f}')
+    print(f'{name}: final KL(q || p) = {", ".join(kls)} nats')
 ```
 
 ```{.python .input #gan-saturating-versus-non-saturating-training-1}
 %%tab jax
 Z_show = jax.random.normal(jax.random.key(5), (200, 2))  # for every snapshot
-runs = {}
+runs = {}  # name: (losses, snapshots) of the first run, for the plot
 for name, step in [('non-saturating', update_G),
                    ('saturating', update_G_saturating)]:
-    net_G_ab, net_D_ab = make_nets()
-    net_G_ab.layers[0].bias[...] += jnp.array([-6.0, 6.0])
-    data_iter_ab = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,
-                                   key=jax.random.key(9))
-    snaps = {}  # epoch: generated samples
-    hist = train_gan(net_D_ab, net_G_ab, data_iter_ab, num_epochs=20,
-                     latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
-                     seed=10,  # the same minibatches and latent draws
-                     on_epoch=lambda epoch: snaps.update(
-                         {epoch: net_G_ab(Z_show)}))
-    runs[name] = (hist, snaps)
-    mu_q, Sigma_q = generator_gaussian(net_G_ab)
-    print(f'{name}: final KL(q || p) = '
-          f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.2f} nats')
+    kls = []
+    for seed in (10, 11, 12):  # both arms see the same minibatches and draws
+        net_G_ab, net_D_ab = make_nets()
+        net_G_ab.layers[0].bias[...] += jnp.array([-6.0, 6.0])
+        data_iter_ab = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,
+                                       key=jax.random.key(seed - 1))
+        snaps = {}  # epoch: generated samples
+        hist = train_gan(net_D_ab, net_G_ab, data_iter_ab, num_epochs=20,
+                         latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
+                         seed=seed, on_epoch=lambda epoch: snaps.update(
+                             {epoch: net_G_ab(Z_show)}))
+        runs.setdefault(name, (hist, snaps))
+        mu_q, Sigma_q = generator_gaussian(net_G_ab)
+        kls.append(f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.2f}')
+    print(f'{name}: final KL(q || p) = {", ".join(kls)} nats')
 ```
 
 The first two panels show each arm's samples after five and twenty epochs; the third shows both critics' losses.
@@ -780,16 +669,121 @@ for ax, (name, (hist, snaps)) in zip(axes[:2], runs.items()):
     ax.set_title(name)
 epochs = list(range(1, 21))
 d2l.plot(epochs, [runs['non-saturating'][0][:, 0],
-                  runs['saturating'][0][:, 0], [math.log(2)] * 20],
+                  runs['saturating'][0][:, 0], [2 * math.log(2)] * 20],
          'epoch', 'critic loss', legend=['non-saturating', 'saturating',
-                                         'log 2'],
+                                         '2 log 2'],
          fmts=('-', '--', 'k:'), axes=axes[2])
 fig.tight_layout()
 ```
 
+<!-- WRITER: the reference line in the right panel is now 2 log 2 (the critic loss is the sum of two means, D5); "its critic's loss is back at log 2" becomes "back at 2 log 2". Measured KL values: see reports/code-gan.md. -->
 The saturating generator does not move. Its critic's loss drops to zero within the first epochs, so $\sigma(D(x')) \approx 0$ for every generated sample, and the run ends where it started, more than three hundred nats from the data. The non-saturating generator crosses to the data within the first few epochs: by epoch five its samples lie in the data region, though not yet centered on it. By epoch twenty they fill the ellipse, $D_{\textrm{KL}}(q \,\|\, p)$ is well below one nat, and its critic's loss is back at $\log 2$.
 
 The non-saturating weight amplifies the factor $\nabla_\theta D$ but cannot create it. Here the critic's score surface slopes toward the data even far from them; an optimal critic on separated supports offers no slope, and no choice of weight helps.
+
+## The Game on Fashion-MNIST
+
+<!-- WRITER: the garment part now comes last (design 3.2) and needs an opening paragraph: the analysis checked out on the Gaussian, and the same update rules now train a generator of images. -->
+
+### Garments from Noise
+:label:`subsec_gan_fashion_mnist`
+
+Fashion-MNIST, the $28 \times 28$ grayscale images of ten kinds of clothing from :numref:`sec_fashion_mnist`, gives a first test on images. Both players are multilayer perceptrons with leaky ReLU units, which pass negative inputs with slope 0.2 instead of zeroing them. The generator maps 100 latent numbers through hidden layers of 256 and 512 units to 784 pixels, with a final tanh for the range $[-1, 1]$ to which we scale the images. The critic mirrors it, from 784 inputs through 512 and 256 units to one logit.
+
+The function `make_mlp` builds such a perceptron from its list of layer widths, with the activation `act` between consecutive linear layers. Its weights start uniform in $\pm 1/\sqrt{n_{\mathrm{in}}}$ for a layer with $n_{\mathrm{in}}$ inputs, and its offsets at zero. It is saved for the small networks of later sections.
+
+```{.python .input #gan-garments-from-noise-5}
+%%tab pytorch
+#@save
+def make_mlp(sizes, act):
+    """Linear layers of the given widths with the activation module act
+    between them; weights uniform in +-1/sqrt(fan_in), zero biases."""
+    layers = []
+    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
+        linear = nn.Linear(d_in, d_out)  # weights uniform by default
+        nn.init.zeros_(linear.bias)
+        layers += [linear, act]
+    return nn.Sequential(*layers[:-1])
+```
+
+```{.python .input #gan-garments-from-noise-5}
+%%tab jax
+#@save
+def make_mlp(sizes, act, *, rngs):
+    """Linear layers of the given widths with the activation function act
+    between them; weights uniform in +-1/sqrt(fan_in), zero biases."""
+    init = nnx.initializers.variance_scaling(1 / 3, 'fan_in', 'uniform')
+    layers = []
+    for d_in, d_out in zip(sizes[:-1], sizes[1:]):
+        layers += [nnx.Linear(d_in, d_out, kernel_init=init, rngs=rngs), act]
+    return nnx.Sequential(*layers[:-1])
+```
+
+```{.python .input #gan-garments-from-noise-1}
+%%tab pytorch
+torch.manual_seed(0)
+fmnist = d2l.FashionMNIST()
+# All 60,000 training images as rows of 784 pixels in [-1, 1]
+images = fmnist.train.data.reshape(-1, 784).float() / 127.5 - 1
+image_iter = d2l.load_array((images,), batch_size=64)
+leaky = nn.LeakyReLU(0.2)
+net_G_img = nn.Sequential(make_mlp([100, 256, 512, 784], leaky), nn.Tanh())
+net_D_img = make_mlp([784, 512, 256, 1], leaky)
+```
+
+```{.python .input #gan-garments-from-noise-1}
+%%tab jax
+fmnist = d2l.FashionMNIST()
+# All 60,000 training images as rows of 784 pixels in [-1, 1]
+images = fmnist.train[0].reshape(-1, 784).astype(np.float32) / 127.5 - 1
+image_iter = d2l.ArrayLoader((images,), batch_size=64, shuffle=True,
+                             key=jax.random.key(3))
+rngs = nnx.Rngs(0)
+leaky = lambda x: nnx.leaky_relu(x, 0.2)
+net_G_img = nnx.Sequential(make_mlp([100, 256, 512, 784], leaky, rngs=rngs),
+                           jnp.tanh)
+net_D_img = make_mlp([784, 512, 256, 1], leaky, rngs=rngs)
+```
+
+Both players learn at the DCGAN's rate of $2 \cdot 10^{-4}$, on minibatches of 64, for twenty epochs (almost 19,000 iterations).
+
+```{.python .input #gan-garments-from-noise-2}
+%%tab pytorch, jax
+history_img = train_gan(net_D_img, net_G_img, image_iter, num_epochs=20,
+                        latent_dim=100, lr_D=2e-4, lr_G=2e-4, seed=1)
+print(f'last epoch: critic loss {history_img[-1, 0]:.2f}, '
+      f'generator loss {history_img[-1, 1]:.2f}')
+```
+
+Thirty samples from fresh latent draws:
+
+```{.python .input #gan-garments-from-noise-3}
+%%tab pytorch
+with torch.no_grad():
+    fake_img = net_G_img(torch.randn(30, 100))
+d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray');
+```
+
+```{.python .input #gan-garments-from-noise-3}
+%%tab jax
+fake_img = net_G_img(jax.random.normal(jax.random.key(2), (30, 100)))
+d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray');
+```
+
+The samples are recognizable garments: shirts and other tops, dresses and shoes. Most outlines are clear, but the interiors are grainy and speckled rather than blurred; neither network knows that neighboring pixels belong together, which the convolutional networks of :numref:`sec_dcgan` add. The two losses show how far the game is from its end.
+
+```{.python .input #gan-garments-from-noise-4}
+%%tab pytorch, jax
+epochs = list(range(1, len(history_img) + 1))
+d2l.plot(epochs, [history_img[:, 0], history_img[:, 1],
+                  [2 * math.log(2)] * len(epochs), [math.log(2)] * len(epochs)],
+         'epoch', 'per-sample loss',
+         legend=['critic', 'generator', '2 log 2', 'log 2'],
+         fmts=('C0-', 'C1--', 'C0:', 'C1:'), figsize=(4.5, 3))
+```
+
+<!-- WRITER: D5: the critic's loss is now the sum of two batch means; its equilibrium is 2 log 2 (1.39) and the generator's log 2 (0.69). Measured last-epoch losses: see reports/code-gan.md (about 1.04 for the critic, 1.37 for the generator). GAN-9: say what the losses show and do not show. Seed sweeps (6 PyTorch, 10 JAX runs of this cell's setup) show that about one run in seven or eight drops all footwear and ends with the critic near 0.93 instead of 1.04 to 1.06; JAX on the GPU is not bit-reproducible, so the captured JAX run can be such a run; read the captured samples before describing them. -->
+Within the first epoch the critic pulls ahead: its per-sample loss falls well below $\log 2$ and the generator's rises well above it. Both then drift slowly toward $\log 2$, but after twenty epochs the critic's loss is still about 0.5 and the generator's about 1.4. The critic still tells real from generated garments with some confidence, so at this budget the game has not reached its equilibrium, where both losses would sit at $\log 2$.
 
 ## Summary
 

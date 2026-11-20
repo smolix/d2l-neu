@@ -342,10 +342,12 @@ for desc, fn in (('eager', d2l.gelu_ish), ('compiled', compiled)):
     print(f'{b}, {arrays_moved[desc] * x.nbytes / b.time / 1e9:.0f} GB/s')
 ```
 
-The compiled chain is eight to ten times faster, close to the predicted
-nine, and both versions move data at about 0.7 TB/s or more. The compiler
-made memory no faster and arithmetic no cheaper. It removed 16 of the 18
-array transfers.
+The compiled chain is about ten times faster, close to the predicted
+nine. Both versions move data at 0.7 to 0.9 TB/s, and the two rates wander
+independently from run to run, so re-runs of this cell put the measured
+ratio anywhere between eight and eleven, with the count of bytes in the
+middle of that range. The compiler made memory no faster and arithmetic
+no cheaper. It removed 16 of the 18 array transfers.
 
 The same count applies at the scale of a language model. The chapter's
 running example is a GPT with a billion parameters and width $d = 2048$,
@@ -770,7 +772,8 @@ recorded, so a capture system freezes it, refuses it, or falls back to
 Python. A compiler that specializes to shapes compiles again for a new
 shape, unless it compiled for a symbolic size. Fusion merges elementwise
 chains, and reductions whose rows fit on the chip, into single kernels; for
-`gelu_ish` it divides the memory traffic and the time by about nine.
+`gelu_ish` it divides the memory traffic by nine and the time by
+roughly as much.
 Replaying a recorded sequence of kernels as a CUDA graph removes the
 launches, which small models and small steps need: a compiled step that
 still launches its kernels one by one stays overhead-bound. Compilation
@@ -1151,11 +1154,12 @@ with padding to the next multiple of 64?
 - Predicted speedup: the ratio of bytes, $18/2 = 9$.
 :::
 
-::: {.slide title="Fused gelu_ish Runs 8–10× Faster at About the Same Bandwidth"}
+::: {.slide title="Fused gelu_ish Runs About 10× Faster, as the Byte Count Predicts"}
 @!compilation-what-the-compiler-does-fusion
 
 - Check `allclose` first: compilers reorder floating-point arithmetic.
-- Both versions move data at 0.7 TB/s or more.
+- Both versions move data at 0.7–0.9 TB/s; re-runs put the ratio
+  between 8 and 11, around the predicted 9.
 
 ::: {.d2l-note}
 Memory is no faster and arithmetic no cheaper: 16 of the 18 transfers are
@@ -1320,7 +1324,7 @@ The device's work was predicted correctly; what is left is host time.
 
 - Tracing records tensor operations on placeholders; a branch on a value is
   frozen, refused, or left to Python.
-- `gelu_ish` on 61 MiB: eager moves 1.07 GiB, fused 122 MiB; 8–10× faster.
+- `gelu_ish` on 61 MiB: eager moves 1.07 GiB, fused 122 MiB; about 10× faster.
 - GELU variant of the 1B GPT: unfused activation $9I^*/d \approx 0.72$ of
   the products' time; fused, under a tenth.
 - MLP step: 0.25 ms of work under milliseconds of launches; compiling

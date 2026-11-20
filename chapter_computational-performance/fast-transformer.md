@@ -725,23 +725,12 @@ step at batch 512 uses about a third of the card's memory, so memory does
 not limit it, and our method predicts that checkpointing can only slow the
 step down. It even predicts by how much. The blocks run their forward pass
 twice, 8 FLOPs per parameter and token instead of 6, so a step limited by
-the device should keep about $6/8 = 0.75$ of its throughput. We measure it
-to check the prediction, and to see how much memory it would free for a
-model that needed it.
+the device should keep about $6/8 = 0.75$ of its throughput.
 
-:begin_tab:`pytorch`
-`Checkpointed` wraps a module so that it runs under `checkpoint` from
-`torch.utils.checkpoint`. We give a copy of our model, with its weights,
-checkpointed blocks; the rest of its forward pass stays as `d2l.GPT`
-defines it. Before the timing we check that it computes the same logits.
-:end_tab:
-
-:begin_tab:`jax`
-`Checkpointed` wraps a module so that it runs under `nnx.remat`, Flax's
-form of `jax.checkpoint`. We give a copy of `model16`, with its weights,
-checkpointed blocks; the rest of its forward pass stays as `FusedGPT`
-defines it. Before the timing we check that it computes the same logits.
-:end_tab:
+A FLOP count is a proxy for time, and the clock can give a second
+estimate. We time the forward pass of the kept configuration alone, on one
+minibatch of 512 windows and without computing gradients, and ask what
+running it once more would leave of the step.
 
 ```{.python .input #fast-transformer-activation-checkpointing-1}
 %%tab pytorch
@@ -764,6 +753,29 @@ print(f'forward pass {1e3 * t_forward:.1f} ms of a {1e3 * t_step:.1f} ms '
       f'step: repeating it keeps at least {1 / (1 + t_forward / t_step):.2f} '
       f'of the throughput')
 ```
+
+The two estimates agree. The forward pass takes about a third of the step,
+as the FLOP count said, and repeating it would keep about three quarters
+of the throughput. The cell prints a bound, "at least", because the timed
+forward pass includes the embedding and the output layer, which
+checkpointing does not run twice; at 256 symbols they are a small share of
+the work. We now measure the checkpointed step, to check both estimates
+and to see how much memory checkpointing would free for a model that
+needed it.
+
+:begin_tab:`pytorch`
+`Checkpointed` wraps a module so that it runs under `checkpoint` from
+`torch.utils.checkpoint`. We give a copy of our model, with its weights,
+checkpointed blocks; the rest of its forward pass stays as `d2l.GPT`
+defines it. Before the timing we check that it computes the same logits.
+:end_tab:
+
+:begin_tab:`jax`
+`Checkpointed` wraps a module so that it runs under `nnx.remat`, Flax's
+form of `jax.checkpoint`. We give a copy of `model16`, with its weights,
+checkpointed blocks; the rest of its forward pass stays as `FusedGPT`
+defines it. Before the timing we check that it computes the same logits.
+:end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab pytorch
@@ -816,21 +828,29 @@ memory = plan.temp_size_in_bytes / 2**30
 print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 ```
 
-Checkpointing cuts the memory of the step to about a third and lowers
-throughput less than predicted. The prediction counted FLOPs, and the time
-of a step does not follow them exactly. The forward pass of the blocks,
-the part that runs twice, takes less than its third of the step: the
-backward pass computes the gradients of every elementwise operation and of
-the attention, and moves more bytes per FLOP than the forward pass does.
+Checkpointing cuts the memory of the step to about a third, and it keeps
+more of the throughput than either estimate left it.
 
 :begin_tab:`pytorch`
-Throughput falls to 0.85 of the previous configuration, so repeating the
-forward pass of the blocks added less than a fifth to the step.
+Throughput falls to 0.85 of the previous configuration, well above the
+0.77 that the clock allowed. Repeating the forward pass of the blocks
+added less than a fifth to the step, while the same forward pass run on
+its own takes three tenths of it: inside the backward pass the
+recomputation costs only about three fifths of what it costs alone. We
+have not established why. The embedding and the output layer explain
+little of it, and the compiler, which sees the recomputation and the
+backward pass in one program, may run parts of them in shared kernels. A
+profile of the checkpointed step would show which kernels the
+recomputation adds and how long they take (exercise :exref:`ex_ft-remat`).
 :end_tab:
 
 :begin_tab:`jax`
-Throughput falls to 0.79 of the previous configuration, so repeating the
-forward pass of the blocks added about a quarter to the step.
+Throughput falls to 0.79 of the previous configuration, close to the 0.76
+that the clock allowed. Repeating the forward pass of the blocks added
+about a quarter to the step, against the third that the same forward pass
+takes on its own. A profile of the checkpointed step would show which
+kernels the recomputation adds and how long they take (exercise
+:exref:`ex_ft-remat`).
 :end_tab:
 
 Checkpointing is the right change for a model or a minibatch that would
@@ -1121,12 +1141,17 @@ one initialization, one with the step of the baseline and one with the
 final step, on the same 200 minibatches of 512 windows, about 13 million
 tokens, and compute the loss of both on the validation text with
 `d2l.lm_perplexity` (:numref:`sec_test_models`), in nats per byte. If the
-final step computes the same training, the two curves should stay within
-a tenth of a nat of each other at every printed step, and as a floor each
-validation loss must lie below the 2.45 nats per byte of the bigram model
-of :numref:`sec_gpt`. The check is coarse: a defect that changes the
-weights by a fraction of a percent over 200 steps, such as a dropped
-weight decay of 0.01, passes it.
+final step computes the same training, the two curves should start at the
+same loss and stay within a tenth of a nat of each other while training
+runs smoothly, and as a floor each validation loss must lie below the 2.45
+nats per byte of the bigram model of :numref:`sec_gpt`. Smoothness is not
+guaranteed. The timing runs use a constant learning rate without warm-up
+or gradient clipping. With such a recipe the loss now and then rises by a
+few tenths of a nat or more late in training, and one curve can then lie
+well above the other at a single printed step. The check is coarse in the
+other direction as well: a defect that changes the weights by a fraction
+of a percent over 200 steps, such as a dropped weight decay of 0.01,
+passes it.
 
 ```{.python .input #fast-transformer-the-waterfall-1}
 %%tab pytorch
@@ -1177,16 +1202,31 @@ for name, curve in losses.items():
     assert validation[name] < 2.45  # Better than the bigram model
 ```
 
-Both curves start near $\log 256 \approx 5.55$, the loss of a uniform
-guess over the 256 bytes, and they stay within a tenth of a nat of each
-other at every printed step. In mid-training the curve of the final step
-lies above that of the baseline by up to a tenth of a nat; one pair of
-runs cannot tell whether bf16 trains systematically a little slower or the
-two trajectories merely drifted apart. Over its last 20 steps each curve
-moves in a band less than a tenth of a nat wide, and the two validation
-losses differ by no more than a few hundredths of a nat, both well below
-the bigram level. Within what one pair of runs can show, the final step
-trains the model as the baseline does.
+Both curves start at the same loss, near $\log 256 \approx 5.55$, the
+loss of a uniform guess over the 256 bytes, since both models start from
+the same weights. Through step 100 they stay within a tenth of a nat of
+each other, and both validation losses lie below the bigram level.
+
+:begin_tab:`pytorch`
+The agreement lasts to the end. At step 200 the two curves differ by a few
+hundredths of a nat, over its last 20 steps each moves in a band less than
+a tenth of a nat wide, and the two validation losses differ by about a
+hundredth, both well below the bigram level.
+:end_tab:
+
+:begin_tab:`jax`
+In this run the loss of the baseline rose late: over its last 20 steps it
+lies between 2.13 and 2.81, and at step 200 it stands 0.22 nats above the
+final step, with a validation loss 0.21 higher. The curve of the final
+step shows no such rise. A rise in the reference is no evidence against
+the step under test, but it removes the comparison at step 200 and on the
+validation text, and what remains is the agreement through step 100 and
+the bigram floor.
+:end_tab:
+
+One pair of runs can show no more than this: the final step starts where
+the baseline starts, follows it while training runs smoothly, and ends
+below the bigram floor.
 
 The same run shows what a throughput table leaves out. The GPT of
 :numref:`sec_gpt` reached 1.35 nats per byte after 8 million tokens. This
@@ -1340,6 +1380,21 @@ faster step is not yet a faster training run.
        :numref:`subsec_ft-rungs` whether these minibatches fit on the card,
        and measure those that do.
    :exlabel:`ex_ft-fixed`
+
+1. [code] **Cost of recomputation.** Activation checkpointing in
+   :numref:`subsec_ft-rungs` was measured against two estimates, one from
+   the FLOP count and one from the time of the forward pass alone.
+    1. Record the kernel times of the checkpointed step with
+       `d2l.kernel_times`, as `profile` does, and split its device time
+       with `account`. Compare both parts with those of the step of
+       `+ batch 512`, and say which of them carries the extra time.
+    1. Time the forward pass of the blocks alone, without the embedding
+       and the output layer, and compute the bound of the section again.
+       Does it move closer to the measured ratio?
+    1. Checkpoint only every second block. Predict the throughput and the
+       memory of that step from your measurements before you measure
+       them, and compare.
+   :exlabel:`ex_ft-remat`
 
 1. [code] **Causality gate.** The training check of
    :numref:`subsec_ft-waterfall` accepts the final configuration when its
@@ -1728,13 +1783,15 @@ Two fifths of the step moves bytes, not FLOPs.
 ::: {.slide title="Checkpointing Costs Less Than the Predicted Quarter"}
 [Activation checkpointing]{.kicker}
 
+@!fast-transformer-activation-checkpointing-2
+
 @!fast-transformer-rungs-each-one-measured-4
 
-- Blocks run forward twice: 8 FLOPs per parameter and token, not 6:
+- FLOPs: the blocks run forward twice, 8 per parameter and token, not 6:
   ratio 0.75.
-- Less: the repeated forward pass takes under a third of the step's
-  time; the backward pass moves more bytes per FLOP.
-- Memory falls to about a third.
+- Clock: the forward pass takes about a third of the step, so at least
+  three quarters remain.
+- Measured: above both estimates; memory falls to about a third.
 
 ::: {.d2l-note}
 The right change only for a model or minibatch that does not fit.
@@ -1807,8 +1864,10 @@ Two predictions of opposite sign, a loss and a gain; both held.
 @!fast-transformer-training-check
 
 - One initialization, the same 200 minibatches of 512 windows.
-- Within a tenth of a nat throughout; validation within a few
-  hundredths, below the bigram model's 2.45.
+- The same loss at step 1, within a tenth of a nat through step 100;
+  both validation losses below the bigram model's 2.45.
+- Constant rate, no warm-up or clipping: a curve can rise late, so one
+  late value settles little.
 - A coarse check: a dropped weight decay would pass it.
 
 ::: {.d2l-note .warn}

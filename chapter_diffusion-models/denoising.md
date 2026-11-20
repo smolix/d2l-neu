@@ -698,7 +698,7 @@ The exact score of $p$ sends every chain to a mode with the right spread, but th
 
 The exact score of $p_\sigma$ at $\sigma = 1$ crosses freely, because the noise has filled the valleys, and its weights land within about $0.02$ of $0.5$, $0.3$ and $0.2$. Its strays and spread come out as predicted: these are good samples of the wrong distribution. The truncated spread understates the error; a variance five times too large shows up as a spread only twice the data's, and as about $40\%$ strays.
 
-The trained networks do neither job well. Each is the score it was trained to be, that of $p_{0.3}$, not that of $p$. The components of $p_{0.3}$ have variance $0.25 + 0.09 = 0.34$, and the calculation for the perfect sampler, now with $2 \cdot 0.34$ in place of $2s^2$, predicts about $4\%$ strays and a spread near $0.6$. The exact score of $p_{0.3}$ prints just that: $4.3\%$ strays and a spread of $0.61$ to $0.63$. Both networks print a spread of about $0.6$ and five to six and a half percent strays: as wide as $p_{0.3}$, or a little wider. In width, the networks are what they were trained to be.
+The trained networks do neither job well. Each is the score it was trained to be, that of $p_{0.3}$, not that of $p$. The components of $p_{0.3}$ have variance $0.25 + 0.09 = 0.34$, and the calculation for the perfect sampler, now with $2 \cdot 0.34$ in place of $2s^2$, predicts about $4\%$ strays and a spread near $0.6$. The exact score of $p_{0.3}$ prints just that: $4.3$ to $4.4\%$ strays and a spread of $0.61$ to $0.63$. Both networks print a spread of about $0.6$ and roughly five to six and a half percent strays: as wide as $p_{0.3}$, or a little wider. In width, the networks are what they were trained to be.
 
 Their chains also cross the valleys, more than the field they imitate would allow. The barriers of $p_{0.3}$ are lower than those of $p$ but still 7 to 9 nats high, and its row shows how little they let through in 2,000 steps: the heaviest mode gains at most $0.03$ on its starting share (part 3 of Exercise :exref:`ex_denoising-escaping-mode` predicts how little). The networks, from the same start, carry it to $0.39$ to $0.46$, still below its weight of $0.5$, and the two of them split the rest differently. That extra mass did not climb the barriers of $p_{0.3}$; it moved along errors of the learned field between the modes, where few noisy training points land. Crossings that depend on the errors of the field cannot be trusted to deliver the weights, and even a run that landed on the right ones would prove nothing.
 
@@ -1435,9 +1435,9 @@ $p_{0.3}$; two networks trained at $\sigma = 0.3$.
 | field | weights | width |
 |---|---|---|
 | exact score of $p$ | a third each, as at the start | right; 1–2% stray |
-| exact score of $p_\sigma$, $\sigma = 1$ | within about 0.02 of 0.5, 0.3, 0.2 | variance ×5; ~41% stray, spread about 1 |
+| exact score of $p_\sigma$, $\sigma = 1$ | within about 0.02 of 0.5, 0.3, 0.2 | variance ×5; ~40% stray, spread about 1 |
 | exact score of $p_\sigma$, $\sigma = 0.3$ | heaviest mode gains at most 0.03 | as predicted: spread 0.61–0.63, ~4% stray |
-| trained at $\sigma = 0.3$, two seeds | heaviest mode to 0.39–0.46 | that of $p_{0.3}$: spread about 0.6, 5–6.5% stray |
+| trained at $\sigma = 0.3$, two seeds | heaviest mode to 0.39–0.46 | that of $p_{0.3}$: spread about 0.6, ~5–6.5% stray |
 
 - The barriers of $p$ are 10–12 nats high: a million steps to cross.
 - Trained chains cross far more than $p_{0.3}$ allows, along the field's

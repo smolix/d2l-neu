@@ -6,37 +6,18 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Pooling
 :label:`sec_pooling`
 
-The convolutional layers we have built so far answer local questions: the edge
-detector of :numref:`sec_conv_layer`, for example, reports at each spatial
-location whether an edge is present there. An image classifier, however, must
-ultimately answer a global question about the entire image---such as whether a
-Fashion-MNIST picture depicts a shirt or a sneaker. Bridging the gap from many
-local feature responses to a single global prediction requires two properties.
+Convolutional layers answer local questions—whether an edge sits at pixel
+$(i, j)$—whereas a classifier must answer a global question about the whole
+image. Bridging from local feature maps to a global prediction requires both
+wide spatial reach (:numref:`subsec_stride_rf`) and robustness to tiny spatial
+shifts so a one-pixel camera jitter does not alter the prediction.
 
-The first is *spatial reach*: units near the top of the network must have a
-receptive field (:numref:`sec_conv_layer`) wide enough to span the entire
-input. At full resolution this grows slowly---covering a $28\times28$
-Fashion-MNIST image takes fourteen $3\times3$ layers. As we saw in
-:numref:`subsec_stride_rf`, reducing spatial resolution along the way
-accelerates receptive-field growth dramatically: with just two halvings, six
-$3\times3$ layers suffice.
-
-The second requirement is *robustness to small shifts*. A convolutional edge
-detector fires at the exact pixel where the edge occurs. If the object or the
-camera shifts by a single pixel---which happens constantly in real-world
-photography---the feature map shifts by one pixel as well, yet the
-classifier's prediction ought to stay the same.
-
-A *pooling layer* addresses both goals at once: it downsamples feature maps
-much like a strided convolution, while summarizing each local window with a
-single aggregate statistic—either its maximum or its average. Because the
-maximum over a small window stays unchanged as long as the strongest response
-remains within that window, pooling helps dampen sensitivity to tiny spatial
-shifts. Still, as we will measure directly below, local pooling provides only
-*tolerance* to small shifts rather than true translation invariance; achieving
-full invariance requires pooling across the entire feature map, and even then
-boundary effects still play a role.
-
+A *pooling layer* serves both goals without adding learnable parameters: it
+slides a window across each channel independently and summarizes every patch by
+its *maximum* or *average*. Because the maximum over a small block stays unchanged
+as long as the peak response remains inside that block, local pooling provides
+*tolerance* to small shifts, while *global pooling* across the entire feature map
+collapses spatial coordinates into a single channel-wise vector.
 ```{.python .input #pooling}
 %%tab mxnet
 import math
@@ -249,50 +230,16 @@ all spatial positions yields the exact same scalar regardless of where the
 response sits (bottom row of :numref:`fig_pooling_shift`). This operation is
 called *global pooling*, and it collapses each channel to a single number.
 
-On a bare synthetic feature map, global invariance holds trivially by
-symmetry. Inside an actual CNN, however, global pooling sits atop
-convolutional layers, and a convolution is only strictly shift-equivariant
-away from the image borders (:numref:`sec_why-conv`). To observe the boundary
-effect, let us slide our single-pixel response through all four columns once
-more, pass it through a $3\times3$ kernel of all ones with one pixel of zero
-padding (which replicates the response into every output window containing
-it), and then compute the global maximum and global mean.
 
-```{.python .input #pooling-global-pooling-1}
-%%tab mxnet
-pad = lambda Z: mnp.pad(Z, 1)  # One pixel of zeros on every side
-```
-
-```{.python .input #pooling-global-pooling-1}
-%%tab pytorch
-pad = lambda Z: F.pad(Z, (1, 1, 1, 1))  # One pixel of zeros on every side
-```
-
-```{.python .input #pooling-global-pooling-1}
-%%tab tensorflow
-pad = lambda Z: tf.pad(Z, [[1, 1], [1, 1]])  # One pixel of zeros per side
-```
-
-```{.python .input #pooling-global-pooling-1}
-%%tab jax
-pad = lambda Z: jnp.pad(Z, 1)  # One pixel of zeros on every side
-```
-
-```{.python .input #pooling-global-pooling-2}
-for j in range(4):
-    H = d2l.numpy(d2l.corr2d(pad(single_response(1, j)), d2l.ones((3, 3))))
-    print(f'response at (1, {j}): global max {H.max():.2f}, '
-          f'global mean {H.mean():.4f}')
-```
-
-While the global maximum remains 1 regardless of column, the global mean
-varies with position: an interior response in column 1 or 2 falls inside nine
-$3\times3$ windows, whereas a border response in column 0 or 3 falls inside
-only six---mirroring the boundary counts of :numref:`img_conv_reuse`---so the
-global mean drops from $9/16$ to $6/16$. This lesson carries over to full-scale
-networks: convolutional stacks ending in global pooling are strictly invariant
-only to shifts that keep salient content away from the image boundaries, and
-approximately invariant otherwise.
+Inside a full CNN, however, global pooling sits atop zero-padded convolutional
+layers, which are strictly shift-equivariant only away from the image borders
+(:numref:`sec_why-conv`). As we saw in :numref:`subsec_padding_values`, an
+interior pixel participates in all nine windows of a $3 \times 3$ kernel whereas
+a border pixel participates in only six (and a corner pixel in four), so while a
+global maximum over an isolated response stays constant across columns, a global
+average drops when a feature moves onto the padded border. Convolutional stacks
+ending in global pooling are therefore strictly invariant to shifts that keep
+salient content away from the boundaries, and approximately invariant otherwise.
 
 In the modern architectures of :numref:`chap_modern_cnn`, the two roles of
 pooling are frequently separated. Intermediate spatial downsampling is often
@@ -484,26 +431,6 @@ padded borders).
 
 ## Exercises
 
-1. [code] **Average pooling as convolution.** Express
-   $k_\textrm{h} \times k_\textrm{w}$ average pooling with stride
-   $(s_\textrm{h}, s_\textrm{w})$ on an input with $c$ channels as a
-   convolution with $c$ output channels. Give the kernel
-   $\mathbf{K}_{o,c}$ for $o = c$ and for $o \neq c$, so that each channel
-   is pooled separately, as pooling layers do. On the input
-   of :numref:`fig_pooling`, verify that your convolution reproduces
-   `pool2d(X, (2, 2), 'avg')`.
-
-1. **Receptive field and cost of downsampling.** Consider $3\times3$
-   convolutions with stride 1 and padding 1, with 64 input and 64 output
-   channels, on a $224\times224$ input.
-    1. How many such layers does a stack need before the receptive field
-       of a unit at its top covers the whole image?
-    1. Now insert $2\times2$ max-pooling with stride 2 after every second
-       convolutional layer. How many convolutional layers are needed now?
-    1. Count the multiply-adds of the two stacks, and the comparisons that
-       the pooling layers perform. Which part of the cost does pooling
-       remove, and what does it cost itself?
-
 1. **Pooling alternatives.**
     1. Do we need a separate minimum-pooling layer, or can it be expressed
        through an operation already in this section?
@@ -513,7 +440,7 @@ padded borders).
        Find its limits as $\tau \to 0$ and as $\tau \to \infty$. Give one
        cost that softmax pooling adds relative to max-pooling.
 
-1. **Aliasing and blur-pool.** Naive stride-2 downsampling keeps
+2. **Aliasing and blur-pool.** Naive stride-2 downsampling keeps
    every second entry of its input. Measure frequency in cycles per input
    sample, so that the one-dimensional signals $(1, 0, 1, 0, 1, 0)$ and
    $(0, 1, 0, 1, 0, 1)$ both have frequency $\tfrac{1}{2}$.
@@ -528,7 +455,7 @@ padded borders).
        $(\tfrac{1}{2}, \tfrac{1}{2})$ computes on the two signals above.
        Which pooling operation from this section does it coincide with?
 
-1. [code] **Backward pass of max-pooling.** Derive the gradient of
+3. [code] **Backward pass of max-pooling.** Derive the gradient of
    two-dimensional max-pooling with respect to its input, for a
    $k_\textrm{h} \times k_\textrm{w}$ window and stride equal to the
    window size, and implement it without automatic differentiation.
@@ -540,7 +467,7 @@ padded borders).
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
     ConvolutionalNetworks, naive max-pooling backward pass.*
 
-1. **Max-pooling via ReLU.** ● A convolution is linear, so it cannot
+4. **Max-pooling via ReLU.** ● A convolution is linear, so it cannot
    compute a maximum by itself.
     1. Express $\max(a, b)$ using only affine operations and
        $\textrm{ReLU}(x) = \max(0, x)$.

@@ -706,7 +706,7 @@ Blindness and stuck chains have one cause: the weights live in the valleys, wher
 
 ## Denoising Images
 
-Does any of this survive outside the plane? Nothing in the denoising loss depends on the dimension of the data, so it applies to images unchanged. What we lose is the yardstick: the posterior mean of images cannot be computed, so we compare the network with the best denoiser we can compute, a linear one. We use Fashion-MNIST (:numref:`sec_fashion_mnist`) with pixel values scaled to $[-1, 1]$, loaded and shown by two small helpers, and noise of standard deviation $\sigma = 0.5$. The network is four $3 \times 3$ convolutions with 32 channels and SiLU activations, trained by the same loop as the score network for 600 steps with minibatches of 128 images and fresh noise for each. It predicts the noise $\boldsymbol\epsilon$, so by :eqref:`eq_diffusion-three-predictions` its output divided by $-\sigma$ is a score of the noisy images in $784$ dimensions, obtained without ever writing down a density, and $\tilde{\mathbf{x}} - \sigma\hat{\boldsymbol\epsilon}$ is the denoised image.
+Does any of this survive outside the plane? Nothing in the denoising loss depends on the dimension of the data, so it applies to images unchanged. What we lose is the yardstick: the posterior mean of images cannot be computed, so we compare the network with the best denoiser we can compute, a linear one. We use Fashion-MNIST (:numref:`sec_fashion_mnist`) with pixel values scaled to $[-1, 1]$, loaded and shown by two small helpers, and noise of standard deviation $\sigma = 0.5$. The network is four $3 \times 3$ convolutions with 32 channels and SiLU activations, trained by the same loop as the score network for 600 steps with minibatches of 128 images and fresh noise for each. We train it twice, from two seeds, so that whatever it achieves comes with a second run beside it. It predicts the noise $\boldsymbol\epsilon$, so by :eqref:`eq_diffusion-three-predictions` its output divided by $-\sigma$ is a score of the noisy images in $784$ dimensions, obtained without ever writing down a density, and $\tilde{\mathbf{x}} - \sigma\hat{\boldsymbol\epsilon}$ is the denoised image.
 
 ```{.python .input #denoising-denoising-images}
 %%tab pytorch
@@ -792,7 +792,7 @@ for seed in (0, 1):
     print(f'seed {seed}: last training loss {losses[-50:].mean():.3f}')
 ```
 
-The loss, the squared error of the predicted noise per pixel, levels off near $0.12$, far above zero. Times $\sigma^2 = 0.25$ it is the squared error of the denoised image, about $0.03$ per pixel; the test below confirms this on images the network has not seen.
+The loss, the squared error of the predicted noise per pixel, levels off near $0.12$ for both seeds, far above zero. Times $\sigma^2 = 0.25$ it is the squared error of the denoised image, about $0.03$ per pixel; the test below confirms this on images the network has not seen.
 
 Now the reference, the best *linear* denoiser. If the images were Gaussian with mean $\boldsymbol\mu$ and covariance $\boldsymbol\Sigma$, Tweedie's formula would give the shrinkage of the Gaussian case above, along each eigenvector of $\boldsymbol\Sigma$ with its own factor $\lambda/(\lambda + \sigma^2)$:
 
@@ -801,7 +801,7 @@ D_{\mathrm{lin}}(\tilde{\mathbf{x}}) = \boldsymbol\mu + \boldsymbol\Sigma (\bold
 $$
 :eqlabel:`eq_diffusion-wiener`
 
-This *Wiener filter* keeps directions in which the images vary more than the noise and suppresses the others; it is the best affine denoiser for any distribution with this mean and covariance (Exercise :exref:`ex_denoising-linear-denoiser`). We estimate $\boldsymbol\mu$ and $\boldsymbol\Sigma$ from the 60,000 training images and compare the per-pixel squared error of the noisy input, the Wiener filter and the network on 1,000 test images. The rows of the figure show clean images, their noisy versions, the filter's output and the network's.
+This *Wiener filter* keeps directions in which the images vary more than the noise and suppresses the others; it is the best affine denoiser for any distribution with this mean and covariance (Exercise :exref:`ex_denoising-linear-denoiser`). We estimate $\boldsymbol\mu$ and $\boldsymbol\Sigma$ from the 60,000 training images and compare the per-pixel squared error of the noisy input, the Wiener filter and both networks on 1,000 test images; beside each average the cell prints its standard error over the images. The rows of the figure show clean images, their noisy versions, the filter's output and that of the first network.
 
 ```{.python .input #denoising-denoising-images-2}
 %%tab pytorch
@@ -847,7 +847,7 @@ for name, xh in outputs.items():               # error of each of 1,000 images
 d2l.show_gray(jnp.concatenate([x[:8], xt[:8], x_lin[:8], x_net[0][:8]]), 4, 8);
 ```
 
-The noisy input has error $\sigma^2 = 0.25$ per pixel, the Wiener filter about $0.045$, and the network about $0.03$, some $30\%$ less than the best linear map after only 600 steps. The network wins because the images are not Gaussian. A linear filter keeps or suppresses the same directions of pixel space for every image, and its outputs show blurred edges and a faint grain on the background. The network returns a clean background and sharper edges, and keeps lettering on a pullover that the filter smears. The optimal denoiser moves a noisy point toward the thin set the data occupy; for data on a line it projects onto the line (Exercise :exref:`ex_denoising-data-on-a-line`). A linear filter can only shrink toward one flat subspace, the same for every image. The set of garments is curved, and a convolutional network can follow its curvature from local shape.
+The noisy input has error $\sigma^2 = 0.25$ per pixel, the Wiener filter about $0.045$, and both networks about $0.03$, some $30\%$ less than the best linear map after only 600 steps. The gap of about $0.014$ is some thirty standard errors of these averages, which are $0.0004$ to $0.0005$, and more than twenty times the difference between the two networks, at most $0.0006$: this is not a lucky run. The network wins because the images are not Gaussian. A linear filter keeps or suppresses the same directions of pixel space for every image, and its outputs show blurred edges and a faint grain on the background. The network in the last row returns a clean background and sharper edges, and keeps lettering on a pullover that the filter smears. The optimal denoiser moves a noisy point toward the thin set the data occupy; for data on a line it projects onto the line (Exercise :exref:`ex_denoising-data-on-a-line`). A linear filter can only shrink toward one flat subspace, the same for every image. The set of garments is curved, and a convolutional network can follow its curvature from local shape.
 
 Both outputs are smooth. A posterior mean averages over every clean image consistent with the noisy one, so texture that the noise destroyed comes back as its average, the blur of :numref:`sec_gan_beyond`. A denoiser returns an average, and a generator must return a draw.
 
@@ -1017,8 +1017,9 @@ One noise level cannot both describe the data and sample them: at a small level 
        driven by the networks trained at $\sigma = 0.3$. What does the
        comparison say about the learned field between the modes?
    :exlabel:`ex_denoising-escaping-mode`
-1. [code] **A denoiser at the wrong noise level.** The network of this
-   section saw only the noise level $\sigma = 0.5$ in training.
+1. [code] **A denoiser at the wrong noise level.** The networks of this
+   section saw only the noise level $\sigma = 0.5$ in training; use the
+   first.
     1. Noise 1,000 test images at
        $\sigma' \in \{0.1, 0.25, 0.5, 0.75, 1\}$ and denoise them with
        $\tilde{\mathbf{x}} - \sigma' \hat{\boldsymbol\epsilon}$. Plot the
@@ -1067,7 +1068,7 @@ Denoising and the Score<br>
 ::: {.col}
 - Rows: clean garments; noise $\sigma = 0.5$; best linear filter; a
   four-layer convnet.
-- Squared error per pixel: 0.25, about 0.045, about 0.03.
+- Squared error per pixel: 0.25, about 0.045, about 0.03 (two seeds).
 
 ::: {.d2l-note .warn}
 If a network can remove noise, does it know what pictures look like?
@@ -1457,8 +1458,9 @@ $$D_{\mathrm{lin}}(\tilde{\mathbf{x}}) = \boldsymbol\mu + \boldsymbol\Sigma
 |---|---|
 | noisy input | 0.25 |
 | Wiener filter, 784 × 784 covariance | about 0.045 |
-| four $3 \times 3$ convolutions, 600 steps | about 0.03 |
+| four $3 \times 3$ convolutions, 600 steps, two seeds | about 0.03 each |
 
+Gap 0.014; standard errors at most 0.0005, seeds at most 0.0006 apart.
 Training loss about 0.12; times $\sigma^2 = 0.25$ it is the 0.03 above.
 The convnet follows the curved set of garments; a linear filter projects
 onto one flat subspace.
@@ -1494,7 +1496,7 @@ Why can no single $\sigma$ give both?
 - One level: error U-shaped, best about 0.15 to 0.25; blind to weights
   (Fisher about $10^{-5}$ against KL 0.07 nats); exact chains do not cross
   in 2,000 steps.
-- Garments: about 0.045 (Wiener) against about 0.03 (convnet).
+- Garments: about 0.045 (Wiener) against about 0.03 (convnet, two seeds).
 
 **Next:** every noise level at once, on one path from data to noise.
 :::

@@ -1,70 +1,52 @@
 # Computation
 :label:`chap_computation`
 
-So far, every model we have built fit into a handful of lines: a class holding a
-few layers, a loss function, and a call to `fit`. When we trained the multilayer
-perceptron in :numref:`sec_mlp-implementation`, the framework silently handed
-its four parameter arrays to the optimizer, placed them on a device of its
-choosing, and discarded them when the notebook closed. To move fast, we relied
-on the libraries without looking inside them. Once models grow to real-world
-scale, however, we have to peel back the curtain. Consider an 8-billion-parameter
-language model—a running example we return to throughout this chapter. Its
-weights alone consume 32 GB in the 32-bit floating-point format we have used so
-far. Will the model even fit in GPU memory? Can a week-long training run resume
-cleanly after a crash? And what if your architecture calls for a layer that the
-library does not yet provide?
+Up to now we have relied on frameworks to manage model construction, parameters,
+initialization, and device execution behind the scenes. Moving from textbook
+prototypes to production-scale systems requires opening that black box. Training
+an 8-billion-parameter language model in 32-bit floating point with Adam
+demands 128 GB of parameter, gradient, and optimizer state before storing a
+single activation, and runs across thousands of GPUs where hardware failures
+interrupt training every few hours. At that scale, understanding how frameworks
+represent, initialize, compute with, and persist models is essential.
 
-In the early days of neural networks, practitioners derived and coded the
-gradients of each architecture by hand. Around 1990, Léon Bottou and Yann LeCun
-transformed that workflow by assembling their network simulator out of
-composable *modules*—each computing its outputs in the forward pass and its
-gradients in the backward pass—so that designing a new architecture meant
-rewiring existing building blocks rather than rewriting derivatives from scratch.
-Torch, PyTorch, and every framework in this book follow this same blueprint,
-organizing a model as a tree of modules that own their parameters and buffers.
-The optimizer, initializer, checkpoint saver, and GPU transfer routines all
-operate by walking that tree. Understanding this module tree is the central idea
-of the chapter, moving you from *end user* to *power user*: it lets you override
-defaults whenever they break—whether a poorly initialized network fails to learn
-(:numref:`sec_numerical_stability`) or an incomplete checkpoint fails to resume
-training properly.
+Everything in this chapter builds on one central data structure: a neural
+network is a *tree of modules* whose leaves hold its *state*—trainable
+parameters and fixed buffers alike—each addressed by its path from the root.
+Every framework operation walks that same tree:
 
-The chapter unfolds in three stages: constructing a model, choosing its
-numerical precision, and running it reliably. The first four sections cover
-model construction: assembling models from modules and configurations
-(:numref:`sec_model_construction`), inspecting model state and accounting for
-training memory (:numref:`sec_parameters`), initializing parameters—extending
-the analysis of :numref:`sec_numerical_stability` to deep residual networks
-(:numref:`sec_init_param`), and writing custom layers and gradients when library
-primitives fall short (:numref:`sec_custom_layer`). Next, :numref:`sec_numerics`
-examines floating-point formats—what 16-bit mixed precision saves in memory and
-speed, and how small updates can silently vanish if handled carelessly. The
-final three sections bring models into practice: saving, resuming, and safely
-loading pretrained weights (:numref:`sec_read_write`), managing GPUs,
-asynchronous execution, and activation memory (:numref:`sec_use_gpu`), and
-ensuring reproducibility while inspecting live activations and gradients
-(:numref:`sec_repro`).
-
-Because this chapter introduces no new architectures or datasets, it can be
-tempting to skim or skip it. Resist that urge: every modeling chapter that
-follows builds directly on these tools. Parts of the chapter double as practical
-reference material, and individual sections note which details you can skim on a
-first pass and revisit as needed. Throughout, we focus on computation on a
-single device, deferring multi-GPU and distributed training to
-:numref:`chap_performance`.
-
-```toc
-:maxdepth: 2
-
-model-construction
-parameters-state-memory
-init
-custom-layers
-numerics
-saving-loading
-gpus-devices-memory
-reproducibility-inspection
-```
+* :numref:`sec_model_construction` shows how modules register child modules into
+  a hierarchy, why hiding layers in plain Python lists silently drops them from
+  training, how residual blocks and compiled forward passes work, how lazy
+  layers infer shapes on the fly, and how to separate architecture configs from
+  builder code.
+* :numref:`sec_parameters` opens the state tree to distinguish trainable
+  parameters from non-trainable buffers, derives the 16-byte-per-parameter
+  memory floor for fp32 Adam training, counts parameters abstractly without
+  allocating memory, and covers weight tying and parameter freezing.
+* :numref:`sec_init_param` moves from single-layer initialization to whole-tree
+  and residual-network initialization, showing why unscaled residual blocks blow
+  up activation variance by $(1 + g^2)^N$ and how scaling output projections by
+  $1/\sqrt{N}$ or zeroing them keeps deep stacks stable.
+* :numref:`sec_custom_layer` shows how to extend a framework with stateless
+  layers, parameterized layers (`RMSNorm`), layers holding fixed buffers
+  (`RandomFeatures`), and custom backward passes (the *straight-through
+  estimator* for non-differentiable rounding).
+* :numref:`sec_numerics` compares fp32, fp16, and bf16, showing why 16-bit
+  weights round away small updates and how mixed-precision training pairs fp32
+  master weights with 16-bit compute (and dynamic loss scaling for fp16).
+* :numref:`sec_read_write` covers safe weight serialization (`safetensors` vs.
+  arbitrary code execution in `pickle`), crash-safe atomic training checkpoints
+  that resume bit for bit, and auditing missing or unexpected keys when loading
+  pretrained weights.
+* :numref:`sec_use_gpu` places tensors and models on GPUs, explains asynchronous
+  command queues and accurate GPU benchmarking, dissects live vs. reserved vs.
+  driver memory, uses activation checkpointing to cut activation memory from
+  $O(K)$ to $O(\sqrt{K})$, and wires GPU support into `d2l.Trainer`.
+* :numref:`sec_repro` shows how to control pseudorandom seeds across workers and
+  devices, why parallel GPU atomic additions are non-associative, and how to
+  attach forward and backward hooks to inspect activation statistics, gradient
+  norms, and the first layer that emits a NaN.
 
 ## Resources and Further Reading {.unnumbered}
 

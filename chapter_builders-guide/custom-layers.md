@@ -88,8 +88,7 @@ from flax import serialization
 ## Layers without Parameters
 
 We start with the simplest possible custom layer: one that holds no state at
-all. `CenteredLayer` subtracts the global mean (including across the batch
-axis—an exercise examines what that implies) from its input tensor. To build it,
+all. `CenteredLayer` subtracts the global mean from its input tensor. To build it,
 we subclass the framework's base module and implement only the forward pass.
 
 ```{.python .input #custom-layers-layers-without-parameters-1}
@@ -366,39 +365,6 @@ taking one gradient step so the gain moves off ones, and copying the full state
 into a freshly initialized clone—after which both models should produce
 identical outputs (:numref:`sec_read_write` extends this to disk checkpoints).
 
-:begin_tab:`mxnet`
-A `Trainer` given `net.collect_params()` finds the gain and updates it.
-`save_parameters` writes every parameter, the gain included, to a file, and
-`load_parameters` reads the file into the clone. `initialize(device=...)`
-places the gain like any other parameter and `reset_device` moves it later
-(:numref:`sec_use_gpu`); the forward pass fetches the copy that lives where
-the input does, which is what `self.gain.data(X.device)` is for.
-:end_tab:
-
-:begin_tab:`pytorch`
-An optimizer given `net.parameters()` finds the gain and updates it.
-`state_dict` returns every registered tensor, the gain included, keyed by
-its path in the module tree, and `load_state_dict` copies them into the
-clone. `.to(device)` would move the gain with the rest of the model.
-:end_tab:
-
-:begin_tab:`tensorflow`
-An optimizer given `net.trainable_variables` finds the gain and updates it.
-`get_weights` returns the model's weights, the gain included, as a list of
-arrays, and `set_weights` loads the list into the clone once a first call
-has built it. Keras places the gain where `add_weight` creates it, on a GPU
-if one is visible, like any built-in weight (:numref:`sec_use_gpu`).
-:end_tab:
-
-:begin_tab:`jax`
-An `nnx.Optimizer` built with `wrt=nnx.Param` finds the gain and updates
-it. `nnx.to_pure_dict` turns the state of the model, the gain included,
-into a nested dictionary of arrays keyed by path, and `flax.serialization`
-turns that into bytes and back. `nnx.replace_by_pure_dict` and `nnx.update`
-write the restored values into the clone. `jax.device_put` would move the
-state, the gain included, like any other tree of arrays.
-:end_tab:
-
 ```{.python .input #custom-layers-the-composability-guarantee-3}
 %%tab mxnet
 net = nn.Sequential()
@@ -478,30 +444,12 @@ equivalent, testing our custom implementation against it with non-trivial
 weights provides an immediate numerical sanity check.
 
 :begin_tab:`mxnet`
-Gluon provides `nn.LayerNorm` but no RMSNorm, so this tab has no library
-implementation to compare with. Where the library lacks a layer, the custom
-layer is the implementation, and the checks above are its tests.
+Gluon provides `nn.LayerNorm` but no built-in RMSNorm, so our custom `RMSNorm` is the implementation to use.
 :end_tab:
 
-:begin_tab:`pytorch`
-PyTorch's `nn.RMSNorm` calls its gain `weight`. We give both
-implementations the same gain, other than all ones, and compare their
-outputs.
+:begin_tab:`pytorch, tensorflow, jax`
+We set a non-trivial gain (`linspace(0.5, 1.5, 8)`) on both our custom `RMSNorm` and the native layer (`nn.RMSNorm`, `tf.keras.layers.RMSNormalization`, `nnx.RMSNorm`) and verify that their outputs match:
 :end_tab:
-
-:begin_tab:`tensorflow`
-Keras's `RMSNormalization` calls its gain `scale` and its divisor guard
-`epsilon`. We give both implementations the same gain, other than all ones,
-and compare their outputs; once both layers are built, `get_weights` and
-`set_weights` copy the gain across.
-:end_tab:
-
-:begin_tab:`jax`
-NNX's `nnx.RMSNorm` calls its gain `scale` and its divisor guard `epsilon`.
-Parameters are mutable NNX variables, so we assign the same gain, other
-than all ones, to both implementations and compare their outputs.
-:end_tab:
-
 ```{.python .input #custom-layers-checking-against-the-built-in}
 %%tab pytorch
 ours, native = RMSNorm(8), nn.RMSNorm(8, eps=1e-6)
@@ -534,16 +482,9 @@ native.scale[...] = gain
 bool(jnp.allclose(ours(X), native(X)))
 ```
 
-:begin_tab:`pytorch, tensorflow, jax`
-The two agree to floating-point precision. Having written the layer,
-should we now use it? Not when the library's layer computes what we need:
-that one is maintained with the library and may run faster, for example by
-combining several operations into one. A custom layer is the right choice
-for a new layer, a modification of an existing one, or a layer the library
-lacks, and then its values, gradients, and saved state need tests like the
-ones above.
-:end_tab:
-
+Whenever a built-in library layer matches your specification, prefer it in
+production for maintenance and fused-kernel speed; write custom layers for
+novel operations or modifications the library lacks.
 ## Layers with Fixed State
 
 Some layers depend on arrays that are neither learned by gradient descent nor
@@ -561,32 +502,11 @@ Each row of $\mathbf{Z}$ provides $D$ fixed nonlinear features—remarkably, eve
 without ever updating $\mathbf{W}$ or $\mathbf{b}$, a single trainable linear
 layer placed on top can approximate rich nonlinear functions.
 
-From a systems standpoint, $\mathbf{W}$ and $\mathbf{b}$ must stay frozen during
-optimization, yet they *must* be saved in checkpoints and moved across devices,
-since the linear head is calibrated specifically to those random projections.
-They are textbook *buffers* (:numref:`subsec_params_buffers`).
-
-:begin_tab:`mxnet`
-In Gluon a buffer is a `gluon.Constant`, a parameter that receives no
-gradient and that no `Trainer` updates.
-:end_tab:
-
-:begin_tab:`pytorch`
-In PyTorch, `register_buffer` registers a tensor as a buffer.
-:end_tab:
-
-:begin_tab:`tensorflow`
-In Keras a buffer is a variable created with `add_weight(trainable=False)`.
-Each `add_weight` gets an initializer of its own, because one Keras
-initializer object returns the same values every time it is called.
-:end_tab:
-
-:begin_tab:`jax`
-As in :numref:`subsec_params_buffers`, we define a `Buffer` subclass of
-`nnx.Variable` for fixed arrays; an optimizer that updates `nnx.Param`
-skips it.
-:end_tab:
-
+Just like the running statistics in `Standardizer` (:numref:`subsec_params_buffers`),
+$\mathbf{W}$ and $\mathbf{b}$ must stay fixed during optimization yet travel
+with the model in checkpoints and across devices. We therefore register them as
+buffers (`gluon.Constant`, `register_buffer`, `add_weight(..., trainable=False)`,
+or our `Buffer(nnx.Variable)` subclass):
 ```{.python .input #custom-layers-precomputed-state-buffers-1}
 %%tab mxnet
 class RandomFeatures(nn.Block):
@@ -795,32 +715,6 @@ Loading only the linear weights causes the MSE to explode by more than two
 orders of magnitude—no better than predicting zero—whereas restoring the full
 state including the buffers recovers the trained fit exactly.
 
-:begin_tab:`mxnet`
-`collect_params` of the model lists the two constants next to the weight and
-bias of the dense layer, and `save_parameters` writes all four to the file.
-Plain array attributes would be missing from it.
-:end_tab:
-
-:begin_tab:`pytorch`
-`net.state_dict()` holds `0.W` and `0.b` next to the weight and bias of the
-linear layer. Plain tensor attributes would be missing from it.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`net.get_weights()` holds `W` and `b` next to the kernel and bias of the
-dense layer, while `net.trainable_variables`, which the optimizer received,
-holds only the latter two. Plain tensor attributes would be missing from
-both.
-:end_tab:
-
-:begin_tab:`jax`
-`nnx.state(net)` holds the buffers next to the parameters, while the
-optimizer, built with `wrt=nnx.Param`, skips them. NNX also treats an array
-stored as a plain attribute as part of the state, but without a kind; the
-`Variable` subclass is what lets filters such as `nnx.state(net, Buffer)`
-select the buffers.
-:end_tab:
-
 This exact same buffer mechanism stores non-trainable tables and running
 statistics across later chapters, such as the running mean and variance of batch
 normalization (:numref:`sec_batch_norm`).
@@ -956,49 +850,20 @@ round_ste.defvjp(round_ste_fwd, round_ste_bwd)
 ```
 
 :begin_tab:`mxnet`
-Two rules govern the class. First, a `Function` object can be used only
-once: create a fresh `RoundSTE()` for every application, or the second call
-fails with an assertion. Second, `backward` receives the gradient of the
-loss with respect to each output of `forward` and returns the gradient with
-respect to each input. Ours ignores the input values; a backward pass that
-needs them saves them in `forward` with `self.save_for_backward` and reads
-them from `self.saved_tensors`.
+Instantiate a fresh `RoundSTE()` on every call (a `Function` instance is single-use); if `backward` needs forward tensors, save them with `self.save_for_backward`.
 :end_tab:
 
 :begin_tab:`pytorch`
-Two rules govern the class. First, we call it as `RoundSTE.apply(X)`, never
-through `forward` directly. `apply` inserts the operation into the graph
-that autograd records. A direct call runs `X.round()` as an ordinary
-operation, which autograd records with its true derivative, zero; the
-custom backward pass never runs, and no error says so. Second, `backward`
-receives the gradient of the loss with respect to the output and returns
-the gradient with respect to each input. Ours ignores the input values; a
-backward pass that needs them saves them in `forward` with
-`ctx.save_for_backward` and reads them from `ctx`.
+Always invoke `RoundSTE.apply(X)` (calling `forward` directly bypasses autograd registration); if `backward` needs forward tensors, save them via `ctx.save_for_backward`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Two rules govern the decorator. First, the decorated function returns a
-pair: the output and the gradient function. The gradient function is
-defined inside the forward pass, so it can use any value that the forward
-pass computed, such as the input. Second, `grad` receives the gradient of
-the loss with respect to the output and returns one gradient per argument
-of the decorated function. A function that reads a `tf.Variable` must also
-return gradients for the variables, through a keyword argument `variables`
-of `grad`; TensorFlow raises an error that names this requirement if it is
-missing.
+`@tf.custom_gradient` returns `(output, grad_fn)`, where the inner `grad(upstream)` closure can capture any forward tensors from its enclosing scope.
 :end_tab:
 
 :begin_tab:`jax`
-Two rules govern the definition. First, the forward rule returns a pair:
-the output and the *residuals*, the values that the backward rule will
-need. Ours needs none and returns `None`; returning the output alone causes
-a `TypeError` asking for a pair. Second, the backward rule receives
-the residuals and the gradient of the loss with respect to the output, and
-returns a tuple with one gradient per argument of the function, hence
-`(grad_output,)`.
+`round_ste_fwd` returns `(output, residuals)` (`None` when no forward values are needed), and `round_ste_bwd(residuals, grad_output)` returns a one-element tuple `(grad_output,)` matching the input arguments.
 :end_tab:
-
 Let's verify our custom backward rule by multiplying the rounded weights by
 $(1, 2, 3)$ and summing: the straight-through estimator should deliver
 $(1, 2, 3)$ directly as the gradient with respect to $\mathbf{w}$:
@@ -1247,51 +1112,9 @@ rounding—a custom backward rule like the straight-through estimator (or its
 stop-gradient shortcut) lets training proceed. Whenever a built-in library layer
 matches your specification, prefer it for maintenance and fused-kernel speed.
 
-:begin_tab:`mxnet`
-In Gluon, `gluon.Parameter` holds learned state, `gluon.Constant` holds
-buffers, and `autograd.Function` supplies a backward rule, with one fresh
-instance per call; `npx.stop_gradient` covers the straight-through case in
-one expression.
-:end_tab:
-
-:begin_tab:`pytorch`
-In PyTorch, `nn.Parameter` holds learned state, `register_buffer` registers
-buffers, and `torch.autograd.Function` supplies a backward rule, invoked
-through `apply`; `detach()` covers the straight-through case in one
-expression.
-:end_tab:
-
-:begin_tab:`tensorflow`
-In Keras, `add_weight` creates learned state, `add_weight(trainable=False)`
-creates buffers, and `@tf.custom_gradient` lets a function return its own
-backward rule; `tf.stop_gradient` covers the straight-through case in one
-expression.
-:end_tab:
-
-:begin_tab:`jax`
-In NNX, `nnx.Param` holds learned state, other `nnx.Variable` subclasses
-hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
-`jax.lax.stop_gradient` covers the straight-through case in one expression.
-:end_tab:
-
 ## Exercises
 
-1. **Centering over the batch.** `CenteredLayer` subtracts the mean over
-   every entry of its input, the batch axis included. Consider the network
-   of this section, a linear layer with bias $\mathbf{b}$ followed by
-   `CenteredLayer`.
-    1. Show that the output for one example depends on the other examples
-       in the minibatch. State when evaluating the network on one example
-       at a time gives the same outputs as evaluating it on the whole
-       minibatch at once.
-    1. Show that adding the same constant to every entry of $\mathbf{b}$
-       leaves the output unchanged, and conclude which direction in the
-       space of biases receives zero gradient.
-    1. A per-example variant subtracts from each row its own mean over the
-       feature axis, as layer normalization does. State which of the two
-       properties above this variant keeps.
-
-2. [code] **Scale invariance of RMSNorm.** ● Set $\epsilon = 0$.
+1. [code] **Scale invariance of RMSNorm.** ● Set $\epsilon = 0$.
     1. Show that $\textrm{RMSNorm}(c\mathbf{x}) = \textrm{RMSNorm}(\mathbf{x})$
        for every $c > 0$.
     1. Differentiate both sides with respect to $c$ at $c = 1$ and conclude
@@ -1304,7 +1127,7 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
        length of $\mathbf{x}$?
 
 :begin_tab:`mxnet`
-3. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+2. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
    `RMSNorm` (a shift applied after the gain, restoring part of what layer
    normalization had), and verify that the file written by
    `save_parameters` for a model containing it grows by the expected entry.
@@ -1315,7 +1138,7 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 :begin_tab:`pytorch`
-3. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+2. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
    `RMSNorm` (a shift applied after the gain, restoring part of what layer
    normalization had), and verify that the state dict of a model containing
    it grows by the expected entry. Then place the layer directly before a
@@ -1325,7 +1148,7 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 :begin_tab:`tensorflow`
-3. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+2. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
    `RMSNorm` (a shift applied after the gain, restoring part of what layer
    normalization had), and verify that `get_weights` on a model containing
    it grows by the expected entry. Then place the layer directly before a
@@ -1335,7 +1158,7 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 :begin_tab:`jax`
-3. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
+2. [code] **RMSNorm bias.** Add an optional learned bias $\mathbf{b}$ to
    `RMSNorm` (a shift applied after the gain, restoring part of what layer
    normalization had), and verify that the parameter state of a model
    containing it grows by the expected entry. Then place the layer directly
@@ -1344,7 +1167,7 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
    changing the outputs. What is the folded bias?
 :end_tab:
 
-4. [code] **Random features approximate a kernel.** Let $\mathbf{w}$ have
+3. [code] **Random features approximate a kernel.** Let $\mathbf{w}$ have
    independent standard normal entries and $b$ be uniform on $[0, 2\pi]$.
     1. Using
        $\cos\alpha\cos\beta = \frac{1}{2}(\cos(\alpha - \beta) + \cos(\alpha + \beta))$
@@ -1363,7 +1186,7 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
     *Adapted from :cite:`Rahimi.Recht.2007`.*
 
 :begin_tab:`mxnet`
-5. [code] **A clamp with a custom gradient.** Implement an
+4. [code] **A clamp with a custom gradient.** Implement an
    `autograd.Function` whose forward is `mnp.clip(X, lo, hi)` and whose
    backward passes the gradient only where the input lay strictly inside the
    clamp range; `forward` must save `X` with `save_for_backward`. Compare
@@ -1378,7 +1201,7 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 :begin_tab:`pytorch`
-5. [code] **A clamp with a custom gradient.** Implement an
+4. [code] **A clamp with a custom gradient.** Implement an
    `autograd.Function` whose forward is `X.clamp(lo, hi)` and whose backward
    passes the gradient only where the input lay strictly inside the clamp
    range. Compare its gradients with those of the native `torch.clamp` for
@@ -1392,7 +1215,7 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 :begin_tab:`tensorflow`
-5. [code] **A clamp with a custom gradient.** Implement a
+4. [code] **A clamp with a custom gradient.** Implement a
    `@tf.custom_gradient` function whose forward is `tf.clip_by_value(X, lo,
    hi)` and whose backward passes the gradient only where the input lay
    strictly inside the clamp range; the gradient closure must capture `X`.
@@ -1407,7 +1230,7 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
 :end_tab:
 
 :begin_tab:`jax`
-5. [code] **A clamp with a custom gradient.** Implement a `custom_vjp`
+4. [code] **A clamp with a custom gradient.** Implement a `custom_vjp`
    function whose forward is `jnp.clip(X, lo, hi)` and whose backward passes
    the gradient only where the input lay strictly inside the clamp range;
    the forward rule must save `X` as a residual. Compare its gradients with
@@ -1421,18 +1244,6 @@ hold buffers, and `jax.custom_vjp` attaches a backward rule to a function;
     [Custom derivative rules](https://docs.jax.dev/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html).*
 :end_tab:
 
-6. [extended] **Bucketing with a straight-through estimator.** ●
-   The experiment of this section rounded the weights themselves. Here the
-   rounding sits between two layers, on an activation. Write a layer whose forward pass maps a score $s$ to the
-   bucket index $\lfloor K\sigma(s) \rfloor$ and whose backward pass treats
-   the floor as the identity. Return the index as a floating-point tensor so
-   that gradients can reach $s$. Place the layer with $K = 4$ between two
-   linear layers of output width one, and train the network on inputs
-   $\mathbf{x} \in \mathbb{R}^{10}$ with targets
-   $y = \lfloor 4\sigma(\mathbf{w}^\top \mathbf{x}) \rfloor$ for a fixed
-   random $\mathbf{w}$. Compare the final training loss with that of the
-   same network in which the floor keeps its true gradient, and explain
-   which parameters learn in each case.
 
 [Discussions](https://d2l.discourse.group/t/36755)
 

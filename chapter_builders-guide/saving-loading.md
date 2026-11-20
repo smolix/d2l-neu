@@ -112,30 +112,17 @@ automatically by traversing the module tree (:numref:`sec_model_construction`),
 keying every tensor by its path from the root. Let's inspect the state of a
 simple single-hidden-layer MLP with 256 hidden units.
 
-:begin_tab:`mxnet`
-`collect_params` maps the dotted paths (`hidden.weight`, `output.bias`) to
-the parameters, including the running statistics of any batch normalization
-layers.
-:end_tab:
-
-:begin_tab:`pytorch`
-`state_dict` maps the dotted paths (`hidden.weight`, `output.bias`) to the
-tensors, buffers included.
+:begin_tab:`mxnet, pytorch`
+`collect_params()` and `state_dict()` map dotted paths (`hidden.weight`, `output.bias`) to parameters and buffers:
 :end_tab:
 
 :begin_tab:`tensorflow`
-`net.weights` lists the variables, and each variable's `path` names its place
-in the layer tree (`mlp/hidden/kernel`; Keras calls a weight matrix a
-*kernel*). Keras invents layer names such as `dense_3` when we do not choose
-them, so we name the layers to keep the paths the same in every instance.
+`net.weights` lists variables carrying their layer-tree `path` (`mlp/hidden/kernel`), using explicit `name=` arguments to keep paths deterministic:
 :end_tab:
 
 :begin_tab:`jax`
-`nnx.state` returns the variables as a tree whose paths follow the module
-graph (`hidden.kernel`, `output.bias`; Flax calls a weight matrix a
-*kernel*).
+`nnx.state` returns a nested state tree keyed by module attribute paths (`hidden.kernel`, `output.bias`):
 :end_tab:
-
 ```{.python .input #saving-loading-state-not-code-2}
 %%tab mxnet
 class MLP(nn.Block):
@@ -235,29 +222,13 @@ class Tripwire:
         return (print, ('*** payload executed while loading ***',))
 ```
 
-:begin_tab:`mxnet`
-MXNet's own array files contain no pickle, but `gluon.Trainer.save_states`,
-which we use for checkpoints below, writes pickle, and so does NumPy
-whenever it saves an object that is not a plain array. Loading such a NumPy
-file with `allow_pickle=True` runs the payload:
+:begin_tab:`mxnet, tensorflow, jax`
+NumPy uses `pickle` whenever it saves non-primitive Python objects; loading with `allow_pickle=True` executes the payload immediately:
 :end_tab:
 
 :begin_tab:`pytorch`
-`torch.save` writes pickle. Loading the file with `weights_only=False`, the
-behavior of `torch.load` before PyTorch 2.6, runs the payload:
+`torch.save` writes a pickle archive; loading with `weights_only=False` (the default prior to PyTorch 2.6) executes the payload immediately:
 :end_tab:
-
-:begin_tab:`tensorflow`
-NumPy writes pickle whenever it saves an object that is not a plain array.
-Loading such a file with `allow_pickle=True` runs the payload:
-:end_tab:
-
-:begin_tab:`jax`
-NumPy, whose formats JAX uses, writes pickle whenever it saves an object
-that is not a plain array. Loading such a file with `allow_pickle=True` runs
-the payload:
-:end_tab:
-
 ```{.python .input #saving-loading-safetensors-the-interchange-format-1}
 %%tab mxnet, tensorflow, jax
 np.save('tripwire.npy', np.array(Tripwire(), dtype=object))  # pickled
@@ -270,24 +241,8 @@ torch.save(Tripwire(), 'tripwire.pt')
 _ = torch.load('tripwire.pt', weights_only=False)  # the payload runs here
 ```
 
-:begin_tab:`mxnet`
-NumPy's default, `allow_pickle=False`, refuses the file instead:
-:end_tab:
-
-:begin_tab:`pytorch`
-Since version 2.6, `torch.load` defaults to `weights_only=True`, which
-accepts only tensors, numbers, strings, and containers of them, and refuses
-the file:
-:end_tab:
-
-:begin_tab:`tensorflow`
-NumPy's default, `allow_pickle=False`, refuses the file instead:
-:end_tab:
-
-:begin_tab:`jax`
-NumPy's default, `allow_pickle=False`, refuses the file instead:
-:end_tab:
-
+By default, `np.load` (`allow_pickle=False`) and modern `torch.load`
+(`weights_only=True`) reject arbitrary Python objects:
 ```{.python .input #saving-loading-safetensors-the-interchange-format-2}
 %%tab mxnet, tensorflow, jax
 try:
@@ -334,29 +289,6 @@ Face Hub.
 
 Let's save our MLP's state to `mlp.safetensors`, load it into a fresh clone, and
 verify that both instances produce identical outputs.
-
-:begin_tab:`mxnet`
-We use the NumPy binding of safetensors, converting each parameter with
-`.asnumpy()` on the way out and with `mnp.array` on the way back.
-:end_tab:
-
-:begin_tab:`pytorch`
-`save_file` takes the `state_dict` directly, and `load_file` returns one.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The variable paths provide the names. `load_file` returns constant tensors,
-which we `assign` to the variables of the new model. `save_file` converts
-the values of the dictionary passed to it to NumPy in place, so we hand it a
-fresh dictionary.
-:end_tab:
-
-:begin_tab:`jax`
-A safetensors file stores a flat mapping from names to tensors, while the
-NNX state is a nested tree. `traverse_util.flatten_dict` turns the tree into
-a mapping from paths to arrays, and we join each path with dots;
-`unflatten_dict` reverses this.
-:end_tab:
 
 ```{.python .input #saving-loading-safetensors-the-interchange-format-3}
 %%tab mxnet
@@ -476,46 +408,20 @@ finished, guaranteeing that any reader sees either the complete previous
 checkpoint or the complete new one.
 
 :begin_tab:`mxnet`
-In MXNet a checkpoint is three files: `save_parameters` writes the model,
-`gluon.Trainer.save_states` writes the optimizer state, and a JSON file
-holds the step, the configuration, and the state of a random-number
-generator. The trainer state is pickle, so it should be loaded only from our
-own disk. MXNet can reseed its random-number generators but cannot save
-their state, so randomness that must resume exactly, here the order of the
-minibatches, comes from a NumPy generator, whose state JSON can store.
-Three renames are not one atomic step; an exercise builds a manifest that
-publishes the three files together.
+We write `.params` (model), `.states` (Trainer pickle—load only from trusted disk), and `.json` (step, config, and NumPy RNG state) to `.tmp` files before atomically replacing each with `os.replace`:
 :end_tab:
 
 :begin_tab:`pytorch`
-The helpers below keep the checkpoint to tensors, numbers, and strings, so
-that it loads with `weights_only=True`. This is why the configuration, a
-dataclass, is stored as a dictionary through `asdict`. Besides the global
-random-number streams, the helpers save and restore a `torch.Generator`
-passed as `rng`, such as the one that will draw our minibatches. The rename
-is `os.replace`.
+We pack model state, optimizer state, step, `asdict(cfg)`, and CPU/CUDA/`torch.Generator` RNG states into a pure-tensor/primitive dict compatible with `weights_only=True`, saving via a `.tmp` file and `os.replace`:
 :end_tab:
 
 :begin_tab:`tensorflow`
-`tf.train.Checkpoint` saves and restores the variables of the objects passed
-to it, here the model, the optimizer with Adam's averages, a step counter,
-and a `tf.random.Generator`, as one unit. Each save gets a new number
-(`run-tf-1`, `run-tf-2`, ...), so a crash cannot damage the previous save,
-and the configuration goes into a JSON file with the same number. The global
-random generator is not tracked; randomness that must resume exactly comes
-from a tracked `tf.random.Generator`.
+`tf.train.Checkpoint` bundles the model, optimizer, step variable, and `tf.random.Generator` into numbered checkpoint files (`run-tf-1`, ...), paired with a `.cfg.json` config file:
 :end_tab:
 
 :begin_tab:`jax`
-In NNX the model and the optimizer expose their state as trees, and the
-random-number key, the step, and the configuration are three more branches;
-in JAX a key is an array like any other. Orbax, the JAX checkpointing
-library, writes such a tree to a temporary directory and renames it when it
-is complete. We overwrite one directory with `force=True` so that the
-notebook can run twice; a real run writes numbered steps through
-`CheckpointManager` and keeps the last complete one.
+We pack the model state tree, optimizer state tree, PRNG key array, step, and config dict into one dictionary and save it atomically via Orbax (`ocp.StandardCheckpointer`):
 :end_tab:
-
 ```{.python .input #saving-loading-checkpointing-a-training-run-1}
 %%tab mxnet
 def save_checkpoint(prefix, model, trainer, step, cfg=None, rng=None):  #@save
@@ -778,37 +684,9 @@ the full checkpoint and once omitting the random generator state (as if a script
 simply re-seeded from 0)—and measure the maximum weight discrepancy against the
 uninterrupted run.
 
-:begin_tab:`mxnet`
-`load_parameters` and `load_states` overwrite the model and the trainer in
-place, matching parameters by the dotted names that the file stores. Nothing
-checks that every name found a partner; the last part of this section writes
-that check.
-:end_tab:
-
-:begin_tab:`pytorch`
-`load_state_dict` overwrites the tensors of the model and the optimizer in
-place. It raises an error if a name or a shape in the file does not match
-the model.
-:end_tab:
-
 :begin_tab:`tensorflow`
-`restore` overwrites the tracked objects in place, matching each variable by
-its route through the object graph (`model`, then the layer, then its
-`kernel`) rather than by name. `assert_existing_objects_matched()` on the
-status it returns raises an error unless every object we pass found its
-saved values; `expect_partial()` accepts that the file holds more than we
-restore. A newly created Keras Adam has no variables for its averages until
-it first updates the weights, so we call `opt.build` before restoring into
-it.
+Because Keras's `Adam` creates its moment variables lazily on the first update, `resume` calls `opt.build(model.trainable_variables)` before restoring into the optimizer.
 :end_tab:
-
-:begin_tab:`jax`
-Without a template, Orbax returns the saved tree as it was written: arrays,
-the key, and the plain numbers of the step and the configuration. We read
-the configuration, build the model, and write the restored values into the
-model and the optimizer.
-:end_tab:
-
 ```{.python .input #saving-loading-checkpointing-a-training-run-3}
 %%tab mxnet
 def resume(path, num_steps, restore_optimizer=True, restore_rng=True):
@@ -947,29 +825,6 @@ million excluding its 1,000-class head). We will study convolutional networks in
 :numref:`chap_cnn` and :numref:`chap_modern_cnn`; for weight loading, ResNet-50
 is simply a state dictionary of a few hundred named tensors.
 
-:begin_tab:`mxnet`
-Gluon's model zoo, `gluon.model_zoo.vision`, downloads the weights the first
-time we pass `pretrained=True`. The files come from the hosting of the
-archived MXNet project, which has no guarantee of staying available.
-:end_tab:
-
-:begin_tab:`pytorch`
-torchvision downloads the weights the first time we pass a `weights=` value.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`tf.keras.applications` downloads the weights the first time we pass
-`weights='imagenet'`; `include_top=False` leaves out the 1,000-class head,
-and `pooling='avg'` averages the last feature map into one vector of 2,048
-features per image.
-:end_tab:
-
-:begin_tab:`jax`
-The book's NNX ResNet-50, `d2l.nnx_resnet.ResNet50`, downloads Microsoft's
-ImageNet weights as a safetensors file from the Hugging Face Hub, at a fixed
-revision, and maps them into the NNX model.
-:end_tab:
-
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
 %%tab mxnet
 net = gluon.model_zoo.vision.resnet50_v1(pretrained=True)  # ~100 MB once
@@ -1011,30 +866,9 @@ ResNet-50 lets us inspect two diagnostic sets: *missing* keys (model parameters
 absent from the file, left randomly initialized) and *unexpected* keys (file
 entries unused by the model).
 
-:begin_tab:`mxnet`
-`load_dict` with `allow_missing=True` skips parameters that the file does not
-fill, and with `ignore_extra=True` skips file entries that have no place in
-the model; neither reports what it skipped. We compute the two sets from the
-names ourselves.
-:end_tab:
-
 :begin_tab:`pytorch`
-`load_state_dict(..., strict=False)` loads what matches and returns the two
-sets as `missing_keys` and `unexpected_keys` instead of raising an error.
+`load_state_dict(..., strict=False)` loads matching keys and returns `(missing_keys, unexpected_keys)` directly; in MXNet, TensorFlow, and JAX, we compute the set differences between the model's parameter paths and the checkpoint's keys:
 :end_tab:
-
-:begin_tab:`tensorflow`
-We match variables by their `path` and compute the two sets ourselves. For
-whole Keras weight files, `load_weights(path, skip_mismatch=True)` does a
-similar job: it fills every layer whose shapes match and lists the others
-in a warning.
-:end_tab:
-
-:begin_tab:`jax`
-We flatten both state trees to mappings from paths to arrays, take from the
-file every path that the model has, and compute the two sets ourselves.
-:end_tab:
-
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-2}
 %%tab mxnet
 damaged = {name: p.data() for name, p in net.collect_params().items()
@@ -1132,10 +966,7 @@ mismatches silently.
 
 ## Exercises
 
-1. **Reasons to checkpoint.** Name two reasons to checkpoint a run that
-   never leaves the machine it trains on, and state for each which
-   compartments of :numref:`fig_bg_checkpoint_contents` it needs.
-2. [code] **Safetensors header.** The header length of the MLP's
+1. [code] **Safetensors header.** The header length of the MLP's
    safetensors file is the 8-byte little-endian integer at the start of the
    file (:numref:`fig_bg_safetensors_layout`).
     1. Predict, then measure, how that length changes when the hidden width
@@ -1149,7 +980,7 @@ mismatches silently.
        single-tensor read without deserializing the whole object graph.
 
 :begin_tab:`mxnet`
-3. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+2. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
    a second hidden layer `hidden2` of width 256 before the output layer and
    renames the attribute `output` to `head`.
     1. Load `mlp.safetensors` into `MLP2` with
@@ -1164,7 +995,7 @@ mismatches silently.
 :end_tab:
 
 :begin_tab:`pytorch`
-3. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+2. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
    a second hidden layer `hidden2` of width 256 before the output layer and
    renames the attribute `output` to `head`.
     1. Load `mlp.safetensors` into `MLP2` with
@@ -1179,7 +1010,7 @@ mismatches silently.
 :end_tab:
 
 :begin_tab:`tensorflow`
-3. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+2. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
    a second hidden layer named `hidden2` of width 256 before the output
    layer and names the output layer `head` instead of `output`.
     1. Load `mlp.safetensors` into `MLP2` by assigning each variable whose
@@ -1195,7 +1026,7 @@ mismatches silently.
 :end_tab:
 
 :begin_tab:`jax`
-3. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
+2. [code] **Partial loading.** Define `MLP2`, a copy of `MLP` that inserts
    a second hidden layer `hidden2` of width 256 before the output layer and
    renames the attribute `output` to `head`.
     1. Load `mlp.safetensors` into `MLP2` with a key-set merge like the one
@@ -1209,7 +1040,7 @@ mismatches silently.
     *Adapted from Matthew Inkawhich, [Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html), "Warmstarting Model Using Parameters from a Different Model".*
 :end_tab:
 
-4. [code] **Dtype round trip.** ● A `float16` number stores 5 exponent bits
+3. [code] **Dtype round trip.** ● A `float16` number stores 5 exponent bits
    and 10 mantissa bits, against 8 and 23 in `float32`
    (:numref:`sec_numerics`). Cast the parameters of an `MLP` to `float16`,
    save them, and load them back into a `float32` `MLP`.
@@ -1224,7 +1055,7 @@ mismatches silently.
        Compute what `float16` stores for the square of a gradient entry of
        $10^{-4}$, and explain why a resumable checkpoint keeps the
        optimizer state in `float32`.
-5. [extended] **Crash-safe manifest.** ●
+4. [extended] **Crash-safe manifest.** ●
     1. Build a utility that writes model state, optimizer state, and a JSON
        metadata file under a fresh step-numbered prefix, then publishes the
        three by renaming into place one manifest that records each file's

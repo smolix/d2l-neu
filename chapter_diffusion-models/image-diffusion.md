@@ -48,11 +48,6 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #image-diffusion-diffusion-for-images-1}
-%%tab pytorch
-torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
-```
-
 ## The Denoising U-Net
 
 ### Skips, Resolutions and the Time Embedding
@@ -162,7 +157,11 @@ nearest-neighbor up-sampling to the size of each skip comes back.
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-2}
 %%tab pytorch
 class UNet(nn.Module):  #@save
-    """A small U-Net on time t, a label y (num_classes = null), and cond."""
+    """A small U-Net on an image x (n, c, h, w), times t (n,) and labels y.
+
+    y = num_classes is the null label. cond (n, emb_dim), if given, is added
+    to the time features; the flow map of the few-step section passes the
+    embedding of its step size there."""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
                  out_channels=1, emb_dim=128):
         super().__init__()
@@ -201,7 +200,11 @@ class UNet(nn.Module):  #@save
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-2}
 %%tab jax
 class UNet(nnx.Module):  #@save
-    """A small U-Net (NHWC) on time t, a label y (num_classes = null), cond."""
+    """A small U-Net on an image x (n, h, w, c), times t (n,) and labels y.
+
+    y = num_classes is the null label. cond (n, emb_dim), if given, is added
+    to the time features; the flow map of the few-step section passes the
+    embedding of its step size there."""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
                  out_channels=1, emb_dim=128, *, rngs):
         self.emb_dim, self.num_classes = emb_dim, num_classes
@@ -241,26 +244,38 @@ class UNet(nnx.Module):  #@save
         return self.outc(nnx.silu(self.norm(h)))
 ```
 
+<!-- WRITER: the cell no longer runs a shape check on random inputs; it builds the network and prints, per output resolution, the parameters and the convolution multiply-adds per image (the embeddings make up the rest of the total). Measured: 28 x 28 211,329 parameters, 152M multiply-adds; 14 x 14 493,376 and 92M; 7 x 7 459,776 and 22M; total 1,198,913. The 7 x 7 level holds 38% of the parameters at 8% of the compute, the 28 x 28 level 18% of the parameters at 57% of the compute: depth at low resolution is cheap. Rewrite "and check that a batch ... keeps its shape" accordingly. -->
 We build the network with 64 channels at full resolution and ten classes,
-and check that a batch of noisy images, times and labels keeps its shape.
+and count its parameters and multiply-adds at each resolution.
 
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-3}
 %%tab pytorch
+torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
 torch.manual_seed(0)
 dev = d2l.try_gpu()
 net = UNet(ch=64, num_classes=10).to(dev)
-x, t = torch.randn(8, 1, 28, 28, device=dev), torch.rand(8, device=dev)
-c = torch.arange(8, device=dev)
-print(f'output {tuple(net(x, t, c).shape)}, {d2l.num_params(net):,} parameters')
+levels = {28: ['inc', 'down1', 'up0', 'outc'], 14: ['pool1', 'down2', 'up1'],
+          7: ['pool2', 'mid']}  # the blocks whose output has each size
+for side, names in levels.items():
+    params = [p for n in names for p in getattr(net, n).parameters()]
+    kernels = sum(p.numel() for p in params if p.dim() == 4)  # convolutions
+    print(f'{side} x {side}: {sum(p.numel() for p in params):,} parameters, '
+          f'{kernels * side ** 2 / 1e6:.0f}M multiply-adds per image')
+print(f'total: {d2l.num_params(net):,} parameters')
 ```
 
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-3}
 %%tab jax
 net = UNet(ch=64, num_classes=10, rngs=nnx.Rngs(0))
-k1, k2 = jax.random.split(jax.random.key(0))
-x, t = jax.random.normal(k1, (8, 28, 28, 1)), jax.random.uniform(k2, (8,))
-c = jnp.arange(8)
-print(f'output {net(x, t, c).shape}, {d2l.num_params(net):,} parameters')
+levels = {28: ['inc', 'down1', 'up0', 'norm', 'outc'],
+          14: ['pool1', 'down2', 'up1'], 7: ['pool2', 'mid']}
+for side, names in levels.items():  # the blocks whose output has each size
+    params = [p for n in names
+              for p in jax.tree.leaves(nnx.state(getattr(net, n), nnx.Param))]
+    kernels = sum(p.size for p in params if p.ndim == 4)  # convolutions
+    print(f'{side} x {side}: {sum(p.size for p in params):,} parameters, '
+          f'{kernels * side ** 2 / 1e6:.0f}M multiply-adds per image')
+print(f'total: {d2l.num_params(net):,} parameters')
 ```
 
 The network has about 1.2 million parameters, a thirtieth of the 35.7
@@ -285,37 +300,17 @@ better than $0.5$: the unconditional prediction needs only enough data to
 serve as a baseline for the conditional one
 (:numref:`subsec_diffusion-images-guided`).
 
-A sampler needs a field of $(\mathbf{x}, t)$ alone. `cfg` turns the
-conditional network into one: it evaluates the network with the requested
-labels $c$ and with the null label in one doubled batch and returns
-$\mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$.
-With $\gamma = 1$ this is the conditional prediction $\mathbf{u}_c$, with
-$\gamma = 0$ the unconditional one; until the guidance experiment we use
-$\gamma = 1$.
+<!-- WRITER: `cfg` moved to the classifier-free guidance subsection (IMG-2); this paragraph now introduces only `conditional`. -->
+A sampler needs a field of $(\mathbf{x}, t)$ alone. `conditional` fixes the
+label: it turns the network into the field
+$(\mathbf{x}, t) \mapsto \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t, c)$
+for the labels $c$ of a batch.
 
-```{.python .input #image-diffusion-classifier-free-guidance}
-%%tab pytorch
-def cfg(net, c, gamma):  #@save
-    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled."""
-    null = torch.full_like(c, net.num_classes)
-    def guided(x, t):
-        out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
-                         torch.cat([c, null])).chunk(2)
-        return out + gamma * (out_c - out)
-    return guided
-```
-
-```{.python .input #image-diffusion-classifier-free-guidance}
-%%tab jax
-def cfg(net, c, gamma):  #@save
-    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled."""
-    null = jnp.full_like(c, net.num_classes)
-    def guided(x, t):
-        out_c, out = jnp.split(net(jnp.concatenate([x, x]),
-                                   jnp.concatenate([t, t]),
-                                   jnp.concatenate([c, null])), 2)
-        return out + gamma * (out_c - out)
-    return guided
+```{.python .input #image-diffusion-conditioning-on-a-class}
+%%tab pytorch, jax
+def conditional(net, c):  #@save
+    """The field (x, t) -> net(x, t, c) with the labels c fixed."""
+    return lambda x, t: net(x, t, c)
 ```
 
 ## The Training Recipe
@@ -403,49 +398,97 @@ ODE from $t = 1$ to $t = 0$ with 50 Euler steps. `generate` draws $n$
 images, the $i$-th of class $i \bmod 10$, in chunks, starting from the same
 noise at every call so that two calls differ only in what we change between
 them.
+<!-- WRITER: `generate` now takes the field as a function `field(model, c)` (default `conditional`) instead of a guidance scale, and a `seed` for the initial noise (default 0, so two calls still share their noise unless the seed changes). -->
 
 ```{.python .input #image-diffusion-one-trainer-3}
 %%tab pytorch
 euler50 = lambda pred, x: d2l.ode_sample(pred, x, path.sigma_bars(50))
 
-def generate(model, gamma, sampler=euler50, n=5000, chunk=500):
-    """n samples from fixed noise; the i-th requests class i % 10."""
-    gen = torch.Generator(dev).manual_seed(0)
+def generate(model, field=conditional, sampler=euler50, n=5000, chunk=500,
+             seed=0):
+    """n samples of field(model, c) from the noise of a seed; the i-th
+    requests class i % 10."""
+    gen = torch.Generator(dev).manual_seed(seed)
     z = torch.randn(n, 1, 28, 28, device=dev, generator=gen)
     c = torch.arange(n, device=z.device) % 10
-    out = [sampler(d2l.make_pred(cfg(model, c_k, gamma), path, 'velocity'), z_k)
+    out = [sampler(d2l.make_pred(field(model, c_k), path, 'velocity'), z_k)
            for z_k, c_k in zip(z.split(chunk), c.split(chunk))]
     return torch.cat(out).clamp(-1, 1)
 
 names = d2l.FashionMNIST().text_labels(range(10))
-d2l.show_gray(generate(ema, 1.0, n=40), 4, 10, titles=names + [''] * 30);
+d2l.show_gray(generate(ema, n=40), 4, 10, titles=names + [''] * 30);
 ```
 
 ```{.python .input #image-diffusion-one-trainer-3}
 %%tab jax
 euler50 = lambda pred, x, key: d2l.ode_sample(pred, x, path.sigma_bars(50))
 
-@nnx.jit(static_argnums=5)  # the sampler is a Python function: one trace each
-def sample_chunk(model, gamma, c, z, key, sampler):
-    return sampler(d2l.make_pred(cfg(model, c, gamma), path, 'velocity'), z, key)
+@nnx.jit(static_argnums=(1, 5))  # Python functions: one trace for each
+def sample_chunk(model, field, c, z, key, sampler):
+    return sampler(d2l.make_pred(field(model, c), path, 'velocity'), z, key)
 
-def generate(model, gamma, sampler=euler50, n=5000, chunk=500):
-    """n samples from fixed noise; the i-th requests class i % 10."""
-    kz, ks = jax.random.split(jax.random.key(0))
+def generate(model, field=conditional, sampler=euler50, n=5000, chunk=500,
+             seed=0):
+    """n samples of field(model, c) from the noise of a seed; the i-th
+    requests class i % 10."""
+    kz, ks = jax.random.split(jax.random.key(seed))
     z, c = jax.random.normal(kz, (n, 28, 28, 1)), jnp.arange(n) % 10
-    out = [sample_chunk(model, gamma, c[i:i + chunk], z[i:i + chunk],
+    out = [sample_chunk(model, field, c[i:i + chunk], z[i:i + chunk],
                         jax.random.fold_in(ks, i), sampler)
            for i in range(0, n, chunk)]
     return jnp.concatenate(out).clip(-1, 1)
 
 names = d2l.FashionMNIST().text_labels(range(10))
-d2l.show_gray(generate(ema, 1.0, n=40), 4, 10, titles=names + [''] * 30);
+d2l.show_gray(generate(ema, n=40), 4, 10, titles=names + [''] * 30);
 ```
 
 Each column holds four samples of one class. Most are recognizable members
 of the requested class, with varied shapes, prints and shades; some are
 malformed, and shirts, pullovers and coats are hard to tell apart, as among
 real images.
+
+<!-- WRITER: new cell (IMG-12). Top row: the first test image (an ankle boot) noised to t = 0, 0.2, ..., 1 on the linear path with one noise draw; bottom row: the clean image x0_hat = x_t - t u(x_t, t, c) the trained weight average implies, given the label. Printed (per-pixel RMS, images in [-1, 1]), dev runs: distance from the image PT 0.00 0.07 0.12 0.15 0.22 0.41, JAX 0.00 0.07 0.12 0.16 0.30 0.48; distance from the class mean PT 0.46 0.46 0.46 0.44 0.37 0.10, JAX 0.46 0.46 0.45 0.42 0.29 0.06. The lead-in and the sentence after the cell are a first draft; check them against the captured numbers. -->
+What does the network see along the way, and what does it predict? The
+first row below noises one test image, an ankle boot, to six times on the
+linear path; the second row shows the clean image
+$\hat{\mathbf{x}}_0 = \mathbf{x}_t - t\, \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}_t, t, c)$
+that the trained network implies at each of them, given the label. The
+printed rows measure how far each $\hat{\mathbf{x}}_0$ lies from the image
+and from the average training image of its class.
+
+```{.python .input #image-diffusion-one-trainer-4}
+%%tab pytorch
+torch.manual_seed(0)
+ts = torch.linspace(0, 1, 6, device=dev)
+x0, c = X_test[:1].expand(6, -1, -1, -1), y_test[:1].expand(6)
+x_t = path.sample(x0, ts, torch.randn_like(x0[:1]).expand_as(x0))
+with torch.no_grad():
+    x0_hat = path.x0_eps('velocity', ema(x_t, ts, c), x_t, ts)[0]
+rms = lambda a, b: ((a - b) ** 2).mean((1, 2, 3)).sqrt().tolist()
+for name, ref in (('image', x0), ('class mean', X[y == c[0]].mean(0))):
+    print(f'RMS from the {name}:', ' '.join(f'{e:.2f}' for e in rms(x0_hat, ref)))
+d2l.show_gray(torch.cat([x_t, x0_hat]), 2, 6,
+              titles=[f't = {t:.1f}' for t in ts.tolist()] + [''] * 6);
+```
+
+```{.python .input #image-diffusion-one-trainer-4}
+%%tab jax
+ts = jnp.linspace(0, 1, 6)
+x0, c = jnp.repeat(X_test[:1], 6, 0), jnp.repeat(y_test[:1], 6)
+eps = jax.random.normal(jax.random.key(1), x0[:1].shape)
+x_t = path.sample(x0, ts, jnp.repeat(eps, 6, 0))
+x0_hat = path.x0_eps('velocity', ema(x_t, ts, c), x_t, ts)[0]
+rms = lambda a, b: jnp.sqrt(((a - b) ** 2).mean((1, 2, 3))).tolist()
+for name, ref in (('image', x0), ('class mean', X[y == c[0]].mean(0))):
+    print(f'RMS from the {name}:', ' '.join(f'{e:.2f}' for e in rms(x0_hat, ref)))
+d2l.show_gray(jnp.concatenate([x_t, x0_hat]), 2, 6,
+              titles=[f't = {t:.1f}' for t in ts.tolist()] + [''] * 6);
+```
+
+At small $t$ the prediction is the image itself. As $t$ grows it loses the
+details that the noise has covered and moves toward the average ankle boot,
+which it reaches at $t = 1$, where the noise carries no information about
+the image and only the label is left.
 
 ### The Moving Average
 
@@ -562,7 +605,7 @@ def fd_and_agreement(cnn, imgs, f_ref):
     agree = (cls == torch.arange(len(imgs), device=cls.device) % 10)
     return d2l.fid_score(f, f_ref), agree.float().mean().item()
 
-fd_ema, _ = fd_and_agreement(cnn, generate(ema, 1.0), f_test[:5000])
+fd_ema, _ = fd_and_agreement(cnn, generate(ema), f_test[:5000])
 print(f'FD of 5,000 samples: {fd_ema:.2f}')
 ```
 
@@ -575,7 +618,7 @@ def fd_and_agreement(cnn, imgs, f_ref):
     agree = (cnn.head(f).argmax(1) == jnp.arange(len(imgs)) % 10).mean()
     return d2l.fid_score(f, f_ref), float(agree)
 
-fd_ema, _ = fd_and_agreement(cnn, generate(ema, 1.0), f_test[:5000])
+fd_ema, _ = fd_and_agreement(cnn, generate(ema), f_test[:5000])
 print(f'FD of 5,000 samples: {fd_ema:.2f}')
 ```
 
@@ -595,12 +638,17 @@ squared maximum mean discrepancy with a cubic kernel on the same features
 (:numref:`sec_dcgan`), whose expected value for two sets of real images is
 zero at every $n$.
 
+<!-- WRITER: the cell now scores five disjoint sets of 1,000 and of 5,000 real training images against the test reference the samples are scored against (f_test[:n]) and prints mean and range of FD and KID. Dev runs: 1,000: FD PT 0.88 (0.82 to 0.95), JAX 0.87 (0.80 to 0.98); KID PT 0.0044 (-0.0093 to 0.0226), JAX 0.0119 (-0.0050 to 0.0332). 5,000: FD PT 0.17 (0.15 to 0.19), JAX 0.16 (0.14 to 0.19); KID PT -0.0020 (-0.0052 to 0.0017), JAX -0.0007 (-0.0038 to 0.0038). A dev check with test-against-test sets gave the same values (1,000: 0.79 to 1.00; 5,000: 0.17), so training images are a fair real reference. Rename the subsection "A Reference Value for the Frechet Distance" and add :label:`subsec_diffusion-fd-reference` (other sections cite it). The single-draw sentences below ("about 0.2", "about 1, about six times larger", KID "within a few hundredths ... a few thousandths") must be read against these means and ranges; KID at 1,000 scatters by about plus or minus 0.02 around zero, at 5,000 by about plus or minus 0.005. The samples FD of about 0.95 is five to six times the 5,000 reference. -->
 ```{.python .input #image-diffusion-reading-the-number-1}
 %%tab pytorch, jax
+f_real = fd_features(cnn, X[:25_000])  # five disjoint sets of 5,000
 for n in (1000, 5000):
-    f_a, f_b = f_test[:n], f_test[5000:5000 + n]
-    print(f'real against real, {n} images each: FD '
-          f'{d2l.fid_score(f_a, f_b):.2f}, KID {d2l.kid_score(f_a, f_b):.5f}')
+    sets = [f_real[i * n:(i + 1) * n] for i in range(5)]
+    fd = np.array([float(d2l.fid_score(f, f_test[:n])) for f in sets])
+    kid = np.array([float(d2l.kid_score(f, f_test[:n])) for f in sets])
+    print(f'{n:,} real images, five sets: FD {fd.mean():.2f} '
+          f'({fd.min():.2f} to {fd.max():.2f}), KID {kid.mean():.4f} '
+          f'({kid.min():.4f} to {kid.max():.4f})')
 ```
 
 At 5,000 images per set the floor is about 0.2, and at 1,000 it is about 1,
@@ -613,19 +661,15 @@ the gap is the error of our model after 15,000 updates.
 
 With a scale in hand we can ask how much the moving average helps, and
 whether a thousand-step sampler beats fifty Euler steps. The reference is
-the ancestral chain of :numref:`sec_diffusion-gaussian-paths`, run with
+the ancestral chain of :numref:`sec_diffusion-integration`, run with
 1,000 steps on the variance-preserving grid of :citet:`ho2020denoising`
 through `make_pred`.
 
+<!-- WRITER: the cell now runs three noise draws of 5,000 samples and prints, per draw, the FD of the weight average (Euler 50), of the last weights and of the 1,000-step chain on the average, with the paired differences to the average. Dev runs: average PT 0.94 to 0.97, JAX 0.93 to 0.96; last weights PT +0.98 to +1.02, JAX +2.08 to +2.23 (worse in every draw, by far more than the 5,000-image reference range of about 0.05); chain PT -0.14 to -0.22, JAX -0.06 to -0.12 (lower in every draw; a modest gain for twenty times the evaluations). Replace "over training runs ... the last weights anywhere from 1 to 3.5" (no cell runs several trainings) and "a tenth to a quarter lower" (holds for PT, not for JAX at 6 to 13 percent) by what the printed rows show; say the comparison is paired (same network, same noise). -->
 ```{.python .input #image-diffusion-reading-the-number-2}
 %%tab pytorch
 vp = d2l.GaussianPath.vp()
 ancestral1000 = lambda pred, x: d2l.ancestral_sample(pred, x, vp, 1000)
-fd_raw, _ = fd_and_agreement(cnn, generate(net, 1.0), f_test[:5000])
-fd_anc, _ = fd_and_agreement(cnn, generate(ema, 1.0, ancestral1000),
-                             f_test[:5000])
-print(f'FD, Euler 50: average {fd_ema:.2f}, last weights {fd_raw:.2f}; '
-      f'chain with 1,000 steps, average {fd_anc:.2f}')
 ```
 
 ```{.python .input #image-diffusion-reading-the-number-2}
@@ -633,11 +677,18 @@ print(f'FD, Euler 50: average {fd_ema:.2f}, last weights {fd_raw:.2f}; '
 vp = d2l.GaussianPath.vp()
 ancestral1000 = lambda pred, x, key: d2l.ancestral_sample(pred, x, vp, 1000,
                                                           key)
-fd_raw, _ = fd_and_agreement(cnn, generate(net, 1.0), f_test[:5000])
-fd_anc, _ = fd_and_agreement(cnn, generate(ema, 1.0, ancestral1000),
-                             f_test[:5000])
-print(f'FD, Euler 50: average {fd_ema:.2f}, last weights {fd_raw:.2f}; '
-      f'chain with 1,000 steps, average {fd_anc:.2f}')
+```
+
+```{.python .input #image-diffusion-reading-the-number-3}
+%%tab pytorch, jax
+for seed in range(3):  # three draws of the initial noise
+    fd = [fd_and_agreement(cnn, generate(model, sampler=sampler, seed=seed),
+                           f_test[:5000])[0]
+          for model, sampler in ((ema, euler50), (net, euler50),
+                                 (ema, ancestral1000))]
+    print(f'noise {seed}: Euler 50 average {fd[0]:.2f}, last weights '
+          f'{fd[1]:.2f} ({fd[1] - fd[0]:+.2f}); chain with 1,000 steps '
+          f'{fd[2]:.2f} ({fd[2] - fd[0]:+.2f})')
 ```
 
 The weights of the last update are no better than their average and often
@@ -675,7 +726,7 @@ that samples matched their classes much better with $\gamma > 1$. The
 classifier must be trained on noisy images, since the sampler evaluates its
 gradient at $\mathbf{x}_t$, where a classifier of clean images gives
 meaningless gradients. The appendix treats the rule on a one-dimensional
-mixture (:numref:`sec_mdl-ddim-guidance`); exercise
+mixture (:numref:`sec_mdl-ddim-guidance`); Exercise
 :exref:`ex_image-diffusion-clean-classifier-guide` runs it on our images.
 
 ### Classifier-Free Guidance
@@ -709,8 +760,42 @@ velocities:
 $$\tilde{\mathbf{u}}(\mathbf{x}, t) = \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing) + \gamma \big(\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t, c) - \mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t, \varnothing)\big).$$
 :eqlabel:`eq_diffusion-cfg`
 
+<!-- WRITER: `cfg` now lives here (IMG-2). It evaluates the network with the labels c and with the null label in one doubled batch; at gamma = 1 it returns `conditional(net, c)` and skips the unlabeled half, which halves the cost of every sample drawn without guidance. Say so in a sentence; "This is what `cfg` computes" now points at the cell above it. -->
+```{.python .input #image-diffusion-classifier-free-guidance}
+%%tab pytorch
+def cfg(net, c, gamma):  #@save
+    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
+
+    gamma is a Python number; at gamma = 1 this is conditional(net, c)."""
+    if gamma == 1:
+        return d2l.conditional(net, c)
+    null = torch.full_like(c, net.num_classes)
+    def guided(x, t):  # one doubled batch: labeled, then unlabeled
+        out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
+                         torch.cat([c, null])).chunk(2)
+        return out + gamma * (out_c - out)
+    return guided
+```
+
+```{.python .input #image-diffusion-classifier-free-guidance}
+%%tab jax
+def cfg(net, c, gamma):  #@save
+    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
+
+    gamma is a Python number; at gamma = 1 this is conditional(net, c)."""
+    if gamma == 1:
+        return d2l.conditional(net, c)
+    null = jnp.full_like(c, net.num_classes)
+    def guided(x, t):  # one doubled batch: labeled, then unlabeled
+        out_c, out = jnp.split(net(jnp.concatenate([x, x]),
+                                   jnp.concatenate([t, t]),
+                                   jnp.concatenate([c, null])), 2)
+        return out + gamma * (out_c - out)
+    return guided
+```
+
 This is what `cfg` computes, and the same argument holds for every target of
-the dictionary (exercise :exref:`ex_image-diffusion-equivalent-guidance`).
+the dictionary (Exercise :exref:`ex_image-diffusion-equivalent-guidance`).
 :citet:`Ho.Salimans.2022` write the rule as $(1 + w)\, \mathbf{u}_c - w\,
 \mathbf{u}_\varnothing$, so their $w$ is our $\gamma - 1$.
 :numref:`fig_diffusion-guidance` draws the rule on the running example: for
@@ -728,8 +813,11 @@ requested class.
 
 ```{.python .input #image-diffusion-classifier-free-guidance-1}
 %%tab pytorch, jax
-for gamma in (0.0, 1.0, 1.5, 2.0, 3.0, 4.0):
-    fd, agree = fd_and_agreement(cnn, generate(ema, gamma), f_test[:5000])
+guided = lambda gamma: lambda net, c: cfg(net, c, gamma)
+samples = {gamma: generate(ema, guided(gamma))
+           for gamma in (0.0, 1.0, 1.5, 2.0, 3.0, 4.0)}
+for gamma, imgs in samples.items():
+    fd, agree = fd_and_agreement(cnn, imgs, f_test[:5000])
     print(f'gamma {gamma:.1f}: FD {fd:5.2f}, class agreement {agree:.3f}')
 ```
 
@@ -741,6 +829,43 @@ samples are assigned their requested class, about as high as this classifier
 can confirm, since it classifies only a little more than 90% of real test
 images correctly.
 
+<!-- WRITER: new cell (IMG-9). Dev runs: gamma 0: mean term PT 0.91 of FD 3.05, JAX 1.14 of 3.38; gamma 1: mean term PT 0.39 of 0.97, JAX 0.41 of 0.96. So from gamma 1 to 0 the mean term grows by about 0.5 to 0.7 and the rest (the trace term, spread within the features) by about 1.6 to 1.7: most of the rise is in how the unguided images look, not in the class mix. Class shares at gamma 0 (feature network): PT from 0.069 (sandal) and 0.076 (trouser) to 0.140 (pullover), JAX from 0.067 (sandal) to 0.140 (pullover); test images 0.097 to 0.103. The sentence "the unconditional prediction covers all ten classes and was trained on only one example in ten" can stay as the cause of the larger part; the class mix is off too (pullovers and shirts too common, sandals and trousers too rare) and accounts for the smaller part. -->
+Two causes could raise the FD at $\gamma = 0$: the sampler may produce the
+classes in the wrong proportions, which moves the mean of the features, or
+it may produce images of each class that differ from real ones, which
+changes their spread. The next cell separates the two. It prints the mean
+term $\|\boldsymbol{\mu}_p - \boldsymbol{\mu}_q\|^2$ of
+:eqref:`eq_diffusion-fd` beside the whole FD, and the share of each class
+among the unguided samples beside its share among the test images, both as
+the feature network classifies them.
+
+```{.python .input #image-diffusion-classifier-free-guidance-3}
+%%tab pytorch
+for gamma in (0.0, 1.0):
+    f = fd_features(cnn, samples[gamma])
+    mean_term = ((f.mean(0) - f_test[:5000].mean(0)) ** 2).sum()
+    print(f'gamma {gamma:.1f}: mean term {mean_term:.2f} of FD '
+          f'{d2l.fid_score(f, f_test[:5000]):.2f}')
+share = lambda cls: torch.bincount(cls, minlength=10) / len(cls)
+cls = cnn.head(fd_features(cnn, samples[0.0]).to(dev)).argmax(1)
+for name, s_test, s_0 in zip(names, share(c_test), share(cls)):
+    print(f'{name:>11}: test images {s_test:.3f}, gamma 0 {s_0:.3f}')
+```
+
+```{.python .input #image-diffusion-classifier-free-guidance-3}
+%%tab jax
+for gamma in (0.0, 1.0):
+    f = fd_features(cnn, samples[gamma])
+    mean_term = ((f.mean(0) - f_test[:5000].mean(0)) ** 2).sum()
+    print(f'gamma {gamma:.1f}: mean term {mean_term:.2f} of FD '
+          f'{d2l.fid_score(f, f_test[:5000]):.2f}')
+share = lambda cls: jnp.bincount(cls, length=10) / len(cls)
+cls = cnn.head(fd_features(cnn, samples[0.0])).argmax(1)
+for name, s_test, s_0 in zip(names, share(c_test), share(cls)):
+    print(f'{name:>11}: test images {s_test:.3f}, gamma 0 {s_0:.3f}')
+```
+
+<!-- WRITER: dev-run sweep, FD / agreement: gamma 0 PT 3.05 / 0.099, JAX 3.38 / 0.099; 1 PT 0.97 / 0.886, JAX 0.96 / 0.895; 1.5 PT 1.05 / 0.963, JAX 1.04 / 0.961; 2 PT 1.87 / 0.983, JAX 1.81 / 0.981; 3 PT 3.77 / 0.996, JAX 3.50 / 0.996; 4 PT 5.48 / 0.999, JAX 5.07 / 0.998. "the FDs at gamma = 1 and 1.5 differ by less than the spread between training runs" rests on runs no cell executes: the difference (0.08) is about the width of the 5,000-image reference range and of the spread over noise draws of the paired cell (0.03); call the two nearly equal and cite subsec_diffusion-fd-reference. -->
 Guidance beyond $\gamma = 1$ trades variety for typicality. At $\gamma =
 1.5$ the FD stays near its minimum, about 1, while the agreement
 rises to about 96%; the FDs at $\gamma = 1$ and $1.5$ differ by less than
@@ -755,7 +880,8 @@ the noise of the first grid at $\gamma = 0$ and at $\gamma = 4$.
 ```{.python .input #image-diffusion-classifier-free-guidance-2}
 %%tab pytorch, jax
 for gamma in (0.0, 4.0):
-    d2l.show_gray(generate(ema, gamma, n=40), 4, 10, titles=names + [''] * 30)
+    d2l.show_gray(generate(ema, guided(gamma), n=40), 4, 10,
+                  titles=names + [''] * 30)
 ```
 
 At $\gamma = 0$ the columns no longer follow their labels. At $\gamma = 4$
@@ -847,9 +973,10 @@ which sampler should take them is the subject of
     1. Compare the mean and the spread of the KID with those of the FD at
        each $n$. Which of the two would you report for a set of 500
        samples?
-    1. The samples of `generate(ema, 1.0)` scored an FD of about 1 at
+    1. The samples of `generate(ema)` scored an FD of about 1 at
        $n = 5000$. Predict their FD at $n = 1000$ from your line, and check
        the prediction.
+    <!-- WRITER: no cell runs several training runs; read the gamma = 1 and 1.5 FDs against the five-set FD range of the reference cell instead (worklist decision 12). -->
     1. The FDs at $\gamma = 1$ and $\gamma = 1.5$ were within the spread
        between training runs. Score ten disjoint subsets of 500 samples at
        each of the two scales with both FD and KID. Can either score tell
@@ -904,10 +1031,12 @@ which sampler should take them is the subject of
        guidance at every step and with $\gamma = 1$.
     1. Which interval accounts for most of the gain in agreement, and which
        for most of the rise in FD? Relate the answer to the time at which a
-       sample commits to its class (exercise
-       :exref:`ex_gaussian-paths-commitment-time`).
-       :exref:`ex_mdl-score-matching-diffusion-flow-guidance-levels` asks
-       the same question for two classes in one dimension.
+       sample commits to its class (Exercise
+       :exref:`ex_gaussian-paths-commitment-time` of
+       :numref:`sec_diffusion-integration`). Exercise
+       :exref:`ex_mdl-score-matching-diffusion-flow-guidance-levels` of
+       :numref:`sec_mdl-score-matching-diffusion-flow` asks the same question
+       for two classes in one dimension.
    :exlabel:`ex_image-diffusion-guidance-interval`
 1. [extended] **Autoguidance.** ●● :citet:`Karras.Aittala.Kynkaanniemi.ea.2024`
    guide a conditional model with a weaker version of itself in place of its
@@ -979,8 +1108,8 @@ which sampler should take them is the subject of
    :exlabel:`ex_image-diffusion-label-dropout`
 1. [code] **Diagnosing a broken trainer.** Each of four bugs leaves the code
    running: (i) the images are scaled to $[0, 1]$ instead of $[-1, 1]$ in
-   `batch_fn`; (ii) `loss_fn` passes $1000\, t$ to the network, while the
-   sampler passes $t$; (iii) `loss_fn` draws the noise once and reuses it for
+   `batch_fn`; (ii) `loss_fn` passes $1000\, t$ to the network, as code that
+   counts DDPM's 1,000 steps does, while the sampler still passes $t$; (iii) `loss_fn` draws the noise once and reuses it for
    every minibatch; (iv) label dropout substitutes class 0 instead of the
    null label.
     1. Before running anything, predict for each bug how it shows in the
@@ -1039,7 +1168,8 @@ which sampler should take them is the subject of
        versions of the Gaussian of (a), and explain why the ODE therefore
        does not end at it.
     1. The truncation trick of Exercise
-       :exref:`ex_conditional-biggan-s-truncation-trick`, applied to the
+       :exref:`ex_conditional-biggan-s-truncation-trick` of
+       :numref:`sec_gan_conditional`, applied to the
        generator $\boldsymbol{\mu}_c + s \mathbf{z}$, and sampling from
        $p(\mathbf{x} \mid c)^{1/T}$ at a temperature $T < 1$ also narrow the
        class. Which of the three methods moves the class mean as well, and
@@ -1274,6 +1404,7 @@ $$\mathrm{FD} = \|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2 + \mathrm{tr}\Big(\bol
 @!image-diffusion-fr-chet-distance-in-learned-features-1
 :::
 
+<!-- WRITER: slide numbers come from single draws; the cell now prints the mean and range over five sets of real images at 1,000 and 5,000. -->
 ::: {.slide title="Two Real Sets Already Differ: The FD Floor Depends on n"}
 @!image-diffusion-reading-the-number-1
 
@@ -1287,8 +1418,9 @@ Compare FDs only at equal numbers of images.
 :::
 :::
 
+<!-- WRITER: "Last weights: anywhere from 1 to 3.5 across seeds" rests on runs no cell executes; quote the printed paired values over three noise draws instead. Slides still to add (worklist Part 5 B): the noising strip (cell image-diffusion-one-trainer-4) and the gamma = 0 class shares (cell image-diffusion-classifier-free-guidance-3). -->
 ::: {.slide title="The Weight Average Scores About 1; the Last Weights Do Worse, 1,000 Steps Little Better"}
-@!image-diffusion-reading-the-number-2
+@!image-diffusion-reading-the-number-3
 
 - Weight average: about 1 in every training run, five to six times the floor
   of 0.2; the gap is the model's error.

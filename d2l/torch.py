@@ -4117,7 +4117,11 @@ class UNetBlock(nn.Module):
         return h + self.skip(x)
 
 class UNet(nn.Module):
-    """A small U-Net on time t, a label y (num_classes = null), and cond.
+    """A small U-Net on an image x (n, c, h, w), times t (n,) and labels y.
+
+    y = num_classes is the null label. cond (n, emb_dim), if given, is added
+    to the time features; the flow map of the few-step section passes the
+    embedding of its step size there.
 
     Defined in :numref:`sec_diffusion-images`"""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
@@ -4154,16 +4158,11 @@ class UNet(nn.Module):
         h = self.up0(up(h, h1), emb)  # skip connection
         return self.outc(h)
 
-def cfg(net, c, gamma):
-    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
+def conditional(net, c):
+    """The field (x, t) -> net(x, t, c) with the labels c fixed.
 
     Defined in :numref:`sec_diffusion-images`"""
-    null = torch.full_like(c, net.num_classes)
-    def guided(x, t):
-        out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
-                         torch.cat([c, null])).chunk(2)
-        return out + gamma * (out_c - out)
-    return guided
+    return lambda x, t: net(x, t, c)
 
 def fashion_feature_cnn(X, y):
     """The feature network that judges Fashion-MNIST samples in this chapter.
@@ -4179,6 +4178,21 @@ def fd_features(cnn, imgs):
     Defined in :numref:`sec_diffusion-images`"""
     rgb = lambda x: x.clamp(-1, 1).expand(-1, 3, -1, -1)
     return d2l.batched(lambda x: cnn.features(rgb(x)), imgs).cpu()
+
+def cfg(net, c, gamma):
+    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
+
+    gamma is a Python number; at gamma = 1 this is conditional(net, c).
+
+    Defined in :numref:`sec_diffusion-images`"""
+    if gamma == 1:
+        return d2l.conditional(net, c)
+    null = torch.full_like(c, net.num_classes)
+    def guided(x, t):  # one doubled batch: labeled, then unlabeled
+        out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
+                         torch.cat([c, null])).chunk(2)
+        return out + gamma * (out_c - out)
+    return guided
 
 @torch.no_grad()
 def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):

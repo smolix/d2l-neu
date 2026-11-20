@@ -3536,7 +3536,8 @@ class ReplayBufferC(d2l.ReplayBuffer):
 
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update the critic; return the summed log loss, halved.
+    """Update the critic; return its log loss summed over both batches
+    (per sample, the sum of two means: 2 log 2 at equilibrium).
 
     Defined in :numref:`sec_basic_gan`"""
     batch_size = X.shape[0]
@@ -3547,7 +3548,7 @@ def update_D(X, Z, net_D, net_G, optimizer_D):
         return (jnp.sum(optax.sigmoid_binary_cross_entropy(
                     real_Y, jnp.ones(batch_size))) +
                 jnp.sum(optax.sigmoid_binary_cross_entropy(
-                    fake_Y, jnp.zeros(batch_size)))) / 2
+                    fake_Y, jnp.zeros(batch_size))))
     loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
     optimizer_D.update(net_D, grads_D)
     return loss_D
@@ -3568,10 +3569,12 @@ def update_G(Z, net_D, net_G, optimizer_G):
     return loss_G
 
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None, on_epoch=None):
+              step_G=update_G, seed=None, on_epoch=None, ema=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
-    return the per-sample (loss_D, loss_G) of each epoch.
+    (beta_1 = 0.5), calling ema.update(net_G) after every generator step
+    and on_epoch(epoch) after each epoch if given; return each epoch's
+    per-sample losses (loss_D, the sum of the critic's two batch means,
+    and loss_G).
 
     Defined in :numref:`sec_basic_gan`"""
     key = d2l.get_key() if seed is None else jax.random.key(seed)
@@ -3587,6 +3590,8 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             Z = jax.random.normal(subkey, (X.shape[0], latent_dim))
             loss_D += update_D(X, Z, net_D, net_G, optimizer_D)
             loss_G += step_G(Z, net_D, net_G, optimizer_G)
+            if ema is not None:
+                ema.update(net_G)
             n += X.shape[0]
         history.append((loss_D / n, loss_G / n))
         if on_epoch is not None:
@@ -3604,11 +3609,6 @@ def make_mlp(sizes, act, *, rngs):
         layers += [nnx.Linear(d_in, d_out, kernel_init=init, rngs=rngs), act]
     return nnx.Sequential(*layers[:-1])
 
-def mmd2_unbiased(K_pp, K_qq, K_pq):
-    """Unbiased MMD^2 from the kernel matrices within p, within q, and
-    across; the diagonals (a point with itself) are left out.
-
-    Defined in :numref:`sec_gan_objectives`"""
 mu_p = np.array([[0.0, 2.4], [-2.1, -1.2], [2.1, -1.2]])     # data
 A_p = np.stack([0.7 * np.eye(2)] * 3)
 
@@ -3654,16 +3654,16 @@ def make_critic(rngs):
                           nnx.Linear(64, 64, rngs=rngs), leaky,
                           nnx.Linear(64, 1, rngs=rngs))
 
+def mmd2_unbiased(K_pp, K_qq, K_pq):
+    """Unbiased MMD^2 from the kernel matrices within p, within q, and
+    across; the diagonals (a point with itself) are left out.
+
+    Defined in :numref:`sec_gan_objectives`"""
     m, n = len(K_pp), len(K_qq)
     return ((K_pp.sum() - K_pp.diagonal().sum()) / (m * (m - 1))
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
             - 2 * K_pq.mean())
 
-def rpgan_loss_D(critic, real, fake):
-    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
-
-    Defined in :numref:`sec_gan_convergence`"""
-    return jax.nn.softplus(critic(fake) - critic(real)).mean()
 mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
 A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7
 
@@ -3683,7 +3683,7 @@ class MixtureGenerator(nnx.Module):
 
 @nnx.jit(static_argnums=(0, 1))
 def train_toy_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k):
-    """One critic step (unless critic_loss is None), then one generator step.
+    """A critic step (unless critic_loss is None), then a generator step.
 
     Defined in :numref:`sec_gan_objectives`"""
     if critic_loss is not None:            # the generator is fixed here
@@ -3716,6 +3716,11 @@ def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
             trace.append(js_mixtures(*G.params_np()))
     return np.array(trace)
 
+def rpgan_loss_D(critic, real, fake):
+    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return jax.nn.softplus(critic(fake) - critic(real)).mean()
 
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator.

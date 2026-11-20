@@ -3409,7 +3409,8 @@ class ReplayBufferC(d2l.ReplayBuffer):
         self.act = np.zeros((capacity, act_dim), np.float32)
 
 def update_D(X, Z, net_D, net_G, trainer_D):
-    """Update the critic; return the summed log loss, halved.
+    """Update the critic; return its log loss summed over both batches
+    (per sample, the sum of two means: 2 log 2 at equilibrium).
 
     Defined in :numref:`sec_basic_gan`"""
     trainer_D.zero_grad()
@@ -3419,7 +3420,7 @@ def update_D(X, Z, net_D, net_G, trainer_D):
     loss_D = (F.binary_cross_entropy_with_logits(
                   real_Y, torch.ones_like(real_Y), reduction='sum') +
               F.binary_cross_entropy_with_logits(
-                  fake_Y, torch.zeros_like(fake_Y), reduction='sum')) / 2
+                  fake_Y, torch.zeros_like(fake_Y), reduction='sum'))
     loss_D.backward()
     trainer_D.step()
     return loss_D
@@ -3438,10 +3439,12 @@ def update_G(Z, net_D, net_G, trainer_G):
     return loss_G
 
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None, on_epoch=None):
+              step_G=update_G, seed=None, on_epoch=None, ema=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
-    return the per-sample (loss_D, loss_G) of each epoch.
+    (beta_1 = 0.5), calling ema.update(net_G) after every generator step
+    and on_epoch(epoch) after each epoch if given; return each epoch's
+    per-sample losses (loss_D, the sum of the critic's two batch means,
+    and loss_G).
 
     Defined in :numref:`sec_basic_gan`"""
     if seed is not None:
@@ -3457,6 +3460,8 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             Z = torch.randn(X.shape[0], latent_dim, device=X.device)
             loss_D += update_D(X, Z, net_D, net_G, trainer_D).detach()
             loss_G += step_G(Z, net_D, net_G, trainer_G).detach()
+            if ema is not None:
+                ema.update(net_G)
             n += X.shape[0]
         history.append(torch.stack([loss_D, loss_G]) / n)
         if on_epoch is not None:
@@ -3475,11 +3480,6 @@ def make_mlp(sizes, act):
         layers += [linear, act]
     return nn.Sequential(*layers[:-1])
 
-def mmd2_unbiased(K_pp, K_qq, K_pq):
-    """Unbiased MMD^2 from the kernel matrices within p, within q, and
-    across; the diagonals (a point with itself) are left out.
-
-    Defined in :numref:`sec_gan_objectives`"""
 mu_p = np.array([[0.0, 2.4], [-2.1, -1.2], [2.1, -1.2]])     # data
 A_p = np.stack([0.7 * np.eye(2)] * 3)
 
@@ -3532,16 +3532,16 @@ def make_critic():
 
 to_t = lambda a: torch.tensor(a, dtype=torch.float32)
 
+def mmd2_unbiased(K_pp, K_qq, K_pq):
+    """Unbiased MMD^2 from the kernel matrices within p, within q, and
+    across; the diagonals (a point with itself) are left out.
+
+    Defined in :numref:`sec_gan_objectives`"""
     m, n = len(K_pp), len(K_qq)
     return ((K_pp.sum() - K_pp.diagonal().sum()) / (m * (m - 1))
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
             - 2 * K_pq.mean())
 
-def rpgan_loss_D(critic, real, fake):
-    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
-
-    Defined in :numref:`sec_gan_convergence`"""
-    return F.softplus(critic(fake) - critic(real)).mean()
 mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
 A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7
 
@@ -3592,6 +3592,11 @@ def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
             trace.append(js_mixtures(*G.params_np()))
     return np.array(trace)
 
+def rpgan_loss_D(critic, real, fake):
+    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
+
+    Defined in :numref:`sec_gan_convergence`"""
+    return F.softplus(critic(fake) - critic(real)).mean()
 
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator.

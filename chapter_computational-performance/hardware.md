@@ -509,22 +509,26 @@ for desc, src in [('pageable', x_pageable), ('pinned', x_pinned)]:
 `pin_memory()` returns a copy of a tensor in pinned memory, and
 `non_blocking=True` issues the copy from pinned memory without waiting for
 it to finish; from pageable memory the copy is synchronous, whatever the
-flag says. A `DataLoader(pin_memory=True)` pins every minibatch on a
+flag says. The CUDA driver performs that pageable copy in chunks through
+pinned buffers of its own, so it stages one chunk while the previous one
+crosses the link. A `DataLoader(pin_memory=True)` pins every minibatch on a
 background thread as the workers deliver it.
 :end_tab:
 
 :begin_tab:`jax`
 JAX names the memory in which an array lives by its *memory kind*:
 `'device'` for the GPU's memory and `'pinned_host'` for pinned host
-memory, while a NumPy array lives in pageable memory. JAX may run several
-transfers at once, and the last one issued can finish first; since
-`Benchmark` waits only for the last result, each timed call here waits for
-its own copy.
+memory, while a NumPy array lives in pageable memory. A `device_put` of a
+NumPy array first copies the whole array into pinned memory and only then
+starts the transfer, so the pageable time is the sum of the two copies.
+JAX may run several transfers at once, and the last one issued can finish
+first; since `Benchmark` waits only for the last result, each timed call
+here waits for its own copy.
 :end_tab:
 
-The pinned copy reaches about 24 GB/s, three quarters of the
-32 GB/s that a PCIe 4.0 ×16 link carries in each direction, and forty
-times below the card's own memory bandwidth. We write
+The pinned copy reaches about 23 GB/s, close to three quarters of the
+32 GB/s that a PCIe 4.0 ×16 link carries in each direction, and about
+forty times below the card's own memory bandwidth. We write
 $\beta_\textrm{host}$ for this rate; on a PCIe 5.0 host or a laptop it is
 another number. The pageable copy is slower, because every byte first
 makes an extra trip through host memory. Data that the GPU reads
@@ -642,7 +646,7 @@ on our machine. On another machine only that column changes.
 | GPU memory bandwidth, $\beta$ | 1–8 TB/s | about 0.9 TB/s (1.0 rated) | the speed limit of elementwise operations and of decode |
 | ridge point, $P/\beta$ | 120–300 FLOP/byte | 164 FLOP/byte | below it, memory sets the time |
 | sweep time, $C/\beta$ | about 20 ms | 24 ms (rated $\beta$) | the largest model that fits decodes one stream at about 50 tokens/s |
-| host to device, $\beta_\textrm{host}$ | at most 32 GB/s (PCIe 4.0) to 64 GB/s (PCIe 5.0), one direction | about 24 GB/s | keep data on the device |
+| host to device, $\beta_\textrm{host}$ | at most 32 GB/s (PCIe 4.0) to 64 GB/s (PCIe 5.0), one direction | about 23 GB/s | keep data on the device |
 | GPU to GPU, $\beta_\textrm{link}$ | 450–900 GB/s over NVLink, one direction | staged through host memory, at most $\beta_\textrm{host}$; measured in :numref:`sec_multi_gpu` | sets the time of every gradient exchange |
 | bytes per parameter, training with Adam | 16 (fp32), 18 (mixed precision) | | what fits (:numref:`sec_memory_precision`) |
 | bytes per token, decode | $2N$ + KV cache (bf16) | | tokens/s $\lesssim$ bandwidth / bytes per token |
@@ -750,7 +754,7 @@ sweep time is about 20 ms on every current GPU.
     1. Compute $P/\beta$ in bf16 for an RTX 4090 against its own memory
        and against the host-staged GPU-to-GPU path of
        :numref:`subsec_hw-interconnects` at $\beta_\textrm{host}$, about
-       24 GB/s. Compute it for a B200 against its HBM and against one
+       23 GB/s. Compute it for a B200 against its HBM and against one
        direction of NVLink 5, 900 GB/s.
     1. In data-parallel training (:numref:`sec_multi_gpu`), every GPU
        holds a copy of a model with $N$ parameters and processes $T$
@@ -1091,7 +1095,7 @@ $I = 0.25$ FLOP/B; (b) a matmul at $I = 1{,}000$ FLOP/B.
 ::: {.slide title="Pinned Host Memory Feeds PCIe at Three Quarters of Its Rate"}
 @!hardware-the-cpu-s-role
 
-- Pinned: $\beta_\textrm{host} \approx$ 24 of PCIe 4.0's 32 GB/s, forty
+- Pinned: $\beta_\textrm{host} \approx$ 23 of PCIe 4.0's 32 GB/s, about forty
   times below GPU memory.
 - Pageable: an extra copy through host memory first.
 - Keep data on the device; copy minibatches from pinned memory, overlapped.
@@ -1100,7 +1104,7 @@ $I = 0.25$ FLOP/B; (b) a matmul at $I = 1{,}000$ FLOP/B.
 ::: {.slide title="Without Peer-to-Peer, Every Inter-GPU Byte Goes through the Host"}
 ![](../img/mdl-perf-pcie-topology.svg){height=400px}
 
-GPU to GPU: at most $\beta_\textrm{host} \approx$ 24 GB/s, and only if
+GPU to GPU: at most $\beta_\textrm{host} \approx$ 23 GB/s, and only if
 both hops overlap; almost 40× below one direction of NVLink 5. The 4 GB of
 fp32 gradients of the 1B GPT: ≥ 0.17 s per step here, more than half of
 the 0.3 s that 8K tokens take at peak.
@@ -1159,7 +1163,7 @@ per second for one stream, and for a batch of 64?
 [Wrap-up]{.kicker}
 
 - Bandwidth = wires × rate per wire; each step from the die cuts the
-  wires: 1 TB/s on the board, 24 GB/s to the host, no faster GPU to GPU.
+  wires: 1 TB/s on the board, 23 GB/s to the host, no faster GPU to GPU.
 - Compute is area, I/O is perimeter, and power caps the bytes: ridge
   points of 117–295 FLOP/B, rising over generations.
 - Random reads reach a third of $\beta$; reaching $\beta$ needs

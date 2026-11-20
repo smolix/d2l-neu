@@ -425,3 +425,257 @@ Even a quick visual scan previews what our linear classifier is up against: trou
 [Discussions](https://d2l.discourse.group/t/17980)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.2]{.kicker}
+
+Image Classification Data<br>**Fashion-MNIST · minibatches · a look at the images**
+:::
+:::
+
+::: {.slide title="MNIST Is Too Easy, ImageNet Too Big for a Notebook"}
+[The problem]{.kicker}
+
+| dataset | images | classes | what goes wrong |
+|---|---|---|---|
+| MNIST | 70,000 digits, $28\times28$, gray | 10 | CNNs above 99%, classical methods about 97%: models barely differ |
+| ImageNet | 1.2 million photos, color | 1,000 | hours to days of GPU time per run |
+| **Fashion-MNIST** | **70,000 garments, $28\times28$, gray** | **10** | **linear models about 83%, good CNNs above 90%** |
+
+::: {.d2l-note}
+Fashion-MNIST keeps MNIST's format, loads in seconds, and leaves room
+between weak and strong models.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- load Fashion-MNIST in your framework, with the same images as in the
+  other three;
+- read the shape of a minibatch in channel-first or channel-last layout;
+- time the loader, a lower bound on the time of an epoch;
+- check images and labels by eye before training, and say which classes
+  resemble each other.
+
+**Running example:** 60,000 training and 10,000 test images; minibatches
+of 64 images of $28 \times 28$ pixels, 32-bit floats.
+:::
+
+::: {.slide title="The Data Every Classifier in This Chapter Reads"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Softmax Regression | probabilities over classes, cross-entropy |
+| **Image Classification Data** | **Fashion-MNIST in minibatches** |
+| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
+| Concise Implementation | framework layers, a stable loss |
+| Measuring Classifiers | precision, recall, costs, calibration |
+| Generalization in Classification | error bars, test-set reuse, VC dimension |
+| Environment and Distribution Shift | correcting for shifted data |
+:::
+
+::: {.col .narrow}
+- **Uses:** `DataModule` and `Trainer` from linear regression.
+- **Skips:** data augmentation, color images, data larger than memory.
+:::
+:::
+:::
+
+::: {.slide title="Ten Classes, 6,000 Training and 1,000 Test Images Each"}
+[The dataset]{.kicker}
+
+| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|
+| T-shirt | trouser | pullover | dress | coat | sandal | shirt | sneaker | bag | ankle boot |
+
+Labels are the class indices 0–9; a lookup gives the names:
+
+@image-classification-dataset-loading-the-dataset-4
+:::
+
+::: {.slide title="Every Framework Loads the Same Published Files"}
+[The dataset]{.kicker}
+
+- **PyTorch:** torchvision; **TensorFlow, JAX:** Keras; **MXNet:** reads
+  the published gzip files itself.
+- `FashionMNIST(batch_size=64, resize=(28, 28))` keeps both splits in
+  memory.
+
+@!image-classification-dataset-loading-the-dataset-2
+
+::: {.d2l-note .warn}
+The 10,000 **test** images serve as validation data. A test set consulted
+for every comparison stops being an unbiased test.
+:::
+:::
+
+::: {.slide title="Gluon's Own Copy Has a Different Test Set" only="mxnet"}
+[The dataset]{.kicker}
+
+- Gluon ships a copy of Fashion-MNIST, split differently from the published
+  dataset: about 80% of its 10,000 test images are **training** images of
+  the published one.
+- Results on it cannot be compared with published numbers.
+- So `FashionMNIST.read` opens the published files: a 16-byte header, then
+  $28 \times 28 = 784$ bytes per image (8 bytes and one byte per label for
+  the labels).
+:::
+
+::: {.slide title="The Training Loader Reshuffles; Both Keep the Short Last Minibatch"}
+[Reading minibatches]{.kicker}
+
+@image-classification-dataset-reading-a-minibatch-1
+
+- Training: a new random order every epoch, so the minibatches differ from
+  epoch to epoch. Validation: the stored order every time.
+- Pixel values become floats in $[0, 1]$; images are resized if asked.
+- The last minibatch of an epoch is short (32 images at a batch size of
+  64), and both loaders keep it, so every epoch covers every image.
+:::
+
+::: {.slide title="Check: How Many Minibatches per Epoch?"}
+[Check]{.kicker}
+
+With minibatches of **256**, how many minibatches does
+
+1. one training epoch have, and how large is the last one?
+2. one pass over the validation set have?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.**
+
+1. $60{,}000 = 234 \times 256 + 96$: 235 minibatches, the last of 96.
+2. $10{,}000 = 39 \times 256 + 16$: 40 minibatches, the last of 16.
+:::
+:::
+:::
+
+::: {.slide title="Channel-First or Channel-Last, Depending on the Framework"}
+[Reading minibatches]{.kicker}
+
+An image is $c \times h \times w$ or $h \times w \times c$, with
+$c$ channels (1 for gray, 3 for color) and $h \times w$ pixels:
+
+@image-classification-dataset-loading-the-dataset-3
+
+::: {.d2l-note .rule}
+Same image in every framework; only the position of the channel axis
+differs.
+:::
+:::
+
+::: {.slide title="A Minibatch Is a 4-D Tensor of Images and a Vector of Labels"}
+[Reading minibatches]{.kicker}
+
+@!image-classification-dataset-reading-a-minibatch-2
+
+- PyTorch, MXNet: $(n, c, h, w)$; TensorFlow, JAX: $(n, h, w, c)$.
+- Images: 32-bit floats in $[0, 1]$. Labels: integers 0–9.
+- One minibatch of images: $64 \times 784 \times 4$ bytes $\approx$ 200 KB.
+:::
+
+::: {.slide title="Check: How Much Memory?"}
+[Check]{.kicker}
+
+1. A minibatch of shape $(256, 1, 28, 28)$ in 32-bit floats?
+2. All 60,000 training images as 32-bit floats? As bytes, as stored?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.**
+
+1. $256 \times 784 \times 4 = 802{,}816$ bytes, about 0.8 MB.
+2. $60{,}000 \times 784 \times 4 \approx 188$ MB as floats; a quarter of
+   that, 47 MB, as bytes. Both fit in memory easily.
+:::
+:::
+:::
+
+::: {.slide title="Reading One Epoch Takes Seconds"}
+[Loader speed]{.kicker}
+
+One pass over the 60,000 training images, with no model:
+
+@image-classification-dataset-reading-a-minibatch-3
+
+::: {.d2l-note .rule}
+The time depends on storage, workers, framework, and hardware: it holds only
+for the machine that ran it.
+:::
+:::
+
+::: {.slide title="An Epoch Takes at Least as Long as Its Slower Stage"}
+[Loader speed]{.kicker}
+
+Loader workers prepare the next minibatches while the model trains on the
+current one, so
+
+$$\textrm{time per epoch} \;\ge\; \max(\textrm{loading time},\ \textrm{compute time}).$$
+
+- Loading slower: the processor waits. Add workers, prefetch, keep the
+  data in memory.
+- Compute slower: the loader is fast enough; speed up the model instead.
+:::
+
+::: {.slide title="Look at the Images Before Training"}
+[Inspecting the images]{.kicker}
+
+@-image-classification-dataset-visualization-2
+
+- Grayscale, as the model receives them, each titled with its label.
+- `reshape` drops the channel axis in either layout, since $c = 1$.
+:::
+
+::: {.slide title="Shirts and Coats Look Alike at 28 × 28 Pixels"}
+[Inspecting the images]{.kicker}
+
+The first three validation images of each class, one class per column:
+
+@!image-classification-dataset-inspecting-the-images-1
+
+::: {.d2l-note}
+Similar classes (shirt, coat, pullover, T-shirt) are where a classifier
+will make most of its mistakes.
+:::
+:::
+
+::: {.slide title="Check: Which Bug Would the Gallery Show?"}
+[Check]{.kicker}
+
+Which of these bugs does a gallery reveal before training, and which only a
+poor loss after it?
+
+1. labels shifted by one class;
+2. images transposed;
+3. pixels left in $[0, 255]$;
+4. every image delivered twice per epoch.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.** 1 and 2 show at a glance: wrong titles, sideways garments.
+3 shows in the printed values, not the picture, since the color map
+rescales. 4 shows in neither: count the images per epoch.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+| step | running example |
+|---|---|
+| dataset | 60,000 + 10,000 garments, 10 classes, $28 \times 28$ gray |
+| split | the published split; test images as validation |
+| minibatch | 64 images as a four-dimensional tensor, floats in $[0, 1]$ |
+| epoch | 938 minibatches, reshuffled every time, the last one short |
+| checks | loader time, a lower bound on the epoch; a gallery with labels: the four tops look alike |
+
+**Next:** softmax regression from scratch, trained on these images.
+:::

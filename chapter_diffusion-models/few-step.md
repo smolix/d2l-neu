@@ -601,7 +601,7 @@ for name, loss in (('consistency', consistency_loss),
 ```
 
 The distilled students end near zero, about 0.03 for the two-time student
-and 0.07 to 0.08 for the consistency student. MeanFlow ends at 76 to 85
+and 0.06 to 0.08 for the consistency student. MeanFlow ends at 76 to 85
 over its six runs, about a thousand times the consistency student's loss.
 Most of that may be the floor, the disagreement between examples that no
 network can remove; the cell does not measure the floor, so the number
@@ -880,8 +880,10 @@ images = {('teacher', n): d2l.flow_map_sample(velocity, noise, n)
 images |= {(f'student {seed}', n): d2l.flow_map_sample(u, noise, n)
            for seed, u in image_students.items() for n in ns_student}
 fd = {key: d2l.fid_score(features(x), f_test) for key, x in images.items()}
-for (name, n), v in fd.items():
-    print(f'{name:>9}, {n:2d} evaluations: FD {v:6.2f}')
+print('FD at evaluations' + ''.join(f'{n:8d}' for n in ns_teacher))
+for name in ['teacher', *(f'student {seed}' for seed in image_students)]:
+    print(f'{name:17}' + ''.join(f'{fd[name, n]:8.2f}' for n in ns_teacher
+                                 if (name, n) in fd))
 d2l.plot([ns_teacher, ns_student, ns_student, [1, 50]],
          [[fd['teacher', n] for n in ns_teacher],
           *[[fd[f'student {seed}', n] for n in ns_student]
@@ -902,8 +904,10 @@ images = {('teacher', n): d2l.flow_map_sample(velocity, noise, n)
 images |= {(f'student {seed}', n): d2l.flow_map_sample(u, noise, n)
            for seed, u in image_students.items() for n in ns_student}
 fd = {key: d2l.fid_score(features(x), f_test) for key, x in images.items()}
-for (name, n), v in fd.items():
-    print(f'{name:>9}, {n:2d} evaluations: FD {v:6.2f}')
+print('FD at evaluations' + ''.join(f'{n:8d}' for n in ns_teacher))
+for name in ['teacher', *(f'student {seed}' for seed in image_students)]:
+    print(f'{name:17}' + ''.join(f'{fd[name, n]:8.2f}' for n in ns_teacher
+                                 if (name, n) in fd))
 d2l.plot([ns_teacher, ns_student, ns_student, [1, 50]],
          [[fd['teacher', n] for n in ns_teacher],
           *[[fd[f'student {seed}', n] for n in ns_student]
@@ -914,16 +918,15 @@ d2l.plot([ns_teacher, ns_student, ns_student, [1, 50]],
                  'floor'], legend_loc='upper right')
 ```
 
-The teacher's FD falls from about 145 to 165 at one Euler step and about
+The teacher's FD falls from about 145 to 170 at one Euler step and about
 80 at two, to about 7 at ten and about 2.6 at fifty, against a floor of
 about 0.8. The students lie far below this curve at small budgets: one jump
 scores 11 to 12, between four and five times the teacher's fifty-step FD,
-two jumps nearly twice it, and four about 1.4 times, close to what the
+two jumps nearly twice it, and four 1.4 to 1.5 times, close to what the
 teacher reaches in twenty steps. Read across the plot, two jumps of a
 student land between the teacher's ten and twenty Euler steps, and one jump
-between its four and ten. The two students agree to within 0.1 at two and
-four jumps and to within a tenth of the FD at one, so these readings hold
-for either of them.
+between its four and ten. The two students agree to within a tenth of
+their FD at every budget, so these readings hold for either of them.
 
 A distilled student can at best reproduce its teacher's ODE, so its target
 is the FD of the teacher's exact ODE, which fifty Euler steps approach from
@@ -1022,7 +1025,7 @@ or each example's own. On the mixture, students distilled from a teacher
 match it in one or two evaluations in every run, while MeanFlow gets the
 mode weights right in one jump but draws the modes too tight; on
 Fashion-MNIST a distilled student scores four to five times the teacher's
-fifty-step FD in one jump and about 1.4 times in four. Matching
+fifty-step FD in one jump and 1.4 to 1.5 times in four. Matching
 distributions, with a critic or a difference of scores, is the other route
 to one step.
 
@@ -1513,7 +1516,7 @@ velocity). Which final losses can approach zero?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** The distilled ones: their target is a function of the point.
-Measured over six runs: 0.07 to 0.08 (consistency), 0.03 (two-time), 76 to
+Measured over six runs: 0.06 to 0.08 (consistency), 0.03 (two-time), 76 to
 85 (MeanFlow), whose target varies between examples at the same point.
 :::
 :::
@@ -1554,7 +1557,7 @@ $t - s$, 5,000 updates on the teacher's velocity. FD: Fréchet distance of
 classifier features to 1,000 test images; floor about 0.8.
 
 - Against the teacher's fifty steps: one jump 4 to 5 times the FD, two
-  nearly twice, four about 1.4 times.
+  nearly twice, four 1.4 to 1.5 times.
 :::
 :::
 :::

@@ -73,12 +73,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " consistency, seeds 2 to 7: mean loss of the last 1,000 updates 0.068 to 0.076\n"
+          "text": " consistency, seeds 2 to 7: mean loss of the last 1,000 updates 0.063 to 0.079\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "distillation, seeds 2 to 7: mean loss of the last 1,000 updates 0.030 to 0.037\n"
+          "text": "distillation, seeds 2 to 7: mean loss of the last 1,000 updates 0.031 to 0.034\n"
         },
         {
           "type": "stream",
@@ -109,27 +109,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          consistency, 1  0.004 0.004 0.004 0.004 0.004 0.004  1.9%-2.1%  0.459-0.461\n"
+          "text": "          consistency, 1  0.005 0.004 0.004 0.004 0.004 0.004  2.0%       0.459-0.461\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "consistency, 2 re-noised  0.005 0.004 0.003 0.006 0.005 0.005  1.2%-1.4%  0.472-0.483\n"
+          "text": "consistency, 2 re-noised  0.005 0.004 0.003 0.006 0.005 0.005  1.2%-1.4%  0.469-0.482\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         distillation, 1  0.004 0.004 0.004 0.004 0.005 0.004  1.7%-1.9%  0.449-0.462\n"
+          "text": "         distillation, 1  0.004 0.004 0.004 0.004 0.005 0.004  1.7%-1.9%  0.448-0.461\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         distillation, 2  0.005 0.005 0.005 0.004 0.006 0.005  1.0%-1.1%  0.469-0.478\n"
+          "text": "         distillation, 2  0.005 0.006 0.005 0.004 0.005 0.005  1.0%-1.1%  0.468-0.475\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         distillation, 4  0.005 0.005 0.006 0.005 0.006 0.005  0.9%-1.0%  0.458-0.469\n"
+          "text": "         distillation, 4  0.005 0.004 0.006 0.005 0.006 0.004  0.9%       0.460-0.470\n"
         },
         {
           "type": "stream",
@@ -150,8 +150,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "few-step/few-step-on-the-running-example-2-1.png",
-          "bytes": 61505,
-          "sha256": "sha256:4bc7f3953317c5bc8de4b1afb23f5f41d2c4a8e89880dc96bf905fb8a73cbe20"
+          "bytes": 61744,
+          "sha256": "sha256:29aadb860176e3591762958da96b4b48c235b5a992c9ec602bf22da4b20c4654"
         }
       ]
     },
@@ -167,7 +167,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "floor, 1,000 real images against 1,000 others: FD 0.86\n"
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.83\n"
         }
       ]
     },
@@ -177,33 +177,33 @@
       "outputs": []
     },
     "few-step-on-images-3": {
-      "code_fingerprint": "sha256:6a3450bcadf5a85701ffddfa4d4555b9f32fc2edeabb9f5282e39e6878c1dd17",
+      "code_fingerprint": "sha256:d51bc4a1efb6e0ebf0334be90433c0de7d1c5dfc1f8db63281e72d45f462bfe5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  teacher,  1 evaluations: FD 144.60\n  teacher,  2 evaluations: FD  78.22\n  teacher,  4 evaluations: FD  26.75\n  teacher, 10 evaluations: FD   6.68\n  teacher, 20 evaluations: FD   3.75\n  teacher, 50 evaluations: FD   2.64\nstudent 2,  1 evaluations: FD  11.19\nstudent 2,  2 evaluations: FD   4.89\nstudent 2,  4 evaluations: FD   3.65\nstudent 3,  1 evaluations: FD  11.96\nstudent 3,  2 evaluations: FD   4.94\nstudent 3,  4 evaluations: FD   3.61\n"
+          "text": "FD at evaluations       1       2       4      10      20      50\nteacher            146.34   79.09   27.29    6.93    3.94    2.70\nstudent 2           11.84    5.01    3.83\nstudent 3           12.04    5.00    3.75\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-3-1.svg",
-          "bytes": 39841,
-          "sha256": "sha256:3cbe4f6ef74b8435c1a7c0095c0effb9d7fa835741da4a430be4e469ab53465e"
+          "bytes": 39843,
+          "sha256": "sha256:62890144172e9527e3a60f0ab23712169ea4ab2074353aa8bad44a61afc37b5a"
         }
       ]
     },
     "few-step-on-images-4": {
-      "code_fingerprint": "sha256:c1e0996f27419b31f5f0072008b1dd29abb2d2617b805f1081844ee515c89408",
+      "code_fingerprint": "sha256:058e74fca61226bb8820c112cd0233fb633f709bcab51f910eb5e30dd68e48f0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-4-1.svg",
-          "bytes": 215681,
-          "sha256": "sha256:397d3e0a67a16d89d044324b0eceb8331ce83a1ed1c5d442778158dec0ce46cf"
+          "bytes": 215297,
+          "sha256": "sha256:dc410e098735ec56b05628bbdd46438d2e7b759ed1ab12c89c31e10c75cfb852"
         }
       ]
     }

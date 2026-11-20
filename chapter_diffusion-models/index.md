@@ -270,7 +270,7 @@ Stop after the first row and you understand diffusion models.
 | Samplers | Heun (a second-order ODE solver), even steps on the linear path: the chain's FD in about 20 evaluations |
 | Likelihood | network within half a hundredth of a nat of the exact field (true value about 2.5 nats per point) |
 | Latents | at this scale, the best pixel model beats every latent one |
-| Few-Step | a distilled student in four evaluations: FD about 1.4 times that of 50 teacher steps |
+| Few-Step | a distilled student in four evaluations: FD 1.4 to 1.5 times that of 50 teacher steps |
 | Discrete | binary garments: 0.17 bits per pixel, 0.70 for independent pixels |
 
 FD: Fréchet distance between generated and real images in a classifier's

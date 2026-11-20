@@ -1,47 +1,56 @@
 # Attention
 :label:`chap_attention`
 
-The sequence models of :numref:`chap_rnn` read a text one token at a time
-and carry what they have read in a state of fixed size. Think of a reader
-who reaches the last chapter of a mystery novel and needs the name of a
-minor character from the first page. A person turns back and looks. A
-recurrent network must have kept the name in its state all along, written
-when nothing marked it as important. Can a network look back
-instead, and read only what the current prediction needs?
+The recurrent models of :numref:`chap_rnn` read a sequence one token at a
+time and compress everything they have seen into a hidden state of fixed
+size. If a prediction near the end of a long document depends on a detail
+from the first paragraph, the recurrent network must have written that detail
+into its hidden state long before knowing it would be needed. Rather than
+compressing history into a single vector, can a network retain a
+representation at every position and retrieve only what the current
+prediction requires?
 
-Attention does this. It keeps a representation of every position, scores
-the current query against a key at every position, turns the scores into
-weights, and returns the weighted average of the values stored there. The
-*query* says what a position looks for, a *key* what it offers, and a
-*value* what it hands back. A weighted average, unlike a hard choice, is
-differentiable, so gradient descent can learn what to look for. A layer
-runs several such lookups side by side, called *heads*. The idea became
-known through machine translation, where it let a network consult every
-source word instead of one vector summarizing the sentence
-:cite:`Bahdanau.Cho.Bengio.2014`. The Transformer then made attention the
-only operation that mixes positions :cite:`Vaswani.Shazeer.Parmar.ea.2017`.
+*Attention* does exactly this. At each lookup, a *query* vector representing
+what the current position seeks is scored against a *key* vector at every
+candidate position. A softmax converts those scores into nonnegative weights
+that sum to one, and the layer returns the weighted average of the *value*
+vectors stored at those positions. Because a weighted average is smooth,
+gradient descent can train the projections that produce queries, keys, and
+values end to end. Running several such lookups in parallel gives *multi-head
+attention*. Introduced for neural machine translation so a decoder could
+consult every source word directly :cite:`Bahdanau.Cho.Bengio.2014`,
+attention became the sole position-mixing operation in the Transformer
+:cite:`Vaswani.Shazeer.Parmar.ea.2017`.
 
-Reading every position raises problems that recurrent networks never had.
-A weighted average ignores the order of its inputs. Scoring all pairs of
-positions costs time and memory that grow with the square of the length.
-And a map of attention weights shows where a head looks, not what it
-computes.
+Replacing recurrence with all-pairs lookup introduces three new challenges:
 
-The first three sections build the layer: a lookup in a table of two
-records, a learned score with masks, and a sentence that queries itself.
-This *self-attention* (:numref:`sec_multihead-attention`) is the
-layer a transformer stacks. The three problems are not equally settled.
-Order has a standard answer. Cost still shapes new architectures, and two
-sections take it on: exact attention without stored scores, then cheaper
-variants that read only recent keys or, as *linear attention*, return to a
-state of fixed size, the very thing attention set out to avoid. What a
-trained head computes is understood in detail only in small models, and the
-last section takes one apart.
+1. **Order blindness:** A weighted sum is invariant to permutations of its
+   inputs, so positional information must be injected explicitly.
+2. **Quadratic scaling:** Scoring all pairs of $n$ tokens requires $O(n^2)$
+   operations and memory, motivating both IO-aware exact kernels and sub-quadratic
+   approximations.
+3. **Mechanistic interpretation:** Attention weights show *where* a head
+   reads, not *what* function it computes across layers.
 
-A reader heading for :numref:`chap_transformers` needs the first four
-sections and the opening of the last, on the *residual stream* that every
-layer writes into. The sections on cost can wait until
-:numref:`sec_kv-cache` and :numref:`chap_modern_rnn` need them.
+The first three sections construct the layer: differentiable key--value
+lookup (:numref:`sec_queries-keys-values`), scaled dot-product scoring and
+boolean masking (:numref:`sec_attention-scoring-functions`), and multi-head
+self-attention (:numref:`sec_multihead-attention`).
+:numref:`sec_positional-information` addresses sequence order through
+absolute, rotary (RoPE), and relative (ALiBi) positional encodings. The next
+two sections address computational scale: :numref:`sec_attention-at-scale`
+derives tiled online-softmax kernels (FlashAttention) that avoid
+materializing the $n \times n$ score matrix, and
+:numref:`sec_windowed-linear-attention` examines sliding-window and linear
+attention variants. Finally, :numref:`sec_what-attention-computes` analyzes
+trained attention circuits through the residual stream, QK/OV decompositions,
+and two-layer induction heads, and :numref:`sec_attention-further-reading`
+surveys extensions and primary literature.
+
+Readers heading directly to :numref:`chap_transformers` need only the first
+four sections and the residual-stream formulation at the start of
+:numref:`sec_what-attention-computes`; the sections on computational cost can
+be read alongside :numref:`sec_kv-cache` and :numref:`chap_modern_rnn`.
 
 ```toc
 :maxdepth: 2
@@ -55,49 +64,6 @@ windowed-linear-attention
 what-attention-computes
 further-reading
 ```
-
-## Resources and Further Reading {.unnumbered}
-
-If you read two of these, take the 3Blue1Brown lesson for the picture of a
-query meeting its keys, and Elhage et al. alongside
-:numref:`sec_what-attention-computes`. Each entry names the section it goes
-with, and all are freely accessible online. Related topics that the chapter
-does not teach are collected in :numref:`sec_attention-further-reading`.
-
-**Visual introductions**
-
-- [Attention in Transformers, Step-by-Step](https://www.3blue1brown.com/lessons/attention), 3Blue1Brown (2024): a geometric introduction to queries, keys, values, and attention weights, the lookup of :numref:`sec_queries-keys-values` drawn as vectors, with queries and keys in a small space of their own and values in the embedding space.
-- [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/), Jay Alammar (2018): follows a two-word input through self-attention one step at a time (query, key, and value vectors, scores, scaling, softmax, weighted sum), with a picture for each step; read it with :numref:`sec_attention-scoring-functions` and :numref:`sec_multihead-attention`.
-- [Transformers from Scratch](https://peterbloem.nl/blog/transformers), Peter Bloem (2019): builds self-attention from a plain weighted sum before adding learned projections, and treats its input as a set, the permutation equivariance that :numref:`sec_positional-information` proves and then breaks.
-
-**Foundational papers**
-
-- [Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473), Bahdanau et al. (2014): the learned alignment that started the field, whose additive score :numref:`sec_attention-scoring-functions` compares with the dot product.
-- [Attention Is All You Need](https://arxiv.org/abs/1706.03762), Vaswani et al. (2017): scaled dot-product attention, multi-head attention, and sinusoidal positions, the starting point of :numref:`sec_attention-scoring-functions` through :numref:`sec_positional-information`.
-
-**Position**
-
-- [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864), Su et al. (2021): rotary embeddings, derived as in :numref:`sec_positional-information` from the requirement that scores depend only on offsets.
-- [Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation](https://arxiv.org/abs/2108.12409), Press et al. (2022): ALiBi and the length-extrapolation experiment that :numref:`sec_positional-information` repeats on a small model.
-- [YaRN: Efficient Context Window Extension of Large Language Models](https://arxiv.org/abs/2309.00071), Peng et al. (2024): reviews position interpolation and the NTK-aware change of base that preceded it, and adds a separate treatment of fast and slow pairs and a softmax temperature, the context extension of :numref:`sec_positional-information`.
-
-**The cost of attention**
-
-- [FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness](https://arxiv.org/abs/2205.14135), Dao et al. (2022): the tiled online softmax of :numref:`sec_attention-at-scale`, with the memory-traffic analysis that explains its speed.
-- [Fast Transformer Decoding: One Write-Head Is All You Need](https://arxiv.org/abs/1911.02150), Shazeer (2019): multi-query attention, in which all heads read one shared set of keys and values. :numref:`sec_multihead-attention` shows when such sharing loses nothing, and :numref:`sec_kv-cache-reduction` why it is done and what it costs.
-- [Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention](https://arxiv.org/abs/2006.16236), Katharopoulos et al. (2020): linear attention and its recurrent form, as in :numref:`sec_windowed-linear-attention`.
-- [The Transformer Family Version 2.0](https://lilianweng.github.io/posts/2023-01-27-the-transformer-family-v2/), Lilian Weng (2023): a survey of attention variants, sparse patterns, and efficient approximations, for the windows and kernels of :numref:`sec_windowed-linear-attention` and the many relatives the section leaves out.
-
-**What attention computes**
-
-- [A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html), Elhage et al. (2021): the residual stream and the QK and OV circuits that :numref:`sec_what-attention-computes` reads from trained weights.
-- [In-Context Learning and Induction Heads](https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html), Olsson et al. (2022): induction heads in small and large models, the circuit that :numref:`sec_what-attention-computes` trains and dissects.
-- [Thinking Like Transformers](https://arxiv.org/abs/2106.06981), Weiss, Goldberg, and Yahav (2021): RASP, a small programming language whose operations are those of a transformer, used to write down what a fixed number of attention layers can compute; a companion to the expressivity arguments of :numref:`sec_what-attention-computes`.
-- [Transformer Puzzles](https://github.com/srush/Transformer-Puzzles), Sasha Rush: short coding puzzles in Python on the internals of the transformer, based on the RASP paper above; a way to practice thinking in attention layers.
-
-**Courses**
-
-- [Stanford CS224n: Natural Language Processing with Deep Learning](https://web.stanford.edu/class/cs224n/): lectures and an assignment on self-attention, positions, and transformer components, the material of :numref:`sec_attention-scoring-functions` through :numref:`sec_positional-information`.
 
 <!-- slides -->
 

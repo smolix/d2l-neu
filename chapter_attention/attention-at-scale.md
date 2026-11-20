@@ -1,39 +1,24 @@
 # The Cost of Attention
 :label:`sec_attention-at-scale`
 
-The language model of :numref:`sec_positional-information` read contexts of
-128 bytes, and we never asked what its attention cost. Language models in
-use today read whole reports, code repositories and books, often tens or
-hundreds of thousands of tokens at once. Self-attention lets every token read
-every other token in a single layer, or every earlier one in a language
-model, and that is what makes it expensive: it computes one score for every
-pair of positions. How does this cost grow with the length of the context,
-and how much of it can be avoided without changing what the layer computes?
+Long-context language models process tens or hundreds of thousands of tokens
+in a single pass. Because dense self-attention evaluates a score for every
+pair of positions, both its arithmetic and its naive memory footprint grow
+quadratically with sequence length $n$. At $n = 8{,}192$, a single head
+evaluates $6.7 \times 10^7$ query--key pairs (256 MiB in float32).
 
-Doubling the context quadruples the number of pairs. A context of 8,192
-tokens already has 67 million query--key pairs per head, and storing their
-scores in single precision takes 256 MiB for one head of one sequence.
-Arithmetic and memory both grow with the square of the sequence length, and
-at long contexts this quadratic term dominates the cost of the attention
-layer.
+For several years, $O(n^2)$ memory was widely assumed to be an unavoidable
+cost of exact attention. Then :citet:`Rabe.Staats.2021` demonstrated—building
+on the *online softmax* algorithm of :citet:`Milakov.Gimelshein.2018`—that
+exact attention never requires materializing the $n \times n$ score matrix,
+and *FlashAttention* :cite:`Dao.Fu.Ermon.ea.2022` turned tiled online softmax
+into an IO-aware GPU kernel that is both faster than naive attention and
+linear in memory.
 
-For several years this cost was taken to be a property of attention itself,
-and from about 2019 on a whole literature approximated attention to escape
-it. Then Rabe and Staats
-showed, in a paper titled "Self-attention does not need $O(n^2)$ memory"
-:cite:`Rabe.Staats.2021`, that the exact computation never needed the
-matrix. Their tool was a trick that Milakov and Gimelshein had published
-three years earlier to make the softmax alone faster
-:cite:`Milakov.Gimelshein.2018`. The quadratic memory turned out to be a
-property of one way of computing attention. The quadratic arithmetic is
-another matter, and this section shows the difference.
-
-We first count the cost, in operations and in bytes, and check both counts
-against measurements on a GPU. Then we ask whether the score matrix has to
-be stored at all, and what a GPU gains when it is not. Everything in this
-section computes attention exactly; the next section asks what must be given
-up to compute less. The cells time GPU kernels and need a CUDA GPU with a few
-GiB of free memory.
+This section counts the FLOPs and memory of dense attention, benchmarks them
+on a GPU, derives blockwise online softmax, and compares a chunked
+implementation and fused FlashAttention kernels against naive matrix
+materialization.
 
 ```{.python .input #attention-at-scale-the-cost-of-attention}
 %%tab pytorch
@@ -65,12 +50,9 @@ from torch.nn.attention import SDPBackend, sdpa_kernel
 
 ### Counting FLOPs
 
-Self-attention connects every pair of positions in one layer, where a
-recurrence needs $n$ steps and a stack of convolutions many layers
-(:numref:`sec_multihead-attention` compares the three). The cost shows in
-the operation count. For a layer of width $d$ with $H$ heads on $n$ tokens,
-:eqref:`eq_multihead-flops` gave the two leading terms, and the softmax adds
-a third:
+For a multi-head self-attention layer of width $d$ with $H$ heads of width
+$d_h = d/H$ over $n$ tokens, :eqref:`eq_multihead-flops` together with the
+row-wise softmax gives
 
 $$
 \underbrace{8 n d^2}_{\textrm{projections}} \;+\;
@@ -79,64 +61,32 @@ $$
 $$
 :eqlabel:`eq_attn-layer-flops`
 
-The quadratic term comes from the two matrix products inside each head. A
-head of width $d_h$ forms $n^2$ dot products of length $d_h$ and mixes $n^2$
-values, $4n^2 d_h$ FLOPs when one multiply--add counts as two, and with
-$d_h = d/H$ the $H$ heads add up to $4n^2 d$. The softmax adds a few
-operations per score, the term $O(Hn^2)$. The counts in this section are per
-layer and in terms of the model width $d$; the measurements run one head at
-a time and use $d_h$.
-
-Which term matters depends on the context. As
-:numref:`sec_multihead-attention` found, the quadratic part dominates once
-$n > 2d$. GPT-2 small, with $d = 768$ and contexts of 1,024 tokens, sits
-below the crossover, so its projections still cost more than its scores. A model
-with $d = 4096$ at $n = 131{,}072$ sits far beyond it. There $n/2d = 16$, so
-an attention layer does sixteen times as much score-and-mix work as projection
-work. The rule $n > 2d$ is worth remembering because it needs only two numbers
-that every model description states. It compares attention with its own
-projections, though. :numref:`chap_transformers` adds to every layer a
-feed-forward network that typically costs twice as much as the projections,
-which moves the crossover for a whole transformer layer to about $n = 6d$.
+The quadratic $4n^2 d$ term ($2n^2 d_h$ for $\mathbf{Q}\mathbf{K}^\top$ and
+$2n^2 d_h$ for $\mathbf{A}\mathbf{V}$ across $H$ heads) overtakes the linear
+$8nd^2$ projection term once $n > 2d$. For GPT-2 small ($d = 768$, $n =
+1{,}024$), projections still dominate; for a model with $d = 4{,}096$ at
+$n = 131{,}072$, $n / (2d) = 16$, so scoring and mixing require $16\times$ as
+many FLOPs as the attention projections (and roughly $5\times$ as many as the
+entire transformer block once the feed-forward network of
+:numref:`chap_transformers` is included, which moves the block crossover to
+$n \approx 6d$).
 
 ### Counting Memory
 :label:`subsec_attn-counting-memory`
 
-Arithmetic is only one part of the cost, and at long contexts memory is
-often what runs out first. A naive implementation writes out the score
-matrix and its softmax. These are two $n \times n$ buffers, $8n^2$ bytes in
-single precision, per head and per sequence in the batch. The projections,
-by contrast, keep only $O(nd)$ activations. Let us consider one head of
-width $d_h = 64$, the head width of GPT-2 small, at $n = 8192$. The inputs
-$\mathbf{Q}, \mathbf{K}, \mathbf{V}$ occupy 6 MiB together, while the two
-score buffers occupy 512 MiB. At a context of $n = 131{,}072$ tokens a
-*single* attention map in fp32 would take $n^2 \times 4$ bytes $= 64$ GiB
-per head and sequence, which is why no system at that scale ever stores one.
+At long contexts, memory often becomes the bottleneck before arithmetic. A
+naive implementation materializes both the $n \times n$ score matrix and its
+$n \times n$ softmax weight matrix, consuming $8n^2$ bytes per head and
+sequence in float32 (versus $O(nd)$ for projections). For one head of width
+$d_h = 64$ at $n = 8{,}192$, $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ occupy just
+6 MiB together while the two $n \times n$ buffers consume 512 MiB; at $n =
+131{,}072$, a single float32 attention matrix would require 64 GiB. During
+training, saving attention weights across all 12 layers and 12 heads of GPT-2
+small at $n = 8{,}192$ would require $144 \times 256\textrm{ MiB} = 36\textrm{
+GiB}$ per sequence.
 
-Training makes matters worse, because the weights of every layer and every
-head must be kept until the backward pass reaches them. Run GPT-2 small, 12
-layers of 12 heads, at 8,192 tokens, and its saved fp32 weights alone take
-$144 \times 256$ MiB $= 36$ GiB per sequence. That is more than the 24 GB
-of the GPU this book runs on (:numref:`sec_hardware`), for a model whose 124
-million parameters fit in half a gigabyte.
-
-We check the formula on one head of width 64 as $n$ doubles. The function
-`attention` computes
-$\mathrm{softmax}(\mathbf{Q}\mathbf{K}^\top/\sqrt{d_h})\mathbf{V}$ through
-the full score matrix, and `d2l.peak_memory` of :numref:`sec_use_gpu`
-reports the temporary memory that a call needs. The prediction is the two
-$n \times n$ float buffers, $8n^2$ bytes.
-
-:begin_tab:`pytorch`
-Here `d2l.peak_memory` reads the high-water mark of PyTorch's caching
-allocator.
-:end_tab:
-
-:begin_tab:`jax`
-XLA reserves a large part of the GPU's memory at startup and decides at
-compile time which buffers exist, so `d2l.peak_memory` asks the compiler how
-much temporary memory the compiled function reserves.
-:end_tab:
+We verify the $8n^2$-byte scratch footprint on one float32 head ($d_h = 64$)
+using `d2l.peak_memory` (:numref:`sec_use_gpu`):
 
 ```{.python .input #attention-at-scale-counting-memory-1}
 %%tab pytorch
@@ -174,17 +124,11 @@ for n in [2048, 4096, 8192, 16384]:
           f' MiB, predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
 ```
 
-The measurement agrees with $8n^2$ bytes to within 10 MiB of workspace at
-every length, and doubling $n$ quadruples it. At $n = 16{,}384$, a single
-fp32 head already needs 2 GiB of temporary storage.
-
 ### Measuring Time
 
-If the running time follows the operation count, each doubling of $n$
-should multiply it by four. We time the forward pass as $n$ doubles, after
-warm-up calls. On an accelerator, kernel launches return before the work is
-done, so we synchronize before reading the clock. `d2l.Benchmark` of
-:numref:`sec_use_gpu` does both and reports the average time per call.
+Timing the same forward pass with `d2l.Benchmark` (:numref:`sec_use_gpu`)
+confirms the quadratic runtime growth once $n$ is large enough to amortize
+kernel launch latency ($n \ge 8{,}192$):
 
 ```{.python .input #attention-at-scale-counting-memory-2}
 %%tab pytorch
@@ -201,77 +145,42 @@ for n in [2048, 4096, 8192, 16384]:
     print(d2l.Benchmark(lambda: attention_jit(Q, Q, Q), desc=f'n = {n:5d}'))
 ```
 
-Between 8,192 and 16,384 tokens, where every call lasts more than a
-millisecond, doubling $n$ multiplies the time by about four, as the
-$4n^2 d_h$ operation count predicts. The shorter calls are poorer guides. At
-2,048 and 4,096 tokens a call lasts a fraction of a millisecond, short
-enough that the fixed cost of launching kernels weighs in, and the ratio
-between neighboring lengths changes from run to run. The growth is half of
-what the timing tells. The other half is in the size of the times, which we
-can read once we know where a GPU keeps its data.
-
 ## Exact Attention Without the Matrix
 
 ### Blockwise Online Softmax
 
-Must the $n \times n$ matrix exist at all? Each output row is a weighted
-average of the values, with weights
-$\exp(a_j)/\sum_{j'}\exp(a_{j'})$ that depend on *all* scores of the row
-through the normalizer. This looks like an obstacle to computing attention
-one block of keys at a time, because the weights of the first block are not
-known until the last block has been seen. It turns out that they need not be
-known early. It suffices to carry the unnormalized sums along and divide
-once at the end, the way one computes a running mean from a running total
-and a count.
+At first glance, the softmax denominator $\sum_{j'} \exp(a_{j'})$ and the
+numerical-stability row maximum $\max_{j'} a_{j'}$
+(:numref:`subsec_softmax-implementation-revisited`) appear to require all $n$
+scores before any value can be weighted. *Online softmax*
+:cite:`Milakov.Gimelshein.2018` avoids this two-pass requirement by
+processing keys in blocks of size $c$ and maintaining three running statistics
+per query: the running maximum score $m$, the running denominator sum $s =
+\sum_j e^{a_j - m}$, and the unnormalized output accumulator $\mathbf{o} =
+\sum_j e^{a_j - m} \mathbf{v}_j$.
 
-One complication remains. A softmax subtracts the row maximum before
-exponentiating, so that no exponent exceeds zero. Without it, a score above
-about 88 overflows single precision
-(:numref:`subsec_softmax-implementation-revisited`), and float16, one of the
-two 16-bit formats in which attention runs, overflows at much smaller
-scores. A blockwise computation does not know the row maximum in advance. It
-keeps the largest score seen so far instead, and corrects the past whenever
-a larger one arrives.
-
-The correction is easiest to see in the smallest case: one query, four keys
-in two blocks of two, with scores $(1, 3)$ in the first block and $(5, 2)$
-in the second. After the first block the running maximum is $m = 3$, and the
-running sum of exponentials, taken relative to that maximum, is
-$s = e^{1-3} + e^{3-3} \approx 0.135 + 1 = 1.135$. The second block raises
-the maximum to $m' = 5$. Every term of $s$ was computed relative to 3 and
-must now be relative to 5, which means multiplying it by
-$e^{3-5} \approx 0.135$. The old sum becomes 0.154, and the new block adds
-$e^{0} + e^{-3} \approx 1.050$, so $s' \approx 1.203$. This is
-$\sum_j e^{a_j - 5}$ over all four scores, as if we had known the maximum
-from the start, and the largest score receives the weight
-$1/1.203 \approx 0.83$. One multiplication repaired the whole first block,
-however many keys it had held.
-
-In general, we process the keys in blocks of $c$ and keep three running
-quantities per query: the maximum $m$ seen so far, the sum $s$ of
-exponentials relative to that maximum, and the output accumulator
-$\mathbf{o}$, which sums the values with the same unnormalized weights. A
-new block of scores $\{a_j\}$ with values $\{\mathbf{v}_j\}$ updates them as
+When a new block of scores $\{a_j\}$ and values $\{\mathbf{v}_j\}$ arrives,
+updating the running maximum to $m' = \max(m, \max_j a_j)$ requires rescaling
+the previously accumulated sum $s$ and output $\mathbf{o}$ by $e^{m - m'}$:
 
 $$
 \begin{aligned}
 m' &= \max\big(m, \max_j a_j\big), \\
 s' &= s\, e^{m - m'} + \sum\nolimits_j e^{a_j - m'}, \\
-\mathbf{o}' &= \mathbf{o}\, e^{m - m'} + \sum\nolimits_j e^{a_j - m'}\, \mathbf{v}_j,
+\mathbf{o}' &= \mathbf{o}\, e^{m - m'} + \sum\nolimits_j e^{a_j - m'}\, \mathbf{v}_j.
 \end{aligned}
 $$
 :eqlabel:`eq_online-softmax`
 
-and after the last block, $\mathbf{o}/s$ is exactly
-$\mathrm{softmax}(\mathbf{a})\mathbf{V}$. The factor $e^{m - m'}$ is the
-multiplication that repaired the first block in the example. It equals one
-when a block leaves the maximum unchanged, and otherwise it rescales
-everything accumulated under the old maximum, so no approximation is made.
-This way of computing a softmax is
-called *online softmax* :cite:`Milakov.Gimelshein.2018`.
-:numref:`fig_online-softmax` shows the resulting schedule for all queries at
-once. One $n \times c$ stripe of the score matrix is in memory at a time,
-next to a running state of size $O(n d_h)$ :cite:`Rabe.Staats.2021`.
+For example, if block 1 has scores $(1, 3)$, then $m = 3$ and $s = e^{-2} +
+e^0 \approx 1.135$. If block 2 has scores $(5, 2)$, the new maximum is $m' =
+5$, so the block-1 sum is rescaled by $e^{3 - 5} = e^{-2}$ and incremented by
+$e^{5 - 5} + e^{2 - 5}$, yielding $s' = e^{-4} + e^{-2} + e^0 + e^{-3}
+\approx 1.203$—identical to the standard softmax denominator computed with
+the global maximum $5$ known in advance. After the final block,
+$\mathbf{o} / s$ equals $\mathrm{softmax}(\mathbf{a})\mathbf{V}$ up to
+floating-point round-off, while holding only one $n \times c$ score stripe in
+memory at a time (:numref:`fig_online-softmax`, :cite:`Rabe.Staats.2021`).
 
 ![Online softmax processes the score matrix one key block at a time. Of the scores, only the current $n \times c$ stripe is in memory, next to the running maxima, sums and outputs $\mathbf{m}, \mathbf{s}, \mathbf{O}$ of all queries; the full $n \times n$ matrix is never stored.](../img/mdl-attention-online-softmax.svg)
 :label:`fig_online-softmax`
@@ -279,21 +188,12 @@ next to a running state of size $O(n d_h)$ :cite:`Rabe.Staats.2021`.
 ### A Chunked Implementation
 :label:`subsec_attn-chunked`
 
-From here on we work in the causal setting of a language model, for two
-reasons: the language models of this book are causal, and a causal kernel
-can skip work, which will matter for the timing below. `d2l.causal_mask`
-supplies the mask, and excluded scores are overwritten with the most
-negative finite value of the dtype rather than with $-\infty$, as in
-:numref:`sec_attention-scoring-functions`. Here the finite value does a
-second job. If the first block that a query sees held only masked scores,
-$-\infty$ would leave the running maximum at $-\infty$, and the exponent
-$a_j - m'$ would become $-\infty + \infty$, which is undefined (Exercise
-:exref:`ex_attention-at-scale-running-maximum`d traces this case).
-
-We first implement a naive reference, which accepts any number of leading
-axes such as heads, and then a chunked version for one head. The chunked
-implementation applies :eqref:`eq_online-softmax` to all queries at once and
-processes one key block per iteration.
+We compare full-matrix `causal_attention` against `chunked_attention`, which
+steps through key--value blocks of width `chunk_size=512` using
+:eqref:`eq_online-softmax` (initializing $m$ and masking future positions with
+`finfo(dtype).min` to avoid $-\infty - (-\infty) = \mathrm{NaN}$ when an
+entire block is causally masked; see Exercise
+:exref:`ex_attention-at-scale-running-maximum`d).
 
 ```{.python .input #attention-at-scale-a-chunked-implementation-1}
 %%tab pytorch
@@ -360,8 +260,8 @@ def chunked_attention(Q, K, V, chunk_size=512):
     return O / s
 ```
 
-The chunked version is meant to be exact, so we check it against the
-reference.
+`chunked_attention` matches `causal_attention` to float32 precision ($\sim
+10^{-6}$) while reducing peak memory from $O(n^2)$ to $O(nc)$:
 
 ```{.python .input #attention-at-scale-a-chunked-implementation-2}
 %%tab pytorch
@@ -383,12 +283,6 @@ with jax.default_matmul_precision('highest'):
                   - causal_attention(Q, K, V)).max()
 print(f'maximum deviation: {float(err):.2e}')
 ```
-
-The two computations agree up to floating-point rounding, at the level of
-$10^{-7}$ to $10^{-6}$ in fp32. Chunking changes the order of evaluation,
-not the definition of attention. The chunked version holds $n \times c$
-scores at a time instead of $n \times n$, so its footprint should grow
-linearly in $n$ rather than quadratically.
 
 ```{.python .input #attention-at-scale-a-chunked-implementation-3}
 %%tab pytorch
@@ -416,83 +310,35 @@ d2l.plot(lengths, mems, 'sequence length n', 'XLA temp memory (MiB)',
          legend=['full matrix', 'chunked'], xscale='log', yscale='log')
 ```
 
-At $n = 16{,}384$ the full-matrix implementation needs 2 GiB of scratch
-memory or a little more, the two $n \times n$ buffers of our count. The
-chunked one, as the printed line shows, needs more than an order of
-magnitude less, and the gap doubles with every further doubling of $n$.
-
-:begin_tab:`pytorch`
-The full-matrix line exceeds 2 GiB by about 256 MiB: the reference also
-holds its boolean causal mask, one byte for each of the $n^2$ pairs.
-:end_tab:
-
 ### Memory Traffic and Fused Kernels
 
-Chunking saves memory. Can it save time as well? To answer, we need to know
-where a GPU keeps its data. Its *main memory* holds gigabytes and is what
-`peak_memory` measured. Next to the arithmetic units sits a much smaller and
-much faster memory, a few hundred kilobytes for each group of units, that
-holds only what is being worked on. A GPU computes far faster than it can
-read from main memory. The RTX 4090 used for this book reads its main
-memory at about 0.9 TB/s, while it performs about 80 trillion operations
-per second on 32-bit matrices and 165 trillion on 16-bit ones
-(:numref:`chap_performance` measures these numbers). An operation that
-performs little arithmetic per byte it moves therefore spends most of its
-time waiting for data.
+A GPU's compute units execute matrix arithmetic orders of magnitude faster
+than its off-chip high-bandwidth memory (HBM) can transfer data (e.g., on an
+RTX 4090, $\sim 165$ TFLOP/s in float16 versus $\sim 0.9$ TB/s HBM bandwidth;
+see :numref:`chap_performance`). Naive attention is *memory-bandwidth bound*:
+it writes the $n \times n$ score matrix to HBM, reads it back for softmax,
+writes the $n \times n$ weights to HBM, and reads them again to multiply by
+$\mathbf{V}$—moving $4n^2$ floats across HBM with low arithmetic intensity
+(Exercises :exref:`ex_attention-at-scale-arithmetic-intensity` and
+:exref:`ex_attention-at-scale-tiled-traffic`). Because a Python loop like
+`chunked_attention` still launches separate GPU kernels that read and write
+every $n \times c$ stripe to HBM, it reduces peak memory allocation without
+reducing total HBM traffic.
 
-With these numbers, the timing of one head at $n = 16{,}384$ can be read for
-its size. The score matrix holds 1 GiB in fp32, so a single pass over it,
-one write or one read, takes about 1.2 ms. The arithmetic,
-$4n^2 d_h \approx 7 \times 10^{10}$ operations, takes under a millisecond at
-peak. The call took several milliseconds: the time of several passes over
-the matrix, and several times what the arithmetic needs. The reason lies in
-what naive attention does with the matrix. It writes the $n^2$ scores to
-main memory, reads them back for the softmax, writes the weights, and reads
-them again for the value mixing. These are four passes at the least, with
-far fewer operations per byte moved than the GPU needs to keep its
-arithmetic units busy (Exercise
-:exref:`ex_attention-at-scale-arithmetic-intensity` counts them).
+*FlashAttention* :cite:`Dao.Fu.Ermon.ea.2022` tiles both queries and keys so
+that each score block and its running statistics $(m, s, \mathbf{o})$ reside
+entirely in fast on-chip SRAM throughout the loop, never touching HBM. For
+the backward pass, instead of saving $n \times n$ attention weights, the
+forward pass stores only the scalar log-normalizer $\ell = m + \log s$ per
+query ($O(n)$ memory) and recomputes the score tiles on chip during
+backpropagation.
 
-Our `chunked_attention` does not avoid these passes. Every operation in its
-loop writes its result to main memory and the next one reads it back, so it
-saves memory but not traffic (Exercise
-:exref:`ex_attention-at-scale-tiled-traffic`a counts both). Saving the
-traffic takes a single kernel that runs the whole loop and keeps each piece
-of the score matrix in fast memory until all work on it is done. A stripe is
-far too large for that: at $n = 8{,}192$ and $c = 512$ it holds 16 MiB in
-fp32. The rows of the score matrix do not interact, however, since each
-query carries its own $m$, $s$ and $\mathbf{o}$. So the queries can be cut
-into tiles as well, and a tile of queries meets the key blocks one at a
-time, through a tile of scores small enough to stay in fast memory.
-
-FlashAttention :cite:`Dao.Fu.Ermon.ea.2022` is this schedule fitted to the
-hardware: tiles of queries and keys sized to the fast memory, so that every
-tile of scores is used where it is computed and never reaches main memory.
-The result is exact attention that is faster *and* needs memory linear in
-$n$.
-
-Training adds a difficulty. The backward pass needs the attention weights,
-which the fused kernel never stored. It recomputes them, tile by tile, from
-the inputs and from one number per query that the forward pass keeps,
-$\ell = m + \log s$, the logarithm of the final normalizer. Any weight is
-then $e^{a_j - \ell}$, computed from its score alone. Recomputing every score
-sounds wasteful, but on a GPU the extra arithmetic takes less time than the
-memory traffic it avoids. For GPT-2 small at 8,192 tokens, the 36 GiB of
-saved weights become 4.5 MiB of such numbers.
-
-Frameworks provide this schedule as a fused kernel, one kernel that performs
-all steps without writing intermediate results to main memory:
-`torch.nn.functional.scaled_dot_product_attention` in PyTorch and
-`jax.nn.dot_product_attention` with `implementation='cudnn'` in JAX. We
-compare it with the naive reference on a minibatch of 2 sequences with 8
-heads of width 64 in half precision at $n = 8192$. The memory can be
-predicted before running. The naive reference holds two $n \times n$
-half-precision buffers for each of the 16 heads, $16 \cdot 4n^2$ bytes
-$= 4$ GiB, while the fused kernel needs little beyond its output,
-$2 \cdot 8 \cdot 8192 \cdot 64$ numbers of two bytes, or 16 MiB. A third
-run switches the mask off. The fused kernel then computes every tile, as
-the naive reference does, and the comparison separates what skipping tiles
-saves from what the schedule saves.
+We benchmark the framework-provided fused FlashAttention kernel
+(`F.scaled_dot_product_attention` in PyTorch; `jax.nn.dot_product_attention`
+with `implementation='cudnn'` in JAX) against `causal_attention` on $B = 2$
+sequences, $H = 8$ heads, $d_h = 64$, and $n = 8{,}192$ in float16. Including
+an unmasked fused run separates the $O(n^2)$ HBM-traffic speedup from the
+$\sim 1.5\times$ speedup of skipping upper-triangular causal tiles:
 
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
 %%tab pytorch
@@ -534,63 +380,25 @@ for name, f in [('naive', causal_attention), ('fused', fused_attention),
     print(f'{name:>14}: {t*1e3:6.2f} ms, XLA temp {mem/2**20:7.1f} MiB')
 ```
 
-The prediction holds: about 4 GiB of scratch memory for the naive
-reference, and for the fused kernel a small multiple of its 16 MiB output.
-The fused kernel is also several times faster. One might suspect the mask
-of doing the work, since a causal kernel skips the tiles above the
-diagonal, about half of them. The third line settles this. Skipping saves
-about a factor of 1.5, not the full two: the causal kernel does half the
-arithmetic but at a lower rate. And without the mask, computing exactly as
-many scores as the naive reference, the fused kernel is still several times
-faster. The tiles explain a little of the gap.
-
-The rest is traffic, and the hardware numbers above show it. Without the
-mask the fused kernel performs
-$4 \cdot 16 \cdot n^2 \cdot 64 \approx 2.7 \times 10^{11}$ operations, which
-would take 1.7 ms at the card's 16-bit peak, and the measured time is close
-to that. Its arithmetic sets its pace;
-memory hardly enters. The naive reference moves 2 GiB with every pass over
-its 16 score matrices, about 2.4 ms per pass, and its measured time is that
-of about four passes or more, while the same arithmetic would fill less
-than a fifth of it. Naive attention spends most of its time writing and
-reading a matrix that it never needed to keep.
-
-:begin_tab:`pytorch`
-`sdpa_kernel(SDPBackend.FLASH_ATTENTION)` makes
-`scaled_dot_product_attention` use the FlashAttention kernel, which takes
-half and bfloat16 inputs, instead of letting PyTorch choose a backend.
-:end_tab:
-
-:begin_tab:`jax`
-`implementation='cudnn'` selects cuDNN's fused kernel for half and bfloat16
-inputs on NVIDIA GPUs. The default implementation is XLA's own, which
-writes out the full score matrix.
-:end_tab:
-
-Exact attention in a fused kernel is what nearly every language model runs
-today, and it gives up nothing: the function is the same, only the schedule
-differs. It removes the stored matrix and most of the traffic, but not the
-arithmetic. Every query still scores every earlier key, so the quadratic
-term of :eqref:`eq_attn-layer-flops`, halved by the causal mask, still grows
-fourfold with each doubling of the context. Doing less than that means
-computing something other than dense attention, and the next section asks
-what such a change costs.
+The fused kernel reduces temporary memory from $\sim 4$ GiB ($16 \cdot 4n^2$
+bytes) to a small multiple of the 16 MiB output and runs several times faster
+close to the GPU's peak matrix throughput. Even with fused kernels, however,
+exact attention still performs $\Theta(n^2 d)$ arithmetic operations;
+achieving linear time complexity requires changing the attention mechanism
+itself (:numref:`sec_windowed-linear-attention`).
 
 ## Summary
 
-Dense self-attention scores every pair of positions, so a layer costs
-$4n^2d$ FLOPs beside the $8nd^2$ of its projections, and the quadratic term
-dominates once the context exceeds twice the model width. A naive
-implementation also stores two $n \times n$ buffers per head, which our
-measurements confirm at $8n^2$ bytes, and spends most of its time moving
-them through the GPU's main memory. Online softmax removes the matrix
-without changing the result: it processes keys in blocks and carries a
-running maximum, normalizer and output, rescaling them whenever the maximum
-grows. FlashAttention runs this schedule on tiles that stay in the GPU's
-fast memory, which makes exact attention several times faster and linear in
-memory. Most of the speed comes from the traffic it saves; skipping the
-masked tiles adds a factor of about 1.5. The $n^2$ arithmetic remains, and
-the next section takes it on.
+* Dense self-attention requires $8nd^2 + 4n^2d$ FLOPs per layer; the
+  quadratic score-and-mix term dominates the projections once $n > 2d$.
+* Materializing the $n \times n$ score and weight matrices consumes $8n^2$
+  bytes per head in float32 and makes naive attention memory-bandwidth bound.
+* *Online softmax* computes exact attention block by block by maintaining a
+  running maximum $m$, normalizer $s$, and value accumulator $\mathbf{o}$,
+  rescaling prior sums by $e^{m - m'}$ whenever $m$ increases.
+* *FlashAttention* fuses tiled online softmax in on-chip SRAM, reducing
+  memory to $O(n)$ and achieving large wall-clock speedups while leaving the
+  $\Theta(n^2 d)$ FLOP count intact.
 
 ## Exercises
 

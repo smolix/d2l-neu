@@ -2,7 +2,8 @@
 """Render the landing page's code sample from the book source and the output store.
 
 The landing page (index.md) shows one real section of the book: the model
-class and the training cell of the concise softmax regression section, in
+class and the training cell of the concise softmax regression implementation
+(softmax-regression-scratch.md, since #233 merged the concise section into it), in
 every framework that section covers, next to the training plot that cell
 produced when the notebook was last executed. Both come from the repository:
 
@@ -38,7 +39,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 INDEX = REPO / "index.md"
 
-SOURCE = "chapter_linear-classification/softmax-regression-concise.md"
+SOURCE = "chapter_linear-classification/softmax-regression-scratch.md"
 CELLS = [
     "softmax-regression-concise-defining-the-model",
     "softmax-regression-concise-training",

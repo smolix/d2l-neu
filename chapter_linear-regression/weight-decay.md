@@ -15,7 +15,7 @@ To see the core pathology in its simplest two-feature form, imagine predicting r
 
 On a tiny training sample where $x_1 - x_2$ happened by chance to correlate slightly with the label noise, unregularized least squares will happily choose $(501, -499)^\top$ to shave a sliver off the training error, only to fail catastrophically on new readings. How can we keep all $d$ features in the model while preventing the weights from blowing up along poorly determined directions?
 
-The classic remedy—known as *ridge regression* or *Tikhonov regularization* in statistics :cite:`Hoerl.Kennard.1970,Tikhonov.1943` and *weight decay* in deep learning—adds a smooth penalty on the squared Euclidean norm $\|\mathbf{w}\|_2^2$ directly to the loss function. In this section, we derive weight decay from four complementary perspectives (penalized optimization, per-step multiplicative decay in SGD, Bayesian Gaussian priors, and spectral shrinkage along eigenvectors of $\mathbf{X}^\top\mathbf{X}$) and implement it both from scratch and concisely in all four frameworks.
+The classic remedy—known as *ridge regression* or *Tikhonov regularization* in statistics :cite:`Hoerl.Kennard.1970,tikhonov1977solutions` and *weight decay* in deep learning—adds a smooth penalty on the squared Euclidean norm $\|\mathbf{w}\|_2^2$ directly to the loss function. In this section, we derive weight decay from four complementary perspectives (penalized optimization, per-step multiplicative decay in SGD, Bayesian Gaussian priors, and spectral shrinkage along eigenvectors of $\mathbf{X}^\top\mathbf{X}$) and implement it both from scratch and concisely in all four frameworks.
 
 ```{.python .input #weight-decay}
 %%tab mxnet

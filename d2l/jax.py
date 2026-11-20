@@ -4441,11 +4441,12 @@ def ddim_invert(pred, x, path, steps, t_end=1.0):
 
     Defined in :numref:`sec_diffusion-samplers`"""
     a, s = path.grid(steps, 0.0, t_end)
+    j = np.maximum(np.arange(steps), 1)  # at t = 0 x is read at the next level
     def step(x, inputs):
-        a_t, s_t, a_s, s_s = inputs
-        eps = pred(x, a_s, s_s)[1]              # x read at the next level
+        a_t, s_t, a_s, s_s, a_j, s_j = inputs
+        eps = pred(x, a_j, s_j)[1]
         return a_s * (x - s_t * eps) / a_t + s_s * eps, None
-    return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:]))[0]
+    return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:], a[j], s[j]))[0]
 
 class Autoencoder(nnx.Module):
     """Residual convolutional autoencoder from 28x28x1 images to a 7x7

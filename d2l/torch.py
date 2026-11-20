@@ -4242,7 +4242,8 @@ def ddim_invert(pred, x, path, steps, t_end=1.0):
     Defined in :numref:`sec_diffusion-samplers`"""
     a, s = path.grid(steps, 0.0, t_end)
     for i in range(steps):
-        eps = pred(x, a[i + 1], s[i + 1])[1]    # x read at the next level
+        j = max(i, 1)  # at t = 0 (sigma = 0) x is read at the next level
+        eps = pred(x, a[j], s[j])[1]
         x = a[i + 1] * (x - s[i] * eps) / a[i] + s[i + 1] * eps
     return x
 

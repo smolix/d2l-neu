@@ -183,45 +183,8 @@ proves this, together with the two extreme cases: a single data point is
 integrated without error by strides of any length, because
 $\hat{\boldsymbol\epsilon}$ is then constant along each trajectory, and
 Gaussian data shrink at every stride (:numref:`fig_mdl-dyn-ddim-strides`).
-We check the equivalence with the exact predictor of the mixture `mix` of
-:numref:`sec_diffusion-denoising`, running DDIM and `ode_sample` for ten
-steps on the linear path from the same 20,000 starting points.
 
-```{.python .input #samplers-the-ddim-family-and-euler-s-method-1}
-%%tab pytorch
-mix = d2l.GaussianMixture.three_modes()
-vp, lin = d2l.GaussianPath.vp(), d2l.GaussianPath.linear()
-
-def pred_exact(x, alpha, sigma):
-    """The mixture's exact (x0, eps) at x = alpha x0 + sigma eps."""
-    x0 = mix.posterior_mean(x, alpha, sigma)
-    return x0, (x - alpha * x0) / sigma
-
-torch.manual_seed(0)
-z = torch.randn(20_000, 2)
-gap = (d2l.ddim_sample(pred_exact, z, lin, 10)
-       - d2l.ode_sample(pred_exact, z, lin.sigma_bars(10)))
-print(f'DDIM against Euler: largest difference {gap.abs().max():.1e}')
-```
-
-```{.python .input #samplers-the-ddim-family-and-euler-s-method-1}
-%%tab jax
-mix = d2l.GaussianMixture.three_modes()
-vp, lin = d2l.GaussianPath.vp(), d2l.GaussianPath.linear()
-
-def pred_exact(x, alpha, sigma):
-    """The mixture's exact (x0, eps) at x = alpha x0 + sigma eps."""
-    x0 = mix.posterior_mean(x, alpha, sigma)
-    return x0, (x - alpha * x0) / sigma
-
-z = jax.random.normal(jax.random.key(0), (20_000, 2))
-gap = (d2l.ddim_sample(pred_exact, z, lin, 10)
-       - d2l.ode_sample(pred_exact, z, lin.sigma_bars(10)))
-print(f'DDIM against Euler: largest difference {jnp.abs(gap).max():.1e}')
-```
-
-The two samplers agree to the rounding error of 32-bit arithmetic: they
-compute the same function in two coordinate systems.
+<!-- WRITER: the DDIM = Euler check cell is cut (SMP-2). One sentence here: `ddim_sample` and `ode_sample` compute the same function in two coordinate systems, and in a run they agree to 32-bit rounding (largest difference about 1e-4 on the mixture). The definitions of `mix`, `vp`, `lin`, `pred_exact` and `z` moved into the next cell (`#samplers-skipping-steps-on-the-running-example`); introduce `pred_exact` (the exact (x0, eps) of the mixture `mix` of sec_diffusion-denoising) where that cell is introduced. -->
 
 ### Stochastic and Deterministic Steps
 
@@ -255,7 +218,7 @@ deterministic sampler to win at small budgets and the stochastic one to
 catch up as the steps shorten. :numref:`fig_diffusion-two-samplers` shows
 both on the mixture.
 
-![The two ends of the DDIM family on the three-mode mixture with the exact predictor, 200 steps on the variance-preserving path from six starting points at $t = 1$ (circles) to $t = 0$ (crosses); training data in grey. (a) At $\eta = 0$ each start follows a smooth curve into a mode. (b) At $\eta = 1$ the paths are jagged and may end in a different mode. Both produce the same distribution at $t = 0$.](../img/mdl-diffusion-two-samplers.svg)
+![The two ends of the DDIM family on the three-mode mixture with the exact predictor, 200 steps on the variance-preserving path from three starting points at $t = 1$ (circles) to $t = 0$ (crosses); training data in grey. (a) At $\eta = 0$ each start follows a smooth curve into a mode. (b) At $\eta = 1$ the paths are jagged, here two of the three end in a different mode; the first half of each path, where noise dominates, is drawn faded. Both produce the same distribution at $t = 0$.](../img/mdl-diffusion-two-samplers.svg)
 :label:`fig_diffusion-two-samplers`
 
 Two stochastic samplers must be kept apart. The ancestral chain of
@@ -280,29 +243,65 @@ runs DDIM on the variance-preserving grid with 5 to 1,000 steps and prints
 the mean distance to the thousand-step samples and the spread (the mean
 squared distance to the nearest mode).
 
+```{.python .input #samplers-skipping-steps-on-the-running-example-1}
+%%tab pytorch
+mix = d2l.GaussianMixture.three_modes()
+vp, lin = d2l.GaussianPath.vp(), d2l.GaussianPath.linear()
+
+def pred_exact(x, alpha, sigma):
+    """The mixture's exact (x0, eps) at x = alpha x0 + sigma eps."""
+    x0 = mix.posterior_mean(x, alpha, sigma)
+    return x0, (x - alpha * x0) / sigma
+
+torch.manual_seed(0)
+z, data = torch.randn(20_000, 2), mix.sample(20_000)
+print(f'data: spread {mix.summary(data)["spread"]:.3f}')
+```
+
+```{.python .input #samplers-skipping-steps-on-the-running-example-1}
+%%tab jax
+mix = d2l.GaussianMixture.three_modes()
+vp, lin = d2l.GaussianPath.vp(), d2l.GaussianPath.linear()
+
+def pred_exact(x, alpha, sigma):
+    """The mixture's exact (x0, eps) at x = alpha x0 + sigma eps."""
+    x0 = mix.posterior_mean(x, alpha, sigma)
+    return x0, (x - alpha * x0) / sigma
+
+k_z, k_data, k_eta = jax.random.split(jax.random.key(0), 3)  # k_eta: per n
+z, data = jax.random.normal(k_z, (20_000, 2)), mix.sample(k_data, 20_000)
+print(f'data: spread {mix.summary(data)["spread"]:.3f}')
+```
+
 ```{.python .input #samplers-skipping-steps-on-the-running-example}
 %%tab pytorch
 samples = {n: d2l.ddim_sample(pred_exact, z, vp, n)
            for n in (5, 10, 20, 50, 200, 1000)}
+spread = lambda pts: f'{mix.summary(pts)["spread"]:.3f}'
 for n, x in samples.items():
     gap = (x - samples[1000]).norm(dim=1).mean()
-    print(f'{n:4d} steps: distance to 1,000 steps {gap:.3f}, '
-          f'spread {mix.summary(x)["spread"]:.3f}')
+    eta1 = d2l.ddim_sample(pred_exact, z, vp, n, eta=1.0)
+    chain = d2l.ancestral_sample(pred_exact, z, vp, n)
+    print(f'{n:4d} steps: distance to 1,000 steps {gap:.3f}, spread '
+          f'{spread(x)} (eta = 1: {spread(eta1)}, ancestral: {spread(chain)})')
 d2l.scatter_panels([samples[10][:2000], samples[200][:2000]],
-                   ['10 steps', '200 steps'], data=mix.sample(2000));
+                   ['10 steps', '200 steps'], data=data[:2000]);
 ```
 
 ```{.python .input #samplers-skipping-steps-on-the-running-example}
 %%tab jax
 samples = {n: d2l.ddim_sample(pred_exact, z, vp, n)
            for n in (5, 10, 20, 50, 200, 1000)}
+spread = lambda pts: f'{mix.summary(pts)["spread"]:.3f}'
 for n, x in samples.items():
     gap = jnp.linalg.norm(x - samples[1000], axis=1).mean()
-    print(f'{n:4d} steps: distance to 1,000 steps {gap:.3f}, '
-          f'spread {mix.summary(x)["spread"]:.3f}')
+    k1, k2 = jax.random.split(jax.random.fold_in(k_eta, n))
+    eta1 = d2l.ddim_sample(pred_exact, z, vp, n, 1.0, k1)
+    chain = d2l.ancestral_sample(pred_exact, z, vp, n, k2)
+    print(f'{n:4d} steps: distance to 1,000 steps {gap:.3f}, spread '
+          f'{spread(x)} (eta = 1: {spread(eta1)}, ancestral: {spread(chain)})')
 d2l.scatter_panels([samples[10][:2000], samples[200][:2000]],
-                   ['10 steps', '200 steps'],
-                   data=mix.sample(jax.random.key(1), 2000));
+                   ['10 steps', '200 steps'], data=data[:2000]);
 ```
 
 The distance halves each time the number of steps doubles, as for a
@@ -316,6 +315,8 @@ Gaussian data always removes too much noise (exercise
 like Gaussians. Since the spread rewards contraction, and a stochastic
 sample has no thousand-step counterpart, we compare $\eta = 0$ with $\eta =
 1$ on images instead.
+
+<!-- WRITER (SMP-5, SMP-3): the cell now prints the data's own spread (0.476 in development, both frameworks) and, next to the deterministic sampler's spread, those of eta = 1 and of the ancestral chain from the same starts. Development (PyTorch; JAX the same to the third digit for eta = 0): spread at 5/10/20/50/200/1,000 steps: eta = 0: 0.309, 0.380, 0.420, 0.451, 0.469, 0.474; eta = 1: 0.33, 0.32, 0.34, 0.40, 0.455, 0.475; ancestral: 0.38, 0.52, 0.52, 0.50, 0.48, 0.48 (the stochastic spreads vary by about 0.003 between noise draws). So on long strides eta = 1 contracts the modes even more than eta = 0, and the ancestral chain, which adds the forward-step variance, spreads them beyond the data's 0.476: posterior variance too little, forward-step variance too much (SMP-3; exercise ex_samplers-optimal-variance gives the best variance between them). Both converge to the data's spread on fine grids. The sentence "Since the spread rewards contraction, and a stochastic sample has no thousand-step counterpart, we compare eta = 0 with eta = 1 on images instead" is superseded: the spread is now printed for all three and reads in both directions against the data's value; explain the contraction here, once. -->
 
 ### Second Order and the Step Grid
 
@@ -422,6 +423,47 @@ at $80$ but crowds its last levels down to $0.002$. Exponential integrators
 such as DPM-Solver :cite:`Lu.Zhou.Bao.ea.2022` take steps in $\log
 \bar\sigma$ (exercise :exref:`ex_samplers-dpm-solver`).
 
+<!-- WRITER: new cell below (SMP-8, structure "multistep solvers"): `multistep_sample`, a local function (not saved), is the second-order Adams-Bashforth method on d x_bar / d sigma_bar = eps_hat. Each step makes ONE network evaluation and extrapolates the slope linearly from this step's and the previous step's noise estimate: x_bar_s = x_bar_t + h (eps_t + h / (2 h_prev) (eps_t - eps_prev)), with h = sigma_bar_s - sigma_bar_t; written as the Euler (= DDIM) step x0_hat + sigma_bar_s eps_hat plus the correction c (eps_t - eps_prev), c = h^2 / (2 h_prev). The first step (and the step after a start at sigma_bar = inf, where h_prev is infinite) is an Euler step. Second order at one evaluation per step, the idea of DPM-Solver++(2M) and its relatives (which extrapolate in log sigma_bar instead of sigma_bar). Replace the DPM-Solver sentence above by the SMP-8 paragraph (in these coordinates the linear part is already removed, DDIM is the first-order member of the exponential-integrator family, multistep members reuse the previous evaluation) and introduce the cell. -->
+
+```{.python .input #samplers-second-order-and-the-step-grid-1}
+%%tab pytorch
+@torch.no_grad()
+def multistep_sample(pred, x, sigma_bars):
+    """Second-order Adams-Bashforth on d x_bar / d sigma_bar = eps: one
+    evaluation per step, the slope extrapolated from the last two."""
+    r = sigma_bars
+    xb = x if math.isinf(r[0]) else x * math.sqrt(1 + r[0] ** 2)  # x / alpha
+    eps_prev = 0
+    for k in range(len(r) - 1):
+        x0, eps = d2l.pred_bar(pred, xb, r[k])
+        c = ((r[k + 1] - r[k]) ** 2 / (2 * (r[k] - r[k - 1]))
+             if k > 0 and math.isfinite(r[k - 1]) else 0.0)  # 0: Euler
+        xb = x0 + r[k + 1] * eps + c * (eps - eps_prev)
+        eps_prev = eps
+    return xb
+```
+
+```{.python .input #samplers-second-order-and-the-step-grid-1}
+%%tab jax
+def multistep_sample(pred, x, sigma_bars):
+    """Second-order Adams-Bashforth on d x_bar / d sigma_bar = eps: one
+    evaluation per step, the slope extrapolated from the last two."""
+    with jax.ensure_compile_time_eval():          # the grid is a constant
+        r = [float(v) for v in sigma_bars]
+    c = [0.0] + [(r[k + 1] - r[k]) ** 2 / (2 * (r[k] - r[k - 1]))
+                 if math.isfinite(r[k - 1]) else 0.0     # 0: Euler
+                 for k in range(1, len(r) - 1)]
+    def step(carry, inputs):
+        xb, eps_prev = carry
+        r_t, r_s, c = inputs
+        x0, eps = d2l.pred_bar(pred, xb, r_t)
+        return (x0 + r_s * eps + c * (eps - eps_prev), eps), None
+    xb = x if math.isinf(r[0]) else x * math.sqrt(1 + r[0] ** 2)  # x / alpha
+    return jax.lax.scan(step, (xb, jnp.zeros_like(xb)),
+                        (jnp.array(r[:-1]), jnp.array(r[1:]),
+                         jnp.array(c)))[0][0]
+```
+
 ### Quality against Evaluations on Images
 
 On images the field is learned. We train the unconditional version of the
@@ -430,31 +472,45 @@ parameters without its label input, on the velocity of the linear path for
 ten thousand updates, a few minutes on one GPU, and sample from the moving
 average of its weights.
 
+<!-- WRITER: the model is now the class-conditional U-Net of sec_diffusion-images (label dropout 0.1, label 10 = null), trained here for 10,000 updates with the chapter's `regression_loss` (the labels ride along through `d2l.conditional`), so that one network serves the unguided rows (each sample requests a label, the i-th class i mod 10, i.e. the classes in their data proportions), the guided row (gamma = 2) and the editing, inversion and inpainting below. The paragraph above ("the unconditional version ... without its label input") is false now. -->
+
 ```{.python .input #samplers-quality-against-evaluations-on-images-1}
 %%tab pytorch
 X, y, X_test, y_test = d2l.load_fashion_mnist_pm1()
+loss = d2l.regression_loss(lin, 'velocity')
 
 def batch_fn():
-    return X[torch.randint(0, len(X), (128,), device=X.device)]
+    i = torch.randint(0, len(X), (128,), device=X.device)
+    drop = torch.rand(128, device=X.device) < 0.1   # label dropout
+    return X[i], torch.where(drop, 10, y[i])        # 10 is the null label
+
+def loss_fn(net, batch):  # the regression loss of the labeled field
+    x0, c = batch
+    return loss(d2l.conditional(net, c), x0)
 
 torch.manual_seed(0)
-net = d2l.UNet(ch=64).to(X.device)
-net, ema, _ = d2l.train_regression(net, d2l.regression_loss(lin, 'velocity'),
-                                   batch_fn, 10_000)
-pred = d2l.make_pred(ema, lin, 'velocity')
+net = d2l.UNet(ch=64, num_classes=10).to(X.device)
+net, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 10_000)
 ```
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-1}
 %%tab jax
 X, y, X_test, y_test = d2l.load_fashion_mnist_pm1()
+loss = d2l.regression_loss(lin, 'velocity')
 
 def batch_fn(key):
-    return X[jax.random.randint(key, (128,), 0, len(X))]
+    k1, k2 = jax.random.split(key)
+    i = jax.random.randint(k1, (128,), 0, len(X))
+    drop = jax.random.uniform(k2, (128,)) < 0.1     # label dropout
+    return X[i], jnp.where(drop, 10, y[i])          # 10 is the null label
 
-net = d2l.UNet(ch=64, rngs=nnx.Rngs(0))
-net, ema, _ = d2l.train_regression(net, d2l.regression_loss(lin, 'velocity'),
-                                   batch_fn, 10_000, jax.random.key(0))
-pred = d2l.make_pred(ema, lin, 'velocity')
+def loss_fn(net, batch, key):  # the regression loss of the labeled field
+    x0, c = batch
+    return loss(d2l.conditional(net, c), x0, key)
+
+net = d2l.UNet(ch=64, num_classes=10, rngs=nnx.Rngs(0))
+net, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 10_000,
+                                   jax.random.key(0))
 ```
 
 We score samples by the Fréchet distance (FD) of
@@ -462,13 +518,30 @@ We score samples by the Fréchet distance (FD) of
 against 1,000 test images, read against the floor of two disjoint sets of
 1,000 real images.
 
+<!-- WRITER: the cell now repeats every measurement on three draws of 1,000 noise images (shared by all samplers, so every comparison is paired) and prints the mean plus or minus half the range over the draws (`mean_range`); the floor likewise uses three disjoint sets of 1,000 real images. The i-th sample requests class i mod 10. `fd_runs(sampler, n, gamma)` scores a sampler (pred, noise, n) on the three draws, with the field d2l.cfg(ema, labels, gamma) (gamma = 1: the conditional field). Read every FD against the floor's range, not a single floor value. -->
+
 ```{.python .input #samplers-quality-against-evaluations-on-images-2}
 %%tab pytorch
 cnn = d2l.fashion_feature_cnn(X, y)
 features = lambda imgs: d2l.fd_features(cnn, imgs)
 f_test = features(X_test[:1000])
-floor = d2l.fid_score(features(X_test[1000:2000]), f_test)
-print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
+floors = [d2l.fid_score(features(X_test[k:k + 1000]), f_test)
+          for k in (1000, 2000, 3000)]
+labels = torch.arange(1000, device=X.device) % 10   # sample i has class i % 10
+gen = torch.Generator(X.device).manual_seed(1)
+noises = [torch.randn(1000, 1, 28, 28, device=X.device, generator=gen)
+          for _ in range(3)]                        # shared by every sampler
+
+def fd_runs(sampler, n, gamma=1.0):
+    """FD of sampler(pred, noise, n) on each noise draw, field cfg(gamma)."""
+    pred = d2l.make_pred(d2l.cfg(ema, labels, gamma), lin, 'velocity')
+    return [d2l.fid_score(features(sampler(pred, z, n).clamp(-1, 1)), f_test)
+            for z in noises]
+
+def mean_range(fds):  # the mean, plus or minus half the range of the draws
+    return f'{np.mean(fds):5.2f}±{(max(fds) - min(fds)) / 2:.2f}'
+
+print('floor, 1,000 real images against 1,000 others: FD', mean_range(floors))
 ```
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-2}
@@ -476,8 +549,29 @@ print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
 cnn = d2l.fashion_feature_cnn(X, y)
 features = lambda imgs: d2l.fd_features(cnn, imgs)
 f_test = features(X_test[:1000])
-floor = d2l.fid_score(features(X_test[1000:2000]), f_test)
-print(f'floor, 1,000 real images against 1,000 others: FD {floor:.2f}')
+floors = [d2l.fid_score(features(X_test[k:k + 1000]), f_test)
+          for k in (1000, 2000, 3000)]
+labels = jnp.arange(1000) % 10                      # sample i has class i % 10
+k_noise, k_run = jax.random.split(jax.random.key(1))
+noises = [jax.random.normal(k, (1000, 28, 28, 1))   # shared by every sampler
+          for k in jax.random.split(k_noise, 3)]
+run_keys = iter(jax.random.split(k_run, 1000))      # fresh noise of the samplers
+
+@nnx.jit(static_argnums=(0, 1, 2))  # one trace per sampler, step count, gamma
+def sample(sampler, n, gamma, model, c, z, key):
+    pred = d2l.make_pred(d2l.cfg(model, c, gamma), lin, 'velocity')
+    return sampler(pred, z, n, key).clip(-1, 1)
+
+def fd_runs(sampler, n, gamma=1.0):
+    """FD of sampler(pred, noise, n, key) on each noise draw, field cfg(gamma)."""
+    keys = jax.random.split(next(run_keys), len(noises))
+    return [d2l.fid_score(features(sample(sampler, n, gamma, ema, labels, z, k)),
+                          f_test) for z, k in zip(noises, keys)]
+
+def mean_range(fds):  # the mean, plus or minus half the range of the draws
+    return f'{np.mean(fds):5.2f}±{(max(fds) - min(fds)) / 2:.2f}'
+
+print('floor, 1,000 real images against 1,000 others: FD', mean_range(floors))
 ```
 
 Each sampler draws 1,000 images from the same noise. "VP" and "linear"
@@ -485,84 +579,93 @@ denote even steps in time on that path, so DDIM with $\eta = 0$ on "VP" is
 Euler's method on the first grid printed above; "EDM" denotes the crowded
 grid. We count network evaluations, not steps.
 
+<!-- WRITER (SMP-4, SMP-11): the first table is now the DDIM family and the ancestral chain on the VP grid at 10, 20, 50, 100, 200 and 1,000 steps, so eta = 0, eta = 1 and the chain are compared at every budget, including 1,000. Development run, PyTorch (JAX agrees within the ranges; numbers move at capture): eta = 0: 5.4, 2.9, 1.8, 1.5, 1.5, 1.5 (half-ranges 0.1-0.2); eta = 1: 7.5, 4.4, 2.7, 2.1, 1.7, 1.4; ancestral: 44, 30, 12, 4.7, 2.3, 1.4. Floor 0.87±0.14. Lesson the run supports: noise never helps at equal steps up to 100 (eta = 0 wins by more than the range at 10 to 100 steps); at 1,000 steps all three agree within the run-to-run range (about 1.4-1.5) and sit above the floor, so the gap closes but the stochastic samplers do not overtake. "Fresh noise corrects errors" is therefore not shown by this experiment: it shows the cost of noise at small budgets and a tie at large ones. The deterministic sampler is on its plateau from about 100 steps (1.5 at 100, 200 and 1,000). The ancestral chain at 50 steps (12) is far worse than DDIM at 10 (5.4). -->
+
 ```{.python .input #samplers-quality-against-evaluations-on-images-3}
 %%tab pytorch
-families = {  # name: (sampler(pred, noise, n), step counts n)
-    'ancestral, VP': (lambda p, z, n: d2l.ancestral_sample(p, z, vp, n),
-                      (50, 200, 1000)),
-    'DDIM eta=1, VP': (lambda p, z, n: d2l.ddim_sample(p, z, vp, n, 1.0),
-                       (10, 20, 50, 100)),
-    'DDIM eta=0, VP': (lambda p, z, n: d2l.ddim_sample(p, z, vp, n),
-                       (10, 20, 50, 100)),
-    'Euler, linear': (lambda p, z, n: d2l.ode_sample(p, z, lin.sigma_bars(n)),
-                      (10, 20, 50)),
-    'Euler, EDM': (lambda p, z, n: d2l.ode_sample(p, z, d2l.edm_grid(n)),
-                   (10, 20, 50)),
-    'Heun, linear': (lambda p, z, n: d2l.heun_sample(p, z, lin.sigma_bars(n)),
-                     (5, 10, 25)),
-    'Heun, EDM': (lambda p, z, n: d2l.heun_sample(p, z, d2l.edm_grid(n)),
-                  (5, 10, 25))}
-
-def evaluations(name, n):  # Heun's second slope is skipped at inf and at 0
-    return {'Heun, linear': 2 * n - 2, 'Heun, EDM': 2 * n - 1}.get(name, n)
-
-torch.manual_seed(1)
-noise = torch.randn(1000, 1, 28, 28, device=X.device)
-images = {name: [f(pred, noise, n).clamp(-1, 1) for n in steps]
-          for name, (f, steps) in families.items()}
-fd = {name: [d2l.fid_score(features(x), f_test) for x in xs]
-      for name, xs in images.items()}
-for name, (_, steps) in families.items():
-    print(f'{name:15s}', '  '.join(f'{evaluations(name, n):4d}: {v:5.2f}'
-                                   for n, v in zip(steps, fd[name])))
+vp_samplers = {  # the DDIM family and the ancestral chain, even steps on VP
+    'DDIM, eta = 0': lambda p, z, n: d2l.ddim_sample(p, z, vp, n),
+    'DDIM, eta = 1': lambda p, z, n: d2l.ddim_sample(p, z, vp, n, eta=1.0),
+    'ancestral': lambda p, z, n: d2l.ancestral_sample(p, z, vp, n)}
+steps = (10, 20, 50, 100, 200, 1000)
+torch.manual_seed(2)  # the fresh noise of the stochastic samplers
+fd_vp = {name: [fd_runs(f, n) for n in steps]
+         for name, f in vp_samplers.items()}
+print('steps        ', ''.join(f'{n:>11d}' for n in steps))
+for name, row in fd_vp.items():
+    print(f'{name:13s}', ''.join(f'{mean_range(v):>11s}' for v in row))
 ```
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-3}
 %%tab jax
-families = {  # name: (sampler(pred, noise, n, key), step counts n)
-    'ancestral, VP': (lambda p, z, n, k: d2l.ancestral_sample(p, z, vp, n, k),
-                      (50, 200, 1000)),
-    'DDIM eta=1, VP': (lambda p, z, n, k: d2l.ddim_sample(p, z, vp, n, 1.0, k),
-                       (10, 20, 50, 100)),
-    'DDIM eta=0, VP': (lambda p, z, n, k: d2l.ddim_sample(p, z, vp, n),
-                       (10, 20, 50, 100)),
-    'Euler, linear': (lambda p, z, n, k: d2l.ode_sample(p, z,
-                                                        lin.sigma_bars(n)),
-                      (10, 20, 50)),
-    'Euler, EDM': (lambda p, z, n, k: d2l.ode_sample(p, z, d2l.edm_grid(n)),
-                   (10, 20, 50)),
-    'Heun, linear': (lambda p, z, n, k: d2l.heun_sample(p, z,
-                                                         lin.sigma_bars(n)),
-                     (5, 10, 25)),
-    'Heun, EDM': (lambda p, z, n, k: d2l.heun_sample(p, z, d2l.edm_grid(n)),
-                  (5, 10, 25))}
-
-def evaluations(name, n):  # Heun's second slope is skipped at inf and at 0
-    return {'Heun, linear': 2 * n - 2, 'Heun, EDM': 2 * n - 1}.get(name, n)
-
-k_noise, k_run = jax.random.split(jax.random.key(1))
-noise = jax.random.normal(k_noise, (1000, 28, 28, 1))
-keys = iter(jax.random.split(k_run, 32))
-images = {name: [f(pred, noise, n, next(keys)).clip(-1, 1) for n in steps]
-          for name, (f, steps) in families.items()}
-fd = {name: [d2l.fid_score(features(x), f_test) for x in xs]
-      for name, xs in images.items()}
-for name, (_, steps) in families.items():
-    print(f'{name:15s}', '  '.join(f'{evaluations(name, n):4d}: {v:5.2f}'
-                                   for n, v in zip(steps, fd[name])))
+vp_samplers = {  # the DDIM family and the ancestral chain, even steps on VP
+    'DDIM, eta = 0': lambda p, z, n, k: d2l.ddim_sample(p, z, vp, n),
+    'DDIM, eta = 1': lambda p, z, n, k: d2l.ddim_sample(p, z, vp, n, 1.0, k),
+    'ancestral': lambda p, z, n, k: d2l.ancestral_sample(p, z, vp, n, k)}
+steps = (10, 20, 50, 100, 200, 1000)
+fd_vp = {name: [fd_runs(f, n) for n in steps]
+         for name, f in vp_samplers.items()}
+print('steps        ', ''.join(f'{n:>11d}' for n in steps))
+for name, row in fd_vp.items():
+    print(f'{name:13s}', ''.join(f'{mean_range(v):>11s}' for v in row))
 ```
 
-The plot shows each FD against the number of evaluations.
+<!-- WRITER (SMP-7, SMP-9): the second table runs Euler, Heun and the multistep sampler on three grids at about 10, 20, 50 and 100 network evaluations (Heun takes n // 2 + 1 steps: exactly the budget on the linear grid, one evaluation more on the EDM grids, whose first level is finite). "linear" is even steps in t on the training path (sigma_bar from inf through 9 to 0.11), "EDM" is rho = 7 from 80 to 0.002, "EDM, rho = 3" the same ends with less crowding toward the data, which puts more steps at high noise. Development run, PyTorch (JAX within the ranges): Euler linear 3.2, 2.0, 1.6, 1.5; Euler EDM 7.0, 3.3, 2.0, 1.8; Euler rho = 3: 9.7, 4.1, 2.2, 1.8; Heun linear 1.4, 1.2, 1.3, 1.4; Heun EDM (9/19/49/99 evaluations in that run) 10.0, 1.9, 1.5, 1.6; Heun rho = 3: 73, 6.2, 1.7, 1.6; multistep linear 2.0, 1.5, 1.5, 1.5; multistep EDM 4.7, 2.1, 1.6, 1.6; multistep rho = 3: 6.5, 2.5, 1.6, 1.6. Lessons the run supports: (1) on the linear grid Heun's method is on the plateau (about 1.2-1.5, the level of the 1,000-step samplers) from 10 to 20 evaluations and the multistep sampler from 20; Euler needs about 50; (2) both EDM grids lose at small budgets for every method, and rho = 3, which moves steps from the data end to high noise, loses more: the steps at high noise are the wasted ones, the crowding near the data is not what hurts (the review's rival explanations: training with uniform t on the linear path, and step counts below the 18+ Heun steps of Karras et al.); (3) differences of 0.1-0.2 on the plateau are inside the half-ranges and the floor's own spread (0.87±0.14): read them as ties. Heun at 10-20 evaluations scoring slightly below the 1,000-step samplers is such a tie, not a better sampler (its samples are 0.11 RMS from the converged ODE solution at 10 evaluations, see the guided cell). -->
+
+```{.python .input #samplers-quality-against-evaluations-on-images-6}
+%%tab pytorch
+grids = {'linear': lin.sigma_bars, 'EDM': d2l.edm_grid,
+         'EDM, rho = 3': lambda n: d2l.edm_grid(n, rho=3)}
+solvers = {'Euler': d2l.ode_sample, 'Heun': d2l.heun_sample,
+           'multistep': multistep_sample}
+budgets = (10, 20, 50, 100)  # evaluations: Heun takes budget // 2 + 1 steps
+
+def on_grid(solver, grid):  # a sampler (pred, noise, steps)
+    return lambda p, z, n: solver(p, z, grid(n))
+
+fd_ode = {(s, g): [fd_runs(on_grid(solver, grid),
+                           b // 2 + 1 if s == 'Heun' else b) for b in budgets]
+          for s, solver in solvers.items() for g, grid in grids.items()}
+print('evaluations            ', ''.join(f'{b:>11d}' for b in budgets))
+for (s, g), row in fd_ode.items():
+    print(f'{s + ", " + g:23s}', ''.join(f'{mean_range(v):>11s}' for v in row))
+```
+
+```{.python .input #samplers-quality-against-evaluations-on-images-6}
+%%tab jax
+grids = {'linear': lin.sigma_bars, 'EDM': d2l.edm_grid,
+         'EDM, rho = 3': lambda n: d2l.edm_grid(n, rho=3)}
+solvers = {'Euler': d2l.ode_sample, 'Heun': d2l.heun_sample,
+           'multistep': multistep_sample}
+budgets = (10, 20, 50, 100)  # evaluations: Heun takes budget // 2 + 1 steps
+
+def on_grid(solver, grid):  # a sampler (pred, noise, steps, key)
+    return lambda p, z, n, k: solver(p, z, grid(n))
+
+fd_ode = {(s, g): [fd_runs(on_grid(solver, grid),
+                           b // 2 + 1 if s == 'Heun' else b) for b in budgets]
+          for s, solver in solvers.items() for g, grid in grids.items()}
+print('evaluations            ', ''.join(f'{b:>11d}' for b in budgets))
+for (s, g), row in fd_ode.items():
+    print(f'{s + ", " + g:23s}', ''.join(f'{mean_range(v):>11s}' for v in row))
+```
+
+The plot shows the mean FD against the number of evaluations for the three
+samplers on the variance-preserving grid and the three solvers on the linear
+grid.
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-4}
 %%tab pytorch, jax
-evals = [[evaluations(name, n) for n in steps]
-         for name, (_, steps) in families.items()]
-d2l.plot(evals + [[5, 1000]], list(fd.values()) + [[floor, floor]],
-         'network evaluations', 'FD', legend=list(families) + ['floor'],
-         xscale='log', yscale='log', figsize=(6, 4),
-         fmts=('o-', 's-', '^-', 'v--', 'D--', 'x-.', '+-.', 'k:'))
+curves = {**{name: (steps, row) for name, row in fd_vp.items()},
+          **{f'{s}, linear': (budgets, fd_ode[s, 'linear']) for s in solvers}}
+d2l.plot([x for x, _ in curves.values()] + [[10, 1000]],
+         [[np.mean(v) for v in row] for _, row in curves.values()]
+         + [[np.mean(floors)] * 2], 'network evaluations', 'FD',
+         legend=list(curves) + ['floor'], xscale='log', yscale='log',
+         figsize=(6, 4), fmts=('o-', 's-', '^-', 'v--', 'D--', 'x-.', 'k:'))
 ```
+
+<!-- WRITER: the three paragraphs below read the old single-draw tables; every number and several claims (eta = 1 "catching up as the trade-off predicts", the crowded-grid explanation, "on larger images") must be rewritten from the two new tables; see the notes above them. -->
 
 The thousand-step ancestral chain, the reference, scores two to three times
 the floor. Deterministic DDIM at fifty steps scores about 3, within about 1.5
@@ -594,22 +697,77 @@ its shape is decided; the linear grid spends seven of its ten steps there.
 :citet:`Karras.Aittala.Aila.ea.2022` tuned $\rho = 7$ for 35 to 79
 evaluations on larger images.
 
+<!-- WRITER (review "Structural findings" 3b, worklist A.4): new cell. A guided field changes what the solver integrates. For gamma = 1 (the conditional field) and gamma = 2 the cell runs the three solvers on the linear grid at 10, 20 and 50 evaluations of the field (each guided evaluation is one network call on a doubled batch) and prints the FD and the root-mean-square distance per pixel to a reference from the same noise: Heun with 200 evaluations, i.e. the integration error itself, which FD cannot see. Development run, PyTorch: reference FD 1.46 (gamma 1) and 2.02 (gamma 2). gamma = 1: Euler FD 3.2/2.0/1.6, RMS 0.104/0.061/0.030; Heun 1.4/1.2/1.3, RMS 0.112/0.034/0.012; multistep 2.0/1.5/1.5, RMS 0.088/0.041/0.013. gamma = 2: Euler 3.1/2.5/2.2, RMS 0.101/0.060/0.029; Heun 2.8/2.3/2.1, RMS 0.126/0.053/0.014; multistep 2.6/2.2/2.05, RMS 0.089/0.044/0.015. Lessons: guidance raises Heun's error at 20 evaluations by half (0.034 to 0.053) while Euler's and the multistep sampler's barely move; at gamma = 2 no solver is within the range of the reference at 20 evaluations (2.2-2.5 against 2.02) and all are at 50, so guidance roughly moves the plateau from 20 to 50 evaluations, at twice the network calls per evaluation. Also: Heun at 10 evaluations has an FD at the plateau (1.4) although its samples are as far from the converged ones as Euler's (RMS 0.11): FD scores the distribution, not the integration error. -->
+
+```{.python .input #samplers-quality-against-evaluations-on-images-7}
+%%tab pytorch
+def endpoints(solver, n, gamma):
+    """Samples of a solver with n steps on the linear grid, per noise draw."""
+    pred = d2l.make_pred(d2l.cfg(ema, labels, gamma), lin, 'velocity')
+    return [solver(pred, z, lin.sigma_bars(n)).clamp(-1, 1) for z in noises]
+
+for gamma in (1.0, 2.0):
+    refs = endpoints(d2l.heun_sample, 101, gamma)    # 200 evaluations
+    fds = [d2l.fid_score(features(x), f_test) for x in refs]
+    print(f'gamma = {gamma:.0f}, reference: FD {mean_range(fds)}')
+    for s, solver in solvers.items():
+        cols = []
+        for b in (10, 20, 50):
+            xs = endpoints(solver, b // 2 + 1 if s == 'Heun' else b, gamma)
+            fds = [d2l.fid_score(features(x), f_test) for x in xs]
+            rms = np.mean([((x - r) ** 2).mean().sqrt().item()
+                           for x, r in zip(xs, refs)])
+            cols.append(f'{b:3d}: FD {mean_range(fds)}, RMS {rms:.3f}')
+        print(f'  {s:9s}', '   '.join(cols))
+```
+
+```{.python .input #samplers-quality-against-evaluations-on-images-7}
+%%tab jax
+def endpoints(solver, n, gamma):
+    """Samples of a solver with n steps on the linear grid, per noise draw."""
+    keys = jax.random.split(next(run_keys), len(noises))  # unused: no noise
+    return [sample(on_grid(solver, lin.sigma_bars), n, gamma, ema, labels,
+                   z, k) for z, k in zip(noises, keys)]
+
+for gamma in (1.0, 2.0):
+    refs = endpoints(d2l.heun_sample, 101, gamma)    # 200 evaluations
+    fds = [d2l.fid_score(features(x), f_test) for x in refs]
+    print(f'gamma = {gamma:.0f}, reference: FD {mean_range(fds)}')
+    for s, solver in solvers.items():
+        cols = []
+        for b in (10, 20, 50):
+            xs = endpoints(solver, b // 2 + 1 if s == 'Heun' else b, gamma)
+            fds = [d2l.fid_score(features(x), f_test) for x in xs]
+            rms = np.mean([float(jnp.sqrt(((x - r) ** 2).mean()))
+                           for x, r in zip(xs, refs)])
+            cols.append(f'{b:3d}: FD {mean_range(fds)}, RMS {rms:.3f}')
+        print(f'  {s:9s}', '   '.join(cols))
+```
+
 Below are eight images from each of four samplers, all from the same eight
 noise images: the ancestral chain with 1,000 steps, DDIM with 10 and with 50
 steps, and Heun's method on the crowded grid with 19 evaluations.
 
+<!-- WRITER (SMP-11): the image rows are now the ancestral chain with 50 steps (the speckle the text describes), DDIM (eta = 0) with 10 and with 50 steps, and Heun's method on the linear grid with 20 evaluations, all from the same eight noise images and labels. Describe what the rendered rows show after capture. -->
+
 ```{.python .input #samplers-quality-against-evaluations-on-images-5}
 %%tab pytorch
-rows = [images['ancestral, VP'][2], images['DDIM eta=0, VP'][0],
-        images['DDIM eta=0, VP'][2], images['Heun, EDM'][1]]
-d2l.show_gray(torch.cat([x[:8] for x in rows]), 4, 8);
+z8 = noises[0][:8]
+pred8 = d2l.make_pred(d2l.conditional(ema, labels[:8]), lin, 'velocity')
+rows = [d2l.ancestral_sample(pred8, z8, vp, 50),
+        d2l.ddim_sample(pred8, z8, vp, 10), d2l.ddim_sample(pred8, z8, vp, 50),
+        d2l.heun_sample(pred8, z8, lin.sigma_bars(11))]
+d2l.show_gray(torch.cat(rows).clamp(-1, 1), 4, 8);
 ```
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-5}
 %%tab jax
-rows = [images['ancestral, VP'][2], images['DDIM eta=0, VP'][0],
-        images['DDIM eta=0, VP'][2], images['Heun, EDM'][1]]
-d2l.show_gray(jnp.concatenate([x[:8] for x in rows]), 4, 8);
+z8 = noises[0][:8]
+pred8 = d2l.make_pred(d2l.conditional(ema, labels[:8]), lin, 'velocity')
+rows = [d2l.ancestral_sample(pred8, z8, vp, 50, next(run_keys)),
+        d2l.ddim_sample(pred8, z8, vp, 10), d2l.ddim_sample(pred8, z8, vp, 50),
+        d2l.heun_sample(pred8, z8, lin.sigma_bars(11))]
+d2l.show_gray(jnp.concatenate(rows).clip(-1, 1), 4, 8);
 ```
 
 The last three rows match column by column: the deterministic samplers
@@ -629,6 +787,8 @@ retraining.
 
 `ddim_invert` runs the deterministic sampler backwards, from an image at $t = 0$ toward noise. Each step evaluates the network at the current point but tells it the noise level of the step's upper end, since the predictor needs $\sigma > 0$ and the first point has none.
 
+<!-- WRITER (SMP-12): `ddim_invert` now evaluates the noise estimate where the usual DDIM inversion does: at the current point and its own level, eps_hat(x_bar_t, sigma_bar_t), on every step but the first; only the first step, which starts at sigma = 0 where the predictor is undefined, reads its point at the next level. The sentence above ("tells it the noise level of the step's upper end") is false for all steps but the first; write the arguments of eps_hat in the displayed step. Measured in development (PyTorch, images, conditional field with each image's label): the old variant (upper level on every step) reconstructs images more closely at 10-100 steps (squared error 0.042/0.022/0.008/0.0034 against 0.073/0.043/0.017/0.0043 at 10/20/50/100) but converges more slowly: at 200 steps 0.0014 against 0.0004; on the mixture with the exact field the old variant's error falls only about 1.8x per doubling (RMS ~ h^0.4), the usual one's about 3-4.6x (first order) from 20 steps. So the usual inversion is the consistent one; the old choice traded order for a small-budget advantage. -->
+
 ```{.python .input #samplers-the-latent-code}
 %%tab pytorch
 @torch.no_grad()  #@save
@@ -636,7 +796,8 @@ def ddim_invert(pred, x, path, steps, t_end=1.0):
     """Deterministic DDIM run backwards, from data x at t = 0 to t_end."""
     a, s = path.grid(steps, 0.0, t_end)
     for i in range(steps):
-        eps = pred(x, a[i + 1], s[i + 1])[1]    # x read at the next level
+        j = max(i, 1)  # at t = 0 (sigma = 0) x is read at the next level
+        eps = pred(x, a[j], s[j])[1]
         x = a[i + 1] * (x - s[i] * eps) / a[i] + s[i + 1] * eps
     return x
 ```
@@ -646,11 +807,12 @@ def ddim_invert(pred, x, path, steps, t_end=1.0):
 def ddim_invert(pred, x, path, steps, t_end=1.0):  #@save
     """Deterministic DDIM run backwards, from data x at t = 0 to t_end."""
     a, s = path.grid(steps, 0.0, t_end)
+    j = np.maximum(np.arange(steps), 1)  # at t = 0 x is read at the next level
     def step(x, inputs):
-        a_t, s_t, a_s, s_s = inputs
-        eps = pred(x, a_s, s_s)[1]              # x read at the next level
+        a_t, s_t, a_s, s_s, a_j, s_j = inputs
+        eps = pred(x, a_j, s_j)[1]
         return a_s * (x - s_t * eps) / a_t + s_s * eps, None
-    return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:]))[0]
+    return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:], a[j], s[j]))[0]
 ```
 
 In the coordinates $(\bar{\mathbf{x}}, \bar\sigma)$ each inverse step is the
@@ -665,24 +827,34 @@ decodes 100 test images with 10 to 100 steps on the linear path.
 ```{.python .input #samplers-the-latent-code-1}
 %%tab pytorch
 x0 = X_test[:100]
-codes = {n: d2l.ddim_invert(pred, x0, lin, n) for n in (10, 20, 50, 100)}
+pred = d2l.make_pred(d2l.conditional(ema, y_test[:100]), lin, 'velocity')
+codes = {n: d2l.ddim_invert(pred, x0, lin, n) for n in (10, 20, 50, 100, 200)}
 recon = {n: d2l.ddim_sample(pred, code, lin, n) for n, code in codes.items()}
-for n in codes:
+for n in codes:  # the mixture's points through its exact field, for contrast
+    back = d2l.ddim_sample(pred_exact, d2l.ddim_invert(pred_exact, data, lin, n),
+                           lin, n)
     print(f'{n:3d} steps: squared error per pixel '
-          f'{((recon[n] - x0) ** 2).mean():.4f}, code std {codes[n].std():.2f}')
+          f'{((recon[n] - x0) ** 2).mean():.4f}, code std {codes[n].std():.2f}; '
+          f'mixture {((back - data) ** 2).mean():.4f}')
 d2l.show_gray(torch.cat([x0[:8], recon[10][:8], recon[50][:8]]), 3, 8);
 ```
 
 ```{.python .input #samplers-the-latent-code-1}
 %%tab jax
 x0 = X_test[:100]
-codes = {n: d2l.ddim_invert(pred, x0, lin, n) for n in (10, 20, 50, 100)}
+pred = d2l.make_pred(d2l.conditional(ema, y_test[:100]), lin, 'velocity')
+codes = {n: d2l.ddim_invert(pred, x0, lin, n) for n in (10, 20, 50, 100, 200)}
 recon = {n: d2l.ddim_sample(pred, code, lin, n) for n, code in codes.items()}
-for n in codes:
+for n in codes:  # the mixture's points through its exact field, for contrast
+    back = d2l.ddim_sample(pred_exact, d2l.ddim_invert(pred_exact, data, lin, n),
+                           lin, n)
     print(f'{n:3d} steps: squared error per pixel '
-          f'{((recon[n] - x0) ** 2).mean():.4f}, code std {codes[n].std():.2f}')
+          f'{((recon[n] - x0) ** 2).mean():.4f}, code std {codes[n].std():.2f}; '
+          f'mixture {((back - data) ** 2).mean():.4f}')
 d2l.show_gray(jnp.concatenate([x0[:8], recon[10][:8], recon[50][:8]]), 3, 8);
 ```
+
+<!-- WRITER (SMP-13): the cell now encodes with each test image's label (the conditional field), runs 10 to 200 steps, and prints next to each image error the squared error per coordinate of 20,000 mixture points encoded and decoded with the exact field. Development (PyTorch, usual inversion): images 0.073, 0.043, 0.017, 0.0043, 0.0004 at 10/20/50/100/200 steps, code std 0.73, 0.82, 0.89, 0.93, 0.94; mixture with the exact field (per coordinate) about 0.32, 0.094, 0.020, 0.0063, 0.0021. The slow decay at few steps is therefore not the learned field's doing: the exact field shows it too, and the learned field's error falls as fast or faster from 50 steps on. What both share is the first steps next to the data, where the noise estimate changes fastest (and the first step reads its point at the wrong level); with enough steps the error falls at least as fast as first order. Rewrite the next paragraph ("since the learned field adds errors of its own" is contradicted), and SMP-13(b): at 50 steps the RMS error per pixel is about 0.13 on a [-1, 1] scale, the weak point of DDIM inversion in practice. -->
 
 The reconstruction error falls with the number of steps, more slowly than
 the step size, since the learned field adds errors of its own: at fifty
@@ -705,24 +877,32 @@ between the 50-step codes of the first two test images.
 
 ```{.python .input #samplers-the-latent-code-2}
 %%tab pytorch
-z0, z1 = codes[50][0], codes[50][1]
+i, j = torch.nonzero(y_test[:100] == y_test[0])[:2, 0]  # one class: one field
+z0, z1 = codes[50][i], codes[50][j]
 omega = torch.arccos(((z0 * z1).sum() / (z0.norm() * z1.norm())).clamp(-1, 1))
 u = torch.linspace(0, 1, 8, device=z0.device).reshape(-1, 1, 1, 1)
 zs = (torch.sin((1 - u) * omega) * z0 + torch.sin(u * omega) * z1
       ) / torch.sin(omega)
-d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8);
+pred_i = d2l.make_pred(d2l.conditional(ema, y_test[i].repeat(8)), lin,
+                       'velocity')
+d2l.show_gray(d2l.ddim_sample(pred_i, zs, lin, 50), 1, 8);
 ```
 
 ```{.python .input #samplers-the-latent-code-2}
 %%tab jax
-z0, z1 = codes[50][0], codes[50][1]
+i, j = jnp.nonzero(y_test[:100] == y_test[0])[0][:2]  # one class: one field
+z0, z1 = codes[50][i], codes[50][j]
 omega = jnp.arccos(jnp.clip(
     (z0 * z1).sum() / (jnp.linalg.norm(z0) * jnp.linalg.norm(z1)), -1, 1))
 u = jnp.linspace(0, 1, 8).reshape(-1, 1, 1, 1)
 zs = (jnp.sin((1 - u) * omega) * z0 + jnp.sin(u * omega) * z1
       ) / jnp.sin(omega)
-d2l.show_gray(d2l.ddim_sample(pred, zs, lin, 50), 1, 8);
+pred_i = d2l.make_pred(d2l.conditional(ema, jnp.full(8, y_test[i])), lin,
+                       'velocity')
+d2l.show_gray(d2l.ddim_sample(pred_i, zs, lin, 50), 1, 8);
 ```
+
+<!-- WRITER: the interpolation now runs between the first two test images of one class (the first test image and the next of its class), since the conditional decoder needs one label for the whole row; "the first test image to the second" is false. -->
 
 The row moves from a reconstruction of the first test image to one of the
 second, and every intermediate code decodes to a plausible item.
@@ -739,6 +919,8 @@ sampler replaces them by details that real images do have, and the coarse
 layout survives. The time $t_0$ sets the balance between fidelity to the
 input and realism.
 
+<!-- WRITER (SMP-15): each class-mean input is now sampled with its own label (the conditional field). Development (PyTorch): t0 = 0.3: squared distance 0.018, FD 32; 0.5: 0.045, 12; 0.7: 0.088, 4.0; 1.0: 0.18, 1.9 (the inputs: about 87). Quote the t0 = 0.3 FD: the outputs are sharper than the means but far from real garments; only at 0.7 does the FD approach a sampler's. With the label, t0 = 1 gives a fresh sample of the same class (distance 0.18, not an unrelated item), so "at t0 = 1 the output is an unrelated sample" becomes "a new garment of the same class". -->
+
 Our rough inputs are the ten class-mean images, blurred silhouettes that no
 real garment looks like, each noised a hundred times to $t_0 \in \{0.3,
 0.5, 0.7, 1\}$ and integrated back with 25 DDIM steps. The cell prints the
@@ -748,7 +930,8 @@ outputs (realism); the row $t_0 = 0$ holds the inputs.
 ```{.python .input #samplers-editing-by-partial-noising}
 %%tab pytorch
 means = torch.stack([X[y == c].mean(0) for c in range(10)])
-inputs = means.repeat(100, 1, 1, 1)                  # 1,000 inputs
+inputs = means.repeat(100, 1, 1, 1)                  # 1,000 inputs, class i % 10
+pred = d2l.make_pred(d2l.conditional(ema, labels), lin, 'velocity')
 torch.manual_seed(2)
 eps = torch.randn_like(inputs)
 edits = {0.0: inputs}
@@ -765,7 +948,8 @@ d2l.show_gray(torch.cat([x[:10] for x in edits.values()]), 5, 10);
 ```{.python .input #samplers-editing-by-partial-noising}
 %%tab jax
 means = jnp.stack([X[y == c].mean(0) for c in range(10)])
-inputs = jnp.tile(means, (100, 1, 1, 1))             # 1,000 inputs
+inputs = jnp.tile(means, (100, 1, 1, 1))             # 1,000 inputs, class i % 10
+pred = d2l.make_pred(d2l.conditional(ema, labels), lin, 'velocity')
 eps = jax.random.normal(jax.random.key(2), inputs.shape)
 edits = {0.0: inputs}
 for t0 in (0.3, 0.5, 0.7, 1.0):
@@ -830,6 +1014,8 @@ def inpaint(pred, known, mask, path, steps, key):
     return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:], keys[1:]))[0]
 ```
 
+<!-- WRITER: the completions are now sampled with the label of each test image (the conditional field), so the model knows the class and the upper half; say so. -->
+
 We keep the upper half of eight test images and ask for three completions of
 each, from different noise. The rows show the known halves, the three
 completions and the originals.
@@ -838,6 +1024,8 @@ completions and the originals.
 %%tab pytorch
 mask = torch.zeros(1, 1, 28, 28, device=X.device)
 mask[..., :14, :] = 1                                # the upper half is known
+pred = d2l.make_pred(d2l.conditional(ema, y_test[:8].repeat(3)), lin,
+                     'velocity')
 torch.manual_seed(3)
 fills = inpaint(pred, X_test[:8].repeat(3, 1, 1, 1), mask, lin, 50)
 d2l.show_gray(torch.cat([X_test[:8] * mask, fills, X_test[:8]]), 5, 8);
@@ -846,6 +1034,8 @@ d2l.show_gray(torch.cat([X_test[:8] * mask, fills, X_test[:8]]), 5, 8);
 ```{.python .input #samplers-inpainting-and-posterior-sampling-2}
 %%tab jax
 mask = jnp.zeros((1, 28, 28, 1)).at[:, :14].set(1)  # the upper half is known
+pred = d2l.make_pred(d2l.conditional(ema, jnp.tile(y_test[:8], 3)), lin,
+                     'velocity')
 fills = inpaint(pred, jnp.tile(X_test[:8], (3, 1, 1, 1)), mask, lin, 50,
                 jax.random.key(3))
 d2l.show_gray(jnp.concatenate([X_test[:8] * mask, fills, X_test[:8]]), 5, 8);
@@ -1086,6 +1276,8 @@ and measures the choices.
 
 <!-- slides -->
 
+<!-- WRITER (slides): the "DDIM and Euler Agree to 32-Bit Rounding" slide is removed with its cell (SMP-2). Every FD on the slides below is from the old single-draw store and is stale; the decks need: the eta comparison slide with the paired three-draw result at 10 to 1,000 steps (`#samplers-quality-against-evaluations-on-images-3`), a slide for the solver x grid table (`#samplers-quality-against-evaluations-on-images-6`), one for the guided cell (`#samplers-quality-against-evaluations-on-images-7`), the multistep sampler (`#samplers-second-order-and-the-step-grid-1`), and the decision slide; the spread slide's cell now also prints eta = 1, the ancestral chain and the data's spread. -->
+
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §17.4]{.kicker}
@@ -1203,16 +1395,6 @@ error is the change of $\hat{\boldsymbol\epsilon}$ along the trajectory.
 :::
 :::
 
-::: {.slide title="DDIM and Euler Agree to 32-Bit Rounding"}
-Ten steps on the linear path, the mixture's exact predictor, the same
-20,000 starting points:
-
-@!samplers-the-ddim-family-and-euler-s-method-1
-
-Two coordinate systems, one function: differences below $10^{-4}$, on a
-scale where the modes are five units apart.
-:::
-
 ::: {.slide title="Check: How Much Noise Does η = 1 Replace on Ten Steps?"}
 [Check]{.kicker}
 
@@ -1237,8 +1419,9 @@ is small even at $\eta = 1$.
 :::
 
 ::: {.col}
-200 steps from six starts (circles) to $t = 0$ (crosses). (a) $\eta = 0$:
-smooth curves. (b) $\eta = 1$: jagged paths that may change mode.
+200 steps from three starts (circles) to $t = 0$ (crosses). (a) $\eta = 0$:
+smooth curves. (b) $\eta = 1$: jagged paths (first half faded) that may
+change mode.
 :::
 :::
 
@@ -1324,7 +1507,7 @@ FD at each number of network evaluations:
 ::: {.slide title="Deterministic Samplers Approximate One Map from Noise to Images"}
 @!samplers-quality-against-evaluations-on-images-5
 
-Rows: ancestral 1,000 steps; DDIM 10; DDIM 50; Heun on the EDM grid, 19
+Rows: ancestral 50 steps; DDIM 10; DDIM 50; Heun on the linear grid, 20
 evaluations. The last three match column by column; ten steps blur. The
 ancestral image depends on the noise it adds.
 :::

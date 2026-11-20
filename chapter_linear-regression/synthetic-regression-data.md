@@ -51,7 +51,7 @@ from d2l import jax as d2l
 
 ## Generating the Data
 
-To keep visualization effortless while exercising multi-feature matrix algebra, we generate $n = 1{,}000$ training examples with $d = 2$ features. We draw the design matrix $\mathbf{X} \in \mathbb{R}^{1000 \times 2}$ with independent standard normal entries $X_{ij} \sim \mathcal{N}(0, 1)$, and generate the labels from the linear model
+To keep visualization effortless while exercising multi-feature matrix algebra, we generate $n = 1{,}000$ examples with $d = 2$ features. We draw the design matrix $\mathbf{X} \in \mathbb{R}^{1000 \times 2}$ with independent standard normal entries $X_{ij} \sim \mathcal{N}(0, 1)$, and generate the labels from the linear model
 
 $$\mathbf{y} = \mathbf{X} \mathbf{w}^* + b^* + \boldsymbol{\epsilon},$$
 
@@ -62,7 +62,7 @@ $$\mathbf{w}^* = (2,\, -3.4)^\top, \qquad b^* = 4.2,$$
 and additive Gaussian noise $\epsilon^{(i)} \sim \mathcal{N}(0, \sigma^2)$ with standard deviation $\sigma = 0.01$. Notice that the signal $(\mathbf{X}\mathbf{w}^* + b^*)$ varies on a scale of several units, whereas the noise $\sigma = 0.01$ is hundreds of times smaller—so any healthy optimizer should recover $\mathbf{w}^*$ and $b^*$ to within a few thousandths.
 
 :begin_tab:`jax`
-Because JAX uses explicit functional pseudorandom keys (:numref:`sec_prob`), our data generator takes one extra argument, a `key`, which we draw from the tiny stateful key helper `d2l.get_key`.
+Because JAX uses explicit functional pseudorandom keys (:numref:`sec_prob`), we first register a tiny stateful key helper `get_key` in `d2l` so our data generator can be called with the same arguments across all four frameworks.
 :end_tab:
 
 ```{.python .input #synthetic-regression-data-generating-the-data-1}
@@ -124,27 +124,39 @@ print(f'features: ({float(x[0]):.4f}, {float(x[1]):.4f})')
 print(f'label: {float(label):.4f}, noise: {float(eps):.4f}')
 ```
 
+Let us draw $1{,}000$ synthetic examples and inspect the first feature row and scalar label:
+
+plane.
+
+## Recovering the Parameters
+:label:`subsec_synthetic-regression-data-recovery`
+
+
 For our first example, verify the math by hand: $2 x_1^{(1)} - 3.4 x_2^{(1)} + 4.2$ matches $y^{(1)}$ up to the tiny $\mathcal{N}(0, 0.01^2)$ perturbation.
 
 ## Inspecting the Data
 
 Before fitting any model, let us plot the label $y$ against each feature $x_1$ and $x_2$ individually:
 
-```{.python .input #synthetic-regression-data-inspecting-the-data}
-d2l.set_figsize((7, 2.5))
-_, axes = d2l.plt.subplots(1, 2, sharey=True)
-for j, ax in enumerate(axes):
-    ax.scatter(d2l.numpy(X[:1000, j]), d2l.numpy(y[:1000, 0]), s=2)
-    ax.set_xlabel(f'$x_{j + 1}$')
-    ax.set_ylabel('$y$' if j == 0 else '')
-```
+$\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}} (\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*) = \tilde{\mathbf{X}}^\top \boldsymbol{\epsilon}$,
+and therefore
+
+$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}.$$
+
+The *estimation error* $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$ is a
+purely linear function of the noise $\boldsymbol{\epsilon}$: when $\sigma = 0$,
+least squares recovers $\tilde{\mathbf{w}}^*$ with zero error.
+
+For arbitrary datasets, reasoning about $(\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}})^{-1}$
+can be messy, but for our standard normal features the matrix is remarkably
+clean. Each entry of $\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}} / n$ is the
 
 Each scatter plot reveals a clear linear trend with the expected sign: $y$ climbs with $x_1$ (slope $+2$) and falls more steeply with $x_2$ (slope $-3.4$). Why does each 2D scatter plot look like a thick band rather than a razor-thin line when $\sigma = 0.01$ is so tiny? Because plotting $y$ against $x_2$ alone ignores each point's variation in $x_1$: the unplotted term $2 x_1$ has standard deviation $2$, which spreads the vertical position of the points across a band several units wide! Viewing marginal 2D projections of a multivariate relationship always folds the other coordinates into apparent vertical scatter.
 
 ## Recovering the Parameters
-:label:`subsec_synthetic-regression-data-recovery`
 
 Since we derived the closed-form normal equations in :numref:`subsec_linear-regression-analytic-solution`, let us compute the exact least-squares solution $(\hat{\mathbf{w}}, \hat{b})$ on our 1,000 examples right now using `lstsq` on the augmented design matrix $[\mathbf{X}, \mathbf{1}]$. This gives us the gold-standard finite-sample fit that minibatch SGD in :numref:`sec_linear_scratch` will aim to match:
+
 
 ```{.python .input #synthetic-regression-data-recovering-the-parameters-1}
 %%tab pytorch
@@ -203,20 +215,16 @@ Even with `lstsq` solving the empirical loss to machine precision, $(\hat{\mathb
        $\{10, 100, 1{,}000, 10{,}000\}$ with `noise=0.01`. Plot both measurements against the prediction
        $\sigma/\sqrt{n}$ on logarithmic axes.
     1. Find the smallest $n$ at which the measurement agrees with
-       $\sigma/\sqrt{n}$ to within 10%, and say which approximation behind
-       that prediction fails for fewer examples.
-    1. Write $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$,
-       $\tilde{\mathbf{w}}^* = (\mathbf{w}^*, b^*)$, and
-       $\hat{\tilde{\mathbf{w}}} = (\hat{\mathbf{w}}, \hat{b})$. Show from the
-       normal equations that
-       $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$,
-       and derive $\textrm{Cov}(\hat{\tilde{\mathbf{w}}}) = \sigma^2(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}$
-       from it. Then generate correlated features
+       $\sigma/\sqrt{n}$ to within 10%, and say which step of the derivation
+       fails for fewer examples.
+    1. Derive $\textrm{Cov}(\hat{\tilde{\mathbf{w}}}) = \sigma^2(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}$
+       from the expression for $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$
+       in this section. Then generate correlated features
        $x_2 = \rho x_1 + \sqrt{1 - \rho^2}\, z$, with $x_1$ and $z$
        independent and standard normal, for $\rho \in \{0, 0.9, 0.99\}$.
        Predict the standard error of $\hat{w}_1$ from this formula, check
        it numerically, and explain why the predictions
-       $\hat{\tilde{\mathbf{w}}}^\top \tilde{\mathbf{x}}$, with $\tilde{\mathbf{x}} = (\mathbf{x}, 1)$, on new examples drawn from the same
+       $\hat{\tilde{\mathbf{w}}}^\top \tilde{\mathbf{x}}$ on new examples drawn from the same
        distribution remain accurate when the weights do not.
    :exlabel:`ex_synthetic-regression-data-recovery-under-noise`
 
@@ -230,11 +238,9 @@ Even with `lstsq` solving the empirical loss to machine precision, $(\hat{\mathb
     1. Check the prediction for $n \in \{100, 1{,}000, 10{,}000\}$
        training examples. Which estimation errors shrink as $n$ grows, which
        do not, and how do the shrinking ones compare with $\sigma/\sqrt{n}$?
-    1. A test that flags any parameter error above $10^{-3}$, about three
-       standard errors, would pass a correct implementation on the data of
-       this section. Would it declare a correct implementation faulty on
-       these data? Explain what passing or failing such a test can tell you
-       when the model does not fit the data.
+    1. Would the threshold of $10^{-3}$ declare a correct implementation
+       faulty on these data? Explain what passing or failing the test of
+       this section can tell you when the model does not fit the data.
    :exlabel:`ex_synthetic-regression-data-misspecified`
 
 1. **The loss floor and its fluctuation.** The next section judges a
@@ -253,7 +259,7 @@ Even with `lstsq` solving the empirical loss to machine precision, $(\hat{\mathb
        independent validation sets. Then use the result of part (a) to find
        the smallest parameter error that raises the expected loss by one
        standard error of the validation loss, and compare it with the
-       parameter-error threshold of $10^{-3}$ from the previous exercise.
+       threshold of $10^{-3}$.
    :exlabel:`ex_synthetic-regression-data-loss-floor`
 
 :begin_tab:`mxnet`

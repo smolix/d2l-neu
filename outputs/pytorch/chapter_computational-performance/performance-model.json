@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:4f7131bb89e7ffaa001ef1ea133748141b5ddf7306a784e1ec00018b42fbaf8a",
+    "d2l_lib_fingerprint": "sha256:d8eaccfb5e0910906b4ef099551370ca79e5a3c11ad27738575e9c6c42589894",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,89 +14,49 @@
       "outputs": []
     },
     "performance-model-the-performance-model-1": {
-      "code_fingerprint": "sha256:0038ccfc7dfc6c607d70a1ba8f9ecf0db2d2f47e80b6a7e3a0aeb2934b139f28",
+      "code_fingerprint": "sha256:db8c7c03367dcd02fe9ed19a6d4ba75dfbed232187f80fed076c115ccce9a867",
       "kind": "text",
       "outputs": []
     },
     "performance-model-the-performance-model-2": {
-      "code_fingerprint": "sha256:0930a840478c17327aaefa059b0f5c5bb1af3ae1d05701cb2d36a2f7e5bfd2ff",
+      "code_fingerprint": "sha256:4bd0d69c1e5a1decb834aa99a856a55913eb5ab21942ca8d45b6f81ae7464430",
       "kind": "text",
       "outputs": []
     },
-    "performance-model-the-ridge-point-of-the-rtx-4090-1": {
-      "code_fingerprint": "sha256:aff9db9031d7717534f4ef73675d3caf0572f3e2496788762c9c56a4dbe4dd99",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "NVIDIA GeForce RTX 4090\n"
-        }
-      ]
-    },
-    "performance-model-counting-flops-bytes-and-arithmetic-intensity": {
-      "code_fingerprint": "sha256:45023c4f7221a3191e6394a0f73feb3d3c33190243178d39823e3d5c99e064df",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "ridge point = 164 FLOP/byte\n"
-        }
-      ]
-    },
     "performance-model-measuring-without-lying-2": {
-      "code_fingerprint": "sha256:937391e91526ff8ac769786b449527eef909f1561172d5764e53c674f17e5f3a",
+      "code_fingerprint": "sha256:5a1820217f0ef814d334556e4068c15f7fef2bc1b0f4ac14de878ee09c901dd7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.064 s   read once: 0.040 s\n"
+          "text": "read every step: 0.063 s   read once: 0.040 s\n"
         }
       ]
     },
     "performance-model-measuring-without-lying-4": {
-      "code_fingerprint": "sha256:0fab359e2bc58de24a56dd67bff6d50e6842ae25dbf0bf903e290dbe276e5eb7",
+      "code_fingerprint": "sha256:1e879bec52ca01838292bb9f0c90e093a3d171ffba81d1fb248a5ec07b861a7b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4096 x 4096 product: 0.89 ms/call"
+          "text": "4096 x 4096 product: 0.90 ms/call"
         }
       ]
     },
-    "performance-model-the-sweep-mapping-our-gpu": {
-      "code_fingerprint": "sha256:7ee3f9f49b1a8628372b9bc1a8d2a314eaf9c9b886fce3a5826e0779cb4c784b",
-      "kind": "text",
-      "outputs": []
-    },
-    "performance-model-matrix-products-across-sizes-1": {
-      "code_fingerprint": "sha256:80cdcf1397bee143144c61f1c5371fd5452314b57839e3c4c46497b91da07676",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "performance-model/performance-model-matrix-products-across-sizes-1-1.svg",
-          "bytes": 32575,
-          "sha256": "sha256:67b4497fa92183ef357379c6dae31d13ee2f4183713c886385c5779de0b7fdaa"
-        }
-      ]
-    },
-    "performance-model-matrix-products-across-sizes-2": {
-      "code_fingerprint": "sha256:aeb90a1084d904af98937293dce8775f1986cbce66a17bf662691d53fa349c7d",
+    "hardware-batched-decoding": {
+      "code_fingerprint": "sha256:035be3b690f6b2c0ee319485e28f48dcfc9c9f1c8077c1c87d6903c83dd525fe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  256:    12.7 us per call,   2.6 TFLOP/s\nn =  512:    12.7 us per call,  21.1 TFLOP/s\nn = 1024:    16.8 us per call, 128.0 TFLOP/s\nn = 2048:   107.4 us per call, 160.0 TFLOP/s\nn = 4096:   891.7 us per call, 154.1 TFLOP/s\nn = 8192:  6513.3 us per call, 168.8 TFLOP/s\n"
+          "text": "NVIDIA GeForce RTX 4090: ridge point 164 FLOP/byte\nB =    1: bound 0.53 ms (memory ), measured 0.57 ms,   0.9 TFLOP/s\nB =    4: bound 0.53 ms (memory ), measured 0.57 ms,   3.7 TFLOP/s\nB =   16: bound 0.53 ms (memory ), measured 0.57 ms,  15.0 TFLOP/s\nB =   64: bound 0.54 ms (memory ), measured 0.58 ms,  58.9 TFLOP/s\nB =  128: bound 0.54 ms (memory ), measured 0.64 ms, 106.9 TFLOP/s\nB =  256: bound 0.83 ms (compute), measured 0.90 ms, 152.2 TFLOP/s\nB = 1024: bound 3.33 ms (compute), measured 3.34 ms, 164.6 TFLOP/s\n"
         }
       ]
     },
     "performance-model-three-regimes-1": {
-      "code_fingerprint": "sha256:b4757f4d677d2d5f08e5e650ba3fefde84f93715104714db9266c3df22bfce89",
+      "code_fingerprint": "sha256:1d5ef7085ed28b0a1c678aa32ab884067aab875d4ef32b3f82f029e188c391bb",
       "kind": "text",
       "outputs": [
         {
@@ -107,39 +67,84 @@
       ]
     },
     "performance-model-three-regimes-2": {
-      "code_fingerprint": "sha256:954f6079df212fb449dc0a1d01efd7e45d60bfe270c4f2f3ca74336997fa7515",
+      "code_fingerprint": "sha256:33bfe064d1d7c59fac984834102fb91deb717739925798f4e91e7de45e8f4d70",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 op: 0.59 ms/call\nchain: 5.24 ms/call\n"
+          "text": "1 op: 0.59 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chain: 5.25 ms/call\n"
+        }
+      ]
+    },
+    "performance-model-the-sweep-mapping-our-gpu": {
+      "code_fingerprint": "sha256:868456503efe75e0a0a191a31f8bd90184c631278c18ea52aeafd2a72386106a",
+      "kind": "text",
+      "outputs": []
+    },
+    "performance-model-matrix-products-across-sizes-1": {
+      "code_fingerprint": "sha256:6550b9294897d3784034cddf69af4eab7aa3321b236faf881ec5b5ab9ae4c4b1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "performance-model/performance-model-matrix-products-across-sizes-1-1.svg",
+          "bytes": 32574,
+          "sha256": "sha256:6c3f58b58775f3495731e2ba69ee02981e9aec29532fd8fa31a7cd754c2e189c"
+        }
+      ]
+    },
+    "performance-model-matrix-products-across-sizes-2": {
+      "code_fingerprint": "sha256:31f6954f7bfc67946626819152a144f2cf4971f22b18fcef8586c1577e77e5e1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  256:    12.7 us per call,   2.6 TFLOP/s\nn =  512:    13.7 us per call,  19.5 TFLOP/s\nn = 1024:    16.0 us per call, 134.3 TFLOP/s\nn = 2048:   102.8 us per call, 167.1 TFLOP/s\nn = 4096:   873.6 us per call, 157.3 TFLOP/s\nn = 8192:  6690.3 us per call, 164.3 TFLOP/s\n"
+        }
+      ]
+    },
+    "performance-model-matrix-products-across-sizes-3": {
+      "code_fingerprint": "sha256:28c1dced5b078a4c069258dcb99fb5c44cf706bade97451252e4c4b8d868f388",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "256 x 256 product :  21.0 us per call, device busy  3.2 us\nx + 1 on 256 x 256:  10.9 us per call, device busy  1.0 us\n"
         }
       ]
     },
     "performance-model-profiling-a-training-step-1": {
-      "code_fingerprint": "sha256:9325a5dc17bb5f01275b7088b12815039b4f3d78541c67889cbd4780228f016e",
+      "code_fingerprint": "sha256:0ed17fec5fa65eb18e81c8869c41d793ac766148fa5bde177185be96e2f76ef5",
       "kind": "text",
       "outputs": []
     },
     "performance-model-the-profiler": {
-      "code_fingerprint": "sha256:23752a7d070b83ac82acd118cd9deecf4baa120ff12c17acea70ec91b3c13b3e",
+      "code_fingerprint": "sha256:3f2516f762dce52b8b86b73f8dfa9437781b608a2692def20728d907198b5543",
       "kind": "text",
       "outputs": []
     },
     "performance-model-reading-the-profile-1": {
-      "code_fingerprint": "sha256:9c2c3f0135719771a81911a0abd067b64d47d0e44774d893b46f44efad789dfa",
+      "code_fingerprint": "sha256:1ee2fd308cfd8d25c49257bd9717865b6fd7dae594549d95e0d9da7e1355dacf",
       "kind": "text",
       "outputs": []
     },
     "performance-model-profiling-a-training-step-2": {
-      "code_fingerprint": "sha256:8fffdd2a74380cd796fe11eb6ba97e21c39b1faceb5d1eee58be0e272291df6e",
+      "code_fingerprint": "sha256:10af5cee04bd3c5b5650b56b65507ca329de4815c1cbb280e3c8908da326c271",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 2.61 ms per step, device busy 2.59 ms (99%), matrix products 80%\n  0.83 ms  32%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_n\n  0.80 ms  31%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  0.42 ms  16%  multi_tensor_apply_kernel<TensorListMetadata<2>, Bin\n  0.39 ms  15%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_n\n  0.06 ms   2%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n  0.02 ms   1%  vectorized_elementwise_kernel<4, launch_clamp_scalar\n"
+          "text": "wall clock 2.67 ms per step, device busy 2.65 ms (99%), matrix products 80%\n  0.85 ms  32%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_n\n  0.82 ms  31%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  0.42 ms  16%  multi_tensor_apply_kernel<TensorListMetadata<2>, Bin\n  0.40 ms  15%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_n\n  0.06 ms   2%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n  0.02 ms   1%  vectorized_elementwise_kernel<4, launch_clamp_scalar\n"
         }
       ]
     }

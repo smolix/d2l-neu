@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:7177221aef9647545e1b728597e4f7148000528facf3291f8eca999391141a93",
+    "d2l_lib_fingerprint": "sha256:1da0d0ff0ec803e9145de75b420219473bf48495f7eff24ac3acc4e4df8c31ee",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,79 +14,121 @@
       "outputs": []
     },
     "convergence-phase-portraits": {
-      "code_fingerprint": "sha256:5e1355c148d8cc8cdfe0abbd6ca40f24e2594fd3bda72d7210886f44846cb0ea",
+      "code_fingerprint": "sha256:59217536c0bd8ef89b47231fff630754fc92b1da8bd41f5353c113a55477a3da",
       "kind": "text",
       "outputs": []
     },
     "convergence-phase-portraits-1": {
-      "code_fingerprint": "sha256:3e3857cc6f1f869352b87bb10b8ad6d737cb58ab94ca5a8a7f9ef1a8a686b2df",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "convergence/convergence-phase-portraits-1-1.svg",
-          "bytes": 58242,
-          "sha256": "sha256:691d464a922d3e5d17d379c42bd7d8f7ee29afe2c2f643b997a729f87b273693"
-        }
-      ]
-    },
-    "convergence-a-gaussian-shift": {
-      "code_fingerprint": "sha256:396ef6ae6f2304d73dc8cda108065bbf5e20742027fd354d91f6ae52337e3d1b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "gamma     0: exact 9.950e-03, local 1.000e-02, large-gamma inf\ngamma  0.01: exact 9.566e-03, local 9.615e-03, large-gamma 2.500e-01\ngamma     1: exact 1.996e-03, local 2.000e-03, large-gamma 2.500e-03\ngamma    10: exact 2.438e-04, local 2.439e-04, large-gamma 2.500e-04\n"
-        }
-      ]
-    },
-    "convergence-the-loss-in-code": {
-      "code_fingerprint": "sha256:e01bb80dbdddcc4fb9f631031a97f062c3cd79673f2bac53c55e9be502f6d23a",
-      "kind": "text",
-      "outputs": []
-    },
-    "convergence-the-loss-in-code-2": {
-      "code_fingerprint": "sha256:526a58a0f8a5b661d1ecc86699644b5b84368e718cf598c8a772ee065aae5074",
-      "kind": "text",
-      "outputs": []
-    },
-    "convergence-the-loss-in-code-1": {
-      "code_fingerprint": "sha256:55ed0e8b617b9a9585140c165e308d5059ee0d3c6b8a094cb03df4415e269de9",
-      "kind": "text",
-      "outputs": []
-    },
-    "convergence-mode-coverage-on-25-gaussians-1": {
-      "code_fingerprint": "sha256:8c72b6ed32c22f755742cad0630b02779409aabb572a6c76b518a3fcd2efbb05",
-      "kind": "text",
-      "outputs": []
-    },
-    "convergence-mode-coverage-on-25-gaussians-3": {
-      "code_fingerprint": "sha256:7093a4658841e65367ccc4cf70872bf7b8a62de7edb503391f5f8d6ee7cfb6bb",
-      "kind": "text",
-      "outputs": []
-    },
-    "convergence-mode-coverage-on-25-gaussians-4": {
-      "code_fingerprint": "sha256:f2db35c3d9947e09ff7e77399cea7d749d7e708fc48f6d9d6a1ab3d4fe4c9da9",
-      "kind": "text",
-      "outputs": []
-    },
-    "convergence-mode-coverage-on-25-gaussians-2": {
-      "code_fingerprint": "sha256:444a2fff8dc2fcf393f07827a45cdfc26db1a50966def16658bdb0202699745a",
+      "code_fingerprint": "sha256:473e2aea24506e53eb028b652585f1a4077e470bad0375f49c61d6a3732f5f4f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GAN: 13/25 modes, on-mode 0.73, distance 0.18, E_q|grad D|^2 1.2e+01\nR3GAN, gamma=1: 25/25 modes, on-mode 0.83, distance 0.13, E_q|grad D|^2 5.6e-04\nR3GAN, gamma=10: 25/25 modes, on-mode 0.22, distance 0.45, E_q|grad D|^2 1.1e-04\n"
+          "text": "flow, RK4: 1.41 -> 1.41 in 800 steps; second half in [1.41, 1.41]\nsteps, simultaneous: 1.41 -> 2.87 in 300 steps; second half in [2.44, 2.87]\nsteps, alternating: 1.41 -> 1.36 in 2000 steps; second half in [1.34, 1.42]\npenalized, gamma = 0.3: 1.41 -> 0.000652 in 300 steps; second half in [0.000652, 0.0396]\npenalized, gamma = 1: 1.41 -> 6.97e-12 in 300 steps; second half in [6.97e-12, 2.33e-05]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "convergence/convergence-mode-coverage-on-25-gaussians-2-1.svg",
-          "bytes": 997051,
-          "sha256": "sha256:74451181b31efd8889133bd170160822012e09b508dcec177c566bf433c6311f"
+          "asset": "convergence/convergence-phase-portraits-1-1.svg",
+          "bytes": 110579,
+          "sha256": "sha256:1f6018bbb0eb1d4859041535c98c3389e009aa9bc568c0f7eb5ab80f9e658c69"
+        }
+      ]
+    },
+    "convergence-a-gaussian-shift": {
+      "code_fingerprint": "sha256:eaf9f057545739ca04db781928f35eee7b821c2bfddc2b3f1d77af36de23db54",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mu 0.2, gamma    0: exact 9.950e-03, local 1.000e-02 (1.00x), large-gamma inf (infx)\nmu 0.2, gamma 0.01: exact 9.566e-03, local 9.615e-03 (1.01x), large-gamma 2.500e-01 (26.13x)\nmu 0.2, gamma    1: exact 1.996e-03, local 2.000e-03 (1.00x), large-gamma 2.500e-03 (1.25x)\nmu 0.2, gamma   10: exact 2.438e-04, local 2.439e-04 (1.00x), large-gamma 2.500e-04 (1.03x)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mu   1, gamma    0: exact 2.228e-01, local 2.500e-01 (1.12x), large-gamma inf (infx)\nmu   1, gamma 0.01: exact 2.135e-01, local 2.404e-01 (1.13x), large-gamma 6.250e+00 (29.27x)\nmu   1, gamma    1: exact 4.818e-02, local 5.000e-02 (1.04x), large-gamma 6.250e-02 (1.30x)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mu   1, gamma   10: exact 6.120e-03, local 6.098e-03 (1.00x), large-gamma 6.250e-03 (1.02x)\nmu   3, gamma    0: exact 1.054e+00, local 2.250e+00 (2.14x), large-gamma inf (infx)\nmu   3, gamma 0.01: exact 1.012e+00, local 2.163e+00 (2.14x), large-gamma 5.625e+01 (55.57x)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mu   3, gamma    1: exact 3.909e-01, local 4.500e-01 (1.15x), large-gamma 5.625e-01 (1.44x)\nmu   3, gamma   10: exact 6.862e-02, local 5.488e-02 (0.80x), large-gamma 5.625e-02 (0.82x)\n"
+        }
+      ]
+    },
+    "convergence-the-loss-in-code": {
+      "code_fingerprint": "sha256:6dbc3b138a2554fd1990831737d95597f03041457f5f99ad75345fa44b6c307a",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-the-loss-in-code-2": {
+      "code_fingerprint": "sha256:9fb3cac1d52dc705d6c6e5abe4a49b08e74f7274523f666cbda2d6592752ac52",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-the-loss-in-code-1": {
+      "code_fingerprint": "sha256:13eca9fd420c3b707d1d9e9921eb328b7f601f3931e6e4f8995140bd9b561924",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-mode-coverage-on-25-gaussians-1": {
+      "code_fingerprint": "sha256:f67ec46a8ede0faa8699d77fcdde0f514168af5c5212fdfe236d863a38e5524a",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-mode-coverage-on-25-gaussians-5": {
+      "code_fingerprint": "sha256:3e671c679c0fd6f34af76c7c87fb1cc2437ea224886a87ede2978fda97a8f65c",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-mode-coverage-on-25-gaussians-3": {
+      "code_fingerprint": "sha256:14eb723c33b6fcd921a74b167a6fd6d4333ec880b2c6970827c24ef45a902bce",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-mode-coverage-on-25-gaussians-4": {
+      "code_fingerprint": "sha256:4c98c42a3be6fd1a55308d76dfdc25890954e63ed29138fc7acb87d9341de95a",
+      "kind": "text",
+      "outputs": []
+    },
+    "convergence-mode-coverage-on-25-gaussians-2": {
+      "code_fingerprint": "sha256:5e70abaf9ed8f306aeeeea688c59ff9e1c7e8046c9980fb0399a196dd5339a0d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "arm                          run  modes  on-mode  distance  E_q|grad D|^2\nNS                             0  12/25     0.81      0.15        1.0e+01\nNS                             1  15/25     0.94      0.08        7.2e-01\nNS                             2  24/25     0.74      0.17        5.9e+00\nNS + R1 + R2                   0  25/25     0.67      0.21        2.4e-03\nNS + R1 + R2                   1  25/25     0.87      0.11        4.1e-04\nNS + R1 + R2                   2  25/25     0.79      0.14        8.2e-04\npairing                        0  20/25     0.64      0.24        3.1e+00\npairing                        1  17/25     0.78      0.15        1.3e+01\npairing                        2  23/25     0.77      0.16        6.3e+00\npairing + R1 + R2              0  25/25     0.79      0.15        8.2e-04\npairing + R1 + R2              1  25/25     0.70      0.19        1.4e-03\npairing + R1 + R2              2  25/25     0.79      0.15        7.4e-04\npairing + R1 + R2, gamma=10    0  25/25     0.28      0.39        9.0e-05\n"
+        }
+      ]
+    },
+    "convergence-mode-coverage-on-25-gaussians-7": {
+      "code_fingerprint": "sha256:52d73b4e9bfb48a68ec2cee716f52ed04d032c95b2a69df95f31dc7b9b831827",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "convergence/convergence-mode-coverage-on-25-gaussians-7-1.svg",
+          "bytes": 1328519,
+          "sha256": "sha256:b086ea4a233a49156d2f7312c2e4edda004c004732decd8b1b1abb6da2e09aba"
+        }
+      ]
+    },
+    "convergence-mode-coverage-on-25-gaussians-6": {
+      "code_fingerprint": "sha256:bdfbece4584ba02b89036edd64fa3e51e2213e6ac606988b23aade8732c1004c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "on-mode fraction of run 0 at every 1,250 steps\n  NS                           0.01 0.02 0.06 0.15 0.52 0.68 0.78 0.81\n  NS + R1 + R2                 0.03 0.03 0.06 0.11 0.27 0.36 0.59 0.68\n  pairing                      0.01 0.07 0.15 0.25 0.27 0.46 0.59 0.62\n  pairing + R1 + R2            0.03 0.03 0.04 0.07 0.51 0.61 0.71 0.79\n  pairing + R1 + R2, gamma=10  0.02 0.02 0.03 0.05 0.06 0.09 0.20 0.27\ncritic loss of run 0 at every 1,250 steps\n  NS                           1.34 1.15 0.95 0.93 0.94 0.95 0.96 0.96\n  NS + R1 + R2                 1.38 1.37 1.36 1.37 1.37 1.38 1.38 1.38\n  pairing                      0.68 0.67 0.64 0.61 0.59 0.58 0.58 0.58\n  pairing + R1 + R2            0.68 0.68 0.67 0.68 0.68 0.69 0.69 0.69\n  pairing + R1 + R2, gamma=10  0.69 0.70 0.69 0.69 0.69 0.69 0.69 0.69\n"
         }
       ]
     }

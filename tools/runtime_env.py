@@ -58,6 +58,11 @@ NOTEBOOK_TIMEOUTS = {
     "chapter_diffusion-models/image-diffusion.ipynb": 7200,
     "chapter_diffusion-models/samplers.ipynb": 7200,
     "chapter_diffusion-models/design-space.ipynb": 7200,
+    # 16.5 and 16.6 train several image GANs each; a PyTorch run took about
+    # 40 min alone on one RTX 4090 (2026-11-20) and can pass 60 min when the
+    # card is shared.
+    "chapter_generative-adversarial-networks/dcgan.ipynb": 7200,
+    "chapter_generative-adversarial-networks/conditional.ipynb": 7200,
 }
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The
@@ -95,6 +100,18 @@ GPU_ONLY_NOTEBOOKS = {
     "chapter_diffusion-models/latent-diffusion.ipynb",
     "chapter_diffusion-models/few-step.ipynb",
     "chapter_diffusion-models/discrete-diffusion.ipynb",
+    # 16.4 trains 13 GANs on 25 Gaussians and 16.7 trains nine students and
+    # an adversarial pair; the JAX tabs name no device, so the keyword scan
+    # reads them as CPU, where they would train on the host (2026-11-20).
+    "chapter_generative-adversarial-networks/convergence.ipynb",
+    "chapter_generative-adversarial-networks/adversarial-losses.ipynb",
+    # 16.1, 16.2 and 16.3 train small GANs and critics whose JAX tabs name no
+    # device either; freshly generated (output-free) notebooks scanned as CPU
+    # and ran JAX on the host, which also changes the JAX numbers against the
+    # store's GPU runs (2026-11-20).
+    "chapter_generative-adversarial-networks/gan.ipynb",
+    "chapter_generative-adversarial-networks/objectives.ipynb",
+    "chapter_generative-adversarial-networks/relativistic.ipynb",
     # 19.1 trains SGNS and GloVe on the GPU (a CPU run draws other random
     # numbers, so the grid agreement line holds only on the GPU).
     "chapter_lm-encoders/word-embeddings.ipynb",
@@ -252,7 +269,7 @@ MULTI_GPU_NOTEBOOKS = {
 # card while one of these runs. Unlike MULTI_GPU_NOTEBOOKS (a fixed 2 GPUs,
 # 1-2 slots each, happy to share the rest of each card with other jobs),
 # these build a jax.sharding.Mesh over every jax.devices() entry in one
-# process (13.6/13.7's Mesh + NamedSharding + jitted sharded-training-step
+# process (13.6/13.8's Mesh + NamedSharding + jitted sharded-training-step
 # notebooks) and therefore must see ALL physical GPUs via CUDA_VISIBLE_DEVICES
 # with no other tenant preallocating VRAM on any of them. The PyTorch tabs of
 # the same notebooks launch torchrun --nproc-per-node over all physical GPUs,
@@ -311,6 +328,10 @@ FULL_CARD_NOTEBOOKS = {
     "chapter_computational-performance/compilation.ipynb": 1,
     "chapter_computational-performance/memory-precision.ipynb": 1,
     "chapter_computational-performance/multiple-gpus.ipynb": 2,
+    # 13.7 trains a 1.9-billion-parameter GPT sharded over two GPUs: about
+    # 16 GiB per GPU, measured (dev, 2026-11-19), and the seconds per step
+    # that the prose reads; it needs both cards whole.
+    "chapter_computational-performance/sharding.ipynb": 2,
     "chapter_hyperparameter-optimization/rs-async.ipynb": 1,
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
     # 18.1 measures bandwidth, per-token decode time and a kernel profile of
@@ -350,6 +371,9 @@ PINNED_GPU_NOTEBOOKS = {
     # 0,1, ~6.2 on 2,3, ~7.4 on 0,2 or 1,3 (2026-11-02); the prose quotes 0,1,
     # which is also the pair a standalone run uses.
     "chapter_computational-performance/multiple-gpus.ipynb": (0, 1),
+    # 13.7 measures beta_link of an all-gather and predicts its step from
+    # it; the same pair as 13.5 keeps the two sections' rates comparable.
+    "chapter_computational-performance/sharding.ipynb": (0, 1),
 }
 
 # (framework, relative-path) → number of global GPU slots to hold for
@@ -428,18 +452,33 @@ NOTEBOOK_ENV = {
         "XLA_PYTHON_CLIENT_ALLOCATOR": "vmm",
         "NCCL_LOCAL_REGISTER": "0",
     },
-    # 13.7: XLA calls cuBLAS for the matrix products instead of generating
+    # 13.7: NCCL's buffer registration fails harmlessly on GPUs without
+    # peer-to-peer access (this box) and would print a warning at every
+    # collective of the sharded step.
+    ("jax", "chapter_computational-performance/sharding.ipynb"): {
+        "NCCL_LOCAL_REGISTER": "0",
+    },
+    # 13.8: XLA calls cuBLAS for the matrix products instead of generating
     # Triton kernels, which run the products of the large minibatches more
-    # slowly on the RTX 4090; NCCL as above.
+    # slowly on the RTX 4090; NCCL as above. The training check runs the
+    # fp32 step at batch 512, which asks for about 13 GiB in one piece after
+    # the data-parallel cells have come and gone. With PREALLOCATE=false, as
+    # set for every JAX notebook, the BFC allocator grows region by region
+    # and fails on that request (OOM at 12.92 GiB in two scheduler runs and
+    # in a run outside the scheduler, 2026-11-20); a preallocated BFC pool
+    # and the 'vmm' allocator both pass. 'vmm' maps each array into one
+    # contiguous range, as in 13.6; the throughputs are unchanged (every
+    # configuration within the run-to-run spread of the BFC runs).
     ("jax", "chapter_computational-performance/fast-transformer.ipynb"): {
         "XLA_FLAGS": "--xla_gpu_enable_triton_gemm=false",
         "NCCL_LOCAL_REGISTER": "0",
+        "XLA_PYTHON_CLIENT_ALLOCATOR": "vmm",
     },
-    # 13.7: detach the profiler's instrumentation from the GPU when a profile
-    # ends; otherwise every later kernel launch of the process is slowed.
-    ("pytorch", "chapter_computational-performance/fast-transformer.ipynb"): {
-        "TEARDOWN_CUPTI": "1",
-    },
+    # 13.1, 13.3, 13.4, 13.5, 13.8 (PyTorch) set TEARDOWN_CUPTI=1 in their
+    # first cells, before the first torch.profiler session: launches after a
+    # profile otherwise stay about 30% slower (12.4 -> 16.6 us per operation
+    # of a tanh stack, dev, 2026-11-20). Setting it inside the process works
+    # as well as setting it before the start (12.4 us after the profile).
     # 18.4: generation with KV caches of changing length leaves PyTorch's
     # caching allocator holding blocks it cannot reuse. In the D2L_RERUN
     # regeneration run tensors peaked at 10.8 GiB while the card showed

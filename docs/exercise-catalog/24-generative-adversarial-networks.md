@@ -20,10 +20,22 @@ CNN/MNIST classification and VAE debiasing only. Berkeley CS294-158's GAN homewo
 video/README summaries, so it is not cited as provenance. UDL (Prince) ch. 15 Problems
 15.2–15.6 map cleanly onto gan.md/objectives.md's divergence content; 15.6 is already the
 book's own cited source for conditional.md's truncation exercise. Overall the chapter's
-62 exercises (2026-11 tightening; 8 to 10 per section: gan 10,
-objectives 9, relativistic 8, convergence 9, dcgan 10, conditional 8,
-adversarial-losses 8) carry `:exlabel:` ids, listed per section below in source order;
+55 exercises (2026-11-20 revision: gan 8, objectives 8, relativistic 6,
+convergence 9, dcgan 9, conditional 8, adversarial-losses 7) carry `:exlabel:` ids;
 external material is used almost entirely to add depth rather than replace anything.
+
+**Status after the 2026-11 Advanced pass.** The per-section lists below predate
+the revision. Retired, no longer in the source: `ex_gan-likelihood-versus-samples`,
+`ex_gan-unequal-priors`, `ex_objectives-hinge-lipschitz` (its result is now in the
+text of `objectives.md`), `ex_objectives-separated-initializations` (now a section
+experiment), `ex_relativistic-local-expansion-let-e`,
+`ex_relativistic-prove-shift-invariance-ev`, `ex_dcgan-precision-recall` (now taught
+in `subsec_gan_precision_recall`), `ex_conditional-implement-concatenation-critic-one`,
+`ex_adversarial-losses-multi-round-refinement` (now an entry of
+`sec_gan-further-reading`) and `ex_adversarial-losses-pointwise-plus-adversarial`.
+New: `ex_objectives-wasserstein-penalty`, `ex_conditional-modulated-generator` and
+`ex_adversarial-losses-teacher-noise-and-weight`. Other kept exercises were reworded;
+the source `.md` files are authoritative.
 
 ---
 

@@ -25,14 +25,10 @@ from gen_visual_design_gan_revisions import build_all as build_gan_redesigns
 ROOT = Path(__file__).resolve().parent.parent
 GAN_FIGURES = {
     "figure-16.1.1-gan-architecture": "mdl-gan-architecture.svg",
-    "gan-objective-template": "mdl-gan-template.svg",
     "gan-relativistic-pairing": "mdl-gan-pairing.svg",
-    "gan-training-strategies": "mdl-gan-exits.svg",
 }
 GAN_REDESIGNS = {
-    "gan-objective-template": "gan-objective-template-redesign",
     "gan-relativistic-pairing": "gan-relativistic-pairing-redesign",
-    "gan-training-strategies": "gan-training-strategies-redesign",
 }
 
 

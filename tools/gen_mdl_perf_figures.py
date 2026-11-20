@@ -297,8 +297,9 @@ def fig_latency_ladder():
     magnitude.  GPU cache and memory latencies are the RTX 4090
     microbenchmarks of Luo et al. (2024) at boost clock; the CUDA launch cost
     is NVIDIA's CUDA Graph guide (1-5 us); the highlighted rung is the host
-    cost of one eager framework operation dispatched from Python, the cost
-    the overhead regime is made of."""
+    cost of one eager framework operation dispatched from Python, 10-100 us
+    on current hosts and frameworks, the cost the overhead regime is made
+    of."""
     rows = [
         ("CPU L1 hit", 1, "1 ns"),
         ("GPU L1 / shared memory", 15, "~15 ns"),
@@ -307,7 +308,7 @@ def fig_latency_ladder():
         ("GPU memory access", 250, "200–300 ns"),
         ("CUDA kernel launch", 3e3, "1–5 µs"),
         ("RDMA network round trip", 4e3, "2–5 µs"),
-        ("eager operation from Python", 1e4, "5–15 µs"),
+        ("eager operation from Python", 3e4, "10–100 µs"),
         ("NVMe read", 7e4, "50–100 µs"),
         ("WAN round trip", 6e7, "~60 ms"),
     ]
@@ -626,9 +627,10 @@ def fig_compile_pipelines():
 
 def fig_fusion():
     """Memory traffic of the elementwise chain
-    0.5 x (1 + tanh(0.8 (x + 0.04 x^3))) on a 64 MB array.  Eager execution
-    runs eight kernels that read ten arrays and write eight (18 x 64 MB);
-    the fused kernel reads x once and writes the result once (2 x 64 MB)."""
+    0.5 x (1 + tanh(0.8 (x + 0.04 x^3))) on a 61 MiB array (4000 x 4000
+    fp32).  Eager execution runs eight kernels that read ten arrays and write
+    eight (18 x 61 MiB); the fused kernel reads x once and writes the result
+    once (2 x 61 MiB)."""
     fig, ax = plt.subplots(figsize=(10.4, 4.9))
     ops = [("mul", 1), ("pow", 1), ("mul", 1), ("add", 2), ("mul", 1),
            ("tanh", 1), ("add", 1), ("mul", 2)]
@@ -658,8 +660,8 @@ def fig_fusion():
         for xr in reads:
             link(xr, ym + 0.17, yk - bh / 2 - 0.04, READ)
         link(x + 0.24, yk - bh / 2 - 0.04, ym + 0.17, WRITE)
-    ax.text(5.45, ym - 0.52, "8 kernels: 10 reads + 8 writes of 64 MB "
-            "= 1.15 GB moved", ha="center", va="center", fontsize=12.5,
+    ax.text(5.45, ym - 0.52, "8 kernels: 10 reads + 8 writes of 61 MiB "
+            "= 1.07 GiB moved", ha="center", va="center", fontsize=12.5,
             color="black")
 
     # Fused: one kernel, intermediates stay in registers.
@@ -672,8 +674,8 @@ def fig_fusion():
          GREEN, fc=fl.T.GREEN.tint, fontsize=12.5)
     link(xs[0] - 0.24, ym + 0.17, yk - bh / 2 - 0.04, READ)
     link(xs[-1] + 0.24, yk - bh / 2 - 0.04, ym + 0.17, WRITE)
-    ax.text(5.45, ym - 0.52, "1 kernel: 1 read + 1 write of 64 MB "
-            "= 128 MB moved", ha="center", va="center", fontsize=12.5,
+    ax.text(5.45, ym - 0.52, "1 kernel: 1 read + 1 write of 61 MiB "
+            "= 122 MiB moved", ha="center", va="center", fontsize=12.5,
             color="black")
     # Key for the arrow colours.
     ax.text(0.85, 3.55, "read", ha="right", va="center", fontsize=12.5,
@@ -857,6 +859,68 @@ def fig_data_parallel():
     fl.clean_axes(ax, lim=((-0.3, 8.7), (-0.4, 4.95)), hide=True,
                   equal=False)
     fl.save(fig, "mdl-perf-data-parallel")
+
+
+def fig_one_launcher():
+    """One host drives two GPUs: it issues device 0's kernels, then
+    device 1's, so each GPU idles while the host serves the other, and a
+    host-bound step takes about 2 h_step plus the exchange (13.5)."""
+    fig, ax = plt.subplots(figsize=(9.0, 3.9))
+
+    y_cpu, y_g0, y_g1, h = 2.4, 1.3, 0.3, 0.5
+    H = 3.6            # host time to issue one device's kernels (h_step)
+    X = 1.3            # the exchange: alpha + S / beta_link
+    T = 2 * H + X
+
+    for y, name in ((y_cpu, "host\n(CPU)"), (y_g0, "GPU 0"),
+                    (y_g1, "GPU 1")):
+        ax.plot([0.0, T + 0.2], [y - h / 2 - 0.06, y - h / 2 - 0.06],
+                color=LIGHT, lw=0.8, zorder=1)
+        ax.text(-0.25, y, name, ha="right", va="center", fontsize=13,
+                color="black")
+
+    # The host issues GPU 0's kernels, then GPU 1's, then the copies.
+    _lane_kernel(ax, 0.03, H - 0.06, y_cpu, h, GRAY,
+                 label="issue GPU 0's kernels", fontsize=12)
+    _lane_kernel(ax, H + 0.03, H - 0.06, y_cpu, h, GRAY,
+                 label="issue GPU 1's kernels", fontsize=12)
+    _lane_kernel(ax, 2 * H + 0.03, 0.5, y_cpu, h, GRAY)
+
+    # Each GPU runs short kernels while its own are being issued.
+    n, w = 8, 0.16
+    for j in range(n):
+        x = 0.25 + j * (H - 0.4) / n
+        _lane_kernel(ax, x, w, y_g0, h, BLUE)
+        _lane_kernel(ax, H + x, w, y_g1, h, BLUE)
+    for x0, y in ((H, y_g0), (0.0, y_g1)):
+        ax.text(x0 + H / 2, y, "idle", ha="center", va="center",
+                fontsize=12.5, color="black", style="italic")
+
+    # Both GPUs then take part in the allreduce.
+    for y in (y_g0, y_g1):
+        _lane_kernel(ax, 2 * H + 0.03, X - 0.06, y, h, ORANGE,
+                     label="allreduce", fontsize=12, tc="black")
+
+    # Spans above the host lane.
+    y_s = y_cpu + h / 2 + 0.3
+    for x0, x1, lab in ((0.0, H, r"$h_{\mathrm{step}}$"),
+                        (H, 2 * H, r"$h_{\mathrm{step}}$"),
+                        (2 * H, T, r"$\alpha + S/\beta_{\mathrm{link}}$")):
+        ax.annotate("", xy=(x1, y_s), xytext=(x0, y_s),
+                    arrowprops=dict(arrowstyle="<->", color="black", lw=1.1,
+                                    shrinkA=0, shrinkB=0))
+        ax.text((x0 + x1) / 2, y_s + 0.12, lab, ha="center", va="bottom",
+                fontsize=13.5, color="black")
+
+    ax.annotate("", xy=(T + 0.2, y_g1 - h / 2 - 0.4),
+                xytext=(0, y_g1 - h / 2 - 0.4),
+                arrowprops=dict(arrowstyle="->", color="black", lw=1.0))
+    ax.text(T / 2, y_g1 - h / 2 - 0.52, "time (one step)", ha="center",
+            va="top", fontsize=13, color="black")
+
+    fl.clean_axes(ax, lim=((-1.5, T + 0.5), (-0.75, 3.55)), hide=True,
+                  equal=False)
+    fl.save(fig, "mdl-perf-one-launcher")
 
 
 def fig_ring_allreduce():
@@ -1096,6 +1160,7 @@ FIGURES = [
     fig_memory_anatomy,
     fig_splitting,
     fig_data_parallel,
+    fig_one_launcher,
     fig_ring_allreduce,
     fig_ddp_overlap,
     fig_fsdp_lifecycle,

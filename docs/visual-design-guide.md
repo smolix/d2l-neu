@@ -681,7 +681,7 @@ Audit particular assets with:
 
 ```bash
 python3 tools/audit_visuals.py img/mdl-gan-architecture.svg \
-    img/mdl-gan-template.svg
+    img/mdl-gan-pairing.svg
 ```
 
 The audit reports, among other things, aspect ratio, embedded raster content,

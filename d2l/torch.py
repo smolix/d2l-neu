@@ -2661,6 +2661,8 @@ def kernel_times(f, steps=10):
             for e in prof.key_averages()
             if e.device_type == torch.autograd.DeviceType.CUDA}
 
+PRODUCT_KERNELS = 'gemm|xmma|cutlass|matmul|sdpa'
+
 def show_profile(kernels, step_ms, rows=6):
     """Busy device time against the wall-clock time step_ms of a step, the
     share of the matrix products, and the kernels with the most time.
@@ -2668,7 +2670,7 @@ def show_profile(kernels, step_ms, rows=6):
     Defined in :numref:`sec_perf_model`"""
     busy = sum(kernels.values())
     products = sum(ms for name, ms in kernels.items()
-                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+                   if re.search(PRODUCT_KERNELS, name, re.I))
     print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '
           f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
     for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:
@@ -2748,20 +2750,27 @@ def windows(corpus, batch_size, num_steps=128):
         W = corpus[starts + offsets].long()
         yield W[:, :-1], W[:, 1:]
 
-def make_step(model, forward=None, bf16=False):
+def make_step(model, forward=None, bf16=False, warmup=0):
     """An AdamW training step of `model` on a minibatch (X, Y); `forward`
-    replaces the model's forward pass, `bf16` turns on autocast.
+    replaces the model's forward pass, `bf16` turns on autocast, and a
+    `warmup` > 0 raises the learning rate linearly to 1e-3 over as many
+    steps.
 
     Defined in :numref:`sec_fast_transformer`"""
     forward = model if forward is None else forward
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
                                   weight_decay=0.01, fused=True)
+    if warmup:
+        schedule = torch.optim.lr_scheduler.LambdaLR(
+            optimizer, lambda i: min(1, (i + 1) / warmup))
     def step(X, Y):
         with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
             loss = F.cross_entropy(forward(X).flatten(0, 1), Y.flatten())
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
+        if warmup:
+            schedule.step()
         return loss
     return step
 
@@ -3409,7 +3418,8 @@ class ReplayBufferC(d2l.ReplayBuffer):
         self.act = np.zeros((capacity, act_dim), np.float32)
 
 def update_D(X, Z, net_D, net_G, trainer_D):
-    """Update the critic; return the summed log loss, halved.
+    """Update the critic; return its log loss summed over both batches
+    (per sample, the sum of two means: 2 log 2 at equilibrium).
 
     Defined in :numref:`sec_basic_gan`"""
     trainer_D.zero_grad()
@@ -3419,7 +3429,7 @@ def update_D(X, Z, net_D, net_G, trainer_D):
     loss_D = (F.binary_cross_entropy_with_logits(
                   real_Y, torch.ones_like(real_Y), reduction='sum') +
               F.binary_cross_entropy_with_logits(
-                  fake_Y, torch.zeros_like(fake_Y), reduction='sum')) / 2
+                  fake_Y, torch.zeros_like(fake_Y), reduction='sum'))
     loss_D.backward()
     trainer_D.step()
     return loss_D
@@ -3433,15 +3443,17 @@ def update_G(Z, net_D, net_G, trainer_G):
     fake_Y = net_D(net_G(Z))
     loss_G = F.binary_cross_entropy_with_logits(
         fake_Y, torch.ones_like(fake_Y), reduction='sum')
-    loss_G.backward()
+    loss_G.backward()  # also fills net_D's .grad (update_D zeroes it)
     trainer_G.step()
     return loss_G
 
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None, on_epoch=None):
+              step_G=update_G, seed=None, on_epoch=None, ema=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
-    return the per-sample (loss_D, loss_G) of each epoch.
+    (beta_1 = 0.5), calling ema.update(net_G) after every generator step
+    and on_epoch(epoch) after each epoch if given; return each epoch's
+    per-sample losses (loss_D, the sum of the critic's two batch means,
+    and loss_G).
 
     Defined in :numref:`sec_basic_gan`"""
     if seed is not None:
@@ -3457,6 +3469,8 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             Z = torch.randn(X.shape[0], latent_dim, device=X.device)
             loss_D += update_D(X, Z, net_D, net_G, trainer_D).detach()
             loss_G += step_G(Z, net_D, net_G, trainer_G).detach()
+            if ema is not None:
+                ema.update(net_G)
             n += X.shape[0]
         history.append(torch.stack([loss_D, loss_G]) / n)
         if on_epoch is not None:
@@ -3475,6 +3489,60 @@ def make_mlp(sizes, act):
         layers += [linear, act]
     return nn.Sequential(*layers[:-1])
 
+mu_p = np.array([[0.0, 2.4], [-2.1, -1.2], [2.1, -1.2]])     # data
+A_p = np.stack([0.7 * np.eye(2)] * 3)
+
+def mixture_logpdf(x, mus, As):
+    """Log density of the uniform mixture of Gaussians N(mu_k, A_k^T A_k).
+
+    Defined in :numref:`sec_gan_objectives`"""
+    comps = []
+    for mu, A in zip(mus, As):
+        Sigma, diff = A.T @ A, x - mu
+        sol = np.linalg.solve(Sigma, diff.T).T
+        comps.append(-0.5 * ((diff * sol).sum(1)
+                             + np.linalg.slogdet(2 * np.pi * Sigma)[1]))
+    return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
+
+def sample_mixture(n, mus, As, rng):
+    """n draws from the uniform mixture of Gaussians mu_k + z A_k.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    k = rng.integers(0, len(mus), n)
+    z = rng.standard_normal((n, 2))
+    return np.einsum('ni,nij->nj', z, As[k]) + mus[k]
+
+grid_1d = np.linspace(-7.0, 7.0, 281)
+grid_2d = np.stack([g.ravel() for g in np.meshgrid(grid_1d, grid_1d)], axis=1)
+cell_area = (grid_1d[1] - grid_1d[0]) ** 2
+
+def js_mixtures(mus_q, As_q, mus_p=mu_p, As_p=A_p):
+    """JS(p, q) between two known mixtures, p the data by default, by
+    quadrature on grid_2d.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    logp = mixture_logpdf(grid_2d, mus_p, As_p)
+    logq = mixture_logpdf(grid_2d, mus_q, As_q)
+    p, q = np.exp(logp), np.exp(logq)
+    logm = np.log(np.maximum((p + q) / 2, 1e-300))
+    return 0.5 * (p * (logp - logm) + q * (logq - logm)).sum() * cell_area
+
+TRUNC_STD = 0.8796  # standard deviation of N(0, 1) truncated at +-2
+
+def make_critic():
+    """Leaky-ReLU MLP with LeCun-normal weights and zero biases.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    D = nn.Sequential(nn.Linear(2, 64), nn.LeakyReLU(0.2),
+                      nn.Linear(64, 64), nn.LeakyReLU(0.2), nn.Linear(64, 1))
+    for layer in D[::2]:  # weight std 1/sqrt(fan_in) after truncation
+        s = layer.in_features ** -0.5 / TRUNC_STD
+        nn.init.trunc_normal_(layer.weight, std=s, a=-2 * s, b=2 * s)
+        nn.init.zeros_(layer.bias)
+    return D
+
+to_t = lambda a: torch.tensor(a, dtype=torch.float32)
+
 def mmd2_unbiased(K_pp, K_qq, K_pq):
     """Unbiased MMD^2 from the kernel matrices within p, within q, and
     across; the diagonals (a point with itself) are left out.
@@ -3485,21 +3553,125 @@ def mmd2_unbiased(K_pp, K_qq, K_pq):
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
             - 2 * K_pq.mean())
 
+def gradient_penalty(D, X, fake, u):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D).
+
+    Defined in :numref:`sec_gan_objectives`"""
+    x = (u * X + (1 - u) * fake).requires_grad_()
+    grad, = torch.autograd.grad(D(x).sum(), x, create_graph=True)
+    return ((grad.abs() - 1) ** 2).mean()
+
+class Shift(nn.Module):
+    """The generator x' = theta + z.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, theta0):
+        super().__init__()
+        self.theta = nn.Parameter(torch.tensor(theta0))
+
+    def forward(self, z):
+        return self.theta + z
+
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
+                n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
+    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
+    theta0 and theta after every step, the gradient of every step, and the
+    critic.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    G, D = Shift(theta0), d2l.make_mlp([1, 32, 32, 1], nn.ReLU())
+    opt_G = torch.optim.SGD(G.parameters(), lr_G)
+    opt_D = torch.optim.Adam(D.parameters(), lr_D, betas=(0.5, 0.9))
+    n = n_critic if critic_loss else 0
+    thetas, grads = [theta0], []
+    for _ in range(steps):
+        X, Z = (to_t(rng.standard_normal((n + 1, batch, 1))) for _ in range(2))
+        U = to_t(rng.uniform(size=(n, batch, 1)))   # interpolation weights
+        for i in range(n):
+            fake = G(Z[i]).detach()
+            loss = critic_loss(D(X[i]), D(fake))
+            if gp:
+                loss = loss + gp * gradient_penalty(D, X[i], fake, U[i])
+            opt_D.zero_grad()
+            loss.backward()
+            opt_D.step()
+        fake = G(Z[-1])
+        loss = (gen_loss(X[-1], fake) if critic_loss is None
+                else gen_loss(D(X[-1]), D(fake)))
+        opt_G.zero_grad()
+        loss.backward()
+        grads.append(G.theta.grad.item())
+        opt_G.step()
+        thetas.append(G.theta.item())
+    return np.array(thetas), np.array(grads), D
+
+mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
+A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7
+
+class MixtureGenerator(nn.Module):
+    """x = mu_k + z A_k for a uniformly drawn component k.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, mu, A):
+        super().__init__()
+        self.mu = nn.Parameter(to_t(mu))
+        self.A = nn.Parameter(to_t(A))
+
+    def forward(self, z, k):
+        return torch.einsum('ni,nij->nj', z, self.A[k]) + self.mu[k]
+
+    def params_np(self):
+        return (self.mu.detach().numpy().copy(),
+                self.A.detach().numpy().copy())
+
+def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
+    """Fit a MixtureGenerator from (mu_0, A_0) to the data mixture, one
+    critic step per generator step. The losses act on the critic's scores of
+    the real and generated batch; with critic_loss None, gen_loss acts on the
+    two batches. Returns the exact JS(p, q_t) every 200 steps.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    G, D = MixtureGenerator(mu_0, A_0), make_critic()
+    opt_G = torch.optim.Adam(G.parameters(), lr)
+    opt_D = torch.optim.Adam(D.parameters(), 2 * lr)
+    trace = []
+    for t in range(steps):
+        X = to_t(sample_mixture(batch, mu_p, A_p, rng))
+        z = to_t(rng.standard_normal((batch, 2)))
+        k = torch.tensor(rng.integers(0, 3, batch))
+        if critic_loss is not None:
+            opt_D.zero_grad()
+            critic_loss(D(X), D(G(z, k).detach())).backward()
+            opt_D.step()
+        opt_G.zero_grad()
+        fake = G(z, k)
+        loss = (gen_loss(X, fake) if critic_loss is None
+                else gen_loss(D(X), D(fake)))
+        loss.backward()
+        opt_G.step()
+        if t % 200 == 0:
+            trace.append(js_mixtures(*G.params_np()))
+    return np.array(trace)
+
 def rpgan_loss_D(critic, real, fake):
     """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return F.softplus(critic(fake) - critic(real)).mean()
 
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator.
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return F.softplus(critic(real) - critic(fake)).mean()
 
 def gan_loss_D(critic, real, fake):
     """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(x'))]: the
-    batch means, where update_D reports the halved sum.
+    sum of two batch means, 2 log 2 at equilibrium, as update_D.
 
     Defined in :numref:`sec_gan_convergence`"""
     return F.softplus(-critic(real)).mean() + F.softplus(critic(fake)).mean()
@@ -3553,7 +3725,7 @@ def load_pokemon(resolution=64):
     """All Pokemon sprites as one (n, 3, h, w) tensor in [-1, 1].
 
     Defined in :numref:`sec_dcgan`"""
-    import warnings  # not in the d2l library preamble
+    import warnings
     transform = torchvision.transforms.Compose([
         torchvision.transforms.Resize((resolution, resolution)),
         torchvision.transforms.PILToTensor()])
@@ -3564,6 +3736,24 @@ def load_pokemon(resolution=64):
     with warnings.catch_warnings():  # palette sprites with transparency
         warnings.filterwarnings('ignore', message='Palette images')
         return torch.cat([X for X, _ in loader]).float() / 127.5 - 1
+
+class EMA:
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Buffers such as batch-norm statistics are copied;
+    the average is kept in evaluation mode.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, model, half_life):
+        import copy  # the d2l library preamble does not import it
+        self.model = copy.deepcopy(model).requires_grad_(False).eval()
+        self.decay = 0.5 ** (1 / half_life)
+
+    def update(self, model):
+        with torch.no_grad():
+            for avg, p in zip(self.model.parameters(), model.parameters()):
+                avg.lerp_(p, 1 - self.decay)
+            for avg, b in zip(self.model.buffers(), model.buffers()):
+                avg.copy_(b)
 
 def fan_in_init(module):
     """Fan-in normal weights with the leaky-ReLU gain, zero offsets.
@@ -3606,8 +3796,9 @@ class Generator(nn.Module):
         return self.to_rgb(x)                        # no tanh: raw output
 
 class Discriminator(nn.Module):
-    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
-    a 4x4 feature map phi(x), then a linear head on the flattened map.
+    """Critic that mirrors the generator: conv + leaky ReLU + bilinear
+    downsampling to a 4x4 feature map phi(x), then a linear head on the
+    flattened map.
 
     Defined in :numref:`sec_dcgan`"""
     def __init__(self, resolution, base_ch):
@@ -3630,24 +3821,6 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         return self.head(self.phi(x).flatten(1))
-
-class EMA:
-    """Exponential moving average of a model's parameters, given as a
-    half-life in steps. Buffers such as batch-norm statistics are copied;
-    the average is kept in evaluation mode.
-
-    Defined in :numref:`sec_dcgan`"""
-    def __init__(self, model, half_life):
-        import copy  # the d2l library preamble does not import it
-        self.model = copy.deepcopy(model).requires_grad_(False).eval()
-        self.decay = 0.5 ** (1 / half_life)
-
-    def update(self, model):
-        with torch.no_grad():
-            for avg, p in zip(self.model.parameters(), model.parameters()):
-                avg.lerp_(p, 1 - self.decay)
-            for avg, b in zip(self.model.buffers(), model.buffers()):
-                avg.copy_(b)
 
 def sample_real(images, n, labels=None):
     """Draw a training batch with random horizontal flips; return it with
@@ -3755,6 +3928,28 @@ def batched(f, X, batch_size=1000):
     Defined in :numref:`sec_dcgan`"""
     with torch.no_grad():
         return torch.cat([f(X_k) for X_k in X.split(batch_size)])
+
+def precision_recall(feat_real, feat_gen, k=3, chunk=1000):
+    """k-NN precision and recall of two feature sets: the fraction of each
+    set inside the union of the other set's balls, each ball reaching to its
+    center's k-th nearest neighbor; return (precision, recall).
+
+    Defined in :numref:`sec_dcgan`"""
+    P = np.asarray(feat_real, np.float64)
+    Q = np.asarray(feat_gen, np.float64)
+    def dists(A, B):  # (len(A), len(B)) Euclidean distances
+        sq = (A ** 2).sum(1)[:, None] - 2 * A @ B.T + (B ** 2).sum(1)
+        return np.sqrt(np.maximum(sq, 0))
+    def chunks(A):
+        return (A[i:i + chunk] for i in range(0, len(A), chunk))
+    def radii(A):  # sorted distances start with the point itself, at 0
+        return np.concatenate([np.partition(dists(a, A), k, axis=1)[:, k]
+                               for a in chunks(A)])
+    def covered(A, B, r_B):  # is each row of A inside some ball of B?
+        return np.concatenate([(dists(a, B) <= r_B).any(1)
+                               for a in chunks(A)])
+    return (float(covered(Q, P, radii(P)).mean()),
+            float(covered(P, Q, radii(Q)).mean()))
 
 class GaussianMixture:
     """A mixture of isotropic Gaussians, exact at every noise level.

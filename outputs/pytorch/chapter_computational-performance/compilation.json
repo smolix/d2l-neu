@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7d63622377726cea34b2ba0e9018b88f07a8058cac78accd4c4bf5f509d7a3b3",
+    "d2l_lib_fingerprint": "sha256:3a8f036dfe599e2e2a8e5d119a2aa95fdd5b61cfb1ff3867c4a4874fc2b47f03",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,23 +14,23 @@
       "outputs": []
     },
     "compilation-compute-graphs-and-compilation-1": {
-      "code_fingerprint": "sha256:edc30466c6374c05dfd35e0c6f808cbdffa25197bce16ed9471744a194108df3",
+      "code_fingerprint": "sha256:0424e27e4b1cc582cc93c40fae74c44caa61276cbeeda6760c8bf58eaaf92906",
       "kind": "text",
       "outputs": []
     },
     "compilation-capture-two-philosophies-1": {
-      "code_fingerprint": "sha256:f987ec1bf35a84d5571fce51fa6d300b24a5e7f50b7d14809230118b7447866f",
+      "code_fingerprint": "sha256:2ea7f36a4e7541cd096fed44ad0f081c194a3532ee3b60aecfcadd0dbb605771",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "graphs: 2, breaks: 1\ndef forward(self, L_x_ : torch.Tensor):\n    l_x_ = L_x_\n    x = l_x_ * 2;  l_x_ = None\n    sum_1 = x.sum()\n    gt = sum_1 > 0;  sum_1 = None\n    return (gt, x)\ndef forward(self, L_x_ : torch.Tensor):\n    l_x_ = L_x_\n    add = l_x_ + 1;  l_x_ = None\n    return (add,)\n"
+          "text": "graphs: 2, breaks: 1\ndef forward(self, L_x_ : torch.Tensor):\n    l_x_ = L_x_\n    x = l_x_ * 2;  l_x_ = None\n    sum_1 = x.sum()\n    gt = sum_1 > 0;  sum_1 = None\n    return (gt, x)\ndef forward(self, L_x_ : torch.Tensor):\n    l_x_ = L_x_\n    sub = l_x_ - 1;  l_x_ = None\n    return (sub,)\n"
         }
       ]
     },
     "compilation-capture-two-philosophies-2": {
-      "code_fingerprint": "sha256:6832451d485ddd9c6ebb9a6a859844cdf966fa126ee6c0b54b082574df4bc652",
+      "code_fingerprint": "sha256:b836d826a3dfd7e12a7078e28adc45edd2f05e94b8eaba6490a80ba65cf0a97d",
       "kind": "text",
       "outputs": [
         {
@@ -41,7 +41,7 @@
       ]
     },
     "compilation-what-the-compiler-does-fusion": {
-      "code_fingerprint": "sha256:193d26ac8f98820c50813e209daf93377eef1e491899b0505ea1a89f3e74ed6d",
+      "code_fingerprint": "sha256:600a8d2f63aff65ebff27e9f3a2a09e202705044b4144f276ceecdff754fad0d",
       "kind": "text",
       "outputs": [
         {
@@ -52,29 +52,55 @@
       ]
     },
     "compilation-compiling-a-training-step-1": {
-      "code_fingerprint": "sha256:ce2da930194999dbdd56ee65e92e3f099f2a66423820a3d2381f75b01c870d55",
+      "code_fingerprint": "sha256:35cc0aa4cd0482468097c15a6144f15b0e96811a63ba10dda337d99a621af320",
       "kind": "text",
       "outputs": []
     },
     "compilation-whole-step-compilation-measured": {
-      "code_fingerprint": "sha256:f8072f2fb48eb5497c3594edc43bab699f8a676530d8afca12eff3129ecbfda4",
+      "code_fingerprint": "sha256:75ea02f6a3884f61227de39bdbb09a345ebbb65ba47d8ff33c4b651ec34103e2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 0.8 s\neager: 2.74 ms, compiled: 1.59 ms\nbreak-even: 713 steps\n"
+          "text": "first call: 0.6 s\neager: 2.93 ms, compiled: 2.08 ms\nbreak-even: about 700 steps\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "graphs: 2\n"
         }
       ]
     },
     "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:193c7198f3b82f1a7ee207851098dd6496cef61477acb85550740b4886795d62",
+      "code_fingerprint": "sha256:779c0ca7a481b3adb1bfcb3c3ae3f9e9d3fd1c07c5b46b16a4a2f0b020fa051a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 2.68 ms/call\nreduce-overhead: 0.30 ms/call\n"
+          "text": "eager: 2.14 ms/call, 17.8 µs per operation\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "compiled: 2.02 ms/call, 16.8 µs per operation\nreduce-overhead: 0.28 ms/call, 2.4 µs per operation\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "wall clock 2.02 ms per step, device busy 0.31 ms (15%), matrix products 55%\n  0.17 ms  55%  Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_\n  0.08 ms  25%  splitKreduce_kernel<32, 16, int, float, float, float\n  0.06 ms  20%  triton_poi_fused_tanh_0\n"
+        }
+      ]
+    },
+    "compilation-replaying-the-training-step": {
+      "code_fingerprint": "sha256:4d3b1e096b9a02de125f3e708ab0bf4575fa3e39de984fb78b9b14c228acadef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "training step, reduce-overhead: 0.71 ms/call, GPU busy 0.25 ms\n"
         }
       ]
     }

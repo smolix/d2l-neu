@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/sharding.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:6cab50def039209560c7e4535fe46192441334b6add067b5bb4a988f6598a037",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sharding-setup": {
+      "code_fingerprint": "sha256:08375d24c3add03cc0b621accef9d204b8108a398a44f13c2d796b6baa55f2c5",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-sharding-the-training-state": {
+      "code_fingerprint": "sha256:839b6386337c9ee860d0c5bf1b3399d330d30da53c600462469122460b7c3aa3",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-sharding-the-training-state-1": {
+      "code_fingerprint": "sha256:637e3f9d6b953f884032575c4d55b64438605b7746c5b53bc01167acbcdf7dfe",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-sharding-the-training-state-2": {
+      "code_fingerprint": "sha256:270745da07b1f640c44cc014cd6bf678fb05b350fb618aeedd2f051a5b1dbf26",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1.92 billion parameters, 16N = 28.6 GiB\nJAX may allocate 22.1 GiB of one GPU\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-1": {
+      "code_fingerprint": "sha256:abebc4be2a656e4b34505bfd673410c404a1393d8036f98e53764f22f7fc09c8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bus bandwidth = 2.2 GB/s in an all-gather on 2 GPUs (beta_link = 0.46 ns/byte)\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-2": {
+      "code_fingerprint": "sha256:cdabf7ee63aac8a1bcb74f0dc63a20bf79d8b78c3a4454439065793d99ea8d98",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "state per GPU, 16N/k: 14.3 GiB\ncommunication, 3(k-1)S beta_link/k: 5.3 s per step\narithmetic at the peak, 8N bT/P: 0.38 s per step\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-5": {
+      "code_fingerprint": "sha256:c4bb440927381b031bf34e18fcbb454f56ba482de75a35195a6a66617f84d053",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-6": {
+      "code_fingerprint": "sha256:2812dc0cc36490c11cd282eb40ceb626fd9f21323b2a2d51c5ec0590da07e72d",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-7": {
+      "code_fingerprint": "sha256:4f40ee9d2cc63fd28f60136de3ae0e5347475a53e3418e6b94062633a1baa473",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per GPU: weights and moments 10.7 GiB (donated: 10.7 GiB), temporaries 5.0 GiB\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-8": {
+      "code_fingerprint": "sha256:6b522c152e7a51904d7b0a063a9f10b11b465c3a24e8c8ca85d6c9ebba0895b9",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-9": {
+      "code_fingerprint": "sha256:7b3f2e2d0ba97b828ec28a51df08d6865f8e7e77937b4b1c692fe30d9ab24c8a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "all-gather: 14.92 GB\nreduce-scatter: 3.83 GB\nall-to-all: 0.03 GB\nall-reduce: 0.00 GB\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-10": {
+      "code_fingerprint": "sha256:1747d31415bf05fde759c5a3e62524d641db0c5c3a89b6742243c32b126f1960",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-11": {
+      "code_fingerprint": "sha256:ca6a775b7983a362613a919e2e0109d7b0a527c1e5303524471f6753e65864a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per GPU: peak memory 15.8 GiB; 5.29 s per step (5.28 to 5.50)\nof each step, GPU 0 spends 5.01 s in communication kernels\n"
+        }
+      ]
+    }
+  }
+}

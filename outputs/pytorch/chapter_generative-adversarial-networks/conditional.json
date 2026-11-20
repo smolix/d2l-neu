@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e26d8d56f4c1bd6d2eda6a3b165e332f8a485f539273973b5476176ca889f56d",
+    "d2l_lib_fingerprint": "sha256:72a1bde6a6d9f8116d32f712730f2583fcf9d275f23b693247ecfb76160fc057",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,14 +13,25 @@
       "kind": "text",
       "outputs": []
     },
-    "conditional-class-conditional-cifar-10-1": {
-      "code_fingerprint": "sha256:14915f829e4cb8a229e47149ca3de66a6e87ad15663d9a2b67a0ed105eb686fe",
+    "conditional-three-ways-in-1": {
+      "code_fingerprint": "sha256:c3b90f90bef48070b21ab08b92409b5a88515981a31ba97ac9af690ec8fa6eba",
       "kind": "text",
       "outputs": []
     },
+    "conditional-three-ways-in-2": {
+      "code_fingerprint": "sha256:46aee41a230b8884856cb2bd1376f12bdc22e810b719765a6b508a1e908fa28c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "at initialization: max |out - h| = 0.0\nafter one step on class 3: rows changed in a [3] and in b [3]\n"
+        }
+      ]
+    },
     "conditional-class-conditional-cifar-10": {
-      "code_fingerprint": "sha256:294c30c3fa89e82d896ffa49917fec6892cfbce377fc73acbc645d2127171248",
-      "kind": "asset",
+      "code_fingerprint": "sha256:c6d9f6e9da9e3c76da576628f55709dfcf6fb317ba149945f5a65b93392111fa",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
@@ -32,12 +43,12 @@
       ]
     },
     "conditional-a-conditional-backbone-at-32-by-32-1": {
-      "code_fingerprint": "sha256:4f69a4a34b679fac0a2a7bd3bb6fc4b809f88f53f6f6f25bfb02eb2b4ca0dbe1",
+      "code_fingerprint": "sha256:98cec847f173725ba19dd930d1dcbe06f9caa4aa51d665fed66e01f352082e7f",
       "kind": "text",
       "outputs": []
     },
     "conditional-a-conditional-backbone-at-32-by-32-2": {
-      "code_fingerprint": "sha256:3f304c36a908634d20abe24b33dfbd3856b250edd822f714ec31d33c345dfa9d",
+      "code_fingerprint": "sha256:3ecfe4897e3141d8a4a3d49d7af03933f2fe87a74063882a1c44c8a37585bda6",
       "kind": "text",
       "outputs": [
         {
@@ -48,98 +59,144 @@
       ]
     },
     "conditional-training-with-the-chapter-s-loss-2": {
-      "code_fingerprint": "sha256:93e6df411358d97df0ef904e28f6be3a2adbf01b5eb1c6a1451c378bad628d3e",
+      "code_fingerprint": "sha256:d44405397fb83a5bee1f5a22601d84f9fc2ca2154bac613ed3bdd896ed3652e7",
       "kind": "text",
       "outputs": []
     },
     "conditional-training-with-the-chapter-s-loss-3": {
-      "code_fingerprint": "sha256:9870c71a3e5d75833aae684befbbf545262201c96daa06a1120a1dd435e61ef1",
+      "code_fingerprint": "sha256:7c034987504ba03c5c472f5f19a115414e654606f69833b97d6f64f810c40ffd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "critic loss 0.52 (+ penalty 0.061), generator loss 1.06, pair accuracy 0.79\n"
+          "text": "last 5,000 steps: critic loss 0.52 (+ penalty 0.062), generator loss 1.05, pair accuracy 0.79\nfirst 2,000 steps: pair accuracy 0.83\n"
         }
       ]
     },
     "conditional-training-with-the-chapter-s-loss-4": {
-      "code_fingerprint": "sha256:37b101ba694ddd938b401fe07b024c4817b544c484f1161ef0a456a6a1538b6a",
+      "code_fingerprint": "sha256:08afbfbb3bce4a2c7791305a9fc4ee526d90eb322b99f5bff0168b4582d6bc55",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-4-1.svg",
-          "bytes": 53022,
-          "sha256": "sha256:9572bf89688c93edfae3389eaafad705afc7ab9ff5b6b72c0d97d264eaa62297"
+          "bytes": 53020,
+          "sha256": "sha256:8bb7ac27af7b0298d5ea2b8e9be9e8db40f2221ed03f21cbe270a14b6f0f34a6"
         }
       ]
     },
     "conditional-training-with-the-chapter-s-loss-5": {
-      "code_fingerprint": "sha256:0dc3160195d3f9ecba046d931cd5a82d49bca1b8ea7dbfb472dc4498684badc1",
+      "code_fingerprint": "sha256:3b600da347d9e9965c5aa464f5301581e3ad31a83a7893ba5c1c91b89aabcfe6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "conditional/conditional-training-with-the-chapter-s-loss-5-1.svg",
-          "bytes": 529221,
-          "sha256": "sha256:04edcfb28b0ada28c1cb49fcf2ca375c058c1cc6982172620dd92ad2cb7fcae5"
+          "bytes": 525661,
+          "sha256": "sha256:96f96b32ab62e7e67569624d44c2548ff6d7d5c91bab2aa123055967ec3d6566"
         }
       ]
     },
     "conditional-measuring-condition-alignment-1": {
-      "code_fingerprint": "sha256:9f5d6b625779e337b0c13efeaeab2365d3c392af0c17e93351cb39147e483487",
+      "code_fingerprint": "sha256:51eae831b5398363b5155730720336849086b5d0f7aee84d395c79668268e2d1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CIFAR-10 test accuracy: 0.778\n"
+          "text": "CIFAR-10 test accuracy: 0.779\n"
         }
       ]
     },
     "conditional-alignment-per-class-1": {
-      "code_fingerprint": "sha256:3427ed721288ea5f93bed2000dcbec857b6dc8812a2c12dadf5e558f81566d3d",
+      "code_fingerprint": "sha256:f70d6d51f0634b4a6a49411228d1d23e02bb36af89240b84565c0fb519b09473",
       "kind": "text",
       "outputs": []
     },
     "conditional-measuring-condition-alignment-2": {
-      "code_fingerprint": "sha256:b888e65de0bd3842dc0eb2bee728488e9a196cb8424c99fda7458a00dec3898f",
+      "code_fingerprint": "sha256:5d69c367c74ca7c494f8b069f0eddf3ecb5953ff402ab53a157ce0a9c9a54e4c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class         alignment   real    gap\nairplane           0.74   0.78  -0.05\nautomobile         0.81   0.91  -0.10\nbird               0.65   0.66  -0.01\ncat                0.50   0.59  -0.09\ndeer               0.64   0.71  -0.07\ndog                0.65   0.75  -0.10\nfrog               0.87   0.85  +0.01\nhorse              0.72   0.80  -0.08\nship               0.87   0.86  +0.00\ntruck              0.78   0.86  -0.09\nmean               0.72   0.78  -0.06\n"
+          "text": "class         alignment   real    gap\nairplane           0.80   0.78  +0.01\nautomobile         0.82   0.91  -0.09\nbird               0.66   0.67  -0.01\ncat                0.54   0.57  -0.03\ndeer               0.66   0.71  -0.05\ndog                0.69   0.76  -0.06\nfrog               0.78   0.85  -0.07\nhorse              0.76   0.80  -0.05\nship               0.86   0.87  -0.01\ntruck              0.79   0.87  -0.08\nmean               0.74   0.78  -0.04\n"
         }
       ]
     },
     "conditional-fidelity-and-within-class-diversity-1": {
-      "code_fingerprint": "sha256:84c591cac9d65a871ca75b85f5eedcd477c370169514e2f3c49d3bf185e49adc",
+      "code_fingerprint": "sha256:06e13ad47cc0fdb9a1b44f019a5b277c623bfcffc767906f31cf2332c027453b",
       "kind": "text",
       "outputs": []
     },
     "conditional-measuring-condition-alignment-4": {
-      "code_fingerprint": "sha256:87c1e22a3bb59320d2059dc0ea51b57a693b9758923029efa4533893f081e42a",
+      "code_fingerprint": "sha256:4c1997fe47fc4b3f3de2fab1e1fd2ae8c55dccf9f642277a57be6786abda7370",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "comparison              FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)  out-of-range\nreal vs. real                     0.67             -0.007            --\ngenerated vs. real                2.34              0.117         0.009\nwithin-class feature variance: generated 0.167, real 0.216, second real set 0.208\n"
+          "text": "against the reference     FD (CIFAR-CNN)  MMD^2 (CIFAR-CNN)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "real (the floor)                    0.15             -0.001\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "generated                           1.60              0.105\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "generated, second draw              1.65              0.108\ngenerated values outside [-1, 1]: 0.010\n"
         }
       ]
     },
-    "conditional-measuring-condition-alignment-5": {
-      "code_fingerprint": "sha256:aa23592a2da81a71d22970f06d0f776336d66d9ac16c443585e87a82828000dd",
+    "conditional-fidelity-and-within-class-diversity-2": {
+      "code_fingerprint": "sha256:1e7e15ea9830fc491434d27ced276149e84a51484773bf8281445e309241aaa8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "permuted labels: alignment 0.73 -> 0.03\nmost confident image per class: alignment 1.00, within-class variance 0\n"
+          "text": "per class, k = 3         precision      worst class  recall      worst class\nreal (the floor)              0.85       truck 0.77    0.84        bird 0.80\ngenerated                     0.90       truck 0.85    0.59       horse 0.52\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "generated, second draw        0.90       truck 0.84    0.59       truck 0.53\nwithin-class feature variance: generated 0.174, real 0.217, the floor 0.212\n"
+        }
+      ]
+    },
+    "conditional-a-prototype-baseline": {
+      "code_fingerprint": "sha256:36329ea0f3aec573d234cbc309bc66fe6dbc8526dd759c2a00f9f633e41b18eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "100 per class            alignment     FD   MMD^2 precision  recall\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "real, random                  0.78   0.43  -0.003      0.85    0.85\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "real, nearest centroid        0.91   3.03   0.123      0.97    0.37\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "generated                     0.74   1.59   0.077      0.89    0.67\n"
         }
       ]
     }

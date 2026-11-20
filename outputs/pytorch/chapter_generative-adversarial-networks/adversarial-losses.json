@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0da173a4dc91db9f9c823bb637032f1415ad3426c84afc9972b6bbfc12f66760",
+    "d2l_lib_fingerprint": "sha256:3c1ceff037849aaf6d0a23a135326d3389f2a233757aaa097dd480132445abf3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -48,7 +48,68 @@
           "mime": "image/svg+xml",
           "asset": "adversarial-losses/adversarial-losses-the-capacity-argument-3-1.svg",
           "bytes": 52070,
-          "sha256": "sha256:2c4934f0d2b49ce5d18bfc4cd61ba942fa48913b1379fe025eb58b4aa9ac7f92"
+          "sha256": "sha256:d60bca7102efe40562dc5406577fff660d03468255457244248f007b297b12dd"
+        }
+      ]
+    },
+    "adversarial-losses-distillation-on-two-bands-1": {
+      "code_fingerprint": "sha256:78b4a23b84b35b00e38edfd6710472218fb9bc704aec6e42237d99ac6610ed8d",
+      "kind": "text",
+      "outputs": []
+    },
+    "adversarial-losses-distillation-on-two-bands-2": {
+      "code_fingerprint": "sha256:0050381097e541cc20e4ce85e1b0e697e1529ffc4fc47ca5a81b62e409f2fe79",
+      "kind": "text",
+      "outputs": []
+    },
+    "adversarial-losses-distillation-on-two-bands-3": {
+      "code_fingerprint": "sha256:8d7b56745e07e4d97190be400b46aaaf2b403d58dbe922c27e097bcdbf73214d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "regression, seed 0: 0.97 from the nearer band, 0% upper, 0% lower, 100% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "regression, seed 1: 0.98 from the nearer band, 0% upper, 0% lower, 100% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "regression, seed 2: 0.98 from the nearer band, 0% upper, 0% lower, 100% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic, seed 0: 0.03 from the nearer band, 49% upper, 50% lower, 1% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic, seed 1: 0.08 from the nearer band, 50% upper, 49% lower, 1% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic, seed 2: 0.04 from the nearer band, 50% upper, 49% lower, 1% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic + regression, seed 0: 0.05 from the nearer band, 48% upper, 50% lower, 2% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic + regression, seed 1: 0.06 from the nearer band, 50% upper, 48% lower, 2% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic + regression, seed 2: 0.04 from the nearer band, 48% upper, 51% lower, 1% off the bands\n"
         }
       ]
     }

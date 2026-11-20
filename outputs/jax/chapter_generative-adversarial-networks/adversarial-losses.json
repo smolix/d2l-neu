@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:46a265fbd3a7be7f76ff16dea305199ef721584f6364c4ede72d367ce321f90f",
+    "d2l_lib_fingerprint": "sha256:30ac1ff40a64d0b8989a64b233efaadd168c86655710c8239a8267131f74ed54",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "squared error: 0.98 from the nearer band, 0.02 from x = c, 100% off the bands\nadversarial: 0.05 from the nearer band, 1.00 from x = c, 0% off the bands\n"
+          "text": "squared error: 0.98 from the nearer band, 0.02 from x = c, 100% off the bands\nadversarial: 0.04 from the nearer band, 1.01 from x = c, 0% off the bands\n"
         }
       ]
     },
@@ -47,8 +47,69 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adversarial-losses/adversarial-losses-the-capacity-argument-3-1.svg",
-          "bytes": 52137,
-          "sha256": "sha256:9f8bf1a1954dada8dcd3fcf3fdb5e29771a5dcb2d4ff988a6cd08088c6995944"
+          "bytes": 52157,
+          "sha256": "sha256:ebbc0d07008b7afeceb4f426d01876e3a5aa3028a4cde8eacf2f1475cbc7fbd7"
+        }
+      ]
+    },
+    "adversarial-losses-distillation-on-two-bands-1": {
+      "code_fingerprint": "sha256:6cb9a71fbfa07737534c10de0a96f6e1a7975aa23eb06973d1280f9fd1d353c5",
+      "kind": "text",
+      "outputs": []
+    },
+    "adversarial-losses-distillation-on-two-bands-2": {
+      "code_fingerprint": "sha256:900239787a5136abe97fcca8885774d42f136a7ef5b7a7c24e5857b5e778382e",
+      "kind": "text",
+      "outputs": []
+    },
+    "adversarial-losses-distillation-on-two-bands-3": {
+      "code_fingerprint": "sha256:714deefe4a10b48d844530abcd00b924c489ba0306e1ae4d00ad18f1ff21398e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "regression, seed 0: 0.96 from the nearer band, 0% upper, 0% lower, 100% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "regression, seed 1: 0.97 from the nearer band, 0% upper, 0% lower, 100% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "regression, seed 2: 0.97 from the nearer band, 0% upper, 0% lower, 100% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic, seed 0: 0.03 from the nearer band, 52% upper, 47% lower, 1% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic, seed 1: 0.06 from the nearer band, 50% upper, 49% lower, 1% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic, seed 2: 0.03 from the nearer band, 52% upper, 47% lower, 2% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic + regression, seed 0: 0.04 from the nearer band, 48% upper, 50% lower, 1% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic + regression, seed 1: 0.04 from the nearer band, 49% upper, 50% lower, 1% off the bands\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic + regression, seed 2: 0.04 from the nearer band, 49% upper, 49% lower, 1% off the bands\n"
         }
       ]
     }

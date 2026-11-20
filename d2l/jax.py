@@ -3956,13 +3956,6 @@ class GaussianMixture:
         return (jax.nn.softmax(log_p, 1)[..., None]
                 * (self.means + a * self.std ** 2 / var * r)).sum(1)
 
-    def velocity(self, x, t):
-        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
-        log_p, r, var, a = self._modes(x, 1 - t, t)
-        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
-        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
-        return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
-
     def nll(self, x):
         """Mean negative log-likelihood of clean points, in nats.
 
@@ -3980,6 +3973,15 @@ class GaussianMixture:
         return dict(weights=[round(float(w), 3) for w in weights],
                     stray=round(1 - float(inside.mean()), 4),
                     spread=round(float(near[inside].mean()), 3))
+
+    def velocity(self, x, t):
+        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps.
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        log_p, r, var, a = self._modes(x, 1 - t, t)
+        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
+        return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 
 def scatter_panels(samples, titles=None, data=None, lim=4.5,
                    size=3.0):
@@ -4026,6 +4028,13 @@ class TimeMLP(nnx.Module):
 def train_regression(model, loss_fn, batch_fn, num_steps, key, *,
                      lr=1e-3, cosine=False, ema_half_life=1000, chunk=500):
     """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses.
+
+    The learning rate is constant or, with cosine=True, decays to zero along
+    a cosine. The EMA model averages the weights (d2l.EMA): the weights of
+    ema_half_life updates ago count half as much as the current ones. Each
+    chunk of updates is one jitted scan, a single dispatch to the device:
+    the networks of this chapter are so small that dispatching their
+    updates one at a time would cost more time than running them.
 
     Defined in :numref:`sec_diffusion-denoising`"""
     schedule = optax.cosine_decay_schedule(lr, num_steps) if cosine else lr
@@ -4167,10 +4176,18 @@ class GaussianPath:
         det = a * ds - s * da
         return (ds * x - s * out) / det, (a * out - da * x) / det
 
+    def sigma_bars(self, steps):
+        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
+
+        Defined in :numref:`sec_diffusion-integration`"""
+        a, s = self.grid(steps)
+        with jax.ensure_compile_time_eval():         # constants, even under jit
+            return s / a
+
     def time_at(self, log_snr):
         """The time with a given log-SNR, by bisection (lambda_t falls in t).
 
-        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        Defined in :numref:`sec_diffusion-integration`"""
         def halve(_, interval):
             lo, hi = interval
             mid = (lo + hi) / 2
@@ -4179,14 +4196,6 @@ class GaussianPath:
         lo, hi = jax.lax.fori_loop(0, 50, halve, (jnp.zeros_like(log_snr),
                                                   jnp.ones_like(log_snr)))
         return (lo + hi) / 2
-
-    def sigma_bars(self, steps):
-        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
-
-        Defined in :numref:`sec_diffusion-gaussian-paths`"""
-        a, s = self.grid(steps)
-        with jax.ensure_compile_time_eval():         # constants, even under jit
-            return s / a
 
 def regression_loss(path, kind):
     """Squared error of net(x_t, t) against the target of a kind, t ~ U(0, 1).
@@ -4200,22 +4209,10 @@ def regression_loss(path, kind):
         return (error ** 2).reshape(len(x0), -1).sum(1).mean()  # per example
     return loss_fn
 
-def make_pred(net, path, kind):
-    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
-
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
-    def pred(x, alpha, sigma):
-        log_snr = jnp.where(alpha > 0, 2 * jnp.log(alpha / sigma), -jnp.inf)
-        t = path.time_at(jnp.asarray(log_snr, jnp.float32))
-        x = x * (path.sigma(t) / sigma)         # the same point on our path
-        t = jnp.full((len(x),), t)
-        return path.x0_eps(kind, net(x, t), x, t)
-    return pred
-
 def pred_bar(pred, xb, r):
     """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise.
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     finite = jnp.isfinite(r)
     a = jnp.where(finite, 1 / jnp.sqrt(1 + r ** 2), 0.0)
     return pred(xb * jnp.where(finite, a, 1.0), a,
@@ -4225,7 +4222,7 @@ def ode_sample(pred, x, sigma_bars):
     """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
     noisy point at the first level, unit-variance scale (noise if inf).
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     with jax.ensure_compile_time_eval():         # the grid is a constant
         r = jnp.asarray(sigma_bars)
         from_inf = bool(jnp.isinf(r[0]))
@@ -4236,10 +4233,22 @@ def ode_sample(pred, x, sigma_bars):
     xb = x if from_inf else x * jnp.sqrt(1 + r[0] ** 2)  # x / alpha
     return jax.lax.scan(step, xb, (r[:-1], r[1:]))[0]
 
+def make_pred(net, path, kind):
+    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
+
+    Defined in :numref:`sec_diffusion-integration`"""
+    def pred(x, alpha, sigma):
+        log_snr = jnp.where(alpha > 0, 2 * jnp.log(alpha / sigma), -jnp.inf)
+        t = path.time_at(jnp.asarray(log_snr, jnp.float32))
+        x = x * (path.sigma(t) / sigma)         # the same point on our path
+        t = jnp.full((len(x),), t)
+        return path.x0_eps(kind, net(x, t), x, t)
+    return pred
+
 def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):
     """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0.
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     a, s = path.grid(steps, t_start)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
     ratio = s_s * a_t / (a_s * s_t)

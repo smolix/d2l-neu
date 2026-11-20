@@ -3803,13 +3803,6 @@ class GaussianMixture:
         return (torch.softmax(log_p, 1)[..., None]
                 * (self.means + a * self.std ** 2 / var * r)).sum(1)
 
-    def velocity(self, x, t):
-        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
-        log_p, r, var, a = self._modes(x, 1 - t, t)
-        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
-        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
-        return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
-
     def nll(self, x):
         """Mean negative log-likelihood of clean points, in nats.
 
@@ -3827,6 +3820,15 @@ class GaussianMixture:
         return dict(weights=[round(w, 3) for w in weights.tolist()],
                     stray=round(1 - inside.float().mean().item(), 4),
                     spread=round(near[inside].mean().item(), 3))
+
+    def velocity(self, x, t):
+        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps.
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        log_p, r, var, a = self._modes(x, 1 - t, t)
+        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
+        return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 
 def scatter_panels(samples, titles=None, data=None, lim=4.5,
                    size=3.0):
@@ -3876,8 +3878,16 @@ def train_regression(model, loss_fn, batch_fn, num_steps, *,
                      compiled=True):
     """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses).
 
+    The learning rate is constant or, with cosine=True, decays to zero along
+    a cosine. The EMA model averages the weights (d2l.EMA): the weights of
+    ema_half_life updates ago count half as much as the current ones. On a
+    GPU, Adam is fused into one kernel and, with compiled=True, the loss and
+    its gradient run as CUDA graphs: the networks of this chapter are so
+    small that launching their kernels one at a time would cost more time
+    than running them.
+
     Defined in :numref:`sec_diffusion-denoising`"""
-    params = list(model.parameters())  # fused Adam: one kernel per step on a GPU
+    params = list(model.parameters())
     opt = torch.optim.Adam(params, lr=lr, fused=params[0].is_cuda)
     sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
              if cosine else None)
@@ -4007,23 +4017,23 @@ class GaussianPath:
         det = a * ds - s * da
         return (ds * x - s * out) / det, (a * out - da * x) / det
 
+    def sigma_bars(self, steps):
+        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
+
+        Defined in :numref:`sec_diffusion-integration`"""
+        a, s = self.grid(steps)
+        return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
+
     def time_at(self, log_snr):
         """The time with a given log-SNR, by bisection (lambda_t falls in t).
 
-        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        Defined in :numref:`sec_diffusion-integration`"""
         lo, hi = torch.zeros_like(log_snr), torch.ones_like(log_snr)
         for _ in range(50):
             mid = (lo + hi) / 2
             later = self.log_snr(mid) > log_snr      # the answer lies after mid
             lo, hi = torch.where(later, mid, lo), torch.where(later, hi, mid)
         return (lo + hi) / 2
-
-    def sigma_bars(self, steps):
-        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
-
-        Defined in :numref:`sec_diffusion-gaussian-paths`"""
-        a, s = self.grid(steps)
-        return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
 
 def regression_loss(path, kind):
     """Squared error of net(x_t, t) against the target of a kind, t ~ U(0, 1).
@@ -4036,22 +4046,10 @@ def regression_loss(path, kind):
         return (error ** 2).flatten(1).sum(1).mean()  # ||error||^2 per example
     return loss_fn
 
-def make_pred(net, path, kind):
-    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
-
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
-    def pred(x, alpha, sigma):
-        log_snr = 2 * math.log(alpha / sigma) if alpha > 0 else -math.inf
-        t = path.time_at(torch.tensor(log_snr, dtype=torch.float64))
-        x = x * (path.sigma(t).item() / sigma)  # the same point on our path
-        t = torch.full((len(x),), t.item(), device=x.device)
-        return path.x0_eps(kind, net(x, t), x, t)
-    return pred
-
 def pred_bar(pred, xb, r):
     """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise.
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     if math.isinf(r):
         return pred(xb, 0.0, 1.0)
     a = 1 / math.sqrt(1 + r ** 2)
@@ -4062,7 +4060,7 @@ def ode_sample(pred, x, sigma_bars):
     """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
     noisy point at the first level, unit-variance scale (noise if inf).
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     r0 = sigma_bars[0]
     xb = x if math.isinf(r0) else x * math.sqrt(1 + r0 ** 2)  # x / alpha
     for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
@@ -4070,11 +4068,23 @@ def ode_sample(pred, x, sigma_bars):
         xb = x0 + r_s * eps                    # the Euler (= DDIM) step
     return xb
 
+def make_pred(net, path, kind):
+    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
+
+    Defined in :numref:`sec_diffusion-integration`"""
+    def pred(x, alpha, sigma):
+        log_snr = 2 * math.log(alpha / sigma) if alpha > 0 else -math.inf
+        t = path.time_at(torch.tensor(log_snr, dtype=torch.float64))
+        x = x * (path.sigma(t).item() / sigma)  # the same point on our path
+        t = torch.full((len(x),), t.item(), device=x.device)
+        return path.x0_eps(kind, net(x, t), x, t)
+    return pred
+
 @torch.no_grad()
 def ancestral_sample(pred, x, path, steps, *, t_start=1.0):
     """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0.
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     a, s = path.grid(steps, t_start)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])

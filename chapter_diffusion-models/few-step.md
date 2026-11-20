@@ -710,14 +710,14 @@ are too tight, with a spread of 0.31 to 0.34 after one jump and 0.37 to
 0.38 after two and four. That is also why its four jumps stray less often
 than the data themselves.
 
-Two runs per student are few, so we retrained each two-time student with
-seeds 2 to 7 (outside the notebook, same code). One jump kept the weights
-within 0.007 in every run. After four jumps the distilled student stayed
-within 0.006 in all six, while one or two MeanFlow students in six ended
-0.013 to 0.023 off, three to five times the miss of a fresh draw. So
-MeanFlow's weights after several jumps depend on the training run, and a
-single run is no guide to them; its one-jump weights and its tight modes
-recur in every run.
+Two runs per student are few. Changing the seeds of the training cell to
+2 through 7 gives six runs of each two-time student, and their weight
+errors tell two stories. One jump stays within 0.007 in every run, and
+the distilled student stays within 0.006 at two and four jumps as well.
+After four MeanFlow jumps, however, one or two runs in six end 0.013 to
+0.023 off, several times the miss of a fresh draw. MeanFlow's weights
+after several jumps thus depend on the training run, and a single run is
+no guide to them; the distilled student's do not.
 
 :begin_tab:`pytorch`
 In this tab both MeanFlow runs of the table are among the steady ones:
@@ -1480,7 +1480,9 @@ target varies between examples at the same point.
 One evaluation: weights within 0.007. Spread: data 0.47, distilled 0.45 to
 0.46, MeanFlow 0.31 to 0.34. Strays: data 1%, distilled 2%, MeanFlow 4%.
 The two-time students differ only in the reference velocity, and that
-alone shrinks the spread by more than 0.1.
+alone shrinks the spread by more than 0.1. After four jumps MeanFlow's
+weights vary between training runs (up to about 0.02 off over six seeds);
+the distilled student's stay within 0.006.
 :::
 :::
 

@@ -880,11 +880,11 @@ d2l.plot([ns_teacher, ns_student, [1, 50]],
          xscale='log', yscale='log', fmts=('o-', 's-', 'k:'))
 ```
 
-The teacher's FD falls from about 150 to 170 at one Euler step and 80 to
-85 at two, to about 7 at ten and 2.6 to 2.7 at fifty, against a floor of
+The teacher's FD falls from about 150 to 170 at one Euler step and about
+80 to 85 at two, to about 7 at ten and 2.6 to 2.7 at fifty, against a floor of
 about 0.8. The student lies far below this curve at small budgets: one
 jump scores 11 to 12, between four and five times the teacher's
-fifty-step FD, two jumps about twice it, and four within about 1.5 times.
+fifty-step FD, two jumps nearly twice it, and four within about 1.5 times.
 Read across the plot, two evaluations of the student are worth about
 fifteen Euler steps of the teacher, and one about seven.
 
@@ -1484,7 +1484,7 @@ updates on the teacher's velocity. FD: Fréchet distance of classifier
 features to 1,000 test images; floor (two sets of test images) about 0.8.
 
 - Against the teacher's fifty steps: one jump 4 to 5 times the FD, two
-  about twice, four about 1.5 times.
+  nearly twice, four about 1.5 times.
 :::
 :::
 :::

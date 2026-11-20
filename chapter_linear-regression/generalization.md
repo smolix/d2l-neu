@@ -317,8 +317,8 @@ d2l.plt.legend(['test', '5-fold cross-validation'], ncol=2, frameon=False,
 
 Without ever glancing at the test set, repeated 5-fold cross-validation reliably
 locates the bottom of the test-error bowl—usually selecting degree $3$, or
-occasionally a nearby degree whose test error is nearly indistinguishable (see
-exercise :exref:`ex_generalization-cv-reliability`). Near the minimum, the two
+occasionally a nearby degree whose test error is nearly indistinguishable.
+Near the minimum, the two
 curves track within a small factor, with cross-validation naturally a bit noisier
 since it averages over $20$ points instead of $1{,}000$. At high degrees, notice
 why cross-validation shoots up even earlier and higher than test error: each

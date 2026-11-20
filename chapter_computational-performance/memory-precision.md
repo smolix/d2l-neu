@@ -731,7 +731,7 @@ stored byte, and its time is within a few percent of the floor plus the
 update.
 
 bf16 then runs 1.5 to 1.75 times as fast as tf32. Why not twice? The floor
-plus the update is $6.7 + 1.3 = 8.0$ ms, and the step takes 8.4 to 9.6 ms.
+plus the update is $6.7 + 1.3 = 8.0$ ms, and the step takes 8.3 to 9.7 ms.
 The update moves bytes, not FLOPs, so it takes as long as before: about a
 tenth of the tf32 step, it is a seventh of the bf16 one. The casts of
 weights and gradients between fp32 and bf16 move bytes as well. Whatever
@@ -1035,21 +1035,29 @@ for m in (1, 4):
 The peak falls to about half, and the gradients that persist across the
 micro-batches are a large part of what remains. The time grows by a tenth
 to a fifth, far more than the spread of the five timings: accumulation over
-micro-batches of 1,024 tokens is not free. The fraction $2I^*/n$ also says
-how to make it cheap. At micro-batches of 4,096 tokens it is 4%.
+micro-batches of 1,024 tokens is not free. Nor is the extra time spent
+waiting. In both rows the device-busy time, the kernel times of one step
+summed, equals the step time to the millisecond: the GPU never sits idle
+between kernels, and every added millisecond is work. The fraction
+$2I^*/n$ also says how to make it cheap. At micro-batches of 4,096 tokens
+it is 4%.
 
 :begin_tab:`pytorch`
 The two-block GPT runs in tf32 here, because the timing cell of
-:numref:`subsec_mp-mixed` left `'high'` set. The step takes 17 ms longer,
+:numref:`subsec_mp-mixed` left `'high'` set. The step takes 16 ms longer,
 more than twice the 7 ms of accumulator traffic that we predicted. A
-profile of the two steps (:numref:`sec_perf_model`), which this cell does
-not run, puts the rest in the additions into `.grad`, which run below the
-full bandwidth, and in idle time between the kernels of the smaller
-micro-batches.
+profile that sorts the kernels by kind (:numref:`sec_perf_model`) finds
+two causes. The matrix products run slower on micro-batches of 1,024
+tokens. And there are more additions than our count has: the output layer
+shares its weights with the token embedding, so in every micro-batch
+autograd first adds the two gradients of that table, about half the
+parameters of this model, and only then adds the result into `.grad`.
+Tying the weights saves a table's worth of memory and charges for it in
+every micro-batch.
 :end_tab:
 
 :begin_tab:`jax`
-The step takes 9 ms longer, close to the 7 ms of accumulator traffic that
+The step takes 10 ms longer, close to the 7 ms of accumulator traffic that
 we predicted at the full specified bandwidth, which a copy never quite
 reaches.
 :end_tab:
@@ -1747,7 +1755,8 @@ as 1 or 4 micro-batches. Predicted:
 
 @!memory-precision-accumulated-step
 
-Divide each loss by $m$; clip and step after the last micro-batch.
+- Device busy for the whole step: the extra time is work, not idle gaps.
+- Divide each loss by $m$; clip and step after the last micro-batch.
 :::
 
 ::: {.slide title="Check: Two Sequences with m = 256, or Four with m = 128?"}

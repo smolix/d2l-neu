@@ -318,6 +318,10 @@ for i in range(len(P0)):
     print(f'{float(runs[0.4][0][i, 0]):9.2f} {float(mlp_loss(P0[i])):6.3f} |'
           + '|'.join(f' {float(s[i, -1]):9.2f} {float(l[i]):7.1e} '
                      f'{float(r[i]):6.0%} ' for s, l, r in runs.values()))
+```
+
+```{.python .input #gd-the-edge-of-stability-1}
+%%tab pytorch, jax
 curves = {rf'$\eta = {eta}$': eta / 2 * s for eta, (s, _, _) in runs.items()}
 d2l.plot_curves(curves, 'step', r'sharpness$\,/\,(2/\eta)$',
                 x=np.arange(0, 20001, 500), reference=1)
@@ -456,7 +460,7 @@ $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}): \qquad x_1 \left
 @!optimization-intro-an-ill-conditioned-valley
 :::
 
-::: {.slide title="Balancing Both Factors Gives 47 Steps at η = 0.476" layout="tight"}
+::: {.slide title="Balancing Both Factors Gives 47 Steps at η = 0.476"}
 [A narrow valley]{.kicker}
 
 @!optimization-intro-an-ill-conditioned-valley-1
@@ -486,7 +490,13 @@ over it and creeps into the shallow one (factor $-0.96$). The learning
 rate selects by curvature, not by depth.
 :::
 
-::: {.slide title="Sharpness Stops at 2/η: 5.0 at η = 0.4, 8 or Just Below at η = 0.25" layout="tight"}
+::: {.slide title="Normalized Sharpness Climbs to 1 and Plateaus There"}
+[Edge of stability]{.kicker}
+
+@!gd-the-edge-of-stability-1
+:::
+
+::: {.slide title="Sharpness Stops at 2/η: 5.0 at η = 0.4, 8 or Just Below at η = 0.25"}
 [Edge of stability]{.kicker}
 
 @!optimization-intro-the-edge-of-stability-2

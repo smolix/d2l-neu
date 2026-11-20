@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 18945,
-          "sha256": "sha256:5177b4c8f7f9158fed24d46cc100e65d42df6fa75e8577dd06a805c7a09f4255"
+          "sha256": "sha256:ea1d2af3e32da59ad47749cac3b5bf2d7355906af6b97ed90934a2cf9397da11"
         }
       ]
     },
@@ -64,19 +64,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "f''(7.27) = 1.81, f''(-1.83) = 0.98\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eta 0.5, 2/eta = 4: x = 7.269 after 10 steps, 7.269 after 100\neta 2, 2/eta = 1: x = -1.528 after 10 steps, -1.821 after 100\n"
+          "text": "f''(7.27) = 1.81, f''(-1.83) = 0.98\neta 0.5, 2/eta = 4: x = 7.269 after 10 steps, 7.269 after 100\neta 2, 2/eta = 1: x = -1.528 after 10 steps, -1.821 after 100\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gd/gd-local-minima-1.svg",
           "bytes": 20739,
-          "sha256": "sha256:7b4dc3029ffb17e5db165418634ee535209c54247dc16cf5fb0c5840762387ed"
+          "sha256": "sha256:addc9cc9cfadd61381e15ee92d53628df601505846adadab4e7623008b90cdc7"
         }
       ]
     },
@@ -86,8 +81,8 @@
       "outputs": []
     },
     "optimization-intro-the-edge-of-stability-2": {
-      "code_fingerprint": "sha256:bc6211a9b289c10ffe3c3511d686e924a5368af3033a993da75454a4a7ad2928",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:6168712086a2df87d5c0b052a465cfe5813d593ab7de6f30db643cb2e67eb3f9",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
@@ -97,19 +92,25 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     2.65  0.232 |      5.01 4.6e-04    50% |      7.97 1.0e-04     0% \n     2.57  0.318 |      5.00 3.5e-04    50% |      7.70 9.8e-05     0% \n     4.19  0.640 |      5.01 2.8e-03    50% |      7.97 8.2e-04    50% \n     4.41  0.486 |      5.00 4.7e-04    50% |      7.92 6.3e-05     0% \n     2.83  0.492 |      5.00 7.0e-04    50% |      8.04 2.5e-04    50% \n     3.09  0.533 |      5.00 2.7e-04    50% |      7.78 1.6e-04     0% \n     3.23  0.898 |      5.00 4.9e-04    50% |      8.01 1.9e-04    50% \n     3.48  0.496 |      4.99 3.6e-04    50% |      7.93 5.5e-05     0% \n     2.62  0.653 |      5.00 2.2e-04    50% |      7.93 3.8e-05     0% \n     3.50  0.433 |      5.00 8.7e-04    50% |      7.98 2.8e-04    50% \n"
-        },
+          "text": "     3.49  0.932 |      5.01 5.1e-04    50% |      8.01 1.8e-04    50% \n     4.11  0.422 |      5.01 3.7e-04    50% |      7.63 6.8e-05     0% \n     4.95  0.585 |      5.00 9.8e-04    50% |      7.98 1.7e-04    50% \n     2.80  0.597 |      5.01 5.0e-04    50% |      7.98 1.1e-04    50% \n     4.15  0.599 |      5.00 3.4e-04    50% |      7.98 7.2e-05     7% \n     3.78  0.237 |      5.00 4.2e-04    50% |      8.01 1.1e-04    50% \n     3.31  0.271 |      5.00 3.1e-04    50% |      7.94 6.4e-05     0% \n     2.83  0.306 |      4.99 4.3e-04    50% |      7.98 2.0e-04    50% \n     2.62  0.229 |      5.01 3.9e-04    50% |      7.99 4.5e-05     0% \n     2.68  0.767 |      5.01 3.7e-04    50% |      8.01 1.8e-04    50% \n"
+        }
+      ]
+    },
+    "gd-the-edge-of-stability-1": {
+      "code_fingerprint": "sha256:8dfd90be3203559a7c011f8ed09bba36865590fbc523b14f0bddb17acab2dad4",
+      "kind": "asset",
+      "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "gd/optimization-intro-the-edge-of-stability-2-1.svg",
-          "bytes": 34286,
-          "sha256": "sha256:d070f8ea379aee9c639a9dbf6b9991853fef73c81b29f70944d9b7ffb5a93c56"
+          "asset": "gd/gd-the-edge-of-stability-1-1.svg",
+          "bytes": 34159,
+          "sha256": "sha256:ae24af55c6853688fdce960db97bf9661ad0869b72813d8d8ae9304da98359fb"
         }
       ]
     },
     "gd-preconditioning": {
-      "code_fingerprint": "sha256:18bbc713505848d35c8cb7ac0d51a53c559a27e3a9070a5a0fa8659e0130720a",
+      "code_fingerprint": "sha256:d064ecf8f09cede3795b6327c950e03d07c814d449b94f5a9fc02bc2355eb304",
       "kind": "mixed",
       "outputs": [
         {
@@ -122,7 +123,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-preconditioning-1.svg",
           "bytes": 16677,
-          "sha256": "sha256:53956da4cc869419221af3f52887e3bc69ddc252b95a5160e700cc3ae40de132"
+          "sha256": "sha256:9a510c13f2588b3d487f860a7c47a52288a0debd673de59f8defc8bf4484fe26"
         }
       ]
     }

@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 18945,
-          "sha256": "sha256:1a2f2a9bfa6c13a96a43540e33e411c7bfa25aa5e0fe263ead66821e8266eeac"
+          "sha256": "sha256:b2a39444758209187b40f394b1007f2cdf1c7155b1d8cdf2a141763ccc83f12b"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-local-minima-1.svg",
           "bytes": 20734,
-          "sha256": "sha256:b8f882fc0ea4431d8661af0cf8a39c8a0c32f20dbe910ec6c769ea60add20ee7"
+          "sha256": "sha256:8ebc47deddd41980d3867d40f448ada255e32af307918652edcd8b8d4411bfc2"
         }
       ]
     },
@@ -76,25 +76,31 @@
       "outputs": []
     },
     "optimization-intro-the-edge-of-stability-2": {
-      "code_fingerprint": "sha256:61d1875a5222dca7feb5573164207aa0026493a52dc983ccb963b30ff8cbb182",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:6b854f058d5fe4a0b212d6f1f8fe40685f1bef306a527ad6650694bcb80edbd1",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      start      |    eta 0.4, 2/eta = 5     |    eta 0.25, 2/eta = 8     \nsharpness   loss | sharpness    loss  rising | sharpness    loss  rising \n     3.17  0.919 |      4.99 4.0e-04    50% |      7.74 1.4e-04     0% \n     4.92  0.621 |      5.00 4.1e-04    50% |      8.01 4.1e-04    46% \n     3.44  0.401 |      5.00 2.9e-04    50% |      7.83 6.5e-05     0% \n     3.39  0.348 |      5.00 4.1e-04    50% |      7.72 2.5e-05     0% \n     2.67  0.494 |      5.00 4.2e-04    50% |      7.99 1.4e-04    50% \n     3.78  0.558 |      4.99 1.1e-03    50% |      8.01 8.1e-05    50% \n     5.29  0.240 |      5.00 3.7e-04     0% |      8.01 4.8e-04    50% \n     2.91  0.808 |      5.00 3.4e-04    50% |      7.96 3.6e-05     0% \n     3.10  0.276 |      5.00 3.3e-04     0% |      8.00 5.1e-04     0% \n     3.78  0.921 |      5.00 4.8e-04    50% |      7.99 4.1e-04    50% \n"
-        },
+          "text": "      start      |    eta 0.4, 2/eta = 5     |    eta 0.25, 2/eta = 8     \nsharpness   loss | sharpness    loss  rising | sharpness    loss  rising \n     2.92  0.540 |      5.00 3.3e-04    50% |      8.00 3.5e-04    50% \n     2.45  0.257 |      5.00 1.9e-03    50% |      7.78 1.0e-04     0% \n     5.18  0.669 |      4.99 3.9e-04    50% |      7.98 1.4e-04    50% \n     3.46  0.323 |      4.99 4.1e-04    50% |      7.98 2.9e-04    49% \n     3.33  0.736 |      4.99 4.2e-04    50% |      8.01 2.0e-04    50% \n     4.62  0.805 |      4.99 3.9e-04    50% |      8.02 1.7e-04    50% \n     2.95  1.170 |      5.01 3.2e-04    50% |      7.98 7.4e-05     0% \n     3.98  1.408 |      5.00 3.0e-04     0% |      8.00 3.9e-04    50% \n     4.06  0.706 |      5.00 2.9e-04    50% |      8.00 2.3e-04     1% \n     3.19  0.376 |      5.00 2.7e-04    50% |      7.98 4.4e-05     0% \n"
+        }
+      ]
+    },
+    "gd-the-edge-of-stability-1": {
+      "code_fingerprint": "sha256:e04e561ab354099bcc6d55dade8cdadf33ab32d1764949366adb7e07f672de91",
+      "kind": "asset",
+      "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "gd/optimization-intro-the-edge-of-stability-2-1.svg",
-          "bytes": 34162,
-          "sha256": "sha256:be26f7ca98c5e81058ee55dd67af7492ff682e4ae2c899790f83ed44965f2336"
+          "asset": "gd/gd-the-edge-of-stability-1-1.svg",
+          "bytes": 34153,
+          "sha256": "sha256:6094c2fd0a4bff2afcde4dc38bca531eeab2b0d59e9280ef1f02105641aa5f53"
         }
       ]
     },
     "gd-preconditioning": {
-      "code_fingerprint": "sha256:1487f2c625f0c865394ee7e8764f7f6c63926e949365e714228965b5e2f181cd",
+      "code_fingerprint": "sha256:f2483d55853f942e21732dc9b035292f438b91da8e75168fa7948a5e63d36c39",
       "kind": "mixed",
       "outputs": [
         {
@@ -107,7 +113,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-preconditioning-1.svg",
           "bytes": 16716,
-          "sha256": "sha256:12eb13d378b38dcde88bc07a8c342e4d9a4e9a23494fbd5484b7ff9a41244cef"
+          "sha256": "sha256:9597bb93a5df8a8c04ffebae3ae334d56a1d5e7a60df76b5e0f17894ffa884aa"
         }
       ]
     }

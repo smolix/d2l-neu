@@ -481,9 +481,12 @@ updates the parameters.
 :end_tab:
 
 :begin_tab:`jax`
-We take one step on one GPU and one step on two GPUs, from the same
-initialization and on the same 256 examples, and compare the changes of the
-parameters.
+`update(k, idx)` returns the change of the parameters in one step on $k$
+GPUs, always from the same initialization. We take this step on two GPUs
+and compare it with two references on one GPU: one step on all 256
+examples, and the mean of the steps on the two halves. For plain SGD
+from one starting point, that mean is the step on the accumulated
+gradients of the halves (:numref:`subsec_mp-accumulation`).
 :end_tab:
 
 ```{.python .input #multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5}
@@ -575,18 +578,23 @@ minibatch, with the added collectives (exercise :exref:`ex_mgp-syncbn`).
 :end_tab:
 
 :begin_tab:`jax`
-The two steps differ by a fifth of a percent of the largest update. That
-is small, but far larger than the rounding differences of the one-step
-check in :numref:`subsec_mg-byhand`, so the number alone does not settle
-which choice was made. The program does. Under `jit`, the mean and the
-variance of a batch normalization layer are means over an axis that is
-split across the GPUs, so the compiler computes them over the whole
-minibatch and inserts allreduces for them: the sharded step is meant to
-compute the single-GPU step on all 256 examples. The compiled
-program shows these allreduces next to those of the gradients.
-`allreduce_megabytes` finds every allreduce instruction in the text of
-the compiled program and adds up the sizes of the fp32 arrays that it
-returns.
+The check settles the question by itself. The two-GPU step differs from
+one GPU on all 256 examples by a few times $10^{-5}$, about two orders of
+magnitude less than from the accumulated halves, which miss by about a
+tenth of the largest update. The first gap is of the size that summing
+the same numbers in a different order produces in this network: on two
+GPUs, every weight gradient and every batch-norm statistic is summed in
+two parts, one per GPU, before the parts are added. The second gap is
+what per-shard statistics would cost. So the sharded step is the step on
+the whole minibatch.
+
+The reason lies in the program. Under `jit`, the mean and the variance of
+a batch normalization layer are means over an axis that is split across
+the GPUs, so the compiler computes them over the whole minibatch and
+inserts allreduces for them, exactly as it does for the gradients. We can
+find these allreduces in the compiled program. `allreduce_megabytes`
+reads every allreduce instruction in its text and adds up the sizes of
+the fp32 arrays that it returns.
 :end_tab:
 
 ```{.python .input #multi-gpu-practice-a-one-step-check-1}
@@ -831,10 +839,10 @@ if d2l.num_gpus() >= 2:
 ```
 
 Each GPU sends at about 2.4 GB/s. An allreduce of ResNet-18's gradients
-that nothing overlaps takes 18 ms on two GPUs and, with the ring factor
-of 1.5, 28 ms on four. The measured exposed times are close to these
-numbers, and from two GPUs to four they grow by about half, as the ring
-factor predicts. The cost model gets the bytes right. Overlap hides far
+that nothing overlaps takes about 18.5 ms on two GPUs and, with the ring
+factor of 1.5, about 28 ms on four. The measured exposed times are close
+to these numbers, and from two GPUs to four they grow by about half, as
+the ring factor predicts. The cost model gets the bytes right. Overlap hides far
 less of the communication on this machine than the bucket model
 predicts.
 
@@ -863,7 +871,7 @@ For each configuration `profile_step` also profiles ten steps on GPU 0, as
 in :numref:`sec_perf_model`, and splits the device time per step into
 NCCL's kernels and all others. If the bucket model held, the step without
 communication would match the one-GPU step, NCCL's kernels would run for
-about $S/\beta_\textrm{link}$, 18 ms, and the other kernels would take as
+about $S/\beta_\textrm{link}$, 18.5 ms, and the other kernels would take as
 long as on one GPU.
 
 :begin_tab:`pytorch`
@@ -948,9 +956,9 @@ second of device work per step, even one Python thread would keep two
 GPUs fed, so how the tools organize the host costs nothing and gains
 nothing for this model. All of the extra time is communication.
 
-NCCL's kernels run for about 20 ms per step, close to the 18 ms of the
-bare benchmark, so the allreduces run as fast as they do alone and the
-second assumption holds. What fails is the third: the computation
+NCCL's kernels run for 20 to 22 ms per step, close to the 18.5 ms of the
+bare benchmark, so the allreduces run about as fast as they do alone and
+the second assumption holds. What fails is the third: the computation
 kernels take longer when an allreduce runs beside them. Between our GPUs,
 NCCL moves the bytes through host memory with GPU kernels of its own,
 which most likely hold some of the GPU's processors for as long as an
@@ -971,9 +979,9 @@ slower computation.
 :end_tab:
 
 :begin_tab:`jax`
-For 11 ms of the step GPU 0 only communicates (119 against 108 ms of
-computation). These 11 ms hold the last gradient buffer, which full
-overlap would leave exposed (8 to 11 ms), and some of the small
+For about 12 ms of the step GPU 0 only communicates (119.4 against
+107.7 ms of computation). These 12 ms hold the last gradient buffer,
+which full overlap would leave exposed (8 to 11 ms), and some of the small
 allreduces of the statistics, which nothing can hide. The other 10 ms of
 NCCL's kernels run beside the computation, which takes 8 ms longer than
 without communication. Most of what overlap hides comes back as slower
@@ -1016,7 +1024,7 @@ if d2l.num_gpus() >= 2:
 ```
 
 The bare allreduce runs four to five times faster, and the predicted
-communication of ResNet-18 falls from about 18 ms to about 4 ms. It is
+communication of ResNet-18 falls from about 18.5 ms to about 4 ms. It is
 tempting to switch it on and declare victory. The setting helps only on
 machines whose GPUs lack peer-to-peer access, only with the NCCL versions
 that still contain it, and only if the training run survives it.
@@ -1028,9 +1036,10 @@ although the same collectives complete in the bare benchmark (exercise
 :end_tab:
 
 :begin_tab:`jax`
-We have not run the training step of this section with the setting;
-whether it completes, and how much faster it runs, is the subject of
-exercise :exref:`ex_mgp-transport`.
+On our machine the training step of this section completes with the
+setting, in a run outside this notebook. One run gives no range, so how
+much faster it trains is left to exercise :exref:`ex_mgp-transport`,
+which measures it with repeats.
 :end_tab:
 
 We train with NCCL's default. A setting that is not documented, and that
@@ -1061,7 +1070,7 @@ partitions, and it groups the gradients into buckets whose allreduces
 start while the backward pass is still running. A one-step check against
 one GPU shows what the parallel step computes; under batch normalization
 an implementation must choose between per-shard and global statistics,
-and the check, with the compiled program where there is one, tells which.
+and the check, set against both references, tells which.
 On our four RTX 4090s, which exchange gradients through host memory,
 four GPUs do the work of a little over three for ResNet-18, and two GPUs
 that do not communicate step as fast as one. The exposed communication is
@@ -1235,8 +1244,10 @@ same model would lose almost nothing.
        saturate, and does the gap measured at 256 MB hold at every size?
     1. Write the training of this section into a script and run it on two
        GPUs in a fresh process with the setting, under a time limit.
-       Does training complete, and at what speed relative to the default
-       transport?
+       Does training complete on your machine? Time a few hundred steps
+       under each transport, in several fresh processes each, and decide
+       whether the difference in speed is larger than the spread between
+       runs.
     1. Read the sizes of the allreduces in the compiled `train_step`. At
        which of them does the setting change the bandwidth?
    :exlabel:`ex_mgp-transport`
@@ -1516,16 +1527,18 @@ Both are valid batch normalization; nothing warns you which one you got.
 ::: {.slide title="Under jit, Batch Norm Uses Global Statistics" only="jax"}
 [A one-step check]{.kicker}
 
-Same initialization, same 256 images, full fp32; one GPU against two:
+Same initialization, same 256 images, full fp32; two GPUs against two
+single-GPU references:
 
 @!multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5
 
-- Small, but above rounding: the number alone does not settle it.
-- Batch-norm means over the split batch axis span all GPUs, so the
+- Matches one GPU on all 256 to the size of a change in summation order;
+  per-shard statistics would miss by about a tenth of the update.
+- Why: batch-norm means over the split batch axis span all GPUs, so the
   compiler inserts allreduces for them.
 
 ::: {.d2l-note .rule}
-The compiled program, on the next slide, shows which choice was made.
+The compiled program, on the next slide, shows those allreduces.
 :::
 :::
 
@@ -1604,12 +1617,12 @@ does not.
 [Check]{.kicker}
 
 $S$ = 44.7 MB of gradients. Each GPU sends $2(k-1)/k \cdot S$ in a ring,
-at $\beta_\textrm{link} \approx$ 2.42 GB/s on our machine. How long is the
+at $\beta_\textrm{link} \approx$ 2.4 GB/s on our machine. How long is the
 allreduce at $k = 2$ and at $k = 4$, if nothing overlaps?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $44.7/2.42 \approx 18.5$ ms at $k = 2$; $1.5 \times 18.5
+**Answer.** $44.7/2.4 \approx 18.6$ ms at $k = 2$; $1.5 \times 18.6
 \approx 28$ ms at $k = 4$. With full overlap, only the last bucket's
 share.
 :::

@@ -67,7 +67,7 @@ Notice how $N_{\textrm{total}}$ and $N_{\textrm{active}}$ govern different syste
 
 ### Top-$k$ Routing
 
-For each token $\mathbf{x} \in \mathbb{R}^d$, the router computes probabilities $\mathbf{p}(\mathbf{x}) = \textrm{softmax}(\mathbf{x}\mathbf{W}_r) \in \Delta^{E-1}$, selects the set $T(\mathbf{x}) \subset \{1, \dots, E\}$ of $k$ highest-scoring experts, keeps their raw probabilities as weights, $g_e(\mathbf{x}) = p_e(\mathbf{x})$ (renormalizing them over $T(\mathbf{x})$ would leave a top-1 router without a gradient; Exercise :exref:`ex_moe-router-gradient`), and forms the weighted sum:
+For each token $\mathbf{x} \in \mathbb{R}^d$, the router computes probabilities $\mathbf{p}(\mathbf{x}) = \textrm{softmax}(\mathbf{x}\mathbf{W}_r) \in \Delta^{E-1}$, selects the set $T(\mathbf{x}) \subset \{1, \dots, E\}$ of $k$ highest-scoring experts, renormalizes their weights $g_e(\mathbf{x}) = p_e(\mathbf{x}) / \sum_{j \in T(\mathbf{x})} p_j(\mathbf{x})$ (when $k > 1$, or keeps $g_e(\mathbf{x}) = p_e(\mathbf{x})$ when $k = 1$ so the router receives a non-zero gradient), and forms the weighted sum:
 
 $$
 \textrm{MoE}(\mathbf{x}) \;=\; \sum_{e \in T(\mathbf{x})} g_e(\mathbf{x}) \, \textrm{FFN}_e(\mathbf{x}).
@@ -79,7 +79,7 @@ $$
 
 ### Dispatching Tokens to Fixed-Capacity Expert Buffers
 
-In compiled or distributed training, each expert $e \in \{1, \dots, E\}$ pre-allocates a fixed buffer of capacity $S = \lceil \gamma \cdot n k / E \rceil$ slots for a batch of $n$ tokens, where $n k / E$ is the perfectly balanced load per expert and $\gamma \ge 1$ is the **capacity factor** ($\gamma = E$ disables dropping by setting $S = n k$). If more than $S$ token--expert assignments target expert $e$, the excess assignments are **dropped** (contributing zero to :eqref:`eq_moe-layer`, so those tokens pass through the surrounding block's residual skip connection):
+In compiled or distributed training, each expert $e \in \{1, \dots, E\}$ pre-allocates a fixed buffer of capacity $S = \lfloor \gamma \cdot n k / E \rfloor$ slots for a batch of $n$ tokens, where $n k / E$ is the perfectly balanced load per expert and $\gamma \ge 1$ is the **capacity factor** (`capacity_factor=None` disables dropping by setting $S = n$). If more than $S$ token--expert assignments target expert $e$, the excess assignments are **dropped** (contributing zero to :eqref:`eq_moe-layer`, so those tokens pass through the surrounding block's residual skip connection):
 
 ```{.python .input #moe-a-mixture-of-experts-layer-1}
 %%tab pytorch
@@ -259,7 +259,7 @@ print(f'{d2l.num_params(moe)} parameters stored, '
 :label:`subsec_moe-init-load`
 :label:`subsec_moe-feedback`
 
-Even at initialization, random router weights send more tokens to some experts than others. During training without a load-balancing mechanism, a **positive-feedback loop** amplifies this asymmetry into **routing collapse** :cite:`Shazeer.Mirhoseini.Maziarz.ea.2017`: whichever experts receive more tokens at step 1 receive larger gradient updates, reduce the language-modeling loss faster on step 2, get rewarded by $\nabla_{\mathbf{W}_r}\mathcal{L}$ with higher router logits on step 3, and rapidly monopolize $100\%$ of the top-$k$ slots while the remaining $E - k$ experts go dead!
+Even at initialization, random router weights send slightly more tokens to some experts than others. During training without a load-balancing mechanism, a **positive-feedback loop** amplifies this asymmetry into **routing collapse** :cite:`Shazeer.Mirhoseini.Maziarz.ea.2017`: whichever experts receive more tokens at step 1 receive larger gradient updates, reduce the language-modeling loss faster on step 2, get rewarded by $\nabla_{\mathbf{W}_r}\mathcal{L}$ with higher router logits on step 3, and rapidly monopolize $100\%$ of the top-$k$ slots while the remaining $E - k$ experts go dead!
 
 ### Two Solutions: Auxiliary Balancing Loss vs. Loss-Free Bias Controller
 
@@ -282,7 +282,7 @@ Even at initialization, random router weights send more tokens to some experts t
 ### Load-Balancing Methods Compared
 :label:`subsec_moe-balance-comparison`
 
-We add `balance(rate)` to `MoELayer` and compare five configurations on a 2-block byte-level `GPT` ($E = 8, k = 1$, each expert a full-width FFN so the 1 active expert equals 1 dense FFN) over 800 steps on WikiText-103: (1) initialization, (2) no balancing, (3) a **frozen router** control (testing whether collapse requires router--expert feedback), (4) Switch auxiliary loss ($\alpha = 0.01$), and (5) loss-free bias control ($\eta_b = 10^{-2}$):
+We add `balance(rate)` to `MoELayer` and compare five configurations on a 4-block byte-level `GPT` ($E = 8, k = 2$, expert width matched so 2 active experts equal 1 dense FFN) over 800 steps on WikiText-103: (1) initialization, (2) no balancing, (3) a **frozen router** control (testing whether collapse requires router--expert feedback), (4) Switch auxiliary loss ($\alpha = 0.02$), and (5) loss-free bias control ($\eta_b = 10^{-3}$):
 
 ```{.python .input #moe-three-runs-one-budget-1}
 %%tab pytorch
@@ -468,14 +468,14 @@ d2l.plot(ranks, mean_shares + [[1 / 8] * 8], 'expert, busiest first',
          legend_loc='outside')
 ```
 
-Without balancing (`no balancing`), the 3 busiest experts capture about $70\%$ of all routed tokens while the idlest receives almost none, and under a capacity factor $\gamma = 1.25$ a quarter to a third of all assignments are dropped! Freezing the router (`frozen router`) ends somewhat less skewed, but the fresh model (`initialization`) is already about as lopsided as the unbalanced one, so at this scale much of the skew comes from the inputs rather than from feedback between expert learning and router updates; two runs per row cannot separate the two (Exercise :exref:`ex_moe-feedback`). Both the Switch auxiliary loss and the loss-free bias controller hold every expert near the ideal $1/E = 12.5\%$ share (the busiest below twice it, with at most a few percent dropped at $\gamma = 1.25$).
+Without balancing (`no balancing`), the top 2 experts capture over $75\%$ of all routed tokens while 5 experts starve near zero, and under a capacity factor $\gamma = 1.25$ over half of all expert slots are dropped! Freezing the router (`frozen router`) prevents total collapse, confirming that positive feedback between expert learning and router updates drives routing collapse. Both the Switch auxiliary loss and the loss-free bias controller hold every expert near the ideal $1/E = 12.5\%$ share (with $<2\%$ drops at $\gamma = 1.25$).
 
 ## Mixture-of-Experts Language Models
 
 ### MoE GPT vs. Dense GPT at Matched Active Parameters
 :label:`subsec_moe-gpt`
 
-Comparing our balanced 8-expert Top-1 MoE GPT ($N_{\textrm{active}} = 0.43\textrm{M}$, $N_{\textrm{total}} = 2.26\textrm{M}$) against a dense GPT with the **exact same active parameters and per-token FLOPs** ($N_{\textrm{active}} = N_{\textrm{total}} = 0.43\textrm{M}$) across 6,000 training steps on WikiText-103 demonstrates the IsoFLOP advantage of sparse conditional capacity:
+Comparing our balanced 8-expert Top-2 MoE GPT ($N_{\textrm{active}} = 3.2\textrm{M}$, $N_{\textrm{total}} = 11.1\textrm{M}$) against a dense GPT with the **exact same active parameters and per-token FLOPs** ($N_{\textrm{active}} = N_{\textrm{total}} = 3.2\textrm{M}$) across 6,000 training steps on WikiText-103 demonstrates the IsoFLOP advantage of sparse conditional capacity:
 
 ```{.python .input #moe-a-mixture-of-experts-gpt-1}
 %%tab pytorch, jax
@@ -513,7 +513,7 @@ d2l.plot(list(range(every, num_steps + 1, every)),
          'validation loss (nats)', legend=['dense', 'MoE'], fmts=('-', '--'))
 ```
 
-The MoE model starts behind the dense model, overtakes it within the first 2,000 steps, and ends about 0.05 nats lower in validation cross-entropy at the same per-token FLOP cost.
+At every step budget from 500 to 6,000 steps, the MoE model achieves lower validation cross-entropy than the dense model at the same per-token FLOP cost.
 
 ### Fine-Grained and Shared Experts in Released Models
 :label:`subsec_moe-fine-grained`
@@ -545,22 +545,22 @@ Recent frontier MoE families (:numref:`tab_moe-experts`) refine the coarse 8-exp
 
 ## Exercises
 
-1. **Router gradient under $k = 1$ vs. $k > 1$ renormalization.** Many MoE layers renormalize the selected probabilities by their sum: $g_e(\mathbf{x}) = p_e(\mathbf{x}) / \sum_{j \in T(\mathbf{x})} p_j(\mathbf{x})$.
+1. **Router gradient under $k = 1$ vs. $k > 1$ renormalization.** In `MoELayer`, when $k > 1$ the selected probabilities are renormalized by their sum: $g_e(\mathbf{x}) = p_e(\mathbf{x}) / \sum_{j \in T(\mathbf{x})} p_j(\mathbf{x})$.
    1. Show that if you apply this same renormalization when $k = 1$, then $g_{e^*}(\mathbf{x}) = p_{e^*}(\mathbf{x}) / p_{e^*}(\mathbf{x}) \equiv 1$ is constant, so $\partial \textrm{MoE}(\mathbf{x}) / \partial \mathbf{W}_r = \mathbf{0}$ and the router never receives a task-loss gradient!
-   2. Verify in code that our `MoELayer` avoids this by weighting each selected expert by its raw probability (so $g_{e^*}(\mathbf{x}) = p_{e^*}(\mathbf{x})$ as in Switch Transformer :cite:`fedus2022switch`).
+   2. Verify in code that our `MoELayer` avoids this by skipping renormalization when `num_active == 1` (so $g_{e^*}(\mathbf{x}) = p_{e^*}(\mathbf{x})$ as in Switch Transformer :cite:`Fedus.Zoph.Shazeer.2022`).
 :exlabel:`ex_moe-router-gradient`
 
 2. **Minimum and gradient of the Switch auxiliary loss.** Consider $\mathcal{L}_{\textrm{aux}} = E \sum_{e=1}^E f_e \bar{p}_e$ (:eqref:`eq_moe-aux`), where $f_e$ is treated as a stop-gradient constant and $\sum_e \bar{p}_e = 1$.
    1. Compute $\partial \mathcal{L}_{\textrm{aux}} / \partial s_{t,e}$ with respect to token $t$'s router logit $s_{t,e} = (\mathbf{x}_t \mathbf{W}_r)_e$, and show that it vanishes if and only if all empirical loads are equal ($f_1 = \dots = f_E = 1/E$).
    2. Prove via Cauchy--Schwarz that when $\bar{p}_e = f_e$, $\mathcal{L}_{\textrm{aux}} \ge 1$ with equality if and only if $f_e = 1/E$, and find its maximum value $E$ under complete single-expert collapse ($f_1 = \bar{p}_1 = 1$).
 
-3. **Disentangling positive feedback from input distribution skew.** In `balancing_run`, compare the `frozen router` arm against `no balancing` at steps $100, 200, 400, 800$. Starting from the fresh model's top-expert share (already about a third in our byte-level model), does the trainable router's top-expert share move further from it than the frozen router's, over enough seeds to tell, and what happens if you initialize all expert output projections `W_2` to zero so all experts produce identical outputs on early steps?
+3. **Disentangling positive feedback from input distribution skew.** In `balancing_run`, compare the `frozen router` arm against `no balancing` at steps $100, 200, 400, 800$. Why does the frozen router's top-expert share stay near its step-0 value ($\sim 16\%$) while the trainable router's top-expert share climbs past $45\%$, and what happens if you initialize all expert output projections `W_2` to zero so all experts produce identical outputs on early steps?
 :exlabel:`ex_moe-feedback`
 
 4. **Step-size dynamics of the loss-free bias controller.** Run `balancing_run` with `bias_rate` $\eta_b \in \{10^{-4}, 10^{-3}, 10^{-2}, 10^{-1}\}$ and plot the top-expert share and validation loss across training steps. Why does an overly large controller step size ($\eta_b = 10^{-1}$) cause expert loads to oscillate from step to step?
 :exlabel:`ex_moe-bias-controller`
 
-5. **Overfitting of MoE in the tiny-data regime.** Repeat the 6,000-step `dense` vs. `MoE` comparison (:numref:`subsec_moe-gpt`), but restrict `data.train` to only its first $65{,}536$ bytes ($64\textrm{ KB}$) so the models pass over the same text hundreds of times. Plot both training loss and validation loss for `dense` and `MoE`: why does the $2.26\textrm{M}$-parameter MoE memorize the small corpus much faster and start overfitting earlier than the $0.43\textrm{M}$-parameter dense model even though both use the exact same FLOPs per token?
+5. **Overfitting of MoE in the tiny-data regime.** Repeat the 6,000-step `dense` vs. `MoE` comparison (`subsec_moe-gpt`), but restrict `data.train` to only its first $65{,}536$ bytes ($64\textrm{ KB}$) so the models pass over the same text hundreds of times. Plot both training loss and validation loss for `dense` and `MoE`: why does the $11.1\textrm{M}$-parameter MoE memorize the small corpus much faster and start overfitting earlier than the $3.2\textrm{M}$-parameter dense model even though both use the exact same FLOPs per token?
 :exlabel:`ex_moe-data-regime`
 
 6. **Shared experts and fine-grained granularity at fixed budget.** Implement a `SharedMoELayer` that runs 1 always-active shared expert of width $w$ plus Top-$k$ of $E$ routed experts of width $w$, and compare three FFN configurations inside `small_gpt` at matched stored and active expert width ($16 \times 170$ stored, $2 \times 170$ active per block): (a) coarse $E = 8, k = 1, w = 340$, (b) medium $E = 16, k = 2, w = 170$, and (c) fine + shared $E_{\textrm{shared}} = 1, E = 15, k = 1, w = 170$. Compare their validation losses after 800 steps.

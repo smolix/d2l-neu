@@ -842,9 +842,9 @@ Each GPU sends at about 2.4 GB/s. An allreduce of ResNet-18's gradients
 that nothing overlaps takes about 18.5 ms on two GPUs and, with the ring
 factor of 1.5, about 28 ms on four. The measured exposed times are close
 to these numbers, and from two GPUs to four they grow by about half, as
-the ring factor predicts. The cost model gets the bytes right. Overlap hides far
-less of the communication on this machine than the bucket model
-predicts.
+the ring factor predicts. The cost model gets the bytes right. Overlap
+hides far less of the communication on this machine than the bucket
+model predicts.
 
 :begin_tab:`pytorch`
 DDP's last bucket holds 8.7 of the 45 MB of gradients, so with full overlap

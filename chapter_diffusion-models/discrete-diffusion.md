@@ -44,14 +44,14 @@ import optax
 from d2l import jax as d2l
 ```
 
-```{.python .input #discrete-diffusion-2}
-%%tab pytorch
-torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
-```
-
 ```{.python .input #discrete-diffusion-1}
 %%tab pytorch, jax
 from scipy.special import ndtr, xlogy
+```
+
+```{.python .input #discrete-diffusion-2}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
 ```
 
 ## Corrupting Tokens
@@ -378,25 +378,26 @@ marginals :eqref:`eq_diffusion-discrete-qbar`, so the proposition applies
 to it unchanged, and a jump from $t_k$ to $t_{k+1}$ reveals each masked
 token with probability
 $(\bar{\alpha}_{t_{k+1}} - \bar{\alpha}_{t_k}) / (1 - \bar{\alpha}_{t_k})$.
-The function `unmask` returns the list of states, the last of which is
-the sample.
+The function `unmask` returns the sample.
+<!-- WRITER: `unmask` now returns only the final sample (the
+intermediate-states grid that used the list of states is cut); the sentence
+above was changed to say so. -->
 
 ```{.python .input #discrete-diffusion-parallel-reveals-and-the-independence-error}
 %%tab pytorch
 @torch.inference_mode()
 def unmask(model, shape, steps, alpha_bar, mask_id):
-    """Reveal tokens from the all-mask state in `steps` jumps; all states."""
+    """Reveal tokens from the all-mask state in `steps` jumps."""
     T = len(alpha_bar) - 1
     levels = torch.linspace(T, 0, steps + 1).round().long().tolist()
-    states = [torch.full(shape, mask_id, device=alpha_bar.device)]
+    z = torch.full(shape, mask_id, device=alpha_bar.device)
     for t, s in zip(levels[:-1], levels[1:]):
-        z = states[-1]
         logits = model(z, torch.full(shape[:1], t / T, device=z.device))
         draw = torch.distributions.Categorical(logits=logits).sample()
         p = (alpha_bar[s] - alpha_bar[t]) / (1 - alpha_bar[t])  # reveal prob.
         reveal = (z == mask_id) & (torch.rand(shape, device=z.device) < p)
-        states.append(torch.where(reveal, draw, z))
-    return states
+        z = torch.where(reveal, draw, z)
+    return z
 ```
 
 ```{.python .input #discrete-diffusion-parallel-reveals-and-the-independence-error}
@@ -411,13 +412,13 @@ def reveal(model, z, t, s, alpha_bar, mask_id, key):
     return jnp.where(accept, draw, z)
 
 def unmask(model, shape, steps, alpha_bar, mask_id, key):
-    """Reveal tokens from the all-mask state in `steps` jumps; all states."""
+    """Reveal tokens from the all-mask state in `steps` jumps."""
     T = len(alpha_bar) - 1
     levels = [round(l) for l in np.linspace(T, 0, steps + 1)]
-    states = [jnp.full(shape, mask_id)]
+    z = jnp.full(shape, mask_id)
     for t, s, k in zip(levels[:-1], levels[1:], jax.random.split(key, steps)):
-        states.append(reveal(model, states[-1], t, s, alpha_bar, mask_id, k))
-    return states
+        z = reveal(model, z, t, s, alpha_bar, mask_id, k)
+    return z
 ```
 
 Tokens revealed in the same jump are drawn independently, each from its
@@ -683,65 +684,113 @@ model has learned the marginal of each token and its conditional given the
 other. Almost all of the gap is the floor; the network's own excess over
 the floor is of the order of a thousandth of a nat. The floor is not just
 looseness of the bound: the thirty-two-step sampler of an exact network
-models $(1 - 1/32)\, p + (1/32)\, p^1 \otimes p^2$ rather than $p$. The
-next cell compares histograms of 20,000 pairs drawn with
-$S \in \{32, 8, 2, 1\}$ steps with the table, after printing the floor
-that 20,000 true samples impose.
+models $(1 - 1/32)\, p + (1/32)\, p^1 \otimes p^2$ rather than $p$.
+<!-- WRITER: the cells below no longer draw 20,000 pairs and compare
+histograms. With two tokens the output table of `unmask` can be summed
+exactly: each token is revealed in jump $j$ with probability
+$\pi_j = \bar{\alpha}_{t_{j+1}} - \bar{\alpha}_{t_j}$, independently of the
+other, and the network is told the time, so the table is the sum over the
+pair of jumps (same jump: both marginals at that level; different jumps:
+the first token's marginal at its level times the second's conditional at
+the later level). `conditionals` reads the trained network's predictions in
+the three mask patterns at one level (2K + 1 inputs); `sampler_table` sums
+them. The same function applied to the true table's marginals and
+conditionals reproduces the exact-network column of the earlier cell, which
+checks it. Write one or two sentences of lead-in here saying this; the old
+sentence about the 20,000-pair histograms and their sampling floor is
+gone. -->
 
 ```{.python .input #discrete-diffusion-the-quantized-mixture-4}
 %%tab pytorch
-def histogram(z):  # pairs of tokens to a K x K table of frequencies
-    counts = torch.bincount(z[:, 0] * K + z[:, 1], minlength=K * K)
-    return np.float64(counts.view(K, K)) / len(z)
-
-torch.manual_seed(1)
-data = quantize(mix.sample(20000))
-print(f'TV(histogram of 20000 true samples, table): '
-      f'{tv(histogram(data), table):.3f}')
-samples = {S: unmask(pair_model, (20000, 2), S, alpha_bar, mask_id=K)[-1]
-           for S in (32, 8, 2, 1)}
-for S, z in samples.items():
-    print(f'{S:>2} steps: TV {tv(histogram(z), table):.3f}, '
-          f'exact network {tv(product, table) / S:.3f}')
+@torch.inference_mode()
+def conditionals(model, tau):
+    """A pair model's predictions at time tau: both marginals with both
+    tokens masked, then c2[a, b] = q(x2 = b | x1 = a), c1[a, b] = q(x1 = a |
+    x2 = b)."""
+    K = model.K                                   # also the mask index
+    a, m = torch.arange(K), torch.full((K,), K)
+    z = torch.cat([torch.tensor([[K, K]]),        # both masked
+                   torch.stack([a, m], 1),        # x1 = a revealed
+                   torch.stack([m, a], 1)])       # x2 = a revealed
+    q = torch.softmax(model(z, torch.full((2 * K + 1,), tau)), -1)
+    q = q.double().numpy()                        # (2K + 1, 2, K)
+    return q[0, 0], q[0, 1], q[1:K + 1, 1], q[K + 1:, 0].T
 ```
 
 ```{.python .input #discrete-diffusion-the-quantized-mixture-4}
 %%tab jax
-def histogram(z):  # pairs of tokens to a K x K table of frequencies
-    counts = jnp.bincount(z[:, 0] * K + z[:, 1], length=K * K)
-    return np.float64(counts.reshape(K, K)) / len(z)
-
-key, k1, *keys = jax.random.split(jax.random.key(1), 6)
-data = quantize(mix.sample(k1, 20000))
-print(f'TV(histogram of 20000 true samples, table): '
-      f'{tv(histogram(data), table):.3f}')
-samples = {S: unmask(pair_model, (20000, 2), S, alpha_bar, mask_id=K,
-                     key=k)[-1]
-           for S, k in zip((32, 8, 2, 1), keys)}
-for S, z in samples.items():
-    print(f'{S:>2} steps: TV {tv(histogram(z), table):.3f}, '
-          f'exact network {tv(product, table) / S:.3f}')
+def conditionals(model, tau):
+    """A pair model's predictions at time tau: both marginals with both
+    tokens masked, then c2[a, b] = q(x2 = b | x1 = a), c1[a, b] = q(x1 = a |
+    x2 = b)."""
+    K = model.K                                   # also the mask index
+    a, m = jnp.arange(K), jnp.full(K, K)
+    z = jnp.concatenate([jnp.array([[K, K]]),     # both masked
+                         jnp.stack([a, m], 1),    # x1 = a revealed
+                         jnp.stack([m, a], 1)])   # x2 = a revealed
+    q = jax.nn.softmax(model(z, jnp.full(2 * K + 1, tau)))
+    q = np.float64(q)                             # (2K + 1, 2, K)
+    return q[0, 0], q[0, 1], q[1:K + 1, 1], q[K + 1:, 0].T
 ```
 
-The distance tracks $\mathrm{TV}(p^1 \otimes p^2, p)/S$. At thirty-two
-and eight steps the sampling floor and the model error add a few
-hundredths; at two steps and one step the systematic error dominates, and
-the distance lies within a few hundredths of the prediction. In the
+```{.python .input #discrete-diffusion-the-quantized-mixture-1}
+%%tab pytorch, jax
+def sampler_table(cond, steps, alpha_bar):
+    """Exact output table of `unmask` on a pair; cond(t / T) returns the
+    predictions at level t in the order of `conditionals`."""
+    T = len(alpha_bar) - 1
+    levels = [round(l) for l in np.linspace(T, 0, steps + 1)]
+    pi = np.float64([float(alpha_bar[s] - alpha_bar[t])  # P(revealed in jump)
+                     for t, s in zip(levels[:-1], levels[1:])])[:, None]
+    q1, q2, c2, c1 = map(np.stack, zip(*[cond(t / T) for t in levels[:-1]]))
+    before1 = np.cumsum(pi * q1, 0) - pi * q1     # revealed in earlier jumps
+    before2 = np.cumsum(pi * q2, 0) - pi * q2
+    return (np.einsum('j,ja,jb->ab', pi[:, 0] ** 2, q1, q2)   # same jump
+            + np.einsum('ja,jab->ab', pi * before1, c2)       # x1 first
+            + np.einsum('jb,jab->ab', pi * before2, c1))      # x2 first
+
+exact = lambda tau: (p1, p2, c2, c1)  # the true marginals and conditionals
+print('TV to the table: trained and exact network; TV between the two')
+for S in (32, 8, 2, 1):
+    q = sampler_table(lambda tau: conditionals(pair_model, tau), S, alpha_bar)
+    q_exact = sampler_table(exact, S, alpha_bar)
+    print(f'{S:>2} steps: trained {tv(q, table):.3f}, exact '
+          f'{tv(q_exact, table):.3f}, between {tv(q, q_exact):.3f}')
+```
+
+<!-- WRITER: replace the old reading paragraph ("The distance tracks
+TV/S. At thirty-two and eight steps the sampling floor ...") by what this
+table shows; read the numbers from the captured store. Direct runs (three
+training seeds per framework, both frameworks, not captured): trained
+0.019-0.021 / 0.045 / 0.159-0.160 / 0.314-0.320 at S = 32 / 8 / 2 / 1;
+exact 0.010 / 0.039 / 0.157 / 0.314; between the two tables 0.010-0.014
+at every S. Lesson: the trained sampler follows the exact network's
+TV/S; the network's own error is about 0.01, nearly the same at every S,
+so it doubles the distance at 32 steps and is a small addition at one or
+two. The panels below are 2,000 pairs per sampler drawn with `unmask`,
+placed at random inside their cells (unchanged picture). -->
+The distance tracks $\mathrm{TV}(p^1 \otimes p^2, p)/S$. In the
 panels (2,000 pairs, placed at random inside their cells), the one-step
 sampler puts mass where the column of one mode crosses the row of another,
 where the data has none.
 
 ```{.python .input #discrete-diffusion-the-quantized-mixture-5}
 %%tab pytorch
-decode = lambda z: (z[:2000] + torch.rand(2000, 2)) / K * 10 - 5  # in cell
-d2l.scatter_panels([decode(data), decode(samples[32]), decode(samples[1])],
-                   ['data', '32 steps', '1 step']);
+torch.manual_seed(1)
+pairs = [quantize(mix.sample(2000))] + [
+    unmask(pair_model, (2000, 2), S, alpha_bar, mask_id=K) for S in (32, 1)]
+decode = lambda z: (z + torch.rand(len(z), 2)) / K * 10 - 5  # inside cell
+d2l.scatter_panels([decode(z) for z in pairs], ['data', '32 steps', '1 step']);
 ```
 
 ```{.python .input #discrete-diffusion-the-quantized-mixture-5}
 %%tab jax
-decode = lambda z: (z[:2000] + jax.random.uniform(key, (2000, 2))) / K * 10 - 5
-d2l.scatter_panels([decode(data), decode(samples[32]), decode(samples[1])],
+k0, k32, k1, *kc = jax.random.split(jax.random.key(1), 6)
+pairs = [quantize(mix.sample(k0, 2000))] + [
+    unmask(pair_model, (2000, 2), S, alpha_bar, mask_id=K, key=k)
+    for S, k in ((32, k32), (1, k1))]
+decode = lambda z, k: (z + jax.random.uniform(k, z.shape)) / K * 10 - 5
+d2l.scatter_panels([decode(z, k) for z, k in zip(pairs, kc)],
                    ['data', '32 steps', '1 step']);
 ```
 
@@ -854,67 +903,55 @@ The bound is about 0.17 bits per pixel, against about 0.70 for
 independent pixels. As code lengths (:numref:`sec_mdl-coding-compression`),
 the model could encode a held-out garment in about 135 bits, where coding
 each pixel on its own takes about 550; the model has captured much of the
-dependence between pixels. The first grid shows 48 samples drawn in a
+dependence between pixels. The grid shows 48 of 1,000 samples drawn in a
 hundred steps.
+<!-- WRITER: the cell now draws 1,000 samples per sampler (the speckle
+counts below are measured on all 1,000, not on 48) and shows the first 48.
+-->
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-4}
 %%tab pytorch
-show_tokens = lambda z, rows: d2l.show_gray(  # masked pixels in gray
-    torch.where(z == 2, 0.0, 2.0 * z - 1)[:, None], rows, 8, scale=0.8)
 torch.manual_seed(3)
-states = unmask(unet, (48, 28, 28), T_img, alpha_bar_img, mask_id=2)
-show_tokens(states[-1], 6);
+z100 = unmask(unet, (1000, 28, 28), T_img, alpha_bar_img, mask_id=2)
+d2l.show_gray(z100[:48], 6, 8, scale=0.8);
 ```
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-4}
 %%tab jax
-show_tokens = lambda z, rows: d2l.show_gray(  # masked pixels in gray
-    jnp.where(z == 2, 0.0, 2.0 * z - 1)[..., None], rows, 8, scale=0.8)
-states = unmask(unet, (48, 28, 28), T_img, alpha_bar_img, mask_id=2,
-                key=jax.random.key(4))
-show_tokens(states[-1], 6);
+z100 = unmask(unet, (1000, 28, 28), T_img, alpha_bar_img, mask_id=2,
+              key=jax.random.key(4))
+d2l.show_gray(z100[:48], 6, 8, scale=0.8);
 ```
 
 Many samples are recognizable binary garments, rougher than the
 gray-level samples of the earlier sections; others are fragments, at 6,000
-updates of training. The second grid follows eight
-of them after 20, 40, 60, 80 and 100 steps, with masked pixels in gray.
-
-```{.python .input #discrete-diffusion-images-as-binary-tokens-5}
-%%tab pytorch
-show_tokens(torch.cat([states[k][:8] for k in (20, 40, 60, 80, 100)]), 5);
-```
-
-```{.python .input #discrete-diffusion-images-as-binary-tokens-5}
-%%tab jax
-show_tokens(jnp.concatenate([states[k][:8] for k in (20, 40, 60, 80, 100)]),
-            5);
-```
-
-The outline of a garment appears early, and later reveals fill it in
-consistently, because every prediction is conditioned on everything
-revealed so far. The third grid uses four steps, each revealing about a
+updates of training. The next grid uses four steps, each revealing about a
 quarter of the pixels from predictions that are independent across
 positions.
+<!-- WRITER: the intermediate-states grid (after 20, 40, 60, 80 and 100
+steps) and its reading paragraph ("The outline of a garment appears early
+...") are cut; the bridge sentence above was shortened to match. Its one
+idea (every reveal is conditioned on everything revealed so far) may move
+into the four-step reading if it is wanted. -->
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-6}
 %%tab pytorch
-few = unmask(unet, (48, 28, 28), 4, alpha_bar_img, mask_id=2)[-1]
-show_tokens(few, 6);
+z4 = unmask(unet, (1000, 28, 28), 4, alpha_bar_img, mask_id=2)
+d2l.show_gray(z4[:48], 6, 8, scale=0.8);
 ```
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-6}
 %%tab jax
-few = unmask(unet, (48, 28, 28), 4, alpha_bar_img, mask_id=2,
-             key=jax.random.key(5))[-1]
-show_tokens(few, 6);
+z4 = unmask(unet, (1000, 28, 28), 4, alpha_bar_img, mask_id=2,
+            key=jax.random.key(5))
+d2l.show_gray(z4[:48], 6, 8, scale=0.8);
 ```
 
 No garment survives: each step reveals about 200 pixels drawn independently
 of one another, and the result is texture.
 
 To measure what four steps lose, we count *speckles*, pixels that differ
-from all four of their neighbors.
+from all four of their neighbors, in 1,000 images of each kind.
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-7}
 %%tab pytorch
@@ -924,7 +961,7 @@ def speckles(z):  # fraction of interior pixels unlike all four neighbors
             & (c != z[:, 1:-1, :-2]) & (c != z[:, 1:-1, 2:])).float().mean()
 
 print(f'speckles: data {speckles(X[:1000]):.4f}, 100 steps '
-      f'{speckles(states[-1]):.4f}, 4 steps {speckles(few):.4f}')
+      f'{speckles(z100):.4f}, 4 steps {speckles(z4):.4f}')
 ```
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-7}
@@ -935,9 +972,13 @@ def speckles(z):  # fraction of interior pixels unlike all four neighbors
             & (c != z[:, 1:-1, :-2]) & (c != z[:, 1:-1, 2:])).mean()
 
 print(f'speckles: data {speckles(X[:1000]):.4f}, 100 steps '
-      f'{speckles(states[-1]):.4f}, 4 steps {speckles(few):.4f}')
+      f'{speckles(z100):.4f}, 4 steps {speckles(z4):.4f}')
 ```
 
+<!-- WRITER: speckles are now counted on 1,000 samples per sampler (was
+48). Direct runs, not captured: data 0.0037; 100 steps 0.0075 (PyTorch
+tab) and 0.0068 (JAX tab), 1.8-2.0 times the data; 4 steps 0.0330 and
+0.0335, about 9 times. -->
 The data has about four speckles per thousand interior pixels, the
 hundred-step samples about twice as many, and the four-step samples about
 nine times as many. The count is not a measure of sample quality; it
@@ -1251,11 +1292,9 @@ per step.
        validation windows, with several masks per window. Plot it next to
        the validation loss of `GPT` in bits per character. Compare the
        best value of each curve and the update at which it is reached.
-       Expect the denoiser to stay well behind: in a scoping run on the
-       WikiText-103 bytes of :numref:`sec_gpt`, an untuned denoiser of
-       this size reached about 2.3 nats per byte after 1,000 updates,
-       where `GPT` reaches about 1.3. The gap is the cost that the scaling
-       studies measure, not a bug.
+       Expect the denoiser's bound to stay well above the loss of `GPT`
+       at every update before `GPT` begins to overfit: the gap is the
+       cost that the scaling studies measure, not a bug.
     1. Continue training the denoiser to 8,000 updates if its bound still
        falls at update 2,000. Which model begins to overfit later? How
        does training on randomly masked windows change what the denoiser
@@ -1556,13 +1595,16 @@ The network's own excess over the floor: about a thousandth of a nat.
 :::
 :::
 
-::: {.slide title="Sampled Pairs Track TV/S: One Step Crosses the Modes"}
+<!-- WRITER: slide rewritten for the exact sampler table (no sampled
+histograms, no 20,000-sample floor); check the title against the captured
+numbers. -->
+::: {.slide title="The Trained Sampler Tracks TV/S: One Step Crosses the Modes"}
 ::: {.cols .vc}
 ::: {.col}
-20,000 pairs per sampler; 20,000 true samples alone sit about 0.04 from
-the table.
+Output table of `unmask` on the pair, summed exactly over the jumps in
+which each token is revealed:
 
-@!discrete-diffusion-the-quantized-mixture-4
+@!discrete-diffusion-the-quantized-mixture-1
 
 One step: six blobs where the data has three.
 :::
@@ -1577,13 +1619,15 @@ One step: six blobs where the data has three.
 [Check]{.kicker}
 
 An exact network on the pair errs by $0.314/S$. How many steps bring it
-to 0.01? Would 20,000 samples of the trained sampler show 0.01?
+to 0.01?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $S \geq 32$ ($0.314/32 \approx 0.0098$). No: 20,000 true
-samples alone lie about 0.04 from the table, so the measured distance
-stays a few hundredths above.
+**Answer.** $S \geq 32$ ($0.314/32 \approx 0.0098$).
+<!-- WRITER: the second question (would 20,000 samples show 0.01?) was
+dropped with the sampled histograms; a replacement question could ask how
+far the trained network's 32-step table lies from 0.01 and why (read the
+number from the store). -->
 :::
 :::
 :::
@@ -1598,13 +1642,6 @@ on one-hot pixels, $T = 100$, 6,000 updates; bound on 1,000 test images:
 A held-out garment: about 135 bits, against about 550 coding each pixel
 alone.
 :::
-:::
-
-::: {.slide title="In a Hundred Steps the Outline Comes First, the Fill Agrees"}
-@!discrete-diffusion-images-as-binary-tokens-5
-
-Rows: after 20, 40, 60, 80, 100 steps; gray is masked. Every reveal is
-conditioned on everything revealed so far.
 :::
 
 ::: {.slide title="Four Steps Give Texture: Speckles Rise about Ninefold"}

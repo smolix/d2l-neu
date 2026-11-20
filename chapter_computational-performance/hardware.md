@@ -475,9 +475,9 @@ The third job is to stage the copies to the GPU. Every host-to-device copy
 crosses PCIe, and the GPU's *copy engine*, a unit that moves data over PCIe
 while the SMs compute, reads only from host memory that the operating
 system may not move or swap out, called page-locked or *pinned* memory. As
-:numref:`sec_use_gpu` showed, an ordinary, *pageable* host array is
-therefore first copied by the CPU into pinned memory and only then
-transferred. An array that already sits in pinned memory skips the first
+:numref:`sec_use_gpu` showed, every byte of an ordinary, *pageable* host
+array is therefore first copied by the CPU into pinned memory and only
+then transferred. An array that already sits in pinned memory skips the first
 copy, and its transfer can overlap with computation. We time both kinds of
 copy for a 256 MiB array to find the ceiling of the host link.
 

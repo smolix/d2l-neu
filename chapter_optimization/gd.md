@@ -486,7 +486,7 @@ over it and creeps into the shallow one (factor $-0.96$). The learning
 rate selects by curvature, not by depth.
 :::
 
-::: {.slide title="No Run Ends Above 2/η: 5.0 at η = 0.4, 8 or Just Below at η = 0.25" layout="tight"}
+::: {.slide title="Sharpness Stops at 2/η: 5.0 at η = 0.4, 8 or Just Below at η = 0.25" layout="tight"}
 [Edge of stability]{.kicker}
 
 @!optimization-intro-the-edge-of-stability-2

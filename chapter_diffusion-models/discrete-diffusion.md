@@ -1,7 +1,10 @@
 # Discrete Diffusion
 :label:`sec_diffusion-discrete`
 
-Every model in this chapter has added Gaussian noise to real numbers:
+Add a little Gaussian noise to every pixel of a garment and it is still
+a garment, only grainier. Add a small real number to the index of the
+word "cat" and the result is not a slightly noisy cat. Every model in this
+chapter has relied on the first kind of noise, added to real numbers:
 coordinates of points, pixel intensities, latents of an autoencoder. Text
 is made of tokens, and the language model of :numref:`sec_gpt` writes it
 one token at a time, from left to right. That takes one network evaluation
@@ -10,8 +13,7 @@ sequential calls. Nor can a model that looks only to the left fill a gap
 using the words that follow it. Diffusion generates many positions per
 evaluation, each conditioned on everything around it. Can text, code or a
 quantized image be generated this way, with a likelihood bound to train
-against? The noise is the obstacle. Adding a small real number to the
-index of the word "cat" does not produce a slightly noisy cat.
+against? The noise is the obstacle.
 
 Noise for tokens has to change values rather than nudge them.
 :citet:`Hoogeboom.Nielsen.Jaini.ea.2021` and
@@ -1064,7 +1066,8 @@ garment's outline, more often an average garment's than any particular
 one's, filled with texture.
 
 To measure what four steps lose, we count *speckles*, pixels that differ
-from all four of their neighbors, in 1,000 images of each kind. A third
+from all four of their neighbors, in 1,000 images of each kind, and print
+each fraction with its standard error over the 1,000 images. A third
 batch takes 784 jumps, one pixel per jump on average, to show what a
 hundred steps still lose. The chain's hundred levels cannot carry that
 many jumps: `unmask` rounds its levels to the chain's, and a jump between
@@ -1111,8 +1114,6 @@ for name, z in (('data', X[:1000]), ('784 steps', z784), ('100 steps', z100),
           f'the 1,000 images {per_image.std(ddof=1) / len(z) ** 0.5:.5f}')
 ```
 
-<!-- WRITER: M4b: the cell now prints the speckle fraction of each set with its standard error over the 1,000 images (four lines). Dev runs: data 0.0037 (SE 0.00016); 784 steps 0.0047 PT, 0.0046-0.0048 JAX (SE 0.00016-0.00017); 100 steps 0.0075 PT, 0.0069-0.0071 JAX (SE 0.00021); 4 steps 0.0329-0.0336 (SE 0.00026-0.00027). The drop from 100 to 784 steps, 0.0021-0.0028, is about eight to ten standard errors of the difference (about 0.00027). Replace "Re-running the notebook moved ... no accident of the draw" with that reading; the multiples (about twice, about nine times, about 1.3 times, two thirds of the excess) still hold. -->
-
 The data have about four speckles per thousand interior pixels, and the
 four-step samples about nine times as many: the image counterpart of the
 phantom blobs of the one-step pair. The hundred-step samples have about
@@ -1120,16 +1121,21 @@ twice the data's count, and there two causes mix: about eight pixels
 still appear per jump, and the network is imperfect after 6,000 updates.
 The 784-step row pulls them apart. More jumps shrink the independence
 error and leave the network's own error where it was, as on the pair, and
-one pixel per jump removes about two thirds of the hundred-step excess.
-Most of what a hundred steps lose is therefore the independence error,
-not the network. Re-running the notebook moved the hundred-step count by a
-tenth of that drop or less, so the drop is no accident of the draw. The
-rest, which leaves the 784-step samples with about 1.3 times the data's
-speckles, is the network's own error plus what little independence
-remains when a pixel seldom shares its jump with a neighbor; Exercise
+one pixel per jump removes two thirds to three quarters of the
+hundred-step excess. Could the draw of the images alone produce that
+drop? Both rows come from the same network, so the 1,000 images of each
+are the only chance in the comparison. Each count is a mean over
+independent images, with a standard error of 0.00016 to 0.0002, and the
+difference of two such means has one of about 0.00026; the drop is about
+ten times that. Most of what a hundred steps lose is therefore the
+independence error, not the network. The rest, which leaves the 784-step
+samples with about 1.3 times the data's speckles, still about four
+standard errors of a difference above the data, is the network's own
+error plus what little independence remains when a pixel seldom shares
+its jump with a neighbor; Exercise
 :exref:`ex_discrete-diffusion-pairs-revealed`e separates the two.
 
-## Where Diffusion Stands
+## Neighbors and Retrospect
 
 This section has treated masked diffusion on its own terms. Its
 neighbors in the book are the language models of :numref:`sec_gpt` and
@@ -1229,7 +1235,7 @@ it surveys (:numref:`sec_lm_architectures_fr`).
 
 ## Summary
 
-Diffusion does not need Gaussian noise. A chain that erases tokens has
+Diffusion does not need Gaussian noise: a chain that erases tokens has
 closed-form marginals and posteriors, and the variational bound becomes a
 cross-entropy on the masked positions, weighted by $1/t$ under the linear
 schedule; the best prediction at a mask does not depend on the time.
@@ -1323,9 +1329,9 @@ infilling in return.
        it for the pair with $S = 32$, for the binary images with $S = 100$
        and $S = 784$, and for $L = S = 1024$.
     1. The 784-step samples of :numref:`subsec_diffusion-binary-images`
-       keep about a third of the hundred-step excess of speckles. Show
-       that with $S$ equal jumps an interior pixel shares its jump with at
-       least one of its four neighbors with probability
+       keep a quarter to a third of the hundred-step excess of speckles.
+       Show that with $S$ equal jumps an interior pixel shares its jump
+       with at least one of its four neighbors with probability
        $1 - (1 - 1/S)^4$, and evaluate it for $S = 4$, $100$ and $784$.
        Then train `unet` for twice as many updates and count the speckles
        at 100 and at 784 jumps again. Which count falls, and what does that
@@ -1907,17 +1913,17 @@ alone. A weak yardstick: the fair rival is a raster-order model.
 :::
 
 ::: {.slide title="Four Steps Give Texture: Speckles Rise about Ninefold"}
-::: {.cols .vc}
-::: {.col}
-Each step reveals about 200 pixels, independent of one another.
-
-Speckle: a pixel unlike all four neighbors.
+Speckle: a pixel unlike all four neighbors. Four steps: about 200
+independent pixels each.
 
 @!discrete-diffusion-images-as-binary-tokens-7
 
-Data about 4 per 1,000; 4 steps about 9× (independence error); 100
-steps about 2× (eight pixels per jump, and an imperfect network); 784
-steps about 1.3×: most of the hundred-step excess was independence.
+::: {.cols .vc}
+::: {.col}
+- Data about 4 per 1,000; 4 steps about 9×: independence error.
+- 100 steps about 2×: 8 pixels per jump, imperfect network.
+- 784 steps about 1.3×: a drop of about ten standard errors, so the
+  hundred-step excess was mostly independence.
 :::
 
 ::: {.col .narrow}

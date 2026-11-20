@@ -608,11 +608,12 @@ All models now start from the 20,000 points of the Euler experiment: the
 teacher with fifty Euler steps, the consistency student with one jump or
 two with re-noising at $t = 0.5$, the two-time students with one, two or
 four jumps. A fresh draw from the mixture shows what a perfect sampler
-would print. Each row gives the largest weight error over both seeds, then
-each seed's strays, the samples farther than three standard deviations
-from every mode center, and its spread, the mean squared distance of the
+would print. For each run a row gives the largest error in the three
+weights, the strays, the samples farther than three standard deviations
+from every mode center, and the spread, the mean squared distance of the
 samples that do not stray to the center of their mode
-(:numref:`sec_diffusion-denoising`).
+(:numref:`sec_diffusion-denoising`). A student row holds its two runs,
+seeds 2 and 3, separated by a slash.
 
 ```{.python .input #few-step-on-the-running-example-2}
 %%tab pytorch
@@ -695,7 +696,8 @@ d2l.scatter_panels([samples[k][0][:2000] for k in names], names,
 After one evaluation every student puts its samples on the three modes
 with weights within 0.007 of 0.5/0.3/0.2. A fresh draw of 20,000 points
 misses by 0.004 to 0.005, so one jump gets the weights right to within
-about the noise of sampling. The fresh draw strays about 1% of the time,
+about the noise of sampling, and the distilled two-time student keeps them
+that close at two and four jumps. The fresh draw strays about 1% of the time,
 the tail of each Gaussian beyond three standard deviations, and the teacher
 with fifty steps about 1.5%. Both distilled students stray about 2% after
 one evaluation and keep the data's spread, 0.45 to 0.46 against 0.47. A
@@ -707,6 +709,16 @@ about 4% after one jump, and its panel shows a second defect: the modes
 are too tight, with a spread of 0.31 to 0.34 after one jump and 0.37 to
 0.38 after two and four. That is also why its four jumps stray less often
 than the data themselves.
+
+:begin_tab:`jax`
+In this tab the MeanFlow run with seed 3 drifts after more jumps: its
+weights are 0.012 off after two jumps and 0.020 after four, so about 2% of
+its samples sit on the wrong mode, while one jump keeps them within 0.005.
+The drift belongs to the training run, not to the sampler. Retrained with
+seeds 2 to 7, two MeanFlow students in six end 0.013 to 0.020 off after
+four jumps, while the distilled two-time student stays within 0.006 in all
+six.
+:end_tab:
 
 The comparison locates the defect. The two-time students share the
 network, the time pairs and the updates and differ only in the velocity
@@ -961,7 +973,7 @@ gives the MeanFlow identity, a regression target that needs one
 Jacobian-vector product, a stop-gradient, and either a teacher's velocity
 or each example's own. On the mixture, students distilled from a teacher
 match it in one or two evaluations, while MeanFlow gets the mode weights
-right but draws the modes too tight; on Fashion-MNIST a student scores
+right in one jump but draws the modes too tight; on Fashion-MNIST a student scores
 four to five times the teacher's fifty-step FD in one jump and within
 about 1.5 times in four. Matching distributions, with a critic or a
 difference of scores, is the other route to one step.
@@ -1472,7 +1484,7 @@ updates on the teacher's velocity. FD: Fréchet distance of classifier
 features to 1,000 test images; floor (two sets of test images) about 0.8.
 
 - Against the teacher's fifty steps: one jump 4 to 5 times the FD, two
-  about twice, four within 1.5 times.
+  about twice, four about 1.5 times.
 :::
 :::
 :::

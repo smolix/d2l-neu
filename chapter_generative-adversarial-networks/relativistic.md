@@ -44,6 +44,36 @@ $$
 
 The critic maximizes $\Phi$, whereas the generator minimizes it. The quantity $\sigma(D(x) - D(x'))$ is the Bradley--Terry probability :cite:`Bradley.Terry.1952` that $x$ beats $x'$, so $\Phi$ is the log-likelihood of ranking real samples above generated ones, and the critic learns a ranking rather than a classification rule. Jolicoeur-Martineau called such a critic *relativistic*, because it scores a sample relative to a sample from the opposing distribution. The paired form used here is abbreviated RpGAN, for relativistic *paired*, and the divergence derived below inherits the subscript. Comparing one generated sample with several real ones gives the InfoNCE loss of contrastive learning (Exercise :exref:`ex_relativistic-more-negatives`).
 
+In code, the critic's loss is $-\Phi$ estimated on aligned pairs, the $i$-th real sample against the $i$-th generated one, with $-\log \sigma(u) = \operatorname{softplus}(-u)$. The generator's loss is the non-saturating form that swaps the two members, for reasons given at the end of this section. Both functions take the critic and the two batches, as the penalized training loops of :numref:`sec_dcgan` and :numref:`sec_gan_conditional` call them.
+
+<!-- WRITER: this cell moved here verbatim from convergence.md (`convergence-the-loss-in-code`), which now calls `d2l.rpgan_loss_D/G`. The two sentences above are a minimal lead-in written by the code step; rewrite freely. The "Diagonal and All-Pairs Estimates" sentence (REL-11) can point here. -->
+
+```{.python .input #relativistic-the-bradley-terry-critic}
+%%tab pytorch
+#@save
+def rpgan_loss_D(critic, real, fake):
+    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))]."""
+    return F.softplus(critic(fake) - critic(real)).mean()
+
+#@save
+def rpgan_loss_G(critic, real, fake):
+    """Non-saturating pairing loss for the generator."""
+    return F.softplus(critic(real) - critic(fake)).mean()
+```
+
+```{.python .input #relativistic-the-bradley-terry-critic}
+%%tab jax
+#@save
+def rpgan_loss_D(critic, real, fake):
+    """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))]."""
+    return jax.nn.softplus(critic(fake) - critic(real)).mean()
+
+#@save
+def rpgan_loss_G(critic, real, fake):
+    """Non-saturating pairing loss for the generator."""
+    return jax.nn.softplus(critic(real) - critic(fake)).mean()
+```
+
 ### Shift Invariance and Bilinearity
 
 Ranking ignores the level of the critic's scores, which classification does not (:numref:`fig_gan_pairing`).
@@ -208,31 +238,7 @@ Part (a) says that a pair containing one sample from each distribution carries a
 
 Because the theorem is an identity, a finite example can verify it without sampling error. On five atoms the critic is a vector $D \in \mathbb{R}^5$ and $\Phi$ is an exact sum over 25 pairs. We maximize $\Phi$ by gradient ascent along the functional derivative :eqref:`eq_gan_rp_stationarity` and compare the maximum plus $\log 2$ with both forms in :eqref:`eq_gan_rp_value`. The optimized critic should equal $\lambda$ up to an additive constant.
 
-```{.python .input #relativistic-verifying-the-closed-form-1}
-%%tab pytorch, jax
-p = np.array([0.35, 0.25, 0.20, 0.12, 0.08])   # data distribution
-q = np.array([0.02, 0.05, 0.13, 0.30, 0.50])   # generator distribution
-lam = np.log(p / q)
-
-def sigma(t):
-    return 1 / (1 + np.exp(-t))
-
-D = np.zeros(5)
-for _ in range(400):   # ascend Phi along its functional derivative
-    R = sigma(D[None, :] - D[:, None])         # R[i, j] = sigma(D_j - D_i)
-    D += 20.0 * (p * (R @ q) - q * (p @ R))
-U = D[:, None] - D[None, :]                    # U[i, j] = D_i - D_j
-phi = (np.outer(p, q) * (-np.logaddexp(0.0, -U))).sum()
-P, Q = np.outer(p, q).ravel(), np.outer(q, p).ravel()
-print(f'sup Phi + log 2, by gradient ascent:    {phi + np.log(2):.9f}')
-print(f'JS(p (x) q, q (x) p), computed directly: {js(P, Q):.9f}')
-print(f'entropy form H((P+Q)/2) - H(p) - H(q):  '
-      f'{entropy((P + Q) / 2) - entropy(p) - entropy(q):.9f}')
-print(f'JS(p, q) = {js(p, q):.6f},  log 2 = {np.log(2):.6f}')
-D_c, lam_c = D - D.mean(), lam - lam.mean()
-print(f'max |D - lambda|, both centered:        '
-      f'{np.abs(D_c - lam_c).max():.1e}')
-```
+<!-- WRITER: the five-atom verification cell (`relativistic-verifying-the-closed-form-1`) is deleted per the design (REL-5); this subsection and the sentence after it ("agree to nine decimal places", 0.23 < 0.38 < 0.69) go. Its `sigma`, `p`, `q`, `lam`, `D_c` no longer exist in the notebook; the exercises that use the five atoms must state them (F8). The numbers it printed: d_Rp = 0.376889913 (all three forms), JS(p, q) = 0.234050. -->
 
 The three computations of $d_{\mathrm{Rp}}$ agree to nine decimal places, and after centering the recovered critic matches $\lambda$ to double-precision round-off. The value respects part (a), $\mathrm{JS}(p, q) \approx 0.23 < d_{\mathrm{Rp}} \approx 0.38 < \log 2 \approx 0.69$, so here a pair carries about 1.6 times the information of a single sample.
 
@@ -266,24 +272,7 @@ The classical weight compares a sample with the critic's zero level, which the p
 
 On the five atoms of :numref:`subsec_gan_rp_verification`, take the critic $D = \lambda$ and the shifted critic $D = \lambda + 2$, which the pairing game cannot tell apart. A generated sample whose score under $\lambda$ is $t$ gets the threshold weight $\sigma(t)$ under the first critic and $\sigma(t + 2)$ under the second; its rank weight $\sum_x p(x)\, \sigma(t - \lambda(x))$ is the same under both. The plot draws the four curves and marks the real atoms at their scores.
 
-```{.python .input #relativistic-verifying-the-closed-form-2}
-%%tab pytorch, jax
-def rank_weight(t, D, p):   # E_{x ~ p}[sigma(t - D(x))], generated scores t
-    return (p[:, None] * sigma(t[None, :] - D[:, None])).sum(axis=0)
-
-ts = np.linspace(-6.0, 8.0, 281)   # scores of generated samples under lambda
-d2l.plot([ts] * 4 + [lam],
-         [sigma(ts), sigma(ts + 2), rank_weight(ts, lam, p),
-          rank_weight(ts + 2, lam + 2, p), rank_weight(lam, lam, p)],
-         r'score of a generated sample under $D = \lambda$', 'weight',
-         legend=[r'threshold, $\lambda$', r'threshold, $\lambda + 2$',
-                 r'rank, $\lambda$', r'rank, $\lambda + 2$', 'real atoms'],
-         fmts=('C2-', 'C2--', 'C3-', 'k:', 'C0o'), figsize=(5.5, 3.2))
-top = lam.max()   # the highest real score
-print(f'highest real score: threshold {sigma(top):.2f} at lambda, '
-      f'{sigma(top + 2):.2f} at lambda + 2; '
-      f'rank {rank_weight(np.array([top]), lam, p)[0]:.2f} at both')
-```
+<!-- WRITER: the rank-weight plot cell (`relativistic-verifying-the-closed-form-2`) is deleted per the design (REL-7); the paragraph before it that introduces the plot and the paragraph after it (0.95, 0.99, 0.75) go. Keep the display `eq_gan_rp_weights` and the definition sentence. -->
 
 Shifting the critic moves the threshold curve two units to the left, so at the highest real score the threshold weight rises from 0.95 to 0.99 although the pairing game has not changed. The two rank curves coincide. They rise smoothly across the real scores, each real atom contributing its mass $p(x)$, and reach only 0.75 at the highest one, so the rank weight separates samples that the threshold weight treats as nearly equal.
 
@@ -335,9 +324,12 @@ def losses(gen):
     return np.array([js(p_hat, q_hat) - np.log(2), js(P, Q) - np.log(2), paired])
 
 for gen in ([0, 0], [0, 0.1]):   # both on x_1; then x'_2 steps off it
-    print(f'gen = {gen}: (classical, all pairs, paired) / log 2 = '
-          f'{np.round(losses(gen) / np.log(2), 2)}')
+    value = losses(gen)
+    print(f'gen = {gen}: classical, all pairs, paired = {np.round(value, 3)} nats'
+          f' = {np.round(value / np.log(2), 2)} x log 2')
 ```
+
+<!-- WRITER: the landscape print now gives nats and multiples of log 2, labeled. At gen = [0, 0]: classical -0.477 nats (-0.69 x log 2; this is JS - log 2 with JS = 0.216, not -log 2), all pairs -0.347 (-0.5 x log 2), paired -0.347 (-0.5 x log 2). At gen = [0, 0.1]: -0.347, -0.173, -0.347 nats (-0.5, -0.25, -0.5 x log 2). The sentence after the cell stays true. -->
 
 Moving $x'_2$ off $x_1$ raises the all-pairs loss from $-\tfrac12 \log 2$ to $-\tfrac14 \log 2$ and leaves the paired loss at $-\tfrac12 \log 2$, as computed by hand. A small move lets each generated point stay or step to a nearby position that holds no data, so coincident points may separate. The count keeps the assignments that every small move makes worse but that are not global minima.
 
@@ -395,6 +387,33 @@ $$
 $$
 
 where $D_{\mathrm{J}} = \mathbb{E}_p[\lambda] - \mathbb{E}_q[\lambda] = D_{\textrm{KL}}(p \,\|\, q) + D_{\textrm{KL}}(q \,\|\, p) \geq 0$. The bound exceeds $\log 2$ whenever $q \neq p$, and the loss equals $\log 2$ at $q = p$, so the non-saturating generator, too, is minimized only at the data. The variants differ when generated samples rank badly: at the optimal critic, the $q$-average of $w_{\textrm{Rp}}$ is at most $\tfrac12$ and tends to zero as the supports separate (Exercise :exref:`ex_relativistic-zero-sum-weights`). On the two atoms it is about 0.24, against 0.76 for the non-saturating weight.
+
+### Pairing on the Mixture Testbed
+:label:`subsec_gan_rp_trained`
+
+The pairing loss can train the generator of :numref:`subsec_gan_objectives_testbed` with nothing else changed: the same planar three-mode mixture, start, networks, optimizers and step count. `d2l.train_toy` hands the losses the critic's scores of the real and the generated batch, so the critic passed to the pairing losses is the identity on those scores. We train two arms, the pairing critic with the non-saturating generator and with the saturating one (the critic's loss negated, the zero-sum game), three runs each, and report the columns of :numref:`subsec_gan_objectives_testbed`: the median $\mathrm{JS}(p, q_t)$ over the last 2,000 steps and the first recorded step with $\mathrm{JS} < 0.01$.
+
+```{.python .input #relativistic-pairing-on-the-mixture-testbed}
+%%tab pytorch, jax
+scores = lambda s: s   # train_toy passes scores, so the critic is the identity
+arms = {'non-saturating': (lambda r, f: d2l.rpgan_loss_D(scores, r, f),
+                           lambda r, f: d2l.rpgan_loss_G(scores, r, f)),
+        'saturating': (lambda r, f: d2l.rpgan_loss_D(scores, r, f),
+                       lambda r, f: -d2l.rpgan_loss_D(scores, r, f))}
+
+def first_step_below(trace, level=0.01, every=200):
+    below = np.flatnonzero(trace < level)
+    return f'{every * below[0]:5d}' if len(below) else ' none'
+
+for name, (critic_loss, gen_loss) in arms.items():
+    traces = [d2l.train_toy(critic_loss, gen_loss, seed) for seed in range(3)]
+    medians = ' '.join(f'{np.median(t[-2000 // 200:]):.4f}' for t in traces)
+    firsts = ' '.join(first_step_below(t) for t in traces)
+    print(f'pairing, {name:14s} median JS (runs 0-2): {medians}   '
+          f'first step JS < 0.01: {firsts}')
+```
+
+<!-- WRITER: measured in two direct, uncaptured executions per tab (the scheduler run replaces these numbers). PyTorch (CPU testbed, bit-identical in both executions): non-saturating median JS 0.0006 0.0005 0.0007 nats, first step 2400 2600 2400; saturating 0.0020 0.0017 0.0014, first step 1800 1800 1800. JAX (GPU, not bit-reproducible on the same seed): execution 1 non-saturating 0.0008 0.0008 0.0007, first step 2200 2400 2200; saturating 0.0017 0.0016 0.0013, first step 1800 1800 2000. Execution 2 non-saturating 0.0008 0.0006 0.0005, first step 2200 2400 2200; saturating 0.0012 0.0019 0.0011, first step 1800 2000 1800. Same-seed logistic row of 16.2 from the development copy of the testbed: PyTorch 0.0008 0.0008 0.0008, first step 2400 x3; JAX 0.0011 0.0006 0.0009, first step 2400 2400 2200. Firm lessons under the trained-comparison standard: (1) the non-saturating pairing generator fits the planar mixture as the logistic loss does (ranges overlap; no difference claimed); (2) the saturating (zero-sum) pairing generator does NOT stall from this start, whose supports overlap: every run reaches JS < 0.01, no later than the non-saturating runs, and ends within a few thousandths of a nat of the data. In every run so far its median sits above every non-saturating run (about 0.0015 against 0.0007), but in JAX execution 2 the gap (0.0003) is smaller than the saturating arm's own range (0.0008), so the standard does not support 'ends higher' as a claim; at most 'in these runs the saturating arm ends slightly higher'. 'Saturating reaches 0.01 sooner' is at the trace resolution (200 steps) in JAX; do not build on it. The vanishing zero-sum weight of the table above needs generated samples that rank below every real one, which this start does not produce; do not claim the run shows saturation. -->
 
 ### Diagonal and All-Pairs Estimates
 
@@ -719,7 +738,7 @@ $$= H\big(\tfrac12(p \otimes q + q \otimes p)\big) - H(p) - H(q)$$
 :::
 
 ::: {.slide title="Five Atoms: the Three Forms Agree to Nine Digits"}
-@!relativistic-verifying-the-closed-form-1
+<!-- WRITER: placeholder of the deleted five-atom cell removed; this slide goes (design: halve the deck). -->
 
 - Gradient ascent on $\Phi$, JS on 25 pair atoms, the entropy form.
 - The recovered critic equals $\lambda$ after centering.
@@ -753,7 +772,7 @@ Toward 1 as the supports separate: both divergences reach $\log 2$.
 $$w_{\textrm{Rp}}(x') = \mathbb{E}_{x \sim p}[\sigma(D(x') - D(x))]
 \qquad w_{\textrm{sat}}(x') = \sigma(D(x'))$$
 
-@!relativistic-verifying-the-closed-form-2
+<!-- WRITER: placeholder of the deleted rank-weight cell removed; the slide keeps the display only, or goes. -->
 
 - Shift the critic by 2: the threshold weight moves, the rank weight does not.
 :::

@@ -5,7 +5,7 @@ The multilayer perceptron of :numref:`sec_basic_gan` learned to draw Fashion-MNI
 
 Convolutional networks answered the first question. In 2015 a convolutional generator trained on photographs of bedrooms produced bedrooms that no camera had taken :cite:`Radford.Metz.Chintala.2015`, and within a few years generated faces were hard to tell from photographs. Diffusion models now draw most images, but the adversarial loss survives as a term in one-step generators (:numref:`sec_gan_beyond`), which are built and judged with the networks and scores of this section.
 
-We work with about 40,000 small game sprites. We build the 2015 network, then a plain network without its batch normalization and its other devices, and train the plain network three times, changing one ingredient at a time, to see whether the gradient penalties of :numref:`sec_gan_convergence` make the devices unnecessary. Then we turn the second question into numbers: two distances the chapter already knows, computed in the features of an image classifier, and a pair of scores that say separately whether the samples look like real images and whether they cover all of them. The section ends with two questions about memory: does the generator draw sensible images between its samples, and does the critic remember its training images? The notebook needs a GPU, on which it runs in under half an hour.
+We work with about 40,000 small game sprites. We build the 2015 network, then a plain network without its batch normalization and its other devices, and train the plain network three times, changing one ingredient at a time, to see whether the gradient penalties of :numref:`sec_gan_convergence` make the devices unnecessary. Then we turn the second question into numbers: two distances the chapter already knows, computed in the features of an image classifier, and a pair of scores that say separately whether the samples look like real images and whether they cover all of them. The section ends with two questions about memory: does the generator draw sensible images between its samples, and does the critic remember its training images? The notebook needs a GPU, on which it runs in about half an hour.
 
 ```{.python .input #dcgan-setup}
 %%tab jax
@@ -774,7 +774,7 @@ for name, (loss_D, loss_G, gamma, num_steps) in arms.items():
           f'penalty {gamma / 2 * (r1 + r2):.3f}, train-holdout gap {gap:+.2f}')
 ```
 
-Both penalized critics sit below their equilibrium values, about 1.05 against $2 \log 2 \approx 1.39$ for the classic loss and about 0.5 against $\log 2 \approx 0.69$ for pairing: each stays somewhat ahead of its generator without running away. The penalty adds between 0.08 and 0.13 to these losses. The unpenalized critic's loss lies lower still, far below $2 \log 2$. We return to the train--holdout gaps at the end of the section.
+Both penalized critics sit below their equilibrium values, about 1.05 against $2 \log 2 \approx 1.39$ for the classic loss and about 0.5 against $\log 2 \approx 0.69$ for pairing: each stays somewhat ahead of its generator without running away. The penalty adds between 0.08 and 0.13 to these losses. The unpenalized critic plays the same classic loss as the first penalized one and sits at about 0.6, less than half of $2 \log 2$. We return to the train--holdout gaps at the end of the section.
 
 ### Training Traces
 
@@ -795,7 +795,7 @@ axes[0].legend(list(runs), loc='center right')
 fig.tight_layout()
 ```
 
-The first panel separates the arms by two orders of magnitude. Without a penalty the critic's squared gradient on real images climbs from about a tenth to above one during the first 2,000 steps and then swings between a few tenths and about 6, while both penalized critics stay flat near 0.01. The second panel hardly separates them: all three critics order more than nine in ten fresh pairs correctly at most checks, with occasional sharp dips. In the third panel all three rank weights start near 0.1. Over the same first 2,000 steps the unpenalized one falls toward zero and then stays mostly below a tenth, apart from spikes, while with the penalty it rises to between about a quarter and two fifths.
+The first panel separates the arms by two orders of magnitude. Without a penalty the critic's squared gradient on real images climbs from about a tenth to above one during the first 2,000 steps and then swings between a few tenths and 6 to 8, while both penalized critics stay flat near 0.01. The second panel hardly separates them: all three critics order more than nine in ten fresh pairs correctly at most checks, with occasional sharp dips. In the third panel all three rank weights start low, at about 0.15 or below. Over the same first 2,000 steps the unpenalized one falls toward zero and then stays mostly below a tenth, apart from spikes, while with the penalty it rises to between about a quarter and two fifths.
 
 Read together, the last two panels say what the penalty does. Every critic orders nearly every pair, but the margins differ. A rank weight of a third means a typical score difference of about 0.7, since $\sigma(-0.7) \approx 0.33$; a rank weight of a few hundredths means a difference of 3 or more, since $\sigma(-3) \approx 0.05$. The penalized critic puts real images above generated ones by a small margin, the unpenalized critic by a wide one. The ranking accuracy, a hard threshold, cannot see this; the rank weight, its soft version, can.
 
@@ -849,7 +849,7 @@ grids = [tile_images(G(z_show), 8) for G in gens.values()]
 d2l.show_images(grids, 1, 4, titles=list(gens), scale=3.4);
 ```
 
-Without a penalty the classic loss collapses: after 6,000 steps the 64 latent codes produce one grey texture that resembles no sprite. The two penalized arms produce diverse, creature-shaped sprites on white backgrounds with softer outlines than real ones, and no difference between the two is visible. Creature-shaped is as far as it goes: none of these is a creature one could name. Each penalized arm sees about 0.77 million images, far fewer than published GANs train on. Compare them with DCGAN's samples: those are large, blotchy shapes that fill their frames, while the penalized arms draw smaller figures with outlines on white, closer in look to the real sprites. The eye prefers the penalized arms. We will see whether the scores agree.
+Without a penalty the classic loss collapses: after 6,000 steps the 64 latent codes produce one or two grey textures that resemble no sprite. The two penalized arms produce diverse, creature-shaped sprites on white backgrounds with softer outlines than real ones, and no difference between the two is visible. Creature-shaped is as far as it goes: none of these is a creature one could name. Each penalized arm sees about 0.77 million images, far fewer than published GANs train on. Compare them with DCGAN's samples in the first panel: larger, more saturated figures with blotchy textures, many of them filling their tiles, while the penalized arms draw smaller figures with outlines on white, closer in look to the real sprites. The eye prefers the penalized arms. We will see whether the scores agree.
 
 The traces put two changes of the unpenalized arm in order: during the first 2,000 steps its critic grows about a hundred times steeper on real images than the penalized critics, and its rank weight falls toward zero. They do not log the diversity of the samples, so where the collapse falls in that sequence, and what causes what, they cannot say. Exercise :exref:`ex_dcgan-rerun-arm-classic-loss` logs steepness and diversity together to find out.
 
@@ -971,7 +971,7 @@ $$
 
 Precision is the fraction of generated images that land among real ones; recall is the fraction of real images near which the generator lands. We use $K = 3$, as the paper does. Larger $K$ inflates every ball and pushes both numbers toward one, so they compare generators only at equal $K$ and $n$.
 
-What should a collapsed generator score? Its samples are nearly identical, so each one's third nearest neighbor sits almost on top of it, every generated ball shrinks to a point, and recall falls to zero whatever the image looks like. Precision depends on whether the repeated image looks like a sprite. Our unpenalized arm repeats a grey texture, so we expect both numbers near zero.
+What should a collapsed generator score? Its samples are nearly identical, so each one's third nearest neighbor sits almost on top of it, every generated ball shrinks to a point, and recall falls to zero whatever the image looks like. Precision depends on whether the repeated image looks like a sprite. Our unpenalized arm repeats one or two grey textures, so we expect both numbers near zero.
 
 ```{.python .input #dcgan-precision-and-recall}
 %%tab pytorch, jax
@@ -1059,15 +1059,15 @@ for key, (ref, feat) in scored.items():
 print(f'real pixel values equal to +1: {white:.0%}')
 ```
 
-The floor behaves as predicted: FD is below 0.2 for two samples of the same distribution, and $\widehat{\mathrm{MMD}}^2$ lies within a few thousandths of zero. Precision and recall are 0.95 rather than one, because with $K = 3$ a real image of one set can fall between the balls of the other. A second draw moves FD by at most 0.15, less than any gap between two generators.
+The floor behaves as predicted: FD is below 0.2 for two samples of the same distribution, and $\widehat{\mathrm{MMD}}^2$ lies within a few thousandths of zero. Precision and recall are 0.95 rather than one, because with $K = 3$ a real image of one set can fall between the balls of the other. A second draw moves FD by at most about 0.2, less than any gap between two generators in the table.
 
-The collapsed arm scores an FD of 72 to 86, hundreds of times the floor, with precision and recall both zero, as predicted. This is the firm result of the experiment: on this backbone the unpenalized classic loss collapses, and the two penalties rescue it. The penalized arms score FD between 2.8 and 4.2, about 15 to 25 times the floor.
+The collapsed arm scores an FD of 64 to 72, hundreds of times the floor, with recall zero and precision at most 0.07, as predicted. This is the firm result of the experiment: on this backbone the unpenalized classic loss collapses, and the two penalties rescue it. The penalized arms score FD between 3.5 and 5.4, about 18 to 28 times the floor.
 
 Which penalized arm is better? In this table pairing scores lower, and the second draw shows that the gap is larger than sampling noise. But the second draw changes only the latent codes. Each arm is a single training run, and the table does not measure how far a second training run would move its scores; Exercise :exref:`ex_dcgan-rerun-arm-classic-loss` shows how much one run can differ from the next. A difference with no range beside it is not a result. This budget does not separate the classic loss from the pairing loss; that would take several training runs per arm.
 
-Every generator that did not collapse is still far from the data. Its precision is about 0.35 to 0.4 and its recall about 0.4 to 0.5: fewer than half of its samples land among real sprites, and it comes near only about half of the real ones. Between one in seven and one in six raw pixel values of a penalized generator lie outside $[-1, 1]$, where DCGAN's tanh keeps all of them inside. Nearly half of the real pixel values equal $+1$, the white background, which is most likely where a generator without tanh overshoots; clamping maps such overshoot back to white.
+Every generator that did not collapse is still far from the data. Its precision is about a third to 0.4 and its recall about 0.4 to 0.5: fewer than half of its samples land among real sprites, and it comes near only about half of the real ones. About one in seven raw pixel values of a penalized generator lies above $+1$ and about one in a thousand below $-1$, where DCGAN's tanh keeps all of them inside $[-1, 1]$. The overshoot is almost entirely on the white side: nearly half of the real pixel values equal $+1$, the white background, so a generator without tanh that draws white often lands past it, and clamping maps it back.
 
-The DCGAN row deserves the most attention, because here the eye and the scores disagree. The 2015 network has the lowest FD, about 2, and an $\widehat{\mathrm{MMD}}^2$ four to eight times below the penalized arms, with about as many images seen (20 epochs of 36,538 against 12,000 steps of 64) and no second differentiation of its critic. This gap is also large against the differences within the table: the two penalized arms differ from each other in $\widehat{\mathrm{MMD}}^2$ by less than a factor of two. Each generator is still one training run, so we draw only the weak conclusion that no score here prefers the penalized arms. Precision and recall call DCGAN and the penalized arms about equal. The eye, as we saw, prefers the penalized arms.
+The DCGAN row deserves the most attention, because here the eye and the scores disagree. The 2015 network has the lowest FD, about 2, and an $\widehat{\mathrm{MMD}}^2$ about six to ten times below the penalized arms, with about as many images seen (20 epochs of 36,538 against 12,000 steps of 64) and no second differentiation of its critic. This gap is also large against the differences within the table: the two penalized arms differ from each other in $\widehat{\mathrm{MMD}}^2$ by less than a factor of two. Each generator is still one training run, so we draw only the weak conclusion that no score here prefers the penalized arms. Precision and recall call DCGAN and the penalized arms about equal. The eye, as we saw, prefers the penalized arms.
 
 Which should we believe? The scores see each sprite as a $32 \times 32$ thumbnail, through 22-pixel windows of a network trained on photographs. At that size DCGAN's blotches are partly averaged away, and the statistics of color and texture that FD and $\widehat{\mathrm{MMD}}^2$ compare presumably count for more than the outlines the eye looks for. A score measures closeness in the features of its network and nothing else: our classifier judges sprites by what helps to classify photographs, and a different feature network can change the values and reorder similar models. The verdict therefore has two halves. By these scores and at this scale, DCGAN is at least as good as the modern recipe, and cheaper; by eye it is not. What the penalized loss gives us on sprites is a network with none of DCGAN's devices that trains at all. That the same loss scales to far larger networks is R3GAN's claim, which our notebook cannot test.
 
@@ -1113,11 +1113,11 @@ d2l.show_images([tile_images(x[:8].reshape(-1, 64, 64, 3), 8)
                 1, 2, titles=['latent walk', 'pixel cross-fade'], scale=4.5);
 ```
 
-Both predictions hold. The walk scores 0.38 to 0.39, close to the arm's own 0.35 to 0.41, and the cross-fade about half of that. Along the walk shape and color change gradually, while each cross-fade shows two figures at once. The midpoint of two Gaussian codes is shorter than a typical code by a factor of about $\sqrt 2$, which is why some authors walk along a great circle; here the straight line already stays among the data.
+Both predictions hold. The walk scores 0.35 to 0.38, close to the arm's own 0.36 to 0.41, and the cross-fade 0.18 to 0.21, about half of that. Along the walk shape and color change gradually, while each cross-fade shows two figures at once. The midpoint of two Gaussian codes is shorter than a typical code by a factor of about $\sqrt 2$, which is why some authors walk along a great circle; here the straight line already stays among the data.
 
 ### Limited Data
 
-About 37,000 training sprites is a small dataset for a critic with 1.6 million parameters, which sees each training image about twenty times in 12,000 steps of 64. A critic that recognizes individual training images scores them higher than unseen ones and pulls the generator toward the finite training set. The penalized critics' train--holdout gaps of $+0.02$ to $+0.05$ are small against the margin of about 0.7 by which they rank real above generated images: at this budget they score held-out sprites much as they score training images. The unpenalized critic ranks by margins several times wider, so its larger gap of $+0.16$ to $+0.29$ is no clearer sign of memorization; Exercise :exref:`ex_dcgan-scale-free-overfitting-statistic` puts all three on one scale. Smaller datasets and longer training do open the gap. On subsets of a face dataset from 140,000 down to 10,000 images, :citet:`Karras.Aittala.Hellsten.ea.2020` saw FID begin to worsen during training, sooner the smaller the set, and at 20,000 and 50,000 images, about the size of ours, they saw the critic's scores of training and held-out images drift apart as training went on.
+About 37,000 training sprites is a small dataset for a critic with 1.6 million parameters, which sees each training image about twenty times in 12,000 steps of 64. A critic that recognizes individual training images scores them higher than unseen ones and pulls the generator toward the finite training set. The penalized critics' train--holdout gaps of $+0.02$ to $+0.05$ are small against the margin of about 0.7 by which they rank real above generated images: at this budget they score held-out sprites much as they score training images. The unpenalized critic ranks by margins several times wider, so its larger gap of $+0.08$ to $+0.29$ is no clearer sign of memorization; Exercise :exref:`ex_dcgan-scale-free-overfitting-statistic` puts all three on one scale. Smaller datasets and longer training do open the gap. On subsets of a face dataset from 140,000 down to 10,000 images, :citet:`Karras.Aittala.Hellsten.ea.2020` saw FID begin to worsen during training, sooner the smaller the set, and at 20,000 and 50,000 images, about the size of ours, they saw the critic's scores of training and held-out images drift apart as training went on.
 
 The remedy that they and :citet:`Zhao.Liu.Lin.ea.2020` propose augments both inputs of the critic, inside the generator's gradient path. Augmenting only the real images, as our flips do, teaches the generator the augmented distribution, which for flips is harmless only if each sprite is as likely as its mirror image. Applied to both inputs, an augmentation leaves the matching problem intact as long as it does not map two different distributions to the same one; Karras et al. call such an augmentation *non-leaking* (Exercise :exref:`ex_dcgan-augmentation-leaks`).
 
@@ -1500,10 +1500,11 @@ $R_1 = \|\nabla_x D(x)\|^2$ on real images, $R_2$ on generated ones.
 ::: {.slide title="The Unpenalized Arm Collapses; Both Penalized Arms Stay Diverse"}
 @!dcgan-loss-a-b-on-one-backbone-3
 
-- No penalty: one grey texture after 6,000 steps.
+- No penalty: one or two grey textures after 6,000 steps.
 - Penalized: diverse sprite-like shapes, no visible difference; none is a
   nameable creature after 0.77 M images.
-- To the eye they look closer to real sprites than DCGAN's blotches.
+- To the eye they look closer to real sprites than DCGAN's larger,
+  blotchy figures (first panel).
 
 ::: {.d2l-note}
 Seen together: a steep critic, a rank weight near 0, a collapse. The
@@ -1568,16 +1569,18 @@ in its own set.
 @!dcgan-scoring-the-two-runs
 
 4,059 samples against 4,059 held-out sprites; every generator from its
-weight average, on two latent draws.
+weight average, on two latent draws. The last two columns: raw pixel
+values above $+1$ and below $-1$ (the backbone has no tanh; the
+overflow sits on the white side).
 :::
 
 ::: {.slide title="By These Scores the 2015 Network Is at Least as Good as the Penalized Backbone"}
 | run | FD | $\widehat{\mathrm{MMD}}^2$ | recall |
 |:--|--:|--:|--:|
-| real vs. real | 0.17 to 0.18 | about 0 | 0.95 |
-| DCGAN | about 2 | 0.08 to 0.11 | about 0.5 |
-| penalized arms | 2.8 to 4.2 | 0.4 to 0.8 | 0.4 to 0.5 |
-| unpenalized | 72 to 86 | 7.5 to 9.6 | 0.00 |
+| real vs. real | 0.17 to 0.19 | about 0 | 0.95 |
+| DCGAN | about 2 | 0.08 to 0.12 | about 0.5 |
+| penalized arms | 3.5 to 5.4 | 0.6 to 1.1 | 0.4 to 0.5 |
+| unpenalized | 64 to 72 | 7.5 to 7.6 | 0.00 |
 
 - The penalties rescue the plain backbone: the firm result.
 - Classic vs. pairing: one training run each; the second draw shows only
@@ -1591,8 +1594,8 @@ weight average, on two latent draws.
 @!dcgan-latent-interpolation
 
 $z_t = (1 - t)\, z_0 + t\, z_1$ at eight evenly spaced points for 64
-pairs. Inner points: precision 0.38 to 0.39, like the arm's own samples;
-cross-fade 0.18 to 0.19. Shape and color change gradually: no jumps, as a
+pairs. Inner points: precision 0.35 to 0.38, like the arm's own samples;
+cross-fade 0.18 to 0.21, about half. Shape and color change gradually: no jumps, as a
 lookup table would show.
 :::
 
@@ -1627,7 +1630,7 @@ only the reals is safe only if $p$ is mirror-symmetric.
 
 - Transposed convolution: side $\text{stride}\cdot(n-1) + \text{kernel} - 2\cdot\text{pad}$; five layers grow $1 \to 64$.
 - DCGAN trains the classic loss on 36,538 sprites: FD about 2 against a floor below 0.2, lowest of all generators, though its samples look blotchier.
-- No normalization, no penalty: collapse, FD 72 to 86, recall 0.
+- No normalization, no penalty: collapse, FD 64 to 72, recall 0.
 - $R_1 + R_2$ at $\gamma = 10$: critic about 100× flatter, diverse sprites; classic and pairing not separated.
 - FID = Gaussian $W_2^2$, KID = unbiased cubic-kernel MMD, precision and recall = fidelity and coverage; all read against the floor.
 

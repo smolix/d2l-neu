@@ -520,3 +520,360 @@ for name, blk in blocks.items():
 
 5. **Rate of token collapse.** :numref:`subsec_signal-propagation` argued that in a post-norm block, only the attention sublayer mixes across tokens, while the FFN acts position-wise. Modify `MiniBlock` so that the attention sublayer is skipped ($\mathbf{H} = \textrm{Norm}(\mathbf{X})$) and only the post-norm FFN runs, and re-run `signal_stats(pre_norm=False)`. Does token spread still collapse to zero across 32 layers, or does it stabilize? Explain how this confirms each factor in :eqref:`eq_collapse-rate`.
 :exlabel:`ex_transformer-block-ffn-width-rounding`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §11.1]{.kicker}
+
+The Transformer Block<br>
+**residual stream · normalization placement · token collapse · RMSNorm and QK-norm · SwiGLU · one configurable class**
+:::
+:::
+
+::: {.slide title="Thirty-Two Fresh Post-Norm Blocks Squeeze 64 Tokens onto One Point"}
+[The problem]{.kicker}
+
+- Attention averages values: it mixes tokens but computes no new feature
+  of any one token.
+- Stack 32 blocks the 2017 way, with Xavier weights. Before any training
+  the tokens agree to one part in $10^4$; $\mathbf{W}_q$ gets gradients
+  near $10^{-9}$.
+
+::: {.d2l-note .warn}
+What must a block contain, and what keeps a deep stack's tokens apart?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- count a block's parameters: $4d^2 + 8d^2$;
+- predict a post-norm stack's token spread from its weight scale;
+- explain why collapsed tokens starve $\mathbf{W}_q, \mathbf{W}_k$;
+- write RMSNorm and QK-norm, and size SwiGLU to match the MLP.
+
+**Running examples:** a GPT-2-small block ($d = 768$); 32 random blocks at
+$d = 256$, in three stacks.
+:::
+
+::: {.slide title="The Block Is What Every Transformer Repeats"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| **The Transformer Block** | **attention + FFN, residual stream** |
+| A GPT from Scratch | a trained language model; GPT-2 loaded |
+| The KV Cache | reuse past keys and values |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
+| Encoders, Decoders, and Cross-Attention | the other two wirings |
+| Vision Transformer | images as token sequences |
+| Scaling Laws | loss against parameters, data, compute |
+| Mixture of Experts | more parameters per FLOP |
+| The Modern Recipe | released models as settings |
+:::
+
+::: {.col .narrow}
+- **Uses:** multi-head attention, LayerNorm, GELU, Xavier initialization.
+- **Skips:** positions and the causal mask (next deck), training.
+:::
+:::
+:::
+
+::: {.slide title="Two Sublayers Read from a Residual Stream and Add Back"}
+@fig:mdl-transformers-block-anatomy
+
+Attention is the only place tokens interact; the FFN acts on each token
+alone. Both map $(n, d)$ to $(n, d)$, so blocks stack.
+:::
+
+::: {.slide title="Post-Norm Normalizes the Stream; Pre-Norm Normalizes What Each Branch Reads"}
+Token vectors $\mathbf{x} \in \mathbb{R}^d$ on the residual stream. The
+literature also says post-LN and pre-LN, after layer normalization:
+
+$$\textrm{post-norm (2017):}\quad \mathbf{h} = \mathrm{Norm}_1(\mathbf{x} + \mathrm{Attn}(\mathbf{x})), \quad \mathbf{y} = \mathrm{Norm}_2(\mathbf{h} + \mathrm{FFN}(\mathbf{h}))$$
+
+$$\textrm{pre-norm:}\quad \mathbf{h} = \mathbf{x} + \mathrm{Attn}(\mathrm{Norm}_1(\mathbf{x})), \quad \mathbf{y} = \mathbf{h} + \mathrm{FFN}(\mathrm{Norm}_2(\mathbf{h}))$$
+
+- $\mathrm{Attn}$: multi-head self-attention with projections
+  $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v, \mathbf{W}_o \in
+  \mathbb{R}^{d \times d}$.
+- $\mathrm{FFN}(\mathbf{x}) = \mathbf{W}_2\,\phi(\mathbf{W}_1\mathbf{x})$,
+  hidden width $4d$.
+:::
+
+::: {.slide title="In Code the Two Arrangements Differ in Two Lines"}
+```{.python #transformer-block-exercises-1}
+def block(X, pre_norm):
+    if pre_norm:                       # norm on each branch's input
+        Y = norm1(X)
+        X = X + attn(Y, Y, Y)
+        return X + ffn(norm2(X))
+    X = norm1(X + attn(X, X, X))       # 2017: norm on the stream
+    return norm2(X + ffn(X))
+```
+
+Same weights, two different functions. A fresh stack is a fixed random
+function, so how each treats signals can be measured before training.
+:::
+
+::: {.slide title="Fresh Attention Adds Nearly the Same Vector to Every Token"}
+- Fresh weights see content only through random $\mathbf{W}_q,
+  \mathbf{W}_k$. Bold step: treat them as unrelated to it.
+- Each token gets a mixture of all tokens with expectation
+  $\boldsymbol{\mu}$, the mean token; deviations largely cancel.
+- Every token gains about $\mathbf{W}_o\mathbf{W}_v\boldsymbol{\mu}$:
+  the shared part grows, the differences do not.
+
+::: {.d2l-note .rule}
+Post-norm rescales all tokens alike, and LayerNorm's mean is per token,
+not $\boldsymbol{\mu}$: nothing undoes the growth.
+:::
+:::
+
+::: {.slide title="Each Post-Norm Block Multiplies the Shared Energy by $1 + g^4$"}
+- Tokens $\mathbf{x}_i = \boldsymbol{\mu} + \boldsymbol{\delta}_i$;
+  $\rho = n\|\boldsymbol{\mu}\|^2 / \sum_i \|\boldsymbol{\delta}_i\|^2$;
+  spread $s = (1+\rho)^{-1/2}$.
+- $\mathbf{W}_v, \mathbf{W}_o$ with entries of variance $g^2/d$: each
+  multiplies squared lengths by $g^2$, so $\rho \to (1+g^4)\rho$.
+- 64 random tokens: $\rho_0 = 1/63$, so
+  $s_k \approx \big(1 + (1+g^4)^k/63\big)^{-1/2}$.
+
+| predicted spread $s_k$, block $k$ | 8 | 16 | 32 |
+|---|---|---|---|
+| Xavier, $g = 1$: $\rho$ doubles per block | 0.44 | 0.031 | $1.2 \times 10^{-4}$ |
+| GPT-2's $\mathcal{N}(0, 0.02^2)$ at $d = 256$: $g^2 \approx 0.1$ | 0.99 | 0.99 | 0.99 |
+:::
+
+::: {.slide title="The Measured Spread Follows the Prediction"}
+Post-norm and pre-norm with Xavier weights; post-norm with
+$\mathcal{N}(0, 0.02^2)$. Spread against depth, predictions dotted:
+
+@!transformer-block-signal-propagation-at-initialization-3
+:::
+
+::: {.slide title="Small Weights Do Not Collapse"}
+- Xavier: spread about 0.3, 0.02, $10^{-4}$; below prediction (by $< 2\times$),
+  since the FFN (GELU has a positive mean) adds a shared part too.
+- $\mathcal{N}(0, 0.02^2)$: $1 + g^4 \approx 1.01$; spread 0.97 after 32
+  blocks.
+- GPT-1 and BERT are post-norm; DeepNet trains 1,000 layers.
+
+::: {.d2l-note .rule}
+Collapse needs post-norm and large weights: the size of the weights decides.
+:::
+
+[Wang et al., 2024 (DeepNet)]{.small}
+:::
+
+::: {.slide title="Check: Is 0.02 Small at Width 1024?"}
+[Check]{.kicker}
+
+A post-norm stack of 24 blocks at $d = 1024$, 64 random tokens, weights
+from $\mathcal{N}(0, 0.02^2)$. Predict the token spread at the top.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $g^2 = 1024 \cdot 0.02^2 = 0.41$, $g^4 = 0.17$;
+$\rho = 1.17^{24}/63 \approx 0.66$, spread $\approx 0.78$: the tokens are
+already partly merged. A fixed standard deviation is a larger $g$ at a
+larger width. (Xavier: $\rho = 2^{24}/63 \approx 2.7 \times 10^5$, spread
+$\approx 0.002$.)
+:::
+:::
+:::
+
+::: {.slide title="Identical Tokens Starve the Query and Key Weights"}
+::: {.cols .vc}
+::: {.col}
+@!transformer-block-signal-propagation-at-initialization-2
+:::
+
+::: {.col .narrow}
+- Equal tokens: every query scores every key alike, so the weights stop
+  depending on $\mathbf{W}_q, \mathbf{W}_k$.
+- Top post-norm block: $\sim 10^{-9}$; $\mathbf{W}_v, \mathbf{W}_o$ still
+  get several hundredths.
+- Lowest blocks: about $10^{-2}$. The starvation is local.
+:::
+:::
+:::
+
+::: {.slide title="Pre-Norm Adds to the Shared Part Instead of Multiplying It"}
+- Branches read normalized inputs, so their outputs have fixed scale.
+  Post-norm pins the stream RMS at 1.
+- If each block adds unit mean square: RMS $\sqrt{33} \approx 5.7$ after
+  32 blocks. Measured: about 5, somewhat below.
+- Shared vectors land on a growing stream: spread about a third at 32,
+  so $\rho = 8$, against $2^{32}/63 \approx 7 \times 10^7$ predicted for
+  post-norm with Xavier.
+
+::: {.d2l-note .rule}
+Keep every branch small against the stream: pre-norm by growth, small
+weights by size.
+:::
+:::
+
+::: {.slide title="RMSNorm Drops the Centering, and Ignores Scale but Not Shift"}
+$$\mathrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\tfrac{1}{d}\sum_{i=1}^d x_i^2 + \epsilon}} \odot \boldsymbol{\gamma}$$
+
+Learned gain $\boldsymbol{\gamma}$, small $\epsilon$. $\mathbf{x} = (1, 2,
+3, 6)$: RMS $\sqrt{12.5} = 3.54$; mean 3, standard deviation
+$\sqrt{3.5} = 1.87$. Unit gain, zero shift:
+
+@!transformer-block-rmsnorm
+
+::: {.d2l-note}
+Last row: an offset swamps RMSNorm's output. Centering would remove it,
+but in practice it did not matter, so current models leave it out.
+:::
+
+[Zhang & Sennrich, 2019]{.small}
+:::
+
+::: {.slide title="QK-Norm Bounds the Attention Logits"}
+- Logits $\mathbf{q}^\top\mathbf{k}/\sqrt{d_h}$, head width $d_h$.
+  Inflated $\mathbf{q}, \mathbf{k}$: one-hot softmax, vanishing gradient.
+- Seen while scaling ViTs (diverging at 8B parameters) and in small LMs
+  at high learning rates.
+- QK-norm: normalize each head's $\mathbf{q}, \mathbf{k}$ first. Unit
+  gains: $|\textrm{logit}| \le \sqrt{d_h} = 8$.
+
+[Henry et al., 2020; Dehghani et al., 2023; Wortsman et al., 2024]{.small}
+:::
+
+::: {.slide title="QK-Norm Keeps the Entropy Up When the Weights Grow"}
+64 random tokens, one head of width 64; $\mathbf{W}_q, \mathbf{W}_k$
+scaled by $\lambda$. Uniform weights: entropy $\log 64 = 4.16$; one-hot: 0.
+
+@!transformer-block-normalizing-queries-and-keys
+
+::: {.d2l-note}
+Without the norm the logits grow like $\lambda^2$; with it nothing changes.
+At $\lambda = 1$, entropy 3.7: fresh attention is not uniform, but its
+preferences are random.
+:::
+:::
+
+::: {.slide title="Check: Inflate the Query and Key Weights by 8"}
+[Check]{.kicker}
+
+At $\lambda = 1$ the logits have standard deviation about 1. What is it at
+$\lambda = 8$, without and with QK-norm?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Queries and keys both grow by 8, so the logits grow by
+$8^2 = 64$: standard deviation about 64, attention nearly one-hot. With
+QK-norm the scale cancels: still about 1.
+:::
+:::
+:::
+
+::: {.slide title="FFN Rows Act as Keys, Columns as Values"}
+$$\mathrm{FFN}(\mathbf{x}) = \mathbf{W}_2\,\phi(\mathbf{W}_1\mathbf{x}) = \sum_{j=1}^{4d} \phi(\mathbf{w}_{1,j}^\top \mathbf{x})\, \mathbf{w}_{2,j}$$
+
+- Row $\mathbf{w}_{1,j}$ of $\mathbf{W}_1$: a key that responds to a
+  pattern in the token.
+- Column $\mathbf{w}_{2,j}$ of $\mathbf{W}_2$: the value added to the
+  stream when it responds.
+- GPT-2 small: $4d = 3{,}072$ such memories per block.
+
+[Geva et al., 2021]{.small}
+:::
+
+::: {.slide title="SwiGLU Multiplies Two Views of the Input"}
+$$\mathrm{SwiGLU}(\mathbf{x}) = \mathbf{W}_2\big(\mathrm{SiLU}(\mathbf{W}_g\mathbf{x}) \odot \mathbf{W}_1\mathbf{x}\big), \quad \mathrm{SiLU}(z) = z\,\mathrm{sigmoid}(z)$$
+
+- SiLU is unbounded above, not a gate in $[0, 1]$. Where SiLU is nearly
+  linear, the product is quadratic in $\mathbf{x}$.
+- Width $\tfrac{8}{3}d$ keeps $8d^2$: $2{,}048$ instead of $3{,}072$ at
+  $d = 768$.
+- Matched size, held-out log-perplexity: 1.944, against 1.983 (GELU)
+  and 1.997 (ReLU); repeated runs differ by 0.005 to 0.01.
+
+::: {.d2l-note}
+"We offer no explanation as to why these architectures seem to work."
+:::
+
+[Shazeer, 2020]{.small}
+:::
+
+::: {.slide title="Both FFNs Fit One Class at the Same Budget"}
+```{.python #transformer-block-exercises-2}
+width = 4 * d if act == 'gelu' else round(8 * d / 3)
+
+def ffn(x):
+    if act == 'gelu':                   # W_1, W_2: 8 d^2
+        return W_2(gelu(W_1(x)))
+    return W_2(silu(W_g(x)) * W_1(x))   # W_g, W_1, W_2: 8 d^2
+```
+
+At $d = 256$: 524,288 parameters for GELU, 524,544 for SwiGLU, since
+$\tfrac{8}{3} \cdot 256$ rounds to 683.
+:::
+
+::: {.slide title="A GPT-2-Small Block Holds 7.1 Million Parameters"}
+[Running example]{.kicker}
+
+| part | count | $d = 768$ |
+|---|---|---|
+| attention, 4 projections | $4d^2$ | 2.4M |
+| FFN, two or three matrices | $8d^2$ | 4.7M |
+| block | $12d^2$ | 7.1M |
+| 12 blocks | | 85M |
+| + token and position embeddings | | 124M |
+
+::: {.d2l-note .rule}
+Two thirds of every block sit in the FFN.
+:::
+:::
+
+::: {.slide title="One Constructor Covers 2017 and Today"}
+| argument | choices | default |
+|---|---|---|
+| `norm` | `'rms'`, `'layer'` | `'rms'` |
+| `act` | `'swiglu'`, `'gelu'` | `'swiglu'` |
+| `pre_norm` | `True`, `False` | `True` |
+| `bias` | `True`, `False` | `False` |
+| `attn_factory`, `ffn_factory` | replace a whole sublayer | `None` |
+
+The default is the Llama configuration (2023); `norm='layer'`,
+`act='gelu'`, `pre_norm=False`, `bias=True` gives the 2017 block, with GELU
+for ReLU.
+:::
+
+::: {.slide title="Check: A Fair Comparison"}
+[Check]{.kicker}
+
+Someone compares SwiGLU with hidden width $4d$ against the GELU MLP at
+$d = 768$. How many more parameters does the SwiGLU FFN have?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $3 \cdot 4d^2 = 12d^2$ against $8d^2$: 50% more, 7.1M
+against 4.7M. Any gain could come from size; the width $\tfrac{8}{3}d$
+removes the confound.
+:::
+:::
+:::
+
+::: {.slide title="A Fresh Post-Norm Stack Collapses Only When Its Weights Are Large"}
+[Wrap-up]{.kicker}
+
+- Block: attention mixes tokens; the FFN holds two thirds of $12d^2$
+  (7.1M in GPT-2 small).
+- Post-norm: shared part $\times (1 + g^4)$ per block. Xavier: spread
+  $10^{-4}$ at 32; $\mathcal{N}(0, 0.02^2)$: 0.97.
+- Pre-norm only adds; stream RMS about 5 at 32, against
+  $\sqrt{33} \approx 5.7$ if every block added unit mean square.
+- RMSNorm drops centering; QK-norm bounds logits; SwiGLU multiplies two
+  views.
+
+**Next:** embeddings, positions, and a causal mask turn the block into a
+GPT, trained on bytes.
+:::

@@ -22,3 +22,72 @@ oo-design
 generalization
 weight-decay
 ```
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2]{.kicker}
+
+A complete learning procedure in its simplest form<br>
+**model · loss · minibatch SGD · synthetic data · generalization · weight decay**
+:::
+:::
+
+::: {.slide title="Every Part of Learning Appears in Linear Regression"}
+[The problem]{.kicker}
+
+- Predict a price from area and age with
+  $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$: a loss measures the misfit,
+  minibatch SGD lowers it.
+- **A wrong program still runs:** one shape bug, a falling loss, and wrong
+  weights.
+- **A perfect fit can mislead:** 20 weights fit 20 noisy points exactly and
+  miss new ones.
+
+::: {.d2l-note}
+Both failures recur in every later chapter. Linear regression is simple
+enough to analyze them.
+:::
+:::
+
+::: {.slide title="By the End of This Chapter You Can"}
+[Goals]{.kicker}
+
+- fit a linear model in closed form and by minibatch SGD;
+- derive a loss from a model of the noise;
+- verify an implementation against known parameters, to within a few
+  standard errors $\sigma/\sqrt{n}$;
+- diagnose underfitting and overfitting, and select a model on validation
+  data;
+- limit a model's flexibility continuously with a penalty of strength
+  $\lambda$ on large weights.
+:::
+
+::: {.slide title="Map of the Chapter"}
+[Chapter map]{.kicker}
+
+| section | question | adds |
+|---|---|---|
+| Linear Regression | how does a linear model predict, and how do we fit it? | model, loss, closed form, minibatch SGD |
+| Synthetic Data | how do we test training when we know the answer? | data with known $\mathbf{w}^*, b^*$ |
+| Implementation from Scratch | what does each part look like when we write it? | SGD and the training loop by hand |
+| Object-Oriented Design | how do we organize model, data, and training once? | `Module`, `DataModule`, `Trainer` |
+| Concise Implementation | which framework parts replace ours? | framework layers and losses |
+| Generalization | when does a good fit predict new data well? | training vs. test error |
+| Weight Decay | how do we limit flexibility continuously? | a penalty on large weights |
+:::
+
+::: {.slide title="Every Section Works on a Running Example With Real Numbers"}
+[Running examples]{.kicker}
+
+| section | running example |
+|---|---|
+| Linear Regression | a 150 m² house, predicted at 480,000 dollars; the three-point line (inputs 0, 1, 2; labels 1, 1, 0) |
+| Synthetic Data | $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, noise $\sigma = 0.01$; 1,000 training, 1,000 validation examples |
+| Implementation from Scratch | minibatches of 32; loss floor $\sigma^2/2 = 5 \times 10^{-5}$ |
+| Object-Oriented Design | the same data and model, trained once more through `Module`, `DataModule`, `Trainer` |
+| Concise Implementation | the same data and model, from framework layers |
+| Generalization | 20 noisy samples of a cubic; polynomials of degree 1 to 19 |
+| Weight Decay | 200 features, 300 noisy examples; two near-duplicate features |
+:::

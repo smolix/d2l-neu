@@ -5,6 +5,14 @@ Open almost any GAN codebase and its training script offers a menu of losses: no
 
 Every entry of the menu changes one of two things: the loss that trains the critic, or the set of functions the critic may be. A coin with two outcomes shows what any classification loss computes. Restricting the critic instead gives a second family, which measures how far apart two distributions are rather than how much they overlap. We then test both families twice: with a one-parameter generator that starts far from the data, and on a mixture of three Gaussians whose densities we know.
 
+```{.python .input #objectives-setup}
+%%tab jax
+# Deterministic GPU kernels; JAX reads XLA_FLAGS once, before the imports
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_deterministic_ops=true').strip()
+```
+
 ```{.python .input #objectives-adversarial-objectives-and-divergences}
 %%tab pytorch
 import math
@@ -496,11 +504,13 @@ def mmd2_median(x, y):
     return mmd2_loss(x, y, (torch.cdist(xy, xy).median().detach(),))
 
 #@save
-def gradient_penalty(D, X, fake, u):
-    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D)."""
+def gradient_penalty(D, X, fake, u, one_sided=False):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D);
+    one-sided, only slopes steeper than one pay: max(0, |D'(x)| - 1)^2."""
     x = (u * X + (1 - u) * fake).requires_grad_()
     grad, = torch.autograd.grad(D(x).sum(), x, create_graph=True)
-    return ((grad.abs() - 1) ** 2).mean()
+    excess = grad.abs() - 1
+    return ((excess.clamp(min=0) if one_sided else excess) ** 2).mean()
 ```
 
 ```{.python .input #objectives-separated-start-losses}
@@ -520,10 +530,12 @@ def mmd2_median(x, y):
     return mmd2_loss(x, y, (jax.lax.stop_gradient(jnp.median(dist)),))
 
 #@save
-def gradient_penalty(D, X, fake, u):
-    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D)."""
+def gradient_penalty(D, X, fake, u, one_sided=False):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D);
+    one-sided, only slopes steeper than one pay: max(0, |D'(x)| - 1)^2."""
     grad = jax.grad(lambda x: D(x).sum())(u * X + (1 - u) * fake)
-    return ((jnp.abs(grad) - 1) ** 2).mean()
+    excess = jnp.abs(grad) - 1
+    return ((jnp.maximum(excess, 0) if one_sided else excess) ** 2).mean()
 ```
 
 `train_shift` gives the critic five Adam steps for every generator step, which keeps it near its best response. The generator takes plain gradient steps with learning rate $0.01$: Adam would rescale every step to about its learning rate and hide the size of the gradient, which is what we want to see. The function records $\theta$ and the generator's gradient at every step. A positive `gp` adds the gradient penalty to the critic loss; with `critic_loss` set to `None`, the generator minimizes `gen_loss` of the two batches.
@@ -541,8 +553,9 @@ class Shift(nn.Module):
         return self.theta + z
 
 #@save
-def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
-                n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, one_sided=False,
+                theta0=6.0, steps=1500, n_critic=5, batch=256, lr_D=1e-2,
+                lr_G=1e-2):
     """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
     theta0 and theta after every step, the gradient of every step, and the
     critic."""
@@ -560,7 +573,8 @@ def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
             fake = G(Z[i]).detach()
             loss = critic_loss(D(X[i]), D(fake))
             if gp:
-                loss = loss + gp * gradient_penalty(D, X[i], fake, U[i])
+                loss = loss + gp * gradient_penalty(D, X[i], fake, U[i],
+                                                    one_sided)
             opt_D.zero_grad()
             loss.backward()
             opt_D.step()
@@ -587,8 +601,9 @@ class Shift(nnx.Module):
         return self.theta + z
 
 #@save
-@nnx.jit(static_argnums=(0, 1, 2))
-def shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U):
+@nnx.jit(static_argnums=(0, 1, 2, 3))
+def shift_step(critic_loss, gen_loss, gp, one_sided, G, D, opt_G, opt_D, X, Z,
+               U):
     """One critic step per row of U, then one generator step; returns the
     generator's gradient."""
     for i in range(len(U)):
@@ -596,7 +611,8 @@ def shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U):
         def d_loss(D_):
             loss = critic_loss(D_(X[i]), D_(fake))
             if gp:
-                loss = loss + gp * gradient_penalty(D_, X[i], fake, U[i])
+                loss = loss + gp * gradient_penalty(D_, X[i], fake, U[i],
+                                                    one_sided)
             return loss
         opt_D.update(D, nnx.grad(d_loss)(D))
     def g_loss(G_):
@@ -608,8 +624,9 @@ def shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U):
     return grad.theta[...]
 
 #@save
-def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
-                n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, one_sided=False,
+                theta0=6.0, steps=1500, n_critic=5, batch=256, lr_D=1e-2,
+                lr_G=1e-2):
     """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
     theta0 and theta after every step, the gradient of every step, and the
     critic."""
@@ -624,8 +641,8 @@ def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
         X, Z = (jnp.asarray(rng.standard_normal((n + 1, batch, 1)),
                             jnp.float32) for _ in range(2))
         U = jnp.asarray(rng.uniform(size=(n, batch, 1)), jnp.float32)
-        grad = shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D,
-                          X, Z, U)
+        grad = shift_step(critic_loss, gen_loss, gp, one_sided, G, D, opt_G,
+                          opt_D, X, Z, U)
         grads.append(grad)                      # device scalars,
         thetas.append(G.theta[...])             # converted once below
     return np.asarray(jnp.stack(thetas)), np.asarray(jnp.stack(grads)), D
@@ -637,22 +654,25 @@ Five arms train three times each. Four are the non-saturating logistic and the h
 %%tab pytorch, jax
 w1 = (lambda r, f: f.mean() - r.mean(), lambda r, f: -f.mean())
 arms = {'logistic, sat.': (losses['logistic'][0],
-                           lambda r, f: -softplus(f).mean(), 0.0),
-        'logistic, NS': (*losses['logistic'], 0.0),
-        'hinge': (*losses['hinge'], 0.0),
-        'W1 + GP': (*w1, 10.0),
-        'MMD, median': (None, mmd2_median, 0.0)}
-steps, w1_runs = (0, 100, 300, 1000, 1500), []  # w1_runs: (theta, critic)
-print(f'{"":20s}|gradient|   theta at steps {steps}   first |theta| < 0.5')
-for name, (critic_loss, gen_loss, gp) in arms.items():
+                           lambda r, f: -softplus(f).mean(), {}),
+        'logistic, NS': (*losses['logistic'], {}),
+        'hinge': (*losses['hinge'], {}),
+        'W1 + GP': (*w1, dict(gp=10.0)),
+        'W1 + 1-sided GP': (*w1, dict(gp=10.0, one_sided=True)),
+        'MMD, median': (None, mmd2_median, {})}
+steps, w1_runs = (0, 100, 300, 1000, 1500), []  # (arm, seed, theta, critic)
+print(f'{"":17s}|grad|   theta at steps {", ".join(map(str, steps))}'
+      '  arrival  farthest')
+for name, (critic_loss, gen_loss, kwargs) in arms.items():
     for seed in range(3):
-        thetas, grads, D = train_shift(critic_loss, gen_loss, seed, gp)
-        if name == 'W1 + GP':
-            w1_runs.append((thetas[-1], D))
-        hit = np.flatnonzero(np.abs(thetas) < 0.5)
-        print(f'{name:15s} {seed}   {np.median(np.abs(grads[:100])):8.3f}   '
-              + ''.join(f'{thetas[t]:7.2f}' for t in steps) + '   '
-              + (f'{hit[0]:5d}' if len(hit) else 'not reached'))
+        thetas, grads, D = train_shift(critic_loss, gen_loss, seed, **kwargs)
+        if name.startswith('W1'):
+            w1_runs.append((name, seed, thetas[-1], D))
+        hit = np.flatnonzero(np.abs(thetas) < 0.5)  # arrival: hit[0]
+        print(f'{name:16s}{seed}{np.median(np.abs(grads[:100])):7.3f} '
+              + ''.join(f'{thetas[t]:7.2f}' for t in steps)
+              + (f'{hit[0]:9d}{np.abs(thetas[hit[0]:]).max():10.2f}'
+                 if len(hit) else '  not reached'))
 ```
 
 The prediction holds. The saturating arm's gradient is between $0.006$ and $0.015$, about a hundredth, and in 1,500 steps $\theta$ moves from $6$ only to about $5.76$. The non-saturating arm trains the same critic with the same loss and changes only the generator's loss, yet its gradient is $2.7$ to $3.0$, a factor of hundreds larger, and every run reaches $|\theta| < 0.5$ by step 390. The critic was never the problem. For these Gaussians the optimal logistic critic $\lambda$ is a line of slope $-\theta$, and the trained critic slopes as well. The saturating loss multiplies that slope by $\sigma(D(x'))$, the critic's probability that a generated sample is real (:numref:`sec_basic_gan`), which six units from the data is negligible. The non-saturating loss passes the slope on almost unweighted. The saturation belongs to the generator's loss.
@@ -666,40 +686,44 @@ Past the data the critic has to reverse its slope, and this is where the two-sid
 ```{.python .input #objectives-separated-start-w1-critics}
 %%tab pytorch
 def slope_and_units(D, x):
-    """D'(x) and the number of hidden ReLU units that are active at x."""
+    """D'(x) and, per hidden layer, the number of ReLU units active at x."""
     x = h = torch.tensor([[x]], dtype=torch.float32, requires_grad=True)
-    active = 0
+    active = []
     for layer in D:
         h = layer(h)
         if isinstance(layer, nn.ReLU):
-            active += int((h > 0).sum())
+            active.append(int((h > 0).sum()))
     slope, = torch.autograd.grad(h.sum(), x)
     return slope.item(), active
 
-print("W1 + GP   theta   D'(theta)  active   D'(0)  active  (of 64 units)")
-for seed, (theta, D) in enumerate(w1_runs):
+print(f"{'':19s}theta D'(theta)  active    D'(0)  active"
+      '  (of 32 units per layer)')
+for name, seed, theta, D in w1_runs:
     (s_t, a_t), (s_0, a_0) = (slope_and_units(D, x) for x in (theta, 0.0))
-    print(f'{seed:7d} {theta:7.2f} {s_t:11.2f} {a_t:7d} {s_0:7.2f} {a_0:7d}')
+    print(f'{name:16s}{seed}{theta:7.2f}{s_t:10.2f}{a_t[0]:5d}{a_t[1]:3d}'
+          f'{s_0:9.2f}{a_0[0]:5d}{a_0[1]:3d}')
 ```
 
 ```{.python .input #objectives-separated-start-w1-critics}
 %%tab jax
 def slope_and_units(D, x):
-    """D'(x) and the number of hidden ReLU units that are active at x."""
+    """D'(x) and, per hidden layer, the number of ReLU units active at x."""
     def forward(x):
-        h, active = x, 0
+        h, active = x, []
         for layer in D.layers:
             h = layer(h)
             if not isinstance(layer, nnx.Linear):  # an activation
-                active += (h > 0).sum()
+                active.append((h > 0).sum())
         return h.sum(), active
     slope, active = jax.grad(forward, has_aux=True)(jnp.array([[x]]))
-    return float(slope.squeeze()), int(active)
+    return float(slope.squeeze()), [int(a) for a in active]
 
-print("W1 + GP   theta   D'(theta)  active   D'(0)  active  (of 64 units)")
-for seed, (theta, D) in enumerate(w1_runs):
+print(f"{'':19s}theta D'(theta)  active    D'(0)  active"
+      '  (of 32 units per layer)')
+for name, seed, theta, D in w1_runs:
     (s_t, a_t), (s_0, a_0) = (slope_and_units(D, x) for x in (theta, 0.0))
-    print(f'{seed:7d} {theta:7.2f} {s_t:11.2f} {a_t:7d} {s_0:7.2f} {a_0:7d}')
+    print(f'{name:16s}{seed}{theta:7.2f}{s_t:10.2f}{a_t[0]:5d}{a_t[1]:3d}'
+          f'{s_0:9.2f}{a_0[0]:5d}{a_0[1]:3d}')
 ```
 
 The linear analysis reads this printout well. Each critic has nearly the same slope at $\theta$ as at $0$, so across the gap it is close to a straight line, and the runs land in the states that line allows. Some critics are flat, with slope $0.00$ at both points, and their generators have not moved since step 1,000. The run that ends at $\theta = -7.6$ has a critic still on the old side. Its slope is $-0.62$ to $-0.65$; with the data to the right of $\theta$, a negative slope carries $\theta$ further left, and the predicted size at $d = 7.6$ is $1 - d/20 = 0.62$. That generator is being pushed out. The flat critics are not dead networks, though: 10 to 28 of their 64 units are active, and the units that stay on simply pass no slope from input to output.

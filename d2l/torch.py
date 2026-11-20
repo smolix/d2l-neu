@@ -3553,13 +3553,15 @@ def mmd2_unbiased(K_pp, K_qq, K_pq):
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
             - 2 * K_pq.mean())
 
-def gradient_penalty(D, X, fake, u):
-    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D).
+def gradient_penalty(D, X, fake, u, one_sided=False):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D);
+    one-sided, only slopes steeper than one pay: max(0, |D'(x)| - 1)^2.
 
     Defined in :numref:`sec_gan_objectives`"""
     x = (u * X + (1 - u) * fake).requires_grad_()
     grad, = torch.autograd.grad(D(x).sum(), x, create_graph=True)
-    return ((grad.abs() - 1) ** 2).mean()
+    excess = grad.abs() - 1
+    return ((excess.clamp(min=0) if one_sided else excess) ** 2).mean()
 
 class Shift(nn.Module):
     """The generator x' = theta + z.
@@ -3572,8 +3574,9 @@ class Shift(nn.Module):
     def forward(self, z):
         return self.theta + z
 
-def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
-                n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, one_sided=False,
+                theta0=6.0, steps=1500, n_critic=5, batch=256, lr_D=1e-2,
+                lr_G=1e-2):
     """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
     theta0 and theta after every step, the gradient of every step, and the
     critic.
@@ -3593,7 +3596,8 @@ def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
             fake = G(Z[i]).detach()
             loss = critic_loss(D(X[i]), D(fake))
             if gp:
-                loss = loss + gp * gradient_penalty(D, X[i], fake, U[i])
+                loss = loss + gp * gradient_penalty(D, X[i], fake, U[i],
+                                                    one_sided)
             opt_D.zero_grad()
             loss.backward()
             opt_D.step()
@@ -15490,6 +15494,34 @@ d2l.DATA_HUB['glove.42b.300d'] = (d2l.DATA_URL + 'glove.42B.300d.zip',
 
 d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
                            'c1816da3821ae9f43899be655002f6c723e91b88')
+
+def cuda_graphed(step, device, warmup=3):
+    """Return a function that calls step(). On a CUDA device it runs step()
+    eagerly for warmup calls on a side stream, then records one call as a
+    CUDA graph and replays it for every later call; elsewhere it calls step()
+    directly. Replay reuses the recorded memory addresses, so the optimizers
+    must keep their state and learning rate on the device (capturable=True,
+    learning rate as a tensor).
+
+    Defined in :numref:`sec_gan_convergence`"""
+    if torch.device(device).type != 'cuda':
+        return step
+    graph, calls = torch.cuda.CUDAGraph(), 0
+    def run():
+        nonlocal calls
+        calls += 1
+        if calls <= warmup:      # allocates optimizer state and workspaces
+            side = torch.cuda.Stream()
+            side.wait_stream(torch.cuda.current_stream())
+            with torch.cuda.stream(side):
+                step()
+            torch.cuda.current_stream().wait_stream(side)
+            return
+        if calls == warmup + 1:  # recording launches nothing
+            with torch.cuda.graph(graph):
+                step()
+        graph.replay()
+    return run
 
 
 ones_like = torch.ones_like

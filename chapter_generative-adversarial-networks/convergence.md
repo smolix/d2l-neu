@@ -516,26 +516,6 @@ The training function takes the two losses and $\gamma$ as arguments and alterna
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
 %%tab pytorch
-def graphed(step, warmup=3):
-    """Run step() eagerly for warmup calls on a side stream, then record one
-    call as a CUDA graph and replay it for every later call."""
-    graph, calls = torch.cuda.CUDAGraph(), 0
-    def run():
-        nonlocal calls
-        calls += 1
-        if calls <= warmup:      # allocates optimizer state and workspaces
-            side = torch.cuda.Stream()
-            side.wait_stream(torch.cuda.current_stream())
-            with torch.cuda.stream(side):
-                step()
-            torch.cuda.current_stream().wait_stream(side)
-            return
-        if calls == warmup + 1:  # recording launches nothing
-            with torch.cuda.graph(graph):
-                step()
-        graph.replay()
-    return run
-
 def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
                batch=1024, latent=64, seed=0, checkpoints=8):
     """Alternate critic and generator steps; at each checkpoint record the
@@ -545,9 +525,10 @@ def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
     dev, grid = centers.device, centers.cpu().numpy()
     net_G = d2l.make_mlp([latent, 256, 256, 2], nn.ReLU()).to(dev)
     net_D = d2l.make_mlp([2, 256, 256, 1], nn.LeakyReLU(0.2)).to(dev)
-    opt_G, opt_D = [torch.optim.Adam(net.parameters(),  # lr on the GPU
+    opt_G, opt_D = [torch.optim.Adam(net.parameters(),  # lr on the device
                                      torch.tensor(lr, device=dev),
-                                     betas=(0.0, 0.99), capturable=True)
+                                     betas=(0.0, 0.99),
+                                     capturable=dev.type == 'cuda')
                     for net in (net_G, net_D)]
     scheds = [torch.optim.lr_scheduler.CosineAnnealingLR(opt, steps, lr / 10)
               for opt in (opt_G, opt_D)]
@@ -563,7 +544,7 @@ def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
         generator_step(net_G, opt_G, loss_G, net_D,
                        sample_modes(centers, batch), z)
 
-    step, trace = graphed(step), []
+    step, trace = d2l.cuda_graphed(step, dev), []
     for t in range(1, steps + 1):
         step()
         for sched in scheds:
@@ -615,6 +596,7 @@ def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
     return net_G, trace
 ```
 
+<!-- WRITER: S2 done in code: the CUDA-graph helper moved to the library as `d2l.cuda_graphed(step, device)` (convergence-lib.md, eager off CUDA); cut this note to one sentence, e.g. that `d2l.cuda_graphed` replays each step as one CUDA graph because issuing its few hundred short kernels from Python takes longer than running them (:numref:`subsec_comp-overhead`), which is why the optimizers keep their state on the device (`capturable`). -->
 :begin_tab:`pytorch`
 One step of these small networks launches a few hundred short kernels, and issuing them from Python takes longer than running them (:numref:`subsec_comp-overhead`). `graphed` records the step as a CUDA graph after three eager warm-up steps and replays it with one launch per step. Replay reuses the recorded memory addresses, so the optimizers keep their learning rate and step count on the GPU (`capturable=True`, with the learning rate passed as a tensor), and the scheduler updates the learning rate in place between replays.
 :end_tab:

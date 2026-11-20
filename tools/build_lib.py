@@ -65,6 +65,9 @@ LIB_ONLY_FILES = [
     # Two BPETokenizer methods of the retired seq2seq translator, kept so
     # the tokenizer's library block (and every notebook using it) is unchanged.
     'chapter_recurrent-modern/legacy-tokenizer-lib.md',
+    # The CUDA-graph replay behind the 25-Gaussians training step of the GAN
+    # convergence section, explained there in one sentence.
+    'chapter_generative-adversarial-networks/convergence-lib.md',
 ]
 
 # A LIB_ONLY file whose symbols are referenced at *module-import time* by a

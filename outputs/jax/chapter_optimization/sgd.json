@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 300, x1: -0.799298, x2: -0.058574\n"
+          "text": "step 300, x1: -0.708950, x2: 0.035603\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 54184,
-          "sha256": "sha256:4efb45d2cba9f159b6d72b9b61f1063138aa0cf8e0632d96cf53c89220acf841"
+          "bytes": 54409,
+          "sha256": "sha256:794bfbee12c5d16bd410cc187b592420b8100e7df14fd21ba9ed1811bf77aa94"
         }
       ]
     },
@@ -43,12 +43,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.1: measured [0.2522 0.0156], predicted [0.2525 0.0156]\n"
+          "text": "eta=0.1: measured [0.2498 0.0154], predicted [0.2525 0.0156]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eta=0.05: measured [0.1255 0.0068], predicted [0.1256 0.0069]\n"
+          "text": "eta=0.05: measured [0.1244 0.0069], predicted [0.1256 0.0069]\n"
         }
       ]
     },
@@ -89,58 +89,47 @@
         }
       ]
     },
-    "sgd-where-the-model-stops-4": {
-      "code_fingerprint": "sha256:cd46bd4bcf247409a3983c3ffd2a94f877dc857e17a22c44277036f573bffd51",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "exact fit, worst of 400 runs after 1, 5, 10, 20 epochs: 1e-03 5e-08 2e-13 2e-14\n"
-        }
-      ]
-    },
     "sgd-the-training-function": {
-      "code_fingerprint": "sha256:1f654a464f40108e7945d2b6e22f8d6e9b33be1ff4231aa05a0f97fb2f896015",
+      "code_fingerprint": "sha256:a415f57a452234af6cba60da9f0db8d966ec84af764ca2aab6ea51229243a0bf",
       "kind": "text",
       "outputs": []
     },
     "minibatch-sgd-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:a314f2dd74fc7ad5f68484d9f5a6ec1d96f4b4bed50063b7ca87016cc5016528",
+      "code_fingerprint": "sha256:27acfb699cd1db06b3950edb2ed75e70d8af39ef6c5947d4db57ba000fd8849d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=1500:    1 updates/epoch, 0.002 s/epoch (2.1 ms/update), last-epoch loss 0.242\n"
+          "text": "b=1500:    1 updates/epoch, 0.002 s/epoch (2.0 ms/update), last-epoch loss 0.242\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=   1: 1500 updates/epoch, 0.847 s/epoch (0.6 ms/update), last-epoch loss 0.244\n"
+          "text": "b=   1: 1500 updates/epoch, 0.930 s/epoch (0.6 ms/update), last-epoch loss 0.245\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  10:  150 updates/epoch, 0.120 s/epoch (0.8 ms/update), last-epoch loss 0.246\n"
+          "text": "b=  10:  150 updates/epoch, 0.111 s/epoch (0.7 ms/update), last-epoch loss 0.247\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b= 100:   15 updates/epoch, 0.017 s/epoch (1.1 ms/update), last-epoch loss 0.247\n"
+          "text": "b= 100:   15 updates/epoch, 0.014 s/epoch (0.9 ms/update), last-epoch loss 0.248\n"
         }
       ]
     },
     "minibatch-sgd-implementation-from-scratch-7": {
-      "code_fingerprint": "sha256:4ae0f5565e67b7282afb5de3d8c9d0a60dda99adbc8cd17b333d8e09769ad3a1",
+      "code_fingerprint": "sha256:30070b0afb2d27e7252d6259535683f32b3b19d100e3bdb59cc705bac0f62241",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/minibatch-sgd-implementation-from-scratch-7-1.svg",
-          "bytes": 59888,
-          "sha256": "sha256:4ba3175e0d1e03e0522cb32fd9bc26a0018804a8958fb706f6551b8b29e1f86d"
+          "bytes": 61167,
+          "sha256": "sha256:ec344fec2a7510b10268c5e4690e304789a47ba8fc035fa0e4999cdee3c7b0f5"
         }
       ]
     }

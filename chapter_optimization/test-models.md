@@ -644,7 +644,7 @@ Two Test Models<br>**a transformer and a CNN · minibatch SGD baselines · compa
 :::
 :::
 
-::: {.slide title="TinyLM Has 470,784 Parameters Across Three Structural Groups" layout="tight"}
+::: {.slide title="TinyLM Has 470,784 Parameters Across Three Structural Groups" layout="code"}
 [TinyLM]{.kicker}
 
 @!adam-a-tiny-language-model-3

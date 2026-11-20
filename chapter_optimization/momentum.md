@@ -123,7 +123,7 @@ whose characteristic polynomial is $z^2 - (1 + \beta - \eta\lambda)z + \beta = 0
 
 The optimal parameters :eqref:`eq_momentum-optimal` equate the critical damping thresholds of the flattest and steepest eigenvalues, $(1 - \sqrt{\eta^\star\lambda_{\min}})^2 = (\sqrt{\eta^\star\lambda_{\max}} - 1)^2 = \beta^\star$, critically damping both extreme modes while ensuring that every intermediate eigenvalue $\lambda \in [\lambda_{\min}, \lambda_{\max}]$ lies in the underdamped complex-root regime and contracts at rate $\sqrt{\beta^\star}$.
 
-On our valley ($\kappa = 20$), :eqref:`eq_momentum-optimal` yields $\eta^\star \approx 0.672, \beta^\star \approx 0.403$, reducing the asymptotic contraction factor from $0.905$ to $\sqrt{\beta^\star} \approx 0.635$ and cutting the steps to reach $10^{-6}$ relative error from $139$ down to $40$:
+On our valley ($\kappa = 20$), :eqref:`eq_momentum-optimal` yields $\eta^\star \approx 0.668, \beta^\star \approx 0.403$, reducing the asymptotic contraction factor from $0.905$ to $\sqrt{\beta^\star} \approx 0.635$ and cutting the steps to reach $10^{-6}$ relative error from $139$ down to $40$:
 
 ```{.python .input #momentum-acceleration-and-damping-1}
 %%tab pytorch, jax
@@ -250,7 +250,7 @@ for (name, beta), lrs in grids.items():
 
 Both predictions hold quantitatively:
 * On full-batch **softmax regression**, adding momentum $\beta = 0.9$ increases the optimal learning rate from $\eta = 0.125$ to $\eta = 0.4$ ($\eta_{\text{eff}} = 4.0$, a $32\times$ larger effective step), cutting the steps needed to reach loss $0.5$ by more than $6\times$ ($625 \to 100$ steps) and lowering the final loss from $0.472$ to $0.365$.
-* On small-batch **`FashionCNN`** ($b = 32$), the run is noise-limited: the optimal learning rate shifts from $\eta = 0.2$ at $\beta = 0$ to $\eta = 0.02$ at $\beta = 0.9$—preserving the exact same effective step $\eta_{\text{eff}} = 0.2$—and both configurations reach loss $0.3$ and final loss $\sim 0.27\text{--}0.28$ within the single-seed variation of :numref:`sec_test_models`.
+* On small-batch **`FashionCNN`** ($b = 32$), the run is noise-limited: the optimal learning rate drops from $\eta \approx 0.1$–$0.2$ at $\beta = 0$ to $\eta \approx 0.02$–$0.04$ at $\beta = 0.9$—a factor of $5$–$10$ that keeps the effective step $\eta_{\text{eff}}$ within one step of the factor-of-two grid of its $\beta = 0$ value—and both configurations reach loss $0.3$ and final losses of $0.26$–$0.30$ within the single-seed variation of :numref:`sec_test_models`.
 
 ## Nesterov Momentum
 

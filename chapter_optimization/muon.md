@@ -154,7 +154,7 @@ def newton_schulz(M, num_iters=5, a=3.4445, b=-4.7750, c=2.0315, eps=1e-7):
     return X.T if tall else X
 ```
 
-For an $m \times n$ matrix ($m \le n$) and token batch size $B$, five Newton–Schulz iterations cost $5(4m^2n + 2m^3)$ FLOPs compared to $6mnB$ FLOPs for the forward and backward passes—an overhead of $\sim 5m/B$ ($<1\%$ at production batch sizes $B \sim 5 \times 10^5$, and $\sim 12\%$ on `TinyLM` at $B = 4{,}096$). Applying `newton_schulz` to a $96 \times 64$ Gaussian matrix illustrates how $k \in \{3, 5\}$ iterations collapse the singular value spectrum into $[0.68, 1.13]$:
+For an $m \times n$ matrix ($m \le n$) and token batch size $B$, five Newton–Schulz iterations cost $5(4m^2n + 2m^3)$ FLOPs compared to $6mnB$ FLOPs for the forward and backward passes—an overhead of $\sim 5m/B$ ($<1\%$ at production batch sizes $B \sim 5 \times 10^5$, and $\sim 12\%$ on `TinyLM` at $B = 4{,}096$). Applying `newton_schulz` to a $96 \times 64$ Gaussian matrix illustrates how the iterations collapse the singular value spectrum: into $[0.68, 1.20]$ after $k = 3$ and $[0.68, 1.13]$ after $k = 5$:
 
 ```{.python .input #muon-orthogonalization-by-newton-schulz-2}
 %%tab pytorch
@@ -246,7 +246,7 @@ def scratch_muon(learning_rate, momentum=0.95, weight_decay=0.0):
 ### Parameter Groups and Hybrid Optimizer
 :label:`subsec_muon-parameter-groups`
 
-On `TinyLM`, routing the $8$ internal block matrices (`qkv`, `proj`, `mlp1`, `mlp2` across $2$ blocks) to Muon and the remaining $14$ tensors (embeddings, LayerNorm vectors, biases, and output head) to AdamW assigns $393{,}216$ of the $470{,}784$ parameters ($84\%$) to Muon. Because Muon stores only one momentum buffer per parameter instead of AdamW's two moments, the hybrid optimizer reduces total optimizer-state memory by $42\%$.
+On `TinyLM`, routing the $8$ internal block matrices (`qkv`, `proj`, `mlp1`, `mlp2` across $2$ blocks) to Muon and the remaining $22$ tensors (embeddings, LayerNorm vectors, biases, and output head) to AdamW assigns $393{,}216$ of the $470{,}784$ parameters ($84\%$) to Muon. Because Muon stores only one momentum buffer per parameter instead of AdamW's two moments, the hybrid optimizer reduces total optimizer-state memory by $42\%$.
 
 ```{.python .input #muon-dividing-the-census-1}
 %%tab pytorch
@@ -400,7 +400,7 @@ for name, lr, vals in [('AdamW', best_adamw, adamw_val),
           f'{near[0]:g} to {near[-1]:g}')
 ```
 
-On `TinyLM`, Muon+AdamW establishes a $>0.1$-nat validation lead at step $500$, crosses the $1.6$-nat threshold $250$ steps earlier than AdamW, and expands the usable learning-rate window up to $\eta = 3 \times 10^{-2}$ (where AdamW stalls above $2.7$ nats because rank-$1$ early gradients under entrywise normalization can have spectral norm $\sqrt{\min(m, n)}$ times larger than an orthogonalized update). In large-scale pretraining benchmarks with full learning-rate decay ($0.1\text{B}\text{--}1.2\text{B}$ parameters :cite:`Wen.Hall.Ma.ea.2025` and trillion-parameter runs such as Kimi K2 :cite:`Liu.Su.Yao.ea.2025,Kimi.Team.2025`, often paired with attention-logit clipping), Muon achieves $1.1\times\text{--}1.4\times$ step reductions over heavily tuned AdamW while cutting optimizer state memory nearly in half.
+On `TinyLM`, Muon+AdamW establishes a $>0.1$-nat validation lead at step $500$, crosses the $1.6$-nat threshold at least one checkpoint ($250$ steps) earlier than AdamW, and expands the usable learning-rate window up to $\eta = 3 \times 10^{-2}$ (where AdamW finishes near or above $2$ nats because rank-$1$ early gradients under entrywise normalization can have spectral norm $\sqrt{\min(m, n)}$ times larger than an orthogonalized update). In large-scale pretraining benchmarks with full learning-rate decay ($0.1\text{B}\text{--}1.2\text{B}$ parameters :cite:`Wen.Hall.Ma.ea.2025` and trillion-parameter runs such as Kimi K2 :cite:`Liu.Su.Yao.ea.2025,Kimi.Team.2025`, often paired with attention-logit clipping), Muon achieves $1.1\times\text{--}1.4\times$ step reductions over heavily tuned AdamW while cutting optimizer state memory nearly in half.
 
 ## Summary
 

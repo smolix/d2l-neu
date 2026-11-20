@@ -373,9 +373,9 @@ d2l.plot(xs, ys, 'examples / minimum', 'steps / minimum', xscale='log',
          legend=['model', 'TinyLM', 'FashionCNN'])
 ```
 
-Both architectures collapse cleanly onto the universal curve $(E/E_{\min} - 1)(S/S_{\min} - 1) = 1$ with fitted critical batch sizes $b_{\text{crit}} \sim 100$ sequences for `TinyLM` and $b_{\text{crit}} \sim 200\text{--}400$ images for `FashionCNN`, matching the order of magnitude of the two-batch estimator $b_{\text{noise}}$.
+Both architectures fall near the universal curve $(E/E_{\min} - 1)(S/S_{\min} - 1) = 1$ (a point close to $E = E_{\min}$ sits on the curve's steep wall, where a small error in the measured step count moves it far up or down) with fitted critical batch sizes $b_{\text{crit}} \sim 100$ sequences for `TinyLM` and $b_{\text{crit}} \sim 200\text{--}400$ images for `FashionCNN`, matching the order of magnitude of the two-batch estimator $b_{\text{noise}}$.
 
-Finally, we directly verify the linear ($\eta \propto b$) versus square-root ($\eta \propto \sqrt{b}$) learning-rate scaling rules :eqref:`eq_lr-rules` on `FashionCNN` at a fixed data budget of $12{,}800$ images ($1/5$ epoch). Increasing $b$ by $8\times$ ($8 \to 64$) under SGD with momentum shifts the optimal learning rate by $\sim 8\times$, whereas increasing $b$ by $64\times$ ($2 \to 128$) under Adam shifts the optimal learning rate by $\sqrt{64} = 8\times$ ($3$ grid steps of $2\times$) rather than $64\times$:
+Finally, we directly verify the linear ($\eta \propto b$) versus square-root ($\eta \propto \sqrt{b}$) learning-rate scaling rules :eqref:`eq_lr-rules` on `FashionCNN` at a fixed data budget of $12{,}800$ images ($1/5$ epoch). Increasing $b$ by $8\times$ ($8 \to 64$) under SGD with momentum shifts the optimal learning rate by $4\text{--}8\times$ (at $b = 64$ the final loss is nearly flat between $\eta = 0.05$ and $0.1$), whereas increasing $b$ by $64\times$ ($2 \to 128$) under Adam shifts the optimal learning rate by only $4\text{--}8\times$ ($2$ to $3$ grid steps of $2\times$), near $\sqrt{64} = 8\times$ rather than $64\times$:
 
 ```{.python .input #batch-size-learning-rate-rules-1}
 %%tab pytorch
@@ -519,7 +519,7 @@ Batch Size<br>
 @!batch-size-the-language-model
 :::
 
-::: {.slide title="TinyLM and FashionCNN Collapse Onto the Universal Step–Data Frontier" layout="tight"}
+::: {.slide title="TinyLM and FashionCNN Fall Near the Universal Step–Data Frontier" layout="tight"}
 [The critical batch size]{.kicker}
 
 $$\Big(\frac{E}{E_{\min}} - 1\Big)\Big(\frac{S}{S_{\min}} - 1\Big) = 1$$

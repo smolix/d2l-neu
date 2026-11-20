@@ -1,7 +1,7 @@
 # Adam and AdamW
 :label:`sec_adam`
 
-In :numref:`sec_test_models`, plain minibatch SGD required a learning rate of $\eta = 0.5$ on `TinyLM` to reach a loss of $2.13$ nats/byte, whereas `AdamW` with $\eta = 3 \times 10^{-3}$—a learning rate more than a hundred times smaller—reached $1.59$ nats/byte in the same $2{,}000$ steps. Why does an optimizer with a hundredfold smaller nominal learning rate train faster, and why is it the universal default for Transformers?
+In :numref:`sec_test_models`, plain minibatch SGD required a learning rate of $\eta = 0.5$ on `TinyLM` to reach a loss of about $2.1$ nats/byte, whereas `AdamW` with $\eta = 3 \times 10^{-3}$—a learning rate more than a hundred times smaller—reached $1.59$ nats/byte in the same $2{,}000$ steps. Why does an optimizer with a hundredfold smaller nominal learning rate train faster, and why is it the universal default for Transformers?
 
 Momentum (:numref:`sec_momentum`) averages gradients over time but still applies a single scalar step size to every parameter. Yet in deep networks—and especially Transformers—gradient magnitudes vary by orders of magnitude across embeddings, attention projections, MLP layers, and normalization parameters. **Adam** (*Adaptive Moment Estimation*, :citet:`Kingma.Ba.2014`) combines momentum with a per-coordinate root-mean-square (RMS) gradient preconditioner developed through **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` and **RMSProp** :cite:`Tieleman.Hinton.2012`. Dividing each coordinate's update by its own historical gradient scale makes the learning rate $\eta$ a direct step length in parameter space rather than a multiplier on raw gradients.
 
@@ -279,7 +279,7 @@ print(f'{"max / min":<11}{ratio(grad_init):>24.0f}{ratio(grad_500):>13.0f}'
       f'{ratio(step):>16.1f}')
 ```
 
-Raw gradient magnitudes span a **$40\times$ range** at initialization (from $\sim 2 \times 10^{-4}$ on token embeddings to $\sim 7 \times 10^{-3}$ on biases) and a **$15\times$ range** at step $500$. Under SGD, a single scalar learning rate moves biases $15\text{--}40\times$ faster than token embeddings; under Adam, the normalized step size across all eight parameter groups lies within a narrow $2\times$ band ($0.1\eta\text{--}0.3\eta$, close to the pure-noise ratio $\sqrt{(1-\beta_1)/(1+\beta_1)} \approx 0.23$).
+Raw gradient magnitudes span a **$40\times$ range** at initialization (from $\sim 2 \times 10^{-4}$ on token embeddings to $\sim 7 \times 10^{-3}$ on biases) and a **$15\times$ range** at step $500$. Under SGD, a single scalar learning rate moves the groups with the largest gradients (biases, LayerNorm, the output head) $15\text{--}40\times$ faster than the embeddings; under Adam, the normalized step size across all eight parameter groups lies within a narrow $2\times$ band ($0.1\eta\text{--}0.3\eta$, close to the pure-noise ratio $\sqrt{(1-\beta_1)/(1+\beta_1)} \approx 0.23$).
 
 Because gradient scales in `TinyLM` lie around $10^{-4}\text{--}10^{-2}$ and Adam's EMA includes $(1-\beta_1) = 0.1$, Adam at $\eta \sim 3 \times 10^{-3}$ produces parameter steps comparable in magnitude to SGD with momentum $0.9$ at $\eta \sim 0.3$. Sweeping both optimizers across log-spaced learning-rate grids over $3$ seeds confirms this scale shift and demonstrates Adam's decisive advantage in usable learning-rate range and stability:
 
@@ -347,7 +347,7 @@ d2l.plot(list(range(0, 2000, 25)),
                  f'Adam, lr {best_adam:g}'])
 ```
 
-On `TinyLM`, Adam reaches a target loss of $1.8$ nats in nearly half the steps of SGD with momentum ($650\text{--}800$ vs. $1{,}100\text{--}1{,}500$), finishes at a lower final loss, operates across a $10\times$ usable learning-rate window ($10^{-3}$ to $10^{-2}$), and remains finite even at $\eta = 3 \times 10^{-2}$ because its normalized update length is bounded by $\eta$, whereas SGD diverges to `inf` as soon as $\eta \ge 0.5$. On larger Transformers with subword vocabularies, this gap widens further due to block-level Hessian heterogeneity :cite:`Zhang.Chen.Ding.ea.2024` and heavy-tailed token frequencies :cite:`Kunstner.Chen.Lavington.ea.2023,Kunstner.Yadav.Milligan.ea.2024`.
+On `TinyLM`, Adam reaches a target loss of $1.8$ nats in nearly half the steps of SGD with momentum ($650\text{--}800$ vs. $1{,}100\text{--}1{,}500$), finishes at a lower final loss, operates across a $10\times$ usable learning-rate window ($10^{-3}$ to $10^{-2}$), and remains finite even at $\eta = 3 \times 10^{-2}$ because its normalized update length is bounded by $\eta$. SGD's best rate, $\eta = 0.3$, sits one grid step below divergence: its worst one-step loss spikes are several times Adam's, one spike can set a run back so far that it never reaches $1.8$, and at $\eta = 0.5$ most runs diverge to `inf`. On larger Transformers with subword vocabularies, this gap widens further due to block-level Hessian heterogeneity :cite:`Zhang.Chen.Ding.ea.2024` and heavy-tailed token frequencies :cite:`Kunstner.Chen.Lavington.ea.2023,Kunstner.Yadav.Milligan.ea.2024`.
 
 ### Role of $\epsilon$ and Limits of the Second-Moment Estimate
 :label:`subsec_adam-variance-estimate`
@@ -638,13 +638,13 @@ Adam and AdamW<br>
 @!adam-adam-on-the-valley-1
 :::
 
-::: {.slide title="Raw Gradients in TinyLM Span 15–40×; Adam Equalizes Steps to Within 2×" layout="tight"}
+::: {.slide title="Raw Gradients in TinyLM Span 15–40×; Adam Equalizes Steps to Within 2×"}
 [Gradient scales in TinyLM]{.kicker}
 
 @!adam-gradient-scales-in-a-network-2
 :::
 
-::: {.slide title="Adam Trains Faster and Over a 10× Wider Learning-Rate Range Than SGD" layout="tight"}
+::: {.slide title="Adam Trains Faster Than SGD, Over a 10× Learning-Rate Window" layout="tight"}
 [Adam vs. SGD on TinyLM]{.kicker}
 
 @!adam-the-race-on-the-language-model-3

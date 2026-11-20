@@ -94,7 +94,7 @@ d2l.plot(np.arange(1, 3001), list(dists.values()), 'step',
          yscale='log')
 ```
 
-The constant rate ($\eta = 0.1$) plateaus at its stationary noise ball ($0.25 + 0.016 \approx 0.27$). Polynomial decay with $\alpha = 1/2$ ($\eta_T \approx 0.036$) and $\alpha = 1$ ($\eta_T \approx 0.0033$) track :eqref:`eq_scheduler-bias-noise` down to $\sim 0.10$ and $\sim 0.011$, respectively. By contrast, exponential decay ($\gamma = 0.98$) has a terminal rate of $10^{-27}$ yet freezes at a mean-squared error of $0.13$: because its remaining budget after step $s$ is only $R_s \approx \eta_s / (1-\gamma) = 50\eta_s$, noise injected once $\eta_s \lesssim 0.1$ ($R_s \lambda_1 \lesssim 1$) is never contracted away, leaving a frozen variance of $(1-\gamma)\sigma^2 / (4\lambda_1^2) = 0.125$ (Exercise :exref:`ex_scheduler-frozen-noise`).
+The constant rate ($\eta = 0.1$) plateaus at its stationary noise ball ($0.25 + 0.016 \approx 0.27$). Polynomial decay with $\alpha = 1/2$ ($\eta_T \approx 0.036$) and $\alpha = 1$ ($\eta_T \approx 0.0033$) track :eqref:`eq_scheduler-bias-noise` down to $0.09\text{--}0.10$ and $0.011\text{--}0.012$, respectively. By contrast, exponential decay ($\gamma = 0.98$) has a terminal rate of $10^{-27}$ yet freezes at a mean-squared error of $0.12\text{--}0.13$: because its remaining budget after step $s$ is only $R_s \approx \eta_s / (1-\gamma) = 50\eta_s$, noise injected once $\eta_s \lesssim 0.1$ ($R_s \lambda_1 \lesssim 1$) is never contracted away, leaving a frozen variance of $(1-\gamma)\sigma^2 / (4\lambda_1^2) = 0.125$ (Exercise :exref:`ex_scheduler-frozen-noise`).
 
 ## Decay Shapes on a Language Model
 :label:`subsec_scheduler-decay-shapes`
@@ -213,7 +213,7 @@ d2l.plot(list(range(25, 2001, 25)), list(curves.values()), 'step',
          ylim=[1.45, 1.95])
 ```
 
-At step $1{,}500$, cosine decay leads because its learning rate has already fallen to $15\%$ of the peak, damping high-frequency oscillation. However, between steps $1{,}600$ and $2{,}000$, when `stable_decay` linearly reduces $\eta_t \to 0$, its loss drops sharply by $\sim 0.10$ nats—finishing $0.05\text{--}0.09$ nats below the constant schedule and slightly ahead of cosine decay, which had only half the cumulative travel budget ($B_T = 3.0$ vs. $5.4$). Notice that comparing checkpoints before learning-rate decay completes can reverse the true end-of-training ranking :cite:`Wen.Hall.Ma.ea.2025`.
+At step $1{,}500$, cosine decay leads because its learning rate has already fallen to $15\%$ of the peak, damping high-frequency oscillation. However, between steps $1{,}600$ and $2{,}000$, when `stable_decay` linearly reduces $\eta_t \to 0$, its loss drops sharply by $\sim 0.10$ nats—finishing $0.05\text{--}0.06$ nats below the constant schedule and $\sim 0.05$ nats ahead of cosine decay, which had only half the cumulative travel budget ($B_T = 3.0$ vs. $5.4$). Notice that comparing checkpoints before learning-rate decay completes can reverse the true end-of-training ranking :cite:`Wen.Hall.Ma.ea.2025`.
 
 ## Learning-Rate Warmup
 :label:`subsec_scheduler-warmup`
@@ -222,7 +222,7 @@ While decay settles the iterate at the end of training, **learning-rate warmup**
 
 Why is warmup needed? First, under Adam (:numref:`sec_adam`), step $1$ moves every coordinate by $\pm\eta_0$ based on a single minibatch before the momentum average $\mathbf{m}_t$ and second-moment average $\mathbf{v}_t$ have accumulated multi-batch statistics. On `TinyLM`, where initial linear weight matrices have $\text{RMS}(\mathbf{W}_0) \approx 0.045$, a cold start at $\eta_0 = 0.03$ alters every weight by $\sim 67\%$ of its initial magnitude on step $1$, corrupting the initialization and causing the run to stall near $2.8$ nats. Second, as shown in :numref:`subsec_gd-edge-of-stability`, gradually raising $\eta_t$ lowers the sharpness ceiling $2/\eta_t$ progressively, guiding the network into a flat region that can tolerate the peak learning rate :cite:`Goyal.Dollar.Girshick.ea.2017,Kalra.Barkeshli.2024`.
 
-Adding a $20$-step linear ramp (`warmup(peak, 20)`, just $1\%$ of the $2{,}000$-step run) caps the initial relative weight change below $10\%$ and rescues training at $\eta_0 = 0.03$, lowering the final validation loss by nearly a full nat:
+Adding a $20$-step linear ramp (`warmup(peak, 20)`, just $1\%$ of the $2{,}000$-step run) caps the initial relative weight change at about $10\%$ and rescues training at $\eta_0 = 0.03$, lowering the final validation loss by about a full nat:
 
 ```{.python .input #lr-scheduler-cold-and-ramped-1}
 %%tab pytorch
@@ -331,7 +331,7 @@ Every branched cooldown drops the validation loss sharply below the continuing p
 ## Summary
 
 * A learning-rate schedule $\eta_t$ is governed by its **cumulative learning-rate budget** $B_T = \sum_{t=0}^{T-1}\eta_t$ (how far the iterate can travel along flat directions) and its **terminal learning rate** $\eta_T$ (the final noise floor), subject to retaining sufficient post-step budget $R_s \gtrsim 1/\lambda$ to damp earlier noise.
-* On `TinyLM`, decaying the learning rate to zero at the end of training eliminates the $O(\eta)$ oscillation of constant-rate AdamW, reducing validation loss by $0.05\text{--}0.09$ nats.
+* On `TinyLM`, decaying the learning rate to zero at the end of training eliminates the $O(\eta)$ oscillation of constant-rate AdamW, reducing validation loss by $0.05\text{--}0.06$ nats.
 * **Linear warmup** over the first $1\%\text{--}5\%$ of steps prevents oversized initial Adam steps before $(\mathbf{m}_t, \mathbf{v}_t)$ stabilize and steers the trajectory below the sharpness threshold $2/\eta_0$.
 * **Warmup–stable–decay (WSD)** holds $\eta_0$ constant after warmup and decays only over the final $10\%\text{--}20\%$ of steps, allowing short cooldown branches to be forked from any intermediate checkpoint.
 
@@ -340,7 +340,7 @@ Every branched cooldown drops the validation loss sharply below the continuing p
 1. [code] **Frozen noise under exponential decay.** Under $\eta_s = \eta_0\gamma^s$ with remaining budget $R_s \approx \eta_s/(1-\gamma)$, integrate $\sum_{s} \eta_s^2 \sigma^2 e^{-2\lambda R_s}$ to show that the asymptotic frozen variance along curvature $\lambda$ is $(1-\gamma)\sigma^2 / (4\lambda^2)$ when $2\lambda\eta_0 \gg 1-\gamma$. Verify this prediction with `sgd_valley` for $\gamma \in \{0.98, 0.99, 0.995\}$.
    :exlabel:`ex_scheduler-frozen-noise`
 
-1. [code] **Piecewise-constant step decay.** Use :eqref:`eq_scheduler-bias-noise` to design a $3$-stage piecewise-constant schedule over $3{,}000$ steps on `sgd_valley` and compare its final mean-squared distance against $\alpha = 1$ polynomial decay ($0.011$).
+1. [code] **Piecewise-constant step decay.** Use :eqref:`eq_scheduler-bias-noise` to design a $3$-stage piecewise-constant schedule over $3{,}000$ steps on `sgd_valley` and compare its final mean-squared distance against $\alpha = 1$ polynomial decay (about $0.01$).
    :exlabel:`ex_scheduler-step-decay`
 
 1. [code] **Schedules with identical cumulative budget $B_T$ and terminal rate $\eta_T$.** ● Compare full-horizon linear decay $\eta_t = \eta_0(1 - t/T)$ and cosine decay :eqref:`eq_scheduler-cosine` with $\eta_T = 0$ (both of which have $B_T = \eta_0 T / 2$ and $\eta_T = 0$) on `sgd_valley` ($\eta_0 = 0.4, T = 3{,}000$), and explain why cosine decay finishes at a lower terminal distance by comparing their remaining budgets $R_t$ near $t \approx T$.

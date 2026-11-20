@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:3bb457f0c3eee37005cf6a1888da446e2289fc7992b7f7380f38b6e389533665",
+    "d2l_lib_fingerprint": "sha256:da5a657ef644529629cff51b0ae077790fab2e9a8a3ee994cf8a0dfaa4cbd16d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -45,17 +45,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   1        1       1.608             16    21         0.25               1.5\n"
+          "text": "   1        1       1.613             14    13         0.26               1.7\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 0.3      inf       1.642\n"
+          "text": " 0.3      inf       1.669\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   3        1     191.579           2000  1999        41.41               1.6\n"
+          "text": "   3        1     197.921           2000  1999        43.59               1.7\n"
         },
         {
           "type": "stream",
@@ -65,50 +65,37 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   1        1       1.613             14    13         0.25               2.0\n"
+          "text": "   1        1       1.616             15    23         0.26               1.5\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 0.3      inf       1.653\n"
+          "text": " 0.3      inf       1.679\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   3        1     183.909           2000  1999        42.63               3.3\n"
-        }
-      ]
-    },
-    "practice-a-nan-averted-3": {
-      "code_fingerprint": "sha256:c8cc50a0dadacc7883916a067603159a7ca54a678f08e72e7c006d48ac4ec9a9",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 32665,
-          "sha256": "sha256:05e284e0d065a6e0a4f501055e607623a9b3ee4d4631d3be3fe8e8ac39efa24c"
+          "text": "   3        1     103.020           2000  1999        35.99              13.0\n"
         }
       ]
     },
     "practice-weight-averaging-1": {
-      "code_fingerprint": "sha256:70f675bee9266a4751b29acda3022585709cdb9d1af5aaf08baf6267481871ca",
+      "code_fingerprint": "sha256:db4129065b43ca9af05a823b5d1cc2a11a684743aa384863eb73e0a79335f130",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-4": {
-      "code_fingerprint": "sha256:f659d3ec8b9f07102e525cbb8c3ad8b2894b8ca7630fbc0ed8535b8ea13441db",
+      "code_fingerprint": "sha256:b01b897f3a01324809961073b3e1c2766631618503510eb23ec120cba38a34e2",
       "kind": "text",
       "outputs": []
     },
     "practice-averaging-at-a-constant-learning-rate-1": {
-      "code_fingerprint": "sha256:99d721a83c4ca75969d266e16217901ac825d8217bcb168113ea410f5044a5a5",
+      "code_fingerprint": "sha256:13d2d2af3a3fe5c030b5494b64f13f6fcc2f1528373411c11b675415c6d6bc69",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-2": {
-      "code_fingerprint": "sha256:f98482d3a24422fdea9f31776d999c20e03aa8bca2609f22781e1669a710a2c0",
+      "code_fingerprint": "sha256:d354a2ba3193e0453347292a6fd99f804c10045c1a6fd7148902531033081abc",
       "kind": "text",
       "outputs": [
         {
@@ -119,91 +106,50 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant rate            0.903 to 0.907        0.904       0.915\n"
+          "text": "constant rate            0.890 to 0.906        0.890       0.913\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine decay             0.906 to 0.910        0.910       0.906\n"
+          "text": "cosine decay             0.910 to 0.913        0.912       0.911\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "constant rate            0.882 to 0.911        0.911       0.913\n"
+          "text": "constant rate            0.863 to 0.904        0.904       0.911\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine decay             0.909 to 0.912        0.912       0.910\n"
+          "text": "cosine decay             0.903 to 0.910        0.910       0.906\n"
         }
       ]
     },
     "practice-weight-averaging-3": {
-      "code_fingerprint": "sha256:b9634482c2d906c4eceafd55cc3337359a322f9669da1d8e8adb7fb5aba35153",
+      "code_fingerprint": "sha256:2e0ca481d196051ac073250edf917d4abb4ca7c5a2d7a850cd060ce9a885c98e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 31675,
-          "sha256": "sha256:dd6fb4f98acfdb82ff623402b02efd7d2ddfb4bf8c4030e39fce910e88357677"
+          "bytes": 31669,
+          "sha256": "sha256:03074697a7cd3d5ff1b1be96512f2568f9c03309482df3208171f360284ffe47"
         }
       ]
     },
     "practice-a-worked-configuration-1": {
-      "code_fingerprint": "sha256:0f94a3142a99aa54ff5bdc6bf250281dc218bee2d26a9839f7f57f0688ecd0e2",
+      "code_fingerprint": "sha256:a9035157f46e041c287c9e051aac5a14b5174a730c155c1986ede73ce214ea03",
       "kind": "text",
       "outputs": []
     },
-    "practice-a-worked-configuration-2": {
-      "code_fingerprint": "sha256:81674f8028fd91ded09e121aa35ebb71237bd8b344759bef402b49d369c7280f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "3,307,264 parameters\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "batch    32:   3.6 ms per gradient,   8815 sequences per second\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "batch    64:   3.7 ms per gradient,  17086 sequences per second\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "batch   128:   4.9 ms per gradient,  26100 sequences per second\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "batch   256:  10.1 ms per gradient,  25252 sequences per second\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "batch   512:  22.3 ms per gradient,  22971 sequences per second\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "batch  1024:  47.8 ms per gradient,  21409 sequences per second\n"
-        }
-      ]
-    },
     "practice-a-worked-configuration-3": {
-      "code_fingerprint": "sha256:95dc42318d07c15f6dc36488963ecdd77f95367b01024704baacf11c9727b6ab",
+      "code_fingerprint": "sha256:76773476d09bbdccc18916f0294f7eccecea0714d25dd6ee828f16c68efd0c42",
       "kind": "text",
       "outputs": []
     },
     "practice-a-worked-configuration-4": {
-      "code_fingerprint": "sha256:b741e4ed7f7ae849dd0932d8d04eb6043e04701c9d080edd601f45fbf33cfdd8",
+      "code_fingerprint": "sha256:530c3474db4266e80d33bf6c67421dd228538f28ba4853f02ef22210ca3ad18e",
       "kind": "text",
       "outputs": [
         {
@@ -214,27 +160,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: loss 1.886 after 300 steps, 2% of the steps clipped\n"
+          "text": "lr 0.001: loss 1.880 after 300 steps, 2% of the steps clipped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: loss 1.726 after 300 steps, 2% of the steps clipped\n"
+          "text": "lr 0.003: loss 1.769 after 300 steps, 3% of the steps clipped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: loss 2.489 after 300 steps, 6% of the steps clipped\n"
+          "text": "lr 0.01: loss 2.482 after 300 steps, 6% of the steps clipped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "peak rate 0.003; noise scale after its 300 steps: 230\n"
+          "text": "peak rate 0.003; noise scale after its 300 steps: 173\n"
         }
       ]
     },
     "practice-a-worked-configuration-5": {
-      "code_fingerprint": "sha256:a19755a910fdc28967eaa519bd691404b9ce335d0a19a63e1d57c3b220d107f0",
+      "code_fingerprint": "sha256:680aa0102d3dfac7ed1b1501ff00672f2fa08c6074ba4bf2d6b830fadadb1322",
       "kind": "text",
       "outputs": [
         {
@@ -245,12 +191,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "seed 1                1.250    1.250     0.6%     1.303  0.053\n"
+          "text": "seed 1                1.247    1.247     0.6%     1.300  0.053\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "seed 2                1.246    1.247     0.7%     1.304  0.057\nspread between the seeds: configured 0.003, baseline 0.001\n"
+          "text": "seed 2                1.249    1.249     0.6%     1.305  0.056\nspread between the seeds: configured 0.002, baseline 0.006\n"
         }
       ]
     }

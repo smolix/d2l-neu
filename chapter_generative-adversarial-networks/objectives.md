@@ -657,9 +657,11 @@ for name, (critic_loss, gen_loss, gp) in arms.items():
 
 The prediction holds. The saturating arm's gradient is between $0.006$ and $0.015$, about a hundredth, and in 1,500 steps $\theta$ moves from $6$ only to about $5.76$. The non-saturating arm trains the same critic with the same loss and changes only the generator's loss, yet its gradient is $2.7$ to $3.0$, a factor of hundreds larger, and every run reaches $|\theta| < 0.5$ by step 390. The critic was never the problem. For these Gaussians the optimal logistic critic $\lambda$ is a line of slope $-\theta$, and the trained critic slopes as well. The saturating loss multiplies that slope by $\sigma(D(x'))$, the critic's probability that a generated sample is real (:numref:`sec_basic_gan`), which six units from the data is negligible. The non-saturating loss passes the slope on almost unweighted. The saturation belongs to the generator's loss.
 
-The hinge is the case that the analysis of optimal critics gets wrong. Its optimal critic $\operatorname{sign} \lambda$ is level at both clouds, so a generator that minimizes $-D(x')$ against it would not move at all. For that generator loss the gradient is simply the critic's average slope at the generated samples, so the table measures the trained critic directly: its slope there is $1.1$ to $1.7$, and every run reaches the data between steps 727 and 943. The trained network ramps across the gap instead of building the step. A small network fitted to minibatches a few steps at a time is smoother than the optimal critic, and here that smoothness, not the divergence on the label, moves the generator.
+The hinge is the case that the analysis of optimal critics gets wrong. Its optimal critic $\operatorname{sign} \lambda$ is level at both clouds, so a generator that minimizes $-D(x')$ against it would not move at all. For that generator loss the gradient is simply the critic's average slope at the generated samples, so the table measures the trained critic directly: its slope there is $1.1$ to $1.7$, and every run reaches the data between steps 719 and 918. The trained network ramps across the gap instead of building the step. A small network fitted to minibatches a few steps at a time is smoother than the optimal critic, and here that smoothness, not the divergence on the label, moves the generator.
 
-The $W_1$ gradient is $1.25$ to $1.26$ in every run rather than $1$, because the penalty is soft. A linear critic of slope $a$, with the two means a distance $d$ apart, pays $-ad + 10(a - 1)^2$ under the penalized loss, which is smallest at $a = 1 + d/20$, between $1.25$ and $1.3$ while $d$ is between five and six. This push shrinks only toward one, so the generator reaches the data at nearly full speed, between steps 477 and 502, and nothing in the push tells it to stop there. Past the data the critic has to reverse its slope, and the two-sided penalty, which charges $\gamma$ for a flat critic, turns that reversal into a climb over a barrier at slope zero. With the generator a distance $d$ beyond the data, a linear critic still on the old side sits in a local minimum of the penalized loss, at slope $1 - d/20$ pointing away from the data, and from there it pushes the generator further away. A ReLU critic that does cross slope zero can switch off all its units on the way, and a flat critic leaves the generator wherever it happens to be. The critics of the three $W_1$ runs at step 1,500 show which ending each run took. Since the generator minimizes $-D(x')$, a step moves $\theta$ by the learning rate times $D'(\theta)$; the cell prints that slope at the final $\theta$ and at the data mean $0$, and how many of the critic's 64 hidden units are active at each point.
+The $W_1$ gradient is $1.25$ to $1.26$ in every run rather than $1$, because the penalty is soft. A linear critic of slope $a$, with the two means a distance $d$ apart, pays $-ad + 10(a - 1)^2$ under the penalized loss, which is smallest at $a = 1 + d/20$, between $1.25$ and $1.3$ while $d$ is between five and six. This push shrinks only toward one, so the generator reaches the data at nearly full speed, between steps 477 and 508, and nothing in the push tells it to stop there.
+
+Past the data the critic has to reverse its slope, and this is where the two-sided penalty bites. It charges $\gamma$ for a flat critic, so the reversal is a climb over a barrier at slope zero. With the generator a distance $d$ beyond the data, a linear critic still on the old side sits in a local minimum of the penalized loss, at slope $1 - d/20$ pointing away from the data, and from there it pushes the generator further out. A critic that gets over the barrier settles at $1 + d/20$ on the new side and pulls the generator back. A ReLU critic has a third possibility that a linear one lacks: it can go flat, and a flat critic leaves the generator wherever it happens to be. Which of these did the runs meet? The critic's slope at the generator tells us, since the generator minimizes $-D(x')$ and each of its steps moves $\theta$ by about the learning rate times $D'(\theta)$. The cell reads the three $W_1$ critics at step 1,500: their slope at the final $\theta$ and at the data mean $0$, and how many of their 64 hidden units are active at each point.
 
 ```{.python .input #objectives-separated-start-w1-critics}
 %%tab pytorch
@@ -700,7 +702,17 @@ for seed, (theta, D) in enumerate(w1_runs):
     print(f'{seed:7d} {theta:7.2f} {s_t:11.2f} {a_t:7d} {s_0:7.2f} {a_0:7d}')
 ```
 
-The runs show both endings: between steps 1,000 and 1,500, $\theta$ does not move at all in some runs, and in others it ends two or more units from the data. :numref:`sec_gan_convergence` shows on a two-parameter game that a penalty centered at slope one keeps pushing a generator that already matches the data, and that a penalty centered at zero does not.
+The linear analysis reads this printout well. Each critic has nearly the same slope at $\theta$ as at $0$, so across the gap it is close to a straight line, and the runs land in the states that line allows. Some critics are flat, with slope $0.00$ at both points, and their generators have not moved since step 1,000. The run that ends at $\theta = -7.6$ has a critic still on the old side. Its slope is $-0.62$ to $-0.65$; with the data to the right of $\theta$, a negative slope carries $\theta$ further left, and the predicted size at $d = 7.6$ is $1 - d/20 = 0.62$. That generator is being pushed out. The flat critics are not dead networks, though: 10 to 28 of their 64 units are active, and the units that stay on simply pass no slope from input to output.
+
+:begin_tab:`pytorch`
+The run that ends at $\theta = -7.18$ shows the third state: its critic has crossed the barrier, with slope $+1.34$ against the predicted $1 + d/20 = 1.36$, and it now pulls the generator back toward the data. The flat critic holds its generator at $\theta = 0.30$, inside the data.
+:end_tab:
+
+:begin_tab:`jax`
+Two of the three critics are flat, and they hold their generators at $\theta = -1.18$ and $-1.40$, a little more than a unit past the data.
+:end_tab:
+
+Under the two-sided penalty, arriving at the data is the easy part; staying there is not. :numref:`sec_gan_convergence` shows on a two-parameter game that a penalty centered at slope one keeps pushing a generator that already matches the data, and that a penalty centered at zero does not.
 
 MMD moves steadily, from $6$ to $1.32$ in 1,500 steps, with a gradient of $0.21$ that is the same in every run. Its speed says nothing about MMD against the critics, because the scale of its gradient is set by the bandwidth and by the scale of $\mathrm{MMD}^2$.
 
@@ -1221,9 +1233,9 @@ plain gradient steps; three runs per arm.
 | arm | gradient | first $\lvert\theta\rvert < 0.5$ |
 |:--|:--|:--|
 | logistic, saturating | 0.006--0.015 | not in 1,500 steps |
-| logistic, non-saturating | 2.7--3.0 | steps 378--388 |
-| hinge | 1.1--1.7 | steps 727--943 |
-| $W_1$ + gradient penalty | 1.25--1.26 | steps 477--502, then may stall or be pushed away |
+| logistic, non-saturating | 2.7--3.0 | steps 377--388 |
+| hinge | 1.1--1.7 | steps 719--918 |
+| $W_1$ + gradient penalty | 1.25--1.26 | steps 477--508, then may stall or be pushed away |
 | MMD, median bandwidth | 0.21 | $\theta = 1.32$ at step 1,500 |
 
 ::: {.d2l-note}
@@ -1267,9 +1279,25 @@ arrives at nearly full speed, then stalls or is pushed away again. Why?
 **Answer.** The $W_1$ push stays near unit size at the data. Past it the
 critic must reverse its slope, and the penalty $\gamma(|T'| - 1)^2$ puts
 a barrier at slope zero: a critic left on the old side pushes the
-generator away; a ReLU critic that crosses can go flat and leave it
-where it is.
+generator away; a ReLU critic can also go flat and leave it where it is.
 :::
+:::
+:::
+
+::: {.slide title="At Step 1,500 Each W1 Critic Is a Ramp or Flat"}
+Slope $D'$ of each $W_1$ critic at the generator $\theta$ and at the data
+mean $0$; active units of 64:
+
+@!objectives-separated-start-w1-critics
+
+- Flat: slope 0.00 at both points; $\theta$ stays where it is.
+- Old side, $\theta \approx -7.6$, a distance $d = 7.6$ past the data: slope $-0.62$ to $-0.65$, pushing
+  $\theta$ out; linear prediction $1 - d/20 = 0.62$.
+- A critic that crosses settles at $1 + d/20$ and pulls $\theta$ back.
+
+::: {.d2l-note}
+Same slope at $\theta$ and at $0$: across the gap each critic is nearly a
+straight line. Arriving is easy; staying is not.
 :::
 :::
 
@@ -1284,7 +1312,8 @@ where it is.
   $\mu = 1$ to 7.
 - **Far start:** saturating gradient 0.01, non-saturating about 3. The
   generator moves when its critic slopes at its samples and its loss
-  passes the slope on; the divergence decides neither.
+  passes the slope on; the divergence decides neither. $W_1$ + penalty
+  arrives by step 508, then stalls or is pushed out.
 - **Mixture:** all five losses from 0.529 nats to a few thousandths.
 
 **Next:** a critic that compares a real sample with a generated one.

@@ -84,6 +84,11 @@ GPU_ONLY_NOTEBOOKS = {
     "chapter_diffusion-models/latent-diffusion.ipynb",
     "chapter_diffusion-models/few-step.ipynb",
     "chapter_diffusion-models/discrete-diffusion.ipynb",
+    # 16.4 trains 13 GANs on 25 Gaussians and 16.7 trains nine students and
+    # an adversarial pair; the JAX tabs name no device, so the keyword scan
+    # reads them as CPU, where they would train on the host (2026-11-20).
+    "chapter_generative-adversarial-networks/convergence.ipynb",
+    "chapter_generative-adversarial-networks/adversarial-losses.ipynb",
     # 19.1 trains SGNS and GloVe on the GPU (a CPU run draws other random
     # numbers, so the grid agreement line holds only on the GPU).
     "chapter_lm-encoders/word-embeddings.ipynb",

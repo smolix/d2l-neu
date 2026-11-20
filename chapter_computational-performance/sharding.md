@@ -73,11 +73,12 @@ import re
 from jax.sharding import NamedSharding, PartitionSpec as P
 ```
 
-The cells of this section need two GPUs. Their stored outputs come from
-two RTX 4090s without peer-to-peer access, which exchange data through host
-memory. We count the parameters $N$ of the 36-block GPT without allocating
-memory for them, and compare its $16N$ bytes of training state with the
-memory of one GPU.
+The next cell runs on any machine, even one without a GPU. All cells
+after it need two GPUs, and their stored outputs come from two RTX 4090s
+without peer-to-peer access, which exchange data through host memory. We
+count the parameters $N$ of the 36-block GPT without allocating memory for
+them, and compare its $16N$ bytes of training state with the memory of one
+GPU, if there is one.
 
 ```{.python .input #sharding-sharding-the-training-state-2}
 %%tab pytorch
@@ -291,7 +292,7 @@ del x                       # Frees its memory before the training step
 print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on {k} GPUs')
 ```
 
-Each GPU sends at about 2.2 GB/s, close to what the allreduces of
+Each GPU sends at a little over 2 GB/s, close to what the allreduces of
 :numref:`sec_multi_gpu_concise` reached between the same two GPUs through
 host memory. The 11.5 GB of a step should therefore take about 5 s.
 
@@ -318,7 +319,7 @@ print(f'arithmetic at the peak, 8N bT/P: '
 At best, overlap hides the 0.4 s of arithmetic under the 5 s of
 communication. No schedule can hide 5 s of communication under 0.4 s of
 arithmetic. The prediction for a step is therefore about 5 s, of which the
-arithmetic would fill about a fourteenth.
+arithmetic would fill less than a tenth.
 
 ## Sharded Training on Two GPUs
 
@@ -553,7 +554,7 @@ communication, and the three timed steps agree within a few percent. GPU 0
 spends nearly all of the step in communication kernels, so the arithmetic
 adds little beside them, and the step lasts about as long as its
 communication. Three byte counts and one measured rate predicted it to
-within about a tenth. On our machine, sharding lets the model train on two
+within a sixth. On our machine, sharding lets the model train on two
 GPUs, at about 7% of the speed that its arithmetic would allow.
 
 What 7% means becomes clear over a whole run. A compute-optimal run of
@@ -621,8 +622,8 @@ a fast link the same bytes take milliseconds.
        of data parallelism in fp32, and its memory per parameter with the
        last row of :numref:`tab_mgp-zero`.
     1. For the 36-block GPT on $k = 2$ GPUs, with the $\beta_\textrm{link}$
-       measured in this section (the stored output gives 2.2 GB/s if you
-       have no two GPUs), find the number of tokens per GPU and step at
+       measured in this section (the stored output of your tab gives it if
+       you have no two GPUs), find the number of tokens per GPU and step at
        which the computation, $8N$ operations per token with checkpointing
        at 83 TFLOP/s, takes as long as the communication
        of :eqref:`eq_fsdp_comm`. How many sequences of 1,024 tokens is that,
@@ -962,16 +963,16 @@ not the bytes each one sends.
 ::: {.slide title="Check: Predict Memory and Time on Two GPUs"}
 [Check]{.kicker}
 
-$N = 1.92$ B, $S = 4N = 7.7$ GB, $k = 2$, $\beta_\textrm{link} =
-2.2$ GB/s sent per GPU, 2,048 tokens per GPU, checkpointing at about
+$N = 1.92$ B, $S = 4N = 7.7$ GB, $k = 2$, $\beta_\textrm{link}$ of
+2.2 to 2.3 GB/s sent per GPU, 2,048 tokens per GPU, checkpointing at about
 1 MiB per token, $8N$ FLOPs per token at 83 TFLOP/s. Peak memory,
 communication, arithmetic?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $16N/2 = 14.3$ GiB, plus 2 GiB of activations and a block or
-two: at most 17 GiB. Each phase sends $S/2$, so
-$1.5S/\beta_\textrm{link} = 11.5/2.2 \approx 5.2$ s. Arithmetic:
+two: at most 17 GiB. Each phase sends $S/2$, so $1.5S = 11.5$ GB at
+$\beta_\textrm{link}$ take about 5 s. Arithmetic:
 $8 \cdot 1.92 \cdot 10^9 \cdot 2048 / (8.3 \cdot 10^{13}) \approx 0.4$ s.
 :::
 :::
@@ -983,7 +984,7 @@ $8 \cdot 1.92 \cdot 10^9 \cdot 2048 / (8.3 \cdot 10^{13}) \approx 0.4$ s.
 @!sharding-memory-and-communication-11
 
 - Peak about 16 GiB per GPU, under the predicted 17.
-- About 5.5 s per step, a little over the predicted 5.2 s.
+- About 5.5 s per step, a little over the predicted 5 s.
 - Nearly all of it in communication kernels; the 0.4 s of arithmetic adds
   little.
 
@@ -1066,7 +1067,7 @@ arithmetic.
 
 | link | $\beta_\textrm{link}$ | communication per step |
 |---|---|---|
-| ours: PCIe through host memory | 2.2 GB/s | 5.2 s |
+| ours: PCIe through host memory | 2.2 to 2.3 GB/s | about 5 s |
 | NVLink 5 | 900 GB/s | 13 ms |
 
 The arithmetic limits the step; on such links FSDP costs little.

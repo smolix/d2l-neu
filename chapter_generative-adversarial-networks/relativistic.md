@@ -375,9 +375,9 @@ for name, (critic_loss, gen_loss) in arms.items():
     print(f'{name:15s} median JS {medians}   first JS < 0.01 {firsts}')
 ```
 
-Both arms fit, as predicted. The non-saturating runs end below a thousandth of a nat and cross 0.01 nats between steps 2,200 and 2,600, as the logistic loss of :numref:`sec_gan_objectives` did (about a thousandth of a nat, step 2,400), so pairing loses nothing in fit. The saturating generator, far from stalling, is the faster one here: every saturating run crosses 0.01 nats around step 1,800, before any non-saturating run, and ends a little higher, between one and two thousandths of a nat. Both differences are real in these runs and too small to matter. Near the data the saturating weight is not small, so nothing saturates.
+Both arms fit, as predicted. The non-saturating runs end at about a thousandth of a nat or less and cross 0.01 nats between steps 2,200 and 2,600, as the logistic loss of :numref:`sec_gan_objectives` did (about a thousandth of a nat, step 2,400), so pairing loses nothing in fit. The saturating generator, far from stalling, is the faster one here: every saturating run crosses 0.01 nats at step 1,800, before any non-saturating run, and ends between one and two thousandths of a nat, a little above the non-saturating runs. Neither difference matters at this level. Near the data the saturating weight is not small, so nothing saturates.
 
-The case for the non-saturating form lies at the other extreme, a start far from the data. There a trained pairing critic ranks every generated sample below every real one, the rank weight is close to zero for all of them, and the saturating generator should stall as the classical one did in :numref:`subsec_gan_objectives_separated_start`, where it moved $\theta$ from 6 to about 5.76 in 1,500 steps while the non-saturating arm reached the data by step 390. We run that start with the pairing critic: `d2l.train_shift` of :numref:`subsec_gan_objectives_separated_start`, with the critic and generator losses of the cell above, three runs per generator loss, printing that experiment's columns.
+The case for the non-saturating form lies at the other extreme, a start far from the data. There a trained pairing critic ranks every generated sample below every real one, the rank weight is close to zero for all of them, and the saturating generator should stall as the classical one did in :numref:`subsec_gan_objectives_separated_start`. We run that start with the pairing critic: `d2l.train_shift` of :numref:`subsec_gan_objectives_separated_start`, with the critic and generator losses of the cell above, three runs per generator loss, printing that experiment's columns.
 
 ```{.python .input #relativistic-pairing-on-the-separated-start}
 %%tab pytorch, jax
@@ -392,13 +392,13 @@ for name, (critic_loss, gen_loss) in arms.items():
               + (f'{hit[0]:5d}' if len(hit) else 'not reached'))
 ```
 
-Part (d) of Exercise :exref:`ex_relativistic-zero-sum-weights` runs that start with the pairing critic. On images the supports are typically disjoint or nearly so (:numref:`sec_basic_gan`), so this extreme is not exotic, and the chapter trains the non-saturating form throughout.
+The prediction holds, and more sharply than in the classical game. The saturating pairing generator does not move at all: its median gradient over the first 100 steps prints as 0.000, that is, below half a thousandth, and after 1,500 steps $\theta$ still reads 5.99 or 6.00. The classical saturating generator of :numref:`subsec_gan_objectives_separated_start` at least crept, with gradients of about a hundredth, from 6 to about 5.76. A critic that ranks every generated sample last gives the saturating generator nothing to follow. The non-saturating pairing generator, with gradients of about 3, is within 0.6 of the data by step 300 and comes within 0.5 between steps 315 and 335 in every run, a little sooner than the classical non-saturating arm (steps 377 to 388). The two pairing arms end six units apart, while runs of the same arm differ by at most 0.01 in $\theta$ and 20 in the arrival step, so the verdict does not depend on the seed. On images the supports are typically disjoint or nearly so (:numref:`sec_basic_gan`), so this extreme is not exotic, and the chapter trains the non-saturating form throughout.
 
 Neither the value of the game nor the weights, however, say whether gradient play between critic and generator reaches its equilibrium at all, and with pairing or without, it need not. :numref:`sec_gan_convergence` takes up that question.
 
 ## Summary
 
-The pairing objective is the Bradley--Terry log-likelihood of ranking a real sample above a generated one. Its optimal critic is still the log density ratio, now only up to a constant, so the sign of a pairing score means nothing. Treating the ordered pair as one observation turns the game into the log-loss game between $p \otimes q$ and $q \otimes p$, and its value $\mathrm{JS}(p \otimes q, q \otimes p) = 2\,\mathrm{JS}(p, q) - I(a_1; a_2)$ is the information a randomly ordered pair carries about which member is real. That value lies between $\mathrm{JS}(p, q)$ and $\log 2$: about twice $\mathrm{JS}$ near $q = p$, and $\log 2$ on disjoint supports. The generator's weight becomes a rank among the real scores. With a best-response critic, a fixed one-to-one coupling removes the collision minima that the classical and all-pairs losses share; but pairs redrawn at every step average back to the all-pairs objective, whose landscape keeps them, so the case for pairing as a guard against dropped modes rests on experiments. On a planar mixture pairing fits as the logistic loss does, with either generator loss; far from the data the saturating rank weight vanishes, so we train the non-saturating form.
+The pairing objective is the Bradley--Terry log-likelihood of ranking a real sample above a generated one. Its optimal critic is still the log density ratio, now only up to a constant, so the sign of a pairing score means nothing. Treating the ordered pair as one observation turns the game into the log-loss game between $p \otimes q$ and $q \otimes p$, and its value $\mathrm{JS}(p \otimes q, q \otimes p) = 2\,\mathrm{JS}(p, q) - I(a_1; a_2)$ is the information a randomly ordered pair carries about which member is real. That value lies between $\mathrm{JS}(p, q)$ and $\log 2$: about twice $\mathrm{JS}$ near $q = p$, and $\log 2$ on disjoint supports. The generator's weight becomes a rank among the real scores. With a best-response critic, a fixed one-to-one coupling removes the collision minima that the classical and all-pairs losses share; but pairs redrawn at every step average back to the all-pairs objective, whose landscape keeps them, so the case for pairing as a guard against dropped modes rests on experiments. On a planar mixture pairing fits as the logistic loss does, with either generator loss. Far from the data the saturating rank weight vanishes: started six units away, the saturating generator does not move in 1,500 steps, while the non-saturating one reaches the data by step 335, so we train the non-saturating form.
 
 ## Exercises
 
@@ -426,12 +426,15 @@ The pairing objective is the Bradley--Terry log-likelihood of ranking a real sam
        $\tfrac12$, with equality only at $q = p$. What does it tend to as
        the supports separate, and what does this imply for the saturating
        generator started far from the data?
-    1. Test the prediction of part (c) on the separated start of the
-       objectives section, :numref:`subsec_gan_objectives_separated_start`.
-       Copy `train_shift` and run it with the pairing critic loss and each
-       of the two generator losses, built as in the mixture cell, three runs
-       each, starting at $\theta = 6$. Compare the gradient and $\theta$
-       after 1,500 steps with the classical arms of that experiment.
+    1. Part (c) predicts that the saturating weight fades as the generator
+       moves away from the data, and the separated start found it gone at
+       $\theta = 6$. Find where it fades: run `d2l.train_shift` with the
+       pairing critic loss and each generator loss of the mixture cell from
+       `theta0` in $\{1, 2, 3, 4\}$, three runs each, and record the median
+       gradient over the first 100 steps and whether $\theta$ comes within
+       0.5 of the data. Between which starts does the saturating generator
+       stop moving? Does the non-saturating generator's gradient depend on
+       the start?
    :exlabel:`ex_relativistic-zero-sum-weights`
 
 1. **Gap to twice Jensen--Shannon.** ● Take the randomly ordered
@@ -744,17 +747,33 @@ The guarantee belongs to the coupling, not to the comparison.
 :::
 :::
 
-::: {.slide title="Near the Data Both Generator Losses Fit; Far from It the Saturating Weight Vanishes"}
+::: {.slide title="Near the Data Both Generator Losses Fit, and the Saturating One Is Faster"}
 Saturating: minimize $\Phi$, weight $w_{\textrm{Rp}}$. Non-saturating:
 weight $1 - w_{\textrm{Rp}}$. Planar mixture, start 0.53 nats away, three
 runs each:
 
 @!relativistic-pairing-on-the-mixture-testbed
 
-- Overlapping start: both fit; saturating is even a little faster.
-- Separated start: every $x'$ ranks below every real $x$, so
-  $w_{\textrm{Rp}} \approx 0$; the classical saturating generator moved
-  from 6 to about 5.76 in 1,500 steps.
+- Both fit; every saturating run reaches 0.01 nats first, at step 1,800.
+- Near the data $w_{\textrm{Rp}}$ is not small, so nothing saturates.
+:::
+
+::: {.slide title="Six Units from the Data the Saturating Pairing Generator Does Not Move"}
+$p = \mathcal{N}(0, 1)$, $q = \mathcal{N}(\theta, 1)$ from $\theta = 6$:
+every $x'$ ranks below every real $x$, so $w_{\textrm{Rp}} \approx 0$.
+Three runs per arm, 1,500 steps:
+
+| critic, generator loss | median gradient, first 100 steps | $\theta$ at the end | within 0.5 of the data |
+|:--|:--|:--|:--|
+| pairing, saturating | below 0.0005 | 5.99--6.00 | never |
+| classical, saturating | 0.006--0.015 | 5.75--5.77 | never |
+| pairing, non-saturating | 3.0--3.2 | 0.00 | steps 315--335 |
+| classical, non-saturating | 2.7--2.9 | 0.00--0.01 | steps 377--388 |
+
+::: {.d2l-note}
+A critic that ranks every generated sample last gives the saturating
+generator nothing to follow: train the non-saturating form.
+:::
 :::
 
 ::: {.slide title="Check: Where Can $x'_2$ Go?"}
@@ -778,8 +797,8 @@ $-\log 2$ when $x'_2$ reaches $x_2$.
   against 0.193 for one sample.
 - Between JS and $\log 2$, twice JS near $q = p$, $\log 2$ on disjoint supports.
 - Collision minima at $n = 3$: 21, 21, 0, the 0 only for a fixed pairing.
-- Train the generator on the non-saturating form: near the data both fit,
-  far from it $w_{\textrm{Rp}} \approx 0$.
+- Train the generator on the non-saturating form: near the data both fit;
+  six units away the saturating one stays at $\theta = 6$.
 
 **Next:** whether gradient play reaches the equilibrium, and coverage on 25
 Gaussians with and without pairing.

@@ -26,3 +26,90 @@ generalization-deep
 dropout
 kaggle-house-price
 ```
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4]{.kicker}
+
+From linear models to networks with hidden layers<br>
+**hidden layers · backpropagation · initialization · generalization · dropout · Kaggle**
+:::
+:::
+
+::: {.slide title="A Linear Model Cannot Combine Its Inputs"}
+[The problem]{.kicker}
+
+- **XOR of two bits:** no line separates the two classes, so every linear
+  classifier gets at least one of the four points wrong.
+- **Fashion-MNIST:** softmax regression levels off at about 84%; one hidden
+  layer of 256 ReLUs reaches about 87% after 30 epochs.
+- **The price:** 203,530 parameters, 26 times as many, about 3.4 per
+  training image. Such a network could memorize its training set, yet it
+  does not.
+
+::: {.d2l-note}
+Hidden layers make the model expressive; this chapter shows how to train
+them and why they still generalize.
+:::
+:::
+
+::: {.slide title="By the End of This Chapter You Can"}
+[Goals]{.kicker}
+
+- compute XOR with two hidden units;
+- implement an MLP from scratch and with framework layers;
+- derive backpropagation and check it against automatic differentiation;
+- choose the initial scale (Xavier, He) so that ten layers train;
+- show that capacity cannot explain generalization, and what gradient
+  descent prefers instead;
+- measure what dropout changes when labels are noisy; select a model by
+  cross-validation.
+
+**The idea:** a hidden layer computes features, an affine map followed by a
+fixed nonlinearity, and softmax regression classifies them. **Running
+example:** the Fashion-MNIST models on the next slide.
+:::
+
+::: {.slide title="Running Example: 26 Times the Parameters Add Three Points on Fashion-MNIST"}
+[Running example]{.kicker}
+
+| model | parameters | multiply-adds per image | validation accuracy |
+|---|---:|---:|---:|
+| softmax regression | 7,850 | 7,840 | about 84% (30 epochs) |
+| MLP, 256 hidden units | 203,530 | 203,264 | about 87% (30 epochs) |
+| MLP, 2 × 256 hidden units, dropout | 269,322 | 268,800 | about 87% (20 epochs) |
+
+- Seconds per epoch on a GPU: about the same for softmax regression and the
+  MLP, since reading the images and the fixed cost of each step dominate.
+- The decks of this chapter measure their models against these rows.
+:::
+
+::: {.slide title="Map of the Chapter"}
+[Chapter map]{.kicker}
+
+| section | question | adds |
+|---|---|---|
+| Multilayer Perceptrons | which functions can hidden layers represent? | hidden layers, universal approximation, activation functions |
+| Implementation | what does an MLP cost and gain? | an MLP trained on Fashion-MNIST |
+| Backpropagation | how does one backward pass compute every gradient? | how the gradients are computed, and at what memory cost |
+| Numerical Stability and Initialization | why do gradients vanish or explode? | vanishing gradients, Xavier and He initialization |
+| Generalization in Deep Learning | why does a network that can memorize generalize? | memorization, double descent, implicit bias, early stopping |
+| Dropout | what does silencing random units change? | random masks, slower memorization of noisy labels |
+| Predicting House Prices on Kaggle | how do the pieces work on real data? | the workflow on real data |
+:::
+
+::: {.slide title="Every Section Works on a Running Example With Real Numbers"}
+[Running examples]{.kicker}
+
+| section | running example |
+|---|---|
+| Multilayer Perceptrons | XOR computed by two hidden units; at $z = 4$ the sigmoid's slope is 0.018, the ReLU's 1 |
+| Implementation | 203,530 parameters; about 87% against about 84% for softmax regression |
+| Backpropagation | a minibatch of 256 stores 1.1 MB of activations next to 0.8 MB of weights |
+| Numerical Stability and Initialization | ten layers, weights of standard deviation 0.01: the gradient shrinks by more than $10^8$, and the loss never leaves $\log 10$ |
+| Generalization in Deep Learning | 100% training accuracy on random labels, chance on test images |
+| Dropout | 1,000 images, 40% of the labels redrawn: dropout ends three to five points higher |
+| Predicting House Prices on Kaggle | RMSE of log prices: about 0.15 for a linear model, about 0.135 for an MLP |
+:::

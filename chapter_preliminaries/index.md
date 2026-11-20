@@ -17,3 +17,71 @@ calculus
 autograd
 probability
 ```
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §1]{.kicker}
+
+The tools for the smallest complete learning problem<br>
+**tensors · tables · linear algebra · calculus · autograd · probability · documentation**
+:::
+:::
+
+::: {.slide title="Even a Small Learning Problem Involves Many Numbers"}
+[The problem]{.kicker}
+
+- Learning takes six steps: load examples, represent them as numbers,
+  predict, measure the loss, change the parameters, and check whether the
+  result is real.
+- A minibatch of 256 grayscale images of 28 × 28 pixels holds 200,704
+  numbers; a linear classifier for ten categories has
+  784 × 10 + 10 = 7,850 parameters.
+- Python loops over single numbers are too slow at this scale, and
+  derivatives by hand are too error-prone.
+
+::: {.d2l-note}
+Each step needs one tool, and each section of this chapter supplies one.
+:::
+:::
+
+::: {.slide title="By the End of This Chapter You Can"}
+[Goals]{.kicker}
+
+- store a minibatch of images as a tensor and compute on all of it at once;
+- turn a table with gaps and words into tensors;
+- write a linear classifier for a minibatch as one matrix product, and
+  predict its shape and its cost;
+- compute a gradient by hand, and let a framework compute it for you;
+- decide whether a measured difference is larger than sampling noise, and
+  update a probability with evidence;
+- find out what an unfamiliar function does.
+:::
+
+::: {.slide title="Map of the Chapter"}
+[Chapter map]{.kicker}
+
+| step | tool | section |
+|---|---|---|
+| store data, compute on all of it at once | tensors | Data Manipulation |
+| turn table records into tensors | pandas | Data Preprocessing |
+| predict for a whole minibatch; stack layers | matrix products, norms, eigenvalues | Linear Algebra |
+| find which way lowers the loss | derivatives, gradients, chain rule | Calculus |
+| get derivatives without algebra | automatic differentiation | Automatic Differentiation |
+| tell a pattern from noise; update a belief with evidence | standard error, conditional probability, Bayes' theorem | Probability and Statistics |
+| find out what a function does | documentation, `help` | Documentation |
+:::
+
+::: {.slide title="Every Section Works on a Running Example With Real Numbers"}
+[Running examples]{.kicker}
+
+| section | running example |
+|---|---|
+| Data Manipulation | `images`, a minibatch of shape $(256, 1, 28, 28)$, `uint8` |
+| Data Preprocessing | `house_tiny.csv`: 10 homes, 3 + 4 missing entries, roof type as text |
+| Linear Algebra | the same minibatch as $\mathbf{X} \in \mathbb{R}^{256 \times 784}$; 7,850 parameters |
+| Calculus, Automatic Differentiation | the line model: inputs 0, 1, 2 with labels 1, 1, 0 |
+| Probability and Statistics | a coin with 56 heads in 100 tosses; an HIV test |
+| Documentation | gamma samples with shape $k = 2$ and rate $3$: does the sampler take a rate or a scale? |
+:::

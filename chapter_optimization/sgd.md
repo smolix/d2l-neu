@@ -357,36 +357,405 @@ An update on $b = 100$ examples takes roughly the same wall-clock time as an upd
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §9.2]{.kicker}
+[Dive into Deep Learning · §9.3]{.kicker}
 
 Stochastic and Minibatch Gradient Descent<br>**sampled gradients · the noise ball · minibatches · where a run stalls**
 :::
 :::
 
-::: {.slide title="SGD Reaches the Valley Floor and Wanders in an Elongated Cloud" layout="tight"}
-[SGD on the valley]{.kicker}
+::: {.slide title="An Exact Gradient Needs a Full Pass over the Data"}
+[The problem]{.kicker}
+
+ResNet-50 on ImageNet, a common recipe:
+
+| quantity | value |
+|:--|--:|
+| training images | 1.28 million |
+| minibatch | 256 images |
+| passes over the data with minibatches | 90 |
+| updates in 90 passes | 450,000 |
+| passes for 450,000 exact-gradient updates | 450,000 |
+
+::: {.d2l-note .warn}
+Exact gradients would take 5,000 times the work, yet a few hundred random
+images already show which way is downhill.
+:::
+
+[Goyal et al., 2017]{.small}
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- derive the cloud in which constant-step SGD ends on a quadratic;
+- predict how learning rate $\eta$, curvature $\lambda$, noise variance
+  $\sigma^2$ and batch size $b$ change it;
+- predict the loss at which a training run stalls, or that it will not;
+- compare batch sizes per example and per second.
+
+**Idea:** noise adds a floor. Constant-step SGD fluctuates in a *noise
+ball* of squared radius $\eta\sigma^2/(2\lambda b)$.
+
+**Running example:** the valley $0.1x_1^2 + 2x_2^2$ with unit gradient
+noise, then linear regression on 1,500 wind-tunnel measurements of
+airfoil noise (5 features, 6 weights).
+:::
+
+::: {.slide title="Noise Is the Second Problem of the Chapter"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| part | decks |
+|---|---|
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · **Stochastic and Minibatch Gradient Descent** |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
+:::
+
+::: {.col .narrow}
+- **Uses:** gradient descent on a quadratic, its ceiling $\eta < 2/L$
+  ($L$: largest curvature).
+- **Skips:** convergence proofs, schedules for networks, the
+  memory-traffic analysis of batching on large models.
+:::
+:::
+:::
+
+::: {.slide title="A Sampled Gradient Is Right on Average"}
+[Sampled gradients]{.kicker}
+
+$$f(\mathbf{x}) = \frac{1}{n}\sum_{i=1}^n f_i(\mathbf{x}), \qquad
+\mathbf{x} \leftarrow \mathbf{x} - \eta\, \nabla f_i(\mathbf{x}),
+\quad i \sim \textrm{uniform}$$
+
+- $\mathbf{x}$: parameters; $f_i$: loss on example $i$ of $n$; $\eta$:
+  learning rate.
+- One step costs one per-example gradient instead of $n$.
+- Unbiased: $\mathbb{E}_i[\nabla f_i(\mathbf{x})] = \nabla f(\mathbf{x})$.
+  That is the easy half.
+- Noisy: $\nabla f_i = \nabla f + \boldsymbol{\xi}$ with
+  $\mathbb{E}[\boldsymbol{\xi}] = \mathbf{0}$; one example pulls toward
+  fitting itself alone.
+:::
+
+::: {.slide title="On the Valley, SGD Is Gradient Descent plus Unit Noise"}
+[Sampled gradients]{.kicker}
+
+The valley $f(\mathbf{x}) = 0.1x_1^2 + 2x_2^2$: curvature 0.2 along $x_1$
+(flat), 4 along $x_2$ (steep). Sampling is simulated by Gaussian noise of
+variance 1 on both gradient coordinates:
+
+@-sgd-stochastic-gradient-updates-2
+
+::: {.d2l-note}
+Same start $(-5, -2)$ and same update as gradient descent; only the
+gradient is noisy. (`s1`, `s2` and the two returned zeros are state slots
+that this update does not use.)
+:::
+:::
+
+::: {.slide title="Constant-Step SGD Stalls in a Cloud"}
+[Sampled gradients]{.kicker}
+
+The valley, $\eta = 0.1$, 300 steps:
 
 @!sgd-stochastic-gradient-updates-3
+
+The cloud does not shrink with more steps, and it is longest along the
+flat $x_1$.
 :::
 
-::: {.slide title="The Stationary Noise Ball Scales as η σ² / (2 λ b)"}
+::: {.slide title="Contraction and Noise Balance at a Fixed Variance"}
 [The noise ball]{.kicker}
 
-$$\mathbb{E}\big[x_\infty^2\big] = \frac{\eta\, \sigma^2}{b\,\lambda\, (2 - \eta\lambda)} \approx \frac{\eta\, \sigma^2}{2\lambda b} \quad \textrm{for } \eta\lambda \ll 1$$
+One coordinate, curvature $\lambda$, noise $\xi_t$ of variance $\sigma^2$,
+the same at every point (a bold assumption):
+
+I. $\;x_{t+1} = (1-\eta\lambda)\,x_t - \eta\,\xi_t$
+
+II. $\;\mathbb{E}[x_{t+1}^2] = (1-\eta\lambda)^2\,\mathbb{E}[x_t^2] + \eta^2\sigma^2$
+(the cross term has mean zero)
+
+III. Fixed point $v = (1-\eta\lambda)^2 v + \eta^2\sigma^2$, with
+$x_\infty$ the iterate after many steps:
+
+$$\boxed{\mathbb{E}[x_\infty^2] = \frac{\eta\sigma^2}{\lambda(2-\eta\lambda)} \approx \frac{\eta\sigma^2}{2\lambda}}$$
+
+The squared radius grows with $\eta$ and $\sigma^2$ and shrinks with $\lambda$.
+:::
+
+::: {.slide title="Noise Keeps the Ceiling 2/λ and Adds a Floor"}
+[The noise ball]{.kicker}
+
+$$\mathbb{E}[x_\infty^2] = \frac{\eta\sigma^2}{\lambda(2-\eta\lambda)}$$
+
+| gradient descent | with noise |
+|:--|:--|
+| ceiling $\eta < 2/\lambda$ | unchanged: the ball grows without bound as $\eta\lambda \to 2$ |
+| factor $1 - \eta\lambda$ per step | unchanged, until the iterate reaches the ball |
+| converges to the minimum | stalls at variance $\approx \eta\sigma^2/(2\lambda)$ |
+
+::: {.d2l-note .rule}
+What noise adds is a floor.
+:::
+:::
+
+::: {.slide title="The Ball Is Four Times Wider along the Flat Direction"}
+[The noise ball]{.kicker}
+
+The valley at $\eta = 0.1$, $\sigma^2 = 1$:
+
+| direction | $\lambda$ | variance | standard deviation |
+|:--|--:|--:|--:|
+| $x_1$ (flat) | 0.2 | $0.1/(0.2 \cdot 1.98) \approx 0.25$ | 0.5 |
+| $x_2$ (steep) | 4 | $0.1/(4 \cdot 1.6) \approx 0.016$ | 0.125 |
+
+::: {.d2l-note}
+The flat directions, slowest for gradient descent, are also where noise
+carries the iterate farthest: the pull back is weakest there.
+:::
+:::
+
+::: {.slide title="10,000 Simulated Runs Match the Formula"}
+[The noise ball]{.kicker}
+
+Start 10,000 runs at the minimum, take 2,000 noisy steps, measure the
+variance of each coordinate across runs:
 
 @!sgd-the-noise-ball
+
+::: {.d2l-note}
+Agreement within a few percent, the sampling error of 10,000 runs.
+:::
 :::
 
-::: {.slide title="Curvature Cancels in the Stationary Excess Loss" layout="tight"}
+::: {.slide title="Check: Halve the Learning Rate"}
+[Check]{.kicker}
+
+On the valley, $\eta$ drops from 0.1 to 0.05. What happens to the variance
+along $x_1$ and along $x_2$, and to the number of steps needed to reach
+the ball?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $x_1$: $0.25 \to 0.126$, half, since $\eta\lambda$ is small.
+$x_2$: $0.0156 \to 0.0069$, somewhat less than half, since
+$\eta\lambda = 0.4$ is not small and the exact formula applies. Each step
+closes the fraction $\eta\lambda$ of the distance, so reaching the ball
+takes twice as many steps.
+:::
+:::
+:::
+
+::: {.slide title="Decreasing Rates Converge if Their Sum Diverges and Their Squares Do Not"}
+[Decreasing learning rates]{.kicker}
+
+$$\sum_t \eta_t = \infty \qquad \textrm{and} \qquad \sum_t \eta_t^2 < \infty$$
+
+- First: the iterate can travel arbitrarily far.
+- Second: with every rate below the ceiling $2/\lambda$, the noise left
+  at the end has variance at most $\sigma^2 \sum_t \eta_t^2$.
+- $\eta_t = c/t$ satisfies both; a constant rate fails the second,
+  geometric decay the first.
+
+[Robbins and Monro, 1951; curvature positive and bounded in every direction, noise of bounded variance]{.small}
+:::
+
+::: {.slide title="Noise Turns a Geometric Rate into 1/t"}
+[Decreasing learning rates]{.kicker}
+
+Distance to the minimum of the valley after $t$ steps:
+
+| method | squared distance | distance | 100 times closer costs |
+|:--|:--|:--|:--|
+| gradient descent, best rate $\eta = 0.476$ | $\propto 0.905^{2t}$ | $\propto 0.905^{t}$ | 47 more steps |
+| SGD, $\eta_t = c/t$, $c$ large enough | $\propto 1/t$ | $\propto 1/\sqrt{t}$ | 10,000 times the steps |
+
+::: {.d2l-note}
+In return an SGD step costs one per-example gradient, a step of gradient
+descent $n$, and a training loss rarely needs many digits.
+:::
+:::
+
+::: {.slide title="Averaging b Examples Divides the Variance by b"}
+[Minibatches]{.kicker}
+
+$$\mathbf{g}_t = \frac{1}{b}\sum_{i\in\mathcal{B}_t} \nabla f_i(\mathbf{x}_t),
+\qquad
+\mathbb{E}\,\|\mathbf{g}_t - \nabla f\|^2 = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}$$
+
+- $\mathcal{B}_t$: $b$ examples drawn independently.
+- $\operatorname{tr}\boldsymbol{\Sigma} = \mathbb{E}_i\|\nabla f_i - \nabla f\|^2$:
+  squared error of one example's gradient, summed over the coordinates.
+
+::: {.d2l-note}
+Variance $\propto 1/b$, so noise $\propto 1/\sqrt{b}$: a batch 100 times
+larger makes the gradient error only 10 times smaller.
+:::
+:::
+
+::: {.slide title="The Ball Depends on η and b Only through η/b"}
+[Minibatches]{.kicker}
+
+$$\sigma^2 \to \frac{\sigma^2}{b}: \qquad
+\mathbb{E}[x_\infty^2] \approx \frac{\eta\,\sigma^2}{2\lambda b}$$
+
+| to halve the squared radius | cost |
+|:--|:--|
+| halve $\eta$ | twice the steps to reach the ball |
+| double $b$ | twice the work per step |
+
+::: {.d2l-note .rule}
+**The $\eta/b$ invariance.** For small $\eta\lambda$, runs with the same
+$\eta/b$ fluctuate in the same ball.
+:::
+:::
+
+::: {.slide title="The Loss Stalls η tr Σ / (4b) above Its Minimum"}
 [Excess loss on data]{.kicker}
 
-$$\mathbb{E}\big[f(\mathbf{x}_\infty)\big] - f(\mathbf{x}^\star) \approx \frac{\eta \operatorname{tr} \boldsymbol{\Sigma}}{4b}$$
+Quadratic loss, eigenvector $k$ of the Hessian: curvature $\lambda_k$,
+gradient variance $\sigma_k^2$ per example.
 
-@!sgd-where-the-model-stops-3
+I. Variance of the iterate: $\;\eta \sigma_k^2/(2\lambda_k b)$
+
+II. Loss of a displacement of mean square $v$: $\;\tfrac12\lambda_k v$
+
+III. Product: $\eta \sigma_k^2/(4b)$. The curvature cancels, so the
+condition number does not enter. Sum over $k$, with
+$\sum_k \sigma_k^2 = \operatorname{tr}\boldsymbol{\Sigma}$:
+
+$$\boxed{\mathbb{E}[f(\mathbf{x}_t)] - f(\mathbf{x}^*) \approx \frac{\eta \operatorname{tr}\boldsymbol{\Sigma}}{4b}}$$
+
+$\mathbf{x}^*$: the minimizer; the left side is the *excess loss*.
 :::
 
-::: {.slide title="Minibatches Amortize Fixed Overhead Without Losing Data Efficiency" layout="tight"}
-[Batch size and throughput]{.kicker}
+::: {.slide title="Linear Regression Stalls 0.004 above Its Minimum of 0.24, as Predicted"}
+[Excess loss on data]{.kicker}
+
+Airfoil regression (1,500 examples, 6 weights); Hessian and minimizer in
+closed form. $L$: largest curvature;
+$\operatorname{tr}\boldsymbol{\Sigma}$ at the minimizer:
+
+@!sgd-where-the-model-stops-1
+
+Prediction at $\eta = 0.05$, $b = 10$:
+$0.05 \cdot 3.24/40 \approx 0.004$; half at $\eta = 0.025$. Measured,
+400 runs started at the minimizer:
+
+@!sgd-where-the-model-stops-3
+
+SGD stalls within 2% of the minimum.
+:::
+
+::: {.slide title="Check: What if the Model Fits Every Example?"}
+[Check]{.kicker}
+
+Replace the targets by the predictions of the best linear model. Inputs,
+Hessian, $\eta = 0.05$ and $b = 10$ stay the same. Where does the loss of
+constant-step SGD stall now?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Every per-example gradient vanishes at the minimizer, so
+$\operatorname{tr}\boldsymbol{\Sigma} = 0$ there and the formula predicts
+no ball: SGD should converge.
+:::
+:::
+:::
+
+::: {.slide title="With an Exact Fit, Constant-Step SGD Converges"}
+[Excess loss on data]{.kicker}
+
+Largest excess loss among 400 runs from zero weights, same $\eta$ and $b$:
+
+@!sgd-where-the-model-stops-4
+
+With noisy targets the same settings stalled at 0.004.
+
+::: {.d2l-note}
+The ball is as large as the disagreement between the examples at the
+minimum. Networks lie between the two cases.
+:::
+:::
+
+::: {.slide title="Distinct Examples Shrink the Variance by (n − b)/(n − 1)"}
+[Sampling without replacement]{.kicker}
+
+$$\mathbb{E}\,\|\mathbf{g}_t - \nabla f\|^2 = \frac{\operatorname{tr}\boldsymbol{\Sigma}}{b}\cdot\frac{n-b}{n-1}$$
+
+- The $n$ errors $\nabla f_i - \nabla f$ sum to zero, so two distinct
+  examples partly cancel.
+- $b = 10$, $n = 1{,}500$: factor 0.994. $b = n$: factor 0, the gradient
+  is exact.
+
+::: {.d2l-note}
+Reshuffling every epoch cancels more: the draws are no longer
+independent, and for small $\eta$ the ball is smaller than the formulas
+say.
+:::
+
+[Mishchenko, Khaled and Richtárik, 2020]{.small}
+:::
+
+::: {.slide title="An Update Costs about a Millisecond with 1 or with 100 Examples"}
+[Batch size and cost]{.kicker}
+
+Airfoil regression, $\eta/b = 0.005$ for $b = 1, 10, 100$; gradient
+descent ($b = 1{,}500$) at $\eta = 0.9$:
+
+@!minibatch-sgd-implementation-from-scratch-3
+
+::: {.d2l-note}
+The time goes mostly into fixed costs per update, so a pass at $b = 1$
+takes about 50 to 100 times as long as at $b = 100$. A full gradient on
+1,500 examples costs only a few updates.
+:::
+:::
+
+::: {.slide title="Per Example the Stochastic Runs Tie and Gradient Descent Lags"}
+[Batch size and cost]{.kicker}
 
 @!minibatch-sgd-implementation-from-scratch-7
+
+- Equal $\eta/b$: $b$ steps at rate $\eta/b$ shrink a direction by
+  $(1 - \eta\lambda/b)^b \approx 1 - \eta\lambda$, as one step at $\eta$
+  does.
+- Gradient descent: one update per pass, level after about three passes,
+  then lowest (0.242, no ball).
+:::
+
+::: {.slide title="Check: How Far Does the Tie Extend?"}
+[Check]{.kicker}
+
+The stochastic runs keep $\eta/b = 0.005$, and $L = 2.10$. What is
+$\eta\lambda$ along the steepest direction at $b = 100$, and what does it
+do to the ball there? At which batch size does $\eta$ reach the ceiling
+$2/L = 0.95$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\eta\lambda = 0.5 \cdot 2.10 = 1.05$, not small: the exact
+formula divides by $2 - \eta\lambda = 0.95$ instead of 2, so the ball is
+twice as large in that direction, and the floor rises from 0.004 to about
+0.006. The ceiling is reached at $0.95/0.005 = 190$ examples.
+:::
+:::
+:::
+
+::: {.slide title="Noise Sets a Floor, and η/b Sets Its Height"}
+[Wrap-up]{.kicker}
+
+- Noise ball $\eta\sigma^2/(2\lambda b)$: on the valley at $\eta = 0.1$,
+  standard deviation 0.5 along $x_1$, 0.125 along $x_2$.
+- Excess loss $\eta \operatorname{tr}\boldsymbol{\Sigma}/(4b)$, whatever
+  the curvatures: 0.004 on the airfoil regression, zero when the model
+  fits every example.
+- Rates $c/t$ remove the ball at a speed of $1/t$.
+- Equal $\eta/b$, small $\eta\lambda$: same progress per example at about
+  a millisecond per update, with 1 or with 100 examples.
+
+**Next:** two small networks to test optimizers on, then momentum for the
+flat directions.
 :::

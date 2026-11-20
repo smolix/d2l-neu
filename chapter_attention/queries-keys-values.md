@@ -688,26 +688,26 @@ returns NaN at $q = 15$ in single precision. Why, and what fixes it?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** Every distance is at least 10, so every kernel value
-$\exp(-d^2/0.5) \le e^{-200}$ underflows to $0$ in float32, and $0/0$ is
-NaN. Compute the weights with `softmax(-dists**2 / (2 * sigma**2))`,
-which subtracts the row maximum before exponentiating.
+**Answer.** Every kernel value is below $e^{-200}$, which underflows to
+0 (float32 stops near $e^{-103}$), so the normalization computes $0/0$.
+Computing the weights as a softmax of the scores $-(q - x_i)^2/2\sigma^2$
+subtracts the largest score first and stays finite.
 :::
 :::
 :::
 
-::: {.slide title="Soft Lookup, Softmax Sharpness, and Why Weights Must Be Learned"}
+::: {.slide title="Attention Is a Soft Lookup Whose Sharpness Is One Factor"}
 [Wrap-up]{.kicker}
 
-- Attention answers a query with a softmax-weighted sum of stored values:
-  a convex combination, from exact lookup to average pooling.
-- The rule does not depend on the number of pairs; the memory grows with
-  it.
-- Nadaraya–Watson regression is attention with a fixed Gaussian kernel;
-  its bandwidth is the sharpness of the softmax.
-- A heatmap of weights shows where each query looks, a hypothesis about
-  what the layer does, not a proof.
+- $\textrm{Attention}(\mathbf{q}, \mathcal{D}) = \sum_i \alpha(\mathbf{q},
+  \mathbf{k}_i)\, \mathbf{v}_i$, softmax weights: a point inside the hull
+  of the values.
+- $\{(2, 10), (5, 20)\}$: $q = 4$ gives 19.5, $q = 3.5$ gives 15. Three
+  keys in the plane: weights 0.67, 0.24, 0.09; output $(1.0, 2.1)$.
+- Fixed rule, growing memory: 131,072 numbers for one GPT-2-small head
+  at 1,024 tokens.
+- Nadaraya–Watson: $1/\sigma^2$ scales the scores; $\sigma = 0.1$ chases
+  noise, $\sigma = 2$ flattens.
 
-**Next:** a score that a network can learn, and masks for the pairs it
-must ignore.
+**Next:** learned scores, the factor $1/\sqrt{d}$, and masks.
 :::

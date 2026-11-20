@@ -638,26 +638,316 @@ Across $5$ independent random seeds at a well-tuned learning rate, the final $10
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §9.3]{.kicker}
+[Dive into Deep Learning · §9.4]{.kicker}
 
-Two Test Models<br>**a transformer and a CNN · minibatch SGD baselines · comparison protocol**
+Two Test Models<br>**a transformer and a CNN · minibatch SGD at three rates · the spread between two runs**
 :::
 :::
 
-::: {.slide title="TinyLM Has 470,784 Parameters Across Three Structural Groups" layout="code"}
+::: {.slide title="A Network Has No Formula, and Two Runs of One Setting Differ"}
+[The problem]{.kicker}
+
+On the valley $0.1 x_1^2 + 2 x_2^2$ every answer could be computed:
+
+| question | valley | network |
+|:--|:--|:--|
+| largest stable learning rate | $2/4 = 0.5$ | unknown |
+| steps to 1% at the best rate | 47 | unknown |
+| where SGD at a constant rate ends | in a cloud of known size | unknown |
+
+::: {.d2l-note .warn}
+We must train and look. But a new optimizer ends at a loss 0.02 below the
+old one: is that the optimizer, or the random seed?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- describe the two test models of this chapter and count their
+  parameters;
+- predict the loss of a model before training, and place a loss among
+  landmarks that need no training;
+- tell from a loss curve whether the learning rate is too low, too high,
+  or workable;
+- decide whether a difference between two runs is a result;
+- set up a comparison of two optimizers that is fair to both.
+
+**Running example:** `TinyLM`, a small language model on Wikipedia bytes.
+**The idea:** a difference between two settings counts only if it exceeds
+the difference between two runs of one setting.
+:::
+
+::: {.slide title="From Here On the Chapter Measures on Two Small Networks"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| part | decks |
+|---|---|
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch Gradient Descent |
+| **2 · Direction:** which way to step | **Two Test Models** · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
+:::
+
+::: {.col .narrow}
+- **Uses:** minibatch SGD; the ceiling $\eta < 2/L$ on the learning rate
+  $\eta$ ($L$: largest curvature); the *noise ball*, the cloud in which
+  SGD at a constant rate ends.
+- **Skips:** how a transformer works. An optimizer sees only parameters
+  and their gradients.
+:::
+:::
+:::
+
+::: {.slide title="A Run Reads 3% of the Text, So It Cannot Memorize It"}
 [TinyLM]{.kicker}
 
-@!adam-a-tiny-language-model-3
+| quantity | value |
+|:--|--:|
+| corpus: WikiText-103, first training file | 270 million bytes |
+| token | one UTF-8 byte, 256 values |
+| minibatch | 64 windows of 64 consecutive bytes |
+| run | 2,000 steps |
+| predictions per run | $2{,}000 \times 64 \times 64 \approx 8.2$ million |
+| share of the corpus read | 3% |
+| on *The Time Machine* (170,000 characters) | each character a target 47 times |
+
+::: {.d2l-note}
+Windows start at random offsets, so almost no text is seen twice: the
+training loss of a new minibatch is a loss on unseen text.
 :::
 
-::: {.slide title="Minibatch SGD on TinyLM Shows Three Regimes Across η ∈ {0.1, 0.5, 2.5}" layout="tight"}
-[A first run with minibatch SGD]{.kicker}
+[Merity et al., 2016]{.small}
+:::
+
+::: {.slide title="TinyLM Has 470,784 Parameters, 90% of Them in Matrices"}
+[TinyLM]{.kicker}
+
+Byte and position embeddings → 2 transformer blocks of width 128 (attention
+and an MLP, each normalized, each with a residual connection) → linear
+head with 256 logits for the next byte.
+
+| kind | what | parameters | share |
+|:--|:--|--:|--:|
+| embeddings | byte and position tables | 40,960 | 9% |
+| matrices | weights of the linear layers | 425,984 | 90% |
+| vectors | biases, normalization scales and shifts | 3,840 | 1% |
+
+::: {.d2l-note}
+Four matrices per block: `qkv` (128 → 384) and `proj` (128 → 128) in
+attention, 128 → 512 → 128 in the MLP; 196,608 entries. Weight decay will
+act on the matrices only.
+:::
+:::
+
+::: {.slide title="FashionCNN Has 421,642 Parameters, 95% in One Matrix"}
+[FashionCNN]{.kicker}
+
+Fashion-MNIST, $28 \times 28$ grayscale images, 10 classes, minibatches of
+256 images.
+
+| layer | output | parameters |
+|:--|:--|--:|
+| $3 \times 3$ convolution, ReLU, $2 \times 2$ max-pooling | $32 \times 14 \times 14$ | 320 |
+| $3 \times 3$ convolution, ReLU, $2 \times 2$ max-pooling | $64 \times 7 \times 7$ | 18,496 |
+| fully connected, ReLU | 128 | 401,536 |
+| fully connected | 10 | 1,290 |
+
+::: {.d2l-note}
+The features are convolutional, but by parameter count an optimizer is
+mostly training one fully connected layer.
+:::
+:::
+
+::: {.slide title="A Run Is 2,000 Steps, Read by the Mean of Its Last 100 Losses"}
+[Training and reading a run]{.kicker}
+
+Loss of a step: the cross-entropy $-\ln p(\textrm{target})$ on its
+minibatch, in nats.
+
+| | `TinyLM` | `FashionCNN` |
+|:--|:--|:--|
+| minibatch | 64 windows of 64 bytes | 256 images |
+| 2,000 steps read | 3% of the text, once | every image 8.5 times |
+| the training loss is | a loss on unseen text | a loss on images seen before |
+| also reported | validation loss | test accuracy |
+
+::: {.d2l-note}
+On `TinyLM` the loss of one step scatters by about 0.1 nats. *Final loss*:
+the mean of the last 100 steps, infinity if the run diverged.
+:::
+:::
+
+::: {.slide title="Check: What Is the Loss of a Model That Knows Nothing?"}
+[Check]{.kicker}
+
+1. `TinyLM` predicts one of 256 byte values. What loss does a uniform
+   guess have?
+2. What is the same number for `FashionCNN`?
+3. Will an untrained `TinyLM` start below, at, or above that level?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\ln 256 \approx 5.55$ and $\ln 10 \approx 2.30$. Above:
+random logits of variance $s^2 \approx 1/3$ prefer some bytes for no
+reason, which costs about $s^2/2 = 1/6$ nat. Expect a start near 5.7.
+:::
+:::
+:::
+
+::: {.slide title="Three Landmarks Need No Training: 5.55, 3.2 and 2.5 Nats"}
+[A first run]{.kicker}
+
+A loss says more next to the loss of a model that we understand.
+
+| model | what it knows | loss, nats per byte |
+|:--|:--|--:|
+| uniform guess | nothing | $\ln 256 \approx 5.55$ |
+| byte frequencies | how common each byte is | about 3.2 |
+| table of byte pairs | the byte before | about 2.5 |
+
+::: {.d2l-note}
+The last two are counts on the Wikipedia text, not trained models. To get
+below 2.5, a model must use more than one byte of context.
+:::
+:::
+
+::: {.slide title="Plain SGD at Three Rates Ends at 2.5, at 2.1, and at inf"}
+[A first run]{.kicker}
+
+`TinyLM`, plain minibatch SGD, constant learning rate, 2,000 steps.
 
 @!test-models-a-first-run-with-minibatch-sgd-2
+
+Dotted: the uniform guess. Not drawn: the landmarks 3.2 and 2.5.
 :::
 
-::: {.slide title="Minibatch SGD Reaches ~90% Test Accuracy on FashionCNN" layout="tight"}
-[FashionCNN baseline]{.kicker}
+::: {.slide title="Each of the Three Curves Is a Diagnosis"}
+[A first run]{.kicker}
+
+| rate | curve | diagnosis |
+|:--|:--|:--|
+| 0.1 | smooth from the first step; still falling at step 2,000; ends near 2.5, the level of the pair table | too low: raise it |
+| 0.5 | thrown up by more than a nat in the first 30 steps; recovers; ends near 2.1 | too high for a few early steps; the best of the three |
+| 2.5 | down by more than a nat, then above its start, then `inf` | too high where the first step led: lower it |
+
+- The ceiling lies between 0.5 and 2.5, and on a network it depends on
+  where the run is.
+- Steps 1,000 to 2,000: another 0.2 nats at rate 0.5, about 0.05 at rate
+  0.1. Short of steps, not stuck in noise.
+:::
+
+::: {.slide title="The Baselines: 2.1 Nats per Byte and 90% Test Accuracy"}
+[A first run]{.kicker}
+
+`FashionCNN`, the same loop, plain SGD at learning rate 0.3:
 
 @!test-models-a-first-run-with-minibatch-sgd-3
+
+| model | plain SGD, 2,000 steps |
+|:--|:--|
+| `TinyLM`, rate 0.5 | training loss about 2.1 nats per byte |
+| `FashionCNN`, rate 0.3 | training loss about 0.22, test accuracy about 90% |
+:::
+
+::: {.slide title="Five Runs of One Setting of TinyLM End Within About 0.01 Nats"}
+[The spread]{.kicker}
+
+New initial weights and new minibatches in each run. `TinyLM`: AdamW (a
+library optimizer, explained two decks on), rate 0.003, no weight decay.
+`FashionCNN`: SGD, rate 0.3.
+
+@!test-models-comparing-two-runs-3
+
+Validation loss is below training loss in every run, the opposite of
+memorization.
+:::
+
+::: {.slide title="A Result Is a Difference of at Least Three Times the Range"}
+[The spread]{.kicker}
+
+| quantity | range of five runs | three times | we ask for |
+|:--|:--|:--|:--|
+| `TinyLM`, training loss | about 0.01 nats | 0.03 to 0.04 | 0.05 nats |
+| `FashionCNN`, training loss | at most about 0.02 | 0.06 | 0.06 |
+| `FashionCNN`, test accuracy | at most about 1 point | 3 points | 3 points |
+
+- Five more runs could give a range half or twice as large, hence the
+  margin. The factor 3 is a convention.
+- A smaller difference is a tie. To resolve it, repeat the runs.
+- The range belongs to its setting: a well-chosen rate, read at step
+  2,000.
+:::
+
+::: {.slide title="A Fair Comparison Tunes the Learning Rate of Every Arm"}
+[The protocol]{.kicker}
+
+SGD trained at rate 0.5, AdamW at 0.003: no shared rate suits both.
+
+| class | meaning | in this chapter |
+|:--|:--|:--|
+| scientific | what the question is about; each value is an *arm* | the optimizer |
+| nuisance | set to its best value separately for each arm | the learning rate |
+| fixed | the same in every arm; each limits the claim | model, batch size, 2,000 steps, constant rate |
+
+::: {.d2l-note .warn}
+Bold: half a million parameters, 2,000 steps. Trust them for mechanisms
+and large differences, not for effects of scale.
+:::
+
+[Godbole et al., Deep Learning Tuning Playbook, 2023]{.small}
+:::
+
+::: {.slide title="Tuned Means the Best Point of a Grid; Usable Means Within 0.15 Nats of It"}
+[The protocol]{.kicker}
+
+Our SGD sweep on `TinyLM`:
+
+| rate | final loss | within 0.15 nats of the best? |
+|:--|:--|:--|
+| 0.1 | about 2.5 | no: 0.35 higher |
+| 0.5 | about 2.1 | the best of the grid |
+| 2.5 | `inf` | no: diverged |
+
+- **Tuned:** the grid point with the lowest final loss, no more. Grids are
+  a factor of about 3 apart; all runs start from the same weights.
+- **Usable range:** here 0.5 alone. 0.15 nats is more than 10 times the
+  range of five runs.
+:::
+
+::: {.slide title="Check: Result or Tie?"}
+[Check]{.kicker}
+
+One run per setting, 2,000 steps each.
+
+1. `TinyLM`: optimizer A ends at 1.57, optimizer B at 1.59.
+2. `FashionCNN`: 90.4% against 89.6% test accuracy.
+3. `TinyLM`: plain SGD at 2.1, AdamW at 1.59.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 1: a tie, 0.02 is under 0.05. 2: a tie, 0.8 points is under
+3. 3: half a nat is no tie, but three rates a factor of 5 apart did not
+tune SGD, so the comparison is not yet fair.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- `TinyLM`: 470,784 parameters, next byte of Wikipedia, 3% of the text
+  per run. `FashionCNN`: 421,642 parameters, Fashion-MNIST.
+- Landmarks: 5.55 for the uniform guess, about 3.2 for byte frequencies,
+  about 2.5 for byte pairs. An untrained `TinyLM` starts near 5.7.
+- Plain SGD on `TinyLM`: rate 0.1 ends near 2.5, rate 0.5 near 2.1, rate
+  2.5 diverges within a few steps.
+- Five runs agree within about 0.01 nats; a result is at least 3 times
+  the range, 0.05 nats.
+- Protocol: tune the learning rate of every arm on a grid, same initial
+  weights, report the usable range.
+
+**Next:** momentum, the first of the two things that AdamW does
+differently from plain SGD.
 :::

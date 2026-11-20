@@ -269,3 +269,284 @@ Real-world tabular datasets almost always arrive with missing values, categorica
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17967)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.2]{.kicker}
+
+Tensors from a table with gaps<br>**inspect · impute · one-hot encode · standardize · convert**
+:::
+:::
+
+::: {.slide title="Ten Homes: Gaps, Words, and Scales 500× Apart"}
+[The problem]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@!pandas-reading-the-dataset-2
+:::
+
+::: {.col .narrow}
+- 3 room counts and 4 roof types are missing (`NaN`).
+- `RoofType` is a word, not a number.
+- Mean area 1,654 sq ft, mean rooms 3.3.
+
+::: {.d2l-note}
+A model needs a tensor of numbers.
+:::
+:::
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- inspect a table's size, gaps, and types with `info` and `describe`;
+- choose among deleting, imputing, and flagging missing values;
+- one-hot encode a categorical column;
+- standardize numerical columns without leaking test data;
+- convert the result to `float32` tensors.
+
+**Running example:** `house_tiny.csv`, 10 homes, 4 columns, the target
+(label) is `Price`.
+:::
+
+::: {.slide title="Preprocessing Turns a CSV File Into Tensors"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | tool |
+|---|---|
+| Data Manipulation | tensors |
+| **Data Preprocessing** | **pandas** |
+| Linear Algebra | matrix products, norms, eigenvalues |
+| Calculus | derivatives, gradients, chain rule |
+| Automatic Differentiation | autograd |
+| Probability and Statistics | standard error, Bayes' theorem |
+| Documentation | `help`, small tests |
+:::
+
+::: {.col .narrow}
+- **Uses:** tensors, from the previous deck.
+- **Skips:** joining several tables, tables larger than memory, images,
+  and text.
+:::
+:::
+:::
+
+::: {.slide title="Three Transformations Stand Between read_csv and to_numpy"}
+[Pipeline]{.kicker}
+
+@fig:pandas-pipeline
+
+- `read_csv` loads the text into a DataFrame, gaps and words included.
+- Imputation, encoding, and scaling make every entry a number.
+- `to_numpy` hands the result to the framework as `X` and `y`.
+:::
+
+::: {.slide title="info Shows Size, Gaps, and Types in One Call"}
+[Inspect]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@-pandas-knowing-your-data-1
+
+10 rows; per column, `info` reports:
+
+| column | present | type |
+|---|---|---|
+| `NumRooms` | 7 of 10 | `float64` |
+| `RoofType` | 6 of 10 | `str` |
+| `Area` | 10 of 10 | `int64` |
+| `Price` | 10 of 10 | `int64` |
+:::
+
+::: {.col .narrow}
+- `NumRooms` holds whole numbers but is `float64`: `NaN` is a float.
+- `RoofType` is `str`: a category to encode.
+:::
+:::
+:::
+
+::: {.slide title="describe Shows Scales 500× Apart"}
+[Inspect]{.kicker}
+
+@-pandas-knowing-your-data-2
+
+| | `NumRooms` | `Area` (sq ft) | `Price` (dollars) |
+|---|---|---|---|
+| mean | 3.29 | 1,654 | 233,050 |
+| std | 1.11 | 556 | 76,129 |
+| min | 2 | 850 | 127,500 |
+| max | 5 | 2,600 | 375,000 |
+
+The mean area is about 500 times the mean number of rooms.
+:::
+
+::: {.slide title="Split Off the Target Before Any Transformation"}
+[Inspect]{.kicker}
+
+@pandas-separating-inputs-and-targets-1
+
+- **Inputs** (features): `NumRooms`, `RoofType`, `Area`.
+- **Target** (label): `Price`, which must never appear among the inputs.
+
+::: {.d2l-note .warn}
+`iloc` selects by position and breaks silently if columns move; selecting
+by name does not.
+:::
+:::
+
+::: {.slide title="Count the Gaps Before Choosing a Remedy"}
+[Missing values]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@pandas-handling-missing-values-1
+
+- **delete** the row: loses data;
+- **impute** the mean: keeps rows, guesses values;
+- add an **indicator**: the gap itself becomes a feature.
+:::
+
+::: {.col .fig .big}
+@fig:pandas-missing
+:::
+:::
+:::
+
+::: {.slide title="Deletion Keeps Only 4 of 10 Homes"}
+[Missing values]{.kicker}
+
+Dropping every row with a gap keeps the complete rows only:
+
+@pandas-handling-missing-values-2
+
+Six of ten homes, and their prices, are lost. On small data we impute
+instead.
+:::
+
+::: {.slide title="Mean Imputation Fills the Gaps With 23/7 ≈ 3.29"}
+[Missing values]{.kicker}
+
+@-pandas-handling-missing-values-3
+
+| row | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `NumRooms` before | 3 | NaN | 2 | 4 | NaN | 3 | 5 | 2 | NaN | 4 |
+| after | 3 | **3.29** | 2 | 4 | **3.29** | 3 | 5 | 2 | **3.29** | 4 |
+
+The seven observed counts sum to 23. `RoofType` has no mean; its gaps are
+handled by the encoding.
+:::
+
+::: {.slide title="Check: Which Remedy Fits?"}
+[Check]{.kicker}
+
+1. A column is missing in 95% of the rows.
+2. `NumRooms` is missing mostly for large homes.
+3. `RoofType` is missing for 4 of 10 homes.
+
+::: {.d2l-note .fragment .fade-up}
+**Answers.**
+
+1. Drop the column, or keep only an indicator: imputation would invent
+   most of it.
+2. Impute and add an indicator: the gap itself predicts a high price.
+3. Make "missing" a category of its own (`dummy_na=True`).
+:::
+:::
+
+::: {.slide title="One-Hot Encoding Adds a 0/1 Column per Category"}
+[Categories]{.kicker}
+
+@-pandas-encoding-categorical-features-1
+
+::: {.cols .vc}
+::: {.col}
+- Codes 0, 1, 2 for `Slate`, `Tile`, missing would invent an order.
+- One-hot: all categories are equally far apart.
+- `dummy_na=True`: "missing" gets its own column.
+- Two values only: one 0/1 column suffices.
+:::
+
+::: {.col .fig}
+@fig:pandas-onehot
+:::
+:::
+:::
+
+::: {.slide title="In Raw Units, Two Rooms Count Less Than Three Square Feet"}
+[Scaling]{.kicker}
+
+Standardize each numerical column: $x \mapsto (x - \mu)/\sigma$, with
+mean $\mu$ and standard deviation $\sigma$.
+
+@-pandas-numerical-features-1
+
+::: {.cols .vc}
+::: {.col}
+Largest home: 5 rooms $\to$ 1.89, 2,600 sq ft $\to$ 1.70. Both now
+count in standard deviations from the mean.
+:::
+
+::: {.col .fig .big}
+@fig:pandas-scale
+:::
+:::
+:::
+
+::: {.slide title="Statistics Come From the Training Rows Only"}
+[Scaling]{.kicker}
+
+- Training rows 0 to 7: compute $\mu$, $\sigma$, and the imputation means.
+- Test rows 8 and 9: apply the same numbers, unchanged.
+- This deck's code used all 10 rows, to keep it short. With rows 0 to 7
+  only, the largest home becomes 1.86 and 1.66 instead of 1.89 and 1.70.
+
+::: {.d2l-note .warn}
+Statistics from all rows leak the test data into training, and the test
+score then overstates performance on new data.
+:::
+:::
+
+::: {.slide title="A (10, 5) float32 Tensor and Ten Targets"}
+[Conversion]{.kicker}
+
+@pandas-conversion-to-tensor-format
+
+::: {.d2l-note}
+Rows: homes. Columns: 2 standardized features and 3 roof-type indicators.
+:::
+:::
+
+::: {.slide title="Check: How Many Columns Does X Get?"}
+[Check]{.kicker}
+
+A table has the numerical columns `NumRooms`, `Area`, and `YearBuilt`,
+some with gaps, a column `RoofType` with the values `Slate`, `Tile`, and
+`Metal` and some gaps, and the target `Price`. How many columns does `X`
+have after `get_dummies(..., dummy_na=True)`?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer.** 7: three numerical columns, three roof types, and one column
+for a missing roof type. `Price` is the target, not a feature.
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+| step | running example |
+|---|---|
+| inspect with `info`, `describe` | 10 rows; 3 + 4 gaps; scales 500× apart |
+| delete, impute, or flag gaps | deletion keeps 4 of 10; the mean fills 3.29 |
+| one-hot encode categories | `RoofType` becomes 3 columns |
+| standardize (here with all 10 rows; in practice training rows only) | 5 rooms $\to$ 1.89, 2,600 sq ft $\to$ 1.70 |
+| convert with `to_numpy(dtype='float32')` | `X`: (10, 5), `y`: (10,) |
+
+**Next:** the operations that models apply to such matrices.
+:::

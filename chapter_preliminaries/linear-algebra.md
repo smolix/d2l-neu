@@ -778,3 +778,398 @@ Linear algebra expresses whole-minibatch models compactly: stacking $256$ flatte
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17968)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.3]{.kicker}
+
+Linear algebra for one minibatch of images<br>**shapes · reductions · dot and matrix products · cost · norms · eigenvalues**
+:::
+:::
+
+::: {.slide title="One Matrix Product Turns 256 Images Into 2,560 Scores"}
+[The problem]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- A linear classifier for $28 \times 28$ images: 784 pixels, 10
+  categories, $784 \times 10 + 10 = 7{,}850$ parameters, minibatches
+  of 256.
+- $256 \times 10 \times 784 \approx 2$ million multiply--adds per
+  minibatch, about $4 \times 10^6$ FLOPs.
+- The scores $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$ are one
+  expression whose shape and cost we can read off before anything runs.
+:::
+
+::: {.col .fig .big}
+@fig:linear-algebra-matmul
+:::
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- read the shape of every object in $\mathbf{X}\mathbf{W} + \mathbf{b}$;
+- reduce along an axis and broadcast the result back;
+- predict the shape and the FLOPs of a matrix product;
+- measure errors and weights with norms;
+- say how 50 layers of matrices scale a signal.
+
+**Running example:** a minibatch
+$\mathbf{X} \in \mathbb{R}^{256 \times 784}$, weights
+$\mathbf{W} \in \mathbb{R}^{784 \times 10}$.
+:::
+
+::: {.slide title="Every Layer of a Network Starts With a Matrix Product"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | tool |
+|---|---|
+| Data Manipulation | tensors |
+| Data Preprocessing | pandas |
+| **Linear Algebra** | **matrix products, norms, eigenvalues** |
+| Calculus | derivatives, gradients, chain rule |
+| Automatic Differentiation | autograd |
+| Probability and Statistics | standard error, Bayes' theorem |
+| Documentation | `help`, small tests |
+:::
+
+::: {.col .narrow}
+- **Uses:** tensors, reshaping, and broadcasting, from the first deck.
+- **Skips:** determinants, solving linear systems, and the SVD, which the
+  mathematics appendix covers.
+:::
+:::
+:::
+
+::: {.slide title="Order Counts Axes; Dimensionality Counts Elements"}
+[Objects]{.kicker}
+
+| object | example | order | shape |
+|---|---|---|---|
+| scalar | one pixel | 0 | $()$ |
+| vector | one flattened image | 1 | $(784,)$ |
+| matrix | the minibatch $\mathbf{X}$ | 2 | $(256, 784)$ |
+| tensor | the minibatch of images | 4 | $(256, 1, 28, 28)$ |
+
+- A vector in $\mathbb{R}^{784}$ has order 1 and dimensionality 784.
+- $\mathbf{X}$: one example per row, one feature (pixel position) per
+  column.
+
+::: {.d2l-note}
+"Dimension" is used for both; libraries call the order `ndim`.
+:::
+:::
+
+::: {.slide title="A Reduction Deletes an Axis; keepdims Keeps It as Length 1"}
+[Reductions]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+`axis=0` sums over rows: one sum per column. `axis=1`: one sum per row.
+
+Broadcasting aligns shapes from the right: $(2,)$ cannot meet 3 columns,
+but $(2, 1)$ stretches across them.
+:::
+
+::: {.col}
+@fig:linear-algebra-reduce-axes
+:::
+:::
+:::
+
+::: {.slide title="Centering Images Needs keepdims; Centering Pixels Does Not"}
+[Reductions]{.kicker}
+
+@linear-algebra-keeping-reduced-axes-1
+
+- Column means $(784,)$ align with the last axis of $(256, 784)$.
+- Row means need shape $(256, 1)$. Without `keepdims` the shape is
+  $(256,)$ and $256 \neq 784$: an error.
+- For a square matrix the same mistake gives **no error**, just wrong
+  numbers.
+:::
+
+::: {.slide title="A Score Is a Dot Product"}
+[Dot products]{.kicker}
+
+$$\mathbf{w}^\top \mathbf{x} + b = \sum_{i=1}^{784} w_i x_i + b$$
+
+- Image $\mathbf{x}$, weights $\mathbf{w}$ of one category, offset $b$.
+- Multiply matching entries, add them up.
+- With all weights equal to 1: the sum of the pixels. With weights
+  $\geq 0$ that sum to 1: a weighted average.
+:::
+
+::: {.slide title="Ax Takes One Dot Product per Row"}
+[Matrix–vector]{.kicker}
+
+$(\mathbf{A}\mathbf{x})_i = \mathbf{a}_i^\top\mathbf{x}$ for each row
+$\mathbf{a}_i^\top$ of $\mathbf{A}$, so an $m \times n$ matrix maps
+$\mathbb{R}^n$ to $\mathbb{R}^m$.
+
+@linear-algebra-matrix-vector-products
+
+::: {.cols .vc}
+::: {.col}
+::: {.d2l-note}
+$\mathbf{X}\mathbf{w} + b$: one score per image. Fitted to one
+real-valued label per example, such as a price, it is linear regression.
+:::
+:::
+
+::: {.col .fig}
+@fig:linear-algebra-matvec
+:::
+:::
+:::
+
+::: {.slide title="A Matrix Moves Space: Its Columns Are the Images of e₁ and e₂"}
+[Matrix–vector]{.kicker}
+
+![](../img/mdl-prelim-linear-maps.svg){.nostretch width=100%}
+
+Rotation by 90°, scaling by 2 and 1/2, shear. The unit square (dashed)
+becomes the parallelogram spanned by the columns $\mathbf{A}\mathbf{e}_1$
+and $\mathbf{A}\mathbf{e}_2$.
+:::
+
+::: {.slide title="A Linear Layer Compares Each Image With Ten Templates"}
+[Matrix–matrix]{.kicker}
+
+$$o_{ij} = \sum_{l=1}^{784} x_{il}\, w_{lj} + b_j = (\textrm{image } i)^\top (\textrm{template } j) + b_j$$
+
+@linear-algebra-matrix-matrix-products-1
+
+- $(256 \times 784)(784 \times 10) = 256 \times 10$: inner sizes must match.
+- `argmax` along axis 1 picks one category per image.
+:::
+
+::: {.slide title="Check: A Shape Mismatch"}
+[Check]{.kicker}
+
+You stored the weights as $\mathbf{W}^\top \in \mathbb{R}^{10 \times 784}$,
+one row per category. Does $\mathbf{X}\mathbf{W}^\top$ work? What should
+you compute instead?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer.** No: the inner sizes 784 and 10 differ. Transpose the stored
+matrix: $(256 \times 784)(784 \times 10) = 256 \times 10$, the same scores.
+:::
+:::
+
+::: {.slide title="AB Costs 2mkn FLOPs: About 4 Million for the Minibatch"}
+[Cost]{.kicker}
+
+$(m \times k)(k \times n)$: $mn$ entries, each a dot product of length $k$
+($k$ multiplies, $k - 1$ adds).
+
+| product | FLOPs | numbers involved |
+|---|---|---|
+| (256 × 784)(784 × 10) | $2 \cdot 256 \cdot 784 \cdot 10 \approx 4.0 \times 10^6$ | $2.1 \times 10^5$ |
+| (4096 × 4096)(4096 × 4096) | $2 \cdot 4096^3 \approx 1.4 \times 10^{11}$ | $5.0 \times 10^7$ |
+
+::: {.d2l-note}
+For square matrices the work $2n^3$ grows faster than the $3n^2$ numbers:
+doubling $n$ means 8× the work for 4× the numbers. How fast hardware gets
+through them is a question for the Computational Performance chapter.
+:::
+:::
+
+::: {.slide title="Two Rulers for (3, −4): ℓ₂ Reads 5, ℓ₁ Reads 7"}
+[Norms]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\|\mathbf{x}\|_2 = \sqrt{\textstyle\sum_i x_i^2}, \qquad \|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|$$
+
+@linear-algebra-norms-2
+
+::: {.d2l-note}
+$\|\mathbf{x}\|_2 = \sqrt{\mathbf{x}^\top\mathbf{x}}$ is the length. A
+norm scales with $|\alpha|$, obeys the triangle inequality, and is zero
+only at $\mathbf{0}$.
+:::
+:::
+
+::: {.col .narrow}
+@fig:linear-algebra-norms
+:::
+:::
+:::
+
+::: {.slide title="Normalized, the Dot Product Is a Cosine"}
+[Norms · angles]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+In the plane, the law of cosines gives
+
+$$\mathbf{x}^\top\mathbf{y} = \|\mathbf{x}\|\,\|\mathbf{y}\|\cos\theta.$$
+
+In 784 dimensions, this *defines* the angle:
+
+$$\cos\theta = \frac{\mathbf{x}^\top\mathbf{y}}{\|\mathbf{x}\|\,\|\mathbf{y}\|}.$$
+
+::: {.d2l-note}
+Cosine similarity ignores length: an image and the same image at twice
+the brightness have cosine 1.
+:::
+:::
+
+::: {.col .fig}
+@fig:linear-algebra-dot
+:::
+:::
+:::
+
+::: {.slide title="Cosines Run From 1 (Aligned) to −1 (Opposed)"}
+[Norms · angles]{.kicker}
+
+![](../img/mdl-prelim-cosine.svg){.nostretch width=100%}
+
+$\mathbf{x} = (1, 1, 1, 1)$, $\mathbf{y} = (1, 1, 1, -1)$: lengths 2 and
+2, dot product 2, so $\cos\theta = 1/2$ and $\theta = \pi/3$:
+
+@!linear-algebra-dot-products-3
+:::
+
+::: {.slide title="Cauchy–Schwarz Keeps the Cosine in [−1, 1]"}
+[Norms · angles]{.kicker}
+
+$|\mathbf{x}^\top\mathbf{y}| \le \|\mathbf{x}\|\,\|\mathbf{y}\|$ in any
+dimension. Proof for unit vectors $\mathbf{u} = \mathbf{x}/\|\mathbf{x}\|$,
+$\mathbf{v} = \mathbf{y}/\|\mathbf{y}\|$:
+
+**Step 1:** $0 \le \|\mathbf{u} - \mathbf{v}\|^2 = 1 - 2\mathbf{u}^\top\mathbf{v} + 1$,
+so $\mathbf{u}^\top\mathbf{v} \le 1$.
+
+**Step 2:** $0 \le \|\mathbf{u} + \mathbf{v}\|^2 = 1 + 2\mathbf{u}^\top\mathbf{v} + 1$,
+so $\mathbf{u}^\top\mathbf{v} \ge -1$.
+
+**Step 3:** multiply by $\|\mathbf{x}\|\,\|\mathbf{y}\|$. $\blacksquare$
+
+::: {.d2l-note}
+Equality only when one vector is a multiple of the other.
+:::
+:::
+
+::: {.slide title="Check: Three Cosines"}
+[Check]{.kicker}
+
+Compute the cosine similarity of each pair.
+
+1. $(1, 2, 2)$ and $(2, 1, -2)$
+2. $(1, 0, 1)$ and $(2, 0, 2)$
+3. $(1, 1)$ and $(1, -1)$
+
+::: {.d2l-note .fragment .fade-up}
+**Answers.**
+
+1. Dot product $2 + 2 - 4 = 0$: perpendicular, cosine 0.
+2. The second is twice the first: cosine 1.
+3. Dot product $1 - 1 = 0$: perpendicular. These are the eigenvector
+   directions at the end of the deck.
+:::
+:::
+
+::: {.slide title="Squared Errors Chase Outliers"}
+[Norms]{.kicker}
+
+Errors $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y} = (1, -1, 1, -1, 10)$
+(predictions minus labels): the one large error is
+
+- $100/104 \approx 96\%$ of the squared $\ell_2$ norm,
+- $10/14 \approx 71\%$ of the $\ell_1$ norm.
+
+| norm | appears as |
+|---|---|
+| $\|\mathbf{r}\|_2^2 / n$ for $n$ examples | mean squared error |
+| $\|\mathbf{W}\|_\textrm{F}^2$ | weight decay: shrinks all weights |
+| $\|\mathbf{w}\|_1$ | sparsity: sets many weights to 0 |
+| $\|\mathbf{g}\|_2$, $\mathbf{g}$ the gradient | gradient clipping |
+:::
+
+::: {.slide title="Eigenvectors Are Only Stretched"}
+[Eigenvalues]{.kicker}
+
+$\mathbf{A}\mathbf{v} = \lambda\mathbf{v} \;\Rightarrow\; \mathbf{A}^k\mathbf{v} = \lambda^k\mathbf{v}$ after $k$ multiplications.
+For $\mathbf{S} = \left(\begin{smallmatrix} 2 & 1 \\ 1 & 2 \end{smallmatrix}\right)$:
+$(1, 1) \mapsto (3, 3)$ and $(-1, 1) \mapsto (-1, 1)$, so $\lambda = 3$ and $1$.
+
+![](../img/mdl-prelim-eigen.svg){.nostretch width=72% fig-align="center"}
+:::
+
+::: {.slide title="Repeated Multiplication Finds the Largest Eigenvalue"}
+[Eigenvalues]{.kicker}
+
+Write $\mathbf{x} = \sum_i c_i\mathbf{v}_i$ in the perpendicular
+eigenvectors of a symmetric $\mathbf{A}$. Then
+$\mathbf{A}^k\mathbf{x} = \sum_i c_i\lambda_i^k\mathbf{v}_i$: the largest
+$|\lambda_i|$ takes over.
+
+@linear-algebra-eigenvalues-2
+
+Growth per step 3, direction $(1, 1)/\sqrt{2}$. Rescaling to length 1
+after each step is *power iteration*.
+:::
+
+::: {.slide title="Fifty Layers Turn 1.1 Into 117 and 0.9 Into 0.005"}
+[Eigenvalues]{.kicker}
+
+$\mathbf{M} = \left(\begin{smallmatrix} 1 & 0.1 \\ 0.1 & 1 \end{smallmatrix}\right)$
+has eigenvalues 1.1 and 0.9. Each layer multiplies the part of a signal
+along an eigenvector by its eigenvalue:
+
+| layers *k* | 10 | 20 | 50 |
+|---|---|---|---|
+| 1.1^*k*^ | 2.59 | 6.73 | 117 |
+| 0.9^*k*^ | 0.35 | 0.12 | 0.005 |
+
+Applying $\mathbf{M}$ 50 times to both eigenvectors gives the last column:
+
+@!linear-algebra-powers-of-a-matrix-1
+
+::: {.d2l-note .rule}
+Unless each layer stretches by a factor close to 1, signals and gradients
+explode or vanish exponentially with depth.
+:::
+:::
+
+::: {.slide title="Check: The Cost of One Layer"}
+[Check]{.kicker}
+
+A minibatch of 256 vectors of width 4096 passes through a layer with a
+$4096 \times 4096$ weight matrix, on a GPU that sustains $10^{14}$ FLOP/s.
+
+1. How many FLOPs?
+2. About how long?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers.**
+
+1. $2 \times 256 \times 4096 \times 4096 \approx 8.6 \times 10^9$ FLOPs.
+2. $8.6 \times 10^9 / 10^{14} \approx 86$ µs, if the arithmetic is the
+   bottleneck.
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+| rule | running example |
+|---|---|
+| shape: $(m \times k)(k \times n) = m \times n$ | $(256 \times 784)(784 \times 10) = 256 \times 10$ |
+| `keepdims` keeps a reduced axis as length 1 | row means $(256, 1)$ |
+| cost $2mkn$ FLOPs | $\approx 4 \times 10^6$ per minibatch |
+| $\ell_2$ and $\ell_1$ norms | $(3, -4)$: 5 and 7 |
+| $\cos\theta = \mathbf{x}^\top\mathbf{y} / (\|\mathbf{x}\|\,\|\mathbf{y}\|) \in [-1, 1]$ | brighter image, same cosine |
+| each layer multiplies an eigenvector by $\lambda$ | 50 layers: $1.1^{50} \approx 117$, $0.9^{50} \approx 0.005$ |
+
+**Next:** how the error changes when a parameter changes: calculus.
+:::

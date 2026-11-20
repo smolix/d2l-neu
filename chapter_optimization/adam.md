@@ -619,45 +619,822 @@ While AdamW normalizes each weight entry independently, 2D weight matrices act a
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §9.5]{.kicker}
+[Dive into Deep Learning · §9.6]{.kicker}
 
-Adam and AdamW<br>
-**per-coordinate learning rates · bias correction · gradient scales · decoupled weight decay · equilibrium norm and exemptions**
+Adam<br>
+**per-coordinate learning rates · bias correction · the learning rate as a step length · gradient scales in a network · Adam against SGD**
 :::
 :::
 
-::: {.slide title="AdaGrad and RMSProp Rescale Each Coordinate by Its Gradient History" layout="tight"}
+::: {.slide title="One Learning Rate Leaves x₁ at −0.94 After 20 Steps"}
+[The problem]{.kicker}
+
+The valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$: curvatures $0.2$ and
+$4$, start $(-5, -2)$.
+
+- Gradient descent is stable only for $\eta < 2/4 = 0.5$.
+- At $\eta = 0.4$, $x_1$ shrinks by $1 - 0.4 \cdot 0.2 = 0.92$ per step.
+- After 20 steps: $x_1 = -5 \cdot 0.92^{20} \approx -0.94$.
+- A rate of $1/\textrm{curvature}$ per coordinate would finish in one
+  step.
+
+::: {.d2l-note .warn}
+A network does not tell us its curvatures. Can each coordinate set its own
+step from the size of its own gradients?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- compute AdaGrad, RMSProp, and Adam steps on the valley by hand;
+- explain why the first step of Adam is $\eta$ in every coordinate;
+- show that Adam takes the same steps on $f$ and on $1000 f$, and say
+  what $\eta$ then measures;
+- read a learning-rate sweep for range, speed, and failure mode;
+- say why Adam at a constant rate does not settle.
+
+**Running example:** the valley, then `TinyLM`, a transformer with 0.47
+million parameters that predicts the next byte of Wikipedia text.
+**The idea:** one learning rate per coordinate, set from the size of its
+own gradients.
+:::
+
+::: {.slide title="Adam Replaces the Single Rate by One Rate per Coordinate"}
+[Where this fits]{.kicker}
+
+| part | decks |
+|---|---|
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · **Adam** · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
+
+- **Uses:** the valley and its ceiling $\eta < 2/\textrm{curvature}$;
+  momentum $\beta$ and its window of $1/(1-\beta)$ steps; `TinyLM`.
+- **Skips:** weight decay (next deck), schedules, convergence proofs.
+:::
+
+::: {.slide title="AdaGrad Divides Each Step by Its Coordinate's Gradient History"}
 [Per-coordinate learning rates]{.kicker}
 
+$$\mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{g}_t^2,\qquad
+\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t + \epsilon}} \odot \mathbf{g}_t$$
+
+($\mathbf{g}_t$: gradient at $\mathbf{x}_t$; elementwise;
+$\mathbf{s}_0 = \mathbf{0}$; small $\epsilon > 0$)
+
+- **Rare features:** a coordinate that is rarely touched keeps a large
+  step for when its feature appears.
+- **Ill-conditioning:** a gradient is curvature times distance, so the
+  curvature cancels from the ratio.
+
+::: {.d2l-note .rule}
+Each coordinate gets its own clock: its step decays with its own activity,
+not with $t$.
+:::
+:::
+
+::: {.slide title="Under AdaGrad the Learning Rate Is a Travel Budget of 7.6η in 20 Steps"}
+[Per-coordinate learning rates]{.kicker}
+
+::: {.cols}
+::: {.col}
+$\eta = 0.4$: budget $3.0 < 5$
+
+@!adam-per-coordinate-learning-rates-1
+:::
+
+::: {.col}
+$\eta = 2$: budget $15$ (gradient descent diverges)
+
+@!adam-per-coordinate-learning-rates-2
+:::
+:::
+
+- Step 1 moves every coordinate by $\eta$, since
+  $\mathbf{s}_1 = \mathbf{g}_1^2$.
+- Step $t$ is at most $\eta/\sqrt{t}$:
+  $\sum_{t=1}^{20} t^{-1/2} \approx 7.6$.
+:::
+
+::: {.slide title="RMSProp Forgets: Its Average Spans 1/(1 − β₂) Steps"}
+[Per-coordinate learning rates]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
 @!adam-rmsprop-forgetting-on-purpose-1
 :::
 
-::: {.slide title="Adam Combines Momentum and Bias-Corrected RMS Scaling" layout="tight"}
-[Adam on the valley]{.kicker}
+::: {.col}
+$$\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1-\beta_2)\, \mathbf{g}_t^2$$
 
+replaces $\mathbf{s}_t$ in AdaGrad.
+
+- $\beta_2 = 0.9$: a window of 10 steps.
+- No decay by construction: near the minimum after 20 steps.
+- Step 1 too long: $\mathbf{v}_1 = 0.1\,\mathbf{g}_1^2$, a move of
+  $\eta/\sqrt{0.1} \approx 3.2\,\eta$.
+:::
+:::
+:::
+
+::: {.slide title="After 200 Steps RMSProp Hops Between ±η/2 and AdaGrad Still Converges"}
+[Per-coordinate learning rates]{.kicker}
+
+Both at $\eta = 0.4$:
+
+@!adam-rmsprop-1
+
+- At $x = \pm a$ the gradient has a steady size, so $v_t = g_t^2$ and the
+  step is $\eta\,\mathrm{sign}(g_t)$.
+- A jump of $\eta$ takes $-a$ to $a$ for $a = \eta/2 = 0.2$, at any
+  curvature.
+
+::: {.d2l-note .rule}
+A normalized step does not shrink with the gradient.
+:::
+:::
+
+::: {.slide title="Check: Where Does RMSProp End at η = 0.1?"}
+[Check]{.kicker}
+
+RMSProp on the valley, $\beta_2 = 0.9$, now at $\eta = 0.1$. Where are
+$x_1$ and $x_2$ after 2,000 steps?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Both hop between $-0.05$ and $0.05$: the band is
+$\pm\eta/2$, and the curvatures $0.2$ and $4$ do not enter. To come
+closer, $\eta$ has to fall during the run.
+:::
+:::
+:::
+
+::: {.slide title="Adam Averages the Gradient and Its Square, Then Corrects Both"}
+[Adam]{.kicker}
+
+$$\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1-\beta_1)\,\mathbf{g}_t,
+\qquad
+\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1-\beta_2)\,\mathbf{g}_t^2$$
+
+$$\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1-\beta_1^t},\quad
+\hat{\mathbf{v}}_t = \frac{\mathbf{v}_t}{1-\beta_2^t},\qquad
+\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,
+\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$$
+
+- $\mathbf{m}_t$: momentum, averaged over about $1/(1-\beta_1) = 10$
+  steps.
+- $\mathbf{v}_t$: second-moment estimate; $\sqrt{\hat{\mathbf{v}}_t}$ is
+  the *scale* of a coordinate, averaged over about 1,000 steps.
+- The hats are the *bias correction*. Defaults: $\beta_1 = 0.9$,
+  $\beta_2 = 0.999$, $\epsilon = 10^{-8}$.
+:::
+
+::: {.slide title="Bias Correction Makes the First Step of Adam η in Every Coordinate"}
+[Worked example]{.kicker}
+
+Step 1 from $\mathbf{m}_0 = \mathbf{v}_0 = \mathbf{0}$:
+
+- $\mathbf{m}_1 = 0.1\,\mathbf{g}_1$, $\mathbf{v}_1 = 0.001\,\mathbf{g}_1^2$.
+- Uncorrected: $\mathbf{m}_1/\sqrt{\mathbf{v}_1} = (0.1/0.0316)\,
+  \mathrm{sign}(\mathbf{g}_1) \approx 3.2\,\mathrm{sign}(\mathbf{g}_1)$.
+- Corrected: $\hat{\mathbf{m}}_1 = \mathbf{g}_1$,
+  $\hat{\mathbf{v}}_1 = \mathbf{g}_1^2$, so the step is
+  $\eta\,\mathrm{sign}(\mathbf{g}_1)$.
+- After 10 steps $\mathbf{v}_t$ still holds only
+  $1 - 0.999^{10} \approx 1\%$ of its stationary value.
+
+::: {.d2l-note .rule}
+The weights of $\mathbf{v}_t$ sum to $1 - \beta_2^t$; dividing by that sum
+removes the deficit at every $t$.
+:::
+:::
+
+::: {.slide title="On the Valley Adam Marches 0.4 per Step, Overshoots, and Spirals In"}
+[The learning rate as a step length]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
 @!adam-adam-on-the-valley-1
 :::
 
-::: {.slide title="Raw Gradients in TinyLM Span 15–40×; Adam Equalizes Steps to Within 2×"}
-[Gradient scales in TinyLM]{.kicker}
+::: {.col .narrow}
+$\eta = 0.4$; the plot is the default run.
+
+- Start: $45^\circ$, $0.4$ per step in both coordinates.
+- $\beta_2 = 0.999$ remembers the first gradients: within $10^{-4}$ at
+  step 200.
+- $\beta_2 = 0.9$ forgets: a hop of about $0.02$, for good.
+- A longer window postpones the hop; it does not prevent it.
+:::
+:::
+:::
+
+::: {.slide title="Multiply the Loss by 1,000 and Adam Takes the Same Steps"}
+[The learning rate as a step length]{.kicker}
+
+$$f \to c f:\qquad \mathbf{g}_t \to c\,\mathbf{g}_t,\quad
+\hat{\mathbf{m}}_t \to c\,\hat{\mathbf{m}}_t,\quad
+\sqrt{\hat{\mathbf{v}}_t} \to c\,\sqrt{\hat{\mathbf{v}}_t},\qquad
+\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t}} \ \textrm{unchanged}$$
+
+(for $\epsilon$ negligible beside $\sqrt{\hat{\mathbf{v}}_t}$)
+
+- True per coordinate: on the valley Adam takes the steps it takes on
+  the round bowl $\frac{1}{2}(x_1^2 + x_2^2)$.
+- The condition number 20 drops out, for a valley along the axes.
+
+::: {.d2l-note .rule}
+Under SGD $\eta$ multiplies a gradient. Under Adam $\eta$ is a step
+length: about $\eta$ per coordinate and step.
+:::
+:::
+
+::: {.slide title="Check: Which Optimizer Moves This Weight Farther?"}
+[Check]{.kicker}
+
+A weight whose gradient stays at $10^{-3}$. One step of SGD at
+$\eta = 0.5$, or one step of Adam at $\eta = 0.003$: which is longer? And
+if the gradient stays at $10$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** SGD moves $0.5 \cdot 10^{-3} = 5 \cdot 10^{-4}$, Adam about
+$0.003$, six times as far. At a gradient of $10$, SGD moves $5$ and Adam
+still $0.003$. The two rates have different units.
+:::
+:::
+:::
+
+::: {.slide title="Adam from Scratch Matches the Library to Rounding Error"}
+[Implementation]{.kicker}
+
+State per parameter: $\mathbf{m}$, $\mathbf{v}$, and a step count $t$.
+Two copies of a linear model, same data, 100 steps: our Adam against the
+framework's.
+
+@!adam-adam-both-moments-debiased-2
+
+- Every weight moves by $\eta$ on step 1, as the bias correction
+  promises.
+:::
+
+::: {.slide title="TinyLM's Gradients Differ up to 40-Fold in Size, Adam's Steps 2-Fold"}
+[Adam on a language model]{.kicker}
+
+RMS gradient per kind of parameter (SGD's step per unit of $\eta$) and RMS
+of Adam's step 501 over $\eta$. `qkv`, `proj`: attention; `mlp`: MLP;
+`head`: output layer.
 
 @!adam-gradient-scales-in-a-network-2
+
+::: {.d2l-note}
+A fifth of $\eta$, not $\eta$: minibatch gradients disagree, and the scale
+remembers the larger early gradients. Pure noise gives
+$\sqrt{(1-\beta_1)/(1+\beta_1)}\,\eta \approx 0.23\,\eta$.
+:::
 :::
 
-::: {.slide title="Adam Trains Faster Than SGD, Over a 10× Learning-Rate Window" layout="tight"}
-[Adam vs. SGD on TinyLM]{.kicker}
+::: {.slide title="Adam Trains over a Tenfold Range of Rates, SGD at One Rate"}
+[Adam on a language model]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@!adam-the-race-on-the-language-model-2
+:::
+
+::: {.col}
+`TinyLM`, 2,000 steps at a constant rate, three seeds, SGD with momentum
+$0.9$; `inf`: diverged. *Usable*: mean final loss within $0.15$ nats of
+the best rate's.
+
+- Usable: Adam from $0.001$ to $0.01$; SGD at $0.3$ alone, next to
+  divergence at $0.5$.
+- Best rates 100-fold apart: Adam at $\eta$ steps like SGD with momentum
+  at $0.1\,\eta/\textrm{scale}$.
+- Adam at $0.03$ stalls near $2.8$ and stays finite.
+:::
+:::
+:::
+
+::: {.slide title="Adam Reaches a Loss of 1.8 in Half to Seven Tenths of SGD's Steps"}
+[Adam on a language model]{.kicker}
+
+Three runs at each best rate; the plot is the first seed.
 
 @!adam-the-race-on-the-language-model-3
+
+- Final loss: Adam lower in every run. The curves part in the first few
+  hundred steps.
+- Largest one-step rise: below $0.2$ nats for Adam; several tenths or
+  more in SGD's worst run.
 :::
 
-::: {.slide title="Coupled ℓ₂ Penalty Collapses Weights in Adam; Decoupled AdamW Preserves Them" layout="tight"}
-[Coupled vs. decoupled weight decay]{.kicker}
+::: {.slide title="Check: Why Does Adam Stall Where SGD Diverges?"}
+[Check]{.kicker}
+
+At ten times its best rate Adam ends at a loss of about $2.8$. SGD ends
+at `inf` less than a factor of two above its best rate. Why?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Under SGD a large gradient makes a large step, which makes a
+larger gradient. The step of Adam stays about $\eta$ whatever the
+gradient does: too coarse at $0.03$, but bounded.
+:::
+:::
+:::
+
+::: {.slide title="With β₁ = β₂ = 0, Adam Is Sign Descent"}
+[Sources of the advantage]{.kicker}
+
+$$\beta_1 = \beta_2 = 0,\ \epsilon = 0:\qquad
+\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\frac{\mathbf{g}_t}{|\mathbf{g}_t|}
+= \mathbf{x}_t - \eta\,\mathrm{sign}(\mathbf{g}_t)$$
+
+- **Sign descent:** every coordinate moves by $\eta$ against the sign of
+  its gradient, whatever the size.
+- Valley: $\mathbf{g}_1 = (-1, -8)$ gives the step $(0.4, 0.4)$, the
+  first step of Adam.
+- On large transformers Adam leads SGD by far, and sign descent with
+  momentum shares the lead, with full-batch gradients too.
+
+::: {.d2l-note .rule}
+Adam gains by equalizing the steps of coordinates whose gradients differ
+in size.
+:::
+
+[Kunstner et al. 2023; Zhang et al. 2024]{.small}
+:::
+
+::: {.slide title="TinyLM Is a Mild Case: Two Blocks, and Its Rare Bytes Hardly Count"}
+[Sources of the advantage]{.kicker}
+
+Two sources of unequal gradients grow with a language model:
+
+- blocks (embeddings, attention, MLPs) that differ in curvature far more
+  than those of a CNN;
+- rare tokens: among word pieces most are rare, yet together much of the
+  text. Gradient descent stalls on their loss, Adam does not.
+
+`TinyLM` predicts bytes:
+
+@!adam-sources-of-the-gap-1
+
+[Zhang et al. 2024; Kunstner et al. 2024]{.small}
+:::
+
+::: {.slide title="ε Caps the Learning Rate of Every Coordinate at η/ε"}
+[Limits]{.kicker}
+
+- $\epsilon$ is a floor on the denominator: the rate
+  $\eta/(\sqrt{\hat{v}_{t,i}} + \epsilon)$ of coordinate $i$ never
+  exceeds $\eta/\epsilon$.
+- Large $\epsilon$: $\mathbf{x}_{t+1} \approx \mathbf{x}_t -
+  (\eta/\epsilon)\,\hat{\mathbf{m}}_t$, SGD with momentum $\beta_1$ at
+  rate $(1-\beta_1)\eta/\epsilon$.
+- On `TinyLM` the scales, about $10^{-4}$ and above, are far larger than
+  $\epsilon = 10^{-8}$: the floor is idle.
+
+::: {.d2l-note}
+$\epsilon$ interpolates between Adam and SGD with momentum: a tuning
+knob, not a numerical detail.
+:::
+:::
+
+::: {.slide title="Gradients +4, −1, −1 Should Move x Down; Adam Moves It Up"}
+[Limits]{.kicker}
+
+Losses $4x, -x, -x$, repeated, on $[-1, 1]$: the gradients sum to $+2$,
+so the best point is $x = -1$. Adam with $\beta_1 = 0$,
+$\beta_2 = 1/17$:
+
+| gradient $g_t$ | $+4$ | $-1$ | $-1$ |
+|---|---:|---:|---:|
+| $\sqrt{v_t}$ | 3.89 | 1.35 | 1.02 |
+| step $-\eta\, g_t/\sqrt{v_t}$ | $-1.03\,\eta$ | $+0.74\,\eta$ | $+0.98\,\eta$ |
+
+Net $+0.69\,\eta$ per period: Adam ends at $x = +1$.
+
+::: {.d2l-note .warn}
+Normalization turns a vote weighted by gradient size into a head count.
+AMSGrad divides by the running maximum of $v_t$.
+:::
+
+[Reddi et al. 2019]{.small}
+:::
+
+::: {.slide title="Check: How Far Does a TinyLM Weight Move per Step After 500 Steps?"}
+[Check]{.kicker}
+
+Adam at a constant $\eta = 0.003$. How long is the step of a typical
+weight after 500 steps, and will it shrink at this rate?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Between $0.1\,\eta$ and $0.3\,\eta$ in root mean square,
+about $6 \cdot 10^{-4}$. A normalized step does not shrink with the
+gradient, so only a smaller $\eta$ shortens it.
+:::
+:::
+:::
+
+::: {.slide title="Under Adam the Learning Rate Is a Step Length, and It Is Ours to Choose"}
+[Wrap-up]{.kicker}
+
+- AdaGrad: a travel budget of $7.6\,\eta$ in 20 steps. RMSProp forgets,
+  and ends hopping at $\pm\eta/2 = \pm 0.2$.
+- Adam adds momentum and bias correction: step 1 is $\eta$ in every
+  coordinate.
+- Same steps on $f$ and on $1000 f$: $\eta$ is a step length, and the
+  condition number 20 of the valley drops out.
+- `TinyLM`: gradients differ 15- to 40-fold between kinds of parameters,
+  the steps of Adam 2-fold.
+- Against SGD: a tenfold range of usable rates, a stall in place of
+  divergence, loss $1.8$ in half to seven tenths of the steps.
+
+**Next:** weight decay under a per-coordinate method, in AdamW.
+:::
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §9.7]{.kicker}
+
+AdamW<br>**decoupled weight decay · the timescale of decay · exempt parameters · optimizer state**
+:::
+:::
+
+::: {.slide title="One Coefficient, λ = 0.1, Trains One Run and Flattens Another"}
+[The problem]{.kicker}
+
+`TinyLM` (0.47 million parameters, predicts the next byte of Wikipedia
+text), 1,000 steps of Adam at learning rate 0.003:
+
+| weight decay | training loss, nats per byte |
+|:--|--:|
+| none | about 1.7 |
+| 0.1, applied to the weights (AdamW) | about 1.7 |
+| 0.1, as an $\ell_2$ penalty on the loss | about 3.2 |
+| *a model that knows only how frequent each byte is* | *3.17* |
+
+::: {.d2l-note .warn}
+Under Adam, "weight decay 0.1" has two meanings, more than a nat apart.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- derive what an $\ell_2$ penalty does under Adam;
+- write AdamW's update and say what it changes;
+- compute the timescale of a recipe and tell whether decay acts in a run;
+- predict the size at which decayed weights settle;
+- choose which parameters to decay.
+
+**Idea:** decay must bypass Adam's per-coordinate scaling; then
+$1/(\eta\lambda)$ steps is its timescale ($\eta$: learning rate,
+$\lambda$: decay coefficient).
+
+**Running example:** `TinyLM` at $\eta = 0.003$, $\lambda = 0.1$:
+timescale 3,333 steps.
+:::
+
+::: {.slide title="AdamW Completes the Optimizer of the Modern Recipe"}
+[Where this fits]{.kicker}
+
+| part | decks |
+|---|---|
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · **AdamW** · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
+
+- **Uses:** Adam's update, leaky averages with window $1/(1-\beta)$, the
+  noise ball of constant-step SGD.
+- **Skips:** other regularizers, learning-rate schedules, how to store the
+  optimizer state in fewer bytes.
+:::
+
+::: {.slide title="Under SGD, an ℓ2 Penalty Is Weight Decay"}
+[Penalty and preconditioner]{.kicker}
+
+The penalty $\frac{\lambda}{2}\|\mathbf{x}\|^2$ adds
+$\lambda\mathbf{x}_t$ to the gradient $\mathbf{g}_t$:
+
+$$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta(\mathbf{g}_t + \lambda\mathbf{x}_t) = (1-\eta\lambda)\,\mathbf{x}_t - \eta\,\mathbf{g}_t$$
+
+- $\mathbf{x}$: weights; $\eta$: learning rate; $\lambda$: decay
+  coefficient.
+- Every weight shrinks by the same factor $1 - \eta\lambda$ per step.
+- $\eta = 0.003$, $\lambda = 0.1$: each step removes 0.03% of a weight.
+:::
+
+::: {.slide title="Adam Divides the Penalty by Each Weight's Gradient Scale"}
+[Penalty and preconditioner]{.kicker}
+
+Adam:
+$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\hat{\mathbf{m}}_t/(\sqrt{\hat{\mathbf{v}}_t} + \epsilon)$;
+$\hat{\mathbf{m}}_t$, $\hat{\mathbf{v}}_t$: running averages of the
+gradient and its square. Shrinkage of weight $i$ per step:
+
+$$\underbrace{\frac{\eta\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\, x_{t,i}}_{\textrm{$\ell_2$ through Adam}}
+\qquad\textrm{vs.}\qquad
+\underbrace{\eta\lambda\, x_{t,i}}_{\textrm{weight decay}}$$
+
+::: {.d2l-note}
+Scale $\sqrt{\hat{v}} = 10^{-3}$, if it stayed fixed: the penalty removes
+$0.0003/10^{-3} = 30\%$ per step, weight decay 0.03%.
+:::
+:::
+
+::: {.slide title="AdamW Shrinks the Weights outside the Scaling"}
+[Decoupled weight decay]{.kicker}
+
+$$\mathbf{x}_{t+1} = (1 - \eta\lambda)\,\mathbf{x}_t
+- \eta\, \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon},
+\qquad \hat{\mathbf{m}}_t, \hat{\mathbf{v}}_t \textrm{ from } \mathbf{g}_t \textrm{ alone}$$
+
+- Coupled: add $\lambda\mathbf{x}_t$ to the gradient, then update the
+  averages.
+- Decoupled: shrink the weights, then take the plain Adam step.
+
+Adam plus this one shrinkage, against the library's AdamW, on two copies
+of a linear model, 100 steps at $\lambda = 0.1$:
+
+@!adamw-adamw-from-scratch-2
+
+[Loshchilov and Hutter, 2019]{.small}
+:::
+
+::: {.slide title="Check: What Does the Penalty Do to a Weight of 0.045?"}
+[Check]{.kicker}
+
+The weight matrices of `TinyLM` start with entries of root mean square
+(RMS) 0.045 and loss gradients of about $10^{-3}$. Adam with an $\ell_2$ penalty,
+$\eta = 0.003$, $\lambda = 0.1$. What happens in the first steps?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The penalty's gradient $\lambda x = 0.0045$ exceeds the loss
+gradient, so the scale is mostly penalty and the fixed-scale 30% is never
+reached. Adam normalizes the penalty: the weight moves toward zero by
+about $\eta$ per step, $0.045/0.003 = 15$ steps. $\lambda$ sets where the
+shrinkage stops, not its speed.
+:::
+:::
+:::
+
+::: {.slide title="At λ = 0.1 the Penalty Costs More Than a Nat; AdamW Tracks No Decay"}
+[Coupled and decoupled decay]{.kicker}
+
+Three runs of `TinyLM` from one initialization, 1,000 steps:
 
 @!adamw-one-number-two-meanings
+
+Entropy of the byte frequencies: 3.17 nats.
 :::
 
-::: {.slide title="Only 2D Weight Matrices Are Decayed; Embeddings and 1D Vectors Are Exempt" layout="tight"}
-[Parameter exemptions]{.kicker}
+::: {.slide title="The Penalty Erases the Matrices; What Is Left Predicts Byte Frequencies"}
+[Coupled and decoupled decay]{.kicker}
+
+| run | RMS of the weight matrices, step 0 → 1,000 | final loss |
+|:--|:--|--:|
+| no decay | 0.045 → 0.11 | about 1.7 |
+| AdamW, $\lambda = 0.1$ | 0.045 → 0.10 | about 1.7 |
+| Adam + $\ell_2$, $\lambda = 0.1$ | 0.045 → 0.003 | about 3.2 |
+
+- 0.003 against 0.11: forty times smaller than without decay. Almost no
+  input reaches the output, and the best single prediction is the byte
+  frequencies (3.17 nats).
+- The shrinkage ended where $\lambda|x| \approx 3 \times 10^{-4}$, the
+  size of a loss gradient.
+:::
+
+::: {.slide title="AdamW's Weights Are a Leaky Average of Their Own Steps"}
+[The timescale of decay]{.kicker}
+
+With $\mathbf{u}_t = \hat{\mathbf{m}}_t/(\sqrt{\hat{\mathbf{v}}_t}+\epsilon)$,
+Adam's step before the learning rate:
+
+$$\mathbf{x}_t = (1-\eta\lambda)^t\,\mathbf{x}_0 - \eta\sum_{s=0}^{t-1}(1-\eta\lambda)^{t-1-s}\,\mathbf{u}_s$$
+
+- A step from $k$ steps ago counts with
+  $(1-\eta\lambda)^k \approx e^{-\eta\lambda k}$.
+- Window of the average: the **timescale** $1/(\eta\lambda)$ steps.
+
+::: {.d2l-note}
+$\eta = 0.003$, $\lambda = 0.1$: 3,333 steps. A 1,000-step run is 0.3
+timescales, $e^{-0.3} = 0.74$: decay barely acts.
+:::
+
+[Wang and Aitchison, 2025]{.small}
+:::
+
+::: {.slide title="Decay and Gradients Balance at an RMS of √(η/2λ)"}
+[The equilibrium norm]{.kicker}
+
+One entry $x$ of a weight matrix. Its normalized gradient
+$n_t = g_t/\sqrt{\hat{v}_t}$ has mean 0 and mean square $\sigma^2$, and is
+independent of $x$ and from step to step.
+
+I. $\;x_{t+1} \approx (1-\eta\lambda)\,x_t - \eta\,n_t$ (momentum only
+delivers $n_t$ over about ten steps)
+
+II. $\;\mathbb{E}[x_{t+1}^2] = (1-\eta\lambda)^2\,\mathbb{E}[x_t^2] + \eta^2\sigma^2$
+
+III. Fixed point:
+
+$$\boxed{\mathbb{E}[x_\infty^2] \approx \frac{\eta\sigma^2}{2\lambda}}$$
+
+$\sigma^2 \approx 1$: Adam divides each gradient by its RMS.
+:::
+
+::: {.slide title="Without Decay the Weights Spread like a Random Walk"}
+[The equilibrium norm]{.kicker}
+
+$\lambda = 0$: nothing cancels the growth. Every gradient adds $\eta^2$ to
+the mean square of an entry:
+
+$$\textrm{RMS}_t = \sqrt{\textrm{RMS}_0^2 + \eta^2\, t}$$
+
+`TinyLM`: the weight matrices start at RMS 0.045; at $\eta = 0.003$,
+
+$$\sqrt{0.045^2 + 0.003^2 \cdot 2{,}000} = 0.14 \quad\textrm{after 2,000 steps.}$$
+
+::: {.d2l-note}
+Steps at a right angle to the weights lengthen them, by Pythagoras.
+:::
+:::
+
+::: {.slide title="Check: Which Runs Settle within 2,000 Steps?"}
+[Check]{.kicker}
+
+AdamW on `TinyLM`, $\eta = 0.003$, 2,000 steps, $\lambda$ = 0.1, 0.5
+and 1. Which runs reach their equilibrium, and at which RMS of the weight
+matrices?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Timescales $1/(\eta\lambda)$: 3,333, 667 and 333 steps. The
+first run is shorter than its timescale and cannot settle (its level
+would be 0.122). The others settle, at $\sqrt{\eta/(2\lambda)} = 0.055$
+and $0.039$.
+:::
+:::
+:::
+
+::: {.slide title="Measured: the Weights Settle after Two Timescales"}
+[The equilibrium norm]{.kicker}
+
+Two runs per $\lambda$; RMS of the weight matrices every 250 steps:
+
+@!adamw-the-timescale-of-decay-1
+:::
+
+::: {.slide title="The Formula Has the Ratio Right and the Level 1.4 Times Too Low"}
+[The equilibrium norm]{.kicker}
+
+| $\lambda$ | RMS at step 2,000 | predicted | state | validation loss |
+|--:|--:|--:|:--|:--|
+| 0 | 0.14 | 0.14 | growing | reference |
+| 0.1 | 0.116 | 0.122 | growing, 0.6 timescales | within 0.01 |
+| 0.5 | 0.076 | 0.055 | level from step 1,500 | 0.1 worse |
+| 1 | 0.054 | 0.039 | level from step 750 | 0.25 worse |
+
+- $0.076/0.054 = \sqrt{2}$, as predicted. Both levels are 1.4 times too
+  high; the $\lambda = 0$ row fits, so the excess comes with the decay:
+  the loss gradient pushes back outward.
+
+::: {.d2l-note .warn}
+In 2,000 steps, slow decay does nothing and fast decay does harm (every
+parameter decayed).
+:::
+:::
+
+::: {.slide title="Without Decay a Run Lowers Its Own Learning Rate"}
+[Choice of the coefficient]{.kicker}
+
+- A matrix $\mathbf{W}$ whose output is normalized matters only through
+  its direction:
+  $\textrm{LayerNorm}(c\,\mathbf{W}\mathbf{h}) = \textrm{LayerNorm}(\mathbf{W}\mathbf{h})$
+  for $c > 0$.
+- **Relative step** $\eta/\textrm{RMS}$: how far one gradient moves the
+  entries, relative to their size.
+- No decay: $0.003/0.045 = 0.067$ falls to $0.003/0.14 = 0.021$ in 2,000
+  steps, then on as $1/\sqrt{t}$.
+
+::: {.d2l-note .rule}
+A threefold cut of the learning rate, on a schedule nobody chose.
+:::
+
+[For `TinyLM` a model: none of its matrices is normalized directly]{.small}
+:::
+
+::: {.slide title="Decay Holds the Relative Step at √(2ηλ), the Same for Every Matrix"}
+[Choice of the coefficient]{.kicker}
+
+$$\frac{\eta}{\sqrt{\eta/(2\lambda)}} = \sqrt{2\eta\lambda}$$
+
+- No initial size and no gradient scale in it: a *rotational
+  equilibrium*, every matrix turns at the same rate.
+- One Adam step turns a matrix by about a fifth of it (momentum).
+- `TinyLM`, matrices pooled: 0.039 and 0.056 at $\lambda = 0.5$ and 1,
+  predicted 0.055 and 0.077.
+
+::: {.d2l-note .rule}
+In long single-pass runs, decay lowers the training loss itself.
+:::
+
+[Kosson et al., 2024; D'Angelo et al., 2024]{.small}
+:::
+
+::: {.slide title="Check: Halve η and Double λ. What Changes?"}
+[Check]{.kicker}
+
+A run with AdamW at $(\eta, \lambda) = (0.003, 0.5)$ is repeated at
+$(0.0015, 1)$. What happens to the timescale, to the RMS at which the
+weights settle, and to the relative step?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\eta\lambda$ is unchanged: the same timescale of 667 steps
+and the same relative step $\sqrt{2\eta\lambda}$. The RMS
+$\sqrt{\eta/(2\lambda)}$ halves, which a normalized layer ignores. So when
+$\eta$ changes, hold $\eta\lambda$.
+:::
+:::
+:::
+
+::: {.slide title="Choose λ by Its Timescale"}
+[Choice of the coefficient]{.kicker}
+
+| rule | example |
+|:--|:--|
+| count timescales, $T\eta\lambda$ for $T$ steps; weights settle after about 2 | 1,000 steps at $\eta\lambda = 3 \times 10^{-4}$: 0.3, inert |
+| | 300,000 steps at $\eta = 3 \times 10^{-4}$, $\lambda = 0.1$: 9, active |
+| searching over $\eta$: hold $\eta\lambda$ | set $\lambda = s/\eta$, search $s$ separately |
+| the best timescale is a fraction of the run | 10 times longer run: timescale 3 to 10 times longer, smaller $\lambda$ |
+
+[Loshchilov and Hutter, 2019; Wang and Aitchison, 2025; Bergsma et al., 2025]{.small}
+:::
+
+::: {.slide title="Only the Weight Matrices Are Decayed"}
+[Exempt parameters]{.kicker}
+
+| kind in `TinyLM` | parameters | decayed | reason |
+|:--|--:|:--|:--|
+| weight matrices | 425,984 | yes | under normalization, size sets only the relative step |
+| biases, LayerNorm scales and shifts | 3,840 | no | set scale and offset of each feature directly |
+| token embeddings | 32,768 | no | a row gets a gradient only when its token occurs |
+| position embeddings | 8,192 | no | by custom, with the tokens |
 
 @!adamw-what-not-to-decay-1
+
+[OLMo 2, 2025: decayed embeddings shrank, and the gradients through the LayerNorm after them grew]{.small}
+:::
+
+::: {.slide title="Adam's Two Averages Double the Memory of Weights and Gradients"}
+[Optimizer state]{.kicker}
+
+| per parameter, 32-bit floats | bytes |
+|:--|--:|
+| weight | 4 |
+| gradient | 4 |
+| Adam's averages $m$ and $v$ | 8 |
+| **total** | **16** |
+
+- `TinyLM`: under 4 MB for $m$ and $v$. A billion parameters: 8 GB of
+  16 GB.
+- Only trained parameters carry the state.
+- A checkpoint needs $m$ and $v$ to resume.
+:::
+
+::: {.slide title="Check: Does a 1B-Parameter Model Fit a 24 GB GPU?"}
+[Check]{.kicker}
+
+A model with one billion parameters is trained with AdamW in 32-bit
+floats. Do the weights, the gradients and the optimizer state fit on a
+GPU with 24 GB?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $16 \times 10^9$ bytes = 16 GB: yes, with 8 GB left for the
+activations. Half of the 16 GB is $m$ and $v$.
+:::
+:::
+:::
+
+::: {.slide title="Once Decay Bypasses the Scaling, λ Means a Timescale"}
+[Wrap-up]{.kicker}
+
+- $\ell_2$ through Adam at $\lambda = 0.1$: weight matrices from RMS 0.045
+  to 0.003, loss 3.2, the byte frequencies. AdamW: the loss of no decay.
+- AdamW shrinks by $1 - \eta\lambda$ per step: timescale
+  $1/(\eta\lambda)$, 3,333 steps at $\eta = 0.003$, $\lambda = 0.1$.
+- Settled weights: RMS 1.4 times $\sqrt{\eta/(2\lambda)}$ on `TinyLM`;
+  relative step $\eta/\textrm{RMS}$ constant, in proportion to
+  $\sqrt{2\eta\lambda}$.
+- Decay the matrices only, 90% of `TinyLM`; $m$ and $v$ are 8 of 16 bytes
+  per parameter.
+
+**Next:** Muon, a step chosen for a weight matrix as a whole.
 :::

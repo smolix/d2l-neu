@@ -816,6 +816,120 @@ body $64 \to 256 \to 64$, fed 256 examples from $\mathcal{N}(0, 1)$.
 :::
 :::
 
+::: {.slide title="The Default Initialization Is Not He" only="mxnet"}
+[Library defaults]{.kicker}
+
+Gluon `Dense`: weight $U(\pm 0.07)$, whatever the shape of the layer; zero
+bias.
+
+A $512 \to 256$ layer, checked against the prediction ($U(\pm b)$ has
+standard deviation $b/\sqrt{3}$):
+
+@!init-defaults-and-when-to-override-them
+:::
+
+::: {.slide title="The Default Initialization Is Not He" only="pytorch"}
+[Library defaults]{.kicker}
+
+PyTorch `nn.Linear`: weight and bias $U(\pm 1/\sqrt{n_\textrm{in}})$.
+
+A $512 \to 256$ layer, checked against the prediction ($U(\pm b)$ has
+standard deviation $b/\sqrt{3}$):
+
+@!init-defaults-and-when-to-override-them
+:::
+
+::: {.slide title="The Default Initialization Is Not He" only="tensorflow"}
+[Library defaults]{.kicker}
+
+Keras `Dense`: Xavier (Glorot) uniform,
+$U(\pm\sqrt{6/(n_\textrm{in} + n_\textrm{out})})$; zero bias.
+
+A $512 \to 256$ layer, checked against the prediction ($U(\pm b)$ has
+standard deviation $b/\sqrt{3}$):
+
+@!init-defaults-and-when-to-override-them
+:::
+
+::: {.slide title="The Default Initialization Is Not He" only="jax"}
+[Library defaults]{.kicker}
+
+Flax `nnx.Linear`: LeCun normal, truncated at two standard deviations and
+rescaled to standard deviation $1/\sqrt{n_\textrm{in}}$; zero bias.
+
+A $512 \to 256$ layer, checked against the prediction ($U(\pm b)$ has
+standard deviation $b/\sqrt{3}$):
+
+@!init-defaults-and-when-to-override-them
+:::
+
+::: {.slide title="Override the Default in Four Situations"}
+[Library defaults]{.kicker}
+
+- deep networks without normalization layers: the factor of each layer
+  compounds;
+- architectures the per-layer rule ignores, such as residual networks;
+- reproducing a paper whose results depend on its initialization;
+- parameters created by hand.
+
+::: {.d2l-note .rule}
+A network with one or two hidden layers tolerates the default. A deep one
+may not.
+:::
+:::
+
+::: {.slide title="Check: How Fast Does the Default Shrink Ten ReLU Layers?" only="pytorch"}
+[Check]{.kicker}
+
+Ten layers $256 \to 256$ without biases, weights from
+$U(\pm 1/\sqrt{n_\textrm{in}})$, each followed by a ReLU. By which factor
+does one layer multiply the mean square of the activations, and ten layers?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** A layer with weight variance $\sigma^2$ multiplies the mean
+square by $n_\textrm{in} \sigma^2$, and the ReLU halves it. Here
+$\sigma^2 = b^2/3 = 1/(3 n_\textrm{in})$, so one layer gives
+$\frac13 \cdot \frac12 = \frac16$, and ten layers
+$6^{-10} \approx 1.7 \times 10^{-8}$.
+:::
+:::
+:::
+
+::: {.slide title="Check: How Fast Does the Default Shrink Ten ReLU Layers?" only="tensorflow,jax"}
+[Check]{.kicker}
+
+Ten layers $256 \to 256$ without biases, weights with variance
+$1/n_\textrm{in}$, each followed by a ReLU. By which factor does one layer
+multiply the mean square of the activations, and ten layers?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** A layer with weight variance $\sigma^2$ multiplies the mean
+square by $n_\textrm{in} \sigma^2$, here 1, and the ReLU halves it. One
+layer gives $\frac12$, and ten layers $2^{-10} \approx 10^{-3}$. He
+initialization doubles the variance to cancel the ReLU.
+:::
+:::
+:::
+
+::: {.slide title="Check: How Fast Does the Default Shrink Ten ReLU Layers?" only="mxnet"}
+[Check]{.kicker}
+
+Ten layers $256 \to 256$ without biases, weights from $U(\pm 0.07)$, each
+followed by a ReLU. By which factor does one layer multiply the mean square
+of the activations, and ten layers?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** A layer with weight variance $\sigma^2$ multiplies the mean
+square by $n_\textrm{in} \sigma^2$, and the ReLU halves it. Here
+$\sigma^2 = 0.07^2/3$, so one layer gives
+$256 \cdot 0.07^2 / 6 \approx 0.21$, and ten layers about $10^{-7}$.
+:::
+:::
+:::
+
 ::: {.slide title="He Initialization Restores the Scale of Ten ReLU Layers"}
 [Applying initializers]{.kicker}
 

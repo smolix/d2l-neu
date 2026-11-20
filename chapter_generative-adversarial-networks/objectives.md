@@ -482,12 +482,6 @@ The plot and the figure describe optimal critics. A trained critic is a small ne
 
 ```{.python .input #objectives-separated-start-losses}
 %%tab pytorch
-def gradient_penalty(D, X, fake, u):
-    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D)."""
-    x = (u * X + (1 - u) * fake).requires_grad_()
-    grad, = torch.autograd.grad(D(x).sum(), x, create_graph=True)
-    return ((grad.abs() - 1) ** 2).mean()
-
 def mmd2_loss(x, y, bandwidths=(0.5, 1.0, 2.0)):
     """Unbiased MMD^2 under the sum of RBF kernels of the given bandwidths."""
     def kernel(a, b):
@@ -500,15 +494,17 @@ def mmd2_median(x, y):
     of the pooled batch, held constant in the gradient."""
     xy = torch.cat([x, y])
     return mmd2_loss(x, y, (torch.cdist(xy, xy).median().detach(),))
+
+#@save
+def gradient_penalty(D, X, fake, u):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D)."""
+    x = (u * X + (1 - u) * fake).requires_grad_()
+    grad, = torch.autograd.grad(D(x).sum(), x, create_graph=True)
+    return ((grad.abs() - 1) ** 2).mean()
 ```
 
 ```{.python .input #objectives-separated-start-losses}
 %%tab jax
-def gradient_penalty(D, X, fake, u):
-    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D)."""
-    grad = jax.grad(lambda x: D(x).sum())(u * X + (1 - u) * fake)
-    return ((jnp.abs(grad) - 1) ** 2).mean()
-
 def mmd2_loss(x, y, bandwidths=(0.5, 1.0, 2.0)):
     """Unbiased MMD^2 under the sum of RBF kernels of the given bandwidths."""
     def kernel(a, b):
@@ -522,12 +518,19 @@ def mmd2_median(x, y):
     xy = jnp.concatenate([x, y])
     dist = jnp.sqrt(((xy[:, None] - xy[None]) ** 2).sum(-1))
     return mmd2_loss(x, y, (jax.lax.stop_gradient(jnp.median(dist)),))
+
+#@save
+def gradient_penalty(D, X, fake, u):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D)."""
+    grad = jax.grad(lambda x: D(x).sum())(u * X + (1 - u) * fake)
+    return ((jnp.abs(grad) - 1) ** 2).mean()
 ```
 
 `train_shift` gives the critic five Adam steps for every generator step, which keeps it near its best response. The generator takes plain gradient steps with learning rate $0.01$: Adam would rescale every step to about its learning rate and hide the size of the gradient, which is what we want to see. The function records $\theta$ and the generator's gradient at every step. A positive `gp` adds the gradient penalty to the critic loss; with `critic_loss` set to `None`, the generator minimizes `gen_loss` of the two batches.
 
 ```{.python .input #objectives-separated-start-train}
 %%tab pytorch
+#@save
 class Shift(nn.Module):
     """The generator x' = theta + z."""
     def __init__(self, theta0):
@@ -537,10 +540,12 @@ class Shift(nn.Module):
     def forward(self, z):
         return self.theta + z
 
+#@save
 def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
                 n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
-    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; returns
-    theta0 and theta after every step, and the gradient of every step."""
+    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
+    theta0 and theta after every step, the gradient of every step, and the
+    critic."""
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
     G, D = Shift(theta0), d2l.make_mlp([1, 32, 32, 1], nn.ReLU())
@@ -567,11 +572,12 @@ def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
         grads.append(G.theta.grad.item())
         opt_G.step()
         thetas.append(G.theta.item())
-    return np.array(thetas), np.array(grads)
+    return np.array(thetas), np.array(grads), D
 ```
 
 ```{.python .input #objectives-separated-start-train}
 %%tab jax
+#@save
 class Shift(nnx.Module):
     """The generator x' = theta + z."""
     def __init__(self, theta0):
@@ -580,6 +586,7 @@ class Shift(nnx.Module):
     def __call__(self, z):
         return self.theta + z
 
+#@save
 @nnx.jit(static_argnums=(0, 1, 2))
 def shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U):
     """One critic step per row of U, then one generator step; returns the
@@ -600,10 +607,12 @@ def shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U):
     opt_G.update(G, grad)
     return grad.theta[...]
 
+#@save
 def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
                 n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
-    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; returns
-    theta0 and theta after every step, and the gradient of every step."""
+    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
+    theta0 and theta after every step, the gradient of every step, and the
+    critic."""
     rng = np.random.default_rng(seed)
     G = Shift(theta0)
     D = d2l.make_mlp([1, 32, 32, 1], nnx.relu, rngs=nnx.Rngs(seed))
@@ -619,7 +628,7 @@ def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
                           X, Z, U)
         grads.append(grad)                      # device scalars,
         thetas.append(G.theta[...])             # converted once below
-    return np.asarray(jnp.stack(thetas)), np.asarray(jnp.stack(grads))
+    return np.asarray(jnp.stack(thetas)), np.asarray(jnp.stack(grads)), D
 ```
 
 Five arms train three times each. Four are the non-saturating logistic and the hinge games with the generator losses of :numref:`tab_gan_loss_divergences`, a $W_1$ critic whose generator minimizes $-D(x')$, and MMD with no critic. The fifth keeps the logistic critic but gives the generator the saturating loss of :numref:`sec_basic_gan`, which minimizes $\mathbb{E}[\log \sigma(-D(x'))]$. Against an optimal critic that generator descends the value of the game, $2\,\mathrm{JS} - 2 \log 2$, so the plot above predicts its gradient at distance six: twice the Jensen--Shannon slope there, about a hundredth. For every run the table prints the median size of the generator's gradient over the first 100 steps, $\theta$ at five steps, and the first step at which $|\theta| < 0.5$.
@@ -633,11 +642,13 @@ arms = {'logistic, sat.': (losses['logistic'][0],
         'hinge': (*losses['hinge'], 0.0),
         'W1 + GP': (*w1, 10.0),
         'MMD, median': (None, mmd2_median, 0.0)}
-steps = (0, 100, 300, 1000, 1500)
+steps, w1_runs = (0, 100, 300, 1000, 1500), []  # w1_runs: (theta, critic)
 print(f'{"":20s}|gradient|   theta at steps {steps}   first |theta| < 0.5')
 for name, (critic_loss, gen_loss, gp) in arms.items():
     for seed in range(3):
-        thetas, grads = train_shift(critic_loss, gen_loss, seed, gp)
+        thetas, grads, D = train_shift(critic_loss, gen_loss, seed, gp)
+        if name == 'W1 + GP':
+            w1_runs.append((thetas[-1], D))
         hit = np.flatnonzero(np.abs(thetas) < 0.5)
         print(f'{name:15s} {seed}   {np.median(np.abs(grads[:100])):8.3f}   '
               + ''.join(f'{thetas[t]:7.2f}' for t in steps) + '   '
@@ -648,7 +659,48 @@ The prediction holds. The saturating arm's gradient is between $0.006$ and $0.01
 
 The hinge is the case that the analysis of optimal critics gets wrong. Its optimal critic $\operatorname{sign} \lambda$ is level at both clouds, so a generator that minimizes $-D(x')$ against it would not move at all. For that generator loss the gradient is simply the critic's average slope at the generated samples, so the table measures the trained critic directly: its slope there is $1.1$ to $1.7$, and every run reaches the data between steps 727 and 943. The trained network ramps across the gap instead of building the step. A small network fitted to minibatches a few steps at a time is smoother than the optimal critic, and here that smoothness, not the divergence on the label, moves the generator.
 
-The $W_1$ gradient is $1.25$ to $1.26$ in every run rather than $1$, because the penalty is soft. A linear critic of slope $a$, with the two means a distance $d$ apart, pays $-ad + 10(a - 1)^2$ under the penalized loss, which is smallest at $a = 1 + d/20$, between $1.25$ and $1.3$ while $d$ is between five and six. This push shrinks only toward one, so the generator reaches the data at nearly full speed, between steps 477 and 502, and nothing in the push tells it to stop there. Past the data the critic has to reverse its slope, and the two-sided penalty, which charges $\gamma$ for a flat critic, turns that reversal into a climb over a barrier at slope zero. With the generator a distance $d$ beyond the data, a linear critic still on the old side sits in a local minimum of the penalized loss, at slope $1 - d/20$ pointing away from the data, and from there it pushes the generator further away. A ReLU critic that does cross slope zero can switch off all its units on the way, and a flat critic leaves the generator wherever it happens to be. The runs show both endings: between steps 1,000 and 1,500, $\theta$ does not move at all in some runs, and in others it ends two or more units from the data. :numref:`sec_gan_convergence` shows on a two-parameter game that a penalty centered at slope one keeps pushing a generator that already matches the data, and that a penalty centered at zero does not.
+The $W_1$ gradient is $1.25$ to $1.26$ in every run rather than $1$, because the penalty is soft. A linear critic of slope $a$, with the two means a distance $d$ apart, pays $-ad + 10(a - 1)^2$ under the penalized loss, which is smallest at $a = 1 + d/20$, between $1.25$ and $1.3$ while $d$ is between five and six. This push shrinks only toward one, so the generator reaches the data at nearly full speed, between steps 477 and 502, and nothing in the push tells it to stop there. Past the data the critic has to reverse its slope, and the two-sided penalty, which charges $\gamma$ for a flat critic, turns that reversal into a climb over a barrier at slope zero. With the generator a distance $d$ beyond the data, a linear critic still on the old side sits in a local minimum of the penalized loss, at slope $1 - d/20$ pointing away from the data, and from there it pushes the generator further away. A ReLU critic that does cross slope zero can switch off all its units on the way, and a flat critic leaves the generator wherever it happens to be. The critics of the three $W_1$ runs at step 1,500 show which ending each run took. Since the generator minimizes $-D(x')$, a step moves $\theta$ by the learning rate times $D'(\theta)$; the cell prints that slope at the final $\theta$ and at the data mean $0$, and how many of the critic's 64 hidden units are active at each point.
+
+```{.python .input #objectives-separated-start-w1-critics}
+%%tab pytorch
+def slope_and_units(D, x):
+    """D'(x) and the number of hidden ReLU units that are active at x."""
+    x = h = torch.tensor([[x]], dtype=torch.float32, requires_grad=True)
+    active = 0
+    for layer in D:
+        h = layer(h)
+        if isinstance(layer, nn.ReLU):
+            active += int((h > 0).sum())
+    slope, = torch.autograd.grad(h.sum(), x)
+    return slope.item(), active
+
+print("W1 + GP   theta   D'(theta)  active   D'(0)  active  (of 64 units)")
+for seed, (theta, D) in enumerate(w1_runs):
+    (s_t, a_t), (s_0, a_0) = (slope_and_units(D, x) for x in (theta, 0.0))
+    print(f'{seed:7d} {theta:7.2f} {s_t:11.2f} {a_t:7d} {s_0:7.2f} {a_0:7d}')
+```
+
+```{.python .input #objectives-separated-start-w1-critics}
+%%tab jax
+def slope_and_units(D, x):
+    """D'(x) and the number of hidden ReLU units that are active at x."""
+    def forward(x):
+        h, active = x, 0
+        for layer in D.layers:
+            h = layer(h)
+            if not isinstance(layer, nnx.Linear):  # an activation
+                active += (h > 0).sum()
+        return h.sum(), active
+    slope, active = jax.grad(forward, has_aux=True)(jnp.array([[x]]))
+    return float(slope.squeeze()), int(active)
+
+print("W1 + GP   theta   D'(theta)  active   D'(0)  active  (of 64 units)")
+for seed, (theta, D) in enumerate(w1_runs):
+    (s_t, a_t), (s_0, a_0) = (slope_and_units(D, x) for x in (theta, 0.0))
+    print(f'{seed:7d} {theta:7.2f} {s_t:11.2f} {a_t:7d} {s_0:7.2f} {a_0:7d}')
+```
+
+The runs show both endings: between steps 1,000 and 1,500, $\theta$ does not move at all in some runs, and in others it ends two or more units from the data. :numref:`sec_gan_convergence` shows on a two-parameter game that a penalty centered at slope one keeps pushing a generator that already matches the data, and that a penalty centered at zero does not.
 
 MMD moves steadily, from $6$ to $1.32$ in 1,500 steps, with a gradient of $0.21$ that is the same in every run. Its speed says nothing about MMD against the critics, because the scale of its gradient is set by the bandwidth and by the scale of $\mathrm{MMD}^2$.
 

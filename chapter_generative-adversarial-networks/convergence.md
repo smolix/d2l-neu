@@ -200,7 +200,8 @@ for ax, (title, paths) in zip(axes, panels.items()):
              [P[:, 1] for P in paths.values()] + [x0[1:], [0.0]],
              r'$\theta$', r'$\psi$', list(paths) if len(paths) > 1 else None,
              xlim=(-lim, lim), ylim=(-lim, lim), axes=ax,
-             fmts=('C0-', 'C1-')[:len(paths)] + ('C3o', 'k+'))
+             fmts=('C0-', 'C1-')[:len(paths)] + ('C3o', 'k+'),
+             legend_loc='lower right' if title == 'penalized' else None)
     ax.set_title(title)
     ax.set_aspect('equal')
 fig.tight_layout()
@@ -660,7 +661,7 @@ for name, (loss_D, loss_G, gamma, n_runs) in arms.items():
 grid = np.asarray(centers)
 ```
 
-The cell below prints one row per run and draws run 0 of each of the four arms, with 3,000 generated samples in orange and the 25 centers in blue.
+The cell below prints one row per run.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-2}
 %%tab pytorch, jax
@@ -670,6 +671,12 @@ for name, results in runs.items():
         modes, on, dist = mode_stats(x, grid)
         print(f'{name:28} {seed:3}  {modes:2}/25  {on:7.2f}  {dist:8.2f}'
               f'  {trace[-1][2]:13.1e}')
+```
+
+The next cell draws run 0 of each of the four arms, with 3,000 generated samples in orange and the 25 centers in blue.
+
+```{.python .input #convergence-mode-coverage-on-25-gaussians-7}
+%%tab pytorch, jax
 fig, axes = d2l.plt.subplots(1, 4, figsize=(10, 2.9))
 for ax, name in zip(axes, list(runs)[:4]):
     x = runs[name][0][0][:3000]               # run 0; centers drawn last
@@ -1170,7 +1177,7 @@ $\mathbb{E}_q\|\nabla_x D\|^2$ at the generated samples.
 ::: {.slide title="The Penalty Keeps the Critic Flat and Makes Coverage Reliable"}
 [25 Gaussians]{.kicker}
 
-@!convergence-mode-coverage-on-25-gaussians-2
+@!convergence-mode-coverage-on-25-gaussians-7
 
 - Penalized: $\mathbb{E}_q\|\nabla D\|^2 < 0.003$, 24–25 modes in every run.
   Unpenalized: 0.7 to 17, about a dozen to 25 modes.

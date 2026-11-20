@@ -801,7 +801,7 @@ Read together, the last two panels say what the penalty does. Every critic order
 
 ### Samples of the Three Arms
 
-The grids show 64 samples of each averaged generator, drawn from the same latent codes in all three arms. The saved helper `tile_images` tiles a batch of images into one image, with pixel values clamped to $[-1, 1]$ and mapped to $[0, 1]$ for display.
+The grids show 64 samples of each averaged generator, DCGAN's and those of the three arms, drawn from the same latent codes. The saved helper `tile_images` tiles a batch of images into one image, with pixel values clamped to $[-1, 1]$ and mapped to $[0, 1]$ for display.
 
 ```{.python .input #dcgan-samples-of-the-three-arms-1}
 %%tab pytorch
@@ -833,16 +833,20 @@ def tile_images(imgs, num_rows):
 %%tab pytorch
 torch.manual_seed(42)
 z_show = torch.randn(64, 100, device=device)
+gens = {'DCGAN': ema.model,
+        **{name: ema_G for name, (ema_G, _) in runs.items()}}
 with torch.no_grad():
-    grids = [tile_images(ema_G(z_show), 8) for ema_G, _ in runs.values()]
-d2l.show_images(grids, 1, 3, titles=list(runs), scale=4.5);
+    grids = [tile_images(G(z_show), 8) for G in gens.values()]
+d2l.show_images(grids, 1, 4, titles=list(gens), scale=3.4);
 ```
 
 ```{.python .input #dcgan-loss-a-b-on-one-backbone-3}
 %%tab jax
 z_show = jax.random.normal(jax.random.key(42), (64, 100))
-grids = [tile_images(ema_G(z_show), 8) for ema_G, _ in runs.values()]
-d2l.show_images(grids, 1, 3, titles=list(runs), scale=4.5);
+gens = {'DCGAN': ema.model,
+        **{name: ema_G for name, (ema_G, _) in runs.items()}}
+grids = [tile_images(G(z_show), 8) for G in gens.values()]
+d2l.show_images(grids, 1, 4, titles=list(gens), scale=3.4);
 ```
 
 Without a penalty the classic loss collapses: after 6,000 steps the 64 latent codes produce one grey texture that resembles no sprite. The two penalized arms produce diverse, creature-shaped sprites on white backgrounds with softer outlines than real ones, and no difference between the two is visible. Creature-shaped is as far as it goes: none of these is a creature one could name. Each penalized arm sees about 0.77 million images, far fewer than published GANs train on. Compare them with DCGAN's samples: those are large, blotchy shapes that fill their frames, while the penalized arms draw smaller figures with outlines on white, closer in look to the real sprites. The eye prefers the penalized arms. We will see whether the scores agree.
@@ -995,7 +999,7 @@ def precision_recall(feat_real, feat_gen, k=3, chunk=1000):
 
 ### Scoring the Runs
 
-We score $n = 4{,}059$ samples of each generator, taken from its moving average, against all 4,059 held-out sprites. Each generator is scored on two draws of latent codes, so the second row shows how much a score moves when only the samples change. As a floor we score two disjoint sets of 4,059 training images against each other: any distance between them is estimator noise and, for FD, finite-sample bias. Because the feature network is our own, we call the scores FD and $\mathrm{MMD}^2$ rather than FID and KID; they cannot be compared with published values, which also use twelve times as many samples. The backbone has no tanh, so we clamp its outputs before scoring; the last column reports the fraction of raw pixel values outside $[-1, 1]$.
+We score $n = 4{,}059$ samples of each generator, taken from its moving average, against all 4,059 held-out sprites. Each generator is scored on two draws of latent codes, so the second row shows how much a score moves when only the samples change. As a floor we score two disjoint sets of 4,059 training images against each other: any distance between them is estimator noise and, for FD, finite-sample bias. Because the feature network is our own, we call the scores FD and $\mathrm{MMD}^2$ rather than FID and KID; they cannot be compared with published values, which also use twelve times as many samples. The backbone has no tanh, so we clamp its outputs before scoring; the last two columns report the fractions of raw pixel values above $+1$ and below $-1$.
 
 ```{.python .input #dcgan-scoring-the-runs-1}
 %%tab pytorch
@@ -1007,13 +1011,12 @@ for seed in (7, 8):  # a second latent draw gives the sampling range
     torch.manual_seed(seed)
     zs.append(torch.randn(n, 100, device=device))
 z_score = zs[0]
-gens = {'DCGAN': ema.model,
-        **{name: ema_G for name, (ema_G, _) in runs.items()}}
-feat_gen, out_of_range = {}, {}
+feat_gen, out_of_range = {}, {}  # out_of_range: fractions above +1, below -1
 for name, G in gens.items():
     for row, z in zip((name, '  second draw'), zs):
         x = batched(G, z)
-        out_of_range[(name, row)] = float((x.abs() > 1).float().mean())
+        out_of_range[(name, row)] = (float((x > 1).float().mean()),
+                                     float((x < -1).float().mean()))
         feat_gen[(name, row)] = features(x.clamp(-1, 1))
 feat_real = features(holdout_imgs)
 feat_a, feat_b = features(train_imgs[:n]), features(train_imgs[n:2 * n])
@@ -1028,13 +1031,12 @@ n = len(holdout_imgs)
 zs = [jax.random.normal(jax.random.key(seed), (n, 100))
       for seed in (7, 8)]  # a second latent draw gives the sampling range
 z_score = zs[0]
-gens = {'DCGAN': ema.model,
-        **{name: ema_G for name, (ema_G, _) in runs.items()}}
-feat_gen, out_of_range = {}, {}
+feat_gen, out_of_range = {}, {}  # out_of_range: fractions above +1, below -1
 for name, G in gens.items():
     for row, z in zip((name, '  second draw'), zs):
         x = batched(G, z)
-        out_of_range[(name, row)] = float((jnp.abs(x) > 1).mean())
+        out_of_range[(name, row)] = (float((x > 1).mean()),
+                                     float((x < -1).mean()))
         feat_gen[(name, row)] = features(jnp.clip(x, -1, 1))
 feat_real = features(holdout_imgs)
 feat_a, feat_b = features(train_imgs[:n]), features(train_imgs[n:2 * n])
@@ -1046,12 +1048,12 @@ Each feature set is compared with that of the held-out sprites; the first row is
 ```{.python .input #dcgan-scoring-the-two-runs}
 %%tab pytorch, jax
 print(f'{"run":17s}{"FD":>7s}{"MMD^2":>8s}{"precision":>11s}{"recall":>8s}'
-      f'{"out-of-range":>14s}')
+      f'{"> +1":>7s}{"< -1":>7s}')
 scored = {(None, 'real vs. real'): (feat_a, feat_b),
           **{key: (feat_real, feat) for key, feat in feat_gen.items()}}
 for key, (ref, feat) in scored.items():
     precision, recall = precision_recall(ref, feat)
-    oor = f'{out_of_range[key]:14.3f}' if key in out_of_range else ''
+    oor = ''.join(f'{v:7.3f}' for v in out_of_range.get(key, ()))
     print(f'{key[1]:17s}{fid_score(ref, feat):7.2f}{kid_score(ref, feat):8.3f}'
           f'{precision:11.2f}{recall:8.2f}{oor}')
 print(f'real pixel values equal to +1: {white:.0%}')
@@ -1452,9 +1454,13 @@ X, _ = sample_real(images, 64)                 # flipped reals
 fake = net_G(noise(64)).detach()
 r1, r2 = d2l.r1_r2_penalty(net_D, X, fake)     # per sample
 loss = loss_D(net_D, X, fake)                  # classic or pairing
-(loss + gamma / 2 * (r1 + r2).mean()).backward()     # critic
+opt_D.zero_grad()
+(loss + gamma / 2 * (r1 + r2).mean()).backward()
+opt_D.step()                                   # critic
 X2, _ = sample_real(images, 64)
-loss_G(net_D, X2, net_G(noise(64))).backward()       # generator
+opt_G.zero_grad()
+loss_G(net_D, X2, net_G(noise(64))).backward()
+opt_G.step()                                   # generator
 ema.update(net_G)                              # average for sampling
 ```
 

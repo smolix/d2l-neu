@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-critic-links-1-1.svg",
           "bytes": 306566,
-          "sha256": "sha256:5b233cad6aea49d6523a079e6bea4dd8930cd771fd96c4c2098737e47ea05d0c"
+          "sha256": "sha256:6f03de9ed6ca23638d600b5d6d30a124b550301e83ce054f5cf9f373049b37df"
         }
       ]
     },
@@ -81,22 +81,22 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-divergence-against-separation-1.svg",
           "bytes": 34536,
-          "sha256": "sha256:1dbb6da99a1a986f375a62f79df05d86df0458746c0ca34e3b334cefbb412ade"
+          "sha256": "sha256:cec4f32609f20c90445687b73f14c2bc1e14a4f79da6b24774b911328fdcc55a"
         }
       ]
     },
     "objectives-separated-start-losses": {
-      "code_fingerprint": "sha256:2f5fd73b80bc113ff0d515af68ec6ad26703857543529a8d4bc38238a85cc340",
+      "code_fingerprint": "sha256:ddf4498dad8cfae06a80eecf187b50eae28ad0c6368e533013f9a657e6842461",
       "kind": "text",
       "outputs": []
     },
     "objectives-separated-start-train": {
-      "code_fingerprint": "sha256:1a87f55fcbe0f9620083a3bc6f3f113cf2701613755b2a832d6866132db25971",
+      "code_fingerprint": "sha256:d33ff3a909a750401b4963f545c660640f049fccffcea4784885d8c1abc31329",
       "kind": "text",
       "outputs": []
     },
     "objectives-separated-start-runs": {
-      "code_fingerprint": "sha256:5bb8e2c1f2c15a45837cccc97b556335e01234d452daddacf102eb8ea3383145",
+      "code_fingerprint": "sha256:972261a997fa194407105c93785be5243c5e32ccf0bfb16b653a6bee066ab5b2",
       "kind": "text",
       "outputs": [
         {
@@ -181,8 +181,19 @@
         }
       ]
     },
+    "objectives-separated-start-w1-critics": {
+      "code_fingerprint": "sha256:0e864b8b3d563046f5751ea6873d5620212f3c5a3407058c0083222c75b33b5e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "W1 + GP   theta   D'(theta)  active   D'(0)  active  (of 64 units)\n      0    0.30        0.00      14    0.00      14\n      1   -7.18        1.34      19    1.35      21\n      2   -7.61       -0.65      19   -0.65      19\n"
+        }
+      ]
+    },
     "objectives-five-losses-on-a-gaussian-mixture-1": {
-      "code_fingerprint": "sha256:b8b1ff0437fb54e86add5c03db2d3e1444abf4c75400ffe6e6a73771817dba0e",
+      "code_fingerprint": "sha256:e313dfe966eb77a0a0eee5513a737cb42023be25c4054a99baa22404ccfbca0e",
       "kind": "text",
       "outputs": [
         {
@@ -193,17 +204,17 @@
       ]
     },
     "objectives-one-testbed-four-losses-2": {
-      "code_fingerprint": "sha256:d2de446eda14b859a4b8b0279b628dad466814687e5548a83f8b7c65a06d5cb7",
+      "code_fingerprint": "sha256:6b9547621a2fe4277127ac9334df5db3c5520a65ec747a2d8c9be646fc565536",
       "kind": "text",
       "outputs": []
     },
     "objectives-one-testbed-four-losses-4": {
-      "code_fingerprint": "sha256:65cf1a8544a1a1a2c4a4f65572593ec8d270843b8221b9ae61c5290445f9a512",
+      "code_fingerprint": "sha256:2c829d35edbdb59f28bdd3054b91b5f257571d82828b118aff5319bf99b7d4dc",
       "kind": "text",
       "outputs": []
     },
     "objectives-one-testbed-four-losses-6": {
-      "code_fingerprint": "sha256:8a1ab58575f95c63102da80435c330d1465a8a87cd0b94d4bd3fdd4ed51899ca",
+      "code_fingerprint": "sha256:da791d71d71ed66eb9deb76a79372df7184668b5686daf07818b95ea3ef80c06",
       "kind": "mixed",
       "outputs": [
         {
@@ -216,7 +227,7 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-one-testbed-four-losses-6-1.svg",
           "bytes": 42614,
-          "sha256": "sha256:037cc8cc485763fe8f0cd89fdf523098368f26ed1908b9014306e008e338b2c3"
+          "sha256": "sha256:a33569664f1f15ebf0d8b14db9b0ae3140800ce733a98f571a5004579117ba3a"
         }
       ]
     }

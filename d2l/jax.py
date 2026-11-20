@@ -3666,6 +3666,69 @@ def mmd2_unbiased(K_pp, K_qq, K_pq):
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
             - 2 * K_pq.mean())
 
+def gradient_penalty(D, X, fake, u):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D).
+
+    Defined in :numref:`sec_gan_objectives`"""
+    grad = jax.grad(lambda x: D(x).sum())(u * X + (1 - u) * fake)
+    return ((jnp.abs(grad) - 1) ** 2).mean()
+
+class Shift(nnx.Module):
+    """The generator x' = theta + z.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, theta0):
+        self.theta = nnx.Param(jnp.array(theta0))
+
+    def __call__(self, z):
+        return self.theta + z
+
+@nnx.jit(static_argnums=(0, 1, 2))
+def shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U):
+    """One critic step per row of U, then one generator step; returns the
+    generator's gradient.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    for i in range(len(U)):
+        fake = G(Z[i])
+        def d_loss(D_):
+            loss = critic_loss(D_(X[i]), D_(fake))
+            if gp:
+                loss = loss + gp * gradient_penalty(D_, X[i], fake, U[i])
+            return loss
+        opt_D.update(D, nnx.grad(d_loss)(D))
+    def g_loss(G_):
+        fake = G_(Z[-1])
+        return (gen_loss(X[-1], fake) if critic_loss is None
+                else gen_loss(D(X[-1]), D(fake)))
+    grad = nnx.grad(g_loss)(G)
+    opt_G.update(G, grad)
+    return grad.theta[...]
+
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
+                n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
+    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
+    theta0 and theta after every step, the gradient of every step, and the
+    critic.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    G = Shift(theta0)
+    D = d2l.make_mlp([1, 32, 32, 1], nnx.relu, rngs=nnx.Rngs(seed))
+    opt_G = nnx.Optimizer(G, optax.sgd(lr_G), wrt=nnx.Param)
+    opt_D = nnx.Optimizer(D, optax.adam(lr_D, 0.5, 0.9), wrt=nnx.Param)
+    n = n_critic if critic_loss else 0
+    thetas, grads = [theta0], []
+    for _ in range(steps):
+        X, Z = (jnp.asarray(rng.standard_normal((n + 1, batch, 1)),
+                            jnp.float32) for _ in range(2))
+        U = jnp.asarray(rng.uniform(size=(n, batch, 1)), jnp.float32)
+        grad = shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D,
+                          X, Z, U)
+        grads.append(grad)                      # device scalars,
+        thetas.append(G.theta[...])             # converted once below
+    return np.asarray(jnp.stack(thetas)), np.asarray(jnp.stack(grads)), D
+
 mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
 A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7
 

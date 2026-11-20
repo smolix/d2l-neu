@@ -3434,7 +3434,7 @@ def update_G(Z, net_D, net_G, trainer_G):
     fake_Y = net_D(net_G(Z))
     loss_G = F.binary_cross_entropy_with_logits(
         fake_Y, torch.ones_like(fake_Y), reduction='sum')
-    loss_G.backward()
+    loss_G.backward()  # also fills net_D's .grad (update_D zeroes it)
     trainer_G.step()
     return loss_G
 
@@ -3543,6 +3543,60 @@ def mmd2_unbiased(K_pp, K_qq, K_pq):
     return ((K_pp.sum() - K_pp.diagonal().sum()) / (m * (m - 1))
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
             - 2 * K_pq.mean())
+
+def gradient_penalty(D, X, fake, u):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D).
+
+    Defined in :numref:`sec_gan_objectives`"""
+    x = (u * X + (1 - u) * fake).requires_grad_()
+    grad, = torch.autograd.grad(D(x).sum(), x, create_graph=True)
+    return ((grad.abs() - 1) ** 2).mean()
+
+class Shift(nn.Module):
+    """The generator x' = theta + z.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, theta0):
+        super().__init__()
+        self.theta = nn.Parameter(torch.tensor(theta0))
+
+    def forward(self, z):
+        return self.theta + z
+
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
+                n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
+    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
+    theta0 and theta after every step, the gradient of every step, and the
+    critic.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    G, D = Shift(theta0), d2l.make_mlp([1, 32, 32, 1], nn.ReLU())
+    opt_G = torch.optim.SGD(G.parameters(), lr_G)
+    opt_D = torch.optim.Adam(D.parameters(), lr_D, betas=(0.5, 0.9))
+    n = n_critic if critic_loss else 0
+    thetas, grads = [theta0], []
+    for _ in range(steps):
+        X, Z = (to_t(rng.standard_normal((n + 1, batch, 1))) for _ in range(2))
+        U = to_t(rng.uniform(size=(n, batch, 1)))   # interpolation weights
+        for i in range(n):
+            fake = G(Z[i]).detach()
+            loss = critic_loss(D(X[i]), D(fake))
+            if gp:
+                loss = loss + gp * gradient_penalty(D, X[i], fake, U[i])
+            opt_D.zero_grad()
+            loss.backward()
+            opt_D.step()
+        fake = G(Z[-1])
+        loss = (gen_loss(X[-1], fake) if critic_loss is None
+                else gen_loss(D(X[-1]), D(fake)))
+        opt_G.zero_grad()
+        loss.backward()
+        grads.append(G.theta.grad.item())
+        opt_G.step()
+        thetas.append(G.theta.item())
+    return np.array(thetas), np.array(grads), D
 
 mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
 A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7

@@ -89,6 +89,13 @@ GPU_ONLY_NOTEBOOKS = {
     # reads them as CPU, where they would train on the host (2026-11-20).
     "chapter_generative-adversarial-networks/convergence.ipynb",
     "chapter_generative-adversarial-networks/adversarial-losses.ipynb",
+    # 16.1, 16.2 and 16.3 train small GANs and critics whose JAX tabs name no
+    # device either; freshly generated (output-free) notebooks scanned as CPU
+    # and ran JAX on the host, which also changes the JAX numbers against the
+    # store's GPU runs (2026-11-20).
+    "chapter_generative-adversarial-networks/gan.ipynb",
+    "chapter_generative-adversarial-networks/objectives.ipynb",
+    "chapter_generative-adversarial-networks/relativistic.ipynb",
     # 19.1 trains SGNS and GloVe on the GPU (a CPU run draws other random
     # numbers, so the grid agreement line holds only on the GPU).
     "chapter_lm-encoders/word-embeddings.ipynb",

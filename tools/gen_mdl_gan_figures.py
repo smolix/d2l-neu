@@ -458,7 +458,7 @@ def fig_dcgan():
         ["BN, ReLU"] * 4 + ["tanh\nno BN"], [False] * 4 + [True])
 
     ax.text(x_left, yd + 1.2,
-            f"discriminator $D$: convolutions $4{{\\times}}4$, stride 2"
+            f"critic $D$: convolutions $4{{\\times}}4$, stride 2"
             f" (the last: no padding)    {d_params:,} parameters",
             ha="left", va="bottom", fontsize=13.5, color=GREEN)
     row(yd, [(64, 3, "image"), (32, n, ""), (16, 2 * n, ""), (8, 4 * n, ""),

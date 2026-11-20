@@ -377,7 +377,22 @@ for name, (critic_loss, gen_loss) in arms.items():
 
 Both arms fit, as predicted. The non-saturating runs end below a thousandth of a nat and cross 0.01 nats between steps 2,200 and 2,600, as the logistic loss of :numref:`sec_gan_objectives` did (about a thousandth of a nat, step 2,400), so pairing loses nothing in fit. The saturating generator, far from stalling, is the faster one here: every saturating run crosses 0.01 nats around step 1,800, before any non-saturating run, and ends a little higher, between one and two thousandths of a nat. Both differences are real in these runs and too small to matter. Near the data the saturating weight is not small, so nothing saturates.
 
-The case for the non-saturating form lies at the other extreme, a start far from the data. There a trained pairing critic ranks every generated sample below every real one, the rank weight is close to zero for all of them, and the saturating generator should stall as the classical one did in :numref:`subsec_gan_objectives_separated_start`, where it moved $\theta$ from 6 to about 5.76 in 1,500 steps while the non-saturating arm reached the data by step 390. Part (d) of Exercise :exref:`ex_relativistic-zero-sum-weights` runs that start with the pairing critic. On images the supports are typically disjoint or nearly so (:numref:`sec_basic_gan`), so this extreme is not exotic, and the chapter trains the non-saturating form throughout.
+The case for the non-saturating form lies at the other extreme, a start far from the data. There a trained pairing critic ranks every generated sample below every real one, the rank weight is close to zero for all of them, and the saturating generator should stall as the classical one did in :numref:`subsec_gan_objectives_separated_start`, where it moved $\theta$ from 6 to about 5.76 in 1,500 steps while the non-saturating arm reached the data by step 390. We run that start with the pairing critic: `d2l.train_shift` of :numref:`subsec_gan_objectives_separated_start`, with the critic and generator losses of the cell above, three runs per generator loss, printing that experiment's columns.
+
+```{.python .input #relativistic-pairing-on-the-separated-start}
+%%tab pytorch, jax
+steps = (0, 100, 300, 1000, 1500)
+print(f'{"":20s}|gradient|   theta at steps {steps}   first |theta| < 0.5')
+for name, (critic_loss, gen_loss) in arms.items():
+    for seed in range(3):
+        thetas, grads, _ = d2l.train_shift(critic_loss, gen_loss, seed)
+        hit = np.flatnonzero(np.abs(thetas) < 0.5)
+        print(f'{name:15s} {seed}   {np.median(np.abs(grads[:100])):8.3f}   '
+              + ''.join(f'{thetas[t]:7.2f}' for t in steps) + '   '
+              + (f'{hit[0]:5d}' if len(hit) else 'not reached'))
+```
+
+Part (d) of Exercise :exref:`ex_relativistic-zero-sum-weights` runs that start with the pairing critic. On images the supports are typically disjoint or nearly so (:numref:`sec_basic_gan`), so this extreme is not exotic, and the chapter trains the non-saturating form throughout.
 
 Neither the value of the game nor the weights, however, say whether gradient play between critic and generator reaches its equilibrium at all, and with pairing or without, it need not. :numref:`sec_gan_convergence` takes up that question.
 

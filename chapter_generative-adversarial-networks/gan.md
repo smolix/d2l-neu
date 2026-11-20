@@ -252,7 +252,7 @@ def update_G(Z, net_D, net_G, trainer_G):
     fake_Y = net_D(net_G(Z))
     loss_G = F.binary_cross_entropy_with_logits(
         fake_Y, torch.ones_like(fake_Y), reduction='sum')
-    loss_G.backward()
+    loss_G.backward()  # also fills net_D's .grad (update_D zeroes it)
     trainer_G.step()
     return loss_G
 ```
@@ -430,7 +430,7 @@ fig, axes = d2l.plt.subplots(1, 2, figsize=(9, 3.2))
 epochs = list(range(1, len(history) + 1))
 d2l.plot(epochs, [history[:, 0], history[:, 1], [2 * math.log(2)] * len(epochs),
                   [math.log(2)] * len(epochs)],
-         'epoch', 'per-sample loss',
+         'epoch', 'loss',
          legend=['critic', 'generator', '2 log 2', 'log 2'],
          fmts=('C0-', 'C1--', 'C0:', 'C1:'), axes=axes[0])
 d2l.plot([data[:100, 0], fake[:100, 0]], [data[:100, 1], fake[:100, 1]],
@@ -622,6 +622,16 @@ The weights predict the outcome. The critic will reject the distant samples at o
 
 ```{.python .input #gan-saturating-versus-non-saturating-training-1}
 %%tab pytorch
+def far_start():
+    """make_nets with the generator's offset moved by (-6, 6)."""
+    net_G, net_D = make_nets()
+    with torch.no_grad():
+        net_G[0].bias += torch.tensor([-6.0, 6.0])
+    return net_G, net_D
+
+mu_q, Sigma_q = generator_gaussian(far_start()[0])
+print(f'start of every run: KL(q || p) = '
+      f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.2f} nats')
 torch.manual_seed(3)
 Z_show = torch.randn(200, 2)  # one latent sample for every snapshot
 runs = {}  # name: (losses, snapshots) of the first run, for the plot
@@ -629,9 +639,7 @@ for name, step in [('non-saturating', update_G),
                    ('saturating', update_G_saturating)]:
     kls = []
     for seed in (1, 2, 3):  # both arms see the same minibatches and draws
-        net_G_ab, net_D_ab = make_nets()
-        with torch.no_grad():
-            net_G_ab[0].bias += torch.tensor([-6.0, 6.0])
+        net_G_ab, net_D_ab = far_start()
         snaps = {}  # epoch: generated samples
         hist = train_gan(net_D_ab, net_G_ab, data_iter, num_epochs=20,
                          latent_dim=2, lr_D=0.05, lr_G=0.01, step_G=step,
@@ -645,14 +653,22 @@ for name, step in [('non-saturating', update_G),
 
 ```{.python .input #gan-saturating-versus-non-saturating-training-1}
 %%tab jax
+def far_start():
+    """make_nets with the generator's offset moved by (-6, 6)."""
+    net_G, net_D = make_nets()
+    net_G.layers[0].bias[...] += jnp.array([-6.0, 6.0])
+    return net_G, net_D
+
+mu_q, Sigma_q = generator_gaussian(far_start()[0])
+print(f'start of every run: KL(q || p) = '
+      f'{kl_gaussians(mu_q, Sigma_q, mu_p, Sigma_p):.2f} nats')
 Z_show = jax.random.normal(jax.random.key(5), (200, 2))  # for every snapshot
 runs = {}  # name: (losses, snapshots) of the first run, for the plot
 for name, step in [('non-saturating', update_G),
                    ('saturating', update_G_saturating)]:
     kls = []
     for seed in (1, 2, 3):  # both arms see the same minibatches and draws
-        net_G_ab, net_D_ab = make_nets()
-        net_G_ab.layers[0].bias[...] += jnp.array([-6.0, 6.0])
+        net_G_ab, net_D_ab = far_start()
         data_iter_ab = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,
                                        key=jax.random.key(seed - 1))
         snaps = {}  # epoch: generated samples
@@ -780,11 +796,13 @@ Most samples are recognizable garments, tops and shoes among them, and a few are
 ```{.python .input #gan-garments-from-noise-4}
 %%tab pytorch, jax
 epochs = list(range(1, len(history_img) + 1))
-d2l.plot(epochs, [history_img[:, 0], history_img[:, 1],
-                  [2 * math.log(2)] * len(epochs), [math.log(2)] * len(epochs)],
-         'epoch', 'per-sample loss',
-         legend=['critic', 'generator', '2 log 2', 'log 2'],
-         fmts=('C0-', 'C1--', 'C0:', 'C1:'), figsize=(4.5, 3))
+fig, axes = d2l.plt.subplots(1, 2, figsize=(9, 3), sharex=True)
+for ax, loss, ref, name, ref_name, fmt in zip(
+        axes, history_img.T, (2 * math.log(2), math.log(2)),
+        ('critic', 'generator'), ('2 log 2', 'log 2'), ('C0-', 'C1--')):
+    d2l.plot(epochs, [loss, [ref] * len(epochs)], 'epoch', f'{name} loss',
+             legend=[name, ref_name], fmts=(fmt, 'k:'), axes=ax)
+fig.tight_layout()
 ```
 
 Within the first epoch the critic pulls ahead: its loss lies far below $2 \log 2$ and the generator's far above $\log 2$. Both then drift slowly back toward these values. After twenty epochs the critic's loss is about 1.05 against $2 \log 2 \approx 1.39$, and the generator's about 1.4 against $\log 2 \approx 0.69$ (its curve ends near the critic's reference line by coincidence). The critic still tells real garments from generated ones better than chance. What the losses cannot say is why. A critic ahead of the game may face a generator that is still wrong, or it may have learned, with about 530,000 parameters, the 60,000 training images it sees every epoch (Exercise :exref:`ex_gan-finite-sample-critic`). Nor can they say whether every kind of garment is drawn as often as in the data (Exercise :exref:`ex_gan-class-coverage`), or whether more epochs would bring both players to their equilibrium values. On the Gaussian we could look behind the losses. On images we cannot, and that is the usual situation for a GAN.

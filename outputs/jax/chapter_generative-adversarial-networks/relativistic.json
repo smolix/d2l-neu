@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:81d745bd0916da2de5b7995398d10efa742dd671233f6de8469b3228bc3638ff",
+    "d2l_lib_fingerprint": "sha256:7ee299c29014e8537b38d186fcaaf5348937d43732353267b1e0da4da8308492",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -78,12 +78,53 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "non-saturating  median JS 0.0008 0.0008 0.0006   first JS < 0.01  2200  2400  2200\n"
+          "text": "non-saturating  median JS 0.0010 0.0007 0.0009   first JS < 0.01  2200  2400  2200\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saturating      median JS 0.0015 0.0013 0.0011   first JS < 0.01  1800  1800  1800\n"
+          "text": "saturating      median JS 0.0017 0.0019 0.0014   first JS < 0.01  1800  1800  1800\n"
+        }
+      ]
+    },
+    "relativistic-pairing-on-the-separated-start": {
+      "code_fingerprint": "sha256:12c1bd2cdff2c5b523c2b11222e4261d3b12709dcb46287ac74aefbe28fdf7c6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                    |gradient|   theta at steps (0, 100, 300, 1000, 1500)   first |theta| < 0.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "non-saturating  0      3.164      6.00   2.43   0.58   0.02   0.00     325\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "non-saturating  1      3.077      6.00   2.24   0.54   0.02   0.00     315\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "non-saturating  2      3.006      6.00   2.56   0.59   0.02   0.00     331\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saturating      0      0.000      6.00   6.00   6.00   6.00   6.00   not reached\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saturating      1      0.000      6.00   6.00   6.00   6.00   5.99   not reached\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saturating      2      0.000      6.00   6.00   6.00   6.00   5.99   not reached\n"
         }
       ]
     }

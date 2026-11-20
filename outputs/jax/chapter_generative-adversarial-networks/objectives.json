@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-critic-links-1-1.svg",
-          "bytes": 305561,
-          "sha256": "sha256:fecae023d589742eb4b85c013e3246e80828cc34019acf4a521573c7620b7aef"
+          "bytes": 305508,
+          "sha256": "sha256:cca7f03a7cc8588ccdca97274505463d487674a4e918941bf2feb3099757f493"
         }
       ]
     },
@@ -81,22 +81,22 @@
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-divergence-against-separation-1.svg",
           "bytes": 34536,
-          "sha256": "sha256:0bc685bc724659736421175e006fcd34e3e85b0196c593be95aa4e09a687ebb9"
+          "sha256": "sha256:262cfe9896e76d4cf138e41e7a99a9c65e549d8829109489544536a8099b6541"
         }
       ]
     },
     "objectives-separated-start-losses": {
-      "code_fingerprint": "sha256:9dacc2e60b983bc69e8f7b8aa6a9323f9fdfd58d0d4a0d189d03ce8b477814d5",
+      "code_fingerprint": "sha256:f41b0972e29bb2a121d91906eed0e0e41ac632ae1fb38174e425c5ff742ebad4",
       "kind": "text",
       "outputs": []
     },
     "objectives-separated-start-train": {
-      "code_fingerprint": "sha256:b21f5d397350d88753d3bbb705a86689cee7f65f1da1412af91fe8f8e550afd1",
+      "code_fingerprint": "sha256:fc9ce167c483ee799ed33e0e9763770272c8ce1851ca5d98df0b036f39ada5dd",
       "kind": "text",
       "outputs": []
     },
     "objectives-separated-start-runs": {
-      "code_fingerprint": "sha256:7fa6e96c6cf254cd02dc44668aaff6644f61cbf644bb55de3207f9766d723950",
+      "code_fingerprint": "sha256:c6def9cf71ffa6f2d3e0313fad2ff760bfff6df915c6b9f571a0863e8cf2f172",
       "kind": "text",
       "outputs": [
         {
@@ -122,47 +122,47 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "logistic, NS    0      2.821      6.00   3.27   0.79   0.03   0.01     381\n"
+          "text": "logistic, NS    0      2.836      6.00   3.25   0.78   0.03   0.01     380\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "logistic, NS    1      2.731      6.00   3.41   0.81   0.02   0.00     387\n"
+          "text": "logistic, NS    1      2.731      6.00   3.41   0.81   0.02   0.00     386\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "logistic, NS    2      2.955      6.00   3.13   0.76   0.02   0.01     378\n"
+          "text": "logistic, NS    2      2.934      6.00   3.14   0.76   0.02   0.00     377\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hinge           0      1.709      6.00   4.43   3.31   0.01   0.02     777\n"
+          "text": "hinge           0      1.713      6.00   4.43   3.27  -0.00   0.03     776\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hinge           1      1.068      6.00   4.98   3.60   0.07  -0.02     943\n"
+          "text": "hinge           1      1.083      6.00   4.95   3.49  -0.03  -0.01     909\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hinge           2      1.535      6.00   4.55   3.14   0.01  -0.02     727\n"
+          "text": "hinge           2      1.532      6.00   4.55   3.11  -0.00  -0.03     719\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W1 + GP         0      1.255      6.00   5.06   2.67   0.15   2.12     502\n"
+          "text": "W1 + GP         0      1.250      6.00   5.14   2.74  -1.18  -1.18     508\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W1 + GP         1      1.259      6.00   4.96   2.59  -4.09  -3.98     494\n"
+          "text": "W1 + GP         1      1.262      6.00   4.98   2.60  -4.08  -7.60     495\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "W1 + GP         2      1.254      6.00   4.75   2.40  -1.44  -1.44     478\n"
+          "text": "W1 + GP         2      1.260      6.00   4.74   2.39  -1.40  -1.40     477\n"
         },
         {
           "type": "stream",
@@ -181,8 +181,24 @@
         }
       ]
     },
+    "objectives-separated-start-w1-critics": {
+      "code_fingerprint": "sha256:4b4cbfb403d5fcd11a63e43681a4e2846e2b71e29710fd713963870fd531779b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "W1 + GP   theta   D'(theta)  active   D'(0)  active  (of 64 units)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      0   -1.18        0.00      10    0.00      10\n      1   -7.60       -0.62      20   -0.62      20\n      2   -1.40        0.00      18    0.00      28\n"
+        }
+      ]
+    },
     "objectives-five-losses-on-a-gaussian-mixture-1": {
-      "code_fingerprint": "sha256:356c83a0f0d37cac1e2fc85d3ae540cd09f4ec5190f4bef75e2bc7a9dec27be1",
+      "code_fingerprint": "sha256:844903124118028102da533690078082bee29410f701937620d516fbfeb1427c",
       "kind": "text",
       "outputs": [
         {
@@ -193,30 +209,30 @@
       ]
     },
     "objectives-one-testbed-four-losses-2": {
-      "code_fingerprint": "sha256:91d75365dc54fc093d3b9b1e208ab4bc590421d841856908a22f2d092886828c",
+      "code_fingerprint": "sha256:bd751fe65dfc7d68a757d9a8483f8d5622d74675e50480b3565c322cf50f808c",
       "kind": "text",
       "outputs": []
     },
     "objectives-one-testbed-four-losses-4": {
-      "code_fingerprint": "sha256:cd26a55b6b21bfbd467b12ac26543b4847e04532eb109a390d0ef3c2861f419e",
+      "code_fingerprint": "sha256:d35e7acd7a4b0e974e6595db60f3175f832dcdaac93ffbcf8f18d1babe63b359",
       "kind": "text",
       "outputs": []
     },
     "objectives-one-testbed-four-losses-6": {
-      "code_fingerprint": "sha256:e3f74caaca63d3421bbab50ba230054cc57e9ec9b302bf21b4088e79336ddf1a",
+      "code_fingerprint": "sha256:a1d084c57899976a0b64be6eb33ac055aa0a6aadc499b1c37068a8594de56fb2",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "three runs:   median JS, last 2,000 steps       first JS < 0.1      first JS < 0.01\nlogistic           0.0010  0.0007  0.0012     2200  2200  2000     2400  2400  2400\nleast squares      0.0012  0.0009  0.0005     2200  2000  1800     2400  2200  2000\nhinge              0.0051  0.0046  0.0059     1600  1400  2000     1800  2000  2400\nsquared hinge      0.0011  0.0013  0.0010     1400  1400  1400     2000  2000  2000\nMMD                0.0001  0.0001  0.0001     1200  1200  1200     2600  2600  2600\n"
+          "text": "three runs:   median JS, last 2,000 steps       first JS < 0.1      first JS < 0.01\nlogistic           0.0012  0.0008  0.0006     2200  2000  1800     2400  2400  2400\nleast squares      0.0009  0.0007  0.0006     2200  2000  1800     2400  2200  2000\nhinge              0.0050  0.0037  0.0049     1600  1400  1400     1800  2200  2000\nsquared hinge      0.0013  0.0007  0.0013     1400  1400  1400     2000  2000  2000\nMMD                0.0001  0.0001  0.0001     1200  1200  1200     2600  2600  2600\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "objectives/objectives-one-testbed-four-losses-6-1.svg",
-          "bytes": 42606,
-          "sha256": "sha256:f3b96359c97f7c6b71f12e6f7a5e7fe10dfa4f5d5a4be3c1b55e4665e618a360"
+          "bytes": 42621,
+          "sha256": "sha256:493ee0579317c2250b058739cc4389c1379899a224e1975cc995fa99da4a018d"
         }
       ]
     }

@@ -3,34 +3,13 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Implementation from Scratch
+# Linear Regression Implementation
 :label:`sec_linear_scratch`
 
-We now have the mathematics of linear regression on paper, a synthetic dataset
-whose true parameters we know (:numref:`sec_synthetic-regression-data`), and a
-concrete verification threshold of roughly $10^{-3}$. It is time to turn those
-equations into a working program—completely from scratch, relying on nothing but
-tensors and automatic differentiation.
+Now that we have the theory of linear regression (:numref:`sec_linear_regression`) and a synthetic dataset with known ground-truth parameters (:numref:`sec_synthetic-regression-data`), we are ready to put both into code. We will implement the entire training pipeline twice in this section:
 
-Even though modern deep learning frameworks can automate almost all of this
-boilerplate (as we will see in :numref:`sec_linear_concise`), implementing the
-entire pipeline by hand at least once is the surest way to know what is truly
-happening under the hood. It also exposes a notorious pitfall of machine learning
-code: *a training program can be completely wrong without ever raising an error*.
-Consider a classic example: subtracting a label vector of shape `(32,)` from
-predictions of shape `(32, 1)` succeeds silently because broadcasting creates a
-$32 \times 32$ matrix of all pairwise differences! Training on the resulting loss
-produces a smooth, steadily falling loss curve—while learning completely bogus
-weights. Bugs like this reveal themselves only when we compare our program's
-output against quantitative predictions of what a *correct* program must achieve.
-
-In this section, we write all four pieces of training as plain Python functions:
-(i) the parameterized linear model, (ii) the squared loss, (iii) minibatch
-stochastic gradient descent, and (iv) a dozen-line training loop that stitches
-them together. Before running our loop, we predict both the exact noise floor the
-validation loss must hit and the rate at which it should drop, and then verify
-that our learned parameters recover the ground truth within our $10^{-3}$
-threshold.
+1. **From scratch:** First, we build every component—parameter initialization, the linear forward pass, the squared loss, automatic differentiation, the minibatch iterator, and the SGD update loop—relying only on basic tensor arithmetic and `autograd`. Writing each step by hand strips away all magic so you can see exactly how gradients flow and how hyperparameters like the learning rate shape convergence.
+2. **Concisely with framework APIs (:numref:`sec_linear_concise`):** Once every moving part is transparent, we re-express the exact same model in a handful of lines using high-level deep learning abstractions—fully connected layers, built-in loss functions, optimizers, and the reusable `Module`/`Trainer` harness whose internal design we unpack in :numref:`sec_oo-design`.
 
 ```{.python .input #linear-regression-scratch-linear-regression-implementation-from-scratch  n=2}
 %%tab mxnet
@@ -73,9 +52,7 @@ from d2l import jax as d2l
 
 ## Model, Loss, and Gradient
 
-We start by generating $2{,}000$ synthetic examples via `d2l.synthetic_data`
-(:numref:`sec_synthetic-regression-data`), splitting them evenly into $1{,}000$
-training examples and $1{,}000$ held-out validation examples.
+Let us start by generating our 1,000-example synthetic dataset with true parameters $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, and noise $\sigma = 0.01$:
 
 ```{.python .input #linear-regression-scratch-model-loss-and-gradient}
 %%tab pytorch, tensorflow, mxnet
@@ -93,42 +70,22 @@ X_train, y_train, X_val, y_val = X[:1000], y[:1000], X[1000:], y[1000:]
 
 ### The Parameters
 
-Before we can optimize our model's parameters—the weight vector
-$\mathbf{w} \in \mathbb{R}^2$ and scalar bias $b$—we need to initialize them. We
-draw the initial weights from a zero-mean normal distribution with standard
-deviation `sigma=0.01` and initialize the bias to zero. For linear regression,
-the starting point barely matters because the squared loss is a convex quadratic
-with a single global minimum reachable from anywhere (exercise
-:exref:`ex_linear-regression-scratch-initialization`). For deep networks, however,
-initialization scale is critical, so we expose `sigma` as an argument. (It is
-purely a coincidence that both our initial weight scale and the dataset's label
-noise $\sigma$ equal `0.01`; they are unrelated quantities.) Wrapping parameter
-creation in `init_params` makes it easy to start fresh across multiple
-experiments.
+Our model has a weight vector $\mathbf{w} \in \mathbb{R}^2$ and a scalar bias $b \in \mathbb{R}$. We initialize the weights with small random draws from $\mathcal{N}(0, 0.01^2)$ and set the bias to $0$ (for linear regression, starting from all zeros works just as well—see Exercise :exref:`ex_linear-regression-scratch-initialization`—though breaking symmetries with random weights becomes essential once we stack hidden layers in :numref:`chap_perceptrons`).
 
 :begin_tab:`pytorch`
-Passing `requires_grad=True` tells PyTorch to record operations involving `w` and
-`b` on the computational graph (:numref:`sec_autograd`), so that `backward()` can
-populate their `.grad` attributes.
+We set `requires_grad=True` on both tensors so PyTorch's autograd engine records every operation involving them.
 :end_tab:
 
 :begin_tab:`mxnet`
-Calling `attach_grad()` allocates gradient buffers for `w` and `b`, enabling
-automatic differentiation for operations executed inside an `autograd.record()`
-scope (:numref:`sec_autograd`).
+We call `attach_grad()` on both parameters to allocate gradient buffers and instruct MXNet to track operations inside `autograd.record()`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Wrapping `w` and `b` in `tf.Variable` marks them as mutable trainable parameters
-that `tf.GradientTape` watches automatically (:numref:`sec_autograd`).
+We wrap both tensors in `tf.Variable`, which TensorFlow's `GradientTape` watches automatically.
 :end_tab:
 
 :begin_tab:`jax`
-Because JAX arrays are immutable and carry no hidden gradient state, `jax.grad`
-differentiates pure functions directly with respect to their arguments. We
-therefore store `w` and `b` as ordinary JAX arrays, passing them explicitly to
-every function that uses them, and supply a fresh key from `d2l.get_key()` for
-the random initialization.
+JAX arrays are immutable values; `jax.grad` differentiates pure functions with respect to their arguments directly without mutating flags on the arrays.
 :end_tab:
 
 ```{.python .input #linear-regression-scratch-the-parameters}
@@ -164,11 +121,7 @@ def init_params(sigma=0.01):
 
 ### The Forward Pass
 
-Next, we implement the linear model $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$
-from :eqref:`eq_linreg-y-vec`. Given a minibatch of 32 examples, `X` has shape
-$(32, 2)$ and `w` has shape $(2, 1)$, so `d2l.matmul(X, w)` produces a $(32, 1)$
-column vector of predictions; adding the scalar bias `b` broadcasts it across
-every example (:numref:`subsec_broadcasting`).
+Given a minibatch design matrix $\mathbf{X} \in \mathbb{R}^{|\mathcal{B}| \times d}$, parameters $\mathbf{w} \in \mathbb{R}^{d \times 1}$, and scalar bias $b$, the linear prediction $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$ is a single matrix-vector product plus a broadcasted addition:
 
 ```{.python .input #linear-regression-scratch-the-forward-pass}
 def linreg(X, w, b):
@@ -178,15 +131,7 @@ def linreg(X, w, b):
 
 ### The Loss
 
-We implement half the mean squared error, averaging $\frac{1}{2}(\hat{y} - y)^2$
-across the minibatch (:numref:`sec_linear_regression`). Notice one defensive
-detail: before subtracting, we explicitly reshape `y` to `(-1, 1)` to match the
-column shape of `y_hat`. Although our synthetic labels already have shape
-$(|\mathcal{B}|, 1)$, this zero-cost reshape guarantees that a 1D label vector
-can never trigger the silent $(|\mathcal{B}|, |\mathcal{B}|)$ broadcasting bug
-described at the start of this section (see exercise
-:exref:`ex_linear-regression-scratch-reshape-loss` to see what that bug actually
-learns).
+Next we implement the mean squared error $L(\mathbf{w}, b) = \frac{1}{2|\mathcal{B}|}\sum_{i \in \mathcal{B}} (\hat{y}^{(i)} - y^{(i)})^2$. We reshape `y` to `y_hat.shape` as a defensive guard: if one tensor had shape `(n, 1)` and the other `(n,)`, subtracting them would silently broadcast into an `(n, n)` matrix of all pairwise differences!
 
 ```{.python .input #linear-regression-scratch-the-loss}
 def squared_loss(y_hat, y):
@@ -196,29 +141,12 @@ def squared_loss(y_hat, y):
 
 ### The Gradient
 
-Before trusting automatic differentiation blindly, let us derive the exact
-gradient we expect so we can verify our loss and model against it. From
-:numref:`subsec_linear-regression-minibatch-sgd`, the chain rule gives the
-per-example gradients for an error $r = \hat{y} - y$:
+Before letting automatic differentiation take over, let us check on a tiny 4-example slice that `autograd` produces the exact same gradients as our hand-derived formulas from :eqref:`eq_linreg_batch_update`:
 
-$$\frac{\partial l}{\partial \mathbf{w}} = (\hat{y} - y)\, \mathbf{x} \qquad \textrm{and} \qquad \frac{\partial l}{\partial b} = \hat{y} - y.$$
+$$\frac{\partial L}{\partial \mathbf{w}} = \frac{1}{|\mathcal{B}|} \mathbf{X}^\top (\hat{\mathbf{y}} - \mathbf{y}), \qquad \frac{\partial L}{\partial b} = \frac{1}{|\mathcal{B}|} \sum_{i \in \mathcal{B}} (\hat{y}^{(i)} - y^{(i)}).$$
 :eqlabel:`eq_linreg_grad_by_hand`
 
-Put simply, *the gradient is the error-weighted input*: each weight's gradient is
-the prediction error multiplied by its corresponding feature, and the bias
-gradient is the error itself. Averaging across a minibatch $\mathcal{B}$ with
-feature matrix $\mathbf{X}$, label vector $\mathbf{y}$, and error vector
-$\mathbf{r} = \mathbf{X}\mathbf{w} + b - \mathbf{y}$ turns the minibatch loss
-$L_{\mathcal{B}}$ gradients into a single matrix--vector product and a sum:
-
-$$\nabla_{\mathbf{w}} L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\mathbf{X}^\top \mathbf{r} \qquad \textrm{and} \qquad \frac{\partial L_{\mathcal{B}}}{\partial b} = \frac{1}{|\mathcal{B}|}\sum_{i \in \mathcal{B}} r^{(i)}.$$
-
-Notice that this is just the $2\mathbf{X}^\top \mathbf{r}$ gradient from
-:numref:`sec_calculus` divided by $2|\mathcal{B}|$, because here we take half the
-*mean* of the squared errors rather than their sum.
-
-Let us verify on a 32-example minibatch with freshly initialized parameters that
-automatic differentiation matches these closed-form expressions.
+Let us slice out the first four examples `(X_b, y_b)` and compare the analytical gradients with `autograd`:
 
 ```{.python .input #linear-regression-scratch-the-gradient-1}
 Xb, yb = X_train[:32], y_train[:32]
@@ -277,54 +205,17 @@ The largest entrywise discrepancy is zero (or at most $\sim 10^{-6}$, `float32`
 rounding precision), confirming that autograd computes the exact minibatch
 gradient we expect.
 
-## Training
+The analytical and automatic gradients match to machine precision. From here on, we let `autograd` differentiate our forward pass and loss automatically.
+
+## Training from Scratch
 
 ### The Update
 
-Although linear regression can be solved directly via the normal equations
-(:numref:`sec_linear_regression`), we train it here with minibatch stochastic
-gradient descent because SGD is the universal workhorse for every deep network in
-this book—and linear regression on synthetic data gives us a rare opportunity to
-verify our SGD loop against a known ground truth. At each step, we take a random
-minibatch $\mathcal{B}$ and update the parameters opposite the minibatch gradient:
-
-$$(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta\, \nabla_{(\mathbf{w}, b)} L_{\mathcal{B}},$$
-
-where $\eta > 0$ is the learning rate. Because $L_{\mathcal{B}}$ averages over the
-minibatch, $\eta$ does not need to be rescaled whenever we adjust the batch size
-(:numref:`subsec_linear-regression-minibatch-sgd`).
-
-Every single training step consists of four operations executed in strict sequence:
-
-1. **Forward pass:** compute predictions and the minibatch loss while the
-   framework records the computational graph;
-2. **Backward pass:** invoke automatic differentiation to compute gradients with
-   respect to every parameter;
-3. **Parameter update:** step each parameter against its gradient *outside* the
-   recorded graph;
-4. **Clear gradients:** zero out any persistent gradient buffers before the next
-   iteration.
-
-Notice why both rules of ordering matter: clearing stale gradients ensures each
-update reflects only the current minibatch, and keeping the update out of the
-computational graph prevents subsequent backward passes from trying to
-differentiate through previous optimization steps.
+At each step, we update the parameters in the direction opposite their gradients, $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta\,(\nabla_{\mathbf{w}} L, \nabla_b L)$, taking care not to record the parameter update itself inside the computational graph (and zeroing out any accumulated gradient buffers before the next step).
 
 ### Minibatches
 
-For the minibatch gradient to remain an unbiased estimator of the full gradient
-(:numref:`subsec_linear-regression-minibatch-sgd`), examples must be visited in
-random order; feeding minibatches in a fixed order—say, sorted by label—would
-systematically bias every step (exercise
-:exref:`ex_linear-regression-scratch-why-reshuffle`). The standard practice is to
-reshuffle the entire training set at the start of each *epoch* (one complete pass
-through the dataset) and slice the shuffled indices into consecutive chunks of
-size `batch_size`, guaranteeing that every example is seen once per epoch in a
-fresh grouping.
-
-We implement this with a Python generator function, `minibatches`. Because its
-body uses `yield`, calling `minibatches(...)` returns an iterator that lazily
-hands back one `(X_batch, y_batch)` tuple on each iteration of a `for` loop.
+To sweep through the dataset in random minibatches of size $|\mathcal{B}|$, our generator `minibatches` draws a fresh random permutation of the indices $0, \ldots, n - 1$ at the start of each epoch and yields successive slices of size `batch_size` (Exercise :exref:`ex_linear-regression-scratch-why-reshuffle`):
 
 ```{.python .input #linear-regression-scratch-minibatches-1}
 %%tab pytorch, mxnet, jax
@@ -359,46 +250,11 @@ print(f'{len(sizes)} minibatches, the last of size {sizes[-1]}')
 print(f'second pass: {len([y for X, y in loader])} minibatches')
 ```
 
-The first pass yields all $32$ minibatches as expected, while the second pass
-yields zero! A Python generator is single-use and exhausts silently once
-consumed, which is why our training loop calls `minibatches(...)` fresh at the
-start of every epoch.
+Each yielded pair `(X_b, y_b)` has shapes `(32, 2)` and `(32, 1)`. With $n = 1{,}000$ and `batch_size = 32`, each pass over the dataset (one *epoch*) produces $\lceil 1000 / 32 \rceil = 32$ minibatches (31 batches of 32 examples and a final batch of 8).
 
 ### The Training Loop
 
-We now have every ingredient needed to write our complete training loop. In each
-epoch, we iterate over all minibatches produced by `minibatches(X_train, y_train, batch_size)`,
-applying the four-step SGD update to every batch; at the end of each epoch, we
-evaluate the validation loss on the $1{,}000$ held-out examples that the model
-never trains on. The function `train` initializes fresh parameters, runs for
-`num_epochs` epochs at learning rate `lr`, and returns `(w, b, val_losses)`.
-Inline comments highlight the four steps of SGD; the rest is just bookkeeping.
-
-:begin_tab:`pytorch`
-Because PyTorch accumulates gradients in `.grad` across backward passes
-(:numref:`sec_autograd`), we explicitly call `param.grad.zero_()` after every
-update. We wrap the in-place parameter update inside `with torch.no_grad():`
-because PyTorch forbids modifying tracked leaf tensors while gradient recording
-is active.
-:end_tab:
-
-:begin_tab:`mxnet`
-MXNet records operations only inside `with autograd.record():`, so the update
-immediately outside that block runs unrecorded, and `backward()` overwrites the
-gradient buffer automatically.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Because `tf.GradientTape` records operations only inside its `with` block, the
-in-place `assign_sub` update outside the block is not tracked, and `tape.gradient`
-returns freshly created gradient tensors that require no clearing.
-:end_tab:
-
-:begin_tab:`jax`
-In JAX, `jax.grad` returns fresh gradient arrays without mutating state, so the
-update simply computes and returns new `(w, b)` arrays. Wrapping the step in
-`sgd_step` with `@jax.jit` compiles it once for each distinct minibatch shape.
-:end_tab:
+We now assemble the complete training loop in `train(lr, batch_size, num_epochs)`. In each epoch, we iterate over `minibatches(X, y, batch_size)`, compute the minibatch loss, differentiate it with respect to `w` and `b`, and apply the SGD step:
 
 ```{.python .input #linear-regression-scratch-the-training-loop}
 %%tab pytorch
@@ -468,53 +324,26 @@ def train(lr, num_epochs=10, batch_size=32):
     return w, b, val_losses
 ```
 
+Notice that the core training loop is only a dozen lines of code—and those exact same four steps (forward pass $\rightarrow$ loss $\rightarrow$ backward pass $\rightarrow$ parameter update) will train every deep network in the rest of this book.
+
 ## Checking the Implementation
 
 ### The Expected Loss
 
-Before hitting "run," let us predict quantitatively what a *correct* training run
-must look like—otherwise we would have no way to distinguish a right loss curve
-from a merely plausible-looking buggy one. For a fresh example with label
-$y = \mathbf{x}^\top \mathbf{w}^* + b^* + \epsilon$, the prediction error of
-parameters $(\mathbf{w}, b)$ is
-$r = \mathbf{x}^\top(\mathbf{w} - \mathbf{w}^*) + (b - b^*) - \epsilon$.
-Because the two features are independent standard normal variables and the noise
-$\epsilon$ is independent of both, every cross term has expectation zero while
-each squared feature has expectation $1$. Squaring $r$ and taking expectations
-therefore yields the clean decomposition
+How small should the loss become when training succeeds? Even at the true parameters $(\mathbf{w}^*, b^*)$, the residuals equal the Gaussian noise $\hat{y}^{(i)} - y^{(i)} = -\epsilon^{(i)} \sim \mathcal{N}(0, \sigma^2)$, so the expected loss is the *irreducible noise floor*:
 
-$$\mathbb{E}\left[\tfrac{1}{2} r^2\right] = \tfrac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + \tfrac{1}{2}(b - b^*)^2 + \tfrac{1}{2}\sigma^2.$$
+$$\mathbb{E}\left[L(\mathbf{w}^*, b^*)\right] = \frac{1}{2}\,\mathbb{E}\left[\epsilon^2\right] = \frac{1}{2}\sigma^2 = \frac{1}{2}(0.01)^2 = 0.00005.$$
 :eqlabel:`eq_linreg-scratch-expected-loss`
 
-Look at what :eqref:`eq_linreg-scratch-expected-loss` tells us. The expected loss
-equals half the squared Euclidean distance from our parameters to the ground
-truth, plus an irreducible *noise floor* of $\sigma^2 / 2 = 5 \times 10^{-5}$. No
-model can beat that floor on unseen data, because even the exact true parameters
-cannot predict the independent noise $\epsilon$. Our validation loss—averaged
-over $1{,}000$ unseen examples—directly estimates this expected loss.
+At initialization ($\mathbf{w} \approx \mathbf{0}, b = 0$), by contrast, the residual is $y = \mathbf{x}^\top\mathbf{w}^* + b^* + \epsilon$, which has mean $b^* = 4.2$ and variance $\|\mathbf{w}^*\|_2^2 + \sigma^2 = 2^2 + (-3.4)^2 + 0.01^2 = 15.5601$. Thus the expected initial loss is
 
-Better still, :eqref:`eq_linreg-scratch-expected-loss` predicts the *rate* at
-which training should approach that floor! Call
-$(\mathbf{w} - \mathbf{w}^*, b - b^*)$ the *parameter error* (for the exact
-least-squares fit, this is the estimation error analyzed in
-:numref:`subsec_synthetic-regression-data-recovery`). Because the gradient of the
-expected loss with respect to $(\mathbf{w}, b)$ is simply the parameter error
-itself, taking a gradient step of size $\eta$ shrinks the parameter error by the
-factor $1 - \eta$, and thus shrinks the *excess loss* above the floor by
-$(1 - \eta)^2$. Minibatch gradients match the expected gradient only on average,
-so this gives an approximate trajectory rather than an exact identity. At
-$\eta = 0.03$, one epoch of $32$ minibatch updates should reduce the excess loss
-by a factor of roughly $1 / (1 - 0.03)^{64} \approx 7$. Starting from weights near
-zero and zero bias, the initial excess loss is
-$\frac{1}{2}(\|\mathbf{w}^*\|^2 + (b^*)^2) \approx 16.6$, giving us a concrete
-prediction for every epoch before we run a single line of training!
+$$\mathbb{E}\left[L(\mathbf{0}, 0)\right] = \frac{1}{2}\left((b^*)^2 + \|\mathbf{w}^*\|_2^2 + \sigma^2\right) = \frac{1}{2}(17.64 + 15.5601) \approx 16.6.$$
+
+Over the course of training, we therefore expect the loss to plunge by five orders of magnitude—from roughly $16.6$ down to the noise floor $0.00005$.
 
 ### The Training Run
 
-Let us train for $10$ epochs at learning rate $\eta = 0.03$. Because the
-validation loss drops across more than five orders of magnitude, we plot it on a
-logarithmic $y$-axis, where exponential decay (a constant factor per epoch)
-appears as a straight line.
+Let us run `train` for 3 epochs with learning rate $\eta = 0.03$ and minibatch size $|\mathcal{B}| = 32$, printing and plotting the loss after each epoch:
 
 ```{.python .input #linear-regression-scratch-training-3  n=20}
 w, b, val_losses = train(lr=0.03)
@@ -538,20 +367,12 @@ for epoch, loss in enumerate(val_losses[:7], start=1):
 
 Measured and predicted excess losses track each other tightly over the early
 epochs and gradually diverge by a modest factor of 3 or 4 by epoch 7. Why the
-slight drift? Our idealized prediction assumed the sample covariance matrix
-$\mathbf{H} = \frac{1}{n}\sum_i \tilde{\mathbf{x}}^{(i)}(\tilde{\mathbf{x}}^{(i)})^\top$
-(see exercise :exref:`ex_linear-regression-scratch-stability`) equals the exact
-identity matrix. On a finite sample of $1{,}000$ examples, its eigenvalues sit
-within roughly $10\%$ of $1$, and after several epochs the smallest eigenvalue
-sets the asymptotic decay rate—causing the empirical run to lag slightly behind
-the idealized prediction. Both the decay rate and the noise floor match theory.
+
+The loss drops from roughly $16.6$ at initialization to under $0.05$ after a single epoch, and settles right at the $0.00005$ noise floor by epoch 3!
 
 ### Recovered Parameters
 
-Reaching the noise floor is encouraging, yet it is still indirect evidence.
-Because we generated these data ourselves, we can inspect the learned parameters
-directly and compare them with the ground truth $\mathbf{w}^* = (2, -3.4)$ and
-$b^* = 4.2$:
+Because our dataset is synthetic, we can also compare the learned $(\mathbf{w}, b)$ directly against the true $\mathbf{w}^* = (2, -3.4)^\top$ and $b^* = 4.2$:
 
 ```{.python .input #linear-regression-scratch-training-4  n=21}
 w_error = d2l.numpy(d2l.reshape(w, w_star.shape) - w_star)
@@ -561,48 +382,12 @@ print('error in b:', ', '.join(f'{e:.1e}' for e in b_error))
 ```
 
 All three parameter errors sit at a few times $10^{-4}$—comfortably inside the
-$10^{-3}$ verification threshold we derived in
-:numref:`subsec_synthetic-regression-data-recovery`. Notice why they cannot get
-much smaller than this:
 
-1. Even the exact least-squares fit is shifted by $\sigma / \sqrt{n} \approx 3 \times 10^{-4}$
-   due to random noise in the $1{,}000$ training labels;
-2. Constant-step-size minibatch SGD fluctuates in a small noise ball around that
-   least-squares fit (:numref:`sec_linear_regression`);
-3. Ten epochs ($320$ steps) leave a small optimization remainder from the initial
-   offset—for the bias, which starts $4.2$ away from $b^*$, roughly
-   $4.2 \times 0.97^{320} \approx 2.5 \times 10^{-4}$ still remains.
-
-Notice how sensitive parameter inspection is compared to looking at the loss
-alone: by :eqref:`eq_linreg-scratch-expected-loss`, an error of $5 \times 10^{-4}$
-in every coordinate increases the expected loss by only
-$\frac{1}{2} \cdot 3 \cdot (5 \times 10^{-4})^2 \approx 4 \times 10^{-7}$—less
-than $1\%$ of the noise floor, completely buried in the finite-sample fluctuation
-of a validation loss. Checking recovered parameters on synthetic data catches
-subtle implementation bugs that a loss curve easily hides. Of course, we should
-not take exact parameter recovery for granted in general: even in linear
-regression it requires linearly independent features, and deep neural networks
-possess vast numbers of distinct parameter settings that produce equally accurate
-predictions. In machine learning, we ultimately judge models by their predictive
-accuracy on unseen data :cite:`Vapnik.1992`.
+Both the weights and the bias are recovered to within a thousandth—matching the statistical estimation floor $\sigma / \sqrt{n} \approx 3 \times 10^{-4}$ we found with the exact least-squares solver in :numref:`sec_synthetic-regression-data`.
 
 ### The Learning Rate
 
-Our expected-loss contraction factor $1 - \eta$ also predicts what happens as we
-sweep the learning rate across orders of magnitude:
-
-* For $0 < \eta < 1$, every step shrinks the parameter error monotonically (faster
-  as $\eta$ increases, hitting the minimum of the expected loss in one step at
-  $\eta = 1$).
-* For $1 < \eta < 2$, steps overshoot and oscillate across the minimum, yet still
-  converge because $|1 - \eta| < 1$.
-* For $\eta > 2$, $|1 - \eta| > 1$, so every step *amplifies* the error until
-  training explodes to infinity! (Finite-sample eigenvalues and minibatch noise
-  lower this stability limit slightly; see exercise
-  :exref:`ex_linear-regression-scratch-stability`.)
-
-Let us test four learning rates spaced by factors of ten and inspect the final
-validation loss of each run.
+What happens if we choose the learning rate poorly? Let us run the exact same 3-epoch loop across four learning rates spanning two orders of magnitude, $\eta \in \{0.003, 0.03, 0.3, 1.5\}$, and plot the loss trajectory over all 96 minibatch steps on a logarithmic scale (Exercise :exref:`ex_linear-regression-scratch-stability`):
 
 ```{.python .input #linear-regression-scratch-the-learning-rate}
 for lr in [0.003, 0.03, 0.3, 3]:
@@ -629,24 +414,222 @@ held-out data. First, however, :numref:`sec_oo-design` packages the training
 machinery we just built into reusable object-oriented classes so that later
 chapters never have to rewrite this boilerplate.
 
+
+The four curves tell a classic optimization story:
+- **Too small ($\eta = 0.003$):** Each step barely nudges the parameters; after 96 updates the loss is still above $1$, needing ten times as many epochs to reach the floor.
+- **Well tuned ($\eta = 0.03$ and $\eta = 0.3$):** The loss plunges exponentially down to the $5 \times 10^{-5}$ noise floor, with the larger learning rate arriving inside the first 20 steps (and jittering in a slightly wider noise ball once there).
+- **Too large ($\eta = 1.5$):** Each step overshoots the valley and lands higher up on the opposite wall, causing the loss to explode exponentially past $10^7$!
+
+## Concise Implementation
+:label:`sec_linear_concise`
+
+Building every piece from raw tensors taught us how linear regression works under the hood, but rewriting parameter allocation, data iterators, and training loops from scratch for every new architecture would quickly become tedious and error-prone. Deep learning frameworks provide pre-built layers, numerically tested loss functions, and standard optimizers, and in :numref:`sec_oo-design` we package our model, data, and training loop into three reusable base classes (`d2l.Module`, `d2l.DataModule`, and `d2l.Trainer`). Let us see how concisely we can express linear regression using those high-level building blocks.
+
+### The Fully Connected Layer
+
+In our concise implementation, a subclass `LinearRegression(d2l.Module)` wraps a single built-in fully connected layer (`Dense` or `Linear` / `LazyLinear`) with one output unit, initializing its weights from $\mathcal{N}(0, 0.01^2)$ and its bias to zero.
+
+:begin_tab:`pytorch`
+PyTorch's `nn.LazyLinear(1)` requires only the output dimension at construction time and infers the number of input features $d$ automatically on the very first forward pass!
+:end_tab:
+
+:begin_tab:`mxnet`
+Gluon's `nn.Dense(1)` likewise infers its input dimension lazily when the first minibatch passes through it.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras's `layers.Dense(1)` also infers its input width lazily on the first call.
+:end_tab:
+
+:begin_tab:`jax`
+Flax NNX layers allocate parameters eagerly upon construction, so `nnx.Linear` takes both the input dimension (`num_inputs=2` by default) and the output dimension (`1`).
+:end_tab:
+
+```{.python .input #linear-regression-concise-defining-the-model-1}
+%%tab pytorch
+class LinearRegression(d2l.Module):  #@save
+    """Linear regression built from framework components."""
+    def __init__(self, lr):
+        super().__init__()
+        self.save_hyperparameters()
+        self.net = nn.LazyLinear(1)
+
+    def weight_init(self, module):
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, std=0.01)
+            nn.init.zeros_(module.bias)
+```
+
+```{.python .input #linear-regression-concise-defining-the-model-1}
+%%tab mxnet
+class LinearRegression(d2l.Module):  #@save
+    """Linear regression built from framework components."""
+    def __init__(self, lr):
+        super().__init__()
+        self.save_hyperparameters()
+        self.net = nn.Dense(1)
+        self.net.initialize(init.Normal(sigma=0.01))
+```
+
+```{.python .input #linear-regression-concise-defining-the-model-1}
+%%tab tensorflow
+class LinearRegression(d2l.Module):  #@save
+    """Linear regression built from framework components."""
+    def __init__(self, lr):
+        super().__init__()
+        self.save_hyperparameters()
+        init = tf.initializers.RandomNormal(stddev=0.01)
+        self.net = tf.keras.layers.Dense(1, kernel_initializer=init)
+```
+
+```{.python .input #linear-regression-concise-defining-the-model-1}
+%%tab jax
+class LinearRegression(d2l.Module):  #@save
+    """Linear regression built from framework components."""
+    def __init__(self, num_inputs, lr, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = nnx.Linear(
+            num_inputs, 1, kernel_init=nnx.initializers.normal(0.01),
+            rngs=rngs)
+```
+
+Notice that `LinearRegression` does not even need to define `forward`: it
+inherits `Module.forward` from :numref:`sec_oo-design`, which delegates directly
+to `self.net(X)`.
+
+
+### The Loss Function
+
+Instead of writing $(\hat{y} - y)^2 / 2$ by hand, we delegate `loss` to each framework's built-in mean squared error primitive (`nn.MSELoss` in PyTorch, `gluon.loss.L2Loss` in MXNet, `MeanSquaredError` in Keras, or `optax.squared_error` in JAX). Note that PyTorch, TensorFlow, and Optax omit the cosmetic $\frac{1}{2}$ factor in their squared error definitions (dividing it out here keeps the numerical loss values identical to our scratch implementation):
+
+```{.python .input #linear-regression-concise-defining-the-loss-function}
+%%tab pytorch
+@d2l.add_to_class(LinearRegression)  #@save
+def loss(self, y_hat, y):
+    fn = nn.MSELoss()
+    return fn(y_hat, y)
+```
+
+```{.python .input #linear-regression-concise-defining-the-loss-function}
+%%tab mxnet
+@d2l.add_to_class(LinearRegression)  #@save
+def loss(self, y_hat, y):
+    fn = gluon.loss.L2Loss()
+    return 2 * fn(y_hat, y).mean()  # L2Loss includes the 1/2
+```
+
+```{.python .input #linear-regression-concise-defining-the-loss-function}
+%%tab tensorflow
+@d2l.add_to_class(LinearRegression)  #@save
+def loss(self, y_hat, y):
+    fn = tf.keras.losses.MeanSquaredError()
+    return fn(y, y_hat)
+```
+
+```{.python .input #linear-regression-concise-defining-the-loss-function}
+%%tab jax
+@d2l.add_to_class(LinearRegression)  #@save
+def loss(self, y_hat, y):
+    return optax.squared_error(y_hat, y).mean()
+```
+
+
+### The Optimizer
+
+Similarly, `configure_optimizers` returns each framework's built-in minibatch SGD instance (`torch.optim.SGD`, `gluon.Trainer`, `tf.keras.optimizers.SGD`, or `optax.sgd`), automatically wired to the module's registered parameters and learning rate `self.lr`:
+
+```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
+%%tab pytorch
+@d2l.add_to_class(LinearRegression)  #@save
+def configure_optimizers(self):
+    return torch.optim.SGD(self.parameters(), self.lr)
+```
+
+```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
+%%tab tensorflow
+@d2l.add_to_class(LinearRegression)  #@save
+def configure_optimizers(self):
+    return tf.keras.optimizers.SGD(self.lr)
+```
+
+```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
+%%tab jax
+@d2l.add_to_class(LinearRegression)  #@save
+def configure_optimizers(self):
+    return optax.sgd(self.lr)
+```
+
+```{.python .input #linear-regression-concise-defining-the-optimization-algorithm}
+%%tab mxnet
+@d2l.add_to_class(LinearRegression)  #@save
+def configure_optimizers(self):
+    return gluon.Trainer(self.collect_params(),
+                         'sgd', {'learning_rate': self.lr})
+```
+
+
+### Training with Framework Components
+
+With `LinearRegression` defined, training reduces to four lines: instantiate the model, instantiate `d2l.SyntheticRegressionData`, create a `d2l.Trainer(max_epochs=3)`, and call `trainer.fit(model, data)`:
+
+```{.python .input #linear-regression-concise-training-4}
+print(f"validation loss: {trainer.history['val_loss'][-1]:.2e}")
+```
+
+The final validation loss lands within roughly $15\%$ of the theoretical noise
+floor $\sigma^2 = 10^{-4}$.
+
+To verify parameter recovery directly, we add a small `get_w_b` helper that
+
+The validation and training loss curves drop right down to the $0.00005$ noise floor, mirroring our from-scratch implementation. Let us add a small helper method `get_w_b` to extract the learned weight tensor and bias from the framework layer and compare them against $(\mathbf{w}^*, b^*)$:
+
+```{.python .input #linear-regression-concise-training-2}
+%%tab pytorch
+@d2l.add_to_class(LinearRegression)  #@save
+def get_w_b(self):
+    return self.net.weight.detach(), self.net.bias.detach()
+```
+
+```{.python .input #linear-regression-concise-training-2}
+%%tab mxnet
+@d2l.add_to_class(LinearRegression)  #@save
+def get_w_b(self):
+    return self.net.weight.data(), self.net.bias.data()
+```
+
+```{.python .input #linear-regression-concise-training-2}
+%%tab tensorflow
+@d2l.add_to_class(LinearRegression)  #@save
+def get_w_b(self):
+    return self.net.kernel, self.net.bias
+```
+
+```{.python .input #linear-regression-concise-training-2}
+%%tab jax
+@d2l.add_to_class(LinearRegression)  #@save
+def get_w_b(self):
+    return self.net.kernel[...], self.net.bias[...]
+```
+
+```{.python .input #linear-regression-concise-training-3}
+w, b = model.get_w_b()
+w_error = d2l.numpy(d2l.reshape(w, data.w.shape) - data.w)
+b_error = d2l.numpy(b - data.b)
+print('error in w:', ', '.join(f'{e:.1e}' for e in w_error))
+print('error in b:', ', '.join(f'{e:.1e}' for e in b_error))
+```
+
+Once again, the errors in $\hat{\mathbf{w}}$ and $\hat{b}$ are only a few times
+$10^{-4}$, matching our scratch run because the dominant error sources (label
+
 ## Summary
 
-* A complete linear regression training pipeline from scratch requires just four
-  plain components: parameterized forward pass (`linreg`), squared loss
-  (`squared_loss`), minibatch shuffling (`minibatches`), and a dozen-line SGD
-  training loop (`train`).
-* The gradient of the squared loss is the error-weighted input
-  ($\frac{1}{|\mathcal{B}|}\mathbf{X}^\top \mathbf{r}$ for $\mathbf{w}$ and the
-  mean error for $b$), which automatic differentiation matches up to `float32`
-  rounding.
-* Every minibatch SGD step runs four operations in order: recorded forward pass
-  and loss, backward pass, unrecorded parameter update, and gradient clearing.
-* On our synthetic Gaussian dataset, the expected loss decomposes into
-  $\frac{1}{2}\|\mathbf{w}-\mathbf{w}^*\|^2 + \frac{1}{2}(b-b^*)^2 + \frac{1}{2}\sigma^2$,
-  predicting the noise floor ($\sigma^2/2 = 5 \times 10^{-5}$), the decay rate per
-  epoch, and the learning-rate stability limit. Comparing learned parameters
-  directly against $(\mathbf{w}^*, b^*)$ verifies the code to a few times
-  $10^{-4}$—catching subtle errors that a loss curve alone would hide.
+- **From-scratch implementation:** A complete deep learning training loop requires only four primitives—a parameterized forward pass ($\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$), a scalar loss ($\frac{1}{2|\mathcal{B}|}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$), reverse-mode automatic differentiation, and a minibatch SGD parameter update.
+- **Verification via the noise floor:** On synthetic data with additive noise $\mathcal{N}(0, \sigma^2)$, the expected loss at the true parameters is $\frac{1}{2}\sigma^2$ ($0.00005$ for $\sigma = 0.01$), providing an exact quantitative test that optimization has converged.
+- **Learning-rate sensitivity:** Too small a learning rate crawls slowly; a well-chosen range converges exponentially to the noise floor; too large a learning rate overshoots the quadratic bowl and diverges.
+- **Concise framework implementation:** High-level framework layers (`LazyLinear` / `Dense` / `nnx.Linear`), built-in MSE losses, and `SGD` optimizers—organized inside `d2l.Module` and driven by `d2l.Trainer`—reproduce the exact same model and parameter recovery in a fraction of the code.
 
 ## Exercises
 
@@ -657,18 +640,6 @@ chapters never have to rewrite this boilerplate.
    :eqref:`eq_linreg-scratch-expected-loss` to estimate how many more epochs
    the second case needs at learning rate 0.03, then check your estimate.
    :exlabel:`ex_linear-regression-scratch-initialization`
-
-1. **Shapes in the loss.** Suppose the data loader yielded labels `y` of
-   shape $(|\mathcal{B}|,)$ while the predictions `y_hat` have shape
-   $(|\mathcal{B}|, 1)$, and `squared_loss` computed `(y_hat - y) ** 2 / 2` without
-   reshaping `y`.
-    1. Determine whether an error is raised, and find the shape and the
-       entries of `y_hat - y`.
-    1. Show that this loss is smallest when the model predicts the mean of
-       the minibatch labels for every example. Determine approximately the
-       weights and the bias that training approaches on the synthetic
-       data, and the value at which the loss levels off.
-   :exlabel:`ex_linear-regression-scratch-reshape-loss`
 
 1. [code] **Second derivatives.** Compute by hand the Hessian of the
    minibatch loss with respect to $(\mathbf{w}, b)$, and state which
@@ -732,407 +703,85 @@ chapters never have to rewrite this boilerplate.
         of :numref:`fig_linreg-loss-menu`.
    :exlabel:`ex_linear-regression-scratch-robust-losses`
 
-1. **Uncleared gradients.** ● Suppose the gradient buffers accumulate and
-   are never cleared, so that the update at step $t$ subtracts
-   $\eta(\mathbf{g}_1 + \cdots + \mathbf{g}_t)$, the sum of all minibatch
-   gradients so far. For the one-dimensional loss $\frac{h}{2}(w - c)^2$
-   with $h > 0$, whose minimum lies at $w = c$, and with exact gradients,
-   derive a recurrence for the error $e_t = w_t - c$, and determine for
-   which values of $\eta h$ the error converges to zero. State what this
-   predicts for `train` under the same accumulation.
+1. [code] **A layer without a bias.** Build `LinearRegression` with a
+   layer that has no bias (every framework's dense layer has an argument
+   that turns the bias off), and train it as in this section.
+    1. Before training, predict the value at which the validation loss
+       levels off, from the expected loss
+       :eqref:`eq_linreg-scratch-expected-loss` doubled for the mean
+       squared error. Then check your prediction.
+    1. Predict what the weights converge to and how far they end from
+       $\mathbf{w}^*$. Since the features have mean zero, the missing bias
+       acts on the weights like label noise of standard deviation
+       $b^* = 4.2$; it enters both the estimation error of
+       :numref:`subsec_synthetic-regression-data-recovery` and the noise
+       ball of minibatch SGD (:numref:`sec_linear_regression`). Compare
+       your prediction with the errors of the trained weights.
+   :exlabel:`ex_linear-regression-concise-no-bias`
 
-1. **Planted bug.** A faulty variant of `minibatches` shuffles the rows of
-   `X` and the entries of `y` with two independent permutations. We collect
-   the pairs that it yields in one epoch over the training data, whose
-   parameters are $\mathbf{w}^* = (2, -3.4)$ and $b^* = 4.2$ with noise
-   standard deviation $0.01$. We then fit $\hat{\mathbf{w}}$ and $\hat{b}$
-   to these pairs by least squares.
-    1. Predict the approximate values of $\hat{\mathbf{w}}$ and $\hat{b}$,
-       and explain your prediction.
-    1. Estimate the mean squared error of this fit on the collected pairs,
-       and compare it with the smallest mean squared error that any
-       predictor can attain on correctly paired data.
+1. [code] **Several outputs.** Change the output width of the layer in
+   `LinearRegression` from 1 to 2. After constructing `data`, append to
+   `data.y` a second label column
+   $y_2 = \mathbf{x}^\top \mathbf{w}_2^* + b_2^* + \epsilon_2$, computed
+   from `data.X` with generating parameters of your choice and noise of
+   the same size.
+    1. Show that the squared loss summed over the two outputs splits into
+       two independent linear regressions, one per output. Conclude that
+       the parameters learned for one output do not depend on the labels of
+       the other.
+    1. The framework losses average over every entry of the
+       $|\mathcal{B}| \times 2$ matrix of errors of a minibatch
+       $\mathcal{B}$, not only over its examples. State by which factor
+       the gradient of each output's parameters shrinks relative to the
+       single-output model, and which learning rate reproduces the
+       single-output training run. Confirm this by training both models
+       from the same initial parameters on the same minibatches.
+
+1. [code] **Feature scale and step size.** Multiply the first column of
+   `data.X` by 100 after constructing `data`, leaving `data.y` unchanged,
+   so that the generating weight of that feature becomes $0.02$. Recall
+   from exercise :exref:`ex_linear-regression-scratch-stability` that
+   gradient descent diverges once $\eta$ exceeds $2/\mu_{\max}$, where
+   $\mu_{\max}$ is the largest eigenvalue of the Hessian $\mathbf{H}$ of
+   the loss.
+    1. Compute $\mathbf{H}$ for `LinearRegression.loss` and estimate its
+       eigenvalues before and after the rescaling.
+    1. Predict the largest learning rate for which training does not
+       diverge, before and after the rescaling, and check both predictions
+       by training at learning rates around them.
+    1. At a learning rate just below the new limit, predict how many
+       updates the second weight needs to reduce its error by a factor of
+       100, and compare the prediction with a measurement. Then standardize
+       the rescaled feature as in :numref:`sec_pandas`, and show that
+       `lr=0.015` works again.
+
+1. [code] **Optimization versus estimation error.** ● Train
+   `LinearRegression` with `lr=0.015` and `max_epochs=10` on
+   `SyntheticRegressionData` with `num_train` set to each of
+   $5, 50, 500, 5{,}000$ and `batch_size=min(32, num_train)`. For each run,
+   compare the distance $\|\hat{\mathbf{w}} - \mathbf{w}^*\|_2$ of the
+   trained weights from the generating weights $\mathbf{w}^*$, stored in
+   `data.w`, with the same distance for the least-squares solution on the
+   same training data, computed as in the recovery subsection
+   (:numref:`subsec_synthetic-regression-data-recovery`).
+    1. Count the parameter updates in each run, and explain the ratio of
+       the two errors at each `num_train`.
+    1. Find the number of epochs after which the run with `num_train=5`
+       comes within a factor of two of its least-squares error.
+
 
 :begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/t/42)
+[Discussions](https://d2l.discourse.group/t/44)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://d2l.discourse.group/t/43)
+[Discussions](https://d2l.discourse.group/t/45)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/201)
+[Discussions](https://d2l.discourse.group/t/204)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://d2l.discourse.group/t/17976)
+[Discussions](https://d2l.discourse.group/t/17977)
 :end_tab:
-
-<!-- slides -->
-
-::: {.slide}
-::: {.cover}
-[Dive into Deep Learning · §2.3]{.kicker}
-
-Linear regression with tensors and autograd<br>
-**parameters · the gradient by hand · minibatch SGD · a dozen-line loop · a known answer**
-:::
-:::
-
-::: {.slide title="A Wrong Training Loop Can Still Lower the Loss"}
-[The problem]{.kicker}
-
-- Labels of shape $(32,)$ minus predictions of shape $(32, 1)$: no error.
-  Broadcasting forms a $32 \times 32$ matrix of differences.
-- Ten epochs on that loss lower it steadily, while $\mathbf{w}$ ends far
-  from $(2, -3.4)$.
-- Nothing in the loss curve says that the program is wrong.
-
-::: {.d2l-note}
-Train on data with a **known answer**:
-$\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, noise $\sigma = 0.01$. A correct
-program must reach the loss floor $\sigma^2/2 = 5 \times 10^{-5}$ and
-recover $\mathbf{w}^*$ and $b^*$ to within about $10^{-3}$.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- write parameters, forward pass, loss, minibatch SGD, and a dozen-line
-  training loop with tensors and autograd;
-- derive the gradient by hand and check it against autograd;
-- put the four operations of a training step in the right order;
-- predict the loss curve and the parameter error before training;
-- say which learning rates converge and which diverge.
-
-**Running example:** $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$,
-$\sigma = 0.01$; 1,000 training examples in minibatches of 32.
-:::
-
-::: {.slide title="Every Part of Training, Written by Hand"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Linear Regression | model, loss, closed form, minibatch SGD |
-| Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
-| **Implementation from Scratch** | **SGD and the training loop by hand** |
-| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
-| Concise Implementation | framework layers and losses |
-| Generalization | training vs. test error |
-| Weight Decay | a penalty on large weights |
-:::
-
-::: {.col .narrow}
-- **Uses:** the squared loss and the SGD update, autograd, the synthetic
-  data and its threshold of $10^{-3}$.
-- **Skips:** the classes that package this code (the next deck) and
-  framework layers.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[The model and its gradient]{.dtitle}
-
-[parameters · forward pass · loss · the gradient by hand]{.dsub}
-:::
-:::
-
-::: {.slide title="A Prediction Is One (32×2)(2×1) Product; the Loss a Mean"}
-[The model]{.kicker}
-
-Start from $\mathbf{w} \sim \mathcal{N}(0, 0.01^2)$, $b = 0$; a minibatch
-$\mathcal{B}$ of 32 examples:
-
-$$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b, \qquad L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\sum_{i \in \mathcal{B}} \tfrac{1}{2}\bigl(\hat{y}^{(i)} - y^{(i)}\bigr)^2$$
-
-@linear-regression-scratch-the-forward-pass
-
-@linear-regression-scratch-the-loss
-
-::: {.d2l-note}
-The loss first reshapes $\mathbf{y}$ into a $(32, 1)$ column: a $(32,)$
-vector would broadcast to $32 \times 32$.
-:::
-:::
-
-::: {.slide title="The Gradient Is the Error-Weighted Input"}
-[The gradient]{.kicker}
-
-One example, error $r = \hat{y} - y$:
-
-$$\frac{\partial l}{\partial \mathbf{w}} = r\, \mathbf{x}, \qquad \frac{\partial l}{\partial b} = r$$
-
-. . .
-
-A minibatch $\mathcal{B}$: features $\mathbf{X}$, labels $\mathbf{y}$,
-errors $\mathbf{r} = \mathbf{X}\mathbf{w} + b - \mathbf{y}$:
-
-$$\nabla_{\mathbf{w}} L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\mathbf{X}^\top \mathbf{r}, \qquad \frac{\partial L_{\mathcal{B}}}{\partial b} = \frac{1}{|\mathcal{B}|}\sum_{i \in \mathcal{B}} r^{(i)}$$
-
-::: {.d2l-note .rule}
-One matrix–vector product per minibatch.
-:::
-:::
-
-::: {.slide title="Autograd Returns the Gradient Derived by Hand"}
-[The gradient]{.kicker}
-
-One minibatch of 32 examples, fresh parameters:
-
-@linear-regression-scratch-the-gradient-2
-
-The largest difference is zero or at most about $10^{-6}$: float32 rounding.
-:::
-
-::: {.slide title="Check: The Gradient at w = 0, b = 0"}
-[Check]{.kicker}
-
-Start from $\mathbf{w} = \mathbf{0}$, $b = 0$. Averaged over many examples,
-what is the gradient, and where does its negative point? The features are
-independent standard normal.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The errors are $r = -y$, so the gradient is
-$\mathbb{E}[\mathbf{x}\, r] = -\mathbb{E}[\mathbf{x}\mathbf{x}^\top]\mathbf{w}^* = -\mathbf{w}^* = (-2, 3.4)$
-for $\mathbf{w}$ and $\mathbb{E}[r] = -b^* = -4.2$ for $b$. The negative gradient
-points straight at the true parameters.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Minibatch SGD and the loop]{.dtitle}
-
-[one step, in order · random minibatches · a dozen lines]{.dsub}
-:::
-:::
-
-::: {.slide title="Four Operations per Step, in a Fixed Order"}
-[One step]{.kicker}
-
-1. **Forward pass and loss** $L_{\mathcal{B}}$, recorded for
-   differentiation.
-2. **Backward pass**: the gradient of this minibatch's loss.
-3. **Update** $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta\, \nabla L_{\mathcal{B}}$,
-   *not* recorded.
-4. **Clear** any gradient the framework keeps.
-
-::: {.d2l-note .rule}
-The next backward pass must see only its own minibatch, so kept gradients
-are cleared before it. The update is not part of the loss, so it is never
-recorded.
-:::
-:::
-
-::: {.slide title="Check: Forgetting to Clear the Gradients"}
-[Check]{.kicker}
-
-Suppose `backward` added each new gradient to the stored one, and nothing
-ever cleared it. What does step $t$ subtract, and what happens to the
-parameters?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\eta(\mathbf{g}_1 + \cdots + \mathbf{g}_t)$: every earlier
-gradient is applied again at every step. The parameters run past the
-minimum, and on a quadratic they oscillate around it without settling.
-:::
-:::
-:::
-
-::: {.slide title="A Random Minibatch Points the Right Way; a Sorted One Need Not"}
-[Minibatches]{.kicker}
-
-At $\mathbf{w} = \mathbf{0}$, $b = 0$ a minibatch's gradient for the bias is
-$\partial L_{\mathcal{B}} / \partial b = -(\text{mean label})$. The labels
-have mean 4.2 and standard deviation $\sqrt{2^2 + 3.4^2} \approx 3.9$.
-
-| minibatch of 32 | mean label | $\partial L_{\mathcal{B}} / \partial b$ | step on $b$ |
-|---|---|---|---|
-| drawn at random | $4.2 \pm 0.7$ | $\approx -4.2$ | up, toward 4.2 |
-| the 32 smallest labels | $\approx -4.6$ | $\approx +4.6$ | down, away from 4.2 |
-
-::: {.d2l-note}
-A random minibatch's gradient is an unbiased estimate of the full
-gradient. Minibatches in a fixed order, sorted by label, bias every step.
-:::
-
-[The lowest 3.2% of a normal distribution average 2.2 standard deviations below its mean.]{.dgm-cap}
-:::
-
-::: {.slide title="A Minibatch Loader Shuffles, Then Cuts Into Pieces of 32"}
-[Minibatches]{.kicker}
-
-@linear-regression-scratch-minibatches-1
-
-- A new random order on every call; each example is used once per epoch.
-- `yield` makes the function a **generator**: it hands the loop one
-  minibatch at a time.
-:::
-
-::: {.slide title="32 Minibatches per Epoch, and a Generator Runs Out After One"}
-[Minibatches]{.kicker}
-
-$\lceil 1000/32 \rceil = 32$ minibatches: $31 \times 32 + 8$.
-
-@synthetic-regression-data-reading-the-data-in-minibatches-1
-
-::: {.d2l-note .warn}
-A generator is exhausted after one pass, without an error, so the training
-loop calls `minibatches` anew in every epoch.
-:::
-:::
-
-::: {.slide title="A Dozen Lines Train Linear Regression"}
-[The loop]{.kicker}
-
-@linear-regression-scratch-the-training-loop
-
-::: {.d2l-note}
-The comments mark the operations of a step; the other lines run the two
-loops and record the validation loss after every epoch.
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Checking the result]{.dtitle}
-
-[a prediction · the run · the parameters · the learning rate]{.dsub}
-:::
-:::
-
-::: {.slide title="The Expected Loss Is Half the Squared Parameter Error Plus σ²/2"}
-[A prediction]{.kicker}
-
-Standard normal features, independent of the noise:
-
-$$\mathbb{E}\bigl[\tfrac{1}{2} r^2\bigr] = \tfrac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + \tfrac{1}{2}(b - b^*)^2 + \tfrac{1}{2}\sigma^2$$
-
-- Floor: $\sigma^2/2 = 5 \times 10^{-5}$; nothing gets below it.
-- Gradient $= (\mathbf{w} - \mathbf{w}^*, b - b^*)$: a step multiplies the
-  parameter error by $1 - \eta$, the excess loss by $(1 - \eta)^2$.
-- Start: $\tfrac{1}{2}(2^2 + 3.4^2 + 4.2^2) \approx 16.6$ above the floor.
-
-At $\eta = 0.03$, by how much should one epoch of 32 steps lower the excess?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-$0.97^{64} \approx 0.14$: a factor of about 7 per epoch.
-:::
-:::
-:::
-
-::: {.slide title="The Loss Falls 7× per Epoch to the Floor of 5×10⁻⁵"}
-[The run]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-Ten epochs at $\eta = 0.03$; the validation loss on a log scale.
-
-A straight line, then the floor after seven or eight epochs, as predicted.
-:::
-
-::: {.col .fig .big}
-@!linear-regression-scratch-training-3
-:::
-:::
-:::
-
-::: {.slide title="Measured Excess Tracks the Prediction for Seven Epochs"}
-[The run]{.kicker}
-
-Validation loss minus $\sigma^2/2$, against $16.6 \times 0.97^{64k}$ after
-epoch $k$:
-
-@!linear-regression-scratch-the-training-run-1
-
-::: {.d2l-note}
-The two drift apart by at most a factor of 3 or 4. The prediction takes
-$\mathbf{H}$, the average of $(\mathbf{x}, 1)(\mathbf{x}, 1)^\top$, to be
-$\mathbf{I}$; its eigenvalues lie within about 10% of 1, and the smallest
-sets the late rate.
-:::
-:::
-
-::: {.slide title="The Parameters Come Within About 10⁻³ of (2, −3.4) and 4.2"}
-[The parameters]{.kicker}
-
-Parameter errors $\hat{\mathbf{w}} - \mathbf{w}^*$ and $\hat{b} - b^*$:
-
-@!linear-regression-scratch-training-4
-
-- Even exact least squares misses by $\sigma/\sqrt{n} = 0.01/\sqrt{1000} \approx 3 \times 10^{-4}$.
-- The loss cannot see this: $\tfrac{1}{2} \cdot 3 \cdot (5 \times 10^{-4})^2 \approx 4 \times 10^{-7}$,
-  under 1% of the floor.
-
-::: {.d2l-note .rule}
-Comparing parameters catches bugs that a loss curve hides.
-:::
-:::
-
-::: {.slide title="η = 0.003 Crawls, η = 3 Diverges"}
-[The learning rate]{.kicker}
-
-Along the averaged gradient, the parameter error is multiplied by
-$1 - \eta$ per step: it shrinks for $0 < \eta < 2$ and grows for
-$\eta > 2$. With minibatches the limit is somewhat lower.
-
-@linear-regression-scratch-the-learning-rate
-
-::: {.d2l-note}
-At $\eta = 3$ the parameter error is multiplied by about $-2$ per step, and
-the loss overflows.
-:::
-:::
-
-::: {.slide title="Check: Ten Times More Noise"}
-[Check]{.kicker}
-
-Generate the data with $\sigma = 0.1$ instead of $0.01$ and train the same
-way. Where does the loss level off, how large are the parameter errors, and
-how fast does the loss fall?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The floor $\sigma^2/2$ rises 100-fold, to $5 \times 10^{-3}$.
-The parameter errors grow 10-fold, to about
-$\sigma/\sqrt{n} \approx 3 \times 10^{-3}$.
-The rate, a factor of 7 per epoch, is unchanged: the noise does not change
-the gradient of the expected loss.
-:::
-:::
-:::
-
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- **Model:** $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$; loss
-  $L_{\mathcal{B}}$, the mean of $\tfrac{1}{2}(\hat{y} - y)^2$.
-- **Gradient:** the error-weighted input, $\frac{1}{|\mathcal{B}|}\mathbf{X}^\top\mathbf{r}$;
-  autograd agrees up to float32 rounding.
-- **Step:** forward and loss, backward, unrecorded update, clear kept
-  gradients; a dozen lines train the model.
-- **Check:** loss $16.6 \to 5 \times 10^{-5}$ at 7× per epoch; parameter
-  errors a few times $10^{-4}$, within $10^{-3}$.
-- **Learning rate:** the averaged gradient converges for $0 < \eta < 2$;
-  with minibatches the limit is somewhat lower; $\eta = 3$ diverges.
-
-**Next:** object-oriented design, the same code as `Module`,
-`DataModule`, `Trainer`, trained once more.
-:::

@@ -1,7 +1,7 @@
 # Sampling by Integration
 :label:`sec_diffusion-integration`
 
-The previous section ended with a network that knows, at every noise level, where a noisy point should move: a field of arrows that leads from the noise toward the data. It is tempting to think that we are done. Draw a point of noise, follow the arrows, stop when they stop. But arrows that point at the data produce points near the data, and points near the data are not yet samples *of* the data. The Langevin chains of :numref:`sec_diffusion-denoising` showed the difference. Driven by the exact score of the data, they ended near the modes, each with the right spread, and kept the shares of their starts, about a third in each mode, where the data put a half, three tenths and a fifth. The annealed ladder of :numref:`sec_diffusion-gaussian-paths` got the shares right on exact scores, walking down ten noise levels whose spacing and step sizes we chose by hand. It worked, and nothing in it said that it had to. Our network gives a field at every level of a continuous path. Is following it enough, and why should it put the right share of the samples in each mode?
+It is tempting to think that we are done once a network knows, at every noise level, where a noisy point should move: a field of arrows that leads from the noise toward the data. Draw a point of noise, follow the arrows, stop when they stop. But arrows that point at the data produce points near the data, and points near the data are not yet samples *of* the data. The Langevin chains of :numref:`sec_diffusion-denoising` showed the difference. Driven by the exact score of the data, they ended near the modes, each with the right spread, and kept the shares of their starts, about a third in each mode, where the data put a half, three tenths and a fifth. The annealed ladder of :numref:`sec_diffusion-gaussian-paths` got the shares right on exact scores, walking down ten noise levels whose spacing and step sizes we chose by hand. It worked, and nothing in it said that it had to. Our network gives a field at every level of a continuous path. Is following it enough, and why should it put the right share of the samples in each mode?
 
 The answer is a conservation law. A velocity field moves probability the way a current moves water, and the field of the previous section moves exactly the mass of the Gaussian path: it carries the noise at $t = 1$ into the data at $t = 0$ through every intermediate density. :citet:`song2021score` built a sampler on this fact, a differential equation that runs the field backward from noise. :citet:`ho2020denoising` had sampled earlier with a chain of noisy steps, and it turns out that their chain follows the same law, with a correction added at every step.
 
@@ -379,7 +379,7 @@ $$
 \mathbf{x}_s \approx \Big[ \mathbf{x}_t + \tfrac{\beta}{2} \nabla \log p_t(\mathbf{x}_t) + \sqrt{\beta}\, \mathbf{z} \Big] + \tfrac{\beta}{2} \big( \mathbf{x}_t + \nabla \log p_t(\mathbf{x}_t) \big).
 $$
 
-The bracket is the Langevin step $\mathbf{x} \leftarrow \mathbf{x} + \frac{h}{2} \nabla \log p + \sqrt{h}\, \boldsymbol\xi$ of :numref:`sec_diffusion-denoising` with step size $h = \beta$ on the density $p_t$: it leaves $p_t$ in place and pulls stray points back toward it. The second term is one Euler step of the probability-flow ODE from $t$ back to $s$. On the VP path the marginal velocity is $\mathbf{u}_t = -\tfrac12 \beta(t)\, (\mathbf{x} + \nabla \log p_t)$: this is the score–velocity identity of :numref:`sec_diffusion-gaussian-paths` with $\dot\alpha_t/\alpha_t = -\beta(t)/2$ and $\alpha_t^2 + \sigma_t^2 = 1$. Here $\beta(t) = 0.1 + 19.9\, t$ is the rate of the VP schedule, and a short step has $\beta \approx \beta(t)\, (t - s)$. The Euler step from $t$ back to $s$ therefore moves the point by $-(t - s)\, \mathbf{u}_t = \tfrac12 \beta(t)\, (t - s)\, (\mathbf{x}_t + \nabla \log p_t) \approx \tfrac{\beta}{2} (\mathbf{x}_t + \nabla \log p_t)$, which is the second term. An ancestral step is a flow step plus a Langevin correction at the current noise level. The chain does what the ODE does, and at every step it also repairs some of what earlier steps got wrong.
+The bracket is the Langevin step $\mathbf{x} \leftarrow \mathbf{x} + \frac{h}{2} \nabla \log p + \sqrt{h}\, \boldsymbol\xi$ of :numref:`sec_diffusion-denoising` with step size $h = \beta$ on the density $p_t$: it leaves $p_t$ in place and pulls stray points back toward it. The second term is one Euler step of the probability-flow ODE from $t$ back to $s$. On the VP path the marginal velocity is $\mathbf{u}_t = -\tfrac12 \beta(t)\, (\mathbf{x} + \nabla \log p_t)$: this is the score–velocity identity of :numref:`sec_diffusion-gaussian-paths` with $\dot\alpha_t/\alpha_t = -\beta(t)/2$ and $\alpha_t^2 + \sigma_t^2 = 1$. Here $\beta(t) = 0.1 + 19.9\, t$ is the rate of the VP schedule, and a short step has $\beta \approx \beta(t)\, (t - s)$. The Euler step from $t$ back to $s$ therefore moves the point by $-(t - s)\, \mathbf{u}_t = \tfrac12 \beta(t)\, (t - s)\, (\mathbf{x}_t + \nabla \log p_t) \approx \tfrac{\beta}{2} (\mathbf{x}_t + \nabla \log p_t)$, which is the second term. An ancestral step is a flow step plus a Langevin correction at the current noise level. The chain does what the ODE does, and its Langevin half pulls points back toward $p_t$, which can undo part of an earlier error; whether it does so in practice is measured in :numref:`sec_diffusion-samplers`.
 
 ### The Reverse SDE
 
@@ -505,7 +505,7 @@ d2l.scatter_panels([runs[k][:2000] for k in runs],
 
 Network and oracle send only $0.2$ to $0.5$ percent of the starts to different modes, and every weight of a network row lies within $0.004$ of its oracle row. What separates the rows from $0.5/0.3/0.2$ is the sampling error of $20{,}000$ points, which the oracle shares. The spreads lie within about $0.01$ of the data's, and every sampler, network or oracle, strays about one percent of the time, as the data themselves do. These strays are not errors at all: they are the $1.1\%$ of each Gaussian mode that lies beyond three standard deviations. The network leaves one trace. From the same starts, the flow strays a little more often with the network than with the oracle, about $1.3$ against $1.1$ percent, while the two chains stray about equally often. For the mode weights, on this example, the network is as good as the exact posterior mean, and both samplers recover the weights and the spread of the data together, which Langevin dynamics at a single noise level could not.
 
-Which sampler should one use? On the mixture, at these step counts, it hardly matters: the mode weights of both are limited by the number of samples, not by the sampler or the network. They differ in what else they offer. The ODE is a deterministic map, so a sample can be reproduced from its start, interpolated between starts, or run backward from data to noise. The chain gives up that map for its Langevin half, which keeps pulling points back toward $p_t$ when earlier steps have moved them off. When steps are few these properties decide, and :numref:`sec_diffusion-samplers` measures which one matters more.
+Which sampler should one use? On the mixture, at these step counts, it hardly matters: the mode weights of both are limited by the number of samples, not by the sampler or the network. They differ in what else they offer. The ODE is a deterministic map, so a sample can be reproduced from its start, interpolated between starts, or run backward from data to noise. The chain gives up that map for its Langevin half, which can pull points that earlier steps moved off back toward $p_t$. When steps are few these properties decide, and :numref:`sec_diffusion-samplers` measures which one matters more.
 
 With a path, a target and a sampler in hand, the models of the literature are choices along three axes (:numref:`tab_diffusion_models`).
 
@@ -514,12 +514,14 @@ With a path, a target and a sampler in hand, the models of the literature are ch
 
 | model | target and path | sampler | where |
 |:--|:--|:--|:--|
-| denoising score model | the noise, at one level | Langevin dynamics | :numref:`sec_diffusion-denoising` |
+| denoising score model | the score $-\boldsymbol\epsilon/\sigma$, at one level | Langevin dynamics | :numref:`sec_diffusion-denoising` |
 | noise-conditional score network | the score at each level of a ladder on the VE path, weighted by $\tilde\sigma^2$ | annealed Langevin dynamics | :numref:`sec_diffusion-gaussian-paths` |
 | DDPM | $\boldsymbol\epsilon$ on the VP path | the ancestral chain or the probability-flow ODE | :numref:`sec_diffusion-gaussian-paths`, here |
 | flow matching, rectified flow | $\boldsymbol\epsilon - \mathbf{x}_0$ on the linear path | Euler steps on the probability-flow ODE | :numref:`sec_diffusion-gaussian-paths`, here |
 | $\mathbf{v}$-prediction | $\mathbf{v}$ on the cosine path | either | :numref:`sec_diffusion-gaussian-paths`, :numref:`sec_diffusion-design-space` |
-| EDM | the clean point on the VE path, with inputs and outputs scaled per noise level | a second-order solver of the probability-flow ODE, in $\bar{\mathbf{x}}$ and $\bar\sigma$ | :numref:`sec_diffusion-samplers`, :numref:`sec_diffusion-design-space` |
+| EDM | the clean point on the VE path, rescaled per noise level | a second-order solver of the probability-flow ODE | :numref:`sec_diffusion-samplers`, :numref:`sec_diffusion-design-space` |
+
+The last row looks ahead. EDM's solver, more accurate than Euler's method, is the subject of :numref:`sec_diffusion-samplers`, and its rescaling of the network's input and output that of :numref:`sec_diffusion-design-space`.
 
 In the plane we could check the network against the oracle, and a hundred evaluations per sample cost nothing. An image model has neither luxury: no oracle tells us how far it is from the posterior mean, and every evaluation is a pass through a large network. The next section trains one on Fashion-MNIST and has to find another way to judge its samples.
 
@@ -770,8 +772,8 @@ for one-point data on every path; on the linear path, Euler in $t$.
 ::: {.slide title="Ten Steps Narrow the Samples, and So Does the Exact Field"}
 [Sampling]{.kicker}
 
-- **Strays:** points farther than $3s = 1.5$ from every mean. **Spread:**
-  mean squared distance of the rest to their mean.
+- **Strays:** farther than $1.5$ (three mode s.d.) from every mean.
+  **Spread:** mean squared distance of the rest to their mean.
 - One step lands on the mean $(-0.5, -0.7)$.
 - Ten steps: about 3% strays, spread $0.45$ against the data's $0.48$–$0.49$.
 - A hundred steps: the data's strays (1.1–1.5%) and spread.
@@ -842,7 +844,7 @@ measures whether it does.
 :::
 :::
 
-::: {.slide title="Check: Why Is the Converted Noise Network Worst near the Noise?"}
+::: {.slide title="Check: How Does a Noise Error Reach the Velocity near Pure Noise?"}
 [Check]{.kicker}
 
 On the linear path $\hat{\mathbf{x}}_0 = (\mathbf{x} - t\,
@@ -870,7 +872,7 @@ pure noise.
 | DDPM | $\boldsymbol\epsilon$, VP path | ancestral chain or flow ODE |
 | flow matching | $\boldsymbol\epsilon - \mathbf{x}_0$, linear path | Euler on the flow ODE |
 | $\mathbf{v}$-prediction | $\mathbf{v}$, cosine path | either |
-| EDM | clean point, VE path | second-order steps in $\bar{\mathbf{x}}$, $\bar\sigma$ |
+| EDM (later decks) | clean point, VE path, rescaled per level | second-order steps |
 :::
 
 ::: {.slide title="Wrap-up"}
@@ -879,7 +881,7 @@ pure noise.
 - **Transport:** the marginal velocity moves the mass of $p_t$, so the
   flow ODE, solved exactly, carries noise into data with the right weights.
 - **Euler:** one step lands on the mean $(-0.5, -0.7)$; a hundred recover
-  the modes, with about 1% strays.
+  the modes, with about as many strays as the data.
 - **Coordinates:** $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sigma_s\hat{\boldsymbol\epsilon}$ on every path.
 - **Ancestral chain:** a flow step plus a Langevin step.
 - **Network against oracle:** 0.2 to 0.5% of starts change mode.

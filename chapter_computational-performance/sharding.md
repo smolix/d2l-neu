@@ -10,6 +10,19 @@ gradients, and Adam's moment estimates take 29 GiB, more than the 24 GiB
 of an RTX 4090. Data parallelism would place these 29 GiB on every one of
 our four GPUs, so four GPUs cannot train this model any more than one can.
 
+```{.python .input #sharding-setup}
+%%tab jax
+# XLA reads its flags once, when JAX starts, so this cell runs before the
+# imports. The latency-hiding scheduler orders the step with its memory in
+# view. Without it, XLA starts every reduce-scatter of the sharded step as
+# soon as its gradient exists and finishes them all at the end, so the full
+# gradients of all blocks are alive at once: about 8 GB of temporaries per
+# GPU instead of about 5, more than JAX may allocate by default.
+import os
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_enable_latency_hiding_scheduler=true')
+```
+
 ```{.python .input #sharding-sharding-the-training-state}
 %%tab pytorch
 import math
@@ -29,6 +42,43 @@ from jax import numpy as jnp
 from flax import nnx
 import optax
 from d2l import jax as d2l
+```
+
+```{.python .input #sharding-sharding-the-training-state-1}
+%%tab pytorch
+import json
+```
+
+```{.python .input #sharding-sharding-the-training-state-1}
+%%tab jax
+import collections
+import re
+from jax.sharding import NamedSharding, PartitionSpec as P
+```
+
+<!-- WRITER: the cell below prints the opening's numbers (1.92 billion parameters, 16N = 28.6 GiB; PyTorch: one GPU holds 23.6 GiB; JAX: the bytes_limit JAX may allocate, 17.6 GiB by default, 22.2 GiB under the scheduler's 0.94 fraction). The opening can say "as the cell shows" instead of asserting it. -->
+
+```{.python .input #sharding-sharding-the-training-state-2}
+%%tab pytorch
+config = dict(vocab_size=50257, num_hiddens=2048, num_heads=16,
+              num_blks=36, pos='learned')
+with torch.device('meta'):  # Shapes and dtypes only, no data
+    N = d2l.num_params(d2l.GPT(**config))
+total = torch.cuda.mem_get_info()[1]
+print(f'{N / 1e9:.2f} billion parameters, 16N = {16 * N / 2**30:.1f} GiB; '
+      f'one GPU holds {total / 2**30:.1f} GiB')
+```
+
+```{.python .input #sharding-sharding-the-training-state-2}
+%%tab jax
+config = dict(vocab_size=50257, num_hiddens=2048, num_heads=16,
+              num_blks=36, pos='learned')
+key = d2l.get_key()
+N = d2l.num_params(nnx.eval_shape(lambda: d2l.GPT(**config,
+                                                  rngs=nnx.Rngs(key))))
+limit = jax.devices()[0].memory_stats()['bytes_limit']
+print(f'{N / 1e9:.2f} billion parameters, 16N = {16 * N / 2**30:.1f} GiB; '
+      f'JAX may allocate {limit / 2**30:.1f} GiB of one GPU')
 ```
 
 ## Partitioning the Optimizer State, Gradients, and Weights
@@ -145,6 +195,38 @@ that we measured on two, one allreduce of data parallelism takes
 $3N/\beta$, about 5 s, and the three phases of FSDP take $4.5N/\beta$,
 about 7 s.
 
+<!-- WRITER: this paragraph is false for the run, which is at k = 2 (structure.md 3.8): FSDP sends (k-1)S/k per GPU in each of its three phases, S = 4N = 7.7 GB the fp32 weights or gradients; at k = 2 that is S/2 = 3.8 GB per phase and 11.5 GB per step. beta_link is measured by the cell below on an all-gather, the collective FSDP uses (dev, GPUs 0 and 1: 2.2-2.3 GB/s in PyTorch, 2.1-2.2 in JAX), not "about 5 GB/s" (the old beta, an allreduce's 2S/t). The symbol N names the parameter count in the cell output; the prose used N for gradient bytes (MGP-15): write S for bytes. -->
+
+```{.python .input #sharding-memory-and-communication-1}
+%%tab pytorch
+GATHER = r'''
+import json, torch
+import torch.distributed as dist
+from d2l import torch as d2l
+
+_, k, device = d2l.init_distributed()
+x = torch.zeros(2**26 // k, device=device)  # This GPU's part
+y = torch.empty(2**26, device=device)       # 256 MB, gathered
+t = d2l.Benchmark(lambda: dist.all_gather_into_tensor(y, x), repeats=10).time
+print(json.dumps({'beta_link': (k - 1) / k * y.nbytes / t}))  # Sent per GPU
+dist.destroy_process_group()
+'''
+beta_link = min(r['beta_link'] for r in d2l.torchrun(GATHER, 2))
+print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on two GPUs')
+```
+
+```{.python .input #sharding-memory-and-communication-1}
+%%tab jax
+mesh = jax.make_mesh((2,), ('data',), devices=jax.devices()[:2],
+                     axis_types=(jax.sharding.AxisType.Auto,))
+x = jnp.zeros(2**26, device=NamedSharding(mesh, P('data')))  # 256 MB
+# Asking for the result on every GPU makes the compiler gather the halves
+gather = jax.jit(lambda x: x, out_shardings=NamedSharding(mesh, P()))
+t = d2l.Benchmark(lambda: gather(x), repeats=10).time
+beta_link = x.nbytes / 2 / t  # Each GPU sends its half
+print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on two GPUs')
+```
+
 The computation of a step is much shorter. The forward and the backward
 pass take about six floating-point operations per parameter and token
 (:numref:`sec_scaling-laws`). Two sequences of 1,024 tokens per GPU, which
@@ -157,6 +239,187 @@ machine, sharding lets the model train on four GPUs, at a few percent of
 the speed that its computation would allow. Over NVLink 5, at 900 GB/s in
 each direction, the same three phases take about 20 ms, and FSDP is the
 standard way to train models whose state does not fit on one GPU.
+
+<!-- WRITER: the paragraph above quotes four GPUs and "a few percent"; the run is on k = 2. The prediction cell below prints the three numbers the prose should derive before the run: state 16N/k = 14.3 GiB per GPU; communication 3(k-1)S/(k beta_link) (dev: 5.0 s PyTorch, 5.3-5.4 s JAX); arithmetic 8N bT/P at the tf32 peak, 6N per token times 4/3 for the forward pass that checkpointing repeats (0.38 s for 2,048 tokens per GPU). Activations with per-block checkpointing: each block keeps its input, 8 KiB per token in fp32, 36 x 2,048 x 8 KiB = 0.6 GB, plus the logits of 2 x 1,024 tokens over 50,257 words, 0.4 GB per copy. -->
+
+```{.python .input #sharding-memory-and-communication-2}
+%%tab pytorch, jax
+k, b, T = 2, 2, 1024  # GPUs; sequences of T tokens per GPU and step
+S = 4 * N             # Bytes of the fp32 weights, and of the gradients
+peak_tf32 = 82.6e12   # FLOP/s of the RTX 4090's tensor cores in tf32
+print(f'state per GPU, 16N/k: {16 * N / k / 2**30:.1f} GiB')
+print(f'communication, 3(k-1)S/(k beta_link): '
+      f'{3 * (k - 1) / k * S / beta_link:.1f} s per step')
+print(f'arithmetic at the peak, 8N bT/P: '
+      f'{8 * N * b * T / peak_tf32:.2f} s per step')
+```
+
+<!-- WRITER (PyTorch tab note): the script below builds the model on the meta device, wraps every block so that torch.utils.checkpoint recomputes it (Checkpointed), calls fully_shard once per block and once for the whole model, and only then allocates this GPU's shards with to_empty and initializes them as d2l.GPT does (norms to one, embeddings N(0, 0.02^2), then init_weights); random initialization of a sharded tensor draws the values that the whole tensor would get, given the same seed in every process. fused=True runs Adam's update as one kernel over all tensors instead of the default foreach update, whose temporaries are as large as the gradients (about 3.6 GiB here). The JSON line: peak memory, three timed steps after one warm-up, and the device seconds of NCCL kernels in one profiled step. -->
+
+```{.python .input #sharding-memory-and-communication-3}
+%%tab pytorch
+TRAIN_FSDP = r'''
+import json, sys, torch
+import torch.distributed as dist
+from torch import nn
+from torch.nn import functional as F
+from torch.distributed.fsdp import fully_shard
+from torch.utils.checkpoint import checkpoint
+from d2l import torch as d2l
+
+class Checkpointed(nn.Module):
+    """A block whose activations the backward pass recomputes."""
+    def __init__(self, blk):
+        super().__init__()
+        self.blk = blk
+
+    def forward(self, X, **kwargs):
+        return checkpoint(self.blk, X, use_reentrant=False, **kwargs)
+
+config, b, T = json.loads(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
+_, k, device = d2l.init_distributed()
+torch.set_float32_matmul_precision('high')  # fp32 products on tf32 cores
+torch.manual_seed(0)        # The same seed in every process
+with torch.device('meta'):  # Shapes only: no GPU holds the whole model
+    model = d2l.GPT(**config)
+model.blks = nn.ModuleList(Checkpointed(blk) for blk in model.blks)
+for blk in model.blks:      # Each block is gathered and released on its own
+    fully_shard(blk)
+fully_shard(model)          # The rest: the embeddings and the final norm
+model.to_empty(device=device)  # This GPU's shards, not yet initialized
+with torch.no_grad():       # Initialize the shards as d2l.GPT does
+    for m in model.modules():
+        if isinstance(m, nn.RMSNorm):
+            m.reset_parameters()
+    for emb in (model.token_emb, model.pos_emb):
+        nn.init.normal_(emb.weight, std=0.02)
+    model.init_weights()
+opt = torch.optim.Adam(model.parameters(), lr=1e-4, fused=True)
+X = torch.randint(0, config['vocab_size'], (b, T), device=device)
+
+def step():
+    loss = F.cross_entropy(model(X).flatten(0, 1), X.flatten())
+    loss.backward()
+    opt.step()
+    opt.zero_grad()
+
+step()                      # Warm-up; creates Adam's moment estimates
+times = [d2l.Benchmark(step, warmup=0, repeats=1).time for _ in range(3)]
+kernels = d2l.kernel_times(step, steps=1)
+comm = sum(ms for name, ms in kernels.items() if 'nccl' in name.lower())
+print(json.dumps({'peak': torch.cuda.max_memory_allocated(), 'times': times,
+                  'comm': comm / 1e3}))
+dist.destroy_process_group()
+'''
+```
+
+```{.python .input #sharding-memory-and-communication-4}
+%%tab pytorch
+ranks = d2l.torchrun(TRAIN_FSDP, k, json.dumps(config), b, T)
+peak = max(r['peak'] for r in ranks)
+times, comm = ranks[0]['times'], ranks[0]['comm']  # GPU 0
+```
+
+<!-- WRITER (JAX tab note): the jitted create builds the model and the optimizer under a sharding constraint on their state, so that each GPU computes only its own shards (device memory after create: 10.7 GiB per GPU, the 12N/k bytes of weights and moment estimates); the key is an argument, since a constant key would make XLA compute the weights while compiling (dev: 312 s instead of 71 s). The 36 blocks still take about a minute to compile. fsdp_sharding splits the first axis that k divides: the leading axis of every weight matrix and norm; the embedding table, whose 50,257 rows k = 2 does not divide, along its width. The loss function repeats d2l.GPT's forward pass with two changes: nnx.remat recomputes each block in the backward pass, and with_sharding_constraint keeps each block's output split by batch. Donation lets the step write the new state into the buffers of the old (alias 10.7 GiB in the memory analysis); without it the step would hold both, 2 x 10.7 GiB plus temporaries, more than a card. -->
+
+```{.python .input #sharding-memory-and-communication-5}
+%%tab jax
+def fsdp_sharding(x):
+    """Split the first axis of x whose length k divides across the GPUs;
+    replicate x if there is none."""
+    for i, n in enumerate(x.shape):
+        if n % k == 0:
+            return NamedSharding(mesh, P(*[None] * i, 'data'))
+    return NamedSharding(mesh, P())
+
+@nnx.jit
+def create(key):  # Passed in: XLA would fold a constant key while compiling
+    model = d2l.GPT(**config, rngs=nnx.Rngs(key))
+    opt = nnx.Optimizer(model, optax.adam(1e-4), wrt=nnx.Param)
+    state = nnx.state((model, opt))
+    nnx.update((model, opt), jax.lax.with_sharding_constraint(
+        state, jax.tree.map(fsdp_sharding, state)))
+    return model, opt
+
+model, opt = create(d2l.get_key())  # Each GPU computes only its shards
+```
+
+```{.python .input #sharding-memory-and-communication-6}
+%%tab jax
+data = NamedSharding(mesh, P('data'))     # Split along the batch
+block = nnx.remat(lambda blk, H: blk(H))  # Recomputed in the backward pass
+
+def loss_fn(model, X):
+    H = model.token_emb(X) + model.pos_emb(jnp.arange(X.shape[1]))
+    for blk in model.blks:  # Every block's output stays split by batch
+        H = jax.lax.with_sharding_constraint(block(blk, H), data)
+    logits = model.token_emb.attend(model.norm(H))
+    return optax.softmax_cross_entropy_with_integer_labels(logits, X).mean()
+
+# Donated, the old weights and moment estimates make room for the new ones
+@nnx.jit(donate_argnums=(0, 1))
+def train_step(model, opt, X):
+    loss, grads = nnx.value_and_grad(loss_fn)(model, X)
+    opt.update(model, grads)
+    return loss
+```
+
+```{.python .input #sharding-memory-and-communication-7}
+%%tab jax
+X = jax.device_put(jax.random.randint(d2l.get_key(), (k * b, T), 0,
+                                      config['vocab_size']), data)
+compiled = train_step.lower(model, opt, X).compile()
+mem = compiled.memory_analysis()  # Bytes per GPU
+print(f'per GPU: weights and moments '
+      f'{mem.argument_size_in_bytes / 2**30:.1f} GiB (donated: '
+      f'{mem.alias_size_in_bytes / 2**30:.1f} GiB), temporaries '
+      f'{mem.temp_size_in_bytes / 2**30:.1f} GiB')
+```
+
+```{.python .input #sharding-memory-and-communication-8}
+%%tab jax
+def collective_megabytes(compiled):  #@save
+    """Megabytes of the results of each kind of collective in a compiled
+    program, on one GPU."""
+    sizes = collections.Counter()
+    for line in compiled.as_text().splitlines():
+        # A synchronous collective, or the -done half of an asynchronous
+        # pair, whose result type lists only the arrays that it returns
+        op = re.search(r' = (.*?) (all-gather|reduce-scatter|all-reduce|'
+                       r'all-to-all|collective-permute)(-done)?\(', line)
+        for bits, dims in re.findall(r'[a-z]+(\d+)\[([\d,]*)\]',
+                                     op[1] if op else ''):
+            n = math.prod(int(d) for d in dims.split(',') if d)
+            sizes[op[2]] += int(bits) // 8 * n / 1e6
+    return dict(sizes)
+```
+
+```{.python .input #sharding-memory-and-communication-9}
+%%tab jax
+for kind, mb in sorted(collective_megabytes(compiled).items(),
+                       key=lambda kv: -kv[1]):
+    print(f'{kind}: {mb / 1e3:.2f} GB')
+```
+
+```{.python .input #sharding-memory-and-communication-10}
+%%tab jax
+train_step(model, opt, X).block_until_ready()  # Warm-up, finished
+times = [d2l.Benchmark(lambda: train_step(model, opt, X), warmup=0,
+                       repeats=1).time for _ in range(3)]
+kernels = d2l.kernel_times(lambda: train_step(model, opt, X), steps=1)
+comm = sum(ms for name, ms in kernels.items() if 'nccl' in name.lower()) / 1e3
+peak = jax.devices()[0].memory_stats()['peak_bytes_in_use']
+```
+
+```{.python .input #sharding-memory-and-communication-11}
+%%tab pytorch, jax
+print(f'per GPU: peak memory {peak / 2**30:.1f} GiB; '
+      f'{np.median(times):.2f} s per step ({min(times):.2f} to '
+      f'{max(times):.2f}), of which GPU 0 spends {comm:.2f} s in '
+      f'communication kernels')
+```
+
+<!-- WRITER (measured, dev runs on GPUs 0 and 1, 2026-11-20, not captured; the capture runs on the same pair): PyTorch beta_link 2.2-2.3 GB/s, predicted communication 5.0 s; peak 16.0 GiB per GPU (prediction about 17); 5.72 s per step (5.71 to 5.75; a second run 5.70 to 5.73), 5.69 s of it in NCCL kernels on GPU 0. JAX beta_link 2.1-2.2 GB/s, predicted 5.3-5.4 s; weights and moments 10.7 GiB, all of it donated; temporaries 4.3 GiB in one run, 5.2 GiB in another (XLA's schedule differs between compilations), peak 15.1-16.1 GiB; 5.40 s per step (5.38 to 5.55), 5.09 s in NCCL kernels. Compiled collectives (JAX): all-gather results 14.92 GB = the 36 blocks' weights twice (2 x 7.25 GB) plus the embedding table once (0.41 GB); reduce-scatter results 3.83 GB = S/k, so the full gradient S was reduce-scattered once; all-to-all 0.03 GB and a scalar all-reduce come from the embedding table, which is split along its width (fallback a of the design: the blocks follow FSDP exactly, the table does not). Bytes each GPU sends: 14.92/2 + 3.83 = 11.3 GB against 3 S/2 = 11.5 GB predicted. Without the activation constraint (dev, 4 blocks) the partitioner mixes allreduces, all-to-alls and collective-permutes and moves 6.7 GB instead of 2.7 GB: the JAX tab note's claim is true (good exercise material). So: the step is the communication, both tabs, within 15% of 3(k-1)S/(k beta_link); arithmetic at the tf32 peak is 0.38 s, 1/15 (PyTorch) to 1/14 (JAX) of the step, not "a twelfth" (the protected sentence takes the measured fraction). Not printed: the device time of the computing kernels rises from about 0.6 s (12-block model on one GPU, scaled to 36) to 2.2 s (JAX) and 3.5 s (PyTorch) while NCCL kernels run beside them; it overlaps the communication and does not set the step. -->
 
 The arithmetic also says when to shard. A model whose training state fits
 on one GPU next to its activations trains fastest with data parallelism.

@@ -2874,6 +2874,23 @@ def allreduce_megabytes(compiled):
                                                     result)) / 1e6)
     return sorted(sizes, reverse=True)
 
+def collective_megabytes(compiled):
+    """Megabytes of the results of each kind of collective in a compiled
+    program, on one GPU.
+
+    Defined in :numref:`sec_sharding`"""
+    sizes = collections.Counter()
+    for line in compiled.as_text().splitlines():
+        # A synchronous collective, or the -done half of an asynchronous
+        # pair, whose result type lists only the arrays that it returns
+        op = re.search(r' = (.*?) (all-gather|reduce-scatter|all-reduce|'
+                       r'all-to-all|collective-permute)(-done)?\(', line)
+        for bits, dims in re.findall(r'[a-z]+(\d+)\[([\d,]*)\]',
+                                     op[1] if op else ''):
+            n = math.prod(int(d) for d in dims.split(',') if d)
+            sizes[op[2]] += int(bits) // 8 * n / 1e6
+    return dict(sizes)
+
 def windows(corpus, batch_size, num_steps=128, *, sharding=None):
     """Endless minibatches of windows at random offsets, each position with
     the next byte as its target; `sharding` spreads them over devices.

@@ -3496,7 +3496,9 @@ def mixture_logpdf(x, mus, As):
     return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
 
 def sample_mixture(n, mus, As, rng):
-    """n draws from the uniform mixture of Gaussians mu_k + z A_k."""
+    """n draws from the uniform mixture of Gaussians mu_k + z A_k.
+
+    Defined in :numref:`sec_gan_objectives`"""
     k = rng.integers(0, len(mus), n)
     z = rng.standard_normal((n, 2))
     return np.einsum('ni,nij->nj', z, As[k]) + mus[k]

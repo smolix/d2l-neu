@@ -9,11 +9,7 @@ This section takes up both problems on 40,000 small game sprites. We first build
 
 ```{.python .input #dcgan-setup}
 %%tab jax
-# Deterministic XLA kernels. On an accelerator XLA otherwise picks each
-# matrix product's kernel by timing candidates, and kernels that add in
-# different orders differ in the last bits; training runs at large step
-# sizes can turn such differences into different outcomes. JAX reads
-# XLA_FLAGS once, when it starts, so this cell runs before the imports.
+# Deterministic GPU kernels; JAX reads XLA_FLAGS once, before the imports
 import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_deterministic_ops=true').strip()
@@ -62,7 +58,7 @@ d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
 #@save
 def load_pokemon(resolution=64):
     """All Pokemon sprites as one (n, 3, h, w) tensor in [-1, 1]."""
-    import warnings  # not in the d2l library preamble
+    import warnings
     transform = torchvision.transforms.Compose([
         torchvision.transforms.Resize((resolution, resolution)),
         torchvision.transforms.PILToTensor()])
@@ -88,7 +84,7 @@ d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
 def load_pokemon(resolution=64):
     """All Pokemon sprites as one (n, h, w, 3) array in [-1, 1]."""
     import warnings
-    from PIL import Image  # neither is in the d2l library preamble
+    from PIL import Image
     data_dir = d2l.download_extract('pokemon')
     files = sorted(os.path.join(root, f)
                    for root, _, names in os.walk(data_dir) for f in names
@@ -255,39 +251,90 @@ data_iter = d2l.ArrayLoader((images[perm[n_holdout:]],), 256, shuffle=True,
                             drop_last=True, key=jax.random.key(3))
 ```
 
+<!-- WRITER: EMA is now defined here, where it is first used (the DCGAN run samples from and is scored by an average of its generator, DCG-15); the EMA sentences of "Averaging, Flips, and Ranking" move here: the update rule with the half-life (500 steps here and in every later run), why the average of rotating iterates sits closer to the equilibrium, and that batch-norm statistics are copied, not averaged. -->
+
+```{.python .input #dcgan-training-with-the-classic-loss-4}
+%%tab pytorch
+#@save
+class EMA:
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Buffers such as batch-norm statistics are copied;
+    the average is kept in evaluation mode."""
+    def __init__(self, model, half_life):
+        import copy  # the d2l library preamble does not import it
+        self.model = copy.deepcopy(model).requires_grad_(False).eval()
+        self.decay = 0.5 ** (1 / half_life)
+
+    def update(self, model):
+        with torch.no_grad():
+            for avg, p in zip(self.model.parameters(), model.parameters()):
+                avg.lerp_(p, 1 - self.decay)
+            for avg, b in zip(self.model.buffers(), model.buffers()):
+                avg.copy_(b)
+```
+
+```{.python .input #dcgan-training-with-the-classic-loss-4}
+%%tab jax
+#@save
+class EMA:
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Other state such as batch-norm statistics is copied;
+    the average is kept in evaluation mode."""
+    def __init__(self, model, half_life):
+        self.model = nnx.clone(model)
+        self.model.eval()
+        self.decay = 0.5 ** (1 / half_life)
+
+    def update(self, model):
+        self.average(self.model, model, self.decay)
+
+    @staticmethod
+    @nnx.jit
+    def average(avg, model, decay):
+        """Move the parameters of avg toward those of model, in place."""
+        params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
+                              nnx.state(avg, nnx.Param),
+                              nnx.state(model, nnx.Param))
+        nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
+```
+
+<!-- WRITER: D5: train_gan now reports loss_D as the sum of the critic's two batch means, so its equilibrium is 2 log 2 ≈ 1.39 and the generator's log 2 ≈ 0.69; "both would equal log 2" is false. The run now also tracks the EMA (half-life 500 steps, about 3.5 epochs of 142 steps). Measured last-epoch losses: see the report code-dcgan.md. -->
 Twenty epochs take a minute or two on one GPU. The printed losses are per image; at the equilibrium both would equal $\log 2 \approx 0.69$.
 
 ```{.python .input #dcgan-training-with-the-classic-loss-2}
 %%tab pytorch
+ema = EMA(net_G, half_life=500)
 history = d2l.train_gan(net_D, net_G, data_iter, num_epochs=20,
-                        latent_dim=100, lr_D=0.0002, lr_G=0.0002, seed=1)
+                        latent_dim=100, lr_D=0.0002, lr_G=0.0002, seed=1,
+                        ema=ema)
 loss_D, loss_G = history[-1]
 print(f'last epoch: loss_D {loss_D:.3f}, loss_G {loss_G:.3f}')
 ```
 
 ```{.python .input #dcgan-training-with-the-classic-loss-2}
 %%tab jax
+ema = EMA(net_G, half_life=500)
 history = d2l.train_gan(net_D, net_G, data_iter, num_epochs=20,
-                        latent_dim=100, lr_D=0.0002, lr_G=0.0002, seed=1)
+                        latent_dim=100, lr_D=0.0002, lr_G=0.0002, seed=1,
+                        ema=ema)
 loss_D, loss_G = history[-1]
 print(f'last epoch: loss_D {loss_D:.3f}, loss_G {loss_G:.3f}')
 ```
 
+<!-- WRITER: the grid now shows the EMA generator (ema.model, kept in evaluation mode). -->
 We sample in evaluation mode, in which batch normalization uses the statistics collected during training, so that each image depends only on its own latent code.
 
 ```{.python .input #dcgan-training-with-the-classic-loss-3}
 %%tab pytorch
-net_G.eval()
 with torch.no_grad():
-    fake = net_G(torch.randn(20, 100, device=device))
+    fake = ema.model(torch.randn(20, 100, device=device))
 d2l.show_images(fake.cpu().permute(0, 2, 3, 1) / 2 + 0.5,
                 num_rows=4, num_cols=5);
 ```
 
 ```{.python .input #dcgan-training-with-the-classic-loss-3}
 %%tab jax
-net_G.eval()
-fake = net_G(jax.random.normal(jax.random.key(2), (20, 100)))
+fake = ema.model(jax.random.normal(jax.random.key(2), (20, 100)))
 d2l.show_images(np.asarray(fake) / 2 + 0.5, num_rows=4, num_cols=5);
 ```
 
@@ -401,8 +448,9 @@ The critic mirrors the generator. Four stages of convolution, leaky ReLU, and bi
 %%tab pytorch
 #@save
 class Discriminator(nn.Module):
-    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
-    a 4x4 feature map phi(x), then a linear head on the flattened map."""
+    """Critic that mirrors the generator: conv + leaky ReLU + bilinear
+    downsampling to a 4x4 feature map phi(x), then a linear head on the
+    flattened map."""
     def __init__(self, resolution, base_ch):
         super().__init__()
         num_stages = int(np.log2(resolution / 4))
@@ -433,8 +481,9 @@ for net in (Generator(latent_dim=100, resolution=64, base_ch=512),
 %%tab jax
 #@save
 class Discriminator(nnx.Module):
-    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
-    a 4x4 feature map phi(x), then a linear head on the flattened map."""
+    """Critic that mirrors the generator: conv + leaky ReLU + bilinear
+    downsampling to a 4x4 feature map phi(x), then a linear head on the
+    flattened map."""
     def __init__(self, resolution, base_ch, *, rngs):
         num_stages = int(np.log2(resolution / 4))
         chans = [3] + [base_ch * 2 ** i for i in range(num_stages)]
@@ -473,23 +522,6 @@ Three saved helpers complete the recipe. `sample_real` draws a training batch wi
 ```{.python .input #dcgan-a-modern-minimal-backbone-3}
 %%tab pytorch
 #@save
-class EMA:
-    """Exponential moving average of a model's parameters, given as a
-    half-life in steps. Buffers such as batch-norm statistics are copied;
-    the average is kept in evaluation mode."""
-    def __init__(self, model, half_life):
-        import copy  # the d2l library preamble does not import it
-        self.model = copy.deepcopy(model).requires_grad_(False).eval()
-        self.decay = 0.5 ** (1 / half_life)
-
-    def update(self, model):
-        with torch.no_grad():
-            for avg, p in zip(self.model.parameters(), model.parameters()):
-                avg.lerp_(p, 1 - self.decay)
-            for avg, b in zip(self.model.buffers(), model.buffers()):
-                avg.copy_(b)
-
-#@save
 def sample_real(images, n, labels=None):
     """Draw a training batch with random horizontal flips; return it with
     its labels (None without labels)."""
@@ -512,28 +544,6 @@ def pair_stats(net_D, real, fake, y=None):
 
 ```{.python .input #dcgan-a-modern-minimal-backbone-3}
 %%tab jax
-#@save
-class EMA:
-    """Exponential moving average of a model's parameters, given as a
-    half-life in steps. Other state such as batch-norm statistics is copied;
-    the average is kept in evaluation mode."""
-    def __init__(self, model, half_life):
-        self.model = nnx.clone(model)
-        self.model.eval()
-        self.decay = 0.5 ** (1 / half_life)
-
-    def update(self, model):
-        self.average(self.model, model, self.decay)
-
-    @staticmethod
-    @nnx.jit
-    def average(avg, model, decay):
-        """Move the parameters of avg toward those of model, in place."""
-        params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
-                              nnx.state(avg, nnx.Param),
-                              nnx.state(model, nnx.Param))
-        nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
-
 #@save
 def sample_real(key, images, n, labels=None):
     """Draw a training batch with random horizontal flips; return it with
@@ -725,7 +735,7 @@ for name, (loss_D, loss_G, gamma, num_steps) in arms.items():
           f'penalty {gamma / 2 * (r1 + r2):.3f}, train-holdout gap {gap:+.2f}')
 ```
 
-Both penalized critics sit below their equilibrium values, about 1.05 against $2 \log 2 \approx 1.39$ for the classic loss and about 0.5 against $\log 2 \approx 0.69$ for pairing: each stays somewhat ahead of its generator without running away. The penalty adds about a tenth to a fifth to the loss. The unpenalized critic's loss swings too widely to be read from one number. We return to the train--holdout gaps in :numref:`subsec_gan_limited_data`.
+Both penalized critics sit below their equilibrium values, about 1.05 against $2 \log 2 \approx 1.39$ for the classic loss and about 0.5 against $\log 2 \approx 0.69$ for pairing: each stays somewhat ahead of its generator without running away. The penalty adds about a tenth to a fifth to the loss. The unpenalized critic's loss swings too widely to be read from one number. We return to the train--holdout gaps at the end of the section.
 
 ### Training Traces
 
@@ -899,24 +909,55 @@ print(f'CIFAR-10 test accuracy: {float((pred == test_y).mean()):.3f}')
 
 The classifier labels about four in five test images correctly.
 
+### Precision and Recall
+:label:`subsec_gan_precision_recall`
+
+<!-- WRITER: new subsection (structure 3.6, DCG precision/recall; ex_dcgan-precision-recall retires into it). Define precision and recall in feature space after Kynkäänniemi et al. (2019): around each feature vector a ball whose radius is the distance to its k-th nearest neighbor in its own set (k = 3, the point itself not counted); precision is the fraction of generated features inside the union of the real balls, recall the fraction of real features inside the union of the generated balls. Prediction for the reader before the table: the collapsed NS arm has high precision and recall near zero; recall is the number that sees collapse, FD folds it in with everything else. The function computes the distances 1,000 rows at a time, so it never holds more than 1,000 x n of them. -->
+
+```{.python .input #dcgan-precision-and-recall}
+%%tab pytorch, jax
+#@save
+def precision_recall(feat_real, feat_gen, k=3, chunk=1000):
+    """k-NN precision and recall of two feature sets: the fraction of each
+    set inside the union of the other set's balls, each ball reaching to its
+    center's k-th nearest neighbor; return (precision, recall)."""
+    P = np.asarray(feat_real, np.float64)
+    Q = np.asarray(feat_gen, np.float64)
+    def dists(A, B):  # (len(A), len(B)) Euclidean distances
+        sq = (A ** 2).sum(1)[:, None] - 2 * A @ B.T + (B ** 2).sum(1)
+        return np.sqrt(np.maximum(sq, 0))
+    def chunks(A):
+        return (A[i:i + chunk] for i in range(0, len(A), chunk))
+    def radii(A):  # sorted distances start with the point itself, at 0
+        return np.concatenate([np.partition(dists(a, A), k, axis=1)[:, k]
+                               for a in chunks(A)])
+    def covered(A, B, r_B):  # is each row of A inside some ball of B?
+        return np.concatenate([(dists(a, B) <= r_B).any(1)
+                               for a in chunks(A)])
+    return (float(covered(Q, P, radii(P)).mean()),
+            float(covered(P, Q, radii(Q)).mean()))
+```
+
 ### Scoring the Runs
 
+<!-- WRITER: the scoring now uses n = 4,059, all held-out sprites, against 4,059 samples of each generator (DCGAN scored from its EMA like the other three rows); the floor compares two disjoint sets of 4,059 training images; the table gains precision and recall columns. Re-quote every number from the new table. -->
 We score 500 samples of each generator against 500 held-out sprites. As a floor we also score two disjoint sets of 500 training images against each other: any distance between them is estimator noise and, for FD, finite-sample bias. Because the feature network is our own, we call the scores FD and $\mathrm{MMD}^2$ rather than FID and KID; they use the same formulas but cannot be compared with published values. The backbone has no tanh, so its outputs can leave $[-1, 1]$. We clamp them before scoring, and the last column reports the fraction of raw pixel values outside the range.
 
 ```{.python .input #dcgan-scoring-the-runs-1}
 %%tab pytorch
 features = lambda imgs: batched(  # 2 x 2 averages: 64 x 64 -> 32 x 32
     cnn.features, F.avg_pool2d(imgs, 2)).cpu().numpy()
-n = 500
+n = len(holdout_imgs)
 torch.manual_seed(7)
 z_score = torch.randn(n, 100, device=device)
-gens = {'DCGAN': net_G, **{name: ema_G for name, (ema_G, _) in runs.items()}}
-with torch.no_grad():
-    raw = {name: G(z_score) for name, G in gens.items()}
-out_of_range = {name: float((x.abs() > 1).float().mean())
-                for name, x in raw.items()}
-feat_gen = {name: features(x.clamp(-1, 1)) for name, x in raw.items()}
-feat_real = features(holdout_imgs[:n])
+gens = {'DCGAN': ema.model,
+        **{name: ema_G for name, (ema_G, _) in runs.items()}}
+feat_gen, out_of_range = {}, {}
+for name, G in gens.items():
+    x = batched(G, z_score)
+    out_of_range[name] = float((x.abs() > 1).float().mean())
+    feat_gen[name] = features(x.clamp(-1, 1))
+feat_real = features(holdout_imgs)
 feat_a, feat_b = features(train_imgs[:n]), features(train_imgs[n:2 * n])
 white = float((holdout_imgs == 1).float().mean())
 ```
@@ -925,13 +966,16 @@ white = float((holdout_imgs == 1).float().mean())
 %%tab jax
 features = lambda imgs: np.asarray(batched(  # 2 x 2 averages: 64 -> 32
     cnn.features, nnx.avg_pool(imgs, (2, 2), strides=(2, 2))))
-n = 500
+n = len(holdout_imgs)
 z_score = jax.random.normal(jax.random.key(7), (n, 100))
-gens = {'DCGAN': net_G, **{name: ema_G for name, (ema_G, _) in runs.items()}}
-raw = {name: G(z_score) for name, G in gens.items()}
-out_of_range = {name: float((jnp.abs(x) > 1).mean()) for name, x in raw.items()}
-feat_gen = {name: features(jnp.clip(x, -1, 1)) for name, x in raw.items()}
-feat_real = features(holdout_imgs[:n])
+gens = {'DCGAN': ema.model,
+        **{name: ema_G for name, (ema_G, _) in runs.items()}}
+feat_gen, out_of_range = {}, {}
+for name, G in gens.items():
+    x = batched(G, z_score)
+    out_of_range[name] = float((jnp.abs(x) > 1).mean())
+    feat_gen[name] = features(jnp.clip(x, -1, 1))
+feat_real = features(holdout_imgs)
 feat_a, feat_b = features(train_imgs[:n]), features(train_imgs[n:2 * n])
 white = float((holdout_imgs == 1).mean())
 ```
@@ -940,12 +984,15 @@ Each feature set is compared with that of the held-out sprites; the first row is
 
 ```{.python .input #dcgan-scoring-the-two-runs}
 %%tab pytorch, jax
-print(f'{"run":18s}{"FD":>8s}{"MMD^2":>8s}{"out-of-range":>14s}')
-print(f'{"real vs. real":18s}{fid_score(feat_a, feat_b):8.2f}'
-      f'{kid_score(feat_a, feat_b):8.3f}')
-for name, feat in feat_gen.items():
-    print(f'{name:18s}{fid_score(feat, feat_real):8.2f}'
-          f'{kid_score(feat, feat_real):8.3f}{out_of_range[name]:14.3f}')
+print(f'{"run":17s}{"FD":>7s}{"MMD^2":>8s}{"precision":>11s}{"recall":>8s}'
+      f'{"out-of-range":>14s}')
+scored = {'real vs. real': (feat_a, feat_b),
+          **{name: (feat_real, feat) for name, feat in feat_gen.items()}}
+for name, (ref, feat) in scored.items():
+    precision, recall = precision_recall(ref, feat)
+    oor = f'{out_of_range[name]:14.3f}' if name in out_of_range else ''
+    print(f'{name:17s}{fid_score(ref, feat):7.2f}{kid_score(ref, feat):8.3f}'
+          f'{precision:11.2f}{recall:8.2f}{oor}')
 print(f'real pixel values equal to +1: {white:.0%}')
 ```
 
@@ -953,10 +1000,50 @@ The floor behaves as described above: FD is positive for two samples of the same
 
 Both scores depend on the feature network as well as on the generator: our classifier judges sprites by what helps to classify photographs, and a different feature network can change the values and reorder similar models.
 
+### Latent Interpolation
+
+<!-- WRITER: new subsection (structure 3.6, item 7). The cell walks eight equal steps along the straight line between two latent codes, for 64 pairs drawn with a fixed seed, through the RpGAN + R1 + R2 EMA generator, and compares the walk with a pixel cross-fade between the same two end images. It prints the precision of the six inner steps of each against the held-out features (the arm's own precision in the table above is the reference) and shows the first eight pairs of each. Prediction for the reader: every intermediate of the latent walk is a sprite, while a cross-fade is a double exposure. Measured numbers: see the report code-dcgan.md. One sentence ties this to the train-holdout gap (a generator that only reproduced training images would have nothing to show between them). -->
+
+```{.python .input #dcgan-latent-interpolation}
+%%tab pytorch
+G = runs['RpGAN + R1 + R2'][0]
+torch.manual_seed(0)
+z0, z1 = torch.randn(2, 64, 1, 100, device=device)  # 64 pairs of codes
+t = torch.linspace(0, 1, 8, device=device).view(1, 8, 1)
+path = batched(G, ((1 - t) * z0 + t * z1).reshape(-1, 100)).clamp(-1, 1)
+path = path.reshape(64, 8, 3, 64, 64)               # (pair, step, image)
+t = t.view(1, 8, 1, 1, 1)
+fade = (1 - t) * path[:, :1] + t * path[:, -1:]     # pixel cross-fades
+inner = lambda x: features(x[:, 1:-1].flatten(0, 1))
+print(f'precision of the inner steps: latent walk '
+      f'{precision_recall(feat_real, inner(path))[0]:.2f}, '
+      f'cross-fade {precision_recall(feat_real, inner(fade))[0]:.2f}')
+d2l.show_images([tile_images(x[:8].flatten(0, 1), 8) for x in (path, fade)],
+                1, 2, titles=['latent walk', 'pixel cross-fade'], scale=4.5);
+```
+
+```{.python .input #dcgan-latent-interpolation}
+%%tab jax
+G = runs['RpGAN + R1 + R2'][0]
+z0, z1 = jax.random.normal(jax.random.key(0), (2, 64, 1, 100))  # 64 pairs
+t = jnp.linspace(0, 1, 8).reshape(1, 8, 1)
+path = jnp.clip(batched(G, ((1 - t) * z0 + t * z1).reshape(-1, 100)), -1, 1)
+path = path.reshape(64, 8, 64, 64, 3)               # (pair, step, image)
+t = t.reshape(1, 8, 1, 1, 1)
+fade = (1 - t) * path[:, :1] + t * path[:, -1:]     # pixel cross-fades
+inner = lambda x: features(x[:, 1:-1].reshape(-1, 64, 64, 3))
+print(f'precision of the inner steps: latent walk '
+      f'{precision_recall(feat_real, inner(path))[0]:.2f}, '
+      f'cross-fade {precision_recall(feat_real, inner(fade))[0]:.2f}')
+d2l.show_images([tile_images(x[:8].reshape(-1, 64, 64, 3), 8)
+                 for x in (path, fade)],
+                1, 2, titles=['latent walk', 'pixel cross-fade'], scale=4.5);
+```
+
 ## Limited Data
 
+<!-- WRITER: the label subsec_gan_limited_data is deleted (no reference outside this file); the two subsections become one paragraph (DCG-12). -->
 ### Memorizing Critics
-:label:`subsec_gan_limited_data`
 
 Forty thousand sprites is a small dataset for a critic with 1.6 million parameters: in 12,000 steps at batch size 64 it sees each training image about twenty times. Instead of estimating a density ratio, such a critic can start to recognize individual training images. It then scores them higher than held-out images, and its gradient pulls the generator toward the finite training set rather than the distribution behind it. The train--holdout gap printed after each run measures this. The penalized critics' gaps stay within a few hundredths of zero, so at this budget they score held-out sprites as they score their training images; the unpenalized critic's gap varies from run to run, by up to a few tenths in either direction, and lives on a larger score scale (Exercise :exref:`ex_dcgan-scale-free-overfitting-statistic`). On smaller datasets this gap is the first sign of trouble :cite:`Karras.Aittala.Hellsten.ea.2020`. Whether the generator copies its training images is a separate question (Exercise :exref:`ex_dcgan-checking-for-copies`).
 
@@ -1090,6 +1177,7 @@ DCGAN trained the classic loss to diverse sprites through its architecture: tran
        $\mathrm{MMD}^2 = 0$ imply $q = p$? Does a Gaussian kernel
        distinguish the mixture in (b) from $p$?
    :exlabel:`ex_dcgan-moments-fid-kid`
+<!-- WRITER: z_score now holds 4,059 latent codes (n = len(holdout_imgs)), not 500; feat_real holds all 4,059 held-out sprites. -->
 1. [short-code] **Checking for copies.** Embed the 500 samples of the
    RpGAN + $R_1$ + $R_2$ arm drawn from `z_score` and all training images
    with `features`, and find each sample's nearest training

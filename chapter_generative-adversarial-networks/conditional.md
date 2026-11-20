@@ -14,6 +14,7 @@ from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 ```
+
 ```{.python .input #conditional-conditional-generation}
 %%tab jax
 import math
@@ -24,6 +25,7 @@ from flax import nnx
 import optax
 from d2l import jax as d2l
 ```
+
 ## The Conditional Game
 
 ### The Optimal Conditional Critic
@@ -93,6 +95,7 @@ class Modulate(nn.Module):
     def forward(self, h, c):
         return self.a(c)[:, :, None, None] * h + self.b(c)[:, :, None, None]
 ```
+
 ```{.python .input #conditional-three-ways-in-1}
 %%tab jax
 class Modulate(nnx.Module):
@@ -127,6 +130,7 @@ rows = lambda w, w0: (w != w0).any(1).nonzero().flatten().tolist()
 print('after one step on class 3: rows changed in a', rows(mod.a.weight, a0),
       'and in b', rows(mod.b.weight, b0))
 ```
+
 ```{.python .input #conditional-three-ways-in-2}
 %%tab jax
 mod = Modulate(10, 8, rngs=nnx.Rngs(0))
@@ -182,6 +186,7 @@ first = [int((train_y == c).nonzero()[0]) for c in range(10)]
 d2l.show_images(train_X[first].cpu().permute(0, 2, 3, 1) / 2 + 0.5,
                 num_rows=2, num_cols=5, titles=classes);
 ```
+
 ```{.python .input #conditional-class-conditional-cifar-10}
 %%tab jax
 classes = ['airplane', 'automobile', 'bird', 'cat', 'deer',
@@ -191,6 +196,7 @@ first = [int(np.nonzero(np.asarray(train_y) == c)[0][0]) for c in range(10)]
 d2l.show_images(np.asarray(train_X[np.array(first)]) / 2 + 0.5,
                 num_rows=2, num_cols=5, titles=classes);
 ```
+
 ### A Conditional Backbone
 
 The networks are the saved `d2l.Generator` and `d2l.Discriminator` of :numref:`sec_dcgan` at resolution 32, one resampling stage fewer than for the $64 \times 64$ sprites, with the condition as an extra input to each. Everything else is unchanged: bilinear resampling, leaky ReLU, no normalization, no tanh, and fan-in initialization. The saved generator concatenates optional extra $4 \times 4$ maps, its `extra` input, with the learned constant and the projected latent code before the mixing convolution. `CondGenerator` fills that slot with the class embedding, broadcast over the $4 \times 4$ grid. The embedding starts with unit variance, the scale of the learned constant beside it, so from the first step the class weighs about as much as the other inputs.
@@ -208,6 +214,7 @@ class CondGenerator(d2l.Generator):
         ec = self.embed(y)[:, :, None, None].expand(-1, -1, 4, 4)
         return super().forward(z, ec)
 ```
+
 ```{.python .input #conditional-a-conditional-backbone-at-32-by-32-1}
 %%tab jax
 class CondGenerator(d2l.Generator):
@@ -252,6 +259,7 @@ print(net_G(torch.zeros(2, 100), torch.zeros(2, dtype=torch.long)).shape)
 print(net_D(torch.zeros(2, 3, 32, 32),
             torch.zeros(2, dtype=torch.long)).shape)
 ```
+
 ```{.python .input #conditional-a-conditional-backbone-at-32-by-32-2}
 %%tab jax
 class ProjectionCritic(d2l.Discriminator):
@@ -273,6 +281,7 @@ net_D = ProjectionCritic(32, 64, rngs=nnx.Rngs(0))
 print(net_G(jnp.zeros((2, 100)), jnp.zeros(2, dtype=jnp.int32)).shape)
 print(net_D(jnp.zeros((2, 32, 32, 3)), jnp.zeros(2, dtype=jnp.int32)).shape)
 ```
+
 One image per request, and one score per image--label pair.
 
 ### Training with Same-Class Pairs
@@ -283,7 +292,7 @@ Within one class, the pairing loss of :numref:`sec_gan_relativistic` scores a re
 
 Every 250 steps the loop also logs how often the critic ranks a real image above a generated one. With test images on the real side, this is the *held-out pair accuracy*: on 512 fresh pairs of a test image and a generated image of the same class, the fraction that the critic orders correctly, $\hat P(D(x, c) > D(x', c))$. The constants $\zeta_c$ cancel from it, whereas the critic's mean score drifts with them. A value of one half means that the critic cannot tell real from generated images of a class.
 
-Apart from the length, 15,000 steps against 12,000, and the widths that come with one stage fewer, three settings differ from the sprite runs: batches of 128 images instead of 64, evaluations on 512 pairs instead of 256, and the penalty weight $\gamma = 0.5$ instead of $10$. Part of the last change is resolution. The penalty smooths the critic over image distances below about $2\sqrt\gamma$ (:numref:`sec_gan_convergence`), and the distance between two images grows with the square root of the number of pixels. A $32 \times 32$ image has a quarter of the pixels of a $64 \times 64$ sprite, so its distances are half as long, and the matching weight is a quarter of the sprite value, 2.5 (Exercise :exref:`ex_dcgan-penalty-weight-resolution`). The remaining factor of five was set at this budget, for this data; no rule in this chapter predicts it, and R3GAN itself starts CIFAR-10 at a smaller value still (:numref:`sec_gan_convergence`).
+Apart from the length, 15,000 steps against 12,000, and the widths that come with one stage fewer, three settings differ from the sprite runs: batches of 128 images instead of 64, evaluations on 512 pairs instead of 256, and the penalty weight $\gamma = 0.5$ instead of $10$. Resolution accounts for a factor of four of the last change, since $\gamma$ is a squared length (:numref:`sec_gan_convergence`) and a $32 \times 32$ image has a quarter of the pixels of a $64 \times 64$ sprite (Exercise :exref:`ex_dcgan-penalty-weight-resolution`); the remaining factor of five was set at this budget, for this data, and R3GAN itself starts CIFAR-10 at a smaller value still.
 
 ```{.python .input #conditional-training-with-the-chapter-s-loss-2}
 %%tab pytorch
@@ -296,6 +305,7 @@ ema_G, history = d2l.train_r3gan(
     train_y, eval_images=test_X, eval_labels=test_y, eval_size=512,
     batch_size=128, seed=1)
 ```
+
 ```{.python .input #conditional-training-with-the-chapter-s-loss-2}
 %%tab jax
 rngs = nnx.Rngs(0)  # the initialization
@@ -321,6 +331,7 @@ print(f'last 5,000 steps: critic loss {loss_D:.2f} (+ penalty '
       f'pair accuracy {acc:.2f}')
 print(f'first 2,000 steps: pair accuracy {acc_early:.2f}')
 ```
+
 ```{.python .input #conditional-training-with-the-chapter-s-loss-4}
 %%tab pytorch, jax
 steps = history['step']
@@ -333,7 +344,8 @@ d2l.plot(steps, [history['accuracy'], np.full_like(steps, 0.5)], 'step',
          'held-out pair accuracy', ylim=[0.3, 1], fmts=('-', 'k:'),
          axes=axes[1]);
 ```
-The dotted lines mark $\log 2$, the value of either pairing loss when the critic cannot order a pair, and a pair accuracy of one half. After an early transient both losses settle within a few thousand steps, the critic's pairing loss near 0.52, below $\log 2$ because the critic keeps winning, with the penalty adding about a tenth to it. The pair accuracy says by how much. The critic orders nearly every fresh same-class pair at the first check, between 83% and 92% averaged over the first 2,000 steps, and about 80% over the last 5,000; over the last 10,000 steps the curve fluctuates around 0.8 without a trend.
+
+The dotted lines mark $\log 2$, the value of either pairing loss when the critic cannot order a pair, and a pair accuracy of one half. After an early transient both losses settle within a few thousand steps, the critic's pairing loss near 0.52, below $\log 2$ because the critic keeps winning, with the penalty adding about 0.06 to it. The pair accuracy says by how much. The critic orders nearly every fresh same-class pair at the first check, between 83% and 92% averaged over the first 2,000 steps, and about 80% over the last 5,000; over the last 10,000 steps the curve fluctuates around 0.8 without a trend.
 
 Is that a failure of the conditioning? A generator that ignored its labels would hand the critic easy wins: a truck generated on a request for a cat, paired with a real cat, is no contest. The sprite critics of :numref:`sec_dcgan`, which play the same penalized game without labels, order more than nine in ten fresh pairs at most checks until the end of their runs, so a critic that stays ahead is the normal state of this game at our budgets. A generator that matched every class would bring the pair accuracy down to one half. Ours has settled short of it at this size and this budget, and the flat curve gives no reason to expect that more of the same steps would close the rest.
 
@@ -351,6 +363,7 @@ with torch.no_grad():
 panels = [d2l.tile_images(imgs[9 * c:9 * (c + 1)], 3) for c in range(10)]
 d2l.show_images(panels, 2, 5, titles=classes, scale=2);
 ```
+
 ```{.python .input #conditional-training-with-the-chapter-s-loss-5}
 %%tab jax
 z = jax.random.normal(jax.random.key(42), (90, 100))
@@ -359,6 +372,7 @@ imgs = ema_G(z, y)
 panels = [d2l.tile_images(imgs[9 * c:9 * (c + 1)], 3) for c in range(10)]
 d2l.show_images(panels, 2, 5, titles=classes, scale=2);
 ```
+
 Most panels read as their class, and pose, color and background vary within every panel, so the figure shows no obvious collapse within a class. Look closer at the animals, though. Deer and horses are brown forms on grass, frogs are green and brown textures, and birds, cats and dogs are often similar brown shapes: the generator tells these classes apart by palette and background as much as by shape. That is what a shortcut looks like, and a shortcut can satisfy a classifier without satisfying a person. Inspection cannot say how often an image would be recognized as its class, or how much of a class's variety is missing; we measure both next.
 
 ## Measuring a Conditional Generator
@@ -378,7 +392,7 @@ The cyclic shift from the start of this section is the first row at its sharpest
 
 ### A Referee Classifier
 
-To check requests we need a judge that knows the classes. The referee is a CIFAR-10 classifier: the feature network of :numref:`sec_dcgan`, trained the same way, with `d2l.train_feature_cnn` at CIFAR-10's native $32 \times 32$ resolution, random horizontal flips, random shifts of up to four pixels, and a learning rate that rises and then anneals over 15 epochs. When we trained it without the augmentation and the schedule, it overfit, and its accuracy on a single class moved by tens of points between two training seeds, more than the differences we want to read. With them it reaches about 78%, and its per-class accuracies move by a few points between runs. A pretrained ImageNet network would be a sharper referee; ours trains inside the notebook, and reading every alignment against its accuracy on real images corrects for how often it errs on photographs.
+To check requests we need a judge that knows the classes. The referee is a CIFAR-10 classifier: the feature network of :numref:`sec_dcgan`, trained the same way, with `d2l.train_feature_cnn` at CIFAR-10's native $32 \times 32$ resolution, random horizontal flips, random shifts of up to four pixels, and a learning rate that rises and then anneals over 15 epochs. It reaches about 78%. Both additions come from trials that this notebook does not repeat: without them the referee overfit, and its accuracy on a single class moved by tens of points between two training seeds, more than the differences we want to read; with them it moved by a few points. A pretrained ImageNet network would be a sharper referee; ours trains inside the notebook, and reading every alignment against its accuracy on real images corrects for how often it errs on photographs.
 
 ```{.python .input #conditional-measuring-condition-alignment-1}
 %%tab pytorch
@@ -390,6 +404,7 @@ cls_acc = [float((pred[test_y == c] == c).float().mean())
            for c in range(10)]
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).float().mean()):.3f}')
 ```
+
 ```{.python .input #conditional-measuring-condition-alignment-1}
 %%tab jax
 cnn = d2l.FeatureCNN(resolution=32, rngs=nnx.Rngs(1))
@@ -398,6 +413,7 @@ pred = d2l.batched(cnn, test_X).argmax(1)
 cls_acc = [float((pred[test_y == c] == c).mean()) for c in range(10)]
 print(f'CIFAR-10 test accuracy: {float((pred == test_y).mean()):.3f}')
 ```
+
 ### Alignment per Class
 
 For each generated image, the referee either predicts the requested class or it does not. The fraction of matches, overall and per class, is the *alignment*. We compare it with the referee's accuracy on real test images of the same class, because the referee also misclassifies real images. The real accuracy is a reference, not an upper bound: unusually typical images can be easier to classify than average photographs, as a baseline below shows. The next cell draws 500 images of each class from the averaged generator, and the one after prints alignment beside the real accuracy and their difference.
@@ -419,6 +435,7 @@ yg = np.repeat(np.arange(10), 500)  # the requested classes
 pred_gen = d2l.batched(cnn, gen).argmax(1).cpu().numpy()
 align = [float((pred_gen[yg == c] == c).mean()) for c in range(10)]
 ```
+
 ```{.python .input #conditional-alignment-per-class-1}
 %%tab jax
 def generate(seed, n=500):
@@ -442,7 +459,8 @@ for name, a, r in zip(classes + ['mean'], align + [np.mean(align)],
                       cls_acc + [np.mean(cls_acc)]):
     print(f'{name:12s}{a:11.2f}{r:7.2f}{a - r:+7.2f}')
 ```
-Averaged over classes, alignment is about three in four (0.72 to 0.74), four to six points below the referee's accuracy on real images. By this measure the generator obeys nearly as often as the referee can tell. Remember the shortcut, though: the referee learned from the same 50,000 images as the generator, so a palette that works for one may work for the other, and alignment counts what a 78% classifier accepts, which can be more than a person would. No class is recognized much more often than its real counterpart, and cat is the hardest class in both columns, for generated images as for photographs. The per-class differences move by several points between training runs, so the table does not rank the classes.
+
+Averaged over classes, alignment is about three in four (0.72 to 0.74), four to six points below the referee's accuracy on real images. By this measure the generator obeys nearly as often as the referee can tell. Remember the shortcut, though: the referee learned from the same 50,000 images as the generator, so a palette that works for one may work for the other, and alignment counts what a 78% classifier accepts, which can be more than a person would. No class is recognized much more often than its real counterpart, and cat is the hardest class in both columns, for generated images as for photographs. Beyond that, the table does not rank the classes: it comes from one training run, and in our trials, which this notebook does not repeat, the per-class differences moved by several points from one training run to the next.
 
 ### Fidelity and Within-Class Diversity
 
@@ -459,6 +477,7 @@ f_gen = features(gen)
 f_gen2 = features(generate(8).clamp(-1, 1))          # a second draw
 idx, pred_real = idx.cpu().numpy(), pred.cpu().numpy()
 ```
+
 ```{.python .input #conditional-fidelity-and-within-class-diversity-1}
 %%tab jax
 features = lambda imgs: np.asarray(d2l.batched(cnn.features, imgs))
@@ -482,7 +501,8 @@ for name, f in draws.items():
           f'{d2l.kid_score(f, f_real):19.3f}')
 print(f'generated values outside [-1, 1]: {out_of_range:.3f}')
 ```
-In FD the generated set lies ten to twelve times as far from the reference as the floor does, and the second draw moves FD by only 0.05 to 0.08, so the distance belongs to the generator, not to the draw. In $\mathrm{MMD}^2$ the floor sits at zero within its noise and the generated set at about 0.11. About one raw value in a hundred lies outside $[-1, 1]$ before the clamp, so the clamp changes few pixels and hides little.
+
+In FD the generated set lies ten to twelve times as far from the reference as the floor does, and the second draw moves FD by less than a tenth, so the distance belongs to the generator, not to the draw. In $\mathrm{MMD}^2$ the floor sits at zero within its noise and the generated set at about 0.11. About one raw value in a hundred lies outside $[-1, 1]$ before the clamp, so the clamp changes few pixels and hides little.
 
 The distances fold every difference into one number. Per-class precision and recall separate two kinds of difference: generated images unlike any real image of their class, and real images unlike any generated one. Around each feature vector, draw a ball that reaches to its third-nearest neighbor in its own set (:numref:`subsec_gan_precision_recall`). *Precision* is the fraction of generated images of class $c$ that fall inside some real ball of class $c$, and *recall* is the fraction of real images of class $c$ that fall inside some generated ball. The cell computes both for each class against the reference, prints their means over classes and the worst class, and ends with the within-class feature variance, the variance of the features within each class averaged over features and classes.
 
@@ -509,7 +529,7 @@ print(f'within-class feature variance: generated {cvar(f_gen):.3f}, '
       f'real {cvar(f_real):.3f}, the floor {cvar(f_real2):.3f}')
 ```
 
-The two numbers point in opposite directions. Precision is higher for the generated images than for a second real set, 0.90 against 0.85. Recall is far lower, 0.57 to 0.59 against 0.82 to 0.84: only about three in five real images have a generated image near them. The second draw changes neither number by more than 0.01. The generator plays it safe. Together the two numbers say where its images are: precision says they lie among the real images of their class, so the generator has not drifted away from the data; recall says they lie in only part of each class. The measurements cannot say which part is missing, whether poses, backgrounds or contrast, but each is variety the class has and the generator lacks. The within-class feature variance points the same way, about a fifth lower for the generated images (0.17 against 0.21 to 0.22) while the floor comes within 3%. The class with the lowest recall changes between runs, so we name none.
+The two numbers point in opposite directions. Precision is higher for the generated images than for a second real set, 0.90 against 0.85. Recall is far lower: only about three in five real images have a generated image near them, against more than four in five for the floor. The second draw changes neither number by more than 0.01. The generator plays it safe. Together the two numbers say where its images are: precision says they lie among the real images of their class, so the generator has not drifted away from the data; recall says they lie in only part of each class. The measurements cannot say which part is missing, whether poses, backgrounds or contrast, but each is variety the class has and the generator lacks. The within-class feature variance points the same way, about a fifth lower for the generated images, while the floor comes within a few percent of the reference. The worst classes are printed for completeness; one training run cannot say whether another would find the same ones, so we name none.
 
 ### A Prototype Baseline
 
@@ -537,13 +557,13 @@ for name, (f, p) in sets.items():
           f'{prec:10.2f}{rec:8.2f}')
 ```
 
-Alignment rewards prototypes; recall catches them. The referee recognizes 90 to 91% of the prototypes, against 78 to 79% of the random real images, and their precision is 0.97 against 0.85 to 0.86. Their recall is 0.36 to 0.37 against 0.83 to 0.85, less than half. The generator's row lies between the two real rows: its precision, 0.89, sits above the random real images, as the prototypes' does, but its recall, 0.65 to 0.67, is nearly twice theirs, and its alignment is the lowest of the three. It is less typical than the prototypes and more varied.
+Alignment rewards prototypes; recall catches them. The referee recognizes nine in ten prototypes, more than the random real images, and their precision is close to one. Their recall is less than half that of the random real images. The generator's row lies between the two real rows: its precision sits above the random real images, as the prototypes' does, but its recall is nearly twice theirs, and its alignment is the lowest of the three. It is less typical than the prototypes and more varied.
 
 FD gives the surprise of the table. It places the prototypes at about 3, against 0.43 for the random real images, and so ranks a set of real photographs below the trained generator (1.6 to 2.0); $\mathrm{MMD}^2$ also places the prototypes far above the random real images. FD measures how far one cloud of features lies from another. It is not a score of image quality, and a set of perfect but typical photographs lies farther from the data than our generator does.
 
 Nor are the prototypes a straw man. BigGAN's truncation trick moves a generator toward them on purpose, trading recall for precision, and Exercise :exref:`ex_conditional-biggan-s-truncation-trick` measures that trade with these instruments.
 
-One caution about sizes. At 100 images per class the generator's recall is 0.65 to 0.67, higher than at 500, while the floor's barely moves (0.83 to 0.85 at 100, 0.82 to 0.84 at 500). Smaller sets draw wider balls, and wider balls around concentrated samples reach real images that the samples themselves do not cover. Recall, like FD, is therefore compared only at equal sizes: real images from the floor half score 0.43 in FD at 100 per class, and 0.15 at 500 (Exercise :exref:`ex_conditional-diagnostics-cell-detects-within`).
+One caution about sizes. At 100 images per class the generator's recall is about two thirds, higher than the three in five it has at 500, while the floor's barely moves. Smaller sets draw wider balls, and wider balls around concentrated samples reach real images that the samples themselves do not cover. Recall, like FD, is therefore compared only at equal sizes: real images from the floor half score 0.43 in FD at 100 per class, and about 0.15 at 500 (Exercise :exref:`ex_conditional-diagnostics-cell-detects-within`).
 
 Is giving the request to both players enough, as the opening asked? It is enough to make the game demand every class: the optimal critic compares like with like, and the trained generator obeys about as often as our referee can tell. It was not enough, at our budget, for the generator to cover each class. The opening's third kind of request, a sketch to complete, is a whole image, and for an image condition squared error offers itself as the loss; :numref:`sec_gan_beyond` shows what it does.
 
@@ -984,8 +1004,9 @@ flags each?
 
 - Alignment: the fraction of generated images the referee labels as
   requested.
-- Without flips, 4-pixel shifts and a rising-then-annealed rate, its
-  accuracy on one class moved by tens of points between seeds.
+- Flips, 4-pixel shifts and a rising-then-annealed rate: without them,
+  in trials not repeated here, accuracy on one class moved by tens of
+  points between seeds.
 - Reference: the referee's accuracy on real images of the same class.
 
 ::: {.d2l-note .warn}
@@ -1001,7 +1022,7 @@ shortcut can fool both.
 
 - Mean alignment 0.72 to 0.74 against 0.78 on real images.
 - Cat is the hardest class in both columns.
-- Per-class differences move between runs: do not rank classes.
+- One training run cannot rank the classes.
 :::
 
 ::: {.slide title="The Generated Set Sits Ten to Twelve Times Farther Out Than a Real Floor"}
@@ -1010,7 +1031,7 @@ shortcut can fool both.
 @!conditional-measuring-condition-alignment-4
 
 - Floor: test images 500 to 999 of each class against images 0 to 499.
-- A second generated draw moves FD by 0.05 to 0.08.
+- A second generated draw moves FD by less than 0.1.
 - FD and MMD$^2$ never see a label.
 :::
 
@@ -1023,8 +1044,8 @@ shortcut can fool both.
 **Recall:** real images inside a generated ball of their class.
 
 - Precision 0.90 against 0.85: generated images lie among the real ones.
-- Recall 0.57 to 0.59 against 0.82 to 0.84: two in five real images have
-  no generated neighbor. The generator covers part of each class.
+- Recall about 0.58 against 0.83: two in five real images have no
+  generated neighbor. The generator covers part of each class.
 :::
 
 ::: {.slide title="Alignment Rewards Prototypes; Recall Catches Them"}
@@ -1033,8 +1054,8 @@ shortcut can fool both.
 @!conditional-a-prototype-baseline
 
 - Prototypes: the 100 real images per class nearest the class centroid.
-- Alignment 0.90 to 0.91 and precision 0.97, above random real images.
-- Recall 0.36 to 0.37, less than half.
+- Alignment about 0.9 and precision 0.97, above random real images.
+- Recall less than half that of random real images.
 - FD about 3: real photographs ranked below the generator (1.6 to 2.0).
 - Compare recall and FD only at equal set sizes.
 :::

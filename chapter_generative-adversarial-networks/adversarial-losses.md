@@ -394,7 +394,7 @@ for name, (has_critic, lam) in students.items():
               f'{1 - upper - lower:.0%} off the bands')
 ```
 
-Student (i) lands where the equation put it. In every run it lies between 0.96 and 0.98 from the nearer band, with every output off the bands: regression onto a high-noise teacher reproduces the squared-error student of the first experiment, latent or not. Students (ii) and (iii) sit 0.03 to 0.08 from a band, with 1 or 2% of their outputs off the bands, a gap of about 0.9 against run-to-run ranges of a few hundredths. Both also split their outputs about evenly, 47 to 52% on each band: given a latent, the critic student does what the deterministic one could not. Between students (ii) and (iii) every difference lies inside the range of the runs, so here the regression term neither helps nor hurts, and the critic decides where the samples land.
+Student (i) lands where the equation put it. In every run it lies about one unit from the nearer band, with every output off the bands: regression onto a high-noise teacher reproduces the squared-error student of the first experiment, latent or not. Students (ii) and (iii) sit a few hundredths from a band, and the gap of about 0.9 is many times the spread of the runs. Both also split their outputs about evenly between the bands: given a latent, the critic student does what the deterministic one could not. Between students (ii) and (iii) every difference lies inside the range of the runs, so here the regression term neither helps nor hurts, and the critic decides where the samples land.
 
 That (iii) stays on the bands is the surprising result: its regression term is the one that put student (i) in the corridor, at the same weight. A rough count, with the critic at its best response, explains it. For an output on a band, $u = \pm 1$, the teacher's target lies on average only about 0.2 from the corridor, so the regression pulls the output inward with a gradient of about $2(1 - 0.2) = 1.6$. Suppose the outputs on a band give way toward the corridor by $\delta$. They then form a Gaussian of width 0.05 beside the data's, and the best critic's log ratio gains a slope of $\delta/0.05^2 = 400\,\delta$ against the shift, of which the non-saturating loss passes on about half. The two forces balance at $\delta \approx 1.6/200 = 0.008$, less than a hundredth of a unit and well inside the range of the runs. The bands are so narrow that the critic objects to a shift long before the regression has moved anything. The 1 or 2% of outputs off the bands have the cause seen in the first experiment: a continuous map of $z$ that reaches both bands must pass through the corridor.
 
@@ -405,15 +405,6 @@ Adversarial diffusion distillation (ADD) :cite:`Sauer.Lorenz.Blattmann.ea.2023` 
 Distribution matching distillation (DMD) :cite:`Yin.Gharbi.Zhang.ea.2024` keeps the comparison but trains no classifier. It borrows one idea from the next chapter: the gradient of a log density with respect to its input, $\nabla_x \log p$, is called the *score*, and a trained diffusion model supplies it for the data at each noise level. Let $q$ be the distribution of the student's samples, and $p_\tau$ and $q_\tau$ the data and the samples noised to level $\tau$. DMD moves each sample $x'$ along the difference of two scores, evaluated at a copy of $x'$ noised to a random level $\tau$. The frozen teacher supplies the score of $p_\tau$, as far as the teacher has learned it, and a second diffusion model, trained alongside the student on its current samples, supplies that of $q_\tau$. The difference is $\nabla_x \log(p_\tau/q_\tau)$, the input gradient of the critic that logistic regression between the two would learn. DMD therefore follows the direction a perfect critic would give, without a classifier.
 
 That direction has a weakness. It descends the reverse divergence $D_{\textrm{KL}}(q_\tau \,\|\, p_\tau)$, which charges little for a missing mode (:numref:`subsec_gan_mode_dropping`), and the first DMD added a regression onto precomputed teacher outputs partly for that reason. Its successor DMD2 :cite:`Yin.Gharbi.Park.ea.2024` replaces that regression by a critic against real images, which also lets the student correct what the teacher got wrong.
-
-A critic can also improve the slow model itself, and it need not be a second network. Direct discriminative optimization (DDO) :cite:`Zheng.Chen.Chen.ea.2025` takes a pretrained likelihood model $q_\theta$, such as a diffusion model, freezes a reference copy $q_{\textrm{ref}}$, and writes the critic as
-
-$$
-D_\theta(x) = \log\big(q_\theta(x)/q_{\textrm{ref}}(x)\big).
-$$
-:eqlabel:`eq_beyond_ddo`
-
-Training this critic by logistic regression, real data against samples of $q_{\textrm{ref}}$, changes $q_\theta$ itself, with no discriminator network and no second player. If training reaches $q_\theta = p$, then $D_\theta = \log(p/q_{\textrm{ref}})$, the optimal critic between the data and the reference model (Exercise :exref:`ex_adversarial-losses-ddo-plays-log-loss`). The paper also scales this logit by a small factor and repeats the procedure in rounds; :numref:`sec_gan-further-reading` follows both.
 
 ## Tokenizers and Vocoders
 
@@ -551,10 +542,14 @@ A network trained by squared error predicts the conditional mean of its target g
        :citet:`Kynkaanniemi.Karras.Aittala.ea.2023` that ImageNet-pretrained
        critics can lower Inception-based FID.
    :exlabel:`ex_adversarial-losses-frozen-features`
-1. **DDO's implicit critic.** DDO :cite:`Zheng.Chen.Chen.ea.2025` plays the
-   log-loss game between real data and samples of a frozen model
-   $q_{\textrm{ref}}$ with the critic $D_\theta$ of :eqref:`eq_beyond_ddo`.
-   It minimizes
+1. **DDO's implicit critic.** Direct discriminative optimization (DDO)
+   :cite:`Zheng.Chen.Chen.ea.2025` takes a pretrained likelihood model
+   $q_\theta$, such as a diffusion model, freezes a reference copy
+   $q_{\textrm{ref}}$, and uses their log ratio
+   $D_\theta(x) = \log\big(q_\theta(x)/q_{\textrm{ref}}(x)\big)$ as the
+   critic, so that no discriminator network and no second player are needed.
+   It plays the log-loss game between real data and samples of
+   $q_{\textrm{ref}}$ and minimizes
    $J(\theta) = -\mathbb{E}_{x \sim p}[\log \sigma(D_\theta(x))] - \mathbb{E}_{x \sim q_{\textrm{ref}}}[\log \sigma(-D_\theta(x))]$
    over the parameters of $q_\theta$, starting from
    $\theta = \theta_{\textrm{ref}}$.
@@ -830,9 +825,9 @@ Students $g(c, z)$, $z \sim \mathcal{N}(0, 1)$; 4,000 steps; three seeds each.
 
 | student | from nearer band | on each band | off the bands |
 |:--|--:|--:|--:|
-| (i) regression onto the teacher | 0.96--0.98 | 0% | 100% |
-| (ii) critic | 0.03--0.08 | 47--52% | 1--2% |
-| (iii) critic + regression | 0.04--0.06 | 48--51% | 1--2% |
+| (i) regression onto the teacher | about 1 | 0% | 100% |
+| (ii) critic | a few hundredths | about half | 1--2% |
+| (iii) critic + regression | a few hundredths | about half | 1--2% |
 
 Why (iii) stays: the regression pulls with about $2(1 - 0.2) = 1.6$ at a
 band; a shift $\delta$ draws a critic push of about
@@ -872,21 +867,6 @@ samples, noised to level $\tau$.
   modes; DMD2 adds a critic on real images.
 
 [Yin et al. 2024, DMD and DMD2]{.small}
-:::
-
-::: {.slide title="A Likelihood Model Can Be Its Own Critic"}
-[Critics at scale]{.kicker}
-
-Two evaluable densities define a log-ratio critic:
-
-$$D_\theta(x) = \log \frac{q_\theta(x)}{q_{\textrm{ref}}(x)}$$
-
-- DDO trains this critic by logistic regression, real data against samples
-  of a frozen copy $q_{\textrm{ref}}$, and so updates $q_\theta$ itself.
-- At $q_\theta = p$ it is the optimal critic $\log(p/q_{\textrm{ref}})$.
-- No discriminator network, no second player.
-
-[Zheng et al. 2025]{.small}
 :::
 
 ::: {.slide title="Texture Is Ambiguous, So Autoencoders Keep a Patch Critic"}
@@ -998,8 +978,8 @@ per second.
 
 - Two bands: squared error within about 0.02 of $x = c$, a unit from the
   data; the critic keeps the student on a band.
-- Teacher at $\tau = 2$: regression alone 0.96--0.98 from a band; with a
-  critic 0.03--0.08, about half on each band, regression term or not.
+- Teacher at $\tau = 2$: regression alone about one unit from a band; with
+  a critic a few hundredths, about half on each band, regression term or not.
 - Autoencoders and vocoders keep a critic for texture and phase.
 - GANs keep one-step sampling; four limits remain: no density, two
   networks and a tuned penalty, no push toward a missing mode, instability

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:a82a0a5ecb23f8959760761493ac6a1c2464817f99bcc92e550f718a132edd2b",
+    "d2l_lib_fingerprint": "sha256:9e19b27de734d38b7ceac104e484afd7969ac4edfc2373c425e815863ba7a682",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-phase-portraits-1-1.svg",
           "bytes": 110579,
-          "sha256": "sha256:49bdeeb79ae32baa7e5fb1073a99f5c79897b744063236a6810485ac62f9d191"
+          "sha256": "sha256:c55c84b71a63b9dd8a6ef72170a7c9e29c66ada65af9df18ba56103093da015e"
         }
       ]
     },
@@ -43,22 +43,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu 0.2, gamma    0: exact 9.950e-03, local 1.000e-02 (1.00x), large-gamma inf (infx)\nmu 0.2, gamma 0.01: exact 9.566e-03, local 9.615e-03 (1.01x), large-gamma 2.500e-01 (26.13x)\nmu 0.2, gamma    1: exact 1.996e-03, local 2.000e-03 (1.00x), large-gamma 2.500e-03 (1.25x)\n"
+          "text": "mu 0.2, gamma    0: exact 9.950e-03, local 1.000e-02 (1.00x), large-gamma inf (infx)\nmu 0.2, gamma 0.01: exact 9.566e-03, local 9.615e-03 (1.01x), large-gamma 2.500e-01 (26.13x)\nmu 0.2, gamma    1: exact 1.996e-03, local 2.000e-03 (1.00x), large-gamma 2.500e-03 (1.25x)\nmu 0.2, gamma   10: exact 2.438e-04, local 2.439e-04 (1.00x), large-gamma 2.500e-04 (1.03x)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu 0.2, gamma   10: exact 2.438e-04, local 2.439e-04 (1.00x), large-gamma 2.500e-04 (1.03x)\nmu   1, gamma    0: exact 2.228e-01, local 2.500e-01 (1.12x), large-gamma inf (infx)\nmu   1, gamma 0.01: exact 2.135e-01, local 2.404e-01 (1.13x), large-gamma 6.250e+00 (29.27x)\nmu   1, gamma    1: exact 4.818e-02, local 5.000e-02 (1.04x), large-gamma 6.250e-02 (1.30x)\n"
+          "text": "mu   1, gamma    0: exact 2.228e-01, local 2.500e-01 (1.12x), large-gamma inf (infx)\nmu   1, gamma 0.01: exact 2.135e-01, local 2.404e-01 (1.13x), large-gamma 6.250e+00 (29.27x)\nmu   1, gamma    1: exact 4.818e-02, local 5.000e-02 (1.04x), large-gamma 6.250e-02 (1.30x)\nmu   1, gamma   10: exact 6.120e-03, local 6.098e-03 (1.00x), large-gamma 6.250e-03 (1.02x)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu   1, gamma   10: exact 6.120e-03, local 6.098e-03 (1.00x), large-gamma 6.250e-03 (1.02x)\nmu   3, gamma    0: exact 1.054e+00, local 2.250e+00 (2.14x), large-gamma inf (infx)\nmu   3, gamma 0.01: exact 1.012e+00, local 2.163e+00 (2.14x), large-gamma 5.625e+01 (55.57x)\nmu   3, gamma    1: exact 3.909e-01, local 4.500e-01 (1.15x), large-gamma 5.625e-01 (1.44x)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "mu   3, gamma   10: exact 6.862e-02, local 5.488e-02 (0.80x), large-gamma 5.625e-02 (0.82x)\n"
+          "text": "mu   3, gamma    0: exact 1.054e+00, local 2.250e+00 (2.14x), large-gamma inf (infx)\nmu   3, gamma 0.01: exact 1.012e+00, local 2.163e+00 (2.14x), large-gamma 5.625e+01 (55.57x)\nmu   3, gamma    1: exact 3.909e-01, local 4.500e-01 (1.15x), large-gamma 5.625e-01 (1.44x)\nmu   3, gamma   10: exact 6.862e-02, local 5.488e-02 (0.80x), large-gamma 5.625e-02 (0.82x)\n"
         }
       ]
     },
@@ -88,17 +83,17 @@
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-3": {
-      "code_fingerprint": "sha256:048cf3bc9338ce7ae2ce6708868229491110c1215642cd82fe1c31150c15c793",
+      "code_fingerprint": "sha256:340b8187ac990bb98f04a2869f3b50efb5404482fbeac9236d75cd25ee954153",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-4": {
-      "code_fingerprint": "sha256:0ccf2a4d9c5ec7df3654f625b562a67a49915291abae0b90a11561112f401d8e",
+      "code_fingerprint": "sha256:cf95e3117085b267af5eff67cdc48067cdfe875830283a5f3c4c035f132c8182",
       "kind": "text",
       "outputs": []
     },
     "convergence-mode-coverage-on-25-gaussians-2": {
-      "code_fingerprint": "sha256:29ae161b1127816a554cd7486dfd56ead2061b7e064192c739feff112853928c",
+      "code_fingerprint": "sha256:3fb03377294799691473ee83749db4f1dd9401f7be0520824b824c8f34e67862",
       "kind": "text",
       "outputs": [
         {
@@ -109,7 +104,7 @@
       ]
     },
     "convergence-mode-coverage-on-25-gaussians-7": {
-      "code_fingerprint": "sha256:1b416b3f928932bdfc45e72a52cc96dea333eb909282095e5fa549044ec1994d",
+      "code_fingerprint": "sha256:7e6fead5bff85be54bb2100a96de40fdf89e62ab7571535881a676bf96193ae7",
       "kind": "asset",
       "outputs": [
         {
@@ -117,12 +112,12 @@
           "mime": "image/svg+xml",
           "asset": "convergence/convergence-mode-coverage-on-25-gaussians-7-1.svg",
           "bytes": 1327646,
-          "sha256": "sha256:af2bca2b8493271c1ed56c806b2033aaece14c262313c1b1be6c6c86e02610b8"
+          "sha256": "sha256:1baac8dd04d04e1d5ed95a761e80a63b944317a695d61cf58ac518e2f3b6acde"
         }
       ]
     },
     "convergence-mode-coverage-on-25-gaussians-6": {
-      "code_fingerprint": "sha256:97401080ec3042b5d30ffb35e0ca8166d7ab0d91d44f46280a4e3a028bb0f86c",
+      "code_fingerprint": "sha256:85d91ace17a12966d4789c1f9cd3ffe7582d65beb3e42a9da563985567973286",
       "kind": "text",
       "outputs": [
         {

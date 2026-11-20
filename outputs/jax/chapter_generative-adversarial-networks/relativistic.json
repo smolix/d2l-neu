@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:7ee299c29014e8537b38d186fcaaf5348937d43732353267b1e0da4da8308492",
+    "d2l_lib_fingerprint": "sha256:206b737aad521b16024740fefa643e9c984b27e0bfc8ac251e1dcc164d770240",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -78,12 +78,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "non-saturating  median JS 0.0010 0.0007 0.0009   first JS < 0.01  2200  2400  2200\n"
+          "text": "non-saturating  median JS 0.0008 0.0009 0.0006   first JS < 0.01  2200  2400  2200\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "saturating      median JS 0.0017 0.0019 0.0014   first JS < 0.01  1800  1800  1800\n"
+          "text": "saturating      median JS 0.0018 0.0024 0.0010   first JS < 0.01  1800  1800  1800\n"
         }
       ]
     },
@@ -99,12 +99,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "non-saturating  0      3.164      6.00   2.43   0.58   0.02   0.00     325\n"
+          "text": "non-saturating  0      3.186      6.00   2.43   0.58   0.02   0.00     324\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "non-saturating  1      3.077      6.00   2.24   0.54   0.02   0.00     315\n"
+          "text": "non-saturating  1      3.058      6.00   2.24   0.54   0.02   0.00     314\n"
         },
         {
           "type": "stream",

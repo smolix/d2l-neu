@@ -582,7 +582,7 @@ d2l.plot([lam[:200], lam[200:], lims], [D_out[:200], D_out[200:], lims],
          fmts=('C0.', 'C1.', 'k--'), figsize=(4.2, 3.4))
 ```
 
-From samples alone, the critic has learned the log density ratio: the correlation exceeds 0.98, and the critic explains more than 90 percent of the variance of $\lambda$. The points leave the diagonal at the most negative values of $\lambda$, at generated samples where $p$ is nearly zero, and there the critic is milder than $\lambda$. Two things combine. The critic is a leaky-ReLU network, piecewise linear in $x$, and beyond the samples it has seen it continues linearly, while $\lambda$, a quadratic, keeps falling faster. And the log loss does almost nothing to correct it there. A generated sample contributes $-\log \sigma(-D)$ to the critic's loss, whose derivative in the score is $\sigma(D)$, about $3 \cdot 10^{-7}$ at $D = -15$. This is the saturating weight $w_{\textrm{sat}}$ again, seen from the critic's side: once the critic is confident, it is hardly pushed to be more so. The objective constrains the critic only where the mixture $m$ has appreciable mass and the critic is still unsure, so the estimate is least accurate where the ratio is most extreme.
+From samples alone, the critic has learned the log density ratio: the correlation is about 0.98, and the critic explains more than 90 percent of the variance of $\lambda$. The points leave the diagonal at the most negative values of $\lambda$, at generated samples where $p$ is nearly zero, and there the critic is milder than $\lambda$. Two things combine. The critic is a leaky-ReLU network, piecewise linear in $x$, and beyond the samples it has seen it continues linearly, while $\lambda$, a quadratic, keeps falling faster. And the log loss does almost nothing to correct it there. A generated sample contributes $-\log \sigma(-D)$ to the critic's loss, whose derivative in the score is $\sigma(D)$, about $3 \cdot 10^{-7}$ at $D = -15$. This is the saturating weight $w_{\textrm{sat}}$ again, seen from the critic's side: once the critic is confident, it is hardly pushed to be more so. The objective constrains the critic only where the mixture $m$ has appreciable mass and the critic is still unsure, so the estimate is least accurate where the ratio is most extreme.
 
 ### Saturating and Non-Saturating Losses Compared
 :label:`subsec_gan_saturation`
@@ -702,7 +702,7 @@ d2l.plot(epochs, [runs['non-saturating'][0][:, 0],
 fig.tight_layout()
 ```
 
-For the first two epochs the two critics behave alike: both reject every generated sample, and both losses fall to nearly zero. The critics agree; only the weights differ. The saturating generator hardly moves. Its critic's loss stays at zero, so $\sigma(D(x')) \approx 0$ for every generated sample, and every run ends between 334 and 341 nats from the data, against about 345 at the start. The non-saturating generator crosses to the data within the first few epochs: by epoch five its samples lie in the data region, though not yet centered on it. By epoch twenty they fill the ellipse, $D_{\textrm{KL}}(q \,\|\, p)$ is a few hundredths of a nat in every run, and its critic's loss is back near $2 \log 2$. The two arms end more than three hundred nats apart, while the runs within either arm differ by a few nats at most, so the weight alone decides the outcome.
+For the first two epochs the two critics behave alike: both reject every generated sample, and both losses fall to nearly zero. The critics agree; only the weights differ. The saturating generator hardly moves. Its critic's loss stays at zero, so $\sigma(D(x')) \approx 0$ for every generated sample, and every run ends within about ten nats of where it started, some 345 nats from the data. The non-saturating generator crosses to the data within the first few epochs: by epoch five its samples lie in the data region, though not yet centered on it. By epoch twenty they fill the ellipse, $D_{\textrm{KL}}(q \,\|\, p)$ is a few hundredths of a nat in every run, and its critic's loss is back near $2 \log 2$. The two arms end more than three hundred nats apart, while the runs within either arm differ by a few nats at most, so the weight alone decides the outcome.
 
 The non-saturating weight amplifies the factor $\nabla_\theta D$ but cannot create it. Here the critic's score surface slopes toward the data even far from them; an optimal critic on separated supports offers no slope, and no choice of weight helps.
 
@@ -1206,7 +1206,7 @@ matched the data?
 Hand-set $q$ at $D_{\textrm{KL}}(q\|p) \approx 3.4$ nats; a fresh critic,
 2,000 steps.
 
-- Correlation above 0.98; over 90% of the variance of $\lambda$ explained.
+- Correlation about 0.98; over 90% of the variance of $\lambda$ explained.
 - Too mild at very negative $\lambda$: a piecewise-linear critic against a
   quadratic $\lambda$, and a loss gradient $\sigma(D)$ of about
   $3 \cdot 10^{-7}$ at $D = -15$.
@@ -1222,8 +1222,8 @@ Hand-set $q$ at $D_{\textrm{KL}}(q\|p) \approx 3.4$ nats; a fresh critic,
 @!gan-saturating-and-non-saturating-losses-compared-1
 
 - Start: offset moved by $(-6, 6)$, about 345 nats from the data.
-- Saturating: $w_{\textrm{sat}} \approx 0$; 334 to 341 nats from the data
-  in all three runs. Non-saturating: a few hundredths of a nat.
+- Saturating: $w_{\textrm{sat}} \approx 0$; every run ends within about ten
+  nats of its start. Non-saturating: a few hundredths of a nat.
 
 ::: {.d2l-note}
 By epoch 2 both critics reject every sample. Only the weight differs.
@@ -1263,8 +1263,9 @@ The garment critic ends at about 1.05, below $2 \log 2 \approx 1.39$.
   $\mathrm{JS} = I(x; y) \leq \log 2$, constant on disjoint supports.
 - Non-saturating weight: $e^{5} \approx 148$ times more at $D = -5$;
   descends $2\, D_{\textrm{KL}}(m\|p)$, 0.26 nats for a dropped mode.
-- Gaussian: KL from about 8 nats to a few hundredths; far start, 334 to 341
-  nats against a few hundredths.
+- Gaussian: KL from about 8 nats to a few hundredths; from the far start the
+  saturating generator stays above 330 nats, the non-saturating one reaches
+  a few hundredths.
 - Garments: mostly recognizable; critic about 1.05, still ahead.
 
 **Next:** other losses and critic classes, and which keep a gradient on

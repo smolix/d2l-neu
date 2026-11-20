@@ -694,13 +694,14 @@ matrix-product kernel followed by a split-K reduction, which adds up
 partial products computed over slices of the shared dimension, and the
 tanh runs as a Triton kernel of its own: the product is a library kernel
 that Inductor calls, not one it generates, so it cannot fuse the tanh
-into it. Nothing is fused, and Inductor's generated code launches all 180
-kernels from Python, at about the same 18 µs per operation as eager
-dispatch. The device is busy for about a seventh of the call and waits
-for the host during the rest. Counted per kernel instead of per
-operation, a call takes about 12 µs per launch, close to the 13 µs of a
-bare call in :numref:`subsec_perf-sweep`: the reduction adds a launch to
-every product. With 18 µs per operation and a floor of 1 µs, the bound is
+into it. Nothing is fused, and Inductor's generated Python code issues
+the 120 operations, and with them all 180 kernels, one at a time, at
+about the same 18 µs per operation as eager dispatch. The device is busy
+for about a seventh of the call and waits for the host during the rest.
+Counted per kernel instead of per operation, a call takes about 12 µs per
+launch, close to the 13 µs of a bare product in
+:numref:`subsec_perf-sweep`, which runs as a single kernel: the reduction
+adds a launch to every product here. With 18 µs per operation and a floor of 1 µs, the bound is
 near eighteen. All of the gain, about a factor of seven, comes from
 replay, and the replayed call takes about as long as the device was busy
 in the compiled one, some 0.3 ms. Replay removed the waiting and nothing
@@ -1316,7 +1317,8 @@ A step launches 400 kernels at 8 µs of host time each. The GPU needs
 @!compilation-the-overhead-regime-capture-and-replay
 
 - `compiled`: 3 kernels per layer (product, split-K reduction, Triton
-  tanh), each launched from Python; the device is busy a seventh of the call.
+  tanh), issued one by one from Python; the device is busy a seventh of
+  the call.
 - `reduce-overhead`: CUDA graphs; the call shrinks to the device's busy time.
 - Gain about 7, below the bound $h$ / floor $\approx 18$: a replayed
   kernel also reads and computes.

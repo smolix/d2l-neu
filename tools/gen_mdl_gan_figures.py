@@ -2,15 +2,26 @@
 """Generate the illustrative figures for the Generative Adversarial Networks
 chapter (ch. 16) in the one shared house style defined in ``gen_mdl_figures.py``.
 
-Seven figures; the two that carry the most structure are:
+Seven figures, one per idea the prose draws on:
 
-  * ``mdl-gan-architecture`` -- the adversarial loop: a latent draw through the
-    generator, the generated and real batches meeting at the critic, and
-    the two updates with their opposite goals (replaces the legacy hand-drawn
-    ``img/gan.svg``, now deleted);
-  * ``mdl-gan-pairing`` -- single-sample classification against a fixed
-    threshold versus pair ranking, with the additive shift flipping the
+  * ``mdl-gan-architecture`` (16.1, ``fig_gan``) -- the adversarial loop: a
+    latent draw through the generator, the generated and real batches meeting
+    at the critic, and the two updates with their opposite goals (replaces the
+    legacy hand-drawn ``img/gan.svg``, now deleted);
+  * ``mdl-gan-weights`` (16.1) -- the saturating and non-saturating generator
+    weights against the critic score;
+  * ``mdl-gan-critics-separated`` (16.2) -- the optimal JS, W_1 and MMD critics
+    on disjoint supports;
+  * ``mdl-gan-pairing`` (16.3) -- one sample against a fixed threshold versus
+    a pair judged by its difference, with the additive shift flipping the
     verdict on the left and cancelling on the right;
+  * ``mdl-gan-dcgan`` and ``mdl-gan-backbone`` (16.5) -- DCGAN and the minimal
+    backbone of the three arms, with parameter counts;
+  * ``mdl-gan-conditioning`` (16.6) -- three ways a condition enters.
+
+The networks are called generator and critic throughout, as in the prose.
+The backbone's parameter counts are asserted against the totals the dcgan
+notebook prints; DCGAN's are computed from its layer shapes.
 
 Run with the repo's pytorch venv:
 
@@ -419,7 +430,7 @@ def _shape(r, c):
 def fig_dcgan():
     """DCGAN (Radford et al., 2015) as two rows of feature maps.  Generator:
     1x1x100 -> 4 -> 8 -> 16 -> 32 -> 64, transposed 4x4 convolutions, batch
-    norm + ReLU except at the output (tanh, no BN).  Discriminator: 64 -> 32 ->
+    norm + ReLU except at the output (tanh, no BN).  Critic: 64 -> 32 ->
     16 -> 8 -> 4 -> logit, strided 4x4 convolutions, batch norm + leaky ReLU
     except at the input block (no BN).  The two no-BN blocks are washed gold."""
     fig, ax = plt.subplots(figsize=(13.0, 6.4))

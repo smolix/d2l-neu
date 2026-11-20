@@ -130,6 +130,15 @@ For our first example, verify the math by hand: $2 x_1^{(1)} - 3.4 x_2^{(1)} + 4
 
 Before fitting any model, let us plot the label $y$ against each feature $x_1$ and $x_2$ individually:
 
+```{.python .input #synthetic-regression-data-inspecting-the-data}
+d2l.set_figsize((7, 2.5))
+_, axes = d2l.plt.subplots(1, 2, sharey=True)
+for j, ax in enumerate(axes):
+    ax.scatter(d2l.numpy(X[:1000, j]), d2l.numpy(y[:1000, 0]), s=2)
+    ax.set_xlabel(f'$x_{j + 1}$')
+    ax.set_ylabel('$y$' if j == 0 else '')
+```
+
 Each scatter plot reveals a clear linear trend with the expected sign: $y$ climbs with $x_1$ (slope $+2$) and falls more steeply with $x_2$ (slope $-3.4$). Why does each 2D scatter plot look like a thick band rather than a razor-thin line when $\sigma = 0.01$ is so tiny? Because plotting $y$ against $x_2$ alone ignores each point's variation in $x_1$: the unplotted term $2 x_1$ has standard deviation $2$, which spreads the vertical position of the points across a band several units wide! Viewing marginal 2D projections of a multivariate relationship always folds the other coordinates into apparent vertical scatter.
 
 ## Recovering the Parameters

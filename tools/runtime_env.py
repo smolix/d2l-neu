@@ -48,6 +48,11 @@ GPU_FRAMEWORK_NOTEBOOKS = set()
 # both well inside the default.
 NOTEBOOK_TIMEOUTS = {
     "chapter_diffusion-models/latent-diffusion.ipynb": 7200,
+    # 16.5 and 16.6 train several image GANs each; a PyTorch run took about
+    # 40 min alone on one RTX 4090 (2026-11-20) and can pass 60 min when the
+    # card is shared.
+    "chapter_generative-adversarial-networks/dcgan.ipynb": 7200,
+    "chapter_generative-adversarial-networks/conditional.ipynb": 7200,
 }
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The

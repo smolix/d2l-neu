@@ -175,6 +175,7 @@ def mixture_logpdf(x, mus, As):
                              + np.linalg.slogdet(2 * np.pi * Sigma)[1]))
     return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
 
+#@save
 def sample_mixture(n, mus, As, rng):
     """n draws from the uniform mixture of Gaussians mu_k + z A_k."""
     k = rng.integers(0, len(mus), n)
@@ -583,9 +584,9 @@ def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
         U = jnp.asarray(rng.uniform(size=(n, batch, 1)), jnp.float32)
         grad = shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D,
                           X, Z, U)
-        grads.append(float(grad))
-        thetas.append(float(G.theta[...]))
-    return np.array(thetas), np.array(grads)
+        grads.append(grad)                      # device scalars,
+        thetas.append(G.theta[...])             # converted once below
+    return np.asarray(jnp.stack(thetas)), np.asarray(jnp.stack(grads))
 ```
 
 We add the saturating logistic loss, whose generator minimizes $\mathbb{E}[\log(1 - \sigma(D(x')))]$ and so follows the Jensen--Shannon slope plotted above. Every arm trains three times; the table prints the median gradient over the first 100 steps, $\theta$ at five steps, and the first step at which $|\theta| < 0.5$.

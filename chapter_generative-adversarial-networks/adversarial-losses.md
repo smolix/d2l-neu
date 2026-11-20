@@ -425,7 +425,7 @@ The adversarial objective thus needs an estimate of $\log(p/q)$ or of its gradie
 
 The chapter began with a game whose generator could lose its gradient, whose training could circle without converging, and whose samples could collapse onto a few modes. The repairs work. The non-saturating loss keeps a gradient on the samples the critic rejects, and zero-centered penalties keep one when nearby supports separate and make gradient training converge near the equilibrium (:numref:`sec_gan_convergence`). With these, a plain convolutional generator learns to draw images (:numref:`sec_dcgan`). Four limits remain. The generator is a sampler without a density, so it cannot report how likely an image is. Training still needs two networks and a game that converges reliably only under a penalty whose weight must be chosen for the data. No likelihood term penalizes a missing mode, and the guarantee against mode-dropping minima holds only for a fixed one-to-one pairing of real and generated samples (:numref:`sec_gan_relativistic`). And the game can still become unstable at scale, as ViTok-v2 reported. Diffusion and flow models, the subject of :numref:`chap_diffusion`, avoid the game: they are trained by regression against closed-form targets, computed from each training example.
 
-<!-- WRITER: tab_gan_games is copied here from convergence.md ("The Games of This Chapter"), the receiving half of the move (structure D4, worklist Part 8 (A)4 and (B)11). The giving half, deleting it from convergence.md with its "Reading the Table" subsection and its deck slide, is still open. Place it after the verdict paragraph of the new subsection subsec_gan_beyond_verdict, add two sentences on what it adds (the three choices are independent; the chapter's recipe is one cell of their product), fix the last column (CONV-10: "smooth where p and q overlap; across gaps only through the critic's smoothness"), drop "a symmetric Sobolev penalty", add a hinge row and a column note for the W1 critic trained in sec_gan_objectives. The deck slide with the table is in convergence.md's deck. -->
+<!-- WRITER: tab_gan_games is copied here from convergence.md ("The Games of This Chapter"), the receiving half of the move (structure D4, worklist Part 8 (A)4 and (B)11). The giving half, deleting it from convergence.md with its "Reading the Table" subsection and its deck slide, is still open. Place it after the verdict paragraph of the new subsection subsec_gan_beyond_verdict, add two sentences on what it adds (the three choices are independent; the chapter's recipe is one cell of their product), fix the last column (CONV-10: "smooth where p and q overlap; across gaps only through the critic's smoothness"), drop "a symmetric Sobolev penalty", add a hinge row and a column note for the W1 critic trained in sec_gan_objectives. The deck slide with the table is in convergence.md's deck. Done in the code step: the table, "Three Choices" and "Reading the Table" are deleted from convergence.md and the deck slide moved to the end of this deck. The deleted "Reading the Table" paragraph, for reuse here: "The classifying and the ranking critics estimate the same log ratio; the loss and the pairing change how its errors are weighted, not what is estimated. The MMD and $W_1$ critics estimate a smoothed difference and a potential, and the penalty moves the pairing critic toward them below the length scale $2\sqrt\gamma$. The constraint decides whether a gradient survives on disjoint supports, and the zero-centered penalty also damps the rotation of the Dirac-GAN. Ranking guarantees coverage only for a fixed coupling; for minibatch training the evidence is the StackedMNIST ablation, where the pairing loss recovered all 1,000 modes and the classical loss 693." -->
 Three choices describe every game of this chapter (:numref:`tab_gan_games`): what the critic estimates, what it does with the estimate, and how the critic is constrained. The last column records whether the generator keeps a gradient when the supports of $p$ and $q$ are disjoint.
 
 :The games of this chapter, described by three choices: what the critic estimates, what it does with the estimate, and how the critic is constrained. The last column records whether the generator keeps a gradient on disjoint supports.
@@ -915,6 +915,18 @@ and which of those play a minimax game?
 - ADD: yes, the critic heads, adversarially.
 - DMD: yes, the score model of $q$, by regression, not minimax.
 - ViTok-v2 and DDO: no second network.
+:::
+
+::: {.slide title="Three Choices Describe the Games of the First Four Sections"}
+[The games]{.kicker}
+
+| objective | critic estimates | does | constrained by | disjoint |
+|:--|:--|:--|:--|:--|
+| log loss | $\log(p/q)$ | classifies | nothing | saturates |
+| MMD | smoothed $p - q$ | witnesses | kernel ball | smooth |
+| $W_1$ | potential | witnesses | Lipschitz ball | smooth |
+| RpGAN | $\log(p/q)$ + const | ranks | nothing | saturates |
+| R3GAN | $\log(p/q)$ above $2\sqrt\gamma$ | ranks | Sobolev penalty | smooth |
 :::
 
 ::: {.slide title="What Remains after the Repairs"}

@@ -968,15 +968,19 @@ We score 500 samples of each generator against 500 held-out sprites. As a floor 
 features = lambda imgs: batched(  # 2 x 2 averages: 64 x 64 -> 32 x 32
     cnn.features, F.avg_pool2d(imgs, 2)).cpu().numpy()
 n = len(holdout_imgs)
-torch.manual_seed(7)
-z_score = torch.randn(n, 100, device=device)
+zs = []
+for seed in (7, 8):  # a second latent draw gives the sampling range
+    torch.manual_seed(seed)
+    zs.append(torch.randn(n, 100, device=device))
+z_score = zs[0]
 gens = {'DCGAN': ema.model,
         **{name: ema_G for name, (ema_G, _) in runs.items()}}
 feat_gen, out_of_range = {}, {}
 for name, G in gens.items():
-    x = batched(G, z_score)
-    out_of_range[name] = float((x.abs() > 1).float().mean())
-    feat_gen[name] = features(x.clamp(-1, 1))
+    for row, z in zip((name, '  second draw'), zs):
+        x = batched(G, z)
+        out_of_range[(name, row)] = float((x.abs() > 1).float().mean())
+        feat_gen[(name, row)] = features(x.clamp(-1, 1))
 feat_real = features(holdout_imgs)
 feat_a, feat_b = features(train_imgs[:n]), features(train_imgs[n:2 * n])
 white = float((holdout_imgs == 1).float().mean())
@@ -987,14 +991,17 @@ white = float((holdout_imgs == 1).float().mean())
 features = lambda imgs: np.asarray(batched(  # 2 x 2 averages: 64 -> 32
     cnn.features, nnx.avg_pool(imgs, (2, 2), strides=(2, 2))))
 n = len(holdout_imgs)
-z_score = jax.random.normal(jax.random.key(7), (n, 100))
+zs = [jax.random.normal(jax.random.key(seed), (n, 100))
+      for seed in (7, 8)]  # a second latent draw gives the sampling range
+z_score = zs[0]
 gens = {'DCGAN': ema.model,
         **{name: ema_G for name, (ema_G, _) in runs.items()}}
 feat_gen, out_of_range = {}, {}
 for name, G in gens.items():
-    x = batched(G, z_score)
-    out_of_range[name] = float((jnp.abs(x) > 1).mean())
-    feat_gen[name] = features(jnp.clip(x, -1, 1))
+    for row, z in zip((name, '  second draw'), zs):
+        x = batched(G, z)
+        out_of_range[(name, row)] = float((jnp.abs(x) > 1).mean())
+        feat_gen[(name, row)] = features(jnp.clip(x, -1, 1))
 feat_real = features(holdout_imgs)
 feat_a, feat_b = features(train_imgs[:n]), features(train_imgs[n:2 * n])
 white = float((holdout_imgs == 1).mean())
@@ -1006,16 +1013,17 @@ Each feature set is compared with that of the held-out sprites; the first row is
 %%tab pytorch, jax
 print(f'{"run":17s}{"FD":>7s}{"MMD^2":>8s}{"precision":>11s}{"recall":>8s}'
       f'{"out-of-range":>14s}')
-scored = {'real vs. real': (feat_a, feat_b),
-          **{name: (feat_real, feat) for name, feat in feat_gen.items()}}
-for name, (ref, feat) in scored.items():
+scored = {(None, 'real vs. real'): (feat_a, feat_b),
+          **{key: (feat_real, feat) for key, feat in feat_gen.items()}}
+for key, (ref, feat) in scored.items():
     precision, recall = precision_recall(ref, feat)
-    oor = f'{out_of_range[name]:14.3f}' if name in out_of_range else ''
-    print(f'{name:17s}{fid_score(ref, feat):7.2f}{kid_score(ref, feat):8.3f}'
+    oor = f'{out_of_range[key]:14.3f}' if key in out_of_range else ''
+    print(f'{key[1]:17s}{fid_score(ref, feat):7.2f}{kid_score(ref, feat):8.3f}'
           f'{precision:11.2f}{recall:8.2f}{oor}')
 print(f'real pixel values equal to +1: {white:.0%}')
 ```
 
+<!-- WRITER (code step, lib-review finding 7): the table now scores every generator on two latent draws (seeds 7 and 8; the "second draw" row follows each generator), so each row carries its own sampling range. Each arm is still one training run: the table cannot order the two penalized arms or DCGAN against them unless the gap exceeds both the draw range and what a training rerun moves (two earlier PyTorch executions of identical code reversed the penalized arms, FD 4.58/2.80 then 2.15/3.51). The firm lesson is the NS collapse. Also say how the DCGAN EMA half-life of 125 steps was set: by image count (32,000 images, as in the backbone runs), with held-out scores at half-lives 50 to 500 informing it (reports/code-dcgan.md). -->
 <!-- WRITER: at n = 4,059 the ratios to the floor change: dev runs (not captured) gave a floor of FD 0.17 to 0.19 and MMD^2 within 0.002 of zero (three further disjoint splits per tab agree), so the penalized arms sit at roughly 15 to 25 times the floor, not "three to five times"; the collapsed NS arm at FD about 72 with recall 0.00 in both tabs (precision 0.33 in PyTorch, 0.00 in JAX, so the "high precision" prediction holds only in one tab: write that recall sees the collapse, not that precision stays high). Redrawing the 4,059 latent codes moves FD by about 0.1, far less than the gaps between rows. All generators reach precision 0.3 to 0.4 and recall about 0.45 against a real-against-real 0.95, i.e. every generator misses most of the real manifold at k = 3. Quote the captured table, not these dev numbers. -->
 The floor behaves as described above: FD is positive for two samples of the same distribution, while $\widehat{\mathrm{MMD}}^2$ is close to zero. Against it the collapsed arm scores dozens of times higher. The two penalized arms score three to five times the floor, which fits the soft outlines in their grids, and far below the collapsed arm. Which of the two scores lower changes from run to run, so this budget does not separate them. DCGAN lands close to them: the 2015 architecture keeps trainable the same classic loss that collapses on the unnormalized backbone. $\widehat{\mathrm{MMD}}^2$ agrees, with the collapsed arm far above the other three. Between about one in eight and one in six raw pixel values of a penalized generator lie outside $[-1, 1]$. Nearly half of the real pixel values equal $+1$, the white background, and this is where a generator without tanh overshoots; clamping maps the overshoot back to white.
 

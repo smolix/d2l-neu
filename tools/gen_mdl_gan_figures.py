@@ -2,7 +2,7 @@
 """Generate the illustrative figures for the Generative Adversarial Networks
 chapter (ch. 16) in the one shared house style defined in ``gen_mdl_figures.py``.
 
-Seven figures, among them:
+Seven figures; the two that carry the most structure are:
 
   * ``mdl-gan-architecture`` -- the adversarial loop: a latent draw through the
     generator, the generated and real batches meeting at the critic, and

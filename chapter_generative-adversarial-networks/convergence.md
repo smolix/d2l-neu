@@ -501,8 +501,28 @@ The training function takes the two losses and $\gamma$ as arguments and alterna
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
 %%tab pytorch
-def train_grid(centers, loss_D, loss_G, gamma, steps=4000, lr=2e-3,
-               batch=2048, latent=64, seed=0, checkpoints=8):
+def graphed(step, warmup=3):
+    """Run step() eagerly for warmup calls on a side stream, then record one
+    call as a CUDA graph and replay it for every later call."""
+    graph, calls = torch.cuda.CUDAGraph(), 0
+    def run():
+        nonlocal calls
+        calls += 1
+        if calls <= warmup:      # allocates optimizer state and workspaces
+            side = torch.cuda.Stream()
+            side.wait_stream(torch.cuda.current_stream())
+            with torch.cuda.stream(side):
+                step()
+            torch.cuda.current_stream().wait_stream(side)
+            return
+        if calls == warmup + 1:  # recording launches nothing
+            with torch.cuda.graph(graph):
+                step()
+        graph.replay()
+    return run
+
+def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
+               batch=1024, latent=64, seed=0, checkpoints=8):
     """Alternate critic and generator steps; at each checkpoint record the
     on-mode fraction of 2,000 samples, and the critic loss and E_q|grad D|^2
     averaged over the steps since the previous checkpoint."""
@@ -510,20 +530,27 @@ def train_grid(centers, loss_D, loss_G, gamma, steps=4000, lr=2e-3,
     dev, grid = centers.device, centers.cpu().numpy()
     net_G = d2l.make_mlp([latent, 256, 256, 2], nn.ReLU()).to(dev)
     net_D = d2l.make_mlp([2, 256, 256, 1], nn.LeakyReLU(0.2)).to(dev)
-    opt_G, opt_D = [torch.optim.Adam(net.parameters(), lr, betas=(0.0, 0.99),
-                                     fused=True) for net in (net_G, net_D)]
+    opt_G, opt_D = [torch.optim.Adam(net.parameters(),  # lr on the GPU
+                                     torch.tensor(lr, device=dev),
+                                     betas=(0.0, 0.99), capturable=True)
+                    for net in (net_G, net_D)]
     scheds = [torch.optim.lr_scheduler.CosineAnnealingLR(opt, steps, lr / 10)
               for opt in (opt_G, opt_D)]
-    trace, logs, every = [], torch.zeros(2, device=dev), steps // checkpoints
-    for t in range(1, steps + 1):
+    logs, every = torch.zeros(2, device=dev), steps // checkpoints
+
+    def step():
         real = sample_modes(centers, batch)
         with torch.no_grad():
             fake = net_G(torch.randn(batch, latent, device=dev))
         loss, _, grad_q = critic_step(net_D, opt_D, loss_D, real, fake, gamma)
-        logs += torch.stack([loss, grad_q])  # summed on the device
+        logs.add_(torch.stack([loss, grad_q]))  # summed on the device
         z = torch.randn(batch, latent, device=dev)
         generator_step(net_G, opt_G, loss_G, net_D,
                        sample_modes(centers, batch), z)
+
+    step, trace = graphed(step), []
+    for t in range(1, steps + 1):
+        step()
         for sched in scheds:
             sched.step()
         if t % every == 0:                   # checkpoint
@@ -536,8 +563,8 @@ def train_grid(centers, loss_D, loss_G, gamma, steps=4000, lr=2e-3,
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
 %%tab jax
-def train_grid(centers, loss_D, loss_G, gamma, steps=4000, lr=2e-3,
-               batch=2048, latent=64, seed=0, checkpoints=8):
+def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
+               batch=1024, latent=64, seed=0, checkpoints=8):
     """Alternate critic and generator steps; at each checkpoint record the
     on-mode fraction of 2,000 samples, and the critic loss and E_q|grad D|^2
     averaged over the steps since the previous checkpoint."""
@@ -572,6 +599,11 @@ def train_grid(centers, loss_D, loss_G, gamma, steps=4000, lr=2e-3,
         trace.append((mode_stats(x, grid)[1], *(logs / every).tolist()))
     return net_G, trace
 ```
+
+:begin_tab:`pytorch`
+<!-- WRITER (code step): new tab note for `graphed` (lib-review finding 3). Eager PyTorch took about 6x as long as the compiled JAX step on this model, so the budget had been cut to 4,000 steps at batch 2,048; the PyTorch step now runs as a CUDA graph and the design is back to 10,000 steps at batch 1,024 (the cosine over 10,000 steps the paragraph above already states). -->
+One step of these small networks launches a few hundred short kernels, and issuing them from Python takes longer than running them (:numref:`subsec_comp-overhead`). `graphed` records the step as a CUDA graph after three eager warm-up steps and replays it with one launch per step. Replay reuses the recorded memory addresses, so the optimizers keep their learning rate and step count on the GPU (`capturable=True`, with the learning rate passed as a tensor), and the scheduler updates the learning rate in place between replays.
+:end_tab:
 
 :begin_tab:`jax`
 One compiled function draws the batches and calls both saved steps. `nnx.cached_partial` binds the networks and optimizers to it once, so the loop does not split and merge the model state at every step.
@@ -654,27 +686,6 @@ for col, stat in enumerate(['on-mode fraction', 'critic loss']):
 
 <!-- WRITER: this paragraph is false against the new cells: "sixteen runs", "about 150 runs", "fits the grid" and the gamma = 10 ranges are not printed by any cell; rewrite from the per-run table and trace (numbers in the WRITER notes above and in reports/code-convergence.md). -->
 The R3GAN loss at $\gamma = 1$ fits the grid. Over sixteen runs with different seeds it covered all 25 modes in every run but one, which covered 24, and put most of its samples within three widths of a center. The classical GAN also puts most of its samples on a mode but spreads them less evenly. Over about 150 runs it covered all 25 modes in only about two runs out of five, and in more than a quarter of them it left a whole row or column of the grid nearly empty. The two losses differ more reliably in the critic. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends about three to four orders of magnitude below its value for the unpenalized critic, which stays steep at the generated samples even when the fit is good, like the undamped slope $\psi$ of the Dirac-GAN. At $\gamma = 10$ the grid is blurred, as predicted: only an eighth to three fifths of the samples lie on a mode, and their mean distance to the nearest center is 1.5 to 6 times that at $\gamma = 1$. The blur also thins out some modes, mostly near the center of the grid, so the strict count finds between 21 and 25 covered. The equilibrium is still $q = p$; the larger $\gamma$ slows the approach to it (exercise :exref:`ex_convergence-penalty-length`).
-
-## The Games of This Chapter
-
-### Three Choices
-
-Four sections have now derived what each adversarial game measures. Three choices describe all of them (:numref:`tab_gan_games`): what the critic estimates, what it does with the estimate, and how the critic is constrained. The last column records whether the generator keeps a gradient when the supports of $p$ and $q$ are disjoint.
-
-:The games of this chapter, described by three choices: what the critic estimates, what it does with the estimate, and how the critic is constrained. The last column records whether the generator keeps a gradient on disjoint supports.
-:label:`tab_gan_games`
-
-| objective | the critic estimates | what it does with the estimate | how the critic is constrained | on disjoint supports |
-|:--|:--|:--|:--|:--|
-| log loss, $f$-GAN (:numref:`sec_basic_gan`, :numref:`sec_gan_objectives`) | $\log(p/q)$, or $f'(p/q)$ for an $f$-GAN | classifies one sample | not at all | saturates |
-| MMD (:numref:`sec_gan_objectives`) | a kernel-smoothed $p - q$, the witness | witnesses a difference of means | a fixed kernel ball | smooth |
-| Wasserstein-1 (:numref:`sec_gan_objectives`) | a Kantorovich potential | witnesses a difference of means | a Lipschitz ball | smooth |
-| pairing, RpGAN (:numref:`sec_gan_relativistic`) | $\log(p/q)$ up to a constant | ranks a real--generated pair | not at all | saturates |
-| RpGAN + $R_1$ + $R_2$ (:numref:`sec_gan_convergence`) | $\log(p/q)$ above the length scale $2\sqrt\gamma$, smoothed below | ranks a real--generated pair | a symmetric Sobolev penalty | smooth, near equilibrium |
-
-### Reading the Table
-
-The classifying and the ranking critics estimate the same log ratio; the loss and the pairing change how its errors are weighted, not what is estimated. The MMD and $W_1$ critics estimate a smoothed difference and a potential, and the penalty moves the pairing critic toward them below the length scale $2\sqrt\gamma$. The constraint decides whether a gradient survives on disjoint supports, and the zero-centered penalty also damps the rotation of the Dirac-GAN. Ranking guarantees coverage only for a fixed coupling; for minibatch training the evidence is the StackedMNIST ablation, where the pairing loss recovered all 1,000 modes and the classical loss 693.
 
 Whether this recipe trains an image generator, and how to score the images it produces, is the question of :numref:`sec_dcgan`.
 
@@ -1072,18 +1083,6 @@ $\gamma = 1$ against $\gamma = 10$. Predict.
 @!convergence-mode-coverage-on-25-gaussians-2
 
 - $\gamma = 1$: all 25 modes almost always; GAN: all 25 in about 2 runs of 5.
-:::
-
-::: {.slide title="Three Choices Describe the Games of the First Four Sections"}
-[The games]{.kicker}
-
-| objective | critic estimates | does | constrained by | disjoint |
-|:--|:--|:--|:--|:--|
-| log loss | $\log(p/q)$ | classifies | nothing | saturates |
-| MMD | smoothed $p - q$ | witnesses | kernel ball | smooth |
-| $W_1$ | potential | witnesses | Lipschitz ball | smooth |
-| RpGAN | $\log(p/q)$ + const | ranks | nothing | saturates |
-| R3GAN | $\log(p/q)$ above $2\sqrt\gamma$ | ranks | Sobolev penalty | smooth |
 :::
 
 ::: {.slide title="Wrap-up"}

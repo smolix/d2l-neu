@@ -233,14 +233,11 @@ The closed form permits an exact comparison between the pairing game and the cor
 
 Part (a) says that a pair containing one sample from each distribution carries at least as much information about its ordering as a single sample carries about its origin. The gain is at most a factor of two: given the label, the two members are independent, so the pair carries $2\, \mathrm{JS}(p, q)$ minus the dependence between its members (Exercise :exref:`ex_relativistic-gap-twice-js`). For $p \neq q$ the ratio $d_{\mathrm{Rp}}/\mathrm{JS}$ therefore lies in $[1, 2]$ and, by part (b), tends to 2 near $q = p$; the two atoms gave 1.66. Part (c) shows that pairing does not resolve support saturation. For the point masses $p = \delta_0$ and $q_\theta = \delta_\theta$ of :numref:`sec_basic_gan`, the pairing value equals $\log 2$ for every $\theta \neq 0$ and gives the generator no gradient in $\theta$.
 
-### Verification on Five Atoms
+### Five Atoms
 :label:`subsec_gan_rp_verification`
 
-Because the theorem is an identity, a finite example can verify it without sampling error. On five atoms the critic is a vector $D \in \mathbb{R}^5$ and $\Phi$ is an exact sum over 25 pairs. We maximize $\Phi$ by gradient ascent along the functional derivative :eqref:`eq_gan_rp_stationarity` and compare the maximum plus $\log 2$ with both forms in :eqref:`eq_gan_rp_value`. The optimized critic should equal $\lambda$ up to an additive constant.
-
-<!-- WRITER: the five-atom verification cell (`relativistic-verifying-the-closed-form-1`) is deleted per the design (REL-5); this subsection and the sentence after it ("agree to nine decimal places", 0.23 < 0.38 < 0.69) go. Its `sigma`, `p`, `q`, `lam`, `D_c` no longer exist in the notebook; the exercises that use the five atoms must state them (F8). The numbers it printed: d_Rp = 0.376889913 (all three forms), JS(p, q) = 0.234050. -->
-
-The three computations of $d_{\mathrm{Rp}}$ agree to nine decimal places, and after centering the recovered critic matches $\lambda$ to double-precision round-off. The value respects part (a), $\mathrm{JS}(p, q) \approx 0.23 < d_{\mathrm{Rp}} \approx 0.38 < \log 2 \approx 0.69$, so here a pair carries about 1.6 times the information of a single sample.
+<!-- WRITER (code step): the five-atom verification cell was deleted (REL-5); the label stays on this short statement of the atoms because the rank-weight paragraph and four exercises use them (lib-review finding 5). The values are closed-form: d_Rp = 0.376889913 by all three forms of eq_gan_rp_value, JS(p, q) = 0.234050. Polish or shorten, but keep p and q stated somewhere the label can point to. -->
+A finite example makes the bounds concrete. Take five atoms with data probabilities $p = (0.35, 0.25, 0.20, 0.12, 0.08)$ and generator probabilities $q = (0.02, 0.05, 0.13, 0.30, 0.50)$, so $\lambda = \log(p/q)$ falls from $2.86$ to $-1.83$. The critic is a vector in $\mathbb{R}^5$ and $\Phi$ is an exact sum over 25 pairs. Both forms of :eqref:`eq_gan_rp_value` give $d_{\mathrm{Rp}} \approx 0.377$, between $\mathrm{JS}(p, q) \approx 0.234$ and $\log 2 \approx 0.693$, as part (a) requires: here a pair carries about 1.6 times the information of a single sample.
 
 ## Ranking and Mode Coverage
 
@@ -432,8 +429,9 @@ The pairing objective is the Bradley--Terry log-likelihood of ranking a real sam
    game fixes the level of the critic's scores.
     1. Show that the functional derivative :eqref:`eq_gan_rp_stationarity`
        integrates to zero over $t$ for every critic $D$. What does this imply
-       for `D.mean()` during the ascent loop of
-       :numref:`subsec_gan_rp_verification`? Print it to check.
+       for the mean of the scores when $\Phi$ is maximized by gradient ascent
+       along this derivative? Run the ascent from $D = 0$ on the five atoms of
+       :numref:`subsec_gan_rp_verification` and print `D.mean()` to check.
     1. Let a network critic end in a scalar output bias,
        $D(x) = D_0(x) + b$. Show that every minibatch estimate of $\Phi$,
        diagonal or all-pairs, has zero gradient with respect to $b$. What
@@ -480,7 +478,7 @@ The pairing objective is the Bradley--Terry log-likelihood of ranking a real sam
    $1 - w_{\mathrm{Rp}}(x')$.
     1. Treat each of the five atoms of
        :numref:`subsec_gan_rp_verification` as a generated sample and
-       evaluate both weights with the critic `D_c`. On which
+       evaluate both weights with the critic $D = \lambda$. On which
        atoms does each variant place its largest weight, and how do these
        relate to the atoms where $q$ exceeds $p$? By what factor does
        the $q$-average of the non-saturating weight exceed that of
@@ -553,7 +551,7 @@ The pairing objective is the Bradley--Terry log-likelihood of ranking a real sam
     1. Compute $I(a_1; a_2)$ for the five atoms of
        :numref:`subsec_gan_rp_verification` from the 25-atom distribution
        $\tfrac12 (P + Q)$, and check that $2\, \mathrm{JS}(p, q) - I(a_1; a_2)$
-       reproduces the printed value of $d_{\mathrm{Rp}}$.
+       reproduces the value of $d_{\mathrm{Rp}}$ given there.
    :exlabel:`ex_relativistic-gap-twice-js`
 
 1. [code] **Random re-pairing.** ●● The enumeration of

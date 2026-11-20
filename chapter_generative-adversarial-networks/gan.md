@@ -640,7 +640,7 @@ runs = {}  # name: (losses, snapshots) of the first run, for the plot
 for name, step in [('non-saturating', update_G),
                    ('saturating', update_G_saturating)]:
     kls = []
-    for seed in (10, 11, 12):  # both arms see the same minibatches and draws
+    for seed in (1, 2, 3):  # both arms see the same minibatches and draws
         net_G_ab, net_D_ab = make_nets()
         net_G_ab.layers[0].bias[...] += jnp.array([-6.0, 6.0])
         data_iter_ab = d2l.ArrayLoader((data,), batch_size=8, shuffle=True,

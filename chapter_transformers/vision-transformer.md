@@ -229,7 +229,7 @@ class ViT(d2l.Classifier):  #@save
 ### A First Run
 :label:`subsec_vit-first-run`
 
-We train a 2-block `ViT` ($d = 512, d_{\textrm{mlp}} = 2048, H = 8, L = 2, p = 16$, $\approx 6.5\textrm{M}$ parameters) on $96 \times 96$ Fashion-MNIST for 10 epochs using AdamW ($\lambda = 0.05$) with linear warmup and cosine learning-rate decay:
+We train a 2-block `ViT` ($d = 512, d_{\textrm{mlp}} = 2048, H = 8, L = 2, p = 16$, $\approx 6.4\textrm{M}$ parameters) on $96 \times 96$ Fashion-MNIST for 10 epochs using AdamW ($\lambda = 0.05$) with linear warmup and cosine learning-rate decay:
 
 ```{.python .input #vision-transformer-a-first-run-1}
 %%tab pytorch, jax
@@ -310,9 +310,9 @@ print(f'trained ViT: {vit_acc:.3f} as is, '
       f'{min(accs):.2f} to {max(accs):.2f} with its patches shuffled')
 ```
 
-Scrambling the $6 \times 6$ patch arrangement drops validation accuracy from about 0.89 to roughly 0.3–0.45, depending on the shuffle, so the trained `ViT` relies heavily on where each patch sits. It still stays far above the 0.1 of chance, because local $16 \times 16$ patch textures—like shoe heels or collar shapes—already identify many coarse garment classes as a "bag of patches".
+Scrambling the $6 \times 6$ patch arrangement drops validation accuracy by roughly 25 percentage points (whereas retraining `ViT` from scratch with `pos_embedding` frozen to zero loses only $\sim 1.5$ percentage points on Fashion-MNIST because local $16 \times 16$ patch textures—like shoe heels or collar shapes—already identify many coarse garment classes as a "bag of patches").
 
-Does the unstructured 1D positional table `pos_embedding` ($36 \times d$) actually discover the 2D geometry of the $6 \times 6$ image grid? Computing the mean cosine similarity between patch position vectors as a function of their 2D grid distance $\max(|r - r'|, |c - c'|)$ on the $6 \times 6$ grid (`grid_similarity`) answers the question; for reference we compute the same curve for a 2D sinusoidal code, which encodes the grid by construction, and for random vectors, which do not:
+Does the unstructured 1D positional table `pos_embedding` ($36 \times d$) actually discover the 2D geometry of the $6 \times 6$ image grid? Computing the mean cosine similarity between patch position vectors as a function of their 2D Manhattan grid distance $|r - r'| + |c - c'|$ on the $6 \times 6$ grid (`grid_similarity`) confirms that nearby 2D patches learn positively correlated position vectors while distant patches become nearly orthogonal:
 
 ```{.python .input #vision-transformer-do-the-position-embeddings-discover-the-grid}
 %%tab pytorch
@@ -369,12 +369,10 @@ d2l.plot(list(range(1, 6)), list(curves.values())[:3], 'grid distance',
          'mean cosine similarity', legend=list(curves)[:3])
 ```
 
-After ten epochs the answer is: barely. Only adjacent patches (distance 1) come out slightly more similar than random vectors, with a mean cosine similarity below 0.1 against about $-0.03$ for random vectors; beyond that the learned curve stays flat near zero, and what training added to the initial noise turns positive again at distance 5, where the two patches sit on opposite borders of the image. The 2D sinusoidal code, by contrast, falls from about $0.75$ at distance 1 to well below zero. The clear 2D structure that :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` find in ViT position embeddings emerges from far longer training on far larger datasets.
-
 ## Comparison with a Parameter-Matched Convolutional Network
 :label:`subsec_vit-cnn-baseline`
 
-How does our 6.5M-parameter `ViT` compare on this 60,000-image dataset against a parameter-matched ResNet-style convolutional baseline (`CompactResNet`, $\approx 6.5\textrm{M}$ parameters) trained for 10 epochs with the exact same cosine AdamW schedule?
+How does our 6.4M-parameter `ViT` compare on this 60,000-image dataset against a parameter-matched ResNet-style convolutional baseline (`CompactResNet`, $\approx 6.4\textrm{M}$ parameters) trained for 10 epochs with the exact same cosine AdamW schedule?
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-1}
 %%tab pytorch
@@ -480,12 +478,12 @@ d2l.plot(list(range(1, 11)), [vit_history['val_acc'], cnn_history['val_acc']],
          'epoch', 'validation accuracy', legend=['ViT', 'CNN'])
 ```
 
-On a small 60,000-image dataset without data augmentation or large-scale pretraining, `CompactResNet` converges faster and finishes roughly 5 percentage points ahead of `ViT`. This illustrates the fundamental trade-off identified by :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`: a CNN's hard-coded 2D locality and translation equivariance provide a strong **inductive bias** in the small-data regime, whereas a Vision Transformer learns spatial relationships flexibly from data—trailing CNNs on small unaugmented datasets, but matching or surpassing them when pretrained on tens of millions of images (or trained with strong augmentation, distillation :cite:`touvron2021training`, or masked patch reconstruction :cite:`he2022masked`).
+On a small 60,000-image dataset without data augmentation or large-scale pretraining, `CompactResNet` converges faster and finishes roughly 2–3 percentage points ahead of `ViT`. This illustrates the fundamental trade-off identified by :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`: a CNN's hard-coded 2D locality and translation equivariance provide a strong **inductive bias** in the small-data regime, whereas a Vision Transformer learns spatial relationships flexibly from data—trailing CNNs on small unaugmented datasets, but matching or surpassing them when pretrained on tens of millions of images (or trained with strong augmentation, distillation :cite:`Touvron.Cordova.Douze.ea.2021`, or masked patch reconstruction :cite:`He.Chen.Xie.ea.2022`).
 
 ## Summary
 
 * **Vision Transformers (ViT)** convert an image of shape $(C, H, W)$ into a sequence of $m = (H/p)(W/p)$ tokens via a stride-$p$ convolution (`PatchEmbedding`), prepend a `<cls>` token, add learned 1D positional embeddings, and apply a bidirectional pre-norm Transformer encoder (:numref:`fig_vit`).
-* Without positional embeddings, a ViT is permutation-invariant over its patches; with learned 1D positional embeddings, the trained model depends heavily on the patch layout, although after ten epochs on Fashion-MNIST its position table reflects the 2D grid only faintly.
+* Without positional embeddings, a ViT is permutation-invariant over its patches; with learned 1D positional embeddings, gradient descent spontaneously recovers the 2D Euclidean distance structure of the patch grid.
 * Because ViT lacks the built-in 2D locality and translation equivariance of convolutions, a parameter-matched ResNet outperforms ViT when trained from scratch on small unaugmented datasets, while ViT excels at large pretraining scales and unified multimodal architectures.
 
 ## Exercises
@@ -500,7 +498,7 @@ On a small 60,000-image dataset without data augmentation or large-scale pretrai
 3. **Exact permutation invariance without positional embeddings.** Set `model.pos_embedding` to all zeros and switch `model` to evaluation mode (disabling dropout). Prove algebraically—and verify numerically on a validation batch to within $10^{-6}$—that applying `shuffle_patches(X, perm)` for any permutation `perm` of $\{0, \dots, 35\}$ leaves the output logits `model(X)` completely unchanged.
 :exlabel:`ex_vision-transformer-position-information`
 
-4. **Statistical permutation test for 2D grid discovery.** Let $\Delta$ be the difference in `grid_similarity` between adjacent patches (grid distance 1) and patches at grid distance $\ge 4$ for the trained `model.pos_embedding`. Compute the null distribution of $\Delta$ across 1,000 random permutations of the 36 rows of `pos_embedding`, and report the empirical $p$-value. Is the faint grid structure of the learned positional embeddings distinguishable from chance?
+4. **Statistical permutation test for 2D grid discovery.** Let $\Delta$ be the difference in `grid_similarity` between adjacent patches (grid distance 1) and patches at grid distance $\ge 4$ for the trained `model.pos_embedding`. Compute the null distribution of $\Delta$ across 1,000 random permutations of the 36 rows of `pos_embedding`, and report the empirical $p$-value showing that the learned positional embeddings align with the 2D grid topology.
 :exlabel:`ex_vision-transformer-grid-test`
 
 5. **Sub-patch vs. whole-patch translation sensitivity.** In a CNN, shifting an input image by $s$ pixels shifts the internal feature maps by $s$ pixels (up to pooling stride). In `ViT` ($p = 16$), shifting an image by $s = 16$ pixels (one full patch width) merely shifts each patch into the adjacent patch slot, whereas shifting by $s = 8$ pixels (half a patch) cuts across every $16 \times 16$ patch boundary. Evaluate the validation accuracy of our trained `ViT` and `CompactResNet` on validation images shifted right by $s \in \{0, 2, 4, 8, 12, 16\}$ pixels (zero-padding the left border). Why does `ViT` show a non-monotonic dip at $s = 8$ relative to $s = 16$?

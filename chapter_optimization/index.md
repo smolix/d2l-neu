@@ -58,7 +58,7 @@ derivatives 4 across ($x_2$) and 0.2 along ($x_1$).
 | **Noisy gradients** | at a constant rate, stochastic gradient descent (SGD) stalls in a cloud around the minimum | half the rate halves the variance of the cloud and doubles the steps to reach it |
 
 ::: {.d2l-note}
-Momentum, AdamW, warmup, decay and the batch size are answers to these two
+Momentum, Adam, warmup, decay and the batch size are answers to these two
 problems.
 :::
 :::
@@ -106,12 +106,13 @@ run, and the noise it carries.
 
 | part | decks | measured on |
 |---|---|---|
-| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes and Gradient Descent · Stochastic and Minibatch Gradient Descent | the valley; a 25-parameter network; linear regression on 1,500 airfoil measurements |
-| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam and AdamW · Muon | the valley, then `TinyLM` (470,784 parameters) and `FashionCNN` (421,642) |
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch Gradient Descent | the valley; a 25-parameter network; linear regression on 1,500 airfoil measurements |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon | the valley, then `TinyLM` (470,784 parameters) and `FashionCNN` (421,642) |
 | **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice | the valley; both networks; MLPs of width 128 to 8,192 |
 
 ::: {.d2l-note}
-The core: Momentum, Adam and AdamW, Schedules and Batch Size. Muon and
-Scaling Up can be left for a second pass.
+The core: Momentum, Adam, AdamW, Schedules and Batch Size. Muon and
+Scaling Up can be left for a second pass. Every later deck shows this map
+with its own place marked.
 :::
 :::

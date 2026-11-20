@@ -430,39 +430,102 @@ In deep networks, we are not given $\operatorname{diag}(\mathbf{H})$ directly, n
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §9.1]{.kicker}
+[Dive into Deep Learning · §9.2]{.kicker}
 
-Landscapes and Gradient Descent<br>
-**ill-conditioned valleys · condition number · saddles and plateaus · descent guarantee · edge of stability · preconditioning**
+Gradient Descent<br>
+**the descent guarantee · stable and unstable minima · the edge of stability · Newton's method · preconditioning**
 :::
 :::
 
-::: {.slide title="One Learning Rate Must Serve Curvatures 0.2 and 4"}
+::: {.slide title="On the Valley No Learning Rate Works at 0.5 or Above"}
 [The problem]{.kicker}
 
-The valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$ has **curvature** (second
-derivative) $0.2$ along $x_1$ and $4$ along $x_2$. Gradient descent with
-learning rate $\eta$ steps against the gradient $(0.2 x_1, 4 x_2)$:
+Gradient descent $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x})$
+on the valley $f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2$, from $(-5, -2)$.
+Steps until both coordinates are within 1% of the minimum:
 
-$$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}): \qquad x_1 \leftarrow (1 - 0.2\eta)\, x_1, \quad x_2 \leftarrow (1 - 4\eta)\, x_2$$
+| learning rate $\eta$ | 0.1 | 0.3 | 0.45 | 0.476 | 0.49 | 0.5 |
+|---|---:|---:|---:|---:|---:|---:|
+| steps | 228 | 75 | 49 | 47 | 113 | never |
 
-- $\eta \geq 0.5$: the steep coordinate $x_2$ never shrinks.
-- $\eta < 0.5$: the flat coordinate $x_1$ loses less than 10% per step.
+::: {.d2l-note}
+The valley has the same curvature everywhere, and we chose it. What
+limits the step on a function whose curvature changes from place to
+place?
+:::
 :::
 
-::: {.slide title="At η = 0.45 the Steep Coordinate Swings While the Flat One Creeps" layout="tight"}
-[A narrow valley]{.kicker}
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
 
-@!optimization-intro-an-ill-conditioned-valley
+- prove that every learning rate below $2/L$ lowers a function whose
+  curvature is at most $L$;
+- decide from $f''$ whether gradient descent can settle in a minimum;
+- bound the *sharpness* (the largest curvature of the loss) that
+  full-batch gradient descent can end at;
+- write Newton's update and name what rules it out for a network;
+- precondition the valley and count the steps saved.
+
+**Running example:** the valley, curvatures $0.2$ and $4$, *condition
+number* (largest over smallest curvature) $\kappa = 20$.
+**The idea:** curvature sets the step, at most $2/L$, ideally one over
+the curvature of each direction.
 :::
 
-::: {.slide title="Balancing Both Factors Gives 47 Steps at η = 0.476" layout="tight"}
-[A narrow valley]{.kicker}
+::: {.slide title="Gradient Descent Turns the Valley Into a General Rule"}
+[Where this fits]{.kicker}
 
-@!optimization-intro-an-ill-conditioned-valley-1
+::: {.cols .vc}
+::: {.col}
+| part | decks |
+|---|---|
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · **Gradient Descent** · Stochastic and Minibatch Gradient Descent |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
 :::
 
-::: {.slide title="Every Learning Rate Below 2/L Lowers f"}
+::: {.col .narrow}
+- **Uses:** gradients, the Hessian and its eigenvalues.
+- **Skips:** noisy gradients (next deck), warmup (Schedules),
+  quasi-Newton methods, line search.
+:::
+:::
+:::
+
+::: {.slide title="The Negative Gradient Is the Steepest Direction"}
+[The descent guarantee]{.kicker}
+
+A small step $\boldsymbol{\epsilon}$ changes $f$ by about
+$\boldsymbol{\epsilon}^\top \nabla f(\mathbf{x})$.
+
+- Among steps of length $r$, Cauchy–Schwarz gives
+  $\boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) \geq -r \|\nabla f(\mathbf{x})\|$.
+- Equality only if $\boldsymbol{\epsilon}$ points along
+  $-\nabla f(\mathbf{x})$.
+
+$$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}) \quad \textrm{changes } f \textrm{ by about } -\eta \|\nabla f(\mathbf{x})\|^2$$
+
+::: {.d2l-note .warn}
+True for a short step only. How short is short enough?
+:::
+:::
+
+::: {.slide title="I. A Slope That Changes by at Most L Keeps f Below a Parabola"}
+[The descent guarantee]{.kicker}
+
+Assume $|f'(y) - f'(x)| \leq L\,|y - x|$ for all $x, y$; with a second
+derivative, $|f''| \leq L$. No convexity.
+
+After a distance $s$ the slope exceeds $f'(x)$ by at most $Ls$:
+
+$$f(x + \epsilon) - f(x) - \epsilon f'(x) = \int_0^\epsilon \big(f'(x + s) - f'(x)\big)\, ds \leq \int_0^\epsilon L s\, ds = \frac{L}{2}\epsilon^2$$
+
+::: {.d2l-note}
+$f$ lies below the parabola of curvature $L$ that touches it at $x$.
+:::
+:::
+
+::: {.slide title="II. Every Learning Rate Below 2/L Lowers f"}
 [The descent guarantee]{.kicker}
 
 Insert the gradient step $\epsilon = -\eta f'(x)$:
@@ -472,8 +535,68 @@ $$\boxed{f(x - \eta f'(x)) \leq f(x) - \eta \Big(1 - \frac{\eta L}{2}\Big) f'(x)
 - $0 < \eta < 2/L$: a strict decrease wherever $f'(x) \neq 0$.
 - $\eta = 1/L$ lands where the parabola is lowest: the largest guaranteed
   decrease, $f'(x)^2 / (2L)$.
+- $\eta = 2/L$: the parabola is back at $f(x)$, and the bound is silent.
 - In $d$ variables: $\|\nabla f(\mathbf{x})\|^2$ replaces $f'(x)^2$, and
   $L$ bounds the size of every eigenvalue of the Hessian.
+:::
+
+::: {.slide title="On the Valley L = 4, and the Guarantee Is the Ceiling 0.5"}
+[The descent guarantee]{.kicker}
+
+Hessian $\textrm{diag}(0.2, 4)$ everywhere, so $L = 4$ and $2/L = 0.5$.
+
+| $\eta$ | steep factor $1 - 4\eta$ | flat factor $1 - 0.2\eta$ | guarantee |
+|---|---:|---:|---|
+| $0.25 = 1/L$ | 0 | 0.95 | holds, largest |
+| $0.476$ | −0.905 | 0.905 | holds |
+| $0.5 = 2/L$ | −1 | 0.9 | none |
+
+::: {.d2l-note}
+The guarantee says that $f$ falls, not how fast: the flat direction
+still sets the pace.
+:::
+:::
+
+::: {.slide title="Check: Which Learning Rates Are Safe on cos x?"}
+[Check]{.kicker}
+
+$f(x) = \cos x$.
+
+1. For which learning rates does the guarantee hold?
+2. Which learning rate has the largest guaranteed decrease, and how
+   large is it?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $|f''(x)| = |\cos x| \leq 1$, so $L = 1$: every
+$0 < \eta < 2$ lowers $f$. The best guaranteed rate is $\eta = 1$, with
+decrease $f'(x)^2/2 = \sin^2(x)/2$.
+:::
+:::
+:::
+
+::: {.slide title="A Minimum Sharper Than 2/η Repels Gradient Descent"}
+[Stability of minima]{.kicker}
+
+Near a minimum $x^*$ with curvature $\lambda = f''(x^*)$:
+$f'(x) \approx \lambda (x - x^*)$, so each step multiplies the distance
+to $x^*$ by $1 - \eta\lambda$.
+
+- $\lambda < 2/\eta$: factor smaller than 1 in size, the minimum
+  attracts.
+- $\lambda > 2/\eta$: factor below $-1$, the minimum repels.
+
+$f(x) = x\cos(0.15\pi x)$ has a deep and a shallow minimum:
+
+| minimum | $f''$ | factor at $\eta = 0.5$ | factor at $\eta = 2$ |
+|---|---:|---:|---:|
+| $x = 7.27$ (deep) | 1.81 | 0.09 | −2.6 |
+| $x = -1.83$ (shallow) | 0.98 | 0.51 | −0.96 |
+
+::: {.d2l-note}
+Factor $-2.6$: a distance of $0.01$ from the deep minimum grows to $0.5$
+in four steps.
+:::
 :::
 
 ::: {.slide title="At η = 2 the Run Ends in the Shallow Minimum, the Flatter One"}
@@ -486,10 +609,155 @@ over it and creeps into the shallow one (factor $-0.96$). The learning
 rate selects by curvature, not by depth.
 :::
 
+::: {.slide title="On a Network the Sharpness Rises Until It Meets 2/η"}
+[Edge of stability]{.kicker}
+
+- *Sharpness*: the largest eigenvalue $\lambda_{\max}$ of the Hessian of
+  the loss. Classical advice: measure it, choose $\eta < 2/\lambda_{\max}$.
+- Full-batch gradient descent on networks (Cohen et al., 2021): the
+  sharpness **rises** during training to about $2/\eta$, then stays.
+- The loss keeps falling, but not on every step.
+
+**Test:** a $\tanh$ network with 25 parameters fits 16 points of
+$\sin(3x)$; ten random starts; $\eta = 0.4$ and $\eta = 0.25$, thresholds
+$2/\eta = 5$ and $8$; 20,000 steps.
+:::
+
 ::: {.slide title="No Run Ends Above 2/η: 5.0 at η = 0.4, 8 or Just Below at η = 0.25" layout="tight"}
 [Edge of stability]{.kicker}
 
 @!optimization-intro-the-edge-of-stability-2
+:::
+
+::: {.slide title="At the Edge the Loss Rises on Every Second Step"}
+[Edge of stability]{.kicker}
+
+`rising`: the share of the last 1,000 steps on which the loss went up.
+
+- **50% rising:** sharpness at $2/\eta$, factor $1 - \eta\lambda = -1$.
+  The iterate swings across the sharpest direction; the other 24
+  directions keep descending.
+- **0% rising:** sharpness below $2/\eta$. The descent guarantee is back
+  and every step lowers the loss.
+- **Above $2/\eta$:** the swing grows, and the third-order term of the
+  loss turns it into a drift toward flatter regions (Damian et al.,
+  2023).
+
+::: {.d2l-note}
+$2/\eta$ is a ceiling, not a forecast: at a small $\eta$ the data are
+fitted before the sharpness gets there.
+:::
+:::
+
+::: {.slide title="Check: Where Can a Run at η = 0.5 End?"}
+[Check]{.kicker}
+
+The 25-parameter network, full-batch gradient descent.
+
+1. A run at $\eta = 0.4$ ended at sharpness $5.0$. Can a run at
+   $\eta = 0.5$ from the same start end at the same place?
+2. A run at $\eta = 0.1$ ends at sharpness 10, with the loss falling on
+   every step. Does this contradict the edge of stability?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 1. No: $2/\eta = 4 < 5$, so that region repels the iterate.
+The run ends at sharpness 4 or below. 2. No: $2/\eta = 20$ is a ceiling.
+The run fitted the data before sharpening got that far, and below the
+ceiling every step descends.
+:::
+:::
+:::
+
+::: {.slide title="The Negative Gradient Points at the Wall, Not at the Minimum"}
+[Newton's method]{.kicker}
+
+Valley, start $(-5, -2)$:
+
+- negative gradient $(1, 8)$, direction to the minimum $(5, 2)$;
+- $x_2$ (curvature 4) tolerates no $\eta$ above $0.5$;
+- $x_1$ (curvature $0.2$) would be solved in one step by
+  $\eta = 1/0.2 = 5$.
+
+::: {.d2l-note}
+The valley needs a learning rate per direction: 5 along $x_1$, $1/4$
+along $x_2$. One over the curvature.
+:::
+:::
+
+::: {.slide title="Newton's Method Divides the Gradient by the Curvature"}
+[Newton's method]{.kicker}
+
+Minimize the second-order model
+$f(\mathbf{x}) + \boldsymbol{\epsilon}^\top \nabla f(\mathbf{x}) + \frac{1}{2} \boldsymbol{\epsilon}^\top \mathbf{H} \boldsymbol{\epsilon}$
+over the step $\boldsymbol{\epsilon}$:
+
+$$\nabla f(\mathbf{x}) + \mathbf{H} \boldsymbol{\epsilon} = 0 \quad\Longrightarrow\quad \mathbf{x} \leftarrow \mathbf{x} - \mathbf{H}^{-1} \nabla f(\mathbf{x})$$
+
+- $\mathbf{H}$: the Hessian, the matrix of second derivatives.
+- No learning rate. A quadratic is solved in one step.
+- Valley: $\mathbf{H} = \textrm{diag}(0.2, 4)$,
+  $\nabla f(\mathbf{x}) = (0.2 x_1, 4 x_2)$, so
+  $\mathbf{H}^{-1} \nabla f(\mathbf{x}) = \mathbf{x}$: one step to the
+  origin, for any $\kappa$.
+:::
+
+::: {.slide title="Far Away Newton Walks, Near the Minimum the Error Collapses"}
+[Newton's method]{.kicker}
+
+@!gd-newton-s-method-1
+
+$f(x) = \cosh(0.5x)$ from $x = 10$. Far out
+$f'/f'' = \tanh(0.5x)/0.5 \approx 2$: three steps of 2, from 10 to 4.
+Then $0.53$, $0.012$, $10^{-7}$: the correct digits at least double per
+step.
+:::
+
+::: {.slide title="Negative Curvature Sends Newton to a Maximum"}
+[Newton's method]{.kicker}
+
+@!gd-newton-s-method-2
+
+$x\cos(0.15\pi x)$ from $x = 10$: at $x = 5$ the curvature is $0.12$,
+the step is 20 long and lands where $f'' < 0$. Newton finds points with
+zero gradient; a maximum is one.
+:::
+
+::: {.slide title="Storage Is Not What Rules Newton Out for a Network"}
+[Newton's method]{.kicker}
+
+- $d = 10^9$ parameters: $10^{18}$ Hessian entries $\times$ 4 bytes =
+  4 exabytes.
+- But a Hessian–vector product costs about two gradients, and an
+  iterative solver needs only such products.
+
+What remains:
+
+1. many products per step, each as costly as a gradient step;
+2. minibatch noise: dividing by a curvature estimated near zero;
+3. negative eigenvalues: steps toward saddle points and maxima.
+
+::: {.d2l-note}
+Keep the cheap part: rescale each direction by an estimate of its
+curvature.
+:::
+:::
+
+::: {.slide title="Units Alone Create a Condition Number of a Million"}
+[Preconditioning]{.kicker}
+
+- Linear regression: curvature along a weight = mean squared feature.
+- Two unrelated lengths, one in meters, one in millimeters: curvatures
+  differ by $10^6$.
+
+A *preconditioner* rescales the gradient to improve the condition
+number. The simplest divides by the diagonal of the Hessian:
+
+$$\mathbf{x} \leftarrow \mathbf{x} - \eta\, \textrm{diag}(\mathbf{H})^{-1} \nabla f(\mathbf{x})$$
+
+::: {.d2l-note}
+The factor $10^6$ is gone, and nobody had to notice the units.
+:::
 :::
 
 ::: {.slide title="Preconditioning Solves the Valley in 7 Steps, Not 47"}
@@ -500,4 +768,38 @@ rate selects by curvature, not by depth.
 $\eta = 0.5$: both coordinates keep the factor $1 - \eta = 0.5$, and
 $0.5^7 \approx 0.008$. The condition number has dropped out. At
 $\eta = 1$ this is Newton's method.
+:::
+
+::: {.slide title="Check: Rotate the Valley by 45°"}
+[Check]{.kicker}
+
+The rotated valley has Hessian
+$\begin{pmatrix} 2.1 & -1.9 \\ -1.9 & 2.1 \end{pmatrix}$, with
+eigenvalues 4 and $0.2$. What does the diagonal preconditioner do?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\textrm{diag}(\mathbf{H}) = (2.1, 2.1)$: both coordinates
+are divided by the same number, a plain change of learning rate. The
+condition number stays 20. Only a preconditioner that mixes coordinates,
+such as $\mathbf{H}^{-1}$, undoes a rotation.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- Curvature at most $L$: every $\eta < 2/L$ lowers $f$. Valley: $L = 4$,
+  ceiling $0.5$.
+- A minimum sharper than $2/\eta$ repels: at $\eta = 2$ the run ends at
+  the minimum with $f'' = 0.98$, not the one with $f'' = 1.81$.
+- Full-batch gradient descent on a network: the sharpness rises, but not
+  past $2/\eta$ ($5.0$ at $\eta = 0.4$, 8 or just below at
+  $\eta = 0.25$).
+- Newton divides by the curvature: one step on the valley; a maximum
+  under negative curvature; too costly and too noisy for a network.
+- Diagonal preconditioning: 7 steps instead of 47.
+
+**Next:** the gradient becomes a noisy estimate from a minibatch.
 :::

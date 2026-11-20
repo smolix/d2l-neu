@@ -430,27 +430,475 @@ On `TinyLM`, Muon+AdamW establishes a $>0.1$-nat validation lead at step $500$, 
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §9.6]{.kicker}
+[Dive into Deep Learning · §9.8]{.kicker}
 
 Muon<br>
 **steepest descent under the spectral norm · Newton–Schulz · the hybrid with AdamW · long runs**
 :::
 :::
 
-::: {.slide title="Five Quintic Newton–Schulz Steps Flatten the Singular Spectrum Into [0.68, 1.13]" layout="tight"}
-[Newton–Schulz orthogonalization]{.kicker}
+::: {.slide title="Adam Cannot See That a Weight Matrix Is a Map"}
+[The problem]{.kicker}
+
+`TinyLM`, a two-block transformer that predicts the next byte of Wikipedia
+text: 393,216 of its 470,784 parameters (84%) sit in eight matrices that
+map activations, $\mathbf{y} = \mathbf{W}\mathbf{x}$.
+
+- Adam chooses the step of each entry from that entry's own gradients.
+  Shuffle the entries of a matrix and it takes the same steps.
+- The network sees only what a step $\Delta\mathbf{W}$ does to
+  $\mathbf{y}$.
+
+::: {.d2l-note}
+What is the best step for a matrix, taken as a matrix?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- derive the steepest step under the Euclidean, $\ell_\infty$, and spectral
+  norms;
+- orthogonalize a matrix with five polynomial steps, and say which
+  singular values arrive;
+- write Muon's update with its scale and its weight decay;
+- split a model's parameters between Muon and AdamW;
+- read a comparison of two optimizers for what it shows.
+
+**Idea:** the steepest step depends on how a step is measured.
+
+**Running example:** `TinyLM`, 2,000 steps, Muon + AdamW against AdamW.
+:::
+
+::: {.slide title="Muon Is the Chapter's Third Answer to the Question of Direction"}
+[Where this fits]{.kicker}
+
+| part | decks |
+|---|---|
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · **Muon** |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · Practice |
+
+- **Uses:** Nesterov momentum, Adam as a sign method, decoupled weight
+  decay, the spectral norm.
+- **Skips:** variants of Muon, training on many devices, convergence
+  theory.
+:::
+
+::: {.slide title="The Steepest Direction Depends on the Norm"}
+[Norms and steepest descent]{.kicker}
+
+Linearize, $f(\mathbf{x} + \mathbf{d}) \approx f(\mathbf{x}) + \langle
+\mathbf{g}, \mathbf{d}\rangle$ ($\mathbf{g}$: gradient), and ask for the
+best step of size at most $\eta$:
+
+$$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \leq \eta} \langle \mathbf{g}, \mathbf{d} \rangle.$$
+
+![](../img/mdl-opt-norm-balls.svg){width=60%}
+
+::: {.d2l-note}
+Round ball: the **direction of SGD**. Box, $\max_i |d_i| \leq \eta$:
+**sign descent**, which Adam smooths. Right: the ball for a matrix, next.
+:::
+:::
+
+::: {.slide title="A Matrix Step Is Measured by What It Does to the Layer's Output"}
+[Norms and steepest descent]{.kicker}
+
+A layer computes $\mathbf{y} = \mathbf{W}\mathbf{x}$. A step
+$\Delta\mathbf{W}$ changes its output by $\Delta\mathbf{W}\mathbf{x}$:
+
+$$\|\Delta\mathbf{W}\mathbf{x}\|_2 \leq \|\Delta\mathbf{W}\|_2\,\|\mathbf{x}\|_2$$
+
+- $\|\Delta\mathbf{W}\|_2$: the **spectral norm**, the largest stretch of
+  any vector.
+- SVD: $\mathbf{G} = \sum_i \sigma_i\,\mathbf{u}_i\mathbf{v}_i^\top$ with
+  orthonormal $\mathbf{u}_i$, orthonormal $\mathbf{v}_i$, and singular
+  values $\sigma_1 \geq \sigma_2 \geq \cdots \geq 0$.
+- Spectral norm $\sigma_1$; Frobenius norm $\sqrt{\sum_i \sigma_i^2}$.
+
+::: {.d2l-note}
+128 singular values of one: no input is stretched, yet the Frobenius norm
+is $\sqrt{128} \approx 11$. The Euclidean ball overstates such a step
+elevenfold.
+:::
+:::
+
+::: {.slide title="Under the Spectral Norm the Steepest Step Is UVᵀ"}
+[Norms and steepest descent]{.kicker}
+
+Gradient $\mathbf{G} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$,
+inner product $\langle \mathbf{G}, \mathbf{A}\rangle = \sum_{i,j}
+G_{ij}A_{ij} = \mathrm{tr}(\mathbf{G}^\top\mathbf{A})$:
+
+$$\operatorname*{argmin}_{\|\Delta\mathbf{W}\|_2 \leq \eta} \langle \mathbf{G}, \Delta\mathbf{W}\rangle = -\eta\, \mathbf{U}\mathbf{V}^\top$$
+
+For any $\mathbf{A}$ with $\|\mathbf{A}\|_2 \leq 1$:
+
+1. $\langle \mathbf{G}, \mathbf{A}\rangle =
+   \mathrm{tr}(\boldsymbol{\Sigma}\,\mathbf{U}^\top\mathbf{A}\mathbf{V}) =
+   \sum_i \sigma_i\,(\mathbf{U}^\top\mathbf{A}\mathbf{V})_{ii}$.
+2. $\|\mathbf{U}^\top\mathbf{A}\mathbf{V}\|_2 \leq 1$, so no entry
+   exceeds 1: $\langle \mathbf{G}, \mathbf{A}\rangle \leq \sum_i \sigma_i$.
+3. $\mathbf{A} = \mathbf{U}\mathbf{V}^\top$ gives
+   $\mathbf{U}^\top\mathbf{A}\mathbf{V} = \mathbf{I}$: attained.
+
+::: {.d2l-note}
+The **orthogonalized gradient**: singular vectors kept, every singular
+value set to one.
+:::
+:::
+
+::: {.slide title="Check: Three Balls, Three Steps for One Gradient"}
+[Check]{.kicker}
+
+$$\mathbf{G} = \begin{bmatrix} 3 & 1 \\ 1 & 1 \end{bmatrix}, \qquad \sigma_1 \approx 3.41, \quad \sigma_2 \approx 0.59$$
+
+Up to the factor $-\eta$, what are the steepest steps in the round ball,
+the box, and the spectral ball, and what are the singular values of each?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Round: $\mathbf{G}/\|\mathbf{G}\|_F$, singular values $0.99$
+and $0.17$. Box: the matrix of four ones, $2$ and $0$. Spectral: the
+identity, $1$ and $1$. Equal steps per entry are not equal steps per
+direction.
+:::
+:::
+:::
+
+::: {.slide title="Weak Directions Get a Full Step, and the Ball Bounds What It Does"}
+[Norms and steepest descent]{.kicker}
+
+**Objection.** Small singular values belong to the directions that a
+minibatch identifies most weakly. Some are noise. $\mathbf{U}\mathbf{V}^\top$
+moves along them at the full rate.
+
+1. **The ball.** $\|\Delta\mathbf{W}\mathbf{x}\|_2 \leq \eta\,\|\mathbf{x}\|_2$
+   for every input $\mathbf{x}$: a weak direction disturbs the layer no
+   more than the strongest.
+2. **Averaging.** Muon orthogonalizes momentum, an average over about 20
+   steps.
+3. **Approximation.** Five polynomial steps leave the smallest singular
+   values small.
+
+::: {.d2l-note}
+Answers 2 and 3 belong to the algorithm. We measure them on `TinyLM`.
+:::
+:::
+
+::: {.slide title="Embeddings, Head, and Vectors Stay with AdamW"}
+[Norms and steepest descent]{.kicker}
+
+| ball on the step | steepest step | loss decrease (linearized) | parameters |
+|:--|:--|:--|:--|
+| Euclidean | $-\eta\, \mathbf{g} / \|\mathbf{g}\|_2$ | $\eta\,\|\mathbf{g}\|_2$ | no structure assumed |
+| box ($\ell_\infty$) | $-\eta\, \mathrm{sign}(\mathbf{g})$ | $\eta\,\|\mathbf{g}\|_1$ | coordinates of different scale |
+| spectral | $-\eta\, \mathbf{U}\mathbf{V}^\top$ | $\eta\sum_i \sigma_i$ | hidden matrices |
+
+- Hidden matrix: input and output are both activations.
+- Embedding table: one-hot input, each row is looked up alone.
+- Output head: a dense matrix, kept with AdamW by convention. It trained
+  better that way; the norm argument does not say why.
+:::
+
+::: {.slide title="Muon Is Shampoo without Memory"}
+[Norms and steepest descent]{.kicker}
+
+Shampoo preconditions an $m \times n$ matrix with two accumulated
+matrices, $\mathbf{L}_t = \sum_s \mathbf{G}_s\mathbf{G}_s^\top$ and
+$\mathbf{R}_t = \sum_s \mathbf{G}_s^\top\mathbf{G}_s$. Its step is
+$\mathbf{L}_t^{-1/4}\mathbf{G}_t\mathbf{R}_t^{-1/4}$. Keep only the
+current gradient $\mathbf{G} =
+\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$:
+
+$$(\mathbf{G}\mathbf{G}^\top)^{-1/4}\mathbf{G}(\mathbf{G}^\top\mathbf{G})^{-1/4} = \mathbf{U}\boldsymbol{\Sigma}^{-1/2}\mathbf{U}^\top\,\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top\,\mathbf{V}\boldsymbol{\Sigma}^{-1/2}\mathbf{V}^\top = \mathbf{U}\mathbf{V}^\top.$$
+
+::: {.d2l-note}
+Adam without its averages: the steepest step in the box. Shampoo without
+its sums: the steepest step in the spectral ball.
+:::
+
+[Gupta et al., 2018; Bernstein and Newhouse, 2024]{.small}
+:::
+
+::: {.slide title="Odd Matrix Polynomials Act on Singular Values Alone"}
+[Newton–Schulz]{.kicker}
+
+Wanted: $\mathbf{U}\mathbf{V}^\top$ without an SVD. For numbers $a$, $b$,
+$c$ and $\mathbf{X} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$,
+
+$$p(\mathbf{X}) = a\mathbf{X} + b\,(\mathbf{X}\mathbf{X}^\top)\mathbf{X} + c\,(\mathbf{X}\mathbf{X}^\top)^2\mathbf{X} = \mathbf{U}\,p(\boldsymbol{\Sigma})\,\mathbf{V}^\top$$
+
+because $\mathbf{X}\mathbf{X}^\top =
+\mathbf{U}\boldsymbol{\Sigma}^2\mathbf{U}^\top$. The Newton–Schulz
+iteration:
+
+1. $\mathbf{X} \leftarrow \mathbf{G} / \|\mathbf{G}\|_F$, so every
+   singular value is in $[0, 1]$.
+2. Five times: $\mathbf{A} \leftarrow \mathbf{X}\mathbf{X}^\top$,
+   $\mathbf{X} \leftarrow a\mathbf{X} + (b\mathbf{A} +
+   c\mathbf{A}^2)\mathbf{X}$.
+
+::: {.d2l-note}
+Choose $p$ to push small numbers up and to keep numbers near 1 near 1.
+Zero stays zero.
+:::
+:::
+
+::: {.slide title="The Tuned Quintic Gives Up Convergence for Speed"}
+[Newton–Schulz]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+- Cubic $\tfrac{3}{2}x - \tfrac{1}{2}x^3$: slope 1.5 at zero, converges
+  to 1.
+- Quintic $3.4445x - 4.7750x^3 + 2.0315x^5$: slope 3.44, ends in a band
+  from 0.68 to 1.2.
+- Polar Express (orange): a different quintic at each step narrows the
+  band.
+:::
+
+::: {.col}
+![](../img/mdl-opt-ns-maps.svg){width=100%}
+:::
+:::
+
+[Quintic: Jordan et al., 2024. Per-step quintics: Amsel et al., 2026]{.small}
+:::
+
+::: {.slide title="Check: How Small a Singular Value Can Five Steps Lift?"}
+[Check]{.kicker}
+
+A singular value is $\sigma$ times the Frobenius norm. Near zero the
+quintic multiplies it by 3.4445 per step. How large must $\sigma$ be to
+reach the band, at 0.68, in five steps? And in three?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Five steps multiply by at most $3.4445^5 \approx 485$, so
+$\sigma \geq 0.68/485 \approx 0.15\%$. Three steps multiply by 41:
+$\sigma \geq 1.7\%$. Smaller singular values are raised and still fall
+short.
+:::
+:::
+:::
+
+::: {.slide title="On a Gaussian Matrix Three Steps Already Reach the Band"}
+[Newton–Schulz]{.kicker}
+
+A random $96 \times 64$ Gaussian matrix: singular values from about 2%
+to a little over 20% of the Frobenius norm, enough for three steps.
+Spectrum after $k$ steps of the quintic:
 
 @!muon-orthogonalization-by-newton-schulz-2
 :::
 
-::: {.slide title="84% of TinyLM Parameters Are Hidden 2D Matrices Routed to Muon" layout="tight"}
-[Parameter partitioning]{.kicker}
+::: {.slide title="On the Gradient of a New TinyLM Many Singular Values Fall Short"}
+[Newton–Schulz]{.kicker}
 
-@!muon-dividing-the-census-1
+One minibatch, the four hidden matrices of block 1, five quintic steps.
+
+| matrix | $\sigma_1 / \|\mathbf{G}\|_F$ | singular values that reach 0.68 | norm relative to $\mathbf{U}\mathbf{V}^\top$ |
+|:--|:--|:--|:--|
+| `qkv`, $384 \times 128$ | 0.99 | about half | about 0.7 |
+| `proj`, $128 \times 128$ | 0.99 | under a third | under 0.6 |
+| `mlp1`, $512 \times 128$ | about 0.7 | about 90% | 0.9 |
+| `mlp2`, $128 \times 512$ | over 0.9 | about 60% | about 0.8 |
+
+- $\sigma_1 / \|\mathbf{G}\|_F = 0.99$: by its norm, a gradient of rank
+  one.
+
+::: {.d2l-note}
+Five steps flatten the top of the spectrum and leave the tail small.
+:::
 :::
 
-::: {.slide title="Muon+AdamW Accelerates Early Training and Tolerates 3× Higher Learning Rates" layout="tight"}
-[Comparison with AdamW]{.kicker}
+::: {.slide title="Muon Orthogonalizes Nesterov Momentum, Scaled to AdamW's Step"}
+[Muon from scratch]{.kicker}
 
+$$\mathbf{M}_t = \beta \mathbf{M}_{t-1} + \mathbf{G}_t, \qquad \mathbf{W}_{t+1} = (1 - \eta\lambda)\,\mathbf{W}_t - \eta\cdot 0.2\sqrt{\max(m,n)}\;\mathrm{NS}_5(\mathbf{G}_t + \beta \mathbf{M}_t)$$
+
+- $\mathbf{W}$: $m \times n$ matrix; $\mathbf{G}_t$: its gradient; $\eta$:
+  learning rate; $\mathrm{NS}_5$: five quintic steps.
+- $\mathbf{M}_t$: momentum, $\beta = 0.95$. Averaging comes first:
+  full-size directions belong to about 20 steps, not one minibatch.
+- $0.2\sqrt{\max(m,n)}$: entry RMS $0.2\,\eta$, as for AdamW.
+- $\lambda$: decoupled weight decay.
+
+[Scale and decay: Liu et al., 2025]{.small}
+:::
+
+::: {.slide title="Check: The RMS-Matching Factor"}
+[Check]{.kicker}
+
+`TinyLM`'s first MLP matrix is $512 \times 128$. What is the RMS of an
+entry of its exact $\mathbf{U}\mathbf{V}^\top$, and what does Muon's factor
+turn it into?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 128 singular values of one:
+$\|\mathbf{U}\mathbf{V}^\top\|_F^2 = 128$ over $65{,}536$ entries, so the
+RMS is $1/\sqrt{512} \approx 0.044$. Times $0.2\sqrt{512} \approx 4.5$:
+$0.2$.
+:::
+:::
+:::
+
+::: {.slide title="Hidden Matrices Go to Muon, Everything Else to AdamW"}
+[Muon from scratch]{.kicker}
+
+Predicted: $2 \cdot 128 \cdot (384 + 128 + 512 + 512) = 393{,}216$
+parameters in eight hidden matrices.
+
+@!muon-dividing-the-census-1
+
+- Muon: 84% of the parameters. AdamW: embeddings, head, vectors.
+- Muon keeps one buffer, AdamW two: the optimizer state is 58% of
+  AdamW's.
+- Both halves share one learning rate; decay goes to the hidden matrices.
+:::
+
+::: {.slide title="In Mid-Run Five Steps Come Close to UVᵀ"}
+[Muon from scratch]{.kicker}
+
+Momentum buffers after 500 steps of the hybrid ($\eta = 0.003$,
+$\lambda = 0.1$), against the gradient of the new network:
+
+| matrix | $\sigma_1 / \|\mathbf{G}\|_F$, new network $\to$ step 500 | reach 0.68, new network $\to$ step 500 |
+|:--|:--|:--|
+| `qkv` | 0.99 $\to$ about a third | about half $\to$ 99% |
+| `proj` | 0.99 $\to$ about 0.4 | under a third $\to$ about 90% |
+| `mlp1` | about 0.7 $\to$ under 0.3 | about 90% $\to$ 99% |
+| `mlp2` | over 0.9 $\to$ about 0.3 | about 60% $\to$ 100% |
+
+- Norm about 0.9 of $\mathbf{U}\mathbf{V}^\top$: a step of about
+  $0.18\,\eta$ per entry.
+
+::: {.d2l-note}
+Now every direction gets nearly a full step. Of the three answers to the
+objection, the ball and the average remain.
+:::
+:::
+
+::: {.slide title="On TinyLM the Hybrid Leads Early and Ties at Step 2,000"}
+[Muon from scratch]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Same initial weights, constant rate, grid $10^{-3}$ to $10^{-1}$,
+$\lambda = 0.1$ on hidden matrices, validation loss in nats per byte.
+
+- Step 500: about 1.76 against 1.88. Two runs of one setting differ by
+  about 0.01.
+- Below 1.6: at least 250 steps earlier.
+- Step 2,000: under 0.05 apart, a tie.
+:::
+
+::: {.col}
 @!muon-the-race-on-the-language-model-3
+:::
+:::
+:::
+
+::: {.slide title="At Three Times AdamW's Largest Usable Rate the Hybrid Still Trains"}
+[Muon from scratch]{.kicker}
+
+::: {.cols}
+::: {.col}
+AdamW:
+
+@!muon-the-race-on-the-language-model-1
+:::
+
+::: {.col}
+Muon + AdamW:
+
+@!muon-the-race-on-the-language-model-2
+:::
+:::
+
+::: {.d2l-note}
+At 0.03 AdamW ends over a nat above its best run, the hybrid about a
+tenth. A possible reason, untested: at equal RMS a rank-one step has
+$\sqrt{128} \approx 11$ times the spectral norm of an orthogonalized one.
+:::
+:::
+
+::: {.slide title="With Matched Tuning the Gain Is Tens of Percent"}
+[Muon in long runs]{.kicker}
+
+Ten optimizers, each tuned separately, at four model sizes. The fastest
+precondition a matrix as a matrix, Muon among them:
+
+| parameters | speedup of the fastest over AdamW |
+|:--|:--|
+| 0.1 billion | about $1.4\times$ |
+| 1.2 billion | about $1.1\times$ |
+
+- Speedup: ratio of the steps needed for the same loss.
+- `TinyLM`, 0.47 million parameters: over 0.1 nats ahead at step 500, a
+  tie at step 2,000.
+
+::: {.d2l-note}
+A small model shows the mechanism. It cannot rank optimizers.
+:::
+
+[Wen et al., 2025]{.small}
+:::
+
+::: {.slide title="The Spectral Ball Bounds One Step of One Matrix, Not a Long Run"}
+[Muon in long runs]{.kicker}
+
+- **Many steps.** Muon's step never shrinks. Without weight decay the
+  matrices keep growing and the early lead over AdamW fades.
+- **Two matrices.** Attention scores are dot products of two vectors,
+  each from weights of its own, fed to a softmax. Under Muon they grew
+  past 1,000 in trial runs for a trillion-parameter model.
+- **Remedy.** After each step, scale both sets of weights down wherever
+  the largest score exceeds 100.
+
+::: {.d2l-note}
+Our 2,000 steps are too short to show the first: at $\eta\lambda = 3
+\times 10^{-4}$ the decay acts over $1/(\eta\lambda) = 3{,}333$ steps.
+:::
+
+[Liu et al., 2025; Kimi Team, 2025]{.small}
+:::
+
+::: {.slide title="Check: Can a Training Step Afford Fifteen Matrix Products?"}
+[Check]{.kicker}
+
+An $m \times m$ hidden matrix, a batch of $B$ tokens. The forward and
+backward passes through the matrix cost about $6m^2B$ operations, one
+product of two $m \times m$ matrices $2m^3$. Five Newton–Schulz steps take
+three products each. What share do they add at $m = 768$,
+$B = 524{,}288$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $15 \cdot 2m^3 / (6m^2B) = 5m/B \approx 0.7\%$. On `TinyLM`,
+with $m = 128$, rectangular matrices and $B = 4{,}096$, the same count
+gives about 12%: visible on a small model, negligible at scale.
+:::
+:::
+
+[Cost count: Jordan et al., 2024]{.small}
+:::
+
+::: {.slide title="Recap: The Norm Chooses the Step, and for a Hidden Matrix It Is UVᵀ"}
+[Wrap-up]{.kicker}
+
+- The ball sets the steepest step: gradient, sign, or
+  $\mathbf{U}\mathbf{V}^\top$ for a hidden matrix.
+- Five quintic steps lift singular values above 0.15% of
+  $\|\mathbf{G}\|_F$ to 0.68 or more: under a third to nine tenths of
+  them on a new `TinyLM`, nine tenths or more after 500 steps.
+- $0.2\sqrt{\max(m, n)}$ matches AdamW's step, so both share one rate.
+- `TinyLM`: over 0.1 nats ahead at step 500, a tie at 2,000, one more
+  usable rate at the top.
+- Matched tuning at scale: $1.4\times$ shrinking to $1.1\times$.
+
+**Next:** how the learning rate should change during a run.
 :::

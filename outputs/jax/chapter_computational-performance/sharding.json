@@ -35,39 +35,39 @@
       ]
     },
     "sharding-memory-and-communication-1": {
-      "code_fingerprint": "sha256:991064314db7409d3327c3b3e577d9415fb68bc330687470b09c9a923919ec76",
+      "code_fingerprint": "sha256:abebc4be2a656e4b34505bfd673410c404a1393d8036f98e53764f22f7fc09c8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta_link = 2.2 GB/s in an all-gather on 2 GPUs\n"
+          "text": "bus bandwidth = 2.2 GB/s in an all-gather on 2 GPUs (beta_link = 0.46 ns/byte)\n"
         }
       ]
     },
     "sharding-memory-and-communication-2": {
-      "code_fingerprint": "sha256:85f7883eeb4504cc58ebea170312aca6714691da367c92198636662e53567693",
+      "code_fingerprint": "sha256:cdabf7ee63aac8a1bcb74f0dc63a20bf79d8b78c3a4454439065793d99ea8d98",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "state per GPU, 16N/k: 14.3 GiB\ncommunication, 3(k-1)S/(k beta_link): 5.3 s per step\narithmetic at the peak, 8N bT/P: 0.38 s per step\n"
+          "text": "state per GPU, 16N/k: 14.3 GiB\ncommunication, 3(k-1)S beta_link/k: 5.3 s per step\narithmetic at the peak, 8N bT/P: 0.38 s per step\n"
         }
       ]
     },
     "sharding-memory-and-communication-5": {
-      "code_fingerprint": "sha256:3e194dbf63683252446ca636b708e400a878211007c91ac23473250c9a91824b",
+      "code_fingerprint": "sha256:c4bb440927381b031bf34e18fcbb454f56ba482de75a35195a6a66617f84d053",
       "kind": "text",
       "outputs": []
     },
     "sharding-memory-and-communication-6": {
-      "code_fingerprint": "sha256:042717d2600990a1608ff224c9695810b21cde4a6c3a317be213cba2185dbcee",
+      "code_fingerprint": "sha256:2812dc0cc36490c11cd282eb40ceb626fd9f21323b2a2d51c5ec0590da07e72d",
       "kind": "text",
       "outputs": []
     },
     "sharding-memory-and-communication-7": {
-      "code_fingerprint": "sha256:df183ee2ce33626e144e2000b216358256d1d136372651982965bddacf15a4ae",
+      "code_fingerprint": "sha256:4f40ee9d2cc63fd28f60136de3ae0e5347475a53e3418e6b94062633a1baa473",
       "kind": "text",
       "outputs": [
         {
@@ -78,12 +78,12 @@
       ]
     },
     "sharding-memory-and-communication-8": {
-      "code_fingerprint": "sha256:7f7820cad25242c01fbb756ee395a2e33f5fbbaa6c5276841dcae412fb07d150",
+      "code_fingerprint": "sha256:6b522c152e7a51904d7b0a063a9f10b11b465c3a24e8c8ca85d6c9ebba0895b9",
       "kind": "text",
       "outputs": []
     },
     "sharding-memory-and-communication-9": {
-      "code_fingerprint": "sha256:070bc36346fb095d403c0269451fc9fdfa49e47e76c12107f99ac8f73a23f87d",
+      "code_fingerprint": "sha256:7b3f2e2d0ba97b828ec28a51df08d6865f8e7e77937b4b1c692fe30d9ab24c8a",
       "kind": "text",
       "outputs": [
         {
@@ -94,18 +94,18 @@
       ]
     },
     "sharding-memory-and-communication-10": {
-      "code_fingerprint": "sha256:f4646f1faf36d2b4947316ec0960eb3ef19f16a4eaf2ea72ff321bd997c46aac",
+      "code_fingerprint": "sha256:1747d31415bf05fde759c5a3e62524d641db0c5c3a89b6742243c32b126f1960",
       "kind": "text",
       "outputs": []
     },
     "sharding-memory-and-communication-11": {
-      "code_fingerprint": "sha256:0ff5f991f007880fc799996df3ab7e48a064d13c277dc26c3fa71a33f3132d77",
+      "code_fingerprint": "sha256:ca6a775b7983a362613a919e2e0109d7b0a527c1e5303524471f6753e65864a4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "per GPU: peak memory 15.8 GiB; 5.35 s per step (5.31 to 5.49)\nof each step, GPU 0 spends 5.02 s in communication kernels\n"
+          "text": "per GPU: peak memory 15.8 GiB; 5.29 s per step (5.28 to 5.50)\nof each step, GPU 0 spends 5.01 s in communication kernels\n"
         }
       ]
     }

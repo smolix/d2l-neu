@@ -641,9 +641,9 @@ def allreduce_time(n, devices, calls):
 alpha = allreduce_time(1, devices, calls=100)  # Our star: two copies in turn
 n = 2**26                                # 64M floats ...
 S = 4 * n                                # ... 268 MB (256 MiB) per device
-beta_link = S / (allreduce_time(n, devices, calls=3) - alpha)
-print(f'alpha = {1e6 * alpha:.0f} us, '
-      f'beta_link = {beta_link / 1e9:.1f} GB/s')
+beta_link = (allreduce_time(n, devices, calls=3) - alpha) / S  # s per byte
+print(f'alpha = {1e6 * alpha:.0f} us, beta_link = {1e9 * beta_link:.2f} '
+      f'ns/byte (bus bandwidth {1e-9 / beta_link:.1f} GB/s)')
 ```
 
 ```{.python .input #multiple-gpus-the-accounting}
@@ -656,9 +656,9 @@ def allreduce_time(n, mesh, calls):
 alpha = allreduce_time(1, meshes[1], calls=100)  # XLA's psum, run by NCCL
 n = 2**26                                # 64M floats ...
 S = 4 * n                                # ... 268 MB (256 MiB) per device
-beta_link = S / (allreduce_time(n, meshes[1], calls=3) - alpha)
-print(f'alpha = {1e6 * alpha:.0f} us, '
-      f'beta_link = {beta_link / 1e9:.1f} GB/s')
+beta_link = (allreduce_time(n, meshes[1], calls=3) - alpha) / S  # s per byte
+print(f'alpha = {1e6 * alpha:.0f} us, beta_link = {1e9 * beta_link:.2f} '
+      f'ns/byte (bus bandwidth {1e-9 / beta_link:.1f} GB/s)')
 ```
 
 :begin_tab:`pytorch`
@@ -678,7 +678,7 @@ of two driver-managed copies.
 :begin_tab:`jax`
 `d2l.Benchmark` already makes its calls in a row and waits once, for the
 last result. This cell times `psum`, which XLA hands to NCCL; on our
-machine the bus bandwidth is about 2.5 GB/s, so $\beta_{\textrm{link}}$
+machine the bus bandwidth is about 2.4 GB/s, so $\beta_{\textrm{link}}$
 is about 0.4 ns per byte. On the path through host memory between our
 GPUs, NCCL falls back to a transport that moves fewer bytes per second
 than the PCIe links carry; :numref:`sec_multi_gpu_concise` measures this
@@ -715,7 +715,7 @@ for name, f, calls in (('separately', separately, c),
                        ('at once', lambda: allreduce(flat), 1)):
     t = d2l.Benchmark(f, warmup=1000, repeats=300, devices=devices).time
     print(f'{name:10s}: {1e6 * t:4.0f} us measured, '
-          f'{1e6 * (calls * alpha + n_bytes / beta_link):4.0f} us predicted')
+          f'{1e6 * (calls * alpha + n_bytes * beta_link):4.0f} us predicted')
 ```
 
 ```{.python .input #multiple-gpus-latency-and-bandwidth-of-the-allreduce-1}
@@ -730,7 +730,7 @@ for name, f, calls in (
         ('at once', lambda: allreduce(flat, mesh), 1)):
     t = d2l.Benchmark(f, repeats=100).time
     print(f'{name:10s}: {1e6 * t:4.0f} us measured, '
-          f'{1e6 * (calls * alpha + n_bytes / beta_link):4.0f} us predicted')
+          f'{1e6 * (calls * alpha + n_bytes * beta_link):4.0f} us predicted')
 ```
 
 Ten calls take seven to ten times as long as one call that moves the same
@@ -966,7 +966,7 @@ for k in (1, 2):
     t_step[k], acc = train(params, train_data[:k], test_data, orders)
     print(f'{k} GPU(s): {1e3 * t_step[k]:.2f} ms per step, '
           f'test accuracy {acc:.2f}')
-exchange = alpha + n_bytes / beta_link    # One allreduce of the gradient
+exchange = alpha + n_bytes * beta_link    # One allreduce of the gradient
 print(f'2 GPUs predicted: {1e3 * (t_local[1, 128] + exchange):.2f} ms per '
       f'step by eq_dp_cost, {1e3 * (2 * t_step[1] + exchange):.2f} ms with '
       f'one launcher')
@@ -981,7 +981,7 @@ for k, mesh, data_k in zip((1, 2), meshes, train_data):
                            orders)
     print(f'{k} GPU(s): {1e3 * t_step[k]:.2f} ms per step, '
           f'test accuracy {acc:.2f}')
-exchange = alpha + n_bytes / beta_link    # One allreduce of the gradient
+exchange = alpha + n_bytes * beta_link    # One allreduce of the gradient
 print(f'2 GPUs predicted: {1e3 * (t_local[1, 128] + exchange):.2f} ms per '
       f'step by eq_dp_cost, {1e3 * (2 * t_step[1] + exchange):.2f} ms with '
       f'one launcher')
@@ -1007,7 +1007,7 @@ prediction is the exchange, and most of that is $\alpha$, which contains
 the dispatch of a separate program for every allreduce. The training
 step's `psum` runs inside the program that the step dispatches anyway.
 The same $\alpha$ puts the one-launcher prediction above the measurement,
-by about a sixth.
+by a sixth to a quarter.
 :end_tab:
 
 This is not the result that the opening prepared us for. Twice the
@@ -1149,19 +1149,20 @@ of two.
 At 4,096 examples the device is busy for nearly all of a 3.0 ms step,
 a little longer than the 2.8 ms of host time at 256: the step has just
 left the host-bound case for the middle one. Feeding two GPUs takes the
-host about 5.6 ms, longer than the 3 ms of work that each GPU does, and
-the model predicts a gain of 6%. The measurement shows none. The step on
-two GPUs takes 6.0 ms, a few tenths of a millisecond more than the model
-says, and at the boundary a few tenths decide the row.
+host about 5.5 ms, longer than the 3 ms of work that each GPU does, and
+the model predicts a gain of 8%. The measurement finds about a tenth. At
+the boundary a few tenths of a millisecond of host time decide the row,
+and the host time varies by that much from run to run: in some runs of
+this cell the gain disappears.
 :end_tab:
 
 :begin_tab:`jax`
 At 4,096 examples the device works for 1.7 ms of a 1.8 ms step, more than
-twice the host time of 0.45 ms, so the step is in the device-bound case,
-and the second GPU raises the throughput by about 1.8. The prediction is
-lower, 1.67, and at 256 it is lower too, 0.71 against 0.90. The $\alpha$
-in the prediction again contains the dispatch of a separate program,
-which the `psum` inside the step does not pay.
+twice the host time of about 0.4 ms, so the step is in the device-bound
+case, and the second GPU raises the throughput by about 1.8. The prediction
+is lower, about 1.7, and at 256 it is lower too, 0.71 against more than
+0.8. The $\alpha$ in the prediction again contains the dispatch of a
+separate program, which the `psum` inside the step does not pay.
 :end_tab:
 
 Data parallelism thus works, even for LeNet, once each GPU has enough to
@@ -1437,7 +1438,7 @@ the estimates.
 |---|---|
 | The Performance Model | roofline, three regimes, host time, profiling |
 | Hardware | where peak arithmetic and bandwidth come from |
-| Compute Graphs and Compilation | fusion and kernel replay |
+| Computation Graphs and Compilation | fusion and kernel replay |
 | Memory and Precision | bytes per parameter and per token |
 | **Multi-GPU from First Principles** | **data parallelism by hand, its cost model** |
 | Data Parallelism in Practice | the frameworks' tools, overlapped exchange |

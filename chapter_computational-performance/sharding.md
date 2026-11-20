@@ -270,12 +270,13 @@ _, k, device = d2l.init_distributed()
 x = torch.zeros(2**26 // k, device=device)  # This GPU's part
 y = torch.empty(2**26, device=device)       # 256 MiB, gathered
 t = d2l.Benchmark(lambda: dist.all_gather_into_tensor(y, x), repeats=10).time
-print(json.dumps({'beta_link': (k - 1) / k * y.nbytes / t}))  # Sent per GPU
+print(json.dumps({'beta_link': t / ((k - 1) / k * y.nbytes)}))  # Per byte sent
 dist.destroy_process_group()
 '''
 assert d2l.num_gpus() >= k, 'The cells from here on need two GPUs'
-beta_link = min(r['beta_link'] for r in d2l.torchrun(GATHER, k))
-print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on {k} GPUs')
+beta_link = max(r['beta_link'] for r in d2l.torchrun(GATHER, k))
+print(f'bus bandwidth = {1e-9 / beta_link:.1f} GB/s in an all-gather on {k} '
+      f'GPUs (beta_link = {1e9 * beta_link:.2f} ns/byte)')
 ```
 
 ```{.python .input #sharding-memory-and-communication-1}
@@ -287,9 +288,10 @@ x = jnp.zeros(2**26, device=NamedSharding(mesh, P('data')))  # 256 MiB
 # Asking for the result on every GPU makes the compiler gather the parts
 gather = jax.jit(lambda x: x, out_shardings=NamedSharding(mesh, P()))
 t = d2l.Benchmark(lambda: gather(x), repeats=10).time
-beta_link = (k - 1) / k * x.nbytes / t  # Sent per GPU
+beta_link = t / ((k - 1) / k * x.nbytes)  # Seconds per byte sent per GPU
 del x                       # Frees its memory before the training step
-print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on {k} GPUs')
+print(f'bus bandwidth = {1e-9 / beta_link:.1f} GB/s in an all-gather on {k} '
+      f'GPUs (beta_link = {1e9 * beta_link:.2f} ns/byte)')
 ```
 
 Each GPU sends at a little over 2 GB/s, close to what the allreduces of
@@ -310,8 +312,8 @@ b, T = 2, 1024        # Sequences of T tokens per GPU and step
 S = 4 * N             # Bytes of the fp32 weights, and of the gradients
 peak_flops = 82.6e12  # tf32 FLOP/s of the RTX 4090
 print(f'state per GPU, 16N/k: {16 * N / k / 2**30:.1f} GiB')
-print(f'communication, 3(k-1)S/(k beta_link): '
-      f'{3 * (k - 1) / k * S / beta_link:.1f} s per step')
+print(f'communication, 3(k-1)S beta_link/k: '
+      f'{3 * (k - 1) / k * S * beta_link:.1f} s per step')
 print(f'arithmetic at the peak, 8N bT/P: '
       f'{8 * N * b * T / peak_flops:.2f} s per step')
 ```

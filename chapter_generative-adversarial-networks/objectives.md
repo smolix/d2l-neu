@@ -1212,8 +1212,8 @@ objective in $\mu$, bandwidth $s = 4$:
 
 @!objectives-divergence-against-separation
 
-JS: 0.20 at $\mu = 1$, 0.0013 at $\mu = 7$. $W_1$: always 1.
-MMD: peak 0.27 at $\mu = 4.2$, $3.3 \times 10^{-5}$ at $\mu = 20$.
+JS: 0.20 at $\mu = 1$, 0.0013 at $\mu = 7$. $W_1$: always 1. MMD: peak
+at $\mu = 4.2$.
 :::
 
 ::: {.slide title="Optimal Critics: Only Those That Slope across the Gap Help"}
@@ -1248,10 +1248,8 @@ slope there is 1.1--1.7.
 ::: {.slide title="Every Loss Fits the Mixture; the Hinge Fit Is the Loosest Here"}
 @!objectives-one-testbed-four-losses-6
 
-From 0.529 nats to a few thousandths. Hinge 0.003--0.007, all others at
-most 0.0024, MMD 0.0001: three untuned runs per loss do not rank losses.
-The squared hinge (hinge margin, link $\tanh(\lambda/2)$) ends with the
-logistic and least-squares games.
+From 0.529 nats to a few thousandths; three untuned runs per loss do not
+rank the losses.
 :::
 
 ::: {.slide title="Practice Pairs a Non-Saturating Generator with a Smooth Critic"}

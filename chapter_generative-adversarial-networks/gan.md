@@ -1221,8 +1221,7 @@ Hand-set $q$ at $D_{\textrm{KL}}(q\|p) \approx 3.4$ nats; a fresh critic,
 ::: {.slide title="From a Far Start Only the Non-Saturating Generator Moves"}
 @!gan-saturating-and-non-saturating-losses-compared-1
 
-- Start: generator offset moved by $(-6, 6)$, about 8 units from the data
-  mean and about 345 nats from the data.
+- Start: offset moved by $(-6, 6)$, about 345 nats from the data.
 - Saturating: $w_{\textrm{sat}} \approx 0$; 334 to 341 nats from the data
   in all three runs. Non-saturating: a few hundredths of a nat.
 
@@ -1234,16 +1233,14 @@ By epoch 2 both critics reject every sample. Only the weight differs.
 ::: {.slide title="On Garments the Critic Stays Ahead after Twenty Epochs"}
 @!gan-garments-from-noise-4
 
-- MLPs $100 \to 256 \to 512 \to 784$ and $784 \to 512 \to 256 \to 1$; Adam
-  $2 \cdot 10^{-4}$, $\beta_1 = 0.5$, batch 64.
-- Each loss against its own equilibrium: critic about 1.05 against
-  $2 \log 2 \approx 1.39$, generator about 1.4 against $\log 2 \approx 0.69$.
+- MLPs of widths 256 and 512; Adam $2 \cdot 10^{-4}$, $\beta_1 = 0.5$
+  (Radford et al. 2015), batch 64.
+- Critic about 1.05 against $2 \log 2 \approx 1.39$; generator about 1.4
+  against $\log 2 \approx 0.69$.
 
 ::: {.d2l-note .warn}
 No nats here: neither density can be evaluated.
 :::
-
-[Learning rate and $\beta_1$: Radford et al. 2015]{.small}
 :::
 
 ::: {.slide title="Check: What Does a Critic Loss of 1.05 Tell You?"}

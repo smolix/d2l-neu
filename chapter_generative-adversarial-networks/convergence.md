@@ -1001,11 +1001,6 @@ $$\begin{pmatrix}\theta\\ \psi\end{pmatrix} \mapsto
 [The Dirac-GAN]{.kicker}
 
 @!convergence-phase-portraits-1
-
-From $(1, 1)$, steps of 0.2: the flow stays at 1.41; simultaneous
-1.41 → 2.87 in 300 steps; alternating within 1.34 to 1.42. Right panel, a
-preview of the penalty that follows: $\gamma = 0.3$ spirals in, $\gamma = 1$
-goes in without circling.
 :::
 
 ::: {.slide title="Check: Do the Earlier Repairs Change the Two-Point Dynamics?"}

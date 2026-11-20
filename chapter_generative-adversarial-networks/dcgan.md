@@ -1370,13 +1370,19 @@ leaky ReLU for gradient flow, $\beta_1 = 0.5$ for a moving target.
 :::
 
 ::: {.slide title="DCGAN Trains the Classic Loss to Diverse Sprites"}
+::: {.cols .vc}
+::: {.col .fig}
 @!dcgan-training-with-the-classic-loss-3
+:::
 
+::: {.col}
 - Diverse but blotchy shapes; critic loss far below its equilibrium
   $2 \log 2 \approx 1.39$, yet no collapse.
-- Sampled from a moving average of the weights (half-life 32,000 images):
-  the iterates circle the equilibrium, their average sits closer.
-  Batch-norm statistics re-estimated for the average.
+- Sampled from a moving average of the weights (half-life 32,000
+  images): the iterates circle the equilibrium, their average sits
+  closer. Batch-norm statistics re-estimated for the average.
+:::
+:::
 
 ::: {.d2l-note}
 Why it trains is not isolated: our plain backbone differs in almost
@@ -1501,10 +1507,10 @@ $R_1 = \|\nabla_x D(x)\|^2$ on real images, $R_2$ on generated ones.
 @!dcgan-loss-a-b-on-one-backbone-3
 
 - No penalty: one or two grey textures after 6,000 steps.
-- Penalized: diverse sprite-like shapes, no visible difference; none is a
-  nameable creature after 0.77 M images.
-- To the eye they look closer to real sprites than DCGAN's larger,
-  blotchy figures (first panel).
+- Penalized: alike, diverse sprite-like shapes; none nameable after
+  0.77 M images.
+- To the eye closer to real sprites than DCGAN's blotchy figures (first
+  panel).
 
 ::: {.d2l-note}
 Seen together: a steep critic, a rank weight near 0, a collapse. The

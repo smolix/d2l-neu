@@ -87,6 +87,71 @@ The analysis says what the optimal critic computes, but not how a network should
 
 *Concatenation* :cite:`Mirza.Osindero.2014` embeds the condition in a vector $e_c$ and appends it to an input: beside the latent code in the generator, or beside the image or a feature map in the critic. It imposes no form on how sample and condition interact, so the network must learn that interaction from the adversarial signal alone. *Modulation* scales and shifts a feature map, $a(c) \odot \phi + b(c)$, with one entry per channel; BigGAN computes $a(c)$ and $b(c)$ from a class embedding in every block of its generator :cite:`Brock.Donahue.Simonyan.2019`. Papers write $\gamma(c)$ and $\beta(c)$, but $\gamma$ is the penalty weight in this chapter. The third mechanism conditions only the critic, through a head that scores how well sample and condition fit together. Its most common form follows from the optimal critic.
 
+<!-- WRITER: new cells. Modulate is the six-line layer of the modulation paragraph: a(c) and b(c) are rows of two embedding tables, initialized to ones and zeros, so the layer starts as the identity for every class. The check prints max |out - h| = 0 at initialization, and after one SGD step on a batch that requests class 3 only (toy target 2h + 1) only row 3 of a and of b has changed: the other nine classes' maps are untouched. Explain where it sits (after a convolution in every block of the generator) and why per-block injection reaches every resolution. -->
+
+```{.python .input #conditional-three-ways-in-1}
+%%tab pytorch
+class Modulate(nn.Module):
+    """Scale and shift each channel of h by a(c) and b(c), one row per class."""
+    def __init__(self, num_classes, channels):
+        super().__init__()
+        self.a = nn.Embedding(num_classes, channels)
+        self.b = nn.Embedding(num_classes, channels)
+        nn.init.ones_(self.a.weight)   # a(c) = 1, b(c) = 0: the identity
+        nn.init.zeros_(self.b.weight)
+
+    def forward(self, h, c):
+        return self.a(c)[:, :, None, None] * h + self.b(c)[:, :, None, None]
+```
+```{.python .input #conditional-three-ways-in-1}
+%%tab jax
+class Modulate(nnx.Module):
+    """Scale and shift each channel of h by a(c) and b(c), one row per class."""
+    def __init__(self, num_classes, channels, *, rngs):
+        # a(c) = 1, b(c) = 0: the identity
+        self.a = nnx.Embed(num_classes, channels, rngs=rngs,
+                           embedding_init=nnx.initializers.ones)
+        self.b = nnx.Embed(num_classes, channels, rngs=rngs,
+                           embedding_init=nnx.initializers.zeros)
+
+    def __call__(self, h, c):
+        return self.a(c)[:, None, None, :] * h + self.b(c)[:, None, None, :]
+```
+
+```{.python .input #conditional-three-ways-in-2}
+%%tab pytorch
+torch.manual_seed(0)
+mod = Modulate(10, 8)
+h = torch.randn(10, 8, 4, 4)  # one feature map per class
+with torch.no_grad():
+    print('at initialization: max |out - h| =',
+          float((mod(h, torch.arange(10)) - h).abs().max()))
+a0, b0 = mod.a.weight.detach().clone(), mod.b.weight.detach().clone()
+c3 = torch.full((10,), 3)  # a batch that requests class 3 only
+loss = ((mod(h, c3) - (2 * h + 1)) ** 2).mean()
+loss.backward()
+torch.optim.SGD(mod.parameters(), lr=0.1).step()
+rows = lambda w, w0: (w != w0).any(1).nonzero().flatten().tolist()
+print('after one step on class 3: rows changed in a', rows(mod.a.weight, a0),
+      'and in b', rows(mod.b.weight, b0))
+```
+```{.python .input #conditional-three-ways-in-2}
+%%tab jax
+mod = Modulate(10, 8, rngs=nnx.Rngs(0))
+h = jax.random.normal(jax.random.key(0), (10, 4, 4, 8))  # one map per class
+print('at initialization: max |out - h| =',
+      float(jnp.abs(mod(h, jnp.arange(10)) - h).max()))
+a0, b0 = mod.a.embedding[...], mod.b.embedding[...]
+c3 = jnp.full(10, 3)  # a batch that requests class 3 only
+grads = nnx.grad(lambda m: ((m(h, c3) - (2 * h + 1)) ** 2).mean())(mod)
+nnx.Optimizer(mod, optax.sgd(0.1), wrt=nnx.Param).update(mod, grads)
+rows = lambda w, w0: np.nonzero(np.any(w != w0, axis=1))[0].tolist()
+print('after one step on class 3: rows changed in a',
+      rows(mod.a.embedding[...], a0), 'and in b',
+      rows(mod.b.embedding[...], b0))
+```
+
+
 ### The Projection Head from Bayes' Rule
 
 Bayes' rule, $p(x \mid c) = p(c \mid x)\, p(x) / p(c)$, applied to the numerator and the denominator of :eqref:`eq_gan_cond_dstar`, cancels the shared label marginal and yields
@@ -118,13 +183,10 @@ The condition can also be an entire image: a semantic map, an edge sketch, or a 
 
 We now train a class-conditional generator on the 50,000 labeled $32 \times 32$ training images of CIFAR-10, which come from ten classes and are loaded with `d2l.load_cifar10_arrays` (:numref:`subsec_utils_feature_cnn`). R3GAN reports a class-conditional CIFAR-10 benchmark trained for four days on eight GPUs. Our run takes 15,000 steps, well under half an hour on one GPU, and tests the conditioning and its measurement, not large-scale sample quality.
 
-```{.python .input #conditional-class-conditional-cifar-10-1}
-%%tab pytorch, jax
-classes = ['airplane', 'automobile', 'bird', 'cat', 'deer',
-           'dog', 'frog', 'horse', 'ship', 'truck']
-```
 ```{.python .input #conditional-class-conditional-cifar-10}
 %%tab pytorch
+classes = ['airplane', 'automobile', 'bird', 'cat', 'deer',
+           'dog', 'frog', 'horse', 'ship', 'truck']
 device = d2l.try_gpu()
 train_X, train_y, test_X, test_y = d2l.load_cifar10_arrays()
 first = [int((train_y == c).nonzero()[0]) for c in range(10)]
@@ -133,6 +195,8 @@ d2l.show_images(train_X[first].cpu().permute(0, 2, 3, 1) / 2 + 0.5,
 ```
 ```{.python .input #conditional-class-conditional-cifar-10}
 %%tab jax
+classes = ['airplane', 'automobile', 'bird', 'cat', 'deer',
+           'dog', 'frog', 'horse', 'ship', 'truck']
 train_X, train_y, test_X, test_y = d2l.load_cifar10_arrays()
 first = [int(np.nonzero(np.asarray(train_y) == c)[0][0]) for c in range(10)]
 d2l.show_images(np.asarray(train_X[np.array(first)]) / 2 + 0.5,
@@ -253,8 +317,11 @@ We average the logs over the last 5,000 steps.
 loss_D, loss_G, pen, acc = (np.mean(v[-5000 // 250:]) for v in (
     history['loss_D'], history['loss_G'], history['R1'] + history['R2'],
     history['accuracy']))
-print(f'critic loss {loss_D:.2f} (+ penalty {gamma / 2 * pen:.3f}), '
-      f'generator loss {loss_G:.2f}, pair accuracy {acc:.2f}')
+acc_early = history['accuracy'][history['step'] <= 2000].mean()
+print(f'last 5,000 steps: critic loss {loss_D:.2f} (+ penalty '
+      f'{gamma / 2 * pen:.3f}), generator loss {loss_G:.2f}, '
+      f'pair accuracy {acc:.2f}')
+print(f'first 2,000 steps: pair accuracy {acc_early:.2f}')
 ```
 ```{.python .input #conditional-training-with-the-chapter-s-loss-4}
 %%tab pytorch, jax
@@ -268,6 +335,7 @@ d2l.plot(steps, [history['accuracy'], np.full_like(steps, 0.5)], 'step',
          'held-out pair accuracy', ylim=[0.3, 1], fmts=('-', 'k:'),
          axes=axes[1]);
 ```
+<!-- WRITER: the cell now also prints the mean pair accuracy of the first 2,000 steps. Measured (direct runs 2026-11-20, PyTorch / JAX): last 5,000 steps critic 0.53 / 0.52 (+ penalty 0.058 / 0.065), generator 1.04 / 1.06, pair accuracy 0.78 / 0.81; first 2,000 steps 0.92 / 0.93. The 15,000 steps took 15 min (JAX) and 38 min (PyTorch, on a GPU shared with two other jobs); the store's runs were under half an hour. -->
 The dotted lines mark $\log 2$, the value of either pairing loss when the critic cannot order a pair, and a pair accuracy of one half. Both losses settle within the first few thousand steps, after a high start of the generator loss: the generator's near 1.0, above $\log 2$, and the critic's near 0.5, below it, with the penalty adding about 0.06. The critic still wins most comparisons: late in training it orders about 80% of fresh same-class pairs correctly, down from about 90% early in training. At this budget the generator has not caught up with the data.
 
 ### Samples on Request
@@ -324,19 +392,35 @@ For each generated image, the referee either predicts the requested class or it 
 
 ```{.python .input #conditional-alignment-per-class-1}
 %%tab pytorch
-torch.manual_seed(7)
-y_req = torch.arange(10, device=device).repeat_interleave(500)  # requests
-with torch.no_grad():
-    pred_req = cnn(ema_G(torch.randn(5000, 100, device=device), y_req)
-                   .clamp(-1, 1)).argmax(1)
-align = [float((pred_req[y_req == c] == c).float().mean()) for c in range(10)]
+def generate(seed, n=500):
+    """n images of each class from the EMA generator, in class order."""
+    torch.manual_seed(seed)
+    z = torch.randn(10 * n, 100, device=device)
+    y = torch.arange(10, device=device).repeat_interleave(n)
+    with torch.no_grad():
+        return torch.cat([ema_G(z_k, y_k) for z_k, y_k in
+                          zip(z.split(1000), y.split(1000))])
+
+raw = generate(7)
+gen = raw.clamp(-1, 1)
+yg = np.repeat(np.arange(10), 500)  # the requested classes
+pred_gen = d2l.batched(cnn, gen).argmax(1).cpu().numpy()
+align = [float((pred_gen[yg == c] == c).mean()) for c in range(10)]
 ```
 ```{.python .input #conditional-alignment-per-class-1}
 %%tab jax
-y_req = jnp.repeat(jnp.arange(10), 500)  # requests
-z = jax.random.normal(jax.random.key(7), (5000, 100))
-pred_req = cnn(jnp.clip(ema_G(z, y_req), -1, 1)).argmax(1)
-align = [float((pred_req[y_req == c] == c).mean()) for c in range(10)]
+def generate(seed, n=500):
+    """n images of each class from the EMA generator, in class order."""
+    z = jax.random.normal(jax.random.key(seed), (10 * n, 100))
+    y = jnp.repeat(jnp.arange(10), n)
+    return jnp.concatenate([ema_G(z[i:i + 1000], y[i:i + 1000])
+                            for i in range(0, 10 * n, 1000)])
+
+raw = generate(7)
+gen = jnp.clip(raw, -1, 1)
+yg = np.repeat(np.arange(10), 500)  # the requested classes
+pred_gen = np.asarray(d2l.batched(cnn, gen).argmax(1))
+align = [float((pred_gen[yg == c] == c).mean()) for c in range(10)]
 ```
 
 ```{.python .input #conditional-measuring-condition-alignment-2}
@@ -346,97 +430,104 @@ for name, a, r in zip(classes + ['mean'], align + [np.mean(align)],
                       cls_acc + [np.mean(cls_acc)]):
     print(f'{name:12s}{a:11.2f}{r:7.2f}{a - r:+7.2f}')
 ```
+<!-- WRITER: measured mean alignment 0.71 / 0.72 against real 0.78 / 0.78 (PyTorch / JAX), referee 0.778 / 0.780; cat lowest in both tabs in the generated column (0.49 / 0.52). Per-class gaps differ between the tabs by up to 0.14 (automobile -0.04 / -0.19, dog -0.18 / -0.12), consistent with "do not rank them". -->
 Averaged over classes, alignment is about 0.7, six or seven points below the referee's accuracy on real images. No class is recognized much more often than its real counterpart, and no class is harder than cat in either column. Individual gaps move by several points between runs, so the table does not rank them.
 
 ### Fidelity and Within-Class Diversity
 
-Alignment does not measure image quality. We therefore also compute the two feature-distribution distances of :numref:`sec_dcgan`: the Fréchet distance between Gaussian fits to two feature sets, and the unbiased $\mathrm{MMD}^2$ estimate with a cubic polynomial kernel. Both use the referee's 128-dimensional features, so we call them FD and $\mathrm{MMD}^2$ (CIFAR-CNN); they cannot be compared with published FID or KID scores. The evaluation compares 1,000 generated images, 100 per class, with 1,000 test images in the same proportions, and a second disjoint set of 1,000 test images gives the real-versus-real floor. The distances ignore the labels, so the table is followed by the *within-class feature variance*: the variance of the features within each class, averaged over features and classes.
+Alignment does not measure image quality. We therefore also compute the two feature-distribution distances of :numref:`sec_dcgan`: the Fréchet distance between Gaussian fits to two feature sets, and the unbiased $\mathrm{MMD}^2$ estimate with a cubic polynomial kernel. Both use the referee's 128-dimensional features, so we call them FD and $\mathrm{MMD}^2$ (CIFAR-CNN); they cannot be compared with published FID or KID scores. <!-- WRITER: sizes changed: 500 generated images per class (5,000) against test images 0-499 of each class (the reference); test images 500-999 of each class are the floor; a second generated draw gives the sampling range. -->
+The evaluation compares 1,000 generated images, 100 per class, with 1,000 test images in the same proportions, and a second disjoint set of 1,000 test images gives the real-versus-real floor. The distances ignore the labels, so the table is followed by the *within-class feature variance*: the variance of the features within each class, averaged over features and classes.
 
 ```{.python .input #conditional-fidelity-and-within-class-diversity-1}
 %%tab pytorch
 features = lambda imgs: d2l.batched(cnn.features, imgs).cpu().numpy()
-torch.manual_seed(11)
-yg = torch.arange(10, device=device).repeat_interleave(100)
-with torch.no_grad():
-    raw = ema_G(torch.randn(1000, 100, device=device), yg)
 out_of_range = float((raw.abs() > 1).float().mean())
-gen = raw.clamp(-1, 1)
-idx = [(test_y == c).nonzero().flatten()[:200] for c in range(10)]
-f_real = features(test_X[torch.cat([i[:100] for i in idx])])
-f_real2 = features(test_X[torch.cat([i[100:] for i in idx])])
+idx = test_y.argsort(stable=True).reshape(10, 1000)  # row c: class c
+f_real = features(test_X[idx[:, :500].flatten()])    # the reference
+f_real2 = features(test_X[idx[:, 500:].flatten()])   # the floor
 f_gen = features(gen)
+f_gen2 = features(generate(8).clamp(-1, 1))          # a second draw
+idx, pred_real = idx.cpu().numpy(), pred.cpu().numpy()
 ```
 ```{.python .input #conditional-fidelity-and-within-class-diversity-1}
 %%tab jax
 features = lambda imgs: np.asarray(d2l.batched(cnn.features, imgs))
-yg = jnp.repeat(jnp.arange(10), 100)
-raw = ema_G(jax.random.normal(jax.random.key(11), (1000, 100)), yg)
 out_of_range = float((jnp.abs(raw) > 1).mean())
-gen = jnp.clip(raw, -1, 1)
-idx = [jnp.nonzero(test_y == c)[0][:200] for c in range(10)]
-f_real = features(test_X[jnp.concatenate([i[:100] for i in idx])])
-f_real2 = features(test_X[jnp.concatenate([i[100:] for i in idx])])
+idx = jnp.argsort(test_y, stable=True).reshape(10, 1000)  # row c: class c
+f_real = features(test_X[idx[:, :500].flatten()])    # the reference
+f_real2 = features(test_X[idx[:, 500:].flatten()])   # the floor
 f_gen = features(gen)
+f_gen2 = features(jnp.clip(generate(8), -1, 1))      # a second draw
+idx, pred_real = np.asarray(idx), np.asarray(pred)
 ```
 
 ```{.python .input #conditional-measuring-condition-alignment-4}
 %%tab pytorch, jax
-print(f'{"comparison":22s}{"FD (CIFAR-CNN)":>16s}{"MMD^2 (CIFAR-CNN)":>19s}'
-      f'{"out-of-range":>14s}')
-print(f'{"real vs. real":22s}{d2l.fid_score(f_real2, f_real):16.2f}'
-      f'{d2l.kid_score(f_real2, f_real):19.3f}{"--":>14s}')
-print(f'{"generated vs. real":22s}{d2l.fid_score(f_gen, f_real):16.2f}'
-      f'{d2l.kid_score(f_gen, f_real):19.3f}{out_of_range:14.3f}')
-# Variance within each class, averaged over features and classes
-cvar = lambda f: float(np.asarray(f, np.float64).reshape(10, 100, -1)
-                       .var(1).mean())
-print(f'within-class feature variance: generated {cvar(f_gen):.3g}, '
-      f'real {cvar(f_real):.3g}, second real set {cvar(f_real2):.3g}')
+draws = {'real (the floor)': f_real2, 'generated': f_gen,
+         'generated, second draw': f_gen2}
+print(f'{"against the reference":24s}{"FD (CIFAR-CNN)":>16s}'
+      f'{"MMD^2 (CIFAR-CNN)":>19s}')
+for name, f in draws.items():
+    print(f'{name:24s}{d2l.fid_score(f, f_real):16.2f}'
+          f'{d2l.kid_score(f, f_real):19.3f}')
+print(f'generated values outside [-1, 1]: {out_of_range:.3f}')
 ```
 In FD the generated set lies two to four times as far from the real test images as the second real set does. In $\mathrm{MMD}^2$ the real-versus-real estimate fluctuates around zero, while the generated-versus-real estimate is small and positive. The variance line shows what the distances cannot separate: the generated images have about 20% less within-class feature variance than the real ones, while a second real set comes within 5%. The generator has lost some of the variety within each class, and alignment cannot see that loss.
 
-### Two Baselines
+<!-- WRITER: measured (PyTorch / JAX): FD floor 0.14 / 0.14, generated 1.77 / 1.76, second draw 1.74 / 1.70, so the generated set is about twelve times the floor and the sampling range is a few hundredths; MMD^2 floor -0.001 / -0.001, generated 0.121 / 0.121, second draw 0.125 / 0.118; out-of-range 0.009 / 0.007. The ratio grew from 3 to 4 (old, 100 per class) to about 12 because the floor shrinks with the sample size (finite-sample bias), not because the generator got worse. The paragraph above quotes the old 100-per-class run (FD ratio, variance line). The cell above now scores 500 generated images per class, and a second generated draw, against test images 0-499 of each class (the reference); test images 500-999 of each class give the floor. Re-quote FD and MMD^2 from its output and read the generated value against the floor and against the second draw's sampling range. The variance line moved to the next cell. -->
 
-Two constructed generators show what each measurement can and cannot see. The first keeps the same 1,000 generated images and shifts their *requested* labels cyclically, the counterexample from the start of this section. The second is a degenerate generator that returns, for every request of class $c$, the real test image that the referee classifies as $c$ most confidently. FD and $\mathrm{MMD}^2$ never see a label, so for the first baseline the values of the previous cell stand; we print only the alignment.
+```{.python .input #conditional-fidelity-and-within-class-diversity-2}
+%%tab pytorch, jax
+by_class = lambda f: np.asarray(f).reshape(10, -1, f.shape[-1])
 
-```{.python .input #conditional-measuring-condition-alignment-5}
-%%tab pytorch
-y_perm = (yg + 1) % 10                         # same images, shifted requests
-balanced = torch.cat([i[:100] for i in idx])   # 100 test images per class
-with torch.no_grad():
-    pred_gen = cnn(gen).argmax(1)
-    # The referee's probability of the true class, per class and image
-    p_true = cnn(test_X[balanced]).softmax(1)[
-        torch.arange(1000, device=device), test_y[balanced]].reshape(10, 100)
-    most_confident = balanced.reshape(10, 100)[
-        torch.arange(10, device=device), p_true.argmax(1)]
-    fixed = test_X[most_confident].repeat_interleave(100, dim=0)
-    pred_fix = cnn(fixed).argmax(1)
-print(f'permuted labels: alignment '
-      f'{float((pred_gen == yg).float().mean()):.2f} -> '
-      f'{float((pred_gen == y_perm).float().mean()):.2f}')
-print(f'most confident image per class: alignment '
-      f'{float((pred_fix == yg).float().mean()):.2f}, '
-      f'within-class variance {cvar(features(fixed)):.3g}')
+def pr_by_class(f):
+    """Precision and recall of each class of f against the reference."""
+    return np.array([d2l.precision_recall(r, g) for r, g in
+                     zip(by_class(f_real), by_class(f))])
+
+print(f'{"per class, k = 3":24s}{"precision":>10s}{"worst class":>17s}'
+      f'{"recall":>8s}{"worst class":>17s}')
+for name, f in draws.items():
+    pr = pr_by_class(f)
+    lo = pr.argmin(0)
+    print(f'{name:24s}{pr[:, 0].mean():10.2f}{classes[lo[0]]:>12s}'
+          f'{pr[lo[0], 0]:5.2f}{pr[:, 1].mean():8.2f}'
+          f'{classes[lo[1]]:>12s}{pr[lo[1], 1]:5.2f}')
+# Variance within each class, averaged over features and classes
+cvar = lambda f: float(by_class(f).astype(np.float64).var(1).mean())
+print(f'within-class feature variance: generated {cvar(f_gen):.3f}, '
+      f'real {cvar(f_real):.3f}, the floor {cvar(f_real2):.3f}')
 ```
-```{.python .input #conditional-measuring-condition-alignment-5}
-%%tab jax
-y_perm = (yg + 1) % 10                         # same images, shifted requests
-balanced = jnp.concatenate([i[:100] for i in idx])  # 100 test images per class
-pred_gen = cnn(gen).argmax(1)
-# The referee's probability of the true class, per class and image
-p_true = jax.nn.softmax(cnn(test_X[balanced]))[
-    jnp.arange(1000), test_y[balanced]].reshape(10, 100)
-most_confident = balanced.reshape(10, 100)[jnp.arange(10), p_true.argmax(1)]
-fixed = jnp.repeat(test_X[most_confident], 100, axis=0)
-pred_fix = cnn(fixed).argmax(1)
-print(f'permuted labels: alignment '
-      f'{float((pred_gen == yg).mean()):.2f} -> '
-      f'{float((pred_gen == y_perm).mean()):.2f}')
-print(f'most confident image per class: alignment '
-      f'{float((pred_fix == yg).mean()):.2f}, '
-      f'within-class variance {cvar(features(fixed)):.3g}')
+
+<!-- WRITER: measured (PyTorch / JAX), mean over classes: floor precision 0.85 / 0.85, recall 0.84 / 0.83; generated precision 0.90 / 0.90, recall 0.58 / 0.56; second draw precision 0.90 / 0.90, recall 0.57 / 0.59. So generated images sit inside the real data more often than a second real set does (precision above the floor), while only about 0.57 of the real images lie near some generated image, against 0.84 for real data; the second draw moves recall by 0.01 to 0.03, far less than the 0.27 gap. The worst class is a vehicle in both tabs but differs (recall truck 0.53 / automobile 0.46); do not name one. Variance: generated 0.173 / 0.171, reference 0.215 / 0.214, floor 0.211 / 0.207 (about a fifth less). New cell (place a lead-in before it). Per-class k-NN precision and recall with d2l.precision_recall of sec_dcgan on the referee's 128-d features (k = 3, each class's 500 images against the 500 reference images of that class) for the floor, the generated set and the second draw; the mean over classes and the worst class. Read precision and recall against the floor and the second draw's range; the variance line is read as what it is (generated features are less spread within a class; lower contrast and lost variety both produce this). -->
+
+### A Prototype Baseline
+
+<!-- WRITER: replaces "Two Baselines". The permuted-label baseline is prose only now (stored numbers: alignment 0.73 -> 0.03 in PyTorch, 0.71 -> 0.03 in JAX; FD and MMD^2 cannot change because neither sees a label). The new cell builds a generator that returns real photographs near the middle of each class: per class, the 100 distinct test images (from the floor half, 500-999) nearest the class centroid of the referee's features. It scores them by every measure against the reference, beside 100 random real images per class (the same floor half) and the first 100 generated images per class, so all three rows have the same sample size. Quote what the numbers show, not what the design expected. Measured (PyTorch / JAX), 100 per class: random real alignment 0.78 / 0.80, FD 0.43 / 0.42, MMD^2 -0.002 / -0.002, precision 0.84 / 0.86, recall 0.85 / 0.83; nearest the centroid alignment 0.91 / 0.91, FD 2.93 / 2.90, MMD^2 0.116 / 0.117, precision 0.97 / 0.96, recall 0.39 / 0.36; generated alignment 0.72 / 0.71, FD 1.89 / 1.96, MMD^2 0.096 / 0.112, precision 0.90 / 0.89, recall 0.67 / 0.66. Reading: alignment and precision reward the prototypes (both above real photographs); recall catches them (less than half the real value); FD also catches them and ranks these real photographs below the trained generator. Recall at 100 per class is higher than at 500 per class for the same generator (0.67 against 0.58), because a smaller set has wider balls: compare recall only at equal sizes. -->
+
+```{.python .input #conditional-a-prototype-baseline}
+%%tab pytorch, jax
+floor = by_class(f_real2)  # test images 500-999 of each class
+dist = ((floor - floor.mean(1, keepdims=True)) ** 2).sum(-1)
+near = np.argsort(dist, axis=1)[:, :100]  # 100 distinct images per class
+rows = np.arange(10)[:, None]
+sets = {  # 100 images per class: features and the referee's predictions
+    'real, random': (floor[:, :100], pred_real[idx[:, 500:600]]),
+    'real, nearest centroid': (floor[rows, near],
+                               pred_real[idx[:, 500:][rows, near]]),
+    'generated': (by_class(f_gen)[:, :100],
+                  pred_gen.reshape(10, 500)[:, :100])}
+print(f'{"100 per class":24s}{"alignment":>10s}{"FD":>7s}{"MMD^2":>8s}'
+      f'{"precision":>10s}{"recall":>8s}')
+for name, (f, p) in sets.items():
+    f = f.reshape(1000, -1)
+    prec, rec = pr_by_class(f).mean(0)
+    print(f'{name:24s}{(p == rows).mean():10.2f}'
+          f'{d2l.fid_score(f, f_real):7.2f}{d2l.kid_score(f, f_real):8.3f}'
+          f'{prec:10.2f}{rec:8.2f}')
 ```
+
+<!-- WRITER: the next paragraph describes the deleted cell (permuted labels, most confident image); rewrite it from the prototype table above. -->
 Shifting the requests drops alignment from about 0.7 to a few percent, while FD and $\mathrm{MMD}^2$ cannot change, because neither receives a label. The confident-image generator reaches alignment 1.00 with zero within-class variance: it beats real images on alignment while returning one image per request. This *within-class collapse* is mode collapse inside each conditional distribution. The conditional objective :eqref:`eq_gan_cond_value` penalizes it, because a point mass is far from $p(\cdot \mid c)$, and so does the within-class variance; alignment rewards it.
 
 Conditional evaluation thus has three axes, fidelity, diversity and alignment, and each of our measurements sees only part of them. Published scores combine them: the Fréchet joint distance embeds image and condition together :cite:`DeVries.Romero.Pineda.ea.2019`, and the classification accuracy score trains a classifier on generated pairs and tests it on real ones :cite:`Ravuri.Vinyals.2019`. Exercise :exref:`ex_conditional-diagnostics-cell-detects-within` extends our diagnosis to per-class distances, and Exercise :exref:`ex_conditional-biggan-s-truncation-trick` uses the same instruments on BigGAN's truncation trick, which trades variety for fidelity on purpose.
@@ -489,7 +580,8 @@ Conditional generation gives the request to both players and plays the chapter's
        $D^\star(x, c) - D^\star(x, c')$ through the real and the generated
        label posteriors. How does $\arg\max_c D^\star(x, c)$ differ from
        the rule $\arg\max_c p(c \mid x)$ of the referee?
-    1. For the test images indexed by `bal`, compute $S_{ic} = D(x_i, c)$
+    1. For the test images indexed by `bal`, compute
+       <!-- WRITER: `bal` does not exist; the reference images are test_X[idx[:, :500].flatten()] (500 per class), and gen/yg now hold 500 per class. --> $S_{ic} = D(x_i, c)$
        for all ten classes. Report the fraction of images that score higher
        under their own label $c$ than under $c + 1$, and the accuracy of
        $\arg\max_c S_{ic}$. Then estimate the per-class constant
@@ -505,6 +597,7 @@ Conditional generation gives the request to both players and plays the chapter's
    :exlabel:`ex_conditional-critic-classifier`
 1. [code] **Per-class distances.** The features `f_gen`, `f_real` and
    `f_real2` hold 100 images of each class, in class order.
+   <!-- WRITER: they now hold 500 images of each class (f_gen2 too); a covariance from 500 samples of 128-d features has full rank, so (a) needs rewording; rewrite around per-class recall per the worklist. -->
     1. A covariance matrix estimated from 100 samples of 128-dimensional
        features has rank at most 99. How does this affect a per-class
        Fréchet distance, and why does the unbiased $\mathrm{MMD}^2$
@@ -857,7 +950,8 @@ return label + self.head(phi).squeeze(-1)  # + psi_0(x)
 ::: {.slide title="Each Baseline Fools a Different Measurement"}
 [Two baselines]{.kicker}
 
-@!conditional-measuring-condition-alignment-5
+<!-- WRITER: placeholder now points at the prototype table (the old baseline cell is deleted); rewrite title and bullets; add a Modulate slide (@conditional-three-ways-in-1, @conditional-three-ways-in-2) and a precision/recall slide (@!conditional-fidelity-and-within-class-diversity-2). -->
+@!conditional-a-prototype-baseline
 
 - Shifted requests: alignment collapses; FD and MMD$^2$ do not move.
 - One confident real image per class: alignment 1.00, variance 0.

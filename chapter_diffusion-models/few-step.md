@@ -338,6 +338,8 @@ def flow_map_error(u, teacher, x0, eps, s, t):  #@save
     return ((u_t - target) ** 2).reshape(x0.shape[0], -1).sum(1)
 ```
 
+<!-- WRITER (decision 1, from the denoising code step): `d2l.time_embedding` now defaults to frequencies 1 to 64 per unit of t, which every other network of the chapter uses; the flow maps here pass `time_freqs=slow = (1e-4, 1.0)`, the old features (frequencies up to one), for the mixture students and for the image teacher, whose U-Net the student copies. Study (scratch, 2026-11-20; teacher and student exactly as in this section, seeds 0 and 1, FD of 1,000 samples against 1,000 test images, floor 0.88, one PyTorch feature network for all runs): one jump, old features PT 11.8/10.5, JAX 11.6/9.9; new features PT 17.0/17.8, JAX 25.2/18.8. Two jumps: old 4.8/4.5 and 5.2/4.8, new 5.0/5.8 and 8.1/7.4. The teachers' fifty Euler steps score the same with either (2.4-2.8). The next sentence ('up to one') stays true for the flow maps only; say that the flow maps use slower features than the rest of the chapter, and why. -->
+
 The derivative in $t$ passes through the network's time features, which
 must vary slowly. `d2l.time_embedding` uses sines and cosines of $t$ at
 frequencies up to one. Diffusion code often embeds $1000\, t$, which puts
@@ -396,7 +398,8 @@ class UNetFlowMap(nn.Module):  #@save
         nn.init.zeros_(self.gap.weight), nn.init.zeros_(self.gap.bias)
 
     def forward(self, x, s, t):
-        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
+        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim,
+                                          self.unet.time_freqs))
         return self.unet(x, t, cond=gap)
 ```
 
@@ -411,7 +414,8 @@ class UNetFlowMap(nnx.Module):  #@save
                               bias_init=zeros, rngs=rngs)
 
     def __call__(self, x, s, t):
-        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
+        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim,
+                                          self.unet.time_freqs))
         return self.unet(x, t, cond=gap)
 ```
 
@@ -450,6 +454,8 @@ class MLPFlowMap(d2l.TimeMLP):
     def forward(self, x, s, t):
         return super().forward(x, t, t - s)
 
+slow = (1e-4, 1.0)  # time features of a flow map, whose loss has a d/dt
+
 def consistency_loss(u, x0):  # s = 0, the teacher's velocity
     t = torch.rand(len(x0), device=device)
     return d2l.flow_map_error(u, teacher, x0, torch.randn_like(x0),
@@ -465,7 +471,7 @@ for name, loss in (('consistency', consistency_loss),
                    ('MeanFlow', meanflow_loss)):
     torch.manual_seed(2)
     _, students[name], _ = d2l.train_regression(
-        MLPFlowMap(256, 3, num_times=2).to(device), loss,
+        MLPFlowMap(256, 3, num_times=2, time_freqs=slow).to(device), loss,
         lambda: mix.sample(512), 20_000, cosine=True)
 ```
 
@@ -475,6 +481,8 @@ class MLPFlowMap(d2l.TimeMLP):
     """u(x, s, t): a TimeMLP on the start t and the interval t - s."""
     def __call__(self, x, s, t):
         return super().__call__(x, t, t - s)
+
+slow = (1e-4, 1.0)  # time features of a flow map, whose loss has a d/dt
 
 def consistency_loss(u, x0, key):  # s = 0, the teacher's velocity
     k1, k2 = jax.random.split(key)
@@ -492,7 +500,8 @@ students = {}
 for name, loss in (('consistency', consistency_loss),
                    ('MeanFlow', meanflow_loss)):
     _, students[name], _ = d2l.train_regression(
-        MLPFlowMap(256, 3, num_times=2, rngs=nnx.Rngs(2)), loss,
+        MLPFlowMap(256, 3, num_times=2, time_freqs=slow, rngs=nnx.Rngs(2)),
+        loss,
         lambda k: mix.sample(k, 512), 20_000, jax.random.key(2), cosine=True)
 ```
 
@@ -632,9 +641,9 @@ def batch_fn():
     return X[torch.randint(0, len(X), (128,), device=X.device)]
 
 torch.manual_seed(0)
-_, teacher, _ = d2l.train_regression(d2l.UNet(ch=64).to(X.device),
-                                     d2l.regression_loss(lin, 'velocity'),
-                                     batch_fn, 10_000)
+_, teacher, _ = d2l.train_regression(  # the student copies these time features
+    d2l.UNet(ch=64, time_freqs=slow).to(X.device),
+    d2l.regression_loss(lin, 'velocity'), batch_fn, 10_000)
 ```
 
 ```{.python .input #few-step-on-images}
@@ -644,9 +653,9 @@ X, y, X_test, y_test = d2l.load_fashion_mnist_pm1()
 def batch_fn(key):
     return X[jax.random.randint(key, (128,), 0, len(X))]
 
-_, teacher, _ = d2l.train_regression(d2l.UNet(ch=64, rngs=nnx.Rngs(0)),
-                                     d2l.regression_loss(lin, 'velocity'),
-                                     batch_fn, 10_000, jax.random.key(0))
+_, teacher, _ = d2l.train_regression(  # the student copies these time features
+    d2l.UNet(ch=64, time_freqs=slow, rngs=nnx.Rngs(0)),
+    d2l.regression_loss(lin, 'velocity'), batch_fn, 10_000, jax.random.key(0))
 ```
 
 We score 1,000 samples by the Fréchet distance (FD) of

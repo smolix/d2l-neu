@@ -3999,21 +3999,23 @@ def scatter_panels(samples, titles=None, data=None, lim=4.5,
             ax.set_title(titles[i])
     return axes[0]
 
-def time_embedding(t, dim):
-    """Sines and cosines of t at dim / 2 geometric frequencies.
+def time_embedding(t, dim, freqs=(1.0, 64.0)):
+    """Sines and cosines of t at dim / 2 frequencies, geometric from freqs[0]
+    to freqs[1] radians per unit of t (t in [0, 1]).
 
     Defined in :numref:`sec_diffusion-denoising`"""
-    freqs = jnp.exp(-math.log(10000) / (dim // 2) * jnp.arange(dim // 2))
-    args = jnp.asarray(t, jnp.float32)[:, None] * freqs
+    f = jnp.exp(jnp.linspace(math.log(freqs[0]), math.log(freqs[1]), dim // 2))
+    args = jnp.asarray(t, jnp.float32)[:, None] * f
     return jnp.concatenate([jnp.sin(args), jnp.cos(args)], 1)
 
 class TimeMLP(nnx.Module):
-    """An MLP on a point x and the time features of one or more times.
+    """An MLP on a point x and the time features of one or more times;
+    time_freqs: see time_embedding.
 
     Defined in :numref:`sec_diffusion-denoising`"""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_dim=64, rngs):
-        self.time_dim = time_dim
+                 time_dim=64, time_freqs=(1.0, 64.0), rngs):
+        self.time_dim, self.time_freqs = time_dim, time_freqs
         self.embed = d2l.make_mlp([time_dim * num_times, hidden, hidden],
                                   nnx.silu, rngs=rngs)
         self.inp = d2l.Linear(dim, hidden, rngs=rngs)
@@ -4022,7 +4024,7 @@ class TimeMLP(nnx.Module):
             d2l.make_mlp([hidden] * depth + [dim], nnx.silu, rngs=rngs))
 
     def __call__(self, x, *ts):
-        feats = [time_embedding(t, self.time_dim) for t in ts]
+        feats = [time_embedding(t, self.time_dim, self.time_freqs) for t in ts]
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 
 def train_regression(model, loss_fn, batch_fn, num_steps, key, *,
@@ -4301,12 +4303,14 @@ class UNet(nnx.Module):
 
     y = num_classes is the null label. cond (n, emb_dim), if given, is added
     to the time features; the flow map of the few-step section passes the
-    embedding of its step size there.
+    embedding of its step size there. time_freqs: see time_embedding.
 
     Defined in :numref:`sec_diffusion-images`"""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
-                 out_channels=1, emb_dim=128, *, rngs):
+                 out_channels=1, emb_dim=128, time_freqs=(1.0, 64.0), *,
+                 rngs):
         self.emb_dim, self.num_classes = emb_dim, num_classes
+        self.time_freqs = time_freqs
         init = nnx.initializers.normal(1.0)  # N(0, 1), as in PyTorch
         self.label_emb = (nnx.Embed(num_classes + 1, emb_dim, rngs=rngs,
                                     embedding_init=init)
@@ -4326,7 +4330,7 @@ class UNet(nnx.Module):
         self.outc = conv(ch, out_channels)
 
     def __call__(self, x, t, y=None, cond=None):
-        emb = d2l.time_embedding(t, self.emb_dim)
+        emb = d2l.time_embedding(t, self.emb_dim, self.time_freqs)
         if y is not None:
             emb = emb + self.label_emb(y)
         if cond is not None:
@@ -4595,7 +4599,8 @@ class UNetFlowMap(nnx.Module):
                               bias_init=zeros, rngs=rngs)
 
     def __call__(self, x, s, t):
-        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
+        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim,
+                                          self.unet.time_freqs))
         return self.unet(x, t, cond=gap)
 
 @nnx.jit

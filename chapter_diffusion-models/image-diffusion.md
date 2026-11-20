@@ -161,11 +161,12 @@ class UNet(nn.Module):  #@save
 
     y = num_classes is the null label. cond (n, emb_dim), if given, is added
     to the time features; the flow map of the few-step section passes the
-    embedding of its step size there."""
+    embedding of its step size there. time_freqs: see time_embedding."""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
-                 out_channels=1, emb_dim=128):
+                 out_channels=1, emb_dim=128, time_freqs=(1.0, 64.0)):
         super().__init__()
         self.emb_dim, self.num_classes = emb_dim, num_classes
+        self.time_freqs = time_freqs
         self.label_emb = (nn.Embedding(num_classes + 1, emb_dim)
                           if num_classes else None)
         self.emb_mlp = d2l.make_mlp([emb_dim] * 3, nn.SiLU())
@@ -181,7 +182,7 @@ class UNet(nn.Module):  #@save
                                   nn.Conv2d(ch, out_channels, 3, padding=1))
 
     def forward(self, x, t, y=None, cond=None):
-        emb = d2l.time_embedding(t, self.emb_dim)
+        emb = d2l.time_embedding(t, self.emb_dim, self.time_freqs)
         if y is not None:
             emb = emb + self.label_emb(y)
         if cond is not None:
@@ -204,10 +205,12 @@ class UNet(nnx.Module):  #@save
 
     y = num_classes is the null label. cond (n, emb_dim), if given, is added
     to the time features; the flow map of the few-step section passes the
-    embedding of its step size there."""
+    embedding of its step size there. time_freqs: see time_embedding."""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
-                 out_channels=1, emb_dim=128, *, rngs):
+                 out_channels=1, emb_dim=128, time_freqs=(1.0, 64.0), *,
+                 rngs):
         self.emb_dim, self.num_classes = emb_dim, num_classes
+        self.time_freqs = time_freqs
         init = nnx.initializers.normal(1.0)  # N(0, 1), as in PyTorch
         self.label_emb = (nnx.Embed(num_classes + 1, emb_dim, rngs=rngs,
                                     embedding_init=init)
@@ -227,7 +230,7 @@ class UNet(nnx.Module):  #@save
         self.outc = conv(ch, out_channels)
 
     def __call__(self, x, t, y=None, cond=None):
-        emb = d2l.time_embedding(t, self.emb_dim)
+        emb = d2l.time_embedding(t, self.emb_dim, self.time_freqs)
         if y is not None:
             emb = emb + self.label_emb(y)
         if cond is not None:

@@ -268,21 +268,25 @@ The regression on per-pair targets therefore fits the score of $p_\sigma$, which
 
 `TimeMLP` is the network of every two-dimensional experiment: an MLP on the point plus sinusoidal features of a noise level or time from `time_embedding`, which the image networks share. Here the noise level is fixed.
 
+<!-- WRITER (DEN-5, decision 1): `time_embedding` now uses frequencies geometric from 1 to 64 radians per unit of t (it used 1 down to 1e-4, which suits positions up to 10,000). For t in [0, 1] the old features were in effect t and t^2 (centered rank 2 at 1% of the top singular value; t = 0.50 and 0.51 differed by 0.02 on a feature vector of norm 8); the new ones have rank 24 and those two times differ by 1.8. Study (scratch, 2026-11-20): the image-diffusion baseline (class-conditional velocity U-Net ch=64, 15k updates, EMA, Euler 50, gamma 1), FD of 5,000 samples against 5,000 test images (floor 0.17), seeds 0/1, one PyTorch feature network for all: old features PT 0.93/0.99, JAX 0.92/0.84; new PT 0.81/0.86, JAX 0.78/0.77; EDM-style features of ln(sigma_bar)/4 PT 0.83/0.92, JAX 0.86/0.79. The new features lower FD by about 0.1-0.12 in both frameworks, more than either two-seed range (at most 0.08), so they are the default; the training loss is also lower in all four runs (0.2056-0.2063 against 0.2077-0.2083). The flow maps of :numref:`sec_diffusion-few-step` keep the old, slow features (`time_freqs=(1e-4, 1.0)`): their loss differentiates through the time features, and with the new ones the one-jump FD of the image student rose from 10-12 to 17-25 in both frameworks over two seeds (see the few-step note). One or two sentences here: the features of t in [0, 1] at frequencies 1 to 64 separate nearby times; the flow maps of 17.8 use slow ones, for the reason given there. Quote no study number in prose. -->
+
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab pytorch
-def time_embedding(t, dim):  #@save
-    """Sines and cosines of t at dim / 2 geometric frequencies."""
-    freqs = torch.exp(-math.log(10000) / (dim // 2)
-                      * torch.arange(dim // 2, device=t.device))
-    args = t.float()[:, None] * freqs
+def time_embedding(t, dim, freqs=(1.0, 64.0)):  #@save
+    """Sines and cosines of t at dim / 2 frequencies, geometric from freqs[0]
+    to freqs[1] radians per unit of t (t in [0, 1])."""
+    f = torch.exp(torch.linspace(math.log(freqs[0]), math.log(freqs[1]),
+                                 dim // 2, device=t.device))
+    args = t.float()[:, None] * f
     return torch.cat([args.sin(), args.cos()], 1)
 
 class TimeMLP(nn.Module):  #@save
-    """An MLP on a point x and the time features of one or more times."""
+    """An MLP on a point x and the time features of one or more times;
+    time_freqs: see time_embedding."""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_dim=64):
+                 time_dim=64, time_freqs=(1.0, 64.0)):
         super().__init__()
-        self.time_dim = time_dim
+        self.time_dim, self.time_freqs = time_dim, time_freqs
         self.embed = d2l.make_mlp([time_dim * num_times, hidden, hidden],
                                   nn.SiLU())
         self.inp = nn.Linear(dim, hidden)
@@ -290,23 +294,25 @@ class TimeMLP(nn.Module):  #@save
             nn.SiLU(), d2l.make_mlp([hidden] * depth + [dim], nn.SiLU()))
 
     def forward(self, x, *ts):
-        feats = [time_embedding(t, self.time_dim) for t in ts]
+        feats = [time_embedding(t, self.time_dim, self.time_freqs) for t in ts]
         return self.body(self.inp(x) + self.embed(torch.cat(feats, 1)))
 ```
 
 ```{.python .input #denoising-noise-and-the-regression-target}
 %%tab jax
-def time_embedding(t, dim):  #@save
-    """Sines and cosines of t at dim / 2 geometric frequencies."""
-    freqs = jnp.exp(-math.log(10000) / (dim // 2) * jnp.arange(dim // 2))
-    args = jnp.asarray(t, jnp.float32)[:, None] * freqs
+def time_embedding(t, dim, freqs=(1.0, 64.0)):  #@save
+    """Sines and cosines of t at dim / 2 frequencies, geometric from freqs[0]
+    to freqs[1] radians per unit of t (t in [0, 1])."""
+    f = jnp.exp(jnp.linspace(math.log(freqs[0]), math.log(freqs[1]), dim // 2))
+    args = jnp.asarray(t, jnp.float32)[:, None] * f
     return jnp.concatenate([jnp.sin(args), jnp.cos(args)], 1)
 
 class TimeMLP(nnx.Module):  #@save
-    """An MLP on a point x and the time features of one or more times."""
+    """An MLP on a point x and the time features of one or more times;
+    time_freqs: see time_embedding."""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_dim=64, rngs):
-        self.time_dim = time_dim
+                 time_dim=64, time_freqs=(1.0, 64.0), rngs):
+        self.time_dim, self.time_freqs = time_dim, time_freqs
         self.embed = d2l.make_mlp([time_dim * num_times, hidden, hidden],
                                   nnx.silu, rngs=rngs)
         self.inp = d2l.Linear(dim, hidden, rngs=rngs)
@@ -315,7 +321,7 @@ class TimeMLP(nnx.Module):  #@save
             d2l.make_mlp([hidden] * depth + [dim], nnx.silu, rngs=rngs))
 
     def __call__(self, x, *ts):
-        feats = [time_embedding(t, self.time_dim) for t in ts]
+        feats = [time_embedding(t, self.time_dim, self.time_freqs) for t in ts]
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 ```
 
@@ -556,7 +562,8 @@ The bias grows like $\sigma^4$ at first. For $s = 0.5$ and $d = 2$ it is $0.0004
 ```{.python .input #denoising-the-loss-floor-and-the-noise-level}
 %%tab pytorch
 sigmas, seeds = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 1.0], (1, 2)
-scores = {(s, seed): fit_score(data, s, seed) for seed in seeds for s in sigmas}
+scores = {(s, seed): fit_score(data, s, seed)
+          for seed in seeds for s in sigmas}
 x_test = mix.sample(20000)
 target = mix.score(x_test)                     # the clean score
 def score_error(score, x, target):
@@ -577,7 +584,8 @@ d2l.plot(sigmas, [*learned.values(), bias], 'sigma',
 ```{.python .input #denoising-the-loss-floor-and-the-noise-level}
 %%tab jax
 sigmas, seeds = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 1.0], (1, 2)
-scores = {(s, seed): fit_score(data, s, seed) for seed in seeds for s in sigmas}
+scores = {(s, seed): fit_score(data, s, seed)
+          for seed in seeds for s in sigmas}
 x_test = mix.sample(jax.random.key(2), 20000)
 target = mix.score(x_test)                     # the clean score
 def score_error(score, x, target):
@@ -597,7 +605,7 @@ d2l.plot(sigmas, [*learned.values(), bias], 'sigma',
 
 The learned error traces a U. To the right it follows the bias line, within about $0.1$ from $\sigma = 0.5$ on: the networks fit their blurred targets well, and the targets are wrong. To the left it rises again although the bias vanishes, because the targets are mostly noise; retraining with another seed moves these points by up to a factor of two. The best single level lies between $\sigma = 0.1$ and $0.2$, at an error of about $0.15$ to $0.2$.
 
-<!-- WRITER: the cell now trains every level with seeds 1 and 2 and prints both rows (dev run, both tabs). Second seed against first at sigma <= 0.2: PT 0.418/0.522, 0.196/0.288, 0.210/0.248, 0.302/0.245; JAX 0.275/0.475, 0.207/0.284, 0.172/0.153, 0.152/0.220, i.e. the seed moves the left points by up to about 1.5x (PT) and 1.7x (JAX), not 2x. The best level of each run: 0.196 at 0.1 and 0.245 at 0.2 (PT), 0.152 at 0.2 and 0.153 at 0.15 (JAX): 'between 0.1 and 0.2' holds; the error range is about 0.15 to 0.25. Right side unchanged: within about 0.1 of the bias from sigma = 0.5 on (largest gap 0.11, JAX seed 2 at 0.5). Re-read the numbers after the capture. Also DEN-8/DEN-9 (heading 'Choosing the Noise Level'; the 1/sigma^2 growth across a low-dimensional set) are prose items. -->
+<!-- WRITER: the cell now trains every level with seeds 1 and 2 and prints both rows (dev run, both tabs). Second seed against first at sigma <= 0.2 (dev run with the new time features): PT 0.423/0.541, 0.189/0.285, 0.215/0.255, 0.300/0.252; JAX 0.288/0.482, 0.206/0.272, 0.172/0.151, 0.150/0.224, i.e. the seed moves the left points by up to about 1.5x (PT) and 1.7x (JAX), not 2x. The best level of each run: 0.189 at 0.1 and 0.252 at 0.2 (PT), 0.150 at 0.2 and 0.151 at 0.15 (JAX): 'between 0.1 and 0.2' holds; the error range is about 0.15 to 0.25. Right side unchanged: within about 0.1 of the bias from sigma = 0.5 on (largest gap 0.11, JAX seed 2 at 0.5). Re-read the numbers after the capture. Also DEN-8/DEN-9 (heading 'Choosing the Noise Level'; the 1/sigma^2 growth across a low-dimensional set) are prose items. -->
 
 ### Blindness to Mode Weights
 
@@ -715,7 +723,7 @@ The exact score of $p$ sends every chain to a mode with the right spread, but th
 
 The exact score of $p_\sigma$ at $\sigma = 1$ crosses freely, because the noise has filled the valleys, and its weights land within about $0.02$ of $0.5$, $0.3$ and $0.2$. But its samples have twice the spread, and about $40\%$ of them fail the three-standard-deviation test: they are samples of $p_\sigma$.
 
-<!-- WRITER: the Langevin cell now prints the data's summary beside the chains' (DEN-11) and runs two trained networks, seeds 1 and 2 of the sweep (DEN-10). Dev run: data spread 0.488 (PT) / 0.491 (JAX); the sigma = 1 chain 0.986 / 0.958, so the printed spread doubles while the variance of p_sigma is five times that of p (1.25 against 0.25 per coordinate); strays 42% / 41%. Trained chains, weights from starts of about a third each: PT seed 1 [0.486, 0.244, 0.270], seed 2 [0.493, 0.292, 0.215]; JAX seed 1 [0.394, 0.295, 0.312], seed 2 [0.382, 0.392, 0.227]; strays 4.6-6.3%. So the chains do cross (the exact score of p never does in 2,000 steps), the weights move away from the start's, and where they land differs between networks: in PyTorch both runs land near the true weights, in JAX one run sends mass to the middle mode. Do not write 'toward 0.5' or 'staying near the start's'; say the crossings come from the learned field's errors in the valleys and that a run whose weights match the truth is not evidence that the weights were learned. -->
+<!-- WRITER: the Langevin cell now prints the data's summary beside the chains' (DEN-11) and runs two trained networks, seeds 1 and 2 of the sweep (DEN-10). Dev run: data spread 0.488 (PT) / 0.491 (JAX); the sigma = 1 chain 0.986 / 0.958, so the printed spread doubles while the variance of p_sigma is five times that of p (1.25 against 0.25 per coordinate); strays 42% / 41%. Trained chains, weights from starts of about a third each: PT seed 1 [0.465, 0.259, 0.276], seed 2 [0.460, 0.294, 0.245]; JAX seed 1 [0.391, 0.295, 0.315], seed 2 [0.394, 0.386, 0.221]; strays 4.4-6.5%. So the chains do cross (the exact score of p never does in 2,000 steps), the weights move away from the start's, and where they land differs between networks: in PyTorch both runs move the heavy mode to about 0.46, in JAX to about 0.39, and one JAX run also inflates the middle mode to 0.39. Do not write 'toward 0.5' or 'staying near the start's'; say the crossings come from the learned field's errors in the valleys and that a run whose weights match the truth is not evidence that the weights were learned. -->
 
 The trained network does neither job reliably. Its weights depend on the seed, staying near the start's in some runs and drifting in others, because nothing in a field fitted near the data fixes them. Several percent of its samples stray, against one to two percent for the exact score, because the field is wrong in the valleys where no training pair landed. Langevin steps survive in modern samplers only as a correction applied at each of many noise levels.
 

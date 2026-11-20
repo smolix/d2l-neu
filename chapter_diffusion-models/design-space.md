@@ -898,7 +898,7 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
 
 Every model is 14 to 32 times the floor, while the full recipe of :numref:`sec_diffusion-images` reaches about 0.8 after its 15,000 updates, so the table ranks how quickly each recipe learns, not where it would end. Read against the spread between each row's two seeds, its clearest result is a warning against centring the training times at the middle of the path for images this small. Logit-normal times centred at $t = \tfrac12$ cost about 1 to 1.5 FD, more than the seed spread of either row. Moved toward the data, the same distribution wins all of that back. Every run of the $m = -0.5$ row is at or below every run of the base, although its gain over the base lies within its seed spread, and the control row, a logit-normal moved further still, is never worse than the base either. As predicted, $\mathbf{v}$ on the cosine path does no worse than the base. EDM's recipe, its levels, preconditioning and weight together, beats the base by more than either row's seed spread. How that gain divides between the levels and the preconditioning, two seeds per row do not settle.
 
-The samples of the first seed, one row per recipe in the order of the table, from the same ten noise images:
+The samples of the first seed on EDM's grid, one row per recipe in the order of the table, from the same ten noise images:
 
 ```{.python .input #design-space-a-recipe-ablation-3}
 %%tab pytorch

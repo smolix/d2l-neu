@@ -1068,9 +1068,10 @@ batch takes 784 jumps, one pixel per jump on average, to show what a
 hundred steps still lose. The chain's hundred levels cannot carry that
 many jumps: `unmask` rounds its levels to the chain's, and a jump between
 two equal levels reveals nothing. These jumps therefore run on a linear
-schedule of 784 levels of their own. Their times $k/784$ fall between the
-hundred times the network was trained at, and the number of masked pixels
-tells it the time in any case.
+schedule of 784 levels of their own. Most of their times $k/784$ fall
+between the hundred times the network was trained at (the last seven lie
+below the smallest), and the number of masked pixels tells it the time in
+any case.
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-7}
 %%tab pytorch

@@ -600,7 +600,7 @@ The clean point has $c_t = 1$, the noise $c_t = -\alpha_t/\sigma_t$, the velocit
 
 Near the data we can predict the number. At $t = 0.1$ the modes are still far apart compared with the noise, so the posterior is that of a single Gaussian mode, with variance $s^2 \sigma_t^2 / (\alpha_t^2 s^2 + \sigma_t^2)$ per coordinate. Multiplied by $c_t^2$ and summed over the two coordinates, it gives the noise floor $2\alpha_t^2 s^2/(\alpha_t^2 s^2 + \sigma_t^2)$ and the velocity floor $2 s^2/(\alpha_t^2 s^2 + \sigma_t^2)$ of the linear path, where $\sigma_t = t$. With $s = 0.5$, the VP path ($\alpha = 0.95$, $\sigma = 0.32$) has a noise floor of about $1.37$, and the linear path ($\alpha = 0.9$, $\sigma = 0.1$) a velocity floor of $2.35$.
 
-The cell measures each floor on a million draws, at three times and averaged over $t$, with its standard error. Any network's loss splits into the floor plus the mean squared distance between its prediction and the oracle's, because the oracle's error is uncorrelated with every function of $\mathbf{x}_t$. The cell therefore measures the excess of the averaged network over the floor directly, as that distance (net-floor), and prints the training loss of the last $1{,}000$ steps beside it. The last line reads the velocity network as a noise predictor on the VP path: `eps_from_velocity` moves each point to the linear path at equal log-SNR, asks the velocity network there, and converts its answer to $\hat{\boldsymbol\epsilon}$ with `x0_eps`.
+The cell measures each floor on a million draws, at three times and averaged over $t$, with its standard error. Any network's loss splits into the floor plus the mean squared distance between its prediction and the oracle's, because the oracle's error is uncorrelated with every function of $\mathbf{x}_t$. The cell therefore measures the excess of the averaged network over the floor directly, as that distance (column `excess`), and prints the training loss of the last $1{,}000$ steps beside it (column `train loss`). The last line reads the velocity network as a noise predictor on the VP path: `eps_from_velocity` moves each point to the linear path at equal log-SNR, asks the velocity network there, and converts its answer to $\hat{\boldsymbol\epsilon}$ with `x0_eps`.
 
 ```{.python .input #gaussian-paths-the-loss-floor}
 %%tab pytorch
@@ -1080,7 +1080,7 @@ The targets differ only in how much they magnify one posterior variance.
 
 ::: {.slide title="Both Networks Sit on Their Floors and Hold the Same Posterior Mean"}
 Floor $\mathbb{E}\, \|\text{target} - \mathbb{E}[\text{target} \mid \mathbf{x}_t]\|^2$,
-exact through the oracle; net-floor $= \mathbb{E}\|\text{net} - \text{oracle}\|^2$.
+exact through the oracle; excess $= \mathbb{E}\|\text{net} - \text{oracle}\|^2$.
 
 @!gaussian-paths-the-loss-floor
 

@@ -1295,6 +1295,17 @@ Trained by the optimizer:
 @!parameters-state-memory-parameters-and-buffers-2
 :::
 
+::: {.slide title="An Unregistered Tensor Is Left Behind When the Model Moves"}
+[Parameters and buffers]{.kicker}
+
+@!parameters-state-memory-parameters-and-buffers-3
+
+::: {.d2l-note .warn}
+Converting dtype uses the same machinery as moving to a GPU. A model that
+works on the CPU and fails on the GPU often hides an unregistered tensor.
+:::
+:::
+
 ::: {.slide title="Check: Parameter, Buffer, or Neither?"}
 [Check]{.kicker}
 
@@ -1397,9 +1408,9 @@ activations. Inference needs the weights only, $4 \times 8 \cdot 10^9 =
 ::: {.divider}
 [03]{.dnum}
 
-[Shared and Frozen Parameters]{.dtitle}
+[Shared, Frozen, and Averaged Parameters]{.dtitle}
 
-[tying · freezing]{.dsub}
+[tying · freezing · weight averages]{.dsub}
 :::
 :::
 
@@ -1490,6 +1501,20 @@ Elsewhere `trainable` and `training` are separate switches: a frozen dropout
 layer still drops units in training mode.
 :::
 :::
+
+::: {.slide title="A Weight Average Is State Updated outside Backpropagation"}
+[Weight averages]{.kicker}
+
+After each step, $\bar{\mathbf{w}} \leftarrow 0.9\, \bar{\mathbf{w}} +
+0.1\, \mathbf{w}$. Five Adam steps on the head, then the gap between the
+averaged and the current bias:
+
+@!parameters-state-memory-freezing-parameters-5
+
+The bias moves 0.1 per step, so the gap obeys $e \leftarrow 0.9(e + 0.1)$:
+$0.09, 0.171, \ldots, 0.3686$. The average belongs in the checkpoint.
+:::
+
 ::: {.slide title="Check: Freeze Only the Head of the 8B Model"}
 [Check]{.kicker}
 

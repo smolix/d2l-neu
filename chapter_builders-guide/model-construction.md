@@ -1323,7 +1323,6 @@ quick experiments at the cost of deferring shape creation until a dry run.
 
 [Discussions](https://d2l.discourse.group/t/36752)
 
-
 <!-- slides -->
 
 ::: {.slide}

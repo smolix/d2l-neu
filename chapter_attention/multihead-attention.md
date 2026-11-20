@@ -860,6 +860,19 @@ $n > 2d$ (GPT-2 small: 1,536 tokens).
 - Attention runs over the last two axes: all heads in one batched product.
 :::
 
+::: {.slide title="A Trained Layer: One Head Stays at 0.71, Two Heads Reach Rounding Error"}
+[Multi-head attention]{.kicker}
+
+@!multihead-attention-learned-heads-on-the-copy-both-task-2
+
+- $d = 16$, keys $\mathbf{e}_1, \mathbf{e}_2$, query $\mathbf{e}_3$,
+  values of width 8: room for exactly two.
+- One head: weight on $\mathbf{v}_1$ ends near one half; every split is
+  equally bad.
+- Every run of $H \ge 2$: one head above 0.8 on $\mathbf{v}_1$, one below
+  0.2.
+:::
+
 ::: {.slide title="Heads May Share Keys and Values"}
 [Shared keys and values]{.kicker}
 
@@ -885,6 +898,16 @@ give 8 shared value coordinates and succeed; $(4, 1)$ gives 4: four
 weightings, no room, error back to $0.71$.
 :::
 :::
+:::
+
+::: {.slide title="Sharing Works While the Shared Value Heads Have Room"}
+[Shared keys and values]{.kicker}
+
+@!multihead-attention-sharing-keys-and-values
+
+- $(2, 1)$, $(4, 2)$: rounding error with 768 parameters instead of 1,024.
+- $(4, 1)$: 640 parameters, $0.71$, though its heads weight the positions
+  differently.
 :::
 
 ::: {.slide title="Self- and Cross-Attention Differ Only in Their Inputs"}

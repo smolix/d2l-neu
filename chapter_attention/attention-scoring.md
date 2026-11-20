@@ -1057,6 +1057,34 @@ Random letter embeddings of width 32; "attention" queries "translation":
 - `e`: no partner; the softmax spends its mass anyway.
 :::
 
+::: {.slide title="Keys That Carry Positions Let a Toy Model Learn a Permutation"}
+In translation (Bahdanau et al.) the weights came out as word alignments.
+Toy: output $j$ copies source $\pi(j)$, 8 tokens from 16, one pair swapped.
+Queries: one learned vector per output; keys: $\mathbf{W}_k$[one-hot token;
+one-hot position]; values: one-hot tokens.
+
+@!attention-scoring-attention-as-learned-alignment-4
+
+- Untrained: a fifth to a quarter right, weight on $\pi(j)$ near $1/8$.
+  Trained (three runs): accuracy 1.000, largest weight on $\pi(j)$.
+- Repeated tokens are told apart: the keys carry the position.
+:::
+
+::: {.slide title="Check: A Toy Without Positions"}
+[Check]{.kicker}
+
+Remove the one-hot position from the toy's keys. Can output $j$ still put
+its weight on source position $\pi(j)$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** No. Equal tokens then have equal keys, and every position with
+the same token gets the same weight, as with the letters of
+"attention". The output can depend only on which tokens occur, not where.
+:::
+:::
+:::
+
 ::: {.slide title="Scaled Scores and Boolean Masks Make Attention a Trainable Layer"}
 [Wrap-up]{.kicker}
 

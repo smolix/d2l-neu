@@ -1221,6 +1221,23 @@ range.
 :::
 :::
 
+::: {.slide title="ALiBi Stays Flat Because Far Keys Contribute Nothing"}
+[The experiment]{.kicker}
+
+Share of each head's weight on keys 128 or more back, then perplexity at
+512 with those keys removed:
+
+@!positional-information-alibi-weight-beyond-the-window
+
+@!positional-information-alibi-without-far-keys
+
+::: {.d2l-note}
+Heads 3 and 4 read far keys, as the bias dictates; removing them changes
+nothing. They average broadly, and the last 128 bytes say as much as the
+last 512. Flat perplexity does not mean the model uses the longer context.
+:::
+:::
+
 ::: {.slide title="Only the Slow Pairs Meet New Angles Beyond 128"}
 [Context extension]{.kicker}
 

@@ -574,11 +574,11 @@ disappears first and the outline last.
 
 A sampler visits the levels in the opposite order, and the third row shows
 what that order does. At $t = 1$ the prediction is the blurred average
-boot, 0.3 to 0.4 away from the sample it will become. By $t = 0.6$ it lies within 0.12 to 0.14 of that sample and
-already has its final outline, while the image it is computed from is
-still six parts noise to four parts boot. The remaining steps sharpen the
-edges and add shading and texture. A sample settles its shape early and its
-surface late; Exercise :exref:`ex_image-diffusion-guidance-interval` puts
+boot, 0.3 to 0.4 away from the sample it will become. By $t = 0.6$ it lies
+within 0.12 to 0.14 of that sample and already has its final outline,
+while the image it is computed from is still six parts noise to four parts
+boot. The remaining steps sharpen the edges and add shading and texture. A
+sample settles its shape early and its surface late; Exercise :exref:`ex_image-diffusion-guidance-interval` puts
 this to use.
 
 ### The Moving Average

@@ -610,7 +610,7 @@ for name, row in fd_vp.items():
     print(f'{name:13s}', ''.join(f'{mean_range(v):>11s}' for v in row))
 ```
 
-<!-- WRITER (SMP-7, SMP-9): the second table runs Euler, Heun and the multistep sampler on three grids at about 10, 20, 50 and 100 network evaluations (Heun takes n // 2 + 1 steps: exactly the budget on the linear grid, one evaluation more on the EDM grids, whose first level is finite). "linear" is even steps in t on the training path (sigma_bar from inf through 9 to 0.11), "EDM" is rho = 7 from 80 to 0.002, "EDM, rho = 3" the same ends with less crowding toward the data, which moves steps to high noise. Direct run 2026-11-20, PyTorch (JAX within the ranges except where noted): Euler linear 3.40, 2.06, 1.53, 1.44; Euler EDM 7.19, 3.39, 2.02, 1.73; Euler rho = 3: 9.94, 4.30, 2.20, 1.78; Heun linear 1.48, 1.25, 1.29, 1.36; Heun EDM 6.25 (JAX 6.95), 1.55, 1.44, 1.49; Heun rho = 3: 40.8 (JAX 48.6), 4.97, 1.58, 1.51; multistep linear 2.14, 1.48, 1.40, 1.40; multistep EDM 4.84, 2.15, 1.60, 1.54; multistep rho = 3: 6.76, 2.56, 1.60, 1.53; half-ranges 0.06-0.44. Lessons the runs support: (1) on the linear grid Heun's method reaches the plateau (about 1.3-1.5, the level of the 1,000-step samplers, 1.4-1.5) at 10 to 20 evaluations and the multistep sampler at 20; Euler needs about 50 to 100; (2) both EDM grids lose at 10 and 20 evaluations for every method, and rho = 3, which moves steps from the data end toward high noise, loses more: steps at high noise are the wasted ones, crowding near the data is not what hurts; the remaining rivals for why the paper's grid does not transfer are the training distribution (uniform t on the linear path) and the step counts (Karras et al. use 18 or more Heun steps); "on larger images" should go (review SMP-7c); (3) half of the one-dimensional appendix result transfers (crowding hurts Euler at every budget), Heun's gain from crowding does not; (4) differences of 0.1-0.2 on the plateau are inside the half-ranges and the floor's spread: ties. Heun at 10-20 evaluations scoring slightly below the 1,000-step samplers is such a tie, not a better sampler (its samples are 0.11 RMS from the converged ones at 10 evaluations, see the guided cell). Decision paragraph (SMP-9) can be built on: fix noise and a score, double the evaluations until the score stops moving, read the plateau as model error; here about 20 evaluations of Heun or the multistep sampler on the training grid. -->
+<!-- WRITER (SMP-7, SMP-9): the second table runs Euler, Heun and the multistep sampler on three grids at about 10, 20, 50 and 100 network evaluations (Heun takes b // 2 + 1 steps on the linear grid, exactly b evaluations, and b // 2 steps on the EDM grids, b - 1 evaluations, since their first level is finite; until the run step of 2026-11-20 the EDM rows got b + 1, so the Heun-EDM numbers below are from that older setting; read the captured store). "linear" is even steps in t on the training path (sigma_bar from inf through 9 to 0.11), "EDM" is rho = 7 from 80 to 0.002, "EDM, rho = 3" the same ends with less crowding toward the data, which moves steps to high noise. Direct run 2026-11-20, PyTorch (JAX within the ranges except where noted): Euler linear 3.40, 2.06, 1.53, 1.44; Euler EDM 7.19, 3.39, 2.02, 1.73; Euler rho = 3: 9.94, 4.30, 2.20, 1.78; Heun linear 1.48, 1.25, 1.29, 1.36; Heun EDM 6.25 (JAX 6.95), 1.55, 1.44, 1.49; Heun rho = 3: 40.8 (JAX 48.6), 4.97, 1.58, 1.51; multistep linear 2.14, 1.48, 1.40, 1.40; multistep EDM 4.84, 2.15, 1.60, 1.54; multistep rho = 3: 6.76, 2.56, 1.60, 1.53; half-ranges 0.06-0.44. Lessons the runs support: (1) on the linear grid Heun's method reaches the plateau (about 1.3-1.5, the level of the 1,000-step samplers, 1.4-1.5) at 10 to 20 evaluations and the multistep sampler at 20; Euler needs about 50 to 100; (2) both EDM grids lose at 10 and 20 evaluations for every method, and rho = 3, which moves steps from the data end toward high noise, loses more: steps at high noise are the wasted ones, crowding near the data is not what hurts; the remaining rivals for why the paper's grid does not transfer are the training distribution (uniform t on the linear path) and the step counts (Karras et al. use 18 or more Heun steps); "on larger images" should go (review SMP-7c); (3) half of the one-dimensional appendix result transfers (crowding hurts Euler at every budget), Heun's gain from crowding does not; (4) differences of 0.1-0.2 on the plateau are inside the half-ranges and the floor's spread: ties. Heun at 10-20 evaluations scoring slightly below the 1,000-step samplers is such a tie, not a better sampler (its samples are 0.11 RMS from the converged ones at 10 evaluations, see the guided cell). Decision paragraph (SMP-9) can be built on: fix noise and a score, double the evaluations until the score stops moving, read the plateau as model error; here about 20 evaluations of Heun or the multistep sampler on the training grid. -->
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-6}
 %%tab pytorch
@@ -623,12 +623,12 @@ budgets = (10, 20, 50, 100)  # network evaluations per sample
 def on_grid(solver, grid):  # a sampler (pred, noise, steps)
     return lambda p, z, n: solver(p, z, grid(n))
 
-def steps(s, g, b):  # Heun skips its second slope only into sigma = inf or 0:
+def num_steps(s, g, b):  # Heun skips its second slope only at sigma = inf, 0:
     # b // 2 + 1 steps on the linear grid (b evaluations, the first level is
     # infinite), b // 2 on the EDM grids (b - 1)
     return (b // 2 + (g == 'linear')) if s == 'Heun' else b
 
-fd_ode = {(s, g): [fd_runs(on_grid(solver, grid), steps(s, g, b))
+fd_ode = {(s, g): [fd_runs(on_grid(solver, grid), num_steps(s, g, b))
                    for b in budgets]
           for s, solver in solvers.items() for g, grid in grids.items()}
 print('evaluations            ', ''.join(f'{b:>11d}' for b in budgets))
@@ -647,12 +647,12 @@ budgets = (10, 20, 50, 100)  # network evaluations per sample
 def on_grid(solver, grid):  # a sampler (pred, noise, steps, key)
     return lambda p, z, n, k: solver(p, z, grid(n))
 
-def steps(s, g, b):  # Heun skips its second slope only into sigma = inf or 0:
+def num_steps(s, g, b):  # Heun skips its second slope only at sigma = inf, 0:
     # b // 2 + 1 steps on the linear grid (b evaluations, the first level is
     # infinite), b // 2 on the EDM grids (b - 1)
     return (b // 2 + (g == 'linear')) if s == 'Heun' else b
 
-fd_ode = {(s, g): [fd_runs(on_grid(solver, grid), steps(s, g, b))
+fd_ode = {(s, g): [fd_runs(on_grid(solver, grid), num_steps(s, g, b))
                    for b in budgets]
           for s, solver in solvers.items() for g, grid in grids.items()}
 print('evaluations            ', ''.join(f'{b:>11d}' for b in budgets))

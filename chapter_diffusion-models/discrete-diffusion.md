@@ -1059,8 +1059,9 @@ d2l.show_gray(z4[:48], 6, 8, scale=0.8);
 
 No garment survives. The first jump draws its pixels independently from
 predictions for an all-mask image, which know only where garments tend to
-be, and every later jump conditions on this noise. What remains is the
-outline of an average garment filled with texture.
+be, and every later jump conditions on this noise. What remains is a
+garment's outline, more often an average garment's than any particular
+one's, filled with texture.
 
 To measure what four steps lose, we count *speckles*, pixels that differ
 from all four of their neighbors, in 1,000 images of each kind. A third

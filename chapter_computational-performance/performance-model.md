@@ -298,8 +298,8 @@ because the first call compiles it. A step is then one call. Without reads
 it takes about 0.1 ms, the host time of that call, which is longer than the
 roughly 26 µs that the product needs on the tf32 tensor cores, JAX's default
 for fp32 products on this GPU. Each read adds a few tenths of a millisecond,
-more in a run on a busy host than in one on a quiet host. Since
-$\min(h, t_\textrm{dev})$ is at most 26 µs, almost all of that is the round
+an amount that changes from one run to the next with the load on the host.
+Since $\min(h, t_\textrm{dev})$ is at most 26 µs, almost all of that is the round
 trip $\sigma$ that returns the value to Python, and the reads make the loop
 more than three times as slow.
 :end_tab:

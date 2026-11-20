@@ -14,12 +14,12 @@
       "outputs": []
     },
     "compilation-compute-graphs-and-compilation-1": {
-      "code_fingerprint": "sha256:edc30466c6374c05dfd35e0c6f808cbdffa25197bce16ed9471744a194108df3",
+      "code_fingerprint": "sha256:0424e27e4b1cc582cc93c40fae74c44caa61276cbeeda6760c8bf58eaaf92906",
       "kind": "text",
       "outputs": []
     },
     "compilation-capture-two-philosophies-1": {
-      "code_fingerprint": "sha256:f987ec1bf35a84d5571fce51fa6d300b24a5e7f50b7d14809230118b7447866f",
+      "code_fingerprint": "sha256:2ea7f36a4e7541cd096fed44ad0f081c194a3532ee3b60aecfcadd0dbb605771",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +30,7 @@
       ]
     },
     "compilation-capture-two-philosophies-2": {
-      "code_fingerprint": "sha256:6832451d485ddd9c6ebb9a6a859844cdf966fa126ee6c0b54b082574df4bc652",
+      "code_fingerprint": "sha256:b836d826a3dfd7e12a7078e28adc45edd2f05e94b8eaba6490a80ba65cf0a97d",
       "kind": "text",
       "outputs": [
         {
@@ -41,29 +41,29 @@
       ]
     },
     "compilation-what-the-compiler-does-fusion": {
-      "code_fingerprint": "sha256:193d26ac8f98820c50813e209daf93377eef1e491899b0505ea1a89f3e74ed6d",
+      "code_fingerprint": "sha256:600a8d2f63aff65ebff27e9f3a2a09e202705044b4144f276ceecdff754fad0d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.55 ms/call, 744 GB/s\ncompiled: 0.14 ms/call, 885 GB/s\n"
+          "text": "eager: 1.25 ms/call, 920 GB/s\ncompiled: 0.15 ms/call, 878 GB/s\n"
         }
       ]
     },
     "compilation-compiling-a-training-step-1": {
-      "code_fingerprint": "sha256:ce2da930194999dbdd56ee65e92e3f099f2a66423820a3d2381f75b01c870d55",
+      "code_fingerprint": "sha256:35cc0aa4cd0482468097c15a6144f15b0e96811a63ba10dda337d99a621af320",
       "kind": "text",
       "outputs": []
     },
     "compilation-whole-step-compilation-measured": {
-      "code_fingerprint": "sha256:479829bd201896158cda573b239f05aaaab2d3ab208897c8adae148cda184c08",
+      "code_fingerprint": "sha256:75ea02f6a3884f61227de39bdbb09a345ebbb65ba47d8ff33c4b651ec34103e2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 0.6 s\neager: 3.17 ms, compiled: 2.08 ms\nbreak-even: about 500 steps\n"
+          "text": "first call: 0.6 s\neager: 2.93 ms, compiled: 2.08 ms\nbreak-even: about 700 steps\n"
         },
         {
           "type": "stream",
@@ -73,34 +73,34 @@
       ]
     },
     "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:d5c5ca4e54d380dd62bb59a7127325edb874d346fa3c44264166e1f273d11d3f",
+      "code_fingerprint": "sha256:779c0ca7a481b3adb1bfcb3c3ae3f9e9d3fd1c07c5b46b16a4a2f0b020fa051a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 2.29 ms/call, 19.1 µs per operation\n"
+          "text": "eager: 2.14 ms/call, 17.8 µs per operation\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "compiled: 2.15 ms/call, 18.0 µs per operation\nreduce-overhead: 0.31 ms/call, 2.6 µs per operation\n"
+          "text": "compiled: 2.02 ms/call, 16.8 µs per operation\nreduce-overhead: 0.28 ms/call, 2.4 µs per operation\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 2.15 ms per step, device busy 0.30 ms (14%), matrix products 55%\n  0.17 ms  55%  Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_\n  0.08 ms  25%  splitKreduce_kernel<32, 16, int, float, float, float\n  0.06 ms  20%  triton_poi_fused_tanh_0\n"
+          "text": "wall clock 2.02 ms per step, device busy 0.31 ms (15%), matrix products 55%\n  0.17 ms  55%  Kernel2<cutlass_80_tensorop_s1688gemm_64x64_16x6_tn_\n  0.08 ms  25%  splitKreduce_kernel<32, 16, int, float, float, float\n  0.06 ms  20%  triton_poi_fused_tanh_0\n"
         }
       ]
     },
     "compilation-replaying-the-training-step": {
-      "code_fingerprint": "sha256:886e35b1ca928c5e02373d8f31ad0cbb2a50ee90cfff7b1bde904d6411b8f446",
+      "code_fingerprint": "sha256:4d3b1e096b9a02de125f3e708ab0bf4575fa3e39de984fb78b9b14c228acadef",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training step, reduce-overhead: 0.81 ms/call, GPU busy 0.24 ms\n"
+          "text": "training step, reduce-overhead: 0.71 ms/call, GPU busy 0.25 ms\n"
         }
       ]
     }

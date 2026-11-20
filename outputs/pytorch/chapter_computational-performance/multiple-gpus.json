@@ -14,22 +14,22 @@
       "outputs": []
     },
     "multiple-gpus-multi-gpu-from-first-principles-1": {
-      "code_fingerprint": "sha256:17230bd5c3101eca941c721582a1f355c3ebddbded3c86e6b1efa107ece4931e",
+      "code_fingerprint": "sha256:741eba73fa29db372355d7a90343e65dbf03cf8752ddab3f6bd9cc4294073cd3",
       "kind": "text",
       "outputs": []
     },
     "multiple-gpus-multi-gpu-from-first-principles-2": {
-      "code_fingerprint": "sha256:b138ecfb1913b0e1bde804d3ae4348885f68f6a5e8495c022692a239b1020e9f",
+      "code_fingerprint": "sha256:64457587fb1fd9721e9d40163656f6811ee7848b9a948a452ac9a85a29129023",
       "kind": "text",
       "outputs": []
     },
     "multiple-gpus-data-parallelism-by-hand-1": {
-      "code_fingerprint": "sha256:2007b6393b0856fd9ab2d863ee5aa18ab8e3930c050b513a23b08653f305c1ea",
+      "code_fingerprint": "sha256:547065bbc6ef9e36b642de5cabf829afe8fa9b3052936c57907f38c705d856ea",
       "kind": "text",
       "outputs": []
     },
     "multiple-gpus-the-model-and-the-data-1": {
-      "code_fingerprint": "sha256:17a58db717b321098ea0b82147da35f08e34cdebbf4aa1754e1bb2fee884d6a4",
+      "code_fingerprint": "sha256:93f3b83e52371e1d6d5b6953f72d3f6a9680cb7c663c6cbfd667ea6421841824",
       "kind": "text",
       "outputs": [
         {
@@ -40,12 +40,12 @@
       ]
     },
     "multiple-gpus-data-parallelism-by-hand-2": {
-      "code_fingerprint": "sha256:e5c17285ecb92749c80d5847b831a1585602278f292abc07bcfa6b7ebbea726e",
+      "code_fingerprint": "sha256:ffda840811941587f9405001e1200dc0183ecec3ac169c39f3024148ac11b956",
       "kind": "text",
       "outputs": []
     },
     "multiple-gpus-data-parallelism-by-hand-3": {
-      "code_fingerprint": "sha256:d66b86c423db95da22eae7147910333ddd0b881ff515021b413e0a34efa250c5",
+      "code_fingerprint": "sha256:e66cc850ce63ec9461b3cb347df53a1f5af3e149d70532ee6e8791042625c03b",
       "kind": "text",
       "outputs": [
         {
@@ -56,28 +56,28 @@
       ]
     },
     "multiple-gpus-data-parallelism-by-hand-4": {
-      "code_fingerprint": "sha256:3d938c2657e29bcffb8757cfd5b2f8d5baca405b00961e6e2289bc832bc919d4",
+      "code_fingerprint": "sha256:55d193a3640f7350d831414f2140f7cc2f432901af0d5fba3ebb3c986b2485c4",
       "kind": "text",
       "outputs": []
     },
     "multiple-gpus-data-parallelism-by-hand-7": {
-      "code_fingerprint": "sha256:7082745f06b224447dfb3059b531bbef04b5771ef537a7ba88d7cd49420aa221",
+      "code_fingerprint": "sha256:0ad4604d2eb328a304dfdff2967802d6df617b2a82f5e13ebbe05072726dc543",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 6.9e-02, largest difference 4.1e-08\n"
+          "text": "largest update 1.3e-01, largest difference 3.7e-08\n"
         }
       ]
     },
     "multiple-gpus-ring-allreduce-1": {
-      "code_fingerprint": "sha256:b4829b4d5c1b399ddc68683e2cb6f014501430e203ecf39f86b1892e341ea81d",
+      "code_fingerprint": "sha256:c16e2a18728d4929c0bbdd0bf238e38b5e5f686412090927e31b67220417d9ea",
       "kind": "text",
       "outputs": []
     },
     "multiple-gpus-ring-allreduce-2": {
-      "code_fingerprint": "sha256:bbd5eff95cf5986c0137e8af09be4625605eae61fc980423289b2afc6db3ed4b",
+      "code_fingerprint": "sha256:40be4364aa1f08c90653150c7a788311ec5aef9931bcfa586e82246f06d36ad2",
       "kind": "text",
       "outputs": [
         {
@@ -88,7 +88,7 @@
       ]
     },
     "multiple-gpus-the-accounting": {
-      "code_fingerprint": "sha256:4fe56e1b6581fc139100c307bc6b73873486d37d8a44947349211f443c310941",
+      "code_fingerprint": "sha256:2f8c610748c8c3cca55d0a5e05e4488aae265121f81bc73549290bc8b7a2ea30",
       "kind": "text",
       "outputs": [
         {
@@ -99,35 +99,35 @@
       ]
     },
     "multiple-gpus-latency-and-bandwidth-of-the-allreduce-1": {
-      "code_fingerprint": "sha256:e41b67f42f78d890cf802eae7116d36368a453cbd413228e6eda008cd931c261",
+      "code_fingerprint": "sha256:aff4f8c27621b77b27a659b3711935d7744c66adefd2a614944f1627bce2871b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "separately:  579 us measured,  597 us predicted\nat once   :   81 us measured,   83 us predicted\n"
+          "text": "separately:  591 us measured,  593 us predicted\nat once   :   81 us measured,   83 us predicted\n"
         }
       ]
     },
     "multiple-gpus-lenet-on-one-and-two-gpus-2": {
-      "code_fingerprint": "sha256:892b7ec6827fbe8d3068d2f3d78d482df18e96b7ef7057c9b2910f2d3799472e",
+      "code_fingerprint": "sha256:698e9a776a0fa2f6402c7fabe8e77d4be92c98a9d464b22611fcae7376f74a52",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 2.79 ms per step, device busy 0.30 ms (11%), matrix products 43%\n  0.05 ms  16%  Kernel<cutlass_tensorop_s1688dgrad_optimized_tf32_12\n  0.04 ms  12%  implicit_convolve_sgemm<float, float, 128, 5, 5, 3, \n  0.03 ms  10%  wgrad_alg0_engine<float, 128, 5, 5, 3, 3, 3, false, \n  0.03 ms   9%  avg_pool2d_backward_out_cuda_frame<float, float, int\n"
+          "text": "wall clock 2.72 ms per step, device busy 0.30 ms (11%), matrix products 43%\n  0.05 ms  16%  Kernel<cutlass_tensorop_s1688dgrad_optimized_tf32_12\n  0.04 ms  12%  implicit_convolve_sgemm<float, float, 128, 5, 5, 3, \n  0.03 ms  10%  wgrad_alg0_engine<float, 128, 5, 5, 3, 3, 3, false, \n  0.03 ms   9%  avg_pool2d_backward_out_cuda_frame<float, float, int\n"
         }
       ]
     },
     "multiple-gpus-lenet-on-one-and-two-gpus-1": {
-      "code_fingerprint": "sha256:74418d40e8ac6af70538f26f10dd4dafb20b47c0c21f7456374c3e3c65ee39f6",
+      "code_fingerprint": "sha256:d093bcdf22e5fa8f9c3cfa7e8c248e6e9726e6f7ee999a3ea8f8d1ee0ddbe6c5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 256 examples each: 2.80 ms\n"
+          "text": "1 GPU(s), 256 examples each: 2.78 ms\n"
         },
         {
           "type": "stream",
@@ -137,49 +137,49 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s), 128 examples each: 5.47 ms\n"
+          "text": "2 GPU(s), 128 examples each: 5.49 ms\n"
         }
       ]
     },
     "multiple-gpus-data-parallelism-by-hand-5": {
-      "code_fingerprint": "sha256:e8e4286ee1c5366c0e5372dfe56eebc33b2ddb9616b93d802878545efea303fa",
+      "code_fingerprint": "sha256:c16de4d0edb9bc165439ab5ec2f986dbfed0a1d0a3676c13ee3f3deebfd427a6",
       "kind": "text",
       "outputs": []
     },
     "multiple-gpus-data-parallelism-by-hand-6": {
-      "code_fingerprint": "sha256:83d144875a527de895d96c313acb48661952b2dbedd141ceee46aec23c284fb6",
+      "code_fingerprint": "sha256:b4fbd03246900756be4862bc14e70864bbe217d213f2428c743600ce0b4d600e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s): 2.78 ms per step, test accuracy 0.85\n"
+          "text": "1 GPU(s): 2.77 ms per step, test accuracy 0.81\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPU(s): 5.61 ms per step, test accuracy 0.85\n2 GPUs predicted: 2.79 ms per step by eq_dp_cost, 5.64 ms with one launcher\n"
+          "text": "2 GPU(s): 5.57 ms per step, test accuracy 0.82\n2 GPUs predicted: 2.79 ms per step by eq_dp_cost, 5.63 ms with one launcher\n"
         }
       ]
     },
     "multiple-gpus-larger-minibatches": {
-      "code_fingerprint": "sha256:1d12adcd03c02b7602c39ca96ba03af159b9c0aa7bd486b36959734d4212d279",
+      "code_fingerprint": "sha256:13b3fd49677e8bca696b1298f94766d561f014c82df9a38b80551cdc6d248583",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b =   256: 1 GPU   2.76 ms (device busy  0.30 ms), 2 GPUs   5.42 ms\n           speedup 0.99 predicted, 1.02 measured (windows 1.01 to 1.07)\n"
+          "text": "b =   256: 1 GPU   2.77 ms (device busy  0.30 ms), 2 GPUs   5.71 ms\n           speedup 0.99 predicted, 0.97 measured (windows 0.95 to 0.98)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b =  4096: 1 GPU   3.03 ms (device busy  3.01 ms), 2 GPUs   5.46 ms\n           speedup 1.08 predicted, 1.11 measured (windows 1.07 to 1.12)\n"
+          "text": "b =  4096: 1 GPU   3.02 ms (device busy  3.01 ms), 2 GPUs   6.05 ms\n           speedup 1.07 predicted, 1.00 measured (windows 1.00 to 1.00)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b = 32768: 1 GPU  25.28 ms (device busy 25.38 ms), 2 GPUs  25.55 ms\n           speedup 1.99 predicted, 1.98 measured (windows 1.98 to 1.98)\n"
+          "text": "b = 32768: 1 GPU  25.27 ms (device busy 25.38 ms), 2 GPUs  25.52 ms\n           speedup 1.98 predicted, 1.98 measured (windows 1.98 to 1.98)\n"
         }
       ]
     }

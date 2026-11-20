@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c4e8797bf47acb159080a6b669f46b58d1c949a0bda4e030b2f6e9ba68dfc5e2",
+    "d2l_lib_fingerprint": "sha256:ee0dc78a116c1e58a0f5d1dcf1cc619095bbebaf9ba36a857756960c04c8b216",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,12 +14,12 @@
       "outputs": []
     },
     "memory-precision-memory-and-precision-1": {
-      "code_fingerprint": "sha256:34c0724d2800623cd9d66a0beab5e95da4228d5264ae82d7dd89bc7fce5b773a",
+      "code_fingerprint": "sha256:61469613eff46e2b0f2192871291e138c860e2fea1f53d1decb25439814a7fb7",
       "kind": "text",
       "outputs": []
     },
     "memory-precision-memory-per-parameter": {
-      "code_fingerprint": "sha256:2edd908ddb72d3c52011727407075d3749c2051a1e110a66165db0f6e9053586",
+      "code_fingerprint": "sha256:18d6d5108b2047afe4cc9f4f396faca7159eeaabd06bdda809d6c92249910245",
       "kind": "text",
       "outputs": [
         {
@@ -30,12 +30,12 @@
       ]
     },
     "memory-precision-memory-per-token-1": {
-      "code_fingerprint": "sha256:def1eba0d2f90b899f802fb7a6a5a9b7e0f73177aa60c20036febe35c41e7d4d",
+      "code_fingerprint": "sha256:c2b25c3b1353d4639f2cd69ace96d80087977d1753b0987740cfdb443da04f60",
       "kind": "text",
       "outputs": []
     },
     "memory-precision-memory-per-token-2": {
-      "code_fingerprint": "sha256:5cc14bdfa2ae1b4650b9970edc94182e9befe753623dd7ad5c3183928b4ccf7c",
+      "code_fingerprint": "sha256:401db874d3b033c041fd2556257e3f59b29ea5856c81b83bb9f50cb39cdd2bd3",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +46,7 @@
       ]
     },
     "memory-precision-measuring-memory-1": {
-      "code_fingerprint": "sha256:7c488cdabd4c3647b4c199dea7c80953c7a7e17eb656381ec51fbad253f8fef5",
+      "code_fingerprint": "sha256:e2b1d885eb2152e36e0c8e79e884c89ad7b6dd2cd32f29b2f6843b2d54d809cf",
       "kind": "text",
       "outputs": [
         {
@@ -62,12 +62,12 @@
       ]
     },
     "memory-precision-measured-peak-memory-1": {
-      "code_fingerprint": "sha256:70a0dfbb276455e2783302595bd5e335c6d8173a7487d73df7638724c661fb50",
+      "code_fingerprint": "sha256:136fc60d98ae32e08add520629c244fe504157eef3b5d74d85dca3ae84c8f098",
       "kind": "text",
       "outputs": []
     },
     "memory-precision-measuring-memory-2": {
-      "code_fingerprint": "sha256:052d4c282f1076db89d3058f34b80d44306586525685821c427899de15ce9d12",
+      "code_fingerprint": "sha256:59c570092fb9ea2af88b4ee5a4a26f30d8f36236280c6262a45094639ddb494f",
       "kind": "asset",
       "outputs": [
         {
@@ -75,12 +75,12 @@
           "mime": "image/svg+xml",
           "asset": "memory-precision/memory-precision-measuring-memory-2-1.svg",
           "bytes": 35156,
-          "sha256": "sha256:975b62269ef761953a38d6558945f57bacca214e93986f10c3809caee86ee5bc"
+          "sha256": "sha256:5ab1cc37632c48e6418c10f45bb76c70026017b6d8901295e0b7e472d0ba59ba"
         }
       ]
     },
     "memory-precision-mixed-precision-1": {
-      "code_fingerprint": "sha256:241e538d34ad88d1cf01a4bae0c3cc5a7daf263f013077386f1de4f9298fc328",
+      "code_fingerprint": "sha256:c64413f6a1ba7204b1ad1ca8ab1136b735022e106f3f04a879a21e3001e24d4a",
       "kind": "text",
       "outputs": [
         {
@@ -91,12 +91,12 @@
       ]
     },
     "memory-precision-mixed-precision-2": {
-      "code_fingerprint": "sha256:7015d7f6ad99dfbcd2fd6258b09600a3e0bf831bc410890fcf66a0707e0dfc6f",
+      "code_fingerprint": "sha256:6b88884eb7eb871891d3b74e8884ca4266dce8a4593da35688f5e95a1e709f13",
       "kind": "text",
       "outputs": []
     },
     "memory-precision-mixed-precision-3": {
-      "code_fingerprint": "sha256:11ca588fa5746d78b09e23807217ab0d26ebec2d78d134099ec0241ebbbe8825",
+      "code_fingerprint": "sha256:0e5bae85bf298c50052a72907b36d1e80cb121d8663b51b5f1b16af7991316db",
       "kind": "text",
       "outputs": [
         {
@@ -107,23 +107,23 @@
       ]
     },
     "memory-precision-mixed-precision": {
-      "code_fingerprint": "sha256:f4d2d3a26fd912a42bc0ef542bf765006097bcfddba3d6031b69a3058f96fbff",
+      "code_fingerprint": "sha256:83730c75b5938b68453da21a74b71dd0ebcf40452b8e64099eb544c7610e0ca4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 23.35 ms,  47 TFLOP/s\n"
+          "text": "fp32: 23.15 ms,  48 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 15.22 ms,  72 TFLOP/s\nbf16:  9.68 ms, 114 TFLOP/s\n"
+          "text": "tf32: 15.01 ms,  73 TFLOP/s\nbf16:  9.68 ms, 114 TFLOP/s\n"
         }
       ]
     },
     "memory-precision-activation-checkpointing-1": {
-      "code_fingerprint": "sha256:c83d707c33bcf3c27c8c6506e4cc3bbfb514d85a3503ae600b3c8a8670eb6d86",
+      "code_fingerprint": "sha256:c6d6e2210d52c1a3c2d1a4e70786f7a9e6e3deb5440c7d85ad14ca60289fe0a6",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +134,7 @@
       ]
     },
     "memory-precision-activation-checkpointing": {
-      "code_fingerprint": "sha256:d2d96eec2304c57e76a260cfc50b823f363793f865b765335c711586b3c76ea2",
+      "code_fingerprint": "sha256:116648cbf9ff60b28af3d61ffc5ffdd6c67105c60ae4e8ae581caf5b418a0322",
       "kind": "text",
       "outputs": [
         {
@@ -145,23 +145,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True : stores   40 KiB per token, peak 0.42 GiB, 58 ms per step\n"
+          "text": "checkpointing=True : stores   40 KiB per token, peak 0.42 GiB, 59 ms per step\n"
         }
       ]
     },
     "memory-precision-accumulated-step": {
-      "code_fingerprint": "sha256:aabe2d71c551e1e49a30dcf3e9135f3573695716ad50af33ab2f8a4ed57608fe",
+      "code_fingerprint": "sha256:35efe077e47644b9ae17e9845b5f75174670f3b6fe3deb8373abac5f78f85ded",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 x 4096 tokens: peak 3.53 GiB above the weights, 83 ms per step (83 to 83), device busy 83 ms\n"
+          "text": "1 x 4096 tokens: peak 3.53 GiB above the weights, 83 ms per step (83 to 83), device busy 83 ms\n                matrix products 69 ms, other kernels 13 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4 x 1024 tokens: peak 1.92 GiB above the weights, 99 ms per step (99 to 99), device busy 99 ms\n"
+          "text": "4 x 1024 tokens: peak 1.92 GiB above the weights, 99 ms per step (99 to 99), device busy 99 ms\n                matrix products 74 ms, other kernels 25 ms\n"
         }
       ]
     }

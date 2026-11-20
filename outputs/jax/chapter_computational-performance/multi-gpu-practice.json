@@ -51,17 +51,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 2.6e-02\nlargest difference from one GPU on all 256: 9.7e-05\nlargest difference from one GPU on two accumulated halves: 1.2e-02\n"
+          "text": "largest update 2.4e-02\nlargest difference from one GPU on all 256: 2.5e-05\nlargest difference from one GPU on two accumulated halves: 1.7e-02\n"
         }
       ]
     },
     "multi-gpu-practice-a-one-step-check-1": {
-      "code_fingerprint": "sha256:d2fe1c7653069d9e14a0a18ec6e5c6bd5be5e938e944acef0da4c8102ddc428b",
+      "code_fingerprint": "sha256:1076e8334cd28965186328b65d45acc403d5e5e6d50398d8918a85380f23ea04",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3": {
-      "code_fingerprint": "sha256:c08bbcc22440f71292489d176a18c01e793513394321af12c82630c7c09bab75",
+      "code_fingerprint": "sha256:a8c92f070288a01431f1118510ce891994370a6532b61bad2b8a709947691bd8",
       "kind": "text",
       "outputs": [
         {
@@ -72,68 +72,68 @@
       ]
     },
     "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-4": {
-      "code_fingerprint": "sha256:089d683bb2f98402b574581c97dafefeaaa9592d7ca2838ff50659843ba8e97c",
+      "code_fingerprint": "sha256:2b21ecd258e219f9cd3746d32137edeaec03efb96af47b506c9a3b062b84922f",
       "kind": "text",
       "outputs": []
     },
-    "multi-gpu-practice-ddp-really-run-3": {
-      "code_fingerprint": "sha256:0ab7c135f4cd51d5b301f67c4a8cef82a2257264ab59b3ad36df36e5b135b8d7",
+    "multi-gpu-practice-communication-predicted-and-measured-1": {
+      "code_fingerprint": "sha256:8572fffcbe0be3ad8d0d15d95e80012f0381aa9cab4a44850687502848a1ffb4",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-ddp-really-run-5": {
+      "code_fingerprint": "sha256:6e963bf5ce3da83260a149c48ad1e6bdf666ff1284a11a30bb63f2cac6c04f64",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s):  2554 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4300 examples/s, speedup 1.68, efficiency 84%\n4 GPU(s):  7863 examples/s, speedup 3.08, efficiency 77%\n"
+          "text": "bus bandwidth = 2.43 GB/s (beta_link = 0.41 ns/byte)\nk=2: exposed 18 ms without overlap (1.0 S beta_link), 8 ms with full overlap (last bucket)\nk=4: exposed 28 ms without overlap (1.5 S beta_link), 12 ms with full overlap (last bucket)\n"
+        }
+      ]
+    },
+    "multi-gpu-practice-ddp-really-run-3": {
+      "code_fingerprint": "sha256:7b33e77d0e32f33988eb85bda478d76464385583c9c4b88566789385f1e66173",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1 GPU(s):  2555 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4275 examples/s, speedup 1.67, efficiency 84%\n          predicted 84% without overlap, 93% with full overlap; exposed 20 ms\n4 GPU(s):  7859 examples/s, speedup 3.08, efficiency 77%\n          predicted 78% without overlap, 90% with full overlap; exposed 30 ms\n"
         }
       ]
     },
     "multi-gpu-practice-ddp-really-run-4": {
-      "code_fingerprint": "sha256:1b08a8e9e38ba2c5cebdf02ad36eb5f347ed5fc9b6ae2b3e50759a0d2d70c20c",
+      "code_fingerprint": "sha256:31e16835d23db8e34799393211d6b3b74de05b889c5ea0904f78d4b7ce572fa5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.71, efficiency 86%\n4 GPU(s), 128 examples each: speedup 2.56, efficiency 64%\n"
+          "text": "1 GPU(s), 512 examples each: speedup 1.00, efficiency 100%\n2 GPU(s), 256 examples each: speedup 1.70, efficiency 85%\n4 GPU(s), 128 examples each: speedup 2.55, efficiency 64%\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
-          "bytes": 25898,
-          "sha256": "sha256:f9093298157da7224b4485e53c1eab94bca0a04042dd225ea18d0a72c55d1a0c"
-        }
-      ]
-    },
-    "multi-gpu-practice-communication-predicted-and-measured-1": {
-      "code_fingerprint": "sha256:6f12288c6cd6d1a62fe8976222f7ebbf66ba420430022b4886ace7d2b2e4cdca",
-      "kind": "text",
-      "outputs": []
-    },
-    "multi-gpu-practice-ddp-really-run-5": {
-      "code_fingerprint": "sha256:b907052bbeab8b7c4ecbec12b7d7e4b0f5e9b7038708ab634b800cbcfda48d19",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "bus bandwidth = 2.43 GB/s (beta_link = 0.41 ns/byte)\nk=2: predicted 1.0 S beta_link = 18 ms, measured exposed 19 ms per step\nk=4: predicted 1.5 S beta_link = 28 ms, measured exposed 30 ms per step\n"
+          "bytes": 25896,
+          "sha256": "sha256:bbdea3945cf85ecb972ebbb04396ffcb2124e131f3650ff17c58c9e24c23b636"
         }
       ]
     },
     "multi-gpu-practice-predicted-and-measured-communication-2": {
-      "code_fingerprint": "sha256:b511d035e3ee5a138d951e42d9a2db3f3dac7f412b0b61f057cbbcff35403100",
+      "code_fingerprint": "sha256:73d608e1b5ac7cfa6d748fa96c33f487344eea5efa3110018ddd0ddf271674ba",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-predicted-and-measured-communication-1": {
-      "code_fingerprint": "sha256:e7af5ca9b13aabe58f4680e438c253f07f5e4640751bc5fba5b352d9078ddfaa",
+      "code_fingerprint": "sha256:95871d27cdae9b8fbb0be8b394a0b0cf6b3b2f273c1d7e52e1bc797ca88cc1fd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU:                         100.3 ms per step; GPU 0 computes  100.0 ms, communicates   0.0 ms\n"
+          "text": "1 GPU:                         100.3 ms per step; GPU 0 computes  100.1 ms, communicates   0.0 ms\n"
         },
         {
           "type": "stream",
@@ -143,18 +143,18 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPUs:                        119.2 ms per step; GPU 0 computes  107.9 ms, communicates  21.1 ms\n"
+          "text": "2 GPUs:                        119.1 ms per step; GPU 0 computes  107.8 ms, communicates  21.0 ms\n"
         }
       ]
     },
     "multi-gpu-practice-ddp-really-run-6": {
-      "code_fingerprint": "sha256:bb1d27d3b9ca13d387b18901560ee230c0cf4b1f9ba80c7389c2bd3f888d91c9",
+      "code_fingerprint": "sha256:b37cf71130ed771a885d329bc980de8953eb522e6349536fdaa06c6ff360bdf5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bus bandwidth 2.43 GB/s by default, 10.97 GB/s with the copy engines (4.5x)\n"
+          "text": "bus bandwidth 2.43 GB/s by default, 10.98 GB/s with the copy engines (4.5x)\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:2077318596b41bf1813a1bb5b52556066a263b07f566c5c23ddfe411f7c8a54f",
+    "d2l_lib_fingerprint": "sha256:36b12990a2eda436469b64db9ee305d4f258fcc8983fb819ff89cce1a0055c8c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,8 +13,13 @@
       "kind": "text",
       "outputs": []
     },
+    "memory-precision-memory-and-precision-1": {
+      "code_fingerprint": "sha256:ae8cb4a5b5948a602047ffae3011385efbf7bc1f9c273b6873077c24e01faa95",
+      "kind": "text",
+      "outputs": []
+    },
     "memory-precision-memory-per-parameter": {
-      "code_fingerprint": "sha256:e6c98cfcc3c0541565d687cd2d6bb064ab1572320c7060f9b7688415c360a8ac",
+      "code_fingerprint": "sha256:d9ea898e7a753dc9ec2551df1a1bff5b298d77164b7bf54affe00bc6e936fae7",
       "kind": "text",
       "outputs": [
         {
@@ -25,12 +30,12 @@
       ]
     },
     "memory-precision-memory-per-token-1": {
-      "code_fingerprint": "sha256:82224e864fbe35a30d8a6c4707e90fcbc61eea1c6fa28ffcb40afd18147b62bd",
+      "code_fingerprint": "sha256:242ca9bd96bad289794b73dce3ab51047d8dafc6cb99d5392f0e9051fa93022f",
       "kind": "text",
       "outputs": []
     },
     "memory-precision-memory-per-token-2": {
-      "code_fingerprint": "sha256:2d8e3abf9919be3a26530e18189a5ce06f1f5b15395f4d83d5924ea60c5b971f",
+      "code_fingerprint": "sha256:80dbdec1c477539c2a115291d7f41f2531b1c5cecdb56233d13e7202aed5551a",
       "kind": "text",
       "outputs": [
         {
@@ -41,7 +46,7 @@
       ]
     },
     "memory-precision-measuring-memory-3": {
-      "code_fingerprint": "sha256:324075972e9248dc7913a3ce8a979a7551aaeb1b101a67b01284e8669602aafd",
+      "code_fingerprint": "sha256:929339db3469ccf37cc3e0d3f061b1ac8f5ae854dd9c814179bf2ee6f19ce886",
       "kind": "text",
       "outputs": [
         {
@@ -67,7 +72,7 @@
       ]
     },
     "memory-precision-mixed-precision-1": {
-      "code_fingerprint": "sha256:e2403fe6656ec054104495a13faa649dda9e7bc898cef56a4390afcabddac1dd",
+      "code_fingerprint": "sha256:5d36f391dfa1d5e13e1a2fd23807e2f915e3a5799bad6828cb78f6f8e83cdeeb",
       "kind": "text",
       "outputs": [
         {
@@ -78,12 +83,12 @@
       ]
     },
     "memory-precision-mixed-precision-2": {
-      "code_fingerprint": "sha256:fefd717adfe735a4204d6209b14ff2ea0bc55d1b211fff1b9e9233c5a26c6ea8",
+      "code_fingerprint": "sha256:3f1eb7bf8017df5530149cea54943f360f897341d8147c3bd8dfeae3c1debdf3",
       "kind": "text",
       "outputs": []
     },
     "memory-precision-mixed-precision-3": {
-      "code_fingerprint": "sha256:45f7d41bf31ee97948539adf8571be6f3cf9be5821919f7a5ffe59b2ae3897d7",
+      "code_fingerprint": "sha256:ec247774129b7bc4aa889c494e819154b00385e978147677e5c2d25a3b274230",
       "kind": "text",
       "outputs": [
         {
@@ -94,28 +99,28 @@
       ]
     },
     "memory-precision-mixed-precision": {
-      "code_fingerprint": "sha256:b6440497285f818a53a05be87b37ff273920342d22430c232abf32a887f54373",
+      "code_fingerprint": "sha256:da525e5112e119a74e4071d025a46b848d51c1952b49272afb18f51fef74a790",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 21.92 ms,  50 TFLOP/s\n"
+          "text": "fp32: 21.72 ms,  51 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 14.40 ms,  76 TFLOP/s\n"
+          "text": "tf32: 14.30 ms,  77 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16:  8.34 ms, 132 TFLOP/s\n"
+          "text": "bf16:  8.28 ms, 133 TFLOP/s\n"
         }
       ]
     },
     "memory-precision-activation-checkpointing-1": {
-      "code_fingerprint": "sha256:e33eaeb47d1ba175a3874a5e9494010125a627a203679927209865c4cbbcc974",
+      "code_fingerprint": "sha256:c85e07a8f1422624df94b9698f0e5d84351cae3e972674fc25ac9efd7e8c331e",
       "kind": "text",
       "outputs": [
         {
@@ -126,34 +131,34 @@
       ]
     },
     "memory-precision-activation-checkpointing": {
-      "code_fingerprint": "sha256:d7449a9dfb268930626413f2e6c98485a20a28cba1872f6fd3391fccf4a2a415",
+      "code_fingerprint": "sha256:6cfdb232d0d48413c1fc054c9353c07bea1263fe2301da575a4f2da86c9b9855",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False: stores  936 KiB per token, peak 0.78 GiB, 46 ms per step\n"
+          "text": "checkpointing=False: stores  936 KiB per token, peak 0.78 GiB, 45 ms per step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True : stores   40 KiB per token, peak 0.45 GiB, 58 ms per step\n"
+          "text": "checkpointing=True : stores   40 KiB per token, peak 0.45 GiB, 57 ms per step\n"
         }
       ]
     },
     "memory-precision-accumulated-step": {
-      "code_fingerprint": "sha256:cee2ecc3a9ccf78abaf1bfca15067c983ba5d25b716e256d5d674bc3596f7b1d",
+      "code_fingerprint": "sha256:3821722113c42d0d40e29bd4f9474bbc65cc851a7efbe436ca79f1e88c6bfe8e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 x 4096 tokens: peak 3.09 GiB above the weights, 80 ms per step (80 to 80), device busy 80 ms\n"
+          "text": "1 x 4096 tokens: peak 3.09 GiB above the weights, 80 ms per step (80 to 80), device busy 80 ms\n                matrix products 67 ms, other kernels 13 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4 x 1024 tokens: peak 1.43 GiB above the weights, 90 ms per step (90 to 90), device busy 90 ms\n"
+          "text": "4 x 1024 tokens: peak 1.43 GiB above the weights, 90 ms per step (89 to 90), device busy 89 ms\n                matrix products 69 ms, other kernels 21 ms\n"
         }
       ]
     }

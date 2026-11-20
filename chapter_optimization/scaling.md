@@ -182,7 +182,7 @@ print_optimum(sp_loss, lrs)
 plot_sweep(sp_loss, lrs)
 ```
 
-Under standard parametrization, the U-shaped loss curves shift steadily to the left as width grows: the optimal learning rate drops $16\times$ (from $\sim 3.9 \times 10^{-3}$ at width $128$ to $\sim 2.4 \times 10^{-4}$ at width $8{,}192$, a log–log slope of $\approx -0.7$). Applying the width-$128$ optimal learning rate directly to the width-$8{,}192$ model pushes it far up the unstable right arm of its curve, wiping out the benefit of the $1{,}000\times$ larger parameter count.
+Under standard parametrization, the U-shaped loss curves shift steadily to the left as width grows: the optimal learning rate drops $16$–$32\times$ (from $\sim 3.9 \times 10^{-3}$ at width $128$ to $\sim 1$–$2 \times 10^{-4}$ at width $8{,}192$, a log–log slope of $-0.7$ to $-0.8$). Applying the width-$128$ optimal learning rate directly to the width-$8{,}192$ model pushes it far up the unstable right arm of its curve, wiping out the benefit of the $1{,}000\times$ larger parameter count.
 
 ### Why the Optimal Learning Rate Drifts: The First Adam Step
 
@@ -198,7 +198,7 @@ $$
 $$
 :eqlabel:`eq_scaling_first_step`
 
-where $\overline{|h|} = \frac{1}{n}\sum_{j=1}^n |h_j| = \Theta(1)$. Because $\Delta W_{ij}$ is correlated with $h_j$, all $n$ terms in the sum share the same sign and add coherently ($O(n)$) rather than cancelling like random-sign initialization terms ($O(\sqrt{n})$). To keep the feature update $(\Delta\mathbf{W}\,\mathbf{h})_i = \Theta(1)$ invariant to width $n$, the learning rate of a hidden matrix with fan-in $n$ must scale as **$\eta \propto 1/n$** (log–log slope $-1$; the empirical slope $-0.7$ on the full MLP reflects a compromise between the $n \times n$ hidden matrices and the fixed-fan-in input layer and biases).
+where $\overline{|h|} = \frac{1}{n}\sum_{j=1}^n |h_j| = \Theta(1)$. Because $\Delta W_{ij}$ is correlated with $h_j$, all $n$ terms in the sum share the same sign and add coherently ($O(n)$) rather than cancelling like random-sign initialization terms ($O(\sqrt{n})$). To keep the feature update $(\Delta\mathbf{W}\,\mathbf{h})_i = \Theta(1)$ invariant to width $n$, the learning rate of a hidden matrix with fan-in $n$ must scale as **$\eta \propto 1/n$** (log–log slope $-1$; the empirical slope of $-0.7$ to $-0.8$ on the full MLP reflects a compromise between the $n \times n$ hidden matrices and the fixed-fan-in input layer and biases).
 
 ## Maximal Update Parametrization ($\mu\text{P}$)
 
@@ -361,7 +361,7 @@ for name, loss in (('SP', sp_loss), ('muP', mup_loss)):
               f'  (seeds {runs})')
 ```
 
-Under $\mu\text{P}$, the log–log slope of $\eta^\star(n)$ collapses from $-0.7$ to $\approx 0$: transferring the learning rate tuned at width $128$ directly to width $8{,}192$ incurs $\le 0.003$ nats of suboptimality (well below seed noise), compared to a $0.10\text{--}0.15$-nat penalty under SP.
+Under $\mu\text{P}$, the log–log slope of $\eta^\star(n)$ collapses from $-0.7$ or steeper under SP to near zero (the optimum moves by at most one grid step across the $64\times$ width range): transferring the learning rate tuned at width $128$ directly to width $8{,}192$ incurs $\le 0.003$ nats of suboptimality (well below seed noise), compared to a $0.10\text{--}0.15$-nat penalty under SP.
 
 ## Extensions to Transformers and Spectral Optimizers
 

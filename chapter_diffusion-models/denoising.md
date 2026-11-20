@@ -655,7 +655,7 @@ def langevin(score_fn, x, step, num_steps, key):  #@save
     return jax.lax.scan(move, x, jax.random.split(key, num_steps))[0]
 ```
 
-We start 2,000 chains from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$, so that each mode receives about a third of them, and run 2,000 steps at $h = 0.05$ with four fields: the exact score of $p$, the exact score of $p_\sigma$ at $\sigma = 1$, and the two networks of the sweep trained at $\sigma = 0.3$, used as if they were the score of $p$.
+We start 2,000 chains from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$, so that each mode receives about a third of them, and run 2,000 steps at $h = 0.05$ with five fields: the exact score of $p$; the exact scores of $p_\sigma$ at $\sigma = 1$ and at $\sigma = 0.3$, printed as `p_1` and `p_0.3`; and the two networks of the sweep trained at $\sigma = 0.3$, used as if they were the score of $p$. The exact field at $0.3$ is the one the networks were trained to imitate, so it tells us which of their behavior is the noise level's and which is their own.
 
 With the exact score of $p$, should the chains end with the weights $0.5$, $0.3$ and $0.2$? They should, if 2,000 steps are long enough for a chain to forget its start. The chains at $\sigma = 1$ should sample $p_\sigma$, whose components have variance $s^2 + \sigma^2 = 1.25$ per coordinate, five times that of $p$. The calculation for the perfect sampler, with $2 \cdot 1.25$ in place of $2s^2$, predicts $e^{-2.25/2.5} \approx 41\%$ strays and a spread near $1$, only about twice the data's.
 
@@ -698,9 +698,9 @@ The exact score of $p$ sends every chain to a mode with the right spread, but th
 
 The exact score of $p_\sigma$ at $\sigma = 1$ crosses freely, because the noise has filled the valleys, and its weights land within about $0.02$ of $0.5$, $0.3$ and $0.2$. Its strays and spread come out as predicted: these are good samples of the wrong distribution. The truncated spread understates the error; a variance five times too large shows up as a spread only twice the data's, and as about $40\%$ strays.
 
-The trained networks do neither job well. Each is the score it was trained to be, that of $p_{0.3}$, not that of $p$. The components of $p_{0.3}$ have variance $0.25 + 0.09 = 0.34$, and the calculation for the perfect sampler, now with $2 \cdot 0.34$ in place of $2s^2$, predicts about $4\%$ strays and a spread near $0.6$. Both runs print a spread above $0.6$ and four to seven percent strays: as wide as $p_{0.3}$, or a little wider.
+The trained networks do neither job well. Each is the score it was trained to be, that of $p_{0.3}$, not that of $p$. The components of $p_{0.3}$ have variance $0.25 + 0.09 = 0.34$, and the calculation for the perfect sampler, now with $2 \cdot 0.34$ in place of $2s^2$, predicts about $4\%$ strays and a spread near $0.6$. The exact score of $p_{0.3}$ prints just that: $4.3\%$ strays and a spread of $0.61$ to $0.63$. Both networks print a spread of about $0.6$ and five to six and a half percent strays: as wide as $p_{0.3}$, or a little wider. In width, the networks are what they were trained to be.
 
-Their chains also cross the valleys, more than the field they imitate would allow. The barriers of $p_{0.3}$ are lower than those of $p$ but still 7 to 9 nats high, so in 2,000 steps the exact score of $p_{0.3}$ would move only a small fraction of the chains (part 3 of Exercise :exref:`ex_denoising-escaping-mode` asks how small). The mass that moves must move along errors of the learned field between the modes, where few noisy training points land. In both runs the heaviest mode gains on its starting third but stays below its weight of $0.5$, and the two networks split the rest differently. Crossings that depend on the errors of the field cannot be trusted to deliver the weights, and even a run that landed on the right ones would prove nothing.
+Their chains also cross the valleys, more than the field they imitate would allow. The barriers of $p_{0.3}$ are lower than those of $p$ but still 7 to 9 nats high, and its row shows how little they let through in 2,000 steps: the heaviest mode gains at most $0.03$ on its starting share (part 3 of Exercise :exref:`ex_denoising-escaping-mode` predicts how little). The networks, from the same start, carry it to $0.39$ to $0.46$, still below its weight of $0.5$, and the two of them split the rest differently. That extra mass did not climb the barriers of $p_{0.3}$; it moved along errors of the learned field between the modes, where few noisy training points land. Crossings that depend on the errors of the field cannot be trusted to deliver the weights, and even a run that landed on the right ones would prove nothing.
 
 Blindness and stuck chains have one cause: the weights live in the valleys, where the data seldom go and the chains seldom cross. One noise level either mixes or is sharp, never both. A chain that started at a large level and lowered it as it went might have both. That is the idea the rest of the chapter builds on, and Langevin steps survive in modern samplers mainly as a correction at each of many such levels.
 
@@ -1013,9 +1013,9 @@ One noise level cannot both describe the data and sample them: at a small level 
        $\sigma = 1$, treating the result as an order of magnitude where
        $\Delta U$ is small, and use it to explain the weights of the
        $\sigma = 1$ chains. How many of 2,000 chains should cross in 2,000
-       steps at $\sigma = 0.3$? Compare with the weights of the chains
-       driven by the networks trained at $\sigma = 0.3$. What does the
-       comparison say about the learned field between the modes?
+       steps at $\sigma = 0.3$, and does the printed row of `p_0.3` agree?
+       The networks trained at $\sigma = 0.3$ move at least twice as much
+       mass. What does that say about the learned field between the modes?
    :exlabel:`ex_denoising-escaping-mode`
 1. [code] **A denoiser at the wrong noise level.** The networks of this
    section saw only the noise level $\sigma = 0.5$ in training; use the
@@ -1425,7 +1425,8 @@ $$\mathbf{x} \leftarrow \mathbf{x} + \frac{h}{2}\, \mathbf{s}(\mathbf{x})
 @!denoising-sampling-with-a-score-1
 
 2,000 steps at $h = 0.05$ from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$:
-about a third start near each mode.
+about a third start near each mode. Fields: exact scores of $p$, $p_1$,
+$p_{0.3}$; two networks trained at $\sigma = 0.3$.
 :::
 
 ::: {.slide title="Blurred Chains Find the Weights; Trained Chains Find Neither"}
@@ -1435,11 +1436,12 @@ about a third start near each mode.
 |---|---|---|
 | exact score of $p$ | a third each, as at the start | right; 1–2% stray |
 | exact score of $p_\sigma$, $\sigma = 1$ | within about 0.02 of 0.5, 0.3, 0.2 | variance ×5; ~41% stray, spread about 1 |
-| trained at $\sigma = 0.3$, two seeds | heaviest mode gains, stays below 0.5 | that of $p_{0.3}$, as predicted: spread above 0.6, 4–7% stray |
+| exact score of $p_\sigma$, $\sigma = 0.3$ | heaviest mode gains at most 0.03 | as predicted: spread 0.61–0.63, ~4% stray |
+| trained at $\sigma = 0.3$, two seeds | heaviest mode to 0.39–0.46 | that of $p_{0.3}$: spread about 0.6, 5–6.5% stray |
 
 - The barriers of $p$ are 10–12 nats high: a million steps to cross.
-- Trained chains cross along the field's errors: no evidence about the
-  weights.
+- Trained chains cross far more than $p_{0.3}$ allows, along the field's
+  errors: no evidence about the weights.
 
 ::: {.d2l-note .warn}
 The weights live in the valleys, where the data seldom go and chains seldom

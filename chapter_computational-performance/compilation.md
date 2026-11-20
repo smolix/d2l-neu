@@ -579,11 +579,12 @@ host-bound times, so it varies by a factor of two between runs.
 :end_tab:
 
 :begin_tab:`jax`
-Here the jitted step runs at the estimate, 0.25 ms, a hundred times faster
-than the un-jitted one: `jax.jit` compiles the loss, the gradients, and the
-update into one XLA program, which Python starts with one call. One line of
-code gains a factor of a hundred. Un-jitted, `jax.value_and_grad` also
-linearizes and transposes the loss function in Python at every call, so
+Here the jitted step runs at the estimate, about 0.25 ms, a hundred times
+faster than the un-jitted one: `jax.jit` compiles the loss, the gradients,
+and the update into one XLA program, which Python starts with one call.
+One line of code gains a factor of a hundred. Un-jitted,
+`jax.value_and_grad` also linearizes and transposes the loss function in
+Python at every call, so
 the step costs even more host time than its count of operations predicts.
 Un-jitted JAX is for debugging; training steps are jitted.
 :end_tab:
@@ -699,10 +700,24 @@ with three calls, so the timed calls are replays.
 :begin_tab:`jax`
 `jax.jit` already removes Python from the loop: the compiled function
 starts with one call. The eager version dispatches its 120 operations one
-at a time, at some 50 µs each, which puts the bound near fifty, and it is
-twenty to thirty times slower. Current XLA releases also record runs of
-consecutive kernels on a GPU as CUDA graphs, which XLA calls command
-buffers, so a jitted function is replayed without a separate mode.
+at a time, at 50 to 65 µs each depending on the load of the host, which
+puts the bound near sixty, and it is twenty to thirty times slower.
+Current XLA releases also record runs of consecutive kernels on a GPU as
+CUDA graphs, which XLA calls command buffers, so a jitted function is
+replayed without a separate mode.
+
+The profile holds a small surprise: it lists no tanh kernel. XLA fused
+each tanh into the kernels around it; the product kernel of the next layer
+applies it as it reads its input. The products, however, gained a kernel
+each. A product runs as two: `gemm_fusion_dot` computes four
+partial products over quarters of the shared dimension of 256, a common
+trick for products too small to occupy all of the GPU's processors, and
+`loop_reduce_fusion` adds the four parts. The jitted stack thus launches
+120 kernels, two per layer, as many as the eager version has operations;
+`jitted.lower(params, x).compile().as_text()` prints the compiled program
+that shows it. What the jitted version saves is the trip to Python before
+each of them. Replayed back to back, the kernels keep the device busy for
+most of the call.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -1285,11 +1300,11 @@ A step launches 400 kernels at 8 µs of host time each. The GPU needs
 ::: {.slide title="jit Runs the Stack 20–30× Faster Than Eager Dispatch" only="jax"}
 @!compilation-the-overhead-regime-capture-and-replay
 
-- `jax.jit`: one call from Python for all 120 operations; about 2 µs per
-  operation, twice the floor of `x + 1`.
-- Below the bound $h$ / floor $\approx 50$: a replayed kernel also reads
-  and computes.
-- XLA also records kernel runs as CUDA graphs (command buffers).
+- One call from Python; about 2 µs per operation, twice the floor of
+  `x + 1` (a kernel also reads and computes): below $h$ / floor $\approx 60$.
+- No tanh kernel: XLA fuses each tanh into the next product's kernel.
+- Still 120 kernels: each product splits into 4 partial products plus a
+  sum; replayed as a command buffer (CUDA graph), they keep the device busy.
 :::
 
 ::: {.slide title="Replay Brings the Training Step Below a Millisecond" only="pytorch"}

@@ -926,9 +926,11 @@ d2l.show_gray(jnp.concatenate([images[r][:8].clip(-1, 1) for r in rows]),
 
 The rows match column by column. Two Euler steps of the teacher draw grey
 averages of garments, the mixture's failure in pixels, and in some columns
-not even the kind of garment that fifty steps draw. The student draws the
-teacher's garment from almost every noise image, with harder edges and
-some blotches after one jump and close to the teacher's after two.
+not even the kind of garment that fifty steps draw. The student, from the
+same noise, draws the teacher's garment in almost every column after a
+single evaluation. What one jump loses is detail: prints and stripes
+smudge, an outline turns ragged here and there, and a few blotches appear.
+A second jump brings most columns close to the teacher's fifty steps.
 
 ## Distribution Matching
 
@@ -1507,8 +1509,8 @@ features to 1,000 test images; floor (two sets of test images) about 0.8.
 @!few-step-on-images-4
 
 Rows: teacher, 50 and 2 Euler steps; student, 1 and 2 jumps. Two Euler
-steps draw grey averages; one jump has hard edges and blotches; two come
-close to the teacher.
+steps draw grey averages; one jump draws the teacher's garment with
+smudged detail and a few blotches; two come close to the teacher.
 
 ::: {.d2l-note}
 A distilled student's target is its teacher's exact ODE, whose FD fifty

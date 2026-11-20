@@ -446,7 +446,7 @@ NOTEBOOK_ENV = {
     ("pytorch", "chapter_computational-performance/fast-transformer.ipynb"): {
         "TEARDOWN_CUPTI": "1",
     },
-    # 13.1, 13.3, 13.4, 13.5 time eager steps after a cell has profiled.
+    # 13.1, 13.3, 13.4, 13.5 time steps after a cell has profiled.
     # Without the teardown, launches after the first torch.profiler session
     # stay about 30% slower (12.4 -> 16.6 us per operation of a tanh stack,
     # dev, 2026-11-20); this was the 2.8 -> 3.5 ms drift of the LeNet step

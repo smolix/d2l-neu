@@ -5,7 +5,7 @@ The generators of :numref:`chap_gans` learned to draw garments through a game be
 
 The answer came from physics. Nobody has watched a drop of ink unmix itself in a glass of water. Yet each small step that mixed it adds a little Gaussian noise, and its reverse is again nearly Gaussian, so undoing it means learning mainly a mean. An image noised step by step is such a drop of ink. :citet:`sohl2015deep` trained a network to undo the steps, :citet:`ho2020denoising` found that the target is, of all things, the added noise, and a year later such models drew better images than the best GANs :cite:`Dhariwal.Nichol.2021`. Surprisingly, routes that started from the gradient of the log-density, the *score* :cite:`song2019generative`, and from paths between noise and data :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022,Albergo.Boffi.VandenEijnden.2023` reach the same place: one network that predicts the clean point from a noisy one at every noise level, and a sampler that integrates its predictions.
 
-This regression answers three of the four limits. One network learns it with no critic, and its loss, suitably weighted, bounds the likelihood, which gives a density and charges a model for every point of a mode it drops. Stability at scale cannot be tested on garments of $28 \times 28$ pixels. The second question is harder than it looks. The best prediction of a heavily noised image is the average of all the images that could have produced it, and a sampler built on such averages draws new images. Why a network trained on a finite set does not simply return its training images is still open (:numref:`sec_diffusion-further-reading`).
+This regression answers three of the four limits. One network learns it with no critic, and its loss, suitably weighted, bounds the likelihood, which gives a density and charges a model for every point of a mode it drops. Stability at scale cannot be tested on garments of $28 \times 28$ pixels. How fitting a target can produce something new is harder than it looks. The best prediction of a heavily noised image is the average of all the images that could have produced it, and a sampler built on such averages draws new images. Why a network trained on a finite set does not simply return its training images is still open (:numref:`sec_diffusion-further-reading`).
 
 Our default is the form many image generators adopted from 2024 on :cite:`Esser.Kulal.Blattmann.ea.2024`: a network predicts the velocity along a straight line from data to noise, and the sampler follows it back. Ho et al.'s noise predictor is a second target with the same information. We start simple: the first three sections build the whole model on three Gaussians in the plane, where every learned quantity can be checked against the truth. A reader who stops there understands diffusion models.
 
@@ -270,7 +270,7 @@ Stop after the first row and you understand diffusion models.
 | Samplers | Heun (a second-order ODE solver), even steps on the linear path: the chain's FD in about 20 evaluations |
 | Likelihood | network within half a hundredth of a nat of the exact field (true value about 2.5 nats per point) |
 | Latents | at this scale, the best pixel model beats every latent one |
-| Few-Step | a distilled student in four evaluations: FD about 1.5 times that of 50 teacher steps |
+| Few-Step | a distilled student in four evaluations: FD about 1.4 times that of 50 teacher steps |
 | Discrete | binary garments: 0.17 bits per pixel, 0.70 for independent pixels |
 
 FD: Fréchet distance between generated and real images in a classifier's

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:fa8c988b9416f44ac598e9fa19246c494fc5f24281a36f423ddcde820b902c0b",
+    "d2l_lib_fingerprint": "sha256:ea2cee75368ebb53e1746364f634f74efe6919f900d79a10558338747e594742",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,12 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tracing g for shape (8,)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "tracing g for shape (16,)\n"
+          "text": "tracing g for shape (8,)\ntracing g for shape (16,)\n"
         },
         {
           "type": "stream",
@@ -52,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.80 ms/call, 638 GB/s\ncompiled: 0.16 ms/call, 798 GB/s\n"
+          "text": "eager: 1.84 ms/call, 627 GB/s\ncompiled: 0.17 ms/call, 768 GB/s\n"
         }
       ]
     },
@@ -62,24 +57,24 @@
       "outputs": []
     },
     "compilation-whole-step-compilation-measured": {
-      "code_fingerprint": "sha256:7ac247dea2ff127134526a4dbb0998bef1dffff7830d021cd2d4cf9c5df07996",
+      "code_fingerprint": "sha256:b44a2ca0c868b20234898cca1f9a0c4cf0b37d74a9c217c768c8692181b29e77",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 3.8 s\neager: 26.20 ms, compiled: 0.26 ms\nbreak-even: 145 steps\n"
+          "text": "first call: 5.8 s\neager: 30.87 ms, compiled: 0.26 ms\nbreak-even: about 200 steps\n"
         }
       ]
     },
     "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:0ce146e7553941fd81e0dbe1f8a4538d0693a526110169e2469748d69f1391db",
+      "code_fingerprint": "sha256:7de59ba62878724f3ce0e3ab05e96f4b20c467b518dd04cc1e32b1999768ab76",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 9.15 ms/call\njit: 0.28 ms/call\n"
+          "text": "eager: 7.79 ms/call, 64.9 µs per operation\njit: 0.25 ms/call, 2.1 µs per operation\nwall clock 0.25 ms per step, device busy 0.24 ms (95%), matrix products 74%\n  0.17 ms  73%  gemm_fusion_dot_1\n  0.06 ms  25%  loop_reduce_fusion_1\n  0.00 ms   1%  gemm_fusion_dot\n"
         }
       ]
     }

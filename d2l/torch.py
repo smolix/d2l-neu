@@ -2661,6 +2661,8 @@ def kernel_times(f, steps=10):
             for e in prof.key_averages()
             if e.device_type == torch.autograd.DeviceType.CUDA}
 
+PRODUCT_KERNELS = 'gemm|xmma|cutlass|matmul|sdpa'
+
 def show_profile(kernels, step_ms, rows=6):
     """Busy device time against the wall-clock time step_ms of a step, the
     share of the matrix products, and the kernels with the most time.
@@ -2668,7 +2670,7 @@ def show_profile(kernels, step_ms, rows=6):
     Defined in :numref:`sec_perf_model`"""
     busy = sum(kernels.values())
     products = sum(ms for name, ms in kernels.items()
-                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+                   if re.search(PRODUCT_KERNELS, name, re.I))
     print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '
           f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
     for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:
@@ -2748,20 +2750,27 @@ def windows(corpus, batch_size, num_steps=128):
         W = corpus[starts + offsets].long()
         yield W[:, :-1], W[:, 1:]
 
-def make_step(model, forward=None, bf16=False):
+def make_step(model, forward=None, bf16=False, warmup=0):
     """An AdamW training step of `model` on a minibatch (X, Y); `forward`
-    replaces the model's forward pass, `bf16` turns on autocast.
+    replaces the model's forward pass, `bf16` turns on autocast, and a
+    `warmup` > 0 raises the learning rate linearly to 1e-3 over as many
+    steps.
 
     Defined in :numref:`sec_fast_transformer`"""
     forward = model if forward is None else forward
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
                                   weight_decay=0.01, fused=True)
+    if warmup:
+        schedule = torch.optim.lr_scheduler.LambdaLR(
+            optimizer, lambda i: min(1, (i + 1) / warmup))
     def step(X, Y):
         with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
             loss = F.cross_entropy(forward(X).flatten(0, 1), Y.flatten())
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
+        if warmup:
+            schedule.step()
         return loss
     return step
 

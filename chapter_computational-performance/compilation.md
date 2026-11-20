@@ -1,38 +1,29 @@
-# Compute Graphs and Compilation
+# Computation Graphs and Compilation
 :label:`sec_compilation`
 
 In :numref:`sec_perf_model` the activation function `gelu_ish` took eight
 to nine times as long as a single addition on the same tensor, although its
-arithmetic hardly mattered. The cause was the way the framework ran it.
-Each of its eight elementwise operations ran as a GPU kernel of its own,
-which read its inputs from GPU memory and wrote its result back, and
-:numref:`sec_hardware` showed why that memory traffic is slow. Can a
-framework run such a chain without the traffic, and without the cost of
-issuing every operation from Python?
+arithmetic hardly mattered. Each of its eight elementwise operations ran as
+a GPU kernel of its own, which read its inputs from GPU memory and wrote
+its result back: 18 array transfers where 2 would do
+(:numref:`subsec_perf-regimes`). On a small tensor the same chain is slow
+for another reason. Every operation is issued from Python, and the host
+takes longer to launch a kernel than the GPU takes to run it. Can a
+framework run such a chain without the traffic and without the launches?
 
-A count of the bytes shows how much is wasted. The function computes
-$0.5\, x \left(1 + \tanh\left(0.8\, (x + 0.04\, x^3)\right)\right)$.
-Applied to a $4000 \times 4000$ matrix in fp32, which takes 64 MB, the
-eight kernels together move 1.15 GB to produce 64 MB of output. Reading
-the input once and writing the result once would move 128 MB, nine times
-less. At the RTX 4090's memory bandwidth of about 1 TB/s, the eight
-kernels need at least 1.15 ms where 0.13 ms would do.
-
-Activation functions, normalization layers, residual additions, and
-optimizer updates are all chains of this kind, and a deep network contains
-hundreds of them. Small tensors add a second cost: launching a kernel from
-Python takes longer than running it, and the GPU waits. Both costs come
-from *eager execution*, which runs a program one operation at a time, as
-Python reaches it. The remedy is to give the whole program to a compiler
-before it runs. A compiler that sees all eight operations can merge them
-into one kernel that reads $x$ once and writes the result once. A sequence
-of kernels, once recorded, can be replayed without Python.
-
-We study how a framework captures a program as a graph, what a compiler
-does with that graph, and which programs escape capture.
-Compilation addresses two of the three regimes of :numref:`sec_perf_model`,
-the bandwidth-bound and the overhead-bound regime. Memory capacity is a
-separate limit, the subject of :numref:`sec_memory_precision`.
+Both costs come from *eager execution*, which runs a program one operation
+at a time, as Python reaches it. Activations, normalizations, residual
+additions, and optimizer updates are all chains of cheap operations, so
+the two costs turn up in every model. The remedy for both is to hand the
+whole program to a compiler before it runs. A compiler can merge the eight
+operations of `gelu_ish` into one kernel that reads $x$ once and writes
+the result once, which removes the traffic of the bandwidth-bound regime.
+It can also record a sequence of kernels and replay it without Python,
+which removes the launches of the overhead-bound regime. A compute-bound
+operation, such as one large matrix product, gains from neither. For the
+billion-parameter GPT of this chapter, whose arrays hold tens of millions
+of elements, merging is the remedy that counts; replay matters for small
+models and small minibatches.
 
 ```{.python .input #compilation-compute-graphs-and-compilation}
 %%tab pytorch
@@ -73,25 +64,38 @@ graph.
 
 The computation of a neural network forms a *computation graph*: its nodes
 are operations, and its edges carry tensors from one operation to the next.
-Autograd records this graph during the forward pass so that it can walk it
-backward to compute gradients (:numref:`sec_autograd`).
+Automatic differentiation walks this graph backward to compute gradients
+(:numref:`sec_autograd`). A framework with a *tape*, a log of the
+operations in the order they ran, records the graph during the forward
+pass. A framework that differentiates by tracing the function, as
+described below, records it when asked for a derivative.
 :numref:`fig_compute_graph` shows the graph of a two-layer network
 $\textrm{relu}(\mathbf{X}\mathbf{W}_1 + \mathbf{b}_1)\mathbf{W}_2 +
 \mathbf{b}_2$ followed by a loss.
 
-![The computation graph of a two-layer network with a loss. Autograd
-records it to run the backward pass; a compiler that has the whole graph
+![The computation graph of a two-layer network with a loss. Automatic
+differentiation walks it backward; a compiler that has the whole graph
 before the forward pass can rewrite it.](../img/mdl-perf-compute-graph.svg)
 :label:`fig_compute_graph`
 
-Autograd's record cannot speed up the forward pass. It is written while the
-operations execute, so by the time it exists every operation has already run
-as its own kernel. Each kernel needs a launch, which takes 1–5 µs in the
-CUDA driver and about 5–15 µs of host time when Python dispatches the
-operation (:numref:`sec_hardware`), and each elementwise kernel makes a
-round trip through GPU memory. To merge the `add` with the `relu` that follows it, a
-compiler needs the graph before the forward pass runs. Obtaining the graph
+Such a record cannot speed up the forward pass of an eager program: by the
+time it exists, every operation has already run as a kernel of its own.
+Each of those operations has cost the host the time $h$ that Python, the
+framework, and the driver need to issue one call
+(:numref:`subsec_perf-sweep`), and each elementwise one has made a round
+trip through GPU memory. To merge the `add` with the `relu` that follows
+it, a compiler needs the graph before the forward pass runs. Obtaining it
 in advance is called *graph capture*.
+
+:begin_tab:`pytorch`
+In PyTorch $h$ is about 13 µs per operation on our machine.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX each un-jitted operation is a call of its own through XLA's
+runtime, which takes several tens of microseconds on our machine; a jitted
+function costs about this once per call, however many kernels it runs.
+:end_tab:
 
 ### Tracing
 
@@ -101,29 +105,29 @@ values. Every tensor operation applied to a placeholder is recorded instead
 of computed, and the record is the graph. Python code that does not depend
 on tensor values runs as usual and leaves only its effect: a loop over four
 layers leaves four copies of the layer's operations, and arithmetic on
-shapes leaves constants. Running a function to record its operations is
-called *tracing*. A compiler then translates the graph into kernels, fusing
-operations where it can, and caches them. Later calls with arguments of the
+shapes leaves constants. The graph never sees the loop, only what the loop
+did. Running a function to record its operations is called *tracing*. A
+compiler then translates the graph into kernels, fusing operations where
+it can, and caches them. Later calls with arguments of the
 same shapes and dtypes reuse the cached kernels
 (:numref:`fig_compile_pipelines`).
 
 ![Graph capture. The first call traces the function on placeholders; a
 compiler turns the recorded graph into kernels, which later calls with the
 same shapes and dtypes reuse. A branch on a tensor's value cannot be
-recorded, and a new shape or dtype starts a new
+recorded, and a new shape or dtype may start a new
 capture.](../img/mdl-perf-compile-pipelines.svg)
 :label:`fig_compile_pipelines`
 
 :begin_tab:`pytorch`
-In PyTorch, `torch.compile` wraps a function or a module. At the first call,
-its front end, TorchDynamo, executes the function's Python bytecode with
-*fake tensors* as placeholders and records the tensor operations in a graph
+In PyTorch, `torch.compile` wraps a function or a module. At the first
+call, its front end, TorchDynamo, runs the function's Python bytecode on
+placeholders and records the tensor operations
 :cite:`Ansel.Yang.He.ea.2024`. AOTAutograd derives the backward graph from
-the forward graph, and the Inductor compiler turns both into fused kernels,
-written in Triton for GPUs and in C++ for CPUs. Dynamo also installs
-*guards*, cheap checks of the assumptions the graph depends on, such as the
-shapes and dtypes of the inputs. Every later call evaluates the guards and
-runs the compiled code if they pass.
+the forward graph, and the Inductor compiler turns both into fused kernels.
+Dynamo also installs *guards*, cheap checks of what the graph assumes, such
+as the shapes and dtypes of the inputs. A later call runs the compiled code
+if its guards pass.
 :end_tab:
 
 :begin_tab:`jax`
@@ -139,14 +143,21 @@ the arguments, and `jax.make_jaxpr` prints the jaxpr of a function.
 
 Tracing cannot follow a branch that depends on a value. A placeholder has a
 shape but no value, so when the function asks `if x.sum() > 0:`, tracing
-has no answer, and the answer may differ from call to call. A graph cannot
-hold Python control flow, which leaves two options. The framework can
-return the decision to Python at run time, between two graphs. Or the
-program can express the branch as a tensor operation that the graph can
-hold: a *select* computes both alternatives and keeps one, and a
-*conditional* operation computes only the one it needs. A branch on a shape,
-such as `if x.shape[0] > 4:`, causes no difficulty, since shapes are known
-during tracing. We capture a function that branches on the sign of a sum:
+has no answer, and the answer may differ from call to call. A capture
+system can respond in one of three ways. It can *freeze* the branch: trace
+with a real input instead of a placeholder, record the branch that this
+input took, and take the same branch on every later call, whatever the
+data. This is fast and wrong. It can *refuse*: raise an error, so that the
+programmer writes the branch as a tensor operation the graph can hold. Or
+it can *fall back*: end the graph before the branch, let Python take the
+decision at run time, and continue in a second graph.
+
+A branch can be written as a tensor operation in two ways. A *select*
+computes both alternatives and keeps one; a *conditional* operation
+computes only the one it needs. A branch on a shape, such as
+`if x.shape[0] > 4:`, needs neither, since shapes are known during
+tracing. Which of the three responses does our framework choose for a
+function that branches on the sign of a sum?
 
 ```{.python .input #compilation-capture-two-philosophies-1}
 %%tab pytorch
@@ -184,41 +195,39 @@ print(jax.make_jaxpr(f_select)(jnp.ones(8)))
 ```
 
 :begin_tab:`pytorch`
-Dynamo returns the decision to Python with a *graph break*. The output shows
-two graphs. The first ends at the comparison and returns its result
-together with the doubled `x`. Python reads the comparison and takes the
-branch, and the second graph holds the branch that this random input took,
-`x + 1` or `x - 1`. A graph break returns control to Python on every call
-and splits the program into pieces that the compiler optimizes separately.
-By default Dynamo does not stop at code it cannot capture: it breaks the
-graph, runs that code in Python, and prints no warning.
-`torch.compile(..., fullgraph=True)` turns every break into an error, and
-`torch._dynamo.explain`, an internal function whose interface may change
-between releases, counts them. Writing the branch as a select,
-`torch.where(x.sum() > 0, x + 1, x - 1)`, removes this break.
+By default `torch.compile` falls back, with a *graph break* and no
+warning; `torch._dynamo.explain`, an internal function of PyTorch, counts
+the breaks. The first graph ends at the comparison and returns its result
+with the doubled `x`; Python takes the branch, and the second graph holds
+the branch this random input took. Every call returns to Python between
+the two. `fullgraph=True` and `torch.export`, which captures whole
+programs for deployment, refuse instead. The `torch.jit.trace` of
+TorchScript, PyTorch's earlier compiler, freezes, with only a warning. The
+select `torch.where(x.sum() > 0, x + 1, x - 1)` removes the break.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.jit` does not return decisions to Python. Converting a tracer to a
-Python `bool` raises an error, and the branch must be written as a tensor
-operation. `jax.lax.select` computes both alternatives and keeps one, so the
-whole function becomes a single graph: the jaxpr shows the comparison `gt`
-feeding `select_n`. `jax.lax.cond` executes only one alternative, which
-matters when they are expensive.
+`jax.jit` refuses. Converting a tracer to a Python `bool` raises an error,
+and the branch must be written as a tensor operation. `jax.lax.select`
+computes both alternatives and keeps one, so the whole function becomes a
+single graph: the jaxpr shows the comparison `gt` feeding `select_n`.
+`jax.lax.cond` executes only one alternative, which matters when they are
+expensive.
 :end_tab:
 
 ### Shapes and Recompilation
 
 A compiler specializes the kernels to the shapes in the graph: it chooses
-tile sizes, loop bounds, and memory layouts for them. A call with tensors
-of a new shape or dtype therefore needs a new compilation. A training loop
-whose last minibatch is smaller than the others, as with the Fashion-MNIST
-loaders of :numref:`sec_fashion_mnist`, compiles once more for that
-minibatch. A loop over sequences of varying length may compile at almost
-every step. There are two remedies: keep the set of shapes small, for
-instance by padding sequences to a few fixed lengths, or compile code that
-works for a range of sizes. We call a compiled function on vectors of
-lengths 8, 8, 16, and 32 and count its compilations:
+tile sizes, loop bounds, and memory layouts for them. It must therefore
+compile again for a new shape, unless it compiled for a symbolic size, with
+the length as a variable of the kernel. A training loop whose last minibatch
+is smaller than the others, as with the Fashion-MNIST loaders of
+:numref:`sec_fashion_mnist`, compiles once more for that minibatch. A loop
+over sequences of varying length may compile at almost every step. There are
+two remedies: keep the set of shapes small, for instance by padding
+sequences to a few fixed lengths, or compile code that works for a range of
+sizes. We call a compiled function on vectors of lengths 8, 8, 16, and 32
+and count its compilations.
 
 ```{.python .input #compilation-capture-two-philosophies-2}
 %%tab pytorch
@@ -247,36 +256,32 @@ for n in (8, 8, 16, 32):
 
 :begin_tab:`pytorch`
 `torch.compile` passes each captured graph to a *backend*, normally
-Inductor. Ours records the graph and runs it without compiling it further,
-so the list counts compilations. The first call compiles for length 8 and
-guards on that length, and the second call passes the guard. At length 16
-the guard fails and Dynamo compiles again, this time with the length as a
-symbol: the printed graph takes a `torch.SymInt` argument for it, and the
-call at length 32 reuses this graph. Handling dynamic shapes this way
-takes one extra compilation. `torch.compile(..., dynamic=False)`
-keeps every graph static, and once a function has been compiled eight times
-(`torch._dynamo.config.recompile_limit`), Dynamo stops compiling it and runs
-it eagerly.
+Inductor. Ours records the graph and runs it as it is, so the list counts
+compilations: two for three shapes. The first call compiles for length 8
+and guards on it. At length 16 the guard fails, and Dynamo compiles again
+with the length as a symbol, the `torch.SymInt` argument of the printed
+graph, which serves length 32 as well. After a few recompilations of one
+function, eight at the time of writing, Dynamo runs it eagerly.
 :end_tab:
 
 :begin_tab:`jax`
-The `print` runs only while the function is traced, so it reports each
-trace: one for length 8, none for the second call at length 8, and one each
-for 16 and 32. Every new shape means a new trace and a new XLA compilation.
-Other Python side effects, such as appending to a list or drawing from
-NumPy's random generator, also happen at trace time only, and the compiled
-function repeats none of them. An argument that is a Python value rather
-than an array, such as a flag or a number of layers, can be marked static
-with `static_argnums`; the function is then traced once for each distinct
-value.
+`jax.jit` always specializes. The `print` runs only while the function is
+traced, so it reports each trace: one for length 8, none for the second
+call at length 8, and one each for 16 and 32. Every new shape means a new
+trace and a new XLA compilation. Other Python side effects, such as
+drawing from NumPy's random generator, also happen at trace time only. An
+argument that is a Python value rather than an array, such as a number of
+layers, can be marked static with `static_argnums`; the function is then
+traced once for each distinct value.
 :end_tab:
 
 ## Operation Fusion
 :label:`subsec_comp-fusion`
 
-Merging several operations into one kernel is called *fusion*. Its gain
-can be predicted before anything runs, by counting the bytes that each
-version moves through memory.
+Fusion merges several operations into one kernel.
+:numref:`subsec_perf-regimes` counted the traffic that `gelu_ish` causes
+without it; now we let a compiler remove that traffic and check whether
+the count of bytes predicts the gain before anything runs.
 
 ### Counting Memory Traffic
 
@@ -293,20 +298,27 @@ $n$ elements of $b$ bytes each, the ratio of the bytes moved is
 $$\frac{\textrm{bytes moved, eager}}{\textrm{bytes moved, fused}} =
 \frac{(10 + 8)\, n b}{(1 + 1)\, n b} = 9.$$
 
-Both versions perform the same arithmetic, about a dozen FLOPs per element,
-which is far less than the GPU can do while it moves the element's bytes.
-Both are therefore limited by bandwidth, and fusion should shorten the
-chain by the ratio of the bytes moved, a factor of nine.
+Fusion should therefore shorten the chain ninefold, provided that both
+versions are limited by bandwidth. They are. The fused kernel performs
+about a dozen FLOPs per element and moves 8 bytes for it in fp32, 4 in and
+4 out: an intensity below 2 FLOP/byte. Its arithmetic runs on the GPU's
+ordinary fp32 units, whose 82.6 TFLOP/s put the ridge point near
+82 FLOP/byte. The kernel would need several hundred FLOPs per element
+before arithmetic set its time. On the $4000 \times 4000$ fp32 matrix of
+the cell below, 61 MiB per array, the eager chain moves 1.07 GiB, at least
+1.1 ms at $\beta = 1.008$ TB/s; the fused kernel should need 0.13 ms.
 
-![Memory traffic of `gelu_ish` on a 64 MB array. Eager execution runs eight
-kernels that read ten arrays and write eight; the fused kernel reads the
-input once, keeps the seven intermediate results in registers, and writes
-the result once.](../img/mdl-perf-fusion.svg)
+![Memory traffic of `gelu_ish`. Eager execution runs eight kernels that
+read ten arrays and write eight; the fused kernel reads the input once,
+keeps the seven intermediate results in registers, and writes the result
+once.](../img/mdl-perf-fusion.svg)
 :label:`fig_fusion`
 
-We compile `d2l.gelu_ish`, the function of :numref:`sec_perf_model`, check
-that the compiled version computes the same values, and time both versions. Each time is then converted into a
-bandwidth: the bytes that version moves, divided by its time.
+We compile `d2l.gelu_ish`, the function of :numref:`sec_perf_model`, and
+check first that the compiled version computes the same values. They
+agree to rounding error, not bit for bit, since a compiler may reorder
+floating-point operations. Then we time both versions and convert each
+time into a bandwidth: the bytes that version moves, divided by its time.
 
 ```{.python .input #compilation-what-the-compiler-does-fusion}
 %%tab pytorch
@@ -331,104 +343,87 @@ for desc, fn in (('eager', d2l.gelu_ish), ('compiled', compiled)):
 ```
 
 The compiled chain is eight to ten times faster, close to the predicted
-nine, and both
-versions move data at a similar rate, most of the card's
-1 TB/s. The compiler made memory no faster and arithmetic no cheaper. It
-removed 16 of the 18 array transfers. The cell checks the result before
-timing it, because a faster kernel is of no use if it computes different
-values. It uses `allclose`, since the compiler may reorder floating-point
-operations: the results agree to rounding error, not bit for bit.
+nine, and both versions move data at about 0.7 TB/s or more. The compiler
+made memory no faster and arithmetic no cheaper. It removed 16 of the 18
+array transfers.
 
 The same count applies at the scale of a language model. The chapter's
 running example is a GPT with a billion parameters and width $d = 2048$,
 trained on minibatches of 8 sequences of 1,024 tokens
-(:numref:`sec_perf_model`). Give it a GELU MLP of hidden width
-$4d = 8192$ (`act='gelu'` in `d2l.GPT`). The activation then receives
-$8192 \cdot 8192 \approx 6.7 \times 10^7$ elements per layer, 134 MB per
-array in bf16. Written as `gelu_ish`, the eager chain moves 18 such arrays,
-2.4 GB, which takes about 2.4 ms at 1 TB/s; the fused chain takes 0.27 ms.
-The two matrix multiplications around the activation perform $2 \cdot 2 \cdot 8192 \cdot 2048 \cdot 8192 \approx
-5.5 \times 10^{11}$ FLOPs, about 3.3 ms at the card's bf16 peak of
-165 TFLOP/s. Unfused, the activation adds about three quarters to the time
-of the MLP; fused, it adds under a tenth. Both times are lower bounds, since
-real kernels reach neither peak.
+(:numref:`sec_perf_model`). For this paragraph we replace its SwiGLU
+feed-forward networks by the GELU variant of hidden width $4d = 8192$
+(`act='gelu'` in `d2l.GPT`). The activation then receives
+$8 \cdot 1024 = 8192$ tokens times $4d = 8192$ hidden units, about
+$6.7 \times 10^7$ elements per layer and 128 MiB per array in bf16.
+Written as `gelu_ish`, the eager chain moves 18 such arrays, 2.25 GiB,
+about 2.4 ms at $\beta$; fused, it takes 0.27 ms. The two matrix
+products around it perform
+$2 \cdot 2 \cdot 8192 \cdot 2048 \cdot 8192 \approx 5.5 \times 10^{11}$
+FLOPs, about 3.3 ms at the bf16 peak of 165 TFLOP/s. Unfused, the
+activation adds about three quarters to the time of these two products in
+the forward pass; fused, under a tenth. Both are lower bounds, since real
+kernels reach neither peak.
 
 The ratio of the two times does not depend on the number of tokens $M$.
 The eager chain moves $18 \cdot 4dM$ elements of 2 bytes, and the two
-matrix multiplications perform $2 \cdot 2 \cdot M \cdot d \cdot 4d$
-FLOPs, so
+matrix products perform $2 \cdot 2 \cdot M \cdot d \cdot 4d$ FLOPs, so
 
-$$\frac{t_\textrm{activation}}{t_\textrm{matmul}} =
+$$\frac{t_\textrm{activation}}{t_\textrm{products}} =
 \frac{144\, dM/\beta}{16\, d^2 M/P} = \frac{9 P}{\beta d}
-\approx 0.72$$
+= \frac{9 I^*}{d} \approx 0.72$$
 
-for $P = 165$ TFLOP/s, $\beta = 1$ TB/s, and $d = 2048$. The unfused
-activation matters less in wider models, since the arithmetic grows with
-$d^2$ and the memory traffic only with $d$.
+with the ridge point $I^* = P/\beta \approx 164$ FLOP/byte and
+$d = 2048$. Thus the unfused activation costs as much as the products
+around it when the width is nine ridge points, about 1,500, and it matters
+less in wider models, since the arithmetic grows with $d^2$ and the memory
+traffic only with $d$.
 
-Real models seldom write GELU as a chain of eight operations. Libraries
-ship hand-fused kernels for common activations, and `act='gelu'` calls one.
-A compiler, however, fuses any chain, including ones that no library
-anticipated: a SwiGLU gate, a custom activation, an optimizer update.
+Real models seldom write GELU as a chain of eight operations. They call
+the framework's own GELU, as `act='gelu'` does, and common activations like
+it are fused already. What a compiler adds is that it fuses any chain,
+including ones that no library anticipated: a SwiGLU gate, a custom
+activation, an optimizer update.
 
 ### Fusion Patterns
 
-Compilers fuse three kinds of patterns. The simplest is the *elementwise
+Compilers fuse two kinds of patterns. The first is the *elementwise
 chain*, such as `gelu_ish`: a sequence of operations each of which computes
 element $i$ of its output from element $i$ of its inputs. The whole chain
 runs in one kernel in which each thread applies every operation to its own
-elements.
+elements. In an ordinary training step this is the more common pattern by
+far, since a chain follows nearly every matrix product, in both passes.
 
 A *reduction*, such as a softmax or a layer normalization, combines
-elementwise operations with a maximum or a sum over each row. A fused kernel
-loads a row into on-chip memory once, computes the reduction and the
-normalized outputs there, and writes the row once.
+elementwise operations with a maximum or a sum over each row. When the row
+fits in on-chip memory, a fused kernel loads it once, computes the
+reduction and the normalized outputs there, and writes the row once. A
+longer row has to be read more than once, and the exercises ask how often.
 
-An *epilogue* is a run of elementwise operations that follows a matrix
-multiplication, such as adding a bias and applying an activation. The
-compiler applies them to each tile of the product while the tile is still in
-registers, before it is written to memory.
-
-Compilers do not change the algorithm. A large matrix multiplication is
-limited by arithmetic and already runs as a single tuned library kernel;
-compiling the code around it leaves it as it is. Nor can fusion remove an
-intermediate result that the algorithm needs in full. Attention computes a
-$T \times T$ matrix of scores, normalizes each row with a softmax, and
-multiplies the result by the values. A compiler fuses the softmax but still
-writes the score matrix to memory. FlashAttention
-(:numref:`sec_attention-at-scale`) never writes it: it splits the
-computation into tiles and updates the softmax incrementally as it goes
-:cite:`Dao.Fu.Ermon.ea.2022`, a change of algorithm that general-purpose
-compilers do not find. Such kernels are written by hand, often in Triton
-:cite:`Tillet.Kung.Cox.2019`, a language for GPU kernels embedded in
-Python.
+Compilers do not change the algorithm. A large matrix product is limited
+by arithmetic and runs as one tuned library kernel, which may also apply a
+bias, or a common activation, to each tile before writing it; a compiler
+calls that kernel and fuses the code around it. Nor can fusion remove an
+intermediate result that the algorithm needs in full. A compiler that
+fuses the softmax of attention still writes the $T \times T$ matrix of
+scores to memory. FlashAttention (:numref:`sec_attention-at-scale`) never
+writes it, because it changes the algorithm: it works in tiles and updates
+the softmax incrementally :cite:`Dao.Fu.Ermon.ea.2022`. General-purpose
+compilers do not derive such changes. At most they recognize a common
+spelling of attention and call a kernel written by hand in its place.
+Such kernels are often written in Triton :cite:`Tillet.Kung.Cox.2019`, a
+language for GPU kernels embedded in Python.
 
 ## Compiling a Training Step
 :label:`subsec_comp-wholestep`
 
-A training step contains three kinds of work: matrix multiplications in
-the forward and backward passes, elementwise chains for the activations and
-their derivatives, and an elementwise update of every parameter. Compiling
-the whole step lets the compiler fuse the elementwise work of all three,
-while the matrix multiplications stay library kernels. Compilation itself
-takes time, from seconds for a small step to minutes for a large model,
-and that time is spent at the first call. If compilation takes
-$t_\textrm{compile}$ and the compiled step saves
-$t_\textrm{eager} - t_\textrm{compiled}$ per call, the compiled run
-overtakes the eager one after
-
-$$n^* = \frac{t_\textrm{compile}}{t_\textrm{eager} - t_\textrm{compiled}}$$
-:eqlabel:`eq_compile_break_even`
-
-steps. A run much longer than $n^*$ steps gains from compilation, and a
-shorter one loses. With a compilation time of 30 s and a saving of 10 ms
-per step, for instance, the break-even point is 3,000 steps, a fraction of
-a typical training run but more than most quick experiments.
-
-Our step trains a multilayer perceptron with four linear layers of width
-1,024 and `gelu_ish` between them. It computes the squared loss of the
-network's outputs against targets, then the gradients, and updates the
-parameters by gradient descent.
+A training step is less tidy than one activation on a large array. It
+contains matrix products in both passes, elementwise chains for the
+activations and their derivatives, and an update of every parameter. What
+does compiling all of it gain? Let us start with a small step, small
+enough that we can count everything it does, and predict its time before
+running it. It trains a multilayer perceptron with four linear layers of
+width 1,024 and `gelu_ish` between them, on a minibatch of 512
+examples, with a squared loss and gradient descent.
 
 ```{.python .input #compilation-compiling-a-training-step-1}
 %%tab pytorch
@@ -479,8 +474,7 @@ def train_step(params, X, Y, lr=0.1):  # Forward, backward, SGD update
 :begin_tab:`pytorch`
 `torch.autograd.grad` returns the gradients instead of accumulating them
 in each parameter's `.grad`, so the step reads the parameters and the data
-and changes nothing but the parameters. The usual sequence of `zero_grad`,
-`backward`, and an optimizer's `step` compiles as well.
+and changes nothing but the parameters.
 :end_tab:
 
 :begin_tab:`jax`
@@ -488,9 +482,43 @@ The step is a pure function: it takes the parameters and the data and
 returns the loss and the updated parameters.
 :end_tab:
 
+Two counts predict the step. The first is the device's work. Each of the
+four products of the forward pass performs
+$2 \cdot 512 \cdot 1024 \cdot 1024 \approx 1.1 \times 10^9$ FLOPs, and the
+backward pass needs about twice as many, so the step performs about
+$1.3 \times 10^{10}$ FLOPs: 0.16 ms on the tf32 tensor cores at
+82.6 TFLOP/s. The 4.2 million parameters occupy 16 MiB in fp32; reading
+them in both passes, writing their gradients, and reading both to write
+the update moves about 96 MiB, which takes 0.1 ms. The activations, 2 MiB per
+array, add little once fused. Without gaps, the step would take about a
+quarter of a millisecond.
+
+The second count decides this step: the operations that eager execution
+issues. The forward pass and the loss issue about forty, the backward pass
+about twice as many, and the update two for each of the eight parameter
+tensors, well over a hundred in all. At a host time $h$ of at least ten
+microseconds each, the eager step takes more than a millisecond on any
+GPU, at least five times the device's work on ours. Its arrays are too
+small for fusion to save much traffic, so whatever compilation gains here
+must come from the launches.
+
+Compilation itself takes time, from about a second for a small step to
+minutes for a large model, spent at the first call. If compilation takes
+$t_\textrm{compile}$ and the compiled step saves
+$t_\textrm{eager} - t_\textrm{compiled}$ per call, the compiled run
+overtakes the eager one after
+
+$$n^* = \frac{t_\textrm{compile}}{t_\textrm{eager} - t_\textrm{compiled}}$$
+:eqlabel:`eq_compile_break_even`
+
+steps. A run much longer than $n^*$ steps gains from compilation, and a
+shorter one loses. With a compilation time of 30 s and a saving of 10 ms
+per step, for instance, the break-even point is 3,000 steps, a fraction of
+a typical training run but more than most quick experiments.
+
 We compile the step and time its first call, which includes the
 compilation. Then we time the eager and the compiled step and compute $n^*$
-from :eqref:`eq_compile_break_even`:
+from :eqref:`eq_compile_break_even`.
 
 ```{.python .input #compilation-whole-step-compilation-measured}
 %%tab pytorch
@@ -526,73 +554,74 @@ print(f'first call: {t_first:.1f} s\n'
                         if saved > 0 else 'never, compiled is not faster'))
 ```
 
-<!-- WRITER: The PyTorch cell now also prints `graphs: 2` (torch._dynamo.explain,
-run after the timings because it clears the compile cache), so the tab's "two graphs"
-is shown. The printed first call (PyTorch 0.6-0.8 s) is a warm-cache number: Inductor
-reuses kernels from its on-disk cache of earlier runs; a cold cache takes several
-seconds. Say so where it is read. Dev run 2026-11-19, uncontended 4090: PyTorch first
-call 0.6 s, eager 2.11 ms, compiled 1.19 ms (other runs 1.2-1.7 ms), break-even 641;
-JAX first call 3.4 s, eager 25.0 ms, compiled 0.26 ms, break-even 137. A second
-PyTorch run printed eager 1.98, compiled 1.51 ms, break-even 1,216: the PyTorch n* moves
-by a factor of two between runs (the saving is a difference of two overhead-bound
-times), so quote its order of magnitude only. -->
-The first call takes far longer than a step, up to several seconds, and
-the printed $n^*$ is a small fraction of the steps of a real training run.
+The eager step takes milliseconds, as the count of operations predicted,
+and the device sits idle for most of it. Compilation helps here only as
+far as it takes launches off the host. A compiled step whose kernels are
+still launched one at a time stays overhead-bound, with fewer kernels to
+launch; to come near the estimate, the whole step has to start on the
+device with one call from the host. The first call takes far longer than a
+step, and the break-even point lies between about two hundred and a few
+thousand steps, a small fraction of a real training run.
 
 :begin_tab:`pytorch`
-`torch.compile(train_step)` captures the step in two graphs. Dynamo does
-not trace into the gradient computation, so `torch.autograd.grad` ends the
-first graph, which holds the forward pass and the loss. AOTAutograd has
-already derived the backward graph from it, and Inductor compiled both. After
-the break, a second graph captures the update. Inductor caches the kernels
-it compiles on disk, so a second run of this notebook compiles faster than
-the first.
+Here compilation makes the step less than twice as fast, still five to ten
+times the estimate of its device work. The last line counts two graphs:
+`torch.autograd.grad` ends the first, which holds the forward pass and the
+loss and from which AOTAutograd derived the backward graph, and a second
+holds the update. Inductor fuses the elementwise chains, but on arrays of
+2 MiB that saves little, and its generated code still launches every kernel
+from Python. The printed first call can reuse kernels that Inductor cached
+on disk in earlier runs of the notebook; with an empty cache it can take
+several seconds. The break-even point divides by the difference of two
+host-bound times, so it varies by a factor of two between runs.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.jit(train_step)` compiles the loss, the gradients, and the update into
-one XLA program at its first call. The compiler can also run *ahead of
-time*, before any call: `jax.jit(train_step).lower(params, X, Y).compile()`
-returns the compiled executable, whose `memory_analysis()` reports the
-memory the compiler plans to use (:numref:`sec_memory_precision` reads
-it). The un-jitted step is about two orders of magnitude slower than the
-compiled one, because each operation of the forward pass, the backward
-pass, and the update is then dispatched from Python on its own, at tens of
-microseconds per dispatch. Un-jitted JAX is for debugging; training steps
-are jitted.
+Here the jitted step runs at the estimate, 0.25 ms, a hundred times faster
+than the un-jitted one: `jax.jit` compiles the loss, the gradients, and the
+update into one XLA program, which Python starts with one call. One line of
+code gains a factor of a hundred. Un-jitted, `jax.value_and_grad` also
+linearizes and transposes the loss function in Python at every call, so
+the step costs even more host time than its count of operations predicts.
+Un-jitted JAX is for debugging; training steps are jitted.
 :end_tab:
 
 ## Kernel Replay
 :label:`subsec_comp-overhead`
 
-Fusion reduces memory traffic, but it cannot merge matrix multiplications,
-and each one still needs a launch. Consider a stack of 60 linear layers of
-width 256 without biases, each followed by a tanh, applied to a minibatch
-of 64. Each layer performs a matrix multiplication of
-$2 \cdot 64 \cdot 256 \cdot 256 \approx 8.4 \times 10^6$ FLOPs, which the
-4090 completes in a few microseconds, and a tanh over 16,384 elements,
-<!-- WRITER: The stack issues 120 operations per call, but the number of kernels is
-a library choice: in PyTorch cuBLAS runs each 64x256x256 tf32 product as a GEMM plus a
-split-K reduction kernel, so eager, compiled and replayed calls all run 180 kernels
-(profiled); XLA runs 120 (one product fusion and one tanh fusion per layer). The cells
-now print time per operation (time / 120), not per kernel. -->
-which takes about as long. Eager execution launches 120 kernels per call.
-Python spends 5–15 µs of host time issuing a bare operation
-(:numref:`sec_hardware`), longer than the GPU needs to run it. The GPU
-therefore finishes each kernel before Python has issued the next one, and
-waits. The program is overhead-bound. Fusing the tanh into the preceding matrix
-multiplication would halve the number of launches, but the remaining 60
-would still keep the GPU waiting.
+Compilation cannot make the host faster at issuing a kernel; it can only
+issue fewer kernels, or none. Fusion cannot merge matrix products, and
+every kernel that remains needs a launch. When the kernels are short, the
+launches set the time. Let us take the extreme case, a stack of 60 linear
+layers of width 256 without biases, each followed by a tanh, applied to a
+minibatch of 64.
 
-The remedy is to take Python out of the loop: record the sequence of kernel
-launches once, and replay the whole sequence with a single command. NVIDIA
-GPUs support this through *CUDA graphs*. A CUDA graph stores each kernel
-together with its launch configuration and the memory addresses of its
-arguments. Replaying it takes one launch from the host, after which the GPU
-runs the kernels back to back. The recording is rigid: its shapes and
-memory addresses are fixed. New inputs must therefore be copied into the
-recorded input buffers before a replay, and the outputs of one replay are
-overwritten by the next. Nothing inside the sequence may wait for a value
+Each layer performs a product of
+$2 \cdot 64 \cdot 256 \cdot 256 \approx 8.4 \times 10^6$ FLOPs and a tanh
+over 16,384 elements, so a call issues 120 operations. The roofline allows
+a layer well under a microsecond: 0.1 µs for its FLOPs at the tf32 rate,
+less than half a microsecond for the 384 KiB its product reads and writes.
+Real kernels this small take longer. A kernel needs about a microsecond on
+the device however little it computes, since it has to start and wait for
+its first data; :numref:`subsec_perf-sweep` measured this floor for
+`x + 1` on a small tensor. The floor is measured, not predicted.
+
+Eager execution issues the 120 operations one at a time, at the host time
+$h$ each. Since $h$ exceeds the device time of a kernel, the GPU finishes
+each kernel before the next one arrives, and the stack takes about
+$120\,h$. Issued without the host in the loop, it would take 120 times the
+device time of a kernel, which is at least the floor. Taking Python out of
+the loop can therefore gain at most $h$ divided by the floor: a factor of
+ten or more on our machine, set by the host CPU more than by the GPU.
+
+The way to do it is to record the sequence of kernel launches once and to
+replay the whole sequence with a single command. NVIDIA GPUs support this
+through *CUDA graphs*. A CUDA graph stores each kernel with its launch
+configuration and the memory addresses of its arguments; replaying it takes
+one launch from the host, after which the GPU runs the kernels back to back.
+The recording is rigid. Its shapes and addresses are fixed, so new inputs
+are copied into the recorded input buffers before a replay, the next replay
+overwrites the outputs, and nothing inside the sequence may wait for a value
 read by the CPU.
 
 ```{.python .input #compilation-the-overhead-regime-capture-and-replay}
@@ -635,62 +664,47 @@ for desc, f in (('eager', deep), ('jit', jitted)):
           f'{1e6 * t / 120:.1f} µs per operation')
 ```
 
-<!-- WRITER: New printed facts (dev run 2026-11-19, uncontended 4090). PyTorch:
-eager 2.22 ms (18.5 us per operation), compiled without CUDA graphs 2.14 ms (17.9 us),
-reduce-overhead 0.28 ms (2.3 us); profiled device busy time of the stack 0.28-0.31 ms.
-Fusion removes nothing here (the tanh cannot be fused into the cuBLAS product, and
-Inductor's launches cost the host as much as eager's), so the whole factor of about 8
-is replay. JAX: eager 8.01 ms (66.7 us per operation), jit 0.27 ms (2.2 us), a factor
-of about 30 (store had 9.15 vs 0.28 ms, 33x). Replayed time per operation is the same
-2.2-2.3 us in both tabs: a measured per-kernel device floor, not a roofline number. -->
-Without Python in the loop, the stack runs many times faster, at
-roughly the time the GPU needs for its 120 small kernels. Dividing each time
-by 120 reads off the two costs per kernel: the eager time gives the host
-time of one launch, and the compiled time gives the GPU time of one kernel,
-a few microseconds.
+Eager, an operation takes the host time $h$. Replayed, the stack takes
+about 2 µs per operation, about twice the floor of a bare `x + 1`, because
+a replayed kernel does more than start: it reads its operands and
+computes. The gain is the ratio of the two times, so it falls short of the
+bound by about this factor of two.
 
 :begin_tab:`pytorch`
-`mode='reduce-overhead'` makes `torch.compile` record the compiled kernels
-as CUDA graphs and replay them. The first call compiles and runs a warm-up,
-the second records the CUDA graph, and later calls with the same shapes copy
-the input into the recorded buffer and replay. `Benchmark` warms up with
-<!-- WRITER: "seven to eight times" -> the cell now shows about eight (2.22 vs
-0.28 ms) and that plain torch.compile (2.14 ms) is no faster than eager; the
-attribution to CUDA graphs is now carried by the third timing. -->
-three calls, so the timed calls are replays, seven to eight times faster
-than the eager calls. The host time per launch of the eager version exceeds
-that of a bare operation, since every layer is also a call of an
-`nn.Module`.
-
-We time inference under `torch.no_grad()`, where every call is a complete
-step and can be replayed as a whole. In training, the forward and the
-backward pass are recorded as separate graphs and replayed as a pair. Since a replay overwrites the outputs of the previous
-one, a result that must survive the next call has to be cloned.
+The three timings separate the two remedies. Surprisingly, the stack
+compiled by Inductor is no faster than eager. The tanh is not merged into
+the library's product kernel, so nothing is fused, and Inductor's
+generated code launches each kernel from Python at about the same 18 µs
+per operation as eager dispatch. That is more than the 13 µs of a bare
+call in :numref:`subsec_perf-sweep`, since $h$ depends on the call and on
+the load of the host, and with a floor of 1 µs it puts the bound near
+eighteen. All of the gain, about
+a factor of eight, comes from replay. `mode='reduce-overhead'` makes
+`torch.compile` record its kernels as CUDA graphs: the first call compiles
+and warms up, the second records, and later calls with the same shapes
+copy the input into the recorded buffer and replay. `Benchmark` warms up
+with three calls, so the timed calls are replays.
 :end_tab:
 
 :begin_tab:`jax`
 `jax.jit` already removes Python from the loop: the compiled function
-starts with one call from Python. The eager version dispatches its 120
-<!-- WRITER: "twenty to thirty times" -> about thirty (8.01 vs 0.27 ms; store 33x).
-Command buffers are on by default in the pinned jaxlib 0.12.0.1: disabling them
-(XLA_FLAGS=--xla_gpu_enable_command_buffer=) slows the jitted stack from 0.27-0.41 ms
-to 0.82-0.94 ms (dev test 2026-11-19), so the tab's claim holds; keep the version name
-out of the prose (COMP-13). -->
-operations one at a time, at tens of microseconds each, and is twenty to
-thirty times slower. On a GPU, XLA also records runs of consecutive kernels as
-CUDA graphs by default (XLA calls them command buffers). A jitted function
-is therefore recorded and replayed without a separate mode.
+starts with one call. The eager version dispatches its 120 operations one
+at a time, at some 50 µs each, which puts the bound near fifty, and it is
+twenty to thirty times slower. Current XLA releases also record runs of
+consecutive kernels on a GPU as CUDA graphs, which XLA calls command
+buffers, so a jitted function is replayed without a separate mode.
 :end_tab:
 
-<!-- WRITER: New PyTorch-only cell (introduce it in the PyTorch tab note above or a
-shared sentence; JAX's jitted step already runs at about the roofline, 0.26 ms).
-It replays the training step of the previous subsection with mode='reduce-overhead'
-and prints the profiled GPU busy time. Dev runs: 0.77-0.86 ms per step, GPU busy
-0.25 ms (default torch.compile: 1.2-1.7 ms wall, also 0.25 ms busy; eager 0.40 ms
-busy). Reading: the device work matches the roofline prediction of about 0.2 ms;
-replay halves the compiled step, but the graph break at torch.autograd.grad keeps
-Python between the forward/backward graphs and the update graph, so the step stays
-overhead-bound (about a third of the wall time busy). -->
+:begin_tab:`pytorch`
+Replay applies to the training step of :numref:`subsec_comp-wholestep` as
+well. The pieces of the step, the forward and backward passes of the first
+graph and the update of the second, are recorded as separate CUDA graphs
+and replayed in turn; since a replay overwrites the outputs of the
+previous one, a result that must survive the next call has to be cloned.
+We replay the step and add up the time the device spends in its kernels,
+with the profiler of :numref:`subsec_perf-profiler`.
+:end_tab:
+
 ```{.python .input #compilation-replaying-the-training-step}
 %%tab pytorch
 replayed_step = torch.compile(train_step, mode='reduce-overhead')
@@ -700,51 +714,60 @@ print(f'training step, reduce-overhead: {1000 * t:.2f} ms/call, '
       f'GPU busy {busy:.2f} ms')
 ```
 
+:begin_tab:`pytorch`
+Replay brings the step below a millisecond, and the device's work,
+0.25 ms, matches the estimate made before the first timing. The device is
+still busy for only about a third of the step. The host runs Python
+between the replays, at the graph break, where autograd starts the
+backward graph, and in the bookkeeping of each replay, so the step remains
+overhead-bound. The count of the device's work was right; what is left of
+the step is host time between the graphs.
+:end_tab:
+
 ## Limits of Compilation
 :label:`subsec_comp-hurts`
 
-Compilation speeds up code that runs many times with the same shapes and is
-limited by bandwidth or overhead. Outside these conditions it can take more
-time than it saves.
+Compilation saves time only for code that runs more than $n^*$ times, and
+only on the operations that are bandwidth- or overhead-bound. One large
+matrix product leaves nothing to fuse and no launches to hide, though the
+chains around it still gain. Within those conditions, three things decide
+whether compiling a program is worth the trouble.
 
-* **Short runs.** A function called fewer than the $n^*$ times of
-  :eqref:`eq_compile_break_even` loses time. Quick experiments, evaluation
-  over small datasets, and functions called once are usually faster eager.
 * **Branches on values.** A hot loop full of branches on tensor values is
-  captured, if at all, in fragments separated by returns to Python. It
-  gains from compilation only after its branches are rewritten as selects
-  or conditional operations.
-* **Changing shapes.** Each new shape compiles again. Pad to a few fixed
-  sizes, compile for symbolic sizes, or leave the function eager.
-* **Compute-bound code.** If a profile shows one large matrix
-  multiplication taking most of the time, there is nothing to fuse and no
-  launch overhead to remove. Compiling rarely hurts such code, but it cannot
-  speed it up much.
+  captured, if at all, in fragments separated by returns to Python. In a
+  training loop the usual causes look harmless: reading the loss into
+  Python to log it, a test such as `if loss < 0.1:`, or an operation whose
+  output shape depends on the data, such as selecting the nonzero entries
+  of a tensor. Move such code out of the compiled function, or rewrite it
+  as selects and conditional operations.
+* **Changing shapes.** Every new shape may cost a compilation, and the
+  short last minibatch of an epoch is one of them: drop it, or pad it to
+  the full size.
 * **Debugging.** Compiled code does not run line by line. Breakpoints and
   print statements inside it behave differently, and errors point into
   generated code. Debug eagerly, then compile.
 
-Compilation removes memory traffic and launches from a program that fits on
-one GPU. It leaves the largest consumers of memory where they are: the
-parameters, the optimizer state, and the activations saved for the backward
-pass. :numref:`sec_memory_precision` measures them and shows how lower
-precision and recomputation reduce them.
+Compilation leaves the largest consumers of memory where they are: the
+parameters, the optimizer state, and the activations saved for the
+backward pass. :numref:`sec_memory_precision` measures them and shows how
+lower precision and recomputation reduce them.
 
 ## Summary
 
-Eager execution runs a program one operation at a time, so every elementwise
-operation makes a round trip through GPU memory and every operation needs a
-launch from Python. Graph capture traces the program on placeholders and
-records its tensor operations as a graph specialized to the shapes it saw; a
-branch on a tensor value cannot be recorded, and a new shape requires a new
-compilation. A compiler fuses elementwise chains, reductions, and the
-epilogues of matrix multiplications into single kernels, which for
-`gelu_ish` divides the memory traffic, and with it the time, by about nine.
-Recording a sequence of kernels as a CUDA graph and replaying it removes the
-launch overhead of stacks of small kernels. Compilation takes time at the
-first call, so it saves time only for code that runs often, with fixed
-shapes, in the bandwidth or overhead regime; it cannot speed up a
-compute-bound matrix multiplication.
+Eager execution runs a program one operation at a time, so every
+elementwise operation makes a round trip through GPU memory and every
+operation costs the host time of a launch. Graph capture traces the
+program on placeholders into a graph. A branch on a tensor value cannot be
+recorded, so a capture system freezes it, refuses it, or falls back to
+Python. A compiler that specializes to shapes compiles again for a new
+shape, unless it compiled for a symbolic size. Fusion merges elementwise
+chains, and reductions whose rows fit on the chip, into single kernels; for
+`gelu_ish` it divides the memory traffic and the time by about nine.
+Replaying a recorded sequence of kernels as a CUDA graph removes the
+launches, which small models and small steps need: a compiled step that
+still launches its kernels one by one stays overhead-bound. Compilation
+costs time at the first call, saves it after $n^*$ steps, and cannot speed
+up a compute-bound matrix product.
 
 ## Exercises
 
@@ -826,10 +849,10 @@ compute-bound matrix multiplication.
        those of $w = 64$. For which distribution of lengths would powers
        of two be the better choice?
 
-1. [code] **Fusion behind a matmul.** ● Compilation leaves a large matrix
-   product unchanged but fuses the elementwise chain that follows it.
-   Consider `gelu_ish(a @ a)` for an $n \times n$ matrix `a` in bf16 on a
-   GPU with peak compute $P$, bandwidth $\beta$, and ridge point
+4. [code] **Fusion behind a matrix product.** ● Compilation leaves a large
+   matrix product unchanged but fuses the elementwise chain that follows
+   it. Consider `gelu_ish(a @ a)` for an $n \times n$ matrix `a` in bf16 on
+   a GPU with peak compute $P$, bandwidth $\beta$, and ridge point
    $I^* = P/\beta$, the arithmetic intensity at which the time to compute
    equals the time to move the data. Model the product as compute-bound,
    taking $2n^3/P$ seconds. Model the chain as bandwidth-bound: eager
@@ -838,7 +861,7 @@ compute-bound matrix multiplication.
     1. Derive the speedup bound $S(n)$ of the compiled over the eager
        computation in terms of $n$, $m$, $b$, and $I^*$, and show that it
        tends to 1 as $n$ grows. With $m = 18$ as counted for `gelu_ish`,
-       evaluate $S(n)$ for bf16 on an RTX 4090 ($I^* \approx 165$
+       evaluate $S(n)$ for bf16 on an RTX 4090 ($I^* \approx 164$
        FLOP/byte) at $n = 1024$, $4096$, and $16384$, and find the $n$ at
        which $S(n)$ falls to $1.1$.
     1. Measure the eager and the compiled time of `gelu_ish(a @ a)` with
@@ -846,7 +869,7 @@ compute-bound matrix multiplication.
        speedup together with $S(n)$, and explain where and why the two
        differ.
 
-1. **Fusing a reduction.** ● A numerically safe softmax over each row of an
+5. **Fusing a reduction.** ● A numerically safe softmax over each row of an
    $R \times d$ fp32 matrix can be written as five eager operations: the
    row maximum, the subtraction of that maximum, the exponential, the row
    sum, and the division by that sum.
@@ -895,22 +918,23 @@ compute-bound matrix multiplication.
 
 7. [code] **Overhead crossover.** ● Use the stack of 60 layers of width
    256 at batch size 64 from :numref:`subsec_comp-overhead`, with its eager
-   and its compiled version. Compilation removes the host time of each
-   launch, about 5–15 µs, from the critical path, but not the time each
-   kernel takes to execute.
+   and its replayed version. Replay removes the host time $h$ of each
+   launch from the critical path, but not the time each kernel takes to
+   execute.
     1. Time both versions for depths $L$ from 10 to 200 at width 256, and
-       fit each time as $t(L) = c + sL$. Compare the eager slope per kernel
-       with the launch cost, and explain the compiled slope.
+       fit each time as $t(L) = c + sL$. Compare the eager slope per layer
+       with the host time of the layer's two operations, and explain the
+       replayed slope.
     1. A kernel that performs $F$ FLOPs and moves $B$ bytes takes at least
        $\max(F/P, B/\beta)$ seconds on a GPU with peak compute $P$ and
        bandwidth $\beta$. Predict from this bound the width at which the
        matrix product of one layer takes as long to execute as to launch.
        Then time both versions at depth 60 for widths from 64 to 4096,
-       plot the ratio of eager to compiled time against the width, and
+       plot the ratio of eager to replayed time against the width, and
        compare the width at which the ratio approaches 1 with your
        prediction.
 
-1. [extended] **A tracer of your own.** ●● Build a miniature tracing
+8. [extended] **A tracer of your own.** ●● Build a miniature tracing
    compiler in plain Python, with NumPy arrays as the values on which the
    captured program finally runs.
     1. Write a class `Tracer` whose instances carry a `shape` but no
@@ -948,38 +972,40 @@ compute-bound matrix multiplication.
 ::: {.cover}
 [Dive into Deep Learning · §13.3]{.kicker}
 
-Compute Graphs and Compilation<br>
-**graph capture · operation fusion · kernel replay · limits of compilation**
+Computation Graphs and Compilation<br>
+**graph capture · operation fusion · a training step · kernel replay**
 :::
 :::
 
-::: {.slide title="An Eight-Operation Activation Moves 1.15 GB to Produce 64 MB"}
+::: {.slide title="An Eight-Operation Activation Moves 1.07 GiB to Produce 61 MiB"}
 [The problem]{.kicker}
 
 `gelu_ish`: $0.5\,x\,(1 + \tanh(0.8\,(x + 0.04\,x^3)))$ on a
-$4000 \times 4000$ fp32 matrix, 64 MB:
+$4000 \times 4000$ fp32 matrix, 61 MiB:
 
-- eager: 8 kernels, each reads its inputs from GPU memory and writes back,
-  18 arrays moved: **1.15 GB, 1.15 ms** at 1 TB/s;
-- needed: read $x$ once, write once: **128 MB, 0.13 ms**.
+- eager: 8 kernels, each reads its inputs from GPU memory and writes back;
+  18 arrays moved, **1.07 GiB, at least 1.1 ms** at 1 TB/s;
+- needed: read $x$ once, write once: **122 MiB, 0.13 ms**.
 
 ::: {.d2l-note}
-Executing one operation at a time costs memory traffic and launches, not
-arithmetic. A compiler that sees the whole program removes both.
+Running one operation at a time costs memory traffic and launches, not
+arithmetic. A compiler that sees the whole program can remove both.
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- explain how tracing captures a program, and which code it cannot capture;
-- count the bytes an elementwise chain moves, eager and fused;
-- predict the speedup of fusion from that count;
+- explain how tracing captures a program, and what it does with a branch on
+  a value;
+- predict the speedup of fusion from a count of bytes;
+- predict a training step's time from FLOPs, bytes, and its number of
+  operations, and name its regime;
 - compute after how many steps compilation saves time;
-- tell when replaying a CUDA graph helps, and when not to compile at all.
+- tell when replaying a CUDA graph helps, and when not to compile.
 
-**Running example:** one RTX 4090 (1 TB/s, 165 TFLOP/s bf16) and the MLP of
-the chapter's 1B GPT, with a GELU of hidden width 8192.
+**Running example:** one RTX 4090 ($\beta$ = 1 TB/s; 165 TFLOP/s bf16,
+82.6 TFLOP/s tf32) and the 1B GPT of width 2048.
 :::
 
 ::: {.slide title="Compilation Fixes Two of the Three Regimes"}
@@ -991,26 +1017,30 @@ the chapter's 1B GPT, with a GELU of hidden width 8192.
 |---|---|
 | The Performance Model | roofline, three regimes, timing, profiling |
 | Hardware | where peak arithmetic and bandwidth come from |
-| **Compute Graphs and Compilation** | **fusion and kernel replay** |
+| **Computation Graphs and Compilation** | **fusion and kernel replay** |
 | Memory and Precision | what fits: bytes per parameter and per token |
 | Multi-GPU from First Principles | data parallelism by hand, its cost model |
-| Multi-GPU in Practice | production data parallelism, sharding |
+| Data Parallelism in Practice | one process per GPU, overlap |
+| Sharding the Training State | 16 bytes per parameter, split across GPUs |
 | Case Study: Optimizing a Transformer | the whole method on one GPT |
 :::
 
 ::: {.col .narrow}
-- **Uses:** bandwidth- and overhead-bound regimes, synchronized timing.
+- **Uses:** bandwidth- and overhead-bound regimes; the host time $h$ per
+  call.
 - **Skips:** writing kernels by hand, exporting models for deployment.
 :::
 :::
 :::
 
-::: {.slide title="Autograd Records the Graph Only After Running It"}
+::: {.slide title="A Record Made During the Forward Pass Comes Too Late"}
 ![](../img/mdl-perf-compute-graph.svg){width=82%}
 
-- Eager: each node is a kernel launch (5–15 µs of host time from Python)
-  and, if elementwise, a round trip through memory.
-- To merge `add` and `relu`, a compiler needs the graph *before* running.
+- Eager: each node is a kernel launch costing the host time $h$
+  (10 µs or more per call on our machine) and, if elementwise, a round
+  trip through memory.
+- To merge `add` and `relu`, a compiler needs the graph *before* running:
+  *graph capture*.
 :::
 
 ::: {.slide title="Tracing Records Tensor Operations on Placeholders" only="pytorch"}
@@ -1019,7 +1049,7 @@ the chapter's 1B GPT, with a GELU of hidden width 8192.
 - Placeholders: shape and dtype, no values. Tensor operations are
   recorded; Python loops unroll.
 - `torch.compile`: Dynamo captures the graph from bytecode, AOTAutograd
-  derives the backward, Inductor compiles.
+  derives the backward, Inductor compiles; guards check the shapes.
 :::
 
 ::: {.slide title="Tracing Records Tensor Operations on Placeholders" only="jax"}
@@ -1027,10 +1057,25 @@ the chapter's 1B GPT, with a GELU of hidden width 8192.
 
 - Placeholders: shape and dtype, no values. Tensor operations are
   recorded; Python loops unroll.
-- `jax.jit`: traces to a jaxpr; XLA compiles it.
+- `jax.jit`: traces to a jaxpr; XLA compiles it, cached per shape and dtype.
 :::
 
-::: {.slide title="A Branch on a Value Splits the Graph in Two" only="pytorch"}
+::: {.slide title="A Branch on a Value Can Be Frozen, Refused, or Left to Python"}
+`if x.sum() > 0:` cannot be answered while tracing: a placeholder has no
+value.
+
+| response | what happens |
+|---|---|
+| freeze | the example's branch, on every call: fast and wrong |
+| refuse | an error; rewrite as a *select* or a *conditional* |
+| fall back | a graph break; Python decides between two graphs |
+
+- *Select*: compute both alternatives, keep one. *Conditional*: compute
+  only the one taken.
+- Branches on *shapes* are fine.
+:::
+
+::: {.slide title="torch.compile Falls Back: Two Graphs, One Break" only="pytorch"}
 ```{.python #compilation-exercises-1}
 def f(x):
     x = x * 2
@@ -1039,13 +1084,14 @@ def f(x):
     return x - 1
 ```
 
-- `torch._dynamo.explain(f)`: 2 graphs, 1 break.
 - Graph 1: `x * 2`, `sum`, `> 0`; Python reads the result. Graph 2: the
   branch taken.
+- `fullgraph=True` and `torch.export` refuse; `torch.jit.trace` freezes
+  (with a warning).
 - `torch.where(x.sum() > 0, x + 1, x - 1)`: one graph.
 :::
 
-::: {.slide title="A Branch on a Value Cannot Be Traced" only="jax"}
+::: {.slide title="jax.jit Refuses a Branch on a Value" only="jax"}
 ```{.python #compilation-exercises-2}
 def f(x):
     x = x * 2
@@ -1064,8 +1110,8 @@ def f(x):
 @!compilation-capture-two-philosophies-2
 
 - Calls at lengths 8, 8, 16, 32: two compilations.
-- The second graph takes the length as a symbol (`SymInt`) and serves all
-  later lengths.
+- The second graph takes the length as a symbol (`SymInt`) and serves
+  length 32 as well.
 :::
 
 ::: {.slide title="Every New Shape Means a New Trace" only="jax"}
@@ -1092,96 +1138,101 @@ with padding to the next multiple of 64?
 ::: {.slide title="Fusion Moves 2 Arrays Instead of 18"}
 ![](../img/mdl-perf-fusion.svg){width=80%}
 
-Both versions are bandwidth-bound, so the predicted speedup is the ratio
-of bytes: $18/2 = 9$.
+- Both versions are bandwidth-bound: about 12 FLOPs per 8 bytes, far
+  below the ridge point (82 FLOP/byte for fp32 arithmetic).
+- Predicted speedup: the ratio of bytes, $18/2 = 9$.
 :::
 
-::: {.slide title="Same Bandwidth, Nine Times Fewer Bytes"}
+::: {.slide title="Fused gelu_ish Runs 8–10× Faster at About the Same Bandwidth"}
 @!compilation-what-the-compiler-does-fusion
 
 - Check `allclose` first: compilers reorder floating-point arithmetic.
-- 8–10× faster, close to the predicted 9. Memory is no faster; 16 of 18
-  transfers are gone.
+- Both versions move data at 0.7 TB/s or more.
+
+::: {.d2l-note}
+Memory is no faster and arithmetic no cheaper: 16 of the 18 transfers are
+gone.
+:::
 :::
 
 ::: {.slide title="Check: The Activation of the 1B GPT"}
 [Check]{.kicker}
 
-GELU MLP of width $d = 2048$, hidden $4d = 8192$; 8 sequences of 1,024
-tokens; bf16. How long does eager `gelu_ish` take per layer at 1 TB/s,
-compared with the MLP's two matmuls at 165 TFLOP/s?
+GELU variant of the GPT: width $d = 2048$, hidden $4d = 8192$; 8
+sequences of 1,024 tokens; bf16. Eager `gelu_ish` per layer at 1 TB/s,
+against the two matrix products at 165 TFLOP/s?
 
 ::: {.fragment .fade-up}
-- $8192 \cdot 8192 = 6.7 \times 10^7$ elements, 134 MB per array.
-- Eager: $18 \times 134$ MB $= 2.4$ GB, about 2.4 ms; fused: 0.27 ms.
-- Matmuls: $2 \cdot 2 \cdot 8192 \cdot 2048 \cdot 8192 = 5.5 \times
-  10^{11}$ FLOPs, about 3.3 ms. Unfused: about three quarters more.
-- Ratio $9P/(\beta d) \approx 0.72$, whatever the number of tokens.
+- 8,192 tokens $\times$ 8,192 hidden units $= 6.7 \times 10^7$ elements,
+  128 MiB per array.
+- Eager: $18 \times 128$ MiB $= 2.25$ GiB, about 2.4 ms; fused: 0.27 ms.
+- Products: $5.5 \times 10^{11}$ FLOPs, about 3.3 ms.
+- Ratio $9P/(\beta d) = 9I^*/d \approx 0.72$ for any number of tokens,
+  with the ridge point $I^* = P/\beta \approx 164$ FLOP/byte; it reaches 1
+  at $d \approx 1{,}500$.
 :::
 :::
 
-::: {.slide title="Compilers Fuse Patterns, Not Algorithms"}
+::: {.slide title="Compilers Fuse Chains and Row Reductions, Not Algorithms"}
 | fused | example |
 |---|---|
 | elementwise chains | activations, residual adds, optimizer updates |
-| reductions | softmax, layer norm: one read, one write per row |
-| epilogues | bias + activation applied to a matmul's tiles |
+| reductions, when a row fits on the chip | softmax, layer norm: one read, one write per row |
 
-- Unchanged: the large matmul, already one compute-bound kernel.
+- Unchanged: the large matrix product, already one tuned kernel.
 - Out of reach: the $T \times T$ attention scores. FlashAttention avoids
   them by a new algorithm (tiles, incremental softmax), written by hand.
 :::
 
-::: {.slide title="The Whole Step Compiles: Forward, Backward, Update" only="pytorch"}
-```{.python #compilation-exercises-3}
-def train_step(net, X, Y, lr=0.1):
-    loss = ((net(X) - Y) ** 2).mean()
-    grads = torch.autograd.grad(loss, list(net.parameters()))
-    with torch.no_grad():
-        for p, g in zip(net.parameters(), grads):
-            p -= lr * g
-    return loss
+::: {.slide title="Predict the Step: 0.25 ms of Work, Milliseconds of Launches"}
+MLP, 4 layers of width 1,024, minibatch 512, fp32 with tf32 products.
 
-compiled_step = torch.compile(train_step)
-```
+- FLOPs: about $3 \times 4 \times 2 \cdot 512 \cdot 1024^2 \approx 1.3
+  \times 10^{10}$: 0.16 ms at 82.6 TFLOP/s.
+- Bytes: 16 MiB of parameters, about 6 passes, about 96 MiB: 0.1 ms.
+- Eager: well over 100 operations at $h \geq 10$ µs: more than 1 ms, at
+  least 5× the work.
 
-- Graph 1: forward and loss (+ its backward, from AOTAutograd).
-- Break at `autograd.grad`; graph 2: the update.
+::: {.d2l-note}
+The eager step is overhead-bound; its 2 MiB arrays leave little for
+fusion.
+:::
 :::
 
-::: {.slide title="The Whole Step Compiles: Forward, Backward, Update" only="jax"}
-```{.python #compilation-exercises-4}
-def train_step(params, X, Y, lr=0.1):
-    loss_fn = lambda p: ((mlp(p, X) - Y) ** 2).mean()
-    loss, grads = jax.value_and_grad(loss_fn)(params)
-    return loss, jax.tree.map(lambda p, g: p - lr * g,
-                              params, grads)
+::: {.slide title="The Compiled Step Still Launches Its Kernels One by One" only="pytorch"}
+@!compilation-whole-step-compilation-measured
 
-compiled_step = jax.jit(train_step)
-```
+- Compiled: less than 2× faster, still 5–10× the 0.25 ms of work.
+- Two graphs: break at `torch.autograd.grad`; Inductor's code launches
+  each kernel from Python.
+- First call: warm on-disk cache; cold, several seconds.
+:::
 
-- One XLA program: loss, gradients, update.
-- `.lower(...).compile()` compiles ahead of time; `memory_analysis()` then
-  shows the planned memory.
+::: {.slide title="One XLA Program Runs the Step at the Estimate" only="jax"}
+@!compilation-whole-step-compilation-measured
+
+- Jitted: about 0.25 ms, the estimate; about 100× faster than the
+  un-jitted step.
+- One program, one call: loss, gradients, update.
+- Un-jitted JAX is for debugging; training steps are jitted.
 :::
 
 ::: {.slide title="Compilation Saves Time After a Break-Even Number of Steps"}
 $$n^* = \frac{t_\textrm{compile}}{t_\textrm{eager} - t_\textrm{compiled}}$$
 
-@!compilation-whole-step-compilation-measured
-
-Four layers of width 1,024, batch 512: the first call takes up to several
-seconds, and
-$n^*$ is a small fraction of a real training run.
+- 30 s of compilation, 10 ms saved per step: $n^* = 3{,}000$ steps.
+- Our step: a few hundred to a few thousand steps (warm or cold compile
+  cache), a small fraction of a real training run.
 :::
 
 ::: {.slide title="Thin Layers Leave the GPU Waiting for Python"}
-60 layers, width 256, batch 64: 120 kernels per call.
+60 layers, width 256, batch 64: 120 operations per call.
 
-- GPU: a few µs per kernel ($8.4 \times 10^6$ FLOPs per matmul).
-- Host: 5–15 µs to launch each from Python.
-- The GPU finishes each kernel before the next arrives: overhead-bound.
-- Fusion halves the launches at best; the matmuls stay separate.
+- Roofline: under 1 µs per layer. Measured floor: about 1 µs per kernel
+  (`x + 1`).
+- Eager: $120\,h$. Without Python: at least $120 \times$ floor.
+- Predicted gain: at most $h$ / floor, ten or more here; set by the host
+  CPU more than by the GPU.
 :::
 
 ::: {.slide title="A CUDA Graph Replays a Recorded Kernel Sequence"}
@@ -1193,26 +1244,6 @@ $n^*$ is a small fraction of a real training run.
 ::: {.d2l-note}
 Record once, replay many times: the host cost per step becomes one launch.
 :::
-:::
-
-::: {.slide title="Replay Brings the Stack Close to GPU Time" only="pytorch"}
-@!compilation-the-overhead-regime-capture-and-replay
-
-- `torch.compile(deep, mode='reduce-overhead')`: CUDA graphs. Call 1
-  compiles and warms up, call 2 records, later calls replay.
-- Time / 120: eager gives the host time per launch, compiled the GPU time
-  per kernel.
-- In training, forward and backward are separate graphs replayed as a pair.
-:::
-
-::: {.slide title="Replay Brings the Stack Close to GPU Time" only="jax"}
-@!compilation-the-overhead-regime-capture-and-replay
-
-- `jax.jit`: one call from Python for all 120 kernels.
-- Time / 120: eager gives the host time per operation, jitted the GPU time
-  per kernel.
-- On GPUs, XLA records kernel runs as CUDA graphs (command buffers) by
-  default.
 :::
 
 ::: {.slide title="Check: Which Regime, and How Much Can Replay Gain?"}
@@ -1228,26 +1259,64 @@ A step launches 400 kernels at 8 µs of host time each. The GPU needs
 :::
 :::
 
-::: {.slide title="Compile Code That Is Hot, Fixed-Shape, and Not Compute-Bound"}
-| situation | why compilation does not help |
-|---|---|
-| short runs | fewer than $n^*$ calls |
-| branches on values | fragments, or a rewrite needed |
-| changing shapes | one compilation per shape |
-| one large matmul | nothing to fuse, no overhead to remove |
-| debugging | no line-by-line execution |
+::: {.slide title="Replay, Not Fusion, Makes the Stack Eight Times Faster" only="pytorch"}
+@!compilation-the-overhead-regime-capture-and-replay
+
+- `compiled`: Inductor's kernels, launched one at a time from Python:
+  no faster, about 18 µs per operation like eager.
+- `reduce-overhead`: CUDA graphs; about 2 µs per operation, twice the
+  floor of `x + 1`.
+- Gain about 8, below the bound $h$ / floor $\approx 18$: a replayed
+  kernel also reads and computes.
+:::
+
+::: {.slide title="jit Runs the Stack 20–30× Faster Than Eager Dispatch" only="jax"}
+@!compilation-the-overhead-regime-capture-and-replay
+
+- `jax.jit`: one call from Python for all 120 operations; about 2 µs per
+  operation, twice the floor of `x + 1`.
+- Below the bound $h$ / floor $\approx 50$: a replayed kernel also reads
+  and computes.
+- XLA also records kernel runs as CUDA graphs (command buffers).
+:::
+
+::: {.slide title="Replay Brings the Training Step Below a Millisecond" only="pytorch"}
+@!compilation-replaying-the-training-step
+
+- Device work about 0.25 ms: the estimate holds.
+- Busy about a third of the step: Python still runs between the replayed
+  graphs.
+
+::: {.d2l-note}
+The device's work was predicted correctly; what is left is host time.
+:::
+:::
+
+::: {.slide title="Check: Compile It or Not?"}
+[Check]{.kicker}
+
+- An evaluation of 200 minibatches; compiling takes 30 s and saves 5 ms
+  per step.
+- A model called on a sequence that grows by one token per call.
+- A step that is one $8192 \times 8192$ bf16 matrix product.
+
+::: {.fragment .fade-up}
+- $n^* = 6{,}000 > 200$: stay eager.
+- A new shape per call: pad to a few lengths, or leave it eager.
+- Compute-bound: nothing to fuse, no launches to hide.
+:::
 :::
 
 ::: {.slide title="Wrap-up"}
 [Wrap-up]{.kicker}
 
-- Tracing records tensor operations on placeholders; branches on values
-  and new shapes are its limits.
-- `gelu_ish` on 64 MB: eager moves 1.15 GB, fused 128 MB; 8–10× faster.
-- In the 1B GPT's GELU MLP, the unfused activation takes about 2.4 ms per
-  layer next to 3.3 ms of matmuls; fused, 0.27 ms.
-- Break-even: $n^* = t_\textrm{compile} / (t_\textrm{eager} -
-  t_\textrm{compiled})$.
+- Tracing records tensor operations on placeholders; a branch on a value is
+  frozen, refused, or left to Python.
+- `gelu_ish` on 61 MiB: eager moves 1.07 GiB, fused 122 MiB; 8–10× faster.
+- GELU variant of the 1B GPT: unfused activation $9I^*/d \approx 0.72$ of
+  the products' time; fused, under a tenth.
+- MLP step: 0.25 ms of work under milliseconds of launches; compiling
+  gains only as far as it takes launches off the host.
 - CUDA graphs replay 120 small kernels with one launch.
 
 **Next:** memory and precision.

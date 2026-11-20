@@ -48,7 +48,11 @@ from d2l import jax as d2l
 
 ```{.python .input #compilation-compute-graphs-and-compilation-1}
 %%tab pytorch
+import os
 torch.set_float32_matmul_precision('high')  # fp32 matmuls may use tf32
+# Detach PyTorch's profiler from the GPU when a profile ends; without this,
+# every kernel launch after the first profile stays about 30% slower
+os.environ['TEARDOWN_CUPTI'] = '1'
 ```
 
 ## Graph Capture
@@ -728,6 +732,8 @@ input into the recorded buffer and replay. `Benchmark` warms up with three
 calls, so the timed calls are replays.
 :end_tab:
 
+<!-- WRITER: S7. Split this tab note in two, finding first: (1) Inductor gained nothing, replay gained about a factor of seven, the replayed call lasts as long as the device was busy; end that paragraph on "Replay removed the waiting and nothing else." (2) The mechanics of mode='reduce-overhead' as a short second paragraph. Move the per-launch accounting ("Counted per kernel instead of per operation ... adds a launch to every product here") to exercise 7, part 3, which profiles the eager stack. No cell changed. -->
+
 :begin_tab:`jax`
 `jax.jit` already removes Python from the loop: the compiled function
 starts with one call. The eager version dispatches its 120 operations one
@@ -766,6 +772,8 @@ profile ends. Without it, the profile of the stack above leaves every
 later kernel launch of the process about 30% slower, and the timing below
 reports more host time than the step needs.
 :end_tab:
+
+<!-- WRITER: S2. TEARDOWN_CUPTI=1 is now set in the PyTorch extras cell at the top of this notebook, before the first profile (tested: launches after a profile stay at 12.4 us per operation, as with the variable set before the start; 16.5 to 17.9 us without it). Delete the sentences of the tab note above that tell the reader to set it; nothing else in the note depends on them. -->
 
 ```{.python .input #compilation-replaying-the-training-step}
 %%tab pytorch

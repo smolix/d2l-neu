@@ -77,6 +77,7 @@ from jax.sharding import NamedSharding, PartitionSpec as P
 
 ```{.python .input #fast-transformer-case-study-optimizing-a-transformer-1}
 %%tab pytorch
+import os
 import re
 from torch.utils.checkpoint import checkpoint
 ```
@@ -84,10 +85,9 @@ from torch.utils.checkpoint import checkpoint
 ```{.python .input #fast-transformer-case-study-optimizing-a-transformer-2}
 %%tab pytorch
 torch.set_float32_matmul_precision('high')  # fp32 products on tf32 cores
-# Our outputs come from a run with TEARDOWN_CUPTI=1 in the environment, set
-# before starting, so that the profiler of the cells below detaches from
-# the GPU when a profile ends; without it, every later kernel launch of the
-# process stays slower
+# Detach PyTorch's profiler from the GPU when a profile ends; without this,
+# every kernel launch after the first profile stays about 30% slower
+os.environ['TEARDOWN_CUPTI'] = '1'
 ```
 
 ## Experimental Setup
@@ -803,12 +803,27 @@ remat.blks = nn.ModuleList(Checkpointed(blk) for blk in remat.blks)
 assert torch.allclose(remat(X), model(X), atol=1e-6)
 step = make_step(remat, torch.compile(remat, dynamic=False,
                                       mode='reduce-overhead'), bf16=True)
+with torch.no_grad(), torch.autocast('cuda', torch.bfloat16):
+    forward = d2l.kernel_times(lambda: compiled(X512), steps=5)  # Alone
 torch.cuda.reset_peak_memory_stats()
 start = torch.cuda.memory_allocated()
-record('+ checkpointing', tokens_per_second(step, windows(corpus, 512)),
-       kept=False)
+batches = windows(corpus, 512)
+record('+ checkpointing', tokens_per_second(step, batches), kept=False)
 memory = (torch.cuda.max_memory_allocated() - start) / 2**30
 print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
+
+def split(kernels):
+    """Device ms per step of the matrix products and of all other kernels."""
+    products = sum(ms for name, ms in kernels.items()
+                   if re.search(d2l.PRODUCT_KERNELS, name, re.I))
+    return np.array([products, sum(kernels.values()) - products])
+
+alone = split(forward)
+added = (split(d2l.kernel_times(lambda: step(*next(batches)), steps=5))
+         - split(profiles['+ batch 512']))
+print(f'forward pass alone:  products {alone[0]:4.1f} ms, other kernels '
+      f'{alone[1]:4.1f} ms\nadded to the step:   products {added[0]:4.1f} ms, '
+      f'other kernels {added[1]:4.1f} ms')
 ```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
@@ -852,6 +867,8 @@ backward pass in one program, may run parts of them in shared kernels. A
 profile of the checkpointed step would show which kernels the
 recomputation adds and how long they take (exercise :exref:`ex_ft-remat`).
 :end_tab:
+
+<!-- WRITER: S4. The PyTorch cell now profiles the forward pass alone and the checkpointed step, and prints both split into matrix products (d2l.PRODUCT_KERNELS, which counts the fused attention kernels among them, as show_profile does) and all other kernels, the step as what checkpointing adds to the stored profile of + batch 512. Dev run (GPU 0, 2026-11-20; throughput 0.85x, forward pass 31.0 of a 100.9 ms step): forward pass alone: products 17.6 ms, other kernels 13.4 ms; added to the step: products 14.5 ms, other kernels 3.1 ms. A finer split of a first dev run: added products 12.7 (alone 15.7) plus flash attention 1.9 (alone 1.9); added Triton kernels 3.0 (alone 13.4). So the recomputed products cost about what they cost alone, while the elementwise operations and normalizations between them, 13 ms alone, add only 3 ms: Inductor compiles the recomputation and the backward pass into one program and fuses the recomputed elementwise work into the backward pass's kernels (the checkpointed step's Triton kernels are new fusions, e.g. mm_mul_silu_silu_backward). Replace "We have not established why. The embedding and the output layer explain little of it, and the compiler ... may run parts of them in shared kernels" with this finding. Exercise ex_ft-remat part 1 is now done in the text: reword or drop it. The deck slide that shows this cell (@!fast-transformer-rungs-each-one-measured-4) gains two output lines. -->
 
 :begin_tab:`jax`
 Throughput falls to 0.79 of the previous configuration, close to the 0.76

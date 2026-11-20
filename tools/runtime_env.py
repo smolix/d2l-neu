@@ -441,28 +441,11 @@ NOTEBOOK_ENV = {
         "NCCL_LOCAL_REGISTER": "0",
         "XLA_PYTHON_CLIENT_ALLOCATOR": "vmm",
     },
-    # 13.8: detach the profiler's instrumentation from the GPU when a profile
-    # ends; otherwise every later kernel launch of the process is slowed.
-    ("pytorch", "chapter_computational-performance/fast-transformer.ipynb"): {
-        "TEARDOWN_CUPTI": "1",
-    },
-    # 13.1, 13.3, 13.4, 13.5 time steps after a cell has profiled.
-    # Without the teardown, launches after the first torch.profiler session
-    # stay about 30% slower (12.4 -> 16.6 us per operation of a tanh stack,
-    # dev, 2026-11-20); this was the 2.8 -> 3.5 ms drift of the LeNet step
-    # between two cells of 13.5. JAX's profiler leaves no such cost.
-    ("pytorch", "chapter_computational-performance/performance-model.ipynb"): {
-        "TEARDOWN_CUPTI": "1",
-    },
-    ("pytorch", "chapter_computational-performance/compilation.ipynb"): {
-        "TEARDOWN_CUPTI": "1",
-    },
-    ("pytorch", "chapter_computational-performance/memory-precision.ipynb"): {
-        "TEARDOWN_CUPTI": "1",
-    },
-    ("pytorch", "chapter_computational-performance/multiple-gpus.ipynb"): {
-        "TEARDOWN_CUPTI": "1",
-    },
+    # 13.1, 13.3, 13.4, 13.5, 13.8 (PyTorch) set TEARDOWN_CUPTI=1 in their
+    # first cells, before the first torch.profiler session: launches after a
+    # profile otherwise stay about 30% slower (12.4 -> 16.6 us per operation
+    # of a tanh stack, dev, 2026-11-20). Setting it inside the process works
+    # as well as setting it before the start (12.4 us after the profile).
     # 18.4: generation with KV caches of changing length leaves PyTorch's
     # caching allocator holding blocks it cannot reuse. In the D2L_RERUN
     # regeneration run tensors peaked at 10.8 GiB while the card showed

@@ -56,8 +56,18 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #memory-precision-memory-and-precision-1}
+%%tab jax
+import re
+```
+
+```{.python .input #memory-precision-memory-and-precision-1}
 %%tab pytorch
+import os
+import re
 from torch.utils.checkpoint import checkpoint
+# Detach PyTorch's profiler from the GPU when a profile ends; without this,
+# every kernel launch after the first profile stays about 30% slower
+os.environ['TEARDOWN_CUPTI'] = '1'
 ```
 
 ## Memory of a Training Step
@@ -993,11 +1003,15 @@ for m in (1, 4):
                for p, g in zip(model.parameters(), full)) < 1e-2
     f = lambda: accumulate(model, X, m)
     times = 1000 * np.array([d2l.Benchmark(f).time for _ in range(5)])  # ms
-    busy = sum(d2l.kernel_times(f).values())  # Device ms per step
+    kernels = d2l.kernel_times(f)        # Device ms per step, per kernel
+    busy = sum(kernels.values())
+    products = sum(ms for name, ms in kernels.items()
+                   if re.search(d2l.PRODUCT_KERNELS, name, re.I))
     print(f'{m} x {4096 // m:4d} tokens: peak {peak / 2**30:.2f} GiB above '
           f'the weights, {np.median(times):.0f} ms per step '
           f'({times.min():.0f} to {times.max():.0f}), device busy '
-          f'{busy:.0f} ms')
+          f'{busy:.0f} ms\n{"":16s}matrix products {products:.0f} ms, '
+          f'other kernels {busy - products:.0f} ms')
 ```
 
 ```{.python .input #memory-precision-accumulated-step}
@@ -1025,11 +1039,15 @@ for m in (1, 4):
         accumulate(params, rest, X, m), full))) < 1e-2
     f = lambda: accumulate(params, rest, X, m)
     times = 1000 * np.array([d2l.Benchmark(f).time for _ in range(5)])  # ms
-    busy = sum(d2l.kernel_times(f).values())  # Device ms per step
+    kernels = d2l.kernel_times(f)        # Device ms per step, per kernel
+    busy = sum(kernels.values())
+    products = sum(ms for name, ms in kernels.items()
+                   if re.search(d2l.PRODUCT_KERNELS, name, re.I))
     print(f'{m} x {4096 // m:4d} tokens: peak {peak / 2**30:.2f} GiB above '
           f'the weights, {np.median(times):.0f} ms per step '
           f'({times.min():.0f} to {times.max():.0f}), device busy '
-          f'{busy:.0f} ms')
+          f'{busy:.0f} ms\n{"":16s}matrix products {products:.0f} ms, '
+          f'other kernels {busy - products:.0f} ms')
 ```
 
 The peak falls to about half, and the gradients that persist across the

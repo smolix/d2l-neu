@@ -2859,7 +2859,7 @@ def resnet18(num_classes, in_channels=1, *, rngs):
 
 def allreduce_megabytes(compiled):
     """Megabytes of fp32 results of each allreduce in a compiled program,
-    largest first.
+    in the order in which the program runs them.
 
     Defined in :numref:`sec_multi_gpu_concise`"""
     sizes = []
@@ -2871,7 +2871,7 @@ def allreduce_megabytes(compiled):
             sizes.append(sum(4 * math.prod(map(int, dims.split(',')))
                              for dims in re.findall(r'f32\[([\d,]+)\]',
                                                     result)) / 1e6)
-    return sorted(sizes, reverse=True)
+    return sizes
 
 def windows(corpus, batch_size, num_steps=128, *, sharding=None):
     """Endless minibatches of windows at random offsets, each position with

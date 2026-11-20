@@ -330,9 +330,21 @@ bytes $S$ that every step must sum across the GPUs:
 ```{.python .input #multi-gpu-practice-the-training-step-1}
 %%tab pytorch
 d2l.FashionMNIST()                   # Download once, before any process runs
-num_params = d2l.num_params(resnet18(10))
+net = resnet18(10)
+num_params = d2l.num_params(net)
 S = 4 * num_params                   # Gradient bytes in fp32
-print(f'{num_params / 1e6:.1f}M parameters, S = {S / 1e6:.0f} MB')
+# DDP's buckets: the gradients in the order in which the backward pass
+# produces them, the reverse of the parameters', the first bucket closed
+# at 1 MiB and every later one at 25 MiB
+buckets, size = [], 0
+for p in reversed(list(net.parameters())):
+    size += 4 * p.numel()
+    if size >= (25 if buckets else 1) * 2**20:
+        buckets, size = buckets + [size], 0
+buckets += [size] if size else []
+last_bucket = buckets[-1]            # Bytes of the bucket sent last
+print(f'{num_params / 1e6:.1f}M parameters, S = {S / 1e6:.0f} MB in buckets '
+      f'of {", ".join(f"{b / 1e6:.1f}" for b in buckets)} MB')
 ```
 
 ```{.python .input #multi-gpu-practice-the-training-step-1}
@@ -602,7 +614,7 @@ the fp32 arrays that it returns.
 %%tab jax
 def allreduce_megabytes(compiled):  #@save
     """Megabytes of fp32 results of each allreduce in a compiled program,
-    largest first."""
+    in the order in which the program runs them."""
     sizes = []
     for line in compiled.as_text().splitlines():
         # A synchronous all-reduce, or the -done half of an asynchronous
@@ -612,7 +624,7 @@ def allreduce_megabytes(compiled):  #@save
             sizes.append(sum(4 * math.prod(map(int, dims.split(',')))
                              for dims in re.findall(r'f32\[([\d,]+)\]',
                                                     result)) / 1e6)
-    return sorted(sizes, reverse=True)
+    return sizes
 ```
 
 ```{.python .input #multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-3}
@@ -622,6 +634,7 @@ idx = next(minibatches(mesh, 256 * mesh.size))
 compiled = train_step.lower(model, opt, X, y, idx).compile()
 sizes = allreduce_megabytes(compiled)  # One entry per allreduce
 big = [m for m in sizes if m > 1]      # Gradient buffers, above 1 MB
+last_bucket = 1e6 * big[-1]            # Bytes of the buffer sent last
 print(f'{len(sizes)} allreduces: {len(big)} of '
       f'{" and ".join(f"{m:.1f}" for m in big)} MB, the other '
       f'{len(sizes) - len(big)} of {sum(sizes) - sum(big):.2f} MB together')
@@ -674,71 +687,7 @@ def step_time(k, b, num_steps=50):
     return d2l.Benchmark(stepper(k, b), warmup=10, repeats=num_steps).time
 ```
 
-Weak scaling first, with 256 examples per GPU:
-
-```{.python .input #multi-gpu-practice-ddp-really-run-3}
-%%tab pytorch, jax
-ks = [k for k in (1, 2, 4) if k <= d2l.num_gpus()]
-weak = {k: step_time(k, 256) for k in ks}
-for k in ks:
-    print(f'{k} GPU(s): {k * 256 / weak[k]:5.0f} examples/s, speedup '
-          f'{k * weak[1] / weak[k]:.2f}, efficiency {weak[1] / weak[k]:.0%}')
-```
-
-Two GPUs process somewhat less than twice as many examples per second as
-one, and four GPUs a little over three times as many. The *efficiency*,
-the speedup divided by $k$, falls gradually as GPUs are added. Under weak
-scaling every GPU does the same work at every $k$, so the efficiency is
-the ratio of the single-GPU step time to the step time on $k$ GPUs. What
-it loses is the communication that the step does not hide.
-
-:begin_tab:`pytorch`
-Here the efficiency is 88% on two GPUs and 83% on four. Four GPUs give 3.3
-times the throughput of one, so a sixth of the machine goes to moving
-45 MB per step through host memory. On two GPUs a step takes about 15 ms
-longer than on one (127 against 112 ms), and the next subsection asks where
-those milliseconds go.
-:end_tab:
-
-:begin_tab:`jax`
-Here the efficiency is 84% on two GPUs and 77% on four. Four GPUs give 3.1
-times the throughput of one, so almost a quarter of the machine goes to
-communication. On two GPUs a step takes about 19 ms longer than on one
-(119 against 100 ms), and the next subsection asks where those
-milliseconds go.
-:end_tab:
-
-Four GPUs, in other words, do the work of a little over three. For a model
-that sends 45 MB through host memory at every step this is respectable,
-and at the end of this section the cost model predicts that the same model
-on GPUs with a direct link would lose almost nothing.
-
-Strong scaling holds the global minibatch at 512, so each of the $k$ GPUs
-processes $512/k$ examples while the allreduce keeps its size:
-
-```{.python .input #multi-gpu-practice-ddp-really-run-4}
-%%tab pytorch, jax
-strong = {k: step_time(k, 512 // k) for k in ks}
-for k in ks:
-    print(f'{k} GPU(s), {512 // k} examples each: speedup '
-          f'{strong[1] / strong[k]:.2f}, efficiency '
-          f'{strong[1] / strong[k] / k:.0%}')
-d2l.plot(ks, [ks, [k * weak[1] / weak[k] for k in ks],
-              [strong[1] / strong[k] for k in ks]], 'GPUs', 'speedup',
-         legend=['linear', 'weak (256 per GPU)', 'strong (512 in all)'],
-         fmts=('k:', '-o', '--s'))
-```
-
-At two GPUs the two conventions time the same run, 256 examples per GPU.
-They differ only in the one-GPU reference, 256 or 512 examples, and one
-RTX 4090 processes both at about the same rate per example, so the
-speedups agree. At four GPUs they part. Strong scaling leaves each GPU
-128 examples per step, so the step's computation shrinks while its
-communication does not, and the efficiency falls well below that of weak
-scaling. A training run with a fixed
-minibatch finishes less than three times sooner on four GPUs.
-
-### Predicted and Measured Communication
+<!-- WRITER: S1. The prediction moved here, before the weak-scaling measurement: cost-model prose, beta_link measurement and the prediction cell, which now prints the exposed ms without overlap and with full overlap (last bucket: DDP 8.7 MB from the bucket count printed in the training-step cell; JAX the buffer the compiled program sends last, 18.9 MB). Restate without past-tense references to the weak-scaling numbers; the tab notes below still quote the measured 15 / 19 ms, which now come later. -->
 
 Under weak scaling the computation on each GPU does not change with $k$,
 so the difference $t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ is the
@@ -833,20 +782,14 @@ if d2l.num_gpus() >= 2:
     beta_link = allreduce_beta()
     print(f'bus bandwidth = {1e-9 / beta_link:.2f} GB/s '
           f'(beta_link = {1e9 * beta_link:.2f} ns/byte)')
-    for k in ks[1:]:
+    exposed = {}                   # Predicted exposed seconds per step
+    for k in (2, 4):
         ring = 2 * (k - 1) / k     # Bytes that each GPU sends, per byte of S
-        print(f'k={k}: predicted {ring:.1f} S beta_link = '
-              f'{1e3 * ring * S * beta_link:.0f} ms, measured exposed '
-              f'{1e3 * (weak[k] - weak[1]):.0f} ms per step')
+        exposed[k] = (ring * S * beta_link, ring * last_bucket * beta_link)
+        print(f'k={k}: exposed {1e3 * exposed[k][0]:.0f} ms without overlap '
+              f'({ring:.1f} S beta_link), {1e3 * exposed[k][1]:.0f} ms with '
+              f'full overlap (last bucket)')
 ```
-
-Each GPU sends at about 2.4 GB/s. An allreduce of ResNet-18's gradients
-that nothing overlaps takes about 18.5 ms on two GPUs and, with the ring
-factor of 1.5, about 28 ms on four. The measured exposed times are close
-to these numbers, and from two GPUs to four they grow by about half, as
-the ring factor predicts. The cost model gets the bytes right. Overlap
-hides far less of the communication on this machine than the bucket
-model predicts.
 
 :begin_tab:`pytorch`
 DDP's last bucket holds 8.7 of the 45 MB of gradients, so with full overlap
@@ -859,6 +802,90 @@ With full overlap a step would expose only the last of XLA's two gradient
 buffers. Their sizes, about 26 and 19 MB, put that bound at 8 to 11 ms,
 depending on which comes last, against the 19 ms measured.
 :end_tab:
+
+Weak scaling first, with 256 examples per GPU:
+
+<!-- WRITER: S1. The prediction (bus bandwidth, exposed ms without and with full overlap) now comes before this cell; the cell prints, for k = 2 and 4, the efficiency predicted without overlap and with full overlap and the measured exposed ms. Rewrite the reading below as the test of those two predictions (see code.md for the numbers). -->
+
+```{.python .input #multi-gpu-practice-ddp-really-run-3}
+%%tab pytorch, jax
+ks = [k for k in (1, 2, 4) if k <= d2l.num_gpus()]
+weak = {k: step_time(k, 256) for k in ks}
+for k in ks:
+    print(f'{k} GPU(s): {k * 256 / weak[k]:5.0f} examples/s, speedup '
+          f'{k * weak[1] / weak[k]:.2f}, efficiency {weak[1] / weak[k]:.0%}')
+    if k > 1:  # Predicted: the one-GPU step plus the exposed communication
+        none, full = (weak[1] / (weak[1] + e) for e in exposed[k])
+        print(f'{"":10s}predicted {none:.0%} without overlap, {full:.0%} '
+              f'with full overlap; exposed {1e3 * (weak[k] - weak[1]):.0f} ms')
+```
+
+Two GPUs process somewhat less than twice as many examples per second as
+one, and four GPUs a little over three times as many. The *efficiency*,
+the speedup divided by $k$, falls gradually as GPUs are added. Under weak
+scaling every GPU does the same work at every $k$, so the efficiency is
+the ratio of the single-GPU step time to the step time on $k$ GPUs. What
+it loses is the communication that the step does not hide.
+
+:begin_tab:`pytorch`
+Here the efficiency is 88% on two GPUs and 83% on four. Four GPUs give 3.3
+times the throughput of one, so a sixth of the machine goes to moving
+45 MB per step through host memory. On two GPUs a step takes about 15 ms
+longer than on one (127 against 112 ms), and the next subsection asks where
+those milliseconds go.
+:end_tab:
+
+:begin_tab:`jax`
+Here the efficiency is 84% on two GPUs and 77% on four. Four GPUs give 3.1
+times the throughput of one, so almost a quarter of the machine goes to
+communication. On two GPUs a step takes about 19 ms longer than on one
+(119 against 100 ms), and the next subsection asks where those
+milliseconds go.
+:end_tab:
+
+<!-- WRITER: S1. This paragraph was the reading of the old prediction cell, which printed predicted against measured exposed ms after the weak-scaling cell; it now reads the weak-scaling cell above. Merge it with the tab notes above. -->
+
+Each GPU sends at about 2.4 GB/s. An allreduce of ResNet-18's gradients
+that nothing overlaps takes about 18.5 ms on two GPUs and, with the ring
+factor of 1.5, about 28 ms on four. The measured exposed times are close
+to these numbers, and from two GPUs to four they grow by about half, as
+the ring factor predicts. The cost model gets the bytes right. Overlap
+hides far less of the communication on this machine than the bucket
+model predicts.
+
+Four GPUs, in other words, do the work of a little over three. For a model
+that sends 45 MB through host memory at every step this is respectable,
+and at the end of this section the cost model predicts that the same model
+on GPUs with a direct link would lose almost nothing.
+
+Strong scaling holds the global minibatch at 512, so each of the $k$ GPUs
+processes $512/k$ examples while the allreduce keeps its size:
+
+```{.python .input #multi-gpu-practice-ddp-really-run-4}
+%%tab pytorch, jax
+strong = {k: step_time(k, 512 // k) for k in ks}
+for k in ks:
+    print(f'{k} GPU(s), {512 // k} examples each: speedup '
+          f'{strong[1] / strong[k]:.2f}, efficiency '
+          f'{strong[1] / strong[k] / k:.0%}')
+d2l.plot(ks, [ks, [k * weak[1] / weak[k] for k in ks],
+              [strong[1] / strong[k] for k in ks]], 'GPUs', 'speedup',
+         legend=['linear', 'weak (256 per GPU)', 'strong (512 in all)'],
+         fmts=('k:', '-o', '--s'))
+```
+
+At two GPUs the two conventions time the same run, 256 examples per GPU.
+They differ only in the one-GPU reference, 256 or 512 examples, and one
+RTX 4090 processes both at about the same rate per example, so the
+speedups agree. At four GPUs they part. Strong scaling leaves each GPU
+128 examples per step, so the step's computation shrinks while its
+communication does not, and the efficiency falls well below that of weak
+scaling. A training run with a fixed
+minibatch finishes less than three times sooner on four GPUs.
+
+<!-- WRITER: S1. The heading below now introduces only the diagnosis (which assumption of the bucket model fails); retitle or move it. -->
+
+### Predicted and Measured Communication
 
 The bucket model makes three assumptions: every allreduce starts as soon
 as its bucket is complete, it runs as fast as the bare benchmark, and the

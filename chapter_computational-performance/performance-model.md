@@ -48,8 +48,12 @@ from d2l import jax as d2l
 
 ```{.python .input #performance-model-the-performance-model-1}
 %%tab pytorch
+import os
 import re
 import time
+# Detach PyTorch's profiler from the GPU when a profile ends; without this,
+# every kernel launch after the first profile stays about 30% slower
+os.environ['TEARDOWN_CUPTI'] = '1'
 ```
 
 ```{.python .input #performance-model-the-performance-model-1}
@@ -619,6 +623,8 @@ stays slower, by about 30% on our machine, and so the `x + 1` of the
 control, which is timed after the profile of the product, comes out slower
 than ours.
 :end_tab:
+
+<!-- WRITER: S2. TEARDOWN_CUPTI=1 is now set in the PyTorch extras cell at the top of this notebook, before the first profile (tested: launches after a profile stay at 12.4 us per operation, as with the variable set before the start; 16.5 to 17.9 us without it). Delete the sentences of the tab note above that tell the reader to set it; nothing else in the note depends on them. -->
 
 :begin_tab:`jax`
 Every call of a compiled function passes through XLA's runtime, which

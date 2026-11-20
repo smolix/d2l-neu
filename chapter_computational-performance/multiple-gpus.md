@@ -51,7 +51,11 @@ from d2l import jax as d2l
 
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles-1}
 %%tab pytorch
+import os
 import time
+# Detach PyTorch's profiler from the GPU when a profile ends; without this,
+# every kernel launch after the first profile stays about 30% slower
+os.environ['TEARDOWN_CUPTI'] = '1'
 ```
 
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles-1}
@@ -653,10 +657,26 @@ def allreduce_time(n, mesh, calls):
     x = jnp.zeros((mesh.size, n), device=NamedSharding(mesh, P('data')))
     return d2l.Benchmark(lambda: allreduce(x, mesh), repeats=calls).time
 
-alpha = allreduce_time(1, meshes[1], calls=100)  # XLA's psum, run by NCCL
+def program_time(m, mesh, calls=300):
+    """Seconds per call of one compiled program that makes m allreduces of
+    one float, each on the result of the one before."""
+    def chain(x):
+        for _ in range(m):               # Each allreduce waits for the last
+            x = jax.lax.pmean(x, 'data')
+        return x
+    f = jax.jit(jax.shard_map(chain, mesh=mesh, in_specs=P('data'),
+                              out_specs=P('data')))
+    x = jnp.zeros((mesh.size, 1), device=NamedSharding(mesh, P('data')))
+    return d2l.Benchmark(lambda: f(x), warmup=10, repeats=calls).time
+
+# The training step's psum runs inside a program that is dispatched anyway,
+# so alpha is what each further allreduce adds to one program
+alpha = (program_time(10, meshes[1]) - program_time(1, meshes[1])) / 9
 n = 2**26                                # 64M floats ...
 S = 4 * n                                # ... 268 MB (256 MiB) per device
-beta_link = (allreduce_time(n, meshes[1], calls=3) - alpha) / S  # s per byte
+# Both calls dispatch a program of their own; their difference is the bytes
+beta_link = (allreduce_time(n, meshes[1], calls=3)
+             - allreduce_time(1, meshes[1], calls=100)) / S  # s per byte
 print(f'alpha = {1e6 * alpha:.0f} us, beta_link = {1e9 * beta_link:.2f} '
       f'ns/byte (bus bandwidth {1e-9 / beta_link:.1f} GB/s)')
 ```
@@ -686,6 +706,8 @@ transport and a workaround for it. Each call of `allreduce`
 dispatches a compiled program of its own, so $\alpha$ includes the time of
 that dispatch.
 :end_tab:
+
+<!-- WRITER: S3. The JAX cell now measures alpha as a training step pays it: program_time(m) times one jitted shard_map program with m allreduces (pmean) of one float, each on the result of the one before, and alpha = (t(10) - t(1)) / 9; beta_link is (t(256 MiB) - t(one float)) / S, both separate calls, so their difference drops the dispatch. Dev, two runs: alpha 24 and 25 us (an earlier probe 22 to 31 us), against 266 to 272 us for a separate program per allreduce; beta_link 0.41 ns/byte, 2.4 GB/s, unchanged. A program on two GPUs costs about 170 us with no allreduce in it and about 290 us with one. Replace the sentence 'Each call of allreduce dispatches a compiled program of its own, so alpha includes the time of that dispatch' with how alpha is measured now and why (the step's psum runs inside a program that the step dispatches anyway). -->
 
 A measured $\beta_{\textrm{link}}$ describes the allreduce that moved the
 bytes, the two GPUs that took part, and the path between them
@@ -721,16 +743,30 @@ for name, f, calls in (('separately', separately, c),
 ```{.python .input #multiple-gpus-latency-and-bandwidth-of-the-allreduce-1}
 %%tab jax
 mesh = meshes[1]
-grads = [jnp.zeros((mesh.size, p.size), device=NamedSharding(mesh, P('data')))
-         for p in base]
-flat = jnp.concatenate(grads, axis=1)
+sizes = [p.size for p in base]
+flat = jnp.zeros((mesh.size, sum(sizes)), device=NamedSharding(mesh, P('data')))
 n_bytes, c = flat.nbytes // mesh.size, len(base)  # Bytes per device
-for name, f, calls in (
-        ('separately', lambda: [allreduce(g, mesh) for g in grads], c),
-        ('at once', lambda: allreduce(flat, mesh), 1)):
-    t = d2l.Benchmark(f, repeats=100).time
-    print(f'{name:10s}: {1e6 * t:4.0f} us measured, '
-          f'{1e6 * (calls * alpha + n_bytes * beta_link):4.0f} us predicted')
+
+def separately(g):
+    """One psum per gradient tensor, each after the one before; without the
+    barrier, XLA would merge the ten into one allreduce."""
+    out = []
+    for g_i in jnp.split(g, np.cumsum(sizes)[:-1], axis=1):
+        if out:
+            g_i, _ = jax.lax.optimization_barrier((g_i, out[-1]))
+        out.append(jax.lax.psum(g_i, 'data'))
+    return jnp.concatenate(out, axis=1)
+
+t = {}
+for name, f in (('separately', separately),
+                ('at once', lambda g: jax.lax.psum(g, 'data'))):
+    f = jax.jit(jax.shard_map(f, mesh=mesh, in_specs=P('data'),
+                              out_specs=P('data')))
+    t[name] = d2l.Benchmark(lambda: f(flat), warmup=10, repeats=300).time
+    print(f'{name:10s}: {1e6 * t[name]:4.0f} us measured')
+# Both programs are dispatched once and move the same bytes
+print(f'difference: {1e6 * (t["separately"] - t["at once"]):4.0f} us '
+      f'measured, {1e6 * (c - 1) * alpha:4.0f} us predicted by {c - 1} alpha')
 ```
 
 Ten calls take seven to ten times as long as one call that moves the same
@@ -748,6 +784,8 @@ the transfer of one call runs while the host dispatches the next.
 :eqref:`eq_dp_cost` adds the two terms, so it overestimates a call whose
 transfer is shorter than its dispatch.
 :end_tab:
+
+<!-- WRITER: S3. The JAX one-or-ten cell now runs each variant as one program: ten psums chained with optimization_barrier (without it XLA merges independent psums into one allreduce; checked: 1 all-reduce in the compiled text without the barrier, 10 with it) against one psum of the concatenation; it prints both times and their difference against 9 alpha. Dev, two runs: separately 581 / 547 us, at once 339 / 297 us, difference 242 / 250 us measured against 229 / 218 us predicted. Both programs pay the program's own cost (about 0.3 ms), so alpha + S beta_link does not predict their absolute times; the test is the difference. Rewrite this tab note (the dispatch explanation goes), and check the shared sentence 'Ten calls take seven to ten times as long as one call ... predict the time to within a few percent', which now holds for the PyTorch tab only (JAX: ten take about 1.7 to 1.8 times as long as one). -->
 
 For a gradient this small, the number of messages decides the
 communication time, and the bytes hardly matter. An allreduce of LeNet's
@@ -800,6 +838,8 @@ Without it, every later kernel launch of the process stays slower, by
 about 30% on our machine, and so does every host-bound timing below this
 cell.
 :end_tab:
+
+<!-- WRITER: S2. TEARDOWN_CUPTI=1 is now set in the PyTorch extras cell at the top of this notebook, before the first profile (tested: launches after a profile stay at 12.4 us per operation, as with the variable set before the start; 16.5 to 17.9 us without it). Delete the sentences of the tab note above that tell the reader to set it; nothing else in the note depends on them. -->
 
 :begin_tab:`jax`
 The device is busy for 0.17 ms of a step of 0.46 ms, about a third, and
@@ -1010,6 +1050,8 @@ The same $\alpha$ puts the one-launcher prediction above the measurement,
 by a sixth to a quarter.
 :end_tab:
 
+<!-- WRITER: S3. With the in-program alpha (dev, two runs): 1 GPU 0.41 / 0.41 ms, 2 GPUs 0.97 / 1.12 ms per step; predicted 0.60 / 0.54 ms by eq_dp_cost and 0.94 / 0.94 ms with one launcher. The exchange is now about 0.12 ms (alpha 0.025 of it), not 0.37, so 'almost half of its prediction is the exchange, and most of that is alpha' is false: eq_dp_cost predicts 0.54 to 0.60 ms, a little above the one-GPU step only because t_local(1,128) is as long as the step at 256 plus the exchange. The one-launcher prediction is now 3% to 16% low (the two-GPU step itself varied between the runs, 0.97 and 1.12 ms), no longer a sixth to a quarter high. Delete the alpha explanation; read the rows from the store. -->
+
 This is not the result that the opening prepared us for. Twice the
 one-GPU step accounts for most of the two-GPU step, so the exchange can
 account for no more than the rest. The exchange of gradients, which we
@@ -1164,6 +1206,8 @@ is lower, about 1.7, and at 256 it is lower too, 0.71 against more than
 0.8. The $\alpha$ in the prediction again contains the dispatch of a
 separate program, which the `psum` inside the step does not pay.
 :end_tab:
+
+<!-- WRITER: S3. With the in-program alpha (dev, two runs), predicted against measured: b = 256: 0.87 / 0.88 against 0.81 / 0.79; b = 4096: 1.77 / 1.80 against 1.71 / 1.71; b = 32768: 1.98 / 1.97 against 1.86 / 1.92 (the one-GPU step at 32,768 was 13.4 and 19.0 ms in the two runs and the windows of the second spread from 1.80 to 2.11, so read this row from the store). The predictions now lie a little above the measurements, by 0.05 to 0.1, instead of below; delete the sentence on the dispatch in alpha. -->
 
 Data parallelism thus works, even for LeNet, once each GPU has enough to
 do that the host can keep both busy. The frameworks' own tools

@@ -537,16 +537,16 @@ Between the two problems there should be a best level. We train a network at eac
 ```{.python .input #denoising-the-loss-floor-and-the-noise-level}
 %%tab pytorch
 sigmas, seeds = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 1.0], (1, 2)
-scores = {(s, seed): fit_score(data, s, seed)
-          for seed in seeds for s in sigmas}
+scores = {(sg, seed): fit_score(data, sg, seed)
+          for seed in seeds for sg in sigmas}
 x_test = mix.sample(20000)
 target = mix.score(x_test)                     # the clean score
 def score_error(score, x, target):
     return 0.5 * ((score(x) - target) ** 2).sum(1).mean().item()
-learned = {seed: [score_error(scores[s, seed], x_test, target) for s in sigmas]
-           for seed in seeds}
-bias = [score_error(lambda x: mix.score(x, 1.0, s), x_test, target)
-        for s in sigmas]
+learned = {seed: [score_error(scores[sg, seed], x_test, target)
+                  for sg in sigmas] for seed in seeds}
+bias = [score_error(lambda x: mix.score(x, 1.0, sg), x_test, target)
+        for sg in sigmas]
 for seed in seeds:
     print(f'trained, seed {seed}:', [round(e, 3) for e in learned[seed]])
 print('exact smoothed: ', [round(e, 4) for e in bias])
@@ -559,16 +559,16 @@ d2l.plot(sigmas, [*learned.values(), bias], 'sigma',
 ```{.python .input #denoising-the-loss-floor-and-the-noise-level}
 %%tab jax
 sigmas, seeds = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 1.0], (1, 2)
-scores = {(s, seed): fit_score(data, s, seed)
-          for seed in seeds for s in sigmas}
+scores = {(sg, seed): fit_score(data, sg, seed)
+          for seed in seeds for sg in sigmas}
 x_test = mix.sample(jax.random.key(2), 20000)
 target = mix.score(x_test)                     # the clean score
 def score_error(score, x, target):
     return float(0.5 * ((score(x) - target) ** 2).sum(1).mean())
-learned = {seed: [score_error(scores[s, seed], x_test, target) for s in sigmas]
-           for seed in seeds}
-bias = [score_error(lambda x: mix.score(x, 1.0, s), x_test, target)
-        for s in sigmas]
+learned = {seed: [score_error(scores[sg, seed], x_test, target)
+                  for sg in sigmas] for seed in seeds}
+bias = [score_error(lambda x: mix.score(x, 1.0, sg), x_test, target)
+        for sg in sigmas]
 for seed in seeds:
     print(f'trained, seed {seed}:', [round(e, 3) for e in learned[seed]])
 print('exact smoothed: ', [round(e, 4) for e in bias])
@@ -663,33 +663,35 @@ With the exact score of $p$, should the chains end with the weights $0.5$, $0.3$
 %%tab pytorch
 torch.manual_seed(2)
 x_init = 3 * torch.randn(2000, 2)
-fields = {'exact score of p': mix.score,
-          'exact score at sigma = 1': lambda x: mix.score(x, 1, 1),
-          'trained at 0.3, seed 1': scores[0.3, 1],
-          'trained at 0.3, seed 2': scores[0.3, 2]}
+fields = {'p': mix.score,                     # exact scores of p, p_1, p_0.3
+          'p_1': lambda x: mix.score(x, 1, 1),
+          'p_0.3': lambda x: mix.score(x, 1, 0.3),
+          'net 0.3, seed 1': scores[0.3, 1],   # trained at sigma = 0.3
+          'net 0.3, seed 2': scores[0.3, 2]}
 samples = [d2l.langevin(f, x_init, 0.05, 2000) for f in fields.values()]
-print('start:', mix.summary(x_init))
-print('data: ', mix.summary(data))
+print(f'{"start":>15}:', mix.summary(x_init))
+print(f'{"data":>15}:', mix.summary(data))
 for name, x in zip(fields, samples):
-    print(f'{name}:', mix.summary(x))
-d2l.scatter_panels(samples, list(fields), data=data, size=2.5);
+    print(f'{name:>15}:', mix.summary(x))
+d2l.scatter_panels(samples, list(fields), data=data, size=2.3);
 ```
 
 ```{.python .input #denoising-sampling-with-a-score-1}
 %%tab jax
-fields = {'exact score of p': mix.score,
-          'exact score at sigma = 1': lambda x: mix.score(x, 1, 1),
-          'trained at 0.3, seed 1': scores[0.3, 1],
-          'trained at 0.3, seed 2': scores[0.3, 2]}
+fields = {'p': mix.score,                     # exact scores of p, p_1, p_0.3
+          'p_1': lambda x: mix.score(x, 1, 1),
+          'p_0.3': lambda x: mix.score(x, 1, 0.3),
+          'net 0.3, seed 1': scores[0.3, 1],   # trained at sigma = 0.3
+          'net 0.3, seed 2': scores[0.3, 2]}
 key, *keys = jax.random.split(jax.random.key(2), len(fields) + 1)
 x_init = 3 * jax.random.normal(key, (2000, 2))
 samples = [d2l.langevin(f, x_init, 0.05, 2000, k)
            for f, k in zip(fields.values(), keys)]
-print('start:', mix.summary(x_init))
-print('data: ', mix.summary(data))
+print(f'{"start":>15}:', mix.summary(x_init))
+print(f'{"data":>15}:', mix.summary(data))
 for name, x in zip(fields, samples):
-    print(f'{name}:', mix.summary(x))
-d2l.scatter_panels(samples, list(fields), data=data, size=2.5);
+    print(f'{name:>15}:', mix.summary(x))
+d2l.scatter_panels(samples, list(fields), data=data, size=2.3);
 ```
 
 The exact score of $p$ sends every chain to a mode with the right spread, but the weights stay those of the start, about a third each. The chains do not cross the valleys. These lie 10 to 12 nats above the modes in $-\log p$, and the expected crossing time is of the order of a million steps at this step size (Exercise :exref:`ex_denoising-escaping-mode`); 2,000 steps are not nearly long enough. The sampler is right within each mode and wrong about the weights, the same weights to which the Fisher divergence is blind.
@@ -749,43 +751,45 @@ def show_gray(imgs, num_rows, num_cols, titles=None, scale=1.0):  #@save
 %%tab pytorch
 X, _, X_test, _ = d2l.load_fashion_mnist_pm1()
 sigma = 0.5
-torch.manual_seed(0)
-net = nn.Sequential(nn.Conv2d(1, 32, 3, padding=1), nn.SiLU(),
-                    nn.Conv2d(32, 32, 3, padding=1), nn.SiLU(),
-                    nn.Conv2d(32, 32, 3, padding=1), nn.SiLU(),
-                    nn.Conv2d(32, 1, 3, padding=1)).to(X.device)
-
 def noise_loss(net, x, sigma):
     """Squared error of the predicted noise; the score is -net / sigma."""
     eps = torch.randn_like(x)
     return ((net(x + sigma * eps) - eps) ** 2).mean()
 
 batch_fn = lambda: X[torch.randint(0, len(X), (128,), device=X.device)]
-net, _, losses = d2l.train_regression(
-    net, lambda net, x: noise_loss(net, x, sigma), batch_fn, 600)
-print(f'last training loss {losses[-50:].mean():.3f}')
+nets = {}
+for seed in (0, 1):
+    torch.manual_seed(seed)
+    net = nn.Sequential(nn.Conv2d(1, 32, 3, padding=1), nn.SiLU(),
+                        nn.Conv2d(32, 32, 3, padding=1), nn.SiLU(),
+                        nn.Conv2d(32, 32, 3, padding=1), nn.SiLU(),
+                        nn.Conv2d(32, 1, 3, padding=1)).to(X.device)
+    nets[seed], _, losses = d2l.train_regression(
+        net, lambda net, x: noise_loss(net, x, sigma), batch_fn, 600)
+    print(f'seed {seed}: last training loss {losses[-50:].mean():.3f}')
 ```
 
 ```{.python .input #denoising-denoising-images-1}
 %%tab jax
 X, _, X_test, _ = d2l.load_fashion_mnist_pm1()
 sigma = 0.5
-rngs = nnx.Rngs(0)
-net = nnx.Sequential(nnx.Conv(1, 32, (3, 3), rngs=rngs), nnx.silu,
-                     nnx.Conv(32, 32, (3, 3), rngs=rngs), nnx.silu,
-                     nnx.Conv(32, 32, (3, 3), rngs=rngs), nnx.silu,
-                     nnx.Conv(32, 1, (3, 3), rngs=rngs))
-
 def noise_loss(net, x, key, sigma):
     """Squared error of the predicted noise; the score is -net / sigma."""
     eps = jax.random.normal(key, x.shape)
     return ((net(x + sigma * eps) - eps) ** 2).mean()
 
 batch_fn = lambda key: X[jax.random.randint(key, (128,), 0, len(X))]
-net, _, losses = d2l.train_regression(
-    net, lambda net, x, key: noise_loss(net, x, key, sigma), batch_fn, 600,
-    jax.random.key(0))
-print(f'last training loss {losses[-50:].mean():.3f}')
+nets = {}
+for seed in (0, 1):
+    rngs = nnx.Rngs(seed)
+    net = nnx.Sequential(nnx.Conv(1, 32, (3, 3), rngs=rngs), nnx.silu,
+                         nnx.Conv(32, 32, (3, 3), rngs=rngs), nnx.silu,
+                         nnx.Conv(32, 32, (3, 3), rngs=rngs), nnx.silu,
+                         nnx.Conv(32, 1, (3, 3), rngs=rngs))
+    nets[seed], _, losses = d2l.train_regression(
+        net, lambda net, x, key: noise_loss(net, x, key, sigma), batch_fn,
+        600, jax.random.key(seed))
+    print(f'seed {seed}: last training loss {losses[-50:].mean():.3f}')
 ```
 
 The loss, the squared error of the predicted noise per pixel, levels off near $0.12$, far above zero. Times $\sigma^2 = 0.25$ it is the squared error of the denoised image, about $0.03$ per pixel; the test below confirms this on images the network has not seen.
@@ -811,10 +815,15 @@ with torch.no_grad():
     x = X_test[:1000]
     xt = x + sigma * torch.randn_like(x)
     x_lin = (mu + (xt.reshape(1000, -1) - mu) @ A).reshape(x.shape)
-    x_net = xt - sigma * net(xt)               # Tweedie: xt + sigma^2 * score
-for name, xh in (('noisy', xt), ('Wiener', x_lin), ('network', x_net)):
-    print(f'{name}: per-pixel squared error {((xh - x) ** 2).mean():.4f}')
-d2l.show_gray(torch.cat([x[:8], xt[:8], x_lin[:8], x_net[:8]]), 4, 8);
+    x_net = {seed: xt - sigma * net(xt)        # Tweedie: xt + sigma^2 * score
+             for seed, net in nets.items()}
+outputs = {'noisy': xt, 'Wiener': x_lin,
+           **{f'network, seed {seed}': xh for seed, xh in x_net.items()}}
+for name, xh in outputs.items():               # error of each of 1,000 images
+    err = ((xh - x) ** 2).flatten(1).mean(1)
+    print(f'{name:>16}: per-pixel squared error {err.mean():.4f} '
+          f'(standard error {err.std() / math.sqrt(len(err)):.4f})')
+d2l.show_gray(torch.cat([x[:8], xt[:8], x_lin[:8], x_net[0][:8]]), 4, 8);
 ```
 
 ```{.python .input #denoising-denoising-images-2}
@@ -827,10 +836,15 @@ A = jnp.linalg.solve(Sigma + sigma ** 2 * jnp.eye(784),
 x = X_test[:1000]
 xt = x + sigma * jax.random.normal(jax.random.key(1), x.shape)
 x_lin = (mu + (xt.reshape(1000, -1) - mu) @ A).reshape(x.shape)
-x_net = xt - sigma * net(xt)                   # Tweedie: xt + sigma^2 * score
-for name, xh in (('noisy', xt), ('Wiener', x_lin), ('network', x_net)):
-    print(f'{name}: per-pixel squared error {((xh - x) ** 2).mean():.4f}')
-d2l.show_gray(jnp.concatenate([x[:8], xt[:8], x_lin[:8], x_net[:8]]), 4, 8);
+x_net = {seed: xt - sigma * net(xt)            # Tweedie: xt + sigma^2 * score
+         for seed, net in nets.items()}
+outputs = {'noisy': xt, 'Wiener': x_lin,
+           **{f'network, seed {seed}': xh for seed, xh in x_net.items()}}
+for name, xh in outputs.items():               # error of each of 1,000 images
+    err = ((xh - x) ** 2).reshape(len(x), -1).mean(1)
+    print(f'{name:>16}: per-pixel squared error {err.mean():.4f} '
+          f'(standard error {err.std() / math.sqrt(len(err)):.4f})')
+d2l.show_gray(jnp.concatenate([x[:8], xt[:8], x_lin[:8], x_net[0][:8]]), 4, 8);
 ```
 
 The noisy input has error $\sigma^2 = 0.25$ per pixel, the Wiener filter about $0.045$, and the network about $0.03$, some $30\%$ less than the best linear map after only 600 steps. The network wins because the images are not Gaussian. A linear filter keeps or suppresses the same directions of pixel space for every image, and its outputs show blurred edges and a faint grain on the background. The network returns a clean background and sharper edges, and keeps lettering on a pullover that the filter smears. The optimal denoiser moves a noisy point toward the thin set the data occupy; for data on a line it projects onto the line (Exercise :exref:`ex_denoising-data-on-a-line`). A linear filter can only shrink toward one flat subspace, the same for every image. The set of garments is curved, and a convolutional network can follow its curvature from local shape.

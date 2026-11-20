@@ -624,14 +624,14 @@ def renoised_sample(u, z):
                                t_start=0.5)
 
 def report(name, xs):
-    """Largest weight error over the runs; stray and spread of each run."""
-    stats = [mix.summary(x) for x in xs]
-    err = max(abs(w - w0) for s in stats
-              for w, w0 in zip(s['weights'], mix.weights.tolist()))
+    """Each run's largest weight error, stray fraction and spread."""
+    stats, w_true = [mix.summary(x) for x in xs], mix.weights.tolist()
+    err = ' / '.join(
+        f'{max(abs(w - w0) for w, w0 in zip(s["weights"], w_true)):.3f}'
+        for s in stats)
     stray = ' / '.join(f'{s["stray"]:.1%}' for s in stats)
     spread = ' / '.join(f'{s["spread"]:.3f}' for s in stats)
-    print(f'{name:>24}: weights within {err:.3f}, stray {stray}, '
-          f'spread {spread}')
+    print(f'{name:>24}: weight error {err}, stray {stray}, spread {spread}')
 
 torch.manual_seed(4)
 samples = {'data': [mix.sample(len(z))],
@@ -663,14 +663,14 @@ def renoised_sample(u, z, key):
         key, x.shape)), 1, t_start=0.5)
 
 def report(name, xs):
-    """Largest weight error over the runs; stray and spread of each run."""
-    stats = [mix.summary(x) for x in xs]
-    err = max(abs(w - w0) for s in stats
-              for w, w0 in zip(s['weights'], mix.weights.tolist()))
+    """Each run's largest weight error, stray fraction and spread."""
+    stats, w_true = [mix.summary(x) for x in xs], mix.weights.tolist()
+    err = ' / '.join(
+        f'{max(abs(w - w0) for w, w0 in zip(s["weights"], w_true)):.3f}'
+        for s in stats)
     stray = ' / '.join(f'{s["stray"]:.1%}' for s in stats)
     spread = ' / '.join(f'{s["spread"]:.3f}' for s in stats)
-    print(f'{name:>24}: weights within {err:.3f}, stray {stray}, '
-          f'spread {spread}')
+    print(f'{name:>24}: weight error {err}, stray {stray}, spread {spread}')
 
 samples = {'data': [mix.sample(jax.random.key(3), len(z))],
            'teacher, 50 steps': [d2l.flow_map_sample(
@@ -793,7 +793,7 @@ half the teacher's 10,000.
 def student_loss(u, x0):
     a, b = torch.rand(2, len(x0), device=x0.device)
     s, t = torch.minimum(a, b), torch.maximum(a, b)
-    # half the pairs have s = t: the plain flow-matching term
+    # half the pairs have s = t: the teacher's velocity as target
     s = torch.where(torch.rand(len(x0), device=x0.device) < 0.5, t, s)
     return d2l.flow_map_error(u, teacher, x0, torch.randn_like(x0), s,
                               t).mean()
@@ -811,7 +811,7 @@ def student_loss(u, x0, key):
     k1, k2, k3 = jax.random.split(key, 3)
     a, b = jax.random.uniform(k1, (2, len(x0)))
     s, t = jnp.minimum(a, b), jnp.maximum(a, b)
-    # half the pairs have s = t: the plain flow-matching term
+    # half the pairs have s = t: the teacher's velocity as target
     s = jnp.where(jax.random.uniform(k2, (len(x0),)) < 0.5, t, s)
     return d2l.flow_map_error(u, teacher, x0, jax.random.normal(k3, x0.shape),
                               s, t).mean()

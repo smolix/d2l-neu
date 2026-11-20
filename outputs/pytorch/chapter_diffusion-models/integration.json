@@ -51,18 +51,13 @@
       "outputs": []
     },
     "gaussian-paths-the-probability-flow-ode-and-euler-s-method-1": {
-      "code_fingerprint": "sha256:5517775f9aa312e74cbc533fd543fc98a46de211ab9b33c424421b6cdae11b86",
+      "code_fingerprint": "sha256:f6899a384aab664e2b67b68344a3b283c0b2cde31725f7e78f6da6b44ff692b4",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one step: mean [-0.511, -0.736] std [0.036, 0.027]\n10 steps: {'weights': [0.522, 0.273, 0.206], 'stray': 0.0315, 'spread': 0.447}\n100 steps: {'weights': [0.512, 0.278, 0.211], 'stray': 0.0125, 'spread': 0.475}\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "ode_sample against the loop on the exact field: 9e-05\n"
+          "text": "one step: mean [-0.511, -0.736] std [0.036, 0.027]\n              data: {'weights': [0.517, 0.292, 0.192], 'stray': 0.0145, 'spread': 0.488}\n 10 steps, network: {'weights': [0.522, 0.273, 0.206], 'stray': 0.0315, 'spread': 0.447}\n100 steps, network: {'weights': [0.512, 0.278, 0.211], 'stray': 0.0125, 'spread': 0.475}\n  10 steps, oracle: {'weights': [0.522, 0.273, 0.206], 'stray': 0.019, 'spread': 0.459}\node_sample against the loop on the exact field: 9e-05\n"
         },
         {
           "type": "display_data",
@@ -74,12 +69,12 @@
       ]
     },
     "gaussian-paths-the-reverse-sde-and-the-ancestral-chain": {
-      "code_fingerprint": "sha256:a7afe33abcd9532ecf8fa31357d8bbc4fa7732d107ef61ebb47888808f53eed7",
+      "code_fingerprint": "sha256:01319bde039b0f3f6e99e446ff5d6791fef6123bd9b6f71f881045e4935a0adc",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-the-reverse-sde-and-the-ancestral-chain-1": {
-      "code_fingerprint": "sha256:6ac17d4389a3e65d61973a1824f7e92bc938c2c64b1e2a5ea60727a92ff82df0",
+      "code_fingerprint": "sha256:c6910b329aa12bfd7653d16f02565e030627f8a94a6d4c9b23f2a8abdb377790",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +85,7 @@
       ]
     },
     "gaussian-paths-samples-from-both-samplers": {
-      "code_fingerprint": "sha256:53e03f0243e500b1e5d7d3b660c2034acf3ed4182f8fcab9c81180b0c9a22a61",
+      "code_fingerprint": "sha256:39e8102e4d3803fca0d1af87ed8164b3417189188aa689720deea5b0dcf29f4f",
       "kind": "mixed",
       "outputs": [
         {

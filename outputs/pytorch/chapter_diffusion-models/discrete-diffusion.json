@@ -134,8 +134,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-4-1.png",
-          "bytes": 85423,
-          "sha256": "sha256:a96151c37901a146750b7aa9b36a2d636bcc318848df542e5cb4145faee616da"
+          "bytes": 85735,
+          "sha256": "sha256:5c31ec58c52a6ad84a9b6afa1534ce2b1cbdaa94eab2f55487637b6fe97e86db"
         }
       ]
     },
@@ -147,19 +147,19 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "discrete-diffusion/discrete-diffusion-images-as-binary-tokens-6-1.png",
-          "bytes": 197078,
-          "sha256": "sha256:e328831ee9e4343d6f371198da2b6f480008e457c6733a025bb3a6e077aa0c03"
+          "bytes": 196518,
+          "sha256": "sha256:d5817eb1ad4920f8c9d14fc006f71fb963bcadd34d5f7686df9ee728b66b08f8"
         }
       ]
     },
     "discrete-diffusion-images-as-binary-tokens-7": {
-      "code_fingerprint": "sha256:f180033dd999777d81f6de0acf2c733fa6318bbae957165d6c54f43e0748c037",
+      "code_fingerprint": "sha256:cf5e6f9853dbfd29014e75d41244661c27519e34a82a8e9b682252f7e8631297",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "speckles: data 0.0037, 100 steps 0.0073, 4 steps 0.0333\n"
+          "text": "speckles: data 0.0037, 784 steps 0.0050, 100 steps 0.0074, 4 steps 0.0332\n"
         }
       ]
     }

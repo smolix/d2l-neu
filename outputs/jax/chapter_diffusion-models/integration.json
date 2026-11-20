@@ -46,7 +46,7 @@
       "outputs": []
     },
     "gaussian-paths-the-probability-flow-ode-and-euler-s-method-1": {
-      "code_fingerprint": "sha256:767e9547f72ec6f5e914fdce1e283d9ec51e43c3b7e9bd28b159eb08b98c251a",
+      "code_fingerprint": "sha256:61d27e24ee0675f1869273185d646177797f0043f7628e7aaf14a17978a62576",
       "kind": "mixed",
       "outputs": [
         {
@@ -57,34 +57,44 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "10 steps: {'weights': [0.496, 0.307, 0.197], 'stray': 0.0315, 'spread': 0.452}\n"
+          "text": "              data: {'weights': [0.512, 0.291, 0.197], 'stray': 0.0115, 'spread': 0.481}\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "100 steps: {'weights': [0.485, 0.313, 0.203], 'stray': 0.0135, 'spread': 0.477}\n"
+          "text": " 10 steps, network: {'weights': [0.496, 0.307, 0.197], 'stray': 0.0315, 'spread': 0.452}\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ode_sample against the loop on the exact field: 4e-05\n"
+          "text": "100 steps, network: {'weights': [0.485, 0.313, 0.203], 'stray': 0.0135, 'spread': 0.477}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  10 steps, oracle: {'weights': [0.495, 0.31, 0.195], 'stray': 0.0285, 'spread': 0.456}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ode_sample against the loop on the exact field: 5e-05\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "integration/gaussian-paths-the-probability-flow-ode-and-euler-s-method-1-1.png",
-          "bytes": 54389,
-          "sha256": "sha256:2ac38f7e37029d83f776ee18d44d3acb134f833877959149560b492cad397ddd"
+          "bytes": 54478,
+          "sha256": "sha256:792f5972abfe32edc72d9b0615a65dbf7a7b2cc79cf12484eb685edffb3b41eb"
         }
       ]
     },
     "gaussian-paths-the-reverse-sde-and-the-ancestral-chain": {
-      "code_fingerprint": "sha256:0ff6d4ea72abdc3eb43626f9c14a5f9a7e31d253f0a07f3c0a3b16815128f321",
+      "code_fingerprint": "sha256:df31fa21bc498eceaad30373aa1e0d8e7fcc535b19d9bdb838cd34a6445d185e",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-the-reverse-sde-and-the-ancestral-chain-1": {
-      "code_fingerprint": "sha256:07f5e559800cdc744ded7d18453763e66ed44d5b4058daa6847e0143998d9230",
+      "code_fingerprint": "sha256:01475511eed353b49ac160c8fb5aa3da48413f04dfe8a760f3b3772e86773d32",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +105,7 @@
       ]
     },
     "gaussian-paths-samples-from-both-samplers": {
-      "code_fingerprint": "sha256:784b9b1ca5382c54ee25d2bc55835c830a32455ea712120123f12423a55d0d4b",
+      "code_fingerprint": "sha256:57128d14a223ed219228ccd1fc89d4767ef41ef3afd069f64f6090130e79f592",
       "kind": "mixed",
       "outputs": [
         {
@@ -121,14 +131,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     Euler, oracle: {'weights': [0.498, 0.299, 0.203], 'stray': 0.0106, 'spread': 0.472}\nstandard error of a weight: [0.0035, 0.0032, 0.0028]\nancestral: network and oracle end in different modes for 0.47% of the starts\nEuler: network and oracle end in different modes for 0.31% of the starts\n"
+          "text": "     Euler, oracle: {'weights': [0.498, 0.299, 0.203], 'stray': 0.0106, 'spread': 0.472}\nstandard error of a weight: [0.0035, 0.0032, 0.0028]\nancestral: network and oracle end in different modes for 0.48% of the starts\nEuler: network and oracle end in different modes for 0.31% of the starts\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "integration/gaussian-paths-samples-from-both-samplers-1.png",
-          "bytes": 55780,
-          "sha256": "sha256:a8e7eb2c309f5ff0af17d288c68b14783f82c656d9e833dbcf58a0123340b052"
+          "bytes": 55767,
+          "sha256": "sha256:153cedd18332c76bf0a6fd3bba73ea5c5a35942ac80bc105bd31c2b2558ef00e"
         }
       ]
     }

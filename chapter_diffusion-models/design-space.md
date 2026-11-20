@@ -227,7 +227,7 @@ def pf_nll(eps_fn, path, x, t_min=1e-3, steps=100):
     """-log p(x) under the probability-flow ODE, RK4 from t_min to 1."""
     def f(x, t):                              # velocity and its divergence
         t = torch.full((len(x),), t, device=x.device)
-        def u(x):                             # the velocity, by the dictionary
+        def u(x):                             # the velocity, by x0_eps, target
             x0, eps = path.x0_eps('eps', eps_fn(x, t), x, t)
             return path.target('velocity', x0, eps, t)
         e = torch.eye(x.shape[1], device=x.device)
@@ -257,7 +257,7 @@ def pf_nll(eps_fn, path, x, t_min=1e-3, steps=100):
     """-log p(x) under the probability-flow ODE, RK4 from t_min to 1."""
     def f(x, t):                              # velocity and its divergence
         t = jnp.full((len(x),), t)
-        def u(x):                             # the velocity, by the dictionary
+        def u(x):                             # the velocity, by x0_eps, target
             x0, eps = path.x0_eps('eps', eps_fn(x, t), x, t)
             return path.target('velocity', x0, eps, t)
         e = jnp.eye(x.shape[1])
@@ -350,6 +350,7 @@ def bound(eps_fns, path, x0, draws, t_min=1e-3):
 (b_exact, b_net), (integral, _) = bound([eps_exact, ema], vp, test, 64)
 print(f'exact field: integral {integral.mean():.2f} nats, '
       f'prior and reconstruction {(b_exact - integral).mean():.2f} nats')
+print(f'bound, exact field - true: {mean_se(b_exact - nll)}')
 print(f'bound, network - exact field: {mean_se(b_net - b_exact)}')
 ```
 
@@ -386,6 +387,7 @@ def bound(eps_fns, path, x0, draws, key, t_min=1e-3):
                                         k_bound)
 print(f'exact field: integral {integral.mean():.2f} nats, '
       f'prior and reconstruction {(b_exact - integral).mean():.2f} nats')
+print(f'bound, exact field - true: {mean_se(b_exact - nll)}')
 print(f'bound, network - exact field: {mean_se(b_net - b_exact)}')
 ```
 
@@ -528,6 +530,62 @@ The other objectives need two conversions. On the VP path the $\mathbf{v}$-targe
 | velocity (flow matching) | linear, $t$ uniform | $e^{-\lambda/2}$ |
 | EDM | $\log(\sigma_t/\alpha_t) \sim \mathcal{N}(-1.2, 1.2^2)$ | $\mathcal{N}(\lambda; 2.4, 2.4^2)\,(e^{-\lambda} + \sigma_{\mathrm{data}}^2)$ |
 
+`weighting` computes $w(\lambda)$ for uniform $t$ numerically, as a check of two rows of the table and of where the DDPM weighting peaks: the factor $c(t)$ is the squared slope of a target in the predicted noise, from `x0_eps` and `target`, and $d\lambda/dt$ comes by forward-mode differentiation, as in `rates`.
+
+```{.python .input #design-space-weightings-of-published-objectives}
+%%tab pytorch
+def weighting(path, kind, lam):
+    """w(lambda) = 2 c(t) |dt / dlambda| for t uniform, where c is the squared
+    slope of the target in the predicted noise at a fixed x_t."""
+    t = path.time_at(lam)
+    x, zero, one = (torch.full((len(t), 1), v) for v in (0.0, 0.0, 1.0))
+    def target(eps_hat):                       # the target that eps_hat implies
+        return path.target(kind, *path.x0_eps('eps', eps_hat, x, t), t)
+    c = ((target(one) - target(zero)) ** 2)[:, 0]
+    dlam_dt = torch.func.jvp(path.log_snr, (t,), (torch.ones_like(t),))[1]
+    return 2 * c / dlam_dt.abs()
+
+lam = torch.linspace(-8, 8, 9)
+w_u = weighting(d2l.GaussianPath.linear(), 'velocity', lam)
+w_v = weighting(d2l.GaussianPath.cosine(), 'v', lam)
+row = lambda name, w: print(f'{name:26}' + ''.join(f'{v:8.3f}' for v in w))
+print(f'{"lambda":26}' + ''.join(f'{v:8.0f}' for v in lam.tolist()))
+row('velocity, linear path', w_u.tolist())
+row('  times e^(lambda / 2)', (w_u * (lam / 2).exp()).tolist())
+row('v, cosine path', w_v.tolist())
+row('  divided by the row above', (w_v / w_u).tolist())
+fine = torch.linspace(-9, 9, 1801)
+peak = fine[weighting(vp, 'eps', fine).argmax()]
+print(f'noise, VP path: largest weight at lambda = {peak:.1f}')
+```
+
+```{.python .input #design-space-weightings-of-published-objectives}
+%%tab jax
+def weighting(path, kind, lam):
+    """w(lambda) = 2 c(t) |dt / dlambda| for t uniform, where c is the squared
+    slope of the target in the predicted noise at a fixed x_t."""
+    t = path.time_at(lam)
+    x, zero, one = (jnp.full((len(t), 1), v) for v in (0.0, 0.0, 1.0))
+    def target(eps_hat):                       # the target that eps_hat implies
+        return path.target(kind, *path.x0_eps('eps', eps_hat, x, t), t)
+    c = ((target(one) - target(zero)) ** 2)[:, 0]
+    dlam_dt = jax.jvp(path.log_snr, (t,), (jnp.ones_like(t),))[1]
+    return 2 * c / jnp.abs(dlam_dt)
+
+lam = jnp.linspace(-8, 8, 9)
+w_u = weighting(d2l.GaussianPath.linear(), 'velocity', lam)
+w_v = weighting(d2l.GaussianPath.cosine(), 'v', lam)
+row = lambda name, w: print(f'{name:26}' + ''.join(f'{v:8.3f}' for v in w))
+print(f'{"lambda":26}' + ''.join(f'{v:8.0f}' for v in lam.tolist()))
+row('velocity, linear path', w_u.tolist())
+row('  times e^(lambda / 2)', (w_u * jnp.exp(lam / 2)).tolist())
+row('v, cosine path', w_v.tolist())
+row('  divided by the row above', (w_v / w_u).tolist())
+fine = jnp.linspace(-9, 9, 1801)
+peak = fine[weighting(vp, 'eps', fine).argmax()]
+print(f'noise, VP path: largest weight at lambda = {peak:.1f}')
+```
+
 Two rows coincide: $\mathbf{v}$-prediction on the cosine path and flow matching on the linear path are the same objective :cite:`Gao.Hoogeboom.Heek.ea.2025`. The velocity and noise models of :numref:`sec_diffusion-gaussian-paths` differ in their weighting, not in what they learn (:numref:`fig_diffusion-weightings`).
 
 ![Diffusion objectives as weightings of the noise error over the log signal-to-noise ratio $\lambda$. (a) $w(\lambda)$ on a logarithmic scale: the bound is flat, the noise loss on the linear-$\beta$ VP path peaks near $\lambda \approx -1$, $\mathbf{v}$-prediction and flow matching share the curve $e^{-\lambda/2}$, and EDM's weighting (with the paper's $\sigma_{\mathrm{data}} = 0.5$) is a bump. (b) The density of $\lambda$ under uniform $t$ on the three paths, and under the logit-normal times of :citet:`Esser.Kulal.Blattmann.ea.2024` on the linear path.](../img/mdl-diffusion-weightings.svg)
@@ -643,10 +701,10 @@ What does a noise level remove from an image? Under an orthonormal two-dimension
 ```{.python .input #design-space-noise-levels-are-scales}
 %%tab pytorch
 X, y, X_test, _ = d2l.load_fashion_mnist_pm1()
-F = torch.fft.fft2(X_test[:, 0], norm='ortho')    # noise has power sigma^2
+spec = torch.fft.fft2(X_test[:, 0], norm='ortho')  # noise: power sigma^2
 k = torch.fft.fftfreq(28, 1 / 28, device=X.device)
 ring = torch.sqrt(k[:, None] ** 2 + k ** 2).round().long().flatten()
-power = (torch.bincount(ring, (F.abs() ** 2).mean(0).flatten())
+power = (torch.bincount(ring, (spec.abs() ** 2).mean(0).flatten())
          / torch.bincount(ring))                  # the mean over each ring
 r, power = torch.arange(1, 15), power[1:15].cpu()
 d2l.plot(r, [power] + [torch.full((14,), s ** 2) for s in (0.1, 0.3, 1.0)],
@@ -661,10 +719,10 @@ for s in (0.1, 0.3, 0.5, 1.0, 2.0):
 ```{.python .input #design-space-noise-levels-are-scales}
 %%tab jax
 X, y, X_test, _ = d2l.load_fashion_mnist_pm1()
-F = jnp.fft.fft2(X_test[..., 0], norm='ortho')    # noise has power sigma^2
+spec = jnp.fft.fft2(X_test[..., 0], norm='ortho')  # noise: power sigma^2
 k = jnp.fft.fftfreq(28, 1 / 28)
 ring = jnp.round(jnp.sqrt(k[:, None] ** 2 + k ** 2)).astype(int).flatten()
-power = (jnp.bincount(ring, (jnp.abs(F) ** 2).mean(0).flatten())
+power = (jnp.bincount(ring, (jnp.abs(spec) ** 2).mean(0).flatten())
          / jnp.bincount(ring))                    # the mean over each ring
 r, power = jnp.arange(1, 15), power[1:15]
 d2l.plot(r, [power] + [jnp.full((14,), s ** 2) for s in (0.1, 0.3, 1.0)],
@@ -750,7 +808,8 @@ recipes = {  # name: (path, kind of prediction, network, loss)
                           logit_normal_loss(linear, 'velocity', -1.2, 1.2)),
     'EDM, clean image': (linear, 'x0',
                          lambda: EDM(unet(), linear, sigma_data), edm_loss)}
-grid = d2l.edm_grid(25)                          # 49 network evaluations
+grids = {'EDM grid': d2l.edm_grid(25),            # 49 network evaluations
+         'linear grid': linear.sigma_bars(25)}    # 48 network evaluations
 ```
 
 ```{.python .input #design-space-a-recipe-ablation-1}
@@ -780,7 +839,8 @@ recipes = {  # name: (path, kind of prediction, network, loss)
     'EDM, clean image': (linear, 'x0',
                          lambda seed: EDM(unet(seed), linear, sigma_data),
                          edm_loss)}
-grid = d2l.edm_grid(25)                          # 49 network evaluations
+grids = {'EDM grid': d2l.edm_grid(25),            # 49 network evaluations
+         'linear grid': linear.sigma_bars(25)}    # 48 network evaluations
 ```
 
 The loop trains each recipe from two seeds, samples every model from the same noise and prints the two FDs. One result we can predict before the run. The $\mathbf{v}$-loss on the cosine path is the base's objective in other coordinates, so it should do no worse.
@@ -790,40 +850,50 @@ The loop trains each recipe from two seeds, samples every model from the same no
 batch_fn = lambda: X[torch.randint(0, len(X), (128,), device=X.device)]
 torch.manual_seed(1)
 z = torch.randn(5000, 1, 28, 28, device=device)  # the same noise for every run
+four_seeds = ('base: velocity, t uniform', "t at EDM's levels",
+              'EDM, clean image')         # to split EDM's gain
 models, samples = {}, {}
+print(f'{"FD of each seed":27} {"EDM grid":24} linear grid')
 for name, (path, kind, make_net, loss_fn) in recipes.items():
-    fd = []
-    for seed in (0, 1):
+    fd = {g: [] for g in grids}
+    for seed in range(4 if name in four_seeds else 2):
         torch.manual_seed(seed)
         _, ema_img, _ = d2l.train_regression(make_net().to(device), loss_fn,
                                              batch_fn, 5_000)
         pred = d2l.make_pred(ema_img, path, kind)
-        x = torch.cat([d2l.heun_sample(pred, z_k, grid)
-                       for z_k in z.split(1000)])
-        fd.append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
-        if seed == 0:
-            models[name], samples[name] = ema_img, x[:10]
-    print(f'{name:27} FD {fd[0]:.2f}, {fd[1]:.2f}')
+        for g, levels in grids.items():
+            x = torch.cat([d2l.heun_sample(pred, z_k, levels)
+                           for z_k in z.split(1000)])
+            fd[g].append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
+            if seed == 0 and g == 'EDM grid':
+                models[name], samples[name] = ema_img, x[:10]
+    edm, lin = (', '.join(f'{v:.2f}' for v in fd[g]) for g in grids)
+    print(f'{name:27} {edm:24} {lin}')
 ```
 
 ```{.python .input #design-space-a-recipe-ablation-2}
 %%tab jax
 batch_fn = lambda key: X[jax.random.randint(key, (128,), 0, len(X))]
 z = jax.random.normal(jax.random.key(1), (5000, 28, 28, 1))  # shared noise
+four_seeds = ('base: velocity, t uniform', "t at EDM's levels",
+              'EDM, clean image')         # to split EDM's gain
 models, samples = {}, {}
+print(f'{"FD of each seed":27} {"EDM grid":24} linear grid')
 for name, (path, kind, make_net, loss_fn) in recipes.items():
-    fd = []
-    for seed in (0, 1):
+    fd = {g: [] for g in grids}
+    for seed in range(4 if name in four_seeds else 2):
         _, ema_img, _ = d2l.train_regression(make_net(seed), loss_fn,
                                              batch_fn, 5_000,
                                              jax.random.key(seed))
         pred = d2l.make_pred(ema_img, path, kind)
-        x = jnp.concatenate([d2l.heun_sample(pred, z[i:i + 1000], grid)
-                             for i in range(0, len(z), 1000)])
-        fd.append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
-        if seed == 0:
-            models[name], samples[name] = ema_img, x[:10]
-    print(f'{name:27} FD {fd[0]:.2f}, {fd[1]:.2f}')
+        for g, levels in grids.items():
+            x = jnp.concatenate([d2l.heun_sample(pred, z[i:i + 1000], levels)
+                                 for i in range(0, len(z), 1000)])
+            fd[g].append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
+            if seed == 0 and g == 'EDM grid':
+                models[name], samples[name] = ema_img, x[:10]
+    edm, lin = (', '.join(f'{v:.2f}' for v in fd[g]) for g in grids)
+    print(f'{name:27} {edm:24} {lin}')
 ```
 
 Every model is 14 to 32 times the floor, while the full recipe of :numref:`sec_diffusion-images` reaches about 0.8 after its 15,000 updates, so the table ranks how quickly each recipe learns, not where it would end. Read against the spread between each row's two seeds, its clearest result is a warning against centring the training times at the middle of the path for images this small. Logit-normal times centred at $t = \tfrac12$ cost about 1 to 1.5 FD, more than the seed spread of either row. Moved toward the data, the same distribution wins all of that back. Every run of the $m = -0.5$ row is at or below every run of the base, although its gain over the base lies within its seed spread, and the control row, a logit-normal moved further still, is never worse than the base either. As predicted, $\mathbf{v}$ on the cosine path does no worse than the base. EDM's recipe, its levels, preconditioning and weight together, beats the base by more than either row's seed spread. How that gain divides between the levels and the preconditioning, two seeds per row do not settle.

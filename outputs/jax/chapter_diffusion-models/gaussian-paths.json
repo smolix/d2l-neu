@@ -46,7 +46,7 @@
       ]
     },
     "gaussian-paths-annealing-through-noise-levels": {
-      "code_fingerprint": "sha256:7e85605f5db6452e9820df972070b5b1ad5cf821a3e197b2b472b8e7413adf46",
+      "code_fingerprint": "sha256:9fa6d9cab5d3e026c7192b135909d58c3fff0a2a385ddedf5163d3619c198a77",
       "kind": "mixed",
       "outputs": [
         {
@@ -69,17 +69,17 @@
       ]
     },
     "gaussian-paths-conditional-targets-and-marginal-fields-1": {
-      "code_fingerprint": "sha256:07117a11978aff52e0e9618fd9423aef179892445d2791cddd60b61634927bd7",
+      "code_fingerprint": "sha256:40af4c56b90ebafc8e5bad30faeb8cb5241c837564bccbe479eebfdbb182bfa2",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-four-targets-one-oracle": {
-      "code_fingerprint": "sha256:d48d88c6804869a14db768b90c6e878b6bb40ca3eea3a43c9a1539bcea98c604",
+      "code_fingerprint": "sha256:b357314de0287f9d47bb4ce5ce0f1f1b818070cfd27ac60e61068503a196ec6e",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-conditional-targets-and-marginal-fields": {
-      "code_fingerprint": "sha256:914570ad3444de449d9c1ed96f73d4185332473c7c394ef412c343090b8f9e4a",
+      "code_fingerprint": "sha256:8549ddc8535a3ba22d6bb7c3cbdef98b0dee109872156e693ecd467ece779898",
       "kind": "asset",
       "outputs": [
         {
@@ -87,12 +87,12 @@
           "mime": "image/svg+xml",
           "asset": "gaussian-paths/gaussian-paths-conditional-targets-and-marginal-fields-1.svg",
           "bytes": 18932,
-          "sha256": "sha256:6513bd1c4cd11f9c751614aa167afda00d0607c63d743753bd73dac69458bb6e"
+          "sha256": "sha256:7d9992ece29dd8c2df0c048fe40a01f756cc7791421e3efa5343bd66e62b7715"
         }
       ]
     },
     "gaussian-paths-four-targets-one-oracle-3": {
-      "code_fingerprint": "sha256:5aacabd09b4f3da2260a109b3f2ceb130c517b289b9cdf125f4660187924c1f4",
+      "code_fingerprint": "sha256:08b1f67c5cac8afd542e83dd62135aab98cebbcd32a82439470e989150a6866c",
       "kind": "text",
       "outputs": [
         {
@@ -113,33 +113,33 @@
       ]
     },
     "gaussian-paths-four-targets-one-oracle-2": {
-      "code_fingerprint": "sha256:b126494cfde942071b3abc45808902d9463aa2d82cb80119586d48dea6921fb1",
+      "code_fingerprint": "sha256:f0088a1a4a795cea1ed559ef002947cd1c1180669db8aa9ad30d862d05720412",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-the-loss-floor": {
-      "code_fingerprint": "sha256:f110bd27e4cc11ae970ba2528cb965fcac7e11bfced6813d115b8225cda07433",
+      "code_fingerprint": "sha256:c0f96da0f4824ecdec5e4020345be07684bdda7b9f05c8898fa8d947299c4a98",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)    s.e.  trained  net-floor\n"
+          "text": "target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)    s.e.  train loss   excess\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noise, vp         1.371  0.478  0.002     0.539  0.0011    0.541     0.0002\n"
+          "text": "noise, vp         1.371  0.478  0.002     0.539  0.0011       0.541   0.0002\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "velocity, linear  2.355  2.812  9.156     4.920  0.0070    4.916     0.0010\n"
+          "text": "velocity, linear  2.355  2.812  9.156     4.920  0.0070       4.916   0.0010\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "velocity net read as a noise model on vp: loss 0.540, net-floor 0.0002\n"
+          "text": "velocity net read as a noise model on vp: loss 0.540, excess 0.0002\n"
         }
       ]
     }

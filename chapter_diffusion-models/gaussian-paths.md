@@ -274,8 +274,8 @@ device = d2l.try_gpu()
 mix = d2l.GaussianMixture.three_modes(device)
 x_init = 3 * torch.randn(2000, 2, device=device)
 x = x_init
-for s in torch.logspace(math.log10(3), math.log10(0.05), 10).tolist():
-    x = d2l.langevin(lambda z: mix.score(z, 1.0, s), x, 0.1 * s ** 2, 100)
+for sig in torch.logspace(math.log10(3), math.log10(0.05), 10).tolist():
+    x = d2l.langevin(lambda z: mix.score(z, 1.0, sig), x, 0.1 * sig ** 2, 100)
 control = d2l.langevin(lambda z: mix.score(z, 1.0, 0.05), x_init, 0.05, 1000)
 print('finest level only:', mix.summary(control))
 print('ten levels:       ', mix.summary(x))
@@ -290,9 +290,10 @@ mix = d2l.GaussianMixture.three_modes()
 key, k_init, k_ctrl, k_data = jax.random.split(key, 4)
 x_init = 3 * jax.random.normal(k_init, (2000, 2))
 x = x_init
-for s in jnp.logspace(math.log10(3), math.log10(0.05), 10).tolist():
+for sig in jnp.logspace(math.log10(3), math.log10(0.05), 10).tolist():
     key, k = jax.random.split(key)
-    x = d2l.langevin(lambda z: mix.score(z, 1.0, s), x, 0.1 * s ** 2, 100, k)
+    x = d2l.langevin(lambda z: mix.score(z, 1.0, sig), x, 0.1 * sig ** 2, 100,
+                     k)
 control = d2l.langevin(lambda z: mix.score(z, 1.0, 0.05), x_init, 0.05, 1000,
                        k_ctrl)
 print('finest level only:', mix.summary(control))
@@ -626,19 +627,19 @@ n = 1_000_000
 x0, eps = mix.sample(n), torch.randn(n, 2, device=device)
 times = [torch.full((n,), t, device=device) for t in (0.1, 0.5, 0.9)]
 times.append(torch.rand(n, device=device))             # t ~ U(0, 1)
-print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)    s.e.  trained'
-      '  net-floor')
+print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)    s.e.'
+      '  train loss   excess')
 for name, path, kind, net, losses in (
         ('noise, vp', vp, 'eps', ema_eps, losses_eps),
         ('velocity, linear', linear, 'velocity', ema_v, losses_v)):
     rows = [floor_and_excess(path, kind, net, x0, eps, t) for t in times]
     print(f'{name:16}' + ''.join(f'{r[0]:7.3f}' for r in rows[:3])
           + f'{rows[3][0]:10.3f}{rows[3][1]:8.4f}'
-          + f'{losses[-1000:].mean().item():9.3f}{rows[3][2]:11.4f}')
+          + f'{losses[-1000:].mean().item():12.3f}{rows[3][2]:9.4f}')
 floor, _, gap = floor_and_excess(vp, 'eps', eps_from_velocity, x0, eps,
                                  times[3])
 print(f'velocity net read as a noise model on vp: loss {floor + gap:.3f},'
-      f' net-floor {gap:.4f}')
+      f' excess {gap:.4f}')
 ```
 
 ```{.python .input #gaussian-paths-the-loss-floor}
@@ -666,19 +667,19 @@ key, k_x0, k_eps, k_t = jax.random.split(key, 4)
 x0, eps = mix.sample(k_x0, n), jax.random.normal(k_eps, (n, 2))
 times = [jnp.full((n,), t) for t in (0.1, 0.5, 0.9)]
 times.append(jax.random.uniform(k_t, (n,)))            # t ~ U(0, 1)
-print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)    s.e.  trained'
-      '  net-floor')
+print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)    s.e.'
+      '  train loss   excess')
 for name, path, kind, net, losses in (
         ('noise, vp', vp, 'eps', ema_eps, losses_eps),
         ('velocity, linear', linear, 'velocity', ema_v, losses_v)):
     rows = [floor_and_excess(path, kind, net, x0, eps, t) for t in times]
     print(f'{name:16}' + ''.join(f'{r[0]:7.3f}' for r in rows[:3])
           + f'{rows[3][0]:10.3f}{rows[3][1]:8.4f}'
-          + f'{float(losses[-1000:].mean()):9.3f}{rows[3][2]:11.4f}')
+          + f'{float(losses[-1000:].mean()):12.3f}{rows[3][2]:9.4f}')
 floor, _, gap = floor_and_excess(vp, 'eps', eps_from_velocity, x0, eps,
                                  times[3])
 print(f'velocity net read as a noise model on vp: loss {floor + gap:.3f},'
-      f' net-floor {gap:.4f}')
+      f' excess {gap:.4f}')
 ```
 
 The floors at $t = 0.1$ land within $0.01$ of the prediction. Along the path they move in opposite directions. The noise floor is largest near the data, where a little noise and the spread of a mode look alike, and falls to $0.002$ at $t = 0.9$. The velocity floor rises to about $9$ at $t = 0.9$. It does not keep rising to the end: the posterior variance grows toward the noise, but the factor $1/t^2$ that the velocity puts on it falls to one, and at $t = 1$ the floor is the total variance of the data (Exercise :exref:`ex_gaussian-paths-loss-floor` finds its peak). Averaged over the path the floors differ by an order of magnitude, $0.54$ against $4.9$, only because the targets are scaled differently.

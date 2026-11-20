@@ -1072,8 +1072,11 @@ def speckles(z):  # fraction of interior pixels unlike all four neighbors
     return ((c != z[:, :-2, 1:-1]) & (c != z[:, 2:, 1:-1])
             & (c != z[:, 1:-1, :-2]) & (c != z[:, 1:-1, 2:])).float().mean()
 
-print(f'speckles: data {speckles(X[:1000]):.4f}, 100 steps '
-      f'{speckles(z100):.4f}, 4 steps {speckles(z4):.4f}')
+alpha_bar_784 = 1 - torch.arange(785, device=X.device) / 784  # 784 levels
+z784 = unmask(unet, (1000, 28, 28), 784, alpha_bar_784, mask_id=2)
+print(f'speckles: data {speckles(X[:1000]):.4f}, 784 steps '
+      f'{speckles(z784):.4f}, 100 steps {speckles(z100):.4f}, 4 steps '
+      f'{speckles(z4):.4f}')
 ```
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-7}
@@ -1083,8 +1086,12 @@ def speckles(z):  # fraction of interior pixels unlike all four neighbors
     return ((c != z[:, :-2, 1:-1]) & (c != z[:, 2:, 1:-1])
             & (c != z[:, 1:-1, :-2]) & (c != z[:, 1:-1, 2:])).mean()
 
-print(f'speckles: data {speckles(X[:1000]):.4f}, 100 steps '
-      f'{speckles(z100):.4f}, 4 steps {speckles(z4):.4f}')
+alpha_bar_784 = 1 - jnp.arange(785) / 784          # 784 levels
+z784 = unmask(unet, (1000, 28, 28), 784, alpha_bar_784, mask_id=2,
+              key=jax.random.key(6))
+print(f'speckles: data {speckles(X[:1000]):.4f}, 784 steps '
+      f'{speckles(z784):.4f}, 100 steps {speckles(z100):.4f}, 4 steps '
+      f'{speckles(z4):.4f}')
 ```
 
 The data have about four speckles per thousand interior pixels, and the

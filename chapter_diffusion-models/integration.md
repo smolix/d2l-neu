@@ -321,15 +321,18 @@ x_T = torch.randn(2000, 2, device=device)
 pred_v = make_pred(ema_v, linear, 'velocity')
 samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
            for steps in (1, 10, 100)]
+data = mix.sample(2000)
 print('one step: mean', [round(v, 3) for v in samples[0].mean(0).tolist()],
       'std', [round(v, 3) for v in samples[0].std(0).tolist()])
+print(f'{"data":>18}:', mix.summary(data))
 for steps, x in zip((10, 100), samples[1:]):
-    print(f'{steps} steps:', mix.summary(x))
+    print(f'{steps:>3} steps, network:', mix.summary(x))
+print('  10 steps, oracle:',
+      mix.summary(ode_sample(oracle, x_T, linear.sigma_bars(10))))
 exact = (ode_sample(oracle, x_T, linear.sigma_bars(100))
          - euler(mix.velocity, x_T, 100)).abs().max().item()
 print(f'ode_sample against the loop on the exact field: {exact:.0e}')
-d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'],
-                   data=mix.sample(2000));
+d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'], data=data);
 ```
 
 ```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method-1}
@@ -339,16 +342,19 @@ x_T = jax.random.normal(k_T, (2000, 2))
 pred_v = make_pred(ema_v, linear, 'velocity')
 samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
            for steps in (1, 10, 100)]
+key, k_data = jax.random.split(key)
+data = mix.sample(k_data, 2000)
 print('one step: mean', [round(v, 3) for v in samples[0].mean(0).tolist()],
       'std', [round(v, 3) for v in samples[0].std(0).tolist()])
+print(f'{"data":>18}:', mix.summary(data))
 for steps, x in zip((10, 100), samples[1:]):
-    print(f'{steps} steps:', mix.summary(x))
+    print(f'{steps:>3} steps, network:', mix.summary(x))
+print('  10 steps, oracle:',
+      mix.summary(ode_sample(oracle, x_T, linear.sigma_bars(10))))
 exact = float(jnp.abs(ode_sample(oracle, x_T, linear.sigma_bars(100))
                       - euler(mix.velocity, x_T, 100)).max())
 print(f'ode_sample against the loop on the exact field: {exact:.0e}')
-key, k_data = jax.random.split(key)
-d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'],
-                   data=mix.sample(k_data, 2000));
+d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'], data=data);
 ```
 
 One step puts every sample at the data mean, about $(-0.5, -0.7)$, with a standard deviation of a few hundredths where the exact field has none: the network's field at $t = 1$ is not quite $\mathbf{x} - \mathbb{E}[\mathbf{x}_0]$, and these hundredths are its error there. Ten steps find the three modes, with weights within about $0.03$ of $0.5/0.3/0.2$, but about three percent of the samples stray between the modes. How many should? A Gaussian mode in the plane puts $e^{-9/2} \approx 1.1\%$ of its mass beyond three standard deviations, so about one percent of the data themselves stray, and the other two percent are the sampler's. The modes also come out too narrow: their *spread*, the mean squared distance of a sample that does not stray to its mode center (:numref:`sec_diffusion-denoising`), is $0.45$, against about $0.48$ for the data (the last cell of this section prints it). A hundred steps of the same network bring the strays down to about one percent and the spread to that of the data, so the coarse steps, not the network, made the ten-step samples narrow and stray. The weights then lie within about two standard errors of $2{,}000$ points, where one standard error is about $0.01$. On the exact field the library's sampler and the loop agree to about $10^{-4}$, single-precision rounding, as the algebra says they should.

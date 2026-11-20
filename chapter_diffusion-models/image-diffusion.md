@@ -521,8 +521,18 @@ with torch.no_grad():
 rms = lambda a, b: ((a - b) ** 2).mean((1, 2, 3)).sqrt().tolist()
 for name, ref in (('image', x0), ('class mean', X[y == c[0]].mean(0))):
     print(f'RMS from the {name}:', ' '.join(f'{e:.2f}' for e in rms(x0_hat, ref)))
-d2l.show_gray(torch.cat([x_t, x0_hat]), 2, 6,
-              titles=[f't = {t:.1f}' for t in ts.tolist()] + [''] * 6);
+x, grid, traj = torch.randn_like(x0[:1]), torch.linspace(1, 0, 51), []
+with torch.no_grad():  # one sample of the class: 50 Euler steps from noise
+    for i in range(50):
+        t = grid[i].item()
+        u = ema(x, torch.full((1,), t, device=dev), c[:1])
+        if i % 10 == 0:                        # t = 1.0, 0.8, ..., 0.2
+            traj.append(x - t * u)             # its predicted clean image
+        x = x + (grid[i + 1].item() - t) * u
+traj = torch.cat([x] + traj[::-1])             # from t = 0 (the sample) to 1
+print('RMS from the sample:', ' '.join(f'{e:.2f}' for e in rms(traj, x)))
+d2l.show_gray(torch.cat([x_t, x0_hat, traj]), 3, 6,
+              titles=[f't = {t:.1f}' for t in ts.tolist()] + [''] * 12);
 ```
 
 ```{.python .input #image-diffusion-one-trainer-4}
@@ -535,8 +545,18 @@ x0_hat = path.x0_eps('velocity', ema(x_t, ts, c), x_t, ts)[0]
 rms = lambda a, b: jnp.sqrt(((a - b) ** 2).mean((1, 2, 3))).tolist()
 for name, ref in (('image', x0), ('class mean', X[y == c[0]].mean(0))):
     print(f'RMS from the {name}:', ' '.join(f'{e:.2f}' for e in rms(x0_hat, ref)))
-d2l.show_gray(jnp.concatenate([x_t, x0_hat]), 2, 6,
-              titles=[f't = {t:.1f}' for t in ts.tolist()] + [''] * 6);
+x = jax.random.normal(jax.random.key(2), x0[:1].shape)
+grid, traj = jnp.linspace(1, 0, 51), []
+for i in range(50):  # one sample of the class: 50 Euler steps from noise
+    t = float(grid[i])
+    u = ema(x, jnp.full((1,), t), c[:1])
+    if i % 10 == 0:                            # t = 1.0, 0.8, ..., 0.2
+        traj.append(x - t * u)                 # its predicted clean image
+    x = x + (float(grid[i + 1]) - t) * u
+traj = jnp.concatenate([x] + traj[::-1])       # from t = 0 (the sample) to 1
+print('RMS from the sample:', ' '.join(f'{e:.2f}' for e in rms(traj, x)))
+d2l.show_gray(jnp.concatenate([x_t, x0_hat, traj]), 3, 6,
+              titles=[f't = {t:.1f}' for t in ts.tolist()] + [''] * 12);
 ```
 
 Both ends come out as predicted: at $t = 1$ the prediction lies within 0.07
@@ -668,8 +688,8 @@ def fd_and_agreement(cnn, imgs, f_ref):
     agree = (cls == torch.arange(len(imgs), device=cls.device) % 10)
     return d2l.fid_score(f, f_ref), agree.float().mean().item()
 
-fd_ema, _ = fd_and_agreement(cnn, generate(ema), f_test[:5000])
-print(f'FD of 5,000 samples: {fd_ema:.2f}')
+fd_ema, agree_ema = fd_and_agreement(cnn, generate(ema), f_test[:5000])
+print(f'5,000 samples: FD {fd_ema:.2f}, class agreement {agree_ema:.3f}')
 ```
 
 ```{.python .input #image-diffusion-fr-chet-distance-in-learned-features-2}
@@ -681,8 +701,8 @@ def fd_and_agreement(cnn, imgs, f_ref):
     agree = (cnn.head(f).argmax(1) == jnp.arange(len(imgs)) % 10).mean()
     return d2l.fid_score(f, f_ref), float(agree)
 
-fd_ema, _ = fd_and_agreement(cnn, generate(ema), f_test[:5000])
-print(f'FD of 5,000 samples: {fd_ema:.2f}')
+fd_ema, agree_ema = fd_and_agreement(cnn, generate(ema), f_test[:5000])
+print(f'5,000 samples: FD {fd_ema:.2f}, class agreement {agree_ema:.3f}')
 ```
 
 The samples score an FD of about 0.8. Is that good? The number depends on
@@ -906,10 +926,10 @@ labels.
 %%tab pytorch, jax
 guided = lambda gamma: lambda net, c: cfg(net, c, gamma)
 samples = {gamma: generate(ema, guided(gamma))
-           for gamma in (0.0, 1.0, 1.5, 2.0, 3.0, 4.0)}
+           for gamma in (0.0, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0)}
 for gamma, imgs in samples.items():
     fd, agree = fd_and_agreement(cnn, imgs, f_test[:5000])
-    print(f'gamma {gamma:.1f}: FD {fd:5.2f}, class agreement {agree:.3f}')
+    print(f'gamma {gamma:.2f}: FD {fd:5.2f}, class agreement {agree:.3f}')
 ```
 
 At $\gamma = 0$ the label plays no part, and the agreement is at chance,
@@ -937,6 +957,14 @@ share = lambda cls: torch.bincount(cls, minlength=10) / len(cls)
 cls = cnn.head(fd_features(cnn, samples[0.0]).to(dev)).argmax(1)
 for name, s_test, s_0 in zip(names, share(c_test), share(cls)):
     print(f'{name:>11}: test images {s_test:.3f}, gamma 0 {s_0:.3f}')
+# real training images, 5,000 in the class mix of the gamma = 0 samples
+counts, y_real = torch.bincount(cls, minlength=10).tolist(), y[:25_000].cpu()
+mixed = torch.cat([torch.nonzero(y_real == k)[:n, 0]
+                   for k, n in enumerate(counts)])
+for name, f in (('uniform', f_real[:5000]), ('gamma 0', f_real[mixed])):
+    mean_term = ((f.mean(0) - f_test[:5000].mean(0)) ** 2).sum()
+    print(f'real images, {name} class mix: mean term {mean_term:.2f} of FD '
+          f'{d2l.fid_score(f, f_test[:5000]):.2f}')
 ```
 
 ```{.python .input #image-diffusion-classifier-free-guidance-3}
@@ -950,6 +978,14 @@ share = lambda cls: jnp.bincount(cls, length=10) / len(cls)
 cls = cnn.head(fd_features(cnn, samples[0.0])).argmax(1)
 for name, s_test, s_0 in zip(names, share(c_test), share(cls)):
     print(f'{name:>11}: test images {s_test:.3f}, gamma 0 {s_0:.3f}')
+# real training images, 5,000 in the class mix of the gamma = 0 samples
+counts, y_real = jnp.bincount(cls, length=10).tolist(), np.asarray(y[:25_000])
+mixed = np.concatenate([np.flatnonzero(y_real == k)[:n]
+                        for k, n in enumerate(counts)])
+for name, f in (('uniform', f_real[:5000]), ('gamma 0', f_real[mixed])):
+    mean_term = ((f.mean(0) - f_test[:5000].mean(0)) ** 2).sum()
+    print(f'real images, {name} class mix: mean term {mean_term:.2f} of FD '
+          f'{d2l.fid_score(f, f_test[:5000]):.2f}')
 ```
 
 The class mix is off. Without the label the sampler makes too many

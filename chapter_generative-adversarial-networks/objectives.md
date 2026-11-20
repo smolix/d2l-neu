@@ -49,10 +49,9 @@ $$
 
 in which the critic $T$ ranges over a class $\mathcal{T}$. The game of :numref:`sec_basic_gan` is the case $\ell_p(t) = \log \sigma(t)$ and $\ell_q(t) = -\log \sigma(-t)$ with $\mathcal{T}$ unrestricted.
 
-The first family keeps the critic unconstrained and varies the scores. The supremum can then be taken separately at each $x$, so the result depends on $p$ and $q$ only through $\rho(x)$; these objectives are f-divergences. The second family uses linear scores, $\ell_p = \ell_q = \mathrm{id}$, and restricts $\mathcal{T}$ to a ball of functions, which couples the critic's values across points. A kernel ball gives the maximum mean discrepancy, and the ball of 1-Lipschitz functions the Wasserstein-1 distance (:numref:`fig_gan_template`).
+The first family keeps the critic unconstrained and varies the scores. The supremum can then be taken separately at each $x$, so the result depends on $p$ and $q$ only through $\rho(x)$; these objectives are f-divergences. The second family uses linear scores, $\ell_p = \ell_q = \mathrm{id}$, and restricts $\mathcal{T}$ to a ball of functions, which couples the critic's values across points. A kernel ball gives the maximum mean discrepancy, and the ball of 1-Lipschitz functions the Wasserstein-1 distance.
 
-![Two choices define the classical adversarial objectives: the scoring functions and the critic class. Nonlinear scores with an unconstrained critic yield f-divergences, including the original GAN. Linear scores with a constrained critic yield integral probability metrics: MMD for a kernel ball, Wasserstein-1 for a Lipschitz ball. The relativistic objective of :numref:`sec_gan_relativistic` scores pairs of samples.](../img/mdl-gan-template.svg)
-:label:`fig_gan_template`
+<!-- WRITER: the template figure fig_gan_template and its generator entry are deleted (code step, OBJ-16). Put the 2x2 table here: rows per-sample critic / pair critic, columns unconstrained / constrained critic, one example per cell (hinge on a constrained critic in one cell, RpGAN with penalties in the pair/constrained cell). -->
 
 ### Convexity in the Generator's Distribution
 
@@ -157,12 +156,15 @@ We can test the links point by point when both densities are known. The data $p$
 
 ```{.python .input #objectives-one-testbed-four-losses-1}
 %%tab pytorch, jax
+#@save
 mu_p = np.array([[0.0, 2.4], [-2.1, -1.2], [2.1, -1.2]])     # data
 A_p = np.stack([0.7 * np.eye(2)] * 3)
+
 mu_q = np.array([[0.2, 2.6], [-2.3, -1.0], [2.0, -1.3]])     # hand-set q
 A_q = np.stack([np.diag([0.8, 0.55]), np.diag([0.5, 0.6]),
                 np.array([[0.65, 0.2], [-0.1, 0.7]])])
 
+#@save
 def mixture_logpdf(x, mus, As):
     """Log density of the uniform mixture of Gaussians N(mu_k, A_k^T A_k)."""
     comps = []
@@ -174,6 +176,7 @@ def mixture_logpdf(x, mus, As):
     return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
 
 def sample_mixture(n, mus, As, rng):
+    """n draws from the uniform mixture of Gaussians mu_k + z A_k."""
     k = rng.integers(0, len(mus), n)
     z = rng.standard_normal((n, 2))
     return np.einsum('ni,nij->nj', z, As[k]) + mus[k]
@@ -183,11 +186,12 @@ On a fixed grid, quadrature gives $\mathrm{JS}(p, q)$ for any mixture $q$ of thi
 
 ```{.python .input #objectives-js-by-quadrature}
 %%tab pytorch, jax
+#@save
 grid_1d = np.linspace(-7.0, 7.0, 281)
-gx, gy = np.meshgrid(grid_1d, grid_1d)
-grid_2d = np.stack([gx.ravel(), gy.ravel()], axis=1)
+grid_2d = np.stack([g.ravel() for g in np.meshgrid(grid_1d, grid_1d)], axis=1)
 cell_area = (grid_1d[1] - grid_1d[0]) ** 2
 
+#@save
 def js_mixtures(mus_q, As_q, mus_p=mu_p, As_p=A_p):
     """JS(p, q) between two known mixtures, p the data by default, by
     quadrature on grid_2d."""
@@ -204,8 +208,10 @@ The hand-set $q$ is a few hundredths of a nat from the data, a mismatch of the s
 
 ```{.python .input #objectives-one-testbed-four-losses-3}
 %%tab pytorch
+#@save
 TRUNC_STD = 0.8796  # standard deviation of N(0, 1) truncated at +-2
 
+#@save
 def make_critic():
     """Leaky-ReLU MLP with LeCun-normal weights and zero biases."""
     D = nn.Sequential(nn.Linear(2, 64), nn.LeakyReLU(0.2),
@@ -219,6 +225,7 @@ def make_critic():
 
 ```{.python .input #objectives-one-testbed-four-losses-3}
 %%tab jax
+#@save
 def make_critic(rngs):
     """Leaky-ReLU MLP; nnx.Linear gives LeCun-normal weights, zero biases."""
     leaky = lambda x: nnx.leaky_relu(x, 0.2)
@@ -231,15 +238,15 @@ Each loss is stored as a pair: the critic's loss on the scores of real and gener
 
 ```{.python .input #objectives-loss-pairs}
 %%tab pytorch, jax
-losses = {  # name: (critic loss, generator loss), both on critic scores
+losses = {  # name: (critic loss, generator loss), both on the scores r, f
     'logistic': (lambda r, f: (softplus(-r) + softplus(f)).mean(),
-                 lambda f: softplus(-f).mean()),
+                 lambda r, f: softplus(-f).mean()),
     'least squares': (lambda r, f: ((r - 1) ** 2 + f ** 2).mean() / 2,
-                      lambda f: ((f - 1) ** 2).mean() / 2),
+                      lambda r, f: ((f - 1) ** 2).mean() / 2),
     'hinge': (lambda r, f: (relu(1 - r) + relu(1 + f)).mean(),
-              lambda f: -f.mean()),
+              lambda r, f: -f.mean()),
     'squared hinge': (lambda r, f: (relu(1 - r) ** 2 + relu(1 + f) ** 2).mean(),
-                      lambda f: -f.mean()),
+                      lambda r, f: -f.mean()),
 }
 ```
 
@@ -247,6 +254,7 @@ The links describe the best response to a fixed $q$, so we train a fresh critic 
 
 ```{.python .input #objectives-what-each-critic-estimates}
 %%tab pytorch
+#@save
 to_t = lambda a: torch.tensor(a, dtype=torch.float32)
 
 def best_response(critic_loss, seed=0, steps=3000, batch=512, lr=1e-3):
@@ -385,30 +393,41 @@ We plot each objective's slope with respect to $\mu$, the gradient a generator t
 
 ```{.python .input #objectives-divergence-against-separation}
 %%tab pytorch, jax
-xs = np.linspace(-10.0, 18.0, 5601)           # fixed quadrature grid
+xs = np.linspace(-10.0, 30.0, 8001)           # fixed quadrature grid
 
 def normal_pdf(x, mu, sigma=1.0):
     return np.exp(-(x - mu) ** 2 / (2 * sigma ** 2)) / np.sqrt(
         2 * np.pi * sigma ** 2)
 
+def js_gap(p, q):
+    """log 2 - JS(p, q) on xs, accurate even when tiny: it integrates
+    (p log(1 + q/p) + q log(1 + p/q)) / 2, with log(1 + e^a) = logaddexp(0, a)."""
+    a = np.log(q) - np.log(p)
+    return 0.5 * np.trapezoid(p * np.logaddexp(0, a) + q * np.logaddexp(0, -a),
+                              xs)
+
 def js_1d(p, q):
-    m = (p + q) / 2
-    return 0.5 * np.trapezoid(p * np.log(p / m) + q * np.log(q / m), xs)
+    return np.log(2) - js_gap(p, q)
 
 s = 4.0                                        # RBF kernel bandwidth
-mus = np.linspace(0.1, 8.0, 80)                # separations mu
-js = np.array([js_1d(normal_pdf(xs, 0.0), normal_pdf(xs, mu)) for mu in mus])
+mus = np.linspace(0.1, 20.0, 200)              # separations mu
+gaps = np.array([js_gap(normal_pdf(xs, 0.0), normal_pdf(xs, mu)) for mu in mus])
 mmd2 = 2 * s / np.sqrt(s ** 2 + 2) * (1 - np.exp(-mus ** 2
                                                  / (2 * (s ** 2 + 2))))
-slopes = [np.gradient(js, mus), np.gradient(mmd2, mus),
+slopes = [-np.gradient(gaps, mus), np.gradient(mmd2, mus),
           np.ones_like(mus)]                   # W1 = |mu| has slope one
-for mu in (1.0, 7.0):
-    print(f'mu = {mu:.0f}: JS slope {np.interp(mu, mus, slopes[0]):.4f}, '
-          f'JS / log 2 = {np.interp(mu, mus, js) / np.log(2):.4f}')
+for mu in (1.0, 7.0, 20.0):
+    js = js_1d(normal_pdf(xs, 0.0), normal_pdf(xs, mu))
+    print(f'mu = {mu:2.0f}: JS slope {np.interp(mu, mus, slopes[0]):.4g}, '
+          f'JS / log 2 = {js / np.log(2):.4f}, '
+          f'MMD^2 slope {np.interp(mu, mus, slopes[1]):.4g}')
+peak = slopes[1].argmax()
+print(f'MMD^2 slope peaks at mu = {mus[peak]:.1f} with {slopes[1][peak]:.3f}')
 d2l.plot(mus, slopes, xlabel=r'separation $\mu$', ylabel='slope',
          legend=['JS', 'MMD$^2$', '$W_1$'], yscale='log', figsize=(5, 3))
 ```
 
+<!-- WRITER: the cell now runs mu up to 20 (code step, OBJ-11) and prints: JS slope 0.1987 at mu = 1, 0.001264 at mu = 7 (JS / log 2 = 0.9990), 1.5e-22 at mu = 20; MMD^2 slope peaks at mu = 4.2 with 0.269, is 0.188 at mu = 7 and 3.3e-5 at mu = 20, so the Gaussian decay is now on the page. -->
 The Jensen--Shannon slope collapses once the densities stop overlapping. At $\mu = 7$ it is more than a hundred times smaller than at $\mu = 1$, and the divergence is within a tenth of a percent of $\log 2$, so the generator receives almost no signal about which way to move. The $W_1$ slope stays at one. The $\mathrm{MMD}^2$ slope peaks at a separation set by the bandwidth and then decays like a Gaussian in $\mu$, so the bandwidth sets the range over which MMD gives a gradient.
 
 ### Optimal Critics on Separated Supports
@@ -418,17 +437,189 @@ The Jensen--Shannon slope collapses once the densities stop overlapping. At $\mu
 ![Optimal critics when the data density $p$ (blue) and the generated density $q$ (orange) have disjoint supports. Left: the Jensen--Shannon critic $\log(p/q)$, $+\infty$ on the support of $p$ and $-\infty$ on that of $q$, flat on both. Middle: the $W_1$ critic, a ramp of slope one. Right: the MMD witness $\mathbb{E}_{p}[k(x,\cdot)] - \mathbb{E}_{q}[k(x,\cdot)]$, a smooth difference of kernel bumps (bandwidth half the separation, arbitrary scale). The orange arrows mark each critic's slope at $q$, the direction in which the generator moves.](../img/mdl-gan-critics-separated.svg)
 :label:`fig_gan_critics_separated`
 
+### Trained Critics from a Separated Start
+:label:`subsec_gan_objectives_separated_start`
+
+<!-- WRITER: new subsection (code step, D2/OBJ-12). Setup: data N(0, 1); generator x' = theta + z from theta = 6, trained by plain gradient steps (SGD, lr 1e-2), so the distance theta travels measures the gradient it receives (under Adam every arm, the saturating one included, moved at Adam's speed limit of about 0.01 per step and reached the data near step 550: Adam hides the slope). Critics: the same 2x32 ReLU MLP (d2l.make_mlp), Adam lr 1e-2, betas (0.5, 0.9), 5 critic steps per generator step, batch 256, 1,500 generator steps, seeds 0, 1, 2. Five arms: logistic critic with the saturating generator (the minimax form, whose value is JS, so it follows the plotted JS slope), logistic with the non-saturating generator, hinge, W1 critic with the gradient penalty of Gulrajani et al. (lambda = 10 at random interpolates), MMD^2 with one RBF kernel of median-heuristic bandwidth (no critic). Measured, both tabs (dev runs, not captured; read the store after the capture): saturating |grad| 0.006-0.015, theta 6.00 -> 5.75-5.77 at step 1,500, never near the data; NS |grad| 2.7-3.0, |theta| < 0.5 at steps 377-388; hinge |grad| 1.07-1.71, reached at steps 727-943; W1 + GP |grad| 1.25 in every run, reached at steps 477-502, but its push stays at unit size through the data, and in 1 of 3 (JAX) or 2 of 3 (PyTorch) runs theta swung past the data to about -7.2 to -7.6 by step 1,500 (theta at 1,000 about -4.1 in those runs); MMD median |grad| 0.21, theta 1.32 at step 1,500, not reached. Firm lessons: the saturation in the plot belongs to the saturating generator loss, not to the trained critic: with the same critic the non-saturating loss gets a gradient of about 3 at distance 6; every trained critic and MMD give the far generator a direction; W1's gradient does not shrink at the data (dW1/dtheta = sign theta), so the generator can swing past it (the oscillation that sec_gan_convergence analyzes). Do not rank MMD's speed against the critics: its gradient scale is set by the bandwidth and the scale of MMD^2. Critic lr: at Adam lr 1e-3 the W1 critic started with the wrong slope in 2 of 3 runs and theta first moved away from the data (to about 6.6 at step 100); lr 1e-2 lets every critic track the generator, the premise of the W1 analysis. -->
+
+The generator has one parameter, the location $\theta$ of $q = \mathcal{N}(\theta, 1)$, and the data are $p = \mathcal{N}(0, 1)$. Every critic is the same small ReLU network; the MMD arm has no critic and sets its kernel bandwidth to the median distance between points of the pooled batch.
+
+```{.python .input #objectives-separated-start-losses}
+%%tab pytorch
+def gradient_penalty(D, X, fake, u):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D)."""
+    x = (u * X + (1 - u) * fake).requires_grad_()
+    grad, = torch.autograd.grad(D(x).sum(), x, create_graph=True)
+    return ((grad.abs() - 1) ** 2).mean()
+
+def mmd2_loss(x, y, bandwidths=(0.5, 1.0, 2.0)):
+    """Unbiased MMD^2 under the sum of RBF kernels of the given bandwidths."""
+    def kernel(a, b):
+        sq_dist = torch.cdist(a, b) ** 2
+        return sum(torch.exp(-sq_dist / (2 * s ** 2)) for s in bandwidths)
+    return mmd2_unbiased(kernel(x, x), kernel(y, y), kernel(x, y))
+
+def mmd2_median(x, y):
+    """MMD^2 with one RBF kernel, its bandwidth the median pairwise distance
+    of the pooled batch, held constant in the gradient."""
+    xy = torch.cat([x, y])
+    return mmd2_loss(x, y, (torch.cdist(xy, xy).median().detach(),))
+```
+
+```{.python .input #objectives-separated-start-losses}
+%%tab jax
+def gradient_penalty(D, X, fake, u):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D)."""
+    grad = jax.grad(lambda x: D(x).sum())(u * X + (1 - u) * fake)
+    return ((jnp.abs(grad) - 1) ** 2).mean()
+
+def mmd2_loss(x, y, bandwidths=(0.5, 1.0, 2.0)):
+    """Unbiased MMD^2 under the sum of RBF kernels of the given bandwidths."""
+    def kernel(a, b):
+        sq_dist = ((a[:, None] - b[None]) ** 2).sum(-1)
+        return sum(jnp.exp(-sq_dist / (2 * s ** 2)) for s in bandwidths)
+    return mmd2_unbiased(kernel(x, x), kernel(y, y), kernel(x, y))
+
+def mmd2_median(x, y):
+    """MMD^2 with one RBF kernel, its bandwidth the median pairwise distance
+    of the pooled batch, held constant in the gradient."""
+    xy = jnp.concatenate([x, y])
+    dist = jnp.sqrt(((xy[:, None] - xy[None]) ** 2).sum(-1))
+    return mmd2_loss(x, y, (jax.lax.stop_gradient(jnp.median(dist)),))
+```
+
+`train_shift` gives the critic five Adam steps for every generator step. The generator takes plain gradient steps, so the distance $\theta$ travels measures the gradient it receives; the function records $\theta$ and that gradient at every step. A positive `gp` adds the gradient penalty to the critic loss; with `critic_loss` set to `None`, the generator minimizes `gen_loss` of the two batches.
+
+```{.python .input #objectives-separated-start-train}
+%%tab pytorch
+class Shift(nn.Module):
+    """The generator x' = theta + z."""
+    def __init__(self, theta0):
+        super().__init__()
+        self.theta = nn.Parameter(torch.tensor(theta0))
+
+    def forward(self, z):
+        return self.theta + z
+
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
+                n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
+    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; returns
+    theta0 and theta after every step, and the gradient of every step."""
+    rng = np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    G, D = Shift(theta0), d2l.make_mlp([1, 32, 32, 1], nn.ReLU())
+    opt_G = torch.optim.SGD(G.parameters(), lr_G)
+    opt_D = torch.optim.Adam(D.parameters(), lr_D, betas=(0.5, 0.9))
+    n = n_critic if critic_loss else 0
+    thetas, grads = [theta0], []
+    for _ in range(steps):
+        X, Z = (to_t(rng.standard_normal((n + 1, batch, 1))) for _ in range(2))
+        U = to_t(rng.uniform(size=(n, batch, 1)))   # interpolation weights
+        for i in range(n):
+            fake = G(Z[i]).detach()
+            loss = critic_loss(D(X[i]), D(fake))
+            if gp:
+                loss = loss + gp * gradient_penalty(D, X[i], fake, U[i])
+            opt_D.zero_grad()
+            loss.backward()
+            opt_D.step()
+        fake = G(Z[-1])
+        loss = (gen_loss(X[-1], fake) if critic_loss is None
+                else gen_loss(D(X[-1]), D(fake)))
+        opt_G.zero_grad()
+        loss.backward()
+        grads.append(G.theta.grad.item())
+        opt_G.step()
+        thetas.append(G.theta.item())
+    return np.array(thetas), np.array(grads)
+```
+
+```{.python .input #objectives-separated-start-train}
+%%tab jax
+class Shift(nnx.Module):
+    """The generator x' = theta + z."""
+    def __init__(self, theta0):
+        self.theta = nnx.Param(jnp.array(theta0))
+
+    def __call__(self, z):
+        return self.theta + z
+
+@nnx.jit(static_argnums=(0, 1, 2))
+def shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U):
+    """One critic step per row of U, then one generator step; returns the
+    generator's gradient."""
+    for i in range(len(U)):
+        fake = G(Z[i])
+        def d_loss(D_):
+            loss = critic_loss(D_(X[i]), D_(fake))
+            if gp:
+                loss = loss + gp * gradient_penalty(D_, X[i], fake, U[i])
+            return loss
+        opt_D.update(D, nnx.grad(d_loss)(D))
+    def g_loss(G_):
+        fake = G_(Z[-1])
+        return (gen_loss(X[-1], fake) if critic_loss is None
+                else gen_loss(D(X[-1]), D(fake)))
+    grad = nnx.grad(g_loss)(G)
+    opt_G.update(G, grad)
+    return grad.theta[...]
+
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
+                n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
+    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; returns
+    theta0 and theta after every step, and the gradient of every step."""
+    rng = np.random.default_rng(seed)
+    G = Shift(theta0)
+    D = d2l.make_mlp([1, 32, 32, 1], nnx.relu, rngs=nnx.Rngs(seed))
+    opt_G = nnx.Optimizer(G, optax.sgd(lr_G), wrt=nnx.Param)
+    opt_D = nnx.Optimizer(D, optax.adam(lr_D, 0.5, 0.9), wrt=nnx.Param)
+    n = n_critic if critic_loss else 0
+    thetas, grads = [theta0], []
+    for _ in range(steps):
+        X, Z = (jnp.asarray(rng.standard_normal((n + 1, batch, 1)), jnp.float32)
+                for _ in range(2))
+        U = jnp.asarray(rng.uniform(size=(n, batch, 1)), jnp.float32)
+        grads.append(float(
+            shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U)))
+        thetas.append(float(G.theta[...]))
+    return np.array(thetas), np.array(grads)
+```
+
+We add the saturating logistic loss, whose generator minimizes $\mathbb{E}[\log(1 - \sigma(D(x')))]$ and so follows the Jensen--Shannon slope plotted above. Every arm trains three times; the table prints the median gradient over the first 100 steps, $\theta$ at five steps, and the first step at which $|\theta| < 0.5$.
+
+```{.python .input #objectives-separated-start-runs}
+%%tab pytorch, jax
+w1 = (lambda r, f: f.mean() - r.mean(), lambda r, f: -f.mean())
+arms = {'logistic, sat.': (losses['logistic'][0],
+                           lambda r, f: -softplus(f).mean(), 0.0),
+        'logistic, NS': (*losses['logistic'], 0.0),
+        'hinge': (*losses['hinge'], 0.0),
+        'W1 + GP': (*w1, 10.0),
+        'MMD, median': (None, mmd2_median, 0.0)}
+steps = (0, 100, 300, 1000, 1500)
+print(f'{"":20s}|gradient|   theta at steps {steps}   first |theta| < 0.5')
+for name, (critic_loss, gen_loss, gp) in arms.items():
+    for seed in range(3):
+        thetas, grads = train_shift(critic_loss, gen_loss, seed, gp)
+        hit = np.flatnonzero(np.abs(thetas) < 0.5)
+        print(f'{name:15s} {seed}   {np.median(np.abs(grads[:100])):8.3f}   '
+              + ''.join(f'{thetas[t]:7.2f}' for t in steps) + '   '
+              + (f'{hit[0]:5d}' if len(hit) else 'not reached'))
+```
+
 ### Five Losses on a Gaussian Mixture
 :label:`subsec_gan_objectives_testbed`
 
-Every divergence in :numref:`tab_gan_loss_divergences` vanishes at $q = p$, so with overlapping supports every loss should drive a generator to the data. Near the end, though, the hinge critic reports only the sign of the remaining mismatch, the others also its size. We fit one generator to the three-mode mixture under five objectives: the non-saturating logistic loss of :numref:`sec_basic_gan`, least squares, hinge, the squared hinge, and MMD with a fixed kernel and no critic. The squared hinge keeps the hinge's margin and generator loss $-D$ but has the link $\tanh(\lambda/2)$, which carries magnitude, so comparing the two isolates the link. All five runs share the architecture, learning rates, step counts and start, with no separate tuning. A $W_1$ arm would need the Lipschitz penalty of :numref:`sec_gan_convergence`.
+Every divergence in :numref:`tab_gan_loss_divergences` vanishes at $q = p$, so with overlapping supports every loss should drive a generator to the data. Near the end, though, the hinge critic reports only the sign of the remaining mismatch, the others also its size. We fit one generator to the three-mode mixture under five objectives: the non-saturating logistic loss of :numref:`sec_basic_gan`, least squares, hinge, the squared hinge, and MMD with a fixed kernel and no critic. The squared hinge keeps the hinge's margin and generator loss $-D$ but has the link $\tanh(\lambda/2)$, which carries magnitude, so comparing the two isolates the link. All five runs share the architecture, learning rates, step counts and start, with no separate tuning. A $W_1$ arm would need the Lipschitz penalty of :numref:`sec_gan_convergence`. <!-- WRITER: false now: subsec_gan_objectives_separated_start trains a W1 critic with a gradient penalty (code step). -->
 
 The generator draws one of three components uniformly and applies that component's learned affine map to Gaussian noise, so $q$ stays a three-component mixture whose divergence from $p$ we can compute after every step. We set the start by hand: each mean lies one to two and a half units from a different mode, and each map is $0.4$ times the identity, below the data's $0.7$, so positions and scales remain to be learned.
 
 ```{.python .input #objectives-five-losses-on-a-gaussian-mixture-1}
 %%tab pytorch, jax
+#@save
 mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
 A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7
+
 print(f'JS(p, q) at the start: {js_mixtures(mu_0, A_0):.3f} nats')
 ```
 
@@ -436,6 +627,7 @@ The MMD arm minimizes the unbiased minibatch $\mathrm{MMD}^2$ under the sum of t
 
 ```{.python .input #objectives-one-testbed-four-losses-2}
 %%tab pytorch
+#@save
 class MixtureGenerator(nn.Module):
     """x = mu_k + z A_k for a uniformly drawn component k."""
     def __init__(self, mu, A):
@@ -450,18 +642,12 @@ class MixtureGenerator(nn.Module):
         return (self.mu.detach().numpy().copy(),
                 self.A.detach().numpy().copy())
 
-def mmd2_loss(x, y, bandwidths=(0.5, 1.0, 2.0)):
-    """Unbiased MMD^2 under the sum of three RBF kernels."""
-    def kernel(a, b):
-        sq_dist = torch.cdist(a, b) ** 2
-        return sum(torch.exp(-sq_dist / (2 * s ** 2)) for s in bandwidths)
-    return mmd2_unbiased(kernel(x, x), kernel(y, y), kernel(x, y))
-
 losses['MMD'] = (None, mmd2_loss)   # no critic: MMD^2 to the real batch
 ```
 
 ```{.python .input #objectives-one-testbed-four-losses-2}
 %%tab jax
+#@save
 class MixtureGenerator(nnx.Module):
     """x = mu_k + z A_k for a uniformly drawn component k."""
     def __init__(self, mu, A):
@@ -474,13 +660,6 @@ class MixtureGenerator(nnx.Module):
     def params_np(self):
         return np.asarray(self.mu[...]), np.asarray(self.A[...])
 
-def mmd2_loss(x, y, bandwidths=(0.5, 1.0, 2.0)):
-    """Unbiased MMD^2 under the sum of three RBF kernels."""
-    def kernel(a, b):
-        sq_dist = ((a[:, None] - b[None]) ** 2).sum(-1)
-        return sum(jnp.exp(-sq_dist / (2 * s ** 2)) for s in bandwidths)
-    return mmd2_unbiased(kernel(x, x), kernel(y, y), kernel(x, y))
-
 losses['MMD'] = (None, mmd2_loss)   # no critic: MMD^2 to the real batch
 ```
 
@@ -488,7 +667,12 @@ losses['MMD'] = (None, mmd2_loss)   # no critic: MMD^2 to the real batch
 
 ```{.python .input #objectives-one-testbed-four-losses-4}
 %%tab pytorch
+#@save
 def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
+    """Fit a MixtureGenerator from (mu_0, A_0) to the data mixture, one
+    critic step per generator step. The losses act on the critic's scores of
+    the real and generated batch; with critic_loss None, gen_loss acts on the
+    two batches. Returns the exact JS(p, q_t) every 200 steps."""
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
     G, D = MixtureGenerator(mu_0, A_0), make_critic()
@@ -505,7 +689,8 @@ def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
             opt_D.step()
         opt_G.zero_grad()
         fake = G(z, k)
-        loss = gen_loss(X, fake) if critic_loss is None else gen_loss(D(fake))
+        loss = (gen_loss(X, fake) if critic_loss is None
+                else gen_loss(D(X), D(fake)))
         loss.backward()
         opt_G.step()
         if t % 200 == 0:
@@ -515,17 +700,25 @@ def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
 
 ```{.python .input #objectives-one-testbed-four-losses-4}
 %%tab jax
+#@save
 @nnx.jit(static_argnums=(0, 1))
-def train_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k):
+def train_toy_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k):
+    """One critic step (unless critic_loss is None), then one generator step."""
     if critic_loss is not None:            # the generator is fixed here
         fake = G(z, k)
         opt_D.update(D, nnx.grad(lambda D_: critic_loss(D_(X), D_(fake)))(D))
     def g_loss(G_):
         fake = G_(z, k)
-        return gen_loss(X, fake) if critic_loss is None else gen_loss(D(fake))
+        return (gen_loss(X, fake) if critic_loss is None
+                else gen_loss(D(X), D(fake)))
     opt_G.update(G, nnx.grad(g_loss)(G))
 
+#@save
 def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
+    """Fit a MixtureGenerator from (mu_0, A_0) to the data mixture, one
+    critic step per generator step. The losses act on the critic's scores of
+    the real and generated batch; with critic_loss None, gen_loss acts on the
+    two batches. Returns the exact JS(p, q_t) every 200 steps."""
     rng = np.random.default_rng(seed)
     G, D = MixtureGenerator(mu_0, A_0), make_critic(nnx.Rngs(seed))
     opt_G = nnx.Optimizer(G, optax.adam(lr), wrt=nnx.Param)
@@ -535,7 +728,7 @@ def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
         X = jnp.asarray(sample_mixture(batch, mu_p, A_p, rng), jnp.float32)
         z = jnp.asarray(rng.standard_normal((batch, 2)), jnp.float32)
         k = jnp.asarray(rng.integers(0, 3, batch))
-        train_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k)
+        train_toy_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k)
         if t % 200 == 0:
             trace.append(js_mixtures(*G.params_np()))
     return np.array(trace)
@@ -545,15 +738,21 @@ The divergence fluctuates from step to step near the end of a run, so we report 
 
 ```{.python .input #objectives-one-testbed-four-losses-6}
 %%tab pytorch, jax
-runs = {name: train_toy(*pair) for name, pair in losses.items()}
-for name, trace in runs.items():
-    print(f'{name:14s} median JS(p, q) over the last 2,000 steps: '
-          f'{np.median(trace[-2000 // 200:]):.4f} nats')
-d2l.plot(np.arange(len(runs['logistic'])) * 200, list(runs.values()),
-         xlabel='step', ylabel='JS(p, q_t)', yscale='log',
-         legend=list(runs), figsize=(5, 3))
+runs = {name: [train_toy(*pair, seed=seed) for seed in range(3)]
+        for name, pair in losses.items()}
+print(f'{"loss":14s} median JS over the last 2,000 steps   first step JS < 0.01')
+for name, traces in runs.items():
+    medians = [np.median(trace[-2000 // 200:]) for trace in traces]
+    firsts = [200 * np.argmax(trace < 0.01) if (trace < 0.01).any() else None
+              for trace in traces]
+    print(f'{name:14s}' + ''.join(f'{m:8.4f}' for m in medians) + ' ' * 13
+          + ''.join(f'{t:6d}' if t is not None else '   n/a' for t in firsts))
+d2l.plot(np.arange(len(runs['logistic'][0])) * 200,
+         [traces[0] for traces in runs.values()], xlabel='step',
+         ylabel='JS(p, q_t)', yscale='log', legend=list(runs), figsize=(5, 3))
 ```
 
+<!-- WRITER: the cell now trains every loss with seeds 0, 1, 2 (code step, OBJ-13). Dev runs (not captured; read the store after the capture), median JS over the last 2,000 steps: PyTorch logistic .0008/.0008/.0008, least squares .0009/.0009/.0008, hinge .0070/.0071/.0033, squared hinge .0013/.0008/.0024, MMD .0001 x3; JAX logistic .0011/.0007/.0007, least squares .0008/.0008/.0005, hinge .0078/.0055/.0053, squared hinge .0011/.0005/.0010, MMD .0001 x3. First recorded step with JS < 0.01 (every 200 steps): logistic and least squares 2,000-2,400, hinge 2,000-2,400, squared hinge 2,000-2,400, MMD 2,600 in every run. Under the standard: in JAX the hinge's smallest run (.0053) exceeds every other arm's largest (.0011) by more than the hinge range (.0025); in PyTorch it does not (.0033 against .0024, hinge range .0038). So: all five fit the mixture; the hinge fit is the loosest in these runs. The 'about 0.005' is gone. The JS < 0.01 column does not show the logistic/least-squares plateau (they cross 0.01 with the others); keep the plateau sentence only as read off the plot, or drop it. -->
 Every objective takes the generator from about half a nat to a few thousandths of a nat or less. The hinge ends highest, at about $0.005$ nats, usually several times above the rest. The squared hinge, with the same margin and generator loss, ends below it, at the level of the logistic and least-squares games. MMD, which has no critic to keep up with, ends lowest. The logistic and least-squares runs also stay on their initial plateau longer than the other three.
 
 The hinge stall comes from what its critic must track. Its target $\operatorname{sign} \lambda$ is a full-margin step however small the mismatch, and inside the margin the hinge risk pulls the critic toward it with slope $|1 - 2\eta| \approx |\lambda|/2$, which vanishes as $q$ approaches $p$. The critic falls behind, and the generator keeps following a stale push of full size. The squared hinge's target $\tanh(\lambda/2)$ shrinks with the mismatch, and its quadratic risk pulls in proportion to the error, so its critic keeps up. All five losses share the minimizer $q = p$; what the critic reports near it decides how closely the generator approaches it (Exercise :exref:`ex_objectives-plateaus-lag` tests the lag).
@@ -770,7 +969,7 @@ densities known exactly.
 ::: {.slide title="One Template Generates the Classical Objectives"}
 $$d(p, q) = \sup_{T \in \mathcal{T}} \big\{ \mathbb{E}_{x \sim p}[\ell_p(T(x))] - \mathbb{E}_{x' \sim q}[\ell_q(T(x'))] \big\}$$
 
-![](../img/mdl-gan-template.svg){width=60%}
+<!-- WRITER: the template figure is deleted; the 2x2 table goes here. -->
 
 - Free critic, nonlinear scores $\ell_p, \ell_q$: **f-divergences**.
 - Linear scores, critic in a ball: **integral probability metrics**.
@@ -907,6 +1106,7 @@ $\mu = \sqrt{s^2 + 2} = \sqrt{18} \approx 4.2$.
 :::
 :::
 
+<!-- WRITER (deck): numbers on this slide and in the wrap-up ('near 0.005') no longer match the three-run cell; see the note at the five-loss text. A separated-start slide can use @!objectives-separated-start-runs. -->
 ::: {.slide title="The Hinge Stalls above the Squared Hinge"}
 @!objectives-one-testbed-four-losses-6
 

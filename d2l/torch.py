@@ -3480,6 +3480,58 @@ def mmd2_unbiased(K_pp, K_qq, K_pq):
     across; the diagonals (a point with itself) are left out.
 
     Defined in :numref:`sec_gan_objectives`"""
+mu_p = np.array([[0.0, 2.4], [-2.1, -1.2], [2.1, -1.2]])     # data
+A_p = np.stack([0.7 * np.eye(2)] * 3)
+
+def mixture_logpdf(x, mus, As):
+    """Log density of the uniform mixture of Gaussians N(mu_k, A_k^T A_k).
+
+    Defined in :numref:`sec_gan_objectives`"""
+    comps = []
+    for mu, A in zip(mus, As):
+        Sigma, diff = A.T @ A, x - mu
+        sol = np.linalg.solve(Sigma, diff.T).T
+        comps.append(-0.5 * ((diff * sol).sum(1)
+                             + np.log(np.linalg.det(2 * np.pi * Sigma))))
+    return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
+
+def sample_mixture(n, mus, As, rng):
+    """n draws from the uniform mixture of Gaussians mu_k + z A_k."""
+    k = rng.integers(0, len(mus), n)
+    z = rng.standard_normal((n, 2))
+    return np.einsum('ni,nij->nj', z, As[k]) + mus[k]
+
+grid_1d = np.linspace(-7.0, 7.0, 281)
+grid_2d = np.stack([g.ravel() for g in np.meshgrid(grid_1d, grid_1d)], axis=1)
+cell_area = (grid_1d[1] - grid_1d[0]) ** 2
+
+def js_mixtures(mus_q, As_q, mus_p=mu_p, As_p=A_p):
+    """JS(p, q) between two known mixtures, p the data by default, by
+    quadrature on grid_2d.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    logp = mixture_logpdf(grid_2d, mus_p, As_p)
+    logq = mixture_logpdf(grid_2d, mus_q, As_q)
+    p, q = np.exp(logp), np.exp(logq)
+    logm = np.log(np.maximum((p + q) / 2, 1e-300))
+    return 0.5 * (p * (logp - logm) + q * (logq - logm)).sum() * cell_area
+
+TRUNC_STD = 0.8796  # standard deviation of N(0, 1) truncated at +-2
+
+def make_critic():
+    """Leaky-ReLU MLP with LeCun-normal weights and zero biases.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    D = nn.Sequential(nn.Linear(2, 64), nn.LeakyReLU(0.2),
+                      nn.Linear(64, 64), nn.LeakyReLU(0.2), nn.Linear(64, 1))
+    for layer in D[::2]:  # weight std 1/sqrt(fan_in) after truncation
+        s = layer.in_features ** -0.5 / TRUNC_STD
+        nn.init.trunc_normal_(layer.weight, std=s, a=-2 * s, b=2 * s)
+        nn.init.zeros_(layer.bias)
+    return D
+
+to_t = lambda a: torch.tensor(a, dtype=torch.float32)
+
     m, n = len(K_pp), len(K_qq)
     return ((K_pp.sum() - K_pp.diagonal().sum()) / (m * (m - 1))
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
@@ -3490,6 +3542,56 @@ def rpgan_loss_D(critic, real, fake):
 
     Defined in :numref:`sec_gan_convergence`"""
     return F.softplus(critic(fake) - critic(real)).mean()
+mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
+A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7
+
+class MixtureGenerator(nn.Module):
+    """x = mu_k + z A_k for a uniformly drawn component k.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, mu, A):
+        super().__init__()
+        self.mu = nn.Parameter(to_t(mu))
+        self.A = nn.Parameter(to_t(A))
+
+    def forward(self, z, k):
+        return torch.einsum('ni,nij->nj', z, self.A[k]) + self.mu[k]
+
+    def params_np(self):
+        return (self.mu.detach().numpy().copy(),
+                self.A.detach().numpy().copy())
+
+def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
+    """Fit a MixtureGenerator from (mu_0, A_0) to the data mixture, one
+    critic step per generator step. The losses act on the critic's scores of
+    the real and generated batch; with critic_loss None, gen_loss acts on the
+    two batches. Returns the exact JS(p, q_t) every 200 steps.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    G, D = MixtureGenerator(mu_0, A_0), make_critic()
+    opt_G = torch.optim.Adam(G.parameters(), lr)
+    opt_D = torch.optim.Adam(D.parameters(), 2 * lr)
+    trace = []
+    for t in range(steps):
+        X = to_t(sample_mixture(batch, mu_p, A_p, rng))
+        z = to_t(rng.standard_normal((batch, 2)))
+        k = torch.tensor(rng.integers(0, 3, batch))
+        if critic_loss is not None:
+            opt_D.zero_grad()
+            critic_loss(D(X), D(G(z, k).detach())).backward()
+            opt_D.step()
+        opt_G.zero_grad()
+        fake = G(z, k)
+        loss = (gen_loss(X, fake) if critic_loss is None
+                else gen_loss(D(X), D(fake)))
+        loss.backward()
+        opt_G.step()
+        if t % 200 == 0:
+            trace.append(js_mixtures(*G.params_np()))
+    return np.array(trace)
+
 
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator.

@@ -3609,6 +3609,51 @@ def mmd2_unbiased(K_pp, K_qq, K_pq):
     across; the diagonals (a point with itself) are left out.
 
     Defined in :numref:`sec_gan_objectives`"""
+mu_p = np.array([[0.0, 2.4], [-2.1, -1.2], [2.1, -1.2]])     # data
+A_p = np.stack([0.7 * np.eye(2)] * 3)
+
+def mixture_logpdf(x, mus, As):
+    """Log density of the uniform mixture of Gaussians N(mu_k, A_k^T A_k).
+
+    Defined in :numref:`sec_gan_objectives`"""
+    comps = []
+    for mu, A in zip(mus, As):
+        Sigma, diff = A.T @ A, x - mu
+        sol = np.linalg.solve(Sigma, diff.T).T
+        comps.append(-0.5 * ((diff * sol).sum(1)
+                             + np.log(np.linalg.det(2 * np.pi * Sigma))))
+    return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
+
+def sample_mixture(n, mus, As, rng):
+    """n draws from the uniform mixture of Gaussians mu_k + z A_k."""
+    k = rng.integers(0, len(mus), n)
+    z = rng.standard_normal((n, 2))
+    return np.einsum('ni,nij->nj', z, As[k]) + mus[k]
+
+grid_1d = np.linspace(-7.0, 7.0, 281)
+grid_2d = np.stack([g.ravel() for g in np.meshgrid(grid_1d, grid_1d)], axis=1)
+cell_area = (grid_1d[1] - grid_1d[0]) ** 2
+
+def js_mixtures(mus_q, As_q, mus_p=mu_p, As_p=A_p):
+    """JS(p, q) between two known mixtures, p the data by default, by
+    quadrature on grid_2d.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    logp = mixture_logpdf(grid_2d, mus_p, As_p)
+    logq = mixture_logpdf(grid_2d, mus_q, As_q)
+    p, q = np.exp(logp), np.exp(logq)
+    logm = np.log(np.maximum((p + q) / 2, 1e-300))
+    return 0.5 * (p * (logp - logm) + q * (logq - logm)).sum() * cell_area
+
+def make_critic(rngs):
+    """Leaky-ReLU MLP; nnx.Linear gives LeCun-normal weights, zero biases.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    leaky = lambda x: nnx.leaky_relu(x, 0.2)
+    return nnx.Sequential(nnx.Linear(2, 64, rngs=rngs), leaky,
+                          nnx.Linear(64, 64, rngs=rngs), leaky,
+                          nnx.Linear(64, 1, rngs=rngs))
+
     m, n = len(K_pp), len(K_qq)
     return ((K_pp.sum() - K_pp.diagonal().sum()) / (m * (m - 1))
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
@@ -3619,6 +3664,58 @@ def rpgan_loss_D(critic, real, fake):
 
     Defined in :numref:`sec_gan_convergence`"""
     return jax.nn.softplus(critic(fake) - critic(real)).mean()
+mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
+A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7
+
+class MixtureGenerator(nnx.Module):
+    """x = mu_k + z A_k for a uniformly drawn component k.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, mu, A):
+        self.mu = nnx.Param(jnp.asarray(mu, jnp.float32))
+        self.A = nnx.Param(jnp.asarray(A, jnp.float32))
+
+    def __call__(self, z, k):
+        return jnp.einsum('ni,nij->nj', z, self.A[k]) + self.mu[k]
+
+    def params_np(self):
+        return np.asarray(self.mu[...]), np.asarray(self.A[...])
+
+@nnx.jit(static_argnums=(0, 1))
+def train_toy_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k):
+    """One critic step (unless critic_loss is None), then one generator step.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    if critic_loss is not None:            # the generator is fixed here
+        fake = G(z, k)
+        opt_D.update(D, nnx.grad(lambda D_: critic_loss(D_(X), D_(fake)))(D))
+    def g_loss(G_):
+        fake = G_(z, k)
+        return (gen_loss(X, fake) if critic_loss is None
+                else gen_loss(D(X), D(fake)))
+    opt_G.update(G, nnx.grad(g_loss)(G))
+
+def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
+    """Fit a MixtureGenerator from (mu_0, A_0) to the data mixture, one
+    critic step per generator step. The losses act on the critic's scores of
+    the real and generated batch; with critic_loss None, gen_loss acts on the
+    two batches. Returns the exact JS(p, q_t) every 200 steps.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    G, D = MixtureGenerator(mu_0, A_0), make_critic(nnx.Rngs(seed))
+    opt_G = nnx.Optimizer(G, optax.adam(lr), wrt=nnx.Param)
+    opt_D = nnx.Optimizer(D, optax.adam(2 * lr), wrt=nnx.Param)
+    trace = []
+    for t in range(steps):
+        X = jnp.asarray(sample_mixture(batch, mu_p, A_p, rng), jnp.float32)
+        z = jnp.asarray(rng.standard_normal((batch, 2)), jnp.float32)
+        k = jnp.asarray(rng.integers(0, 3, batch))
+        train_toy_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k)
+        if t % 200 == 0:
+            trace.append(js_mixtures(*G.params_np()))
+    return np.array(trace)
+
 
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator.

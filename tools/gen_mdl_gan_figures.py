@@ -8,9 +8,6 @@ Four figures:
     generator, the generated and real batches meeting at the critic, and
     the two updates with their opposite goals (replaces the legacy hand-drawn
     ``img/gan.svg``, now deleted);
-  * ``mdl-gan-template`` -- the two knobs of the adversarial-objective template
-    ``d(p,q) = sup_T {E_p[a(T)] - E_q[b(T)]}``, with GAN/f-GAN, W_1 and MMD
-    placed on the (scoring functions, critic class) plane and RpGAN lifted off it;
   * ``mdl-gan-pairing`` -- single-sample classification against a fixed
     threshold versus pair ranking, with the additive shift flipping the
     verdict on the left and cancelling on the right;
@@ -36,10 +33,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
-BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+BLUE, ORANGE, GREEN, GRAY = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY
 PURPLE = "#9467bd"
 
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Polygon
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 
 # --------------------------------------------------------------------------- #
@@ -163,85 +160,6 @@ def fig_architecture():
 
     fl.clean_axes(ax, lim=((0.20, 16.70), (-0.75, 7.05)), hide=True)
     fl.save(fig, "mdl-gan-architecture")
-
-
-# =========================================================================== #
-# 16.2  The template's two knobs                                              #
-# =========================================================================== #
-
-def fig_template():
-    """One template, two choices: which scoring functions (a, b) and which critic class.
-    GAN/f-GAN, W_1 and MMD sit at three corners of that plane; RpGAN does not
-    sit on it at all, because its objective is quadratic in (p, q)."""
-    fig, ax = plt.subplots(figsize=(9.6, 6.0))
-
-    SH = np.array([0.44, 0.40])                  # shear: one unit of the scoring-function axis
-    U1, V1 = 7.4, 4.9                            # plane extent
-
-    def P(u, v):
-        return np.array([u + SH[0] * v, SH[1] * v])
-
-    # the plane itself
-    ax.add_patch(Polygon([P(0, 0), P(U1, 0), P(U1, V1), P(0, V1)],
-                         closed=True, fc=LIGHT, alpha=0.22, ec=GRAY, lw=1.2,
-                         zorder=1))
-    # the linear-scoring row: every integral probability metric lives here
-    ax.add_patch(Polygon([P(0, 0.35), P(U1, 0.35), P(U1, 1.75), P(0, 1.75)],
-                         closed=True, fc=GRAY, alpha=0.13, ec="none", zorder=2))
-    ax.text(*(P(U1, 1.05) + np.array([0.22, 0.0])),
-            "integral probability\nmetrics: $\\ell_p(T)=\\ell_q(T)=T$", ha="left",
-            va="center", fontsize=12.5, color="black")
-
-    # the two axes
-    fl.arrow(ax, P(0, 0), P(U1 + 0.55, 0), color="black", lw=1.5, mut=15)
-    fl.arrow(ax, P(0, 0), P(0, V1 + 0.45), color="black", lw=1.5, mut=15)
-    ax.text(*(P(U1 / 2, 0) + np.array([0.0, -0.62])), r"critic class $\mathcal{T}$",
-            ha="center", va="top", fontsize=14.5, color="black")
-    ax.text(*(P(0, V1 + 0.55) + np.array([-0.28, 0.10])), r"scoring functions $(\ell_p, \ell_q)$",
-            ha="right", va="bottom", fontsize=14.5, color="black")
-
-    # ticks along each axis
-    for u, name in [(1.15, "unrestricted"), (4.05, "Lipschitz ball"),
-                    (6.55, "RKHS ball")]:
-        ax.plot(*np.stack([P(u, 0), P(u, 0) - np.array([0.0, 0.16])]).T,
-                color="black", lw=1.2)
-        ax.text(*(P(u, 0) + np.array([0.0, -0.28])), name, ha="center",
-                va="top", fontsize=12.5, color="black")
-    for v, name in [(1.05, "linear"), (3.85, "nonlinear")]:
-        ax.plot(*np.stack([P(0, v), P(0, v) - np.array([0.16, 0.0])]).T,
-                color="black", lw=1.2)
-        ax.text(*(P(0, v) + np.array([-0.28, 0.0])), name, ha="right",
-                va="center", fontsize=12.5, color="black")
-
-    # the three template members
-    members = [
-        (1.15, 3.85, BLUE, "GAN, $f$-GAN ($f$-divergences)", (0.32, -0.02),
-         "left", "center"),
-        (4.05, 1.05, GREEN, "$W_1$", (0.0, 0.36), "center", "bottom"),
-        (6.55, 1.05, ORANGE, "MMD", (0.0, 0.36), "center", "bottom"),
-    ]
-    for u, v, col, name, off, ha, va in members:
-        p = P(u, v)
-        ax.plot(*p, "o", color=col, ms=11, zorder=6)
-        ax.text(p[0] + off[0], p[1] + off[1], name, ha=ha, va=va,
-                fontsize=13, color=col, zorder=7,
-                bbox=dict(fc="white", ec="none", pad=1.6, alpha=0.85))
-
-    # RpGAN: the same two knobs as the GAN, lifted clean off the plane -- its
-    # critic scores a pair, so the objective is not of the template's form.
-    foot = P(1.15, 3.85)
-    lifted = foot + np.array([0.0, 2.15])
-    ax.plot([foot[0], lifted[0]], [foot[1] + 0.14, lifted[1]], ls="--",
-            color=PURPLE, lw=1.6, zorder=5)
-    ax.plot(*lifted, "o", color=PURPLE, ms=11, zorder=6)
-    ax.text(lifted[0] + 0.32, lifted[1],
-            "relativistic pairing: the same two knobs,"
-            "\nbut the critic scores a pair, and the objective"
-            "\nis quadratic in $(p,q)$ — off the plane",
-            ha="left", va="center", fontsize=13, color=PURPLE, zorder=7)
-
-    fl.clean_axes(ax, lim=((-0.7, 11.4), (-0.95, 4.4)), hide=True, equal=True)
-    fl.save(fig, "mdl-gan-template")
 
 
 # =========================================================================== #
@@ -845,7 +763,6 @@ def fig_conditioning():
 FIGURES = [
     fig_architecture,
     fig_weights,
-    fig_template,
     fig_critics_separated,
     fig_pairing,
     fig_dcgan,

@@ -241,6 +241,7 @@ book:
         - chapter_diffusion-models/index.qmd
         - chapter_diffusion-models/denoising.qmd
         - chapter_diffusion-models/gaussian-paths.qmd
+        - chapter_diffusion-models/integration.qmd
         - chapter_diffusion-models/image-diffusion.qmd
         - chapter_diffusion-models/samplers.qmd
         - chapter_diffusion-models/design-space.qmd

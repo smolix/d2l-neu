@@ -54,7 +54,7 @@ $$
 $$
 :eqlabel:`eq_diffusion-linear-path`
 
-What a denoiser can infer from $\mathbf{x}_t$ depends only on the ratio of signal to noise, measured on a log scale as the *log-SNR* $\lambda_t = \log(\alpha_t^2 / \sigma_t^2)$. It falls monotonically from $+\infty$ at the data to $-\infty$ at the noise, a clock that all paths share: at times of equal $\lambda$, two paths hold the same noisy point up to a scale factor (:exref:`ex_gaussian-paths-same-ratio-same-flow`). The VP path reaches $\bar\alpha_1 = e^{-10.05} \approx 4 \cdot 10^{-5}$ at $t = 1$, close enough to pure noise (:numref:`fig_diffusion-paths`).
+What a denoiser can infer from $\mathbf{x}_t$ depends only on the ratio of signal to noise, measured on a log scale as the *log-SNR* $\lambda_t = \log(\alpha_t^2 / \sigma_t^2)$. It falls monotonically from $+\infty$ at the data to $-\infty$ at the noise, a clock that all paths share: at times of equal $\lambda$, two paths hold the same noisy point up to a scale factor (Exercise :exref:`ex_gaussian-paths-same-ratio-same-flow` of :numref:`sec_diffusion-integration`). The VP path reaches $\bar\alpha_1 = e^{-10.05} \approx 4 \cdot 10^{-5}$ at $t = 1$, close enough to pure noise (:numref:`fig_diffusion-paths`).
 
 ::: {.callout-important title="One clock"}
 Data sit at $t = 0$ and noise at $t = 1$ throughout the book (:numref:`sec_mdl-flow-matching-transport`), and every sampler runs from $t = 1$ down to $0$. Flow-matching papers reverse time (:numref:`fig_mdl-dyn-time-conventions`): substitute $1 - t$ for their $t$, read their noise $\mathbf{x}_0$ as our $\boldsymbol\epsilon$ and their data $\mathbf{x}_1$ as our $\mathbf{x}_0$, and flip the sign of every velocity.
@@ -164,7 +164,7 @@ for name, path in (('vp', vp), ('linear', linear)):
           f'log-SNR {r2(path.log_snr(t))}')
 ```
 
-Halfway along in time the VP path is already mostly noise, with $\bar\alpha = 0.079$ and $\lambda \approx -2.5$ against $\lambda = 0$ on the linear path, and at $t = 0.9$ it keeps less than two percent of the signal against ten percent.
+Halfway along in time the VP path is already mostly noise, with $\alpha = 0.28$ against $0.5$ and $\lambda \approx -2.5$ against $\lambda = 0$ on the linear path, and at $t = 0.9$ it keeps less than two percent of the signal against ten percent.
 
 ### The Chain View
 
@@ -261,7 +261,7 @@ d2l.scatter_panels([control, x], ['finest level only', 'ten levels'],
 
 The ladder lands within about $0.03$ of the weights $0.5/0.3/0.2$, with one to two percent of the points straying between the modes. The control has the right spread around each mode but keeps the weights of its starting points, about a third each. The proportions are decided at the coarse levels, where the smoothed density has no valleys; the fine levels only sharpen each mode. A diffusion model divides the work the same way along its path.
 
-This *annealed Langevin dynamics* sampled the first generator of this kind :cite:`song2019generative`, one network that takes the noise level as input, trained by denoising score matching at every level of the ladder with weights $\tilde\sigma_i^2$ (:numref:`sec_mdl-score-based-generative-modeling`, :exref:`ex_mdl-score-matching-diffusion-flow-annealing`). Its levels, step sizes and step counts were designed by hand (:exref:`ex_gaussian-paths-ladder-spacing`). The path replaces the ladder by a continuum of levels, and a sampler that the path determines replaces the hand-tuned Langevin steps.
+This *annealed Langevin dynamics* sampled the first generator of this kind :cite:`song2019generative`, one network that takes the noise level as input, trained by denoising score matching at every level of the ladder with weights $\tilde\sigma_i^2$ (:numref:`sec_mdl-score-based-generative-modeling`; Exercise :exref:`ex_mdl-score-matching-diffusion-flow-annealing` of :numref:`sec_mdl-score-matching-diffusion-flow`). Its levels, step sizes and step counts were designed by hand (Exercise :exref:`ex_gaussian-paths-ladder-spacing`). The path replaces the ladder by a continuum of levels, and a sampler that the path determines replaces the hand-tuned Langevin steps.
 
 ## One Regression
 
@@ -279,6 +279,30 @@ $$
 :eqlabel:`eq_diffusion-marginal-velocity`
 
 the *marginal velocity*. Where only one clean point can have produced $\mathbf{x}$, it is that point's velocity; where several can, it is their average, weighted by how likely each is.
+
+For the mixture this field is exact. Given the mode, $\mathbf{x}_0$ and $\boldsymbol\epsilon$ are jointly Gaussian with $\mathbf{x}_t$, so their conditional means are linear in $\mathbf{x}_t$; `velocity` averages them over the modes with their posterior weights, on the linear path.
+
+```{.python .input #gaussian-paths-conditional-targets-and-marginal-fields-1}
+%%tab pytorch
+@d2l.add_to_class(d2l.GaussianMixture)  #@save
+def velocity(self, x, t):
+    """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
+    log_p, r, var, a = self._modes(x, 1 - t, t)
+    eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+    x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
+    return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
+```
+
+```{.python .input #gaussian-paths-conditional-targets-and-marginal-fields-1}
+%%tab jax
+@d2l.add_to_class(d2l.GaussianMixture)  #@save
+def velocity(self, x, t):
+    """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
+    log_p, r, var, a = self._modes(x, 1 - t, t)
+    eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+    x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
+    return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
+```
 
 A field defined as a conditional expectation is learned by regressing on the quantity inside it, because least squares recovers the conditional mean; this is how denoising score matching recovered the score. For the velocity it gives the *conditional flow matching* loss, which differs from the regression onto the unknown marginal field only by a constant $C$ that does not depend on the network:
 
@@ -371,7 +395,7 @@ def x0_eps(self, kind, out, x, t):
     return (ds * x - s * out) / det, (a * out - da * x) / det
 ```
 
-The method fits in one cell. Each step draws $512$ fresh points from the mixture and a time and a noise for each, and regresses `TimeMLP` onto the conditional velocity of the linear path, for $40{,}000$ Adam steps with a cosine-decayed learning rate; `train_regression` also returns a moving average of the weights with a half-life of $700$ steps.
+The method fits in one cell. Each step draws $512$ fresh points from the mixture and a time and a noise for each (the previous section trained on a fixed set of $2{,}000$ points; with fresh draws there is no training set to memorize, a question Exercise :exref:`ex_gaussian-paths-memorization` takes up), and regresses `TimeMLP` onto the conditional velocity of the linear path, for $40{,}000$ Adam steps with a cosine-decayed learning rate; `train_regression` also returns a moving average of the weights with a half-life of $700$ steps.
 
 ```{.python .input #gaussian-paths-conditional-targets-and-marginal-fields}
 %%tab pytorch
@@ -414,6 +438,7 @@ d2l.plot(jnp.arange(100) * num_steps // 100,
          losses_v.reshape(100, -1).mean(1), 'step', 'loss')
 ```
 
+<!-- WRITER: state the cost of the two trainings (structure 17.2): measured 2026-11-20 on one RTX 4090 shared with other jobs, 75-90 s per model in PyTorch and 50-95 s in JAX (the whole notebook 267 s / 210 s); the old 'PyTorch about 5 min' figure is stale. -->
 Each point of the curve averages $400$ steps. The loss falls within a few thousand steps and levels off near $5$, far above zero; we will see that no network can do much better.
 
 ### Four Targets, One Oracle
@@ -450,55 +475,50 @@ $$
 
 Since the conditional score of the kernel is $-\boldsymbol\epsilon/\sigma_t$, the simple loss is denoising score matching :eqref:`eq_diffusion-dsm` at every level, weighted by $\sigma_t^2$ (:numref:`sec_mdl-ddpm-discretized-sde`). Ho et al. derived it from a variational bound on the log-likelihood; with one particular weighting over $t$ the regression is such a bound (:numref:`sec_diffusion-design-space`).
 
-`target` and `x0_eps` above implement these conversions. `make_pred` wraps a trained network as the pair $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$ at any $(\alpha, \sigma)$, by querying it at the time of its own path with the same log-SNR, which `time_at` finds by bisection. An $\boldsymbol\epsilon$-predictor has no $\hat{\mathbf{x}}_0 = (\mathbf{x} - \sigma\hat{\boldsymbol\epsilon})/\alpha$ at pure noise, $\alpha = 0$, so samplers that start there on the linear and cosine paths need another kind; an $\boldsymbol\epsilon$-model samples on the VP path, whose $\alpha$ stays positive.
+`target` and `x0_eps` above implement these conversions.
 
-```{.python .input #gaussian-paths-four-targets-one-oracle-1}
+<!-- WRITER: new cell below (structure 17.2 "small computable case", GP-9/GP-10): `oracle` (moved here from the floor cell) gives the exact posterior means of the mixture, and `target` applied to them gives every marginal field at one point of the VP path at t = 0.5 (alpha = 0.28, sigma = 0.96). The last line moves the point to the linear path at the same alpha/sigma ratio (t = sigma / (alpha + sigma) = 0.773, point scaled by 1 / (alpha + sigma)); the exact field `mix.velocity` there equals eps_hat - x0_hat of the VP point: equal log-SNR, same posterior mean. Quote the printed values. -->
+
+```{.python .input #gaussian-paths-four-targets-one-oracle-3}
 %%tab pytorch
-@d2l.add_to_class(GaussianPath)  #@save
-def time_at(self, log_snr):
-    """The time with a given log-SNR, by bisection (lambda_t falls in t)."""
-    lo, hi = torch.zeros_like(log_snr), torch.ones_like(log_snr)
-    for _ in range(50):
-        mid = (lo + hi) / 2
-        later = self.log_snr(mid) > log_snr      # the answer lies after mid
-        lo, hi = torch.where(later, mid, lo), torch.where(later, hi, mid)
-    return (lo + hi) / 2
+def oracle(x, alpha, sigma):
+    """The exact posterior means (x0_hat, eps_hat) of the mixture at x."""
+    x0_hat = mix.posterior_mean(x, alpha, sigma)
+    a, s = (torch.as_tensor(v, device=x.device).reshape(-1, 1)
+            for v in (alpha, sigma))
+    return x0_hat, (x - a * x0_hat) / s
 
-def make_pred(net, path, kind):  #@save
-    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path."""
-    def pred(x, alpha, sigma):
-        log_snr = 2 * math.log(alpha / sigma) if alpha > 0 else -math.inf
-        t = path.time_at(torch.tensor(log_snr, dtype=torch.float64))
-        x = x * (path.sigma(t).item() / sigma)  # the same point on our path
-        t = torch.full((len(x),), t.item(), device=x.device)
-        return path.x0_eps(kind, net(x, t), x, t)
-    return pred
+x = torch.tensor([[0.5, -0.5]], device=device)   # one noisy point
+t = torch.tensor([0.5], device=device)           # VP: alpha 0.28, sigma 0.96
+x0_hat, eps_hat = oracle(x, vp.alpha(t), vp.sigma(t))
+for kind in ('x0', 'eps', 'score', 'v', 'velocity'):
+    print(f'{kind:>8} on vp:', r2(vp.target(kind, x0_hat, eps_hat, t)[0]))
+c = 1 / (vp.alpha(t) + vp.sigma(t))     # linear path, same alpha / sigma
+print(f'velocity on linear at t = {(c * vp.sigma(t)).item():.3f}:',
+      r2(mix.velocity(c * x, c * vp.sigma(t))[0]),
+      ' eps_hat - x0_hat:', r2((eps_hat - x0_hat)[0]))
 ```
 
-```{.python .input #gaussian-paths-four-targets-one-oracle-1}
+```{.python .input #gaussian-paths-four-targets-one-oracle-3}
 %%tab jax
-@d2l.add_to_class(GaussianPath)  #@save
-def time_at(self, log_snr):
-    """The time with a given log-SNR, by bisection (lambda_t falls in t)."""
-    def halve(_, interval):
-        lo, hi = interval
-        mid = (lo + hi) / 2
-        later = self.log_snr(mid) > log_snr      # the answer lies after mid
-        return jnp.where(later, mid, lo), jnp.where(later, hi, mid)
-    lo, hi = jax.lax.fori_loop(0, 50, halve, (jnp.zeros_like(log_snr),
-                                              jnp.ones_like(log_snr)))
-    return (lo + hi) / 2
+def oracle(x, alpha, sigma):
+    """The exact posterior means (x0_hat, eps_hat) of the mixture at x."""
+    x0_hat = mix.posterior_mean(x, alpha, sigma)
+    a, s = (jnp.reshape(jnp.asarray(v), (-1, 1)) for v in (alpha, sigma))
+    return x0_hat, (x - a * x0_hat) / s
 
-def make_pred(net, path, kind):  #@save
-    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path."""
-    def pred(x, alpha, sigma):
-        log_snr = jnp.where(alpha > 0, 2 * jnp.log(alpha / sigma), -jnp.inf)
-        t = path.time_at(jnp.asarray(log_snr, jnp.float32))
-        x = x * (path.sigma(t) / sigma)         # the same point on our path
-        t = jnp.full((len(x),), t)
-        return path.x0_eps(kind, net(x, t), x, t)
-    return pred
+x = jnp.array([[0.5, -0.5]])                     # one noisy point
+t = jnp.array([0.5])                             # VP: alpha 0.28, sigma 0.96
+x0_hat, eps_hat = oracle(x, vp.alpha(t), vp.sigma(t))
+for kind in ('x0', 'eps', 'score', 'v', 'velocity'):
+    print(f'{kind:>8} on vp:', r2(vp.target(kind, x0_hat, eps_hat, t)[0]))
+c = 1 / (vp.alpha(t) + vp.sigma(t))     # linear path, same alpha / sigma
+print(f'velocity on linear at t = {float((c * vp.sigma(t))[0]):.3f}:',
+      r2(mix.velocity(c * x, c * vp.sigma(t))[0]),
+      ' eps_hat - x0_hat:', r2((eps_hat - x0_hat)[0]))
 ```
+
+<!-- WRITER: `make_pred` and `time_at` moved to integration.md (sec_diffusion-integration). The floor cell below converts the velocity network into a noise predictor by hand (the linear-path time with the same alpha/sigma ratio, t = sigma / (alpha + sigma), and the point rescaled by 1 / (alpha + sigma)); state that contract in one sentence (GP-7). -->
 
 The second model makes DDPM's choice, the noise target on the VP path, and changes nothing else.
 
@@ -518,6 +538,7 @@ net_eps, ema_eps, losses_eps = d2l.train_regression(
     ema_half_life=700)
 ```
 
+<!-- WRITER: the dictionary check now lives in the floor cell (one line: the velocity network read as a noise predictor on the VP path); the "last part of the section" no longer exists. -->
 The two networks differ in path and target, but by the dictionary they should hold the same posterior mean, which the last part of the section checks.
 
 ### The Loss Floor
@@ -526,417 +547,93 @@ The velocity model's loss levelled off near $5$ for the reason of :numref:`sec_d
 
 ```{.python .input #gaussian-paths-the-loss-floor}
 %%tab pytorch
-def oracle(x, alpha, sigma):
-    """The exact posterior means (x0_hat, eps_hat) of the mixture at x."""
-    x0_hat = mix.posterior_mean(x, alpha, sigma)
-    a, s = (torch.as_tensor(v, device=x.device).reshape(-1, 1)
-            for v in (alpha, sigma))
-    return x0_hat, (x - a * x0_hat) / s
-
-def loss_floor(path, kind, x0, eps, t):
-    """E||target - E[target | x_t]||^2 over the draws (x0, eps, t)."""
+@torch.no_grad()
+def floor_and_excess(path, kind, net, x0, eps, t):
+    """The floor E||target - E[target | x_t]||^2 with its standard error, and
+    the network's loss minus the floor, E||net(x_t, t) - E[target | x_t]||^2."""
     x = path.sample(x0, t, eps)
     best = path.target(kind, *oracle(x, path.alpha(t), path.sigma(t)), t)
-    return ((path.target(kind, x0, eps, t) - best) ** 2).sum(1).mean().item()
+    err = ((path.target(kind, x0, eps, t) - best) ** 2).sum(1)
+    out = torch.cat([net(x[i:i + 100_000], t[i:i + 100_000])  # in chunks
+                     for i in range(0, len(x), 100_000)])
+    return (err.mean().item(), err.std().item() / math.sqrt(len(err)),
+            ((out - best) ** 2).sum(1).mean().item())
+
+def eps_from_velocity(x, t):
+    """ema_v as a noise predictor on the VP path, read at the linear-path
+    time with the same alpha / sigma (the same posterior mean)."""
+    c = 1 / (vp.alpha(t) + vp.sigma(t))
+    t_lin, x_lin = c * vp.sigma(t), c[:, None] * x
+    return linear.x0_eps('velocity', ema_v(x_lin, t_lin), x_lin, t_lin)[1]
 
 n = 1_000_000
 x0, eps = mix.sample(n), torch.randn(n, 2, device=device)
 times = [torch.full((n,), t, device=device) for t in (0.1, 0.5, 0.9)]
 times.append(torch.rand(n, device=device))             # t ~ U(0, 1)
-print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)  trained')
-for name, path, kind, losses in (('noise, vp', vp, 'eps', losses_eps),
-        ('velocity, linear', linear, 'velocity', losses_v)):
-    floors = [loss_floor(path, kind, x0, eps, t) for t in times]
-    print(f'{name:16}' + ''.join(f'{f:7.3f}' for f in floors[:3])
-          + f'{floors[3]:10.3f}{losses[-1000:].mean().item():9.3f}')
+print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)    s.e.  trained'
+      '  net-floor')
+for name, path, kind, net, losses in (
+        ('noise, vp', vp, 'eps', ema_eps, losses_eps),
+        ('velocity, linear', linear, 'velocity', ema_v, losses_v)):
+    rows = [floor_and_excess(path, kind, net, x0, eps, t) for t in times]
+    print(f'{name:16}' + ''.join(f'{r[0]:7.3f}' for r in rows[:3])
+          + f'{rows[3][0]:10.3f}{rows[3][1]:8.4f}'
+          + f'{losses[-1000:].mean().item():9.3f}{rows[3][2]:11.4f}')
+floor, _, gap = floor_and_excess(vp, 'eps', eps_from_velocity, x0, eps,
+                                 times[3])
+print(f'velocity net read as a noise model on vp: loss {floor + gap:.3f},'
+      f' net-floor {gap:.4f}')
 ```
 
 ```{.python .input #gaussian-paths-the-loss-floor}
 %%tab jax
-def oracle(x, alpha, sigma):
-    """The exact posterior means (x0_hat, eps_hat) of the mixture at x."""
-    x0_hat = mix.posterior_mean(x, alpha, sigma)
-    a, s = (jnp.reshape(jnp.asarray(v), (-1, 1)) for v in (alpha, sigma))
-    return x0_hat, (x - a * x0_hat) / s
-
-def loss_floor(path, kind, x0, eps, t):
-    """E||target - E[target | x_t]||^2 over the draws (x0, eps, t)."""
+def floor_and_excess(path, kind, net, x0, eps, t):
+    """The floor E||target - E[target | x_t]||^2 with its standard error, and
+    the network's loss minus the floor, E||net(x_t, t) - E[target | x_t]||^2."""
     x = path.sample(x0, t, eps)
     best = path.target(kind, *oracle(x, path.alpha(t), path.sigma(t)), t)
-    return float(((path.target(kind, x0, eps, t) - best) ** 2).sum(1).mean())
+    err = ((path.target(kind, x0, eps, t) - best) ** 2).sum(1)
+    out = jnp.concatenate([net(x[i:i + 100_000], t[i:i + 100_000])  # chunks
+                           for i in range(0, len(x), 100_000)])
+    return (float(err.mean()), float(err.std()) / math.sqrt(len(err)),
+            float(((out - best) ** 2).sum(1).mean()))
+
+def eps_from_velocity(x, t):
+    """ema_v as a noise predictor on the VP path, read at the linear-path
+    time with the same alpha / sigma (the same posterior mean)."""
+    c = 1 / (vp.alpha(t) + vp.sigma(t))
+    t_lin, x_lin = c * vp.sigma(t), c[:, None] * x
+    return linear.x0_eps('velocity', ema_v(x_lin, t_lin), x_lin, t_lin)[1]
 
 n = 1_000_000
 key, k_x0, k_eps, k_t = jax.random.split(key, 4)
 x0, eps = mix.sample(k_x0, n), jax.random.normal(k_eps, (n, 2))
 times = [jnp.full((n,), t) for t in (0.1, 0.5, 0.9)]
 times.append(jax.random.uniform(k_t, (n,)))            # t ~ U(0, 1)
-print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)  trained')
-for name, path, kind, losses in (('noise, vp', vp, 'eps', losses_eps),
-        ('velocity, linear', linear, 'velocity', losses_v)):
-    floors = [loss_floor(path, kind, x0, eps, t) for t in times]
-    print(f'{name:16}' + ''.join(f'{f:7.3f}' for f in floors[:3])
-          + f'{floors[3]:10.3f}{float(losses[-1000:].mean()):9.3f}')
+print('target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)    s.e.  trained'
+      '  net-floor')
+for name, path, kind, net, losses in (
+        ('noise, vp', vp, 'eps', ema_eps, losses_eps),
+        ('velocity, linear', linear, 'velocity', ema_v, losses_v)):
+    rows = [floor_and_excess(path, kind, net, x0, eps, t) for t in times]
+    print(f'{name:16}' + ''.join(f'{r[0]:7.3f}' for r in rows[:3])
+          + f'{rows[3][0]:10.3f}{rows[3][1]:8.4f}'
+          + f'{float(losses[-1000:].mean()):9.3f}{rows[3][2]:11.4f}')
+floor, _, gap = floor_and_excess(vp, 'eps', eps_from_velocity, x0, eps,
+                                 times[3])
+print(f'velocity net read as a noise model on vp: loss {floor + gap:.3f},'
+      f' net-floor {gap:.4f}')
 ```
 
-Each training loss sits at its floor. The floors differ by an order of magnitude, about $0.5$ for the noise and about $5$ for the velocity, because the targets are scaled differently. The noise floor is largest near the data, where noise and the spread of a mode look alike; the velocity floor, $\textrm{Var}(\mathbf{x}_0 \mid \mathbf{x}_t)/t^2$ summed over coordinates, grows toward the noise end, where the clean point is hardest to guess. A score target would divide the noise floor by $\sigma_t^2$, without bound near the data (:exref:`ex_mdl-score-matching-diffusion-flow-bayes-risk-floor`). Losses of different targets cannot be compared; predictors trained on different targets can, through the dictionary.
+<!-- WRITER: the floor cell now prints the floor's standard error (s.e.), the network's loss minus the floor measured directly as E||net - best||^2 on the same million draws (net-floor), and one dictionary line: the velocity network converted into a noise predictor on the VP path. The "trained" column is the training loss of the raw network over its last 1,000 minibatches; it can fall below the floor by Monte Carlo noise (compare with s.e.; exercise loss-floor (a) asks about this). Quote the new numbers from the store. -->
 
-## Sampling by Integration
-
-The marginal velocity carries the noise distribution to the data distribution, so we sample by following it, along deterministic trajectories or with fresh noise at every step.
-
-### The Probability-Flow ODE and Euler's Method
-
-The pair $(p_t, \mathbf{u}_t)$ satisfies the continuity equation (:numref:`sec_mdl-flow-matching`): the marginal velocity moves the density $p_t$ of $\mathbf{x}_t$ along the path. A point drawn from $p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ and carried backward in time by the ordinary differential equation
-
-$$
-\frac{d\mathbf{x}}{dt} = \mathbf{u}_t(\mathbf{x}), \qquad \textrm{from } t = 1 \textrm{ down to } t = 0,
-$$
-:eqlabel:`eq_diffusion-flow-ode`
-
-is therefore a draw from $p_t$ at every time, and from the data at $t = 0$. This *probability-flow ODE* is the deterministic twin of the diffusion process (:numref:`sec_mdl-probability-flow-ode`). We build it up from the smallest case, as :citet:`Nakkiran.Bradley.Zhou.ea.2025` do.
-
-Let the data be one point $\mathbf{x}_0$. On the linear path a point at $\mathbf{x}$ carries the noise $\boldsymbol\epsilon = (\mathbf{x} - (1 - t)\mathbf{x}_0)/t$ and moves with velocity $\boldsymbol\epsilon - \mathbf{x}_0 = (\mathbf{x} - \mathbf{x}_0)/t$. Every trajectory is a straight line into $\mathbf{x}_0$, and a single step of length one from $t = 1$, $\mathbf{x} \leftarrow \mathbf{x} - \mathbf{u}_1(\mathbf{x}) = \mathbf{x}_0$, is exact. With two data points the field is the posterior-weighted average of two such straight fields, and the trajectories bend where the posterior switches from one point to the other (:numref:`subsec_mdl-fm-two-point`).
-
-Any distribution is a mixture of point masses, with straight conditional paths and a curved marginal flow. At $t = 1$ the point is pure noise, so the posterior equals the prior and $\mathbf{u}_1(\mathbf{x}) = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$: one step of length one sends every start to the mean of the data (:numref:`subsec_mdl-fm-two-point`). For our mixture that mean is $(-0.5, -0.7)$, between the modes, where no data lie.
-
-Euler's method (:numref:`sec_mdl-euler-runge-kutta`) follows the curve in $K$ straight steps, $\mathbf{x} \leftarrow \mathbf{x} - \mathbf{u}_t(\mathbf{x})/K$ at $t = 1, 1 - 1/K, \ldots, 1/K$. We run it with the learned field from $2{,}000$ standard Gaussian starts.
-
-```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method}
-%%tab pytorch
-@torch.no_grad()
-def euler(net, x, steps):
-    """Euler's method on dx/dt = net(x, t), from t = 1 down to t = 0."""
-    for k in range(steps, 0, -1):
-        x = x - net(x, torch.full((len(x),), k / steps, device=x.device)) / steps
-    return x
-
-torch.manual_seed(3)
-x_T = torch.randn(2000, 2, device=device)
-print(mix.summary(euler(ema_v, x_T, 100)))
-```
-
-```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method}
-%%tab jax
-def euler(net, x, steps):
-    """Euler's method on dx/dt = net(x, t), from t = 1 down to t = 0."""
-    for k in range(steps, 0, -1):
-        x = x - net(x, jnp.full((len(x),), k / steps)) / steps
-    return x
-
-key, k_T = jax.random.split(key)
-x_T = jax.random.normal(k_T, (2000, 2))
-print(mix.summary(euler(ema_v, x_T, 100)))
-```
-
-A hundred steps put the samples on the three modes. The library's sampler takes the same steps in other coordinates: along every Gaussian path, $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ and the noise-to-signal ratio $\bar\sigma = \sigma_t/\alpha_t$ obey $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$ :cite:`Karras.Aittala.Aila.ea.2022`, a form that serves every path and predictor.
-
-`ode_sample` takes Euler steps of this equation through a list of levels $\bar\sigma$, here the path's grid in $t$ from `sigma_bars`; second-order steps and other grids wait for :numref:`sec_diffusion-samplers`.
-
-```{.python .input #samplers-second-order-and-the-step-grid}
-%%tab pytorch
-@d2l.add_to_class(GaussianPath)  #@save
-def sigma_bars(self, steps):
-    """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0."""
-    a, s = self.grid(steps)
-    return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
-
-def pred_bar(pred, xb, r):  #@save
-    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise."""
-    if math.isinf(r):
-        return pred(xb, 0.0, 1.0)
-    a = 1 / math.sqrt(1 + r ** 2)
-    return pred(xb * a, a, r * a)
-
-@torch.no_grad()  #@save
-def ode_sample(pred, x, sigma_bars):
-    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
-    noisy point at the first level, unit-variance scale (noise if inf)."""
-    r0 = sigma_bars[0]
-    xb = x if math.isinf(r0) else x * math.sqrt(1 + r0 ** 2)  # x / alpha
-    for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
-        x0, eps = pred_bar(pred, xb, r_t)
-        xb = x0 + r_s * eps                    # the Euler (= DDIM) step
-    return xb
-```
-
-```{.python .input #samplers-second-order-and-the-step-grid}
-%%tab jax
-@d2l.add_to_class(GaussianPath)  #@save
-def sigma_bars(self, steps):
-    """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0."""
-    a, s = self.grid(steps)
-    with jax.ensure_compile_time_eval():         # constants, even under jit
-        return s / a
-
-def pred_bar(pred, xb, r):  #@save
-    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise."""
-    finite = jnp.isfinite(r)
-    a = jnp.where(finite, 1 / jnp.sqrt(1 + r ** 2), 0.0)
-    return pred(xb * jnp.where(finite, a, 1.0), a,
-                jnp.where(finite, r * a, 1.0))
-
-def ode_sample(pred, x, sigma_bars):  #@save
-    """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
-    noisy point at the first level, unit-variance scale (noise if inf)."""
-    with jax.ensure_compile_time_eval():         # the grid is a constant
-        r = jnp.asarray(sigma_bars)
-        from_inf = bool(jnp.isinf(r[0]))
-    def step(xb, r):
-        r_t, r_s = r
-        x0, eps = pred_bar(pred, xb, r_t)
-        return x0 + r_s * eps, None              # the Euler (= DDIM) step
-    xb = x if from_inf else x * jnp.sqrt(1 + r[0] ** 2)  # x / alpha
-    return jax.lax.scan(step, xb, (r[:-1], r[1:]))[0]
-```
-
-How many steps does the flow need? We integrate the wrapped velocity network from the same starts with one, ten and a hundred steps, and check that a hundred steps of `ode_sample` reproduce the loop above.
-
-```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method-1}
-%%tab pytorch
-pred_v = make_pred(ema_v, linear, 'velocity')
-samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
-           for steps in (1, 10, 100)]
-print('one step: mean', [round(v, 3) for v in samples[0].mean(0).tolist()],
-      'std', [round(v, 3) for v in samples[0].std(0).tolist()])
-for steps, x in zip((10, 100), samples[1:]):
-    print(f'{steps} steps:', mix.summary(x))
-print('largest difference to the loop:',
-      (samples[2] - euler(ema_v, x_T, 100)).abs().max().item())
-d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'],
-                   data=mix.sample(2000));
-```
-
-```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method-1}
-%%tab jax
-pred_v = make_pred(ema_v, linear, 'velocity')
-samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
-           for steps in (1, 10, 100)]
-print('one step: mean', [round(v, 3) for v in samples[0].mean(0).tolist()],
-      'std', [round(v, 3) for v in samples[0].std(0).tolist()])
-for steps, x in zip((10, 100), samples[1:]):
-    print(f'{steps} steps:', mix.summary(x))
-print('largest difference to the loop:',
-      float(jnp.abs(samples[2] - euler(ema_v, x_T, 100)).max()))
-key, k_data = jax.random.split(key)
-d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'],
-                   data=mix.sample(k_data, 2000));
-```
-
-One step lands every start on the data mean $(-0.5, -0.7)$, with almost no spread, as the point-mass argument predicts. Ten steps recover the three modes with weights within about $0.03$ of the targets, but about three percent of the samples stray between the modes. A hundred steps bring the strays down to about one percent, and the library's sampler agrees with the loop to within $10^{-3}$. The extra steps follow the curvature of the marginal flow.
-
-### The Reverse SDE and the Ancestral Chain
-
-DDPM runs the reverse chain of :numref:`fig_diffusion-forward-reverse` instead, one stochastic step at a time. The reversal of a small forward step is nearly Gaussian :cite:`sohl2015deep`, and given the clean point it is exactly Gaussian: for $s < t$, $q(\mathbf{x}_s \mid \mathbf{x}_t, \mathbf{x}_0)$ has a mean linear in $\mathbf{x}_t$ and $\mathbf{x}_0$. Ho et al.'s *ancestral* step replaces $\mathbf{x}_0$ by $\hat{\mathbf{x}}_0$ in that mean and adds fresh noise with the variance $\beta = 1 - \bar\alpha_t / \bar\alpha_s$ of the forward step. On the VP path, written with the score, it reads
-
-$$
-\mathbf{x}_s = \frac{\mathbf{x}_t + \beta\, \nabla \log p_t(\mathbf{x}_t)}{\sqrt{1 - \beta}} + \sqrt{\beta}\, \mathbf{z},
-\qquad \mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}).
-$$
-:eqlabel:`eq_diffusion-ancestral-score`
-
-With $1/\sqrt{1 - \beta} \approx 1 + \beta/2$, the step splits to first order into two:
-
-$$
-\mathbf{x}_s \approx \Big[ \mathbf{x}_t + \tfrac{\beta}{2} \nabla \log p_t(\mathbf{x}_t) + \sqrt{\beta}\, \mathbf{z} \Big] + \tfrac{\beta}{2} \big( \mathbf{x}_t + \nabla \log p_t(\mathbf{x}_t) \big).
-$$
-
-The bracket is a Langevin step of size $h = \beta$, which leaves $p_t$ in place and pulls stray points back toward it, and the second term is one Euler step of the probability-flow ODE from $t$ back to $s$, since on the VP path $\mathbf{u}_t = -\tfrac12 \beta(t)\, (\mathbf{x} + \nabla \log p_t)$ and $\beta \approx \beta(t)\, (t - s)$.
-
-In continuous time the reversal is exact, by a theorem of :citet:`Anderson.1982`. A forward process $d\mathbf{x} = \mathbf{f}\, dt + g\, d\mathbf{W}$ is reversed, from $t = 1$ down to $0$, by
-
-$$
-d\mathbf{x} = \big[ \mathbf{f} - g^2 \nabla \log p_t(\mathbf{x}) \big]\, dt + g\, d\bar{\mathbf{W}},
-\qquad\textrm{which has the same marginals as}\qquad
-\frac{d\mathbf{x}}{dt} = \mathbf{f} - \tfrac12 g^2 \nabla \log p_t(\mathbf{x}),
-$$
-:eqlabel:`eq_diffusion-reverse`
-
-where $\bar{\mathbf{W}}$ is a Brownian motion run backward. For the VP path, $\mathbf{f} = -\tfrac12 \beta(t)\mathbf{x}$ and $g^2 = \beta(t)$, the right-hand ODE is the flow we just integrated, and the ancestral step is, to first order, the Euler--Maruyama step (:numref:`sec_mdl-euler-maruyama`) of the SDE. Between the two lies a family of samplers with the same marginals: the more noise a sampler injects, the larger the score correction in its drift (:numref:`sec_mdl-time-reversal`, :numref:`fig_mdl-dyn-lambda-family`).
-
-`ancestral_sample` takes this step on any path with any predictor `pred(x, alpha, sigma) -> (x0, eps)`, with the noise variance $\sigma_t^2 - (\alpha_t/\alpha_s)^2 \sigma_s^2$ of the forward step from $s$ to $t$.
-
-```{.python .input #gaussian-paths-the-reverse-sde-and-the-ancestral-chain}
-%%tab pytorch
-@torch.no_grad()  #@save
-def ancestral_sample(pred, x, path, steps, *, t_start=1.0):
-    """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0."""
-    a, s = path.grid(steps, t_start)
-    for i in range(steps):
-        x0, eps = pred(x, a[i], s[i])
-        ratio = s[i + 1] * a[i] / (a[i + 1] * s[i])
-        x = a[i + 1] * x0 + s[i + 1] * ratio * eps      # the posterior mean
-        if s[i + 1] > 0:                                # no noise at t = 0
-            var = s[i] ** 2 - (a[i] / a[i + 1] * s[i + 1]) ** 2  # forward step
-            x = x + math.sqrt(var) * torch.randn_like(x)
-    return x
-```
-
-```{.python .input #gaussian-paths-the-reverse-sde-and-the-ancestral-chain}
-%%tab jax
-def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):  #@save
-    """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0."""
-    a, s = path.grid(steps, t_start)
-    a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
-    ratio = s_s * a_t / (a_s * s_t)
-    var = jnp.maximum(s_t ** 2 - (a_t / a_s * s_s) ** 2, 0)  # forward step
-    noise = jnp.where(s_s > 0, jnp.sqrt(var), 0)             # none at t = 0
-    def step(x, inputs):
-        a_t, s_t, a_s, c_eps, c_noise, key = inputs
-        x0, eps = pred(x, a_t, s_t)
-        x = a_s * x0 + c_eps * eps                      # the posterior mean
-        return x + c_noise * jax.random.normal(key, x.shape), None
-    return jax.lax.scan(step, x, (a_t, s_t, a_s, s_s * ratio, noise,
-                                  jax.random.split(key, steps)))[0]
-```
-
-We run two hundred steps of the chain with the noise model, from the same $2{,}000$ starts as the flow.
-
-```{.python .input #gaussian-paths-the-reverse-sde-and-the-ancestral-chain-1}
-%%tab pytorch
-pred_eps = make_pred(ema_eps, vp, 'eps')
-print(mix.summary(ancestral_sample(pred_eps, x_T, vp, 200)))
-```
-
-```{.python .input #gaussian-paths-the-reverse-sde-and-the-ancestral-chain-1}
-%%tab jax
-pred_eps = make_pred(ema_eps, vp, 'eps')
-key, k_anc = jax.random.split(key)
-print(mix.summary(ancestral_sample(pred_eps, x_T, vp, 200, k_anc)))
-```
-
-The chain recovers the three modes with the right weights, up to the sampling error of $2{,}000$ points, and about as few strays as the flow at a hundred steps; :citet:`ho2020denoising` ran a thousand steps, but in two dimensions two hundred suffice. Either sampler can use either network through `make_pred`.
-
-## Experiments on the Running Example
-
-Neither network ever saw the exact posterior. We compare each with the oracle in its predictions, its samples, and through the dictionary.
-
-### The Learned Predictor against the Optimal One
-
-The loss of any predictor splits into the floor and a gap that training can still reduce, $\mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}\|^2 = \mathbb{E}\|\boldsymbol\epsilon - \boldsymbol\epsilon^\star\|^2 + \mathbb{E}\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \boldsymbol\epsilon^\star\|^2$, with $\boldsymbol\epsilon^\star$ the oracle's noise prediction. We evaluate all three for the noise model on $20{,}000$ fresh points at four times of the VP path.
-
-```{.python .input #gaussian-paths-the-learned-predictor-against-the-optimal-one}
-%%tab pytorch
-def sq(u, w):
-    """Mean squared distance between two batches of points."""
-    return ((u - w) ** 2).sum(1).mean().item()
-
-torch.manual_seed(4)
-x0, eps = mix.sample(20_000), torch.randn(20_000, 2, device=device)
-print('   t     gap   floor    loss')
-with torch.no_grad():
-    for t in (0.1, 0.3, 0.5, 0.7):
-        tt = torch.full((len(x0),), t, device=device)
-        x = vp.sample(x0, tt, eps)
-        eps_hat = ema_eps(x, tt)
-        eps_star = oracle(x, vp.alpha(tt), vp.sigma(tt))[1]
-        print(f'{t:4} {sq(eps_hat, eps_star):7.4f} {sq(eps, eps_star):7.4f}'
-              f' {sq(eps, eps_hat):7.4f}')
-```
-
-```{.python .input #gaussian-paths-the-learned-predictor-against-the-optimal-one}
-%%tab jax
-def sq(u, w):
-    """Mean squared distance between two batches of points."""
-    return float(((u - w) ** 2).sum(1).mean())
-
-key, k_x0, k_eps = jax.random.split(key, 3)
-x0, eps = mix.sample(k_x0, 20_000), jax.random.normal(k_eps, (20_000, 2))
-print('   t     gap   floor    loss')
-for t in (0.1, 0.3, 0.5, 0.7):
-    tt = jnp.full((len(x0),), t)
-    x = vp.sample(x0, tt, eps)
-    eps_hat = ema_eps(x, tt)
-    eps_star = oracle(x, vp.alpha(tt), vp.sigma(tt))[1]
-    print(f'{t:4} {sq(eps_hat, eps_star):7.4f} {sq(eps, eps_star):7.4f}'
-          f' {sq(eps, eps_hat):7.4f}')
-```
-
-The loss column equals the floor plus the gap, to within the Monte Carlo error. The gap is below a thousandth at every time, on a target with unit variance per coordinate, and small next to the floor at every printed time: the network is close to the oracle wherever the data put their mass.
-
-### Samples from Both Samplers
-
-A sampler accumulates the errors of all its steps. We draw $20{,}000$ samples with two hundred ancestral steps of the noise model and a hundred Euler steps of the velocity model, and repeat both with the oracle in place of the network. At this sample size a mode weight carries a standard error of about $0.0035$.
-
-```{.python .input #gaussian-paths-samples-from-both-samplers}
-%%tab pytorch
-torch.manual_seed(5)
-x_T = torch.randn(20_000, 2, device=device)
-runs = {'data': mix.sample(20_000),
-        'ancestral, network': ancestral_sample(pred_eps, x_T, vp, 200),
-        'ancestral, oracle': ancestral_sample(oracle, x_T, vp, 200),
-        'Euler, network': ode_sample(pred_v, x_T, linear.sigma_bars(100)),
-        'Euler, oracle': ode_sample(oracle, x_T, linear.sigma_bars(100))}
-for name, x in runs.items():
-    print(f'{name:>18}:', mix.summary(x))
-d2l.scatter_panels([runs[k][:2000] for k in runs],
-                   list(runs), lim=4.5, size=2.4);
-```
-
-```{.python .input #gaussian-paths-samples-from-both-samplers}
-%%tab jax
-key, k_T, k_data, k_net, k_oracle = jax.random.split(key, 5)
-x_T = jax.random.normal(k_T, (20_000, 2))
-runs = {'data': mix.sample(k_data, 20_000),
-        'ancestral, network': ancestral_sample(pred_eps, x_T, vp, 200, k_net),
-        'ancestral, oracle': ancestral_sample(oracle, x_T, vp, 200, k_oracle),
-        'Euler, network': ode_sample(pred_v, x_T, linear.sigma_bars(100)),
-        'Euler, oracle': ode_sample(oracle, x_T, linear.sigma_bars(100))}
-for name, x in runs.items():
-    print(f'{name:>18}:', mix.summary(x))
-d2l.scatter_panels([runs[k][:2000] for k in runs],
-                   list(runs), lim=4.5, size=2.4);
-```
-
-The ancestral chain with the network recovers the weights $0.5/0.3/0.2$ within sampling error, and Euler with the network matches them to within about $0.01$. Every sampler, network or oracle, strays about as often as the data themselves, about one percent, the share of a Gaussian beyond three standard deviations. Both samplers recover the mode weights, which no single noise level could.
-
-### The Dictionary Checked
-
-If both networks learned the posterior mean, each should match the linear-path velocity that :eqref:`eq_diffusion-linear-dictionary` computes from the exact score of $p_t$ (`mix.score` with $\alpha = 1 - t$ and $\sigma = t$). For the noise model, `make_pred` returns $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$, whose difference is the linear-path velocity. We stop at $t = 0.95$, because a noise model has no clean-point estimate at $\alpha = 0$.
-
-```{.python .input #gaussian-paths-the-dictionary-checked}
-%%tab pytorch
-print('   t  E|u|^2  velocity net  noise net')
-with torch.no_grad():
-    for t in (0.2, 0.5, 0.8, 0.95):
-        tt = torch.full((len(x0),), t, device=device)
-        x = linear.sample(x0, tt, eps)
-        u = -(x + t * mix.score(x, 1 - t, t)) / (1 - t)  # from the score
-        x0_hat, eps_hat = pred_eps(x, 1 - t, t)
-        print(f'{t:4} {sq(u, 0):7.2f} {sq(ema_v(x, tt), u):13.4f}'
-              f' {sq(eps_hat - x0_hat, u):10.4f}')
-```
-
-```{.python .input #gaussian-paths-the-dictionary-checked}
-%%tab jax
-print('   t  E|u|^2  velocity net  noise net')
-for t in (0.2, 0.5, 0.8, 0.95):
-    tt = jnp.full((len(x0),), t)
-    x = linear.sample(x0, tt, eps)
-    u = -(x + t * mix.score(x, 1 - t, t)) / (1 - t)  # from the score
-    x0_hat, eps_hat = pred_eps(x, 1 - t, t)
-    print(f'{t:4} {sq(u, 0):7.2f} {sq(ema_v(x, tt), u):13.4f}'
-          f' {sq(eps_hat - x0_hat, u):10.4f}')
-```
-
-The velocity network differs from the field computed from the score by less than a quarter of a percent of the field's mean squared norm, which ranges from about $8$ at $t = 0.2$ to about $1$ at $t = 0.8$. The noise network, converted through two paths and a change of time, stays within about one percent, with its largest error at $t = 0.95$, where the conversion divides by a small $\alpha$. No score was learned, and no velocity appears in the noise model's loss.
+Each training loss sits at its floor. The floors differ by an order of magnitude, about $0.5$ for the noise and about $5$ for the velocity, because the targets are scaled differently. The noise floor is largest near the data, where noise and the spread of a mode look alike; the velocity floor, $\textrm{Var}(\mathbf{x}_0 \mid \mathbf{x}_t)/t^2$ summed over coordinates, grows toward the noise end, where the clean point is hardest to guess. A score target would divide the noise floor by $\sigma_t^2$, without bound near the data (Exercise :exref:`ex_mdl-score-matching-diffusion-flow-bayes-risk-floor` of :numref:`sec_mdl-score-matching-diffusion-flow`). Losses of different targets cannot be compared; predictors trained on different targets can, through the dictionary.
 
 ## Summary
 
+<!-- WRITER: the sampling sentences, the dictionary-check sentence and `tab_diffusion_models` moved to integration.md; rewrite the summary for the first half and hand off to sec_diffusion-integration (structure 17.2). -->
+
 A Gaussian path connects the data to noise through every noise level, and a walk down it settles the mode weights at coarse levels and the details at fine ones. One regression onto per-example targets trains one network along the whole path, because least squares recovers the posterior mean; the score, noise, clean point, $v$ and velocity are affine functions of it, and the models of the literature differ only in path, target and sampler (:numref:`tab_diffusion_models`). Samples come from the probability-flow ODE or the ancestral chain. On the mixture both learned models sit at their loss floors, agree through the dictionary, and recover the mode weights.
-
-:The models of this chapter: the target and path that train the network, and the sampler that produces data.
-:label:`tab_diffusion_models`
-
-| model | target and path | sampler | where |
-|:--|:--|:--|:--|
-| denoising score model | the noise, at one level | Langevin dynamics | :numref:`sec_diffusion-denoising` |
-| noise-conditional score network | the noise at each level of a ladder, weighted by $\tilde\sigma^2$ | annealed Langevin dynamics | here, :exref:`ex_gaussian-paths-ncsn` |
-| DDPM | $\boldsymbol\epsilon$ on the VP path | the ancestral chain or the probability-flow ODE | here, :numref:`sec_diffusion-images` |
-| flow matching, rectified flow | $\boldsymbol\epsilon - \mathbf{x}_0$ on the linear path | Euler steps on the probability-flow ODE | here, :numref:`sec_diffusion-samplers` |
-| $\mathbf{v}$-prediction | $\mathbf{v}$ on the cosine path | either, through the dictionary | :numref:`sec_diffusion-design-space` |
-| masked diffusion | the clean tokens of a partly masked sequence, by a weighted cross-entropy | iterative unmasking | :numref:`sec_diffusion-discrete` |
-
-Nothing in this section used the fact that $\mathbf{x}$ had two coordinates. An image has thousands, and its pixels are strongly correlated; the next question is what network, and what changes to training and sampling, a path through image space needs.
 
 ## Exercises
 
@@ -947,7 +644,7 @@ Nothing in this section used the fact that $\mathbf{x}$ had two coordinates. An 
    :exlabel:`ex_gaussian-paths-linear-marginal`
 1. **Velocity, noise and clean-point targets.** On the linear path, take the posterior mean of $\mathbf{x}_t = (1 - t)\mathbf{x}_0 + t\boldsymbol\epsilon$.
     1. Show that the marginal velocity equals both $(\mathbf{x} - \hat{\mathbf{x}}_0)/t$ and $(\hat{\boldsymbol\epsilon} - \mathbf{x})/(1 - t)$.
-    1. By the first part, an error in $\hat{\mathbf{x}}_0$ reaches the velocity divided by $t$, and an error in $\hat{\boldsymbol\epsilon}$ divided by $1 - t$. Near which end of the path is each prediction a poor source of the velocity, and how does this explain why a noise model is never queried at $\alpha = 0$? (:exref:`ex_mdl-flow-matching-transport-target-conditioning` works out the propagation of errors between all targets on the cosine path.)
+    1. By the first part, an error in $\hat{\mathbf{x}}_0$ reaches the velocity divided by $t$, and an error in $\hat{\boldsymbol\epsilon}$ divided by $1 - t$. Near which end of the path is each prediction a poor source of the velocity, and how does this explain why a noise model is never queried at $\alpha = 0$? (Exercise :exref:`ex_mdl-flow-matching-transport-target-conditioning` of :numref:`sec_mdl-flow-matching-transport` works out the propagation of errors between all targets on the cosine path.)
     1. Show that the velocity loss of $\mathbf{u}_{\boldsymbol\theta} = (\mathbf{x} - \hat{\mathbf{x}}_{0,\boldsymbol\theta})/t$ equals the clean-point loss $\mathbb{E}\|\hat{\mathbf{x}}_{0,\boldsymbol\theta} - \mathbf{x}_0\|^2$ weighted by $1/t^2$, and the velocity loss of $\mathbf{u}_{\boldsymbol\theta} = (\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \mathbf{x})/(1 - t)$ equals the noise loss weighted by $1/(1 - t)^2$. Which times does flow matching emphasize relative to each of the two unweighted losses?
    :exlabel:`ex_gaussian-paths-prediction-targets`
 1. [code] **The loss floor.** Use `oracle` and `loss_floor`.
@@ -958,31 +655,12 @@ Nothing in this section used the fact that $\mathbf{x}$ had two coordinates. An 
 
     *Part (d) is adapted from CMU 10-799, [Homework 2](https://kellyyutonghe.github.io/10799S26/assets/pdf/hw2.pdf) (Spring 2026), Question 3(a).*
    :exlabel:`ex_gaussian-paths-loss-floor`
-1. **The ancestral step to first order, for Gaussian data.** ● Let the data be $\mathcal{N}(\mathbf{0}, s^2 \mathbf{I})$, so that on the DDPM chain $q_k = \mathcal{N}(\mathbf{0}, v_k \mathbf{I})$ with $v_k = \bar\alpha_k s^2 + 1 - \bar\alpha_k$.
-    1. Show that one ancestral step :eqref:`eq_diffusion-ancestral-score` with the exact score and step variance $\beta_k$ maps $q_k$ to $\mathcal{N}\big(\mathbf{0}, (v_{k-1} + \delta_k)\mathbf{I}\big)$ with $\delta_k = \beta_k^2 (1/v_k - 1)/(1 - \beta_k)$.
-    1. For which data is the step exact? Is the variance too large or too small for data narrower than the standard Gaussian, such as one component of the mixture, $s = 0.5$?
-    1. How does the error accumulated over the chain change when the schedule is refined to twice as many steps with half the $\beta_k$?
-   :exlabel:`ex_gaussian-paths-ancestral-first-order`
-1. **Step size and Gaussian reversal.** ● The ancestral chain uses Gaussian transitions, which are justified for small steps. This problem measures how small. Write $\sigma_{t|s}^2 = \sigma_t^2 - (\alpha_t/\alpha_s)^2 \sigma_s^2$ for the variance of the forward step from $s$ to $t > s$.
-    1. Show that the exact reversal is the mixture $q(\mathbf{x}_s \mid \mathbf{x}_t) = \mathbb{E}_{\mathbf{x}_0 \mid \mathbf{x}_t}\big[q(\mathbf{x}_s \mid \mathbf{x}_t, \mathbf{x}_0)\big]$ and that its covariance is $\tau^2 \mathbf{I} + c^2\, \textrm{Cov}[\mathbf{x}_0 \mid \mathbf{x}_t]$, where $\tau^2 = \sigma_{t|s}^2 \sigma_s^2/\sigma_t^2$ is the variance of $q(\mathbf{x}_s \mid \mathbf{x}_t, \mathbf{x}_0)$ and $c = \alpha_s \sigma_{t|s}^2/\sigma_t^2$ is the coefficient of $\mathbf{x}_0$ in its mean.
-    1. Let the data be $\pm 1$ with equal probability in one dimension, and let $x_t = 0$. Show that the reversal is the equal mixture of $\mathcal{N}(\pm c, \tau^2)$, which is bimodal exactly when $\zeta^2 = c^2/\tau^2$ exceeds one, and that $\zeta^2 = \alpha_s^2 \sigma_{t|s}^2 / (\sigma_t^2 \sigma_s^2)$. How does $\zeta$ shrink as the step $t - s$ is refined?
-    1. Evaluate $\zeta$ on the VP path from $t = 0.5$ to $s = 0.495$, $0.45$ and $0.3$, and for one step from $t = 0.3$ to $s = 0$. Which reversals are bimodal? What does a Gaussian transition with the optimal mean produce at $x_t = 0$ in the last case, and what should it produce?
-   :exlabel:`ex_gaussian-paths-gaussian-reversal`
-1. [code] **Commitment time.** ● When along the path does a sample decide its mode? :citet:`Biroli.Bonnaire.deBortoli.ea.2024` measure this by cloning: start at a point of $q_t$, run two copies of the reverse chain with independent noise, and record whether they end in the same mode.
-    1. Draw $2{,}000$ clean points, noise them to $\mathbf{x}_t$ on the VP path for $t = 0.9, 0.7, 0.5, 0.4, 0.3, 0.2, 0.1$, and run two copies of `ancestral_sample(pred_eps, x_t, vp, steps, t_start=t)` from each with about $200\, t$ steps. Plot the fraction $\varphi(t)$ of pairs whose ends have the same nearest mean. Which value does $\varphi$ approach as $t \to 1$, and why?
-    1. Let $\Lambda$ be the largest eigenvalue of the covariance of the data. Biroli et al. define the speciation time by $\bar\alpha_t \Lambda = 1$, where the signal along the top principal direction stops dominating the noise. Compute it for the mixture and compare it with your curve and with the ladder of this section, whose coarse levels decided the mode weights. :exref:`ex_mdl-flow-matching-transport-late-decisions` and :exref:`ex_mdl-fokker-planck-probability-flow-mode-merging` work out the same question for two modes in one dimension.
-   :exlabel:`ex_gaussian-paths-commitment-time`
-1. **Same ratio, same flow.** ● Let two Gaussian paths have coefficients related by $\alpha^B_t = c_t\, \alpha^A_t$ and $\sigma^B_t = c_t\, \sigma^A_t$ for a smooth positive function $c_t$, so that they have the same log-SNR at every time.
-    1. Show that $p^B_t(\mathbf{y}) = c_t^{-d}\, p^A_t(\mathbf{y}/c_t)$, and use :eqref:`eq_diffusion-score-velocity` to show that $\mathbf{u}^B_t(\mathbf{y}) = (\dot c_t / c_t)\, \mathbf{y} + c_t\, \mathbf{u}^A_t(\mathbf{y}/c_t)$. Conclude that the trajectories of the probability-flow ODE are related by $\mathbf{y}_t = c_t\, \mathbf{x}_t$.
-    1. Let $\tau(t)$ be increasing. Show that the path $p_{\tau(t)}$ is generated by the field $\dot\tau(t)\, \mathbf{u}_{\tau(t)}$, with the same trajectories as $\mathbf{u}$.
-    1. Find the change of time $\tau(t)$ for which the cosine path $(\cos\frac{\pi\tau}{2}, \sin\frac{\pi\tau}{2})$ at time $\tau(t)$ has the log-SNR of the linear path at time $t$, and show that $c_t = 1/\sqrt{(1 - t)^2 + t^2}$. Where along the path is the rescaling largest?
-    1. What does the probability-flow ODE of the cosine path do to data distributed as $\mathcal{N}(\mathbf{0}, \mathbf{I})$, and why? What does that of the linear path do to the same data?
-   :exlabel:`ex_gaussian-paths-same-ratio-same-flow`
+<!-- WRITER: after the split, part (d) names `make_pred` and the memorization exercise names `euler`, both now defined in sec_diffusion-integration (17.3); the NCSN exercise names `ancestral_sample` and `ode_sample` (17.3). Either point to that section (d2l.make_pred, d2l.ode_sample; euler is local to 17.3) or move the exercises; part (d) can use `x0_eps` with the conversion of `eps_from_velocity` instead of `make_pred`. -->
 1. **Ladder spacing in high dimensions.** ● Let the data be a single point at the origin of $\mathbb{R}^d$, so that $p_{\tilde\sigma} = \mathcal{N}(\mathbf{0}, \tilde\sigma^2 \mathbf{I})$, and let the ladder be geometric with ratio $q = \tilde\sigma_{i-1}/\tilde\sigma_i > 1$.
     1. Show that $r = \|\mathbf{x}\|$ for $\mathbf{x} \sim p_{\tilde\sigma}$ satisfies $\mathbb{E}[r^2] = d\tilde\sigma^2$ and $\textrm{Var}[r^2] = 2d\tilde\sigma^4$, and conclude that $r$ is approximately $\mathcal{N}(\tilde\sigma\sqrt d, \tilde\sigma^2/2)$ for large $d$.
     1. A chain that leaves level $i - 1$ with a sample of $p_{\tilde\sigma_{i-1}}$ enters level $i$ at a radius that lies, with high probability, in $\tilde\sigma_{i-1}(\sqrt d \pm 3/\sqrt 2)$. Show that $p_{\tilde\sigma_i}$ puts the mass $\Phi\big(\sqrt{2d}(q - 1) + 3q\big) - \Phi\big(\sqrt{2d}(q - 1) - 3q\big)$ on this interval, where $\Phi$ is the standard normal distribution function. Why does a mass near zero mean that the chain starts the level where the network has seen almost no training inputs?
     1. :citet:`Song.Ermon.2020` choose $q$ so that this mass is about one half. Solve for $q$ at $d = 3072$, the dimension of CIFAR-10 images, and count the levels from $\tilde\sigma = 50$ down to $0.01$. Compare with the $232$ levels of their CIFAR-10 model.
-    1. The top level must also be coarse enough to merge the modes. Two equal Gaussian components at $\pm\mu$ with variance $v$ have a single mode exactly when $\mu^2 \le v$ (:exref:`ex_mdl-fokker-planck-probability-flow-mode-merging`). Use this criterion on the two lower modes of the mixture to estimate the noise level at which they merge, and compare it with the ladder's top level of $3$.
+    1. The top level must also be coarse enough to merge the modes. Two equal Gaussian components at $\pm\mu$ with variance $v$ have a single mode exactly when $\mu^2 \le v$ (Exercise :exref:`ex_mdl-fokker-planck-probability-flow-mode-merging` of :numref:`sec_mdl-fokker-planck-probability-flow`). Use this criterion on the two lower modes of the mixture to estimate the noise level at which they merge, and compare it with the ladder's top level of $3$.
    :exlabel:`ex_gaussian-paths-ladder-spacing`
 1. [code] **The exact optimum memorizes.** A finite training set is itself a distribution, a mixture of point masses, and its exact velocity field is known. :citet:`Bertrand.Gagneux.Massias.ea.2025` take as their starting point that integrating this field reproduces the training points, and ask why trained networks generalize instead.
     1. Draw $64$ points from the mixture and train `TimeMLP(256, 3)` with `regression_loss(linear, 'velocity')` on batches drawn from these points only.
@@ -1002,7 +680,7 @@ Nothing in this section used the fact that $\mathbf{x}$ had two coordinates. An 
 [Dive into Deep Learning · §17.2]{.kicker}
 
 Gaussian Paths: Diffusion and Flow Matching<br>
-**one clock from data to noise · a ladder of noise levels · one regression · five targets, one oracle · the flow ODE and the ancestral chain**
+**one clock from data to noise · a ladder of noise levels · one regression · five targets, one oracle · the loss floor**
 :::
 :::
 
@@ -1028,8 +706,7 @@ through all of them?
 - derive the regression that learns the marginal velocity from per-example
   targets;
 - convert among noise, clean-point, score, $\mathbf{v}$ and velocity predictions;
-- sample by Euler steps on the flow ODE and by the ancestral chain;
-- check a trained network against the exact posterior mean.
+- check a trained network against the exact posterior mean and its loss floor.
 
 **Running example:** the three-mode mixture, where the posterior mean is
 exact. **Idea:** one regression along a path from data to noise, then an
@@ -1044,7 +721,8 @@ integrator.
 | section | asks |
 |---|---|
 | Denoising and the Score | what a denoiser knows about the data |
-| **Gaussian Paths** | **how to walk from noise to data, and what trains the walk** |
+| **Gaussian Paths** | **which path from data to noise, and what trains the network** |
+| Sampling by Integration | how to follow the learned field from noise to data |
 | Diffusion for Images | network, guidance, a quality score |
 | Samplers, Inversion and Editing | which steps to skip; running backwards |
 | Likelihood, Weighting, Design Space | which choices of the regression matter |
@@ -1055,7 +733,7 @@ integrator.
 
 ::: {.col .narrow}
 - **Uses:** Tweedie's formula, denoising score matching, Langevin dynamics.
-- **Skips:** images, fast samplers, likelihood.
+- **Skips:** sampling (next section), images, likelihood.
 :::
 :::
 :::
@@ -1086,8 +764,8 @@ is the clock that all paths share.
 
 @!gaussian-paths-signal-noise-and-the-log-snr-clock-1
 
-- $t = 0.5$: VP has $\bar\alpha = 0.079$ and $\lambda \approx -2.5$; linear
-  has $\lambda = 0$.
+- $t = 0.5$: VP has $\alpha = 0.28$ and $\lambda \approx -2.5$; linear
+  has $\alpha = 0.5$ and $\lambda = 0$.
 - $t = 0.9$: VP keeps under 2% of the signal, linear 10%.
 :::
 
@@ -1275,117 +953,6 @@ $\mathbb{E}\|\boldsymbol{\epsilon}\|^2 = 2$ (about 1.4 at $t = 0.1$).
 :::
 :::
 
-::: {.slide title="The Flow ODE Carries Noise to Data; Euler Steps Follow It"}
-[Sampling]{.kicker}
-
-$$\frac{d\mathbf{x}}{dt} = \mathbf{u}_t(\mathbf{x}) \textrm{ from } t = 1 \textrm{ to } 0,
-\qquad \textrm{Euler: } \mathbf{x} \leftarrow \mathbf{x} - \tfrac{1}{K}\, \mathbf{u}_t(\mathbf{x})$$
-
-- One data point: $\mathbf{u}_t(\mathbf{x}) = (\mathbf{x} - \mathbf{x}_0)/t$,
-  straight lines; one step is exact.
-- Many points: straight conditional paths, a curved marginal flow.
-- At $t = 1$ the posterior is the prior, $\mathbf{u}_1(\mathbf{x}) = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$.
-
-::: {.d2l-note}
-One step sends every start to the data mean $(-0.5, -0.7)$, between the
-modes.
-:::
-:::
-
-::: {.slide title="One Step Collapses to the Mean; a Hundred Recover the Modes"}
-@!gaussian-paths-the-probability-flow-ode-and-euler-s-method-1
-
-One step: the mean $(-0.5, -0.7)$, almost no spread. Ten steps: weights
-within about 0.03, about 3% strays. A hundred: about 1% strays.
-:::
-
-::: {.slide title="The Ancestral Step Is a Langevin Step Plus an Euler Step"}
-DDPM's step on the VP path from $t$ to $s < t$, with
-$\beta = 1 - \bar\alpha_t / \bar\alpha_s$ and $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$:
-
-$$\mathbf{x}_s = \frac{\mathbf{x}_t + \beta\, \nabla \log p_t(\mathbf{x}_t)}{\sqrt{1 - \beta}} + \sqrt{\beta}\, \mathbf{z}$$
-
-To first order in $\beta$:
-
-$$\mathbf{x}_s \approx \underbrace{\mathbf{x}_t + \tfrac{\beta}{2} \nabla \log p_t + \sqrt{\beta}\, \mathbf{z}}_{\textrm{Langevin step: keeps } p_t}
-+ \underbrace{\tfrac{\beta}{2} \big(\mathbf{x}_t + \nabla \log p_t\big)}_{\textrm{Euler step of the flow ODE}}$$
-
-::: {.d2l-note}
-The Langevin part pulls stray points back toward $p_t$.
-:::
-:::
-
-::: {.slide title="The Reverse SDE and the Flow ODE Share Their Marginals"}
-Forward $d\mathbf{x} = \mathbf{f}\, dt + g\, d\mathbf{W}$; for VP,
-$\mathbf{f} = -\tfrac12 \beta(t)\, \mathbf{x}$, $g^2 = \beta(t)$. From
-$t = 1$ down to 0 (Anderson, 1982):
-
-$$d\mathbf{x} = \big[\mathbf{f} - g^2 \nabla \log p_t(\mathbf{x})\big]\, dt + g\, d\bar{\mathbf{W}}
-\qquad \textrm{and} \qquad
-\frac{d\mathbf{x}}{dt} = \mathbf{f} - \tfrac12 g^2 \nabla \log p_t(\mathbf{x})$$
-
-- Ancestral chain: Euler--Maruyama on the left, to first order.
-- Flow sampler: Euler on the right.
-- Between them, a family: the more noise injected, the larger the score
-  correction in the drift.
-:::
-
-::: {.slide title="Network and Oracle Sample Alike with Both Samplers"}
-[Experiments]{.kicker}
-
-@!gaussian-paths-samples-from-both-samplers
-
-::: {.d2l-note}
-200 ancestral steps (noise model), 100 Euler steps (velocity model), and the
-same with the exact posterior mean. Weights within about 0.01, strays about
-1% everywhere, as in the data.
-:::
-:::
-
-::: {.slide title="The Noise Network Sits within a Thousandth of the Oracle"}
-Loss = floor + gap, with $\boldsymbol{\epsilon}^\star$ the oracle's prediction:
-
-$$\mathbb{E}\|\boldsymbol{\epsilon} - \hat{\boldsymbol{\epsilon}}_{\boldsymbol\theta}\|^2
-= \mathbb{E}\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}^\star\|^2
-+ \mathbb{E}\|\hat{\boldsymbol{\epsilon}}_{\boldsymbol\theta} - \boldsymbol{\epsilon}^\star\|^2$$
-
-@!gaussian-paths-the-learned-predictor-against-the-optimal-one
-
-The gap stays below 0.001 at every time, on a target of unit variance per
-coordinate.
-:::
-
-::: {.slide title="Two Networks, Two Targets, One Velocity Field"}
-Reference: the linear-path velocity from the exact score,
-$\mathbf{u} = -(\mathbf{x} + t\, \nabla \log p_t) / (1 - t)$. The noise
-network enters through $\hat{\boldsymbol{\epsilon}} - \hat{\mathbf{x}}_0$
-and a change of time.
-
-@!gaussian-paths-the-dictionary-checked
-
-Velocity network: under 0.25% of $\mathbb{E}\|\mathbf{u}\|^2$. Noise network:
-within about 1%, worst at $t = 0.95$. Neither learned a score.
-:::
-
-::: {.slide title="Check: Why Is the Converted Noise Network Worst near the Noise?"}
-[Check]{.kicker}
-
-On the linear path $\hat{\mathbf{x}}_0 = (\mathbf{x} - t\,
-\hat{\boldsymbol{\epsilon}}) / (1 - t)$. If $\hat{\boldsymbol{\epsilon}}$ is
-off by $\boldsymbol{\delta}$, how far off is the velocity
-$\hat{\boldsymbol{\epsilon}} - \hat{\mathbf{x}}_0$ at $t = 0.95$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\hat{\boldsymbol{\epsilon}} - \hat{\mathbf{x}}_0 =
-(\hat{\boldsymbol{\epsilon}} - \mathbf{x}) / (1 - t)$, so the error is
-$\boldsymbol{\delta} / (1 - t) = 20\, \boldsymbol{\delta}$. At $\alpha = 0$
-it is unbounded: a noise model is never asked for $\hat{\mathbf{x}}_0$ at
-pure noise.
-:::
-:::
-:::
-
 ::: {.slide title="Wrap-up"}
 [Wrap-up]{.kicker}
 
@@ -1396,10 +963,8 @@ pure noise.
   0.5/0.3/0.2; fine levels sharpen.
 - **Regression:** per-example targets learn the posterior mean; five targets
   convert affinely; losses sit at floors of about 0.5 and 5.
-- **Sampling:** one Euler step lands on the mean, a hundred recover the
-  modes; the ancestral step is Langevin plus Euler.
-- **Check:** both networks match the exact velocity field within about 1%.
+<!-- WRITER: re-read the floor numbers against the new floor cell (net minus floor column, velocity-net-as-noise line). -->
 
-**Next:** the same regression on 784-pixel images, with a U-Net, guidance
-and a quality score.
+**Next:** following the learned field from noise to data, by Euler steps
+and by the ancestral chain.
 :::

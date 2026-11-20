@@ -24,30 +24,32 @@ Figures, by section:
   * ``mdl-diffusion-blueprint`` -- conditional and marginal path and field of
     the linear path on the mixture, exact.
 
-  17.3 image-diffusion.md
+  17.3 integration.md: no figures of its own.
+
+  17.4 image-diffusion.md
   * ``mdl-diffusion-unet`` -- the U-Net with its skips and its time/label
     embedding;
   * ``mdl-diffusion-guidance`` -- classifier-free guidance on the mixture as an
     extrapolation of posterior means.
 
-  17.4 samplers.md
+  17.5 samplers.md
   * ``mdl-diffusion-two-samplers`` -- DDIM at eta = 0 and eta = 1 on the
     mixture with the exact predictor, from shared starts.
 
-  17.5 design-space.md
+  17.6 design-space.md
   * ``mdl-diffusion-weightings`` -- weightings w(lambda) and the densities of
     lambda under uniform t;
   * ``mdl-diffusion-schedules`` -- lambda_t against t for four schedules.
 
-  17.6 latent-diffusion.md
+  17.7 latent-diffusion.md
   * ``mdl-diffusion-latent-pipeline`` -- encoder, latent diffusion, decoder;
   * ``mdl-diffusion-dit-block`` -- patchify, one adaLN-Zero block, depatchify.
 
-  17.7 few-step.md
+  17.8 few-step.md
   * ``mdl-diffusion-flow-map`` -- probability-flow trajectories of a 1-D
     two-Gaussian mixture, a jump of the flow map, and its three identities.
 
-  17.8 discrete-diffusion.md
+  17.9 discrete-diffusion.md
   * ``mdl-diffusion-masking`` -- the absorbing chain on a token sequence.
 
 Run with the repo's pytorch venv:
@@ -500,7 +502,7 @@ def fig_blueprint():
 
 
 # =========================================================================== #
-# 17.3 image-diffusion.md                                                     #
+# 17.4 image-diffusion.md                                                     #
 # =========================================================================== #
 
 def _ubox(ax, x, y, w, h, text, color, fs=TXT, fc="white", zorder=3):
@@ -637,7 +639,7 @@ def fig_guidance():
 
 
 # =========================================================================== #
-# 17.4 samplers.md                                                            #
+# 17.5 samplers.md                                                            #
 # =========================================================================== #
 
 def _ddim_paths(starts, eta, steps=200, seed=0):
@@ -686,7 +688,7 @@ def fig_two_samplers():
 
 
 # =========================================================================== #
-# 17.5 design-space.md                                                        #
+# 17.6 design-space.md                                                        #
 # =========================================================================== #
 
 def _vp_dt_dlam(lam):
@@ -799,7 +801,7 @@ def fig_schedules():
 
 
 # =========================================================================== #
-# 17.6 latent-diffusion.md                                                    #
+# 17.7 latent-diffusion.md                                                    #
 # =========================================================================== #
 
 def _shirt(n=28):
@@ -1037,7 +1039,7 @@ def fig_dit_block():
 
 
 # =========================================================================== #
-# 17.7 few-step.md                                                            #
+# 17.8 few-step.md                                                            #
 # =========================================================================== #
 
 FM_MEANS = np.array([-1.5, 1.5])
@@ -1177,7 +1179,7 @@ def fig_flow_map():
 
 
 # =========================================================================== #
-# 17.8 discrete-diffusion.md                                                  #
+# 17.9 discrete-diffusion.md                                                  #
 # =========================================================================== #
 
 def fig_masking():

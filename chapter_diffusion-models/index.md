@@ -7,6 +7,8 @@ The idea came from physics: in non-equilibrium thermodynamics, structure such as
 
 What does a network that removes noise know about the data (:numref:`sec_diffusion-denoising`)? How do we walk from noise to data, and which regression trains the walk (:numref:`sec_diffusion-gaussian-paths`)? What changes for images, and how do we steer and judge them (:numref:`sec_diffusion-images`)? Which sampling steps can we skip, and what does a sampler do when run backwards (:numref:`sec_diffusion-samplers`)? Is the regression maximum likelihood, and which of its choices matter (:numref:`sec_diffusion-design-space`)? Why do current systems diffuse a compressed code with a transformer (:numref:`sec_diffusion-latent`)? Why does a single step fail, and what fixes it (:numref:`sec_diffusion-few-step`)? What is noise for a token (:numref:`sec_diffusion-discrete`)?
 
+<!-- WRITER: the gaussian-paths split (structure 0.3) adds 17.3 `sec_diffusion-integration` ("Sampling by Integration") between Gaussian Paths and Diffusion for Images; the chapter now has nine sections. The route paragraph above names eight and has no reference to the new section (IDX-3 rewrites it). -->
+
 Along the way the four limits of the game find answers: a density, one regression instead of two networks, a loss under which every missing mode costs, and a transformer trained stably at scale. The mathematics lives in :numref:`chap_mdl-dynamics`, to which the chapter points instead of repeating it; image generation at scale, text-to-image and video belong to a later part of this book.
 
 ```toc
@@ -14,6 +16,7 @@ Along the way the four limits of the game find answers: a density, one regressio
 
 denoising
 gaussian-paths
+integration
 image-diffusion
 samplers
 design-space
@@ -200,6 +203,8 @@ $\mathbf{u}_t = \hat{\boldsymbol\epsilon} - \hat{\mathbf{x}}_0$.
 A network trained on any one target defines all the others.
 :::
 :::
+
+<!-- WRITER: nine sections after the gaussian-paths split (new 17.3 `sec_diffusion-integration`, "Sampling by Integration"); the cover's "eight sections", this map's title and rows, and the wrap-up's "Eight sections" are now false. -->
 
 ::: {.slide title="Eight Sections, One Question Each"}
 [Chapter map]{.kicker}

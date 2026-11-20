@@ -2,7 +2,7 @@
 """Generate the illustrative figures for the Generative Adversarial Networks
 chapter (ch. 16) in the one shared house style defined in ``gen_mdl_figures.py``.
 
-Four figures:
+Seven figures, among them:
 
   * ``mdl-gan-architecture`` -- the adversarial loop: a latent draw through the
     generator, the generated and real batches meeting at the critic, and
@@ -11,8 +11,6 @@ Four figures:
   * ``mdl-gan-pairing`` -- single-sample classification against a fixed
     threshold versus pair ranking, with the additive shift flipping the
     verdict on the left and cancelling on the right;
-  * ``mdl-gan-exits`` -- the three exits from unstable minimax training, each
-    with its named steps and its cost.
 
 Run with the repo's pytorch venv:
 
@@ -227,64 +225,6 @@ def fig_pairing():
     frame(axb, "a pair: is $D(x)$ above $D(x')$?")
 
     fl.save(fig, "mdl-gan-pairing")
-
-
-# =========================================================================== #
-# 16.6  Three exits from instability                                          #
-# =========================================================================== #
-
-def fig_exits():
-    """The de-heuristicization map: regularize the dynamics, constrain the
-    critic, or remove the game -- each branch with its named steps and its
-    cost.  (That the adversarial term returns at distillation is an
-    observation, not a step, so it lives in the caption.)"""
-    fig, ax = plt.subplots(figsize=(12.6, 5.4))
-
-    branches = [
-        (BLUE, "1. regularize the dynamics",
-         ["zero-centered\n$R_1$, $R_2$", "convergent\nobjective (RpGAN)",
-          "R3GAN"],
-         "cost: one more knob ($\\gamma$) and a minimax loop that remains"),
-        (ORANGE, "2. constrain the critic",
-         ["spectral norm", "frozen pretrained\nfeatures",
-          "controlled\naugmentation (ADA)"],
-         "cost: the critic is no longer free and inherits the features' bias"),
-        (GREEN, "3. remove the game",
-         ["MMD, IMLE", "diffusion and flow\nas regression"],
-         "cost: a fixed discrepancy weakens in high dimension; slow sampling"),
-    ]
-
-    xs = [4.60, 8.65, 12.70]                     # the three step columns
-    ys = [5.25, 3.10, 0.95]                      # the three branch lanes
-    bw, bh = 3.34, 0.90
-
-    _box(ax, 1.05, ys[1], 1.80, 1.35, "unstable\nminimax\ntraining", GRAY,
-         fontsize=13.5, lw=1.9)
-
-    # a short trunk leaves the source box; each branch turns off it with a
-    # rounded corner and arrives horizontally at its lane
-    xt = 2.38                                   # x of the branching trunk
-    ax.plot([1.99, xt], [ys[1], ys[1]], color=GRAY, lw=1.7, zorder=4,
-            solid_capstyle="butt")
-    for (col, name, steps, cost), y in zip(branches, ys):
-        ax.add_patch(FancyArrowPatch(
-            (xt, ys[1]), (xs[0] - bw / 2 - 0.10, y),
-            connectionstyle=("arc3,rad=0" if y == ys[1] else
-                             "angle,angleA=90,angleB=0,rad=14"),
-            arrowstyle="-|>", mutation_scale=15, color=col, lw=1.7,
-            shrinkA=0, shrinkB=0, zorder=4))
-        ax.text(xs[0] - bw / 2, y + bh / 2 + 0.16, name, ha="left",
-                va="bottom", fontsize=13.5, color=col)
-        for x, s in zip(xs, steps):
-            _box(ax, x, y, bw, bh, s, col, fontsize=12.5, fc="white")
-        for xa, xb in zip(xs[:len(steps) - 1], xs[1:len(steps)]):
-            fl.arrow(ax, (xa + bw / 2 + 0.08, y), (xb - bw / 2 - 0.08, y),
-                     color=col, lw=1.5, mut=13)
-        ax.text(xs[0] - bw / 2, y - bh / 2 - 0.18, cost, ha="left", va="top",
-                fontsize=12.5, color="black")
-
-    fl.clean_axes(ax, lim=((0.0, 14.55), (-0.05, 6.35)), hide=True, equal=False)
-    fl.save(fig, "mdl-gan-exits")
 
 
 # =========================================================================== #
@@ -768,7 +708,6 @@ FIGURES = [
     fig_dcgan,
     fig_backbone,
     fig_conditioning,
-    fig_exits,
 ]
 
 

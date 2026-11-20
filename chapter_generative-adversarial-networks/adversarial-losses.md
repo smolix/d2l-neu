@@ -233,6 +233,160 @@ The argument predicts where an adversarial term should survive once generators a
 
 Diffusion and flow models generate a sample by repeatedly evaluating a learned denoiser, often dozens or hundreds of times :cite:`ho2020denoising,Lipman.Chen.BenHamu.ea.2022`. The denoiser receives a noisy image $x_t$, a clean image $x_0$ with noise added at level $t$, and is trained by squared error to predict $x_0$. By :eqref:`eq_beyond_condmean` with $(c, x) = (x_t, x_0)$, it learns the conditional mean $\mathbb{E}[x_0 \mid x_t]$. At low noise, $x_t$ nearly determines $x_0$ and the mean is sharp. At high noise, many clean images are compatible with $x_t$, and the mean is their blurred average, the corridor of the two bands. A many-step sampler takes only a small step toward that mean, adds fresh noise, and asks again at a lower noise level, so no single average becomes the output. A one-step student has no later steps. If it is trained by squared error toward the teacher's denoised estimate at high noise, it inherits the average.
 
+### Distillation on Two Bands
+:label:`subsec_gan_beyond_distillation`
+
+<!-- WRITER: new subsection (structure 3.8, worklist Part 8 (A)2 and (B)6, F5). The prose below is a minimal factual lead-in for the new cells; rewrite it in the section's voice. The teacher formula is old exercise 3(b), now in the body: derive it in three lines (it is the denoiser of ch. 17 in miniature) and add the forward references to sec_diffusion-denoising and sec_diffusion-few-step. -->
+The two bands let us check this claim. Let a teacher that knows the data see a student's output with noise added, $\tilde x = \hat x + \tau \xi$ with $\xi \sim \mathcal{N}(0, 1)$. Given the band, $\tilde x$ is normal with mean $c + b$ and variance $s^2 = \tau^2 + 0.05^2$, so the posterior odds of $b = +1$ against $b = -1$ are $\exp\big(2(\tilde x - c)/s^2\big)$, and the posterior mean of the band center is
+
+$$
+\mathbb{E}[c + b \mid \tilde x, c] = c + \tanh\big((\tilde x - c)/(\tau^2 + 0.05^2)\big).
+$$
+
+At small $\tau$ the estimate snaps to the band nearer $\tilde x$. At $\tau = 2$ its slope in $\tilde x$ is at most about $\tfrac14$, a gentle pull toward the corridor. Each student now takes a scalar latent $z \sim \mathcal{N}(0, 1)$ besides $c$, so that it can put samples on both bands. Student (i) regresses onto the teacher's estimate at $\tau = 2$ with the gradient stopped, as the distillation term of ADD does. Student (ii) plays the log-loss game of the first experiment. Student (iii) adds both losses with weight $\lambda = 1$. The function `train_student` trains a student on the critic's loss when it is given a critic, plus $\lambda$ times the regression.
+
+```{.python .input #adversarial-losses-distillation-on-two-bands-1}
+%%tab pytorch
+def teacher(x_tilde, c, tau):
+    """Posterior mean of the band center c + b given x_tilde = x + tau xi."""
+    return c + torch.tanh((x_tilde - c) / (tau ** 2 + 0.05 ** 2))
+
+def train_student(g, D, lam, tau=2.0, num_steps=4000, batch_size=128):
+    """Train g(c, z) on the critic's loss if D is given, plus lam times the
+    squared error toward the teacher's estimate at noise level tau."""
+    opt_G = torch.optim.Adam(g.parameters(), lr=1e-3)
+    if D is not None:
+        opt_D = torch.optim.Adam(D.parameters(), lr=2e-3)
+    for _ in range(num_steps):
+        c, x = make_bands(batch_size)
+        z = torch.randn(batch_size, 1)  # the student's latent
+        x_hat = g(torch.cat([c, z], 1)) + 0.05 * torch.randn(batch_size, 1)
+        real, fake = torch.cat([c, x], 1), torch.cat([c, x_hat], 1)
+        loss_G = 0
+        if D is not None:
+            opt_D.zero_grad()
+            d2l.gan_loss_D(D, real, fake.detach()).backward()
+            opt_D.step()
+            loss_G = d2l.gan_loss_G(D, real, fake)
+        with torch.no_grad():  # the teacher's estimate is a fixed target
+            target = teacher(x_hat + tau * torch.randn(batch_size, 1), c, tau)
+        loss_G = loss_G + lam * ((x_hat - target) ** 2).mean()
+        opt_G.zero_grad()
+        loss_G.backward()
+        opt_G.step()
+```
+
+```{.python .input #adversarial-losses-distillation-on-two-bands-1}
+%%tab jax
+def teacher(x_tilde, c, tau):
+    """Posterior mean of the band center c + b given x_tilde = x + tau xi."""
+    return c + jnp.tanh((x_tilde - c) / (tau ** 2 + 0.05 ** 2))
+
+@nnx.jit(static_argnums=7)
+def student_step(g, D, opt_G, opt_D, key, lam, tau, batch_size):
+    k_data, k_z, k_xi, k_tau = jax.random.split(key, 4)
+    c, x = make_bands(k_data, batch_size)
+    z = jax.random.normal(k_z, (batch_size, 1))  # the student's latent
+    xi = jax.random.normal(k_xi, (batch_size, 1))  # the data's noise
+    sample = lambda g_: g_(jnp.concatenate([c, z], 1)) + 0.05 * xi
+    real = jnp.concatenate([c, x], 1)
+    fake = lambda g_: jnp.concatenate([c, sample(g_)], 1)
+    if D is not None:
+        loss_D = lambda D_: d2l.gan_loss_D(D_, real, fake(g))
+        opt_D.update(D, nnx.grad(loss_D)(D))
+    noise = tau * jax.random.normal(k_tau, (batch_size, 1))
+    def loss_G(g_):
+        x_hat = sample(g_)  # the teacher's estimate is a fixed target
+        target = jax.lax.stop_gradient(teacher(x_hat + noise, c, tau))
+        loss = lam * ((x_hat - target) ** 2).mean()
+        if D is not None:
+            loss += d2l.gan_loss_G(D, real, fake(g_))
+        return loss
+    opt_G.update(g, nnx.grad(loss_G)(g))
+
+def train_student(g, D, lam, key, tau=2.0, num_steps=4000, batch_size=128):
+    """Train g(c, z) on the critic's loss if D is given, plus lam times the
+    squared error toward the teacher's estimate at noise level tau."""
+    opt_G = nnx.Optimizer(g, optax.adam(1e-3), wrt=nnx.Param)
+    opt_D = (None if D is None
+             else nnx.Optimizer(D, optax.adam(2e-3), wrt=nnx.Param))
+    for k in jax.random.split(key, num_steps):
+        student_step(g, D, opt_G, opt_D, k, lam, tau, batch_size)
+```
+
+A student is a distribution of outputs at each $c$, so `band_shares` evaluates it at the 201 inputs of the first experiment and at 64 evenly spaced quantiles of the latent. It returns the mean distance to the nearer band and the shares of outputs within 0.25 of the upper and of the lower band.
+
+```{.python .input #adversarial-losses-distillation-on-two-bands-2}
+%%tab pytorch
+def band_shares(g, cs):
+    """Mean distance of g(c, z) to the nearer band, and its shares on the
+    upper and the lower band, over the inputs cs and 64 quantiles z."""
+    zs = torch.special.ndtri((torch.arange(64) + 0.5) / 64)
+    c, z = (v.reshape(-1, 1) for v in torch.meshgrid(
+        cs.flatten(), zs, indexing='ij'))
+    with torch.no_grad():
+        u = g(torch.cat([c, z], 1)) - c  # offset from the corridor
+    to_band = torch.minimum((u - 1).abs(), (u + 1).abs())
+    return (to_band.mean(), ((u - 1).abs() < 0.25).float().mean(),
+            ((u + 1).abs() < 0.25).float().mean())
+```
+
+```{.python .input #adversarial-losses-distillation-on-two-bands-2}
+%%tab jax
+def band_shares(g, cs):
+    """Mean distance of g(c, z) to the nearer band, and its shares on the
+    upper and the lower band, over the inputs cs and 64 quantiles z."""
+    zs = jax.scipy.special.ndtri((jnp.arange(64) + 0.5) / 64)
+    c, z = (v.reshape(-1, 1) for v in jnp.meshgrid(
+        cs.flatten(), zs, indexing='ij'))
+    u = g(jnp.concatenate([c, z], 1)) - c  # offset from the corridor
+    to_band = jnp.minimum(jnp.abs(u - 1), jnp.abs(u + 1))
+    return (to_band.mean(), (jnp.abs(u - 1) < 0.25).mean(),
+            (jnp.abs(u + 1) < 0.25).mean())
+```
+
+Each student trains for 4,000 steps from three seeds. Within a seed, the three students start from the same weights.
+
+```{.python .input #adversarial-losses-distillation-on-two-bands-3}
+%%tab pytorch
+students = {'regression': (False, 1.0), 'critic': (True, 0.0),
+            'critic + regression': (True, 1.0)}
+for name, (has_critic, lam) in students.items():
+    for seed in range(3):
+        torch.manual_seed(seed)
+        g = d2l.make_mlp([2, 32, 32, 1], nn.Tanh())
+        D = d2l.make_mlp([2, 32, 32, 1], nn.LeakyReLU(0.2))
+        train_student(g, D if has_critic else None, lam)
+        dist, upper, lower = band_shares(g, cs)
+        print(f'{name}, seed {seed}: {dist:.2f} from the nearer band, '
+              f'{upper:.0%} upper, {lower:.0%} lower, '
+              f'{1 - upper - lower:.0%} off the bands')
+```
+
+```{.python .input #adversarial-losses-distillation-on-two-bands-3}
+%%tab jax
+students = {'regression': (False, 1.0), 'critic': (True, 0.0),
+            'critic + regression': (True, 1.0)}
+for name, (has_critic, lam) in students.items():
+    for seed in range(3):
+        rngs = nnx.Rngs(seed)
+        g = d2l.make_mlp([2, 32, 32, 1], nnx.tanh, rngs=rngs)
+        D = d2l.make_mlp([2, 32, 32, 1], lambda h: nnx.leaky_relu(h, 0.2),
+                         rngs=rngs)
+        train_student(g, D if has_critic else None, lam, rngs())
+        dist, upper, lower = band_shares(g, cs)
+        print(f'{name}, seed {seed}: {dist:.2f} from the nearer band, '
+              f'{upper:.0%} upper, {lower:.0%} lower, '
+              f'{1 - upper - lower:.0%} off the bands')
+```
+
+<!-- WRITER: measured in direct runs of the final notebook (not captured; take the digits from the store after the chapter run). Ranges over three seeds, both tabs together:
+regression: 0.96-0.98 from the nearer band, 0% upper, 0% lower, 100% off the bands; it lands in the corridor, like the squared-error student of the first experiment.
+critic: 0.03-0.08 from the band, 49-52% upper, 46-50% lower, 1-2% off; on both bands, about evenly: with a latent input the critic student uses the latent.
+critic + regression: 0.03-0.06 from the band, 48-50% upper, 48-51% lower, 1-2% off.
+Firm lesson: (i) against (ii)/(iii), about 0.97 against about 0.05 from the band and 100% against 1-2% off the bands; ADD's ordering in miniature (unusable, good, about as good). (iii) is not better than (ii) and not worse: every difference lies within the run-to-run range, so do not claim that the regression term helps or hurts here.
+Background, printed by no cell (PyTorch prototype, three seeds; material for an exercise if wanted, e.g. the optional lambda sweep of worklist Part 8 (B)14): at tau = 0.1 the regression student alone lands on both bands (0.03-0.04 from the band, 45-48% upper, 51-53% lower, 2% off), since a low-noise teacher snaps each output to the nearer band and the student keeps the split it starts with; at tau = 0.5 it is mostly on the bands with some blur (0.10-0.15, 6-9% off). Student (iii) at tau = 2 with lambda = 3: 0.03-0.04, 2% off; lambda = 10: 0.06-0.08, 2-3% off; lambda = 30: 0.15-0.18, 4-7% off (the regression starts to pull it into the corridor). -->
+
 ### One-Step Distillation
 
 Distillation trains a student to approximate the teacher's distribution in one to four network evaluations. Adversarial diffusion distillation (ADD) trains a one-step student with two losses :cite:`Sauer.Lorenz.Blattmann.ea.2023`: a regression toward a frozen teacher, which denoises a noised copy of the student's output, and an adversarial loss against real images, with a critic built from frozen DINOv2 features and small trainable heads. In the reported one-step ablation, with all other settings fixed, the regression alone gives FID 315.6, the adversarial loss alone 20.8, and both together 20.6. A student fitted only to a conditional-mean target does not produce usable samples. The adversarial term supplies the sample quality, and the distillation term leaves FID nearly unchanged while raising the CLIP score, the agreement of the image with its prompt.
@@ -251,10 +405,8 @@ Every system above that keeps a critic inherits the training problems of the ear
 
 ### Responses to Instability
 
-The first response regularizes the dynamics of the game: zero-centered penalties on the critic's input gradient make training converge near the equilibrium :cite:`Mescheder.Geiger.Nowozin.2018`, as :numref:`sec_gan_convergence` derives. The second constrains the critic, by bounding its slope, by freezing its features as ADD does, or by augmenting both of its inputs. The third removes the game: a fixed discrepancy such as MMD, or, in diffusion and flow models, a regression on a closed-form target with a unique minimizer, so that training needs no equilibrium between two networks. :numref:`fig_gan_exits` compares the three.
-
-![Three responses to unstable adversarial training, corresponding to different sources of instability: regularize the dynamics of the game, constrain the critic, or replace the game with a fixed discrepancy or regression objective. The first retains a minimax loop and a penalty weight; the second inherits the biases of its fixed features; the third may use discrepancies that weaken in high dimensions or require multi-step sampling. Adversarial losses can reappear when non-adversarial models are distilled to a few steps.](../img/mdl-gan-exits.svg)
-:label:`fig_gan_exits`
+The first response regularizes the dynamics of the game: zero-centered penalties on the critic's input gradient make training converge near the equilibrium :cite:`Mescheder.Geiger.Nowozin.2018`, as :numref:`sec_gan_convergence` derives. The second constrains the critic, by bounding its slope, by freezing its features as ADD does, or by augmenting both of its inputs. The third removes the game: a fixed discrepancy such as MMD, or, in diffusion and flow models, a regression on a closed-form target with a unique minimizer, so that training needs no equilibrium between two networks.
+<!-- WRITER: fig_gan_exits, its SVG and its generator entry are deleted (structure 3.8 "Cut", ADV-16); this subsection is cut by the design. -->
 
 ### Likelihood Models as Critics
 
@@ -272,6 +424,20 @@ The adversarial objective thus needs an estimate of $\log(p/q)$ or of its gradie
 ### Remaining Limits
 
 The chapter began with a game whose generator could lose its gradient, whose training could circle without converging, and whose samples could collapse onto a few modes. The repairs work. The non-saturating loss keeps a gradient on the samples the critic rejects, and zero-centered penalties keep one when nearby supports separate and make gradient training converge near the equilibrium (:numref:`sec_gan_convergence`). With these, a plain convolutional generator learns to draw images (:numref:`sec_dcgan`). Four limits remain. The generator is a sampler without a density, so it cannot report how likely an image is. Training still needs two networks and a game that converges reliably only under a penalty whose weight must be chosen for the data. No likelihood term penalizes a missing mode, and the guarantee against mode-dropping minima holds only for a fixed one-to-one pairing of real and generated samples (:numref:`sec_gan_relativistic`). And the game can still become unstable at scale, as ViTok-v2 reported. Diffusion and flow models, the subject of :numref:`chap_diffusion`, avoid the game: they are trained by regression against closed-form targets, computed from each training example.
+
+<!-- WRITER: tab_gan_games is copied here from convergence.md ("The Games of This Chapter"), the receiving half of the move (structure D4, worklist Part 8 (A)4 and (B)11). The giving half, deleting it from convergence.md with its "Reading the Table" subsection and its deck slide, is still open. Place it after the verdict paragraph of the new subsection subsec_gan_beyond_verdict, add two sentences on what it adds (the three choices are independent; the chapter's recipe is one cell of their product), fix the last column (CONV-10: "smooth where p and q overlap; across gaps only through the critic's smoothness"), drop "a symmetric Sobolev penalty", add a hinge row and a column note for the W1 critic trained in sec_gan_objectives. The deck slide with the table is in convergence.md's deck. -->
+Three choices describe every game of this chapter (:numref:`tab_gan_games`): what the critic estimates, what it does with the estimate, and how the critic is constrained. The last column records whether the generator keeps a gradient when the supports of $p$ and $q$ are disjoint.
+
+:The games of this chapter, described by three choices: what the critic estimates, what it does with the estimate, and how the critic is constrained. The last column records whether the generator keeps a gradient on disjoint supports.
+:label:`tab_gan_games`
+
+| objective | the critic estimates | what it does with the estimate | how the critic is constrained | on disjoint supports |
+|:--|:--|:--|:--|:--|
+| log loss, $f$-GAN (:numref:`sec_basic_gan`, :numref:`sec_gan_objectives`) | $\log(p/q)$, or $f'(p/q)$ for an $f$-GAN | classifies one sample | not at all | saturates |
+| MMD (:numref:`sec_gan_objectives`) | a kernel-smoothed $p - q$, the witness | witnesses a difference of means | a fixed kernel ball | smooth |
+| Wasserstein-1 (:numref:`sec_gan_objectives`) | a Kantorovich potential | witnesses a difference of means | a Lipschitz ball | smooth |
+| pairing, RpGAN (:numref:`sec_gan_relativistic`) | $\log(p/q)$ up to a constant | ranks a real--generated pair | not at all | saturates |
+| RpGAN + $R_1$ + $R_2$ (:numref:`sec_gan_convergence`) | $\log(p/q)$ above the length scale $2\sqrt\gamma$, smoothed below | ranks a real--generated pair | a symmetric Sobolev penalty | smooth, near equilibrium |
 
 ## Summary
 
@@ -318,6 +484,7 @@ Squared error measures a prediction's distance to the conditional mean, so where
        and compare with your predictions. When is the conditional median a
        valid output?
    :exlabel:`ex_adversarial-losses-mean-and-median`
+<!-- WRITER: part (b) of this exercise (the tanh teacher at tau = 0.1 and 2) is now the body experiment of subsec_gan_beyond_distillation; the worklist retires the exercise by default (Part 8 (B)14). -->
 1. [code] **Pointwise plus adversarial.** ADD trains its student on the sum
    of an adversarial loss and a weighted pointwise distillation loss
    :cite:`Sauer.Lorenz.Blattmann.ea.2023`.
@@ -708,12 +875,6 @@ squared-error prediction sound like? And for $[-\pi/2, \pi/2]$?
 - $a = \pi$: $\sin \pi / \pi = 0$. The prediction is silence.
 - $a = \pi/2$: $2/\pi \approx 0.64$ of the true amplitude.
 - Every valid waveform has full amplitude; the mean is none of them.
-:::
-
-::: {.slide title="Three Answers to Instability, Each with a Cost"}
-[Responses to instability]{.kicker}
-
-![](../img/mdl-gan-exits.svg){width=88%}
 :::
 
 ::: {.slide title="A Likelihood Model Can Be Its Own Critic"}

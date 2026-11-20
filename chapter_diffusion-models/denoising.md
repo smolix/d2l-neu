@@ -53,6 +53,8 @@ Each component pulls the point toward its own mean, and the pulls are averaged w
 
 Adding Gaussian noise of standard deviation $\sigma$ to a draw adds $\sigma^2$ to the variance of each component, so the noised distribution is again a mixture, with $s^2$ replaced by $s^2 + \sigma^2$. `GaussianMixture` holds this mixture, with its density, score and posterior mean in closed form at every noise level $\mathbf{x}_t = \alpha \mathbf{x}_0 + \sigma \boldsymbol\epsilon$, and the velocity of the linear path of :numref:`sec_diffusion-gaussian-paths`; in this section $\alpha = 1$.
 
+<!-- WRITER: `GaussianMixture` no longer has a `velocity` method; :numref:`sec_diffusion-gaussian-paths` adds it with `d2l.add_to_class` (DEN-1). The class still takes `alpha` in `log_prob`, `score` and `posterior_mean` (later sections pass it; every call here uses alpha = 1), so this sentence can say the class adds noise of level sigma and leave x_t, alpha and the velocity to the next section (DEN-3). -->
+
 ```{.python .input #denoising-the-running-example-1}
 %%tab pytorch
 class GaussianMixture:  #@save
@@ -99,13 +101,6 @@ class GaussianMixture:  #@save
         log_p, r, var, a = self._modes(x, alpha, sigma)
         return (torch.softmax(log_p, 1)[..., None]
                 * (self.means + a * self.std ** 2 / var * r)).sum(1)
-
-    def velocity(self, x, t):
-        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
-        log_p, r, var, a = self._modes(x, 1 - t, t)
-        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
-        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
-        return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 ```
 
 ```{.python .input #denoising-the-running-example-1}
@@ -154,13 +149,6 @@ class GaussianMixture:  #@save
         log_p, r, var, a = self._modes(x, alpha, sigma)
         return (jax.nn.softmax(log_p, 1)[..., None]
                 * (self.means + a * self.std ** 2 / var * r)).sum(1)
-
-    def velocity(self, x, t):
-        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
-        log_p, r, var, a = self._modes(x, 1 - t, t)
-        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
-        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
-        return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
 ```
 
 Two kinds of statistic score a set of points against the mixture: the mean negative log-likelihood under the true density, and a `summary` of three numbers, the mode weights (each point counted at its nearest mean), the fraction of strays beyond three standard deviations from every mean, and the mean squared distance of the rest to their mean.
@@ -333,13 +321,23 @@ class TimeMLP(nnx.Module):  #@save
 
 `train_regression` is the one training loop of the chapter: Adam on a loss of the model and a fresh batch, constant or cosine-decayed learning rate, and `d2l.EMA` from :numref:`sec_dcgan` on the weights, whose half-life $h$ is the number of updates after which a weight's contribution to the average halves. On a GPU each version compiles its training step (:numref:`sec_compilation`): the networks of this chapter are small enough that launching their kernels one at a time would cost more than running them.
 
+<!-- WRITER: the docstring of `train_regression` now carries the learning-rate options, the EMA half-life and the compile plumbing (DEN-2). Cut this paragraph to one sentence (Adam on fresh batches; the docstring lists the options) and drop the symbol $h$ for the half-life: $h$ is the Langevin step size below, and the half-life is named only in :numref:`sec_diffusion-images` (DEN-12). -->
+
 ```{.python .input #gaussian-paths-experiments-on-the-running-example}
 %%tab pytorch
 def train_regression(model, loss_fn, batch_fn, num_steps, *,  #@save
                      lr=1e-3, cosine=False, ema_half_life=1000,
                      compiled=True):
-    """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses)."""
-    params = list(model.parameters())  # fused Adam: one kernel per step on a GPU
+    """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses).
+
+    The learning rate is constant or, with cosine=True, decays to zero along
+    a cosine. The EMA model averages the weights (d2l.EMA): the weights of
+    ema_half_life updates ago count half as much as the current ones. On a
+    GPU, Adam is fused into one kernel and, with compiled=True, the loss and
+    its gradient run as CUDA graphs: the networks of this chapter are so
+    small that launching their kernels one at a time would cost more time
+    than running them."""
+    params = list(model.parameters())
     opt = torch.optim.Adam(params, lr=lr, fused=params[0].is_cuda)
     sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
              if cosine else None)
@@ -363,7 +361,14 @@ def train_regression(model, loss_fn, batch_fn, num_steps, *,  #@save
 %%tab jax
 def train_regression(model, loss_fn, batch_fn, num_steps, key, *,  #@save
                      lr=1e-3, cosine=False, ema_half_life=1000, chunk=500):
-    """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses."""
+    """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses.
+
+    The learning rate is constant or, with cosine=True, decays to zero along
+    a cosine. The EMA model averages the weights (d2l.EMA): the weights of
+    ema_half_life updates ago count half as much as the current ones. Each
+    chunk of updates is one jitted scan, a single dispatch to the device:
+    the networks of this chapter are so small that dispatching their
+    updates one at a time would cost more time than running them."""
     schedule = optax.cosine_decay_schedule(lr, num_steps) if cosine else lr
     opt = nnx.Optimizer(model, optax.adam(schedule), wrt=nnx.Param)
     ema = d2l.EMA(model, ema_half_life)
@@ -458,6 +463,8 @@ The denoiser shrinks the noisy offset from the mean by the factor $v/(v + \sigma
 
 The cell checks the formula at $\sigma = 0.3$: with the exact score of $p_\sigma$, Tweedie's step should reproduce the exact posterior mean, and with the network from `fit_score` it gives a learned denoiser to compare with the best one on 20,000 fresh noisy points.
 
+<!-- WRITER: the cell no longer prints the exact-score Tweedie gap (DEN-13, it compared two closed forms of one class and could not fail). It prints three squared errors on 20,000 fresh noisy points: noisy input, exact posterior mean, Tweedie with the trained score. Drop the 'with the exact score ... reproduce' clause here and the first sentence after the cell. -->
+
 ```{.python .input #denoising-tweedie-s-formula}
 %%tab pytorch
 sigma = 0.3
@@ -465,8 +472,6 @@ score = fit_score(data, sigma)
 x0 = mix.sample(20000)
 xt = x0 + sigma * torch.randn_like(x0)
 exact = mix.posterior_mean(xt, 1.0, sigma)
-gap = xt + sigma ** 2 * mix.score(xt, 1.0, sigma) - exact
-print(f'Tweedie with the exact score: largest gap {gap.abs().max():.1e}')
 for name, x0_hat in (('noisy point', xt), ('posterior mean', exact),
                      ('Tweedie, trained score', xt + sigma ** 2 * score(xt))):
     print(f'{name}: squared error {((x0_hat - x0) ** 2).sum(1).mean():.4f}')
@@ -480,8 +485,6 @@ k1, k2 = jax.random.split(jax.random.key(1))
 x0 = mix.sample(k1, 20000)
 xt = x0 + sigma * jax.random.normal(k2, x0.shape)
 exact = mix.posterior_mean(xt, 1.0, sigma)
-gap = xt + sigma ** 2 * mix.score(xt, 1.0, sigma) - exact
-print(f'Tweedie with the exact score: largest gap {jnp.abs(gap).max():.1e}')
 for name, x0_hat in (('noisy point', xt), ('posterior mean', exact),
                      ('Tweedie, trained score', xt + sigma ** 2 * score(xt))):
     print(f'{name}: squared error {((x0_hat - x0) ** 2).sum(1).mean():.4f}')
@@ -505,37 +508,9 @@ Any network with a scalar output can serve as the *energy* $E_{\boldsymbol\theta
 ![An energy and its density in one dimension. Left: the energy $E(x)$, a smooth function with a confining quadratic term. Right: the density $\exp(-E(x))/Z$. Wells of the energy become modes of the density.](../img/mdl-diffusion-energy-density.svg)
 :label:`fig_diffusion-energy-density`
 
+<!-- WRITER: the importance-sampling cell (`#denoising-the-normalizer-never-appears`) is cut (DEN-6). This paragraph and the next ('Up to $d = 8$ ...') describe it; the subsection becomes about 150 words, 'Scores and Normalizers', right after Tweedie, with no cell. Exercise `ex_denoising-log-normal-weight` part 2 compares with 'the printed values' and must stand alone (give the estimator and ask the reader to run it) or be dropped. The slide 'Importance Sampling Loses Z by d = 16 ...' is removed. -->
+
 Estimating $Z$ directly fails in high dimensions. Importance sampling (:numref:`sec_mdl-bayes-importance`) draws points from a proposal $q$ and averages the weights $w = e^{-E}/q$, whose mean is $Z$. Take the energy $E(\mathbf{x}) = \|\mathbf{x} - \mathbf{m}\|^2/2$ with $\mathbf{m}$ the all-ones vector in $d$ dimensions, and the proposal $q = \mathcal{N}(\mathbf{0}, \mathbf{I})$, only one standard deviation off in each coordinate. The normalized weight $w/Z = \exp(\mathbf{m}^\top\mathbf{x} - d/2)$ is log-normal with mean one and $\mathbb{E}[(w/Z)^2] = e^d$, so the relative error of an average of $n$ weights is $\sqrt{(e^d - 1)/n}$. The cell compares this prediction with the estimate and with the *effective sample size* $(\sum_i w_i)^2/\sum_i w_i^2$, the number of draws that carry appreciable weight.
-
-```{.python .input #denoising-the-normalizer-never-appears}
-%%tab pytorch
-torch.manual_seed(1)
-n = 100_000
-print(f'{"d":>3} {"estimate / Z":>13} {"predicted rel. error":>21} {"ESS":>8}')
-for d in (1, 2, 4, 8, 16, 32):
-    x = torch.randn(n, d)                      # proposal q = N(0, I)
-    log_w = x.sum(1) - d / 2                   # log(w / Z), m = (1, ..., 1)
-    log_sum = torch.logsumexp(log_w, 0)
-    estimate = torch.exp(log_sum - math.log(n))
-    ess = torch.exp(2 * log_sum - torch.logsumexp(2 * log_w, 0))
-    print(f'{d:>3} {estimate:>13.3f} {math.sqrt((math.exp(d) - 1) / n):>21.3g}'
-          f' {ess:>8.1f}')
-```
-
-```{.python .input #denoising-the-normalizer-never-appears}
-%%tab jax
-n = 100_000
-print(f'{"d":>3} {"estimate / Z":>13} {"predicted rel. error":>21} {"ESS":>8}')
-dims = (1, 2, 4, 8, 16, 32)
-for d, key in zip(dims, jax.random.split(jax.random.key(1), len(dims))):
-    x = jax.random.normal(key, (n, d))         # proposal q = N(0, I)
-    log_w = x.sum(1) - d / 2                   # log(w / Z), m = (1, ..., 1)
-    log_sum = jax.nn.logsumexp(log_w, 0)
-    estimate = jnp.exp(log_sum - math.log(n))
-    ess = jnp.exp(2 * log_sum - jax.nn.logsumexp(2 * log_w, 0))
-    print(f'{d:>3} {estimate:>13.3f} {math.sqrt((math.exp(d) - 1) / n):>21.3g}'
-          f' {ess:>8.1f}')
-```
 
 Up to $d = 8$ the estimate is close to one. At $d = 16$ the predicted relative error is about nine and only tens of draws carry weight, so a run that lands near the truth does so by luck. At $d = 32$ the estimate falls several times to an order of magnitude short: the weights that would raise the average to $Z$ belong to draws too rare to appear among $10^5$. An image has hundreds of thousands of coordinates.
 
@@ -580,39 +555,49 @@ The bias grows like $\sigma^4$ at first. For $s = 0.5$ and $d = 2$ it is $0.0004
 
 ```{.python .input #denoising-the-loss-floor-and-the-noise-level}
 %%tab pytorch
-sigmas = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 1.0]
-scores = {s: fit_score(data, s) for s in sigmas}
+sigmas, seeds = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 1.0], (1, 2)
+scores = {(s, seed): fit_score(data, s, seed) for seed in seeds for s in sigmas}
 x_test = mix.sample(20000)
+target = mix.score(x_test)                     # the clean score
 def score_error(score, x, target):
     return 0.5 * ((score(x) - target) ** 2).sum(1).mean().item()
-learned = [score_error(scores[s], x_test, mix.score(x_test)) for s in sigmas]
-bias = [score_error(lambda x: mix.score(x, 1.0, s), x_test, mix.score(x_test))
+learned = {seed: [score_error(scores[s, seed], x_test, target) for s in sigmas]
+           for seed in seeds}
+bias = [score_error(lambda x: mix.score(x, 1.0, s), x_test, target)
         for s in sigmas]
-print('trained at sigma:', [round(e, 3) for e in learned])
-print('exact smoothed:  ', [round(e, 4) for e in bias])
-d2l.plot(sigmas, [learned, bias], 'sigma', 'error against the clean score',
-         legend=['network trained at sigma', 'exact score of p_sigma'],
-         xscale='log', yscale='log')
+for seed in seeds:
+    print(f'trained, seed {seed}:', [round(e, 3) for e in learned[seed]])
+print('exact smoothed: ', [round(e, 4) for e in bias])
+d2l.plot(sigmas, [*learned.values(), bias], 'sigma',
+         'error against the clean score', xscale='log', yscale='log',
+         legend=[f'network, seed {seed}' for seed in seeds]
+         + ['exact score of p_sigma'])
 ```
 
 ```{.python .input #denoising-the-loss-floor-and-the-noise-level}
 %%tab jax
-sigmas = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 1.0]
-scores = {s: fit_score(data, s) for s in sigmas}
+sigmas, seeds = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 1.0], (1, 2)
+scores = {(s, seed): fit_score(data, s, seed) for seed in seeds for s in sigmas}
 x_test = mix.sample(jax.random.key(2), 20000)
+target = mix.score(x_test)                     # the clean score
 def score_error(score, x, target):
     return float(0.5 * ((score(x) - target) ** 2).sum(1).mean())
-learned = [score_error(scores[s], x_test, mix.score(x_test)) for s in sigmas]
-bias = [score_error(lambda x: mix.score(x, 1.0, s), x_test, mix.score(x_test))
+learned = {seed: [score_error(scores[s, seed], x_test, target) for s in sigmas]
+           for seed in seeds}
+bias = [score_error(lambda x: mix.score(x, 1.0, s), x_test, target)
         for s in sigmas]
-print('trained at sigma:', [round(e, 3) for e in learned])
-print('exact smoothed:  ', [round(e, 4) for e in bias])
-d2l.plot(sigmas, [learned, bias], 'sigma', 'error against the clean score',
-         legend=['network trained at sigma', 'exact score of p_sigma'],
-         xscale='log', yscale='log')
+for seed in seeds:
+    print(f'trained, seed {seed}:', [round(e, 3) for e in learned[seed]])
+print('exact smoothed: ', [round(e, 4) for e in bias])
+d2l.plot(sigmas, [*learned.values(), bias], 'sigma',
+         'error against the clean score', xscale='log', yscale='log',
+         legend=[f'network, seed {seed}' for seed in seeds]
+         + ['exact score of p_sigma'])
 ```
 
 The learned error traces a U. To the right it follows the bias line, within about $0.1$ from $\sigma = 0.5$ on: the networks fit their blurred targets well, and the targets are wrong. To the left it rises again although the bias vanishes, because the targets are mostly noise; retraining with another seed moves these points by up to a factor of two. The best single level lies between $\sigma = 0.1$ and $0.2$, at an error of about $0.15$ to $0.2$.
+
+<!-- WRITER: the cell now trains every level with seeds 1 and 2 and prints both rows (dev run, both tabs). Second seed against first at sigma <= 0.2: PT 0.418/0.522, 0.196/0.288, 0.210/0.248, 0.302/0.245; JAX 0.275/0.475, 0.207/0.284, 0.172/0.153, 0.152/0.220, i.e. the seed moves the left points by up to about 1.5x (PT) and 1.7x (JAX), not 2x. The best level of each run: 0.196 at 0.1 and 0.245 at 0.2 (PT), 0.152 at 0.2 and 0.153 at 0.15 (JAX): 'between 0.1 and 0.2' holds; the error range is about 0.15 to 0.25. Right side unchanged: within about 0.1 of the bias from sigma = 0.5 on (largest gap 0.11, JAX seed 2 at 0.5). Re-read the numbers after the capture. Also DEN-8/DEN-9 (heading 'Choosing the Noise Level'; the 1/sigma^2 growth across a low-dimensional set) are prose items. -->
 
 ### Blindness to Mode Weights
 
@@ -650,7 +635,7 @@ for sigma in (0.0, 0.5, 1.0):
     print(f'sigma = {sigma}: Fisher divergence {fisher:.1e}, KL {kl:.3f} nats')
 ```
 
-Between the clean mixtures the Fisher divergence is about $10^{-5}$, far below the errors of the trained networks, none of which fell below $0.1$, while the KL divergence is $0.07$ nats. A score model trained near the clean data cannot learn the weights: a field with the wrong weights fits as well as one with the right weights, far within any network's error (:numref:`sec_mdl-fisher-divergence`, :exref:`ex_mdl-divergences-distances-score-blindness`). Noise makes the weights visible. As $\sigma$ grows, the components spread into the valleys (:numref:`fig_diffusion-noise-ladder`), the responsibilities differ where $p_\sigma$ has mass, and the Fisher divergence rises to about $10^{-3}$ at $\sigma = 0.5$ and $10^{-2}$ at $\sigma = 1$, while the KL divergence barely changes.
+Between the clean mixtures the Fisher divergence is about $10^{-5}$, far below the errors of the trained networks, none of which fell below $0.1$, while the KL divergence is $0.07$ nats. A score model trained near the clean data cannot learn the weights: a field with the wrong weights fits as well as one with the right weights, far within any network's error (:numref:`sec_mdl-fisher-divergence`; Exercise :exref:`ex_mdl-divergences-distances-score-blindness` of :numref:`sec_mdl-scores`). Noise makes the weights visible. As $\sigma$ grows, the components spread into the valleys (:numref:`fig_diffusion-noise-ladder`), the responsibilities differ where $p_\sigma$ has mass, and the Fisher divergence rises to about $10^{-3}$ at $\sigma = 0.5$ and $10^{-2}$ at $\sigma = 1$, while the KL divergence barely changes.
 
 ![The running example blurred by Gaussian noise of growing standard deviation $\sigma$; crosses mark the component means. As $\sigma$ grows, the valleys between the modes fill in, until at $\sigma = 2$ a single broad bump remains.](../img/mdl-diffusion-noise-ladder.svg)
 :label:`fig_diffusion-noise-ladder`
@@ -691,38 +676,46 @@ def langevin(score_fn, x, step, num_steps, key):  #@save
 
 We run three chains of 2,000 steps at $h = 0.05$ from the same 2,000 starting points, drawn from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$ so that each mode receives about a third of them: with the exact score of $p$, with the exact score of $p_\sigma$ at $\sigma = 1$, and with the network trained at $\sigma = 0.3$, used as if it were the score of $p$.
 
+<!-- WRITER: now four chains: the last two use the networks of seeds 1 and 2 from the sweep, both trained at sigma = 0.3. The cell also prints the data's summary. The panels are drawn at size 2.5 to fit four. -->
+
 ```{.python .input #denoising-sampling-with-a-score-1}
 %%tab pytorch
 torch.manual_seed(2)
 x_init = 3 * torch.randn(2000, 2)
 fields = {'exact score of p': mix.score,
           'exact score at sigma = 1': lambda x: mix.score(x, 1, 1),
-          'trained at sigma = 0.3': scores[0.3]}
+          'trained at 0.3, seed 1': scores[0.3, 1],
+          'trained at 0.3, seed 2': scores[0.3, 2]}
 samples = [d2l.langevin(f, x_init, 0.05, 2000) for f in fields.values()]
 print('start:', mix.summary(x_init))
+print('data: ', mix.summary(data))
 for name, x in zip(fields, samples):
     print(f'{name}:', mix.summary(x))
-d2l.scatter_panels(samples, list(fields), data=data);
+d2l.scatter_panels(samples, list(fields), data=data, size=2.5);
 ```
 
 ```{.python .input #denoising-sampling-with-a-score-1}
 %%tab jax
-key, *keys = jax.random.split(jax.random.key(2), 4)
-x_init = 3 * jax.random.normal(key, (2000, 2))
 fields = {'exact score of p': mix.score,
           'exact score at sigma = 1': lambda x: mix.score(x, 1, 1),
-          'trained at sigma = 0.3': scores[0.3]}
+          'trained at 0.3, seed 1': scores[0.3, 1],
+          'trained at 0.3, seed 2': scores[0.3, 2]}
+key, *keys = jax.random.split(jax.random.key(2), len(fields) + 1)
+x_init = 3 * jax.random.normal(key, (2000, 2))
 samples = [d2l.langevin(f, x_init, 0.05, 2000, k)
            for f, k in zip(fields.values(), keys)]
 print('start:', mix.summary(x_init))
+print('data: ', mix.summary(data))
 for name, x in zip(fields, samples):
     print(f'{name}:', mix.summary(x))
-d2l.scatter_panels(samples, list(fields), data=data);
+d2l.scatter_panels(samples, list(fields), data=data, size=2.5);
 ```
 
-The exact score of $p$ sends every chain to a mode with the right spread, but the weights stay those of the start, about a third each, because the chains do not cross the valleys: for the two lower modes the valley lies about $12$ nats above the modes in $-\log p$, and the expected crossing time is of the order of a million steps at this step size (:exref:`ex_denoising-escaping-mode`). The sampler is right within each mode and wrong about the weights, the same weights to which the Fisher divergence is blind.
+The exact score of $p$ sends every chain to a mode with the right spread, but the weights stay those of the start, about a third each, because the chains do not cross the valleys: for the two lower modes the valley lies about $12$ nats above the modes in $-\log p$, and the expected crossing time is of the order of a million steps at this step size (Exercise :exref:`ex_denoising-escaping-mode`). The sampler is right within each mode and wrong about the weights, the same weights to which the Fisher divergence is blind.
 
 The exact score of $p_\sigma$ at $\sigma = 1$ crosses freely, because the noise has filled the valleys, and its weights land within about $0.02$ of $0.5$, $0.3$ and $0.2$. But its samples have twice the spread, and about $40\%$ of them fail the three-standard-deviation test: they are samples of $p_\sigma$.
+
+<!-- WRITER: the Langevin cell now prints the data's summary beside the chains' (DEN-11) and runs two trained networks, seeds 1 and 2 of the sweep (DEN-10). Dev run: data spread 0.488 (PT) / 0.491 (JAX); the sigma = 1 chain 0.986 / 0.958, so the printed spread doubles while the variance of p_sigma is five times that of p (1.25 against 0.25 per coordinate); strays 42% / 41%. Trained chains, weights from starts of about a third each: PT seed 1 [0.486, 0.244, 0.270], seed 2 [0.493, 0.292, 0.215]; JAX seed 1 [0.394, 0.295, 0.312], seed 2 [0.382, 0.392, 0.227]; strays 4.6-6.3%. So the chains do cross (the exact score of p never does in 2,000 steps), the weights move away from the start's, and where they land differs between networks: in PyTorch both runs land near the true weights, in JAX one run sends mass to the middle mode. Do not write 'toward 0.5' or 'staying near the start's'; say the crossings come from the learned field's errors in the valleys and that a run whose weights match the truth is not evidence that the weights were learned. -->
 
 The trained network does neither job reliably. Its weights depend on the seed, staying near the start's in some runs and drifting in others, because nothing in a field fitted near the data fixes them. Several percent of its samples stray, against one to two percent for the exact score, because the field is wrong in the valleys where no training pair landed. Langevin steps survive in modern samplers only as a correction applied at each of many noise levels.
 
@@ -823,7 +816,7 @@ D_{\mathrm{lin}}(\tilde{\mathbf{x}}) = \boldsymbol\mu + \boldsymbol\Sigma (\bold
 $$
 :eqlabel:`eq_diffusion-wiener`
 
-This *Wiener filter* keeps directions in which the images vary more than the noise and suppresses the others; it is the best affine denoiser for any distribution with this mean and covariance (:exref:`ex_denoising-linear-denoiser`). The cell estimates $\boldsymbol\mu$ and $\boldsymbol\Sigma$ from the 60,000 training images and compares the per-pixel squared error of the noisy input, the Wiener filter and the network on 1,000 test images, shown in that order below the clean ones.
+This *Wiener filter* keeps directions in which the images vary more than the noise and suppresses the others; it is the best affine denoiser for any distribution with this mean and covariance (Exercise :exref:`ex_denoising-linear-denoiser`). The cell estimates $\boldsymbol\mu$ and $\boldsymbol\Sigma$ from the 60,000 training images and compares the per-pixel squared error of the noisy input, the Wiener filter and the network on 1,000 test images, shown in that order below the clean ones.
 
 ```{.python .input #denoising-denoising-images-2}
 %%tab pytorch
@@ -955,7 +948,7 @@ One noise level cannot both describe the data and sample them. At a small level 
        noise levels of the sweep. Where does the single-component formula
        stop describing the mixture, and why?
     1. What does the rule of the first part imply for data concentrated near
-       a low-dimensional set, as in :exref:`ex_denoising-data-on-a-line`?
+       a low-dimensional set, as in Exercise :exref:`ex_denoising-data-on-a-line`?
        Which value of $s$ applies to the directions orthogonal to the set?
    :exlabel:`ex_denoising-smoothed-score-bias`
 1. **Laplace noise.** ● Vincent's theorem holds for any differentiable noise
@@ -966,7 +959,7 @@ One noise level cannot both describe the data and sample them. At a small level 
        $\frac{d}{d\tilde{x}} \log k(\tilde{x} - x_0)$ for $\tilde{x} \neq x_0$.
        Express the minimizer of the corresponding denoising objective in
        terms of the posterior probability $P(x_0 < \tilde{x} \mid \tilde{x})$.
-    1. For the two-point data of :exref:`ex_denoising-regression-identity`,
+    1. For the two-point data of Exercise :exref:`ex_denoising-regression-identity`,
        compute the score of the perturbed density and the posterior mean
        $\mathbb{E}[x_0 \mid \tilde{x}]$ for $|\tilde{x}| < 1$ and for
        $\tilde{x} > 1$. Show that no relation
@@ -1310,21 +1303,6 @@ $$p_{\boldsymbol\theta}(\mathbf{x}) = \frac{e^{-E_{\boldsymbol\theta}(\mathbf{x}
 ::: {.col .fig}
 ![](../img/mdl-diffusion-energy-density.svg)
 :::
-:::
-:::
-
-::: {.slide title="Importance Sampling Loses Z by d = 16 and Misses It by d = 32"}
-[Evidence]{.kicker}
-
-@!denoising-the-normalizer-never-appears
-
-- $E = \|\mathbf{x} - \mathbf{1}\|^2/2$, proposal $\mathcal{N}(\mathbf{0},
-  \mathbf{I})$, $10^5$ draws; relative error $\sqrt{(e^d - 1)/n}$.
-- $d = 16$: predicted error about nine, only tens of draws carry weight.
-  $d = 32$: several times to tenfold short.
-
-::: {.d2l-note .warn}
-An image has hundreds of thousands of coordinates.
 :::
 :::
 

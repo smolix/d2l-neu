@@ -453,11 +453,19 @@ cnn = compact_cnn()  # A fresh CNN
 
 ```{.python .input #vision-transformer-a-convolutional-baseline-at-the-same-budget-2}
 %%tab pytorch, jax
+def final_accuracy(model, data):
+    """Validation accuracy after the ten epochs of the first run."""
+    trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
+    trainer.board.display = False  # No progress plot for the repeats
+    trainer.fit(model, data)
+    return trainer.history['val_acc'][-1]
+
 trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 trainer.fit(cnn, data)
 cnn_history = trainer.history
 cnn_params, cnn_acc = d2l.num_params(cnn), cnn_history['val_acc'][-1]
 cnn_runs = [cnn_acc, final_accuracy(compact_cnn(), data)]  # Run-to-run range
+learned_runs = [vit_acc, final_accuracy(vit(), data)]  # A second ViT run
 print(f'CNN: {cnn_params/1e6:.1f}M parameters, validation accuracy',
       ', '.join(f'{a:.3f}' for a in cnn_runs))
 print(f'ViT: {vit_params/1e6:.1f}M parameters, validation accuracy',

@@ -248,7 +248,7 @@ SHARED_DATA_NOTEBOOKS = {
     # notebooks do not race, because d2l.download writes atomically
     # (mkstemp, then os.replace).
     "chapter_transformers/gpt.ipynb",
-    "chapter_transformers/kv-cache-reduction.ipynb",
+    "chapter_transformers/kv-cache.ipynb",
     "chapter_transformers/scaling-laws.ipynb",
     # chapter_recurrent-modern/lstm.md trains its text models on WikiText-103
     # bytes, the data of gpt.md; linear-recurrence.md, mamba.md and hybrids.md

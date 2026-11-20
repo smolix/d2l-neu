@@ -649,7 +649,7 @@ def fig_backbone():
 
 def fig_conditioning():
     """Concatenation at the input, modulation a(c) h + b(c) of a feature map,
-    and the projection critic's compatibility head e_c^T phi(x) + psi_0(x).
+    and the projection head e_c^T phi(x) + psi_0(x) of the critic.
     Condition-derived quantities are purple (the embedding role)."""
     E_FC, E_EC = "#F2EDF7", PURPLE
     fig, ax = plt.subplots(figsize=(14.6, 4.6))
@@ -692,7 +692,7 @@ def fig_conditioning():
     xh, xm, xp = x0 + 0.65, x0 + 2.25, x0 + 3.3
     xo = xp + 1.35
     _fmap(ax, xh, 1.75, 16)
-    ax.text(xh, 1.75 - a16 / 2 - 0.12, r"$\phi$", ha="center", va="top",
+    ax.text(xh, 1.75 - a16 / 2 - 0.12, r"$h$", ha="center", va="top",
             fontsize=15, color="black")
     circ(xm, 1.75, r"$\times$")
     circ(xp, 1.75, r"$+$")
@@ -712,12 +712,12 @@ def fig_conditioning():
                  (xx, 1.75 + 0.27), color=E_EC, lw=1.5, mut=12)
         ax.text(xx + 0.22 * sgn, 2.55, lab, ha=ha, va="center", fontsize=15,
                 color="black")
-    ax.text((xh + xo) / 2, yf, r"$a(c) \odot \phi + b(c)$", ha="center",
+    ax.text((xh + xo) / 2, yf, r"$a(c) \odot h + b(c)$", ha="center",
             va="center", fontsize=16, color="black")
 
-    # ---------------- (c) compatibility head ----------------
+    # ---------------- (c) projection head ----------------
     x0 = 10.85
-    ax.text(x0 + 0.2, ytop, "compatibility head", ha="left", va="bottom",
+    ax.text(x0 + 0.2, ytop, "projection head", ha="left", va="bottom",
             fontsize=14, color="black")
     a32 = _side(32)
     xx_, xphi, xh2 = x0 + 0.6, x0 + 1.95, x0 + 3.65

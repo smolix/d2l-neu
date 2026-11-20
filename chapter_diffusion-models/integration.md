@@ -29,7 +29,7 @@ from d2l import jax as d2l
 torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
 ```
 
-<!-- WRITER: the cell below rebuilds what this section needs from the previous one: the mixture, the two paths, the exact predictor `oracle`, and the two networks of the previous section, retrained with the same recipe (no checkpoints pass between notebooks). -->
+<!-- WRITER: the cell below rebuilds what this section needs from the previous one: the mixture, the two paths, the exact predictor `oracle`, and the two networks of the previous section, retrained with the same recipe but 20,000 steps instead of 40,000 (no checkpoints pass between notebooks). Say so, and why: at 20,000 steps each network already sits on its loss floor of :numref:`sec_diffusion-gaussian-paths`; the cell prints the training loss over the last 1,000 steps (dev runs, two seeds per framework: velocity 4.905-4.919 against the floor 4.917 +- 0.007; noise 0.536-0.541 against 0.539 +- 0.0011; the loss average over 1,000 minibatches carries noise of about 0.01 for the velocity). Development runs measured the excess over the floor directly: 0.0017 (velocity) and 0.0003 (noise) at 20,000 steps against 0.0010 and 0.0002 at 40,000, all far below the floors' standard errors, and every sampling number below unchanged within its standard error; do not quote these dev numbers, only the printed losses. Cost: about 70 s for both trainings in PyTorch on one GPU, about 20 s in JAX (include compilation); quote a combined 'about a minute or two'. -->
 
 ```{.python .input #integration-sampling-by-integration-3}
 %%tab pytorch
@@ -44,15 +44,18 @@ def oracle(x, alpha, sigma):
             for v in (alpha, sigma))
     return x0_hat, (x - a * x0_hat) / s
 
-num_steps = 40_000
+num_steps = 20_000
 torch.manual_seed(1)
-net_v, ema_v, _ = d2l.train_regression(
+_, ema_v, losses_v = d2l.train_regression(
     d2l.TimeMLP(256, 3).to(device), d2l.regression_loss(linear, 'velocity'),
     lambda: mix.sample(512), num_steps, cosine=True, ema_half_life=700)
 torch.manual_seed(2)
-net_eps, ema_eps, _ = d2l.train_regression(
+_, ema_eps, losses_eps = d2l.train_regression(
     d2l.TimeMLP(256, 3).to(device), d2l.regression_loss(vp, 'eps'),
     lambda: mix.sample(512), num_steps, cosine=True, ema_half_life=700)
+print(f'loss over the last 1,000 steps: velocity '
+      f'{losses_v[-1000:].mean().item():.3f}, '
+      f'noise {losses_eps[-1000:].mean().item():.3f}')
 ```
 
 ```{.python .input #integration-sampling-by-integration-3}
@@ -67,15 +70,18 @@ def oracle(x, alpha, sigma):
     a, s = (jnp.reshape(jnp.asarray(v), (-1, 1)) for v in (alpha, sigma))
     return x0_hat, (x - a * x0_hat) / s
 
-num_steps = 40_000
-net_v, ema_v, _ = d2l.train_regression(
+num_steps = 20_000
+_, ema_v, losses_v = d2l.train_regression(
     d2l.TimeMLP(256, 3, rngs=nnx.Rngs(1)),
     d2l.regression_loss(linear, 'velocity'), lambda k: mix.sample(k, 512),
     num_steps, jax.random.key(1), cosine=True, ema_half_life=700)
-net_eps, ema_eps, _ = d2l.train_regression(
+_, ema_eps, losses_eps = d2l.train_regression(
     d2l.TimeMLP(256, 3, rngs=nnx.Rngs(2)), d2l.regression_loss(vp, 'eps'),
     lambda k: mix.sample(k, 512), num_steps, jax.random.key(2), cosine=True,
     ema_half_life=700)
+print(f'loss over the last 1,000 steps: velocity '
+      f'{float(losses_v[-1000:].mean()):.3f}, '
+      f'noise {float(losses_eps[-1000:].mean()):.3f}')
 ```
 
 The marginal velocity carries the noise distribution to the data distribution, so we sample by following it, along deterministic trajectories or with fresh noise at every step.
@@ -97,18 +103,25 @@ Any distribution is a mixture of point masses, with straight conditional paths a
 
 Euler's method (:numref:`sec_mdl-euler-runge-kutta`) follows the curve in $K$ straight steps, $\mathbf{x} \leftarrow \mathbf{x} - \mathbf{u}_t(\mathbf{x})/K$ at $t = 1, 1 - 1/K, \ldots, 1/K$. We run it with the learned field from $2{,}000$ standard Gaussian starts.
 
+<!-- WRITER: the cell below no longer runs the learned field. It is the small computable case (structure 17.3): Euler on the exact field `mix.velocity` from five fixed starts, (0, 0), (+-1.5, 0), (0, +-1.5), with 1, 10 and 100 steps, printing the end points. The reader can predict the first column (every start on the mean). The 2,000 Gaussian starts and the learned field now begin in the next cell. Measured (both tabs, same numbers): 1 step: all five at (-0.50, -0.70); 10 steps: (-1.91, -1.27), (2.73, -1.34), (-2.92, -1.38), (-0.11, 2.59), (-1.98, -2.06); 100 steps: (-1.98, -1.30), (2.90, -1.36), (-3.06, -1.40), (-0.09, 2.77), (-2.05, -2.17). Ten steps end within about 0.2 of the hundred-step end, a hundred within about 0.02 of a thousand (1,000 steps: (-1.99, -1.30), (2.92, -1.36), (-3.08, -1.40), (-0.09, 2.79), (-2.05, -2.19)); each start ends in the mode on its side, the origin in the heaviest mode at (-2.5, -1.5); the ends are points inside the modes, not their centers: the flow is a deterministic map from noise to data. This is the home of the one-step-mean picture (17.8 cites it). -->
+
 ```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method}
 %%tab pytorch
 @torch.no_grad()
 def euler(net, x, steps):
     """Euler's method on dx/dt = net(x, t), from t = 1 down to t = 0."""
     for k in range(steps, 0, -1):
-        x = x - net(x, torch.full((len(x),), k / steps, device=x.device)) / steps
+        t = torch.full((len(x),), k / steps, device=x.device)
+        x = x - net(x, t) / steps
     return x
 
-torch.manual_seed(3)
-x_T = torch.randn(2000, 2, device=device)
-print(mix.summary(euler(ema_v, x_T, 100)))
+starts = torch.tensor([[0.0, 0.0], [1.5, 0.0], [-1.5, 0.0], [0.0, 1.5],
+                       [0.0, -1.5]], device=device)
+ends = torch.stack([starts] + [euler(mix.velocity, starts, steps)
+                               for steps in (1, 10, 100)], 1)
+print('start          1 step          10 steps        100 steps')
+for row in ends.tolist():
+    print('  '.join(f'({x:5.2f}, {y:5.2f})' for x, y in row))
 ```
 
 ```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method}
@@ -116,13 +129,20 @@ print(mix.summary(euler(ema_v, x_T, 100)))
 def euler(net, x, steps):
     """Euler's method on dx/dt = net(x, t), from t = 1 down to t = 0."""
     for k in range(steps, 0, -1):
-        x = x - net(x, jnp.full((len(x),), k / steps)) / steps
+        t = jnp.full((len(x),), k / steps)
+        x = x - net(x, t) / steps
     return x
 
-key, k_T = jax.random.split(key)
-x_T = jax.random.normal(k_T, (2000, 2))
-print(mix.summary(euler(ema_v, x_T, 100)))
+starts = jnp.array([[0.0, 0.0], [1.5, 0.0], [-1.5, 0.0], [0.0, 1.5],
+                    [0.0, -1.5]])
+ends = jnp.stack([starts] + [euler(mix.velocity, starts, steps)
+                             for steps in (1, 10, 100)], 1)
+print('start          1 step          10 steps        100 steps')
+for row in ends.tolist():
+    print('  '.join(f'({x:5.2f}, {y:5.2f})' for x, y in row))
 ```
+
+<!-- WRITER: "A hundred steps put the samples on the three modes" described the old learned-field run; read the exact-field table instead (note above). -->
 
 A hundred steps put the samples on the three modes. The library's sampler takes the same steps in other coordinates: along every Gaussian path, $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ and the noise-to-signal ratio $\bar\sigma = \sigma_t/\alpha_t$ obey $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$ :cite:`Karras.Aittala.Aila.ea.2022`, a form that serves every path and predictor.
 
@@ -137,7 +157,7 @@ def sigma_bars(self, steps):
     return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
 
 def pred_bar(pred, xb, r):  #@save
-    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise."""
+    """pred at x = alpha x_bar, sigma_bar = r; at r = inf, x_bar is noise."""
     if math.isinf(r):
         return pred(xb, 0.0, 1.0)
     a = 1 / math.sqrt(1 + r ** 2)
@@ -165,7 +185,7 @@ def sigma_bars(self, steps):
         return s / a
 
 def pred_bar(pred, xb, r):  #@save
-    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise."""
+    """pred at x = alpha x_bar, sigma_bar = r; at r = inf, x_bar is noise."""
     finite = jnp.isfinite(r)
     a = jnp.where(finite, 1 / jnp.sqrt(1 + r ** 2), 0.0)
     return pred(xb * jnp.where(finite, a, 1.0), a,
@@ -237,8 +257,12 @@ def make_pred(net, path, kind):  #@save
 
 How many steps does the flow need? We integrate the wrapped velocity network from the same starts with one, ten and a hundred steps, and check that a hundred steps of `ode_sample` reproduce the loop above.
 
+<!-- WRITER: the cell now draws its own 2,000 starts (the previous cell has five fixed starts), and the check of `ode_sample` against the `euler` loop runs on the exact field (`oracle` against `mix.velocity`), so it tests the sampler's change of coordinates alone, without the rounding of the network's tf32 matmuls (on the network the difference varied between 1e-4 and 2e-3 from run to run). Printed: about 1e-4 (dev). Rewrite 'and the library's sampler agrees with the loop to within 10^-3' as: on the exact field the two agree to float32 rounding, about 10^-4, as the algebra says (on the linear path the Euler step in x-bar/sigma-bar coordinates is the Euler step in x). Dev numbers with the 20k model: one step mean about (-0.50, -0.71), std 0.03-0.06; 10 steps strays 0.024-0.032, weights about 0.52/0.27-0.29/0.19-0.21; 100 steps strays 0.012-0.014, weights within 0.012 of 0.5/0.3/0.2. -->
+
 ```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method-1}
 %%tab pytorch
+torch.manual_seed(3)
+x_T = torch.randn(2000, 2, device=device)
 pred_v = make_pred(ema_v, linear, 'velocity')
 samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
            for steps in (1, 10, 100)]
@@ -246,14 +270,17 @@ print('one step: mean', [round(v, 3) for v in samples[0].mean(0).tolist()],
       'std', [round(v, 3) for v in samples[0].std(0).tolist()])
 for steps, x in zip((10, 100), samples[1:]):
     print(f'{steps} steps:', mix.summary(x))
-print('largest difference to the loop:',
-      (samples[2] - euler(ema_v, x_T, 100)).abs().max().item())
+exact = (ode_sample(oracle, x_T, linear.sigma_bars(100))
+         - euler(mix.velocity, x_T, 100)).abs().max().item()
+print(f'ode_sample against the loop on the exact field: {exact:.0e}')
 d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'],
                    data=mix.sample(2000));
 ```
 
 ```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method-1}
 %%tab jax
+key, k_T = jax.random.split(key)
+x_T = jax.random.normal(k_T, (2000, 2))
 pred_v = make_pred(ema_v, linear, 'velocity')
 samples = [ode_sample(pred_v, x_T, linear.sigma_bars(steps))
            for steps in (1, 10, 100)]
@@ -261,8 +288,9 @@ print('one step: mean', [round(v, 3) for v in samples[0].mean(0).tolist()],
       'std', [round(v, 3) for v in samples[0].std(0).tolist()])
 for steps, x in zip((10, 100), samples[1:]):
     print(f'{steps} steps:', mix.summary(x))
-print('largest difference to the loop:',
-      float(jnp.abs(samples[2] - euler(ema_v, x_T, 100)).max()))
+exact = float(jnp.abs(ode_sample(oracle, x_T, linear.sigma_bars(100))
+                      - euler(mix.velocity, x_T, 100)).max())
+print(f'ode_sample against the loop on the exact field: {exact:.0e}')
 key, k_data = jax.random.split(key)
 d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'],
                    data=mix.sample(k_data, 2000));
@@ -337,6 +365,8 @@ def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):  #@save
 
 We run two hundred steps of the chain with the noise model, from the same $2{,}000$ starts as the flow.
 
+<!-- WRITER: at 2,000 points a stray share of about 1% carries a standard error of about 0.002 and the weights about 0.011; direct runs printed strays 0.005-0.013 and weights within 0.013 of 0.5/0.3/0.2. Keep the reading qualitative ('the right weights up to the sampling error of 2,000 points, about one percent strays'); the paired 20,000-point comparison below is where the numbers are. -->
+
 ```{.python .input #gaussian-paths-the-reverse-sde-and-the-ancestral-chain-1}
 %%tab pytorch
 pred_eps = make_pred(ema_eps, vp, 'eps')
@@ -354,34 +384,52 @@ The chain recovers the three modes with the right weights, up to the sampling er
 
 ## Samples from Both Samplers
 
+<!-- WRITER: the cell below now gives network and oracle the same starts AND the same injected noise (ancestral), so each network-oracle difference is the network's alone; it prints the standard error of each weight (0.0035, 0.0032, 0.0028) and, per sampler, the share of starts that network and oracle send to different modes. Direct runs of this notebook (both tabs) and dev runs (two seeds per framework) agree: network and oracle end in different modes for 0.2-0.5% of the starts (Euler 0.2-0.5%, ancestral 0.4-0.5%); every network weight lies within 0.004 of the oracle's; strays: network 1.2-1.3%, oracle 1.1-1.2%, data 1.0-1.1%. New lesson the run carries: the network changes the mode of fewer than one sample in two hundred; the remaining differences from 0.5/0.3/0.2 are the sampling error of 20,000 points, which the oracle shares. -->
+
 A sampler accumulates the errors of all its steps. We draw $20{,}000$ samples with two hundred ancestral steps of the noise model and a hundred Euler steps of the velocity model, and repeat both with the oracle in place of the network. At this sample size a mode weight carries a standard error of about $0.0035$.
 
 ```{.python .input #gaussian-paths-samples-from-both-samplers}
 %%tab pytorch
 torch.manual_seed(5)
 x_T = torch.randn(20_000, 2, device=device)
-runs = {'data': mix.sample(20_000),
-        'ancestral, network': ancestral_sample(pred_eps, x_T, vp, 200),
-        'ancestral, oracle': ancestral_sample(oracle, x_T, vp, 200),
-        'Euler, network': ode_sample(pred_v, x_T, linear.sigma_bars(100)),
-        'Euler, oracle': ode_sample(oracle, x_T, linear.sigma_bars(100))}
+runs = {'data': mix.sample(20_000)}
+for name, pred in (('network', pred_eps), ('oracle', oracle)):
+    torch.manual_seed(6)                       # the same noise for both
+    runs[f'ancestral, {name}'] = ancestral_sample(pred, x_T, vp, 200)
+for name, pred in (('network', pred_v), ('oracle', oracle)):
+    runs[f'Euler, {name}'] = ode_sample(pred, x_T, linear.sigma_bars(100))
 for name, x in runs.items():
     print(f'{name:>18}:', mix.summary(x))
+print('standard error of a weight:', [round(math.sqrt(w * (1 - w) / 20_000), 4)
+                                      for w in mix.weights.tolist()])
+mode = lambda x: ((x[:, None] - mix.means) ** 2).sum(-1).argmin(1)
+for s in ('ancestral', 'Euler'):
+    moved = mode(runs[s + ', network']) != mode(runs[s + ', oracle'])
+    print(f'{s}: network and oracle end in different modes for '
+          f'{moved.float().mean().item():.2%} of the starts')
 d2l.scatter_panels([runs[k][:2000] for k in runs],
                    list(runs), lim=4.5, size=2.4);
 ```
 
 ```{.python .input #gaussian-paths-samples-from-both-samplers}
 %%tab jax
-key, k_T, k_data, k_net, k_oracle = jax.random.split(key, 5)
+key, k_T, k_data, k_noise = jax.random.split(key, 4)
 x_T = jax.random.normal(k_T, (20_000, 2))
-runs = {'data': mix.sample(k_data, 20_000),
-        'ancestral, network': ancestral_sample(pred_eps, x_T, vp, 200, k_net),
-        'ancestral, oracle': ancestral_sample(oracle, x_T, vp, 200, k_oracle),
-        'Euler, network': ode_sample(pred_v, x_T, linear.sigma_bars(100)),
-        'Euler, oracle': ode_sample(oracle, x_T, linear.sigma_bars(100))}
+runs = {'data': mix.sample(k_data, 20_000)}
+for name, pred in (('network', pred_eps), ('oracle', oracle)):
+    runs[f'ancestral, {name}'] = ancestral_sample(  # the same noise for both
+        pred, x_T, vp, 200, k_noise)
+for name, pred in (('network', pred_v), ('oracle', oracle)):
+    runs[f'Euler, {name}'] = ode_sample(pred, x_T, linear.sigma_bars(100))
 for name, x in runs.items():
     print(f'{name:>18}:', mix.summary(x))
+print('standard error of a weight:', [round(math.sqrt(w * (1 - w) / 20_000), 4)
+                                      for w in mix.weights.tolist()])
+mode = lambda x: ((x[:, None] - mix.means) ** 2).sum(-1).argmin(1)
+for s in ('ancestral', 'Euler'):
+    moved = mode(runs[s + ', network']) != mode(runs[s + ', oracle'])
+    print(f'{s}: network and oracle end in different modes for '
+          f'{float(moved.mean()):.2%} of the starts')
 d2l.scatter_panels([runs[k][:2000] for k in runs],
                    list(runs), lim=4.5, size=2.4);
 ```
@@ -470,7 +518,16 @@ modes.
 :::
 :::
 
-::: {.slide title="One Step Collapses to the Mean; a Hundred Recover the Modes"}
+::: {.slide title="On the Exact Field, One Step Lands on the Mean and Ten Reach the Modes"}
+@!gaussian-paths-the-probability-flow-ode-and-euler-s-method
+
+- Five starts, Euler on the mixture's exact velocity, 1, 10, 100 steps.
+- One step: every start at the data mean $(-0.5, -0.7)$, where no data lie.
+- Ten steps: within about 0.2 of the hundred-step end, inside the mode on
+  the start's side; the origin goes to the heaviest mode.
+:::
+
+::: {.slide title="The Learned Field Needs About a Hundred Euler Steps"}
 @!gaussian-paths-the-probability-flow-ode-and-euler-s-method-1
 
 One step: the mean $(-0.5, -0.7)$, almost no spread. Ten steps: weights
@@ -515,8 +572,9 @@ $$d\mathbf{x} = \big[\mathbf{f} - g^2 \nabla \log p_t(\mathbf{x})\big]\, dt + g\
 
 ::: {.d2l-note}
 200 ancestral steps (noise model), 100 Euler steps (velocity model), and the
-same with the exact posterior mean. Weights within about 0.01, strays about
-1% everywhere, as in the data.
+same with the exact posterior mean, from the same starts and the same noise.
+Network and oracle send fewer than 1 start in 200 to different modes; strays
+about 1% everywhere, as in the data.
 :::
 :::
 

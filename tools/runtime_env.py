@@ -73,11 +73,11 @@ GPU_ONLY_NOTEBOOKS = {
     # scheduler run.
     "chapter_diffusion-models/denoising.ipynb",
     # gaussian-paths trains two 2-D models for 40k steps; integration retrains
-    # them for its samplers (no checkpoints pass between notebooks). Direct
-    # runs on one shared, busy RTX 4090 (2026-11-20): gaussian-paths 267 s
-    # PyTorch / 210 s JAX, of which training 75-90 s / 50-95 s per model;
-    # integration 192 s / 243 s. ~8-9 min per model on 8 CPU cores
-    # (2026-11-06).
+    # them for 20k steps for its samplers (no checkpoints pass between
+    # notebooks). Direct runs on one shared, busy RTX 4090 (2026-11-20):
+    # gaussian-paths 267 s PyTorch / 210 s JAX, of which training 75-90 s /
+    # 50-95 s per model; integration 80 s / 56 s. ~8-9 min per 40k-step model
+    # on 8 CPU cores (2026-11-06).
     "chapter_diffusion-models/gaussian-paths.ipynb",
     "chapter_diffusion-models/integration.ipynb",
     "chapter_diffusion-models/image-diffusion.ipynb",

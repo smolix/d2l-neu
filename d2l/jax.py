@@ -4212,7 +4212,7 @@ def regression_loss(path, kind):
     return loss_fn
 
 def pred_bar(pred, xb, r):
-    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise.
+    """pred at x = alpha x_bar, sigma_bar = r; at r = inf, x_bar is noise.
 
     Defined in :numref:`sec_diffusion-integration`"""
     finite = jnp.isfinite(r)

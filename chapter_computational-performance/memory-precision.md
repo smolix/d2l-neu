@@ -993,9 +993,11 @@ for m in (1, 4):
                for p, g in zip(model.parameters(), full)) < 1e-2
     f = lambda: accumulate(model, X, m)
     times = 1000 * np.array([d2l.Benchmark(f).time for _ in range(5)])  # ms
+    busy = sum(d2l.kernel_times(f).values())  # Device ms per step
     print(f'{m} x {4096 // m:4d} tokens: peak {peak / 2**30:.2f} GiB above '
           f'the weights, {np.median(times):.0f} ms per step '
-          f'({times.min():.0f} to {times.max():.0f})')
+          f'({times.min():.0f} to {times.max():.0f}), device busy '
+          f'{busy:.0f} ms')
 ```
 
 ```{.python .input #memory-precision-accumulated-step}
@@ -1023,9 +1025,11 @@ for m in (1, 4):
         accumulate(params, rest, X, m), full))) < 1e-2
     f = lambda: accumulate(params, rest, X, m)
     times = 1000 * np.array([d2l.Benchmark(f).time for _ in range(5)])  # ms
+    busy = sum(d2l.kernel_times(f).values())  # Device ms per step
     print(f'{m} x {4096 // m:4d} tokens: peak {peak / 2**30:.2f} GiB above '
           f'the weights, {np.median(times):.0f} ms per step '
-          f'({times.min():.0f} to {times.max():.0f})')
+          f'({times.min():.0f} to {times.max():.0f}), device busy '
+          f'{busy:.0f} ms')
 ```
 
 The peak falls to about half, and the gradients that persist across the

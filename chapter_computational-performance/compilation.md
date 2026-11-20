@@ -636,11 +636,15 @@ replayed = torch.compile(deep, mode='reduce-overhead')  # As a CUDA graph
 with torch.no_grad():  # Inference: every call is a complete step
     fused(x)
     replayed(x)  # Compiles and warms up; the next call records
+    times = {}
     for desc, f in (('eager', deep), ('compiled', fused),
                     ('reduce-overhead', replayed)):
-        t = d2l.Benchmark(lambda: f(x), repeats=100).time
+        t = times[desc] = d2l.Benchmark(lambda: f(x), repeats=100).time
         print(f'{desc}: {1000 * t:.2f} ms/call, '
               f'{1e6 * t / 120:.1f} µs per operation')
+    # The kernels of the compiled stack, against the time of a call
+    d2l.show_profile(d2l.kernel_times(lambda: fused(x)),
+                     1000 * times['compiled'], rows=3)
 ```
 
 ```{.python .input #compilation-the-overhead-regime-capture-and-replay}
@@ -658,10 +662,14 @@ params = init_deep(d2l.get_key())
 x = jax.random.normal(d2l.get_key(), (64, 256))
 jitted = jax.jit(deep)
 jitted(params, x)  # First call compiles
+times = {}
 for desc, f in (('eager', deep), ('jit', jitted)):
-    t = d2l.Benchmark(lambda: f(params, x), repeats=100).time
+    t = times[desc] = d2l.Benchmark(lambda: f(params, x), repeats=100).time
     print(f'{desc}: {1000 * t:.2f} ms/call, '
           f'{1e6 * t / 120:.1f} µs per operation')
+# The kernels of the jitted stack, against the time of a call
+d2l.show_profile(d2l.kernel_times(lambda: jitted(params, x)),
+                 1000 * times['jit'], rows=3)
 ```
 
 Eager, an operation takes the host time $h$. Replayed, the stack takes

@@ -483,7 +483,7 @@ copy for a 256 MiB array to find the ceiling of the host link.
 
 ```{.python .input #hardware-the-cpu-s-role}
 %%tab pytorch
-x_pageable = torch.randn(64 * 1024 * 1024)  # 256 MB on the host
+x_pageable = torch.randn(64 * 1024 * 1024)  # 256 MiB on the host
 x_pinned = x_pageable.pin_memory()
 gpu = d2l.try_gpu()
 for desc, src in [('pageable', x_pageable), ('pinned', x_pinned)]:
@@ -494,7 +494,7 @@ for desc, src in [('pageable', x_pageable), ('pinned', x_pinned)]:
 ```{.python .input #hardware-the-cpu-s-role}
 %%tab jax
 x_pageable = np.random.default_rng().standard_normal(
-    64 * 1024 * 1024, dtype=np.float32)  # 256 MB on the host
+    64 * 1024 * 1024, dtype=np.float32)  # 256 MiB on the host
 gpu = jax.devices()[0]
 on_gpu = jax.sharding.SingleDeviceSharding(gpu, memory_kind='device')
 x_pinned = jax.device_put(x_pageable, jax.sharding.SingleDeviceSharding(

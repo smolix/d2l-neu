@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:fa8c988b9416f44ac598e9fa19246c494fc5f24281a36f423ddcde820b902c0b",
+    "d2l_lib_fingerprint": "sha256:ea2cee75368ebb53e1746364f634f74efe6919f900d79a10558338747e594742",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,12 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tracing g for shape (8,)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "tracing g for shape (16,)\n"
+          "text": "tracing g for shape (8,)\ntracing g for shape (16,)\n"
         },
         {
           "type": "stream",
@@ -52,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.65 ms/call, 699 GB/s\ncompiled: 0.16 ms/call, 804 GB/s\n"
+          "text": "eager: 1.66 ms/call, 693 GB/s\ncompiled: 0.16 ms/call, 805 GB/s\n"
         }
       ]
     },
@@ -68,18 +63,18 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 5.6 s\neager: 24.66 ms, compiled: 0.25 ms\nbreak-even: about 200 steps\n"
+          "text": "first call: 5.5 s\neager: 25.26 ms, compiled: 0.26 ms\nbreak-even: about 200 steps\n"
         }
       ]
     },
     "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:62d57298a43ae6a6bf8fa65d3c681bbaac7b363cec16e4b012fae09bcc3ba289",
+      "code_fingerprint": "sha256:7de59ba62878724f3ce0e3ab05e96f4b20c467b518dd04cc1e32b1999768ab76",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 6.48 ms/call, 54.0 µs per operation\njit: 0.25 ms/call, 2.1 µs per operation\n"
+          "text": "eager: 7.70 ms/call, 64.2 µs per operation\njit: 0.26 ms/call, 2.2 µs per operation\nwall clock 0.26 ms per step, device busy 0.23 ms (87%), matrix products 73%\n  0.17 ms  72%  gemm_fusion_dot_1\n  0.06 ms  26%  loop_reduce_fusion_1\n  0.00 ms   1%  gemm_fusion_dot\n"
         }
       ]
     }

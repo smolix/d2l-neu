@@ -30,13 +30,11 @@ GPT on two GPUs, and finally run the step and compare.
 %%tab jax
 # XLA reads its flags once, when JAX starts, so this cell runs before the
 # imports. The latency-hiding scheduler orders the step with its memory in
-# view. Without it, XLA starts every reduce-scatter of the sharded step as
-# soon as its gradient exists and finishes them all at the end, so the full
-# gradients of all blocks are alive at once: about 8 GB of temporaries per
-# GPU instead of about 5, more than JAX may allocate by default. The
-# notebook also runs with NCCL_LOCAL_REGISTER=0: NCCL's buffer registration
-# fails on GPUs without peer-to-peer access, such as ours, and would print a
-# warning at every collective.
+# view; without it, the sharded step needs more memory than JAX may
+# allocate by default (see the note on stage 2). On GPUs without
+# peer-to-peer access, such as ours, set NCCL_LOCAL_REGISTER=0 in the
+# environment before starting: NCCL's buffer registration fails there and
+# prints a warning at every collective.
 import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_enable_latency_hiding_scheduler=true')
@@ -85,27 +83,27 @@ memory of one GPU.
 %%tab pytorch
 config = dict(vocab_size=50257, num_hiddens=2048, num_heads=16,
               num_blks=36, pos='learned')
-k = 2                       # GPUs
-assert d2l.num_gpus() >= k, 'This section needs two GPUs'
+k = 2                       # GPUs, from the all-gather below on
 with torch.device('meta'):  # Shapes and dtypes only, no data
     N = d2l.num_params(d2l.GPT(**config))
-total = torch.cuda.mem_get_info()[1]
-print(f'{N / 1e9:.2f} billion parameters, 16N = {16 * N / 2**30:.1f} GiB; '
-      f'one GPU holds {total / 2**30:.1f} GiB')
+print(f'{N / 1e9:.2f} billion parameters, 16N = {16 * N / 2**30:.1f} GiB')
+if d2l.num_gpus():
+    total = torch.cuda.mem_get_info()[1]
+    print(f'one GPU holds {total / 2**30:.1f} GiB')
 ```
 
 ```{.python .input #sharding-sharding-the-training-state-2}
 %%tab jax
 config = dict(vocab_size=50257, num_hiddens=2048, num_heads=16,
               num_blks=36, pos='learned')
-k = 2                       # GPUs
-assert jax.device_count() >= k, 'This section needs two GPUs'
+k = 2                       # GPUs, from the all-gather below on
 key = d2l.get_key()
 N = d2l.num_params(nnx.eval_shape(lambda: d2l.GPT(**config,
                                                   rngs=nnx.Rngs(key))))
-limit = jax.devices()[0].memory_stats()['bytes_limit']
-print(f'{N / 1e9:.2f} billion parameters, 16N = {16 * N / 2**30:.1f} GiB; '
-      f'JAX may allocate {limit / 2**30:.1f} GiB of one GPU')
+print(f'{N / 1e9:.2f} billion parameters, 16N = {16 * N / 2**30:.1f} GiB')
+if jax.default_backend() == 'gpu':
+    limit = jax.devices()[0].memory_stats()['bytes_limit']
+    print(f'JAX may allocate {limit / 2**30:.1f} GiB of one GPU')
 ```
 
 At 28.6 GiB the state alone is several GiB larger than one GPU offers, and
@@ -274,12 +272,14 @@ t = d2l.Benchmark(lambda: dist.all_gather_into_tensor(y, x), repeats=10).time
 print(json.dumps({'beta_link': (k - 1) / k * y.nbytes / t}))  # Sent per GPU
 dist.destroy_process_group()
 '''
+assert d2l.num_gpus() >= k, 'The cells from here on need two GPUs'
 beta_link = min(r['beta_link'] for r in d2l.torchrun(GATHER, k))
 print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on {k} GPUs')
 ```
 
 ```{.python .input #sharding-memory-and-communication-1}
 %%tab jax
+assert jax.device_count() >= k, 'The cells from here on need two GPUs'
 mesh = jax.make_mesh((k,), ('data',), devices=jax.devices()[:k],
                      axis_types=(jax.sharding.AxisType.Auto,))
 x = jnp.zeros(2**26, device=NamedSharding(mesh, P('data')))  # 256 MiB
@@ -307,12 +307,12 @@ The cell evaluates the three predictions.
 %%tab pytorch, jax
 b, T = 2, 1024        # Sequences of T tokens per GPU and step
 S = 4 * N             # Bytes of the fp32 weights, and of the gradients
-peak = {'tf32': 82.6e12, 'bf16': 165.2e12}  # FLOP/s of the RTX 4090
+peak_flops = 82.6e12  # tf32 FLOP/s of the RTX 4090
 print(f'state per GPU, 16N/k: {16 * N / k / 2**30:.1f} GiB')
 print(f'communication, 3(k-1)S/(k beta_link): '
       f'{3 * (k - 1) / k * S / beta_link:.1f} s per step')
 print(f'arithmetic at the peak, 8N bT/P: '
-      f'{8 * N * b * T / peak["tf32"]:.2f} s per step')
+      f'{8 * N * b * T / peak_flops:.2f} s per step')
 ```
 
 At best, overlap hides the 0.4 s of arithmetic under the 5 s of
@@ -439,7 +439,9 @@ def fsdp_sharding(x):
     return NamedSharding(mesh, P())
 
 @nnx.jit
-def create(key):  # Passed in: XLA would fold a constant key while compiling
+def create(key):
+    # The key is an argument: XLA would fold a constant key into the program,
+    # together with every weight drawn from it, as large constants
     model = d2l.GPT(**config, rngs=nnx.Rngs(key))
     opt = nnx.Optimizer(model, optax.adam(1e-4), wrt=nnx.Param)
     state = nnx.state((model, opt))

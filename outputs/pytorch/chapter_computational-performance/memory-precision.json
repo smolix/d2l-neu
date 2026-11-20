@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c3a9a131a75afccc76b031db6e0737cf74651720ee4f7fa98d6baf5eb98c857c",
+    "d2l_lib_fingerprint": "sha256:c4e8797bf47acb159080a6b669f46b58d1c949a0bda4e030b2f6e9ba68dfc5e2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -75,7 +75,7 @@
           "mime": "image/svg+xml",
           "asset": "memory-precision/memory-precision-measuring-memory-2-1.svg",
           "bytes": 35156,
-          "sha256": "sha256:320b39728313d01a85a9ba2c7f36f53f53c3262e3a9c0c8212cff4c1a0428192"
+          "sha256": "sha256:975b62269ef761953a38d6558945f57bacca214e93986f10c3809caee86ee5bc"
         }
       ]
     },
@@ -113,12 +113,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 23.16 ms,  48 TFLOP/s\n"
+          "text": "fp32: 23.35 ms,  47 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 14.93 ms,  74 TFLOP/s\nbf16:  9.62 ms, 114 TFLOP/s\n"
+          "text": "tf32: 15.22 ms,  72 TFLOP/s\nbf16:  9.68 ms, 114 TFLOP/s\n"
         }
       ]
     },
@@ -150,18 +150,18 @@
       ]
     },
     "memory-precision-accumulated-step": {
-      "code_fingerprint": "sha256:04b49c7257a6157fa014134d8bb720561e7d0bd8d0d4625ff316970aba4bf630",
+      "code_fingerprint": "sha256:aabe2d71c551e1e49a30dcf3e9135f3573695716ad50af33ab2f8a4ed57608fe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 x 4096 tokens: peak 3.53 GiB above the weights, 82 ms per step (82 to 83)\n"
+          "text": "1 x 4096 tokens: peak 3.53 GiB above the weights, 83 ms per step (83 to 83), device busy 83 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4 x 1024 tokens: peak 1.92 GiB above the weights, 99 ms per step (99 to 100)\n"
+          "text": "4 x 1024 tokens: peak 1.92 GiB above the weights, 99 ms per step (99 to 99), device busy 99 ms\n"
         }
       ]
     }

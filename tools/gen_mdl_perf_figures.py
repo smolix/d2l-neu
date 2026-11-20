@@ -626,9 +626,10 @@ def fig_compile_pipelines():
 
 def fig_fusion():
     """Memory traffic of the elementwise chain
-    0.5 x (1 + tanh(0.8 (x + 0.04 x^3))) on a 64 MB array.  Eager execution
-    runs eight kernels that read ten arrays and write eight (18 x 64 MB);
-    the fused kernel reads x once and writes the result once (2 x 64 MB)."""
+    0.5 x (1 + tanh(0.8 (x + 0.04 x^3))) on a 61 MiB array (4000 x 4000
+    fp32).  Eager execution runs eight kernels that read ten arrays and write
+    eight (18 x 61 MiB); the fused kernel reads x once and writes the result
+    once (2 x 61 MiB)."""
     fig, ax = plt.subplots(figsize=(10.4, 4.9))
     ops = [("mul", 1), ("pow", 1), ("mul", 1), ("add", 2), ("mul", 1),
            ("tanh", 1), ("add", 1), ("mul", 2)]
@@ -658,8 +659,8 @@ def fig_fusion():
         for xr in reads:
             link(xr, ym + 0.17, yk - bh / 2 - 0.04, READ)
         link(x + 0.24, yk - bh / 2 - 0.04, ym + 0.17, WRITE)
-    ax.text(5.45, ym - 0.52, "8 kernels: 10 reads + 8 writes of 64 MB "
-            "= 1.15 GB moved", ha="center", va="center", fontsize=12.5,
+    ax.text(5.45, ym - 0.52, "8 kernels: 10 reads + 8 writes of 61 MiB "
+            "= 1.07 GiB moved", ha="center", va="center", fontsize=12.5,
             color="black")
 
     # Fused: one kernel, intermediates stay in registers.
@@ -672,8 +673,8 @@ def fig_fusion():
          GREEN, fc=fl.T.GREEN.tint, fontsize=12.5)
     link(xs[0] - 0.24, ym + 0.17, yk - bh / 2 - 0.04, READ)
     link(xs[-1] + 0.24, yk - bh / 2 - 0.04, ym + 0.17, WRITE)
-    ax.text(5.45, ym - 0.52, "1 kernel: 1 read + 1 write of 64 MB "
-            "= 128 MB moved", ha="center", va="center", fontsize=12.5,
+    ax.text(5.45, ym - 0.52, "1 kernel: 1 read + 1 write of 61 MiB "
+            "= 122 MiB moved", ha="center", va="center", fontsize=12.5,
             color="black")
     # Key for the arrow colours.
     ax.text(0.85, 3.55, "read", ha="right", va="center", fontsize=12.5,
@@ -860,8 +861,8 @@ def fig_data_parallel():
 
 
 def fig_one_launcher():
-    """One Python thread drives two GPUs: it issues device 0's kernels, then
-    device 1's, so each GPU idles while the thread serves the other, and a
+    """One host drives two GPUs: it issues device 0's kernels, then
+    device 1's, so each GPU idles while the host serves the other, and a
     host-bound step takes about 2 h_step plus the exchange (13.5)."""
     fig, ax = plt.subplots(figsize=(9.0, 3.9))
 
@@ -870,7 +871,7 @@ def fig_one_launcher():
     X = 1.3            # the exchange: alpha + S / beta_link
     T = 2 * H + X
 
-    for y, name in ((y_cpu, "Python\n(CPU)"), (y_g0, "GPU 0"),
+    for y, name in ((y_cpu, "host\n(CPU)"), (y_g0, "GPU 0"),
                     (y_g1, "GPU 1")):
         ax.plot([0.0, T + 0.2], [y - h / 2 - 0.06, y - h / 2 - 0.06],
                 color=LIGHT, lw=0.8, zorder=1)

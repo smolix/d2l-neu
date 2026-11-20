@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:bca8200ddcbfa350c704b6f0994afbe05a19c86d9cbc0bfedd0b2440cd2174ac",
+    "d2l_lib_fingerprint": "sha256:2077318596b41bf1813a1bb5b52556066a263b07f566c5c23ddfe411f7c8a54f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -100,17 +100,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 21.51 ms,  51 TFLOP/s\n"
+          "text": "fp32: 21.92 ms,  50 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf32: 14.31 ms,  77 TFLOP/s\n"
+          "text": "tf32: 14.40 ms,  76 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16:  8.36 ms, 132 TFLOP/s\n"
+          "text": "bf16:  8.34 ms, 132 TFLOP/s\n"
         }
       ]
     },
@@ -142,18 +142,18 @@
       ]
     },
     "memory-precision-accumulated-step": {
-      "code_fingerprint": "sha256:a2794fbe88d3b7cd1207bcf68c5f50f104834f575ba0a82998b8f4b3ed717d41",
+      "code_fingerprint": "sha256:cee2ecc3a9ccf78abaf1bfca15067c983ba5d25b716e256d5d674bc3596f7b1d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 x 4096 tokens: peak 3.09 GiB above the weights, 80 ms per step (80 to 80)\n"
+          "text": "1 x 4096 tokens: peak 3.09 GiB above the weights, 80 ms per step (80 to 80), device busy 80 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4 x 1024 tokens: peak 1.43 GiB above the weights, 89 ms per step (89 to 89)\n"
+          "text": "4 x 1024 tokens: peak 1.43 GiB above the weights, 90 ms per step (90 to 90), device busy 90 ms\n"
         }
       ]
     }

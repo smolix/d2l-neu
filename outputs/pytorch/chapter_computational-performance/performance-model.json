@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.063 s   read once: 0.040 s\n"
+          "text": "read every step: 0.063 s   read once: 0.039 s\n"
         }
       ]
     },
@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "NVIDIA GeForce RTX 4090: ridge point 164 FLOP/byte\nB =    1: bound 0.53 ms (memory ), measured 0.57 ms,   0.9 TFLOP/s\nB =    4: bound 0.53 ms (memory ), measured 0.57 ms,   3.7 TFLOP/s\nB =   16: bound 0.53 ms (memory ), measured 0.57 ms,  15.0 TFLOP/s\nB =   64: bound 0.54 ms (memory ), measured 0.58 ms,  58.9 TFLOP/s\nB =  128: bound 0.54 ms (memory ), measured 0.64 ms, 106.8 TFLOP/s\nB =  256: bound 0.83 ms (compute), measured 0.90 ms, 152.4 TFLOP/s\nB = 1024: bound 3.33 ms (compute), measured 3.35 ms, 163.9 TFLOP/s\n"
+          "text": "NVIDIA GeForce RTX 4090: ridge point 164 FLOP/byte\nB =    1: bound 0.53 ms (memory ), measured 0.57 ms,   0.9 TFLOP/s\nB =    4: bound 0.53 ms (memory ), measured 0.57 ms,   3.7 TFLOP/s\nB =   16: bound 0.53 ms (memory ), measured 0.57 ms,  14.9 TFLOP/s\nB =   64: bound 0.54 ms (memory ), measured 0.58 ms,  58.9 TFLOP/s\nB =  128: bound 0.54 ms (memory ), measured 0.64 ms, 106.8 TFLOP/s\nB =  256: bound 0.83 ms (compute), measured 0.91 ms, 151.5 TFLOP/s\nB = 1024: bound 3.33 ms (compute), measured 3.36 ms, 163.5 TFLOP/s\n"
         }
       ]
     },
@@ -78,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chain: 5.26 ms/call\n"
+          "text": "chain: 5.25 ms/call\n"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-matrix-products-across-sizes-1-1.svg",
-          "bytes": 32583,
-          "sha256": "sha256:d9f00a1519767cab85cc112a0581386cfc2ffc6878f3d371564df294b60564ed"
+          "bytes": 32578,
+          "sha256": "sha256:077b6e9ede613a0a0966c1152fe8157a50d690cf0bfef071df810c5ffcff47b5"
         }
       ]
     },
@@ -107,7 +107,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  256:    12.8 us per call,   2.6 TFLOP/s\nn =  512:    13.6 us per call,  19.8 TFLOP/s\nn = 1024:    16.1 us per call, 133.2 TFLOP/s\nn = 2048:   103.4 us per call, 166.1 TFLOP/s\nn = 4096:   875.6 us per call, 157.0 TFLOP/s\nn = 8192:  6628.1 us per call, 165.9 TFLOP/s\n"
+          "text": "n =  256:    12.7 us per call,   2.6 TFLOP/s\nn =  512:    12.5 us per call,  21.4 TFLOP/s\nn = 1024:    16.1 us per call, 133.6 TFLOP/s\nn = 2048:   103.2 us per call, 166.4 TFLOP/s\nn = 4096:   876.4 us per call, 156.8 TFLOP/s\nn = 8192:  6770.4 us per call, 162.4 TFLOP/s\n"
         }
       ]
     },
@@ -118,7 +118,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "256 x 256 product :  25.7 us per call, device busy  3.2 us\nx + 1 on 256 x 256:  12.7 us per call, device busy  1.0 us\n"
+          "text": "256 x 256 product :  16.3 us per call, device busy  3.2 us\nx + 1 on 256 x 256:   9.3 us per call, device busy  1.0 us\n"
         }
       ]
     },
@@ -144,7 +144,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 2.70 ms per step, device busy 2.66 ms (99%), matrix products 80%\n  0.85 ms  32%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_n\n  0.83 ms  31%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  0.42 ms  16%  multi_tensor_apply_kernel<TensorListMetadata<2>, Bin\n  0.40 ms  15%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_n\n  0.06 ms   2%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n  0.02 ms   1%  vectorized_elementwise_kernel<4, launch_clamp_scalar\n"
+          "text": "wall clock 2.68 ms per step, device busy 2.66 ms (99%), matrix products 80%\n  0.85 ms  32%  Kernel2<cutlass_80_tensorop_s1688gemm_256x128_16x3_n\n  0.83 ms  31%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  0.42 ms  16%  multi_tensor_apply_kernel<TensorListMetadata<2>, Bin\n  0.40 ms  15%  Kernel2<cutlass_80_tensorop_s1688gemm_128x256_16x3_n\n  0.06 ms   2%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n  0.02 ms   1%  vectorized_elementwise_kernel<4, launch_clamp_scalar\n"
         }
       ]
     }

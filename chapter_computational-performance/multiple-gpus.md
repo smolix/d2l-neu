@@ -639,7 +639,7 @@ def allreduce_time(n, devices, calls):
 
 alpha = allreduce_time(1, devices, calls=100)  # Our star: two copies in turn
 n = 2**26                                # 64M floats ...
-S = 4 * n                                # ... 256 MB per device
+S = 4 * n                                # ... 268 MB (256 MiB) per device
 beta_link = S / (allreduce_time(n, devices, calls=3) - alpha)
 print(f'alpha = {1e6 * alpha:.0f} us, '
       f'beta_link = {beta_link / 1e9:.1f} GB/s')
@@ -654,7 +654,7 @@ def allreduce_time(n, mesh, calls):
 
 alpha = allreduce_time(1, meshes[1], calls=100)  # XLA's psum, run by NCCL
 n = 2**26                                # 64M floats ...
-S = 4 * n                                # ... 256 MB per device
+S = 4 * n                                # ... 268 MB (256 MiB) per device
 beta_link = S / (allreduce_time(n, meshes[1], calls=3) - alpha)
 print(f'alpha = {1e6 * alpha:.0f} us, '
       f'beta_link = {beta_link / 1e9:.1f} GB/s')
@@ -1073,13 +1073,13 @@ for b in (256, 4096, 32768):                # Examples per GPU
     batch = torch.randint(len(data.train), (2 * b,))  # With replacement
     steps = [lambda k=k: train_step(params[:k], train_data[:k],
                                     batch[:k * b], 0.2) for k in (1, 2)]
-    times = []                              # Three timed windows per k
-    for k in (1, 2):
-        params = [broadcast(base, d) for d in devices]  # Equal replicas
-        times.append([d2l.Benchmark(
-            steps[k - 1], warmup=10 if w == 0 else 0,
-            repeats=max(20, 2**16 // b), devices=devices[:k]).time
-            for w in range(3)])
+    times = [[], []]                        # Three timed windows per k,
+    for w in range(3):                      # taken in turn for k = 1 and 2
+        for k in (1, 2):
+            params = [broadcast(base, d) for d in devices]  # Equal replicas
+            times[k - 1].append(d2l.Benchmark(
+                steps[k - 1], warmup=10 if w == 0 else 0,
+                repeats=max(20, 2**18 // b), devices=devices[:k]).time)
     t = np.median(times, axis=1)
     t_dev = sum(d2l.kernel_times(steps[0]).values()) / 1e3
     if b == 256:              # The host sets this step's time (profile above)
@@ -1103,9 +1103,12 @@ for b in (256, 4096, 32768):                # Examples per GPU
         params = broadcast(base, mesh)
         i = jax.device_put(batch[:k * b], NamedSharding(mesh, P('data')))
         steps.append(partial(train_step, params, data_k, i, 0.2, mesh))
-    times = [[d2l.Benchmark(step, warmup=10 if w == 0 else 0,
-                            repeats=max(20, 2**16 // b)).time
-              for w in range(3)] for step in steps]  # Three windows per k
+    times = [[], []]                        # Three timed windows per k,
+    for w in range(3):                      # taken in turn for k = 1 and 2
+        for j, step in enumerate(steps):
+            times[j].append(d2l.Benchmark(
+                step, warmup=10 if w == 0 else 0,
+                repeats=max(20, 2**18 // b)).time)
     t = np.median(times, axis=1)
     t_dev = sum(d2l.kernel_times(steps[0]).values()) / 1e3
     if b == 256:              # The host sets this step's time (profile above)

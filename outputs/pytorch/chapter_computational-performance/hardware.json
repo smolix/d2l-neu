@@ -20,23 +20,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "identity:   4.6 ms, 0.94 TB/s at 16 B/element\n"
+          "text": "identity:   4.8 ms, 0.90 TB/s at 16 B/element\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "random  :  37.3 ms, 0.32 TB/s at 44 B/element\nrandom / identity: 8.1x\n"
+          "text": "random  :  37.4 ms, 0.32 TB/s at 44 B/element\nrandom / identity: 7.8x\n"
         }
       ]
     },
     "hardware-the-cpu-s-role": {
-      "code_fingerprint": "sha256:4c853ef234583ae977332a343c5e9beb84bab941c7d73753a8d3ef6e90089e96",
+      "code_fingerprint": "sha256:6eb6c5accc8eb78eacb66082623d2cb9791f9d0c53ec48f1ac5ded8359d446cc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 14.8 GB/s\npinned: 24.3 GB/s\n"
+          "text": "pageable: 14.2 GB/s\npinned: 23.1 GB/s\n"
         }
       ]
     }

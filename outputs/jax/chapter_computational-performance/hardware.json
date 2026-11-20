@@ -30,13 +30,13 @@
       ]
     },
     "hardware-the-cpu-s-role": {
-      "code_fingerprint": "sha256:44eff7321dcf9845cab8eba67ffebc79ba7ab56d14601bcc80889eef11a8ef02",
+      "code_fingerprint": "sha256:84030ab723c2097200d4300ac6d3873e666a4fe5372b986ed71a69d3e96f402b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable: 5.1 GB/s\npinned: 23.9 GB/s\n"
+          "text": "pageable: 8.3 GB/s\npinned: 23.3 GB/s\n"
         }
       ]
     }

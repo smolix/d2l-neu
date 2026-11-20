@@ -506,9 +506,15 @@ that the network implies at each of them, given the label. We can predict
 both ends of the second row. At $t = 0$ the input is the image. At $t = 1$
 it is pure noise, and a network trained with squared error predicts the
 posterior mean (:numref:`sec_diffusion-denoising`) given what is left, the
-label: the average training image of the class. The printed rows give the
-root-mean-square distance per pixel of each $\hat{\mathbf{x}}_0$ from the
-image and from that average.
+label: the average training image of the class. The first two printed rows
+give the root-mean-square distance per pixel of each $\hat{\mathbf{x}}_0$
+from the image and from that average.
+
+The third row turns to the sampler itself. It starts from fresh noise and
+takes the 50 Euler steps of `euler50` toward an ankle boot, and at
+$t = 1, 0.8, \ldots, 0.2$ it records the clean image that the network
+implies along the way. The column $t = 0$ holds the finished sample, and the
+last printed row gives the distance of each prediction from it.
 
 ```{.python .input #image-diffusion-one-trainer-4}
 %%tab pytorch
@@ -564,10 +570,16 @@ of the average ankle boot and more than 0.4 from the image. In between, the
 network sees better than our eyes. At $t = 0.6$ the boot is hard to find in
 the noise, yet the prediction still has its outline and lies less than 0.2
 from this boot against more than 0.4 from the average one. Detail
-disappears first and the outline last. A sampler visits the levels in the
-opposite order, from $t = 1$ down, so we expect a sample to settle its
-outline early and its texture late; Exercise
-:exref:`ex_image-diffusion-guidance-interval` puts this expectation to use.
+disappears first and the outline last.
+
+A sampler visits the levels in the opposite order, and the third row shows
+what that order does. At $t = 1$ the prediction is the blurred average
+boot, 0.3 to 0.4 away from the sample it will become. By $t = 0.6$ it lies within 0.12 to 0.14 of that sample and
+already has its final outline, while the image it is computed from is
+still six parts noise to four parts boot. The remaining steps sharpen the
+edges and add shading and texture. A sample settles its shape early and its
+surface late; Exercise :exref:`ex_image-diffusion-guidance-interval` puts
+this to use.
 
 ### The Moving Average
 
@@ -705,9 +717,10 @@ fd_ema, agree_ema = fd_and_agreement(cnn, generate(ema), f_test[:5000])
 print(f'5,000 samples: FD {fd_ema:.2f}, class agreement {agree_ema:.3f}')
 ```
 
-The samples score an FD of about 0.8. Is that good? The number depends on
-the feature network and on the number of images, and by itself it says
-nothing; the next subsection supplies a scale.
+The samples score an FD of about 0.8, and the feature network assigns
+nearly 90% of them to the class they asked for. Is an FD of 0.8 good? The
+number depends on the feature network and on the number of images, and by
+itself it says nothing; the next subsection supplies a scale.
 
 ### A Reference Value for the Fréchet Distance
 :label:`subsec_diffusion-fd-reference`
@@ -805,8 +818,8 @@ evaluations, and from here on we measure with fifty Euler steps.
 
 ### Bayes' Rule on Scores
 
-Our conditional samples already belong to their classes, most of the time.
-Some do not: shirts, pullovers and coats were hard to tell apart. The slider
+Our conditional samples already belong to their classes nearly 90% of the
+time. Some do not: shirts, pullovers and coats were hard to tell apart. The slider
 of the introduction asks for more, a sampler that follows the label more
 closely than the trained network does. To see where such a sampler could
 come from, let us look at what a label does to a score. Bayes' rule at time
@@ -918,7 +931,7 @@ conditional one.
 :label:`fig_diffusion-guidance`
 
 To see what $\gamma$ does to the samples, we generate 5,000 samples at each
-of six scales from the same noise. The FD measures how well they cover the
+of seven scales from the same noise. The FD measures how well they cover the
 distribution of real images, the class agreement how well they follow their
 labels.
 
@@ -933,18 +946,22 @@ for gamma, imgs in samples.items():
 ```
 
 At $\gamma = 0$ the label plays no part, and the agreement is at chance,
-10%. The FD rises to about 2.8, more than three times its value with the
-label. At $\gamma = 1$ nearly 90% of the samples are assigned their
-requested class, close to the 93% that the classifier achieves on real test
-images.
+10%. The FD rises to 2.7 to 2.8, more than three times its value with the
+label. The row $\gamma = 1$ repeats the first measurement, as it should with
+the same noise: nearly 90% agreement, close to the 93% that the classifier
+achieves on real test images.
 
 Two causes could raise the FD at $\gamma = 0$: the sampler may produce the
 classes in the wrong proportions, or it may produce images of each class
-that differ from real ones. The next cell gives two clues. It prints the
-mean term $\|\boldsymbol{\mu}_p - \boldsymbol{\mu}_q\|^2$ of
-:eqref:`eq_diffusion-fd` beside the whole FD, and the share of each class
-among the unguided samples beside its share among the test images, both as
-the feature network classifies them.
+that differ from real ones. The next cell gives two clues and then a
+measurement. It prints the mean term
+$\|\boldsymbol{\mu}_p - \boldsymbol{\mu}_q\|^2$ of :eqref:`eq_diffusion-fd`
+beside the whole FD, and the share of each class among the unguided samples
+beside its share among the test images, both as the feature network
+classifies them. Then it imposes the first cause alone on real images: it
+draws 5,000 real training images, with their true labels, in the class
+proportions of the unguided samples, and scores them beside 5,000 real
+images in the even mix.
 
 ```{.python .input #image-diffusion-classifier-free-guidance-3}
 %%tab pytorch
@@ -989,17 +1006,22 @@ for name, f in (('uniform', f_real[:5000]), ('gamma 0', f_real[mixed])):
 ```
 
 The class mix is off. Without the label the sampler makes too many
-pullovers and too few sandals: pullovers are about 14% of its samples and
+pullovers and too few sandals: pullovers are 13 to 14% of its samples and
 sandals 6 to 7%, where each class makes up 10% of the test images. From
 $\gamma = 1$ to $\gamma = 0$ the mean term grows by about 0.5 and the rest of
-the FD by about 1.5. The split does not cleanly separate the two causes,
-since a wrong mix of classes changes the spread of the features as well as
-their mean, and images that look wrong move the mean too. Still, a mix that
-is off by at most four or five points per class is a small change to ten
-nearly equal classes, and we expect it to explain only a small part of a
-rise of about 2; the rest lies in how the unguided images look. Exercise
-:exref:`ex_image-diffusion-what-fd-sees` measures what such a mix costs on
-real images.
+the FD by about 1.4 to 1.5. This split alone does not separate the two
+causes, since a wrong mix of classes changes the spread of the features as
+well as their mean, and images that look wrong move the mean too.
+
+The last two lines measure the first cause by itself. Real images in the unguided mix score
+0.4 to 0.5 against 0.19 for real images in the even mix: the wrong mix by
+itself raises the FD by 0.2 to 0.3, several times the spread of the
+reference value, yet only a tenth to a sixth of the rise of about 1.9 that
+we are trying to explain. Its mean term grows by 0.1 to 0.2, against about
+0.5 for the samples. A mix that is off by at most about four points per
+class is a small change to ten nearly equal classes, and the FD treats it as
+one.
+The rest of the rise lies in how the unguided images look.
 
 We dwell on a scale that nobody samples at because the unconditional
 prediction is the base from which guidance extrapolates. Written as
@@ -1010,11 +1032,14 @@ $1 - \gamma$. A plausible cause of those errors is that the unconditional
 prediction must cover all ten classes and was trained on only one example
 in ten; Exercise :exref:`ex_image-diffusion-label-dropout` tests it.
 
-Guidance beyond $\gamma = 1$ trades variety for typicality, and the trade
-starts at once. At $\gamma = 1.5$ the agreement rises to 96% while the FD
-rises by about 0.3, several times the spread of the reference value
-(:numref:`subsec_diffusion-fd-reference`); among the scales we tried,
-$\gamma = 1$ has the lowest FD. At $\gamma = 2$ the agreement reaches 98%
+Guidance beyond $\gamma = 1$ trades variety for typicality, but the first
+step comes free. At $\gamma = 1.25$ the agreement rises by about five
+points, to 93 to 94%, while the FD stays where it was at $\gamma = 1$,
+within the spread of the reference value
+(:numref:`subsec_diffusion-fd-reference`); the two scales tie for the
+lowest FD. Then the trade starts. At $\gamma = 1.5$ the agreement rises to
+96% while the FD rises by about 0.3, several times that spread. At
+$\gamma = 2$ the agreement reaches 98%
 and the FD is about two and a half times its value at $\gamma = 1$. At
 $\gamma = 3$ and $4$ the agreement exceeds 99%, more than the feature
 network achieves on real images, while the FD climbs to about 4 and then to
@@ -1035,13 +1060,15 @@ each image is a clear member of its class, but the four samples of a column
 resemble one another more than at $\gamma = 1$, with stronger contrast and
 fewer unusual shapes.
 
-If every scale we tried above 1 makes the FD worse, why does every
+If every scale from 1.5 up makes the FD worse, why does every
 text-to-image system guide, and by far more than 1.5? Part of the answer
-lies between the scales we tried. :citet:`Ho.Salimans.2022` found on ImageNet that a small
-weight, $w$ of 0.1 to 0.3 (our $\gamma$ of 1.1 to 1.3), gives a lower FID
-than no guidance, and that larger weights trade FID for typicality as ours
-do. Our grid jumps from 1 to 1.5 and cannot see such a dip. The larger part
-of the answer is that the FD and a person looking at a picture disagree
+lies at mild scales. :citet:`Ho.Salimans.2022` found on ImageNet that a
+small weight, $w$ of 0.1 to 0.3 (our $\gamma$ of 1.1 to 1.3), gives a lower
+FID than no guidance, and that larger weights trade FID for typicality as
+ours do. Our FD at 5,000 images shows no such dip at $\gamma = 1.25$, but
+no cost either: mild guidance buys agreement for nothing that the FD can
+see at this sample size. The larger part of the answer is that the FD and
+a person looking at a picture disagree
 about what a good sample is. The FD judges a set and rewards variety; the
 person judges one image and rewards a clear, typical instance of what was
 asked for. The slider lets the user choose between the two, and the FD
@@ -1141,9 +1168,12 @@ number that means something only beside the distance between real sets of
 the same size, and our samples lie about five times above it. Label dropout
 makes one network both conditional and unconditional, and classifier-free
 guidance extrapolates from the second through the first by a scale
-$\gamma$, trading variety, measured by the FD, for typicality, measured by
-class agreement; practice guides hard because a person judges one picture
-and the FD judges the set. The guided sampler follows the scores of tilted
+$\gamma$, so every error of the unconditional prediction enters every guided
+sample. Without the label our FD more than triples, and the wrong class mix
+explains only a tenth to a sixth of the rise. A mild scale raises the class
+agreement at no cost the FD can see; larger ones trade variety, measured by
+the FD, for typicality, measured by class agreement. Practice guides hard
+because a person judges one picture and the FD judges the set. The guided sampler follows the scores of tilted
 densities that, at high noise, curve more sharply than any noised
 distribution can; on Gaussian classes it ends far narrower than even the
 tilt.
@@ -1196,19 +1226,20 @@ tilt.
    the share of one class at the expense of the others; (iii) blur every
    image with a Gaussian of standard deviation $0.5$ or $1$ pixel; (iv) add
    Gaussian noise of standard deviation $0.05$; (v) replace 10% of the
-   images by the mean image of their class; (vi) resample the set, with
-   replacement, to the class shares that the unguided samples of this
-   section had.
+   images by the mean image of their class.
     1. Tabulate the FD and the KID of each set next to the reference value
        at 5,000 images. Which of these corruptions gives an FD of about 0.8,
        the score of our model?
     1. Is the FD more sensitive to a missing class or to a blur? What does
        the answer imply for reading the FD of a model as a measure of its
        variety or of the quality of its images?
-    1. Compare the FD of set (vi) with the rise of about 2 from
-       $\gamma = 1$ to $\gamma = 0$. How much of that rise can the class mix
-       explain, and how does the FD of (vi) split between its mean term and
-       the rest?
+    1. The text found that the class mix of the unguided samples, at most
+       about four points off per class, raises the FD of real images by
+       only 0.2 to 0.3. Raise the share of one class in (ii) step by step
+       from 10% to 50%. How far must the mix drift before it alone costs
+       the rise of about 1.9 from $\gamma = 1$ to $\gamma = 0$, if it does
+       at all, and how does its FD split between the mean term and the
+       rest?
    :exlabel:`ex_image-diffusion-what-fd-sees`
 1. [code] **A clean classifier as guide.** ● Classifier guidance needs a
    classifier of noisy images, but one can also steer with a classifier of
@@ -1246,8 +1277,8 @@ tilt.
        for most of the rise in FD? Relate the answer to the time at which a
        sample commits to its class, Exercise
        :exref:`ex_gaussian-paths-commitment-time` of
-       :numref:`sec_diffusion-integration`, and to the strip of predictions
-       in this section. Exercise
+       :numref:`sec_diffusion-integration`, and to the third row of the
+       strip of predictions in this section. Exercise
        :exref:`ex_mdl-score-matching-diffusion-flow-guidance-levels` of
        :numref:`sec_mdl-score-matching-diffusion-flow` asks the same question
        for two classes in one dimension.
@@ -1530,12 +1561,12 @@ the average training image of ankle boots, a blurred boot.
 ::: {.slide title="The Prediction Keeps the Outline Long after the Noise Hides It"}
 @!image-diffusion-one-trainer-4
 
-- Top: one test image noised to $t = 0, 0.2, \ldots, 1$. Bottom: the clean
-  image the network implies, given the label.
-- At $t = 1$: within 0.07 of the class average. Detail goes first, the
-  outline last.
-- A sampler visits the levels from $t = 1$ down: outline early, texture
-  late.
+- Rows: a test image noised to $t = 0, \ldots, 1$; the clean image the
+  network implies; the same along one 50-step sample (sample at $t = 0$).
+- Noising: at $t = 1$ within 0.07 of the class average; detail goes first,
+  the outline last.
+- Sampling: by $t = 0.6$ within 0.12–0.14 of the sample, outline in place.
+  Shape early, surface late.
 :::
 
 ::: {.slide title="The Weight Average Sits Nearer the Center of the Wandering Iterates"}
@@ -1602,8 +1633,8 @@ scores 0.8 on 5,000 samples. Which is closer to the data?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** A sits at the reference value of 1,000 real images (about
-0.87): at that size it cannot be told from real data. B is five times its
+**Answer.** A sits at the reference value of 1,000 real images (a little
+under 0.9): at that size it cannot be told from real data. B is five times its
 reference value of about 0.17. A is likely better; to be sure, score both at the
 same size. B is our model.
 :::
@@ -1693,15 +1724,15 @@ $\hat{\mathbf{x}}_0^{c}$, beyond $\hat{\mathbf{x}}_0^{c}$.
 ::: {.slide title="Check: Predict the Guidance Sweep"}
 [Check]{.kicker}
 
-We sample 5,000 images at $\gamma = 0, 1, 1.5, 2, 3, 4$ and record the FD
-and the *class agreement*: the share the feature network assigns to the
-requested class. What is the agreement at $\gamma = 0$? Does the FD keep
+We sample 5,000 images at $\gamma = 0, 1, 1.25, 1.5, 2, 3, 4$ and record
+the FD and the *class agreement*: the share the feature network assigns to
+the requested class. What is the agreement at $\gamma = 0$? Does the FD keep
 falling as $\gamma$ grows?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** At $\gamma = 0$ the label plays no part: chance, 10%. Of the
-scales tried, the FD is lowest at $\gamma = 1$ and rises from $1.5$ on:
+**Answer.** At $\gamma = 0$ the label plays no part: chance, 10%. The FD is
+lowest at $\gamma = 1$ and $1.25$, a tie, and rises from $1.5$ on:
 overshooting removes variety.
 :::
 :::
@@ -1710,15 +1741,14 @@ overshooting removes variety.
 ::: {.slide title="Guidance Trades Variety for Typicality"}
 @!image-diffusion-classifier-free-guidance-1
 
-- $\gamma = 1$: FD about 0.8, agreement nearly 90%; the classifier gets 93%
-  of real images right.
-- $\gamma = 1.5$: agreement 96%, FD up by about 0.3.
-- $\gamma \geq 3$: agreement above 99%, FD 4 to 6: prototypes, without the
-  ambiguous examples of real data.
-- Why guide anyway? The FD judges the set and rewards variety; a person
+- $\gamma = 1$: FD about 0.8, agreement nearly 90% (real images: 93%).
+  $\gamma = 1.25$: same FD, agreement 93–94%.
+- $\gamma = 1.5$: agreement 96%, FD up by about 0.3. $\gamma \geq 3$: above
+  99%, FD 4 to 6: prototypes, without the ambiguous examples of real data.
+- Why guide hard anyway? The FD judges the set and rewards variety; a person
   judges one picture and rewards a clear instance of the request.
 
-[Ho and Salimans (2022): on ImageNet a small $w$ of 0.1 to 0.3 lowered the FID; our grid jumps from 1 to 1.5.]{.small}
+[Ho and Salimans (2022): on ImageNet a small $w$ of 0.1 to 0.3 lowered the FID; ours at $\gamma = 1.25$ holds it level.]{.small}
 :::
 
 ::: {.slide title="Without the Label, the FD Triples and the Class Mix Drifts"}
@@ -1726,12 +1756,13 @@ FD of 5,000 samples, split into its two terms:
 
 | | $\gamma = 1$ | $\gamma = 0$ |
 |:--|:--|:--|
-| whole FD | about 0.8 | about 2.8 |
+| whole FD | about 0.8 | 2.7 to 2.8 |
 | mean term | about 0.3 | 0.7 to 0.9 |
-| trace term | about 0.5 | about 2.0 |
+| trace term | about 0.5 | about 2 |
 
-- Unguided: pullovers about 14% of samples, sandals 6 to 7%; real: 10% each.
-- A wrong mix moves both terms, so the split is a clue, not a proof.
+- Unguided: pullovers 13 to 14% of samples, sandals 6 to 7%; real: 10% each.
+- Real images in that mix: FD 0.2 to 0.3 higher, a tenth to a sixth of the
+  rise. The rest is how the unguided images look.
 - Guidance extrapolates from $\mathbf{u}_\varnothing$: its errors enter
   every guided sample with weight $1 - \gamma$.
 :::
@@ -1788,9 +1819,9 @@ width 0.18 and mean 1.23.
 - **Measure:** FD in our classifier's features; samples about 0.8 against
   about 0.17 for real sets of 5,000; last weights 0.4 to 0.6 worse.
 - **Guidance:** $\mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$;
-  agreement 10% at $\gamma = 0$, nearly 90% at 1, above 99% from 3; FD lowest
-  at $\gamma = 1$ of the scales tried; on Gaussian classes the sampler ends
-  narrower than the tilt.
+  agreement 10% at $\gamma = 0$, nearly 90% at 1, 93–94% at 1.25 for the
+  same FD, above 99% from 3; on Gaussian classes the sampler ends narrower
+  than the tilt.
 
 **Next:** fifty steps came close to a thousand. Which steps can a sampler skip, and
 how few are enough?

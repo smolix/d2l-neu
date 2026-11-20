@@ -210,9 +210,9 @@ dev = X.device
 def batch_fn():
     return X[torch.randint(0, len(X), (128,), device=dev)]
 
-def ae_loss(ae, x):
+def ae_loss(ae, x, beta=1e-4):
     x_hat, kl = ae(x)
-    return ((x_hat - x) ** 2).mean() + 1e-4 * kl
+    return ((x_hat - x) ** 2).mean() + beta * kl
 
 torch.manual_seed(1)
 ae, _, _ = d2l.train_regression(d2l.Autoencoder().to(dev), ae_loss, batch_fn,
@@ -227,9 +227,9 @@ X, y, X_test, y_test = d2l.load_fashion_mnist_pm1()
 def batch_fn(key):
     return X[jax.random.randint(key, (128,), 0, len(X))]
 
-def ae_loss(ae, x, key):
+def ae_loss(ae, x, key, beta=1e-4):
     x_hat, kl = ae(x, key)
-    return ((x_hat - x) ** 2).mean() + 1e-4 * kl
+    return ((x_hat - x) ** 2).mean() + beta * kl
 
 ae, _, _ = d2l.train_regression(d2l.Autoencoder(rngs=nnx.Rngs(1)), ae_loss,
                                 batch_fn, 20_000, jax.random.key(1),
@@ -344,7 +344,7 @@ them by a factor $c$ of about 1.05. The encoder's standard deviation is
 0.02 to 0.03, so the KL term barely blurs each code, and the excess kurtosis
 is near zero or negative: the latents have no heavy tails. A larger
 $\beta$ makes them closer to normal but costs reconstruction quality
-(:exref:`ex_latent-kl-weight`).
+(Exercise :exref:`ex_latent-kl-weight`).
 
 ## Diffusion in the Latent Space
 
@@ -360,7 +360,7 @@ the network's output onto the velocity $\boldsymbol\epsilon - \mathbf{z}_0$.
 
 The scale factor matters because the path mixes the data with noise of unit
 variance. Latents with a standard deviation of five would shift the log-SNR
-at every time by $\log 25$ (:exref:`ex_latent-scale-factor`), and Stable
+at every time by $\log 25$ (Exercise :exref:`ex_latent-scale-factor`), and Stable
 Diffusion multiplies its latents by 0.18215 for this reason. The network is
 the U-Net of :numref:`sec_diffusion-images` with four input and output
 channels, and one `loss_fn` serves images and latents.
@@ -415,7 +415,7 @@ _, unet_pixel, _ = d2l.train_regression(d2l.UNet(ch=64, rngs=nnx.Rngs(4)),
 ```
 
 `sample` draws 5,000 samples from fixed noise with 50 Euler steps of
-`d2l.ode_sample` (:numref:`sec_diffusion-gaussian-paths`), and `decode`
+`d2l.ode_sample` (:numref:`sec_diffusion-integration`), and `decode`
 undoes the scale factor and decodes latents. The first row below holds
 samples of the pixel model, the second decoded samples of the latent model.
 
@@ -475,7 +475,8 @@ inputs, in billions (GFLOP).
 def train_step_gflops(net, loss_fn, shape, batch_size=128):  #@save
     """GFLOP of one training step, forward and backward, on a batch of zeros
     of the given shape."""
-    from torch.utils.flop_counter import FlopCounterMode  # not in the preamble
+    # A local import, so that d2l needs nothing beyond its header's imports
+    from torch.utils.flop_counter import FlopCounterMode
     x = torch.zeros(batch_size, *shape, device=next(net.parameters()).device)
     with FlopCounterMode(display=False) as counter:
         loss_fn(net, x).backward()
@@ -528,6 +529,181 @@ At equal updates the latent model's FD is about 1.4 to 1.5 times the pixel
 model's. It cannot fall below the reconstruction FD of 0.6 to 0.8, and it sits
 well above it. The gap combines the latent model's own error with the
 decoder's response to latents that no training image produced.
+
+<!-- WRITER: draft lead-in for the new perturbed-latent test (LAT-5, LAT-9);
+rewrite in the section's voice. The two cells below train a second
+autoencoder with ten times the KL weight (beta = 1e-3, seed 9, the only extra
+training of the test) and decode, for both autoencoders, the latent means of
+the other 5,000 test images with Gaussian noise of sigma = SIGMAS times the
+latents' standard deviation added. Measured numbers: see the WRITER note
+after the cells. -->
+To tell the two apart, we decode latents that are slightly wrong on purpose:
+the latent means of the other 5,000 test images plus Gaussian noise of
+$\sigma$ times the latents' standard deviation. A second autoencoder,
+trained with ten times the KL weight, shows what a stronger KL term changes.
+
+```{.python .input #latent-diffusion-reading-the-result-1}
+%%tab pytorch
+torch.manual_seed(9)
+ae_10, _, _ = d2l.train_regression(
+    d2l.Autoencoder().to(dev), lambda ae, x: ae_loss(ae, x, beta=1e-3),
+    batch_fn, 20_000, cosine=True)
+```
+
+```{.python .input #latent-diffusion-reading-the-result-1}
+%%tab jax
+ae_10, _, _ = d2l.train_regression(
+    d2l.Autoencoder(rngs=nnx.Rngs(9)),
+    lambda ae, x, key: ae_loss(ae, x, key, beta=1e-3), batch_fn, 20_000,
+    jax.random.key(9), cosine=True)
+```
+
+`perturbed_decodes` prints the encoder's standard deviation in units of the
+latents' standard deviation, the reconstruction error and FD, and for each
+$\sigma$ the mean squared change of the decoded image and its FD.
+
+```{.python .input #latent-diffusion-reading-the-result-2}
+%%tab pytorch
+def perturbed_decodes(ae, x, sigmas=(0.1, 0.3, 0.5)):
+    """Decode the latent means of x, and the means plus Gaussian noise of
+    sigma times their standard deviation."""
+    mu, log_var = d2l.batched(lambda x: torch.cat(ae.encode(x), 1),
+                              x).chunk(2, dim=1)
+    x_rec = d2l.batched(ae.decoder, mu)
+    print(f'  encoder std {(0.5 * log_var).exp().mean() / mu.std():.3f}, '
+          f'reconstructions: error {((x_rec - x) ** 2).mean():.4f}, '
+          f'FD {fd(x_rec):.2f}')
+    gen = torch.Generator(dev).manual_seed(0)
+    eps = torch.randn(mu.shape, device=dev, generator=gen)
+    for sigma in sigmas:
+        x_noisy = d2l.batched(ae.decoder, mu + sigma * mu.std() * eps)
+        print(f'  sigma {sigma}: change {((x_noisy - x_rec) ** 2).mean():.4f} '
+              f'per pixel, FD {fd(x_noisy):.2f}')
+
+for beta, model in ((1e-4, ae), (1e-3, ae_10)):
+    print(f'beta {beta:g}')
+    perturbed_decodes(model, X_test[5000:])
+```
+
+```{.python .input #latent-diffusion-reading-the-result-2}
+%%tab jax
+def perturbed_decodes(ae, x, sigmas=(0.1, 0.3, 0.5)):
+    """Decode the latent means of x, and the means plus Gaussian noise of
+    sigma times their standard deviation."""
+    mu, log_var = jnp.split(
+        d2l.batched(lambda x: jnp.concatenate(encode(ae, x), -1), x), 2,
+        axis=-1)
+    x_rec = d2l.batched(lambda z: decoder(ae, z), mu)
+    print(f'  encoder std {jnp.exp(0.5 * log_var).mean() / mu.std():.3f}, '
+          f'reconstructions: error {((x_rec - x) ** 2).mean():.4f}, '
+          f'FD {fd(x_rec):.2f}')
+    eps = jax.random.normal(jax.random.key(0), mu.shape)
+    for sigma in sigmas:
+        x_noisy = d2l.batched(lambda z: decoder(ae, z),
+                              mu + sigma * mu.std() * eps)
+        print(f'  sigma {sigma}: change {((x_noisy - x_rec) ** 2).mean():.4f} '
+              f'per pixel, FD {fd(x_noisy):.2f}')
+
+for beta, model in ((1e-4, ae), (1e-3, ae_10)):
+    print(f'beta {beta:g}')
+    perturbed_decodes(model, X_test[5000:])
+```
+
+<!-- WRITER: reading of the perturbed-latent test (direct runs 2026-11-20,
+PT / JAX; re-read after capture). beta = 1e-4: encoder std 0.028 / 0.025 of
+the latent std; reconstructions error 0.0038, FD 0.63 / 0.81; sigma 0.1:
+change 0.0023 per pixel, FD 0.51 / 0.64; sigma 0.3: change 0.020, FD
+0.71 / 0.77; sigma 0.5: change 0.054 / 0.053, FD 3.32 / 3.43. beta = 1e-3:
+encoder std 0.19 of the latent std (seven times as large); reconstructions
+error 0.0041, FD 0.88 / 1.14 (worse by 0.25 to 0.33); sigma 0.1: FD
+0.79 / 1.04; 0.3: 0.52 / 0.66; 0.5: change 0.062 / 0.061, FD 1.31 / 1.32.
+Lessons both frameworks show: (1) the decoder of the weak KL term was
+trained on codes blurred by only 3 percent of their spread, and at half the
+spread its FD jumps to about 3.4; the decoder of the ten-times weight, trained
+on codes blurred by about a fifth, stays near 1.3; (2) it pays with worse
+reconstructions; (3) the change per pixel is about the same for both (0.054
+against 0.062 at sigma 0.5): the stronger KL term does not make the decoder
+ignore the noise, it makes it decode noisy codes to plausible garments; (4)
+small noise LOWERS the FD below the reconstructions' (0.51 against 0.63 PT,
+0.64 against 0.81 JAX) while the pixel error rises: the reconstructions
+are slightly too smooth and the noise restores variety. So LAT-8's proposed
+wording "in practice none goes below it" is false; write that a perfect
+latent model would score the reconstruction FD and that this is a reference,
+not a strict floor. -->
+Does the more tolerant decoder give better samples? `latent_unet_fd` runs
+the recipe above on the latents of an autoencoder, a latent U-Net trained
+for 20,000 updates and sampled with 50 Euler steps, and returns the FD of
+the decoded samples; we train two per autoencoder, from two seeds.
+
+```{.python .input #latent-diffusion-reading-the-result-3}
+%%tab pytorch
+def latent_unet_fd(ae, seed):
+    """FD of a latent U-Net trained on the latents of ae as above."""
+    mu, log_var = d2l.batched(lambda x: torch.cat(ae.encode(x), 1),
+                              X).chunk(2, dim=1)
+    s = (0.5 * log_var).exp()
+    c = 1 / (mu + s * torch.randn_like(mu)).std()   # the scale factor
+
+    def latent_batch():
+        i = torch.randint(0, len(mu), (128,), device=dev)
+        return (mu[i] + s[i] * torch.randn_like(mu[i])) * c
+
+    torch.manual_seed(seed)
+    _, net, _ = d2l.train_regression(
+        d2l.UNet(ch=64, in_channels=4, out_channels=4).to(dev), loss_fn,
+        latent_batch, 20_000)
+    z = sample(net, latent_shape)
+    return fd(d2l.batched(lambda z_k: ae.decoder(z_k / c), z))
+
+for beta, model in ((1e-4, ae), (1e-3, ae_10)):
+    fds = [latent_unet_fd(model, seed) for seed in (10, 11)]
+    print(f'beta {beta:g}: latent U-Net FD {fds[0]:.2f} and {fds[1]:.2f}')
+```
+
+```{.python .input #latent-diffusion-reading-the-result-3}
+%%tab jax
+def latent_unet_fd(ae, seed):
+    """FD of a latent U-Net trained on the latents of ae as above."""
+    mu, log_var = jnp.split(
+        d2l.batched(lambda x: jnp.concatenate(encode(ae, x), -1), X), 2,
+        axis=-1)
+    s = jnp.exp(0.5 * log_var)
+    key_z, key_train = jax.random.split(jax.random.key(seed))
+    c = 1 / (mu + s * jax.random.normal(key_z, mu.shape)).std()  # scale
+
+    def latent_batch(key):
+        k1, k2 = jax.random.split(key)
+        i = jax.random.randint(k1, (128,), 0, len(mu))
+        return (mu[i] + s[i] * jax.random.normal(k2, mu[i].shape)) * c
+
+    _, net, _ = d2l.train_regression(
+        d2l.UNet(ch=64, in_channels=4, out_channels=4, rngs=nnx.Rngs(seed)),
+        loss_fn, latent_batch, 20_000, key_train)
+    z = sample(net, latent_shape)
+    return fd(d2l.batched(lambda z_k: decoder(ae, z_k / c), z))
+
+for beta, model in ((1e-4, ae), (1e-3, ae_10)):
+    fds = [latent_unet_fd(model, seed) for seed in (10, 11)]
+    print(f'beta {beta:g}: latent U-Net FD {fds[0]:.2f} and {fds[1]:.2f}')
+```
+
+<!-- WRITER: reading of the latent U-Nets on the two autoencoders (direct
+runs, PT / JAX). beta = 1e-4: FD 1.97 and 1.92 / 2.08 and 2.19 (the cell
+above, seed 3: 1.98 / 2.22). beta = 1e-3: 2.73 and 2.54 / 2.60 and 2.62. The
+difference, about 0.5 to 0.7, is several times the two-seed range (0.05 to
+0.19) in both frameworks: the more tolerant decoder gives WORSE samples.
+Its samples sit about 1.5 to 1.75 above its reconstructions (2.6 against
+0.9 / 1.1), the weak KL term's about 1.3 above (1.95 against 0.63, 2.1
+against 0.81). So at this scale the decoder's intolerance is not what
+separates the latent samples from the reconstructions: the gap is the latent
+model's own error, and the samples are far worse than real latents moved by
+0.3 of their spread (FD about 0.7). This replaces "The gap combines the
+latent model's own error with the decoder's response to latents that no
+training image produced" (LAT-9): the test separates the two. Prediction
+the reader can make (structure): larger beta decodes perturbed latents more
+gracefully and reconstructs worse: confirmed; that it closes the gap: not
+confirmed. Exercise kl-weight now extends this test (beta = 0 and 1e-2, the
+latent statistics); its part 2 is answered in the text and should change. -->
 
 At $28 \times 28$ the trade is not attractive: the pixel model is cheap
 anyway, and the autoencoder needs a training run of its own. At
@@ -770,6 +946,12 @@ from a larger network or from smaller patches, and their largest model,
 trained for seven million steps, set a new best FID on class-conditional
 ImageNet at $256 \times 256$.
 
+<!-- WRITER: the scaling cell now trains DiT-S, DiT-M and a U-Net with
+ch=32 (seeds 5, 6, 7) and reuses the pixel U-Net with ch=64 of the
+regression cell; DiT-L (width 384, depth 8, six heads) moved to the new
+exercise ex_latent-dit-large. This paragraph's "Three DiTs" and its DiT-L
+clause are false; "64 dimensions per head as in the paper" -> "as in most
+of the paper's models" (LAT-16). -->
 We repeat the measurement at our scale. Three DiTs grow in width and depth
 together, with 64 dimensions per head as in the paper: DiT-S (width 128,
 depth 4, two heads), DiT-M (the model above) and DiT-L (width 384, depth 8,
@@ -780,59 +962,79 @@ step.
 ```{.python .input #latent-diffusion-scaling-with-compute-1}
 %%tab pytorch
 sizes = {'DiT-S': dict(width=128, depth=4, num_heads=2),
-         'DiT-M': dict(width=256, depth=6, num_heads=4),
-         'DiT-L': dict(width=384, depth=8, num_heads=6)}
+         'DiT-M': dict(width=256, depth=6, num_heads=4)}
+nets = {'DiT-S': lambda: d2l.DiT(**sizes['DiT-S']),
+        'DiT-M': lambda: d2l.DiT(**sizes['DiT-M']),
+        'U-Net 32': lambda: d2l.UNet(ch=32)}
 runs = {}
-for seed, (name, size) in enumerate(sizes.items(), start=5):
-    gflops = d2l.train_step_gflops(d2l.DiT(**size).to(dev), loss_fn,
-                                   image_shape)
+for seed, (name, make_net) in enumerate(nets.items(), start=5):
     torch.manual_seed(seed)
-    net = d2l.DiT(**size).to(dev)
+    net = make_net().to(dev)
     _, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 20_000)
     imgs = sample(ema, image_shape)
-    runs[name] = dict(params=d2l.num_params(net), gflops=gflops, fd=fd(imgs),
-                      imgs=imgs[:8])
-runs['U-Net'] = dict(params=d2l.num_params(d2l.UNet(ch=64)),
-                     gflops=gflops_pixel, fd=fd_pixel, imgs=x_pixel[:8])
+    runs[name] = dict(params=d2l.num_params(net), fd=fd(imgs), imgs=imgs[:8],
+                      gflops=d2l.train_step_gflops(net, loss_fn, image_shape))
+runs['U-Net 64'] = dict(params=d2l.num_params(d2l.UNet(ch=64)), fd=fd_pixel,
+                        imgs=x_pixel[:8], gflops=gflops_pixel)
 for name, run in runs.items():
-    print(f'{name:6} {run["params"] / 1e6:5.2f}M parameters '
+    print(f'{name:8} {run["params"] / 1e6:5.2f}M parameters '
           f'{run["gflops"]:4.0f} GFLOP per step   FD {run["fd"]:.2f}')
 ```
 
 ```{.python .input #latent-diffusion-scaling-with-compute-1}
 %%tab jax
 sizes = {'DiT-S': dict(width=128, depth=4, num_heads=2),
-         'DiT-M': dict(width=256, depth=6, num_heads=4),
-         'DiT-L': dict(width=384, depth=8, num_heads=6)}
+         'DiT-M': dict(width=256, depth=6, num_heads=4)}
+nets = {'DiT-S': lambda rngs: d2l.DiT(**sizes['DiT-S'], rngs=rngs),
+        'DiT-M': lambda rngs: d2l.DiT(**sizes['DiT-M'], rngs=rngs),
+        'U-Net 32': lambda rngs: d2l.UNet(ch=32, rngs=rngs)}
 runs = {}
-for seed, (name, size) in enumerate(sizes.items(), start=5):
-    gflops = d2l.train_step_gflops(d2l.DiT(**size, rngs=nnx.Rngs(0)),
-                                   loss_fn, image_shape)
-    net = d2l.DiT(**size, rngs=nnx.Rngs(seed))
+for seed, (name, make_net) in enumerate(nets.items(), start=5):
+    net = make_net(nnx.Rngs(seed))
     _, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 20_000,
                                      jax.random.key(seed))
     imgs = sample(ema, image_shape)
-    runs[name] = dict(params=d2l.num_params(net), gflops=gflops, fd=fd(imgs),
-                      imgs=imgs[:8])
-runs['U-Net'] = dict(params=d2l.num_params(d2l.UNet(ch=64, rngs=nnx.Rngs(0))),
-                     gflops=gflops_pixel, fd=fd_pixel, imgs=x_pixel[:8])
+    runs[name] = dict(params=d2l.num_params(net), fd=fd(imgs), imgs=imgs[:8],
+                      gflops=d2l.train_step_gflops(net, loss_fn, image_shape))
+runs['U-Net 64'] = dict(params=d2l.num_params(unet_pixel), fd=fd_pixel,
+                        imgs=x_pixel[:8], gflops=gflops_pixel)
 for name, run in runs.items():
-    print(f'{name:6} {run["params"] / 1e6:5.2f}M parameters '
+    print(f'{name:8} {run["params"] / 1e6:5.2f}M parameters '
           f'{run["gflops"]:4.0f} GFLOP per step   FD {run["fd"]:.2f}')
 ```
 
+<!-- WRITER: the plot now has two curves, DiT-S to DiT-M and U-Net ch=32
+to ch=64. -->
 We plot FD against FLOPs per step on logarithmic axes.
 
 ```{.python .input #latent-diffusion-scaling-with-compute-2}
 %%tab pytorch, jax
-dits = [runs[name] for name in sizes]
-d2l.plot([[run['gflops'] for run in dits], [runs['U-Net']['gflops']]],
-         [[run['fd'] for run in dits], [runs['U-Net']['fd']]],
+curves = [[runs['DiT-S'], runs['DiT-M']], [runs['U-Net 32'], runs['U-Net 64']]]
+d2l.plot([[run['gflops'] for run in curve] for curve in curves],
+         [[run['fd'] for run in curve] for curve in curves],
          'GFLOP per training step', 'FD (5,000 samples)',
-         legend=['DiT-S, M, L', 'U-Net'], xscale='log', yscale='log',
-         fmts=('o-', 'rD'))
+         legend=['DiT-S, DiT-M', 'U-Net ch=32, 64'], xscale='log',
+         yscale='log', fmts=('o-', 'D-'))
 ```
 
+<!-- WRITER: this paragraph and the next are false after the change.
+Direct runs (PT / JAX; re-read after capture): DiT-S 1.26M parameters,
+32 / 33 GFLOP per step, FD 4.83 / 4.61; DiT-M 7.39M, 185 / 190, FD
+1.81 / 1.71; U-Net ch=32 0.34M, 51 / 48, FD 2.44 / 2.60; U-Net ch=64 1.20M,
+203 / 192, FD 1.54 / 1.52 (stored earlier: 1.50 / 1.64, so one U-Net's
+FD moves by about 0.1 between runs). Firm lessons: (1) at every compute
+we ran, the U-Net is below the DiT: near 40-50 GFLOP the U-Net with ch=32 at
+2.4 to 2.6 against DiT-S at 4.6 to 4.8 (with a third fewer GFLOP for DiT-S);
+near 190-200 the U-Net with ch=64 at about 1.5 against DiT-M at 1.7 to 1.8;
+(2) the DiT curve is steeper: about 5.8 times the compute divides its FD by
+about 2.7; about 4 times the compute divides the U-Net's by about 1.6 to 1.7
+(log-log slopes about -0.55 and -0.35). Whether the DiT curve crosses the
+U-Net's is not shown here (exercise dit-large; the stored DiT-L ran 1.31 /
+1.18 at about 550 GFLOP against the U-Net's 1.50 / 1.64, at 2.7 times its
+compute, from one seed each). The scaling law itself is Peebles and Xie's.
+"DiT-L beats it" and "every step up" go (LAT-14, LAT-15). The DiT-S
+comparison at equal parameters still holds (DiT-S 1.26M, U-Net 1.20M, FD
+about three times as high). -->
 FD falls with every step up in size: about 5 for DiT-S at about 30 GFLOP
 per step, 1.5 to 1.7 for DiT-M at about 190, and 1.2 to 1.5 for DiT-L at
 about 550.
@@ -841,17 +1043,21 @@ next threefold increase gains less. The U-Net, at 1.5 to 1.6 and about 200
 GFLOP, matches or slightly beats DiT-M, which spends the same arithmetic with six times the
 parameters, and DiT-L beats it.
 
+<!-- WRITER: the grid now has four rows from the same noise: DiT-S,
+DiT-M, U-Net ch=32, U-Net ch=64. In both frameworks the four models mostly
+draw the same garment in each column (the ODE maps a noise image to one
+image whatever the backbone), DiT-S with blotches. -->
 The rows below show the first eight samples of DiT-S, DiT-M and DiT-L, drawn
 from the same noise.
 
 ```{.python .input #latent-diffusion-scaling-with-compute-3}
 %%tab pytorch
-d2l.show_gray(torch.cat([run['imgs'] for run in dits]), 3, 8);
+d2l.show_gray(torch.cat([run['imgs'] for run in runs.values()]), 4, 8);
 ```
 
 ```{.python .input #latent-diffusion-scaling-with-compute-3}
 %%tab jax
-d2l.show_gray(jnp.concatenate([run['imgs'] for run in dits]), 3, 8);
+d2l.show_gray(jnp.concatenate([run['imgs'] for run in runs.values()]), 4, 8);
 ```
 
 The three models mostly draw the same garment from the same noise, since
@@ -867,7 +1073,7 @@ arithmetic runs as large matrix products, and the methods that train
 language models at scale carry over. Our horizontal axis is compute per
 update. Whether a large model trained for fewer updates beats a small one
 trained for more, at equal total compute, is a separate question
-(:exref:`ex_latent-total-compute`).
+(Exercise :exref:`ex_latent-total-compute`).
 
 Does the transformer help in the latent space too? We train DiT-M on the
 latents with patches of size 1, so that it sees 49 tokens and spends the
@@ -875,13 +1081,11 @@ same arithmetic per step as in pixel space.
 
 ```{.python .input #latent-diffusion-scaling-with-compute-4}
 %%tab pytorch
-gflops = d2l.train_step_gflops(
-    d2l.DiT(img_size=7, patch_size=1, num_channels=4, **sizes['DiT-M']).to(dev),
-    loss_fn, latent_shape)
 torch.manual_seed(8)
 net = d2l.DiT(img_size=7, patch_size=1, num_channels=4,
               **sizes['DiT-M']).to(dev)
 _, dit_latent, _ = d2l.train_regression(net, loss_fn, latent_batch_fn, 20_000)
+gflops = d2l.train_step_gflops(net, loss_fn, latent_shape)
 print(f'latent DiT-M, {gflops:.0f} GFLOP per step: FD '
       f'{fd(decode(sample(dit_latent, latent_shape))):.2f}; latent U-Net '
       f'{fd_latent:.2f}; reconstructions {fd_rec:.2f}')
@@ -889,25 +1093,28 @@ print(f'latent DiT-M, {gflops:.0f} GFLOP per step: FD '
 
 ```{.python .input #latent-diffusion-scaling-with-compute-4}
 %%tab jax
-gflops = d2l.train_step_gflops(
-    d2l.DiT(img_size=7, patch_size=1, num_channels=4, **sizes['DiT-M'],
-            rngs=nnx.Rngs(0)), loss_fn, latent_shape)
 net = d2l.DiT(img_size=7, patch_size=1, num_channels=4, **sizes['DiT-M'],
               rngs=nnx.Rngs(8))
 _, dit_latent, _ = d2l.train_regression(net, loss_fn, latent_batch_fn, 20_000,
                                         jax.random.key(8))
+gflops = d2l.train_step_gflops(net, loss_fn, latent_shape)
 print(f'latent DiT-M, {gflops:.0f} GFLOP per step: FD '
       f'{fd(decode(sample(dit_latent, latent_shape))):.2f}; latent U-Net '
       f'{fd_latent:.2f}; reconstructions {fd_rec:.2f}')
 ```
 
+<!-- WRITER: direct runs (PT / JAX): latent DiT-M FD 1.97 / 2.24 at
+185 / 190 GFLOP; latent U-Net 1.98 / 2.22 at 15 / 11; reconstructions
+0.63 / 0.81; pixel DiT-M 1.81 / 1.71, pixel U-Net 1.54 / 1.52. The latent
+DiT-M ties the latent U-Net in both frameworks at twelve to seventeen times
+the compute per step (LAT-18 conclusion). -->
 The latent DiT-M scores an FD of about 2 (1.8 to 2.3), at or a little below
 the latent U-Net's, although in pixel space it reached 1.5 to 1.7. In the
 latent space the backbone matters little: both land at about three
 times the reconstruction FD. Both backbones, a dozen and two hundred GFLOP
 per step, land at about the same FD, so the limit lies with the autoencoder, its
 reconstructions and its decoder's response to slightly wrong latents
-(:exref:`ex_latent-scaling-in-latents`). At our scale the best pixel model
+(Exercise :exref:`ex_latent-scaling-in-latents`). At our scale the best pixel model
 therefore beats every latent one. At $512 \times 512$ the saving decides,
 but the limit remains, which is why the design of image autoencoders, often
 called *tokenizers*, has become a field of its own.
@@ -952,6 +1159,8 @@ of them dominates training.
 
 ## Summary
 
+<!-- WRITER: "its largest version beat the U-Net" is false now (no DiT-L in
+the text; the U-Net is at or below the DiT at both sizes we ran). -->
 Diffusion does not need to run on pixels. An autoencoder with a small KL
 term compresses each image into a latent of known scale, the regression of
 the previous sections runs on the latents unchanged, and the decoder turns
@@ -1003,6 +1212,12 @@ sample remain fifty; the next section asks how to get by with one or two.
     1. Train both DiT-M models for 2,000 updates and plot their losses.
        Explain the difference through the identity at initialization.
    :exlabel:`ex_latent-zero-gate`
+<!-- WRITER: exercises patch-size (b: "the curve of DiT-S, DiT-M and
+DiT-L"), total-compute ("three pixel DiTs", c: "does DiT-L still beat the
+U-Net?") and scaling-in-latents ("Train DiT-S and DiT-L ... the three latent
+models") still name DiT-L, which is now only in exercise dit-large; the
+worklist merges patch-size into total-compute. kl-weight part 2 is answered
+by the in-text test now. -->
 1. [code] **Patch size.** ● Train DiT-M with patches of size 2 on the pixels
    for 20,000 updates.
     1. How many tokens does it see, and how many FLOPs per step does
@@ -1099,6 +1314,21 @@ sample remain fifty; the next section asks how to get by with one or two.
        paper of Peebles and Xie, and say what longer runs could change.
     1. At 10,000 updates, does DiT-L still beat the U-Net?
    :exlabel:`ex_latent-total-compute`
+1. [code] **A larger transformer.** ● Add DiT-L (width 384, depth 8, six
+   heads, so 64 dimensions per head as for DiT-S and DiT-M) to the scaling
+   run, trained for the same 20,000 updates. It costs about as much compute
+   as the rest of the section together.
+    1. Print its parameters, its GFLOP per training step and its FD, and add
+       it to the plot. How much more compute per step does it spend than the
+       U-Net with `ch=64`?
+    1. Train the U-Net with `ch=64` and DiT-L once more each from another
+       seed. Is the difference between their FDs larger than the spread
+       between the two runs of each?
+    1. Train U-Nets with `ch=96` and `ch=128` as well. Which of the two
+       curves falls faster with compute per step over the range you can
+       afford, and what would the plot have to show to support the claim
+       that the transformer keeps improving where the U-Net does not?
+   :exlabel:`ex_latent-dit-large`
 1. [extended] **Latent diffusion for sprites.** ●● Adapt this section's
    autoencoder to the $64 \times 64$ color sprites of :numref:`sec_dcgan`,
    which gives a $16 \times 16 \times 4$ latent, and train a latent U-Net on
@@ -1355,6 +1585,14 @@ same at every time $t$.
 :::
 :::
 
+<!-- WRITER: slides "FD Falls Steadily ...", "At Equal Parameters the
+U-Net Wins ..." and the Wrap-up quote DiT-L and the old numbers; the
+scaling cell now prints DiT-S, DiT-M, U-Net ch=32 and ch=64 and the plot has
+two curves (numbers in the WRITER note at the scaling paragraph). Add a
+slide for the perturbed-latent test (@!latent-diffusion-reading-the-result-2)
+and one for the latent U-Nets on both autoencoders
+(@!latent-diffusion-reading-the-result-3); the text/video slide goes with
+LAT-19/20. -->
 ::: {.slide title="FD Falls Steadily as Compute per Step Grows"}
 @!latent-diffusion-scaling-with-compute-1
 

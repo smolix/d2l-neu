@@ -41,7 +41,9 @@ GPU_FRAMEWORK_NOTEBOOKS = set()
 # limit also bounds a single cell (nbconvert's per-cell timeout). Keyed by the
 # notebook path relative to _notebooks/<fw>/; applies to every framework.
 # Ruling 2026-11-06 (Alex): modern topics may run longer when the pedagogy
-# needs the experiment (17.6's DiT scaling curve: ~50 min PyTorch, ~20 JAX).
+# needs the experiment. latent-diffusion (17.7: two autoencoders and ten
+# diffusion trainings, DiT-L moved to an exercise) ran 64 min PyTorch and
+# 62 min JAX side by side on one shared RTX 4090 (2026-11-20), above 3600 s.
 #
 # No ch. 18 entry: a normal build stays near 15 min per notebook, and a
 # D2L_RERUN regeneration run must finish within 30 min (ruling 2026-11-12),
@@ -66,8 +68,9 @@ GPU_ONLY_NOTEBOOKS = {
     # per-cell timeout on CPU. denoising stays here although its 2-D cells are
     # CPU-class: its JAX image denoiser is too slow on a CPU slot. Rebuild plan
     # budget (2026-11, per framework): denoising ~1 min, image-diffusion 8-10,
-    # samplers 6-8, design-space 7-9, latent-diffusion ~21, few-step 5-8,
-    # discrete-diffusion 2-3 GPU-min; re-measure at the first scheduler run.
+    # samplers 6-8, design-space 7-9, latent-diffusion ~60 on a shared card,
+    # few-step 5-8, discrete-diffusion 2-3 GPU-min; re-measure at the first
+    # scheduler run.
     "chapter_diffusion-models/denoising.ipynb",
     # gaussian-paths trains two 2-D models for 40k steps; integration retrains
     # them for its samplers (no checkpoints pass between notebooks). Direct

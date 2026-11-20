@@ -4289,7 +4289,8 @@ def train_step_gflops(net, loss_fn, shape, batch_size=128):
     of the given shape.
 
     Defined in :numref:`sec_diffusion-latent`"""
-    from torch.utils.flop_counter import FlopCounterMode  # not in the preamble
+    # A local import, so that d2l needs nothing beyond its header's imports
+    from torch.utils.flop_counter import FlopCounterMode
     x = torch.zeros(batch_size, *shape, device=next(net.parameters()).device)
     with FlopCounterMode(display=False) as counter:
         loss_fn(net, x).backward()

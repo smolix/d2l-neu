@@ -1480,16 +1480,20 @@ target varies between examples at the same point.
 :::
 :::
 
-::: {.slide title="With a Teacher the Students Keep the Spread; MeanFlow Contracts the Modes"}
+::: {.slide title="Students with a Teacher Keep the Spread; MeanFlow Shrinks It"}
 @!few-step-on-the-running-example-2
+:::
+
+::: {.slide title="The Velocity in the Target Alone Shrinks the Spread by over 0.1"}
+- **One evaluation:** weights within 0.007 for every student.
+- **Spread:** data 0.47, distilled 0.45 to 0.46, MeanFlow 0.31 to 0.34.
+- **Strays:** data 1%, distilled 2%, MeanFlow 4%.
+- The two two-time students differ only in the velocity inside the target:
+  the teacher's for distillation, the examples' for MeanFlow.
 
 ::: {.d2l-note}
-One evaluation: weights within 0.007. Spread: data 0.47, distilled 0.45 to
-0.46, MeanFlow 0.31 to 0.34. Strays: data 1%, distilled 2%, MeanFlow 4%.
-The two-time students differ only in the reference velocity, and that
-alone shrinks the spread by more than 0.1. After four jumps MeanFlow's
-weights vary between training runs (up to about 0.02 off over six seeds);
-the distilled student's stay within 0.006.
+After four jumps MeanFlow's weights vary between training runs (up to about
+0.02 off over six seeds); the distilled student's stay within 0.006.
 :::
 :::
 

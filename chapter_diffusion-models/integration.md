@@ -765,13 +765,20 @@ for one-point data on every path; on the linear path, Euler in $t$.
 [Sampling]{.kicker}
 
 @!gaussian-paths-the-probability-flow-ode-and-euler-s-method-1
+:::
 
-One step: the mean $(-0.5, -0.7)$. Ten: about 3% strays, spread $0.45$
-against the data's $0.48$–$0.49$. A hundred: the data's strays and spread.
+::: {.slide title="Ten Steps Narrow the Samples, and So Does the Exact Field"}
+[Sampling]{.kicker}
+
+- **Strays:** points farther than $3s = 1.5$ from every mean. **Spread:**
+  mean squared distance of the rest to their mean.
+- One step lands on the mean $(-0.5, -0.7)$.
+- Ten steps: about 3% strays, spread $0.45$ against the data's $0.48$–$0.49$.
+- A hundred steps: the data's strays (1.1–1.5%) and spread.
 
 ::: {.d2l-note}
 The oracle at ten steps is nearly as narrow ($0.46$) and strays about 2–3%: the
-steps cause the narrowing and part of the strays. The data stray 1.1–1.5%.
+steps cause the narrowing and part of the strays.
 :::
 :::
 
@@ -818,13 +825,20 @@ a Langevin step of size $g^2\Delta t$, which keeps $p_t$.
 [Experiments]{.kicker}
 
 @!gaussian-paths-samples-from-both-samplers
+:::
 
-Shared starts and noise: 0.2 to 0.5% change mode, weights within $0.004$.
-Strays about 1%, as in the data (Euler with the network: 1.3% against 1.1%).
+::: {.slide title="Either Sampler Works on the Mixture"}
+[Experiments]{.kicker}
+
+- Shared starts and noise: 0.2 to 0.5% of the starts change mode; weights
+  within $0.004$.
+- Strays about 1%, as in the data (Euler with the network: 1.3% against
+  1.1%).
+- The ODE is a reproducible map: the same start always gives the same point.
 
 ::: {.d2l-note}
-Either sampler works here. The ODE is a reproducible map; the chain partly
-corrects its own errors.
+The chain's noise can correct earlier errors; on images, the samplers deck
+measures whether it does.
 :::
 :::
 

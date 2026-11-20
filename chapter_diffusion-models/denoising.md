@@ -1057,11 +1057,11 @@ Denoising and the Score<br>
 :::
 :::
 
-::: {.slide title="Trained Only to Remove Noise, a Denoiser Returns the Average Clean Image"}
+::: {.slide title="Trained to Denoise, a Network Returns the Average Clean Image"}
 [The problem]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig .big}
+::: {.col .fig}
 @!denoising-denoising-images-2
 :::
 
@@ -1099,7 +1099,7 @@ of the log-density. **Running example:** three Gaussians in the plane.
 |---|---|
 | **Denoising and the Score** | **what a denoiser knows about the data** |
 | Gaussian Paths | which path from data to noise, and what trains the network |
-| Sampling by Integration | how to follow the learned field from noise to data |
+| Sampling by Integration | how to follow the field |
 | Diffusion for Images | network, guidance, a quality score |
 | Samplers, Inversion and Editing | which steps to skip; running backwards |
 | Likelihood, Weighting, Design Space | which choices of the regression matter |
@@ -1146,7 +1146,7 @@ weights enter only through $r_k$, which differ only in the valleys.
 [Running example]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig}
+::: {.col}
 @!denoising-the-running-example-4
 :::
 
@@ -1156,12 +1156,12 @@ weights enter only through $r_k$, which differ only in the valleys.
   $e^{-4.5} \approx 1\%$.
 - **Spread:** mean squared distance of the rest to their mean; below
   $2s^2 = 0.5$, capped at $2.25$.
-:::
-:::
 
 ::: {.d2l-note}
 2,000 draws, the training set; NLL about 2.5 nats per point, the entropy.
 For a sampler a target, not a bound: crowding the modes scores lower.
+:::
+:::
 :::
 :::
 
@@ -1369,14 +1369,20 @@ $\sigma = 0.5$? Does it grow faster or slower than $\sigma^4$ from here on?
 ::: {.slide title="The Learned Error Traces a U, Best between σ = 0.1 and 0.2"}
 [Evidence]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 @!denoising-the-loss-floor-and-the-noise-level
+:::
 
+::: {.col .narrow}
 - Right: within about 0.1 of the bias from $\sigma = 0.5$ on; the fit is
   good, the target wrong.
 - Left: targets mostly noise; the second seed changes some errors by half
   or more.
 - Best level: $\sigma$ a fifth to two fifths of $s$, around the $s/3$ of
   the bias rule; error about 0.15 to 0.25.
+:::
+:::
 :::
 
 ::: {.slide title="The Fisher Divergence Cannot See the Mode Weights"}
@@ -1393,11 +1399,11 @@ $721 \times 721$ grid:
   KL $0.07$ nats.
 - Noise fills the valleys: Fisher about $10^{-3}$ at $\sigma = 0.5$ and
   $10^{-2}$ at $\sigma = 1$; KL barely moves.
-- Even at $\sigma = 1$: over ten times below any network's error. Noise
-  first lets chains cross.
+- At $\sigma = 1$ still over ten times below; noise first lets chains
+  cross.
 :::
 
-::: {.col .fig .big}
+::: {.col}
 ![](../img/mdl-diffusion-noise-ladder.svg)
 :::
 :::
@@ -1417,16 +1423,14 @@ $$\mathbf{x} \leftarrow \mathbf{x} + \frac{h}{2}\, \mathbf{s}(\mathbf{x})
 - If $\mathbf{s} = \nabla\log p$ and $h \to 0$: $p$ is stationary.
 - Finite $h$: variance $v/(1 - h/(4v))$, 5% too wide for our components at
   $h = 0.05$.
+- Next: 2,000 steps at $h = 0.05$ from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$,
+  with exact scores and with two networks trained at $\sigma = 0.3$.
 :::
 
 ::: {.slide title="With the Exact Score, Every Chain Stays in the Mode Where It Started"}
 [Evidence]{.kicker}
 
 @!denoising-sampling-with-a-score-1
-
-2,000 steps at $h = 0.05$ from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$:
-about a third start near each mode. Fields: exact scores of $p$, $p_1$,
-$p_{0.3}$; two networks trained at $\sigma = 0.3$.
 :::
 
 ::: {.slide title="Blurred Chains Find the Weights; Trained Chains Find Neither"}

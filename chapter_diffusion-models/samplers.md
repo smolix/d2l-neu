@@ -1650,22 +1650,18 @@ change mode.
 :::
 
 ::: {.slide title="On the Mixture, the Stride Error Halves When the Steps Double"}
-::: {.cols .vc}
-::: {.col}
 @!samplers-skipping-steps-on-the-running-example
+
+Exact predictor, VP grid; distance 0.4, 0.2, 0.04 at 5, 10, 50 steps: first order.
 :::
 
-::: {.col .narrow}
-Exact predictor, VP grid. Spread: mean squared distance to the nearest mode;
-the data's is 0.47 to 0.48.
+::: {.slide title="At Ten Steps, η = 1 Ends Too Tight and the Chain Too Wide"}
+Spread: mean squared distance to the nearest mode; the data's is 0.47 to 0.48.
 
-- Distance 0.4, 0.2, 0.04 at 5, 10, 50 steps: first order.
 - Ten steps: $\eta = 0$ 0.38, $\eta = 1$ 0.32 (too tight), ancestral 0.52
   (too wide).
 - Kept noise lines up with $\hat{\mathbf{x}}_0$; fresh noise does not, so
   $\eta = 1$ ends tighter.
-:::
-:::
 :::
 
 ::: {.slide title="On Gaussian Data Euler Shrinks the Sample; Heun Nearly Fixes It"}
@@ -1814,9 +1810,7 @@ Encoder: $\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar\sigma_{t'} -
 
 @!samplers-the-latent-code-1
 
-- Exact field (mixture) errs at the same rate: the error is the steps'.
-- RMS error per pixel 0.05 to 0.06 at 50 steps; codes narrower than noise
-  (std below 0.9).
+- Same rate on the exact field: the error is the steps'. Codes are narrower than noise.
 :::
 
 ::: {.slide title="Spherical Interpolation Keeps Codes at the Norm of Their Endpoints"}

@@ -1562,14 +1562,20 @@ the average training image of ankle boots, a blurred boot.
 :::
 
 ::: {.slide title="The Prediction Keeps the Outline Long after the Noise Hides It"}
+::: {.cols .vc}
+::: {.col}
 @!image-diffusion-one-trainer-4
+:::
 
+::: {.col .narrow}
 - Rows: a test image noised to $t = 0, \ldots, 1$; the clean image the
   network implies; the same along one 50-step sample (sample at $t = 0$).
 - Noising: at $t = 1$ within 0.07 of the class average; detail goes first,
   the outline last.
 - Sampling: by $t = 0.6$ within 0.12–0.14 of the sample, outline in place.
   Shape early, surface late.
+:::
+:::
 :::
 
 ::: {.slide title="The Weight Average Sits Nearer the Center of the Wandering Iterates"}
@@ -1682,9 +1688,11 @@ $$\tilde{\mathbf{u}}(\mathbf{x}, t) = \mathbf{u}_{\boldsymbol\theta}(\mathbf{x},
 if gamma == 1:  # the conditional field
     return d2l.conditional(net, c)
 null = torch.full_like(c, net.num_classes)
+cat = torch.cat
 def guided(x, t):  # one doubled batch
-    out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
-                     torch.cat([c, null])).chunk(2)
+    out = net(cat([x, x]), cat([t, t]),
+              cat([c, null]))
+    out_c, out = out.chunk(2)
     return out + gamma * (out_c - out)
 ```
 
@@ -1706,10 +1714,11 @@ $\hat{\mathbf{x}}_0^{c}$, beyond $\hat{\mathbf{x}}_0^{c}$.
 if gamma == 1:  # the conditional field
     return d2l.conditional(net, c)
 null = jnp.full_like(c, net.num_classes)
+cat = jnp.concatenate
 def guided(x, t):  # one doubled batch
-    out_c, out = jnp.split(net(jnp.concatenate([x, x]),
-                               jnp.concatenate([t, t]),
-                               jnp.concatenate([c, null])), 2)
+    out = net(cat([x, x]), cat([t, t]),
+              cat([c, null]))
+    out_c, out = jnp.split(out, 2)
     return out + gamma * (out_c - out)
 ```
 
@@ -1742,16 +1751,22 @@ overshooting removes variety.
 :::
 
 ::: {.slide title="Guidance Trades Variety for Typicality"}
+::: {.cols .vc}
+::: {.col}
 @!image-diffusion-classifier-free-guidance-1
+:::
 
+::: {.col}
 - $\gamma = 1$: FD about 0.8, agreement nearly 90% (real images: 93%).
   $\gamma = 1.25$: same FD, agreement 93–94%.
 - $\gamma = 1.5$: agreement 96%, FD up by about 0.3. $\gamma \geq 3$: above
   99%, FD 4 to 6: prototypes, without the ambiguous examples of real data.
 - Why guide hard anyway? The FD judges the set and rewards variety; a person
   judges one picture and rewards a clear instance of the request.
+:::
+:::
 
-[Ho and Salimans (2022): on ImageNet a small $w$ of 0.1 to 0.3 lowered the FID; ours at $\gamma = 1.25$ holds it level.]{.small}
+[Ho and Salimans (2022): $w$ of 0.1 to 0.3 lowered ImageNet's FID; our $\gamma = 1.25$ keeps it level.]{.small}
 :::
 
 ::: {.slide title="Without the Label, the FD Triples and the Class Mix Drifts"}

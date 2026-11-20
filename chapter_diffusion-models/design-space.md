@@ -1254,10 +1254,9 @@ the data's scale. Computed: $\mathbf{v}$ over velocity is $0.64$ from
 $\lambda = -8$ to $4$.
 
 ::: {.d2l-note}
-Velocity and noise models differ in their weighting, not in what they learn.
+Velocity and noise models differ in their weighting, not in what they learn
+(Gao et al., 2025).
 :::
-
-[Gao et al., 2025]{.small}
 :::
 
 ::: {.slide title="Monotone Weightings Are Bounds for Noise-Augmented Data"}
@@ -1399,21 +1398,14 @@ curve of the schedule figure).
 
 ::: {.slide title="Centered Times Lose; EDM Wins Only on Its Own Grid"}
 Base: velocity, linear path, $t$ uniform; one change per row; 64-channel
-U-Net, 5,000 updates, two seeds (four for base, EDM's levels, EDM); Heun on two
-grids; FD of 5,000 samples (real 0.17 to 0.18):
+U-Net, 5,000 updates; Heun on two grids; FD of 5,000 samples (real 0.17 to 0.18):
 
 @!design-space-a-recipe-ablation-2
 
-- Every velocity model scores lower on the linear grid; EDM's is
+- Every velocity model scores lower on the linear grid on average; EDM's is
   indifferent. On the linear grid EDM and the base overlap.
-- Centered times: on EDM's grid worse than every base run, by 1.1 to 1.3
-  on average. $m = -0.5$, EDM's levels, $\mathbf{v}$: within or below the
-  base.
-
-::: {.d2l-note}
-At $28 \times 28$, do not center the training times. Judge a recipe with
-more than one sampler.
-:::
+- Centered times: worse than the base on EDM's grid by 1.1 to 1.3 on average.
+- $m = -0.5$, EDM's levels, $\mathbf{v}$: within or below the base.
 :::
 
 ::: {.slide title="Logit-Normal Times Starve the Levels near the Data"}

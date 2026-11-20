@@ -782,7 +782,7 @@ exact. **Idea:** one regression along a path from data to noise.
 |---|---|
 | Denoising and the Score | what a denoiser knows about the data |
 | **Gaussian Paths** | **which path from data to noise, and what trains the network** |
-| Sampling by Integration | how to follow the learned field from noise to data |
+| Sampling by Integration | how to follow the field |
 | Diffusion for Images | network, guidance, a quality score |
 | Samplers, Inversion and Editing | which steps to skip; running backwards |
 | Likelihood, Weighting, Design Space | which choices of the regression matter |
@@ -882,8 +882,12 @@ VP path spends about three quarters of its time where noise dominates.
 ::: {.slide title="Ten Noise Levels Find the Weights That One Level Keeps Wrong"}
 [The ladder]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 @!gaussian-paths-annealing-through-noise-levels
+:::
 
+::: {.col .narrow}
 $\mathbf{x} \leftarrow \mathbf{x} + \tfrac{h}{2}\nabla \log p_{\tilde\sigma}(\mathbf{x}) + \sqrt{h}\,\boldsymbol\xi$
 on exact scores, no network; 2,000 starts from $\mathcal{N}(\mathbf{0}, 9\mathbf{I})$.
 
@@ -891,6 +895,8 @@ on exact scores, no network; 2,000 starts from $\mathcal{N}(\mathbf{0}, 9\mathbf
 Ten levels from 3 to 0.05, 100 steps each with $h_i = 0.1\tilde\sigma_i^2$:
 within about 0.03 of 0.5/0.3/0.2. 1,000 steps at 0.05: about a third each.
 Coarse levels set the weights, fine levels sharpen.
+:::
+:::
 :::
 :::
 

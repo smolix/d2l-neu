@@ -415,7 +415,7 @@ The hinge loss sits between the two families. When $|D| \leq 1$ its payoffs are 
 ### Estimation from Samples
 :label:`subsec_gan_objectives_estimation`
 
-The two metrics differ in how well samples determine them. The unbiased MMD estimate converges at the rate $O(n^{-1/2})$ in any dimension :cite:`Gretton.Borgwardt.Rasch.ea.2012`, whereas the empirical $W_1$ in dimension $d_x > 2$ converges at the rate $n^{-1/d_x}$ :cite:`Weed.Bach.2019`, so halving its error can take $2^{d_x}$ times as many samples. That seems to undercut the Wasserstein critic a page after we introduced it. It does not, because a WGAN critic never computes $W_1$ between two minibatches: it is a small network, and what the generator needs from it is a smooth direction toward the data, not the value. Density-ratio objectives have their own difficulty where the ratio is extreme. At the optimal forward-KL critic each term $e^{T-1}$ of the minibatch average under $q$ equals $\rho$, whose variance under $q$ is $\chi^2(p \,\|\, q) = \int (p - q)^2/q$. That variance can be infinite even when the KL divergence is finite (Exercise :exref:`ex_objectives-estimation-and-dimension` measures both effects).
+The two metrics differ in how well samples determine them. The unbiased MMD estimate converges at the rate $O(n^{-1/2})$ in any dimension :cite:`Gretton.Borgwardt.Rasch.ea.2012`, whereas the empirical $W_1$ in dimension $d_x > 2$ converges at the rate $n^{-1/d_x}$ :cite:`Weed.Bach.2019`, so halving its error can take $2^{d_x}$ times as many samples. A WGAN critic never computes that estimate, though: it is a small network, and the generator uses its slope, not its value. Density-ratio objectives have their own difficulty where the ratio is extreme. At the optimal forward-KL critic each term $e^{T-1}$ of the minibatch average under $q$ equals $\rho$, whose variance under $q$, $\chi^2(p \,\|\, q) = \int (p - q)^2/q$, can be infinite even when the KL divergence is finite (Exercise :exref:`ex_objectives-estimation-and-dimension` measures both effects).
 
 ## Gradients Far from and Near the Data
 :label:`subsec_gan_objectives_gradients`
@@ -486,7 +486,7 @@ In the limit of disjoint supports, drawn in :numref:`fig_gan_critics_separated`,
 ### Trained Critics from a Separated Start
 :label:`subsec_gan_objectives_separated_start`
 
-The plot and the figure describe optimal critics. A trained critic is a small network fitted to minibatches a few steps at a time, and it need not look like any of them. Does it still give a far generator a direction? Let us start a generator six units from the data and see. Its one parameter is the location $\theta$ of $q = \mathcal{N}(\theta, 1)$, and the data are $p = \mathcal{N}(0, 1)$. Every critic is the same ReLU network with two hidden layers of 32 units, and the $W_1$ critic adds the gradient penalty of WGAN-GP with weight $\gamma = 10$. The MMD arm has no critic and sets its kernel bandwidth to the median distance in the pooled batch, so that the kernel reaches across whatever gap there is.
+The plot and the figure describe optimal critics. A trained critic is a small network fitted to minibatches a few steps at a time, and it need not look like any of them. Does it still give a far generator a direction? Let us start a generator six units from the data and see. Its one parameter is the location $\theta$ of $q = \mathcal{N}(\theta, 1)$, and the data are $p = \mathcal{N}(0, 1)$. Every critic is the same ReLU network with two hidden layers of 32 units, and the $W_1$ critics add the gradient penalty of WGAN-GP with weight $\gamma = 10$. The MMD arm has no critic and sets its kernel bandwidth to the median distance in the pooled batch, so that the kernel reaches across whatever gap there is.
 
 ```{.python .input #objectives-separated-start-losses}
 %%tab pytorch
@@ -538,7 +538,7 @@ def gradient_penalty(D, X, fake, u, one_sided=False):
     return ((jnp.maximum(excess, 0) if one_sided else excess) ** 2).mean()
 ```
 
-`train_shift` gives the critic five Adam steps for every generator step, which keeps it near its best response. The generator takes plain gradient steps with learning rate $0.01$: Adam would rescale every step to about its learning rate and hide the size of the gradient, which is what we want to see. The function records $\theta$ and the generator's gradient at every step. A positive `gp` adds the gradient penalty to the critic loss; with `critic_loss` set to `None`, the generator minimizes `gen_loss` of the two batches.
+`train_shift` gives the critic five Adam steps for every generator step, which keeps it near its best response. The generator takes plain gradient steps with learning rate $0.01$: Adam would rescale every step to about its learning rate and hide the size of the gradient, which is what we want to see. The function records $\theta$ and the generator's gradient at every step. A positive `gp` adds the gradient penalty to the critic loss, and `one_sided=True` charges only slopes steeper than one, $\max(0, |T'| - 1)^2$; with `critic_loss` set to `None`, the generator minimizes `gen_loss` of the two batches.
 
 ```{.python .input #objectives-separated-start-train}
 %%tab pytorch
@@ -648,8 +648,7 @@ def train_shift(critic_loss, gen_loss, seed, gp=0.0, one_sided=False,
     return np.asarray(jnp.stack(thetas)), np.asarray(jnp.stack(grads)), D
 ```
 
-<!-- WRITER: M2 code done: the cell now trains SIX arms, three runs each; the sixth, "W1 + 1-sided GP", is the W1 critic with the one-sided penalty max(0, |D'| - 1)^2 (`train_shift(..., gp=10.0, one_sided=True)`). The table gained a column: "arrival" is the first step with |theta| < 0.5 (as before), "farthest" the largest |theta| from that step on. Describe the sixth arm and the new column here. -->
-Five arms train three times each. Four are the non-saturating logistic and the hinge games with the generator losses of :numref:`tab_gan_loss_divergences`, a $W_1$ critic whose generator minimizes $-D(x')$, and MMD with no critic. The fifth keeps the logistic critic but gives the generator the saturating loss of :numref:`sec_basic_gan`, which minimizes $\mathbb{E}[\log \sigma(-D(x'))]$. Against an optimal critic that generator descends the value of the game, $2\,\mathrm{JS} - 2 \log 2$, so the plot above predicts its gradient at distance six: twice the Jensen--Shannon slope there, about a hundredth. For every run the table prints the median size of the generator's gradient over the first 100 steps, $\theta$ at five steps, and the first step at which $|\theta| < 0.5$.
+Six arms train three times each. Four are the non-saturating logistic and the hinge games with the generator losses of :numref:`tab_gan_loss_divergences`, a $W_1$ critic whose generator minimizes $-D(x')$, and MMD with no critic. The fifth repeats on the line the far start of :numref:`subsec_gan_saturation`: it keeps the logistic critic but gives the generator the saturating loss, which minimizes $\mathbb{E}[\log \sigma(-D(x'))]$. Against an optimal critic that generator descends the value of the game, $2\,\mathrm{JS} - 2 \log 2$, so the plot above predicts its gradient at distance six: twice the Jensen--Shannon slope there, about a hundredth. The sixth is a control that we explain below: the $W_1$ critic again, with the penalty made one-sided. For every run the table prints the median size of the generator's gradient over the first 100 steps, $\theta$ at five steps, the *arrival*, the first step at which $|\theta| < 0.5$, and the *farthest* $|\theta|$ from the arrival on.
 
 ```{.python .input #objectives-separated-start-runs}
 %%tab pytorch, jax
@@ -676,14 +675,17 @@ for name, (critic_loss, gen_loss, kwargs) in arms.items():
                  if len(hit) else '  not reached'))
 ```
 
-The prediction holds. The saturating arm's gradient is between $0.006$ and $0.015$, about a hundredth, and in 1,500 steps $\theta$ moves from $6$ only to about $5.76$. The non-saturating arm trains the same critic with the same loss and changes only the generator's loss, yet its gradient is $2.7$ to $3.0$, a factor of hundreds larger, and every run reaches $|\theta| < 0.5$ by step 390. The critic was never the problem. For these Gaussians the optimal logistic critic $\lambda$ is a line of slope $-\theta$, and the trained critic slopes as well. The saturating loss multiplies that slope by $\sigma(D(x'))$, the critic's probability that a generated sample is real (:numref:`sec_basic_gan`), which six units from the data is negligible. The non-saturating loss passes the slope on almost unweighted. The saturation belongs to the generator's loss.
+The result of :numref:`sec_basic_gan` holds here. The saturating gradient is between $0.006$ and $0.015$, about a hundredth as predicted, and in 1,500 steps $\theta$ moves from $6$ only to about $5.76$. With the same critic and critic loss, the non-saturating generator has a gradient of about $3$ and arrives before step 400 in every run. As there, the trained critic slopes at the generated samples, like its optimal version $\lambda$, a line of slope $-\theta$, and the saturating loss scales that slope by $\sigma(D(x'))$, which six units from the data is negligible.
 
-The hinge is the case that the analysis of optimal critics gets wrong. Its optimal critic $\operatorname{sign} \lambda$ is level at both clouds, so a generator that minimizes $-D(x')$ against it would not move at all. For that generator loss the gradient is simply the critic's average slope at the generated samples, so the table measures the trained critic directly: its slope there is $1.1$ to $1.7$, and every run reaches the data between steps 719 and 918. The trained network ramps across the gap instead of building the step. A small network fitted to minibatches a few steps at a time is smoother than the optimal critic, and here that smoothness, not the divergence on the label, moves the generator.
+The hinge is the case that the analysis of optimal critics gets wrong. Its optimal critic $\operatorname{sign} \lambda$ is level at both clouds, so a generator that minimizes $-D(x')$ against it would not move at all. For that generator loss the gradient is simply the critic's average slope at the generated samples, so the table measures the trained critic directly: its slope there is $1.1$ to $1.7$, and every run arrives between about steps 700 and 950. The trained network ramps across the gap instead of building the step: it is smoother than the optimal critic, and here that smoothness, not the divergence on the label, moves the generator.
 
-<!-- WRITER: measured, both tabs (PyTorch reproduces the store bit for bit; JAX now deterministic, two runs identical): two-sided W1 + GP gradient 1.25-1.26, arrival steps 477-508, farthest after arrival 1.13-7.61 in all six runs (PyTorch 1.48, 7.49, 7.61; JAX 1.13, 7.47, 1.22), theta at 1,500 between 0.30 and 7.61 in size. One-sided arm: gradient 1.26-1.27 (1.257-1.265), arrival 476-479, farthest 0.49-0.50 (never farther than where it entered), |theta| at 1,500 at most 0.06 in all six runs. The firm lesson (number, range, difference far beyond the range): the two-sided arm overshoots by more than a unit in every run, the one-sided arm stays within half a unit of the data from its arrival on and ends within 0.06 of it. Replace "arriving is the easy part" and the per-run narrative by this, with the reading rule of M2 option 2. "between steps 477 and 508" -> "near step 500" (S1). -->
-The $W_1$ gradient is $1.25$ to $1.26$ in every run rather than $1$, because the penalty is soft. A linear critic of slope $a$, with the two means a distance $d$ apart, pays $-ad + 10(a - 1)^2$ under the penalized loss, which is smallest at $a = 1 + d/20$, between $1.25$ and $1.3$ while $d$ is between five and six. This push shrinks only toward one, so the generator reaches the data at nearly full speed, between steps 477 and 508, and nothing in the push tells it to stop there.
+Both $W_1$ arms push with a gradient of about $1.26$ in every run rather than $1$, because the penalty is soft. A linear critic of slope $a$, with the two means a distance $d$ apart, pays $-ad + 10(a - 1)^2$ under the penalized loss, which is smallest at $a = 1 + d/20$, between $1.25$ and $1.3$ while $d$ is between five and six. The one-sided penalty charges slopes above one the same, so on the way in the two arms play one game. The push shrinks only toward one, so both generators arrive at nearly full speed, near step 500, and nothing in the push tells them to stop there.
 
-Past the data the critic has to reverse its slope, and this is where the two-sided penalty bites. It charges $\gamma$ for a flat critic, so the reversal is a climb over a barrier at slope zero. With the generator a distance $d$ beyond the data, a linear critic still on the old side sits in a local minimum of the penalized loss, at slope $1 - d/20$ pointing away from the data, and from there it pushes the generator further out. A critic that gets over the barrier settles at $1 + d/20$ on the new side and pulls the generator back. A ReLU critic has a third possibility that a linear one lacks: it can go flat, and a flat critic leaves the generator wherever it happens to be. Which of these did the runs meet? The critic's slope at the generator tells us, since the generator minimizes $-D(x')$ and each of its steps moves $\theta$ by about the learning rate times $D'(\theta)$. The cell reads the three $W_1$ critics at step 1,500: their slope at the final $\theta$ and at the data mean $0$, and how many of their 64 hidden units are active at each point.
+The farthest column tells the two arms apart. Every two-sided run overshoots the data by more than a unit, some by more than seven. Every one-sided run stays within $0.5$ of the data from its arrival on and ends within $0.06$ of it. The spread within each arm is far smaller than the gap between them, so the form of the penalty decides whether the generator stays.
+
+Past the data the critic has to reverse its slope. The two-sided penalty charges $\gamma$ for a flat critic, so the reversal is a climb over a barrier at slope zero. With the generator a distance $d$ beyond the data, a linear critic still on the old side sits in a local minimum of the penalized loss, at slope $1 - d/20$ pointing away from the data, and from there it pushes the generator further out. A critic that gets over the barrier settles at $1 + d/20$ on the new side and pulls the generator back. The argument holds at the start as well: at $d = 6$ a critic whose slope begins with the wrong sign settles at $1 - 6/20 = 0.7$ pointing away and pushes the generator out from the first step. In these runs $\theta$ falls during the first 100 steps, so none started that way. The one-sided penalty charges nothing for slopes below one in size, so it has no barrier, and its critic turns as the generator crosses.
+
+A ReLU critic has one more possibility that a linear one lacks: it can die. The cell reads all six $W_1$ critics at step 1,500: their slope at the final $\theta$ and at the data mean $0$, and how many of the 32 units of each hidden layer are on at each point.
 
 ```{.python .input #objectives-separated-start-w1-critics}
 %%tab pytorch
@@ -728,24 +730,18 @@ for name, seed, theta, D in w1_runs:
           f'{s_0:9.2f}{a_0[0]:5d}{a_0[1]:3d}')
 ```
 
-<!-- WRITER: M1 + M2 code done: the cell now prints all six W1 critics (both arms) with active units PER HIDDEN LAYER (two numbers of 32 each, at theta and at 0). Measured: every flat two-sided critic (slope 0.00 at both points) has 0 of 32 units active in the SECOND layer (PyTorch run 0; JAX runs 0 and 2), so its output is a constant and no gradient reaches the weights: dead, as Fable says. The sentence "The flat critics are not dead networks, though: 10 to 28 of their 64 units are active ..." is FALSE; rewrite (Fable's M1 wording works). The other two-sided critics are alive (layer 2: 7-9 units PyTorch, 2 JAX). One-sided critics at the data: slope -0.16 to 0.65, layer 2 has 3-7 units on, except JAX run 0, also dead (0 of 32 in layer 2) but with its generator at theta = -0.06, inside the data; so a ReLU critic can die under either penalty, and only the two-sided one first carries the generator past the data. States now: PyTorch flat (0.30) / crossed (+1.34 at -7.18) / old side (-0.65 at -7.61); JAX flat (-1.13) / crossed (+1.33 at theta = -7.30, +1.44 at 0) / flat (-1.22). "The run that ends at theta = -7.6 has a critic still on the old side" is now true in PyTorch only: per M2 option 2, give a reading rule and quote no per-run theta, slope or count. The setup sentence before the cell ("reads the three W1 critics ... how many of their 64 hidden units") must follow: six critics, units per layer. -->
-The linear analysis reads this printout well. Each critic has nearly the same slope at $\theta$ as at $0$, so across the gap it is close to a straight line, and the runs land in the states that line allows. Some critics are flat, with slope $0.00$ at both points, and their generators have not moved since step 1,000. The run that ends at $\theta = -7.6$ has a critic still on the old side. Its slope is $-0.62$ to $-0.65$; with the data to the right of $\theta$, a negative slope carries $\theta$ further left, and the predicted size at $d = 7.6$ is $1 - d/20 = 0.62$. That generator is being pushed out. The flat critics are not dead networks, though: 10 to 28 of their 64 units are active, and the units that stay on simply pass no slope from input to output.
+Each critic has about the same slope at $\theta$ as at $0$, so between the two points it is nearly the straight line of the analysis. Each generator step moves $\theta$ by about the learning rate times $D'(\theta)$, and every row reads by one rule, with $d = |\theta|$:
 
-<!-- WRITER: M2: delete both tab notes (option 2). The JAX note is false after the change: JAX now has two flat critics at theta = -1.13 and -1.22 and one crossed critic at -7.30. -->
-:begin_tab:`pytorch`
-The run that ends at $\theta = -7.18$ shows the third state: its critic has crossed the barrier, with slope $+1.34$ against the predicted $1 + d/20 = 1.36$, and it now pulls the generator back toward the data. The flat critic holds its generator at $\theta = 0.30$, inside the data.
-:end_tab:
+- Slope $0.00$ at both points and no unit of the second layer on: the critic is dead. Its output is a constant, so no gradient reaches any weight below the output bias, and neither the Wasserstein term nor the penalty, which charges the full $\gamma$ for a flat critic, can revive it. Its generator stays put.
+- A slope with the sign of $\theta$, of size near $1 - d/20$: the critic is still on the old side and pushes the generator out.
+- A slope against the sign of $\theta$, of size near $1 + d/20$: the critic has crossed and pulls the generator back.
+- A one-sided critic at the data may slope either way, by less than one, since no such slope costs it anything there. If it dies, it leaves its generator at the data.
 
-:begin_tab:`jax`
-Two of the three critics are flat, and they hold their generators at $\theta = -1.18$ and $-1.40$, a little more than a unit past the data.
-:end_tab:
-
-<!-- WRITER: M2: replace this sentence by what the table shows (see the note above the W1 paragraph); keep the hand-off to sec_gan_convergence. -->
-Under the two-sided penalty, arriving at the data is the easy part; staying there is not. :numref:`sec_gan_convergence` shows on a two-parameter game that a penalty centered at slope one keeps pushing a generator that already matches the data, and that a penalty centered at zero does not.
+A leaky ReLU, as in our mixture critics, cannot die, since a leaky unit always passes some gradient; the barrier belongs to the penalty and stays. So the two-sided penalty brings a generator to the data as fast as the one-sided one and fails to keep it there, because it charges the critic for turning. :numref:`sec_gan_convergence` shows on a two-parameter game that a penalty centered at slope one keeps pushing a generator that already matches the data, and that a penalty centered at zero does not.
 
 MMD moves steadily, from $6$ to $1.32$ in 1,500 steps, with a gradient of $0.21$ that is the same in every run. Its speed says nothing about MMD against the critics, because the scale of its gradient is set by the bandwidth and by the scale of $\mathrm{MMD}^2$.
 
-So is the missing gradient a property of the loss, of the critic, or of the divergence? The divergence on the label does go flat, but only the saturating generator descends it, and that generator stalls. Every trained critic sloped at the generated samples, the hinge's included, although its optimal version is a level step there. A far generator moves when its critic slopes at the generated samples and its loss passes that slope on; the divergence on the label decides neither.
+So is the missing gradient a property of the loss, of the critic, or of the divergence? The divergence on the label does go flat, but only the saturating generator descends it, and that generator stalls. At the start every trained critic sloped at the generated samples, the hinge's included, although its optimal version is a level step there. A far generator moves when its critic slopes at the generated samples and its loss passes that slope on; the divergence on the label decides neither.
 
 The systems in use fit this reading. Studies that give each loss the same tuning budget find the losses comparable in final image quality :cite:`Lucic.Kurach.Michalski.ea.2018`, and practice has settled on combinations rather than on a winning divergence. Large image GANs of the BigGAN generation train the hinge loss with a spectrally normalized critic :cite:`Miyato.Kataoka.Koyama.ea.2018,Brock.Donahue.Simonyan.2019`, the mixed cell of :numref:`tab_gan_objective_families`. HiFi-GAN vocoders train least squares :cite:`Kong.Kim.Bae.2020`. The StyleGAN line trains the non-saturating logistic loss with a zero-centered gradient penalty on real samples :cite:`Karras.Laine.Aittala.ea.2020`, the combination that :numref:`sec_gan_convergence` analyzes. All three give the generator a loss that does not saturate.
 
@@ -899,16 +895,13 @@ d2l.plot(np.arange(len(runs['logistic'][0])) * 200,
          ylabel='JS(p, q_t)', yscale='log', legend=list(runs), figsize=(5, 3))
 ```
 
-All five objectives fit the mixture, taking the generator from about half a nat to a few thousandths of a nat or less. MMD, which has no critic to keep up with, ends lowest in every run, at $0.0001$. It is also the first below $0.1$ nats, at step 1,200, and the last below $0.01$, at step 2,600. The hinge ends highest in every run, between $0.003$ and $0.007$ nats, against at most $0.0024$ for every other loss, and the squared hinge, with the same margin and generator loss, ends at the level of the logistic and least-squares games. The hinge fit is thus the loosest in these runs. That is not a verdict on the hinge loss: three untuned runs per loss and a margin of a few thousandths of a nat on a planar toy cannot rank losses that practice relies on.
-
-<!-- WRITER: the JAX objectives notebook now runs with deterministic GPU ops (new setup cell), which changes the JAX mixture rows: median JS last 2,000 steps logistic 0.0011/0.0008/0.0019, least squares 0.0010/0.0007/0.0006, hinge 0.0069/0.0036/0.0064, squared hinge 0.0012/0.0007/0.0009, MMD 0.0001; first JS < 0.1: logistic 2200/2200/1800, LS 2200/2000/1800, hinge 1400/1400/1800, squared hinge 1400/1400/1200, MMD 1200; first < 0.01: logistic 2400 x3, LS 2400/2200/2000, hinge 2000/2200/2000, squared hinge 2000/2000/2400, MMD 2600. "the squared hinge at step 1,400 ... in every run" is now false in JAX (one run 1,200); the previous paragraph's hinge range 0.003-0.007 and "at most 0.0024 for every other loss" still hold. This paragraph is an M4 cut (one sentence + exercise pointer) anyway. PyTorch rows unchanged. -->
-The gap between the two hinges is consistent with what their critics must track. The hinge target $\operatorname{sign} \lambda$ is a full-margin step however small the mismatch, so a critic that falls behind leaves the generator following a stale push of full size. The squared hinge's target $\tanh(\lambda/2)$ shrinks with the mismatch. The logistic and least-squares runs, whose generators weight each sample by how firmly the critic still rejects it, also leave the starting plateau later than the squared hinge and MMD: they fall below $0.1$ nats between steps 1,800 and 2,200, the squared hinge at step 1,400 and MMD at step 1,200 in every run. These runs test neither account; Exercise :exref:`ex_objectives-plateaus-lag` does.
+All five objectives fit the mixture, taking the generator from about half a nat to a few thousandths of a nat or less. MMD, which has no critic to keep up with, ends lowest in every run, at $0.0001$. The hinge ends highest in every run, between $0.003$ and $0.007$ nats against at most $0.0024$ for every other loss, while the squared hinge, with the same margin and generator loss, ends at the level of the logistic and least-squares games. The hinge fit is thus the loosest in these runs. That is not a verdict on the hinge loss: three untuned runs per loss on a planar toy cannot rank losses that practice relies on. Nor do the runs say why. One candidate is critic lag: the hinge target $\operatorname{sign} \lambda$ is a full-margin step however small the mismatch, so a critic that falls behind leaves the generator a stale push of full size, while the squared hinge's target $\tanh(\lambda/2)$ shrinks with the mismatch. Exercise :exref:`ex_objectives-plateaus-lag` tests it.
 
 Near the data, then, every loss here fits the mixture, and far from it the slope that reaches the generator decides. All the critics of this section score a sample on its own. A critic can also be shown a real and a generated sample together and asked which is which, and what such a critic measures is the subject of the next section.
 
 ## Summary
 
-Every adversarial objective with a single-sample critic is a supremum, over a critic class, of expected payoffs, so it is convex in the generator's distribution, though not in its parameters. With a free critic, a classification loss evaluates the f-divergence given by its Bayes-risk gap, and its optimal critic reports a fixed link of the log ratio $\lambda$; tangent lines extend the construction to any f-divergence. Linear payoffs with a restricted critic give integral probability metrics instead: MMD for a kernel ball and, by the Kantorovich--Rubinstein duality, $W_1$ for the Lipschitz ball, which practical critics enforce only approximately. When the supports separate, the ratio-based divergences go flat while $W_1$ keeps unit slope and MMD a slope over separations set by its bandwidth. The divergence does not decide whether a far generator moves, though: every trained critic sloped at the generated samples, the hinge's included, and only the saturating generator loss threw that slope away. Under the two-sided gradient penalty the $W_1$ push does not fade at the data, and the generator need not settle there. With overlapping supports, all five losses fit a three-mode mixture to within a few thousandths of a nat.
+Every adversarial objective with a single-sample critic is a supremum, over a critic class, of expected payoffs, so it is convex in the generator's distribution, though not in its parameters. With a free critic, a classification loss evaluates the f-divergence given by its Bayes-risk gap, and its optimal critic reports a fixed link of the log ratio $\lambda$; tangent lines extend the construction to any f-divergence. Linear payoffs with a restricted critic give integral probability metrics instead: MMD for a kernel ball and, by the Kantorovich--Rubinstein duality, $W_1$ for the Lipschitz ball, which practical critics enforce only approximately. When the supports separate, the ratio-based divergences go flat while $W_1$ keeps unit slope and MMD a slope over separations set by its bandwidth. The divergence does not decide whether a far generator moves, though: every trained critic sloped at the generated samples, the hinge's included, and only the saturating generator loss threw that slope away. Under the two-sided gradient penalty the $W_1$ generator overshoots the data in every run, because the penalty puts a barrier at slope zero; the one-sided penalty has none and keeps it there. With overlapping supports, all five losses fit a three-mode mixture to within a few thousandths of a nat.
 
 ## Exercises
 
@@ -952,17 +945,18 @@ Every adversarial objective with a single-sample critic is a supremum, over a cr
    the separation beyond which it stays below 1% of its maximum. Compare
    with the single kernel $s = 4$. Which bandwidth decides the range?
    :exlabel:`ex_objectives-mmd-gradient-range`
-1. [code] **The penalized $W_1$ critic.** ● Use `train_shift` and the $W_1$
-   arm of :numref:`subsec_gan_objectives_separated_start`.
+1. [code] **The penalized $W_1$ critic.** ● Use `train_shift` and the two-sided
+   $W_1$ arm of :numref:`subsec_gan_objectives_separated_start`.
     1. For a linear critic the text predicts a push of $1 + d/(2\gamma)$
        at distance $d$. Predict the generator's median gradient over the
        first 100 steps for $\gamma \in \{1, 10, 100\}$, and measure it.
-    <!-- WRITER: M2 option 4: the one-sided penalty is now in the body (`gradient_penalty(..., one_sided=True)`, `train_shift(..., one_sided=True)`); keep only the leaky-ReLU part here and ask why a generator may move away from the data from the first step (linear analysis: at d = 6 an old-side critic sits at 1 - 6/20 = 0.7 pointing away). -->
-    1. Replace the two-sided penalty in `gradient_penalty` by the
-       one-sided $\max(0, |T'| - 1)^2$, which has no barrier at slope zero.
-       Separately, give the critic leaky-ReLU activations. Over three seeds,
-       does either change let the generator settle at the data? Which
-       part of the account in the text does each outcome support?
+    1. Copy `train_shift` and give its critic leaky-ReLU activations with
+       negative slope $0.2$, as in `make_critic`, so that it cannot die.
+       Train the two-sided arm over three seeds and record $\theta$ every
+       100 steps. Does the generator now settle at the data? Does it always
+       move toward the data at first? Use the linear analysis to explain why
+       a generator can be pushed away from the first step: at which slope
+       does a critic that starts with the wrong sign settle when $d = 6$?
    :exlabel:`ex_objectives-wasserstein-penalty`
 1. [code] **Plateaus and critic lag.** ● Use `train_toy` and the five
    losses of :numref:`subsec_gan_objectives_testbed`.
@@ -1257,23 +1251,23 @@ at $\mu = 4.2$.
 - Hinge critic $\operatorname{sign}\lambda$: a step, level at both clouds.
 :::
 
-<!-- WRITER: deck: add a row for the one-sided arm (gradient 1.26, arrival steps 476-479, stays within 0.5 of the data; ends within 0.06), and replace "then may stall or be pushed away" by the measured overshoot (farthest 1.1-7.6 in every run); round per S1 (hinge "about 700 to 950", NS "about 380"). JAX values now: NS 2.72-2.90, 378-387; hinge 1.07-1.63, 743-938. -->
 ::: {.slide title="A Far Generator Moves unless Its Loss Saturates"}
 Data $\mathcal{N}(0,1)$; generator $x' = \theta + z$ from $\theta = 6$;
 plain gradient steps; three runs per arm.
 
-| arm | gradient | first $\lvert\theta\rvert < 0.5$ |
-|:--|:--|:--|
-| logistic, saturating | 0.006--0.015 | not in 1,500 steps |
-| logistic, non-saturating | 2.7--3.0 | steps 377--388 |
-| hinge | 1.1--1.7 | steps 719--918 |
-| $W_1$ + gradient penalty | 1.25--1.26 | steps 477--508, then may stall or be pushed away |
-| MMD, median bandwidth | 0.21 | $\theta = 1.32$ at step 1,500 |
+| arm | gradient | arrival, $\lvert\theta\rvert < 0.5$ | farthest after |
+|:--|:--|:--|:--|
+| logistic, saturating | 0.006--0.015 | not in 1,500 steps | |
+| logistic, non-saturating | about 3 | before step 400 | 0.5 |
+| hinge | 1.1--1.7 | steps 700--950 | 0.5 |
+| $W_1$, two-sided penalty | 1.25--1.26 | near step 500 | above 1.1 |
+| $W_1$, one-sided penalty | about 1.26 | near step 500 | 0.5 |
+| MMD, median bandwidth | 0.21 | $\theta = 1.32$ at step 1,500 | |
 
 ::: {.d2l-note}
-Same critic, two generator losses: gradients differ by a factor of hundreds.
-Hinge: the optimal step is level at both clouds, yet the trained critic's
-slope there is 1.1--1.7.
+Same critic, two generator losses: gradients hundreds apart. Hinge: the
+optimal step is level, the trained critic slopes. Two-sided penalty:
+every run overshoots; one-sided: none.
 :::
 :::
 
@@ -1298,38 +1292,35 @@ does not saturate.
 [Lucic et al., 2018; Miyato et al., 2018; Brock et al., 2019; Kong et al., 2020; Karras et al., 2020]{.small}
 :::
 
-<!-- WRITER: M1/M2: the answer should add the measured contrast (one-sided penalty: no barrier, every run stays within half a unit of the data) and say that a flat ReLU critic is dead (no unit on in its second layer). -->
 ::: {.slide title="Check: Why Does the W1 Generator Not Settle?"}
 [Check]{.kicker}
 
 The non-saturating generator settles at the data. The $W_1$ generator
-arrives at nearly full speed, then stalls or is pushed away again. Why?
+with the penalty $\gamma(|T'| - 1)^2$ arrives at nearly full speed and
+overshoots in every run; with $\gamma \max(0, |T'| - 1)^2$ it stays. Why?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** The $W_1$ push stays near unit size at the data. Past it the
-critic must reverse its slope, and the penalty $\gamma(|T'| - 1)^2$ puts
-a barrier at slope zero: a critic left on the old side pushes the
-generator away; a ReLU critic can also go flat and leave it where it is.
+**Answer.** Past the data the critic must reverse its slope. The two-sided
+penalty charges $\gamma$ at slope zero, a barrier: a critic left on the old
+side pushes the generator out. The one-sided penalty charges nothing below
+slope one, so its critic turns freely.
 :::
 :::
 :::
 
-<!-- WRITER: M1/M2: the placeholder now prints six critics with units per layer. Bullets: flat = dead (0 of 32 units on in layer 2), not merely flat; drop the theta = -7.6 bullet (true in PyTorch only); state the reading rule and the one-sided contrast. -->
-::: {.slide title="At Step 1,500 Each W1 Critic Is a Ramp or Flat"}
-Slope $D'$ of each $W_1$ critic at the generator $\theta$ and at the data
-mean $0$; active units of 64:
+::: {.slide title="Each W1 Critic at Step 1,500 Is Dead, Pushing, or Pulling"}
+Slope $D'$ at $\theta$ and at $0$; units on per hidden layer, of 32;
+$d = \lvert\theta\rvert$:
 
 @!objectives-separated-start-w1-critics
 
-- Flat: slope 0.00 at both points; $\theta$ stays where it is.
-- Old side, $\theta \approx -7.6$, a distance $d = 7.6$ past the data: slope $-0.62$ to $-0.65$, pushing
-  $\theta$ out; linear prediction $1 - d/20 = 0.62$.
-- A critic that crosses settles at $1 + d/20$ and pulls $\theta$ back.
+- $0.00$ at both, layer 2 off: **dead**, constant output, no gradient.
+- Sign of $\theta$, size near $1 - d/20$: old side, pushes out.
+- Against $\theta$, size near $1 + d/20$: crossed, pulls back.
 
 ::: {.d2l-note}
-Same slope at $\theta$ and at $0$: across the gap each critic is nearly a
-straight line. Arriving is easy; staying is not.
+One-sided critics at the data slope by less than 1, which costs nothing.
 :::
 :::
 
@@ -1344,9 +1335,9 @@ straight line. Arriving is easy; staying is not.
   $\mu = 1$ to 7.
 - **Far start:** saturating gradient 0.01, non-saturating about 3. The
   generator moves when its critic slopes at its samples and its loss
-  passes the slope on; the divergence decides neither. $W_1$ + penalty
-<!-- WRITER: Wrap-up: "arrives by step 508" -> "near step 500"; add the one-sided arm (stays at the data). -->
-  arrives by step 508, then stalls or is pushed out.
+  passes the slope on; the divergence decides neither. $W_1$: both
+  penalties arrive near step 500; the two-sided one overshoots, the
+  one-sided one stays.
 - **Mixture:** all five losses from 0.529 nats to a few thousandths.
 
 **Next:** a critic that compares a real sample with a generated one.

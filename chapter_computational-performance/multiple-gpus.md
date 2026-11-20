@@ -455,7 +455,7 @@ diff = max(np.abs(u1 - u2).max() for u1, u2 in zip(*updates))
 print(f'largest update {largest:.1e}, largest difference {diff:.1e}')
 ```
 
-The two updates differ by about a millionth of the largest update. That
+The two updates differ by less than a millionth of the largest update. That
 is fp32 rounding, because the two steps add the same numbers in a
 different order. We ran the check in true fp32 on purpose. In tf32, which
 the tensor cores use elsewhere in this section (:numref:`subsec_mp-mixed`),
@@ -676,7 +676,7 @@ of two driver-managed copies.
 :begin_tab:`jax`
 `d2l.Benchmark` already makes its calls in a row and waits once, for the
 last result. This cell times `psum`, which XLA hands to NCCL; on our
-machine $\beta_{\textrm{link}}$ is about 2.4 GB/s. On the path through
+machine $\beta_{\textrm{link}}$ is about 2.5 GB/s. On the path through
 host memory between our GPUs, NCCL falls back to a transport that moves
 fewer bytes per second than the PCIe links carry; :numref:`sec_multi_gpu_concise`
 measures this transport and a workaround for it. Each call of `allreduce`
@@ -730,7 +730,7 @@ for name, f, calls in (
           f'{1e6 * (calls * alpha + n_bytes / beta_link):4.0f} us predicted')
 ```
 
-Ten calls take eight to ten times as long as one call that moves the same
+Ten calls take seven to ten times as long as one call that moves the same
 bytes, and for ten calls the two constants predict the time to within a
 few percent.
 
@@ -790,7 +790,12 @@ and its time is $h_{\textrm{step}}$.
 :begin_tab:`pytorch`
 The device is busy for 0.30 ms of a step of 2.8 ms, about a tenth. Its
 largest kernels, the convolutions and their gradients, take a few
-hundredths of a millisecond each.
+hundredths of a millisecond each. If you run this notebook yourself, set
+`TEARDOWN_CUPTI=1` in the environment before you start it, as we did for
+our outputs. It detaches the profiler from the GPU when a profile ends.
+Without it, every later kernel launch of the process stays slower, by
+about 30% on our machine, and so does every host-bound timing below this
+cell.
 :end_tab:
 
 :begin_tab:`jax`
@@ -827,11 +832,15 @@ for k, b in ((1, 256), (1, 128), (2, 128)):
 
 Halving the minibatch indeed leaves the local work about as long. On two
 GPUs, it takes about twice as long as on one GPU with the same 128
-examples. The step at 256 examples does not take exactly as long as in the
-profile, although the code is the same: on our shared machine the host
-time of a step varies by up to about a quarter from one cell to the next.
-The one-launcher prediction below therefore takes the one-GPU step from
-the training run that it predicts.
+examples. The one-launcher prediction below takes the one-GPU step from
+the training run that it predicts, so that the prediction and the
+measurement come from the same run.
+
+:begin_tab:`jax`
+The step at 256 examples takes 0.41 ms here and 0.46 ms in the profile,
+although the code is the same: the host time of a step differs by about a
+tenth from one cell to the next.
+:end_tab:
 
 Why twice? The host must prepare and issue the work of every device it
 feeds, and on our machine the work for two devices takes it about twice as
@@ -975,16 +984,16 @@ print(f'2 GPUs predicted: {1e3 * (t_local[1, 128] + exchange):.2f} ms per '
       f'one launcher')
 ```
 
-The step on two GPUs takes more than twice as long as the step on one.
+The step on two GPUs takes at least twice as long as the step on one.
 :eqref:`eq_dp_cost` predicts a shorter step than we measure, while
 :eqref:`eq_dp_one-launcher`, which knows only the one-GPU step and the
 exchange, predicts the slowdown.
 
 :begin_tab:`pytorch`
-:eqref:`eq_dp_cost` predicts 3.5 ms, the time of one GPU, and the step
-takes 7.5 ms, within a tenth of the one-launcher prediction. The exchange,
-$\alpha + S/\beta_{\textrm{link}}$, is 0.08 ms, about one percent of the
-step.
+:eqref:`eq_dp_cost` predicts 2.8 ms, the time of one GPU, and the step
+takes 5.6 ms, within one percent of the one-launcher prediction. The
+exchange, $\alpha + S/\beta_{\textrm{link}}$, is 0.08 ms, about one percent
+of the step.
 :end_tab:
 
 :begin_tab:`jax`
@@ -993,7 +1002,8 @@ but for a reason the training step does not share. Almost half of its
 prediction is the exchange, and most of that is $\alpha$, which contains
 the dispatch of a separate program for every allreduce. The training
 step's `psum` runs inside the program that the step dispatches anyway.
-The same $\alpha$ puts the one-launcher prediction above the measurement.
+The same $\alpha$ puts the one-launcher prediction above the measurement,
+by about a sixth.
 :end_tab:
 
 This is not the result that the opening prepared us for. Twice the
@@ -1132,19 +1142,22 @@ device time at 4,096 examples compares with the host time of one step and
 of two.
 
 :begin_tab:`pytorch`
-At 4,096 examples the device works for 3.0 ms of a 3.7 ms step, which is
-less than the 3.5 ms of host time at 256: the step is still in the
-host-bound case. Two GPUs need twice the host time, about 7 ms, and the
-second GPU gains nothing.
+At 4,096 examples the device is busy for nearly all of a 3.0 ms step,
+a little longer than the 2.8 ms of host time at 256: the step has just
+left the host-bound case for the middle one. Feeding two GPUs takes the
+host about 5.6 ms, longer than the 3 ms of work that each GPU does, and
+the model predicts a gain of 6%. The measurement shows none. The step on
+two GPUs takes 6.0 ms, a few tenths of a millisecond more than the model
+says, and at the boundary a few tenths decide the row.
 :end_tab:
 
 :begin_tab:`jax`
 At 4,096 examples the device works for 1.7 ms of a 1.8 ms step, more than
-twice the host time of 0.4 ms, so the step is in the device-bound case,
-and the second GPU raises the throughput by about 1.75, as predicted. At
-256 the three windows scatter widely around their median; each holds only
-256 short steps, a few tenths of a second at most, so the load of a
-shared host shows in it.
+twice the host time of 0.45 ms, so the step is in the device-bound case,
+and the second GPU raises the throughput by about 1.8. The prediction is
+lower, 1.67, and at 256 it is lower too, 0.71 against 0.90. The $\alpha$
+in the prediction again contains the dispatch of a separate program,
+which the `psum` inside the step does not pay.
 :end_tab:
 
 Data parallelism thus works, even for LeNet, once each GPU has enough to
@@ -1597,7 +1610,7 @@ An allreduce of one float gives $\alpha$; one of $2^{26}$ floats
   between them.
 :::
 
-::: {.slide title="Ten Small Allreduces Take Eight to Ten Times as Long as One"}
+::: {.slide title="Ten Small Allreduces Take Seven to Ten Times as Long as One"}
 [Cost model]{.kicker}
 
 LeNet's 10 gradient tensors, sent one by one or concatenated; predicted
@@ -1748,7 +1761,7 @@ Read every speedup with its convention.
   gradient allreduce per step; the one-step check matches to fp32 rounding.
 - Ring allreduce: $2(k-1)S/k < 2S$ bytes per device, $2(k-1)$ hops.
 - $t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + c\alpha + \frac{2(k-1)}{k}\frac{S}{\beta_{\textrm{link}}}$;
-  for LeNet, ten messages cost eight to ten times one.
+  for LeNet, ten messages cost seven to ten times one.
 - One host feeding two GPUs doubles LeNet's host-bound step; the
   exchange is a small part.
 - At 32,768 images per GPU: nearly twice the throughput of one GPU.

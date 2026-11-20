@@ -638,7 +638,7 @@ Adam and AdamW<br>
 @!adam-adam-on-the-valley-1
 :::
 
-::: {.slide title="Raw Gradients in TinyLM Span 15–40×; Adam Equalizes Steps to Within 2×" layout="tight"}
+::: {.slide title="Raw Gradients in TinyLM Span 15–40×; Adam Equalizes Steps to Within 2×"}
 [Gradient scales in TinyLM]{.kicker}
 
 @!adam-gradient-scales-in-a-network-2

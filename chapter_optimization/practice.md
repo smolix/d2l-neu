@@ -451,7 +451,7 @@ Practice<br>
 :::
 :::
 
-::: {.slide title="Clipping at θ = 1 Fires Only on the First 50 Steps and Rescues SGD at η = 1" layout="tight"}
+::: {.slide title="Clipping at θ = 1 Fires Only on the First 50 Steps and Rescues SGD at η = 1"}
 [Gradient clipping]{.kicker}
 
 @!practice-a-nan-averted-2

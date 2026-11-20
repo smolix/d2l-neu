@@ -1057,9 +1057,9 @@ every micro-batch.
 :end_tab:
 
 :begin_tab:`jax`
-The step takes 10 ms longer, close to the 7 ms of accumulator traffic that
-we predicted at the full specified bandwidth, which a copy never quite
-reaches.
+The step takes 10 ms longer. The 7 ms of accumulator traffic that we
+predicted accounts for most of it, and that prediction assumed the full
+specified bandwidth, which a copy never quite reaches.
 :end_tab:
 
 The two gradients agree, but the equivalence rests on conditions that this

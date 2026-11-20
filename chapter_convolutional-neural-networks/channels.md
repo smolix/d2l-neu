@@ -6,32 +6,19 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multiple Input and Multiple Output Channels
 :label:`sec_channels`
 
-So far, every convolutional kernel we have worked with has mapped a single
-two-dimensional grid of numbers to a single output grid. For instance, the
-edge detector in :numref:`sec_conv_layer` operated on a grayscale image and
-detected only one type of edge. Both real images and practical neural networks
-demand more on both sides of the layer. A color photograph stores three
-intensity values at every pixel---one *channel* each for red, green, and
-blue---so a $224\times 224$ RGB image is naturally represented as a
-third-order tensor of shape $3\times 224\times 224$. Detecting a boundary
-between a red region and a green region of equal brightness is impossible
-unless the layer can compare values across channels. On the output side, a
-hidden layer must detect dozens or hundreds of distinct patterns at every
-spatial location (edges at multiple orientations, corners, color contrasts,
-and textures), recording each detector's response in its own grid. How does a
-convolutional layer combine multiple input channels and produce multiple
-output channels, and what computational and memory costs does that introduce?
+So far our convolutions have mapped a single 2D grid to a single 2D grid. Real
+images and hidden representations have multiple *channels* on both sides: an RGB
+photograph is a $3 \times h \times w$ tensor (requiring cross-channel comparisons
+to detect a red-on-green boundary of equal luminance), and a hidden layer
+extracts dozens or hundreds of distinct feature maps in parallel.
 
-Our general formulation in :numref:`sec_why-conv` already provides the answer:
-for each output channel, the layer applies a separate
-$k_\textrm{h}\times k_\textrm{w}$ kernel to every input channel and sums the
-resulting feature maps. In this section, we implement this multi-channel
-operation on top of our single-channel `corr2d` helper and analyze its
-parameter count, arithmetic cost, and activation memory. As we will see, both
-parameters and computation are governed by the product $c_\textrm{i} c_\textrm{o}$
-of input and output channels, which motivates the $1\times 1$ convolutions and
-bottleneck designs explored at the end of the section.
-
+As derived in :numref:`sec_why-conv` (:eqref:`eq_conv-layer-channels`), a layer
+with $c_\textrm{i}$ input channels and $c_\textrm{o}$ output channels maintains
+one $c_\textrm{i} \times k_\textrm{h} \times k_\textrm{w}$ kernel per output
+channel, cross-correlating across all input channels and summing the results. In
+this section, we implement multi-channel convolutions, account for their
+parameter, FLOP, and activation-memory costs (governed by the product
+$c_\textrm{i} c_\textrm{o}$), and introduce $1 \times 1$ bottleneck convolutions.
 ```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab mxnet
 import math
@@ -147,30 +134,13 @@ channels grows as spatial resolution shrinks via strides or pooling, trading
 fine-grained spatial layout for richer, jointly learned feature descriptions
 at each location.
 
-:begin_tab:`mxnet`
-Gluon stores the kernel in this order, channels first, as it does its
-inputs.
+:begin_tab:`mxnet, pytorch`
+Gluon and PyTorch store kernels channels-first as $(c_\textrm{o}, c_\textrm{i}, k_\textrm{h}, k_\textrm{w})$.
 :end_tab:
 
-:begin_tab:`pytorch`
-PyTorch stores the kernel in this order, channels first, as it does its
-inputs.
+:begin_tab:`tensorflow, jax`
+Keras and Flax store kernels channels-last as $(k_\textrm{h}, k_\textrm{w}, c_\textrm{i}, c_\textrm{o})$.
 :end_tab:
-
-:begin_tab:`tensorflow`
-Keras stores the kernel as
-$k_\textrm{h}\times k_\textrm{w}\times c_\textrm{i}\times c_\textrm{o}$, the
-reverse of the order used here, with the channels last, as in its inputs
-(:numref:`sec_padding`).
-:end_tab:
-
-:begin_tab:`jax`
-Flax stores the kernel as
-$k_\textrm{h}\times k_\textrm{w}\times c_\textrm{i}\times c_\textrm{o}$, the
-reverse of the order used here, with the channels last, as in its inputs
-(:numref:`sec_padding`).
-:end_tab:
-
 To implement multi-channel output cross-correlation, we iterate over the
 output kernels, apply `corr2d_multi_in` to each, and stack the resulting
 feature maps along axis 0.

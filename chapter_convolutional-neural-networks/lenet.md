@@ -89,22 +89,13 @@ Each convolutional block pairs a $5\times5$ convolutional layer and a sigmoid
 activation with a $2\times2$ average-pooling layer of stride 2. The first
 convolutional layer outputs 6 channels and the second outputs 16.
 
-:begin_tab:`mxnet`
-The encoder's output has shape (batch size, channels, height, width).
+:begin_tab:`mxnet, pytorch`
+The encoder output has channels-first shape `(batch_size, channels, height, width)`.
 :end_tab:
 
-:begin_tab:`pytorch`
-The encoder's output has shape (batch size, channels, height, width).
+:begin_tab:`tensorflow, jax`
+The encoder output has channels-last shape `(batch_size, height, width, channels)`.
 :end_tab:
-
-:begin_tab:`tensorflow`
-The encoder's output has shape (batch size, height, width, channels).
-:end_tab:
-
-:begin_tab:`jax`
-The encoder's output has shape (batch size, height, width, channels).
-:end_tab:
-
 To connect the convolutional encoder to the dense block, we flatten each
 example's spatial feature maps into a single vector, producing a
 two-dimensional matrix with one row per minibatch example. Three fully
@@ -126,30 +117,6 @@ $28\times28$ output dimensions after the first $5\times5$ convolution.
 With modern deep learning frameworks, assembling LeNet requires only a single
 `Sequential` block. We initialize all layer weights with Xavier initialization
 (:numref:`subsec_xavier`) and set biases to zero.
-
-:begin_tab:`mxnet`
-`initialize(init.Xavier())` draws the weights from Xavier's uniform
-distribution; the biases start at zero, Gluon's default.
-:end_tab:
-
-:begin_tab:`pytorch`
-Lazy layers have no weights until the first minibatch fixes their shapes
-(:numref:`sec_lazy_init`), so the `Trainer` initializes them after that
-minibatch, by calling the model's `weight_init` method on every layer. Ours
-applies `init_cnn`, which draws Xavier-uniform weights, and sets the biases
-to zero.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Xavier initialization, under the name `glorot_uniform`, and zero biases are
-the Keras defaults for convolutional and dense layers, so the model needs no
-initialization code.
-:end_tab:
-
-:begin_tab:`jax`
-NNX layers draw their weights in the constructor. We pass Xavier's uniform
-initializer to each layer; the biases start at zero, the Flax default.
-:end_tab:
 
 ```{.python .input #lenet-1}
 %%tab pytorch
@@ -621,7 +588,7 @@ advances one by one as networks scale up in depth, width, and resolution.
        its training.
    :exlabel:`ex_lenet-modern-components`
 
-1. [code] **Original MNIST.** Write an `MNIST` data class by adapting
+2. [code] **Original MNIST.** Write an `MNIST` data class by adapting
    `d2l.FashionMNIST`, and train both `LeNet` and the MLP of
    :numref:`sec_mlp-implementation` on it, with the settings that each
    uses for Fashion-MNIST. :citet:`LeCun.Bottou.Bengio.ea.1998` report a
@@ -634,7 +601,7 @@ advances one by one as networks scale up in depth, width, and resolution.
        that MNIST makes differences among model classes less visible. Does
        each of the two measures support this statement?
 
-1. [code] **Deeper feature maps.** The text drew the feature maps of the
+3. [code] **Deeper feature maps.** The text drew the feature maps of the
    first convolutional layer.
     1. Display the 16 feature maps of the second convolutional layer of
        the trained `LeNet`, after its sigmoid, for validation images of
@@ -651,22 +618,7 @@ advances one by one as networks scale up in depth, width, and resolution.
        maxima for photos and noise fall inside or clearly outside the
        range observed on the validation images?
 
-1. [code] **Overfitting sanity check.** Before trusting a full training
-   run, check that a network can memorize a small dataset. Fix a subset
-   of 50 Fashion-MNIST training images and train on it with all 50
-   images in one minibatch, for at most 500 gradient steps.
-    1. For both `LeNet` and the modernized LeNet of problem :exref:`ex_lenet-modern-components`,
-       record the number of steps until training accuracy exceeds 99%. If
-       a network does not get there, diagnose which architectural or
-       optimization choice is responsible.
-    1. Name one bug that this check would catch and one that it would
-       miss, and explain why the check cannot detect the second.
-
-    *Adapted from Stanford CS231n,
-    [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
-    Convolutional Networks notebook.*
-
-1. [code] **Shifted garments.** The text argued that `LeNet` is only
+4. [code] **Shifted garments.** The text argued that `LeNet` is only
    partly tolerant to shifts.
     1. Shift every validation image by one, two, and four pixels to the
        right, filling the vacated columns with zeros, and measure the
@@ -682,7 +634,7 @@ advances one by one as networks scale up in depth, width, and resolution.
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap6.html),
     Chapter 6.*
 
-1. [code] **The dense head.** ● :numref:`tab_lenet_cost` shows that the
+5. [code] **The dense head.** ● :numref:`tab_lenet_cost` shows that the
    first fully connected layer holds 78% of LeNet's parameters.
     1. Replace the entire dense head, from the flatten through the output
        layer, by global average pooling followed by a single linear layer

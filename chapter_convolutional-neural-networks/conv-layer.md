@@ -11,23 +11,15 @@ geometric principles: translation equivariance and locality. Now let's see what
 that formula actually computes on an image—and whether gradient descent can
 discover useful kernels automatically from data.
 
-Consider one of the simplest computer vision tasks: locating vertical edges
-where a bright region meets a dark one. Imagine a white grayscale image with a
-black vertical stripe down its center. Subtracting each pixel's right-hand
-neighbor yields zero inside uniform regions, $+1$ where white transitions to
-black, and $-1$ where black returns to white. Because an edge can appear in any
-row or column, we sweep the exact same two-weight detector $(1, -1)$ across
-every valid position, producing an *edge map*. That sliding weighted sum is the
-core computation of a convolutional layer.
-
-Hand-crafting $(1, -1)$ works nicely for vertical edges, yet a real vision
-network needs thousands of detectors for patterns nobody knows how to write down
-in advance. In this section, we define and implement two-dimensional
-cross-correlation, test our hand-crafted edge detector, and then let gradient
-descent *learn* $(1, -1)$ solely from the input image and its edge map. We close
-by showing how frameworks accelerate convolutions via matrix multiplication
-(*im2col*) and how stacking layers widens a unit's receptive field.
-
+Consider locating vertical edges where a bright region meets a dark one.
+Subtracting each pixel's right-hand neighbor ($[\mathbf{X}]_{i,j} - [\mathbf{X}]_{i,j+1}$)
+yields zero inside uniform regions, $+1$ where white transitions to black, and
+$-1$ where black returns to white. Sweeping the two-weight detector $(1, -1)$
+across every valid image location produces an *edge map*. In this section, we
+implement two-dimensional cross-correlation, test our hand-crafted edge
+detector, let gradient descent *learn* $(1, -1)$ directly from data, show how
+frameworks compute convolutions via matrix multiplication (*im2col*), and
+derive how stacking layers widens a unit's receptive field.
 ```{.python .input #conv-layer-convolutions-for-images}
 %%tab mxnet
 import math
@@ -179,18 +171,10 @@ K = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
 corr2d(X, K)
 ```
 
-The output reproduces :numref:`fig_correlation` entry for entry.
-
-### Convolution and Cross-Correlation
-
-Recall from :numref:`sec_why-conv` that mathematical *convolution* flips the
-kernel both horizontally and vertically before sliding it across the input. On
-the $3 \times 3$ input in :numref:`fig_correlation`, strict convolution with the
-flipped kernel $\mathbf{K}' = \begin{bmatrix} 3 & 2 \\ 1 & 0 \end{bmatrix}$
-produces the exact same values 19, 25, 37, and 43. Because kernels are learned
-from data, a layer performing strict convolution simply learns $\mathbf{K}'$
-instead of $\mathbf{K}$ with no change to its outputs. Following deep learning
-convention, we use "convolution" for cross-correlation from here on.
+The output reproduces :numref:`fig_correlation` entry for entry (and as shown in
+:numref:`sec_why-conv`, strict mathematical convolution with a flipped kernel
+$\mathbf{K}'$ learns the exact same family of layers, so we follow standard
+deep learning terminology and call cross-correlation "convolution").
 
 
 ## Convolutional Layers
@@ -564,19 +548,6 @@ layers widens each unit's receptive field linearly by $k_i - 1$ per layer.
 
 ## Exercises
 
-1. [code] **Diagonal edges.** Construct a $6 \times 6$ image `X` whose
-   entries are $1$ on and below the main diagonal and $0$ above it. Let
-   $\mathbf{K}$ be the kernel of :eqref:`eq_edge_kernel`.
-    1. Apply $\mathbf{K}$ and $\mathbf{K}^\top$ to `X` with `corr2d`.
-       Give the positions and signs of the nonzero entries of each
-       output, and explain them from the pixel differences that each
-       kernel computes.
-    1. Let $\mathbf{A}$ be any input and $\mathbf{B}$ any kernel. Show
-       that cross-correlating $\mathbf{A}^\top$ with $\mathbf{B}$ gives
-       the transpose of cross-correlating $\mathbf{A}$ with
-       $\mathbf{B}^\top$. What does this identity predict for `corr2d`
-       applied to the transpose of `X` with $\mathbf{K}$?
-
 1. [code] **Hand-designed kernels.** Design some kernels manually.
     1. Given a directional vector $\mathbf{v} = (v_1, v_2)$, derive an
        edge-detection kernel that detects edges orthogonal to $\mathbf{v}$,
@@ -598,7 +569,7 @@ layers widens each unit's receptive field linearly by $k_i - 1$ per layer.
     [Assignment 2](https://cs231n.github.io/assignments2024/assignment2/),
     ConvolutionalNetworks notebook.*
 
-1. [code] **Convolution as a banded matrix.** The patch matrix of
+2. [code] **Convolution as a banded matrix.** The patch matrix of
    :numref:`subsec_conv_matmul` unfolds the input. The opposite
    construction unrolls the kernel. Let $\mathbf{X}$ be a $4 \times 4$
    input, $\mathbf{K}$ a $3 \times 3$ kernel, and $\textrm{vec}(\cdot)$
@@ -626,7 +597,7 @@ layers widens each unit's receptive field linearly by $k_i - 1$ per layer.
     *Adapted from CMU 11-785,
     [Homework 2 Part 1](https://deeplearning.cs.cmu.edu/S21/index.html).*
 
-1. [code] **Effective receptive field.** ● The theoretical receptive
+3. [code] **Effective receptive field.** ● The theoretical receptive
    field $r$ of this section bounds which inputs *can* influence an
    output; the effective receptive field measures how much
    they actually do :cite:`Luo.Li.Urtasun.ea.2016`. Build a stack of $L$
@@ -649,7 +620,7 @@ layers widens each unit's receptive field linearly by $k_i - 1$ per layer.
        $(1, 1, 1)$. Derive how the standard deviation of the normalized
        profile grows with $L$.
 
-1. [code] **Backward pass of a convolution.** ● Let $\mathbf{Y}$ be the
+4. [code] **Backward pass of a convolution.** ● Let $\mathbf{Y}$ be the
    single-channel cross-correlation of an input $\mathbf{X}$ with a kernel
    $\mathbf{K}$, as computed by `corr2d`, and let $\ell$ be a scalar loss
    that depends on $\mathbf{X}$ and $\mathbf{K}$ only through $\mathbf{Y}$.

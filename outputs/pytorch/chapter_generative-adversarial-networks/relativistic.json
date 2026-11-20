@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:f2268765fa7aa8c16e97c28d6349b93ba07fc251a1ea847942d60534612174dc",
+    "d2l_lib_fingerprint": "sha256:4e8abb9ca691a9fb3ff220e3cddd66c5b99d32108bcdccd47fec8efabfd23fa1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -18,8 +18,13 @@
       "kind": "text",
       "outputs": []
     },
+    "relativistic-the-bradley-terry-critic": {
+      "code_fingerprint": "sha256:8a9b2fa80c986a0dc9f4e221e3c1d69890f8e765a27fa5d9d6d806ded99d8a95",
+      "kind": "text",
+      "outputs": []
+    },
     "relativistic-two-atoms-by-hand": {
-      "code_fingerprint": "sha256:49f898aee2bc1fab704858d0eba1b72c379ef3e70e20ac2d2ce44431a6169378",
+      "code_fingerprint": "sha256:75fac85e6a53729ec686c7c3c594fdf17472b76d4ff3a479c0309dd24291e0ee",
       "kind": "text",
       "outputs": [
         {
@@ -29,59 +34,97 @@
         }
       ]
     },
-    "relativistic-verifying-the-closed-form-1": {
-      "code_fingerprint": "sha256:5eef77f26a37773917456579bfc6ad021b4c5dcf5d6f244fb6b0efdebb479c92",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sup Phi + log 2, by gradient ascent:    0.376889913\nJS(p (x) q, q (x) p), computed directly: 0.376889913\nentropy form H((P+Q)/2) - H(p) - H(q):  0.376889913\nJS(p, q) = 0.234050,  log 2 = 0.693147\nmax |D - lambda|, both centered:        4.4e-16\n"
-        }
-      ]
-    },
-    "relativistic-verifying-the-closed-form-2": {
-      "code_fingerprint": "sha256:ad23063cb42b900f56b89c0e294a66c0851f879494b40b412fa7656bcfaf4b08",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "highest real score: threshold 0.95 at lambda, 0.99 at lambda + 2; rank 0.75 at both\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "relativistic/relativistic-verifying-the-closed-form-2-1.svg",
-          "bytes": 41255,
-          "sha256": "sha256:aefa37a4c23c151bbb76feccd80b82ac6862b132b07f8c1c07edf58ab404e7fa"
-        }
-      ]
-    },
     "relativistic-paired-landscapes-1": {
-      "code_fingerprint": "sha256:24b3f32d1db0906b77a0e02fe7969bc9f99e5484fe7014c2ef0de0fe22bd82ba",
+      "code_fingerprint": "sha256:ec16c479391bf5db755920b815730cb4288b34940354985d89e5c975fe8add3f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gen = [0, 0]: (classical, all pairs, paired) / log 2 = [-0.69 -0.5  -0.5 ]\ngen = [0, 0.1]: (classical, all pairs, paired) / log 2 = [-0.5  -0.25 -0.5 ]\n"
+          "text": "gen         classical, all pairs, paired: nats, multiples of log 2\n[0, 0]      [-0.477 -0.347 -0.347]  [-0.69 -0.5  -0.5 ]\n[0, 0.1]    [-0.347 -0.173 -0.347]  [-0.5  -0.25 -0.5 ]\n"
         }
       ]
     },
     "relativistic-paired-landscapes-2": {
-      "code_fingerprint": "sha256:97afbf3f46bf117a9a841aca07cf8222c5045c22af9a6dea45deaeefb69196c6",
+      "code_fingerprint": "sha256:8333f233c81ae2141bbce06e20fff6d733d7afb07deb40b330207fae9aaf4392",
       "kind": "text",
       "outputs": []
     },
     "relativistic-paired-landscapes-3": {
-      "code_fingerprint": "sha256:84a95a5b3c2f8faa827a383bbdfe90774e82a4c9dede6c790e71464235dd814f",
+      "code_fingerprint": "sha256:fcd3336fe3bf4a69c0fb5cb01f6fdf5604709a6d3910de6f14305e9ba2a11a50",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n = 2: classical 2, all pairs 2, paired 0;  n^n - n! = 2\nn = 3: classical 21, all pairs 21, paired 0;  n^n - n! = 21\n"
+          "text": "n = 2: classical 2, all pairs 2, paired 0;  n^n - n! = 2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 3: classical 21, all pairs 21, paired 0;  n^n - n! = 21\n"
+        }
+      ]
+    },
+    "relativistic-pairing-on-the-mixture-testbed": {
+      "code_fingerprint": "sha256:b8df7a9244feebc012b15adf9e8213ea53b857ccc687e323bdc43816f92a9516",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pairing critic; generator loss, runs 0, 1, 2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "non-saturating  median JS 0.0006 0.0005 0.0007   first JS < 0.01  2400  2600  2400\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saturating      median JS 0.0020 0.0017 0.0014   first JS < 0.01  1800  1800  1800\n"
+        }
+      ]
+    },
+    "relativistic-pairing-on-the-separated-start": {
+      "code_fingerprint": "sha256:4d1dbe41e13b91bae40f9c3d26c45a9c1b88ccc2566593e1e646858516f6ef24",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                    |gradient|   theta at steps (0, 100, 300, 1000, 1500)   first |theta| < 0.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "non-saturating  0      3.244      6.00   2.41   0.57   0.02   0.00     323\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "non-saturating  1      3.021      6.00   2.26   0.55   0.02   0.00     317\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "non-saturating  2      3.057      6.00   2.65   0.60   0.02   0.00     335\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saturating      0      0.000      6.00   6.00   6.00   6.00   6.00   not reached\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saturating      1      0.000      6.00   6.00   6.00   6.00   5.99   not reached\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saturating      2      0.000      6.00   6.00   6.00   6.00   5.99   not reached\n"
         }
       ]
     }

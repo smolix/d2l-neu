@@ -48,6 +48,11 @@ GPU_FRAMEWORK_NOTEBOOKS = set()
 # both well inside the default.
 NOTEBOOK_TIMEOUTS = {
     "chapter_diffusion-models/latent-diffusion.ipynb": 7200,
+    # 16.5 and 16.6 train several image GANs each; a PyTorch run took about
+    # 40 min alone on one RTX 4090 (2026-11-20) and can pass 60 min when the
+    # card is shared.
+    "chapter_generative-adversarial-networks/dcgan.ipynb": 7200,
+    "chapter_generative-adversarial-networks/conditional.ipynb": 7200,
 }
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The
@@ -79,6 +84,18 @@ GPU_ONLY_NOTEBOOKS = {
     "chapter_diffusion-models/latent-diffusion.ipynb",
     "chapter_diffusion-models/few-step.ipynb",
     "chapter_diffusion-models/discrete-diffusion.ipynb",
+    # 16.4 trains 13 GANs on 25 Gaussians and 16.7 trains nine students and
+    # an adversarial pair; the JAX tabs name no device, so the keyword scan
+    # reads them as CPU, where they would train on the host (2026-11-20).
+    "chapter_generative-adversarial-networks/convergence.ipynb",
+    "chapter_generative-adversarial-networks/adversarial-losses.ipynb",
+    # 16.1, 16.2 and 16.3 train small GANs and critics whose JAX tabs name no
+    # device either; freshly generated (output-free) notebooks scanned as CPU
+    # and ran JAX on the host, which also changes the JAX numbers against the
+    # store's GPU runs (2026-11-20).
+    "chapter_generative-adversarial-networks/gan.ipynb",
+    "chapter_generative-adversarial-networks/objectives.ipynb",
+    "chapter_generative-adversarial-networks/relativistic.ipynb",
     # 19.1 trains SGNS and GloVe on the GPU (a CPU run draws other random
     # numbers, so the grid agreement line holds only on the GPU).
     "chapter_lm-encoders/word-embeddings.ipynb",

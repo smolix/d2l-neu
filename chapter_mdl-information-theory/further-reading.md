@@ -268,7 +268,7 @@ Wasserstein distance in that learned feature space instead of raw pixels.
 
 The Kantorovich–Rubinstein dual in :numref:`sec_mdl-optimal-transport`
 optimizes over 1-Lipschitz functions, a constraint that an ordinary neural
-network does not satisfy out of the box. :numref:`sec_gan-further-reading`
+network does not satisfy out of the box. :numref:`sec_gan_objectives`
 compares the three main ways to enforce it (weight clipping, spectral
 normalization, and gradient penalties), while :numref:`sec_gan_convergence`
 examines gradient penalties in detail. In particular, the penalty of

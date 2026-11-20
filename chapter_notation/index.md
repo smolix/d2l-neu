@@ -190,7 +190,8 @@ These symbols belong to :numref:`chap_gans`; :numref:`tab_gan_notation` lists ev
 * $V$: the value function of the minimax log-loss game
 * $\rho = p/q$, $\lambda = \log \rho$: the likelihood ratio (density ratio) and log-density ratio
 * $\eta = p/(p + q)$: the Bayes-optimal class posterior probability that a sample is real (note that within :numref:`chap_gans`, the optimizer step size is written $h$ rather than $\eta$)
-* $f$, $D_f$: a convex generator function and its associated $f$-divergence
+* $f$, $D_f$: a divergence function and its $f$-divergence
+* $\Phi$, $d_{\mathrm{Rp}}$: the pairing (relativistic) objective and its value at the optimal critic
 * $\gamma$, $R_1$, $R_2$: the gradient-penalty weight and the zero-centered gradient penalties evaluated on real data ($R_1$) and generated samples ($R_2$)
 * $c$: a conditioning variable, such as a class label or text prompt
 

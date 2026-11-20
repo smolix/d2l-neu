@@ -3538,7 +3538,8 @@ class ReplayBufferC(d2l.ReplayBuffer):
 
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update the critic; return the summed log loss, halved.
+    """Update the critic; return its log loss summed over both batches
+    (per sample, the sum of two means: 2 log 2 at equilibrium).
 
     Defined in :numref:`sec_basic_gan`"""
     batch_size = X.shape[0]
@@ -3549,7 +3550,7 @@ def update_D(X, Z, net_D, net_G, optimizer_D):
         return (jnp.sum(optax.sigmoid_binary_cross_entropy(
                     real_Y, jnp.ones(batch_size))) +
                 jnp.sum(optax.sigmoid_binary_cross_entropy(
-                    fake_Y, jnp.zeros(batch_size)))) / 2
+                    fake_Y, jnp.zeros(batch_size))))
     loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
     optimizer_D.update(net_D, grads_D)
     return loss_D
@@ -3570,10 +3571,12 @@ def update_G(Z, net_D, net_G, optimizer_G):
     return loss_G
 
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None, on_epoch=None):
+              step_G=update_G, seed=None, on_epoch=None, ema=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
-    return the per-sample (loss_D, loss_G) of each epoch.
+    (beta_1 = 0.5), calling ema.update(net_G) after every generator step
+    and on_epoch(epoch) after each epoch if given; return each epoch's
+    per-sample losses (loss_D, the sum of the critic's two batch means,
+    and loss_G).
 
     Defined in :numref:`sec_basic_gan`"""
     key = d2l.get_key() if seed is None else jax.random.key(seed)
@@ -3589,6 +3592,8 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             Z = jax.random.normal(subkey, (X.shape[0], latent_dim))
             loss_D += update_D(X, Z, net_D, net_G, optimizer_D)
             loss_G += step_G(Z, net_D, net_G, optimizer_G)
+            if ema is not None:
+                ema.update(net_G)
             n += X.shape[0]
         history.append((loss_D / n, loss_G / n))
         if on_epoch is not None:
@@ -3606,6 +3611,53 @@ def make_mlp(sizes, act, *, rngs):
         layers += [nnx.Linear(d_in, d_out, kernel_init=init, rngs=rngs), act]
     return nnx.Sequential(*layers[:-1])
 
+mu_p = np.array([[0.0, 2.4], [-2.1, -1.2], [2.1, -1.2]])     # data
+A_p = np.stack([0.7 * np.eye(2)] * 3)
+
+def mixture_logpdf(x, mus, As):
+    """Log density of the uniform mixture of Gaussians N(mu_k, A_k^T A_k).
+
+    Defined in :numref:`sec_gan_objectives`"""
+    comps = []
+    for mu, A in zip(mus, As):
+        Sigma, diff = A.T @ A, x - mu
+        sol = np.linalg.solve(Sigma, diff.T).T
+        comps.append(-0.5 * ((diff * sol).sum(1)
+                             + np.linalg.slogdet(2 * np.pi * Sigma)[1]))
+    return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
+
+def sample_mixture(n, mus, As, rng):
+    """n draws from the uniform mixture of Gaussians mu_k + z A_k.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    k = rng.integers(0, len(mus), n)
+    z = rng.standard_normal((n, 2))
+    return np.einsum('ni,nij->nj', z, As[k]) + mus[k]
+
+grid_1d = np.linspace(-7.0, 7.0, 281)
+grid_2d = np.stack([g.ravel() for g in np.meshgrid(grid_1d, grid_1d)], axis=1)
+cell_area = (grid_1d[1] - grid_1d[0]) ** 2
+
+def js_mixtures(mus_q, As_q, mus_p=mu_p, As_p=A_p):
+    """JS(p, q) between two known mixtures, p the data by default, by
+    quadrature on grid_2d.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    logp = mixture_logpdf(grid_2d, mus_p, As_p)
+    logq = mixture_logpdf(grid_2d, mus_q, As_q)
+    p, q = np.exp(logp), np.exp(logq)
+    logm = np.log(np.maximum((p + q) / 2, 1e-300))
+    return 0.5 * (p * (logp - logm) + q * (logq - logm)).sum() * cell_area
+
+def make_critic(rngs):
+    """Leaky-ReLU MLP; nnx.Linear gives LeCun-normal weights, zero biases.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    leaky = lambda x: nnx.leaky_relu(x, 0.2)
+    return nnx.Sequential(nnx.Linear(2, 64, rngs=rngs), leaky,
+                          nnx.Linear(64, 64, rngs=rngs), leaky,
+                          nnx.Linear(64, 1, rngs=rngs))
+
 def mmd2_unbiased(K_pp, K_qq, K_pq):
     """Unbiased MMD^2 from the kernel matrices within p, within q, and
     across; the diagonals (a point with itself) are left out.
@@ -3616,21 +3668,136 @@ def mmd2_unbiased(K_pp, K_qq, K_pq):
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
             - 2 * K_pq.mean())
 
+def gradient_penalty(D, X, fake, u):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D).
+
+    Defined in :numref:`sec_gan_objectives`"""
+    grad = jax.grad(lambda x: D(x).sum())(u * X + (1 - u) * fake)
+    return ((jnp.abs(grad) - 1) ** 2).mean()
+
+class Shift(nnx.Module):
+    """The generator x' = theta + z.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, theta0):
+        self.theta = nnx.Param(jnp.array(theta0))
+
+    def __call__(self, z):
+        return self.theta + z
+
+@nnx.jit(static_argnums=(0, 1, 2))
+def shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U):
+    """One critic step per row of U, then one generator step; returns the
+    generator's gradient.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    for i in range(len(U)):
+        fake = G(Z[i])
+        def d_loss(D_):
+            loss = critic_loss(D_(X[i]), D_(fake))
+            if gp:
+                loss = loss + gp * gradient_penalty(D_, X[i], fake, U[i])
+            return loss
+        opt_D.update(D, nnx.grad(d_loss)(D))
+    def g_loss(G_):
+        fake = G_(Z[-1])
+        return (gen_loss(X[-1], fake) if critic_loss is None
+                else gen_loss(D(X[-1]), D(fake)))
+    grad = nnx.grad(g_loss)(G)
+    opt_G.update(G, grad)
+    return grad.theta[...]
+
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
+                n_critic=5, batch=256, lr_D=1e-2, lr_G=1e-2):
+    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
+    theta0 and theta after every step, the gradient of every step, and the
+    critic.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    G = Shift(theta0)
+    D = d2l.make_mlp([1, 32, 32, 1], nnx.relu, rngs=nnx.Rngs(seed))
+    opt_G = nnx.Optimizer(G, optax.sgd(lr_G), wrt=nnx.Param)
+    opt_D = nnx.Optimizer(D, optax.adam(lr_D, 0.5, 0.9), wrt=nnx.Param)
+    n = n_critic if critic_loss else 0
+    thetas, grads = [theta0], []
+    for _ in range(steps):
+        X, Z = (jnp.asarray(rng.standard_normal((n + 1, batch, 1)),
+                            jnp.float32) for _ in range(2))
+        U = jnp.asarray(rng.uniform(size=(n, batch, 1)), jnp.float32)
+        grad = shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D,
+                          X, Z, U)
+        grads.append(grad)                      # device scalars,
+        thetas.append(G.theta[...])             # converted once below
+    return np.asarray(jnp.stack(thetas)), np.asarray(jnp.stack(grads)), D
+
+mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
+A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7
+
+class MixtureGenerator(nnx.Module):
+    """x = mu_k + z A_k for a uniformly drawn component k.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, mu, A):
+        self.mu = nnx.Param(jnp.asarray(mu, jnp.float32))
+        self.A = nnx.Param(jnp.asarray(A, jnp.float32))
+
+    def __call__(self, z, k):
+        return jnp.einsum('ni,nij->nj', z, self.A[k]) + self.mu[k]
+
+    def params_np(self):
+        return np.asarray(self.mu[...]), np.asarray(self.A[...])
+
+@nnx.jit(static_argnums=(0, 1))
+def train_toy_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k):
+    """A critic step (unless critic_loss is None), then a generator step.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    if critic_loss is not None:            # the generator is fixed here
+        fake = G(z, k)
+        opt_D.update(D, nnx.grad(lambda D_: critic_loss(D_(X), D_(fake)))(D))
+    def g_loss(G_):
+        fake = G_(z, k)
+        return (gen_loss(X, fake) if critic_loss is None
+                else gen_loss(D(X), D(fake)))
+    opt_G.update(G, nnx.grad(g_loss)(G))
+
+def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
+    """Fit a MixtureGenerator from (mu_0, A_0) to the data mixture, one
+    critic step per generator step. The losses act on the critic's scores of
+    the real and generated batch; with critic_loss None, gen_loss acts on the
+    two batches. Returns the exact JS(p, q_t) every 200 steps.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    G, D = MixtureGenerator(mu_0, A_0), make_critic(nnx.Rngs(seed))
+    opt_G = nnx.Optimizer(G, optax.adam(lr), wrt=nnx.Param)
+    opt_D = nnx.Optimizer(D, optax.adam(2 * lr), wrt=nnx.Param)
+    trace = []
+    for t in range(steps):
+        X = jnp.asarray(sample_mixture(batch, mu_p, A_p, rng), jnp.float32)
+        z = jnp.asarray(rng.standard_normal((batch, 2)), jnp.float32)
+        k = jnp.asarray(rng.integers(0, 3, batch))
+        train_toy_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k)
+        if t % 200 == 0:
+            trace.append(js_mixtures(*G.params_np()))
+    return np.array(trace)
+
 def rpgan_loss_D(critic, real, fake):
     """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return jax.nn.softplus(critic(fake) - critic(real)).mean()
 
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator.
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return jax.nn.softplus(critic(real) - critic(fake)).mean()
 
 def gan_loss_D(critic, real, fake):
     """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(x'))]: the
-    batch means, where update_D reports the halved sum.
+    sum of two batch means, 2 log 2 at equilibrium, as update_D.
 
     Defined in :numref:`sec_gan_convergence`"""
     return (jax.nn.softplus(-critic(real)).mean()
@@ -3689,7 +3856,7 @@ def load_pokemon(resolution=64):
 
     Defined in :numref:`sec_dcgan`"""
     import warnings
-    from PIL import Image  # neither is in the d2l library preamble
+    from PIL import Image
     data_dir = d2l.download_extract('pokemon')
     files = sorted(os.path.join(root, f)
                    for root, _, names in os.walk(data_dir) for f in names
@@ -3701,6 +3868,29 @@ def load_pokemon(resolution=64):
     with warnings.catch_warnings():  # palette sprites with transparency
         warnings.filterwarnings('ignore', message='Palette images')
         return np.stack([load(f) for f in files]) / 127.5 - 1
+
+class EMA:
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Other state such as batch-norm statistics is copied;
+    the average is kept in evaluation mode.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, model, half_life):
+        self.model = nnx.clone(model)
+        self.model.eval()
+        self.decay = 0.5 ** (1 / half_life)
+
+    def update(self, model):
+        self.average(self.model, model, self.decay)
+
+    @staticmethod
+    @nnx.jit
+    def average(avg, model, decay):
+        """Move the parameters of avg toward those of model, in place."""
+        params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
+                              nnx.state(avg, nnx.Param),
+                              nnx.state(model, nnx.Param))
+        nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
 
 # Fan-in initialization with the leaky-ReLU gain (normal, not truncated)
 fan_in_init = nnx.initializers.variance_scaling(2 / (1 + 0.2 ** 2),
@@ -3743,8 +3933,9 @@ class Generator(nnx.Module):
         return self.to_rgb(x)                        # no tanh: raw output
 
 class Discriminator(nnx.Module):
-    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
-    a 4x4 feature map phi(x), then a linear head on the flattened map.
+    """Critic that mirrors the generator: conv + leaky ReLU + bilinear
+    downsampling to a 4x4 feature map phi(x), then a linear head on the
+    flattened map.
 
     Defined in :numref:`sec_dcgan`"""
     def __init__(self, resolution, base_ch, *, rngs):
@@ -3770,29 +3961,6 @@ class Discriminator(nnx.Module):
 
     def __call__(self, x):
         return self.head(self.phi(x).reshape(x.shape[0], -1))
-
-class EMA:
-    """Exponential moving average of a model's parameters, given as a
-    half-life in steps. Other state such as batch-norm statistics is copied;
-    the average is kept in evaluation mode.
-
-    Defined in :numref:`sec_dcgan`"""
-    def __init__(self, model, half_life):
-        self.model = nnx.clone(model)
-        self.model.eval()
-        self.decay = 0.5 ** (1 / half_life)
-
-    def update(self, model):
-        self.average(self.model, model, self.decay)
-
-    @staticmethod
-    @nnx.jit
-    def average(avg, model, decay):
-        """Move the parameters of avg toward those of model, in place."""
-        params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
-                              nnx.state(avg, nnx.Param),
-                              nnx.state(model, nnx.Param))
-        nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
 
 def sample_real(key, images, n, labels=None):
     """Draw a training batch with random horizontal flips; return it with
@@ -3910,6 +4078,28 @@ def batched(f, X, batch_size=1000):
     Defined in :numref:`sec_dcgan`"""
     return jnp.concatenate([f(X[i:i + batch_size])
                             for i in range(0, len(X), batch_size)])
+
+def precision_recall(feat_real, feat_gen, k=3, chunk=1000):
+    """k-NN precision and recall of two feature sets: the fraction of each
+    set inside the union of the other set's balls, each ball reaching to its
+    center's k-th nearest neighbor; return (precision, recall).
+
+    Defined in :numref:`sec_dcgan`"""
+    P = np.asarray(feat_real, np.float64)
+    Q = np.asarray(feat_gen, np.float64)
+    def dists(A, B):  # (len(A), len(B)) Euclidean distances
+        sq = (A ** 2).sum(1)[:, None] - 2 * A @ B.T + (B ** 2).sum(1)
+        return np.sqrt(np.maximum(sq, 0))
+    def chunks(A):
+        return (A[i:i + chunk] for i in range(0, len(A), chunk))
+    def radii(A):  # sorted distances start with the point itself, at 0
+        return np.concatenate([np.partition(dists(a, A), k, axis=1)[:, k]
+                               for a in chunks(A)])
+    def covered(A, B, r_B):  # is each row of A inside some ball of B?
+        return np.concatenate([(dists(a, B) <= r_B).any(1)
+                               for a in chunks(A)])
+    return (float(covered(Q, P, radii(P)).mean()),
+            float(covered(P, Q, radii(Q)).mean()))
 
 class GaussianMixture:
     """A mixture of isotropic Gaussians, exact at every noise level.

@@ -4,22 +4,22 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:4b8b35bd08e7e4571f9523ace806916f7b5935fed7858f4e4215123e8325e232",
+    "d2l_lib_fingerprint": "sha256:4b6a375044eeb1f4033eb565a1f3580983da3f5726af534d68cd24f3c6b7095e",
     "max_inline_bytes": 0
   },
   "cells": {
     "dcgan-setup": {
-      "code_fingerprint": "sha256:9a0ef29ea78b750dc3205987a49fb4fa79cebcdf3eadf80b894f5ea128aca7db",
+      "code_fingerprint": "sha256:d89fbe469894244e3c9abe43263919fd745e7a377674dc6d6601db3651c85c4c",
       "kind": "text",
       "outputs": []
     },
     "dcgan-adversarial-image-generation": {
-      "code_fingerprint": "sha256:ce8be3dd08ee7913ff12852a3c556dede4c8592ad76e7cd8e64efa81ac988c60",
+      "code_fingerprint": "sha256:3f387660eec38a4ebd84fc000b3998193e179fa201663d230060dea61e551c8f",
       "kind": "text",
       "outputs": []
     },
     "dcgan-the-pokemon-sprites-1": {
-      "code_fingerprint": "sha256:726969d5d45ff7d4e15f79791fcf28c6dab531aeee02ff2d7bf68d5b93bc8619",
+      "code_fingerprint": "sha256:bf497d9dc5613995abbc2e3f532d68d17443e315ba87a0c795f03587c0f46ad8",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "dcgan-the-pokemon-sprites-2": {
-      "code_fingerprint": "sha256:ade9ae1333c2aad97a40f15c2155b0ee433a54c4bee4795cb0772d97ad62e01e",
+      "code_fingerprint": "sha256:af4af901d648f476367e7517cf503cae2416375e3aa94da6b86f24ca9d18f088",
       "kind": "mixed",
       "outputs": [
         {
@@ -47,12 +47,12 @@
       ]
     },
     "dcgan-generator-1": {
-      "code_fingerprint": "sha256:fffecfe469089aefcdd2c1093a8fb1b3fcbff74a7c418b782f68cfe12d9e235e",
+      "code_fingerprint": "sha256:f49cb58fdfd058b1e48a5c0dc4d3d26cd47851b702c518037a85a4cfc857b218",
       "kind": "text",
       "outputs": []
     },
     "dcgan-generator-3": {
-      "code_fingerprint": "sha256:7cbd4936b289d3a014c26dff76dea16fbf9b79f967ae60c31cc5e86e6b042864",
+      "code_fingerprint": "sha256:aa0d6587cb3e6d0d5c961f362a974008ecc2a3d225ba181ae6d5b66cf3858e32",
       "kind": "text",
       "outputs": [
         {
@@ -63,41 +63,51 @@
       ]
     },
     "dcgan-training-with-the-classic-loss-1": {
-      "code_fingerprint": "sha256:d77c244e8f30f1dea8e2a2d786496db350ce5442c014452de18ac64c2ea040ad",
+      "code_fingerprint": "sha256:37a0ee4a1083e7208a86a2272da9ebb11d072c0de2270aad1499aa9e6b471320",
+      "kind": "text",
+      "outputs": []
+    },
+    "dcgan-training-with-the-classic-loss-4": {
+      "code_fingerprint": "sha256:94d9ae72ff6e5dc586b18bca9f734ab08a1fabec62e0adc5de25b7b9b032a264",
       "kind": "text",
       "outputs": []
     },
     "dcgan-training-with-the-classic-loss-2": {
-      "code_fingerprint": "sha256:5af2b5cfa663393768515fc758684660769432aec4d1670bae7752a4edd66a55",
+      "code_fingerprint": "sha256:09a87bde65748385a946b6972b892511d8e0c220db496dc9fb3811a946cf08d6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "last epoch: loss_D 0.110, loss_G 2.974\n"
+          "text": "last epoch: loss_D 0.427, loss_G 3.027\n"
         }
       ]
     },
+    "dcgan-training-with-the-classic-loss-5": {
+      "code_fingerprint": "sha256:6da8209adb31db27a11b2593f7e51054d584df7085d85de42598af72756b2966",
+      "kind": "text",
+      "outputs": []
+    },
     "dcgan-training-with-the-classic-loss-3": {
-      "code_fingerprint": "sha256:ee283798e19b101089e76fa9487b01e627b0abce3ad5a732b0e9fb70bf4dc806",
+      "code_fingerprint": "sha256:8dcd0db3d246ff532bed29f8d002f45e07e2e2a2458cf95a87f849cc6da3a4c9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "dcgan/dcgan-training-with-the-classic-loss-3-1.png",
-          "bytes": 318689,
-          "sha256": "sha256:1e755ee9e4088e3a6d572c20a0a6b1c34eafa0dc670a89e064d30c1216e56186"
+          "bytes": 338403,
+          "sha256": "sha256:2ecbfb6e4a3552dcd85e05c7f9062f45b6a166db4dc8585a06c33b4ecf93072c"
         }
       ]
     },
     "dcgan-a-modern-minimal-backbone-1": {
-      "code_fingerprint": "sha256:024223a94c5802cd341c01295b3518a035ee14663137dfa895356a72fc37f8a3",
+      "code_fingerprint": "sha256:e8941af134ccda3d709a48ba494e702cec58073fd507fd704d8d551d699b67a1",
       "kind": "text",
       "outputs": []
     },
     "dcgan-a-modern-minimal-backbone-2": {
-      "code_fingerprint": "sha256:56bddb91be11df1088a5c33b811178d1363ff549376a4741d6747a7977347da7",
+      "code_fingerprint": "sha256:e36d6d6fdd16c17b1819fd23547d7655b12c50bf33bb10dd1fbdb346a8c4b489",
       "kind": "text",
       "outputs": [
         {
@@ -108,27 +118,27 @@
       ]
     },
     "dcgan-a-modern-minimal-backbone-3": {
-      "code_fingerprint": "sha256:d70b55c7d4de29ab86f59fa16cfe0287ae5c0b86accdaa88946cd87efa86162a",
+      "code_fingerprint": "sha256:534229afd2387b013d838ce6c36d09cc9a386059cadf3299ac5e0c37ca09fcc4",
       "kind": "text",
       "outputs": []
     },
     "dcgan-three-arms": {
-      "code_fingerprint": "sha256:894a6004a6b5699d27f9647afa30234a246349ac76349d163beee589ed89bd22",
+      "code_fingerprint": "sha256:9b09d6e52146a0d1169595a3fbd773402154107c268969410634c171825ae28c",
       "kind": "text",
       "outputs": []
     },
     "dcgan-loss-a-b-on-one-backbone-1": {
-      "code_fingerprint": "sha256:3ddcff02a6e62b1ad8b78ee5e581603f947e3eea91d7a6cc8be0b87bf0a217ea",
+      "code_fingerprint": "sha256:a8ad0adfc549bee3e2dd7fdab85cc1215f946cab32e50097372f5132354c9458",
       "kind": "text",
       "outputs": []
     },
     "dcgan-three-arms-1": {
-      "code_fingerprint": "sha256:1b93077abd37cbd4b227da4ca501b7eb76a2193d8cf2e4e088b17cf6977a875b",
+      "code_fingerprint": "sha256:cd4045fe082a455d3bd5904b0af4381f615336e3b46e06cb3afc85471e27ed24",
       "kind": "text",
       "outputs": []
     },
     "dcgan-loss-a-b-on-one-backbone-2": {
-      "code_fingerprint": "sha256:10d4c9d6c75fce9a5538c507f6c86189ca192b762812e10c75e140107d03c0a0",
+      "code_fingerprint": "sha256:c3f550dc072c61cbabfd85b4882c2a1a7d2b535e3bfe7a9a139849478d601b50",
       "kind": "text",
       "outputs": [
         {
@@ -149,7 +159,7 @@
       ]
     },
     "dcgan-loss-a-b-on-one-backbone-4": {
-      "code_fingerprint": "sha256:55a857480750eb5d56e4a399d843b5246699f4bd3e5e577e27b2a4482726cf66",
+      "code_fingerprint": "sha256:c4693839a9e538437d623993222d3eae7c1cad15875ccbf98a2644f19f233bd0",
       "kind": "asset",
       "outputs": [
         {
@@ -157,17 +167,17 @@
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-4-1.svg",
           "bytes": 69464,
-          "sha256": "sha256:74a7e4e012b440bbeb89197827858f24c6e4eb0168646302e25597afea192413"
+          "sha256": "sha256:619557234c5651732f922bef91be9e5615fadbd2d99156b947c806ecefaa754a"
         }
       ]
     },
     "dcgan-samples-of-the-three-arms-1": {
-      "code_fingerprint": "sha256:8135721e490f6b7a77c913d95379c90670f8aa6fab00b7a61486cb70afa0dbef",
+      "code_fingerprint": "sha256:757b4298b41b150e8e5206f9574508302df0cdd0c863ecdbb9b44ec6ee1e697f",
       "kind": "text",
       "outputs": []
     },
     "dcgan-loss-a-b-on-one-backbone-3": {
-      "code_fingerprint": "sha256:c5c0943b2d3e9ba50ba2522ed7252d101a15279f2cf54930ddbf54271df54d64",
+      "code_fingerprint": "sha256:7e8d9a122fb27bf4f2f846f03f7da5bca9a621e369084c04c2bf577692b1a032",
       "kind": "asset",
       "outputs": [
         {
@@ -175,22 +185,22 @@
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-loss-a-b-on-one-backbone-3-1.svg",
           "bytes": 893460,
-          "sha256": "sha256:9c6d9178479a00ab86c83ec9472a2bdafc59b6e4be5b582485990b7e19b38d97"
+          "sha256": "sha256:3373c8e7a30cacaed4c98a3268d510aff5e66dbfdd8c4eca0744c719027dd8fe"
         }
       ]
     },
     "dcgan-measuring-sample-quality": {
-      "code_fingerprint": "sha256:39297f0495baf8f6f26499ace15c841477d206f82bf7e127fdd95d1eb8763b2c",
+      "code_fingerprint": "sha256:8a9403b732bab9166442c4e82c1ab7ac43ab5e3888b3c128cbeec6cc3e9a4d93",
       "kind": "text",
       "outputs": []
     },
     "dcgan-a-feature-network-1": {
-      "code_fingerprint": "sha256:e182fb4d54629adadadf93deceb9a4017dff5570fa7c568220ee65f6050f7793",
+      "code_fingerprint": "sha256:f4d3ca1c1722e716cbfa145f4f43888d178d1d41c313be7836957204e47f46c0",
       "kind": "text",
       "outputs": []
     },
     "dcgan-a-feature-network-trained-in-the-notebook-2": {
-      "code_fingerprint": "sha256:a1232cd4af09a6b9d54bb73630b6cccfb2ede4a17bf5d801f22967645631757b",
+      "code_fingerprint": "sha256:c02a016c1a37a3e5f508804a329f6df2123258f66729d393e8176a3e6608a7a6",
       "kind": "text",
       "outputs": [
         {
@@ -200,19 +210,87 @@
         }
       ]
     },
+    "dcgan-precision-and-recall": {
+      "code_fingerprint": "sha256:2f69c1b3954aa18cfc0f9ae9986fbfe57377ded7bb9a0fabb747bd5dc80d0dbc",
+      "kind": "text",
+      "outputs": []
+    },
     "dcgan-scoring-the-runs-1": {
-      "code_fingerprint": "sha256:8b10da2a6eeedb96c038a6150992827f2686d3a2b72bd7b92f8299d36a505acc",
+      "code_fingerprint": "sha256:4631dfacd89e90a35914fa31787fecb8f72c0af936a009ee1eef402a5d22f38d",
       "kind": "text",
       "outputs": []
     },
     "dcgan-scoring-the-two-runs": {
-      "code_fingerprint": "sha256:7760f7c4dd178aec0685d39a06792c1282aa4e0927fd6cf63a4238429d569d48",
+      "code_fingerprint": "sha256:3b8f7534ac8ded506bd96e854d55ce75d707696f91af89da1822da1c79a97c10",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "run                     FD   MMD^2  out-of-range\nreal vs. real         1.28  -0.010\nDCGAN                 4.17   0.290         0.000\nNS                   72.81   7.465         0.001\nNS + R1 + R2          5.05   0.655         0.149\nRpGAN + R1 + R2       4.31   0.485         0.149\nreal pixel values equal to +1: 45%\n"
+          "text": "run                   FD   MMD^2  precision  recall  out-of-range\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "real vs. real       0.17  -0.001       0.95    0.95\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DCGAN               1.80   0.083       0.39    0.48         0.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  second draw       1.84   0.090       0.37    0.50         0.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "NS                 71.97   7.502       0.00    0.00         0.001\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  second draw      71.95   7.501       0.00    0.00         0.001\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "NS + R1 + R2        3.96   0.663       0.40    0.41         0.147\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  second draw       4.06   0.687       0.41    0.42         0.145\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RpGAN + R1 + R2     3.71   0.603       0.41    0.42         0.149\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  second draw       3.78   0.608       0.41    0.43         0.150\nreal pixel values equal to +1: 45%\n"
+        }
+      ]
+    },
+    "dcgan-latent-interpolation": {
+      "code_fingerprint": "sha256:3afd13911edcc0fe56e207fc007b4155c597b3fc706f053dfd5e4d76786d2323",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "precision of the inner steps: latent walk 0.38, cross-fade 0.18\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dcgan/dcgan-latent-interpolation-1.svg",
+          "bytes": 632074,
+          "sha256": "sha256:dac85b3b10be344527d23d0a0dd4a9ed52196b4e3cbb0172363d659091abb174"
         }
       ]
     }

@@ -320,10 +320,10 @@ def losses(gen):
     paired = -np.log(2) * np.mean([on_cycle(i, gen) for i in range(n)])
     return np.array([js(p_hat, q_hat) - np.log(2), js(P, Q) - np.log(2), paired])
 
+print('gen         classical, all pairs, paired: nats, multiples of log 2')
 for gen in ([0, 0], [0, 0.1]):   # both on x_1; then x'_2 steps off it
     value = losses(gen)
-    print(f'gen = {gen}: classical, all pairs, paired = {np.round(value, 3)} nats'
-          f' = {np.round(value / np.log(2), 2)} x log 2')
+    print(f'{str(gen):12s}{np.round(value, 3)}  {np.round(value / np.log(2), 2)}')
 ```
 
 <!-- WRITER: the landscape print now gives nats and multiples of log 2, labeled. At gen = [0, 0]: classical -0.477 nats (-0.69 x log 2; this is JS - log 2 with JS = 0.216, not -log 2), all pairs -0.347 (-0.5 x log 2), paired -0.347 (-0.5 x log 2). At gen = [0, 0.1]: -0.347, -0.173, -0.347 nats (-0.5, -0.25, -0.5 x log 2). The sentence after the cell stays true. -->
@@ -402,12 +402,12 @@ def first_step_below(trace, level=0.01, every=200):
     below = np.flatnonzero(trace < level)
     return f'{every * below[0]:5d}' if len(below) else ' none'
 
+print('pairing critic; generator loss, runs 0, 1, 2')
 for name, (critic_loss, gen_loss) in arms.items():
     traces = [d2l.train_toy(critic_loss, gen_loss, seed) for seed in range(3)]
     medians = ' '.join(f'{np.median(t[-2000 // 200:]):.4f}' for t in traces)
     firsts = ' '.join(first_step_below(t) for t in traces)
-    print(f'pairing, {name:14s} median JS (runs 0-2): {medians}   '
-          f'first step JS < 0.01: {firsts}')
+    print(f'{name:15s} median JS {medians}   first JS < 0.01 {firsts}')
 ```
 
 <!-- WRITER: measured in two direct, uncaptured executions per tab (the scheduler run replaces these numbers). PyTorch (CPU testbed, bit-identical in both executions): non-saturating median JS 0.0006 0.0005 0.0007 nats, first step 2400 2600 2400; saturating 0.0020 0.0017 0.0014, first step 1800 1800 1800. JAX (GPU, not bit-reproducible on the same seed): execution 1 non-saturating 0.0008 0.0008 0.0007, first step 2200 2400 2200; saturating 0.0017 0.0016 0.0013, first step 1800 1800 2000. Execution 2 non-saturating 0.0008 0.0006 0.0005, first step 2200 2400 2200; saturating 0.0012 0.0019 0.0011, first step 1800 2000 1800. Same-seed logistic row of 16.2 from the development copy of the testbed: PyTorch 0.0008 0.0008 0.0008, first step 2400 x3; JAX 0.0011 0.0006 0.0009, first step 2400 2400 2200. Firm lessons under the trained-comparison standard: (1) the non-saturating pairing generator fits the planar mixture as the logistic loss does (ranges overlap; no difference claimed); (2) the saturating (zero-sum) pairing generator does NOT stall from this start, whose supports overlap: every run reaches JS < 0.01, no later than the non-saturating runs, and ends within a few thousandths of a nat of the data. In every run so far its median sits above every non-saturating run (about 0.0015 against 0.0007), but in JAX execution 2 the gap (0.0003) is smaller than the saturating arm's own range (0.0008), so the standard does not support 'ends higher' as a claim; at most 'in these runs the saturating arm ends slightly higher'. 'Saturating reaches 0.01 sooner' is at the trace resolution (200 steps) in JAX; do not build on it. The vanishing zero-sum weight of the table above needs generated samples that rank below every real one, which this start does not produce; do not claim the run shows saturation. -->

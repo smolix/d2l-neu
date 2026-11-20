@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:71f23eff288cdfc510d64d9e0a5b0d7d2805ef58e06c7cbbebe8caa44317c605",
+    "d2l_lib_fingerprint": "sha256:81d745bd0916da2de5b7995398d10efa742dd671233f6de8469b3228bc3638ff",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -18,8 +18,13 @@
       "kind": "text",
       "outputs": []
     },
+    "relativistic-the-bradley-terry-critic": {
+      "code_fingerprint": "sha256:474f4ce74329f8cb5f43a831528388c285bf579e6d3b348103520c9c72f203f4",
+      "kind": "text",
+      "outputs": []
+    },
     "relativistic-two-atoms-by-hand": {
-      "code_fingerprint": "sha256:8826b4b1641ebff5c22d208bc885e11f999fbf933b9b823fc48c7f3b1aa6d495",
+      "code_fingerprint": "sha256:bad840fb44764bf270ac79d3a890291cefd6a6bf21fdd7539bd26c0611bcef0a",
       "kind": "text",
       "outputs": [
         {
@@ -29,59 +34,56 @@
         }
       ]
     },
-    "relativistic-verifying-the-closed-form-1": {
-      "code_fingerprint": "sha256:b4e98ca2191cbd1a56aae93ebabc574505a6f3d0e287882efe066f243773d4de",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sup Phi + log 2, by gradient ascent:    0.376889913\nJS(p (x) q, q (x) p), computed directly: 0.376889913\nentropy form H((P+Q)/2) - H(p) - H(q):  0.376889913\nJS(p, q) = 0.234050,  log 2 = 0.693147\nmax |D - lambda|, both centered:        4.4e-16\n"
-        }
-      ]
-    },
-    "relativistic-verifying-the-closed-form-2": {
-      "code_fingerprint": "sha256:ed5daaf67e84baecc33b13e2f7eaf27ba2f8758962aa64ef9125016cde47ac86",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "highest real score: threshold 0.95 at lambda, 0.99 at lambda + 2; rank 0.75 at both\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "relativistic/relativistic-verifying-the-closed-form-2-1.svg",
-          "bytes": 41255,
-          "sha256": "sha256:ee71bb4efb673faf1d0990ec5d3533c97e94b05e1b60e9e4955d235713096eda"
-        }
-      ]
-    },
     "relativistic-paired-landscapes-1": {
-      "code_fingerprint": "sha256:fbf4561d4415f628962c99f623857f004eb93f3c23294607703a3005d3466b91",
+      "code_fingerprint": "sha256:cf6412657a9383e3bcd3eabc4d8c4b082f48c7420659416c170ef7ff4f924d37",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gen = [0, 0]: (classical, all pairs, paired) / log 2 = [-0.69 -0.5  -0.5 ]\ngen = [0, 0.1]: (classical, all pairs, paired) / log 2 = [-0.5  -0.25 -0.5 ]\n"
+          "text": "gen         classical, all pairs, paired: nats, multiples of log 2\n[0, 0]      [-0.477 -0.347 -0.347]  [-0.69 -0.5  -0.5 ]\n[0, 0.1]    [-0.347 -0.173 -0.347]  [-0.5  -0.25 -0.5 ]\n"
         }
       ]
     },
     "relativistic-paired-landscapes-2": {
-      "code_fingerprint": "sha256:e13810833aa0895c5ba26db469afdc02eb04cd76a070a2fbc1fd8b916e25812d",
+      "code_fingerprint": "sha256:0c561725d94111a97fd84ea231cc17a8e8fe245aa863bc090e5504e2c5ccae47",
       "kind": "text",
       "outputs": []
     },
     "relativistic-paired-landscapes-3": {
-      "code_fingerprint": "sha256:6ffd5548cfb133dfed530723640df764b3363bbe62aa7648c47012eb27f823e1",
+      "code_fingerprint": "sha256:8dbd7443f6c7cee2cef698f0ca5d874bc77ef9ac814e6a206f209334514e234e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n = 2: classical 2, all pairs 2, paired 0;  n^n - n! = 2\nn = 3: classical 21, all pairs 21, paired 0;  n^n - n! = 21\n"
+          "text": "n = 2: classical 2, all pairs 2, paired 0;  n^n - n! = 2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 3: classical 21, all pairs 21, paired 0;  n^n - n! = 21\n"
+        }
+      ]
+    },
+    "relativistic-pairing-on-the-mixture-testbed": {
+      "code_fingerprint": "sha256:292ef3ff449c5516b7de9fe30d52e14519d69507ae9f43d19bbe7a5bf24688c2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pairing critic; generator loss, runs 0, 1, 2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "non-saturating  median JS 0.0008 0.0008 0.0006   first JS < 0.01  2200  2400  2200\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "saturating      median JS 0.0015 0.0013 0.0011   first JS < 0.01  1800  1800  1800\n"
         }
       ]
     }

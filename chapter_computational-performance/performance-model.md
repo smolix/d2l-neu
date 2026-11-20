@@ -285,19 +285,20 @@ print(f'read every step: {read_every:.3f} s   read once: {read_once:.3f} s')
 :begin_tab:`pytorch`
 `torch.cuda.synchronize()` waits until the device has finished all queued
 work. Each step issues three calls: the product, the sum, and the addition.
-Without reads a step takes 40 µs, about three times the 13 µs per call that
+Without reads a step takes about 40 µs, three times the 13 µs per call that
 :numref:`subsec_perf-sweep` measures, and more than the roughly 26 µs that
 the product needs on the tf32 tensor cores, so the loop runs at the pace of
-the host. The reads add 23 µs per step, about one device time, as the model
-allows, and make the loop about 1.6 times as slow.
+the host. The reads add about 25 µs per step, about one device time, as the
+model allows, and make the loop about 1.6 times as slow.
 :end_tab:
 
 :begin_tab:`jax`
 `step` is compiled with `jax.jit` and called once before the clock starts,
 because the first call compiles it. A step is then one call. Without reads
-it takes about 0.08 ms, the host time of that call, which is longer than the
+it takes about 0.1 ms, the host time of that call, which is longer than the
 roughly 26 µs that the product needs on the tf32 tensor cores, JAX's default
-for fp32 products on this GPU. Each read adds about 0.2 ms. Since
+for fp32 products on this GPU. Each read adds a few tenths of a millisecond,
+more in a run on a busy host than in one on a quiet host. Since
 $\min(h, t_\textrm{dev})$ is at most 26 µs, almost all of that is the round
 trip $\sigma$ that returns the value to Python, and the reads make the loop
 more than three times as slow.
@@ -401,14 +402,14 @@ for B in (1, 4, 16, 64, 128, 256, 1024):
 
 One matrix on one card reaches both roofs. From $B = 1$ to $B = 128$ the
 time hardly moves, about 0.6 ms, although the arithmetic grows 128-fold; at
-$B = 1$ the product streams its weights at more than nine tenths of $\beta$.
+$B = 1$ the product streams its weights at about nine tenths of $\beta$.
 From $B = 256$ on, the time grows nearly in proportion to $B$, and at
 $B = 1{,}024$ the product computes within a few percent of the peak, or
 slightly beyond it when the clock runs above its rated value. This is the
 contrast between training and generation that the GPT layer showed on
 paper, now measured: the layer that serves a thousand tokens does a
-thousand times the work of the layer that serves one, in about six times
-the time, as the bound predicts.
+thousand times the work of the layer that serves one, in five to six times
+the time, close to the factor of six that the bound predicts.
 
 ### Elementwise Operations
 
@@ -546,8 +547,8 @@ now and then slightly above it: these products are compute-bound in fact as
 well as in the model. The small sizes are another matter. From $n = 256$ to
 $n = 1024$ the work grows 64-fold, but the time per call changes by less
 than a factor of two, and each doubling of $n$ multiplies the throughput by
-seven to nine, close to the eight that $n^3$ predicts when the time per
-call stays fixed.
+six to ten, around the eight that $n^3$ predicts when the time per call
+stays fixed.
 
 A time per call that barely depends on the size cannot be spent on
 arithmetic. Is it spent on the host, which issues the call, or on the
@@ -584,7 +585,7 @@ for desc, f in [('256 x 256 product', lambda: matmul(a, a)),
 ```
 
 In both cases the device is busy for a few microseconds of a call that
-takes many times longer. The rest is the time $h$ that the host needs to
+takes several times longer. The rest is the time $h$ that the host needs to
 issue one call, in Python, the framework, and the driver that launches the
 kernel. For a $256 \times 256$ product, the most expensive part of the
 computation is the line of Python that asks for it. The host time depends
@@ -606,22 +607,33 @@ $n \approx (hP/2)^{1/3}$.
 
 :begin_tab:`pytorch`
 The sweep and the control time the same $256 \times 256$ product, and their
-times per call can differ by a factor of two, while the product keeps the
+times per call differ by a few microseconds, while the product keeps the
 device busy for about 3 µs; the difference lies on the host. With
 $h \approx 13$ µs, the smallest time per call in the sweep, the knee lies
 near $n = 1{,}000$, and the product at $n = 1024$ already reaches about four
-fifths of the peak.
+fifths of the peak. If you run this notebook yourself, set
+`TEARDOWN_CUPTI=1` in the environment before you start it, as we did for
+our outputs. It detaches the profiler from the GPU when a profile ends.
+Without it, every kernel launch after the first profile of the process
+stays slower, by about 30% on our machine, and so the `x + 1` of the
+control, which is timed after the profile of the product, comes out slower
+than ours.
 :end_tab:
 
 :begin_tab:`jax`
 Every call of a compiled function passes through XLA's runtime, which
 allocates the outputs, launches the kernels, and learns from the driver when
-they have finished. On our machine this takes about 0.06 to 0.1 ms per
-call, depending on the function. The small products of the sweep and of
-the control take 0.08 to 0.1 ms per call, and so does the one-call step of
-the loops in :numref:`subsec_perf-measuring`. With $h \approx 0.08$ ms the
-knee lies near $n = 1{,}900$. A training step compiled into one function
-pays this cost once for all of its kernels.
+they have finished. On our machine this takes about 0.05 to 0.11 ms per
+call, depending on the function and on the load of the host. The small
+products of the sweep take 0.08 to 0.11 ms per call and the two calls of
+the control about 0.05 ms, although the device works for only a small part
+of each, so the spread lies on the host; the one-call step of the loops in
+:numref:`subsec_perf-measuring` takes about 0.1 ms. With $h$ between
+0.05 and 0.1 ms the knee lies between $n \approx 1{,}600$ and
+$n \approx 2{,}000$, and the sweep agrees: the product at $n = 1024$ stays
+below a fifth of the peak, the one at $n = 2048$ reaches more than nine
+tenths. A training step compiled into one function pays this cost once for
+all of its kernels.
 :end_tab:
 
 The same reasoning applies to any operation. Each of the three resources
@@ -1276,7 +1288,7 @@ $16{,}384 \times 16{,}384$ bf16 weight (512 MiB) times $B$ rows. Predicted:
 
 ::: {.d2l-note}
 Up to $B = 128$ the time hardly moves. A thousand times the work costs
-about six times the time.
+five to six times the time.
 :::
 :::
 
@@ -1317,7 +1329,8 @@ points climb with slope three, the mark of a fixed time per call. From
 $n = 2048$ the products reach the roof.
 
 ::: {.d2l-note}
-On paper compute-bound from $n \approx 500$; in fact from about 2,000.
+On paper compute-bound from $n \approx 500$; in fact from 1,000 to 2,000,
+depending on the host time per call.
 :::
 :::
 

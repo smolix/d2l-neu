@@ -3719,18 +3719,18 @@ def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
 def rpgan_loss_D(critic, real, fake):
     """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return jax.nn.softplus(critic(fake) - critic(real)).mean()
 
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator.
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return jax.nn.softplus(critic(real) - critic(fake)).mean()
 
 def gan_loss_D(critic, real, fake):
     """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(x'))]: the
-    batch means, where update_D reports the halved sum.
+    sum of two batch means, 2 log 2 at equilibrium, as update_D.
 
     Defined in :numref:`sec_gan_convergence`"""
     return (jax.nn.softplus(-critic(real)).mean()
@@ -3789,7 +3789,7 @@ def load_pokemon(resolution=64):
 
     Defined in :numref:`sec_dcgan`"""
     import warnings
-    from PIL import Image  # neither is in the d2l library preamble
+    from PIL import Image
     data_dir = d2l.download_extract('pokemon')
     files = sorted(os.path.join(root, f)
                    for root, _, names in os.walk(data_dir) for f in names
@@ -3801,6 +3801,29 @@ def load_pokemon(resolution=64):
     with warnings.catch_warnings():  # palette sprites with transparency
         warnings.filterwarnings('ignore', message='Palette images')
         return np.stack([load(f) for f in files]) / 127.5 - 1
+
+class EMA:
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Other state such as batch-norm statistics is copied;
+    the average is kept in evaluation mode.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, model, half_life):
+        self.model = nnx.clone(model)
+        self.model.eval()
+        self.decay = 0.5 ** (1 / half_life)
+
+    def update(self, model):
+        self.average(self.model, model, self.decay)
+
+    @staticmethod
+    @nnx.jit
+    def average(avg, model, decay):
+        """Move the parameters of avg toward those of model, in place."""
+        params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
+                              nnx.state(avg, nnx.Param),
+                              nnx.state(model, nnx.Param))
+        nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
 
 # Fan-in initialization with the leaky-ReLU gain (normal, not truncated)
 fan_in_init = nnx.initializers.variance_scaling(2 / (1 + 0.2 ** 2),
@@ -3843,8 +3866,9 @@ class Generator(nnx.Module):
         return self.to_rgb(x)                        # no tanh: raw output
 
 class Discriminator(nnx.Module):
-    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
-    a 4x4 feature map phi(x), then a linear head on the flattened map.
+    """Critic that mirrors the generator: conv + leaky ReLU + bilinear
+    downsampling to a 4x4 feature map phi(x), then a linear head on the
+    flattened map.
 
     Defined in :numref:`sec_dcgan`"""
     def __init__(self, resolution, base_ch, *, rngs):
@@ -3870,29 +3894,6 @@ class Discriminator(nnx.Module):
 
     def __call__(self, x):
         return self.head(self.phi(x).reshape(x.shape[0], -1))
-
-class EMA:
-    """Exponential moving average of a model's parameters, given as a
-    half-life in steps. Other state such as batch-norm statistics is copied;
-    the average is kept in evaluation mode.
-
-    Defined in :numref:`sec_dcgan`"""
-    def __init__(self, model, half_life):
-        self.model = nnx.clone(model)
-        self.model.eval()
-        self.decay = 0.5 ** (1 / half_life)
-
-    def update(self, model):
-        self.average(self.model, model, self.decay)
-
-    @staticmethod
-    @nnx.jit
-    def average(avg, model, decay):
-        """Move the parameters of avg toward those of model, in place."""
-        params = jax.tree.map(lambda a, p: decay * a + (1 - decay) * p,
-                              nnx.state(avg, nnx.Param),
-                              nnx.state(model, nnx.Param))
-        nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
 
 def sample_real(key, images, n, labels=None):
     """Draw a training batch with random horizontal flips; return it with
@@ -4010,6 +4011,28 @@ def batched(f, X, batch_size=1000):
     Defined in :numref:`sec_dcgan`"""
     return jnp.concatenate([f(X[i:i + batch_size])
                             for i in range(0, len(X), batch_size)])
+
+def precision_recall(feat_real, feat_gen, k=3, chunk=1000):
+    """k-NN precision and recall of two feature sets: the fraction of each
+    set inside the union of the other set's balls, each ball reaching to its
+    center's k-th nearest neighbor; return (precision, recall).
+
+    Defined in :numref:`sec_dcgan`"""
+    P = np.asarray(feat_real, np.float64)
+    Q = np.asarray(feat_gen, np.float64)
+    def dists(A, B):  # (len(A), len(B)) Euclidean distances
+        sq = (A ** 2).sum(1)[:, None] - 2 * A @ B.T + (B ** 2).sum(1)
+        return np.sqrt(np.maximum(sq, 0))
+    def chunks(A):
+        return (A[i:i + chunk] for i in range(0, len(A), chunk))
+    def radii(A):  # sorted distances start with the point itself, at 0
+        return np.concatenate([np.partition(dists(a, A), k, axis=1)[:, k]
+                               for a in chunks(A)])
+    def covered(A, B, r_B):  # is each row of A inside some ball of B?
+        return np.concatenate([(dists(a, B) <= r_B).any(1)
+                               for a in chunks(A)])
+    return (float(covered(Q, P, radii(P)).mean()),
+            float(covered(P, Q, radii(Q)).mean()))
 
 class GaussianMixture:
     """A mixture of isotropic Gaussians, exact at every noise level.

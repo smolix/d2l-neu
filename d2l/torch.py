@@ -3595,18 +3595,18 @@ def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
 def rpgan_loss_D(critic, real, fake):
     """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return F.softplus(critic(fake) - critic(real)).mean()
 
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator.
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return F.softplus(critic(real) - critic(fake)).mean()
 
 def gan_loss_D(critic, real, fake):
     """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(x'))]: the
-    batch means, where update_D reports the halved sum.
+    sum of two batch means, 2 log 2 at equilibrium, as update_D.
 
     Defined in :numref:`sec_gan_convergence`"""
     return F.softplus(-critic(real)).mean() + F.softplus(critic(fake)).mean()
@@ -3660,7 +3660,7 @@ def load_pokemon(resolution=64):
     """All Pokemon sprites as one (n, 3, h, w) tensor in [-1, 1].
 
     Defined in :numref:`sec_dcgan`"""
-    import warnings  # not in the d2l library preamble
+    import warnings
     transform = torchvision.transforms.Compose([
         torchvision.transforms.Resize((resolution, resolution)),
         torchvision.transforms.PILToTensor()])
@@ -3671,6 +3671,24 @@ def load_pokemon(resolution=64):
     with warnings.catch_warnings():  # palette sprites with transparency
         warnings.filterwarnings('ignore', message='Palette images')
         return torch.cat([X for X, _ in loader]).float() / 127.5 - 1
+
+class EMA:
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Buffers such as batch-norm statistics are copied;
+    the average is kept in evaluation mode.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, model, half_life):
+        import copy  # the d2l library preamble does not import it
+        self.model = copy.deepcopy(model).requires_grad_(False).eval()
+        self.decay = 0.5 ** (1 / half_life)
+
+    def update(self, model):
+        with torch.no_grad():
+            for avg, p in zip(self.model.parameters(), model.parameters()):
+                avg.lerp_(p, 1 - self.decay)
+            for avg, b in zip(self.model.buffers(), model.buffers()):
+                avg.copy_(b)
 
 def fan_in_init(module):
     """Fan-in normal weights with the leaky-ReLU gain, zero offsets.
@@ -3713,8 +3731,9 @@ class Generator(nn.Module):
         return self.to_rgb(x)                        # no tanh: raw output
 
 class Discriminator(nn.Module):
-    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
-    a 4x4 feature map phi(x), then a linear head on the flattened map.
+    """Critic that mirrors the generator: conv + leaky ReLU + bilinear
+    downsampling to a 4x4 feature map phi(x), then a linear head on the
+    flattened map.
 
     Defined in :numref:`sec_dcgan`"""
     def __init__(self, resolution, base_ch):
@@ -3737,24 +3756,6 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         return self.head(self.phi(x).flatten(1))
-
-class EMA:
-    """Exponential moving average of a model's parameters, given as a
-    half-life in steps. Buffers such as batch-norm statistics are copied;
-    the average is kept in evaluation mode.
-
-    Defined in :numref:`sec_dcgan`"""
-    def __init__(self, model, half_life):
-        import copy  # the d2l library preamble does not import it
-        self.model = copy.deepcopy(model).requires_grad_(False).eval()
-        self.decay = 0.5 ** (1 / half_life)
-
-    def update(self, model):
-        with torch.no_grad():
-            for avg, p in zip(self.model.parameters(), model.parameters()):
-                avg.lerp_(p, 1 - self.decay)
-            for avg, b in zip(self.model.buffers(), model.buffers()):
-                avg.copy_(b)
 
 def sample_real(images, n, labels=None):
     """Draw a training batch with random horizontal flips; return it with
@@ -3862,6 +3863,28 @@ def batched(f, X, batch_size=1000):
     Defined in :numref:`sec_dcgan`"""
     with torch.no_grad():
         return torch.cat([f(X_k) for X_k in X.split(batch_size)])
+
+def precision_recall(feat_real, feat_gen, k=3, chunk=1000):
+    """k-NN precision and recall of two feature sets: the fraction of each
+    set inside the union of the other set's balls, each ball reaching to its
+    center's k-th nearest neighbor; return (precision, recall).
+
+    Defined in :numref:`sec_dcgan`"""
+    P = np.asarray(feat_real, np.float64)
+    Q = np.asarray(feat_gen, np.float64)
+    def dists(A, B):  # (len(A), len(B)) Euclidean distances
+        sq = (A ** 2).sum(1)[:, None] - 2 * A @ B.T + (B ** 2).sum(1)
+        return np.sqrt(np.maximum(sq, 0))
+    def chunks(A):
+        return (A[i:i + chunk] for i in range(0, len(A), chunk))
+    def radii(A):  # sorted distances start with the point itself, at 0
+        return np.concatenate([np.partition(dists(a, A), k, axis=1)[:, k]
+                               for a in chunks(A)])
+    def covered(A, B, r_B):  # is each row of A inside some ball of B?
+        return np.concatenate([(dists(a, B) <= r_B).any(1)
+                               for a in chunks(A)])
+    return (float(covered(Q, P, radii(P)).mean()),
+            float(covered(P, Q, radii(Q)).mean()))
 
 class GaussianMixture:
     """A mixture of isotropic Gaussians, exact at every noise level.

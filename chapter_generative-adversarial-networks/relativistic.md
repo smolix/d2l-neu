@@ -1,7 +1,7 @@
 # Relativistic Objectives
 :label:`sec_gan_relativistic`
 
-So far the critic has scored one sample at a time, and a classifier critic judged it against a fixed level: is $D(x')$ above zero? People rarely judge subtle differences that way. A taster who cannot say whether one glass holds the expensive wine can often say which of two glasses does, and a chess rating is built from who beat whom, not from an absolute score per player. The reward model of :numref:`sec_regularized` learned the same way, from which of two trajectories a judge preferred. Its tool was the Bradley--Terry model, which turns the difference of two scores into the probability that one contestant wins. :citet:`Jolicoeur-Martineau.2019` gave the GAN critic this comparative task: show it one real and one generated sample, and reward it for ranking the real one higher.
+A classifier critic judges each sample against a fixed level: is $D(x')$ above zero? People rarely judge subtle differences that way. A taster who cannot say whether one glass holds the expensive wine can often say which of two glasses does, and a chess rating is built from who beat whom, not from an absolute score per player. The reward model of :numref:`sec_regularized` learned the same way, from which of two trajectories a judge preferred. Its tool was the Bradley--Terry model, which turns the difference of two scores into the probability that one contestant wins. :citet:`Jolicoeur-Martineau.2019` gave the GAN critic this comparative task: show it one real and one generated sample, and reward it for ranking the real one higher.
 
 The recipe that the rest of this chapter trains, from :numref:`sec_gan_convergence` on, uses such a critic, so we had better know what it measures. Does the best ranking critic still estimate the log density ratio of :numref:`sec_basic_gan`? How much more does a pair reveal about which sample is real than a single sample does? And does ranking protect the generator against dropping modes? The first two have exact answers. The third has an answer much narrower than the one usually given, and we will say how narrow.
 
@@ -42,7 +42,7 @@ $$
 $$
 :eqlabel:`eq_gan_rp`
 
-The critic maximizes $\Phi$ and the generator minimizes it. Since $\sigma(D(x) - D(x'))$ is the Bradley--Terry probability :cite:`Bradley.Terry.1952` that $x$ beats $x'$, $\Phi$ is the log-likelihood of ranking real samples above generated ones, and the critic learns a ranking rather than a classification rule. Jolicoeur-Martineau called such a critic *relativistic*, because it scores a sample relative to one from the other distribution. Her sequel :cite:`Jolicoeur-Martineau.2020` calls this loss RpGAN, for relativistic *paired* (the 2019 paper's RSGAN), and the divergence derived below inherits the subscript.
+The critic maximizes $\Phi$ and the generator minimizes it. Since $\sigma(D(x) - D(x'))$ is the Bradley--Terry probability :cite:`Bradley.Terry.1952` that $x$ beats $x'$, $\Phi$ is the log-likelihood of ranking real samples above generated ones, and the critic learns a ranking rather than a classification rule. Jolicoeur-Martineau called such a critic *relativistic*, because it scores a sample relative to one from the other distribution. The sequel :cite:`Jolicoeur-Martineau.2020` calls this loss RpGAN, for relativistic *paired* (the 2019 paper's RSGAN), and the divergence derived below inherits the subscript.
 
 The code estimates $-\Phi$ on aligned pairs, the $i$-th real sample of a minibatch against the $i$-th generated one, with $-\log \sigma(u) = \operatorname{softplus}(-u)$. The generator's loss swaps the two members. This is the non-saturating form, and the end of the section discusses why we prefer it to minimizing $\Phi$ itself.
 
@@ -213,7 +213,7 @@ The pairing divergence is the number of nats a randomly ordered pair carries abo
 ### Bounds
 :label:`subsec_gan_rp_bounds`
 
-Of everything in this section, the theorem is the result to remember. The second question of the opening, how much more a pair tells than one sample, now reads off its information form. Two facts about the randomly ordered pair do the work. Either member, taken alone, is a draw from $p$ or from $q$ according to the label $y$, so it carries $I(a_k; y) = \mathrm{JS}(p, q)$ nats about the label. And given $y$ the two members are independent draws, so $H(a_2 \mid a_1, y) = H(a_2 \mid y)$. The chain rule of mutual information and these two facts give
+The theorem is the main result of this section. The second question of the opening, how much more a pair tells than one sample, now reads off its information form. Two facts about the randomly ordered pair do the work. Either member, taken alone, is a draw from $p$ or from $q$ according to the label $y$, so it carries $I(a_k; y) = \mathrm{JS}(p, q)$ nats about the label. And given $y$ the two members are independent draws, so $H(a_2 \mid a_1, y) = H(a_2 \mid y)$. The chain rule of mutual information and these two facts give
 
 $$
 \begin{aligned}
@@ -344,7 +344,7 @@ The classical and all-pairs losses each have all $n^n - n!$ collision minima, 21
 
 For a practitioner the third line is the one that matters, and it is the weakest. It fits a finding that otherwise looks odd. Our code pairs the $i$-th real sample of a minibatch with the $i$-th generated one; averaging the loss over all $n^2$ cross pairs lowers the variance of the estimate, but it did not train better generators in the experiments of :citet:`Jolicoeur-Martineau.2020`. Since every minibatch brings fresh samples, both estimators have the same expectation, $\Phi$ itself, and neither keeps the fixed coupling that the theorem needs.
 
-The case that pairing guards against dropped modes therefore rests on experiments. The one published ablation trained the R3GAN recipe on StackedMNIST, stacked digits with 1,000 countable modes, and with gradient penalties on the critic the pairing loss recovered all 1,000 modes while the classical loss recovered 693 :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. One ablation on one dataset is thin evidence for a general claim. We train pairing in the rest of the chapter because it costs no more than the classical loss and that ablation favours it, and :numref:`sec_gan_convergence` repeats the comparison on a grid of 25 Gaussians, with and without pairing.
+The case that pairing guards against dropped modes therefore rests on experiments. The one published ablation trained the R3GAN recipe on StackedMNIST :cite:`Metz.Poole.Pfau.ea.2017`, stacked digits with 1,000 countable modes, and with gradient penalties on the critic the pairing loss recovered all 1,000 modes while the classical loss recovered 693 :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. One ablation on one dataset is thin evidence for a general claim. We train pairing in the rest of the chapter because it costs no more than the classical loss and that ablation favours it, and :numref:`sec_gan_convergence` repeats the comparison on a grid of 25 Gaussians, with and without pairing.
 
 ### Generator Losses for the Pairing Critic
 :label:`subsec_gan_rp_trained`
@@ -392,7 +392,7 @@ for name, (critic_loss, gen_loss) in arms.items():
               + (f'{hit[0]:5d}' if len(hit) else 'not reached'))
 ```
 
-The prediction holds, and more sharply than in the classical game. The saturating pairing generator does not move at all: its median gradient over the first 100 steps prints as 0.000, that is, below half a thousandth, and after 1,500 steps $\theta$ still reads 5.99 or 6.00. The classical saturating generator of :numref:`subsec_gan_objectives_separated_start` at least crept, with gradients of about a hundredth, from 6 to about 5.76. A critic that ranks every generated sample last gives the saturating generator nothing to follow. The non-saturating pairing generator, with gradients of about 3, is within 0.6 of the data by step 300 and comes within 0.5 between steps 315 and 335 in every run, a little sooner than the classical non-saturating arm (steps 377 to 388). The two pairing arms end six units apart, while runs of the same arm differ by at most 0.01 in $\theta$ and 20 in the arrival step, so the verdict does not depend on the seed. On images the supports are typically disjoint or nearly so (:numref:`sec_basic_gan`), so this extreme is not exotic, and the chapter trains the non-saturating form throughout.
+The prediction holds, and more sharply than in the classical game. The saturating pairing generator does not move at all: its median gradient over the first 100 steps prints as 0.000, that is, below half a thousandth, and after 1,500 steps $\theta$ still reads 5.99 or 6.00. The classical saturating generator of :numref:`subsec_gan_objectives_separated_start` at least crept, with gradients of about a hundredth, from 6 to about 5.76. A critic that ranks every generated sample last gives the saturating generator nothing to follow. The non-saturating pairing generator, with gradients of about 3, is within 0.6 of the data by step 300 and comes within 0.5 between steps 315 and 335 in every run, a little sooner than the classical non-saturating arm (steps 377 to 388). The two pairing arms end six units apart, while runs of the same arm differ by at most 0.01 in $\theta$ and 20 in the arrival step, so the verdict does not depend on the seed. On images the supports are typically disjoint or nearly so (:numref:`sec_basic_gan`), so there this extreme is the usual case, and the chapter trains the non-saturating form throughout.
 
 Neither the value of the game nor the weights, however, say whether gradient play between critic and generator reaches its equilibrium at all, and with pairing or without, it need not. :numref:`sec_gan_convergence` takes up that question.
 
@@ -768,7 +768,7 @@ Three runs per arm, 1,500 steps:
 | pairing, saturating | below 0.0005 | 5.99--6.00 | never |
 | classical, saturating | 0.006--0.015 | 5.75--5.77 | never |
 | pairing, non-saturating | 3.0--3.2 | 0.00 | steps 315--335 |
-| classical, non-saturating | 2.7--2.9 | 0.00--0.01 | steps 377--388 |
+| classical, non-saturating | 2.7--3.0 | 0.00--0.01 | steps 377--388 |
 
 ::: {.d2l-note}
 A critic that ranks every generated sample last gives the saturating

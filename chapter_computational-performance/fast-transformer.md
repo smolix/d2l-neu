@@ -303,9 +303,10 @@ step = lambda X, Y: jit_step(model, optimizer, X, Y)
 record('baseline', tokens_per_second(step, windows(corpus, 64)))
 ```
 
-The three windows of the baseline spread by several percent of their
-median or more, as expected. A profile shows where the time of the step
-goes. `profile` records five steps with `d2l.kernel_times` and prints them
+The windows of the baseline spread at least ten times as widely as those
+of every later configuration, as expected: this step still leaves work to
+the host. A profile shows where its time goes.
+`profile` records five steps with `d2l.kernel_times` and prints them
 with `d2l.show_profile` (:numref:`subsec_perf-profiler`): the time during which the device runs
 kernels against the wall-clock time of a step, the share of the matrix
 products, counting fused attention kernels among them, and the largest
@@ -364,17 +365,17 @@ remedy, and a busy device that spends its time in short kernels for the
 second.
 
 :begin_tab:`pytorch`
-Our step is in the second regime. The device waited for about 1% of the
-step, and the kernels outside the matrix products took 8.8 of its 24.4 ms
-of device time. Even if compilation removed all of them and the idle time,
+Our step is in the second regime. The device waited for a few percent of
+the step, and the kernels outside the matrix products took 8.8 of its 24.4
+ms of device time. Even if compilation removed all of them and the idle time,
 the step would shrink to the 15.6 ms of the products: a gain of at most
 1.6. `torch.compile` (:numref:`sec_compilation`) generates fused kernels
 for the forward and the backward pass and leaves the matrix products and
 the optimizer update as they are. With `mode='reduce-overhead'` it also
 records the kernels as CUDA graphs and replays each graph with one launch
 (:numref:`subsec_comp-overhead`), and `dynamic=False` specializes them to
-the minibatch shape. The graphs can gain at most the 1% in which the
-device waited; we keep them because they cost nothing here and keep the
+the minibatch shape. The graphs can gain at most the few percent in which
+the device waited; we keep them because they cost nothing here and keep the
 host from becoming the limit as later changes shorten the device's step.
 Before timing anything, we check that the compiled model computes the same
 logits as the original one.
@@ -424,7 +425,7 @@ for name, call in (('nnx.jit', lambda: walk(model, optimizer)),
 The logits agree to four significant digits or more. They are not
 identical, because the fused fp32 kernels round in a different order than
 the separate ones, and the tf32 products carry the difference forward.
-Throughput rises by about a tenth, well inside the bound of 1.6.
+Throughput rises by more than a tenth, well inside the bound of 1.6.
 :end_tab:
 
 :begin_tab:`jax`
@@ -475,8 +476,9 @@ limited by the device, mostly by the arithmetic of the matrix products.
 The device time per step fell from 24.4 to 22.2 ms, and the gaps between
 kernels closed. The two parts of `torch.compile` divide the gain between
 them: fusion shortened the device time by 2.2 ms, a quarter of the time
-outside the products, and the replay of CUDA graphs closed the idle 0.3
-ms. The products take as long as before, and three quarters of the time
+outside the products, and the replay of CUDA graphs closed the gaps, about
+a millisecond per step in this run. The products take as long as before,
+and three quarters of the time
 outside them remains.
 :end_tab:
 
@@ -560,9 +562,10 @@ record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
 The logits agree to within one percent.
 
 :begin_tab:`pytorch`
-Throughput rises by about 1.7 times: more than the 1.55 that halving the
-products alone would give, since they took 71% of the step, and less than
-2. The surplus has two sources: the bf16 products run closer to their
+Throughput rises by about three quarters: more than the factor of 1.55
+that halving the products alone would give, since they took 71% of the
+step, and less than 2. The surplus has two sources: the bf16 products run
+closer to their
 peak than the tf32 ones did, and the kernels between them move fewer
 bytes. They do not move half as many, because the normalizations, the residual stream, the
 casts, and the optimizer update still carry fp32 values. The attention
@@ -572,9 +575,10 @@ memory.
 :end_tab:
 
 :begin_tab:`jax`
-Throughput rises by about 1.5 times, what halving the products alone
-predicts: 1.48 for products at 65% of the step. So the kernels between the
-products hardly got faster. Among them is XLA's attention: `d2l.GPT`
+Throughput rises by about 1.45 times, a little less than the 1.48 that
+halving the products alone predicts for products at 65% of the step. So
+the kernels between the products got no faster. Among them is XLA's
+attention: `d2l.GPT`
 leaves the choice of attention kernel to `jax.nn.dot_product_attention`,
 whose default is XLA's own implementation, and that implementation builds
 the attention weights of all query–key pairs in device memory
@@ -679,7 +683,7 @@ print(f'memory beyond weights and optimizer state: {memory:.1f} GiB')
 The step needs about a third of the card's 24 GiB.
 
 :begin_tab:`pytorch`
-Throughput rises by 1%, less than the fixed costs predict. Either some
+Throughput rises by about 2%, less than the fixed costs predict. Either some
 kernels of the step cost slightly more per token at the larger size, or
 the noise between runs hides part of the gain; exercise
 :exref:`ex_ft-fixed` measures the fixed cost and the cost per token
@@ -909,7 +913,7 @@ at batch 64 takes a little over 20 ms, less than either; a bf16 step at
 batch 512 takes 90 to 100 ms. For the first configuration the cost model
 predicts a loss from a second GPU, a speedup of about 0.85, and little
 gain from four, about 1.3. For the second it predicts about 1.5 on two
-GPUs and 2.7 on four.
+GPUs and 2.6 to 2.7 on four.
 
 The model leaves out one effect. A framework can start summing the
 gradients of the last layers while the backward pass still computes those
@@ -1095,20 +1099,21 @@ Together the changes make the step about twice as fast, and the fastest
 step performs about half of the 165 TFLOP/s that the tensor cores can
 execute in bf16. The changes that shortened the matrix products and the
 memory traffic around them did nearly all of this work. Less host work
-gained what the idle share of the first profile allowed, about 1%, and the
-larger minibatch was close to a non-event, again as predicted.
+gained what the idle share of the first profile allowed, a few percent at
+most, and the larger minibatch gained a few percent, again as predicted.
 
 :begin_tab:`pytorch`
-Reduced precision alone gave 1.7, inside the bounds that the second
+Reduced precision alone gave about 1.75, inside the bounds that the second
 profile set, in which the products held seven tenths of the step. The
-compiler, to which this chapter gave a whole section, gains a tenth here,
+compiler, to which this chapter gave a whole section, gains little more
+than a tenth here,
 because this model already spends most of its time in large matrix
 products.
 :end_tab:
 
 :begin_tab:`jax`
-Reduced precision gave about 1.5, as the share of the products
-predicted, and the fused attention kernel nearly as much again. The
+Reduced precision gave about 1.45, close to what the share of the
+products predicted, and the fused attention kernel another 1.35. The
 profile could not have shown the second gain in advance, because it counts
 XLA's attention among the kernels between the products. A profile read by
 categories can hide a whole operation inside one of them.
@@ -1596,7 +1601,7 @@ Compute-bound products: a faster format shortens them directly. At width
 - tf32 products until bf16; every change checked before it is timed.
 
 ::: {.d2l-note}
-Without host work, windows agree to 0.1%; runs differ more. Read ratios to
+Without host work, windows agree within 0.2%; runs differ more. Read ratios to
 one decimal.
 :::
 :::
@@ -1611,7 +1616,7 @@ one decimal.
 | fusion | step ÷ time in matrix products |
 | bf16, products a share $f$ | between $1/(1 - f/2)$ and 2 |
 | larger minibatch | step ÷ (step − fixed cost) |
-| checkpointing | a loss: about $6/8 = 0.75$ |
+| checkpointing | a loss: $6/8 = 0.75$ by FLOPs, step ÷ (step + forward) by time |
 
 ::: {.d2l-note}
 The measurement then tests the diagnosis, not only the change.
@@ -1626,7 +1631,7 @@ The measurement then tests the diagnosis, not only the change.
 - Device busy for nearly the whole step: the host keeps up.
 - The third outside the products: short elementwise and normalization
   kernels, bandwidth-bound.
-- Fusion can gain at most $24.4 / 15.6 \approx 1.6$.
+- Fusion can gain at most step ÷ products $= 25.5 / 15.6 \approx 1.6$.
 :::
 
 ::: {.slide title="The Jitted Step Is Busy, and XLA Has Fused It Already" only="jax"}
@@ -1639,7 +1644,7 @@ The measurement then tests the diagnosis, not only the change.
 - The third outside the products: XLA fusions, bandwidth-bound.
 :::
 
-::: {.slide title="Compilation Gains a Tenth of a Possible 1.6" only="pytorch"}
+::: {.slide title="Compilation Gains Over a Tenth of a Possible 1.6" only="pytorch"}
 [Small kernels]{.kicker}
 
 ```{.python #fast-transformer-exercises}
@@ -1704,7 +1709,7 @@ memory is not short.
 :::
 :::
 
-::: {.slide title="bf16 Speeds Up the Step 1.7 Times: Not 1.55, Not 2" only="pytorch"}
+::: {.slide title="bf16 Speeds Up the Step About 1.75 Times: Not 1.55, Not 2" only="pytorch"}
 [Reduced precision]{.kicker}
 
 @!fast-transformer-rungs-each-one-measured-2
@@ -1720,7 +1725,7 @@ Inside the bounds that the second profile set before the run.
 :::
 :::
 
-::: {.slide title="bf16 Alone Gains About 1.5, What Halving the Products Predicts" only="jax"}
+::: {.slide title="bf16 Alone Gains About 1.45; Halving the Products Predicts 1.48" only="jax"}
 [Reduced precision]{.kicker}
 
 @!fast-transformer-rungs-each-one-measured-2
@@ -1732,7 +1737,7 @@ Inside the bounds that the second profile set before the run.
   $T \times T$ weights to memory ($T$ = 128 positions).
 
 ::: {.d2l-note}
-The kernels between the products barely changed.
+The kernels between the products got no faster.
 :::
 :::
 
@@ -1751,7 +1756,7 @@ The bandwidth-bound part responds. Together with bf16: nearly 2×.
 :::
 :::
 
-::: {.slide title="512 Windows per Step Gain a Few Percent, Close to the Bound"}
+::: {.slide title="512 Windows per Step Gain a Few Percent at Most"}
 [Larger minibatches]{.kicker}
 
 @!fast-transformer-rungs-each-one-measured-3

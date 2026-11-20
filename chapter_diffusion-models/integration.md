@@ -771,7 +771,7 @@ against the data's $0.48$–$0.49$. A hundred: the data's strays and spread.
 
 ::: {.d2l-note}
 The oracle at ten steps is nearly as narrow ($0.46$) and strays 2–3%: the
-steps cause the narrowing and part of the strays. The data stray about 1%.
+steps cause the narrowing and part of the strays. The data stray 1.1–1.5%.
 :::
 :::
 

@@ -505,6 +505,8 @@ student draws its times the same way and uses no teacher. The fourth cell,
 consistency training, needs no student of its own: its two choices, one
 time and the example's velocity, are each tested by another student.
 
+<!-- WRITER: M4a: the cell now trains every student six times, seeds 2 to 7 (not twice, seeds 2 and 3); fix "twice each (seeds 2 and 3)". -->
+
 What losses should we expect? A distilled student's target is a function
 of the point and the times, so its loss can approach zero. MeanFlow's
 target contains each example's own velocity twice, once as
@@ -541,13 +543,15 @@ students = {}
 for name, loss in (('consistency', consistency_loss),
                    ('distillation', distillation_loss),
                    ('MeanFlow', meanflow_loss)):
-    for seed in (2, 3):
+    final = []
+    for seed in range(2, 8):
         torch.manual_seed(seed)
         _, students[name, seed], losses = d2l.train_regression(
             MLPFlowMap(256, 3, num_times=2, time_freqs=slow).to(device),
             loss, lambda: mix.sample(512), 20_000, cosine=True)
-        print(f'{name:>12}, seed {seed}: mean loss of the last 1,000 '
-              f'updates {losses[-1000:].mean():.3f}')
+        final.append(float(losses[-1000:].mean()))
+    print(f'{name:>12}, seeds 2 to 7: mean loss of the last 1,000 updates '
+          f'{min(final):.3f} to {max(final):.3f}')
 ```
 
 ```{.python .input #few-step-on-the-running-example-1}
@@ -583,14 +587,16 @@ students = {}
 for name, loss in (('consistency', consistency_loss),
                    ('distillation', distillation_loss),
                    ('MeanFlow', meanflow_loss)):
-    for seed in (2, 3):
+    final = []
+    for seed in range(2, 8):
         _, students[name, seed], losses = d2l.train_regression(
             MLPFlowMap(256, 3, num_times=2, time_freqs=slow,
                        rngs=nnx.Rngs(seed)),
             loss, lambda k: mix.sample(k, 512), 20_000, jax.random.key(seed),
             cosine=True)
-        print(f'{name:>12}, seed {seed}: mean loss of the last 1,000 '
-              f'updates {losses[-1000:].mean():.3f}')
+        final.append(float(losses[-1000:].mean()))
+    print(f'{name:>12}, seeds 2 to 7: mean loss of the last 1,000 updates '
+          f'{min(final):.3f} to {max(final):.3f}')
 ```
 
 The distilled students end near zero, about 0.03 for the two-time student
@@ -600,6 +606,8 @@ that may be the floor, the disagreement between examples that no network
 can remove; the cell does not measure the floor, so the number says little
 about the student. MeanFlow runs are judged by their samples, not by their
 losses.
+
+<!-- WRITER: the cell now prints one line per student, the range over seeds 2 to 7 of the mean loss of the last 1,000 updates. Dev runs (both tabs): consistency 0.068-0.083, distillation 0.030-0.037, MeanFlow 76.1-85.2. Re-read "about 0.03 ... 0.075 ... 76 to 81 in both seeds" against the recaptured store (also the deck note "Measured: 0.075 ... 76 to 81"). -->
 
 All models now start from the 20,000 points of the Euler experiment: the
 teacher with fifty Euler steps, the consistency student with one jump or
@@ -612,6 +620,8 @@ samples that do not stray to the center of their mode
 (:numref:`sec_diffusion-denoising`). A student row holds its two runs,
 seeds 2 and 3, separated by a slash.
 
+<!-- WRITER: the report is now a table: per row the largest weight error of each run (six columns for a student, seeds 2 to 7 in order; one for data and teacher), then the range of the strays and the range of the spreads over the runs. Replace "A student row holds its two runs, seeds 2 and 3, separated by a slash" with that description. -->
+
 ```{.python .input #few-step-on-the-running-example-2}
 %%tab pytorch
 def renoised_sample(u, z):
@@ -621,15 +631,19 @@ def renoised_sample(u, z):
     return d2l.flow_map_sample(u, lin.sample(x, half, torch.randn_like(x)), 1,
                                t_start=0.5)
 
+def span(values, fmt):
+    """'lo-hi' over the runs, or the one value if they print alike."""
+    lo, hi = format(min(values), fmt), format(max(values), fmt)
+    return lo if lo == hi else f'{lo}-{hi}'
+
 def report(name, xs):
-    """Each run's largest weight error, stray fraction and spread."""
+    """Each run's largest weight error; the range of strays and spreads."""
     stats, w_true = [mix.summary(x) for x in xs], mix.weights.tolist()
-    err = ' / '.join(
+    err = ' '.join(
         f'{max(abs(w - w0) for w, w0 in zip(s["weights"], w_true)):.3f}'
         for s in stats)
-    stray = ' / '.join(f'{s["stray"]:.1%}' for s in stats)
-    spread = ' / '.join(f'{s["spread"]:.3f}' for s in stats)
-    print(f'{name:>24}: weight error {err}, stray {stray}, spread {spread}')
+    print(f'{name:>24}  {err:35}  {span([s["stray"] for s in stats], ".1%"):9}'
+          f'  {span([s["spread"] for s in stats], ".3f")}')
 
 torch.manual_seed(4)
 samples = {'data': [mix.sample(len(z))],
@@ -643,6 +657,7 @@ for (name, seed), u in students.items():
         new = {str(k): d2l.flow_map_sample(u, z, k) for k in (1, 2, 4)}
     for k, x in new.items():
         samples.setdefault(f'{name}, {k}', []).append(x)
+print(f'{"":24}  {"largest weight error, each run":35}  {"stray":9}  spread')
 for name, xs in samples.items():
     report(name, xs)
 names = ['teacher, 50 steps', 'consistency, 1', 'distillation, 1',
@@ -660,15 +675,19 @@ def renoised_sample(u, z, key):
     return d2l.flow_map_sample(u, lin.sample(x, half, jax.random.normal(
         key, x.shape)), 1, t_start=0.5)
 
+def span(values, fmt):
+    """'lo-hi' over the runs, or the one value if they print alike."""
+    lo, hi = format(min(values), fmt), format(max(values), fmt)
+    return lo if lo == hi else f'{lo}-{hi}'
+
 def report(name, xs):
-    """Each run's largest weight error, stray fraction and spread."""
+    """Each run's largest weight error; the range of strays and spreads."""
     stats, w_true = [mix.summary(x) for x in xs], mix.weights.tolist()
-    err = ' / '.join(
+    err = ' '.join(
         f'{max(abs(w - w0) for w, w0 in zip(s["weights"], w_true)):.3f}'
         for s in stats)
-    stray = ' / '.join(f'{s["stray"]:.1%}' for s in stats)
-    spread = ' / '.join(f'{s["spread"]:.3f}' for s in stats)
-    print(f'{name:>24}: weight error {err}, stray {stray}, spread {spread}')
+    print(f'{name:>24}  {err:35}  {span([s["stray"] for s in stats], ".1%"):9}'
+          f'  {span([s["spread"] for s in stats], ".3f")}')
 
 samples = {'data': [mix.sample(jax.random.key(3), len(z))],
            'teacher, 50 steps': [d2l.flow_map_sample(
@@ -682,6 +701,7 @@ for (name, seed), u in students.items():
         new = {str(k): d2l.flow_map_sample(u, z, k) for k in (1, 2, 4)}
     for k, x in new.items():
         samples.setdefault(f'{name}, {k}', []).append(x)
+print(f'{"":24}  {"largest weight error, each run":35}  {"stray":9}  spread')
 for name, xs in samples.items():
     report(name, xs)
 names = ['teacher, 50 steps', 'consistency, 1', 'distillation, 1',
@@ -707,6 +727,8 @@ are too tight, with a spread of 0.31 to 0.34 after one jump and 0.37 to
 0.38 after two and four. That is also why its four jumps stray less often
 than the data themselves.
 
+<!-- WRITER: dev runs, six seeds per student. One evaluation: every student within 0.007 of the weights in every run (PT at most 0.007, JAX at most 0.005); data miss 0.004-0.005. Distillation within 0.006 at 1, 2 and 4 jumps in all twelve runs. Strays: data 0.9-1.1%, teacher 1.4-1.6%; consistency 1 jump 1.9-2.1%, re-noised 1.2-1.5%; distillation 1 jump 1.7-2.1%, 2 jumps 1.0-1.1%, 4 jumps 0.8-1.0%; MeanFlow 1 jump 3.9-4.4%, 2 jumps 1.1-1.7%, 4 jumps 0.6-1.1%. Spreads: data 0.474, distilled one jump 0.446-0.462 (consistency 0.457-0.461), MeanFlow 0.314-0.342 after one jump, 0.361-0.399 after two, 0.352-0.394 after four. "its four jumps stray less often than the data" no longer holds in every run (JAX 0.6-1.1% against 1.1%; PT 0.7-0.9% against 0.9%): say "about as often as" or read it from the store. -->
+
 Two runs per student are few. Changing the seeds of the training cell to
 2 through 7 gives six runs of each two-time student, and their weight
 errors tell two stories. One jump stays within 0.007 in every run, and
@@ -715,6 +737,8 @@ After four MeanFlow jumps, however, one or two runs in six end 0.013 to
 0.023 off, two to six times the miss of a fresh draw. MeanFlow's weights
 after several jumps thus depend on the training run, and a single run is
 no guide to them; the distilled student's do not.
+
+<!-- WRITER: M4a: the six runs are now printed. Replace this paragraph with a reading of the printed MeanFlow rows (dev, seeds 2-7 in order). PT: 2 jumps 0.003 0.003 0.007 0.009 0.008 0.007; 4 jumps 0.005 0.005 0.007 0.010 0.023 0.007. JAX: 2 jumps 0.004 0.012 0.004 0.002 0.005 0.006; 4 jumps 0.005 0.020 0.007 0.003 0.013 0.005. So one or two runs in six end 0.013-0.023 off after four jumps in each tab, while one jump stays within 0.007 and distillation within 0.006 in every run. Delete both tab notes below (the JAX "Python loop" sentence is debugging history); if a tab note stays, it may only point at the tab's own drifting seed (PT seed 6, JAX seeds 3 and 6). -->
 
 :begin_tab:`pytorch`
 In this tab both MeanFlow runs of the table are among the steady ones:
@@ -742,6 +766,8 @@ contract the modes in just this way (:numref:`sec_diffusion-samplers`), but
 that is a plausible reading, not a result. On the mixture a teacher is
 worth having: training from data alone saves the teacher's run but leaves
 the student a far noisier target to average.
+
+<!-- WRITER: "(at most 0.015)" is false over six seeds: the spread ranges within a row are 0.007-0.013 for distillation and 0.015-0.025 (PT) / 0.024-0.042 (JAX, 4 jumps 0.352-0.394) for MeanFlow. What holds in both tabs: the ranges never overlap; after one jump every distilled run is at least 0.107 above every MeanFlow run; after two and four jumps at least 0.07 (JAX 2 jumps 0.469 vs 0.399) and 0.064 (JAX 4 jumps 0.458 vs 0.394), PT 0.085 and 0.081. Restate with these. -->
 
 ### Fashion-MNIST
 
@@ -809,6 +835,8 @@ $s < t$ as on the mixture. Starting from trained weights, the student
 learns at a rate of $2 \cdot 10^{-4}$ for 5,000 updates of 128 images,
 half the teacher's 10,000.
 
+<!-- WRITER: S15: the cell now trains two students from the same teacher, seeds 2 and 3; say so. -->
+
 ```{.python .input #few-step-on-images-2}
 %%tab pytorch
 def student_loss(u, x0):
@@ -819,11 +847,13 @@ def student_loss(u, x0):
     return d2l.flow_map_error(u, teacher, x0, torch.randn_like(x0), s,
                               t).mean()
 
-torch.manual_seed(2)
-_, student, _ = d2l.train_regression(  # jvp through GroupNorm won't compile
-    d2l.UNetFlowMap(copy.deepcopy(teacher)).to(X.device), student_loss,
-    batch_fn, 5_000,
-    lr=2e-4, ema_half_life=500, compiled=False)
+image_students = {}
+for seed in (2, 3):
+    torch.manual_seed(seed)
+    _, image_students[seed], _ = d2l.train_regression(
+        d2l.UNetFlowMap(copy.deepcopy(teacher)).to(X.device), student_loss,
+        batch_fn, 5_000, lr=2e-4, ema_half_life=500,
+        compiled=False)  # jvp through GroupNorm won't compile
 ```
 
 ```{.python .input #few-step-on-images-2}
@@ -837,9 +867,12 @@ def student_loss(u, x0, key):
     return d2l.flow_map_error(u, teacher, x0, jax.random.normal(k3, x0.shape),
                               s, t).mean()
 
-_, student, _ = d2l.train_regression(
-    d2l.UNetFlowMap(nnx.clone(teacher), rngs=nnx.Rngs(2)), student_loss,
-    batch_fn, 5_000, jax.random.key(2), lr=2e-4, ema_half_life=500)
+image_students = {}
+for seed in (2, 3):
+    _, image_students[seed], _ = d2l.train_regression(
+        d2l.UNetFlowMap(nnx.clone(teacher), rngs=nnx.Rngs(seed)),
+        student_loss, batch_fn, 5_000, jax.random.key(seed), lr=2e-4,
+        ema_half_life=500)
 ```
 
 From the same 1,000 noise images, the teacher takes 1 to 50 Euler steps
@@ -856,17 +889,19 @@ velocity = lambda x, s, t: teacher(x, t)
 ns_teacher, ns_student = (1, 2, 4, 10, 20, 50), (1, 2, 4)
 images = {('teacher', n): d2l.flow_map_sample(velocity, noise, n)
           for n in ns_teacher}
-images |= {('student', n): d2l.flow_map_sample(student, noise, n)
-           for n in ns_student}
+images |= {(f'student {seed}', n): d2l.flow_map_sample(u, noise, n)
+           for seed, u in image_students.items() for n in ns_student}
 fd = {key: d2l.fid_score(features(x), f_test) for key, x in images.items()}
 for (name, n), v in fd.items():
-    print(f'{name}, {n:2d} evaluations: FD {v:6.2f}')
-d2l.plot([ns_teacher, ns_student, [1, 50]],
+    print(f'{name:>9}, {n:2d} evaluations: FD {v:6.2f}')
+d2l.plot([ns_teacher, ns_student, ns_student, [1, 50]],
          [[fd['teacher', n] for n in ns_teacher],
-          [fd['student', n] for n in ns_student], [floor, floor]],
-         'network evaluations', 'FD',
-         legend=['teacher, Euler', 'student, jumps', 'floor'],
-         xscale='log', yscale='log', fmts=('o-', 's-', 'k:'))
+          *[[fd[f'student {seed}', n] for n in ns_student]
+            for seed in image_students], [floor, floor]],
+         'network evaluations', 'FD', ylim=(0.5, 1e4), xscale='log',
+         yscale='log', fmts=('o-', 's-', '^--', 'k:'),
+         legend=['teacher, Euler', 'student, seed 2', 'student, seed 3',
+                 'floor'], legend_loc='upper right')
 ```
 
 ```{.python .input #few-step-on-images-3}
@@ -876,17 +911,19 @@ velocity = lambda x, s, t: teacher(x, t)
 ns_teacher, ns_student = (1, 2, 4, 10, 20, 50), (1, 2, 4)
 images = {('teacher', n): d2l.flow_map_sample(velocity, noise, n)
           for n in ns_teacher}
-images |= {('student', n): d2l.flow_map_sample(student, noise, n)
-           for n in ns_student}
+images |= {(f'student {seed}', n): d2l.flow_map_sample(u, noise, n)
+           for seed, u in image_students.items() for n in ns_student}
 fd = {key: d2l.fid_score(features(x), f_test) for key, x in images.items()}
 for (name, n), v in fd.items():
-    print(f'{name}, {n:2d} evaluations: FD {v:6.2f}')
-d2l.plot([ns_teacher, ns_student, [1, 50]],
+    print(f'{name:>9}, {n:2d} evaluations: FD {v:6.2f}')
+d2l.plot([ns_teacher, ns_student, ns_student, [1, 50]],
          [[fd['teacher', n] for n in ns_teacher],
-          [fd['student', n] for n in ns_student], [floor, floor]],
-         'network evaluations', 'FD',
-         legend=['teacher, Euler', 'student, jumps', 'floor'],
-         xscale='log', yscale='log', fmts=('o-', 's-', 'k:'))
+          *[[fd[f'student {seed}', n] for n in ns_student]
+            for seed in image_students], [floor, floor]],
+         'network evaluations', 'FD', ylim=(0.5, 1e4), xscale='log',
+         yscale='log', fmts=('o-', 's-', '^--', 'k:'),
+         legend=['teacher, Euler', 'student, seed 2', 'student, seed 3',
+                 'floor'], legend_loc='upper right')
 ```
 
 The teacher's FD falls from about 150 to 170 at one Euler step and about
@@ -896,6 +933,8 @@ jump scores 11 to 12, between four and five times the teacher's
 fifty-step FD, two jumps nearly twice it, and four about 1.5 times.
 Read across the plot, two evaluations of the student are worth about
 fifteen Euler steps of the teacher, and one about seven.
+
+<!-- WRITER: S15 (dev runs, both students now printed and plotted). Teacher 1/2/4/10/20/50 steps: PT 163.5, 84.0, 27.5, 6.75, 3.67, 2.59; JAX 145.6, 78.4, 27.1, 6.83, 3.80, 2.61 (so "about 150 to 170" at one step becomes about 145 to 165). Students, seed 2 / seed 3: one jump PT 11.60 / 11.65, JAX 11.76 / 11.76; two jumps 4.63 / 4.62, 4.90 / 4.85; four jumps 3.65 / 3.82, 3.80 / 3.62. The two students agree to within 0.2 FD at every budget. Ratios to the teacher's fifty steps: one jump 4.5, two 1.8-1.9, four 1.4-1.5. One jump lies between the teacher's 4 and 10 steps, two jumps between 10 and 20 steps: write "between ten and twenty" and "between four and ten", not "about fifteen" and "about seven" (also Summary l.~997 "about fifteen Euler steps", deck slide title "Two Student Jumps Are Worth About Fifteen Euler Steps" and Wrap-up line). -->
 
 A distilled student can at best reproduce its teacher's ODE, so its target
 is the FD of the teacher's exact ODE, which fifty Euler steps approach from
@@ -908,15 +947,17 @@ The rows below are drawn from the same eight noise images: the teacher
 with fifty and with two Euler steps, and the student with one and with two
 jumps.
 
+<!-- WRITER: the rows show the seed-2 student; say "the first student" or "the student with seed 2". -->
+
 ```{.python .input #few-step-on-images-4}
 %%tab pytorch
-rows = [('teacher', 50), ('teacher', 2), ('student', 1), ('student', 2)]
+rows = [('teacher', 50), ('teacher', 2), ('student 2', 1), ('student 2', 2)]
 d2l.show_gray(torch.cat([images[r][:8].clamp(-1, 1) for r in rows]), 4, 8);
 ```
 
 ```{.python .input #few-step-on-images-4}
 %%tab jax
-rows = [('teacher', 50), ('teacher', 2), ('student', 1), ('student', 2)]
+rows = [('teacher', 50), ('teacher', 2), ('student 2', 1), ('student 2', 2)]
 d2l.show_gray(jnp.concatenate([images[r][:8].clip(-1, 1) for r in rows]),
               4, 8);
 ```
@@ -1484,6 +1525,8 @@ target varies between examples at the same point.
 @!few-step-on-the-running-example-2
 :::
 
+<!-- WRITER: deck: the embedded table now has six runs per student; the note "up to about 0.02 off over six seeds" is now printed (PT 0.023, JAX 0.020 and 0.013 after four jumps); "distilled 0.45 to 0.46" becomes 0.45 to 0.46 still (0.446-0.462); MeanFlow one jump 0.31 to 0.34 holds (0.314-0.342). -->
+
 ::: {.slide title="The Velocity in the Target Alone Shrinks the Spread by over 0.1"}
 - **One evaluation:** weights within 0.007 for every student.
 - **Spread:** data 0.47, distilled 0.45 to 0.46, MeanFlow 0.31 to 0.34.
@@ -1496,6 +1539,8 @@ After four jumps MeanFlow's weights vary between training runs (up to about
 0.02 off over six seeds); the distilled student's stay within 0.006.
 :::
 :::
+
+<!-- WRITER: deck (S15): the plot now has two students (seeds 2 and 3) and the cell prints 15 lines; check the slide for overflow. Retitle: two jumps lie between the teacher's 10 and 20 Euler steps, one between 4 and 10. -->
 
 ::: {.slide title="Two Student Jumps Are Worth About Fifteen Euler Steps"}
 ::: {.cols .vc}

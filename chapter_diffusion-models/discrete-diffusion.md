@@ -1076,32 +1076,42 @@ any case.
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-7}
 %%tab pytorch
-def speckles(z):  # fraction of interior pixels unlike all four neighbors
+def speckles(z):
+    """Per image, the fraction of interior pixels unlike all four neighbors."""
     c = z[:, 1:-1, 1:-1]
-    return ((c != z[:, :-2, 1:-1]) & (c != z[:, 2:, 1:-1])
-            & (c != z[:, 1:-1, :-2]) & (c != z[:, 1:-1, 2:])).float().mean()
+    unlike = ((c != z[:, :-2, 1:-1]) & (c != z[:, 2:, 1:-1])
+              & (c != z[:, 1:-1, :-2]) & (c != z[:, 1:-1, 2:]))
+    return unlike.float().mean((1, 2))
 
 alpha_bar_784 = 1 - torch.arange(785, device=X.device) / 784  # 784 levels
 z784 = unmask(unet, (1000, 28, 28), 784, alpha_bar_784, mask_id=2)
-print(f'speckles: data {speckles(X[:1000]):.4f}, 784 steps '
-      f'{speckles(z784):.4f}, 100 steps {speckles(z100):.4f}, 4 steps '
-      f'{speckles(z4):.4f}')
+for name, z in (('data', X[:1000]), ('784 steps', z784), ('100 steps', z100),
+                ('4 steps', z4)):
+    per_image = speckles(z)
+    print(f'{name:>9}: speckles {per_image.mean():.4f}, standard error over '
+          f'the 1,000 images {per_image.std() / len(z) ** 0.5:.5f}')
 ```
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-7}
 %%tab jax
-def speckles(z):  # fraction of interior pixels unlike all four neighbors
+def speckles(z):
+    """Per image, the fraction of interior pixels unlike all four neighbors."""
     c = z[:, 1:-1, 1:-1]
-    return ((c != z[:, :-2, 1:-1]) & (c != z[:, 2:, 1:-1])
-            & (c != z[:, 1:-1, :-2]) & (c != z[:, 1:-1, 2:])).mean()
+    unlike = ((c != z[:, :-2, 1:-1]) & (c != z[:, 2:, 1:-1])
+              & (c != z[:, 1:-1, :-2]) & (c != z[:, 1:-1, 2:]))
+    return unlike.mean((1, 2))
 
 alpha_bar_784 = 1 - jnp.arange(785) / 784          # 784 levels
 z784 = unmask(unet, (1000, 28, 28), 784, alpha_bar_784, mask_id=2,
               key=jax.random.key(6))
-print(f'speckles: data {speckles(X[:1000]):.4f}, 784 steps '
-      f'{speckles(z784):.4f}, 100 steps {speckles(z100):.4f}, 4 steps '
-      f'{speckles(z4):.4f}')
+for name, z in (('data', X[:1000]), ('784 steps', z784), ('100 steps', z100),
+                ('4 steps', z4)):
+    per_image = speckles(z)
+    print(f'{name:>9}: speckles {per_image.mean():.4f}, standard error over '
+          f'the 1,000 images {per_image.std(ddof=1) / len(z) ** 0.5:.5f}')
 ```
+
+<!-- WRITER: M4b: the cell now prints the speckle fraction of each set with its standard error over the 1,000 images (four lines). Dev runs: data 0.0037 (SE 0.00016); 784 steps 0.0047 PT, 0.0046-0.0048 JAX (SE 0.00016-0.00017); 100 steps 0.0075 PT, 0.0069-0.0071 JAX (SE 0.00021); 4 steps 0.0329-0.0336 (SE 0.00026-0.00027). The drop from 100 to 784 steps, 0.0021-0.0028, is about eight to ten standard errors of the difference (about 0.00027). Replace "Re-running the notebook moved ... no accident of the draw" with that reading; the multiples (about twice, about nine times, about 1.3 times, two thirds of the excess) still hold. -->
 
 The data have about four speckles per thousand interior pixels, and the
 four-step samples about nine times as many: the image counterpart of the

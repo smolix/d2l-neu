@@ -845,6 +845,8 @@ grids = {'EDM grid': d2l.edm_grid(25),            # 49 network evaluations
 
 The loop trains each recipe, samples every model on both grids from the same noise and prints one FD per seed and grid. One result we can predict before the run. The $\mathbf{v}$-loss on the cosine path is the base's objective in other coordinates, so it should do no worse.
 
+<!-- WRITER: the cell now prints, per row and grid, the mean over the seeds and then each seed's FD in parentheses, e.g. "3.72 (3.45 3.75 4.33 3.34)"; say so. -->
+
 ```{.python .input #design-space-a-recipe-ablation-2}
 %%tab pytorch
 batch_fn = lambda: X[torch.randint(0, len(X), (128,), device=X.device)]
@@ -853,7 +855,7 @@ z = torch.randn(5000, 1, 28, 28, device=device)  # the same noise for every run
 four_seeds = ('base: velocity, t uniform', "t at EDM's levels",
               'EDM, clean image')         # to split EDM's gain
 models, samples = {}, {}
-print(f'{"FD of each seed":27} {"EDM grid":24} linear grid')
+print(f'{"FD: mean (each seed)":27} {"EDM grid":28} linear grid')
 for name, (path, kind, make_net, loss_fn) in recipes.items():
     fd = {g: [] for g in grids}
     for seed in range(4 if name in four_seeds else 2):
@@ -867,8 +869,9 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
             fd[g].append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
             if seed == 0 and g == 'EDM grid':
                 models[name], samples[name] = ema_img, x[:10]
-    edm, lin = (', '.join(f'{v:.2f}' for v in fd[g]) for g in grids)
-    print(f'{name:27} {edm:24} {lin}')
+    edm, lin = (f'{sum(fd[g]) / len(fd[g]):.2f} ('
+                + ' '.join(f'{v:.2f}' for v in fd[g]) + ')' for g in grids)
+    print(f'{name:27} {edm:28} {lin}')
 ```
 
 ```{.python .input #design-space-a-recipe-ablation-2}
@@ -878,7 +881,7 @@ z = jax.random.normal(jax.random.key(1), (5000, 28, 28, 1))  # shared noise
 four_seeds = ('base: velocity, t uniform', "t at EDM's levels",
               'EDM, clean image')         # to split EDM's gain
 models, samples = {}, {}
-print(f'{"FD of each seed":27} {"EDM grid":24} linear grid')
+print(f'{"FD: mean (each seed)":27} {"EDM grid":28} linear grid')
 for name, (path, kind, make_net, loss_fn) in recipes.items():
     fd = {g: [] for g in grids}
     for seed in range(4 if name in four_seeds else 2):
@@ -892,9 +895,12 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
             fd[g].append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
             if seed == 0 and g == 'EDM grid':
                 models[name], samples[name] = ema_img, x[:10]
-    edm, lin = (', '.join(f'{v:.2f}' for v in fd[g]) for g in grids)
-    print(f'{name:27} {edm:24} {lin}')
+    edm, lin = (f'{sum(fd[g]) / len(fd[g]):.2f} ('
+                + ' '.join(f'{v:.2f}' for v in fd[g]) + ')' for g in grids)
+    print(f'{name:27} {edm:28} {lin}')
 ```
+
+<!-- WRITER: M2/M3 apply to the three paragraphs from here, against the recaptured store (the cell re-runs, so every FD moves). Read the printed means; between executions the same seed moved by up to 0.4 FD in PyTorch and up to about 0.16 in JAX (claims.md), so no "every run" claim and no comparison whose margin is below 0.4 FD (PyTorch) survives; read rows by mean and range. M3: the comparison end point is the unconditional UNet(ch=64) at about 1.5 after 20,000 updates (sec_diffusion-latent), not the class-conditional 0.8. -->
 
 Every model is 12 to 32 times the floor, while the full recipe of :numref:`sec_diffusion-images` reaches about 0.8 after its 15,000 updates, so the table ranks how quickly each recipe learns, not where it would end. We read it against the spread between each row's seeds, beginning with the column we added for fairness.
 

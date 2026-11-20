@@ -1013,7 +1013,7 @@ account for no more than the rest. The exchange of gradients, which we
 were led to fear, takes a small part of the step. What hurts is that two
 GPUs are harder to keep fed than one.
 
-Both runs reach the same test accuracy to within a point. Their only
+Both runs reach the same test accuracy to within a point or two. Their only
 difference is rounding, which a thousand steps of SGD amplify.
 
 ### Strong and Weak Scaling

@@ -1003,6 +1003,14 @@ def main():
     late = [f for f in LIB_ONLY_FILES
             if f not in LIB_ONLY_EARLY_FILES and (args.source / f).exists()]
     files = early + list(CHAPTER_NUMBERING.keys()) + late
+    # oo-design.md defines base classes (Module, DataModule, Trainer) used by
+    # LinearRegression in linear-regression-scratch.md (#sec_linear_concise).
+    if ('chapter_linear-regression/linear-regression-scratch.md' in files
+            and 'chapter_linear-regression/oo-design.md' in files):
+        i_s = files.index('chapter_linear-regression/linear-regression-scratch.md')
+        i_o = files.index('chapter_linear-regression/oo-design.md')
+        if i_s < i_o:
+            files[i_s], files[i_o] = files[i_o], files[i_s]
 
     # Copy __init__.py
     init_src = args.source / 'd2l' / '__init__.py'

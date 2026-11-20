@@ -6,55 +6,16 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Object-Oriented Design for Implementation
 :label:`sec_oo-design`
 
-In :numref:`sec_linear_scratch`, we trained linear regression from scratch with
-a dozen-line `train` function. That simplicity came at a cost: `train` was wired
-directly to one model and one dataset, hard-coding `linreg`, `squared_loss`, `w`,
-`b`, `X_train`, and `X_val` right inside its body. Any new architecture or
-dataset would force us to copy the entire loop and tweak a handful of lines. Yet
-strip away those specific names, and the underlying skeleton never changes:
+In :numref:`sec_linear_scratch`, we saw both sides of implementing a machine learning model: first a standalone twelve-line `train` function wired directly to one model and one dataset, and then a concise four-line `trainer.fit(model, data)` call. As we move on to multilayer perceptrons, convolutional networks, recurrent networks, and Transformers, rewriting data loaders, epoch loops, metric averagers, and live plots in every section would bury the new ideas under repetitive plumbing.
 
-```text
-for epoch in range(num_epochs):
-    for X, y in train_data:                     # data
-        loss = loss_fn(net(X), y)               # model and loss
-        update(params, gradient(loss, params))  # optimizer
-    val_loss = mean_loss(net, val_data)         # model on held-out data
-    record(epoch, val_loss)
-```
+To keep our focus on modeling while keeping every line of the training harness transparent and modifiable, we organize the `d2l` library around three clean object-oriented abstractions (:numref:`fig_oo_design`), inspired by frameworks like PyTorch Lightning :cite:`Falcon.ea.2019`:
 
-Only the commented lines vary from one problem to the next; the scaffolding around
-them is universal. Across this book, nearly thirty sections train models—most of
-them across multiple frameworks—which would mean maintaining close to a hundred
-nearly identical copies of this loop. Adding a single capability such as gradient
-clipping or learning-rate scheduling would require editing every copy, and they
-would inevitably drift out of sync.
+1. **`Module` (models):** Holds trainable parameters, defines the `forward` pass, computes the `loss`, specifies `training_step` and `validation_step`, and returns its optimizer via `configure_optimizers`.
+2. **`DataModule` (data):** Encapsulates dataset downloading, preprocessing, and splitting, exposing `train_dataloader()` and `val_dataloader()` iterables.
+3. **`Trainer` (training loop):** Connects any `Module` to any `DataModule`, running the epoch-by-epoch minibatch training and validation passes, averaging metrics across batches, and plotting live learning curves on a `ProgressBoard`.
 
-The standard engineering remedy is object-oriented modularity, inspired by
-open-source libraries such as [Lightning](https://lightning.ai/). We write the
-training loop *once* and cleanly separate the moving parts into three core
-abstractions (:numref:`fig_oo_design`):
-
-* **`Module`** encapsulates a model: its learnable parameters, forward pass
-  (`forward`), loss function, and optimizer (`configure_optimizers`).
-* **`DataModule`** encapsulates a dataset and serves it as reusable training and
-  validation minibatch loaders.
-* **`Trainer`** runs the training and validation loops, orchestrates gradient
-  updates, and logs epoch metrics into a history dictionary.
-
-In terms of our pseudocode above, `DataModule` supplies `train_data` and
-`val_data`, `Module` supplies `net`, `loss_fn`, and `update`, and `Trainer`
-drives the nested loops and records the losses. From this point on, every model
-in the book subclasses `Module`, every dataset subclasses `DataModule`, and we
-only revisit `Trainer` when introducing new hardware or optimization machinery
-such as GPUs and gradient clipping.
-
-![The three base classes. The `Trainer` takes minibatches from a `DataModule` and passes each to a `Module`, whose `training_step` returns the loss; the trainer updates the parameters and keeps the epoch means of the losses in its `history`. New models and datasets are written as subclasses of `Module` and `DataModule`.](../img/mdl-linreg-oo-classes.svg)
+![The three core classes of the `d2l` training harness: `DataModule` supplies training and validation minibatches, `Module` defines the model, loss, and optimizer, and `Trainer` drives the training and validation loops.](../img/oo-design.svg)
 :label:`fig_oo_design`
-
-In this section, we refactor the from-scratch linear regression code of
-:numref:`sec_linear_scratch` into these three classes and re-run training to
-verify that we recover the exact same results. A few arguments and hooks exist
-solely for upcoming chapters; we flag them whenever they appear.
 
 ```{.python .input #oo-design-object-oriented-design-for-implementation}
 %%tab mxnet
@@ -102,17 +63,10 @@ import collections
 ## Utilities
 :label:`oo-design-utilities`
 
-Before defining our three base classes, we introduce two small Python utilities
-designed specifically to keep notebook code readable. Neither is specific to
-machine learning.
+Before building the three core classes, we introduce two small Python utilities that keep notebook definitions readable and self-contained:
 
-First, standard Python expects an entire class definition to live inside one
-contiguous block of code, whereas explaining a complex class in a notebook works
-far better when each method sits in its own short cell next to the prose
-describing it. The decorator `add_to_class` dynamically attaches a function as a
-method on an already-defined class—even *after* instances of that class have been
-created! (Think of this strictly as pedagogical notebook scaffolding; in regular
-Python source files, always define a class in one place.)
+1. **`@add_to_class(Class)`:** In a textbook or notebook, presenting a 60-line class in one giant code block makes it hard to explain each method as it appears. The decorator `@add_to_class(Class)` lets us define a class's skeleton first and attach new methods to it incrementally in later code cells.
+2. **`HyperParameters` (`save_hyperparameters()`):** Writing `self.a = a; self.b = b; ...` at the top of every `__init__` method is pure boilerplate. Inheriting from `HyperParameters` and calling `self.save_hyperparameters()` inspects the caller's frame and automatically binds every `__init__` argument (except any listed in `ignore`) as an attribute on `self`.
 
 ```{.python .input #oo-design-utilities-1}
 def add_to_class(Class):  #@save
@@ -169,41 +123,12 @@ Every class we build in the remainder of this section inherits from
 ## Models
 :label:`subsec_oo-design-models`
 
-Every model in this book subclasses `Module`. A subclass initializes its
-parameters in `__init__` and implements three core methods: `forward` (which maps
-an input minibatch to predictions—by default delegating to `self.net` if present),
-`loss` (which compares predictions against labels), and `configure_optimizers`
-(which constructs and returns the optimizer). In return, `Module` supplies
-`training_step` and `validation_step` for the trainer to call. Alongside
-`HyperParameters`, `Module` inherits from each framework's native neural network
-base class:
+The `Module` class is the base class of every model we implement. It inherits from each framework's native neural network container (`nn.Module` in PyTorch, `nn.Block` in MXNet, `tf.keras.Model` in TensorFlow, or `nnx.Module` in Flax/JAX) as well as `d2l.HyperParameters`. By default:
 
-:begin_tab:`mxnet`
-In MXNet, that base class is Gluon's `nn.Block`. Calling `model(X)` invokes
-`forward`, and the block automatically tracks any parameters stored as attributes
-(:numref:`sec_model_construction`).
-:end_tab:
-
-:begin_tab:`pytorch`
-In PyTorch, that base class is `nn.Module`. Calling `model(X)` invokes `forward`,
-and the module automatically tracks all registered parameters and submodules
-stored as attributes (:numref:`sec_model_construction`).
-:end_tab:
-
-:begin_tab:`tensorflow`
-In TensorFlow, that base class is `tf.keras.Model`, which invokes `call` when an
-instance is called. Our `call` records the `training` flag (needed later for
-layers like dropout and batch normalization) and forwards to `forward` so our
-subclasses look uniform across frameworks. Notice also that `__init__` clears the
-default `loss = None` attribute set by Keras 3 so it does not shadow our `loss`
-method.
-:end_tab:
-
-:begin_tab:`jax`
-In JAX, that base class is Flax's `nnx.Module`, a standard Python object whose
-attributes hold its parameters directly where `nnx.jit` and `nnx.grad` can find
-them. We wire `__call__` to `forward` for consistency with the other frameworks.
-:end_tab:
+- Calling `model(X)` invokes `model.forward(X)`.
+- `training_step(batch)` passes the features `batch[:-1]` through the model and returns a dictionary `{'loss': l}` comparing the predictions against the labels `batch[-1]`.
+- `validation_step(batch)` computes the same validation loss dictionary (and in :numref:`sec_softmax_scratch`, `Classifier` will override `validation_step` to report both `'loss'` and `'acc'`).
+- The helper `as_metrics` normalizes any single scalar or dictionary return value into a metric dictionary so `Trainer` can log arbitrary named quantities uniformly.
 
 ```{.python .input #oo-design-models}
 %%tab pytorch
@@ -340,36 +265,7 @@ def as_metrics(out):  #@save
 
 ### Linear Regression as a Module
 
-Let us now rewrite the from-scratch model of :numref:`sec_linear_scratch` as a
-subclass `LinearRegressionScratch(d2l.Module)`. Its constructor creates the same
-initial weights and bias as `init_params`, wrapping them in the framework's
-dedicated parameter type so that framework utilities can automatically discover,
-inspect, save, and move them onto a GPU. Nothing about the underlying math
-changes: we still compute the predictions, loss, and SGD update explicitly by
-hand.
-
-:begin_tab:`pytorch`
-Wrapping tensors in `nn.Parameter` both enables gradient tracking (just like
-`requires_grad=True`) and registers them on the `nn.Module` so
-`model.parameters()` yields `w` and `b`.
-:end_tab:
-
-:begin_tab:`mxnet`
-Assigning a Gluon `Parameter` as an attribute registers it with the `nn.Block`,
-and `self.initialize()` allocates its value and gradient arrays (accessed via
-`.data()`).
-:end_tab:
-
-:begin_tab:`tensorflow`
-Calling `self.add_weight(...)` creates a mutable `tf.Variable` and registers it
-with the Keras model so `model.trainable_variables` includes `w` and `b`.
-:end_tab:
-
-:begin_tab:`jax`
-Wrapping arrays in `nnx.Param` marks them as trainable parameters for `nnx.grad`.
-An optional `rngs` argument supplies the PRNG stream for initialization (falling
-back to `d2l.get_key()` when omitted).
-:end_tab:
+To see how `Module` works in practice before using built-in framework layers, let us wrap our from-scratch linear regression parameters $(\mathbf{w}, b)$, forward pass, squared loss, and from-scratch `SGD` updater into `LinearRegressionScratch(d2l.Module)`:
 
 ```{.python .input #linear-regression-scratch-defining-the-model-1  n=6}
 %%tab pytorch
@@ -447,30 +343,8 @@ def loss(self, y_hat, y):
 ```
 
 We package our one-line SGD parameter update into a small `SGD` optimizer class
-matching each framework's native optimizer interface, so that in
-:numref:`sec_linear_concise` we can swap in the framework's built-in optimizer
-without touching a single line of `Trainer`.
 
-:begin_tab:`pytorch`
-Mirroring PyTorch's built-in optimizers, `step()` updates each parameter in place
-and `zero_grad()` resets accumulated gradients to zero.
-:end_tab:
-
-:begin_tab:`mxnet`
-Mirroring Gluon's `Trainer`, `step` updates parameters in place and accepts an
-ignored batch-size argument (since our loss is already a minibatch mean).
-:end_tab:
-
-:begin_tab:`tensorflow`
-Mirroring Keras optimizers, `apply_gradients` iterates over `(grad, param)` pairs
-and updates each variable in place with `assign_sub`.
-:end_tab:
-
-:begin_tab:`jax`
-Mirroring Optax gradient transformations, our `SGD` class defines pure `init` and
-`update` methods that return parameter updates $-\eta \mathbf{g}$, which
-`nnx.Optimizer` adds to the model's parameters.
-:end_tab:
+Next, we wrap our from-scratch minibatch SGD update rule into a reusable `SGD(d2l.HyperParameters)` class and return it from `LinearRegressionScratch.configure_optimizers`:
 
 ```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-1  n=11}
 %%tab mxnet
@@ -570,12 +444,7 @@ def configure_optimizers(self):
 ## Data
 :label:`oo-design-data`
 
-Our data base class `DataModule` is even simpler. Subclasses typically download
-and preprocess raw datasets inside `__init__` (with `root` specifying the local
-cache directory and `num_workers` setting the number of background data-loading
-processes) and implement a single method, `get_dataloader(train)`, which returns a
-reusable data loader yielding `(inputs..., labels)` minibatches. The convenience
-methods `train_dataloader` and `val_dataloader` simply forward to it.
+The `DataModule` base class is the counterpart to `Module` for datasets. Each concrete dataset subclass implements `train_dataloader()` and `val_dataloader()` (typically delegating both to `get_dataloader(train=True/False)`):
 
 ```{.python .input #oo-design-data}
 class DataModule(d2l.HyperParameters):  #@save
@@ -595,13 +464,8 @@ class DataModule(d2l.HyperParameters):  #@save
 
 Next, we turn our synthetic dataset from :numref:`sec_synthetic-regression-data`
 into a `DataModule` subclass whose constructor calls `d2l.synthetic_data` to
-generate `num_train + num_val` examples (by default $1{,}000$ for training and
-$1{,}000$ for validation).
 
-:begin_tab:`jax`
-When `key` is omitted, the constructor draws a fresh one from `d2l.get_key()`, so
-each instantiation yields a new dataset.
-:end_tab:
+Let us package our synthetic regression generator from :numref:`sec_synthetic-regression-data` into `SyntheticRegressionData(d2l.DataModule)`. It generates `num_train + num_val` examples up front (1,000 training and 1,000 validation examples by default) so that `Trainer` can track both training loss and held-out validation loss after every epoch:
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-1}
 %%tab pytorch, tensorflow, mxnet
@@ -629,32 +493,8 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
 
 ### A Loader for Every Epoch
 
-What kind of object should `get_dataloader` return? Our simple `minibatches`
-generator from :numref:`sec_linear_scratch` will not suffice here: `Trainer` asks
-the `DataModule` for its loaders once up front and then iterates over them across
-every epoch. A one-shot generator would run for the first epoch and silently yield
-zero batches for every epoch thereafter!
 
-Instead, we need a *reusable* data loader that can be iterated over epoch after
-epoch, reshuffling the training set into a fresh random order on each pass while
-reporting its batch count via `len`. (For massive datasets that cannot fit in RAM
-or require on-the-fly image decoding, framework data loaders also stream files
-from disk and prefetch batches using background worker threads while the GPU
-trains on the current batch. Our synthetic tensors fit comfortably in memory, so
-we keep things lightweight for now.)
-
-Below, we add `get_tensorloader` to `DataModule` to serve in-memory tensors—using
-the framework's native loader where it fits cleanly, and a tiny `ArrayLoader`
-helper otherwise. Validation splits are always read in their stored order since
-we only average metrics over them.
-
-:begin_tab:`jax`
-Because JAX focuses on array transformations rather than data pipelines, it does
-not ship a built-in data loader. Our `ArrayLoader` keeps the arrays as NumPy
-arrays on the host and splits a fresh PRNG key on every shuffled epoch so no
-random order is repeated. Keeping the final partial minibatch triggers at most
-one extra JIT compilation per training run (not per epoch).
-:end_tab:
+Inside `get_dataloader`, we want an object that can be iterated over once per epoch—reshuffling the training split at the start of every epoch while reading the validation split in deterministic order. We provide both a from-scratch `ArrayLoader` class (wrapping our slice-by-slice index permutation logic from :numref:`sec_linear_scratch`) and a concise `get_tensorloader` method that delegates to each framework's native `DataLoader` / `tf.data.Dataset`:
 
 ```{.python .input #synthetic-regression-data-reusable-data-loaders-1}
 %%tab jax
@@ -812,14 +652,7 @@ len(loader)
 
 ### The Training Loop and the History
 
-The `Trainer` class brings `Module` and `DataModule` together to fit parameters
-over `max_epochs` epochs. (Two additional constructor arguments wait for later
-chapters: `num_gpus` in :numref:`sec_use_gpu` and `gradient_clip_val` in
-:numref:`sec_rnn-scratch`.) `Trainer` also owns a `ProgressBoard` for live
-training curves, defined shortly. Three small setup hooks—`prepare_data`,
-`prepare_model`, and `prepare_optimizer`—are separated into their own methods so
-subsequent chapters can override individual steps (for instance, moving models to
-GPUs) without touching `fit`.
+Now we build `Trainer`, the engine that wires a `Module` and a `DataModule` together. Calling `trainer.fit(model, data)` prepares the data loaders, attaches the model and its optimizer, and runs `max_epochs` passes. In every epoch, `fit_epoch` sweeps through the training minibatches (updating parameters and averaging training metrics) and then calls `validate` over the validation minibatches, recording the epoch averages in `self.history` and updating a live `ProgressBoard` plot:
 
 ```{.python .input #oo-design-training}
 class Trainer(d2l.HyperParameters):  #@save
@@ -932,21 +765,9 @@ the progress board across models.
 
 ### Epoch Means
 
-When `fit_epoch` and `validate` average metrics across an epoch, every *example*
-should carry equal weight—not every *minibatch*. That distinction matters whenever
-the batch size does not divide the dataset evenly: with $1{,}000$ examples and
-`batch_size=32`, the final batch holds only $8$ examples, so unweighted minibatch
-averaging would count each of those $8$ examples four times as heavily as the
-other $992$! To avoid this bias, we weight each minibatch's reported mean by its
-size `len(batch[-1])` (which is why every `training_step` and `validation_step`
-must return a minibatch *mean*, never a sum).
+### Epoch Means
 
-Our small `Averager` class accumulates these example-weighted sums directly on the
-compute device and converts them to Python floats only *once* per epoch inside
-`mean()`. On a GPU, avoiding per-batch host synchronization prevents stalling the
-asynchronous execution queue (:numref:`subsec_async_dispatch`); on a CPU with
-three parameters it makes no speed difference, so you can read `Averager` simply
-as a clean weighted-mean accumulator.
+Because the last minibatch of an epoch is often smaller than `batch_size` (for instance, $1{,}000 = 31 \times 32 + 8$), an unweighted average of per-batch mean losses would give the 8 examples in the final batch the exact same vote as the 32 examples in every earlier batch. Our `Averager` helper accumulates each batch's metric weighted by its batch size `n`, so `avg.means()` always returns the exact per-example average across the entire split:
 
 ```{.python .input #linear-regression-scratch-training-5}
 class Averager:  #@save
@@ -967,11 +788,9 @@ class Averager:  #@save
 
 ### Training and Validation Passes
 
-`fit_epoch` and `validate` translate the inner loop of :numref:`sec_linear_scratch`
-into our three-class interface: minibatches come from the data loader, pass
-through `prepare_batch` (currently an identity hook that :numref:`sec_use_gpu`
-will override to transfer batches onto GPUs), flow through `training_step` or
-`validation_step`, and accumulate into `Averager`.
+### Training and Validation Passes
+
+Next, `validate` and `fit_epoch` execute the per-batch validation and training loops across our four frameworks (with optional gradient clipping `gradient_clip_val` ready for recurrent networks in :numref:`chap_rnn`):
 
 ```{.python .input #linear-regression-scratch-training-1  n=15}
 @d2l.add_to_class(d2l.Trainer)  #@save
@@ -1148,20 +967,9 @@ def validate(self):
 
 ### The Progress Board
 
-To visualize training live inside a notebook (a lightweight nod to tools like
-[TensorBoard](https://www.tensorflow.org/tensorboard)), `Trainer` logs every
-epoch mean to `ProgressBoard`. Its interface is minimal: `draw(x, y, label)`
-appends a point to curve `label`, `show()` renders the figure (implemented in
-:numref:`sec_utils`), and `clear()` resets it. You can customize plotting before
-calling `fit`—for example, setting `trainer.board.yscale = 'log'` for logarithmic
-loss plots or `trainer.board.display = False` when running silent sweeps.
+### The Progress Board
 
-Notice one subtle plotting detail: the training loss mean averages over batches
-processed *while* the parameters were improving throughout the epoch, whereas the
-validation loss is evaluated using the updated parameters at the *end* of the
-epoch. Plotting the training mean at the midpoint of each epoch (`0.5, 1.5, ...`)
-and the validation mean at the end (`1, 2, ...`) aligns the two curves honestly on
-the same timeline.
+Finally, `ProgressBoard` renders live epoch-by-epoch learning curves during notebook execution (and can be silenced via `trainer.board.display = False` whenever we run silent sweeps):
 
 ```{.python .input #oo-design-utilities-6}
 class ProgressBoard(d2l.HyperParameters):  #@save
@@ -1188,12 +996,7 @@ class ProgressBoard(d2l.HyperParameters):  #@save
 
 ## Training Linear Regression Again
 
-Let us now retrain the exact same linear regression model from
-:numref:`sec_linear_scratch` using our new modular classes. Notice how cleanly
-every hyperparameter now lives with the component that owns it: the learning rate
-`lr=0.03` on the model, the batch size `32` (default) on `data`, and `max_epochs=10`
-on `d2l.Trainer` (which pairs our `Trainer` class with the full plotting routine
-in :numref:`sec_utils`).
+Let us test our newly assembled `Module`, `DataModule`, and `Trainer` classes end-to-end by training `LinearRegressionScratch` on `SyntheticRegressionData` for 3 epochs and checking the recovered parameters:
 
 ```{.python .input #oo-design-training-linear-regression-again-1}
 model = LinearRegressionScratch(2, lr=0.03)
@@ -1234,43 +1037,16 @@ b_error = d2l.numpy(model.b[...] - data.b)
 print(f"validation loss: {trainer.history['val_loss'][-1]:.1e}")
 print('error in w:', ', '.join(f'{e:.1e}' for e in w_error))
 print('error in b:', ', '.join(f'{e:.1e}' for e in b_error))
-```
 
-Everything matches: the validation loss sits right at the $5 \times 10^{-5}$
-noise floor, and all three parameter errors lie around a few times $10^{-4}$
-(comfortably inside our $10^{-3}$ threshold). For a single one-off model, all this
-object-oriented scaffolding might seem like overkill—but it pays off immediately
-in the very next section, where we swap in built-in framework layers, losses, and
-optimizers while reusing `d2l.Trainer` and `SyntheticRegressionData` without
-changing a single line.
+Both training and validation loss drop smoothly to the $0.00005$ noise floor, and the recovered parameters match $(\mathbf{w}^*, b^*)$ to within a thousandth—confirming that our object-oriented harness reproduces our standalone scratch loop while freeing every future chapter from boilerplate.
 
 ## Summary
 
-* Nearly every model in this book shares the same outer training loop, so we
-  implement it once in `Trainer` and isolate problem-specific details into
-  subclasses of `Module` (parameters, `forward`, `loss`, `configure_optimizers`)
-  and `DataModule` (reusable training and validation data loaders).
-* Keeping `training_step` and `validation_step` free of logging or plotting side
-  effects decouples models from the trainer; `Averager` computes unbiased
-  example-weighted epoch means (handling partial final minibatches cleanly), and
-  `Trainer` records them in `trainer.history` and plots them on `ProgressBoard`.
-* Refactored into these three classes (stored in the `d2l` library), our
-  from-scratch linear regression reproduces the exact noise floor and parameter
-  recovery of :numref:`sec_linear_scratch`—and lets future chapters swap out
-  models, losses, optimizers, or datasets independently.
+- **Three core abstractions:** The `d2l` library separates modeling (`Module`), data loading (`DataModule`), and optimization loops (`Trainer`), flanked by `@add_to_class`, `HyperParameters`, `Averager`, and `ProgressBoard`.
+- **Exact epoch averages:** `Averager` weights each minibatch's metrics by its example count so partial final minibatches never skew epoch-level losses or accuracies.
+- **Drop-in reuse:** Any model subclassing `Module` (whether built from raw tensors like `LinearRegressionScratch` or framework layers like `LinearRegression` in :numref:`sec_linear_concise`) trains and validates through the exact same `trainer.fit(model, data)` call.
 
 ## Exercises
-
-1. [code] **Methods added later.** Register a second method `do` on class
-   `A` with a different body, predict which version `a.do()` runs, and
-   check. Then attach a function `greet(self)` to the instance instead, with
-   `setattr(a, 'greet', greet)`, call `a.greet()`, and explain the error.
-
-1. **Optimizer and model.** The `Module` class keeps the optimizer in
-   `configure_optimizers`, a *method of the model*, rather than passing it
-   as an argument to `Trainer`. State the advantages of this design choice,
-   and describe a training setup in which putting the optimizer on the
-   model becomes awkward.
 
 1. **Reading the training curves.** The trainer draws the mean training
    loss of each epoch at the middle of the epoch and the validation loss
@@ -1290,15 +1066,6 @@ changing a single line.
    Explain why no model or dataset class has to change. Test your trainer
    on the synthetic regression data with a large `max_epochs`.
 
-1. [code] **Test split.** Write a subclass of `SyntheticRegressionData`
-   whose constructor also draws a test set from the same distribution and
-   whose method `test_dataloader` serves it. Train a model on the original
-   data, and compute its mean loss on the test set once, after the last
-   epoch, with the model's `validation_step`. Explain why the test set is
-   evaluated once at the end rather than after every epoch like the
-   validation data, and what would go wrong if the epoch with the best test
-   loss were reported. :numref:`sec_generalization_basics` returns to this
-   question.
 
 1. [code] **Planck's law.** ● The same `Module` and `Trainer` fit any model
    whose loss can be differentiated, not only a linear one. Use
@@ -1316,7 +1083,7 @@ changing a single line.
     which $B$ and $T$ are of order one before fitting.
 
 :begin_tab:`mxnet`
-7. **A partial last minibatch.** With 1,000 examples per split and
+1. **A partial last minibatch.** With 1,000 examples per split and
    `batch_size=32`, each loader ends a pass with a partial minibatch of 8
    examples. `ArrayLoader` discards it when given `drop_last=True`. The
    training loader reshuffles every epoch, whereas the validation loader
@@ -1326,7 +1093,7 @@ changing a single line.
 :end_tab:
 
 :begin_tab:`pytorch`
-7. **A partial last minibatch.** With 1,000 examples per split and
+1. **A partial last minibatch.** With 1,000 examples per split and
    `batch_size=32`, each loader ends a pass with a partial minibatch of 8
    examples. `DataLoader` discards it when given `drop_last=True`. The
    training loader reshuffles every epoch, whereas the validation loader
@@ -1336,7 +1103,7 @@ changing a single line.
 :end_tab:
 
 :begin_tab:`tensorflow`
-7. **A partial last minibatch.** With 1,000 examples per split and
+1. **A partial last minibatch.** With 1,000 examples per split and
    `batch_size=32`, each loader ends a pass with a partial minibatch of 8
    examples. `Dataset.batch` discards it when given `drop_remainder=True`.
    The training loader reshuffles every epoch, whereas the validation loader
@@ -1346,7 +1113,7 @@ changing a single line.
 :end_tab:
 
 :begin_tab:`jax`
-7. **A partial last minibatch.** With 1,000 examples per split and
+1. **A partial last minibatch.** With 1,000 examples per split and
    `batch_size=32`, each loader ends a pass with a partial minibatch of 8
    examples. `ArrayLoader` discards it when given `drop_last=True`.
     1. The training loader reshuffles every epoch, whereas the validation
@@ -1359,7 +1126,7 @@ changing a single line.
        with that of discarding 8 examples in every epoch.
 :end_tab:
 
-8. [code] **On-the-fly generation.** Write a `DataModule` subclass that
+1. [code] **On-the-fly generation.** Write a `DataModule` subclass that
    stores no $\mathbf{X}$ or $\mathbf{y}$. Its training loader instead draws
    every minibatch fresh from the data-generating process when the
    minibatch is requested.
@@ -1386,518 +1153,3 @@ changing a single line.
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17974)
 :end_tab:
-
-
-<!-- slides -->
-
-::: {.slide}
-::: {.cover}
-[Dive into Deep Learning · §2.4]{.kicker}
-
-One training loop for every model<br>
-**Module · DataModule · Trainer · epoch means · the same result again**
-:::
-:::
-
-::: {.slide title="A Loop Written for One Model Would Need Close to 100 Copies"}
-[The problem]{.kicker}
-
-The dozen-line `train` of the previous deck names `linreg`,
-`squared_loss`, `w`, `b`, and `X_train`. Stripped of the names:
-
-```{.python #oo-design-exercises-3}
-for epoch in range(num_epochs):
-    for X, y in train_data:                     # data
-        loss = loss_fn(net(X), y)               # model and loss
-        update(params, gradient(loss, params))  # optimizer
-    val_loss = mean_loss(net, val_data)         # model on held-out data
-    record(epoch, val_loss)
-```
-
-- Only the commented lines change between models.
-- Nearly 30 sections train a model, most in several frameworks.
-
-::: {.d2l-note}
-Clipping gradients would mean editing every copy. Write the loop **once**.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- say which part of training `Module`, `DataModule`, and `Trainer` own;
-- write a model whose steps return the mean loss of a minibatch;
-- compute an epoch mean that counts every example equally;
-- read `trainer.history` after training;
-- train the linear model of the previous deck through the classes and get
-  the same result.
-
-**Running example:** $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$,
-$\sigma = 0.01$; 1,000 training and 1,000 validation examples in
-minibatches of 32.
-:::
-
-::: {.slide title="Three Classes Turn the Loop Into Reusable Code"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Linear Regression | model, loss, closed form, minibatch SGD |
-| Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
-| Implementation from Scratch | SGD and the training loop by hand |
-| **Object-Oriented Design** | **`Module`, `DataModule`, `Trainer`** |
-| Concise Implementation | framework layers and losses |
-| Generalization | training vs. test error |
-| Weight Decay | a penalty on large weights |
-:::
-
-::: {.col .narrow}
-- **Uses:** the dozen-line training loop and the generator of the previous
-  deck; Python classes.
-- **Skips:** the drawing code of the progress board; asynchronous execution,
-  covered in the chapter on computation.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Model and data]{.dtitle}
-
-[Module · DataModule · a loader for every epoch]{.dsub}
-:::
-:::
-
-::: {.slide title="Each Line of the Loop Has One Owner"}
-[Three classes]{.kicker}
-
-![](../img/mdl-linreg-oo-classes.svg){.nostretch width=90%}
-
-| in the loop | owner | through |
-|--------------------------|-----------|------------------------------|
-| `train_data`, `val_data` | `DataModule` | `train_dataloader()`, `val_dataloader()` |
-| `net`, `loss_fn`, the update rule | `Module` | `forward`, `loss`, `configure_optimizers()` |
-| both `for` loops, gradients, `record` | `Trainer` | `fit`, `history` |
-:::
-
-::: {.slide title="A Model's Steps Return the Mean Loss and Do Nothing Else"}
-[Module]{.kicker}
-
-| method | returns | called |
-|---|---|---|
-| `forward(X)` | predictions | inside the steps |
-| `loss(y_hat, y)` | the mean loss over the minibatch | inside the steps |
-| `training_step(batch)` | the loss, or a dict with key `'loss'` | per training minibatch |
-| `validation_step(batch)` | the loss, or a dict of metrics | per validation minibatch |
-| `configure_optimizers()` | the optimizer | once, before training |
-
-A minibatch is a tuple `(inputs..., labels)`.
-
-::: {.d2l-note}
-No printing, plotting, or recording: nothing in the model refers to the
-trainer, so **any loop** can train or evaluate it.
-:::
-:::
-
-::: {.slide title="add_to_class Adds a Method to a Class That Already Exists"}
-[Notebook utilities]{.kicker}
-
-@oo-design-utilities-2
-
-@oo-design-utilities-3
-
-- `a`, created before `do`, has it: Python looks a method up on the class
-  when it is called.
-- `save_hyperparameters()` stores every constructor argument:
-  `Trainer(max_epochs=10)` has `self.max_epochs`.
-:::
-
-::: {.slide title="LinearRegressionScratch Registers w and b With the Module"}
-[Module]{.kicker}
-
-@linear-regression-scratch-defining-the-model-1
-
-- `forward` and `loss` are `linreg` and `squared_loss` of the previous
-  deck, now methods that read the parameters from the model.
-
-::: {.d2l-note}
-Registered parameters are listed, saved, and moved to a GPU with the model.
-The loss and the update are still ours.
-:::
-:::
-
-::: {.slide title="Keras Calls call, So Module Redirects It to forward" only="tensorflow"}
-[Module · TensorFlow]{.kicker}
-
-```{.python #oo-design-exercises-4}
-def call(self, X, *args, training=None, **kwargs):
-    if training is not None:
-        self.training = training
-    return self.forward(X, *args, **kwargs)
-
-def training_step(self, batch):
-    return self.loss(self(*batch[:-1], training=True), batch[-1])
-```
-
-- `validation_step` passes `training=False`; dropout, written later, reads
-  `self.training`.
-- Keras 3 sets an attribute `loss = None`; the constructor deletes it so
-  that the method `loss` is found.
-:::
-
-::: {.slide title="SGD Subtracts η Times the Gradient, in Place" only="pytorch"}
-[The optimizer]{.kicker}
-
-$(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta\, \nabla_{(\mathbf{w}, b)} L$,
-with learning rate $\eta$. The two methods of our `SGD` class:
-
-```{.python #linear-regression-scratch-exercises-6}
-def step(self):                      # runs inside torch.no_grad()
-    for param in self.params:
-        param -= self.lr * param.grad
-
-def zero_grad(self):
-    for param in self.params:
-        if param.grad is not None:
-            param.grad.zero_()
-```
-
-`configure_optimizers` returns `SGD([self.w, self.b], self.lr)`.
-:::
-
-::: {.slide title="SGD Subtracts η Times the Gradient, in Place" only="mxnet"}
-[The optimizer]{.kicker}
-
-$(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta\, \nabla_{(\mathbf{w}, b)} L$,
-with learning rate $\eta$. The one method of our `SGD` class:
-
-```{.python #linear-regression-scratch-exercises-7}
-def step(self, _):  # batch size ignored: the loss is a mean
-    for param in self.params:  # data() arrays
-        param -= self.lr * param.grad
-```
-
-`configure_optimizers` returns `SGD([self.w.data(), self.b.data()], self.lr)`.
-:::
-
-::: {.slide title="SGD Subtracts η Times the Gradient, in Place" only="tensorflow"}
-[The optimizer]{.kicker}
-
-$(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta\, \nabla_{(\mathbf{w}, b)} L$,
-with learning rate $\eta$. The one method of our `SGD` class:
-
-```{.python #linear-regression-scratch-exercises-8}
-def apply_gradients(self, grads_and_vars):
-    for grad, param in grads_and_vars:
-        param.assign_sub(self.lr * grad)
-```
-
-The same interface as a Keras optimizer; `configure_optimizers` returns
-`SGD(self.lr)`.
-:::
-
-::: {.slide title="In JAX, SGD Returns the Update −η·g Instead of Applying It" only="jax"}
-[The optimizer]{.kicker}
-
-JAX arrays are immutable. An optax optimizer computes updates, and
-`nnx.Optimizer` adds them to the parameters. The two methods of our `SGD`
-class:
-
-```{.python #linear-regression-scratch-exercises-5}
-def init(self, params):                  # SGD keeps no state
-    return optax.EmptyState()
-
-def update(self, updates, state, params=None):
-    updates = jax.tree_util.tree_map(lambda g: -self.lr * g, updates)
-    return updates, state
-```
-:::
-
-::: {.slide title="Check: Which Class Holds Each Setting?"}
-[Check]{.kicker}
-
-The running example trains for 10 epochs with learning rate
-$\eta = 0.03$. Which class holds
-
-1. the learning rate $\eta = 0.03$?
-2. the minibatch size 32?
-3. the 10 epochs?
-4. the true $\mathbf{w}^*$ and the noise level $\sigma = 0.01$?
-5. the squared loss?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answers.** (1) `Module`: `LinearRegressionScratch(2, lr=0.03)` hands it
-to `SGD`. (2) `DataModule`: the default `batch_size=32`. (3) `Trainer`:
-`max_epochs=10`. (4) `DataModule`: the synthetic data. (5) `Module`: its
-`loss`.
-:::
-:::
-:::
-
-::: {.slide title="A Generator Runs Out After One Pass; a Loader Does Not"}
-[DataModule]{.kicker}
-
-A `DataModule` subclass writes one method, `get_dataloader(train)`, which
-returns a **data loader**: an object that yields minibatches `(X, y)`.
-
-| | our generator | framework loader |
-|---|---|---|
-| a second pass | yields nothing | a new random order |
-| `len(loader)` | needs a full pass | 32, without a pass |
-| data larger than memory | must fit in memory | read from disk |
-| assembling minibatches | in the training process | parallel workers, ahead of time |
-
-::: {.d2l-note}
-The trainer iterates over the same loader in every epoch: a generator would
-train for one epoch, then silently do nothing.
-:::
-:::
-
-::: {.slide title="The New Loader Yields 32 Minibatches on Every Pass"}
-[DataModule]{.kicker}
-
-The test of the generator, then the first labels of two new passes:
-
-@!synthetic-regression-data-concise-implementation-of-the-data-loader-3
-
-The loader reports its length without a pass:
-
-@synthetic-regression-data-concise-implementation-of-the-data-loader-4
-:::
-
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[The trainer]{.dtitle}
-
-[the loop · history · epoch means]{.dsub}
-:::
-:::
-
-::: {.slide title="The Trainer Writes the Loop Once"}
-[Trainer]{.kicker}
-
-```{.python #oo-design-exercises-1}
-def fit(self, model, data):
-    ...  # prepare the data, the model, and the optimizer
-    self.history = collections.defaultdict(list)
-    for self.epoch in range(self.max_epochs):
-        # The training mean averages over the epoch: draw it mid-epoch
-        self.record('train', self.fit_epoch(), x=self.epoch + 0.5)
-        self.record('val', self.validate(), x=self.epoch + 1)
-        self.board.show(final=False)
-```
-
-- `fit_epoch` and `validate` return the means over one pass.
-- The training mean uses parameters that change during the epoch: drawn
-  at 0.5, 1.5, …; validation at 1, 2, ….
-:::
-
-::: {.slide title="In JAX the Trainer Holds Two Views and the Optimizer State" only="jax"}
-[Trainer · JAX]{.kicker}
-
-```{.python #oo-design-exercises-2}
-tx = model.configure_optimizers()       # an optax transformation
-self.optim = nnx.Optimizer(model, tx, wrt=nnx.Param)
-self.train_model = nnx.view(model, deterministic=False, ...)
-self.val_model = nnx.view(model, deterministic=True, ...)
-```
-
-- `prepare_model` creates two views that share the parameters; layers
-  such as dropout read the mode from them.
-- `nnx.Optimizer` holds the optimizer state next to the model it updates.
-:::
-
-::: {.slide title="history Keys Join the Split and the Metric Name"}
-[Trainer]{.kicker}
-
-A step returns a loss or a dict; `as_metrics` turns both into a dict:
-
-@oo-design-models-1
-
-```{.python #oo-design-exercises-6}
-def record(self, split, metrics, x):
-    for name in sorted(metrics, key=lambda name: (name != 'loss', name)):
-        self.history[f'{split}_{name}'].append(metrics[name])
-        self.board.draw(x, metrics[name], f'{split}_{name}')
-```
-
-- Keys: `'train_loss'`, `'val_loss'`; a classifier adds `'val_acc'`.
-- `fit` returns nothing: read `trainer.history['val_loss'][-1]`.
-:::
-
-::: {.slide title="Weighting by Size Counts Every Example 1/1,000"}
-[Epoch means]{.kicker}
-
-1,000 examples in minibatches of 32: 31 full ones and one of 8.
-
-| how the epoch mean is formed | one example of a full minibatch | one of the last 8 |
-|---|---|---|
-| minibatch means, equal weights | $1/32 \cdot 1/32 = 1/1024$ | $1/32 \cdot 1/8 = 1/256$ |
-| weighted by size (the trainer) | $1/1000$ | $1/1000$ |
-
-- Equal weights count each of the last 8 examples **4×** as much.
-- The trainer adds $n_b \times$ mean per minibatch, divides by 1,000, and
-  reads the sums once per epoch.
-
-::: {.d2l-note .warn}
-So a step returns a **mean**: a loss summed over 32 examples would enter the
-epoch mean 32× too large.
-:::
-:::
-
-::: {.slide title="fit_epoch Runs the Four Operations on Every Minibatch" only="pytorch"}
-[The loop · simplified]{.kicker}
-
-```{.python #linear-regression-scratch-exercises-1}
-for batch in self.train_dataloader:
-    loss = self.model.training_step(batch)   # 1. forward, loss
-    self.optim.zero_grad()                   # 2. clear
-    loss.backward()                          # 3. backward
-    with torch.no_grad():
-        self.optim.step()                    # 4. update, unrecorded
-    metrics.add({'loss': loss.detach()}, len(batch[-1]))
-return metrics.mean()                        # one sync per epoch
-```
-
-`validate` runs the same loop without steps 2–4, under `torch.no_grad()`.
-:::
-
-::: {.slide title="fit_epoch Runs the Four Operations on Every Minibatch" only="mxnet"}
-[The loop · simplified]{.kicker}
-
-```{.python #linear-regression-scratch-exercises-2}
-previous = None
-for batch in self.train_dataloader:
-    with autograd.record():
-        loss = self.model.training_step(batch)  # 1. forward, loss
-    loss.backward()                             # 2.+3. overwrite
-    self.optim.step(1)                          # 4. update
-    metrics.add({'loss': loss}, len(batch[-1]))
-    if previous is not None:                    # queue: one step long
-        previous.wait_to_read()
-    previous = loss
-return metrics.mean()                           # one read per epoch
-```
-
-`validate` runs the same loop without recording or updates.
-:::
-
-::: {.slide title="One Compiled Function Runs the Four Operations" only="tensorflow"}
-[The loop · simplified]{.kicker}
-
-```{.python #linear-regression-scratch-exercises-3}
-@tf.function                                     # compiled once
-def train_step(batch):
-    with tf.GradientTape() as tape:
-        loss = model.training_step(batch)        # 1. forward, loss
-    grads = tape.gradient(loss, params)          # 2.+3. fresh grads
-    optim.apply_gradients(zip(grads, params))    # 4. update
-    return loss
-```
-
-`fit_epoch` calls it on every minibatch and averages the returned losses.
-:::
-
-::: {.slide title="One Compiled Function Runs the Four Operations" only="jax"}
-[The loop · simplified]{.kicker}
-
-```{.python #linear-regression-scratch-exercises-4}
-@nnx.jit                                         # compiled once per shape
-def train_step(model, optimizer, batch):
-    loss, grads = nnx.value_and_grad(            # 1.-3. fresh grads
-        lambda m: m.training_step(batch))(model)
-    optimizer.update(model, grads)               # 4. update
-    return loss
-```
-
-`fit_epoch` calls it on every minibatch and averages the returned losses.
-:::
-
-::: {.slide title="Check: What Does the Trainer Report?"}
-[Check]{.kicker}
-
-Validation: 1,000 examples, minibatches of 32. The 31 full minibatches have
-mean loss 0.010 and the last one, of 8 examples, mean loss 0.050.
-
-1. Which epoch mean does the trainer report?
-2. Which would equal weights per minibatch report?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answers.** (1) $(992 \cdot 0.010 + 8 \cdot 0.050)/1000 \approx 0.0103$.
-(2) $(31 \cdot 0.010 + 0.050)/32 \approx 0.0113$: 9% too high, because 8
-examples count as much as 32.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Linear regression again]{.dtitle}
-
-[the same model · the same data · through the classes]{.dsub}
-:::
-:::
-
-::: {.slide title="Through the Classes, the Loss Again Falls 7× per Epoch to 5×10⁻⁵"}
-[Training again]{.kicker}
-
-@oo-design-training-linear-regression-again-1
-
-- Training and validation curves lie on top of each other: three
-  parameters cannot fit the noise of 1,000 labels.
-:::
-
-::: {.slide title="The Parameters Again Come Within About 10⁻³ of (2, −3.4) and 4.2"}
-[Training again]{.kicker}
-
-@!oo-design-training-linear-regression-again-2
-
-- Validation loss at the floor $\sigma^2/2 = 5 \times 10^{-5}$.
-- Parameter errors typically a few times $10^{-4}$, as with the
-  dozen-line loop: only the organization of the code has changed.
-:::
-
-::: {.slide title="Check: Which Class Changes?"}
-[Check]{.kicker}
-
-Where does each change go?
-
-1. Train a new network on a new dataset.
-2. Report accuracy as well as the loss.
-3. Use a different optimizer.
-4. Stop when the validation loss stops improving.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answers.** (1) New subclasses of `Module` and `DataModule`. (2) The
-model's `validation_step` returns a dict with `'loss'` and `'acc'`. (3) The
-model's `configure_optimizers`. (4) `Trainer.fit`, once, for every model.
-:::
-:::
-:::
-
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-| class | owns | contract |
-|-----------|----------------------|--------------------------------|
-| `Module` | parameters, `forward`, `loss`, optimizer | steps **return** the mean loss or a dict of means |
-| `DataModule` | training and validation data | `get_dataloader(train)` yields minibatches on every pass |
-| `Trainer` | the loop, `history`, `board` | means over examples: each weighs 1/1,000 |
-
-- Re-run through the classes: loss $\approx 5 \times 10^{-5}$ after 10
-  epochs at 7× per epoch; parameter errors within about $10^{-3}$.
-
-**Next:** the concise implementation: a framework layer, loss, and
-optimizer in the `Module`, trained by the same `Trainer`.
-:::

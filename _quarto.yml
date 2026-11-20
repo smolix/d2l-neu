@@ -103,7 +103,6 @@ book:
         - chapter_linear-regression/synthetic-regression-data.qmd
         - chapter_linear-regression/linear-regression-scratch.qmd
         - chapter_linear-regression/oo-design.qmd
-        - chapter_linear-regression/linear-regression-concise.qmd
         - chapter_linear-regression/generalization.qmd
         - chapter_linear-regression/weight-decay.qmd
         - chapter_linear-classification/index.qmd

@@ -6,45 +6,11 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Probability and Statistics
 :label:`sec_prob`
 
-One way or another, machine learning is all about reasoning under uncertainty. In
-supervised learning, we predict an unknown target from known features, and we
-often want not just a single guess but a measure of how confident we should be—for
-example, how likely a patient is to suffer a heart attack within the next year. In
-unsupervised learning, judging whether a measurement is anomalous requires knowing
-how likely it is under a population model. And even after a model is trained, our
-evaluation of its performance depends on the particular sample of data we happen
-to test it on: a classifier that correctly labels 230 images in a minibatch of 256
-achieves an accuracy of $0.90$, yet on the very next minibatch the exact same
-model might score $0.87$. Before we conclude that one architecture beats another,
-or that a tweak to our training loop actually helped, we need a principled way to
-tell how much such measurements fluctuate by chance alone.
+Machine learning is all about reasoning under uncertainty: predicting how likely a patient is to suffer a heart attack, judging whether a sensor reading is anomalous, or telling whether an accuracy difference from $0.90$ ($230/256$ test images) to $0.87$ on the next minibatch reflects a real change or random sampling fluctuation.
 
-Questions like these are centuries older than machine learning. Probability theory
-was born in the seventeenth century out of games of chance, and its cleanest
-thought experiment is still the humble coin toss. Suppose a coin is tossed 100
-times and lands on heads 56 times. Should we suspect that the coin is biased? The
-raw count cannot answer that by itself: even a perfectly fair coin rarely yields
-exactly 50 heads in 100 tosses, so some departure from 50 is completely normal.
-The real question is whether a deviation of 6 heads is larger than random chance
-routinely produces.
+Probability theory's cleanest thought experiment is still the coin toss: if a coin lands on heads $56$ times in $100$ tosses, should we suspect that it is biased? Even a fair coin rarely lands on heads exactly $50$ times, so we must ask whether a deviation of $6$ heads is larger than chance routinely produces. *Probability* reasons forward from a known model (a fair coin) to the likelihood of outcomes, while *statistics* reasons backward from observed data ($56$ heads in $100$ tosses) to infer properties of the underlying process.
 
-*Probability* and *statistics* tackle the two complementary directions of this
-problem. *Probability* reasons forward: given a mathematical model of a random
-process (such as a fair coin), how likely is each possible outcome? *Statistics*
-reasons backward: starting from observed data (such as 56 heads in 100 tosses),
-what can we infer about the underlying process that generated it? Whenever we
-analyze a dataset—hunting for patterns that generalize to a broader population
-rather than chasing sampling noise—we are combining both ways of thinking.
-
-Simple as the coin question sounds, answering it rigorously takes us through most
-of the foundational ideas we need. We begin by simulating coin tosses to watch
-sampling noise unfold in real time. Next, we introduce the formal language of
-sample spaces, events, random variables, joint distributions, and independence. We
-then define expectation and variance to quantify how rapidly sample averages
-settle down, which resolves the coin question—and tells us how noisy a minibatch
-accuracy is. Finally, we turn to conditional probability and Bayes' theorem to
-reason about what observing one variable reveals about another, culminating in a
-classic medical diagnostic example.
+In this section, we simulate coin tosses to watch sampling fluctuations unfold, introduce sample spaces, events, random variables, joint distributions, and independence, and derive the *standard error* $\sigma/\sqrt{n}$ via expectation and variance to settle the coin question. We then develop conditional probability and Bayes' theorem on a two-step medical diagnostic test.
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab mxnet
@@ -106,24 +72,7 @@ from tensorflow_probability import distributions as tfd
 
 ### Simulated Coin Tosses
 
-If a coin is *fair*, then heads and tails are equally likely. By symmetry, for
-every sequence of $n$ tosses with $n_{\textrm{h}}$ heads and
-$n_{\textrm{t}} = n - n_{\textrm{h}}$ tails, there is an equally likely sequence
-with the roles reversed—which is only possible if each toss has probability $1/2$
-of coming up heads, written $P(\textrm{heads}) = 0.5$. Formally, a *probability*
-assigns a number between $0$ and $1$ to an outcome (or set of outcomes): $1$
-denotes absolute certainty (imagine a trick coin with heads on both faces) and $0$
-denotes impossibility (tails on both faces). Crucially, $P(\textrm{heads}) = 0.5$
-is a *theoretical* property of the coin and the tossing mechanism itself, not of
-any particular sequence of realized tosses.
-
-Formally, drawing realizations from a random process is called *sampling*. To see
-what a fair coin produces in practice, we can simulate tosses using a random
-number generator. Python's `random.random` draws numbers uniformly from the
-interval $[0, 1)$, meaning the probability of landing in any subinterval
-$[a, b] \subset [0, 1)$ is simply its length $b - a$. Testing whether a uniform
-draw exceeds $0.5$ therefore produces `True` (heads) and `False` (tails) with
-probability $0.5$ each.
+For a *fair* coin, symmetry between heads and tails implies $P(\textrm{heads}) = 0.5$. Drawing realizations from a random process is called *sampling*: below, we simulate $100$ tosses first by testing whether uniform draws from $[0, 1)$ exceed $0.5$, and then using our framework's *multinomial* sampler with $n = 100$ and probabilities $(0.5, 0.5)$:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-1}
 num_tosses = 100
@@ -132,19 +81,8 @@ tails = num_tosses - heads
 print("heads, tails: ", [heads, tails])
 ```
 
-Each time we execute this cell, we obtain fresh counts, and rarely do they split
-at exactly 50 and 50. More generally, deep learning frameworks provide built-in
-samplers for any random variable with finitely many outcomes (such as a coin toss
-or the roll of a die) via the *multinomial* distribution, which describes the
-counts of each category across $n$ independent draws. Passing $n = 100$ and the
-probability vector $(0.5, 0.5)$ returns a two-element vector giving the number of
-heads and tails observed.
-
 :begin_tab:`jax`
-Recall from :numref:`sec_ndarray` that JAX random samplers require an explicit
-PRNG key, and we split off a fresh subkey for every draw. Seeding the initial key
-from Python's `random` module ensures that each run of this notebook produces new
-counts.
+In JAX, we split an explicit PRNG key seeded from `random` so each run produces fresh counts.
 :end_tab:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-2}
@@ -175,12 +113,7 @@ jax.random.multinomial(subkey, 100, fair_probs)
 
 ### Frequencies and Probabilities
 
-Dividing the observed counts by the total number of tosses yields the empirical
-*frequency* of each outcome. We distinguish the true underlying probability
-$p = P(\textrm{heads})$ from the observed frequency $\hat{p}$ in $n$ tosses;
-throughout statistics and machine learning, a hat denotes an empirical quantity
-computed from data. To see how much $\hat{p}$ fluctuates from one experiment to
-the next, let us repeat the 100-toss experiment five times.
+Dividing the observed counts by $n$ gives the empirical *frequency* $\hat{p}$, an *estimator* of the true probability $p = P(\textrm{heads}) = 0.5$. Repeating the 100-toss experiment five times shows $\hat{p}$ fluctuating around $0.5$, whereas increasing the sample size to $10{,}000$ tosses pulls $\hat{p}$ much closer to $0.5$:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-3}
 %%tab mxnet
@@ -203,17 +136,6 @@ key, subkey = jax.random.split(key)
 jax.random.multinomial(subkey, 100, fair_probs, shape=(5,)) / 100
 ```
 
-Notice the crucial distinction: the empirical frequencies bounce around on every
-repetition, whereas the true probability remains fixed at $0.5$. A function of
-observed data designed to approximate an unknown parameter is called an
-*estimator*, and the sample frequency $\hat{p}$ is the natural estimator of $p$.
-
-If we had not coded this simulation ourselves and saw only a single 100-toss run,
-we would have no easy way to tell whether a departure from $0.5$ reflected a
-slightly biased coin or ordinary small-sample noise. Increasing the sample size
-dramatically sharpens the picture: after $10{,}000$ tosses, the observed
-frequencies typically hug $0.5$ much more closely.
-
 ```{.python .input #probability-a-simple-example-tossing-coins-4}
 %%tab mxnet
 mnp.random.multinomial(10000, fair_probs) / 10000
@@ -235,10 +157,7 @@ key, subkey = jax.random.split(key)
 jax.random.multinomial(subkey, 10000, fair_probs) / 10000
 ```
 
-To build intuition for how an estimate evolves as evidence accumulates, let us
-track the running frequency of heads after every single toss from $1$ to
-$10{,}000$ using the cumulative sum `cumsum`, and compare it with the horizontal
-line at $P(\textrm{heads}) = 0.5$.
+Tracking the running frequency after every toss from $1$ to $10{,}000$ via `cumsum` illustrates the *law of large numbers* (:numref:`sec_mdl-statistics`), which guarantees that $\hat{p} \to p$ as $n \to \infty$:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-5}
 %%tab mxnet
@@ -282,357 +201,98 @@ d2l.plot(jnp.arange(1, n + 1), [estimates, jnp.full(n, 0.5)], 'tosses',
          xscale='log', figsize=(4.5, 3))
 ```
 
-At first, the running frequency swings wildly; as tosses accumulate, those swings
-damp out, and after a few thousand tosses the curve settles tightly around the
-true probability $0.5$. The mathematical theorem guaranteeing that sample
-frequencies converge to the true underlying probabilities as $n \to \infty$ is
-the *law of large numbers* (stated precisely and proved in
-:numref:`sec_mdl-statistics`; in statistical terminology, this makes $\hat{p}$ a
-*consistent* estimator of $p$). However, the law of large numbers alone does not
-tell us *how fast* convergence happens—which is exactly what we need to judge
-whether 56 heads in 100 tosses is suspicious. To answer that question, we first
-need a precise vocabulary for random outcomes and a way to measure how widely
-sample averages fluctuate.
+To know *how fast* $\hat{p}$ settles—and whether $56/100$ is suspicious—we now formalize random variables and their spread.
 
 ## Events and Random Variables
 
 ### Sample Spaces and Events
 
-We have already come quite far informally: posing a probabilistic model,
-simulating synthetic data, evaluating an estimator, and watching convergence in
-action. To go further, we need a bit of formal machinery.
-
-The set of all distinct possible outcomes of a random experiment is called its
-*sample space* (or *outcome space*), denoted $\mathcal{S}$. For a single coin
-toss, $\mathcal{S} = \{\textrm{heads}, \textrm{tails}\}$; for a single die roll,
-$\mathcal{S} = \{1, 2, 3, 4, 5, 6\}$; and for two coin tosses, $\mathcal{S}$
-consists of the four ordered pairs
-$\{(\textrm{heads}, \textrm{heads}), (\textrm{heads}, \textrm{tails}), (\textrm{tails}, \textrm{heads}), (\textrm{tails}, \textrm{tails})\}$.
-An *event* is any subset $\mathcal{A} \subseteq \mathcal{S}$, and we say that
-$\mathcal{A}$ *occurs* whenever the realized outcome belongs to $\mathcal{A}$. For
-a single die roll, "rolling an even number" is the event
-$\mathcal{A} = \{2, 4, 6\}$ and "rolling at least $5$" is the event
-$\mathcal{B} = \{5, 6\}$. A roll of $6$ causes both $\mathcal{A}$ and
-$\mathcal{B}$ to occur, whereas a roll of $5$ triggers $\mathcal{B}$ alone.
-
-A *probability* function $P$ maps every event $\mathcal{A} \subseteq \mathcal{S}$
-to a real number subject to three axioms formulated by :citet:`Kolmogorov.1933`:
-
-* **Nonnegativity:** $P(\mathcal{A}) \geq 0$ for every event $\mathcal{A}$;
+The set of all possible outcomes of a random experiment is its *sample space* $\mathcal{S}$ (for one die roll, $\mathcal{S} = \{1, 2, 3, 4, 5, 6\}$). An *event* is any subset $\mathcal{A} \subseteq \mathcal{S}$ (such as "rolling an even number," $\mathcal{A} = \{2, 4, 6\}$, or "at least $5$," $\mathcal{B} = \{5, 6\}$). A *probability* function $P$ assigns a real number to every event $\mathcal{A} \subseteq \mathcal{S}$ subject to Kolmogorov's three axioms :cite:`Kolmogorov.1933`:
+* **Nonnegativity:** $P(\mathcal{A}) \geq 0$;
 * **Normalization:** $P(\mathcal{S}) = 1$;
-* **Countable additivity:** for any countable collection of *mutually exclusive*
-  events $\mathcal{A}_1, \mathcal{A}_2, \ldots$ (meaning
-  $\mathcal{A}_i \cap \mathcal{A}_j = \emptyset$ whenever $i \neq j$), the
-  probability that at least one of them occurs equals the sum of their individual
-  probabilities, $P\bigl(\bigcup_{i} \mathcal{A}_i\bigr) = \sum_{i} P(\mathcal{A}_i)$.
+* **Countable additivity:** for mutually exclusive events $\mathcal{A}_1, \mathcal{A}_2, \ldots$ ($\mathcal{A}_i \cap \mathcal{A}_j = \emptyset$ for $i \neq j$), $P(\bigcup_i \mathcal{A}_i) = \sum_i P(\mathcal{A}_i)$.
 
-Remarkably, every rule of probability theory follows from these three compact
-axioms. For instance, any event $\mathcal{A}$ and its *complement* $\mathcal{A}'$
-(all outcomes in $\mathcal{S}$ not in $\mathcal{A}$) are mutually exclusive and
-partition $\mathcal{S}$, so $P(\mathcal{A}) + P(\mathcal{A}') = P(\mathcal{S}) = 1$,
-giving $P(\mathcal{A}') = 1 - P(\mathcal{A})$. Setting $\mathcal{A} = \mathcal{S}$
-immediately proves that the impossible event has zero probability:
-$P(\emptyset) = 0$. Similarly, when two events $\mathcal{A}$ and $\mathcal{B}$
-overlap, simply adding $P(\mathcal{A}) + P(\mathcal{B})$ double-counts the
-intersection $\mathcal{A} \cap \mathcal{B}$ (:numref:`fig_prob_venn`). Splitting
-$\mathcal{A} \cup \mathcal{B}$ into the mutually exclusive pieces $\mathcal{A}$
-and $\mathcal{B} \setminus \mathcal{A}$ (whose probability is
-$P(\mathcal{B}) - P(\mathcal{A} \cap \mathcal{B})$) yields the
-*inclusion--exclusion* formula:
+From these axioms follow the complement rule $P(\mathcal{A}') = 1 - P(\mathcal{A})$, $P(\emptyset) = 0$, and the inclusion--exclusion formula (:numref:`fig_prob_venn`):
 
 $$P(\mathcal{A} \cup \mathcal{B}) = P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A} \cap \mathcal{B}).$$
-
-For a fair die, the probability of rolling an even number or at least $5$ is
-therefore $3/6 + 2/6 - 1/6 = 2/3$—matching the fact that the union
-$\{2, 4, 5, 6\}$ contains four of the six equally likely faces.
 
 ![Two events $\mathcal{A}$ and $\mathcal{B}$ in a sample space $\mathcal{S}$. The sum $P(\mathcal{A}) + P(\mathcal{B})$ counts the overlap $\mathcal{A} \cap \mathcal{B}$ twice.](../img/probability-venn.svg)
 :label:`fig_prob_venn`
 
-### Random Variables
+### Random Variables and Distributions
 
-In practice, we usually care about a numerical quantity derived from an outcome
-rather than the raw outcome itself: the total number of heads in 100 coin tosses,
-the sum of two dice, or whether a classifier predicts the right label on a test
-image. Formally, a *random variable* is a mapping from the sample space
-$\mathcal{S}$ to a set of values. Random variables can be vastly coarser than the
-underlying sample space: the sample space of 100 coin tosses contains $2^{100}$
-distinct sequences (a 31-digit number!), yet the count of heads takes only 101
-possible values.
-
-Every value $v$ that a random variable $X$ can take corresponds to an event—the
-subset of outcomes in $\mathcal{S}$ for which $X = v$—so its probability
-$P(X = v)$ is well defined. Ranges of values likewise define events; for example,
-$P(1 \leq X \leq 3)$ is the probability that $X$ lands between $1$ and $3$. The
-assignment of probabilities $P(X = v)$ across all possible values $v$ is called
-the *distribution* (or *probability mass function*) of $X$, which we denote by
-$P(X)$ as convenient shorthand.
-
-### Discrete and Continuous Variables
-
-The random variables we have encountered so far are *discrete*: they take finitely
-or countably many distinct values, each carrying its own probability mass. Many
-real-world quantities, however, are *continuous*—such as the height or weight of a
-person drawn at random from a population. If we measure with arbitrary precision,
-no two people on Earth have the exact same height (indeed, your own height
-differs slightly between waking up and going to sleep!). Consequently, the
-probability that someone is *literally* $1.80139278\ldots$ meters tall is zero,
-even though that height is possible. Instead, we ask whether a continuous variable
-falls inside an interval, such as between $1.79$ and $1.81$ meters.
-
-Continuous random variables are described not by point probabilities but by a
-*probability density* function $p(x)$ (unrelated to the coin-toss probability $p$),
-where the probability of landing in an interval $[a, b]$ is the area under the
-density curve over that interval (:numref:`fig_prob_density`):
-
-$$P(a \leq X \leq b) = \int_a^b p(x) \, dx.$$
-
-Thus an exact height of $1.80$ meters has probability zero but nonzero density. We
-explore densities and continuous distributions systematically in
-:numref:`sec_mdl-random_variables`. For the remainder of this section we stick to
-discrete variables; every sum over values of a discrete variable simply becomes an
-integral when passing to a continuous density.
+A *random variable* $X$ maps outcomes in $\mathcal{S}$ to numerical values (for example, the number of heads in $100$ coin tosses maps $2^{100}$ sequences to $\{0, \ldots, 100\}$). A *discrete* random variable assigns probability mass $P(X = v)$ to each value $v$ (its *distribution* $P(X)$). A *continuous* random variable (such as a person's exact height) is described instead by a *probability density* $p(x)$ (:numref:`fig_prob_density`), where the probability of landing in $[a, b]$ is the area under the density curve, $P(a \leq X \leq b) = \int_a^b p(x)\,dx$ (:numref:`sec_mdl-random_variables`).
 
 ![A discrete random variable puts probability on individual values (left). A continuous random variable has a density, and the probability of an interval is the area under the density (right).](../img/probability-density.svg)
 :label:`fig_prob_density`
 
-### Joint and Marginal Distributions
+### Joint, Marginal, and Independent Distributions
 
-To analyze 100 coin tosses—or virtually any machine learning problem, where we
-reason simultaneously about the pixels of an image and its class label, or a
-patient's symptoms and underlying diagnosis—we must consider multiple random
-variables defined on the same sample space. Whenever we draw an individual from
-the population (a photograph, a patient, a day of the year), we observe a joint
-realization of all these variables at once.
-
-The *joint distribution* of two random variables $X$ and $Y$ specifies the
-probability of every pair of values $(x, y)$, written $P(X = x, Y = y)$, where
-the comma stands for "and" (the intersection of the two events). For example,
-pick a day at random, and let $X$ record whether it rains and $Y$ whether we
-carry an umbrella. Their joint distribution is a two-way table with one cell per
-combination:
+The *joint distribution* $P(X = x, Y = y)$ of two random variables gives the probability that $X = x$ and $Y = y$ occur together. For example, for rain ($X$) and carrying an umbrella ($Y$) on a random day:
 
 | $P(X, Y)$ | umbrella | no umbrella |
-|:--|:--:|:--:|
+|:--|--:|--:|
 | rain | 0.25 | 0.05 |
 | no rain | 0.10 | 0.60 |
 
-Because every day falls into one and only one cell, the four probabilities sum to
-$1$. :numref:`fig_prob_joint` illustrates an abstract joint table for a binary
-variable $X$ and a three-valued variable $Y$.
+Summing out one variable recovers the *marginal distribution* of the other (*marginalization*, :numref:`fig_prob_joint`):
 
-The joint distribution captures everything there is to know probabilistically
-about $X$ and $Y$. In particular, we can recover the distribution of either
-variable on its own—its *marginal distribution*—by summing out the other variable.
-Because the event $X = x$ must occur alongside exactly one value of $Y$, the
-additivity axiom gives
+$$P(X = x) = \sum_y P(X = x, Y = y),$$
 
-$$P(X = x) = \sum_y P(X = x, Y = y).$$
-
-Summing across each row yields the marginal distribution of $X$, and summing down
-each column yields that of $Y$. In our weather table, it rains on
-$P(\textrm{rain}) = 0.25 + 0.05 = 0.30$ of days, and we carry an umbrella on
-$P(\textrm{umbrella}) = 0.25 + 0.10 = 0.35$ of days; in :numref:`fig_prob_joint`,
-$P(X = x_2) = 0.20 + 0.15 + 0.25 = 0.60$. Summing out a variable like this is
-called *marginalization* (so named because the sums were historically written in
-the margins of the table). As before, we use $P(X, Y)$ as shorthand for the entire
-joint distribution, so an equation such as $P(X, Y) = P(X) P(Y)$ asserts that the
-equality holds for every pair of values $(x, y)$.
+so $P(\textrm{rain}) = 0.25 + 0.05 = 0.30$ and $P(\textrm{umbrella}) = 0.25 + 0.10 = 0.35$.
 
 ![A joint distribution $P(X, Y)$ as a table. Summing a row or a column gives a marginal distribution. Dividing a row by its sum gives a conditional distribution, here $P(Y \mid X = x_2)$.](../img/probability-joint-grid.svg)
 :label:`fig_prob_joint`
 
-### Independence
-
-Two random variables $X$ and $Y$ are *independent*, denoted $X \perp Y$, if their
-joint distribution factorizes into the product of their marginals:
+Two random variables $X$ and $Y$ are *independent* ($X \perp Y$) if their joint distribution factorizes into the product of their marginals:
 
 $$P(X, Y) = P(X) P(Y).$$
 
-Two separate tosses of a coin are independent: knowing how the first toss landed
-tells us nothing about the second. Rain and umbrellas, on the other hand, are
-clearly not independent: $P(\textrm{rain}, \textrm{umbrella}) = 0.25$, whereas the
-product of the marginals is only $0.30 \cdot 0.35 = 0.105$. Independence plays a
-dual role in machine learning. On the one hand, independence across successive
-data samples is what makes empirical averages converge reliably (as we are about
-to prove for the coin). On the other hand, *dependence* between features and
-targets is the very thing we want models to discover: we can predict a disease
-from symptoms only because diseases and symptoms are *not* independent.
+Successive coin tosses are independent, whereas rain and umbrellas are not ($0.25 \neq 0.30 \cdot 0.35 = 0.105$).
 
 ## Expectation and Variance
 
 ### Expectation
 
-A full probability distribution lists the probability of every possible outcome,
-but making decisions often calls for concise numerical summaries. Foremost among
-these is the value we expect *on average*. Suppose you are evaluating a risky
-investment that loses everything ($0\times$ return) with probability $0.5$,
-doubles your money ($2\times$) with probability $0.4$, and grows tenfold
-($10\times$) with probability $0.1$. Weighting each payoff by its probability
-gives an expected return of $0.5 \cdot 0 + 0.4 \cdot 2 + 0.1 \cdot 10 = 1.8\times$.
-More generally, the *expectation* (or *mean*) of a discrete random variable $X$ is
-the probability-weighted average of its values:
+The *expectation* (or *mean*) of a discrete random variable $X$ is its probability-weighted average:
 
-$$\mathbb{E}[X] = \sum_x x \, P(X = x).$$
+$$\mathbb{E}[X] = \sum_x x \, P(X = x),$$
 
-Geometrically, if we place a point mass of weight $P(X = x)$ at each position $x$
-along a number line, $\mathbb{E}[X]$ is the center of mass—the fulcrum where the
-line balances. Likewise, the expectation of any function $f(X)$ is
-$\mathbb{E}[f(X)] = \sum_x f(x) \, P(X = x)$ (for instance, in behavioral
-economics, $f$ might map monetary returns to subjective utility).
+and for any function $f$, $\mathbb{E}[f(X)] = \sum_x f(x)\,P(X = x)$. For an investment returning $0\times$ with probability $0.5$, $2\times$ with probability $0.4$, and $10\times$ with probability $0.1$, $\mathbb{E}[X] = 0.5(0) + 0.4(2) + 0.1(10) = 1.8$. For a coin-toss indicator $X = \mathbf{1}(\textrm{heads}) \in \{0, 1\}$, $\mathbb{E}[X] = 1\cdot p + 0\cdot(1-p) = p$.
 
-For a single coin toss, let $X = \mathbf{1}(\textrm{heads})$ be the *indicator*
-random variable that equals $1$ if the toss lands on heads and $0$ otherwise. Its
-expectation is simply $\mathbb{E}[X] = 1 \cdot p + 0 \cdot (1 - p) = p$: the
-expectation of an indicator variable always equals the probability of its event.
+Expectation is always *linear*—$\mathbb{E}[aX + bY] = a\,\mathbb{E}[X] + b\,\mathbb{E}[Y]$ whether or not $X$ and $Y$ are independent—so the sample frequency $\hat{p} = \frac{1}{n}\sum_{i=1}^n X_i$ satisfies $\mathbb{E}[\hat{p}] = \frac{1}{n}\sum_{i=1}^n \mathbb{E}[X_i] = p$ ($\hat{p}$ is an *unbiased* estimator of $p$).
 
-The single most useful algebraic property of expectation is *linearity*: for any
-random variables $X$ and $Y$ and any constants $a$ and $b$,
-$\mathbb{E}[aX + bY] = a\,\mathbb{E}[X] + b\,\mathbb{E}[Y]$. This follows directly
-by writing $\mathbb{E}[aX + bY]$ as a sum over the joint distribution and
-separating the two terms (see :numref:`sec_mdl-random_variables` for the details),
-and crucially, linearity holds *whether or not $X$ and $Y$ are independent*. If
-$X_i$ is the indicator of heads on toss $i$, linearity immediately tells us that
-the sample frequency $\hat{p} = \frac{1}{n}\sum_{i=1}^n X_i$ satisfies
+### Variance and Sums of Independent Variables
 
-$$\mathbb{E}[\hat{p}] = \mathbb{E}\left[\frac{1}{n} \sum_{i=1}^n X_i\right] = \frac{1}{n} \sum_{i=1}^n \mathbb{E}[X_i] = p.$$
+To measure spread around $\mu = \mathbb{E}[X]$, the *variance* averages the squared deviations, and the *standard deviation* $\sigma = \sqrt{\textrm{Var}(X)}$ restores the original units:
 
-On average across repeated experiments, $\hat{p}$ hits the true probability $p$
-right on target; an estimator with this property is called *unbiased*. While
-reassuring, unbiasedness alone does not tell us how far any *individual* 100-toss
-estimate is likely to wander from $p$. For that, we need a measure of spread.
+$$\textrm{Var}(X) = \mathbb{E}\left[(X - \mu)^2\right] = \mathbb{E}[X^2] - \mu^2, \qquad \textrm{Var}(aX + b) = a^2\,\textrm{Var}(X).$$
 
-### Variance
+For our investment, $\mathbb{E}[X^2] = 0.5(0) + 0.4(4) + 0.1(100) = 11.6$, so $\textrm{Var}(X) = 11.6 - 1.8^2 = 8.36$ ($\sigma \approx 2.9$). For a single coin-toss indicator $X \in \{0, 1\}$, $X^2 = X$, so $\textrm{Var}(X) = p - p^2 = p(1 - p)$ (maximized at $p = 0.5$, where $\textrm{Var}(X) = 1/4$). (When estimating variance from $n$ sample points around their sample mean as in :numref:`sec_pandas`, dividing by $n - 1$—Bessel's correction—corrects for the slight underestimation of dividing by $n$.)
 
-Our investment above boasts an impressive expected return of $1.8\times$, yet half
-the time it wipes out your entire stake—a stark reminder that the mean tells us
-nothing about risk or spread. To measure how widely a random variable fluctuates
-around its mean $\mu = \mathbb{E}[X]$, we cannot simply average the signed
-deviations $X - \mu$, because by linearity
-$\mathbb{E}[X - \mu] = \mathbb{E}[X] - \mu = 0$: positive and negative deviations
-cancel out completely. Squaring the deviations before averaging avoids
-cancellation and defines the *variance*:
+For a sum of two random variables, expanding $\mathbb{E}[(X - \mu_X + Y - \mu_Y)^2]$ gives
 
-$$\textrm{Var}(X) = \mathbb{E}\left[(X - \mu)^2\right] = \mathbb{E}[X^2] - \mu^2.$$
+$$\textrm{Var}(X + Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X, Y), \qquad \textrm{Cov}(X, Y) = \mathbb{E}\left[(X - \mu_X)(Y - \mu_Y)\right],$$
 
-The second identity follows by expanding $(X - \mu)^2 = X^2 - 2\mu X + \mu^2$ and
-applying linearity of expectation term by term.
-
-Because variance is expressed in squared units, we often take its square root to
-obtain the *standard deviation* $\sigma = \sqrt{\textrm{Var}(X)}$, which shares
-the original units of $X$ and captures the typical distance between $X$ and its
-mean. For our investment example,
-$\mathbb{E}[X^2] = 0.5 \cdot 0^2 + 0.4 \cdot 2^2 + 0.1 \cdot 10^2 = 11.6$, so
-$\textrm{Var}(X) = 11.6 - 1.8^2 = 8.36$ and $\sigma \approx 2.9$—larger than the
-expected return itself, confirming that this is indeed a very risky bet.
-
-When we do not know the underlying distribution and observe only $n$ data points
-(as with the table columns in :numref:`sec_pandas`), we estimate the variance from
-the squared deviations around the *sample* average. Because data points lie
-slightly closer to their own sample average than to the unknown population mean
-$\mu$, dividing the sum of squared deviations by $n$ slightly underestimates the
-true variance on average. Dividing by $n - 1$ instead (Bessel's correction, which
-`pandas` applies by default) yields an unbiased estimate of the variance.
-
-For the coin-toss indicator $X \in \{0, 1\}$, we have $X^2 = X$, so its variance
-simplifies cleanly to
-
-$$\textrm{Var}(X) = p - p^2 = p(1 - p).$$
-
-Notice how intuitive this formula is: the variance reaches its maximum of $1/4$
-when $p = 0.5$ (a fair coin, where the outcome is maximally unpredictable) and
-vanishes at $p = 0$ or $p = 1$ (a trick coin that always lands the same way).
-Finally, adding a constant shift $b$ to a random variable leaves its deviations
-from the mean unchanged, while multiplying it by $a$ scales the deviations by $a$
-and their squares by $a^2$, giving $\textrm{Var}(aX + b) = a^2\,\textrm{Var}(X)$.
-
-### Sums of Independent Variables
-
-Since the frequency of heads is an average of $n$ coin tosses, we need a rule for
-the variance of a sum. Writing $\mu_X = \mathbb{E}[X]$ and $\mu_Y = \mathbb{E}[Y]$
-and expanding the square in $\textrm{Var}(X + Y)$ gives
-
-$$\textrm{Var}(X + Y) = \mathbb{E}\left[(X - \mu_X + Y - \mu_Y)^2\right] = \textrm{Var}(X) + \textrm{Var}(Y) + 2\, \textrm{Cov}(X, Y),$$
-
-where the cross term
-
-$$\textrm{Cov}(X, Y) = \mathbb{E}\left[(X - \mu_X)(Y - \mu_Y)\right]$$
-
-is the *covariance* of $X$ and $Y$. Covariance is positive when $X$ and $Y$ tend
-to rise and fall together relative to their means, and negative when one tends to
-be high while the other is low (:numref:`fig_prob_covariance`).
+where the *covariance* $\textrm{Cov}(X, Y)$ (and dimensionless *correlation* $\rho = \textrm{Cov}(X, Y)/(\sigma_X\sigma_Y) \in [-1, 1]$) measures linear co-movement (:numref:`fig_prob_covariance`; for a random vector $\mathbf{x}$, the *covariance matrix* $\boldsymbol{\Sigma} = \mathbb{E}[(\mathbf{x}-\boldsymbol{\mu})(\mathbf{x}-\boldsymbol{\mu})^\top]$ satisfies $\textrm{Var}(\mathbf{v}^\top\mathbf{x}) = \mathbf{v}^\top\boldsymbol{\Sigma}\mathbf{v}$).
 
 ![Samples of three pairs of random variables, with positive, near-zero, and negative covariance.](../img/probability-covariance.svg)
 :label:`fig_prob_covariance`
 
-Because the raw covariance inherits the units of $X$ and $Y$, we often normalize
-it by both standard deviations to obtain the dimensionless *correlation*
-$\rho = \textrm{Cov}(X, Y) / (\sigma_X \sigma_Y)$, which always lies in
-$[-1, 1]$.
-
-Crucially, whenever $X$ and $Y$ are independent, their covariance is zero. Because
-their joint distribution factorizes, expectations of products factorize as well,
-$\mathbb{E}[f(X)g(Y)] = \mathbb{E}[f(X)]\,\mathbb{E}[g(Y)]$, so
-$\textrm{Cov}(X, Y) = \mathbb{E}[X - \mu_X]\,\mathbb{E}[Y - \mu_Y] = 0 \cdot 0 = 0$.
-Therefore, for independent $X$ and $Y$,
+When $X$ and $Y$ are *independent*, $\textrm{Cov}(X, Y) = \mathbb{E}[X - \mu_X]\mathbb{E}[Y - \mu_Y] = 0$ (though zero covariance does not imply independence, e.g., $Y = X^2$ for $X \in \{-1, 0, 1\}$), so **variances of independent variables add**:
 
 $$\textrm{Var}(X + Y) = \textrm{Var}(X) + \textrm{Var}(Y).$$
-
-This is the pivotal step for our coin problem: *variances* of independent random
-variables add directly, whereas *standard deviations* do not. Summing $n$
-independent random variables each with variance $\sigma^2$ produces a total
-variance of $n\sigma^2$, so the standard deviation grows only as $\sqrt{n}\,\sigma$
-rather than $n\sigma$—because positive and negative fluctuations across
-independent draws partially cancel one another out.
-
-Beware that the converse is false: zero covariance does *not* guarantee
-independence. If $X$ is uniform on $\{-1, 0, 1\}$ and $Y = X^2$, then
-$\mathbb{E}[X] = 0$ and $\mathbb{E}[XY] = \mathbb{E}[X^3] = 0$, giving
-$\textrm{Cov}(X, Y) = 0$ even though $Y$ is completely determined by $X$.
-Covariance measures only *linear* co-movement.
-
-One final definition will serve us well in later chapters. For a random vector
-$\mathbf{x}$ with mean vector $\boldsymbol{\mu} = \mathbb{E}[\mathbf{x}]$, we
-collect all coordinate variances and pairwise covariances into the *covariance
-matrix*
-
-$$\boldsymbol{\Sigma} = \mathbb{E}\left[(\mathbf{x} - \boldsymbol{\mu})(\mathbf{x} - \boldsymbol{\mu})^\top\right],$$
-
-whose diagonal entries hold the variances $\textrm{Var}(x_i)$ and whose
-off-diagonal entries $\Sigma_{ij}$ hold $\textrm{Cov}(x_i, x_j)$. Notice how
-convenient this matrix is: for any vector $\mathbf{v}$, a quick check shows that
-$\mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v} = \textrm{Var}(\mathbf{v}^\top \mathbf{x})$,
-allowing us to compute the variance of any linear combination of the coordinates
-with a single matrix multiplication.
 
 ## Estimation Error
 
 ### The Standard Error of a Frequency
 
-We now have every piece needed to quantify how tightly the sample frequency
-$\hat{p} = \frac{1}{n}\sum_{i=1}^n X_i$ clusters around $p$. Because the $n$ coin
-tosses are independent, each with variance $p(1 - p)$, the variance of their sum
-is $n p(1 - p)$. Dividing the sum by $n$ scales its variance by $1/n^2$, yielding
+Because $n$ independent coin tosses each have variance $p(1 - p)$, their sum has variance $np(1 - p)$, and dividing by $n$ scales the variance by $1/n^2$:
 
 $$\textrm{Var}(\hat{p}) = \frac{p(1-p)}{n}.$$
 :eqlabel:`eq_prob_var_phat`
 
-The standard deviation of an estimator is called its *standard error*. For the
-frequency of heads, the standard error is $\sqrt{p(1 - p)/n}$. For a fair coin
-($p = 0.5$), this simplifies to $0.5/\sqrt{n}$: $0.05$ after $100$ tosses, and
-$0.005$ after $10{,}000$ tosses. Notice how slowly this $1/\sqrt{n}$ rate shrinks!
-Cutting the estimation error in half requires *four times* as many tosses, and
-reducing it tenfold demands *a hundred times* as many. (In practice, going from
-$10$ to $1{,}000$ samples gives an easy tenfold gain, whereas collecting the next
-$1{,}000$ samples shrinks the error by only a factor of $\sqrt{2} \approx 1.41$—a
-pattern of diminishing returns that shows up everywhere in machine learning.) When
-$p$ is unknown, we plug in our estimate $\hat{p}$ to obtain the data-driven
-standard error $\sqrt{\hat{p}(1 - \hat{p})/n}$.
-
-Let us check this formula empirically by simulation. For each sample size
-$n \in \{10, 100, 1000, 10000\}$, we run $1000$ independent repetitions of $n$
-fair-coin tosses and compute the standard deviation of the resulting $1000$
-empirical frequencies.
+Taking the square root gives the *standard error* of $\hat{p}$: $\sqrt{p(1-p)/n}$, which for a fair coin ($p = 0.5$) is $0.5/\sqrt{n}$ ($0.05$ at $n = 100$; $0.005$ at $n = 10{,}000$). Because of the $1/\sqrt{n}$ rate, halving the error requires $4\times$ the data. More generally, the average of any $n$ independent draws with variance $\sigma^2$ has standard error $\sigma/\sqrt{n}$. Simulating $1000$ repetitions at each $n \in \{10, 100, 1000, 10000\}$ confirms the $0.5/\sqrt{n}$ line of slope $-1/2$:
 
 ```{.python .input #probability-a-simple-example-tossing-coins-6}
 %%tab mxnet
@@ -676,24 +336,9 @@ d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'tosses n',
          xscale='log', yscale='log', fmts=('o', '-'))
 ```
 
-On log--log axes, the simulated standard deviations fall squarely along the
-theoretical curve $0.5 / \sqrt{n}$, a straight line of slope $-1/2$. Notice that
-our derivation depended on nothing specific to coins other than the variance of a
-single draw and independence across draws. Consequently, the average of *any* $n$
-independent draws from a distribution with variance $\sigma^2$ has variance
-$\sigma^2 / n$ and standard error $\sigma / \sqrt{n}$. This universal $1/\sqrt{n}$
-law governs almost every average we encounter in machine learning—from test-set
-accuracy to minibatch gradient estimates.
+### Testing for Bias and Uncertainty
 
-### Testing for Bias
-
-At long last, we can settle our opening question about $56$ heads in $100$ tosses.
-The observed frequency $\hat{p} = 0.56$ differs from $0.5$ by $0.06$, which is
-$0.06 / 0.05 = 1.2$ standard errors. A fluctuation of roughly one standard error
-is completely ordinary for a fair coin. To see just how routine it is, let us
-simulate $1000$ fair-coin experiments and measure the fraction of runs that stray
-at least as far from $n/2$ as our observed count—both for $56$ heads in $100$
-tosses and for the exact same frequency ($5{,}600$ heads) in $10{,}000$ tosses.
+We can now answer our coin question. In $100$ tosses, $\hat{p} = 0.56$ is $0.06 / 0.05 = 1.2$ standard errors from $0.5$; in $10{,}000$ tosses, the same frequency $\hat{p} = 0.56$ ($5{,}600$ heads) is $0.06 / 0.005 = 12$ standard errors away. Simulating $1000$ fair-coin experiments shows how often a fair coin strays at least that far (estimating the *p-value*):
 
 ```{.python .input #probability-is-the-coin-biased}
 %%tab mxnet
@@ -741,174 +386,25 @@ key, k1, k2 = jax.random.split(key, 3)
 fraction_as_far(k1, 56, 100), fraction_as_far(k2, 5600, 10000)
 ```
 
-Roughly one quarter of all 100-toss experiments with a fair coin wander at least
-as far from $50$ as $56$ does. This fraction estimates what statisticians call a
-*p-value*: the probability, assuming the coin is fair, of observing a result at
-least as extreme as the one we saw. An outcome that occurs roughly one time in
-four by pure chance gives no compelling evidence that the coin is biased. (By the
-same token, it does not *prove* the coin is fair either—$56$ heads is equally
-consistent with a coin having $p = 0.55$, though it decisively rules out $p = 0.3$,
-which lies more than five standard errors away.)
+Roughly a quarter of fair 100-toss runs deviate by $6$ or more heads, so $56/100$ is no evidence of bias, whereas zero out of $1000$ fair 10,000-toss runs come anywhere near $5{,}600$. By *Chebyshev's inequality* (:numref:`sec_mdl-random_variables`), $P(|X - \mu| \geq k\sigma) \leq 1/k^2$ for any distribution, and by the *central limit theorem* (:numref:`sec_mdl-distributions`), sample averages follow an approximately normal bell curve landing within $2$ standard errors roughly $95\%$ of the time. Likewise, a classifier with true accuracy $0.9$ has standard error $\sqrt{0.9 \cdot 0.1 / 256} \approx 0.019$ on a minibatch of $256$ images (so $\pm 2\%$ swings are routine noise), versus $0.003$ on a test set of $10{,}000$ images.
 
-Now compare that with $5{,}600$ heads in $10{,}000$ tosses. The raw frequency is
-still $0.56$, yet it now sits $0.06 / 0.005 = 12$ standard errors away from $0.5$,
-and not a single one of our $1000$ fair-coin simulations comes anywhere near it.
-What separates sampling noise from genuine evidence is not the raw difference
-$|\hat{p} - 0.5|$, but that difference measured in *standard errors*.
-
-How many standard errors make a deviation suspicious? For *any* distribution with
-finite variance, *Chebyshev's inequality* (proved in
-:numref:`sec_mdl-random_variables`) guarantees that a random variable falls $k$ or
-more standard deviations from its mean with probability at most $1/k^2$. For
-$k = 12$, that universal bound is already below $1\%$, though for $k = 2$ it gives
-only a loose $25\%$. Sample averages, however, behave much more nicely: by the
-*central limit theorem* (:numref:`sec_mdl-distributions`), the average of many
-independent draws closely follows a normal distribution
-(:numref:`subsec_normal_distribution_and_squared_loss`), which lands within two
-standard deviations of its mean roughly $95\%$ of the time. This yields a handy
-rule of thumb: a discrepancy smaller than two standard errors is unremarkable,
-whereas one of three or more standard errors is very hard to dismiss as chance.
-
-The exact same arithmetic illuminates our opening classifier example. Suppose a
-model classifies each test image correctly with probability $0.9$, independently
-across images. On a single minibatch of $256$ images, its accuracy has standard
-error $\sqrt{0.9 \cdot 0.1 / 256} \approx 0.019$, so swings of two or three
-percentage points from one minibatch to the next are completely expected even when
-the model has not changed at all. On a test set of $10{,}000$ images, the standard
-error shrinks to $0.003$; the difference between two independently measured
-accuracies then has standard error $\sqrt{2} \cdot 0.003 \approx 0.004$ (since
-variances add), making a one-percentage-point gain exceed two standard errors and
-far less likely to be noise. We revisit this comparison more carefully in the
-exercises.
-
-### Aleatoric and Epistemic Uncertainty
-
-Notice an important asymmetry in our coin experiment. The standard error measures
-our uncertainty about the unknown parameter $p$, and it steadily shrinks toward
-zero as we collect more tosses. Yet our uncertainty about the *next* toss never
-vanishes: even if someone handed us a certificate proving $p = 0.5$ to infinite
-precision, the next toss would still be an unpredictable 50/50 gamble.
-
-In uncertainty quantification and machine learning, these two sources of
-uncertainty are given distinct names :cite:`Der-Kiureghian.Ditlevsen.2009`:
-
-* **Epistemic uncertainty** refers to uncertainty about the model or its
-  parameters (such as the true bias $p$ of a coin). We can reduce epistemic
-  uncertainty by gathering more data—albeit at the slow $1/\sqrt{n}$ rate.
-* **Aleatoric uncertainty** refers to intrinsic randomness in the outcome itself
-  that cannot be eliminated by observing more data from the same features. Even a
-  classifier trained on billions of images will remain uncertain about a blurry
-  photograph that genuinely looks halfway between a shirt and a coat.
-
-(As a side note, philosophers sometimes point out that this terminology is a
-slight abuse of language—*epistemic* literally means "concerning knowledge," so
-strictly speaking all uncertainty reflects incomplete knowledge—yet the
-distinction between reducible model uncertainty and irreducible outcome noise is
-indispensable in practice.)
+Notice finally that collecting more data shrinks *epistemic uncertainty* (uncertainty about the model parameter $p$, decaying as $1/\sqrt{n}$), but never reduces *aleatoric uncertainty* (the intrinsic 50/50 randomness of the next coin toss itself, or an inherently ambiguous image) :cite:`Der-Kiureghian.Ditlevsen.2009`.
 
 ## Conditional Probability
 
-So far we have focused on independent repetitions of a single experiment. In real
-machine learning problems, however, we care deeply about how learning the value of
-one variable updates our beliefs about another: if a patient arrives at a clinic
-with shortness of breath and a loss of smell, we naturally assign a much higher
-probability to COVID-19 than if those symptoms were absent. We now make this
-reasoning precise and put it to work on a classic medical testing scenario.
+### Conditioning, Bayes' Theorem, and Conditional Independence
 
-### Conditional Distributions
+Restricting attention to outcomes where $X = x$ ($P(X = x) > 0$) and renormalizing defines the *conditional probability* of $Y = y$ given $X = x$:
 
-Returning to a joint distribution table such as :numref:`fig_prob_joint`, suppose we
-observe that $X = x_2$. Once we know $X = x_2$, every other row of the table is
-ruled out; we restrict attention to the $X = x_2$ row and renormalize its entries
-so that they sum to $1$. This defines the *conditional probability* of $Y = y$
-given $X = x$:
+$$P(Y = y \mid X = x) = \frac{P(X = x, Y = y)}{P(X = x)} \quad \Longrightarrow \quad P(X, Y) = P(Y \mid X) P(X).$$
 
-$$P(Y = y \mid X = x) = \frac{P(X = x, Y = y)}{P(X = x)},$$
-
-valid whenever $P(X = x) > 0$. In our weather table, conditioning on a rainy day
-rescales the rain row $(0.25, 0.05)$ by its sum $0.30$ to yield $(0.83, 0.17)$: we
-carry an umbrella with probability $0.83$ when it rains, compared with $0.35$ on
-an arbitrary day. Likewise, in :numref:`fig_prob_joint`, rescaling the second row
-$(0.20, 0.15, 0.25)$ by $0.60$ gives $(0.33, 0.25, 0.42)$.
-
-For any fixed event $X = x$, the conditional probabilities $P(Y \mid X = x)$ form
-a perfectly valid probability distribution over $Y$ and obey all three Kolmogorov
-axioms. Expressed in terms of conditional probabilities, independence $X \perp Y$
-simply means that conditioning on $Y$ leaves our beliefs about $X$ unchanged:
-$P(X \mid Y = y) = P(X)$ whenever $P(Y = y) > 0$.
-
-Multiplying both sides of the definition by $P(X = x)$ yields the
-*multiplication rule* (or *product rule*):
-
-$$P(X, Y) = P(Y \mid X) P(X).$$
-
-In words, the probability that both events happen equals the probability of the
-first times the probability of the second given that the first occurred.
-
-### Bayes' Theorem
-
-In science and medicine, one conditional probability is often far easier to
-measure than its reverse. A clinical trial can readily measure how often a
-diagnostic test comes back positive among patients known to have a disease,
-$P(\textrm{positive} \mid \textrm{disease})$. Yet a physician staring at a
-positive lab report needs the reverse probability:
-$P(\textrm{disease} \mid \textrm{positive})$.
-
-The multiplication rule bridges the two immediately. Expanding the joint
-distribution in both orders gives
-$P(X, Y) = P(Y \mid X) P(X) = P(X \mid Y) P(Y)$; dividing through by $P(Y)$ yields
-*Bayes' theorem* :cite:`Bayes.1763`:
+In our weather table, conditioning on rain rescales the rain row $(0.25, 0.05)$ by $0.30$ to give $P(\textrm{umbrella} \mid \textrm{rain}) = 0.25/0.30 \approx 0.83$ (versus $0.35$ unconditionally). Writing the joint probability in both orders, $P(X, Y) = P(Y \mid X)P(X) = P(X \mid Y)P(Y)$, and dividing by $P(Y) = \sum_x P(Y \mid X = x)P(X = x)$ yields *Bayes' theorem* :cite:`Bayes.1763`:
 
 $$P(X \mid Y) = \frac{P(Y \mid X) P(X)}{P(Y)}.$$
 
-Though it takes a single line of algebra to derive, Bayes' theorem is one of the
-most consequential equations in all of statistics because it lets us invert the
-direction of conditioning. Better yet, we do not even need a separate measurement
-of the denominator $P(Y)$: marginalizing the multiplication rule over $X$ gives
-$P(Y) = \sum_x P(Y \mid X = x) P(X = x)$, so $P(Y \mid X)$ and $P(X)$ completely
-determine $P(X \mid Y)$.
+For a hypothesis $H$ and observed data $D$, Bayes' theorem updates the *prior* $P(H)$ via the *likelihood* $P(D \mid H)$ and evidence $P(D)$ to produce the *posterior* $P(H \mid D) \propto P(D \mid H)P(H)$.
 
-In Bayesian inference, $X$ stands for a hypothesis $H$ about the world and $Y$
-stands for the observed data $D$. We begin with a *prior* distribution $P(H)$
-encoding how plausible each hypothesis seems before seeing the data, multiply by
-the *likelihood* $P(D \mid H)$ measuring how well each hypothesis explains the
-data, and normalize by the evidence $P(D)$ to obtain the *posterior* distribution
-$P(H \mid D)$. Because $P(D)$ does not depend on $H$, Bayes' theorem is often
-summarized cleanly as
-
-$$P(H \mid D) \propto P(D \mid H) P(H),$$
-
-or informally: *posterior is proportional to likelihood times prior*. While
-*frequentist* statistics interprets probabilities strictly as long-run frequencies
-of repeatable experiments (such as coin tosses), *Bayesian* statistics uses the
-exact same probability calculus more broadly to represent and update degrees of
-belief—even for non-repeatable events like whether a bridge will withstand an
-earthquake. Before putting Bayes' theorem to work on a diagnostic test, we need
-one more concept.
-
-### Conditional Independence
-
-Because conditional probabilities are ordinary probability distributions, the
-concept of independence carries over directly. Two random variables $X$ and $Y$
-are *conditionally independent* given a third variable $Z$, written
-$X \perp Y \mid Z$, if $P(X, Y \mid Z) = P(X \mid Z) P(Y \mid Z)$.
-
-Remarkably, conditioning on a third variable can either *destroy* an existing
-dependence or *create* a new one (:numref:`fig_prob_explaining_away`):
-
-* **Common cause and chains (conditioning removes dependence).** Among elementary
-  school children, shoe size and reading level are strongly correlated—not because
-  big feet help you read, but because both grow with a common cause, age. Once we
-  condition on age, the correlation disappears. A Markov chain behaves similarly:
-  if $X$ influences $Z$ solely through an intermediate variable $Y$ (say,
-  yesterday's weather affecting tomorrow's only through today's), then once we
-  observe $Y$, learning $X$ tells us nothing further about $Z$.
-* **Common effect (conditioning creates dependence).** Conversely, broken bones
-  and lung cancer may be essentially independent in the general population, yet
-  among hospital inpatients they become negatively correlated. Knowing that a
-  hospitalized patient has a broken leg *explains away* why they are in the
-  hospital, lowering the probability that they were admitted for lung cancer.
-  Conditioning on a common effect couples its otherwise independent causes.
+Two variables $X$ and $Y$ are *conditionally independent* given $Z$ ($X \perp Y \mid Z$) if $P(X, Y \mid Z) = P(X \mid Z)P(Y \mid Z)$. Conditioning can either *remove* dependence (as when conditioning on a common cause like age removes the correlation between shoe size and reading level, or conditioning on the present state in a Markov chain) or *create* dependence (conditioning on a common effect—*explaining away*—as when knowing a hospitalized patient has a broken bone lowers the probability they were admitted for lung cancer; :numref:`fig_prob_explaining_away`).
 
 ![Conditioning changes dependence. A common cause $Z$ makes $X$ and $Y$ dependent, and observing $Z$ removes the dependence. In a chain, $X$ and $Z$ are independent given $Y$. A common effect $Z$ makes its independent causes dependent once $Z$ is observed.](../img/probability-explaining-away.svg)
 :label:`fig_prob_explaining_away`
@@ -916,127 +412,30 @@ dependence or *create* a new one (:numref:`fig_prob_explaining_away`):
 ### Example: Diagnostic Testing
 :label:`subsec_probability_hiv_app`
 
-Let us put these tools to the test on a classic example that reveals just how
-counterintuitive probability can be. Suppose a doctor administers an HIV screening
-test to a patient. The test is impressively accurate: it *never* misses an actual
-infection (zero false negatives), and it triggers a *false positive* on only $1\%$
-of healthy patients. Let $H \in \{0, 1\}$ denote the patient's true HIV status
-($1$ for infected, $0$ for healthy) and $D_1 \in \{0, 1\}$ denote the test result
-($1$ for positive, $0$ for negative). The test's error rates are summarized by the
-conditional distribution:
+Suppose a patient takes an HIV screening test $D_1 \in \{0, 1\}$ with true HIV status $H \in \{0, 1\}$. The test has $100\%$ sensitivity and a $1\%$ false-positive rate:
 
 | $P(D_1 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
-|:--|:--:|:--:|
+|:--|--:|--:|
 | test positive, $D_1 = 1$ | 1.00 | 0.01 |
 | test negative, $D_1 = 0$ | 0.00 | 0.99 |
 
-Notice that each column is a conditional distribution given a fixed value of $H$,
-so the columns sum to $1$ while the rows need not.
-
-Now suppose the test comes back positive ($D_1 = 1$). How worried should the
-patient be—that is, what is $P(H = 1 \mid D_1 = 1)$? Intuitively, the answer must
-depend on how prevalent HIV is in the population, because prevalence determines
-how many healthy people are being tested and hence how many false alarms compete
-with true detections. Suppose the baseline prevalence is $0.15\%$, so
-$P(H = 1) = 0.0015$ and $P(H = 0) = 0.9985$. Marginalizing over $H$ gives the
-overall probability of testing positive:
-
-$$
-\begin{aligned}
-P(D_1 = 1)
-&= P(D_1=1 \mid H=0) P(H=0) + P(D_1=1 \mid H=1) P(H=1) \\
-&= 0.01 \cdot 0.9985 + 1 \cdot 0.0015 = 0.011485.
-\end{aligned}
-$$
-
-Applying Bayes' theorem then yields
+If the population prevalence is $P(H = 1) = 0.0015$ ($P(H = 0) = 0.9985$) and the patient tests positive ($D_1 = 1$), marginalizing gives $P(D_1 = 1) = 0.01(0.9985) + 1(0.0015) = 0.011485$, and Bayes' theorem gives
 
 $$P(H = 1 \mid D_1 = 1) = \frac{P(D_1=1 \mid H=1) P(H=1)}{P(D_1=1)} = \frac{0.0015}{0.011485} = 0.1306.$$
 
-Surprisingly, despite a positive result from a test that catches $100\%$ of cases
-and is $99\%$ accurate on healthy people, the patient's probability of actually
-having HIV is only $13.06\%$! :numref:`fig_prob_natural_freq` makes the reason
-crystal clear using raw counts. Out of $10{,}000$ people, roughly $15$ are
-infected and all $15$ test positive—but $1\%$ of the $9{,}985$ healthy people
-(about $100$ individuals) *also* test positive. When a condition is rare, even a
-small false-positive rate produces far more false alarms than true detections.
+Out of $10{,}000$ people (:numref:`fig_prob_natural_freq`), all $15$ infected people test positive, but so do $1\%$ of the $9{,}985$ healthy people ($\approx 100$ false alarms), leaving only $15 / 115 \approx 13.06\%$ of positive tests truly infected!
 
 ![The HIV test applied to 10,000 people. The 15 infected people test positive, and so do about 100 of the 9,985 healthy people, so only 15 of about 115 positive results are correct.](../img/probability-natural-frequencies.svg)
 :label:`fig_prob_natural_freq`
 
-Faced with such unsettling news, a patient would naturally ask for a follow-up
-test. Suppose the clinic runs a second, different test that is actually *less*
-accurate than the first:
+Now suppose a follow-up test $D_2$ (with $P(D_2 = 1 \mid H = 1) = 0.98$ and false-positive rate $P(D_2 = 1 \mid H = 0) = 0.03$) also comes back positive. Assuming $D_1$ and $D_2$ are conditionally independent given $H$, the joint false-positive rate drops to $0.01 \cdot 0.03 = 0.0003$ while sensitivity is $1 \cdot 0.98 = 0.98$. Marginalizing gives $P(D_1 = 1, D_2 = 1) = 0.0003(0.9985) + 0.98(0.0015) = 0.00176955$, and Bayes' theorem raises the posterior probability of infection to
 
-| $P(D_2 \mid H)$ | $H=1$ (HIV) | $H=0$ (healthy) |
-|:--|:--:|:--:|
-| test positive, $D_2 = 1$ | 0.98 | 0.03 |
-| test negative, $D_2 = 0$ | 0.02 | 0.97 |
+$$P(H = 1 \mid D_1 = 1, D_2 = 1) = \frac{0.98 \cdot 0.0015}{0.00176955} = 0.8307$$
 
-Unfortunately, the second test comes back positive too ($D_2 = 1$). To combine
-both results, we assume that the two tests are *conditionally independent* given
-the patient's true status $H$ (the common-cause pattern of
-:numref:`fig_prob_explaining_away`): once we know whether the patient is infected,
-errors on the first test carry no information about errors on the second. Under
-conditional independence, the joint likelihoods factorize cleanly:
-
-$$
-\begin{aligned}
-P(D_1 = 1, D_2 = 1 \mid H = 0)
-&= P(D_1 = 1 \mid H = 0) P(D_2 = 1 \mid H = 0) = 0.01 \cdot 0.03 = 0.0003, \\
-P(D_1 = 1, D_2 = 1 \mid H = 1)
-&= P(D_1 = 1 \mid H = 1) P(D_2 = 1 \mid H = 1) = 1 \cdot 0.98 = 0.98.
-\end{aligned}
-$$
-
-Marginalizing over $H$ gives the probability that a random person tests positive
-on both assays:
-
-$$
-\begin{aligned}
-P(D_1 = 1, D_2 = 1)
-&= P(D_1 = 1, D_2 = 1 \mid H = 0)P(H=0) + P(D_1 = 1, D_2 = 1 \mid H = 1)P(H=1)\\
-&= 0.0003 \cdot 0.9985 + 0.98 \cdot 0.0015 = 0.00176955.
-\end{aligned}
-$$
-
-Invoking Bayes' theorem one more time gives the updated posterior probability:
-
-$$
-P(H = 1 \mid D_1 = 1, D_2 = 1)
-= \frac{P(D_1 = 1, D_2 = 1 \mid H=1) P(H=1)}{P(D_1 = 1, D_2 = 1)}
-= \frac{0.00147}{0.00176955} = 0.8307.
-$$
-
-The second positive result drives the probability of infection from $13\%$ all the
-way up to $83\%$ (:numref:`fig_prob_update`). Even though the second test is
-markedly less accurate than the first, it dramatically sharpens our inference
-because its false positives are conditionally independent of the first test's
-false positives. (At the opposite extreme, repeating a deterministic test would
-simply reproduce the exact same result and add zero new information; when two
-tests are correlated, we must model their joint distribution directly, as explored
-in the exercises.) Notice, too, that this two-test diagnosis is a simple machine
-learning classifier hiding in plain sight: as we gather more conditionally
-independent features (test outcomes), our ability to predict the hidden label $H$
-improves rapidly.
+(:numref:`fig_prob_update`). Simulating two million virtual patients confirms $0.8307$ (with standard error $\sqrt{0.83 \cdot 0.17 / 3500} \approx 0.006$ over the $\approx 3{,}500$ double-positive patients):
 
 ![The probability that the patient has HIV: the prior, after one positive test, and after two conditionally independent positive tests.](../img/probability-bayes-update.svg)
 :label:`fig_prob_update`
-
-Just like probabilities, expectations can be conditioned on an observed event.
-The *conditional expectation* (or *conditional mean*)
-$\mathbb{E}[Y \mid X = x] = \sum_y y \, P(Y = y \mid X = x)$ averages $Y$ using
-the conditional distribution given $X = x$. Since $H$ is an indicator variable in
-our HIV example, $\mathbb{E}[H \mid D_1 = 1] = P(H = 1 \mid D_1 = 1) \approx 0.13$
-and $\mathbb{E}[H \mid D_1 = 1, D_2 = 1] \approx 0.83$.
-
-Because we have a complete generative model of how statuses and test outcomes
-arise, we can verify our analytical calculation directly by Monte Carlo
-simulation. Below, we simulate two million virtual patients, administer both tests
-to each of them, and compute the empirical fraction of infected patients among
-those who test positive twice. Using `where` selects each patient's test-positive
-probability according to their true status $H$, and boolean indexing with
-`D1 & D2` (:numref:`sec_ndarray`) filters down to the double-positive group.
 
 ```{.python .input #probability-worked-example-hiv-testing-1}
 %%tab mxnet
@@ -1076,55 +475,16 @@ D2 = jax.random.uniform(k3, (n,)) < jnp.where(H, 0.98, 0.03)
 H[D1 & D2].mean()  # Exact value: 0.8307
 ```
 
-The simulated posterior lands within roughly one percentage point of the exact
-answer $0.8307$. Why is the match not tighter given two million patients? Because
-only the rare patients who test positive on *both* assays enter the denominator:
-out of $2{,}000{,}000$ simulated individuals, only about
-$2{,}000{,}000 \cdot 0.00177 \approx 3{,}500$ test positive twice. The simulated
-posterior is therefore a sample frequency over roughly $3{,}500$ patients, whose
-standard error is $\sqrt{0.83 \cdot 0.17 / 3500} \approx 0.006$—making a
-discrepancy of around $0.01$ completely expected. Gaining a single extra digit of
-precision would require simulating $100\times$ as many patients!
-
-Throughout this section, the underlying probabilities were handed to us up front:
-a fair coin with $p = 0.5$, or diagnostic assays with known false-positive rates.
-In real machine learning problems, nobody gives us those distributions—we must
-estimate them from finite training data using parameterized models.
-:numref:`chap_regression` begins with the simplest such model: linear regression.
-
 ## Summary
 
-* *Probability* reasons forward from a generative model to the likelihood of data;
-  *statistics* reasons backward from observed data to infer properties of the
-  underlying process.
-* Every rule of probability follows from Kolmogorov's three axioms. Joint
-  distributions $P(X, Y)$ capture the full relationship between variables;
-  summing out a variable (*marginalization*) recovers individual distributions,
-  and variables are *independent* when $P(X, Y) = P(X) P(Y)$.
-* *Expectation* $\mathbb{E}[X]$ summarizes a distribution's center (and is always
-  linear), while *variance* $\textrm{Var}(X)$ and *standard deviation* $\sigma$
-  measure its spread. Because variances of independent variables add, the average
-  of $n$ independent draws has standard error $\sigma / \sqrt{n}$.
-* Measuring deviations in units of standard errors separates signal from sampling
-  noise: $56$ heads in $100$ tosses ($1.2$ standard errors) is routine for a fair
-  coin, whereas $5{,}600$ heads in $10{,}000$ tosses ($12$ standard errors) is
-  overwhelming evidence of bias. Collecting more data reduces *epistemic*
-  uncertainty at rate $1/\sqrt{n}$, but cannot remove irreducible *aleatoric*
-  uncertainty.
-* *Conditioning* restricts the sample space to outcomes consistent with observed
-  evidence and renormalizes, and *Bayes' theorem*
-  ($P(H \mid D) \propto P(D \mid H) P(H)$) reverses the direction of conditioning:
-  for a rare disease, a single positive result from a $99\%$-specific test yields
-  only a $13\%$ posterior probability of infection, whereas a second,
-  conditionally independent positive test raises it to $83\%$.
+* *Probability* reasons forward from a model to data; *statistics* reasons backward from data to infer the underlying model.
+* Kolmogorov's three axioms generate all probability rules. Joint distributions $P(X, Y)$ marginalize by summing out variables, and factorize as $P(X)P(Y)$ when $X$ and $Y$ are independent.
+* Expectation $\mathbb{E}[X]$ is always linear, while variance $\textrm{Var}(X) = \mathbb{E}[(X-\mu)^2]$ is additive for independent variables, giving an average of $n$ independent draws standard error $\sigma/\sqrt{n}$.
+* Measuring deviations in standard errors separates signal from noise ($56/100$ heads is $1.2$ standard errors; $5600/10000$ is $12$). More data reduces *epistemic* uncertainty as $1/\sqrt{n}$ but leaves *aleatoric* uncertainty unchanged.
+* Bayes' theorem $P(H \mid D) = P(D \mid H)P(H)/P(D)$ reverses conditioning: for a disease with $0.15\%$ prevalence, one positive test ($1\%$ false-positive rate) yields a $13.1\%$ posterior, while a second conditionally independent positive test ($3\%$ false-positive rate) raises it to $83.1\%$.
 
 ## Exercises
 
-1. **Union and intersection bounds.** Given two events with probabilities
-   $P(\mathcal{A})$ and $P(\mathcal{B})$, derive the tightest upper and
-   lower bounds on $P(\mathcal{A} \cup \mathcal{B})$ and
-   $P(\mathcal{A} \cap \mathcal{B})$, and describe the configurations in
-   :numref:`fig_prob_venn` for which each bound is attained.
 1. **Portfolio return and risk.** Assume that you manage a portfolio of
    $n$ stocks whose returns $\mathbf{s} \in \mathbb{R}^n$ are random with
    mean $\boldsymbol{\mu} = \mathbb{E}[\mathbf{s}]$ and covariance matrix
@@ -1144,6 +504,7 @@ estimate them from finite training data using parameterized models.
        problem :cite:`Mangram.2013`. Methods for constrained problems of
        this kind are developed
        in :numref:`sec_mdl-constrained-optimization-duality`.
+
 1. [code] **Chebyshev for the coin-toss estimator.**
    :eqref:`eq_prob_var_phat` gives the variance of the frequency $\hat{p}$
    of heads after $n$ tosses.
@@ -1155,6 +516,7 @@ estimate them from finite training data using parameterized models.
        guarantee $P(|\hat{p} - p| \geq 0.01) \leq 0.05$ for a fair coin,
        and compare with the $n$ at which the standard error
        $\sqrt{p(1-p)/n}$ itself equals $0.01$.
+
 1. **Comparing two classifiers.** ● Two classifiers are evaluated on the same
    test set of $n = 10{,}000$ images. Classifier A labels 9,050 images
    correctly and classifier B labels 9,000 correctly. Treat the test images
@@ -1173,11 +535,7 @@ estimate them from finite training data using parameterized models.
     1. Use $\textrm{Var}(X - Y) = \textrm{Var}(X) + \textrm{Var}(Y) - 2\,\textrm{Cov}(X, Y)$
        to explain the difference. What sign does the covariance between the
        two classifiers' correctness on an image have, and why?
-1. **Two kinds of uncertainty.** Give two examples of prediction tasks other
-   than coin tossing. Choose the first so that more data can reduce the
-   uncertainty about the outcome to any level, and the second so that it
-   cannot. For each, state which part of the uncertainty is aleatoric and which
-   is epistemic, and explain what sets the floor in the second example.
+
 1. **Factorizing a chain.** Let $X$, $Y$, and $Z$ be random variables such
    that $Z$ is conditionally independent of $X$ given $Y$, as in the chain
    of :numref:`fig_prob_explaining_away`.
@@ -1188,6 +546,7 @@ estimate them from finite training data using parameterized models.
        numbers specify the joint distribution if every $X_t$ takes $k$
        values, compared with an arbitrary joint distribution of $T$ such
        variables?
+
 1. **Conditioning on a common effect.** Toss two independent fair coins, and
    let $X, Y \in \{0, 1\}$ indicate heads on each. Let $Z = \max(X, Y)$
    indicate that at least one coin came up heads. Compute $P(X = 1)$,
@@ -1195,6 +554,7 @@ estimate them from finite training data using parameterized models.
    to decide whether $X$ and $Y$ are conditionally independent given
    $Z = 1$, and relate the change from the second value to the third
    to :numref:`fig_prob_explaining_away`.
+
 1. **A second, correlated test.** ● Revisit
    :numref:`subsec_probability_hiv_app` with two new tests whose outcomes
    are conditionally independent for patients with HIV but not for
@@ -1217,6 +577,7 @@ estimate them from finite training data using parameterized models.
     1. Repeat the previous calculation for tests that are conditionally
        independent given $H = 0$ as well, and explain why the two
        posteriors differ.
+
 1. **A defense lawyer's statistics.** A suspect had a documented history of
    abusing his now-murdered wife. His lawyer argues that, statistically,
    only one in a thousand wife-abusers goes on to murder his wife, so the
@@ -1250,458 +611,3 @@ estimate them from finite training data using parameterized models.
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17971)
 :end_tab:
-
-<!-- slides -->
-
-::: {.slide}
-::: {.cover}
-[Dive into Deep Learning · §2.6]{.kicker}
-
-Evidence and error bars for measured numbers<br>
-**sampling · random variables · expectation · the standard error · Bayes' theorem**
-:::
-:::
-
-::: {.slide title="Every Number Computed From Data Fluctuates"}
-[The problem]{.kicker}
-
-- A coin lands heads **56** times in 100 tosses. Is it biased?
-- A classifier labels **230 of 256** images correctly (0.90). The next
-  minibatch gives 0.87. Did anything change?
-- Even a fair coin rarely gives exactly 50 heads.
-
-::: {.d2l-note}
-**Probability:** model → data (how likely is 56 for a fair coin?).
-**Statistics:** data → model (what do 56 heads say about the coin?).
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- read marginals off a joint table and test two variables for independence;
-- compute expectations, variances, and the variance of a sum;
-- attach a standard error $\sigma/\sqrt{n}$ to an average, and decide
-  whether 56 heads in 100 tosses is evidence of bias;
-- reverse a conditional with Bayes' theorem: why a positive HIV test
-  means only 13%.
-
-**Running examples:** a coin tossed $n$ times, a classifier's accuracy on
-a minibatch of 256 images, and a two-test HIV diagnosis.
-:::
-
-::: {.slide title="Probability Turns Measurements Into Evidence"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | tool |
-|---|---|
-| Data Manipulation | tensors |
-| Data Preprocessing | pandas |
-| Linear Algebra | matrix products, norms, eigenvalues |
-| Calculus | derivatives, gradients, chain rule |
-| Automatic Differentiation | autograd |
-| **Probability and Statistics** | **standard error, Bayes' theorem** |
-| Documentation | `help`, small tests |
-:::
-
-::: {.col .narrow}
-- **Uses:** tensors and random sampling from the earlier decks.
-- **Skips:** densities in depth, named distributions, maximum likelihood,
-  and the proofs, all in the mathematics appendix.
-:::
-:::
-:::
-
-::: {.slide title="Frequencies Fluctuate Around the Probability"}
-[Sampling]{.kicker}
-
-Frequencies of heads and tails in 100 tosses of a fair coin:
-
-@probability-a-simple-example-tossing-coins-3
-
-In 10,000 tosses:
-
-@!probability-a-simple-example-tossing-coins-4
-
-- The **probability** $p = 0.5$ belongs to the coin. The **frequency**
-  $\hat{p}$ is an estimate: it changes with every repetition.
-:::
-
-::: {.slide title="The Running Frequency Settles Toward 0.5"}
-[Sampling]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- Heads so far divided by tosses so far, after each toss.
-- **Law of large numbers:** $\hat{p} \to p$ as $n \to \infty$.
-
-::: {.d2l-note}
-It does not say **how fast**. How far from $0.5$ may 100 tosses land?
-:::
-:::
-
-::: {.col .fig .big}
-@!probability-a-simple-example-tossing-coins-5
-:::
-:::
-:::
-
-::: {.slide title="Three Axioms Generate Every Rule"}
-[The rules]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-An **event** is a subset of the sample space $\mathcal{S}$.
-
-- $P(\mathcal{A}) \ge 0$, and $P(\mathcal{S}) = 1$;
-- mutually exclusive events **add**.
-
-Consequences: $P(\mathcal{A}') = 1 - P(\mathcal{A})$ and
-$P(\mathcal{A}\cup\mathcal{B}) = P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
-
-Die, "even or at least 5":
-$$\frac{3}{6} + \frac{2}{6} - \frac{1}{6} = \frac{2}{3}.$$
-:::
-
-::: {.col .fig}
-@fig:probability-venn
-:::
-:::
-:::
-
-::: {.slide title="A Random Variable Maps Outcomes to Values"}
-[The rules]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- Heads in 100 tosses: $2^{100}$ outcomes, only **101** values.
-- **Distribution** $P(X)$: the probability of each value.
-- A height has a **density**: $P(a \le X \le b) = \int_a^b p(x)\,dx$;
-  each exact value has probability zero.
-:::
-::: {.col .fig .big}
-@fig:probability-density
-:::
-:::
-:::
-
-::: {.slide title="A Joint Table Holds Everything About Two Variables"}
-[The rules]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-Rain and umbrella on a random day:
-
-| $P(X, Y)$ | umbrella | no umbrella |
-|:--|:--:|:--:|
-| rain | 0.25 | 0.05 |
-| no rain | 0.10 | 0.60 |
-
-- **Marginal:** sum a row or a column.
-  $P(\textrm{rain}) = 0.30$, $P(\textrm{umbrella}) = 0.35$.
-- **Independent** means $P(X, Y) = P(X)\,P(Y)$. Here
-  $0.25 \neq 0.30 \cdot 0.35$: not independent.
-- Two coin tosses are independent; the coin question needs this.
-:::
-
-::: {.col .fig}
-@fig:probability-joint-grid
-:::
-:::
-:::
-
-::: {.slide title="Expectation Is the Probability-Weighted Average"}
-[Expectation and variance]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$\mathbb{E}[X] = \sum_x x\,P(X{=}x)$$
-
-- Investment: $0.5 \cdot 0 + 0.4 \cdot 2 + 0.1 \cdot 10 = 1.8$.
-- Indicator of heads: $\mathbb{E}[X] = p$.
-- **Linear**, always: $\mathbb{E}[aX + bY] = a\mathbb{E}[X] + b\mathbb{E}[Y]$, so
-  $\mathbb{E}[\hat{p}] = p$: the frequency is **unbiased**.
-:::
-
-::: {.col .fig}
-@fig:probability-expectation
-:::
-:::
-:::
-
-::: {.slide title="Variance Measures the Spread Around the Mean"}
-[Expectation and variance]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$\textrm{Var}(X) = \mathbb{E}\big[(X - \mu)^2\big] = \mathbb{E}[X^2] - \mu^2$$
-
-- Investment: $11.6 - 1.8^2 = 8.36$, so $\sigma \approx 2.9$.
-- Indicator of heads: $p - p^2 = p(1-p)$, at most $\tfrac14$.
-- $\textrm{Var}(aX + b) = a^2\,\textrm{Var}(X)$.
-:::
-
-::: {.col .fig}
-@fig:probability-spread
-:::
-:::
-:::
-
-::: {.slide title="Variances of Independent Variables Add"}
-[Expectation and variance · derivation]{.kicker}
-
-**Step 1.** Expand the square:
-$\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X,Y)$,
-with $\textrm{Cov}(X,Y) = \mathbb{E}[(X-\mu_X)(Y-\mu_Y)]$.
-
-**Step 2.** Independent: $\textrm{Cov}(X,Y) = \mathbb{E}[X-\mu_X]\,\mathbb{E}[Y-\mu_Y] = 0$.
-
-::: {.d2l-note .rule}
-$\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y)$: the sum of $n$
-independent draws has standard deviation $\sqrt{n}\,\sigma$, not $n\sigma$.
-:::
-:::
-
-::: {.slide title="The Standard Error of a Frequency Is 0.5/√n"}
-[Estimation error]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$\textrm{Var}(\hat{p}) = \frac{1}{n^2} \cdot n\,p(1-p) = \frac{p(1-p)}{n}$$
-
-- Fair coin: $0.05$ at $n = 100$, $0.005$ at $n = 10{,}000$.
-- 1000 repeats per $n$ land on the line: **slope $-\tfrac12$**.
-- Half the error costs **4×** the data.
-:::
-
-::: {.col .fig .big}
-@!probability-a-simple-example-tossing-coins-6
-:::
-:::
-:::
-
-::: {.slide title="56 of 100 Is No Evidence of Bias; 5,600 of 10,000 Is"}
-[Estimation error]{.kicker}
-
-- $56/100$: deviation $0.06 = 1.2$ standard errors.
-- $5600/10000$: deviation $0.06 = 12$ standard errors.
-
-Fraction of 1000 fair-coin experiments at least this far from $n/2$, an
-estimate of the **p-value**:
-
-@!probability-is-the-coin-biased
-
-::: {.d2l-note .rule}
-Chebyshev, any distribution: $P(|X - \mu| \ge k\sigma) \le 1/k^2$.
-Averages do better: within 2 standard errors about 95% of the time.
-Under 2 is unremarkable; 3 or more is hard to blame on chance.
-:::
-:::
-
-::: {.slide title="A Minibatch of 256 Images Measures Accuracy to About ±2 Points"}
-[Estimation error]{.kicker}
-
-Correct label with probability $0.9$, independently per image:
-
-- minibatch of 256: $\sqrt{0.9 \cdot 0.1 / 256} \approx 0.019$;
-- test set of 10,000: $\sqrt{0.9 \cdot 0.1 / 10{,}000} = 0.003$;
-- the difference of two such accuracies: $\sqrt{2} \cdot 0.003 \approx 0.004$,
-  since variances add, so one point is more than two standard errors.
-
-::: {.d2l-note}
-In general: an average of $n$ independent draws has standard error
-$\sigma/\sqrt{n}$.
-:::
-:::
-
-::: {.slide title="More Data Removes Only Epistemic Uncertainty"}
-[Estimation error]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- **Epistemic:** uncertainty about the model, such as $p$. It shrinks
-  like $1/\sqrt{n}$.
-- **Aleatoric:** randomness of the outcome. Knowing $p = 0.5$ exactly,
-  the next toss is still 50/50; an ambiguous image stays ambiguous.
-:::
-
-::: {.col .fig .big}
-@fig:probability-uncertainty
-:::
-:::
-:::
-
-::: {.slide title="Check: How Large a Test Set?"}
-[Check]{.kicker}
-
-A classifier has accuracy about $0.9$. How many test images make the
-standard error of its measured accuracy $0.005$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\sqrt{0.9 \cdot 0.1 / n} = 0.005$ gives
-$n = 0.09 / 0.000025 = 3{,}600$. Halving the error to $0.0025$ takes four
-times as many: 14,400.
-:::
-:::
-:::
-
-::: {.slide title="Conditioning Keeps One Row and Renormalizes It"}
-[Conditional probability]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$P(Y \mid X{=}x) = \frac{P(X{=}x,\, Y)}{P(X{=}x)}$$
-
-- Rain row $(0.25, 0.05)$ becomes $(0.83, 0.17)$:
-  $P(\textrm{umbrella} \mid \textrm{rain}) = 0.83$ against $0.35$ on an
-  arbitrary day.
-- In the figure, $P(Y{=}y_3 \mid X{=}x_2) = 0.25 / 0.60 \approx 0.42$.
-- Multiplication rule: $P(X, Y) = P(Y \mid X)\,P(X)$.
-:::
-
-::: {.col .fig}
-@fig:probability-joint-grid
-:::
-:::
-:::
-
-::: {.slide title="Bayes' Theorem Reverses the Conditional"}
-[Conditional probability · derivation]{.kicker}
-
-**Step 1.** Write the joint both ways: $P(X, Y) = P(Y \mid X)\,P(X) = P(X \mid Y)\,P(Y)$.
-
-**Step 2.** Divide by $P(Y)$:
-$$P(X \mid Y) = \frac{P(Y \mid X)\,P(X)}{P(Y)}, \qquad P(Y) = \sum_x P(Y \mid X{=}x)\,P(X{=}x).$$
-
-**Step 3.** Hypothesis $H$, observed data $D$:
-
-::: {.d2l-note .rule}
-posterior $\propto$ likelihood $\times$ prior:
-$\;P(H \mid D) \propto P(D \mid H)\,P(H)$.
-:::
-:::
-
-::: {.slide title="Conditioning Can Remove or Create Dependence"}
-[Conditional probability]{.kicker}
-
-**Conditionally independent given $Z$:**
-$P(X, Y \mid Z) = P(X \mid Z)\,P(Y \mid Z)$.
-
-::: {.cols .vc}
-::: {.col}
-- **Common cause:** shoe size and reading level are related through age,
-  and unrelated at a fixed age.
-- **Common effect:** broken bones and lung cancer become related among
-  hospital patients (*explaining away*).
-:::
-::: {.col .fig .big}
-@fig:probability-explaining-away
-:::
-:::
-:::
-
-::: {.slide title="Check: Condition on a Column"}
-[Check]{.kicker}
-
-In the joint table, $P(X{=}x_1, Y{=}y_1) = 0.12$ and $P(Y{=}y_1) = 0.32$.
-What is $P(X{=}x_1 \mid Y{=}y_1)$? Are $X$ and $Y$ independent?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $0.12 / 0.32 = 0.375$, while $P(X{=}x_1) = 0.40$. Learning
-$Y = y_1$ changes the distribution of $X$, so $X$ and $Y$ are **not**
-independent.
-:::
-:::
-:::
-
-::: {.slide title="A Test That Never Misses Gives Only 13%"}
-[Bayes in action]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$
-\begin{aligned}
-P(D{=}1 \mid H{=}1) &= 1.00 \\
-P(D{=}1 \mid H{=}0) &= 0.01 \\
-\text{prior } P(H{=}1) &= 0.0015
-\end{aligned}
-$$
-
-$$P(H{=}1 \mid D{=}1) = \frac{0.0015}{0.011485} = 0.13$$
-
-Rare disease: false positives outnumber true ones.
-:::
-
-::: {.col .fig .big}
-@fig:probability-natural-frequencies
-:::
-:::
-:::
-
-::: {.slide title="A Second Positive Test Raises 13% to 83%"}
-[Bayes in action]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-Second test: positive with probability $0.98$ if $H{=}1$, $0.03$ if $H{=}0$.
-Given $H$ the tests are independent, so likelihoods multiply:
-$1 \cdot 0.98$ if $H{=}1$, $0.01 \cdot 0.03$ if $H{=}0$.
-
-$$\frac{0.98 \cdot 0.0015}{0.98 \cdot 0.0015 + 0.01 \cdot 0.03 \cdot 0.9985} = 0.83$$
-:::
-
-::: {.col .fig}
-@fig:probability-bayes-update
-:::
-:::
-:::
-
-::: {.slide title="Simulating Two Million Patients Confirms 0.83 to About One Point"}
-[Bayes in action]{.kicker}
-
-Draw each patient's status, then both test results:
-
-@probability-worked-example-hiv-testing-1
-
-::: {.d2l-note}
-Only about 3,500 patients test positive twice, so the simulated fraction
-is a frequency with standard error $\sqrt{0.83 \cdot 0.17 / 3500} \approx
-0.006$. A deviation of one point from $0.83$ is what we should expect.
-:::
-:::
-
-::: {.slide title="Check: A Less Rare Disease"}
-[Check]{.kicker}
-
-Same first test, but 1% of the population is infected. What is
-$P(H{=}1 \mid D_1{=}1)$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.**
-$$\frac{1 \cdot 0.01}{1 \cdot 0.01 + 0.01 \cdot 0.99} = \frac{0.01}{0.0199} \approx 0.50.$$
-The prior matters as much as the test: one positive is now a coin flip.
-:::
-:::
-:::
-
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- **Rules:** marginalize by summing; independent means the joint is a
-  product.
-- **Summaries:** $\mathbb{E}[X]$ and $\textrm{Var}(X)$; variances of independent
-  variables add.
-- **Standard error** $\sigma/\sqrt{n}$: a frequency of $0.56$ lies $1.2$
-  standard errors from $0.5$ after 100 tosses (no evidence of bias), and
-  $12$ after 10,000.
-- **Conditioning:** keep a row and renormalize. **Bayes:** two positive HIV
-  tests take 0.15% to 13% to 83%.
-
-**Next:** looking up what a framework function does, and then the first
-model fitted to data.
-:::

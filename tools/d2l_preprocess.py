@@ -1184,7 +1184,6 @@ CHAPTER_NUMBERING = {
     'chapter_preliminaries/calculus.md': [1, 4],
     'chapter_preliminaries/autograd.md': [1, 5],
     'chapter_preliminaries/probability.md': [1, 6],
-    'chapter_preliminaries/lookup-api.md': [1, 7],
     'chapter_linear-regression/index.md': [2],
     'chapter_linear-regression/linear-regression.md': [2, 1],
     'chapter_linear-regression/synthetic-regression-data.md': [2, 2],

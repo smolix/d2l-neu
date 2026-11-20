@@ -97,7 +97,6 @@ book:
         - chapter_preliminaries/calculus.qmd
         - chapter_preliminaries/autograd.qmd
         - chapter_preliminaries/probability.qmd
-        - chapter_preliminaries/lookup-api.qmd
         - chapter_linear-regression/index.qmd
         - chapter_linear-regression/linear-regression.qmd
         - chapter_linear-regression/synthetic-regression-data.qmd

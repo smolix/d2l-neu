@@ -1288,8 +1288,8 @@ class RNNLM(d2l.RNNLMScratch):  #@save
 ```
 
 Training `RNNLM` with the same hyperparameters reproduces the validation
-perplexity of our from-scratch implementation at a fraction of the wall-clock
-time.
+perplexity and greedy generation of our from-scratch implementation at a
+fraction of the wall-clock time.
 
 ```{.python .input #rnn-implementation-concise-implementation-3}
 %%tab pytorch, mxnet, jax

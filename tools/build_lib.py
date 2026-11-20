@@ -93,6 +93,7 @@ LIB_ONLY_EARLY_FILES = {
 # re-execution of the book.
 DOCSTRING_LABEL_OVERRIDES = {
     'chapter_optimization/test-models.md': 'sec_adam',
+    'chapter_optimization/gd.md': 'sec_gd',
 }
 
 # ──────────────────────────────────────────────────────────

@@ -408,7 +408,7 @@ updates, more than fifty times as many.
 Training is the cheaper part of this section. It passes
 $15{,}000 \times 128 \approx 1.9$ million images forward and backward
 through the network. The samples we draw below, some with a thousand steps
-each, take about 20 million evaluations: three times the arithmetic of
+each, take about 20 million evaluations: three and a half times the arithmetic of
 training, counting a backward pass as two forward ones. Drawing samples
 from a diffusion model can cost more than teaching it to draw them, and much
 of the rest of this chapter is about cutting that cost. On an RTX 4090 the section runs in less than an hour; on a CPU it
@@ -1535,8 +1535,8 @@ one example in ten. Guidance needs the second as its base.
 | weight average | half-life 1,000 updates | half-life about 7,000 |
 
 - Training: 1.9M images forward and backward.
-- Sampling in this section: about 20M network evaluations, three times the
-  arithmetic of training.
+- Sampling in this section: about 20M network evaluations, three and a half
+  times the arithmetic of training.
 :::
 
 ::: {.slide title="Fifty Euler Steps Draw Garments of the Requested Class"}

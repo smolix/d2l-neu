@@ -400,8 +400,9 @@ def normal_pdf(x, mu, sigma=1.0):
         2 * np.pi * sigma ** 2)
 
 def js_gap(p, q):
-    """log 2 - JS(p, q) on xs, accurate even when tiny: it integrates
-    (p log(1 + q/p) + q log(1 + p/q)) / 2, with log(1 + e^a) = logaddexp(0, a)."""
+    """log 2 - JS(p, q) on xs, accurate even when tiny: the integral of
+    (p log(1 + q/p) + q log(1 + p/q)) / 2, with log(1 + e^a) computed as
+    logaddexp(0, a)."""
     a = np.log(q) - np.log(p)
     return 0.5 * np.trapezoid(p * np.logaddexp(0, a) + q * np.logaddexp(0, -a),
                               xs)
@@ -411,7 +412,8 @@ def js_1d(p, q):
 
 s = 4.0                                        # RBF kernel bandwidth
 mus = np.linspace(0.1, 20.0, 200)              # separations mu
-gaps = np.array([js_gap(normal_pdf(xs, 0.0), normal_pdf(xs, mu)) for mu in mus])
+gaps = np.array([js_gap(normal_pdf(xs, 0.0), normal_pdf(xs, mu))
+                 for mu in mus])
 mmd2 = 2 * s / np.sqrt(s ** 2 + 2) * (1 - np.exp(-mus ** 2
                                                  / (2 * (s ** 2 + 2))))
 slopes = [-np.gradient(gaps, mus), np.gradient(mmd2, mus),
@@ -576,11 +578,12 @@ def train_shift(critic_loss, gen_loss, seed, gp=0.0, theta0=6.0, steps=1500,
     n = n_critic if critic_loss else 0
     thetas, grads = [theta0], []
     for _ in range(steps):
-        X, Z = (jnp.asarray(rng.standard_normal((n + 1, batch, 1)), jnp.float32)
-                for _ in range(2))
+        X, Z = (jnp.asarray(rng.standard_normal((n + 1, batch, 1)),
+                            jnp.float32) for _ in range(2))
         U = jnp.asarray(rng.uniform(size=(n, batch, 1)), jnp.float32)
-        grads.append(float(
-            shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D, X, Z, U)))
+        grad = shift_step(critic_loss, gen_loss, gp, G, D, opt_G, opt_D,
+                          X, Z, U)
+        grads.append(float(grad))
         thetas.append(float(G.theta[...]))
     return np.array(thetas), np.array(grads)
 ```
@@ -703,7 +706,7 @@ def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
 #@save
 @nnx.jit(static_argnums=(0, 1))
 def train_toy_step(critic_loss, gen_loss, G, D, opt_G, opt_D, X, z, k):
-    """One critic step (unless critic_loss is None), then one generator step."""
+    """A critic step (unless critic_loss is None), then a generator step."""
     if critic_loss is not None:            # the generator is fixed here
         fake = G(z, k)
         opt_D.update(D, nnx.grad(lambda D_: critic_loss(D_(X), D_(fake)))(D))
@@ -738,15 +741,20 @@ The divergence fluctuates from step to step near the end of a run, so we report 
 
 ```{.python .input #objectives-one-testbed-four-losses-6}
 %%tab pytorch, jax
+def first_below(trace, level):
+    """First recorded step (one record per 200 steps) with JS below level."""
+    hits = np.flatnonzero(trace < level)
+    return f'{200 * hits[0]:6d}' if len(hits) else '   n/a'
+
 runs = {name: [train_toy(*pair, seed=seed) for seed in range(3)]
         for name, pair in losses.items()}
-print(f'{"loss":14s} median JS over the last 2,000 steps   first step JS < 0.01')
+print(f'{"three runs:":14s}{"median JS, last 2,000 steps":>27s}'
+      f'{"first JS < 0.1":>21s}{"first JS < 0.01":>21s}')
 for name, traces in runs.items():
     medians = [np.median(trace[-2000 // 200:]) for trace in traces]
-    firsts = [200 * np.argmax(trace < 0.01) if (trace < 0.01).any() else None
-              for trace in traces]
-    print(f'{name:14s}' + ''.join(f'{m:8.4f}' for m in medians) + ' ' * 13
-          + ''.join(f'{t:6d}' if t is not None else '   n/a' for t in firsts))
+    print(f'{name:14s}   ' + ''.join(f'{m:8.4f}' for m in medians)
+          + '   ' + ''.join(first_below(trace, 0.1) for trace in traces)
+          + '   ' + ''.join(first_below(trace, 0.01) for trace in traces))
 d2l.plot(np.arange(len(runs['logistic'][0])) * 200,
          [traces[0] for traces in runs.values()], xlabel='step',
          ylabel='JS(p, q_t)', yscale='log', legend=list(runs), figsize=(5, 3))

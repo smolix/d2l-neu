@@ -719,7 +719,9 @@ def endpoints(solver, n, gamma):
 for gamma in (1.0, 2.0):
     refs = endpoints(d2l.heun_sample, 101, gamma)    # 200 evaluations
     fds = [d2l.fid_score(features(x), f_test) for x in refs]
-    print(f'gamma = {gamma:.0f}, reference: FD {mean_range(fds)}')
+    print(f'gamma = {gamma:.0f}, reference: FD {mean_range(fds)}; '
+          'FD and RMS distance to it')
+    print('evaluations', ''.join(f'{b:>18d}' for b in (10, 20, 50)))
     for s, solver in solvers.items():
         cols = []
         for b in (10, 20, 50):
@@ -727,8 +729,8 @@ for gamma in (1.0, 2.0):
             fds = [d2l.fid_score(features(x), f_test) for x in xs]
             rms = np.mean([((x - r) ** 2).mean().sqrt().item()
                            for x, r in zip(xs, refs)])
-            cols.append(f'{b:3d}: FD {mean_range(fds)}, RMS {rms:.3f}')
-        print(f'  {s:9s}', '   '.join(cols))
+            cols.append(f'  {mean_range(fds)} {rms:.3f}')
+        print(f'  {s:9s}', ''.join(cols))
 ```
 
 ```{.python .input #samplers-quality-against-evaluations-on-images-7}
@@ -742,7 +744,9 @@ def endpoints(solver, n, gamma):
 for gamma in (1.0, 2.0):
     refs = endpoints(d2l.heun_sample, 101, gamma)    # 200 evaluations
     fds = [d2l.fid_score(features(x), f_test) for x in refs]
-    print(f'gamma = {gamma:.0f}, reference: FD {mean_range(fds)}')
+    print(f'gamma = {gamma:.0f}, reference: FD {mean_range(fds)}; '
+          'FD and RMS distance to it')
+    print('evaluations', ''.join(f'{b:>18d}' for b in (10, 20, 50)))
     for s, solver in solvers.items():
         cols = []
         for b in (10, 20, 50):
@@ -750,8 +754,8 @@ for gamma in (1.0, 2.0):
             fds = [d2l.fid_score(features(x), f_test) for x in xs]
             rms = np.mean([float(jnp.sqrt(((x - r) ** 2).mean()))
                            for x, r in zip(xs, refs)])
-            cols.append(f'{b:3d}: FD {mean_range(fds)}, RMS {rms:.3f}')
-        print(f'  {s:9s}', '   '.join(cols))
+            cols.append(f'  {mean_range(fds)} {rms:.3f}')
+        print(f'  {s:9s}', ''.join(cols))
 ```
 
 Below are eight images from each of four samplers, all from the same eight

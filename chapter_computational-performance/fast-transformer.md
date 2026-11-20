@@ -366,7 +366,7 @@ second.
 
 :begin_tab:`pytorch`
 Our step is in the second regime. The device waited for a few percent of
-the step, and the kernels outside the matrix products took 8.8 of its 24.4
+the step, and the kernels outside the matrix products took 8.8 of its 24.5
 ms of device time. Even if compilation removed all of them and the idle time,
 the step would shrink to the 15.6 ms of the products: a gain of at most
 1.6. `torch.compile` (:numref:`sec_compilation`) generates fused kernels
@@ -473,7 +473,7 @@ products now take about two thirds of its time or more. The step is
 limited by the device, mostly by the arithmetic of the matrix products.
 
 :begin_tab:`pytorch`
-The device time per step fell from 24.4 to 22.2 ms, and the gaps between
+The device time per step fell from 24.5 to 22.3 ms, and the gaps between
 kernels closed. The two parts of `torch.compile` divide the gain between
 them: fusion shortened the device time by 2.2 ms, a quarter of the time
 outside the products, and the replay of CUDA graphs closed the gaps, about
@@ -1106,9 +1106,8 @@ most, and the larger minibatch gained a few percent, again as predicted.
 Reduced precision alone gave about 1.75, inside the bounds that the second
 profile set, in which the products held seven tenths of the step. The
 compiler, to which this chapter gave a whole section, gains little more
-than a tenth here,
-because this model already spends most of its time in large matrix
-products.
+than a tenth here, because this model already spends most of its time in
+large matrix products.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1657,7 +1656,7 @@ step = make_step(model, compiled)
 
 @!fast-transformer-rungs-each-one-measured-1
 
-- Fusion: device time 24.4 → 22.2 ms. CUDA graphs: idle gaps closed.
+- Fusion: device time 24.5 → 22.3 ms. CUDA graphs: idle gaps closed.
 
 ::: {.d2l-note}
 The products, two thirds of the step, are untouched.

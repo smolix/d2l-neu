@@ -253,16 +253,6 @@ Two caveats apply when inspecting attention heatmaps in deep networks:
 
 ## Exercises
 
-1. **Soft lookup by hand.** Use the database $\{(2, 10), (5, 20)\}$ and
-   the score $a(q, k) = -(q - k)^2$ of the opening example.
-    1. Compute the answer to the query $q = 3$.
-    1. Add the record $(4, 30)$ and answer the query $q = 4$ again. Why
-       does the answer move so far from $19.5$?
-    1. Return to the two original records and multiply both scores by
-       $10$. Answer the query $q = 4$ again, and find the limits of the
-       answer as the factor tends to infinity and to zero. Which bandwidth
-       $\sigma$ of the Gaussian kernel corresponds to the factor $10$?
-
 1. **An average of two values.** Let the keys $\mathbf{k}_1, \ldots,
    \mathbf{k}_m$ be orthonormal and let the score be $a(\mathbf{q},
    \mathbf{k}) = \mathbf{q}^\top \mathbf{k}$ with the weights
@@ -295,22 +285,6 @@ Two caveats apply when inspecting attention heatmaps in deep networks:
        plot the three curves. Then redraw the noise in `y_train` 200 times
        with `x_train` fixed, and compare the standard deviation of the
        estimate at each query with $1 / \sqrt{n_{\textrm{eff}}(q)}$.
-
-1. [code] **Queries beyond the data.** The estimate
-   :eqref:`eq_nadaraya-watson` is a convex combination of the values, and
-   the inputs `x_train` lie in the interval $[0, 5)$.
-    1. For distinct scalar keys and a Gaussian kernel of fixed bandwidth,
-       find the limit of the estimate as $q \to \infty$. Find the same limit
-       for the constant kernel.
-    1. Evaluate `nadaraya_watson` with $\sigma = 0.5$ at the queries $5,
-       5.5, \ldots, 10$ and plot the estimate against $y = 2\sin(x) + x$.
-       Explain why no nonnegative kernel and no bandwidth let the estimate
-       follow the trend of the truth.
-    1. With $\sigma = 0.5$, `nadaraya_watson` returns NaN at the query
-       $q = 15$. Explain why in single precision, and compute the weights
-       instead as the softmax :eqref:`eq_softmax_attention` of the scores
-       $-(q - x_i)^2 / (2\sigma^2)$, so that the estimate is finite at
-       every query and every bandwidth.
 
 1. [code] **The gradient of attention.** ● Suppose that $a(\mathbf{q},
    \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$ and that $\mathbf{k}_i =

@@ -628,37 +628,6 @@ for beta in (1, 4, 16):  # Scale the queries up; 8 keys: uniform is 0.125
        map of dimension $D < n$ reproduces $K$ exactly on these points
        when queries and keys coincide.
 
-1. [extended] **Attention variants in a language model.** ● Whether the
-   quality gap between exact and linear attention matters depends on the
-   task. Measure it on `TinyCharLM` of
-   :numref:`sec_positional-information`, with `pos='learned'` for every
-   variant so that position enters the same way.
-    1. Subclass `TinyCharLM` and override `attend` twice: once with a
-       causal band mask of width $w$ in place of the causal mask, and once
-       with the causal linear-attention weights of :eqref:`eq_linear-attn`
-       for $\phi(x) = \mathrm{elu}(x) + 1$, computed explicitly as a full
-       weight matrix over the context so that the method still returns its
-       weights. Add $\epsilon = 10^{-6}$ to the normalizer, as in
-       `linear_attention_parallel`; without it, a row whose features
-       underflow divides zero by zero and training ends in NaN.
-    1. Train dense attention, windows of width $w \in \{4, 16, 64\}$, and
-       linear attention with the protocol of
-       :numref:`subsec_pos-experiment`, and report validation perplexity at
-       context $128$. Relate the window results to the reach $1 + 2(w-1)$
-       of the two-block model.
-    1. Build validation sequences of $128$ bytes, each a random
-       $64$-byte excerpt of the validation text followed by the same
-       excerpt again, and compare the mean loss on the second half with
-       that on the first half for every variant. At the budget of
-       :numref:`subsec_pos-experiment`, expect even dense attention to
-       gain little from the copy. Train the dense model and the window
-       $w = 16$ longer, or on data that repeats, until the dense model's
-       second-half loss falls clearly below its first-half loss, and
-       report the budget at which that happens. Which variants then
-       exploit the repetition, and how does the answer relate to the reach
-       of the windowed models and to the fixed-size state of linear
-       attention?
-
 1. [code] **A decaying state.** ● Give the state of
    :eqref:`eq_linear-attn-recurrence` a scalar decay $\gamma \in (0, 1)$,
    $$\mathbf{S}_t = \gamma\, \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top, \qquad \mathbf{z}_t = \gamma\, \mathbf{z}_{t-1} + \phi(\mathbf{k}_t).$$

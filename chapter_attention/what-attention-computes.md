@@ -727,9 +727,8 @@ d2l.plot([jnp.arange(1, 64), [24, 24]], [acc, [0, 1]],
 ```
 
 Accuracy jumps from $1/64$ on the first copy (and at the restart boundary
-$t = 24$, where content matching has not yet seen a repeated token; Exercise
-:exref:`ex_what-attention-computes-bayes`) to $> 0.90$ from position $25$
-onward.
+$t = 24$, where content matching has not yet seen a repeated token) to
+$> 0.90$ from position $25$ onward.
 
 What accounts for the remaining $\sim 10\%$ error after the restart? When a
 token appears $K > 1$ times within the $L$-token pattern with different
@@ -743,9 +742,8 @@ $$
 \mathbb{E}\left[\frac{1}{K}\right] = \frac{1 - (1 - p)^L}{L p} \approx 0.84, \qquad p = \frac{1}{64},
 $$
 
-and $\approx 0.47$ on repeated tokens alone (Exercise
-:exref:`ex_what-attention-computes-repeated-tokens`). Splitting test positions
-by $K = 1$ (unique) versus $K > 1$ (repeated) shows that `model_two` reaches
+and $\approx 0.47$ on repeated tokens alone. Splitting test positions by
+$K = 1$ (unique) versus $K > 1$ (repeated) shows that `model_two` reaches
 $\sim 0.99$ on unique tokens and $0.70$--$0.90$ on repeated tokens—exceeding
 the $0.47$ single-token baseline by combining longer $n$-gram context and
 RoPE offset preferences:
@@ -955,65 +953,6 @@ validate the induction circuit.
     1. Which limitations in :numref:`tab_induction-evidence` does mean
        ablation remove, and which remain?
    :exlabel:`ex_what-attention-computes-circuit-ablation`
-
-1. [code] **The Bayes-optimal predictor.** ● In the task of
-   :numref:`subsec_two-block-induction`, the pattern length $L$ is uniform
-   on $\{16, \ldots, 32\}$ and the pattern tokens are uniform over 64
-   values. The Bayes-optimal prediction of $x_t$ from $x_0, \ldots,
-   x_{t-1}$ averages the predictions of all pattern lengths $L'$, weighted
-   by their posterior probabilities, and no model achieves a lower
-   expected loss.
-    1. Show that the prefix $x_0, \ldots, x_{t-1}$ has probability
-       $64^{-\min(L', t)}$ under every length $L'$ with which it is
-       consistent. Neglecting shorter lengths that are consistent by chance,
-       derive the posterior weight of the true length at $t = L$ and at
-       $t = L + 1$.
-    1. At $16 \leq t < L$ the true distribution of $x_t$ is uniform. Show
-       that the predictor's distribution there is not, and conclude that its
-       first-copy loss exceeds $\log 64$.
-    1. Simulate the predictor and report its first-copy loss, later-copy
-       loss, and later-copy accuracy, pooled over positions as `eval_copy`
-       pools them. Compare the results with `model_two`.
-    1. :numref:`subsec_unseen-patterns` states that at target position
-       24 of a period-24 pattern the Bayes-optimal predictor gives the
-       first token of the pattern probability $1/8$, more than it gives
-       any other token. Derive both statements from the first part. What
-       is the predictor's accuracy at that position, and what is that of
-       `model_two`?
-   :exlabel:`ex_what-attention-computes-bayes`
-
-1. [code] **Repeated tokens within a pattern.** ●
-   :numref:`subsec_unseen-patterns` found that the errors after the
-   restart concentrate on tokens that occur more than once in their
-   pattern, and that the trained models nevertheless beat a uniform choice
-   among the occurrences of the current token.
-    1. For a pattern of $L$ tokens drawn uniformly from 64 values, compute
-       the probability that the token at a given position occurs elsewhere
-       in the pattern. A circuit that picks one of the $K$ successors of the
-       current token uniformly, when that token occurs $K$ times in the
-       pattern, is correct with probability $1/K$. Show that its expected
-       accuracy is $\mathbb{E}[1/K] = (1 - (1-p)^L)/(Lp)$ with $p = 1/64$,
-       and derive its accuracy on repeated tokens alone. Check the three
-       values that the text gives for $L = 24$, and evaluate them for
-       $L = 21$.
-    1. Patterns of length 21 tile to three copies within 64 tokens.
-       Evaluate `model_two` on them and report its accuracy on repeated
-       tokens separately for the second and for the third copy.
-    1. Explain the results through the single-token match. What does an
-       additional earlier occurrence with the same successor do to the
-       attention pattern and to the output, and what does one with a
-       different successor do?
-    1. The text names two ways to beat the uniform choice: a match on the
-       two-token prefix $(x_{i-1}, x_i)$, which Exercise
-       :exref:`ex_what-attention-computes-paths` shows two blocks can
-       express, and a preference of block 2 for keys 15 to 31 positions
-       back. Measure the attention mass that each block-1 head of
-       `model_two` places at offset $-2$. Then split the repeated tokens of
-       the period-24 evaluation by whether a wrong match lies inside or
-       outside offsets 15 to 31, and compare block 2's accuracy and its
-       attention on the correct key in the two groups. Which mechanism
-       does `model_two` use?
-   :exlabel:`ex_what-attention-computes-repeated-tokens`
 
 1. [code] **K-composition in the weights.** ● The match of the induction
    head works because the QK circuit of block 2 reads what the OV circuit

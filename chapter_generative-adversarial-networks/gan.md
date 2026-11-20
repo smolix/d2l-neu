@@ -582,7 +582,7 @@ d2l.plot([lam[:200], lam[200:], lims], [D_out[:200], D_out[200:], lims],
          fmts=('C0.', 'C1.', 'k--'), figsize=(4.2, 3.4))
 ```
 
-From samples alone, the critic has learned the log density ratio: the correlation is 0.98, and the critic explains more than 90 percent of the variance of $\lambda$. The points leave the diagonal at the most negative values of $\lambda$, at generated samples where $p$ is nearly zero, and there the critic is milder than $\lambda$. Two things combine. The critic is a leaky-ReLU network, piecewise linear in $x$, and beyond the samples it has seen it continues linearly, while $\lambda$, a quadratic, keeps falling faster. And the log loss does almost nothing to correct it there. A generated sample contributes $-\log \sigma(-D)$ to the critic's loss, whose derivative in the score is $\sigma(D)$, about $3 \cdot 10^{-7}$ at $D = -15$. This is the saturating weight $w_{\textrm{sat}}$ again, seen from the critic's side: once the critic is confident, it is hardly pushed to be more so. The objective constrains the critic only where the mixture $m$ has appreciable mass and the critic is still unsure, so the estimate is least accurate where the ratio is most extreme.
+From samples alone, the critic has learned the log density ratio: the correlation exceeds 0.98, and the critic explains more than 90 percent of the variance of $\lambda$. The points leave the diagonal at the most negative values of $\lambda$, at generated samples where $p$ is nearly zero, and there the critic is milder than $\lambda$. Two things combine. The critic is a leaky-ReLU network, piecewise linear in $x$, and beyond the samples it has seen it continues linearly, while $\lambda$, a quadratic, keeps falling faster. And the log loss does almost nothing to correct it there. A generated sample contributes $-\log \sigma(-D)$ to the critic's loss, whose derivative in the score is $\sigma(D)$, about $3 \cdot 10^{-7}$ at $D = -15$. This is the saturating weight $w_{\textrm{sat}}$ again, seen from the critic's side: once the critic is confident, it is hardly pushed to be more so. The objective constrains the critic only where the mixture $m$ has appreciable mass and the critic is still unsure, so the estimate is least accurate where the ratio is most extreme.
 
 ### Saturating and Non-Saturating Losses Compared
 :label:`subsec_gan_saturation`
@@ -618,7 +618,7 @@ def update_G_saturating(Z, net_D, net_G, optimizer_G):
 
 Two arms start from the same initialization and differ only in the generator loss. The cell trains each arm three times, and within a run both arms see the same minibatches and latent draws. After every epoch the callback `on_epoch` records the generator's samples at one fixed set of latent draws. The generator learns at 0.01, twice the rate of the run above. Adam moves each parameter by roughly its learning rate per step, and the first coordinate of $\mu_q$ has about seven units to travel: some 1,400 steps at the slower rate, eleven of the twenty epochs of 125 minibatches, and half as many at 0.01.
 
-The weights predict the outcome. The critic will reject the distant samples at once, so $w_{\textrm{sat}} = \sigma(D(x'))$ should be nearly zero, and the saturating generator should not move.
+The weights predict the outcome. The critic will reject the distant samples at once, so $w_{\textrm{sat}} = \sigma(D(x'))$ should be nearly zero, and the saturating generator should not move. The helper `far_start` builds the shifted pair for every run, and the cell first prints how far that start lies from the data.
 
 ```{.python .input #gan-saturating-versus-non-saturating-training-1}
 %%tab pytorch
@@ -702,7 +702,7 @@ d2l.plot(epochs, [runs['non-saturating'][0][:, 0],
 fig.tight_layout()
 ```
 
-For the first two epochs the two critics behave alike: both reject every generated sample, and both losses fall to nearly zero. The critics agree; only the weights differ. The saturating generator does not move. Its critic's loss stays at zero, so $\sigma(D(x')) \approx 0$ for every generated sample, the samples stay where they started, and every run ends between 334 and 341 nats from the data. The non-saturating generator crosses to the data within the first few epochs: by epoch five its samples lie in the data region, though not yet centered on it. By epoch twenty they fill the ellipse, $D_{\textrm{KL}}(q \,\|\, p)$ is a few hundredths of a nat in every run, and its critic's loss is back near $2 \log 2$. The two arms end more than three hundred nats apart, while the runs within either arm differ by a few nats at most, so the weight alone decides the outcome.
+For the first two epochs the two critics behave alike: both reject every generated sample, and both losses fall to nearly zero. The critics agree; only the weights differ. The saturating generator hardly moves. Its critic's loss stays at zero, so $\sigma(D(x')) \approx 0$ for every generated sample, and every run ends between 334 and 341 nats from the data, against about 345 at the start. The non-saturating generator crosses to the data within the first few epochs: by epoch five its samples lie in the data region, though not yet centered on it. By epoch twenty they fill the ellipse, $D_{\textrm{KL}}(q \,\|\, p)$ is a few hundredths of a nat in every run, and its critic's loss is back near $2 \log 2$. The two arms end more than three hundred nats apart, while the runs within either arm differ by a few nats at most, so the weight alone decides the outcome.
 
 The non-saturating weight amplifies the factor $\nabla_\theta D$ but cannot create it. Here the critic's score surface slopes toward the data even far from them; an optimal critic on separated supports offers no slope, and no choice of weight helps.
 
@@ -791,7 +791,7 @@ fake_img = net_G_img(jax.random.normal(jax.random.key(2), (30, 100)))
 d2l.show_images(fake_img.reshape(30, 28, 28), 2, 15, scale=0.9, cmap='gray');
 ```
 
-Most samples are recognizable garments, tops and shoes among them, and a few are shapeless. Their interiors are grainy and speckled: neither network knows that neighboring pixels belong together, which convolutional networks build in. The losses show how the game went.
+Most samples are recognizable garments, tops and shoes among them, and a few are shapeless. Their interiors are grainy and speckled: neither network knows that neighboring pixels belong together, which convolutional networks build in. The losses show how the game went; each panel draws one player's loss against its own equilibrium value.
 
 ```{.python .input #gan-garments-from-noise-4}
 %%tab pytorch, jax
@@ -805,7 +805,7 @@ for ax, loss, ref, name, ref_name, fmt in zip(
 fig.tight_layout()
 ```
 
-Within the first epoch the critic pulls ahead: its loss lies far below $2 \log 2$ and the generator's far above $\log 2$. Both then drift slowly back toward these values. After twenty epochs the critic's loss is about 1.05 against $2 \log 2 \approx 1.39$, and the generator's about 1.4 against $\log 2 \approx 0.69$ (its curve ends near the critic's reference line by coincidence). The critic still tells real garments from generated ones better than chance. What the losses cannot say is why. A critic ahead of the game may face a generator that is still wrong, or it may have learned, with about 530,000 parameters, the 60,000 training images it sees every epoch (Exercise :exref:`ex_gan-finite-sample-critic`). Nor can they say whether every kind of garment is drawn as often as in the data (Exercise :exref:`ex_gan-class-coverage`), or whether more epochs would bring both players to their equilibrium values. On the Gaussian we could look behind the losses. On images we cannot, and that is the usual situation for a GAN.
+Within the first epoch the critic pulls ahead: its loss lies far below $2 \log 2$ and the generator's far above $\log 2$. Both then drift slowly back toward these values. After twenty epochs the critic's loss is about 1.05 against $2 \log 2 \approx 1.39$, and the generator's about 1.4 against $\log 2 \approx 0.69$. The critic still tells real garments from generated ones better than chance. What the losses cannot say is why. A critic ahead of the game may face a generator that is still wrong, or it may have learned, with about 530,000 parameters, the 60,000 training images it sees every epoch (Exercise :exref:`ex_gan-finite-sample-critic`). Nor can they say whether every kind of garment is drawn as often as in the data (Exercise :exref:`ex_gan-class-coverage`), or whether more epochs would bring both players to their equilibrium values. On the Gaussian we could look behind the losses. On images we cannot, and that is the usual situation for a GAN.
 
 ## Summary
 
@@ -1206,7 +1206,7 @@ matched the data?
 Hand-set $q$ at $D_{\textrm{KL}}(q\|p) \approx 3.4$ nats; a fresh critic,
 2,000 steps.
 
-- Correlation 0.98; over 90% of the variance of $\lambda$ explained.
+- Correlation above 0.98; over 90% of the variance of $\lambda$ explained.
 - Too mild at very negative $\lambda$: a piecewise-linear critic against a
   quadratic $\lambda$, and a loss gradient $\sigma(D)$ of about
   $3 \cdot 10^{-7}$ at $D = -15$.
@@ -1221,7 +1221,8 @@ Hand-set $q$ at $D_{\textrm{KL}}(q\|p) \approx 3.4$ nats; a fresh critic,
 ::: {.slide title="From a Far Start Only the Non-Saturating Generator Moves"}
 @!gan-saturating-and-non-saturating-losses-compared-1
 
-- Start: generator offset moved by $(-6, 6)$, about 8 units from the data mean.
+- Start: generator offset moved by $(-6, 6)$, about 8 units from the data
+  mean and about 345 nats from the data.
 - Saturating: $w_{\textrm{sat}} \approx 0$; 334 to 341 nats from the data
   in all three runs. Non-saturating: a few hundredths of a nat.
 
@@ -1231,21 +1232,15 @@ By epoch 2 both critics reject every sample. Only the weight differs.
 :::
 
 ::: {.slide title="On Garments the Critic Stays Ahead after Twenty Epochs"}
-::: {.cols .vc}
-::: {.col}
+@!gan-garments-from-noise-4
+
 - MLPs $100 \to 256 \to 512 \to 784$ and $784 \to 512 \to 256 \to 1$; Adam
   $2 \cdot 10^{-4}$, $\beta_1 = 0.5$, batch 64.
-- Critic about 1.05 against $2 \log 2 \approx 1.39$; generator about 1.4
-  against $\log 2 \approx 0.69$.
+- Each loss against its own equilibrium: critic about 1.05 against
+  $2 \log 2 \approx 1.39$, generator about 1.4 against $\log 2 \approx 0.69$.
 
 ::: {.d2l-note .warn}
 No nats here: neither density can be evaluated.
-:::
-:::
-
-::: {.col}
-@!gan-garments-from-noise-4
-:::
 :::
 
 [Learning rate and $\beta_1$: Radford et al. 2015]{.small}
@@ -1254,7 +1249,7 @@ No nats here: neither density can be evaluated.
 ::: {.slide title="Check: What Does a Critic Loss of 1.05 Tell You?"}
 [Check]{.kicker}
 
-The garment critic ends at 1.05, below $2 \log 2 \approx 1.39$.
+The garment critic ends at about 1.05, below $2 \log 2 \approx 1.39$.
 
 . . .
 

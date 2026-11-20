@@ -1055,10 +1055,14 @@ for gamma in (0.0, 4.0):
                   titles=names + [''] * 30)
 ```
 
-At $\gamma = 0$ the columns no longer follow their labels. At $\gamma = 4$
-each image is a clear member of its class, but the four samples of a column
-resemble one another more than at $\gamma = 1$, with stronger contrast and
-fewer unusual shapes.
+At $\gamma = 0$ the columns no longer follow their labels: shoes, garments
+and bags share a column. More of the images are malformed than in the first
+grid, smeared or caught halfway between two kinds of object. Here is the
+part of the rise that the class mix could not explain: without the label
+the sampler does not merely pick the wrong classes, it also draws them
+worse. At $\gamma = 4$ each image is a clear member of its class, but the
+four samples of a column resemble one another more than at $\gamma = 1$,
+with stronger contrast and fewer unusual shapes.
 
 If every scale from 1.5 up makes the FD worse, why does every
 text-to-image system guide, and by far more than 1.5? Part of the answer

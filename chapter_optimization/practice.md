@@ -141,7 +141,7 @@ for seed in seeds:
         print(line)
 ```
 
-At $\eta = 1.0$, clipping at $\theta = 1.0$ fires on only the first few dozen steps (all before step $50$) and never fires again over the remaining $1{,}950$ steps (where the median gradient norm is $\sim 0.25$), rescuing the run from `inf` down to $\sim 1.61\text{--}1.64$ nats. Here clipping acts as a **guard**: it intervenes on $<2\%$ of steps to prevent early transient blow-up (and handle heavy-tailed gradient noise :cite:`Zhang.Karimireddy.Veit.ea.2020`). By contrast, at $\eta = 3.0$, clipping fires on nearly $100\%$ of steps and the run still fails to train: when clipping is permanently active as a **brake**, the learning rate $\eta$ is simply too large :cite:`Godbole.Dahl.Gilmer.ea.2023`. In practice, set $\theta$ roughly $3\text{--}5\times$ above the steady-state median gradient norm (typically $\theta = 1.0$) and monitor the clipping fraction.
+At $\eta = 1.0$, clipping at $\theta = 1.0$ fires on only the first few dozen steps (all before step $50$) and never fires again over the remaining $1{,}950$ steps (where the median gradient norm is $\sim 0.25$), rescuing the run from `inf` down to $\sim 1.61\text{--}1.64$ nats. Here clipping acts as a **guard**: it intervenes on $<2\%$ of steps to prevent early transient blow-up (and handle heavy-tailed gradient noise :cite:`Zhang.Karimireddy.Veit.ea.2020`). By contrast, at $\eta = 3.0$, clipping fires on every step for as long as the gradient norm stays finite, and the run still fails to train (its loss stalls at $100\text{--}200$ nats or overflows to `inf`): when clipping is permanently active as a **brake**, the learning rate $\eta$ is simply too large :cite:`Godbole.Dahl.Gilmer.ea.2023`. In practice, set $\theta$ roughly $3\text{--}5\times$ above the steady-state median gradient norm (typically $\theta = 1.0$) and monitor the clipping fraction.
 
 ### Clipping Under AdamW and Operational Spike Recovery
 :label:`subsec_practice-spikes`
@@ -273,7 +273,7 @@ d2l.plot(list(range(1, num_epochs + 1)), [live, avg, decayed], 'epoch',
                  'cosine decay, live weights'], legend_loc='outside')
 ```
 
-At a constant learning rate, the live weights jitter over a $2\%\text{--}6\%$ test-accuracy band across the last five epochs, whereas their EMA tracks the top of the band smoothly at $>91\%$—matching the final accuracy of the cosine-decayed run without ever lowering the learning rate. Thus, weight EMA provides an immediate, zero-step alternative to cooldown branching during the constant plateau of a WSD schedule (:numref:`subsec_scheduler-branching`).
+At a constant learning rate, the live weights jitter over a test-accuracy band of up to $\sim 5\%$ across the last five epochs, whereas their EMA tracks the top of the band smoothly at $>91\%$—matching the final accuracy of the cosine-decayed run without ever lowering the learning rate. Thus, weight EMA provides an immediate, zero-step alternative to cooldown branching during the constant plateau of a WSD schedule (:numref:`subsec_scheduler-branching`).
 
 ## A Worked End-to-End Configuration
 
@@ -302,7 +302,7 @@ We now synthesize the entire chapter to configure a $3{,}000$-step training run 
 | Loss descends smoothly at constant slope until final step | Under-budgeted cumulative travel $B_T$ | Increase peak $\eta_0$ or total steps $T$ |
 
 Following :numref:`tab_practice_recipes`, we configure our $3.3\text{M}$-parameter `TinyLM` with:
-1. **Batch size:** $b = 256$ sequences (where hardware throughput saturates and comparable to the post-warmup gradient-noise scale $b_{\text{noise}} \sim 100$).
+1. **Batch size:** $b = 256$ sequences (where hardware throughput saturates and comparable to the post-warmup gradient-noise scale $b_{\text{noise}} \sim 100\text{--}200$).
 2. **Optimizer & guards:** AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$, decoupled weight decay $\lambda = 0.1$ applied exclusively to 2D hidden matrices (:numref:`subsec_adamw-what-not-to-decay`), global-norm gradient clipping at $\theta = 1.0$, and a short-window weight EMA ($\alpha = 0.995$).
 3. **Peak learning rate calibration:** Three $300$-step ($10\%$-horizon) trial runs across $\eta \in \{10^{-3}, 3 \times 10^{-3}, 10^{-2}\}$ identify $\eta_0 = 3 \times 10^{-3}$ as optimal (with $<5\%$ of steps clipped, confirming that $\theta = 1.0$ acts purely as a guard).
 4. **Schedule:** $60$-step linear warmup ($2\%$ of $T = 3{,}000$) followed by cosine decay to zero, which lowers validation loss by $0.05\text{--}0.06$ nats below the constant-rate baseline ($<0.01$-nat seed spread):

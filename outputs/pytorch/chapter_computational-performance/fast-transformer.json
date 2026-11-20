@@ -19,12 +19,12 @@
       "outputs": []
     },
     "fast-transformer-case-study-optimizing-a-transformer-2": {
-      "code_fingerprint": "sha256:3ce30449af36939b7d1106f8998bdec3d24af7863e79cc8308db475a07c4b25f",
+      "code_fingerprint": "sha256:3a24b0fe70f457679f720acdf81bcc556f0642c53cc21aeb8792c0293a94feb0",
       "kind": "text",
       "outputs": []
     },
     "fast-transformer-the-subject-1": {
-      "code_fingerprint": "sha256:910e72fe58a25916208b2cbe2efb63f5ba9c7605645a60cf28a23e7e807d07d2",
+      "code_fingerprint": "sha256:016545864144d2752d1410d39bebf1ee896cf93f58d4e68a81f33cc6edac93e6",
       "kind": "text",
       "outputs": [
         {
@@ -35,126 +35,142 @@
       ]
     },
     "fast-transformer-the-subject-2": {
-      "code_fingerprint": "sha256:c1727538be3f65176019073791cf32b1c2b11b0ba6f838b3b4713aab4a8da2d4",
+      "code_fingerprint": "sha256:22a850682376309bf76330c5222b5dda5baa299702ec7ed5e9f479a970262b95",
       "kind": "text",
       "outputs": []
     },
     "fast-transformer-rung-0-baseline-profiled": {
-      "code_fingerprint": "sha256:4a0073ca8c4a90dc76f85b781141a71c53764a0a057d47a322fd9d52f9e48084",
+      "code_fingerprint": "sha256:d46414208b184fba280d201f7b424020518673322c701764250658419bc4bc06",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "baseline: 331,680 tokens/s (1.00x), windows within 5.6%\n"
+          "text": "baseline: 321,379 tokens/s (1.00x), windows within 1.9%\n"
         }
       ]
     },
     "fast-transformer-the-baseline-2": {
-      "code_fingerprint": "sha256:3a60089ee518ec73daeceba545ffa2c5d1a6fb1e5eb97fb18cf7a73717191fd6",
+      "code_fingerprint": "sha256:6f8a0fefb7b9054c75718d90fafcb40acfb91e5c2861cc78ac1cc7deb2758b0c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 24.70 ms per step, device busy 24.38 ms (99%), matrix products 64%\n  3.26 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  3.08 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  2.83 ms  12%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  2.40 ms  10%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n"
+          "text": "wall clock 25.49 ms per step, device busy 24.46 ms (96%), matrix products 64%\n  3.28 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  3.09 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  2.84 ms  12%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  2.41 ms  10%  vectorized_elementwise_kernel<4, BinaryFunctor<float\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-1": {
-      "code_fingerprint": "sha256:c10e4bafdf8e5250149692c45a360210a20c57df8d684b4870b374b0c3071ed9",
+      "code_fingerprint": "sha256:ccffd0e1e946ab3deccf32ca2111deb4af7aa5816267eeb0b642810584bc4b8a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "relative difference of the compiled logits: 1.9e-05\n"
+          "text": "relative difference of the compiled logits: 1.7e-05\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ compile: 369,865 tokens/s (1.12x), windows within 0.0%\n"
+          "text": "+ compile: 368,476 tokens/s (1.15x), windows within 0.1%\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-5": {
-      "code_fingerprint": "sha256:1dbb59dbb5927d72460afe33e30cdd1f59b3b11d9f4f2169462195e374463742",
+      "code_fingerprint": "sha256:993529ced5962e52c4d8cb9a4967466547c30359463d553caa17f92ed94189f0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 22.15 ms per step, device busy 22.20 ms (100%), matrix products 71%\n  3.99 ms  18%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  3.04 ms  14%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  2.82 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.44 ms   6%  triton_poi_fused__unsafe_view_mul_silu_silu_backward\n"
+          "text": "wall clock 22.23 ms per step, device busy 22.27 ms (100%), matrix products 71%\n  4.01 ms  18%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  3.05 ms  14%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_t\n  2.83 ms  13%  Kernel2<cutlass_80_tensorop_s1688gemm_128x128_32x3_n\n  1.44 ms   6%  fmha_cutlassB_f32_aligned_64x64_k64_sm80\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-2": {
-      "code_fingerprint": "sha256:385cc2ec07667f5368ed57099a682fbc175c4baeef065a952837b59e750dca04",
+      "code_fingerprint": "sha256:3383aef9c2f8c23e619c5c0f293c6ea47cf300cf54a2f9aeb5dbe4f2f6e8995f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "relative difference of the bf16 logits: 1.9e-03\n"
+          "text": "relative difference of the bf16 logits: 2.0e-03\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ bf16: 645,221 tokens/s (1.74x), windows within 0.1%\n"
+          "text": "+ bf16: 643,172 tokens/s (1.75x), windows within 0.1%\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-3": {
-      "code_fingerprint": "sha256:8a9810512f14a18f0b7456eb8f9f419abc800f83d23b35ad29009e93b9d53339",
+      "code_fingerprint": "sha256:cf8e44cf9fe4c2824fa489635d9b21921c96761b71db1aee4cb80cea1311e1e5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ batch 512: 654,755 tokens/s (1.01x), windows within 0.0%\nmemory beyond weights and optimizer state: 8.6 GiB\n"
+          "text": "+ batch 512: 653,081 tokens/s (1.02x), windows within 0.0%\nmemory beyond weights and optimizer state: 8.6 GiB\n"
         }
       ]
     },
     "fast-transformer-larger-minibatches-1": {
-      "code_fingerprint": "sha256:3e89af5e070b2ab2c0fea2b932423661adae0fe3230748e5d66f68a091a97846",
+      "code_fingerprint": "sha256:6e78fd0b45c44eca147393dc358dd9bf8bd8755366796f8333f293eb0012557f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "wall clock 100.09 ms per step, device busy 100.09 ms (100%), matrix products 57%\n 11.57 ms  12%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_3\n 10.73 ms  11%  ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_tn\n  7.41 ms   7%  Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_bf1\n  5.62 ms   6%  triton_poi_fused__unsafe_view_mm_mul_silu_silu_backw\n"
+          "text": "wall clock 100.35 ms per step, device busy 100.36 ms (100%), matrix products 57%\n 11.63 ms  12%  ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_3\n 10.78 ms  11%  ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_tn\n  7.45 ms   7%  Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_bf1\n  5.62 ms   6%  triton_poi_fused__unsafe_view_mm_mul_silu_silu_backw\n"
+        }
+      ]
+    },
+    "fast-transformer-activation-checkpointing-1": {
+      "code_fingerprint": "sha256:9e1d3f3064be6133b98385d6e5669181669f888bbedc2c626e5d8fc67561e455",
+      "kind": "text",
+      "outputs": []
+    },
+    "fast-transformer-activation-checkpointing-2": {
+      "code_fingerprint": "sha256:7d2f873a21e486da302d275ec4d158c75365a75ac0a4c9ee7eb81d096e4cff83",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "forward pass 30.8 ms of a 100.3 ms step: repeating it keeps at least 0.77 of the throughput\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-4": {
-      "code_fingerprint": "sha256:2c71af6195560080eb0b2204ce3eee93d824f4c43dd2d6198087057229dc6fd4",
+      "code_fingerprint": "sha256:3139cbbb4724a1c20fe45629df9350faf26a355516a43cfd602b372823a68f85",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ checkpointing: 557,775 tokens/s (0.85x), windows within 0.0%\nmemory beyond weights and optimizer state: 3.2 GiB\n"
+          "text": "+ checkpointing: 555,714 tokens/s (0.85x), windows within 0.0%\nmemory beyond weights and optimizer state: 3.2 GiB\n"
         }
       ]
     },
     "fast-transformer-rungs-each-one-measured-7": {
-      "code_fingerprint": "sha256:0aad3f13208c3b1786f1aa066bca88474cab9f427d8a17281ac7d90e5d5e6253",
+      "code_fingerprint": "sha256:ed9949de82258a9da043c36fde6821117769b2c8c08db1d8a9eb94567be413d9",
       "kind": "text",
       "outputs": []
     },
     "fast-transformer-rungs-each-one-measured-8": {
-      "code_fingerprint": "sha256:b38388c136226662837a7b27c37c6e5adcb1798fd8e96bb44603f4cb3b0a1400",
+      "code_fingerprint": "sha256:5304a9e6bc5ba82fcbba6af06e553fc0b91618d46672996dfa5821e7806aa806",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32, batch 64 per GPU: 365,538 tokens/s on one GPU\n"
+          "text": "fp32, batch 64 per GPU: 364,904 tokens/s on one GPU\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2 GPUs: allreduce  31 ms, speedup predicted 0.83x, measured 0.92x\n"
+          "text": "  2 GPUs: allreduce  31 ms, speedup predicted 0.83x, measured 0.91x\n"
         },
         {
           "type": "stream",
@@ -164,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16, batch 512 per GPU: 664,200 tokens/s on one GPU\n"
+          "text": "bf16, batch 512 per GPU: 662,748 tokens/s on one GPU\n"
         },
         {
           "type": "stream",
@@ -179,40 +195,40 @@
       ]
     },
     "fast-transformer-the-waterfall": {
-      "code_fingerprint": "sha256:a59246a9928b3c1c8b99b9f2090a7c4dcde56f3c5793149108a018ab25aabe5a",
+      "code_fingerprint": "sha256:269f585069440c19efd3216b7b47d84a8097996eb14a2ddf38698657ee978e0c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "configuration       tokens/s   step  total  TFLOP/s   MFU\nbaseline             331,680  1.00x  1.00x     37.8   23%\n+ compile            369,865  1.12x  1.12x     42.2   26%\n+ bf16               645,221  1.74x  1.95x     73.6   45%\n+ batch 512          654,755  1.01x  1.97x     74.7   45%\n---------------------------------------------------------\n+ checkpointing      557,775  0.85x            63.6   39%  (not kept)\n"
+          "text": "configuration       tokens/s   step  total  TFLOP/s   MFU\nbaseline             321,379  1.00x  1.00x     36.7   22%\n+ compile            368,476  1.15x  1.15x     42.0   25%\n+ bf16               643,172  1.75x  2.00x     73.4   44%\n+ batch 512          653,081  1.02x  2.03x     74.5   45%\n---------------------------------------------------------\n+ checkpointing      555,714  0.85x            63.4   38%  (not kept)\n"
         }
       ]
     },
     "fast-transformer-the-waterfall-1": {
-      "code_fingerprint": "sha256:a708a6290bdd83e53385f8f5ff669cf854fae6e013cab7583df36c0eea923129",
+      "code_fingerprint": "sha256:8c337088e47a7450460a59d300bc44ade76b00ed69a1b3669d45be88812869e3",
       "kind": "text",
       "outputs": []
     },
     "fast-transformer-training-check": {
-      "code_fingerprint": "sha256:3a5224040e440177afbd26554202b8d335fe1224f796fad39e264f11930f5f7a",
+      "code_fingerprint": "sha256:f1d4c4aafcc46e77fc7b126c548d67d212b88065d59a8d16e2d955a33e0052d6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss at step        1     50    100    200     last 20 steps  validation\nbaseline         5.62   2.88   2.38   2.07      2.01 to 2.09        2.01\nfinal            5.62   2.95   2.42   2.06      2.04 to 2.12        2.02\n"
+          "text": "loss at step        1     50    100    200     last 20 steps  validation\nbaseline         5.68   2.90   2.44   2.04      2.04 to 2.12        2.02\nfinal            5.68   2.90   2.44   2.00      2.00 to 2.09        2.01\n"
         }
       ]
     },
     "fast-transformer-account": {
-      "code_fingerprint": "sha256:1c5764e73e21fb2284f28d31981c061b7237ef6d997985954e2f524fbf5b6fb3",
+      "code_fingerprint": "sha256:b7ec6af67b216b9cffb721cc99f73d5d0d154a7d0bc8d22fa53fdd5e5b1cb37d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ms per 8,192 tokens       step  at peak  products  other\nbaseline (tf32)           24.7     11.3      15.6    8.8\n+ batch 512 (bf16)        12.5      5.7       7.1    5.4\n"
+          "text": "ms per 8,192 tokens       step  at peak  products  other\nbaseline (tf32)           25.5     11.3      15.6    8.8\n+ batch 512 (bf16)        12.5      5.7       7.1    5.4\n"
         }
       ]
     }

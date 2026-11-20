@@ -33,15 +33,16 @@ and an account of where its time goes.
 ```{.python .input #fast-transformer-setup}
 %%tab jax
 # Let XLA overlap collectives with computation. JAX reads XLA_FLAGS once,
-# when it starts, so this cell runs before the imports. The notebook also
-# runs with --xla_gpu_enable_triton_gemm=false in XLA_FLAGS, so that XLA
-# calls cuBLAS for the matrix products (the Triton kernels it would generate
-# run the products of the large minibatches more slowly on the RTX 4090),
-# with NCCL_LOCAL_REGISTER=0: NCCL's buffer registration fails on GPUs
-# without peer-to-peer access and would print a warning at every collective,
-# and with XLA_PYTHON_CLIENT_ALLOCATOR='vmm', which maps each array into one
-# contiguous range: the fp32 step of the training check needs about 13 GiB
-# in one piece after many other arrays have come and gone.
+# when it starts, so this cell runs before the imports. Our outputs come
+# from a run with three more settings in the environment, which you set
+# before starting: --xla_gpu_enable_triton_gemm=false in XLA_FLAGS, so that
+# XLA calls cuBLAS for the matrix products (the Triton kernels it would
+# generate run the products of the large minibatches more slowly on the
+# RTX 4090); NCCL_LOCAL_REGISTER=0, since NCCL's buffer registration fails
+# on GPUs without peer-to-peer access and would print a warning at every
+# collective; and XLA_PYTHON_CLIENT_ALLOCATOR=vmm, which maps each array
+# into one contiguous range: the fp32 step of the training check needs
+# about 13 GiB in one piece after many other arrays have come and gone.
 import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_enable_latency_hiding_scheduler=true')
@@ -83,9 +84,10 @@ from torch.utils.checkpoint import checkpoint
 ```{.python .input #fast-transformer-case-study-optimizing-a-transformer-2}
 %%tab pytorch
 torch.set_float32_matmul_precision('high')  # fp32 products on tf32 cores
-# The notebook runs with TEARDOWN_CUPTI=1 in the environment, so that the
-# profiler of the cells below detaches from the GPU when a profile ends;
-# without it, every later kernel launch of the process stays slower
+# Our outputs come from a run with TEARDOWN_CUPTI=1 in the environment, set
+# before starting, so that the profiler of the cells below detaches from
+# the GPU when a profile ends; without it, every later kernel launch of the
+# process stays slower
 ```
 
 ## Experimental Setup
@@ -741,6 +743,28 @@ checkpointed blocks; the rest of its forward pass stays as `FusedGPT`
 defines it. Before the timing we check that it computes the same logits.
 :end_tab:
 
+```{.python .input #fast-transformer-activation-checkpointing-1}
+%%tab pytorch
+X512, _ = next(windows(corpus, 512))  # One minibatch of the last step
+with torch.no_grad(), torch.autocast('cuda', torch.bfloat16):
+    t_forward = d2l.Benchmark(lambda: compiled(X512)).time
+```
+
+```{.python .input #fast-transformer-activation-checkpointing-1}
+%%tab jax
+X512, _ = next(windows(corpus, 512))  # One minibatch of the last step
+forward = nnx.jit_partial(lambda model, X: model(X), model16, graph=False)
+t_forward = d2l.Benchmark(lambda: forward(X512)).time
+```
+
+```{.python .input #fast-transformer-activation-checkpointing-2}
+%%tab pytorch, jax
+t_step = 512 * 128 / results['+ batch 512']  # Seconds per step
+print(f'forward pass {1e3 * t_forward:.1f} ms of a {1e3 * t_step:.1f} ms '
+      f'step: repeating it keeps at least {1 / (1 + t_forward / t_step):.2f} '
+      f'of the throughput')
+```
+
 ```{.python .input #fast-transformer-rungs-each-one-measured-4}
 %%tab pytorch
 class Checkpointed(nn.Module):
@@ -952,6 +976,7 @@ def data_parallel(k, bf16, batch_size):
     """Tokens per second on k GPUs, and seconds per allreduce of all
     gradients."""
     mesh = jax.make_mesh((k,), ('data',), devices=jax.devices()[:k],
+                         # Auto: the compiler places intermediate results
                          axis_types=(jax.sharding.AxisType.Auto,))
     copy, split = NamedSharding(mesh, P()), NamedSharding(mesh, P('data'))
     net = (FusedGPT if bf16 else d2l.GPT)(len(data.vocab), num_hiddens=512,

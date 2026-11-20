@@ -35,16 +35,16 @@ that one of them sends to another passes through host memory.
 ```{.python .input #multi-gpu-practice-setup}
 %%tab jax
 # JAX and NCCL read these settings once, when they start, so this cell runs
-# before the imports. XLA moves a collective away from the computation
-# around it, so that the two overlap, only when its latency-hiding scheduler
-# is on. The 'vmm' allocator reserves nothing up front and maps each array
-# into one contiguous range, where JAX's default allocator reserves most of
-# every GPU at start-up and carves every array out of that block: one step
-# below needs about 10 GB in one piece after many smaller arrays have come
-# and gone, and a later cell starts a second JAX process on the same GPUs.
-# The notebook also runs with NCCL_LOCAL_REGISTER=0: NCCL's buffer
-# registration fails on GPUs without peer-to-peer access, such as ours, and
-# would print a warning at every collective.
+# before the imports. XLA overlaps a collective with computation only when
+# its latency-hiding scheduler is on. The 'vmm' allocator reserves nothing
+# up front and maps each array into one contiguous range, where JAX's
+# default allocator reserves most of every GPU at start-up and carves every
+# array out of that block: one step below needs about 10 GB in one piece
+# after many smaller arrays have come and gone, and a later cell starts a
+# second JAX process on the same GPUs.
+# On GPUs without peer-to-peer access, such as ours, set
+# NCCL_LOCAL_REGISTER=0 in the environment before starting: NCCL's buffer
+# registration fails there and prints a warning at every collective.
 import os
 os.environ.setdefault('XLA_PYTHON_CLIENT_ALLOCATOR', 'vmm')
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
@@ -533,21 +533,30 @@ if d2l.num_gpus() >= 2:
 
 ```{.python .input #multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5}
 %%tab jax
-key = d2l.get_key()                   # One initialization for both steps
+key = d2l.get_key()                   # One initialization for every step
 idx = np.random.default_rng().permutation(len(y_train))[:256]
-updates = []
+
+def update(k, idx):
+    """Parameter change of one step on k GPUs on the examples idx."""
+    mesh, model, opt, (X, y) = setup(k, key)
+    before = jax.tree.map(np.asarray, nnx.state(model, nnx.Param))
+    train_step(model, opt, X, y,
+               jax.device_put(idx, NamedSharding(mesh, P('data'))))
+    return jax.tree.leaves(jax.tree.map(lambda p, b: np.asarray(p) - b,
+                                        nnx.state(model, nnx.Param), before))
+
 with jax.default_matmul_precision('highest'):  # Full fp32 convolutions
-    for k in (1, min(2, jax.device_count())):
-        mesh, model, opt, (X, y) = setup(k, key)
-        before = jax.tree.map(np.asarray, nnx.state(model, nnx.Param))
-        train_step(model, opt, X, y,
-                   jax.device_put(idx, NamedSharding(mesh, P('data'))))
-        updates.append(jax.tree.map(lambda p, b: np.asarray(p) - b,
-                                    nnx.state(model, nnx.Param), before))
-u1, u2 = (jax.tree.leaves(u) for u in updates)
-print(f'largest update {max(np.abs(u).max() for u in u1):.1e}\n'
-      f'largest difference between one and two GPUs: '
-      f'{max(np.abs(a - b).max() for a, b in zip(u1, u2)):.1e}')
+    two = update(min(2, jax.device_count()), idx)
+    full = update(1, idx)
+    # For SGD, the mean of the steps on the two halves is the step on
+    # their accumulated gradients
+    halves = [(a + b) / 2 for a, b in zip(*(update(1, half)
+                                            for half in np.split(idx, 2)))]
+gap = lambda u: max(np.abs(a - b).max() for a, b in zip(two, u))
+print(f'largest update {max(np.abs(u).max() for u in two):.1e}\n'
+      f'largest difference from one GPU on all 256: {gap(full):.1e}\n'
+      f'largest difference from one GPU on two accumulated halves: '
+      f'{gap(halves):.1e}')
 ```
 
 :begin_tab:`pytorch`

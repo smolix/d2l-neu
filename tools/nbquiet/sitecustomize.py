@@ -223,8 +223,11 @@ _IGNORED_WARNINGS = (
     # torch.profiler, re-entered once per rung in the performance chapter.
     dict(message=r".*Profiler clears events at the end of each cycle.*"),
     # torch.compile (Inductor) on a split reduction, in the compiled training
-    # step of the diffusion chapter: a performance note, not a problem.
-    dict(message=r".*Online softmax is disabled on the fly.*"),
+    # step of the diffusion chapter: a performance note, not a problem. The
+    # message starts with a newline (textwrap.dedent of a triple-quoted
+    # string), and filterwarnings matches from the start without DOTALL, so
+    # the pattern must allow leading whitespace.
+    dict(message=r"\s*Online softmax is disabled on the fly"),
 )
 
 

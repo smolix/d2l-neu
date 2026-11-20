@@ -59,7 +59,7 @@ For a minibatch of $n$ examples, the logits form an $n \times q$ matrix $\mathbf
 
 $$\mathrm{softmax}(\mathbf{O})_{ij} = \frac{\exp(O_{ij})}{\sum_{k=1}^q \exp(O_{ik})}.$$
 
-In code, we exponentiate `O`, sum across columns (`axis=1`) with `keepdims=True` so the row sums keep shape `(n, 1)`, and divide via broadcasting:
+In code, we exponentiate `O`, sum across columns (`axis=1`) with `keepdims=True` so the row sums keep shape `(n, 1)`, and divide via broadcasting. Let us test `softmax` on our cat/chicken/dog logits $(1.0, 2.2, 0.3)$ from :numref:`sec_softmax` and on a row of zeros:
 
 ```{.python .input #softmax-regression-scratch-the-softmax-2}
 def softmax(O):
@@ -291,9 +291,9 @@ this in `cross_entropy`, we average the negative logarithms across the
 minibatch. Notice the one defensive clamp to $10^{-12}$ before taking the
 logarithm: it stops an underflowed zero probability from turning into
 $-\infty$, capping the per-example loss at $27.6$, though—as the comment
-notes—clamping also zeroes out the gradient whenever it triggers. In
-:numref:`sec_softmax_concise`, we replace this stopgap with a fused loss
-computed directly from logits.
+notes—clamping also zeroes out the gradient whenever it triggers. In the
+next section, we replace this stopgap with a fused loss computed directly
+from logits.
 
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-2}
 %%tab pytorch
@@ -379,14 +379,13 @@ points recorded in `trainer.history['val_loss'][-1]` and
 trainer.evaluate(model, data)
 ```
 
-Our classifier gets roughly 83% of the validation images right. How well
-does the finished model fit the 60,000 training images?
+Our classifier gets roughly 83% of the validation images right—and we
 
 ```{.python .input #softmax-regression-scratch-the-training-run-2}
 trainer.evaluate(model, data, train=True)
 ```
 
-After 10 epochs, validation accuracy settles near $83\%$ (varying by $\pm 1\%$ across random seeds) and training accuracy sits near $84$–$85\%$. That tiny generalization gap of one to two points reflects the restricted capacity of a linear classifier: $7{,}850$ parameters cannot memorize $60{,}000$ images (:numref:`chap_classification_generalization`).
+After 10 epochs, validation accuracy settles near $83\%$ (varying by $\pm 1\%$ across random seeds) and training accuracy sits near $84\%$. That tiny $1\%$ generalization gap reflects the restricted capacity of a linear classifier: $7{,}850$ parameters cannot memorize $60{,}000$ images (:numref:`chap_classification_generalization`).
 
 ### Misclassified Images
 
@@ -653,9 +652,9 @@ trainer.fit(model, data)
 
 ## Summary
 
-- **From-scratch pipeline and `Classifier`:** Implementing rowwise `softmax`, indexed `cross_entropy`, and `SoftmaxRegressionScratch` alongside the reusable `Classifier` base class (which logs both validation loss and accuracy) reaches $\sim 83\%$ validation accuracy and $84$–$85\%$ training accuracy on Fashion-MNIST in 10 epochs.
+- **From-scratch pipeline and `Classifier`:** Implementing rowwise `softmax`, indexed `cross_entropy`, and `SoftmaxRegressionScratch` alongside the reusable `Classifier` base class (which logs both validation loss and accuracy) reaches $\sim 83\%$ validation accuracy and $\sim 84\%$ training accuracy on Fashion-MNIST in 10 epochs.
 - **Error analysis via confusion matrix and templates:** Accumulating $\mathbf{P}^\top\mathbf{Y}$ across minibatches builds the $10 \times 10$ confusion matrix without Python loops over examples, revealing that errors concentrate among the four upper-body tops whose learned $28 \times 28$ weight templates overlap heavily.
-- **Fused LogSumExp loss (:numref:`sec_softmax_concise`):** Evaluating $l(y, \mathbf{o}) = o_{\max} + \log\sum_k \exp(o_k - o_{\max}) - o_y$ directly from raw logits prevents both `exp` overflow and `log(0)` underflow while keeping gradients intact across arbitrary logit magnitudes.
+- **Fused LogSumExp loss (`sec_softmax_concise`):** Evaluating $l(y, \mathbf{o}) = o_{\max} + \log\sum_k \exp(o_k - o_{\max}) - o_y$ directly from raw logits prevents both `exp` overflow and `log(0)` underflow while keeping gradients intact across arbitrary logit magnitudes.
 
 ## Exercises
 

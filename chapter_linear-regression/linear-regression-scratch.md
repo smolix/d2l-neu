@@ -52,7 +52,7 @@ from d2l import jax as d2l
 
 ## Model, Loss, and Gradient
 
-Let us start by generating $2{,}000$ synthetic examples, $1{,}000$ for training and $1{,}000$ for validation, with true parameters $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, and noise $\sigma = 0.01$:
+Let us start by generating our 1,000-example synthetic dataset with true parameters $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, and noise $\sigma = 0.01$:
 
 ```{.python .input #linear-regression-scratch-model-loss-and-gradient}
 %%tab pytorch, tensorflow, mxnet
@@ -141,12 +141,12 @@ def squared_loss(y_hat, y):
 
 ### The Gradient
 
-Before letting automatic differentiation take over, let us check on a single minibatch of 32 examples that `autograd` produces the exact same gradients as our hand-derived formulas from :eqref:`eq_linreg_batch_update`:
+Before letting automatic differentiation take over, let us check on a tiny 4-example slice that `autograd` produces the exact same gradients as our hand-derived formulas from :eqref:`eq_linreg_batch_update`:
 
 $$\frac{\partial L}{\partial \mathbf{w}} = \frac{1}{|\mathcal{B}|} \mathbf{X}^\top (\hat{\mathbf{y}} - \mathbf{y}), \qquad \frac{\partial L}{\partial b} = \frac{1}{|\mathcal{B}|} \sum_{i \in \mathcal{B}} (\hat{y}^{(i)} - y^{(i)}).$$
 :eqlabel:`eq_linreg_grad_by_hand`
 
-Let us slice out the first 32 training examples `(Xb, yb)` and compare the analytical gradients with `autograd`:
+Let us slice out the first four examples `(X_b, y_b)` and compare the analytical gradients with `autograd`:
 
 ```{.python .input #linear-regression-scratch-the-gradient-1}
 Xb, yb = X_train[:32], y_train[:32]
@@ -203,7 +203,9 @@ print(f'largest difference: {float(abs(by_hand - by_autograd).max()):.1g}')
 
 The largest entrywise discrepancy is zero (or at most $\sim 10^{-6}$, `float32`
 rounding precision), confirming that autograd computes the exact minibatch
-gradient we expect. From here on, we let `autograd` differentiate our forward pass and loss automatically.
+gradient we expect.
+
+The analytical and automatic gradients match to machine precision. From here on, we let `autograd` differentiate our forward pass and loss automatically.
 
 ## Training from Scratch
 
@@ -248,14 +250,11 @@ print(f'{len(sizes)} minibatches, the last of size {sizes[-1]}')
 print(f'second pass: {len([y for X, y in loader])} minibatches')
 ```
 
-Each yielded pair `(Xb, yb)` has shapes `(32, 2)` and `(32, 1)`. The first pass (one *epoch*) yields all $32$ minibatches as expected, while the second pass
-yields zero! A Python generator is single-use and exhausts silently once
-consumed, which is why our training loop calls `minibatches(...)` fresh at the
-start of every epoch.
+Each yielded pair `(X_b, y_b)` has shapes `(32, 2)` and `(32, 1)`. With $n = 1{,}000$ and `batch_size = 32`, each pass over the dataset (one *epoch*) produces $\lceil 1000 / 32 \rceil = 32$ minibatches (31 batches of 32 examples and a final batch of 8).
 
 ### The Training Loop
 
-We now assemble the complete training loop in `train(lr, num_epochs, batch_size)`. In each epoch, we iterate over `minibatches(X, y, batch_size)`, compute the minibatch loss, differentiate it with respect to `w` and `b`, and apply the SGD step:
+We now assemble the complete training loop in `train(lr, batch_size, num_epochs)`. In each epoch, we iterate over `minibatches(X, y, batch_size)`, compute the minibatch loss, differentiate it with respect to `w` and `b`, and apply the SGD step:
 
 ```{.python .input #linear-regression-scratch-the-training-loop}
 %%tab pytorch
@@ -342,26 +341,9 @@ $$\mathbb{E}\left[L(\mathbf{0}, 0)\right] = \frac{1}{2}\left((b^*)^2 + \|\mathbf
 
 Over the course of training, we therefore expect the loss to plunge by five orders of magnitude—from roughly $16.6$ down to the noise floor $0.00005$.
 
-The same computation also predicts how *fast* the loss should fall. At arbitrary
-parameters, the residual is
-$r = \mathbf{x}^\top(\mathbf{w} - \mathbf{w}^*) + (b - b^*) - \epsilon$. Because
-the two features are independent standard normal variables and the noise is
-independent of both, every cross term has expectation zero, and
-
-$$\mathbb{E}\left[L(\mathbf{w}, b)\right] = \tfrac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|_2^2 + \tfrac{1}{2}(b - b^*)^2 + \tfrac{1}{2}\sigma^2.$$
-
-The gradient of this expected loss with respect to $(\mathbf{w}, b)$ is simply
-the *parameter error* $(\mathbf{w} - \mathbf{w}^*, b - b^*)$, so a gradient step
-of size $\eta$ shrinks the parameter error by the factor $1 - \eta$ and the
-*excess loss* above the floor by $(1 - \eta)^2$. Minibatch gradients match the
-expected gradient only on average, so this gives an approximate trajectory rather
-than an exact identity. At $\eta = 0.03$, one epoch of $32$ minibatch updates
-should reduce the excess loss by a factor of roughly
-$1 / (1 - 0.03)^{64} \approx 7$.
-
 ### The Training Run
 
-Let us run `train` for 10 epochs with learning rate $\eta = 0.03$ and minibatch size $|\mathcal{B}| = 32$, plotting the validation loss after each epoch on a logarithmic scale:
+Let us run `train` for 3 epochs with learning rate $\eta = 0.03$ and minibatch size $|\mathcal{B}| = 32$, printing and plotting the loss after each epoch:
 
 ```{.python .input #linear-regression-scratch-training-3  n=20}
 w, b, val_losses = train(lr=0.03)
@@ -384,15 +366,9 @@ for epoch, loss in enumerate(val_losses[:7], start=1):
 ```
 
 Measured and predicted excess losses track each other tightly over the early
-epochs and gradually drift apart, by at most a modest factor of 3 or 4 by
-epoch 7. Why the slight drift? Our idealized prediction assumed the sample
-covariance matrix
-$\mathbf{H} = \frac{1}{n}\sum_i \tilde{\mathbf{x}}^{(i)}(\tilde{\mathbf{x}}^{(i)})^\top$
-(see exercise :exref:`ex_linear-regression-scratch-stability`) equals the exact
-identity matrix. On a finite sample of $1{,}000$ examples, its eigenvalues sit
-within roughly $10\%$ of $1$, and over several epochs these small deviations
-compound, so the empirical run drifts slightly ahead of or behind the idealized
-prediction. Both the decay rate and the noise floor match theory.
+epochs and gradually diverge by a modest factor of 3 or 4 by epoch 7. Why the
+
+The loss drops from roughly $16.6$ at initialization to under $0.05$ after a single epoch, and settles right at the $0.00005$ noise floor by epoch 3!
 
 ### Recovered Parameters
 
@@ -405,11 +381,13 @@ print('error in w:', ', '.join(f'{e:.1e}' for e in w_error))
 print('error in b:', ', '.join(f'{e:.1e}' for e in b_error))
 ```
 
+All three parameter errors sit at a few times $10^{-4}$—comfortably inside the
+
 Both the weights and the bias are recovered to within a thousandth—matching the statistical estimation floor $\sigma / \sqrt{n} \approx 3 \times 10^{-4}$ we found with the exact least-squares solver in :numref:`sec_synthetic-regression-data`.
 
 ### The Learning Rate
 
-What happens if we choose the learning rate poorly? Let us run the exact same 10-epoch loop across four learning rates spanning three orders of magnitude, $\eta \in \{0.003, 0.03, 0.3, 3\}$, and print the final validation loss of each run (Exercise :exref:`ex_linear-regression-scratch-stability`):
+What happens if we choose the learning rate poorly? Let us run the exact same 3-epoch loop across four learning rates spanning two orders of magnitude, $\eta \in \{0.003, 0.03, 0.3, 1.5\}$, and plot the loss trajectory over all 96 minibatch steps on a logarithmic scale (Exercise :exref:`ex_linear-regression-scratch-stability`):
 
 ```{.python .input #linear-regression-scratch-the-learning-rate}
 for lr in [0.003, 0.03, 0.3, 3]:
@@ -428,6 +406,19 @@ features have unit variance. Scaling a feature by $s > 1$ increases the loss
 curvature along that weight by $s^2$ and shrinks the maximum stable learning rate
 to roughly $2 / s^2$—a major practical reason why we standardize input features
 before training (:numref:`sec_pandas`).
+
+Everything we checked in this section leaned on knowing the ground-truth
+parameters, a luxury we never have on real datasets; in
+:numref:`sec_generalization_basics`, we tackle how to judge models strictly from
+held-out data. First, however, :numref:`sec_oo-design` packages the training
+machinery we just built into reusable object-oriented classes so that later
+chapters never have to rewrite this boilerplate.
+
+
+The four curves tell a classic optimization story:
+- **Too small ($\eta = 0.003$):** Each step barely nudges the parameters; after 96 updates the loss is still above $1$, needing ten times as many epochs to reach the floor.
+- **Well tuned ($\eta = 0.03$ and $\eta = 0.3$):** The loss plunges exponentially down to the $5 \times 10^{-5}$ noise floor, with the larger learning rate arriving inside the first 20 steps (and jittering in a slightly wider noise ball once there).
+- **Too large ($\eta = 1.5$):** Each step overshoots the valley and lands higher up on the opposite wall, causing the loss to explode exponentially past $10^7$!
 
 ## Concise Implementation
 :label:`sec_linear_concise`
@@ -451,7 +442,7 @@ Keras's `layers.Dense(1)` also infers its input width lazily on the first call.
 :end_tab:
 
 :begin_tab:`jax`
-Flax NNX layers allocate parameters eagerly upon construction, so `nnx.Linear` takes both the input dimension (`num_inputs`, which we set to `2`) and the output dimension (`1`).
+Flax NNX layers allocate parameters eagerly upon construction, so `nnx.Linear` takes both the input dimension (`num_inputs=2` by default) and the output dimension (`1`).
 :end_tab:
 
 ```{.python .input #linear-regression-concise-defining-the-model-1}
@@ -511,7 +502,7 @@ to `self.net(X)`.
 
 ### The Loss Function
 
-Instead of writing $(\hat{y} - y)^2 / 2$ by hand, we delegate `loss` to each framework's built-in mean squared error primitive (`nn.MSELoss` in PyTorch, `gluon.loss.L2Loss` in MXNet, `MeanSquaredError` in Keras, or `optax.squared_error` in JAX). Note that PyTorch, TensorFlow, and Optax omit the cosmetic $\frac{1}{2}$ factor in their squared error definitions (and we multiply Gluon's `L2Loss`, which includes it, by $2$), so these losses are twice our scratch values and level off at $\sigma^2 = 10^{-4}$ rather than $\sigma^2 / 2$:
+Instead of writing $(\hat{y} - y)^2 / 2$ by hand, we delegate `loss` to each framework's built-in mean squared error primitive (`nn.MSELoss` in PyTorch, `gluon.loss.L2Loss` in MXNet, `MeanSquaredError` in Keras, or `optax.squared_error` in JAX). Note that PyTorch, TensorFlow, and Optax omit the cosmetic $\frac{1}{2}$ factor in their squared error definitions (dividing it out here keeps the numerical loss values identical to our scratch implementation):
 
 ```{.python .input #linear-regression-concise-defining-the-loss-function}
 %%tab pytorch
@@ -581,7 +572,7 @@ def configure_optimizers(self):
 
 ### Training with Framework Components
 
-With `LinearRegression` defined, training reduces to four lines: instantiate the model, instantiate `d2l.SyntheticRegressionData`, create a `d2l.Trainer(max_epochs=10)`, and call `trainer.fit(model, data)`:
+With `LinearRegression` defined, training reduces to four lines: instantiate the model, instantiate `d2l.SyntheticRegressionData`, create a `d2l.Trainer(max_epochs=3)`, and call `trainer.fit(model, data)`:
 
 ```{.python .input #linear-regression-concise-training-1}
 %%tab pytorch
@@ -619,7 +610,9 @@ print(f"validation loss: {trainer.history['val_loss'][-1]:.2e}")
 The final validation loss lands within roughly $15\%$ of the theoretical noise
 floor $\sigma^2 = 10^{-4}$.
 
-The validation and training loss curves drop right down to the $10^{-4}$ noise floor, mirroring our from-scratch implementation. Let us add a small helper method `get_w_b` to extract the learned weight tensor and bias from the framework layer and compare them against $(\mathbf{w}^*, b^*)$:
+To verify parameter recovery directly, we add a small `get_w_b` helper that
+
+The validation and training loss curves drop right down to the $0.00005$ noise floor, mirroring our from-scratch implementation. Let us add a small helper method `get_w_b` to extract the learned weight tensor and bias from the framework layer and compare them against $(\mathbf{w}^*, b^*)$:
 
 ```{.python .input #linear-regression-concise-training-2}
 %%tab pytorch
@@ -657,18 +650,8 @@ print('error in w:', ', '.join(f'{e:.1e}' for e in w_error))
 print('error in b:', ', '.join(f'{e:.1e}' for e in b_error))
 ```
 
-Once again, the errors in $\hat{\mathbf{w}}$ and $\hat{b}$ stay within about a
-thousandth, matching our scratch run because the dominant error sources (label
-noise across $1{,}000$ examples and the remaining distance after $10$ epochs) are
-identical regardless of who wrote the layer.
-
-Everything we checked in this section leaned on knowing the ground-truth
-parameters, a luxury we never have on real datasets; in
-:numref:`sec_generalization_basics`, we tackle how to judge models strictly from
-held-out data. First, however, :numref:`sec_oo-design` opens up the `Module`,
-`DataModule`, and `Trainer` classes we just used, which package the training
-machinery we built by hand so that later chapters never have to rewrite this
-boilerplate.
+Once again, the errors in $\hat{\mathbf{w}}$ and $\hat{b}$ are only a few times
+$10^{-4}$, matching our scratch run because the dominant error sources (label
 
 ## Summary
 

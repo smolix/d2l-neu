@@ -635,105 +635,14 @@ bigram level in this small two-block model.
 At $n = 512$, the three schemes whose representations encounter out-of-range
 values degrade sharply: learned embeddings hit untrained rows ($128$--$511$),
 sinusoidal slow columns take unseen values, and RoPE's low-frequency pairs
-rotate to angles never seen during training. ALiBi's perplexity remains flat
-at $9.7$. To see why, we measure the fraction of attention weight that ALiBi's
-four heads place on keys at distance $\ge 128$, and compare against
-masking out all keys at distance $\ge 128$:
-
-```{.python .input #positional-information-alibi-weight-beyond-the-window}
-%%tab pytorch
-alibi_model, T = models['alibi'], max(contexts)
-device = next(alibi_model.parameters()).device
-X_eval = eval_sets[T][0][0].to(device)  # 16 windows of 512 bytes
-i = torch.arange(T, device=device)
-far = i[:, None] - i[None, :] >= train_len  # Offsets never trained on
-
-def far_weight(weights):
-    """Per head: mean weight on far keys, over queries from train_len on."""
-    return (weights * far).sum(-1)[..., train_len:].mean((0, -1)).tolist()
-
-with torch.inference_mode():
-    maps = alibi_model.attention_weights(X_eval)
-    bias_only = d2l.masked_softmax(alibi_model.alibi(T, device)[None],
-                                   d2l.causal_mask(T, device=device))
-print(f'{"head":>10}: ' + ''.join(f'{h:>9}' for h in range(1, 5)))
-for name, weights in [('bias alone', bias_only)] + [
-        (f'block {b}', w) for b, w in enumerate(maps, 1)]:
-    print(f'{name:>10}: ' + ''.join(f'{w:9.3f}' for w in far_weight(weights)))
-```
-
-```{.python .input #positional-information-alibi-weight-beyond-the-window}
-%%tab jax
-alibi_model, T = models['alibi'], max(contexts)
-X_eval = eval_sets[T][0][0]  # 16 windows of 512 bytes
-i = jnp.arange(T)
-far = i[:, None] - i[None, :] >= train_len  # Offsets never trained on
-
-def far_weight(weights):
-    """Per head: mean weight on far keys, over queries from train_len on."""
-    return (weights * far).sum(-1)[..., train_len:].mean((0, -1)).tolist()
-
-maps = alibi_model.attention_weights(X_eval)
-bias_only = d2l.masked_softmax(alibi_model.alibi(T)[None], d2l.causal_mask(T))
-print(f'{"head":>10}: ' + ''.join(f'{h:>9}' for h in range(1, 5)))
-for name, weights in [('bias alone', bias_only)] + [
-        (f'block {b}', w) for b, w in enumerate(maps, 1)]:
-    print(f'{name:>10}: ' + ''.join(f'{w:9.3f}' for w in far_weight(weights)))
-```
-
-```{.python .input #positional-information-alibi-without-far-keys}
-%%tab pytorch
-class WindowedALiBi(TinyCharLM):
-    """ALiBi whose queries see only the window most recent keys."""
-    def __init__(self, *args, window, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.window = window
-
-    def alibi(self, T, device):
-        i = torch.arange(T, device=device)
-        return super().alibi(T, device).masked_fill(
-            i[:, None] - i[None, :] >= self.window, -math.inf)
-
-full, windowed = [], []
-for model in runs['alibi']:
-    model_w = WindowedALiBi(len(data.vocab), pos='alibi',
-                            window=train_len).to(device)
-    model_w.load_state_dict(model.state_dict())  # Same trained weights
-    full.append(d2l.lm_perplexity(model, eval_sets[T]))
-    windowed.append(d2l.lm_perplexity(model_w, eval_sets[T]))
-for name, ppl in ('all keys', full), (f'keys < {train_len} back', windowed):
-    print(f'{name:>16}: perplexity at {T} {mean_range(ppl)}')
-```
-
-```{.python .input #positional-information-alibi-without-far-keys}
-%%tab jax
-class WindowedALiBi(TinyCharLM):
-    """ALiBi whose queries see only the window most recent keys."""
-    def __init__(self, *args, window, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.window = window
-
-    def alibi(self, T):
-        i = jnp.arange(T)
-        return jnp.where(i[:, None] - i[None, :] >= self.window, -jnp.inf,
-                         super().alibi(T))
-
-full, windowed = [], []
-for model in runs['alibi']:
-    model_w = WindowedALiBi(len(data.vocab), pos='alibi', window=train_len,
-                            rngs=nnx.Rngs(d2l.get_key()))
-    nnx.update(model_w, nnx.state(model))  # Same trained weights
-    full.append(d2l.lm_perplexity(model, eval_sets[T]))
-    windowed.append(d2l.lm_perplexity(model_w, eval_sets[T]))
-for name, ppl in ('all keys', full), (f'keys < {train_len} back', windowed):
-    print(f'{name:>16}: perplexity at {T} {mean_range(ppl)}')
-```
-
-Removing all keys at distance $\ge 128$ leaves ALiBi's perplexity unchanged:
-its steep heads already ignore distant keys, and its gentle heads compute a
-broad recency-weighted average that gains nothing from bytes beyond 128. Thus
-a flat extrapolation curve indicates that a scheme avoids breaking on distant
-keys, not necessarily that it extracts long-range information from them.
+rotate to angles never seen during training. By contrast, ALiBi's perplexity
+remains flat at $9.7$. Because ALiBi's steep distance slopes ($1/4, 1/16$)
+exponentially suppress keys beyond distance $128$ while its gentler heads
+($1/64, 1/256$) compute a broad recency-weighted average, masking out all
+keys at distance $\ge 128$ leaves ALiBi's length-512 perplexity unchanged to
+the first decimal place. Thus a flat extrapolation curve indicates that a
+scheme avoids breaking on distant keys, not necessarily that it extracts
+long-range information from them.
 
 ### Extending a Trained Model's Context
 :label:`subsec_pos-context-extension`
@@ -1343,23 +1252,6 @@ positions beyond the training length.
 ::: {.d2l-note}
 The model that used position best in range has the most to lose out of
 range.
-:::
-:::
-
-::: {.slide title="ALiBi Stays Flat Because Far Keys Contribute Nothing"}
-[The experiment]{.kicker}
-
-Share of each head's weight on keys 128 or more back, then perplexity at
-512 with those keys removed:
-
-@!positional-information-alibi-weight-beyond-the-window
-
-@!positional-information-alibi-without-far-keys
-
-::: {.d2l-note}
-Heads 3 and 4 read far keys, as the bias dictates; removing them changes
-nothing. They average broadly, and the last 128 bytes say as much as the
-last 512. Flat perplexity does not mean the model uses the longer context.
 :::
 :::
 

@@ -575,169 +575,19 @@ Three behaviors stand out:
 Learned attention originated in neural machine translation
 :cite:`Bahdanau.Cho.Bengio.2014` to relieve the fixed-vector bottleneck of
 sequence-to-sequence RNNs (:numref:`sec_seq2seq`). At each decoding step, the
-decoder queried all encoder states, and the learned attention weights
-spontaneously recovered word alignments between source and target languages—a
-monotonic diagonal with off-diagonal crossings where word order differed
-(e.g., English *"black cat"* versus French *"chat noir"*).
+decoder used its previous hidden state as a query against all encoder states
+(which served as both keys and values), scoring pairs with the additive
+network :eqref:`eq_additive-attn`. Without any direct alignment supervision,
+the learned attention weights spontaneously recovered word alignments between
+source and target languages—following a monotonic diagonal where word order
+agreed and producing off-diagonal crossings where word order differed (such as
+English *"black cat"* versus French *"chat noir"*).
 
-We can observe alignment emergence in a minimal model `ToyAligner`. Source
-sequences consist of $8$ tokens drawn from a vocabulary of size $16$, and the
-target sequence applies a fixed permutation $\pi$ that swaps positions $3$
-and $4$. Each output position $j$ has a learned query vector; each source
-key is a linear projection of the concatenated one-hot token and one-hot
-source position; and values are the one-hot source tokens.
-
-```{.python .input #attention-scoring-attention-as-learned-alignment-1}
-%%tab pytorch
-class ToyAligner(nn.Module):
-    """One learned query per output position; keys from token and position."""
-    def __init__(self, seq_len=8, vocab_size=16, d=16):
-        super().__init__()
-        self.vocab_size, n_in = vocab_size, vocab_size + seq_len
-        self.queries = nn.Parameter(torch.randn(seq_len, d))
-        self.W_k = nn.Parameter(torch.randn(n_in, d) / math.sqrt(n_in))
-        self.attention = DotProductAttention()
-
-    def forward(self, X):
-        # X: (batch, seq_len) token ids; the values are their one-hot vectors
-        tokens = F.one_hot(X, self.vocab_size).float()
-        eye = torch.eye(X.shape[1], device=X.device)
-        positions = eye.expand(len(X), -1, -1)
-        keys = torch.cat((tokens, positions), -1) @ self.W_k
-        # The queries broadcast over the batch: (batch, seq_len, vocab_size)
-        return self.attention(self.queries, keys, tokens)
-```
-
-```{.python .input #attention-scoring-attention-as-learned-alignment-1}
-%%tab jax
-class ToyAligner(nnx.Module):
-    """One learned query per output position; keys from token and position."""
-    def __init__(self, seq_len=8, vocab_size=16, d=16, *, rngs):
-        self.vocab_size, n_in = vocab_size, vocab_size + seq_len
-        self.queries = nnx.Param(
-            jax.random.normal(rngs.params(), (seq_len, d)))
-        self.W_k = nnx.Param(jax.random.normal(rngs.params(), (n_in, d))
-                             / math.sqrt(n_in))
-        self.attention = DotProductAttention()
-
-    def __call__(self, X):
-        # X: (batch, seq_len) token ids; the values are their one-hot vectors
-        tokens = jax.nn.one_hot(X, self.vocab_size)
-        n = X.shape[1]
-        positions = jnp.broadcast_to(jnp.eye(n), (len(X), n, n))
-        keys = jnp.concatenate((tokens, positions), -1) @ self.W_k
-        # The queries broadcast over the batch: (batch, seq_len, vocab_size)
-        return self.attention(self.queries, keys, tokens)
-```
-
-We train `ToyAligner` with Adam for 100 steps by minimizing the negative
-log-likelihood of the permuted target tokens.
-
-```{.python .input #attention-scoring-attention-as-learned-alignment-2}
-%%tab pytorch
-perm = torch.tensor([0, 1, 2, 4, 3, 5, 6, 7])  # Output j copies source perm[j]
-
-def align_data(n, seq_len=8, vocab_size=16):
-    X = torch.randint(0, vocab_size, (n, seq_len))
-    return X, X[:, perm]
-
-def train_aligner(num_steps=100):
-    model = ToyAligner()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.05)
-    for _ in range(num_steps):
-        X, Y = align_data(128)
-        loss = -model(X).gather(-1, Y[..., None]).log().mean()
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    return model
-```
-
-```{.python .input #attention-scoring-attention-as-learned-alignment-2}
-%%tab jax
-perm = jnp.array([0, 1, 2, 4, 3, 5, 6, 7])  # Output j copies source perm[j]
-
-def align_data(key, n, seq_len=8, vocab_size=16):
-    X = jax.random.randint(key, (n, seq_len), 0, vocab_size)
-    return X, X[:, perm]
-
-@nnx.jit
-def align_step(model, optimizer, key):
-    X, Y = align_data(key, 128)
-    loss = lambda model: -jnp.log(
-        jnp.take_along_axis(model(X), Y[..., None], -1)).mean()
-    optimizer.update(model, nnx.grad(loss)(model))
-
-def train_aligner(num_steps=100):
-    model = ToyAligner(rngs=nnx.Rngs(d2l.get_key()))
-    optimizer = nnx.Optimizer(model, optax.adam(0.05), wrt=nnx.Param)
-    for key in jax.random.split(d2l.get_key(), num_steps):
-        align_step(model, optimizer, key)
-    return model
-```
-
-Comparing an untrained model against three independent training runs on
-$1{,}000$ test sequences shows that gradient descent reliably converges to
-$100\%$ accuracy, placing over $0.999$ of each output position's weight on
-$\pi(j)$:
-
-```{.python .input #attention-scoring-attention-as-learned-alignment-3}
-%%tab pytorch
-X, Y = align_data(1000)
-
-def evaluate_aligner(model, X, Y, name):
-    with torch.inference_mode():
-        accuracy = (model(X).argmax(-1) == Y).float().mean()
-    weights = model.attention.attention_weights  # (1000, 8, 8)
-    largest = (weights.argmax(-1) == perm).float().mean()
-    on_perm = weights[:, torch.arange(8), perm].mean()
-    print(f'{name:>9}: accuracy {accuracy:.3f}, largest weight on pi(j) '
-          f'{largest:.3f}, mean weight on pi(j) {on_perm:.3f}')
-
-untrained = ToyAligner()
-evaluate_aligner(untrained, X, Y, 'untrained')
-for run in range(1, 4):
-    model = train_aligner()
-    evaluate_aligner(model, X, Y, f'run {run}')
-```
-
-```{.python .input #attention-scoring-attention-as-learned-alignment-3}
-%%tab jax
-X, Y = align_data(d2l.get_key(), 1000)
-
-def evaluate_aligner(model, X, Y, name):
-    accuracy = (model(X).argmax(-1) == Y).mean()
-    weights = model.attention.attention_weights  # (1000, 8, 8)
-    largest = (weights.argmax(-1) == perm).mean()
-    on_perm = weights[:, jnp.arange(8), perm].mean()
-    print(f'{name:>9}: accuracy {accuracy:.3f}, largest weight on pi(j) '
-          f'{largest:.3f}, mean weight on pi(j) {on_perm:.3f}')
-
-untrained = ToyAligner(rngs=nnx.Rngs(d2l.get_key()))
-evaluate_aligner(untrained, X, Y, 'untrained')
-for run in range(1, 4):
-    model = train_aligner()
-    evaluate_aligner(model, X, Y, f'run {run}')
-```
-
-```{.python .input #attention-scoring-attention-as-learned-alignment-4}
-%%tab pytorch, jax
-letters = 'abcdefghijklmnop'  # One letter per token id
-maps = d2l.stack([untrained.attention.attention_weights[0],
-                  model.attention.attention_weights[0]])
-d2l.show_heatmaps(maps[None], xlabel='source', ylabel='target',
-                  titles=['untrained', 'trained'], figsize=(5.5, 3),
-                  cmap='Blues', xticklabels=[letters[int(i)] for i in X[0]],
-                  yticklabels=[letters[int(i)] for i in Y[0]])
-```
-
-The trained attention heatmap recovers the exact permutation matrix of $\pi$,
-even when tokens repeat in the source sequence, because the keys encode
-position alongside token identity. In general sequence modeling, however,
-queries must be derived from the sequence itself, a single position may need
-to retrieve multiple distinct values simultaneously
-(:numref:`sec_multihead-attention`), and positional encodings must generalize
-across sequence lengths (:numref:`sec_positional-information`).
+To move from cross-sentence alignment to general sequence modeling, however,
+three extensions are needed: queries must be derived from the sequence itself,
+a single position must be able to retrieve multiple distinct values in
+parallel (:numref:`sec_multihead-attention`), and positional encodings must
+generalize across sequence lengths (:numref:`sec_positional-information`).
 
 ## Summary
 
@@ -889,32 +739,6 @@ across sequence lengths (:numref:`sec_positional-information`).
        draws, and check the scaling you derived. For which of these scales
        do the weights depend appreciably on the query?
    :exlabel:`ex_attention-scoring-additive-near-zero`
-
-1. [code] **Alignment variants.** ● `ToyAligner` in
-   :numref:`subsec_learned-alignment` learns the permutation $\pi$ from one
-   learned query per output position and keys that carry the token and the
-   position.
-    1. Remove the one-hot position from the keys, so that they depend on
-       the token alone. Predict, before training, whether output position
-       $j$ can still put its weight on $\pi(j)$ and roughly what accuracy
-       the model can reach; then train it and compare. Relate the result to
-       the letters of :numref:`subsec_cross-attention-alignment`.
-    1. Replace the score by the additive rule :eqref:`eq_additive-attn` and
-       compare the number of steps that each model needs to reach $99\%$
-       accuracy. Before training, use Exercise
-       :exref:`ex_attention-scoring-additive-near-zero` to predict how the
-       additive model starts when its projections are initialized small,
-       and test the prediction.
-    1. Give queries and keys the width $d \in \{16, 256, 1024\}$ with
-       standard normal initialization, and train with and without the
-       factor $1/\sqrt{d}$. Relate the training curves to the entropy of the
-       weights at initialization.
-    1. Show that `ToyAligner` cannot learn a reordering that depends on
-       the tokens, such as swapping two neighbors only when the first
-       belongs to a designated subset of the vocabulary. (Hint: its score
-       is a token term shared by all positions plus a position term;
-       compare the scores of the two neighbors.) State what the query, or
-       the keys, would have to depend on.
 
 [Discussions](https://d2l.discourse.group/t/36769)
 
@@ -1249,34 +1073,6 @@ Random letter embeddings of width 32; "attention" queries "translation":
 - `a`, `t`, `n`: two equal keys, weight split; content cannot tell copies
   apart.
 - `e`: no partner; the softmax spends its mass anyway.
-:::
-
-::: {.slide title="Keys That Carry Positions Let a Toy Model Learn a Permutation"}
-In translation (Bahdanau et al.) the weights came out as word alignments.
-Toy: output $j$ copies source $\pi(j)$, 8 tokens from 16, one pair swapped.
-Queries: one learned vector per output; keys: $\mathbf{W}_k$[one-hot token;
-one-hot position]; values: one-hot tokens.
-
-@!attention-scoring-attention-as-learned-alignment-4
-
-- Untrained: a fifth to a quarter right, weight on $\pi(j)$ near $1/8$.
-  Trained (three runs): accuracy 1.000, largest weight on $\pi(j)$.
-- Repeated tokens are told apart: the keys carry the position.
-:::
-
-::: {.slide title="Check: A Toy Without Positions"}
-[Check]{.kicker}
-
-Remove the one-hot position from the toy's keys. Can output $j$ still put
-its weight on source position $\pi(j)$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** No. Equal tokens then have equal keys, and every position with
-the same token gets the same weight, as with the letters of
-"attention". The output can depend only on which tokens occur, not where.
-:::
-:::
 :::
 
 ::: {.slide title="Scaled Scores and Boolean Masks Make Attention a Trainable Layer"}

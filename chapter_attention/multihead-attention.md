@@ -444,94 +444,6 @@ def merge_heads(self, X):
     return X.swapaxes(1, 2).reshape(X.shape[0], X.shape[2], -1)
 ```
 
-### Learned Heads on the Copy-Both Task
-:label:`subsec_copy-both-learned`
-
-We now test `MultiHeadAttention` of width $d = 16$ on the copy-both task
-($d_v = 8$, padded with zeros to width $16$; keys $\mathbf{e}_1,
-\mathbf{e}_2$ and query $\mathbf{e}_3$).
-
-```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-1}
-%%tab pytorch
-def copy_both_data(n, d=16, d_v=8):
-    """One query, two position-only keys, values of width d_v padded to d."""
-    V = torch.randn(n, 2, d_v)
-    keys = torch.eye(d)[:2].expand(n, 2, d)    # e_1, e_2 mark the positions
-    query = torch.eye(d)[2].expand(n, 1, d)    # e_3 asks for both values
-    values = F.pad(V, (0, d - d_v))
-    return query, keys, values, V.reshape(n, 1, 2 * d_v)
-
-def train_copy_both(num_heads, num_kv_heads=None, num_steps=2000):
-    model = MultiHeadAttention(16, num_heads, num_kv_heads=num_kv_heads)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
-    for _ in range(num_steps):
-        query, keys, values, target = copy_both_data(256)
-        loss = ((model(query, keys, values) - target) ** 2).mean()
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    return model
-
-def evaluate_copy_both(model, n=10000):
-    """Relative error on fresh examples; each head's weight on v_1."""
-    query, keys, values, target = copy_both_data(n)
-    with torch.inference_mode():
-        err = (model(query, keys, values) - target).norm() / target.norm()
-    return err.item(), model.attention_weights[0, :, 0, 0].tolist()
-```
-
-```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-1}
-%%tab jax
-def copy_both_data(key, n, d=16, d_v=8):
-    """One query, two position-only keys, values of width d_v padded to d."""
-    V = jax.random.normal(key, (n, 2, d_v))
-    keys = jnp.broadcast_to(jnp.eye(d)[:2], (n, 2, d))  # e_1, e_2: positions
-    query = jnp.broadcast_to(jnp.eye(d)[2], (n, 1, d))  # e_3 asks for both
-    values = jnp.pad(V, ((0, 0), (0, 0), (0, d - d_v)))
-    return query, keys, values, V.reshape(n, 1, 2 * d_v)
-
-@nnx.jit
-def copy_both_step(model, optimizer, key):
-    query, keys, values, target = copy_both_data(key, 256)
-    loss = lambda model: ((model(query, keys, values) - target) ** 2).mean()
-    optimizer.update(model, nnx.grad(loss)(model))
-
-def train_copy_both(num_heads, num_kv_heads=None, num_steps=2000):
-    model = MultiHeadAttention(16, num_heads, num_kv_heads=num_kv_heads,
-                               rngs=nnx.Rngs(d2l.get_key()))
-    optimizer = nnx.Optimizer(model, optax.adam(1e-2), wrt=nnx.Param)
-    # Full fp32 products: TF32, the default on recent NVIDIA cards, would
-    # stop the error of a solved task near 1e-3 instead of fp32 rounding
-    with jax.default_matmul_precision('highest'):
-        for key in jax.random.split(d2l.get_key(), num_steps):
-            copy_both_step(model, optimizer, key)
-    return model
-
-def evaluate_copy_both(model, n=10000):
-    """Relative error on fresh examples; each head's weight on v_1."""
-    query, keys, values, target = copy_both_data(d2l.get_key(), n)
-    with jax.default_matmul_precision('highest'):
-        Y = model(query, keys, values)
-    err = jnp.linalg.norm(Y - target) / jnp.linalg.norm(target)
-    return float(err), model.attention_weights[0, :, 0, 0].tolist()
-```
-
-```{.python .input #multihead-attention-learned-heads-on-the-copy-both-task-2}
-%%tab pytorch, jax
-print('H  run  parameters  error    weight on v_1, per head')
-for num_heads in (1, 2, 4):
-    for run in (1, 2):
-        model = train_copy_both(num_heads)
-        err, alpha_1 = evaluate_copy_both(model)
-        print(f'{num_heads}  {run:3d}  {d2l.num_params(model):10d}  '
-              f'{err:<#8.2g} ' + ' '.join(f'{a:.2f}' for a in alpha_1))
-```
-
-All configurations have $4 \times 16^2 = 1{,}024$ parameters. As predicted by
-our proposition, $H = 1$ stalls at the $\sqrt{1/2} \approx 0.71$ bound,
-whereas $H \in \{2, 4\}$ learns distinct head weightings and reduces the
-error to $\sim 10^{-7}$.
-
 ### Shared Keys and Values
 :label:`subsec_kv-head-sharing`
 
@@ -542,26 +454,14 @@ $H / H_\textrm{kv}$ by sharing each key--value head across a group of $H /
 H_\textrm{kv}$ query heads; setting $H_\textrm{kv} = 1$ gives *multi-query
 attention* (MQA) :cite:`Shazeer.2019`.
 
-On the copy-both task, the shared value heads span at most $H_\textrm{kv}
-d_h$ coordinates per value, so recovering a $d_v$-dimensional value requires
-$H_\textrm{kv} d_h \ge d_v$ (Exercise
-:exref:`ex_multihead-sharing-keys-and-values`). With $d = 16$ and $d_v = 8$,
-layouts $(H, H_\textrm{kv}) = (2, 1)$ and $(4, 2)$ have $H_\textrm{kv} d_h =
-8$ and solve the task to fp32 precision, whereas $(4, 1)$ has $H_\textrm{kv}
-d_h = 4$ and returns to the $0.71$ bottleneck despite learning distinct
-weightings across its four query heads:
-
-```{.python .input #multihead-attention-sharing-keys-and-values}
-%%tab pytorch, jax
-print('H  H_kv  run  parameters  error    weight on v_1, per head')
-for num_heads, num_kv_heads in ((2, 1), (4, 2), (4, 1)):
-    for run in (1, 2):
-        model = train_copy_both(num_heads, num_kv_heads)
-        err, alpha_1 = evaluate_copy_both(model)
-        print(f'{num_heads}  {num_kv_heads:4d}  {run:3d}  '
-              f'{d2l.num_params(model):10d}  {err:<#8.2g} '
-              + ' '.join(f'{a:.2f}' for a in alpha_1))
-```
+Our copy-both capacity analysis explains when key--value sharing is lossless.
+To retrieve multiple distinct values, query heads must produce distinct
+weightings—which requires only distinct query projections $\mathbf{W}_i^{(q)}$—while
+the shared value heads must have sufficient total dimension $H_\textrm{kv} d_h$
+to hold the retrieved value coordinates ($H_\textrm{kv} d_h \ge d_v$; Exercise
+:exref:`ex_multihead-what-the-bound-counts`). When $H_\textrm{kv} d_h < d_v$,
+the shared value projection bottlenecks the output even if all $H$ query
+heads attend to different positions.
 
 ## Cross-Attention
 
@@ -702,14 +602,6 @@ output at *gave* unchanged. Injecting sequence order is the subject of
        error against $\epsilon$ on logarithmic axes, read off the slope
        where the curve is straight, and explain it with the condition
        number from (a).
-    1. Every head of a freshly initialized layer weights the two positions
-       of the copy-both task close to $(0.5, 0.5)$. Modify
-       `train_copy_both` to record the relative error and the weights of
-       each head every 20 steps, and plot both for $H = 2$. Use the
-       conditioning of the mixing matrix to explain the shape of the error
-       curve in the first few hundred steps. Repeat for $H = 8$ and sort the
-       final heads into those that are nearly one-hot, those that are soft
-       but distinct, and those that nearly duplicate another head.
    :exlabel:`ex_multihead-nearly-identical-heads`
 
 1. **What the bound counts.** ● The proposition of
@@ -729,8 +621,7 @@ output at *gave* unchanged. Injecting sequence order is the subject of
        values $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^{d/2}$ padded with
        zeros to width $d$. Give the attention weights of each head, value
        projections $\mathbf{W}_i^{(v)}$, and an output projection
-       $\mathbf{W}_o$ that solve the task exactly. Compare your weights with
-       those printed in :numref:`subsec_copy-both-learned`.
+       $\mathbf{W}_o$ that solve the task exactly.
     1. Generalize the proposition to $k$ source positions with independent
        standard Gaussian values $\mathbf{v}_1, \ldots, \mathbf{v}_k \in
        \mathbb{R}^{d_v}$ and the target $[\mathbf{v}_1; \ldots;
@@ -741,20 +632,11 @@ output at *gave* unchanged. Injecting sequence order is the subject of
        $$1 - \frac{\operatorname{rank}(\mathbf{A})}{k},$$
        and that softmax weights, whose entries are all positive, can attain
        $\operatorname{rank}(\mathbf{A}) = \min(H, k)$.
+    1. Let the layer have $H$ query heads of width $d_h = d/H$ and
+       $H_\textrm{kv} < H$ shared key--value heads. Show that it can solve
+       the two-position copy-both task if and only if $H_\textrm{kv} d_h \ge
+       d_v$.
    :exlabel:`ex_multihead-what-the-bound-counts`
-
-1. [code] **Sharing keys and values on the copy-both task.** ● Let a layer
-   of width $d$ have $H$ query heads of width $d_h = d/H$ and
-   $H_\textrm{kv} < H$ key--value heads.
-    1. Use the counting of Exercise
-       :exref:`ex_multihead-what-the-bound-counts` to show that it can solve
-       the task only if $H_\textrm{kv} d_h \ge d_v$, and that this condition
-       suffices.
-    1. Train a layer with `train_copy_both(2, 1)`, in which two query heads
-       share one key--value head. Find the parameters that differ between
-       the two heads and those they share, and explain from the copy-both
-       task why the difference must lie where you found it.
-   :exlabel:`ex_multihead-sharing-keys-and-values`
 
 [Discussions](https://d2l.discourse.group/t/36770)
 
@@ -1015,19 +897,6 @@ $n > 2d$ (GPT-2 small: 1,536 tokens).
 - Attention runs over the last two axes: all heads in one batched product.
 :::
 
-::: {.slide title="A Trained Layer: One Head Stays at 0.71, Two Heads Reach Rounding Error"}
-[Multi-head attention]{.kicker}
-
-@!multihead-attention-learned-heads-on-the-copy-both-task-2
-
-- $d = 16$, keys $\mathbf{e}_1, \mathbf{e}_2$, query $\mathbf{e}_3$,
-  values of width 8: room for exactly two.
-- One head: weight on $\mathbf{v}_1$ ends near one half; every split is
-  equally bad.
-- Every run of $H \ge 2$: one head above 0.8 on $\mathbf{v}_1$, one below
-  0.2.
-:::
-
 ::: {.slide title="Heads May Share Keys and Values"}
 [Shared keys and values]{.kicker}
 
@@ -1053,16 +922,6 @@ give 8 shared value coordinates and succeed; $(4, 1)$ gives 4: four
 weightings, no room, error back to $0.71$.
 :::
 :::
-:::
-
-::: {.slide title="Sharing Works While the Shared Value Heads Have Room"}
-[Shared keys and values]{.kicker}
-
-@!multihead-attention-sharing-keys-and-values
-
-- $(2, 1)$, $(4, 2)$: rounding error with 768 parameters instead of 1,024.
-- $(4, 1)$: 640 parameters, $0.71$, though its heads weight the positions
-  differently.
 :::
 
 ::: {.slide title="Self- and Cross-Attention Differ Only in Their Inputs"}

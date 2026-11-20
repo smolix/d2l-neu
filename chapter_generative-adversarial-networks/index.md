@@ -22,6 +22,40 @@ adversarial-losses
 further-reading
 ```
 
+## Notation {.unnumbered}
+
+<!-- WRITER: table moved here from gan.md unchanged (code step); worklist Part 1 (B) item 6 lists the row fixes: w_Rp first used in sec_gan_relativistic; d(p,q) in sec_gan_objectives; drop undecodable 'papers write' entries; 'divergence function' for f; recheck every 'first used' against the new section order. Then reconcile chapter_notation/index.md:183-196. -->
+
+:numref:`tab_gan_notation` collects the chapter's symbols, each with one meaning throughout; letters defined inside an exercise are local to it.
+
+:Notation of this chapter.
+:label:`tab_gan_notation`
+
+| symbol | meaning | first used | papers write |
+|:--|:--|:--|:--|
+| $p$, $q$, $m = \tfrac12(p + q)$ | data, generator and mixture densities | :numref:`sec_basic_gan` | |
+| $x \sim p$, $x' \sim q$; $y$ | a real and a generated sample; the source label, $1$ for real | :numref:`sec_basic_gan` | $y$ or $\hat x$ for $x'$ |
+| $z$, $G$, $d_z$; $d_x$ | latent variable, generator, latent dimension; data dimension | :numref:`sec_basic_gan` | $k$ for $d_z$, $d$ for $d_x$ |
+| $D$, $V$, $V_\ell$ | the critic's realness logit; the value of the log-loss game, of the game with payoff $\ell$ | :numref:`sec_basic_gan` | discriminator; $-D$ in :citet:`Huang.Gokaslan.Kuleshov.ea.2024` |
+| $\rho = p/q$, $\lambda = \log \rho$ | density ratio and its logarithm | :numref:`sec_basic_gan` | |
+| $\mu$; $b$; $\delta_\theta$; $d(p, q)$ | a mean; an additive shift; a point mass at $\theta$; a discrepancy | :numref:`sec_basic_gan` | $\delta$ for a separation of means |
+| $w_{\textrm{sat}}$, $w_{\textrm{ns}}$, $w_{\textrm{Rp}}$ | per-sample weights of the generator update | :numref:`sec_basic_gan` | not named |
+| $\eta = p/(p + q)$ | class posterior | :numref:`sec_gan_objectives` | $\eta$ for a step size, $h$ here |
+| $\ell$, $L$, $\Delta_\ell$ | payoff of a score, its conditional Bayes risk, its Bayes-risk gap | :numref:`sec_gan_objectives` | the loss $-\ell$ |
+| $T \in \mathcal{T}$, $\ell_p$, $\ell_q$; $\mathcal{F}$ | a critic and its class, scores of real and generated samples; the class of an integral probability metric | :numref:`sec_gan_objectives` | $f$ for its test functions |
+| $f$, $D_f$; $k$, $s$ | divergence function, $f$-divergence; kernel, bandwidth | :numref:`sec_gan_objectives` | $\sigma$ or $\ell$ for $s$ |
+| $\Phi$, $d_{\textrm{Rp}}$ | pairing objective, its value at the optimal critic | :numref:`sec_gan_relativistic` | $2\, d_{\textrm{Rp}}$ |
+| $(a_1, a_2)$, $P$, $Q$, $\pi$ | a real--generated pair, its orderings $p \otimes q$ and $q \otimes p$, a pairing permutation | :numref:`sec_gan_relativistic` | |
+| $\mathcal{E}_{\mathrm{GAN}}$, $\mathcal{E}_{\mathrm{diag}}$, $\mathcal{E}_{\mathrm{all}}$ | classical, paired and all-pairs losses at the best response | :numref:`sec_gan_relativistic` | not named |
+| $v$, $\epsilon$ | direction and size of a change $q = p\,(1 + \epsilon v)$ | :numref:`sec_gan_relativistic` | $h$ for $v$ |
+| $\gamma$, $R_1$, $R_2$ | penalty weight, zero-centered gradient penalties | :numref:`sec_gan_convergence` | |
+| $h$, $\nu_{1,2}$, $\psi$, $\mathbf{u}$; $\omega$ | Dirac-GAN step size, eigenvalues, critic slope, field; a wavenumber | :numref:`sec_gan_convergence` | $\lambda_{1,2}$, $v$; $k$ |
+| $\phi$ | a feature map | :numref:`sec_dcgan` | |
+| $c$, $e_c$, $a(c)$, $\psi_0$, $\zeta_c$ | condition, its embedding, modulation scale, unconditional head, per-class constant | :numref:`sec_gan_conditional` | $\gamma(c)$, $\beta(c)$ for scale and shift |
+| $g$; $\xi$; $\vartheta$ | predictor of $x$ from $c$; standard normal noise; a phase | :numref:`sec_gan_beyond` | $f$; $\epsilon$; $\varphi$ |
+
+Divergences and entropies follow the appendix and are in nats: $D_{\textrm{KL}}$ is the Kullback--Leibler divergence, $D_{\mathrm{J}} = D_{\textrm{KL}}(p \,\|\, q) + D_{\textrm{KL}}(q \,\|\, p)$ its symmetrized form, $\mathrm{JS}$ the Jensen--Shannon divergence, $H$ an entropy and $H_b(t)$ that of a coin with bias $t$.
+
 ## Resources and Further Reading {.unnumbered}
 
 These resources accompany particular sections; :numref:`sec_gan-further-reading` turns to the methods the chapter does not teach.

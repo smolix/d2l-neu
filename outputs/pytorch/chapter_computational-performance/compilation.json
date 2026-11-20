@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:7d63622377726cea34b2ba0e9018b88f07a8058cac78accd4c4bf5f509d7a3b3",
+    "d2l_lib_fingerprint": "sha256:cd8d9f99b29036bd38c6386afdab7a1e85b56137cad9cd30192bdc27a177f775",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.25 ms/call, 920 GB/s\ncompiled: 0.15 ms/call, 878 GB/s\n"
+          "text": "eager: 1.25 ms/call, 920 GB/s\ncompiled: 0.15 ms/call, 865 GB/s\n"
         }
       ]
     },
@@ -57,24 +57,45 @@
       "outputs": []
     },
     "compilation-whole-step-compilation-measured": {
-      "code_fingerprint": "sha256:f8072f2fb48eb5497c3594edc43bab699f8a676530d8afca12eff3129ecbfda4",
+      "code_fingerprint": "sha256:479829bd201896158cda573b239f05aaaab2d3ab208897c8adae148cda184c08",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 0.8 s\neager: 2.74 ms, compiled: 1.59 ms\nbreak-even: 713 steps\n"
+          "text": "first call: 0.6 s\neager: 2.98 ms, compiled: 2.09 ms\nbreak-even: about 700 steps\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "graphs: 2\n"
         }
       ]
     },
     "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:193c7198f3b82f1a7ee207851098dd6496cef61477acb85550740b4886795d62",
+      "code_fingerprint": "sha256:6000bea23d563471c88c39ed8330c61e4120723175d68fd5bfb666aa8bd7f54d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 2.68 ms/call\nreduce-overhead: 0.30 ms/call\n"
+          "text": "eager: 2.21 ms/call, 18.4 µs per operation\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "compiled: 2.16 ms/call, 18.0 µs per operation\nreduce-overhead: 0.28 ms/call, 2.4 µs per operation\n"
+        }
+      ]
+    },
+    "compilation-replaying-the-training-step": {
+      "code_fingerprint": "sha256:cded750e2c3e68275b23e129e02f386a4a19e155e6b26e5facd2f13ed02a6a7b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "training step, reduce-overhead: 0.72 ms/call, GPU busy 0.25 ms\n"
         }
       ]
     }

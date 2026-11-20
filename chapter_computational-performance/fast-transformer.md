@@ -37,8 +37,11 @@ training run checks that the fastest step still trains the model.
 # runs with --xla_gpu_enable_triton_gemm=false in XLA_FLAGS, so that XLA
 # calls cuBLAS for the matrix products (the Triton kernels it would generate
 # run the products of the large minibatches more slowly on the RTX 4090),
-# and with NCCL_LOCAL_REGISTER=0: NCCL's buffer registration fails on GPUs
-# without peer-to-peer access and would print a warning at every collective.
+# with NCCL_LOCAL_REGISTER=0: NCCL's buffer registration fails on GPUs
+# without peer-to-peer access and would print a warning at every collective,
+# and with XLA_PYTHON_CLIENT_ALLOCATOR='vmm', which maps each array into one
+# contiguous range: the fp32 step of the training check needs about 13 GiB
+# in one piece after many other arrays have come and gone.
 import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_enable_latency_hiding_scheduler=true')

@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/sharding.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:6cab50def039209560c7e4535fe46192441334b6add067b5bb4a988f6598a037",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sharding-setup": {
+      "code_fingerprint": "sha256:30b2fa197bd12032a3f64a355f1daa9470e5beca1acc3e2f93cbc835cbf91393",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-sharding-the-training-state": {
+      "code_fingerprint": "sha256:8de1da71a6e9c42349f69f2b30436932d1cdc9ebe0aa8d339e89aecfae66f7be",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-sharding-the-training-state-1": {
+      "code_fingerprint": "sha256:4c3ca76fab09575c65cdf7c6191e1c46841dcd460ca2b9e5a58d8d30069da9e2",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-sharding-the-training-state-2": {
+      "code_fingerprint": "sha256:fe00afb1cda3be00121df0e13c902fe99428eb0bc58b257dba7e9c629252b37f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1.92 billion parameters, 16N = 28.6 GiB; JAX may allocate 22.1 GiB of one GPU\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-1": {
+      "code_fingerprint": "sha256:3ff74c371e5f04d18e0adae4837ec009a0a75d3d86f411f517052ac06fa82ead",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta_link = 2.2 GB/s in an all-gather on 2 GPUs\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-2": {
+      "code_fingerprint": "sha256:3c93cc5c9f106debf2f2271a096d2a5223f04ca71e9c9ea80eb6b74c90e34c2a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "state per GPU, 16N/k: 14.3 GiB\ncommunication, 3(k-1)S/(k beta_link): 5.3 s per step\narithmetic at the peak, 8N bT/P: 0.38 s per step\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-5": {
+      "code_fingerprint": "sha256:cb388075d3bffac89a84f2d5dfdc46047195f79305c8a9e411bfc46deeb3ab56",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-6": {
+      "code_fingerprint": "sha256:fafc47a94e4ff64f7e94bf8eaf812ada548e18328a448ec7a95e4bbe96e56fcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-7": {
+      "code_fingerprint": "sha256:836fcb7c0d422231b40c7f2938bef0fcd7d4dbc0499d2d3c70bf74a5474cc6d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per GPU: weights and moments 10.7 GiB (donated: 10.7 GiB), temporaries 4.6 GiB\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-8": {
+      "code_fingerprint": "sha256:ad638a3e5c5849889b59515c683aeb489b9cfa19dbb06ebc10d7917ea37ec064",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-9": {
+      "code_fingerprint": "sha256:f71f7c41c6259ee52331e3c894c3427b5be9301cdcaf3afd64321ba2af20cae3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "all-gather: 14.92 GB\nreduce-scatter: 3.83 GB\nall-to-all: 0.03 GB\nall-reduce: 0.00 GB\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-10": {
+      "code_fingerprint": "sha256:ceda05e6144dbe4fef9e4b0843f3707d7295c8b35931d2a3ca1ccfbfe52385d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-11": {
+      "code_fingerprint": "sha256:3f494ccfa1eb0e7e5a28ea98bc476f580604910e8a539435beb68c600338d48c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per GPU: peak memory 15.5 GiB; 5.38 s per step (5.38 to 5.57)\nof each step, GPU 0 spends 5.08 s in communication kernels\n"
+        }
+      ]
+    }
+  }
+}

@@ -1068,9 +1068,10 @@ for b in (256, 4096, 32768):                # Examples per GPU
     predicted = 2 * t[0] / (max(2 * h_step, t_dev) + exchange)
     speedups = 2 * np.array(times[0]) / np.array(times[1])
     print(f'b = {b:5d}: 1 GPU {1e3 * t[0]:6.2f} ms (device busy '
-          f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms; speedup '
-          f'{predicted:.2f} predicted, {2 * t[0] / t[1]:.2f} measured '
-          f'(windows {speedups.min():.2f}-{speedups.max():.2f})')
+          f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms\n'
+          f'           speedup {predicted:.2f} predicted, '
+          f'{2 * t[0] / t[1]:.2f} measured '
+          f'(windows {speedups.min():.2f} to {speedups.max():.2f})')
 ```
 
 ```{.python .input #multiple-gpus-larger-minibatches}
@@ -1093,9 +1094,10 @@ for b in (256, 4096, 32768):                # Examples per GPU
     predicted = 2 * t[0] / (max(2 * h_step, t_dev) + exchange)
     speedups = 2 * np.array(times[0]) / np.array(times[1])
     print(f'b = {b:5d}: 1 GPU {1e3 * t[0]:6.2f} ms (device busy '
-          f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms; speedup '
-          f'{predicted:.2f} predicted, {2 * t[0] / t[1]:.2f} measured '
-          f'(windows {speedups.min():.2f}-{speedups.max():.2f})')
+          f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms\n'
+          f'           speedup {predicted:.2f} predicted, '
+          f'{2 * t[0] / t[1]:.2f} measured '
+          f'(windows {speedups.min():.2f} to {speedups.max():.2f})')
 ```
 
 We can now predict from three measurements whether more GPUs shorten a

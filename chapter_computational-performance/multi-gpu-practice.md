@@ -52,9 +52,9 @@ communication.
 # registration fails on GPUs without peer-to-peer access, such as ours, and
 # would print a warning at every collective.
 import os
+os.environ.setdefault('XLA_PYTHON_CLIENT_ALLOCATOR', 'vmm')
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_enable_latency_hiding_scheduler=true')
-os.environ.setdefault('XLA_PYTHON_CLIENT_ALLOCATOR', 'vmm')
 ```
 
 ```{.python .input #multi-gpu-practice-multi-gpu-in-practice}

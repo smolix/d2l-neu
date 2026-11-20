@@ -427,10 +427,19 @@ NOTEBOOK_ENV = {
     },
     # 13.8: XLA calls cuBLAS for the matrix products instead of generating
     # Triton kernels, which run the products of the large minibatches more
-    # slowly on the RTX 4090; NCCL as above.
+    # slowly on the RTX 4090; NCCL as above. The training check runs the
+    # fp32 step at batch 512, which asks for about 13 GiB in one piece after
+    # the data-parallel cells have come and gone. With PREALLOCATE=false, as
+    # set for every JAX notebook, the BFC allocator grows region by region
+    # and fails on that request (OOM at 12.92 GiB in two scheduler runs and
+    # in a run outside the scheduler, 2026-11-20); a preallocated BFC pool
+    # and the 'vmm' allocator both pass. 'vmm' maps each array into one
+    # contiguous range, as in 13.6; the throughputs are unchanged (every
+    # configuration within the run-to-run spread of the BFC runs).
     ("jax", "chapter_computational-performance/fast-transformer.ipynb"): {
         "XLA_FLAGS": "--xla_gpu_enable_triton_gemm=false",
         "NCCL_LOCAL_REGISTER": "0",
+        "XLA_PYTHON_CLIENT_ALLOCATOR": "vmm",
     },
     # 13.8: detach the profiler's instrumentation from the GPU when a profile
     # ends; otherwise every later kernel launch of the process is slowed.

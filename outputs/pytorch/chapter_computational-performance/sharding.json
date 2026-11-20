@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/sharding.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:9a5e10d47c49011d3c313a1b95b160a1ca5a0c149712a2c62b116eec79cdb849",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "sharding-sharding-the-training-state": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-sharding-the-training-state-1": {
+      "code_fingerprint": "sha256:a1a2bde836aea20ecebec8943f60d156b026c22f4fb108e15690f91e2b133ddf",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-sharding-the-training-state-2": {
+      "code_fingerprint": "sha256:518cca138529754aee790fd0ce3d1eb7ef82616d30a3e8dc5ce56a28254bf005",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1.92 billion parameters, 16N = 28.6 GiB; one GPU holds 23.5 GiB\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-1": {
+      "code_fingerprint": "sha256:dfd514e1e21d0e24931498d4dc627b193f42dcae0c2ca1cd27ed4d9b83712327",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta_link = 2.2 GB/s in an all-gather on 2 GPUs\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-2": {
+      "code_fingerprint": "sha256:25d33af1d2bb5366f20c5db969ffd7d1e41186cf817496c21076be512b344f4c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "state per GPU, 16N/k: 14.3 GiB\ncommunication, 3(k-1)S/(k beta_link): 5.2 s per step\narithmetic at the peak, 8N bT/P: 0.38 s per step\n"
+        }
+      ]
+    },
+    "sharding-memory-and-communication-3": {
+      "code_fingerprint": "sha256:f7dcff3c1132a42273390aa2d772a03d84be71b3587e867bc43f808504a18d6f",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-4": {
+      "code_fingerprint": "sha256:92812be21f881faa6d8370e7be2cbb2f104b2633ff4fc651f46a7e38575b9921",
+      "kind": "text",
+      "outputs": []
+    },
+    "sharding-memory-and-communication-11": {
+      "code_fingerprint": "sha256:df2b05e622a3215ab343a37c3ba5f2a963713dec03a5358c079b74e7d17fa681",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per GPU: peak memory 16.0 GiB; 5.71 s per step (5.70 to 5.72)\nof each step, GPU 0 spends 5.70 s in communication kernels\n"
+        }
+      ]
+    }
+  }
+}

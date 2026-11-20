@@ -52,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.80 ms/call, 638 GB/s\ncompiled: 0.16 ms/call, 798 GB/s\n"
+          "text": "eager: 1.65 ms/call, 699 GB/s\ncompiled: 0.16 ms/call, 804 GB/s\n"
         }
       ]
     },
@@ -62,24 +62,24 @@
       "outputs": []
     },
     "compilation-whole-step-compilation-measured": {
-      "code_fingerprint": "sha256:7ac247dea2ff127134526a4dbb0998bef1dffff7830d021cd2d4cf9c5df07996",
+      "code_fingerprint": "sha256:b44a2ca0c868b20234898cca1f9a0c4cf0b37d74a9c217c768c8692181b29e77",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first call: 3.8 s\neager: 26.20 ms, compiled: 0.26 ms\nbreak-even: 145 steps\n"
+          "text": "first call: 5.6 s\neager: 24.66 ms, compiled: 0.25 ms\nbreak-even: about 200 steps\n"
         }
       ]
     },
     "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:0ce146e7553941fd81e0dbe1f8a4538d0693a526110169e2469748d69f1391db",
+      "code_fingerprint": "sha256:62d57298a43ae6a6bf8fa65d3c681bbaac7b363cec16e4b012fae09bcc3ba289",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 9.15 ms/call\njit: 0.28 ms/call\n"
+          "text": "eager: 6.48 ms/call, 54.0 µs per operation\njit: 0.25 ms/call, 2.1 µs per operation\n"
         }
       ]
     }

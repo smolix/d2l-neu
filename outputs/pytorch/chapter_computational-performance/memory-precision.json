@@ -30,12 +30,12 @@
       ]
     },
     "memory-precision-memory-per-token-1": {
-      "code_fingerprint": "sha256:01b268c8df71d09cb43eca4a6b4de00f1a4a39af5fe31aec33800af8e5a1aff4",
+      "code_fingerprint": "sha256:def1eba0d2f90b899f802fb7a6a5a9b7e0f73177aa60c20036febe35c41e7d4d",
       "kind": "text",
       "outputs": []
     },
     "memory-precision-memory-per-token-2": {
-      "code_fingerprint": "sha256:71d4e68b81484b74032895878f006a254d246ddacfd7e7d9663c09a04ff23ac7",
+      "code_fingerprint": "sha256:5cc14bdfa2ae1b4650b9970edc94182e9befe753623dd7ad5c3183928b4ccf7c",
       "kind": "text",
       "outputs": [
         {
@@ -46,36 +46,41 @@
       ]
     },
     "memory-precision-measuring-memory-1": {
-      "code_fingerprint": "sha256:55282fe1183aee9f81e1e488ff70b6fc2421eb369c96e5489ed6c9f6b26276f2",
+      "code_fingerprint": "sha256:7c488cdabd4c3647b4c199dea7c80953c7a7e17eb656381ec51fbad253f8fef5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 1024 tokens: peak 1.53 GiB above the weights\n 2048 tokens: peak 1.77 GiB above the weights\n 4096 tokens: peak 3.53 GiB above the weights\nmeasured: 905 KiB per token; counted: 511 KiB per token\n"
+          "text": " 1024 tokens: peak 1.53 GiB above the weights\n 2048 tokens: peak 1.77 GiB above the weights\n 4096 tokens: peak 3.53 GiB above the weights\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 8192 tokens: peak 7.06 GiB above the weights\n 2048 to  4096 tokens: measured 905 KiB per token; counted 511 KiB\n 4096 to  8192 tokens: measured 903 KiB per token; counted 511 KiB\n"
         }
       ]
     },
     "memory-precision-measured-peak-memory-1": {
-      "code_fingerprint": "sha256:6295a5ab142a4fcb78d6bad053dd7bfe449050fc32a25a00ba3cb1e90c45e8ea",
+      "code_fingerprint": "sha256:70a0dfbb276455e2783302595bd5e335c6d8173a7487d73df7638724c661fb50",
       "kind": "text",
       "outputs": []
     },
     "memory-precision-measuring-memory-2": {
-      "code_fingerprint": "sha256:9e735826e256be9e21bed38d3f823eaddacdb3d1915f4641a41832a5c26cb262",
+      "code_fingerprint": "sha256:052d4c282f1076db89d3058f34b80d44306586525685821c427899de15ce9d12",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "memory-precision/memory-precision-measuring-memory-2-1.svg",
-          "bytes": 35149,
-          "sha256": "sha256:7ef49bfe4c61809bf99171a9f27a25d7675c39cd5e5808a0c802f1c9db7c4f85"
+          "bytes": 35156,
+          "sha256": "sha256:320b39728313d01a85a9ba2c7f36f53f53c3262e3a9c0c8212cff4c1a0428192"
         }
       ]
     },
     "memory-precision-mixed-precision-1": {
-      "code_fingerprint": "sha256:5507a7b138279d0e4a4da235bc80b86255cf5ca1c31baa89a377468c81294c1f",
+      "code_fingerprint": "sha256:241e538d34ad88d1cf01a4bae0c3cc5a7daf263f013077386f1de4f9298fc328",
       "kind": "text",
       "outputs": [
         {
@@ -85,46 +90,78 @@
         }
       ]
     },
-    "memory-precision-mixed-precision": {
-      "code_fingerprint": "sha256:e776abcd1a871d31b227aa7d8a0ff5b3aa136199308ac380e05d9e6bbfc4e495",
+    "memory-precision-mixed-precision-2": {
+      "code_fingerprint": "sha256:7015d7f6ad99dfbcd2fd6258b09600a3e0bf831bc410890fcf66a0707e0dfc6f",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-precision-mixed-precision-3": {
+      "code_fingerprint": "sha256:11ca588fa5746d78b09e23807217ab0d26ebec2d78d134099ec0241ebbbe8825",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 22.60 ms/call\ntf32: 14.60 ms/call\n"
+          "text": "1.10e+12 FLOPs per step\n"
+        }
+      ]
+    },
+    "memory-precision-mixed-precision": {
+      "code_fingerprint": "sha256:f4d2d3a26fd912a42bc0ef542bf765006097bcfddba3d6031b69a3058f96fbff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fp32: 23.16 ms,  48 TFLOP/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16: 9.47 ms/call\n"
+          "text": "tf32: 14.93 ms,  74 TFLOP/s\nbf16:  9.62 ms, 114 TFLOP/s\n"
+        }
+      ]
+    },
+    "memory-precision-activation-checkpointing-1": {
+      "code_fingerprint": "sha256:c83d707c33bcf3c27c8c6506e4cc3bbfb514d85a3503ae600b3c8a8670eb6d86",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fp32, count        : 2.83 MiB per token, room for  3,229 tokens\nfp32, measured     : 3.22 MiB per token, room for  2,844 tokens\nbf16, measured     : 2.21 MiB per token, room for  3,272 tokens\nfp32, checkpointing: 0.88 MiB per token, room for 10,435 tokens\nbf16, checkpointing: 0.91 MiB per token, room for  7,956 tokens\n"
         }
       ]
     },
     "memory-precision-activation-checkpointing": {
-      "code_fingerprint": "sha256:fd2097b737903cd966e586ce570691aab52842ba2efb94b15a6f8d19f352e5c5",
+      "code_fingerprint": "sha256:d2d96eec2304c57e76a260cfc50b823f363793f865b765335c711586b3c76ea2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False: stores  606 KiB per token, peak 1.25 GiB, 46 ms per step\n"
+          "text": "checkpointing=False: stores  606 KiB per token, peak 1.25 GiB, 47 ms per step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True : stores   40 KiB per token, peak 0.42 GiB, 57 ms per step\n"
+          "text": "checkpointing=True : stores   40 KiB per token, peak 0.42 GiB, 58 ms per step\n"
         }
       ]
     },
-    "memory-precision-gradient-accumulation": {
-      "code_fingerprint": "sha256:1aef61db3c9c9ee2b89a03f7f61bcd9bb0d1221ade2bc0f9806fe7ff9023966b",
+    "memory-precision-accumulated-step": {
+      "code_fingerprint": "sha256:04b49c7257a6157fa014134d8bb720561e7d0bd8d0d4625ff316970aba4bf630",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max gradient difference: 1.2e-07\n"
+          "text": "1 x 4096 tokens: peak 3.53 GiB above the weights, 82 ms per step (82 to 83)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4 x 1024 tokens: peak 1.92 GiB above the weights, 99 ms per step (99 to 100)\n"
         }
       ]
     }

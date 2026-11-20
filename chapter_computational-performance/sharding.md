@@ -424,7 +424,7 @@ peak_bytes = jax.devices()[0].memory_stats()['peak_bytes_in_use']
 %%tab pytorch, jax
 print(f'per GPU: peak memory {peak_bytes / 2**30:.1f} GiB; '
       f'{np.median(times):.2f} s per step ({min(times):.2f} to '
-      f'{max(times):.2f}), of which GPU 0 spends {comm:.2f} s in '
+      f'{max(times):.2f})\nof each step, GPU 0 spends {comm:.2f} s in '
       f'communication kernels')
 ```
 

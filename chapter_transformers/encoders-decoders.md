@@ -256,7 +256,7 @@ print(f'loss at positions 0-3: {show(pos_loss[:4])}; 60-63: '
       f'{show(pos_loss[-4:])}; interior mean {pos_loss[interior].mean():.2f}')
 ```
 
-The bidirectional encoder traces a symmetric **bathtub (U-shaped) curve**: every interior position enjoys both left and right context (about 1.5–1.6 nats/byte), and loss rises only at the two window edges ($t \approx 0$ and $t \approx n-1$, about 2.4 nats/byte) where one side of the context is cut off by the window boundary. Evaluating `model` on a masked sentence shows how right context disambiguates missing interior bytes:
+The bidirectional encoder traces a symmetric **bathtub (U-shaped) curve**: every interior position enjoys both left and right context ($\approx 1.43$ nats/byte, compared with $\approx 1.97$ nats/byte for a causal control trained on the same 15%-masked windows using only left context), and loss rises only at the two window edges ($t \approx 0$ and $t \approx n-1$) where one side of the context is cut off by the window boundary. Evaluating `mlm` on a masked sentence shows how right context disambiguates missing interior bytes:
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-2}
 %%tab pytorch
@@ -548,7 +548,7 @@ print(f'source {to_str(src[0])!r} -> predicted {to_str(pred[0])!r}')
 ### Reading Cross-Attention Alignment
 :label:`subsec_reading-alignment`
 
-In string reversal, target step $t$ outputs source token $T - 1 - t$. Does the cross-attention weight matrix therefore have to concentrate on the anti-diagonal $(t, T - 1 - t)$? Let us compare our trained `EncoderDecoder`, with one encoder block and one decoder block (`with` encoder self-attention), against an otherwise identical model whose encoder has no blocks, only its embeddings (`without`, so encoder position $j$ can only hold information about source token $j$):
+In string reversal, target step $t$ outputs source token $T - 1 - t$. Does the cross-attention weight matrix therefore have to concentrate on the anti-diagonal $(t, T - 1 - t)$? Let us compare our trained 2-block `EncoderDecoder` (`with` encoder self-attention) against an identical model whose encoder blocks have no self-attention (`without`, so encoder position $j$ can only hold information about source token $j$):
 
 ```{.python .input #encoders-decoders-reading-the-alignment-1}
 %%tab pytorch
@@ -699,7 +699,7 @@ class PerceiverEncoder(nnx.Module):
 2. **Padding masks on ragged sequence-to-sequence batches.** When a batch contains variable-length source strings of lengths $(s_1, \dots, s_B) \le S$ and target strings of lengths $(t_1, \dots, t_B) \le T_{\textrm{dec}}$, three boolean masks are needed: (a) a $(B, 1, S, S)$ encoder padding mask, (b) a $(B, 1, T_{\textrm{dec}}, T_{\textrm{dec}})$ decoder causal + padding mask, and (c) a $(B, 1, T_{\textrm{dec}}, S)$ rectangular cross-attention source-padding mask. Write a helper `make_seq2seq_masks(src_len, tgt_len, S, T_dec)` that constructs all three masks and verify that appending padded tokens to `src` in `EncoderDecoder` does not alter the non-padded decoder logits.
 :exlabel:`ex_encdec-padding`
 
-3. **Varying the MLM masking fraction $p$.** Train `MaskedLM` for 2,000 steps at masking fractions $p \in \{0.05, 0.15, 0.30, 0.50\}$ and evaluate all four models on the same $p = 0.15$ validation set `masked.val_dataloader()`. How does $p$ trade off the number of supervised gradient signals per batch against the amount of uncorrupted context available around each mask?
+3. **Varying the MLM masking fraction $p$.** Train `MaskedLM` for 2,000 steps at masking fractions $p \in \{0.05, 0.15, 0.30, 0.50\}$ and evaluate all four models on the same $p = 0.15$ validation set `masked_data.val`. How does $p$ trade off the number of supervised gradient signals per batch against the amount of uncorrupted context available around each mask?
 
 4. **Forward vs. backward direction of time in causal and bidirectional models.** A causal language model processes text left-to-right ($x_1 \to x_n$). Reverse every byte window in `WikiText103` so a causal model predicts right-to-left ($x_n \to x_1$), train for 1,000 steps, and compare its average per-byte validation loss and its `loss_by_position` curve against the left-to-right causal model and the bidirectional `MaskedLM`. Why is the total joint log-likelihood $\sum_{t=1}^n \log P(x_t \mid \textrm{past})$ theoretically invariant to time reversal, and where does the bidirectional model gain its advantage over both one-sided directions?
 :exlabel:`ex_encdec-times-arrow`

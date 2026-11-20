@@ -860,15 +860,19 @@ Throughput falls to 0.85 of the previous configuration, well above the
 0.77 that the clock allowed. Repeating the forward pass of the blocks
 added less than a fifth to the step, while the same forward pass run on
 its own takes three tenths of it: inside the backward pass the
-recomputation costs only about three fifths of what it costs alone. We
-have not established why. The embedding and the output layer explain
-little of it, and the compiler, which sees the recomputation and the
-backward pass in one program, may run parts of them in shared kernels. A
-profile of the checkpointed step would show which kernels the
-recomputation adds and how long they take (exercise :exref:`ex_ft-remat`).
+recomputation costs only about three fifths of what it costs alone. The
+last two lines of the output say where the difference lies. The matrix
+products of the recomputation add about 14 ms to the step, close to the
+17 ms that all products of the forward pass take alone, the output
+layer's among them: the products are simply computed again. The other
+kernels, the elementwise operations and normalizations between the
+products, take 13 ms in the forward pass alone but add only 3 ms to the
+step. Inductor compiles the recomputation and the backward pass into one
+program and fuses the recomputed elementwise work into the kernels of the
+backward pass; among the new kernels of the step is one that computes a
+SiLU together with the SiLU's gradient. Recomputing an elementwise operation is nearly
+free once it runs inside a kernel that reads the same data anyway.
 :end_tab:
-
-<!-- WRITER: S4. The PyTorch cell now profiles the forward pass alone and the checkpointed step, and prints both split into matrix products (d2l.PRODUCT_KERNELS, which counts the fused attention kernels among them, as show_profile does) and all other kernels, the step as what checkpointing adds to the stored profile of + batch 512. Dev run (GPU 0, 2026-11-20; throughput 0.85x, forward pass 31.0 of a 100.9 ms step): forward pass alone: products 17.6 ms, other kernels 13.4 ms; added to the step: products 14.5 ms, other kernels 3.1 ms. A finer split of a first dev run: added products 12.7 (alone 15.7) plus flash attention 1.9 (alone 1.9); added Triton kernels 3.0 (alone 13.4). So the recomputed products cost about what they cost alone, while the elementwise operations and normalizations between them, 13 ms alone, add only 3 ms: Inductor compiles the recomputation and the backward pass into one program and fuses the recomputed elementwise work into the backward pass's kernels (the checkpointed step's Triton kernels are new fusions, e.g. mm_mul_silu_silu_backward). Replace "We have not established why. The embedding and the output layer explain little of it, and the compiler ... may run parts of them in shared kernels" with this finding. Exercise ex_ft-remat part 1 is now done in the text: reword or drop it. The deck slide that shows this cell (@!fast-transformer-rungs-each-one-measured-4) gains two output lines. -->
 
 :begin_tab:`jax`
 Throughput falls to 0.79 of the previous configuration, close to the 0.76
@@ -1126,8 +1130,8 @@ most, and the larger minibatch gained a few percent, again as predicted.
 :begin_tab:`pytorch`
 Reduced precision alone gave about 1.75, inside the bounds that the second
 profile set, in which the products held seven tenths of the step. The
-compiler, to which this chapter gave a whole section, gains little more
-than a tenth here, because this model already spends most of its time in
+compiler, to which this chapter gave a whole section, gains between a
+tenth and a sixth here, because this model already spends most of its time in
 large matrix products.
 :end_tab:
 
@@ -1402,10 +1406,11 @@ faster step is not yet a faster training run.
 1. [code] **Cost of recomputation.** Activation checkpointing in
    :numref:`subsec_ft-rungs` was measured against two estimates, one from
    the FLOP count and one from the time of the forward pass alone.
-    1. Record the kernel times of the checkpointed step with
-       `d2l.kernel_times`, as `profile` does, and split its device time
-       with `account`. Compare both parts with those of the step of
-       `+ batch 512`, and say which of them carries the extra time.
+    1. Profile the forward pass alone and the checkpointed step with
+       `d2l.kernel_times`, and match the kernels that checkpointing adds to
+       the step with those of the forward pass. Which of them reappear as
+       they ran alone, and which recomputed operations run inside kernels
+       of the backward pass? Read the kernel names.
     1. Time the forward pass of the blocks alone, without the embedding
        and the output layer, and compute the bound of the section again.
        Does it move closer to the measured ratio?

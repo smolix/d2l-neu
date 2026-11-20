@@ -1063,10 +1063,12 @@ it is 4%.
 :begin_tab:`pytorch`
 The two-block GPT runs in tf32 here, because the timing cell of
 :numref:`subsec_mp-mixed` left `'high'` set. The step takes 16 ms longer,
-more than twice the 7 ms of accumulator traffic that we predicted. A
-profile that sorts the kernels by kind (:numref:`sec_perf_model`) finds
-two causes. The matrix products run slower on micro-batches of 1,024
-tokens. And there are more additions than our count has: the output layer
+more than twice the 7 ms of accumulator traffic that we predicted. The
+second line of each row sorts the device time by kind of kernel
+(:numref:`sec_perf_model`) and finds two causes. The matrix products take
+about 5 ms longer on micro-batches of 1,024 tokens, and the other kernels,
+the additions among them, about 12 ms longer. There are more additions
+than our count has: the output layer
 shares its weights with the token embedding, so in every micro-batch
 autograd first adds the two gradients of that table, about half the
 parameters of this model, and only then adds the result into `.grad`.
@@ -1075,9 +1077,12 @@ every micro-batch.
 :end_tab:
 
 :begin_tab:`jax`
-The step takes 10 ms longer. The 7 ms of accumulator traffic that we
-predicted accounts for most of it, and that prediction assumed the full
-specified bandwidth, which a copy never quite reaches.
+The step takes 10 ms longer. The second line of each row sorts the device
+time by kind of kernel: the matrix products take about 2 ms longer, the
+other kernels, the additions among them, about 8 ms. The 7 ms of
+accumulator traffic that we predicted accounts for most of that, and the
+prediction assumed the full specified bandwidth, which a copy never quite
+reaches.
 :end_tab:
 
 The two gradients agree, but the equivalence rests on conditions that this

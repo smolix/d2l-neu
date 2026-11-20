@@ -242,8 +242,9 @@ soon as it reaches its cap, 25 MiB (26.2 MB) by default (the argument
 `bucket_cap_mb`), so it can exceed the cap by the tensor that crossed it.
 DDP also caps the first bucket at 1 MiB, so that communication starts
 early. ResNet-18's 45 MB of gradients form buckets of about 9, 26, and
-9 MB: the first large gradient to arrive, a 9 MB convolution weight of
-the last stage, overshoots the small cap on its own. The last bucket holds
+9 MB, which the code of the training step below counts: the first large
+gradient to arrive, a 9 MB convolution weight of the last stage,
+overshoots the small cap on its own. The last bucket holds
 the gradients of the first two thirds of the layers, which have few
 channels and therefore few weights. (DDP builds these buckets only after
 its first step, in the order in which the gradients became ready; this
@@ -592,7 +593,7 @@ the whole minibatch, with the added collectives (exercise
 
 :begin_tab:`jax`
 The check settles the question by itself. The two-GPU step differs from
-one GPU on all 256 examples by $10^{-4}$ or less, about two orders of
+one GPU on all 256 examples by $10^{-4}$ or less, two to three orders of
 magnitude less than from the accumulated halves, which miss by a tenth of
 the largest update or more. The first gap is of the size that summing
 the same numbers in a different order produces in this network: on two
@@ -687,11 +688,10 @@ def step_time(k, b, num_steps=50):
     return d2l.Benchmark(stepper(k, b), warmup=10, repeats=num_steps).time
 ```
 
-<!-- WRITER: S1. The prediction moved here, before the weak-scaling measurement: cost-model prose, beta_link measurement and the prediction cell, which now prints the exposed ms without overlap and with full overlap (last bucket: DDP 8.7 MB from the bucket count printed in the training-step cell; JAX the buffer the compiled program sends last, 18.9 MB). Restate without past-tense references to the weak-scaling numbers; the tab notes below still quote the measured 15 / 19 ms, which now come later. -->
-
 Under weak scaling the computation on each GPU does not change with $k$,
 so the difference $t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ is the
-communication that a step exposes. The cost model :eqref:`eq_dp_cost` of
+communication that a step exposes. Before we measure it, let us predict
+it. The cost model :eqref:`eq_dp_cost` of
 :numref:`subsec_mg-accounting` charges this communication two terms: $c$
 fixed costs $\alpha$, one per allreduce call, and the time for every GPU
 to send $2(k-1)/k$ times the $S$ gradient bytes, $\beta_\textrm{link}$
@@ -791,21 +791,27 @@ if d2l.num_gpus() >= 2:
               f'full overlap (last bucket)')
 ```
 
+Each GPU sends at about 2.4 GB/s. An allreduce of ResNet-18's gradients
+that nothing overlaps would therefore take about 18 ms on two GPUs and,
+with the ring factor of 1.5, about 28 ms on four.
+
 :begin_tab:`pytorch`
 DDP's last bucket holds 8.7 of the 45 MB of gradients, so with full overlap
-a step would expose a fifth of $S\,\beta_\textrm{link}$, about 4 ms, not the
-15 ms measured.
+a step would expose only a fifth of that: about 4 ms on two GPUs and 5 ms
+on four.
 :end_tab:
 
 :begin_tab:`jax`
 With full overlap a step would expose only the last of XLA's two gradient
-buffers. Their sizes, about 26 and 19 MB, put that bound at 8 to 11 ms,
-depending on which comes last, against the 19 ms measured.
+buffers, which in the program order that `allreduce_megabytes` reports is
+the one of 19 MB, and so about 8 ms on two GPUs and 12 ms on four.
 :end_tab:
 
-Weak scaling first, with 256 examples per GPU:
-
-<!-- WRITER: S1. The prediction (bus bandwidth, exposed ms without and with full overlap) now comes before this cell; the cell prints, for k = 2 and 4, the efficiency predicted without overlap and with full overlap and the measured exposed ms. Rewrite the reading below as the test of those two predictions (see code.md for the numbers). -->
+The two predictions differ enough for a measurement to decide between
+them. We measure weak scaling with 256 examples per GPU, and for every
+$k > 1$ the cell prints the efficiency that each prediction implies, the
+one-GPU step divided by the one-GPU step plus the exposed time, next to
+the exposed time it measures:
 
 ```{.python .input #multi-gpu-practice-ddp-really-run-3}
 %%tab pytorch, jax
@@ -825,33 +831,31 @@ one, and four GPUs a little over three times as many. The *efficiency*,
 the speedup divided by $k$, falls gradually as GPUs are added. Under weak
 scaling every GPU does the same work at every $k$, so the efficiency is
 the ratio of the single-GPU step time to the step time on $k$ GPUs. What
-it loses is the communication that the step does not hide.
+it loses is the communication that the step does not hide, and the step
+loses nearly as much as if nothing were hidden. The measured efficiencies lie at or a little
+above the predictions without overlap, far below those with full overlap,
+and from two GPUs to four the exposed time grows by about half, as the
+ring factor predicts. The cost model gets the bytes right. Overlap hides
+far less of the communication on this machine than the bucket model
+predicts.
 
 :begin_tab:`pytorch`
-Here the efficiency is 88% on two GPUs and 83% on four. Four GPUs give 3.3
+Here the efficiency is 88% on two GPUs and 83% on four, against 86% and
+80% without overlap and 97% and 95% with full overlap. Four GPUs give 3.3
 times the throughput of one, so a sixth of the machine goes to moving
 45 MB per step through host memory. On two GPUs a step takes about 15 ms
-longer than on one (127 against 112 ms), and the next subsection asks where
-those milliseconds go.
+longer than on one (127 against 112 ms): overlap hides about 3 of the
+18 ms, where the bucket model promised 14.
 :end_tab:
 
 :begin_tab:`jax`
-Here the efficiency is 84% on two GPUs and 77% on four. Four GPUs give 3.1
-times the throughput of one, so almost a quarter of the machine goes to
-communication. On two GPUs a step takes about 19 ms longer than on one
-(119 against 100 ms), and the next subsection asks where those
-milliseconds go.
+Here the efficiency is 84% on two GPUs and 77% on four, about the 84% and
+78% predicted without overlap and well below the 93% and 90% of full
+overlap. Four GPUs give 3.1 times the throughput of one, so almost a
+quarter of the machine goes to communication. On two GPUs a step takes
+about 20 ms longer than on one (120 against 100 ms), about as long as an
+allreduce that nothing overlaps.
 :end_tab:
-
-<!-- WRITER: S1. This paragraph was the reading of the old prediction cell, which printed predicted against measured exposed ms after the weak-scaling cell; it now reads the weak-scaling cell above. Merge it with the tab notes above. -->
-
-Each GPU sends at about 2.4 GB/s. An allreduce of ResNet-18's gradients
-that nothing overlaps takes about 18.5 ms on two GPUs and, with the ring
-factor of 1.5, about 28 ms on four. The measured exposed times are close
-to these numbers, and from two GPUs to four they grow by about half, as
-the ring factor predicts. The cost model gets the bytes right. Overlap
-hides far less of the communication on this machine than the bucket
-model predicts.
 
 Four GPUs, in other words, do the work of a little over three. For a model
 that sends 45 MB through host memory at every step this is respectable,
@@ -883,9 +887,7 @@ communication does not, and the efficiency falls well below that of weak
 scaling. A training run with a fixed
 minibatch finishes less than three times sooner on four GPUs.
 
-<!-- WRITER: S1. The heading below now introduces only the diagnosis (which assumption of the bucket model fails); retitle or move it. -->
-
-### Predicted and Measured Communication
+### Assumptions of the Bucket Model
 
 The bucket model makes three assumptions: every allreduce starts as soon
 as its bucket is complete, it runs as fast as the bare benchmark, and the
@@ -900,7 +902,7 @@ For each configuration `profile_step` also profiles ten steps on GPU 0, as
 in :numref:`sec_perf_model`, and splits the device time per step into
 NCCL's kernels and all others. If the bucket model held, the step without
 communication would match the one-GPU step, NCCL's kernels would run for
-about $S\,\beta_\textrm{link}$, 18.5 ms, and the other kernels would take as
+about $S\,\beta_\textrm{link}$, 18 ms, and the other kernels would take as
 long as on one GPU.
 
 :begin_tab:`pytorch`
@@ -985,7 +987,7 @@ second of device work per step, even one Python thread would keep two
 GPUs fed, so how the tools organize the host costs nothing and gains
 nothing for this model. All of the extra time is communication.
 
-NCCL's kernels run for 20 to 22 ms per step, close to the 18.5 ms of the
+NCCL's kernels run for 20 to 22 ms per step, close to the 18 ms of the
 bare benchmark, so the allreduces run about as fast as they do alone and
 the second assumption holds. What fails is the third: the computation
 kernels take longer when an allreduce runs beside them. Between our GPUs,
@@ -1010,7 +1012,7 @@ as slower computation.
 :begin_tab:`jax`
 For about 11 ms of the step GPU 0 only communicates (about 119 against
 108 ms of computation). These 11 ms hold the last gradient buffer,
-which full overlap would leave exposed (8 to 11 ms), and some of the small
+which full overlap would leave exposed (about 8 ms), and some of the small
 allreduces of the statistics, which nothing can hide. The other 10 ms of
 NCCL's kernels run beside the computation, which takes 8 ms longer than
 without communication. Most of what overlap hides comes back as slower
@@ -1053,7 +1055,7 @@ if d2l.num_gpus() >= 2:
 ```
 
 The bare allreduce runs four to five times faster, and the predicted
-communication of ResNet-18 falls from about 18.5 ms to about 4 ms. It is
+communication of ResNet-18 falls from about 18 ms to about 4 ms. It is
 tempting to switch it on and declare victory. The setting helps only on
 machines whose GPUs lack peer-to-peer access, only with the NCCL versions
 that still contain it, and only if the training run survives it.
@@ -1531,8 +1533,8 @@ With full overlap, only the last 9 MB would be exposed: about 4 ms here.
   places computation between them.
 
 ::: {.d2l-note .rule}
-With full overlap, only the last buffer would be exposed: 8 to 11 ms
-here.
+With full overlap, only the last buffer, 19 MB, would be exposed: about
+8 ms here.
 :::
 :::
 
@@ -1617,30 +1619,6 @@ weak-scaling speedup is 1.
 :::
 :::
 
-::: {.slide title="Weak Scaling: Four GPUs Do the Work of a Little Over Three"}
-[Scaling]{.kicker}
-
-256 examples per GPU, the global minibatch grows with $k$:
-
-@!multi-gpu-practice-ddp-really-run-3
-
-::: {.d2l-note .rule}
-Efficiency $= t_{\textrm{step}}(1)/t_{\textrm{step}}(k)$: what it loses is
-the communication that the step does not hide.
-:::
-:::
-
-::: {.slide title="Strong Scaling: A Run with a Fixed Minibatch of 512 Finishes Less Than 3× Sooner"}
-[Scaling]{.kicker}
-
-@!multi-gpu-practice-ddp-really-run-4
-
-::: {.d2l-note .rule}
-At $k = 4$, 128 examples per GPU: the computation shrinks, the allreduce
-does not.
-:::
-:::
-
 ::: {.slide title="Check: Predict the Exposed Time with No Overlap"}
 [Check]{.kicker}
 
@@ -1657,17 +1635,39 @@ share.
 :::
 :::
 
-::: {.slide title="The Exposed Time Is Close to an Allreduce with No Overlap"}
-[Predicted and measured]{.kicker}
+::: {.slide title="Two Predictions: No Overlap, or Only the Last Bucket"}
+[Predicted]{.kicker}
 
 Weak scaling keeps the computation per GPU, so
 $t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ is the exposed
-communication. No overlap: $\frac{2(k-1)}{k} S\,\beta_\textrm{link}$.
+communication. No overlap: $\frac{2(k-1)}{k} S\,\beta_\textrm{link}$;
+full overlap: the same for the last bucket alone.
 
 @!multi-gpu-practice-ddp-really-run-5
+:::
+
+::: {.slide title="Weak Scaling: Four GPUs Do the Work of a Little Over Three"}
+[Scaling]{.kicker}
+
+256 examples per GPU; efficiency $= t_{\textrm{step}}(1)/t_{\textrm{step}}(k)$,
+predicted as $t_{\textrm{step}}(1)/(t_{\textrm{step}}(1) + \textrm{exposed})$:
+
+@!multi-gpu-practice-ddp-really-run-3
 
 ::: {.d2l-note .warn}
-Overlap hides far less here than the bucket model predicts.
+The exposed time is close to an allreduce with no overlap: overlap hides
+far less here than the bucket model predicts.
+:::
+:::
+
+::: {.slide title="Strong Scaling: A Run with a Fixed Minibatch of 512 Finishes Less Than 3× Sooner"}
+[Scaling]{.kicker}
+
+@!multi-gpu-practice-ddp-really-run-4
+
+::: {.d2l-note .rule}
+At $k = 4$, 128 examples per GPU: the computation shrinks, the allreduce
+does not.
 :::
 :::
 

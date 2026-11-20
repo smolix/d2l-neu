@@ -346,12 +346,12 @@ for desc, fn in (('eager', d2l.gelu_ish), ('compiled', compiled)):
     print(f'{b}, {arrays_moved[desc] * x.nbytes / b.time / 1e9:.0f} GB/s')
 ```
 
-The compiled chain is about ten times faster, close to the predicted
-nine. Both versions move data at 0.7 to 0.9 TB/s, and the two rates wander
+The compiled chain is eight to eleven times faster, around the predicted
+nine. Both versions move data at 0.6 to 0.9 TB/s, and the two rates wander
 independently from run to run, so re-runs of this cell put the measured
-ratio anywhere between eight and eleven, with the count of bytes in the
-middle of that range. The compiler made memory no faster and arithmetic
-no cheaper. It removed 16 of the 18 array transfers.
+ratio anywhere in that range, with the count of bytes in the middle of it.
+The compiler made memory no faster and arithmetic no cheaper. It removed 16
+of the 18 array transfers.
 
 The same count applies at the scale of a language model. The chapter's
 running example is a GPT with a billion parameters and width $d = 2048$;
@@ -710,35 +710,32 @@ bound by about this factor.
 
 :begin_tab:`pytorch`
 The three timings separate the two remedies. Surprisingly, the stack compiled
-by Inductor is hardly faster than eager, and the profile says why. Each layer
-runs as three kernels. cuBLAS computes the product as a matrix-product kernel
-followed by a split-K reduction, which adds up partial products computed over
-slices of the shared dimension, and the tanh runs as a Triton kernel of its
-own: the product is a library kernel that Inductor calls, not one it generates,
-so it cannot fuse the tanh into it. Nothing is fused, and Inductor's generated
-Python code issues the 120 operations, and with them all 180 kernels, one at a
-time, at about the same 18 µs per operation as eager dispatch. The device is
-busy for about a seventh of the call and waits for the host during the rest.
-Counted per kernel instead of per operation, a call takes about 12 µs per
-launch, close to the 13 µs of a bare product in :numref:`subsec_perf-sweep`,
-which runs as a single kernel: the reduction adds a launch to every product
-here. With 18 µs per operation and a floor of 1 µs, the bound is near eighteen.
-All of the gain, about a factor of seven, comes from replay, and the replayed
-call takes about as long as the device was busy in the compiled one, some 0.3
-ms. Replay removed the waiting and nothing else. `mode='reduce-overhead'` makes
-`torch.compile` record its kernels as CUDA graphs: the first call compiles and
-warms up, the second records, and later calls with the same shapes copy the
-input into the recorded buffer and replay. `Benchmark` warms up with three
-calls, so the timed calls are replays.
-:end_tab:
+by Inductor is hardly faster than eager, while replay makes it about seven
+times faster, and the replayed call takes about as long as the device was
+busy in the compiled one, some 0.3 ms. The profile says why compilation alone
+gained nothing. Each layer runs as three kernels. cuBLAS computes the product
+as a matrix-product kernel followed by a split-K reduction, which adds up
+partial products computed over slices of the shared dimension, and the tanh
+runs as a Triton kernel of its own: the product is a library kernel that
+Inductor calls, not one it generates, so it cannot fuse the tanh into it.
+Nothing is fused, and Inductor's generated Python code issues the 120
+operations one at a time, at 17 to 18 µs per operation, as eager dispatch
+does. With a floor of 1 µs, the bound is near eighteen. The device is busy
+for about a seventh of the call and waits for the host during the rest.
+Replay removed the waiting and nothing else.
 
-<!-- WRITER: S7. Split this tab note in two, finding first: (1) Inductor gained nothing, replay gained about a factor of seven, the replayed call lasts as long as the device was busy; end that paragraph on "Replay removed the waiting and nothing else." (2) The mechanics of mode='reduce-overhead' as a short second paragraph. Move the per-launch accounting ("Counted per kernel instead of per operation ... adds a launch to every product here") to exercise 7, part 3, which profiles the eager stack. No cell changed. -->
+`mode='reduce-overhead'` makes `torch.compile` record its kernels as CUDA
+graphs: the first call compiles and warms up, the second records, and later
+calls with the same shapes copy the input into the recorded buffer and
+replay. `Benchmark` warms up with three calls, so the timed calls are
+replays.
+:end_tab:
 
 :begin_tab:`jax`
 `jax.jit` already removes Python from the loop: the compiled function
 starts with one call. The eager version dispatches its 120 operations one
 at a time, at 50 to 65 µs each depending on the load of the host, which
-puts the bound near sixty, and it is twenty to thirty times slower.
+puts the bound near sixty, and it is about thirty times slower.
 Current XLA releases also record runs of consecutive kernels on a GPU as
 CUDA graphs, which XLA calls command buffers, so a jitted function is
 replayed without a separate mode.
@@ -765,15 +762,7 @@ and replayed in turn; since a replay overwrites the outputs of the
 previous one, a result that must survive the next call has to be cloned.
 We replay the step and add up the time the device spends in its kernels,
 with the same profiler.
-
-Our outputs come from a run with `TEARDOWN_CUPTI=1` in the environment,
-set before starting, which detaches PyTorch's profiler from the GPU when a
-profile ends. Without it, the profile of the stack above leaves every
-later kernel launch of the process about 30% slower, and the timing below
-reports more host time than the step needs.
 :end_tab:
-
-<!-- WRITER: S2. TEARDOWN_CUPTI=1 is now set in the PyTorch extras cell at the top of this notebook, before the first profile (tested: launches after a profile stay at 12.4 us per operation, as with the variable set before the start; 16.5 to 17.9 us without it). Delete the sentences of the tab note above that tell the reader to set it; nothing else in the note depends on them. -->
 
 ```{.python .input #compilation-replaying-the-training-step}
 %%tab pytorch
@@ -785,14 +774,14 @@ print(f'training step, reduce-overhead: {1000 * t:.2f} ms/call, '
 ```
 
 :begin_tab:`pytorch`
-Replay brings the step below a millisecond, and the device's work, a
-quarter of a millisecond, matches the estimate made before the first
-timing. The device is still busy for only about a third of the step. The
-host runs Python
-between the replays, at the graph break, where autograd starts the
-backward graph, and in the bookkeeping of each replay, so the step remains
-overhead-bound. The count of the device's work was right; what is left of
-the step is host time between the graphs.
+Replay brings the step to about a millisecond or less, 0.7 to 1.2 ms in our
+runs, and the device's work, a quarter of a millisecond, matches the
+estimate made before the first timing. The device is still busy for only a
+fifth to a third of the step. The host runs Python between the replays, at
+the graph break, where autograd starts the backward graph, and in the
+bookkeeping of each replay, so the step remains overhead-bound. The count
+of the device's work was right; what is left of the step is host time
+between the graphs.
 :end_tab:
 
 ## Limits of Compilation
@@ -1008,8 +997,12 @@ up a compute-bound matrix product.
     1. Profile the eager stack with `d2l.kernel_times` and
        `d2l.show_profile`, as the section profiles the compiled one. How
        many kernels does a layer run, which of them computes the tanh, and
-       for what share of a call is the device busy? Explain what
-       compilation changed in the profile, and what it left alone.
+       for what share of a call is the device busy? Divide the time of a
+       call by the number of kernels it launches, and compare this time per
+       launch with the time per call of the bare $256 \times 256$ product
+       in :numref:`subsec_perf-sweep`, which runs as a single kernel.
+       Explain what compilation changed in the profile, and what it left
+       alone.
 
 8. [extended] **A tracer of your own.** ●● Build a miniature tracing
    compiler in plain Python, with NumPy arrays as the values on which the
@@ -1220,11 +1213,11 @@ with padding to the next multiple of 64?
 - Predicted speedup: the ratio of bytes, $18/2 = 9$.
 :::
 
-::: {.slide title="Fused gelu_ish Runs About 10× Faster, as the Byte Count Predicts"}
+::: {.slide title="Fused gelu_ish Runs About 9× Faster, as the Byte Count Predicts"}
 @!compilation-what-the-compiler-does-fusion
 
 - Check `allclose` first: compilers reorder floating-point arithmetic.
-- Both versions move data at 0.7–0.9 TB/s; re-runs put the ratio
+- Both versions move data at 0.6–0.9 TB/s; re-runs put the ratio
   between 8 and 11, around the predicted 9.
 
 ::: {.d2l-note}
@@ -1349,7 +1342,7 @@ A step launches 400 kernels at 8 µs of host time each. The GPU needs
   kernel also reads and computes.
 :::
 
-::: {.slide title="jit Runs the Stack 20–30× Faster Than Eager Dispatch" only="jax"}
+::: {.slide title="jit Runs the Stack About 30× Faster Than Eager Dispatch" only="jax"}
 @!compilation-the-overhead-regime-capture-and-replay
 
 - One call from Python; about 2 µs per operation, twice the floor of
@@ -1359,12 +1352,12 @@ A step launches 400 kernels at 8 µs of host time each. The GPU needs
   sum; replayed as a command buffer (CUDA graph), they keep the device busy.
 :::
 
-::: {.slide title="Replay Brings the Training Step Below a Millisecond" only="pytorch"}
+::: {.slide title="Replay Brings the Training Step to About a Millisecond" only="pytorch"}
 @!compilation-replaying-the-training-step
 
 - Device work about 0.25 ms: the estimate holds.
-- Busy about a third of the step: Python still runs between the replayed
-  graphs.
+- Busy a fifth to a third of the step: Python still runs between the
+  replayed graphs.
 
 ::: {.d2l-note}
 The device's work was predicted correctly; what is left is host time.
@@ -1391,7 +1384,7 @@ The device's work was predicted correctly; what is left is host time.
 
 - Tracing records tensor operations on placeholders; a branch on a value is
   frozen, refused, or left to Python.
-- `gelu_ish` on 61 MiB: eager moves 1.07 GiB, fused 122 MiB; about 10× faster.
+- `gelu_ish` on 61 MiB: eager moves 1.07 GiB, fused 122 MiB; 8 to 11× faster.
 - GELU variant of the 1B GPT: unfused activation $9I^*/d \approx 0.72$ of
   the products' time; fused, under a tenth.
 - MLP step: 0.25 ms of work under milliseconds of launches; compiling

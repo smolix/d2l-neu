@@ -546,13 +546,13 @@ for n, t, tf in zip(sizes, times, measured):
     print(f'n = {n:4d}: {1e6 * t:7.1f} us per call, {tf:5.1f} TFLOP/s')
 ```
 
-From $n = 2048$ on, the GPU computes within about a tenth of the peak, and
-now and then slightly above it: these products are compute-bound in fact as
-well as in the model. The small sizes are another matter. From $n = 256$ to
-$n = 1024$ the work grows 64-fold, but the time per call changes by less
-than a factor of two, and each doubling of $n$ multiplies the throughput by
-six to ten, around the eight that $n^3$ predicts when the time per call
-stays fixed.
+At $n = 4096$ and $n = 8192$ the GPU computes within about a tenth of the
+peak, and now and then slightly above it: these products are compute-bound
+in fact as well as in the model. The small sizes are another matter. From
+$n = 256$ to $n = 1024$ the work grows 64-fold, but the time per call
+changes by less than a factor of two, and each doubling of $n$ multiplies
+the throughput by six to twelve, around the eight that $n^3$ predicts when
+the time per call stays fixed.
 
 A time per call that barely depends on the size cannot be spent on
 arithmetic. Is it spent on the host, which issues the call, or on the
@@ -610,36 +610,30 @@ device time of a product overtakes the host time, at
 $n \approx (hP/2)^{1/3}$.
 
 :begin_tab:`pytorch`
-The sweep and the control time the same $256 \times 256$ product, and their
-times per call differ by a few microseconds, while the product keeps the
-device busy for about 3 µs; the difference lies on the host. With
-$h \approx 13$ µs, the smallest time per call in the sweep, the knee lies
-near $n = 1{,}000$, and the product at $n = 1024$ already reaches about four
-fifths of the peak. If you run this notebook yourself, set
-`TEARDOWN_CUPTI=1` in the environment before you start it, as we did for
-our outputs. It detaches the profiler from the GPU when a profile ends.
-Without it, every kernel launch after the first profile of the process
-stays slower, by about 30% on our machine, and so the `x + 1` of the
-control, which is timed after the profile of the product, comes out slower
-than ours.
+The sweep and the control time the same $256 \times 256$ product, and
+their times per call differ from run to run by a few microseconds, up to
+about 8 µs, while the product keeps the device busy for about 3 µs; the
+difference lies on the host. With $h \approx 13$ µs, the smallest time per
+call in the sweep, the knee lies near $n = 1{,}000$, and the product at
+$n = 1024$ already reaches about four fifths of the peak.
 :end_tab:
-
-<!-- WRITER: S2. TEARDOWN_CUPTI=1 is now set in the PyTorch extras cell at the top of this notebook, before the first profile (tested: launches after a profile stay at 12.4 us per operation, as with the variable set before the start; 16.5 to 17.9 us without it). Delete the sentences of the tab note above that tell the reader to set it; nothing else in the note depends on them. -->
 
 :begin_tab:`jax`
 Every call of a compiled function passes through XLA's runtime, which
 allocates the outputs, launches the kernels, and learns from the driver when
-they have finished. On our machine this takes about 0.05 to 0.11 ms per
+they have finished. On our machine this takes about 0.05 to 0.12 ms per
 call, depending on the function and on the load of the host. The small
-products of the sweep take 0.08 to 0.11 ms per call and the two calls of
-the control about 0.05 ms, although the device works for only a small part
+products of the sweep take 0.08 to 0.12 ms per call and the two calls of
+the control about 0.06 ms, although the device works for only a small part
 of each, so the spread lies on the host; the one-call step of the loops in
 :numref:`subsec_perf-measuring` takes about 0.1 ms. With $h$ between
 0.05 and 0.1 ms the knee lies between $n \approx 1{,}600$ and
 $n \approx 2{,}000$, and the sweep agrees: the product at $n = 1024$ stays
-below a fifth of the peak, the one at $n = 2048$ reaches more than nine
-tenths. A training step compiled into one function pays this cost once for
-all of its kernels.
+below a fifth of the peak. The one at $n = 2048$ sits at the knee, where
+the device time of about 0.1 ms meets the host time, and so it swings with
+the load of the host: between two thirds and more than nine tenths of the
+peak in our runs. A training step compiled into one function pays this cost
+once for all of its kernels.
 :end_tab:
 
 The same reasoning applies to any operation. Each of the three resources
@@ -1331,8 +1325,8 @@ One fused kernel would move 2 tensors instead of 18.
 @!performance-model-matrix-products-across-sizes-1
 
 Up to $n = 1024$ the time per call grows far less than the work, and the
-points climb with slope three, the mark of a fixed time per call. From
-$n = 2048$ the products reach the roof.
+points climb with slope three, the mark of a fixed time per call. By
+$n = 4096$ the products reach the roof.
 
 ::: {.d2l-note}
 On paper compute-bound from $n \approx 500$; in fact from 1,000 to 2,000,

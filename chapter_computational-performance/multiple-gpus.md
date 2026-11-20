@@ -702,12 +702,16 @@ machine the bus bandwidth is about 2.4 GB/s, so $\beta_{\textrm{link}}$
 is about 0.4 ns per byte. On the path through host memory between our
 GPUs, NCCL falls back to a transport that moves fewer bytes per second
 than the PCIe links carry; :numref:`sec_multi_gpu_concise` measures this
-transport and a workaround for it. Each call of `allreduce`
-dispatches a compiled program of its own, so $\alpha$ includes the time of
-that dispatch.
+transport and a workaround for it. A training step makes its allreduce
+inside a compiled program that it launches anyway, so we take $\alpha$ to
+be what one more allreduce adds to such a program: `program_time` times a
+program that makes one allreduce of a single number and one that makes
+ten, each waiting for the one before, and $\alpha$ is a ninth of the
+difference. A separate program for every allreduce would cost about ten
+times as much on our machine, since every program pays a start-up cost of
+its own. For $\beta_{\textrm{link}}$ that cost cancels, because the cell
+subtracts the time of a one-float call from that of the large one.
 :end_tab:
-
-<!-- WRITER: S3. The JAX cell now measures alpha as a training step pays it: program_time(m) times one jitted shard_map program with m allreduces (pmean) of one float, each on the result of the one before, and alpha = (t(10) - t(1)) / 9; beta_link is (t(256 MiB) - t(one float)) / S, both separate calls, so their difference drops the dispatch. Dev, two runs: alpha 24 and 25 us (an earlier probe 22 to 31 us), against 266 to 272 us for a separate program per allreduce; beta_link 0.41 ns/byte, 2.4 GB/s, unchanged. A program on two GPUs costs about 170 us with no allreduce in it and about 290 us with one. Replace the sentence 'Each call of allreduce dispatches a compiled program of its own, so alpha includes the time of that dispatch' with how alpha is measured now and why (the step's psum runs inside a program that the step dispatches anyway). -->
 
 A measured $\beta_{\textrm{link}}$ describes the allreduce that moved the
 bytes, the two GPUs that took part, and the path between them
@@ -715,15 +719,15 @@ bytes, the two GPUs that took part, and the path between them
 ours comes from GPUs 0 and 1.
 
 At these rates, moving LeNet's 247 KB of gradients takes
-$S\,\beta_{\textrm{link}}$, at most about a tenth of a millisecond and less
-than $\alpha$. For a gradient this small, then, the fixed cost should
-matter more than the bandwidth of the link. If so, it matters a great deal
-whether the gradients travel as one message or as ten. We allreduce
-LeNet's ten gradient tensors first one at a time, then all at once as one
-concatenated vector, and print both times next to the predictions of
-:eqref:`eq_dp_cost` with $c = 10$ and $c = 1$. Neither time was used to
-obtain $\alpha$ or $\beta_{\textrm{link}}$, so this is the experiment
-that tests them.
+$S\,\beta_{\textrm{link}}$, at most about a tenth of a millisecond, while
+ten messages would pay $10\alpha$, more than that. For a gradient this
+small it should therefore matter a great deal whether the gradients travel
+as one message or as ten. We allreduce LeNet's ten gradient tensors first
+one at a time, then all at once as one concatenated vector. Both variants
+move the same bytes, so :eqref:`eq_dp_cost` with $c = 10$ and $c = 1$
+predicts that they differ by $9\alpha$. Neither time was used to obtain
+$\alpha$ or $\beta_{\textrm{link}}$, so this is the experiment that tests
+them.
 
 ```{.python .input #multiple-gpus-latency-and-bandwidth-of-the-allreduce-1}
 %%tab pytorch
@@ -769,30 +773,31 @@ print(f'difference: {1e6 * (t["separately"] - t["at once"]):4.0f} us '
       f'measured, {1e6 * (c - 1) * alpha:4.0f} us predicted by {c - 1} alpha')
 ```
 
-Ten calls take seven to ten times as long as one call that moves the same
-bytes, and for ten calls the two constants predict the time to within a
-few percent.
+Ten messages take longer than one by about the $9\alpha$ of the
+prediction.
 
 :begin_tab:`pytorch`
-The single call is predicted as well.
+Here every allreduce is a call of its own, and the two constants predict
+both times to within a few percent: ten calls take seven to ten times as
+long as one.
 :end_tab:
 
 :begin_tab:`jax`
-The single call takes less than its prediction, about as long as
-$\alpha$ alone. Each call costs the host about $\alpha$ to dispatch, and
-the transfer of one call runs while the host dispatches the next.
-:eqref:`eq_dp_cost` adds the two terms, so it overestimates a call whose
-transfer is shorter than its dispatch.
+Both programs also pay a cost that :eqref:`eq_dp_cost` does not count.
+The one with a single allreduce takes about 0.3 ms, of which
+$\alpha + S\,\beta_{\textrm{link}}$ accounts for about 0.13 ms; the rest
+is the start-up of a program on two GPUs, which a training step pays once,
+whatever the program contains. The difference of the two times cancels it
+and leaves the nine extra allreduces, and it comes within a sixth of
+$9\alpha$.
 :end_tab:
 
-<!-- WRITER: S3. The JAX one-or-ten cell now runs each variant as one program: ten psums chained with optimization_barrier (without it XLA merges independent psums into one allreduce; checked: 1 all-reduce in the compiled text without the barrier, 10 with it) against one psum of the concatenation; it prints both times and their difference against 9 alpha. Dev, two runs: separately 581 / 547 us, at once 339 / 297 us, difference 242 / 250 us measured against 229 / 218 us predicted. Both programs pay the program's own cost (about 0.3 ms), so alpha + S beta_link does not predict their absolute times; the test is the difference. Rewrite this tab note (the dispatch explanation goes), and check the shared sentence 'Ten calls take seven to ten times as long as one call ... predict the time to within a few percent', which now holds for the PyTorch tab only (JAX: ten take about 1.7 to 1.8 times as long as one). -->
-
-For a gradient this small, the number of messages decides the
-communication time, and the bytes hardly matter. An allreduce of LeNet's
-gradient is priced like a letter: by the envelope, not by the weight of
-what is inside. This is why the data-parallel tools of
-:numref:`sec_multi_gpu_concise` pack many small gradient tensors into a few
-large buffers before they send them, as our training step does by hand.
+For a gradient this small, nine more messages cost more than all of its
+bytes. An allreduce of LeNet's gradient is priced like a letter, and ten
+envelopes cost more than the weight of what is inside them. This is why the
+data-parallel tools of :numref:`sec_multi_gpu_concise` pack many small
+gradient tensors into a few large buffers before they send them, as our
+training step does by hand.
 
 ### LeNet on One and Two GPUs
 
@@ -829,21 +834,14 @@ The device sits idle for most of the step, so the step is overhead-bound
 and its time is $h_{\textrm{step}}$.
 
 :begin_tab:`pytorch`
-The device is busy for 0.30 ms of a step of 2.8 ms, about a tenth. Its
+The device is busy for 0.30 ms of a step of 2.7 ms, about a tenth. Its
 largest kernels, the convolutions and their gradients, take a few
-hundredths of a millisecond each. If you run this notebook yourself, set
-`TEARDOWN_CUPTI=1` in the environment before you start it, as we did for
-our outputs. It detaches the profiler from the GPU when a profile ends.
-Without it, every later kernel launch of the process stays slower, by
-about 30% on our machine, and so does every host-bound timing below this
-cell.
+hundredths of a millisecond each.
 :end_tab:
 
-<!-- WRITER: S2. TEARDOWN_CUPTI=1 is now set in the PyTorch extras cell at the top of this notebook, before the first profile (tested: launches after a profile stay at 12.4 us per operation, as with the variable set before the start; 16.5 to 17.9 us without it). Delete the sentences of the tab note above that tell the reader to set it; nothing else in the note depends on them. -->
-
 :begin_tab:`jax`
-The device is busy for 0.17 ms of a step of 0.46 ms, about a third, and
-waits for the host the rest of the time.
+The device is busy for 0.17 ms of a step of 0.40 ms, about two fifths,
+and waits for the host the rest of the time.
 :end_tab:
 
 Halving the minibatch should then leave the local work about as long. We
@@ -880,7 +878,7 @@ the training run that it predicts, so that the prediction and the
 measurement come from the same run.
 
 :begin_tab:`jax`
-The step at 256 examples takes 0.41 ms here and 0.46 ms in the profile,
+The step at 256 examples takes 0.37 ms here and 0.40 ms in the profile,
 although the code is the same: the host time of a step differs by about a
 tenth from one cell to the next.
 :end_tab:
@@ -1041,16 +1039,13 @@ of the step.
 :end_tab:
 
 :begin_tab:`jax`
-Here :eqref:`eq_dp_cost` already predicts a slower step than on one GPU,
-but for a reason the training step does not share. Almost half of its
-prediction is the exchange, and most of that is $\alpha$, which contains
-the dispatch of a separate program for every allreduce. The training
-step's `psum` runs inside the program that the step dispatches anyway.
-The same $\alpha$ puts the one-launcher prediction above the measurement,
-by a sixth to a quarter.
+:eqref:`eq_dp_cost` predicts about 0.5 ms, a little more than the
+one-GPU step, because the one-GPU step at 128 examples takes as long as
+the step at 256 and the exchange, $\alpha + S\,\beta_{\textrm{link}}$,
+adds about 0.13 ms. The step on two GPUs takes 0.9 to 1.1 ms in our runs,
+about the one-launcher prediction of 0.9 ms or somewhat more; it varies
+from run to run by more than the prediction does.
 :end_tab:
-
-<!-- WRITER: S3. With the in-program alpha (dev, two runs): 1 GPU 0.41 / 0.41 ms, 2 GPUs 0.97 / 1.12 ms per step; predicted 0.60 / 0.54 ms by eq_dp_cost and 0.94 / 0.94 ms with one launcher. The exchange is now about 0.12 ms (alpha 0.025 of it), not 0.37, so 'almost half of its prediction is the exchange, and most of that is alpha' is false: eq_dp_cost predicts 0.54 to 0.60 ms, a little above the one-GPU step only because t_local(1,128) is as long as the step at 256 plus the exchange. The one-launcher prediction is now 3% to 16% low (the two-GPU step itself varied between the runs, 0.97 and 1.12 ms), no longer a sixth to a quarter high. Delete the alpha explanation; read the rows from the store. -->
 
 This is not the result that the opening prepared us for. Twice the
 one-GPU step accounts for most of the two-GPU step, so the exchange can
@@ -1192,22 +1187,21 @@ At 4,096 examples the device is busy for nearly all of a 3.0 ms step,
 a little longer than the 2.8 ms of host time at 256: the step has just
 left the host-bound case for the middle one. Feeding two GPUs takes the
 host about 5.5 ms, longer than the 3 ms of work that each GPU does, and
-the model predicts a gain of 8%. The measurement finds about a tenth. At
-the boundary a few tenths of a millisecond of host time decide the row,
-and the host time varies by that much from run to run: in some runs of
-this cell the gain disappears.
+the model predicts a gain of 7 to 8%. The measurement finds anything from
+no gain, as in the run shown, to about a tenth. At the boundary a few
+tenths of a millisecond of host time decide the row, and the host time
+varies by that much from run to run.
 :end_tab:
 
 :begin_tab:`jax`
 At 4,096 examples the device works for 1.7 ms of a 1.8 ms step, more than
 twice the host time of about 0.4 ms, so the step is in the device-bound
-case, and the second GPU raises the throughput by about 1.8. The prediction
-is lower, about 1.7, and at 256 it is lower too, 0.71 against more than
-0.8. The $\alpha$ in the prediction again contains the dispatch of a
-separate program, which the `psum` inside the step does not pay.
+case, and the second GPU raises the throughput by about 1.7 to 1.8. In
+every row the prediction lies a little above the measurement, by a few
+hundredths up to about a tenth: the step on two GPUs takes slightly longer
+than the sum of the device time and the exchange, and the model has no
+term for the difference.
 :end_tab:
-
-<!-- WRITER: S3. With the in-program alpha (dev, two runs), predicted against measured: b = 256: 0.87 / 0.88 against 0.81 / 0.79; b = 4096: 1.77 / 1.80 against 1.71 / 1.71; b = 32768: 1.98 / 1.97 against 1.86 / 1.92 (the one-GPU step at 32,768 was 13.4 and 19.0 ms in the two runs and the windows of the second spread from 1.80 to 2.11, so read this row from the store). The predictions now lie a little above the measurements, by 0.05 to 0.1, instead of below; delete the sentence on the dispatch in alpha. -->
 
 Data parallelism thus works, even for LeNet, once each GPU has enough to
 do that the host can keep both busy. The frameworks' own tools
@@ -1221,18 +1215,18 @@ all 16 bytes per parameter.
 Data parallelism trains a copy of the model on every device, each on its
 share of the minibatch, and an allreduce of the gradients before every
 update keeps the copies equal. A ring allreduce, a reduce-scatter followed
-by an all-gather, makes each device send $2(k-1)S/k$ bytes, never more
-than $2S$, in $2(k-1)$ sequential steps. The cost of a step follows from
+by an all-gather, makes each device send $2(k-1)S/k$ bytes, never more than
+$2S$, in $2(k-1)$ sequential steps. The cost of a step follows from
 :eqref:`eq_dp_cost`, whose terms can each be measured; for LeNet's small
-gradient the number of messages, not the bytes, sets the time of the
-exchange. When one host feeds $k$ devices, a host-bound step takes about
-$k$ times its host time, a term that :eqref:`eq_dp_one-launcher` adds to
-the cost model. A second GPU never helps while the one-GPU step is
-host-bound, and it helps once the device work per step outlasts both the
-host time of feeding two GPUs and the exchange: LeNet gains nothing at 256
-examples per GPU and nearly doubles its throughput at 32,768. A reported
-speedup must say whether it holds the global minibatch fixed (strong
-scaling) or the per-device batch (weak scaling).
+gradient, nine more messages cost more than all of its bytes. When one host
+feeds $k$ devices, a host-bound step takes about $k$ times its host time, a
+term that :eqref:`eq_dp_one-launcher` adds to the cost model. A second GPU
+never helps while the one-GPU step is host-bound, and it helps once the
+device work per step outlasts both the host time of feeding two GPUs and
+the exchange: LeNet gains nothing at 256 examples per GPU and nearly
+doubles its throughput at 32,768. A reported speedup must say whether it
+holds the global minibatch fixed (strong scaling) or the per-device batch
+(weak scaling).
 
 ## Exercises
 
@@ -1643,30 +1637,31 @@ $t_{\textrm{compute}}(B) - t_{\textrm{compute}}(B/2) > c\alpha + S\,\beta_{\text
 ::: {.slide title="Measured on Two RTX 4090s: α and β_link"}
 [Cost model]{.kicker}
 
-An allreduce of one float gives $\alpha$; one of $2^{26}$ floats
-(268 MB) gives $\beta_{\textrm{link}} = (t - \alpha)/$bytes:
+Small allreduces give the fixed cost $\alpha$ of one more call; one of
+$2^{26}$ floats (268 MB) gives $\beta_{\textrm{link}}$, the extra time
+per byte:
 
 @!multiple-gpus-the-accounting
 
 - Bus bandwidth far below PCIe's 32 GB/s: every byte is copied into
   host memory and out again.
-- LeNet's 247 KB: $S\,\beta_{\textrm{link}}$ is at most about 0.1 ms, less
-  than $\alpha$.
+- LeNet's 247 KB: $S\,\beta_{\textrm{link}}$ is at most about 0.1 ms;
+  ten messages pay $10\alpha$, more than that.
 - The value belongs to one allreduce, one pair of GPUs, and the path
   between them.
 :::
 
-::: {.slide title="Ten Small Allreduces Take Seven to Ten Times as Long as One"}
+::: {.slide title="Ten Small Allreduces Cost Nine α More Than One"}
 [Cost model]{.kicker}
 
-LeNet's 10 gradient tensors, sent one by one or concatenated; predicted
-as $c\,\alpha + S\,\beta_{\textrm{link}}$ with $c = 10$ and $c = 1$:
+LeNet's 10 gradient tensors, sent one by one or concatenated: the same
+bytes, so the model predicts a difference of $9\alpha$:
 
 @!multiple-gpus-latency-and-bandwidth-of-the-allreduce-1
 
 ::: {.d2l-note .rule}
-For small gradients the number of messages sets the time: priced by the
-envelope, not by the weight. Data-parallel tools pack gradients into
+For small gradients nine more messages cost more than all the bytes: the
+price is set by the envelopes. Data-parallel tools pack gradients into
 large buffers before sending.
 :::
 :::
@@ -1809,7 +1804,7 @@ Read every speedup with its convention.
   gradient allreduce per step; the one-step check matches to fp32 rounding.
 - Ring allreduce: $2(k-1)S/k < 2S$ bytes per device, $2(k-1)$ hops.
 - $t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + c\alpha + \frac{2(k-1)}{k}S\,\beta_{\textrm{link}}$;
-  for LeNet, ten messages cost seven to ten times one.
+  for LeNet, ten messages cost nine $\alpha$ more than one.
 - One host feeding two GPUs doubles LeNet's host-bound step; the
   exchange is a small part.
 - At 32,768 images per GPU: nearly twice the throughput of one GPU.

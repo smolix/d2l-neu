@@ -189,11 +189,12 @@ print(f'random / identity: {times["random"] / times["identity"]:.1f}x')
 The identity gather runs at about 0.9 TB/s, as predicted. The random
 gather takes about 37 ms, roughly an order of magnitude longer, and even
 counted at a whole sector per read it reaches only a third of the
-bandwidth. Sectors explain a factor of three. Most of the rest is the DRAM
-itself. A DRAM chip delivers bytes from a *row* of a few kilobytes that it
-must open first, and opening a row takes far longer than reading from an
-open one. Consecutive addresses share a row; random ones almost
-never do. Memory moves sectors, not numbers, and it moves them fastest from
+bandwidth. Sectors explain a factor of three. For the rest, the likely
+cause is the DRAM itself. A DRAM chip delivers bytes from a *row* of a few
+kilobytes that it must open first, and opening a row takes far longer than
+reading from an open one. Consecutive addresses share a row; random ones
+almost never do, so nearly every random read waits for a row to open.
+Memory moves sectors, not numbers, and it moves them fastest from
 a row that is already open. The cell cannot rule out a second cause,
 misses in the caches that translate the GPU's addresses; an exercise at the
 end of the section measures how long a run of consecutive elements must be

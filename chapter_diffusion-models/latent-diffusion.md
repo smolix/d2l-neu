@@ -1,16 +1,16 @@
 # Latent Diffusion and Transformers
 :label:`sec_diffusion-latent`
 
-Every image model of this chapter so far has looked at every pixel at every
-step. The U-Net of :numref:`sec_diffusion-images` reads all 784 pixels of a
-garment fifty times to draw it, and at $28 \times 28$ nobody minds. A color
-photograph of $512 \times 512$ pixels holds a thousand times as many
-numbers. The previous section showed what most of them are for: the
-sampler fixes the silhouette of a garment while the noise is still heavy and
-spends its last steps on texture, the detail a viewer hardly notices. A
-wrong stitch goes unnoticed; a missing sleeve does not. Why, then, should
-every step of a diffusion model carry all of those numbers, when most of
-them describe the stitches?
+Suppose we asked the U-Net of :numref:`sec_diffusion-images` for a color
+photograph of $512 \times 512$ pixels instead of a garment. To draw a
+garment it reads all 784 pixels fifty times, and at $28 \times 28$ nobody
+minds. The photograph holds a thousand times as many numbers, and the
+network would read every one of them at every step. The previous section
+showed what most of them are for: the sampler fixes the silhouette of a
+garment while the noise is still heavy and spends its last steps on
+texture, the detail a viewer hardly notices. A wrong stitch goes unnoticed;
+a missing sleeve does not. Why, then, should every step of a diffusion
+model carry all of those numbers, when most of them describe the stitches?
 
 :citet:`Rombach.Blattmann.Lorenz.ea.2022` answered by splitting the work in
 two. An autoencoder compresses each image once into a small grid of
@@ -1217,19 +1217,19 @@ reduces the number of evaluations, fifty per sample in this section.
 
 ## Summary
 
-Diffusion does not need to run on pixels. An autoencoder with a small KL term
-compresses each image into a latent of known scale, the regression of the
-earlier sections runs on the latents unchanged, and the decoder turns sampled
-latents back into images, at a fraction of the arithmetic per step. The
-decoder's reconstructions are what a perfect latent model would score; on
-Fashion-MNIST the latent samples stayed far above them, and neither a more
-tolerant decoder nor a larger backbone closed the gap. The gap is the latent
-model's own error, but the encoder decides how hard the latents are to learn.
-The diffusion transformer reads latents or pixels as patch tokens and lets the
-condition set a scale, a shift and a gate in every block, starting from the
-identity. At our scale the U-Net beat it at equal compute, while the
-transformer's FD fell faster as it grew. A latent helps when images are large,
-a transformer when budgets are.
+Diffusion does not need to run on pixels: an autoencoder with a small KL
+term compresses each image into a latent of known scale, the regression of
+the earlier sections runs on the latents unchanged, and each step costs a
+fraction of the arithmetic. The decoder's reconstructions show what a
+perfect latent model would score; on Fashion-MNIST the latent samples
+stayed at about three times that, and neither a more tolerant decoder nor a
+larger backbone closed the gap, which is the latent model's own error on
+latents whose difficulty the encoder decides. The diffusion transformer
+reads latents or pixels as patch tokens and lets the condition set a scale,
+a shift and a gate in every block, starting from the identity. At our scale
+the U-Net beat it at equal compute, while the transformer's FD fell faster
+as it grew. A latent helps when images are large, a transformer when
+budgets are.
 
 ## Exercises
 

@@ -298,12 +298,12 @@ class EMA:
         nnx.update(avg, params, nnx.state(model, nnx.Not(nnx.Param)))
 ```
 
-<!-- WRITER: D5: train_gan now reports loss_D as the sum of the critic's two batch means, so its equilibrium is 2 log 2 ≈ 1.39 and the generator's log 2 ≈ 0.69; "both would equal log 2" is false. The run now also tracks the EMA (half-life 500 steps, about 3.5 epochs of 142 steps). Measured last-epoch losses: see the report code-dcgan.md. -->
+<!-- WRITER: D5: train_gan now reports loss_D as the sum of the critic's two batch means, so its equilibrium is 2 log 2 ≈ 1.39 and the generator's log 2 ≈ 0.69; "both would equal log 2" is false. The run now also tracks an EMA of the generator with a half-life of 125 steps: 32,000 images at batch 256, the same number of images as the half-life of 500 steps at batch 64 in the backbone runs (an epoch here is 142 steps). Measured on four DCGAN runs (two seeds per tab), a half-life of 500 steps averaged over too much of a 2,840-step run and scored far worse than the last iterate (FD 7.4 to 8.4 against 2.1 to 3.2), while half-lives of 50 to 100 steps scored at or below the last iterate; see the report code-dcgan.md. The last-epoch losses are not stable across runs (loss_D 0.25 to 0.43 in four runs, with the same code), so quote no digits beyond "well below 2 log 2". -->
 Twenty epochs take a minute or two on one GPU. The printed losses are per image; at the equilibrium both would equal $\log 2 \approx 0.69$.
 
 ```{.python .input #dcgan-training-with-the-classic-loss-2}
 %%tab pytorch
-ema = EMA(net_G, half_life=500)
+ema = EMA(net_G, half_life=125)  # 32,000 images, as in the later runs
 history = d2l.train_gan(net_D, net_G, data_iter, num_epochs=20,
                         latent_dim=100, lr_D=0.0002, lr_G=0.0002, seed=1,
                         ema=ema)
@@ -313,12 +313,32 @@ print(f'last epoch: loss_D {loss_D:.3f}, loss_G {loss_G:.3f}')
 
 ```{.python .input #dcgan-training-with-the-classic-loss-2}
 %%tab jax
-ema = EMA(net_G, half_life=500)
+ema = EMA(net_G, half_life=125)  # 32,000 images, as in the later runs
 history = d2l.train_gan(net_D, net_G, data_iter, num_epochs=20,
                         latent_dim=100, lr_D=0.0002, lr_G=0.0002, seed=1,
                         ema=ema)
 loss_D, loss_G = history[-1]
 print(f'last epoch: loss_D {loss_D:.3f}, loss_G {loss_G:.3f}')
+```
+
+<!-- WRITER: new cell below (fault found in this pass). The EMA copies the live generator's batch-norm running statistics, but those belong to the live weights, not to the averaged ones; sampled with them, the averaged DCGAN generator scored far worse than its last iterate (4,059 samples, half-life 500 steps: FD 8.25 against 2.11 in PyTorch, 7.37 against 2.12 in JAX; recall 0.14 and 0.20 against 0.45 and 0.46). The cell re-estimates the statistics for the averaged weights by running it in training mode on 100 fresh batches of latent codes (the running averages forget at rate 0.1 per batch, so the copied statistics keep a weight of 0.9^100). The backbone of the later runs has no normalization, so only DCGAN needs this. In four runs the re-estimation lowered FD at every half-life (at half-life 100: 2.39 to 2.03, 2.05 to 1.81 in PyTorch; 1.94 to 1.72, 2.09 to 1.91 in JAX); see the report code-dcgan.md. -->
+
+```{.python .input #dcgan-training-with-the-classic-loss-5}
+%%tab pytorch
+ema.model.train()  # batch-norm statistics for the averaged weights
+with torch.no_grad():  # 100 batches; running averages forget at rate 0.1
+    for _ in range(100):
+        ema.model(torch.randn(256, 100, device=device))
+ema.model.eval();
+```
+
+```{.python .input #dcgan-training-with-the-classic-loss-5}
+%%tab jax
+ema.model.train()  # batch-norm statistics for the averaged weights
+# 100 batches; running averages forget at rate 0.1
+for key in jax.random.split(jax.random.key(4), 100):
+    ema.model(jax.random.normal(key, (256, 100)))
+ema.model.eval()
 ```
 
 <!-- WRITER: the grid now shows the EMA generator (ema.model, kept in evaluation mode). -->
@@ -996,6 +1016,7 @@ for name, (ref, feat) in scored.items():
 print(f'real pixel values equal to +1: {white:.0%}')
 ```
 
+<!-- WRITER: at n = 4,059 the ratios to the floor change: dev runs (not captured) gave a floor of FD 0.17 to 0.19 and MMD^2 within 0.002 of zero (three further disjoint splits per tab agree), so the penalized arms sit at roughly 15 to 25 times the floor, not "three to five times"; the collapsed NS arm at FD about 72 with recall 0.00 in both tabs (precision 0.33 in PyTorch, 0.00 in JAX, so the "high precision" prediction holds only in one tab: write that recall sees the collapse, not that precision stays high). Redrawing the 4,059 latent codes moves FD by about 0.1, far less than the gaps between rows. All generators reach precision 0.3 to 0.4 and recall about 0.45 against a real-against-real 0.95, i.e. every generator misses most of the real manifold at k = 3. Quote the captured table, not these dev numbers. -->
 The floor behaves as described above: FD is positive for two samples of the same distribution, while $\widehat{\mathrm{MMD}}^2$ is close to zero. Against it the collapsed arm scores dozens of times higher. The two penalized arms score three to five times the floor, which fits the soft outlines in their grids, and far below the collapsed arm. Which of the two scores lower changes from run to run, so this budget does not separate them. DCGAN lands close to them: the 2015 architecture keeps trainable the same classic loss that collapses on the unnormalized backbone. $\widehat{\mathrm{MMD}}^2$ agrees, with the collapsed arm far above the other three. Between about one in eight and one in six raw pixel values of a penalized generator lie outside $[-1, 1]$. Nearly half of the real pixel values equal $+1$, the white background, and this is where a generator without tanh overshoots; clamping maps the overshoot back to white.
 
 Both scores depend on the feature network as well as on the generator: our classifier judges sprites by what helps to classify photographs, and a different feature network can change the values and reorder similar models.

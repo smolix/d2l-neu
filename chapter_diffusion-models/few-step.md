@@ -715,7 +715,7 @@ Two runs per student are few. Changing the seeds of the training cell to
 errors tell two stories. One jump stays within 0.007 in every run, and
 the distilled student stays within 0.006 at two and four jumps as well.
 After four MeanFlow jumps, however, one or two runs in six end 0.013 to
-0.023 off, several times the miss of a fresh draw. MeanFlow's weights
+0.023 off, two to six times the miss of a fresh draw. MeanFlow's weights
 after several jumps thus depend on the training run, and a single run is
 no guide to them; the distilled student's do not.
 
@@ -736,7 +736,7 @@ The comparison locates the defect. The two-time students share the
 network, the time pairs and the updates and differ only in the velocity
 inside the target. Their spreads differ by more than 0.1 after one jump
 and by 0.08 to 0.1 after two and four, many times the difference between
-seeds (at most 0.015). In this run, then, the contraction comes from
+seeds (at most 0.015). In this experiment, then, the contraction comes from
 training on the examples' velocities. Why a noisy target ends in a map
 that is too tight rather than a noisy one, the run does not say. A student
 that has learned only part of the correction term of

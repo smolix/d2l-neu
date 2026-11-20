@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:84673c7284ff724d599068b8f02315de909414c3df3568cf134220ec2055f93c",
+    "d2l_lib_fingerprint": "sha256:683346089fae36516e96052ab7f145b4df01f10a3c852bbfb2ad20cd6b7f2cb5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -68,187 +68,78 @@
         }
       ]
     },
+    "gaussian-paths-conditional-targets-and-marginal-fields-1": {
+      "code_fingerprint": "sha256:07117a11978aff52e0e9618fd9423aef179892445d2791cddd60b61634927bd7",
+      "kind": "text",
+      "outputs": []
+    },
     "gaussian-paths-four-targets-one-oracle": {
-      "code_fingerprint": "sha256:16ac9fc7dde6961b69cbd43b70d8bb5a7836ef200e64cf60d342047ed27bffc7",
+      "code_fingerprint": "sha256:d48d88c6804869a14db768b90c6e878b6bb40ca3eea3a43c9a1539bcea98c604",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-conditional-targets-and-marginal-fields": {
-      "code_fingerprint": "sha256:6fd475f16600879fc2b7e9c3995c6499905a39f0089d2454d4e849d4a31d1619",
+      "code_fingerprint": "sha256:914570ad3444de449d9c1ed96f73d4185332473c7c394ef412c343090b8f9e4a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gaussian-paths/gaussian-paths-conditional-targets-and-marginal-fields-1.svg",
-          "bytes": 17538,
-          "sha256": "sha256:e652dc6878c9bbfddf5dcb2fb3fcf2778024532dfd60b167bc2302d9bc9e6133"
+          "bytes": 18932,
+          "sha256": "sha256:6513bd1c4cd11f9c751614aa167afda00d0607c63d743753bd73dac69458bb6e"
         }
       ]
     },
-    "gaussian-paths-four-targets-one-oracle-1": {
-      "code_fingerprint": "sha256:0518c5b830a088d7079537380a63dafe3cac16545a58cfabe4fabc6c7eb4bf12",
+    "gaussian-paths-four-targets-one-oracle-3": {
+      "code_fingerprint": "sha256:5aacabd09b4f3da2260a109b3f2ceb130c517b289b9cdf125f4660187924c1f4",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      x0 on vp: [0.29, -0.98]\n     eps on vp: [0.44, -0.23]\n   score on vp: [-0.46, 0.24]\n       v on vp: [-0.15, 0.88]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "velocity on vp: [-0.22, 1.29]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "velocity on linear at t = 0.773: [0.15, 0.75]  eps_hat - x0_hat: [0.15, 0.75]\n"
+        }
+      ]
     },
     "gaussian-paths-four-targets-one-oracle-2": {
-      "code_fingerprint": "sha256:7754409c5665160721ab45877573809de1616481a7612b8693b177dcda64625e",
+      "code_fingerprint": "sha256:b126494cfde942071b3abc45808902d9463aa2d82cb80119586d48dea6921fb1",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-the-loss-floor": {
-      "code_fingerprint": "sha256:0360ec6edd245b4001805dd38ee2b0e53938ea92486363c4b8b0352a807caa5e",
+      "code_fingerprint": "sha256:f110bd27e4cc11ae970ba2528cb965fcac7e11bfced6813d115b8225cda07433",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)  trained\n"
+          "text": "target, path      t=0.1  t=0.5  t=0.9  t~U(0,1)    s.e.  trained  net-floor\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noise, vp         1.371  0.478  0.002     0.539    0.541\n"
+          "text": "noise, vp         1.371  0.478  0.002     0.539  0.0011    0.541     0.0002\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "velocity, linear  2.355  2.812  9.156     4.920    4.916\n"
-        }
-      ]
-    },
-    "gaussian-paths-the-probability-flow-ode-and-euler-s-method": {
-      "code_fingerprint": "sha256:d2b928958ff7a4b503179fad5c44a6c3817d17fdb2e4c0d1018085646c28a942",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "{'weights': [0.497, 0.304, 0.2], 'stray': 0.015, 'spread': 0.459}\n"
-        }
-      ]
-    },
-    "samplers-second-order-and-the-step-grid": {
-      "code_fingerprint": "sha256:7f7923499a441fbbe3a5fda54596e8f2586aee906bb99f78212cb47bbf1c39fa",
-      "kind": "text",
-      "outputs": []
-    },
-    "gaussian-paths-the-probability-flow-ode-and-euler-s-method-1": {
-      "code_fingerprint": "sha256:b01778c7c046a26bc0c960ac8efc0628c31f9eb8fc6cd133d300d5a79743a8e1",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "one step: mean [-0.508, -0.699] std [0.039, 0.032]\n"
+          "text": "velocity, linear  2.355  2.812  9.156     4.920  0.0070    4.916     0.0010\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "10 steps: {'weights': [0.51, 0.296, 0.194], 'stray': 0.031, 'spread': 0.439}\n100 steps: {'weights': [0.497, 0.304, 0.2], 'stray': 0.015, 'spread': 0.459}\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "largest difference to the loop: 0.00033918023109436035\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "gaussian-paths/gaussian-paths-the-probability-flow-ode-and-euler-s-method-1-1.svg",
-          "bytes": 1299929,
-          "sha256": "sha256:b96ffe7176ec1e3e0f7ef98ba460f2ea2987e2b6a0da25cfc630446687cb8827"
-        }
-      ]
-    },
-    "gaussian-paths-the-reverse-sde-and-the-ancestral-chain": {
-      "code_fingerprint": "sha256:7bc3db1cde0ce8d7cee429bfa8b52da58d09b9383c75a0c15fe8bd69c2fb04eb",
-      "kind": "text",
-      "outputs": []
-    },
-    "gaussian-paths-the-reverse-sde-and-the-ancestral-chain-1": {
-      "code_fingerprint": "sha256:cfc3bd3dc0c9bfde31bcb2bcbbfffc46c3944718724b2cf3403ef1e798510cfe",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "{'weights': [0.485, 0.311, 0.205], 'stray': 0.01, 'spread': 0.479}\n"
-        }
-      ]
-    },
-    "gaussian-paths-the-learned-predictor-against-the-optimal-one": {
-      "code_fingerprint": "sha256:34c8c4e61386529fbf00574c380ff82b70d5650fef71b8700ec1346d2ec13354",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   t     gap   floor    loss\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 0.1  0.0005  1.3544  1.3553\n 0.3  0.0003  0.7714  0.7717\n 0.5  0.0001  0.4759  0.4760\n 0.7  0.0000  0.0542  0.0543\n"
-        }
-      ]
-    },
-    "gaussian-paths-samples-from-both-samplers": {
-      "code_fingerprint": "sha256:068305c16d29be6dbc88c9a3ebaf00b563c2918a21e43399e47dd07679137ab8",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "              data: {'weights': [0.503, 0.298, 0.199], 'stray': 0.0094, 'spread': 0.478}\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "ancestral, network: {'weights': [0.497, 0.3, 0.203], 'stray': 0.0123, 'spread': 0.485}\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " ancestral, oracle: {'weights': [0.499, 0.298, 0.203], 'stray': 0.0134, 'spread': 0.485}\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "    Euler, network: {'weights': [0.495, 0.308, 0.197], 'stray': 0.0117, 'spread': 0.47}\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "     Euler, oracle: {'weights': [0.495, 0.307, 0.198], 'stray': 0.0106, 'spread': 0.472}\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "gaussian-paths/gaussian-paths-samples-from-both-samplers-1.svg",
-          "bytes": 1099654,
-          "sha256": "sha256:82140b34956fb389e2066d4e9d140068feb593f286c776bee9eef5ab4eaadb24"
-        }
-      ]
-    },
-    "gaussian-paths-the-dictionary-checked": {
-      "code_fingerprint": "sha256:366d2337a2f59035b872e1f16eb8e5f0a07f46f0a661392dc8ace741d684ca96",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   t  E|u|^2  velocity net  noise net\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 0.2    8.05        0.0004     0.0006\n 0.5    7.73        0.0014     0.0013\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 0.8    1.07        0.0011     0.0014\n0.95    2.00        0.0006     0.0136\n"
+          "text": "velocity net read as a noise model on vp: loss 0.540, net-floor 0.0002\n"
         }
       ]
     }

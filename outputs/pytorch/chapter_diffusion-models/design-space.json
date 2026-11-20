@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6176129de11e16184558c68f88151f6479dcdf377b384d84451efddbe5e22e2a",
+    "d2l_lib_fingerprint": "sha256:b02f3747e43dac09076ed29f6589ebe0c20af0dee4ec9b7152e458ff0be7d74c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,28 +46,44 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true NLL 2.4831 +- 0.0171 nats\nflow, exact field - true: 0.0001 +- 0.0001\nflow, network - exact field: 0.0025 +- 0.0013\n"
+          "text": "true NLL 2.4831 +- 0.0171 nats\nflow, exact field - true: 0.0001 +- 0.0001\nflow, network - exact field: 0.0026 +- 0.0013\n"
         }
       ]
     },
     "design-space-a-number-for-the-mixture-3": {
-      "code_fingerprint": "sha256:d0db58c7fa54b73d4044d4967a776cae5541a5b31e0d67db0250c4dadebd197a",
+      "code_fingerprint": "sha256:2ac1df6ba90a75a10dd3e0b57912491b82c29a9b27191290acebd80eceb01191",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bound, exact field - true: 0.0045 +- 0.0148\nbound, network - exact field: 0.0110 +- 0.0008\n"
+          "text": "exact field: integral 8.76 nats, prior and reconstruction -6.27 nats\nbound, network - exact field: 0.0048 +- 0.0005\n"
+        }
+      ]
+    },
+    "design-space-a-number-for-the-mixture-4": {
+      "code_fingerprint": "sha256:7bbe1763f3685deeffe2d771070eb8dd1563beaae96517ff8587cc2105ad7eb4",
+      "kind": "text",
+      "outputs": []
+    },
+    "design-space-a-number-for-the-mixture-5": {
+      "code_fingerprint": "sha256:8fa260b7c5d6b7c0555024d93fdaab5097170079af144aaa5a586f00c74c8839",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "width loss    bound - exact  flow - exact  samples: NLL  strays   (seeds 0, 1)\n  256 simple  0.0089 0.0080 0.0042 0.0050  2.491  2.502  0.012  0.013\n  256 bound   0.0065 0.0065 0.0119 0.0161  2.503  2.498  0.013  0.012\n   32 simple  0.0379 0.0308 0.0253 0.0346  2.535  2.534  0.018  0.018\n   32 bound   0.0268 0.0201 0.0359 0.0501  2.564  2.552  0.022  0.021\ndata                                       2.476         0.012\n"
         }
       ]
     },
     "design-space-edm-s-table": {
-      "code_fingerprint": "sha256:5536658d28b526f8dafcd38ddce7b633cf70546f42bcaff19e2ed4e6a8843f19",
+      "code_fingerprint": "sha256:c8911f58d91c32a72f1a68e27144a99eb823ffd6a54be6f1b490b6cbd65b41bd",
       "kind": "text",
       "outputs": []
     },
     "design-space-noise-levels-are-scales": {
-      "code_fingerprint": "sha256:edd331460bcddaea8c791e5d2945e37a3d70e68d650264135316958c76b9e10b",
+      "code_fingerprint": "sha256:98d6827bbcbfb6b03446f04bdf226f61673dc0d609be5a1a75a3cfeab84be968",
       "kind": "mixed",
       "outputs": [
         {
@@ -79,48 +95,114 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-noise-levels-are-scales-1.svg",
-          "bytes": 32733,
-          "sha256": "sha256:799da029debbdd3e2e77dd5df7eb0c498f6d7eb8a12ba3313ad375dfd2ee404b"
+          "bytes": 32735,
+          "sha256": "sha256:53030da729ff2906106aceafd9c47f7102a6a83b13666c365785f92d5032c273"
         }
       ]
     },
     "design-space-a-recipe-ablation": {
-      "code_fingerprint": "sha256:dcec62fa13a9e69f420e8812c2fb32a2f50eda86ba781188e9a546cb511bd854",
+      "code_fingerprint": "sha256:a78484b3ce5997c4bbd23622440f871b05743071fbd587e286f077e7c8ca4206",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD, real against real: 0.89\n"
+          "text": "pixels: mean -0.43, standard deviation 0.71, root mean square 0.83\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FD, real against real: 0.17\n"
         }
       ]
     },
     "design-space-a-recipe-ablation-1": {
-      "code_fingerprint": "sha256:109583b10b099e8951bffa0e068a2f94e8a17dcf832f4584a738a73f05437c4d",
+      "code_fingerprint": "sha256:7396af0a966c288314e87c1c9189a71f6665ac81f15eace42921da1941540a7d",
       "kind": "text",
       "outputs": []
     },
     "design-space-a-recipe-ablation-2": {
-      "code_fingerprint": "sha256:132c0d445ed0046c7df0a8849f0e659b66108e020c8cb33e0aeef0313275455b",
+      "code_fingerprint": "sha256:464a993ccd2fe0d20f9eedacd9560fc6d751d2a967648be7b1d237e70a18153b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD                  DDIM-50, eta 0  DDIM-50, eta 1         Heun-25\nnoise, vp                    12.85            9.30            9.99\nv, vp                         8.85            8.72            7.69\nvelocity, linear              3.06            4.23            2.69\nEDM, vp                       4.56            6.39            3.88\n"
+          "text": "base: velocity, t uniform   FD 3.43, 3.61\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t logit-normal              FD 4.40, 4.99\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t logit-normal, m = -0.5    FD 2.98, 3.35\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine path, v              FD 3.45, 3.23\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t at EDM's levels           FD 2.31, 3.12\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "EDM, clean image            FD 3.20, 3.06\n"
         }
       ]
     },
     "design-space-a-recipe-ablation-3": {
-      "code_fingerprint": "sha256:3e63972906be75c1cfbbbda432bed20ac85bf997bcde9bfb925e24c9c293b61e",
+      "code_fingerprint": "sha256:44dbcacd0c819920eac212e8bc9e3909b3406ecd046f42dedfccb6828ce39ec2",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-a-recipe-ablation-3-1.svg",
-          "bytes": 190320,
-          "sha256": "sha256:c4ea2507c144154ec9ef127ff976c47760e5b2cb7049aed68526145e3705a4dc"
+          "bytes": 394709,
+          "sha256": "sha256:39f4d926060b5851c9642a6efb5d4b10299523134da75847a71cdb5b4bdcf126"
+        }
+      ]
+    },
+    "design-space-a-recipe-ablation-4": {
+      "code_fingerprint": "sha256:e55c85592d71e926a45ab0547f1414baa091d86aee4bb68322638dd88ab97d64",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.01: loss  422.5 (uniform),  672.7 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.03: loss  332.6 (uniform),  408.5 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.10: loss  224.7 (uniform),  238.8 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.50: loss  131.1 (uniform),  127.3 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.90: loss  244.6 (uniform),  245.8 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.98: loss  278.6 (uniform),  289.7 (logit-normal)\n"
         }
       ]
     }

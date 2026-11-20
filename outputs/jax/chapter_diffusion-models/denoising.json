@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:5eb0e66f493bbc701a6e05af9869d2feb608a62b4a0ef2f0526670145a38b7b5",
+    "d2l_lib_fingerprint": "sha256:31488fdf35a1ebf3af49e7477b4b58fd462eac169537a232a3bb0d3a8e18168c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,22 +14,22 @@
       "outputs": []
     },
     "denoising-the-running-example-1": {
-      "code_fingerprint": "sha256:4d72437d30d65a6b324fbe0615484e6201fb69685a44175bdaf063af213762e1",
+      "code_fingerprint": "sha256:ed74e79e1aae66dd4097b3d86d43ba7bee947819589fddacc0680e37baf2a1de",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-3": {
-      "code_fingerprint": "sha256:2af459428666942650b0b114b97fd4195559062aee77310ee7606ebeab7707d3",
+      "code_fingerprint": "sha256:e5803823060ac358528631ceaff6f4f8d20a69fd60c392035fbe18851c513977",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-2": {
-      "code_fingerprint": "sha256:82be3b609a23d1eb2d841a64f042d1a474f3dbe5ec97ef4729649bd58490f62f",
+      "code_fingerprint": "sha256:18a84591648e70da04a42fb33e3f600f14aa04f6cd0122c3eada9381a93ea6a9",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-4": {
-      "code_fingerprint": "sha256:d2289c85654e561867becba423d09942b2a9febb2afb9599d95c5ed434f41966",
+      "code_fingerprint": "sha256:854ad1d193014cfeb9aaf7931d64011e69ee5e4286a683fd90d32175b7ee66ad",
       "kind": "mixed",
       "outputs": [
         {
@@ -47,29 +47,24 @@
       ]
     },
     "denoising-noise-and-the-regression-target": {
-      "code_fingerprint": "sha256:fa1f3cd2036c7ba1ece83793edc3fe826e6e7689a10418ad4b0a5407c4210259",
+      "code_fingerprint": "sha256:47e59dda7d9a493da711d42554620facbf6672350dee667c12a5711210fb00eb",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-experiments-on-the-running-example": {
-      "code_fingerprint": "sha256:2df5000e3472996854f7e709a3e14ac544213446b6056a6a99abb1bddedb52f6",
+      "code_fingerprint": "sha256:23f3d1332671c3239719be2dc9daf6235b2b465c40aedf26c9e82ee3d2cbb23b",
       "kind": "text",
       "outputs": []
     },
     "denoising-noise-and-the-regression-target-1": {
-      "code_fingerprint": "sha256:3e9e7862b96fae69ea7426a0d26d6e11321d5cb11b3c933e2969e3b64923fd90",
+      "code_fingerprint": "sha256:e63b98d16d70067bd894e30d0ad43cb1ae92eb1a7495f2b1f4e8f4f9839b9368",
       "kind": "text",
       "outputs": []
     },
     "denoising-tweedie-s-formula": {
-      "code_fingerprint": "sha256:c5e02dc93b3c99c5b615a7756e14b30c8e79ca29834fb08dc7fd51fda26baa7a",
+      "code_fingerprint": "sha256:d622c0da388f4f17988bba3156e30d47d578cda119ba8fd6e4b59a5279a2e68a",
       "kind": "text",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Tweedie with the exact score: largest gap 4.8e-07\n"
-        },
         {
           "type": "stream",
           "name": "stdout",
@@ -77,67 +72,26 @@
         }
       ]
     },
-    "denoising-the-normalizer-never-appears": {
-      "code_fingerprint": "sha256:99505e8a681447b8a82f9f8fcde98ac04ba68f0f5b7e4875ef655a1af705ff05",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  d  estimate / Z  predicted rel. error      ESS\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  1         0.997               0.00415  37933.5\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  2         1.001               0.00799  14688.5\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  4         0.974                0.0232   2650.0\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  8         0.860                 0.173    442.6\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 16         0.911                  9.43     24.5\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 32         0.250              2.81e+04      3.0\n"
-        }
-      ]
-    },
     "denoising-the-loss-floor-and-the-noise-level": {
-      "code_fingerprint": "sha256:7dc6fa4c0eb617c2ca4f02d0b284c6a092f91d198703a9331f45e91488d23ae5",
+      "code_fingerprint": "sha256:8eb6124ebcf78f1b99bf8d899ebe29782a4da7bb28760a0d9932067d89c750b8",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained at sigma: [0.275, 0.207, 0.172, 0.152, 0.328, 1.054, 2.589]\nexact smoothed:   [0.0004, 0.0059, 0.0272, 0.0759, 0.2794, 0.9972, 2.5655]\n"
+          "text": "trained, seed 1: [0.288, 0.206, 0.172, 0.15, 0.33, 1.058, 2.594]\ntrained, seed 2: [0.482, 0.272, 0.151, 0.224, 0.42, 1.105, 2.589]\nexact smoothed:  [0.0004, 0.0059, 0.0272, 0.0759, 0.2794, 0.9972, 2.5655]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-the-loss-floor-and-the-noise-level-1.svg",
-          "bytes": 35929,
-          "sha256": "sha256:9d0295c0951503ba154a1015a66d7f647897dae15bf8591faf2ef5526bba0787"
+          "bytes": 37207,
+          "sha256": "sha256:0370e027d564718db7be8b338501de8ef8e93446a85ab654dcedf06c5717d22f"
         }
       ]
     },
     "denoising-blindness-to-mode-weights": {
-      "code_fingerprint": "sha256:12f7843c0f648f5143b8b43c8b40bc417a28bc1ae72e9d75bf03332f367e637d",
+      "code_fingerprint": "sha256:53de27cad327dfc8638e78e51a8f7ea1bb8b0a539f515083c865819f26cbd500",
       "kind": "text",
       "outputs": [
         {
@@ -148,18 +102,18 @@
       ]
     },
     "denoising-sampling-with-a-score": {
-      "code_fingerprint": "sha256:522969f6c67605be95e46728480bd4703f95c7ecfd4a6ce40963f2ec37b1d24e",
+      "code_fingerprint": "sha256:07a6bd8f071fd5cac860646c33e8fac9824b49db92b9db6b0e7ca72a75cb9d19",
       "kind": "text",
       "outputs": []
     },
     "denoising-sampling-with-a-score-1": {
-      "code_fingerprint": "sha256:6d4758992b13088880c71a9df85575658cc493c723920c0d2095f104c35e9f22",
+      "code_fingerprint": "sha256:5ce7b92dee497427e1ecf5ce8c03a1b6f8be476ed7f7db5f559fe0179131822a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start: {'weights': [0.324, 0.313, 0.363], 'stray': 0.763, 'spread': 1.131}\n"
+          "text": "start: {'weights': [0.324, 0.313, 0.363], 'stray': 0.763, 'spread': 1.131}\ndata:  {'weights': [0.495, 0.293, 0.212], 'stray': 0.015, 'spread': 0.491}\n"
         },
         {
           "type": "stream",
@@ -174,24 +128,29 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained at sigma = 0.3: {'weights': [0.394, 0.295, 0.312], 'stray': 0.056, 'spread': 0.625}\n"
+          "text": "trained at 0.3, seed 1: {'weights': [0.391, 0.295, 0.315], 'stray': 0.0555, 'spread': 0.626}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "trained at 0.3, seed 2: {'weights': [0.394, 0.386, 0.221], 'stray': 0.0575, 'spread': 0.616}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-sampling-with-a-score-1-1.svg",
-          "bytes": 1308328,
-          "sha256": "sha256:69ed750f921438bcf2c1abf790b35b91c8f4a955c072bdbd7a9b30294f5e74a2"
+          "bytes": 1737245,
+          "sha256": "sha256:d91a22268a764aa6ab5d8e3414e0440e97651852e6ef2f2b8b372c252a4f5cd3"
         }
       ]
     },
     "denoising-denoising-images": {
-      "code_fingerprint": "sha256:30c5ac1c2daf348905b5e049924f2e2a9f99b8979cbeb0c80904a21c4aa40436",
+      "code_fingerprint": "sha256:ca472914f1d462df23e4bb328e5c626593034bdce90cd5ef180d80e3f2946dc0",
       "kind": "text",
       "outputs": []
     },
     "denoising-denoising-images-1": {
-      "code_fingerprint": "sha256:04fc7f4b8669d1e126efaeebe15c9b91790f9fe2da70e3ff213ccc53fc8048eb",
+      "code_fingerprint": "sha256:4fb040f14aa7c92e6b2eb0f5fae4e40d9b0dd232f1c882e547d93337ab36b6b3",
       "kind": "text",
       "outputs": [
         {
@@ -202,7 +161,7 @@
       ]
     },
     "denoising-denoising-images-2": {
-      "code_fingerprint": "sha256:88442b6265620a830cd3ba959657c77f41357994c425b70eaba2849469821047",
+      "code_fingerprint": "sha256:b36a015e3b1225a8f920da5d3db3a3d7ef4995d81671835eaf2006998286072b",
       "kind": "mixed",
       "outputs": [
         {
@@ -214,8 +173,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-denoising-images-2-1.svg",
-          "bytes": 254921,
-          "sha256": "sha256:091630ea584166580e7b5c634514ab4f3ce6c233f526bd887b5ffdba0e220480"
+          "bytes": 254913,
+          "sha256": "sha256:4cee2d78eb0370de5047c37fef4846c20f79feb4a2e52f7432f0be81e9898627"
         }
       ]
     }

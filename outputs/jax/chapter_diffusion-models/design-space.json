@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:e0759b8828aa82500385b2445b97052f20b8633d4df7fc4cf3db7a9bc62da103",
+    "d2l_lib_fingerprint": "sha256:4596096fae40563f4786bb72ebd63a5fbfc8b383764c0a995d7c861dc137aa04",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -41,28 +41,54 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true NLL 2.4432 +- 0.0162 nats\nflow, exact field - true: 0.0001 +- 0.0001\nflow, network - exact field: 0.0035 +- 0.0011\n"
+          "text": "true NLL 2.4432 +- 0.0162 nats\nflow, exact field - true: 0.0001 +- 0.0001\nflow, network - exact field: 0.0041 +- 0.0013\n"
         }
       ]
     },
     "design-space-a-number-for-the-mixture-3": {
-      "code_fingerprint": "sha256:6a4e5eacb6bad55c8a3c56760686ad06ff67a455e4551a855cbca40850d68663",
+      "code_fingerprint": "sha256:0efdab9e135b6d4bb6e0981af478407d4dd49549ca8a2d1aae5e0f0ef1c389bc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bound, exact field - true: -0.0033 +- 0.0148\nbound, network - exact field: 0.0116 +- 0.0009\n"
+          "text": "exact field: integral 8.74 nats, prior and reconstruction -6.28 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bound, network - exact field: 0.0042 +- 0.0005\n"
+        }
+      ]
+    },
+    "design-space-a-number-for-the-mixture-4": {
+      "code_fingerprint": "sha256:32e516991fa040e25c819f338a8d961208b50929aea6517bcc33f8517a19b0e6",
+      "kind": "text",
+      "outputs": []
+    },
+    "design-space-a-number-for-the-mixture-5": {
+      "code_fingerprint": "sha256:28246a30317944c7125cea8583eeb98e084ccb16a0eb2d485c8ca7ce0bfc3a80",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "width loss    bound - exact  flow - exact  samples: NLL  strays   (seeds 0, 1)\n  256 simple  0.0093 0.0126 0.0080 0.0090  2.501  2.500  0.011  0.011\n  256 bound   0.0079 0.0078 0.0145 0.0156  2.512  2.502  0.014  0.012\n   32 simple  0.0378 0.0458 0.0244 0.0254  2.514  2.518  0.015  0.016\n   32 bound   0.0267 0.0262 0.0434 0.0427  2.573  2.564  0.023  0.021\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "data                                       2.467         0.010\n"
         }
       ]
     },
     "design-space-edm-s-table": {
-      "code_fingerprint": "sha256:3f36c73ef2b0b3b3def826fdf835eb14752521ee782d6f6b38c8da8d06f5e6d5",
+      "code_fingerprint": "sha256:e24c8e356337416b49f14ab3ff2fd78826d250d7f11588fd03ac5645a6d598e2",
       "kind": "text",
       "outputs": []
     },
     "design-space-noise-levels-are-scales": {
-      "code_fingerprint": "sha256:09f7627cb42c5285046eec0306b5f9775ea9a67ec26fea4f829a09217e06c6a4",
+      "code_fingerprint": "sha256:285c87f7494849ee5174d30523befdbd1c5e4e1c152bae5d24a90df72847ffe1",
       "kind": "mixed",
       "outputs": [
         {
@@ -94,48 +120,114 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-noise-levels-are-scales-1.svg",
-          "bytes": 32735,
-          "sha256": "sha256:c8c4f197f48834d1aa75c7e811174532c90e97953b0476a79fcc6984d66929c9"
+          "bytes": 32717,
+          "sha256": "sha256:28d4739568f456a55d7606a03f183f955fa8cf8626dd0e9e8767051acfda7aa7"
         }
       ]
     },
     "design-space-a-recipe-ablation": {
-      "code_fingerprint": "sha256:9ea9ffe63a93f21a2f90d2b99dec144383cd5ea6323487d564e4d33cdef5fac7",
+      "code_fingerprint": "sha256:b384afc77ae9bdb0f7f0806b7e292d038dfd84af7a70cde7387ec2743abd25c9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD, real against real: 0.85\n"
+          "text": "pixels: mean -0.43, standard deviation 0.71, root mean square 0.83\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FD, real against real: 0.17\n"
         }
       ]
     },
     "design-space-a-recipe-ablation-1": {
-      "code_fingerprint": "sha256:25f0c3f7cadf532876bd56e89750ed1914ecf10531d6b590f78be28d7701cfff",
+      "code_fingerprint": "sha256:841c322baae0a2ab5c87fb12211f2b3a9f6bf8aa6e6c74a97ec8d106034e4efe",
       "kind": "text",
       "outputs": []
     },
     "design-space-a-recipe-ablation-2": {
-      "code_fingerprint": "sha256:a2a9872d4afcf8e69b962e377127c0565f2c25b97346be2484f764ba6f41be87",
+      "code_fingerprint": "sha256:f9d4cd90eedde18001ddd2970d157eec5bb0b8f3e4c837d9bf39953856717aa2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD                  DDIM-50, eta 0  DDIM-50, eta 1         Heun-25\nnoise, vp                    21.42           10.47           17.40\nv, vp                         8.23            9.36            7.15\nvelocity, linear              4.02            6.81            3.26\nEDM, vp                       4.61            7.62            4.05\n"
+          "text": "base: velocity, t uniform   FD 3.91, 4.09\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t logit-normal              FD 5.45, 5.23\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t logit-normal, m = -0.5    FD 3.86, 3.21\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine path, v              FD 3.42, 3.21\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t at EDM's levels           FD 3.85, 3.73\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "EDM, clean image            FD 2.50, 2.91\n"
         }
       ]
     },
     "design-space-a-recipe-ablation-3": {
-      "code_fingerprint": "sha256:f889950bb4abc2f48500db721d66bb931f8d408e601f467b8b902fab91c79a19",
+      "code_fingerprint": "sha256:a8a2eaf4881f477ee9486c7048ee1877f7c3edda53897f06d5a8aeceac5473f4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-a-recipe-ablation-3-1.svg",
-          "bytes": 200812,
-          "sha256": "sha256:c37709a95ef8dcde0bfe06aad7e939880466c0941d0c5985a4e3f348be2276b4"
+          "bytes": 367157,
+          "sha256": "sha256:678cac9bec26933003fa579e37dae30f3a177a3b78fa0aa2c25efb02fccfc251"
+        }
+      ]
+    },
+    "design-space-a-recipe-ablation-4": {
+      "code_fingerprint": "sha256:40a90875f07096c8b75f4090749f6a658baba752dd7c427750cb8324dead91f8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.01: loss  435.4 (uniform),  701.7 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.03: loss  336.2 (uniform),  412.0 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.10: loss  225.8 (uniform),  239.8 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.50: loss  130.7 (uniform),  126.8 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.90: loss  245.0 (uniform),  246.7 (logit-normal)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 0.98: loss  278.1 (uniform),  293.7 (logit-normal)\n"
         }
       ]
     }

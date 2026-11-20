@@ -1298,6 +1298,7 @@ does not saturate.
 [Lucic et al., 2018; Miyato et al., 2018; Brock et al., 2019; Kong et al., 2020; Karras et al., 2020]{.small}
 :::
 
+<!-- WRITER: M1/M2: the answer should add the measured contrast (one-sided penalty: no barrier, every run stays within half a unit of the data) and say that a flat ReLU critic is dead (no unit on in its second layer). -->
 ::: {.slide title="Check: Why Does the W1 Generator Not Settle?"}
 [Check]{.kicker}
 

@@ -1,7 +1,7 @@
 # Decoder-Only Language Models (GPT)
 :label:`sec_gpt`
 
-A single `TransformerBlock` (:numref:`sec_transformer-block`) maps a sequence of $d$-dimensional token representations to a sequence of the same shape $(B, T, d)$. To turn a stack of causal Transformer blocks into an autoregressive **Generative Pre-trained Transformer (GPT)** :cite:`Radford.Narasimhan.Salimans.ea.2018,Radford.Wu.Child.ea.2019,Brown.Mann.Ryder.ea.2020`, we wrap $L$ blocks between two boundary layers (:numref:`fig_gpt-stack`):
+A single `TransformerBlock` (:numref:`sec_transformer-block`) maps a sequence of $d$-dimensional token representations to a sequence of the same shape $(B, T, d)$. To turn a stack of causal Transformer blocks into an autoregressive **Generative Pre-trained Transformer (GPT)** :cite:`Radford.Narasimhan.Salimans.ea.2018,Radford.Wu.Child.ea.2019,brown2020language`, we wrap $L$ blocks between two boundary layers (:numref:`fig_gpt-stack`):
 
 1. **Input embedding:** A token embedding table $\mathbf{E} \in \mathbb{R}^{V \times d}$ maps discrete token IDs $x_1, \dots, x_T \in \{0, \dots, V-1\}$ to vectors in $\mathbb{R}^d$ (optionally adding learned absolute position embeddings $\mathbf{P} \in \mathbb{R}^{T_{\max} \times d}$ when rotary position embeddings are not used inside attention).
 2. **Final normalization and language-modeling head:** After $L$ causal `TransformerBlock` layers, a final normalization layer stabilizes the residual stream $\mathbf{H}^{(L)}$ and a linear head projects each position $t$ to next-token logits $\mathbf{Z} = \textrm{Norm}(\mathbf{H}^{(L)})\mathbf{E}^\top \in \mathbb{R}^{B \times T \times V}$, **tying** the output projection weights to the input embedding table $\mathbf{E}$ :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`.
@@ -365,7 +365,7 @@ class LMOptimizer(nnx.Optimizer):  #@save
             self.opt_state.hyperparams[name][...] = value
 ```
 
-Training our 6-block byte-level `GPT` ($d = 256, H = 8, L = 6$, $\approx 4.8\textrm{M}$ parameters) for 1,000 steps ($\approx 8.2\textrm{M}$ bytes) drives validation cross-entropy well below both the empirical unigram entropy ($4.51$ nats/byte) and the empirical bigram entropy ($3.45$ nats/byte) of English Wikipedia text:
+Training our 6-block byte-level `GPT` ($d = 256, H = 8, L = 6$, $\approx 4.8\textrm{M}$ parameters) for 1,000 steps ($\approx 8.2\textrm{M}$ bytes) drives validation cross-entropy well below both the empirical unigram entropy ($3.17$ nats/byte) and the empirical bigram entropy ($2.45$ nats/byte) of English Wikipedia text:
 
 ```{.python .input #gpt-training-the-modern-configuration}
 %%tab pytorch, jax
@@ -431,12 +431,12 @@ for act, repeats in (('swiglu', 2), ('gelu', 3)):
           + f'; mean {np.mean(runs[act]):.3f}, range {np.ptp(runs[act]):.3f}')
 ```
 
-Run-to-run variation across random seeds is only $\sim 0.01$ nats/byte, whereas `SwiGLU` consistently beats `GELU` at the same parameter and FLOP budget by $\sim 0.06$ nats/byte. (Similarly, switching `pre_norm=True` to `pre_norm=False` without warmup causes training to stall at the unigram loss of $4.51$ nats/byte due to the early-layer gradient attenuation and token collapse shown in :numref:`subsec_signal-propagation`, and even with warmup post-norm trails pre-norm by $\sim 0.13$ nats/byte.)
+Run-to-run variation across random seeds is only $\sim 0.01$ nats/byte, whereas `SwiGLU` consistently beats `GELU` at the same parameter and FLOP budget by $\sim 0.06$ nats/byte. (Similarly, switching `pre_norm=True` to `pre_norm=False` without warmup causes training to stall at the unigram loss of $3.17$ nats/byte due to the early-layer gradient attenuation and token collapse shown in :numref:`subsec_signal-propagation`, and even with warmup post-norm trails pre-norm by a few hundredths of a nat per byte.)
 
 ### Comparing Against a Matched Recurrent Baseline
 :label:`subsec_gpt-rnn-baseline`
 
-How does our 6-block `GPT` compare against the recurrent language model (`d2l.RNNLM`, :numref:`sec_rnn-scratch`) given the **same parameter count** ($d_{\textrm{rnn}} = 1536$, $\approx 4.8\textrm{M}$ parameters) and training steps? We sweep the RNN learning rate across $\{5\times 10^{-4}, 10^{-3}, 2\times 10^{-3}\}$ and plot validation loss as a function of window position $t \in \{1, \dots, 128\}$ (`loss_by_position`):
+How does our 6-block `GPT` compare against the recurrent language model (`d2l.RNNLM`, :numref:`sec_rnn-scratch`) given the **same parameter count** ($d_{\textrm{rnn}} = 1920$, $\approx 4.7\textrm{M}$ parameters) and training steps? We sweep the RNN learning rate across $\{10^{-3}, 2\times 10^{-3}, 4\times 10^{-3}\}$ and compare validation loss as a function of window position $t \in \{1, \dots, 128\}$ (`loss_by_position`):
 
 ```{.python .input #gpt-against-a-recurrent-network-1}
 %%tab pytorch
@@ -497,7 +497,7 @@ for name, net, ms in (('GPT', model, np.mean(times['swiglu'])),
           + f'; {ms:.1f} ms per training step')
 ```
 
-At position $t = 1$ (where only a single byte of context is available), `GPT` and `RNNLM` start at the exact same loss. As more prefix context becomes available ($t \to 128$), the Transformer's validation loss drops much more steeply than the RNN's because self-attention reads any prior byte in $O(1)$ hops rather than compressing history through $t$ sequential recurrent steps.
+At position $t = 1$ (where only a single byte of context is available), `GPT` and `RNNLM` start at nearly the same loss. As more prefix context becomes available ($t \to 128$), the Transformer's validation loss drops more steeply than the RNN's because self-attention reads any prior byte in $O(1)$ hops rather than compressing history through $t$ sequential recurrent steps.
 
 ## Sampling from the Model
 :label:`subsec_gpt-sampling`
@@ -671,7 +671,7 @@ gpt2 = load_gpt2()
 print(f'{d2l.num_params(gpt2) / 1e6:.1f}M parameters')
 ```
 
-We verify the loaded checkpoint by computing its cross-entropy on the opening paragraph of *The Time Machine* ($\approx 3.1$ nats/token, or perplexity $\approx 22$) and generating continuations:
+We verify the loaded checkpoint by computing its cross-entropy on the opening paragraph of *The Time Machine* ($\approx 3.9$ nats/token, or perplexity $\approx 49$) and generating continuations:
 
 ```{.python .input #gpt-loading-gpt-2-3}
 %%tab pytorch

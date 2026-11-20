@@ -7,7 +7,7 @@ Depending on which tokens are available at the start of the computation and whet
 
 1. **Encoder-only (bidirectional self-attention):** Every token attends to every token (`is_causal=False`), computing a context-aware representation of a complete input sequence in one pass (BERT :cite:`Devlin.Chang.Lee.ea.2018`, RoBERTa :cite:`Liu.Ott.Goyal.ea.2019`, ViT :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`).
 2. **Decoder-only (causal self-attention):** Each token attends only to itself and earlier positions (`is_causal=True`), supporting both prompt reading and autoregressive generation in a single homogeneous stack (GPT, Llama 3, Qwen3).
-3. **Encoder--decoder (bidirectional encoder + causal decoder with cross-attention):** A bidirectional encoder maps a source sequence $\mathbf{X}_{\textrm{src}}$ to contextual representations $\mathbf{H}_{\textrm{enc}}$, and a causal decoder generates the target sequence $\mathbf{Y}_{\textrm{tgt}}$ one token at a time while querying $\mathbf{H}_{\textrm{enc}}$ through **cross-attention** (the original 2017 Transformer :cite:`Vaswani.Shazeer.Parmar.ea.2017`, T5 :cite:`Raffel.Shazeer.Roberts.ea.2020`, Whisper :cite:`Radford.Kim.Xu.ea.2023`).
+3. **Encoder--decoder (bidirectional encoder + causal decoder with cross-attention):** A bidirectional encoder maps a source sequence $\mathbf{X}_{\textrm{src}}$ to contextual representations $\mathbf{H}_{\textrm{enc}}$, and a causal decoder generates the target sequence $\mathbf{Y}_{\textrm{tgt}}$ one token at a time while querying $\mathbf{H}_{\textrm{enc}}$ through **cross-attention** (the original 2017 Transformer :cite:`Vaswani.Shazeer.Parmar.ea.2017`, T5 :cite:`raffel2020exploring`, Whisper :cite:`radford2023whisper`).
 
 ```{.python .input #encoders-decoders-encoders-decoders-and-cross-attention}
 %%tab pytorch
@@ -256,7 +256,7 @@ print(f'loss at positions 0-3: {show(pos_loss[:4])}; 60-63: '
       f'{show(pos_loss[-4:])}; interior mean {pos_loss[interior].mean():.2f}')
 ```
 
-The bidirectional encoder traces a symmetric **bathtub (U-shaped) curve**: every interior position enjoys both left and right context ($\approx 1.43$ nats/byte, compared with $\approx 1.97$ nats/byte for a causal control trained on the same 15%-masked windows using only left context), and loss rises only at the two window edges ($t \approx 0$ and $t \approx n-1$) where one side of the context is cut off by the window boundary. Evaluating `mlm` on a masked sentence shows how right context disambiguates missing interior bytes:
+The bidirectional encoder traces a symmetric **bathtub (U-shaped) curve**: every interior position enjoys both left and right context (about 1.5–1.6 nats/byte), and loss rises only at the two window edges ($t \approx 0$ and $t \approx n-1$, about 2.4 nats/byte) where one side of the context is cut off by the window boundary. Evaluating `model` on a masked sentence shows how right context disambiguates missing interior bytes:
 
 ```{.python .input #encoders-decoders-what-the-second-side-is-worth-2}
 %%tab pytorch
@@ -548,7 +548,7 @@ print(f'source {to_str(src[0])!r} -> predicted {to_str(pred[0])!r}')
 ### Reading Cross-Attention Alignment
 :label:`subsec_reading-alignment`
 
-In string reversal, target step $t$ outputs source token $T - 1 - t$. Does the cross-attention weight matrix therefore have to concentrate on the anti-diagonal $(t, T - 1 - t)$? Let us compare our trained 2-block `EncoderDecoder` (`with` encoder self-attention) against an identical model whose encoder blocks have no self-attention (`without`, so encoder position $j$ can only hold information about source token $j$):
+In string reversal, target step $t$ outputs source token $T - 1 - t$. Does the cross-attention weight matrix therefore have to concentrate on the anti-diagonal $(t, T - 1 - t)$? Let us compare our trained `EncoderDecoder`, with one encoder block and one decoder block (`with` encoder self-attention), against an otherwise identical model whose encoder has no blocks, only its embeddings (`without`, so encoder position $j$ can only hold information about source token $j$):
 
 ```{.python .input #encoders-decoders-reading-the-alignment-1}
 %%tab pytorch
@@ -624,7 +624,7 @@ Because cross-attention requires only that queries $\mathbf{Q} \in \mathbb{R}^{B
 ![A latent bottleneck with input length $N$, $M$ learned latents, width $d$, and $L$ latent blocks. Every latent reads every input (shaded band); the read of one latent is drawn in full. One cross-attention read has mixing cost $O(MNd)$; each subsequent latent self-attention layer has mixing cost $O(M^2d)$, for $O(LM^2d)$ across the stack. These terms hold batch size, head count, and width fixed and omit projections and FFNs.](../img/mdl-transformers-latent-bottleneck.svg)
 :label:`fig_latent-bottleneck`
 
-In **Perceiver** :cite:`Jaegle.Gimeno.Brock.ea.2021` (and multimodal vision--language resamplers :cite:`Alayrac.Donahue.Luc.ea.2022`), a learned array of $M \ll N$ latent query vectors $\mathbf{Z}_0 \in \mathbb{R}^{M \times d}$ cross-attends to an $N$-token input $\mathbf{X} \in \mathbb{R}^{B \times N \times d}$ in $O(M N d)$ operations, after which $L$ self-attention blocks process the compact latent array of length $M$ in $O(L M^2 d)$ operations instead of $O(L N^2 d)$:
+In **Perceiver** :cite:`Jaegle.Gimeno.Brock.ea.2021` (and multimodal vision--language resamplers :cite:`alayrac2022flamingo`), a learned array of $M \ll N$ latent query vectors $\mathbf{Z}_0 \in \mathbb{R}^{M \times d}$ cross-attends to an $N$-token input $\mathbf{X} \in \mathbb{R}^{B \times N \times d}$ in $O(M N d)$ operations, after which $L$ self-attention blocks process the compact latent array of length $M$ in $O(L M^2 d)$ operations instead of $O(L N^2 d)$:
 
 ```{.python .input #encoders-decoders-queries-need-not-come-from-a-sequence}
 %%tab pytorch
@@ -682,7 +682,7 @@ class PerceiverEncoder(nnx.Module):
 
 * **Encoder-only (`is_causal=False`)** gives every token full bidirectional context in a single pass, making it the standard backbone for dense text embeddings, reranking, token classification, and non-autoregressive vision backbones (:numref:`sec_vision-transformer`).
 * **Decoder-only (`is_causal=True`)** trains on $100\%$ of sequence tokens via next-token prediction (versus $15\%$ in MLM) and processes prompts and generated continuations in a single unified parameter stack and KV cache (:numref:`sec_kv-cache`), making it the dominant architecture for general-purpose language models.
-* **Encoder--decoder (with cross-attention)** shines when the input and output have different modalities or lengths—such as speech spectrograms to text in Whisper :cite:`Radford.Kim.Xu.ea.2023`, or high-resolution visual/sensor arrays compressed through a fixed-size latent cross-attention interface (:numref:`fig_latent-bottleneck`).
+* **Encoder--decoder (with cross-attention)** shines when the input and output have different modalities or lengths—such as speech spectrograms to text in Whisper :cite:`radford2023whisper`, or high-resolution visual/sensor arrays compressed through a fixed-size latent cross-attention interface (:numref:`fig_latent-bottleneck`).
 
 ## Summary
 
@@ -699,7 +699,7 @@ class PerceiverEncoder(nnx.Module):
 2. **Padding masks on ragged sequence-to-sequence batches.** When a batch contains variable-length source strings of lengths $(s_1, \dots, s_B) \le S$ and target strings of lengths $(t_1, \dots, t_B) \le T_{\textrm{dec}}$, three boolean masks are needed: (a) a $(B, 1, S, S)$ encoder padding mask, (b) a $(B, 1, T_{\textrm{dec}}, T_{\textrm{dec}})$ decoder causal + padding mask, and (c) a $(B, 1, T_{\textrm{dec}}, S)$ rectangular cross-attention source-padding mask. Write a helper `make_seq2seq_masks(src_len, tgt_len, S, T_dec)` that constructs all three masks and verify that appending padded tokens to `src` in `EncoderDecoder` does not alter the non-padded decoder logits.
 :exlabel:`ex_encdec-padding`
 
-3. **Varying the MLM masking fraction $p$.** Train `MaskedLM` for 2,000 steps at masking fractions $p \in \{0.05, 0.15, 0.30, 0.50\}$ and evaluate all four models on the same $p = 0.15$ validation set `masked_data.val`. How does $p$ trade off the number of supervised gradient signals per batch against the amount of uncorrupted context available around each mask?
+3. **Varying the MLM masking fraction $p$.** Train `MaskedLM` for 2,000 steps at masking fractions $p \in \{0.05, 0.15, 0.30, 0.50\}$ and evaluate all four models on the same $p = 0.15$ validation set `masked.val_dataloader()`. How does $p$ trade off the number of supervised gradient signals per batch against the amount of uncorrupted context available around each mask?
 
 4. **Forward vs. backward direction of time in causal and bidirectional models.** A causal language model processes text left-to-right ($x_1 \to x_n$). Reverse every byte window in `WikiText103` so a causal model predicts right-to-left ($x_n \to x_1$), train for 1,000 steps, and compare its average per-byte validation loss and its `loss_by_position` curve against the left-to-right causal model and the bidirectional `MaskedLM`. Why is the total joint log-likelihood $\sum_{t=1}^n \log P(x_t \mid \textrm{past})$ theoretically invariant to time reversal, and where does the bidirectional model gain its advantage over both one-sided directions?
 :exlabel:`ex_encdec-times-arrow`
@@ -707,5 +707,5 @@ class PerceiverEncoder(nnx.Module):
 5. **Content-addressed vs. position-addressed cross-attention alignment.** In our string reversal experiment, every letter in a random string can repeat, so position is required to distinguish duplicate letters. Modify `sample_batch` so each length-12 string is a random permutation of 12 *distinct* letters, and train `EncoderDecoder` without positional embeddings in the encoder (`pos_emb.weight.zero_()`). Why does a 1-layer encoder without position embeddings fail on string reversal even when all 12 letters are distinct, whereas a sorting task (outputting the input letters in alphabetical order `a..p`) succeeds without any encoder positional embeddings?
 :exlabel:`ex_encdec-depth-heads`
 
-6. **Perceiver IO for sequence-to-sequence reversal.** Perceiver IO :cite:`Jaegle.Borgeaud.Alayrac.ea.2021` pairs a `PerceiverEncoder` ($M$ learned latent queries attending to the $N$-token input) with a cross-attention **decoder** in which $N_{\textrm{out}}$ target position embeddings $\mathbf{Q}_{\textrm{out}} \in \mathbb{R}^{N_{\textrm{out}} \times d}$ cross-attend to the $M$ latent vectors $\mathbf{Z}^{(L)} \in \mathbb{R}^{B \times M \times d}$. Build a `PerceiverAutoencoder` that encodes a 12-letter string into $M \in \{2, 4, 8, 12\}$ latents ($d = 128$) and decodes the reversed string in one parallel cross-attention readout pass. How does reversal accuracy vary with the bottleneck size $M$?
+6. **Perceiver IO for sequence-to-sequence reversal.** Perceiver IO :cite:`Jaegle.Borgeaud.Alayrac.ea.2022` pairs a `PerceiverEncoder` ($M$ learned latent queries attending to the $N$-token input) with a cross-attention **decoder** in which $N_{\textrm{out}}$ target position embeddings $\mathbf{Q}_{\textrm{out}} \in \mathbb{R}^{N_{\textrm{out}} \times d}$ cross-attend to the $M$ latent vectors $\mathbf{Z}^{(L)} \in \mathbb{R}^{B \times M \times d}$. Build a `PerceiverAutoencoder` that encodes a 12-letter string into $M \in \{2, 4, 8, 12\}$ latents ($d = 128$) and decodes the reversed string in one parallel cross-attention readout pass. How does reversal accuracy vary with the bottleneck size $M$?
 :exlabel:`ex_encdec-perceiver-reversal`

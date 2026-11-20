@@ -226,7 +226,7 @@ Under standard post-norm (`post-norm`), token spread collapses to nearly zero by
 
 ### Gradients at Initialization
 
-Plotting the backward gradient norm $\|\partial \mathcal{L} / \partial W_q^{(\ell)}\|_F$ across block index $\ell \in \{1, \dots, 32\}$ reveals the dual problem during backpropagation :cite:`Xiong.Yang.He.ea.2020`:
+Plotting the backward gradient norm $\|\partial \mathcal{L} / \partial W_q^{(\ell)}\|_F$ across block index $\ell \in \{1, \dots, 32\}$ reveals the dual problem during backpropagation :cite:`xiong2020layer`:
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization-2}
 %%tab pytorch, jax

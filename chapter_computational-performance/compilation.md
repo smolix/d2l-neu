@@ -627,6 +627,11 @@ are copied into the recorded input buffers before a replay, the next replay
 overwrites the outputs, and nothing inside the sequence may wait for a value
 read by the CPU.
 
+We time each version of the stack and then profile the compiled one with
+the tools of :numref:`subsec_perf-profiler`: which kernels does it run, and
+for how much of a call is the device busy? The profile's first line calls
+one call of the stack a step.
+
 ```{.python .input #compilation-the-overhead-regime-capture-and-replay}
 %%tab pytorch
 deep = nn.Sequential(*[m for _ in range(60)  # 120 operations per call
@@ -675,22 +680,31 @@ d2l.show_profile(d2l.kernel_times(lambda: jitted(params, x)),
                  1000 * times['jit'], rows=3)
 ```
 
-Eager, an operation takes the host time $h$. Replayed, the stack takes
-about 2 µs per operation, about twice the floor of a bare `x + 1`, because
-a replayed kernel does more than start: it reads its operands and
+Eager, an operation takes the host time $h$. Replayed, the stack takes 2
+to 3 µs per operation, two to three times the floor of a bare `x + 1`,
+because a replayed kernel does more than start: it reads its operands and
 computes. The gain is the ratio of the two times, so it falls short of the
-bound by about this factor of two.
+bound by about this factor.
 
 :begin_tab:`pytorch`
 The three timings separate the two remedies. Surprisingly, the stack
-compiled by Inductor is no faster than eager. The tanh is not merged into
-the library's product kernel, so nothing is fused, and Inductor's
-generated code launches each kernel from Python at about the same 18 µs
-per operation as eager dispatch. That is more than the 13 µs of a bare
-call in :numref:`subsec_perf-sweep`, since $h$ depends on the call and on
-the load of the host, and with a floor of 1 µs it puts the bound near
-eighteen. All of the gain, about
-a factor of eight, comes from replay. `mode='reduce-overhead'` makes
+compiled by Inductor is hardly faster than eager, and the profile says
+why. Each layer runs as three kernels. cuBLAS computes the product as a
+matrix-product kernel followed by a split-K reduction, which adds up
+partial products computed over slices of the shared dimension, and the
+tanh runs as a Triton kernel of its own: the product is a library kernel
+that Inductor calls, not one it generates, so it cannot fuse the tanh
+into it. Nothing is fused, and Inductor's generated code launches all 180
+kernels from Python, at about the same 18 µs per operation as eager
+dispatch. The device is busy for about a seventh of the call and waits
+for the host during the rest. Counted per kernel instead of per
+operation, a call takes about 12 µs per launch, close to the 13 µs of a
+bare call in :numref:`subsec_perf-sweep`: the reduction adds a launch to
+every product. With 18 µs per operation and a floor of 1 µs, the bound is
+near eighteen. All of the gain, about a factor of seven, comes from
+replay, and the replayed call takes about as long as the device was busy
+in the compiled one, some 0.3 ms. Replay removed the waiting and nothing
+else. `mode='reduce-overhead'` makes
 `torch.compile` record its kernels as CUDA graphs: the first call compiles
 and warms up, the second records, and later calls with the same shapes
 copy the input into the recorded buffer and replay. `Benchmark` warms up
@@ -727,7 +741,13 @@ graph and the update of the second, are recorded as separate CUDA graphs
 and replayed in turn; since a replay overwrites the outputs of the
 previous one, a result that must survive the next call has to be cloned.
 We replay the step and add up the time the device spends in its kernels,
-with the profiler of :numref:`subsec_perf-profiler`.
+with the same profiler.
+
+Our outputs come from a run with `TEARDOWN_CUPTI=1` in the environment,
+set before starting, which detaches PyTorch's profiler from the GPU when a
+profile ends. Without it, the profile of the stack above leaves every
+later kernel launch of the process about 30% slower, and the timing below
+reports more host time than the step needs.
 :end_tab:
 
 ```{.python .input #compilation-replaying-the-training-step}
@@ -740,9 +760,10 @@ print(f'training step, reduce-overhead: {1000 * t:.2f} ms/call, '
 ```
 
 :begin_tab:`pytorch`
-Replay brings the step below a millisecond, and the device's work,
-0.25 ms, matches the estimate made before the first timing. The device is
-still busy for only about a third of the step. The host runs Python
+Replay brings the step below a millisecond, and the device's work, a
+quarter of a millisecond, matches the estimate made before the first
+timing. The device is still busy for only about a third of the step. The
+host runs Python
 between the replays, at the graph break, where autograd starts the
 backward graph, and in the bookkeeping of each replay, so the step remains
 overhead-bound. The count of the device's work was right; what is left of
@@ -959,6 +980,11 @@ up a compute-bound matrix product.
        plot the ratio of eager to replayed time against the width, and
        compare the width at which the ratio approaches 1 with your
        prediction.
+    1. Profile the eager stack with `d2l.kernel_times` and
+       `d2l.show_profile`, as the section profiles the compiled one. How
+       many kernels does a layer run, which of them computes the tanh, and
+       for what share of a call is the device busy? Explain what
+       compilation changed in the profile, and what it left alone.
 
 8. [extended] **A tracer of your own.** ●● Build a miniature tracing
    compiler in plain Python, with NumPy arrays as the values on which the
@@ -1286,14 +1312,13 @@ A step launches 400 kernels at 8 µs of host time each. The GPU needs
 :::
 :::
 
-::: {.slide title="Replay, Not Fusion, Makes the Stack Eight Times Faster" only="pytorch"}
+::: {.slide title="Replay, Not Fusion, Makes the Stack Seven Times Faster" only="pytorch"}
 @!compilation-the-overhead-regime-capture-and-replay
 
-- `compiled`: Inductor's kernels, launched one at a time from Python:
-  no faster, about 18 µs per operation like eager.
-- `reduce-overhead`: CUDA graphs; about 2 µs per operation, twice the
-  floor of `x + 1`.
-- Gain about 8, below the bound $h$ / floor $\approx 18$: a replayed
+- `compiled`: 3 kernels per layer (product, split-K reduction, Triton
+  tanh), each launched from Python; the device is busy a seventh of the call.
+- `reduce-overhead`: CUDA graphs; the call shrinks to the device's busy time.
+- Gain about 7, below the bound $h$ / floor $\approx 18$: a replayed
   kernel also reads and computes.
 :::
 
@@ -1344,7 +1369,7 @@ The device's work was predicted correctly; what is left is host time.
   the products' time; fused, under a tenth.
 - MLP step: 0.25 ms of work under milliseconds of launches; compiling
   gains only as far as it takes launches off the host.
-- CUDA graphs replay 120 small kernels with one launch.
+- CUDA graphs replay the kernels of 120 small operations with one launch.
 
 **Next:** memory and precision.
 :::

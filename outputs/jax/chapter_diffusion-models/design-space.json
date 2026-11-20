@@ -52,7 +52,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "exact field: integral 8.74 nats, prior and reconstruction -6.28 nats\nbound, exact field - true: -0.0033 +- 0.0148\nbound, network - exact field: 0.0042 +- 0.0005\n"
+          "text": "exact field: integral 8.74 nats, prior and reconstruction -6.28 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bound, exact field - true: -0.0033 +- 0.0148\nbound, network - exact field: 0.0042 +- 0.0005\n"
         }
       ]
     },
@@ -68,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "width loss    bound - exact  flow - exact  samples: NLL  strays   (seeds 0, 1)\n  256 simple  0.0093 0.0126 0.0080 0.0090  2.500  2.501  0.011  0.011\n  256 bound   0.0079 0.0078 0.0145 0.0156  2.511  2.502  0.014  0.012\n   32 simple  0.0378 0.0458 0.0244 0.0255  2.514  2.518  0.015  0.016\n   32 bound   0.0266 0.0262 0.0434 0.0427  2.573  2.564  0.023  0.021\n"
+          "text": "width loss    bound - exact  flow - exact  samples: NLL  strays   (seeds 0, 1)\n  256 simple  0.0093 0.0126 0.0080 0.0090  2.500  2.501  0.011  0.011\n  256 bound   0.0079 0.0078 0.0146 0.0156  2.512  2.502  0.014  0.012\n   32 simple  0.0378 0.0458 0.0244 0.0254  2.514  2.518  0.015  0.016\n   32 bound   0.0267 0.0262 0.0434 0.0427  2.572  2.564  0.023  0.021\n"
         },
         {
           "type": "stream",
@@ -131,8 +136,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-noise-levels-are-scales-1.svg",
-          "bytes": 32731,
-          "sha256": "sha256:0d229cc54e18d44876969a1b52f67f1f61a31bfd81579e001e45325d38aa695d"
+          "bytes": 32717,
+          "sha256": "sha256:f188b47c7d5d28c93454851827b6c621e4cadfc9953a001790b84d11d0dad96b"
         }
       ]
     },
@@ -158,77 +163,77 @@
       "outputs": []
     },
     "design-space-a-recipe-ablation-2": {
-      "code_fingerprint": "sha256:1b64d87a541eecb87d260438d6cea8f5b8280f37049df11814cefa8732913c5f",
+      "code_fingerprint": "sha256:3bb784aa227fe2ec564a1930aa9721dc13aece1c45f8abd06f2e4e8f568941bf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "FD of each seed             EDM grid                 linear grid\n"
+          "text": "FD: mean (each seed)        EDM grid                     linear grid\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "base: velocity, t uniform   3.88, 4.10, 4.09, 4.04   3.35, 3.52, 3.47, 3.53\n"
+          "text": "base: velocity, t uniform   4.08 (3.94 4.11 4.19 4.07)   3.48 (3.39 3.50 3.51 3.51)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t logit-normal              5.43, 5.22               4.19, 3.82\n"
+          "text": "t logit-normal              5.25 (5.29 5.21)             3.95 (4.10 3.80)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t logit-normal, m = -0.5    3.82, 3.19               3.08, 2.43\n"
+          "text": "t logit-normal, m = -0.5    3.51 (3.84 3.19)             2.74 (3.07 2.41)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine path, v              3.38, 3.19               3.32, 3.11\n"
+          "text": "cosine path, v              3.34 (3.43 3.25)             3.24 (3.34 3.15)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t at EDM's levels           3.80, 3.71, 3.01, 3.55   3.21, 3.26, 2.52, 3.20\n"
+          "text": "t at EDM's levels           3.56 (3.93 3.81 3.01 3.50)   3.06 (3.30 3.32 2.48 3.13)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "EDM, clean image            2.66, 2.99, 3.37, 3.62   2.46, 3.02, 3.05, 3.77\n"
+          "text": "EDM, clean image            3.11 (2.60 2.91 3.34 3.61)   3.02 (2.37 2.96 2.97 3.78)\n"
         }
       ]
     },
     "design-space-a-recipe-ablation-3": {
-      "code_fingerprint": "sha256:d4fce4c1a4da0bc2f55d36423820bd2c30db6aa6580402edacf1606dbcb6400b",
+      "code_fingerprint": "sha256:c69d8e614ef7b9264419c69f3bac98ff3b2bd24ffea2c0693d23b0a1a901e5ae",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "design-space/design-space-a-recipe-ablation-3-1.svg",
-          "bytes": 367185,
-          "sha256": "sha256:dacff39859ba1389db2544eae6222f79fd4873face541fdd821fcfa49bf112a4"
+          "bytes": 367297,
+          "sha256": "sha256:4d05b92eb62c2ad0e4575a4671b3f47e761e29be46b24fc52aa125d35fe20d16"
         }
       ]
     },
     "design-space-a-recipe-ablation-4": {
-      "code_fingerprint": "sha256:22efddf6ef1aa81896fd01c2c8537e6bd32447a5af1b620e50b0cc0d3f3aaedc",
+      "code_fingerprint": "sha256:5333072ed39b9b0ae734d46f2a434058186d3d6a25d8f94461a80e26c2ac70dd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t = 0.01: loss  435.8 (uniform),  702.2 (logit-normal)\n"
+          "text": "t = 0.01: loss  435.6 (uniform),  701.1 (logit-normal)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t = 0.03: loss  336.2 (uniform),  412.1 (logit-normal)\n"
+          "text": "t = 0.03: loss  336.3 (uniform),  411.4 (logit-normal)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t = 0.10: loss  225.7 (uniform),  239.9 (logit-normal)\n"
+          "text": "t = 0.10: loss  225.8 (uniform),  239.7 (logit-normal)\n"
         },
         {
           "type": "stream",
@@ -238,12 +243,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t = 0.90: loss  245.0 (uniform),  246.7 (logit-normal)\n"
+          "text": "t = 0.90: loss  245.1 (uniform),  246.7 (logit-normal)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t = 0.98: loss  278.1 (uniform),  293.8 (logit-normal)\n"
+          "text": "t = 0.98: loss  278.1 (uniform),  293.7 (logit-normal)\n"
         }
       ]
     }

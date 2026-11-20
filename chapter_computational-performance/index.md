@@ -199,18 +199,18 @@ about 400 times more slowly than the card's own memory.
 [Chapter map]{.kicker}
 
 | section | question | GPUs |
-|---|---|---|
-| The Performance Model | which resource limits an operation, and what time does it predict? | 1 |
+|-----------------------------------|---------------------------------------------------------|--------|
+| The Performance Model | which resource limits an operation, and how long does it take? | 1 |
 | Hardware | where do arithmetic rate and bandwidth come from? | 1 |
-| Computation Graphs and Compilation | how does a compiler remove memory traffic and overhead? | 1 |
-| Memory and Precision | where does the memory of a step go, and how does a model fit? | 1 |
+| Computation Graphs and Compilation | how does a compiler cut memory traffic and overhead? | 1 |
+| Memory and Precision | where does a step's memory go, and how does a model fit? | 1 |
 | Multi-GPU from First Principles | when does a second GPU shorten a step? | 2 |
-| Data Parallelism in Practice | how do production tools drive every GPU, and what does overlap hide? | 2–4 |
-| Sharding the Training State | what does it cost to train a model that no card holds? | 2 |
+| Data Parallelism in Practice | what do production tools and overlap gain? | 2–4 |
+| Sharding the Training State | what does a model that no card holds cost to train? | 2 |
 | Case Study: Optimizing a Transformer | where do the milliseconds of a GPT step go? | 1–4 |
 
-**Not here:** kernels written by hand; training across machines, serving, and
-quantization for inference (Language Models part).
+**Not here:** hand-written kernels; many machines, serving, and inference
+quantization (Language Models part).
 :::
 
 ::: {.slide title="A 1B-Parameter GPT Returns in Hardware, Memory, and Sharding"}

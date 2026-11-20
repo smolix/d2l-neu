@@ -4,7 +4,7 @@
 The previous section described a GPU by two numbers, its peak arithmetic
 rate $P$ and its memory bandwidth $\beta$, and found that an operation
 performing $I$ FLOPs per byte it moves runs at most at $\min(P, I\beta)$.
-We took both numbers from a specification sheet. On the RTX 4090 they are
+We took both numbers as given. On the RTX 4090 they are
 165 trillion floating-point operations per second on bf16 matrices and
 about one trillion bytes per second, so in the time the card reads one byte
 from its memory it can perform about 165 floating-point operations. Where
@@ -448,8 +448,8 @@ applies to them.
 Capacity $C$, the slowest-growing of the three quantities, decides what
 fits at all. Training our 1B-parameter GPT with Adam in fp32 stores
 16 bytes per parameter for the weights, their gradients, and the two moment
-estimates, 16 GB before any activations, which an RTX 4090 holds with
-8 GB to spare.
+estimates, 15 GiB before any activations, which an RTX 4090 holds with
+9 GiB to spare.
 
 ## Data Paths outside the GPU
 
@@ -1015,14 +1015,13 @@ Per generation: compute ×2.6, bandwidth ×2.0, capacity ×1.8. At
 ::: {.slide title="Streaming 8 TB/s at 45 nm DRAM Energy Would Draw 1.3–2.6 kW"}
 ::: {.cols .vc}
 ::: {.col}
-![](../img/mdl-perf-energy-ladder.svg){height=440px}
+![](../img/mdl-perf-energy-ladder.svg){height=385px}
 :::
 
 ::: {.col .narrow}
 - 64-bit DRAM read ≈ 500 fp32 multiplies.
 - 8 TB/s × 160–330 pJ/B = 1.3–2.6 kW, more than a whole B200 (1 kW).
-- Current DRAM costs several times less per bit; HBM's short wires less
-  again.
+- Current DRAM costs several times less per bit; HBM less again.
 :::
 :::
 

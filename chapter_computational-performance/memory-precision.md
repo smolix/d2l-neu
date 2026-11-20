@@ -1102,11 +1102,11 @@ the arithmetic of this section sets its numbers. bf16 makes the products
 faster. Two sequences of 1,024 tokens fit in bf16 without checkpointing,
 with some room; a third would leave little or none. So a micro-batch
 holds two sequences, and the step accumulates 256 of them, a global batch
-of 524,288 tokens. Checkpointing would allow micro-batches of four
-sequences and halve the accumulator traffic, from $2I^*/n \approx 16\%$ to
-8% with the bf16 ridge point of 164, but its recomputation costs about a
-quarter, more than it saves. It helps only once a micro-batch of useful
-size no longer fits.
+of 524,288 tokens. The accumulator traffic costs $2I^*/n \approx 16\%$
+with the bf16 ridge point of 164. Even if checkpointing removed this
+traffic altogether, it would save 16% and cost about a quarter in
+recomputation. It helps only once a micro-batch of useful size no longer
+fits.
 
 Now we can ask what a step costs. At $6N$ FLOPs per token, a global batch
 takes $6 \times 1.01 \times 10^9 \times 524{,}288 \approx 3.2 \times

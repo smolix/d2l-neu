@@ -15,8 +15,7 @@ the collective algorithms are for readers who will write kernels or run
 clusters. Theano is history, and parameter servers mostly so. Function and
 flag names are those of late 2026; the ideas will outlast the names.
 Implementations, tutorials, and courses for what the chapter does teach are
-listed in its introduction (:numref:`chap_performance`). Nothing else in
-the book depends on this section.
+listed in its introduction (:numref:`chap_performance`).
 
 ## Measuring and Modeling
 

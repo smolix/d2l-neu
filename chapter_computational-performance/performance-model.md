@@ -653,7 +653,7 @@ $hP \approx 1.6 \times 10^9$ FLOPs and fewer than $h\beta \approx 10$ MB
 moved then takes the time of its launch, whatever it computes. That covers
 the square products below about $n = 900$, among them the two smallest of
 the sweep, and almost every layer of the small networks of the Basics part.
-A slower host raises both thresholds, and a faster GPU raises the first:
+A slower host raises both thresholds, and a faster GPU raises them too:
 the knee $n \approx (hP/2)^{1/3}$ grows with $P$.
 
 The roofline alone is a ceiling. Where the host is not the limit, it is

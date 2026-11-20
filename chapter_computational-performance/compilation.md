@@ -402,14 +402,32 @@ reduction and the normalized outputs there, and writes the row once. A
 longer row has to be read more than once, and the exercises ask how often.
 
 Compilers do not change the algorithm. A large matrix product is limited
-by arithmetic and runs as one tuned library kernel, which may also apply a
-bias, or a common activation, to each tile before writing it; a compiler
-calls that kernel and fuses the code around it. Nor can fusion remove an
-intermediate result that the algorithm needs in full. A compiler that
-fuses the softmax of attention still writes the $T \times T$ matrix of
-scores to memory. FlashAttention (:numref:`sec_attention-at-scale`) never
-writes it, because it changes the algorithm: it works in tiles and updates
-the softmax incrementally :cite:`Dao.Fu.Ermon.ea.2022`. General-purpose
+by arithmetic, and no fusion makes it faster. What fusion can still remove
+is the round trip through memory of the elementwise code next to it. A
+compiler that hands the product to a library kernel fuses only the code
+around that kernel. A compiler that generates the product kernel itself can
+apply the neighboring elementwise operations inside it, to each tile as it
+is read or before it is written.
+
+:begin_tab:`pytorch`
+Inductor calls cuBLAS for the products of our examples, so the tanh after
+each product of the stack in :numref:`subsec_comp-overhead` remains a
+kernel of its own.
+:end_tab:
+
+:begin_tab:`jax`
+By default XLA generates product kernels of its own. The update of
+:numref:`subsec_perf-profiler` ran inside the two products that compute the
+weight gradients, and in the stack of :numref:`subsec_comp-overhead` each
+tanh runs inside the product kernel of the next layer.
+:end_tab:
+
+Nor can fusion remove an intermediate result that the algorithm needs in
+full. A compiler that fuses the softmax of attention still writes the
+$T \times T$ matrix of scores to memory. FlashAttention
+(:numref:`sec_attention-at-scale`) never writes it, because it changes the
+algorithm: it works in tiles and updates the softmax incrementally
+:cite:`Dao.Fu.Ermon.ea.2022`. General-purpose
 compilers do not derive such changes. At most they recognize a common
 spelling of attention and call a kernel written by hand in its place.
 Such kernels are often written in Triton :cite:`Tillet.Kung.Cox.2019`, a
@@ -719,7 +737,7 @@ Current XLA releases also record runs of consecutive kernels on a GPU as
 CUDA graphs, which XLA calls command buffers, so a jitted function is
 replayed without a separate mode.
 
-The profile holds a small surprise: it lists no tanh kernel. XLA fused
+The profile lists no tanh kernel. XLA fused
 each tanh into the kernels around it; the product kernel of the next layer
 applies it as it reads its input. The products, however, gained a kernel
 each. A product runs as two: `gemm_fusion_dot` computes four
@@ -1231,7 +1249,8 @@ against the two matrix products at 165 TFLOP/s?
 | elementwise chains | activations, residual adds, optimizer updates |
 | reductions, when a row fits on the chip | softmax, layer norm: one read, one write per row |
 
-- Unchanged: the large matrix product, already one tuned kernel.
+- The product itself gets no faster; a compiler that generates the
+  product kernel can fuse the code next to it into it.
 - Out of reach: the $T \times T$ attention scores. FlashAttention avoids
   them by a new algorithm (tiles, incremental softmax), written by hand.
 :::

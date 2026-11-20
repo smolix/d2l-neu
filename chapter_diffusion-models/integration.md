@@ -312,7 +312,7 @@ def make_pred(net, path, kind):  #@save
 
 ### The Learned Field
 
-Does the trained velocity network behave like the exact field, landing on the data mean after one step and in the modes after ten? We run it from $2{,}000$ standard Gaussian starts with one, ten and a hundred steps of `ode_sample`. The cell also runs `ode_sample` with the oracle and the plain Euler loop with `mix.velocity` from the same starts. On the linear path the two take identical steps, so they should agree up to rounding.
+Does the trained velocity network behave like the exact field, landing on the data mean after one step and in the modes after ten? We run it from $2{,}000$ standard Gaussian starts with one, ten and a hundred steps of `ode_sample`. Two more rows make the numbers readable: $2{,}000$ draws from the data themselves, the grey points of the plot, and the oracle taking the same ten steps from the same starts. Last, the cell runs `ode_sample` with the oracle against the plain Euler loop with `mix.velocity`. On the linear path the two take identical steps, so they should agree up to rounding.
 
 ```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method-1}
 %%tab pytorch
@@ -357,7 +357,7 @@ print(f'ode_sample against the loop on the exact field: {exact:.0e}')
 d2l.scatter_panels(samples, ['1 step', '10 steps', '100 steps'], data=data);
 ```
 
-One step puts every sample at the data mean, about $(-0.5, -0.7)$, with a standard deviation of a few hundredths where the exact field has none: the network's field at $t = 1$ is not quite $\mathbf{x} - \mathbb{E}[\mathbf{x}_0]$, and these hundredths are its error there. Ten steps find the three modes, with weights within about $0.03$ of $0.5/0.3/0.2$, but about three percent of the samples stray between the modes. How many should? A Gaussian mode in the plane puts $e^{-9/2} \approx 1.1\%$ of its mass beyond three standard deviations, so about one percent of the data themselves stray, and the other two percent are the sampler's. The modes also come out too narrow: their *spread*, the mean squared distance of a sample that does not stray to its mode center (:numref:`sec_diffusion-denoising`), is $0.45$, against about $0.48$ for the data (the last cell of this section prints it). A hundred steps of the same network bring the strays down to about one percent and the spread to that of the data, so the coarse steps, not the network, made the ten-step samples narrow and stray. The weights then lie within about two standard errors of $2{,}000$ points, where one standard error is about $0.01$. On the exact field the library's sampler and the loop agree to about $10^{-4}$, single-precision rounding, as the algebra says they should.
+One step puts every sample at the data mean, about $(-0.5, -0.7)$, with a standard deviation of a few hundredths where the exact field has none: the network's field at $t = 1$ is not quite $\mathbf{x} - \mathbb{E}[\mathbf{x}_0]$, and these hundredths are its error there. Ten steps find the three modes, with weights within about $0.03$ of $0.5/0.3/0.2$, but about three percent of the samples stray between the modes. How many should? A Gaussian mode in the plane puts $e^{-9/2} \approx 1.1\%$ of its mass beyond three standard deviations, and the data row strays $1.2$ to $1.5$ percent. The modes also come out too narrow: their *spread*, the mean squared distance of a sample that does not stray to its mode center (:numref:`sec_diffusion-denoising`), is $0.45$, against $0.48$ to $0.49$ for the data. Is that the network's fault or the steps'? The oracle row settles it. On the exact field, ten steps from the same starts give a spread of $0.46$ and two to three percent strays. So the narrowing belongs to the steps, with at most $0.01$ added by the network, and the extra strays are partly the steps' and partly the network's. The oracle's weights match the network's to within $0.003$: whatever separates the ten-step weights from $0.5/0.3/0.2$, it is not the network. Where an exact field exists, run the sampler on it before blaming the network. A hundred steps of the same network bring the strays down to the data's level, about $1.3$ percent, and the spread to within about $0.01$ of the data's. The weights then lie within about two standard errors of $2{,}000$ points, where one standard error is about $0.01$. On the exact field the library's sampler and the loop agree to about $10^{-4}$, single-precision rounding, as the algebra says they should.
 
 ## The Ancestral Chain and the Reverse SDE
 
@@ -766,13 +766,12 @@ for one-point data on every path; on the linear path, Euler in $t$.
 
 @!gaussian-paths-the-probability-flow-ode-and-euler-s-method-1
 
-One step: the mean $(-0.5, -0.7)$. Ten: weights within about $0.03$,
-about 3% strays, modes too narrow. A hundred: about 1% strays, the data's
-spread.
+One step: the mean $(-0.5, -0.7)$. Ten: about 3% strays, spread $0.45$
+against the data's $0.48$–$0.49$. A hundred: the data's strays and spread.
 
 ::: {.d2l-note}
-The data stray about 1% ($e^{-9/2}$, the tails of each mode); the extra 2% at
-ten steps is step error, gone at a hundred.
+The oracle at ten steps is nearly as narrow ($0.46$) and strays 2–3%: the
+steps cause the narrowing and part of the strays. The data stray about 1%.
 :::
 :::
 

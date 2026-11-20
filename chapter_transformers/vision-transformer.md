@@ -480,7 +480,7 @@ d2l.plot(list(range(1, 11)), [vit_history['val_acc'], cnn_history['val_acc']],
          'epoch', 'validation accuracy', legend=['ViT', 'CNN'])
 ```
 
-On a small 60,000-image dataset without data augmentation or large-scale pretraining, `CompactResNet` converges faster and finishes roughly 5 percentage points ahead of `ViT`. This illustrates the fundamental trade-off identified by :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`: a CNN's hard-coded 2D locality and translation equivariance provide a strong **inductive bias** in the small-data regime, whereas a Vision Transformer learns spatial relationships flexibly from data—trailing CNNs on small unaugmented datasets, but matching or surpassing them when pretrained on tens of millions of images (or trained with strong augmentation, distillation :cite:`Touvron.Cordova.Douze.ea.2021`, or masked patch reconstruction :cite:`He.Chen.Xie.ea.2022`).
+On a small 60,000-image dataset without data augmentation or large-scale pretraining, `CompactResNet` converges faster and finishes roughly 5 percentage points ahead of `ViT`. This illustrates the fundamental trade-off identified by :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`: a CNN's hard-coded 2D locality and translation equivariance provide a strong **inductive bias** in the small-data regime, whereas a Vision Transformer learns spatial relationships flexibly from data—trailing CNNs on small unaugmented datasets, but matching or surpassing them when pretrained on tens of millions of images (or trained with strong augmentation, distillation :cite:`touvron2021training`, or masked patch reconstruction :cite:`he2022masked`).
 
 ## Summary
 

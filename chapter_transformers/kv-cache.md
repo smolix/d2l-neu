@@ -456,7 +456,7 @@ d2l.plot(batches, measured + bounds, 'batch size', 'tokens per second',
 
 Because both memory capacity (:eqref:`eq_kv-cache-bytes`) and the large-batch decode throughput ceiling (:eqref:`eq_kv-cache-batch-throughput`) are governed by the per-sequence cache size $M_{\textrm{KV}}(n, 1) = 2 b L n H_{\textrm{kv}} d_h$, modern Transformer architectures compress the product $n \cdot H_{\textrm{kv}} \cdot d_h$ along three orthogonal axes:
 
-1. **Fewer key--value heads ($H_{\textrm{kv}} < H$):** Grouped-query attention (GQA) :cite:`Ainslie.Lee-Thorp.deJong.ea.2023` and multi-query attention (MQA) :cite:`Shazeer.2019` share each key--value head across $G = H / H_{\textrm{kv}}$ query heads (:numref:`fig_gqa`).
+1. **Fewer key--value heads ($H_{\textrm{kv}} < H$):** Grouped-query attention (GQA) :cite:`Ainslie.Lee-Thorp.Jong.ea.2023` and multi-query attention (MQA) :cite:`Shazeer.2019` share each key--value head across $G = H / H_{\textrm{kv}}$ query heads (:numref:`fig_gqa`).
 2. **Narrower per-token representations ($2 H_{\textrm{kv}} d_h \to r$):** Low-rank key--value projections and Multi-Head Latent Attention (MLA) :cite:`Liu.Feng.Xue.ea.2024` compress all heads' keys and values into a low-dimensional latent vector (:numref:`subsec_kv-cache-low-rank`).
 3. **Shorter cached context ($n \to w + s$):** Sliding-window attention evicts tokens older than a window $w$, while keeping $s \ge 1$ initial **attention sink** tokens :cite:`Xiao.Tian.Chen.ea.2024` so the softmax denominator remains stable (:numref:`subsec_kv-cache-sinks`).
 
@@ -466,7 +466,7 @@ Because both memory capacity (:eqref:`eq_kv-cache-bytes`) and the large-batch de
 ### Axis 1: Grouped-Query Attention and Checkpoint Uptraining
 :label:`subsec_kv-cache-gqa-quality`
 
-Our `CausalAttention` class (:numref:`sec_gpt`) already accepts `num_kv_heads`: setting $H_{\textrm{kv}} = H / G$ shrinks $\mathbf{W}_{qkv}$ and cuts $M_{\textrm{KV}}$ by a factor of $G = H / H_{\textrm{kv}}$. Moreover, :citet:`Ainslie.Lee-Thorp.deJong.ea.2023` showed that an existing multi-head checkpoint ($H_{\textrm{kv}} = H$) can be converted into a GQA or MQA model by **mean-pooling** each group of $G$ key and value projection heads (`pool_heads`) and **uptraining** for a small fraction ($\sim 5\text{--}10\%$) of the original training budget.
+Our `CausalAttention` class (:numref:`sec_gpt`) already accepts `num_kv_heads`: setting $H_{\textrm{kv}} = H / G$ shrinks $\mathbf{W}_{qkv}$ and cuts $M_{\textrm{KV}}$ by a factor of $G = H / H_{\textrm{kv}}$. Moreover, :citet:`Ainslie.Lee-Thorp.Jong.ea.2023` showed that an existing multi-head checkpoint ($H_{\textrm{kv}} = H$) can be converted into a GQA or MQA model by **mean-pooling** each group of $G$ key and value projection heads (`pool_heads`) and **uptraining** for a small fraction ($\sim 5\text{--}10\%$) of the original training budget.
 
 We compare training our 6-block byte-level `GPT` ($H = 8$) from scratch for 1,000 steps at $H_{\textrm{kv}} \in \{8, 2\}$ (and at $H_{\textrm{kv}} = 2$ for only 50 steps) against converting the trained $H_{\textrm{kv}} = 8$ checkpoint down to $H_{\textrm{kv}} = 2$, by mean-pooling and by keeping the first head of each group, both zero-shot (0 steps) and after 50 and 100 steps ($10\%$) of uptraining, in two runs:
 
@@ -804,7 +804,7 @@ print(f'full attention:            loss {full:.2f}, '
 
 | Method | Factor reduced | Stored numbers per sequence | Needs training? |
 |:--|:--|:--|:--|
-| **Shared KV heads (GQA, MQA)** :cite:`Shazeer.2019,Ainslie.Lee-Thorp.deJong.ea.2023` | Heads $H_{\textrm{kv}} < H$ | $2 L n H_{\textrm{kv}} d_h$ | Yes: train from scratch or uptrain ($\sim 5\text{--}10\%$) |
+| **Shared KV heads (GQA, MQA)** :cite:`Shazeer.2019,Ainslie.Lee-Thorp.Jong.ea.2023` | Heads $H_{\textrm{kv}} < H$ | $2 L n H_{\textrm{kv}} d_h$ | Yes: train from scratch or uptrain ($\sim 5\text{--}10\%$) |
 | **Low-rank latent (MLA)** :cite:`Liu.Feng.Xue.ea.2024` | Width $2 H_{\textrm{kv}} d_h \to r$ | $\approx L n r$ (plus a small rotary key) | Yes for MLA; a post-hoc SVD basis works to $\sim 6\times$ |
 | **Sliding window with sinks** :cite:`Xiao.Tian.Chen.ea.2024` | Length $n \to w + s$ | $2 L (w + s) H_{\textrm{kv}} d_h$ | Works zero-shot on pretrained models when $s \ge 1$ |
 

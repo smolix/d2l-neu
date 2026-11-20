@@ -3,7 +3,7 @@
 
 In a dense Transformer (:numref:`sec_scaling-laws`), every token uses every parameter: doubling model capacity $N \approx 12 L d^2$ doubles the training cost ($6 N$ FLOPs/token) and doubles the inference compute ($2 N$ FLOPs/token). Can we grow a model's stored parameter capacity $N_{\textrm{total}}$ without growing the active parameters $N_{\textrm{active}}$ executed per token?
 
-Recall from :numref:`sec_transformer-block` that the feed-forward network holds two-thirds of a dense block's parameters ($8 d^2$ out of $12 d^2$) and acts **position-wise** on each token vector $\mathbf{x} \in \mathbb{R}^d$ independently. A **Sparse Mixture-of-Experts (MoE)** layer :cite:`Jacobs.Jordan.Nowlan.ea.1991,Shazeer.Mirhoseini.Maziarz.ea.2017,Lepikhin.Lee.Xu.ea.2020,Fedus.Zoph.Shazeer.2022` exploits this independence (:numref:`fig_moe-layer`): it replaces a block's single FFN with a bank of $E$ parallel FFN **experts** $\{\textrm{FFN}_1, \dots, \textrm{FFN}_E\}$ and uses a lightweight linear **router** $\mathbf{W}_r \in \mathbb{R}^{d \times E}$ to dispatch each token $\mathbf{x}$ to only its top-$k$ experts ($1 \le k \ll E$).
+Recall from :numref:`sec_transformer-block` that the feed-forward network holds two-thirds of a dense block's parameters ($8 d^2$ out of $12 d^2$) and acts **position-wise** on each token vector $\mathbf{x} \in \mathbb{R}^d$ independently. A **Sparse Mixture-of-Experts (MoE)** layer :cite:`Jacobs.Jordan.Nowlan.ea.1991,Shazeer.Mirhoseini.Maziarz.ea.2017,Lepikhin.Lee.Xu.ea.2021,fedus2022switch` exploits this independence (:numref:`fig_moe-layer`): it replaces a block's single FFN with a bank of $E$ parallel FFN **experts** $\{\textrm{FFN}_1, \dots, \textrm{FFN}_E\}$ and uses a lightweight linear **router** $\mathbf{W}_r \in \mathbb{R}^{d \times E}$ to dispatch each token $\mathbf{x}$ to only its top-$k$ experts ($1 \le k \ll E$).
 
 ```{.python .input #moe-mixture-of-experts}
 %%tab pytorch
@@ -263,7 +263,7 @@ Even at initialization, random router weights send more tokens to some experts t
 
 ### Two Solutions: Auxiliary Balancing Loss vs. Loss-Free Bias Controller
 
-1. **Switch auxiliary load-balancing loss** :cite:`Fedus.Zoph.Shazeer.2022`: Let $f_e = \frac{1}{n k} \sum_{t=1}^n \mathbb{I}[e \in T(\mathbf{x}_t)]$ be the empirical fraction of routed slots dispatched to expert $e$ in a batch of $n$ tokens, and let $\bar{p}_e = \frac{1}{n}\sum_{t=1}^n p_e(\mathbf{x}_t)$ be the mean router probability assigned to expert $e$. Adding $\alpha \mathcal{L}_{\textrm{aux}}$ to the training loss, where
+1. **Switch auxiliary load-balancing loss** :cite:`fedus2022switch`: Let $f_e = \frac{1}{n k} \sum_{t=1}^n \mathbb{I}[e \in T(\mathbf{x}_t)]$ be the empirical fraction of routed slots dispatched to expert $e$ in a batch of $n$ tokens, and let $\bar{p}_e = \frac{1}{n}\sum_{t=1}^n p_e(\mathbf{x}_t)$ be the mean router probability assigned to expert $e$. Adding $\alpha \mathcal{L}_{\textrm{aux}}$ to the training loss, where
 
    $$
    \mathcal{L}_{\textrm{aux}} \;=\; E \sum_{e=1}^{E} f_e \, \bar{p}_e,
@@ -547,7 +547,7 @@ Recent frontier MoE families (:numref:`tab_moe-experts`) refine the coarse 8-exp
 
 1. **Router gradient under $k = 1$ vs. $k > 1$ renormalization.** Many MoE layers renormalize the selected probabilities by their sum: $g_e(\mathbf{x}) = p_e(\mathbf{x}) / \sum_{j \in T(\mathbf{x})} p_j(\mathbf{x})$.
    1. Show that if you apply this same renormalization when $k = 1$, then $g_{e^*}(\mathbf{x}) = p_{e^*}(\mathbf{x}) / p_{e^*}(\mathbf{x}) \equiv 1$ is constant, so $\partial \textrm{MoE}(\mathbf{x}) / \partial \mathbf{W}_r = \mathbf{0}$ and the router never receives a task-loss gradient!
-   2. Verify in code that our `MoELayer` avoids this by weighting each selected expert by its raw probability (so $g_{e^*}(\mathbf{x}) = p_{e^*}(\mathbf{x})$ as in Switch Transformer :cite:`Fedus.Zoph.Shazeer.2022`).
+   2. Verify in code that our `MoELayer` avoids this by weighting each selected expert by its raw probability (so $g_{e^*}(\mathbf{x}) = p_{e^*}(\mathbf{x})$ as in Switch Transformer :cite:`fedus2022switch`).
 :exlabel:`ex_moe-router-gradient`
 
 2. **Minimum and gradient of the Switch auxiliary loss.** Consider $\mathcal{L}_{\textrm{aux}} = E \sum_{e=1}^E f_e \bar{p}_e$ (:eqref:`eq_moe-aux`), where $f_e$ is treated as a stop-gradient constant and $\sum_e \bar{p}_e = 1$.

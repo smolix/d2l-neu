@@ -152,7 +152,6 @@ book:
         - chapter_recurrent-neural-networks/text-sequence.qmd
         - chapter_recurrent-neural-networks/language-model.qmd
         - chapter_recurrent-neural-networks/rnn.qmd
-        - chapter_recurrent-neural-networks/rnn-implementation.qmd
         - chapter_recurrent-neural-networks/bptt.qmd
         - chapter_recurrent-neural-networks/decoding.qmd
     - part: chapter_advanced/index.qmd

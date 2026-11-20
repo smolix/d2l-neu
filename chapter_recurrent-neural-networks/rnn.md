@@ -2,236 +2,171 @@
 :label:`sec_rnn`
 
 The count-based language models of :numref:`sec_language-model` predict each
-token from a short window of immediate predecessors. A trigram model, for
-example, conditions only on the two preceding words; anything earlier in the
-document has zero influence on its prediction. Human readers, by contrast,
-carry context across an entire book—a character introduced in the opening
-chapter still shapes how we interpret the final page. How can a model
-condition on an arbitrarily long prefix without growing larger as the prefix
-grows?
+token from a short window of immediate predecessors. A trigram model conditions
+only on the two preceding tokens; anything earlier in the document has zero
+influence on its prediction. Simply widening the window quickly hits a wall: a
+count table spanning 20 BPE tokens would have to track $1024^{20} \approx
+10^{60}$ contexts, and even a neural network reading a fixed window of $m$
+concatenated token embeddings :cite:`Bengio.Ducharme.Vincent.ea.2003` remains
+blind to any token $m + 1$ steps back while growing linearly in parameter count
+with $m$.
 
-Simply widening the context window quickly hits a wall. A count table spanning
-20 BPE tokens must track $1024^{20} \approx 10^{60}$ possible contexts,
-virtually none of which will ever appear in any corpus. A neural network
-reading the last 20 tokens fares considerably better because it can generalize
-across related contexts, yet its window remains rigid: any token 21 positions
-back is still completely invisible.
+In :numref:`sec_sequence`, we introduced a fundamentally different approach: a
+*latent* autoregressive model that compresses the entire history into a
+fixed-size *hidden state* vector $\mathbf{h}_{t-1}$ and predicts the next token
+from that summary,
 
-In :numref:`sec_sequence`, we introduced a fundamentally different approach:
-a *latent* autoregressive model that compresses the entire history into a
-fixed-size *hidden state* vector $\mathbf{h}_{t-1}$ and predicts the next
-token from that summary:
-
-$$P(x_t \mid x_{<t}) \approx P(x_t \mid \mathbf{h}_{t-1}).$$
-
-After observing each new token $x_t$, the model updates its state using both
-the previous state and the new input:
-
-$$\mathbf{h}_t = g(\mathbf{h}_{t-1}, x_t).$$
+$$P(x_t \mid x_{<t}) \approx P(x_t \mid \mathbf{h}_{t-1}), \qquad \mathbf{h}_t = g(\mathbf{h}_{t-1}, x_t).$$
 :eqlabel:`eq_ht_xt`
 
-Under this recurrence, the computational cost per step stays constant no
-matter how long the prefix becomes. Strictly speaking, the approximation above
-is exact only if $\mathbf{h}_{t-1}$ preserves everything about the prefix that
-is relevant to predicting $x_t$. Because a fixed-size vector cannot retain
-every detail of an arbitrarily long text, the network must learn what to
-remember and what to discard. A *recurrent neural network* (RNN) parameterizes
+Under this recurrence, the computational cost per step stays constant no matter
+how long the prefix becomes. A *recurrent neural network* (RNN) parameterizes
 the transition function $g$ with a neural network layer whose weights are
-shared across all time steps :cite:`elman1990finding`. In this section, we
-formulate the RNN, assemble it into a language model, and analyze its
-parameter count and computational cost before implementing and training it in
-:numref:`sec_rnn-scratch`.
+shared across all time steps :cite:`elman1990finding`. (Note that a *hidden
+state* carried across time steps differs from a feedforward *hidden layer*
+sitting between input and output within a single step.) In this section, we
+formulate the RNN language model, tally its parameters and compute, and
+implement it both from scratch and with high-level framework layers on *The
+Time Machine*.
 
-One terminological point deserves care: "hidden" here differs from the
-*hidden layers* of :numref:`chap_perceptrons`. A hidden layer sits between
-the input and output within a single feedforward pass, whereas a *hidden
-state* is passed forward from one time step to the next, acting as a learned
-memory that depends on every input observed so far.
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
 
-## Neural Networks without Hidden States
+```{.python .input #rnn-implementation-implementing-rnn-language-models}
+%%tab mxnet
+import math
+import numpy as np
+from mxnet import autograd, gluon, init, np as mnp, npx
+from mxnet.gluon import nn
+from d2l import mxnet as d2l
+npx.set_np()
+```
 
-An RNN is easiest to understand as a multilayer perceptron augmented with one
-additional input—the previous hidden state. Let us therefore revisit the
-single-hidden-layer MLP of :numref:`sec_mlp` with activation function $\phi$.
-Given a minibatch of $b$ examples with $d$ features each,
-$\mathbf{X} \in \mathbb{R}^{b \times d}$ (we denote the batch size by $b$
-here because $n$ denotes the $n$-gram order throughout this chapter), the
-hidden layer computes
+```{.python .input #rnn-implementation-implementing-rnn-language-models}
+%%tab pytorch
+import math
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+from d2l import torch as d2l
+```
 
-$$\mathbf{H} = \phi(\mathbf{X} \mathbf{W}_{\textrm{xh}} + \mathbf{b}_\textrm{h}),$$
-:eqlabel:`rnn_h_without_state`
+```{.python .input #rnn-implementation-implementing-rnn-language-models}
+%%tab tensorflow
+import math
+import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
 
-using weight matrix $\mathbf{W}_{\textrm{xh}} \in \mathbb{R}^{d \times h}$,
-bias $\mathbf{b}_\textrm{h} \in \mathbb{R}^{1 \times h}$ (broadcast across
-the $b$ rows; see :numref:`subsec_broadcasting`), and $h$ hidden units, so
-that $\mathbf{H} \in \mathbb{R}^{b \times h}$. The output layer then maps
-$\mathbf{H}$ to logits
+```{.python .input #rnn-implementation-implementing-rnn-language-models}
+%%tab jax
+import math
+import numpy as np
+import jax
+from jax import numpy as jnp
+from flax import nnx
+import optax
+from d2l import jax as d2l
+```
 
-$$\mathbf{O} = \mathbf{H} \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q},$$
-
-with $\mathbf{W}_{\textrm{hq}} \in \mathbb{R}^{h \times q}$ and
-$\mathbf{b}_\textrm{q} \in \mathbb{R}^{1 \times q}$; for classification,
-applying $\textrm{softmax}(\mathbf{O})$ yields a probability distribution over
-the $q$ classes.
-
-We can adapt this MLP into a language model by feeding it the $m$ most recent
-tokens and asking it to classify the next token across all $q = |\mathcal{V}|$
-entries in the vocabulary. Because integer token ids are arbitrary labels with
-no meaningful numerical order, we represent each token by looking up its
-corresponding row in a learned matrix
-$\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$, called its
-*embedding*—a $d$-dimensional dense vector. Because $\mathbf{E}$ is trained
-end to end alongside the network, tokens appearing in similar contexts acquire
-similar vectors, allowing statistical evidence about `"cat"` to generalize
-naturally to `"feline"` in a way that count tables
-(:numref:`sec_language-model`) could never achieve.
-
-Concatenating the $m$ context embeddings into a single input vector of length
-$md$ yields the *neural $n$-gram* language model
-:cite:`Bengio.Ducharme.Vincent.ea.2003`. Replacing discrete lookup tables with
-a smooth neural function allows the model to assign sensible probabilities to
-unseen contexts that resemble training examples. Even so, the fixed window
-remains: tokens more than $m$ steps in the past remain out of reach, and the
-input weight matrix grows linearly with $m$, adding $dh$ parameters for every
-extra token of context (8,192 extra weights per token when $d = 64$ and
-$h = 128$).
+```{.python .input #rnn-implementation-implementing-rnns-1}
+%%tab jax
+import random
+```
 
 ## Recurrent Neural Networks with Hidden States
 :label:`subsec_rnn_w_hidden_states`
 
-A recurrent neural network removes the fixed window by feeding the hidden
-layer its own state from the previous time step. At step $t$, let
-$\mathbf{X}_t \in \mathbb{R}^{b \times d}$ hold the $d$-dimensional inputs for
-a minibatch of $b$ sequences, and let
-$\mathbf{H}_t \in \mathbb{R}^{b \times h}$ hold their hidden states (one state
-vector $\mathbf{h}_t$ per row). Introducing a recurrent weight matrix
-$\mathbf{W}_{\textrm{hh}} \in \mathbb{R}^{h \times h}$ that governs how the
-prior state feeds into the current one gives
+An RNN is easiest to understand by starting from a single-hidden-layer MLP
+(:numref:`sec_mlp`) and adding one recurrent connection. Given a minibatch of
+$b$ examples with $d$ features each, $\mathbf{X} \in \mathbb{R}^{b \times d}$
+(we use $b$ for batch size throughout this chapter because $n$ denotes $n$-gram
+order), an ordinary hidden layer with activation function $\phi$ computes
 
-$$\mathbf{H}_t = \phi(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}  + \mathbf{b}_\textrm{h}).$$
+$$\mathbf{H} = \phi(\mathbf{X} \mathbf{W}_{\textrm{xh}} + \mathbf{b}_\textrm{h}),$$
+:eqlabel:`rnn_h_without_state`
+
+with $\mathbf{W}_{\textrm{xh}} \in \mathbb{R}^{d \times h}$ and
+$\mathbf{b}_\textrm{h} \in \mathbb{R}^{1 \times h}$, followed by an output
+projection $\mathbf{O} = \mathbf{H} \mathbf{W}_{\textrm{hq}} +
+\mathbf{b}_\textrm{q}$ into $q$ logits.
+
+Now suppose we receive a sequence of minibatch inputs
+$\mathbf{X}_t \in \mathbb{R}^{b \times d}$ indexed by time step $t$. To let the
+hidden representation remember earlier steps, we feed the previous hidden state
+$\mathbf{H}_{t-1} \in \mathbb{R}^{b \times h}$ back into the layer via a
+recurrent weight matrix
+$\mathbf{W}_{\textrm{hh}} \in \mathbb{R}^{h \times h}$:
+
+$$\mathbf{H}_t = \phi(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} + \mathbf{b}_\textrm{h}), \qquad \mathbf{O}_t = \mathbf{H}_t \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}.$$
 :eqlabel:`rnn_h_with_state`
 
-Compared with :eqref:`rnn_h_without_state`, the sole addition is the recurrent
-term $\mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}$, turning
-:eqref:`rnn_h_with_state` into a concrete instantiation of :eqref:`eq_ht_xt`.
-Because the same formula computes $\mathbf{H}_t$ from $\mathbf{H}_{t-1}$ at
-every time step (starting from $\mathbf{H}_0 = \mathbf{0}$), the update is
-*recurrent*; a layer executing :eqref:`rnn_h_with_state` is a *recurrent
-layer*, and a network built from such layers is a recurrent neural network. At
-each step, the output layer maps the current hidden state to logits exactly as
-before:
-
-$$\mathbf{O}_t = \mathbf{H}_t \mathbf{W}_{\textrm{hq}} + \mathbf{b}_\textrm{q}.$$
-
-Crucially, the very same five parameter tensors—three in the recurrent layer
-and two in the output layer—are reused at every time step, so the total number
-of parameters is completely independent of the sequence length.
-
-To build intuition for how this state retains memory, consider the smallest
-possible scalar RNN ($d = h = 1$) with $\phi = \tanh$, $w_\textrm{xh} = 1$,
-$w_\textrm{hh} = 0.5$, zero bias, and the input sequence $1, 0, 0$. Starting
-from $h_0 = 0$, the hidden state evolves as $\tanh(1) = 0.76$ after step 1,
-$\tanh(0.5 \cdot 0.76) = 0.36$ after step 2, and
-$\tanh(0.5 \cdot 0.36) = 0.18$ after step 3. The initial input continues to
-influence the state several steps later, attenuated by roughly $w_\textrm{hh}$
-at each step; had $w_\textrm{hh}$ been zero, it would have vanished
-immediately. Thus, the recurrent weight controls how rapidly past information
-fades.
-
-Better still, a recurrent state can solve tasks that are impossible for *any*
-fixed-window model. Suppose a model reads a stream of bits and must report at
-every step whether the total number of ones seen so far is even or odd
-(parity). No model restricted to the last $m$ inputs can succeed for any
-finite $m$, because flipping a single bit that has already fallen out of the
-window reverses the true parity while leaving the model's input completely
-unchanged. A recurrent state, by contrast, needs to store only a single bit—the
-running parity—and flip it whenever the current input is 1; two hidden units
-with a threshold activation solve this task for sequences of arbitrary length
-(as you will verify in the final exercise).
-
-:numref:`fig_rnn` unrolls an RNN across three consecutive time steps. The
-horizontal arrows pass the hidden state forward through time, and the weight
-labels repeat at every step to emphasize parameter sharing. Viewed in this
-unrolled form, an RNN running over $T$ steps is equivalent to a $T$-layer
-feedforward network whose layers all share the same weights.
+Because the same five parameter tensors—$\mathbf{W}_{\textrm{xh}}$,
+$\mathbf{W}_{\textrm{hh}}$, $\mathbf{b}_\textrm{h}$ in the recurrent layer and
+$\mathbf{W}_{\textrm{hq}}$, $\mathbf{b}_\textrm{q}$ in the output layer—are
+reused at every step (starting from $\mathbf{H}_0 = \mathbf{0}$), the parameter
+count is completely independent of sequence length (:numref:`fig_rnn`). Viewed
+in unrolled form, an RNN running over $T$ steps is a $T$-layer feedforward
+network whose layers all share the same weights.
 
 ![An RNN with a hidden state, unrolled across three adjacent time steps. The same weights are reused at every step.](../img/mdl-rnn-unfolded.svg)
 :label:`fig_rnn`
 
-Notice that the two matrix multiplications in :eqref:`rnn_h_with_state` can
-equally be written as a single product by concatenating the input and previous
-state horizontally and stacking the two weight matrices vertically:
+Notice that the two matrix products in :eqref:`rnn_h_with_state` equal a single
+product of the horizontally concatenated inputs with the vertically stacked
+weights:
 
 $$[\mathbf{X}_t, \mathbf{H}_{t-1}] \begin{bmatrix} \mathbf{W}_{\textrm{xh}} \\ \mathbf{W}_{\textrm{hh}} \end{bmatrix} = \mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}}.$$
 
-Mathematically, a recurrent layer is therefore nothing more than a standard
-fully connected layer applied to the concatenation $[\mathbf{X}_t, \mathbf{H}_{t-1}]$.
-Deep learning libraries nevertheless keep the two products separate because
-during training all inputs $\mathbf{X}_1, \ldots, \mathbf{X}_T$ are available
-up front, allowing $\mathbf{X}_t \mathbf{W}_{\textrm{xh}}$ across all time
-steps to be computed in a single batched matrix multiplication outside the
-sequential time loop (exercise :exref:`ex_rnn-input-product`).
+Libraries nevertheless keep the two products separate because during training
+all inputs $\mathbf{X}_1, \ldots, \mathbf{X}_T$ are known up front, allowing
+$\mathbf{X}_t \mathbf{W}_{\textrm{xh}}$ across all $T$ steps to be batched
+outside the sequential time loop (exercise :exref:`ex_rnn-input-product`).
+
+Furthermore, a recurrent state can solve tasks that are impossible for *any*
+fixed-window model, such as reporting at every step whether the running count
+of ones in a bit stream is even or odd (parity): flipping a bit older than any
+fixed window $m$ reverses the true parity while leaving the last $m$ bits
+unchanged, whereas a two-unit recurrent state tracks parity over arbitrary
+lengths.
 
 ### Constant Memory per Step
 :label:`subsec_rnn-constant-memory`
 
-Computing $\mathbf{H}_t$ requires only $\mathbf{H}_{t-1}$ and $\mathbf{X}_t$;
-all earlier inputs and states can be discarded once $\mathbf{H}_t$ is formed.
-Consequently, both memory and computation per step remain constant regardless
-of sequence length. For the model we train in :numref:`sec_rnn-scratch`, with
-$h = 128$ hidden units stored in 32-bit floating point, the hidden state of a
-single sequence occupies just 512 bytes—whether the model has read ten tokens
-or a million.
+Because computing $\mathbf{H}_t$ requires only $\mathbf{H}_{t-1}$ and
+$\mathbf{X}_t$, both memory and computation per step remain constant regardless
+of sequence length: with $h = 128$ `float32` hidden units, the state of a
+sequence occupies just 512 bytes whether the model has read ten tokens or a
+million. That constant footprint is also an inherent *lossy* bottleneck—every
+detail remembered from the prefix must pass through those 512 bytes, unlike
+*attention* (:numref:`chap_attention`), which retains representations of every
+past token at a cost that grows with sequence length.
 
-That constant footprint comes with an inherent trade-off: the hidden state is
-necessarily a *lossy* bottleneck. No entire novel can be stored losslessly in
-512 bytes, so recording new information inevitably overwrites older details.
-The alternative paradigm retains a representation of every past token and lets
-the model attend directly back to all of them at each step—namely, *attention*
-(:numref:`chap_attention`), which lifts this bottleneck at the cost of memory
-and compute that grow with sequence length.
+### RNN Language Models and Teacher Forcing
+:label:`subsec_teacher-forcing`
 
-## RNN Language Models
-
-An RNN language model consumes one token per time step and predicts the next.
-Its input stage is the same embedding lookup used by the neural $n$-gram: at
-step $t$, the $b$ token ids in the minibatch index $b$ rows of the embedding
-table $\mathbf{E}$ to form $\mathbf{X}_t \in \mathbb{R}^{b \times d}$
-(mathematically identical to multiplying a one-hot matrix by $\mathbf{E}$,
-without ever materializing the sparse one-hot vectors). The recurrent layer
-updates $\mathbf{H}_t$, and the output layer projects $\mathbf{H}_t$ to
-$q = |\mathcal{V}|$ logits per sequence, whose softmax defines the predictive
-distribution $P(x_{t+1} \mid x_{\leq t})$. Because $\mathbf{H}_t$ incorporates
-the entire prefix, the model parameterizes every conditional in the exact
-chain-rule factorization
-$P(x_1, \ldots, x_T) = \prod_t P(x_t \mid x_{<t})$
-(:eqref:`eq_lm_factorization` in :numref:`sec_language-model`) without
-imposing a hard Markov cutoff.
-
-:numref:`fig_rnn_train` illustrates training on the windowed sequences from
-:numref:`subsec_partitioning-seqs`. Consider the phrase `"thing that struck me"`
-from *The Time Machine*, which our 1,024-token BPE tokenizer
-(:numref:`sec_text-sequence`) splits into the five tokens `␣thing`, `␣that`,
-`␣stru`, `ck`, and `␣me` (where `␣` denotes a leading space, and `"struck"`
-splits into two subwords). We feed the first four tokens as input and use the
-same sequence shifted forward by one token—`␣that`, `␣stru`, `ck`, `␣me`—as
-the targets. At every time step, cross-entropy compares the softmax output
-against the target token, and we average the loss across steps. At step 3, for
-instance, the model has read `␣thing ␣that ␣stru` and is trained to predict
-`ck`, completing the partially spelled word. Since this average cross-entropy
-is the logarithm of perplexity (:numref:`sec_language-model`), minimizing the
-training loss directly minimizes perplexity.
+An RNN language model consumes one token id per step and predicts a
+distribution over the next token across all $q = |\mathcal{V}|$ vocabulary
+entries (:numref:`fig_rnn_train`). At step $t$, the $b$ token ids in the
+minibatch look up their corresponding rows in a learned embedding table
+$\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$ to form
+$\mathbf{X}_t \in \mathbb{R}^{b \times d}$ (mathematically identical to
+multiplying a $b \times |\mathcal{V}|$ one-hot matrix by $\mathbf{E}$, without
+materializing or multiplying by zeros). The recurrent layer updates
+$\mathbf{H}_t$, and $\textrm{softmax}(\mathbf{O}_t)$ defines
+$P(x_{t+1} \mid x_{\leq t})$ in the chain-rule factorization
+:eqref:`eq_lm_factorization`.
 
 ![An RNN language model trained by teacher forcing over BPE tokens of *The Time Machine*. The target sequence is the input shifted forward by one token, so each step is trained to predict the next token.](../img/mdl-rnn-lm-shift.svg)
 :label:`fig_rnn_train`
 
-### Model Size and Computation
-
-Where do the parameters of an RNN language model actually live? Let us tally
-them for the model we will train on *The Time Machine* in
-:numref:`sec_rnn-scratch`, using our BPE vocabulary of
+Where do the parameters and FLOPs sit? For our BPE vocabulary of
 $|\mathcal{V}| = 1{,}027$ ids (1,024 BPE tokens plus three special tokens),
-embedding dimension $d = 64$, and hidden size $h = 128$:
+embedding width $d = 64$, and hidden size $h = 128$:
 
 | part | shape | parameters |
 |---|---|--:|
@@ -243,81 +178,1170 @@ embedding dimension $d = 64$, and hidden size $h = 128$:
 | output bias $\mathbf{b}_\textrm{q}$ | $1{,}027$ | 1,027 |
 | total | | 222,915 |
 
-Surprisingly, the recurrent layer—the part responsible for all sequential
-memory—accounts for just 24,704 parameters, or 11% of the model. The remaining
-89% reside in the embedding table and output projection, both of which scale
-linearly with vocabulary size. Per-token compute breaks down along the same
-lines: the recurrent step performs
-$64 \cdot 128 + 128 \cdot 128 = 24{,}576$ multiply-adds, whereas the output
-projection requires $128 \cdot 1{,}027 = 131{,}456$—over five times as
-many—while the embedding lookup simply copies a row. Enlarging the vocabulary
-therefore increases both memory and per-token latency without expanding the
-hidden state, whereas expanding the hidden state adds memory capacity at a
-quadratic parameter cost in $h^2$ inside $\mathbf{W}_{\textrm{hh}}$.
+The recurrent layer accounts for just 24,704 parameters (11% of the model) and
+$24{,}576$ multiply-adds per token, whereas the vocabulary-sized embedding and
+output layers hold 89% of the parameters and the output projection alone costs
+$128 \cdot 1{,}027 = 131{,}456$ multiply-adds.
 
-### Teacher Forcing
-:label:`subsec_teacher-forcing`
+During training, the input at every step is the *ground-truth* token from the
+corpus regardless of what the model predicted at the previous step—a regime
+known as *teacher forcing*. Because all ground-truth inputs in a window are
+known up front, the entire window's cross-entropy loss (the logarithm of
+perplexity) is evaluated in one forward pass. During generation, however, each
+sampled or greedy token is fed back in as the next input, exposing the rollout
+to its own errors just like our multistep sine-wave forecast in
+:numref:`sec_sequence`.
 
-During training, the input fed at every time step is always the *ground-truth*
-token from the corpus, regardless of what the model predicted at the preceding
-step. This standard training regime is called *teacher forcing*. Because every
-step conditions on an error-free prefix and all targets in a window are known
-beforehand, the entire window's loss can be computed in a single forward pass.
+## An RNN Language Model from Scratch
+:label:`sec_rnn-scratch`
 
-During text generation, however, ground-truth continuations do not exist.
-Instead, we prime the model with a short prompt, draw a token from its
-predicted distribution (or pick the highest-probability token), and feed that
-generated token right back in as the next input. The model now conditions on
-its *own* predictions—recreating the exact gap between one-step training and
-multistep rollouts we encountered on the noisy sine wave in
-:numref:`sec_sequence`. A slightly awkward token perturbs the hidden state
-carried forward, and mistakes can compound over long passages. Because teacher
-forcing never exposes the network to its own errors, decoding strategies
-(:numref:`sec_decoding`) play a critical role in keeping generation on track.
+We now implement the three components of this language model—the recurrent
+cell, the embedding lookup, and the output layer—from scratch.
 
-Two important issues remain to be investigated. First, because the loss at
-step $t$ depends on the shared weights through every preceding step of the
-recurrence, its gradient involves long products of Jacobians that can vanish
-or explode as sequences lengthen; :numref:`sec_rnn-scratch` introduces
-gradient clipping to stabilize training, and :numref:`sec_bptt` analyzes the
-underlying gradient dynamics mathematically. Second, while the hidden state
-*can* in principle depend on the entire prefix, the architecture alone does not
-guarantee how much of that prefix a trained vanilla RNN will actually retain—a
-question we will measure directly once we train the model.
+### The Recurrent Cell
+
+The `RNNScratch` class stores the parameters of :eqref:`rnn_h_with_state` with
+$\phi = \tanh$. We draw $\mathbf{W}_{\textrm{xh}}$ and
+$\mathbf{W}_{\textrm{hh}}$ from $\mathcal{N}(0, \sigma^2)$ with $\sigma = 0.01$
+and initialize $\mathbf{b}_\textrm{h}$ to zero. At this scale, the spectral
+radius of $\mathbf{W}_{\textrm{hh}}$ is roughly $\sigma\sqrt{h} \approx 0.11$,
+so an untrained cell decays its past state rapidly and leaves training to grow
+recurrent weights where needed.
+
+:begin_tab:`tensorflow`
+Each weight gets its own initializer object. An unseeded Keras initializer
+returns the same values every time it is called, so one shared initializer
+would make the first rows of $\mathbf{W}_{\textrm{hh}}$ a copy of
+$\mathbf{W}_{\textrm{xh}}$.
+:end_tab:
+
+```{.python .input #rnn-implementation-the-recurrent-cell-1}
+%%tab mxnet
+class RNNScratch(d2l.Module):  #@save
+    """The RNN model implemented from scratch."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        self.W_xh = gluon.Parameter('W_xh', shape=(num_inputs, num_hiddens),
+                                    init=init.Normal(sigma))
+        self.W_hh = gluon.Parameter('W_hh', shape=(num_hiddens, num_hiddens),
+                                    init=init.Normal(sigma))
+        self.b_h = gluon.Parameter('b_h', shape=(num_hiddens,),
+                                   init=init.Zero())
+        self.initialize()
+```
+
+```{.python .input #rnn-implementation-the-recurrent-cell-1}
+%%tab pytorch
+class RNNScratch(d2l.Module):  #@save
+    """The RNN model implemented from scratch."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        self.W_xh = nn.Parameter(
+            d2l.randn(num_inputs, num_hiddens) * sigma)
+        self.W_hh = nn.Parameter(
+            d2l.randn(num_hiddens, num_hiddens) * sigma)
+        self.b_h = nn.Parameter(d2l.zeros(num_hiddens))
+```
+
+```{.python .input #rnn-implementation-the-recurrent-cell-1}
+%%tab tensorflow
+class RNNScratch(d2l.Module):  #@save
+    """The RNN model implemented from scratch."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        self.W_xh = self.add_weight(  # One initializer per weight
+            name='W_xh', shape=(num_inputs, num_hiddens),
+            initializer=tf.keras.initializers.RandomNormal(stddev=sigma))
+        self.W_hh = self.add_weight(
+            name='W_hh', shape=(num_hiddens, num_hiddens),
+            initializer=tf.keras.initializers.RandomNormal(stddev=sigma))
+        self.b_h = self.add_weight(name='b_h', shape=(num_hiddens,),
+                                   initializer='zeros')
+```
+
+```{.python .input #rnn-implementation-the-recurrent-cell-1}
+%%tab jax
+class RNNScratch(nnx.Module):  #@save
+    """The RNN model implemented from scratch."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01, rngs=None):
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
+        self.sigma = sigma
+        self.W_xh = nnx.Param(
+            rngs.params.normal((num_inputs, num_hiddens)) * sigma)
+        self.W_hh = nnx.Param(
+            rngs.params.normal((num_hiddens, num_hiddens)) * sigma)
+        self.b_h = nnx.Param(jnp.zeros(num_hiddens))
+```
+
+The forward pass loops over the leading time axis of `inputs`—of shape
+(`num_steps`, `batch_size`, `num_inputs`)—initializing the hidden state to
+zeros when none is supplied and returning the list of all per-step hidden
+states alongside the final state.
+
+:begin_tab:`mxnet`
+The MXNet version reads the values of the parameters with `data()`, here and
+in the language model below.
+:end_tab:
+
+:begin_tab:`jax`
+When the training step is compiled, the Python loop is unrolled into one
+copy of the cell per time step, so the compilation time grows with the
+number of steps. The concise implementation at the end of this section
+uses `nnx.RNN`, which runs the cell under `jax.lax.scan` and compiles it
+only once.
+:end_tab:
+
+```{.python .input #rnn-implementation-the-recurrent-cell-2}
+%%tab mxnet
+@d2l.add_to_class(RNNScratch)  #@save
+def forward(self, inputs, state=None):
+    if state is None:
+        # Initial state with shape: (batch_size, num_hiddens)
+        state = d2l.zeros((inputs.shape[1], self.num_hiddens),
+                          ctx=inputs.ctx)
+    outputs = []
+    for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs)
+        state = d2l.tanh(d2l.matmul(X, self.W_xh.data()) +
+                         d2l.matmul(state, self.W_hh.data()) +
+                         self.b_h.data())
+        outputs.append(state)
+    return outputs, state
+```
+
+```{.python .input #rnn-implementation-the-recurrent-cell-2}
+%%tab pytorch
+@d2l.add_to_class(RNNScratch)  #@save
+def forward(self, inputs, state=None):
+    if state is None:
+        # Initial state with shape: (batch_size, num_hiddens)
+        state = d2l.zeros((inputs.shape[1], self.num_hiddens),
+                          device=inputs.device)
+    outputs = []
+    for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs)
+        state = d2l.tanh(d2l.matmul(X, self.W_xh) +
+                         d2l.matmul(state, self.W_hh) + self.b_h)
+        outputs.append(state)
+    return outputs, state
+```
+
+```{.python .input #rnn-implementation-the-recurrent-cell-2}
+%%tab tensorflow
+@d2l.add_to_class(RNNScratch)  #@save
+def forward(self, inputs, state=None):
+    if state is None:
+        # Initial state with shape: (batch_size, num_hiddens)
+        state = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
+    outputs = []
+    for X in tf.unstack(inputs):  # Shape: (num_steps, batch_size, num_inputs)
+        state = d2l.tanh(d2l.matmul(X, self.W_xh) +
+                         d2l.matmul(state, self.W_hh) + self.b_h)
+        outputs.append(state)
+    return outputs, state
+```
+
+```{.python .input #rnn-implementation-the-recurrent-cell-2}
+%%tab jax
+@d2l.add_to_class(RNNScratch)  #@save
+def __call__(self, inputs, state=None):
+    if state is None:
+        # Initial state with shape: (batch_size, num_hiddens)
+        state = jnp.zeros((inputs.shape[1], self.num_hiddens))
+    outputs = []
+    for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs)
+        state = d2l.tanh(d2l.matmul(X, self.W_xh) +
+                         d2l.matmul(state, self.W_hh) + self.b_h)
+        outputs.append(state)
+    return outputs, state
+```
+
+We verify the output and final-state shapes on a dummy minibatch using a small
+`check_shape` helper that will be reused in later chapters.
+
+```{.python .input #rnn-implementation-the-recurrent-cell-3}
+batch_size, num_inputs, num_hiddens, num_steps = 2, 16, 32, 100
+rnn = RNNScratch(num_inputs, num_hiddens)
+X = d2l.ones((num_steps, batch_size, num_inputs))
+outputs, state = rnn(X)
+```
+
+```{.python .input #rnn-implementation-the-recurrent-cell-4}
+def check_shape(a, shape):  #@save
+    """Check the shape of a tensor."""
+    assert a.shape == shape, \
+            f'tensor\'s shape {a.shape} != expected shape {shape}'
+
+check_shape(d2l.stack(outputs, 0), (num_steps, batch_size, num_hiddens))
+check_shape(state, (batch_size, num_hiddens))
+```
+
+### The Embedding and Output Layers
+
+`RNNLMScratch` wraps a recurrent cell `rnn` with an embedding table `E` and an
+output projection (`W_hq`, `b_q`), plus optional dropout rates on the
+embeddings and hidden states. Embedding rows are initialized from
+$\mathcal{N}(0, 1)$ (matching unit-scale one-hot inputs) while output weights
+use scale $\sigma = 0.01$ with zero bias, so an untrained model produces
+near-zero logits and an initial perplexity close to $|\mathcal{V}|$. Subclassing
+`d2l.Classifier` provides mean cross-entropy loss, and overriding
+`validation_step` records that loss directly so its exponential gives
+validation perplexity.
+
+```{.python .input #rnn-implementation-from-token-ids-to-embeddings-1}
+%%tab mxnet
+class RNNLMScratch(d2l.Classifier):  #@save
+    """The RNN-based language model implemented from scratch."""
+    def __init__(self, rnn, vocab_size, lr=0.01, dropout=0, emb_dropout=0):
+        super().__init__()
+        self.save_hyperparameters()
+        self.sigma = getattr(rnn, 'sigma', 0.01)  # Scale of the output weights
+        self.init_params()
+
+    def init_params(self):
+        self.E = gluon.Parameter(
+            'E', shape=(self.vocab_size, self.rnn.num_inputs),
+            init=init.Normal(1))
+        self.W_hq = gluon.Parameter(
+            'W_hq', shape=(self.rnn.num_hiddens, self.vocab_size),
+            init=init.Normal(self.sigma))
+        self.b_q = gluon.Parameter('b_q', shape=(self.vocab_size,),
+                                   init=init.Zero())
+        for param in (self.E, self.W_hq, self.b_q):  # The cell has its own
+            param.initialize()
+
+    def validation_step(self, batch):
+        return self.loss(self(*batch[:-1]), batch[-1])
+```
+
+```{.python .input #rnn-implementation-from-token-ids-to-embeddings-1}
+%%tab pytorch
+class RNNLMScratch(d2l.Classifier):  #@save
+    """The RNN-based language model implemented from scratch."""
+    def __init__(self, rnn, vocab_size, lr=0.01, dropout=0, emb_dropout=0):
+        super().__init__()
+        self.save_hyperparameters()
+        self.sigma = getattr(rnn, 'sigma', 0.01)  # Scale of the output weights
+        self.init_params()
+
+    def init_params(self):
+        self.E = nn.Parameter(
+            d2l.randn(self.vocab_size, self.rnn.num_inputs))
+        self.W_hq = nn.Parameter(
+            d2l.randn(self.rnn.num_hiddens, self.vocab_size) * self.sigma)
+        self.b_q = nn.Parameter(d2l.zeros(self.vocab_size))
+
+    def validation_step(self, batch):
+        return self.loss(self(*batch[:-1]), batch[-1])
+```
+
+```{.python .input #rnn-implementation-from-token-ids-to-embeddings-1}
+%%tab tensorflow
+class RNNLMScratch(d2l.Classifier):  #@save
+    """The RNN-based language model implemented from scratch."""
+    def __init__(self, rnn, vocab_size, lr=0.01, dropout=0, emb_dropout=0):
+        super().__init__()
+        self.save_hyperparameters()
+        self.sigma = getattr(rnn, 'sigma', 0.01)  # Scale of the output weights
+        self.init_params()
+
+    def init_params(self):
+        self.E = self.add_weight(
+            name='E', shape=(self.vocab_size, self.rnn.num_inputs),
+            initializer=tf.keras.initializers.RandomNormal(stddev=1))
+        self.W_hq = self.add_weight(
+            name='W_hq', shape=(self.rnn.num_hiddens, self.vocab_size),
+            initializer=tf.keras.initializers.RandomNormal(stddev=self.sigma))
+        self.b_q = self.add_weight(name='b_q', shape=(self.vocab_size,),
+                                   initializer='zeros')
+
+    def validation_step(self, batch):
+        return self.loss(self(*batch[:-1], training=False), batch[-1])
+```
+
+```{.python .input #rnn-implementation-from-token-ids-to-embeddings-1}
+%%tab jax
+class RNNLMScratch(d2l.Classifier):  #@save
+    """The RNN-based language model implemented from scratch."""
+    def __init__(self, rnn, vocab_size, lr=0.01, dropout=0, emb_dropout=0,
+                 rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rnn', 'rngs'])
+        self.rnn = rnn
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
+        sigma = getattr(rnn, 'sigma', 0.01)  # Scale of the output weights
+        self.E = nnx.Param(rngs.params.normal((vocab_size, rnn.num_inputs)))
+        self.W_hq = nnx.Param(rngs.params.normal(
+            (rnn.num_hiddens, vocab_size)) * sigma)
+        self.b_q = nnx.Param(jnp.zeros(vocab_size))
+        self.drop = nnx.Dropout(dropout, rngs=rngs)
+        self.emb_drop = nnx.Dropout(emb_dropout, rngs=rngs)
+
+    def validation_step(self, batch):
+        return self.loss(self(*batch[:-1]), batch[-1])
+```
+
+Because the data loader yields minibatches of shape (`batch_size`,
+`num_steps`), `embedding` transposes the token ids before indexing `E`,
+returning a (`num_steps`, `batch_size`, `num_inputs`) tensor whose leading axis
+is time.
+
+```{.python .input #rnn-implementation-from-token-ids-to-embeddings-2}
+%%tab mxnet
+@d2l.add_to_class(RNNLMScratch)  #@save
+def embedding(self, X):
+    # Output shape: (num_steps, batch_size, num_inputs)
+    return self.E.data()[X.T]
+```
+
+```{.python .input #rnn-implementation-from-token-ids-to-embeddings-2}
+%%tab pytorch
+@d2l.add_to_class(RNNLMScratch)  #@save
+def embedding(self, X):
+    # Output shape: (num_steps, batch_size, num_inputs)
+    return self.E[X.T]
+```
+
+```{.python .input #rnn-implementation-from-token-ids-to-embeddings-2}
+%%tab tensorflow
+@d2l.add_to_class(RNNLMScratch)  #@save
+def embedding(self, X):
+    # Output shape: (num_steps, batch_size, num_inputs)
+    return tf.gather(self.E, tf.transpose(X))
+```
+
+```{.python .input #rnn-implementation-from-token-ids-to-embeddings-2}
+%%tab jax
+@d2l.add_to_class(RNNLMScratch)  #@save
+def embedding(self, X):
+    # Output shape: (num_steps, batch_size, num_inputs)
+    return self.E[X.T]
+```
+
+`output_layer` stacks the per-step states into shape (`batch_size`,
+`num_steps`, `num_hiddens`) and applies the shared output projection in a
+single batched matrix product, while `forward` chains embedding lookup,
+dropout, the recurrent cell, and the output projection.
+
+```{.python .input #rnn-implementation-the-output-layer-1}
+%%tab mxnet
+@d2l.add_to_class(RNNLMScratch)  #@save
+def output_layer(self, rnn_outputs):
+    # A list of per-step states, or a tensor whose first axis is time
+    H = d2l.stack(list(rnn_outputs), 1)  # (batch_size, num_steps, num_hiddens)
+    return d2l.matmul(H, self.W_hq.data()) + self.b_q.data()
+
+@d2l.add_to_class(RNNLMScratch)  #@save
+def forward(self, X, state=None):
+    # npx.dropout is active only inside autograd.record, that is, in training
+    embs = npx.dropout(self.embedding(X), p=self.emb_dropout)
+    rnn_outputs, _ = self.rnn(embs, state)
+    H = d2l.stack(list(rnn_outputs), 0)  # (num_steps, batch_size, num_hiddens)
+    return self.output_layer(npx.dropout(H, p=self.dropout))
+```
+
+```{.python .input #rnn-implementation-the-output-layer-1}
+%%tab pytorch
+@d2l.add_to_class(RNNLMScratch)  #@save
+def output_layer(self, rnn_outputs):
+    # A list of per-step states, or a tensor whose first axis is time
+    H = d2l.stack(list(rnn_outputs), 1)  # (batch_size, num_steps, num_hiddens)
+    return d2l.matmul(H, self.W_hq) + self.b_q
+
+@d2l.add_to_class(RNNLMScratch)  #@save
+def forward(self, X, state=None):
+    embs = F.dropout(self.embedding(X), self.emb_dropout, self.training)
+    rnn_outputs, _ = self.rnn(embs, state)
+    H = d2l.stack(list(rnn_outputs), 0)  # (num_steps, batch_size, num_hiddens)
+    return self.output_layer(F.dropout(H, self.dropout, self.training))
+```
+
+```{.python .input #rnn-implementation-the-output-layer-1}
+%%tab tensorflow
+@d2l.add_to_class(RNNLMScratch)  #@save
+def output_layer(self, rnn_outputs):
+    # A list of per-step states, or a tensor whose first axis is time
+    H = d2l.stack(list(rnn_outputs), 1)  # (batch_size, num_steps, num_hiddens)
+    return d2l.matmul(H, self.W_hq) + self.b_q
+
+@d2l.add_to_class(RNNLMScratch)  #@save
+def forward(self, X, state=None):
+    embs = self.embedding(X)
+    if self.training:  # tf.nn.dropout is always active; apply it in training
+        embs = tf.nn.dropout(embs, self.emb_dropout)
+    rnn_outputs, _ = self.rnn(embs, state)
+    if self.training:  # A list of per-step states (scratch) or one tensor
+        rnn_outputs = tf.nest.map_structure(
+            lambda H: tf.nn.dropout(H, self.dropout), rnn_outputs)
+    return self.output_layer(rnn_outputs)
+```
+
+```{.python .input #rnn-implementation-the-output-layer-1}
+%%tab jax
+@d2l.add_to_class(RNNLMScratch)  #@save
+def output_layer(self, rnn_outputs):
+    # A list of per-step states, or a tensor whose first axis is time
+    H = d2l.stack(list(rnn_outputs), 1)  # (batch_size, num_steps, num_hiddens)
+    return d2l.matmul(H, self.W_hq) + self.b_q
+
+@d2l.add_to_class(RNNLMScratch)  #@save
+def forward(self, X, state=None):
+    embs = self.emb_drop(self.embedding(X))
+    rnn_outputs, _ = self.rnn(embs, state)
+    H = d2l.stack(list(rnn_outputs), 0)  # (num_steps, batch_size, num_hiddens)
+    return self.output_layer(self.drop(H))
+```
+
+```{.python .input #rnn-implementation-the-output-layer-2}
+%%tab pytorch, mxnet, tensorflow
+model = RNNLMScratch(rnn, vocab_size=1024)
+outputs = model(d2l.ones((batch_size, num_steps), dtype=d2l.int64))
+check_shape(outputs, (batch_size, num_steps, 1024))
+```
+
+```{.python .input #rnn-implementation-the-output-layer-2}
+%%tab jax
+model = RNNLMScratch(rnn, vocab_size=1024)
+outputs = model(d2l.ones((batch_size, num_steps), dtype=d2l.int32))
+check_shape(outputs, (batch_size, num_steps, 1024))
+```
+
+## Gradient Clipping
+
+Because an unrolled RNN applies the same transition Jacobian across $T$ steps,
+gradients can shrink or grow exponentially with $T$ (:numref:`sec_bptt`). A
+sudden gradient spike moves the parameters by Euclidean distance
+$\eta\|\mathbf{g}\|$, overshooting the local region where the first-order
+Taylor approximation holds and undoing dozens of updates in a single step.
+Rather than shrinking $\eta$ across the board, *gradient clipping* caps the
+global gradient norm (computed jointly over all model parameters) at a
+threshold $\theta$ by projecting $\mathbf{g}$ onto the ball of radius $\theta$:
+
+$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right) \mathbf{g}.$$
+:eqlabel:`eq_grad_clipping`
+
+Whenever `gradient_clip_val` is positive, `d2l.Trainer` (:numref:`sec_oo-design`)
+applies :eqref:`eq_grad_clipping` right after backpropagation and before the
+optimizer step.
+
+:begin_tab:`mxnet, pytorch`
+The method below rescales each parameter's gradient in place.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The method below returns the (possibly rescaled) gradients, and the compiled
+training step hands them to the optimizer.
+:end_tab:
+
+:begin_tab:`jax`
+The JAX trainer updates the parameters with an optax transformation inside
+its compiled training step, so the clipping goes there too:
+`prepare_optimizer` turns `clip_gradients` into an optax transformation and
+chains it in front of the model's optimizer.
+:end_tab:
+
+```{.python .input #rnn-implementation-gradient-clipping}
+%%tab mxnet
+@d2l.add_to_class(d2l.Trainer)  #@save
+def clip_gradients(self, grad_clip_val, model):
+    params = [p.data() for p in model.collect_params().values()
+              if p.grad_req != 'null']
+    norm = mnp.sqrt(sum((p.grad ** 2).sum() for p in params))
+    scale = mnp.minimum(grad_clip_val / norm, 1.0)  # no `if` on the host
+    for param in params:
+        param.grad[:] *= scale
+```
+
+```{.python .input #rnn-implementation-gradient-clipping}
+%%tab pytorch
+@d2l.add_to_class(d2l.Trainer)  #@save
+def clip_gradients(self, grad_clip_val, model):
+    params = [p for p in model.parameters() if p.requires_grad]
+    norm = torch.sqrt(sum(torch.sum(p.grad ** 2) for p in params))
+    scale = torch.clamp(grad_clip_val / norm, max=1.0)  # no `if` on the host
+    for param in params:
+        param.grad.mul_(scale)
+```
+
+```{.python .input #rnn-implementation-gradient-clipping}
+%%tab tensorflow
+@d2l.add_to_class(d2l.Trainer)  #@save
+def clip_gradients(self, grad_clip_val, grads):
+    grad_clip_val = tf.constant(grad_clip_val, dtype=tf.float32)
+    new_grads = [tf.convert_to_tensor(grad) if isinstance(
+        grad, tf.IndexedSlices) else grad for grad in grads]
+    norm = tf.math.sqrt(sum((tf.reduce_sum(grad ** 2)) for grad in new_grads))
+    scale = tf.minimum(1.0, grad_clip_val / norm)
+    return [grad * scale for grad in new_grads]
+```
+
+```{.python .input #rnn-implementation-gradient-clipping}
+%%tab jax
+def clip_gradients(grad_clip_val, grads):  #@save
+    """Rescale the gradients to global norm at most grad_clip_val."""
+    grad_leaves, _ = jax.tree_util.tree_flatten(grads)
+    norm = jnp.sqrt(sum(jnp.vdot(x, x) for x in grad_leaves))
+    clip = lambda grad: jnp.where(norm < grad_clip_val,
+                                  grad, grad * (grad_clip_val / norm))
+    return jax.tree_util.tree_map(clip, grads)
+
+@d2l.add_to_class(d2l.Trainer)  #@save
+def prepare_optimizer(self, model):
+    val = self.gradient_clip_val
+    key = (jax.tree.structure(model), type(model).configure_optimizers, val)
+    if key not in d2l.optimizer_cache:
+        tx = model.configure_optimizers()
+        if val > 0:  # The closure holds only val, not the trainer
+            clip = lambda grads, params: clip_gradients(val, grads)
+            tx = optax.chain(optax.stateless(clip), tx)
+        d2l.optimizer_cache.clear()
+        d2l.optimizer_cache[key] = tx
+    self.optim = nnx.Optimizer(model, d2l.optimizer_cache[key],
+                               wrt=nnx.Param)
+```
+
+## Training and Evaluation
+
+`d2l.TimeMachine` (:numref:`sec_language-model`) encodes the 65,741 BPE tokens
+of the novella and yields minibatches of $T = 32$ overlapping windows—50,000
+for training and 5,000 for validation, separated by a 32-window gap so no
+validation token appears as a training target. Because each window starts from
+$\mathbf{H}_0 = \mathbf{0}$, backpropagation is *truncated* to 32 steps
+(:numref:`sec_bptt`).
+
+```{.python .input #rnn-implementation-training-1}
+data = d2l.TimeMachine(batch_size=1024, num_steps=32)
+```
+
+### A Plain Model and the Role of Clipping
+
+We first train our 222,915-parameter baseline ($d = 64$, $h = 128$, no dropout)
+for ten epochs of SGD at learning rate $\eta = 4$ with clipping at
+$\theta = 1$, saving a copy of the initial embedding table `E_init` first.
+
+```{.python .input #rnn-implementation-training-2}
+%%tab pytorch, mxnet, jax
+rnn = RNNScratch(num_inputs=64, num_hiddens=128)
+model = RNNLMScratch(rnn, vocab_size=len(data.vocab), lr=4)
+```
+
+```{.python .input #rnn-implementation-training-2}
+%%tab tensorflow
+with d2l.try_gpu():
+    rnn = RNNScratch(num_inputs=64, num_hiddens=128)
+    model = RNNLMScratch(rnn, vocab_size=len(data.vocab), lr=4)
+```
+
+```{.python .input #rnn-implementation-a-plain-model-1}
+%%tab mxnet
+E_init = d2l.numpy(model.E.data()).copy()
+```
+
+```{.python .input #rnn-implementation-a-plain-model-1}
+%%tab pytorch, tensorflow
+E_init = d2l.numpy(model.E).copy()
+```
+
+```{.python .input #rnn-implementation-a-plain-model-1}
+%%tab jax
+E_init = d2l.numpy(model.E[...]).copy()
+```
+
+```{.python .input #rnn-implementation-training-3}
+trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
+ppl_init = math.exp(trainer.evaluate(model, data)['loss'])
+print(f'initial validation perplexity {ppl_init:.0f}')
+trainer.fit(model, data)
+```
+
+```{.python .input #rnn-implementation-training-4}
+ppl_plain = math.exp(trainer.history['val_loss'][-1])
+print(f'validation perplexity {ppl_plain:.1f}')
+```
+
+Initial validation perplexity sits near $|\mathcal{V}| = 1{,}027$, and after
+ten epochs the clipped model converges smoothly to a validation perplexity
+around 90–100 (while training perplexity drops below half that value as the
+222,915 parameters begin overfitting the 50,000 training tokens).
+
+To see why gradient clipping is essential at $\eta = 4$, we train three fresh
+unclipped instances of the exact same model and plot their validation
+perplexity trajectories on a log scale alongside the clipped baseline.
+
+```{.python .input #rnn-implementation-a-plain-model-2}
+%%tab pytorch, mxnet, jax
+def unclipped_model():
+    return RNNLMScratch(RNNScratch(num_inputs=64, num_hiddens=128),
+                        vocab_size=len(data.vocab), lr=4)
+```
+
+```{.python .input #rnn-implementation-a-plain-model-2}
+%%tab tensorflow
+def unclipped_model():
+    with d2l.try_gpu():
+        return RNNLMScratch(RNNScratch(num_inputs=64, num_hiddens=128),
+                            vocab_size=len(data.vocab), lr=4)
+```
+
+```{.python .input #rnn-implementation-a-plain-model-3}
+ppl_runs = []
+for run in range(3):  # Three unseeded runs, no clipping
+    trainer_unclipped = d2l.Trainer(max_epochs=10, num_gpus=1)
+    trainer_unclipped.board.display = False  # One plot for all runs below
+    trainer_unclipped.fit(unclipped_model(), data)
+    ppls = [math.exp(loss) for loss in trainer_unclipped.history['val_loss']]
+    ppl_runs.append(ppls)
+    print(f'run {run + 1}: highest {max(ppls):.3g}, final {ppls[-1]:.3g}')
+finals = [ppls[-1] for ppls in ppl_runs]
+print(f'{sum(f > 2 * ppl_plain for f in finals)} of 3 runs end above twice '
+      f'the clipped {ppl_plain:.3g}; finals from {min(finals):.3g} to '
+      f'{max(finals):.3g}')
+```
+
+```{.python .input #rnn-implementation-a-plain-model-4}
+ppl_clipped = [math.exp(loss) for loss in trainer.history['val_loss']]
+d2l.plot(list(range(1, 11)), [ppl_clipped] + ppl_runs, 'epoch',
+         'validation perplexity', yscale='log',
+         legend=['clipped', 'run 1', 'run 2', 'run 3'],
+         legend_loc='outside', figsize=(5, 2.5))
+```
+
+Without clipping, mid-training gradient spikes send validation perplexity
+jumping violently—sometimes above the untrained baseline of 1,027—and most
+runs finish at more than twice the clipped model's perplexity. Converting our
+clipped validation perplexity to bits per byte (:eqref:`eq_bpb`) divides
+$\log_2 \textrm{ppl}$ by the average UTF-8 bytes per BPE token ($\approx 2.8$):
+
+```{.python .input #rnn-implementation-training-5}
+ids = d2l.numpy(data.X[data.num_train:data.num_train+data.num_val, 0]).tolist()
+bytes_per_token = len(data.tokenizer.decode(ids).encode('utf-8')) / len(ids)
+print(f'{bytes_per_token:.2f} bytes/token, '
+      f'{math.log2(ppl_plain) / bytes_per_token:.2f} bits per byte')
+```
+
+### Embeddings under SGD and a Wider Model with Dropout
+
+Inspecting how far each row of $\mathbf{E}$ moved over the ten epochs of SGD
+exposes a second bottleneck:
+
+```{.python .input #rnn-implementation-embeddings-under-sgd-1}
+%%tab mxnet
+E_final = d2l.numpy(model.E.data())
+```
+
+```{.python .input #rnn-implementation-embeddings-under-sgd-1}
+%%tab pytorch, tensorflow
+E_final = d2l.numpy(model.E)
+```
+
+```{.python .input #rnn-implementation-embeddings-under-sgd-1}
+%%tab jax
+E_final = d2l.numpy(model.E[...])
+```
+
+```{.python .input #rnn-implementation-embeddings-under-sgd-2}
+change = (((E_final - E_init) ** 2).sum(1) / (E_init ** 2).sum(1)) ** 0.5
+print(f'mean change of an embedding row: {change.mean():.1%} of its length')
+```
+
+Because row $i$ receives a gradient only from positions where token $i$ occurs,
+and the loss averages over all $1{,}024 \times 32 = 32{,}768$ tokens in a
+minibatch, rare or moderate-frequency tokens receive tiny gradients under a
+uniform SGD learning rate, leaving $\mathbf{E}$ almost frozen. While adaptive
+optimizers like Adam (:numref:`sec_adam`) rescale per-coordinate step sizes to
+move embeddings much further (explored in the exercises), we can also address
+this directly within SGD: widening the embedding from $d = 64$ to $d = 512$
+gives the densely updated input matrix $\mathbf{W}_{\textrm{xh}}$ a far richer
+random feature basis, while adding dropout (0.1 on embeddings, 0.5 on hidden
+states) curbs overfitting.
+
+```{.python .input #rnn-implementation-a-wider-embedding-with-dropout-1}
+%%tab pytorch, mxnet, jax
+rnn = RNNScratch(num_inputs=512, num_hiddens=128)
+model = RNNLMScratch(rnn, vocab_size=len(data.vocab), lr=4, dropout=0.5,
+                     emb_dropout=0.1)
+```
+
+```{.python .input #rnn-implementation-a-wider-embedding-with-dropout-1}
+%%tab tensorflow
+with d2l.try_gpu():
+    rnn = RNNScratch(num_inputs=512, num_hiddens=128)
+    model = RNNLMScratch(rnn, vocab_size=len(data.vocab), lr=4, dropout=0.5,
+                         emb_dropout=0.1)
+```
+
+```{.python .input #rnn-implementation-a-wider-embedding-with-dropout-2}
+trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
+trainer.fit(model, data)
+```
+
+```{.python .input #rnn-implementation-a-wider-embedding-with-dropout-3}
+ppl_scratch = math.exp(trainer.history['val_loss'][-1])
+print(f'validation perplexity {ppl_scratch:.1f}, '
+      f'{math.log2(ppl_scratch) / bytes_per_token:.2f} bits per byte')
+```
+
+Validation perplexity drops from roughly 90–100 down to around 60, cutting bits
+per byte from 2.3–2.4 to roughly 2.1.
+
+### Comparison with Kneser–Ney and Effective Context Horizon
+
+How does 2.1 bits per byte compare against interpolated Kneser--Ney smoothing
+(:numref:`subsec_kneser-ney`)? We fit Kneser--Ney $n$-grams ($n = 2, 3, 4$) on
+the exact same 50,000 BPE training tokens and evaluate both Kneser--Ney and our
+trained RNN on `val[32:]`, where each token is scored as the final target of
+its 32-token validation window.
+
+```{.python .input #rnn-implementation-training-6}
+first_tokens = d2l.numpy(data.X[:, 0]).tolist()  # First token of each window
+train = first_tokens[:data.num_train]
+val = first_tokens[data.num_train:data.num_train + data.num_val]
+lp_kns = {n: d2l.kneser_ney(train, val, len(data.vocab), n)[32:]
+          for n in (2, 3, 4)}
+for n, lp in lp_kns.items():
+    bits = -sum(lp) / len(lp) / math.log(2)
+    print(f'KN {n}-gram: {bits / bytes_per_token:.2f} bits per byte')
+lp_kn = lp_kns[3]
+```
+
+```{.python .input #rnn-implementation-comparison-with-kneser-ney-1}
+start, stop = data.num_train, data.num_train + data.num_val - 32  # val[32:]
+```
+
+```{.python .input #rnn-implementation-comparison-with-kneser-ney-2}
+%%tab mxnet
+X_val = data.X[start:stop].as_in_ctx(d2l.try_gpu())
+Y_val = data.Y[start:stop].as_in_ctx(d2l.try_gpu())
+logp = d2l.numpy(mnp.concatenate([  # Log-probability of every target
+    npx.pick(npx.log_softmax(model(X_val[i:i + 1024])), Y_val[i:i + 1024])
+    for i in range(0, len(X_val), 1024)]))
+```
+
+```{.python .input #rnn-implementation-comparison-with-kneser-ney-2}
+%%tab pytorch
+model.eval()
+with torch.inference_mode():  # Log-probability of every target
+    logp = d2l.numpy(torch.cat([
+        F.log_softmax(model(X.to(d2l.try_gpu())), -1).gather(
+            -1, Y.to(d2l.try_gpu())[..., None])[..., 0]
+        for X, Y in zip(data.X[start:stop].split(1024),
+                        data.Y[start:stop].split(1024))]))
+```
+
+```{.python .input #rnn-implementation-comparison-with-kneser-ney-2}
+%%tab tensorflow
+X_val, Y_val = data.X[start:stop], data.Y[start:stop]
+logp = d2l.numpy(tf.concat([  # Log-probability of every target
+    tf.gather(tf.nn.log_softmax(model(X_val[i:i + 1024], training=False)),
+              Y_val[i:i + 1024], batch_dims=2)
+    for i in range(0, len(X_val), 1024)], 0))
+```
+
+```{.python .input #rnn-implementation-comparison-with-kneser-ney-2}
+%%tab jax
+model_eval = nnx.view(model, deterministic=True, raise_if_not_found=False)
+X_val, Y_val = data.X[start:stop], data.Y[start:stop]
+logp = d2l.numpy(jnp.concatenate([  # Log-probability of every target
+    jnp.take_along_axis(jax.nn.log_softmax(model_eval(X_val[i:i + 1024])),
+                        Y_val[i:i + 1024, :, None], -1)[..., 0]
+    for i in range(0, len(X_val), 1024)]))
+```
+
+Why does a recurrent network reading 32 tokens of history land near the same
+$\approx 2.1$ bits per byte as a Kneser--Ney trigram that looks back only two
+tokens? (Note that the two models still make genuinely complementary
+predictions: each assigns higher probability than the other on roughly half of
+all validation tokens, and a 50/50 linear mixture
+$0.5\, P_\textrm{RNN} + 0.5\, P_\textrm{KN}$ :cite:`Mikolov.Kombrink.Burget.ea.2011`
+improves over the standalone trigram by roughly 0.06 bits per byte.) To see
+how much context the trained RNN actually uses, we plot its average validation
+bits per byte at each window position $1, \ldots, 32$ against the Kneser--Ney
+trigram baseline.
+
+```{.python .input #rnn-implementation-comparison-with-kneser-ney-4}
+bits = -logp.mean(0) / math.log(2) / bytes_per_token  # One per position
+kn_bits = -sum(lp_kn) / len(lp_kn) / math.log(2) / bytes_per_token
+positions = np.arange(1, data.num_steps + 1)
+d2l.plot(positions, [bits, [kn_bits] * data.num_steps],
+         'tokens of context', 'bits per byte', legend=['RNN', 'KN trigram'],
+         figsize=(4.5, 3))
+print('bits per byte with 1, 2, 3, 4, 8, 32 tokens of context:',
+      [round(float(bits[k - 1]), 2) for k in (1, 2, 3, 4, 8, 32)])
+```
+
+The diagnostic curve explains the tie immediately: surprisal drops sharply from
+1 to 3 tokens of context, then goes completely flat from position 4 through 32.
+Although the hidden state *can* depend on all 32 tokens in the forward pass,
+gradient-based training only taught it to exploit the last three—a phenomenon
+we trace directly to vanishing gradients in :numref:`sec_bptt`.
+
+## Text Generation
+
+Once trained, our language model generates text autoregressively via `predict`:
+it first warms up the hidden state on the user's prefix tokens, then generates
+`num_tokens` continuation tokens by feeding each chosen token back in as the
+next input (using greedy argmax when `temperature=0.0`, or sampling from the
+temperature-scaled softmax otherwise; see :numref:`sec_decoding`).
+
+```{.python .input #rnn-implementation-generating-text-1}
+%%tab mxnet
+@d2l.add_to_class(RNNLMScratch)  #@save
+def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0):
+    outputs, state = tok.encode(prefix), None
+    for i in range(len(outputs) - 1):  # Warm up on the prefix
+        X = d2l.tensor([[outputs[i]]], ctx=device)
+        _, state = self.rnn(self.embedding(X), state)
+    for _ in range(num_tokens):  # Generate num_tokens continuation tokens
+        X = d2l.tensor([[outputs[-1]]], ctx=device)
+        rnn_outputs, state = self.rnn(self.embedding(X), state)
+        logits = self.output_layer(rnn_outputs)[0, 0]
+        if temperature == 0:  # Greedy: the highest-scoring token
+            token = logits.argmax()
+        else:  # Sample from the softmax of logits / temperature
+            token = npx.random.categorical(npx.softmax(logits / temperature))
+        outputs.append(int(token))
+    return tok.decode(outputs)
+```
+
+```{.python .input #rnn-implementation-generating-text-1}
+%%tab pytorch
+@d2l.add_to_class(RNNLMScratch)  #@save
+@torch.inference_mode()  # Generation needs no autograd graph
+def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0):
+    outputs, state = tok.encode(prefix), None
+    for i in range(len(outputs) - 1):  # Warm up on the prefix
+        X = d2l.tensor([[outputs[i]]], device=device)
+        _, state = self.rnn(self.embedding(X), state)
+    for _ in range(num_tokens):  # Generate num_tokens continuation tokens
+        X = d2l.tensor([[outputs[-1]]], device=device)
+        rnn_outputs, state = self.rnn(self.embedding(X), state)
+        logits = self.output_layer(rnn_outputs)[0, 0]
+        if temperature == 0:  # Greedy: the highest-scoring token
+            token = logits.argmax()
+        else:  # Sample from the softmax of logits / temperature
+            token = torch.distributions.Categorical(
+                logits=logits / temperature).sample()
+        outputs.append(int(token))
+    return tok.decode(outputs)
+```
+
+```{.python .input #rnn-implementation-generating-text-1}
+%%tab tensorflow
+@d2l.add_to_class(RNNLMScratch)  #@save
+def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0):
+    outputs, state = tok.encode(prefix), None
+    for i in range(len(outputs) - 1):  # Warm up on the prefix
+        X = d2l.tensor([[outputs[i]]])
+        _, state = self.rnn(self.embedding(X), state)
+    for _ in range(num_tokens):  # Generate num_tokens continuation tokens
+        X = d2l.tensor([[outputs[-1]]])
+        rnn_outputs, state = self.rnn(self.embedding(X), state)
+        logits = self.output_layer(rnn_outputs)[0]  # Shape: (1, vocab_size)
+        if temperature == 0:  # Greedy: the highest-scoring token
+            token = tf.argmax(logits[0])
+        else:  # Sample from the softmax of logits / temperature
+            token = tf.random.categorical(logits / temperature, 1)[0, 0]
+        outputs.append(int(token))
+    return tok.decode(outputs)
+```
+
+```{.python .input #rnn-implementation-generating-text-1}
+%%tab jax
+@d2l.add_to_class(RNNLMScratch)  #@save
+def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0):
+    model = nnx.view(self, deterministic=True, use_running_average=True,
+                     raise_if_not_found=False)
+    outputs, state = tok.encode(prefix), None
+    for i in range(len(outputs) - 1):  # Warm up on the prefix
+        X = d2l.tensor([[outputs[i]]])
+        _, state = model.rnn(model.embedding(X), state)
+    for _ in range(num_tokens):  # Generate num_tokens continuation tokens
+        X = d2l.tensor([[outputs[-1]]])
+        rnn_outputs, state = model.rnn(model.embedding(X), state)
+        logits = model.output_layer(rnn_outputs)[0, 0]
+        if temperature == 0:  # Greedy: the highest-scoring token
+            token = logits.argmax()
+        else:  # Sample from the softmax of logits / temperature
+            token = jax.random.categorical(d2l.get_key(), logits / temperature)
+        outputs.append(int(token))
+    return tok.decode(outputs)
+```
+
+```{.python .input #rnn-implementation-generating-text-2}
+%%tab mxnet, pytorch
+d2l.print_wrapped(repr(model.predict('The Time Traveller', 50,
+                                     data.tokenizer, d2l.try_gpu())))
+```
+
+```{.python .input #rnn-implementation-generating-text-2}
+%%tab tensorflow, jax
+d2l.print_wrapped(repr(model.predict('The Time Traveller', 50,
+                                     data.tokenizer)))
+```
+
+Because greedy decoding is deterministic, once the hidden state revisits a
+recent phrase it cycles through that loop indefinitely—a failure mode we study
+and fix in :numref:`sec_decoding`.
+
+## Concise Implementation
+:label:`sec_rnn-concise`
+
+Framework-supplied recurrent layers fuse the recurrent step and time loop into
+optimized low-level kernels. The `RNN` module below matches the interface and
+initialization of `RNNScratch`, and `RNNLM` subclasses `RNNLMScratch` by
+swapping in built-in embedding and linear layers.
+
+:begin_tab:`mxnet`
+Gluon's recurrent layer keeps two bias vectors, one for the input term and
+one for the recurrent term. Their sum plays the role of
+$\mathbf{b}_\textrm{h}$, and both start at zero. Gluon's default
+activation is ReLU, so we ask for tanh.
+:end_tab:
+
+:begin_tab:`pytorch`
+`nn.RNN` keeps two bias vectors, one for the input term and one for the
+recurrent term. Their sum plays the role of $\mathbf{b}_\textrm{h}$, and
+both start at zero.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`SimpleRNN` takes batch-major inputs, so `forward` transposes on the way in
+and out. As in `RNNScratch`, each weight gets its own initializer object.
+:end_tab:
+
+:begin_tab:`jax`
+Flax NNX provides `SimpleCell` for a plain recurrent cell. It consumes one
+time step and an explicit hidden state, and `nnx.RNN` scans it over the
+input sequence. The cell's input projection carries the bias, and its
+recurrent projection has none, so the cell has one bias vector, as
+`RNNScratch` does.
+:end_tab:
+
+```{.python .input #rnn-implementation-concise-implementation-1}
+%%tab mxnet
+class RNN(d2l.Module):  #@save
+    """The RNN model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        # Gluon's default activation is ReLU; use the tanh of RNNScratch
+        self.rnn = gluon.rnn.RNN(num_hiddens, activation='tanh')
+        self.rnn.initialize(init.Normal(sigma))  # The biases start at zero
+
+    def forward(self, inputs, H=None):
+        if H is None:
+            H, = self.rnn.begin_state(inputs.shape[1], ctx=inputs.ctx)
+        outputs, (H, ) = self.rnn(inputs, (H, ))
+        return outputs, H
+```
+
+```{.python .input #rnn-implementation-concise-implementation-1}
+%%tab pytorch
+class RNN(d2l.Module):  #@save
+    """The RNN model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        self.rnn = nn.RNN(num_inputs, num_hiddens)
+        for name, param in self.rnn.named_parameters():
+            if name.startswith('weight'):
+                nn.init.normal_(param, std=sigma)
+            else:  # Both bias vectors start at zero
+                nn.init.zeros_(param)
+
+    def forward(self, inputs, H=None):
+        return self.rnn(inputs, H)
+```
+
+```{.python .input #rnn-implementation-concise-implementation-1}
+%%tab tensorflow
+class RNN(d2l.Module):  #@save
+    """The RNN model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        normal = tf.keras.initializers.RandomNormal
+        self.rnn = tf.keras.layers.SimpleRNN(
+            num_hiddens, kernel_initializer=normal(stddev=sigma),
+            recurrent_initializer=normal(stddev=sigma),
+            return_sequences=True, return_state=True)
+
+    # Keras builds the layer by calling `call` with named arguments, which
+    # `Module.call(X, *args)` cannot pass on, so we name the state here
+    def call(self, inputs, H=None, training=None):
+        return self.forward(inputs, H)
+
+    def forward(self, inputs, H=None):
+        # The keras layer is batch-major: transpose in and out
+        outputs, H = self.rnn(tf.transpose(inputs, perm=[1, 0, 2]), H)
+        return tf.transpose(outputs, perm=[1, 0, 2]), H
+```
+
+```{.python .input #rnn-implementation-concise-implementation-1}
+%%tab jax
+class RNN(nnx.Module):  #@save
+    """The RNN model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01, rngs=None):
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
+        self.sigma = sigma
+        normal = nnx.initializers.normal(sigma)
+        cell = nnx.SimpleCell(num_inputs, num_hiddens, kernel_init=normal,
+                              recurrent_kernel_init=normal, rngs=rngs)
+        self.rnn = nnx.RNN(cell, time_major=True, return_carry=True,
+                           rngs=rngs)
+
+    def __call__(self, inputs, H=None):
+        H, outputs = self.rnn(inputs, initial_carry=H)
+        return outputs, H
+```
+
+:begin_tab:`pytorch`
+`nn.Embedding` draws its rows from $\mathcal{N}(0, 1)$ by default; the
+weights of `nn.Linear` are set explicitly.
+:end_tab:
+
+```{.python .input #rnn-implementation-concise-implementation-2}
+%%tab mxnet
+class RNNLM(d2l.RNNLMScratch):  #@save
+    """The RNN-based language model implemented with high-level APIs."""
+    def init_params(self):
+        self.emb = nn.Embedding(self.vocab_size, self.rnn.num_inputs,
+                                weight_initializer=init.Normal(1))
+        self.linear = nn.Dense(self.vocab_size, flatten=False,
+                               weight_initializer=init.Normal(self.sigma))
+        # The recurrent layer initializes itself (d2l.RNN) or is initialized
+        # by its owner; here we initialize only the layers defined here
+        self.emb.initialize()
+        self.linear.initialize()
+
+    def embedding(self, X):
+        return self.emb(X.T)
+
+    def output_layer(self, hiddens):
+        return d2l.swapaxes(self.linear(hiddens), 0, 1)
+```
+
+```{.python .input #rnn-implementation-concise-implementation-2}
+%%tab pytorch
+class RNNLM(d2l.RNNLMScratch):  #@save
+    """The RNN-based language model implemented with high-level APIs."""
+    def init_params(self):
+        self.emb = nn.Embedding(self.vocab_size, self.rnn.num_inputs)
+        self.linear = nn.Linear(self.rnn.num_hiddens, self.vocab_size)
+        nn.init.normal_(self.linear.weight, std=self.sigma)
+        nn.init.zeros_(self.linear.bias)
+
+    def embedding(self, X):
+        return self.emb(X.T)
+
+    def output_layer(self, hiddens):
+        return d2l.swapaxes(self.linear(hiddens), 0, 1)
+```
+
+```{.python .input #rnn-implementation-concise-implementation-2}
+%%tab tensorflow
+class RNNLM(d2l.RNNLMScratch):  #@save
+    """The RNN-based language model implemented with high-level APIs."""
+    def init_params(self):
+        normal = tf.keras.initializers.RandomNormal
+        self.emb = tf.keras.layers.Embedding(
+            self.vocab_size, self.rnn.num_inputs,
+            embeddings_initializer=normal(stddev=1))
+        self.linear = tf.keras.layers.Dense(
+            self.vocab_size, kernel_initializer=normal(stddev=self.sigma))
+
+    def embedding(self, X):
+        return self.emb(tf.transpose(X))
+
+    def output_layer(self, hiddens):
+        return d2l.transpose(self.linear(hiddens), (1, 0, 2))
+```
+
+```{.python .input #rnn-implementation-concise-implementation-2}
+%%tab jax
+class RNNLM(d2l.RNNLMScratch):  #@save
+    """The RNN-based language model implemented with high-level APIs."""
+    def __init__(self, rnn, vocab_size, lr=0.01, dropout=0, emb_dropout=0,
+                 rngs=None):
+        d2l.Classifier.__init__(self)
+        self.save_hyperparameters(ignore=['rnn', 'rngs'])
+        self.rnn = rnn
+        rngs = nnx.Rngs(random.getrandbits(32)) if rngs is None else rngs
+        sigma = getattr(rnn, 'sigma', 0.01)  # Scale of the output weights
+        self.emb = nnx.Embed(vocab_size, rnn.num_inputs,
+                             embedding_init=nnx.initializers.normal(1.0),
+                             rngs=rngs)
+        self.linear = nnx.Linear(
+            rnn.num_hiddens, vocab_size,
+            kernel_init=nnx.initializers.normal(sigma), rngs=rngs)
+        self.drop = nnx.Dropout(dropout, rngs=rngs)
+        self.emb_drop = nnx.Dropout(emb_dropout, rngs=rngs)
+
+    def embedding(self, X):
+        return self.emb(X.T)
+
+    def output_layer(self, hiddens):
+        return d2l.swapaxes(self.linear(hiddens), 0, 1)
+```
+
+Training `RNNLM` with the same hyperparameters reproduces the validation
+perplexity and greedy generation of our from-scratch implementation at a
+fraction of the wall-clock time.
+
+```{.python .input #rnn-implementation-concise-implementation-3}
+%%tab pytorch, mxnet, jax
+rnn = RNN(num_inputs=512, num_hiddens=128)
+model = RNNLM(rnn, vocab_size=len(data.vocab), lr=4, dropout=0.5,
+              emb_dropout=0.1)
+```
+
+```{.python .input #rnn-implementation-concise-implementation-3}
+%%tab tensorflow
+with d2l.try_gpu():
+    rnn = RNN(num_inputs=512, num_hiddens=128)
+    model = RNNLM(rnn, vocab_size=len(data.vocab), lr=4, dropout=0.5,
+                  emb_dropout=0.1)
+```
+
+```{.python .input #rnn-implementation-concise-implementation-5}
+trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
+trainer.fit(model, data)
+```
+
+```{.python .input #rnn-implementation-concise-implementation-6}
+%%tab pytorch, mxnet
+ppl_concise = math.exp(trainer.history['val_loss'][-1])
+pred = model.predict('The Time Traveller', 30, data.tokenizer, d2l.try_gpu())
+d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
+```
+
+```{.python .input #rnn-implementation-concise-implementation-6}
+%%tab tensorflow, jax
+ppl_concise = math.exp(trainer.history['val_loss'][-1])
+pred = model.predict('The Time Traveller', 30, data.tokenizer)
+d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
+```
 
 ## Summary
 
 A recurrent neural network updates a fixed-size hidden state from the current
-input and the previous state while sharing the same parameters across all time
-steps. Because its parameter count is independent of sequence length and older
-inputs need not be stored once summarized, both memory and computation per
-step stay constant—at the cost of compressing an arbitrarily long past into a
-lossy state vector. An RNN language model embeds each input token, advances
-the hidden state, and projects that state into logits over the vocabulary,
-with most parameters and compute concentrated in the vocabulary-sized
-embedding and output layers. Training proceeds via teacher forcing—feeding
-true prefixes to minimize cross-entropy (and thus perplexity)—whereas
-generation feeds the model's own predictions back into the recurrence.
+input and previous state using weights shared across all time steps, achieving
+constant memory and compute per step at the cost of compressing history into a
+lossy state vector. An RNN language model pairs an embedding table, a
+$\tanh$ recurrent cell, and a vocabulary-sized output projection (where 89% of
+our baseline's parameters reside), trained by teacher forcing to minimize
+per-token cross-entropy. Global gradient clipping (:eqref:`eq_grad_clipping`)
+prevents exploding gradient spikes from derailing training at high learning
+rates. On *The Time Machine*, a wider embedding with dropout brings the
+SGD-trained RNN to $\approx 2.1$ bits per byte—tying an interpolated
+Kneser--Ney trigram—because the trained vanilla RNN effectively exploits only
+the last three tokens of context, a limitation we explain mathematically in
+:numref:`sec_bptt`.
 
 ## Exercises
-
-1. **Parameter counts.** Consider next-token prediction over a vocabulary
-   $\mathcal{V}$ from a context of $m$ previous tokens. Evaluate every
-   count below for $|\mathcal{V}| = 10{,}000$, $m = 20$, and
-   $h = d = 256$.
-    1. An $(m+1)$-gram stores a count for every possible context and
-       successor. How many entries does its table hold, and by what
-       factor does that number grow when $m$ increases by one?
-    1. The RNN language model of this section has $h$ hidden units, an
-       embedding table of $d$-dimensional vectors, and an output layer
-       with one logit per vocabulary token. Count its parameters,
-       embedding table included. How does the count depend on $m$?
-    1. The neural $n$-gram of :citet:`Bengio.Ducharme.Vincent.ea.2003`
-       feeds the concatenated embeddings of the $m$ context tokens to a
-       hidden layer of width $h$, followed by the same output layer.
-       Count its parameters as a function of $m$, embedding table
-       included, and state how many parameters each additional context
-       token adds. Compare the growth in $m$ of the three models.
 
 1. **Separating the input product.** Let
    $\mathbf{X}_t \in \mathbb{R}^{b \times d}$ and
@@ -401,287 +1425,92 @@ generation feeds the model's own predictions back into the recurrence.
        correct? Relate this to the description of the state as a lossy
        fixed-size summary in :numref:`subsec_rnn-constant-memory`.
 
+1. [code] **Gradient clipping ablation.** `d2l.Trainer` applies the
+   projection :eqref:`eq_grad_clipping` whenever `gradient_clip_val` is
+   positive.
+    1. Record the norm of the gradient before clipping at every update
+       of the first epoch, and plot it. How often does clipping act, and
+       when?
+    1. Most unclipped runs of this section jumped at `lr=4`. Halve the
+       learning rate until three unclipped runs in a row train without a
+       jump in the validation perplexity. How does their validation
+       perplexity after ten epochs compare with that of the clipped run at
+       `lr=4`? What, then, does clipping make possible?
+    1. Replace $\tanh$ by ReLU in `RNNScratch` and train again, with and
+       without clipping. Is clipping still needed? Explain the difference
+       from the $\tanh$ cell in terms of the range of the hidden state.
+
+1. [code] **Usable history.** Every training window starts from a zero
+   state, so the model is never trained to use more than `num_steps`
+   tokens of context, and the loss by position showed that it uses far
+   fewer. `predict`, by contrast, carries the state across the whole
+   prefix and every generated token. Evaluate the trained model
+   on 512 consecutive validation tokens in two ways: resetting the state
+   to zero every 32 tokens as in training, and carrying the state across
+   all 512 tokens. Compare the average cross-entropy of the two. Does the
+   carried state help, hurt, or make no difference, and what does the
+   answer say about the states the model reaches beyond its training
+   horizon?
+
+1. [code] **Adam.** Train the model with the wider embedding with the Adam
+   optimizer of :numref:`sec_adam` instead of SGD: subclass
+   `RNNLMScratch`, override `configure_optimizers` to return Adam with
+   learning rate 0.003, and keep clipping at 1.
+    1. With `emb_dropout=0.2`, score the tokens `val[32:]` as in the
+       comparison above, and compare its bits per byte with the SGD
+       model, the Kneser–Ney trigram and 4-gram, and the mixture of the
+       RNN and the trigram at $\lambda = 0.5$.
+    1. Record the validation loss after every epoch, with
+       `emb_dropout=0.1` and with 0.2. At which epoch is it lowest, and what
+       happens after that?
+    1. Measure again how far the embedding rows move during training. Why
+       does Adam move them further than SGD does?
+
+1. [code] **Vocabulary size and bits per byte.** ● Retrain the model with
+   the wider embedding for `vocab_size` 512, 1,024, 2,048, and 4,096 in
+   `d2l.TimeMachine`. The number of windows depends on the vocabulary size,
+   so split by fraction: build each dataset once to read off
+   `n = len(data.X)`, then build it again with `num_train=int(0.8 * n)` and
+   `num_val=n - int(0.8 * n)`. (Setting `data.num_train` afterwards would
+   skip the step that keeps validation tokens out of the training targets.)
+   Every model then trains and validates on about the same stretch of text.
+   Their per-token perplexities are not comparable, so compare them by bits
+   per byte.
+    1. Which vocabulary size gives the lowest bits per byte?
+    1. How do the parameter counts of the embedding table and the output
+       layer, and the length of the corpus in tokens, change with the
+       vocabulary size? Which of these effects best explains the trend
+       you measured?
+
+1. [code] **Cross-book generalization.** ● Subclass `d2l.TimeMachine` and
+   override `_download` to return the text of a different H. G. Wells
+   novel, such as *The War of the Worlds* (Project Gutenberg ebook 36).
+   Train the tokenizer and the model on it.
+    1. Evaluate the model on held-out text of its own novel and on *The
+       Time Machine*, encoding both with the new novel's tokenizer.
+       Report perplexity and bits per byte for both.
+    1. Write $s = \log_2(\textrm{ppl})$ for the per-token surprisal and
+       $b$ for the bytes per token of an evaluated text, so that bits per
+       byte is $s / b$. The ratio of bits per byte on *The Time Machine*
+       (TM) to bits per byte on the held-out text of the new novel (own)
+       factors as
+       $$\frac{s_\textrm{TM}}{s_\textrm{own}} \cdot \frac{b_\textrm{own}}{b_\textrm{TM}}.$$
+       The first factor reflects the model's predictions and the second
+       the tokenizer's compression. Measure both factors. Which lies
+       further from one?
+
 :begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/t/337)
+[Discussions](https://d2l.discourse.group/t/336)
 :end_tab:
 
 :begin_tab:`pytorch`
-[Discussions](https://d2l.discourse.group/t/1050)
+[Discussions](https://d2l.discourse.group/t/486)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/1051)
+[Discussions](https://d2l.discourse.group/t/1052)
 :end_tab:
 
 :begin_tab:`jax`
-[Discussions](https://d2l.discourse.group/t/18013)
+[Discussions](https://d2l.discourse.group/t/18014)
 :end_tab:
-
-<!-- slides -->
-
-::: {.slide}
-::: {.cover}
-[Dive into Deep Learning · §8.4]{.kicker}
-
-Recurrent Neural Networks<br>**hidden state · shared weights · constant memory · RNN language model · teacher forcing**
-:::
-:::
-
-::: {.slide title="A Window Forgets Everything Older Than Its Width"}
-[The problem]{.kicker}
-
-- The trigram model predicts from the last **2** words; the 3rd word back
-  is invisible.
-- A count table over 20 BPE tokens of context: $1024^{20} \approx 10^{60}$
-  contexts.
-- A neural $n$-gram over $m$ tokens (embedding size $d$, hidden width
-  $h$): each extra token adds $d h$ weights (8,192 at $d = 64$,
-  $h = 128$), and token $m+1$ is still invisible.
-
-::: {.d2l-note .warn}
-Can a summary of fixed size replace the window, with constant work per step?
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute one RNN step and give the shape of every term;
-- show that the two products of a step equal one product on
-  $[\mathbf{X}_t, \mathbf{H}_{t-1}]$;
-- count the parameters and per-token work of an RNN language model;
-- explain teacher forcing and why generation differs from training.
-
-**Running example:** the first RNN language model of the next deck, on
-*The Time Machine*: BPE vocabulary 1,027 ids, embeddings $d = 64$, state
-$h = 128$.
-:::
-
-::: {.slide title="A Hidden State Replaces the Window"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| Working with Sequences | autoregression, latent state, rollout error |
-| From Text to Tokens | characters, words, bytes, BPE |
-| Language Models | $n$-grams, perplexity, bits per byte |
-| **Recurrent Neural Networks** | **a hidden state updated at every step** |
-| Implementing RNNs | an RNN language model, scratch and concise |
-| Backpropagation Through Time | gradients through time, truncation |
-| Decoding and Generation | greedy decoding, beam search, sampling |
-:::
-
-::: {.col .narrow}
-- **Uses:** MLP, softmax and cross-entropy, BPE windows with shifted
-  targets.
-- **Skips:** training (next deck), gradients through time.
-:::
-:::
-:::
-
-::: {.slide title="One Update Rule, the Same Weights at Every Step"}
-[The recurrence]{.kicker}
-
-$$\underbrace{\mathbf{H}_t}_{b \times h} = \phi\big(
-\underbrace{\mathbf{X}_t}_{b \times d}\,\underbrace{\mathbf{W}_\textrm{xh}}_{d \times h}
-+ \underbrace{\mathbf{H}_{t-1}}_{b \times h}\,\underbrace{\mathbf{W}_\textrm{hh}}_{h \times h}
-+ \underbrace{\mathbf{b}_\textrm{h}}_{1 \times h}\big).$$
-
-- $b$ sequences in the minibatch (not the bias $\mathbf{b}_\textrm{h}$),
-  $d$ inputs, $h$ hidden units,
-  $\mathbf{H}_0 = \mathbf{0}$; output
-  $\mathbf{O}_t = \mathbf{H}_t \mathbf{W}_\textrm{hq} + \mathbf{b}_\textrm{q}$.
-- Compared with an MLP layer, the only new term is
-  $\mathbf{H}_{t-1}\mathbf{W}_\textrm{hh}$.
-- The parameter count does not depend on the sequence length.
-:::
-
-::: {.slide title="Inputs 1, 0, 0 Leave the States 0.76, 0.36, 0.18"}
-[Smallest case]{.kicker}
-
-One input, one hidden unit: $h_t = \tanh(x_t + 0.5\, h_{t-1})$,
-$h_0 = 0$.
-
-| step | $x_t$ | $h_t$ |
-|---|--:|--:|
-| 1 | 1 | $\tanh(1) = 0.76$ |
-| 2 | 0 | $\tanh(0.38) = 0.36$ |
-| 3 | 0 | $\tanh(0.18) = 0.18$ |
-
-The first input persists, scaled by about $w_\textrm{hh} = 0.5$ per step.
-**The recurrent weight sets how long the past persists.**
-:::
-
-::: {.slide title="A State Can Track Parity; No Window Can"}
-[What a state can do]{.kicker}
-
-Task: read bits one at a time; after each, say whether the number of ones
-so far is even or odd.
-
-- **Window of the last $m$ inputs:** flip a bit that has left the window.
-  The answer flips; the model's input does not. It fails for every $m$.
-- **State:** hold one bit, the parity so far, and flip it whenever the
-  input is 1. Two hidden units with a threshold activation suffice, for
-  sequences of any length.
-
-::: {.d2l-note}
-A fixed-size state can depend on arbitrarily old inputs. A window cannot.
-:::
-:::
-
-::: {.slide title="Unrolled, an RNN Is a Deep Network with Tied Weights"}
-[Unrolling]{.kicker}
-
-![An RNN unrolled across three time steps; the same weights are reused at every step.](../img/mdl-rnn-unfolded.svg){width=62%}
-
-$T$ steps: a network $T$ layers deep, every layer with the same weights.
-:::
-
-::: {.slide title="Two Products Equal One Product on the Concatenation"}
-[One matrix multiplication]{.kicker}
-
-$$[\mathbf{X}_t, \mathbf{H}_{t-1}]
-\begin{bmatrix} \mathbf{W}_\textrm{xh} \\ \mathbf{W}_\textrm{hh} \end{bmatrix}
-= \mathbf{X}_t \mathbf{W}_\textrm{xh} + \mathbf{H}_{t-1} \mathbf{W}_\textrm{hh}.$$
-
-- Each entry is a sum over $d + h$ terms: the first $d$ come from
-  $\mathbf{X}_t$, the last $h$ from $\mathbf{H}_{t-1}$.
-- The recurrent layer is a fully connected layer on
-  $[\mathbf{X}_t, \mathbf{H}_{t-1}]$.
-:::
-
-::: {.slide title="Check: Shapes of One Step"}
-[Check]{.kicker}
-
-$b = 32$ sequences, $d = 64$, $h = 128$. What are the shapes of
-$\mathbf{X}_t \mathbf{W}_\textrm{xh}$, of $[\mathbf{X}_t, \mathbf{H}_{t-1}]$,
-and of the stacked weight matrix?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\mathbf{X}_t \mathbf{W}_\textrm{xh}$: $32 \times 128$.
-$[\mathbf{X}_t, \mathbf{H}_{t-1}]$: $32 \times 192$. Stacked weights:
-$192 \times 128$, and the product is again $32 \times 128$.
-:::
-:::
-:::
-
-::: {.slide title="The State Is 512 Bytes for Any Prefix Length"}
-[Constant memory]{.kicker}
-
-- $\mathbf{H}_t$ needs only $\mathbf{H}_{t-1}$ and $\mathbf{X}_t$; older
-  inputs can be discarded.
-- $h = 128$ float32 numbers: **512 bytes** per sequence, after ten tokens
-  or a million.
-- The drawback: a **lossy** summary. To record something new, the network
-  must overwrite something old.
-- Attention (later) keeps every past token instead; its memory grows with
-  the sequence.
-:::
-
-::: {.slide title="An RNN Language Model Is Embedding, Recurrence, Output Layer"}
-[RNN language model]{.kicker}
-
-| stage | shape per step |
-|---|---|
-| token ids | $b$ |
-| embedding rows of $\mathbf{E}$ ($1{,}027 \times 64$) | $b \times 64$ |
-| state $\mathbf{H}_t$ | $b \times 128$ |
-| logits $\mathbf{O}_t$ | $b \times 1{,}027$ |
-| softmax | $P(x_{t+1} \mid x_1, \ldots, x_t)$ |
-
-- Ids are arbitrary labels. Learned rows of $\mathbf{E}$ can give "cat"
-  and "feline" similar vectors, which no count table can.
-- No Markov cutoff: $\mathbf{H}_t$ depends on the entire prefix.
-:::
-
-::: {.slide title="89% of the 222,915 Parameters Sit in the Embedding and Output Layers"}
-[Model size]{.kicker}
-
-| part | shape | parameters |
-|---|---|--:|
-| embedding $\mathbf{E}$ | $1{,}027 \times 64$ | 65,728 |
-| $\mathbf{W}_\textrm{xh}$, $\mathbf{W}_\textrm{hh}$, $\mathbf{b}_\textrm{h}$ | $64 \times 128$, $128 \times 128$, $128$ | 24,704 |
-| $\mathbf{W}_\textrm{hq}$, $\mathbf{b}_\textrm{q}$ | $128 \times 1{,}027$, $1{,}027$ | 132,483 |
-
-The recurrent layer, which does the remembering, is 11% of the model.
-The rest scales with the vocabulary.
-:::
-
-::: {.slide title="Per Token, the Output Layer Does 5× the Work of the Recurrence"}
-[Work per token]{.kicker}
-
-- Recurrence: $64 \cdot 128 + 128 \cdot 128 = 24{,}576$ multiply-adds.
-- Output layer: $128 \cdot 1{,}027 = 131{,}456$ multiply-adds.
-- Embedding: a row copy.
-
-Neither depends on the sequence length. A larger vocabulary makes the
-model larger and slower without enlarging the state.
-:::
-
-::: {.slide title="Check: Which Terms Grow 4× When the Hidden Size Doubles?"}
-[Check]{.kicker}
-
-Double $h$ from 128 to 256, keep $d = 64$ and $|\mathcal{V}| = 1{,}027$.
-Which parameter blocks and per-token multiply-adds grow 4×, 2×, or not at all?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** 4×: $\mathbf{W}_\textrm{hh}$ ($h^2$: 16,384 → 65,536). 2×:
-$\mathbf{W}_\textrm{xh}$, $\mathbf{b}_\textrm{h}$, $\mathbf{W}_\textrm{hq}$
-and the output-layer work. Recurrence work: 3.3× (24,576 → 81,920; its
-$h^2$ part 4×, its $dh$ part 2×). Unchanged: $\mathbf{E}$,
-$\mathbf{b}_\textrm{q}$.
-:::
-:::
-:::
-
-::: {.slide title="Training Predicts Every Next Token from the True Prefix"}
-[Teacher forcing]{.kicker}
-
-![Input tokens of "thing that struck me"; each target is the next token.](../img/mdl-rnn-lm-shift.svg){width=48%}
-
-Loss: cross-entropy at every step, averaged. Its exponential is the
-perplexity.
-:::
-
-::: {.slide title="An Untrained Model Starts at Perplexity 1,027"}
-[Teacher forcing]{.kicker}
-
-- A near-uniform prediction over 1,027 ids: loss
-  $\log 1{,}027 \approx 6.93$ nats per token, perplexity $\approx 1{,}027$.
-- Check it before training: an initial loss far above
-  $\log |\mathcal{V}|$ means the initial logits are too large.
-- All targets of a window are known in advance: one pass computes the
-  loss of all $T$ steps.
-:::
-
-::: {.slide title="Generation Feeds Back the Model's Own Outputs"}
-[Generation]{.kicker}
-
-- Training: the input at step $t$ is the **true** token $x_t$.
-- Generation: the input is the token the model **itself** produced.
-- A slightly wrong token changes the state the model continues from, and
-  errors can compound.
-
-Training never shows the model its own mistakes.
-:::
-
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
-
-- **RNN:** $\mathbf{H}_t = \phi(\mathbf{X}_t\mathbf{W}_\textrm{xh} +
-  \mathbf{H}_{t-1}\mathbf{W}_\textrm{hh} + \mathbf{b}_\textrm{h})$, the
-  same weights at every step; one product on $[\mathbf{X}_t, \mathbf{H}_{t-1}]$.
-- **Constant memory:** 512 bytes of state per sequence, at any length;
-  the summary is lossy.
-- **Language model:** embedding, recurrence, output layer: 222,915
-  parameters, 89% of them in the embedding table and the output layer.
-- **Teacher forcing:** true prefixes in training, own outputs in
-  generation.
-
-**Next:** we implement and train this model, with a limit on the size of
-its gradient, and measure how much of the prefix the trained state uses.
-:::

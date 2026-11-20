@@ -137,12 +137,12 @@ trajectory of the old model, and since those trajectories never cross,
 their chords rarely do. :numref:`subsec_mdl-reflow` proves that reflow
 with the exact field keeps the data distribution and never increases the
 transport cost, and on two-moons data one Euler step of the reflowed model
-scores as well as thirty-two steps of the original.
+scores as well as many steps of the original.
 
 A trained field weakens the guarantee. The new pairs end at the model's
 samples, not at the data, so the reflowed model inherits the original's
-errors: on two moons it reproduces the original's thirty-two-step samples,
-blur included (:numref:`subsec_mdl-reflow`), and an image model passes on
+errors: on two moons it reproduces the original's samples, their blur
+included (:numref:`subsec_mdl-reflow`), and an image model passes on
 every defect of its samples in the same way. Each round also costs a
 training run, and the best one-step results of :citet:`Liu.Gong.Liu.2022`
 still came from distilling the reflowed model. The rest of this section
@@ -238,8 +238,8 @@ Together with the condition at $s = t$, where the map is the identity and
 its slope in $s$ is the velocity, each identity determines the flow map.
 They differ only in what a loss must compute. Composition is the simplest;
 the Eulerian identity is the only one that needs neither an intermediate
-time nor a velocity where the jump lands, and it pays for that with one
-Jacobian-vector product. Consistency models and MeanFlow both use the
+time nor a velocity where the jump lands; it needs one Jacobian-vector
+product instead. Consistency models and MeanFlow both use the
 Eulerian identity; :citet:`Boffi.Albergo.VandenEijnden.2025` sort the
 few-step methods by the identity they enforce.
 
@@ -390,7 +390,9 @@ the flow maps pass `time_freqs=slow`, frequencies from $10^{-4}$ to one,
 which the code below defines as `slow`. Large frequencies put large factors
 into the derivative (code that embeds $1000\, t$ multiplies it by up to a
 thousand), a source of instability that :citet:`Lu.Song.2025` report for
-consistency models.
+consistency models. Exercise :exref:`ex_few-step-time-pairs` trains the image
+teacher and student of the next section with the faster features and
+compares the two.
 
 A flow map takes $\mathbf{x}_t$ to $\mathbf{x}_s$ in one jump,
 $\mathbf{x}_s = \mathbf{x}_t - (t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s,
@@ -497,7 +499,8 @@ _, teacher, _ = d2l.train_regression(
 
 Three students fill three cells of :numref:`tab_diffusion-flow-map-methods`.
 All are `TimeMLP`s that see the start $t$ and the interval $t - s$,
-trained like the teacher, twice each (seeds 2 and 3). The consistency
+trained like the teacher, six times each (seeds 2 to 7), so that we can
+tell a property of a method from an accident of one run. The consistency
 student draws $t$ uniformly, fixes $s = 0$ and uses the teacher's
 velocity. The flow-map distillation student draws two uniform times, takes
 the smaller as $s$, and uses the teacher's velocity too; the MeanFlow
@@ -541,13 +544,15 @@ students = {}
 for name, loss in (('consistency', consistency_loss),
                    ('distillation', distillation_loss),
                    ('MeanFlow', meanflow_loss)):
-    for seed in (2, 3):
+    final = []
+    for seed in range(2, 8):
         torch.manual_seed(seed)
         _, students[name, seed], losses = d2l.train_regression(
             MLPFlowMap(256, 3, num_times=2, time_freqs=slow).to(device),
             loss, lambda: mix.sample(512), 20_000, cosine=True)
-        print(f'{name:>12}, seed {seed}: mean loss of the last 1,000 '
-              f'updates {losses[-1000:].mean():.3f}')
+        final.append(float(losses[-1000:].mean()))
+    print(f'{name:>12}, seeds 2 to 7: mean loss of the last 1,000 updates '
+          f'{min(final):.3f} to {max(final):.3f}')
 ```
 
 ```{.python .input #few-step-on-the-running-example-1}
@@ -583,34 +588,36 @@ students = {}
 for name, loss in (('consistency', consistency_loss),
                    ('distillation', distillation_loss),
                    ('MeanFlow', meanflow_loss)):
-    for seed in (2, 3):
+    final = []
+    for seed in range(2, 8):
         _, students[name, seed], losses = d2l.train_regression(
             MLPFlowMap(256, 3, num_times=2, time_freqs=slow,
                        rngs=nnx.Rngs(seed)),
             loss, lambda k: mix.sample(k, 512), 20_000, jax.random.key(seed),
             cosine=True)
-        print(f'{name:>12}, seed {seed}: mean loss of the last 1,000 '
-              f'updates {losses[-1000:].mean():.3f}')
+        final.append(float(losses[-1000:].mean()))
+    print(f'{name:>12}, seeds 2 to 7: mean loss of the last 1,000 updates '
+          f'{min(final):.3f} to {max(final):.3f}')
 ```
 
 The distilled students end near zero, about 0.03 for the two-time student
-and 0.075 for the consistency student. MeanFlow ends at 76 to 81 in both
-seeds, about a thousand times the consistency student's loss. Most of
-that may be the floor, the disagreement between examples that no network
-can remove; the cell does not measure the floor, so the number says little
-about the student. MeanFlow runs are judged by their samples, not by their
+and 0.06 to 0.08 for the consistency student. MeanFlow ends at 76 to 85
+over its six runs, about a thousand times the consistency student's loss.
+Most of that may be the floor, the disagreement between examples that no
+network can remove; the cell does not measure the floor, so the number
+says little about the student. MeanFlow runs are judged by their samples, not by their
 losses.
 
 All models now start from the 20,000 points of the Euler experiment: the
 teacher with fifty Euler steps, the consistency student with one jump or
 two with re-noising at $t = 0.5$, the two-time students with one, two or
 four jumps. A fresh draw from the mixture shows what a perfect sampler
-would print. For each run a row gives the largest error in the three
-weights, the strays, the samples farther than three standard deviations
-from every mode center, and the spread, the mean squared distance of the
-samples that do not stray to the center of their mode
-(:numref:`sec_diffusion-denoising`). A student row holds its two runs,
-seeds 2 and 3, separated by a slash.
+would print. A row of the table gives the largest error in the three
+weights for each run, six for a student in the order of its seeds and one
+for the data and the teacher. It then gives, as a range over the runs, the
+strays, the samples farther than three standard deviations from every mode
+center, and the spread, the mean squared distance of the samples that do
+not stray to the center of their mode (:numref:`sec_diffusion-denoising`).
 
 ```{.python .input #few-step-on-the-running-example-2}
 %%tab pytorch
@@ -621,15 +628,19 @@ def renoised_sample(u, z):
     return d2l.flow_map_sample(u, lin.sample(x, half, torch.randn_like(x)), 1,
                                t_start=0.5)
 
+def span(values, fmt):
+    """'lo-hi' over the runs, or the one value if they print alike."""
+    lo, hi = format(min(values), fmt), format(max(values), fmt)
+    return lo if lo == hi else f'{lo}-{hi}'
+
 def report(name, xs):
-    """Each run's largest weight error, stray fraction and spread."""
+    """Each run's largest weight error; the range of strays and spreads."""
     stats, w_true = [mix.summary(x) for x in xs], mix.weights.tolist()
-    err = ' / '.join(
+    err = ' '.join(
         f'{max(abs(w - w0) for w, w0 in zip(s["weights"], w_true)):.3f}'
         for s in stats)
-    stray = ' / '.join(f'{s["stray"]:.1%}' for s in stats)
-    spread = ' / '.join(f'{s["spread"]:.3f}' for s in stats)
-    print(f'{name:>24}: weight error {err}, stray {stray}, spread {spread}')
+    print(f'{name:>24}  {err:35}  {span([s["stray"] for s in stats], ".1%"):9}'
+          f'  {span([s["spread"] for s in stats], ".3f")}')
 
 torch.manual_seed(4)
 samples = {'data': [mix.sample(len(z))],
@@ -643,6 +654,7 @@ for (name, seed), u in students.items():
         new = {str(k): d2l.flow_map_sample(u, z, k) for k in (1, 2, 4)}
     for k, x in new.items():
         samples.setdefault(f'{name}, {k}', []).append(x)
+print(f'{"":24}  {"largest weight error, each run":35}  {"stray":9}  spread')
 for name, xs in samples.items():
     report(name, xs)
 names = ['teacher, 50 steps', 'consistency, 1', 'distillation, 1',
@@ -660,15 +672,19 @@ def renoised_sample(u, z, key):
     return d2l.flow_map_sample(u, lin.sample(x, half, jax.random.normal(
         key, x.shape)), 1, t_start=0.5)
 
+def span(values, fmt):
+    """'lo-hi' over the runs, or the one value if they print alike."""
+    lo, hi = format(min(values), fmt), format(max(values), fmt)
+    return lo if lo == hi else f'{lo}-{hi}'
+
 def report(name, xs):
-    """Each run's largest weight error, stray fraction and spread."""
+    """Each run's largest weight error; the range of strays and spreads."""
     stats, w_true = [mix.summary(x) for x in xs], mix.weights.tolist()
-    err = ' / '.join(
+    err = ' '.join(
         f'{max(abs(w - w0) for w, w0 in zip(s["weights"], w_true)):.3f}'
         for s in stats)
-    stray = ' / '.join(f'{s["stray"]:.1%}' for s in stats)
-    spread = ' / '.join(f'{s["spread"]:.3f}' for s in stats)
-    print(f'{name:>24}: weight error {err}, stray {stray}, spread {spread}')
+    print(f'{name:>24}  {err:35}  {span([s["stray"] for s in stats], ".1%"):9}'
+          f'  {span([s["spread"] for s in stats], ".3f")}')
 
 samples = {'data': [mix.sample(jax.random.key(3), len(z))],
            'teacher, 50 steps': [d2l.flow_map_sample(
@@ -682,6 +698,7 @@ for (name, seed), u in students.items():
         new = {str(k): d2l.flow_map_sample(u, z, k) for k in (1, 2, 4)}
     for k, x in new.items():
         samples.setdefault(f'{name}, {k}', []).append(x)
+print(f'{"":24}  {"largest weight error, each run":35}  {"stray":9}  spread')
 for name, xs in samples.items():
     report(name, xs)
 names = ['teacher, 50 steps', 'consistency, 1', 'distillation, 1',
@@ -690,53 +707,51 @@ d2l.scatter_panels([samples[k][0][:2000] for k in names], names,
                    data=mix.sample(jax.random.key(5), 2000), size=2.4);
 ```
 
-After one evaluation every student puts its samples on the three modes
-with weights within 0.007 of 0.5/0.3/0.2. A fresh draw of 20,000 points
-misses by 0.004 to 0.005, so one jump gets the weights right to within
-about the noise of sampling, and the distilled two-time student keeps them
-that close at two and four jumps. The fresh draw strays about 1% of the time,
-the tail of each Gaussian beyond three standard deviations, and the teacher
-with fifty steps about 1.5%. Both distilled students stray about 2% after
-one evaluation and keep the data's spread, 0.45 to 0.46 against 0.47. A
-second evaluation brings their strays to the teacher's level or below,
-whether it re-noises (1.2% to 1.5%) or jumps again (1.0% to 1.1%). On the
-mixture re-noising costs nothing these numbers can see; what the second
-jump keeps is the pairing of each sample with its noise. MeanFlow strays
-about 4% after one jump, and its panel shows a second defect: the modes
-are too tight, with a spread of 0.31 to 0.34 after one jump and 0.37 to
-0.38 after two and four. That is also why its four jumps stray less often
-than the data themselves.
+After one evaluation every run of every student puts its samples on the
+three modes with weights within 0.007 of 0.5/0.3/0.2. A fresh draw of
+20,000 points misses by 0.004 to 0.005, so one jump gets the weights right
+to within about the noise of sampling, and the distilled two-time student
+keeps them that close at two and four jumps. The fresh draw strays about 1%
+of the time, the tail of each Gaussian beyond three standard deviations,
+and the teacher with fifty steps about 1.5%. Both distilled students stray
+about 2% after one evaluation and keep the data's spread, 0.45 to 0.46
+against 0.47. A second evaluation brings their strays to the teacher's
+level or below, whether it re-noises (1.2% to 1.5%) or jumps again (1.0% to
+1.1%). On the mixture re-noising costs nothing these numbers can see; what
+the second jump keeps is the pairing of each sample with its noise.
+MeanFlow strays about 4% after one jump, and its panel shows a second
+defect: the modes are too tight, with a spread of 0.31 to 0.34 after one
+jump and 0.35 to 0.40 after two and four. That is also why its four jumps
+stray no more often than the data themselves.
 
-Two runs per student are few. Changing the seeds of the training cell to
-2 through 7 gives six runs of each two-time student, and their weight
-errors tell two stories. One jump stays within 0.007 in every run, and
-the distilled student stays within 0.006 at two and four jumps as well.
-After four MeanFlow jumps, however, one or two runs in six end 0.013 to
-0.023 off, two to six times the miss of a fresh draw. MeanFlow's weights
-after several jumps thus depend on the training run, and a single run is
-no guide to them; the distilled student's do not.
+The six runs also show where a single run would mislead. The distilled
+student's weights stay within 0.006 at two and four jumps in every run.
+MeanFlow's do not: after four jumps one or two runs in six end 0.013 to
+0.023 off, two to six times the miss of a fresh draw, while the others stay
+within 0.010. MeanFlow's weights after several jumps thus depend on the
+training run, and one run is no guide to them; the distilled student's do
+not.
 
 :begin_tab:`pytorch`
-In this tab both MeanFlow runs of the table are among the steady ones:
-0.005 off after four jumps.
+In this tab the drifting run is the one with seed 6, the fifth column of
+the table: 0.023 off after four jumps.
 :end_tab:
 
 :begin_tab:`jax`
-In this tab the MeanFlow run with seed 3 is one of the drifting ones: its
-weights are 0.012 off after two jumps and 0.020 after four, so about 2% of
-its samples sit on the wrong mode, while its one jump stays within 0.005.
-A Python loop over the same jumps gives the same weights as the compiled
-sampler, so the drift belongs to the training run, not to the sampler.
+In this tab the drifting runs are those with seeds 3 and 6, the second and
+fifth columns of the table: 0.020 and 0.013 off after four jumps. The run
+with seed 3 is already 0.012 off after two.
 :end_tab:
 
 The comparison locates the defect. The two-time students share the
 network, the time pairs and the updates and differ only in the velocity
-inside the target. Their spreads differ by more than 0.1 after one jump
-and by 0.08 to 0.1 after two and four, many times the difference between
-seeds (at most 0.015). In this experiment, then, the contraction comes from
-training on the examples' velocities. Why a noisy target ends in a map
-that is too tight rather than a noisy one, the run does not say. A student
-that has learned only part of the correction term of
+inside the target. Their spreads never overlap: every distilled run lies
+more than 0.1 above every MeanFlow run after one jump and at least 0.06
+above after two and four, while the six runs of one student span at most
+0.013 (distilled) and about 0.04 (MeanFlow). In this experiment, then, the
+contraction comes from training on the examples' velocities. Why a noisy
+target ends in a map that is too tight rather than a noisy one, the runs do
+not say. A student that has learned only part of the correction term of
 :eqref:`eq_diffusion-meanflow` is partly an Euler step, and Euler strides
 contract the modes in just this way (:numref:`sec_diffusion-samplers`), but
 that is a plausible reading, not a result. On the mixture a teacher is
@@ -807,7 +822,8 @@ student starts as the teacher, and these pairs are meant to keep it from
 forgetting the velocity while it learns to jump. The other half draw
 $s < t$ as on the mixture. Starting from trained weights, the student
 learns at a rate of $2 \cdot 10^{-4}$ for 5,000 updates of 128 images,
-half the teacher's 10,000.
+half the teacher's 10,000. We train two students from the same teacher,
+with seeds 2 and 3, to see how much of the result belongs to the run.
 
 ```{.python .input #few-step-on-images-2}
 %%tab pytorch
@@ -819,11 +835,13 @@ def student_loss(u, x0):
     return d2l.flow_map_error(u, teacher, x0, torch.randn_like(x0), s,
                               t).mean()
 
-torch.manual_seed(2)
-_, student, _ = d2l.train_regression(  # jvp through GroupNorm won't compile
-    d2l.UNetFlowMap(copy.deepcopy(teacher)).to(X.device), student_loss,
-    batch_fn, 5_000,
-    lr=2e-4, ema_half_life=500, compiled=False)
+image_students = {}
+for seed in (2, 3):
+    torch.manual_seed(seed)
+    _, image_students[seed], _ = d2l.train_regression(
+        d2l.UNetFlowMap(copy.deepcopy(teacher)).to(X.device), student_loss,
+        batch_fn, 5_000, lr=2e-4, ema_half_life=500,
+        compiled=False)  # jvp through GroupNorm won't compile
 ```
 
 ```{.python .input #few-step-on-images-2}
@@ -837,13 +855,16 @@ def student_loss(u, x0, key):
     return d2l.flow_map_error(u, teacher, x0, jax.random.normal(k3, x0.shape),
                               s, t).mean()
 
-_, student, _ = d2l.train_regression(
-    d2l.UNetFlowMap(nnx.clone(teacher), rngs=nnx.Rngs(2)), student_loss,
-    batch_fn, 5_000, jax.random.key(2), lr=2e-4, ema_half_life=500)
+image_students = {}
+for seed in (2, 3):
+    _, image_students[seed], _ = d2l.train_regression(
+        d2l.UNetFlowMap(nnx.clone(teacher), rngs=nnx.Rngs(seed)),
+        student_loss, batch_fn, 5_000, jax.random.key(seed), lr=2e-4,
+        ema_half_life=500)
 ```
 
 From the same 1,000 noise images, the teacher takes 1 to 50 Euler steps
-and the student 1, 2 or 4 jumps, and we plot FD against the number of
+and each student 1, 2 or 4 jumps, and we plot FD against the number of
 network evaluations. The teacher's single step should land on the mean
 image, the pixel version of the mixture's failure, so its FD there should
 dwarf every other point.
@@ -856,17 +877,21 @@ velocity = lambda x, s, t: teacher(x, t)
 ns_teacher, ns_student = (1, 2, 4, 10, 20, 50), (1, 2, 4)
 images = {('teacher', n): d2l.flow_map_sample(velocity, noise, n)
           for n in ns_teacher}
-images |= {('student', n): d2l.flow_map_sample(student, noise, n)
-           for n in ns_student}
+images |= {(f'student {seed}', n): d2l.flow_map_sample(u, noise, n)
+           for seed, u in image_students.items() for n in ns_student}
 fd = {key: d2l.fid_score(features(x), f_test) for key, x in images.items()}
-for (name, n), v in fd.items():
-    print(f'{name}, {n:2d} evaluations: FD {v:6.2f}')
-d2l.plot([ns_teacher, ns_student, [1, 50]],
+print('FD at evaluations' + ''.join(f'{n:8d}' for n in ns_teacher))
+for name in ['teacher', *(f'student {seed}' for seed in image_students)]:
+    print(f'{name:17}' + ''.join(f'{fd[name, n]:8.2f}' for n in ns_teacher
+                                 if (name, n) in fd))
+d2l.plot([ns_teacher, ns_student, ns_student, [1, 50]],
          [[fd['teacher', n] for n in ns_teacher],
-          [fd['student', n] for n in ns_student], [floor, floor]],
-         'network evaluations', 'FD',
-         legend=['teacher, Euler', 'student, jumps', 'floor'],
-         xscale='log', yscale='log', fmts=('o-', 's-', 'k:'))
+          *[[fd[f'student {seed}', n] for n in ns_student]
+            for seed in image_students], [floor, floor]],
+         'network evaluations', 'FD', ylim=(0.5, 1e4), xscale='log',
+         yscale='log', fmts=('o-', 's-', '^--', 'k:'),
+         legend=['teacher, Euler', 'student, seed 2', 'student, seed 3',
+                 'floor'], legend_loc='upper right')
 ```
 
 ```{.python .input #few-step-on-images-3}
@@ -876,47 +901,53 @@ velocity = lambda x, s, t: teacher(x, t)
 ns_teacher, ns_student = (1, 2, 4, 10, 20, 50), (1, 2, 4)
 images = {('teacher', n): d2l.flow_map_sample(velocity, noise, n)
           for n in ns_teacher}
-images |= {('student', n): d2l.flow_map_sample(student, noise, n)
-           for n in ns_student}
+images |= {(f'student {seed}', n): d2l.flow_map_sample(u, noise, n)
+           for seed, u in image_students.items() for n in ns_student}
 fd = {key: d2l.fid_score(features(x), f_test) for key, x in images.items()}
-for (name, n), v in fd.items():
-    print(f'{name}, {n:2d} evaluations: FD {v:6.2f}')
-d2l.plot([ns_teacher, ns_student, [1, 50]],
+print('FD at evaluations' + ''.join(f'{n:8d}' for n in ns_teacher))
+for name in ['teacher', *(f'student {seed}' for seed in image_students)]:
+    print(f'{name:17}' + ''.join(f'{fd[name, n]:8.2f}' for n in ns_teacher
+                                 if (name, n) in fd))
+d2l.plot([ns_teacher, ns_student, ns_student, [1, 50]],
          [[fd['teacher', n] for n in ns_teacher],
-          [fd['student', n] for n in ns_student], [floor, floor]],
-         'network evaluations', 'FD',
-         legend=['teacher, Euler', 'student, jumps', 'floor'],
-         xscale='log', yscale='log', fmts=('o-', 's-', 'k:'))
+          *[[fd[f'student {seed}', n] for n in ns_student]
+            for seed in image_students], [floor, floor]],
+         'network evaluations', 'FD', ylim=(0.5, 1e4), xscale='log',
+         yscale='log', fmts=('o-', 's-', '^--', 'k:'),
+         legend=['teacher, Euler', 'student, seed 2', 'student, seed 3',
+                 'floor'], legend_loc='upper right')
 ```
 
-The teacher's FD falls from about 150 to 170 at one Euler step and about
-80 to 85 at two, to about 7 at ten and 2.6 to 2.7 at fifty, against a
-floor of about 0.8. The student lies far below this curve at small budgets: one
-jump scores 11 to 12, between four and five times the teacher's
-fifty-step FD, two jumps nearly twice it, and four about 1.5 times.
-Read across the plot, two evaluations of the student are worth about
-fifteen Euler steps of the teacher, and one about seven.
+The teacher's FD falls from about 145 to 170 at one Euler step and about
+80 at two, to about 7 at ten and about 2.6 at fifty, against a floor of
+about 0.8. The students lie far below this curve at small budgets: one jump
+scores 11 to 12, between four and five times the teacher's fifty-step FD,
+two jumps nearly twice it, and four 1.4 to 1.5 times, close to what the
+teacher reaches in twenty steps. Read across the plot, two jumps of a
+student land between the teacher's ten and twenty Euler steps, and one jump
+between its four and ten. The two students agree to within a tenth of
+their FD at every budget, so these readings hold for either of them.
 
 A distilled student can at best reproduce its teacher's ODE, so its target
 is the FD of the teacher's exact ODE, which fifty Euler steps approach from
 above, not the floor. How much of the remaining gap is a matter of
-training, our run does not tell. The student saw 640,000 images; published
+training, our runs do not tell. Each student saw 640,000 images; published
 students are trained on far more and come much closer to their teachers in
 one step :cite:`Song.Dhariwal.Chen.ea.2023,Lu.Song.2025`.
 
 The rows below are drawn from the same eight noise images: the teacher
-with fifty and with two Euler steps, and the student with one and with two
-jumps.
+with fifty and with two Euler steps, and the student with seed 2 with one
+and with two jumps.
 
 ```{.python .input #few-step-on-images-4}
 %%tab pytorch
-rows = [('teacher', 50), ('teacher', 2), ('student', 1), ('student', 2)]
+rows = [('teacher', 50), ('teacher', 2), ('student 2', 1), ('student 2', 2)]
 d2l.show_gray(torch.cat([images[r][:8].clamp(-1, 1) for r in rows]), 4, 8);
 ```
 
 ```{.python .input #few-step-on-images-4}
 %%tab jax
-rows = [('teacher', 50), ('teacher', 2), ('student', 1), ('student', 2)]
+rows = [('teacher', 50), ('teacher', 2), ('student 2', 1), ('student 2', 2)]
 d2l.show_gray(jnp.concatenate([images[r][:8].clip(-1, 1) for r in rows]),
               4, 8);
 ```
@@ -956,7 +987,7 @@ $$\nabla_{\boldsymbol\theta} D_{\textrm{KL}}(q_{\boldsymbol\theta, t} \,\|\, p_t
 The gradient is the student's score minus the teacher's, so a descent step
 moves each noised sample toward where the data have more mass than the
 student puts there. The teacher supplies $\nabla \log p_t$, since on the
-linear path a velocity is a score in disguise
+linear path the score is an affine function of the velocity
 :eqref:`eq_diffusion-linear-dictionary`, and a second diffusion model,
 trained alongside on the student's own samples, supplies
 $\nabla \log q_{\boldsymbol\theta, t}$. Such a student is bounded by
@@ -971,11 +1002,11 @@ through the ODE no longer apply.
 What to pick follows from the budget. At fifty evaluations a teacher with
 a good solver needs no second training run. When latency matters, distill
 a two-time flow map from the teacher: on Fashion-MNIST two of its jumps
-were worth about fifteen Euler steps. Without a teacher, MeanFlow trains a
-flow map from data alone, at the price of the too-tight modes it drew on
-the mixture. Distribution matching, with or without a critic, also reaches
-one step, but gives up the map from noise to sample that inversion and
-editing need.
+landed between the teacher's ten and twenty Euler steps. Without a teacher,
+MeanFlow trains a flow map from data alone, but on the mixture it drew
+modes that are too tight. Distribution matching, with or without a critic,
+also reaches one step, but gives up the map from noise to sample that
+inversion and editing need.
 
 Both routes start from the same object: a continuous path along which a
 velocity or a score is defined. Neither exists when $\mathbf{x}$ is a
@@ -984,18 +1015,19 @@ sequence of tokens, the subject of :numref:`sec_diffusion-discrete`.
 ## Summary
 
 Long Euler steps fail because the trajectories bend; one step from noise
-lands every sample on the data mean. Straightening the paths by reflow made one step possible, but the original
-work still distilled the reflowed model for its best one-step results. A
-flow map replaces the velocity by the jump itself, written through the
-average velocity over an interval. Differentiating it along the trajectory
-gives the MeanFlow identity, a regression target that needs one
+lands every sample on the data mean. Reflow straightens the paths, but the
+original work still distilled the reflowed model for its best one-step
+results. A flow map replaces the velocity by the jump itself, written
+through the average velocity over an interval; differentiating it along the
+trajectory gives the MeanFlow identity, a regression target that needs one
 Jacobian-vector product, a stop-gradient, and either a teacher's velocity
 or each example's own. On the mixture, students distilled from a teacher
-match it in one or two evaluations, while MeanFlow gets the mode weights
-right in one jump but draws the modes too tight; on Fashion-MNIST a student scores
-four to five times the teacher's fifty-step FD in one jump and about 1.5
-times in four. Matching distributions, with a critic or a
-difference of scores, is the other route to one step.
+match it in one or two evaluations in every run, while MeanFlow gets the
+mode weights right in one jump but draws the modes too tight; on
+Fashion-MNIST a distilled student scores four to five times the teacher's
+fifty-step FD in one jump and 1.4 to 1.5 times in four. Matching
+distributions, with a critic or a difference of scores, is the other route
+to one step.
 
 ## Exercises
 
@@ -1086,9 +1118,11 @@ difference of scores, is the other route to one step.
        across times. What does the experiment on the mixture tell you about
        the recipe on images, and what does it not?
    :exlabel:`ex_few-step-stop-gradient`
-1. [code] **Which times to train on, and on what grid.** The MeanFlow student drew every pair
-   with $s < t$ from two uniform times, the image student half of its pairs
-   with $s = t$, and consistency distillation as published uses a grid.
+1. [code] **Which times to train on, on what grid, and how to embed them.**
+   The MeanFlow student drew every pair with $s < t$ from two uniform
+   times, the image student half of its pairs with $s = t$, and consistency
+   distillation as published uses a grid. All of them saw the times through
+   the slow features `slow`.
     1. Train the MeanFlow student on the mixture with a share of $0.25$,
        $0.5$, $0.75$ and $1$ of the pairs having $s < t$, and report the
        strays and spread at one and two jumps. Which share serves one jump
@@ -1108,6 +1142,14 @@ difference of scores, is the other route to one step.
        train it on the mixture with the teacher of this section for $N = 8$
        and $N = 64$, and compare its one-step strays with those of the
        continuous student. Does a finer grid help, and why?
+    1. Train the image teacher and student of this section again with the
+       default time features of the chapter, frequencies up to 64 (leave
+       out `time_freqs`), and compare the student's FD at one and two jumps
+       with that of the student on slow features, each against its own
+       teacher's fifty-step FD. Explain the difference with the factor
+       $\omega$ that each feature contributes to $\frac{d}{dt}
+       \bar{\mathbf{u}}$. Is a velocity model without a derivative in its
+       loss hurt by the slow features?
    :exlabel:`ex_few-step-time-pairs`
 1. [code] **Inverting a student.** The exact flow map is a bijection, so
    $\Phi_{0 \to 1}$ undoes $\Phi_{1 \to 0}$.
@@ -1181,7 +1223,7 @@ difference of scores, is the other route to one step.
 [Dive into Deep Learning · §17.8]{.kicker}
 
 Few-Step Generation<br>
-**one Euler step lands on the mean · reflow · flow maps · consistency models · the MeanFlow identity · three students on the mixture · a student on Fashion-MNIST · matching distributions**
+**one Euler step lands on the mean · reflow · flow maps · consistency models · the MeanFlow identity · three students on the mixture · two students on Fashion-MNIST · matching distributions**
 :::
 :::
 
@@ -1288,7 +1330,7 @@ there.
 - **Reflow** retrains on pairs of noise and the model's own sample: chords
   of trajectories that never cross. With the exact field: same
   distribution, no higher transport cost.
-- Two moons: one reflowed step scores like 32 original steps, blur
+- Two moons: one reflowed step scores like many original steps, blur
   included.
 
 ::: {.d2l-note}
@@ -1474,14 +1516,18 @@ velocity). Which final losses can approach zero?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** The distilled ones: their target is a function of the point.
-Measured: 0.075 (consistency), 0.03 (two-time), 76 to 81 (MeanFlow), whose
-target varies between examples at the same point.
+Measured over six runs: 0.06 to 0.08 (consistency), 0.03 (two-time), 76 to
+85 (MeanFlow), whose target varies between examples at the same point.
 :::
 :::
 :::
 
 ::: {.slide title="Students with a Teacher Keep the Spread; MeanFlow Shrinks It"}
+::: {.cols}
+::: {.col}
 @!few-step-on-the-running-example-2
+:::
+:::
 :::
 
 ::: {.slide title="The Velocity in the Target Alone Shrinks the Spread by over 0.1"}
@@ -1492,24 +1538,26 @@ target varies between examples at the same point.
   the teacher's for distillation, the examples' for MeanFlow.
 
 ::: {.d2l-note}
-After four jumps MeanFlow's weights vary between training runs (up to about
-0.02 off over six seeds); the distilled student's stay within 0.006.
+After four jumps MeanFlow's weights vary between training runs (one or two
+runs in six 0.013 to 0.023 off); the distilled student's stay within
+0.006 in every run.
 :::
 :::
 
-::: {.slide title="Two Student Jumps Are Worth About Fifteen Euler Steps"}
+
+::: {.slide title="Two Student Jumps Land Between Ten and Twenty Teacher Steps"}
 ::: {.cols .vc}
 ::: {.col}
 @!few-step-on-images-3
 :::
 
 ::: {.col .narrow}
-Student: the teacher U-Net plus a zero-initialized input $t - s$, 5,000
-updates on the teacher's velocity. FD: Fréchet distance of classifier
-features to 1,000 test images; floor (two sets of test images) about 0.8.
+Students (seeds 2, 3): the teacher U-Net plus a zero-initialized input
+$t - s$, 5,000 updates on the teacher's velocity. FD: Fréchet distance of
+classifier features to 1,000 test images; floor about 0.8.
 
 - Against the teacher's fifty steps: one jump 4 to 5 times the FD, two
-  nearly twice, four about 1.5 times.
+  nearly twice, four 1.4 to 1.5 times.
 :::
 :::
 :::
@@ -1517,9 +1565,9 @@ features to 1,000 test images; floor (two sets of test images) about 0.8.
 ::: {.slide title="The Student Draws the Teacher's Garment from the Same Noise"}
 @!few-step-on-images-4
 
-Rows: teacher, 50 and 2 Euler steps; student, 1 and 2 jumps. Two Euler
-steps draw gray averages; one jump draws the teacher's garment with
-smudged detail and a few blotches; two come close to the teacher.
+Rows: teacher, 50 and 2 Euler steps; student (seed 2), 1 and 2 jumps.
+Two Euler steps draw gray averages; one jump draws the teacher's garment
+with smudged detail and a few blotches; two come close to the teacher.
 
 ::: {.d2l-note}
 A distilled student's target is its teacher's exact ODE, whose FD fifty
@@ -1570,7 +1618,7 @@ noise for a second evaluation.
   students keep the spread 0.45 to 0.46, MeanFlow contracts it to 0.31 to
   0.34.
 - **Images:** one jump 4 to 5 times the teacher's 50-step FD; two jumps
-  worth about fifteen Euler steps.
+  between the teacher's 10 and 20 Euler steps.
 
 **Next:** no continuous path exists for tokens; what is noise for a token?
 :::

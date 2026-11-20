@@ -1,11 +1,11 @@
 # Denoising and the Score
 :label:`sec_diffusion-denoising`
 
-The previous chapter ended with a fact about squared error: a network trained by squared error learns the conditional mean of its target given its input, and where the input leaves the target ambiguous, that mean averages the possibilities. A denoiser is such a network: shown a noisy photograph, it returns the average of all clean photographs that could have produced it. For the generators of :numref:`chap_gans` that average was a defect. Here it is the starting point, because diffusion and flow models are trained by this same regression: add noise to a training example and ask the network for the clean example back.
-
 If a network can remove noise from a picture, does it know what pictures look like? The noise filter of a camera app, trained on millions of photographs, restores edges and faces in a grainy picture. Fed pure static, it does not return static: it sharpens whatever faint structure it finds into the kinds of shapes that photographs contain. So it knows something. Statisticians said what, long before deep learning. Herbert Robbins and Koichi Miyasawa showed that the best denoiser moves the noisy point along the gradient of the log-density of the noisy data, a gradient called the *score*. Robbins credited the result to Maurice Tweedie, and :citet:`Efron.2011` made it known as *Tweedie's formula*. A denoiser and a score are therefore one object, and :citet:`Vincent.2011` showed that training a denoiser by regression fits the score.
 
-This matters because a density needs a normalizer, an integral over all possible inputs that nobody can compute for images, while a score needs none and is enough to draw samples. We start simple, with a distribution on which every quantity can be computed exactly. On it we show that a denoiser is a posterior mean and find out what a denoiser trained at a single noise level can and cannot do; then we denoise images.
+The regression is one we know. The previous chapter ended with a fact about squared error: a network trained by squared error learns the conditional mean of its target given its input, and where the input leaves the target ambiguous, that mean averages the possibilities. A denoiser is such a network: shown a noisy photograph, it returns the average of all clean photographs that could have produced it. For the generators of :numref:`chap_gans` that average was a defect. Here it is the starting point, because diffusion and flow models are trained by this same regression: add noise to a training example and ask the network for the clean example back.
+
+Why should we want the score rather than the density itself? A density needs a normalizer, an integral over all possible inputs that nobody can compute for images, while a score needs none and is enough to draw samples. We start simple, with a distribution on which every quantity can be computed exactly. On it we show that a denoiser is a posterior mean and find out what a denoiser trained at a single noise level can and cannot do; then we denoise images.
 
 ```{.python .input #denoising-denoising-score-matching}
 %%tab pytorch
@@ -260,7 +260,16 @@ $$
 $$
 :eqlabel:`eq_diffusion-posterior-mean-score`
 
-The regression on per-pair targets therefore fits the score of $p_\sigma$, which we never wrote down. The theorem is two lines of Bayes' rule (:numref:`sec_mdl-denoising-score-matching`), and it is the reason this chapter can train generators by regression at all: we cannot evaluate the score of the data, but we can evaluate the score of the noise we added ourselves.
+The proof is two lines of Bayes' rule. The noisy density is the clean one blurred by the noise, $p_\sigma(\tilde{\mathbf{x}}) = \int p(\mathbf{x}_0)\, p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\, d\mathbf{x}_0$. Differentiate under the integral, write the gradient of the kernel as the kernel times the gradient of its logarithm, and divide by $p_\sigma(\tilde{\mathbf{x}})$:
+
+$$
+\nabla \log p_\sigma(\tilde{\mathbf{x}})
+= \int \frac{p(\mathbf{x}_0)\, p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)}{p_\sigma(\tilde{\mathbf{x}})}\, \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\, d\mathbf{x}_0.
+$$
+
+The fraction is Bayes' rule for the posterior $p(\mathbf{x}_0 \mid \tilde{\mathbf{x}})$, so the right-hand side is the posterior mean of the conditional score, which is :eqref:`eq_diffusion-posterior-mean-score`. Nothing in the two lines used that the noise is Gaussian; the conditions under which the gradient may move inside the integral are in :numref:`sec_mdl-denoising-score-matching`.
+
+The regression on per-pair targets therefore fits the score of $p_\sigma$, which we never wrote down. This is the reason the chapter can train generators by regression at all: we cannot evaluate the score of the data, but we can evaluate the score of the noise we added ourselves.
 
 ### Tweedie's Formula
 
@@ -1192,7 +1201,13 @@ $$J_{\mathrm{DSM}}(\boldsymbol\theta) = \tfrac12\, \mathbb{E}\,
 
 Vincent: the minimizer is
 $\mathbb{E}[-\boldsymbol\epsilon/\sigma \mid \tilde{\mathbf{x}}]
-= \nabla \log p_\sigma(\tilde{\mathbf{x}})$.
+= \nabla \log p_\sigma(\tilde{\mathbf{x}})$. Proof: differentiate
+$p_\sigma = \int p(\mathbf{x}_0)\, p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}_0)\, d\mathbf{x}_0$
+and divide by $p_\sigma$; Bayes' rule leaves
+
+$$\nabla \log p_\sigma(\tilde{\mathbf{x}}) = \int p(\mathbf{x}_0 \mid
+\tilde{\mathbf{x}})\, \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}}
+\mid \mathbf{x}_0)\, d\mathbf{x}_0$$
 
 ::: {.d2l-note}
 We cannot evaluate the score of the data, but we can evaluate the score of

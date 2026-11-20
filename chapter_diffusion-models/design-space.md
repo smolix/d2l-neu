@@ -1,7 +1,7 @@
 # Likelihood, Weighting and the Design Space
 :label:`sec_diffusion-design-space`
 
-For five sections we have trained networks by regression onto a per-example target and accepted the result because it worked: samples of the mixture land on its three modes with the right weights, and the garments of :numref:`sec_diffusion-images` look like garments. We have never asked what probability the model assigns to a data point, a density model's first question and one the adversarial models of :numref:`chap_gans` could not answer. Is "predict the noise" maximum likelihood in disguise, and what negative log-likelihood does it give the mixture, whose true value is about 2.5 nats per point? And which of the choices made along the way (the target, the weight of each noise level, the schedule) matter?
+For five sections we have trained networks by regression onto a per-example target and accepted the result because it worked: samples of the mixture land on its three modes with the right weights, and the garments of :numref:`sec_diffusion-images` look like garments. We have never asked what probability the model assigns to a data point, a density model's first question and one the adversarial models of :numref:`chap_gans` could not answer. Is "predict the noise" a form of maximum likelihood, and what negative log-likelihood does it give the mixture, whose true value is about 2.5 nats per point? And which of the choices made along the way (the target, the weight of each noise level, the schedule) matter?
 
 The noise loss and the velocity loss both trained good models, so the question is not idle: are they the same loss, and is either of them the likelihood? :citet:`sohl2015deep` read the noising chain backward as a latent-variable model with a lower bound on its likelihood, and :citet:`ho2020denoising` noticed that this bound is a sum of the very noise regressions we have been running, one per noise level, each with its own weight. :citet:`Kingma.Gao.2023` then showed that the other losses are the same sum with other weights. Choosing a target and a schedule thus comes down largely to one question, how much effort the loss spends at each noise level, and to a second one, what the network is asked to output. Both we can measure: on the mixture in nats, on Fashion-MNIST by the Fréchet distance. The section ends with what we would choose for a new model.
 
@@ -493,7 +493,9 @@ for (width, name), (r0, r1) in rows.items():
 print(f'data {"":36}{mix.nll(test):7.3f}{mix.summary(test)["stray"]:14.3f}')
 ```
 
-At full width the weighting matters little. All four models lie within two hundredths of a nat of the exact field on both measures, and their samples cannot be told apart, with stray fractions close to the data's. Each weighting is already ahead on its own measure, though, by two to three thousandths of a nat on the bound and by half a hundredth to a hundredth on the flow. At 32 units the split grows and reaches the samples. The bound-weighted model has the lower bound, by one to one and a half hundredths of a nat. The simple loss, which is no bound on the likelihood, nonetheless gives the better flow likelihood, its negative log-likelihood lower by one to two hundredths, and the better samples: a sample negative log-likelihood lower by two to five hundredths and fewer strays, about 1.5 to 1.8% against 2.0 to 2.3%. On this mixture, training on the bound did not give the small network its best likelihood. A likely reason is where the draws go. Uniform $\lambda$ on $[-10.05, 9.12]$ puts about $7/19$, more than a third, of the bound's draws above $\lambda = 2$, where the point is nearly clean; uniform $t$ on our VP path puts about a tenth there. A small network trained on the bound thus has less left for the noisier levels that every sample and every flow trajectory passes through. So the answer to the opening question is no, with a qualification. The simple loss is not the likelihood bound but the bound's integrand under another weight. With capacity to spare the weight moves either likelihood by about a hundredth of a nat at most; with little capacity it decides between a better bound on one side and a better flow likelihood and better samples on the other.
+At full width the weighting matters little. All four models lie within two hundredths of a nat of the exact field on both measures, and their samples cannot be told apart, with stray fractions close to the data's. Each weighting is already ahead on its own measure, though, by one to five thousandths of a nat on the bound and by half a hundredth to a hundredth on the flow. At 32 units the split grows and reaches the samples. The bound-weighted model has the lower bound, by one to two hundredths of a nat. The simple loss, which is no bound on the likelihood, nonetheless gives the better flow likelihood, its negative log-likelihood lower by one to two hundredths, and the better samples: a sample negative log-likelihood lower by two to six hundredths and fewer strays, about 1.5 to 1.8% against 2.0 to 2.3%. On this mixture, training on the bound did not give the small network its best likelihood. The likely reason is the one we guessed, where the draws go: uniform $\lambda$ on $[-10.05, 9.12]$ puts about $7/19$, more than a third, of the bound's draws above $\lambda = 2$, where the point is nearly clean, and uniform $t$ on our VP path puts about a tenth there.
+
+So the answer to the opening question is no, with a qualification. The simple loss is not the likelihood bound but the bound's integrand under another weight. With capacity to spare the weight moves either likelihood by about a hundredth of a nat at most; with little capacity it decides between a better bound on one side and a better flow likelihood and better samples on the other.
 
 ## Objectives as Weightings
 
@@ -586,7 +588,7 @@ peak = fine[weighting(vp, 'eps', fine).argmax()]
 print(f'noise, VP path: largest weight at lambda = {peak:.1f}')
 ```
 
-The velocity weighting is $e^{-\lambda/2}$ to every printed digit, and the $\mathbf{v}$ weighting is the same curve times $0.64$ from $\lambda = -8$ to $4$. The constant, $0.642$ at the noisy end, is $2(1 + s)/\pi$. Our cosine path is that of :citet:`Nichol.Dhariwal.2021`, $\alpha_t \propto \cos\big(\tfrac{\pi}{2}(t + s)/(1 + s)\big)$ with a small offset $s = 0.008$ and rescaled to start at one, so its angle advances slightly more slowly than that of $\cos\frac{\pi t}{2}$. The offset matters only where the point is nearly clean, and there the ratio falls, to $0.62$ at $\lambda = 6$ and $0.53$ at $\lambda = 8$. Up to a constant and that clean end, then, $\mathbf{v}$-prediction on the cosine path and flow matching on the linear path are the same objective :cite:`Gao.Hoogeboom.Heek.ea.2025`. The noise loss on the VP path peaks at $\lambda = -0.9$, a little on the noisy side of the point where signal and noise are equal. The velocity and noise models of :numref:`sec_diffusion-gaussian-paths` differ in their weighting, not in what they learn (:numref:`fig_diffusion-weightings`).
+The velocity weighting is $e^{-\lambda/2}$ to every printed digit, and the $\mathbf{v}$ weighting is the same curve times $0.64$ from $\lambda = -8$ to $4$. The constant, $0.642$ at the noisy end, is $2 \cdot 1.008/\pi$. Our cosine path is that of :citet:`Nichol.Dhariwal.2021`, $\alpha_t \propto \cos\big(\tfrac{\pi}{2}(t + 0.008)/1.008\big)$ with a small offset of $0.008$ and rescaled to start at one, so its angle advances slightly more slowly than that of $\cos\frac{\pi t}{2}$. The offset matters only where the point is nearly clean, and there the ratio falls, to $0.62$ at $\lambda = 6$ and $0.53$ at $\lambda = 8$. Up to a constant and that clean end, then, $\mathbf{v}$-prediction on the cosine path and flow matching on the linear path are the same objective :cite:`Gao.Hoogeboom.Heek.ea.2025`. The noise loss on the VP path peaks at $\lambda = -0.9$, a little on the noisy side of the point where signal and noise are equal. The velocity and noise models of :numref:`sec_diffusion-gaussian-paths` differ in their weighting, not in what they learn (:numref:`fig_diffusion-weightings`).
 
 ![Diffusion objectives as weightings of the noise error over the log signal-to-noise ratio $\lambda$. (a) $w(\lambda)$ on a logarithmic scale: the bound is flat, the noise loss on the linear-$\beta$ VP path peaks near $\lambda \approx -1$, $\mathbf{v}$-prediction and flow matching share the curve $e^{-\lambda/2}$, and EDM's weighting (with the paper's $\sigma_{\mathrm{data}} = 0.5$) is a bump. (b) The density of $\lambda$ under uniform $t$ on the three paths, and under the logit-normal times of :citet:`Esser.Kulal.Blattmann.ea.2024` on the linear path.](../img/mdl-diffusion-weightings.svg)
 :label:`fig_diffusion-weightings`
@@ -613,7 +615,7 @@ One of these choices, the target, seems to have vanished in the previous part, w
 
 ### EDM's Table
 
-In the columns of Karras et al., who call their own method EDM, four methods read as follows:
+In the columns of Karras et al., who call their own method EDM, three models of :numref:`tab_diffusion_models` and EDM itself read as follows:
 
 | method | training: path, levels, weighting | network output | sampler |
 |---|---|---|---|
@@ -741,7 +743,7 @@ The same view explains why a schedule depends on the resolution. At $56 \times 5
 ![Noise schedules on the log-SNR clock: $\lambda_t$ against $t$ for the linear-$\beta$ VP, cosine and linear paths, and the cosine path shifted for four times the side length ($\lambda_t - \log 16$). The VP path ends at $\lambda \approx -10$, the others at $-\infty$. The band marks the log-SNR at which noise hides the image above 6 cycles per image on Fashion-MNIST.](../img/mdl-diffusion-schedules.svg)
 :label:`fig_diffusion-schedules`
 
-Block averaging also magnifies whatever signal the end of a schedule leaves behind. Our VP path ends at $\lambda \approx -10$, so its network never trains on the pure noise the sampler starts from, and a fraction $\alpha_1 \approx 0.007$ of the image survives. Is that dangerous? Averaging all 784 pixels gives the image's mean brightness a signal-to-noise ratio of at most about $784\, e^{-10} \approx 0.04$, far too little to read. Stable Diffusion's schedule stopped at much less noise, at a log-SNR of about $-5$, on latents of $64 \times 64$ values per channel. The mean of a channel averages 4,096 of them, which raises its ratio to about $4096\, e^{-5} \approx 28$, and the overall brightness of an image survived all the noise. The model learned to rely on it, and since the sampler starts from noise of mean zero, it could not generate very bright or very dark images :cite:`Lin.Liu.Li.ea.2024`.
+Block averaging also magnifies whatever signal the end of a schedule leaves behind. Our VP path ends at $\lambda \approx -10$, where the mean of all 784 pixels has a signal-to-noise ratio of at most $784\, e^{-10} \approx 0.04$, far too little to read. Stable Diffusion's schedule stopped at a log-SNR of about $-5$ on latents of $64 \times 64$ values per channel, where the mean of a channel reaches $4096\, e^{-5} \approx 28$. The model learned to rely on the brightness that survived, and since its sampler starts from noise of mean zero, it could not generate very bright or very dark images :cite:`Lin.Liu.Li.ea.2024`.
 
 ### One-Factor Comparisons
 
@@ -779,7 +781,7 @@ floor = d2l.fid_score(f_test, d2l.fd_features(cnn, X_test[5000:]))
 print(f'FD, real against real: {floor:.2f}')
 ```
 
-Fashion-MNIST is mostly black background: the pixels have a mean of $-0.43$ and a root mean square of $0.83$, well above the paper's $0.5$, and the cell passes the measured value to `EDM`. Two sets of 5,000 real images score $0.17$ to $0.18$ against each other.
+Fashion-MNIST is mostly black background: the pixels have a mean of $-0.43$ and a root mean square of $0.83$, well above the paper's $0.5$, and the cell passes the measured value to `EDM`. Two sets of 5,000 real images score about $0.17$ against each other.
 
 `logit_normal_loss` is `regression_loss` with logit-normal times in place of uniform ones. On the linear path $\bar\sigma = t/(1 - t)$, so $\log \bar\sigma = m + s n$: with $m = -1.2$ and $s = 1.2$ the velocity model trains at EDM's log-normal levels, and the row of that name differs from EDM's only in the parameterization and the weight. It is also a logit-normal centered further toward the data than the $m = -0.5$ row, at $t \approx 0.23$.
 
@@ -843,7 +845,7 @@ grids = {'EDM grid': d2l.edm_grid(25),            # 49 network evaluations
          'linear grid': linear.sigma_bars(25)}    # 48 network evaluations
 ```
 
-The loop trains each recipe, samples every model on both grids from the same noise and prints one FD per seed and grid. One result we can predict before the run. The $\mathbf{v}$-loss on the cosine path is the base's objective in other coordinates, so it should do no worse.
+The loop trains each recipe, samples every model on both grids from the same noise and prints, for each row and grid, the mean FD over the seeds and then each seed's FD in parentheses. One result we can predict before the run. The $\mathbf{v}$-loss on the cosine path is the base's objective in other coordinates, so it should do no worse.
 
 ```{.python .input #design-space-a-recipe-ablation-2}
 %%tab pytorch
@@ -853,7 +855,7 @@ z = torch.randn(5000, 1, 28, 28, device=device)  # the same noise for every run
 four_seeds = ('base: velocity, t uniform', "t at EDM's levels",
               'EDM, clean image')         # to split EDM's gain
 models, samples = {}, {}
-print(f'{"FD of each seed":27} {"EDM grid":24} linear grid')
+print(f'{"FD: mean (each seed)":27} {"EDM grid":28} linear grid')
 for name, (path, kind, make_net, loss_fn) in recipes.items():
     fd = {g: [] for g in grids}
     for seed in range(4 if name in four_seeds else 2):
@@ -867,8 +869,9 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
             fd[g].append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
             if seed == 0 and g == 'EDM grid':
                 models[name], samples[name] = ema_img, x[:10]
-    edm, lin = (', '.join(f'{v:.2f}' for v in fd[g]) for g in grids)
-    print(f'{name:27} {edm:24} {lin}')
+    edm, lin = (f'{sum(fd[g]) / len(fd[g]):.2f} ('
+                + ' '.join(f'{v:.2f}' for v in fd[g]) + ')' for g in grids)
+    print(f'{name:27} {edm:28} {lin}')
 ```
 
 ```{.python .input #design-space-a-recipe-ablation-2}
@@ -878,7 +881,7 @@ z = jax.random.normal(jax.random.key(1), (5000, 28, 28, 1))  # shared noise
 four_seeds = ('base: velocity, t uniform', "t at EDM's levels",
               'EDM, clean image')         # to split EDM's gain
 models, samples = {}, {}
-print(f'{"FD of each seed":27} {"EDM grid":24} linear grid')
+print(f'{"FD: mean (each seed)":27} {"EDM grid":28} linear grid')
 for name, (path, kind, make_net, loss_fn) in recipes.items():
     fd = {g: [] for g in grids}
     for seed in range(4 if name in four_seeds else 2):
@@ -892,17 +895,18 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
             fd[g].append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
             if seed == 0 and g == 'EDM grid':
                 models[name], samples[name] = ema_img, x[:10]
-    edm, lin = (', '.join(f'{v:.2f}' for v in fd[g]) for g in grids)
-    print(f'{name:27} {edm:24} {lin}')
+    edm, lin = (f'{sum(fd[g]) / len(fd[g]):.2f} ('
+                + ' '.join(f'{v:.2f}' for v in fd[g]) + ')' for g in grids)
+    print(f'{name:27} {edm:28} {lin}')
 ```
 
-Every model is 12 to 32 times the floor, while the full recipe of :numref:`sec_diffusion-images` reaches about 0.8 after its 15,000 updates, so the table ranks how quickly each recipe learns, not where it would end. We read it against the spread between each row's seeds, beginning with the column we added for fairness.
+Every model is about 12 to 30 times the floor, while the same unconditional U-Net reaches about 1.5 after 20,000 updates (:numref:`sec_diffusion-latent`), so the table ranks how quickly each recipe learns, not where it would end. We read each row by its mean and by the spread of its own runs, never by a single run: a seed fixes the initial weights and the batches, but training on a GPU is not bitwise reproducible, so even one seed's FD changes when the notebook runs again. We begin with the column we added for fairness.
 
-Every run of every model trained on the velocity of the linear path, the control included, scores lower on the linear grid than on EDM's, by 0.1 to 1.4 (the base by 0.5 to 0.7), and $\mathbf{v}$ on the cosine path does too, by less. EDM's own model shows no consistent preference; its runs move by up to 0.4 in either direction. So the suggestion of :numref:`sec_diffusion-samplers` does not survive the test: a velocity model trained at EDM's levels still prefers the linear grid. If something in EDM's recipe makes its grid harmless, the comparison points to the parameterization and the weight, not to the levels.
+Every run of the base scores lower on the linear grid than on EDM's, by 0.5 to 0.7. So, on average, does every other model trained on the velocity of the linear path, the control included, by 0.35 to 1.3, and $\mathbf{v}$ on the cosine path leans the same way, by 0.1 to 0.4. EDM's own model shows no consistent preference: its mean moves by less than a tenth between the grids, its runs by up to about 0.4 in either direction. So the suggestion of :numref:`sec_diffusion-samplers` does not survive the test: a velocity model trained at EDM's levels still prefers the linear grid. If something in EDM's recipe makes its grid harmless, the comparison points to the parameterization and the weight, not to the levels.
 
-The clearest result about training is a warning against centering the training times at the middle of the path for images this small. On EDM's grid the centered logit-normal row is worse than the base in every run, by about 1.1 to 1.3 FD on average; on the linear grid the loss shrinks to about 0.5 to 0.75. Moved toward the data, the same distribution wins all of that back: every run of the $m = -0.5$ row beats every centered run on both grids, and none lies above the base's range. Whether it also beats uniform times, two runs cannot settle: its gain over the base is at most about the spread between its own two runs. The control row, a logit-normal moved further still, likewise lies within or below the base's range on both grids, and, as predicted, $\mathbf{v}$ on the cosine path does no worse than the base.
+The clearest result about training is a warning against centering the training times at the middle of the path for images this small. On EDM's grid the centered logit-normal row is worse than the base by about 1.1 to 1.3 FD on average, and its mean lies above every run of the base; on the linear grid the deficit shrinks to about 0.5 to 0.75. Moved toward the data, the same distribution wins all of that back: every run of the $m = -0.5$ row beats every centered run on both grids. That row, the control (a logit-normal moved further still) and, as predicted, $\mathbf{v}$ on the cosine path all lie within or below the base's range on both grids. Whether any of them beats uniform times, two to four runs cannot settle: on the linear grid, where the base does best, each one's mean gain over it is at most about the spread between its own runs.
 
-EDM's whole recipe, its levels, preconditioning and weight together, beats the base in every run on its own grid. On the linear grid, the one the base prefers, their runs overlap and neither recipe is ahead by more than its seed spread. Part of what looked like EDM's win was a comparison of samplers. How its gain on its own grid divides between the levels and the preconditioning, four seeds do not settle either: the control's runs alone spread over 0.8 to 1.7 FD and overlap EDM's.
+On its own grid, EDM's whole recipe, its levels, preconditioning and weight together, scores about half a point to a point below the base on average, and its runs lie at the low end of the base's range or below it. On the linear grid, the one the base prefers, their runs overlap and neither recipe is ahead by more than its seed spread. Part of what looked like EDM's win was a comparison of samplers. How its gain on its own grid divides between the levels and the preconditioning, four seeds do not settle either: the control's runs alone spread over 0.9 to 1.8 FD and overlap EDM's.
 
 The samples of the first seed on EDM's grid, one row per recipe in the order of the table, from the same ten noise images:
 
@@ -955,15 +959,15 @@ At $t = \tfrac12$, where most of its training times fall, the logit-normal model
 
 ### Choosing a Recipe
 
-What should we choose for a new model? First a target that stays well scaled at both ends of the path: the velocity on the linear path, $\mathbf{v}$ on a variance-preserving one, or EDM's preconditioned clean image with $\sigma_{\mathrm{data}}$ measured on the data. On our images EDM's whole recipe beat the base only on its own grid; against the base sampled on the grid that the base prefers, we could not tell them apart. Its one firm advantage here was indifference to the grid, a convenience when the sampler is not yet fixed, and our comparison cannot say what its preconditioning brings on its own. A bare noise predictor served DDPM and the first Stable Diffusion models, but only on paths that stop short of pure noise, and its division by $\alpha_t$ makes it the target we would not pick for a new model (Exercise :exref:`ex_design-space-cosine-clipping` shows it failing on the cosine path). Then a path that reaches pure noise, so that the network trains on what the sampler starts from. The training levels go where the image's structure is decided, and here our comparison speaks most clearly: for $28 \times 28$ garments nearer the data than the middle of the path, and for larger images toward more noise, by the logarithm of the ratio of pixel counts. The weighting comes last and depends on what we want to report. The bound's weighting gives the better bound; for samples, and on the small mixture network even for the flow likelihood, one that spends less on nearly clean points did better. Whatever we choose, we judge it with more than one sampler: EDM's grid cost the base about half an FD point, as much as most of the recipe changes moved it.
+What should we choose for a new model? First a target that stays well scaled at both ends of the path: the velocity on the linear path, $\mathbf{v}$ on a variance-preserving one, or EDM's preconditioned clean image with $\sigma_{\mathrm{data}}$ measured on the data. On our images EDM's whole recipe scored below the base on its own grid; against the base sampled on the grid that the base prefers, we could not tell them apart. Its one firm advantage here was indifference to the grid, a convenience when the sampler is not yet fixed, and our comparison cannot say what its preconditioning brings on its own. A bare noise predictor served DDPM and the first Stable Diffusion models, but only on paths that stop short of pure noise, and its division by $\alpha_t$ makes it the target we would not pick for a new model (Exercise :exref:`ex_design-space-cosine-clipping` shows it failing on the cosine path). Then a path that reaches pure noise, so that the network trains on what the sampler starts from. The training levels go where the image's structure is decided, and here our comparison speaks most clearly: for $28 \times 28$ garments nearer the data than the middle of the path, and for larger images toward more noise, by the logarithm of the ratio of pixel counts. The weighting comes last and depends on what we want to report. The bound's weighting gives the better bound; for samples, and on the small mixture network even for the flow likelihood, one that spends less on nearly clean points did better. Whatever we choose, we judge it with more than one sampler: EDM's grid cost the base about 0.6 FD, as much as most of the recipe changes moved it.
 
-The book's default, the velocity on the linear path with uniform $t$, passes the first two tests, spreads its training levels evenly instead of placing them, and has the monotone weighting $e^{-\lambda/2}$. On the linear grid, which it prefers, no change we tried beat it by more than about the spread between that change's own runs. It is the plainest of the good recipes, which is why the rest of the chapter keeps it.
+The book's default, the velocity on the linear path with uniform $t$, passes the first two tests, spreads its training levels evenly instead of placing them, and has the monotone weighting $e^{-\lambda/2}$. On the linear grid, which it prefers, no change we tried beat it on average by more than about three quarters of a point, and two runs of one recipe can lie that far apart. It is the plainest of the good recipes, which is why the rest of the chapter keeps it.
 
 Every choice in this section was made on $28 \times 28$ pixels, and the scale argument says what most pixels of a larger image hold: detail that the last few noise levels decide and a viewer hardly sees. Why spend the network's work on them at all, rather than diffuse a smaller representation of the image?
 
 ## Summary
 
-Read backward, the noising chain is a latent-variable model whose likelihood bound is a sum of noise regressions, each weighted by half the drop in log-SNR over its step. On the mixture a trained noise predictor comes within half a hundredth of a nat of the exact field, by the bound and by the flow. Every published loss is the same integral over the log-SNR with its own weighting; the monotone ones are bounds for noise-augmented data, and a time distribution is a weighting in disguise. The weighting decides where a small network's error goes: the bound's weighting gave the better bound, the simple loss the better flow likelihood and samples. What the network outputs still matters, because a finite network finds some outputs harder than others. On Fashion-MNIST, training times centered at the middle of the path cost about 1.1 to 1.3 FD on EDM's grid, and EDM's whole recipe beat the base on that grid but not on the linear one, which every velocity model preferred, so a recipe's FD depends on the sampler it is judged with. That leaves a short recipe: a well-scaled target, a path to pure noise, training levels where the image's structure forms, and more than one sampler to judge them by.
+Read backward, the noising chain is a latent-variable model whose likelihood bound is a sum of noise regressions, each weighted by half the drop in log-SNR over its step. Every published loss, its training times included, is the same integral over the log-SNR with its own weighting, and the monotone weightings are bounds for noise-augmented data. On the mixture a trained noise predictor comes within half a hundredth of a nat of the exact field; with 32 hidden units the bound's weighting gave the better bound, the simple loss the better flow likelihood and samples. The weighting does not settle what the network should output, since a finite network finds some outputs harder than others. On Fashion-MNIST, training times centered at the middle of the path cost about 1.1 to 1.3 FD on EDM's grid, and EDM's whole recipe beat the base on average on that grid, while on the linear one their runs overlapped, so a recipe must be judged with more than one sampler. For a new model we would choose a well-scaled target, a path to pure noise and training levels where the image's structure forms.
 
 ## Exercises
 
@@ -1007,7 +1011,7 @@ Read backward, the noising chain is a latent-variable model whose likelihood bou
 1. **The forward posterior.** Derive :eqref:`eq_diffusion-posterior`.
     1. Write $q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \propto q(\mathbf{x}_k \mid \mathbf{x}_{k-1})\, q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$ as a product of two Gaussians in $\mathbf{x}_{k-1}$, add their precisions, and combine their means in proportion to precision.
     1. Show that $\tilde\beta_k \le \beta_k$, with equality only if $\sigma_{k-1}^2 = 1$. Where in the chain is $\tilde\beta_k$ much smaller than $\beta_k$?
-    1. In the two-step example of the text, let the data be $\mathcal{N}(0, s^2)$. Show that the variance $\nu_2$ that minimizes the bound is $\mathrm{Var}(x_1 \mid x_2)$, and that it equals $\tilde\beta_2$ as $s \to 0$ and $\beta_2$ at $s = 1$, the two choices of :citet:`ho2020denoising`.
+    1. In the two-step example of the text, let the data be $\mathcal{N}(0, a^2)$. Show that the variance $\nu_2$ that minimizes the bound is $\mathrm{Var}(x_1 \mid x_2)$, and that it equals $\tilde\beta_2$ as $a \to 0$ and $\beta_2$ at $a = 1$, the two choices of :citet:`ho2020denoising`.
    :exlabel:`ex_design-space-forward-posterior`
 1. [code] **Clipping the predicted image.** The cosine path reaches $\alpha_1 = 0$.
     1. Train a noise predictor on `d2l.GaussianPath.cosine()` with the recipe of the comparison and sample it with `ddim_sample` on the same path. What happens at the first step, and why?
@@ -1040,7 +1044,7 @@ Likelihood, Weighting and the Design Space<br>
   2.5 nats per point. What does the trained network give?
 
 ::: {.d2l-note .warn}
-Is "predict the noise" maximum likelihood in disguise? Which choices
+Is "predict the noise" a form of maximum likelihood? Which choices
 (target, weight per noise level, schedule) matter?
 :::
 :::
@@ -1206,7 +1210,8 @@ within half a hundredth of a nat by both measures.
 
 ::: {.slide title="Each Weighting Wins on Its Own Measure"}
 Noise predictors, simple loss against the bound's weighting ($\lambda$
-uniform), two widths, two seeds:
+uniform), two widths, two seeds. Strays: samples more than three standard
+deviations from every mode.
 
 @!design-space-a-number-for-the-mixture-5
 
@@ -1398,7 +1403,8 @@ curve of the schedule figure).
 
 ::: {.slide title="Centered Times Lose; EDM Wins Only on Its Own Grid"}
 Base: velocity, linear path, $t$ uniform; one change per row; 64-channel
-U-Net, 5,000 updates; Heun on two grids; FD of 5,000 samples (real 0.17 to 0.18):
+U-Net, 5,000 updates; Heun on two grids. FD: Fréchet distance of classifier
+features, 5,000 samples against test images (two real sets: 0.17).
 
 @!design-space-a-recipe-ablation-2
 
@@ -1430,7 +1436,7 @@ skip.
   shifted by the log pixel ratio when larger.
 - **Weighting:** the bound's for the bound; less on clean points for
   samples.
-- **Sampler:** more than one; EDM's grid cost the base about half an FD point.
+- **Sampler:** more than one; EDM's grid cost the base about 0.6 FD.
 
 ::: {.d2l-note}
 The book's default, velocity on the linear path with $t$ uniform, is the
@@ -1438,7 +1444,7 @@ plainest of the good recipes.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Wrap-up"}
 [Wrap-up]{.kicker}
 
 - **Bound:** noise regressions weighted by half the log-SNR drop; exact
@@ -1448,8 +1454,8 @@ plainest of the good recipes.
 - **Weightings:** one integral; monotone ones are bounds; each wins on its
   own measure.
 - **Images:** centered logit-normal times cost 0.5 to 1.3 FD, by grid;
-  EDM's recipe beats the base only on its own grid, where every velocity
-  model scores worse.
+  EDM's recipe beats the base on its own grid, the grid every velocity
+  model scores worse on; on the linear grid their runs overlap.
 
 **Next:** why diffuse the pixels at all, rather than a smaller code?
 :::

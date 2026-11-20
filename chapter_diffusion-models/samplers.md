@@ -1,15 +1,15 @@
 # Samplers, Inversion and Editing
 :label:`sec_diffusion-samplers`
 
-The last section drew its images with fifty Euler steps of the
-probability-flow ODE, and the thousand-step ancestral chain of
-:numref:`sec_diffusion-integration` scored only a little lower in FD, at
-twenty times the cost. The cost is easy to count: every step of a sampler
-evaluates the U-Net once, and everything else the step does is a few
-additions. Two questions are therefore worth asking. Which of the thousand
-steps do we need, and how few can we take? And once sampling is the
-integration of a field, can we run it backwards, from a real image to the
-noise that produces it, and edit the image from there?
+Every step of the samplers we have met evaluates the U-Net once, and
+everything else the step does is a few additions, so a sample costs as many
+network evaluations as it takes steps. The last section drew its images with
+fifty Euler steps of the probability-flow ODE, and the thousand-step
+ancestral chain of :numref:`sec_diffusion-integration` scored only a little
+lower in FD, at twenty times the cost. Two questions are therefore worth
+asking. Which of the thousand steps do we need, and how few can we take? And
+once sampling is the integration of a field, can we run it backwards, from a
+real image to the noise that produces it, and edit the image from there?
 
 :citet:`Song.Meng.Ermon.2020` answered the first question with an
 observation about training. The regression of
@@ -708,15 +708,16 @@ They close on it but never overtake it. Up to two hundred steps $\eta = 0$
 scores between a third and nearly a half lower than $\eta = 1$ at every
 budget, far outside the half-ranges; at a thousand the three end within
 about 0.2 of each other, between about 1.3 and 1.5. On this model fresh
-noise never helped: at no budget did a stochastic sampler score below
-$\eta = 0$. The ancestral chain loses most, with about 8 to 11 at
-fifty steps, worse than DDIM at ten (a little over 5). Its forward-step
-variance suits data as wide as the noise, but a garment is nearly determined
-once the noise is small, and the excess variance should show as speckle; the
-image rows at the end of the next subsection show it. DDIM itself changes by
-about a tenth after a hundred steps, and at fifty it is within about a third
-of the thousand-step chain at a twentieth of the evaluations, which is the
-central result of :citet:`Song.Meng.Ermon.2020`.
+noise never helped: at no budget did a stochastic sampler beat $\eta = 0$
+by more than the half-ranges, and at a thousand steps the ancestral chain
+only ties it. Up to a hundred steps the ancestral chain loses most, with
+about 8 to 11 at fifty steps, worse than DDIM at ten (a little over 5). Its
+forward-step variance suits data as wide as the noise, but a garment is
+nearly determined once the noise is small, and the excess variance should
+show as speckle; the image rows at the end of the next subsection show it.
+DDIM itself changes by about a tenth after a hundred steps, and at fifty it
+is within about a third of the thousand-step chain at a twentieth of the
+evaluations, which is the central result of :citet:`Song.Meng.Ermon.2020`.
 
 The second table counts network evaluations rather than steps, since that is
 what a sample costs. It runs Euler's method, Heun's method and the multistep
@@ -802,11 +803,11 @@ variance-preserving one and about 6.5 on EDM; Heun's method scores about 1.5
 on the linear grid and 12 to 15 on EDM. The EDM grid loses for every method
 at every budget, by far at 10 and 20 evaluations. At 50 and 100 it still
 loses by 0.2 to 0.4 for Euler's method, well outside the half-ranges; for
-the second-order methods the gap there is 0.1 to 0.2, no larger than the
-half-ranges, so at those budgets crowding does not help them and we cannot
-say that it hurts. Half of the one-dimensional result transfers, then:
-crowding the steps toward the data hurts Euler's method, but Heun's gain
-from crowding does not appear.
+the second-order methods the gap there shrinks to 0.1 to 0.2, one to two
+half-ranges, so at those budgets crowding does not help them, and it
+probably still costs a little. Half of the one-dimensional result
+transfers, then: crowding the steps toward the data hurts Euler's method,
+but Heun's gain from crowding does not appear.
 
 Why does the paper's grid lose here? The grid printout suggests two
 culprits, the crowding at the data end and the four steps spent at high
@@ -824,7 +825,9 @@ decided. Why the grid serves the models of Karras et al., we can only
 suggest. Their networks were trained on noise levels drawn log-normally
 around $\bar\sigma \approx 0.3$, the low-noise range their grid crowds, ours
 with $t$ uniform on the linear path; and they chose $\rho = 7$ at 35 to 79
-evaluations. We have tested neither explanation.
+evaluations. The next section tests the first explanation and rejects it: a
+model trained at EDM's levels still scores lower on the linear grid
+(:numref:`sec_diffusion-design-space`). The second remains open.
 
 ### Integration Error, Guidance and the Choice of a Sampler
 
@@ -908,9 +911,9 @@ to 1 above it; by fifty the multistep sampler has reached the reference's
 range or its edge, while Heun's method is 0.15 to 0.2 above it and Euler's
 about 0.3. The distances confirm the prediction only in part. At twenty
 evaluations Heun's distance to the reference is a third to a half larger
-than without guidance, but Euler's and the multistep sampler's have barely
-moved, and at ten and twenty evaluations the multistep sampler is the
-closest of the three. Under guidance, then, only the multistep sampler
+than without guidance, but Euler's and the multistep sampler's have moved
+by a sixth or less, and at ten and twenty evaluations the multistep sampler
+is the closest of the three. Under guidance, then, only the multistep sampler
 reaches the plateau by fifty evaluations, a hundred network passes; Heun's
 and Euler's methods need more, and the table does not say how many.
 
@@ -1272,22 +1275,23 @@ weighting change.
 ## Summary
 
 Training fixes only the distribution of the noisy point at each time, so one
-network serves a family of samplers. Its deterministic member, DDIM, is
+network serves a family of samplers: its deterministic member, DDIM, is
 Euler's method for the probability-flow ODE in the coordinates
 $(\mathbf{x}/\alpha, \sigma/\alpha)$, and its stochastic members add fresh
-noise; for data narrower than the noise the best variance lies between the
-posterior's and the forward step's. On the Fashion-MNIST model fresh noise
-cost quality at every budget up to two hundred steps and came within about
-0.2 of the deterministic sampler only at a thousand. Heun's method on the
-model's own training grid reached the plateau of the thousand-step samplers
-at about twenty evaluations, and Euler's method at fifty to a hundred. The
-grid mattered as much as the method, under guidance only the multistep
-sampler reached the plateau by fifty evaluations, and FD did not rank the
-solvers by their integration error. To choose a sampler for a new model,
-double the evaluations until the score stops moving. Run backwards, the
-deterministic sampler gives every image a code, with a first-order
-round-trip error; a sampler started from a partly noised image edits it,
-and one that overwrites the known pixels at every step inpaints.
+noise. On the Fashion-MNIST model fresh noise never helped: both stochastic
+samplers scored worse at every budget up to two hundred steps, and at a
+thousand the better of them only tied the deterministic one. Heun's method
+on the model's own training grid reached the plateau, the model's own
+error, at about twenty evaluations and Euler's method at fifty to a
+hundred; the crowded grid of Karras et al. lost for every method, and under
+guidance only the multistep sampler reached the plateau by fifty
+evaluations. FD, which scores the set of samples, did not rank the solvers
+by their integration error. To choose a sampler for a new model, start
+deterministic on the training grid and double the evaluations until the
+score stops moving by more than its run-to-run range. Run backwards, the
+deterministic sampler gives every image a code; a sampler started from a
+partly noised image edits it, and one that overwrites the known pixels at
+every step inpaints.
 
 ## Exercises
 
@@ -1725,7 +1729,7 @@ real against real about 0.9:
 
 - $\eta = 0$ a third or more below $\eta = 1$ at every budget up to 200
   steps.
-- At 1,000 steps all three within about 0.2; noise never overtakes.
+- At 1,000 steps all three within about 0.2; the ancestral chain ties.
 - Ancestral at 50 steps (8 to 11) loses to DDIM at 10.
 :::
 
@@ -1879,7 +1883,7 @@ error measures the steps, not whether the field is right.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Wrap-up"}
 [Wrap-up]{.kicker}
 
 - **One network, a family:** $\eta = 0$ is DDIM, Euler's method in

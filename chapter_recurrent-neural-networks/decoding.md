@@ -534,8 +534,8 @@ d2l.plot([np.arange(1, len(probs) + 1), [20, 20], [n_p, n_p],
                  f'min-p=0.05: keep {n_m}'])
 ```
 
-On log–log axes, the sorted probabilities fall steadily from roughly $0.2$ at
-rank 1 down to about $10^{-3}$ near rank 100 before plunging more steeply
+On log–log axes, the sorted probabilities fall steadily from between $0.1$ and
+$0.25$ at rank 1 down to about $10^{-3}$ near rank 100 before plunging more steeply
 across the remaining hundreds of tokens—the vast low-probability tail that
 truncation removes. To observe how adaptively each rule responds to model
 confidence, we compare `"The Time Traveller"` against the shorter prefix

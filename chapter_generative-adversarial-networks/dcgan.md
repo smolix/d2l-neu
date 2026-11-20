@@ -1488,9 +1488,8 @@ $R_1 = \|\nabla_x D(x)\|^2$ on real images, $R_2$ on generated ones.
   100× the penalized value within 2,000 steps.
 - Ranking accuracy: above 0.9 at most checks in all three arms.
 - Rank weight $w_{\mathrm{Rp}} = \mathbb{E}_x\,\sigma(D(x') - D(x))$:
-  low from the first check without the penalty, mostly below 0.15 apart
-  from spikes (a tenth: margin about 2.2); rises to 0.25 to 0.4 with it
-  (margin about 0.7, since $\sigma(-0.7) \approx 0.33$).
+  low from the first check without the penalty, mostly below 0.15; 0.25
+  to 0.4 with it (margin about 0.7, since $\sigma(-0.7) \approx 0.33$).
 :::
 
 ::: {.slide title="The Unpenalized Arm Collapses; Both Penalized Arms Stay Diverse"}

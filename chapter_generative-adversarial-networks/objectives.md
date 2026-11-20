@@ -172,7 +172,7 @@ def mixture_logpdf(x, mus, As):
         Sigma, diff = A.T @ A, x - mu
         sol = np.linalg.solve(Sigma, diff.T).T
         comps.append(-0.5 * ((diff * sol).sum(1)
-                             + np.log(np.linalg.det(2 * np.pi * Sigma))))
+                             + np.linalg.slogdet(2 * np.pi * Sigma)[1]))
     return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
 
 def sample_mixture(n, mus, As, rng):

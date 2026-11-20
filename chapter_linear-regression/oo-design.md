@@ -342,6 +342,8 @@ def loss(self, y_hat, y):
     return d2l.reduce_mean(l)
 ```
 
+We package our one-line SGD parameter update into a small `SGD` optimizer class
+
 Next, we wrap our from-scratch minibatch SGD update rule into a reusable `SGD(d2l.HyperParameters)` class and return it from `LinearRegressionScratch.configure_optimizers`:
 
 ```{.python .input #linear-regression-scratch-defining-the-optimization-algorithm-1  n=11}
@@ -459,6 +461,9 @@ class DataModule(d2l.HyperParameters):  #@save
     def val_dataloader(self):
         return self.get_dataloader(train=False)
 ```
+
+Next, we turn our synthetic dataset from :numref:`sec_synthetic-regression-data`
+into a `DataModule` subclass whose constructor calls `d2l.synthetic_data` to
 
 Let us package our synthetic regression generator from :numref:`sec_synthetic-regression-data` into `SyntheticRegressionData(d2l.DataModule)`. It generates `num_train + num_val` examples up front (1,000 training and 1,000 validation examples by default) so that `Trainer` can track both training loss and held-out validation loss after every epoch:
 
@@ -760,6 +765,8 @@ the progress board across models.
 
 ### Epoch Means
 
+### Epoch Means
+
 Because the last minibatch of an epoch is often smaller than `batch_size` (for instance, $1{,}000 = 31 \times 32 + 8$), an unweighted average of per-batch mean losses would give the 8 examples in the final batch the exact same vote as the 32 examples in every earlier batch. Our `Averager` helper accumulates each batch's metric weighted by its batch size `n`, so `avg.means()` always returns the exact per-example average across the entire split:
 
 ```{.python .input #linear-regression-scratch-training-5}
@@ -778,6 +785,8 @@ class Averager:  #@save
         names = sorted(self.sums, key=lambda name: (name != 'loss', name))
         return {name: float(self.sums[name]) / self.n for name in names}
 ```
+
+### Training and Validation Passes
 
 ### Training and Validation Passes
 
@@ -958,6 +967,8 @@ def validate(self):
 
 ### The Progress Board
 
+### The Progress Board
+
 Finally, `ProgressBoard` renders live epoch-by-epoch learning curves during notebook execution (and can be silenced via `trainer.board.display = False` whenever we run silent sweeps):
 
 ```{.python .input #oo-design-utilities-6}
@@ -985,7 +996,7 @@ class ProgressBoard(d2l.HyperParameters):  #@save
 
 ## Training Linear Regression Again
 
-Let us test our newly assembled `Module`, `DataModule`, and `Trainer` classes end-to-end by training `LinearRegressionScratch` on `SyntheticRegressionData` for 10 epochs and checking the recovered parameters:
+Let us test our newly assembled `Module`, `DataModule`, and `Trainer` classes end-to-end by training `LinearRegressionScratch` on `SyntheticRegressionData` for 3 epochs and checking the recovered parameters:
 
 ```{.python .input #oo-design-training-linear-regression-again-1}
 model = LinearRegressionScratch(2, lr=0.03)
@@ -1028,7 +1039,7 @@ print('error in w:', ', '.join(f'{e:.1e}' for e in w_error))
 print('error in b:', ', '.join(f'{e:.1e}' for e in b_error))
 ```
 
-Both training and validation loss drop smoothly to the $0.00005$ noise floor, and the recovered parameters match $(\mathbf{w}^*, b^*)$ to within about a thousandth—confirming that our object-oriented harness reproduces our standalone scratch loop while freeing every future chapter from boilerplate.
+Both training and validation loss drop smoothly to the $0.00005$ noise floor, and the recovered parameters match $(\mathbf{w}^*, b^*)$ to within a thousandth—confirming that our object-oriented harness reproduces our standalone scratch loop while freeing every future chapter from boilerplate.
 
 ## Summary
 

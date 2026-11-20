@@ -564,24 +564,25 @@ print(f'largest update {max(np.abs(u).max() for u in two):.1e}\n'
 
 :begin_tab:`pytorch`
 The DDP step agrees with the accumulated halves to about $10^{-7}$, which
-is rounding error, but it differs from the step on all 256 examples by
-about a tenth of the largest update. DDP normalizes each GPU's shard with
-the statistics of that shard. It computes what one GPU computes when it
-accumulates the gradients of the same shards
+is rounding error, but it differs from the step on all 256 examples by a
+few hundredths to a tenth of the largest update, depending on the run. DDP
+normalizes each GPU's shard with the statistics of that shard. It computes
+what one GPU computes when it accumulates the gradients of the same shards
 (:numref:`subsec_mp-accumulation`), not the step on the whole minibatch,
-and nothing warns us of the difference. A tenth sounds alarming, yet
-both steps are legitimate batch normalization, one with statistics over
-128 examples and one with statistics over 256. The choice starts to
-matter when a GPU holds only a few examples, whose mean and variance are
-noisy. `nn.SyncBatchNorm` then computes the statistics over the whole
-minibatch, with the added collectives (exercise :exref:`ex_mgp-syncbn`).
+and nothing warns us of the difference. A gap of this size sounds
+alarming, yet both steps are legitimate batch normalization, one with
+statistics over 128 examples and one with statistics over 256. The choice
+starts to matter when a GPU holds only a few examples, whose mean and
+variance are noisy. `nn.SyncBatchNorm` then computes the statistics over
+the whole minibatch, with the added collectives (exercise
+:exref:`ex_mgp-syncbn`).
 :end_tab:
 
 :begin_tab:`jax`
 The check settles the question by itself. The two-GPU step differs from
-one GPU on all 256 examples by a few times $10^{-5}$, about two orders of
-magnitude less than from the accumulated halves, which miss by about a
-tenth of the largest update. The first gap is of the size that summing
+one GPU on all 256 examples by $10^{-4}$ or less, about two orders of
+magnitude less than from the accumulated halves, which miss by a tenth of
+the largest update or more. The first gap is of the size that summing
 the same numbers in a different order produces in this network: on two
 GPUs, every weight gradient and every batch-norm statistic is summed in
 two parts, one per GPU, before the parts are added. The second gap is
@@ -793,13 +794,13 @@ from d2l import torch as d2l
 _, _, device = d2l.init_distributed()
 x = torch.zeros(2**26, device=device)   # 64M floats: 256 MB
 t = d2l.Benchmark(lambda: dist.all_reduce(x), repeats=10).time
-print(json.dumps({'beta_link': x.nbytes / t}))  # Each GPU sends S at k = 2
+print(json.dumps({'beta_link': t / x.nbytes}))  # Each GPU sends S at k = 2
 dist.destroy_process_group()
 '''
 def allreduce_beta(env=None):
-    """beta_link of a bare 256 MB allreduce on two GPUs: the bytes per
-    second that each GPU sends."""
-    return min(r['beta_link'] for r in d2l.torchrun(ALLREDUCE, 2, env=env))
+    """beta_link of a bare 256 MB allreduce on two GPUs: the seconds
+    per byte that each GPU sends."""
+    return max(r['beta_link'] for r in d2l.torchrun(ALLREDUCE, 2, env=env))
 ```
 
 ```{.python .input #multi-gpu-practice-communication-predicted-and-measured-1}
@@ -815,11 +816,11 @@ x = jnp.zeros((2, 2**26), device=NamedSharding(mesh, P('data')))  # 256 MB
 psum = jax.jit(jax.shard_map(lambda x: jax.lax.psum(x, 'data'), mesh=mesh,
                              in_specs=P('data'), out_specs=P('data')))
 t = d2l.Benchmark(lambda: psum(x), repeats=10).time
-print(json.dumps({'beta_link': x.nbytes / mesh.size / t}))  # S per GPU
+print(json.dumps({'beta_link': t / (x.nbytes / mesh.size)}))  # S per GPU
 '''
 def allreduce_beta(env=None):
-    """beta_link of a bare 256 MB allreduce on two GPUs: the bytes per
-    second that each GPU sends."""
+    """beta_link of a bare 256 MB allreduce on two GPUs: the seconds
+    per byte that each GPU sends."""
     run = subprocess.run([sys.executable, '-c', ALLREDUCE], check=True,
                          capture_output=True, text=True,
                          env={**os.environ, **(env or {})})
@@ -830,11 +831,12 @@ def allreduce_beta(env=None):
 %%tab pytorch, jax
 if d2l.num_gpus() >= 2:
     beta_link = allreduce_beta()
-    print(f'beta_link = {beta_link / 1e9:.2f} GB/s')
+    print(f'bus bandwidth = {1e-9 / beta_link:.2f} GB/s '
+          f'(beta_link = {1e9 * beta_link:.2f} ns/byte)')
     for k in ks[1:]:
         ring = 2 * (k - 1) / k     # Bytes that each GPU sends, per byte of S
-        print(f'k={k}: predicted {ring:.1f} S/beta_link = '
-              f'{1e3 * ring * S / beta_link:.0f} ms, measured exposed '
+        print(f'k={k}: predicted {ring:.1f} S beta_link = '
+              f'{1e3 * ring * S * beta_link:.0f} ms, measured exposed '
               f'{1e3 * (weak[k] - weak[1]):.0f} ms per step')
 ```
 
@@ -974,13 +976,13 @@ The step is hardly longer than its computation kernels (127 against
 The two numbers come from different measurements, the wall clock of 50
 steps and the kernel time of ten, so their difference is not precise to
 a millisecond. But the computation kernels now take 125 ms instead of
-112 ms. Overlap works, and 14 of the 18 ms that it hides come back as
-slower computation.
+112 ms. Overlap works, and about 13 of the 18 ms that it hides come back
+as slower computation.
 :end_tab:
 
 :begin_tab:`jax`
-For about 12 ms of the step GPU 0 only communicates (119.4 against
-107.7 ms of computation). These 12 ms hold the last gradient buffer,
+For about 11 ms of the step GPU 0 only communicates (about 119 against
+108 ms of computation). These 11 ms hold the last gradient buffer,
 which full overlap would leave exposed (8 to 11 ms), and some of the small
 allreduces of the statistics, which nothing can hide. The other 10 ms of
 NCCL's kernels run beside the computation, which takes 8 ms longer than
@@ -1018,9 +1020,9 @@ if d2l.num_gpus() >= 2:
     # exists in NCCL 2.28.9 (bundled with PyTorch 2.11) and 2.30.4 (with
     # jaxlib 0.12); the library of NCCL 2.31.2 no longer contains it
     beta_ce = allreduce_beta({'NCCL_SHM_USE_CUDA_MEMCPY': '1'})
-    print(f'beta_link = {beta_link / 1e9:.2f} GB/s by default, '
-          f'{beta_ce / 1e9:.2f} GB/s with the copy engines '
-          f'({beta_ce / beta_link:.1f}x)')
+    print(f'bus bandwidth {1e-9 / beta_link:.2f} GB/s by default, '
+          f'{1e-9 / beta_ce:.2f} GB/s with the copy engines '
+          f'({beta_link / beta_ce:.1f}x)')
 ```
 
 The bare allreduce runs four to five times faster, and the predicted
@@ -1344,13 +1346,13 @@ overlap; the chapter's GPT returns in the next deck.
 ::: {.col}
 | section | adds |
 |---|---|
-| The Performance Model | roofline, three regimes, timing, profiling |
+| The Performance Model | roofline, regimes, timing, profiles |
 | Hardware | where peak arithmetic and bandwidth come from |
 | Computation Graphs and Compilation | fusion and kernel replay |
-| Memory and Precision | what fits: bytes per parameter and per token |
-| Multi-GPU from First Principles | data parallelism by hand, its cost model |
-| **Data Parallelism in Practice** | **production tools, scaling on four GPUs** |
-| Sharding the Training State | the training state divided among the GPUs |
+| Memory and Precision | bytes per parameter and per token |
+| Multi-GPU from First Principles | data parallelism by hand, cost model |
+| **Data Parallelism in Practice** | **production tools on four GPUs** |
+| Sharding the Training State | training state split across GPUs |
 | Case Study: Optimizing a Transformer | the whole method on one GPT |
 :::
 
@@ -1532,7 +1534,7 @@ single-GPU references:
 @!multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-5
 
 - Matches one GPU on all 256 to the size of a change in summation order;
-  per-shard statistics would miss by about a tenth of the update.
+  per-shard statistics would miss by a tenth of the update or more.
 - Why: batch-norm means over the split batch axis span all GPUs, so the
   compiler inserts allreduces for them.
 

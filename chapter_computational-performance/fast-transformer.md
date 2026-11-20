@@ -265,18 +265,25 @@ computes from fp32 logits.
 
 ```{.python .input #fast-transformer-rung-0-baseline-profiled}
 %%tab pytorch
-def make_step(model, forward=None, bf16=False):  #@save
+def make_step(model, forward=None, bf16=False, warmup=0):  #@save
     """An AdamW training step of `model` on a minibatch (X, Y); `forward`
-    replaces the model's forward pass, `bf16` turns on autocast."""
+    replaces the model's forward pass, `bf16` turns on autocast, and a
+    `warmup` > 0 raises the learning rate linearly to 1e-3 over as many
+    steps."""
     forward = model if forward is None else forward
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
                                   weight_decay=0.01, fused=True)
+    if warmup:
+        schedule = torch.optim.lr_scheduler.LambdaLR(
+            optimizer, lambda i: min(1, (i + 1) / warmup))
     def step(X, Y):
         with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
             loss = F.cross_entropy(forward(X).flatten(0, 1), Y.flatten())
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
+        if warmup:
+            schedule.step()
         return loss
     return step
 
@@ -639,13 +646,14 @@ minibatch from 64 to 512 windows, or 65,536 tokens per step, spreads 7/8
 of this cost and should gain a few percent, about 5% if these are the
 only fixed costs.
 
-The change is still worth making, because data parallelism helps only
-when the step on each GPU is long (:numref:`subsec_ft-dp`). It is not
-free in training terms: beyond the critical batch size of
-:numref:`sec_batch_size`, eight times the examples per step do not make a
-step eight times as useful (exercise :exref:`ex_ft-target`). Since the
-activations grow with the minibatch, we also record the memory that the
-step needs beyond the weights and the optimizer state.
+The change is still worth making, because data parallelism gains much only
+once the step on each GPU is several times longer than the allreduce
+(:numref:`subsec_ft-dp`). It is not free in training terms: beyond the
+critical batch size of :numref:`sec_batch_size`, eight times the examples
+per step do not make a step eight times as useful (exercise
+:exref:`ex_ft-target`). Since the activations grow with the minibatch, we
+also record the memory that the step needs beyond the weights and the
+optimizer state.
 
 :begin_tab:`pytorch`
 `torch.cuda.max_memory_allocated` reports the most memory allocated since
@@ -1140,27 +1148,33 @@ different size would leave it unchanged. We therefore train two copies of
 one initialization, one with the step of the baseline and one with the
 final step, on the same 200 minibatches of 512 windows, about 13 million
 tokens, and compute the loss of both on the validation text with
-`d2l.lm_perplexity` (:numref:`sec_test_models`), in nats per byte. If the
-final step computes the same training, the two curves should start at the
-same loss and stay within a tenth of a nat of each other while training
-runs smoothly, and as a floor each validation loss must lie below the 2.45
-nats per byte of the bigram model of :numref:`sec_gpt`. Smoothness is not
-guaranteed. The timing runs use a constant learning rate without warm-up
-or gradient clipping. With such a recipe the loss now and then rises by a
-few tenths of a nat or more late in training, and one curve can then lie
-well above the other at a single printed step. The check is coarse in the
-other direction as well: a defect that changes the weights by a fraction
-of a percent over 200 steps, such as a dropped weight decay of 0.01,
-passes it.
+`d2l.lm_perplexity` (:numref:`sec_test_models`), in nats per byte.
+Unlike the timing runs, the check warms the learning rate up linearly over
+its first 50 steps, for the reason that :numref:`sec_gpt` gives. Without
+the warm-up, 200 steps of AdamW at a constant $10^{-3}$ now and then let
+the loss jump by a few tenths of a nat late in training, and a jump in
+either curve would hide what the check looks for. The timing runs need no
+warm-up, since the time of a step does not depend on its learning rate.
+If the final step computes the same training, the two curves start at
+the same loss, the means of their last 20 steps agree to within 0.15
+nats, so do the two validation losses, and both validation losses lie
+below the 2.45 nats per byte of the bigram model of :numref:`sec_gpt`.
+The cell asserts the last three. The tolerance comes from repeated runs
+of this check, in which the two curves drifted apart by up to a tenth of
+a nat: rounding to bf16 sends the two runs along slightly different
+paths, and a single step can lie further off than the mean of 20. The check is coarse in the other
+direction: a defect that changes the weights by a fraction of a percent
+over 200 steps, such as a dropped weight decay of 0.01, passes it.
 
 ```{.python .input #fast-transformer-the-waterfall-1}
 %%tab pytorch
 learner = d2l.GPT(len(data.vocab), num_hiddens=512).to(device)
 reference = d2l.GPT(len(data.vocab), num_hiddens=512).to(device)
 reference.load_state_dict(learner.state_dict())  # One initialization
-steps = {'baseline': make_step(reference),
+steps = {'baseline': make_step(reference, warmup=50),
          'final': make_step(learner, torch.compile(
-             learner, dynamic=False, mode='reduce-overhead'), bf16=True)}
+             learner, dynamic=False, mode='reduce-overhead'), bf16=True,
+             warmup=50)}
 batches = windows(corpus, 512)
 minibatches = [next(batches) for _ in range(200)]  # The same for both
 losses = {name: torch.stack([step(X, Y).detach()
@@ -1177,11 +1191,14 @@ learner = d2l.to_bf16(FusedGPT(len(data.vocab), num_hiddens=512,
 reference = d2l.GPT(len(data.vocab), num_hiddens=512,
                     rngs=nnx.Rngs(d2l.get_key()))
 nnx.update(reference, nnx.state(learner, nnx.Param))  # One initialization
-reference_optimizer = nnx.Optimizer(reference, adamw, wrt=nnx.Param)
+# The learning rate rises linearly to 1e-3 over the first 50 steps
+warm = optax.adamw(optax.linear_schedule(1e-3 / 50, 1e-3, 49),
+                   weight_decay=0.01)
+reference_optimizer = nnx.Optimizer(reference, warm, wrt=nnx.Param)
 steps = {'baseline': lambda X, Y: jit_step(reference, reference_optimizer,
                                            X, Y),
          'final': nnx.jit_partial(train_step, learner, nnx.Optimizer(
-             learner, adamw, wrt=nnx.Param), graph=False)}
+             learner, warm, wrt=nnx.Param), graph=False)}
 batches = windows(corpus, 512)
 minibatches = [next(batches) for _ in range(200)]  # The same for both
 losses = {name: jnp.stack([step(X, Y) for X, Y in minibatches]).tolist()
@@ -1193,48 +1210,33 @@ validation = {name: math.log(d2l.lm_perplexity(net, data.val_dataloader()))
 ```{.python .input #fast-transformer-training-check}
 %%tab pytorch, jax
 checkpoints = (1, 50, 100, 200)
+late = {name: np.mean(curve[-20:]) for name, curve in losses.items()}
 print(f'{"loss at step":14}' + ''.join(f'{i:>7}' for i in checkpoints)
-      + f'{"last 20 steps":>18}{"validation":>12}')
+      + f'{"mean of last 20":>17}{"validation":>12}')
 for name, curve in losses.items():
-    last = curve[-20:]
     print(f'{name:14}' + ''.join(f'{curve[i - 1]:7.2f}' for i in checkpoints)
-          + f'{min(last):10.2f} to {max(last):.2f}{validation[name]:12.2f}')
+          + f'{late[name]:17.2f}{validation[name]:12.2f}')
     assert validation[name] < 2.45  # Better than the bigram model
+for values in (late, validation):  # The final step trains like the baseline
+    assert abs(values['baseline'] - values['final']) < 0.15
 ```
 
 Both curves start at the same loss, near $\log 256 \approx 5.55$, the
 loss of a uniform guess over the 256 bytes, since both models start from
-the same weights. Through step 100 they stay within a tenth of a nat of
-each other, and both validation losses lie below the bigram level.
-
-:begin_tab:`pytorch`
-The agreement lasts to the end. At step 200 the two curves differ by a few
-hundredths of a nat, over its last 20 steps each moves in a band less than
-a tenth of a nat wide, and the two validation losses differ by about a
-hundredth, both well below the bigram level.
-:end_tab:
-
-:begin_tab:`jax`
-In this run the loss of the baseline rose late: over its last 20 steps it
-lies between 2.13 and 2.81, and at step 200 it stands 0.22 nats above the
-final step, with a validation loss 0.21 higher. The curve of the final
-step shows no such rise. A rise in the reference is no evidence against
-the step under test, but it removes the comparison at step 200 and on the
-validation text, and what remains is the agreement through step 100 and
-the bigram floor.
-:end_tab:
-
-One pair of runs can show no more than this: the final step starts where
-the baseline starts, follows it while training runs smoothly, and ends
-below the bigram floor.
+the same weights. The two curves stay close at every printed step, the
+late means and the validation losses agree to within the tolerance, and
+both validation losses lie well below the bigram level. One pair of runs
+can show no more than this: the final step starts where the baseline
+starts, follows it to the end, and reaches nearly the same validation
+loss.
 
 The same run shows what a throughput table leaves out. The GPT of
 :numref:`sec_gpt` reached 1.35 nats per byte after 8 million tokens. This
-run saw 13 million and ends more than half a nat higher. It took 200 steps
-where that run took 1,000, and it kept the constant learning rate of the
-timing runs instead of a schedule tuned for 200 steps. Throughput is not
-progress: a training run needs a short time to a target loss, and exercise
-:exref:`ex_ft-target` works out when a larger minibatch shortens it.
+run saw 13 million and ends higher. It took 200 steps where that run took
+1,000, and its learning rate never decays, where the cosine schedule of
+that run brought it to zero. Throughput is not progress: a training run
+needs a short time to a target loss, and exercise :exref:`ex_ft-target`
+works out when a larger minibatch shortens it.
 
 ### Account of the Final Step
 :label:`subsec_ft-account`
@@ -1624,7 +1626,7 @@ The measurement then tests the diagnosis, not only the change.
 - Device busy for nearly the whole step: the host keeps up.
 - The third outside the products: short elementwise and normalization
   kernels, bandwidth-bound.
-- Fusion can gain at most step ÷ products $= 25.5 / 15.6 \approx 1.6$.
+- Fusion can gain at most step ÷ products $\approx 25 / 15.6 \approx 1.6$.
 :::
 
 ::: {.slide title="The Jitted Step Is Busy, and XLA Has Fused It Already" only="jax"}
@@ -1862,15 +1864,15 @@ Two predictions of opposite sign, a loss and a gain; both held.
 @!fast-transformer-training-check
 
 - One initialization, the same 200 minibatches of 512 windows.
-- The same loss at step 1, within a tenth of a nat through step 100;
-  both validation losses below the bigram model's 2.45.
-- Constant rate, no warm-up or clipping: a curve can rise late, so one
-  late value settles little.
+- Learning rate warmed up over 50 steps: without it the loss can jump
+  late. Timing needs none; a step's time ignores its learning rate.
+- Asserted: mean of the last 20 steps and validation within 0.15 nats
+  (bf16 paths drift by up to a tenth); both below the bigram's 2.45.
 - A coarse check: a dropped weight decay would pass it.
 
 ::: {.d2l-note .warn}
-13M tokens, yet more than half a nat above the 1.35 the Transformers
-chapter reached after 8M: throughput is not progress.
+13M tokens, yet above the 1.35 the Transformers chapter reached after
+8M: throughput is not progress.
 :::
 :::
 

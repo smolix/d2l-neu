@@ -2750,20 +2750,27 @@ def windows(corpus, batch_size, num_steps=128):
         W = corpus[starts + offsets].long()
         yield W[:, :-1], W[:, 1:]
 
-def make_step(model, forward=None, bf16=False):
+def make_step(model, forward=None, bf16=False, warmup=0):
     """An AdamW training step of `model` on a minibatch (X, Y); `forward`
-    replaces the model's forward pass, `bf16` turns on autocast.
+    replaces the model's forward pass, `bf16` turns on autocast, and a
+    `warmup` > 0 raises the learning rate linearly to 1e-3 over as many
+    steps.
 
     Defined in :numref:`sec_fast_transformer`"""
     forward = model if forward is None else forward
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
                                   weight_decay=0.01, fused=True)
+    if warmup:
+        schedule = torch.optim.lr_scheduler.LambdaLR(
+            optimizer, lambda i: min(1, (i + 1) / warmup))
     def step(X, Y):
         with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
             loss = F.cross_entropy(forward(X).flatten(0, 1), Y.flatten())
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
+        if warmup:
+            schedule.step()
         return loss
     return step
 

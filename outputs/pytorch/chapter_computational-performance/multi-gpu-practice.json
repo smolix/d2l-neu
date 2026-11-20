@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "largest update 1.6e-02\nlargest difference from one GPU on all 256: 1.6e-03\nlargest difference from one GPU on two accumulated halves: 1.2e-07\n"
+          "text": "largest update 2.6e-02\nlargest difference from one GPU on all 256: 9.3e-04\nlargest difference from one GPU on two accumulated halves: 1.2e-07\n"
         }
       ]
     },
@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 GPU(s):  2285 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4038 examples/s, speedup 1.77, efficiency 88%\n4 GPU(s):  7564 examples/s, speedup 3.31, efficiency 83%\n"
+          "text": "1 GPU(s):  2282 examples/s, speedup 1.00, efficiency 100%\n2 GPU(s):  4033 examples/s, speedup 1.77, efficiency 88%\n4 GPU(s):  7549 examples/s, speedup 3.31, efficiency 83%\n"
         }
       ]
     },
@@ -85,33 +85,33 @@
           "mime": "image/svg+xml",
           "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
           "bytes": 25898,
-          "sha256": "sha256:02485c78c6f7bd80a26ffc58822d0adc7afae5c4550e950b7c8e3458a37d7e7a"
+          "sha256": "sha256:0e7019c8885cd6379b1c808efee01c9e7d7c703dd91d8a827ab6e48434a91fa1"
         }
       ]
     },
     "multi-gpu-practice-communication-predicted-and-measured-1": {
-      "code_fingerprint": "sha256:bacaaff73fdaf2772cb870f0e272e4e87ccbf95555b4661ea1e0383325f4be71",
+      "code_fingerprint": "sha256:04078992e7dc2546f19fd2f88504f8930d4ed12b2dc99127a5fec36bbf9de85e",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-ddp-really-run-5": {
-      "code_fingerprint": "sha256:6f33bafae090334867acfa51b080d236f729ebe89ad72aae4deda0dcca3f8ce7",
+      "code_fingerprint": "sha256:51cacc0b635ffc33bc8f053ccc89eaa9020c1629c6b6cc85b5789850a822575c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta_link = 2.42 GB/s\nk=2: predicted 1.0 S/beta_link = 18 ms, measured exposed 15 ms per step\nk=4: predicted 1.5 S/beta_link = 28 ms, measured exposed 23 ms per step\n"
+          "text": "bus bandwidth = 2.42 GB/s (beta_link = 0.41 ns/byte)\nk=2: predicted 1.0 S beta_link = 18 ms, measured exposed 15 ms per step\nk=4: predicted 1.5 S beta_link = 28 ms, measured exposed 23 ms per step\n"
         }
       ]
     },
     "multi-gpu-practice-predicted-and-measured-communication-2": {
-      "code_fingerprint": "sha256:93a078c9e7ac82ababdf2f92a98eb1d945517a02506333d01db32cea4913fae1",
+      "code_fingerprint": "sha256:d12c6d5783d7808dda329bd7e888c1d8c8e26c4fe64fe32f69046eabb484cba6",
       "kind": "text",
       "outputs": []
     },
     "multi-gpu-practice-predicted-and-measured-communication-1": {
-      "code_fingerprint": "sha256:7256fa7927f8953ba4b5d9dd4cebe31ae99f5420bd0ef692619e0386b8c09f26",
+      "code_fingerprint": "sha256:6025ab473e89b42760ac9efe33af72d09d3eecb3b32f77fcdd039e05679e509b",
       "kind": "text",
       "outputs": [
         {
@@ -122,23 +122,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPUs without communication:  112.0 ms per step; GPU 0 computes  111.5 ms, communicates   0.0 ms\n"
+          "text": "2 GPUs without communication:  112.0 ms per step; GPU 0 computes  111.6 ms, communicates   0.0 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 GPUs:                        126.9 ms per step; GPU 0 computes  125.2 ms, communicates  19.8 ms\n"
+          "text": "2 GPUs:                        127.0 ms per step; GPU 0 computes  125.2 ms, communicates  19.9 ms\n"
         }
       ]
     },
     "multi-gpu-practice-ddp-really-run-6": {
-      "code_fingerprint": "sha256:ed619647627183e26f7d65947f37f393a8707415a2815c151e5245e492c51654",
+      "code_fingerprint": "sha256:0d79a0e3c8fcfaeb71f979d957c4c43ab8ff9e16a392802f4232b0869f2049a8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "beta_link = 2.42 GB/s by default, 11.41 GB/s with the copy engines (4.7x)\n"
+          "text": "bus bandwidth 2.42 GB/s by default, 11.48 GB/s with the copy engines (4.7x)\n"
         }
       ]
     }

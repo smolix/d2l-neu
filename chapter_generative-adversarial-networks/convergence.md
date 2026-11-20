@@ -661,7 +661,7 @@ for name, (loss_D, loss_G, gamma, n_runs) in arms.items():
 grid = np.asarray(centers)
 ```
 
-The cell below prints one row per run.
+Each run gets one row: the covered modes, the on-mode fraction and the mean distance for 10,000 samples of the trained generator, and the critic's steepness averaged over its last 1,250 steps.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-2}
 %%tab pytorch, jax
@@ -673,7 +673,7 @@ for name, results in runs.items():
               f'  {trace[-1][2]:13.1e}')
 ```
 
-The next cell draws run 0 of each of the four arms, with 3,000 generated samples in orange and the 25 centers in blue.
+Numbers alone hide where the off-mode samples go, so we also draw run 0 of each of the four arms: 3,000 generated samples in orange, the 25 centers as blue crosses.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-7}
 %%tab pytorch, jax
@@ -687,7 +687,7 @@ for ax, name in zip(axes, list(runs)[:4]):
 fig.tight_layout()
 ```
 
-The prediction about the critic holds by a wide margin. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends below $0.003$ in every run; without it, between about 0.7 and 17. The unpenalized critic stays steep at the generated samples, like the undamped slope $\psi$ of the Dirac-GAN. Coverage follows the penalty, not the loss. Every run at $\gamma = 1$ covers 24 or 25 modes (all 25 in the runs printed here), while the unpenalized runs range from about a dozen modes to all 25: without the penalty, coverage is a matter of luck. Pairing makes no difference beyond this run-to-run range, with or without the penalty: the coverage benefit that R3GAN measured on StackedMNIST is not visible in our runs. Nor does the penalty make the fit sharper. In all four arms 64% to 94% of the samples lie on a mode, against 98.9% for a perfect fit, at a mean distance of 0.08 to 0.24 from the nearest center, against about 0.06. The scatter plots show where the rest go: mostly on lines between neighbouring centers. A continuous generator cannot jump from one island to the next, so it draws the bridges. In the unpenalized NS panel some interior modes are nearly empty.
+The prediction about the critic holds by a wide margin. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends below $0.003$ in every run; without it, between about 0.7 and 17. The unpenalized critic stays steep at the generated samples, like the undamped slope $\psi$ of the Dirac-GAN. Coverage follows the penalty, not the loss. Every run at $\gamma = 1$ covers 24 or 25 modes (all 25 in the runs printed here), while the unpenalized runs range from about a dozen modes to all 25: without the penalty, coverage is a matter of luck. Pairing makes no difference beyond this run-to-run range, with or without the penalty: the coverage benefit that R3GAN measured on StackedMNIST is not visible in our runs. Nor does the penalty make the fit sharper. In all four arms 64% to 94% of the samples lie on a mode, against 98.9% for a perfect fit, at a mean distance of 0.08 to 0.24 from the nearest center, against about 0.06. The scatter plots show where the rest go: mostly on lines between neighbouring centers, with a few strays elsewhere. A continuous generator cannot jump from one island to the next, so it draws the bridges. In the unpenalized NS panel some interior modes are nearly empty.
 
 At $\gamma = 10$ the fit is much looser: only 19% to 28% of the samples lie on a mode, at a mean distance two to five times that at $\gamma = 1$, though 23 to 25 modes still hold some mass. The larger penalty flattens the critic further, to about $10^{-4}$, and the fit is slower. More friction is not always better, and the section has offered two reasons why: the overdamped spring approaches its equilibrium more slowly, at a rate near $\ell'(0)^2/\gamma$, and the low-pass filter damps short length scales more. Both give the direction of the effect, neither its size, since both assumed a generator near the data and the filter also a slowly varying $m$ (exercise :exref:`ex_convergence-penalty-length`).
 
@@ -1183,6 +1183,8 @@ $\mathbb{E}_q\|\nabla_x D\|^2$ at the generated samples.
   Unpenalized: 0.7 to 17, about a dozen to 25 modes.
 - Pairing: no effect beyond the run-to-run range. Sharpness: no arm near a
   perfect fit.
+- Off-mode samples sit on bridges between neighbouring centers: a
+  continuous generator cannot jump between islands.
 :::
 
 ::: {.slide title="A Critic Loss at Its Equilibrium Value Certifies Nothing"}

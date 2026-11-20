@@ -504,7 +504,9 @@ d2l.show_gray(jnp.concatenate([x_pixel[:8], x_latent[:8]]), 2, 8);
 ```
 
 Both rows show recognizable garments. The latent model scores an FD of
-about 2 (2.0 to 2.2), the pixel model about 1.5.
+about 2 (2.0 to 2.2), the pixel model about 1.5. Both are unconditional, as
+are all models of this section, so neither can be compared with the
+class-conditional 0.8 of :numref:`sec_diffusion-images`.
 
 What did the latent model save? `train_step_gflops` counts the
 floating-point operations of one training step, forward and backward on 128
@@ -1210,6 +1212,9 @@ keep growing it, the regime in which Peebles and Xie measured. Because the
 autoencoder shapes both numbers whatever the backbone, the design of image
 autoencoders, often called *tokenizers*, has become a field of its own.
 
+Latents and transformers make each network evaluation cheaper. Neither
+reduces the number of evaluations, fifty per sample in this section.
+
 ## Summary
 
 Diffusion does not need to run on pixels. An autoencoder with a small KL term
@@ -1224,9 +1229,7 @@ The diffusion transformer reads latents or pixels as patch tokens and lets the
 condition set a scale, a shift and a gate in every block, starting from the
 identity. At our scale the U-Net beat it at equal compute, while the
 transformer's FD fell faster as it grew. A latent helps when images are large,
-a transformer when budgets are. However cheap each evaluation is, fifty
-evaluations per sample remain fifty; the next section asks how to get by with
-one or two.
+a transformer when budgets are.
 
 ## Exercises
 

@@ -761,7 +761,9 @@ too, and corrects for its bias by comparison rather than by formula.
 The rest of the chapter compares FDs only at the same number of images and
 with the same feature network. It treats two FDs of 5,000 images that differ
 by less than about 0.05, the spread of the five real sets, as equal; at
-1,000 images that spread is 0.15 to 0.2.
+1,000 images that spread is 0.15 to 0.2. Later sections print the reference
+value beside their scores as the *floor*, the score that a perfect generator
+would reach on average.
 
 Our samples, at about 0.8, lie about five times above the reference value
 at 5,000 images; the gap is the error of our model. Yet they score lower

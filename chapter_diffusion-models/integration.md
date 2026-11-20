@@ -312,7 +312,7 @@ def make_pred(net, path, kind):  #@save
 
 ### The Learned Field
 
-Does the trained velocity network behave like the exact field, landing on the data mean after one step and in the modes after ten? We run it from $2{,}000$ standard Gaussian starts with one, ten and a hundred steps of `ode_sample`. Two more rows make the numbers readable: $2{,}000$ draws from the data themselves, the grey points of the plot, and the oracle taking the same ten steps from the same starts. Last, the cell runs `ode_sample` with the oracle against the plain Euler loop with `mix.velocity`. On the linear path the two take identical steps, so they should agree up to rounding.
+Does the trained velocity network behave like the exact field, landing on the data mean after one step and in the modes after ten? We run it from $2{,}000$ standard Gaussian starts with one, ten and a hundred steps of `ode_sample`. Two more rows make the numbers readable: $2{,}000$ draws from the data themselves, the gray points of the plot, and the oracle taking the same ten steps from the same starts. Last, the cell runs `ode_sample` with the oracle against the plain Euler loop with `mix.velocity`. On the linear path the two take identical steps, so they should agree up to rounding.
 
 ```{.python .input #gaussian-paths-the-probability-flow-ode-and-euler-s-method-1}
 %%tab pytorch

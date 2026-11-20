@@ -166,25 +166,22 @@ should move no point. The exact estimates are $\hat{\mathbf{x}}_0 = \alpha_t
 one deterministic stride from $t = 1$ to $t = 0$ returns $\hat{\mathbf{x}}_0
 = \alpha_1 \mathbf{x}_1$: with $\alpha_1 \approx 0.0066$ the whole cloud
 collapses onto its mean. The step holds the noise estimate fixed across the
-stride, while along the exact trajectory it changes. In the coordinates
-$\bar{\mathbf{x}} = \mathbf{x} / \alpha_t$ and $\bar\sigma_t = \sigma_t /
-\alpha_t$ of :numref:`sec_diffusion-integration`, every Gaussian path reads
-$\bar{\mathbf{x}}_t = \mathbf{x}_0 + \bar\sigma_t \boldsymbol\epsilon$, and
-the ratio $\kappa$ above is simply $\bar\sigma_s / \bar\sigma_t$. The
-deterministic step is $\bar{\mathbf{x}}_s = \hat{\mathbf{x}}_0 +
-\bar\sigma_s \hat{\boldsymbol\epsilon}$, and substituting
-:eqref:`eq_diffusion-x0-hat` gives
+stride, while along the exact trajectory it changes.
+
+At $\eta = 0$ the step is $\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 +
+\sigma_s \hat{\boldsymbol\epsilon}$, the step that `ode_sample` takes in
+:numref:`sec_diffusion-integration`. In the coordinates $\bar{\mathbf{x}} =
+\mathbf{x} / \alpha_t$ and $\bar\sigma_t = \sigma_t / \alpha_t$ derived
+there it reads
 
 $$\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\, \hat{\boldsymbol\epsilon},$$
 
-one Euler step of the ODE $d\bar{\mathbf{x}} / d\bar\sigma =
-\hat{\boldsymbol\epsilon}$. For the exact noise estimate this is the
-probability-flow ODE with the noise level $\bar\sigma$ as the clock, so on
-every Gaussian path DDIM is Euler's method. `ode_sample` of
-:numref:`sec_diffusion-integration` takes exactly these steps: with
-$\eta = 0$, `ddim_sample` and `ode_sample` on the same levels compute one
-function in two coordinate systems. :numref:`sec_mdl-ddim-guidance` proves
-the equivalence, together with the two extreme cases: a single data point is
+one Euler step of the probability-flow ODE $d\bar{\mathbf{x}} / d\bar\sigma =
+\hat{\boldsymbol\epsilon}$, and the ratio $\kappa$ above is simply
+$\bar\sigma_s / \bar\sigma_t$. On every Gaussian path, then, DDIM is
+Euler's method, and with $\eta = 0$ `ddim_sample` and `ode_sample` on the
+same levels compute one function in two coordinate systems.
+:numref:`sec_mdl-ddim-guidance` proves the equivalence, together with the two extreme cases: a single data point is
 integrated without error by strides of any length, because
 $\hat{\boldsymbol\epsilon}$ is then constant along each trajectory, and
 Gaussian data shrink at every stride (:numref:`fig_mdl-dyn-ddim-strides`).
@@ -223,7 +220,7 @@ on images in :numref:`subsec_diffusion-samplers-quality`.
 :numref:`fig_diffusion-two-samplers` shows both ends of the family on the
 mixture.
 
-![The two ends of the DDIM family on the three-mode mixture with the exact predictor, 200 steps on the variance-preserving path from three starting points at $t = 1$ (circles) to $t = 0$ (crosses); training data in grey. (a) At $\eta = 0$ each start follows a smooth curve into a mode. (b) At $\eta = 1$ the paths are jagged, and here two of the three end in a different mode than in (a); the first half of each path, where noise dominates, is drawn faded. Both produce the same distribution at $t = 0$.](../img/mdl-diffusion-two-samplers.svg)
+![The two ends of the DDIM family on the three-mode mixture with the exact predictor, 200 steps on the variance-preserving path from three starting points at $t = 1$ (circles) to $t = 0$ (crosses); training data in gray. (a) At $\eta = 0$ each start follows a smooth curve into a mode. (b) At $\eta = 1$ the paths are jagged, and here two of the three end in a different mode than in (a); the first half of each path, where noise dominates, is drawn faded. Both produce the same distribution at $t = 0$.](../img/mdl-diffusion-two-samplers.svg)
 :label:`fig_diffusion-two-samplers`
 
 Two stochastic samplers must be kept apart. The ancestral chain adds the
@@ -1628,7 +1625,7 @@ $f = 1 - \mathrm{SNR}_t/\mathrm{SNR}_s$ of the noise is fresh? On a
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $f = 1 - (59/152)^2 \approx 0.85$: most of the noise is
-replaced. On a fine grid neighbouring levels have nearly equal SNR, so $f$
+replaced. On a fine grid neighboring levels have nearly equal SNR, so $f$
 is small even at $\eta = 1$.
 :::
 :::

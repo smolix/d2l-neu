@@ -35,7 +35,7 @@ torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
 
 ## Paths from Data to Noise
 
-A walk through all noise levels needs the levels in a row, each labelled by a time.
+A walk through all noise levels needs the levels in a row, each labeled by a time.
 
 ### Signal, Noise and the Log-SNR
 

@@ -62,11 +62,8 @@ torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
 
 On an exact field a long Euler step makes one error: it follows the
 tangent while the trajectory bends. At $t = 1$ this error is as large as it
-can be. The point is pure noise and says nothing about its destination, so
-from every start the velocity $\mathbf{u}_1(\mathbf{x}) = \mathbf{x} -
-\mathbb{E}[\mathbf{x}_0]$ points at the same place, the data mean
-(:numref:`sec_diffusion-integration`), and a step of length one lands
-there. Later steps start from points that have begun to commit to a mode
+can be: from every start the velocity points at the data mean, and a step
+of length one lands there (:numref:`sec_diffusion-integration`). Later steps start from points that have begun to commit to a mode
 and aim better, but each still cuts across the curve.
 
 ### Euler Steps on the Exact Field
@@ -257,7 +254,7 @@ $f(\mathbf{x}, 0) = \mathbf{x}$, the Eulerian identity
 :eqref:`eq_diffusion-eulerian` at $s = 0$.
 
 In *consistency distillation*, Song et al. let the teacher take one ODE
-step between neighbouring times of a grid, and require the student's outputs at the two points to agree. The output at
+step between neighboring times of a grid, and require the student's outputs at the two points to agree. The output at
 the earlier point serves as the target; it is held fixed and computed with
 a moving average of the student's weights. As the grid is refined the
 difference, divided by the step, becomes the derivative above, which
@@ -896,7 +893,7 @@ The teacher's FD falls from about 150 to 170 at one Euler step and about
 80 to 85 at two, to about 7 at ten and 2.6 to 2.7 at fifty, against a
 floor of about 0.8. The student lies far below this curve at small budgets: one
 jump scores 11 to 12, between four and five times the teacher's
-fifty-step FD, two jumps nearly twice it, and four within about 1.5 times.
+fifty-step FD, two jumps nearly twice it, and four about 1.5 times.
 Read across the plot, two evaluations of the student are worth about
 fifteen Euler steps of the teacher, and one about seven.
 
@@ -924,7 +921,7 @@ d2l.show_gray(jnp.concatenate([images[r][:8].clip(-1, 1) for r in rows]),
               4, 8);
 ```
 
-The rows match column by column. Two Euler steps of the teacher draw grey
+The rows match column by column. Two Euler steps of the teacher draw gray
 averages of garments, the mixture's failure in pixels, and in some columns
 not even the kind of garment that fifty steps draw. The student, from the
 same noise, draws the teacher's garment in almost every column after a
@@ -971,15 +968,23 @@ is trained along trajectories of the ODE, so the generator's sample for a
 given noise vector need not be the teacher's, and inversion and editing
 through the ODE no longer apply.
 
+What to pick follows from the budget. At fifty evaluations a teacher with
+a good solver needs no second training run. When latency matters, distill
+a two-time flow map from the teacher: on Fashion-MNIST two of its jumps
+were worth about fifteen Euler steps. Without a teacher, MeanFlow trains a
+flow map from data alone, at the price of the too-tight modes it drew on
+the mixture. Distribution matching, with or without a critic, also reaches
+one step, but gives up the map from noise to sample that inversion and
+editing need.
+
 Both routes start from the same object: a continuous path along which a
 velocity or a score is defined. Neither exists when $\mathbf{x}$ is a
 sequence of tokens, the subject of :numref:`sec_diffusion-discrete`.
 
 ## Summary
 
-One Euler step from noise lands every sample on the mean of the data,
-because at pure noise the velocity points at the mean from every start.
-Straightening the paths by reflow made one step possible, but the original
+Long Euler steps fail because the trajectories bend; one step from noise
+lands every sample on the data mean. Straightening the paths by reflow made one step possible, but the original
 work still distilled the reflowed model for its best one-step results. A
 flow map replaces the velocity by the jump itself, written through the
 average velocity over an interval. Differentiating it along the trajectory
@@ -988,8 +993,8 @@ Jacobian-vector product, a stop-gradient, and either a teacher's velocity
 or each example's own. On the mixture, students distilled from a teacher
 match it in one or two evaluations, while MeanFlow gets the mode weights
 right in one jump but draws the modes too tight; on Fashion-MNIST a student scores
-four to five times the teacher's fifty-step FD in one jump and within
-about 1.5 times in four. Matching distributions, with a critic or a
+four to five times the teacher's fifty-step FD in one jump and about 1.5
+times in four. Matching distributions, with a critic or a
 difference of scores, is the other route to one step.
 
 ## Exercises
@@ -1121,11 +1126,11 @@ difference of scores, is the other route to one step.
    :exlabel:`ex_few-step-invert`
 1. [code] **A guided student.** ● Classifier-free guidance, as in
    :numref:`subsec_diffusion-images-guided`, evaluates the network twice
-   per step. :citet:`Meng.Rombach.Gao.ea.2023` distil the guided velocity
+   per step. :citet:`Meng.Rombach.Gao.ea.2023` distill the guided velocity
    into one network, which halves the cost of every step before the number
    of steps is reduced. Train the class-conditional U-Net of
    :numref:`sec_diffusion-images` with `time_freqs=slow`, as this section's
-   image teacher was trained, and distil it into a two-time student whose reference
+   image teacher was trained, and distill it into a two-time student whose reference
    velocity $\mathbf{u}_{\textrm{ref}}$ is the guided velocity
    $\tilde{\mathbf{u}}$, `d2l.cfg(teacher, c, 2.0)`, for random labels $c$,
    with the label as an input of the student.
@@ -1357,7 +1362,7 @@ $f(\mathbf{x}, t) = \Phi_{t \to 0}(\mathbf{x})$, trained so that
 $\tfrac{d}{dt} f(\mathbf{x}_t, t) = \mathbf{0}$ with $f(\mathbf{x}, 0) = \mathbf{x}$:
 the Eulerian identity at $s = 0$.
 
-- **Distillation:** a teacher's ODE step joins neighbouring grid times;
+- **Distillation:** a teacher's ODE step joins neighboring grid times;
   the outputs there must agree (target: a moving average of the student).
 - **Training:** the example's velocity $\boldsymbol\epsilon - \mathbf{x}_0$
   replaces the teacher.
@@ -1509,7 +1514,7 @@ features to 1,000 test images; floor (two sets of test images) about 0.8.
 @!few-step-on-images-4
 
 Rows: teacher, 50 and 2 Euler steps; student, 1 and 2 jumps. Two Euler
-steps draw grey averages; one jump draws the teacher's garment with
+steps draw gray averages; one jump draws the teacher's garment with
 smudged detail and a few blotches; two come close to the teacher.
 
 ::: {.d2l-note}

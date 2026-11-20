@@ -458,3 +458,422 @@ One famous exception to early stopping is *grokking* :cite:`Power.Burda.Edwards.
 
 [Discussions](https://d2l.discourse.group/t/7473)
 
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4.5]{.kicker}
+
+Generalization in Deep Learning<br>**random labels · double descent · implicit bias · early stopping**
+:::
+:::
+
+::: {.slide title="Our MLP Has 3.4 Parameters per Training Image and Still Generalizes"}
+[The problem]{.kicker}
+
+| model | parameters | per training example | on new data |
+|---|---:|---:|---|
+| polynomial, degree 19, 20 points | 20 | 1 | error over 1000× the cubic's |
+| MLP, 256 hidden units, Fashion-MNIST | 203,530 | 3.4 | about 87%, against about 89% on training images |
+
+- Counting parameters predicts that the MLP memorizes. After 30 epochs it
+  had not, but that run was short. What if we train until every training
+  label is fit?
+- To choose width, training time, and regularization we need to know what
+  controls generalization.
+
+::: {.d2l-note}
+Measure: what the network *can* fit, what happens past one parameter per
+example, and what gradient descent *does* fit.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- show by experiment that a network's capacity cannot explain its
+  generalization, and compute why the VC bound is vacuous for it;
+- measure double descent and explain its peak by the conditioning of the
+  feature matrix;
+- prove that gradient descent from zero finds the minimum-norm fit, and
+  state its logistic-loss counterpart, the maximum-margin separator;
+- use early stopping against label noise.
+
+**Running example:** Fashion-MNIST after 30 epochs. Softmax regression:
+7,850 parameters, about 84%. The MLP: 203,530 parameters, about 87%.
+Experiments use 1,000 training images.
+:::
+
+::: {.slide title="Generalization Asks Why Large Networks Do Not Memorize"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Multilayer Perceptrons | hidden layers, universal approximation, activation functions |
+| Implementation | an MLP trained on Fashion-MNIST |
+| Backpropagation | how the gradients are computed, and at what memory cost |
+| Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
+| **Generalization in Deep Learning** | **memorization, double descent, implicit bias, early stopping** |
+| Dropout | random masks, slower memorization of noisy labels |
+| Predicting House Prices on Kaggle | the workflow on real data |
+:::
+
+::: {.col .narrow}
+- **Uses:** the polynomial U-curve, the VC bound, least squares,
+  the MLP with He initialization.
+- **Skips:** neural tangent kernels, PAC-Bayesian bounds, the proof of the
+  maximum-margin theorem.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Memorization and Capacity]{.dtitle}
+
+[random labels, the VC bound, inductive bias]{.dsub}
+:::
+:::
+
+::: {.slide title="The Same MLP Fits Random Labels as Well as True Ones"}
+[Capacity · experiment]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+1,000 images, 203,530 parameters, SGD for 200 epochs. Random labels:
+each label redrawn uniformly, independent of the image.
+
+- True labels: over 99% train after 60–90 epochs, about 80–83% test.
+- Random labels: over 99% train after 110–150 epochs, about 10% test.
+
+::: {.d2l-note}
+Same network, optimizer, and images; only the labels differ.
+:::
+:::
+
+::: {.col .fig .big}
+@!generalization-deep-fitting-random-labels-5
+:::
+:::
+:::
+
+::: {.slide title="The VC Bound Is Vacuous for the MLP: √(203,530 / 60,000) ≈ 1.8"}
+[Capacity · theory]{.kicker}
+
+With probability $1 - \delta$, every $f$ in a class of VC dimension $v$:
+
+$$\epsilon(f) \leq \epsilon_\mathcal{S}(f) + c\sqrt{\frac{v + \log(1/\delta)}{n}}$$
+
+- $\epsilon$: population error; $\epsilon_\mathcal{S}$: training error.
+- Linear classifier: $v$ = number of parameters. Same estimate for the
+  MLP on all 60,000 images: $\sqrt{203{,}530/60{,}000} \approx 1.8$.
+
+::: {.d2l-note .warn}
+An error never exceeds 1: the bound guarantees nothing. Random labels rule
+out **every** bound that depends only on the class and $n$: on 1,000
+random labels the training error is 0 and the population error 0.9, so the
+second term is at least 0.9, for true labels too.
+:::
+:::
+
+::: {.slide title="Every Learner Bets on an Inductive Bias"}
+[Capacity · inductive bias]{.kicker}
+
+No free lunch: averaged over all labelings of the unseen inputs, every
+learner has the same expected error (Wolpert, 1996).
+
+| learner | prefers |
+|---|---|
+| linear classifier | classes separated by hyperplanes |
+| polynomial + weight decay | small weights, slowly varying curves |
+| 1-nearest neighbor | nearby inputs have the same label |
+| MLP + gradient descent | not fully known: **this deck** |
+
+::: {.d2l-note}
+1-NN fits every training point, yet its error tends to at most twice the
+best possible (Cover and Hart, 1967). Exact fit ≠ overfitting.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Double Descent]{.dtitle}
+
+[past one parameter per example]{.dsub}
+:::
+:::
+
+::: {.slide title="The Classical U: Polynomial Fits Get Worse Up to One Weight per Example"}
+[Double descent · recap]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+20 noisy points from a cubic:
+
+- degree 3: test error at the noise level;
+- degree 19: 20 weights fit all 20 points, test error more than 1000×
+  larger.
+
+::: {.d2l-note}
+The study stopped at degree 19: beyond it, infinitely many exact fits.
+Which one should we take?
+:::
+:::
+
+::: {.col .fig .big}
+![Training error falls with complexity; test error falls, then rises.](../img/mdl-gen-capacity-error.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Random Features: Freeze the Hidden Layer, Fit the Output by Least Squares"}
+[Double descent · model]{.kicker}
+
+$\mathbf{H} = \textrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)}) \in \mathbb{R}^{n\times h}$,
+$\mathbf{W}^{(1)}$ frozen at its He initialization; one-hot labels
+$\mathbf{Y} \in \mathbb{R}^{n \times 10}$.
+
+$$\min_{\mathbf{W}^{(2)}} \|\mathbf{H}\mathbf{W}^{(2)} - \mathbf{Y}\|^2$$
+
+- $h < n$: unique least-squares fit, misses some labels.
+- $h = n$: square, invertible $\mathbf{H}$: exactly one exact fit, the
+  **interpolation threshold**.
+- $h > n$: infinitely many exact fits; take the **minimum-norm** one.
+  `np.linalg.lstsq` returns it in all three cases.
+
+Here $n = 1{,}000$ images and $h$ from 50 to 10,000.
+:::
+
+::: {.slide title="Past Interpolation, Test Error Falls Again"}
+[Double descent · experiment]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+- $h < n$: the classical U, best about 23% at a few hundred units.
+- $h = n$: about 90% error, that of guessing.
+- $h = 10{,}000$: about 20%, a few points **below** the best $h < n$.
+
+::: {.d2l-note}
+From $h = n$ on, every model fits every label exactly: training error cannot
+tell these models apart.
+:::
+:::
+
+::: {.col .fig .big}
+@!generalization-deep-beyond-the-interpolation-threshold-2
+:::
+:::
+:::
+
+::: {.slide title="The Peak Sits Where Hidden Units Equal Examples: H Is Nearly Singular"}
+[Double descent · conditioning]{.kicker}
+
+At $h = n$, $\mathbf{H}$ is square: the fit must invert it. Its smallest
+singular value $s_\textrm{min} \approx 0$, and the inverse stretches that
+direction by $1/s_\textrm{min}$.
+
+@!generalization-deep-conditioning-at-the-threshold-1
+
+::: {.d2l-note}
+Past $h = n$, an exact fit with $h$ units is one with $h + 1$ (zero new
+weight): the minimum norm can only shrink.
+:::
+:::
+
+::: {.slide title="Check: How Can More Data Hurt?"}
+[Check]{.kicker}
+
+The random-features model with 1,000 hidden units is trained on 500 images,
+then on 1,000. Which test error is lower?
+
+::: {.fragment .fade-up}
+@!generalization-deep-conditioning-at-the-threshold-2
+
+::: {.d2l-note}
+**Answer.** 500 images. With 1,000 images, $h = n$: the model sits on its
+interpolation threshold. Deep networks show the same peaks in width,
+epochs, and data (Nakkiran et al., 2021).
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Implicit Bias]{.dtitle}
+
+[which exact fit gradient descent finds]{.dsub}
+:::
+:::
+
+::: {.slide title="Gradient Descent from Zero Finds the Minimum-Norm Fit"}
+[Implicit bias · least squares]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$L(\mathbf{w}) = \tfrac12\|\mathbf{H}\mathbf{w} - \mathbf{y}\|^2$,
+$\mathbf{H} \in \mathbb{R}^{n \times h}$, $h > n$.
+
+I. Gradient $\mathbf{H}^\top(\mathbf{H}\mathbf{w} - \mathbf{y})$: a
+combination of the rows.
+
+II. From $\mathbf{w}_0 = \mathbf{0}$: $\mathbf{w}_t = \mathbf{H}^\top
+\mathbf{a}_t$, and the limit fits:
+$\mathbf{w}^\star = \mathbf{H}^\top(\mathbf{H}\mathbf{H}^\top)^{-1}\mathbf{y}$.
+
+III. Other fits: $\mathbf{w}^\star + \mathbf{v}$, $\mathbf{H}\mathbf{v} = \mathbf{0}$,
+$\|\mathbf{w}^\star + \mathbf{v}\|^2 = \|\mathbf{w}^\star\|^2 + \|\mathbf{v}\|^2$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-mlp-min-norm.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="From Zero, Gradient Descent Lands on the Solution of lstsq"}
+[Implicit bias · check]{.kicker}
+
+20 equations, 100 unknowns; 2,000 steps of gradient descent from
+$\mathbf{w}_0 = \mathbf{0}$ and from a random $\mathbf{w}_0$:
+
+@!generalization-deep-minimum-norm-interpolation
+
+- Both runs fit every label (residual near 0).
+- From zero: distance 0 to the minimum-norm fit $\mathbf{w}^\star$.
+- From a random start: an exact fit more than ten times longer.
+:::
+
+::: {.slide title="Logistic Gradient Descent Turns Toward the Max-Margin Separator"}
+[Implicit bias · classification]{.kicker}
+
+Separable data, labels $\pm 1$, loss $\log(1 + e^{-m})$ with margin
+$m = y\,\mathbf{w}^\top\mathbf{x}$: no finite minimizer, $\|\mathbf{w}\| \to \infty$.
+
+![](../img/mdl-mlp-max-margin.svg){width=70%}
+
+::: {.d2l-note}
+The direction converges to the maximum-margin separator (Soudry et al.,
+2018), slowly: the training error is 0 from step 1.
+:::
+:::
+
+::: {.slide title="Check: Where Does Gradient Descent from w₀ Stop?"}
+[Check]{.kicker}
+
+One equation $w_1 + 2w_2 = 4$, so $\mathbf{h} = (1, 2)$. Gradient descent
+starts at $\mathbf{w}_0 = (1, 1)$. Where does it stop, and how long is the
+result compared with the minimum-norm fit?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Steps move along $\mathbf{h}$:
+$\mathbf{w}_0 + \frac{4 - 3}{5}\mathbf{h} = (1.2, 1.4)$, norm $1.84$.
+The minimum-norm fit is $\frac{4}{5}\mathbf{h} = (0.8, 1.6)$, norm $1.79$.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Early Stopping]{.dtitle}
+
+[clean labels first]{.dsub}
+:::
+:::
+
+::: {.slide title="Clean Labels Are Fit First, Wrong Labels Later"}
+[Early stopping · experiment]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+1,000 images, 20% of labels redrawn: about 18% wrong.
+
+- After 20 epochs: over 80% of the clean labels fit, under 20% of the
+  wrong ones. Validation accuracy peaks in this phase.
+- Then the wrong labels are memorized, nearly all after about 100–160 epochs;
+  validation accuracy drops several points.
+:::
+
+::: {.col .fig .big}
+@!generalization-deep-clean-labels-first
+:::
+:::
+:::
+
+::: {.slide title="Early Stopping Keeps the Clean Fit"}
+[Early stopping · rule]{.kicker}
+
+Monitor validation accuracy every epoch; keep the parameters of the best
+epoch; stop after *patience* epochs without improvement.
+
+@!generalization-deep-stopping-rule
+
+- Several points of test accuracy as a rule (one to nine in our runs), and
+  fewer epochs.
+- For least squares, stopping after $t$ steps of size $\eta$ acts like
+  weight decay with $\lambda \approx 1/(\eta t)$.
+:::
+
+::: {.slide title="Grokking: Generalization Can Arrive Long After Memorization"}
+[Early stopping · limits]{.kicker}
+
+![](../img/mdl-mlp-grokking.svg){width=70%}
+
+::: {.d2l-note .warn}
+Addition modulo 97 with weight decay: 100% training accuracy within about
+a thousand steps, validation near chance ten times as long, full accuracy
+two to three orders of magnitude later (Power et al., 2022). A patience rule
+stops far too early.
+:::
+:::
+
+::: {.slide title="Check: How Many Training Labels Does the Memorizing Network Get Wrong?"}
+[Check]{.kicker}
+
+20% of 1,000 labels are redrawn uniformly from 10 classes. After 200 epochs
+the network reproduces nearly every training label. Against the **true** labels,
+what is its training accuracy?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** About 82%. A redrawn label is correct with probability 1/10, so
+$0.2 \times 0.9 = 18\%$ of the labels are wrong, and the network reproduces
+them.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Capacity:** the MLP fits random labels (100% train, 10% test); the VC
+  term is $\sqrt{203{,}530/60{,}000} \approx 1.8$.
+- **Double descent:** random features peak at $h = n$ (about 90% error) and
+  fall to about 20% at $h = 10n$; $s_\textrm{min} \approx 0$ at the peak.
+:::
+
+::: {.col}
+- **Implicit bias, for linear models:** gradient descent from zero finds
+  the minimum-norm fit; with the logistic loss it approaches the maximum
+  margin. Neither result is proved for the MLP.
+- **Early stopping:** clean labels first; stopping at the best validation
+  epoch gains several points (one to nine in our runs).
+- **Open:** a theory that predicts a deep network's test error.
+:::
+:::
+
+**Next:** if memorizing wrong labels costs accuracy, make memorizing
+harder: dropout.
+:::

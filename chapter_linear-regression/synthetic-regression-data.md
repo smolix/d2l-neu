@@ -194,6 +194,7 @@ e_w = d2l.numpy(w_hat[:2] - w_star)
 print(f'error in w: ({e_w[0]:.1e}, {e_w[1]:.1e})')
 print(f'error in b: {float(w_hat[2] - b_star):.1e}')
 print(f'standard error: {noise / n ** 0.5:.1e}')
+```
 
 Even with `lstsq` solving the empirical loss to machine precision, $(\hat{\mathbf{w}}, \hat{b})$ differs from the true $(2, -3.4, 4.2)$ in the fourth decimal place. That tiny discrepancy is *statistical estimation error*, not numerical error: the 1,000 noise draws $\boldsymbol{\epsilon}$ happen to correlate slightly with the columns of $\mathbf{X}$, tilting the least-squares plane by a quantity of order $\sigma / \sqrt{n} = 0.01 / \sqrt{1000} \approx 3 \times 10^{-4}$ (Exercise :exref:`ex_synthetic-regression-data-recovery-under-noise`). No algorithm trained on these 1,000 noisy points can recover $(\mathbf{w}^*, b^*)$ more accurately than this statistical limit. And as Exercise :exref:`ex_synthetic-regression-data-misspecified` explores, when the true data-generating function is nonlinear, least squares finds the best linear approximation to it over the feature distribution.
 
@@ -276,3 +277,256 @@ Even with `lstsq` solving the empirical loss to machine precision, $(\hat{\mathb
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17975)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.2]{.kicker}
+
+A dataset with a known answer<br>**generator · error threshold**
+:::
+:::
+
+::: {.slide title="A Poor Fit on Real Data Has Three Suspects"}
+[The problem]{.kicker}
+
+Suppose a model reaches a poor validation loss on real data. Is the model
+wrong, the optimization or its code, or the data?
+
+- **Real data:** the true parameters are unknown, and the three
+  explanations are hard to tell apart.
+- **Synthetic data:** we choose $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$,
+  and the noise, so model and data are right by construction; only the
+  optimization or its implementation can fail.
+- A fit of $\hat{\mathbf{w}} = (1.9, -3.1)$ is then $0.3$ off, where the
+  noise allows about $0.001$.
+
+::: {.d2l-note}
+A fit that misses the known $\mathbf{w}^*$ by more than the noise allows
+points to a bug, or to an optimization that has not converged.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- generate $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$
+  with one function, `synthetic_data`;
+- predict how close a correct fit comes to $\mathbf{w}^*$: within a few
+  standard errors $\sigma/\sqrt{n}$.
+
+**Running example:** $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, noise
+$\sigma = 0.01$; 1,000 training and 1,000 validation examples.
+:::
+
+::: {.slide title="Known Parameters Turn Training Into a Test"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Linear Regression | model, loss, closed form, minibatch SGD |
+| **Synthetic Data** | **data with known $\mathbf{w}^*, b^*$** |
+| Implementation from Scratch | SGD and the training loop by hand |
+| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
+| Concise Implementation | framework layers and losses |
+| Generalization | training vs. test error |
+| Weight Decay | a penalty on large weights |
+:::
+
+::: {.col .narrow}
+- **Uses:** the normal equations, the standard error
+  $\sigma/\sqrt{n}$ of an average.
+- **Skips:** minibatches and the training loop (next deck), the classes
+  (the deck after).
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Generating the data]{.dtitle}
+
+[a known plane · a little noise · one function]{.dsub}
+:::
+:::
+
+::: {.slide title="Labels Lie on a Known Plane, Up to Noise of About 0.01"}
+[Generating the data]{.kicker}
+
+$$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}, \qquad x_j \sim \mathcal{N}(0, 1), \quad \epsilon \sim \mathcal{N}(0, \sigma^2)$$
+
+- $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, $\sigma = 0.01$; $b^*$ is added
+  to every label.
+- Gaussian noise makes the squared loss the maximum-likelihood loss, so a
+  linear model is correctly specified.
+- `synthetic_data` draws 2,000 examples: 1,000 to train on, 1,000 to
+  validate with.
+:::
+
+::: {.slide title="The First Label Is Off the Plane by the Noise Alone"}
+[Generating the data]{.kicker}
+
+@synthetic-regression-data-generating-the-dataset-2
+
+The first example, and its noise $y - (\mathbf{w}^{*\top}\mathbf{x} + b^*)$:
+
+@!synthetic-regression-data-generating-the-dataset-3
+
+::: {.d2l-note}
+The noise is at most a few hundredths, since $\sigma = 0.01$.
+:::
+:::
+
+::: {.slide title="One Key Fixes the Dataset; a New Key Draws a New One" only="jax"}
+[Generating the data · JAX]{.kicker}
+
+JAX has no global random state: every draw takes a key.
+
+```{.python #synthetic-regression-data-exercises}
+key1, key2 = jax.random.split(key)
+X = jax.random.normal(key1, (n, w.shape[0]))
+eps = jax.random.normal(key2, (n, 1)) * noise
+```
+
+- $\mathbf{X}$ and $\boldsymbol{\epsilon}$ come from two different keys.
+- The same key always produces the same dataset; `d2l.get_key()` gives a
+  new key on every call, from a stream seeded anew on every run.
+:::
+
+::: {.slide title="Check: Which Loss Do the True Parameters Reach?"}
+[Check]{.kicker}
+
+A model that predicts with exactly $\mathbf{w}^* = (2, -3.4)$ and
+$b^* = 4.2$ is scored with the squared loss
+$\tfrac{1}{2}(\hat{y} - y)^2$, averaged over the examples. About which
+value does that average settle?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\hat{y} - y = -\epsilon$, so the average approaches
+$\tfrac{1}{2}\mathbb{E}[\epsilon^2] = \sigma^2/2 = 5 \times 10^{-5}$. The noise is
+unpredictable: no model does better on new examples, and a correct
+training run levels off there.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Recovering the parameters]{.dtitle}
+
+[how close a correct fit can come]{.dsub}
+:::
+:::
+
+::: {.slide title="I. The Estimation Error Is Linear in the Noise"}
+[Recovering the parameters · derivation]{.kicker}
+
+Append a column of ones: $\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$,
+$\tilde{\mathbf{w}}^* = (2, -3.4, 4.2)$, and
+$\mathbf{y} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \boldsymbol{\epsilon}$.
+
+Least squares solves
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top\mathbf{y}$.
+Substitute $\mathbf{y}$:
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}(\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*) = \tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$, so
+
+$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}.$$
+
+::: {.d2l-note}
+Without noise, least squares recovers $\tilde{\mathbf{w}}^*$ exactly. The
+noise moves the minimizer of the loss, and we need to know how far.
+:::
+:::
+
+::: {.slide title="II. Standard Normal Features Make X̃ᵀX̃ ≈ 1,000 · I"}
+[Recovering the parameters · derivation]{.kicker}
+
+Each entry of $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}/n$ averages
+$n = 1{,}000$ products of two columns:
+
+| entry | product | its mean |
+|---|---|---|
+| diagonal | $x_j^2$ or $1 \cdot 1$ | 1 |
+| off the diagonal | $x_j x_k$ or $x_j \cdot 1$ | 0 |
+
+An average over 1,000 examples lies within a few percent of its mean. So
+
+$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* \approx \frac{1}{n}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\tilde{\mathbf{x}}^{(i)}, \qquad \tilde{\mathbf{x}}^{(i)} = (\mathbf{x}^{(i)}, 1).$$
+:::
+
+::: {.slide title="III. Each Coordinate Misses by About σ/√n = 3 × 10⁻⁴"}
+[Recovering the parameters · derivation]{.kicker}
+
+Coordinate $j$ of the error averages $n$ independent terms
+$\epsilon^{(i)} \tilde{x}_j^{(i)}$, each with mean 0 and variance
+$\sigma^2 \mathbb{E}[\tilde{x}_j^2] = \sigma^2$. An average of $n$ such terms has standard
+deviation $\sigma/\sqrt{n}$, its **standard error**:
+
+::: {.d2l-note .rule}
+$$\sigma/\sqrt{n} = 0.01/\sqrt{1000} \approx 3 \times 10^{-4}$$
+for each weight and for the bias.
+:::
+
+Ten times more noise, ten times the error; a hundred times more examples, a tenth of it.
+
+[Assumes: noise independent of the features, $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} \approx n\mathbf{I}$.]{.dgm-cap}
+:::
+
+::: {.slide title="Least Squares Lands Within a Few 10⁻⁴ of the Truth"}
+[Recovering the parameters]{.kicker}
+
+`lstsq` on the 1,000 training examples, with a column of ones for $b$:
+
+@!synthetic-regression-data-recovering-the-parameters-2
+
+- Least squares: an error above $10^{-3}$, over three standard errors,
+  would be rare.
+- SGD fluctuates around this estimate by a similar amount, so a converged
+  model lands within about $10^{-3}$.
+
+::: {.d2l-note .rule}
+An error of $0.1$ means a bug, or an optimization that has not converged.
+:::
+:::
+
+::: {.slide title="Check: How Close With Fewer Examples or More Noise?"}
+[Check]{.kicker}
+
+What standard error do the weights have with
+
+1. 100 training examples and $\sigma = 0.01$?
+2. 1,000 training examples and $\sigma = 0.1$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.**
+
+1. $0.01/\sqrt{100} = 10^{-3}$: ten times fewer examples, a
+   $\sqrt{10} \approx 3.2$ times larger error.
+2. $0.1/\sqrt{1000} \approx 3 \times 10^{-3}$: the error scales with
+   $\sigma$.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+| step | running example |
+|---|---|
+| generate $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ | $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, $\sigma = 0.01$ |
+| standard error $\sigma/\sqrt{n}$ | $0.01/\sqrt{1000} \approx 3 \times 10^{-4}$; least-squares errors of that size |
+| threshold for training | a converged model within about $10^{-3}$ |
+| what passing shows | the code recovers what it should; nothing about data a linear model does not fit |
+
+**Next:** the model, the loss, and minibatch SGD written as plain
+functions, trained on these data, their estimates held to $10^{-3}$.
+:::

@@ -271,3 +271,437 @@ This theorem answers our conceptual puzzle: because linear classifiers in $\math
 
 [Discussions](https://d2l.discourse.group/t/6829)
 
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.6]{.kicker}
+
+Error bars for test scores, guarantees for model classes<br>
+**test-set size · test-set reuse · uniform convergence · the VC dimension**
+:::
+:::
+
+::: {.slide title="A Test Score Is a Sample, and a Training Score Can Be Memorized"}
+[The problem]{.kicker}
+
+- Softmax regression labels **about 83%** of the 10,000 Fashion-MNIST
+  test images correctly. Another 10,000 images would give a different number.
+- A lookup table of the 60,000 training labels scores **100%** on the
+  training set and guesses on every new image.
+
+::: {.d2l-note}
+1. How many test examples give a trustworthy accuracy?
+2. What happens if we evaluate on the same test set again and again?
+3. Why should a fitted linear model beat memorization?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- attach a standard error and a 95% radius to a test error;
+- size a test set with the normal approximation and with Hoeffding's bound;
+- estimate how much selection and adaptive reuse inflate a test score;
+- define shattering and the VC dimension, and show that lines in the plane
+  have VC dimension 3;
+- read the VC bound, and say why it is vacuous for deep networks.
+
+**Running example:** a classifier with error $0.15$, roughly softmax
+regression on Fashion-MNIST, and its 10,000 test images.
+:::
+
+::: {.slide title="Error Bars and Guarantees Complete the Classification Pipeline"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Softmax Regression | probabilities over classes, cross-entropy |
+| Image Classification Data | Fashion-MNIST in minibatches |
+| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
+| Concise Implementation | framework layers, a stable loss |
+| Measuring Classifiers | precision, recall, costs, calibration |
+| **Generalization in Classification** | **error bars, test-set reuse, VC dimension** |
+| Environment and Distribution Shift | correcting for shifted data |
+:::
+
+::: {.col .narrow}
+- **Uses:** the standard error of an average, its standard deviation over
+  $\sqrt{n}$; training vs. test error; validation sets.
+- **Skips:** proofs of Hoeffding's inequality and the VC bound (mathematics
+  appendix); why deep networks generalize (next chapter).
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The Test Set]{.dtitle}
+
+[how precisely a test set measures one classifier]{.dsub}
+:::
+:::
+
+::: {.slide title="The Test Error Is the Frequency of Heads of a Biased Coin"}
+[The test set]{.kicker}
+
+For a classifier $f$ fixed **before** the test set $\mathcal{D}$ of $n$
+examples is drawn:
+
+$$\epsilon_\mathcal{D}(f) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}\left(f(\mathbf{x}^{(i)}) \neq y^{(i)}\right)
+\qquad
+\epsilon(f) = P\left(f(X) \neq Y\right)$$
+
+- Each term is 1 with probability $\epsilon(f)$: unbiased, with standard
+  error $\sqrt{\epsilon(1-\epsilon)/n} \le 0.5/\sqrt{n}$.
+- $\epsilon = 0.15$, $n = 10{,}000$: standard error $\approx 0.0036$.
+
+::: {.d2l-note}
+Half the error bar takes **four times** the test data.
+:::
+:::
+
+::: {.slide title="The Central Limit Theorem Turns a Standard Error into a 95% Interval"}
+[The test set · confidence]{.kicker}
+
+For large $n$, $\epsilon_\mathcal{D}(f)$ is approximately normal, and a
+normal variable lies within 1.96 standard deviations of its mean 95% of the
+time:
+
+$$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \le 1.96\sqrt{\epsilon(1-\epsilon)/n}\right) \approx 0.95$$
+
+- Running example: radius $1.96 \cdot 0.0036 \approx 0.007$.
+- Worst case $\epsilon = \tfrac12$: radius $0.01$ needs
+  $n \ge (1.96 \cdot 0.5/0.01)^2 = 9{,}604$.
+
+::: {.d2l-note}
+A 10,000-image test set knows one model's accuracy to about **±1 point**.
+:::
+:::
+
+::: {.slide title="Hoeffding Certifies ±1% at 95% with 18,445 Examples"}
+[The test set · finite samples]{.kicker}
+
+Each term lies in $[0, 1]$, so at **every** $n$ and for every distribution,
+a deviation of $t$ or more has probability
+
+$$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \ge t\right) \le 2\exp\left(-2nt^2\right).$$
+
+- Set the right side to $\delta = 0.05$: radius $\sqrt{\log(2/\delta)/(2n)}$.
+- $t = 0.01$: $n \ge \log 40/(2 \cdot 0.01^2) \approx 18{,}445$, about
+  twice the 9,604 of the normal approximation.
+
+::: {.d2l-note}
+Hoeffding uses only the **range** of each term, not its variance.
+:::
+:::
+
+::: {.slide title="At Small Error Rates the Normal Interval Undercovers; Hoeffding Holds"}
+[The test set · simulation]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+10,000 simulated test sets per size $n$, true error $0.15$ or $0.01$.
+Plotted: the fraction of test sets whose 95% interval contains the true
+error.
+
+::: {.d2l-note}
+The normal interval, with the measured error plugged in, falls short when
+few errors are expected. Hoeffding's interval covers at every $n$, at about
+twice the width.
+:::
+:::
+
+::: {.col .fig .big}
+@!generalization-classification-the-test-set-2
+:::
+:::
+:::
+
+::: {.slide title="Check: How Many Test Examples for ±0.5% at 95%?"}
+[Check]{.kicker}
+
+Worst case $\epsilon = \tfrac12$. Compute $n$ with the normal approximation
+and with Hoeffding's inequality.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Normal: $(1.96 \cdot 0.5/0.005)^2 = 38{,}416$.
+Hoeffding: $\log 40/(2 \cdot 0.005^2) \approx 73{,}778$. Halving the radius
+multiplies both by four.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Test Set Reuse]{.dtitle}
+
+[selection and adaptive overfitting]{.dsub}
+:::
+:::
+
+::: {.slide title="The Union Bound Widens the Radius for k Classifiers by Only √log k"}
+[Test set reuse · selection]{.kicker}
+
+$k$ classifiers fixed in advance, one test set. $P(\text{any of } k \text{ events}) \le$ the sum of their probabilities:
+
+$$P\left(\max_j |\epsilon_\mathcal{D}(f_j) - \epsilon(f_j)| \ge t\right) \le 2k\exp\left(-2nt^2\right)$$
+
+All $k$ within $\sqrt{\log(2k/\delta)/(2n)}$ at once. With $n = 10{,}000$,
+$\delta = 0.05$:
+
+| $k$ | 1 | 1,000 | 1,000,000 |
+|---|---|---|---|
+| radius | 0.014 | 0.023 | 0.030 |
+:::
+
+::: {.slide title="Selection Alone Lifts Coin-Flip Classifiers to About 0.56"}
+[Test set reuse · selection]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+1,000 coin-flip labels; 10,000 classifiers that guess at random (true
+accuracy 0.5). Best test accuracy among the first $k$:
+
+::: {.d2l-note .warn}
+About **0.56** after 10,000 guessers, tracking
+$0.5 + \sqrt{\log(k)/(2n)}$. Nothing was learned.
+:::
+:::
+
+::: {.col .fig .big}
+@!generalization-classification-test-set-reuse-1
+:::
+:::
+:::
+
+::: {.slide title="A Majority Vote of Lucky Guessers Scores About 0.7"}
+[Test set reuse · adaptive overfitting]{.kicker}
+
+Keep the guessers among the first 1,000 that scored above 0.5; predict their
+majority vote. On new data the vote is still a coin flip.
+
+@!generalization-classification-adaptive-overfitting
+
+::: {.d2l-note .warn}
+Using earlier scores to build the next model inflates the score far more
+than selection: **about 0.7** from 1,000 scores, vs. 0.54 to 0.57 for the best
+single guesser. This is **adaptive overfitting**.
+:::
+:::
+
+::: {.slide title="Validation Sets Absorb Selection; the Test Set Is Consulted Once"}
+[Test set reuse · in practice]{.kicker}
+
+- **Training set** fits, **validation set** selects and tunes, **test set**
+  reports, once.
+- New test sets for CIFAR-10 and ImageNet (Recht et al., 2019): accuracy
+  drops 3 to 15 points, ranking kept; slightly different images, not reuse,
+  explain the drops.
+
+::: {.d2l-note}
+The worst case is real for **small** test sets queried **often**, such as
+public competition leaderboards.
+:::
+:::
+
+::: {.slide title="Check: How Wide Is the Interval for 100 Models?"}
+[Check]{.kicker}
+
+You compare 100 classifiers, fixed in advance, on 10,000 test examples. How
+wide must the radius be so that all 100 are within it with probability 95%?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\sqrt{\log(2 \cdot 100/0.05)/(2 \cdot 10{,}000)} =
+\sqrt{\log 4000/20{,}000} \approx 0.020$, against $0.014$ for one
+classifier.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Statistical Learning Theory]{.dtitle}
+
+[guarantees from the model class alone]{.dsub}
+:::
+:::
+
+::: {.slide title="Training Is Test-Set Reuse Taken to the Extreme"}
+[Learning theory · uniform convergence]{.kicker}
+
+The learner picks $f_\mathcal{S}$ from a **hypothesis class** $\mathcal{F}$
+to make the training error $\epsilon_\mathcal{S}$ small. For finite
+$\mathcal{F}$, the union bound with $k = |\mathcal{F}|$ gives, with
+probability $\ge 1 - \delta$,
+
+$$|\epsilon_\mathcal{S}(f) - \epsilon(f)| \le \sqrt{\frac{\log(2|\mathcal{F}|/\delta)}{2n}} \quad \text{for every } f \in \mathcal{F}.$$
+
+::: {.d2l-note}
+**Uniform convergence:** it holds for $f_\mathcal{S}$, whichever one the
+learner picks.
+:::
+:::
+
+::: {.slide title="Memorizers and Infinite Classes Break the Finite-Class Bound"}
+[Learning theory · uniform convergence]{.kicker}
+
+::: {.cols}
+::: {.col}
+::: {.d2l-note .warn}
+**Memorizer:** training error 0 on every training set; on coin-flip labels
+population error $\tfrac12$. No gap bound can shrink with $n$.
+:::
+:::
+
+::: {.col}
+::: {.d2l-note}
+**Linear classifiers:** real-valued $\mathbf{w}, b$, so
+$|\mathcal{F}| = \infty$. Yet on $n$ points they produce at most $2^n$
+labelings. **Count labelings, not classifiers.**
+:::
+:::
+:::
+:::
+
+::: {.slide title="Lines in the Plane Shatter Three Points but No Four"}
+[Learning theory · VC dimension]{.kicker}
+
+**Shatter:** produce all $2^n$ labelings of the points. **VC dimension:**
+the size of the largest shattered set. Dots $+1$, squares $-1$.
+
+![](../img/mdl-clf-shattering.svg){width=90%}
+
+Convex quadrilateral: the diagonals cross. Point inside a triangle: every
+line keeps it with the corners.
+:::
+
+::: {.slide title="Linear Classifiers in d Dimensions Have VC Dimension d + 1"}
+[Learning theory · VC dimension]{.kicker}
+
+$f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top\mathbf{x} + b)$:
+
+- **≥ d + 1:** shatter $\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d$;
+  $b$ sets the label of $\mathbf{0}$, then $w_i$ the label of
+  $\mathbf{e}_i$.
+- **≤ d + 1:** any $d + 2$ points split into two groups whose convex hulls
+  intersect; no hyperplane separates them.
+- A memorizer: VC dimension $\infty$.
+
+::: {.d2l-note}
+Not a parameter count: $\operatorname{sign}(\sin(\omega x))$ has one
+parameter and VC dimension $\infty$.
+:::
+:::
+
+::: {.slide title="Beyond the VC Dimension, Labelings Grow Polynomially"}
+[Learning theory · counting]{.kicker}
+
+Lines in the plane on $n$ points, no three on a line: $n^2 - n + 2$ of the
+$2^n$ labelings.
+
+| $n$ | 3 | 4 | 10 | 100 |
+|---|---|---|---|---|
+| lines | 8 | 14 | 92 | 9,902 |
+| all labelings | 8 | 16 | 1,024 | $\approx 1.3 \times 10^{30}$ |
+
+::: {.d2l-note}
+**Sauer's lemma:** VC dimension $v$ $\Rightarrow$ at most $(en/v)^v$
+labelings of $n \ge v$ points.
+:::
+:::
+
+::: {.slide title="The VC Bound Replaces log|F| by the VC Dimension"}
+[Learning theory · the bound]{.kicker}
+
+Union bound over labelings, plus a finer analysis: with probability
+$\ge 1 - \delta$, for **every** $f \in \mathcal{F}$,
+
+$$\epsilon(f) \le \epsilon_\mathcal{S}(f) + c\sqrt{\frac{v + \log(1/\delta)}{n}},$$
+
+with $c$ the same for every class and distribution.
+
+::: {.d2l-note}
+Linear classifiers, $v = d + 1$: for $n \gg d$, training error $\approx$
+population error, whatever the data. A memorizer gets no guarantee.
+:::
+:::
+
+::: {.slide title="Even for a Linear Model the Bound Is Loose"}
+[Learning theory · the bound]{.kicker}
+
+Shirts against everything else (a binary problem): $d = 784$ pixels,
+$n = 60{,}000$ training images.
+
+$$\sqrt{\frac{785}{60{,}000}} \approx 0.11 \quad \text{before the constant } c$$
+
+- Observed for softmax regression: about 84% on training images, about
+  83% on test images, a gap of **one or two points**.
+- The bound covers the **worst** distribution; real data are rarely that
+  adversarial. A 10,000-image test set pins the error down to about
+  $\pm 0.01$.
+:::
+
+::: {.slide title="For Deep Networks the VC Bound Is Vacuous"}
+[Learning theory · limits]{.kicker}
+
+- Deep networks fit even **random labels** on their whole training set
+  (Zhang et al.): VC dimension $\ge n$.
+- On real labels they generalize well, often better when larger.
+- Bounds that use the data and the algorithm (e.g., Rademacher complexity)
+  are research in progress.
+
+::: {.d2l-note}
+Deep learning certifies generalization **after** training, with held-out
+data.
+:::
+:::
+
+::: {.slide title="Check: VC Dimension of Quadratic Classifiers in the Plane"}
+[Check]{.kicker}
+
+$f(\mathbf{x}) = \operatorname{sign}(p(\mathbf{x}))$ with $p$ a polynomial of
+degree at most 2 in $\mathbf{x} \in \mathbb{R}^2$. What is the VC dimension?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 6. The classifier is linear in the five features
+$x_1, x_2, x_1^2, x_1x_2, x_2^2$ plus a bias, so $v = 5 + 1$.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Test error** of a fixed $f$: unbiased, standard error
+  $\le 0.5/\sqrt{n}$. ±0.01 at 95%: about **10,000** examples (normal),
+  **18,445** (Hoeffding).
+- **Selection** among $k$ fixed models: radius grows like
+  $\sqrt{\log k}$. **Adaptive** reuse: much faster (0.5 → 0.7). Select on
+  validation data.
+:::
+
+::: {.col}
+- **Uniform convergence** extends the union bound to a class.
+- **VC dimension** = largest shattered set; linear classifiers on
+  $\mathbb{R}^d$: $d + 1$. Gap $\lesssim c\sqrt{(v + \log(1/\delta))/n}$.
+- **Deep networks:** vacuous bounds; held-out data certify them.
+:::
+:::
+
+**Next:** what happens when the test data come from a different
+distribution than the training data.
+:::

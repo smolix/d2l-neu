@@ -416,27 +416,416 @@ For a square $n \times n$ hidden matrix, :eqref:`eq_spectral_condition` requires
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §9.9]{.kicker}
+[Dive into Deep Learning · §9.11]{.kicker}
 
 Scaling Up<br>
 **the drifting optimum · the first Adam step · muP · the coordinate check · transfer across widths**
 :::
 :::
 
-::: {.slide title="Under Standard Parametrization, the Optimal Learning Rate Drifts Downward With Width" layout="tight"}
-[Learning-rate sweep under SP]{.kicker}
+::: {.slide title="A Learning Rate Tuned at Width 128 Wastes a Network a Thousand Times Larger"}
+[The problem]{.kicker}
+
+MLP on Fashion-MNIST, 400 Adam steps, training loss:
+
+| network | learning rate | loss |
+|:--|:--|--:|
+| width 128, 135 thousand parameters | its own best | 0.32 to 0.33 |
+| width 8,192, 141 million parameters | the one tuned at width 128 | 0.31 to 0.38, by seed |
+| width 8,192 | its own best | 0.22 to 0.24, by seed |
+
+::: {.d2l-note .warn}
+A large run allows no sweep. Its learning rate comes from a small proxy,
+and by default that rate is wrong.
+:::
+
+With width-aware rules, a 6.7-billion-parameter GPT-3 was tuned on a
+40-million-parameter proxy for about 7% of its pretraining compute.
+
+[Yang et al., 2022]{.small}
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- explain why the best learning rate falls with width;
+- state the muP rules for Adam and implement them;
+- run a coordinate check and say what it cannot detect;
+- read a sweep for its optimum and for the cost of transfer;
+- compute the spectral norm of a first update.
+
+**Idea:** a layer with $n$ inputs sums $n$ terms of one sign in every
+update; per-layer rules divide the width out.
+
+**Running example:** an MLP $784 \to n \to n \to n \to 10$ on
+Fashion-MNIST, $n = 128$ to $8{,}192$, 400 Adam steps, two seeds.
+:::
+
+::: {.slide title="Scaling Up Moves the Learning Rate with the Model"}
+[Where this fits]{.kicker}
+
+| part | decks |
+|---|---|
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · **Scaling Up** · Practice |
+
+- **Uses:** Adam's first step is $\eta$ times the sign of the gradient;
+  the spectral norm and Muon's update; AdamW's settled relative step.
+- **Skips:** growth in depth, batch size and training length; the
+  exponents for SGD.
+:::
+
+::: {.slide title="Only the Two Middle Matrices Grow in Both Dimensions"}
+[A family of widths]{.kicker}
+
+MLP $784 \to n \to n \to n \to 10$, $n$ = 128, 512, 2,048, 8,192:
+
+| matrix | shape | fan-in (inputs) | grows with $n$ |
+|:--|:--|:--|:--|
+| input | $n \times 784$ | 784 | outputs only |
+| hidden (two) | $n \times n$ | $n$ | **inputs and outputs** |
+| output | $10 \times n$ | $n$ | inputs only |
+
+**Standard parametrization (SP):** weights of variance
+$1/\textrm{fan-in}$, zero biases, one learning rate $\eta$ for all layers.
+
+**Score of a run:** mean training loss of the last 50 of 400 steps.
+:::
+
+::: {.slide title="Under SP the Best Learning Rate Falls Sixteenfold over a 64-Fold Widening"}
+[Learning-rate sweep]{.kicker}
+
+Four widths, ten learning rates a factor of two apart, two seeds:
 
 @!scaling-the-sweep
+
+Slope of log best rate against log width: about $-0.7$. Each end of the
+family, run at the other end's best rate, loses about 0.1 nats.
 :::
 
-::: {.slide title="One Adam Step Causes O(n³) Logit Explosion Under SP; μP Keeps All Layers Flat" layout="tight"}
+::: {.slide title="Adam's First Step Adds n Terms of One Sign"}
+[The first Adam step]{.kicker}
+
+One example. Hidden matrix $\mathbf{W}$ ($n \times n$), input activations
+$\mathbf{h}$, output $\mathbf{z} = \mathbf{W}\mathbf{h}$, backpropagated
+error $\boldsymbol{\delta}$ at $\mathbf{z}$, learning rate $\eta$.
+
+I. $\;$Gradient: $\mathbf{g} = \boldsymbol{\delta}\mathbf{h}^\top$
+
+II. $\;$First Adam step:
+$\Delta\mathbf{W} = -\eta\operatorname{sign}(\mathbf{g})
+= -\eta\operatorname{sign}(\boldsymbol{\delta})\operatorname{sign}(\mathbf{h})^\top$
+
+III. Its effect on $\mathbf{z}$:
+
+$$\boxed{(\Delta\mathbf{W}\mathbf{h})_i = -\eta \operatorname{sign}(\delta_i)
+\sum_{j=1}^n |h_j| = -\eta \operatorname{sign}(\delta_i)\, n\,
+\overline{|h|}}$$
+
+$\overline{|h|}$: mean absolute activation, about the size of $z_i$
+itself. One step changes $z_i$ by about $\eta n$ times its size.
+:::
+
+::: {.slide title="The Same η Is a Nudge at Width 128 and a Thirtyfold Change at Width 8,192"}
+[The first Adam step]{.kicker}
+
+Relative change of a hidden layer in one step, $\eta n$, at
+$\eta = 2^{-8} \approx 0.004$:
+
+| width $n$ | 128 | 512 | 2,048 | 8,192 |
+|:--|--:|--:|--:|--:|
+| $\eta n$ | 0.5 | 2 | 8 | 32 |
+
+- Equal steps at every width need $\eta \propto 1/n$: a slope of $-1$.
+- Measured: $-0.7$. The count is crude: one example, one step, and only
+  the matrices with $n$ inputs.
+
+::: {.d2l-note .rule}
+One step moves a layer's output by about $\eta$ times its fan-in.
+:::
+:::
+
+::: {.slide title="Check: Which Matrices Take Larger Steps When the Width Doubles?"}
+[Check]{.kicker}
+
+The width $n$ of the MLP doubles at a fixed learning rate. By what factor
+does the first Adam step change the output of the input matrix
+($n \times 784$), of a hidden matrix ($n \times n$), and of the output
+matrix ($10 \times n$)?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** A step moves the output by about $\eta$ times the fan-in.
+Input matrix: fan-in 784, no change. Hidden and output matrices: fan-in
+$n$, twice as far.
+:::
+:::
+:::
+
+::: {.slide title="muP Writes the Width into Three Per-Layer Rules"}
+[The rules]{.kicker}
+
+Base width $n_{\textrm{base}}$, width multiplier
+$m = n / n_{\textrm{base}}$, Adam:
+
+| parameters | initial variance | learning rate | forward pass |
+|:--|:--|:--|:--|
+| input weights, all biases | $1/\textrm{fan-in}$; biases 0 | $\eta$ | unchanged |
+| hidden matrices | $1/\textrm{fan-in}$ | $\eta/m$ | unchanged |
+| output matrix | $1/n_{\textrm{base}}$ at every width | $\eta$ | logits $\times\, 1/m$ |
+
+"Maximal update": the largest updates that do not grow with the width.
+Smaller ones leave a wide layer where its initialization put it.
+
+[Yang and Hu, 2021; Yang et al., 2022]{.small}
+:::
+
+::: {.slide title="The Hidden Rule Cancels the Sum, and the Output Layer Averages"}
+[The rules]{.kicker}
+
+- **Hidden matrices:** first step
+  $(\eta/m)\, n\, \overline{|h|} = \eta\, n_{\textrm{base}}\, \overline{|h|}$
+  at every width.
+- **Output matrix, its own update:** logits
+  $= \frac{1}{m}\mathbf{W}\mathbf{h}$, so every update acts $m$ times
+  less.
+- **Output matrix, updates of the features $\mathbf{h}$:** the error
+  reached them through $\mathbf{W}$, so $\mathbf{W}\,\Delta\mathbf{h}$
+  sums $n$ terms of one sign. It stays bounded only for weights of size
+  $1/n$: variance $1/n_{\textrm{base}}$, times $1/m$.
+- **Code:** output weights $\times \sqrt{m}$ once, features $\div\, m$,
+  hidden rate $\eta/m$.
+
+::: {.d2l-note}
+A standard output layer sums over $n$ hidden units. Under muP it
+averages, and the initial logits shrink as $1/\sqrt{m}$.
+:::
+:::
+
+::: {.slide title="The Base Width Fixes the Constants That the Rules Leave Open"}
+[The rules]{.kicker}
+
+- At $n = n_{\textrm{base}}$, $m = 1$: muP is SP.
+- The rules give exponents. The base gives constants: the input rate
+  relative to the hidden rate, and the size of the initial logits.
+- A project puts the base at its proxy. Here it is 8,192, the widest
+  network: the same network under SP and muP, already tuned by the sweep.
+
+| width | $m$ | hidden rate | initial logits, relative to SP |
+|:--|--:|--:|--:|
+| 8,192 | 1 | $\eta$ | 1 |
+| 128 | 1/64 | $64\,\eta$ | 8 |
+:::
+
+::: {.slide title="One Adam Step under SP: Slopes of One, Two and Three"}
 [The coordinate check]{.kicker}
 
-@!scaling-the-coordinate-check-3
+Mean |activation| of each layer after one Adam step on one minibatch, at
+the rate tuned for width 128:
+
+@!scaling-the-coordinate-check-2
+
+Layer 1 is flat. Each later layer multiplies the excess by a further
+factor of order $\eta n$; the logits end about 1,000 times larger at width
+8,192.
 :::
 
-::: {.slide title="Under μP, the Optimal Learning Rate Transfers Directly From Width 128 to Width 8,192" layout="tight"}
+::: {.slide title="Under muP All Four Curves Are Flat"}
+[The coordinate check]{.kicker}
+
+The same check, at the rate tuned for the base width. At width 128 the
+hidden matrices learn at $64\eta$, four times the rate of the SP check:
+
+@!scaling-the-coordinate-check-3
+
+::: {.d2l-note .warn}
+Growth with width convicts an implementation. Flat curves do not acquit
+it: updates that shrink too fast with width are flat too.
+:::
+:::
+
+::: {.slide title="Check: Which Curve Shows a Missing Logit Multiplier?"}
+[Check]{.kicker}
+
+An implementation of muP with $m \geq 1$ gives the hidden matrices
+$\eta/m$ but forgets to divide the logits by $m$. What does the coordinate
+check show?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The hidden layers stay flat. The output matrix still sums $n$
+terms of one sign in its first step, so the logit curve grows in
+proportion to the width.
+:::
+:::
+:::
+
+::: {.slide title="Under muP the Best Learning Rate Stays in One Place"}
 [Learning-rate transfer]{.kicker}
 
+The same sweep with the same seeds, under muP:
+
 @!scaling-learning-rate-transfer
+
+Best rate $2.4 \times 10^{-4}$ or one grid step below, at every width.
+Slope within 0.2 of zero, against $-0.7$ under SP.
+:::
+
+::: {.slide title="muP Leaves a Narrow Network Less Room above Its Optimum"}
+[Learning-rate transfer]{.kicker}
+
+A hidden weight has size about $1/\sqrt{n}$; Adam moves it by up to
+$\eta/m$ per step. The two are equal at $\eta = \sqrt{n}/n_{\textrm{base}}$:
+
+| width $n$ | 128 | 512 | 2,048 | 8,192 |
+|:--|--:|--:|--:|--:|
+| step = weight at $\eta$ = | $1.4 \times 10^{-3}$ | $2.8 \times 10^{-3}$ | $5.5 \times 10^{-3}$ | $1.1 \times 10^{-2}$ |
+| loss passes 0.5 at $\eta$ = | $2.0 \times 10^{-3}$ | $3.9 \times 10^{-3}$ | $7.8 \times 10^{-3}$ | $1.6 \times 10^{-2}$ or above |
+
+- The three narrower curves pass 0.5 at the first grid point above their
+  rate, from about 0.4 one point below it.
+
+::: {.d2l-note}
+The safe way round: we tune narrow and run wide, and the wide network has
+more room.
+:::
+:::
+
+::: {.slide title="Transfer Costs a Tenth of a Nat under SP and Nothing under muP"}
+[Learning-rate transfer]{.kicker}
+
+Width 8,192 at the rate tuned for width 128, and at its own best rate:
+
+@!scaling-learning-rate-transfer-1
+
+- SP: either seed loses 0.09 to 0.15 nats; two seeds at one rate differ
+  by at most 0.05.
+- muP: at most 0.003 above its own best.
+:::
+
+::: {.slide title="For a Transformer, Ask Whether Inputs and Outputs Grow with the Width"}
+[Rules for a transformer]{.kicker}
+
+`TinyLM`, a small transformer language model of width $d$;
+$m = d/d_{\textrm{base}}$; Adam:
+
+| part | rule |
+|:--|:--|
+| embeddings, biases, normalization scales and shifts (no sum over the width) | learning rate $\eta$ |
+| the four matrices of a block (inputs and outputs grow with $d$) | learning rate $\eta/m$ |
+| output head ($d$ inputs, always 256 outputs) | initial variance fixed, logits $\times\, 1/m$ |
+| attention scores (dot product of two learned vectors) | extra factor $1/\sqrt{m}$ |
+
+Training aligns the two vectors, so their dot product grows as the
+dimension, not as its square root.
+:::
+
+::: {.slide title="Adam's First Update Has Spectral Norm η√(k_out k_in)"}
+[Muon and width]{.kicker}
+
+Spectral norm $\|\Delta\mathbf{W}\|_2$: the largest factor by which
+$\Delta\mathbf{W}$ stretches a vector.
+
+I. $\;\Delta\mathbf{W} = -\eta\,\mathbf{s}\mathbf{t}^\top$,
+$\mathbf{s} = \operatorname{sign}(\boldsymbol{\delta})$,
+$\mathbf{t} = \operatorname{sign}(\mathbf{h})$: rank one
+
+II. $\;\|\mathbf{s}\mathbf{t}^\top\|_2 = \|\mathbf{s}\|_2\,\|\mathbf{t}\|_2$
+
+III. With $k_{\textrm{out}}$, $k_{\textrm{in}}$ nonzero entries of
+$\boldsymbol{\delta}$, $\mathbf{h}$:
+
+$$\boxed{\|\Delta\mathbf{W}\|_2 = \eta\sqrt{k_{\textrm{out}}\,k_{\textrm{in}}}}$$
+
+ReLU, $n \times n$: half the entries are nonzero on either side, so the
+norm is about $\eta n/2$. It grows with the width.
+:::
+
+::: {.slide title="Check: How Large Should the Spectral Norm of an Update Be?"}
+[Check]{.kicker}
+
+A matrix has $d_{\textrm{in}}$ inputs and $d_{\textrm{out}}$ outputs. An
+input with entries of order one has length $\sqrt{d_{\textrm{in}}}$. How
+large must $\|\Delta\mathbf{W}\|_2$ be for the update to change every
+output entry by an amount of order one?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The change of the output must have length
+$\sqrt{d_{\textrm{out}}}$, so
+$\|\Delta\mathbf{W}\|_2 \approx \sqrt{d_{\textrm{out}}/d_{\textrm{in}}}$,
+the *spectral condition*. For an $n \times n$ matrix this is a constant,
+while Adam's $\eta n/2$ grows with $n$.
+:::
+:::
+
+[Yang, Simon and Bernstein, 2023]{.small}
+:::
+
+::: {.slide title="Muon at AdamW's Entry Scale Still Grows as √n"}
+[Muon and width]{.kicker}
+
+Muon's update: the averaged gradient with its singular values pushed to
+about one, times a shape factor ($d_{\textrm{in}}$ inputs,
+$d_{\textrm{out}}$ outputs). For an $n \times n$ matrix:
+
+| update | spectral norm | $\eta$ must scale as |
+|:--|:--|:--|
+| Adam, first step | $\eta n/2$ | $1/n$ |
+| Muon $\times\; 0.2\sqrt{\max(d_{\textrm{out}}, d_{\textrm{in}})}$, entries as large as AdamW's | $0.2\,\eta\sqrt{n}$ | $1/\sqrt{n}$ |
+| Muon $\times \sqrt{d_{\textrm{out}}/d_{\textrm{in}}}$ | $\eta$ | constant |
+
+[Bernstein, 2025; Shah et al., 2025 combine Muon with muP]{.small}
+:::
+
+::: {.slide title="Check the Family, Move the Rate with the Width, Sweep Once More"}
+[Limits of transfer]{.kicker}
+
+- Coordinate check on every family you scale: seconds.
+- Never carry $\eta$ across a large change of width unchanged: per-layer
+  rules, or a fitted slope under SP ($-0.7$ here; the first-step count
+  gives $-1$).
+- Sweep the transferred rate once more, a factor of two each way.
+
+::: {.d2l-note .warn}
+Open: under AdamW every matrix settles at a relative step
+$\sqrt{2\eta\lambda}$ ($\lambda$: weight decay), whatever its width. muP
+may then act mainly as a warmup.
+:::
+
+[Bi et al., 2024; Kosson et al., 2025]{.small}
+:::
+
+::: {.slide title="Check: By What Factor Should the Learning Rate Fall from Width 128 to 2,048?"}
+[Check]{.kicker}
+
+A network is widened from 128 to 2,048, so $m = 16$. Give the factor for
+(a) the hidden matrices under muP with Adam, (b) Muon at AdamW's entry
+scale, (c) the shared rate under SP, from the measured slope of $-0.7$.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** (a) $m = 16$. (b) $\sqrt{m} = 4$. (c) $16^{0.7} \approx 7$;
+in the sweep the best rate fell from about $4 \times 10^{-3}$ to about
+$5 \times 10^{-4}$, a factor of 8.
+:::
+:::
+:::
+
+::: {.slide title="Wider Layers Sum More Terms, and muP Divides the Sum Out"}
+[Wrap-up]{.kicker}
+
+- **Drift:** one Adam step moves a layer by about $\eta$ times its
+  fan-in; under SP the best rate fell sixteenfold from width 128 to 8,192.
+- **muP:** hidden rate $\eta/m$, logits $\times\, 1/m$; the best rate
+  stays within one grid step.
+- **Transfer:** the width-128 rate costs 0.1 nats at width 8,192 under
+  SP, at most 0.003 under muP.
+- **Coordinate check:** growth convicts, flat curves do not acquit.
+- **Muon** at AdamW's entry scale: spectral norm $0.2\,\eta\sqrt{n}$, so
+  its rate must fall as $1/\sqrt{n}$.
+
+**Next:** configuring, protecting and finishing a run that cannot be
+repeated.
 :::

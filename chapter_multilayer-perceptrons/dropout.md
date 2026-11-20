@@ -486,3 +486,382 @@ In practice, dropout is most valuable precisely when parameter count dwarfs data
 [Discussions](https://d2l.discourse.group/t/17987)
 :end_tab:
 
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4.6]{.kicker}
+
+Dropout<br>**random masks · inverted dropout · noisy labels**
+:::
+:::
+
+::: {.slide title="An MLP Trained Long Enough Memorizes Its Wrong Labels"}
+[The problem]{.kicker}
+
+- The MLP of this chapter fits 1,000 Fashion-MNIST images even with
+  **random** labels, and it loses accuracy on new images as it memorizes
+  wrong ones.
+- **Weight decay** limits the size of the weights; **early stopping**
+  limits the length of training.
+- **Dropout** disturbs the network while it learns: at every step, each
+  hidden unit is set to zero with probability $p$.
+
+::: {.d2l-note}
+The motivation (Hinton et al., 2012): a unit may be useful only together
+with particular partners. Such *co-adapted* combinations fit the training
+set and need not carry over to new images. With random units missing at
+every step, no unit can count on a partner.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- compute the mean and the variance of a dropped unit;
+- explain why the network at test time is **not** the average of the
+  thinned networks, with a two-unit counterexample;
+- implement a dropout layer and an MLP that uses it;
+- measure what dropout changes when there are wrong labels to memorize,
+  and what it does not;
+- show that, for a linear model, dropout is a form of weight decay.
+
+**Running example:** Fashion-MNIST. Softmax regression: 7,850 parameters,
+about 84% after 30 epochs. Here: an MLP with two hidden layers of 256 units,
+269,322 parameters, trained for 20 epochs at learning rate 0.1.
+:::
+
+::: {.slide title="Dropout Is the Third Regularizer of the Book"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Multilayer Perceptrons | hidden layers, universal approximation, activation functions |
+| Implementation | an MLP trained on Fashion-MNIST |
+| Backpropagation | how the gradients are computed, and at what memory cost |
+| Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
+| Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |
+| **Dropout** | **random masks, slower memorization of noisy labels** |
+| Predicting House Prices on Kaggle | the workflow on real data |
+:::
+
+::: {.col .narrow}
+- **Uses:** weight decay, He initialization, the `Trainer`, Fashion-MNIST.
+- **Skips:** variants such as DropConnect and stochastic depth, and the
+  Bayesian reading of dropout beyond one exercise.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Noise in Hidden Layers]{.dtitle}
+
+[masks, rescaling, and the network at test time]{.dsub}
+:::
+:::
+
+::: {.slide title="For a Linear Model, Input Noise Is Weight Decay"}
+[Noise · motivation]{.kicker}
+
+Perturb the input, $\mathbf{x} + \boldsymbol{\epsilon}$, with independent
+entries of mean 0 and variance $s^2$:
+
+$$\mathbb{E}\left[\left(\mathbf{w}^\top(\mathbf{x} + \boldsymbol{\epsilon}) + b - y\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + s^2\|\mathbf{w}\|^2.$$
+
+- The cross term vanishes: $\mathbb{E}[\boldsymbol{\epsilon}] = \mathbf{0}$.
+- Training on noisy inputs = squared loss + weight decay $s^2\|\mathbf{w}\|^2$.
+
+::: {.d2l-note}
+Dropout moves the noise to the hidden units, and makes it large: it removes
+units instead of nudging them.
+:::
+:::
+
+::: {.slide title="Dropout Zeros a Unit with Probability p and Rescales the Rest"}
+[Noise · the operation]{.kicker}
+
+With a mask $\xi_j$ that is 0 with probability $p$ and 1 otherwise:
+
+$$h_j' = \frac{\xi_j h_j}{1 - p} = \begin{cases} 0 & \textrm{with probability } p,\\ h_j/(1 - p) & \textrm{with probability } 1 - p.\end{cases}$$
+
+- A fresh mask for every unit, every example, every step.
+- $\mathbb{E}[h_j'] = p \cdot 0 + (1 - p)\frac{h_j}{1-p} = h_j$: the expected value
+  is kept, and $1/(1 - p)$ is the only factor that keeps it.
+
+::: {.d2l-note}
+**Inverted dropout** rescales during training, so the test network is the
+plain network. The original version (Hinton et al., 2012) scaled the
+weights by $1 - p$ at test time instead.
+:::
+:::
+
+::: {.slide title="The Noise Is as Large as the Activation"}
+[Noise · the variance]{.kicker}
+
+$$\mathbb{E}[h_j'^2] = \frac{h_j^2}{1 - p}, \qquad \textrm{Var}[h_j'] = \frac{p}{1 - p}\, h_j^2.$$
+
+| $p$ | kept unit scaled by | variance for $h_j = 1$ |
+|---|---:|---:|
+| 0.2 | 1.25 | 0.25 |
+| 0.5 | 2 | 1 |
+
+::: {.d2l-note}
+At $p = 0.5$ the standard deviation of $h_j'$ equals $|h_j|$: this is not
+a small perturbation.
+:::
+:::
+
+::: {.slide title="The Test Network Is Not the Average of the Thinned Networks"}
+[Noise · test time]{.kicker}
+
+Two units, $h_1 = h_2 = 1$, $p = 0.5$, pre-activation $z = h_1' - h_2'$:
+
+| $(h_1', h_2')$ | (0,0) | (2,0) | (0,2) | (2,2) |
+|---|---:|---:|---:|---:|
+| $z$ | 0 | 2 | −2 | 0 |
+| $\textrm{ReLU}(z)$ | 0 | 2 | 0 | 0 |
+
+- Linear layer: $\mathbb{E}[z] = 0$, the full network's value.
+- After the ReLU: $\mathbb{E}[\textrm{ReLU}(z)] = 0.5$, but the full network gives
+  $\textrm{ReLU}(0) = 0$.
+
+::: {.d2l-note}
+The expected value is kept unit by unit, not through nonlinear layers.
+:::
+:::
+
+::: {.slide title="Check: How Large Is the Noise at p = 0.8?"}
+[Check]{.kicker}
+
+A unit has activation $h_j = 1$ and dropout probability $p = 0.8$. What is
+a kept unit scaled to, and what is the variance of $h_j'$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** A kept unit becomes $1/(1 - 0.8) = 5$, kept one time in five.
+The variance is $0.8/0.2 = 4$: a standard deviation twice the
+activation.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Implementation]{.dtitle}
+
+[a dropout layer and an MLP that uses it]{.dsub}
+:::
+:::
+
+::: {.slide title="A Dropout Layer in Three Lines"}
+[Implementation · the layer]{.kicker}
+
+Draw a uniform number per entry, keep the entry if it is at least $p$,
+scale the survivors by $1/(1 - p)$:
+
+@dropout-implementation-from-scratch-1
+:::
+
+::: {.slide title="A Million Ones at p = 0.2: Mean 1, Variance 0.25"}
+[Implementation · check]{.kicker}
+
+@!dropout-implementation-from-scratch-2
+
+- $p = 0.5$: each entry is 0 with probability $1/2$, otherwise doubled.
+- The sample mean and variance match $1$ and $p/(1 - p) = 0.25$.
+:::
+
+::: {.slide title="Dropout Goes after Each Hidden Activation, Only in Training"}
+[Implementation · the model]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+`Linear → ReLU → dropout(0.2) → Linear → ReLU → dropout(0.5) → Linear`
+
+- Dropped units get no gradient on that example.
+- Fewer units dropped near the input, more deeper.
+- He initialization (variance $2/n_\textrm{in}$), zero biases, in every
+  framework.
+:::
+
+::: {.col .fig .big}
+![Dropping $h_2$ and $h_5$ removes them and their connections for one step.](../img/dropout2.svg)
+:::
+:::
+:::
+
+::: {.slide title="Training: 20 Epochs on Fashion-MNIST"}
+[Implementation · training]{.kicker}
+
+Two hidden layers of 256 units, $p = 0.2$ and $0.5$, SGD at learning rate
+0.1, minibatches of 256:
+
+@!dropout-training
+
+::: {.d2l-note}
+The training loss is computed with masks, on thinned networks; the
+validation loss on the full network.
+:::
+:::
+
+::: {.slide title="Concise: One Dropout Layer after Each Activation"}
+[Implementation · concise]{.kicker}
+
+A framework `Dropout(p)` layer masks and rescales in training mode and passes
+its input through at test time; the `Trainer` switches the mode.
+
+@dropout-concise-implementation-1
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Effects of Dropout]{.dtitle}
+
+[too little to regularize · noisy labels]{.dsub}
+:::
+:::
+
+::: {.slide title="On All 60,000 Images There Is Too Little to Regularize"}
+[Effects · the full data]{.kicker}
+
+- A regularizer can only remove overfitting that is there.
+- After 20 epochs on all of Fashion-MNIST, the training loss, even with the
+  masks switched on, ends only a little below the validation loss.
+- To see what dropout does, we need a network that overfits.
+
+::: {.d2l-note}
+The last deck supplied one: 1,000 images with redrawn labels, 200 epochs.
+The MLP memorized the wrong labels and lost validation accuracy doing so.
+:::
+:::
+
+::: {.slide title="With Noisy Labels, Dropout Slows Memorization"}
+[Effects · noisy labels]{.kicker}
+
+1,000 images, 40% of the labels redrawn (about 36% wrong), 200 epochs,
+minibatches of 64; dropout 0.5 in both hidden layers against none:
+
+@!dropout-noisy-labels-2
+:::
+
+::: {.slide title="Dropout Slows the Memorization and Does Not Stop It"}
+[Effects · reading]{.kicker}
+
+| | no dropout | dropout 0.5 |
+|---|---|---|
+| wrong labels reproduced | all, by about epoch 100 | three quarters to four fifths after 200 epochs, still rising |
+| validation accuracy, last ten epochs | about ten points below its early best | three to five points higher |
+
+::: {.d2l-note}
+Dropout changes which fit training finds when there is noise to fit. Both
+networks end below their early best: early stopping is still worth having.
+:::
+:::
+
+::: {.slide title="Check: How Often Can a Unit Count on a Given Partner?"}
+[Check]{.kicker}
+
+The second hidden layer has 256 units and $p = 0.5$. How many of them does
+an example keep on average, and in what fraction of the steps are two given
+units of that layer both present?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $256 \times 0.5 = 128$ units. Two given units are both kept with
+probability $0.5^2 = 0.25$: a unit can count on a partner in one step of
+four. In the first layer ($p = 0.2$): about 205 units, a given pair in 64%
+of the steps.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Interpretations]{.dtitle}
+
+[noise, co-adaptation, an implicit ensemble]{.dsub}
+:::
+:::
+
+::: {.slide title="For Linear Regression, Dropout Is Weight Decay Scaled by x²"}
+[Interpretations · noise]{.kicker}
+
+Drop the inputs $x_j' = \xi_j x_j/(1 - p)$: mean $x_j$, variance
+$\frac{p}{1-p}x_j^2$, independent.
+
+$$\mathbb{E}\left[\left(\mathbf{w}^\top\mathbf{x}' + b - y\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + \frac{p}{1 - p}\sum_j x_j^2 w_j^2.$$
+
+- Expected loss = loss of the mean + variance of the prediction.
+- Each weight is penalized by the square of its input; no penalty where
+  $x_j = 0$.
+
+::: {.d2l-note}
+For deep networks the penalty depends on activations that change during
+training: no closed form.
+:::
+:::
+
+::: {.slide title="Three Explanations, None Complete"}
+[Interpretations · overview]{.kicker}
+
+| view | what it says | limit |
+|---|---|---|
+| noise injection | tolerate noise → smoother function | exact only for linear models |
+| co-adaptation | units must work alone | plausible; not tested by our experiment |
+| implicit ensemble | $2^{512}$ thinned networks, shared weights | test network ≠ their average |
+
+::: {.d2l-note}
+Only the expected value of each unit is exact. With 512 hidden units there
+are $2^{512} \approx 10^{154}$ masks.
+:::
+:::
+
+::: {.slide title="Dropout Today: Sparingly, at About 0.1, or Not at All"}
+[Interpretations · practice]{.kicker}
+
+- **Where it matters:** many more parameters than examples, and many passes
+  over each example.
+- **Early-2010s image classifiers** (AlexNet): dropout kept large fully
+  connected layers from overfitting.
+- **Later architectures:** small probabilities, around 0.1.
+- **Models that see each example once** (large language models): often 0.
+- **Caution:** dropout before a normalization layer changes the mean square
+  by $1/(1-p)$ between training and test.
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Operation:** zero with probability $p$, scale by $1/(1-p)$;
+  $\mathbb{E}[h_j'] = h_j$, $\textrm{Var}[h_j'] = \frac{p}{1-p}h_j^2$.
+- **Test time:** full network, no masks; not the average of the thinned
+  networks once a nonlinearity intervenes.
+:::
+
+::: {.col}
+- **Fashion-MNIST, 2 × 256, 20 epochs:** about 87%; too little overfitting
+  for dropout to matter.
+- **1,000 images, 40% of labels redrawn:** no dropout memorizes every wrong
+  label; dropout 0.5 memorizes more slowly and ends three to five points
+  higher.
+- **Linear model:** dropout = weight decay scaled by $x_j^2$.
+- **Why it works:** noise, co-adaptation, ensemble; each a partial account.
+:::
+:::
+
+**Next:** house prices on Kaggle, a table of mixed numbers and categories,
+where preprocessing and validation decide the result.
+:::

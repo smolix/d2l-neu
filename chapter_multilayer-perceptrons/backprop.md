@@ -428,3 +428,433 @@ In the forward pass, each example performs $d h + h q = 784 \times 256 + 256 \ti
 
 [Discussions](https://d2l.discourse.group/t/102)
 
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §4.3]{.kicker}
+
+Backpropagation<br>**computational graphs · local rules · the backward pass of an MLP · memory**
+:::
+:::
+
+::: {.slide title="One Backward Pass Returns All 203,530 Gradients"}
+[The problem]{.kicker}
+
+The Fashion-MNIST MLP, $784 \to 256 \to 10$, has 203,530 parameters.
+
+- Finite differences: one extra forward pass per parameter, 203,530 per step.
+- Automatic differentiation: one backward pass, about the cost of a forward
+  pass.
+
+. . .
+
+So far `backward()` has been a black box. It decides:
+
+- why training needs more memory than prediction;
+- why a ReLU unit that is never active stops learning;
+- why the gradients of deep networks vanish or explode (next deck).
+
+::: {.d2l-note}
+Open the box: three local rules and the values they read.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- run the backward pass of a small graph by hand;
+- say what the gradient of a hidden layer means, and why one backward pass
+  suffices for every parameter;
+- derive the gradients of $\mathbf{X}\mathbf{W}$, of a bias, and of an
+  activation function;
+- write the backward pass of an MLP and check it against autograd;
+- count, in bytes, the values that training must store;
+- read a dead ReLU unit off a gradient.
+
+**Running example:** the Fashion-MNIST MLP: 203,530 parameters, 203,264
+multiply-adds per example in the forward pass, minibatches of 256.
+:::
+
+::: {.slide title="Gradients by Local Rules, Between the MLP and Its Initialization"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Multilayer Perceptrons | hidden layers, universal approximation, activation functions |
+| Implementation | an MLP trained on Fashion-MNIST |
+| **Backpropagation** | **how the gradients are computed, and at what memory cost** |
+| Numerical Stability and Initialization | vanishing gradients, Xavier and He initialization |
+| Generalization in Deep Learning | memorization, double descent, implicit bias, early stopping |
+| Dropout | random masks, slower memorization of noisy labels |
+| Predicting House Prices on Kaggle | the workflow on real data |
+:::
+
+::: {.col .narrow}
+- **Uses:** the chain rule and autograd; the cross-entropy gradient
+  $\hat{\mathbf{Y}} - \mathbf{Y}$; the MLP.
+- **Skips:** forward mode; rules for general tensor operations.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Computational Graphs]{.dtitle}
+
+[values flow forward · gradients flow back]{.dsub}
+:::
+:::
+
+::: {.slide title="Reminder: an Addition Copies the Gradient; a Multiplication Scales It by the Other Input"}
+[Computational graphs]{.kicker}
+
+Automatic differentiation in its barest form, on three numbers:
+$e = (a + b)\,c$ at $a = 2$, $b = 1$, $c = -3$. Forward: $u = a + b = 3$, $e = u\,c = -9$.
+Backward: start from $\partial e/\partial e = 1$.
+
+![](../img/mdl-mlp-backprop-small.svg){width=62%}
+:::
+
+::: {.slide title="Every Node Needs Stored Values and a Finished Gradient"}
+[Computational graphs]{.kicker}
+
+Two questions for each node of the graph:
+
+- **Which forward values does its rule read?** The multiplication reads
+  both inputs: $c$ for $\partial e/\partial u$, $u$ for
+  $\partial e/\partial c$. The addition reads nothing.
+- **When is its gradient ready?** Once every node that uses its value has
+  passed a gradient back: $e$, then $u$ and $c$, then $a$ and $b$.
+
+::: {.d2l-note .rule}
+The backward pass visits the graph in reverse order and reads values that
+the forward pass kept.
+:::
+:::
+
+::: {.slide title="Each Weight Matrix Feeds Two Nodes: Its Layer and the Penalty"}
+[Computational graphs]{.kicker}
+
+$\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}$,
+$\mathbf{H} = \phi(\mathbf{Z})$,
+$\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$,
+$L$ = mean cross-entropy, $J = L + s$ with
+$s = \tfrac{\lambda}{2}(\|\mathbf{W}^{(1)}\|_\textrm{F}^2 + \|\mathbf{W}^{(2)}\|_\textrm{F}^2)$.
+
+![](../img/mdl-mlp-forward-graph.svg){width=72%}
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Local Rules]{.dtitle}
+
+[three rules · the backward pass in five lines · K layers]{.dsub}
+:::
+:::
+
+::: {.slide title="The Gradient of XW Is XᵀG for W and GWᵀ for X"}
+[Local rules]{.kicker}
+
+$\mathbf{A} = \mathbf{X}\mathbf{W}$, so $a_{ij} = \sum_r x_{ir} w_{rj}$; the
+gradient arriving from above is $\mathbf{G} = \partial J/\partial \mathbf{A}$.
+
+I. $w_{rj}$ enters every entry of column $j$:
+$\;\partial J/\partial w_{rj} = \sum_i g_{ij}\, x_{ir} = [\mathbf{X}^\top\mathbf{G}]_{rj}$
+
+II. $x_{ir}$ enters every entry of row $i$:
+$\;\partial J/\partial x_{ir} = \sum_j g_{ij}\, w_{rj} = [\mathbf{G}\mathbf{W}^\top]_{ir}$
+
+::: {.d2l-note .rule}
+$\mathbf{X}^\top\mathbf{G}$ is $d \times h$ like $\mathbf{W}$, and
+$\mathbf{G}\mathbf{W}^\top$ is $n \times d$ like $\mathbf{X}$. The weight
+gradient needs the input, so $\mathbf{X}$ must be kept.
+:::
+:::
+
+::: {.slide title="A Bias Sums the Gradient over Examples; an Activation Multiplies by Its Slope"}
+[Local rules]{.kicker}
+
+::: {.cols}
+::: {.col}
+**Bias** $\mathbf{Z} = \mathbf{A} + \mathbf{b}$, added to every row, with
+$\mathbf{G} = \partial J/\partial \mathbf{Z}$:
+
+$$\frac{\partial J}{\partial \mathbf{A}} = \mathbf{G}, \qquad
+  \frac{\partial J}{\partial \mathbf{b}} = \mathbf{G}^\top \mathbf{1}.$$
+
+The sum runs over the $n$ examples. Nothing is stored.
+:::
+
+::: {.col}
+**Activation** $\mathbf{H} = \phi(\mathbf{Z})$, entry by entry:
+
+$$\frac{\partial J}{\partial \mathbf{Z}} = \frac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z}).$$
+
+ReLU: $\phi'(z) = 1$ for $z > 0$, else 0. Active units pass the gradient;
+inactive ones block it.
+:::
+:::
+:::
+
+::: {.slide title="The Backward Pass of an MLP Is Five Lines"}
+[Local rules]{.kicker}
+
+$$
+\begin{aligned}
+\tfrac{\partial J}{\partial \mathbf{O}} &= \tfrac{1}{n}(\hat{\mathbf{Y}} - \mathbf{Y}) \\
+\tfrac{\partial J}{\partial \mathbf{W}^{(2)}} &= \mathbf{H}^\top \tfrac{\partial J}{\partial \mathbf{O}} + \lambda \mathbf{W}^{(2)} \\
+\tfrac{\partial J}{\partial \mathbf{H}} &= \tfrac{\partial J}{\partial \mathbf{O}}\, \mathbf{W}^{(2)\top} \\
+\tfrac{\partial J}{\partial \mathbf{Z}} &= \tfrac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z}) \\
+\tfrac{\partial J}{\partial \mathbf{W}^{(1)}} &= \mathbf{X}^\top \tfrac{\partial J}{\partial \mathbf{Z}} + \lambda \mathbf{W}^{(1)}
+\end{aligned}
+$$
+
+::: {.d2l-note .rule}
+Top to bottom is the order: the output layer first. The lines read
+$\hat{\mathbf{Y}}$, $\mathbf{H}$, $\mathbf{W}^{(2)}$, $\mathbf{Z}$, and
+$\mathbf{X}$; bias gradients are the row sums of the lines above them.
+:::
+:::
+
+::: {.slide title="W⁽²⁾ Collects the Gradients of Two Paths"}
+[Local rules]{.kicker}
+
+$$J \leftarrow L \leftarrow \mathbf{O} \leftarrow \mathbf{W}^{(2)}
+\qquad\text{and}\qquad
+J \leftarrow s \leftarrow \mathbf{W}^{(2)}$$
+
+The chain rule adds the paths:
+$\mathbf{H}^\top \partial J/\partial \mathbf{O}$ from the loss plus
+$\lambda\mathbf{W}^{(2)}$ from the penalty.
+
+::: {.d2l-note .warn}
+A value that feeds several nodes sums their gradients. In a hand-written
+backward pass, `=` where `+=` belongs gives a wrong gradient and no error.
+:::
+:::
+
+::: {.slide title="A Hidden Unit Learns from the Output Errors Sent Back to It"}
+[Local rules]{.kicker}
+
+The five lines, read as a message:
+
+- **Line 1:** the error at the outputs, predicted probabilities minus
+  labels.
+- **Line 3:** $\partial J/\partial \mathbf{H} = \partial J/\partial \mathbf{O}\,\mathbf{W}^{(2)\top}$
+  sends it back through the weights that carried $\mathbf{H}$ forward. Unit
+  $j$ receives the errors of the $q$ outputs, each times its weight to that
+  output.
+- **Line 4:** the message passes only where the slope $\phi'$ is not zero.
+
+::: {.d2l-note}
+A hidden unit has no label of its own. It learns from how wrong the outputs
+that it feeds are, and in which direction: hence *back-propagation*.
+:::
+:::
+
+::: {.slide title="K Layers Repeat One Step"}
+[Local rules]{.kicker}
+
+$\mathbf{Z}^{(k)} = \mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}$,
+$\mathbf{H}^{(k)} = \phi(\mathbf{Z}^{(k)})$, $\mathbf{H}^{(0)} = \mathbf{X}$,
+$\mathbf{O} = \mathbf{Z}^{(K)}$. Start from
+$\partial J/\partial \mathbf{Z}^{(K)} = \tfrac1n(\hat{\mathbf{Y}} - \mathbf{Y})$,
+then for $k = K - 1, \ldots, 1$:
+
+$$
+\frac{\partial J}{\partial \mathbf{Z}^{(k)}} = \Bigl(\frac{\partial J}{\partial \mathbf{Z}^{(k+1)}}\, \mathbf{W}^{(k+1)\top}\Bigr) \odot \phi'\bigl(\mathbf{Z}^{(k)}\bigr), \qquad
+\frac{\partial J}{\partial \mathbf{W}^{(k)}} = \mathbf{H}^{(k-1)\top} \frac{\partial J}{\partial \mathbf{Z}^{(k)}} + \lambda \mathbf{W}^{(k)}
+$$
+
+::: {.d2l-note .rule}
+A layer need not know how many others there are. On the way down the error
+is multiplied by one transposed weight matrix and one matrix of slopes per
+layer: the product that the next deck measures.
+:::
+:::
+
+::: {.slide title="Check: The Shape of the First-Layer Gradient"}
+[Check]{.kicker}
+
+For a minibatch of 256 examples of the Fashion-MNIST MLP, what is the shape
+of $\partial J/\partial \mathbf{W}^{(1)}$, and how many outer products does
+$\mathbf{X}^\top \partial J/\partial \mathbf{Z}$ add up?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $784 \times 256$, the shape of $\mathbf{W}^{(1)}$. It adds 256
+outer products $\mathbf{x}_i \mathbf{g}_i^\top$, one per example, where
+$\mathbf{x}_i^\top$ and $\mathbf{g}_i^\top$ are row $i$ of $\mathbf{X}$
+and of $\partial J/\partial \mathbf{Z}$.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[A Worked Example]{.dtitle}
+
+[two inputs · two hidden units · one output]{.dsub}
+:::
+:::
+
+::: {.slide title="Forward: z₁ = −1, so the First Hidden Unit Is Inactive"}
+[Worked example]{.kicker}
+
+ReLU, squared loss $L = \tfrac12(o - y)^2$, zero biases, $\lambda = 0$:
+
+$$
+\mathbf{X} = \begin{bmatrix} 1 & 2 \end{bmatrix},\quad
+\mathbf{W}^{(1)} = \begin{bmatrix} \phantom{-}1 & 0 \\ -1 & 1 \end{bmatrix},\quad
+\mathbf{W}^{(2)} = \begin{bmatrix} \phantom{-}2 \\ -1 \end{bmatrix},\quad
+y = 0.
+$$
+
+. . .
+
+$\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} = \begin{bmatrix} -1 & 2 \end{bmatrix}$,
+$\quad\mathbf{H} = \begin{bmatrix} 0 & 2 \end{bmatrix}$,
+$\quad o = \mathbf{H}\mathbf{W}^{(2)} = -2$,
+$\quad L = 2$.
+
+Backward starts from $\partial L/\partial o = o - y = -2$.
+:::
+
+::: {.slide title="Backward: the Inactive Unit Zeros a Column of ∂L/∂W⁽¹⁾"}
+[Worked example]{.kicker}
+
+![](../img/mdl-mlp-backprop-graph.svg){width=80%}
+
+Column $j$ of $\mathbf{W}^{(1)}$ feeds hidden unit $j$. A unit that is
+inactive for every training example never gets a gradient: it is dead.
+:::
+
+::: {.slide title="The Backward Pass in Code"}
+[Worked example · minibatch]{.kicker}
+
+The five lines, with cross-entropy, biases, weight decay, and ReLU:
+
+@-backprop-checking-the-backward-pass-on-a-minibatch-1
+:::
+
+::: {.slide title="Hand-Written and Automatic Gradients Agree to Float64 Rounding"}
+[Worked example · minibatch]{.kicker}
+
+Random minibatch of 256 for the $784 \to 256 \to 10$ MLP, weights from
+$\mathcal{N}(0, 0.01^2)$, $\lambda = 10^{-3}$, all in 64-bit floating point;
+largest difference relative to the largest gradient entry:
+
+@!backprop-checking-the-backward-pass-on-a-minibatch-2
+
+::: {.d2l-note .rule}
+All below $10^{-14}$, a few rounding errors: the five lines are what
+autograd computes.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Memory and Computation]{.dtitle}
+
+[what training stores · what the backward pass costs]{.dsub}
+:::
+:::
+
+::: {.slide title="Training Stores 1.1 MB per Minibatch, More than the 0.8 MB of Parameters"}
+[Memory]{.kicker}
+
+| stored for the backward pass | shape | numbers |
+|---|---|---:|
+| input $\mathbf{X}$ | $256 \times 784$ | 200,704 |
+| activations $\mathbf{H}$ (also give $\phi'(\mathbf{Z})$ for ReLU) | $256 \times 256$ | 65,536 |
+| probabilities $\hat{\mathbf{Y}}$ | $256 \times 10$ | 2,560 |
+| **total**, at 4 bytes each | | **268,800 = 1.1 MB** |
+
+Parameters: 203,530 = 0.8 MB. The stored values grow with the minibatch
+and with every hidden layer; prediction discards each layer's input.
+:::
+
+::: {.slide title="The Backward Pass Costs About as Much as the Forward Pass"}
+[Computation]{.kicker}
+
+Multiply-adds per example:
+
+- **forward:** $784 \cdot 256 + 256 \cdot 10 = 203{,}264$
+- **backward:** each product becomes two (weights and input), except that
+  $\partial J/\partial \mathbf{X}$ is not needed:
+  $784 \cdot 256 + 2 \cdot 256 \cdot 10 = 205{,}824$
+
+::: {.d2l-note}
+A training step costs about two forward passes here, and about three in a
+network whose first layer is small.
+:::
+:::
+
+::: {.slide title="One Pass Suffices Because the Derivatives Share Their Work"}
+[Computation]{.kicker}
+
+How can one backward pass return 203,530 derivatives?
+
+- **Finite differences:** one forward pass per parameter, some two hundred
+  thousand per training step.
+- **Backward pass:** computes the two errors
+  $\partial J/\partial \mathbf{O}$ and $\partial J/\partial \mathbf{Z}$
+  once. Every parameter gradient is then one product or sum away:
+  $\mathbf{H}^\top \partial J/\partial \mathbf{O}$,
+  $\mathbf{X}^\top \partial J/\partial \mathbf{Z}$, and the row sums.
+
+::: {.d2l-note .rule}
+The work that the derivatives have in common is done once. This is the
+advantage of reverse mode, with the shared quantities named: they are the
+errors of the layers.
+:::
+:::
+
+::: {.slide title="Check: Ten Hidden Layers of Width 256"}
+[Check]{.kicker}
+
+Give the Fashion-MNIST MLP ten hidden layers of width 256. How many bytes
+does training store per minibatch of 256, and how does that compare with
+the parameters?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\mathbf{X}$ (200,704) + ten $\mathbf{H}$ (655,360) +
+$\hat{\mathbf{Y}}$ (2,560) = 858,624 numbers, 3.4 MB. Parameters:
+200,960 + 9 × 65,792 + 2,570 = 795,658, 3.2 MB. Doubling the minibatch
+doubles the first number only.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **Local rules:** an addition copies the gradient, a multiplication scales
+  it by the other input; $\mathbf{X}\mathbf{W}$ sends back
+  $\mathbf{X}^\top\mathbf{G}$ and $\mathbf{G}\mathbf{W}^\top$; an activation
+  multiplies by $\phi'(\mathbf{Z})$.
+- **Order:** output layer first; a value that feeds two nodes sums their
+  gradients.
+- **Meaning:** each layer receives the error of the layer above through the
+  transposed weights, and every parameter gradient is read off these
+  errors, which is why one pass suffices.
+- **Check:** five lines match autograd to float64 rounding.
+- **Dead units:** an inactive ReLU unit zeros its column of
+  $\partial L/\partial \mathbf{W}^{(1)}$.
+- **Cost:** 1.1 MB stored per minibatch of 256 against 0.8 MB of
+  parameters; the backward pass about as expensive as the forward pass.
+
+**Next:** what a product of many layers' factors does to the gradient.
+:::

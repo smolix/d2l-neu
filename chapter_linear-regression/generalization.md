@@ -447,3 +447,392 @@ Using only the 20 training examples, 5-fold cross-validation cleanly rejects bot
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17978)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.6]{.kicker}
+
+Performance on data the model has not seen<br>
+**training and test error · underfitting and overfitting · bias and variance · validation**
+:::
+:::
+
+::: {.slide title="Twenty Weights Fit Twenty Points and Miss New Ones"}
+[The problem]{.kicker}
+
+@!generalization-polynomial-curve-fitting-6
+
+- 20 noisy samples of a cubic. Degree 19, one weight per point: training
+  error essentially 0, error on 1,000 new points many orders of magnitude
+  above the cubic's.
+- Fitting the sample is the means; predicting **new** data is the goal.
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- tell training error from generalization error, and estimate the second
+  on held-out data;
+- diagnose underfitting and overfitting from the two errors;
+- split the expected test error into bias², variance, and noise;
+- predict when more data helps and when it does not;
+- choose a model with a validation set or $K$-fold cross-validation.
+
+**Running example:** 20 noisy samples of the cubic
+$5 + 1.2x - 3.4x^2 + 5.6x^3$, fit by polynomials of degree 1 to 19.
+:::
+
+::: {.slide title="Held-Out Data Tells Us Whether a Fit Carries Over"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Linear Regression | model, loss, closed form, minibatch SGD |
+| Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
+| Implementation from Scratch | SGD and the training loop by hand |
+| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
+| Concise Implementation | framework layers and losses |
+| **Generalization** | **training vs. test error** |
+| Weight Decay | a penalty on large weights |
+:::
+
+::: {.col .narrow}
+- **Uses:** least squares, and the standard error $\sigma/\sqrt{n}$ of
+  an average.
+- **Skips:** learning-theory bounds, distribution shift, and why deep
+  networks generalize; later chapters take these up.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Two Errors]{.dtitle}
+
+[what we can compute and what we want]{.dsub}
+:::
+:::
+
+::: {.slide title="Training Error Averages Over the Sample, Risk Over the Population"}
+[Two errors]{.kicker}
+
+**IID assumption:** training examples and future examples are drawn
+independently from one distribution $P(X, Y)$. For a model $f$, with
+$l(\hat{y}, y)$ the loss of predicting $\hat{y}$ for label $y$:
+
+$$R_\textrm{emp}(f) = \frac{1}{n}\sum_{i=1}^n l\big(f(\mathbf{x}^{(i)}), y^{(i)}\big)$$
+
+$$R(f) = \mathbb{E}\big[l(f(\mathbf{x}), y)\big]$$
+
+The first averages over the $n$ training examples, the second over a new
+example $(\mathbf{x}, y)$ drawn from $P$.
+
+::: {.d2l-note}
+The training error (*empirical risk*) is computable; the generalization
+error (*risk*) is what we want. Their difference $R - R_\textrm{emp}$ is
+the *generalization gap*.
+:::
+:::
+
+::: {.slide title="Held-Out Data Estimates the Risk; Training Data Flatters the Model"}
+[Two errors]{.kicker}
+
+- **Held-out examples:** $n'$ examples that played no part in training.
+  Their average loss is unbiased, with standard error $\sigma_l/\sqrt{n'}$
+  ($\sigma_l$: standard deviation of one example's loss). The validation loss of
+  the earlier decks is such an estimate; this deck calls them a test set.
+- **Training set:** it chose the model. A lookup table of its labels has
+  training error 0 and knows nothing about new inputs.
+
+::: {.d2l-note .warn}
+The training error is an **optimistic** estimate of the risk.
+:::
+:::
+
+::: {.slide title="Check: Is the Gap More Than Noise?"}
+[Check]{.kicker}
+
+A model has training error $0.020$ and error $0.030$ on 400 held-out
+examples. The loss of one example has standard deviation $0.04$. Is the
+gap real, or could the held-out estimate be off by that much?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The standard error of the held-out estimate is
+$0.04/\sqrt{400} = 0.002$. The gap of $0.010$ is five standard errors:
+the model does worse on new data than on its training data.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Underfitting and Overfitting]{.dtitle}
+
+[polynomials of growing degree on 20 points]{.dsub}
+:::
+:::
+
+::: {.slide title="Polynomial Regression Is Linear Regression on Powers of x"}
+[Underfitting and overfitting]{.kicker}
+
+$$\hat{y} = \sum_{j=0}^{d} w_j x^j \qquad \textrm{(features } 1, x, \ldots, x^d\textrm{)}$$
+
+- The degree $d$ sets the flexibility; degree $n - 1$ fits $n$ distinct
+  points exactly.
+- Data: $y = f^*(x) + \epsilon$, $f^*(x) = 5 + 1.2x - 3.4x^2 + 5.6x^3$,
+  $\epsilon \sim \mathcal{N}(0, \sigma^2)$ with $\sigma = 0.1$, $x$
+  uniform on $[-1, 1]$.
+- 20 training and 1,000 test examples, drawn anew on every run. Least
+  squares for each degree; predicting $f^*$ exactly scores about
+  $\sigma^2 = 0.01$.
+:::
+
+::: {.slide title="Degree 1 Underfits; Degree 19 Overfits With Huge Weights"}
+[Underfitting and overfitting]{.kicker}
+
+@!generalization-polynomial-curve-fitting-4
+
+- **Degree 1:** both errors far above $\sigma^2 = 0.01$. Too rigid:
+  *underfitting*.
+- **Degree 3:** both errors of the order of the noise level; largest
+  weight near the true coefficient 5.6.
+- **Degree 19:** training error near 0, test error many orders of
+  magnitude larger, enormous weights: *overfitting*.
+:::
+
+::: {.slide title="Training Error Always Falls; Test Error Is Lowest Near Degree 3"}
+[Underfitting and overfitting]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Training error falls with every degree: a larger class contains the
+  smaller one.
+- Test error is lowest at or just above degree 3, then climbs by orders
+  of magnitude.
+- High training error: underfitting. Test error far above a low training
+  error: overfitting.
+:::
+
+::: {.col .fig .big}
+@!generalization-polynomial-curve-fitting-5
+:::
+:::
+:::
+
+::: {.slide title="Check: Select the Degree by Training Error?"}
+[Check]{.kicker}
+
+Which degree has the smallest training error in the sweep, and how does
+its test error compare with that of degree 3?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Degree 19, the most flexible, as it must be: a larger class
+never fits the training data worse. Its test error is many orders of
+magnitude above that of degree 3. The training error cannot choose the
+flexibility.
+:::
+:::
+:::
+
+::: {.slide title="Expected Test Error Is Bias² Plus Variance Plus Noise"}
+[Bias and variance]{.kicker}
+
+Same inputs, fresh training noise: the fit $\hat{f}$ is random. For a
+test input $x$ with label $y = f^*(x) + \epsilon$,
+
+$$\mathbb{E}\big[(y - \hat{f}(x))^2\big] = \underbrace{\big(f^*(x) - \mathbb{E}[\hat{f}(x)]\big)^2}_{\textrm{bias}^2} + \underbrace{\textrm{Var}\big(\hat{f}(x)\big)}_{\textrm{variance}} + \sigma^2.$$
+
+- **Bias:** how far the average fit is from the truth.
+- **Variance:** how much the fit moves when the noise is redrawn.
+- **Noise** $\sigma^2$: what no model can predict.
+:::
+
+::: {.slide title="Bias Vanishes at Degree 3; Variance Grows With Every Degree"}
+[Bias and variance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Least squares is linear in the labels, so the average fit is the fit
+  to the noiseless labels: it gives the bias².
+- 200 redraws of the training noise give the variance, roughly
+  $\sigma^2 (d+1)/n$ at low degrees.
+- The sum is smallest at degree 3.
+:::
+
+::: {.col .fig}
+@!generalization-bias-variance-decomposition
+:::
+:::
+:::
+
+::: {.slide title="Too Rigid Means Bias; Too Flexible Means Variance"}
+[Bias and variance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+For many families of models that grow step by step:
+
+- training error keeps falling, even below the noise level;
+- test error is smallest at an intermediate complexity;
+- the gap widens as complexity grows.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-gen-capacity-error.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Capacity Is More Than a Parameter Count"}
+[Model complexity]{.kicker}
+
+- **Capacity:** the ability to fit many labelings. Degree 19 fits *any*
+  20 labels exactly, random ones too, so its perfect fit is no evidence of
+  a pattern.
+- **Weight size:** that fit uses weights larger by many orders of
+  magnitude than the cubic's, whose largest is about 5.6. Small weights cannot swing so wildly: weight decay, next.
+- **Deep networks** fit randomly assigned labels on standard image
+  datasets, yet generalize when trained on the real ones (Zhang et al.,
+  2021).
+:::
+
+::: {.slide title="More Data Cures Variance, Not Bias"}
+[Dataset size]{.kicker}
+
+Fresh training sets of size $n$, the same 1,000 test examples:
+
+@!generalization-dataset-size
+
+- Degree 19: orders of magnitude better by $n = 100$, as good as the
+  cubic at $n = 1{,}000$.
+- Degree 1: still 1.5 to 2 at $n = 1{,}000$.
+
+::: {.d2l-note}
+When capacity grows with the number of weights, let the complexity grow
+**with** the data, not ahead of it. Deep networks complicate this rule.
+:::
+:::
+
+::: {.slide title="Check: Collect More Data?"}
+[Check]{.kicker}
+
+Model A: training error 1.9, test error 2.0. Model B: training error
+$10^{-14}$, test error $10^{8}$. For which one does ten times more data
+help?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Model B. It overfits, and more data cuts its variance. Model
+A underfits: more data leaves its bias, so it needs a more flexible
+model instead.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Model Selection]{.dtitle}
+
+[choosing without the test set]{.dsub}
+:::
+:::
+
+::: {.slide title="Selecting on the Test Set Makes Its Score Optimistic"}
+[Model selection]{.kicker}
+
+- Keep the best of 19 test errors and you keep a lucky one: the test set
+  has been fit.
+- The training error always picks the most flexible model.
+- **Three-way split:** training set (fit) · validation set (choose) ·
+  test set (report once).
+
+::: {.d2l-note .warn}
+Test sets reused across many experiments and papers invite the same bias.
+:::
+:::
+
+::: {.slide title="K-Fold Cross-Validation Uses Every Example to Train and to Validate"}
+[Model selection]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Train on $K - 1$ folds, validate on the one left out, average the $K$
+  errors; retrain the winner on all the data.
+- Each fold's model sees only $(K-1)/K$ of the data: a slightly
+  **pessimistic** estimate.
+- $K = n$ (leave-one-out) removes that bias but costs $n$ fits. $K = 5$
+  or $10$ is the usual compromise.
+:::
+
+::: {.col .fig}
+![](../img/mdl-mlp-kfold.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Cross-Validation Picks a Low Degree Without the Test Set"}
+[Model selection]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+@!generalization-cross-validation-2
+
+- 5 random folds of the 20 training examples, averaged over 10 splits.
+- Usually degree 3, otherwise a degree a little above it with a test
+  error close to degree 3's. The test error itself is lowest at 3 or a
+  little above.
+- At high degrees it usually rises earlier than the test error: each
+  fold fits only 16 points, and degree 15 interpolates them.
+:::
+
+::: {.col .fig}
+@!generalization-cross-validation-3
+:::
+:::
+:::
+
+::: {.slide title="Check: What Does Cross-Validation Cost?"}
+[Check]{.kicker}
+
+We compare 19 degrees on $n = 20$ examples. How many least-squares fits
+do 5-fold cross-validation and leave-one-out need, counting the final
+refit? How many examples does each fit see?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 5-fold: $19 \cdot 5 = 95$ fits on 16 examples, plus one refit
+on all 20; our ten random splits make it 950. Leave-one-out:
+$19 \cdot 20 = 380$ fits on 19 examples, plus the refit: less bias for four
+times the cost of one split.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **Two errors:** training error is optimistic; held-out error estimates
+  the risk, with standard error $\sigma_l/\sqrt{n'}$.
+- **Underfitting** is bias (degree 1: both errors far above $\sigma^2$);
+  **overfitting** is variance (degree 19: test error many orders of
+  magnitude above that of degree 3).
+- **Expected test error** = bias² + variance + $\sigma^2$, smallest at
+  degree 3.
+- **More data** cures variance, not bias.
+- **Select** with a validation set or $K$-fold cross-validation, never
+  with the test set: 5-fold usually picks degree 3.
+
+**Next:** weight decay, a finer control of capacity than the degree.
+:::

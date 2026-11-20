@@ -26,3 +26,104 @@ scaling-laws
 moe
 further-reading
 ```
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §11]{.kicker}
+
+One block, many models<br>
+**the block · GPT · KV cache · encoders and decoders · ViT · scaling laws · experts · the modern recipe**
+:::
+:::
+
+::: {.slide title="Twelve Copies of One Block Make GPT-2 Small"}
+[The problem]{.kicker}
+
+- One block: attention ($4d^2$ parameters) and a feed-forward network
+  ($8d^2$), each adding to a residual stream. At width $d = 768$ that is
+  $12d^2 \approx 7.1$M.
+- Deeper, it can fail before training starts: after 32 post-norm blocks
+  with Xavier weights, all tokens agree to about one part in $10^4$.
+- Generating, every token reads all the weights and a growing cache: at
+  4,096 tokens a GPT-2-sized model reads 288 MiB of cache besides 471 MiB
+  of weights.
+
+**Check:** twelve blocks hold 85M parameters, but GPT-2 small has 124M.
+Where are the other 39M?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+In the token embedding, $50{,}257 \times 768 \approx 38.6$M, which the
+output layer reuses, and in 1,024 learned positions, 0.8M.
+:::
+:::
+:::
+
+::: {.slide title="By the End of This Chapter You Can"}
+[Goals]{.kicker}
+
+- build the block, and say when a deep post-norm stack maps all tokens
+  toward one vector and what pre-norm changes;
+- train a GPT beside a recurrent network of its size, and load GPT-2 into
+  it;
+- implement a KV cache, bound the speed of decoding by its bandwidth, and
+  shrink the cache by sharing key–value heads;
+- count parameters and FLOPs, split a compute budget, and route tokens to
+  experts;
+- wire encoders, encoder–decoders and ViTs, and read a released model as
+  settings of the block.
+
+**Idea:** most problems of depth and scale are answered by a setting of
+one block. **Running examples:** a 4.8M-parameter byte-level GPT; GPT-2
+small (124M, 12 blocks of width 768).
+:::
+
+::: {.slide title="The Block and GPT Are the Core; the Cache Comes Next"}
+[Scope and place]{.kicker}
+
+- **Assumes:** attention with masks and rotary positions; AdamW with
+  warmup.
+- **Core:** the block and GPT.
+- **Next:** the KV cache and how to shrink it, which explain why a long
+  conversation costs more per word.
+- **Can wait:** the vision transformer; encoders until the encoder chapter
+  of the language-model part.
+- **Cost:** one RTX 4090; every notebook under a quarter of an hour.
+- **Leaves out:** data, fine-tuning, serving, quantization, kernels,
+  parallelism.
+:::
+
+::: {.slide title="Build a GPT, Make It Generate, Then Rewire, Scale and Read It"}
+[Chapter map]{.kicker}
+
+| | section | question |
+|--------|------------------------------|------------------------------------------|
+| **build** | The Transformer Block | what does a block need besides attention? |
+| | A GPT from Scratch | how do blocks become a trained language model? |
+| **generate** | The KV Cache | how do we generate without recomputing? |
+| | Shrinking the KV Cache | which factor of the cache can shrink? |
+| **rewire** | Encoders, Decoders, and Cross-Attention | which wiring suits which task? |
+| | Vision Transformer | can the same blocks classify images? |
+| **scale** | Scaling Laws | what does a run cost, and how is a budget split? |
+| | Mixture of Experts | how do we store many FFNs and run few? |
+| **read** | The Modern Recipe | which settings do released models choose? |
+| | Further Reading | what does the chapter leave out? |
+:::
+
+::: {.slide title="Every Section Runs on Models That Fit One GPU"}
+[Running examples]{.kicker}
+
+| section | example |
+|------------------------------|--------------------------------------------------|
+| The Transformer Block | 32 random blocks: post-LN and pre-LN with Xavier weights, post-LN at GPT-2's weight scale; one vector through LayerNorm and RMSNorm |
+| A GPT from Scratch | a 4.8M-parameter GPT on WikiText-103 bytes; a recurrent network of the same size on the same bytes; GPT-2 small |
+| The KV Cache | an untrained GPT-2-sized model: cached decoding, prefill, batched decode |
+| Shrinking the KV Cache | the byte GPT with 8 and with 2 key–value heads; GPT-2 small: low-rank keys, sinks |
+| Encoders, Decoders, and Cross-Attention | masked bytes; sequence reversal; learned queries |
+| Vision Transformer | Fashion-MNIST at $96 \times 96$, 36 patches |
+| Scaling Laws | fifteen GPTs: five sizes, three data budgets |
+| Mixture of Experts | an 8-expert GPT against a dense one |
+| The Modern Recipe | GPT-2, Llama 3 8B and Qwen3-32B as constructor calls at our model's size |
+:::

@@ -565,3 +565,371 @@ Recent frontier MoE families (:numref:`tab_moe-experts`) refine the coarse 8-exp
 
 6. **Shared experts and fine-grained granularity at fixed budget.** Implement a `SharedMoELayer` that runs 1 always-active shared expert of width $w$ plus Top-$k$ of $E$ routed experts of width $w$, and compare three FFN configurations inside `small_gpt` at matched stored and active expert width ($16 \times 170$ stored, $2 \times 170$ active per block): (a) coarse $E = 8, k = 1, w = 340$, (b) medium $E = 16, k = 2, w = 170$, and (c) fine + shared $E_{\textrm{shared}} = 1, E = 15, k = 1, w = 170$. Compare their validation losses after 800 steps.
 :exlabel:`ex_moe-granularity`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §11.8]{.kicker}
+
+Mixture of Experts<br>
+**stored and active parameters · top-k routing · dispatch · load balancing · an MoE GPT · fine-grained and shared experts**
+:::
+:::
+
+::: {.slide title="A Dense Model Runs Every Parameter for Every Token"}
+[The problem]{.kicker}
+
+- GPT-2 small: 124M parameters, about $2 \times 124\textrm{M}$ operations
+  per token. Twice the parameters, twice the cost.
+- The feed-forward networks hold two thirds of each block: $8d^2$ of
+  $12d^2$.
+- Yet "the integral of" and "Act I, Scene" need different knowledge.
+- DeepSeek-V3 stores 671B parameters and uses **37B** per token.
+
+::: {.d2l-note .warn}
+Can a model store many parameters but run only the few each token needs?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- count the stored and active parameters of an expert layer;
+- route tokens to fixed buffers and say which assignments are dropped;
+- predict an uneven load before training, and balance it with a loss or a
+  bias controller;
+- read an MoE GPT against a dense GPT with the same parameters per token;
+- explain fine-grained and shared experts.
+
+**Running example:** GPT-2 small with eight experts per block, then our
+small byte-level GPT.
+:::
+
+::: {.slide title="More Parameters per Operation"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| The Transformer Block | attention + FFN, residual stream |
+| A GPT from Scratch | a trained language model; GPT-2 loaded |
+| The KV Cache | reuse past keys and values |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
+| Encoders, Decoders, and Cross-Attention | the other two wirings |
+| Vision Transformer | images as token sequences |
+| Scaling Laws | loss against parameters, data, compute |
+| **Mixture of Experts** | **more parameters per FLOP** |
+| The Modern Recipe | released models as settings |
+:::
+
+::: {.col .narrow}
+- **Uses:** `d2l.FeedForward`, `d2l.GPT`, its data and training recipe;
+  tokens per parameter from Scaling Laws.
+- **Skips:** experts spread over many devices.
+:::
+:::
+:::
+
+::: {.slide title="A Router Sends Each Token to k of E Experts"}
+::: {.cols .vc}
+::: {.col .fig .big}
+@fig:mdl-transformers-moe
+:::
+
+::: {.col}
+$$\mathrm{MoE}(\mathbf{x}) = \sum_{i \in \mathcal{E}_k(\mathbf{x})} p_i\, \mathrm{FFN}_i(\mathbf{x})$$
+
+- $\mathbf{p} = \mathrm{softmax}(\mathbf{W}_r \mathbf{x})$;
+  $\mathcal{E}_k$: the $k$ largest $p_i$.
+- Stored: $E$ experts. Run: $k$.
+:::
+:::
+:::
+
+::: {.slide title="GPT-2 Small With Eight Experts Stores 521M and Uses 124M"}
+[Running example]{.kicker}
+
+| | dense | 8 experts, top-1 |
+|---|--:|--:|
+| FFN per block | 4.72M | 8 × 4.72M |
+| FFN, 12 blocks | 56.7M | 453M |
+| everything else | 67.8M | 67.8M |
+| **stored** | **124M** | **521M** |
+| **active per token** | **124M** | **124M** |
+
+Same operations per token; 4.2 times the parameters in memory.
+:::
+
+::: {.slide title="Mixtral Uses 12.9B of Its 46.7B Parameters per Token"}
+@!moe-conditional-computation
+
+- "8x7B" is not 56B: the experts share attention and embeddings. A token
+  uses a little over a quarter of the 46.7B.
+- DeepSeek-V3: 656B of its 671B parameters sit in experts, 28 times
+  what a token uses there.
+- ours: the two-block byte GPT trained later in this deck.
+- The count assumes an even spread of tokens over the experts.
+:::
+
+::: {.slide title="The Probability Weight Carries the Router's Gradient"}
+- Selecting the top $k$ is discrete: no gradient.
+- The weight $p_i$ of a selected expert is differentiable.
+- If more of expert $i$ would lower the loss, the gradient raises $p_i$,
+  and the router selects $i$ more often for similar tokens.
+- Switch Transformer (Fedus et al., 2022): weight $= p_i$; in the figure,
+  $0.24 + 0.31 = 0.55$. Mixtral renormalizes over the selected $k$; with
+  $k = 1$ such a router learns nothing from the loss.
+:::
+
+::: {.slide title="Check: What Fraction of a Layer Does One Token Use?"}
+[Check]{.kicker}
+
+A layer with $E = 64$ experts of width $w$, $k = 6$ routed, plus 2 shared
+experts of the same width. What fraction of the expert parameters does one
+token use?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $(6 + 2)/(64 + 2) = 8/66 \approx 12\%$. The router adds
+$d \times 64$ weights, which every token uses.
+:::
+:::
+:::
+
+::: {.slide title="Each Expert Gets a Fixed Buffer of S Slots"}
+- $n$ tokens make $nk$ assignments (token, expert); each expert's count
+  varies by batch.
+- Fixed shapes: $S = \lceil c\, nk/E \rceil$ slots per expert, capacity
+  factor $c = 1.25$ in Switch.
+- All experts run at once on $(E, S, d)$: about $c\,nk$ rows, a fraction
+  $ck/E$ of running every expert on every token.
+
+::: {.d2l-note}
+A balanced router fills the buffers; an unbalanced one overflows them.
+:::
+:::
+
+::: {.slide title="Six Assignments, Three Experts, Three Slots: The Last One Is Dropped"}
+@!moe-dispatching-tokens-to-experts-2
+
+- First come, first served: place $=$ cumulative count $- 1$; slot
+  $= eS + \text{place}$; place $\geq S$ goes to slot $ES = 9$.
+- Late tokens of a minibatch are dropped first.
+- Dropping is a choice: sorting tokens into variable-length segments drops
+  nothing (DeepSeek-V3 drops none).
+:::
+
+::: {.slide title="Dispatch: Number, Copy Into Buffers, Run, Gather Back" only="pytorch"}
+```{.python #moe-exercises-1}
+e = idx.flatten()                              # expert of each pair
+onehot = F.one_hot(e, E)                       # (n k, E)
+rank = (onehot.cumsum(0) * onehot).sum(1) - 1  # place in its queue
+slot = torch.where(rank < S, e * S + rank, E * S)  # E S: dropped
+buf = x.new_zeros(E * S + 1, d)                # + an overflow row
+buf[slot] = x.repeat_interleave(k, 0)
+Y = self.run_experts(buf[:-1].reshape(E, S, d)).reshape(E * S, d)
+Y = torch.cat([Y, Y.new_zeros(1, d)])[slot]    # dropped: zeros
+weights = P.gather(-1, idx)                    # (n, k): the p_i
+out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
+```
+
+`x`: $(n, d)$ tokens; `P`: $(n, E)$ router probabilities; `idx`:
+$(n, k)$ selected experts. `run_experts`: SwiGLU as three batched products
+on the stacked weights.
+:::
+
+::: {.slide title="Dispatch: Number, Copy Into Buffers, Run, Gather Back" only="jax"}
+```{.python #moe-exercises-2}
+e = idx.ravel()                                # expert of each pair
+onehot = jax.nn.one_hot(e, E, dtype=jnp.int32)  # (n k, E)
+rank = (onehot.cumsum(0) * onehot).sum(1) - 1  # place in its queue
+slot = jnp.where(rank < S, e * S + rank, E * S)  # E S: dropped
+buf = jnp.zeros((E * S, d), x.dtype).at[slot].set(
+    jnp.repeat(x, k, 0), mode='drop')
+Y = self.run_experts(buf.reshape(E, S, d)).reshape(E * S, d)
+Y = Y.at[slot].get(mode='fill', fill_value=0)  # dropped: zeros
+weights = jnp.take_along_axis(P, idx, -1)      # (n, k): the p_i
+out = (weights[..., None] * Y.reshape(n, k, d)).sum(1)
+```
+
+`x`: $(n, d)$ tokens; `P`: $(n, E)$ router probabilities; `idx`:
+$(n, k)$ selected experts. Every shape follows from $n$: one compilation,
+whatever the routing.
+:::
+
+::: {.slide title="Prediction: Bytes Are Unbalanced Before Any Training"}
+- Random vectors spread evenly; text does not. A part $\mathbf{m}$ shared
+  by every position adds the same scores $\mathbf{W}_r \mathbf{m}$ to
+  every token's logits.
+- Block 1 sees the current byte plus a blend of earlier bytes that is
+  much the same everywhere: equal bytes go to one expert.
+- Nearly one byte in five is a space (18.9%); one buffer holds
+  $1.25/8 \approx 16\%$ of the assignments.
+
+::: {.d2l-note .warn}
+A fresh model should overflow its busiest buffers before any gradient.
+:::
+:::
+
+::: {.slide title="Training Can Make It Worse: Routing Feeds on Itself"}
+- An expert slightly better on its tokens is rewarded twice: its weights
+  improve, **and** the router raises its probability.
+- More tokens, more gradient, a better expert, more tokens.
+- End point, *routing collapse*: a few experts take most tokens.
+- Test: freeze the router, so that it cannot learn.
+:::
+
+::: {.slide title="Remedy 1: Penalize Load Times Probability"}
+$$\mathcal{L}_{\mathrm{balance}} = E \sum_{i=1}^{E} f_i\, \bar{p}_i$$
+
+- $f_i$: fraction of the minibatch's assignments that expert $i$
+  received (a count, no gradient); $\bar{p}_i$: mean probability of $i$.
+- Even routing: $\mathcal{L}_{\mathrm{balance}} = 1$. One expert takes
+  everything with $p \approx 1$: about $E$.
+- Added with weight $\lambda_\textrm{bal} = 0.01$ (Switch). Its gradient
+  lowers the busiest experts' probability for every token, whatever the
+  token needs.
+:::
+
+::: {.slide title="Remedy 2: Bias the Selection, Not the Weights"}
+$$\mathcal{E}_k = \operatorname{argtop}_k(p_i + b_i), \qquad b_i \leftarrow b_i + u\,\mathrm{sign}(1/E - f_i)$$
+
+- After each step, overloaded experts lose bias, underloaded ones gain.
+- $b_i$ never enters the weight $p_i$: no competing gradient.
+- Scale: $u = 0.01$ against $p_i \approx 1/8$; 100 steps of overload cost
+  a bias of 1, so a lasting imbalance always loses. Too large a $u$, and
+  the load swings from expert to expert.
+- DeepSeek-V3: $u = 0.001$, plus a per-sequence loss at $10^{-4}$.
+:::
+
+::: {.slide title="Check: What Is the Balancing Loss Here?"}
+[Check]{.kicker}
+
+$E = 4$. A minibatch sends half of its tokens to expert 1 and a sixth to
+each of the others; the mean probabilities follow the same split. What is
+$\mathcal{L}_{\mathrm{balance}}$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $4\,(\tfrac12 \cdot \tfrac12 + 3 \cdot \tfrac16 \cdot \tfrac16)
+= 4 \cdot \tfrac13 \approx 1.33$, against 1 for even routing.
+:::
+:::
+:::
+
+::: {.slide title="A Fresh Model Is Already Skewed, and a Frozen Router Stays So"}
+Two blocks of width 128, 8 experts, top-1, $c = 1.25$, 800 steps on
+WikiText-103 bytes. First line: the spaces' share of the bytes. "no
+drops": the same model with room for every assignment.
+
+@!moe-three-runs-one-budget-3
+
+::: {.d2l-note}
+Fresh: busiest expert 2.9–3.8× its share. Frozen router: 2.4–4.1×.
+:::
+:::
+
+::: {.slide title="Balanced Runs Spread the Load and End Lower"}
+@!moe-three-runs-one-budget-4
+
+- Unbalanced: the three busiest experts take about three quarters of the
+  tokens, the idlest little. Balanced: busiest 1.2–1.4×, at most 1% dropped.
+- Without dropping, the unbalanced models gain 0.02–0.08 nats and still end
+  above the best balanced runs: capacity left untrained costs the rest.
+- Not ranked at this scale. Start with the controller: no competing
+  gradient, better at 1B+ (Wang et al., 2024), used by DeepSeek-V3.
+:::
+
+::: {.slide title="Same Parameters per Token, 5.3 Times the Stored Ones"}
+The small GPT of the balancing runs, dense and with each FFN replaced by 8
+experts, top-1, auxiliary loss $\lambda_\textrm{bal} = 0.01$:
+
+@!moe-a-mixture-of-experts-gpt-1
+
+- 6,000 steps, about 50M bytes: over 100 per dense parameter.
+- Capacity factor 2: a buffer holds a quarter of the assignments, room
+  for the spaces that block 1 sends to one expert early on. The experts
+  compute $2n$ rows for $n$ tokens.
+:::
+
+::: {.slide title="The Mixture Overtakes the Dense Model by Step 2,000"}
+@!moe-a-mixture-of-experts-gpt
+
+- Behind at first (about 0.1 nats in the plotted run), ahead from step
+  1,000 to 2,000 on in every run.
+- The gap widens until the decaying learning rate stops both curves:
+  about 0.05 nats lower (0.04–0.06) at the end in every run, nothing
+  dropped.
+:::
+
+::: {.slide title="An Expert Parameter Is Worth Less Stored, More per Operation"}
+- Slow start: each fresh expert's output is scaled by $p_i$, the largest of
+  eight probabilities near $1/8$, and each expert sees an eighth of the
+  tokens.
+- Runs of each model agree within 0.015; the gain, 0.04–0.06, is about
+  three times that.
+- Yardstick (scaling grid, 2,000 steps): tripling a dense model, 0.59M to
+  1.77M, gained about 0.05 nats.
+- The mixture gains about as much while storing 2.26M and using 0.43M
+  per token.
+
+::: {.d2l-note}
+Per stored parameter, experts buy less than a dense model; per operation,
+they buy more, and operations are what each token costs.
+:::
+:::
+
+::: {.slide title="Narrow and Shared Experts: Same Budget, Far More Combinations"}
+::: {.cols .vc}
+::: {.col .fig .big}
+@fig:mdl-transformers-moe-fine
+:::
+
+::: {.col}
+- Cut 16 experts into 64 of a quarter width: $\binom{16}{2} = 120$
+  combinations become $\binom{64}{8} \approx 4.4 \times 10^9$.
+- A shared expert stores common processing once.
+- DeepSeekMoE, 2B stored: loss 1.81 against 1.87 for GShard at equal
+  size.
+- Real routers are less tidy: Mixtral's follow syntax and token identity
+  more than topic.
+:::
+:::
+:::
+
+::: {.slide title="Check: How Much Text Does One Expert See?"}
+[Check]{.kicker}
+
+Our MoE GPT trains for 6,000 steps of 64 windows of 128 bytes, with
+8 experts per layer and top-1 routing, evenly balanced. How many
+bytes does one expert of a layer see, and how many does the dense
+FFN see?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $6000 \cdot 64 \cdot 128 \approx 49$M bytes pass through
+each layer. The dense FFN sees all of them; each expert sees about
+$49\textrm{M}/8 \approx 6$M. Every expert must learn from an eighth of the
+data, which is why mixtures need plenty of distinct text.
+:::
+:::
+:::
+
+::: {.slide title="Balanced Experts Add Parameters Without Adding Work per Token"}
+[Wrap-up]{.kicker}
+
+- MoE: $E$ FFNs and a router; parameters grow with $E$, operations per
+  token with $k$. Mixtral 46.7B/12.9B; GPT-2 small with 8 experts
+  521M/124M.
+- Fixed buffers of $\lceil c\,nk/E \rceil$ slots; first come, first
+  served; overflow is dropped.
+- Byte routing is skewed before training (about 3–4×); a loss or a
+  selection bias evens it (1.2–1.4×), and every balanced run ends lower.
+- Our MoE GPT overtakes the dense GPT by step 2,000 and ends about 0.05
+  nats lower in every run, storing 5.3 times the parameters.
+
+**Next:** the modern recipe: released models as settings of this
+chapter's block.
+:::

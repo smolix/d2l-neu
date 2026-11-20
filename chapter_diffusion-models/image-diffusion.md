@@ -12,25 +12,21 @@ prediction, the recipe that trains it, the way a label steers it, and the
 number that tells us whether its samples are good, now that "it looks right"
 has to be judged over thousands of images.
 
-Each of the four has an origin. :citet:`ho2020denoising` took the U-Net of
-:citet:`Ronneberger.Fischer.Brox.2015`, a segmentation network whose skip
-connections carry fine detail past a coarse bottleneck, and gave it the noise
-level as an extra input. :citet:`Dhariwal.Nichol.2021` and then
+Three of the four have a single origin; the recipe gathers pieces from several
+papers, which we credit as we meet them. :citet:`ho2020denoising` took the
+U-Net of :citet:`Ronneberger.Fischer.Brox.2015`, a segmentation network whose
+skip connections carry fine detail past a coarse bottleneck, and gave it the
+noise level as an extra input. :citet:`Dhariwal.Nichol.2021` and then
 :citet:`Ho.Salimans.2022` found that pushing each prediction further in the
 direction that a label adds makes samples more typical of the label and less
 varied; this *guidance* is what the prompt slider controls.
-:citet:`Heusel.Ramsauer.Unterthiner.ea.2017` proposed to compare generated
-and real images through the statistics of their features under a trained
-network, the measurement that image generation papers report.
+:citet:`Heusel.Ramsauer.Unterthiner.ea.2017` proposed to compare generated and
+real images through the statistics of their features under a trained network,
+the measurement that image generation papers report.
 
 We build all four on Fashion-MNIST, with a network small enough to train on
 one GPU. The largest systems differ from it in scale, in the network and in
 what they condition on, but they rest on the same four ideas.
-
-:begin_tab:`pytorch`
-The cell after the imports lets float32 matrix products run on the GPU's tensor cores
-in TF32, a format with a shorter mantissa, which speeds up training.
-:end_tab:
 
 ```{.python .input #image-diffusion-diffusion-models-for-images}
 %%tab pytorch
@@ -766,9 +762,9 @@ value beside their scores as the *floor*, the score that a perfect generator
 would reach on average.
 
 Our samples, at about 0.8, lie about five times above the reference value
-at 5,000 images; the gap is the error of our model. Yet they score lower
-than two sets of 1,000 real images do against each other. A Fréchet
-distance without its number of images is meaningless.
+at 5,000 images; the gap is the error of our model. Yet two sets of 1,000
+real images score about as much against each other. A Fréchet distance
+without its number of images is meaningless.
 
 With a scale in hand we can ask how much the moving average helps, and
 whether a thousand-step sampler beats fifty Euler steps. The thousand-step
@@ -805,11 +801,11 @@ for seed in range(3):  # three draws of the initial noise
           f'{fd[2]:.2f} ({fd[2] - fd[0]:+.2f})')
 ```
 
-On this network the weights of the last update are worse than their average
-in every draw, by 0.4 to 0.6, more than ten times as much as the average
-moves between draws. How much worse depends on where the last update happened
-to land in its cloud, and another training run would land elsewhere. An
-average over the last few thousand updates depends much less on such luck,
+On this network the weights of the last update are worse than their average in
+every draw, by 0.4 to 0.6, while the FD of the average moves by only a few
+hundredths between draws. How much worse depends on where the last update
+happened to land in its cloud, and another training run would land elsewhere.
+An average over the last few thousand updates depends much less on such luck,
 which is the reason to sample from it. The thousand-step chain scores 0.1 to
 0.2 lower than fifty Euler steps, again in every draw. It changes the path,
 the sampler and the number of steps at once, so it measures the combination,
@@ -1032,21 +1028,19 @@ $1 - \gamma$. A plausible cause of those errors is that the unconditional
 prediction must cover all ten classes and was trained on only one example
 in ten; Exercise :exref:`ex_image-diffusion-label-dropout` tests it.
 
-Guidance beyond $\gamma = 1$ trades variety for typicality, but the first
-step comes free. At $\gamma = 1.25$ the agreement rises by about five
-points, to 93 to 94%, while the FD stays where it was at $\gamma = 1$,
-within the spread of the reference value
-(:numref:`subsec_diffusion-fd-reference`); the two scales tie for the
-lowest FD. Then the trade starts. At $\gamma = 1.5$ the agreement rises to
-96% while the FD rises by about 0.3, several times that spread. At
-$\gamma = 2$ the agreement reaches 98%
-and the FD is about two and a half times its value at $\gamma = 1$. At
-$\gamma = 3$ and $4$ the agreement exceeds 99%, more than the feature
-network achieves on real images, while the FD climbs to about 4 and then to
-between 5.5 and 6: the guided samples are the class's prototypes, easier to
-classify than real ones, without the ambiguous examples that real data
-contain. The grids show the samples from the noise of the first grid at
-$\gamma = 0$ and at $\gamma = 4$.
+Guidance beyond $\gamma = 1$ trades variety for typicality, but not at first.
+At $\gamma = 1.25$ the agreement rises by about five points, to 93 to 94%,
+while the FD stays where it was at $\gamma = 1$, within the spread of the
+reference value (:numref:`subsec_diffusion-fd-reference`); the two scales tie
+for the lowest FD. Then the trade starts. At $\gamma = 1.5$ the agreement
+rises to 96% while the FD rises by about 0.3, several times that spread. At
+$\gamma = 2$ the agreement reaches 98% and the FD is about two and a half
+times its value at $\gamma = 1$. At $\gamma = 3$ and $4$ the agreement exceeds
+99%, more than the feature network achieves on real images, while the FD
+climbs to about 4 and then to between 5.5 and 6: the guided samples are the
+class's prototypes, easier to classify than real ones, without the ambiguous
+examples that real data contain. The grids show the samples from the noise of
+the first grid at $\gamma = 0$ and at $\gamma = 4$.
 
 ```{.python .input #image-diffusion-classifier-free-guidance-2}
 %%tab pytorch, jax
@@ -1069,8 +1063,8 @@ system guide, and by far more than 1.5? Part of the answer lies at mild
 scales. :citet:`Ho.Salimans.2022` found on ImageNet that a small weight, $w$
 of 0.1 to 0.3 (our $\gamma$ of 1.1 to 1.3), gives a lower FID than no
 guidance, and that larger weights trade FID for typicality as ours do. Our FD
-at 5,000 images shows no such dip at $\gamma = 1.25$, but no cost either:
-mild guidance buys agreement for nothing that the FD can see at this sample
+at 5,000 images shows no such dip at $\gamma = 1.25$, but no rise either:
+mild guidance raises agreement at no cost that the FD can see at this sample
 size. The larger part of the answer is that the FD and a person looking at a
 picture disagree about what a good sample is. The FD judges a set and rewards
 variety; the person judges one image and rewards a clear, typical instance of
@@ -1159,27 +1153,23 @@ the question of :numref:`sec_diffusion-samplers`.
 
 ## Summary
 
-Nothing in the regression or the samplers depends on the dimension, so what
-an image model adds is a network that sees both the whole image and each
-pixel. A U-Net does both, with skip connections that carry detail past a
-coarse bottleneck and the time and the label added inside every block. Ours
-has 1.2 million parameters; trained for 15,000 updates and sampled from a
-moving average of its weights, it draws recognizable Fashion-MNIST garments,
-and drawing them costs more arithmetic than training did. The Fréchet
-distance in a trained classifier's features turns sample quality into a
-number that means something only beside the distance between real sets of the
-same size, and our samples lie about five times above it. Label dropout makes
-one network both conditional and unconditional, and classifier-free guidance
-extrapolates from the second through the first by a scale $\gamma$, so every
-error of the unconditional prediction enters every guided sample. Without the
-label our FD more than triples, and the wrong class mix explains only a tenth
-to a sixth of the rise. A mild scale raises the class agreement at no cost
-the FD can see; larger ones trade variety, measured by the FD, for
-typicality, measured by class agreement. Practice guides hard because a
-person judges one picture and the FD judges the set. The guided sampler
-follows the scores of tilted densities that, at high noise, curve more
-sharply than any noised distribution can; on Gaussian classes it ends far
-narrower than even the tilt.
+Nothing in the regression or the samplers depends on the dimension, so what an
+image model adds is a network that sees both the whole image and each pixel: a
+U-Net, whose skip connections carry detail past a coarse bottleneck and whose
+every block receives the time and the label. Sampled from a moving average of
+its weights, our small U-Net draws recognizable garments, and drawing them
+costs more arithmetic than training it did. The Fréchet distance in a
+classifier's features means something only beside its reference value, the
+score of two real sets of the same size; our samples lie about five times
+above it. Label dropout makes one network both conditional and unconditional,
+and classifier-free guidance extrapolates from the second through the first by
+a scale $\gamma$, so every error of the unconditional prediction enters every
+guided sample. A mild scale raises the class agreement at no cost the FD can
+see, larger ones trade variety for typicality, and practice guides hard anyway
+because a person judges one picture and the FD judges the set. On Gaussian
+classes the guided sampler ends far narrower than even the tilted Gaussian,
+because at high noise the tilted densities curve more sharply than any noised
+distribution can.
 
 ## Exercises
 
@@ -1628,8 +1618,8 @@ Compare FDs only at equal $n$. At 5,000 images, differences below about
 
 - Same initial noise for all three samplers; three draws.
 - Our samples: about 0.8, five times the reference value of about 0.17.
-- Last weights: 0.4 to 0.6 worse, more than ten times the draw-to-draw
-  spread.
+- Last weights: 0.4 to 0.6 worse; the average moves by a few hundredths
+  between draws.
 - 1,000 ancestral steps (VP path, through `make_pred`): lower in every draw,
   for twenty times the evaluations.
 :::

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:04ca1104f1eefdea61131fd994f6811c65ac42a12bfd9f575b96fdfb6f219fcb",
+    "d2l_lib_fingerprint": "sha256:f43e69391d26185683bdd94208fd445da5f74f284a51c08c29529da247635842",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,36 +30,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (0.5027, -0.0564)\nlabel: 5.4010, noise: 0.0038\n"
-        }
-      ]
-    },
-    "synthetic-regression-data-inspecting-the-data": {
-      "code_fingerprint": "sha256:786a87dbd3de977ea1d26b1024ab67a2a45d9e5faed6589c246df5d9caaec954",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "synthetic-regression-data/synthetic-regression-data-inspecting-the-data-1.svg",
-          "bytes": 225226,
-          "sha256": "sha256:2d9e2991f3cfb7c7e85445f3bc24171a849a4900feba37a7cc8676739dbbb341"
+          "text": "features: (-3.2383, -0.6623)\nlabel: -0.0080, noise: 0.0167\n"
         }
       ]
     },
     "synthetic-regression-data-recovering-the-parameters-1": {
-      "code_fingerprint": "sha256:42e56843ec4e86c868385350f608d44850cf3abf4e0a0e065f74570b036e0960",
+      "code_fingerprint": "sha256:a498d58d3cfecc886fc7547435a3ce2ed99824db61119504755afa1d23dd68ca",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-recovering-the-parameters-2": {
-      "code_fingerprint": "sha256:703091bfec98590a7acf4633d969c4f084a966ed77188e4ae375194b408c8609",
+      "code_fingerprint": "sha256:83b74a6ebc093d5c32a90f1fbde7da8894690106b5fa38c71b6a8282d1e7f9da",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (4.1e-04, 5.2e-05)\nerror in b: -2.7e-04\nstandard error: 3.2e-04\n"
+          "text": "error in w: (-6.2e-04, -1.7e-04)\nerror in b: 1.1e-04\nstandard error: 3.2e-04\n"
         }
       ]
     }

@@ -1063,7 +1063,14 @@ be, and every later jump conditions on this noise. What remains is the
 outline of an average garment filled with texture.
 
 To measure what four steps lose, we count *speckles*, pixels that differ
-from all four of their neighbors, in 1,000 images of each kind.
+from all four of their neighbors, in 1,000 images of each kind. A third
+batch takes 784 jumps, one pixel per jump on average, to show what a
+hundred steps still lose. The chain's hundred levels cannot carry that
+many jumps: `unmask` rounds its levels to the chain's, and a jump between
+two equal levels reveals nothing. These jumps therefore run on a linear
+schedule of 784 levels of their own. Their times $k/784$ fall between the
+hundred times the network was trained at, and the number of masked pixels
+tells it the time in any case.
 
 ```{.python .input #discrete-diffusion-images-as-binary-tokens-7}
 %%tab pytorch
@@ -1099,9 +1106,16 @@ four-step samples about nine times as many: the image counterpart of the
 phantom blobs of the one-step pair. The hundred-step samples have about
 twice the data's count, and there two causes mix: about eight pixels
 still appear per jump, and the network is imperfect after 6,000 updates.
-This count alone cannot separate them. More jumps would, since they
-shrink the independence error and leave the network's own error in place,
-as on the pair (Exercise :exref:`ex_discrete-diffusion-pairs-revealed`e).
+The 784-step row pulls them apart. More jumps shrink the independence
+error and leave the network's own error where it was, as on the pair, and
+one pixel per jump removes about two thirds of the hundred-step excess.
+Most of what a hundred steps lose is therefore the independence error,
+not the network. Re-running the notebook moved the hundred-step count by a
+tenth of that drop or less, so the drop is no accident of the draw. The
+rest, which leaves the 784-step samples with about 1.3 times the data's
+speckles, is the network's own error plus what little independence
+remains when a pixel seldom shares its jump with a neighbor; Exercise
+:exref:`ex_discrete-diffusion-pairs-revealed`e separates the two.
 
 ## Where Diffusion Stands
 
@@ -1296,13 +1310,14 @@ infilling in return.
        of evaluations is $S\, (1 - (1 - 1/S)^L)$ for $L$ tokens. Evaluate
        it for the pair with $S = 32$, for the binary images with $S = 100$
        and $S = 784$, and for $L = S = 1024$.
-    1. The hundred-step samples of :numref:`subsec_diffusion-binary-images`
-       have about twice the data's speckles, from two causes: about eight
-       pixels revealed per jump, and the network's own error. Draw 1,000
-       images from `unet` with $S = 784$ jumps, one pixel per jump on
-       average, and count their speckles. Does the count fall toward that
-       of the data or stay near that of the hundred-step samples? Which of
-       the two causes does the answer point to?
+    1. The 784-step samples of :numref:`subsec_diffusion-binary-images`
+       keep about a third of the hundred-step excess of speckles. Show
+       that with $S$ equal jumps an interior pixel shares its jump with at
+       least one of its four neighbors with probability
+       $1 - (1 - 1/S)^4$, and evaluate it for $S = 4$, $100$ and $784$.
+       Then train `unet` for twice as many updates and count the speckles
+       at 100 and at 784 jumps again. Which count falls, and what does that
+       say about the share of the remaining excess that is the network's?
    :exlabel:`ex_discrete-diffusion-pairs-revealed`
 
 1. [code] **One token at a time.** An order-agnostic autoregressive
@@ -1889,7 +1904,8 @@ Speckle: a pixel unlike all four neighbors.
 @!discrete-diffusion-images-as-binary-tokens-7
 
 Data about 4 per 1,000; 4 steps about 9× (independence error); 100
-steps about 2× (eight pixels per jump, and an imperfect network).
+steps about 2× (eight pixels per jump, and an imperfect network); 784
+steps about 1.3×: most of the hundred-step excess was independence.
 :::
 
 ::: {.col .narrow}

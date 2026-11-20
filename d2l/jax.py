@@ -4148,13 +4148,6 @@ class GaussianMixture:
         return (jax.nn.softmax(log_p, 1)[..., None]
                 * (self.means + a * self.std ** 2 / var * r)).sum(1)
 
-    def velocity(self, x, t):
-        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
-        log_p, r, var, a = self._modes(x, 1 - t, t)
-        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
-        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
-        return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
-
     def nll(self, x):
         """Mean negative log-likelihood of clean points, in nats.
 
@@ -4173,6 +4166,15 @@ class GaussianMixture:
                     stray=round(1 - float(inside.mean()), 4),
                     spread=round(float(near[inside].mean()), 3))
 
+    def velocity(self, x, t):
+        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps.
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        log_p, r, var, a = self._modes(x, 1 - t, t)
+        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
+        return (jax.nn.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
+
 def scatter_panels(samples, titles=None, data=None, lim=4.5,
                    size=3.0):
     """Scatter 2-D point sets side by side on equal, shared axes.
@@ -4189,21 +4191,23 @@ def scatter_panels(samples, titles=None, data=None, lim=4.5,
             ax.set_title(titles[i])
     return axes[0]
 
-def time_embedding(t, dim):
-    """Sines and cosines of t at dim / 2 geometric frequencies.
+def time_embedding(t, dim, freqs=(1.0, 64.0)):
+    """Sines and cosines of t at dim / 2 frequencies, geometric from freqs[0]
+    to freqs[1] radians per unit of t (t in [0, 1]).
 
     Defined in :numref:`sec_diffusion-denoising`"""
-    freqs = jnp.exp(-math.log(10000) / (dim // 2) * jnp.arange(dim // 2))
-    args = jnp.asarray(t, jnp.float32)[:, None] * freqs
+    f = jnp.exp(jnp.linspace(math.log(freqs[0]), math.log(freqs[1]), dim // 2))
+    args = jnp.asarray(t, jnp.float32)[:, None] * f
     return jnp.concatenate([jnp.sin(args), jnp.cos(args)], 1)
 
 class TimeMLP(nnx.Module):
-    """An MLP on a point x and the time features of one or more times.
+    """An MLP on a point x and the time features of one or more times;
+    time_freqs: see time_embedding.
 
     Defined in :numref:`sec_diffusion-denoising`"""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_dim=64, rngs):
-        self.time_dim = time_dim
+                 time_dim=64, time_freqs=(1.0, 64.0), rngs):
+        self.time_dim, self.time_freqs = time_dim, time_freqs
         self.embed = d2l.make_mlp([time_dim * num_times, hidden, hidden],
                                   nnx.silu, rngs=rngs)
         self.inp = d2l.Linear(dim, hidden, rngs=rngs)
@@ -4212,12 +4216,19 @@ class TimeMLP(nnx.Module):
             d2l.make_mlp([hidden] * depth + [dim], nnx.silu, rngs=rngs))
 
     def __call__(self, x, *ts):
-        feats = [time_embedding(t, self.time_dim) for t in ts]
+        feats = [time_embedding(t, self.time_dim, self.time_freqs) for t in ts]
         return self.body(self.inp(x) + self.embed(jnp.concatenate(feats, 1)))
 
 def train_regression(model, loss_fn, batch_fn, num_steps, key, *,
                      lr=1e-3, cosine=False, ema_half_life=1000, chunk=500):
     """Adam on loss_fn(model, batch_fn(k1), k2) -> model, EMA model, losses.
+
+    The learning rate is constant or, with cosine=True, decays to zero along
+    a cosine. The EMA model averages the weights (d2l.EMA): the weights of
+    ema_half_life updates ago count half as much as the current ones. Each
+    chunk of updates is one jitted scan, a single dispatch to the device:
+    the networks of this chapter are so small that dispatching their
+    updates one at a time would cost more time than running them.
 
     Defined in :numref:`sec_diffusion-denoising`"""
     schedule = optax.cosine_decay_schedule(lr, num_steps) if cosine else lr
@@ -4359,10 +4370,18 @@ class GaussianPath:
         det = a * ds - s * da
         return (ds * x - s * out) / det, (a * out - da * x) / det
 
+    def sigma_bars(self, steps):
+        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
+
+        Defined in :numref:`sec_diffusion-integration`"""
+        a, s = self.grid(steps)
+        with jax.ensure_compile_time_eval():         # constants, even under jit
+            return s / a
+
     def time_at(self, log_snr):
         """The time with a given log-SNR, by bisection (lambda_t falls in t).
 
-        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        Defined in :numref:`sec_diffusion-integration`"""
         def halve(_, interval):
             lo, hi = interval
             mid = (lo + hi) / 2
@@ -4371,14 +4390,6 @@ class GaussianPath:
         lo, hi = jax.lax.fori_loop(0, 50, halve, (jnp.zeros_like(log_snr),
                                                   jnp.ones_like(log_snr)))
         return (lo + hi) / 2
-
-    def sigma_bars(self, steps):
-        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
-
-        Defined in :numref:`sec_diffusion-gaussian-paths`"""
-        a, s = self.grid(steps)
-        with jax.ensure_compile_time_eval():         # constants, even under jit
-            return s / a
 
 def regression_loss(path, kind):
     """Squared error of net(x_t, t) against the target of a kind, t ~ U(0, 1).
@@ -4392,22 +4403,10 @@ def regression_loss(path, kind):
         return (error ** 2).reshape(len(x0), -1).sum(1).mean()  # per example
     return loss_fn
 
-def make_pred(net, path, kind):
-    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
-
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
-    def pred(x, alpha, sigma):
-        log_snr = jnp.where(alpha > 0, 2 * jnp.log(alpha / sigma), -jnp.inf)
-        t = path.time_at(jnp.asarray(log_snr, jnp.float32))
-        x = x * (path.sigma(t) / sigma)         # the same point on our path
-        t = jnp.full((len(x),), t)
-        return path.x0_eps(kind, net(x, t), x, t)
-    return pred
-
 def pred_bar(pred, xb, r):
-    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise.
+    """pred at x = alpha x_bar, sigma_bar = r; at r = inf, x_bar is noise.
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     finite = jnp.isfinite(r)
     a = jnp.where(finite, 1 / jnp.sqrt(1 + r ** 2), 0.0)
     return pred(xb * jnp.where(finite, a, 1.0), a,
@@ -4417,7 +4416,7 @@ def ode_sample(pred, x, sigma_bars):
     """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
     noisy point at the first level, unit-variance scale (noise if inf).
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     with jax.ensure_compile_time_eval():         # the grid is a constant
         r = jnp.asarray(sigma_bars)
         from_inf = bool(jnp.isinf(r[0]))
@@ -4428,10 +4427,22 @@ def ode_sample(pred, x, sigma_bars):
     xb = x if from_inf else x * jnp.sqrt(1 + r[0] ** 2)  # x / alpha
     return jax.lax.scan(step, xb, (r[:-1], r[1:]))[0]
 
+def make_pred(net, path, kind):
+    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
+
+    Defined in :numref:`sec_diffusion-integration`"""
+    def pred(x, alpha, sigma):
+        log_snr = jnp.where(alpha > 0, 2 * jnp.log(alpha / sigma), -jnp.inf)
+        t = path.time_at(jnp.asarray(log_snr, jnp.float32))
+        x = x * (path.sigma(t) / sigma)         # the same point on our path
+        t = jnp.full((len(x),), t)
+        return path.x0_eps(kind, net(x, t), x, t)
+    return pred
+
 def ancestral_sample(pred, x, path, steps, key, *, t_start=1.0):
     """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0.
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     a, s = path.grid(steps, t_start)
     a_t, s_t, a_s, s_s = a[:-1], s[:-1], a[1:], s[1:]
     ratio = s_s * a_t / (a_s * s_t)
@@ -4480,12 +4491,18 @@ class UNetBlock(nnx.Module):
         return h + (x if self.skip is None else self.skip(x))
 
 class UNet(nnx.Module):
-    """A small U-Net (NHWC) on time t, a label y (num_classes = null), cond.
+    """A small U-Net on an image x (n, h, w, c), times t (n,) and labels y.
+
+    y = num_classes is the null label. cond (n, emb_dim), if given, is added
+    to the time features; the flow map of the few-step section passes the
+    embedding of its step size there. time_freqs: see time_embedding.
 
     Defined in :numref:`sec_diffusion-images`"""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
-                 out_channels=1, emb_dim=128, *, rngs):
+                 out_channels=1, emb_dim=128, time_freqs=(1.0, 64.0), *,
+                 rngs):
         self.emb_dim, self.num_classes = emb_dim, num_classes
+        self.time_freqs = time_freqs
         init = nnx.initializers.normal(1.0)  # N(0, 1), as in PyTorch
         self.label_emb = (nnx.Embed(num_classes + 1, emb_dim, rngs=rngs,
                                     embedding_init=init)
@@ -4505,7 +4522,7 @@ class UNet(nnx.Module):
         self.outc = conv(ch, out_channels)
 
     def __call__(self, x, t, y=None, cond=None):
-        emb = d2l.time_embedding(t, self.emb_dim)
+        emb = d2l.time_embedding(t, self.emb_dim, self.time_freqs)
         if y is not None:
             emb = emb + self.label_emb(y)
         if cond is not None:
@@ -4521,17 +4538,11 @@ class UNet(nnx.Module):
         h = self.up0(up(h, h1), emb)  # skip connection
         return self.outc(nnx.silu(self.norm(h)))
 
-def cfg(net, c, gamma):
-    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
+def conditional(net, c):
+    """The field (x, t) -> net(x, t, c) with the labels c fixed.
 
     Defined in :numref:`sec_diffusion-images`"""
-    null = jnp.full_like(c, net.num_classes)
-    def guided(x, t):
-        out_c, out = jnp.split(net(jnp.concatenate([x, x]),
-                                   jnp.concatenate([t, t]),
-                                   jnp.concatenate([c, null])), 2)
-        return out + gamma * (out_c - out)
-    return guided
+    return lambda x, t: net(x, t, c)
 
 def fashion_feature_cnn(X, y):
     """The feature network that judges Fashion-MNIST samples in this chapter.
@@ -4553,6 +4564,22 @@ def fd_features(cnn, imgs):
 
     Defined in :numref:`sec_diffusion-images`"""
     return d2l.batched(lambda x: gray_features(cnn, x), imgs)
+
+def cfg(net, c, gamma):
+    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
+
+    gamma is a Python number; at gamma = 1 this is conditional(net, c).
+
+    Defined in :numref:`sec_diffusion-images`"""
+    if gamma == 1:
+        return d2l.conditional(net, c)
+    null = jnp.full_like(c, net.num_classes)
+    def guided(x, t):  # one doubled batch: labeled, then unlabeled
+        out_c, out = jnp.split(net(jnp.concatenate([x, x]),
+                                   jnp.concatenate([t, t]),
+                                   jnp.concatenate([c, null])), 2)
+        return out + gamma * (out_c - out)
+    return guided
 
 def ddim_sample(pred, x, path, steps, eta=0.0, key=None, *,
                 t_start=1.0, t_end=0.0):
@@ -4610,11 +4637,12 @@ def ddim_invert(pred, x, path, steps, t_end=1.0):
 
     Defined in :numref:`sec_diffusion-samplers`"""
     a, s = path.grid(steps, 0.0, t_end)
+    j = np.maximum(np.arange(steps), 1)  # at t = 0 x is read at the next level
     def step(x, inputs):
-        a_t, s_t, a_s, s_s = inputs
-        eps = pred(x, a_s, s_s)[1]              # x read at the next level
+        a_t, s_t, a_s, s_s, a_j, s_j = inputs
+        eps = pred(x, a_j, s_j)[1]
         return a_s * (x - s_t * eps) / a_t + s_s * eps, None
-    return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:]))[0]
+    return jax.lax.scan(step, x, (a[:-1], s[:-1], a[1:], s[1:], a[j], s[j]))[0]
 
 class Autoencoder(nnx.Module):
     """Residual convolutional autoencoder from 28x28x1 images to a 7x7
@@ -4753,17 +4781,19 @@ def flow_map_sample(u, x, steps, t_start=1.0):
     return jax.lax.scan(jump, x, (ts[:-1], ts[1:]))[0]
 
 class UNetFlowMap(nnx.Module):
-    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap.
+    """u(x, s, t): a velocity U-Net, plus a zero-initialized input for the
+    gap t - s. The caller passes a copy of the teacher's U-Net.
 
     Defined in :numref:`sec_diffusion-few-step`"""
     def __init__(self, unet, *, rngs):
-        self.unet = nnx.clone(unet)
+        self.unet = unet
         zeros = nnx.initializers.zeros
         self.gap = nnx.Linear(unet.emb_dim, unet.emb_dim, kernel_init=zeros,
                               bias_init=zeros, rngs=rngs)
 
     def __call__(self, x, s, t):
-        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
+        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim,
+                                          self.unet.time_freqs))
         return self.unet(x, t, cond=gap)
 
 @nnx.jit

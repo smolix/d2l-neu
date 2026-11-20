@@ -1,9 +1,9 @@
 # Likelihood, Weighting and the Design Space
 :label:`sec_diffusion-design-space`
 
-For four sections we have trained networks by regression onto a per-example target and accepted the result because it worked: samples of the mixture land on its three modes with the right weights, and the garments of :numref:`sec_diffusion-images` look like garments. We have never asked what probability the model assigns to a data point, a density model's first question and one the adversarial models of :numref:`chap_gans` could not answer. Is "predict the noise" maximum likelihood in disguise, and what negative log-likelihood does it give the mixture, whose true value is about 2.5 nats per point? And which of the choices made along the way (the target, the weight of each noise level, the schedule) matter?
+For five sections we have trained networks by regression onto a per-example target and accepted the result because it worked: samples of the mixture land on its three modes with the right weights, and the garments of :numref:`sec_diffusion-images` look like garments. We have never asked what probability the model assigns to a data point, a density model's first question and one the adversarial models of :numref:`chap_gans` could not answer. Is "predict the noise" maximum likelihood in disguise, and what negative log-likelihood does it give the mixture, whose true value is about 2.5 nats per point? And which of the choices made along the way (the target, the weight of each noise level, the schedule) matter?
 
-:citet:`sohl2015deep` and :citet:`ho2020denoising` derived the model as a latent-variable model whose latents are the noisy copies of a data point, with a lower bound on the log-likelihood that is a sum of noise regressions, one per noise level, each with its own weight; the loss of :numref:`sec_diffusion-gaussian-paths` sets every weight to one. :citet:`Kingma.Gao.2023` showed that every diffusion objective, flow matching included, is the same integral over the log signal-to-noise ratio with its own weighting. The section ends with the design choices of :citet:`Karras.Aittala.Aila.ea.2022`, noise levels as image scales, and four recipes on Fashion-MNIST.
+The noise loss and the velocity loss both trained good models, so the question is not idle: are they the same loss, and is either of them the likelihood? :citet:`sohl2015deep` read the noising chain backward as a latent-variable model with a lower bound on its likelihood, and :citet:`ho2020denoising` noticed that this bound is a sum of the very noise regressions we have been running, one per noise level, each with its own weight. :citet:`Kingma.Gao.2023` then showed that the other losses are the same sum with other weights. Choosing a target and a schedule thus comes down largely to one question, how much effort the loss spends at each noise level, and to a second one, what the network is asked to output. Both we can measure: on the mixture in nats, on Fashion-MNIST by the Fréchet distance. The section ends with what we would choose for a new model.
 
 ```{.python .input #design-space-likelihood-weighting-and-the-design-space}
 %%tab pytorch
@@ -33,7 +33,7 @@ torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
 
 ## The Likelihood Bound
 
-Read backward, the chain of :numref:`sec_diffusion-gaussian-paths` is a generative model with $T$ layers of latent variables, whose likelihood we can bound.
+Let us first write the chain of :numref:`sec_diffusion-gaussian-paths` as a generative model and bound its likelihood; the noise regression will then appear by itself.
 
 ### The Chain as a Latent-Variable Model
 
@@ -46,29 +46,33 @@ p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k) = \mathcal{N}\big(\bol
 $$
 :eqlabel:`eq_diffusion-reverse-chain`
 
-with $p(\mathbf{x}_T) = \mathcal{N}(\mathbf{0}, \mathbf{I})$, a mean $\boldsymbol\mu_{\boldsymbol\theta}$ computed by a network, and fixed variances $\nu_k$ ($\sigma_k$ remains the path's noise scale). The density of $\mathbf{x}_0$ integrates this joint over $\mathbf{x}_{1:T}$, which we cannot compute, but any distribution over the latents gives a lower bound on it, the evidence lower bound (ELBO) of :numref:`sec_mdl-latent-em-elbo`. The chain supplies one, the forward process itself. As an upper bound on the negative log-likelihood,
+with $p(\mathbf{x}_T) = \mathcal{N}(\mathbf{0}, \mathbf{I})$, a mean $\boldsymbol\mu_{\boldsymbol\theta}$ computed by a network, and fixed variances $\nu_k$ ($\sigma_k$ remains the path's noise scale).
+
+The density of $\mathbf{x}_0$ is this joint integrated over the latents $\mathbf{x}_{1:T}$, an integral over $T$ copies of the data space that we cannot compute. Any distribution $q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)$ over the latents turns it into an expectation, $p_{\boldsymbol\theta}(\mathbf{x}_0) = \mathbb{E}_{q}\big[p_{\boldsymbol\theta}(\mathbf{x}_{0:T}) / q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)\big]$, and since the logarithm is concave, the logarithm of an average is at least the average of the logarithms (Jensen's inequality). For the negative log-likelihood this gives an upper bound,
 
 $$
 -\log p_{\boldsymbol\theta}(\mathbf{x}_0)
+= -\log \mathbb{E}_{q}\!\left[\frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right]
 \le \mathbb{E}_{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\!\left[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right] =: L(\mathbf{x}_0).
 $$
 :eqlabel:`eq_diffusion-elbo`
 
-The gap is $D_{\textrm{KL}}\big(q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{1:T} \mid \mathbf{x}_0)\big)$, so the bound is tight when the learned reverse chain, given $\mathbf{x}_0$, retraces the forward chain.
+This is the *evidence lower bound* (ELBO) of variational inference (:numref:`sec_mdl-latent-em-elbo`) with its sign flipped. In most latent-variable models $q$ has to be learned so that it comes close to the true posterior; here the forward chain supplies it, and nothing about it is learned. The gap in the inequality is $D_{\textrm{KL}}\big(q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{1:T} \mid \mathbf{x}_0)\big)$, so the bound is tight when the learned reverse chain, given $\mathbf{x}_0$, retraces the forward chain. Averaged over the data, the bound is at least the cross-entropy $\mathbb{E}_{p}[-\log p_{\boldsymbol\theta}(\mathbf{x}_0)] = H(p) + D_{\textrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$, so a model that drops a mode pays on every point of it.
 
-Substituting the factorizations of both chains splits the bound into one term per step. With $\mathbb{E}_q$ the expectation over $q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)$,
+To compare the two chains we substitute their factorizations, the product above for $p_{\boldsymbol\theta}$ and $q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) = \prod_k q(\mathbf{x}_k \mid \mathbf{x}_{k-1})$, which splits the bound into one term per step:
 
 $$
-\begin{aligned}
-L(\mathbf{x}_0)
-&= \mathbb{E}_q\Big[-\log p(\mathbf{x}_T) - \sum_{k=1}^{T} \log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)}{q(\mathbf{x}_k \mid \mathbf{x}_{k-1})}\Big] \\
-&= \mathbb{E}_q\Big[-\log p(\mathbf{x}_T) - \sum_{k=2}^{T} \log\Big(\frac{p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)}{q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)} \cdot \frac{q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)}{q(\mathbf{x}_k \mid \mathbf{x}_0)}\Big) - \log \frac{p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)}{q(\mathbf{x}_1 \mid \mathbf{x}_0)}\Big] \\
-&= \mathbb{E}_q\Big[\log \frac{q(\mathbf{x}_T \mid \mathbf{x}_0)}{p(\mathbf{x}_T)} + \sum_{k=2}^{T} \log \frac{q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)}{p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)} - \log p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)\Big].
-\end{aligned}
+L(\mathbf{x}_0) = \mathbb{E}_q\Big[-\log p(\mathbf{x}_T) - \sum_{k=1}^{T} \log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)}{q(\mathbf{x}_k \mid \mathbf{x}_{k-1})}\Big].
 $$
 :eqlabel:`eq_diffusion-elbo-steps`
 
-The second line reverses each forward step by Bayes' rule with $\mathbf{x}_0$ held fixed: by the Markov property $q(\mathbf{x}_k \mid \mathbf{x}_{k-1}) = q(\mathbf{x}_k \mid \mathbf{x}_{k-1}, \mathbf{x}_0)$, which equals $q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)\, q(\mathbf{x}_k \mid \mathbf{x}_0) / q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$. In the third line the ratios of marginals telescope to $q(\mathbf{x}_1 \mid \mathbf{x}_0) / q(\mathbf{x}_T \mid \mathbf{x}_0)$, whose numerator cancels the $k = 1$ denominator. Each remaining logarithm is, in expectation, a divergence:
+The $k$-th term cannot yet be read as a divergence, since the learned step goes from $\mathbf{x}_k$ to $\mathbf{x}_{k-1}$ and the forward step the other way. Bayes' rule turns the forward step around. By the Markov property it does not change when we also condition on $\mathbf{x}_0$, and then
+
+$$
+q(\mathbf{x}_k \mid \mathbf{x}_{k-1}) = q(\mathbf{x}_k \mid \mathbf{x}_{k-1}, \mathbf{x}_0) = \frac{q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)\, q(\mathbf{x}_k \mid \mathbf{x}_0)}{q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)}.
+$$
+
+Substituted for $k \ge 2$, the ratios of marginals telescope, $\prod_{k=2}^{T} q(\mathbf{x}_{k-1} \mid \mathbf{x}_0) / q(\mathbf{x}_k \mid \mathbf{x}_0) = q(\mathbf{x}_1 \mid \mathbf{x}_0) / q(\mathbf{x}_T \mid \mathbf{x}_0)$, and the numerator cancels the forward step left over at $k = 1$. Each remaining logarithm is, in expectation, a divergence:
 
 $$
 L(\mathbf{x}_0) = \underbrace{D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big)}_{L_T}
@@ -77,7 +81,7 @@ L(\mathbf{x}_0) = \underbrace{D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}
 $$
 :eqlabel:`eq_diffusion-elbo-terms`
 
-The middle terms compare each learned step with the *forward posterior* $q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)$, the reversal of step $k$ for a known clean point. Conditioning on $\mathbf{x}_0$ makes it computable: as a product of two Gaussians in $\mathbf{x}_{k-1}$, the forward step and $q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$, it is Gaussian (:exref:`ex_design-space-forward-posterior` completes the square),
+The *prior term* $L_T$ checks that the chain ends at the Gaussian the sampler starts from, the *denoising terms* $L_{k-1}$ compare each learned step with the *forward posterior*, the reversal of step $k$ for a known clean point, and the *reconstruction term* $L_0$ scores the last step. Conditioning on $\mathbf{x}_0$ makes the forward posterior computable: as a product of two Gaussians in $\mathbf{x}_{k-1}$, the forward step and $q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$, it is Gaussian (Exercise :exref:`ex_design-space-forward-posterior` completes the square),
 
 $$
 q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) = \mathcal{N}\big(\tilde{\boldsymbol\mu}_k, \tilde\beta_k \mathbf{I}\big),
@@ -90,13 +94,26 @@ $$
 
 The mean is a weighted average of where the clean point and the noisy point put $\mathbf{x}_{k-1}$, and the variance is below the forward step's $\beta_k$: knowing both ends pins the middle down.
 
-The smallest case shows the three kinds of terms. With one coordinate, $T = 2$ and $\beta_1 = \beta_2 = 1/2$, the *prior term* $L_2$ compares the chain's end $\mathcal{N}(\alpha_2 x_0, \sigma_2^2)$ with $\mathcal{N}(0, 1)$ and by the Gaussian formula :eqref:`eq_gan_mvn_kl` equals $x_0^2/8 + 0.019$: two large steps leave much of $x_0$ behind. The *denoising term* $L_1$ compares the learned step from $x_2$ to $x_1$ with the forward posterior, and the *reconstruction term* $L_0$ scores the last step. At $T = 1000$ the prior term is nearly zero and the denoising terms carry the training signal.
+The prior and denoising terms compare Gaussians, so one formula evaluates them. For isotropic Gaussians in $d$ dimensions,
 
-Averaged over the data, the bound is at least the cross-entropy $\mathbb{E}_{p}[-\log p_{\boldsymbol\theta}(\mathbf{x}_0)] = H(p) + D_{\textrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$: a model that drops a mode pays on every point of it.
+$$
+D_{\textrm{KL}}\big(\mathcal{N}(\mathbf{m}_1, v_1 \mathbf{I}) \,\|\, \mathcal{N}(\mathbf{m}_2, v_2 \mathbf{I})\big) = \frac{d}{2}\Big(\frac{v_1}{v_2} - 1 - \log\frac{v_1}{v_2}\Big) + \frac{\|\mathbf{m}_1 - \mathbf{m}_2\|^2}{2 v_2},
+$$
+:eqlabel:`eq_diffusion-gauss-kl`
+
+a special case of the formula of :numref:`subsec_gan_fit`. The first part charges a wrong variance, the second a wrong mean, measured in units of the second variance.
+
+How large is each term? The smallest case can be worked by hand. Take one coordinate, data drawn from $\mathcal{N}(0, 1)$, a chain of $T = 2$ steps with $\beta_1 = \beta_2 = \tfrac12$, so that $\alpha_1^2 = \tfrac12$ and $\alpha_2^2 = \tfrac14$, and the best possible learned means. The prior term compares the chain's end $\mathcal{N}(\alpha_2 x_0, \tfrac34)$ with $\mathcal{N}(0, 1)$ and equals $x_0^2/8 + 0.019$, or $0.144$ on average: two large steps leave much of $x_0$ behind. The forward posterior of the second step has mean $\tfrac{\sqrt 2}{3}(x_0 + x_2)$ and variance $\tilde\beta_2 = \tfrac13$, and the best learned step replaces $x_0$ in that mean by its best guess from $x_2$, which is still uncertain by a variance of $\tfrac34$. With $\nu_k = \beta_k$, the forward step's own variance, the expected bound is
+
+$$
+\mathbb{E}\, L = \underbrace{0.144}_{L_2} + \underbrace{0.203}_{L_1} + \underbrace{1.072}_{L_0} = 1.419 = \tfrac12 \log(2\pi e),
+$$
+
+the true negative log-likelihood of $\mathcal{N}(0, 1)$: for Gaussian data and these variances, two steps already make the bound exact. The reconstruction term is the easiest to check. Given $x_1$, the clean point is still uncertain by a variance of $\tfrac12$, which is just $\nu_1$, so $L_0 = \tfrac12 \log(2\pi \cdot \tfrac12) + \tfrac12 = 1.072$. With $\nu_2 = \tilde\beta_2$ instead, $L_1$ grows to $0.25$ and the bound to $1.466$. The reason is worth remembering. The forward posterior knows $x_0$, so its variance is small; the learned step from $x_2$ does not, and its variance has to include that uncertainty too. At $T = 1000$ the prior term is nearly zero, each step is small, and the denoising terms carry the training signal.
 
 ### From the Bound to Weighted Regression
 
-Each denoising term compares two Gaussians whose variances do not depend on the network, so by :eqref:`eq_gan_mvn_kl` only the distance between the means involves $\boldsymbol\theta$:
+Each denoising term compares two Gaussians whose variances do not depend on the network, so by :eqref:`eq_diffusion-gauss-kl` only the distance between the means involves $\boldsymbol\theta$:
 
 $$
 L_{k-1} = \mathbb{E}_q\Big[\frac{1}{2\nu_k} \big\|\tilde{\boldsymbol\mu}_k(\mathbf{x}_k, \mathbf{x}_0) - \boldsymbol\mu_{\boldsymbol\theta}(\mathbf{x}_k, k)\big\|^2\Big] + \textrm{const},
@@ -132,7 +149,7 @@ $$
 \frac{\beta_k}{2(1 - \beta_k)\sigma_{k-1}^2} = \tfrac12\big(e^{\lambda_{k-1} - \lambda_k} - 1\big) \approx \tfrac12(\lambda_{k-1} - \lambda_k).
 $$
 
-The bound charges every step by how much it lowers the log-SNR. The cell prints these weights along our VP chain ($T = 1000$).
+The bound charges every step by how much it lowers the log-SNR. The cell prints both weights along our VP chain ($T = 1000$), next to half the log-SNR step.
 
 ```{.python .input #design-space-from-the-bound-to-weighted-regression}
 %%tab pytorch, jax
@@ -149,7 +166,7 @@ for k in (2, 10, 100, 500, 1000):
           f'half log-SNR step {dlam / 2:.4f}')
 ```
 
-Where the steps are small, the weight for $\nu_k = \tilde\beta_k$ equals half the log-SNR step; for $\nu_k = \beta_k$ it differs only at the start. Both are largest at the first steps, where the log-SNR falls by $\log(k/(k-1))$ per step, and stay near $0.01$ or below after the first few dozen. The simple loss of :numref:`sec_diffusion-gaussian-paths`,
+Where the steps are small, the weight for $\nu_k = \tilde\beta_k$ equals half the log-SNR step, and the weight for $\nu_k = \beta_k$ differs from it only at the start. Both are largest at the first steps, where the log-SNR drops fastest: twice the printed half-steps gives $0.78$ at $k = 2$ and $0.157$ at $k = 10$. No grid of equal time steps escapes this. Even a constant $\beta$ lowers the log-SNR by at least $\log(k/(k-1))$ at step $k$, which is $\log 2 \approx 0.69$ at $k = 2$ and $\log(10/9) \approx 0.105$ at $k = 10$; our $\beta$ grows along the chain, and our first steps drop by more. After the first few dozen steps both weights stay near $0.01$ or below. The simple loss of :numref:`sec_diffusion-gaussian-paths`,
 
 $$
 L_{\textrm{simple}}(\boldsymbol\theta) = \mathbb{E}_{k,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, \big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\alpha_k \mathbf{x}_0 + \sigma_k \boldsymbol\epsilon, k)\big\|^2,
@@ -164,11 +181,11 @@ L(\mathbf{x}_0) \to \frac12 \int_{\lambda_{\min}}^{\lambda_{\max}} \mathbb{E}_{\
 $$
 :eqlabel:`eq_diffusion-elbo-continuous`
 
-where $\mathbf{x}_\lambda$ is the point of the path with log-SNR $\lambda$ :cite:`Kingma.Salimans.Poole.ea.2021`, from $\lambda_{\max}$ at the smallest noise level to $\lambda_{\min}$ at the path's end. The limit needs steps small in $\lambda$, which the chain's grid lacks at the data end, where the log-SNR falls by $\log 2$ from the first step to the second whatever $T$ is; there the chain's bound is loose (:exref:`ex_design-space-weights-of-the-bound`).
+where $\mathbf{x}_\lambda$ is the point of the path with log-SNR $\lambda$ :cite:`Kingma.Salimans.Poole.ea.2021`, from $\lambda_{\max}$ at the smallest noise level to $\lambda_{\min}$ at the path's end. In words, the bound is the noise error integrated over the log-SNR with weight one, plus the two end terms. The limit needs steps small in $\lambda$, which the chain's grid lacks at the data end: from the first step to the second the log-SNR falls by more than $\log 2$, whatever $T$ is. There the chain's bound is loose (Exercise :exref:`ex_design-space-weights-of-the-bound`).
 
 ### A Number for the Mixture
 
-Two numbers measure the likelihood of a trained network: the bound :eqref:`eq_diffusion-elbo-continuous`, which belongs to the stochastic reverse process, and the density of the deterministic probability-flow ODE of :numref:`sec_diffusion-gaussian-paths`, by the change of variables; for the exact field they coincide. We train a noise predictor on the VP path with the mixture recipe of :numref:`sec_diffusion-gaussian-paths` for $20{,}000$ steps.
+Two numbers measure the likelihood of a trained network. The bound :eqref:`eq_diffusion-elbo-continuous` belongs to the stochastic reverse process. The probability-flow ODE of :numref:`sec_diffusion-integration` is a deterministic map from noise to data, and its density follows by a change of variables. For the exact field the two agree; for a trained network they need not. We train a noise predictor on the VP path with the mixture recipe of :numref:`sec_diffusion-gaussian-paths` for $20{,}000$ steps.
 
 ```{.python .input #design-space-a-number-for-the-mixture}
 %%tab pytorch
@@ -191,13 +208,13 @@ _, ema, _ = d2l.train_regression(
     cosine=True, ema_half_life=700)
 ```
 
-Along a trajectory of $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ the log-density changes at the rate $-\nabla \cdot \mathbf{u}_t$, the instantaneous change of variables of :numref:`sec_mdl-continuous-normalizing-flows`. Integrating from a data point at a small time $t_{\min}$ to $t = 1$, where the density is a standard Gaussian, gives
+Along a trajectory of $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$ the log-density changes at the rate $-\nabla \cdot \mathbf{u}_t$: where the flow spreads points apart, the density thins. This is the instantaneous change of variables of :numref:`sec_mdl-continuous-normalizing-flows`. Integrating from a data point at a small time $t_{\min}$ to $t = 1$, where the density is a standard Gaussian, gives
 
 $$
 \log p(\mathbf{x}_{t_{\min}}) = \log \mathcal{N}(\mathbf{x}_1; \mathbf{0}, \mathbf{I}) + \int_{t_{\min}}^{1} \nabla \cdot \mathbf{u}_t(\mathbf{x}_t)\, dt.
 $$
 
-`pf_nll` integrates the point and the divergence by fourth-order Runge--Kutta on 100 steps that crowd toward the data; the velocity comes from the dictionary of :numref:`sec_diffusion-gaussian-paths`, the divergence is the trace of the $2 \times 2$ Jacobian, one forward-mode derivative per coordinate, and the reference is the mixture's exact noise prediction. We start at $t_{\min} = 0.001$, where the noise is about $1\%$ of the signal.
+`pf_nll` integrates the point and its accumulated divergence together on 100 steps that crowd toward the data, where the field changes fastest. It uses the classical fourth-order Runge--Kutta method (:numref:`sec_mdl-euler-runge-kutta`), a relative of Heun's method of :numref:`sec_diffusion-samplers` that evaluates the field four times per step. The velocity comes from the noise prediction through the conversions of :numref:`sec_diffusion-gaussian-paths`. The divergence is the trace of the $2 \times 2$ Jacobian, one forward-mode derivative per coordinate; in $d$ dimensions that is $d$ derivatives per evaluation, which is why an image needs a cheaper estimate (Exercise :exref:`ex_design-space-hutchinson`). We start at $t_{\min} = 0.001$, where the noise is about $1\%$ of the signal, and take the mixture's exact noise prediction as the reference.
 
 ```{.python .input #design-space-a-number-for-the-mixture-1}
 %%tab pytorch
@@ -210,7 +227,7 @@ def pf_nll(eps_fn, path, x, t_min=1e-3, steps=100):
     """-log p(x) under the probability-flow ODE, RK4 from t_min to 1."""
     def f(x, t):                              # velocity and its divergence
         t = torch.full((len(x),), t, device=x.device)
-        def u(x):                             # the velocity, by the dictionary
+        def u(x):                             # the velocity, by x0_eps, target
             x0, eps = path.x0_eps('eps', eps_fn(x, t), x, t)
             return path.target('velocity', x0, eps, t)
         e = torch.eye(x.shape[1], device=x.device)
@@ -240,7 +257,7 @@ def pf_nll(eps_fn, path, x, t_min=1e-3, steps=100):
     """-log p(x) under the probability-flow ODE, RK4 from t_min to 1."""
     def f(x, t):                              # velocity and its divergence
         t = jnp.full((len(x),), t)
-        def u(x):                             # the velocity, by the dictionary
+        def u(x):                             # the velocity, by x0_eps, target
             x0, eps = path.x0_eps('eps', eps_fn(x, t), x, t)
             return path.target('velocity', x0, eps, t)
         e = jnp.eye(x.shape[1])
@@ -262,7 +279,7 @@ def pf_nll(eps_fn, path, x, t_min=1e-3, steps=100):
     return (x ** 2).sum(1) / 2 + x.shape[1] / 2 * math.log(2 * math.pi) - div
 ```
 
-We evaluate both fields on 4,000 fresh draws.
+We evaluate both fields on the same 4,000 fresh draws.
 
 ```{.python .input #design-space-a-number-for-the-mixture-2}
 %%tab pytorch
@@ -289,23 +306,24 @@ print(f'flow, exact field - true: {mean_se(pf_exact - nll[:4000])}')
 print(f'flow, network - exact field: {mean_se(pf_net - pf_exact)}')
 ```
 
-The exact field's flow reproduces the true 2.5 nats per point to about four decimals, which checks the integrator; the trained network's comes within about $0.01$ nats of it (a few thousandths in our runs). The network has learned the density, not only how to sample from it.
+The exact field's flow reproduces the true 2.5 nats per point to about four decimals, which checks the integrator. The trained network's negative log-likelihood lies within a few thousandths of a nat of it, a paired difference with a standard error of about a thousandth. The network has learned the density, not only how to sample from it.
 
-The prior term of the bound is about $\tfrac12 \alpha_1^2 \|\mathbf{x}_0\|^2 \approx 2 \cdot 10^{-4}$ nats. The last step outputs a Gaussian around $\hat{\mathbf{x}}_0$ with the variance $e^{-\lambda_{\max}} = \sigma^2/\alpha^2$ of the smallest noise level, and since $\mathbf{x}_0 - \hat{\mathbf{x}}_0 = (\sigma/\alpha)(\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon)$,
+The bound needs its two end terms. The prior term is about $\tfrac12 \alpha_1^2 \|\mathbf{x}_0\|^2 \approx 2 \cdot 10^{-4}$ nats. The last step outputs a Gaussian around $\hat{\mathbf{x}}_0$ with the variance $e^{-\lambda_{\max}} = \sigma^2/\alpha^2$ of the smallest noise level, and since $\mathbf{x}_0 - \hat{\mathbf{x}}_0 = (\sigma/\alpha)(\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon)$,
 
 $$
 L_0 = \frac{d}{2} \log\big(2\pi e^{-\lambda_{\max}}\big) + \frac12\, \mathbb{E}\big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_{t_{\min}}, t_{\min})\big\|^2 .
 $$
 
-In two dimensions at a noise level of $0.01$ this is about $-7.3 + 1 = -6.3$ nats, so the integral alone, about 9 nats, is not a likelihood; only the sum is.
+We can predict the split before the cell prints it. In two dimensions at a noise level of $0.01$ the first part is about $-7.3$ nats, the log-normalizer of a very narrow Gaussian. The second is about $1$, half the expected squared error of a network that cannot tell noise this small from the data's own variation, so $L_0 \approx -6.3$. If the whole bound is near 2.5 nats, the integral alone must be about $2.5 + 6.3 \approx 8.8$ nats. Neither part is a likelihood; only the sum bounds one.
 
-`bound` estimates the integral by Monte Carlo, with $\lambda$ uniform and stratified. Pinning the bound down to $0.01$ nats takes a few million network evaluations, but the difference between two predictors on shared points, levels and noise takes far fewer (:numref:`subsec_mdl-paired-comparisons`), so `bound` evaluates a list of predictors on shared draws.
+`bound` estimates the integral by Monte Carlo, with $\lambda$ uniform and stratified. Pinning the bound down to $0.01$ nats takes a few million network evaluations. The difference between two predictors takes far fewer when both see the same points, levels and noise, because most of the Monte Carlo noise is then common to both and cancels (:numref:`subsec_mdl-paired-comparisons`); `bound` therefore evaluates a list of predictors on shared draws.
 
 ```{.python .input #design-space-a-number-for-the-mixture-3}
 %%tab pytorch
 @torch.no_grad()
 def bound(eps_fns, path, x0, draws, t_min=1e-3):
-    """Per-point bound on -log p(x0) for each eps(x, t), on shared draws."""
+    """Per-point bound on -log p(x0) for each eps(x, t), on shared draws,
+    and its integral over the log-SNR alone."""
     n, d = x0.shape
     a1, s1 = (f(torch.tensor(1.0)).item() for f in (path.alpha, path.sigma))
     lam_max = path.log_snr(torch.tensor(t_min)).item()
@@ -316,8 +334,9 @@ def bound(eps_fns, path, x0, draws, t_min=1e-3):
     t = torch.full((n,), t_min, device=x0.device)
     eps = torch.randn_like(x0)
     x = path.sample(x0, t, eps)               # the reconstruction term
-    out = [prior + d / 2 * math.log(2 * math.pi / math.exp(lam_max))
-           + ((f(x, t) - eps) ** 2).sum(1) / 2 for f in eps_fns]
+    ends = [prior + d / 2 * math.log(2 * math.pi / math.exp(lam_max))
+            + ((f(x, t) - eps) ** 2).sum(1) / 2 for f in eps_fns]
+    integrals = [torch.zeros(n, device=x0.device) for _ in eps_fns]
     for _ in range(draws):                    # log-SNR uniform, stratified
         u = (torch.randperm(n, device=x0.device)
              + torch.rand(n, device=x0.device)) / n
@@ -325,10 +344,12 @@ def bound(eps_fns, path, x0, draws, t_min=1e-3):
         eps = torch.randn_like(x0)
         x = path.sample(x0, t, eps)
         for i, f in enumerate(eps_fns):
-            out[i] += scale * ((f(x, t) - eps) ** 2).sum(1)
-    return out
+            integrals[i] += scale * ((f(x, t) - eps) ** 2).sum(1)
+    return [e + i for e, i in zip(ends, integrals)], integrals
 
-b_exact, b_net = bound([eps_exact, ema], vp, test, 64)
+(b_exact, b_net), (integral, _) = bound([eps_exact, ema], vp, test, 64)
+print(f'exact field: integral {integral.mean():.2f} nats, '
+      f'prior and reconstruction {(b_exact - integral).mean():.2f} nats')
 print(f'bound, exact field - true: {mean_se(b_exact - nll)}')
 print(f'bound, network - exact field: {mean_se(b_net - b_exact)}')
 ```
@@ -336,7 +357,8 @@ print(f'bound, network - exact field: {mean_se(b_net - b_exact)}')
 ```{.python .input #design-space-a-number-for-the-mixture-3}
 %%tab jax
 def bound(eps_fns, path, x0, draws, key, t_min=1e-3):
-    """Per-point bound on -log p(x0) for each eps(x, t), on shared draws."""
+    """Per-point bound on -log p(x0) for each eps(x, t), on shared draws,
+    and its integral over the log-SNR alone."""
     n, d = x0.shape
     a1, s1 = (float(f(jnp.array(1.0))) for f in (path.alpha, path.sigma))
     lam_max = float(path.log_snr(jnp.array(t_min)))
@@ -347,8 +369,9 @@ def bound(eps_fns, path, x0, draws, key, t_min=1e-3):
     key, k_eps = jax.random.split(key)
     t, eps = jnp.full((n,), t_min), jax.random.normal(k_eps, x0.shape)
     x = path.sample(x0, t, eps)               # the reconstruction term
-    out = [prior + d / 2 * math.log(2 * math.pi / math.exp(lam_max))
-           + ((f(x, t) - eps) ** 2).sum(1) / 2 for f in eps_fns]
+    ends = [prior + d / 2 * math.log(2 * math.pi / math.exp(lam_max))
+            + ((f(x, t) - eps) ** 2).sum(1) / 2 for f in eps_fns]
+    integrals = [jnp.zeros(n) for _ in eps_fns]
     for k in jax.random.split(key, draws):    # log-SNR uniform, stratified
         k_perm, k_u, k_eps = jax.random.split(k, 3)
         u = (jax.random.permutation(k_perm, n)
@@ -356,24 +379,129 @@ def bound(eps_fns, path, x0, draws, key, t_min=1e-3):
         t = path.time_at(lam_max - u * (lam_max - lam_min))
         eps = jax.random.normal(k_eps, x0.shape)
         x = path.sample(x0, t, eps)
-        out = [o + scale * ((f(x, t) - eps) ** 2).sum(1)
-               for o, f in zip(out, eps_fns)]
-    return out
+        integrals = [o + scale * ((f(x, t) - eps) ** 2).sum(1)
+                     for o, f in zip(integrals, eps_fns)]
+    return [e + i for e, i in zip(ends, integrals)], integrals
 
-b_exact, b_net = bound([eps_exact, ema], vp, test, 64, k_bound)
+(b_exact, b_net), (integral, _) = bound([eps_exact, ema], vp, test, 64,
+                                        k_bound)
+print(f'exact field: integral {integral.mean():.2f} nats, '
+      f'prior and reconstruction {(b_exact - integral).mean():.2f} nats')
 print(f'bound, exact field - true: {mean_se(b_exact - nll)}')
 print(f'bound, network - exact field: {mean_se(b_net - b_exact)}')
 ```
 
-With the exact field the bound matches the true negative log-likelihood within its Monte Carlo error of about $0.015$ nats: in the continuous limit the reverse process with the exact score has no gap. The network's bound lies about a hundredth of a nat above the exact field's (a paired difference resolved to about a thousandth), so on the mixture regression onto the noise is maximum likelihood to within about a hundredth of a nat.
+The cell confirms the prediction: an integral of about 8.75 nats and end terms of about $-6.3$. For the exact field the bound minus the true negative log-likelihood, paired point by point over all 20,000 test points, is zero within its standard error of $0.015$, so with the best possible predictor the continuous bound shows no gap at that precision. The network's bound lies about half a hundredth of a nat above the exact field's, a paired difference resolved to half a thousandth. Both measures agree: on the mixture this network is within half a hundredth of a nat of maximum likelihood.
 
-## Every Objective Is a Weighting
+### The Simple Loss against the Bound
+
+That result does not yet answer the opening question. With capacity to spare, every weighting that covers all levels has the same minimizer, the exact noise prediction, so any of them would land this close. The weighting can matter only when the network is too small to be exact everywhere; it then decides where the error goes. We therefore train noise predictors with two weightings, the simple loss and the bound's own ($\lambda$ uniform, which `bound_loss` draws through `time_at`), at full width and with 32 hidden units, from two seeds each. Each of the eight models gets 10,000 steps, half the budget of the model above, to keep the experiment affordable. Before reading the result we can guess it. At full width the two weightings should nearly agree. At 32 units the bound-weighted model should have the lower bound, since that is what it is trained on. The simple loss spends far fewer of its draws on nearly clean points and more on the noisy levels, which every sample and every flow trajectory crosses, so it may do better there.
+
+```{.python .input #design-space-a-number-for-the-mixture-4}
+%%tab pytorch
+def bound_loss(path, t_min=1e-3):
+    """The noise regression with the log-SNR uniform: the bound's weighting."""
+    lam_max, lam_min = (path.log_snr(torch.tensor(t)).item()
+                        for t in (t_min, 1.0))
+    def loss_fn(net, x0):
+        u = torch.rand(len(x0), device=x0.device)
+        t = path.time_at(lam_max - u * (lam_max - lam_min))
+        eps = torch.randn_like(x0)
+        return ((net(path.sample(x0, t, eps), t) - eps) ** 2).sum(1).mean()
+    return loss_fn
+
+losses = {'simple': d2l.regression_loss(vp, 'eps'), 'bound': bound_loss(vp)}
+nets = {}
+for width in (256, 32):
+    for name, loss_fn in losses.items():
+        for seed in (0, 1):
+            torch.manual_seed(seed)
+            nets[width, name, seed] = d2l.train_regression(
+                d2l.TimeMLP(width, 3).to(device), loss_fn,
+                lambda: mix.sample(512), 10_000, cosine=True,
+                ema_half_life=700)[1]
+```
+
+```{.python .input #design-space-a-number-for-the-mixture-4}
+%%tab jax
+def bound_loss(path, t_min=1e-3):
+    """The noise regression with the log-SNR uniform: the bound's weighting."""
+    lam_max, lam_min = (float(path.log_snr(jnp.array(t)))
+                        for t in (t_min, 1.0))
+    def loss_fn(net, x0, key):
+        k_u, k_eps = jax.random.split(key)
+        u = jax.random.uniform(k_u, (len(x0),))
+        t = path.time_at(lam_max - u * (lam_max - lam_min))
+        eps = jax.random.normal(k_eps, x0.shape)
+        return ((net(path.sample(x0, t, eps), t) - eps) ** 2).sum(1).mean()
+    return loss_fn
+
+losses = {'simple': d2l.regression_loss(vp, 'eps'), 'bound': bound_loss(vp)}
+nets = {}
+for width in (256, 32):
+    for name, loss_fn in losses.items():
+        for seed in (0, 1):
+            nets[width, name, seed] = d2l.train_regression(
+                d2l.TimeMLP(width, 3, rngs=nnx.Rngs(seed)), loss_fn,
+                lambda key: mix.sample(key, 512), 10_000,
+                jax.random.key(seed), cosine=True, ema_half_life=700)[1]
+```
+
+Each model is scored three ways: by the bound and by the flow likelihood, each as a paired difference from the exact field on the test points, and by its samples, drawn with the ancestral chain from shared noise and scored under the true density. For the samples we report their mean negative log-likelihood under the true density and the fraction of strays, points more than three standard deviations from every mode; the data themselves score about 2.47 nats and 1%.
+
+```{.python .input #design-space-a-number-for-the-mixture-5}
+%%tab pytorch
+b_all, _ = bound([eps_exact, *nets.values()], vp, test, 64)
+torch.manual_seed(2)
+z = torch.randn(20_000, 2, device=device)        # shared by every model
+rows = {}
+for (width, name, _), net, b_net in zip(nets, nets.values(), b_all[1:]):
+    with torch.no_grad():
+        flow = pf_nll(net, vp, test[:4000])
+        torch.manual_seed(3)  # the same injected noise for every model
+        x = d2l.ancestral_sample(d2l.make_pred(net, vp, 'eps'), z, vp, 1000)
+    rows.setdefault((width, name), []).append(
+        ((b_net - b_all[0]).mean(), (flow - pf_exact).mean(), mix.nll(x),
+         mix.summary(x)['stray']))
+print('width loss    bound - exact  flow - exact  samples: NLL  strays'
+      '   (seeds 0, 1)')
+for (width, name), (r0, r1) in rows.items():
+    print(f'{width:5} {name:7}' + ''.join(
+        f'{v0:7.4f}{v1:7.4f}' if i < 2 else f'{v0:7.3f}{v1:7.3f}'
+        for i, (v0, v1) in enumerate(zip(r0, r1))))
+print(f'data {"":36}{mix.nll(test):7.3f}{mix.summary(test)["stray"]:14.3f}')
+```
+
+```{.python .input #design-space-a-number-for-the-mixture-5}
+%%tab jax
+b_all, _ = bound([eps_exact, *nets.values()], vp, test, 64, k_bound)
+z = jax.random.normal(jax.random.key(2), (20_000, 2))  # shared by every model
+rows = {}
+for (width, name, _), net, b_net in zip(nets, nets.values(), b_all[1:]):
+    flow = pf_nll(net, vp, test[:4000])
+    x = d2l.ancestral_sample(d2l.make_pred(net, vp, 'eps'), z, vp, 1000,
+                             jax.random.key(3))
+    rows.setdefault((width, name), []).append(
+        ((b_net - b_all[0]).mean(), (flow - pf_exact).mean(), mix.nll(x),
+         mix.summary(x)['stray']))
+print('width loss    bound - exact  flow - exact  samples: NLL  strays'
+      '   (seeds 0, 1)')
+for (width, name), (r0, r1) in rows.items():
+    print(f'{width:5} {name:7}' + ''.join(
+        f'{v0:7.4f}{v1:7.4f}' if i < 2 else f'{v0:7.3f}{v1:7.3f}'
+        for i, (v0, v1) in enumerate(zip(r0, r1))))
+print(f'data {"":36}{mix.nll(test):7.3f}{mix.summary(test)["stray"]:14.3f}')
+```
+
+At full width the weighting matters little. All four models lie within two hundredths of a nat of the exact field on both measures, and their samples cannot be told apart, with stray fractions close to the data's. Each weighting is already ahead on its own measure, though, by two to three thousandths of a nat on the bound and by half a hundredth to a hundredth on the flow. At 32 units the split grows and reaches the samples. The bound-weighted model has the lower bound, by one to one and a half hundredths of a nat. The simple loss, which is no bound on the likelihood, nonetheless gives the better flow likelihood, its negative log-likelihood lower by one to two hundredths, and the better samples: a sample negative log-likelihood lower by two to five hundredths and fewer strays, about 1.5 to 1.8% against 2.0 to 2.3%. On this mixture, training on the bound did not give the small network its best likelihood. A likely reason is where the draws go. Uniform $\lambda$ on $[-10.05, 9.12]$ puts about $7/19$, more than a third, of the bound's draws above $\lambda = 2$, where the point is nearly clean; uniform $t$ on our VP path puts about a tenth there. A small network trained on the bound thus has less left for the noisier levels that every sample and every flow trajectory passes through. So the answer to the opening question is no, with a qualification. The simple loss is not the likelihood bound but the bound's integrand under another weight. With capacity to spare the weight moves either likelihood by about a hundredth of a nat at most; with little capacity it decides between a better bound on one side and a better flow likelihood and better samples on the other.
+
+## Objectives as Weightings
 
 The bound weights each unit of log-SNR equally, the simple loss each step of the chain, and flow matching regresses a velocity on another path. In a common variable these are one objective with three weightings.
 
 ### The Log-SNR Form
 
-Each of our losses draws a time $t$, forms $\mathbf{x}_t$, and takes the squared error of a target. Every target is affine in the noise prediction at fixed $\mathbf{x}_t$, so each squared error is $c(t)\, \|\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon\|^2$ for a factor $c(t)$ set by the target and the path, and changing the variable from $t$ to $\lambda$ gives the form of :citet:`Kingma.Gao.2023`,
+Each of our losses draws a time $t$, forms $\mathbf{x}_t$, and takes the squared error of a target. At fixed $\mathbf{x}_t$ every target is affine in the noise prediction, with a scalar slope that depends only on $t$, so each squared error is $c(t)\, \|\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon\|^2$ for a factor $c(t)$ set by the target and the path. Changing the variable from $t$ to $\lambda$ gives the form of :citet:`Kingma.Gao.2023`,
 
 $$
 \mathcal{L}_w = \frac12 \int_{\lambda_{\min}}^{\lambda_{\max}} w(\lambda)\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\, d\lambda,
@@ -382,50 +510,110 @@ w(\lambda) = 2\, c(t)\, p(t) \left|\frac{dt}{d\lambda}\right|,
 $$
 :eqlabel:`eq_diffusion-weighted-loss`
 
-where $p(t)$ is the density of training times. The bound :eqref:`eq_diffusion-elbo-continuous` is the weighting $w \equiv 1$.
+where $p(t)$ is the density of training times. A loss is thus described completely by one function, how much it cares about the noise error at each log-SNR. The bound :eqref:`eq_diffusion-elbo-continuous` is the weighting $w \equiv 1$.
 
 The expectation inside the integral does not depend on the path: at the same $\lambda$ two paths hold the same noisy point up to scale (:numref:`sec_diffusion-gaussian-paths`), so the network faces the same prediction problem. A schedule thus enters $\mathcal{L}_w$ only through the weighting and the endpoints $\lambda_{\min}$ and $\lambda_{\max}$; for the bound, schedules with the same endpoints give the same loss :cite:`Kingma.Salimans.Poole.ea.2021`.
 
-As the smallest worked case, take the noise loss with uniform $t$ on the linear path, $c = p = 1$. There $\sigma_t/\alpha_t = t/(1 - t) = e^{-\lambda/2}$, so $t = 1/(1 + e^{\lambda/2})$ and $|dt/d\lambda| = \tfrac18 \cosh^{-2}(\lambda/4)$. The weighting $w(\lambda) = \tfrac14 \cosh^{-2}(\lambda/4)$ is a bump centered at $\lambda = 0$, where signal and noise are equally strong, decaying like $e^{-|\lambda|/2}$ on both sides.
+As the smallest worked case, take the noise loss with uniform $t$ on the linear path, $c = p = 1$. There $\sigma_t/\alpha_t = t/(1 - t) = e^{-\lambda/2}$, so $t = 1/(1 + e^{\lambda/2})$ and $|dt/d\lambda| = \tfrac18 \operatorname{sech}^2(\lambda/4)$. The weighting $w(\lambda) = \tfrac14 \operatorname{sech}^2(\lambda/4)$ is a bump centered at $\lambda = 0$, where signal and noise are equally strong, decaying like $e^{-|\lambda|/2}$ on both sides.
 
-### The Weighting Figure
+### Weightings of Published Objectives
 
-The other objectives need two conversions. On the VP path the $\mathbf{v}$-target of :citet:`Salimans.Ho.2022` satisfies $\hat{\mathbf{v}} - \mathbf{v} = (\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon)/\alpha_t$, so $c = 1/\alpha_t^2 = 1 + e^{-\lambda}$. The velocity on the linear path satisfies the same relation, and there $1/\alpha_t = 1 + e^{-\lambda/2}$. With uniform $t$ this gives the following weightings, each up to a constant factor (:exref:`ex_design-space-implied-weighting` derives them).
+The other objectives need two conversions. On the VP path the $\mathbf{v}$-target of :citet:`Salimans.Ho.2022` satisfies $\hat{\mathbf{v}} - \mathbf{v} = (\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon)/\alpha_t$, so $c = 1/\alpha_t^2 = 1 + e^{-\lambda}$. The velocity on the linear path satisfies the same relation, and there $1/\alpha_t = 1 + e^{-\lambda/2}$. With uniform $t$ this gives the following weightings, each up to a constant factor (Exercise :exref:`ex_design-space-implied-weighting` derives them). The EDM row, which draws its own levels, uses the data's scale $\sigma_{\mathrm{data}}$, defined with EDM below.
 
 | objective | path and noise levels | $w(\lambda)$ |
 |---|---|---|
 | bound (ELBO) | any path | $1$ |
 | noise, DDPM | VP, linear $\beta$, $t$ uniform | $\lvert dt/d\lambda\rvert$ |
-| noise | linear, $t$ uniform | $\cosh^{-2}(\lambda/4)$, a bump at $\lambda = 0$ |
-| noise | cosine, $t$ uniform | $\cosh^{-1}(\lambda/2)$ |
+| noise | linear, $t$ uniform | $\operatorname{sech}^2(\lambda/4)$, a bump at $\lambda = 0$ |
+| noise | cosine, $t$ uniform | $\operatorname{sech}(\lambda/2)$ |
 | $\mathbf{v}$ | cosine, $t$ uniform | $e^{-\lambda/2}$ |
 | velocity (flow matching) | linear, $t$ uniform | $e^{-\lambda/2}$ |
 | EDM | $\log(\sigma_t/\alpha_t) \sim \mathcal{N}(-1.2, 1.2^2)$ | $\mathcal{N}(\lambda; 2.4, 2.4^2)\,(e^{-\lambda} + \sigma_{\mathrm{data}}^2)$ |
 
-Two rows coincide: $\mathbf{v}$-prediction on the cosine path and flow matching on the linear path are the same objective :cite:`Gao.Hoogeboom.Heek.ea.2025`. The velocity and noise models of :numref:`sec_diffusion-gaussian-paths` differ in their weighting, not in what they learn (:numref:`fig_diffusion-weightings`).
+Algebra of this kind is easy to get wrong by a factor, so let us have the computer check two rows and the peak of the DDPM weighting. `weighting` computes $w(\lambda)$ for uniform $t$ without any algebra: the factor $c(t)$ is the squared slope of a target in the predicted noise, which `x0_eps` and `target` give at a fixed $\mathbf{x}_t$, and $d\lambda/dt$ comes by forward-mode differentiation, as in `rates`.
 
-![Diffusion objectives as weightings of the noise error over the log signal-to-noise ratio $\lambda$. (a) $w(\lambda)$ on a logarithmic scale: the bound is flat, the noise loss on the linear-$\beta$ VP path peaks near $\lambda \approx -1$, $\mathbf{v}$-prediction and flow matching share the curve $e^{-\lambda/2}$, and EDM's weighting ($\sigma_{\mathrm{data}} = 0.5$) is a bump. (b) The density of $\lambda$ under uniform $t$ on the three paths, and under the logit-normal times of :citet:`Esser.Kulal.Blattmann.ea.2024` on the linear path.](../img/mdl-diffusion-weightings.svg)
+```{.python .input #design-space-weightings-of-published-objectives}
+%%tab pytorch
+def weighting(path, kind, lam):
+    """w(lambda) = 2 c(t) |dt / dlambda| for t uniform, where c is the squared
+    slope of the target in the predicted noise at a fixed x_t."""
+    t = path.time_at(lam)
+    x, zero, one = (torch.full((len(t), 1), v) for v in (0.0, 0.0, 1.0))
+    def target(eps_hat):                       # the target that eps_hat implies
+        return path.target(kind, *path.x0_eps('eps', eps_hat, x, t), t)
+    c = ((target(one) - target(zero)) ** 2)[:, 0]
+    dlam_dt = torch.func.jvp(path.log_snr, (t,), (torch.ones_like(t),))[1]
+    return 2 * c / dlam_dt.abs()
+
+lam = torch.linspace(-8, 8, 9)
+w_u = weighting(d2l.GaussianPath.linear(), 'velocity', lam)
+w_v = weighting(d2l.GaussianPath.cosine(), 'v', lam)
+row = lambda name, w: print(f'{name:26}' + ''.join(f'{v:8.3f}' for v in w))
+print(f'{"lambda":26}' + ''.join(f'{v:8.0f}' for v in lam.tolist()))
+row('velocity, linear path', w_u.tolist())
+row('  times e^(lambda / 2)', (w_u * (lam / 2).exp()).tolist())
+row('v, cosine path', w_v.tolist())
+row('  divided by the row above', (w_v / w_u).tolist())
+fine = torch.linspace(-9, 9, 1801)
+peak = fine[weighting(vp, 'eps', fine).argmax()]
+print(f'noise, VP path: largest weight at lambda = {peak:.1f}')
+```
+
+```{.python .input #design-space-weightings-of-published-objectives}
+%%tab jax
+def weighting(path, kind, lam):
+    """w(lambda) = 2 c(t) |dt / dlambda| for t uniform, where c is the squared
+    slope of the target in the predicted noise at a fixed x_t."""
+    t = path.time_at(lam)
+    x, zero, one = (jnp.full((len(t), 1), v) for v in (0.0, 0.0, 1.0))
+    def target(eps_hat):                       # the target that eps_hat implies
+        return path.target(kind, *path.x0_eps('eps', eps_hat, x, t), t)
+    c = ((target(one) - target(zero)) ** 2)[:, 0]
+    dlam_dt = jax.jvp(path.log_snr, (t,), (jnp.ones_like(t),))[1]
+    return 2 * c / jnp.abs(dlam_dt)
+
+lam = jnp.linspace(-8, 8, 9)
+w_u = weighting(d2l.GaussianPath.linear(), 'velocity', lam)
+w_v = weighting(d2l.GaussianPath.cosine(), 'v', lam)
+row = lambda name, w: print(f'{name:26}' + ''.join(f'{v:8.3f}' for v in w))
+print(f'{"lambda":26}' + ''.join(f'{v:8.0f}' for v in lam.tolist()))
+row('velocity, linear path', w_u.tolist())
+row('  times e^(lambda / 2)', (w_u * jnp.exp(lam / 2)).tolist())
+row('v, cosine path', w_v.tolist())
+row('  divided by the row above', (w_v / w_u).tolist())
+fine = jnp.linspace(-9, 9, 1801)
+peak = fine[weighting(vp, 'eps', fine).argmax()]
+print(f'noise, VP path: largest weight at lambda = {peak:.1f}')
+```
+
+The velocity weighting is $e^{-\lambda/2}$ to every printed digit, and the $\mathbf{v}$ weighting is the same curve times $0.64$ from $\lambda = -8$ to $4$. The constant, $0.642$ at the noisy end, is $2(1 + s)/\pi$. Our cosine path is that of :citet:`Nichol.Dhariwal.2021`, $\alpha_t \propto \cos\big(\tfrac{\pi}{2}(t + s)/(1 + s)\big)$ with a small offset $s = 0.008$ and rescaled to start at one, so its angle advances slightly more slowly than that of $\cos\frac{\pi t}{2}$. The offset matters only where the point is nearly clean, and there the ratio falls, to $0.62$ at $\lambda = 6$ and $0.53$ at $\lambda = 8$. Up to a constant and that clean end, then, $\mathbf{v}$-prediction on the cosine path and flow matching on the linear path are the same objective :cite:`Gao.Hoogeboom.Heek.ea.2025`. The noise loss on the VP path peaks at $\lambda = -0.9$, a little on the noisy side of the point where signal and noise are equal. The velocity and noise models of :numref:`sec_diffusion-gaussian-paths` differ in their weighting, not in what they learn (:numref:`fig_diffusion-weightings`).
+
+![Diffusion objectives as weightings of the noise error over the log signal-to-noise ratio $\lambda$. (a) $w(\lambda)$ on a logarithmic scale: the bound is flat, the noise loss on the linear-$\beta$ VP path peaks near $\lambda \approx -1$, $\mathbf{v}$-prediction and flow matching share the curve $e^{-\lambda/2}$, and EDM's weighting (with the paper's $\sigma_{\mathrm{data}} = 0.5$) is a bump. (b) The density of $\lambda$ under uniform $t$ on the three paths, and under the logit-normal times of :citet:`Esser.Kulal.Blattmann.ea.2024` on the linear path.](../img/mdl-diffusion-weightings.svg)
 :label:`fig_diffusion-weightings`
 
-Weightings that fall monotonically in $\lambda$ are bounds themselves: such an $\mathcal{L}_w$ is the bound for data augmented with Gaussian noise of a random level :cite:`Kingma.Gao.2023`, because a weighting that is one below some level $\mu$ and zero above is the bound :eqref:`eq_diffusion-elbo-continuous` for data noised to log-SNR $\mu$, and a monotone weighting is a positive mixture of such steps. By this criterion $\mathbf{v}$-prediction and flow matching are likelihood training of slightly noisy data; DDPM's noise loss and EDM's weighting, which both peak, are not.
+Which of these weightings are likelihood bounds? Surprisingly, more than one. A weighting that is one below some level $\mu$ and zero above is the bound :eqref:`eq_diffusion-elbo-continuous` for data noised to log-SNR $\mu$: such data start the path at $\mu$, so only the levels below $\mu$ remain in their bound. A weighting that falls monotonically in $\lambda$ is a positive mixture of such steps. Such an $\mathcal{L}_w$ is therefore the bound for data augmented with Gaussian noise of a random level :cite:`Kingma.Gao.2023`. For $w = e^{-\lambda/2}$ the mixing density, $-w'(\mu) = \tfrac12 e^{-\mu/2}$, grows toward low log-SNR, so $\mathbf{v}$-prediction and flow matching are likelihood training of data noised to a random level, mostly a heavy one. They train the coarse structure that survives heavy noise and give the finest detail, which dominates a likelihood, little weight. DDPM's noise loss and EDM's weighting both peak, and they are not bounds of this kind at all.
 
 ### The Time Distribution as Importance Sampling
 
-Training times enter :eqref:`eq_diffusion-weighted-loss` only through the product $w(\lambda) = 2c\, p\, |dt/d\lambda|$. In principle the two are separate: for $\lambda$ drawn from any density $p(\lambda)$ that covers the range,
+Training times enter :eqref:`eq_diffusion-weighted-loss` only through the product $w(\lambda) = 2c\, p\, |dt/d\lambda|$. In principle the density of training times and the weighting are separate choices: for $\lambda$ drawn from any density $p(\lambda)$ that covers the range,
 
 $$
 \mathcal{L}_w = \mathbb{E}_{\lambda \sim p}\Big[\frac{w(\lambda)}{2\, p(\lambda)}\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\Big],
 $$
 
-the importance-sampling identity of :numref:`sec_mdl-bayes-importance`, so $p(\lambda)$ changes only the variance of the estimate. Uniform $t$ on the linear-$\beta$ VP path spends almost half its draws below $\lambda = -3$ (panel (b) of :numref:`fig_diffusion-weightings`), where the bound's integrand is close to zero, and :citet:`Nichol.Dhariwal.2021` reweighted them for this reason (:exref:`ex_design-space-weights-of-the-bound`). Since in practice nobody divides by $p(\lambda)$, a time distribution such as the logit-normal of :citet:`Esser.Kulal.Blattmann.ea.2024` is a weighting in disguise.
+the importance-sampling identity of :numref:`sec_mdl-bayes-importance`, so $p(\lambda)$ changes only the variance of the estimate. The choice still matters. Uniform $t$ on the linear-$\beta$ VP path spends almost half its draws below $\lambda = -3$ (panel (b) of :numref:`fig_diffusion-weightings`), where the bound's integrand is small: $\mathbf{x}_t$ there is nearly the noise itself, and predicting the noise from it is easy. :citet:`Nichol.Dhariwal.2021` moved to the cosine path for this reason. To estimate the bound itself, they also drew its steps by importance (Exercise :exref:`ex_design-space-weights-of-the-bound`).
+
+In practice nobody divides by $p(\lambda)$, so a time distribution is a weighting in disguise. A common one is the *logit-normal* of :citet:`Esser.Kulal.Blattmann.ea.2024`, $t = 1/(1 + e^{-(m + s n)})$ with $n \sim \mathcal{N}(0, 1)$: the center $m$ moves the times along the path, the spread $s$ sets how tightly they cluster, and $m = 0$ concentrates them around $t = \tfrac12$. Used without division at $m = 0$, it multiplies the weighting of the loss by a bump around the middle of the path.
 
 ## The Design Space
 
-A diffusion paper fixes a path, a target, a weighting, the training levels, a network and a sampler. :citet:`Karras.Aittala.Aila.ea.2022` separated these choices and showed that most of them can be made independently.
+A diffusion paper fixes a path, a target, a weighting, the training levels, a network and a sampler. :citet:`Karras.Aittala.Aila.ea.2022` separated these choices and showed that most of them can be made independently, which is what lets us compare them one at a time.
+
+One of these choices, the target, seems to have vanished in the previous part, where every target turned into a weighting of the same noise error. The weighting view says which function a loss is minimized by. It says nothing about how hard that function is for a finite network to output, or how much an error grows when one output is converted into another. Two losses with the same weighting can therefore train different networks (the last part of Exercise :exref:`ex_design-space-implied-weighting` looks for the difference), and what the network is asked to output still matters.
 
 ### EDM's Table
 
-EDM, as Karras et al. call their method, describes published methods by these columns:
+In the columns of Karras et al., who call their own method EDM, four methods read as follows:
 
 | method | training: path, levels, weighting | network output | sampler |
 |---|---|---|---|
@@ -436,7 +624,7 @@ EDM, as Karras et al. call their method, describes published methods by these co
 
 NCSN :cite:`song2019generative` (:numref:`sec_mdl-score-based-generative-modeling`) never scales the data ($\alpha = 1$), the *variance-exploding* view. EDM works in these coordinates on every path, $\bar{\mathbf{x}} = \mathbf{x}/\alpha$ with noise level $\bar\sigma = \sigma/\alpha$, as `ode_sample` does.
 
-EDM's new column is the parameterization. The network $F$ shares its weights across noise levels, so it should see inputs and produce outputs of unit variance at every level. For data of standard deviation $\sigma_{\mathrm{data}}$, the denoiser is
+EDM's new column is this parameterization: what the network outputs, and how its input and output are scaled. Two considerations decide it. The first is scale. The network $F$ shares its weights across noise levels, so it should see inputs and produce outputs of unit variance at every level. For data of zero mean and standard deviation $\sigma_{\mathrm{data}}$, the denoiser is
 
 $$
 D(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}\, \bar{\mathbf{x}} + c_{\mathrm{out}}\, F(c_{\mathrm{in}}\, \bar{\mathbf{x}};\, \bar\sigma),
@@ -447,9 +635,13 @@ c_{\mathrm{out}} = \frac{\bar\sigma\, \sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2
 $$
 :eqlabel:`eq_diffusion-edm-precond`
 
-and trains it on $\|D - \mathbf{x}_0\|^2$ with weight $1/c_{\mathrm{out}}^2$, which gives $F$ a unit-variance target too (:exref:`ex_design-space-edm-preconditioning` derives the coefficients). At low noise the denoiser passes its input through ($c_{\mathrm{skip}} \to 1$, $c_{\mathrm{out}} \to 0$) and $F$ only corrects it; at high noise the output is $F$'s guess scaled to the data ($c_{\mathrm{skip}} \to 0$, $c_{\mathrm{out}} \to \sigma_{\mathrm{data}}$).
+and trains it on $\|D - \mathbf{x}_0\|^2$ with weight $1/c_{\mathrm{out}}^2$, which gives $F$ a unit-variance target too (Exercise :exref:`ex_design-space-edm-preconditioning` derives the coefficients). At low noise the denoiser passes its input through ($c_{\mathrm{skip}} \to 1$, $c_{\mathrm{out}} \to 0$) and $F$ only corrects it; at high noise the output is $F$'s guess scaled to the data ($c_{\mathrm{skip}} \to 0$, $c_{\mathrm{out}} \to \sigma_{\mathrm{data}}$). For data that are not centered the derivation goes through with the root mean square in place of $\sigma_{\mathrm{data}}$, since every variance in it is then a second moment about zero. Karras et al. use $\sigma_{\mathrm{data}} = 0.5$ for their natural images; we measure the value on our own data below.
 
-`EDM` wraps a network $F(\mathbf{x}, t)$ in this preconditioning in the coordinates of a path ($c_{\mathrm{in}} \bar{\mathbf{x}} = \mathbf{x}/n$ with $n^2 = \sigma^2 + \alpha^2 \sigma_{\mathrm{data}}^2$, finite even at $\alpha = 0$) and predicts the clean image; `edm_loss` draws the log-normal levels and applies the weight.
+The scale argument also shows what goes wrong with a bare noise predictor. It turns its output into a clean image by dividing by the signal coefficient, $\hat{\mathbf{x}}_0 = (\mathbf{x}_t - \sigma_t \hat{\boldsymbol\epsilon})/\alpha_t$, and on the VP path $\alpha_1 \approx 0.007$, so near pure noise the division magnifies the noise error about 150-fold. The noise loss, nearly satisfied there by copying the input, has no reason to push its error below the one part in 150 that the division needs. EDM never divides by a small number.
+
+The second consideration is what a finite network can represent. An image lies near a set of much lower dimension than its pixel count, while the noise fills every dimension. At high noise, where the network must produce a whole image from little signal, the clean image is the easier output, and there $c_{\mathrm{skip}} \to 0$ and $F$ predicts a scaled clean image; at low noise $F$ predicts a multiple of the noise, a small correction to its input. :citet:`Li.He.2026` take this argument to its limit: transformers on large pixel patches fail at predicting the noise or the velocity and work at predicting the clean image.
+
+`EDM` wraps a network $F(\mathbf{x}, t)$ in this preconditioning in the coordinates of a path ($c_{\mathrm{in}} \bar{\mathbf{x}} = \mathbf{x}/n$ with $n^2 = \sigma^2 + \alpha^2 \sigma_{\mathrm{data}}^2$, finite even at $\alpha = 0$) and predicts the clean image; `edm_loss` draws the log-normal levels and applies the weight. Karras et al. also feed the network the noise level as $\tfrac14 \log \bar\sigma$. Our `EDM` passes the path's time $t$, like every other model of this chapter, so that the comparisons below change only the output.
 
 ```{.python .input #design-space-edm-s-table}
 %%tab pytorch
@@ -501,7 +693,7 @@ def edm_loss(edm, x0, key):
     return (weight.reshape(-1, 1, 1, 1) * (edm(x, t) - x0) ** 2).mean()
 ```
 
-### Noise Levels Are Scales
+### Noise Levels and Image Scales
 :label:`subsec_diffusion-design-space-scales`
 
 What does a noise level remove from an image? Under an orthonormal two-dimensional Fourier transform, white noise of standard deviation $\sigma$ has power $\sigma^2$ at every frequency, while images concentrate their power at low frequencies; a frequency is hidden once the noise power exceeds the image's. The cell plots the power of the test images, averaged over rings of radius $r$ cycles per image, against three noise levels.
@@ -509,10 +701,10 @@ What does a noise level remove from an image? Under an orthonormal two-dimension
 ```{.python .input #design-space-noise-levels-are-scales}
 %%tab pytorch
 X, y, X_test, _ = d2l.load_fashion_mnist_pm1()
-F = torch.fft.fft2(X_test[:, 0], norm='ortho')    # noise has power sigma^2
+spec = torch.fft.fft2(X_test[:, 0], norm='ortho')  # noise: power sigma^2
 k = torch.fft.fftfreq(28, 1 / 28, device=X.device)
 ring = torch.sqrt(k[:, None] ** 2 + k ** 2).round().long().flatten()
-power = (torch.bincount(ring, (F.abs() ** 2).mean(0).flatten())
+power = (torch.bincount(ring, (spec.abs() ** 2).mean(0).flatten())
          / torch.bincount(ring))                  # the mean over each ring
 r, power = torch.arange(1, 15), power[1:15].cpu()
 d2l.plot(r, [power] + [torch.full((14,), s ** 2) for s in (0.1, 0.3, 1.0)],
@@ -527,10 +719,10 @@ for s in (0.1, 0.3, 0.5, 1.0, 2.0):
 ```{.python .input #design-space-noise-levels-are-scales}
 %%tab jax
 X, y, X_test, _ = d2l.load_fashion_mnist_pm1()
-F = jnp.fft.fft2(X_test[..., 0], norm='ortho')    # noise has power sigma^2
+spec = jnp.fft.fft2(X_test[..., 0], norm='ortho')  # noise: power sigma^2
 k = jnp.fft.fftfreq(28, 1 / 28)
 ring = jnp.round(jnp.sqrt(k[:, None] ** 2 + k ** 2)).astype(int).flatten()
-power = (jnp.bincount(ring, (jnp.abs(F) ** 2).mean(0).flatten())
+power = (jnp.bincount(ring, (jnp.abs(spec) ** 2).mean(0).flatten())
          / jnp.bincount(ring))                    # the mean over each ring
 r, power = jnp.arange(1, 15), power[1:15]
 d2l.plot(r, [power] + [jnp.full((14,), s ** 2) for s in (0.1, 0.3, 1.0)],
@@ -544,184 +736,286 @@ for s in (0.1, 0.3, 0.5, 1.0, 2.0):
 
 The image power falls by three orders of magnitude from one to fourteen cycles per image. Noise at $\sigma = 0.1$ stays below it everywhere, $\sigma = 0.3$ hides the rings from about 9 cycles per image outward, and $\sigma = 1$ from about 4. Adding noise is thus a low-pass filter whose cutoff falls as $\sigma$ grows, and sampling runs from coarse to fine: the high-noise steps decide a garment's silhouette, the last steps its texture :cite:`Dieleman.2024`.
 
-The same view explains why a schedule depends on the resolution. At $56 \times 56$ with the same per-pixel noise, averaging each $2 \times 2$ block recovers the $28 \times 28$ image while the four noise values average to variance $\sigma^2/4$: for the coarse structure the signal-to-noise ratio has grown fourfold, and a schedule tuned at one resolution is too easy at a higher one. :citet:`Hoogeboom.Heek.Salimans.2023` shift $\lambda_t$ down by the logarithm of the ratio of pixel counts (:exref:`ex_design-space-resolution-schedule`, :numref:`fig_diffusion-schedules`).
+The same view explains why a schedule depends on the resolution. At $56 \times 56$ with the same per-pixel noise, averaging each $2 \times 2$ block recovers the $28 \times 28$ image while the four noise values average to variance $\sigma^2/4$: for the coarse structure the signal-to-noise ratio has grown fourfold, and a schedule tuned at one resolution is too easy at a higher one. :citet:`Hoogeboom.Heek.Salimans.2023` shift $\lambda_t$ down by the logarithm of the ratio of pixel counts (Exercise :exref:`ex_design-space-resolution-schedule`, :numref:`fig_diffusion-schedules`).
 
 ![Noise schedules on the log-SNR clock: $\lambda_t$ against $t$ for the linear-$\beta$ VP, cosine and linear paths, and the cosine path shifted for four times the side length ($\lambda_t - \log 16$). The VP path ends at $\lambda \approx -10$, the others at $-\infty$. The band marks the log-SNR at which noise hides the image above 6 cycles per image on Fashion-MNIST.](../img/mdl-diffusion-schedules.svg)
 :label:`fig_diffusion-schedules`
 
-The VP path ends at $\lambda \approx -10$, so its network never trains on the pure noise the sampler starts from. At high resolution, where block averaging magnifies the leftover signal, this kept Stable Diffusion from generating very bright or very dark images :cite:`Lin.Liu.Li.ea.2024`.
+Block averaging also magnifies whatever signal the end of a schedule leaves behind. Our VP path ends at $\lambda \approx -10$, so its network never trains on the pure noise the sampler starts from, and a fraction $\alpha_1 \approx 0.007$ of the image survives. Is that dangerous? Averaging all 784 pixels gives the image's mean brightness a signal-to-noise ratio of at most about $784\, e^{-10} \approx 0.04$, far too little to read. Stable Diffusion's schedule stopped at much less noise, at a log-SNR of about $-5$, on latents of $64 \times 64$ values per channel. The mean of a channel averages 4,096 of them, which raises its ratio to about $4096\, e^{-5} \approx 28$, and the overall brightness of an image survived all the noise. The model learned to rely on it, and since the sampler starts from noise of mean zero, it could not generate very bright or very dark images :cite:`Lin.Liu.Li.ea.2024`.
 
-### A Recipe Ablation
+### One-Factor Comparisons
 
-We compare four recipes on Fashion-MNIST with everything else fixed: noise and $\mathbf{v}$-prediction on the VP path, the velocity on the linear path (the recipe of :numref:`sec_diffusion-images`), and EDM on the VP path. Each trains an unconditional 64-channel `d2l.UNet` for 5,000 updates, a third of that section's budget, and samples the same 1,000 noise images with deterministic and stochastic DDIM ($\eta = 0$ and $1$, 50 VP steps) and with 25 Heun steps on its own path, about 50 evaluations each. The Fréchet distance (FD) of :numref:`sec_diffusion-images` scores the samples against that of two sets of 1,000 test images.
+We can now test the choices on images, one at a time. The base is the recipe of :numref:`sec_diffusion-images`, the velocity on the linear path with $t$ uniform, and each other row changes one thing:
+
+| row | what changes against the base |
+|---|---|
+| `t logit-normal` | logit-normal times with $m = 0$, $s = 1$, the choice of :citet:`Esser.Kulal.Blattmann.ea.2024` |
+| `t logit-normal, m = -0.5` | the same, centered at $t \approx 0.38$, nearer the data |
+| `cosine path, v` | $\mathbf{v}$ on the cosine path, by the weightings table the base's objective |
+| `t at EDM's levels` | EDM's log-normal noise levels, a control for the next row |
+| `EDM, clean image` | EDM's preconditioned clean image, with its levels and weight |
+
+Each model is an unconditional 64-channel `d2l.UNet`, trained for 5,000 updates, a third of the budget of :numref:`sec_diffusion-images`, from two seeds; the base, the control and EDM, whose comparison is the hardest to read, get four. All are sampled from the same 5,000 noise images by Heun's method and scored by the Fréchet distance (FD) against 5,000 test images. The sampler raises a question of fairness. EDM's own paper samples on its $\rho = 7$ grid, but for a model trained with uniform times :numref:`sec_diffusion-samplers` found that grid no better than the linear one at this budget, and suggested that it suits models trained at EDM's levels. A comparison on one grid could thus favor one recipe, so every model is sampled on both, EDM's grid (49 evaluations) and the linear grid (48). The cell first measures the pixels, for EDM's $\sigma_{\mathrm{data}}$, and the floor of :numref:`subsec_diffusion-fd-reference`, the FD between two sets of real images.
 
 ```{.python .input #design-space-a-recipe-ablation}
 %%tab pytorch
+sigma_data = X.pow(2).mean().sqrt().item()     # root mean square of a pixel
+print(f'pixels: mean {X.mean():.2f}, standard deviation {X.std():.2f}, '
+      f'root mean square {sigma_data:.2f}')
 cnn = d2l.fashion_feature_cnn(X, y)
-f_test = d2l.fd_features(cnn, X_test[:2000])
-floor = d2l.fid_score(f_test[:1000], f_test[1000:])
+f_test = d2l.fd_features(cnn, X_test[:5000])
+floor = d2l.fid_score(f_test, d2l.fd_features(cnn, X_test[5000:]))
 print(f'FD, real against real: {floor:.2f}')
 ```
 
 ```{.python .input #design-space-a-recipe-ablation}
 %%tab jax
+sigma_data = float(jnp.sqrt((X ** 2).mean()))  # root mean square of a pixel
+print(f'pixels: mean {X.mean():.2f}, standard deviation {X.std():.2f}, '
+      f'root mean square {sigma_data:.2f}')
 cnn = d2l.fashion_feature_cnn(X, y)
-f_test = d2l.fd_features(cnn, X_test[:2000])
-floor = d2l.fid_score(f_test[:1000], f_test[1000:])
+f_test = d2l.fd_features(cnn, X_test[:5000])
+floor = d2l.fid_score(f_test, d2l.fd_features(cnn, X_test[5000:]))
 print(f'FD, real against real: {floor:.2f}')
 ```
 
-A noise predictor cannot be queried at $\alpha = 0$, so DDIM runs every model on the VP grid, where $\alpha$ stays positive.
+Fashion-MNIST is mostly black background: the pixels have a mean of $-0.43$ and a root mean square of $0.83$, well above the paper's $0.5$, and the cell passes the measured value to `EDM`. Two sets of 5,000 real images score $0.17$ to $0.18$ against each other.
+
+`logit_normal_loss` is `regression_loss` with logit-normal times in place of uniform ones. On the linear path $\bar\sigma = t/(1 - t)$, so $\log \bar\sigma = m + s n$: with $m = -1.2$ and $s = 1.2$ the velocity model trains at EDM's log-normal levels, and the row of that name differs from EDM's only in the parameterization and the weight. It is also a logit-normal centered further toward the data than the $m = -0.5$ row, at $t \approx 0.23$.
 
 ```{.python .input #design-space-a-recipe-ablation-1}
 %%tab pytorch
-linear = d2l.GaussianPath.linear()
+def logit_normal_loss(path, kind, m=0.0, s=1.0):
+    """regression_loss with logit-normal times t = sigmoid(m + s N(0, 1))."""
+    def loss_fn(net, x0):
+        t = torch.sigmoid(m + s * torch.randn(len(x0), device=x0.device))
+        eps = torch.randn_like(x0)
+        error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
+        return (error ** 2).flatten(1).sum(1).mean()
+    return loss_fn
+
+linear, cosine = d2l.GaussianPath.linear(), d2l.GaussianPath.cosine()
 unet = lambda: d2l.UNet(ch=64)
 recipes = {  # name: (path, kind of prediction, network, loss)
-    'noise, vp': (vp, 'eps', unet, d2l.regression_loss(vp, 'eps')),
-    'v, vp': (vp, 'v', unet, d2l.regression_loss(vp, 'v')),
-    'velocity, linear': (linear, 'velocity', unet,
-                         d2l.regression_loss(linear, 'velocity')),
-    'EDM, vp': (vp, 'x0', lambda: EDM(unet(), vp), edm_loss)}
-samplers = {  # name: sampler(pred, z, path); DDIM always on the VP time grid
-    'DDIM-50, eta 0': lambda pred, z, path: d2l.ddim_sample(pred, z, vp, 50),
-    'DDIM-50, eta 1': lambda pred, z, path: d2l.ddim_sample(pred, z, vp, 50,
-                                                            1.0),
-    'Heun-25': lambda pred, z, path: d2l.heun_sample(pred, z,
-                                                     path.sigma_bars(25))}
+    'base: velocity, t uniform': (linear, 'velocity', unet,
+                                  d2l.regression_loss(linear, 'velocity')),
+    't logit-normal': (linear, 'velocity', unet,
+                       logit_normal_loss(linear, 'velocity')),
+    't logit-normal, m = -0.5': (linear, 'velocity', unet,
+                                 logit_normal_loss(linear, 'velocity', -0.5)),
+    'cosine path, v': (cosine, 'v', unet, d2l.regression_loss(cosine, 'v')),
+    "t at EDM's levels": (linear, 'velocity', unet,  # ln sigma_bar = logit t
+                          logit_normal_loss(linear, 'velocity', -1.2, 1.2)),
+    'EDM, clean image': (linear, 'x0',
+                         lambda: EDM(unet(), linear, sigma_data), edm_loss)}
+grids = {'EDM grid': d2l.edm_grid(25),            # 49 network evaluations
+         'linear grid': linear.sigma_bars(25)}    # 48 network evaluations
 ```
 
 ```{.python .input #design-space-a-recipe-ablation-1}
 %%tab jax
-linear = d2l.GaussianPath.linear()
-unet = lambda: d2l.UNet(ch=64, rngs=nnx.Rngs(0))
+def logit_normal_loss(path, kind, m=0.0, s=1.0):
+    """regression_loss with logit-normal times t = sigmoid(m + s N(0, 1))."""
+    def loss_fn(net, x0, key):
+        k_t, k_eps = jax.random.split(key)
+        t = jax.nn.sigmoid(m + s * jax.random.normal(k_t, (len(x0),)))
+        eps = jax.random.normal(k_eps, x0.shape)
+        error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
+        return (error ** 2).reshape(len(x0), -1).sum(1).mean()
+    return loss_fn
+
+linear, cosine = d2l.GaussianPath.linear(), d2l.GaussianPath.cosine()
+unet = lambda seed: d2l.UNet(ch=64, rngs=nnx.Rngs(seed))
 recipes = {  # name: (path, kind of prediction, network, loss)
-    'noise, vp': (vp, 'eps', unet, d2l.regression_loss(vp, 'eps')),
-    'v, vp': (vp, 'v', unet, d2l.regression_loss(vp, 'v')),
-    'velocity, linear': (linear, 'velocity', unet,
-                         d2l.regression_loss(linear, 'velocity')),
-    'EDM, vp': (vp, 'x0', lambda: EDM(unet(), vp), edm_loss)}
-samplers = {  # name: sampler(pred, z, path); DDIM always on the VP time grid
-    'DDIM-50, eta 0': lambda pred, z, path: d2l.ddim_sample(pred, z, vp, 50),
-    'DDIM-50, eta 1': lambda pred, z, path: d2l.ddim_sample(
-        pred, z, vp, 50, 1.0, jax.random.key(2)),
-    'Heun-25': lambda pred, z, path: d2l.heun_sample(pred, z,
-                                                     path.sigma_bars(25))}
+    'base: velocity, t uniform': (linear, 'velocity', unet,
+                                  d2l.regression_loss(linear, 'velocity')),
+    't logit-normal': (linear, 'velocity', unet,
+                       logit_normal_loss(linear, 'velocity')),
+    't logit-normal, m = -0.5': (linear, 'velocity', unet,
+                                 logit_normal_loss(linear, 'velocity', -0.5)),
+    'cosine path, v': (cosine, 'v', unet, d2l.regression_loss(cosine, 'v')),
+    "t at EDM's levels": (linear, 'velocity', unet,  # ln sigma_bar = logit t
+                          logit_normal_loss(linear, 'velocity', -1.2, 1.2)),
+    'EDM, clean image': (linear, 'x0',
+                         lambda seed: EDM(unet(seed), linear, sigma_data),
+                         edm_loss)}
+grids = {'EDM grid': d2l.edm_grid(25),            # 49 network evaluations
+         'linear grid': linear.sigma_bars(25)}    # 48 network evaluations
 ```
 
-The loop trains, samples and scores each model.
+The loop trains each recipe, samples every model on both grids from the same noise and prints one FD per seed and grid. One result we can predict before the run. The $\mathbf{v}$-loss on the cosine path is the base's objective in other coordinates, so it should do no worse.
 
 ```{.python .input #design-space-a-recipe-ablation-2}
 %%tab pytorch
 batch_fn = lambda: X[torch.randint(0, len(X), (128,), device=X.device)]
-samples, fd = {}, {}
+torch.manual_seed(1)
+z = torch.randn(5000, 1, 28, 28, device=device)  # the same noise for every run
+four_seeds = ('base: velocity, t uniform', "t at EDM's levels",
+              'EDM, clean image')         # to split EDM's gain
+models, samples = {}, {}
+print(f'{"FD of each seed":27} {"EDM grid":24} linear grid')
 for name, (path, kind, make_net, loss_fn) in recipes.items():
-    torch.manual_seed(0)
-    _, ema_img, _ = d2l.train_regression(make_net().to(device), loss_fn,
-                                         batch_fn, 5_000)
-    pred = d2l.make_pred(ema_img, path, kind)
-    for sampler, run in samplers.items():
-        torch.manual_seed(1)                  # the same noise for every run
-        z = torch.randn(1000, 1, 28, 28, device=device)
-        samples[name, sampler] = run(pred, z, path)
-        fd[name, sampler] = d2l.fid_score(
-            d2l.fd_features(cnn, samples[name, sampler]), f_test[:1000])
-print(f'{"FD":18}' + ''.join(f'{s:>16}' for s in samplers))
-for name in recipes:
-    print(f'{name:18}' + ''.join(f'{fd[name, s]:16.2f}' for s in samplers))
+    fd = {g: [] for g in grids}
+    for seed in range(4 if name in four_seeds else 2):
+        torch.manual_seed(seed)
+        _, ema_img, _ = d2l.train_regression(make_net().to(device), loss_fn,
+                                             batch_fn, 5_000)
+        pred = d2l.make_pred(ema_img, path, kind)
+        for g, levels in grids.items():
+            x = torch.cat([d2l.heun_sample(pred, z_k, levels)
+                           for z_k in z.split(1000)])
+            fd[g].append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
+            if seed == 0 and g == 'EDM grid':
+                models[name], samples[name] = ema_img, x[:10]
+    edm, lin = (', '.join(f'{v:.2f}' for v in fd[g]) for g in grids)
+    print(f'{name:27} {edm:24} {lin}')
 ```
 
 ```{.python .input #design-space-a-recipe-ablation-2}
 %%tab jax
 batch_fn = lambda key: X[jax.random.randint(key, (128,), 0, len(X))]
-z = jax.random.normal(jax.random.key(1), (1000, 28, 28, 1))  # shared noise
-samples, fd = {}, {}
+z = jax.random.normal(jax.random.key(1), (5000, 28, 28, 1))  # shared noise
+four_seeds = ('base: velocity, t uniform', "t at EDM's levels",
+              'EDM, clean image')         # to split EDM's gain
+models, samples = {}, {}
+print(f'{"FD of each seed":27} {"EDM grid":24} linear grid')
 for name, (path, kind, make_net, loss_fn) in recipes.items():
-    _, ema_img, _ = d2l.train_regression(make_net(), loss_fn, batch_fn, 5_000,
-                                         jax.random.key(0))
-    pred = d2l.make_pred(ema_img, path, kind)
-    for sampler, run in samplers.items():
-        samples[name, sampler] = run(pred, z, path)
-        fd[name, sampler] = d2l.fid_score(
-            d2l.fd_features(cnn, samples[name, sampler]), f_test[:1000])
-print(f'{"FD":18}' + ''.join(f'{s:>16}' for s in samplers))
-for name in recipes:
-    print(f'{name:18}' + ''.join(f'{fd[name, s]:16.2f}' for s in samplers))
+    fd = {g: [] for g in grids}
+    for seed in range(4 if name in four_seeds else 2):
+        _, ema_img, _ = d2l.train_regression(make_net(seed), loss_fn,
+                                             batch_fn, 5_000,
+                                             jax.random.key(seed))
+        pred = d2l.make_pred(ema_img, path, kind)
+        for g, levels in grids.items():
+            x = jnp.concatenate([d2l.heun_sample(pred, z[i:i + 1000], levels)
+                                 for i in range(0, len(z), 1000)])
+            fd[g].append(d2l.fid_score(d2l.fd_features(cnn, x), f_test))
+            if seed == 0 and g == 'EDM grid':
+                models[name], samples[name] = ema_img, x[:10]
+    edm, lin = (', '.join(f'{v:.2f}' for v in fd[g]) for g in grids)
+    print(f'{name:27} {edm:24} {lin}')
 ```
 
-Two sets of real images score just under 1 against each other, and every entry is about three times that or more: 5,000 updates leave all four models far from the data. The recipes separate clearly. The velocity on the linear path scores best with every sampler, with EDM next; $\mathbf{v}$-prediction on the VP path lands at two to three times the velocity model's FD with the deterministic samplers; and the noise predictor's deterministic samples are the worst entries, with stochastic DDIM better. Apart from the noise predictor, deterministic sampling is about as good as stochastic or better. Below are the noise predictor's samples (rows: DDIM with $\eta = 0$, $\eta = 1$, Heun).
+Every model is 12 to 32 times the floor, while the full recipe of :numref:`sec_diffusion-images` reaches about 0.8 after its 15,000 updates, so the table ranks how quickly each recipe learns, not where it would end. We read it against the spread between each row's seeds, beginning with the column we added for fairness.
+
+Every run of every model trained on the velocity of the linear path, the control included, scores lower on the linear grid than on EDM's, by 0.1 to 1.4 (the base by 0.5 to 0.7), and $\mathbf{v}$ on the cosine path does too, by less. EDM's own model shows no consistent preference; its runs move by up to 0.4 in either direction. So the suggestion of :numref:`sec_diffusion-samplers` does not survive the test: a velocity model trained at EDM's levels still prefers the linear grid. If something in EDM's recipe makes its grid harmless, the comparison points to the parameterization and the weight, not to the levels.
+
+The clearest result about training is a warning against centering the training times at the middle of the path for images this small. On EDM's grid the centered logit-normal row is worse than the base in every run, by about 1.1 to 1.3 FD on average; on the linear grid the loss shrinks to about 0.5 to 0.75. Moved toward the data, the same distribution wins all of that back: every run of the $m = -0.5$ row beats every centered run on both grids, and none lies above the base's range. Whether it also beats uniform times, two runs cannot settle: its gain over the base is at most about the spread between its own two runs. The control row, a logit-normal moved further still, likewise lies within or below the base's range on both grids, and, as predicted, $\mathbf{v}$ on the cosine path does no worse than the base.
+
+EDM's whole recipe, its levels, preconditioning and weight together, beats the base in every run on its own grid. On the linear grid, the one the base prefers, their runs overlap and neither recipe is ahead by more than its seed spread. Part of what looked like EDM's win was a comparison of samplers. How its gain on its own grid divides between the levels and the preconditioning, four seeds do not settle either: the control's runs alone spread over 0.8 to 1.7 FD and overlap EDM's.
+
+The samples of the first seed on EDM's grid, one row per recipe in the order of the table, from the same ten noise images:
 
 ```{.python .input #design-space-a-recipe-ablation-3}
 %%tab pytorch
-rows = [samples['noise, vp', s][:10] for s in samplers]
-d2l.show_gray(torch.cat(rows), 3, 10);
+d2l.show_gray(torch.cat(list(samples.values())), len(samples), 10);
 ```
 
 ```{.python .input #design-space-a-recipe-ablation-3}
 %%tab jax
-rows = [samples['noise, vp', s][:10] for s in samplers]
-d2l.show_gray(jnp.concatenate(rows), 3, 10);
+d2l.show_gray(jnp.concatenate(list(samples.values())), len(samples), 10);
 ```
 
-The deterministic samples are blotchy and over-saturated, the stochastic ones smoother garments. At $t = 1$ the VP path has $\alpha_1 \approx 0.007$, so $\hat{\mathbf{x}}_0 = (\mathbf{x} - \sigma\hat{\boldsymbol\epsilon})/\alpha$ magnifies the noise predictor's error about 150-fold, and the noise loss gives these levels too little weight for a short run to make that error small. The velocity loss weights these levels heavily, and EDM's network outputs the clean image there without dividing. The $\mathbf{v}$-loss, about $2 \cdot 10^4$ times the noise loss at $t = 1$, weights them heavily too, yet trails the velocity model, a gap that :exref:`ex_design-space-implied-weighting` probes. A stochastic step replaces part of the point with fresh noise and so corrects earlier errors, which a deterministic step carries to the end (:numref:`sec_diffusion-samplers`).
+In most columns all six recipes draw the same garment from the same noise, differing in detail; only in a few columns does a garment change its kind. The recipes learn nearly the same map from noise to image, as one posterior mean in different weightings should.
 
-### Parameterization at Finite Capacity
+The per-level test loss locates the deficit of the centered logit-normal model. The cell evaluates it and the base at single noise levels, on the same 2,000 test images and noise.
 
-For an unlimited network the four targets are one posterior mean in four forms, and choosing among them only chooses a weighting. A finite network finds some harder than others: an image lies near a set of much lower dimension than its pixel count, while the noise fills every dimension, so the clean image is the simpler target at every level. :citet:`Li.He.2026` find that transformers on large patches fail at predicting the noise or the velocity and work at predicting the clean image.
+```{.python .input #design-space-a-recipe-ablation-4}
+%%tab pytorch
+x0 = X_test[:2000]
+torch.manual_seed(3)
+eps = torch.randn_like(x0)
+with torch.no_grad():
+    for t in (0.01, 0.03, 0.1, 0.5, 0.9, 0.98):
+        t = torch.full((len(x0),), t, device=device)
+        x, target = linear.sample(x0, t, eps), linear.target(
+            'velocity', x0, eps, t)
+        loss = [((models[name](x, t) - target) ** 2).flatten(1).sum(1).mean()
+                for name in ('base: velocity, t uniform', 't logit-normal')]
+        print(f't = {t[0]:.2f}: loss {loss[0]:6.1f} (uniform), '
+              f'{loss[1]:6.1f} (logit-normal)')
+```
+
+```{.python .input #design-space-a-recipe-ablation-4}
+%%tab jax
+x0 = X_test[:2000]
+eps = jax.random.normal(jax.random.key(3), x0.shape)
+for t in (0.01, 0.03, 0.1, 0.5, 0.9, 0.98):
+    t = jnp.full((len(x0),), t)
+    x, target = linear.sample(x0, t, eps), linear.target(
+        'velocity', x0, eps, t)
+    loss = [((models[name](x, t) - target) ** 2).reshape(len(x0), -1)
+             .sum(1).mean()
+             for name in ('base: velocity, t uniform', 't logit-normal')]
+    print(f't = {t[0]:.2f}: loss {loss[0]:6.1f} (uniform), '
+          f'{loss[1]:6.1f} (logit-normal)')
+```
+
+At $t = \tfrac12$, where most of its training times fall, the logit-normal model is slightly better than the base (a loss of 127 against 131); at $t = 0.01$ it is far worse (about 670 to 700 against 420 to 440). It draws fewer than one training time in three thousand below $t = 0.03$, where uniform times draw three in a hundred, and the last steps of every sampler use these levels to fix the fine detail. Esser et al. chose the center for the latents of much larger images; by the scale argument above, a $28 \times 28$ image decides its structure at less noise, and the shifted row moves the training levels there.
+
+### Choosing a Recipe
+
+What should we choose for a new model? First a target that stays well scaled at both ends of the path: the velocity on the linear path, $\mathbf{v}$ on a variance-preserving one, or EDM's preconditioned clean image with $\sigma_{\mathrm{data}}$ measured on the data. On our images EDM's whole recipe beat the base only on its own grid; against the base sampled on the grid that the base prefers, we could not tell them apart. Its one firm advantage here was indifference to the grid, a convenience when the sampler is not yet fixed, and our comparison cannot say what its preconditioning brings on its own. A bare noise predictor served DDPM and the first Stable Diffusion models, but only on paths that stop short of pure noise, and its division by $\alpha_t$ makes it the target we would not pick for a new model (Exercise :exref:`ex_design-space-cosine-clipping` shows it failing on the cosine path). Then a path that reaches pure noise, so that the network trains on what the sampler starts from. The training levels go where the image's structure is decided, and here our comparison speaks most clearly: for $28 \times 28$ garments nearer the data than the middle of the path, and for larger images toward more noise, by the logarithm of the ratio of pixel counts. The weighting comes last and depends on what we want to report. The bound's weighting gives the better bound; for samples, and on the small mixture network even for the flow likelihood, one that spends less on nearly clean points did better. Whatever we choose, we judge it with more than one sampler: EDM's grid cost the base about half an FD point, as much as most of the recipe changes moved it.
+
+The book's default, the velocity on the linear path with uniform $t$, passes the first two tests, spreads its training levels evenly instead of placing them, and has the monotone weighting $e^{-\lambda/2}$. On the linear grid, which it prefers, no change we tried beat it by more than about the spread between that change's own runs. It is the plainest of the good recipes, which is why the rest of the chapter keeps it.
+
+Every choice in this section was made on $28 \times 28$ pixels, and the scale argument says what most pixels of a larger image hold: detail that the last few noise levels decide and a viewer hardly sees. Why spend the network's work on them at all, rather than diffuse a smaller representation of the image?
 
 ## Summary
 
-Diffusion training is maximum likelihood up to a weighting. The chain's bound is a sum of noise regressions weighted by the drop in log-SNR per step, and on the mixture the trained network's bound and its probability-flow likelihood both come within about $0.01$ nats of the true 2.5 nats. DDPM's simple loss, $\mathbf{v}$-prediction, flow matching and EDM are the same integral with other weightings; the monotone ones are bounds for noise-augmented data. The parameterization decides what a finite network must compute, and the schedule matters through its endpoints and the resolution. Most of an image's pixels carry detail a viewer hardly sees: why diffuse the pixels at all, rather than a smaller representation?
+Read backward, the noising chain is a latent-variable model whose likelihood bound is a sum of noise regressions, each weighted by half the drop in log-SNR over its step. On the mixture a trained noise predictor comes within half a hundredth of a nat of the exact field, by the bound and by the flow. Every published loss is the same integral over the log-SNR with its own weighting; the monotone ones are bounds for noise-augmented data, and a time distribution is a weighting in disguise. The weighting decides where a small network's error goes: the bound's weighting gave the better bound, the simple loss the better flow likelihood and samples. What the network outputs still matters, because a finite network finds some outputs harder than others. On Fashion-MNIST, training times centered at the middle of the path cost about 1.1 to 1.3 FD on EDM's grid, and EDM's whole recipe beat the base on that grid but not on the linear one, which every velocity model preferred, so a recipe's FD depends on the sampler it is judged with. That leaves a short recipe: a well-scaled target, a path to pure noise, training levels where the image's structure forms, and more than one sampler to judge them by.
 
 ## Exercises
 
 1. [code] **The prior term.** The reverse chain starts from $\mathcal{N}(\mathbf{0}, \mathbf{I})$, and $L_T$ measures how far the end of the forward chain is from it.
     1. Approximating $\log(1 - \beta_k)$ by $-\beta_k$ gives $\alpha_T^2 \approx \exp(-\sum_k \beta_k)$. Evaluate the approximation for the VP path's chain at $T = 1000$ and compare it with the exact value. Which term of the expansion of $\log(1 - \beta_k)$ accounts for the difference?
-    1. Use :eqref:`eq_gan_mvn_kl` to write $L_T$ as a function of $\alpha_T^2$, $d$ and $\|\mathbf{x}_0\|^2$, and show that it is approximately $\tfrac12 \alpha_T^2 \|\mathbf{x}_0\|^2$ for small $\alpha_T^2$. Compute $\mathbb{E}\|\mathbf{x}_0\|^2$ for the mixture from its parameters and evaluate $L_T$ for `vp` and for a VP path with $\beta$ from $0.1$ to $5$.
+    1. Use :eqref:`eq_diffusion-gauss-kl` to write $L_T$ as a function of $\alpha_T^2$, $d$ and $\|\mathbf{x}_0\|^2$, and show that it is approximately $\tfrac12 \alpha_T^2 \|\mathbf{x}_0\|^2$ for small $\alpha_T^2$. Compute $\mathbb{E}\|\mathbf{x}_0\|^2$ for the mixture from its parameters and evaluate $L_T$ for `vp` and for a VP path with $\beta$ from $0.1$ to $5$.
     1. For the second path, draw 20,000 samples with `d2l.ancestral_sample` and the exact predictor, once starting from $\mathcal{N}(\mathbf{0}, \mathbf{I})$ and once from the exact $q(\mathbf{x}_T)$, which you obtain by noising draws of the mixture. Compare the outputs of `mix.summary`. Which statistic does the prior term affect? Compute the mean of $q(\mathbf{x}_T)$ and use it to explain the direction of the change. (The extended exercise "Prior mismatch, ODE versus SDE" of :numref:`sec_mdl-fokker-planck-probability-flow` compares how the reverse SDE and the probability-flow ODE carry such a mismatch to the data.)
    :exlabel:`ex_design-space-prior-term`
-1. [code] **The weights of the bound.** ● Let $w_k$ be the weight in :eqref:`eq_diffusion-lt-eps`.
-    1. Compute $w_k$ for $\nu_k = \beta_k$ and for $\nu_k = \tilde\beta_k$ at every step $k = 2, \ldots, 1000$ of the VP chain and plot both on a logarithmic axis. What fraction of $\sum_k w_k$ lies on the steps $k \le 20$ for each choice? What fraction does the simple loss put there?
-    1. Evaluate the chain's bound :eqref:`eq_diffusion-elbo-terms` on the mixture with the exact noise predictor, $\nu_k = \tilde\beta_k$, and the reconstruction term of the text at the noise level of step 1. Compare it with the true negative log-likelihood and with the continuous bound of the text. Show that over a step where the clean point is uncertain by about the step's own noise, the true reverse step has a variance larger than $\tilde\beta_k$, and estimate the divergence that each of the first steps contributes. Repeat with steps uniform in $\lambda$ instead of $t$.
-    1. A minibatch estimate of the chain's bound draws $k$ uniformly. :citet:`Nichol.Dhariwal.2021` (Section 3.3) instead draw $k$ with probability $p_k$ proportional to the root mean square of the per-sample value of $L_{k-1}$ and divide the drawn term by $p_k$. Why does this reduce the variance of the estimate? Which steps would such a sampler draw most often on the mixture?
+1. [code] **The weights of the bound.** ● Let $\omega_k$ be the weight in :eqref:`eq_diffusion-lt-eps`.
+    1. Compute $\omega_k$ for $\nu_k = \beta_k$ and for $\nu_k = \tilde\beta_k$ at every step $k = 2, \ldots, 1000$ of the VP chain and plot both on a logarithmic axis. What fraction of $\sum_k \omega_k$ lies on the steps $k \le 20$ for each choice? What fraction does the simple loss put there?
+    1. Evaluate the chain's bound :eqref:`eq_diffusion-elbo-terms` on the mixture with the exact noise predictor, $\nu_k = \tilde\beta_k$, and the reconstruction term of the text at the noise level of step 1. Compare it with the true negative log-likelihood and with the continuous bound of the text. By the two-step example of the text, which steps would you expect to contribute most of the excess, and why?
+    1. A minibatch estimate of the chain's bound draws $k$ uniformly. :citet:`Nichol.Dhariwal.2021` instead draw $k$ with probability $p_k$ proportional to the root mean square of the per-sample value of $L_{k-1}$ and divide the drawn term by $p_k$. Why does this reduce the variance of the estimate? Which steps would such a sampler draw most often on the mixture?
    :exlabel:`ex_design-space-weights-of-the-bound`
-1. [code] **Target and weighting.** ● :citet:`ho2020denoising` (Table 2) compare predicting $\tilde{\boldsymbol\mu}_k$ with predicting $\boldsymbol\epsilon$, each trained on the bound or on an unweighted squared error.
+1. [code] **Target and weighting.** ● :citet:`ho2020denoising` compare predicting $\tilde{\boldsymbol\mu}_k$ with predicting $\boldsymbol\epsilon$, each trained on the bound or on an unweighted squared error. They found that $\tilde{\boldsymbol\mu}$-prediction gave good samples only when trained on the bound, and that $\boldsymbol\epsilon$-prediction gave its best samples with the unweighted error.
     1. Let the network output $\boldsymbol\mu_{\boldsymbol\theta}$ directly and train it on :eqref:`eq_diffusion-mean-matching` with $\nu_k = \beta_k$. Solve :eqref:`eq_diffusion-mu-theta` for the implied noise prediction, and show that in terms of it the objective is the regression :eqref:`eq_diffusion-lt-eps` with the weights of the bound. What must a network that outputs $\boldsymbol\mu_{\boldsymbol\theta}$ represent accurately, given that $\tilde{\boldsymbol\mu}_k$ is nearly $\mathbf{x}_k$?
-    1. With `TimeMLP` and the recipe of this section on the chain with $T = 1000$, train three models: noise prediction with the weights of the bound, mean prediction on the bound, and mean prediction on the unweighted error. Compare each with the model trained on the simple loss by the bound and the flow likelihood of the text, and by the summary statistics of DDIM samples with 50 steps. Which findings of :citet:`ho2020denoising` does the comparison reproduce?
+    1. The text trained noise predictors with the simple loss and with the bound's weighting. With `TimeMLP` at 32 hidden units and the recipe of the text, train two models that output $\boldsymbol\mu_{\boldsymbol\theta}$ on the chain with $T = 1000$, one on the bound and one on the unweighted error, and score them as the text scores its noise predictors. Do the two findings of :citet:`ho2020denoising` hold on the mixture?
+    1. Train the noise predictor of the text at 32 units with a third weighting, the velocity loss's $e^{-\lambda/2}$ (draw $\lambda$ uniformly and weight each term). Where does it fall between the two weightings of the text on each measure?
    :exlabel:`ex_design-space-target-and-weighting`
 1. **The implied weighting.** Use :eqref:`eq_diffusion-weighted-loss`.
     1. Show that the velocity loss on the linear path with $t$ uniform has $w(\lambda) \propto e^{-\lambda/2}$, and that the $\mathbf{v}$-loss on the cosine path $\alpha_t = \cos\frac{\pi t}{2}$, $\sigma_t = \sin\frac{\pi t}{2}$ has the same weighting.
-    1. Show that the noise loss on the cosine path with $t$ uniform has $w(\lambda) \propto \cosh^{-1}(\lambda/2)$, and compute $w$ for the noise loss and the $\mathbf{v}$-loss on the linear-$\beta$ VP path of the ablation.
+    1. Show that the noise loss on the cosine path with $t$ uniform has $w(\lambda) \propto \operatorname{sech}(\lambda/2)$, and compute $w$ for the noise loss and the $\mathbf{v}$-loss on the linear-$\beta$ VP path `vp`.
     1. Which of these weightings are monotone in $\lambda$? Which noise levels does the noise loss on the VP path downweight relative to the $\mathbf{v}$-loss on the same path, and by what factor at its last step?
-    1. (Code.) By the first part, the $\mathbf{v}$-loss on the cosine path weights the levels as the velocity loss does. Train it with the recipe of the ablation and score it with the three samplers. Does matching the weighting close the gap between $\mathbf{v}$-prediction on the VP path and the velocity model? What else differs between the two recipes?
+    1. (Code.) By the first part, the $\mathbf{v}$-loss on the cosine path and the velocity loss on the linear path are one objective, yet the comparison of the text trains two different networks with them. Evaluate the two first-seed models of the comparison at single noise levels, as the last cell of the comparison does, after converting both outputs to noise predictions at the same $\lambda$ with `make_pred`. At which levels do they differ? The two paths feed the network the same point at different scales: which scale does each path's input have at $t = 1/2$, and how could the difference explain what you see?
    :exlabel:`ex_design-space-implied-weighting`
 1. [code] **Likelihoods in many dimensions.** ● In $d$ dimensions the exact divergence in `pf_nll` takes $d$ forward-mode derivatives per evaluation. Replace it by the estimate $\mathbf{r}^\top (\partial \mathbf{u}/\partial \mathbf{x})\, \mathbf{r}$ of :eqref:`eq_mdl-ode-hutchinson` with one Rademacher vector $\mathbf{r}$ per step, which takes one derivative :cite:`Grathwohl.Chen.Bettencourt.ea.2018`.
-    1. Show that the resulting estimate of $\log p$ is unbiased. The variance of one probe is derived in Exercise :exref:`ex_mdl-odes-solvers-hutchinson-variance`a; measure the standard deviation of the estimate per point on the mixture, and compare it with the gap of a few thousandths of a nat between the trained network and the exact field. How many probes per step, or how many points, does resolving that gap take?
-    1. Apply the estimate to the velocity model of the ablation on 100 test images, after adding uniform noise of the width of one gray level, $2/255$, to each pixel. Report the result in bits per dimension, $\big(-\log p(\mathbf{x})/d + \log 127.5\big)/\log 2$, which counts the bits per pixel of the 8-bit image. Compare it with the 8 bits of the raw encoding. What would 15,000 updates change?
+    1. Show that the resulting estimate of $\log p$ is unbiased. The variance of one probe is derived in the first part of Exercise :exref:`ex_mdl-odes-solvers-hutchinson-variance` of :numref:`sec_mdl-neural-odes-cnf`; measure the standard deviation of the estimate per point on the mixture, and compare it with the gap of a few thousandths of a nat between the trained network and the exact field. How many probes per step, or how many points, does resolving that gap take?
+    1. Apply the estimate to the base model of the comparison (the velocity on the linear path) on 100 test images, after adding uniform noise of the width of one gray level, $2/255$, to each pixel. Report the result in bits per dimension, $\big(-\log p(\mathbf{x})/d + \log 127.5\big)/\log 2$, which counts the bits per pixel of the 8-bit image. A density that is uniform over the 256 gray levels scores exactly 8 bits; a working model scores far less, a few bits or fewer, and a value near or above 8 usually means a missing $\log 127.5$ or a sign error. What would 15,000 updates change?
    :exlabel:`ex_design-space-hutchinson`
 1. **Resolution and the schedule.** Write $\mathrm{SNR}_t = \alpha_t^2/\sigma_t^2$ for data with unit variance per pixel.
     1. Show that multiplying the data by a constant $\kappa$ multiplies the ratio of signal to noise variance in $\mathbf{x}_t$ by $\kappa^2$ at every $t$.
     1. Upsample each image to $28 r \times 28 r$ pixels by repeating every pixel in an $r \times r$ block, and noise the large image with the same schedule. Show that averaging the noisy image over the blocks gives the original image at the ratio $r^2\, \mathrm{SNR}_t$.
     1. For $r = 32$, an $896 \times 896$ image, compute $r^2\, \mathrm{SNR}_1$ for `vp`, and find the time of the $28 \times 28$ path with the same ratio. What does the result imply for an $896 \times 896$ model trained with this schedule, whose sampler starts from pure noise?
     1. Which shift of $\lambda_t$ lets the averaged large image pass through the same ratios as the $28 \times 28$ model? Compare it with the shift of :citet:`Hoogeboom.Heek.Salimans.2023`.
+    1. (Code.) Upsample Fashion-MNIST to $56 \times 56$ by repeating pixels, and train the base recipe of the comparison on it twice, once on the linear path and once with $\lambda_t$ shifted by $-\log 4$, from two seeds each. Does the shift help by more than the seed spread, as the fourth part leads you to expect?
    :exlabel:`ex_design-space-resolution-schedule`
 1. [code] **Paired likelihood comparisons.** Differences of hundredths of a nat between two models can only be resolved by pairing.
     1. For a fixed model $p_{\boldsymbol\theta}$ and test points $\mathbf{x}_i$, let $d_i = \log p(\mathbf{x}_i) - \log p_{\boldsymbol\theta}(\mathbf{x}_i)$. Show that the mean of the $d_i$ is an unbiased estimate of $D_{\textrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$. Why can it be negative?
-    1. Train a velocity model on the linear path with the recipe of this section. Compute the flow likelihood of both models on the same 4,000 test points, and report each model's mean negative log-likelihood with its standard error, then the mean of the per-point differences with its standard error. Which comparison resolves the two models? (:numref:`subsec_mdl-paired-comparisons` discusses the general case.)
+    1. Train a velocity model on the linear path with the recipe of this section. Compute the flow likelihood of this velocity model and of the noise predictor of the text on the same 4,000 test points, and report each model's mean negative log-likelihood with its standard error, then the mean of the per-point differences with its standard error. Which comparison resolves the two models? (:numref:`subsec_mdl-paired-comparisons` discusses the general case.)
     1. Do the same for the bound. Its log-SNR form is the same on every path, so for the velocity model draw $\lambda$, find the time of the linear path with `time_at`, and turn the velocity prediction into a noise prediction with `x0_eps`. Does the ordering of the two models agree with that of the flow likelihood?
    :exlabel:`ex_design-space-paired-likelihoods`
 1. **The forward posterior.** Derive :eqref:`eq_diffusion-posterior`.
     1. Write $q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \propto q(\mathbf{x}_k \mid \mathbf{x}_{k-1})\, q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$ as a product of two Gaussians in $\mathbf{x}_{k-1}$, add their precisions, and combine their means in proportion to precision.
     1. Show that $\tilde\beta_k \le \beta_k$, with equality only if $\sigma_{k-1}^2 = 1$. Where in the chain is $\tilde\beta_k$ much smaller than $\beta_k$?
-    1. For $T = 2$ and $\beta_1 = \beta_2 = 1/2$, write out $\tilde{\boldsymbol\mu}_2$ and $\tilde\beta_2$, and the three terms of :eqref:`eq_diffusion-elbo-terms` for a network that predicts the noise exactly, for one-dimensional data $\mathcal{N}(0, s^2)$.
+    1. In the two-step example of the text, let the data be $\mathcal{N}(0, s^2)$. Show that the variance $\nu_2$ that minimizes the bound is $\mathrm{Var}(x_1 \mid x_2)$, and that it equals $\tilde\beta_2$ as $s \to 0$ and $\beta_2$ at $s = 1$, the two choices of :citet:`ho2020denoising`.
    :exlabel:`ex_design-space-forward-posterior`
 1. [code] **Clipping the predicted image.** The cosine path reaches $\alpha_1 = 0$.
-    1. Train a noise predictor on `d2l.GaussianPath.cosine()` with the recipe of the ablation and sample it with `ddim_sample` on the same path. What happens at the first step, and why?
-    1. Start the sampler instead at $t = 0.99$ from pure noise, with `t_start`. Compare the samples and their FD with those of the noise predictor of the ablation.
+    1. Train a noise predictor on `d2l.GaussianPath.cosine()` with the recipe of the comparison and sample it with `ddim_sample` on the same path. What happens at the first step, and why?
+    1. Start the sampler instead at $t = 0.99$ from pure noise, with `t_start`. Compare the samples and their FD with those of the $\mathbf{v}$-predictor on the same path in the comparison.
     1. Wrap the predictor so that it clips $\hat{\mathbf{x}}_0$ to $[-1, 1]$ and recomputes $\hat{\boldsymbol\epsilon}$ from it, and sample again. Which part of the failure does clipping repair, and which does it not? Why does a $\mathbf{v}$-predictor on the same path need no clipping?
    :exlabel:`ex_design-space-cosine-clipping`
 1. **EDM's preconditioning.** ● Let $\mathbf{x}_0$ have zero mean and per-coordinate variance $\sigma_{\mathrm{data}}^2$, independent of the noise.
-    1. Choose $c_{\mathrm{in}}$ so that the input $c_{\mathrm{in}}(\mathbf{x}_0 + \bar\sigma\boldsymbol\epsilon)$ of $F$ has unit variance. Writing the training target of $F$ as $(\mathbf{x}_0 - c_{\mathrm{skip}}\, \bar{\mathbf{x}})/c_{\mathrm{out}}$, choose $c_{\mathrm{skip}}$ to minimize its variance, and then $c_{\mathrm{out}}$ to make that variance one. Check the result against :eqref:`eq_diffusion-edm-precond`.
+    1. Choose $c_{\mathrm{in}}$ so that the input $c_{\mathrm{in}}(\mathbf{x}_0 + \bar\sigma\boldsymbol\epsilon)$ of $F$ has unit variance. Writing the training target of $F$ as $(\mathbf{x}_0 - c_{\mathrm{skip}}\, \bar{\mathbf{x}})/c_{\mathrm{out}}$, choose $c_{\mathrm{skip}}$ to minimize its variance, and then $c_{\mathrm{out}}$ to make that variance one. Check the result against :eqref:`eq_diffusion-edm-precond`. Repeat with second moments in place of variances for data whose mean is not zero, and show that $\sigma_{\mathrm{data}}$ becomes the root mean square.
     1. Show that the loss $\|D - \mathbf{x}_0\|^2 / c_{\mathrm{out}}^2$ is $\|F - \textrm{target}\|^2$, and that, written as a noise loss, it is the noise error times $(e^{-\lambda} + \sigma_{\mathrm{data}}^2)/\sigma_{\mathrm{data}}^2$.
     1. With $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$, show that EDM's weighting is $w(\lambda) \propto \mathcal{N}(\lambda; 2.4, 2.4^2)\, (e^{-\lambda} + \sigma_{\mathrm{data}}^2)$. Where is its peak? :citet:`Kingma.Gao.2023` make it monotone by holding it at its peak value for all $\lambda$ below the peak. By the theorem of the text, what does the change make of EDM's objective?
    :exlabel:`ex_design-space-edm-preconditioning`
@@ -730,17 +1024,17 @@ Diffusion training is maximum likelihood up to a weighting. The chain's bound is
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §17.5]{.kicker}
+[Dive into Deep Learning · §17.6]{.kicker}
 
 Likelihood, Weighting and the Design Space<br>
-**the chain as a latent-variable model · the bound is weighted noise regression · a likelihood for the mixture · every objective is a weighting · EDM's table · noise levels as scales**
+**the bound is weighted noise regression · a likelihood for the mixture · every loss is a weighting · EDM's preconditioning · noise levels as scales · one factor at a time**
 :::
 :::
 
 ::: {.slide title="We Never Asked What Probability the Model Assigns"}
 [The problem]{.kicker}
 
-- Four sections of regression onto a target: modes land, garments look
+- Five sections of regression onto a target: modes land, garments look
   like garments.
 - The three-mode mixture has a true negative log-likelihood of about
   2.5 nats per point. What does the trained network give?
@@ -754,14 +1048,15 @@ Is "predict the noise" maximum likelihood in disguise? Which choices
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- derive the likelihood bound as a sum of weighted noise regressions;
-- compute each step's weight from the drop in log-SNR;
+- derive the likelihood bound and read each step's weight as a drop in
+  log-SNR;
+- compute the bound of a two-step chain by hand;
 - measure a model's likelihood by the flow and by the bound;
-- write any diffusion objective as a weighting $w(\lambda)$;
-- read EDM's design table and its preconditioning.
+- write any diffusion loss as a weighting $w(\lambda)$;
+- choose a target, a path and training levels for a new model.
 
-**Running examples:** the mixture (2.5 nats); four recipes on
-Fashion-MNIST.
+**Running examples:** the mixture (2.5 nats); Fashion-MNIST, one factor
+at a time.
 :::
 
 ::: {.slide title="This Deck Asks Why the Loss Is Right"}
@@ -772,10 +1067,11 @@ Fashion-MNIST.
 | section | asks |
 |---|---|
 | Denoising and the Score | what a denoiser knows about the data |
-| Gaussian Paths | how to walk from noise to data |
+| Gaussian Paths | which regression trains the walk to data |
+| Sampling by Integration | how to walk from noise to data |
 | Diffusion for Images | what changes for images |
 | Samplers, Inversion and Editing | which steps to skip |
-| **Likelihood and the Design Space** | **is the regression maximum likelihood?** |
+| **Likelihood, Weighting and the Design Space** | **is the regression maximum likelihood?** |
 | Latent Diffusion and Transformers | why diffuse a compressed code |
 | Few-Step Generation | why one step fails |
 | Discrete Diffusion | what noise is for a token |
@@ -783,8 +1079,8 @@ Fashion-MNIST.
 
 ::: {.col .narrow}
 - **Uses:** $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
-  \boldsymbol\epsilon$ (data $t = 0$, noise $t = 1$); the ELBO; the
-  probability-flow ODE; FD.
+  \boldsymbol\epsilon$ (data $t = 0$, noise $t = 1$); log-SNR
+  $\lambda = \log(\alpha^2/\sigma^2)$; the probability-flow ODE; FD.
 - **Skips:** latent spaces, distillation.
 :::
 :::
@@ -792,15 +1088,20 @@ Fashion-MNIST.
 
 ::: {.slide title="Read Backward, the Noising Chain Is a Latent-Variable Model"}
 Forward: $\mathbf{x}_k = \sqrt{1 - \beta_k}\, \mathbf{x}_{k-1} +
-\sqrt{\beta_k}\, \boldsymbol\epsilon_k$, so $\mathbf{x}_k = \alpha_k
-\mathbf{x}_0 + \sigma_k \boldsymbol\epsilon$ with $\alpha_k^2 = \prod_{j \le
-k}(1 - \beta_j)$. Backward, learned:
+\sqrt{\beta_k}\, \boldsymbol\epsilon_k$. Backward, learned:
+$p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k) =
+\mathcal{N}(\boldsymbol\mu_{\boldsymbol\theta}(\mathbf{x}_k, k), \nu_k
+\mathbf{I})$, from $\mathbf{x}_T \sim \mathcal{N}(\mathbf{0},
+\mathbf{I})$.
 
-$$p_{\boldsymbol\theta}(\mathbf{x}_{0:T}) = \mathcal{N}(\mathbf{x}_T; \mathbf{0}, \mathbf{I}) \prod_{k=1}^{T} \mathcal{N}\big(\mathbf{x}_{k-1}; \boldsymbol\mu_{\boldsymbol\theta}(\mathbf{x}_k, k),\, \nu_k \mathbf{I}\big)$$
+Average over the forward chain $q$; the log is concave (Jensen):
 
-The forward chain $q$ is the variational posterior:
+$$-\log p_{\boldsymbol\theta}(\mathbf{x}_0) = -\log \mathbb{E}_q\Big[\frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\Big] \le \mathbb{E}_{q}\Big[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\Big] =: L(\mathbf{x}_0)$$
 
-$$-\log p_{\boldsymbol\theta}(\mathbf{x}_0) \le \mathbb{E}_{q}\Big[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\Big] =: L(\mathbf{x}_0)$$
+::: {.d2l-note}
+The forward chain is the variational posterior, and nothing about it is
+learned.
+:::
 
 [Sohl-Dickstein et al., 2015; Ho et al., 2020]{.small}
 :::
@@ -823,6 +1124,21 @@ $L_0 = -\mathbb{E}_q \log p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)$
 \beta_k$: knowing both ends pins the middle down.
 :::
 
+::: {.slide title="Two Steps and Gaussian Data Already Make the Bound Exact"}
+One coordinate, $x_0 \sim \mathcal{N}(0, 1)$, $T = 2$, $\beta_1 = \beta_2
+= \tfrac12$, the best learned means, $\nu_k = \beta_k$:
+
+$$\mathbb{E}\, L = \underbrace{0.144}_{\textrm{prior}} + \underbrace{0.203}_{\textrm{denoising}} + \underbrace{1.072}_{\textrm{reconstruction}} = 1.419 = \tfrac12 \log(2\pi e)$$
+
+- With $\nu_2 = \tilde\beta_2 = \tfrac13$ instead: $L_1 = 0.25$, bound
+  1.466.
+
+::: {.d2l-note}
+The learned step does not know $x_0$; its variance must include that
+uncertainty.
+:::
+:::
+
 ::: {.slide title="Predicting the Noise Turns Each Term into a Weighted Regression"}
 Substituting $\mathbf{x}_0 = (\mathbf{x}_k - \sigma_k
 \boldsymbol\epsilon)/\alpha_k$:
@@ -843,75 +1159,81 @@ weight $= \tfrac12(e^{\lambda_{k-1} - \lambda_k} - 1) \approx
 
 @!design-space-from-the-bound-to-weighted-regression
 
-About 0.6 at the second step, near 0.01 or below after the first few dozen.
+- About 0.6 at the second step, near 0.01 or below after a few dozen.
+- The simple loss sets every weight to one and still gives better
+  samples.
+
+::: {.d2l-note}
+The bound charges every step by how much it lowers the log-SNR.
 :::
-
-::: {.slide title="The Simple Loss Sets Every Weight to One"}
-$$L_{\textrm{simple}} = \mathbb{E}_{k,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, \big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\alpha_k \mathbf{x}_0 + \sigma_k \boldsymbol\epsilon, k)\big\|^2, \qquad k \text{ uniform}$$
-
-- Relative to the bound it neglects the least noisy steps, which hold an
-  image's finest detail.
-- It gives better samples.
-- As steps shrink, the bound becomes
-  $\tfrac12 \int \mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}\|^2\, d\lambda + L_T + L_0$.
 
 [Ho et al., 2020; Kingma et al., 2021]{.small}
 :::
 
-::: {.slide title="Check: The Prior Term of a Two-Step Chain"}
+::: {.slide title="Check: Predict How the Mixture's Bound Splits"}
 [Check]{.kicker}
 
-One coordinate, $T = 2$, $\beta_1 = \beta_2 = \tfrac12$. The chain ends at
-$\mathcal{N}(\alpha_2 x_0, \sigma_2^2)$. Compute $L_2 = D_{\textrm{KL}}$ to
-$\mathcal{N}(0, 1)$, using $\tfrac12(\mu^2 + s^2 - 1 - \log s^2)$.
+At $t_{\min}$ the noise is $1\%$ of the signal, $e^{-\lambda_{\max}}
+\approx 10^{-4}$, and no network can predict it. In 2-D,
+
+$$L_0 = \tfrac{d}{2}\log\big(2\pi e^{-\lambda_{\max}}\big) + \tfrac12 \mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}\|^2 \approx\ ?$$
+
+If the whole bound is 2.5 nats, how large is the integral over $\lambda$?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $\alpha_2^2 = \tfrac14$, $\sigma_2^2 = \tfrac34$:
-$L_2 = x_0^2/8 + \tfrac12(\log\tfrac43 - \tfrac14) \approx x_0^2/8 + 0.019$.
-Two large steps leave much of $x_0$ behind; at $T = 1000$ this term is
-nearly zero.
+**Answer.** $L_0 \approx -7.3 + 1 = -6.3$ nats, so the integral is about
+$2.5 + 6.3 \approx 8.8$ nats. Neither part is a likelihood; only the sum
+bounds one.
 :::
 :::
 :::
 
-::: {.slide title="The Flow Recovers the Mixture's 2.5 Nats; the Network Is within About 0.01"}
-Integrate the point and the divergence of the velocity from $t_{\min} =
-0.001$ to $t = 1$:
-
-$$\log p(\mathbf{x}_{t_{\min}}) = \log \mathcal{N}(\mathbf{x}_1; \mathbf{0}, \mathbf{I}) + \int_{t_{\min}}^{1} \nabla \cdot \mathbf{u}_t(\mathbf{x}_t)\, dt$$
+::: {.slide title="Flow and Bound Put the Network within Half a Hundredth of a Nat"}
+Flow: $d \log p/dt = -\nabla \cdot \mathbf{u}_t$ along the trajectory, from
+the data to $t = 1$. Bound: Monte Carlo over $\lambda$, with points, levels
+and noise shared by both predictors.
 
 @!design-space-a-number-for-the-mixture-2
 
-Exact field: the true 2.5 nats to about four decimals. Network: within
-about 0.01 nats.
-:::
-
-::: {.slide title="The Bound Is Tight for the Exact Score"}
-Monte Carlo over $\lambda$, with each point, level and noise shared by
-both predictors:
-
 @!design-space-a-number-for-the-mixture-3
 
-- Exact field: matches the true NLL within the Monte Carlo error, about
-  0.015 nats.
-- Network: about a hundredth of a nat above, resolved to about a thousandth
-  by pairing.
+::: {.d2l-note}
+The exact field gives the true 2.5 nats to four decimals; the network is
+within half a hundredth of a nat by both measures.
+:::
+:::
+
+::: {.slide title="Each Weighting Wins on Its Own Measure"}
+Noise predictors, simple loss against the bound's weighting ($\lambda$
+uniform), two widths, two seeds:
+
+@!design-space-a-number-for-the-mixture-5
+
+- 32 units: bound weighting, lower bound; simple loss, lower flow NLL and
+  fewer strays (256 units: all within two hundredths of a nat).
+- Uniform $\lambda$ puts over a third of its draws at $\lambda > 2$, nearly
+  clean; uniform $t$ about a tenth.
 
 ::: {.d2l-note}
-On the mixture, noise regression is maximum likelihood to about 0.01 nats.
+Training on the bound does not give a small network its best likelihood.
 :::
 :::
 
-::: {.slide title="Every Objective Is One Integral with Its Own Weighting"}
-Every target is affine in $\hat{\boldsymbol\epsilon}$, so each loss is
-$c(t)\,\|\hat{\boldsymbol\epsilon} - \boldsymbol\epsilon\|^2$. With training
-times of density $p(t)$:
+::: {.slide title="Every Loss Is One Integral with Its Own Weighting"}
+Every target is affine in $\hat{\boldsymbol\epsilon}$ with a scalar slope,
+so each loss is $c(t)\,\|\hat{\boldsymbol\epsilon} -
+\boldsymbol\epsilon\|^2$. With training times of density $p(t)$:
 
 $$\mathcal{L}_w = \frac12 \int w(\lambda)\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\, d\lambda, \qquad w(\lambda) = 2\, c(t)\, p(t) \left|\frac{dt}{d\lambda}\right|$$
 
 - The bound is $w \equiv 1$.
 - A schedule enters only through $w$ and the endpoints of $\lambda$.
+
+::: {.d2l-note}
+A loss is described completely by how much it cares about the noise error
+at each log-SNR.
+:::
 
 [Kingma and Gao, 2023]{.small}
 :::
@@ -921,24 +1243,34 @@ $$\mathcal{L}_w = \frac12 \int w(\lambda)\, \mathbb{E}\big\|\hat{\boldsymbol\eps
 |---|---|---|
 | bound (ELBO) | any path | $1$ |
 | noise, DDPM | VP, linear $\beta$, $t$ uniform | $\lvert dt/d\lambda\rvert$ |
-| noise | linear, $t$ uniform | $\cosh^{-2}(\lambda/4)$, a bump at $\lambda = 0$ |
-| noise | cosine, $t$ uniform | $\cosh^{-1}(\lambda/2)$ |
+| noise | linear, $t$ uniform | $\operatorname{sech}^2(\lambda/4)$, a bump at $\lambda = 0$ |
+| noise | cosine, $t$ uniform | $\operatorname{sech}(\lambda/2)$ |
 | $\mathbf{v}$ | cosine, $t$ uniform | $e^{-\lambda/2}$ |
 | velocity (flow matching) | linear, $t$ uniform | $e^{-\lambda/2}$ |
 | EDM | $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$ | $\mathcal{N}(\lambda; 2.4, 2.4^2)\,(e^{-\lambda} + \sigma_{\mathrm{data}}^2)$ |
 
-Each up to a constant factor; $\bar\sigma = \sigma/\alpha$.
+Each up to a constant factor; $\bar\sigma = \sigma/\alpha$, $\sigma_{\mathrm{data}}$
+the data's scale. Computed: $\mathbf{v}$ over velocity is $0.64$ from
+$\lambda = -8$ to $4$.
 
-[Gao et al., 2025]{.small}
+::: {.d2l-note}
+Velocity and noise models differ in their weighting, not in what they learn
+(Gao et al., 2025).
+:::
 :::
 
 ::: {.slide title="Monotone Weightings Are Bounds for Noise-Augmented Data"}
 ![](../img/mdl-diffusion-weightings.svg){width=90%}
 
 - Weight one below a level $\mu$, zero above: the bound for data noised to
-  log-SNR $\mu$. Monotone $w$ mixes such steps.
-- So $\mathbf{v}$ and flow matching train likelihood of slightly noisy
-  data; DDPM's and EDM's peaked weightings do not.
+  log-SNR $\mu$, whose path starts at $\mu$. Monotone $w$ mixes such steps.
+- $e^{-\lambda/2}$ mixes mostly heavy noise. Peaked weightings (DDPM, EDM)
+  are not bounds.
+
+::: {.d2l-note}
+$\mathbf{v}$-prediction and flow matching are likelihood training of data
+noised to a random level, mostly a heavy one.
+:::
 :::
 
 ::: {.slide title="The Time Distribution Is a Weighting in Disguise"}
@@ -947,17 +1279,21 @@ For any density $p(\lambda)$ covering the range (importance sampling):
 $$\mathcal{L}_w = \mathbb{E}_{\lambda \sim p}\Big[\frac{w(\lambda)}{2\, p(\lambda)}\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\Big]$$
 
 - In principle $p$ changes only the variance.
-- Uniform $t$ on the VP path spends almost half its draws below
-  $\lambda = -3$, where the bound's integrand is nearly zero.
-- Nobody divides by $p(\lambda)$: logit-normal times reweight the loss.
+- Logit-normal times: $t = 1/(1 + e^{-(m + s n)})$, $n \sim
+  \mathcal{N}(0, 1)$; at $m = 0$ a bump around $t = \tfrac12$.
+
+::: {.d2l-note}
+Nobody divides by $p(\lambda)$, so the time distribution multiplies the
+weighting.
+:::
 :::
 
 ::: {.slide title="Check: Which Losses Are Bounds?"}
 [Check]{.kicker}
 
 On the linear path with $t$ uniform, the noise loss has $w \propto
-\cosh^{-2}(\lambda/4)$ and the velocity loss $w \propto e^{-\lambda/2}$. Which one is a
-likelihood bound for noise-augmented data?
+\operatorname{sech}^2(\lambda/4)$ and the velocity loss $w \propto
+e^{-\lambda/2}$. Which one is a likelihood bound for noise-augmented data?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
@@ -976,22 +1312,29 @@ step weightings.
 | flow matching | linear, $t$ uniform | velocity | Euler or adaptive ODE |
 | EDM | $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$, weight $1/c_{\mathrm{out}}^2$ | preconditioned clean image | Heun, $\rho = 7$ grid |
 
-Most choices can be made independently.
+::: {.d2l-note}
+Most choices can be made independently, so they can be compared one at a
+time. The target still matters: equal weightings, different outputs.
+:::
 
 [Karras et al., 2022]{.small}
 :::
 
 ::: {.slide title="Preconditioning Gives the Network Unit Variance In and Out"}
-In $\bar{\mathbf{x}} = \mathbf{x}/\alpha$, for data of standard deviation
-$\sigma_{\mathrm{data}}$:
+In $\bar{\mathbf{x}} = \mathbf{x}/\alpha$, for zero-mean data of standard
+deviation $\sigma_{\mathrm{data}}$ (otherwise the root mean square):
 
 $$D(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}\, \bar{\mathbf{x}} + c_{\mathrm{out}}\, F(c_{\mathrm{in}}\, \bar{\mathbf{x}};\, \bar\sigma)$$
 
 $$c_{\mathrm{in}} = \frac{1}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}},\; c_{\mathrm{skip}} = \frac{\sigma_{\mathrm{data}}^2}{\bar\sigma^2 + \sigma_{\mathrm{data}}^2},\; c_{\mathrm{out}} = \frac{\bar\sigma\, \sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}$$
 
-- Low noise: $c_{\mathrm{skip}} \to 1$, $F$ only corrects its input.
-- High noise: $F$'s guess scaled to $\sigma_{\mathrm{data}}$, no division
-  by a small $\alpha$.
+- Our pixels: mean $-0.43$, so $\sigma_{\mathrm{data}}$ = root mean square
+  $0.83$.
+- A noise predictor divides by $\alpha_1 \approx 0.007$: 150-fold error.
+
+::: {.d2l-note}
+EDM never divides by a small number.
+:::
 :::
 
 ::: {.slide title="Noise of Level σ Hides Every Frequency above a Cutoff"}
@@ -1005,7 +1348,11 @@ White noise has power $\sigma^2$ at every frequency; the test images'
 power falls a thousandfold from 1 to 14 cycles per image.
 
 - $\sigma = 0.3$ hides from about 9 cycles, $\sigma = 1$ from about 4.
-- Sampling decides the silhouette first, the texture last.
+
+::: {.d2l-note}
+Noise is a low-pass filter: sampling decides the silhouette first, the
+texture last.
+:::
 :::
 :::
 
@@ -1017,8 +1364,13 @@ power falls a thousandfold from 1 to 14 cycles per image.
 ::: {.col}
 - $56 \times 56$, same per-pixel noise: averaging $2 \times 2$ blocks
   divides the noise variance by 4, so the coarse SNR grows fourfold.
-- Fix: shift $\lambda_t$ down by the log of the pixel-count ratio.
-- VP ends at $\lambda \approx -10$, never pure noise.
+- Leftover signal, averaged: VP at $\lambda \approx -10$, $784\,e^{-10}
+  \approx 0.04$; Stable Diffusion at $-5$, $4096\,e^{-5} \approx 28$, so
+  very bright or dark images are out of reach.
+
+::: {.d2l-note}
+Shift $\lambda_t$ down by the log of the pixel-count ratio.
+:::
 :::
 
 ::: {.col .fig .big}
@@ -1027,27 +1379,6 @@ power falls a thousandfold from 1 to 14 cycles per image.
 :::
 
 [Hoogeboom et al., 2023; Lin et al., 2024]{.small}
-:::
-
-::: {.slide title="The Velocity Recipe Wins the Ablation; EDM Comes Next"}
-Four recipes, 64-channel U-Net, 5,000 updates, same 1,000 noise images,
-about 50 evaluations per sampler:
-
-@!design-space-a-recipe-ablation-2
-
-- Real against real just under 1; every entry about three times that or
-  more.
-- $\mathbf{v}$ on VP: two to three times the velocity model's FD with the
-  deterministic samplers.
-:::
-
-::: {.slide title="The Noise Predictor Fails Where It Must Divide by α"}
-@!design-space-a-recipe-ablation-3
-
-Rows: DDIM $\eta = 0$, $\eta = 1$, Heun. At $t = 1$, $\alpha_1 \approx
-0.007$: $\hat{\mathbf{x}}_0 = (\mathbf{x} - \sigma\hat{\boldsymbol\epsilon})
-/\alpha$ magnifies the error about 150-fold, at levels the noise loss
-barely weights. Fresh noise ($\eta = 1$) lowers the FD.
 :::
 
 ::: {.slide title="Check: How Far Should the Schedule Shift at 56 × 56?"}
@@ -1065,16 +1396,60 @@ curve of the schedule figure).
 :::
 :::
 
+::: {.slide title="Centered Times Lose; EDM Wins Only on Its Own Grid"}
+Base: velocity, linear path, $t$ uniform; one change per row; 64-channel
+U-Net, 5,000 updates; Heun on two grids; FD of 5,000 samples (real 0.17 to 0.18):
+
+@!design-space-a-recipe-ablation-2
+
+- Every velocity model scores lower on the linear grid on average; EDM's is
+  indifferent. On the linear grid EDM and the base overlap.
+- Centered times: worse than the base on EDM's grid by 1.1 to 1.3 on average.
+- $m = -0.5$, EDM's levels, $\mathbf{v}$: within or below the base.
+:::
+
+::: {.slide title="Logit-Normal Times Starve the Levels near the Data"}
+Test loss at single levels, base against centered logit-normal times:
+
+@!design-space-a-recipe-ablation-4
+
+- Fewer than 1 in 3,000 training times below $t = 0.03$.
+
+::: {.d2l-note}
+The sampler's last steps fix the fine detail at the levels these times
+skip.
+:::
+:::
+
+::: {.slide title="Choose the Target, the Path and Where to Train"}
+- **Target:** velocity, $\mathbf{v}$, or EDM's preconditioned clean image
+  ($\sigma_{\mathrm{data}}$ measured); a bare noise predictor needs a path
+  that stops short of pure noise.
+- **Path:** reaching pure noise.
+- **Levels:** where structure forms; nearer the data at $28 \times 28$,
+  shifted by the log pixel ratio when larger.
+- **Weighting:** the bound's for the bound; less on clean points for
+  samples.
+- **Sampler:** more than one; EDM's grid cost the base about half an FD point.
+
+::: {.d2l-note}
+The book's default, velocity on the linear path with $t$ uniform, is the
+plainest of the good recipes.
+:::
+:::
+
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-- **Bound:** a sum of noise regressions, each weighted by half its log-SNR
-  drop; the simple loss sets all weights to one.
-- **Mixture:** flow and bound both within about 0.01 nats of the true
-  2.5 nats.
-- **Weightings:** DDPM, $\mathbf{v}$, flow matching, EDM are one integral;
-  monotone ones are bounds.
-- **Ablation:** velocity on the linear path best, EDM next.
+- **Bound:** noise regressions weighted by half the log-SNR drop; exact
+  for two steps and Gaussian data (1.419 nats).
+- **Mixture:** flow and bound within half a hundredth of a nat of the
+  exact field's 2.5.
+- **Weightings:** one integral; monotone ones are bounds; each wins on its
+  own measure.
+- **Images:** centered logit-normal times cost 0.5 to 1.3 FD, by grid;
+  EDM's recipe beats the base only on its own grid, where every velocity
+  model scores worse.
 
 **Next:** why diffuse the pixels at all, rather than a smaller code?
 :::

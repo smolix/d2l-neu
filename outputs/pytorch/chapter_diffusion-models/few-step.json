@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:6452ee02f17aaec01b76480cc287d0054a3a82e1683fbc4bc0a7841c1e78ad87",
+    "d2l_lib_fingerprint": "sha256:10a5cbd4bbb98761eb95d0befb85bae878f54a5ae13a7f8765546aea361c1e6f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,13 +13,18 @@
       "kind": "text",
       "outputs": []
     },
+    "few-step-few-step-generation-2": {
+      "code_fingerprint": "sha256:99a08246570621ec759e5fc68c95b43e1accd7f57287e66cc2fd8fe22515efc2",
+      "kind": "text",
+      "outputs": []
+    },
     "few-step-few-step-generation-1": {
-      "code_fingerprint": "sha256:238350fa623f3cd7eddbe505de4aa3a26cf591927d030e0a94c0a525ae65cd40",
+      "code_fingerprint": "sha256:886bbd38678fee755f16427af29e8bb1db8106b5fd4df2a869f9bdbe68262fa3",
       "kind": "text",
       "outputs": []
     },
     "few-step-the-average-where-the-data-are-not": {
-      "code_fingerprint": "sha256:729e63d70828c8a916016396d06c054d7031148f5622ba1d4777bbc460986a80",
+      "code_fingerprint": "sha256:545e1333e2a36df7b64670a9ac69347676192881190a517138293ec8afb4ae39",
       "kind": "mixed",
       "outputs": [
         {
@@ -37,108 +42,138 @@
       ]
     },
     "few-step-average-velocity-and-the-meanflow-identity": {
-      "code_fingerprint": "sha256:b4c45424ceaba312f19ba9b7f9a197b5125174d83b7f39f7a07b1833f966b08f",
+      "code_fingerprint": "sha256:4c8ca6f1a19097fc246df1029c79f5d31499d549f4b369142cbf8c13056ddd1d",
       "kind": "text",
       "outputs": []
     },
     "few-step-average-velocity-and-the-meanflow-identity-1": {
-      "code_fingerprint": "sha256:b69b332bf2a3cef1912dc8331f485966dcb96652983cd8377d6762726b110f37",
+      "code_fingerprint": "sha256:de4e712fba6b5b8a318afde2236f9ea390746dd38dee191b56f3dc1b5217d41b",
       "kind": "text",
       "outputs": []
     },
     "few-step-average-velocity-and-the-meanflow-identity-2": {
-      "code_fingerprint": "sha256:606783e39feddcf7abec8c2f9eaba5903f6e0dfaab44a0bd6ce57167415a3d5c",
+      "code_fingerprint": "sha256:191e9cd58f9e03f7972b191af62524c1dbc5510c78f32fd72250bbf617e29132",
       "kind": "text",
       "outputs": []
     },
     "few-step-on-the-running-example": {
-      "code_fingerprint": "sha256:c5d0e334b8b58c9c04f34c1d3fa2d69261083730494312b4516b6b98ce824c52",
+      "code_fingerprint": "sha256:8c60da017c3641c20b7090e33f37567aca31561b709232a8f6edab779dc1ddba",
       "kind": "text",
       "outputs": []
     },
     "few-step-on-the-running-example-1": {
-      "code_fingerprint": "sha256:31e169cad474eabc8491a494eb3b1ae7291fac055eb82ae174058bb9de1ac0f8",
+      "code_fingerprint": "sha256:596a812b258cc90d9b412464e5b668aaf3135ac0ca69eae21585f324c43a077f",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " consistency, seed 2: mean loss of the last 1,000 updates 0.076\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " consistency, seed 3: mean loss of the last 1,000 updates 0.074\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "distillation, seed 2: mean loss of the last 1,000 updates 0.034\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "distillation, seed 3: mean loss of the last 1,000 updates 0.030\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    MeanFlow, seed 2: mean loss of the last 1,000 updates 76.136\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    MeanFlow, seed 3: mean loss of the last 1,000 updates 81.287\n"
+        }
+      ]
     },
     "few-step-on-the-running-example-2": {
-      "code_fingerprint": "sha256:d15e3555faa825977b2a96ba47502ee75de614bbf4b72e0079ddb10329883896",
+      "code_fingerprint": "sha256:8ab07d6ac410b2e2b69677066640870ffb5edf7e56da83b5f8561be7e6c403b0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                    data: weights [0.498, 0.302, 0.199], stray 1.2%, spread 0.476\n       teacher, 50 steps: weights [0.501, 0.297, 0.202], stray 1.7%, spread 0.459\n          consistency, 1: weights [0.498, 0.298, 0.204], stray 2.2%, spread 0.454\nconsistency, 2 re-noised: weights [0.498, 0.3, 0.202], stray 1.3%, spread 0.474\n             MeanFlow, 1: weights [0.507, 0.29, 0.203], stray 4.2%, spread 0.313\n             MeanFlow, 2: weights [0.496, 0.305, 0.199], stray 1.5%, spread 0.361\n             MeanFlow, 4: weights [0.494, 0.308, 0.198], stray 0.8%, spread 0.368\n"
+          "text": "                    data: weight error 0.005, stray 0.9%, spread 0.474\n       teacher, 50 steps: weight error 0.003, stray 1.6%, spread 0.461\n          consistency, 1: weight error 0.003 / 0.003, stray 2.1% / 2.1%, spread 0.457 / 0.457\nconsistency, 2 re-noised: weight error 0.003 / 0.002, stray 1.5% / 1.2%, spread 0.476 / 0.482\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         distillation, 1: weight error 0.003 / 0.003, stray 2.0% / 1.9%, spread 0.453 / 0.450\n         distillation, 2: weight error 0.004 / 0.004, stray 1.1% / 1.1%, spread 0.470 / 0.464\n         distillation, 4: weight error 0.004 / 0.003, stray 0.9% / 0.9%, spread 0.465 / 0.457\n             MeanFlow, 1: weight error 0.007 / 0.002, stray 4.2% / 4.3%, spread 0.314 / 0.329\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "             MeanFlow, 2: weight error 0.003 / 0.003, stray 1.7% / 1.5%, spread 0.379 / 0.370\n             MeanFlow, 4: weight error 0.005 / 0.005, stray 0.8% / 0.7%, spread 0.376 / 0.367\n"
         },
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "few-step/few-step-on-the-running-example-2-1.png",
-          "bytes": 48304,
-          "sha256": "sha256:9b03cd7dcf2389d82488716d69d06dc24b986c16365efa13909298ab9ec6d306"
-        }
-      ]
-    },
-    "few-step-on-the-running-example-3": {
-      "code_fingerprint": "sha256:dd51d0b48e2373137cc906ff231268cb0ca9e9a9f7b688adbe9d37d10a56765e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "weighted MeanFlow, 1: weights [0.944, 0.027, 0.029], stray 2.3%\n"
+          "bytes": 59762,
+          "sha256": "sha256:e90bd0302d542c62d4d735623e4fbe648725ee9d6d3bbf252c70c606b1b5e4ed"
         }
       ]
     },
     "few-step-on-images": {
-      "code_fingerprint": "sha256:25ca93dd990389213717e7da65435431999d0e6c96edc7b822fe1f1f39d720df",
+      "code_fingerprint": "sha256:b21933de6a62e0455934c84efe86278c3529eb1e7ab6bf897747c9c2e814798e",
       "kind": "text",
       "outputs": []
     },
     "few-step-on-images-1": {
-      "code_fingerprint": "sha256:373672b17562b07982a2c4dcbb7538e1da6e7d2d05835f328ad6608b05a33913",
+      "code_fingerprint": "sha256:3af21d752a75e9906b429575193bd3648569c0bbd6287601bfc1de306f54eb00",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "floor, 1,000 real images against 1,000 others: FD 0.81\n"
+          "text": "floor, 1,000 real images against 1,000 others: FD 0.79\n"
         }
       ]
     },
     "few-step-on-images-2": {
-      "code_fingerprint": "sha256:b6b2db3a65031ad02d510717be23082f1bcfc9cc91dcd6b43d6bd9bb0e27d1ce",
+      "code_fingerprint": "sha256:aa9aeb6de730be086a0a99e27a3c4c1b00d55ea41c5081a663b1cdf434674f99",
       "kind": "text",
       "outputs": []
     },
     "few-step-on-images-3": {
-      "code_fingerprint": "sha256:6f4876dab7c8141130d8b7c31d39c56be54072613c6a8bd6703e14dc2cc6c647",
+      "code_fingerprint": "sha256:74280be234aa4de04ddc47c8af54259f58ebf76f10004ee679265f54f319e9d1",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "teacher,  1 evaluations: FD 164.34\nteacher,  2 evaluations: FD  83.23\nteacher,  4 evaluations: FD  27.49\nteacher, 10 evaluations: FD   6.79\nteacher, 20 evaluations: FD   3.69\nteacher, 50 evaluations: FD   2.60\nstudent,  1 evaluations: FD  12.34\nstudent,  2 evaluations: FD   5.11\nstudent,  4 evaluations: FD   3.62\n"
+          "text": "teacher,  1 evaluations: FD 165.00\nteacher,  2 evaluations: FD  84.93\nteacher,  4 evaluations: FD  28.06\nteacher, 10 evaluations: FD   6.85\nteacher, 20 evaluations: FD   3.70\nteacher, 50 evaluations: FD   2.63\nstudent,  1 evaluations: FD  11.59\nstudent,  2 evaluations: FD   4.65\nstudent,  4 evaluations: FD   3.67\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-3-1.svg",
-          "bytes": 32801,
-          "sha256": "sha256:638afe8abcc4f04a5ca29eaaebfac2741c38063a4d4e2e787c9de9f883deff42"
+          "bytes": 32802,
+          "sha256": "sha256:7c368456cdcfc9a6360cc0ec6ea5311fc1b1e1c35676e290eaa69a188ad1f93e"
         }
       ]
     },
     "few-step-on-images-4": {
-      "code_fingerprint": "sha256:8f280f4ca3b18fe60c1d926d370c58399d0c13cb1352198284649b7ed90d1707",
+      "code_fingerprint": "sha256:433b93be9c93fd44302aff3abdab77a018d9ff72d7bb76fa298a567ace9a0f04",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "few-step/few-step-on-images-4-1.svg",
-          "bytes": 186037,
-          "sha256": "sha256:52735394d42702d284dfb954e20afb433182539db2b7b550d7d4a507f406c6cc"
+          "bytes": 183269,
+          "sha256": "sha256:d139c93e71e2399164a43590cc2b2af385505130b10b0bbfbb2ba95e5b441d6c"
         }
       ]
     }

@@ -41,13 +41,23 @@ GPU_FRAMEWORK_NOTEBOOKS = set()
 # limit also bounds a single cell (nbconvert's per-cell timeout). Keyed by the
 # notebook path relative to _notebooks/<fw>/; applies to every framework.
 # Ruling 2026-11-06 (Alex): modern topics may run longer when the pedagogy
-# needs the experiment (17.6's DiT scaling curve: ~50 min PyTorch, ~20 JAX).
+# needs the experiment. latent-diffusion (17.7: two autoencoders and ten
+# diffusion trainings, DiT-L moved to an exercise) ran 64 min PyTorch and
+# 62 min JAX side by side on one shared RTX 4090 (2026-11-20), above 3600 s;
+# the scaling cell then gained a second seed per point (about 18 more GPU-min
+# per framework on a shared card), hence 10800 s. image-diffusion, samplers
+# and design-space each ran 30-47 min on a busy shared card in direct runs
+# (2026-11-20), close enough to 3600 s under scheduler contention to need
+# 7200 s.
 #
 # No ch. 18 entry: a normal build stays near 15 min per notebook, and a
 # D2L_RERUN regeneration run must finish within 30 min (ruling 2026-11-12),
 # both well inside the default.
 NOTEBOOK_TIMEOUTS = {
-    "chapter_diffusion-models/latent-diffusion.ipynb": 7200,
+    "chapter_diffusion-models/latent-diffusion.ipynb": 10800,
+    "chapter_diffusion-models/image-diffusion.ipynb": 7200,
+    "chapter_diffusion-models/samplers.ipynb": 7200,
+    "chapter_diffusion-models/design-space.ipynb": 7200,
     # 16.5 and 16.6 train several image GANs each; a PyTorch run took about
     # 40 min alone on one RTX 4090 (2026-11-20) and can pass 60 min when the
     # card is shared.
@@ -69,15 +79,21 @@ GPU_ONLY_NOTEBOOKS = {
     # CPU run with 4 threads) a GPU cut PyTorch runs 3-12x and JAX runs from
     # 7-51 min to 1-1.5 min; image-diffusion's JAX variant blew the 3600 s
     # per-cell timeout on CPU. denoising stays here although its 2-D cells are
-    # CPU-class: its JAX image denoiser is too slow on a CPU slot. Rebuild plan
-    # budget (2026-11, per framework): denoising ~1 min, image-diffusion 8-10,
-    # samplers 6-8, design-space 7-9, latent-diffusion ~21, few-step 5-8,
-    # discrete-diffusion 2-3 GPU-min; re-measure at the first scheduler run.
+    # CPU-class: its JAX image denoiser is too slow on a CPU slot. Measured in
+    # the scheduler run of 2026-11-20 (PyTorch / JAX, minutes, one RTX 4090
+    # shared by two or three of these notebooks): denoising 2 / 1.6,
+    # gaussian-paths 3 / 1.7, integration 1.7 / 1.5, discrete-diffusion
+    # 2.7 / 3.6, few-step 12 / 7.5, image-diffusion 49 / 31, samplers 24 / 25
+    # (14 alone, JAX), design-space 48 / 34, latent-diffusion 84 / 84.
     "chapter_diffusion-models/denoising.ipynb",
-    # gaussian-paths trains two 2-D models for 40k steps (pilot P0). Re-timed
-    # 2026-11-06 in the library phase: on a GPU PyTorch ~5 min and JAX < 1 min
-    # for both models, against ~8-9 min each on 8 CPU cores.
+    # gaussian-paths trains two 2-D models for 40k steps; integration retrains
+    # them for 20k steps for its samplers (no checkpoints pass between
+    # notebooks). Direct runs on one shared, busy RTX 4090 (2026-11-20):
+    # gaussian-paths 267 s PyTorch / 210 s JAX, of which training 75-90 s /
+    # 50-95 s per model; integration 80 s / 56 s. ~8-9 min per 40k-step model
+    # on 8 CPU cores (2026-11-06).
     "chapter_diffusion-models/gaussian-paths.ipynb",
+    "chapter_diffusion-models/integration.ipynb",
     "chapter_diffusion-models/image-diffusion.ipynb",
     "chapter_diffusion-models/samplers.ipynb",
     "chapter_diffusion-models/design-space.ipynb",

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9449357aceb171a123f4ef7d2c249fb78fefb239c2e536a3b2753422514887ca",
+    "d2l_lib_fingerprint": "sha256:2d433fa90ef7d2a9905dba459345b0683084dc51caccb833fdfee9b45083d403",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,22 +19,22 @@
       "outputs": []
     },
     "denoising-the-running-example-1": {
-      "code_fingerprint": "sha256:2ab00379dde442664c70ca5697428324d9fff86dc56ffe40c63286e172b4d090",
+      "code_fingerprint": "sha256:0808e8bb0dcecb7184fa17b2d48c6770cc2dd4b1faf0b34997cd5812f4d771de",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-3": {
-      "code_fingerprint": "sha256:7626176ff5435bd1ba9bcf82455d3d0f448e93fba47854ae782cbd42928362ee",
+      "code_fingerprint": "sha256:7ba0097a7c80486a6201df727396719f6d78dc3ce9ea3cdbcf97db4734a2bd99",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-2": {
-      "code_fingerprint": "sha256:4ec475650b78356f299ba026b04f30b83ca6f5f87fdbf6616ae6e0d740d189f6",
+      "code_fingerprint": "sha256:eaa7128e7398bfefd91c9fe63f45431205e5c613408ffdf73e5a7533f8be0c96",
       "kind": "text",
       "outputs": []
     },
     "denoising-the-running-example-4": {
-      "code_fingerprint": "sha256:b7c52cc59914712f74a7e20814f58e4d53ce180fd63888649f5522f97668f2d7",
+      "code_fingerprint": "sha256:2f068e82e19d92ce4f578113ea3db1bcbe11d58e34f762db880958353e75a5fd",
       "kind": "mixed",
       "outputs": [
         {
@@ -52,62 +52,51 @@
       ]
     },
     "denoising-noise-and-the-regression-target": {
-      "code_fingerprint": "sha256:593d72254ba3b71cedb051fe9f27e9d6e10ee02821c2938df51018d48642e3c3",
+      "code_fingerprint": "sha256:a0e66a351b53be625d7d0250316440b2cc466f71fbf6b4decbc6d510ca77d5ea",
       "kind": "text",
       "outputs": []
     },
     "gaussian-paths-experiments-on-the-running-example": {
-      "code_fingerprint": "sha256:dfc204bdf8091b0893fe0fabcd8ed7d9da2045d39a3e2656e15471f19fd60587",
+      "code_fingerprint": "sha256:fba400c1933cfc941050fa79d24718a9fbfff347ce7cac0486651369702973ce",
       "kind": "text",
       "outputs": []
     },
     "denoising-noise-and-the-regression-target-1": {
-      "code_fingerprint": "sha256:8c01af3385800d0a1488599ae6d4d0825e0743797906757c29d648d5e4e03e8d",
+      "code_fingerprint": "sha256:350b6f118c15dfcc201b5ef19bcef61244db70bde5c7c064644b0028b18e66f2",
       "kind": "text",
       "outputs": []
     },
     "denoising-tweedie-s-formula": {
-      "code_fingerprint": "sha256:37987b9c8209701d9b55bab03e471c0ad2992850b146c51edb0f864b80be36ea",
+      "code_fingerprint": "sha256:ec55d5612432e380cf73c00090b331833ef99b16bcd5442fb80735bc6719fc05",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Tweedie with the exact score: largest gap 4.8e-07\nnoisy point: squared error 0.1782\nposterior mean: squared error 0.1317\nTweedie, trained score: squared error 0.1329\n"
-        }
-      ]
-    },
-    "denoising-the-normalizer-never-appears": {
-      "code_fingerprint": "sha256:b3834f28bf2531661cbe92f1e561d453e951803aeec755aaa5fe40472c20300d",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  d  estimate / Z  predicted rel. error      ESS\n  1         0.999               0.00415  37155.5\n  2         1.017               0.00799  12501.1\n  4         1.009                0.0232   2620.7\n  8         1.038                 0.173    132.1\n 16         0.529                  9.43     72.3\n 32         0.081              2.81e+04     11.0\n"
+          "text": "noisy point: squared error 0.1782\nposterior mean: squared error 0.1317\nTweedie, trained score: squared error 0.1328\n"
         }
       ]
     },
     "denoising-the-loss-floor-and-the-noise-level": {
-      "code_fingerprint": "sha256:a0972fbc3a8463e5eb146109fef729e6065a4a7c8e0a2be2d0f82aeeb69e1298",
+      "code_fingerprint": "sha256:ccd3bd50576ea516fcb18b89e2237a7d228558dedebbbae061e65f1a7b13a871",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained at sigma: [0.427, 0.205, 0.216, 0.308, 0.419, 1.103, 2.604]\nexact smoothed:   [0.0004, 0.006, 0.0275, 0.0767, 0.2826, 1.0084, 2.5955]\n"
+          "text": "trained, seed 1: [0.423, 0.189, 0.215, 0.3, 0.409, 1.077, 2.559]\ntrained, seed 2: [0.541, 0.285, 0.255, 0.252, 0.363, 1.019, 2.532]\nexact smoothed:  [0.0004, 0.0059, 0.0271, 0.0755, 0.2781, 0.9924, 2.5538]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-the-loss-floor-and-the-noise-level-1.svg",
-          "bytes": 35928,
-          "sha256": "sha256:61e0914d4c5e9d130bd812b5f98ab871ee37c86792deb3427fe8164534640588"
+          "bytes": 37010,
+          "sha256": "sha256:8361f577fe8740b9063ee9afc900b65945ce59e74200e303fafa308c88ff3e95"
         }
       ]
     },
     "denoising-blindness-to-mode-weights": {
-      "code_fingerprint": "sha256:9391354211d5358cf093064899c8e2d8c7b541fc3174a4d04c1fc0b198fac118",
+      "code_fingerprint": "sha256:da3ac11dbb1acda693fd70dcaa6efa10a672b675104680e70c0b54cdfa536e48",
       "kind": "text",
       "outputs": [
         {
@@ -118,69 +107,69 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sigma = 1.0: Fisher divergence 9.5e-03, KL 0.064 nats\n"
+          "text": "sigma = 0.5: Fisher divergence 1.4e-03, KL 0.069 nats\nsigma = 1.0: Fisher divergence 9.5e-03, KL 0.064 nats\n"
         }
       ]
     },
     "denoising-sampling-with-a-score": {
-      "code_fingerprint": "sha256:a87ecf224c70cd4c684b49ee7628c97beb329e317ea6946600279442ac6492fc",
+      "code_fingerprint": "sha256:53701bf6c5e0f660bd6623b1b5bba263a068e430aa5ae7173ada5a8dbfda1970",
       "kind": "text",
       "outputs": []
     },
     "denoising-sampling-with-a-score-1": {
-      "code_fingerprint": "sha256:c238289839411438688df3ec41e106f0f44c376d15f0bbe80e98fbde74af72ac",
+      "code_fingerprint": "sha256:09873e235ae7d22202bc8ea8bd7fac0716be6cb05b0a90a44e221925b0a5f9d7",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "start: {'weights': [0.308, 0.329, 0.363], 'stray': 0.751, 'spread': 1.051}\nexact score of p: {'weights': [0.312, 0.335, 0.354], 'stray': 0.0095, 'spread': 0.501}\nexact score at sigma = 1: {'weights': [0.498, 0.298, 0.204], 'stray': 0.4245, 'spread': 0.986}\ntrained at sigma = 0.3: {'weights': [0.486, 0.244, 0.27], 'stray': 0.063, 'spread': 0.649}\n"
+          "text": "          start: {'weights': [0.308, 0.329, 0.363], 'stray': 0.751, 'spread': 1.051}\n           data: {'weights': [0.5, 0.317, 0.183], 'stray': 0.012, 'spread': 0.488}\n              p: {'weights': [0.312, 0.335, 0.354], 'stray': 0.0095, 'spread': 0.501}\n            p_1: {'weights': [0.498, 0.298, 0.204], 'stray': 0.4245, 'spread': 0.986}\n          p_0.3: {'weights': [0.329, 0.334, 0.338], 'stray': 0.0435, 'spread': 0.627}\nnet 0.3, seed 1: {'weights': [0.454, 0.262, 0.284], 'stray': 0.0485, 'spread': 0.625}\nnet 0.3, seed 2: {'weights': [0.458, 0.289, 0.253], 'stray': 0.0525, 'spread': 0.628}\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-sampling-with-a-score-1-1.svg",
-          "bytes": 1308723,
-          "sha256": "sha256:6fec3e4ef5544397ee8c2a613d52d83d7ebbdb6a0b90a7c3cc33b16a26e0d1ef"
+          "bytes": 2154622,
+          "sha256": "sha256:7ebe62fe413df3f68201510cd9b25666b420da2dbb331611398d578bd11aa587"
         }
       ]
     },
     "denoising-denoising-images": {
-      "code_fingerprint": "sha256:fab2d0841ee25e710b4eb62771d048e83d53e50a400b27c3d4c34670d84bc61d",
+      "code_fingerprint": "sha256:aacfe83db81571f15ddbff99656c14d0bb7a6ccd70d94bd4e3e11a3d8e375196",
       "kind": "text",
       "outputs": []
     },
     "denoising-denoising-images-1": {
-      "code_fingerprint": "sha256:e06c6461f90bfb4d8c61f23113c2bb3666b2056d1eccae60dfa779efc6f2dc2d",
+      "code_fingerprint": "sha256:28521809faa15c56e77e833efa0eabff7aba52025522128d744b73be32493206",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "last training loss 0.124\n"
+          "text": "seed 0: last training loss 0.124\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed 1: last training loss 0.121\n"
         }
       ]
     },
     "denoising-denoising-images-2": {
-      "code_fingerprint": "sha256:d19ec4dc871b86c07c829207461fca1c1521b14432d613a024303737647be970",
+      "code_fingerprint": "sha256:17deb292bdf862ed1f39b462ef69739d8f46f4f148669c99e085482ae9176b9a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "noisy: per-pixel squared error 0.2493\nWiener: per-pixel squared error 0.0447\nnetwork: per-pixel squared error 0.0312\n"
+          "text": "           noisy: per-pixel squared error 0.2493 (standard error 0.0004)\n          Wiener: per-pixel squared error 0.0447 (standard error 0.0005)\n network, seed 0: per-pixel squared error 0.0309 (standard error 0.0004)\n network, seed 1: per-pixel squared error 0.0303 (standard error 0.0004)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "denoising/denoising-denoising-images-2-1.svg",
-          "bytes": 256949,
-          "sha256": "sha256:772471bfa1d49652651e5b26721af949e81b1d69f2307647aac055c1adbfbf3b"
+          "bytes": 256373,
+          "sha256": "sha256:c7596f9432b49a3966e02ce0bd2c65bd24791696ddda6e340f8f90a014f6ed75"
         }
       ]
     }

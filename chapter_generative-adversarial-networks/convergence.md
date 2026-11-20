@@ -142,7 +142,7 @@ J_\gamma = \begin{pmatrix} 0 & \ell'(0) \\ -\ell'(0) & -\gamma \end{pmatrix},
 $$
 :eqlabel:`eq_gan_dirac_pen`
 
-Both eigenvalues have negative real parts for every $\gamma > 0$. The equilibrium of the Dirac-GAN attracts, and small enough simultaneous or alternating steps converge to it at a linear rate; in the underdamped regime the simultaneous step must satisfy $h < \gamma/\ell'(0)^2$ (exercise :exref:`ex_convergence-discrete-simultaneous-update-dirac`). The characteristic polynomial $\nu^2 + \gamma\nu + \ell'(0)^2$ is that of a damped spring, the damped pendulum of :numref:`subsec_mdl-ode-linearization` with friction $\gamma$, and it has the spring's three regimes. For $\gamma < 2\ell'(0)$ the square root is imaginary and trajectories spiral inward. At $\gamma = 2\ell'(0)$, which is $\gamma = 1$ for the logistic loss, the repeated real eigenvalue gives critical damping, the fastest approach without oscillation. Larger values overdamp the dynamics: the slower eigenvalue, close to $-\ell'(0)^2/\gamma$, makes convergence slower as $\gamma$ grows. More friction is not always better.
+Both eigenvalues have negative real parts for every $\gamma > 0$. The equilibrium of the Dirac-GAN attracts, and small enough simultaneous or alternating steps converge to it at a linear rate. The characteristic polynomial $\nu^2 + \gamma\nu + \ell'(0)^2$ is that of a damped spring, the damped pendulum of :numref:`subsec_mdl-ode-linearization` with friction $\gamma$, and it has the spring's three regimes. For $\gamma < 2\ell'(0)$, the *underdamped* regime, the square root is imaginary and trajectories spiral inward; there the simultaneous step converges exactly when $h < \gamma/\ell'(0)^2$ (exercise :exref:`ex_convergence-discrete-simultaneous-update-dirac`). At $\gamma = 2\ell'(0)$, which is $\gamma = 1$ for the logistic loss, the repeated real eigenvalue gives critical damping, the fastest approach without oscillation. Larger values overdamp the dynamics: the slower eigenvalue, close to $-\ell'(0)^2/\gamma$, makes convergence slower as $\gamma$ grows. More friction is not always better.
 
 ### Phase Portraits
 
@@ -259,7 +259,7 @@ $$
 \quad \text{for the logistic loss, at the slope } c = -\frac{\mu}{1 + 4\gamma} .
 $$
 
-The log ratio $\log(p/q)$ has slope $-\mu$. The penalty shrinks the critic's slope by the factor $1 + 4\gamma$, and the value with it. At $\gamma = 0$ the value is $\mu^2/4 = 2\,\mathrm{JS}(p, q)$ to leading order, the unpenalized value of :numref:`sec_basic_gan`. For large $\gamma$ it is $\mu^2/(16\gamma) = \tfrac{\ell'(0)^2}{4\gamma} W_2(p, q)^2$, since the Wasserstein-2 distance between two Gaussians that differ by a shift is $|\mu|$: a heavily penalized critic measures how far the mass has to move.
+The log ratio $\log(p/q)$ has slope $-\mu$. The penalty shrinks the critic's slope by the factor $1 + 4\gamma$, and the value with it. At $\gamma = 0$ the value is $\mu^2/4 = 2\,\mathrm{JS}(p, q)$ to leading order, the unpenalized value of :numref:`sec_basic_gan`. For large $\gamma$ it is $\mu^2/(16\gamma) = \tfrac{\ell'(0)^2}{4\gamma} W_2(p, q)^2$, since the Wasserstein-2 distance, the $W_1$ of :numref:`sec_gan_objectives` with the squared distance $\|x - x'\|^2$ as the transport cost and the square root taken of the cheapest cost, is $|\mu|$ for two Gaussians that differ by a shift: a heavily penalized critic measures how far the mass has to move.
 
 We check the formula against the full penalized problem, solved by Newton's method for a critic tabulated on a grid, with no expansion and no assumption on its shape. At $\mu = 0.2$ the formula predicts $0.01$ at $\gamma = 0$, $0.002$ at $\gamma = 1$ and $2.4 \cdot 10^{-4}$ at $\gamma = 10$. The larger shifts test where "near" ends.
 
@@ -596,9 +596,8 @@ def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
     return net_G, trace
 ```
 
-<!-- WRITER: S2 done in code: the CUDA-graph helper moved to the library as `d2l.cuda_graphed(step, device)` (convergence-lib.md, eager off CUDA); cut this note to one sentence, e.g. that `d2l.cuda_graphed` replays each step as one CUDA graph because issuing its few hundred short kernels from Python takes longer than running them (:numref:`subsec_comp-overhead`), which is why the optimizers keep their state on the device (`capturable`). -->
 :begin_tab:`pytorch`
-One step of these small networks launches a few hundred short kernels, and issuing them from Python takes longer than running them (:numref:`subsec_comp-overhead`). `graphed` records the step as a CUDA graph after three eager warm-up steps and replays it with one launch per step. Replay reuses the recorded memory addresses, so the optimizers keep their learning rate and step count on the GPU (`capturable=True`, with the learning rate passed as a tensor), and the scheduler updates the learning rate in place between replays.
+`d2l.cuda_graphed` replays each step on the GPU as one CUDA graph, because issuing the few hundred short kernels of these small networks from Python takes longer than running them (:numref:`subsec_comp-overhead`), and the optimizers keep their learning rate and step count on the device (`capturable`) so that the replay can update them.
 :end_tab:
 
 :begin_tab:`jax`
@@ -669,9 +668,9 @@ for ax, name in zip(axes, list(runs)[:4]):
 fig.tight_layout()
 ```
 
-The prediction about the critic holds by a wide margin. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends below $0.003$ in every run; without it, between about 0.7 and 17. The unpenalized critic stays steep at the generated samples, like the undamped slope $\psi$ of the Dirac-GAN. Coverage follows the penalty, not the loss. Every run at $\gamma = 1$ covers 24 or 25 modes (all 25 in the runs printed here), while the unpenalized runs range from about a dozen modes to all 25: without the penalty, coverage is a matter of luck. Pairing makes no difference beyond this run-to-run range, with or without the penalty: the coverage benefit that R3GAN measured on StackedMNIST is not visible in our runs. Nor does the penalty make the fit sharper. In all four arms 64% to 94% of the samples lie on a mode, against 98.9% for a perfect fit, at a mean distance of 0.08 to 0.24 from the nearest center, against about 0.06. The scatter plots show where the rest go: mostly on lines between neighbouring centers, with a few strays elsewhere. A continuous generator cannot jump from one island to the next, so it draws the bridges. In the unpenalized NS panel some interior modes are nearly empty.
+The prediction about the critic holds by a wide margin. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends at a few thousandths at most in every run; without it, between about 0.7 and 17. The unpenalized critic stays steep at the generated samples, like the undamped slope $\psi$ of the Dirac-GAN. Coverage follows the penalty, not the loss. Every run at $\gamma = 1$ covers 24 or 25 modes (all 25 in the runs printed here), while the unpenalized runs range from about a dozen modes to all 25: without the penalty, coverage is a matter of luck. Pairing makes no difference beyond this run-to-run range, with or without the penalty: the coverage benefit that R3GAN measured on StackedMNIST is not visible in our runs. Nor does the penalty make the fit sharper. In all four arms about two thirds to nine tenths of the samples lie on a mode, against 98.9% for a perfect fit, at a mean distance of 0.08 to 0.24 from the nearest center, against about 0.06. The scatter plots show where the rest go: mostly on lines between neighbouring centers, with a few strays elsewhere. A continuous generator cannot jump from one island to the next, so it draws the bridges. In the unpenalized NS panel some interior modes are nearly empty.
 
-At $\gamma = 10$ the fit is much looser: only 19% to 28% of the samples lie on a mode, at a mean distance two to five times that at $\gamma = 1$, though 23 to 25 modes still hold some mass. The larger penalty flattens the critic further, to about $10^{-4}$, and the fit is slower. More friction is not always better, and the section has offered two reasons why: the overdamped spring approaches its equilibrium more slowly, at a rate near $\ell'(0)^2/\gamma$, and the low-pass filter damps short length scales more. Both give the direction of the effect, neither its size, since both assumed a generator near the data and the filter also a slowly varying $m$ (exercise :exref:`ex_convergence-penalty-length`).
+At $\gamma = 10$ the fit is much looser: only about a fifth to a quarter of the samples lie on a mode, at a mean distance two to five times that at $\gamma = 1$, though 23 to 25 modes still hold some mass. The larger penalty flattens the critic further, to about $10^{-4}$, and the fit is slower. More friction is not always better, and the section has offered two reasons why: the overdamped spring approaches its equilibrium more slowly, at a rate near $\ell'(0)^2/\gamma$, and the low-pass filter damps short length scales more. Both give the direction of the effect, neither its size, since both assumed a generator near the data and the filter also a slowly varying $m$ (exercise :exref:`ex_convergence-penalty-length`).
 
 Does the unpenalized game circle, as the Dirac-GAN does? The trace prints, for run 0 of every arm, the on-mode fraction and the critic loss at each checkpoint. The critic loss equals $2\log 2 \approx 1.39$ at the equilibrium for NS and $\log 2 \approx 0.69$ for pairing. Each value averages the critic loss over 1,250 steps, so the trace can show slow swings but not fast ones.
 
@@ -686,7 +685,7 @@ for col, stat in enumerate(['on-mode fraction', 'critic loss']):
 
 The on-mode fraction rises over training in every arm, with at most a dip of a hundredth, and no slow swing is visible. The critic losses tell the difference between the arms. Without the penalty the critic wins: its loss falls below the equilibrium value, from about 1.35 to about 1.0 for NS and from 0.68 to about 0.6 for pairing, and stays there. With the penalty it sits at the equilibrium value throughout, 1.36 to 1.38 and 0.67 to 0.69, even at 2,500 steps, when 3% or less of the samples lie on a mode. A critic loss at its equilibrium value therefore certifies nothing about the samples: a flat critic cannot separate $p$ from $q$, whether or not they agree. Keep this in mind whenever a GAN's loss curve looks reassuringly calm.
 
-We can now return to the garment generator of :numref:`subsec_gan_fashion_mnist`. Its critic pulled ahead in the first epoch and then drifted slowly back toward $2\log 2$, ending at about 1.05. The unpenalized NS critics on the grid take much the same course: they fall below $2\log 2$ early, then level off or creep back, and end at about 1.0. On the grid that course goes with samples that improve steadily. So the unsettled garment losses most likely meant slow progress against a critic that stayed ahead and steep, not a visible circle. Whether the parameters also rotate on a faster time scale, as on two points, averages over many steps cannot tell.
+We can now return to the garment generator of :numref:`subsec_gan_fashion_mnist`. Its critic pulled ahead in the first epoch and then drifted slowly back toward $2\log 2$, ending at about 1.05. The unpenalized NS critic of run 0 on the grid takes much the same course: it falls below $2\log 2$ early, then levels off or creeps back, and ends at about 1.0. On the grid that course goes with samples that improve steadily and with a critic that stays steep at them. The grid therefore suggests that the unsettled garment losses meant slow progress against a critic that stayed ahead, not a visible circle; the garment run did not measure whether its critic was also steep. Whether the parameters also rotate on a faster time scale, as on two points, averages over many steps cannot tell.
 
 On the grid the penalty flattened the critic and made coverage reliable. The rotation of the Dirac-GAN did not show at the resolution of these runs, and the samples were no sharper with the penalty than without it. Two dimensions say little about how either effect scales. Whether this recipe trains an image generator, and how to score the images it produces, is the question of :numref:`sec_dcgan`.
 
@@ -1156,7 +1155,8 @@ $\mathbb{E}_q\|\nabla_x D\|^2$ at the generated samples.
 
 @!convergence-mode-coverage-on-25-gaussians-7
 
-- Penalized: $\mathbb{E}_q\|\nabla D\|^2 < 0.003$, 24–25 modes in every run.
+- Penalized: $\mathbb{E}_q\|\nabla D\|^2$ a few thousandths at most, 24–25
+  modes in every run.
   Unpenalized: 0.7 to 17, about a dozen to 25 modes.
 - Pairing: no effect beyond the run-to-run range. Sharpness: no arm near a
   perfect fit.
@@ -1176,7 +1176,7 @@ $\mathbb{E}_q\|\nabla_x D\|^2$ at the generated samples.
 
 - Unpenalized critics win and stay steep; penalized ones read the
   equilibrium value even when 3% or less of the samples lie on a mode.
-- $\gamma = 10$: 19% to 28% on a mode, slower but not stuck.
+- $\gamma = 10$: about a fifth to a quarter on a mode, slower but not stuck.
 :::
 
 ::: {.slide title="Wrap-up"}

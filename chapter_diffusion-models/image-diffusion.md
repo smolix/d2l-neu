@@ -48,6 +48,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #image-diffusion-diffusion-for-images-1}
+%%tab pytorch
+torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
+```
+
 ## The Denoising U-Net
 
 ### Skips, Resolutions and the Time Embedding
@@ -253,7 +258,6 @@ and count its parameters and multiply-adds at each resolution.
 
 ```{.python .input #image-diffusion-skips-resolutions-and-the-time-embedding-3}
 %%tab pytorch
-torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
 torch.manual_seed(0)
 dev = d2l.try_gpu()
 net = UNet(ch=64, num_classes=10).to(dev)

@@ -2,7 +2,7 @@
 :label:`sec_diffusion-samplers`
 
 Every step of a sampler costs one evaluation of the U-Net, and the ancestral
-chain of :numref:`sec_diffusion-gaussian-paths` takes a thousand steps per
+chain of :numref:`sec_diffusion-integration` takes a thousand steps per
 image. The last section sampled with fifty Euler steps of the
 probability-flow ODE, and on its conditional model the thousand-step chain
 scored only a little lower in FD, at twenty times the evaluations. Which of the thousand steps do
@@ -56,7 +56,7 @@ torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
 ## One Field, Two Samplers
 
 The ancestral chain and Euler's method of
-:numref:`sec_diffusion-gaussian-paths`, one adding fresh noise at every step
+:numref:`sec_diffusion-integration`, one adding fresh noise at every step
 and the other none, read the network through the same pair of estimates: at
 a point $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
 \boldsymbol\epsilon$ of a Gaussian path, the clean point
@@ -67,7 +67,7 @@ $$\hat{\mathbf{x}}_0 = \frac{\mathbf{x}_t - \sigma_t \hat{\boldsymbol\epsilon}}{
 :eqlabel:`eq_diffusion-x0-hat`
 
 Whatever the network was trained to predict, `d2l.make_pred` of
-:numref:`sec_diffusion-gaussian-paths` turns it into a function `pred(x,
+:numref:`sec_diffusion-integration` turns it into a function `pred(x,
 alpha, sigma)` returning this pair at any noise level, and the samplers of
 this section read nothing else.
 
@@ -222,7 +222,7 @@ both on the mixture.
 :label:`fig_diffusion-two-samplers`
 
 Two stochastic samplers must be kept apart. The ancestral chain of
-:numref:`sec_diffusion-gaussian-paths` adds the variance of the forward
+:numref:`sec_diffusion-integration` adds the variance of the forward
 step, $\sigma_t^2 - (\alpha_t / \alpha_s)^2 \sigma_s^2$, while $\eta = 1$
 adds the posterior variance, smaller by the factor $\sigma_s^2 /
 \sigma_t^2$. On a thousand-step grid the factor is close to one and the two
@@ -618,13 +618,18 @@ grids = {'linear': lin.sigma_bars, 'EDM': d2l.edm_grid,
          'EDM, rho = 3': lambda n: d2l.edm_grid(n, rho=3)}
 solvers = {'Euler': d2l.ode_sample, 'Heun': d2l.heun_sample,
            'multistep': multistep_sample}
-budgets = (10, 20, 50, 100)  # evaluations: Heun takes budget // 2 + 1 steps
+budgets = (10, 20, 50, 100)  # network evaluations per sample
 
 def on_grid(solver, grid):  # a sampler (pred, noise, steps)
     return lambda p, z, n: solver(p, z, grid(n))
 
-fd_ode = {(s, g): [fd_runs(on_grid(solver, grid),
-                           b // 2 + 1 if s == 'Heun' else b) for b in budgets]
+def steps(s, g, b):  # Heun skips its second slope only into sigma = inf or 0:
+    # b // 2 + 1 steps on the linear grid (b evaluations, the first level is
+    # infinite), b // 2 on the EDM grids (b - 1)
+    return (b // 2 + (g == 'linear')) if s == 'Heun' else b
+
+fd_ode = {(s, g): [fd_runs(on_grid(solver, grid), steps(s, g, b))
+                   for b in budgets]
           for s, solver in solvers.items() for g, grid in grids.items()}
 print('evaluations            ', ''.join(f'{b:>11d}' for b in budgets))
 for (s, g), row in fd_ode.items():
@@ -637,13 +642,18 @@ grids = {'linear': lin.sigma_bars, 'EDM': d2l.edm_grid,
          'EDM, rho = 3': lambda n: d2l.edm_grid(n, rho=3)}
 solvers = {'Euler': d2l.ode_sample, 'Heun': d2l.heun_sample,
            'multistep': multistep_sample}
-budgets = (10, 20, 50, 100)  # evaluations: Heun takes budget // 2 + 1 steps
+budgets = (10, 20, 50, 100)  # network evaluations per sample
 
 def on_grid(solver, grid):  # a sampler (pred, noise, steps, key)
     return lambda p, z, n, k: solver(p, z, grid(n))
 
-fd_ode = {(s, g): [fd_runs(on_grid(solver, grid),
-                           b // 2 + 1 if s == 'Heun' else b) for b in budgets]
+def steps(s, g, b):  # Heun skips its second slope only into sigma = inf or 0:
+    # b // 2 + 1 steps on the linear grid (b evaluations, the first level is
+    # infinite), b // 2 on the EDM grids (b - 1)
+    return (b // 2 + (g == 'linear')) if s == 'Heun' else b
+
+fd_ode = {(s, g): [fd_runs(on_grid(solver, grid), steps(s, g, b))
+                   for b in budgets]
           for s, solver in solvers.items() for g, grid in grids.items()}
 print('evaluations            ', ''.join(f'{b:>11d}' for b in budgets))
 for (s, g), row in fd_ode.items():

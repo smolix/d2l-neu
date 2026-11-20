@@ -170,7 +170,7 @@ where $\mathbf{x}_\lambda$ is the point of the path with log-SNR $\lambda$ :cite
 
 ### A Number for the Mixture
 
-Two numbers measure the likelihood of a trained network: the bound :eqref:`eq_diffusion-elbo-continuous`, which belongs to the stochastic reverse process, and the density of the deterministic probability-flow ODE of :numref:`sec_diffusion-gaussian-paths`, by the change of variables; for the exact field they coincide. We train a noise predictor on the VP path with the mixture recipe of :numref:`sec_diffusion-gaussian-paths` for $20{,}000$ steps.
+Two numbers measure the likelihood of a trained network: the bound :eqref:`eq_diffusion-elbo-continuous`, which belongs to the stochastic reverse process, and the density of the deterministic probability-flow ODE of :numref:`sec_diffusion-integration`, by the change of variables; for the exact field they coincide. We train a noise predictor on the VP path with the mixture recipe of :numref:`sec_diffusion-gaussian-paths` for $20{,}000$ steps.
 
 ```{.python .input #design-space-a-number-for-the-mixture}
 %%tab pytorch
@@ -441,6 +441,7 @@ rows = {}
 for (width, name, _), net, b_net in zip(nets, nets.values(), b_all[1:]):
     with torch.no_grad():
         flow = pf_nll(net, vp, test[:4000])
+        torch.manual_seed(3)  # the same injected noise for every model
         x = d2l.ancestral_sample(d2l.make_pred(net, vp, 'eps'), z, vp, 1000)
     rows.setdefault((width, name), []).append(
         ((b_net - b_all[0]).mean(), (flow - pf_exact).mean(), mix.nll(x),
@@ -668,7 +669,7 @@ The VP path ends at $\lambda \approx -10$, so its network never trains on the pu
 
 <!-- WRITER (DSP-12): the four-recipe ablation is replaced by one-factor comparisons; the heading, this lead-in and the readings below are first drafts. Rename the heading (e.g. "One Factor at a Time"). The noise predictor on the VP path, its sample grid and the "150-fold" diagnosis are gone with the old table; the alpha_1 ~ 0.007 argument can move into the EDM paragraph ("no division by a small alpha") if wanted. Exercises 4d and 3b were rewritten as extensions of the new experiments. -->
 
-We change one choice at a time against a base recipe, the velocity on the linear path with $t$ uniform (the recipe of :numref:`sec_diffusion-images`): the time distribution (logit-normal, as :citet:`Esser.Kulal.Blattmann.ea.2024` use, and the same shifted toward the data), the path with its matching target ($\mathbf{v}$ on the cosine path, the same weighting by the table above) and the parameterization (EDM's preconditioned clean image on the linear path). Each model is an unconditional 64-channel `d2l.UNet` trained for 5,000 updates, a third of that section's budget, from two seeds; all are sampled from the same 5,000 noise images by Heun on EDM's grid with 25 levels, 49 evaluations, and scored by the Fréchet distance (FD) of :numref:`sec_diffusion-images` against 5,000 test images. EDM's $\sigma_{\mathrm{data}}$ is set from the data, which the cell measures first.
+We change one choice at a time against a base recipe, the velocity on the linear path with $t$ uniform (the recipe of :numref:`sec_diffusion-images`): the time distribution (logit-normal, as :citet:`Esser.Kulal.Blattmann.ea.2024` use, the same shifted toward the data, and EDM's log-normal levels), the path with its matching target ($\mathbf{v}$ on the cosine path, the same weighting by the table above) and the parameterization (EDM's preconditioned clean image on the linear path, read against the velocity model at EDM's levels, since `edm_loss` also draws those levels). Each model is an unconditional 64-channel `d2l.UNet` trained for 5,000 updates, a third of that section's budget, from two seeds; all are sampled from the same 5,000 noise images by Heun on EDM's grid with 25 levels, 49 evaluations, and scored by the Fréchet distance (FD) of :numref:`sec_diffusion-images` against 5,000 test images. EDM's $\sigma_{\mathrm{data}}$ is set from the data, which the cell measures first.
 
 ```{.python .input #design-space-a-recipe-ablation}
 %%tab pytorch
@@ -694,14 +695,14 @@ print(f'FD, real against real: {floor:.2f}')
 
 <!-- WRITER (DSP-10): direct runs 2026-11-20, both frameworks: pixel mean -0.43, standard deviation 0.71, root mean square 0.83. EDM's 0.5 is the value of the paper's natural-image datasets; its derivation assumes zero mean, and for data that are not centered the unit-variance argument holds with the root mean square in place of the standard deviation (c_skip minimizes E||x0 - c_skip x_bar||^2, which involves E||x0||^2), so the cell passes 0.83. Dev comparison (not in the notebook), EDM grid, FD at 5,000: sigma_data = 0.5 gave 3.76 / 3.17 (PyTorch seeds 0, 1) and 3.87 (JAX seed 0); 0.83 gave 3.03 / 3.30 and 2.64: no worse, so the measured value is used. Floor (real against real, 5,000 each): 0.17 in both. Also say in one clause that EDM feeds the network (1/4) ln sigma_bar where `EDM` passes the path's t. -->
 
-`logit_normal_loss` is `regression_loss` with $t = 1/(1 + e^{-(m + n)})$, $n \sim \mathcal{N}(0, 1)$, in place of uniform times.
+`logit_normal_loss` is `regression_loss` with $t = 1/(1 + e^{-(m + s n)})$, $n \sim \mathcal{N}(0, 1)$, in place of uniform times. On the linear path $\bar\sigma = t/(1 - t)$, so $\ln \bar\sigma = m + s n$: with $m = -1.2$ and $s = 1.2$ the velocity model trains at EDM's log-normal levels, and the row of that name differs from EDM's only in the parameterization and the weight.
 
 ```{.python .input #design-space-a-recipe-ablation-1}
 %%tab pytorch
-def logit_normal_loss(path, kind, m=0.0):
-    """regression_loss with logit-normal times t = sigmoid(m + N(0, 1))."""
+def logit_normal_loss(path, kind, m=0.0, s=1.0):
+    """regression_loss with logit-normal times t = sigmoid(m + s N(0, 1))."""
     def loss_fn(net, x0):
-        t = torch.sigmoid(m + torch.randn(len(x0), device=x0.device))
+        t = torch.sigmoid(m + s * torch.randn(len(x0), device=x0.device))
         eps = torch.randn_like(x0)
         error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
         return (error ** 2).flatten(1).sum(1).mean()
@@ -717,6 +718,8 @@ recipes = {  # name: (path, kind of prediction, network, loss)
     't logit-normal, m = -0.5': (linear, 'velocity', unet,
                                  logit_normal_loss(linear, 'velocity', -0.5)),
     'cosine path, v': (cosine, 'v', unet, d2l.regression_loss(cosine, 'v')),
+    "t at EDM's levels": (linear, 'velocity', unet,  # ln sigma_bar = logit t
+                          logit_normal_loss(linear, 'velocity', -1.2, 1.2)),
     'EDM, clean image': (linear, 'x0',
                          lambda: EDM(unet(), linear, sigma_data), edm_loss)}
 grid = d2l.edm_grid(25)                          # 49 network evaluations
@@ -724,11 +727,11 @@ grid = d2l.edm_grid(25)                          # 49 network evaluations
 
 ```{.python .input #design-space-a-recipe-ablation-1}
 %%tab jax
-def logit_normal_loss(path, kind, m=0.0):
-    """regression_loss with logit-normal times t = sigmoid(m + N(0, 1))."""
+def logit_normal_loss(path, kind, m=0.0, s=1.0):
+    """regression_loss with logit-normal times t = sigmoid(m + s N(0, 1))."""
     def loss_fn(net, x0, key):
         k_t, k_eps = jax.random.split(key)
-        t = jax.nn.sigmoid(m + jax.random.normal(k_t, (len(x0),)))
+        t = jax.nn.sigmoid(m + s * jax.random.normal(k_t, (len(x0),)))
         eps = jax.random.normal(k_eps, x0.shape)
         error = net(path.sample(x0, t, eps), t) - path.target(kind, x0, eps, t)
         return (error ** 2).reshape(len(x0), -1).sum(1).mean()
@@ -744,6 +747,8 @@ recipes = {  # name: (path, kind of prediction, network, loss)
     't logit-normal, m = -0.5': (linear, 'velocity', unet,
                                  logit_normal_loss(linear, 'velocity', -0.5)),
     'cosine path, v': (cosine, 'v', unet, d2l.regression_loss(cosine, 'v')),
+    "t at EDM's levels": (linear, 'velocity', unet,  # ln sigma_bar = logit t
+                          logit_normal_loss(linear, 'velocity', -1.2, 1.2)),
     'EDM, clean image': (linear, 'x0',
                          lambda seed: EDM(unet(seed), linear, sigma_data),
                          edm_loss)}
@@ -793,6 +798,7 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
     print(f'{name:27} FD {fd[0]:.2f}, {fd[1]:.2f}')
 ```
 
+<!-- WRITER (lib-review finding 1, run step): the table has a sixth row, "t at EDM's levels": the base velocity target with ln sigma_bar ~ N(-1.2, 1.2^2) (logit-normal m = -1.2, s = 1.2), so that the EDM row differs from it only in parameterization and weight; the EDM gain over the base splits into the level distribution (base -> EDM's levels) and the parameterization with its weight (EDM's levels -> EDM). The numbers of the captured run are in claims.md; the direct-run numbers below predate the row. -->
 <!-- WRITER (DSP-12): direct runs 2026-11-20 (not captured; FD of 5,000 samples against 5,000 test images, real against real 0.17 in both; seeds 0, 1):
 PyTorch: base 3.81, 3.83; t logit-normal 4.62, 5.36; t logit-normal m = -0.5 3.16, 2.98; cosine path, v 3.84, 3.59; EDM, clean image 3.48, 3.43.
 JAX: base 3.89, 4.10; t logit-normal 5.45, 5.17; m = -0.5 3.84, 3.17; cosine path, v 3.40, 3.21; EDM 2.62, 2.92.

@@ -857,7 +857,7 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
 1. **One and two Euler steps.**
     1. A single step of the deterministic sampler from pure noise to $t = 0$
        returns $\mathbb{E}[\mathbf{x}_0]$ from every start, whatever the
-       path (:numref:`sec_diffusion-gaussian-paths`). Does the same hold for
+       path (:numref:`sec_diffusion-integration`). Does the same hold for
        one Euler step in $t$, $\mathbf{x} - \mathbf{u}_1(\mathbf{x})$, on the
        cosine path $\alpha_t = \cos\frac{\pi t}{2}$,
        $\sigma_t = \sin\frac{\pi t}{2}$? What does that step return, and
@@ -962,7 +962,8 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
        MeanFlow student in strays and in training cost per step.
    :exlabel:`ex_few-step-lagrangian`
 1. [code] **A guided student.** ● Train the class-conditional U-Net of
-   :numref:`sec_diffusion-images` and distil it into a two-time student
+   :numref:`sec_diffusion-images` with `time_freqs=slow`, as the teacher of
+   this section, and distil it into a two-time student
    whose reference velocity $\mathbf{u}_{\textrm{ref}}$ is the guided velocity
    $\tilde{\mathbf{u}}$, `d2l.cfg(teacher, c, 2.0)`, for random labels $c$,
    with the label as an input of the student.

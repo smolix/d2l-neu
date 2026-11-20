@@ -43,13 +43,21 @@ GPU_FRAMEWORK_NOTEBOOKS = set()
 # Ruling 2026-11-06 (Alex): modern topics may run longer when the pedagogy
 # needs the experiment. latent-diffusion (17.7: two autoencoders and ten
 # diffusion trainings, DiT-L moved to an exercise) ran 64 min PyTorch and
-# 62 min JAX side by side on one shared RTX 4090 (2026-11-20), above 3600 s.
+# 62 min JAX side by side on one shared RTX 4090 (2026-11-20), above 3600 s;
+# the scaling cell then gained a second seed per point (about 18 more GPU-min
+# per framework on a shared card), hence 10800 s. image-diffusion, samplers
+# and design-space each ran 30-47 min on a busy shared card in direct runs
+# (2026-11-20), close enough to 3600 s under scheduler contention to need
+# 7200 s.
 #
 # No ch. 18 entry: a normal build stays near 15 min per notebook, and a
 # D2L_RERUN regeneration run must finish within 30 min (ruling 2026-11-12),
 # both well inside the default.
 NOTEBOOK_TIMEOUTS = {
-    "chapter_diffusion-models/latent-diffusion.ipynb": 7200,
+    "chapter_diffusion-models/latent-diffusion.ipynb": 10800,
+    "chapter_diffusion-models/image-diffusion.ipynb": 7200,
+    "chapter_diffusion-models/samplers.ipynb": 7200,
+    "chapter_diffusion-models/design-space.ipynb": 7200,
 }
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The

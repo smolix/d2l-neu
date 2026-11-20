@@ -584,7 +584,7 @@ alpha_bar = 1 - jnp.arange(T + 1) / T       # the linear schedule
 ```
 
 We train it with `d2l.train_regression`
-(:numref:`sec_diffusion-gaussian-paths`) on fresh draws from the mixture,
+(:numref:`sec_diffusion-denoising`) on fresh draws from the mixture,
 512 pairs per batch, each with a uniformly drawn step, with a learning rate
 that decays along a cosine over 6,000 updates.
 

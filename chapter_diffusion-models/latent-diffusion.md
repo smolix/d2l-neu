@@ -965,20 +965,26 @@ sizes = {'DiT-S': dict(width=128, depth=4, num_heads=2),
          'DiT-M': dict(width=256, depth=6, num_heads=4)}
 nets = {'DiT-S': lambda: d2l.DiT(**sizes['DiT-S']),
         'DiT-M': lambda: d2l.DiT(**sizes['DiT-M']),
-        'U-Net 32': lambda: d2l.UNet(ch=32)}
-runs = {}
-for seed, (name, make_net) in enumerate(nets.items(), start=5):
-    torch.manual_seed(seed)
-    net = make_net().to(dev)
-    _, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 20_000)
-    imgs = sample(ema, image_shape)
-    runs[name] = dict(params=d2l.num_params(net), fd=fd(imgs), imgs=imgs[:8],
-                      gflops=d2l.train_step_gflops(net, loss_fn, image_shape))
-runs['U-Net 64'] = dict(params=d2l.num_params(d2l.UNet(ch=64)), fd=fd_pixel,
-                        imgs=x_pixel[:8], gflops=gflops_pixel)
+        'U-Net 32': lambda: d2l.UNet(ch=32),
+        'U-Net 64': lambda: d2l.UNet(ch=64)}
+seeds = {'DiT-S': (5, 12), 'DiT-M': (6, 13), 'U-Net 32': (7, 14),
+         'U-Net 64': (15,)}  # the first U-Net 64 is the pixel model above
+runs = {name: dict(fd=[]) for name in nets}
+runs['U-Net 64'].update(fd=[fd_pixel], imgs=x_pixel[:8])
+for name, make_net in nets.items():
+    for seed in seeds[name]:
+        torch.manual_seed(seed)
+        net = make_net().to(dev)
+        _, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 20_000)
+        imgs = sample(ema, image_shape)
+        runs[name]['fd'].append(fd(imgs))
+        runs[name].setdefault('imgs', imgs[:8])
+    runs[name].update(params=d2l.num_params(net), gflops=d2l.train_step_gflops(
+        net, loss_fn, image_shape))
 for name, run in runs.items():
     print(f'{name:8} {run["params"] / 1e6:5.2f}M parameters '
-          f'{run["gflops"]:4.0f} GFLOP per step   FD {run["fd"]:.2f}')
+          f'{run["gflops"]:4.0f} GFLOP per step   FD '
+          + ', '.join(f'{v:.2f}' for v in run['fd']))
 ```
 
 ```{.python .input #latent-diffusion-scaling-with-compute-1}
@@ -987,22 +993,29 @@ sizes = {'DiT-S': dict(width=128, depth=4, num_heads=2),
          'DiT-M': dict(width=256, depth=6, num_heads=4)}
 nets = {'DiT-S': lambda rngs: d2l.DiT(**sizes['DiT-S'], rngs=rngs),
         'DiT-M': lambda rngs: d2l.DiT(**sizes['DiT-M'], rngs=rngs),
-        'U-Net 32': lambda rngs: d2l.UNet(ch=32, rngs=rngs)}
-runs = {}
-for seed, (name, make_net) in enumerate(nets.items(), start=5):
-    net = make_net(nnx.Rngs(seed))
-    _, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 20_000,
-                                     jax.random.key(seed))
-    imgs = sample(ema, image_shape)
-    runs[name] = dict(params=d2l.num_params(net), fd=fd(imgs), imgs=imgs[:8],
-                      gflops=d2l.train_step_gflops(net, loss_fn, image_shape))
-runs['U-Net 64'] = dict(params=d2l.num_params(unet_pixel), fd=fd_pixel,
-                        imgs=x_pixel[:8], gflops=gflops_pixel)
+        'U-Net 32': lambda rngs: d2l.UNet(ch=32, rngs=rngs),
+        'U-Net 64': lambda rngs: d2l.UNet(ch=64, rngs=rngs)}
+seeds = {'DiT-S': (5, 12), 'DiT-M': (6, 13), 'U-Net 32': (7, 14),
+         'U-Net 64': (15,)}  # the first U-Net 64 is the pixel model above
+runs = {name: dict(fd=[]) for name in nets}
+runs['U-Net 64'].update(fd=[fd_pixel], imgs=x_pixel[:8])
+for name, make_net in nets.items():
+    for seed in seeds[name]:
+        net = make_net(nnx.Rngs(seed))
+        _, ema, _ = d2l.train_regression(net, loss_fn, batch_fn, 20_000,
+                                         jax.random.key(seed))
+        imgs = sample(ema, image_shape)
+        runs[name]['fd'].append(fd(imgs))
+        runs[name].setdefault('imgs', imgs[:8])
+    runs[name].update(params=d2l.num_params(net), gflops=d2l.train_step_gflops(
+        net, loss_fn, image_shape))
 for name, run in runs.items():
     print(f'{name:8} {run["params"] / 1e6:5.2f}M parameters '
-          f'{run["gflops"]:4.0f} GFLOP per step   FD {run["fd"]:.2f}')
+          f'{run["gflops"]:4.0f} GFLOP per step   FD '
+          + ', '.join(f'{v:.2f}' for v in run['fd']))
 ```
 
+<!-- WRITER (lib-review finding 2, run step): every point of the scaling cell now has two trainings (DiT-S seeds 5, 12; DiT-M 6, 13; U-Net 32 7, 14; U-Net 64 the pixel model of seed 4 and seed 15), the cell prints both FDs and the plot shows their mean. Quote only differences larger than the two-seed ranges; the captured numbers are in claims.md. -->
 <!-- WRITER: the plot now has two curves, DiT-S to DiT-M and U-Net ch=32
 to ch=64. -->
 We plot FD against FLOPs per step on logarithmic axes.
@@ -1011,7 +1024,7 @@ We plot FD against FLOPs per step on logarithmic axes.
 %%tab pytorch, jax
 curves = [[runs['DiT-S'], runs['DiT-M']], [runs['U-Net 32'], runs['U-Net 64']]]
 d2l.plot([[run['gflops'] for run in curve] for curve in curves],
-         [[run['fd'] for run in curve] for curve in curves],
+         [[sum(run['fd']) / 2 for run in curve] for curve in curves],
          'GFLOP per training step', 'FD (5,000 samples)',
          legend=['DiT-S, DiT-M', 'U-Net ch=32, 64'], xscale='log',
          yscale='log', fmts=('o-', 'D-'))

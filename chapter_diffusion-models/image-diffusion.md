@@ -405,16 +405,16 @@ and the losses. We use a constant learning rate of $10^{-3}$ for 15,000
 updates; :citet:`ho2020denoising` trained with $2 \cdot 10^{-4}$ for 800,000
 updates, more than fifty times as many.
 
-Training is the cheaper part of this section. It passes
-$15{,}000 \times 128 \approx 1.9$ million images forward and backward
-through the network. The samples we draw below, some with a thousand steps
-each, take about 20 million evaluations: three and a half times the arithmetic of
-training, counting a backward pass as two forward ones. Drawing samples
-from a diffusion model can cost more than teaching it to draw them, and much
-of the rest of this chapter is about cutting that cost. On an RTX 4090 the section runs in less than an hour; on a CPU it
-would take many hours. A reader without a GPU can score 1,000 samples
-instead of 5,000 and read the result against the reference value at 1,000
-images, which we compute below.
+Training is the cheaper part of this section. It passes $15{,}000 \times 128
+\approx 1.9$ million images forward and backward through the network. The
+samples we draw below, some with a thousand steps each, take about 20 million
+evaluations: three and a half times the arithmetic of training, counting a
+backward pass as two forward ones. Drawing samples from a diffusion model can
+cost more than teaching it to draw them, and much of the rest of this chapter
+is about cutting that cost. On an RTX 4090 the section runs in less than an
+hour; on a CPU it would take many hours. A reader without a GPU can score
+1,000 samples instead of 5,000 and read the result against the reference
+value at 1,000 images, which we compute below.
 
 ```{.python .input #image-diffusion-one-trainer-2}
 %%tab pytorch
@@ -573,13 +573,13 @@ from this boot against more than 0.4 from the average one. Detail
 disappears first and the outline last.
 
 A sampler visits the levels in the opposite order, and the third row shows
-what that order does. At $t = 1$ the prediction is the blurred average
-boot, 0.3 to 0.4 away from the sample it will become. By $t = 0.6$ it lies
-within 0.12 to 0.14 of that sample and already has its final outline,
-while the image it is computed from is still six parts noise to four parts
-boot. The remaining steps sharpen the edges and add shading and texture. A
-sample settles its shape early and its surface late; Exercise :exref:`ex_image-diffusion-guidance-interval` puts
-this to use.
+what that order does. At $t = 1$ the prediction is the blurred average boot,
+0.3 to 0.4 away from the sample it will become. By $t = 0.6$ it lies within
+0.12 to 0.14 of that sample and already has its final outline, while the
+image it is computed from is still six parts noise to four parts boot. The
+remaining steps sharpen the edges and add shading and texture. A sample
+settles its shape early and its surface late; Exercise
+:exref:`ex_image-diffusion-guidance-interval` puts this to use.
 
 ### The Moving Average
 
@@ -805,13 +805,13 @@ for seed in range(3):  # three draws of the initial noise
 
 On this network the weights of the last update are worse than their average
 in every draw, by 0.4 to 0.6, more than ten times as much as the average
-moves between draws. How much worse depends on where the last update
-happened to land in its cloud, and another training run would land
-elsewhere. An average over the last few thousand updates depends much less
-on such luck, which is the reason to sample from it. The thousand-step
-chain scores 0.1 to 0.2 lower than fifty Euler steps, again in every draw.
-It changes the path, the sampler and the number of steps at once, so it
-measures the combination, not any one of the three. That is a modest gain for twenty times the
+moves between draws. How much worse depends on where the last update happened
+to land in its cloud, and another training run would land elsewhere. An
+average over the last few thousand updates depends much less on such luck,
+which is the reason to sample from it. The thousand-step chain scores 0.1 to
+0.2 lower than fifty Euler steps, again in every draw. It changes the path,
+the sampler and the number of steps at once, so it measures the combination,
+not any one of the three. That is a modest gain for twenty times the
 evaluations, and from here on we measure with fifty Euler steps.
 
 ## Guidance
@@ -819,15 +819,14 @@ evaluations, and from here on we measure with fifty Euler steps.
 ### Bayes' Rule on Scores
 
 Our conditional samples already belong to their classes nearly 90% of the
-time. Some do not: shirts, pullovers and coats were hard to tell apart. The slider
-of the introduction asks for more, a sampler that follows the label more
-closely than the trained network does. To see where such a sampler could
+time. Some do not: shirts, pullovers and coats were hard to tell apart. The
+slider of the introduction asks for more, a sampler that follows the label
+more closely than the trained network does. To see where such a sampler could
 come from, let us look at what a label does to a score. Bayes' rule at time
-$t$ reads $p_t(\mathbf{x} \mid c) =
-p_t(\mathbf{x})\, p_t(c \mid \mathbf{x}) / p(c)$, where $p_t(c \mid
-\mathbf{x})$ is the probability that a noisy image $\mathbf{x}$ at time $t$
-came from a clean image of class $c$, and $p(c)$ drops out of the gradient
-of the logarithm:
+$t$ reads $p_t(\mathbf{x} \mid c) = p_t(\mathbf{x})\, p_t(c \mid \mathbf{x})
+/ p(c)$, where $p_t(c \mid \mathbf{x})$ is the probability that a noisy image
+$\mathbf{x}$ at time $t$ came from a clean image of class $c$, and $p(c)$
+drops out of the gradient of the logarithm:
 
 $$\nabla_{\mathbf{x}} \log p_t(\mathbf{x} \mid c) = \nabla_{\mathbf{x}} \log p_t(\mathbf{x}) + \nabla_{\mathbf{x}} \log p_t(c \mid \mathbf{x}).$$
 :eqlabel:`eq_diffusion-bayes-score`
@@ -1013,15 +1012,14 @@ the FD by about 1.4 to 1.5. This split alone does not separate the two
 causes, since a wrong mix of classes changes the spread of the features as
 well as their mean, and images that look wrong move the mean too.
 
-The last two lines measure the first cause by itself. Real images in the unguided mix score
-0.4 to 0.5 against 0.19 for real images in the even mix: the wrong mix by
-itself raises the FD by 0.2 to 0.3, several times the spread of the
-reference value, yet only a tenth to a sixth of the rise of about 1.9 that
-we are trying to explain. Its mean term grows by 0.1 to 0.2, against about
-0.5 for the samples. A mix that is off by at most about four points per
+The last two lines measure the first cause by itself. Real images in the
+unguided mix score 0.4 to 0.5 against 0.19 for real images in the even mix:
+the wrong mix by itself raises the FD by 0.2 to 0.3, several times the spread
+of the reference value, yet only a tenth to a sixth of the rise of about 1.9
+that we are trying to explain. Its mean term grows by 0.1 to 0.2, against
+about 0.5 for the samples. A mix that is off by at most about four points per
 class is a small change to ten nearly equal classes, and the FD treats it as
-one.
-The rest of the rise lies in how the unguided images look.
+one. The rest of the rise lies in how the unguided images look.
 
 We dwell on a scale that nobody samples at because the unconditional
 prediction is the base from which guidance extrapolates. Written as
@@ -1064,19 +1062,18 @@ worse. At $\gamma = 4$ each image is a clear member of its class, but the
 four samples of a column resemble one another more than at $\gamma = 1$,
 with stronger contrast and fewer unusual shapes.
 
-If every scale from 1.5 up makes the FD worse, why does every
-text-to-image system guide, and by far more than 1.5? Part of the answer
-lies at mild scales. :citet:`Ho.Salimans.2022` found on ImageNet that a
-small weight, $w$ of 0.1 to 0.3 (our $\gamma$ of 1.1 to 1.3), gives a lower
-FID than no guidance, and that larger weights trade FID for typicality as
-ours do. Our FD at 5,000 images shows no such dip at $\gamma = 1.25$, but
-no cost either: mild guidance buys agreement for nothing that the FD can
-see at this sample size. The larger part of the answer is that the FD and
-a person looking at a picture disagree
-about what a good sample is. The FD judges a set and rewards variety; the
-person judges one image and rewards a clear, typical instance of what was
-asked for. The slider lets the user choose between the two, and the FD
-records faithfully what is given up.
+If every scale from 1.5 up makes the FD worse, why does every text-to-image
+system guide, and by far more than 1.5? Part of the answer lies at mild
+scales. :citet:`Ho.Salimans.2022` found on ImageNet that a small weight, $w$
+of 0.1 to 0.3 (our $\gamma$ of 1.1 to 1.3), gives a lower FID than no
+guidance, and that larger weights trade FID for typicality as ours do. Our FD
+at 5,000 images shows no such dip at $\gamma = 1.25$, but no cost either:
+mild guidance buys agreement for nothing that the FD can see at this sample
+size. The larger part of the answer is that the FD and a person looking at a
+picture disagree about what a good sample is. The FD judges a set and rewards
+variety; the person judges one image and rewards a clear, typical instance of
+what was asked for. The slider lets the user choose between the two, and the
+FD records faithfully what is given up.
 
 ### The Distribution a Guided Sampler Follows
 
@@ -1168,19 +1165,19 @@ has 1.2 million parameters; trained for 15,000 updates and sampled from a
 moving average of its weights, it draws recognizable Fashion-MNIST garments,
 and drawing them costs more arithmetic than training did. The Fréchet
 distance in a trained classifier's features turns sample quality into a
-number that means something only beside the distance between real sets of
-the same size, and our samples lie about five times above it. Label dropout
-makes one network both conditional and unconditional, and classifier-free
-guidance extrapolates from the second through the first by a scale
-$\gamma$, so every error of the unconditional prediction enters every guided
-sample. Without the label our FD more than triples, and the wrong class mix
-explains only a tenth to a sixth of the rise. A mild scale raises the class
-agreement at no cost the FD can see; larger ones trade variety, measured by
-the FD, for typicality, measured by class agreement. Practice guides hard
-because a person judges one picture and the FD judges the set. The guided sampler follows the scores of tilted
-densities that, at high noise, curve more sharply than any noised
-distribution can; on Gaussian classes it ends far narrower than even the
-tilt.
+number that means something only beside the distance between real sets of the
+same size, and our samples lie about five times above it. Label dropout makes
+one network both conditional and unconditional, and classifier-free guidance
+extrapolates from the second through the first by a scale $\gamma$, so every
+error of the unconditional prediction enters every guided sample. Without the
+label our FD more than triples, and the wrong class mix explains only a tenth
+to a sixth of the rise. A mild scale raises the class agreement at no cost
+the FD can see; larger ones trade variety, measured by the FD, for
+typicality, measured by class agreement. Practice guides hard because a
+person judges one picture and the FD judges the set. The guided sampler
+follows the scores of tilted densities that, at high noise, curve more
+sharply than any noised distribution can; on Gaussian classes it ends far
+narrower than even the tilt.
 
 ## Exercises
 

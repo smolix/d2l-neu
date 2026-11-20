@@ -611,3 +611,458 @@ H[D1 & D2].mean()  # Exact value: 0.8307
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17971)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.6]{.kicker}
+
+Evidence and error bars for measured numbers<br>
+**sampling · random variables · expectation · the standard error · Bayes' theorem**
+:::
+:::
+
+::: {.slide title="Every Number Computed From Data Fluctuates"}
+[The problem]{.kicker}
+
+- A coin lands heads **56** times in 100 tosses. Is it biased?
+- A classifier labels **230 of 256** images correctly (0.90). The next
+  minibatch gives 0.87. Did anything change?
+- Even a fair coin rarely gives exactly 50 heads.
+
+::: {.d2l-note}
+**Probability:** model → data (how likely is 56 for a fair coin?).
+**Statistics:** data → model (what do 56 heads say about the coin?).
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- read marginals off a joint table and test two variables for independence;
+- compute expectations, variances, and the variance of a sum;
+- attach a standard error $\sigma/\sqrt{n}$ to an average, and decide
+  whether 56 heads in 100 tosses is evidence of bias;
+- reverse a conditional with Bayes' theorem: why a positive HIV test
+  means only 13%.
+
+**Running examples:** a coin tossed $n$ times, a classifier's accuracy on
+a minibatch of 256 images, and a two-test HIV diagnosis.
+:::
+
+::: {.slide title="Probability Turns Measurements Into Evidence"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | tool |
+|---|---|
+| Data Manipulation | tensors |
+| Data Preprocessing | pandas |
+| Linear Algebra | matrix products, norms, eigenvalues |
+| Calculus | derivatives, gradients, chain rule |
+| Automatic Differentiation | autograd |
+| **Probability and Statistics** | **standard error, Bayes' theorem** |
+| Documentation | `help`, small tests |
+:::
+
+::: {.col .narrow}
+- **Uses:** tensors and random sampling from the earlier decks.
+- **Skips:** densities in depth, named distributions, maximum likelihood,
+  and the proofs, all in the mathematics appendix.
+:::
+:::
+:::
+
+::: {.slide title="Frequencies Fluctuate Around the Probability"}
+[Sampling]{.kicker}
+
+Frequencies of heads and tails in 100 tosses of a fair coin:
+
+@probability-a-simple-example-tossing-coins-3
+
+In 10,000 tosses:
+
+@!probability-a-simple-example-tossing-coins-4
+
+- The **probability** $p = 0.5$ belongs to the coin. The **frequency**
+  $\hat{p}$ is an estimate: it changes with every repetition.
+:::
+
+::: {.slide title="The Running Frequency Settles Toward 0.5"}
+[Sampling]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Heads so far divided by tosses so far, after each toss.
+- **Law of large numbers:** $\hat{p} \to p$ as $n \to \infty$.
+
+::: {.d2l-note}
+It does not say **how fast**. How far from $0.5$ may 100 tosses land?
+:::
+:::
+
+::: {.col .fig .big}
+@!probability-a-simple-example-tossing-coins-5
+:::
+:::
+:::
+
+::: {.slide title="Three Axioms Generate Every Rule"}
+[The rules]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+An **event** is a subset of the sample space $\mathcal{S}$.
+
+- $P(\mathcal{A}) \ge 0$, and $P(\mathcal{S}) = 1$;
+- mutually exclusive events **add**.
+
+Consequences: $P(\mathcal{A}') = 1 - P(\mathcal{A})$ and
+$P(\mathcal{A}\cup\mathcal{B}) = P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
+
+Die, "even or at least 5":
+$$\frac{3}{6} + \frac{2}{6} - \frac{1}{6} = \frac{2}{3}.$$
+:::
+
+::: {.col .fig}
+@fig:probability-venn
+:::
+:::
+:::
+
+::: {.slide title="A Random Variable Maps Outcomes to Values"}
+[The rules]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Heads in 100 tosses: $2^{100}$ outcomes, only **101** values.
+- **Distribution** $P(X)$: the probability of each value.
+- A height has a **density**: $P(a \le X \le b) = \int_a^b p(x)\,dx$;
+  each exact value has probability zero.
+:::
+::: {.col .fig .big}
+@fig:probability-density
+:::
+:::
+:::
+
+::: {.slide title="A Joint Table Holds Everything About Two Variables"}
+[The rules]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Rain and umbrella on a random day:
+
+| $P(X, Y)$ | umbrella | no umbrella |
+|:--|:--:|:--:|
+| rain | 0.25 | 0.05 |
+| no rain | 0.10 | 0.60 |
+
+- **Marginal:** sum a row or a column.
+  $P(\textrm{rain}) = 0.30$, $P(\textrm{umbrella}) = 0.35$.
+- **Independent** means $P(X, Y) = P(X)\,P(Y)$. Here
+  $0.25 \neq 0.30 \cdot 0.35$: not independent.
+- Two coin tosses are independent; the coin question needs this.
+:::
+
+::: {.col .fig}
+@fig:probability-joint-grid
+:::
+:::
+:::
+
+::: {.slide title="Expectation Is the Probability-Weighted Average"}
+[Expectation and variance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\mathbb{E}[X] = \sum_x x\,P(X{=}x)$$
+
+- Investment: $0.5 \cdot 0 + 0.4 \cdot 2 + 0.1 \cdot 10 = 1.8$.
+- Indicator of heads: $\mathbb{E}[X] = p$.
+- **Linear**, always: $\mathbb{E}[aX + bY] = a\mathbb{E}[X] + b\mathbb{E}[Y]$, so
+  $\mathbb{E}[\hat{p}] = p$: the frequency is **unbiased**.
+:::
+
+::: {.col .fig}
+@fig:probability-expectation
+:::
+:::
+:::
+
+::: {.slide title="Variance Measures the Spread Around the Mean"}
+[Expectation and variance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\textrm{Var}(X) = \mathbb{E}\big[(X - \mu)^2\big] = \mathbb{E}[X^2] - \mu^2$$
+
+- Investment: $11.6 - 1.8^2 = 8.36$, so $\sigma \approx 2.9$.
+- Indicator of heads: $p - p^2 = p(1-p)$, at most $\tfrac14$.
+- $\textrm{Var}(aX + b) = a^2\,\textrm{Var}(X)$.
+:::
+
+::: {.col .fig}
+@fig:probability-spread
+:::
+:::
+:::
+
+::: {.slide title="Variances of Independent Variables Add"}
+[Expectation and variance · derivation]{.kicker}
+
+**Step 1.** Expand the square:
+$\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y) + 2\,\textrm{Cov}(X,Y)$,
+with $\textrm{Cov}(X,Y) = \mathbb{E}[(X-\mu_X)(Y-\mu_Y)]$.
+
+**Step 2.** Independent: $\textrm{Cov}(X,Y) = \mathbb{E}[X-\mu_X]\,\mathbb{E}[Y-\mu_Y] = 0$.
+
+::: {.d2l-note .rule}
+$\textrm{Var}(X+Y) = \textrm{Var}(X) + \textrm{Var}(Y)$: the sum of $n$
+independent draws has standard deviation $\sqrt{n}\,\sigma$, not $n\sigma$.
+:::
+:::
+
+::: {.slide title="The Standard Error of a Frequency Is 0.5/√n"}
+[Estimation error]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\textrm{Var}(\hat{p}) = \frac{1}{n^2} \cdot n\,p(1-p) = \frac{p(1-p)}{n}$$
+
+- Fair coin: $0.05$ at $n = 100$, $0.005$ at $n = 10{,}000$.
+- 1000 repeats per $n$ land on the line: **slope $-\tfrac12$**.
+- Half the error costs **4×** the data.
+:::
+
+::: {.col .fig .big}
+@!probability-a-simple-example-tossing-coins-6
+:::
+:::
+:::
+
+::: {.slide title="56 of 100 Is No Evidence of Bias; 5,600 of 10,000 Is"}
+[Estimation error]{.kicker}
+
+- $56/100$: deviation $0.06 = 1.2$ standard errors.
+- $5600/10000$: deviation $0.06 = 12$ standard errors.
+
+Fraction of 1000 fair-coin experiments at least this far from $n/2$, an
+estimate of the **p-value**:
+
+@!probability-is-the-coin-biased
+
+::: {.d2l-note .rule}
+Chebyshev, any distribution: $P(|X - \mu| \ge k\sigma) \le 1/k^2$.
+Averages do better: within 2 standard errors about 95% of the time.
+Under 2 is unremarkable; 3 or more is hard to blame on chance.
+:::
+:::
+
+::: {.slide title="A Minibatch of 256 Images Measures Accuracy to About ±2 Points"}
+[Estimation error]{.kicker}
+
+Correct label with probability $0.9$, independently per image:
+
+- minibatch of 256: $\sqrt{0.9 \cdot 0.1 / 256} \approx 0.019$;
+- test set of 10,000: $\sqrt{0.9 \cdot 0.1 / 10{,}000} = 0.003$;
+- the difference of two such accuracies: $\sqrt{2} \cdot 0.003 \approx 0.004$,
+  since variances add, so one point is more than two standard errors.
+
+::: {.d2l-note}
+In general: an average of $n$ independent draws has standard error
+$\sigma/\sqrt{n}$.
+:::
+:::
+
+::: {.slide title="More Data Removes Only Epistemic Uncertainty"}
+[Estimation error]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Epistemic:** uncertainty about the model, such as $p$. It shrinks
+  like $1/\sqrt{n}$.
+- **Aleatoric:** randomness of the outcome. Knowing $p = 0.5$ exactly,
+  the next toss is still 50/50; an ambiguous image stays ambiguous.
+:::
+
+::: {.col .fig .big}
+@fig:probability-uncertainty
+:::
+:::
+:::
+
+::: {.slide title="Check: How Large a Test Set?"}
+[Check]{.kicker}
+
+A classifier has accuracy about $0.9$. How many test images make the
+standard error of its measured accuracy $0.005$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\sqrt{0.9 \cdot 0.1 / n} = 0.005$ gives
+$n = 0.09 / 0.000025 = 3{,}600$. Halving the error to $0.0025$ takes four
+times as many: 14,400.
+:::
+:::
+:::
+
+::: {.slide title="Conditioning Keeps One Row and Renormalizes It"}
+[Conditional probability]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$P(Y \mid X{=}x) = \frac{P(X{=}x,\, Y)}{P(X{=}x)}$$
+
+- Rain row $(0.25, 0.05)$ becomes $(0.83, 0.17)$:
+  $P(\textrm{umbrella} \mid \textrm{rain}) = 0.83$ against $0.35$ on an
+  arbitrary day.
+- In the figure, $P(Y{=}y_3 \mid X{=}x_2) = 0.25 / 0.60 \approx 0.42$.
+- Multiplication rule: $P(X, Y) = P(Y \mid X)\,P(X)$.
+:::
+
+::: {.col .fig}
+@fig:probability-joint-grid
+:::
+:::
+:::
+
+::: {.slide title="Bayes' Theorem Reverses the Conditional"}
+[Conditional probability · derivation]{.kicker}
+
+**Step 1.** Write the joint both ways: $P(X, Y) = P(Y \mid X)\,P(X) = P(X \mid Y)\,P(Y)$.
+
+**Step 2.** Divide by $P(Y)$:
+$$P(X \mid Y) = \frac{P(Y \mid X)\,P(X)}{P(Y)}, \qquad P(Y) = \sum_x P(Y \mid X{=}x)\,P(X{=}x).$$
+
+**Step 3.** Hypothesis $H$, observed data $D$:
+
+::: {.d2l-note .rule}
+posterior $\propto$ likelihood $\times$ prior:
+$\;P(H \mid D) \propto P(D \mid H)\,P(H)$.
+:::
+:::
+
+::: {.slide title="Conditioning Can Remove or Create Dependence"}
+[Conditional probability]{.kicker}
+
+**Conditionally independent given $Z$:**
+$P(X, Y \mid Z) = P(X \mid Z)\,P(Y \mid Z)$.
+
+::: {.cols .vc}
+::: {.col}
+- **Common cause:** shoe size and reading level are related through age,
+  and unrelated at a fixed age.
+- **Common effect:** broken bones and lung cancer become related among
+  hospital patients (*explaining away*).
+:::
+::: {.col .fig .big}
+@fig:probability-explaining-away
+:::
+:::
+:::
+
+::: {.slide title="Check: Condition on a Column"}
+[Check]{.kicker}
+
+In the joint table, $P(X{=}x_1, Y{=}y_1) = 0.12$ and $P(Y{=}y_1) = 0.32$.
+What is $P(X{=}x_1 \mid Y{=}y_1)$? Are $X$ and $Y$ independent?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $0.12 / 0.32 = 0.375$, while $P(X{=}x_1) = 0.40$. Learning
+$Y = y_1$ changes the distribution of $X$, so $X$ and $Y$ are **not**
+independent.
+:::
+:::
+:::
+
+::: {.slide title="A Test That Never Misses Gives Only 13%"}
+[Bayes in action]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$
+\begin{aligned}
+P(D{=}1 \mid H{=}1) &= 1.00 \\
+P(D{=}1 \mid H{=}0) &= 0.01 \\
+\text{prior } P(H{=}1) &= 0.0015
+\end{aligned}
+$$
+
+$$P(H{=}1 \mid D{=}1) = \frac{0.0015}{0.011485} = 0.13$$
+
+Rare disease: false positives outnumber true ones.
+:::
+
+::: {.col .fig .big}
+@fig:probability-natural-frequencies
+:::
+:::
+:::
+
+::: {.slide title="A Second Positive Test Raises 13% to 83%"}
+[Bayes in action]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Second test: positive with probability $0.98$ if $H{=}1$, $0.03$ if $H{=}0$.
+Given $H$ the tests are independent, so likelihoods multiply:
+$1 \cdot 0.98$ if $H{=}1$, $0.01 \cdot 0.03$ if $H{=}0$.
+
+$$\frac{0.98 \cdot 0.0015}{0.98 \cdot 0.0015 + 0.01 \cdot 0.03 \cdot 0.9985} = 0.83$$
+:::
+
+::: {.col .fig}
+@fig:probability-bayes-update
+:::
+:::
+:::
+
+::: {.slide title="Simulating Two Million Patients Confirms 0.83 to About One Point"}
+[Bayes in action]{.kicker}
+
+Draw each patient's status, then both test results:
+
+@probability-worked-example-hiv-testing-1
+
+::: {.d2l-note}
+Only about 3,500 patients test positive twice, so the simulated fraction
+is a frequency with standard error $\sqrt{0.83 \cdot 0.17 / 3500} \approx
+0.006$. A deviation of one point from $0.83$ is what we should expect.
+:::
+:::
+
+::: {.slide title="Check: A Less Rare Disease"}
+[Check]{.kicker}
+
+Same first test, but 1% of the population is infected. What is
+$P(H{=}1 \mid D_1{=}1)$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.**
+$$\frac{1 \cdot 0.01}{1 \cdot 0.01 + 0.01 \cdot 0.99} = \frac{0.01}{0.0199} \approx 0.50.$$
+The prior matters as much as the test: one positive is now a coin flip.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **Rules:** marginalize by summing; independent means the joint is a
+  product.
+- **Summaries:** $\mathbb{E}[X]$ and $\textrm{Var}(X)$; variances of independent
+  variables add.
+- **Standard error** $\sigma/\sqrt{n}$: a frequency of $0.56$ lies $1.2$
+  standard errors from $0.5$ after 100 tosses (no evidence of bias), and
+  $12$ after 10,000.
+- **Conditioning:** keep a row and renormalize. **Bayes:** two positive HIV
+  tests take 0.15% to 13% to 83%.
+
+**Next:** looking up what a framework function does, and then the first
+model fitted to data.
+:::

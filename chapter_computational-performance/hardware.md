@@ -109,11 +109,12 @@ the first byte takes to arrive. Latencies span eight orders of magnitude
 cache to a sixty-millisecond round trip across a continent; the GPU entries
 come from microbenchmarks of the RTX 4090 :cite:`Luo.Fan.Li.ea.2024`. The
 highlighted entry matters most in this chapter. One eager operation
-dispatched from Python takes 5–15 µs of host time, of which the kernel
-launch is 1–5 µs (:numref:`sec_perf_model` measured the host time $h$ per
-call in your framework). In 10 µs the RTX 4090 streams 10 MB, more than
-many operations of a small model read, which is why this chapter keeps
-returning to fewer, larger operations.
+dispatched from Python takes some ten to a hundred microseconds of host
+time, depending on the framework and the host, of which the kernel launch
+is 1–5 µs (:numref:`sec_perf_model` measured the host time $h$ per call
+in your framework). Even 10 µs is enough for the RTX 4090 to stream
+10 MB, more than many operations of a small model read, which is why this
+chapter keeps returning to fewer, larger operations.
 
 ![Latencies on a logarithmic scale. The highlighted entry is the host time
 of one framework operation dispatched from Python, of which the kernel
@@ -526,15 +527,14 @@ first; since `Benchmark` waits only for the last result, each timed call
 here waits for its own copy.
 :end_tab:
 
-The pinned copy reaches about 23 GB/s, close to three quarters of the
-32 GB/s that a PCIe 4.0 ×16 link carries in each direction, and about
-forty times below the card's own memory bandwidth. We write
-$\beta_\textrm{host}$ for this rate; on a PCIe 5.0 host or a laptop it is
-another number. The pageable copy is slower, because every byte first
-makes an extra trip through host memory. Data that the GPU reads
-repeatedly therefore belongs on the device. Data that must arrive at every
-step, such as minibatches, should come from pinned memory, with the copy
-overlapped with computation.
+The pinned copy reaches about 23 GB/s, close to three quarters of the 32 GB/s
+that a PCIe 4.0 ×16 link carries in each direction, and about forty times below
+the card's own memory bandwidth. On a PCIe 5.0 host or a laptop this rate is
+another number. The pageable copy is slower, because every byte first makes an
+extra trip through host memory. Data that the GPU reads repeatedly therefore
+belongs on the device. Data that must arrive at every step, such as
+minibatches, should come from pinned memory, with the copy overlapped with
+computation.
 
 ### Links between GPUs
 :label:`subsec_hw-interconnects`
@@ -550,7 +550,7 @@ Our machine shows the consequence (:numref:`fig_pcie_topology`). Its four
 RTX 4090s sit in pairs behind two PCIe host bridges, and every byte from
 one GPU to another is staged through host memory: up one PCIe link,
 through the CPU's memory, and down another. A copy between two of our GPUs
-therefore runs at most at $\beta_\textrm{host}$, and only if the two hops
+therefore runs at most at the pinned copy rate, and only if the two hops
 overlap; one after the other, they halve it. That is almost forty times
 less than one direction of NVLink 5. How fast an *allreduce*, the
 collective operation that sums the gradients of all GPUs, runs over this
@@ -564,7 +564,7 @@ another.](../img/mdl-perf-pcie-topology.svg)
 
 Data-parallel training of our 1B-parameter GPT on two GPUs sums the
 $S = 4$ GB of fp32 gradients of every step across the GPUs. Moving them
-once takes at least $S/\beta_\textrm{host}$, about 0.17 s on our machine,
+once at the pinned copy rate takes at least 0.17 s on our machine,
 and less than 5 ms over one direction of NVLink 5. Is 0.17 s a lot? A GPU
 that processes, say, 8,192 tokens per step performs about
 $6N = 6 \times 10^9$ FLOPs per token for the forward and backward passes,
@@ -641,13 +641,13 @@ on our machine. On another machine only that column changes.
 
 | quantity | magnitude, late 2026 | our machine | why it matters |
 |---|---|---|---|
-| host time per call, $h$ | about 10 µs for an eager operation, more for a call of a compiled function | measured in :numref:`sec_perf_model` | small operations cannot keep the GPU busy |
+| host time per call, $h$ | 10 µs to 0.1 ms per call | measured in :numref:`sec_perf_model` | small operations cannot keep the GPU busy |
 | peak bf16 rate, $P$ | 0.17–2.3 PFLOP/s | 165 TFLOP/s | the speed limit of large matrix products |
 | GPU memory bandwidth, $\beta$ | 1–8 TB/s | about 0.9 TB/s (1.0 rated) | the speed limit of elementwise operations and of decode |
 | ridge point, $P/\beta$ | 120–300 FLOP/byte | 164 FLOP/byte | below it, memory sets the time |
 | sweep time, $C/\beta$ | about 20 ms | 24 ms (rated $\beta$) | the largest model that fits decodes one stream at about 50 tokens/s |
-| host to device, $\beta_\textrm{host}$ | at most 32 GB/s (PCIe 4.0) to 64 GB/s (PCIe 5.0), one direction | about 23 GB/s | keep data on the device |
-| GPU to GPU, $\beta_\textrm{link}$ | 450–900 GB/s over NVLink, one direction | staged through host memory, at most $\beta_\textrm{host}$; measured in :numref:`sec_multi_gpu` | sets the time of every gradient exchange |
+| host to device, pinned | at most 32 GB/s (PCIe 4.0) to 64 GB/s (PCIe 5.0), one direction | about 23 GB/s | keep data on the device |
+| GPU to GPU | 450–900 GB/s over NVLink, one direction | staged through host memory, at most the pinned copy rate; measured in :numref:`sec_multi_gpu` | sets the time of every gradient exchange |
 | bytes per parameter, training with Adam | 16 (fp32), 18 (mixed precision) | | what fits (:numref:`sec_memory_precision`) |
 | bytes per token, decode | $2N$ + KV cache (bf16) | | tokens/s $\lesssim$ bandwidth / bytes per token |
 
@@ -689,8 +689,8 @@ sweep time is about 20 ms on every current GPU.
        on-die capacity in :numref:`fig_memory_hierarchy`. In which regime
        does the curve depart from $t(n)$, and why?
     1. Repeat the host-to-device measurement of :numref:`subsec_hw-cpu`
-       for transfers from 4 KB to 256 MB, and fit $\alpha$ and
-       $\beta_\textrm{host}$. Where does the fitted $\alpha$ fall on
+       for transfers from 4 KB to 256 MB, and fit $\alpha$ and the
+       bandwidth. Where does the fitted $\alpha$ fall on
        :numref:`fig_latency_ladder`?
 
 1. **Wires and rates.** :numref:`subsec_hw-bytes` writes bandwidth as the
@@ -753,8 +753,8 @@ sweep time is about 20 ms on every current GPU.
    in the time one byte crosses the path.
     1. Compute $P/\beta$ in bf16 for an RTX 4090 against its own memory
        and against the host-staged GPU-to-GPU path of
-       :numref:`subsec_hw-interconnects` at $\beta_\textrm{host}$, about
-       23 GB/s. Compute it for a B200 against its HBM and against one
+       :numref:`subsec_hw-interconnects` at the pinned copy rate,
+       about 23 GB/s. Compute it for a B200 against its HBM and against one
        direction of NVLink 5, 900 GB/s.
     1. In data-parallel training (:numref:`sec_multi_gpu`), every GPU
        holds a copy of a model with $N$ parameters and processes $T$
@@ -766,9 +766,9 @@ sweep time is about 20 ms on every current GPU.
        proportional to the ridge point of the link, and that the threshold
        does not depend on $N$.
     1. Evaluate the threshold for the host-staged path, for NVLink, and
-       for $\beta_\textrm{link} \approx 2.4$ GB/s, the rate at which each
-       GPU sends during a large allreduce that NCCL performs over the
-       staged path of :numref:`fig_pcie_topology` at its default settings
+       for the 2.4 GB/s at which each GPU sends during a large allreduce
+       that NCCL performs over the staged path of
+       :numref:`fig_pcie_topology` at its default settings
        (:numref:`sec_multi_gpu_concise` measures it). By what factor does the
        ridge point of each of these links exceed the memory ridge point of
        the same GPU? Relate the factors to the wires-times-rate argument
@@ -799,15 +799,15 @@ sweep time is about 20 ms on every current GPU.
        What does this factor imply for the decode rate of the largest
        model that fits on each new generation?
 
-1. **Launch-bound decode.** In eager single-stream decode, the CPU
-   launches every kernel of every block for every token, while the GPU
-   reads the weights of every block. Consider a GPT whose $L$ blocks of
-   width $d$ each hold about $12d^2$ weights in bf16 and launch at least
-   $K = 12$ kernels per token. Take, for example, 8 µs of host time per
-   kernel, within the range that :numref:`fig_latency_ladder` gives for an
-   eager operation. Launches are asynchronous, so a decode step takes at
-   least the larger of the total launch time and the time to read the
-   weights. Ignore the embedding table and the KV cache.
+1. **Launch-bound decode.** In eager single-stream decode, the CPU launches
+   every kernel of every block for every token, while the GPU reads the weights
+   of every block. Consider a GPT whose $L$ blocks of width $d$ each hold about
+   $12d^2$ weights in bf16 and launch at least $K = 12$ kernels per token.
+   Take, for example, 8 µs of host time per kernel, near the low end of the
+   range that :numref:`fig_latency_ladder` gives for an eager operation.
+   Launches are asynchronous, so a decode step takes at least the larger of the
+   total launch time and the time to read the weights. Ignore the embedding
+   table and the KV cache.
     1. Show that which of the two times is larger does not depend on $L$,
        and find the width $d^*$ at which they are equal on the RTX 4090 and
        on the B200.
@@ -933,14 +933,15 @@ Registers and caches: ~0.1 GB at tens of TB/s. GPU memory: 24–180 GB at
 :::
 :::
 
-::: {.slide title="One Eager Operation Takes as Long as Streaming 10 MB"}
+::: {.slide title="One Eager Operation Takes at Least as Long as Streaming 10 MB"}
 ::: {.cols .vc}
 ::: {.col}
 ![](../img/mdl-perf-latency-ladder.svg){height=470px}
 :::
 
 ::: {.col .narrow}
-- Host time of one eager operation from Python: 5–15 µs, about 10 µs.
+- Host time of one eager operation from Python: 10–100 µs, depending on
+  the framework and the host.
 - In 10 µs the RTX 4090 streams 10 MB.
 - Many small operations are limited by the host time $h$ per call, not by
   the GPU.
@@ -1095,7 +1096,7 @@ $I = 0.25$ FLOP/B; (b) a matmul at $I = 1{,}000$ FLOP/B.
 ::: {.slide title="Pinned Host Memory Feeds PCIe at Three Quarters of Its Rate"}
 @!hardware-the-cpu-s-role
 
-- Pinned: $\beta_\textrm{host} \approx$ 23 of PCIe 4.0's 32 GB/s, about forty
+- Pinned: about 23 of PCIe 4.0's 32 GB/s, about forty
   times below GPU memory.
 - Pageable: an extra copy through host memory first.
 - Keep data on the device; copy minibatches from pinned memory, overlapped.
@@ -1104,7 +1105,7 @@ $I = 0.25$ FLOP/B; (b) a matmul at $I = 1{,}000$ FLOP/B.
 ::: {.slide title="Without Peer-to-Peer, Every Inter-GPU Byte Goes through the Host"}
 ![](../img/mdl-perf-pcie-topology.svg){height=400px}
 
-GPU to GPU: at most $\beta_\textrm{host} \approx$ 23 GB/s, and only if
+GPU to GPU: at most the pinned copy rate, about 23 GB/s, and only if
 both hops overlap; almost 40× below one direction of NVLink 5. The 4 GB of
 fp32 gradients of the 1B GPT: ≥ 0.17 s per step here, more than half of
 the 0.3 s that 8K tokens take at peak.

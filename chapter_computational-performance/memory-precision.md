@@ -145,19 +145,19 @@ same output as its input. That is a second copy, $d$ more, if rearranging
 the heads into one row per token copies the array, and nothing more if it
 does not.
 
-The feed-forward half of the block follows the same rules. Its
-normalization keeps its input, $d$, and the gate and the up-projection
-both read the same normalized output, which needs to be kept only once,
-another $d$. The SwiGLU network computes a gate $\mathbf{g}$ and an
-up-projection $\mathbf{u}$, each of width $\tfrac{8}{3}d$, and multiplies $\textrm{SiLU}(\mathbf{g})$ by
+The feed-forward half of the block follows the same rules. Its normalization
+keeps its input, $d$, and the gate and the up-projection both read the same
+normalized output, which needs to be kept only once, another $d$. The SwiGLU
+network computes a gate $\mathbf{g}$ and an up-projection $\mathbf{u}$, each of
+width $\tfrac{8}{3}d$, and multiplies $\textrm{SiLU}(\mathbf{g})$ by
 $\mathbf{u}$. The SiLU keeps $\mathbf{g}$, the product keeps both of its
 factors, and the down-projection keeps the product: four vectors of width
-$\tfrac{8}{3}d$, about $11d$. In all, a block keeps $19.7d$ values per
-token with the second copy and $18.7d$ without. We round to $20d$, which is
-160 KiB in fp32 at $d = 2048$. :citet:`Korthikanti.Casper.Lym.ea.2022`
-count the same way for the block of GPT-3 without dropout and arrive at
-$16d$ values besides the attention weights; our feed-forward network keeps
-more because it has a gate.
+$\tfrac{8}{3}d$, about $11d$. In all, a block keeps $19.7d$ values per token
+with the second copy and $18.7d$ without. We round to $20d$, which is 160 KiB
+in fp32 at $d = 2048$. :citet:`Korthikanti.Casper.Lym.ea.2022` count the same
+way for the block of GPT-3 without dropout and arrive at $16d$ values besides
+the attention weights; our feed-forward network keeps more because it has a
+gate.
 
 Nothing in this count grows with the length $T$ of the sequence, because
 the attention keeps no $T \times T$ array. The fused attention kernel of
@@ -342,13 +342,13 @@ M_\textrm{GPU}$. The first term is fixed by the model and the optimizer;
 the second grows with the minibatch. The largest minibatch is therefore
 $n_{\max} = (M_\textrm{GPU} - 16N) / (L a + a_\textrm{out})$.
 
-The equation charges the gradients, $4N$ bytes, for the whole step. That
-is right under gradient accumulation (:numref:`subsec_mp-accumulation`),
-where the gradients of one piece of the minibatch stay in memory while the
-next piece runs. A single step creates its gradients while the
-activations are being released and peaks lower, at $12N$ bytes plus the activations
-(:numref:`fig_memory_anatomy`; Exercise :exref:`ex_mp-peak`). A model of
-this size trains with accumulation, so we budget for it.
+The equation charges the gradients, $4N$ bytes, for the whole step. That is
+right under gradient accumulation (:numref:`subsec_mp-accumulation`), where the
+gradients of one piece of the minibatch stay in memory while the next piece
+runs. A single step creates its gradients while the activations are being
+released and peaks lower, at $12N$ bytes plus the activations
+(:numref:`fig_memory_anatomy`; Exercise :exref:`ex_mp-peak`). A model of this
+size trains with accumulation, so we budget for it.
 
 :begin_tab:`pytorch`
 `zero_grad(set_to_none=True)` releases the gradients after each update, so
@@ -447,22 +447,22 @@ for n in (2048, 4096):  # Growth per token from n to 2n tokens
 ```
 
 Why should the peak hold more than what is stored? The count is what the
-backward pass keeps. The peak also holds what the backward pass creates
-while the kept tensors are still in memory, and the largest of these
-arrays belongs, once again, to the loss. Its backward pass begins with
-two arrays of $V$ fp32 values per token: the gradient with respect to the
-log-probabilities, and from it the gradient with respect to the logits. For a moment both exist next to the stored log-probabilities,
-and an implementation that writes them to memory needs $8V$ bytes, 393 KiB,
-per token more than the count.
+backward pass keeps. The peak also holds what the backward pass creates while
+the kept tensors are still in memory, and the largest of these arrays belongs,
+once again, to the loss. Its backward pass begins with two arrays of $V$ fp32
+values per token: the gradient with respect to the log-probabilities, and from
+it the gradient with respect to the logits. For a moment both exist next to the
+stored log-probabilities, and an implementation that writes them to memory
+needs $8V$ bytes, 393 KiB, per token more than the count.
 
 :begin_tab:`pytorch`
 The measured slope exceeds the count by 392 to 394 KiB per token, the $8V$
-bytes of the two gradients. The first of them is all zeros but one: to
-mark which one of 50,257 log-probabilities the loss read, the backward
-pass of `F.cross_entropy` writes 50,257 numbers per token. With 1,024
-tokens the peak comes later in the step, when the gradients of the
-weights exist, and it lies above the line through the other points. For our GPT the peak needs about 3.2 MiB per
-token, which leaves room for about 2,800 tokens instead of 3,200.
+bytes of the two gradients. The first of them is all zeros but one: to mark
+which one of 50,257 log-probabilities the loss read, the backward pass of
+`F.cross_entropy` writes 50,257 numbers per token. With 1,024 tokens the peak
+comes later in the step, when the gradients of the weights exist, and it lies
+above the line through the other points. For our GPT the peak needs about 3.2
+MiB per token, which leaves room for about 2,800 tokens instead of 3,200.
 :end_tab:
 
 :begin_tab:`jax`

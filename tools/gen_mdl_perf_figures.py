@@ -297,8 +297,9 @@ def fig_latency_ladder():
     magnitude.  GPU cache and memory latencies are the RTX 4090
     microbenchmarks of Luo et al. (2024) at boost clock; the CUDA launch cost
     is NVIDIA's CUDA Graph guide (1-5 us); the highlighted rung is the host
-    cost of one eager framework operation dispatched from Python, the cost
-    the overhead regime is made of."""
+    cost of one eager framework operation dispatched from Python, 10-100 us
+    on current hosts and frameworks, the cost the overhead regime is made
+    of."""
     rows = [
         ("CPU L1 hit", 1, "1 ns"),
         ("GPU L1 / shared memory", 15, "~15 ns"),
@@ -307,7 +308,7 @@ def fig_latency_ladder():
         ("GPU memory access", 250, "200–300 ns"),
         ("CUDA kernel launch", 3e3, "1–5 µs"),
         ("RDMA network round trip", 4e3, "2–5 µs"),
-        ("eager operation from Python", 1e4, "5–15 µs"),
+        ("eager operation from Python", 3e4, "10–100 µs"),
         ("NVMe read", 7e4, "50–100 µs"),
         ("WAN round trip", 6e7, "~60 ms"),
     ]

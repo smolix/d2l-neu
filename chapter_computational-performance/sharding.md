@@ -239,12 +239,12 @@ Communication sets the time of the step. In an all-gather or a
 reduce-scatter of $S$ bytes, each of the $k$ GPUs sends $(k-1)S/k$ bytes:
 it is one of the two phases of the ring allreduce of
 :numref:`subsec_mg-ring`. FSDP runs three such phases per step. Let
-$\beta_\textrm{link}$ be the rate at which each GPU sends during a large
-collective (:numref:`subsec_mg-accounting`). The communication of a step
+$\beta_\textrm{link}$ be the time per byte that each GPU sends during a
+large collective (:numref:`subsec_mg-accounting`). The communication of a step
 then takes
 
 $$
-t_\textrm{comm} = \frac{3(k-1)}{k}\,\frac{S}{\beta_\textrm{link}}.
+t_\textrm{comm} = \frac{3(k-1)}{k}\,S\,\beta_\textrm{link}.
 $$
 :eqlabel:`eq_fsdp_comm`
 
@@ -632,7 +632,6 @@ a fast link the same bytes take milliseconds.
        change the answer when FSDP gathers the weights anew for every
        micro-batch?
 
-
 :begin_tab:`pytorch`
 2. [extended] **Sharded optimizer state.** ● This section ran stage 3 with
     `fully_shard`; here you implement ZeRO stage 1
@@ -949,10 +948,10 @@ collectives, and the bytes, are those of stage 1.
 ![](../img/mdl-perf-fsdp-lifecycle.svg){width=70%}
 
 Per step: two all-gathers and one reduce-scatter of $S = 4N$ bytes. With
-$\beta_\textrm{link}$ the bytes each GPU sends per second in a large
+$\beta_\textrm{link}$ the time per byte that each GPU sends in a large
 collective:
 
-$$t_\textrm{comm} = \frac{3(k-1)}{k}\,\frac{S}{\beta_\textrm{link}}$$
+$$t_\textrm{comm} = \frac{3(k-1)}{k}\,S\,\beta_\textrm{link}$$
 
 ::: {.d2l-note .rule}
 From $1.5S$ per GPU at $k = 2$ towards $3S$: more GPUs divide the memory,
@@ -963,16 +962,16 @@ not the bytes each one sends.
 ::: {.slide title="Check: Predict Memory and Time on Two GPUs"}
 [Check]{.kicker}
 
-$N = 1.92$ B, $S = 4N = 7.7$ GB, $k = 2$, $\beta_\textrm{link}$ of
-2.2 to 2.3 GB/s sent per GPU, 2,048 tokens per GPU, checkpointing at about
+$N = 1.92$ B, $S = 4N = 7.7$ GB, $k = 2$, a bus bandwidth of
+2.2 to 2.3 GB/s per GPU, 2,048 tokens per GPU, checkpointing at about
 1 MiB per token, $8N$ FLOPs per token at 83 TFLOP/s. Peak memory,
 communication, arithmetic?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $16N/2 = 14.3$ GiB, plus 2 GiB of activations and a block or
-two: at most 17 GiB. Each phase sends $S/2$, so $1.5S = 11.5$ GB at
-$\beta_\textrm{link}$ take about 5 s. Arithmetic:
+two: at most 17 GiB. Each phase sends $S/2$, so $1.5S = 11.5$ GB
+take about 5 s. Arithmetic:
 $8 \cdot 1.92 \cdot 10^9 \cdot 2048 / (8.3 \cdot 10^{13}) \approx 0.4$ s.
 :::
 :::
@@ -1065,7 +1064,7 @@ per direction. How long is the communication, and what limits the step?
 **Answer.** $11.5 / 900 \approx 13$ ms, a thirtieth of the 0.4 s of
 arithmetic.
 
-| link | $\beta_\textrm{link}$ | communication per step |
+| link | bus bandwidth | communication per step |
 |---|---|---|
 | ours: PCIe through host memory | 2.2 to 2.3 GB/s | about 5 s |
 | NVLink 5 | 900 GB/s | 13 ms |

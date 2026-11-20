@@ -217,7 +217,7 @@ running.](../img/mdl-perf-ddp-overlap.svg)
 
 The size of a bucket is a compromise between the two parts of an
 allreduce's time in :numref:`subsec_mg-accounting`: a fixed cost $\alpha$
-per call, and the bytes divided by the link rate $\beta_\textrm{link}$.
+per call, and a time $\beta_\textrm{link}$ for every byte sent.
 Small buckets start early but incur $\alpha$ many times. A single bucket
 for all gradients incurs $\alpha$ once, but it waits for the whole
 backward pass. Whatever the size, the last bucket holds the gradients of
@@ -744,12 +744,12 @@ so the difference $t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ is the
 communication that a step exposes. The cost model :eqref:`eq_dp_cost` of
 :numref:`subsec_mg-accounting` charges this communication two terms: $c$
 fixed costs $\alpha$, one per allreduce call, and the time for every GPU
-to send $2(k-1)/k$ times the $S$ gradient bytes at $\beta_\textrm{link}$,
-the rate at which a GPU sends during a large allreduce. For the large
+to send $2(k-1)/k$ times the $S$ gradient bytes, $\beta_\textrm{link}$
+per byte. For the large
 allreduces that carry the gradients, the fixed costs are small next to
 the bytes.
 
-If nothing overlaps, the whole allreduce is exposed: $S/\beta_\textrm{link}$
+If nothing overlaps, the whole allreduce is exposed: $S\,\beta_\textrm{link}$
 at $k = 2$. The bucket model makes a bolder prediction. Only the
 allreduce of the last bucket remains exposed, provided that the earlier
 ones finish while the backward pass still runs.
@@ -848,7 +848,7 @@ model predicts.
 
 :begin_tab:`pytorch`
 DDP's last bucket holds 8.7 of the 45 MB of gradients, so with full overlap
-a step would expose a fifth of $S/\beta_\textrm{link}$, about 4 ms, not the
+a step would expose a fifth of $S\,\beta_\textrm{link}$, about 4 ms, not the
 15 ms measured.
 :end_tab:
 
@@ -871,7 +871,7 @@ For each configuration `profile_step` also profiles ten steps on GPU 0, as
 in :numref:`sec_perf_model`, and splits the device time per step into
 NCCL's kernels and all others. If the bucket model held, the step without
 communication would match the one-GPU step, NCCL's kernels would run for
-about $S/\beta_\textrm{link}$, 18.5 ms, and the other kernels would take as
+about $S\,\beta_\textrm{link}$, 18.5 ms, and the other kernels would take as
 long as on one GPU.
 
 :begin_tab:`pytorch`
@@ -988,8 +988,8 @@ without communication. Most of what overlap hides comes back as slower
 computation.
 :end_tab:
 
-Why is $\beta_\textrm{link}$ so low in the first place? A copy between two
-of our GPUs, staged through host memory, can run at up to about 24 GB/s,
+Why is the bus bandwidth so low in the first place? A copy between two
+of our GPUs, staged through host memory, can run at up to about 23 GB/s,
 the rate of a pinned copy from host memory
 (:numref:`subsec_hw-interconnects`). That is ten times the 2.4 GB/s at
 which each GPU sends during the allreduce. Between GPUs without
@@ -1000,7 +1000,7 @@ perform a GPU's memory copies, move the same bytes faster.
 
 :begin_tab:`pytorch`
 We have seen them at work already. Our star of :numref:`sec_multi_gpu`
-reached a $\beta_\textrm{link}$ of about 9.5 GB/s between the same two
+reached a bus bandwidth of about 9.5 GB/s between the same two
 GPUs, two copies one after the other at about 19 GB/s each, because its
 copies were driver-managed copies, which run on the copy engines. On this
 machine the production library, at its default settings, sends bytes four
@@ -1141,7 +1141,7 @@ same model would lose almost nothing.
    as follows. The backward pass takes time $t_b$ and releases the
    gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
    The allreduces of the buckets run one at a time and in order, and each
-   takes $\alpha + \tau/n$, where $\tau = S/\beta_\textrm{link}$ is the
+   takes $\alpha + \tau/n$, where $\tau = S\,\beta_\textrm{link}$ is the
    communication time of all gradients at $k = 2$ and $\alpha$ is a fixed
    cost per collective. The exposed communication is the time from the end
    of the backward pass to the end of the last allreduce.
@@ -1156,7 +1156,7 @@ same model would lose almost nothing.
     1. Pass `bucket_cap_mb` to `DDP` in `TRAIN_DDP`, sweep it from 1 MB to
        100 MB at $k = 2$ with `step_time`, and plot the exposed
        communication against the bucket size. Estimate $t_b$ as two thirds
-       of the single-GPU step time and $\tau$ as $S/\beta_\textrm{link}$.
+       of the single-GPU step time and $\tau$ as $S\,\beta_\textrm{link}$.
        Is the measured optimum consistent with your model, and which
        $\alpha$ does it imply?
     1. The measurement with `profile_step` shows that the computation
@@ -1180,7 +1180,7 @@ same model would lose almost nothing.
        the script with `torchrun` from a shell). Predict whether the
        setting can change anything on your machine.
     1. Extend the comparison to payloads from 1 MB to 256 MB and plot
-       $\beta_\textrm{link}$ of both transports against the payload. Where
+       the bus bandwidth of both transports against the payload. Where
        does each saturate, and does the gap measured at 256 MB hold at
        every size?
     1. Launch `TRAIN_DDP` on two GPUs with the setting (the `env` argument
@@ -1198,7 +1198,7 @@ same model would lose almost nothing.
    as follows. The backward pass takes time $t_b$ and releases the
    gradients in $n$ buckets of equal size, bucket $i$ at time $i\,t_b/n$.
    The allreduces of the buckets run one at a time and in order, and each
-   takes $\alpha + \tau/n$, where $\tau = S/\beta_\textrm{link}$ is the
+   takes $\alpha + \tau/n$, where $\tau = S\,\beta_\textrm{link}$ is the
    communication time of all gradients at $k = 2$ and $\alpha$ is a fixed
    cost per collective. The exposed communication is the time from the end
    of the backward pass to the end of the last allreduce.
@@ -1217,7 +1217,7 @@ same model would lose almost nothing.
        gradient allreduces in the compiled `train_step` and measure the
        exposed communication `step_time(2, 256) - step_time(1, 256)`.
        Estimate $t_b$ as two thirds of the single-GPU step time and $\tau$
-       as $S/\beta_\textrm{link}$. Is the measured optimum consistent with
+       as $S\,\beta_\textrm{link}$. Is the measured optimum consistent with
        your model, and which $\alpha$ does it imply?
     1. The measurement with `profile_step` shows that the computation
        kernels slow down while an allreduce runs beside them. Record a few
@@ -1240,7 +1240,7 @@ same model would lose almost nothing.
        line), and predict whether the setting can change anything on your
        machine.
     1. Time the `psum` for payloads from 1 MB to 256 MB under both settings
-       and plot $\beta_\textrm{link}$ against the payload. Where does each
+       and plot the bus bandwidth against the payload. Where does each
        saturate, and does the gap measured at 256 MB hold at every size?
     1. Write the training of this section into a script and run it on two
        GPUs in a fresh process with the setting, under a time limit.
@@ -1262,12 +1262,11 @@ same model would lose almost nothing.
        made and before `model` is wrapped in `DDP`, and repeat the check.
        Why would converting before the copy hang the run? Which of the two
        references does the DDP step now match?
-    1. How many collectives per step does the conversion add to
-       `resnet18`? Measure `step_time` with the converted model at $k = 2$
-       and $k = 4$ under weak scaling, and compare the added time with the
-       time that the added bytes take at $\beta_\textrm{link}$. Which
-       properties of these collectives, other than their size, set their
-       cost?
+    1. How many collectives per step does the conversion add to `resnet18`?
+       Measure `step_time` with the converted model at $k = 2$ and $k = 4$
+       under weak scaling, and compare the added time with the time that the
+       added bytes take at $\beta_\textrm{link}$ per byte. Which properties of
+       these collectives, other than their size, set their cost?
    :exlabel:`ex_mgp-syncbn`
 :end_tab:
 
@@ -1282,13 +1281,13 @@ same model would lose almost nothing.
        vectors they carry as well as the calls. What does each of them
        carry?
     1. Call `model.eval()` before compiling, so that every `BatchNorm`
-       normalizes with its running averages, and count the allreduces
-       again. Measure `step_time` with and without this change at $k = 1$,
-       $k = 2$ and $k = 4$. Separate what making the statistics global
-       costs per step from what computing batch statistics costs on a
-       single GPU, and compare the cost of global statistics with the time
-       that the added bytes take at $\beta_\textrm{link}$. Which properties
-       of these collectives, other than their size, set their cost?
+       normalizes with its running averages, and count the allreduces again.
+       Measure `step_time` with and without this change at $k = 1$, $k = 2$ and
+       $k = 4$. Separate what making the statistics global costs per step from
+       what computing batch statistics costs on a single GPU, and compare the
+       cost of global statistics with the time that the added bytes take at
+       $\beta_\textrm{link}$ per byte. Which properties of these collectives,
+       other than their size, set their cost?
    :exlabel:`ex_mgp-syncbn`
 :end_tab:
 
@@ -1329,8 +1328,8 @@ how much of the exchange does overlap hide?
 - explain how buckets overlap the allreduce with the backward pass, and
   when they cannot;
 - check a data-parallel step against one GPU, batch norm included;
-- predict the exposed communication from $S/\beta_\textrm{link}$
-  ($\beta_\textrm{link}$: the bytes per second each GPU sends in an
+- predict the exposed communication from $S\,\beta_\textrm{link}$
+  ($\beta_\textrm{link}$: the time per byte that each GPU sends in an
   allreduce), and split the measured time into its causes.
 
 **Running example:** ResNet-18 on our four RTX 4090s, which have no
@@ -1617,7 +1616,7 @@ does not.
 [Check]{.kicker}
 
 $S$ = 44.7 MB of gradients. Each GPU sends $2(k-1)/k \cdot S$ in a ring,
-at $\beta_\textrm{link} \approx$ 2.4 GB/s on our machine. How long is the
+at a bus bandwidth of about 2.4 GB/s on our machine. How long is the
 allreduce at $k = 2$ and at $k = 4$, if nothing overlaps?
 
 ::: {.fragment .fade-up}
@@ -1634,7 +1633,7 @@ share.
 
 Weak scaling keeps the computation per GPU, so
 $t_{\textrm{step}}(k) - t_{\textrm{step}}(1)$ is the exposed
-communication. No overlap: $\frac{2(k-1)}{k} S/\beta_\textrm{link}$.
+communication. No overlap: $\frac{2(k-1)}{k} S\,\beta_\textrm{link}$.
 
 @!multi-gpu-practice-ddp-really-run-5
 
@@ -1650,7 +1649,7 @@ One GPU; two GPUs that skip the allreduce; two GPUs. Device time on GPU 0:
 
 @!multi-gpu-practice-predicted-and-measured-communication-1
 
-- NCCL's kernels: about $S/\beta_\textrm{link}$, as predicted.
+- NCCL's kernels: about $S\,\beta_\textrm{link}$, as predicted.
 - The kernels beside them run slower: NCCL copies through host memory with
   GPU kernels of its own.
 
@@ -1697,9 +1696,9 @@ different $\beta_\textrm{link}$.
 - Buckets overlap allreduces with the backward; the last stays exposed.
 - One-step check: DDP equals one GPU accumulating over the shards.
 - ResNet-18, weak scaling: 1.8× on two GPUs, 3.3× on four.
-- Exposed time near $S/\beta_\textrm{link}$: the allreduce overlaps,
+- Exposed time near $S\,\beta_\textrm{link}$: the allreduce overlaps,
   but the computation beside it slows down.
-- Copy engines: $\beta_\textrm{link}$ four to five times higher, but
+- Copy engines: bus bandwidth four to five times higher, but
   DDP training deadlocks.
 
 **Next:** every GPU still holds the whole training state, 16 bytes per
@@ -1715,9 +1714,9 @@ the GPUs.
 - Buckets overlap allreduces with the backward; the last stays exposed.
 - One-step check and compiled program: global batch-norm statistics.
 - ResNet-18, weak scaling: 1.7× on two GPUs, 3.1× on four.
-- Exposed time near $S/\beta_\textrm{link}$: half of it runs alone, and
+- Exposed time near $S\,\beta_\textrm{link}$: half of it runs alone, and
   the computation beside the rest slows down.
-- Copy engines: $\beta_\textrm{link}$ four to five times higher; check
+- Copy engines: bus bandwidth four to five times higher; check
   it on the training run.
 
 **Next:** every GPU still holds the whole training state, 16 bytes per

@@ -303,15 +303,14 @@ step = lambda X, Y: jit_step(model, optimizer, X, Y)
 record('baseline', tokens_per_second(step, windows(corpus, 64)))
 ```
 
-The windows of the baseline spread at least ten times as widely as those
-of every later configuration, as expected: this step still leaves work to
-the host. A profile shows where its time goes.
-`profile` records five steps with `d2l.kernel_times` and prints them
-with `d2l.show_profile` (:numref:`subsec_perf-profiler`): the time during which the device runs
-kernels against the wall-clock time of a step, the share of the matrix
-products, counting fused attention kernels among them, and the largest
-kernels. It also keeps the kernel times for the account at the end of the
-section.
+The windows of the baseline spread at least ten times as widely as those of
+every later configuration, as expected: this step still leaves work to the
+host. A profile shows where its time goes. `profile` records five steps with
+`d2l.kernel_times` and prints them with `d2l.show_profile`
+(:numref:`subsec_perf-profiler`): the time during which the device runs kernels
+against the wall-clock time of a step, the share of the matrix products,
+counting fused attention kernels among them, and the largest kernels. It also
+keeps the kernel times for the account at the end of the section.
 
 ```{.python .input #fast-transformer-the-baseline-2}
 %%tab pytorch, jax
@@ -382,17 +381,17 @@ logits as the original one.
 :end_tab:
 
 :begin_tab:`jax`
-Our step is already fused, and the device waited for 2% of it, so less
-host work can gain at most 2% here. We remove the host work all the same.
-It is a fixed cost per step, hidden only while the device's own step is
-longer, and every later change shortens that step. `nnx.jit` lets us pass
-the model and the optimizer, Python objects that hold arrays, to a
-compiled function, and on every call it walks through both objects to
-collect their arrays and writes the results back. We time this work alone with compiled functions that do nothing, called through
-`nnx.jit`; through `nnx.jit` with `graph=False`, which treats the two
-objects as trees of arrays; and through `nnx.jit_partial` with
-`graph=False`, which also binds them to the function once, so that later
-calls pass only the minibatch.
+Our step is already fused, and the device waited for 2% of it, so less host
+work can gain at most 2% here. We remove the host work all the same. It is a
+fixed cost per step, hidden only while the device's own step is longer, and
+every later change shortens that step. `nnx.jit` lets us pass the model and the
+optimizer, Python objects that hold arrays, to a compiled function, and on
+every call it walks through both objects to collect their arrays and writes the
+results back. We time this work alone with compiled functions that do nothing,
+called through `nnx.jit`; through `nnx.jit` with `graph=False`, which treats
+the two objects as trees of arrays; and through `nnx.jit_partial` with
+`graph=False`, which also binds them to the function once, so that later calls
+pass only the minibatch.
 :end_tab:
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-1}
@@ -562,16 +561,14 @@ record('+ bf16', tokens_per_second(step, windows(corpus, 64)))
 The logits agree to within one percent.
 
 :begin_tab:`pytorch`
-Throughput rises by about three quarters: more than the factor of 1.55
-that halving the products alone would give, since they took 71% of the
-step, and less than 2. The surplus has two sources: the bf16 products run
-closer to their
-peak than the tf32 ones did, and the kernels between them move fewer
-bytes. They do not move half as many, because the normalizations, the residual stream, the
-casts, and the optimizer update still carry fp32 values. The attention
-needed no new kernel: since the baseline, `F.scaled_dot_product_attention`
-has run a fused one, which never writes the attention weights to device
-memory.
+Throughput rises by about three quarters: more than the factor of 1.55 that
+halving the products alone would give, since they took 71% of the step, and
+less than 2. The surplus has two sources: the bf16 products run closer to their
+peak than the tf32 ones did, and the kernels between them move fewer bytes.
+They do not move half as many, because the normalizations, the residual stream,
+the casts, and the optimizer update still carry fp32 values. The attention
+needed no new kernel: since the baseline, `F.scaled_dot_product_attention` has
+run a fused one, which never writes the attention weights to device memory.
 :end_tab:
 
 :begin_tab:`jax`
@@ -618,11 +615,11 @@ record('+ fused attention', tokens_per_second(step, windows(corpus, 64)))
 ```
 
 :begin_tab:`jax`
-The fused attention raises throughput by about another third, and the
-logits still agree with the fp32 ones to within one percent. It leaves
-the arithmetic of the attention as it was and removes the traffic of its weights: this is the
-bandwidth-bound part of the step responding. Together, the two rows
-nearly double the throughput.
+The fused attention raises throughput by about another third, and the logits
+still agree with the fp32 ones to within one percent. It leaves the arithmetic
+of the attention as it was and removes the traffic of its weights: this is the
+bandwidth-bound part of the step responding. Together, the two rows nearly
+double the throughput.
 :end_tab:
 
 ### Larger Minibatches
@@ -879,15 +876,15 @@ update, the GPUs sum their gradients with an allreduce. The cost model of
 
 $$
 t_{\textrm{compute}}(B/k) + c\,\alpha +
-\frac{2(k-1)}{k}\,\frac{S}{\beta_{\textrm{link}}}.
+\frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}.
 $$
 
 Here $B/k$ is each GPU's share of a minibatch of $B$ examples, $c$ is the
-number of allreduce calls, each with a fixed cost $\alpha$, $S$ is the
-size of the gradients in bytes, and $\beta_{\textrm{link}}$ is the rate at
-which each GPU sends during a large allreduce. Our GPUs stage every byte
-through host memory, and :numref:`sec_multi_gpu_concise` measured their
-$\beta_{\textrm{link}}$ at about 2.4 GB/s.
+number of allreduce calls, each with a fixed cost $\alpha$, $S$ is the size of
+the gradients in bytes, and $\beta_{\textrm{link}}$ is the time per byte that
+each GPU sends during a large allreduce. Our GPUs stage every byte through host
+memory, and :numref:`sec_multi_gpu_concise` measured a bus bandwidth of about
+2.4 GB/s between them, so $\beta_{\textrm{link}}$ is about 0.42 ns per byte.
 
 In our runs the minibatch per GPU stays fixed as GPUs are added, which is
 called *weak scaling*, so the computation term stays the time of a step on
@@ -907,8 +904,8 @@ time than a step.
 
 Both terms are known before we run anything. The gradients of our GPT
 occupy $S = 76$ MB in fp32, so the allreduce should take
-$S/\beta_{\textrm{link}} \approx 31$ ms on two GPUs and
-$1.5\, S/\beta_{\textrm{link}} \approx 47$ ms on four. A compiled fp32 step
+$S\,\beta_{\textrm{link}} \approx 31$ ms on two GPUs and
+$1.5\, S\,\beta_{\textrm{link}} \approx 47$ ms on four. A compiled fp32 step
 at batch 64 takes a little over 20 ms, less than either; a bf16 step at
 batch 512 takes 90 to 100 ms. For the first configuration the cost model
 predicts a loss from a second GPU, a speedup of about 0.85, and little
@@ -1036,23 +1033,22 @@ for bf16, batch_size in ((False, 64), (True, 512)):
                   f'measured {speed / one:.2f}x')
 ```
 
-The allreduce takes 31 ms on two GPUs and 48 ms on four, within a
-millisecond of the prediction. At batch 64 two GPUs are slower than one,
-and four gain less than a factor of 1.5. At batch 512 in bf16 the step is
-several times longer while the allreduce stays the same, and the
-prediction rises to about three quarters of linear scaling on two GPUs and
-two thirds on four. In the measurement, four GPUs process about three
-times as many tokens per second as one, the largest gain of any single
-change in this section. Each measurement lies above its prediction or within a few
-percent below it, and the distance above is the part of the allreduce
-that ran during the backward pass. The cost model made two predictions of
-opposite sign here, a loss from a second GPU for the short step and a gain
-for the long one, and both held. On this machine, data parallelism gains
-much only once the step on each GPU is several times longer than the
-allreduce.
+The allreduce takes 31 ms on two GPUs and 48 ms on four, within a millisecond
+of the prediction. At batch 64 two GPUs are slower than one, and four gain less
+than a factor of 1.5. At batch 512 in bf16 the step is several times longer
+while the allreduce stays the same, and the prediction rises to about three
+quarters of linear scaling on two GPUs and two thirds on four. In the
+measurement, four GPUs process about three times as many tokens per second as
+one, the largest gain of any single change in this section. Each measurement
+lies above its prediction or within a few percent below it, and the distance
+above is the part of the allreduce that ran during the backward pass. The cost
+model made two predictions of opposite sign here, a loss from a second GPU for
+the short step and a gain for the long one, and both held. On this machine,
+data parallelism gains much only once the step on each GPU is several times
+longer than the allreduce.
 
 GPUs that share an NVLink domain send to each other at up to 900 GB/s in
-each direction, hundreds of times our $\beta_{\textrm{link}}$
+each direction, hundreds of times our bus bandwidth
 (:numref:`subsec_hw-interconnects`). The allreduce of 76 MB then takes a
 fraction of a millisecond, and the cost model predicts nearly linear
 scaling even at batch 64.
@@ -1290,20 +1286,19 @@ more than twice as fast, because in bf16 and at the larger minibatch they
 also run closer to their peak, and the kernels between them lost about two
 fifths of their time.
 
-What would make this step twice as fast again? Not faster arithmetic
-alone. The products are within a fifth of their peak, and even fp8, which
-runs at twice the bf16 rate on this card (:numref:`sec_hardware`), would
-shorten only them: the step would become about 1.4 times faster, and at
-most 1.5 even if the fp8 products ran at their peak. Nor fewer bytes
-alone. With every kernel between the products gone, the step would still
-take the 7 ms of its products, only 1.7 to 1.8 times faster than now. A
-factor of two needs both. Normalizations and activations fused into the
-kernels of the products, a residual stream in fewer bits, and kernels
-written for one model cut the bytes between the products, and fp8
-shortens the products themselves. Such kernels, training in fp8 with a
-scale for each tensor or block of values, and training on many machines
-belong to the Language Models part. After everything, two fifths of the step is still memory
-traffic, which is where this chapter began.
+What would make this step twice as fast again? Not faster arithmetic alone. The
+products are within a fifth of their peak, and even fp8, which runs at twice
+the bf16 rate on this card (:numref:`sec_hardware`), would shorten only them:
+the step would become about 1.4 times faster, and at most 1.5 even if the fp8
+products ran at their peak. Nor fewer bytes alone. With every kernel between
+the products gone, the step would still take the 7 ms of its products, only 1.7
+to 1.8 times faster than now. A factor of two needs both. Normalizations and
+activations fused into the kernels of the products, a residual stream in fewer
+bits, and kernels written for one model cut the bytes between the products, and
+fp8 shortens the products themselves. Such kernels, training in fp8 with a
+scale for each tensor or block of values, and training on many machines belong
+to the Language Models part. After everything, two fifths of the step is still
+memory traffic, which is where this chapter began.
 
 ## Summary
 
@@ -1605,7 +1600,6 @@ one decimal.
 :::
 :::
 
-
 ::: {.slide title="The Last Profile Bounds What the Next Change Can Gain"}
 [Predict first]{.kicker}
 
@@ -1820,10 +1814,10 @@ A change gains only where the limit lies: order matters.
 [Data parallelism]{.kicker}
 
 $$t_{\textrm{step}}(k) \approx t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k),
-\quad t_{\textrm{allreduce}} = \tfrac{2(k-1)}{k}\,\tfrac{S}{\beta_{\textrm{link}}}$$
+\quad t_{\textrm{allreduce}} = \tfrac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}$$
 
-- $S$ = 76 MB of fp32 gradients; link rate
-  $\beta_{\textrm{link}} \approx 2.4$ GB/s through host memory.
+- $S$ = 76 MB of fp32 gradients; $\beta_{\textrm{link}} \approx 0.42$ ns per
+  byte (bus bandwidth about 2.4 GB/s) through host memory.
 - Weak scaling (fixed minibatch per GPU): speedup
   $k\,t_{\textrm{step}}(1) / (t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k))$.
 

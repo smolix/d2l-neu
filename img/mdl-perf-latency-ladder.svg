@@ -1501,8 +1501,8 @@ z
    </g>
    <g id="patch_12">
     <path d="M 157.724375 109.242535 
-L 352.666402 109.242535 
-L 352.666402 87.121426 
+L 374.697268 109.242535 
+L 374.697268 87.121426 
 L 157.724375 87.121426 
 z
 " clip-path="url(#p5c23622255)" style="fill: #ff7f0e"/>
@@ -1784,22 +1784,24 @@ z
    </g>
    <g id="text_23">
     <g id="patch_22">
-     <path d="M 357.626402 107.84098 
-L 400.684839 107.84098 
-L 400.684839 88.52298 
-L 357.626402 88.52298 
+     <path d="M 379.657268 107.84098 
+L 435.638518 107.84098 
+L 435.638518 88.52298 
+L 379.657268 88.52298 
 z
 " style="fill: #ffffff"/>
     </g>
-    <!-- 5–15 µs -->
-    <g transform="translate(358.666402 102.56298) scale(0.13 -0.13)">
-     <use xlink:href="#SourceSans3-Regular-53a"/>
-     <use xlink:href="#SourceSans3-Regular-588" transform="translate(49.703125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-536" transform="translate(97.703125 0)"/>
-     <use xlink:href="#SourceSans3-Regular-53a" transform="translate(147.40625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1" transform="translate(197.109375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-348" transform="translate(217.109375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(273.3125 0)"/>
+    <!-- 10–100 µs -->
+    <g transform="translate(380.697268 102.56298) scale(0.13 -0.13)">
+     <use xlink:href="#SourceSans3-Regular-536"/>
+     <use xlink:href="#SourceSans3-Regular-535" transform="translate(49.703125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-588" transform="translate(99.40625 0)"/>
+     <use xlink:href="#SourceSans3-Regular-536" transform="translate(147.40625 0)"/>
+     <use xlink:href="#SourceSans3-Regular-535" transform="translate(197.109375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-535" transform="translate(246.8125 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1" transform="translate(296.515625 0)"/>
+     <use xlink:href="#SourceSans3-Regular-348" transform="translate(316.515625 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(372.71875 0)"/>
     </g>
    </g>
    <g id="text_24">

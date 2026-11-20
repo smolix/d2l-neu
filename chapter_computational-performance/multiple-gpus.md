@@ -559,19 +559,18 @@ Every device ends with the sum, and the bytes per device creep toward
 $2S$: each doubling of the ring adds less traffic per device than the one
 before.
 
-The byte count does not determine the time on its own. The ring takes
-$2(k-1)$ steps one after another, and each step includes the fixed time of
-a transfer, so the fixed cost of a ring allreduce grows linearly in $k$
-while its bytes stay below $2S$. For small messages, where the fixed cost dominates,
-collective libraries switch to algorithms with fewer sequential steps,
-such as trees, whose depth grows only like $\log_2 k$; exercise
-:exref:`ex_mg-latency` derives where the crossover lies. On our machine
-the ring also has fewer independent links than its picture suggests.
-Every hop passes through host memory, so all hops share the host's memory
-system and two PCIe host bridges (:numref:`fig_pcie_topology`).
-:eqref:`eq_ring_traffic` says how many
-bytes each device must move. How fast they move is a property of the
-machine that we have to measure.
+The byte count does not determine the time on its own. The ring takes $2(k-1)$
+steps one after another, and each step includes the fixed time of a transfer,
+so the fixed cost of a ring allreduce grows linearly in $k$ while its bytes
+stay below $2S$. For small messages, where the fixed cost dominates, collective
+libraries switch to algorithms with fewer sequential steps, such as trees,
+whose depth grows only like $\log_2 k$; exercise :exref:`ex_mg-latency` derives
+where the crossover lies. On our machine the ring also has fewer independent
+links than its picture suggests. Every hop passes through host memory, so all
+hops share the host's memory system and two PCIe host bridges
+(:numref:`fig_pcie_topology`). :eqref:`eq_ring_traffic` says how many bytes
+each device must move. How fast they move is a property of the machine that we
+have to measure.
 
 ## Communication Cost and Scaling
 :label:`subsec_mg-accounting`
@@ -587,32 +586,35 @@ backward pass and the update. On $k$ devices, each device does this work
 for $B/k$ examples, and the step also waits for the allreduce of the $S$
 gradient bytes that every device holds. We charge an allreduce as the
 latency-bandwidth model charges a single message :cite:`Hockney.1994`: a
-fixed cost $\alpha$ that every call pays however few bytes move, plus the
-bytes that each device sends divided by a rate $\beta_{\textrm{link}}$. The subscript keeps the link
-apart from $\beta$, the memory bandwidth of the GPU in the roofline of
-:numref:`sec_perf_model`; on our machine the two differ by orders of
-magnitude.
+fixed cost $\alpha$ that every call pays however few bytes move, plus a
+time $\beta_{\textrm{link}}$ for every byte that a device sends. A message
+of $S$ bytes then costs $\alpha + S\,\beta_{\textrm{link}}$. Note that
+$\beta_{\textrm{link}}$ is a time per byte, the convention of the
+literature on collective communication :cite:`Thakur.Rabenseifner.Gropp.2005`,
+while $\beta$, the memory bandwidth in the roofline of
+:numref:`sec_perf_model`, is a rate in bytes per second.
 
-For $\beta_{\textrm{link}}$ we take the rate at which one device sends
-while a large allreduce runs, which collective benchmarks report as the
-*bus bandwidth*. Each device of a ring sends the bytes of
-:eqref:`eq_ring_traffic`, so the step time on $k$ devices is approximately
+Collective benchmarks report the rate at which one device sends while a
+large allreduce runs and call it the *bus bandwidth*;
+$\beta_{\textrm{link}}$ is its inverse. Each device of a ring sends the
+bytes of :eqref:`eq_ring_traffic`, so the step time on $k$ devices is
+approximately
 
 $$
 t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + c\,\alpha +
-\frac{2(k-1)}{k}\,\frac{S}{\beta_{\textrm{link}}},
+\frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}},
 $$
 :eqlabel:`eq_dp_cost`
 
 where $c$ is the number of allreduce calls per step. At $k = 1$ there is
 no allreduce, so $c = 0$, and the last term vanishes too. At $k = 2$ the
-last term is simply $S/\beta_{\textrm{link}}$. As devices are added, only
+last term is simply $S\,\beta_{\textrm{link}}$. As devices are added, only
 the first term shrinks. The bytes per device grow from $S$ toward $2S$,
 and $\alpha$ grows as well: a ring allreduce makes $2(k-1)$ transfers one
 after another, and each pays its own start-up time, so for a ring $\alpha$
 grows linearly in $k$. A second device therefore shortens the step only
 if $t_{\textrm{compute}}(B) - t_{\textrm{compute}}(B/2)$, the
-computation it takes over, exceeds $c\alpha + S/\beta_{\textrm{link}}$,
+computation it takes over, exceeds $c\alpha + S\,\beta_{\textrm{link}}$,
 the communication it adds. The three quantities $t_{\textrm{compute}}$,
 $\alpha$, and $\beta_{\textrm{link}}$ can each be measured on their own,
 and we do so for LeNet.
@@ -620,14 +622,13 @@ and we do so for LeNet.
 ### Latency and Bandwidth of the Allreduce
 
 Let us measure the two constants with two allreduces at the extremes. An
-allreduce of a single number moves almost no bytes, so its time is
-$\alpha$. An allreduce of $2^{26}$ floats, about 268 MB per device, takes
-so long that $\alpha$ hardly matters, and on two devices
-$\beta_{\textrm{link}}$ is those bytes divided by $t - \alpha$, where $t$
-is its time. A training loop does not wait for the devices after each
-allreduce; the next kernels queue behind it. We therefore time many calls in a row and wait
-once at the end, since a wait after every call would add its own delay to
-$\alpha$.
+allreduce of a single number moves almost no bytes, so its time is $\alpha$. An
+allreduce of $2^{26}$ floats, about 268 MB per device, takes so long that
+$\alpha$ hardly matters, and on two devices $\beta_{\textrm{link}}$ is $t -
+\alpha$ divided by those bytes, where $t$ is its time. A training loop does not
+wait for the devices after each allreduce; the next kernels queue behind it. We
+therefore time many calls in a row and wait once at the end, since a wait after
+every call would add its own delay to $\alpha$.
 
 ```{.python .input #multiple-gpus-the-accounting}
 %%tab pytorch
@@ -667,19 +668,21 @@ calls as it times (ten rounds of `calls` against three), because the first
 few hundred allreduces of a run can be slower than the rest, which would
 inflate $\alpha$. This cell times the star that we wrote, which on two
 devices is two copies of all the bytes, one after the other. On our
-machine $\beta_{\textrm{link}}$ is about 9.5 GB/s, so each copy runs at
-about 19 GB/s, a little below the 23 GB/s that a pinned copy from host
-memory reached in :numref:`sec_hardware`. The fixed cost $\alpha$ is that
+machine the bus bandwidth is about 9.5 GB/s ($\beta_{\textrm{link}}$
+about 0.1 ns per byte), so each copy runs at about 19 GB/s, a little
+below the 23 GB/s that a pinned copy from host memory reached in
+:numref:`sec_hardware`. The fixed cost $\alpha$ is that
 of two driver-managed copies.
 :end_tab:
 
 :begin_tab:`jax`
 `d2l.Benchmark` already makes its calls in a row and waits once, for the
 last result. This cell times `psum`, which XLA hands to NCCL; on our
-machine $\beta_{\textrm{link}}$ is about 2.5 GB/s. On the path through
-host memory between our GPUs, NCCL falls back to a transport that moves
-fewer bytes per second than the PCIe links carry; :numref:`sec_multi_gpu_concise`
-measures this transport and a workaround for it. Each call of `allreduce`
+machine the bus bandwidth is about 2.5 GB/s, so $\beta_{\textrm{link}}$
+is about 0.4 ns per byte. On the path through host memory between our
+GPUs, NCCL falls back to a transport that moves fewer bytes per second
+than the PCIe links carry; :numref:`sec_multi_gpu_concise` measures this
+transport and a workaround for it. Each call of `allreduce`
 dispatches a compiled program of its own, so $\alpha$ includes the time of
 that dispatch.
 :end_tab:
@@ -690,7 +693,7 @@ bytes, the two GPUs that took part, and the path between them
 ours comes from GPUs 0 and 1.
 
 At these rates, moving LeNet's 247 KB of gradients takes
-$S/\beta_{\textrm{link}}$, at most about a tenth of a millisecond and less
+$S\,\beta_{\textrm{link}}$, at most about a tenth of a millisecond and less
 than $\alpha$. For a gradient this small, then, the fixed cost should
 matter more than the bandwidth of the link. If so, it matters a great deal
 whether the gradients travel as one message or as ten. We allreduce
@@ -755,7 +758,7 @@ large buffers before they send them, as our training step does by hand.
 
 ### LeNet on One and Two GPUs
 
-A step on two GPUs spends $\alpha + S/\beta_{\textrm{link}}$ on one
+A step on two GPUs spends $\alpha + S\,\beta_{\textrm{link}}$ on one
 allreduce. What it saves depends on how the time of the local work
 depends on the batch, and the profiler of :numref:`subsec_perf-profiler`
 can tell us before we run anything on two GPUs. Recall from
@@ -861,7 +864,7 @@ $k$ devices takes about
 $$
 t_{\textrm{step}}(k) \approx \max\bigl(k\,h_{\textrm{step}},\;
 t_{\textrm{dev}}(B/k)\bigr) + c\,\alpha +
-\frac{2(k-1)}{k}\,\frac{S}{\beta_{\textrm{link}}}.
+\frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}.
 $$
 :eqlabel:`eq_dp_one-launcher`
 
@@ -993,7 +996,7 @@ exchange, predicts the slowdown.
 :begin_tab:`pytorch`
 :eqref:`eq_dp_cost` predicts 2.8 ms, the time of one GPU, and the step
 takes 5.6 ms, within a few percent of the one-launcher prediction. The
-exchange, $\alpha + S/\beta_{\textrm{link}}$, is 0.08 ms, about one percent
+exchange, $\alpha + S\,\beta_{\textrm{link}}$, is 0.08 ms, about one percent
 of the step.
 :end_tab:
 
@@ -1045,7 +1048,7 @@ with one allreduce, it helps when
 
 $$
 \max\bigl(2h_{\textrm{step}},\; t_{\textrm{dev}}(b)\bigr) + \alpha +
-\frac{S}{\beta_{\textrm{link}}} \;<\;
+S\,\beta_{\textrm{link}} \;<\;
 2\max\bigl(h_{\textrm{step}},\; t_{\textrm{dev}}(b)\bigr).
 $$
 
@@ -1055,12 +1058,12 @@ h_{\textrm{step}}$, the left side exceeds $2h_{\textrm{step}}$ and the
 right side equals it: no exchange, however fast, can help. If the device
 works long enough for the host to feed both GPUs,
 $t_{\textrm{dev}}(b) \ge 2h_{\textrm{step}}$, the condition becomes
-$t_{\textrm{dev}}(b) > \alpha + S/\beta_{\textrm{link}}$: the device time
+$t_{\textrm{dev}}(b) > \alpha + S\,\beta_{\textrm{link}}$: the device time
 that the second GPU takes over must exceed the exchange. In between, for
 $h_{\textrm{step}} < t_{\textrm{dev}}(b) < 2h_{\textrm{step}}$, the
 condition reads
 $t_{\textrm{dev}}(b) > h_{\textrm{step}} + (\alpha +
-S/\beta_{\textrm{link}})/2$, and the gain, if any, stays below two. In
+S\,\beta_{\textrm{link}})/2$, and the gain, if any, stays below two. In
 short, a second GPU never helps a host-bound step, and it helps once the
 host can feed both devices and the work it takes over outlasts the
 exchange it adds. For LeNet's 247 KB the exchange is a fraction of a
@@ -1189,13 +1192,12 @@ scaling) or the per-device batch (weak scaling).
 ## Exercises
 
 1. **Data versus pipeline parallelism.** Consider a stack of $L$ fully
-   connected layers of width $d$, with fp32 weights and no biases, trained
-   on two GPUs with minibatch size $B$. Data parallelism allreduces the
-   gradients of all weights. Two-stage pipeline
-   parallelism (:numref:`fig_splitting`) places the first $L/2$ layers on one GPU and
-   the rest on the other, so the forward pass sends the $B \times d$
-   activations at the cut to the second GPU and the backward pass returns
-   their gradient.
+   connected layers of width $d$, with fp32 weights and no biases, trained on
+   two GPUs with minibatch size $B$. Data parallelism allreduces the gradients
+   of all weights. Two-stage pipeline parallelism (:numref:`fig_splitting`)
+   places the first $L/2$ layers on one GPU and the rest on the other, so the
+   forward pass sends the $B \times d$ activations at the cut to the second GPU
+   and the backward pass returns their gradient.
     1. Count the bytes that cross between the two GPUs per step in each
        scheme, and evaluate both for $L = 32$, $d = 4096$, and $B = 256$.
        For which relation between $B$, $L$, and $d$ does data parallelism
@@ -1234,21 +1236,20 @@ scaling) or the per-device batch (weak scaling).
    not shrink with the shard and $t_1$ is the time per example. Neglect
    the fixed cost of the one allreduce per step. By :eqref:`eq_dp_cost`,
    one step at a fixed global batch $B$ then takes
-   $$t_{\textrm{step}}(k) = t_0 + \frac{B\,t_1}{k} + \frac{2(k-1)}{k}\,\frac{S}{\beta_{\textrm{link}}},$$
+   $$t_{\textrm{step}}(k) = t_0 + \frac{B\,t_1}{k} + \frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}},$$
    with no communication at $k = 1$. The strong-scaling speedup is
    $R(k) = t_{\textrm{step}}(1) / t_{\textrm{step}}(k)$.
     1. Show that $R(k) > 1$ holds for one $k > 1$ exactly when it holds
        for every $k > 1$, and find the condition. Find the limit of $R(k)$
        as $k \to \infty$.
     1. A model with 11.2 million fp32 parameters has $t_0 = 2$ ms and
-       $t_1 = 0.2$ ms per example, and it is trained with $B = 256$.
-       Compute $R(2)$, $R(4)$, and the limit for
-       $\beta_{\textrm{link}} = 20$ GB/s and for
-       $\beta_{\textrm{link}} = 5$ GB/s. Find the rate
-       $\beta_{\textrm{link}}$ below which no number of GPUs speeds up
-       this model.
+       $t_1 = 0.2$ ms per example, and it is trained with $B = 256$. Compute
+       $R(2)$, $R(4)$, and the limit for a bus bandwidth of 20 GB/s
+       ($\beta_{\textrm{link}} = 0.05$ ns per byte) and of 5 GB/s
+       ($\beta_{\textrm{link}} = 0.2$ ns per byte). Find the bus bandwidth
+       below which no number of GPUs speeds up this model.
     1. Sending the gradients in bf16 instead of fp32 halves $S$. For
-       $\beta_{\textrm{link}} = 5$ GB/s, recompute $R(4)$ and the limit of
+       a bus bandwidth of 5 GB/s, recompute $R(4)$ and the limit of
        $R(k)$, and state which of the two gains more from the halving.
 
 1. **Parameter servers and the ring.** Before collective libraries became
@@ -1271,15 +1272,14 @@ scaling) or the per-device batch (weak scaling).
     part 1 is on paper. The star pattern routes all traffic through
     device 0, while the ring of :numref:`fig_ring_allreduce` spreads it
     over all $k$ devices.
-    1. For $k$ devices holding $S$ bytes each, count the bytes that the
-       star and the ring move in total, and the bytes that the busiest
-       device sends and receives. The star starts its broadcast only after
-       its sum is complete. Predict the ratio of their times under two
-       assumptions. In the first, each device has one link that carries
-       $\beta_{\textrm{link}}$ bytes per second in each direction at the
-       same time, and all links work concurrently. In the second, the
-       machine runs one transfer at a time at $\beta_{\textrm{link}}$
-       bytes per second.
+    1. For $k$ devices holding $S$ bytes each, count the bytes that the star
+       and the ring move in total, and the bytes that the busiest device sends
+       and receives. The star starts its broadcast only after its sum is
+       complete. Predict the ratio of their times under two assumptions. In the
+       first, each device has one link that moves a byte in time
+       $\beta_{\textrm{link}}$ in each direction at the same time, and all
+       links work concurrently. In the second, the machine runs one transfer at
+       a time, again at $\beta_{\textrm{link}}$ per byte.
     1. Write `ring_allreduce(data)` with the interface of `allreduce`:
        split each tensor into $k$ chunks with `chunk`, and implement
        reduce-scatter and all-gather with explicit `.to()` copies. Check it
@@ -1295,15 +1295,14 @@ scaling) or the per-device batch (weak scaling).
     part 1 is on paper. The star pattern routes all traffic through
     device 0, while the ring of :numref:`fig_ring_allreduce` spreads it
     over all $k$ devices.
-    1. For $k$ devices holding $S$ bytes each, count the bytes that the
-       star and the ring move in total, and the bytes that the busiest
-       device sends and receives. The star starts its broadcast only after
-       its sum is complete. Predict the ratio of their times under two
-       assumptions. In the first, each device has one link that carries
-       $\beta_{\textrm{link}}$ bytes per second in each direction at the
-       same time, and all links work concurrently. In the second, the
-       machine runs one transfer at a time at $\beta_{\textrm{link}}$
-       bytes per second.
+    1. For $k$ devices holding $S$ bytes each, count the bytes that the star
+       and the ring move in total, and the bytes that the busiest device sends
+       and receives. The star starts its broadcast only after its sum is
+       complete. Predict the ratio of their times under two assumptions. In the
+       first, each device has one link that moves a byte in time
+       $\beta_{\textrm{link}}$ in each direction at the same time, and all
+       links work concurrently. In the second, the machine runs one transfer at
+       a time, again at $\beta_{\textrm{link}}$ per byte.
     1. Write `ring_allreduce` as a function under `jax.shard_map` that
        passes chunks to the neighboring device with `jax.lax.ppermute` and
        selects them with `jax.lax.axis_index`. Check it against
@@ -1333,26 +1332,26 @@ scaling) or the per-device batch (weak scaling).
        the gradients of two shards, and decide whether the rounding matters
        for SGD.
 
-1. **Latency in the allreduce.** ● The byte count of
-   :eqref:`eq_ring_traffic` ignores the fixed cost of starting a transfer.
-   Let one transfer of $n$ bytes over a link take
-   $\alpha_{\textrm{hop}} + n/\beta_{\textrm{link}}$, where
-   $\beta_{\textrm{link}}$ is the rate of one link in one direction; in a
-   ring every device sends at that rate, so it is also the bus bandwidth
-   of :eqref:`eq_dp_cost`. A ring allreduce of $S$ bytes on $k$ devices
-   makes $2(k-1)$ transfers of $S/k$ bytes one after another, so
-   $$t_{\textrm{ring}} = 2(k-1)\left(\alpha_{\textrm{hop}} + \frac{S}{k\,\beta_{\textrm{link}}}\right).$$
+1. **Latency in the allreduce.** ● The byte count of :eqref:`eq_ring_traffic`
+   ignores the fixed cost of starting a transfer. Let one transfer of $n$ bytes
+   over a link take $\alpha_{\textrm{hop}} + n\,\beta_{\textrm{link}}$, where
+   $\beta_{\textrm{link}}$ is the time per byte of one link in one direction;
+   in a ring every device sends over one link at a time, so this is also the
+   $\beta_{\textrm{link}}$ of :eqref:`eq_dp_cost`. A ring allreduce of $S$
+   bytes on $k$ devices makes $2(k-1)$ transfers of $S/k$ bytes one after
+   another, so
+   $$t_{\textrm{ring}} = 2(k-1)\left(\alpha_{\textrm{hop}} + \frac{S}{k}\,\beta_{\textrm{link}}\right).$$
     1. A binary-tree allreduce sums up the tree and broadcasts back down.
        It takes $2\log_2 k$ steps, each of which sends the full $S$ bytes,
        so
-       $$t_{\textrm{tree}} = 2\log_2 k \left(\alpha_{\textrm{hop}} + \frac{S}{\beta_{\textrm{link}}}\right).$$
+       $$t_{\textrm{tree}} = 2\log_2 k \left(\alpha_{\textrm{hop}} + S\,\beta_{\textrm{link}}\right).$$
        Describe how the fixed and the byte term of each algorithm grow
        with $k$. For $k = 8$, $\alpha_{\textrm{hop}} = 10\ \mu\textrm{s}$,
-       and $\beta_{\textrm{link}} = 20$ GB/s, find the message size below
+       and a bus bandwidth of 20 GB/s, find the message size below
        which the tree is faster than the ring.
     1. The $\alpha$ of :eqref:`eq_dp_cost` is the fixed cost of a whole
        allreduce, $2(k-1)\alpha_{\textrm{hop}}$ for a ring. At $k = 2$
-       one allreduce takes $\alpha + S/\beta_{\textrm{link}}$. The message
+       one allreduce takes $\alpha + S\,\beta_{\textrm{link}}$. The message
        size $S_{1/2}$ at which it spends half of its time on the fixed cost
        is called its half-performance length. Express $S_{1/2}$ in
        $\alpha$ and $\beta_{\textrm{link}}$, and compute it from the
@@ -1578,20 +1577,21 @@ The byte count says how much moves; the machine decides how fast.
 
 $$
 t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + c\,\alpha +
-\frac{2(k-1)}{k}\,\frac{S}{\beta_{\textrm{link}}}
+\frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}
 $$
 
 - $t_{\textrm{compute}}(b)$: forward, backward, and update on $b$
   examples;
 - $c$ allreduce calls per step, each with fixed cost $\alpha$ (for a
   ring, $2(k-1)$ start-up times);
-- $S$ gradient bytes per device; $\beta_{\textrm{link}}$: rate at which a
-  device sends during a large allreduce (bus bandwidth).
+- $S$ gradient bytes per device; $\beta_{\textrm{link}}$: time per byte that a
+  device sends during a large allreduce, the inverse of the bus
+  bandwidth.
 
 ::: {.d2l-note .rule}
 Only the first term shrinks with $k$; the bytes grow toward $2S$. A second
 GPU helps only if
-$t_{\textrm{compute}}(B) - t_{\textrm{compute}}(B/2) > c\alpha + S/\beta_{\textrm{link}}$.
+$t_{\textrm{compute}}(B) - t_{\textrm{compute}}(B/2) > c\alpha + S\,\beta_{\textrm{link}}$.
 :::
 :::
 
@@ -1599,15 +1599,15 @@ $t_{\textrm{compute}}(B) - t_{\textrm{compute}}(B/2) > c\alpha + S/\beta_{\textr
 [Cost model]{.kicker}
 
 An allreduce of one float gives $\alpha$; one of $2^{26}$ floats
-(268 MB) gives $\beta_{\textrm{link}}$ = bytes $/ (t - \alpha)$:
+(268 MB) gives $\beta_{\textrm{link}} = (t - \alpha)/$bytes:
 
 @!multiple-gpus-the-accounting
 
-- Far below PCIe's 32 GB/s: every byte is copied into host memory and
-  out again.
-- LeNet's 247 KB: $S/\beta_{\textrm{link}}$ is at most about 0.1 ms, less
+- Bus bandwidth far below PCIe's 32 GB/s: every byte is copied into
+  host memory and out again.
+- LeNet's 247 KB: $S\,\beta_{\textrm{link}}$ is at most about 0.1 ms, less
   than $\alpha$.
-- The rate belongs to one allreduce, one pair of GPUs, and the path
+- The value belongs to one allreduce, one pair of GPUs, and the path
   between them.
 :::
 
@@ -1615,7 +1615,7 @@ An allreduce of one float gives $\alpha$; one of $2^{26}$ floats
 [Cost model]{.kicker}
 
 LeNet's 10 gradient tensors, sent one by one or concatenated; predicted
-as $c\,\alpha + S/\beta_{\textrm{link}}$ with $c = 10$ and $c = 1$:
+as $c\,\alpha + S\,\beta_{\textrm{link}}$ with $c = 10$ and $c = 1$:
 
 @!multiple-gpus-latency-and-bandwidth-of-the-allreduce-1
 
@@ -1644,12 +1644,12 @@ kernels, whatever the batch: half a minibatch saves little.
 
 One GPU's step is host time $h_{\textrm{step}}$. The host must issue the
 work of both GPUs, and serving two takes it about twice as long as
-serving one. The exchange $\alpha + S/\beta_{\textrm{link}}$ is a fraction
+serving one. The exchange $\alpha + S\,\beta_{\textrm{link}}$ is a fraction
 of a millisecond. Predict the two-GPU step.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** About $2h_{\textrm{step}} + \alpha + S/\beta_{\textrm{link}}$:
+**Answer.** About $2h_{\textrm{step}} + \alpha + S\,\beta_{\textrm{link}}$:
 twice the one-GPU step. Each GPU waits while the host serves the other,
 so the second GPU makes the step slower, whatever the exchange costs.
 :::
@@ -1677,7 +1677,7 @@ twice as long as one. The host's work adds up over the devices it feeds.
 $$
 t_{\textrm{step}}(k) \approx \max\bigl(k\,h_{\textrm{step}},\,
 t_{\textrm{dev}}(B/k)\bigr) + c\,\alpha +
-\frac{2(k-1)}{k}\,\frac{S}{\beta_{\textrm{link}}}
+\frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}
 $$
 
 Five epochs at minibatch 256, predicted from one-GPU step times and the
@@ -1698,7 +1698,7 @@ $b$ examples per GPU; one step on two GPUs against two steps on one:
 
 $$
 \max(2h_{\textrm{step}}, t_{\textrm{dev}}(b)) + \alpha +
-\frac{S}{\beta_{\textrm{link}}} < 2\max(h_{\textrm{step}}, t_{\textrm{dev}}(b))
+S\,\beta_{\textrm{link}} < 2\max(h_{\textrm{step}}, t_{\textrm{dev}}(b))
 $$
 
 - $t_{\textrm{dev}}(b)$: device-busy time for $b$ examples.
@@ -1706,7 +1706,7 @@ $$
 - $h_{\textrm{step}} < t_{\textrm{dev}}(b) < 2h_{\textrm{step}}$: a gain
   below two at best.
 - $t_{\textrm{dev}}(b) \ge 2h_{\textrm{step}}$: true iff
-  $t_{\textrm{dev}}(b) > \alpha + S/\beta_{\textrm{link}}$.
+  $t_{\textrm{dev}}(b) > \alpha + S\,\beta_{\textrm{link}}$.
 :::
 
 ::: {.slide title="At 32,768 Images per GPU, Two GPUs Nearly Double the Throughput"}
@@ -1730,14 +1730,14 @@ Training costs about 6 FLOPs per parameter and token. One step: 32,768
 tokens (micro-batches of about 2,000 tokens, gradients accumulated, one
 allreduce; the 16 GB of fp32 Adam state fits on each 24 GB card); about
 35 TFLOP/s achieved per GPU in bf16; $S$ = 4 GB of fp32 gradients.
-Predict the speedup of two GPUs over one for $\beta_{\textrm{link}}$ =
-10 GB/s and for 2.5 GB/s.
+Predict the speedup of two GPUs over one for a bus bandwidth of
+10 GB/s and of 2.5 GB/s.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** One GPU:
 $6 \cdot 10^9 \cdot 32{,}768 / (3.5 \cdot 10^{13}) \approx 5.6$ s.
-Two: $2.8$ s of compute plus $S/\beta_{\textrm{link}}$:
+Two: $2.8$ s of compute plus $S\,\beta_{\textrm{link}}$:
 $5.6 / 3.2 \approx 1.75\times$ at 10 GB/s, $5.6 / 4.4 \approx 1.3\times$
 at 2.5 GB/s. The host is no limit: every kernel is long.
 :::
@@ -1763,7 +1763,7 @@ Read every speedup with its convention.
 - Data parallelism: a copy per device, a share of every minibatch, one
   gradient allreduce per step; the one-step check matches to fp32 rounding.
 - Ring allreduce: $2(k-1)S/k < 2S$ bytes per device, $2(k-1)$ hops.
-- $t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + c\alpha + \frac{2(k-1)}{k}\frac{S}{\beta_{\textrm{link}}}$;
+- $t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + c\alpha + \frac{2(k-1)}{k}S\,\beta_{\textrm{link}}$;
   for LeNet, ten messages cost seven to ten times one.
 - One host feeding two GPUs doubles LeNet's host-bound step; the
   exchange is a small part.

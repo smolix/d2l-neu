@@ -350,9 +350,9 @@ middle of that range. The compiler made memory no faster and arithmetic
 no cheaper. It removed 16 of the 18 array transfers.
 
 The same count applies at the scale of a language model. The chapter's
-running example is a GPT with a billion parameters and width $d = 2048$,
-trained on minibatches of 8 sequences of 1,024 tokens
-(:numref:`sec_perf_model`). For this paragraph we replace its SwiGLU
+running example is a GPT with a billion parameters and width $d = 2048$;
+take a forward pass over 8 sequences of 1,024 tokens, the minibatch of
+:numref:`sec_perf_model`. For this paragraph we replace its SwiGLU
 feed-forward networks by the GELU variant of hidden width $4d = 8192$
 (`act='gelu'` in `d2l.GPT`). The activation then receives
 $8 \cdot 1024 = 8192$ tokens times $4d = 8192$ hidden units, about
@@ -687,29 +687,27 @@ computes. The gain is the ratio of the two times, so it falls short of the
 bound by about this factor.
 
 :begin_tab:`pytorch`
-The three timings separate the two remedies. Surprisingly, the stack
-compiled by Inductor is hardly faster than eager, and the profile says
-why. Each layer runs as three kernels. cuBLAS computes the product as a
-matrix-product kernel followed by a split-K reduction, which adds up
-partial products computed over slices of the shared dimension, and the
-tanh runs as a Triton kernel of its own: the product is a library kernel
-that Inductor calls, not one it generates, so it cannot fuse the tanh
-into it. Nothing is fused, and Inductor's generated Python code issues
-the 120 operations, and with them all 180 kernels, one at a time, at
-about the same 18 µs per operation as eager dispatch. The device is busy
-for about a seventh of the call and waits for the host during the rest.
+The three timings separate the two remedies. Surprisingly, the stack compiled
+by Inductor is hardly faster than eager, and the profile says why. Each layer
+runs as three kernels. cuBLAS computes the product as a matrix-product kernel
+followed by a split-K reduction, which adds up partial products computed over
+slices of the shared dimension, and the tanh runs as a Triton kernel of its
+own: the product is a library kernel that Inductor calls, not one it generates,
+so it cannot fuse the tanh into it. Nothing is fused, and Inductor's generated
+Python code issues the 120 operations, and with them all 180 kernels, one at a
+time, at about the same 18 µs per operation as eager dispatch. The device is
+busy for about a seventh of the call and waits for the host during the rest.
 Counted per kernel instead of per operation, a call takes about 12 µs per
-launch, close to the 13 µs of a bare product in
-:numref:`subsec_perf-sweep`, which runs as a single kernel: the reduction
-adds a launch to every product here. With 18 µs per operation and a floor of 1 µs, the bound is
-near eighteen. All of the gain, about a factor of seven, comes from
-replay, and the replayed call takes about as long as the device was busy
-in the compiled one, some 0.3 ms. Replay removed the waiting and nothing
-else. `mode='reduce-overhead'` makes
-`torch.compile` record its kernels as CUDA graphs: the first call compiles
-and warms up, the second records, and later calls with the same shapes
-copy the input into the recorded buffer and replay. `Benchmark` warms up
-with three calls, so the timed calls are replays.
+launch, close to the 13 µs of a bare product in :numref:`subsec_perf-sweep`,
+which runs as a single kernel: the reduction adds a launch to every product
+here. With 18 µs per operation and a floor of 1 µs, the bound is near eighteen.
+All of the gain, about a factor of seven, comes from replay, and the replayed
+call takes about as long as the device was busy in the compiled one, some 0.3
+ms. Replay removed the waiting and nothing else. `mode='reduce-overhead'` makes
+`torch.compile` record its kernels as CUDA graphs: the first call compiles and
+warms up, the second records, and later calls with the same shapes copy the
+input into the recorded buffer and replay. `Benchmark` warms up with three
+calls, so the timed calls are replays.
 :end_tab:
 
 :begin_tab:`jax`

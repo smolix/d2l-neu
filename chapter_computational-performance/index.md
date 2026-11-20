@@ -27,10 +27,10 @@ difference. The difference is where the time went.
 Everything rests on the first section (:numref:`sec_perf_model`), which
 introduces one quantity, the arithmetic an operation performs per byte it
 moves, and puts the method to work. Hardware (:numref:`sec_hardware`)
-explains where the peak rate and the bandwidth come from; a reader in a
-hurry can take its tables. Compilation (:numref:`sec_compilation`) and
-fewer bits with recomputation (:numref:`sec_memory_precision`) are the
-one-GPU tools most readers will use every day. Three sections then add
+explains where the peak rate and the bandwidth come from; a hurried reader
+can take its tables. Compilation (:numref:`sec_compilation`) and the
+memory techniques of :numref:`sec_memory_precision` are the one-GPU tools
+most readers will use every day. Three sections then add
 GPUs. A second GPU helps only when each card has enough work, and on our
 cards, which meet only through host memory, the wires between them matter
 as much as the GPUs. Dividing the weights, gradients, and optimizer state
@@ -70,14 +70,13 @@ further-reading
 ## Resources and Further Reading {.unnumbered}
 
 The resources below accompany the sections of this chapter; each names the
-section it goes with, and all are freely accessible online. Read Horace
-He's essay before or beside :numref:`sec_perf_model`: it takes about
-fifteen minutes and describes the same three limits in another voice. The scaling book of
-Austin et al. is the natural second text for the whole chapter. Related
-topics that the chapter does not teach, such as other accelerators,
-kernels written by hand, compressed optimizer state, and collective
-algorithms beyond the ring, are collected in
-:numref:`sec_performance-further-reading`.
+section it goes with, and all are freely accessible online. Read Horace He's
+essay before or beside :numref:`sec_perf_model`: it takes about fifteen minutes
+and describes the same three limits in another voice. The scaling book of
+Austin et al. is the natural second text for the whole chapter. Related topics
+that the chapter does not teach, such as other accelerators, kernels written by
+hand, compressed optimizer state, and collective algorithms beyond the ring,
+are collected in :numref:`sec_performance-further-reading`.
 
 **Books and long-form texts**
 
@@ -164,13 +163,15 @@ in one host.
 | $P$ | peak tensor-core rate | 165 TFLOP/s bf16 (83 tf32, rated) | an 8,192-wide bf16 product reaches it |
 | $\beta$ | GPU memory bandwidth | 1.0 TB/s rated, about 0.9 measured | elementwise operations moving 512 MiB |
 | $h$ | host time per operation issued from Python | about 13 µs | tiny products the GPU runs in a few µs |
-| $\beta_\textrm{host}$ | pinned host-to-GPU copy | about 24 GB/s | copying a pinned buffer |
-| $\beta_\textrm{link}$ | NCCL allreduce rate between GPUs 0 and 1 | about 2.4 GB/s, through host memory | a bare 256 MB allreduce |
+| — | pinned host-to-GPU copy rate | about 23 GB/s | copying a pinned buffer |
+| $\beta_\textrm{link}$ | time per byte a GPU sends in an NCCL allreduce, GPUs 0 and 1 | about 0.42 ns per byte (bus bandwidth about 2.4 GB/s), through host memory | a bare 256 MB allreduce |
 
 ::: {.d2l-note}
 Ridge point, where the two roofs meet: $P/\beta \approx 164$ FLOP per byte
-at the rated $\beta$. The link between the GPUs moves bytes about 400 times
-more slowly than the card's own memory.
+at the rated $\beta$. $\beta$ is a rate, $\beta_\textrm{link}$ a time per
+byte, as in the literature on collectives: a message of $S$ bytes costs
+$\alpha + S\,\beta_\textrm{link}$. The link between the GPUs moves bytes
+about 400 times more slowly than the card's own memory.
 :::
 :::
 
@@ -181,14 +182,16 @@ more slowly than the card's own memory.
 |---|---|---|---|
 | $P$ | peak tensor-core rate | 165 TFLOP/s bf16 (83 tf32, rated) | an 8,192-wide bf16 product reaches it |
 | $\beta$ | GPU memory bandwidth | 1.0 TB/s rated, about 0.9 measured | elementwise operations moving 512 MiB |
-| $h$ | host time per call of a jitted function | about 60–100 µs | tiny products the GPU runs in a few µs |
-| $\beta_\textrm{host}$ | pinned host-to-GPU copy | about 24 GB/s | copying a pinned buffer |
-| $\beta_\textrm{link}$ | NCCL allreduce rate between GPUs 0 and 1 | about 2.4 GB/s, through host memory | a bare 256 MB allreduce |
+| $h$ | host time per call of a jitted function | about 50–110 µs | tiny products the GPU runs in a few µs |
+| — | pinned host-to-GPU copy rate | about 23 GB/s | copying a pinned buffer |
+| $\beta_\textrm{link}$ | time per byte a GPU sends in an NCCL allreduce, GPUs 0 and 1 | about 0.42 ns per byte (bus bandwidth about 2.4 GB/s), through host memory | a bare 256 MB allreduce |
 
 ::: {.d2l-note}
 Ridge point, where the two roofs meet: $P/\beta \approx 164$ FLOP per byte
-at the rated $\beta$. The link between the GPUs moves bytes about 400 times
-more slowly than the card's own memory.
+at the rated $\beta$. $\beta$ is a rate, $\beta_\textrm{link}$ a time per
+byte, as in the literature on collectives: a message of $S$ bytes costs
+$\alpha + S\,\beta_\textrm{link}$. The link between the GPUs moves bytes
+about 400 times more slowly than the card's own memory.
 :::
 :::
 

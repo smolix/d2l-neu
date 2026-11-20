@@ -117,15 +117,14 @@ large model and suits training poorly.
 
 ### Block-Scaled Formats in Detail
 
-The block scales of :numref:`subsec_hw-gpu` cost bits. In the OCP
-microscaling formats :cite:`Rouhani.Zhao.More.ea.2023` an 8-bit
-power-of-two scale shared by 32 values adds a quarter bit per value.
-NVIDIA's NVFP4 shares an fp8 scale among 16 values, half a bit per value,
-plus one fp32 scale per tensor. For the extra quarter bit its scales need
-not be powers of two, so they can bring each block's largest value close to
-6, the top of the fp4 range, where a power-of-two scale can only bring it
-within a factor of two. Either way a 4-bit number costs at most 4.5 bits, under a
-third of the 16 bits of bf16.
+The block scales of :numref:`subsec_hw-gpu` cost bits. In the OCP microscaling
+formats :cite:`Rouhani.Zhao.More.ea.2023` an 8-bit power-of-two scale shared by
+32 values adds a quarter bit per value. NVIDIA's NVFP4 shares an fp8 scale
+among 16 values, half a bit per value, plus one fp32 scale per tensor. For the
+extra quarter bit its scales need not be powers of two, so they can bring each
+block's largest value close to 6, the top of the fp4 range, where a
+power-of-two scale can only bring it within a factor of two. Either way a 4-bit
+number costs at most 4.5 bits, under a third of the 16 bits of bf16.
 
 ## Compilers and Kernels
 
@@ -212,8 +211,8 @@ parameter of :numref:`subsec_mp-anatomy`, twice our card. ZeRO-Offload
 :cite:`Ren.Rajbhandari.Aminabadi.ea.2021` keeps the fp32 weights and both
 moments in host memory and runs the update on the CPU, leaving the card
 12 GB of 16-bit weights and gradients. Gradients out and weights back then
-move 12 GB per step, about half a second at our $\beta_\textrm{host}$ of
-about 24 GB/s (:numref:`subsec_hw-cpu`). At six FLOPs per parameter and
+move 12 GB per step, about half a second at the 23 GB/s of our pinned
+copies (:numref:`subsec_hw-cpu`). At six FLOPs per parameter and
 token and half the bf16 peak, the card processes about 4,600 tokens per
 second, so a minibatch of a few thousand tokens computes long enough to
 hide the copy. The CPU's Adam step over all three billion parameters is the
@@ -236,17 +235,17 @@ recomputing the rest.
 
 ### Fragmentation and Preallocation
 
-A training step can run out of memory with gigabytes free. PyTorch's
-caching allocator keeps freed blocks for reuse. When shapes change from
-step to step, as with variable sequence lengths, the free memory splits
-into pieces that no new tensor fits, and the error reports a large amount
-"reserved but unallocated". Letting the allocator grow a segment in place
-removes most of this waste
-(`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`), as the error message
-suggests. Under JAX the first surprise is a card that `nvidia-smi` shows
-nearly full whatever the model: a process reserves 75% of the card's memory at its first operation, so a second JAX
-process on the same card can fail (`XLA_PYTHON_CLIENT_PREALLOCATE=false`
-turns this off, `XLA_CLIENT_MEM_FRACTION` sets the share).
+A training step can run out of memory with gigabytes free. PyTorch's caching
+allocator keeps freed blocks for reuse. When shapes change from step to step,
+as with variable sequence lengths, the free memory splits into pieces that no
+new tensor fits, and the error reports a large amount "reserved but
+unallocated". Letting the allocator grow a segment in place removes most of
+this waste (`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`), as the error
+message suggests. Under JAX the first surprise is a card that `nvidia-smi`
+shows nearly full whatever the model: a process reserves 75% of the card's
+memory at its first operation, so a second JAX process on the same card can
+fail (`XLA_PYTHON_CLIENT_PREALLOCATE=false` turns this off,
+`XLA_CLIENT_MEM_FRACTION` sets the share).
 
 ## Communication and Scale
 
@@ -262,10 +261,10 @@ step count of a tree when $k$ is a power of two
 :cite:`Thakur.Rabenseifner.Gropp.2005`. For four GPUs and gradients of tens
 of megabytes the ring is the right choice; the others pay off for small
 messages or many devices, and libraries pick among them by message size and
-topology. NVIDIA's nccl-tests prints our $\beta_\textrm{link}$
-(:numref:`sec_multi_gpu`) as *bus bandwidth*, next to an *algorithm
-bandwidth*, the message size over the time, which equals the bus bandwidth
-at $k = 2$ and falls to about half of it for large $k$.
+topology. NVIDIA's nccl-tests prints the inverse of our
+$\beta_\textrm{link}$ (:numref:`sec_multi_gpu`) as *bus bandwidth*, next
+to an *algorithm bandwidth*, the message size over the time, which equals
+the bus bandwidth at $k = 2$ and falls to about half of it for large $k$.
 
 ### Parameter Servers and Asynchronous Updates
 

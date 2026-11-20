@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 28524,
-          "sha256": "sha256:b56d04ca28937ffd92841d2d8b6e60ac1dd3b64710e52d990ac9c9415d0e561a"
+          "bytes": 31369,
+          "sha256": "sha256:aed2cd34c6d9e7f5cf517e97ebf0c4177336e0d7dd29707deed382995fb9d30f"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 1.695 (lowest 0.925, epoch 2), norm of w 2.06\n"
+          "text": "validation loss 1.610 (lowest 0.891, epoch 2), norm of w 2.03\n"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 30336,
-          "sha256": "sha256:4fe1f79d7524995da38d0276863a3190e09462110d646559089ffa50eca8b8e3"
+          "bytes": 29325,
+          "sha256": "sha256:2f55a58c4cd909a51368194c274c3dd1acc990a2fc5bd8e8526f6be41f455632"
         }
       ]
     },
@@ -77,74 +77,58 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 0.908, norm of w 1.25\n"
-        }
-      ]
-    },
-    "weight-decay-two-duplicated-features-1": {
-      "code_fingerprint": "sha256:1f109a7107b346839e95e54daede88c89d456256ec32a86d0061a2f5eff6d61a",
-      "kind": "text",
-      "outputs": []
-    },
-    "weight-decay-two-duplicated-features-2": {
-      "code_fingerprint": "sha256:abc2e351a00d2298c671af591e9b956215a96f4146006ea638442deb32d4db00",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "least squares (  5.59,  -3.59): test 0.010, disagreeing 0.213\n        ridge (  0.99,   0.99): test 0.010, disagreeing 0.010\nleast squares ( 13.88, -11.87): test 0.010, disagreeing 1.613\n        ridge (  1.00,   1.00): test 0.010, disagreeing 0.010\neigenvalues of X^T X / n: 6.0e-07, 2.0e+00\n"
+          "text": "validation loss 0.874, norm of w 1.17\n"
         }
       ]
     },
     "weight-decay-why-shrinkage-helps-the-spectral-view": {
-      "code_fingerprint": "sha256:4d4e2332531b4fbb35921ab44d5969f2000576a9be7b6d784c373d50718b1490",
+      "code_fingerprint": "sha256:7a27ed3d793afb57504415a9de75dae9c2ae879194f1460a1f7e47200ade25bc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mu from 0.04 to 3.1, 54 of 200 below lambda\nfactors from 0.11 to 0.90, df = 127\n"
+          "text": "mu from 0.04 to 3.2, 54 of 200 below lambda\nfactors from 0.10 to 0.91, df = 127\n"
         }
       ]
     },
     "weight-decay-the-directions-our-data-determine-1": {
-      "code_fingerprint": "sha256:8b61b227c79a12c7456e3f21c6285030e8209da761dfaa838fcb095761d6e1e4",
+      "code_fingerprint": "sha256:603d4e22ed7dc2fafd66f04b8721209422ba42d9adcde7a8d453f2ee6c0b1f31",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  lambda = 0: squared error 1.81 in the 54 poorly determined directions, 0.68 in the rest\nlambda = 1/3: squared error 0.42 in the 54 poorly determined directions, 0.46 in the rest\n"
+          "text": "  lambda = 0: squared error 1.49 in the 54 poorly determined directions, 0.52 in the rest\nlambda = 1/3: squared error 0.30 in the 54 poorly determined directions, 0.40 in the rest\n"
         }
       ]
     },
     "weight-decay-concise-implementation-1": {
-      "code_fingerprint": "sha256:5b21aff8748f3ecf4695a10e349f297b75c0812ee9eebf420d329dea1e797a8a",
+      "code_fingerprint": "sha256:de1e74622d42450f8445f4a2b00aad46b678061116a15d252b2f18536b0fdd4d",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-concise-implementation-2": {
-      "code_fingerprint": "sha256:112b66f4498a93e6f61f460c513f29bd3b8c8117897c4f573546b4240fa2a3f8",
+      "code_fingerprint": "sha256:02ad5bc23a7b132d62c782b5ade8de2ccc63fabc698eea36b9f0e82bc322b468",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 29235,
-          "sha256": "sha256:72f7ac23304db767be01b475faa64de2b6ea2c99ad95aa5c21f3ecb8d0289829"
+          "bytes": 28485,
+          "sha256": "sha256:83a5b1e8cff5d29a1cb5ab65fa15d541fc06b009eef4f734b1dd5172dda5c084"
         }
       ]
     },
     "weight-decay-concise-implementation-3": {
-      "code_fingerprint": "sha256:bf7715b32677f0810a09cee3b5bb3c645538d29b4236d1d8291bf573467e7ffb",
+      "code_fingerprint": "sha256:1fddb747d6541b768caf727f3c783fe192cc3b85d600865e644000d1ab43ea53",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss 1.821, norm of w 1.25\n"
+          "text": "validation loss 1.785, norm of w 1.17\n"
         }
       ]
     }

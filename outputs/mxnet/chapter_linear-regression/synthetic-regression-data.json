@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (0.1020, 1.7984)\nlabel: -1.6942, noise: 0.0166\n"
+          "text": "features: (-2.4133, 1.3905)\nlabel: -5.3682, noise: -0.0140\n"
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (2.9e-04, 3.0e-04)\nerror in b: -3.8e-05\nstandard error: 3.2e-04\n"
+          "text": "error in w: (6.7e-04, 2.1e-04)\nerror in b: 7.6e-06\nstandard error: 3.2e-04\n"
         }
       ]
     }

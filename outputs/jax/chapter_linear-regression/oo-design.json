@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [7.74 8.56 6.1 ]\na new pass starts with labels [1.82 7.01 4.4 ]\n"
+          "text": "32 minibatches, the last of size 8\nsecond pass: 32 minibatches\na new pass starts with labels [6.59 1.05 1.47]\na new pass starts with labels [6.62 7.7  4.22]\n"
         }
       ]
     },
@@ -179,8 +179,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-training-linear-regression-again-1-1.svg",
-          "bytes": 34350,
-          "sha256": "sha256:4eb3abe9604d195511e5191710836fe5533a343df67df7a0d0bf498e881d5913"
+          "bytes": 34362,
+          "sha256": "sha256:249ac2a402f8e7d9135bc2a2028a6e25183ab01ee60e7a8ea1e6c2d08019eb1a"
         }
       ]
     },
@@ -191,7 +191,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation loss: 4.9e-05\nerror in w: -1.8e-04, 1.6e-04\nerror in b: -3.7e-04\n"
+          "text": "validation loss: 5.2e-05\nerror in w: -4.8e-04, 1.9e-04\nerror in b: 8.1e-06\n"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:9773187307537ba82e0a51c54ec889fdfbaf03f90b6bc8481d5c396e65a58f7e",
+    "d2l_lib_fingerprint": "sha256:39dd18b0c57d1f0d83fb86b13c83796274ba3fac62cc9b7d484bd3edbdd7d97a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -96,8 +96,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 33231,
-          "sha256": "sha256:df8b2140919772f07fa1f33e81d4653a8e0639a13c4f9bff8358eddb0d311344"
+          "bytes": 33237,
+          "sha256": "sha256:ec2b42d028c6931ba171a59369a1c144b2e2bcdb1513d6919cd34367f97d5fad"
         }
       ]
     },
@@ -112,7 +112,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.47993779296875, 'acc': 0.833}"
+          "text": "{'loss': 0.50735263671875, 'acc': 0.8206}"
         }
       ]
     },
@@ -122,7 +122,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'loss': 0.4448636067708333, 'acc': 0.8482333333333333}"
+          "text": "{'loss': 0.47165211588541667, 'acc': 0.8342333333333334}"
         }
       ]
     },
@@ -145,8 +145,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 48815,
-          "sha256": "sha256:e5c221c2e4dcba6f9ebee063adb68971f4ae7a9975c2ab074aad41fca2779a94"
+          "bytes": 47275,
+          "sha256": "sha256:2415571873e0c8dd95aae2a5a2d4863995ebe9efbdec19c2bcdd91a23a23e004"
         }
       ]
     },
@@ -168,8 +168,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 36836,
-          "sha256": "sha256:befdde272881405c9fc95252868cccb2ebf73570eeac23c3ef92c9b327309536"
+          "bytes": 36829,
+          "sha256": "sha256:b8d1b32853494d1592ee94b93a1b5b65cf2ce55e68ff4d9de875fefe1e73ccd9"
         }
       ]
     },
@@ -180,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "shirt taken for T-shirt: 149\ncoat taken for shirt: 136\npullover taken for coat: 132\npullover taken for shirt: 129\nshirt taken for pullover: 103\n"
+          "text": "coat taken for pullover: 341\nshirt taken for pullover: 218\nshirt taken for T-shirt: 164\ncoat taken for shirt: 91\nT-shirt taken for shirt: 69\n"
         }
       ]
     },
@@ -192,8 +192,41 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-what-the-model-learned-1.svg",
-          "bytes": 65364,
-          "sha256": "sha256:b953993429240f94fddbc0f1718c901bf9072e2d0f6faad6835c3ee0563c2b12"
+          "bytes": 65436,
+          "sha256": "sha256:0c4edf2e85eb326c2562bef16d05112832d8c6f95ac7de74b68011eea6ea6df6"
+        }
+      ]
+    },
+    "softmax-regression-concise-defining-the-model": {
+      "code_fingerprint": "sha256:a527a0e271ce574d645f8880d32c08c7af1cd16b8a29f71a10bc7c79749f8f03",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-concise-softmax-revisited": {
+      "code_fingerprint": "sha256:d68bba2ad6893d12085c516b8c8f33cca62aa0a6daafd2cb88ce487077fbf1cd",
+      "kind": "text",
+      "outputs": []
+    },
+    "softmax-regression-concise-the-framework-loss": {
+      "code_fingerprint": "sha256:3861eddd1de2c20f43f3d559c6ab9434cbf252e4fe73f8d759dcad5868a1ec1a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([   0., 1000.])"
+        }
+      ]
+    },
+    "softmax-regression-concise-training": {
+      "code_fingerprint": "sha256:f47600e85c5f48bc1499bcdd3c7bf2e36bdc4b5aa8e56c650b129284d0ab4efb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "softmax-regression-scratch/softmax-regression-concise-training-1.svg",
+          "bytes": 30661,
+          "sha256": "sha256:200df14e7f046029a3203d0a07644d21d2397e760be49864c7f6db8598f5eb61"
         }
       ]
     }

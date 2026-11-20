@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:dcfd2b9502f2660b0cc7e8c9ee99807b6f608008b66ff3f216fadd7eb8c367ed",
+    "d2l_lib_fingerprint": "sha256:6323208e8fe3b04acc7a6d59fd795b826416f52354746600c2af29f922db0c7a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gradient: [-2.4593  3.8416 -4.395 ]\nlargest difference: 2e-07\n"
+          "text": "gradient: [-1.6582  2.3576 -5.0225]\nlargest difference: 1e-07\n"
         }
       ]
     },
@@ -78,8 +78,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 28135,
-          "sha256": "sha256:cb3469d4d2179ee201b3f1cb532bc693bd0207a534062b1408f98215de2aa397"
+          "bytes": 28137,
+          "sha256": "sha256:fa6993145c46cdcec93ac57710227acc991931555e0d92225896b1b7d0d05aa6"
         }
       ]
     },
@@ -90,7 +90,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1: measured 2.6e+00, predicted 2.4e+00\nepoch 2: measured 4.1e-01, predicted 3.4e-01\nepoch 3: measured 6.7e-02, predicted 4.8e-02\nepoch 4: measured 1.1e-02, predicted 6.8e-03\nepoch 5: measured 1.8e-03, predicted 9.7e-04\nepoch 6: measured 2.8e-04, predicted 1.4e-04\nepoch 7: measured 4.7e-05, predicted 2.0e-05\n"
+          "text": "epoch 1: measured 2.8e+00, predicted 2.4e+00\nepoch 2: measured 4.6e-01, predicted 3.4e-01\nepoch 3: measured 7.8e-02, predicted 4.8e-02\nepoch 4: measured 1.3e-02, predicted 6.8e-03\nepoch 5: measured 2.1e-03, predicted 9.7e-04\nepoch 6: measured 3.6e-04, predicted 1.4e-04\nepoch 7: measured 6.2e-05, predicted 2.0e-05\n"
         }
       ]
     },
@@ -101,7 +101,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: 5.3e-05, 3.1e-04\nerror in b: -6.9e-04\n"
+          "text": "error in w: -3.6e-04, 4.1e-04\nerror in b: 1.1e-05\n"
         }
       ]
     },
@@ -112,12 +112,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.003  validation loss: 2.7e+00\n"
+          "text": "lr = 0.003  validation loss: 2.9e+00\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr = 0.03   validation loss: 5.3e-05\n"
+          "text": "lr = 0.03   validation loss: 5.2e-05\n"
         },
         {
           "type": "stream",
@@ -128,6 +128,61 @@
           "type": "stream",
           "name": "stdout",
           "text": "lr = 3      validation loss: nan\n"
+        }
+      ]
+    },
+    "linear-regression-concise-defining-the-model-1": {
+      "code_fingerprint": "sha256:3a6c80be92422df41b89dadda14d604eed9ba0a06b082ca05d37831f7f371794",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-loss-function": {
+      "code_fingerprint": "sha256:5aae36e025a183bdeaa157deb692a53ac3e90d7b40e3229db7b8e2a38625c8c8",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-defining-the-optimization-algorithm": {
+      "code_fingerprint": "sha256:5ad525f1fadb52bd0c0dec090fbfc8d2ea52c2f89040cb2cbc9e1a0d26bc17d8",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-training-1": {
+      "code_fingerprint": "sha256:c9eb0cfdd31cefc8463784d59b376af19bbc317f61bc0cc7ee8d444cd922a793",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "linear-regression-scratch/linear-regression-concise-training-1-1.svg",
+          "bytes": 33767,
+          "sha256": "sha256:989d6cfabf1060328007f33097a5943af4322541f98a2d4740e117eb3a17d41b"
+        }
+      ]
+    },
+    "linear-regression-concise-training-4": {
+      "code_fingerprint": "sha256:b18d70c60d1307bc2046d1e3c4221401e2817690bbcb8ea2c6554375ce0b07cc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation loss: 9.72e-05\n"
+        }
+      ]
+    },
+    "linear-regression-concise-training-2": {
+      "code_fingerprint": "sha256:4b852aeb123c1314f2d57b7ebed5b5f5300bd6802b53ce9ca16906982ad7b9a4",
+      "kind": "text",
+      "outputs": []
+    },
+    "linear-regression-concise-training-3": {
+      "code_fingerprint": "sha256:a629d28baa71dd370710d209f8161213c908a4238b762f75e8531a4fde327713",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "error in w: 1.8e-04, 5.1e-04\nerror in b: 5.2e-04\n"
         }
       ]
     }

@@ -668,7 +668,7 @@ few hundred allreduces of a run can be slower than the rest, which would
 inflate $\alpha$. This cell times the star that we wrote, which on two
 devices is two copies of all the bytes, one after the other. On our
 machine $\beta_{\textrm{link}}$ is about 9.5 GB/s, so each copy runs at
-about 19 GB/s, a little below the 24 GB/s that a pinned copy from host
+about 19 GB/s, a little below the 23 GB/s that a pinned copy from host
 memory reached in :numref:`sec_hardware`. The fixed cost $\alpha$ is that
 of two driver-managed copies.
 :end_tab:
@@ -984,14 +984,15 @@ print(f'2 GPUs predicted: {1e3 * (t_local[1, 128] + exchange):.2f} ms per '
       f'one launcher')
 ```
 
-The step on two GPUs takes at least twice as long as the step on one.
+The step on two GPUs takes about twice as long as the step on one, or
+longer.
 :eqref:`eq_dp_cost` predicts a shorter step than we measure, while
 :eqref:`eq_dp_one-launcher`, which knows only the one-GPU step and the
 exchange, predicts the slowdown.
 
 :begin_tab:`pytorch`
 :eqref:`eq_dp_cost` predicts 2.8 ms, the time of one GPU, and the step
-takes 5.6 ms, within one percent of the one-launcher prediction. The
+takes 5.6 ms, within a few percent of the one-launcher prediction. The
 exchange, $\alpha + S/\beta_{\textrm{link}}$, is 0.08 ms, about one percent
 of the step.
 :end_tab:
@@ -1716,6 +1717,8 @@ The same LeNet step, $b$ examples per GPU:
 @!multiple-gpus-larger-minibatches
 
 - 256: host-bound, no gain.
+- 4,096: the device time, set against one host time and two, decides
+  which case the row is in and what the second GPU gains.
 - 32,768: the device outlasts the host time of both GPUs and the
   247 KB exchange; close to two, and close to the prediction.
 :::

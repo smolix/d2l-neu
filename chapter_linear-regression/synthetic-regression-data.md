@@ -194,6 +194,7 @@ e_w = d2l.numpy(w_hat[:2] - w_star)
 print(f'error in w: ({e_w[0]:.1e}, {e_w[1]:.1e})')
 print(f'error in b: {float(w_hat[2] - b_star):.1e}')
 print(f'standard error: {noise / n ** 0.5:.1e}')
+```
 
 Even with `lstsq` solving the empirical loss to machine precision, $(\hat{\mathbf{w}}, \hat{b})$ differs from the true $(2, -3.4, 4.2)$ in the fourth decimal place. That tiny discrepancy is *statistical estimation error*, not numerical error: the 1,000 noise draws $\boldsymbol{\epsilon}$ happen to correlate slightly with the columns of $\mathbf{X}$, tilting the least-squares plane by a quantity of order $\sigma / \sqrt{n} = 0.01 / \sqrt{1000} \approx 3 \times 10^{-4}$ (Exercise :exref:`ex_synthetic-regression-data-recovery-under-noise`). No algorithm trained on these 1,000 noisy points can recover $(\mathbf{w}^*, b^*)$ more accurately than this statistical limit. And as Exercise :exref:`ex_synthetic-regression-data-misspecified` explores, when the true data-generating function is nonlinear, least squares finds the best linear approximation to it over the feature distribution.
 

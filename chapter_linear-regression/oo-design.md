@@ -1037,6 +1037,7 @@ b_error = d2l.numpy(model.b[...] - data.b)
 print(f"validation loss: {trainer.history['val_loss'][-1]:.1e}")
 print('error in w:', ', '.join(f'{e:.1e}' for e in w_error))
 print('error in b:', ', '.join(f'{e:.1e}' for e in b_error))
+```
 
 Both training and validation loss drop smoothly to the $0.00005$ noise floor, and the recovered parameters match $(\mathbf{w}^*, b^*)$ to within a thousandth—confirming that our object-oriented harness reproduces our standalone scratch loop while freeing every future chapter from boilerplate.
 

@@ -117,6 +117,13 @@ def features(x, d):
     return x.reshape(-1, 1) ** np.arange(d + 1)
 
 def fit_degree(x, y, d):
+    """Least-squares weights of the degree-d polynomial fitted to (x, y)."""
+    return np.linalg.lstsq(features(x, d), y, rcond=None)[0]
+
+def mse(w, x, y):
+    """Mean squared error of the polynomial with weights w on (x, y)."""
+    return ((features(x, len(w) - 1) @ w - y) ** 2).mean()
+```
 
 Look at the three fitted curves and their losses:
 - **Degree $k = 1$ (underfitting):** A straight line cannot bend to follow $\cos(\frac{3\pi}{2}x)$; both training loss and validation loss are stuck around $0.2$–$0.3$, five times the $0.045$ noise floor.

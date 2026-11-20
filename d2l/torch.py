@@ -4381,14 +4381,14 @@ def flow_map_sample(u, x, steps, t_start=1.0):
     return x
 
 class UNetFlowMap(nn.Module):
-    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap.
+    """u(x, s, t): a velocity U-Net, plus a zero-initialized input for the
+    gap t - s. The caller passes a copy of the teacher's U-Net.
 
     Defined in :numref:`sec_diffusion-few-step`"""
     def __init__(self, unet):
         super().__init__()
-        import copy  # the d2l library preamble does not import it
         # the teacher is an EMA copy with gradients off; the student trains
-        self.unet = copy.deepcopy(unet).requires_grad_(True)
+        self.unet = unet.requires_grad_(True)
         self.gap = nn.Linear(unet.emb_dim, unet.emb_dim)
         nn.init.zeros_(self.gap.weight), nn.init.zeros_(self.gap.bias)
 

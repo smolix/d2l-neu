@@ -48,6 +48,11 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #few-step-few-step-generation-2}
+%%tab pytorch
+import copy
+```
+
 ```{.python .input #few-step-few-step-generation-1}
 %%tab pytorch
 torch.set_float32_matmul_precision('high')  # tf32 matmuls on tensor cores
@@ -63,7 +68,7 @@ them.
 ### The Average Where the Data Are Not
 
 One Euler step from pure noise sends every start to the data mean
-(:numref:`sec_diffusion-gaussian-paths`), for the mixture $(-0.5, -0.7)$,
+(:numref:`sec_diffusion-integration`), for the mixture $(-0.5, -0.7)$,
 where no data lie.
 
 More steps help, but how many are needed? `mix.velocity` evaluates the
@@ -83,7 +88,8 @@ euler = {n: d2l.ode_sample(pred_exact, z, lin.sigma_bars(n))
          for n in (1, 2, 4, 10)}
 for n, x in euler.items():
     s = mix.summary(x)
-    print(f'{n:2d} Euler steps: weights {s["weights"]}, stray {s["stray"]:.1%}')
+    print(f'{n:2d} Euler steps: weights {s["weights"]}, '
+          f'stray {s["stray"]:.1%}')
 d2l.scatter_panels([x[:2000] for x in euler.values()],
                    [f'{n} steps' for n in euler], data=mix.sample(2000),
                    size=2.4);
@@ -99,7 +105,8 @@ euler = {n: d2l.ode_sample(pred_exact, z, lin.sigma_bars(n))
          for n in (1, 2, 4, 10)}
 for n, x in euler.items():
     s = mix.summary(x)
-    print(f'{n:2d} Euler steps: weights {s["weights"]}, stray {s["stray"]:.1%}')
+    print(f'{n:2d} Euler steps: weights {s["weights"]}, '
+          f'stray {s["stray"]:.1%}')
 d2l.scatter_panels([x[:2000] for x in euler.values()],
                    [f'{n} steps' for n in euler],
                    data=mix.sample(jax.random.key(1), 2000), size=2.4);
@@ -388,12 +395,12 @@ teacher's velocity.
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity-2}
 %%tab pytorch
 class UNetFlowMap(nn.Module):  #@save
-    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap."""
+    """u(x, s, t): a velocity U-Net, plus a zero-initialized input for the
+    gap t - s. The caller passes a copy of the teacher's U-Net."""
     def __init__(self, unet):
         super().__init__()
-        import copy  # the d2l library preamble does not import it
         # the teacher is an EMA copy with gradients off; the student trains
-        self.unet = copy.deepcopy(unet).requires_grad_(True)
+        self.unet = unet.requires_grad_(True)
         self.gap = nn.Linear(unet.emb_dim, unet.emb_dim)
         nn.init.zeros_(self.gap.weight), nn.init.zeros_(self.gap.bias)
 
@@ -406,9 +413,10 @@ class UNetFlowMap(nn.Module):  #@save
 ```{.python .input #few-step-average-velocity-and-the-meanflow-identity-2}
 %%tab jax
 class UNetFlowMap(nnx.Module):  #@save
-    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap."""
+    """u(x, s, t): a velocity U-Net, plus a zero-initialized input for the
+    gap t - s. The caller passes a copy of the teacher's U-Net."""
     def __init__(self, unet, *, rngs):
-        self.unet = nnx.clone(unet)
+        self.unet = unet
         zeros = nnx.initializers.zeros
         self.gap = nnx.Linear(unet.emb_dim, unet.emb_dim, kernel_init=zeros,
                               bias_init=zeros, rngs=rngs)
@@ -437,9 +445,12 @@ _, teacher, _ = d2l.train_regression(
 ```{.python .input #few-step-on-the-running-example}
 %%tab jax
 _, teacher, _ = d2l.train_regression(
-    d2l.TimeMLP(256, 3, rngs=nnx.Rngs(1)), d2l.regression_loss(lin, 'velocity'),
-    lambda k: mix.sample(k, 512), 20_000, jax.random.key(1), cosine=True)
+    d2l.TimeMLP(256, 3, rngs=nnx.Rngs(1)),
+    d2l.regression_loss(lin, 'velocity'), lambda k: mix.sample(k, 512),
+    20_000, jax.random.key(1), cosine=True)
 ```
+
+<!-- WRITER: the mixture experiment now trains three students, two seeds each (2 and 3): consistency distillation (s = 0, teacher), flow-map distillation (s < t, teacher; the top-right cell of tab_diffusion-flow-map-methods, newly trained) and MeanFlow (s < t, no teacher). The paragraph below ("Both students ...") must name three. The training cell prints each student's mean loss over the last 1,000 updates: about 0.08 (consistency) and 0.03 (flow-map distillation) against 75-90 for MeanFlow, whose target carries the conditional velocity through the Jacobian-vector product (FEW-13: the cause of the contraction). -->
 
 Both students are `TimeMLP`s that see the start $t$ and the interval
 $t - s$. The consistency student draws $t$ uniformly, fixes $s = 0$ and uses
@@ -461,18 +472,28 @@ def consistency_loss(u, x0):  # s = 0, the teacher's velocity
     return d2l.flow_map_error(u, teacher, x0, torch.randn_like(x0),
                               torch.zeros_like(t), t).mean()
 
+def distillation_loss(u, x0):  # s < t, the teacher's velocity
+    a, b = torch.rand(2, len(x0), device=device)
+    s, t = torch.minimum(a, b), torch.maximum(a, b)
+    return d2l.flow_map_error(u, teacher, x0, torch.randn_like(x0), s,
+                              t).mean()
+
 def meanflow_loss(u, x0):  # s < t, no teacher
     a, b = torch.rand(2, len(x0), device=device)
-    return d2l.flow_map_error(u, None, x0, torch.randn_like(x0),
-                              torch.minimum(a, b), torch.maximum(a, b)).mean()
+    s, t = torch.minimum(a, b), torch.maximum(a, b)
+    return d2l.flow_map_error(u, None, x0, torch.randn_like(x0), s, t).mean()
 
 students = {}
 for name, loss in (('consistency', consistency_loss),
+                   ('distillation', distillation_loss),
                    ('MeanFlow', meanflow_loss)):
-    torch.manual_seed(2)
-    _, students[name], _ = d2l.train_regression(
-        MLPFlowMap(256, 3, num_times=2, time_freqs=slow).to(device), loss,
-        lambda: mix.sample(512), 20_000, cosine=True)
+    for seed in (2, 3):
+        torch.manual_seed(seed)
+        _, students[name, seed], losses = d2l.train_regression(
+            MLPFlowMap(256, 3, num_times=2, time_freqs=slow).to(device),
+            loss, lambda: mix.sample(512), 20_000, cosine=True)
+        print(f'{name:>12}, seed {seed}: mean loss of the last 1,000 '
+              f'updates {losses[-1000:].mean():.3f}')
 ```
 
 ```{.python .input #few-step-on-the-running-example-1}
@@ -490,20 +511,35 @@ def consistency_loss(u, x0, key):  # s = 0, the teacher's velocity
     return d2l.flow_map_error(u, teacher, x0, jax.random.normal(k2, x0.shape),
                               jnp.zeros_like(t), t).mean()
 
+def distillation_loss(u, x0, key):  # s < t, the teacher's velocity
+    k1, k2 = jax.random.split(key)
+    a, b = jax.random.uniform(k1, (2, len(x0)))
+    s, t = jnp.minimum(a, b), jnp.maximum(a, b)
+    return d2l.flow_map_error(u, teacher, x0, jax.random.normal(k2, x0.shape),
+                              s, t).mean()
+
 def meanflow_loss(u, x0, key):  # s < t, no teacher
     k1, k2 = jax.random.split(key)
     a, b = jax.random.uniform(k1, (2, len(x0)))
+    s, t = jnp.minimum(a, b), jnp.maximum(a, b)
     return d2l.flow_map_error(u, None, x0, jax.random.normal(k2, x0.shape),
-                              jnp.minimum(a, b), jnp.maximum(a, b)).mean()
+                              s, t).mean()
 
 students = {}
 for name, loss in (('consistency', consistency_loss),
+                   ('distillation', distillation_loss),
                    ('MeanFlow', meanflow_loss)):
-    _, students[name], _ = d2l.train_regression(
-        MLPFlowMap(256, 3, num_times=2, time_freqs=slow, rngs=nnx.Rngs(2)),
-        loss,
-        lambda k: mix.sample(k, 512), 20_000, jax.random.key(2), cosine=True)
+    for seed in (2, 3):
+        _, students[name, seed], losses = d2l.train_regression(
+            MLPFlowMap(256, 3, num_times=2, time_freqs=slow,
+                       rngs=nnx.Rngs(seed)),
+            loss, lambda k: mix.sample(k, 512), 20_000, jax.random.key(seed),
+            cosine=True)
+        print(f'{name:>12}, seed {seed}: mean loss of the last 1,000 '
+              f'updates {losses[-1000:].mean():.3f}')
 ```
+
+<!-- WRITER: the table below now has one row per sampler with both seeds: the largest deviation of any mode weight from 0.5/0.3/0.2 over the two runs, then stray and spread of seed 2 / seed 3. Direct notebook runs, 2026-11-20 (PT; JAX; seed 2 / seed 3): data spread 0.474, strays 0.9%; 1.1%; teacher fifty steps spread 0.462; 0.464, strays 1.6%; 1.4%; consistency one jump spread 0.459/0.458; 0.459/0.461, strays 2.1%; 2.0%; re-noised second step strays 1.3-1.4%, spread 0.47-0.48; flow-map distillation one jump spread 0.453/0.452; 0.457/0.449, strays 2.0-2.1%; 1.7-1.8%, two jumps 0.465-0.474; MeanFlow one jump spread 0.314/0.329; 0.333/0.337, strays 4.0-4.3%, two jumps 0.370-0.379, four jumps 0.367-0.383, strays 0.6-0.8%; weights of every row within 0.007 of 0.5/0.3/0.2 except MeanFlow four jumps in JAX (0.020). Losses of the last 1,000 updates: consistency 0.075-0.076, distillation 0.030-0.035, MeanFlow 76-81. Longer training does not close the gap (scratch runs, seed 2 unless noted): 40,000 updates give one-jump spreads 0.33-0.38 (PT and JAX, seeds 2 and 3), 80,000 give 0.38 and 160,000 give 0.39 (JAX), with two jumps at 0.39-0.40; batches of 2,048 at 20,000 updates give 0.37. The spread levels off near 0.39 against 0.47, and the loss rises with training (80 to 130), so the notebook keeps 20,000 updates and the prose states the contraction as the measured price of training without a teacher at this budget, not as a matter of budget: the distilled two-time student, same network, times and updates, keeps the spread (0.454-0.457 at one jump, 0.47 at two). Mechanism, stated as what the run shows: the MeanFlow target carries the example's conditional velocity through the Jacobian-vector product, so its noise is three orders of magnitude larger than the distilled student's (the printed losses); the averaging argument holds at the fixed point, but the trained network settles on a contracted map. Do not claim more about why. "Both students reproduce the mixture" (FEW-13) is false for MeanFlow's spread; the weights claim holds ("within about 0.01"). -->
 
 All models start from the 20,000 points of the Euler experiment. The
 teacher takes fifty Euler steps, the consistency student one jump or two
@@ -520,22 +556,34 @@ def renoised_sample(u, z):
     return d2l.flow_map_sample(u, lin.sample(x, half, torch.randn_like(x)), 1,
                                t_start=0.5)
 
-cm, mf = students['consistency'], students['MeanFlow']
-samples = {'data': mix.sample(20_000),
-           'teacher, 50 steps': d2l.flow_map_sample(
-               lambda x, s, t: teacher(x, t), z, 50),
-           'consistency, 1': d2l.flow_map_sample(cm, z, 1),
-           'consistency, 2 re-noised': renoised_sample(cm, z),
-           **{f'MeanFlow, {k}': d2l.flow_map_sample(mf, z, k)
-              for k in (1, 2, 4)}}
-for name, x in samples.items():
-    s = mix.summary(x)
-    print(f'{name:>24}: weights {s["weights"]}, stray {s["stray"]:.1%}, '
-          f'spread {s["spread"]:.3f}')
-d2l.scatter_panels([samples[k][:2000] for k in
-                    ('teacher, 50 steps', 'consistency, 1', 'MeanFlow, 1')],
-                   ['teacher, 50 steps', 'consistency, 1 step',
-                    'MeanFlow, 1 step'], data=mix.sample(2000), size=2.4);
+def report(name, xs):
+    """Largest weight error over the runs; stray and spread of each run."""
+    stats = [mix.summary(x) for x in xs]
+    err = max(abs(w - w0) for s in stats
+              for w, w0 in zip(s['weights'], mix.weights.tolist()))
+    stray = ' / '.join(f'{s["stray"]:.1%}' for s in stats)
+    spread = ' / '.join(f'{s["spread"]:.3f}' for s in stats)
+    print(f'{name:>24}: weights within {err:.3f}, stray {stray}, '
+          f'spread {spread}')
+
+torch.manual_seed(4)
+samples = {'data': [mix.sample(len(z))],
+           'teacher, 50 steps': [d2l.flow_map_sample(
+               lambda x, s, t: teacher(x, t), z, 50)]}
+for (name, seed), u in students.items():
+    if name == 'consistency':  # a one-time map re-noises for a second step
+        new = {'1': d2l.flow_map_sample(u, z, 1),
+               '2 re-noised': renoised_sample(u, z)}
+    else:
+        new = {str(k): d2l.flow_map_sample(u, z, k) for k in (1, 2, 4)}
+    for k, x in new.items():
+        samples.setdefault(f'{name}, {k}', []).append(x)
+for name, xs in samples.items():
+    report(name, xs)
+names = ['teacher, 50 steps', 'consistency, 1', 'distillation, 1',
+         'MeanFlow, 1']
+d2l.scatter_panels([samples[k][0][:2000] for k in names], names,
+                   data=mix.sample(2000), size=2.4);
 ```
 
 ```{.python .input #few-step-on-the-running-example-2}
@@ -547,23 +595,33 @@ def renoised_sample(u, z, key):
     return d2l.flow_map_sample(u, lin.sample(x, half, jax.random.normal(
         key, x.shape)), 1, t_start=0.5)
 
-cm, mf = students['consistency'], students['MeanFlow']
-samples = {'data': mix.sample(jax.random.key(3), 20_000),
-           'teacher, 50 steps': d2l.flow_map_sample(
-               lambda x, s, t: teacher(x, t), z, 50),
-           'consistency, 1': d2l.flow_map_sample(cm, z, 1),
-           'consistency, 2 re-noised': renoised_sample(cm, z,
-                                                       jax.random.key(4)),
-           **{f'MeanFlow, {k}': d2l.flow_map_sample(mf, z, k)
-              for k in (1, 2, 4)}}
-for name, x in samples.items():
-    s = mix.summary(x)
-    print(f'{name:>24}: weights {s["weights"]}, stray {s["stray"]:.1%}, '
-          f'spread {s["spread"]:.3f}')
-d2l.scatter_panels([samples[k][:2000] for k in
-                    ('teacher, 50 steps', 'consistency, 1', 'MeanFlow, 1')],
-                   ['teacher, 50 steps', 'consistency, 1 step',
-                    'MeanFlow, 1 step'],
+def report(name, xs):
+    """Largest weight error over the runs; stray and spread of each run."""
+    stats = [mix.summary(x) for x in xs]
+    err = max(abs(w - w0) for s in stats
+              for w, w0 in zip(s['weights'], mix.weights.tolist()))
+    stray = ' / '.join(f'{s["stray"]:.1%}' for s in stats)
+    spread = ' / '.join(f'{s["spread"]:.3f}' for s in stats)
+    print(f'{name:>24}: weights within {err:.3f}, stray {stray}, '
+          f'spread {spread}')
+
+samples = {'data': [mix.sample(jax.random.key(3), len(z))],
+           'teacher, 50 steps': [d2l.flow_map_sample(
+               lambda x, s, t: teacher(x, t), z, 50)]}
+for (name, seed), u in students.items():
+    if name == 'consistency':  # a one-time map re-noises for a second step
+        key = jax.random.fold_in(jax.random.key(4), seed)
+        new = {'1': d2l.flow_map_sample(u, z, 1),
+               '2 re-noised': renoised_sample(u, z, key)}
+    else:
+        new = {str(k): d2l.flow_map_sample(u, z, k) for k in (1, 2, 4)}
+    for k, x in new.items():
+        samples.setdefault(f'{name}, {k}', []).append(x)
+for name, xs in samples.items():
+    report(name, xs)
+names = ['teacher, 50 steps', 'consistency, 1', 'distillation, 1',
+         'MeanFlow, 1']
+d2l.scatter_panels([samples[k][0][:2000] for k in names], names,
                    data=mix.sample(jax.random.key(5), 2000), size=2.4);
 ```
 
@@ -579,54 +637,11 @@ too tight, though: their spread is about 0.38 after two and four jumps
 against 0.47 for the data, which is also why four jumps stray less often
 than the data themselves.
 
-MeanFlow's ImageNet recipe divides each example's squared error $e$ by
-$(e + c)^p$, held fixed, with $p = 1$ and a small $c$, so that the gradient
-is that of $\log(e + c)$. Squared error is minimized by the conditional mean
-of the target, its logarithm near the most probable value. Without a
-teacher the targets at a noisy point spread over the three modes, so the
-weighted loss should pull the field toward the heaviest mode. We train the
-MeanFlow student again with this weight.
-
-```{.python .input #few-step-on-the-running-example-3}
-%%tab pytorch
-def weighted_meanflow_loss(u, x0, c=1e-3):
-    """The MeanFlow loss with each squared error e divided by e + c, fixed."""
-    a, b = torch.rand(2, len(x0), device=device)
-    e = d2l.flow_map_error(u, None, x0, torch.randn_like(x0),
-                           torch.minimum(a, b), torch.maximum(a, b))
-    return (e / (e.detach() + c)).mean()
-
-torch.manual_seed(2)
-_, weighted, _ = d2l.train_regression(
-    MLPFlowMap(256, 3, num_times=2).to(device), weighted_meanflow_loss,
-    lambda: mix.sample(512), 20_000, cosine=True)
-s = mix.summary(d2l.flow_map_sample(weighted, z, 1))
-print(f'weighted MeanFlow, 1: weights {s["weights"]}, stray {s["stray"]:.1%}')
-```
-
-```{.python .input #few-step-on-the-running-example-3}
-%%tab jax
-def weighted_meanflow_loss(u, x0, key, c=1e-3):
-    """The MeanFlow loss with each squared error e divided by e + c, fixed."""
-    k1, k2 = jax.random.split(key)
-    a, b = jax.random.uniform(k1, (2, len(x0)))
-    e = d2l.flow_map_error(u, None, x0, jax.random.normal(k2, x0.shape),
-                           jnp.minimum(a, b), jnp.maximum(a, b))
-    return (e / (jax.lax.stop_gradient(e) + c)).mean()
-
-_, weighted, _ = d2l.train_regression(
-    MLPFlowMap(256, 3, num_times=2, rngs=nnx.Rngs(2)), weighted_meanflow_loss,
-    lambda k: mix.sample(k, 512), 20_000, jax.random.key(2), cosine=True)
-s = mix.summary(d2l.flow_map_sample(weighted, z, 1))
-print(f'weighted MeanFlow, 1: weights {s["weights"]}, stray {s["stray"]:.1%}')
-```
-
-The weighted student puts more than nine samples in ten on the heaviest mode,
-and few of them stray: the loss has fitted the most probable target instead
-of the average one. Plain squared error recovers the weights, which is why
-the other losses take the plain mean of `flow_map_error`.
+<!-- WRITER: the weighted-MeanFlow cell (#few-step-on-the-running-example-3) and its two paragraphs are gone (FEW-14); the experiment is now the exercise `ex_few-step-loss-weight`, which carries the two-dimensional caveat. Stored result for reference only (not to be quoted): 0.944 / 0.945 of the samples on the heaviest mode. Cut "which is why the other losses take the plain mean" wherever it survives; the slides "Check: Fit the Most Probable Target Instead?" and "The Log Weight Puts Nine Samples in Ten on One Mode" are cut. -->
 
 ### On Images
+
+<!-- WRITER: the teacher here is not the network of the samplers section, which is now class-conditional (num_classes=10) with the chapter's default time features; this cell trains an unconditional `UNet(ch=64)` with the flow map's slow time features (the student copies them), 10,000 updates, about 1.2 million parameters. Say that, without "the U-Net of" sec_diffusion-samplers. -->
 
 On Fashion-MNIST we distil the unconditional U-Net of
 :numref:`sec_diffusion-samplers`, about 1.2 million parameters trained for
@@ -699,7 +714,8 @@ def student_loss(u, x0):
 
 torch.manual_seed(2)
 _, student, _ = d2l.train_regression(  # jvp through GroupNorm won't compile
-    d2l.UNetFlowMap(teacher).to(X.device), student_loss, batch_fn, 5_000,
+    d2l.UNetFlowMap(copy.deepcopy(teacher)).to(X.device), student_loss,
+    batch_fn, 5_000,
     lr=2e-4, ema_half_life=500, compiled=False)
 ```
 
@@ -715,8 +731,8 @@ def student_loss(u, x0, key):
                               s, t).mean()
 
 _, student, _ = d2l.train_regression(
-    d2l.UNetFlowMap(teacher, rngs=nnx.Rngs(2)), student_loss, batch_fn,
-    5_000, jax.random.key(2), lr=2e-4, ema_half_life=500)
+    d2l.UNetFlowMap(nnx.clone(teacher), rngs=nnx.Rngs(2)), student_loss,
+    batch_fn, 5_000, jax.random.key(2), lr=2e-4, ema_half_life=500)
 ```
 
 From the same 1,000 noise images, the teacher takes 1 to 50 Euler steps
@@ -770,6 +786,8 @@ The student lies far below this curve at small budgets: one jump scores
 about 4 to 5 times the teacher's fifty-step FD, two jumps about twice, and
 four within about 1.5 times. Two evaluations of the student are worth about
 fifteen Euler steps of the teacher, and one about seven.
+
+<!-- WRITER (FEW-16): "Training our student longer lowers its one-step FD only slowly" is printed by no cell; cut it from the prose and from the slide note. Scratch dev run, 2026-11-20 (same teacher, same student seed, 5,000 vs 10,000 updates, FD of 1,000 samples against 1,000 test images, PT feature network, floor 0.86-0.87): one jump 11.2 -> 10.2 (PT) and 11.9 -> 11.0 (JAX); two jumps 4.5 -> 4.3 and 5.1 -> 4.7; four jumps 3.6 -> 3.3 and 3.8 -> 3.6; teacher fifty steps 2.6 / 2.7. Doubling the updates lowers the one-jump FD by about a tenth, less than the seed-to-seed range at 5,000 updates (10.5-11.8 PT, 9.9-11.6 JAX, from the time-embedding study), so the run does not show that budget closes the gap; the review's candid version ("we do not know how much of the remaining gap is budget") fits. The papers' numbers need citations and the per-example comparison (640,000 examples here). -->
 
 The remaining gap at one evaluation is a matter of budget. The students in
 the papers train for roughly 100,000 to 800,000 iterations at batches of
@@ -914,6 +932,22 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
     1. Song et al. compute the target with a moving average of the
        student's weights instead. Implement this with `d2l.EMA` and compare.
    :exlabel:`ex_few-step-stop-gradient`
+1. [code] **Weighting the MeanFlow loss.** MeanFlow's ImageNet recipe
+   :cite:`Geng.Deng.Bai.ea.2025` divides each example's squared error $e$
+   by $e + c$, held fixed, with a small $c$, so that the gradient is that of
+   $\log(e + c)$.
+    1. Squared error is minimized by the conditional mean of the target.
+       Near which value does the weighted loss put its minimizer? Without a
+       teacher the targets at a noisy point of the mixture spread over the
+       three modes; predict the mode weights of one-jump samples.
+    1. Train the MeanFlow student of this section with the weighted loss
+       and $c = 10^{-3}$, and report its one-jump weights and strays.
+    1. On a $28 \times 28$ image, $e$ sums 784 squared errors. Argue that
+       it then varies far less between examples at the same $(s, t)$ than
+       in two dimensions, so that the weight acts mostly as a weighting
+       across times. What does the experiment on the mixture tell you about
+       the recipe on images, and what does it not?
+   :exlabel:`ex_few-step-loss-weight`
 1. **The Lagrangian loss.** ● :citet:`Boffi.Albergo.VandenEijnden.2025`
    train flow maps with the Lagrangian identity.
     1. Substitute :eqref:`eq_diffusion-flow-map` into $\partial_s
@@ -966,8 +1000,9 @@ velocity, which do not exist when $\mathbf{x}$ is a sequence of tokens, the subj
        $(m, s)$ at $t \in \{0.1, 0.3, 0.5, 0.9\}$, and locate the minimizer
        at each $t$. Why is the minimum near $\log 2$ at small $t$? Relate the
        result to mode dropping in GANs (:numref:`subsec_gan_mode_dropping`)
-       and to the merging of modes under noise
-       (:exref:`ex_mdl-fokker-planck-probability-flow-mode-merging`). What
+       and to the merging of modes under noise (Exercise
+       :exref:`ex_mdl-fokker-planck-probability-flow-mode-merging` of
+       :numref:`sec_mdl-fokker-planck-probability-flow`). What
        does a weighting of the levels toward large $t$ buy a Gaussian
        generator, and what can no weighting buy it?
    :exlabel:`ex_few-step-matching-noised`
@@ -1220,6 +1255,8 @@ with $\mathbf{u}_t$ in place of $\bar{\mathbf{u}}$ it is Euler.
 :::
 :::
 
+<!-- WRITER: the notes of the two slides below say "the time embedding uses frequencies up to one"; since decision 1 that holds for the flow maps only (time_freqs=slow); the chapter default is 1 to 64. -->
+
 ::: {.slide title="The Loss Is One Jacobian-Vector Product and a Detached Target" only="pytorch"}
 ```{.python #few-step-exercises-1}
 x_t = d2l.GaussianPath.linear().sample(x0, t, eps)
@@ -1255,38 +1292,14 @@ turn the target into noise.
 :::
 :::
 
+<!-- WRITER: this slide shows the new three-student table (two seeds each, flow-map distillation added). The note's numbers and the title need the MeanFlow contraction: one-jump spread 0.31-0.34 against 0.47 for the data, while the distilled two-time student keeps 0.45-0.46. -->
+
 ::: {.slide title="On the Mixture, One Evaluation Recovers the Mode Weights"}
 @!few-step-on-the-running-example-2
 
 ::: {.d2l-note}
 Weights within 0.015; strays 2% (consistency), 4% (MeanFlow), data 1%; two
 evaluations: about 1.5%, the teacher's level.
-:::
-:::
-
-::: {.slide title="Check: Fit the Most Probable Target Instead?"}
-[Check]{.kicker}
-
-MeanFlow's ImageNet recipe divides each squared error $e$ by $(e + c)$,
-held fixed: the gradient of $\log(e + c)$. With no teacher, the targets at
-a noisy point spread over three modes. Predict the mode weights.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Squared error fits the conditional mean; the log fits near the
-most probable value, so the field pulls toward the heaviest mode.
-:::
-:::
-:::
-
-::: {.slide title="The Log Weight Puts Nine Samples in Ten on One Mode"}
-@!few-step-on-the-running-example-3
-
-More than nine samples in ten land on the heaviest mode, and few stray: the
-loss fits the most probable target, not the average.
-
-::: {.d2l-note}
-Plain squared error recovers the weights; keep the plain mean.
 :::
 :::
 

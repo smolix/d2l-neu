@@ -4589,11 +4589,12 @@ def flow_map_sample(u, x, steps, t_start=1.0):
     return jax.lax.scan(jump, x, (ts[:-1], ts[1:]))[0]
 
 class UNetFlowMap(nnx.Module):
-    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap.
+    """u(x, s, t): a velocity U-Net, plus a zero-initialized input for the
+    gap t - s. The caller passes a copy of the teacher's U-Net.
 
     Defined in :numref:`sec_diffusion-few-step`"""
     def __init__(self, unet, *, rngs):
-        self.unet = nnx.clone(unet)
+        self.unet = unet
         zeros = nnx.initializers.zeros
         self.gap = nnx.Linear(unet.emb_dim, unet.emb_dim, kernel_init=zeros,
                               bias_init=zeros, rngs=rngs)

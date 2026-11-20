@@ -48,13 +48,13 @@ communication.
 # every GPU at start-up and carves every array out of that block: one step
 # below needs about 10 GB in one piece after many smaller arrays have come
 # and gone, and a later cell starts a second JAX process on the same GPUs.
-# NCCL's buffer registration fails harmlessly on GPUs without peer-to-peer
-# access, such as ours, and would print a warning at every collective.
+# The notebook also runs with NCCL_LOCAL_REGISTER=0: NCCL's buffer
+# registration fails on GPUs without peer-to-peer access, such as ours, and
+# would print a warning at every collective.
 import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_enable_latency_hiding_scheduler=true')
 os.environ.setdefault('XLA_PYTHON_CLIENT_ALLOCATOR', 'vmm')
-os.environ.setdefault('NCCL_LOCAL_REGISTER', '0')
 ```
 
 ```{.python .input #multi-gpu-practice-multi-gpu-in-practice}
@@ -818,7 +818,8 @@ def profile_step(k, b, communicate=True):
 %%tab jax
 def local_stepper(k, b):
     """The step of `stepper` without communication: inside shard_map every
-    GPU sees only its shard and steps on its own shard's gradient."""
+    GPU sees only its shard, normalizes it with the shard's own batch
+    statistics, and steps on its own shard's gradient."""
     mesh, model, opt, (X, y) = setup(k, d2l.get_key())
     batches = minibatches(mesh, k * b)
     graphdef, state = nnx.split((model, opt))
@@ -839,7 +840,9 @@ def local_stepper(k, b):
 
 def profile_step(k, b, communicate=True):
     """Seconds per step on k GPUs with b examples per GPU, and device
-    milliseconds per step on GPU 0 of computation and of NCCL's kernels."""
+    milliseconds per step on GPU 0 of computation and of NCCL's kernels:
+    the two gradient allreduces and the small allreduces of the batch
+    normalization statistics."""
     step = stepper(k, b) if communicate else local_stepper(k, b)
     t = d2l.Benchmark(step, warmup=10, repeats=50).time
     kernels = d2l.kernel_times(step)
@@ -863,7 +866,16 @@ if d2l.num_gpus() >= 2:
               f'{compute:6.1f} ms, communicates {comm:5.1f} ms')
 ```
 
-<!-- WRITER: the two tab notes below state trace numbers that no cell prints; the cell above replaces them (see its note). -->
+<!-- WRITER: the two tab notes below state trace numbers that no cell prints; the cell above replaces them (see its note).
+JAX tab (lib review, finding 3): the communicating JAX step also carries one small allreduce per batch-norm statistic (the -3 cell counts them), and the step without communication normalizes per shard, so the JAX "communicates" column and the difference "2 GPUs" minus "2 GPUs without communication" include those latency-bound collectives, while 2(k-1)/k S/beta_link counts gradient bytes only. The JAX tab note must say so; the PyTorch difference is the gradient allreduce alone (BN is per GPU in both PyTorch runs). -->
+
+:begin_tab:`jax`
+In the JAX rows, the step with communication also runs the small
+allreduces of the batch normalization statistics, and the step without
+it normalizes each shard with its own statistics. The difference between
+the two steps, and the time of NCCL's kernels, therefore include those
+collectives as well as the two gradient allreduces.
+:end_tab:
 
 :begin_tab:`pytorch`
 In a trace of the step on two GPUs, the backward kernels take about a

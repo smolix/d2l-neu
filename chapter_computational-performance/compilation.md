@@ -501,9 +501,11 @@ t_first = d2l.Benchmark(lambda: compiled_step(net, X, Y),
                         warmup=0, repeats=1).time  # Includes compilation
 t_eager = d2l.Benchmark(lambda: train_step(net, X, Y)).time
 t_compiled = d2l.Benchmark(lambda: compiled_step(net, X, Y)).time
+saved = t_eager - t_compiled  # Per step; a difference of two short times
 print(f'first call: {t_first:.1f} s\n'
       f'eager: {1000 * t_eager:.2f} ms, compiled: {1000 * t_compiled:.2f} ms\n'
-      f'break-even: {t_first / (t_eager - t_compiled):.0f} steps')
+      'break-even: ' + (f'about {float(f"{t_first / saved:.1g}"):,.0f} steps'
+                        if saved > 0 else 'never, compiled is not faster'))
 # explain is internal to torch; it clears the compile cache and recompiles
 print('graphs:', torch._dynamo.explain(train_step)(net, X, Y).graph_count)
 ```
@@ -517,9 +519,11 @@ t_first = d2l.Benchmark(lambda: compiled_step(params, X, Y),
                         warmup=0, repeats=1).time  # Includes compilation
 t_eager = d2l.Benchmark(lambda: train_step(params, X, Y)).time
 t_compiled = d2l.Benchmark(lambda: compiled_step(params, X, Y)).time
+saved = t_eager - t_compiled  # Per step; a difference of two short times
 print(f'first call: {t_first:.1f} s\n'
       f'eager: {1000 * t_eager:.2f} ms, compiled: {1000 * t_compiled:.2f} ms\n'
-      f'break-even: {t_first / (t_eager - t_compiled):.0f} steps')
+      'break-even: ' + (f'about {float(f"{t_first / saved:.1g}"):,.0f} steps'
+                        if saved > 0 else 'never, compiled is not faster'))
 ```
 
 <!-- WRITER: The PyTorch cell now also prints `graphs: 2` (torch._dynamo.explain,

@@ -17,7 +17,10 @@ our four GPUs, so four GPUs cannot train this model any more than one can.
 # view. Without it, XLA starts every reduce-scatter of the sharded step as
 # soon as its gradient exists and finishes them all at the end, so the full
 # gradients of all blocks are alive at once: about 8 GB of temporaries per
-# GPU instead of about 5, more than JAX may allocate by default.
+# GPU instead of about 5, more than JAX may allocate by default. The
+# notebook also runs with NCCL_LOCAL_REGISTER=0: NCCL's buffer registration
+# fails on GPUs without peer-to-peer access, such as ours, and would print a
+# warning at every collective.
 import os
 os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
                            ' --xla_gpu_enable_latency_hiding_scheduler=true')
@@ -62,6 +65,8 @@ from jax.sharding import NamedSharding, PartitionSpec as P
 %%tab pytorch
 config = dict(vocab_size=50257, num_hiddens=2048, num_heads=16,
               num_blks=36, pos='learned')
+k = 2                       # GPUs
+assert d2l.num_gpus() >= k, 'This section needs two GPUs'
 with torch.device('meta'):  # Shapes and dtypes only, no data
     N = d2l.num_params(d2l.GPT(**config))
 total = torch.cuda.mem_get_info()[1]
@@ -73,6 +78,8 @@ print(f'{N / 1e9:.2f} billion parameters, 16N = {16 * N / 2**30:.1f} GiB; '
 %%tab jax
 config = dict(vocab_size=50257, num_hiddens=2048, num_heads=16,
               num_blks=36, pos='learned')
+k = 2                       # GPUs
+assert jax.device_count() >= k, 'This section needs two GPUs'
 key = d2l.get_key()
 N = d2l.num_params(nnx.eval_shape(lambda: d2l.GPT(**config,
                                                   rngs=nnx.Rngs(key))))
@@ -206,25 +213,26 @@ from d2l import torch as d2l
 
 _, k, device = d2l.init_distributed()
 x = torch.zeros(2**26 // k, device=device)  # This GPU's part
-y = torch.empty(2**26, device=device)       # 256 MB, gathered
+y = torch.empty(2**26, device=device)       # 256 MiB, gathered
 t = d2l.Benchmark(lambda: dist.all_gather_into_tensor(y, x), repeats=10).time
 print(json.dumps({'beta_link': (k - 1) / k * y.nbytes / t}))  # Sent per GPU
 dist.destroy_process_group()
 '''
-beta_link = min(r['beta_link'] for r in d2l.torchrun(GATHER, 2))
-print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on two GPUs')
+beta_link = min(r['beta_link'] for r in d2l.torchrun(GATHER, k))
+print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on {k} GPUs')
 ```
 
 ```{.python .input #sharding-memory-and-communication-1}
 %%tab jax
-mesh = jax.make_mesh((2,), ('data',), devices=jax.devices()[:2],
+mesh = jax.make_mesh((k,), ('data',), devices=jax.devices()[:k],
                      axis_types=(jax.sharding.AxisType.Auto,))
-x = jnp.zeros(2**26, device=NamedSharding(mesh, P('data')))  # 256 MB
-# Asking for the result on every GPU makes the compiler gather the halves
+x = jnp.zeros(2**26, device=NamedSharding(mesh, P('data')))  # 256 MiB
+# Asking for the result on every GPU makes the compiler gather the parts
 gather = jax.jit(lambda x: x, out_shardings=NamedSharding(mesh, P()))
 t = d2l.Benchmark(lambda: gather(x), repeats=10).time
-beta_link = x.nbytes / 2 / t  # Each GPU sends its half
-print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on two GPUs')
+beta_link = (k - 1) / k * x.nbytes / t  # Sent per GPU
+del x                       # Frees its memory before the training step
+print(f'beta_link = {beta_link / 1e9:.1f} GB/s in an all-gather on {k} GPUs')
 ```
 
 The computation of a step is much shorter. The forward and the backward
@@ -244,14 +252,14 @@ standard way to train models whose state does not fit on one GPU.
 
 ```{.python .input #sharding-memory-and-communication-2}
 %%tab pytorch, jax
-k, b, T = 2, 2, 1024  # GPUs; sequences of T tokens per GPU and step
+b, T = 2, 1024        # Sequences of T tokens per GPU and step
 S = 4 * N             # Bytes of the fp32 weights, and of the gradients
-peak_tf32 = 82.6e12   # FLOP/s of the RTX 4090's tensor cores in tf32
+peak = {'tf32': 82.6e12, 'bf16': 165.2e12}  # FLOP/s of the RTX 4090
 print(f'state per GPU, 16N/k: {16 * N / k / 2**30:.1f} GiB')
 print(f'communication, 3(k-1)S/(k beta_link): '
       f'{3 * (k - 1) / k * S / beta_link:.1f} s per step')
 print(f'arithmetic at the peak, 8N bT/P: '
-      f'{8 * N * b * T / peak_tf32:.2f} s per step')
+      f'{8 * N * b * T / peak["tf32"]:.2f} s per step')
 ```
 
 <!-- WRITER (PyTorch tab note): the script below builds the model on the meta device, wraps every block so that torch.utils.checkpoint recomputes it (Checkpointed), calls fully_shard once per block and once for the whole model, and only then allocates this GPU's shards with to_empty and initializes them as d2l.GPT does (norms to one, embeddings N(0, 0.02^2), then init_weights); random initialization of a sharded tensor draws the values that the whole tensor would get, given the same seed in every process. fused=True runs Adam's update as one kernel over all tensors instead of the default foreach update, whose temporaries are as large as the gradients (about 3.6 GiB here). The JSON line: peak memory, three timed steps after one warm-up, and the device seconds of NCCL kernels in one profiled step. -->
@@ -295,6 +303,7 @@ with torch.no_grad():       # Initialize the shards as d2l.GPT does
         nn.init.normal_(emb.weight, std=0.02)
     model.init_weights()
 opt = torch.optim.Adam(model.parameters(), lr=1e-4, fused=True)
+# The same tokens on every GPU: they only set the shapes of the step
 X = torch.randint(0, config['vocab_size'], (b, T), device=device)
 
 def step():
@@ -316,7 +325,7 @@ dist.destroy_process_group()
 ```{.python .input #sharding-memory-and-communication-4}
 %%tab pytorch
 ranks = d2l.torchrun(TRAIN_FSDP, k, json.dumps(config), b, T)
-peak = max(r['peak'] for r in ranks)
+peak_bytes = max(r['peak'] for r in ranks)
 times, comm = ranks[0]['times'], ranks[0]['comm']  # GPU 0
 ```
 
@@ -378,7 +387,7 @@ print(f'per GPU: weights and moments '
 
 ```{.python .input #sharding-memory-and-communication-8}
 %%tab jax
-def collective_megabytes(compiled):  #@save
+def collective_megabytes(compiled):
     """Megabytes of the results of each kind of collective in a compiled
     program, on one GPU."""
     sizes = collections.Counter()
@@ -408,12 +417,12 @@ times = [d2l.Benchmark(lambda: train_step(model, opt, X), warmup=0,
                        repeats=1).time for _ in range(3)]
 kernels = d2l.kernel_times(lambda: train_step(model, opt, X), steps=1)
 comm = sum(ms for name, ms in kernels.items() if 'nccl' in name.lower()) / 1e3
-peak = jax.devices()[0].memory_stats()['peak_bytes_in_use']
+peak_bytes = jax.devices()[0].memory_stats()['peak_bytes_in_use']
 ```
 
 ```{.python .input #sharding-memory-and-communication-11}
 %%tab pytorch, jax
-print(f'per GPU: peak memory {peak / 2**30:.1f} GiB; '
+print(f'per GPU: peak memory {peak_bytes / 2**30:.1f} GiB; '
       f'{np.median(times):.2f} s per step ({min(times):.2f} to '
       f'{max(times):.2f}), of which GPU 0 spends {comm:.2f} s in '
       f'communication kernels')

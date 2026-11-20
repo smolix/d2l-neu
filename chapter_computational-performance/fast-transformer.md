@@ -1176,11 +1176,9 @@ def account(kernels, tokens, speed):
     at `speed` tokens/s: the step, its matrix products, and all its other
     kernels."""
     per_step = 8192 / tokens  # Steps per 8,192 tokens
-    # Products are named as in d2l.show_profile: cuBLAS and CUTLASS kernels,
-    # PyTorch's fused attention (fmha_cutlass...), cuDNN's (...sdpa...)
-    products = per_step * sum(
+    products = per_step * sum(  # Kernel names as in d2l.show_profile
         ms for name, ms in kernels.items()
-        if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+        if re.search(d2l.PRODUCT_KERNELS, name, re.I))
     other = per_step * sum(kernels.values()) - products
     return 1e3 * 8192 / speed, products, other
 

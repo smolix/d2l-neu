@@ -1018,7 +1018,9 @@ per b, the one-GPU step, its device-busy time t_dev (d2l.kernel_times), the
 two-GPU step, and the speedup in examples per second, predicted as
 2 t(1) / (max(2 h_step, t_dev) + alpha + S/beta_link) with h_step the
 one-GPU step at b = 256 (host-bound, per the profile), and measured as
-2 t(1) / t(2).
+2 t(1) / t(2). Each configuration is timed in three windows (median
+printed), and the measured speedup carries the range of the three
+per-window speedups; read claims against that range (lib review, finding 2).
 Dev runs (GPUs 0 and 1, 2026-11-19, shared host; two runs per tab, the
 final one first):
 PyTorch: b = 256: 1 GPU 3.48 ms, device busy 0.30, 2 GPUs 6.89; speedup
@@ -1048,20 +1050,27 @@ that the step waits for the slower device. -->
 
 ```{.python .input #multiple-gpus-larger-minibatches}
 %%tab pytorch
-params = [broadcast(base, d) for d in devices]
 for b in (256, 4096, 32768):                # Examples per GPU
     batch = torch.randint(len(data.train), (2 * b,))  # With replacement
     steps = [lambda k=k: train_step(params[:k], train_data[:k],
                                     batch[:k * b], 0.2) for k in (1, 2)]
-    t = [d2l.Benchmark(steps[k - 1], warmup=10, repeats=max(20, 2**16 // b),
-                       devices=devices[:k]).time for k in (1, 2)]
+    times = []                              # Three timed windows per k
+    for k in (1, 2):
+        params = [broadcast(base, d) for d in devices]  # Equal replicas
+        times.append([d2l.Benchmark(
+            steps[k - 1], warmup=10 if w == 0 else 0,
+            repeats=max(20, 2**16 // b), devices=devices[:k]).time
+            for w in range(3)])
+    t = np.median(times, axis=1)
     t_dev = sum(d2l.kernel_times(steps[0]).values()) / 1e3
     if b == 256:              # The host sets this step's time (profile above)
         h_step = t[0]
     predicted = 2 * t[0] / (max(2 * h_step, t_dev) + exchange)
+    speedups = 2 * np.array(times[0]) / np.array(times[1])
     print(f'b = {b:5d}: 1 GPU {1e3 * t[0]:6.2f} ms (device busy '
           f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms; speedup '
-          f'{predicted:.2f} predicted, {2 * t[0] / t[1]:.2f} measured')
+          f'{predicted:.2f} predicted, {2 * t[0] / t[1]:.2f} measured '
+          f'(windows {speedups.min():.2f}-{speedups.max():.2f})')
 ```
 
 ```{.python .input #multiple-gpus-larger-minibatches}
@@ -1074,15 +1083,19 @@ for b in (256, 4096, 32768):                # Examples per GPU
         params = broadcast(base, mesh)
         i = jax.device_put(batch[:k * b], NamedSharding(mesh, P('data')))
         steps.append(partial(train_step, params, data_k, i, 0.2, mesh))
-    t = [d2l.Benchmark(step, warmup=10, repeats=max(20, 2**16 // b)).time
-         for step in steps]
+    times = [[d2l.Benchmark(step, warmup=10 if w == 0 else 0,
+                            repeats=max(20, 2**16 // b)).time
+              for w in range(3)] for step in steps]  # Three windows per k
+    t = np.median(times, axis=1)
     t_dev = sum(d2l.kernel_times(steps[0]).values()) / 1e3
     if b == 256:              # The host sets this step's time (profile above)
         h_step = t[0]
     predicted = 2 * t[0] / (max(2 * h_step, t_dev) + exchange)
+    speedups = 2 * np.array(times[0]) / np.array(times[1])
     print(f'b = {b:5d}: 1 GPU {1e3 * t[0]:6.2f} ms (device busy '
           f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms; speedup '
-          f'{predicted:.2f} predicted, {2 * t[0] / t[1]:.2f} measured')
+          f'{predicted:.2f} predicted, {2 * t[0] / t[1]:.2f} measured '
+          f'(windows {speedups.min():.2f}-{speedups.max():.2f})')
 ```
 
 We can now predict from three measurements whether more GPUs shorten a

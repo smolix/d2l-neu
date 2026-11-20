@@ -733,19 +733,19 @@ import tempfile
 
 def kernel_times(f, steps=10):  #@save
     """Device milliseconds per call of f, for every kernel that f runs."""
-    trace_dir = tempfile.mkdtemp()
-    with jax.profiler.trace(trace_dir):
-        for _ in range(steps):
-            out = f()
-        jax.block_until_ready(out)
-    xspace = glob.glob(f'{trace_dir}/**/*.xplane.pb', recursive=True)[0]
-    gpu = jax.profiler.ProfileData.from_file(xspace).find_plane_with_name(
-        '/device:GPU:0')
     kernels = collections.Counter()
-    for line in gpu.lines:
-        if line.name.startswith('Stream'):  # One line per CUDA stream
-            for e in line.events:
-                kernels[e.name] += e.duration_ns / 1e6 / steps
+    with tempfile.TemporaryDirectory() as trace_dir:  # Removed afterwards
+        with jax.profiler.trace(trace_dir):
+            for _ in range(steps):
+                out = f()
+            jax.block_until_ready(out)
+        xspace = glob.glob(f'{trace_dir}/**/*.xplane.pb', recursive=True)[0]
+        gpu = jax.profiler.ProfileData.from_file(
+            xspace).find_plane_with_name('/device:GPU:0')
+        for line in gpu.lines:
+            if line.name.startswith('Stream'):  # One line per CUDA stream
+                for e in line.events:
+                    kernels[e.name] += e.duration_ns / 1e6 / steps
     return kernels
 ```
 
@@ -773,15 +773,17 @@ list from the C++ names of the kernels.
 
 ```{.python .input #performance-model-reading-the-profile-1}
 %%tab pytorch, jax
+PRODUCT_KERNELS = 'gemm|xmma|cutlass|matmul|sdpa'  #@save
+# Kernel names that mark a matrix product: cuBLAS and CUTLASS kernels (gemm,
+# xmma, cutlass, which also names PyTorch's fused attention), XLA's fused
+# products (gemm_fusion_dot), and matmul or sdpa kernels
+
 def show_profile(kernels, step_ms, rows=6):  #@save
     """Busy device time against the wall-clock time step_ms of a step, the
     share of the matrix products, and the kernels with the most time."""
     busy = sum(kernels.values())
-    # Names that mark a matrix product: cuBLAS and CUTLASS kernels (gemm,
-    # xmma, cutlass, which also names PyTorch's fused attention), XLA's
-    # fused products (gemm_fusion_dot), and matmul or sdpa kernels
     products = sum(ms for name, ms in kernels.items()
-                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+                   if re.search(PRODUCT_KERNELS, name, re.I))
     print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '
           f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
     for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:

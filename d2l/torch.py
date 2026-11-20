@@ -2661,17 +2661,16 @@ def kernel_times(f, steps=10):
             for e in prof.key_averages()
             if e.device_type == torch.autograd.DeviceType.CUDA}
 
+PRODUCT_KERNELS = 'gemm|xmma|cutlass|matmul|sdpa'
+
 def show_profile(kernels, step_ms, rows=6):
     """Busy device time against the wall-clock time step_ms of a step, the
     share of the matrix products, and the kernels with the most time.
 
     Defined in :numref:`sec_perf_model`"""
     busy = sum(kernels.values())
-    # Names that mark a matrix product: cuBLAS and CUTLASS kernels (gemm,
-    # xmma, cutlass, which also names PyTorch's fused attention), XLA's
-    # fused products (gemm_fusion_dot), and matmul or sdpa kernels
     products = sum(ms for name, ms in kernels.items()
-                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+                   if re.search(PRODUCT_KERNELS, name, re.I))
     print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '
           f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
     for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:

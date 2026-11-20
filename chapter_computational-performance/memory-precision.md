@@ -746,6 +746,7 @@ four times as many as without checkpointing.
 ```{.python .input #memory-precision-activation-checkpointing-1}
 %%tab pytorch, jax
 M_gpu, d, L = 24 * 2**30, config['num_hiddens'], config['num_blks']
+slope = (peaks[8192] - peaks[4096]) / 4096  # Growth per token, measured
 excess = slope - (2 * block + head)  # Measured peak above the count
 budgets = {  # Configuration: (fixed bytes, bytes per token at the peak)
     'fp32, count': (16 * N, L * block + head),

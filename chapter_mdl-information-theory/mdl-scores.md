@@ -684,9 +684,13 @@ in a GAN is the standard choice for complex domains like images
 (:numref:`sec_basic_gan`), where we do not know ahead of time which features
 distinguish real samples from generated ones; its drawbacks are that the
 estimated divergence is biased downward and flattens out when the model is far
-from the data (:numref:`sec_mdl-f-gan-dual`). A 1-Lipschitz critic fixes that
-flat gradient because $W_1$ keeps a constant slope at every distance
-(:numref:`sec_gan_objectives` compares both objectives in practice). A fixed
+from the data (:numref:`sec_mdl-f-gan-dual`). The optimal 1-Lipschitz critic
+has no such flat stretch, because $W_1$ keeps a constant slope at every
+distance. Trained critics need not behave like their optimal versions, though:
+in the experiment of :numref:`subsec_gan_objectives_separated_start` a trained
+logistic critic still slopes at far generated samples, and a $W_1$ critic held
+near unit slope by the usual two-sided gradient penalty carries its generator
+to the data and then past it. A fixed
 kernel avoids training a second network altogether and achieves $O(N^{-1/2})$
 estimation error in any dimension (:numref:`sec_mdl-ipm-mmd`), making it ideal
 for two-sample tests and sample evaluation, though its gradient vanishes beyond

@@ -515,9 +515,13 @@ Because a neural network can approximate such a test function, the **WGAN**
 :cite:`Arjovsky.Chintala.Bottou.2017` trains the dual objective
 :eqref:`eq_mdl-kr-dual` directly, using a neural critic constrained to be
 approximately 1-Lipschitz in the role of $g$. :numref:`sec_gan_objectives`
-compares this objective with other adversarial losses, and
-:numref:`sec_gan_convergence` examines the gradient penalties used to enforce
-the Lipschitz constraint. Keep in mind that when a critic is only
+compares this objective with other adversarial losses and trains such a
+critic, whose slope a gradient penalty pulls toward one.
+:numref:`sec_gan_convergence` shows why later recipes center their penalties
+at zero instead: a penalty that prefers unit slope keeps pushing a generator
+that already matches the data, while one centered at zero only keeps the
+critic's gradient small at the samples and enforces no Lipschitz constraint.
+Keep in mind that when a critic is only
 approximately Lipschitz and restricted to a neural architecture, the score it
 reports is no longer exact $W_1$.
 

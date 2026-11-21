@@ -1638,7 +1638,6 @@ mixture under stable-then-decay ends about 0.1 bits per byte below cosine on
 gap shrinks with the length of the run, which is why the arms, all on one
 schedule, are compared only with each other.
 <!-- campaign: lm-mix-runs-t2-v1 -->
-<!-- campaign: lm-mix-runs-t2-v1 -->
 
 ### Annealing Gains and Recency
 :label:`subsec_lm_mix_recency`
@@ -1651,7 +1650,9 @@ read last, not acquired a skill it lacked, and a gain of that kind fades when
 training continues on other data. Two checks separate the cases. One measures
 the loss on held-out data of the annealed domain that does not resemble any
 benchmark; the other continues training on the general mixture after the
-anneal and asks whether the gain survives. Blakeney and colleagues (2024)
+anneal and asks whether the gain survives; the recency arm above is the
+second check in miniature, and at T1 scale a third of its mathematics gain
+did not survive. Blakeney and colleagues (2024)
 proposed upsampling domains at the end of training as a cheap way to test
 which data help, and the method is valuable because it is fast. It should
 not be read as a measure of what a model can do after the anneal is over.

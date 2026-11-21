@@ -1,32 +1,28 @@
 # Document Extraction from Web Crawls
 :label:`sec_lm_crawl`
 
-Every text in this book so far has arrived clean: *The Time Machine* as a
-plain file in :numref:`sec_text-sequence`, the book's own sources as the
-retrieval corpus of :numref:`sec_lm_retrieval`. The models of :numref:`chap_lm_pretrained` were
-trained mostly on the public web, and the web does not arrive as text. It
-arrives as pages. Open a news article in a browser and you see the article,
-but the page also holds a navigation menu, a cookie banner, a column of
+Open a news article in a browser and you see the article. The page the
+server sent holds more: a navigation menu, a cookie banner, a column of
 related links, a footer of legal notices, and perhaps a table or a block of
-code inside the article itself. Something has to decide which of these is
-the document.
+code inside the article itself. The models of :numref:`chap_lm_pretrained`
+were trained mostly on such pages, and the web does not arrive as text.
+Something has to decide which part of each page is the document.
 
 That something is an *extractor*, a program that turns a page's HTML into
 plain text, and its decision is final. A paragraph it drops is never seen by
-the model, however long we train; a menu it keeps is learned as if someone
+the model, however long we train. A menu it keeps is learned as if someone
 had written it as prose. Extraction decides what the model can ever learn,
-and it decides before any filter, deduplication or tokenizer has a say.
+before any filter, deduplication or tokenizer has a say.
 
 This section follows one archive file of Common Crawl, the public crawl
-behind nearly every open pretraining corpus, from its raw bytes to a set of
-documents with a manifest that lets anyone rebuild them. On the way we
-compare three extractors with the text Common Crawl ships beside its
-archives, measure what each loses on prose, code, tables and mathematics,
-and identify the language, normalize the characters and remove the email
+behind nearly every open pretraining corpus, from its raw bytes to documents
+with a manifest that lets anyone rebuild them. On the way we compare three
+extractors with the text Common Crawl ships beside its archives, and we
+identify the language, normalize the characters and remove the email
 addresses of every document that survives. Our reference is FineWeb
 :cite:`Penedo.Kydlicek.BenAllal.ea.2024`, a released corpus built from the
-same archive file, so for every record we can set our text beside the text
-that a production pipeline kept.
+same archive file, so every record we keep has a production pipeline's text
+beside ours.
 
 ```{.python .input #crawl-imports}
 %%tab pytorch
@@ -59,12 +55,11 @@ import pandas as pd
 from warcio.archiveiterator import ArchiveIterator
 ```
 
-Everything below runs on a CPU, in a few minutes with eight worker processes
-for the extraction; the first run also downloads 256 MiB of the archive and
-the 102 MB text file that goes with it. Every step is deterministic given the
-pinned bytes and package versions, so every build recomputes every number,
-and the last cell checks them against the registered copies. Setting
-`D2L_RERUN` only chooses which result files a run writes.
+Everything below runs on a CPU in a few minutes; the first run also
+downloads 256 MiB of the archive and its 102 MB text file. Every step is
+deterministic given the pinned bytes and package versions, and the last cell
+checks every number against the registered copy. Setting `D2L_RERUN` makes
+a run write new copies of the named result files instead.
 
 ```{.python .input #crawl-config}
 %%tab pytorch
@@ -83,15 +78,12 @@ print(f'CRAWL_MIB={CRAWL_MIB}, LID_MIN={LID_MIN}, N_WORKERS={N_WORKERS}, '
 ```
 
 The registry holds no Common Crawl bytes. The entry `lm-cc-warc-256m-v1` is a
-*pin*: a small file with the archive's URL, the byte range we read and a
-SHA-256 hash for every 16 MiB block of it. The bytes come from Common
-Crawl's own servers and stay in a local cache. Common Crawl grants no
-licence for the pages it archives, so this book neither commits nor hosts
-them. What it does publish is FineWeb's text for the records of our range
-(FineWeb is released under the ODC-By licence), fastText's language
-identifier, and two files of counts, offsets and hashes. The second cell
-pins, by revision, the released datasets and models that the whole chapter
-uses.
+*pin*: the archive's URL, the byte range we read and a SHA-256 hash for every
+16 MiB block of it. The bytes come from Common Crawl's servers and stay in a
+local cache: Common Crawl grants no licence for the pages it archives. The book publishes only FineWeb's text for the records of our
+range (under FineWeb's ODC-By licence) and files of counts, offsets and
+hashes. The second cell pins, by revision, the datasets and models of the
+whole chapter.
 
 ```{.python .input #crawl-data-hub}
 %%tab pytorch
@@ -144,12 +136,13 @@ LM_DATA_SOURCES = {  # name: (kind, Hub repository, revision, licence)
 :label:`subsec_lm_crawl_warc`
 
 Since 2008 Common Crawl has crawled the web again and again, lately every
-month or two and a few billion pages at a time, and it publishes each crawl
-as tens of thousands of archive files in the WARC format (Web ARChive, a standard of the web-archiving community). A WARC
-file is a sequence of *records*, and every fetch leaves three of them: a
-`request` record with the HTTP request the crawler sent, a `response` record
-with the server's whole reply, headers and body, and a `metadata` record
-with what the crawler noted about the fetch. One `warcinfo` record at the
+month or two and a few billion pages at a time. It publishes each crawl as
+tens of thousands of archive files in the WARC format (Web ARChive, a
+standard of the web-archiving community). A WARC file is a sequence of
+*records*, and every fetch leaves three of them. A `request` record holds
+the HTTP request the crawler sent, a `response` record the server's whole
+reply, headers and body, and a `metadata` record what the crawler noted
+about the fetch. One `warcinfo` record at the
 start describes the crawl itself. Each record begins with a header that
 holds a unique record id, the URL, the date and the length of what follows.
 
@@ -158,7 +151,7 @@ metadata and links of each page as JSON, and a WET file holds plain text in
 `conversion` records, each pointing back to its response through a
 `WARC-Refers-To` header. A WET file is about a tenth of the size of its WARC
 file, and it is the cheapest way to get text out of a crawl. Several early
-corpora used it. We will see what that costs.
+corpora used it. We will see what it keeps.
 
 One design decision makes the format easy to sample. Each record is
 compressed as its own gzip member, and a gzip file may be a concatenation of
@@ -457,9 +450,9 @@ them. We compare four sources of text for every HTML page.
   text with it.
 - **Resiliparse**, from the ChatNoir web search project, is written in C++
   for speed. DCLM (Li and colleagues, 2024) compared it with trafilatura and
-  WET text by training models on each: both libraries gave better models than
-  WET text, by similar margins, and DCLM chose Resiliparse because it is much
-  faster.
+  WET text by training models on each. Both libraries gave better models
+  than WET text, by similar margins, and DCLM chose Resiliparse because it is
+  much faster.
 - **naive** is our own, and it shows the mechanism in forty lines. It splits
   the page into blocks at block-level tags, counts each block's characters
   and the characters inside its links, and keeps a block with at least 40
@@ -600,11 +593,11 @@ for name, (page, want) in d2l.NAIVE_FIXTURES.items():
 Now the real pages. The next cell runs the three extractors on every HTML
 response of the range in eight worker processes and joins the WET text by
 `WARC-Refers-To`. It also sorts each page into classes by markers in its
-HTML: *code* if it has a `<pre>` or `<code>` block of at least three lines,
-*table* if a table has at least four cells, *math* if it holds TeX in MathML
-annotations, MathJax scripts or the alt text of images, and *prose* if it has
-none of these and at least 200 characters of paragraph text. A page may be in
-several classes.
+HTML. A page is *code* if it has a `<pre>` or `<code>` block of at least
+three lines and *table* if a table has at least four cells. It is *math* if
+it holds TeX in MathML annotations, MathJax scripts or the alt text of
+images, and *prose* if it has none of these and at least 200 characters of
+paragraph text. A page may be in several classes.
 
 ```{.python .input #crawl-extract}
 %%tab pytorch
@@ -647,8 +640,8 @@ Two of the counts are worth a second look. WET has no conversion record for
 different set of pages; any comparison has to join by record id and count
 the missing ones. And mathematics is rare: 12 pages in 9,591, with code not
 much more common at 79. Tables, by contrast, appear on one page in six. The
-speeds differ by more than an order of magnitude: Resiliparse is about 15
-times faster than trafilatura, and the naive extractor about 8 times.
+speeds differ by more than an order of magnitude: Resiliparse is more than
+ten times faster than trafilatura, and the naive extractor several times.
 
 ### Code, Tables and Mathematics
 :label:`subsec_lm_crawl_structure`
@@ -804,28 +797,30 @@ fig.tight_layout()
 print(deltas.round(3).to_string(index=False))
 ```
 
-Extractors differ most on tables. Resiliparse finds about 0.73 of the table
-cells, trafilatura about 0.61 (a paired difference of $-0.12$, with an
-interval from $-0.18$ to $-0.06$), and the naive extractor only 0.24, because
-cells are too short to be blocks, exactly as the fixture predicted. On prose
-the two libraries do not differ: each recovers a little under 0.9 of the
-paragraph text, and the paired interval includes 0. On code, 44 English
-pages are too few to separate them. Mathematics we wanted to measure and could not, with 4
+The left panel shows recall by page class, and the extractors differ most
+on tables. Resiliparse finds about 0.73 of the table cells and trafilatura
+about 0.61, a paired difference of $-0.12$ with an interval from $-0.18$ to
+$-0.06$. The naive extractor finds only 0.24, because cells are too short to
+be blocks, as the fixture predicted. On prose the two libraries do not
+differ: each recovers a little under 0.9 of the paragraph text, and the
+paired interval includes 0. On code, 44 English pages are too few to
+separate them. Mathematics we wanted to measure and could not, with 4
 English pages from 2 domains. A general crawl is the wrong place to study
 mathematical extraction; corpora such as FineMath start from pages selected
 for it.
 
-WET recalls nearly everything, of course, since it keeps everything, and its
-precision proxy shows the cost: 0.44, against 0.60 to 0.64 for the three
-extractors, so more than half of WET's characters sit on lines outside the
-content elements. The naive extractor is the surprise. It keeps more
-paragraph text than either library, about 0.1 more, because it has no notion
-of "the article" and keeps every dense paragraph, whether it belongs to the
-article or not. It pays with tables and with boilerplate. Between the two
-libraries the verdict is clear for this sample: Resiliparse is at least as
-good as trafilatura wherever we can tell them apart, and about 15 times
-faster. Trafilatura's lead on code (0.92 against 0.82) is within the noise of
-44 pages.
+WET recalls nearly everything, since it keeps everything, and the right
+panel shows what else it keeps. Its precision proxy is 0.44, against 0.60 to
+0.64 for the three extractors, so more than half of WET's characters sit on
+lines outside the content elements. The naive extractor is the surprise. It
+keeps more paragraph text than either library, about 0.1 more, because it
+has no notion of "the article" and keeps every dense paragraph, whether it
+belongs to the article or not. It loses the tables, and its precision proxy
+is the lowest of the three extractors. Between the two libraries the verdict
+is clear for this sample: Resiliparse is at least as good as trafilatura
+wherever we can tell them apart, and more than ten times faster.
+Trafilatura's lead on code (0.92 against 0.82) is within the noise of 44
+pages.
 
 FineWeb's text for the same records offers a second view, and it must be
 read carefully. It is not ground truth. FineWeb extracted it with
@@ -907,7 +902,7 @@ Here is the reason never to read agreement as accuracy. Resiliparse recalled
 more of the table text than trafilatura did, yet it agrees less with FineWeb,
 because FineWeb's text is trafilatura's.
 
-## Language Identification
+## Language Identification and Normalization
 :label:`subsec_lm_crawl_lid`
 
 Pretraining corpora are split by language before anything else, because
@@ -1080,11 +1075,11 @@ nothing, as the assertion checks): the English text of this range is
 already composed. NFKC
 changes 619 of them, 19%, rewriting 7,911 code points. Most of the rewrites
 are harmless. No-break spaces become spaces and the ellipsis becomes three
-dots. Further down the list they are not: the double prime of inches and
-arc-seconds becomes two primes, ™ becomes the letters TM, full-width colons
-and commas in Chinese text become ASCII punctuation, ½ and ¼ become digits
-around a fraction slash, and mathematical bold letters become plain ones,
-erasing what may be the only mark of a vector. No-break spaces occur in 292
+dots. Further down the list they are not. The double prime of inches and
+arc-seconds becomes two primes, ™ becomes the letters TM, and full-width
+colons and commas in Chinese text become ASCII punctuation. ½ and ¼ become
+digits around a fraction slash, and mathematical bold letters become plain
+ones, erasing what may be the only mark of a vector. No-break spaces occur in 292
 documents, and 6 documents still carry U+FFFD, decoding failures that the
 charset chain did not catch. This sample has no zero-width joiners, but a
 multilingual corpus does, and there they matter: in Devanagari the joiner
@@ -1105,7 +1100,7 @@ which parses every candidate IP address and keeps private, loopback,
 documentation and multicast addresses (192.168.1.1 identifies nobody). Names,
 street addresses and a sentence about someone's diagnosis have no fixed
 shape. No regular expression finds them, and model-based detectors find some
-of them at the price of many false alarms. We implement what rules can do,
+of them along with many false alarms. We implement what rules can do,
 and it is the easy part.
 
 ```{.python .input #crawl-pii-def}
@@ -1327,9 +1322,9 @@ site's terms are others. Common Crawl is an archive. It honors `robots.txt`
 when it crawls, but it grants no licence for what it stores, and a page's
 being public does not make its text free to copy. Site owners have noticed.
 *Consent in Crisis* (Longpre and colleagues, 2024) audited the `robots.txt`
-files and terms of service behind widely used corpora and found
-restrictions aimed at AI crawlers spreading within a single year, most of
-all among the actively maintained sites that supply much of the useful text.
+files and terms of service behind widely used corpora. Restrictions aimed at
+AI crawlers spread within a single year, most of all among the actively
+maintained sites that supply much of the useful text.
 
 Rights therefore enter a pipeline as engineering inputs, like any other
 field. Each of our documents records where it came from: the WARC file, the
@@ -1821,20 +1816,18 @@ throws away? :numref:`sec_lm_quality_filtering` takes up quality.
 ## Summary
 
 A web page is mostly not its content, and the extractor that turns its HTML
-into text decides what a model trained on it can ever learn. Common Crawl
-stores each fetch as separately compressed WARC records, so a byte range is a
-valid sample, a record can be fetched again from its offset, and a corpus can
-be published as pins and hashes instead of text. On 256 MiB of one archive
-file, the extractors differed most on tables (Resiliparse about 0.73 of the
-cells, trafilatura about 0.61, our link-density extractor 0.24) and not at all
-between the two libraries on prose, while Common Crawl's own WET text kept
-the most boilerplate; agreement with FineWeb measures closeness to its
-trafilatura pipeline, not accuracy. A language score is a preference among
-176 labels, not the probability that a text is English; NFC is the one safe
-normalization, while NFKC rewrote a fifth of the documents; rules remove
-email and IP addresses and also version numbers, and nothing else. A
-manifest whose stages balance and whose canonical form has a hash makes the
-3,288 documents of c0 rebuildable, auditable and removable row by row.
+into text decides what a model trained on it can ever learn. Because Common
+Crawl compresses each WARC record on its own, a byte range is a valid sample
+and a corpus can be published as pins and hashes instead of text. On 256 MiB
+of one archive file the extractors differed most on tables: Resiliparse
+found about 0.73 of the cells, trafilatura about 0.61 and our link-density
+extractor 0.24. Agreement with FineWeb measures closeness to its trafilatura
+pipeline, not accuracy. A language score is a preference among 176 labels,
+not the probability that a text is English. NFC is the one safe
+normalization, and the rules that remove email and IP addresses also remove
+version numbers. A manifest whose stages balance and whose canonical form
+has a hash makes the 3,288 documents of c0 rebuildable, auditable and
+removable row by row.
 
 ## Exercises
 
@@ -1867,8 +1860,12 @@ manifest whose stages balance and whose canonical form has a hash makes the
        on the order, while $n_\textrm{out}$ does not.
     1. Show that the expected cost per document is smallest when the rules
        are sorted by increasing $c_j / p_j$. (Hint: swap two adjacent rules.)
-    1. The `lang_id` stage charges `not_en` before `low_score`. What would
-       the two counts be in the other order, given the c0 funnel?
+    1. [code] The `lang_id` stage charges `not_en` (the top label is not
+       English) before `low_score` (the top label's score is below 0.65,
+       whatever the label). Write the two counts of the other order in
+       terms of the funnel's 5,448 and 550 and one number that the funnel
+       does not give. Name that number and compute it from the c0 rows of
+       `pages`, which record every page's top label and score.
    :exlabel:`ex_lm_crawl-rule-order`
 
 1. **A threshold for purity.** ● A corpus holds $N_\ell$ documents in each
@@ -2068,8 +2065,8 @@ Each document's log records which link decided.
 |---|---|---|
 | WET | all visible text, one line per block | precomputed |
 | trafilatura | scores the document tree; FineWeb's extractor | 1× |
-| Resiliparse | C++, main-content rules; DCLM's extractor | about 15× |
-| naive, ours | dense blocks with few links | about 8× |
+| Resiliparse | C++, main-content rules; DCLM's extractor | more than 10× |
+| naive, ours | dense blocks with few links | several × |
 
 Naive rule, block of $t$ characters with $l$ in links: keep if $t \ge 40$
 and $l \le t/3$; keep neighbors within 2 blocks if $t \ge 15$ and
@@ -2113,7 +2110,7 @@ interval includes 0; code too few pages to separate.
 
 ::: {.d2l-note}
 WET recalls everything and keeps the menus: more than half of its characters
-are boilerplate.
+lie outside the content elements.
 :::
 :::
 

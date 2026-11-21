@@ -445,6 +445,11 @@ Inconsolata (code).
 **Tab sync** (_d2l-tabs.html): Custom JS syncs all `panel-tabset
 group="framework"` tabs, persists selection to localStorage. Works on
 `file://` URLs (Quarto's native tab sync requires ES modules over HTTP).
+A tabset without the selected framework is hidden (a per-cell variant). A
+page with no tabset for it at all (the PyTorch/JAX-only Advanced part when
+the reader chose TensorFlow or MXNet) shows the first framework it has, in
+the order PyTorch, JAX, TensorFlow, MXNet, and leaves the stored choice
+alone; only a tab click or `?framework=` changes it.
 
 **Sidebar** (_d2l-tabs.html): Part headers are clickable toggles
 (JS-driven). Sections default collapsed; expand state persists to

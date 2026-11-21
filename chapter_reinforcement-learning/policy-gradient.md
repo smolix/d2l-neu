@@ -546,7 +546,7 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
        -\tfrac{1}{3}\big(Q_\textrm{calm}(s, \bar a) - V(s)\big)$, where
        $\bar a$ is the command opposite to $a$. Conclude that the exact
        gradient at $\theta = 0$ is one third as long on slippery ice, and
-       check it with `J_fn` on both transition tables.
+       check it with `policy_objective` on both transition tables.
    :exlabel:`ex_policy-gradient-theorem-table`
 1. [code] **Reusing a batch.** ● Modify `train_reinforce_tabular` to call
    `policy_step` $k$ times on each batch without any correction, for

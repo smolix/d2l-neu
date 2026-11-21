@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0d6a5046a69821a67a950f082398c696bca097720d9ec080553b9168c4378d14",
+    "d2l_lib_fingerprint": "sha256:b1dc9a0971de0ccb57f0931b7c3fc25cf03ce12a45a5632c480977838c9c9cf3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,23 +30,36 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: (0.6769, 0.9026)\nlabel: 2.4762, noise: -0.0088\n"
+          "text": "features: (1.2794, 1.2895)\nlabel: 2.3786, noise: 0.0042\n"
+        }
+      ]
+    },
+    "synthetic-regression-data-inspecting-the-data": {
+      "code_fingerprint": "sha256:d348a6fa876760e257e8f8d11edbec50099fa930eb3f881e01b91b5a706715a7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "synthetic-regression-data/synthetic-regression-data-inspecting-the-data-1.svg",
+          "bytes": 226019,
+          "sha256": "sha256:0eb256af8f2114cdab6e37fad41e470e8b20cef4dde3f2fcf859c92de9f8b9fe"
         }
       ]
     },
     "synthetic-regression-data-recovering-the-parameters-1": {
-      "code_fingerprint": "sha256:7fa04b7cf98710d33286ba6d45fab5ac2da5e26e61e82a477677710bba3aa39b",
+      "code_fingerprint": "sha256:f092732e0e12d306f62fa81d2ec1c2fa22acdce96021cf35ac5b7cee54c50c5e",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-recovering-the-parameters-2": {
-      "code_fingerprint": "sha256:dcf47fd2754a3b036ae09706d45652ff43f3c83fc8712b3eb4ee8532eeff9b5a",
+      "code_fingerprint": "sha256:69645125aa2caa32205499b7c69016ea7b8514ce105ba18c366c94d49bbaf127",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in w: (1.3e-04, -3.3e-04)\nerror in b: -4.8e-04\nstandard error: 3.2e-04\n"
+          "text": "error in w: (3.3e-04, 5.7e-04)\nerror in b: 1.1e-04\nstandard error: 3.2e-04\n"
         }
       ]
     }

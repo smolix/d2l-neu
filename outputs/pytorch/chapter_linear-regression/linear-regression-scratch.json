@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b322feb2ed41c672fb9ab054fe95c1210ed8b1b787ec5835bac758cfcab89bee",
+    "d2l_lib_fingerprint": "sha256:9e402a6e2b5cb92f2480baf4109b95f09a841ac728a70e0bd358c84130e50d44",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -123,61 +123,6 @@
           "type": "stream",
           "name": "stdout",
           "text": "lr = 3      validation loss: nan\n"
-        }
-      ]
-    },
-    "linear-regression-concise-defining-the-model-1": {
-      "code_fingerprint": "sha256:ad58c17368992a2bf0e182e72e2672efaa0ee2868e6b2ecb6fdb177affafade9",
-      "kind": "text",
-      "outputs": []
-    },
-    "linear-regression-concise-defining-the-loss-function": {
-      "code_fingerprint": "sha256:004145b8c8c75214cbe8339eea4f9a74ff27ca315023e11148145443449d5424",
-      "kind": "text",
-      "outputs": []
-    },
-    "linear-regression-concise-defining-the-optimization-algorithm": {
-      "code_fingerprint": "sha256:bc41ab85bff01f833d918376fd8eff3eda7c71fc962ba95a38c193a4dbe8bee5",
-      "kind": "text",
-      "outputs": []
-    },
-    "linear-regression-concise-training-1": {
-      "code_fingerprint": "sha256:c58767af64e3d20fae6b0acb93cf2fcf175a4ce420f1fe6c2647894d7637ffb9",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "linear-regression-scratch/linear-regression-concise-training-1-1.svg",
-          "bytes": 33759,
-          "sha256": "sha256:b42a05de0f07647bc9d097f0258fdbf4beca7e5144c5f263ee4823d4e53716ec"
-        }
-      ]
-    },
-    "linear-regression-concise-training-4": {
-      "code_fingerprint": "sha256:8d9fbd62e70fce79d276abe19d370bbfa23494a7f4707b66c78cbe57c76825ca",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "validation loss: 1.01e-04\n"
-        }
-      ]
-    },
-    "linear-regression-concise-training-2": {
-      "code_fingerprint": "sha256:86a798e94767a7f957bc91009925fae25374690e1fa7d2714a23bec1f90ae382",
-      "kind": "text",
-      "outputs": []
-    },
-    "linear-regression-concise-training-3": {
-      "code_fingerprint": "sha256:e4504fd329794f4306dabb342850b0359ccfb817815176448cfccb5f98c03002",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "error in w: -2.1e-04, 9.5e-04\nerror in b: -1.1e-03\n"
         }
       ]
     }

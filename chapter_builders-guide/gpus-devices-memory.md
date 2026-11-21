@@ -786,6 +786,10 @@ crashes with out-of-memory (OOM).
 :begin_tab:`jax`
 Because XLA statically plans memory for compiled functions, `compiled.memory_analysis().temp_size_in_bytes` reports the temporary workspace/activation bytes required beyond inputs and outputs:
 :end_tab:
+
+:begin_tab:`mxnet`
+MXNet's C++ caching allocator does not expose live-tensor or peak-byte counters to Python; use `nvidia-smi` or framework-level profilers to inspect device memory.
+:end_tab:
 ```{.python .input #gpus-devices-memory-three-views-of-memory-1}
 %%tab pytorch
 def peak_memory(f, *args):  #@save
@@ -821,6 +825,10 @@ before measuring: consider a three-hidden-layer MLP of width 4096 taking
 $4N \approx 144$ MiB) at minibatch size 4096. The three hidden-layer outputs are
 each $4096 \times 4096$ fp32 tensors of 64 MiB—192 MiB in total, already a third
 larger than the weights themselves!
+
+:begin_tab:`mxnet`
+Because MXNet does not expose a per-step live-byte allocator counter in Python, the four-stage training memory trace is executed in the PyTorch, TensorFlow, and JAX tabs, while the analytical $16N$ plus activations budget below applies identically to MXNet.
+:end_tab:
 
 ```{.python .input #gpus-devices-memory-what-fills-memory-during-training}
 %%tab pytorch

@@ -103,8 +103,8 @@ with 7 billion parameters trained in BF16 with Adam, the parameters and
 gradients take 14 GB each and Adam's two FP32 moments take 56 GB. The FP32
 master copy of the parameters that mixed-precision training keeps adds
 28 GB, for a total of 112 GB, or 16 bytes per parameter. The toy model
-below leaves out the master copy, reuses the GB figures as GiB, and adds
-18 GiB of activations and 5 GiB of temporary buffers. It is crude, but it
+below omits that 28 GB master copy (leaving $14 + 14 + 56 = 84\text{ GiB}$ of model state when reusing the GB figures as GiB) and adds
+18 GiB of activations and 5 GiB of temporary buffers ($107\text{ GiB}$ in total). It is crude, but it
 ranks the strategies correctly, and it needs no GPU to run:
 
 ```{.python .input #training-systems-memory-model}

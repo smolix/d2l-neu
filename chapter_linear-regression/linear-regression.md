@@ -91,11 +91,7 @@ Dividing by $n$ puts the objective on a per-example scale, so that doubling the 
 
 $$\mathbf{w}^*, b^* = \operatorname*{argmin}_{\mathbf{w},\, b}\  L(\mathbf{w}, b).$$
 
-Notice how concrete this objective is on a tiny two-point dataset with a single feature and no bias ($b = 0$). If example 1 has $(x^{(1)}, y^{(1)}) = (1, 2)$ and example 2 has $(x^{(2)}, y^{(2)}) = (2, 3)$, then for any candidate slope $w$,
-
-$$L(w) = \frac{1}{4}\Big[(w - 2)^2 + (2w - 3)^2\Big] = \frac{1}{4}(5w^2 - 16w + 13).$$
-
-Let us evaluate this quadratic objective at $w = 1$ and at $w = 1.6$, and plot the parabola alongside both resulting lines:
+Because errors are squared, a prediction off by $10$ incurs a hundred times the penalty of a prediction off by $1$, so a single corrupted label can dominate the fit. To see how severely, let us place twenty points on the line $y = 2x$, corrupt a single label to $y^{(6)} = 10{,}000$ (as a data-entry typo might), and fit a line through the origin $\hat{y} = wx$ in two ways: first by the closed-form squared-loss minimizer $w = \sum_i x^{(i)} y^{(i)} / \sum_i (x^{(i)})^2$, and second by minimizing the *mean absolute error* $\frac{1}{n}\sum_i |w x^{(i)} - y^{(i)}|$ over a fine grid of candidate slopes:
 
 ```{.python .input #linear-regression-loss-function}
 x = np.arange(1.0, 21.0)
@@ -116,8 +112,6 @@ grows only linearly, so the nineteen clean points easily outvote it. Which
 behavior is desirable depends on what kind of noise we expect in our labels—a
 question we answer from first principles in
 :numref:`subsec_normal_distribution_and_squared_loss`.
-
-At $w = 1$, the predictions are $1$ and $2$ (each off by $1$), giving $L(1) = 0.5$. Setting the derivative $L'(w) = \frac{1}{2}(5w - 8)$ to zero pinpoints the exact minimizer at $w^* = 1.6$, where $L(1.6) = 0.05$. Even at the optimum, the loss is strictly positive because no line through the origin can pass through both $(1, 2)$ and $(2, 3)$ simultaneously.
 
 ## Minimizing the Loss
 
@@ -151,7 +145,7 @@ $$\mathbf{X}^\top \mathbf{X}\, \mathbf{w}^* = \mathbf{X}^\top \mathbf{y}, \qquad
 
 When the columns of $\mathbf{X}$ are linearly dependent (for instance, when two features are redundant or when $d > n$), $\mathbf{X}^\top\mathbf{X}$ is singular: a least-squares minimizer still exists, but infinitely many weight vectors achieve the exact same minimum loss (Exercise :exref:`ex_linear-regression-singular-design-matrix`).
 
-In code, you should almost never form $(\mathbf{X}^\top\mathbf{X})^{-1}$ explicitly; dedicated least-squares solvers (`lstsq`) use QR or SVD factorizations that are both faster and far more numerically stable. Let us verify the normal equations on a small random $5 \times 2$ design matrix against the built-in solver:
+In code, you should almost never form $(\mathbf{X}^\top\mathbf{X})^{-1}$ explicitly; dedicated least-squares solvers (`lstsq`) use QR or SVD factorizations that are both faster and far more numerically stable. Let us verify the normal equations on the three-point line model from :numref:`sec_calculus`—inputs $0, 1, 2$, labels $1, 1, 0$, and augmented rows $(1, \textrm{input})$ so that $\hat{\mathbf{w}} = (w_1, w_2)^\top = (7/6, -1/2)^\top$ holds the intercept first and the slope second—and check that the residual vector $\mathbf{r} = \mathbf{X}\hat{\mathbf{w}} - \mathbf{y} = (1/6, -1/3, 1/6)^\top$ satisfies $\mathbf{X}^\top\mathbf{r} = \mathbf{0}$ up to `float32` precision:
 
 ```{.python .input #linear-regression-the-normal-equations}
 %%tab pytorch
@@ -248,7 +242,7 @@ Halving $\eta$ or doubling $|\mathcal{B}|$ shrinks that terminal noise ball, and
 
 When implementing minibatch updates :eqref:`eq_linreg_batch_update`, you should never loop over the examples $i \in \mathcal{B}_t$ one by one in Python. Instead, we *vectorize* the computation—expressing the entire minibatch forward pass and gradient step as array and matrix operations dispatched to highly optimized C++/CUDA libraries that run in parallel across SIMD vector units or thousands of GPU cores.
 
-To see the difference firsthand, let us benchmark adding two $10{,}000$-dimensional vectors of ones: first with a Python `for` loop, and then with a single vectorized `+` operator. We first define a small `Timer` utility that records elapsed wall-clock times across runs:
+To see the difference firsthand, let us benchmark predicting the labels of $n = 1{,}000$ examples with weights $\mathbf{w} = (2, -3.4)^\top$ and bias $b = 4.2$: first one example at a time in a Python `for` loop, and then for all $1{,}000$ examples at once with a single matrix product `X @ w + b`:
 
 ```{.python .input #linear-regression-vectorization-for-speed-1}
 %%tab pytorch
@@ -314,8 +308,7 @@ Even though both paths perform the exact same arithmetic, computing all $1{,}000
 predictions in a single vectorized call is *hundreds of times* faster! The loop
 pays Python interpreter overhead and kernel-launch latency on every single
 example, whereas the matrix multiplication pays that overhead once and hands the
-
-The single vectorized expression `a + b` runs orders of magnitude faster than the Python loop! Every framework translates `a + b` into a single native kernel call free of Python interpreter overhead and type-checking per element. Throughout this book, vectorizing over minibatches—turning $n$ inner products $\mathbf{w}^\top\mathbf{x}^{(i)}$ into one matrix-vector product $\mathbf{X}\mathbf{w}$—is the single most important habit for writing fast deep learning code.
+entire batch to a single compiled linear-algebra routine. Throughout this book, vectorizing over minibatches—turning $n$ inner products $\mathbf{w}^\top\mathbf{x}^{(i)}$ into one matrix-vector product $\mathbf{X}\mathbf{w}$—is the single most important habit for writing fast deep learning code.
 
 ## Squared Loss and Gaussian Noise
 :label:`subsec_normal_distribution_and_squared_loss`
@@ -328,9 +321,7 @@ Recall the normal (or Gaussian) distribution with mean $\mu$ and variance $\sigm
 
 $$p(x) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{1}{2 \sigma^2} (x - \mu)^2\right).$$
 
-Let us implement this density directly in Python and plot its familiar bell-shaped curves for several choices of $(\mu, \sigma)$ (:numref:`fig_linreg_gaussian_noise`):
-
-*squared* deviation $(x - \mu)^2$ appears inside the negative exponential, extreme
+This density forms a symmetric bell-shaped curve centered at $\mu$, whose width is set by the standard deviation $\sigma$ (about 68% of the probability lies within $\sigma$ of the mean and about 95% within $2\sigma$). Because the *squared* deviation $(x - \mu)^2$ appears inside the negative exponential, extreme
 deviations are vanishingly unlikely: a value $5\sigma$ from the mean has density
 $e^{-12.5} \approx 4 \times 10^{-6}$ times that at the peak. We write
 $\epsilon \sim \mathcal{N}(\mu, \sigma^2)$ to denote a normally distributed random
@@ -354,11 +345,7 @@ at every input $\mathbf{x}$ (:numref:`fig_linreg_gaussian_noise`).
 
 ### Maximum Likelihood
 
-Suppose that our observations arise from a true underlying linear relationship corrupted by additive independent Gaussian measurement noise:
-
-$$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon, \qquad \textrm{where } \epsilon \sim \mathcal{N}(0, \sigma^2).$$
-
-Given features $\mathbf{x}$, the conditional distribution of the observed label $y$ is then normal with mean $\mathbf{w}^\top\mathbf{x} + b$ and variance $\sigma^2$:
+Under this additive Gaussian noise model, given features $\mathbf{x}$, the conditional distribution of the observed label $y$ is normal with mean $\mathbf{w}^\top\mathbf{x} + b$ and variance $\sigma^2$:
 
 $$P(y \mid \mathbf{x}) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{1}{2 \sigma^2} (y - \mathbf{w}^\top \mathbf{x} - b)^2\right).$$
 
@@ -371,7 +358,14 @@ Look closely at the two terms on the right. The first term, $\frac{n}{2}\log(2\p
 ### Choosing a Loss from a Noise Model
 :label:`subsec_linreg-loss-menu`
 
-This maximum-likelihood connection is far more than a historical footnote: it gives us a principled recipe for designing loss functions whenever Gaussian noise is *not* the right model of reality (:numref:`fig_linreg-loss-menu`).
+This maximum-likelihood connection is far more than a historical footnote: it gives us a principled recipe for designing loss functions whenever Gaussian noise is *not* the right model of reality (:numref:`fig_linreg-loss-menu`):
+
+| Output type | Noise model | Loss (negative log-likelihood) |
+|:--|:--|:--|
+| real-valued, well-behaved noise | Gaussian | squared error (this section) |
+| real-valued, outliers or heavy tails | Laplace | absolute error (exercise :exref:`ex_linear-regression-laplace-noise`) |
+| positive, multiplicative fluctuations (prices) | Gaussian on $\log y$ | squared error on $\log y$ (exercise :exref:`ex_linear-regression-beyond-gaussian-noise`) |
+| counts (sales, arrivals) | Poisson | $\nu(\mathbf{x}) - y \log \nu(\mathbf{x})$ (exercise :exref:`ex_linear-regression-counting-apples`) |
 
 - **Heavy-tailed outliers (Laplace noise $\rightarrow$ $\ell_1$ loss):** If occasional corrupted measurements produce wild outliers, the quadratic growth of $(\hat{y} - y)^2$ lets a single bad data point yank the fitted line toward itself. Modeling the noise with heavier exponential tails—the Laplace distribution $p(\epsilon) = \frac{1}{2\tau}\exp(-|\epsilon|/\tau)$—turns the negative log-likelihood into the *absolute error* ($\ell_1$) loss $|\hat{y} - y|$ (Exercise :exref:`ex_linear-regression-laplace-noise`), whose gradient has constant magnitude $\pm 1$ no matter how far an outlier sits.
 - **Combining smooth optima with outlier robustness (Huber loss):** Because $|\hat{y} - y|$ has a sharp corner at zero where its derivative jumps between $-1$ and $+1$, practitioners often use the *Huber loss*, which splices a quadratic bowl for small residuals ($|\hat{y} - y| \leq \delta$) onto linear slopes for large residuals ($|\hat{y} - y| > \delta$).

@@ -20,11 +20,11 @@ campaigns:
       - HuggingFaceFW/fineweb-edu sample/10BT @ 87f09149 (about 8 files for 150M bucket-1-7 tokens)
       - HuggingFaceTB/finemath finemath-4plus @ e92b25a6
       - codeparrot/codeparrot-clean @ 35a59fb0 (permissive licences only; built locally, never hosted)
-    runs: 45 proxy runs (19 training mixtures, 3 of them the fixed corner mixtures MIX_EDGES) plus 3 learning-rate runs at 2^25 tokens (d2l.mix_run_specs)
+    runs: 45 proxy runs (19 training mixtures, 3 of them the fixed corner mixtures MIX_EDGES) plus 4 learning-rate runs at 2^25 tokens (d2l.mix_run_specs)
     flop: 9.6e17  # arithmetic (6ND + 12 L d T D per run, DoReMi's run x 10/6); the smoke prints its own count
     compile: true  # MIX_CONFIGS['t2']['compile']: torch.compile, +11% tokens/s on the 4090; micro-batch 16 (32: +2% at twice the memory; 64 does not fit 24 GB)
-    predicted_a100_hours: null  # smoke: FLOP / (312e12 x MFU of the compiled run on the 4090) + compile time once per run; arithmetic 3.4 at MFU 0.25, 5.7 at 0.15
-    memory_gib_per_run: null  # smoke peak; expected at most 8.4, two runs per 40 GB card
+    predicted_a100_hours: 2.9  # smoke of mix-t1 (lm-mix-runs-t1-v1, 2026-11-21): FLOP / (312e12 x 0.30, the compiled MFU on the 4090) + compile time once per run; 5.4 GPU-hours on one RTX 4090, about 1.4 h on four
+    memory_gib_per_run: 8.4  # smoke peak on the 4090; two runs per 40 GB card
     stop_hours: null  # if null, the launcher stops at 1.5 x the smoke's predicted GPU-hours on the node's cards / the number of workers (--max-hours overrides)
     gpus: the runs are independent after the learning-rate choice; one worker per GPU
     outputs:
@@ -37,3 +37,11 @@ campaigns:
       upload and register the five keys in data-mixtures.md's data-hub cell;
       re-run the section (RUNS_KEY switches to lm-mix-runs-t2-v1 by itself);
       rewrite every sentence marked "campaign: lm-mix-runs-t2-v1"
+  - id: 20.4-mixtures-t2s
+    section: sec_lm_data_mixtures (chapter_lm-data/data-mixtures.md)
+    tier: T2, small-scale test
+    status: run 2026-11-21 on the four RTX 4090s (author ruling 2026-11-20) as a test of the T2 code path; never the T2 result
+    config: run_mix_campaign.py's 't2s' (d2l.MIX_CONFIGS['t2'] at half its tokens, 2^26 per run, 2^24 per learning-rate run, on the T2 pools)
+    command: python tools/run_mix_campaign.py --config t2s --gpus 0,1,2,3 --out data/lm/rerun/mix-t2s --max-hours 0.25, then the same with --resume --max-hours 3 (tests the time stop and the resume)
+    outputs:
+      - data/lm/rerun/mix-t2s/lm-mix-runs-t2s-v1.json -> lm-mix-runs-t2s-v1

@@ -139,6 +139,10 @@ d2l.DATA_HUB['lm-mix-code150-meta-v1'] = (  # the T2 code pool's meta and
     # attribution, no code (20.4)
     d2l.LM_DATA_URL + 'lm-mix-code150-meta-v1.tar',
     '139d6b2a3d463867cab48cd0b64986d7c0466996')
+d2l.DATA_HUB['lm-mix-runs-t1-v1'] = (  # the 41 T1 runs, the selection,
+    # DoReMi's weights and the T2 smoke (mix-t1 regeneration, 20.4)
+    d2l.LM_DATA_URL + 'lm-mix-runs-t1-v1.json',
+    '92abf76a5e9891ba3efe5c5daa5f2a021f05c9e4')
 
 # lm-mix-runs-t2-v1 is added after the T2 campaign
 MIX_KEYS = ('lm-mix-web-20m-v1', 'lm-mix-math-20m-v1', 'lm-mix-val-1m-v1',

@@ -213,8 +213,7 @@ depends on how the data are scaled, so a score-matching loss on one dataset
 cannot be compared directly with the loss on another, nor interpreted as a
 coding budget in nats. Exercise
 :exref:`ex_mdl-divergences-distances-fisher-stein`a works out the case of unequal
-variances, and Exercise :exref:`ex_mdl-scores-change-of-variables` examines a
-general change of variables.
+variances.
 
 ### Mixing Weights of Distant Modes
 
@@ -274,11 +273,10 @@ $e^{-m^2/2} = e^{-12.5} \approx 4 \times 10^{-6}$, just as the nearly empty
 valley predicted. A loss built purely from scores cannot see how probability
 mass is divided between distant modes. That is why we insisted on a *connected*
 region earlier: on two disconnected regions, identical scores allow
-$\log p - \log q$ to take a different constant on each region (Exercise
-:exref:`ex_mdl-scores-separate-regions`). Consequently, a model trained by
-minimizing the Fisher divergence can get the location and shape of every mode
-right and still place $30\%$ of its mass where the data place $70\%$
-:cite:`Wenliang.Kanagawa.2020`.
+$\log p - \log q$ to take a different constant on each region. Consequently, a
+model trained by minimizing the Fisher divergence can get the location and
+shape of every mode right and still place $30\%$ of its mass where the data
+place $70\%$ :cite:`Wenliang.Kanagawa.2020`.
 
 Fortunately, adding noise fills the valley. If we add independent Gaussian
 noise of standard deviation $2$ to both mixtures, each component's variance
@@ -755,26 +753,6 @@ samples, or a score.
        checks Stein's identity only on polynomials up to a fixed degree?
    :exlabel:`ex_mdl-divergences-distances-fisher-stein`
 
-1. **Units and changes of variables.** Let $a > 0$, and write $P_a$ and $Q_a$
-   for the distributions of $aX$ when $X$ is drawn from $P$ and from $Q$,
-   respectively.
-    1. Show that $D_{\textrm{KL}}(P_a\|Q_a) = D_{\textrm{KL}}(P\|Q)$ and
-       $D_{\textrm{F}}(P_a\|Q_a) = D_{\textrm{F}}(P\|Q)/a^2$. Suppose a set of
-       images is stored once with pixel values in $[0, 255]$ and once with
-       values in $[0, 1]$. By what factor does the Fisher divergence between
-       the data and a model differ between the two representations?
-    1. Replace linear scaling with a smooth, strictly increasing map
-       $y = \phi(x)$ on $\mathbb{R}$. Show that the two scores at $y$ differ by
-       $\big(s_P(x) - s_Q(x)\big)/\phi'(x)$, even though each individual score
-       gains a term involving $\phi''$. Conclude that the Fisher divergence
-       becomes $\tfrac{1}{2}\, \mathbb{E}_P\big[(s_P - s_Q)^2 / \phi'^2\big]$,
-       while the KL divergence remains unchanged.
-    1. A change of variables can therefore make any nonzero Fisher divergence
-       as large or as small as we like. For the two Gaussian mixtures in the
-       text, where on the real line would $\phi$ need to be nearly flat to make
-       the difference in mixing weights visible?
-   :exlabel:`ex_mdl-scores-change-of-variables`
-
 1. [code] **Score blindness to mixing weights.** ● Let
    $P_w = w\, \mathcal{N}(-m, 1) + (1 - w)\, \mathcal{N}(m, 1)$.
     1. The text computes $D_{\textrm{F}}(P_{0.7}\|P_{0.3})$ and
@@ -819,24 +797,6 @@ samples, or a score.
        that region relative to $\ell$? Conclude that $\mathrm{KSD}^2$ decays
        like $e^{-m^2}$. Would choosing a smaller length scale help?
    :exlabel:`ex_mdl-divergences-distances-score-blindness`
-
-1. **Two separate regions.** Let $p_0(x) = 30\, x^2 (1 - x)^2$ for
-   $0 < x < 1$ and $p_0(x) = 0$ elsewhere, and let $P_w$ have density
-   $w\, p_0(x) + (1 - w)\, p_0(x - 2)$: two identical humps separated by a gap.
-    1. Show that the score of $P_w$ is independent of $w$ wherever the density
-       is positive. Conclude that $D_{\textrm{F}}(P_{0.7}\|P_{0.3}) = 0$, and
-       compute $D_{\textrm{KL}}(P_{0.7}\|P_{0.3})$.
-    1. Which step breaks down in the text's argument that the Fisher divergence
-       is zero only when $P = Q$? How does this example relate to the two
-       Gaussian mixtures in the text as $m \to \infty$?
-    1. Let $P_w$ be the data distribution, and fit the weight $v$ of a model
-       $P_v$ by score matching. What does the objective
-       :eqref:`eq_mdl-score-matching-line` tell you about $v$?
-    1. Evaluate :eqref:`eq_mdl-ksd-score-diff` for $P_{0.7}$ and $P_{0.3}$. The
-       text notes that $\mathrm{KSD}^2 = 0$ only for $P = Q$ under mild
-       regularity conditions. Name one condition that must be included in that
-       statement.
-   :exlabel:`ex_mdl-scores-separate-regions`
 
 1. **Score matching for a Gaussian model.** Let the data distribution $P$ have
    mean $a$ and variance $v$, take the model $Q = \mathcal{N}(\mu, \sigma^2)$,
@@ -890,29 +850,6 @@ samples, or a score.
        criteria have selected three different quartics. Why is this not a
        contradiction, and under what condition would all three agree?
    :exlabel:`ex_mdl-scores-unnormalized-quartic`
-
-1. [code] **A polynomial Stein kernel.** Let $Q = \mathcal{N}(0, 1)$ and take
-   the kernel $k(x, x') = \sum_{j=0}^{M} x^j x'^j$, whose features are the
-   monomials $1, x, \ldots, x^M$.
-    1. Show that
-       $\mathrm{KSD}^2(P, Q) = \sum_{j=0}^{M} \big(\mathbb{E}_P[j X^{j-1} - X^{j+1}]\big)^2$,
-       a sum of squared Stein averages like those printed in the Stein's
-       identity experiment, one per monomial. Evaluate this for $M = 1$ on
-       $P = \mathcal{N}(0.5, 1)$ and on $P = \mathcal{N}(0, 4)$, and compare
-       with the first two columns of that experiment's output.
-    1. Let $P(X = 1) = P(X = -1) = \tfrac{1}{2}$, as in Exercise
-       :exref:`ex_mdl-divergences-distances-fisher-stein`c. Show that
-       $\mathrm{KSD}^2(P, Q) = 0$ for $M \leq 2$ and equals $4$ for $M = 3$.
-       Why can no kernel with finitely many features guarantee that
-       $\mathrm{KSD}^2 = 0$ only when $P = Q$?
-    1. The Stein kernel :eqref:`eq_mdl-stein-kernel` does not require $P$ to
-       have a density. For the RBF kernel with $\ell = 1$ and the two-point
-       distribution from (b), show that $k_Q(x, x) = 2$ and
-       $k_Q(1, -1) = -8e^{-2}$, so that
-       $\mathrm{KSD}^2(P, Q) = 1 - 4e^{-2} \approx 0.46$. Verify this with
-       `ksd2_ustat` on $2{,}000$ draws. Which features of the RBF kernel
-       in :numref:`sec_mdl-ipm-mmd` detect what monomials up to degree $2$ miss?
-   :exlabel:`ex_mdl-scores-polynomial-stein-kernel`
 
 1. [code] **The length scale of the Stein kernel.** Let the data be
    $P = \mathcal{N}(0, 1)$, as in the KSD experiment, and use the RBF kernel

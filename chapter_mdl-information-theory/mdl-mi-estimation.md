@@ -1315,30 +1315,6 @@ representation.
 
 ## Exercises
 
-1. [code] **Bias of the histogram estimator.** For an independent pair,
-   `binned_mi` of :numref:`subsec_mdl-mi-high-dim` reports about $0.003$
-   nats at $b = 40$ and a few hundredths of a nat at $b = 160$, from
-   $n = 200{,}000$ samples. This problem predicts such numbers.
-    1. For an independent pair, $2n$ times the estimate of `binned_mi` is
-       the $G$-statistic of the test for independence. When every cell's
-       expected count is large, this statistic is approximately
-       $\chi^2$-distributed with $(b-1)^2$ degrees of freedom, and so has
-       mean $(b-1)^2$. Predict the mean estimate at $b = 40$ and at
-       $b = 160$, and compare with the first row of the table. Why are the
-       printed values smaller, and why is the gap wider at $b = 160$?
-       *Hint:* count the cells that hold any sample.
-    1. Replace each coordinate by its rank divided by $n$ before binning, so
-       that every bin of each axis holds the same number of samples. Average
-       the estimate over $20$ independent pairs with $\rho = 0$ for
-       $n \in \{2000, 20{,}000\}$ and $b \in \{10, 40\}$, and compare with the
-       prediction of (a). For which setting does the prediction fail, and
-       why?
-    1. Bin the ranks of the Gaussian pair at $\rho = 0.99$ with
-       $n = 200{,}000$ and $b \in \{40, 100, 400\}$. Which of the two errors
-       of the histogram dominates at each $b$? Together with (b), what does
-       this suggest about how $b$ should grow with $n$?
-   :exlabel:`ex_mdl-mutual-information-histogram-bias`
-
 1. **Heavy tails of the exponentiated pmi.** ● Let $(X, Y)$ be the Gaussian
    pair with correlation $\rho$, $I = -\tfrac{1}{2}\log(1 - \rho^2)$, and
    $Q = P_X \otimes P_Y$. Under $Q$ the mean of $e^{\textrm{pmi}}$ is $1$
@@ -1364,25 +1340,6 @@ representation.
        give the same variance for $N \geq 3$, although neighboring terms
        share a variable. *Hint:* condition on the shared pair.
    :exlabel:`ex_mdl-mi-estimation-heavy-tails`
-
-1. [code] **Limits of KSG.** The function `ksg_counts` counts neighbors
-   with strict inequalities and excludes each point from its own counts,
-   and `ksg_mi` turns the counts into an estimate.
-    1. The table of :numref:`subsec_mdl-ksg-dimension` prints the mean
-       strip count $\bar{n}$ of each row. Using $\psi(j) \approx \log j$ and
-       $n_x \approx n_y \approx \bar{n}$, show that the estimate is about
-       $\log\frac{m n}{\bar{n}^2}$, and reproduce the five printed estimates
-       from the five counts to within a few tenths of a nat. Why does the
-       formula come out a little low in every row?
-    1. Run `ksg_counts` and `ksg_mi` at $d = 16$ with $\rho = 0.5$ and with
-       $\rho = 0.99$, where the truth is $2.3$ and $31$ nats. Does the
-       estimate still increase with the dependence? Could it rank the
-       dependence of several pairs, and could it measure it?
-    1. Let $Y$ be $X$ plus Gaussian noise of standard deviation $10^{-6}$,
-       with $X$ standard normal and one-dimensional. What is the true
-       $I(X; Y)$, and what does KSG report at $n = 2000$? Which ceiling
-       binds, and how many samples would raise it to the truth?
-   :exlabel:`ex_mdl-mi-estimation-ksg-ceiling`
 
 1. **Barber–Agakov with a Gaussian decoder.** Take the standard bivariate
    Gaussian pair with correlation $\rho$, whose information is

@@ -857,36 +857,6 @@ with entropic regularization.
        starts far from its data?
    :exlabel:`ex_mdl-divergences-distances-q-mathcaln-delta`
 
-1. [code] **Sampling error of the MMD estimate.** At $\ell = 1$ and
-   $d = 0.5$ the closed form $\tfrac{2}{\sqrt{3}}\big(1 - e^{-d^2/6}\big)$
-   gives $0.047$.
-    1. Recompute `mmd2_unbiased` with the RBF kernel on $200$ fresh pairs of
-       samples drawn like `x_p` and `y_shift`, with `n = 250` and with
-       `n = 1000`, and compare the mean and the standard deviation of the
-       estimates with the closed form. How does the standard deviation scale
-       with the sample size? Is the value that your run of the MMD
-       experiment printed within the spread?
-    1. Repeat for pairs drawn like `x_p` and `y_same`. The standard
-       deviation now scales differently. How, and why does this help a test
-       of $P = Q$?
-   :exlabel:`ex_mdl-test-functions-transport-mmd-sampling-error`
-
-1. **Rescaling and the data-processing inequality.** An f-divergence is
-   $D_f(P\|Q) = \mathbb{E}_{x \sim Q}[f(p(x)/q(x))]$ for a convex $f$ with
-   $f(1) = 0$, and it satisfies the data-processing inequality
-   $D_f(P\kappa \,\|\, Q\kappa) \leq D_f(P\|Q)$ for every channel $\kappa$,
-   that is, for every deterministic or random map applied to both
-   distributions (:numref:`subsec_mdl-f-div-data-processing`). Apply the map
-   $x \mapsto 2x$ to both $P$ and $Q$.
-    1. Show from the definition that no f-divergence changes under an
-       invertible map, and that $W_1$ doubles.
-    1. Show that the RBF $\textrm{MMD}^2$ at $\ell = 1$ falls from $0.047$ to
-       $0.036$ for $\mathcal{N}(0, 1)$ against $\mathcal{N}(0.5, 1)$, but
-       rises from $0.235$ to $0.787$ for $\delta_0$ against $\delta_{0.5}$.
-       Why does the data-processing inequality say nothing about MMD and
-       $W_1$?
-   :exlabel:`ex_mdl-test-functions-transport-rescaling`
-
 1. [code] **One-dimensional transport.** ● On the real line, $W_1$ is the
    area between the CDFs :eqref:`eq_mdl-w1-cdf`.
     1. For two empirical distributions on samples $x_1, \ldots, x_N$ and

@@ -448,8 +448,7 @@ for densities). $\blacksquare$
 The proof rests on a single idea. Averaged over the truth, the ratio $q/p$ is at
 most $1$, so its logarithm averages to at most $0$, with equality only when
 $q/p$ does not vary at all (meaning $q = p$). A model incurs no extra surprisal
-only when it is right. Exercise :exref:`ex_mdl-information-theory-gibbs-tangent`
-compares this proof with the tangent-line proof.
+only when it is right.
 
 Gibbs' inequality immediately settles the uniform upper bound we left unproved.
 For any distribution $P$ on $k$ outcomes and the uniform distribution $U$ on the
@@ -607,9 +606,7 @@ whenever you read a loss curve. Three cases illustrate what it implies:
   $H = -(1-\rho)\log(1-\rho) - \rho\log\tfrac{\rho}{k-1} = H_b(\rho) + \rho\log(k-1)$.
   For $\rho = 0.1$ and $k = 10$, this floor is $0.325 + 0.220 = 0.545$ nats. As
   long as $1 - \rho > \rho/(k-1)$, predicting the clean class remains optimal,
-  so the highest achievable accuracy is $1 - \rho$ (here $90\%$). Exercise
-  :exref:`ex_mdl-information-theory-noise-ambiguous-input` extends this to
-  inputs whose clean class is itself uncertain.
+  so the highest achievable accuracy is $1 - \rho$ (here $90\%$).
 
 Before running the next cell, pause and guess the loss of a confident predictor
 that assigns probability $0.99$ to the clean class in this noisy setting. It is
@@ -1240,21 +1237,6 @@ cross-entropy remain invariant.
    $c > 0$. Work with the function $g(t) = I(e^{-t})$ for $t \geq 0$.
    :exlabel:`ex_mdl-information-theory-show-that-self-information`
 
-1. **Two proofs of Gibbs' inequality.** The text proves Gibbs' inequality
-   with Jensen's inequality. :numref:`subsec_mdl-max-entropy-derivation`
-   proves it from the tangent line $\ln u \le u - 1$.
-    1. Show that the tangent-line proof, with $u = q(x)/p(x)$ on the support
-       of $P$, gives $D_{\textrm{KL}}(P\|Q) \ge 1 - Q(\textrm{supp}\,P)$,
-       where the text obtains $-\log Q(\textrm{supp}\,P)$. Which bound is
-       larger?
-    1. Find a pair $P \neq Q$ for which the bound of the text holds with
-       equality. Can the tangent-line bound hold with equality for
-       $P \neq Q$?
-    1. Why are the two proofs nevertheless the same argument? Hint: the
-       standard proof of Jensen's inequality for a concave $f$ bounds $f$ by
-       its tangent line at $\mathbb{E}[X]$.
-   :exlabel:`ex_mdl-information-theory-gibbs-tangent`
-
 1. [code] **The label-noise floor.** Labels on $k$ classes are correct with
    probability $1-\rho$ and otherwise uniform over the other $k-1$ classes,
    independently of the input.
@@ -1275,44 +1257,6 @@ cross-entropy remain invariant.
        violate, what does the linear model's own error add, and how could
        you estimate the floor that does apply?
    :exlabel:`ex_mdl-information-theory-label-noise-floor`
-
-1. **Label noise on an ambiguous input.** The floor of the previous exercise
-   assumes that the input determines the clean class. Fix one input at which
-   it does not: the clean class $C$ has the distribution $\mathbf{c}$ on $k$
-   classes, and the recorded label $Y$ equals $C$ with probability $1 - \rho$
-   and is otherwise uniform over the other $k - 1$ classes.
-    1. Show that $H(Y \mid C) = H_b(\rho) + \rho\log(k-1)$, whatever
-       $\mathbf{c}$ is. Call this value $H_{\textrm{noise}}$.
-    1. Write the chain rule :eqref:`eq_mdl-entropy-chain-rule` for the pair
-       $(C, Y)$ in both orders, and conclude that
-       $H_{\textrm{noise}} \le H(Y) \le H(C) + H_{\textrm{noise}}$. Which
-       result of the text gives the lower bound? For which $\mathbf{c}$ and
-       $\rho$ does the upper bound hold with equality?
-    1. For $k = 2$ and $\rho = 0.1$, compute $H(Y)$ for
-       $\mathbf{c} = (1, 0)$, $(0.9, 0.1)$ and $(\tfrac12, \tfrac12)$, and
-       compare each value with the two bounds. How much does the noise add
-       to the entropy of the label when the clean class is a fair coin, and
-       why?
-    1. A data set has $10\%$ label noise on ten classes, and some of its
-       inputs are ambiguous. Is the value $0.545$ nats of
-       :numref:`subsec_mdl-irreducible-loss` a lower or an upper bound on
-       its floor?
-   :exlabel:`ex_mdl-information-theory-noise-ambiguous-input`
-
-1. [code] **The initial-loss check.** A freshly initialized network produces
-   small, random logits.
-    1. Let the $k$ logits be independent with mean $0$ and variance $s^2$.
-       Expand $\log \sum_j e^{z_j}$ to second order in the $z_j$ to show
-       $\mathbb{E}[\textrm{CE}] \approx \ln k + \tfrac{s^2}{2}\big(1 -
-       \tfrac1k\big)$.
-    1. Check the formula by sampling Gaussian logits for $k = 10$ and
-       $s = 0.1, 0.5, 1$. Where does the second-order approximation start to
-       fail, and in which direction?
-    1. A 10-class model reports a loss of $4.1$ at initialization. What does
-       the formula say about the scale of its logits, and what would you
-       change in the initialization? Given what you found in (b), is the
-       formula still trustworthy at that scale?
-   :exlabel:`ex_mdl-information-theory-initial-loss`
 
 1. **Other scoring rules.** A scoring rule $S(\mathbf{q}, y)$ is strictly
    proper if the expected penalty

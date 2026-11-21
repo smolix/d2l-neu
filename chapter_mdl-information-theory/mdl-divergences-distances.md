@@ -1052,7 +1052,7 @@ critic. With exact expectations, any adversarial divergence estimate is an
 underestimate, and the number itself never reveals how much is missing. When
 expectations are replaced by finite-sample averages, it remains a valid lower
 bound (in expectation) only on fresh samples that were not used to train the
-critic (Exercise :exref:`ex_mdl-divergences-distances-restricted-critics`d).
+critic.
 
 The gradient update also reveals where the missing divergence hides. Because
 $T(x)$ moves at a rate proportional to $q(x)$, the critic learns slowest where
@@ -1204,32 +1204,6 @@ supports lie.
        $\delta^2$ and not $\delta$?
    :exlabel:`ex_mdl-divergences-distances-sharpness-pinsker-coins-biases`
 
-1. **Detecting generated text.** A detector receives one text of $n$
-   tokens. With probability $\tfrac{1}{2}$ a person wrote it (distribution
-   $P$ over texts), and otherwise a language model sampled it (distribution
-   $Q$).
-    1. Show that no detector is right with probability above
-       $\tfrac{1}{2}\big(1 + \textrm{TV}(P, Q)\big)$. Show also that a
-       detector which sees only a function of the text, such as its length,
-       its word counts or the features of a network, can do no better than
-       one that sees the text.
-    1. On human text the model's loss exceeds the entropy of the text by
-       $\varepsilon$ nats per token, so that
-       $D_{\textrm{KL}}(P\|Q) = n \varepsilon$ by the decomposition of the
-       cross-entropy in :numref:`sec_mdl-information_theory`. Bound the
-       detector's accuracy with Pinsker's inequality. For
-       $\varepsilon = 0.02$, what does the bound allow at $n = 1$ and at
-       $n = 10$, and from which length on does it allow an accuracy of
-       $90\%$?
-    1. The bound of (b) limits detection and promises nothing. Let $Q$ be
-       $P$ conditioned on avoiding a set of texts that has probability
-       $0.02$ under $P$. Compute $\textrm{TV}(P, Q)$,
-       $D_{\textrm{KL}}(P\|Q)$ and $D_{\textrm{KL}}(Q\|P)$. What does the
-       best detector do, and how often is it right? TV is symmetric, so
-       Pinsker's inequality holds with either direction of KL. Which
-       direction is the useful one here?
-   :exlabel:`ex_mdl-divergences-distances-detecting-generated-text`
-
 1. **Hellinger bounds and testing.** ● Pinsker's inequality is vacuous
    once $D_{\textrm{KL}} > 2$. Let
    $\textrm{BC}(P, Q) = \sum_x \sqrt{p(x) q(x)} = 1 - \tfrac{1}{2} d_{\mathrm{H}}^2(P, Q)$
@@ -1280,49 +1254,6 @@ supports lie.
        the kind that :numref:`sec_mdl-ipm-mmd` studies. Which $g$ attains
        it?
    :exlabel:`ex_mdl-divergences-distances-derive-convex-conjugate`
-
-1. [code] **Restricted critics.** ● The bound :eqref:`eq_mdl-f-gan-bound`
-   is tight only when the critic class contains the optimal critic. Take
-   the $\chi^2$ function with the conjugate $f^*(t) = t + t^2/4$, and
-   critics $T_{\boldsymbol{\theta}}(x) = \boldsymbol{\theta}^\top \boldsymbol{\phi}(x)$
-   that are linear in a feature vector $\boldsymbol{\phi}(x)$.
-   Write $\mathbf{m}_P = \mathbb{E}_P[\boldsymbol{\phi}]$,
-   $\mathbf{m}_Q = \mathbb{E}_Q[\boldsymbol{\phi}]$ and
-   $\boldsymbol{\Sigma} = \mathbb{E}_Q[\boldsymbol{\phi} \boldsymbol{\phi}^\top]$,
-   assumed invertible.
-    1. Show that the bound is a concave quadratic in $\boldsymbol{\theta}$,
-       maximized at
-       $\boldsymbol{\theta}^\star = 2 \boldsymbol{\Sigma}^{-1} (\mathbf{m}_P - \mathbf{m}_Q)$,
-       with the value
-       $(\mathbf{m}_P - \mathbf{m}_Q)^\top \boldsymbol{\Sigma}^{-1} (\mathbf{m}_P - \mathbf{m}_Q)$.
-    1. For affine critics, $\boldsymbol{\phi}(x) = (1, x)$, show that the
-       value is $(\mathbb{E}_P[X] - \mathbb{E}_Q[X])^2 / \textrm{Var}_Q(X)$.
-       What does the restricted bound certify for $P = \mathcal{N}(0, 1)$
-       and $Q = \mathcal{N}(0, 4)$?
-    1. Use the features $\phi_k(x) = \mathrm{He}_k\big((x - \mu_Q)/\sigma_Q\big)$
-       for $k = 0, \ldots, K$, where $\mathrm{He}_k$ are the probabilists'
-       Hermite polynomials (`numpy.polynomial.hermite_e.hermevander`) and
-       $\mu_Q$, $\sigma_Q$ are the mean and standard deviation of $Q$.
-       Compute $\mathbf{m}_P$, $\mathbf{m}_Q$ and $\boldsymbol{\Sigma}$ by
-       quadrature on a grid, and plot the value against $K \leq 10$ for the
-       pairs $\big(\mathcal{N}(1, 1), \mathcal{N}(0, 1)\big)$ and
-       $\big(\mathcal{N}(0, 1), \mathcal{N}(0, 4)\big)$, together with
-       their exact divergences $\chi^2 = e - 1$ and $4/\sqrt{7} - 1$. For the
-       first pair the values are partial sums of a familiar series. Explain
-       why from the generating function
-       $e^{xt - t^2/2} = \sum_k \mathrm{He}_k(x)\, t^k / k!$ and the
-       orthogonality of the polynomials: for $Z \sim \mathcal{N}(0, 1)$,
-       $\mathbb{E}[\mathrm{He}_j(Z)\, \mathrm{He}_k(Z)]$ is $k!$ if $j = k$
-       and $0$ otherwise.
-    1. For the second pair, replace the expectations by averages over
-       $n = 200$ samples from each distribution and fit
-       $\boldsymbol{\theta}^\star$ on these samples. Evaluate the bound on
-       the same samples and on $10^5$ fresh samples, averaged over $200$
-       repetitions, for $K \in \{2, 4, 6, 8, 10\}$. Which of the two
-       evaluations estimates a valid lower bound on $\chi^2$? Why does the
-       other one exceed the restricted value of (c) and, for large $K$, even
-       $\chi^2$ itself?
-   :exlabel:`ex_mdl-divergences-distances-restricted-critics`
 
 [Discussions](https://d2l.discourse.group/t/36835)
 

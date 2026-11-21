@@ -19,17 +19,16 @@ many times is worth far less than as many fresh sources of the same size.
 A language model offers a way out that would have sounded odd a few years
 ago. It can write more text.
 
-Here is the smallest version of the idea. Below, a model of two billion
-parameters reads a paragraph from an educational web page about a mouthwash
-for oral pain and rewrites it in the style of an encyclopedia. The rewrite is
-cleaner than its source, it keeps every fact, and it costs the model a few
-seconds. If one paragraph can be rewritten, so can a million, and a
-pretraining run could read each source once as written and once rephrased
-instead of twice as written. Maini and colleagues (2024) did this
-with the C4 web crawl and report that their models reached the same
-perplexity about three times faster. NVIDIA has since rewritten a large part
-of a whole crawl the same way, and Hugging Face has released half a trillion
-tokens of rewritten educational web text.
+Here is the smallest version of the idea, which we run later in this
+section. A model of two billion parameters reads a paragraph from an
+educational web page about a mouthwash for oral pain and rewrites it in the
+style of an encyclopedia. The rewrite is cleaner than its source, it keeps
+every fact, and it costs the model a few seconds. If one paragraph can be
+rewritten, so can a million, and a pretraining run could read each source
+once as written and once rephrased instead of twice as written. Maini and
+colleagues (2024) did this with the C4 web crawl and report that their
+models reached the same perplexity about three times faster. Whole crawls
+have since been rewritten the same way.
 
 Generated text has costs, and they are hard to see in any single example. A
 rewrite can change a number or add a claim and still read perfectly well.
@@ -72,18 +71,16 @@ import pandas as pd
 from scipy import sparse
 ```
 
-The notebook does three kinds of work. The rewrites shown in the text, about
-150 of them, are generated live by Qwen3.5-2B in bf16 on a GPU, which
-takes a few minutes. Everything larger was computed once and registered: a
+The rewrites shown in the text, about 150 of them, are generated live by
+Qwen3.5-2B in bf16 on a GPU in a few minutes. Everything larger was computed once and registered: a
 corpus of 4.7 million tokens of source chunks with their rewrites, the
 verdicts of a judge model on sixty of them, and the fifteen training runs of
 the comparison. A normal build reads these files and repeats the start of
 one training run as a check; setting `D2L_RERUN` to a name in `ARTIFACTS`
-regenerates that file instead, as in the previous sections. The training
-runs use the proxy models of :numref:`sec_lm_data_mixtures` in their wider
-shape, 8.1 million parameters, for the $2^{24}$ tokens per run of that
-section's smaller scale, T1. Every result of the comparison is therefore
-stated at T1 scale (8.1M-parameter proxies, $2^{24}$ tokens).
+regenerates that file instead. The runs use the wider proxies of
+:numref:`sec_lm_data_mixtures` at that section's smaller scale, T1, so every
+result of the comparison is stated at T1 scale (8.1M-parameter proxies,
+$2^{24}$ tokens).
 
 ```{.python .input #synthetic-data-config}
 %%tab pytorch
@@ -143,12 +140,11 @@ for m, rev in PINS.items():
     say(f'  {m}@{rev[:8]}')
 ```
 
-Two files are registered. The corpus is FineWeb-Edu text, which its
-publishers release under the ODC-By licence, rewritten by a model released
-under Apache-2.0, so it ships as text with the attribution that ODC-By asks
-for; every printed example below carries it too. The results file holds the
-judge's verdicts, the logs of the fifteen runs and three rows of the
-Cosmopedia dataset that we inspect later.
+Two files are registered. The corpus is FineWeb-Edu text (ODC-By) rewritten
+by an Apache-2.0 model, so it ships as text with the attribution that ODC-By
+asks for, and every printed example carries it. The results file holds
+the judge's verdicts, the logs of the fifteen runs and three Cosmopedia
+rows.
 
 ```{.python .input #synthetic-data-data-hub}
 %%tab pytorch
@@ -182,6 +178,73 @@ if RES_KEY in d2l.DATA_HUB:
         RESULTS = json.load(f)
 ```
 
+## Kinds of Synthetic Data
+:label:`subsec_lm_synth_kinds`
+
+Text written by a model enters training in four ways. A model can write new
+documents from a seed, such as a topic, an outline or a web page: a textbook
+chapter, a story, an exercise with its solution. It can rewrite existing
+documents, as in that example. It can write demonstrations for post-training, the
+requests and answers that teach a pretrained model to follow instructions.
+And it can label data: the educational scores of
+:numref:`sec_lm_quality_filtering` were assigned by Qwen3.8-27B, so the
+classifier of that section learned from synthetic labels. This section
+treats the first two kinds as pretraining data.
+
+The two differ in what they can add. A rewrite that does its job changes the
+form of a text but not its content, since the facts are those of the source.
+A generation from a seed can add content, which is both its promise and its
+risk, because the content comes from the generator's memory, errors
+included.
+
+Fluency proves nothing here; a fluent paragraph can carry a wrong number.
+Generated data must be judged by its effect: how much a model trained with it
+improves on held-out data, compared with a model trained without it at the
+same cost. The best-known demonstration that generated text can help is
+phi-1 (Gunasekar and colleagues, 2023), a code model of 1.3 billion
+parameters trained on about 6 billion tokens of filtered web code and about 1
+billion tokens of textbooks and exercises written by GPT-3.5. It reached
+50.6% pass@1 on HumanEval, a strong score for its size. The result is real
+and also narrow. It concerns short Python functions of the kind HumanEval
+tests, the paper itself examines whether its generated exercises
+resemble the benchmark, and it does not show that generated textbooks teach
+a general language model more per token than good real text does. That
+question needs a controlled comparison at equal cost, which we run below on
+a small scale.
+
+## Rephrasing the Web
+:label:`subsec_lm_synth_rephrase`
+
+Maini and colleagues (2024) call their recipe WRAP, for web rephrase
+augmented pretraining. An off-the-shelf instruction-tuned model rewrites
+chunks of web text in a few styles, among them "like Wikipedia" and as
+questions and answers, and the language model trains on real and rephrased
+text in equal parts. On C4, a crawl with plenty of noise left in it, they
+report pretraining about three times faster, and at equal compute a
+perplexity more than 10% lower on average over subsets of the Pile. They
+explain the gain in two parts: the rewrites are cleaner than the web, and
+their styles are closer to the text that evaluations use. The second part
+makes a prediction that we can test, and we return to it when we evaluate.
+
+Rephrasing has since reached the scale of whole crawls. Nemotron-CC (Su and
+colleagues, 2024) sorts Common Crawl with quality classifiers, rewrites
+low-quality documents into cleaner text and turns high-quality ones into
+question-answer pairs and other forms. Its current release, Nemotron-CC-v2,
+adds crawls from 2024 and 2025, and by its dataset card about 2.5 trillion of
+its tokens were written by Mistral-NeMo-12B-Instruct and Qwen3-30B-A3B; the
+card also lists DeepSeek and other Qwen models among its generators. It is
+released under the NVIDIA Data Agreement for Model Training, so this book
+cites it and ships none of it. FinePhrase (Niklaus and colleagues, 2026)
+rewrites FineWeb-Edu, the source we use, into 486 billion tokens of FAQs,
+tutorials, tables and mathematical word problems, generated by
+SmolLM2-1.7B-Instruct and released under ODC-By. Its authors compare
+prompts, generators and sources over more than a trillion generated tokens.
+They find that generators larger than about a billion parameters add nothing
+and report generation costs up to thirty times lower than earlier synthetic
+datasets. That finding is why a rephraser of two billion parameters is a
+reasonable choice here and not only a cheap one.
+
+Our pipeline is the same in miniature.
 Rephrasing has four steps: cut a document into chunks, wrap each chunk in a
 prompt, generate, and filter the replies. The two prompts follow two of the
 styles of Maini and colleagues, an encyclopedia passage and a conversation of
@@ -507,73 +570,8 @@ enough freedom to vary a word and not enough to vary a text. An
 instruction-tuned model has one preferred answer to a prompt, and sampling
 explores the neighbourhood of that answer.
 
-## Kinds of Synthetic Data
-:label:`subsec_lm_synth_kinds`
-
-Text written by a model enters training in four ways. A model can write new
-documents from a seed, such as a topic, an outline or a web page: a textbook
-chapter, a story, an exercise with its solution. It can rewrite existing
-documents, as above. It can write demonstrations for post-training, the
-requests and answers that teach a pretrained model to follow instructions.
-And it can label data: the educational scores of
-:numref:`sec_lm_quality_filtering` were assigned by Qwen3.8-27B, so the
-classifier of that section learned from synthetic labels. This section
-treats the first two kinds as pretraining data.
-
-The two differ in what they can add. A rewrite that does its job changes the
-form of a text but not its content, since the facts are those of the source.
-A generation from a seed can add content, which is both its promise and its
-risk, because the content comes from the generator's memory, errors
-included.
-
-Fluency proves nothing here; a fluent paragraph can carry a wrong number.
-Generated data must be judged by its effect: how much a model trained with it
-improves on held-out data, compared with a model trained without it at the
-same cost. The best-known demonstration that generated text can help is
-phi-1 (Gunasekar and colleagues, 2023), a code model of 1.3 billion
-parameters trained on about 6 billion tokens of filtered web code and about 1
-billion tokens of textbooks and exercises written by GPT-3.5. It reached
-50.6% pass@1 on HumanEval, a strong score for its size. The result is real
-and also narrow. It concerns short Python functions of the kind HumanEval
-tests, the paper itself examines whether its generated exercises
-resemble the benchmark, and it does not show that generated textbooks teach
-a general language model more per token than good real text does. That
-question needs a controlled comparison at equal cost, which we run below on
-a small scale.
-
-## Rephrasing the Web
-:label:`subsec_lm_synth_rephrase`
-
-Maini and colleagues (2024) call their recipe WRAP, for web rephrase
-augmented pretraining. An off-the-shelf instruction-tuned model rewrites
-chunks of web text in a few styles, among them "like Wikipedia" and as
-questions and answers, and the language model trains on real and rephrased
-text in equal parts. On C4, a crawl with plenty of noise left in it, they
-report pretraining about three times faster, and at equal compute a
-perplexity more than 10% lower on average over subsets of the Pile. They
-explain the gain in two parts: the rewrites are cleaner than the web, and
-their styles are closer to the text that evaluations use. The second part
-deserves as much suspicion as interest, and we return to it when we evaluate.
-
-Rephrasing has since reached the scale of whole crawls. Nemotron-CC (Su and
-colleagues, 2024) sorts Common Crawl with quality classifiers, rewrites
-low-quality documents into cleaner text and turns high-quality ones into
-question-answer pairs and other forms. Its current release, Nemotron-CC-v2,
-adds crawls from 2024 and 2025, and by its dataset card about 2.5 trillion of
-its tokens were written by Mistral-NeMo-12B-Instruct and Qwen3-30B-A3B. It is
-released under the NVIDIA Data Agreement for Model Training, so this book
-cites it and ships none of it. FinePhrase (Niklaus and colleagues, 2026)
-rewrites FineWeb-Edu, the source we use, into 486 billion tokens of FAQs,
-tutorials, tables and mathematical word problems, generated by
-SmolLM2-1.7B-Instruct and released under ODC-By. Its authors compare
-prompts, generators and sources over more than a trillion generated tokens.
-They find that generators larger than about a billion parameters add nothing
-and report generation costs up to thirty times lower than earlier synthetic
-datasets. That finding is why a rephraser of two billion parameters is a
-reasonable choice here and not only a cheap one.
-
-Our pipeline is the same in miniature. Before generating anything, we check
-the chunker on twenty documents of the pool.
+Before generating at scale, we check the chunker on twenty documents of the
+pool.
 
 ```{.python .input #synthetic-data-chunk-check}
 %%tab pytorch
@@ -684,16 +682,19 @@ say(ATTRIBUTION)
 ```
 
 The two styles behave differently. The encyclopedia style is well behaved:
-59 of 60 replies are kept, and the rewrites are about as long as their
-sources. The conversations are longer than their sources, and 16 of the 60
-ran out of the 512 new tokens before they ended; 10 more fell outside the
-length range, so only 34 survive. A style that expands its source needs a
+all but about one of the 60 replies are kept, and the rewrites are about as
+long as their sources. The conversations are longer than their sources.
+About a quarter of them ran out of the 512 new tokens before they ended, and
+with those that fell outside the length range, only a little over half
+survive. These counts come from one sampled run, and on other hardware they
+move by a few. A style that expands its source needs a
 larger budget than one that restates it, and no prompt can change that.
 
 The histograms show what the flags see. Copy rates spread from about 0.2 to
 1. The near-copies above 0.8 include chunks with little to rewrite, such as
 the one-sentence medical disclaimer printed above. Number fidelity is 1 for
-about 63% of the encyclopedia rewrites and for half of the conversations.
+about three in five of the encyclopedia rewrites and for about half of the
+conversations.
 The rewrite with the lowest copy rate turns a blog post about ghee into an
 encyclopedia entry and drops its notice about affiliate links, which is what
 we want from a rewrite. It also scores 0 on number fidelity, and only
@@ -788,9 +789,11 @@ for k in ('one plain prompt', '3 formats x 3 audiences'):
 ```
 
 The prompt knobs work. Cut to 70 words each, the nine conditioned texts
-share almost no 4-gram (0.995 distinct, against 0.756 for the plain prompt),
-and the mean Jaccard similarity of their pairs is zero to three decimals. The plain prompt already varies more
-than the rephrasings (0.444), because a request to write about a topic leaves
+share almost no 4-gram (0.995 distinct, against about 0.76 for the plain
+prompt), and the mean Jaccard similarity of their pairs is zero to three
+decimals. All three settings sample at the same temperature, so the gain
+comes from the prompt alone. The plain prompt already varies more than the
+rephrasings (about 0.44), because a request to write about a topic leaves
 the model room that a request to rewrite does not. That room is the point of
 generation and also its risk. The first conditioned output is a textbook
 section for young children about "the magic of mouthwash for stomach pain";
@@ -1072,8 +1075,8 @@ also quotes the first such claim, so that a reader can check every verdict.
 
 The judge reasons before it answers, and we let it. Its replies are greedy,
 limited to 12,000 new tokens within a context of 16,384, with no separate
-budget for the reasoning. How the verdicts were made: `D2L_RERUN=reph-judge`
-on the GPUs of the build machine.
+budget for the reasoning. The verdicts are registered; setting `D2L_RERUN`
+to `reph-judge` regenerates them, with one judge server per GPU.
 
 ```{.python .input #synthetic-data-judge}
 %%tab pytorch
@@ -1224,9 +1227,11 @@ By the judge, the rewrite adds a claim in 39 of 56 pairs: 70%, with a 95%
 interval from 57% to 80%. Many of the added claims are small. One rewrite
 calls the CMS Web Guide "an article", another says that something "had been
 known for years". Others are not small, such as a sentence about the United
-States supporting a revolt in Syria and another in Bahrain. Told to add
-nothing, a rephraser of two billion parameters adds something most of the
-time.
+States supporting a revolt in Syria and another in Bahrain. The judge reads
+strictly, and no person has checked its verdicts, so 70% is the rate that one
+strict reader with one prompt reports, not a measured error rate. By that
+reading, a rephraser of two billion parameters, told to add nothing, adds
+something most of the time.
 
 The judge and the number check agree on only half of the pairs. In 25 pairs
 every number was kept and the judge still found an added claim; in 3, a
@@ -1307,7 +1312,9 @@ of the rewrites, 8% shorter than S1, the margin is 11.9%. How large a
 difference in loss is that? Arm D will give a scale. It holds about a fifth
 more effective tokens than A, and B's best case is a little over half of
 that. Three seeds per arm may well not resolve a gain of this size, and we
-say so before training rather than after.
+say so before training rather than after. A design with a smaller source
+read more often leaves B far more room at the same cost, and exercise
+:exref:`ex_lm_synth-room` works it out.
 
 ### The Five Arms
 :label:`subsec_lm_synth_build`
@@ -1383,11 +1390,10 @@ Each arm trains with three data-order seeds. The recipe is that of
 :numref:`sec_lm_data_mixtures`, with its peak learning rate and a cosine
 schedule, and with two changes. The model is the wider proxy of 8.1 million
 parameters, 6.3 million of them in its embedding table. And the warmup lasts
-10% of the steps instead of 2%. At the learning rate chosen in that section
-for the smaller proxy, five warmup steps let this wider model spike, and in
-a probe of three seeds the spread of its final losses was about four times
-larger than with 26 warmup steps. The warmup was set by that spread alone,
-before any arm was compared, and all five arms share it. Each run is
+10% of the steps instead of 2%, because at the learning rate chosen in that
+section the wider model trains less steadily with only five warmup steps.
+The warmup was fixed before any arm was compared, all five arms share it,
+and exercise :exref:`ex_lm_synth-warmup` measures what it changes. Each run is
 evaluated in bits per byte on two sets, the held-out real documents of the
 pool and the rewrites of the same documents, at a quarter, half, three
 quarters and the end of training. A normal build reads the registered runs
@@ -1567,21 +1573,28 @@ distribution shift. Training on a generator's output moves the training
 distribution toward the generator's: a model that has read the rephraser's
 style finds that style easy, and a model that has read nothing else is worse
 at the web. Had we evaluated only on rewrites, C would be the best arm in
-the table. This is the reason to suspect the second half of WRAP's
-explanation: style that matches the evaluation helps the evaluation.
+the table. This is the second half of WRAP's explanation at work: style
+that matches the evaluation helps the evaluation, whatever it does for
+other text.
 
 Mixing repairs most of the damage. At T1 scale (8.1M-parameter proxies,
 $2^{24}$ tokens), B beats C on real validation by about 0.06, in every seed.
 Arm E, new information in rephrased form, ends below B in the table but by
 less than the threshold: no difference detected at this scale.
 
-Why did rephrasing help WRAP and not us? Two differences stand out. Our
-source is FineWeb-Edu, documents already selected for clear educational
-prose, so a rewrite has little noise to remove, while WRAP's largest gains
-were on C4. And at our scale there is little to gain: the bound allows 12%
-more effective tokens, and the curves of A and B in the third panel lie on
-top of each other from the first evaluation to the last, while D pulls
-away. What carries over to any scale is the protocol: equal tokens, both
+Did rephrasing behave as WRAP reports? On the kind of text where WRAP
+measured, it did. Arm B gains on rephrased validation, text in a style other
+than the source's, where it beats A by about 0.05 bits per byte, more than
+fresh text does. WRAP's perplexity result is likewise reported on text other
+than its C4 source, subsets of the Pile, and its own explanation, that the
+rewrites' styles are closer to the evaluation text, predicts this pattern.
+On held-out text of the source distribution, where WRAP made no claim, the
+rewrites of the same chunks added nothing measurable. There was also little
+to gain at our scale: the bound allows 12% more effective tokens, and the
+curves of A and B in the third panel lie on top of each other from the first
+evaluation to the last, while D pulls away. Whether rewrites help more on a
+noisier source than FineWeb-Edu, the first half of WRAP's explanation, this
+comparison does not test. What carries over to any scale is the protocol: equal tokens, both
 validation sets, a noise threshold fixed in advance and a bound computed
 before the runs. A claim that synthetic data helps should come with all
 four.
@@ -1874,24 +1887,26 @@ anyone who trains on the data knows it. The same checks return in
 answers for post-training and generated text becomes the main ingredient
 rather than a supplement. For pretraining one question stays open at our
 scale: whether a stronger rephraser, or a style that adds structure rather
-than polish, turns the null result of arm B into a gain.
+than polish, turns the null result of arm B on real text into a gain.
 
 ## Summary
 
 Language models can rewrite existing documents or write new ones from a
-seed, and both kinds of text are now used in pretraining at the scale of
-whole crawls. A rewrite has to be checked: cheap string measures catch lost
-numbers and near-copies, a judge model finds the added claims they miss
-(about 70% of the rewrites of a two-billion-parameter model add one), and the
-two checks measure different failures. Diversity comes from the prompt,
-through seed, format and audience, far more than from the sampling
-temperature. At T1 scale (8.1M-parameter proxies, $2^{24}$ tokens), rewrites
-of the same source added no measurable effective data, within the 12% that
-the law of repeated data allowed, while rewrites alone made the model better
-on rewrites and worse on real text, so a claim about synthetic data needs
-both validation sets. Training each generation only on the previous model's
-output loses variance and rare words, accumulating real data prevents it,
-and the rights to generated text follow both its source and its generator.
+seed, and both kinds of text now enter pretraining at the scale of whole
+crawls. Rewrites have to be checked. Cheap string measures catch lost
+numbers and near-copies. A strict judge model finds the added claims they
+miss, and by its reading about 70% of the rewrites of a
+two-billion-parameter model add one. The two checks see different failures,
+losses and additions. At one temperature, conditioning the prompt on format
+and audience raised distinct 4-grams from about 0.76 to 0.995. At T1 scale
+(8.1M-parameter proxies, $2^{24}$ tokens), rewrites mixed with their own
+source changed nothing measurable on real text, within the 12% that the law
+of repeated data allowed, and helped on rewritten text. Rewrites alone made
+the model better on rewrites and worse on real text, so a claim about
+synthetic data needs both validation sets. Training each generation only on
+the previous model's output loses variance and rare words, and accumulating
+real data prevents it. The rights to generated text follow both its source
+and its generator.
 
 ## Exercises
 
@@ -1968,6 +1983,28 @@ and the rights to generated text follow both its source and its generator.
    here.
    :exlabel:`ex_lm_synth-stronger`
 
+1. [code] **Room to gain.** Arm B of this section could gain at most 11.9% in
+   effective tokens over A. Keep the budget of $2^{24}$ tokens, but let A read
+   a source of $U = 2^{19}$ tokens 32 times and B read that source and its
+   rewrites 16 times each.
+    1. Compute both sides of :eqref:`eq_lm_synth_bounds` for this design. How
+       much more room does B have?
+    1. Run A, B and D at this size with three seeds each, and apply
+       the section's rule on both validation sets. Before running, predict
+       which of the differences it will resolve.
+    1. A smaller source read more often also costs A more. Which of the two
+       designs answers the question of the opening better, and why?
+   :exlabel:`ex_lm_synth-room`
+
+1. [code] **Warmup and seed spread.** The arms warm up over 10% of their
+   steps; the proxies of :numref:`sec_lm_data_mixtures` warm up over 2%.
+   Train arm A with both warmups at the same peak learning rate, three seeds
+   each, and compare the standard deviation of the final real-validation
+   bits per byte. Plot the training losses of the first 40 steps. Where does
+   the difference come from, and how small a difference between two arms
+   could the section's rule resolve under each warmup?
+   :exlabel:`ex_lm_synth-warmup`
+
 1. [code] **Fresh data against collapse.** Extend `collapse_sim` so that a
    fraction $\phi$ of the $n$ points of each generation is drawn from the
    true distribution and the rest from the previous fit, in replace mode.
@@ -2028,7 +2065,7 @@ Qwen3.5-2B as rephraser, 8.1M-parameter proxies trained on $2^{24}$ tokens.
 | choose text | Quality Filtering |
 | | Deduplication and Decontamination |
 | mix text | Data Mixtures |
-| make text | **Synthetic and Rephrased Data** |
+| | **Synthetic and Rephrased Data** |
 | cut text | Tokenizers at Scale |
 :::
 
@@ -2087,7 +2124,7 @@ with thinking off; any `<think>` in a reply fails an assertion.
 :::
 
 ::: {.slide title="Style Sets the Length: Conversations Run Out of Tokens"}
-[Live rewrites, 60 chunks per style]{.kicker}
+[Live rewrites, 60 chunks per style, one sampled run]{.kicker}
 
 | | encyclopedia | questions and answers |
 |---|---|---|
@@ -2097,8 +2134,9 @@ with thinking off; any `<think>` in a reply fails an assertion.
 | every number kept | 63% | 50% |
 | mean copy rate | 0.53 | 0.47 |
 
-Registered corpus, 14,305 chunks: 13,809 kept, about 70% keep every number,
-9% fewer tokens for the same characters.
+Live counts move by a few on other hardware. Registered corpus, 14,305
+chunks: 13,809 kept, about 70% keep every number, 9% fewer tokens for the
+same characters.
 :::
 
 ::: {.slide title="Check: Which of These Rewrites Is Good Data?"}
@@ -2117,7 +2155,7 @@ them.
 :::
 :::
 
-::: {.slide title="A 27B Judge Finds an Added Claim in 70% of Rewrites"}
+::: {.slide title="A Strict 27B Judge Finds an Added Claim in 70% of Rewrites"}
 [The judge]{.kicker}
 
 Qwen3.8-27B (4-bit), thinking on, no thinking budget, 12,000 new tokens;
@@ -2132,11 +2170,12 @@ median reply about 2,800 tokens; 56 verdicts of 60.
 check: 50%.
 
 ::: {.d2l-note}
-The number check sees losses, the judge sees additions. Run both.
+The number check sees losses, the judge sees additions. Run both. No
+person has checked the verdicts: 70% is one strict reader's rate.
 :::
 :::
 
-::: {.slide title="Diversity Comes from the Prompt, Not the Temperature"}
+::: {.slide title="At One Temperature, Format and Audience Raise Diversity"}
 [Generating from seeds]{.kicker}
 
 Nine outputs from one seed, temperature 0.7, each cut to 70 words:
@@ -2219,8 +2258,9 @@ E − B: no difference detected. B − C on real: −0.06.
 
 - A model that read the rephraser's style finds that style easy.
 - Evaluating only on rewrites would make C the best arm.
-- WRAP's "style matches the evaluation" cuts both ways.
-- FineWeb-Edu is already clean: little noise for a rewrite to remove.
+- B gains on rewritten text (−0.05) and nothing on real text; WRAP, too,
+  measured its gain on text other than its source.
+- That is the pattern WRAP's "style matches the evaluation" predicts.
 
 ::: {.d2l-note}
 Report: equal tokens, both validation sets, a noise threshold fixed in
@@ -2293,8 +2333,8 @@ Descriptive, not legal advice.
 [Recap]{.kicker}
 
 - Cheap checks: 70% of rewrites keep every number; "thirty" counts as lost.
-- A 27B judge: 70% of rewrites add a claim; agreement with numbers 50%.
-- Prompt conditioning: distinct 4-grams 0.76 → 0.995.
+- A strict 27B judge: 70% of rewrites add a claim; agreement with numbers 50%.
+- Prompt conditioning at one temperature: distinct 4-grams 0.76 → 0.995.
 - At T1 scale: B = A within noise (bound 12.5%); C loses 0.07 on real, wins
   0.06 on rewrites.
 - Replace collapses ($q^T$), accumulate stays bounded; rare words go first.

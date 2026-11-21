@@ -37,7 +37,7 @@ In control notation, a continuous state is written $\mathbf{x}_t \in \mathbb{R}^
 $$\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t,$$
 :eqlabel:`eq_lqr_dynamics`
 
-where $\mathbf{A} \in \mathbb{R}^{d \times d}$ is the state-transition matrix and $\mathbf{B} \in \mathbb{R}^{d \times m}$ is the control-input matrix (the discrete-time counterpart of the linear ODEs in :numref:`sec_mdl_odes_solvers`). The target state is the origin $\mathbf{x} = \mathbf{0}$. Over a finite horizon of $H$ steps, we minimize the total quadratic cost
+where $\mathbf{A} \in \mathbb{R}^{d \times d}$ is the state-transition matrix and $\mathbf{B} \in \mathbb{R}^{d \times m}$ is the control-input matrix (the discrete-time counterpart of the linear ODEs in :numref:`sec_mdl-odes-solvers`). The target state is the origin $\mathbf{x} = \mathbf{0}$. Over a finite horizon of $H$ steps, we minimize the total quadratic cost
 
 $$J(\mathbf{x}_0, \mathbf{u}_{0:H-1}) = \sum_{t=0}^{H-1} \big(\mathbf{x}_t^\top \mathbf{Q}\mathbf{x}_t + \mathbf{u}_t^\top \mathbf{R}\mathbf{u}_t\big) + \mathbf{x}_H^\top \mathbf{Q}_H \mathbf{x}_H,$$
 :eqlabel:`eq_lqr_cost`
@@ -162,7 +162,7 @@ print(f'LQR gain K_inf:          [{K_lqr[0]:.3f}, {K_lqr[1]:.3f}]')
 print(f'closed-loop eigenvalues: {eigs_closed[0]:.4f}, {eigs_closed[1]:.4f}')
 ```
 
-At the upright fixed point, the open-loop Jacobian $\mathbf{A}$ has an unstable eigenvalue $\lambda_1 = 1.2133 > 1$: any small tilt grows exponentially at over $21\%$ per step, as seen in the phase portrait of :numref:`sec_mdl_odes_solvers`. Solving the Riccati recursion with `Pendulum-v1`'s cost matrices $\mathbf{Q} = \textrm{diag}(1, 0.1)$ and $\mathbf{R} = [[0.001]]$ produces the feedback gain $\mathbf{K}_\infty = [19.693, 5.263]$, which pulls both closed-loop eigenvalues inside the unit circle ($\lambda_1 = 0.8537, \lambda_2 = 0.2467$).
+At the upright fixed point, the open-loop Jacobian $\mathbf{A}$ has an unstable eigenvalue $\lambda_1 = 1.2133 > 1$: any small tilt grows exponentially at over $21\%$ per step, as seen in the phase portrait of :numref:`sec_mdl-odes-solvers`. Solving the Riccati recursion with `Pendulum-v1`'s cost matrices $\mathbf{Q} = \textrm{diag}(1, 0.1)$ and $\mathbf{R} = [[0.001]]$ produces the feedback gain $\mathbf{K}_\infty = [19.693, 5.263]$, which pulls both closed-loop eigenvalues inside the unit circle ($\lambda_1 = 0.8537, \lambda_2 = 0.2467$).
 
 ### Where Local Linearization Fails: Torque Saturation and the Basin of Attraction
 
@@ -291,6 +291,7 @@ d2l.plot(np.arange(80) * 0.05, [xs_nom[:-1, 0], xs_nom[:-1, 1], us_nom],
 ```
 
 Look at the trajectory that iLQR discovers in 35 iterations from the bottom $(\pi, 0)$:
+
 - **Steps 0 to 10 (initial back-swing):** It pushes left ($u_0 = -1.782$) to $\vartheta_{10} = 2.652\text{ rad}$.
 - **Steps 10 to 30 (energy pump):** It reverses torque ($u_{10} = +0.966 \to u_{20} = +1.681$), driving the pendulum through the bottom to $\vartheta_{30} = 4.038\text{ rad}$ on the other side to store gravitational potential energy.
 - **Steps 30 to 60 (whip and catch):** It reverses torque again ($u_{30} = -1.807 \to u_{40} = -1.832$), reaching peak angular speed $\dot\vartheta_{40} = -4.440\text{ rad/s}$ as it climbs past the horizontal ($\vartheta_{40} = 1.567\text{ rad}$) into the upright catch basin ($\vartheta_{50} = 0.375\text{ rad}$) and brakes smoothly to rest at the top ($\vartheta_{60} = 0.0009\text{ rad}$, $\vartheta_{80} = 0.0001\text{ rad}$, $u_{80} = 0.000$).

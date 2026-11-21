@@ -111,6 +111,22 @@ for ru in (0.01, 0.10, 1.00):
           f'P_00={P_inf[0, 0]:5.2f}  rho(A - B K)={rho:.3f}')
 ```
 
+We can also plot the closed-loop position trajectories $p_t$ starting from $\mathbf{x}_0 = (1, 0)^\top$ under the three control-effort penalties:
+
+```{.python .input #optimal-control-riccati-plot}
+%%tab pytorch, jax
+trajs, steps_di = [], np.arange(51) * dt
+for ru in (0.01, 0.10, 1.00):
+    _, Ks = riccati_lqr(A_di, B_di, Q_di, np.array([[ru]]), H=100)
+    x, xs_di = np.array([1.0, 0.0]), [1.0]
+    for _ in range(50):
+        x = (A_di - B_di @ Ks[0]) @ x
+        xs_di.append(x[0])
+    trajs.append(xs_di)
+d2l.plot(steps_di, trajs, 'time (s)', 'position $p_t$',
+         legend=['R = 0.01', 'R = 0.10', 'R = 1.00'], figsize=(5, 3))
+```
+
 Look at the two components of the stationary feedback law $u_t^* = -k_p p_t - k_v v_t$: dynamic programming has automatically derived a *proportional-derivative* (PD) controller, pushing back against the position error $p_t$ with gain $k_p$ and damping the velocity $v_t$ with gain $k_v$. When control effort is cheap ($R = 0.01$), LQR chooses aggressive gains $\mathbf{K}_\infty = [7.613, 4.585]$ that contract the state norm at rate $\rho(\mathbf{A} - \mathbf{B}\mathbf{K}_\infty) = 0.761$ per step; when control effort is expensive ($R = 1.00$), it uses gentle accelerations $\mathbf{K}_\infty = [0.930, 1.395]$ with contraction rate $\rho = 0.930$ and a higher cumulative cost $V_0(\mathbf{x}_0) = \mathbf{x}_0^\top \mathbf{P}_\infty \mathbf{x}_0$ ($P_{00} = 15.00$ vs. $6.02$).
 
 ## Linearizing a Nonlinear System Around an Equilibrium
@@ -162,15 +178,15 @@ B_p = np.asarray(jax.jacrev(pendulum_f_close, argnums=1)(x_eq, u_eq))
 Q_p, R_p = np.diag([1.0, 0.1]), np.array([[0.001]])
 Ps_p, Ks_p = riccati_lqr(A_p, B_p, Q_p, R_p, H=200)
 K_lqr = Ks_p[0][0]
-eigs_open = np.linalg.eigvals(A_p)
-eigs_closed = np.linalg.eigvals(A_p - B_p @ Ks_p[0])
+eigs_open = np.linalg.eigvals(A_p).real
+eigs_closed = np.linalg.eigvals(A_p - B_p @ Ks_p[0]).real
 print(f'A at upright:\n{A_p}')
 print(f'open-loop eigenvalues:   {eigs_open[0]:.4f}, {eigs_open[1]:.4f}')
 print(f'LQR gain K_inf:          [{K_lqr[0]:.3f}, {K_lqr[1]:.3f}]')
 print(f'closed-loop eigenvalues: {eigs_closed[0]:.4f}, {eigs_closed[1]:.4f}')
 ```
 
-At the upright fixed point, the open-loop Jacobian $\mathbf{A}$ has an unstable eigenvalue $\lambda_1 = 1.2133 > 1$: any small tilt grows exponentially at over $21\%$ per step, as seen in the phase portrait of :numref:`sec_mdl_odes_solvers`. Solving the Riccati recursion with `Pendulum-v1`'s cost matrices $\mathbf{Q} = \textrm{diag}(1, 0.1)$ and $\mathbf{R} = [[0.001]]$ produces the feedback gain $\mathbf{K}_\infty = [19.693, 5.263]$, which pulls both closed-loop eigenvalues inside the unit circle ($\lambda_1 = 0.8537, \lambda_2 = 0.2467$).
+At the upright fixed point, the open-loop Jacobian $\mathbf{A}$ has an unstable eigenvalue $\lambda_1 = 1.2133 > 1$: any small tilt grows exponentially at over $21\%$ per step, as seen in the phase portrait of :numref:`sec_mdl_odes_solvers`. Solving the Riccati recursion with `Pendulum-v1`'s cost matrices $\mathbf{Q} = \textrm{diag}(1, 0.1)$ and $\mathbf{R} = [[0.001]]$ produces the feedback gain $\mathbf{K}_\infty = [19.693, 5.262]$, which pulls both closed-loop eigenvalues inside the unit circle ($\lambda_1 = 0.8537, \lambda_2 = 0.2467$).
 
 ### Where Local Linearization Fails: Torque Saturation and the Basin of Attraction
 
@@ -265,9 +281,9 @@ def ilqr_swingup(x0, H=80, iters=35, q_run=0.02, r_v=0.02, q_T=100.0,
             w = q_T if t >= H - 20 else q_run
             A, B = As[t], Bs[t]
             Qx = 2.0 * w * (Q_base @ xs[t]) + A.T @ Vx
-            Qv = 2.0 * r_v * vs[t] + float(B.T @ Vx)
+            Qv = 2.0 * r_v * vs[t] + (B.T @ Vx).item()
             Qxx = 2.0 * w * Q_base + A.T @ Vxx @ A
-            Qvv = 2.0 * r_v + 1e-2 + float(B.T @ Vxx @ B)
+            Qvv = 2.0 * r_v + 1e-2 + (B.T @ Vxx @ B).item()
             Qvx = (B.T @ Vxx @ A).ravel()
             ks[t], Ks[t] = -Qv / Qvv, -Qvx / Qvv
             Vx = Qx + Qvx * ks[t]
@@ -292,6 +308,10 @@ for t in range(0, 81, 10):
     u_t = us_nom[t] if t < 80 else 0.0
     print(f't={t:2d}  theta={xs_nom[t, 0]:7.4f}  '
           f'thetadot={xs_nom[t, 1]:7.4f}  u={u_t:+6.3f}')
+d2l.plot(np.arange(80) * 0.05, [xs_nom[:-1, 0], xs_nom[:-1, 1], us_nom],
+         'time (s)', 'angle / velocity / torque',
+         legend=[r'angle $\vartheta_t$', r'velocity $\dot{\vartheta}_t$',
+                 r'torque $u_t$'], figsize=(5.5, 3.2))
 ```
 
 Look at the trajectory that iLQR discovers in 35 iterations from the bottom $(\pi, 0)$:
@@ -319,24 +339,28 @@ vs_pad = np.concatenate([vs_nom, np.zeros(T - 80)])
 us_pad = np.concatenate([us_nom, np.zeros(T - 80)])
 Ks_pad = np.vstack([Ks_nom, np.tile(Ks_nom[-1], (T - 80, 1))])
 
-def mpc_action(x, vs_warm, H_mpc=60):
+def mpc_action(x, vs_warm):
     """One receding-horizon MPC step: warm-started iLQR with fallback re-seed."""
+    H_mpc = max(25, len(vs_warm))
     warm = np.concatenate([vs_warm, np.zeros(H_mpc)])[:H_mpc]
-    xs_w, us_w, vs_w, _, c_w = ilqr_swingup(x, H=H_mpc, iters=8, vs_init=warm)
-    if abs(xs_w[-1, 0]) > 0.2:   # warm plan missed the top: re-plan from seed
-        xs_s, us_s, vs_s, _, c_s = ilqr_swingup(x, H=H_mpc, iters=20)
-        if c_s < c_w:
-            return us_s[0], vs_s[0], np.append(vs_s[1:], 0.0)
-    return us_w[0], vs_w[0], np.append(vs_w[1:], 0.0)
+    xs_w, us_w, vs_w, _, _ = ilqr_swingup(x, H=H_mpc, iters=18, vs_init=warm)
+    if abs(xs_w[-1, 0]) > 0.2:   # warm plan missed the top: re-plan over 60 steps
+        _, us_s, vs_s, _, _ = ilqr_swingup(x, H=60, iters=25)
+        return us_s[0], vs_s[0], vs_s[1:]
+    return us_w[0], vs_w[0], vs_w[1:]
 
 for impulse in (0.0, 0.5, 2.2):
     x_ol, x_tv, x_mpc = [np.array([np.pi, 0.0]) for _ in range(3)]
     ret_ol = ret_tv = ret_mpc = 0.0
-    vs_warm = vs_pad.copy()
+    th_ol, th_tv, th_mpc = [], [], []
+    vs_warm = vs_nom.copy()
     for t in range(T):
         if t == 45:
             for x in (x_ol, x_tv, x_mpc):
                 x[1] += impulse
+        th_ol.append(wrap(x_ol[0]))
+        th_tv.append(wrap(x_tv[0]))
+        th_mpc.append(wrap(x_mpc[0]))
         # 1. Open-loop
         ret_ol -= wrap(x_ol[0])**2 + 0.1 * x_ol[1]**2 + 0.001 * us_pad[t]**2
         x_ol, _, _, _ = step_tanh(x_ol, vs_pad[t])
@@ -353,13 +377,21 @@ for impulse in (0.0, 0.5, 2.2):
     print(f'  Open-loop:  final theta={wrap(x_ol[0]):+6.3f}, return={ret_ol:6.1f}')
     print(f'  TV-LQR:     final theta={wrap(x_tv[0]):+6.3f}, return={ret_tv:6.1f}')
     print(f'  MPC (iLQR): final theta={wrap(x_mpc[0]):+6.3f}, return={ret_mpc:6.1f}')
+d2l.plot(np.arange(T) * 0.05, [th_ol, th_tv, th_mpc],
+         'time (s)', r'wrapped angle $\vartheta_t$ (rad)',
+         legend=['Open-loop', 'TV-LQR', 'MPC (iLQR)'], figsize=(5.5, 3.2))
 ```
+
+:numref:`fig_rl_optimal_control` places the three stages of this section side by side: the local LQR value contours and torque-saturation boundary around the upright equilibrium, the iLQR energy-pumping trajectory in the $(\vartheta, \dot\vartheta)$ phase plane, and the disturbance-rejection trajectories under the strong impulse $\Delta\dot\vartheta = +2.2\text{ rad/s}$ at $t = 45$.
+
+![Optimal control from local LQR to receding-horizon MPC. (a) Upright LQR cost-to-go contours $V_\infty(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_\infty\mathbf{x}$ and the static holding boundary $|\vartheta| \leq \arcsin(2/5) \approx 0.412\text{ rad}$ (dotted): starting from $\vartheta_0 = 0.40\text{ rad}$ converges to the origin (blue), whereas $\vartheta_0 = 0.50\text{ rad}$ saturates the motor torque $|u| \leq 2$ and falls away (orange dashed). (b) The 80-step iLQR swing-up trajectory in the $(\vartheta, \dot\vartheta)$ phase plane, pumping from $(\pi, 0)$ to $\vartheta_{30} = 4.04\text{ rad}$ before whipping through the bottom to the upright equilibrium $(0, 0)$. (c) Wrapped angle $\vartheta_t$ when an impulse $\Delta\dot\vartheta = +2.2\text{ rad/s}$ strikes at $t = 45$ ($2.25\text{ s}$, vertical dotted line): open-loop and TV-LQR fail, while receding-horizon MPC plans a new swing-up and returns to $\vartheta = 0$.](../img/mdl-rl-optimal-control.svg)
+:label:`fig_rl_optimal_control`
 
 The three disturbance levels separate the three controllers cleanly:
 
-- **No disturbance ($\Delta\dot\vartheta = 0.0$):** All three swing the pendulum up, earning returns around $-313$ to $-334$ (well above the $-200$ balancing bar once at the top; over the final 40 steps after $t=80$, open-loop begins to drift slightly to $\vartheta_{120} = +0.075\text{ rad}$ at the unstable saddle, while TV-LQR and MPC hold $\vartheta_{120} = 0.000\text{ rad}$).
-- **Moderate disturbance ($\Delta\dot\vartheta = +0.5\text{ rad/s}$):** Open-loop execution is knocked off its precomputed schedule, falls back down, and ends at $\vartheta_{120} = -2.938\text{ rad}$ (return $-502.2$). Both TV-LQR ($\vartheta_{120} = -0.001\text{ rad}$, return $-333.9$) and MPC ($\vartheta_{120} = 0.000\text{ rad}$, return $-314.3$) absorb the push and lock the rod upright.
-- **Strong disturbance ($\Delta\dot\vartheta = +2.2\text{ rad/s}$):** The knock arrests the upward climb and sends the pendulum falling back toward the bottom. TV-LQR's linear feedback around the old nominal trajectory saturates its torque and fails ($\vartheta_{120} = +1.959\text{ rad}$, return $-797.9$), because recovering requires a new swing-up pump that does not exist in a linear neighborhood of the old trajectory. Receding-horizon MPC detects that the shifted plan no longer reaches the top, plans a fresh swing-up from the post-disturbance state, and restores the pendulum to the upright equilibrium ($\vartheta_{120} = +0.001\text{ rad}$, return $-543.4$).
+- **No disturbance ($\Delta\dot\vartheta = 0.0$):** All three swing the pendulum up, earning returns around $-332$ to $-334$ (well above the $-200$ balancing bar once at the top; over the final 40 steps after $t=80$, open-loop begins to drift slightly to $\vartheta_{120} = +0.075\text{ rad}$ at the unstable saddle, while TV-LQR and MPC hold $\vartheta_{120} = 0.000\text{ rad}$).
+- **Moderate disturbance ($\Delta\dot\vartheta = +0.5\text{ rad/s}$):** Open-loop execution is knocked off its precomputed schedule, falls back down, and ends at $\vartheta_{120} = -2.939\text{ rad}$ (return $-502.3$). Both TV-LQR ($\vartheta_{120} = -0.001\text{ rad}$, return $-333.9$) and MPC ($\vartheta_{120} = +0.000\text{ rad}$, return $-331.7$) absorb the push and lock the rod upright.
+- **Strong disturbance ($\Delta\dot\vartheta = +2.2\text{ rad/s}$):** The knock arrests the upward climb and sends the pendulum falling back toward the bottom. TV-LQR's linear feedback around the old nominal trajectory saturates its torque and fails ($\vartheta_{120} = +1.959\text{ rad}$, return $-797.9$), because recovering requires a new swing-up pump that does not exist in a linear neighborhood of the old trajectory. Receding-horizon MPC detects that the shifted plan no longer reaches the top, plans a fresh swing-up from the post-disturbance state, and restores the pendulum to the upright equilibrium ($\vartheta_{120} = +0.000\text{ rad}$, return $-558.2$).
 
 ### From Classical Control to Reinforcement Learning
 
@@ -519,13 +551,13 @@ $$v_t^{\textrm{new}} = \bar{v}_t + \alpha\, k_t + \mathbf{K}_t(\mathbf{x}_t^{\te
 :::
 
 ::: {.slide title="Open-Loop vs. TV-LQR vs. Receding-Horizon MPC"}
-- What happens when an angular-velocity impulse $\Delta\dot\vartheta$ strikes at step $t = 45$?
+![](../img/mdl-rl-optimal-control.svg){width=94%}
 
-| impulse at $t = 45$ | Open-loop $(\bar{u}_t)$ | TV-LQR $(\bar{v}_t + \mathbf{K}_t\delta\mathbf{x}_t)$ | Receding-horizon MPC ($H_{\textrm{mpc}} = 60$) |
+| impulse at $t = 45$ | Open-loop $(\bar{u}_t)$ | TV-LQR $(\bar{v}_t + \mathbf{K}_t\delta\mathbf{x}_t)$ | Receding-horizon MPC |
 |---|---|---|---|
-| $0.0\text{ rad/s}$ | $\vartheta_{120} = +0.075$, ret $-333.6$ | $\vartheta_{120} = +0.000$, ret $-333.7$ | $\vartheta_{120} = +0.000$, ret $-313.2$ |
-| $+0.5\text{ rad/s}$ | $\vartheta_{120} = -2.938$, ret $-502.2$ | $\vartheta_{120} = -0.001$, ret $-333.9$ | $\vartheta_{120} = +0.000$, ret $-314.3$ |
-| $+2.2\text{ rad/s}$ | $\vartheta_{120} = +2.941$, ret $-621.1$ | $\vartheta_{120} = +1.959$, ret $-797.9$ | $\vartheta_{120} = +0.001$, ret $-543.4$ |
+| $0.0\text{ rad/s}$ | $\vartheta_{120} = +0.075$, ret $-333.6$ | $\vartheta_{120} = +0.000$, ret $-333.7$ | $\vartheta_{120} = +0.000$, ret $-331.6$ |
+| $+0.5\text{ rad/s}$ | $\vartheta_{120} = -2.939$, ret $-502.3$ | $\vartheta_{120} = -0.001$, ret $-333.9$ | $\vartheta_{120} = +0.000$, ret $-331.7$ |
+| $+2.2\text{ rad/s}$ | $\vartheta_{120} = +2.941$, ret $-621.1$ | $\vartheta_{120} = +1.959$, ret $-797.9$ | $\vartheta_{120} = +0.000$, ret $-558.2$ |
 
 ::: {.d2l-note}
 TV-LQR handles small disturbances inside the linear tube around $\bar{\mathbf{x}}_t$; receding-horizon MPC re-solves from $\mathbf{x}_t$ and plans a new swing-up when knocked back down.

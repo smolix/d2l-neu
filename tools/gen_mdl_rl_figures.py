@@ -3127,6 +3127,190 @@ def fig_reward_gridworld():   # F5 (ch. 15) -> mdl-rl-reward-gridworld
     fl.save(fig, "mdl-rl-reward-gridworld")
 
 
+def fig_optimal_control():   # F_oc (ch. 14) -> mdl-rl-optimal-control
+    """(a) Upright LQR quadratic value contours V(x) = x^T P_inf x and the
+    torque-saturation boundary |theta| <= arcsin(2/5): theta_0 = 0.40 converges,
+    theta_0 = 0.50 saturates and falls. (b) iLQR swing-up trajectory in the
+    (theta, thetadot) phase plane from (pi, 0) to (0, 0). (c) Wrapped angle
+    under a strong impulse (+2.2 rad/s at t = 45): Open-loop and TV-LQR fail,
+    while receding-horizon MPC re-plans a pump and recovers to 0."""
+    dt, g = 0.05, 10.0
+    A_p = np.array([[1.0 + 1.5 * g * dt**2, dt], [1.5 * g * dt, 1.0]])
+    B_p = np.array([[3.0 * dt**2], [3.0 * dt]])
+    Q_p, R_p = np.diag([1.0, 0.1]), np.array([[0.001]])
+    P = Q_p.copy()
+    for _ in range(200):
+        BtP = B_p.T @ P
+        K = np.linalg.solve(R_p + BtP @ B_p, BtP @ A_p)
+        P = Q_p + A_p.T @ P @ (A_p - B_p @ K)
+    K_lqr = K[0]
+
+    def wrap(th):
+        return ((th + np.pi) % (2 * np.pi)) - np.pi
+
+    def step_nl(x, u):
+        th, thdot = x[0], x[1]
+        u_c = float(np.clip(u, -2.0, 2.0))
+        newthdot = float(np.clip(thdot + (1.5 * g * np.sin(th) + 3.0 * u_c) * dt,
+                                 -8.0, 8.0))
+        return np.array([th + newthdot * dt, newthdot])
+
+    def step_tanh(x, v):
+        th, thdot = x[0], x[1]
+        th_v = np.tanh(v)
+        u = 2.0 * th_v
+        du_dv = 2.0 * (1.0 - th_v**2)
+        newthdot = thdot + (1.5 * g * np.sin(th) + 3.0 * u) * dt
+        newth = th + newthdot * dt
+        dthdot_dth = 1.5 * g * np.cos(th) * dt
+        dthdot_dv = 3.0 * dt * du_dv
+        A = np.array([[1.0 + dthdot_dth * dt, dt], [dthdot_dth, 1.0]])
+        B = np.array([[dthdot_dv * dt], [dthdot_dv]])
+        return np.array([newth, newthdot]), A, B, u
+
+    def ilqr_swingup(x0, H=80, iters=35, q_run=0.02, r_v=0.02, q_T=100.0,
+                     vs_init=None):
+        vs = (np.array(vs_init, dtype=float) if vs_init is not None
+              else np.array([0.2 if t < 15 else 0.0 for t in range(H)]))
+        for _ in range(iters):
+            xs, As, Bs, us, cost = [np.array(x0, dtype=float)], [], [], [], 0.0
+            for t in range(H):
+                x_next, A, B, u = step_tanh(xs[-1], vs[t])
+                As.append(A); Bs.append(B); us.append(u)
+                w = q_T if t >= H - 20 else q_run
+                cost += w * (xs[-1] @ Q_p @ xs[-1]) + r_v * vs[t]**2
+                xs.append(x_next)
+            cost += q_T * (xs[-1] @ Q_p @ xs[-1])
+            Vx = 2.0 * q_T * (Q_p @ xs[-1])
+            Vxx = 2.0 * q_T * Q_p
+            ks, Ks = np.zeros(H), np.zeros((H, 2))
+            for t in range(H - 1, -1, -1):
+                w = q_T if t >= H - 20 else q_run
+                A, B = As[t], Bs[t]
+                Qx = 2.0 * w * (Q_p @ xs[t]) + A.T @ Vx
+                Qv = 2.0 * r_v * vs[t] + (B.T @ Vx).item()
+                Qxx = 2.0 * w * Q_p + A.T @ Vxx @ A
+                Qvv = 2.0 * r_v + 1e-2 + (B.T @ Vxx @ B).item()
+                Qvx = (B.T @ Vxx @ A).ravel()
+                ks[t], Ks[t] = -Qv / Qvv, -Qvx / Qvv
+                Vx = Qx + Qvx * ks[t]
+                Vxx = Qxx + np.outer(Qvx, Ks[t])
+            for alpha in (1.0, 0.5, 0.25, 0.1, 0.03):
+                x_new, vs_new, c_new = np.array(x0, dtype=float), np.zeros(H), 0.0
+                for t in range(H):
+                    v_t = vs[t] + alpha * ks[t] + Ks[t] @ (x_new - xs[t])
+                    vs_new[t] = v_t
+                    w = q_T if t >= H - 20 else q_run
+                    c_new += w * (x_new @ Q_p @ x_new) + r_v * v_t**2
+                    x_new, _, _, _ = step_tanh(x_new, v_t)
+                c_new += q_T * (x_new @ Q_p @ x_new)
+                if c_new < cost:
+                    vs = vs_new
+                    break
+        return np.array(xs), np.array(us), vs, Ks, cost
+
+    fig = plt.figure(figsize=(12.2, 3.6))
+    gs = GridSpec(1, 3, width_ratios=[1.0, 1.0, 1.1], figure=fig, wspace=0.34)
+    axa, axb, axc = (fig.add_subplot(gs[0, i]) for i in range(3))
+
+    # --- (a) Upright LQR basin & value contours ---
+    th_g = np.linspace(-0.75, 0.75, 120)
+    thd_g = np.linspace(-2.2, 2.2, 120)
+    TH, THD = np.meshgrid(th_g, thd_g)
+    V_grid = P[0, 0] * TH**2 + 2 * P[0, 1] * TH * THD + P[1, 1] * THD**2
+    axa.contour(TH, THD, V_grid, levels=[0.5, 2.0, 5.0, 12.0, 25.0],
+                colors=[LIGHT], linewidths=1.1, zorder=1)
+    th_lim = np.arcsin(0.4)
+    axa.axvline(th_lim, color=GRAY, lw=1.2, ls=":", zorder=2)
+    axa.axvline(-th_lim, color=GRAY, lw=1.2, ls=":", zorder=2)
+
+    tr_ok, tr_fail = [np.array([0.40, 0.0])], [np.array([0.50, 0.0])]
+    for _ in range(60):
+        x1 = tr_ok[-1]
+        tr_ok.append(step_nl(x1, -(K_lqr @ x1)))
+        x2 = tr_fail[-1]
+        tr_fail.append(step_nl(x2, -(K_lqr @ x2)))
+    tr_ok, tr_fail = np.array(tr_ok), np.array(tr_fail)
+    axa.plot(tr_ok[:, 0], tr_ok[:, 1], color=BLUE, lw=2.4, zorder=4,
+             label=r"$\vartheta_0 = 0.40$ (balanced)")
+    axa.plot(tr_fail[:18, 0], tr_fail[:18, 1], color=ORANGE, lw=2.2, ls="--",
+             zorder=4, label=r"$\vartheta_0 = 0.50$ (falls)")
+    axa.plot([0], [0], "o", color=GREEN, ms=7, zorder=6)
+    axa.set_xlim(-0.72, 0.72)
+    axa.set_ylim(-2.1, 2.1)
+    axa.set_xlabel(r"angle $\vartheta$ (rad)", fontsize=13)
+    axa.set_ylabel(r"velocity $\dot{\vartheta}$ (rad/s)", fontsize=13)
+    axa.legend(loc="lower left", frameon=False, fontsize=11)
+    _black_axes(axa)
+    _letter(axa, "(a)", x=-0.16, y=1.02)
+
+    # --- (b) iLQR energy-pumping swing-up in phase space ---
+    xs_nom, us_nom, vs_nom, Ks_nom, _ = ilqr_swingup([np.pi, 0.0], H=80, iters=35)
+    axb.plot(xs_nom[:, 0], xs_nom[:, 1], color=BLUE, lw=2.4, zorder=4)
+    axb.plot([np.pi], [0.0], "o", color=ORANGE, ms=7, zorder=6)
+    axb.plot([0.0], [0.0], "o", color=GREEN, ms=7, zorder=6)
+    axb.annotate("start $(\\pi, 0)$", xy=(np.pi, 0.0), xytext=(2.05, 1.4),
+                 fontsize=11.5, arrowprops=dict(arrowstyle="->", lw=1.0))
+    axb.annotate("pump ($\\vartheta_{30}=4.04$)", xy=(xs_nom[30, 0], xs_nom[30, 1]),
+                 xytext=(2.3, -3.6), fontsize=11.5, color=BLUE,
+                 arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.0))
+    axb.annotate("upright $(0, 0)$", xy=(0.0, 0.0), xytext=(0.45, 2.2),
+                 fontsize=11.5, color=GREEN,
+                 arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.0))
+    axb.set_xlim(-0.3, 4.35)
+    axb.set_ylim(-4.9, 3.8)
+    axb.set_xlabel(r"unwrapped angle $\vartheta$ (rad)", fontsize=13)
+    axb.set_ylabel(r"velocity $\dot{\vartheta}$ (rad/s)", fontsize=13)
+    _black_axes(axb)
+    _letter(axb, "(b)", x=-0.16, y=1.02)
+
+    # --- (c) Disturbance rejection at t = 45 (+2.2 rad/s) ---
+    T = 120
+    xs_pad = np.vstack([xs_nom, np.zeros((T - 80, 2))])
+    vs_pad = np.concatenate([vs_nom, np.zeros(T - 80)])
+    Ks_pad = np.vstack([Ks_nom, np.tile(Ks_nom[-1], (T - 80, 1))])
+
+    def mpc_action(x, vs_warm):
+        H_mpc = max(25, len(vs_warm))
+        warm = np.concatenate([vs_warm, np.zeros(H_mpc)])[:H_mpc]
+        xs_w, us_w, vs_w, _, _ = ilqr_swingup(x, H=H_mpc, iters=18, vs_init=warm)
+        if abs(xs_w[-1, 0]) > 0.2:
+            _, us_s, vs_s, _, _ = ilqr_swingup(x, H=60, iters=25)
+            return us_s[0], vs_s[0], vs_s[1:]
+        return us_w[0], vs_w[0], vs_w[1:]
+
+    x_ol, x_tv, x_mpc = [np.array([np.pi, 0.0]) for _ in range(3)]
+    th_ol, th_tv, th_mpc = [], [], []
+    vs_warm = vs_nom.copy()
+    for t in range(T):
+        if t == 45:
+            for x in (x_ol, x_tv, x_mpc):
+                x[1] += 2.2
+        th_ol.append(wrap(x_ol[0]))
+        th_tv.append(wrap(x_tv[0]))
+        th_mpc.append(wrap(x_mpc[0]))
+        x_ol, _, _, _ = step_tanh(x_ol, vs_pad[t])
+        v_tv = vs_pad[t] + Ks_pad[t] @ (x_tv - xs_pad[t])
+        x_tv, _, _, _ = step_tanh(x_tv, v_tv)
+        _, v_m, vs_warm = mpc_action(x_mpc, vs_warm)
+        x_mpc, _, _, _ = step_tanh(x_mpc, v_m)
+
+    ts = np.arange(T) * dt
+    axc.axhline(0.0, color=LIGHT, lw=1.0, zorder=1)
+    axc.axvline(45 * dt, color=GRAY, lw=1.1, ls=":", zorder=2)
+    axc.plot(ts, th_ol, color=GRAY, lw=1.7, ls=":", label="Open-loop", zorder=3)
+    axc.plot(ts, th_tv, color=ORANGE, lw=2.0, ls="--", label="TV-LQR", zorder=4)
+    axc.plot(ts, th_mpc, color=BLUE, lw=2.5, label="MPC (iLQR)", zorder=5)
+    axc.set_xlim(0, T * dt)
+    axc.set_ylim(-3.3, 3.3)
+    axc.set_xlabel("time (s)", fontsize=13)
+    axc.set_ylabel(r"wrapped angle $\vartheta_t$ (rad)", fontsize=13)
+    axc.legend(loc="lower right", frameon=False, fontsize=11)
+    _black_axes(axc)
+    _letter(axc, "(c)", x=-0.16, y=1.02)
+    fl.save(fig, "mdl-rl-optimal-control")
+
+
 FIGURES = [
     fig_agent_env,
         fig_roadmap,
@@ -3160,6 +3344,7 @@ FIGURES = [
         fig_sac_update,
         fig_model_planning,
         fig_reward_gridworld,
+        fig_optimal_control,
 ]
 
 

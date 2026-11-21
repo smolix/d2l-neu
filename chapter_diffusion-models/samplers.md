@@ -377,7 +377,7 @@ is a choice of the sampler, separate from the training path, since
 returns these levels and `heun_sample` takes Heun steps through any list of
 levels. We print the ten-step grid of each of three choices: even in time
 on the variance-preserving path, even in time on the linear path, and the
-grid of Karras et al., which we call EDM after their paper.
+polynomial noise-level grid of :citet:`Karras.Aittala.Aila.ea.2022`, which we call the *EDM grid* (*Elucidating the Design Space of Diffusion-Based Generative Models*, whose preconditioning we study in :numref:`sec_diffusion-design-space`).
 
 ```{.python .input #samplers-second-order-and-the-step-grid}
 %%tab pytorch

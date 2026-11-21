@@ -17,11 +17,14 @@ change; the method will not.
 
 **Capacity decides what runs at all.** Training keeps the weights, their
 gradients, and the optimizer state in memory, several times the size of the
-model (:numref:`sec_training_systems`). A model that does not fit cannot
-run, however fast the card. **Bandwidth decides how fast a model generates
-text.** Each new token requires reading every weight that the token uses,
-plus the KV cache, the keys and values that attention keeps for all earlier
-tokens (:numref:`sec_kv-cache`). Hence
+model—either replicated across GPUs under Distributed Data Parallel (DDP) or
+sharded across GPUs under Fully Sharded Data Parallel (FSDP) and the Zero
+Redundancy Optimizer (ZeRO), as we will see in :numref:`sec_training_systems`.
+A model that does not fit cannot run, however fast the card. **Bandwidth
+decides how fast a model generates text.** Each new token requires reading
+every weight that the token uses, plus the key–value (KV) cache, the keys and
+values that attention keeps for all earlier tokens (:numref:`sec_kv-cache`, and
+at serving scale in :numref:`sec_model_serving`). Hence
 
 $$
 \textrm{decode tokens/s} \lesssim

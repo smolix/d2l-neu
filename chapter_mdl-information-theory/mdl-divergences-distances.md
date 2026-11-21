@@ -45,7 +45,10 @@ called the *f-divergences*. All of its members share one proof of
 non-negativity, one method for estimation from samples, and one structural
 reason for being blind to the distance $d$. The remaining two rows, which do
 move with $d$, avoid the density ratio altogether; we will study them in
-:numref:`sec_mdl-test-functions-transport`.
+:numref:`sec_mdl-test-functions-transport` (before turning to score-based
+comparisons such as Fisher divergence and Stein discrepancy in
+:numref:`sec_mdl-scores`, and sample-based mutual-information estimation in
+:numref:`sec_mdl-mi-estimation`).
 
 Once the family is in place, we will address three questions that recur
 throughout deep learning. First, does it matter which distribution comes first
@@ -1246,13 +1249,19 @@ supports lie.
        outcome of the running pair accounts for most of the gap after ten
        steps, and why? For which step sizes does the ascent converge?
     1. Compute the conjugate of the total-variation function
-       $f(u) = \tfrac{1}{2}|u - 1|$ over $u \in (0, \infty)$. Show that
+       $f(u) = \tfrac{1}{2}|u - 1|$ over $u \in (0, \infty)$, corresponding to
+       the total variation distance
+       $D_{\textrm{TV}}(p, q) = \tfrac{1}{2}\int |p(x)-q(x)|\,dx$. Show that
        critics with values in $[-\tfrac{1}{2}, \tfrac{1}{2}]$ suffice to
        maximize the bound, and conclude that
        $\textrm{TV}(P, Q) = \sup_g \big(\mathbb{E}_P[g] - \mathbb{E}_Q[g]\big)$
-       over all functions $g$ with $|g| \leq \tfrac{1}{2}$, a supremum of
-       the kind that :numref:`sec_mdl-ipm-mmd` studies. Which $g$ attains
-       it?
+       over all functions $g$ with $|g| \leq \tfrac{1}{2}$. (As we will see in
+       :numref:`sec_mdl-ipm-mmd`, replacing the boundedness condition
+       $|g| \leq \tfrac{1}{2}$ by the $1$-Lipschitz condition
+       $\|f\|_{\textrm{Lip}} \le 1$ yields the 1-Wasserstein or Earth Mover's
+       distance
+       $W_1(p, q) = \inf_{\gamma \in \Pi(p, q)} \mathbb{E}_{(X,Y)\sim\gamma}[\|X - Y\|] = \sup_{\|f\|_{\textrm{Lip}} \le 1} (\mathbb{E}_p[f] - \mathbb{E}_q[f])$.)
+       Which $g$ attains the total-variation supremum?
    :exlabel:`ex_mdl-divergences-distances-derive-convex-conjugate`
 
 [Discussions](https://d2l.discourse.group/t/36835)

@@ -433,12 +433,12 @@ A Markov decision process writes a problem of acting over time as states, action
    :exlabel:`ex_mdp-time-limits`
 
 1. **Actions without consequences.** A multi-armed bandit has a single
-   state, so no action can influence the future.
+   state, so no action can influence the future. For any policy $\pi$, let $V^\pi(s) = \mathbb{E}_\pi[\sum_{t=0}^\infty \gamma^t r(s_t, a_t) \mid s_0 = s]$ denote its state-value function and define the action-value function $Q^\pi(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s')$ (:numref:`sec_valueiter` develops both in full).
     1. Suppose more generally that the kernel does not depend on the action,
        $P(s' \mid s, a) = P(s' \mid s)$ for all $a$. Show that for every
        $\gamma$ the policy that picks an action in
-       $\arg\max_a r(s, a)$ at every state maximizes the expected discounted
-       return from every start state.
+       $\arg\max_a r(s, a)$ at every state maximizes $Q^\pi(s, a)$ and hence the expected discounted
+       return $V^\pi(s)$ from every start state.
     1. Construct an MDP with two states and two actions in which this
        greedy policy is optimal for small $\gamma$ and not for large
        $\gamma$, and find the value of $\gamma$ at which the optimal action

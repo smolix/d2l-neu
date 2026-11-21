@@ -448,8 +448,8 @@ $n^3$. From $n = 256$ to $1024$ the work grows $64\times$, yet the time per
 call changes by less than $2\times$.
 
 To see whether that constant time is spent on the host or the device, we time
-a $256 \times 256$ product alongside `x + 1` of the same shape, and use
-`d2l.kernel_times` (defined in :numref:`subsec_perf-profiler`) to measure how
+a $256 \times 256$ product alongside `x + 1` of the same shape, and use the
+profiler helper `d2l.kernel_times` (which we construct below in :numref:`subsec_perf-profiler`) to measure how
 long the GPU itself is busy per call.
 
 ```{.python .input #performance-model-matrix-products-across-sizes-3}

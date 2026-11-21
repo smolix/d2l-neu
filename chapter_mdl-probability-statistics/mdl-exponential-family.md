@@ -266,9 +266,9 @@ average. Applying that recipe here sets the mean $\theta/2$ equal to
 $\bar x=0.4$, yielding $\theta=0.8$, a value under which the observed draw
 $0.9$ is impossible. Because the uniform likelihood depends on the data through
 their maximum rather than a sum, the machinery of this section does not apply.
-Exercise :exref:`ex_mdl-maximum-likelihood-moving-support` in
-:numref:`sec_mdl-maximum_likelihood` compares how these two estimators behave
-as the sample size grows.
+As we will see in :numref:`sec_mdl-maximum_likelihood` (Exercise
+:exref:`ex_mdl-maximum-likelihood-moving-support`), the two estimators also
+converge at different rates as the sample size grows.
 
 Heavy-tailed distributions fall outside the family for a second reason. The
 *Student-$t$* distribution arises by taking a Gaussian whose precision
@@ -678,8 +678,11 @@ $13A''(\hat\eta)=13\cdot\frac{36}{169}=\frac{36}{13}\approx2.77$. Large
 curvature means the loss climbs steeply away from $\hat\eta$, pinning down the
 log-odds tightly. Thirteen flips leave plenty of wiggle room: moving by
 $1/\sqrt{2.77}\approx0.60$ away from $\hat\eta\approx0.81$ raises the loss by
-only about half a nat. :numref:`sec_mdl-maximum_likelihood` identifies this
-curvature as the Fisher information and turns it into an error bar.
+only about half a nat. As we will formalize in
+:numref:`sec_mdl-maximum_likelihood`, this expected curvature is the *Fisher
+information*
+$I(\theta) = \textrm{Var}_\theta(\nabla_\theta \log p(X \mid \theta)) = -\mathbb{E}_\theta[\nabla_\theta^2 \log p(X \mid \theta)]$,
+which turns directly into an asymptotic error bar.
 :numref:`fig_mdl-prob-log-partition` illustrates both the tangent of $A$ at
 $\hat\eta$ and the shape of the negative log-likelihood.
 
@@ -702,9 +705,8 @@ Logistic regression hits the exact same wall whenever a hyperplane separates
 the two classes in the training set: the loss keeps decreasing as the weights
 scale up, driving them toward infinity. Adding a prior on the parameters
 (which we introduce at the end of this section) or using weight decay restores
-a finite optimum; Exercise
-:exref:`ex_mdl-maximum-likelihood-small-samples-boundary` in
-:numref:`sec_mdl-maximum_likelihood` works out the details.
+a finite optimum, as we will see in :numref:`sec_mdl-maximum_likelihood`
+(Exercise :exref:`ex_mdl-maximum-likelihood-small-samples-boundary`).
 
 When a minimizer does exist, it is unique whenever the negative log-likelihood
 is strictly convex. That holds if $\textrm{Cov}(T)$ is positive definite,
@@ -1364,7 +1366,10 @@ pseudo-counts to the posterior mean and $a-1$ and $b-1$ to the mode.
    makes the natural parameter of a Poisson an affine function of the
    features: $y_i\mid\mathbf x_i\sim\mathrm{Poisson}(e^{\eta_i})$ with
    $\eta_i=\mathbf w^\top\mathbf x_i+b$.
-    1. Use the negative log-likelihood :eqref:`eq_mdl-exp_family_nll` to
+    1. Use the negative log-likelihood :eqref:`eq_mdl-exp_family_nll`
+       (equivalently, the empirical log-likelihood
+       $\ell(\boldsymbol\eta) = \sum_{i=1}^n \bigl(\boldsymbol\eta^\top T(y_i) - A(\boldsymbol\eta)\bigr)$
+       up to terms independent of the parameters) to
        write the loss as a function of $(\mathbf w,b)$, and compute its
        gradient and Hessian. Show that the loss is convex. Which equations
        does a zero gradient impose on the fitted means
@@ -1382,12 +1387,14 @@ pseudo-counts to the posterior mean and $a-1$ and $b-1$ to the mode.
        Explain the behavior of the mean with the equations of (a).
    :exlabel:`ex_mdl-distributions-poisson-regression`
 
-1. **Conjugate priors from natural parameters.** ● For a scalar natural
-   parameter $\eta$, the conjugate prior
+1. **Conjugate priors from natural parameters.** ● For a natural
+   parameter $\boldsymbol\eta$, the conjugate prior
    :eqref:`eq_mdl-exp_family_conjugate` reads
-   $p(\eta)\propto\exp\bigl(\nu\,\eta-\kappa\,A(\eta)\bigr)$, and $n$
-   observations update it by $\nu\to\nu+\sum_i T(x_i)$ and
-   $\kappa\to\kappa+n$.
+   $p(\boldsymbol\eta)\propto\exp\bigl(\boldsymbol\nu_0^\top\boldsymbol\eta-n_0\,A(\boldsymbol\eta)\bigr)$,
+   and $n$ observations $x_{1:n}$ produce the posterior density
+   $p(\boldsymbol\eta \mid x_{1:n}) \propto \exp\bigl(\boldsymbol\eta^\top\bigl(\boldsymbol\nu_0 + \sum_{i=1}^n T(x_i)\bigr) - (n_0 + n)A(\boldsymbol\eta)\bigr)$
+   (written in the scalar case with $\nu = \nu_0$ and $\kappa = n_0$, updated by
+   $\nu\to\nu+\sum_i T(x_i)$ and $\kappa\to\kappa+n$).
     1. For the Poisson, $\eta=\log\lambda$ and $A(\eta)=e^\eta$. Change
        variables from $\eta$ to $\lambda$, including the Jacobian, and show
        that the prior on $\lambda$ is a Gamma distribution. Identify its shape

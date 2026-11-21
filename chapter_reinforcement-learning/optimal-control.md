@@ -1,7 +1,7 @@
 # Optimal Control, LQR, and Model Predictive Control
 :label:`sec_optimal_control`
 
-Dynamic programming (:numref:`sec_valueiter`) solved the slippery lake by sweeping a table of sixteen state values until Bellman's optimality equation held at every cell. That table relies on a finite state set. What happens when the state is a continuous vector $\mathbf{x}_t \in \mathbb{R}^d$—positions, angles, and velocities, as in the vehicle of :numref:`sec_mdp` or the pendulum of :numref:`sec_deeprl`—and the action is a continuous control $\mathbf{u}_t \in \mathbb{R}^m$? Grids do not scale: partitioning each of $d$ coordinates into $100$ bins produces $100^d$ cells, Bellmans's *curse of dimensionality* :cite:`BellmanDPBook`.
+The tabular methods of :numref:`sec_mdp`–:numref:`sec_imitation`—from value iteration (:numref:`sec_valueiter`) and Q-learning (:numref:`sec_qlearning`) to behavior cloning and DAgger (:numref:`sec_imitation`)—all rely on a finite table with one row per state. What happens when the state is a continuous vector $\mathbf{x}_t \in \mathbb{R}^d$—positions, angles, and velocities, as in the vehicle of :numref:`sec_mdp`—and the action is a continuous control input $\mathbf{u}_t \in \mathbb{R}^m$ evolving under known dynamics $\mathbf{x}_{t+1} = f(\mathbf{x}_t, \mathbf{u}_t)$? Discretizing a continuous space into a grid does not scale: partitioning each of $d$ coordinates into $m$ bins explodes into $m^d$ states ($100^d$ cells at $100$ bins per coordinate), Bellman's *curse of dimensionality* :cite:`BellmanDPBook`.
 
 Control theory solved this problem in continuous state and action spaces long before deep reinforcement learning, starting from an algebraic observation due to :citet:`Kalman.1960`. When the transition dynamics are linear in the state and control, and the one-step cost is quadratic in both, Bellman's backward dynamic programming preserves the quadratic form of the value function at every step. Instead of a table of $100^d$ entries, the exact value function $V_t(\mathbf{x}) = \mathbf{x}^\top \mathbf{P}_t \mathbf{x}$ is parameterized by a symmetric $d \times d$ matrix $\mathbf{P}_t$ with $d(d+1)/2$ independent numbers. The Bellman backup reduces to the *Riccati recursion*, and the optimal policy is a linear state-feedback law $\mathbf{u}_t^* = -\mathbf{K}_t \mathbf{x}_t$: the *Linear-Quadratic Regulator* (LQR) :cite:`Kalman.1960,Anderson.Moore.2007`.
 
@@ -126,12 +126,12 @@ Look at the two components of the stationary feedback law $u_t^* = -k_p p_t - k_
 
 ### Analytical Linearization of `Pendulum-v1`
 
-Now consider the nonlinear pendulum of :numref:`sec_deeprl`, with state $\mathbf{x}_t = (\vartheta_t, \dot\vartheta_t)^\top$ measured from the upright vertical ($\vartheta = 0$ upright, $\vartheta = \pi$ hanging straight down) and torque $u_t \in [-2, 2]$. Over one simulator step of $\Delta t = 0.05\text{ s}$ with gravity $g = 10$, mass $m = 1$, and rod length $l = 1$, the semi-implicit Euler transition $f(\mathbf{x}_t, u_t)$ is
+Now consider a physical benchmark that will accompany us through the rest of this chapter and :numref:`chap_deep_rl`: the inverted pendulum (`Pendulum-v1`). A rigid rod of mass $m = 1$ and length $l = 1$ is pivoted at one end under gravity $g = 10$ and driven by a bounded motor torque $u_t \in [-2, 2]$. Its continuous state is $\mathbf{x}_t = (\vartheta_t, \dot\vartheta_t)^\top$, where $\vartheta_t$ is the angle measured from the upright vertical ($\vartheta = 0$ upright, $\vartheta = \pi$ hanging straight down) and $\omega_t = \dot\vartheta_t \in [-8, 8]$ is the angular velocity. Because the peak gravitational torque at the horizontal ($\vartheta = \pi/2$) is $mgl/2 = 5 > 2$, the motor is *underactuated*: it cannot lift the rod directly from the bottom to the top in a single push. Over one simulator step of $\Delta t = 0.05\text{ s}$, the semi-implicit Euler transition $\mathbf{x}_{t+1} = f(\mathbf{x}_t, u_t)$ is
 
 $$\dot\vartheta_{t+1} = \dot\vartheta_t + \Big(\frac{3g}{2l}\sin\vartheta_t + \frac{3}{ml^2}u_t\Big)\Delta t, \qquad \vartheta_{t+1} = \vartheta_t + \dot\vartheta_{t+1}\Delta t,$$
 :eqlabel:`eq_pendulum_discrete`
 
-and the one-step cost is $c(\mathbf{x}_t, u_t) = \vartheta_t^2 + 0.1\,\dot\vartheta_t^2 + 0.001\,u_t^2$, so $\mathbf{Q} = \textrm{diag}(1.0, 0.1)$ and $\mathbf{R} = [[0.001]]$.
+with angular velocity clipped to $[-8, 8]$. Each step incurs the quadratic stage cost $c(\vartheta_t, \dot\vartheta_t, u_t) = \vartheta_t^2 + 0.1\,\dot\vartheta_t^2 + 0.001\,u_t^2$ (with $\vartheta_t$ wrapped to $[-\pi, \pi]$, corresponding to $\mathbf{Q} = \textrm{diag}(1.0, 0.1)$ and $\mathbf{R} = [[0.001]]$), or equivalently emits the reward $r_t = -c(\vartheta_t, \dot\vartheta_t, u_t)$. Standard benchmark episodes run for $200$ steps ($10\text{ s}$): an uncontrolled pendulum scores around $-1{,}200$ to $-1{,}500$, whereas a controller that swings the rod up and balances it upright scores above $-200$. Here we plan directly with the known equations of motion :eqref:`eq_pendulum_discrete`; :numref:`sec_deeprl`, :numref:`sec_sac`, and :numref:`sec_model_based` will return to this exact pendulum benchmark when the agent must act or learn a dynamics model without knowing the physics.
 
 The upright posture $\mathbf{x}^* = (0, 0)^\top$ with zero torque $u^* = 0$ is a fixed point, $f(\mathbf{x}^*, u^*) = \mathbf{x}^*$. Near any reference pair $(\bar{\mathbf{x}}, \bar{u})$, a first-order Taylor expansion approximates the nonlinear transition by a local linear model in the deviations $\delta\mathbf{x}_t = \mathbf{x}_t - \bar{\mathbf{x}}$ and $\delta u_t = u_t - \bar{u}$:
 
@@ -364,7 +364,7 @@ d2l.plot(np.arange(T) * 0.05, [th_ol, th_tv, th_mpc],
 ![Optimal control from local LQR to receding-horizon MPC. (a) Upright LQR cost-to-go contours $V_\infty(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_\infty\mathbf{x}$ and the static holding boundary $|\vartheta| \leq \arcsin(2/5) \approx 0.412\text{ rad}$ (dotted): starting from $\vartheta_0 = 0.40\text{ rad}$ converges to the origin (blue), whereas $\vartheta_0 = 0.50\text{ rad}$ saturates the motor torque $|u| \leq 2$ and falls away (orange dashed). (b) The 80-step iLQR swing-up trajectory in the $(\vartheta, \dot\vartheta)$ phase plane, pumping from $(\pi, 0)$ to $\vartheta_{30} = 4.04\text{ rad}$ before whipping through the bottom to the upright equilibrium $(0, 0)$. (c) Wrapped angle $\vartheta_t$ when an impulse $\Delta\dot\vartheta = +2.2\text{ rad/s}$ strikes at $t = 45$ ($2.25\text{ s}$, vertical dotted line): open-loop and TV-LQR fail, while receding-horizon MPC plans a new swing-up and returns to $\vartheta = 0$.](../img/mdl-rl-optimal-control.svg)
 :label:`fig_rl_optimal_control`
 
-The three disturbance levels separate the three controllers cleanly:
+The three disturbance levels on our pendulum benchmark separate the three controllers cleanly:
 
 - **No disturbance ($\Delta\dot\vartheta = 0.0$):** All three swing the pendulum up, earning returns around $-332$ to $-334$ (well above the $-200$ balancing bar once at the top; over the final 40 steps after $t=80$, open-loop begins to drift slightly to $\vartheta_{120} = +0.075\text{ rad}$ at the unstable saddle, while TV-LQR and MPC hold $\vartheta_{120} = 0.000\text{ rad}$).
 - **Moderate disturbance ($\Delta\dot\vartheta = +0.5\text{ rad/s}$):** Open-loop execution is knocked off its precomputed schedule, falls back down, and ends at $\vartheta_{120} = -2.939\text{ rad}$ (return $-502.3$). Both TV-LQR ($\vartheta_{120} = -0.001\text{ rad}$, return $-333.9$) and MPC ($\vartheta_{120} = +0.000\text{ rad}$, return $-331.7$) absorb the push and lock the rod upright.
@@ -372,7 +372,7 @@ The three disturbance levels separate the three controllers cleanly:
 
 ### From Classical Control to Reinforcement Learning
 
-:numref:`tab_control_vs_rl` summarizes the dictionary between classical optimal control and reinforcement learning, and shows how the methods of the rest of this chapter and :numref:`chap_deep_rl` relax each assumption of LQR and iLQR:
+:numref:`tab_control_vs_rl` summarizes the dictionary between classical optimal control and reinforcement learning, and shows how the upcoming sections of this chapter and :numref:`chap_deep_rl` relax each assumption of LQR and iLQR:
 
 :The bridge between classical optimal control and reinforcement learning.
 :label:`tab_control_vs_rl`
@@ -385,9 +385,9 @@ The three disturbance levels separate the three controllers cleanly:
 | Bellman backup | Riccati recursion :eqref:`eq_riccati_recursion` | Bellman expectation / optimality operator (:numref:`sec_valueiter`) |
 | Known nonlinear physics $f$ | gradient-based trajectory optimization (iLQR / DDP) + MPC | tree search or sampling-based MPC (:numref:`sec_model_based`) |
 | Unknown dynamics, learned $\hat{f}_\phi$ | system identification + certainty-equivalent MPC | model-based RL with random shooting / CEM (:numref:`sec_model_based`) |
-| Unknown dynamics, no model | model-free adaptive control | policy gradient (:numref:`sec_policygradient`), PPO (:numref:`sec_ppo`), DQN (:numref:`sec_dqn`), SAC (:numref:`sec_sac`) |
+| Unknown dynamics, no model | model-free adaptive control | policy gradient (:numref:`sec_policygradient`, :numref:`sec_deeprl`), PPO (:numref:`sec_ppo`), DQN (:numref:`sec_dqn`), SAC (:numref:`sec_sac`) |
 
-When the dynamics $f$ are unknown and must be acted on without fitting a transition model, we cannot compute the Jacobians $\mathbf{A}_t = \partial f/\partial \mathbf{x}$ and $\mathbf{B}_t = \partial f/\partial \mathbf{u}$ required by the backward Riccati pass. :numref:`sec_policygradient` shows how a stochastic policy $\pi_\theta(a \mid s)$ bypasses these unknown derivatives by differentiating the log-probability of its own sampled actions instead.
+When the dynamics $f$ are unknown and must be acted on without fitting a transition model, we cannot compute the Jacobians $\mathbf{A}_t = \partial f/\partial \mathbf{x}$ and $\mathbf{B}_t = \partial f/\partial \mathbf{u}$ required by the backward Riccati pass. :numref:`sec_policygradient` shows how a stochastic policy $\pi_\theta(a \mid s)$ bypasses these unknown derivatives by differentiating the log-probability of its own sampled actions instead, and :numref:`sec_deeprl` and :numref:`sec_model_based` will return to our pendulum benchmark with neural policies and learned dynamics models.
 
 ## Summary
 

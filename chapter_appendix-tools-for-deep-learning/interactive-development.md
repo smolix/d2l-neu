@@ -105,7 +105,8 @@ uv run --no-sync jupyter lab
 On Linux with an NVIDIA GPU, synchronize `pylock.gpu.toml` instead. The
 `--no-sync` option keeps uv from altering the environment that the lock
 selected. A clone of the [GitHub repository](https://github.com/smolix/d2l-neu)
-builds its environments with `make` instead (:numref:`sec_developers_guide`).
+builds its environments with `make` instead (as we will set up in
+:numref:`sec_developers_guide`).
 
 The *kernel* selected inside a notebook must belong to the environment where
 the packages were installed. A Jupyter server can see many kernels; its own
@@ -331,7 +332,8 @@ note the environment and hardware needed to interpret any measurement.
 1. [code] **Asynchronous accelerator timing.** ● Consider the product of two
    $8192 \times 8192$ matrices in a 16-bit format on a GPU: bf16 where the
    GPU supports it, and fp16 on the T4 and P100 of the free Colab and Kaggle
-   tiers (:numref:`sec_hosted_notebooks`), which have no bf16 units. Use one
+   tiers (as we will set up in :numref:`sec_hosted_notebooks`), which have no
+   bf16 units. Use one
    of these free GPUs if your machine has none.
     1. Compute the time the product needs at the dense throughput that your
        GPU's datasheet lists for this format, or, for an RTX 4090, at its

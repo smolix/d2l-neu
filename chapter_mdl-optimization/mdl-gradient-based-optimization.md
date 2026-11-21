@@ -663,9 +663,13 @@ that adding momentum shifts this stability threshold to $(2 + 2\beta)/\eta$.
 
 ### From Quadratics to Convex Functions
 
-What carries over beyond quadratics is the linear dependence on $\kappa$. If
-$f$ is $L$-smooth and $\mu$-strongly convex
-:eqref:`eq_mdl-opt-strong-convexity`, then at every point it is sandwiched
+What carries over beyond quadratics is the linear dependence on $\kappa$. As we
+will formalize in :numref:`sec_mdl-convexity`, a differentiable function is
+convex if and only if it lies on or above every tangent hyperplane, and
+$\mu$-strongly convex (:eqref:`eq_mdl-opt-strong-convexity`) if
+$f(\mathbf{y}) \ge f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) + \tfrac{\mu}{2}\|\mathbf{y} - \mathbf{x}\|_2^2$
+for all $\mathbf{x}, \mathbf{y}$. If $f$ is $L$-smooth and $\mu$-strongly
+convex, then at every point it is sandwiched
 between two quadratics of curvatures $\mu$ and $L$. The ratio $\kappa = L/\mu$
 replaces $\lambda_{\max}/\lambda_{\min}$, and gradient descent with
 $\eta = 1/L$ satisfies
@@ -986,13 +990,18 @@ what changes when gradients are noisy
        Show that the minimizer of $\nabla f(\mathbf{x})^\top \mathbf{d}$ over
        $\|\mathbf{d}\|_{\mathbf{P}} = 1$ is proportional to
        $-\mathbf{P}^{-1}\nabla f(\mathbf{x})$, and identify the $\mathbf{P}$
-       that recovers Newton's direction :eqref:`eq_mdl-opt-newton-step`. The
+       that recovers Newton's direction
+       $-\big(\nabla^2 f(\mathbf{x})\big)^{-1}\nabla f(\mathbf{x})$ (which we
+       will study in :numref:`sec_mdl-curvature-methods`,
+       :eqref:`eq_mdl-opt-newton-step`). The
        change of variables $\mathbf{u} = \mathbf{P}^{1/2}\mathbf{d}$ reduces
        the problem to the Euclidean case.
    :exlabel:`ex_mdl-gradient-based-optimization-show-that-is-de`
 
 1. [code] **Smoothness constants.** The smoothness constant $L$ of
-   :eqref:`eq_mdl-opt-smoothness` bounds the curvature of $f$, and for a
+   :eqref:`eq_mdl-opt-smoothness`
+   ($\|\nabla f(\mathbf{y}) - \nabla f(\mathbf{x})\|_2 \le L\|\mathbf{y} - \mathbf{x}\|_2$)
+   bounds the curvature of $f$, and for a
    logistic loss it can be computed directly from the data.
     1. Let $f$ be twice continuously differentiable and $L$-smooth. Show that
        $\|\nabla^2 f(\mathbf{x})\,\mathbf{v}\| \le L\,\|\mathbf{v}\|$ for all
@@ -1001,13 +1010,18 @@ what changes when gradients are noisy
        the equivalence stated after :eqref:`eq_mdl-opt-smoothness`.
     1. Consider
        $f(\mathbf{w}) = \frac1n \sum_{i=1}^n \log\big(1 + \exp(-y_i\, \mathbf{x}_i^\top \mathbf{w})\big) + \frac{\nu}{2}\|\mathbf{w}\|^2$
-       with labels $y_i = \pm 1$ and $\nu = 0.1$—the `loss` function from the
-       data cell of :numref:`subsec_mdl-why-not-newton`, where
-       $\mathbf{x}_i^\top$ is the $i$-th row of $\mathbf{X}$. Show that
+       with labels $y_i = \pm 1$ and $\nu = 0.1$—the `loss` function that we
+       will use in the data cell of :numref:`subsec_mdl-why-not-newton`, where
+       $\mathbf{x}_i^\top$ is the $i$-th row of
+       $\mathbf{X} \in \mathbb{R}^{n \times d}$ ($n = 200$, $d = 5$, with
+       independent standard Gaussian entries). Show that
        $L = \lambda_{\max}(\mathbf{X}^\top \mathbf{X})/(4n) + \nu$ is a valid
        smoothness constant and that the Hessian attains this bound at
        $\mathbf{w} = \mathbf{0}$.
-    1. Compute this $L$ for the data of that cell. It comes out near $0.4$ for
+    1. Compute this $L$ for a $200 \times 5$ matrix $\mathbf{X}$ of standard
+       Gaussian entries and labels $y_i \in \{\pm 1\}$ drawn with
+       $P(y_i = 1) = 1/(1 + \exp(-\mathbf{x}_i^\top \mathbf{w}_{\mathrm{true}}))$
+       for $\mathbf{w}_{\mathrm{true}} = (1, -2, 1.5, 0, 2)$. It comes out near $0.4$ for
        every draw; explain why using
        $\lambda_{\max}(\mathbf{X}^\top\mathbf{X})/n \approx (1 + \sqrt{d/n})^2$
        for standard Gaussian entries. Count how many steps $\eta = 0.5$ (the
@@ -1038,7 +1052,9 @@ what changes when gradients are noisy
    :exlabel:`ex_mdl-gradient-based-optimization-steepest-other-norms`
 
 1. [code] **Heavy ball: the double root and the factor $k$.** ● Apply heavy
-   ball :eqref:`eq_mdl-opt-heavy-ball` to $f(u) = \tfrac{\lambda}{2} u^2$.
+   ball :eqref:`eq_mdl-opt-heavy-ball`
+   ($\mathbf{x}_{k+1} = \mathbf{x}_k - \eta \nabla f(\mathbf{x}_k) + \beta(\mathbf{x}_k - \mathbf{x}_{k-1})$)
+   to $f(u) = \tfrac{\lambda}{2} u^2$.
     1. Write one iteration as a linear map on the state $(u_k, u_{k-1})$ and
        show that the characteristic polynomial of its $2 \times 2$ matrix
        is :eqref:`eq_mdl-opt-hb-char-poly`.
@@ -1067,7 +1083,9 @@ what changes when gradients are noisy
    \nabla f(x) = \begin{cases} 25x, & x < 1, \\ x + 24, & 1 \le x < 2, \\ 25x - 24, & x \ge 2. \end{cases}
    $$
 
-    1. Show that $f$ is $\mu$-strongly convex with $\mu = 1$ and $L$-smooth
+    1. Show that $f$ is $\mu$-strongly convex
+       ($f(y) \ge f(x) + \nabla f(x)(y - x) + \tfrac{\mu}{2}(y - x)^2$) with
+       $\mu = 1$ and $L$-smooth ($|\nabla f(y) - \nabla f(x)| \le L|y - x|$)
        with $L = 25$.
     1. Run heavy ball with the tuning :eqref:`eq_mdl-opt-hb-tuning` for $300$
        steps from $x_0 = 3.3$ with zero initial velocity, and run Nesterov's

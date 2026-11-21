@@ -900,7 +900,7 @@ for name, (path, kind, make_net, loss_fn) in recipes.items():
     print(f'{name:27} {edm:28} {lin}')
 ```
 
-At 5,000 updates (one-quarter the budget of :numref:`sec_diffusion-latent`), this table measures sample quality early in training across multiple seeds on two sampling grids:
+At 5,000 updates (one-quarter the 20,000-step budget we will use for latent diffusion in :numref:`sec_diffusion-latent`), this table measures sample quality early in training across multiple seeds on two sampling grids:
 
 1. **Sampling grid sensitivity:** Every velocity model trained on the linear path (including the control trained at EDM's noise levels) scores $0.35$–$1.3$ FD lower on the linear grid than on the EDM grid, whereas the preconditioned EDM model is insensitive to the grid choice.
 2. **Training noise-level distribution:** Centering logit-normal training times at $m = 0$ ($t = 0.5$) degrades FD by $1.1$–$1.3$ on the EDM grid ($0.5$–$0.75$ on the linear grid) relative to uniform $t$. Shifting the logit-normal center toward the data ($m = -0.5$, $t \approx 0.38$) or using EDM's levels ($m = -1.2$, $t \approx 0.23$) eliminates this deficit.

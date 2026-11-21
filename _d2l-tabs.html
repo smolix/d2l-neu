@@ -137,6 +137,16 @@
       // A ?framework= request is an explicit choice; a stored one is kept as is.
       syncTabs(initial, !!requested);
     }
+
+    // Cross-tab sync: update this page's visible tabs (without overwriting the
+    // stored preference if this page has to fall back) before the Slides and
+    // notebook-launcher storage listeners inspect .nav-link.active.
+    window.addEventListener('storage', function(e) {
+      if (e.key === STORAGE_KEY) {
+        var next = normalizeFramework(getStored()[GROUP]);
+        if (next) syncTabs(next, false);
+      }
+    });
   }
 
   // Run when DOM is ready
@@ -355,24 +365,35 @@
     return Math.max(0, segs.length - 1);
   }
 
+  var FALLBACK_ORDER = ['pytorch', 'jax', 'tensorflow', 'mxnet'];
+
   function getCurrentFw() {
     // A single-framework page (SINGLE_FRAMEWORK_PARTS in
     // tools/d2l_preprocess.py) names its one framework.
     var solo = document.getElementById('d2l-single-framework');
     if (solo && FW_DISPLAY[solo.dataset.framework]) return solo.dataset.framework;
-    try {
-      var data = JSON.parse(localStorage.getItem('quarto-persistent-tabsets-data') || '{}');
-      var name = DISPLAY_TO_FW[data.framework];
-      if (name) return name;
-    } catch(_) {}
-    // Fall back to the active tab on the page if any.
+    // Follow the active tab on the page when framework tabsets are present
+    // (already resolved by syncTabs's effectiveFramework fallback).
     var active = document.querySelector(
       '.panel-tabset[data-group="framework"] .nav-link.active');
     if (active) {
       var fw = DISPLAY_TO_FW[active.textContent.trim()];
       if (fw) return fw;
     }
+    try {
+      var data = JSON.parse(localStorage.getItem('quarto-persistent-tabsets-data') || '{}');
+      var name = DISPLAY_TO_FW[data.framework];
+      if (name) return name;
+    } catch(_) {}
     return 'pytorch';
+  }
+
+  function effectiveSlideFw(fw) {
+    if (available.indexOf(fw) !== -1) return fw;
+    for (var i = 0; i < FALLBACK_ORDER.length; i++) {
+      if (available.indexOf(FALLBACK_ORDER[i]) !== -1) return FALLBACK_ORDER[i];
+    }
+    return fw;
   }
 
   function buildUrl(fw, key) {
@@ -388,7 +409,7 @@
 
   function update() {
     if (!buttonEl) return;
-    var fw = getCurrentFw();
+    var fw = effectiveSlideFw(getCurrentFw());
     var link = buttonEl.querySelector('a');
     var fwLabel = FW_DISPLAY[fw] || fw;
     var fwSpan = link.querySelector('.d2l-toc-slides-fw');

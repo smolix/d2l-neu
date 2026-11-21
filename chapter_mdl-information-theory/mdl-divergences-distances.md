@@ -1263,230 +1263,185 @@ supports lie.
 ::: {.cover}
 [Dive into Deep Learning · §37.3]{.kicker}
 
-f-Divergences<br>**one convex function of the density ratio**
+f-Divergences and Variational Duals<br>**density ratios · forward vs. reverse KL · total variation · Pinsker's inequality · Fenchel duality · f-GAN**
 :::
 :::
 
-::: {.slide title="Three of Five Comparisons Give d = 0.01 and d = 100 the Same Loss"}
-[The problem]{.kicker}
+::: {.slide title="Why Disjoint Supports Break Density-Ratio Losses"}
+[Motivation: The Point-Mass Diagnostic]{.kicker}
 
-Data at one point, $P=\delta_0$; model at one point, $Q=\delta_d$, a distance $d$ away:
+A generative network mapping low-dimensional noise into image space places its samples on a thin manifold that initially fails to overlap real data. Compare two point masses $P = \delta_0$ and $Q = \delta_d$ separated by distance $d$:
 
-| comparison | $d=0.01$ | $d=1$ | $d=100$ |
-|:---|---:|---:|---:|
-| KL divergence | $\infty$ | $\infty$ | $\infty$ |
-| Jensen–Shannon divergence | $\log 2$ | $\log 2$ | $\log 2$ |
-| total variation | $1$ | $1$ | $1$ |
-| kernel distance $\textrm{MMD}^2$ | $0.0001$ | $0.79$ | $2.00$ |
-| transport distance $W_1$ | $0.01$ | $1$ | $100$ |
+| Distribution Comparison | Near Miss ($d = 0.01$) | Moderate ($d = 1$) | Far Off ($d = 100$) | Gradient w.r.t. $d$ |
+|:--|---:|---:|---:|:---|
+| **KL divergence** $D_{\textrm{KL}}(P \| Q)$ | $\infty$ | $\infty$ | $\infty$ | Undefined ($\infty$) |
+| **Jensen–Shannon divergence** $\textrm{JS}(P, Q)$ | $\log 2 \approx 0.693$ | $\log 2 \approx 0.693$ | $\log 2 \approx 0.693$ | $0$ (completely flat) |
+| **Total variation distance** $\textrm{TV}(P, Q)$ | $1.000$ | $1.000$ | $1.000$ | $0$ (completely flat) |
+| **RBF Kernel MMD** $\textrm{MMD}^2(P, Q)$ ($\ell = 1$) | $0.0001$ | $0.787$ | $2.000$ | Nonzero locally |
+| **Wasserstein-1 distance** $W_1(P, Q)$ | $0.01$ | $1.00$ | $100.00$ | $\pm 1$ everywhere |
 
 ::: {.d2l-note .warn}
-A loss that is the same at every $d$ has no gradient in $d$. The three frozen rows are one family.
+**The Frozen-Row Problem:** The first three rows belong to one family—the **$f$-divergences**—built from the density ratio $u(x) = p(x)/q(x)$. When supports do not overlap, all of them freeze at a constant independent of $d$!
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Checking the Point-Mass Diagnostic in Code"}
+[Five Comparisons on Disjoint Atoms]{.kicker}
 
-- write KL, Jensen–Shannon and total variation as one average of a convex function of $p/q$;
-- prove $D_f\ge0$ with one Jensen step, and say why $D_f$ is blind to $d$;
-- predict what forward and reverse KL do to a model that is too small;
-- bound a detector's accuracy by total variation, and total variation by $\sqrt{\textrm{KL}/2}$;
-- turn a divergence into a game against a critic, and read its estimate as a lower bound.
+Representing $\delta_0$ and $\delta_d$ as probability vectors $(1, 0)$ and $(0, 1)$ on atoms $\{0, d\}$ reproduces the table directly:
 
-**Running examples:** $P=(0.6,0.3,0.1)$ against $Q=(0.2,0.5,0.3)$; the point masses $\delta_0$, $\delta_d$.
+@!mdl-divergences-distances-divergences-and-distances-between-distributions-1
 
-**The idea:** keep the ratio $p/q$, change the function applied to it.
+- This section studies the density-ratio family (**$f$-divergences**) to answer three questions: (1) how forward and reverse KL differ on misspecified models, (2) what total variation and Pinsker's inequality guarantee for statistical detectors, and (3) how convex duality estimates any $D_f$ from samples via a critic network.
 :::
 
-::: {.slide title="The Ratio Family Comes First; Averages, Transport and Slopes Follow"}
-[Where this fits]{.kicker}
+::: {.slide title="Divergences Versus True Probability Metrics"}
+[Mathematical Foundations]{.kicker}
+
+What mathematical axioms distinguish a general divergence from a true distance metric?
+
+- **Divergence axioms:** A function $D(P, Q)$ is a *divergence* if it satisfies non-negativity and identity of indiscernibles:
+  $$D(P, Q) \ge 0, \qquad D(P, Q) = 0 \iff P = Q$$
+- **Metric axioms:** A *metric* must additionally be symmetric ($D(P, Q) = D(Q, P)$) and satisfy the triangle inequality ($D(P, R) \le D(P, Q) + D(Q, R)$).
+- **Why KL divergence fails both metric axioms:**
+  - **Asymmetry:** For $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(0, 4)$, $D_{\textrm{KL}}(P \| Q) = 0.318\text{ nats} \neq D_{\textrm{KL}}(Q \| P) = 0.807\text{ nats}$.
+  - **Triangle violation:** For unit-variance Gaussians centered at $0, 1, 2$, $D_{\textrm{KL}}(\mathcal{N}(\mu_1, 1) \| \mathcal{N}(\mu_2, 1)) = \tfrac12(\mu_1 - \mu_2)^2$, so $D_{\textrm{KL}}(0 \| 2) = 2 > \tfrac12 + \tfrac12$ (KL behaves like a *squared* Euclidean distance).
+:::
+
+::: {.slide title="The f-Divergence Template and Non-Negativity"}
+[Unifying Density-Ratio Divergences]{.kicker}
+
+Rewriting KL divergence as $\mathbb{E}_{x \sim Q}[u(x)\log u(x)]$ where $u(x) = p(x)/q(x)$ is the density ratio reveals a general template: replace $u \log u$ with any convex function $f : (0, \infty) \to \mathbb{R}$ satisfying $f(1) = 0$ (assuming $P \ll Q$):
+
+$$D_f(P \| Q) = \mathbb{E}_{x \sim Q}\!\left[f\!\left(\frac{p(x)}{q(x)}\right)\right]$$
+
+- **One-line proof of non-negativity (Jensen's inequality):** Because the density ratio averages to $1$ under $Q$ ($\mathbb{E}_Q[u] = \sum_x q(x)\frac{p(x)}{q(x)} = \sum_x p(x) = 1$), convexity of $f$ immediately yields:
+  $$D_f(P \| Q) = \mathbb{E}_Q[f(u)] \ge f(\mathbb{E}_Q[u]) = f(1) = 0$$
+- **Strict positivity and affine invariance:** If $f$ is strictly convex at $u = 1$ ($f(u) > c(u-1)$ for all $u \neq 1$), then $D_f(P \| Q) = 0 \iff u(x) = 1$ everywhere ($P = Q$). Moreover, adding $c(u - 1)$ to $f(u)$ changes no divergence because $\mathbb{E}_Q[c(u - 1)] = 0$.
+:::
+
+::: {.slide title="Common Divergence Functions and Their Properties"}
+[The f-Divergence Catalog]{.kicker}
+
+Every major density-ratio comparison in statistics and machine learning corresponds to one convex generator $f(u)$:
+
+| Divergence Name | Generator $f(u)$ (with $f(1) = 0$) | Explicit Sum / Integral Formula | Curvature $f''(1)$ | Symmetric / Metric? |
+|:--|:---|:---|---:|:---|
+| **Forward KL** $D_{\textrm{KL}}(P \| Q)$ | $u \log u$ | $\sum_x p(x) \log(p(x)/q(x))$ | $1$ | No / No |
+| **Reverse KL** $D_{\textrm{KL}}(Q \| P)$ | $-\log u$ | $\sum_x q(x) \log(q(x)/p(x))$ | $1$ | No / No |
+| **Pearson $\chi^2$** $\chi^2(P \| Q)$ | $(u - 1)^2$ | $\sum_x (p(x) - q(x))^2 / q(x)$ | $2$ | No / No |
+| **Squared Hellinger** $d_{\mathrm{H}}^2(P, Q)$ | $(\sqrt{u} - 1)^2$ | $\sum_x (\sqrt{p(x)} - \sqrt{q(x)})^2$ | $1/2$ | Yes / $d_{\mathrm{H}}$ is a metric |
+| **Total Variation** $\textrm{TV}(P, Q)$ | $\tfrac12 |u - 1|$ | $\tfrac12 \sum_x |p(x) - q(x)|$ | Corner | Yes / True metric |
+| **Jensen–Shannon** $\textrm{JS}(P, Q)$ | $\tfrac{u}{2}\log u - \tfrac{u+1}{2}\log\tfrac{u+1}{2}$ | $\tfrac12 D_{\textrm{KL}}(P \| M) + \tfrac12 D_{\textrm{KL}}(Q \| M)$ | $1/4$ | Yes / $\sqrt{\textrm{JS}}$ is a metric |
+| **$\alpha$-Divergence** ($\alpha \neq 0, 1$) | $\frac{u^\alpha - \alpha u + \alpha - 1}{\alpha(\alpha - 1)}$ | Interpolates rev-KL ($\alpha\to 0$) to KL ($\alpha\to 1$) | $1$ | At $\alpha = 1/2$ |
+:::
+
+::: {.slide title="Geometry of Divergence Generators Near u = 1"}
+[Comparing Penalty Shapes]{.kicker}
+
+Shifting each smooth generator by $f'(1)(u - 1)$ so all curves touch zero tangentially at $u = 1$ reveals how they agree locally yet diverge in the tails:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Entropy, Cross-Entropy, and KL | surprise, KL, the loss floor |
-| Codes, Compression, and Perplexity | the code behind the log-loss |
-| **f-Divergences** | **one convex function of the ratio** |
-| Test Functions and Transport | averages and moving mass |
-| Score-Based Comparisons | slopes, no normalizer |
-| Mutual Information | dependence and what it limits |
-| Estimating Mutual Information | what samples can show |
+- **Near $u = 1$ (local agreement):** Every smooth curve is a parabola $\tfrac12 f''(1)(u - 1)^2$, while Total Variation has a V-shaped corner.
+- **As $u \to 0$ ($p \ll q$, model places mass in empty regions):** Reverse KL ($-\log u$) blows up to $+\infty$, heavily penalizing spurious model modes.
+- **As $u \to \infty$ ($p \gg q$, model misses data):** Forward KL ($u \log u$) and $\chi^2$ ($(u-1)^2$) grow superlinearly, whereas TV and JS grow only linearly.
 :::
 
-::: {.col .narrow}
-- **Uses:** KL, Jensen's inequality, the convex conjugate.
-- **Skips:** Rényi divergences; the two rows that move with $d$ (next deck); estimation error.
-:::
-:::
-:::
-
-::: {.slide title="Any Convex f with f(1) = 0 Gives a Divergence"}
-[The template]{.kicker}
-
-KL is the average $\mathbb{E}_Q[u\log u]$ of a function of the density ratio $u=p/q$.
-Replace $u\log u$ by any convex $f$ with $f(1)=0$:
-
-$$D_f(P\Vert Q)=\mathbb{E}_{x\sim Q}\big[f\big(p(x)/q(x)\big)\big]$$
-
-::: {.d2l-note .rule}
-$\mathbb{E}_Q[u]=\sum_x p(x)=1$, so Jensen gives $D_f\ge f(\mathbb{E}_Q[u])=f(1)=0$. $\blacksquare$
-:::
-
-- $D_f=0$ only for $P=Q$, if some line through $(1,0)$ lies strictly below $f$ elsewhere.
-- Running pair: $u=3,\ 0.6,\ \tfrac13$ with weights $0.2,\ 0.5,\ 0.3$.
-- KL $=0.659-0.153-0.110=0.396$ nats.
-
-[Assumes $p=0$ wherever $q=0$.]{.small}
-:::
-
-::: {.slide title="Each Divergence Is One Choice of f"}
-[Divergence functions]{.kicker}
-
-| divergence | $f(u)$ | as a sum over outcomes | symmetric |
-|:--|:--|:--|:-:|
-| KL | $u\log u$ | $\sum p\log(p/q)$ | no |
-| reverse KL | $-\log u$ | $\sum q\log(q/p)$ | no |
-| Pearson $\chi^2$ | $(u-1)^2$ | $\sum(p-q)^2/q$ | no |
-| squared Hellinger | $(\sqrt u-1)^2$ | $\sum(\sqrt p-\sqrt q)^2$ | yes |
-| total variation (TV) | $\tfrac12\lvert u-1\rvert$ | $\tfrac12\sum\lvert p-q\rvert$ | yes |
-| Jensen–Shannon (JS) | $\tfrac u2\log u-\tfrac{u+1}2\log\tfrac{u+1}2$ | $\tfrac12\textrm{KL}(P\Vert M)+\tfrac12\textrm{KL}(Q\Vert M)$ | yes |
-
-[$M=\tfrac12(P+Q)$ is the even mixture; $p/m\le2$ gives $\textrm{JS}\le\log2$.]{.small}
-:::
-
-::: {.slide title="On Disjoint Supports Every f-Divergence Is the Constant f(0) + f′(∞)"}
-[Disjoint supports]{.kicker}
-
-- Where $p=0<q$: the term is $q\,f(0)$.
-- Where $q=0<p$: the limit of $q\,f(p/q)$ as $q\to0$, which is $p\,f'(\infty)$ with $f'(\infty)=\lim_{t\to\infty}f(t)/t$.
-- Point masses: $D_f(\delta_0\Vert\delta_d)=f(0)+f'(\infty)$ for every $d\ne0$.
-
-| divergence function | $f(0)$ | $f'(\infty)$ | sum |
-|:--|:-:|:-:|:-:|
-| KL: $u\log u$ | $0$ | $\infty$ | $\infty$ |
-| total variation: $\tfrac12\lvert u-1\rvert$ | $\tfrac12$ | $\tfrac12$ | $1$ |
-| Jensen–Shannon | $\tfrac12\log2$ | $\tfrac12\log2$ | $\log2$ |
-
-::: {.d2l-note .warn}
-$d$ does not appear: no f-divergence tells a near miss from a far one.
-:::
-:::
-
-::: {.slide title="Check: TV and χ² of the Running Pair"}
-[Check]{.kicker}
-
-For $P=(0.6,0.3,0.1)$ and $Q=(0.2,0.5,0.3)$, compute
-
-$$\textrm{TV}=\tfrac12\sum\lvert p-q\rvert\qquad\textrm{and}\qquad\chi^2=\sum(p-q)^2/q.$$
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\textrm{TV}=\tfrac12(0.4+0.2+0.2)=0.4$;
-$\chi^2=\tfrac{0.16}{0.2}+\tfrac{0.04}{0.5}+\tfrac{0.04}{0.3}=1.013$.
-:::
-:::
-:::
-
-::: {.slide title="On One Pair the Six Divergences Range from 0.09 to 1.01"}
-[The running pair]{.kicker}
-
-$P=(0.6,0.3,0.1)$, $Q=(0.2,0.5,0.3)$, both argument orders:
-
-@!divergences-distances-f-table
-
-::: {.d2l-note}
-Reverse KL is KL with the arguments swapped. Yet $2\,\textrm{KL}=0.79$, $4\,d_{\mathrm H}^2=0.74$ and $8\,\textrm{JS}=0.73$ nearly agree. Why?
-:::
-:::
-
-::: {.slide title="Near P = Q Every Smooth f-Divergence Is ½ f″(1) χ²"}
-[The local quadratic]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- $\mathbb{E}_Q[u-1]=0$: the slope $f'(1)$ does not count.
-- Near $u=1$, $f$ is a parabola of curvature $f''(1)$.
-- $\mathbb{E}_Q[(u-1)^2]=\chi^2$.
-- So $D_f\approx\tfrac12f''(1)\,\chi^2$.
-- $f''(1)$: KL and reverse KL $1$, Hellinger $\tfrac12$, JS $\tfrac14$.
-:::
-
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:mdl-it-f-div-generators
 :::
 :::
-
-[Curves shifted by $f'(1)(u-1)$. Total variation has a corner at $u=1$ and no curvature.]{.small}
 :::
 
-::: {.slide title="The Shortfall from the Quadratic Shrinks in Proportion to t"}
-[The local quadratic]{.kicker}
+::: {.slide title="Boundary Rules: Why Disjoint Supports Freeze D_f"}
+[Singular Measures & Disjoint Supports]{.kicker}
 
-The factors $2,4,8$ are $2/f''(1)$: all three products approximate $\chi^2=1.013$.
+What happens to $D_f(P \| Q)$ when $P$ and $Q$ place mass on regions where the other vanishes?
 
-Move $P$ toward $Q$, $P_t=Q+t\,(P-Q)$; ratio $D_f(P_t\Vert Q)\big/\tfrac12f''(1)\chi^2(P_t\Vert Q)$:
+- **Boundary limits at $p = 0$ and $q = 0$:**
+  - Where $p(x) = 0 < q(x)$ ($u = 0$), the contribution is $q(x)\,f(0)$ with $f(0) = \lim_{u \downarrow 0} f(u)$.
+  - Where $q(x) = 0 < p(x)$ ($u \to \infty$), taking $\lim_{q \downarrow 0} q\,f(p/q) = p \lim_{t \to \infty} f(t)/t$ gives $p(x)\,f'(\infty)$ where $f'(\infty) = \lim_{t \to \infty} f(t)/t$.
+- **Universal constant on disjoint point masses ($d \neq 0$):** At $x = 0$ ($p=1, q=0$) and $x = d$ ($p=0, q=1$):
+  $$D_f(\delta_0 \| \delta_d) = f(0) + f'(\infty) \quad \text{for every } d \neq 0$$
+  - **Forward KL ($u\log u$):** $f(0) = 0$, $f'(\infty) = \infty$ $\implies$ $D_{\textrm{KL}}(\delta_0 \| \delta_d) = \infty$.
+  - **Jensen–Shannon:** $f(0) = \tfrac12\log 2$, $f'(\infty) = \tfrac12\log 2$ $\implies$ $\textrm{JS}(\delta_0, \delta_d) = \log 2$.
+  - **Total Variation ($\tfrac12|u-1|$):** $f(0) = \tfrac12$, $f'(\infty) = \tfrac12$ $\implies$ $\textrm{TV}(\delta_0, \delta_d) = 1$.
+:::
+
+::: {.slide title="Evaluating Six f-Divergences on the Running Pair"}
+[Numerical Comparison]{.kicker}
+
+On $P = (0.6, 0.3, 0.1)$ and $Q = (0.2, 0.5, 0.3)$, the six divergences span an order of magnitude ($0.091$ to $1.013$), yet rescaling by $2/f''(1)$ makes $2\,\textrm{KL} = 0.79$, $4\,d_{\mathrm{H}}^2 = 0.74$, and $8\,\textrm{JS} = 0.73$ nearly coincide:
+
+@!divergences-distances-f-table
+:::
+
+::: {.slide title="Local Quadratic Theorem: All Smooth D_f Agree"}
+[Second-Order Taylor Expansion]{.kicker}
+
+Why do all smooth $f$-divergences become scalar multiples of Pearson's $\chi^2(P \| Q) = \mathbb{E}_Q[(u - 1)^2]$ when $P$ is close to $Q$?
+
+- **Taylor expansion around $u = 1$:** For three-times differentiable $f$ with $|f'''| \le B$ on $[1-r, 1+r]$ where $r = \max_x |u(x) - 1| < 1$:
+  $$f(u) = \underbrace{f(1)}_{=0} + f'(1)(u - 1) + \frac{f''(1)}{2}(u - 1)^2 + R(u), \qquad |R(u)| \le \frac{B}{6}|u - 1|^3$$
+- **Expectation under $Q$ kills the first-order term:** Because $\mathbb{E}_Q[u - 1] = 0$, the slope $f'(1)$ drops out completely:
+  $$\left|D_f(P \| Q) - \frac{f''(1)}{2}\chi^2(P \| Q)\right| \le \frac{Br}{6}\chi^2(P \| Q)$$
+- **Connection to Fisher information and natural gradients:** For a small parameter step $q_{\boldsymbol{\theta}+\mathbf{h}}$ vs. $q_{\boldsymbol{\theta}}$, $u - 1 \approx \mathbf{h}^\top \nabla_{\boldsymbol{\theta}} \log q_{\boldsymbol{\theta}}$, so $\chi^2(q_{\boldsymbol{\theta}+\mathbf{h}} \| q_{\boldsymbol{\theta}}) \approx \mathbf{h}^\top \mathbf{I}(\boldsymbol{\theta})\mathbf{h}$ and *every* smooth $D_f$ has Hessian $f''(1)\mathbf{I}(\boldsymbol{\theta})$.
+:::
+
+::: {.slide title="Verifying Local Quadratic Convergence in Code"}
+[Asymptotic Agreement]{.kicker}
+
+Sliding $P_t = Q + t(P - Q)$ toward $Q$ scales $r = 2t$; as $t$ drops tenfold from $0.1$ to $0.01$, the relative gap between $D_f(P_t \| Q)$ and $\tfrac12 f''(1)\chi^2(P_t \| Q)$ drops tenfold to $< 1\%$:
 
 @!mdl-divergences-distances-the-local-quadratic
-
-::: {.d2l-note}
-The choice of $f$ matters only far from the target, as early in training.
-:::
 :::
 
-::: {.slide title="Forward KL Averages over the Data, Reverse KL over the Model"}
-[Forward and reverse KL]{.kicker}
+::: {.slide title="Forward vs. Reverse KL: Mode-Covering vs. Seeking"}
+[Asymmetry as a Modeling Choice]{.kicker}
 
-Fit a model $Q_{\boldsymbol\theta}$ with density $q_{\boldsymbol\theta}$ to a target $P$:
+When fitting a parametric model $Q_{\boldsymbol{\theta}}$ to a target $P$ outside the model family, argument order reverses the geometry of the fit:
 
-| | forward $D_{\textrm{KL}}(P\Vert Q_{\boldsymbol\theta})$ | reverse $D_{\textrm{KL}}(Q_{\boldsymbol\theta}\Vert P)$ |
-|:--|:--|:--|
-| averages over | the target | the model |
-| infinite when | $q_{\boldsymbol\theta}=0<p$ | $p=0<q_{\boldsymbol\theta}$ |
-| so the model | covers every mode | may settle on one |
-| needs | samples of $P$, density $q_{\boldsymbol\theta}$ | samples of $Q_{\boldsymbol\theta}$, $p$ up to a constant |
-| used by | maximum likelihood | variational inference |
-
-::: {.d2l-note}
-The direction is a modeling decision, and often what you can compute decides it.
-:::
+| Property | Forward KL: $D_{\textrm{KL}}(P \| Q_{\boldsymbol{\theta}}) = \mathbb{E}_P[\log(p/q_{\boldsymbol{\theta}})]$ | Reverse KL: $D_{\textrm{KL}}(Q_{\boldsymbol{\theta}} \| P) = \mathbb{E}_{Q_{\boldsymbol{\theta}}}[\log(q_{\boldsymbol{\theta}}/p)]$ |
+|:--|:---|:---|
+| **Expectation taken over** | True data distribution $P$ | Model distribution $Q_{\boldsymbol{\theta}}$ |
+| **Blows up to $+\infty$ when** | $q_{\boldsymbol{\theta}}(x) \to 0$ where $p(x) > 0$ ($f'(\infty) = \infty$) | $p(x) \to 0$ where $q_{\boldsymbol{\theta}}(x) > 0$ ($f(0) = \infty$) |
+| **Geometric behavior** | **Zero-avoiding / mode-covering:** stretches over all data modes, spilling mass into valleys | **Zero-forcing / mode-seeking:** locks onto a single mode and ignores distant modes |
+| **What it requires** | Data samples $x \sim P$ and tractable density $q_{\boldsymbol{\theta}}(x)$ | Model samples $x \sim Q_{\boldsymbol{\theta}}$ and target $\tilde{p}(x)$ up to $Z$ |
+| **Primary ML applications** | Maximum likelihood (classifiers, autoregressive LLMs) | Variational inference (ELBO), RLHF policy KL penalty |
 :::
 
-::: {.slide title="Check: Predict Both Fits Before Running Them"}
-[Check]{.kicker}
+::: {.slide title="Fitting a Single Gaussian to a Bimodal Mixture"}
+[Misspecified Model Behavior]{.kicker}
 
-Target $P=0.7\,\mathcal N(-2,0.6^2)+0.3\,\mathcal N(2,0.6^2)$, model $\mathcal N(\mu,\sigma^2)$.
+Consider fitting $Q_{\boldsymbol{\theta}} = \mathcal{N}(\mu, \sigma^2)$ to the asymmetric bimodal mixture $P = 0.7\,\mathcal{N}(-2, 0.6^2) + 0.3\,\mathcal{N}(2, 0.6^2)$:
 
-- Forward KL is maximum likelihood, which matches mean and variance. What are $\mu$ and $\sigma$?
-- Reverse KL: what is its value for a model that sits on the $70\%$ mode?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\mu=0.7(-2)+0.3(2)=-0.8$ and $\sigma^2=0.36+0.7\cdot0.3\cdot4^2=3.72$, so $\sigma=1.93$.
-On that mode $p\approx0.7\,q$, so reverse KL $\approx\log(1/0.7)=0.357$ nats; on the other mode, $\log(1/0.3)=1.204$.
-:::
-:::
+- **Exact forward-KL fit (moment matching):** Minimizing $D_{\textrm{KL}}(P \| \mathcal{N}(\mu, \sigma^2))$ matches the mean and variance of $P$:
+  $$\mu^* = 0.7(-2) + 0.3(2) = -0.800, \qquad (\sigma^*)^2 = 0.6^2 + 0.7(0.3)(-2 - 2)^2 = 3.72 \implies \sigma^* = 1.929$$
+- **Reverse-KL local minima (mode dropping):** If $Q_{\boldsymbol{\theta}}$ matches a single component $\mathcal{N}(\mu_k, 0.6^2)$ carrying mixture weight $w_k$, then $p(x) \approx w_k q_{\boldsymbol{\theta}}(x)$ across that mode, so:
+  $$D_{\textrm{KL}}(Q_{\boldsymbol{\theta}} \| P) \approx \mathbb{E}_{Q_{\boldsymbol{\theta}}}\!\left[\log\frac{q_{\boldsymbol{\theta}}(x)}{w_k q_{\boldsymbol{\theta}}(x)}\right] = \log\frac{1}{w_k}$$
+  - Locking onto the $70\%$ mode ($\mu \approx -2, \sigma \approx 0.6$) costs $\ln(1/0.7) \approx 0.357\text{ nats}$; locking onto the $30\%$ mode ($\mu \approx +2$) costs $\ln(1/0.3) \approx 1.204\text{ nats}$.
 :::
 
-::: {.slide title="Forward KL Covers Both Modes; Reverse KL Picks One" layout="tight"}
-[Forward and reverse KL]{.kicker}
+::: {.slide title="Visualizing Mode-Covering and Mode-Seeking Fits"}
+[Numerical Optimization Demo]{.kicker}
+
+Notice how reverse KL underestimates the target standard deviation by $>3\times$ ($\sigma = 0.603$ vs. $1.929$) and converges to whichever mode lies closer to initialization:
 
 @!divergences-distances-fwd-rev-kl
-
-Each criterion prefers its own fit. Third row: a start near the $30\%$ mode stays there.
 :::
 
-::: {.slide title="Total Variation Is the Largest Disagreement About Any Event"}
-[Total variation]{.kicker}
+::: {.slide title="Total Variation and Optimal Single-Sample Tests"}
+[Operational Meaning of TV]{.kicker}
+
+What does a Total Variation distance of $\textrm{TV}(P, Q) = 0.4$ physically guarantee?
 
 ::: {.cols .vc}
 ::: {.col}
-$$\textrm{TV}(P,Q)=\tfrac12\sum_x\lvert p(x)-q(x)\rvert=\sup_A\lvert P(A)-Q(A)\rvert$$
-
-- The best event is $A^\star=\{p>q\}$.
-- Running pair: $A^\star$ is the first outcome, and $\textrm{TV}=0.6-0.2=0.4$.
-- TV is a metric.
+- **Worst-case event discrepancy:**
+  $$\textrm{TV}(P, Q) = \frac{1}{2}\sum_x |p(x) - q(x)| = \sup_{A} |P(A) - Q(A)|$$
+- **Optimal separating event:** The supremum is attained by $A^\star = \{x : p(x) > q(x)\}$ because positive and negative lobes of $p - q$ have equal area.
+- **Hypothesis testing ceiling:** Given one draw equally likely from $P$ or $Q$, *any* detector (GAN discriminator or AI-text detector) succeeds with probability at most $\tfrac12(1 + \textrm{TV}(P, Q))$.
 :::
 
 ::: {.col .fig}
@@ -1495,93 +1450,54 @@ $$\textrm{TV}(P,Q)=\tfrac12\sum_x\lvert p(x)-q(x)\rvert=\sup_A\lvert P(A)-Q(A)\r
 :::
 :::
 
-::: {.slide title="The Best Test on One Sample Is Right ½(1 + TV) of the Time"}
-[Total variation]{.kicker}
+::: {.slide title="Pinsker's Inequality: Bounding TV via KL"}
+[Two-Step Proof via Log-Sum]{.kicker}
 
-One sample, from $P$ or from $Q$ with probability $\tfrac12$ each. Answer "$P$" if it lands in $A$:
+Because neural losses control log-probabilities ($D_{\textrm{KL}}$) while safety and trust-region guarantees require bounded event shifts ($\textrm{TV}$), **Pinsker's inequality** bridges the two:
 
-$$\Pr(\textrm{right})=\tfrac12P(A)+\tfrac12\big(1-Q(A)\big)\le\tfrac12\big(1+\textrm{TV}(P,Q)\big)$$
-
-- Equality at $A=A^\star$.
-- Running pair: answer "$P$" on the first outcome, right $70\%$ of the time.
-
-::: {.d2l-note}
-A GAN discriminator (data or generated?) and a detector of generated text are such tests: TV caps their accuracy.
-:::
+::: {.d2l-note .rule}
+**Proposition (Pinsker's Inequality):** For any two distributions $P$ and $Q$, $\textrm{TV}(P, Q) \le \sqrt{\tfrac12 D_{\textrm{KL}}(P \| Q)}$.
 :::
 
-::: {.slide title="Pinsker: TV Is at Most √(KL/2)"}
-[Pinsker's inequality]{.kicker}
-
-**I. Two coins** $\textrm{Ber}(a)$, $\textrm{Ber}(b)$ with heads probabilities $a$ and $b$.<br>
-Let $\rho(a)=D_{\textrm{KL}}(\textrm{Ber}(a)\Vert\textrm{Ber}(b))-2(a-b)^2$.<br>
-Then $\rho(b)=\rho'(b)=0$ and $\rho''(a)=\tfrac1{a(1-a)}-4\ge0$, so $\rho\ge0$.
-
-. . .
-
-**II. Merge** the outcomes in $A^\star$ and in its complement: KL can only fall
-(log-sum inequality, one Jensen step), and $a=P(A^\star)$, $b=Q(A^\star)$ have $a-b=\textrm{TV}$.
-
-. . .
-
-**III.** $D_{\textrm{KL}}(P\Vert Q)\ge D_{\textrm{KL}}(\textrm{Ber}(a)\Vert\textrm{Ber}(b))\ge2\,\textrm{TV}^2$:
-$\;\boxed{\textrm{TV}(P,Q)\le\sqrt{\tfrac12D_{\textrm{KL}}(P\Vert Q)}}$
-
-::: {.d2l-note}
-Running pair: $0.4\le\sqrt{0.396/2}=0.445$. No converse: $q=0$ on a rare event gives $\textrm{KL}=\infty$ at tiny TV.
-:::
+- **Step 1 (Two-outcome Bernoulli case):** For coins $\textrm{Ber}(a)$ and $\textrm{Ber}(b)$, define $\rho(a) = D_{\textrm{KL}}(\textrm{Ber}(a) \| \textrm{Ber}(b)) - 2(a - b)^2$. Fixing $b$, we have $\rho(b) = \rho'(b) = 0$ and $\rho''(a) = \frac{1}{a(1-a)} - 4 \ge 0$ (since $a(1-a) \le 1/4$), so $\rho(a) \ge 0$ for all $a \in [0, 1]$.
+- **Step 2 (Coarsening to $A^\star = \{p > q\}$ via log-sum inequality):** Merge all outcomes into the two buckets $A^\star$ (probabilities $a = P(A^\star), b = Q(A^\star)$ with $a - b = \textrm{TV}(P, Q)$) and $(A^\star)^c$. By the log-sum inequality ($\sum_i v_i \log\frac{v_i}{w_i} \ge (\sum_i v_i)\log\frac{\sum_i v_i}{\sum_i w_i}$):
+  $$D_{\textrm{KL}}(P \| Q) \ge D_{\textrm{KL}}(\textrm{Ber}(a) \| \textrm{Ber}(b)) \ge 2(a - b)^2 = 2\,\textrm{TV}(P, Q)^2 \quad \blacksquare$$
 :::
 
-::: {.slide title="The Constant ½ Is Sharp; the Median Pair Sits Near 0.8" layout="tight"}
-[Pinsker's inequality]{.kicker}
+::: {.slide title="Sharpness and Limits of Pinsker's Inequality"}
+[Monte Carlo Verification]{.kicker}
 
-$10{,}000$ random pairs on five outcomes, then a fair coin against biases $0.6$, $0.51$, $0.501$:
+Across $10{,}000$ random 5-outcome pairs, $\textrm{TV}/\sqrt{\textrm{KL}/2}$ has median $0.81$ and never exceeds $1$, while nearly fair coins ($\delta \to 0$) prove that the constant $\tfrac12$ cannot be improved:
 
 @!divergences-distances-pinsker
 :::
 
-::: {.slide title="No Processing Makes Two Distributions Easier to Tell Apart"}
-[Data processing]{.kicker}
+::: {.slide title="The Data-Processing Inequality for f-Divergences"}
+[Monotonicity Under Channels]{.kicker}
 
-A channel $\kappa(y\mid x)$ turns $x$ into $y$, at random or not; $(P\kappa)(y)=\sum_x\kappa(y\mid x)\,p(x)$.
+Can a feature extractor, quantizer, or randomized transformation ever make two distributions $P$ and $Q$ easier to distinguish?
 
-$$D_f(P\kappa\,\Vert\,Q\kappa)\le D_f(P\Vert Q)$$
-
-- Proof: Jensen, once for each output $y$.
-- Running pair, outcomes 2 and 3 merged: KL $0.396\to0.382$, $\chi^2$ $1.013\to1$.
-- A divergence measured on features is a lower bound on the divergence of the inputs.
-- A map that can be undone changes nothing: $D_f$ ignores the scale of the axis.
-
-::: {.d2l-note .rule}
-Holds for every convex $f$ with $f(1)=0$ and every channel.
-:::
+- **Markov channel transformation:** Let $\kappa(y \mid x)$ be any transition kernel mapping $x \mapsto y$, producing output distributions $(P\kappa)(y) = \sum_x \kappa(y \mid x)p(x)$ and $(Q\kappa)(y) = \sum_x \kappa(y \mid x)q(x)$.
+- **Universal contraction theorem:** Applying Jensen's inequality under the posterior weights $\frac{\kappa(y \mid x)q(x)}{(Q\kappa)(y)}$ for each output $y$ proves that for *every* $f$-divergence:
+  $$D_f(P\kappa \,\|\, Q\kappa) \le D_f(P \| Q)$$
+- **Two key consequences for deep learning:**
+  1. Any divergence measured on extracted features $\phi(x)$ is a *lower bound* on the raw-space divergence $D_f(P \| Q)$.
+  2. Any invertible transformation $\phi$ acts as a channel in both directions, forcing $D_f(\phi_\# P \| \phi_\# Q) = D_f(P \| Q)$ (**coordinate scale invariance**).
 :::
 
-::: {.slide title="Check: a Detector Sees One Text and KL Is 0.02 Nats"}
-[Check]{.kicker}
+::: {.slide title="Legendre–Fenchel Conjugate and Tangent Bounds"}
+[Convex Duality Foundations]{.kicker}
 
-Human text $P$, model text $Q$, each with probability $\tfrac12$, and
-$D_{\textrm{KL}}(P\Vert Q)=0.02$ nats. How accurate can a detector be?
-What if it sees only the length of the text?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\textrm{TV}\le\sqrt{0.02/2}=0.1$, so at most $\tfrac12(1+0.1)=55\%$.
-The length is a processed text: no better.
-:::
-:::
-:::
-
-::: {.slide title="A Convex Function Lies Above Each of Its Tangents"}
-[The conjugate]{.kicker}
+How can we estimate $D_f(P \| Q)$ when we have only samples from $P$ and $Q$ and cannot evaluate $p(x)/q(x)$?
 
 ::: {.cols .vc}
 ::: {.col}
-- Conjugate: $f^*(t)=\sup_u\big(ut-f(u)\big)$.
-- The tangent of slope $t$ has intercept $-f^*(t)$.
-- Fenchel–Young: $f(u)\ge ut-f^*(t)$, with equality at $t=f'(u)$.
-- $f(u)=u\log u$: maximum where $\log u+1=t$, so $f^*(t)=e^{t-1}$.
-- $f(u)=(u-1)^2$, over all real $u$: $f^*(t)=t+t^2/4$.
+- **Convex conjugate:** Every convex function $f(u)$ is the upper envelope of its tangent lines of slope $t$ and intercept $-f^*(t)$:
+  $$f^*(t) = \sup_{u}\big(ut - f(u)\big)$$
+- **Fenchel–Young inequality:** For every $u$ and slope $t$:
+  $$f(u) \ge ut - f^*(t)$$
+  with equality at $t = f'(u)$.
+- **Examples:** $f(u) = u\log u$ $\implies$ $f^*(t) = e^{t-1}$; $f(u) = (u-1)^2$ $\implies$ $f^*(t) = t + t^2/4$.
 :::
 
 ::: {.col .fig}
@@ -1590,90 +1506,69 @@ The length is a processed text: no better.
 :::
 :::
 
-::: {.slide title="Any f-Divergence Is a Game Against a Critic"}
-[The critic bound]{.kicker}
+::: {.slide title="The Variational Critic Bound and f-GAN Training"}
+[Estimating Divergences from Samples]{.kicker}
 
-Samples give no ratio $p/q$. Pick a function $T(x)$, the critic.
+Applying the Fenchel–Young inequality $f(u) \ge ut - f^*(t)$ pointwise at $u = p(x)/q(x)$ with a learned **critic** $t = T(x)$ and multiplying by $q(x)$ eliminates the unknown density ratio:
 
-Fenchel–Young at $u=p/q$ and $t=T$, multiplied by $q$:
+$$q(x)\,f\!\left(\frac{p(x)}{q(x)}\right) \ge p(x)T(x) - q(x)f^*(T(x)) \implies D_f(P \| Q) \ge \mathbb{E}_{x \sim P}[T(x)] - \mathbb{E}_{x \sim Q}\big[f^*(T(x))\big]$$
 
-$$q\,f(p/q)\ \ge\ p\,T-q\,f^*(T)\quad\Longrightarrow\quad\boxed{D_f(P\Vert Q)\ge\mathbb{E}_P[T]-\mathbb{E}_Q[f^*(T)]}$$
-
-- Equality at $T^\star=f'(p/q)$; for $\chi^2$, $T^\star=2(p/q-1)$.
-- Both terms are averages over samples: no densities.
-- f-GAN: the critic maximizes the bound; the generator, the network whose samples are $Q$, minimizes it.
-
-[Assumes differentiable $f$, $p=0$ wherever $q=0$, finite expectations.]{.small}
+- **Sample-only expectations:** Both terms on the right are simple averages over real data $x \sim P$ and generated samples $x \sim Q$.
+- **Optimal critic $T^\star(x)$:** Equality holds pointwise when the critic matches the slope of $f$ at the true density ratio:
+  $$T^\star(x) = f'\!\left(\frac{p(x)}{q(x)}\right)$$
+  (e.g., $T^\star = 1 + \log(p/q)$ for forward KL; $T^\star = 2(p/q - 1)$ for Pearson $\chi^2$).
+- **The $f$-GAN minimax game (Nowozin et al., 2016):** The critic $T$ maximizes the lower bound to track $D_f(P \| Q)$, while the generator producing $Q$ minimizes it.
 :::
 
-::: {.slide title="The Original GAN Is the Jensen–Shannon Member"}
-[The critic bound]{.kicker}
+::: {.slide title="Recovering the Original GAN as a JS Dual"}
+[Binary Cross-Entropy Discriminator]{.kicker}
 
-**I.** $f(u)=u\log u-(u+1)\log(u+1)$ has $f^*(t)=-\log(1-e^t)$ for $t<0$.
+The original GAN objective of Goodfellow et al. (2014) is a special case of the $f$-GAN critic bound:
 
-. . .
-
-**II.** Write the critic as $T=\log D$ with a discriminator $D(x)\in(0,1)$:
-
-$$\mathbb{E}_P[T]-\mathbb{E}_Q[f^*(T)]=\mathbb{E}_P[\log D]+\mathbb{E}_Q[\log(1-D)]$$
-
-. . .
-
-**III.** $T^\star=f'(p/q)$ gives $D^\star=\tfrac p{p+q}$, and $f=2f_{\textrm{JS}}-(u-1)\log2-\log4$.<br>
-Since $\mathbb{E}_Q[u-1]=0$, the value is $\boxed{2\,\textrm{JS}(P,Q)-\log4}$
-
-::: {.d2l-note}
-Running pair: $2(0.0911)-1.386=-1.204$. Here $f_{\textrm{JS}}$ is the Jensen–Shannon function of the table.
-:::
+- **1. Choose the generator and conjugate:** Take $f(u) = u\log u - (u+1)\log(u+1)$, whose conjugate over $t < 0$ is $f^*(t) = -\log(1 - e^t)$.
+- **2. Parameterize the critic via a sigmoid discriminator $D(x) \in (0, 1)$:** Setting $T(x) = \log D(x)$ turns $-f^*(T(x))$ into $\log(1 - D(x))$, yielding the binary cross-entropy game:
+  $$\mathbb{E}_{x \sim P}[T(x)] - \mathbb{E}_{x \sim Q}[f^*(T(x))] = \mathbb{E}_{x \sim P}[\log D(x)] + \mathbb{E}_{x \sim Q}[\log(1 - D(x))]$$
+- **3. Optimal discriminator and JS value:** Setting $T^\star(x) = f'(p/q) = \log\frac{p(x)}{p(x)+q(x)}$ gives the Bayes-optimal discriminator $D^\star(x) = \frac{p(x)}{p(x)+q(x)}$. Because $f(u) = 2f_{\textrm{JS}}(u) - (u-1)\log 2 - \log 4$, the value at $D^\star$ is exactly $2\,\textrm{JS}(P, Q) - \log 4$.
 :::
 
-::: {.slide title="A Critic in Training Reports Less Than the Divergence" layout="tight"}
-[Chi-squared on the running pair · gradient ascent from T = 0]{.kicker}
+::: {.slide title="Practical Pitfalls of Adversarial Critic Bounds"}
+[Underestimation & Vanishing Gradients]{.kicker}
+
+Training a $\chi^2$ critic by gradient ascent on $P = (0.6, 0.3, 0.1)$ vs. $Q = (0.2, 0.5, 0.3)$ ($\chi^2 = 1.0133$) exposes two structural limits of the variational bound:
 
 @!divergences-distances-f-gan-bound
 
-Exact expectations: every critic but $T^\star$ reports too little, and does not say by how much.
+- **Downward bias & disjoint-support saturation:** Any suboptimal critic ($T \neq T^\star$, including $2T^\star$) underestimates $D_f$ by $\tfrac14\mathbb{E}_Q[(T - T^\star)^2]$; on disjoint supports, $T^\star$ is constant ($f'(\infty)$ on data, $f'(0)$ on model samples), giving the generator zero gradient!
 :::
 
-::: {.slide title="On Disjoint Supports the Best Critic Is Constant"}
-[Limits of the bound]{.kicker}
+::: {.slide title="Concept Check: f-Divergences, Pinsker, Critics"}
+[Check Your Understanding]{.kicker}
 
-- With disjoint supports $p/q$ is $\infty$ on the data and $0$ on the model's samples.
-- So $T^\star=f'(p/q)$ is one constant on each support: $f'(\infty)$ and $f'(0)$.
-- The generator is updated through the critic's gradient at its own samples, and a constant has gradient zero.
+Work through these three calculations:
 
-::: {.d2l-note .warn}
-The ratio $p/q$ keeps no trace of the distance between the supports, so the generator learns nothing about which way to move.
-:::
-:::
+1. **Hand calculation:** For $P = (0.6, 0.3, 0.1)$ and $Q = (0.2, 0.5, 0.3)$, compute $\textrm{TV}(P, Q)$ and Pearson's $\chi^2(P \| Q)$. Which outcome dominates $\chi^2(P \| Q)$ and why?
+2. **AI-text detector ceiling:** Suppose human text $P$ and LLM text $Q$ satisfy $D_{\textrm{KL}}(P \| Q) = 0.02\text{ nats}$. What is the highest accuracy any single-sample detector can achieve on a $50/50$ mix? Does passing the text through a feature extractor help?
+3. **Interpreting a critic score:** A critic trained with the $\chi^2$ conjugate $f^*(t) = t + t^2/4$ reports $\mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)] = 0.70$ on a fresh held-out test set. What can you conclude about the true $\chi^2(P \| Q)$?
 
-::: {.slide title="Check: a Critic Reports 0.70 for χ². What Do You Know?"}
-[Check]{.kicker}
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
 
-A critic trained on samples of $P$ and $Q$ reports
-$\mathbb{E}_P[T]-\mathbb{E}_Q[f^*(T)]=0.70$ with the $\chi^2$ conjugate.
-What does this say about $\chi^2(P\Vert Q)$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** If the $0.70$ was computed on fresh samples, $\chi^2(P\Vert Q)\ge0.70$, and nothing more:
-the bound is tight only at $T^\star=f'(p/q)$. On the running pair five ascent steps gave $0.70$; the truth is $1.013$.
-On the critic's own training samples even the bound is not guaranteed.
-:::
+1. **TV & $\chi^2$:** $\textrm{TV} = \tfrac12(0.4 + 0.2 + 0.2) = 0.40$ (attained on $A^\star = \{1\}$). $\chi^2 = \frac{0.4^2}{0.2} + \frac{0.2^2}{0.5} + \frac{0.2^2}{0.3} = 0.80 + 0.08 + 0.133 = 1.0133$; outcome $1$ contributes $0.80$ because $\chi^2$ divides by $q_1 = 0.2$.
+2. **Detector ceiling:** By Pinsker, $\textrm{TV}(P, Q) \le \sqrt{0.02/2} = 0.10$, so max accuracy is $\tfrac12(1 + \textrm{TV}) \le 55\%$. By data processing, no feature extractor can increase $D_{\textrm{KL}}$ or $\textrm{TV}$.
+3. **Critic bound:** On fresh samples, $\chi^2(P \| Q) \ge 0.70$ in expectation—it is a certified lower bound, but could be much larger if $T \neq T^\star$ (as at step 5 of our ascent where truth was $1.0133$).
 :::
 :::
 
-::: {.slide title="One Function of the Ratio: What It Gives and What It Misses"}
-[Recap]{.kicker}
+::: {.slide title="Summary: The f-Divergence Family and Duals"}
+[Key Takeaways]{.kicker}
 
-- $D_f=\mathbb{E}_Q[f(p/q)]\ge0$ by Jensen; running pair: KL $0.396$, TV $0.4$, $\chi^2$ $1.013$, JS $0.091$.
-- Forward KL covers both modes ($\sigma=1.93$); reverse KL picks one ($\sigma=0.60$).
-- $\textrm{TV}\le\sqrt{\textrm{KL}/2}$, and the best one-sample test is right $\tfrac12(1+\textrm{TV})$ of the time.
-- Processing never increases $D_f$.
-- A critic bounds $D_f$ from below: $0.70$ of $1.013$ after five steps.
-- Point masses: $D_f=f(0)+f'(\infty)$ at every $d$.
+| Concept / Tool | Mathematical Form | Key Property / Theorem | Deep Learning Role & Caveat |
+|:--|:---|:---|:---|
+| **$f$-Divergence** | $D_f(P \| Q) = \mathbb{E}_Q[f(p/q)]$ | $D_f \ge 0$ by Jensen; $D_f \approx \tfrac12 f''(1)\chi^2$ locally | Unifies KL, rev-KL, $\chi^2$, Hellinger, TV, JS; freezes at $f(0)+f'(\infty)$ on disjoint supports |
+| **Forward vs. Reverse KL** | $\mathbb{E}_P[\log(p/q)]$ vs. $\mathbb{E}_Q[\log(q/p)]$ | $f'(\infty) = \infty$ (forward) vs. $f(0) = \infty$ (reverse) | Forward KL (MLE) covers all modes; Reverse KL (VI) locks onto one mode and underestimates variance |
+| **Total Variation (TV)** | $\tfrac12\|p-q\|_1 = \sup_A |P(A)-Q(A)|$ | Optimal 1-sample test accuracy is $\tfrac12(1 + \textrm{TV})$ | True metric in $[0, 1]$; saturates at $1$ on disjoint supports |
+| **Pinsker's Inequality** | $\textrm{TV}(P, Q) \le \sqrt{\tfrac12 D_{\textrm{KL}}(P \| Q)}$ | Sharp constant $1/2$ as $P \to Q$; no converse | Converts KL trust regions (PPO) into worst-case event bounds |
+| **Data Processing** | $D_f(P\kappa \| Q\kappa) \le D_f(P \| Q)$ | Contraction under any channel $\kappa(y \mid x)$ | Feature divergences lower-bound input divergences; scale invariance |
+| **Fenchel Critic Bound** | $D_f(P \| Q) \ge \mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]$ | Tight at $T^\star = f'(p/q)$; $2\,\textrm{JS} - \log 4$ for GAN | Enables sample-only adversarial training ($f$-GAN), but biased low for imperfect $T$ |
+:::
 
-::: {.d2l-note}
-Next: comparisons built without the ratio, which move with $d$.
-:::
-:::

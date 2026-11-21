@@ -1486,447 +1486,321 @@ rate penalty becomes the familiar KL regularizer of a variational autoencoder.
 ::: {.cover}
 [Dive into Deep Learning · §37.6]{.kicker}
 
-How much does one variable tell about another?<br>**dependence · processing · Fano · capacity · rate–distortion · the bottleneck**
+Mutual Information and the Information Bottleneck<br>**dependence · PMI · data processing · Fano's inequality · channel capacity · rate–distortion · IB**
 :::
 :::
 
-::: {.slide title="Correlation Says 0, Yet the Pair Shares 1.14 Nats"}
-[The problem]{.kicker}
+::: {.slide title="Why Correlation Misses Nonlinear Dependence"}
+[Motivation: Zero Correlation, High Information]{.kicker}
+
+Linear correlation $\rho(X, Y) = \frac{\textrm{Cov}(X, Y)}{\sigma_X \sigma_Y}$ detects only straight-line relationships. Consider $X \sim \mathcal{N}(0, 1)$ and the noisy parabola $Y = X^2 + 0.3\epsilon$ with $\epsilon \sim \mathcal{N}(0, 1)$:
 
 ![](../img/mdl-it-mi-corr-vs-mi.svg){width=100%}
 
-::: {.d2l-note}
-Middle: $Y=X^2+0.3\epsilon$ has correlation $\rho=0$, since
-$\textrm{Cov}(X,Y)=\mathbb{E}[X^3]=0$. Yet $X$ fixes $Y$ up to noise of
-s.d. $0.3$, and the pair shares more nats than the Gaussian pair on the left.
-:::
+- Because $X^3$ is symmetric around zero, $\textrm{Cov}(X, Y) = \mathbb{E}[X^3] = 0$ $\implies$ $\rho(X, Y) = 0$, yet knowing $X$ pins down $Y$ to within standard deviation $0.3$ and shares **$1.14\text{ nats}$**—more than the bivariate Gaussian at $\rho = 0.9$ ($0.83\text{ nats}$)!
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Joint and Conditional Entropy on the Flipped Bit"}
+[Running Benchmark: Binary Symmetric Channel]{.kicker}
 
-- compute $I(X;Y)$ for a table and for a Gaussian pair;
-- prove that processing can only lose information;
-- turn an error rate, or a test loss, into a floor on information;
-- compute a channel's capacity and a source's rate at distortion $D$;
-- solve the Gaussian information bottleneck in closed form.
+Let $X \in \{0, 1\}$ be a fair bit ($p_X = (\tfrac12, \tfrac12)$) and let $Y$ be a copy of $X$ flipped with probability $\delta = 0.1$:
 
-**Running examples:** the *flipped bit*, a fair bit and its copy flipped
-with probability $0.1$; the Gaussian pair at correlation $\rho=0.9$. Units:
-nats, $1$ bit $=\ln2=0.693$.
+$$p_{X,Y} = \begin{pmatrix} 0.45 & 0.05 \\ 0.05 & 0.45 \end{pmatrix}, \qquad p_X = p_Y = \left(\frac{1}{2}, \frac{1}{2}\right)$$
 
-**The idea:** dependence is the KL divergence of the joint distribution
-from the product of its marginals.
+- **Marginal entropies:** Each variable alone is a fair coin: $H(X) = H(Y) = \ln 2 \approx 0.693\text{ nats}$.
+- **Joint entropy of the pair:** Viewing $(X, Y)$ as a 4-outcome variable:
+  $$H(X, Y) = -2(0.45\ln 0.45) - 2(0.05\ln 0.05) = 1.018\text{ nats}$$
+- **Conditional entropy remaining in $Y$ given $X$:** Each conditional row $p(y \mid x)$ is $(0.9, 0.1)$ or $(0.1, 0.9)$ with binary entropy $H_b(0.1) = 0.325\text{ nats}$, verifying the chain rule $H(X, Y) = H(X) + H(Y \mid X) = 0.693 + 0.325 = 1.018\text{ nats}$.
 :::
 
-::: {.slide title="From Two Distributions to Two Variables"}
-[Where this fits]{.kicker}
+::: {.slide title="Mutual Information: KL Divergence from Independence"}
+[Core Definition]{.kicker}
+
+If $X$ and $Y$ were independent, their joint distribution would be the product of their marginals $P_X \otimes P_Y$. **Mutual information** is the KL divergence from independence to the true joint distribution:
+
+$$I(X; Y) = D_{\textrm{KL}}\big(P_{X,Y} \,\|\, P_X \otimes P_Y\big) = \mathbb{E}_{(x, y) \sim P_{X,Y}}\!\left[\log\frac{p_{X,Y}(x, y)}{p_X(x)\,p_Y(y)}\right]$$
+
+- **Calculation on the flipped bit ($\delta = 0.1$):** The independent product places $0.25$ in every cell, so $p_{X,Y}/(p_X p_Y)$ equals $0.45/0.25 = 1.8$ on the agreeing diagonal (weight $0.9$) and $0.05/0.25 = 0.2$ off the diagonal (weight $0.1$):
+  $$I(X; Y) = 0.9\ln 1.8 + 0.1\ln 0.2 = 0.529 - 0.161 = 0.368\text{ nats} \approx 0.531\text{ bits}$$
+- **Conditional KL view (row-by-row):** Since $\frac{p_{X,Y}(x, y)}{p_X(x)p_Y(y)} = \frac{p(y \mid x)}{p_Y(y)}$, $I(X; Y) = \mathbb{E}_{x \sim P_X}\big[D_{\textrm{KL}}(p(y \mid x) \,\|\, p_Y(y))\big]$ measures how far observing $x$ shifts $Y$ away from its marginal prior $p_Y$.
+:::
+
+::: {.slide title="Symmetry, Non-Negativity, and Entropy Overlap"}
+[Fundamental Identities]{.kicker}
+
+How does mutual information connect to individual, joint, and conditional entropies?
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Entropy, Cross-Entropy, and KL | surprise, KL, the loss floor |
-| Codes, Compression, and Perplexity | the code behind the log-loss |
-| f-Divergences | one convex function of the ratio |
-| Test Functions and Transport | averages and moving mass |
-| Score-Based Comparisons | slopes, no normalizer |
-| **Mutual Information** | **dependence and what it limits** |
-| Estimating Mutual Information | what samples can show |
-:::
-
-::: {.col .narrow}
-- **Uses:** entropy $H$, KL $\ge0$ with equality only for equal
-  distributions; all distributions known.
-- **Skips:** estimation from samples; proofs of the coding theorems.
-:::
-:::
-:::
-
-::: {.slide title="A Noisy Copy Keeps 0.33 of Its 0.69 Nats of Surprise"}
-[Joint and conditional entropy]{.kicker}
-
-$X$ a fair bit, $Y$ its copy flipped w.p. $0.1$ (rows $x$, columns $y$):
-$$p_{X,Y}=\begin{pmatrix}0.45&0.05\\0.05&0.45\end{pmatrix}$$
-
-- Joint entropy, the pair as one variable:
-  $H(X,Y)=-2(0.45\ln0.45)-2(0.05\ln0.05)=1.018$.
-- Conditional entropy $H(Y\mid X)$, the average row entropy: rows
-  $(0.9,0.1)$, so $H_b(0.1)=0.325$.
-- Chain rule $H(X,Y)=H(X)+H(Y\mid X)$: $1.018=0.693+0.325$.
-
-[$H_b(p)=-p\ln p-(1-p)\ln(1-p)$, the entropy of a coin with bias $p$]{.small}
-:::
-
-::: {.slide title="Mutual Information Is the KL Divergence from Independence"}
-[Definition]{.kicker}
-
-$$I(X;Y)=D_{\textrm{KL}}(P_{X,Y}\,\|\,P_X\otimes P_Y)=\mathbb{E}\Big[\log\tfrac{p(x,y)}{p(x)\,p(y)}\Big]$$
-
-::: {.cols .vc}
-::: {.col}
-- Independent: $0.25$ per cell. Ratios $1.8$, $0.2$.
-- $I=0.9\ln1.8+0.1\ln0.2=0.368$.
-- Symmetric, $\ge0$, zero iff independent.
-- By rows: $I=\mathbb{E}_x D_{\textrm{KL}}(p(y\mid x)\,\|\,p(y))$; each row
-  $(0.9,0.1)$ is $0.368$ from $(0.5,0.5)$.
+- **Non-negativity & independence:** By Gibbs' inequality, $I(X; Y) = I(Y; X) \ge 0$, and $I(X; Y) = 0 \iff P_{X,Y} = P_X \otimes P_Y$ ($X$ and $Y$ are independent).
+- **Three equivalent entropy decompositions:** Expanding $\log\frac{p(x,y)}{p(x)p(y)}$ yields:
+  $$I(X; Y) = H(X) + H(Y) - H(X, Y)$$
+  $$I(X; Y) = H(X) - H(X \mid Y) = H(Y) - H(Y \mid X)$$
+- **Uncertainty reduction:** On the flipped bit, observing $X$ cuts the uncertainty of $Y$ by $0.693 - 0.325 = 0.368\text{ nats}$.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-it-mi-overlap.svg){width=85%}
+![](../img/mdl-it-mi-overlap.svg){width=100%}
 :::
-:::
-
-::: {.d2l-note}
-$0.368=0.693-0.325=H(Y)-H(Y\mid X)$ nats: a copy that is wrong one time in
-ten carries about half a bit.
 :::
 :::
 
-::: {.slide title="A Gaussian Pair Shares $-\tfrac12\log(1-\rho^2)$ Nats"}
-[The Gaussian pair]{.kicker}
+::: {.slide title="Verifying Discrete Mutual Information in Code"}
+[KL Form vs. Entropy Reduction]{.kicker}
 
-$(X,Y)$ Gaussian with correlation $\rho$. Use $I(X;Y)=h(Y)-h(Y\mid X)$.
+Evaluating both the KL divergence formula and the conditional entropy reduction $H(Y) - H(Y \mid X)$ on the $2 \times 2$ flipped-bit table confirms $I(X; Y) = 0.3681\text{ nats}$ ($0.531\text{ bits}$):
 
-**I.** Differential entropy of $Y$: $h(Y)=\tfrac12\log(2\pi e\,\sigma_Y^2)$.
-
-**II.** Given $X=x$, $Y$ is Gaussian with variance $\sigma_Y^2(1-\rho^2)$
-for every $x$, so $h(Y\mid X)=\tfrac12\log\big(2\pi e\,\sigma_Y^2(1-\rho^2)\big)$.
-
-**III.** Subtract. Only $1-\rho^2$ is left, the fraction of the variance of
-$Y$ that $X$ leaves unexplained.
-
-$$\boxed{I(X;Y)=-\tfrac12\log(1-\rho^2)}$$
-
-| $\rho$ | $0$ | $0.5$ | $0.9$ | $0.99$ | $\to\pm1$ |
-|---|---|---|---|---|---|
-| $I$ (nats) | $0$ | $0.144$ | $0.830$ | $1.959$ | $\infty$ |
+@mutual-information-joint-conditional
 :::
 
-::: {.slide title="Pointwise MI Ranks Collocations; Counts Do Not"}
-[Pointwise mutual information]{.kicker}
+::: {.slide title="Mutual Information of a Bivariate Gaussian Pair"}
+[Exact Closed Form in Continuous Space]{.kicker}
 
-$\textrm{pmi}(x,y)=\log\dfrac{p(x,y)}{p(x)\,p(y)}$, and $I=\mathbb{E}[\textrm{pmi}]$.
+For continuous variables with differential entropies $h$, the KL definition of $I(X; Y)$ remains non-negative and unit-free:
 
-| count | york | learning | day |
-| :-- | --: | --: | --: |
-| **new** | 38 | 3 | 9 |
-| **machine** | 1 | 46 | 3 |
-| **the** | 11 | 21 | 168 |
+::: {.d2l-note .rule}
+**Proposition (Gaussian Mutual Information):** If $(X, Y)$ is bivariate Gaussian with variances $\sigma_X^2, \sigma_Y^2 > 0$ and correlation $\rho \in (-1, 1)$, then $I(X; Y) = -\tfrac12\log(1 - \rho^2)$.
+:::
+
+- **Two-line proof:** Marginally, $Y \sim \mathcal{N}(\mu_Y, \sigma_Y^2)$ has $h(Y) = \tfrac12\log(2\pi e\sigma_Y^2)$. Conditioned on $X = x$, the linear regression residual has constant variance $\textrm{Var}(Y \mid X = x) = \sigma_Y^2(1 - \rho^2)$ for every $x$, so $h(Y \mid X) = \tfrac12\log\big(2\pi e\sigma_Y^2(1 - \rho^2)\big)$, and $h(Y) - h(Y \mid X) = -\tfrac12\log(1 - \rho^2)$. $\blacksquare$
+
+| Linear Correlation $\rho$ | $\rho = 0$ | $\rho = 0.5$ | $\rho = 0.9$ (Running Benchmark) | $\rho = 0.99$ | $\rho \to \pm 1$ ($Y = X$) |
+|:--|---:|---:|---:|---:|---:|
+| **Unexplained Variance** $1 - \rho^2$ | $1.00$ | $0.75$ | $0.19$ | $0.0199$ | $0$ |
+| **Mutual Information** $I(X; Y)$ (nats) | $0.000$ | $0.144$ | **$0.830$** | $1.959$ | $\infty$ |
+:::
+
+::: {.slide title="Pointwise Mutual Information and Collocations"}
+[Local Attraction vs. Repulsion]{.kicker}
+
+While $I(X; Y)$ averages over all outcome pairs, the log-ratio for a single pair $(x, y)$ is the **pointwise mutual information**:
+
+$$\textrm{pmi}(x, y) = \log\frac{p_{X,Y}(x, y)}{p_X(x)\,p_Y(y)}, \qquad I(X; Y) = \mathbb{E}_{(x, y) \sim P_{X,Y}}\big[\textrm{pmi}(x, y)\big]$$
+
+- Dividing by the marginal frequencies $p_X(x)p_Y(y)$ separates genuine word collocations (*new york*, *machine learning*) from words that co-occur merely because both are common (*the day*):
 
 @!mutual-information-pmi-corpus
-
-::: {.d2l-note}
-"The day" is the most frequent pair; "new york" and "machine learning"
-outscore it.
-:::
 :::
 
-::: {.slide title="The Parabola Pair: 1.14 Nats from One-Dimensional Integrals"}
-[Nonlinear dependence]{.kicker}
+::: {.slide title="Evaluating Nonlinear MI on the Noisy Parabola"}
+[1D Quadrature vs. Gaussian Upper Bound]{.kicker}
 
-$Y=X^2+0.3\epsilon$, correlation $0$. Use $I=h(Y)-h(Y\mid X)$:
-
-- $h(Y\mid X)=h(0.3\epsilon)=\tfrac12\ln(2\pi e\cdot0.09)=0.215$.
-- Bound: $\textrm{Var}(Y)=2.09$, and a Gaussian has the most entropy at a
-  given variance, so $h(Y)\le1.79$ and $I\le1.57$.
-- Value: integrate $p_Y(y)=\int\mathcal N(x;0,1)\,\mathcal N(y;x^2,0.09)\,dx$.
+For $X \sim \mathcal{N}(0, 1)$ and $Y = X^2 + 0.3\epsilon$ ($\rho = 0$), conditioning on $X = x$ leaves only the additive Gaussian noise $0.3\epsilon$, so $h(Y \mid X) = \tfrac12\ln(2\pi e \cdot 0.09) = 0.215\text{ nats}$, while 1D numerical quadrature of $p_Y(y)$ gives $h(Y) = 1.356\text{ nats}$ and $I(X; Y) = 1.141\text{ nats}$:
 
 @!mdl-mutual-information-mutual-information-as-nonlinear-correlation-1
 :::
 
-::: {.slide title="An Invertible Map Leaves $I$ Unchanged but Moves Correlation"}
-[Invariance]{.kicker}
+::: {.slide title="Reparameterization Invariance Under Bijections"}
+[Coordinate Independence]{.kicker}
 
-$I(\phi(X);\psi(Y))=I(X;Y)$ for invertible $\phi,\psi$: the joint density
-and both marginals pick up the same Jacobian factors, which cancel in the
-ratio.
+Unlike differential entropy $h(X)$ (which shifts with units) or linear correlation $\rho(X, Y)$ (which changes under nonlinear stretches), mutual information is invariant under any invertible transformation of the variables:
 
-Gaussian pair at $\rho=0.9$, then $x\mapsto x^3$:
+$$I\big(\phi(X); \psi(Y)\big) = I(X; Y) \quad \text{for all bijections } \phi, \psi$$
 
-- $I$ stays $0.830$ nats.
-- Correlation $0.90\to3\rho/\sqrt{15}=0.697$, since
-  $\mathbb{E}[X^3Y]=3\rho$ and $\textrm{Var}(X^3)=15$.
-
-::: {.d2l-note}
-Differential entropy $h$ is not invariant: there the factor does not cancel.
-:::
+- **Why Jacobians cancel:** For smooth bijections $\tilde{x} = \phi(x)$ and $\tilde{y} = \psi(y)$, the joint density transforms as $p_{\tilde{X},\tilde{Y}}(\tilde{x}, \tilde{y}) = p_{X,Y}(x, y)|\det D\phi(x)|^{-1}|\det D\psi(y)|^{-1}$, and the product of marginals $p_{\tilde{X}}(\tilde{x})p_{\tilde{Y}}(\tilde{y})$ picks up the exact same two Jacobian factors, which cancel in the ratio $\frac{p_{\tilde{X},\tilde{Y}}}{p_{\tilde{X}}p_{\tilde{Y}}}$.
+- **Concrete demonstration on the $\rho = 0.9$ Gaussian pair:** Applying the cubic bijection $X \mapsto X^3$ leaves $I(X^3; Y) = I(X; Y) = 0.830\text{ nats}$ completely unchanged, whereas the linear correlation drops from $\rho = 0.900$ to $\frac{\mathbb{E}[X^3 Y]}{\sqrt{\textrm{Var}(X^3)\textrm{Var}(Y)}} = \frac{3\rho}{\sqrt{15}} = 0.697$.
 :::
 
-::: {.slide title="Check: A Fair Bit Is Flipped w.p. 0.1, Then w.p. 0.2"}
-[Check]{.kicker}
+::: {.slide title="Conditional Mutual Information and the Chain Rule"}
+[Three-Variable Decompositions]{.kicker}
 
-One flip w.p. $\delta$ leaves $I=\ln2-H_b(\delta)$. How much information
-about the original bit survives both flips?
+How much information do $X$ and $Y$ share once a third variable $Z$ is observed?
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Two flips compose to one flip with probability
-$0.1\cdot0.8+0.9\cdot0.2=0.26$, so $I=\ln2-H_b(0.26)=0.120$ nats: two
-thirds of the $0.368$ nats are lost.
+::: {.cols .vc}
+::: {.col}
+- **Conditional mutual information:**
+  $$I(X; Y \mid Z) = H(X \mid Z) - H(X \mid Y, Z) \ge 0$$
+  which equals $\mathbb{E}_z[D_{\textrm{KL}}(P_{X,Y\mid z} \| P_{X\mid z}\otimes P_{Y\mid z})]$ and vanishes if and only if $X \perp Y \mid Z$.
+- **Chain rule for mutual information:**
+  $$I(X; Y, Z) = I(X; Z) + I(X; Y \mid Z) = I(X; Y) + I(X; Z \mid Y)$$
+- **Two flips in series ($\delta_1 = 0.1, \delta_2 = 0.2 \implies \delta = 0.26$):** $I(X; Y, Z) = 0.368 = 0.120 + 0.248\text{ nats}$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-it-bsc-chain.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Chain Rule: $I(X;Y,Z)=I(X;Z)+I(X;Y\mid Z)$"}
-[Conditional mutual information]{.kicker}
+::: {.slide title="The Data-Processing Inequality (DPI)"}
+[Sequential Processing Cannot Create Information]{.kicker}
 
-- $I(X;Y\mid Z)=H(X\mid Z)-H(X\mid Y,Z)$: what $X,Y$ share once $Z$ is known.
-- $H(X)-H(X\mid Y,Z)=\big[H(X)-H(X\mid Z)\big]+\big[H(X\mid Z)-H(X\mid Y,Z)\big]$.
-
-![](../img/mdl-it-bsc-chain.svg){width=66%}
-
-- $Y$ first: $0.368+0$. $Z$ first: $0.120+I(X;Y\mid Z)$, so
-  $I(X;Y\mid Z)=0.248$.
-:::
-
-::: {.slide title="Processing Cannot Increase Information"}
-[Data-processing inequality]{.kicker}
-
-Markov chain $X\to Y\to Z$: $Z$ is computed from $Y$ alone, so
-$I(X;Z\mid Y)=0$.
-
-$$I(X;Z)+I(X;Y\mid Z)=I(X;Y,Z)=I(X;Y)+\underbrace{I(X;Z\mid Y)}_{=0}$$
+Three variables form a **Markov chain** $X \to Y \to Z$ if $Z$ depends on $(X, Y)$ solely through $Y$ ($p(z \mid x, y) = p(z \mid y)$, or equivalently $I(X; Z \mid Y) = 0$).
 
 ::: {.d2l-note .rule}
-$I(X;Z)\le I(X;Y)$, with equality iff $X\to Z\to Y$ is also Markov.
+**Theorem (Data-Processing Inequality):** If $X \to Y \to Z$ is a Markov chain, then
+$$I(X; Z) \le I(X; Y)$$
+with equality if and only if $I(X; Y \mid Z) = 0$ (meaning $X \to Z \to Y$ is also a Markov chain).
 :::
 
-- Two flips: $0.120\le0.368$.
-- Equality: an invertible map loses nothing. Nor does a *sufficient
-  statistic*, a summary that keeps all $Y$ says about $X$: the number of
-  heads, for the bias of a coin.
+- **Two-line proof from the chain rule:** Expand $I(X; Y, Z)$ in both orders:
+  $$I(X; Z) + I(X; Y \mid Z) = I(X; Y, Z) = I(X; Y) + \underbrace{I(X; Z \mid Y)}_{= 0 \text{ (Markov)}} \implies I(X; Z) = I(X; Y) - \underbrace{I(X; Y \mid Z)}_{\ge 0} \le I(X; Y) \quad \blacksquare$$
+- **Sufficient statistics:** Equality $I(X; T(Y)) = I(X; Y)$ holds if and only if $T(Y)$ retains everything $Y$ reveals about $X$ ($p(x \mid y) = p(x \mid T(y))$, e.g., the total head count for a coin's bias).
 :::
 
-::: {.slide title="Conditioning Is Not Processing"}
-[Counterexample]{.kicker}
+::: {.slide title="Conditioning Is Not Processing: The XOR Synergy"}
+[When Conditioning Increases MI]{.kicker}
 
-$X,Y$ independent fair bits, $Z=X\oplus Y$. Given $Z$, $Y$ determines $X$.
+The inequality $I(X; Y \mid Z) \le I(X; Y)$ holds inside a Markov chain $X \to Y \to Z$, but *not* in general! If $X, Y$ are independent fair bits and $Z = X \oplus Y$, observing $Z$ jumps their shared information from $0$ to $\ln 2 = 0.693\text{ nats}$:
 
 @!mutual-information-dpi-check
-
-- Lines 1 and 2: the two flips; $I(X;Z\mid Y)=0$ is the Markov property.
-- Line 3: conditioning raises $I$ from $0$ to $\ln2$. Here $Z$ is computed
-  from $X$ and $Y$ together, not from one of them, so the inequality does not
-  apply.
 :::
 
-::: {.slide title="Layers Cannot Add Information; They Make It Readable"}
-[Depth]{.kicker}
+::: {.slide title="What Deep Network Layers Do: Usable Information"}
+[Interpreting DPI in Deep Learning]{.kicker}
 
-Layers $X\to Z_1\to Z_2$ and label $Y$: $I(Y;Z_2)\le I(Y;Z_1)\le I(Y;X)$.
+In a feed-forward network with label $Y$, input $X$, and hidden layers $Z_1, Z_2, \ldots$, the variables form a Markov chain $Y \to X \to Z_1 \to Z_2 \to \cdots$, so the data-processing inequality guarantees:
 
-- $Y$ a fair bit; $X$ uniform on the circle of radius $1$ ($Y=0$) or $2$
-  ($Y=1$); $Z=\|X\|^2$.
-- $I(Y;Z)=I(Y;X)=\ln2$: nothing gained, nothing lost.
-- Linear classifier on $X$: at best $2/3$ correct (a line tangent to the
-  inner circle cuts off $1/3$ of the outer one). Threshold on $Z$: all
-  correct.
+$$I(Y; Z_\ell) \le \cdots \le I(Y; Z_1) \le I(Y; X)$$
 
-::: {.d2l-note .warn}
-Deterministic layer of a continuous input: $I(X;Z_\ell)$ is infinite, or
-$H(Z_\ell)$ after quantization.
-:::
+- **If depth cannot add label information, why do deep layers help?** Because downstream classifiers (such as a final linear layer) belong to a *restricted function family* $\mathcal{V}$ and cannot extract arbitrarily tangled information!
+- **Concentric circles example:** Let $Y \in \{0, 1\}$ be a fair bit, and let $X \in \mathbb{R}^2$ lie uniformly on the circle of radius $1$ when $Y = 0$ and radius $2$ when $Y = 1$.
+  - $X$ determines $Y$ exactly ($I(Y; X) = \ln 2$), yet any linear half-plane classifier on $X$ gets at most $2/3$ accuracy (zero **usable information** $I_{\mathcal{V}}(X \to Y) = 0$ for logistic regression).
+  - A single quadratic feature $Z_1 = \|X\|_2^2 \in \{1, 4\}$ satisfies $I(Y; Z_1) = \ln 2 = I(Y; X)$ (no new Shannon information created), yet makes all $\ln 2\text{ nats}$ linearly separable with $100\%$ accuracy!
 :::
 
-::: {.slide title="Fano: Low Error Needs Information"}
-[Fano's inequality]{.kicker}
+::: {.slide title="Fano's Inequality: Prediction Requires Information"}
+[Lower-Bounding Classification Error]{.kicker}
 
-$Y$ with $k$ values, estimate $\hat Y=g(X)$ in the same set, $P_e=P(\hat Y\ne Y)$:
-$$\underbrace{H_b(P_e)}_{\text{wrong or not}}+\underbrace{P_e\log(k-1)}_{\text{which other label}}\ \ge\ H(Y\mid X)=H(Y)-I(X;Y)$$
+How much mutual information $I(X; Y)$ must an input $X$ carry about a $k$-class label $Y$ for *any* classifier $\hat{Y} = g(X) \in \{1, \ldots, k\}$ to achieve error probability $P_e = \Pr(\hat{Y} \neq Y)$?
 
-- Flipped bit, $\hat Y=X$: $H_b(0.1)=0.325=H(Y\mid X)$, tight.
-- $k=1{,}000$ balanced classes, $H(Y)=6.91$ nats:
+::: {.d2l-note .rule}
+**Theorem (Fano's Inequality):** For any $k$-class target $Y$ and any estimator $\hat{Y} = g(X) \in \{1, \ldots, k\}$ with error rate $P_e = \Pr(\hat{Y} \neq Y)$,
+$$H_b(P_e) + P_e \log(k - 1) \ge H(Y \mid X) = H(Y) - I(X; Y)$$
+:::
+
+- **Coding intuition (repairing $\hat{Y}$):** To reconstruct $Y$ from $\hat{Y}$, we send $H_b(P_e)$ nats saying whether $\hat{Y}$ erred, plus at most $\log(k-1)$ nats naming which of the other $k-1$ classes occurred whenever it erred (probability $P_e$).
 
 @!mutual-information-fano
 :::
 
-::: {.slide title="Fano Follows from an Error Indicator and the Chain Rule"}
-[Proof of Fano's inequality]{.kicker}
+::: {.slide title="Three-Step Proof of Fano's Inequality"}
+[Error Indicator & Chain Rule]{.kicker}
 
-$W=\mathbf 1\{\hat Y\ne Y\}$ indicates an error. Expand
-$H(W,Y\mid\hat Y)$ in two orders.
+Let $W = \mathbf{1}\{\hat{Y} \neq Y\} \in \{0, 1\}$ be the binary error indicator ($P(W = 1) = P_e$). Expand the conditional entropy $H(W, Y \mid \hat{Y})$ in two orders:
 
-**I.** $W$ is a function of $(Y,\hat Y)$, so
-$H(W,Y\mid\hat Y)=H(Y\mid\hat Y)$.
-
-**II.** $H(W,Y\mid\hat Y)=H(W\mid\hat Y)+H(Y\mid W,\hat Y)\le H_b(P_e)+P_e\log(k-1)$:
-conditioning cannot raise entropy, and after an error $k-1$ labels remain.
-
-**III.** $\hat Y$ is computed from $X$, so $Y\to X\to\hat Y$ is a Markov
-chain and $H(Y\mid\hat Y)\ge H(Y\mid X)$.
-
-$$\boxed{H_b(P_e)+P_e\log(k-1)\ \ge\ H(Y\mid\hat Y)\ \ge\ H(Y\mid X)}$$
-
-::: {.d2l-note}
-No classifier computed from $X$, however it is trained, beats the bound.
-:::
+- **Step 1 ($W$ is a deterministic function of $Y$ and $\hat{Y}$):**
+  $$H(W, Y \mid \hat{Y}) = H(Y \mid \hat{Y}) + \underbrace{H(W \mid Y, \hat{Y})}_{= 0} = H(Y \mid \hat{Y})$$
+- **Step 2 (Expand with $W$ first and bound both terms):**
+  $$H(W, Y \mid \hat{Y}) = \underbrace{H(W \mid \hat{Y})}_{\le H(W) = H_b(P_e)} + \underbrace{H(Y \mid W, \hat{Y})}_{= (1-P_e)\cdot 0 + P_e H(Y \mid W=1, \hat{Y}) \le P_e \log(k-1)}$$
+- **Step 3 (Apply data processing to $Y \to X \to \hat{Y}$):** Because $I(Y; \hat{Y}) \le I(Y; X)$, we have $H(Y \mid X) \le H(Y \mid \hat{Y}) \le H_b(P_e) + P_e \log(k - 1)$. $\blacksquare$
 :::
 
-::: {.slide title="A Loss Certifies Information: $I\ge H(Y)-L$"}
-[Loss certificate]{.kicker}
+::: {.slide title="The Test-Loss Certificate: I(X; Y) ≥ H(Y) − L"}
+[Barber–Agakov Variational Certificate]{.kicker}
 
-- Any model $q(y\mid x)$ with loss $L=\mathbb{E}[-\log q(Y\mid X)]$.
-- Cross-entropy $\ge$ entropy, for each $x$: $H(Y\mid X)\le L$, so
-  $I(X;Y)\ge H(Y)-L$.
-- Flipped bit, $\hat Y=X$ with confidence $c$:
+While Fano's inequality uses hard error rate $P_e$, any probabilistic predictor $q(y \mid x)$ with held-out cross-entropy loss $L = \mathbb{E}_{(x,y) \sim P_{X,Y}}[-\log q(y \mid x)]$ directly certifies a lower bound on $I(X; Y)$:
+
+$$I(X; Y) = H(Y) - H(Y \mid X) \ge H(Y) - L \quad \Big(\text{with gap } \mathbb{E}_x\big[D_{\textrm{KL}}(p(\cdot \mid x) \,\|\, q(\cdot \mid x))\big] \ge 0\Big)$$
 
 @!mdl-mutual-information-fano-s-inequality-1
-
-::: {.d2l-note}
-Only the calibrated model ($c=0.9$) certifies the full $0.368$ nats. Fano
-sees only the $10\%$ error and certifies $0.368$ for all four.
 :::
 
-[Barber and Agakov 2003]{.small}
-:::
+::: {.slide title="Shannon's Two Curves: Capacity & Rate–Distortion"}
+[Extremizing Mutual Information]{.kicker}
 
-::: {.slide title="Check: Which Input Gets the Most Through a 0.1-Flip Channel?"}
-[Check]{.kicker}
-
-A line flips each bit sent with probability $0.1$. The sender chooses
-$P(X=1)$. Which choice maximizes $I(X;Y)$ between the bit sent and the bit
-received, and how much gets through?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $H(Y\mid X)=H_b(0.1)$ for every input, so maximize $H(Y)$: the
-uniform input, $\ln2-H_b(0.1)=0.368$ nats. This maximum over inputs is the
-*capacity* of the line, $C=\ln2-H_b(\delta)$ at flip probability $\delta$.
-Rows 1 and 2 sweep the input, rows 3 and 4 show $C$ against $\delta$:
-:::
-
-@!mdl-mutual-information-channel-capacity
-:::
-:::
-
-::: {.slide title="Capacity Is a Maximum of $I$, Rate–Distortion a Minimum"}
-[Shannon's two curves]{.kicker}
-
-$C=\max_{p(x)}I(X;Y)$ $\;\cdot\;$ $R(D)=\min I(X;\hat X)$ at distortion $\mathbb{E}\,d(X,\hat X)\le D$
+Shannon's two fundamental operational limits of communication and lossy compression are dual extremum problems over mutual information:
 
 ![](../img/mdl-it-capacity-rd.svg){width=100%}
 
-::: {.d2l-note}
-Left: the sender picks the input of a channel. Right: an encoder picks a
-reconstruction $\hat X$ of a source $X$, and $d$ scores its error. Block
-codes reach any rate below $C$, and distortion $D$ at any rate above $R(D)$
-(Shannon 1948, 1959).
-:::
+- **Channel Capacity (Left):** Fix the noisy channel $p(y \mid x)$ and *maximize* over the sender's input distribution: $C = \max_{p(x)} I(X; Y)$.
+- **Rate–Distortion (Right):** Fix the source $p(x)$ and *minimize* over the lossy encoder $p(\hat{x} \mid x)$ subject to distortion budget $D$: $R(D) = \inf_{p(\hat{x} \mid x): \mathbb{E}[d(X, \hat{X})] \le D} I(X; \hat{X})$.
 :::
 
-::: {.slide title="A Gaussian Source Costs $\tfrac12\log(\sigma_X^2/D)$ Nats"}
-[Rate–distortion]{.kicker}
+::: {.slide title="Capacity of the Binary Symmetric Channel"}
+[Maximizing Over Input Distributions]{.kicker}
 
-Source $\mathcal N(0,\sigma_X^2)$, squared error
-$\mathbb{E}(X-\hat X)^2\le D<\sigma_X^2$.
+For a binary symmetric channel that flips each transmitted bit independently with probability $\delta \in [0, 1]$, every row of $p(y \mid x)$ has entropy $H_b(\delta)$, so $I(X; Y) = H(Y) - H_b(\delta)$ is maximized when $Y$ (and therefore $X$) is uniform ($\tfrac12, \tfrac12$):
 
-**I.** Lower bound: $I\ge h(X)-h(X-\hat X)\ge\tfrac12\log\frac{\sigma_X^2}{D}$
-(a Gaussian has the most entropy at a given variance).
+$$C(\delta) = \max_{p(x)} I(X; Y) = \ln 2 - H_b(\delta)\text{ nats per channel use}$$
 
-**II.** Attained ($\sigma_X=1$) by $Z=X+\sigma\epsilon$,
-$\hat X=\mathbb{E}[X\mid Z]$, with $D=\frac{\sigma^2}{1+\sigma^2}$:
+@!mdl-mutual-information-channel-capacity
+:::
+
+::: {.slide title="Gaussian Rate–Distortion: 1 Bit Halves RMS Error"}
+[Minimizing Over Lossy Encoders]{.kicker}
+
+For a Gaussian source $X \sim \mathcal{N}(0, \sigma_X^2)$ under squared-error distortion $\mathbb{E}[(X - \hat{X})^2] \le D < \sigma_X^2$, the rate–distortion function is:
+
+$$R(D) = \frac{1}{2}\log\frac{\sigma_X^2}{D} \iff D(R) = \sigma_X^2 e^{-2R} \quad \text{(each extra bit } \ln 2\text{ nats cuts MSE by } 4\times\text{)}$$
+
+- **Lower bound proof:** $I(X; \hat{X}) = h(X) - h(X - \hat{X} \mid \hat{X}) \ge h(X) - h(X - \hat{X}) \ge \tfrac12\log(2\pi e\sigma_X^2) - \tfrac12\log(2\pi e D) = \tfrac12\log(\sigma_X^2/D)$.
+- **Attaining the bound via the additive Gaussian channel:** Encode $Z = X + \sigma\epsilon$ and reconstruct the posterior mean $\hat{X} = \mathbb{E}[X \mid Z] = \frac{\sigma_X^2}{\sigma_X^2 + \sigma^2}Z$:
 
 @!mdl-mutual-information-rate-distortion
-
-::: {.d2l-note}
-$D=\sigma_X^2e^{-2R}$: one more bit divides the squared error by four.
 :::
 
-[Shannon 1959]{.small}
+::: {.slide title="The Information Bottleneck as Rate–Distortion"}
+[Task-Relevant Representation Learning]{.kicker}
+
+How should a stochastic encoder $p(z \mid x)$ compress an input $X$ into a representation $Z$ that discards nuisance background details while preserving everything needed to predict a target label $Y$? Along the Markov chain $Y \to X \to Z$, the **Information Bottleneck** (Tishby et al., 1999) minimizes:
+
+$$\min_{p(z \mid x)}\; \underbrace{I(X; Z)}_{\text{compression rate}} - \beta \underbrace{I(Y; Z)}_{\text{preserved label info}} \qquad (\beta > 0)$$
+
+- **Always collapses for $\beta \le 1$:** By data processing, $I(Y; Z) \le \min\{I(X; Y), I(X; Z)\}$, so for $\beta \le 1$, $I(X; Z) - \beta I(Y; Z) \ge (1 - \beta)I(X; Z) \ge 0$, minimized by a constant encoder $I(X; Z) = 0$.
+- **Exact rate–distortion equivalence:** Expanding $I(Y; X, Z)$ by the chain rule in both orders along $Y \to X \to Z$ ($I(Y; Z \mid X) = 0$) proves:
+  $$I(Y; Z) = I(X; Y) - \mathbb{E}_{(x, z) \sim P_{X,Z}}\Big[\underbrace{D_{\textrm{KL}}\big(p(y \mid x) \,\|\, p(y \mid z)\big)}_{\text{KL prediction distortion } d_{\textrm{IB}}(x, z)}\Big]$$
 :::
 
-::: {.slide title="The Bottleneck Is Rate–Distortion with the Label as Distortion"}
-[Information bottleneck]{.kicker}
+::: {.slide title="Closed-Form Solution of the Gaussian Bottleneck"}
+[Concave Frontier & Phase Transition]{.kicker}
 
-Goal: a representation $Z$ that keeps what predicts the label $Y$ and drops
-the rest of the input $X$ (lighting, background), which costs nats and can
-mislead. Encoder $p(z\mid x)$, Markov chain $Y\to X\to Z$:
-$$\min\ I(X;Z)-\beta\,I(Y;Z)$$
-
-- $I(Y;Z)\le\min\{I(X;Y),\,I(X;Z)\}$, so for $\beta\le1$ the objective is
-  $\ge(1-\beta)I(X;Z)\ge0$: keep nothing.
-- $I(Y;Z)=I(X;Y)-\mathbb{E}\,D_{\textrm{KL}}\big(p(y\mid x)\,\|\,p(y\mid z)\big)$.
-
-::: {.d2l-note}
-The distortion is how much worse $z$ predicts $Y$ than $x$ does.
-:::
-
-[Tishby, Pereira and Bialek 1999]{.small}
-:::
-
-::: {.slide title="The Gaussian Bottleneck Keeps Nothing Until $\beta$ Exceeds $1/\rho^2$"}
-[Gaussian bottleneck]{.kicker}
-
-$Z=X+\sigma\epsilon$, rate $u=I(X;Z)$:
-$\;I(Y;Z)=-\tfrac12\log\big(1-\rho^2(1-e^{-2u})\big)$.
+For the bivariate Gaussian pair $(X, Y)$ with correlation $\rho = 0.9$ ($I(X; Y) = 0.830\text{ nats}$) and additive encoder $Z = X + \sigma\epsilon$, writing rate $u = I(X; Z) = \tfrac12\log(1 + \sigma^{-2})$ yields the exact optimal frontier:
 
 ::: {.cols .vc}
-::: {.col .fig .big}
+::: {.col}
+- **Concave information-plane curve:**
+  $$I(Y; Z) = -\frac{1}{2}\log\Big(1 - \rho^2\big(1 - e^{-2u}\big)\Big)$$
+- **Phase transition at $\beta_c = 1/\rho^2$:** The frontier leaves $(0, 0)$ with slope $\frac{dI(Y;Z)}{du}\big|_{u=0} = \rho^2 = 0.81$. For all $\beta \le 1/\rho^2 \approx 1.235$, the optimal encoder **collapses** ($u^* = 0$).
+- **Operating point for $\beta > 1/\rho^2$:**
+  $$u^* = \frac{1}{2}\log\frac{\rho^2(\beta - 1)}{1 - \rho^2}$$
+:::
+
+::: {.col .fig}
 ![](../img/mdl-it-ib-tradeoff.svg){width=100%}
 :::
-
-::: {.col}
-- Slope $\rho^2$ at $u=0$, then falling.
-- One nat of rate: $+1$, and at most $-\beta\rho^2$.
-- $\beta>1/\rho^2$: operating point
-  $u^*=\tfrac12\log\frac{\rho^2(\beta-1)}{1-\rho^2}$.
-- Below $1/\rho^2$, here $1.23$: *collapse*.
-
-[Chechik et al. 2005]{.small}
-:::
 :::
 :::
 
-::: {.slide title="A VAE's KL Penalty Is an Upper Bound on a Rate"}
-[Variational information bottleneck]{.kicker}
+::: {.slide title="Verifying the Bottleneck Phase Transition & VIB"}
+[Grid Search & Variational Autoencoders]{.kicker}
 
-The marginal $p(z)$ is unknown. Replace it by a fixed prior $r(z)$:
-
-$$\mathbb{E}_x D_{\textrm{KL}}\big(p(z\mid x)\,\|\,r(z)\big)=I(X;Z)+D_{\textrm{KL}}\big(p(z)\,\|\,r(z)\big)\ge I(X;Z)$$
-
-- Label term: a decoder $q(y\mid z)$ with loss $L_Z$ certifies
-  $I(Y;Z)\ge H(Y)-L_Z$.
-- VAE: encoder $p(z\mid x)$, prior $r(z)$, decoder for $x$. Loss:
-  reconstruction error plus a weight times the left side.
-
-::: {.d2l-note}
-The KL penalty caps the nats the latent code keeps about its input. The
-reconstruction error is the distortion.
-:::
-
-[Alemi et al. 2017]{.small}
-:::
-
-::: {.slide title="Check: Where Is the Operating Point at $\rho=0.9$, $\beta=2$?"}
-[Check]{.kicker}
-
-Use $u^*=\tfrac12\log\frac{\rho^2(\beta-1)}{1-\rho^2}$ and
-$I(Y;Z)^*=\tfrac12\log\frac{\beta-1}{\beta(1-\rho^2)}$.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $u^*=\tfrac12\ln(0.81/0.19)=0.73$ nats of rate and
-$\tfrac12\ln(1/0.38)=0.48$ nats of label information. A grid search agrees:
-:::
+Grid search over $4{,}001$ noise scales $\sigma$ confirms collapse at $\beta = 1.20$ and turn-on at $\beta = 1.25$:
 
 @!mutual-information-ib-plane
+
+- **Variational Information Bottleneck (VIB) and VAEs:** When $p(z)$ is unknown, replacing it with a prior $r(z) = \mathcal{N}(0, I)$ upper-bounds the rate via $\mathbb{E}_x[D_{\textrm{KL}}(p(z \mid x) \| r(z))] = I(X; Z) + D_{\textrm{KL}}(p(z) \| r(z)) \ge I(X; Z)$—the exact KL regularizer of a Variational Autoencoder!
+:::
+
+::: {.slide title="Concept Check: Cascaded Channels, Capacity, IB"}
+[Check Your Understanding]{.kicker}
+
+Work through these three problems:
+
+1. **Two noisy lines in series:** A fair bit $X$ passes through a flip channel with $\delta_1 = 0.1$ to produce $Y$, and $Y$ passes through an independent flip channel with $\delta_2 = 0.2$ to produce $Z$. What are $I(X; Y)$, $I(X; Z)$, $I(X; Z \mid Y)$, and $I(X; Y \mid Z)$?
+2. **Binary symmetric channel capacity:** Why does a BSC with flip probability $\delta = 1.0$ have the same capacity ($\ln 2\text{ nats}$) as a noiseless channel ($\delta = 0$), whereas $\delta = 0.5$ has capacity $0$?
+3. **Gaussian bottleneck operating point:** For the Gaussian pair at $\rho = 0.9$ ($\rho^2 = 0.81$), compute the optimal rate $u^* = I(X; Z)^*$ and preserved label information $I(Y; Z)^*$ at trade-off multiplier $\beta = 2$.
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Cascaded flips:** $I(X; Y) = \ln 2 - H_b(0.1) = 0.368\text{ nats}$. The composite flip probability is $0.1(0.8) + 0.9(0.2) = 0.26$, so $I(X; Z) = \ln 2 - H_b(0.26) = 0.120\text{ nats}$. By the Markov chain $X \to Y \to Z$, $I(X; Z \mid Y) = 0$, and the chain rule gives $I(X; Y \mid Z) = 0.368 - 0.120 = 0.248\text{ nats}$.
+2. **BSC capacity:** $C(\delta) = \ln 2 - H_b(\delta)$. At $\delta = 1$, every bit is deterministically inverted ($H_b(1) = 0$) and the receiver simply flips it back; at $\delta = 0.5$, the output is a fair coin independent of the input ($H_b(0.5) = \ln 2 \implies C = 0$).
+3. **Gaussian IB at $\beta = 2$:** Since $\beta = 2 > 1/0.81 = 1.235$, $u^* = \tfrac12\ln\frac{0.81(1)}{0.19} = 0.725\text{ nats}$, and $I(Y; Z)^* = \tfrac12\ln\frac{1}{2(0.19)} = 0.484\text{ nats}$.
 :::
 :::
 
-::: {.slide title="One Number Bounds Processing, Prediction, Transmission, Compression"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Mutual Information and Bottlenecks"}
+[Key Takeaways]{.kicker}
 
-- $I=D_{\textrm{KL}}(P_{X,Y}\|P_X\otimes P_Y)$: $0.368$ nats for the
-  flipped bit, $0.830$ for the Gaussian pair at $\rho=0.9$, $1.14$ for the
-  parabola.
-- Processing only loses: a second flip leaves $0.120$ nats.
-- Fano: $5\%$ error on $1{,}000$ classes needs $6.36$ of $6.91$ nats; a
-  loss $L$ certifies $I\ge H(Y)-L$.
-- Capacity $\ln2-H_b(\delta)$; rate $\tfrac12\log(\sigma_X^2/D)$, $1.15$
-  nats at $D=0.1$.
-- Bottleneck: keeps nothing for $\beta\le1/\rho^2=1.23$; a VAE's KL penalty
-  is an upper bound on its rate.
-
-**Next:** every number here used the densities. What can samples show?
+| Concept / Theorem | Mathematical Formula | Key Invariance / Bound | Deep Learning Role |
+|:--|:---|:---|:---|
+| **Mutual Information** | $I(X; Y) = D_{\textrm{KL}}(P_{X,Y} \| P_X \otimes P_Y)$ | $I(\phi(X); \psi(Y)) = I(X; Y)$ for bijections | Measures arbitrary nonlinear dependence in nats |
+| **Gaussian MI** | $I(X; Y) = -\tfrac12\log(1 - \rho^2)$ | Depends only on unexplained variance $1-\rho^2$ | Exact benchmark; diverges as $\rho \to \pm 1$ ($Y = X$) |
+| **Pointwise MI (PMI)** | $\textrm{pmi}(x, y) = \log\frac{p(x,y)}{p(x)p(y)}$ | $\mathbb{E}_{P_{X,Y}}[\textrm{pmi}] = I(X; Y)$; $\mathbb{E}_{P_X\otimes P_Y}[e^{\textrm{pmi}}] = 1$ | NLP collocation ranking; Word2Vec & InfoNCE optimal critic |
+| **Data Processing (DPI)** | $X \to Y \to Z \implies I(X; Z) \le I(X; Y)$ | Gap is $I(X; Y \mid Z) \ge 0$ (0 iff sufficient stat) | Layers cannot create label info; they make it linearly readable |
+| **Fano & Loss Certificate** | $H_b(P_e) + P_e\log(k-1) \ge H(Y \mid X)$; $I \ge H(Y) - L$ | Holds for any classifier $\hat{Y} = g(X)$ or model $q(y \mid x)$ | Certifies minimum input information from test accuracy or NLL |
+| **Capacity & Rate–Distortion** | $C = \max_{p(x)} I(X; Y)$; $R(D) = \min_{\mathbb{E}d \le D} I(X; \hat{X})$ | BSC: $\ln 2 - H_b(\delta)$; Gaussian RD: $\tfrac12\log(\sigma_X^2/D)$ | Fundamental limits of noisy channels & lossy autoencoders |
+| **Information Bottleneck** | $\min_{p(z\mid x)} I(X; Z) - \beta I(Y; Z)$ | Gaussian collapse for $\beta \le 1/\rho^2$; VIB rate $\le \mathbb{E}[D_{\textrm{KL}}(p \| r)]$ | Task-specific compression; explains the VAE KL regularizer |
 :::
+

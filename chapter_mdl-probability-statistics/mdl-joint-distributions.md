@@ -970,93 +970,49 @@ uncorrelated, while in polar coordinates they become two independent variables.
 ::: {.cover}
 [Dive into Deep Learning · §36.2]{.kicker}
 
-Two coordinates, a conditional slice, a Jacobian<br>**joint distributions and transformations**
+Joint Distributions and Transformations: Conditioning, Covariance, and Jacobians<br>**joint & marginal densities · conditional slicing · Eve's law · optimal MSE predictor · covariance & correlation · Jacobian change of variables**
 :::
 :::
 
-::: {.slide title="The Dart's Coordinates Are Dependent, Yet Their Covariance Is 0"}
-[The problem]{.kicker}
+::: {.slide title="Dependence, Predictability, and Correlation Differ"}
+[Motivation]{.kicker}
 
-A dart lands uniformly on the unit disk, at position $(X, Y)$.
+A dart lands uniformly on the unit disk at Cartesian coordinates $(X, Y)$. Separate 1D densities cannot describe how variables move together, and even on this simple disk three notions of association come apart:
 
-| question | answer for the dart |
-|:--|:--|
-| Does $Y$ tell us about $X$? | yes: $Y=0.9$ forces $\lvert X\rvert\le0.44$ |
-| Best guess for $X$ given $Y$? | $0$, whatever $Y$ is |
-| Covariance of $X$ and $Y$? | $0$ |
+| Question About the Dart's Coordinates $(X, Y)$ | Mathematical Answer on the Unit Disk | What It Reveals |
+| :--- | :--- | :--- |
+| **1. Are $X$ and $Y$ independent?** | **No:** observing $Y = 0.9$ restricts $\|X\| \le \sqrt{1 - 0.9^2} \approx 0.44$ | The circular boundary couples the ranges of $X$ and $Y$ |
+| **2. What is the best predictor of $X$ given $Y$?** | **$\mathbb{E}[X \mid Y = y] = 0$** for every height $y \in (-1, 1)$ | Knowing $Y$ narrows the chord for $X$ without shifting its center |
+| **3. What is the covariance $\mathrm{Cov}(X, Y)$?** | **$\mathrm{Cov}(X, Y) = 0$** (and correlation $\rho = 0$) | Linear correlation misses circular or symmetric nonlinear coupling |
 
 ::: {.d2l-note .warn}
-Dependence, predictability and correlation are three different things. One
-density per coordinate cannot tell them apart.
+**Core distinction:** Independence ($p_{X,Y} = p_X p_Y$) implies zero conditional mean shift ($\mathbb{E}[X \mid Y] = \mathbb{E}[X]$), which in turn implies zero covariance ($\mathrm{Cov}(X, Y) = 0$)—but **neither arrow reverses**!
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Joint Densities: Probability per Unit Area"}
+[Multivariate Densities]{.kicker}
 
-- find marginal and conditional densities from a joint density;
-- name the best squared-error predictor, and split a variance into the part it
-  explains and the part it cannot;
-- compute covariances, correlations and the variance of an average;
-- find the density of a transformed variable $g(X)$.
+For two continuous random variables $(X, Y)$, the **joint density** $p_{X,Y}(x, y) \ge 0$ measures probability per unit area over small squares of side $\epsilon$:
 
-**Running example:** the dart on the unit disk, joint density $1/\pi$.
-**Idea:** slice the joint density to condition; divide by the local stretch
-to transform.
+$$P\bigl(X \in [x, x+\epsilon],\ Y \in [y, y+\epsilon]\bigr) \approx \epsilon^2\,p_{X,Y}(x, y), \qquad P\bigl((X, Y) \in \mathcal{D}\bigr) = \iint_{\mathcal{D}} p_{X,Y}(x, y)\,dx\,dy$$
+
+- **Total volume normalization:** Integrating over the entire plane $\mathbb{R}^2$ must yield $\iint_{\mathbb{R}^2} p_{X,Y}(x, y)\,dx\,dy = 1$.
+- **The dart's joint density:** Every part of the unit disk $\mathcal{D} = \{(x, y) : x^2 + y^2 \le 1\}$ (area $\pi$) is equally likely, so
+  $$p_{X,Y}(x, y) = \begin{cases} 1/\pi & \text{if } x^2 + y^2 \le 1, \\ 0 & \text{otherwise.} \end{cases}$$
+- **Why flat does not mean factorized:** Even though $1/\pi$ is constant inside the disk, the indicator $\mathbf{1}_{x^2 + y^2 \le 1}$ cannot be written as $a(x)\,b(y)$ because the allowed range of $x$ depends on $y$.
 :::
 
-::: {.slide title="Second in the Chapter: Several Variables at Once"}
-[Where this fits]{.kicker}
+::: {.slide title="Marginal Densities: Integrating Out Variables"}
+[The Sum Rule for Continuous Densities]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Random Variables | densities, moments, tail bounds |
-| **Joint Distributions** | **conditioning, covariance, change of variables** |
-| Distributions | the named distributions and their losses |
-| The Exponential Family | one form, convex fits, conjugacy |
-| Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP |
-| Latent Variables and EM | the ELBO, EM |
-| Bayesian Computation | averaging over a posterior |
-| Concentration Inequalities | exponential tails of averages |
-| Uniform Convergence | guarantees after selection |
-| Naive Bayes | one classifier, end to end |
-:::
-
-::: {.col .narrow}
-- **Uses:** density, c.d.f., mean and variance of one variable.
-- **Skips:** named distributions, estimation.
-:::
-:::
-:::
-
-::: {.slide title="A Joint Density Is Probability per Unit Area"}
-[Joint densities]{.kicker}
-
-A small square of side $\epsilon$ at $(x,y)$ has probability
-$\approx\epsilon^2\,p_{X,Y}(x,y)$, and for a region $\mathcal D$
-
-$$P\bigl((X,Y)\in\mathcal D\bigr)=\iint_{\mathcal D}p_{X,Y}(x,y)\,dx\,dy .$$
-
-- Dart: the disk has area $\pi$, so $p_{X,Y}=1/\pi$ on the disk, $0$ outside.
-- Constant on the disk, yet not of the form $a(x)\,b(y)$: the rim ties the
-  coordinates together.
-:::
-
-::: {.slide title="A Marginal Integrates the Joint Density Along a Strip"}
-[Joint densities]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$p_X(x)=\int p_{X,Y}(x,y)\,dy$$
-
-Dart: the strip at $x$ runs from $-\sqrt{1-x^2}$ to $\sqrt{1-x^2}$, so
-$p_X(x)=\tfrac2\pi\sqrt{1-x^2}$, a semicircle.
-
-A flat joint density has a curved marginal: strips through the middle are
-longer.
+- To recover the density of $X$ alone, sum the probabilities of small squares $\epsilon^2 p_{X,Y}(x, \epsilon i)$ along the vertical strip at $x$ and cancel $\epsilon$:
+  $$p_X(x) = \int_{-\infty}^{\infty} p_{X,Y}(x, y)\,dy$$
+- **Dart marginal is a semicircle:** At horizontal position $x \in [-1, 1]$, the vertical strip crosses the disk from $y = -\sqrt{1-x^2}$ to $+\sqrt{1-x^2}$:
+  $$p_X(x) = \int_{-\sqrt{1-x^2}}^{\sqrt{1-x^2}} \frac{1}{\pi}\,dy = \frac{2}{\pi}\sqrt{1 - x^2}$$
+- A flat joint density produces a curved marginal because chords through the center are longer than chords near the rim.
 :::
 
 ::: {.col .fig}
@@ -1065,18 +1021,15 @@ longer.
 :::
 :::
 
-::: {.slide title="Conditioning on Y = y Means Conditioning on a Thin Strip"}
-[Conditioning]{.kicker}
+::: {.slide title="Conditional Densities: Slicing and Renormalizing"}
+[Conditioning on Zero-Probability Events]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$P(Y=y)=0$, so condition on $Y\in[y,y+\epsilon]$ and shrink:
-
-$$p_{X\mid Y}(x\mid y)=\frac{p_{X,Y}(x,y)}{p_Y(y)}.$$
-
-Cut the joint density along the line $Y=y$; rescale the profile to area $1$.
-
-Dart: $X\mid Y=y$ is uniform on the chord $\lvert x\rvert\le\sqrt{1-y^2}$.
+- Because $P(Y = y) = 0$, the discrete formula $P(X, Y)/P(Y)$ divides zero by zero. Conditioning on a thin strip $Y \in [y, y+\epsilon]$ and sending $\epsilon \downarrow 0$ gives the **conditional density**:
+  $$p_{X \mid Y}(x \mid y) = \frac{p_{X,Y}(x, y)}{p_Y(y)} \quad \text{for } p_Y(y) > 0$$
+- **Geometric picture:** Slice the joint surface $p_{X,Y}$ along the horizontal line $Y = y$ and divide by the slice area $p_Y(y)$ so the profile integrates to $1$.
+- **Dart conditional:** Given $Y = y$, $X$ is uniform along the chord $[-\sqrt{1-y^2}, \sqrt{1-y^2}]$ with density $\frac{1}{2\sqrt{1-y^2}}$.
 :::
 
 ::: {.col .fig}
@@ -1085,84 +1038,95 @@ Dart: $X\mid Y=y$ is uniform on the chord $\lvert x\rvert\le\sqrt{1-y^2}$.
 :::
 :::
 
-::: {.slide title="Independent Means the Same Conditional at Every y"}
-[Conditioning]{.kicker}
+::: {.slide title="Chain Rule, Bayes' Rule, and Independence"}
+[Factorization & Sum of Independent Variables]{.kicker}
 
-$X\perp Y$ when $p_{X\mid Y}(x\mid y)=p_X(x)$, equivalently
-$p_{X,Y}(x,y)=p_X(x)\,p_Y(y)$.
+Rearranging the conditional density gives the **chain rule** $p_{X,Y}(x, y) = p_{X \mid Y}(x \mid y)\,p_Y(y) = p_{Y \mid X}(y \mid x)\,p_X(x)$ and **Bayes' rule for densities**:
 
-| joint density | $p_{X\mid Y}(x\mid y)$ | independent? |
-|:--|:--|:--|
-| $4xy$ on $[0,1]^2$ | $2x$ for every $y$ | yes |
-| dart, $1/\pi$ on the disk | uniform on a chord that shrinks with $\lvert y\rvert$ | no |
+$$p_{X \mid Y}(x \mid y) = \frac{p_{Y \mid X}(y \mid x)\,p_X(x)}{p_Y(y)} = \frac{p_{Y \mid X}(y \mid x)\,p_X(x)}{\int p_{Y \mid X}(y \mid x')\,p_X(x')\,dx'}$$
 
-::: {.d2l-note}
-Writing the chain rule both ways gives Bayes' rule for densities:
-$p_{X\mid Y}(x\mid y)=p_{Y\mid X}(y\mid x)\,p_X(x)/p_Y(y)$.
+| Joint Density $p_{X,Y}(x, y)$ | Marginal $p_Y(y)$ | Conditional $p_{X \mid Y}(x \mid y)$ | Independent ($X \perp Y$)? |
+| :--- | :--- | :--- | :--- |
+| $4xy$ on unit square $[0, 1]^2$ | $\int_0^1 4xy\,dx = 2y$ | $4xy / (2y) = 2x = p_X(x)$ for all $y$ | **Yes:** $p_{X,Y}(x,y) = (2x)(2y)$ |
+| $1/\pi$ on unit disk $x^2+y^2 \le 1$ | $\frac{2}{\pi}\sqrt{1-y^2}$ | $\frac{1}{2\sqrt{1-y^2}}$ on $\|x\| \le \sqrt{1-y^2}$ | **No:** support shrinks with $\|y\|$ |
+
+::: {.d2l-note .rule}
+**Convolution of independent variables:** When $X \perp Y$, the pair $(X, X+Y)$ has joint density $p_X(x)\,p_Y(s - x)$ at $(x, s)$, so marginalizing out $x$ yields the density of the sum: $p_{X+Y}(s) = \int_{-\infty}^\infty p_X(x)\,p_Y(s - x)\,dx$.
 :::
 :::
 
-::: {.slide title="The Conditional Mean Is the Best Squared-Error Predictor"}
-[Conditional expectation]{.kicker}
+::: {.slide title="Conditional Expectation and the Tower Property"}
+[Averaging Within Strips]{.kicker}
 
-$\mathbb{E}[X\mid Y=y]=\int x\,p_{X\mid Y}(x\mid y)\,dx$: the average of $X$
-on the strip at $y$. For any predictor $h$ of $X$ from $Y$,
+The **conditional expectation** $\mathbb{E}[X \mid Y = y]$ is the center of mass of the conditional density on the slice $Y = y$:
 
-$$\mathbb{E}\bigl[(X-h(Y))^2\bigr]=\underbrace{\mathbb{E}[\textrm{Var}(X\mid Y)]}_{\textrm{no }h\textrm{ removes this}}+\underbrace{\mathbb{E}\bigl[(\mathbb{E}[X\mid Y]-h(Y))^2\bigr]}_{\textrm{zero for }h=\mathbb{E}[X\mid Y]}.$$
+$$\mathbb{E}[X \mid Y = y] = \int_{-\infty}^{\infty} x\,p_{X \mid Y}(x \mid y)\,dx, \qquad \mathrm{Var}(X \mid Y) = \mathbb{E}[X^2 \mid Y] - \bigl(\mathbb{E}[X \mid Y]\bigr)^2$$
 
-*Why:* split $X-h=(X-\mathbb{E}[X\mid Y])+(\mathbb{E}[X\mid Y]-h)$; the cross
-term averages to zero within every strip.
-
-::: {.d2l-note}
-A network trained with the squared loss estimates
-$\mathbb{E}[\textrm{target}\mid\textrm{input}]$.
-:::
+- **Pulling out known factors:** Within the strip $Y = y$, any function $h(Y)$ behaves as a constant:
+  $$\mathbb{E}\bigl[h(Y)\,g(X, Y) \mid Y\bigr] = h(Y)\,\mathbb{E}\bigl[g(X, Y) \mid Y\bigr]$$
+- **Law of Total Expectation (Tower Property):** Averaging the strip averages recovers the overall mean:
+  $$\mathbb{E}\bigl[\mathbb{E}[X \mid Y]\bigr] = \int \left(\int x\,p_{X \mid Y}(x \mid y)\,dx\right) p_Y(y)\,dy = \iint x\,p_{X,Y}(x, y)\,dx\,dy = \mathbb{E}[X]$$
 :::
 
-::: {.slide title="A Variance Splits Into Within-Strip and Between-Strip Parts"}
-[Law of total variance]{.kicker}
+::: {.slide title="The Law of Total Variance (Eve's Law)"}
+[Splitting Variance Into Within-Strip and Between-Strip Parts]{.kicker}
 
-$$\textrm{Var}(X)=\mathbb{E}[\textrm{Var}(X\mid Y)]+\textrm{Var}(\mathbb{E}[X\mid Y])$$
+**Proposition (Law of Total Variance / Eve's Law):** For any pair $(X, Y)$ where $X$ has finite variance,
 
-Mixture: label $Z=1$ with probability $0.2$, then $X\sim\mathcal N(3,1)$;
-otherwise $X\sim\mathcal N(-1,1)$.
+$$\mathrm{Var}(X) = \underbrace{\mathbb{E}\bigl[\mathrm{Var}(X \mid Y)\bigr]}_{\text{unexplained (within strips)}} + \underbrace{\mathrm{Var}\bigl(\mathbb{E}[X \mid Y]\bigr)}_{\text{explained by } Y \text{ (between strips)}}$$
 
-- within: $1$; between: $0.2\cdot0.8\cdot4^2=2.56$; the label explains $72\%$.
-
-@!mdl-random-variables-conditional-expectation
-
-::: {.d2l-note}
-The parts are noisy in the third decimal; their sum matches the sample
-variance exactly. The identity holds for the sample itself.
-:::
+- **Proof by telescoping moments:**
+  1. Expand the first term via the tower property on $X^2$:
+     $$\mathbb{E}\bigl[\mathrm{Var}(X \mid Y)\bigr] = \mathbb{E}\bigl[\mathbb{E}[X^2 \mid Y] - (\mathbb{E}[X \mid Y])^2\bigr] = \mathbb{E}[X^2] - \mathbb{E}\bigl[(\mathbb{E}[X \mid Y])^2\bigr]$$
+  2. Expand the variance of the random variable $m(Y) = \mathbb{E}[X \mid Y]$ (whose mean is $\mathbb{E}[m(Y)] = \mathbb{E}[X]$):
+     $$\mathrm{Var}\bigl(\mathbb{E}[X \mid Y]\bigr) = \mathbb{E}\bigl[(\mathbb{E}[X \mid Y])^2\bigr] - (\mathbb{E}[X])^2$$
+  3. Adding the two equations cancels $\mathbb{E}[(\mathbb{E}[X \mid Y])^2]$, leaving $\mathbb{E}[X^2] - (\mathbb{E}[X])^2 = \mathrm{Var}(X)$. $\blacksquare$
 :::
 
-::: {.slide title="For the Dart, Knowing Y Explains None of the Variance of X"}
-[Law of total variance]{.kicker}
+::: {.slide title="The Conditional Mean Optimizes Squared Error"}
+[Theoretical Foundation of Regression]{.kicker}
 
-- The chord at height $y$ is symmetric: $\mathbb{E}[X\mid Y=y]=0$.
-- Uniform on half-width $w$ has variance $w^2/3$:
-  $\textrm{Var}(X\mid Y=y)=(1-y^2)/3$.
-- $\mathbb{E}[Y^2]=\tfrac12\mathbb{E}[R^2]=\tfrac14$, so
+Why does training a neural network $h(Y)$ with squared-error loss estimate the conditional expectation $\mathbb{E}[X \mid Y]$?
 
-$$\textrm{Var}(X)=\underbrace{\frac{1-1/4}{3}}_{\textrm{within}}+\underbrace{0}_{\textrm{between}}=\frac14 .$$
+**Proposition:** For any predictor $h(Y)$ with $\mathbb{E}[h(Y)^2] < \infty$, write $m(Y) = \mathbb{E}[X \mid Y]$. Then:
 
-::: {.d2l-note}
-$Y$ narrows the range of $X$ but never shifts its center. The best predictor
-is the constant $0$, although the two are dependent.
-:::
+$$\mathbb{E}\bigl[(X - h(Y))^2\bigr] = \underbrace{\mathbb{E}\bigl[\mathrm{Var}(X \mid Y)\bigr]}_{\text{irreducible noise (independent of } h\text{)}} + \underbrace{\mathbb{E}\bigl[(\mathbb{E}[X \mid Y] - h(Y))^2\bigr]}_{\ge 0 \text{ (vanishes iff } h(Y) = \mathbb{E}[X \mid Y]\text{)}}$$
+
+- **Proof:** Split $X - h(Y) = \bigl(X - m(Y)\bigr) + \bigl(m(Y) - h(Y)\bigr)$ and square. The cross term vanishes inside every strip because $m(Y) - h(Y)$ pulls out of the conditional expectation:
+  $$\mathbb{E}\bigl[(X - m(Y))(m(Y) - h(Y)) \mid Y\bigr] = \bigl(m(Y) - h(Y)\bigr)\underbrace{\mathbb{E}[X - m(Y) \mid Y]}_{m(Y) - m(Y) = 0} = 0$$
+- **Fraction of variance explained ($R^2$):** No predictor can explain more than $\frac{\mathrm{Var}(\mathbb{E}[X \mid Y])}{\mathrm{Var}(X)}$ of the target's variance.
 :::
 
-::: {.slide title="Covariance Is One Number for a Linear Trend, and It Has Units"}
-[Covariance]{.kicker}
+::: {.slide title="Eve's Law in Action: Dart vs. Gaussian Mixture"}
+[Analytic & Empirical Variance Decomposition]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$\textrm{Cov}(X,Y)=\mathbb{E}[(X-\mu_X)(Y-\mu_Y)]=\mathbb{E}[XY]-\mu_X\mu_Y$
+- **Dart on the disk ($0\%$ explained):** Each chord at height $y$ is symmetric ($\mathbb{E}[X \mid Y=y] = 0$) with uniform variance $(1 - y^2)/3$. Since $\mathbb{E}[Y^2] = \frac{1}{2}\mathbb{E}[R^2] = \frac{1}{4}$:
+  $$\mathrm{Var}(X) = \frac{1 - 1/4}{3} + \mathrm{Var}(0) = \frac{1}{4} + 0$$
+- **Two-component mixture ($72\%$ explained):** Label $Z \sim \mathrm{Bernoulli}(0.2)$ selects $\mathcal{N}(3, 1)$ vs. $\mathcal{N}(-1, 1)$. Within-group variance is $1$; between-group variance is $0.2(0.8)(3 - (-1))^2 = 2.56$ (total $3.56$).
+:::
 
-- Dart: $\mathbb{E}[XY]=0$ by symmetry, so $\textrm{Cov}=0$, yet dependent.
-- Independent implies $\textrm{Cov}=0$; the converse fails.
-- $Y$ in cents instead of dollars: every covariance $\times100$.
+::: {.col}
+Simulating $10^6$ mixture draws confirms that Eve's law holds *exactly* for the empirical sample itself:
+
+@mdl-random-variables-conditional-expectation
+:::
+:::
+:::
+
+::: {.slide title="Covariance: Measuring Linear Co-Movement"}
+[Bivariate Second Moment]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- The **covariance** averages the product of deviations from the two means:
+  $$\sigma_{XY} = \mathrm{Cov}(X, Y) = \mathbb{E}\bigl[(X - \mu_X)(Y - \mu_Y)\bigr] = \mathbb{E}[XY] - \mu_X\mu_Y$$
+- **Bilinearity & shift invariance:**
+  - $\mathrm{Cov}(X, X) = \mathrm{Var}(X)$
+  - $\mathrm{Cov}(cX + d, Y) = c\,\mathrm{Cov}(X, Y)$
+  - $\mathrm{Cov}(X + Z, Y) = \mathrm{Cov}(X, Y) + \mathrm{Cov}(Z, Y)$
+- **Scale sensitivity:** Converting $Y$ from dollars to cents multiplies $\mathrm{Cov}(X, Y)$ by $100$ without changing the point cloud's shape.
 :::
 
 ::: {.col .fig}
@@ -1171,37 +1135,41 @@ $\textrm{Cov}(X,Y)=\mathbb{E}[(X-\mu_X)(Y-\mu_Y)]=\mathbb{E}[XY]-\mu_X\mu_Y$
 :::
 :::
 
-::: {.slide title="An Average of n Independent Draws Has Variance σ²/n"}
-[Covariance]{.kicker}
+::: {.slide title="Variance of a Sum and the 1/√n Monte Carlo Rate"}
+[Why Averaging Reduces Noise]{.kicker}
 
-$$\textrm{Var}(X+Y)=\textrm{Var}(X)+\textrm{Var}(Y)+2\,\textrm{Cov}(X,Y)$$
+Expanding the squared deviation of $X + Y$ around $\mu_X + \mu_Y$ yields the general sum rule:
 
-For independent $X_1,\ldots,X_n$ with variance $\sigma^2$ every cross term
-vanishes:
+$$\mathrm{Var}(X + Y) = \mathrm{Var}(X) + \mathrm{Var}(Y) + 2\,\mathrm{Cov}(X, Y), \qquad \mathrm{Var}\!\left(\sum_{i=1}^n X_i\right) = \sum_{i=1}^n \sum_{j=1}^n \mathrm{Cov}(X_i, X_j)$$
 
-$$\textrm{Var}(\bar X_n)=\frac{1}{n^2}\cdot n\sigma^2=\frac{\sigma^2}{n}.$$
-
-- Four times the draws halve the standard deviation.
-- Dart: $\textrm{Var}(R)=\tfrac1{18}$, so $556$ darts give the mean distance
-  to $\pm0.01$.
-
-::: {.d2l-note}
-Needs a finite variance: Cauchy averages never settle.
-:::
+::: {.cols}
+::: {.col}
+- **Independent draws ($\mathrm{Cov}(X_i, X_j) = 0$ for $i \ne j$):**
+  For $n$ independent variables with variance $\sigma^2$, the sum has variance $n\sigma^2$, so the sample mean $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$ satisfies
+  $$\mathrm{Var}(\bar{X}_n) = \frac{n\sigma^2}{n^2} = \frac{\sigma^2}{n} \implies \sigma_{\bar{X}_n} = \frac{\sigma}{\sqrt{n}}$$
+  Halving the error requires **$4\times$** as many samples ($556$ darts to estimate $\mathbb{E}[R]$ within $\pm 0.01$).
 :::
 
-::: {.slide title="Correlation Measures Tightness and Sign, Not Slope"}
-[Correlation]{.kicker}
+::: {.col}
+- **Correlated ensemble predictions ($\mathrm{Corr}(Y_i, Y_j) = \rho$):**
+  With $n$ diagonal terms $\sigma^2$ and $n(n-1)$ off-diagonal terms $\rho\sigma^2$:
+  $$\mathrm{Var}(\bar{Y}_n) = \sigma^2\!\left(\rho + \frac{1 - \rho}{n}\right) \xrightarrow{n \to \infty} \rho\sigma^2$$
+  Positive correlation creates an irreducible variance floor $\rho\sigma^2$ that averaging cannot remove!
+:::
+:::
+:::
+
+::: {.slide title="Correlation Coefficient and Cosine Geometry"}
+[Scale-Free Linear Association]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$\rho=\dfrac{\textrm{Cov}(X,Y)}{\sigma_X\sigma_Y}$ has no units, and
-$-1\le\rho\le1$.
-
-*Proof.* $\textrm{Var}(tX+Y)\ge0$ is a quadratic in $t$ with no two real
-roots, so $\textrm{Cov}^2\le\textrm{Var}(X)\,\textrm{Var}(Y)$. $\blacksquare$
-
-$\rho=\pm1$ only for $Y=cX+d$. $Y=0.5X$ and $Y=2X$ both have $\rho=1$.
+- Dividing by both standard deviations strips away physical units to define the **correlation coefficient**:
+  $$\rho(X, Y) = \frac{\mathrm{Cov}(X, Y)}{\sigma_X \sigma_Y} \in [-1, 1]$$
+- **Proof of $|\rho| \le 1$ (Cauchy–Schwarz):** For every $t \in \mathbb{R}$,
+  $$\mathrm{Var}(tX + Y) = \sigma_X^2 t^2 + 2\,\mathrm{Cov}(X, Y)t + \sigma_Y^2 \ge 0$$
+  A non-negative quadratic has discriminant $\Delta \le 0$, giving $\mathrm{Cov}(X,Y)^2 \le \sigma_X^2\sigma_Y^2$, with $\rho = \pm 1 \iff Y = cX + d$.
+- **Hilbert-space view:** Under inner product $\langle \tilde{X}, \tilde{Y} \rangle = \mathbb{E}[\tilde{X}\tilde{Y}]$, correlation is literally $\cos\angle(\tilde{X}, \tilde{Y})$.
 :::
 
 ::: {.col .fig}
@@ -1210,49 +1178,45 @@ $\rho=\pm1$ only for $Y=cX+d$. $Y=0.5X$ and $Y=2X$ both have $\rho=1$.
 :::
 :::
 
-::: {.slide title="Check: Cov(X, X²) for a Symmetric X? Independent?"}
-[Check]{.kicker}
+::: {.slide title="Pitfall: Uncorrelated Does Not Mean Independent"}
+[Three Classic Counterexamples]{.kicker}
 
-Let $X$ be symmetric about $0$ with finite $\mathbb{E}[X^4]$. What is
-$\textrm{Cov}(X,X^2)$? Are $X$ and $X^2$ independent?
+If $X \perp Y$, the joint density factorizes and $\mathbb{E}[XY] = \mathbb{E}[X]\mathbb{E}[Y]$, so $\mathrm{Cov}(X, Y) = 0$. However, zero covariance only rules out a *linear* trend—nonlinear dependence can remain complete:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\mathbb{E}[X^3]-\mathbb{E}[X]\,\mathbb{E}[X^2]=0-0=0$. Not
-independent (unless $X^2$ is constant): $X^2$ is a function of $X$.
-Uncorrelated is not independent.
-:::
-:::
-:::
+| Counterexample | Construction | Why $\mathrm{Cov}(X, Y) = 0$ | Why $X$ and $Y$ Are Dependent |
+| :--- | :--- | :--- | :--- |
+| **1. Circular disk** | Dart $(X, Y)$ uniform on $x^2 + y^2 \le 1$ | $\iint_{\text{disk}} xy\,dx\,dy = 0$ by odd symmetry | $Y = 0.9$ forces $\|X\| \le 0.44$ |
+| **2. Quadratic curve** | $X \sim \mathcal{N}(0, 1)$ and $Y = X^2$ | $\mathbb{E}[X^3] - \mathbb{E}[X]\mathbb{E}[X^2] = 0 - 0 = 0$ | $Y$ is a deterministic function of $X$ |
+| **3. Random-sign normal** | $X \sim \mathcal{N}(0, 1)$, $S \in \{\pm 1\}$ fair, $Y = SX$ | $\mathbb{E}[SX^2] = \mathbb{E}[S]\mathbb{E}[X^2] = 0 \cdot 1 = 0$ | Both $X, Y \sim \mathcal{N}(0, 1)$, yet $\|Y\| = \|X\|$ always! |
 
-::: {.slide title="The Covariance Matrix Gives the Variance in Every Direction"}
-[Covariance matrix]{.kicker}
-
-For a random vector $\mathbf X$ with mean $\boldsymbol\mu$:
-$\boldsymbol\Sigma=\mathbb{E}[(\mathbf X-\boldsymbol\mu)(\mathbf X-\boldsymbol\mu)^\top]$,
-$\Sigma_{ij}=\textrm{Cov}(X_i,X_j)$.
-
-$$\textrm{Var}(\mathbf a^\top\mathbf X)=\mathbf a^\top\boldsymbol\Sigma\,\mathbf a\ge0$$
-
-- Symmetric and positive semidefinite, because a variance is never negative.
-- Dart: $\boldsymbol\Sigma=\operatorname{diag}(\tfrac14,\tfrac14)$.
-
-::: {.d2l-note}
-Its eigenvectors are the principal components of the data.
+::: {.d2l-note .warn}
+**Lesson for representation learning:** Linear whitening (decorrelating features so $\boldsymbol{\Sigma} = \mathbf{I}$) removes second-order linear correlations but does not make features statistically independent unless the vector is *jointly* Gaussian.
 :::
 :::
 
-::: {.slide title="A Map Divides the Density by Its Local Stretch"}
-[Transformations]{.kicker}
+::: {.slide title="The Covariance Matrix and Directional Variance"}
+[Second Moments of Random Vectors]{.kicker}
+
+For a random vector $\mathbf{X} = (X_1, \dots, X_n)^\top$ with mean vector $\boldsymbol{\mu} = \mathbb{E}[\mathbf{X}]$, the $n \times n$ **covariance matrix** collects all variances on its diagonal and pairwise covariances off-diagonal:
+
+$$\boldsymbol{\Sigma} = \mathbb{E}\bigl[(\mathbf{X} - \boldsymbol{\mu})(\mathbf{X} - \boldsymbol{\mu})^\top\bigr], \qquad \Sigma_{ij} = \mathrm{Cov}(X_i, X_j)$$
+
+- **Symmetry:** $\boldsymbol{\Sigma}^\top = \boldsymbol{\Sigma}$ because $\mathrm{Cov}(X_i, X_j) = \mathrm{Cov}(X_j, X_i)$.
+- **Positive semidefiniteness ($\boldsymbol{\Sigma} \succeq \mathbf{0}$):** Projecting $\mathbf{X}$ onto any fixed direction vector $\mathbf{a} \in \mathbb{R}^n$ produces a scalar random variable $\mathbf{a}^\top \mathbf{X}$ whose variance is the quadratic form:
+  $$\mathrm{Var}(\mathbf{a}^\top \mathbf{X}) = \mathbb{E}\bigl[\mathbf{a}^\top (\mathbf{X} - \boldsymbol{\mu})(\mathbf{X} - \boldsymbol{\mu})^\top \mathbf{a}\bigr] = \mathbf{a}^\top \boldsymbol{\Sigma}\mathbf{a} \ge 0$$
+- **Spectral interpretation:** The eigenvectors of $\boldsymbol{\Sigma}$ point along the principal axes of variance (PCA), while for our symmetric dart on the unit disk, $\boldsymbol{\Sigma} = \mathrm{diag}(1/4, 1/4)$.
+:::
+
+::: {.slide title="1D Change of Variables: Conservation of Probability"}
+[How Transformations Reshape a Density]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$Y=g(X)$, $g$ one-to-one. An interval keeps its probability:
-$p_Y(y)\,\lvert\Delta y\rvert=p_X(x)\,\lvert\Delta x\rvert$, so
-
-$$p_Y(y)=p_X\bigl(g^{-1}(y)\bigr)\left|\frac{dg^{-1}}{dy}(y)\right|.$$
-
-Dart: $R=\sqrt U$, $g^{-1}(r)=r^2$, so $p_R(r)=1\cdot2r$.
+- If $X$ has density $p_X$ and $Y = g(X)$ for a smooth, strictly monotone map $g$, why is $p_Y(y) \ne p_X(g^{-1}(y))$?
+- **Probability mass—not density height—is conserved:** An interval of width $\Delta x$ carries probability $p_X(x)\Delta x$ and stretches to width $\Delta y \approx |g'(x)|\Delta x$:
+  $$p_Y(y)\,\Delta y \approx p_X(x)\,\Delta x \implies p_Y(y) = \frac{p_X(x)}{|g'(x)|}$$
+- **Formal 1D Rule:** On the image interval $g(I)$,
+  $$p_Y(y) = p_X\bigl(g^{-1}(y)\bigr)\left|\frac{dg^{-1}}{dy}(y)\right|$$
 :::
 
 ::: {.col .fig}
@@ -1261,76 +1225,85 @@ Dart: $R=\sqrt U$, $g^{-1}(r)=r^2$, so $p_R(r)=1\cdot2r$.
 :::
 :::
 
-::: {.slide title="The Log-Normal Peaks at 1/e, Not Where the Naive Guess Puts It"}
-[Transformations]{.kicker}
+::: {.slide title="Worked Example: Log-Normal vs. Naive Plug-In"}
+[Why the Jacobian Factor 1/y Shifts the Peak]{.kicker}
 
-$Y=e^X$, $X\sim\mathcal N(0,1)$: $p_Y(y)=\dfrac{1}{y\sqrt{2\pi}}e^{-(\log y)^2/2}$,
-peak at $e^{-1}\approx0.37$. The naive $p_X(\log y)$ peaks at $1$ and has area
-$e^{1/2}\approx1.65$: not a density.
+::: {.cols .vc}
+::: {.col}
+- Let $X \sim \mathcal{N}(0, 1)$ and $Y = e^X > 0$. Here $g^{-1}(y) = \log y$ and $\left|\frac{dg^{-1}}{dy}\right| = \frac{1}{y}$, yielding the **log-normal** density:
+  $$p_Y(y) = \frac{1}{y\sqrt{2\pi}}\exp\!\left(-\frac{(\log y)^2}{2}\right), \quad y > 0$$
+- **Peak shift:** Differentiating $\log p_Y(y) = -\log y - \frac{1}{2}(\log y)^2 + C$ gives mode **$y = e^{-1} \approx 0.368$**.
+- **Failure of naive $p_X(\log y)$:** Omitting $1/y$ puts the peak at $y = 1$ and encloses total area $\int p_X(x)e^x\,dx = \mathbb{E}[e^X] = e^{1/2} \approx 1.65 \ne 1$.
+:::
 
+::: {.col .fig}
 @!random-variables-change-of-variables
 :::
-
-::: {.slide title="In n Dimensions the Stretch Is a Jacobian Determinant"}
-[Transformations]{.kicker}
-
-$\mathbf Y=g(\mathbf X)$, $g$ smooth and invertible, $J_g$ its Jacobian matrix:
-
-$$\log p_{\mathbf Y}(\mathbf y)=\log p_{\mathbf X}(\mathbf x)-\log\lvert\det J_g(\mathbf x)\rvert,\qquad\mathbf x=g^{-1}(\mathbf y).$$
-
-- $\mathbf Y=\operatorname{diag}(2,3)\,\mathbf X$: a unit square becomes a
-  $2\times3$ rectangle, so the density is divided by $6$.
-- Composed maps: the log-determinants add.
-
-::: {.d2l-note}
-Normalizing flows stack invertible layers with cheap log-determinants and so
-compute exact likelihoods.
 :::
 :::
 
-::: {.slide title="In Polar Coordinates the Dart Is Two Independent Variables"}
-[Transformations]{.kicker}
+::: {.slide title="Multivariate Change of Variables and Normalizing Flows"}
+[Jacobian Determinants in Deep Generative Models]{.kicker}
 
-$(x,y)=(r\cos\theta,r\sin\theta)$ has Jacobian determinant $r$:
+In $\mathbb{R}^n$, a smooth invertible transformation $\mathbf{Y} = g(\mathbf{X})$ scales local volume around $\mathbf{x} = g^{-1}(\mathbf{y})$ by the absolute **Jacobian determinant** $|\det J_g(\mathbf{x})|$:
 
-$$p_{R,\Theta}(r,\theta)=\frac1\pi\cdot r=\underbrace{2r}_{\textrm{distance}}\cdot\underbrace{\frac1{2\pi}}_{\textrm{angle}}.$$
+$$p_{\mathbf{Y}}(\mathbf{y}) = p_{\mathbf{X}}\bigl(g^{-1}(\mathbf{y})\bigr)\,\bigl|\det J_{g^{-1}}(\mathbf{y})\bigr| \iff \log p_{\mathbf{Y}}(\mathbf{y}) = \log p_{\mathbf{X}}(\mathbf{x}) - \log\bigl|\det J_g(\mathbf{x})\bigr|$$
 
-- The joint density factorizes: $R\perp\Theta$, with $\Theta$ uniform.
-- The density $2r$ again, now from a Jacobian.
-
-::: {.d2l-note}
-$X$ and $Y$ were dependent. Independence is a property of the coordinates we
-choose, not only of the dart.
-:::
+::: {.cols}
+::: {.col}
+- **Geometric intuition:** The linear map $\mathbf{Y} = \mathrm{diag}(2, 3)\mathbf{X}$ stretches a unit square into a $2 \times 3$ rectangle of area $\det \mathbf{A} = 6$, dividing the density by $6$.
+- **Composing layers:** By $\det(J_2 J_1) = (\det J_2)(\det J_1)$, stacking invertible maps $g = g_L \circ \dots \circ g_1$ subtracts $\sum_{\ell=1}^L \log|\det J_{g_\ell}|$.
 :::
 
-::: {.slide title="Check: the Density of U² for a Uniform U?"}
-[Check]{.kicker}
-
-$U$ is uniform on $[0,1]$ and $Y=U^2$. What is the density of $Y$? Is it
-bounded?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $g^{-1}(y)=\sqrt y$ with derivative $1/(2\sqrt y)$, so
-$p_Y(y)=1/(2\sqrt y)$ on $(0,1)$. It is unbounded near $0$, where squaring
-compresses, and still integrates to $[\sqrt y]_0^1=1$.
+::: {.col}
+- **Normalizing Flows (e.g., RealNVP):** Map simple noise $\mathbf{X} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ through triangular affine coupling layers:
+  $$y_1 = x_1, \qquad y_2 = x_2 e^{s(x_1)} + t(x_1)$$
+  Here $J_g$ is lower triangular with diagonal $(1, e^{s(x_1)})$, so $\log|\det J_g(\mathbf{x})| = s(x_1)$ in $O(1)$ time regardless of how complex the neural networks $s, t$ are!
 :::
 :::
 :::
 
-::: {.slide title="One Dart Showed Every Result of the Deck"}
-[Wrap-up]{.kicker}
+::: {.slide title="Coordinate Choice: The Dart in Polar Coordinates"}
+[Unknotting Dependence via a Jacobian]{.kicker}
 
-- Joint $1/\pi$; marginal a semicircle; $X\mid Y$ uniform on a chord.
-- Dependent, yet $\mathbb{E}[X\mid Y]=0$ and $\textrm{Cov}(X,Y)=0$:
-  $\textrm{Var}(X)=\tfrac14$ is all within-strip.
-- $\mathbb{E}[X\mid Y]$ is the best squared-error predictor; a variance splits
-  into within and between.
-- $\textrm{Var}(\bar X_n)=\sigma^2/n$ for independent draws.
-- $R=\sqrt U$ has density $2r$; in polar coordinates $R\perp\Theta$.
+Express the dart's Cartesian position $(x, y)$ in polar coordinates $(r, \theta)$ via $(x, y) = (r\cos\theta, r\sin\theta)$:
 
-::: {.d2l-note}
-Next: the distributions that have names, built with these tools.
+$$J_g(r, \theta) = \begin{pmatrix} \frac{\partial x}{\partial r} & \frac{\partial x}{\partial \theta} \\ \frac{\partial y}{\partial r} & \frac{\partial y}{\partial \theta} \end{pmatrix} = \begin{pmatrix} \cos\theta & -r\sin\theta \\ \sin\theta & r\cos\theta \end{pmatrix} \implies \det J_g(r, \theta) = r(\cos^2\theta + \sin^2\theta) = r$$
+
+- **Applying the multivariate change-of-variables rule** from $(x, y)$ (where $p_{X,Y} = 1/\pi$) to $(r, \theta) \in [0, 1] \times [0, 2\pi)$:
+  $$p_{R,\Theta}(r, \theta) = p_{X,Y}(r\cos\theta, r\sin\theta)\,\bigl|\det J_g(r, \theta)\bigr| = \frac{1}{\pi}\cdot r = \underbrace{2r}_{p_R(r)} \cdot \underbrace{\frac{1}{2\pi}}_{p_\Theta(\theta)}$$
+- **Factorization into independent coordinates:** In Cartesian coordinates, $X$ and $Y$ were coupled by the circular rim; in polar coordinates, the joint density factors cleanly into $R \perp \Theta$ with $p_R(r) = 2r$ and $\Theta \sim \mathrm{Unif}[0, 2\pi)$.
+:::
+
+::: {.slide title="Concept Check: Conditioning, Variance & Jacobians"}
+[Check Your Understanding]{.kicker}
+
+Test your grasp of joint distributions and density transformations on three problems:
+
+1. **Explained variance ($R^2$) ceiling:** Using Eve's law and the optimal predictor decomposition, what is the maximum $R^2 = 1 - \frac{\mathbb{E}[(X - h(Y))^2]}{\mathrm{Var}(X)}$ any model $h(Y)$ can achieve when predicting the dart's $X$ from $Y$?
+2. **Minimum correlation of $n$ exchangeable variables:** If $Y_1, \dots, Y_n$ each have variance $\sigma^2$ and pairwise correlation $\rho$, use $\mathrm{Var}(\sum_{i=1}^n Y_i) \ge 0$ to find the smallest possible negative correlation $\rho$.
+3. **Unbounded transformed density:** If $U \sim \mathrm{Unif}(0, 1)$, what is the density $p_Y(y)$ of $Y = U^2$ on $(0, 1)$? Why does it blow up near $y = 0$ while still integrating to $1$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $R^2 \le \frac{\mathrm{Var}(\mathbb{E}[X \mid Y])}{\mathrm{Var}(X)}$. For the dart, $\mathbb{E}[X \mid Y] = 0$ is constant, so $\mathrm{Var}(\mathbb{E}[X \mid Y]) = 0$ and the ceiling is **$R^2 = 0$** for *every* predictor $h(Y)$.
+2. $\mathrm{Var}(\sum_{i=1}^n Y_i) = n\sigma^2(1 + (n-1)\rho) \ge 0 \implies \boldsymbol{\rho \ge -\frac{1}{n-1}}$ (attained when $\sum_{i=1}^n Y_i = 0$, e.g., $Y_2 = -Y_1$ gives $\rho = -1$ for $n=2$).
+3. $g^{-1}(y) = \sqrt{y}$ has derivative $\frac{1}{2\sqrt{y}}$, so **$p_Y(y) = \frac{1}{2\sqrt{y}}$** on $(0, 1)$. Squaring strongly compresses intervals near $0$, piling probability density to $\infty$ as $y \downarrow 0$, yet $\int_0^1 \frac{1}{2\sqrt{y}}\,dy = [\sqrt{y}]_0^1 = 1$.
 :::
 :::
+
+::: {.slide title="Summary: Joint Distributions and Transformations"}
+[Key Takeaways]{.kicker}
+
+| Operation / Theorem | Mathematical Formula | Dart / Worked Benchmark | Deep Learning Role |
+| :--- | :--- | :--- | :--- |
+| **Marginalization** | $p_X(x) = \int_{-\infty}^\infty p_{X,Y}(x, y)\,dy$ | Flat disk $1/\pi \to$ semicircle $\frac{2}{\pi}\sqrt{1-x^2}$ | Integrating out latent variables |
+| **Conditioning & Independence** | $p_{X\mid Y}(x\mid y) = \frac{p_{X,Y}(x,y)}{p_Y(y)}$; $X \perp Y \iff p_{X,Y} = p_X p_Y$ | Uniform on chord $\|x\| \le \sqrt{1-y^2}$ (dependent) | Discriminative & autoregressive models |
+| **Optimal MSE Predictor** | $\mathbb{E}[(X-h(Y))^2] = \mathbb{E}[\mathrm{Var}(X\mid Y)] + \mathbb{E}[(\mathbb{E}[X\mid Y]-h(Y))^2]$ | Best predictor $h^\star(Y) = \mathbb{E}[X \mid Y]$ | Neural networks trained with $L_2$ loss |
+| **Law of Total Variance** | $\mathrm{Var}(X) = \mathbb{E}[\mathrm{Var}(X \mid Y)] + \mathrm{Var}(\mathbb{E}[X \mid Y])$ | Mixture: $1.00\text{ (within)} + 2.56\text{ (between)} = 3.56$ | ANOVA, $R^2$ ceiling & noise decomposition |
+| **Covariance & Sum Variance** | $\mathrm{Cov}(X,Y) = \mathbb{E}[XY]-\mu_X\mu_Y$; $\mathrm{Var}(\bar{X}_n) = \sigma^2/n$ | $\mathrm{Cov}(X,Y)=0$ on disk despite dependence | Monte Carlo $\sigma/\sqrt{n}$ & ensemble diversity |
+| **Covariance Matrix $\boldsymbol{\Sigma}$** | $\boldsymbol{\Sigma} = \mathbb{E}[(\mathbf{X}-\boldsymbol{\mu})(\mathbf{X}-\boldsymbol{\mu})^\top]$; $\mathrm{Var}(\mathbf{a}^\top\mathbf{X}) = \mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a} \ge 0$ | Disk $\boldsymbol{\Sigma} = \mathrm{diag}(1/4, 1/4)$ | PCA, feature whitening & Mahalanobis metrics |
+| **Jacobian Density Rule** | $\log p_{\mathbf{Y}}(\mathbf{y}) = \log p_{\mathbf{X}}(\mathbf{x}) - \log\|\det J_g(\mathbf{x})\|$ | Log-normal peak $e^{-1}$; polar $p_{R,\Theta} = 2r \cdot \frac{1}{2\pi}$ | Normalizing flows & reparameterized densities |
+:::
+

@@ -961,228 +961,315 @@ and the standard normal normalizing constant $\sqrt{2\pi}$.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §23.4]{.kicker}
+[Dive into Deep Learning · §34.6]{.kicker}
 
-Integral Calculus<br>**slices · the fundamental theorem · change of variables · the Gaussian integral**
+Integral Calculus<br>**Riemann sums · Fundamental Theorem · improper integrals · integration by parts & substitution · Fubini's theorem · Jacobian determinants · Gaussian integral**
 :::
 :::
 
-::: {.slide title="A Density of 0.40 at Zero, yet P(Z = 0) = 0"}
-[The problem]{.kicker}
+::: {.slide title="Why Continuous Probabilities Require Integration"}
+[Motivation]{.kicker}
 
-The standard normal has density $p(z)=e^{-z^2/2}/\sqrt{2\pi}$.
+Every continuous probability, expected loss, and normalizing constant in machine learning is an area or volume under a density function:
 
-- $p(0)=0.40$, yet no single point has positive probability.
-- Intervals do: $P(-1\le Z\le 1)\approx 0.68$, the **area** under $p$.
-- The constant $1/\sqrt{2\pi}$ makes the total area $1$.
-- Training through sampling needs the **derivative** of such an area.
-
-::: {.d2l-note .warn}
-Where does $1/\sqrt{2\pi}$ come from, and how is $0.68$ computed?
-:::
+::: {.cols}
+::: {.col}
+- **The standard normal paradox:** A standard normal random variable $Z \sim \mathcal{N}(0, 1)$ has density $p(z) = \frac{1}{\sqrt{2\pi}}e^{-z^2/2}$. At $z = 0$ the density peaks at $p(0) \approx 0.40$, yet the probability of landing on the single point $0$ is $P(Z = 0) = 0$.
+- **Intervals carry probability:** Because $p(z)$ measures probability *per unit length*, only intervals enclose positive area: $P(-1 \le Z \le 1) = \int_{-1}^1 p(z)\,dz \approx 0.683$.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- evaluate an integral by an antiderivative or by a symmetry;
-- predict the error of a grid sum from the slice width;
-- change variables in one and in many dimensions, and integrate the bell curve.
-
-**Running examples:** $Z\sim\mathcal N(0,1)$; $\int_0^2\frac{x}{1+x^2}dx$.
-
-**The idea:** thin slices add up; undo a derivative to add them.
+::: {.col}
+- **Two foundational questions:**
+  1. How do we add up a continuously varying height $f(x)$ over an interval $[a, b]$ without evaluating infinite sums by hand?
+  2. Where does the normalizing constant $\sqrt{2\pi} = \int_{-\infty}^\infty e^{-z^2/2}\,dz$ come from when $e^{-z^2/2}$ has no elementary antiderivative?
+:::
+:::
 :::
 
-::: {.slide title="Integration Turns Rates Back into Totals"}
-[Where this fits]{.kicker}
+::: {.slide title="Riemann Sums: Slicing Area into Thin Rectangles"}
+[The Definite Integral]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Single Variable Calculus | derivative, Taylor, corners |
-| Multivariable Calculus | gradient, Hessian, critical points |
-| The Chain Rule on Computational Graphs | sum over paths, backward pass |
-| Matrix Calculus | Jacobians, a layer's backward rule |
-| Automatic Differentiation | forward and reverse mode |
-| **Integral Calculus** | **areas, change of variables, the Gaussian integral** |
-| Expectations and Their Gradients | score-function and pathwise estimators |
-:::
-
-::: {.col .narrow}
-- **Uses:** derivatives, chain rule, determinants.
-- **Skips:** measure theory, Stokes' theorem.
-:::
-:::
-:::
-
-::: {.slide title="Thin Slices Add Up: the Integral Is a Limit of Sums"}
-::: {.cols .vc}
-::: {.col}
-$\int_0^1x^2\,dx$ with $N$ slices tagged at the left end:
-
-$$\sum_{i=0}^{N-1}\tfrac1N\bigl(\tfrac iN\bigr)^2=\tfrac13-\tfrac1{2N}+\tfrac1{6N^2}$$
-
-- $N=10$: $0.285$; $100$: $0.3284$; $1000$: $0.3328$
-- limit $\tfrac13$, error $\approx\tfrac1{2N}$
+- **Left-endpoint rectangles on $f(x) = x^2$ over $[0, 1]$:** Dividing $[0, 1]$ into $N$ slices of width $\epsilon = 1/N$ gives the exact closed-form sum:
+  $$\sum_{i=0}^{N-1} \frac{1}{N}\left(\frac{i}{N}\right)^2 = \frac{1}{3} - \frac{1}{2N} + \frac{1}{6N^2}$$
+  which converges to $\tfrac{1}{3}$ with first-order error $\approx \tfrac{1}{2N} = \tfrac{\epsilon}{2}$.
+- **General Riemann integral:** A bounded function $f$ is **Riemann integrable** on $[a, b]$ if every tagged partition sum $\sum_{i=1}^N f(\xi_i)(x_i - x_{i-1})$ converges to the same limit $\int_a^b f(x)\,dx$ as the maximum slice width $\|P\| \to 0$.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-cal-riemann.svg)
+![](../img/mdl-cal-riemann.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="The Left Rule's Error Falls Like ε"}
-$\int_0^2\frac{x}{1+x^2}\,dx=\tfrac12\log5$, slices of width $\epsilon$:
+::: {.slide title="First-Order Discretization Error of Left Sums"}
+[Convergence Rate]{.kicker}
+
+On our running integral $\int_0^2 \frac{x}{1 + x^2}\,dx = \tfrac{1}{2}\log 5 \approx 0.804719$, cutting the slice width $\epsilon$ tenfold reduces the left-sum error tenfold:
 
 @!integral-riemann-converge
 
 ::: {.d2l-note}
-Error $\approx\tfrac\epsilon2\bigl(f(a)-f(b)\bigr)=-0.2\,\epsilon$: half the
-slice width times the change of $f$ from end to end.
+**Why the error equals $\tfrac{\epsilon}{2}(f(a) - f(b)) = -0.2\epsilon$:** Summing the triangular excess $\tfrac{\epsilon^2}{2}f'(x_i)$ above each left rectangle yields $\tfrac{\epsilon}{2}\int_a^b f'(x)\,dx = \tfrac{\epsilon}{2}(f(b) - f(a))$.
 :::
 :::
 
-::: {.slide title="Area Grows at the Height of the Curve, so ∫f = G(b) − G(a)"}
+::: {.slide title="Signed Area and Monotonicity of the Integral"}
+[Integral Properties]{.kicker}
+
 ::: {.cols .vc}
 ::: {.col}
-- Area-so-far $F(x)=\int_a^xf$; a strip of width $\epsilon$ adds
-  $\approx\epsilon f(x)$, so $F'=f$.
-- Any $G$ with $G'=f$: $\int_a^bf=G(b)-G(a)$.
-- $G=\tfrac12\log(1+x^2)$ gives $\tfrac12\log 5$.
+- **Signed area above and below the axis:** Lobes below the horizontal axis ($f(\xi_i) < 0$) enter Riemann sums with negative height and subtract from the total area.
+- **Oriented limits:** Integrating from right to left negates slice widths, so $\int_b^a f(x)\,dx = -\int_a^b f(x)\,dx$.
+- **Monotonicity:** If $f(x) \le g(x)$ everywhere on $[a, b]$, every tagged sum of $f$ is bounded by that of $g$, so $\int_a^b f(x)\,dx \le \int_a^b g(x)\,dx$.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-cal-ftc-sliver.svg)
+![](../img/mdl-cal-signed-area.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Interval Additivity and the Area-So-Far Function"}
+[Accumulated Area]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Additivity over subintervals:** Any partition containing $b \in [a, c]$ splits into partitions of $[a, b]$ and $[b, c]$, giving $\int_a^c f\,dx = \int_a^b f\,dx + \int_b^c f\,dx$.
+- **The area-so-far function $F(x)$:** Fix a base point $a$ and treat the upper endpoint $x$ as a variable:
+  $$F(x) = \int_a^x f(y)\,dy$$
+- **Every integral is a difference of $F$:** By additivity, the area over $[x_1, x_2]$ is simply $\int_{x_1}^{x_2} f(x)\,dx = F(x_2) - F(x_1)$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-sub-area.svg){width=100%}
+:::
 :::
 :::
 
-[Needs $G'=f$ on all of $[a,b]$: $\int_{-1}^1x^{-2}dx\ne[-1/x]_{-1}^1=-2$.]{.small}
+::: {.slide title="The Fundamental Theorem of Calculus (FTC)"}
+[Rate of Area Accumulation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Theorem (FTC Part 1):** Let $f$ be Riemann integrable on $[a, b]$ and define $F(x) = \int_a^x f(y)\,dy$. At any interior point $x \in (a, b)$ where $f$ is continuous, $F$ is differentiable and
+  $$\frac{dF}{dx}(x) = f(x)$$
+- **Squeeze proof via monotonicity & additivity:** Nudging $x \mapsto x+\epsilon$ ($\epsilon > 0$) adds a single sliver $F(x+\epsilon) - F(x) = \int_x^{x+\epsilon} f(y)\,dy$. Setting $m_\epsilon = \inf_{[x, x+\epsilon]} f$ and $M_\epsilon = \sup_{[x, x+\epsilon]} f$, monotonicity traps the sliver between two rectangles:
+  $$m_\epsilon \le \frac{F(x+\epsilon) - F(x)}{\epsilon} \le M_\epsilon$$
+  By continuity of $f$ at $x$, both $m_\epsilon, M_\epsilon \to f(x)$ as $\epsilon \to 0$.
 :::
 
-::: {.slide title="∫₁^∞ x^(−s) dx Is Finite Only for s > 1"}
-$$\int_1^b x^{-s}dx=\frac{b^{1-s}-1}{1-s}\ \to\ \frac1{s-1}\ (s>1),\quad\infty\ (s\le1)$$
+::: {.col .fig}
+![](../img/mdl-cal-ftc-sliver.svg){width=100%}
+:::
+:::
+:::
 
-$\int_0^\infty e^{-x}dx=1$ by exact partials and by left sums, $\epsilon=10^{-3}$:
+::: {.slide title="The Evaluation Rule and Antiderivative Pitfalls"}
+[Computing Integrals]{.kicker}
+
+The Fundamental Theorem converts integration (an infinite limit of sums) into **antidifferentiation** (reading the derivative table backward):
+
+::: {.d2l-note .rule}
+**Evaluation Rule (FTC Part 2):** If $f$ is continuous on $[a, b]$ and $G$ is any antiderivative of $f$ ($G'(x) = f(x)$ for **all** $x \in [a, b]$), then
+$$\int_a^b f(x)\,dx = G(b) - G(a)$$
+:::
+
+- **Why any antiderivative $G$ works:** Since $(G - F)' = f - f = 0$ on $(a, b)$, the Mean Value Theorem (§34.1) implies $G(x) - F(x) = C$ is constant, so $G(b) - G(a) = F(b) - F(a) = \int_a^b f(x)\,dx$.
+- **Running example solved in one line:** For $f(x) = \frac{x}{1+x^2}$, the chain rule gives $\frac{d}{dx}\bigl[\tfrac{1}{2}\log(1+x^2)\bigr] = \frac{x}{1+x^2}$, so $\int_0^2 \frac{x}{1+x^2}\,dx = \tfrac{1}{2}\log 5 - \tfrac{1}{2}\log 1 = \tfrac{1}{2}\log 5$.
+- **Critical pitfall ($G' = f$ must hold on all of $[a, b]$):** Writing $\int_{-1}^1 x^{-2}\,dx = [-1/x]_{-1}^1 = -2$ is false (and negative for a positive integrand!) because $-1/x$ blows up at $x = 0 \in [-1, 1]$.
+:::
+
+::: {.slide title="Verifying the Area-So-Far Function Across [0, 2]"}
+[Numerical Check]{.kicker}
+
+Comparing the cumulative left-endpoint sum $F(x) = \int_0^x \frac{y}{1+y^2}\,dy$ against $G(x) - G(0) = \tfrac{1}{2}\log(1+x^2)$ across the entire grid $[0, 2]$ confirms that the maximum gap sits at $x = 1$ (where $f(1) = \tfrac{1}{2}$ peaks) and equals $\tfrac{\epsilon}{2}f(1) = \tfrac{\epsilon}{4}$:
+
+@!integral-ftc-check
+:::
+
+::: {.slide title="Improper Integrals and Heavy-Tailed Power Laws"}
+[Unbounded Domains & Blow-Ups]{.kicker}
+
+Probability densities on $[a, \infty)$ or $\mathbb{R}$ are integrated by taking limits of finite intervals, $\int_a^\infty f(x)\,dx = \lim_{b \to \infty} \int_a^b f(x)\,dx$ (and on $(-\infty, \infty)$, **both** tails $\int_{-\infty}^0$ and $\int_0^\infty$ must converge independently):
+
+| Power-Law Regime ($s > 0$) | Definite Integral Before Limit | Convergence Threshold & Value |
+| :--- | :--- | :--- |
+| **Unbounded tail $\int_1^\infty x^{-s}\,dx$** | $\int_1^b x^{-s}\,dx = \dfrac{b^{1-s} - 1}{1 - s}$ ($\log b$ if $s=1$) | **Converges iff $s > 1$** to $\dfrac{1}{s - 1}$ (diverges for $s \le 1$) |
+| **Endpoint blow-up $\int_0^1 x^{-s}\,dx$** | $\int_a^1 x^{-s}\,dx = \dfrac{1 - a^{1-s}}{1 - s}$ ($-\log a$ if $s=1$) | **Converges iff $s < 1$** to $\dfrac{1}{1 - s}$ (diverges for $s \ge 1$) |
+
+::: {.d2l-note .warn}
+**Heavy-tailed distributions ($p(x) \propto x^{-s}$ as $x \to \infty$):** A power-law tail is normalizable ($\int_1^\infty x^{-s}dx < \infty$) only for $s > 1$, has a finite mean ($\int_1^\infty x \cdot x^{-s}dx < \infty$) only for $s > 2$, and has a finite variance ($\int_1^\infty x^2 \cdot x^{-s}dx < \infty$) only for $s > 3$. The Cauchy density $\frac{1}{\pi(1+x^2)}$ ($s = 2$) is normalized but has **no defined mean**!
+:::
+:::
+
+::: {.slide title="Truncation Error vs. Discretization Error"}
+[Numerical Quadrature Pitfall]{.kicker}
+
+Approximating an improper integral $\int_0^\infty e^{-x}\,dx = 1$ on a finite grid $[0, b]$ with slice width $\epsilon = 10^{-3}$ introduces two independent errors—domain **truncation error** $e^{-b}$ and slice **discretization error** $\tfrac{\epsilon}{2} = 0.0005$:
 
 @!integral-improper
 
 ::: {.d2l-note}
-Truncation error $e^{-b}$; discretization error $\tfrac\epsilon2$.
-Each knob fixes one error only.
+Increasing the cutoff $b$ from $1$ to $20$ drives the truncation error $e^{-b}$ below $10^{-8}$, yet the left sum plateaus at $1.000500$: pushing $b \to \infty$ never reduces the discretization bias $\tfrac{\epsilon}{2}(f(0) - 0) = 0.0005$.
 :::
 :::
 
-::: {.slide title="Integration by Parts Moves the Derivative to the Other Factor"}
-$$\int_a^b u\,v'\,dx = \bigl[\,u\,v\,\bigr]_a^b - \int_a^b u'\,v\,dx$$
+::: {.slide title="Integration by Parts and Stein's Identity"}
+[Reversing the Product Rule]{.kicker}
 
-- $u=x$, $v'=e^{-x}$: $\int_0^\infty xe^{-x}dx=0+1=1$.
-- Bell weight $w=e^{-z^2/2}$, $w'=-zw$:
-  $\int g'\,w\,dz=\int z\,g\,w\,dz$.
-- $g=z$: the bell-weighted mean of $z^2$ is $1$; $g=z^3$: of $z^4$, $3$.
+Integrating the product rule $(uv)' = u'v + uv'$ across $[a, b]$ shifts a derivative from one factor to the other at the cost of a boundary term:
+
+$$\int_a^b u(x)\,v'(x)\,dx = \Bigl[u(x)\,v(x)\Bigr]_a^b - \int_a^b u'(x)\,v(x)\,dx$$
+
+- **Exponential mean:** Setting $u = x$ and $v' = e^{-x}$ ($v = -e^{-x}$) gives $\int_0^\infty x e^{-x}\,dx = [-x e^{-x}]_0^\infty + \int_0^\infty e^{-x}\,dx = 0 + 1 = 1$.
+- **Stein's identity for the Gaussian bell $w(z) = e^{-z^2/2}$:** Because $w'(z) = -z\,w(z)$, integrating $g'(z)w(z)$ by parts when $g(z)w(z) \to 0$ at $\pm\infty$ gives:
+  $$\int_{-\infty}^\infty g'(z)\,w(z)\,dz = \Bigl[g(z)w(z)\Bigr]_{-\infty}^\infty - \int_{-\infty}^\infty g(z)\bigl(-z\,w(z)\bigr)\,dz = \int_{-\infty}^\infty z\,g(z)\,w(z)\,dz$$
+- **Normal moments without a single antiderivative:** For $Z \sim \mathcal{N}(0, 1)$, $\mathbb{E}[g'(Z)] = \mathbb{E}[Z\,g(Z)]$: setting $g(z) = z$ gives $\mathbb{E}[Z^2] = \mathbb{E}[1] = 1$, and setting $g(z) = z^3$ gives $\mathbb{E}[Z^4] = 3\mathbb{E}[Z^2] = 3$!
 :::
 
-::: {.slide title="Check: Two Integrals"}
-[Check]{.kicker}
+::: {.slide title="Change of Variables (Substitution) in 1D"}
+[Reversing the Chain Rule]{.kicker}
 
-1. Is $\int_1^\infty x^{-3/2}\,dx$ finite? If so, what is it?
-2. What is $\int_0^1 x\,e^{-x^2}\,dx$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answers.** (1) $s=\tfrac32>1$: the value is $\frac1{s-1}=2$.
-(2) Substitute $y=x^2$: $\tfrac12\int_0^1e^{-y}dy=\tfrac{1-e^{-1}}2=0.316$.
-:::
-:::
-:::
-
-::: {.slide title="Substitution Is the Chain Rule Reversed: Match the Slivers"}
-$$\int_{u(a)}^{u(b)} f(y)\,dy = \int_a^b f(u(x))\,u'(x)\,dx$$
-
-![](../img/mdl-cal-rect-trans.svg)
-
-Without the factor $x$, $\int e^{-x^2}dx$ has no elementary antiderivative.
-:::
-
-::: {.slide title="A Grid Sum Totals in Any Order: Fubini"}
 ::: {.cols .vc}
 ::: {.col}
-$$\iint_R f = \int_a^b\!\Bigl(\int_c^d f\,dy\Bigr)dx = \int_c^d\!\Bigl(\int_a^b f\,dx\Bigr)dy$$
-
-- products split: $\iint g(x)h(y)=\int g\int h$
-- $\frac{x^2-y^2}{(x^2+y^2)^2}$ on $[0,1]^2$: the orders give $\pm\frac\pi4$
+- **Chain rule read backward:** If $G' = f$, then $(G \circ u)'(x) = f(u(x))\,u'(x)$, so the evaluation rule yields the **1D change-of-variables formula**:
+  $$\int_{u(a)}^{u(b)} f(y)\,dy = \int_a^b f(u(x))\,\frac{du}{dx}\,dx$$
+- **Geometric stretch factor $du/dx$:** A slice of width $\epsilon$ at $x$ maps to an image slice at $y = u(x)$ of width $\Delta y \approx u'(x)\epsilon$ and height $f(u(x))$.
+- **Worked example:** In $\int_0^1 x e^{-x^2}\,dx$, setting $y = u(x) = x^2$ ($dy = 2x\,dx$) supplies the derivative factor $u'(x)$ and yields $\tfrac{1}{2}\int_0^1 e^{-y}\,dy = \tfrac{1 - e^{-1}}{2} \approx 0.316$.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-cal-sum-order.svg)
+![](../img/mdl-cal-rect-trans.svg){width=100%}
 :::
 :::
-
-[Needs $\iint|f|<\infty$, or $f\ge0$ (Tonelli).]{.small}
 :::
 
-::: {.slide title="The Jacobian Determinant Is the Local Volume Factor"}
-$$\int_{\boldsymbol\phi(\Omega)} f(\mathbf y)\,d\mathbf y = \int_{\Omega} f(\boldsymbol\phi(\mathbf x))\,\bigl|\det\mathbf J_{\boldsymbol\phi}(\mathbf x)\bigr|\,d\mathbf x$$
+::: {.slide title="Double Integrals and Volume Under a Surface"}
+[Multiple Integrals]{.kicker}
 
-![](../img/mdl-cal-cov-jacobian.svg)
-
-$(u,v)\mapsto(2u,v)$: $|\det|=2$, so the ellipse $\tfrac{x^2}4+y^2\le1$
-has area $2\pi$.
-
-[$\boldsymbol\phi$ one-to-one and continuously differentiable on the open set
-$\Omega$, with $\det\mathbf J_{\boldsymbol\phi}\ne0$; $f$ absolutely integrable.]{.small}
-:::
-
-::: {.slide title="Polar Coordinates Turn ∫ e^(−x²) dx into √π"}
 ::: {.cols .vc}
 ::: {.col}
-I. $\bigl(\int e^{-x^2}dx\bigr)^2=\iint e^{-x^2-y^2}dx\,dy$ (product rule)
-
-II. $x=r\cos\theta$, $y=r\sin\theta$: $|\det\mathbf J_{\boldsymbol\phi}|=r$
-
-III. $\int_0^{2\pi}\!\int_0^\infty re^{-r^2}dr\,d\theta=2\pi\cdot\tfrac12=\pi$
-
-$$\boxed{\int e^{-x^2}dx=\sqrt\pi,\quad \int e^{-z^2/2}dz=\sqrt{2\pi}}$$
+- **From intervals to rectangles $R = [a, b] \times [c, d]$:** Tile the base plane with $\epsilon \times \epsilon$ squares of area $\epsilon^2$, erect a vertical column of height $f(x_i, y_j)$ on each cell, and take the limit as $\epsilon \to 0$:
+  $$\iint_R f(x, y)\,dx\,dy = \lim_{\epsilon \to 0} \sum_{i, j} \epsilon^2 f(x_i, y_j)$$
+- **Signed volume:** Just as in 1D, regions where $f(x, y) > 0$ contribute positive volume and regions where $f(x, y) < 0$ contribute negative volume.
+- **2D Gaussian bell:** The surface $z = e^{-x^2 - y^2}$ over $[-2, 2]^2$ is rotationally symmetric and factors as $e^{-x^2}e^{-y^2}$.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-cal-polar-cell.svg)
+![](../img/mdl-cal-bell-surface.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Squares Exhaust the Plane: the Volume Tends to π"}
-Grid sum of $e^{-x^2-y^2}$ over $[-b,b]^2$ at $\epsilon=0.01$:
+::: {.slide title="Fubini's Theorem and Factoring Product Integrals"}
+[Iterated Integration]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Fubini's theorem:** If $f$ is **absolutely integrable** on $R$ ($\iint_R |f| < \infty$), or if $f \ge 0$ everywhere (**Tonelli's theorem**), we can compute the double integral by slicing in either order:
+  $$\iint_R f(x,y)\,dx\,dy = \int_a^b\!\left(\int_c^d f(x,y)\,dy\right)dx$$
+- **Product integrands split completely:** When $f(x, y) = g(x)h(y)$, the inner factor pulls out so $\iint_R g(x)h(y)\,dx\,dy = \bigl(\int_a^b g\,dx\bigr)\bigl(\int_c^d h\,dy\bigr)$.
+- **Why $\iint |f| < \infty$ matters:** For $f(x,y) = \frac{x^2-y^2}{(x^2+y^2)^2}$ on $[0,1]^2$, $\iint |f| = \infty$ and the two orders disagree ($+\frac{\pi}{4}$ vs. $-\frac{\pi}{4}$)!
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-sum-order.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Multivariable Change of Variables & Jacobian Det"}
+[Volume Distortion in R^n]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **From 1D stretch $|u'(x)|$ to $n$-D volume factor $|\det \mathbf{J}_{\boldsymbol{\phi}}|$:** Let $\boldsymbol{\phi} : \Omega \to \mathbb{R}^n$ be a $C^1$-diffeomorphism (continuously differentiable, injective, with $\det \mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x}) \ne 0$ everywhere on open $\Omega$).
+- **Change-of-variables theorem:** For any absolutely integrable $f$,
+  $$\int_{\boldsymbol{\phi}(\Omega)} f(\mathbf{y})\,d\mathbf{y} = \int_{\Omega} f(\boldsymbol{\phi}(\mathbf{x}))\,\bigl|\det \mathbf{J}_{\boldsymbol{\phi}}\bigr|\,d\mathbf{x}$$
+- **Geometric meaning:** Locally, $\boldsymbol{\phi}$ acts like its Jacobian matrix $\mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})$, mapping an infinitesimal cube of volume $d\mathbf{x}$ to a parallelepiped of volume $|\det \mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})|\,d\mathbf{x}$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-cov-jacobian.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Density Transformation in Normalizing Flows"}
+[Deep Generative Models]{.kicker}
+
+In deep generative modeling, a **normalizing flow** transforms a simple base random vector $\mathbf{X} \sim p_{\mathbf{X}}$ (such as an isotropic Gaussian) through an invertible neural network $\mathbf{Y} = \boldsymbol{\phi}(\mathbf{X})$:
+
+- **Conservation of probability mass:** For any region $A = \boldsymbol{\phi}(\Omega)$, the probability $P(\mathbf{Y} \in A) = P(\mathbf{X} \in \Omega)$ gives:
+  $$\int_{\Omega} p_{\mathbf{X}}(\mathbf{x})\,d\mathbf{x} = \int_{\boldsymbol{\phi}(\Omega)} p_{\mathbf{Y}}(\mathbf{y})\,d\mathbf{y} = \int_{\Omega} p_{\mathbf{Y}}\bigl(\boldsymbol{\phi}(\mathbf{x})\bigr)\,\bigl|\det \mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})\bigr|\,d\mathbf{x}$$
+- **Exact log-likelihood training formula:** Since this equality holds for every region $\Omega$, the densities are related pointwise by:
+  $$p_{\mathbf{Y}}\bigl(\boldsymbol{\phi}(\mathbf{x})\bigr) = p_{\mathbf{X}}(\mathbf{x})\,\bigl|\det \mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})\bigr|^{-1} \implies \log p_{\mathbf{Y}}\bigl(\boldsymbol{\phi}(\mathbf{x})\bigr) = \log p_{\mathbf{X}}(\mathbf{x}) - \log\bigl|\det \mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})\bigr|$$
+- **Architectural impact:** Flow layers (RealNVP, Glow) are designed with triangular or coupling Jacobians so that $\log|\det \mathbf{J}_{\boldsymbol{\phi}}|$ is a fast $O(n)$ sum of log-diagonal entries rather than an $O(n^3)$ determinant.
+:::
+
+::: {.slide title="Evaluating the Gaussian Integral via Polar Coords"}
+[The √(2π) Normalizer]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Because $e^{-x^2}$ lacks an elementary antiderivative, we evaluate $I = \int_{-\infty}^\infty e^{-x^2}\,dx$ by squaring it into a 2D integral and switching to polar coordinates $\boldsymbol{\phi}(r, \theta) = (r\cos\theta, r\sin\theta)$:
+
+- **1. Square & factor (Fubini):** $I^2 = \iint_{\mathbb{R}^2} e^{-x^2-y^2}\,dx\,dy$.
+- **2. Polar Jacobian determinant:** A polar cell with sides $dr$ and $r\,d\theta$ has volume factor $|\det \mathbf{J}_{\boldsymbol{\phi}}(r, \theta)| = r(\cos^2\theta + \sin^2\theta) = r$.
+- **3. Integrate with the supplied $r$ factor:**
+  $$I^2 = \int_0^{2\pi}\!\!\int_0^\infty r e^{-r^2}\,dr\,d\theta = 2\pi \cdot \frac{1}{2} = \pi$$
+  Taking the square root gives $I = \sqrt{\pi} \approx 1.7725$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-polar-cell.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Exhausting the Plane & Standard Normal Probabilities"}
+[Code Verification]{.kicker}
+
+Substituting $z = \sqrt{2}\,x$ ($dz = \sqrt{2}\,dx$) into $\int_{-\infty}^\infty e^{-x^2}\,dx = \sqrt{\pi}$ gives the standard normal normalizer $\int_{-\infty}^\infty e^{-z^2/2}\,dz = \sqrt{2\pi} \approx 2.5066$, and $P(-1 \le Z \le 1) = \operatorname{erf}(1/\sqrt{2}) \approx 0.6827$:
 
 @!integral-gaussian
 
 ::: {.d2l-note}
-The square's value is $\pi\operatorname{erf}(b)^2$; by $b=3$ the volume
-outside the square is about $10^{-4}$.
+Why do the 2D grid sums on $[-b, b]^2$ at $\epsilon = 0.01$ match $\pi\operatorname{erf}(b)^2$ to 6 digits even though the left rule is normally $O(\epsilon)$? For an even integrand on a symmetric interval $[-b, b]$, the first-order bias $\tfrac{\epsilon}{2}(f(-b) - f(b))$ cancels identically to zero!
 :::
 :::
 
-::: {.slide title="Probabilities Are Areas Under the Density"}
-$$p\ge0,\quad\int p=1,\qquad P(a\le X\le b)=\int_a^bp(x)\,dx,\qquad P(X=x)=0$$
+::: {.slide title="Concept Check: Integral Calculus"}
+[Review & Practice]{.kicker}
 
-::: {.d2l-note}
-$P(|Z|\le1)=\operatorname{erf}(1/\sqrt2)=0.683$: the $68\%$ we set out to compute.
-$\mathbb{E}[Z^2]=1$ by the Stein identity.
+Test your understanding of the Fundamental Theorem, change of variables, and Gaussian moments:
+
+1. **GELU & ReLU as integrals:** Let $\phi(t) = \frac{1}{\sqrt{2\pi}}e^{-t^2/2}$ be the standard normal density and $\Phi(x) = \int_{-\infty}^x \phi(t)\,dt$ its CDF. Using the Fundamental Theorem and product rule, what is the derivative of the $\mathrm{GELU}$ activation $\mathrm{GELU}(x) = x\Phi(x)$?
+2. **Swapping integration order (Fubini):** The inner integral of $\int_0^1 \bigl(\int_y^1 e^{-x^2}\,dx\bigr)\,dy$ has no elementary antiderivative. Reverse the order of integration over the triangle $0 \le y \le x \le 1$ and evaluate it in closed form!
+3. **Multivariate Gaussian normalizer:** For a $d$-dimensional covariance matrix $\boldsymbol{\Sigma} = \mathbf{L}\mathbf{L}^\top$ ($\det \mathbf{L} > 0$), use $\mathbf{x} = \mathbf{L}\mathbf{z}$ to evaluate $\int_{\mathbb{R}^d} \exp(-\tfrac{1}{2}\mathbf{x}^\top\boldsymbol{\Sigma}^{-1}\mathbf{x})\,d\mathbf{x}$.
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. By the Fundamental Theorem, $\Phi'(x) = \phi(x)$, so the product rule gives $\mathrm{GELU}'(x) = \Phi(x) + x\phi(x)$.
+2. The triangle $0 \le y \le x \le 1$ slices vertically as $0 \le x \le 1$ and $0 \le y \le x$: $\int_0^1 \bigl(\int_0^x e^{-x^2}\,dy\bigr)\,dx = \int_0^1 x e^{-x^2}\,dx = \tfrac{1}{2}(1 - e^{-1})$—the inner $y$-integral supplies the exact missing factor $x$!
+3. Under $\mathbf{x} = \mathbf{L}\mathbf{z}$, $|\det \mathbf{J}| = |\det \mathbf{L}| = (\det \boldsymbol{\Sigma})^{1/2}$ and $\mathbf{x}^\top\boldsymbol{\Sigma}^{-1}\mathbf{x} = \|\mathbf{z}\|_2^2$, so Fubini factors the integral into $(\det \boldsymbol{\Sigma})^{1/2}\prod_{i=1}^d \int_{-\infty}^\infty e^{-z_i^2/2}\,dz_i = (2\pi)^{d/2}(\det \boldsymbol{\Sigma})^{1/2}$.
 :::
 :::
 
-::: {.slide title="Integration Accumulates Slices"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Integral Calculus Toolkit"}
+[Key Takeaways]{.kicker}
 
-- Slices: $0.285\to\tfrac13$; error $\approx\tfrac\epsilon2(f(a)-f(b))$.
-- Fundamental theorem: $\int_0^2\frac{x}{1+x^2}dx=\tfrac12\log5=0.805$.
-- Polar coordinates: $\sqrt\pi$, so the normal constant is $\sqrt{2\pi}$.
-- Densities: $P(|Z|\le1)=0.683$.
+| Theorem / Technique | Mathematical Formula | Role in Probability & Deep Learning |
+| :--- | :--- | :--- |
+| **Definite Integral & Bias** | $\int_a^b f(x)\,dx = \lim_{\|P\|\to 0}\sum_i f(\xi_i)\Delta x_i$ | Left-sum bias is $\tfrac{\epsilon}{2}(f(a)-f(b))$; vanishes on symmetric bells |
+| **Fundamental Theorem (FTC)** | $\frac{d}{dx}\int_a^x f(y)\,dy = f(x)$; $\int_a^b f(x)\,dx = G(b)-G(a)$ | Replaces slice summation with antidifferentiation ($G'=f$ on $[a,b]$) |
+| **Improper Power-Law Test** | $\int_1^\infty x^{-s}dx = \frac{1}{s-1}$ ($s>1$); $\int_0^1 x^{-s}dx = \frac{1}{1-s}$ ($s<1$) | Governs when heavy-tailed distributions have finite mean/variance |
+| **Integration by Parts & Stein** | $\int_a^b u v'\,dx = [uv]_a^b - \int_a^b u'v\,dx$; $\mathbb{E}[g'(Z)] = \mathbb{E}[Z g(Z)]$ | Shifts derivatives off unknown densities (score matching, moments) |
+| **Fubini's Theorem** | $\iint_R f\,dx\,dy = \int_a^b(\int_c^d f\,dy)dx$ ($\iint\|f\|<\infty$ or $f\ge 0$) | Marginalizes joint densities; factors independent product integrals |
+| **$n$-D Change of Variables** | $\int_{\boldsymbol{\phi}(\Omega)} f(\mathbf{y})\,d\mathbf{y} = \int_\Omega f(\boldsymbol{\phi}(\mathbf{x}))\|\det\mathbf{J}_{\boldsymbol{\phi}}(\mathbf{x})\|\,d\mathbf{x}$ | Adjusts densities by $\log\|\det\mathbf{J}_{\boldsymbol{\phi}}\|$ in normalizing flows |
+| **Gaussian Integral** | $\int_{-\infty}^\infty e^{-x^2}dx = \sqrt{\pi}$ $\implies$ $\int_{-\infty}^\infty e^{-z^2/2}dz = \sqrt{2\pi}$ | Proved via 2D polar coordinates ($\|\det\mathbf{J}\| = r$); normalizes $\mathcal{N}(0,1)$ |
+:::
 
-::: {.d2l-note}
-Next: how such an area changes when a parameter moves, the gradient of an
-expectation.
-:::
-:::

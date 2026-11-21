@@ -1154,319 +1154,329 @@ what changes when gradients are noisy
 
 <!-- slides -->
 
-
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §24.1]{.kicker}
+[Dive into Deep Learning · §35.1]{.kicker}
 
-Gradient Descent and Curvature<br>**the safe step · the condition number · momentum**
+Gradient Descent and Curvature<br>**steepest descent · L-smoothness · descent lemma · condition number · heavy-ball & Nesterov momentum**
 :::
 :::
 
-::: {.slide title="One Direction, Three Distances: $7 \to 6.01$, $1.62$, $12.4$"}
-[The problem]{.kicker}
+::: {.slide title="One Downhill Direction, Three Step Lengths"}
+[Motivation]{.kicker}
 
-$f(x,y)=\tfrac12(x^2+10y^2)$ at $(2,1)$: $f=7$, $\nabla f=(2,10)$.
+Every gradient step moves opposite $\nabla f(\mathbf{x})$, so the gradient fixes the direction and the learning rate $\eta$ sets only the distance. Consider the elliptical bowl $f(x, y) = \tfrac12(x^2 + 10y^2)$ from $\mathbf{x}_0 = (2, 1)$, where $f = 7$ and $\nabla f = (2, 10)$:
 
-| step $\eta$ | $0.01$ | $0.1$ | $0.25$ |
-|---|---|---|---|
-| $f(\mathbf{x}-\eta\nabla f)$ | $6.01$ | $1.62$ | $12.4$ |
+| Learning Rate $\eta$ | New Iterate $\mathbf{x}_1 = (2 - 2\eta,\, 1 - 10\eta)$ | New Loss $f(\mathbf{x}_1)$ | Physical Regime |
+| :--- | :--- | :--- | :--- |
+| **$\eta = 0.01$** | $(1.98,\, 0.90)$ | $6.01$ | Safe but painfully slow progress |
+| **$\eta = 0.10$** | $(1.80,\, 0.00)$ | $1.62$ | Eliminates steep $y$-mode in one step |
+| **$\eta = 0.25$** | $(1.50,\, -1.50)$ | $12.38$ | Overshoots steep wall and diverges |
 
 ::: {.d2l-note .warn}
-The direction was downhill every time; only the distance differed. How far
-can a gradient be trusted, and what does that limit cost?
+Every step pointed strictly downhill; only the step length changed. A step small enough to stay stable along the steep $y$-wall creeps along the flat $x$-floor, forcing $69$ steps at $\kappa = 10$ and $6{,}908$ steps at $\kappa = 1000$.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="First-Order Taylor Model and Descent Directions"}
+[Steepest Descent]{.kicker}
 
-- bound the safe step from the smoothness constant $L$;
-- predict gradient descent's step count from $\kappa$: $69$ at $\kappa=10$, $6{,}908$ at $10^3$;
-- prove why momentum cuts it to about $\sqrt\kappa$: $27$, $315$;
+Expanding a differentiable objective $f : \mathbb{R}^d \to \mathbb{R}$ around $\mathbf{x}$ along a unit direction $\mathbf{d}$ ($\|\mathbf{d}\| = 1$) for a small step $\eta > 0$ gives:
 
-**Running example:** $\tfrac12(x^2+10y^2)$, stretched to $\tfrac12(x_1^2+1000x_2^2)$.
+$$f(\mathbf{x} + \eta\,\mathbf{d}) = f(\mathbf{x}) + \eta\,\nabla f(\mathbf{x})^\top \mathbf{d} + o(\eta)$$
 
-**The idea:** the largest curvature caps the step, the smallest sets the pace.
+- **Descent direction criterion:** Any vector $\mathbf{d}$ making an acute angle with $-\nabla f(\mathbf{x})$ satisfies $\nabla f(\mathbf{x})^\top \mathbf{d} < 0$, which guarantees $f(\mathbf{x} + \eta\,\mathbf{d}) < f(\mathbf{x})$ for all sufficiently small $\eta > 0$.
+- **Cauchy–Schwarz optimality:** For every unit vector $\|\mathbf{d}\| = 1$, Cauchy–Schwarz bounds the directional slope from below:
+  $$\nabla f(\mathbf{x})^\top \mathbf{d} \ge -\|\nabla f(\mathbf{x})\|\,\|\mathbf{d}\| = -\|\nabla f(\mathbf{x})\|$$
+- **Unique steepest direction:** Equality holds if and only if $\mathbf{d} = -\nabla f(\mathbf{x}) / \|\nabla f(\mathbf{x})\|$.
 :::
 
-::: {.slide title="First the Step Size, Then When the Answer Is Optimal"}
-[Where this fits]{.kicker}
+::: {.slide title="Comparing Directional Slopes Over Finite Steps"}
+[Steepest Descent]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| **Gradient Descent and Curvature** | **safe steps, $\kappa$, momentum** |
-| Curvature Methods | Newton, BFGS, trust regions |
-| Convexity | local = global, rates, Jensen |
-| Stochastic Gradient Methods | noise floors, step decay |
-| Adaptive Methods | per-coordinate steps |
-| Constrained Optimization | KKT, projections, prox |
-| Duality | lower bounds, prices |
-| Numerical Stability and Conditioning | rounding, conditioning |
-:::
-
-::: {.col .narrow}
-- **Uses:** gradients, Hessians, eigenvalues.
-- **Skips:** noise, constraints, curvature models (next section).
-:::
-:::
-:::
-
-::: {.slide title="The Negative Gradient Is the Steepest Direction"}
-[Directions]{.kicker}
-
-A step $\eta\mathbf{d}$ changes $f$ by $\eta\,\nabla f^\top\mathbf{d}+o(\eta)$.
-Cauchy--Schwarz: $\nabla f^\top\mathbf{d}\ge-\|\nabla f\|$ for unit $\mathbf{d}$,
-with equality only at $\mathbf{d}=-\nabla f/\|\nabla f\|$.
+On $f(x, y) = \tfrac12(x^2 + 10y^2)$ at $(2, 1)$, the normalized negative gradient is $(-0.196, -0.981)$ with directional slope $-\|\nabla f\| = -10.198$. Over a short step $\eta = 0.01$, actual loss changes track $\eta \nabla f^\top \mathbf{d}$ within $1\%$:
 
 @!gradient-based-optimization-steepest-direction
 
-At $(2,1)$: steepest slope $-10.2$; the axis direction only $-2.0$.
+::: {.d2l-note}
+Differentiability alone guarantees descent only for *infinitesimally* small steps. To certify a finite step size $\eta > 0$, we must bound how rapidly the gradient itself can change along the step.
+:::
 :::
 
-::: {.slide title="$L$-Smoothness Caps the Step at $2/L$"}
+::: {.slide title="L-Smoothness and the Global Quadratic Ceiling"}
 [Smoothness]{.kicker}
 
-$\|\nabla f(\mathbf{x})-\nabla f(\mathbf{y})\|\le L\|\mathbf{x}-\mathbf{y}\|$:
-Hessian eigenvalues in $[-L,L]$. Here $L=10$; $\tfrac14x^4$ has no global $L$.
+A differentiable function $f$ is **$L$-smooth** if its gradient is $L$-Lipschitz across the domain:
 
-$$f(\mathbf{x}_{k+1})\le f(\mathbf{x}_k)-\eta\big(1-\tfrac{L\eta}{2}\big)\|\nabla f(\mathbf{x}_k)\|^2$$
+$$\|\nabla f(\mathbf{x}) - \nabla f(\mathbf{y})\| \le L\,\|\mathbf{x} - \mathbf{y}\| \qquad \text{for all } \mathbf{x}, \mathbf{y}$$
 
-::: {.d2l-note .rule}
-Linear gain $\eta\|\nabla f\|^2$ against quadratic error $\tfrac{L}{2}\eta^2\|\nabla f\|^2$:
-progress for $0<\eta<2/L$, best guaranteed at $\eta=1/L$.
+- **Hessian characterization:** When $f$ is twice continuously differentiable, $L$-smoothness is equivalent to requiring all eigenvalues of $\nabla^2 f(\mathbf{x})$ to lie in $[-L, L]$.
+- **Integral derivation of the quadratic ceiling:** Integrate $\psi(t) = f(\mathbf{x} + t(\mathbf{y} - \mathbf{x}))$ from $t = 0$ to $1$ and apply Cauchy–Schwarz with $L$-smoothness:
+  $$f(\mathbf{y}) - f(\mathbf{x}) - \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) = \int_0^1 \big(\nabla f(\mathbf{x} + t(\mathbf{y}-\mathbf{x})) - \nabla f(\mathbf{x})\big)^\top(\mathbf{y}-\mathbf{x})\,dt \le \tfrac{L}{2}\|\mathbf{y} - \mathbf{x}\|^2$$
+- **Geometric meaning:** The graph of $f(\mathbf{y})$ never rises above its tangent plane at $\mathbf{x}$ by more than the isotropic parabola $\tfrac{L}{2}\|\mathbf{y} - \mathbf{x}\|^2$.
 :::
+
+::: {.slide title="The Descent Lemma and the 2/L Step Ceiling"}
+[Smoothness]{.kicker}
+
+Substituting the gradient descent update $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\,\mathbf{g}_k$ (where $\mathbf{g}_k = \nabla f(\mathbf{x}_k)$) into the quadratic ceiling yields the **descent lemma**:
+
+$$f(\mathbf{x}_{k+1}) \le f(\mathbf{x}_k) - \eta\,\|\mathbf{g}_k\|^2 + \tfrac{L}{2}\eta^2\|\mathbf{g}_k\|^2 = f(\mathbf{x}_k) - \eta\left(1 - \tfrac{L\eta}{2}\right)\|\mathbf{g}_k\|^2$$
+
+- **Linear gain vs. curvature penalty:** The first-order drop $-\eta\|\mathbf{g}_k\|^2$ dominates for small $\eta$, while the worst-case curvature penalty $+\tfrac{L}{2}\eta^2\|\mathbf{g}_k\|^2$ grows quadratically in $\eta$.
+- **Strict descent window:** The factor $\eta(1 - L\eta/2)$ is strictly positive if and only if $0 < \eta < 2/L$. At $\eta = 2/L$, the linear gain and curvature penalty cancel completely.
+- **Optimal worst-case step:** Minimizing the quadratic ceiling selects $\eta = 1/L$, certifying a per-step decrease of at least $f(\mathbf{x}_{k+1}) \le f(\mathbf{x}_k) - \tfrac{1}{2L}\|\mathbf{g}_k\|^2$.
 :::
 
-::: {.slide title="Descent Lemma Checked: Bound $1.8$, Actual $1.62$"}
+::: {.slide title="Visualizing the Quadratic Ceiling Along a Step"}
 [Smoothness]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig}
-![The objective along the step and its ceiling.](../img/mdl-opt-descent-lemma-slice.svg){width=98%}
-:::
-
 ::: {.col}
+On $f(x,y) = \tfrac12(x^2 + 10y^2)$ from $(2, 1)$, we have $L = 10$ and $\|\mathbf{g}_0\|^2 = 104$:
+
 @!mdl-gradient-based-optimization-smoothness-and-the-descent-lemma
 
-Past $2/L=0.2$ the bound exceeds $f=7$ and promises nothing.
+- At $\eta = 1/L = 0.1$, the ceiling guarantees $f \le 1.8$ and the step achieves $1.62$.
+- Beyond $2/L = 0.2$, the ceiling exceeds $f(\mathbf{x}_0) = 7$ and at $\eta = 0.25$ the actual loss climbs to $12.375$.
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-descent-lemma-slice
 :::
 :::
 :::
 
-::: {.slide title="Without Convexity, Some Gradient Among $K$ Is $O(1/\sqrt K)$"}
-[Stationarity]{.kicker}
+::: {.slide title="Finding Stationary Points Without Convexity"}
+[Nonconvex Guarantees]{.kicker}
 
-At $\eta=1/L$: $\|\nabla f_k\|^2\le2L\,(f_k-f_{k+1})$. Sum over $k<K$, telescope:
+Even on nonconvex landscapes, the descent lemma alone prevents the gradient norm from staying large indefinitely when $f$ is bounded below by $f_{\mathrm{low}}$:
 
-$$\min_{k<K}\|\nabla f(\mathbf{x}_k)\|^2\le\frac{2L\,(f(\mathbf{x}_0)-f_{\mathrm{low}})}{K}$$
+- **Telescoping the per-step drops:** At $\eta = 1/L$, rearrange the descent lemma as $\|\mathbf{g}_k\|^2 \le 2L\big(f(\mathbf{x}_k) - f(\mathbf{x}_{k+1})\big)$ and sum over $k = 0, \ldots, K-1$:
+  $$\sum_{k=0}^{K-1} \|\nabla f(\mathbf{x}_k)\|^2 \le 2L\big(f(\mathbf{x}_0) - f(\mathbf{x}_K)\big) \le 2L\big(f(\mathbf{x}_0) - f_{\mathrm{low}}\big)$$
+- **Sublinear stationarity rate:** Because the minimum over $K$ steps is at most the average,
+  $$\min_{0 \le k < K} \|\nabla f(\mathbf{x}_k)\|^2 \le \frac{2L\big(f(\mathbf{x}_0) - f_{\mathrm{low}}\big)}{K}$$
 
-::: {.d2l-note .warn}
-Stationary, not minimal: on $\tfrac12x^2+\cos y$ from $(1,0)$, gradient
-descent stops at the saddle $(0,0)$ with $f=1$; the minimum is $-1$.
+::: {.d2l-note}
+Among the first $K$ iterates, at least one has gradient norm $\|\nabla f(\mathbf{x}_k)\| = O(1/\sqrt{K})$, requiring only $L$-smoothness and a lower bound on the objective.
+:::
 :::
 
-[Assumes a global $L$; ReLU networks are only modeled by it.]{.small}
+::: {.slide title="Why Stationarity Does Not Guarantee a Minimum"}
+[Nonconvex Pitfalls]{.kicker}
+
+A vanishing gradient certifies a stationary point, but without convexity it cannot distinguish a global minimum from a local minimum or a saddle point:
+
+- **Concrete saddle trap:** Consider $f(x, y) = \tfrac12 x^2 + \cos y$, which is bounded below by $f_{\mathrm{low}} = -1$ and is globally $1$-smooth since $\nabla^2 f(x, y) = \mathrm{diag}(1, -\cos y)$ has eigenvalues in $[-1, 1]$.
+- **Trajectory from $(1, 0)$:** With $\eta = 1/L = 1$, the first step updates $x_1 = 1 - 1(1) = 0$ and $y_1 = 0 - 1(-\sin 0) = 0$.
+- **Premature halt:** At $(0, 0)$, the gradient vanishes ($\nabla f(0, 0) = \mathbf{0}$) and gradient descent stops permanently at $f(0, 0) = 1$—a saddle point curving upward along $x$ and downward along $y$, two full units above the global minimum $f(0, \pi) = -1$.
 :::
 
-::: {.slide title="Backtracking Finds a Safe Step Without Knowing $L$"}
-[Line search]{.kicker}
+::: {.slide title="Backtracking Line Search and the Armijo Rule"}
+[Adaptive Step Sizes]{.kicker}
 
-Armijo: accept $\eta$ if $f(\mathbf{x}-\eta\nabla f)\le f(\mathbf{x})-c\,\eta\|\nabla f\|^2$; else halve.
-Guaranteed once $\eta\le2(1-c)/L$. On $\tfrac14x^4$ from $x_0=3$, $c=\tfrac12$:
+In practice $L$ is rarely known in advance, and functions like the quartic $f(x) = \tfrac14 x^4$ ($f''(x) = 3x^2$) have no finite global $L$. **Backtracking line search** adapts $\eta$ to the local curvature:
+
+- **Armijo sufficient-decrease condition:** Starting from a trial step $\eta_0$, accept $\eta$ only if the actual loss drop achieves at least a fraction $c \in (0, 1)$ of the first-order Taylor prediction:
+  $$f\big(\mathbf{x}_k - \eta\,\nabla f(\mathbf{x}_k)\big) \le f(\mathbf{x}_k) - c\,\eta\,\|\nabla f(\mathbf{x}_k)\|^2$$
+- **Update rule:** While the Armijo inequality fails, halve the candidate step ($\eta \leftarrow \eta / 2$).
+- **Automatic termination:** By the descent lemma on the local segment, the test is guaranteed to pass as soon as $1 - L_{\mathrm{loc}}\eta/2 \ge c$ $\iff$ $\eta \le 2(1-c)/L_{\mathrm{loc}}$, returning $\eta \ge \min\big(\eta_0,\, (1-c)/L_{\mathrm{loc}}\big)$ without knowing $L_{\mathrm{loc}}$.
+:::
+
+::: {.slide title="Backtracking vs. Fixed Step on a Quartic Bowl"}
+[Adaptive Step Sizes]{.kicker}
+
+On $f(x) = \tfrac14 x^4$ from $x_0 = 3$ with $c = \tfrac12$, the update $x \mapsto x(1 - \eta x^2)$ contracts $|x|$ if and only if $\eta x_0^2 < 2$ ($\eta < 2/9 \approx 0.22$), whereas local curvature at $x_0 = 3$ is $f''(3) = 27$:
 
 @!gradient-based-optimization-backtracking
 
-- Fixed $0.3$ diverges: the step shrinks $|x|$ only if $\eta x^2<2$, so from $x_0=3$ the limit is $2/9\approx0.22$.
-- The descent lemma certifies only $2/f''(x_0)=2/27$, a third of that range.
-- First accepted $0.031$, just under $1/27$; then larger as $f''$ falls.
+::: {.d2l-note .warn}
+A fixed step $\eta = 0.3$ (safe near the origin) explodes to $6.5 \times 10^{103}$ in $6$ steps from $x_0 = 3$. Backtracking starts at $\eta = 0.031 < 1/27$ and automatically doubles $\eta$ as the iterate enters flatter regions near zero.
+:::
 :::
 
-::: {.slide title="Gradient Descent on a Quadratic Is $d$ Scalar Recursions"}
-[Quadratics]{.kicker}
+::: {.slide title="The Quadratic Model and the Condition Number"}
+[Quadratic Geometry]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-One mode, $f=\tfrac{\lambda}{2}u^2$: $u_k=(1-\eta\lambda)^k u_0$.
+Near any strict local minimizer $\mathbf{x}^\star$ with positive-definite Hessian $\mathbf{A} = \nabla^2 f(\mathbf{x}^\star) \succ \mathbf{0}$, shifting $\mathbf{x}^\star$ to the origin yields the canonical quadratic model:
 
-In the eigenbasis of $\mathbf{A}$: $u_i^{(k)}=(1-\eta\lambda_i)^k u_i^{(0)}$.
+$$f(\mathbf{x}) = \tfrac12\,\mathbf{x}^\top \mathbf{A}\,\mathbf{x}$$
 
-- **stable** iff $\eta<2/\lambda_{\max}=2/L$;
-- **speed** $\rho=\max_i|1-\eta\lambda_i|$, the slowest mode.
+- **Spectrum:** $0 < \lambda_{\min} = \lambda_1 \le \cdots \le \lambda_d = \lambda_{\max} = L$.
+- **Condition number:** $\kappa = \lambda_{\max} / \lambda_{\min} \ge 1$ measures the ratio of steepest to flattest curvature ($\kappa = 10$ on our gentle bowl, $\kappa = 1000$ on the chapter benchmark).
 :::
 
 ::: {.col .fig}
-![Gradient descent on a round bowl and in a valley.](../img/mdl-opt-gd-bowl-vs-valley.svg){width=98%}
+@fig:mdl-opt-gd-bowl-vs-valley
 :::
 :::
 :::
 
-::: {.slide title="Six Step Sizes on $\mathrm{diag}(1,10)$: Only $2/11$ Balances Both Modes"}
-[Quadratics]{.kicker}
+::: {.slide title="Spectral Decoupling into Scalar Recursions"}
+[Quadratic Geometry]{.kicker}
+
+Because $\nabla f(\mathbf{x}) = \mathbf{A}\mathbf{x}$, gradient descent applies the linear operator $\mathbf{x}_{k+1} = (\mathbf{I} - \eta\mathbf{A})\mathbf{x}_k$. Expanding $\mathbf{x}_k$ in the orthonormal eigenbasis of $\mathbf{A}$ with coordinates $u_i^{(k)}$ decouples the $d$ variables completely:
+
+$$u_i^{(k+1)} = (1 - \eta\lambda_i)\,u_i^{(k)} \implies u_i^{(k)} = (1 - \eta\lambda_i)^k\,u_i^{(0)}$$
+
+- **Exact stability ceiling:** Every mode contracts if and only if $|1 - \eta\lambda_i| < 1$ for all $i$, which requires $0 < \eta < 2/\lambda_{\max} = 2/L$. Thus the descent lemma's sufficient threshold $2/L$ is also *strictly necessary* on quadratics.
+- **Spectral radius governs speed:** The worst-case error norm decays as $\rho(\eta)^k$, where $\rho(\eta) = \max_i |1 - \eta\lambda_i| = \max\big(|1 - \eta\lambda_{\min}|,\, |1 - \eta\lambda_{\max}|\big)$ is determined by the two extreme eigenvalues.
+:::
+
+::: {.slide title="Sweeping Step Sizes Across the Stability Limit"}
+[Quadratic Geometry]{.kicker}
+
+On $\mathbf{A} = \mathrm{diag}(1, 10)$ from $\mathbf{x}_0 = (1, 1)$, the stability ceiling is $2/\lambda_{\max} = 0.20$:
 
 @!gradient-based-optimization-eta-sweep
 
-- $0.02$: slow; $0.1$: stiff mode gone, slow mode at $0.9$.
-- $2/11$: both at $0.818$; $0.19$: stiff mode alternates at $-0.9$.
-- $0.2$: alternates forever; $0.21$: grows.
+- At $\eta = 0.10 = 1/L$, the stiff mode vanishes in $1$ step ($1 - 10\eta = 0$), but the slow mode crawls at $1 - \eta = 0.90$.
+- At $\eta = 2/11 \approx 0.182$, both modes contract by $9/11 \approx 0.818$ ($+9/11$ and $-9/11$), cutting the $60$-step error by two orders of magnitude.
 :::
 
-::: {.slide title="The Best Fixed Step Levels the Two Extreme Modes"}
-[Quadratics]{.kicker}
+::: {.slide title="The Optimal Fixed Step Balances Extreme Modes"}
+[Quadratic Geometry]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig .big}
-![The V of contraction factors for two step sizes.](../img/mdl-opt-eta-tent.svg){width=98%}
+::: {.col}
+Because $\lambda \mapsto |1 - \eta\lambda|$ is V-shaped on $[\lambda_{\min}, \lambda_{\max}]$, $\rho(\eta)$ is minimized by equalizing the contraction magnitudes at the two endpoints:
+
+$$1 - \eta^\star\lambda_{\min} = \eta^\star\lambda_{\max} - 1 \implies \eta^\star = \frac{2}{\lambda_{\min} + \lambda_{\max}}$$
+
+- **Optimal contraction rate:**
+  $$\rho(\eta^\star) = \frac{\kappa - 1}{\kappa + 1} \approx 1 - \frac{2}{\kappa}$$
+- **Linear iteration complexity:** Reaching $\|\mathbf{x}_k\| \le \epsilon\|\mathbf{x}_0\|$ takes $k \approx \frac{\kappa}{2}\log\frac{1}{\epsilon}$ steps ($69$ at $\kappa=10$, $6{,}908$ at $\kappa=1000$).
 :::
 
-::: {.col .narrow}
-$$\eta^\star=\frac{2}{\lambda_{\min}+\lambda_{\max}},\quad \rho=\frac{\kappa-1}{\kappa+1}$$
-
-$\kappa=10$: $\rho=9/11$, $69$ steps.
-
-Steps $\approx\tfrac{\kappa}{2}\log\tfrac1\epsilon$: **linear in $\kappa$**.
-:::
-:::
-:::
-
-::: {.slide title="Check: Best Step and Rate on $\mathrm{diag}(1,100)$?"}
-[Check]{.kicker}
-
-What is $\eta^\star$, what is $\rho$, and about how many steps give six digits?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\eta^\star=2/101$, $\rho=99/101=0.980$, and
-$\log 10^6/\log(101/99)\approx 691$ steps, about $\tfrac{100}{2}\cdot13.8$.
+::: {.col .fig}
+@fig:mdl-opt-eta-tent
 :::
 :::
 :::
 
-::: {.slide title="At the Edge of Stability the Sharpness Rises to $2/\eta$"}
-[Quadratics]{.kicker}
+::: {.slide title="Neural Network Training at the Edge of Stability"}
+[Deep Learning Dynamics]{.kicker}
 
-On a $25$-parameter $\tanh$ net under full-batch GD (the Optimization
-chapter runs it), the sharpness climbs to about $2/\eta$ and stays there,
-while the loss falls over the run but rises on many single steps.
+Why not simply measure the top Hessian eigenvalue (**sharpness**) $\lambda_{\max}(\nabla^2 f)$ of a neural network at initialization and set $\eta < 2/\lambda_{\max}$?
 
-::: {.d2l-note .rule}
-Above $2/\eta$ the top mode's factor $1-\eta\lambda_{\max}<-1$: it grows
-and alternates, and the loss rises on that step. What pulls $\lambda_{\max}$
-back lies outside the quadratic model (its third-order term).
-:::
+- **Progressive sharpening:** During full-batch gradient descent on deep networks, $\lambda_{\max}(\nabla^2 f(\mathbf{x}_k))$ steadily grows until it reaches the stability threshold $2/\eta$ and hovers there (*Edge of Stability*).
+- **What the quadratic model explains:** Once $\lambda_{\max} > 2/\eta$, the top eigenvector's multiplier $1 - \eta\lambda_{\max}$ drops below $-1$, causing that coordinate to oscillate with growing amplitude and explaining non-monotone loss spikes on individual steps.
+- **What lies beyond quadratics:** On a fixed quadratic, $\lambda_{\max} > 2/\eta$ diverges to infinity. On a neural network, third-order Taylor terms couple the oscillation to the changing Hessian, steering the iterate toward flatter regions that pull $\lambda_{\max}$ back to $2/\eta$.
 :::
 
-::: {.slide title="Each Hypothesis Upgrades What Converges"}
-[Convexity]{.kicker}
+::: {.slide title="How Convexity Upgrades Convergence Guarantees"}
+[Rate Hierarchy]{.kicker}
 
-Gradient descent with $\eta=1/L$:
+Adding structural assumptions on $f$ upgrades gradient descent ($\eta = 1/L$) from local stationarity to global optimality and geometric convergence:
 
-| assumption | guarantee |
-|---|---|
-| $L$-smooth | $\min_k\|\nabla f\|^2=O(1/K)$: stationary |
-| + convex | $f-f^\star=O(1/k)$: globally optimal |
-| + $\mu$-strongly convex | $f-f^\star\le(1-1/\kappa)^k(f_0-f^\star)$ |
-
-On a quadratic at $\eta^\star$ the value factor is $\big(\tfrac{\kappa-1}{\kappa+1}\big)^2\approx1-\tfrac4\kappa$:
-four times fewer steps than the class bound.
+| Objective Class | Mathematical Assumption | Guaranteed Rate at $\eta = 1/L$ | Steps for Accuracy $\epsilon$ |
+| :--- | :--- | :--- | :--- |
+| **Smooth Nonconvex** | $\nabla f$ is $L$-Lipschitz, $f \ge f_{\mathrm{low}}$ | $\min_{k < K}\|\nabla f(\mathbf{x}_k)\|^2 \le \frac{2L(f_0 - f_{\mathrm{low}})}{K}$ | $O(1/\epsilon^2)$ for $\|\nabla f\| \le \epsilon$ |
+| **Smooth Convex** | $L$-smooth and $\nabla^2 f(\mathbf{x}) \succeq \mathbf{0}$ | $f(\mathbf{x}_k) - f^\star \le \frac{L\|\mathbf{x}_0 - \mathbf{x}^\star\|^2}{2k}$ | $O(1/\epsilon)$ for $f - f^\star \le \epsilon$ |
+| **Strongly Convex** | $\mu\mathbf{I} \preceq \nabla^2 f(\mathbf{x}) \preceq L\mathbf{I}$ ($\kappa = L/\mu$) | $f(\mathbf{x}_k) - f^\star \le (1 - 1/\kappa)^k(f_0 - f^\star)$ | $O(\kappa \log(1/\epsilon))$ |
+| **Quadratic at $\eta^\star$** | $f(\mathbf{x}) = \tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$, $\eta^\star = \frac{2}{\mu + L}$ | $f(\mathbf{x}_k) - f^\star \le \bigl(\frac{\kappa - 1}{\kappa + 1}\bigr)^{2k}(f_0 - f^\star)$ | $\approx \frac{\kappa}{4}\log(1/\epsilon)$ for $f - f^\star$ |
 :::
 
-::: {.slide title="Momentum Gives the Iterate a Velocity with Memory"}
-[Momentum]{.kicker}
-
-$\mathbf{v}_{k+1}=\beta\mathbf{v}_k-\eta\nabla f(\mathbf{x}_k)$, $\ \mathbf{x}_{k+1}=\mathbf{x}_k+\mathbf{v}_{k+1}$:
-alternating gradients cancel, persistent ones add up.
-
-![Three momentum settings at $\eta=2/11$.](../img/mdl-opt-momentum-damping.svg){width=96%}
-
-Rates $0.81$, $0.57$, $0.92$; the best possible, $0.52$, needs a larger $\eta$.
-:::
-
-::: {.slide title="Derivation I: One Mode Is a Second-Order Recurrence"}
-[Momentum]{.kicker}
-
-Eliminate $\mathbf{v}_k=\mathbf{x}_k-\mathbf{x}_{k-1}$ in the mode with gradient $\lambda u_k$:
-
-$$u_{k+1}=(1+\beta-\eta\lambda)\,u_k-\beta\,u_{k-1}$$
-
-Try $u_k=z^k$:
-
-$$z^2-(1+\beta-\eta\lambda)\,z+\beta=0$$
-
-- Product of the roots: $z_1z_2=\beta$.
-- $\beta=0$ gives back $z=1-\eta\lambda$, gradient descent.
-:::
-
-::: {.slide title="Derivation II: Complex Roots Have Modulus $\sqrt\beta$, Whatever $\lambda$ Is"}
-[Momentum]{.kicker}
-
-Discriminant $(1+\beta-\eta\lambda)^2-4\beta<0$
-
-$$\iff\ (1-\sqrt\beta)^2<\eta\lambda<(1+\sqrt\beta)^2$$
-
-- Complex pair: $|z|^2=z\bar z=\beta$, so $|z|=\sqrt\beta$.
-- At the two ends: a double root $\pm\sqrt\beta$, error $\propto k\,\beta^{k/2}$.
-- Outside: one real root of modulus $>\sqrt\beta$.
-:::
-
-::: {.slide title="Derivation III: Put the Extreme Modes at the Two Ends"}
+::: {.slide title="Heavy-Ball Momentum: Velocity with Memory"}
 [Momentum]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$\eta\lambda_{\min}=(1-\sqrt\beta)^2$, $\ \eta\lambda_{\max}=(1+\sqrt\beta)^2$:
+Gradient descent takes $O(\kappa)$ steps because a memoryless step cannot damp steep oscillations without starving flat directions. Polyak's **heavy-ball momentum** maintains an exponentially weighted velocity $\mathbf{v}_k$ and updates $\mathbf{x}_{k+1} = \mathbf{x}_k + \mathbf{v}_{k+1}$:
 
-::: {.d2l-note .rule}
-$$\sqrt{\beta^\star}=\frac{\sqrt\kappa-1}{\sqrt\kappa+1},\quad
-\eta_{\mathrm{HB}}=\Big(\frac{2}{\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}}}\Big)^2$$
-:::
+$$\mathbf{v}_{k+1} = \beta\,\mathbf{v}_k - \eta\,\nabla f(\mathbf{x}_k)$$
 
-$\kappa=10$: rate $0.52$ against $0.82$. Nesterov's look-ahead: $1-1/\sqrt\kappa$, also off quadratics.
+- **Two-step recurrence:** Eliminating $\mathbf{v}_k = \mathbf{x}_k - \mathbf{x}_{k-1}$ gives $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\nabla f(\mathbf{x}_k) + \beta(\mathbf{x}_k - \mathbf{x}_{k-1})$.
+- **Dual action:** Opposite gradients along steep walls cancel; aligned gradients along the flat floor accumulate speed.
 :::
 
 ::: {.col .fig}
-![Roots of the heavy-ball polynomial.](../img/mdl-opt-hb-eigenvalues.svg){width=98%}
+@fig:mdl-opt-momentum-damping
 :::
 :::
 :::
 
-::: {.slide title="Measured: Gradient Descent $\propto\kappa$, Heavy Ball $\propto\sqrt\kappa$ Times a Log"}
-[Momentum]{.kicker}
+::: {.slide title="Characteristic Polynomial of a Momentum Mode"}
+[Momentum Analysis]{.kicker}
 
-Steps to $|\mathbf{x}_k|\le10^{-6}|\mathbf{x}_0|$ on $\mathrm{diag}(1,\kappa)$, one gradient per step each:
+In the eigenbasis of a quadratic $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$, each mode $u_k$ with eigenvalue $\lambda$ obeys the second-order linear recurrence $u_{k+1} = (1 + \beta - \eta\lambda)u_k - \beta u_{k-1}$. Substituting $u_k = z^k$ yields the characteristic equation:
+
+$$z^2 - (1 + \beta - \eta\lambda)\,z + \beta = 0$$
+
+- **Complex-conjugate root regime:** The discriminant $(1 + \beta - \eta\lambda)^2 - 4\beta$ is nonpositive whenever:
+  $$(1 - \sqrt{\beta})^2 \le \eta\lambda \le (1 + \sqrt{\beta})^2$$
+- **Equalized root modulus:** When the roots $z, \bar{z}$ are complex conjugates, their product is the constant term $z\bar{z} = |z|^2 = \beta$, so **both roots have modulus $|z| = \sqrt{\beta}$ regardless of $\lambda$**.
+- **Endpoint double roots:** At the two boundaries $\eta\lambda = (1 \pm \sqrt{\beta})^2$, a repeated real root $z = \pm\sqrt{\beta}$ introduces a linear prefactor $|u_k| \le C\,k\,\beta^{k/2}$.
+:::
+
+::: {.slide title="Optimal Heavy-Ball Tuning and the √κ Law"}
+[Momentum Analysis]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Placing the extreme eigenvalues $\lambda_{\min}$ and $\lambda_{\max}$ right at the endpoints of the complex-root interval, $\eta\lambda_{\min} = (1 - \sqrt{\beta})^2$ and $\eta\lambda_{\max} = (1 + \sqrt{\beta})^2$, forces every mode onto the circle of radius $\sqrt{\beta^\star}$ with step size $\eta_{\mathrm{HB}} = 4 / (\sqrt{\lambda_{\max}} + \sqrt{\lambda_{\min}})^2$:
+
+$$\beta^\star = \left(\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}\right)^{\!2}$$
+
+- **Accelerated contraction rate:** Every mode contracts at rate
+  $$\rho_{\mathrm{HB}} = \sqrt{\beta^\star} = \frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1} \approx 1 - \frac{2}{\sqrt{\kappa}}$$
+- **Speedup:** Iteration complexity drops from $O(\kappa\log\tfrac{1}{\epsilon})$ to $O(\sqrt{\kappa}\log\tfrac{1}{\epsilon})$.
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-hb-eigenvalues
+:::
+:::
+:::
+
+::: {.slide title="Nesterov Acceleration and Global Guarantees"}
+[Accelerated Methods]{.kicker}
+
+Heavy ball's $\sqrt{\kappa}$ theorem holds strictly for quadratics; on general smooth strongly convex functions, its fixed tuning can get trapped in a limit cycle. **Nesterov's accelerated gradient** evaluates $\nabla f$ at the look-ahead point $\mathbf{x}_k + \beta\mathbf{v}_k$:
+
+$$\mathbf{v}_{k+1} = \beta\,\mathbf{v}_k - \eta\,\nabla f(\mathbf{x}_k + \beta\,\mathbf{v}_k), \qquad \mathbf{x}_{k+1} = \mathbf{x}_k + \mathbf{v}_{k+1}$$
+
+- **Look-ahead braking:** If momentum is about to carry the iterate uphill past the minimum, the gradient at $\mathbf{x}_k + \beta\mathbf{v}_k$ already points backward and applies the brakes before overshooting.
+- **Global optimal rates:** With $\eta = 1/L$ and $\beta = (\sqrt{\kappa}-1)/(\sqrt{\kappa}+1)$, Nesterov achieves $f(\mathbf{x}_k) - f^\star \le C(1 - 1/\sqrt{\kappa})^k$ on *every* $L$-smooth, $\mu$-strongly convex function, and $O(1/k^2)$ on smooth convex functions.
+- **Nemirovski–Yudin lower bound:** When $d \ge 2k+1$, no first-order method using only past gradients can beat $O(1/k^2)$ or the $\sqrt{\kappa}$ scaling in the worst case.
+:::
+
+::: {.slide title="Benchmarking Iteration Scaling Across κ"}
+[Empirical Verification]{.kicker}
+
+Measuring the exact number of iterations required to reach $\|\mathbf{x}_k\| \le 10^{-6}\|\mathbf{x}_0\|$ on $\mathrm{diag}(1, \kappa)$ from $(1, 1)$ confirms the linear $\kappa$ vs. $\sqrt{\kappa}$ scaling laws:
 
 @!gradient-based-optimization-momentum
 
-- $\kappa=10^3$: $6{,}908$ against $315$ against $508$.
-- The rising last column is the double root's factor $k$.
-- Heavy ball can cycle off quadratics; Nesterov keeps its theorem.
+- **Gradient descent** stays pinned at $k/\kappa \approx 6.9$ ($6{,}908$ steps at $\kappa = 1000$).
+- **Heavy ball** finishes in $315$ steps at $\kappa = 1000$; its ratio $k/\sqrt{\kappa}$ drifts gently ($8.5$ $\to$ $10.0$) due to the Jordan-block double-root prefactor $k\rho_{\mathrm{HB}}^k$, matching $k \approx \frac{\sqrt{\kappa}}{2}(\log 10^6 + \log k)$.
 :::
 
-::: {.slide title="Check: Heavy-Ball Steps at $\kappa=100$?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: Step Sizes and Momentum Rates"}
+[Concept Check]{.kicker}
 
-Gradient descent needs $691$ steps for six digits on $\mathrm{diag}(1,100)$.
-Estimate heavy ball's count from its rate.
+Consider the quadratic objective $f(x_1, x_2) = \tfrac12(x_1^2 + 100\,x_2^2)$ with eigenvalues $\lambda_{\min} = 1$, $\lambda_{\max} = 100$ ($\kappa = 100$):
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\rho=9/11$, so $\rho^k=10^{-6}$ gives about $69$ steps. The
-double roots add $\tfrac{\sqrt\kappa}{2}\log k\approx 23$: the cell measures $93$.
+1. What is the maximum stable learning rate for gradient descent, the optimal fixed step $\eta^\star$, and the per-step contraction factor $\rho(\eta^\star)$?
+2. Roughly how many gradient descent steps are needed to shrink $\|\mathbf{x}_k\|$ by $10^{-6}$?
+3. What contraction factor $\rho_{\mathrm{HB}}$ does tuned heavy-ball momentum achieve, and roughly how many steps does it need (including the double-root logarithmic term)?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:** **(1)** Stability ceiling: $2/L = 0.02$. Optimal step: $\eta^\star = 2/(1 + 100) = 2/101 \approx 0.0198$. Contraction factor: $\rho(\eta^\star) = 99/101 \approx 0.9802$. **(2)** $\log(10^6)/\log(101/99) \approx \frac{100}{2}\ln(10^6) \approx 691$ steps. **(3)** With $\sqrt{\kappa} = 10$, $\rho_{\mathrm{HB}} = (10 - 1)/(10 + 1) = 9/11 \approx 0.818$. Pure geometric decay predicts $69$ steps, and the double-root factor $k\rho_{\mathrm{HB}}^k$ adds $\frac{\sqrt{\kappa}}{2}\ln k \approx 24$ steps, matching the measured $93$ steps.
 :::
 :::
+
+::: {.slide title="Summary: First-Order Methods and Curvature"}
+[Key Takeaways]{.kicker}
+
+| Method / Concept | Step Rule / Formula | Contraction / Guarantee | Core Takeaway |
+| :--- | :--- | :--- | :--- |
+| **Descent Lemma** | $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\mathbf{g}_k$, $0 < \eta < 2/L$ | $\Delta f \le -\eta(1 - L\eta/2)\|\mathbf{g}_k\|^2$ | Steepest curvature $L$ caps the safe step at $2/L$ |
+| **Backtracking (Armijo)** | Halve $\eta$ until $f(\mathbf{x} - \eta\mathbf{g}) \le f(\mathbf{x}) - c\eta\|\mathbf{g}\|^2$ | Finds $\eta \ge \min(\eta_0, (1-c)/L_{\mathrm{loc}})$ | Adapts to local curvature without knowing $L$ |
+| **Optimal Fixed-Step GD** | $\eta^\star = \frac{2}{\lambda_{\min} + \lambda_{\max}}$ | $\rho_{\mathrm{GD}} = \frac{\kappa - 1}{\kappa + 1} \approx 1 - \frac{2}{\kappa}$ | Iteration count scales linearly with $\kappa = L/\mu$ |
+| **Heavy-Ball Momentum** | $\mathbf{v}_{k+1} = \beta^\star\mathbf{v}_k - \eta_{\mathrm{HB}}\mathbf{g}_k$ | $\rho_{\mathrm{HB}} = \frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1} \approx 1 - \frac{2}{\sqrt{\kappa}}$ | Complex roots equalize all modes at modulus $\sqrt{\beta^\star}$ |
+| **Nesterov Look-Ahead** | $\mathbf{v}_{k+1} = \beta\mathbf{v}_k - \frac{1}{L}\nabla f(\mathbf{x}_k + \beta\mathbf{v}_k)$ | $\rho_{\mathrm{NAG}} = 1 - \frac{1}{\sqrt{\kappa}}$ ($O(1/k^2)$ if $\mu=0$) | Achieves optimal $O(\sqrt{\kappa})$ globally beyond quadratics |
 :::
 
-::: {.slide title="Curvature Limits the Step"}
-[Wrap-up]{.kicker}
-
-| on $\mathrm{diag}(1,10)$ | number |
-|---|---|
-| safe step $2/L$ | $0.2$ |
-| best fixed step, rate, steps | $2/11$, $9/11$, $69$ |
-| heavy ball rate, steps | $0.52$, $27$ |
-| at $\kappa=10^3$: GD, heavy ball | $6{,}908$, $315$ |
-
-Next: a step that knows the curvature.
-:::

@@ -1,29 +1,9 @@
 # Sequence-to-Sequence Learning
 :label:`sec_seq2seq`
 
-The language models of the previous chapters continue a sequence: they read
-text and predict the next token. Many tasks have a different shape. A
-translator reads an English sentence and writes a French one; a speech
-recognizer listens to a clip and writes down the words. Input and output are
-both sequences, but their lengths differ, and the third French word need not
-render the third English one. Translation was the problem on which, in 2014,
-neural networks first rivalled the statistical systems that then dominated the
-field :cite:`Sutskever.Vinyals.Le.2014,Cho.Van-Merrienboer.Gulcehre.ea.2014`.
-The design was simple. One recurrent network reads the source, a second writes
-the target, and a single state passes between them.
+The language models of the previous chapters continue a single sequence: they read text and predict the next token. Many tasks map one sequence to another of a different length, where positions do not align one-to-one: a translator reads an English sentence and writes a French one, or a speech recognizer transcribes an audio clip into words. Translation was the benchmark on which neural networks first rivaled statistical phrase-based systems in 2014 :cite:`Sutskever.Vinyals.Le.2014,Cho.Van-Merrienboer.Gulcehre.ea.2014`. Their architecture was simple: one recurrent network reads the source, a second writes the target, and a single fixed-width state vector passes between them.
 
-You have met the successors of this design before the design itself. The
-attention of :numref:`chap_attention` was invented to repair its weakness,
-and the transformer encoder--decoder of :numref:`sec_transformer` replaced
-it. Why, then, does it get a section in a chapter on recurrent networks?
-Because its weakness is the subject of this chapter: one state of fixed
-size stands between reading and writing, and every recurrent model in the
-sections that follow keeps such a state. Here we can measure what that
-costs. We first set up the encoder--decoder abstraction, which outlived the
-networks that first filled it, and the scores by which one translation is
-judged better than another. Then we train a small recurrent
-encoder--decoder on a task in which every letter of the input must pass
-through the state, and watch it fail as the input grows.
+You have already met the successors of this design—cross-attention (:numref:`chap_attention`) and the Transformer encoder--decoder (:numref:`sec_transformer`)—which were invented to bypass its single-vector bottleneck. Why revisit the 2014 design here? Because that bottleneck is the central subject of this chapter: every recurrent model in the sections that follow compresses its past into a state of fixed size. Here we set up the encoder--decoder abstraction and the standard lexical translation metrics (`chrF` and `BLEU`), and then measure directly on a string-reversal benchmark how much information a single fixed state vector can carry as the input grows.
 
 ```{.python .input #seq2seq-imports}
 %%tab pytorch
@@ -54,95 +34,32 @@ import collections
 ## The Encoder--Decoder Abstraction
 :label:`sec_encoder-decoder`
 
-Mapping one sequence to another of a different length is called
-*sequence-to-sequence learning*, or sequence transduction. The idea that
-makes it tractable is to split the model in two
-(:numref:`fig_encoder_decoder`). An *encoder* consumes the source sequence
-and compresses it into a state. A *decoder* consumes that state and
-produces the target, one token at a time. The state is the sole channel
-between them: everything the decoder ever learns about the source, it
-learns through that one object.
+Mapping one sequence to another of variable length (*sequence-to-sequence learning* or *sequence transduction*) splits naturally into two modules (:numref:`fig_encoder_decoder`): an *encoder* that consumes the source sequence and summarizes it into a state, and a *decoder* that consumes that state and generates the target one token at a time. Everything the decoder learns about the source must pass through that state.
 
 ![The encoder--decoder architecture: the encoder reads the source sequence into a state, and the decoder generates the target sequence from that state.](../img/mdl-modernrnn-encoder-decoder.svg)
 :label:`fig_encoder_decoder`
 
-The decoder half should look familiar. Take a source $x_1, \ldots, x_T$
-and a target $y_1, \ldots, y_{T'}$, whose length $T'$ need not equal $T$.
-A language model (:numref:`sec_language-model`) factorizes the probability
-of the target token by token. The decoder does the same, except that every
-factor is also conditioned on the encoder's state $\mathbf{c}$:
+Given a source $x_1, \ldots, x_T$ and a target $y_1, \ldots, y_{T'}$ (where $T'$ need not equal $T$), the decoder factorizes the conditional probability autoregressively just like a language model (:numref:`sec_language-model`), except that every factor is conditioned on the encoder state $\mathbf{c}$:
 
 $$P(y_1, \ldots, y_{T'} \mid x_1, \ldots, x_T) = \prod_{t'=1}^{T'} P(y_{t'} \mid y_1, \ldots, y_{t'-1}, \mathbf{c}).$$
 :eqlabel:`eq_seq2seq_conditional`
 
-A decoder is thus a *conditional* language model: the same next-token
-machinery, pointed at a source. Look at the right-hand side, though. The
-source has disappeared from it, and only $\mathbf{c}$ is left. The
-equation holds only if $\mathbf{c}$ keeps everything about the source that
-the decoder will need, and the last part of this section measures how far
-a state of fixed size falls short of that.
+Notice that the source sequence disappears on the right-hand side, leaving only $\mathbf{c}$: the equation holds only if $\mathbf{c}$ retains everything about the source that the decoder will need. During training we minimize next-token cross-entropy under teacher forcing (:numref:`subsec_teacher-forcing`), feeding ground-truth previous target tokens; at inference time the decoder feeds back its own emitted tokens until it produces an end-of-sequence token.
 
-The decoder is trained like a language model, on the cross-entropy of each
-next target token, with the teacher forcing of
-:numref:`subsec_teacher-forcing`: it is fed the correct previous target
-tokens rather than its own guesses. At test time there are no correct
-tokens to feed. The decoder writes a token, reads it back as its next
-input, and goes on until it writes an end-of-sequence token. Our
-measurement below keeps the correct tokens, for a reason we give there.
+Two groups introduced this recurrent design in 2014. :citet:`Cho.Van-Merrienboer.Gulcehre.ea.2014` used a GRU encoder--decoder (:numref:`sec_gru`) to score phrase pairs inside a statistical translation system, while :citet:`Sutskever.Vinyals.Le.2014` translated English to French end-to-end with deep LSTMs connected through a single vector. Notably, Sutskever et al. fed the source sentence to the encoder *backward* so that the first words of the translation sat only a few recurrent steps from the corresponding source words—shortening the gradient path without changing how much total information the state had to hold.
 
-Two groups built this design in 2014.
-:citet:`Cho.Van-Merrienboer.Gulcehre.ea.2014` used an encoder--decoder made
-of the gated units of :numref:`sec_gru` to score phrase pairs inside a
-statistical translation system. :citet:`Sutskever.Vinyals.Le.2014` let the
-design translate on its own: a deep LSTM read the English sentence, a
-second deep LSTM wrote the French one, and the state between them was a
-single vector. One detail of their recipe looks like a hack and is in fact
-instructive. They fed the source sentence to the encoder backward. The
-first words of the translation then sit a few steps away from the source
-words they render, instead of a whole sentence away, and these short
-dependencies, the authors argued, made the network much easier to train.
-Reading backward changes nothing about how much the state must hold. It
-changes how far each word travels through the recurrence before it is
-needed, and that distance turned out to matter too.
-
-The recurrent networks of that design did not last, but the abstraction
-did. Make both halves transformers and put a small convolutional front-end
-before the encoder, and you have Whisper transcribing speech
-:cite:`radford2023whisper`; put a vision backbone in place of the encoder,
-and you have an image-captioning model. What changed is the state. In the
-encoder--decoder of :numref:`sec_transformer` it is one vector per source
-token rather than one vector for the whole source. That section builds the
-wiring as it is practiced today. This one keeps the 2014 version, because
-its single vector is the object we want to measure.
+While recurrent encoders and decoders were later superseded by Transformers (such as Whisper for speech :cite:`radford2023whisper` or vision-language captioners), the encoder--decoder abstraction endured. What changed in :numref:`sec_transformer` is that the state passed to the decoder became a sequence of one vector per source token rather than a single vector for the entire source. Here we keep the 2014 single-vector state because its capacity limit is the exact quantity we want to measure.
 
 ## Scoring Translations
 :label:`sec_translation-scoring`
 
-We said that in 2014 neural networks rivalled the statistical systems.
-Rivalled by what number? A human judge is the gold standard, and far too
-slow to consult after every epoch, so the field scores a candidate by its
-overlap with a reference translation. The comparisons of 2014 were made in BLEU.
-The overlap score that evaluation studies now recommend in its place is
-chrF :cite:`Popovic.2015,Kocmi.Federmann.Grundkiewicz.ea.2021`. We
-implement both, and :numref:`sec_lm_scoring` uses them again on text that
-language models write.
+Because human evaluation is too slow to run inside a training loop, machine translation models are scored by lexical $n$-gram overlap against a reference translation. The 2014 papers reported BLEU; modern evaluation benchmarks recommend character-level chrF in its place :cite:`Popovic.2015,Kocmi.Federmann.Grundkiewicz.ea.2021`. We implement both here and reuse them in :numref:`sec_lm_scoring`.
 
-chrF compares *character* $n$-grams rather than words. This sidesteps
-tokenization and gives a word that is almost right (a shared stem, a wrong
-inflection) partial credit instead of none. Spaces are removed first. For
-each order $n = 1, \ldots, 6$, the precision is the share of the
-candidate's $n$-grams that also occur in the reference, and the recall is
-the share of the reference's $n$-grams that occur in the candidate. chrF
-averages each over the six orders, to $P$ and $R$, and combines the two
-into an F-score:
+**chrF** compares character $n$-grams (with spaces stripped) for orders $n = 1, \ldots, 6$, avoiding tokenization sensitivity and granting partial credit for shared stems or near-miss inflections. For each order $n$, precision is the fraction of candidate $n$-grams present in the reference, and recall is the fraction of reference $n$-grams present in the candidate (using multiset intersection `p & r` so repeated $n$-grams are clipped at their reference count). Averaging precision and recall across the six orders to obtain $P$ and $R$, chrF computes the $F_\beta$-score:
 
 $$F_\beta = \frac{(1 + \beta^2)\, P R}{\beta^2 P + R}.$$
 
-With $\beta = 2$, a reference $n$-gram that the candidate misses costs more
-than an extra $n$-gram that the candidate adds. In the code, watch the
-intersection `p & r` of the two counters. It keeps the smaller of the two
-counts, so a candidate that repeats a correct word ten times gets credit
-for it only as often as the reference contains it.
+With $\beta = 2$, recall weighs more heavily than precision.
 
 ```{.python .input #seq2seq-chrf}
 %%tab pytorch, jax
@@ -164,25 +81,12 @@ def chrf(pred, label, n=6, beta=2):  #@save
     return (1 + beta**2) * prec * rec / (beta**2 * prec + rec)
 ```
 
-BLEU :cite:`Papineni.Roukos.Ward.ea.2002`, which you will meet in most
-older papers, counts words. Its $p_n$ is the precision of word $n$-grams
-for $n = 1, \ldots, k$, clipped in the same way. BLEU multiplies these
-precisions, each raised to a weight, and damps the product with a *brevity
-penalty*, so that a model cannot raise its precision by writing only the
-few words it is sure of:
+**BLEU** :cite:`Papineni.Roukos.Ward.ea.2002` measures clipped word $n$-gram precisions $p_n$ ($n = 1, \ldots, k$) and multiplies their weighted geometric mean by a *brevity penalty* so short, high-precision fragments cannot game the score:
 
 $$\text{BLEU} = \exp\!\left(\min\!\left(0, 1 - \frac{\text{len}_{\text{label}}}{\text{len}_{\text{pred}}}\right)\right) \prod_{n=1}^{k} p_n^{1/2^n}.$$
 :eqlabel:`eq_bleu`
 
-Here $\text{len}_{\text{pred}}$ and $\text{len}_{\text{label}}$ count the
-words of the candidate and the reference. No weight rescues a zero:
-$0^{1/16}$ is still 0. So for a candidate of at least $k$ words, BLEU is 0
-as soon as one order $n \le k$ has no match at all, and it is 1 only when
-every $n$-gram of the candidate is matched and the candidate is not
-shorter than the reference. This form weights order $n$ by $1/2^n$ and
-scores a single sentence. The standard corpus-level BLEU weights the orders
-up to 4 equally and pools the counts over a whole test set, where an order
-without any match is rare.
+Because it is a product, a single zero precision $p_n = 0$ at any order $n \le k$ drives sentence-level BLEU to $0$. (Standard corpus-level BLEU weights orders $n \le 4$ equally by $1/4$ and pools counts across an entire test set, where zero counts are rare.)
 
 ```{.python .input #seq2seq-bleu}
 %%tab pytorch, jax
@@ -203,14 +107,7 @@ def bleu(pred_seq, label_seq, k):  #@save
     return score
 ```
 
-The two metrics part ways on a single sentence. We score three candidates
-against one reference: an exact copy, a near miss with one wrong
-inflection, and a paraphrase that means the same thing in other words. The
-near miss lets us predict one number before running anything. It changes
-the third of six words, and each of the three word 4-grams of a six-word
-sentence contains the third word. So $p_4 = 0$, and BLEU with $k = 4$ is
-zero, however good the rest of the sentence is. chrF loses only the
-character $n$-grams that touch the stray *s*.
+To see how the two metrics diverge on a single sentence, we score an exact copy, a near miss with one wrong inflection on the third of six words, and a valid paraphrase. Because every 4-gram in a six-word sentence touches the third word, $p_4 = 0$ on the near miss, driving BLEU with $k = 4$ to zero while chrF loses only the character $n$-grams overlapping the stray *s*.
 
 ```{.python .input #seq2seq-scoring-translations-1}
 %%tab pytorch, jax
@@ -223,36 +120,13 @@ for name, candidate in candidates.items():
           f'BLEU {bleu(candidate, reference, k=4):.2f}')
 ```
 
-The near miss scores 0.91 on chrF and zero on BLEU. The paraphrase
-says the same thing as the reference, yet it scores 0.67 on chrF, below the
-ungrammatical near miss, and zero on BLEU. Neither metric knows what a
-sentence means; both count shared pieces of text. Learned metrics fill
-that gap. COMET :cite:`Rei.Stewart.Farinha.ea.2020`, for instance, is a
-network trained to predict human ratings of translations. So, increasingly,
-does a large language model asked to judge, a model of the kind
-:numref:`chap_transformers` builds. In practice, use chrF for a quick
-lexical score. To compare with older work, compute the standard
-corpus-level BLEU with a shared implementation such as sacreBLEU
-:cite:`Post.2018`, not the sentence-level variant above. Check meaning with
-a learned metric or a human reader.
+The near miss scores 0.91 on chrF and 0.00 on BLEU, while the meaning-preserving paraphrase scores 0.67 on chrF and 0.00 on BLEU. Because both metrics count surface overlap rather than semantics, modern evaluation pairs chrF (or corpus-level sacreBLEU :cite:`Post.2018` for historical comparisons) with learned neural evaluators such as COMET :cite:`Rei.Stewart.Farinha.ea.2020` or LLM judges.
 
 ## The Fixed-State Bottleneck
 
-How much of a source fits through one state? Translation is a poor place
-to ask, because long sentences are also rarer and harder, and the two
-effects cannot be told apart. We use the reversal task of
-:numref:`subsec_reversal-task` instead: reverse a random string over an
-alphabet of 16 letters. The letters are drawn independently, so the
-letters the decoder has already written tell it nothing about the next
-one, and every letter must come through the encoder's final state. The
-task also has the layout that Sutskever et al. obtained by feeding their
-source backward: the first letter to write is the last one read.
+How much of an input sequence fits through a single state vector? Natural language confounds length with syntactic rarity, so we isolate state capacity using the synthetic string-reversal benchmark of :numref:`subsec_reversal-task`: reversing a random string of $T$ independent letters drawn uniformly from an alphabet of 16 symbols. Because the letters are independent, previously decoded letters give zero information about the next letter—every letter must travel through the encoder's final state $\mathbf{c}$. Reversal also naturally gives the last encoder token first to the decoder, matching Sutskever et al.'s reversed-input ordering.
 
-Each batch is fresh, so the model never sees a string twice. The class
-`Reversal` hands the model one sequence `X`: the source, followed by the
-decoder input, which is the reversed string shifted right behind a start
-token, as teacher forcing requires. The two travel as one sequence because
-`d2l.train_steps` passes the model a single input.
+Each minibatch draws fresh random strings. `Reversal` packs the source string and the right-shifted reversed target (prefixed by a start token `V`) into a single tensor `X` for `d2l.train_steps`.
 
 ```{.python .input #seq2seq-the-fixed-state-bottleneck-1}
 %%tab pytorch
@@ -298,31 +172,12 @@ class Reversal:
             yield self.batch(self.batch_size, subkey)
 ```
 
-Counting tells us what to expect, up to a point. One of 16 equally likely
-letters carries $\log_2 16 = 4$ bits, so a string of $T$ letters carries $4T$
-bits: 32 bits at $T = 8$, 256 bits at $T = 64$. A state of fixed size holds
-only so many bits, so beyond some length the accuracy must fall, and a wider
-state should hold out longer. Counting says only that the fall must begin
-before the string outgrows the state. A state of 64 numbers stored as 32-bit
-floats has room for 2,048 bits, enough for 512 letters. Will a trained network
-reverse 500 letters through it? A hundred? Make a guess before you read the
-table.
+In raw bit count, each of the 16 equiprobable letters carries $\log_2 16 = 4$ bits, so a length-$T$ string carries $4T$ bits (32 bits at $T = 8$; 256 bits at $T = 64$). In principle, 64 single-precision floats occupy 2,048 bits—room for 512 letters. How many letters can a trained GRU actually pack and unpack through 64 or 256 floats?
 
-The model follows :numref:`fig_seq2seq_details`. A GRU encoder
-(:numref:`sec_gru`) reads the source. Its final state $\mathbf{c}$ starts
-the GRU decoder, which also reads $\mathbf{c}$ at every step, concatenated
-to the embedding of its input letter:
+Following :numref:`fig_seq2seq_details` and :citet:`Cho.Van-Merrienboer.Gulcehre.ea.2014`, the GRU encoder's final state $\mathbf{c}$ both initializes the GRU decoder ($\mathbf{s}_0 = \mathbf{c}$) and is concatenated to the input embedding at every decoding step:
 
 $$\mathbf{s}_{t'} = g(y_{t'-1}, \mathbf{c}, \mathbf{s}_{t'-1}).$$
 :eqlabel:`eq_seq2seq_s_t`
-
-Here $g$ is the GRU update and $\mathbf{s}_0 = \mathbf{c}$. The source
-thus enters the decoder twice: as its starting state, and again at every
-step, so a decoder state that loses track of the source while writing is
-handed it back. Feeding $\mathbf{c}$ at every step follows the decoder of
-:citet:`Cho.Van-Merrienboer.Gulcehre.ea.2014`; Sutskever et al. used it
-only as the starting state. A linear layer maps each decoder state to
-scores for the 16 letters.
 
 ![A GRU encoder--decoder on reversal, unrolled. The encoder reads the source; its final state $\mathbf{c}$ starts the decoder and enters every decoder step. The decoder reads the reversed string shifted right behind a start token and predicts the reversed string.](../img/mdl-modernrnn-seq2seq.svg)
 :label:`fig_seq2seq_details`
@@ -371,17 +226,7 @@ class Reverser(nnx.Module):
         return self.head(self.decoder(dec_X, initial_carry=c))
 ```
 
-Each model trains for 1,000 steps of 128 fresh strings with AdamW and a cosine
-schedule that takes the learning rate from $3 \times 10^{-3}$ to zero, without
-warmup or weight decay, as for the reversal model of :numref:`sec_transformer`.
-`d2l.LMOptimizer` packages this optimizer, and `d2l.train_steps`
-(:numref:`sec_test_models`) runs the steps. We then score the model on 1,000
-fresh strings by the fraction of letters it predicts correctly, still given the
-correct previous letters. We keep the correct letters for a simple reason. The
-letters are independent, so the previous letters alone reveal nothing about the
-next one, and whatever the decoder knows about it came through the state. Had
-the decoder fed back its own guesses, its early mistakes would mix into the
-measurement.
+We train each model for 1,000 steps on minibatches of 128 fresh strings using AdamW with a cosine decay from $3 \times 10^{-3}$ to zero (`d2l.LMOptimizer` and `d2l.train_steps`), matching :numref:`sec_transformer`. We evaluate per-letter accuracy on 1,000 fresh strings under teacher forcing: because the letters are independent, feeding ground-truth previous tokens leaks nothing about the next target letter while preventing early decoding errors from confounding the state-capacity measurement.
 
 ```{.python .input #seq2seq-the-fixed-state-bottleneck-3}
 %%tab pytorch
@@ -411,9 +256,7 @@ def reversal_accuracy(num_hiddens, length):
     return float((model(X).argmax(-1) == Y).mean())
 ```
 
-We train two models for each state width, 64 and 256, and each string
-length from 8 to 64, and print both accuracies. Guessing gives
-$1/16 \approx 0.06$.
+We run two seeds for state widths 64 and 256 across lengths $T \in \{8, 16, 32, 64\}$ (chance accuracy is $1/16 \approx 0.06$).
 
 ```{.python .input #seq2seq-the-fixed-state-bottleneck-4}
 %%tab pytorch, jax
@@ -425,71 +268,13 @@ for num_hiddens in widths:
     print(f'{num_hiddens:5d}' + ''.join(f'   {a:.2f}/{b:.2f}' for a, b in row))
 ```
 
-The two runs of each entry agree to within 0.02, and the trend is ten
-times larger than that. With 64 numbers of state, accuracy falls from 0.99
-at 8 letters to 0.26 to 0.27 at 64 letters: still four times better than
-guessing, but most of the string is lost. The state four times wider holds
-out longer. It is still at 0.99 at 16 letters and gets about half the
-letters right at 64. So much counting predicted.
+At width 64, accuracy drops from 0.99 at $T = 8$ to 0.72 at $T = 16$ and 0.26–0.27 at $T = 64$. Quadrupling the state width to 256 holds accuracy at 0.99 through $T = 16$ and recovers roughly half the letters at $T = 64$. Even so, effective capacity is a small fraction of raw floating-point bits: at $T = 16$, the string carries just 64 bits (1 bit per state float at width 64), yet a quarter of the letters are lost. Moreover, scaling state width proportionally with sequence length still loses ground ($T = 8$ at width 64 reaches 0.99, whereas $T = 32$ at width 256 reaches ~0.80), because the network must also propagate early letters across a longer chain of nonlinear recurrent updates.
 
-Counting did not predict where, and here the table surprises. At 16
-letters the string carries 64 bits, a thirty-second of what 64 floats could
-store, and the narrow network already loses a quarter of the letters. The
-string needs only one bit per number of state, and the trained network
-does not deliver even that. Nor is the width of the state the whole story.
-Compare entries with the same number of letters per number of state. Eight
-letters through 64 numbers come out at 0.99, but 32 letters through 256
-numbers only at about 0.8. Likewise, 16 letters through 64 numbers come out
-at nearly three in four, and 64 letters through 256 numbers at about half.
-Four times the state
-for four times the letters loses about 0.2 of accuracy, so a longer string
-is harder even when the state grows with it.
-
-The limit is not the precision of the floats. It lies in the code that the
-network finds: a way to write the letters into its state through a long chain
-of gated updates and to read them back out in reverse order. The table cannot
-tell which of three things limits that code: the GRU's architecture, the
-optimizer, or the budget of 1,000 steps. It is a measurement at a fixed budget,
-and an exercise asks how far longer training moves it.
-
-Translation ran into the same wall.
-:citet:`Cho.Van-Merrienboer.Bahdanau.ea.2014` found that the BLEU score of
-a recurrent encoder--decoder falls quickly as sentences grow longer. The
-much larger LSTMs of :citet:`Sutskever.Vinyals.Le.2014` held up much
-better on long sentences, which the authors credited to reading the source
-backward; their state was also far wider, which helps in our table too.
-The repair came the same year, when :citet:`Bahdanau.Cho.Bengio.2014` let
-the decoder look back at every encoder state
-(:numref:`sec_attention-scoring-functions`).
-
-The cross-attention model of :numref:`sec_transformer` has no single state
-between its encoder and its decoder. Each letter it writes reads the
-encoder's vector at every source position, so nothing has to be squeezed.
-On strings of 12 letters its loss falls below 0.03 nats per letter by step
-100, a tenth of our budget, and after its 300 steps of training it
-reverses fresh strings without a single error. But looking back requires
-keeping every encoder state, a memory that grows with the input, which is
-what a recurrent network was meant to avoid. The rest of this chapter
-takes the other road. It keeps one state of fixed size, first makes it
-fast to train, and then asks how to make it a better memory, until the
-last section mixes a little attention back in.
+Neural machine translation hit the exact same bottleneck in 2014 :cite:`Cho.Van-Merrienboer.Bahdanau.ea.2014`, prompting :citet:`Bahdanau.Cho.Bengio.2014` to introduce cross-attention so the decoder could look back at every encoder state (:numref:`sec_attention-scoring-functions`, :numref:`sec_transformer`)—solving length-12 reversal perfectly within 300 steps at the cost of a cache that grows linearly with input length. The remainder of this chapter explores the complementary path: keeping a fixed-size state, making it parallelizable to train, expanding it from a vector into a key--value matrix memory, and finally combining it with a small fraction of attention layers.
 
 ## Summary
 
-Sequence-to-sequence learning maps one sequence to another of a different
-length. The encoder--decoder abstraction splits the model in two: an
-encoder reads the source into a state, and a decoder, a conditional
-language model, writes the target from it. In the 2014 design that state
-is a single vector, and it stands in for the whole source in every factor
-of the decoder's probability. Translations are scored by their overlap
-with a reference, chrF by character $n$-grams and BLEU by word $n$-grams,
-and neither score knows when two sentences mean the same thing. Trained to
-reverse random strings, a GRU encoder--decoder with 64 numbers of state
-falls from almost perfect at 8 letters to about a quarter of the letters
-at 64, far below what counting allows, and a wider state holds out longer.
-Attention removes the single state by letting the decoder look back, at
-the cost of a memory that grows with the input; the rest of this chapter
-keeps the single state and makes it better.
+The encoder--decoder architecture maps a variable-length source sequence to a variable-length target sequence by summarizing the source into an encoder state $\mathbf{c}$ and conditioning an autoregressive decoder on $\mathbf{c}$. Translation quality is commonly measured by character $n$-gram overlap (chrF) or word $n$-gram precision with a brevity penalty (BLEU), supplemented by learned semantic metrics. On synthetic string reversal, a single fixed-width GRU state vector degrades rapidly as sequence length grows, storing well under one effective bit per state coordinate and motivating both attention mechanisms and the structured higher-capacity recurrent states developed in the rest of this chapter.
 
 ## Exercises
 
@@ -534,12 +319,6 @@ keeps the single state and makes it better.
    decoder only as its initial state, as Sutskever et al. did, and not as
    an input at every step. How does that change the accuracies at each
    length, and why might repeating the context help a small model?
-1. **An LSTM encoder--decoder.** Replace the GRUs with the LSTMs of
-   :numref:`sec_lstm` in both the encoder and the decoder of `Reverser`.
-   How does the per-letter accuracy change at each length? An LSTM
-   carries a memory cell besides its hidden state; decide which of the two
-   the decoder should start from, or whether it should start from both,
-   and test your choice.
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1062)

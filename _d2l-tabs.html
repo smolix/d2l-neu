@@ -138,6 +138,17 @@
       syncTabs(initial, !!requested);
     }
 
+    // Quarto's own tabsets.js reads the same storage key on `pageshow` and
+    // toggles every framework tabset to the stored name, with no fallback:
+    // on a PyTorch/JAX page with TensorFlow stored that deactivates every
+    // pane and hides all code. Re-apply our choice after it runs.
+    window.addEventListener('pageshow', function() {
+      setTimeout(function() {
+        var now = normalizeFramework(requested || getStored()[GROUP]) || initial;
+        if (now) syncTabs(now, false);
+      }, 0);
+    });
+
     // Cross-tab sync: update this page's visible tabs (without overwriting the
     // stored preference if this page has to fall back) before the Slides and
     // notebook-launcher storage listeners inspect .nav-link.active.

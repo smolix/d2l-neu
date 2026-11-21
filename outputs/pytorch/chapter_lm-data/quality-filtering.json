@@ -1,0 +1,350 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-data/quality-filtering.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:45aa273f73e5c6950cdd550ee6ee055eacf7524da3eea3cb5c26467a800d74e4",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "quality-filtering-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "quality-filtering-extras": {
+      "code_fingerprint": "sha256:7c3a3c280ca0f2033d76e61e02cabf5e3b74d2a99848d83205af7b3b6b6dc630",
+      "kind": "text",
+      "outputs": []
+    },
+    "quality-filtering-config": {
+      "code_fingerprint": "sha256:31d72b552a21d2be0db09057039c3c7d09166b7eeeb7321caa63b5904b782e52",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GPU=True, SMALL=False, regenerating: none\n  Qwen/Qwen3-Embedding-0.6B@97b0c614\n  Qwen/Qwen3-0.6B-Base@da87bfb6\n  RedHatAI/Qwen3.8-27B-INT4@71dface3\n  HuggingFaceFW/fineweb-edu-classifier@284663cb\n"
+        }
+      ]
+    },
+    "quality-filtering-data-hub": {
+      "code_fingerprint": "sha256:a024893327f662fb5bb02a83acb57b2575e77a5b5172d1e67e44fb05304ebc92",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "registered: lm-edu-annot-22k-v1, lm-data-audit-stream-v1, lm-data-emb-qwen3emb-v1,\n    lm-quality-head-v1, lm-c1-docs-v1, lm-data-quality-results-v1, lm-data-removal-labels-v1 |\n    pending: none\n"
+        }
+      ]
+    },
+    "quality-filtering-opening": {
+      "code_fingerprint": "sha256:7c22044e15e7c7cc08cb91f21b3e69346f002e3a1f6fdf6d8561ba32b1540dcf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FineWeb-Edu keeps 19,287,119 of FineWeb's 265,662,695 documents of CC-MAIN-2025-05: 7.26%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\npasses every rule, at least 1,500 characters, lowest score of our classifier\n    (<urn:uuid:adce31f7-4963-45dd-89f8-19e3b3a8eb17>):\n  I NEED REVENGE DEATH SPELL TO KILL <PHONE> INSTANT LOVE SPELLS THAT WORK FAST, NO SIDE EFFECTS AND\n  IT DOESN’T BACKFIRE, My name is Dr ITSOKWI Spells caster. Call/WhatsApp <PHONE> Specializing in\n  helping you to achieve your goals. Trusted lost love spells in the world. Love spells that really\n  work, spell to return ex lover with effective results GET BACK LOST LOVER AFTER DIVORCE, get my\n  EX-LOVER back, Instant Divorce Spell, Fertility/Pregnancy Spell, Marriage Spell, Love spells, lost\n  love spells, breakup spells, love spell casters that work,online love spell caster,psychic love sp\n  …\n\nremoved by our classifier, labelled \"keep\" in the review, lowest score\n    (<urn:uuid:e69fd49e-7746-4495-8e31-9486b75854eb>):\n  By recording live interviews, our platform harnesses the power of artificial intelligence to help\n  teams run a faster, better interview process. Request a DemoFinding the right software engineer\n  can make all the difference in the success of your team, the quality of your code, and the success\n  of your platform. With technology constantly evolving, it's important to hire someone who is not\n  only technically skilled but also adaptable, collaborative, and innovative. It's equally important\n  that you hire someone who fits your company's mission and culture. This guide will provide you\n  with a comprehen …\n\nText: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 (ODC-By 1.0)\n"
+        }
+      ]
+    },
+    "quality-filtering-rules-def": {
+      "code_fingerprint": "sha256:d0ee15f05790c1d8efd6cfe1a13d6fdb3129659c70b4e64f2f4f363926ae4eed",
+      "kind": "text",
+      "outputs": []
+    },
+    "quality-filtering-rules-fixtures": {
+      "code_fingerprint": "sha256:1380b9e4481cf6c87535fef50d9cc52f5867db53bd8c72e440dd176ba35caecc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          fixture             fired   ok\n             keep            (keep) True\n  gopher_dup_text   gopher_dup_text True\n gopher_top_ngram  gopher_top_ngram True\n gopher_dup_ngram  gopher_dup_ngram True\n     gopher_words      gopher_words True\n  gopher_word_len   gopher_word_len True\n   gopher_symbols    gopher_symbols True\n   gopher_bullets    gopher_bullets True\n  gopher_ellipsis   gopher_ellipsis True\n     gopher_alpha      gopher_alpha True\ngopher_stop_words gopher_stop_words True\n       c4_quality        c4_quality True\n    fw_line_punct     fw_line_punct True\n   fw_short_lines    fw_short_lines True\n     fw_dup_chars      fw_dup_chars True\n    fw_list_ratio     fw_list_ratio True\n"
+        }
+      ]
+    },
+    "quality-filtering-rules-parity": {
+      "code_fingerprint": "sha256:e7aa0c9cbbe2403e05e080768aea72c9410bfce834ffc99299e81736a7225b6e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2,000 c0 documents, datatrove 0.10.1; per filter, the share of documents on which both\n    implementations decide alike:\n agree  datatrove_only            filter  ours_only\n0.9910               8 gopher_repetition         10\n0.9615              60    gopher_quality         17\n0.9930              11                c4          3\n0.9990               1           fineweb          1\n0.9555              34          pipeline         55\n     3  c4: ours c4_quality, datatrove keep\n    11  c4: ours keep, datatrove too_few_sentences\n    14  gopher_quality: ours gopher_alpha, datatrove keep\n     3  gopher_quality: ours gopher_words, datatrove keep\n    58  gopher_quality: ours keep, datatrove gopher_below_alpha_threshold\n     2  gopher_quality: ours keep, datatrove gopher_short_doc\n     9  gopher_repetition: ours gopher_top_ngram, datatrove keep\n     3  gopher_repetition: ours keep, datatrove top_3_gram\n     4  gopher_repetition: ours keep, datatrove top_4_gram\n     6  pipeline: ours fw_dup_chars, datatrove keep\n    27  pipeline: ours fw_line_punct, datatrove keep\n    15  pipeline: ours fw_short_lines, datatrove keep\n     7  pipeline: ours gopher_alpha, datatrove keep\n     7  pipeline: ours keep, datatrove fineweb\n    25  pipeline: ours keep, datatrove gopher_quality\n"
+        }
+      ]
+    },
+    "quality-filtering-rules-run": {
+      "code_fingerprint": "sha256:2e2e2919dd479aafca09e555bdaa74280fd2c0cc4350fe1e6b6e362f8b047d0f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rules on 3,288 c0 and 29,000 stream documents: 25 s\n                  first        fired       \ncorpus               c0 stream    c0 stream\ncode                                       \ngopher_dup_text     571      0   571      0\ngopher_top_ngram    247     10   319     10\ngopher_dup_ngram    176     12   571     13\ngopher_words        322    104   601    109\ngopher_word_len       7      1    14      1\ngopher_symbols        2      0    25      0\ngopher_bullets       15     11    22     11\ngopher_ellipsis      52     42   156     43\ngopher_alpha        403    108   958    125\ngopher_stop_words    21      2   463      6\nc4_quality          123     27   704     28\nfw_line_punct       195      0  1150      0\nfw_short_lines       33      0   719      0\nfw_dup_chars         89      0   937      0\nfw_list_ratio         0      0   444      0\nc0: 3,288 in, 2,256 removed (68.6%), 1,032 kept\nstream: 20,000 in, 317 removed (1.6%), 19,683 kept\nc0, rules that fire together most often: gopher_alpha + fw_line_punct (560); fw_line_punct +\n    fw_short_lines (558); fw_line_punct + fw_dup_chars (557)\nFineWeb-2 (each already filtered with its own language rules), under these English rules:\nlanguage   n  removed  rate    lo    hi          top_rule  rate_without_stop_words\ndeu_Latn 500      479 0.958 0.937 0.972 gopher_stop_words                    0.276\nswh_Latn 500      467 0.934 0.909 0.953 gopher_stop_words                    0.164\nhin_Deva 500      500 1.000 0.992 1.000   gopher_word_len                    1.000\ncmn_Hani 500      500 1.000 0.992 1.000      gopher_alpha                    1.000\njpn_Jpan 500      500 1.000 0.992 1.000      gopher_words                    1.000\ntha_Thai 500      500 1.000 0.992 1.000      gopher_alpha                    1.000\n"
+        }
+      ]
+    },
+    "quality-filtering-ppl": {
+      "code_fingerprint": "sha256:26e8e9a1c88067bed66642f94c34a23f616cfd1dedab1854de98ccfe9ab1fc28",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-0.6B-Base@da87bfb608c1: Qwen3ForCausalLM, stop tokens [151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3,000 documents in 67 s, peak 8.1 GiB (9.9 GiB reserved)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "NLL per token (nats), 5/25/50/75/95th percentiles: 1.81 2.56 2.91 3.28 3.94\n\n10 lowest:\n   0.82  'More articles from Noriko Ishii\\nPlease be mindful of our community standards.\\nYo'\n   0.89  'Operating systems are the software that manages the hardware and software resour'\n   1.02  'Why Investing in Property is a Smart Financial Move.\\nInvesting in property has l'\n   1.08  '- This topic is empty.\\n26/10/2023 at 14:42 #4028\\nToday, I’d like to delve into a'\n   1.08  'Pediatric care is a specialized branch of medicine dedicated to the health and w'\n   1.10  'In this guide we will show you how you can learn to code with the help of ChatGP'\n   1.12  'In today’s digital age, a strong online presence is crucial for any business. A '\n   1.15  'Gas turbines have become an essential component of modern power generation, avia'\n   1.17  'Dubai Fulfillment Services\\nDubai, a global hub for trade and commerce, has rapid'\n   1.18  'Greetings, readers! I am excited to delve into the topic of sustainable transpor'\n\n10 highest:\n   5.01  'Your garden looks fantastic. That sweat tooth auto looks really good! Never trie'\n   5.04  'As have a peek at these guys you can see regarding the a lot more than pokies pa'\n   5.04  'To your Discord server they likewise have usage of a private #Alpha route. Which'\n   5.05  'Well a lot of the blog challenges seem to be centred on \"Christmas in July\" at t'\n   5.05  'On the internet breaks appear for those that should have an urgent funds treatme'\n   5.09  'A Selection of Railway Photos and Videos, mostly from the Midlands\\nJust my photo'\n   5.17  'The new artists made use of an appealing palette away from hues when taking care'\n   5.53  'view it However, they may be comparatively current, for the reason that brag sup'\n   6.05  \"a realtor Is really a short sale investor's Greatest buddie Since they're Given \"\n   6.61  'And unending person, cellular background services same population, that, to onli'\n\nText: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 (ODC-By 1.0)\n"
+        }
+      ]
+    },
+    "quality-filtering-label-def": {
+      "code_fingerprint": "sha256:abaa3f06129ccc6c2bb313202bcad9c1fc3e6ad8b7c97548c64cc2fcf65f1c89",
+      "kind": "text",
+      "outputs": []
+    },
+    "quality-filtering-label-live": {
+      "code_fingerprint": "sha256:37341c1146c9ddc75f1d4da804d0a18db624472783f8346093c16bfcf33007e5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "labels by labeller 'RedHatAI/Qwen3.8-27B-INT4@71dface38d4cbfa34121f1d446d4a0fa1025f13c', server\n    'vLLM 0.33.0', score_prefix 'Educational score: ', extra_space True\n32 prompts scored twice (another server, another order): largest |dp| 0.0000, same label 1.000\n"
+        }
+      ]
+    },
+    "quality-filtering-label-regen": {
+      "code_fingerprint": "sha256:fefb98d5b57b2a3ec42505c5f90a78f254b86a04bc2c7c394dd0535e3b579301",
+      "kind": "text",
+      "outputs": []
+    },
+    "quality-filtering-agreement": {
+      "code_fingerprint": "sha256:b6f5188ab1ca8d56a8f3786f730f7c6836d4d8299c23c5ffffc35a7820f01a68",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "labels: lm-edu-annot-22k-v1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "22,000 rows; probability on the six digits (a second space counted): median 0.997, 1st percentile\n    0.990\nshare of the rows at or above each score:\n score >=  Qwen3.8-27B  Llama-3-70B\n        1       0.8240       0.8796\n        2       0.0643       0.3082\n        3       0.0138       0.0913\n        4       0.0001       0.0181\n        5       0.0000       0.0000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ranking: Spearman of the expected score against Llama-3-70B's score 0.761 [0.755, 0.767]\nlabels: exact agreement 0.591; quadratic-weighted kappa 0.496; binary (score >= 3) kappa 0.239\n    [0.215, 0.260]; with Qwen cut at Llama's share (0.091) 0.649\nrows: Llama-3-70B score, columns: Qwen3.8-27B score\nqwen      0      1    2    3  4  5\nllama                             \n0      1956    693    0    0  0  0\n1      1908  10637   26    0  0  0\n2         8   4481  275    7  0  0\n3         1    837  634  138  0  0\n4         0     64  175  156  3  0\n5         0      1    0    0  0  0\n\n2,000 justification-first answers, 0 without a parsable score\nthe two protocols of Qwen3.8-27B on 2,000 rows: exact agreement 0.502, quadratic-weighted kappa\n    0.457, binary kappa 0.662 [0.506, 0.797]; share >= 3: digit probabilities 0.0180, justification\n    first 0.0105\nrows: digit probabilities, columns: justification first\njustified    0    1   2   3  4  5\ndigits                           \n0          328    0   0   0  0  0\n1          844  607  81   0  0  0\n2            0   48  54   2  0  0\n3            0    3  14  16  3  0\n4            0    0   0   0  0  0\n5            0    0   0   0  0  0\n"
+        }
+      ]
+    },
+    "quality-filtering-labels-choice": {
+      "code_fingerprint": "sha256:dbeb06868071b21b30559cf6ad20465d786d482034c1006db50270c577c8bf09",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "training labels: qwen_score\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{'train': 18000, 'val': 2000, 'test': 2000}\n"
+        }
+      ]
+    },
+    "quality-filtering-embed-def": {
+      "code_fingerprint": "sha256:0fd9445b74c92b0c42ca521f3fdaa2e6f39ceae48c50eb2e66225ae8aca31554",
+      "kind": "text",
+      "outputs": []
+    },
+    "quality-filtering-embed": {
+      "code_fingerprint": "sha256:b899416e353690e2eadcb810e286ee373cd58094509aa9425e62bc046b0c73ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n29 of 64 texts truncated to 512 tokens\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "64 test texts, cosine of embed_docs to the registered vectors: min 0.9998; to sentence-transformers:\n    min 0.9998\nc0 vectors: 3,288 from the local cache or this run\n"
+        }
+      ]
+    },
+    "quality-filtering-heads-def": {
+      "code_fingerprint": "sha256:d6b31e1015a38b95c2c9c689a94b7374b786cd3aa65ee6a4d0fad326fb694960",
+      "kind": "text",
+      "outputs": []
+    },
+    "quality-filtering-heads": {
+      "code_fingerprint": "sha256:cc21c33082bb1c45544c7f22271302ad46e02e07cf34f06be66d3650f0ebd145",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "heads: 8 s; final training loss: regression 0.126 (MSE), logistic 0.020\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "hashed bag: 66 s on the CPU\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "thresholds t* (best validation F1): regression head 1.611, logistic head 0.160, hashed bag 0.037,\n    released 2.938\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "released classifier live on 2000 test rows: largest difference to the registered scores 0.016\n"
+        }
+      ]
+    },
+    "quality-filtering-clf-table": {
+      "code_fingerprint": "sha256:7215e1ce28ff2195df2cfdaab536b74df181600e64f9367764c05deb380dea61",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2,000 test rows (parameters: the trained part; the heads also run the frozen\n    Qwen/Qwen3-Embedding-0.6B; F1 lo/hi: bootstrap interval of F1 qwen_score)\n     classifier  threshold  retained    params  ms_per_doc   MAE\nregression head      1.611     0.036      1025       6.375 0.300\n  logistic head      0.160     0.023      1025       6.375   NaN\n     hashed bag      0.037     0.072  67108929       0.629   NaN\n       released      2.938     0.040 109483009       1.038 0.371\n     classifier  F1 qwen  AUC qwen  F1 llama  AUC llama  F1 lo  F1 hi\nregression head    0.444     0.983     0.419      0.912  0.318  0.552\n  logistic head    0.561     0.978     0.290      0.865  0.410  0.680\n     hashed bag    0.257     0.902     0.367      0.800  0.171  0.344\n       released    0.466     0.977     0.538      0.966  0.349  0.571\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "regression head minus released, on qwen_score: F1 -0.021 [-0.140, +0.091] (paired bootstrap over\n    rows); accuracy +0.001 [-0.007, +0.009]\n"
+        }
+      ]
+    },
+    "quality-filtering-ceiling": {
+      "code_fingerprint": "sha256:bdc45bf8b322f6dd9709e7b54cf3549ae74162b64f9f191767523a263cc3fc71",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "F1 = 2 pi TPR / (pi + rho) at 50 thresholds: largest gap 5.6e-17\n eta  closed_form  simulated  within_3se\n0.02       0.9007     0.9007        True\n0.05       0.7787     0.7782        True\n0.10       0.6250     0.6248        True\nthe two protocols disagree on 0.0095 of 2,000 test rows: eta 0.0048 [0.0028, 0.0068], ceiling F1\n    0.800 [0.675, 0.889]\nequal symmetric noise implies equal shares; Qwen3.8-27B 0.014 and Llama-3-70B 0.091 differ in scale,\n    so their disagreement does not estimate eta\nmeasured test F1: regression head 0.444, logistic head 0.561, hashed bag 0.257, released 0.466 | all\n    below the ceiling: True\n"
+        }
+      ]
+    },
+    "quality-filtering-threshold": {
+      "code_fingerprint": "sha256:f4179b1dc28d2826d2f43e66c8398d27a81d3e04aef9117fdc044ac61be6e84e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "quality-filtering/quality-filtering-threshold-1.svg",
+          "bytes": 66190,
+          "sha256": "sha256:751ca2b86718c44274d8ff6baf0dbe041bce7c1e4dd5ecca511d559ba8629ad3"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "on the 20,000-document stream (FineWeb-Edu kept 7.26% of this dump):\n                            classifier  documents  tokens\n                       regression head     0.0285  0.0484\n                         logistic head     0.0186  0.0301\n                            hashed bag     0.0614  0.0576\n                              released     0.0356  0.0509\nreleased, int_score >= 3 (FineWeb-Edu)     0.0710  0.0986\nregression head, keep a document whose predicted score is at least the cut (t* = 1.611); stream\n    shares, test precision and recall against qwen_score >= 3:\n  cut  documents  tokens  precision  recall     F1\n1.000     0.3674  0.4844     0.0436  1.0000 0.0835\n1.500     0.0512  0.0804     0.2705  0.9167 0.4177\n1.611     0.0286  0.0485     0.3333  0.6667 0.4444\n2.000     0.0028  0.0052     0.6364  0.1944 0.2979\n2.500     0.0000  0.0000        NaN  0.0000 0.0000\n3.000     0.0000  0.0000        NaN  0.0000 0.0000\nof 1e12 tokens of such a dump, regression head keeps about 4.8e+10\n"
+        }
+      ]
+    },
+    "quality-filtering-audit-def": {
+      "code_fingerprint": "sha256:db72dbb1ea377f4b28f0c9f662664e872e50724beaf2ffa346b046104f6ed11d",
+      "kind": "text",
+      "outputs": []
+    },
+    "quality-filtering-audit": {
+      "code_fingerprint": "sha256:8c661f01b9948491343dc1d7fdcd380c2469d4119fe6560df0089a4520afbe9a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stream halves: {'A': 10089, 'B': 9911} | removal rates: {'heuristics': 0.016, 'classifier': 0.972,\n    'both': 0.972}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  grouping   group        arm    n  domains  removal   diff  diff_lo  diff_hi  diff_A  diff_B  same\n     cctld     .au heuristics  544      534    0.011 -0.005   -0.013    0.005  -0.005  -0.005  True\n     cctld     .ca heuristics  324      314    0.025  0.009   -0.006    0.027   0.016   0.002  True\n     cctld     .in heuristics  238      235    0.025  0.009   -0.008    0.031   0.001   0.018  True\n     cctld     .nz heuristics  111      108    0.027  0.011   -0.016    0.045   0.015   0.006  True\n     cctld     .uk heuristics 1098     1059    0.011 -0.005   -0.011    0.002  -0.003  -0.007  True\n     cctld     .za heuristics  110      104    0.027  0.011   -0.016    0.047   0.020   0.002  True\n     cctld     .au classifier  544      534    0.989  0.019    0.009    0.027   0.022   0.016  True\n     cctld     .ca classifier  324      314    0.978  0.008   -0.009    0.023   0.011   0.006  True\n     cctld     .in classifier  238      235    0.966 -0.004   -0.029    0.018   0.021  -0.029 False\n     cctld     .nz classifier  111      108    0.973  0.003   -0.032    0.030   0.014  -0.012 False\n     cctld     .uk classifier 1098     1059    0.978  0.008   -0.001    0.017   0.005   0.011  True\n     cctld     .za classifier  110      104    0.982  0.012   -0.017    0.032   0.012   0.012  True\n     cctld     .au       both  544      534    0.989  0.019    0.009    0.027   0.022   0.016  True\n     cctld     .ca       both  324      314    0.981  0.011   -0.005    0.026   0.010   0.012  True\n     cctld     .in       both  238      235    0.966 -0.004   -0.029    0.017   0.021  -0.029 False\n     cctld     .nz       both  111      108    0.973  0.003   -0.032    0.030   0.014  -0.012 False\n     cctld     .uk       both 1098     1059    0.978  0.008   -0.001    0.017   0.005   0.011  True\n     cctld     .za       both  110      104    0.982  0.012   -0.017    0.031   0.012   0.012  True\nhost_class    blog heuristics  569      257    0.016 -0.000   -0.009    0.016  -0.001   0.001 False\nhost_class edu_gov heuristics  553      402    0.022  0.006   -0.006    0.019   0.002   0.010  True\nhost_class   forum heuristics  204      186    0.020  0.003   -0.013    0.025   0.005   0.002  True\nhost_class    news heuristics  786      680    0.003 -0.014   -0.017   -0.009  -0.013  -0.014  True\nhost_class    shop heuristics  494      476    0.018  0.002   -0.009    0.015  -0.003   0.007 False\nhost_class    blog classifier  569      257    0.981  0.010   -0.016    0.022   0.023  -0.018 False\nhost_class edu_gov classifier  553      402    0.976  0.006   -0.007    0.018   0.016  -0.004 False\nhost_class   forum classifier  204      186    0.975  0.005   -0.017    0.024   0.009   0.002  True\nhost_class    news classifier  786      680    0.975  0.004   -0.008    0.015   0.007   0.002  True\nhost_class    shop classifier  494      476    0.996  0.026    0.019    0.031   0.022   0.029  True\nhost_class    blog       both  569      257    0.981  0.010   -0.017    0.021   0.022  -0.018 False\nhost_class edu_gov       both  553      402    0.976  0.006   -0.007    0.018   0.016  -0.004 False\nhost_class   forum       both  204      186    0.975  0.005   -0.018    0.024   0.008   0.002  True\nhost_class    news       both  786      680    0.975  0.004   -0.008    0.015   0.007   0.002  True\nhost_class    shop       both  494      476    0.996  0.026    0.019    0.031   0.022   0.029  True\ntoo few (under 100 documents or 10 domains): .ie, .ng, .ph, wiki\ngroups whose combined removal rate differs from the reference beyond its interval, with the\n    classifier-only interval excluding 0 and the same sign in both halves: cctld=.au,\n    host_class=shop\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "quality-filtering/quality-filtering-audit-1.svg",
+          "bytes": 77917,
+          "sha256": "sha256:ad39a0c1f4727021c1f13fe5dfca53ab8ab10173dcd5534eb276d21718d003a6"
+        }
+      ]
+    },
+    "quality-filtering-review": {
+      "code_fingerprint": "sha256:8fa506f172dc64a4dc86944a24c4b306af64a63429360f9d30f90f552ea58fc4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "removed-document pools: {'classifier only': 1838, 'heuristics': 317} | reviewed: {'classifier only':\n    100, 'heuristics': 100}\nlabeller: RedHatAI/Qwen3.8-27B-INT4@71dface38d4cbfa34121f1d446d4a0fa1025f13c thinking, max_tokens\n    12000; removal precision (share labelled \"drop\"):\n            arm   n  drop  precision    lo    hi\nclassifier only 100    11       0.11 0.063 0.186\n     heuristics 100    70       0.70 0.604 0.781\n\n[classifier only, score 1.32, label drop] The page is generic, vague, and likely machine-generated\n    SEO filler with little substantive information and a truncated contact address.\n  In the world of technology, adapters play a crucial role in ensuring compatibility between\n  different devices and systems. One such adapter that has gained popularity is the 21A adapter. In\n  this article, we will explore what a 21A adapter is, its functions, and why it is widely used in\n  various indust …\n\n[heuristics, score 1.37, label keep] The page is a concise, informative encyclopedia entry about a\n    figure in Greek mythology, providing coherent prose a reader could learn from.\n  Erisichthon (wool of the earth, much earth) In Greek mythology, a sacrilegious person, son of\n  Triopas and Hiscilla of Thessaly; brother of Iphimedeia, Messene, and Phorbas; father of Mestra.\n  Mestra could take any beast form, which was a gift from her lover, Poseidon. Erisichthon would\n  sell Mestra in …\n\n[heuristics, score 0.89, label keep] The page is a coherent, informative professional bio describing\n    a massage therapist's training, techniques, and services.\n  Laresa attended Vancouver College of Massage Therapy (VCMT) where she was honoured with the Heart\n  Award for ‘Unconditional positive regard for others combined with a passionate commitment to\n  excellence in the massage therapy profession’.Laresa’s holistic approach to massage focuses on\n  treating speci …\n\n[classifier only, score 1.57, label drop] The page is a disjointed, contradictory collection of\n    low-quality snippets about billionaire net worth that reads like machine-generated or scraped\n    SEO content rather than coherent, useful prose.\n  Elon Musk is an entrepreneur and business magnate who co-founded PayPal and Tesla Motors. He is\n  now the CEO of SpaceX. As of March 2017, Musk’s personal wealth is estimated to be $13.9 billion,\n  making him the 83rd richest person in the world. In contrast, the President of the United States\n  is only w …\n\n[heuristics, score 0.40, label drop] The page is a short e-commerce product description with\n    marketing copy and UI boilerplate, offering little general-purpose learning value.\n  Big jeans were synonymous with the nineties, but no matter the decade, it's been proven that these\n  '94 Baggy Bootcut jeans will never go out of style. They’re effortless, cool and feature a mid\n  rise and bootcut leg, making whatever you pair them with look just that much better. Fit and\n  Sizing Loose  …\n\nText: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 (ODC-By 1.0)\n"
+        }
+      ]
+    },
+    "quality-filtering-agree-stream": {
+      "code_fingerprint": "sha256:310c4e6d144b19d1c61684144353f109959e6ff089d3670f27468905e8a3ee8b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "on the stream, regression head and the released classifier keep 0.029 and 0.036; they agree on 0.967\n    of the documents, Cohen's kappa 0.466 [0.430, 0.499]\n"
+        }
+      ]
+    },
+    "quality-filtering-c1": {
+      "code_fingerprint": "sha256:9f58e574d139d8f8a71a77ba04e36b79a7b427e3b9b14915fe6feabf2c16d993",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{\"name\": \"heuristics\", \"n_in\": 3288, \"n_out\": 1032, \"drops\": {\"c4_quality\": 123, \"gopher_dup_ngram\":\n    176, \"fw_line_punct\": 195, \"gopher_words\": 322, \"gopher_stop_words\": 21, \"fw_dup_chars\": 89,\n    \"gopher_dup_text\": 571, \"gopher_top_ngram\": 247, \"gopher_alpha\": 403, \"gopher_ellipsis\": 52,\n    \"fw_short_lines\": 33, \"gopher_bullets\": 15, \"gopher_word_len\": 7, \"gopher_symbols\": 2}}\n{\"name\": \"edu_score\", \"n_in\": 1032, \"n_out\": 1032, \"drops\": {}}\nc0 documents kept by the rules with edu_score >= t*: 20 of 1,032 (the flag keeps the score; the\n    threshold is a parameter)\nagainst lm-c1-docs-v1: reason codes identical; edu_score largest difference 0.000; 0 decisions flip\n    (each within that difference of t*)\n"
+        }
+      ]
+    },
+    "quality-filtering-results": {
+      "code_fingerprint": "sha256:2d34f69528ec8c09e6ab6f27e497cc7ffc0f2b5a5f4f82aa3b1e1c7e24ced352",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "against lm-data-quality-results-v1: 901/901 values equal, largest numeric difference 0; c1 manifest\n    identical\nhead weights against lm-quality-head-v1: largest difference 0.0e+00 (bit-identical: True)\n"
+        }
+      ]
+    }
+  }
+}

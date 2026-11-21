@@ -18,6 +18,33 @@ finished):
   fw2-slice   lm-data-fw2-slice-v1.tar, the ten-language tokenizer slice of
               20.6: slice.parquet, hindi.parquet, meta.json, README.md.
 
+  audit-stream lm-data-audit-stream-v1.parquet, the audit stream of 20.2
+              and the same-host documents of 20.3 (FineWeb text, ODC-By):
+              role 'stream': FineWeb CC-MAIN-2025-05 000_00000.parquet at
+              the pinned revision, every 45th row from row 7, rows of the
+              pinned WARC file excluded, the first 20,000; half 'A' or 'B'
+              by d2l._stream_half(registered domain). role 'fw2_<lang>':
+              the first 500 rows of row group 3 of data/<lang>/train/
+              000_00000.parquet of FineWeb-2, six languages. role
+              'host_pair': in the same FineWeb file, without the WARC's and
+              the stream's rows, the hosts (urlsplit hostname, lower case)
+              with at least 4 rows, sorted, permuted by default_rng(0); the
+              first 1,500, each with its first 4 rows in file order (6,000
+              documents, 9,000 same-host pairs). Columns id, url, text,
+              dump, date, language_score, token_count, role, half.
+
+  parity      datatrove-parity-v1.json (written to data/lm/, where 20.2's
+              quality-results regeneration reads it): our rules
+              (d2l.heuristic_filters) against datatrove's four filters as
+              FineWeb ran them, on 2,000 c0 documents (default_rng(0)
+              permutation of d2l.c0_documents(), the first 2,000). Each
+              family is compared on the original text; 'pipeline' compares
+              keep or remove with datatrove's filters run in FineWeb's
+              order on one document. Datatrove runs in its own environment
+              (--datatrove-python, default $D2L_DATATROVE_PYTHON, else
+              /home/smola/venvs/datatrove-0.10.1/bin/python) through
+              tools/datatrove_parity.py. No text is written to the output.
+
 lm-data-fw2-slice-v1
   slice.parquet  lang, part ('train' | 'heldout'), doc_id, text (NFC),
                  src_row. Nine FineWeb-2 configs (deu_Latn, rus_Cyrl,
@@ -280,9 +307,175 @@ def fineweb_ref(out_dir):
                           .hexdigest())), flush=True)
 
 
+AUDIT_LANGS = ('deu_Latn', 'hin_Deva', 'cmn_Hani', 'jpn_Jpan', 'tha_Thai',
+               'swh_Latn')
+AUDIT_COLS = ['id', 'url', 'text', 'dump', 'date', 'language_score',
+              'token_count']
+N_STREAM, N_HOSTS, PER_HOST = 20_000, 1_500, 4
+
+
+def audit_stream(out_dir):
+    """lm-data-audit-stream-v1.parquet (see the module docstring)."""
+    import collections
+    from urllib.parse import urlsplit
+    import numpy as np
+    import pandas as pd
+    import pyarrow.parquet as pq
+    from huggingface_hub import HfFileSystem, hf_hub_download
+    out_dir = os.path.abspath(out_dir)
+    os.chdir(os.path.join(ROOT, 'tools'))  # ../data/lm is this checkout's
+    with open(d2l.download_keyed('lm-cc-warc-256m-v1')) as f:
+        pinned = json.load(f)['fineweb_file_path']
+    rev = d2l.LM_DATA_SOURCES['fineweb'][2]
+    f = pq.ParquetFile(hf_hub_download('HuggingFaceFW/fineweb', FW_FILE,
+                                       revision=rev, repo_type='dataset'))
+    rows, start = [], 0  # the stream: every 45th row from row 7
+    for g in range(f.num_row_groups):
+        n = f.metadata.row_group(g).num_rows
+        want = [i - start for i in range(start, start + n)
+                if i >= 7 and (i - 7) % 45 == 0]
+        if want:
+            t = f.read_row_group(g, columns=AUDIT_COLS + ['file_path'])
+            rows += [r for r in t.take(want).to_pylist()
+                     if r['file_path'] != pinned]
+        start += n
+        if len(rows) >= N_STREAM:
+            break
+    stream = pd.DataFrame(rows[:N_STREAM])[AUDIT_COLS].assign(role='stream')
+    stream['half'] = [d2l._stream_half(d2l.registered_domain(u))
+                      for u in stream.url]
+    print(f'stream: {len(stream):,} rows, halves '
+          f'{stream.half.value_counts().sort_index().to_dict()}', flush=True)
+    fs, rev2 = HfFileSystem(), d2l.LM_DATA_SOURCES['fineweb-2'][2]
+    parts = [stream]
+    for lang in AUDIT_LANGS:  # row group 3, read by range
+        with fs.open(f'datasets/HuggingFaceFW/fineweb-2@{rev2}/data/{lang}/'
+                     'train/000_00000.parquet', 'rb') as fh:
+            t = pq.ParquetFile(fh).read_row_group(3, columns=[
+                'id', 'url', 'text', 'dump', 'date', 'language_score'])
+        parts.append(t.slice(0, 500).to_pandas().assign(
+            role=f'fw2_{lang}', half=None, token_count=None))
+        print(f'fw2_{lang}: 500 rows', flush=True)
+    audit = pd.concat(parts, ignore_index=True)
+    audit['token_count'] = audit.token_count.astype('Int64')
+    stream_ids = set(stream.id)  # the same-host documents of 20.3
+    meta = f.read(columns=['id', 'url', 'file_path']).to_pandas()
+    meta = meta[(meta.file_path != pinned) & ~meta.id.isin(stream_ids)]
+    by_host = collections.defaultdict(list)
+    for i, u in zip(meta.index, meta.url):
+        h = (urlsplit(u).hostname or '').lower()
+        if h:
+            by_host[h].append(i)
+    eligible = sorted(h for h, r in by_host.items() if len(r) >= PER_HOST)
+    pick = [eligible[i] for i in
+            np.random.default_rng(0).permutation(len(eligible))[:N_HOSTS]]
+    want = np.array(sorted(i for h in pick for i in by_host[h][:PER_HOST]))
+    starts = np.cumsum([0] + [f.metadata.row_group(g).num_rows
+                              for g in range(f.num_row_groups)])
+    hp = []
+    for g in range(f.num_row_groups):
+        sel = want[(want >= starts[g]) & (want < starts[g + 1])] - starts[g]
+        if len(sel):
+            hp.append(f.read_row_group(g, columns=AUDIT_COLS).take(sel)
+                      .to_pandas())
+    host = pd.concat(hp, ignore_index=True).assign(role='host_pair',
+                                                   half=None)
+    assert len(host) == N_HOSTS * PER_HOST
+    assert not host.id.isin(stream_ids).any()
+    print(f'host_pair: {len(eligible):,} eligible hosts, {len(pick):,} '
+          f'picked, {len(host):,} rows', flush=True)
+    res = pd.concat([audit, host[audit.columns]], ignore_index=True)
+    res['token_count'] = res.token_count.astype('Int64')
+    assert res.id.is_unique
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, 'lm-data-audit-stream-v1.parquet')
+    res.to_parquet(path + '.part', index=False, compression='zstd')
+    os.replace(path + '.part', path)
+    print(json.dumps(dict(path=path, rows=len(res), roles=res.role
+                          .value_counts().to_dict(),
+                          bytes=os.path.getsize(path),
+                          sha1=hashlib.sha1(open(path, 'rb').read())
+                          .hexdigest())), flush=True)
+
+
+PARITY_FAMILIES = {  # datatrove family: our reason codes
+    'gopher_repetition': ('gopher_dup_text', 'gopher_top_ngram',
+                          'gopher_dup_ngram'),
+    'gopher_quality': ('gopher_words', 'gopher_word_len', 'gopher_symbols',
+                       'gopher_bullets', 'gopher_ellipsis', 'gopher_alpha',
+                       'gopher_stop_words'),
+    'c4': ('c4_quality',),
+    'fineweb': ('fw_line_punct', 'fw_short_lines', 'fw_dup_chars',
+                'fw_list_ratio')}
+N_PARITY = 2_000
+
+
+def parity(out_path, python):
+    """datatrove-parity-v1.json (see the module docstring)."""
+    import collections
+    import subprocess
+    import tempfile
+    import numpy as np
+    out_path = os.path.abspath(out_path)
+    os.chdir(os.path.join(ROOT, 'tools'))  # ../data/lm is this checkout's
+    docs = d2l.c0_documents()
+    pick = sorted(np.random.default_rng(0).permutation(len(docs))[:N_PARITY])
+    docs = [docs[i] for i in pick]
+    tmp = tempfile.mkdtemp(dir=os.path.dirname(out_path))
+    src, dst = os.path.join(tmp, 'in.jsonl'), os.path.join(tmp, 'out.jsonl')
+    try:  # c0 text stays in the gitignored data folder and is deleted
+        with open(src, 'w', encoding='utf-8') as f:
+            for d in docs:
+                f.write(json.dumps({'id': d.id, 'text': d.text}) + '\n')
+        subprocess.run([python, '-I', os.path.join(ROOT, 'tools',
+                                                   'datatrove_parity.py'),
+                        src, dst], check=True)
+        with open(dst, encoding='utf-8') as f:
+            theirs = {r['id']: r for r in map(json.loads, f)}
+    finally:
+        for p in (src, dst):
+            if os.path.exists(p):
+                os.remove(p)
+        os.rmdir(tmp)
+    ours = {d.id: d2l.heuristic_filters(d.text) for d in docs}
+    rows, reasons = [], collections.Counter()
+    for fam, codes in list(PARITY_FAMILIES.items()) + [('pipeline', None)]:
+        n = agree = ours_only = theirs_only = 0
+        for d in docs:
+            mine = [c for c in ours[d.id] if codes is None or c in codes]
+            dt = theirs[d.id][fam]
+            n += 1
+            if bool(mine) == (dt is not None):
+                agree += 1
+                continue
+            if mine:
+                ours_only += 1
+            else:
+                theirs_only += 1
+            reasons[f'{fam}: ours {mine[0] if mine else "keep"}, '
+                    f'datatrove {dt or "keep"}'] += 1
+        rows.append(dict(filter=fam, agree=round(agree / n, 4),
+                         ours_only=ours_only, datatrove_only=theirs_only))
+    versions = {r['datatrove_version'] for r in theirs.values()}
+    assert len(versions) == 1
+    res = dict(n_docs=len(docs), datatrove_version=versions.pop(),
+               sample='default_rng(0).permutation(c0)[:2000]',
+               filters=rows, disagreements=dict(reasons.most_common(15)))
+    blob = json.dumps(res, indent=1, sort_keys=True).encode('utf-8')
+    with open(out_path + '.part', 'wb') as f:
+        f.write(blob)
+    os.replace(out_path + '.part', out_path)
+    print(json.dumps(dict(path=out_path, filters=rows,
+                          sha1=hashlib.sha1(blob).hexdigest())), flush=True)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    ap.add_argument('source', choices=['fw2-slice', 'fineweb-ref'])
+    ap.add_argument('source', choices=['fw2-slice', 'fineweb-ref',
+                                       'audit-stream', 'parity'])
+    ap.add_argument('--datatrove-python', default=os.environ.get(
+        'D2L_DATATROVE_PYTHON',
+        '/home/smola/venvs/datatrove-0.10.1/bin/python'))
     ap.add_argument('--out', default=os.path.join(ROOT, 'data', 'lm',
                                                   'build-sources-v1'))
     a = ap.parse_args(argv)
@@ -290,6 +483,11 @@ def main(argv=None):
         fw2_slice(a.out)
     elif a.source == 'fineweb-ref':
         fineweb_ref(a.out)
+    elif a.source == 'audit-stream':
+        audit_stream(a.out)
+    elif a.source == 'parity':
+        parity(os.path.join(ROOT, 'data', 'lm', 'datatrove-parity-v1.json'),
+               a.datatrove_python)
 
 
 if __name__ == '__main__':

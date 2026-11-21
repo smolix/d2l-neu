@@ -264,6 +264,56 @@ class LabelScoresTest(unittest.TestCase):
                                    prefix='score: ')
         np.testing.assert_allclose(rev[::-1], one, atol=1e-5)
 
+    def test_extra_space(self):
+        # p(d) + p(space) p(d | space), against the two prefixes scored
+        model, tok = tiny_lm()
+        prompts = ['the quick brown fox', 'lazy dog jumps over the fox ' * 3]
+        got = d2l.edu_label_scores(model, tok, prompts, prefix='score: ',
+                                   extra_space=True)
+        ids, digits, space = d2l._edu_label_ids(tok, prompts, 'score: ',
+                                                True)
+        with torch.no_grad():
+            for k, x in enumerate(ids):
+                p1 = model(torch.tensor([x])).logits[0, -1].softmax(-1)
+                p2 = model(torch.tensor([x + [space]])).logits[0, -1]
+                p2 = p2.softmax(-1)
+                want = (p1[digits] + p1[space] * p2[digits]).numpy()
+                np.testing.assert_allclose(got[k], want, atol=1e-5)
+
+    def test_served_equals_local(self):
+        # the served scores from a stub server that runs the same model
+        model, tok = tiny_lm()
+        prompts = ['the quick brown fox', 'over the lazy dog', 'fox ' * 9]
+        calls = []
+
+        def post(url, path, body, **kw):
+            calls.append((url, len(body['prompt'])))
+            self.assertEqual((path, body['max_tokens']), ('/completions', 1))
+            with torch.no_grad():
+                lp = model(torch.tensor([body['prompt']])).logits[0, -1]
+                lp = lp.log_softmax(-1)
+            self.assertEqual(body['logprobs'], 20)
+            top = torch.topk(lp, lp.numel())  # every token: exact sums
+            return {'choices': [{'logprobs': {'top_logprobs': [{
+                f'token_id:{int(i)}': float(v)
+                for v, i in zip(top.values, top.indices)}]}}]}
+
+        old = d2l._vllm_post
+        d2l._vllm_post = post
+        try:
+            for extra in (False, True):
+                want = d2l.edu_label_scores(model, tok, prompts,
+                                            prefix='score: ',
+                                            extra_space=extra)
+                got = d2l.edu_label_scores_served(
+                    ['u0', 'u1'], tok, prompts, model='m', prefix='score: ',
+                    extra_space=extra, concurrency=2)
+                self.assertEqual(got.shape, (3, 6))
+                np.testing.assert_allclose(got, want, atol=1e-5)
+        finally:
+            d2l._vllm_post = old
+        self.assertEqual({u for u, _ in calls}, {'u0', 'u1'})
+
     @unittest.skipUnless(QWEN_TOK, 'Qwen3.5-4B tokenizer not in the cache')
     def test_qwen_digit_tokens(self):
         import transformers

@@ -68,6 +68,11 @@ NOTEBOOK_TIMEOUTS = {
     # card is shared.
     "chapter_generative-adversarial-networks/dcgan.ipynb": 7200,
     "chapter_generative-adversarial-networks/conditional.ipynb": 7200,
+    # 20.2's regeneration labels 22,000 documents on four vLLM servers (one
+    # request at a time each, for reproducible bits), embeds 42,000 and
+    # judges 200 removals in one run (about 100 min on four RTX 4090s,
+    # 2026-11-21); a normal build reads the results in minutes.
+    "chapter_lm-data/quality-filtering.ipynb": 10800,
 }
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The
@@ -519,6 +524,10 @@ NOTEBOOK_ENV = {
         "HF_HUB_VERBOSITY": "error",
     },
     ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): {
+        "HF_HUB_VERBOSITY": "error",
+    },
+    # 20.2: the same X-HF-Warning (the sentence-transformers check).
+    ("pytorch", "chapter_lm-data/quality-filtering.ipynb"): {
         "HF_HUB_VERBOSITY": "error",
     },
     # 19.5: Qwen3.5-9B generates with prompts of changing length within 1-2

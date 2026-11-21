@@ -867,6 +867,145 @@ def _edu_annot_sample():
     return df.drop(columns='pos')
 
 #@save
+# The quality labeller (from 2026-11-20; Qwen3.5-4B before): Qwen3.8-27B,
+# the judge of :numref:`sec_lm_rag`, in RedHat's W4A16 build (Apache-2.0),
+# one copy per 24 GB GPU served by vLLM, which lives in an environment of
+# its own (D2L_VLLM); 16.7 GiB of weights per card
+EDU_LABELLER_LOCAL = {'model': 'RedHatAI/Qwen3.8-27B-INT4',
+                      'revision': '71dface38d4cbfa34121f1d446d4a0fa1025f13c',
+                      'vllm': '0.33.0'}
+
+#@save
+def edu_label_servers(gpus=None, vllm=None):
+    """One d2l.LocalChatServer per GPU (default: every visible GPU), each
+    serving EDU_LABELLER_LOCAL with vLLM on that GPU alone, offline from
+    the local Hub cache, from the executable vllm (default: the
+    environment variable D2L_VLLM, else `vllm` on the PATH). At the
+    defaults (0.9 of the memory, 64 sequences) vLLM refuses to start:
+    the linear-attention layers' state cache holds 54 sequences. A server
+    takes 0.95 of an idle card; on a card that already holds memory (this
+    process's own, say) it takes what is free less 1.5 GiB."""
+    import shutil  # not in the d2l library preamble
+    import subprocess
+    exe = vllm or os.environ.get('D2L_VLLM') or shutil.which('vllm')
+    if exe is None:
+        raise RuntimeError('no vLLM: install it in its own environment and '
+                           'set D2L_VLLM to its vllm executable')
+    if gpus is None:
+        vis = os.environ.get('CUDA_VISIBLE_DEVICES')
+        gpus = (vis.split(',') if vis else
+                [str(i) for i in range(torch.cuda.device_count())])
+    servers, j = [], d2l.EDU_LABELLER_LOCAL
+    for g in gpus:  # nvidia-smi reads memory without opening a CUDA context
+        used, total = map(int, subprocess.run(
+            ['nvidia-smi', '-i', str(g), '--query-gpu=memory.used,'
+             'memory.total', '--format=csv,noheader,nounits'], check=True,
+            capture_output=True, text=True).stdout.split(','))
+        frac = 0.95 if used <= 100 else min(0.95, (total - used - 1536)
+                                            / total)
+        servers.append(d2l.LocalChatServer([
+            'env', f'CUDA_VISIBLE_DEVICES={g}', 'HF_HUB_OFFLINE=1', exe,
+            'serve', j['model'], '--revision', j['revision'],
+            '--max-model-len', '16384', '--max-num-seqs', '32',
+            '--gpu-memory-utilization', f'{frac:.3f}', '--language-model-only',
+            '--limit-mm-per-prompt', '{"image": 0, "video": 0}',
+            '--reasoning-parser', 'qwen3', '--seed', '0', '--host',
+            '127.0.0.1', '--port', '{port}']))
+    return servers
+
+#@save
+def _vllm_post(url, path, body, timeout=600.0, attempts=3):
+    """The JSON reply of an OpenAI-compatible server to a POST of body at
+    url + path, with up to attempts tries five seconds apart."""
+    import urllib.request
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    req = urllib.request.Request(url + path, json.dumps(body).encode(),
+                                 {'Content-Type': 'application/json'})
+    for k in range(attempts):
+        try:
+            with opener.open(req, timeout=timeout) as r:
+                return json.load(r)
+        except OSError:
+            if k == attempts - 1:
+                raise
+            time.sleep(5)
+
+#@save
+def _edu_label_ids(tokenizer, prompts, prefix, extra_space=False):
+    """The prompts as edu_label_scores scores them: (token ids, the ids of
+    '0' ... '5', the id of one more space or None). Each prompt is a user
+    turn of the chat template (non-thinking) followed by prefix, tokenized
+    as if the digit followed, then cut, so a prefix that ends in spaces
+    splits as in the model's own text."""
+    digits = [tokenizer.encode(str(d), add_special_tokens=False)
+              for d in range(6)]
+    if any(len(t) != 1 for t in digits):
+        raise ValueError(f'the digits are not single tokens: {digits}')
+    digits = [t[0] for t in digits]
+    ids, space = [], None
+    for p in prompts:
+        chat = tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': p}], tokenize=False,
+            add_generation_prompt=True, enable_thinking=False) + prefix
+        x = tokenizer(chat + '0', add_special_tokens=False)['input_ids']
+        if x[-1] != digits[0]:
+            raise ValueError(f'the digit after {prefix!r} merges with it')
+        ids.append(x[:-1])
+        if extra_space:  # the same text with one more space
+            y = tokenizer(chat + ' 0', add_special_tokens=False)['input_ids']
+            if y[:len(x) - 1] != x[:-1] or len(y) != len(x) + 1:
+                raise ValueError('one more space does not add one token')
+            if space not in (None, y[-2]):
+                raise ValueError('the extra space is not one token id')
+            space = y[-2]
+    return ids, digits, space
+
+#@save
+def edu_label_scores_served(urls, tokenizer, prompts, *, model=None,
+                            prefix='Educational score: ', extra_space=False,
+                            concurrency=1):
+    """edu_label_scores computed by OpenAI-compatible vLLM servers at urls,
+    each serving model (default EDU_LABELLER_LOCAL's): the same token ids,
+    sent as the prompt of a one-token greedy completion with the top 20
+    log-probabilities; a digit outside them counts as 0. With extra_space,
+    the probability of digit d also counts the answers that write one more
+    space first: p(d) + p(space) p(d | space). Rows are spread over the
+    servers in turn, at most concurrency requests in flight per server;
+    they come back in input order. One at a time (the default), every
+    server returns the same bits for a prompt; a batch of concurrent
+    requests changes them (by up to about 0.08 for Qwen3.8-27B-INT4)."""
+    import concurrent.futures
+    import threading
+    model = model or d2l.EDU_LABELLER_LOCAL['model']
+    ids, digits, space = d2l._edu_label_ids(tokenizer, prompts, prefix,
+                                            extra_space)
+    want = digits + ([space] if extra_space else [])
+    gates = [threading.Semaphore(concurrency) for _ in urls]
+
+    def top(i, x):
+        k = i % len(urls)
+        with gates[k]:
+            d = d2l._vllm_post(urls[k], '/completions', dict(
+                model=model, prompt=x, max_tokens=1, temperature=0,
+                logprobs=20, return_tokens_as_token_ids=True))
+        lp = d['choices'][0]['logprobs']['top_logprobs'][0]
+        lp = {int(t.rsplit(':', 1)[-1]): v for t, v in lp.items()}
+        return [math.exp(lp[t]) if t in lp else 0.0 for t in want]
+
+    with concurrent.futures.ThreadPoolExecutor(
+            concurrency * len(urls)) as ex:
+        P = np.array(list(ex.map(top, range(len(ids)), ids)))
+        if not extra_space:
+            return P
+        more = np.flatnonzero(P[:, 6] > 0)  # one more space, then a digit
+        Q = np.array(list(ex.map(top, more, [ids[i] + [space]
+                                             for i in more])))
+    out = P[:, :6].copy()
+    if len(more):
+        out[more] += P[more, 6:7] * Q[:, :6]
+    return out
+
+#@save
 def _stream_half(domain):
     """The audit stream's half ('A' or 'B') of a registered domain: the
     parity of the first 32 bits of its SHA-256, so the halves share no

@@ -33,8 +33,8 @@ million parameters might not suit one a hundred times larger. This section
 builds the method for three domains, web text, Python and mathematics. It
 measures the noise that any fitted function has to beat and compares the
 mixture it selects with uniform weights and with the weights of DoReMi, a
-method that optimizes a different objective. The first worry is put to 41
-runs, the second to a model four times larger. Temperature sampling across languages,
+method that optimizes a different objective. The first worry is put to the
+training runs, the second to a model four times larger. Temperature sampling across languages,
 the value of repeated data and annealing at the end of training come along
 the way, because each changes how a mixture should be read.
 
@@ -75,9 +75,9 @@ some code and mathematics. It is an illustration, fixed in advance because a
 target chosen after the results can make almost any mixture look best. One
 launcher, `tools/run_mix_campaign.py`, makes all training runs of the section
 and stores them in a registered run set. A normal build reads that file and
-needs a GPU only for a short live check. Setting `D2L_RERUN=mix-t1` retrains all 41 runs on the
-GPUs named in `CUDA_VISIBLE_DEVICES`, which takes about a quarter of an hour
-on four RTX 4090s, and writes the result under a new name.
+needs a GPU only for a short live check. Setting `D2L_RERUN=mix-t1` retrains all 65 runs on the
+GPUs named in `CUDA_VISIBLE_DEVICES`, which takes about twenty minutes on
+four RTX 4090s, and writes the result under a new name.
 
 ```{.python .input #data-mixtures-config}
 %%tab pytorch
@@ -97,13 +97,13 @@ def say(*args, sep=' '):
 
 DOMAINS = MIX_DOMAINS
 T_AVG, T_DEP = (np.array(MIX_TARGETS[k]) for k in ('t_avg', 't_dep'))
-ARTIFACTS = {'mix-t1': ('lm-mix-runs-t1-v1', 'lm-mix-runs-t1-v1.json')}
+ARTIFACTS = {'mix-t1': ('lm-mix-runs-t1-v2', 'lm-mix-runs-t1-v2.json')}
 RERUN = d2l.lm_rerun(ARTIFACTS)
 GPU = torch.cuda.is_available()
 assert GPU or not RERUN, 'the mix-t1 regeneration trains on a GPU'
 # The T2 campaign's logs replace the T1 run set once they are registered
 T2 = 'lm-mix-runs-t2-v1' in d2l.DATA_HUB and not RERUN
-RUNS_KEY = 'lm-mix-runs-t2-v1' if T2 else 'lm-mix-runs-t1-v1'
+RUNS_KEY = 'lm-mix-runs-t2-v1' if T2 else 'lm-mix-runs-t1-v2'
 CONFIG = 't2' if T2 else 't1'
 TAG = f'[at {CONFIG.upper()} scale]'
 say(f'configuration {CONFIG}' + ('' if T2 else ' (the T2 campaign logs are '
@@ -150,6 +150,10 @@ d2l.DATA_HUB['lm-mix-runs-t1-v1'] = (  # the 41 T1 runs, the selection,
     # DoReMi's weights and the T2 smoke (mix-t1 regeneration, 20.4)
     d2l.LM_DATA_URL + 'lm-mix-runs-t1-v1.json',
     '92abf76a5e9891ba3efe5c5daa5f2a021f05c9e4')
+d2l.DATA_HUB['lm-mix-runs-t1-v2'] = (  # v1's runs without the staged arm,
+    # plus the 27 runs of the v2 design (20.4)
+    d2l.LM_DATA_URL + 'lm-mix-runs-t1-v2.json',
+    '8b44a65a466ac5a938dcbe58eef6a89a130a7249')
 d2l.DATA_HUB['lm-mix-runs-t2s-v1'] = (  # a small-scale test of the T2 code
     # path on four RTX 4090s: the T2 design at half its tokens (20.4)
     d2l.LM_DATA_URL + 'lm-mix-runs-t2s-v1.json',
@@ -157,7 +161,8 @@ d2l.DATA_HUB['lm-mix-runs-t2s-v1'] = (  # a small-scale test of the T2 code
 
 # lm-mix-runs-t2-v1 is added after the T2 campaign
 MIX_KEYS = ('lm-mix-web-20m-v1', 'lm-mix-math-20m-v1', 'lm-mix-val-1m-v1',
-            'lm-mix-code-meta-v1', 'lm-mix-runs-t1-v1', 'lm-mix-web-150m-v1',
+            'lm-mix-code-meta-v1', 'lm-mix-runs-t1-v1', 'lm-mix-runs-t1-v2',
+            'lm-mix-web-150m-v1',
             'lm-mix-math-150m-v1', 'lm-mix-val-2m-v1',
             'lm-mix-code150-meta-v1', 'lm-mix-runs-t2s-v1',
             'lm-mix-runs-t2-v1')
@@ -200,8 +205,8 @@ any run. T1 trains proxies of 4.6 million parameters for $2^{24}$ tokens per
 run and fits on one consumer GPU. T2 trains proxies of 20.3 million
 parameters for $2^{27}$ tokens per run, eight times the tokens on a model four
 times larger, and is packaged as a campaign for a larger machine. Every
-number quoted in the text comes from the 41 runs of T1, and each such
-sentence says so. A test of the T2 design at half its tokens, run on four RTX
+number quoted in the text comes from the T1 runs, and each such sentence
+says so. A test of the T2 design at half its tokens, run on four RTX
 4090s, appears only in :numref:`subsec_lm_mix_transfer`, as a first look at
 a larger proxy. The full T2 campaign has not been run.
 <!-- campaign: lm-mix-runs-t2-v1 -->
@@ -704,10 +709,13 @@ added. Without them no training mixture would put more than about two thirds
 on web text, and `t_dep`'s region would be reached only by extrapolation; a
 design sampled only from the interior of the simplex cannot say much about
 its edges. Four held-out mixtures are drawn from Dirichlet(1) with another
-seed and never used for fitting. The rest of the runs measure the noise and
-the arms: three pure-domain runs, two more seeds of the uniform mixture on the
-schedule of the training runs, and three seeds each for the four arms of
-:numref:`subsec_lm_mix_choose`. No weight exceeds 0.9.
+seed and never used for fitting. The rest of the runs measure the noise,
+the arms and two checks. There are three seeds of each pure-domain run, four
+more seeds of the uniform mixture on the schedule of the training runs, and
+three seeds each for the arms of :numref:`subsec_lm_mix_choose` and the
+annealing arms of :numref:`subsec_lm_mix_anneal`. The checks train three
+mixtures at half the chosen learning rate and the uniform mixture on two
+schedules at four times the tokens. No weight exceeds 0.9.
 
 ```{.python .input #data-mixtures-design}
 %%tab pytorch
@@ -738,9 +746,14 @@ One regeneration writes the whole run set. The launcher first chooses the
 peak learning rate on the uniform mixture from four values at half the run's
 tokens. It then trains the runs in dependency order on all visible GPUs, fits
 the regression and chooses the selected mixture by code, trains DoReMi's
-weights, and finally the arms that need them. A normal build reads the
-registered result, and the cell asserts that it is the design above, trained
-on these pools with this tokenizer.
+weights, and finally the arms that need them. The registered run set is the
+second version of the design. It keeps the 38 runs of the first version that
+the second still contains, unchanged, and adds the 27 runs of the extra seeds,
+the annealing arms and the checks, trained afterwards with the same code on
+the same cards; a launcher pointed at a directory of finished runs trains
+only the missing ones. A normal build reads the registered result, and the
+cell asserts that it is the design above, trained on these pools with this
+tokenizer.
 
 ```{.python .input #data-mixtures-regen}
 %%tab pytorch
@@ -755,7 +768,7 @@ if 'mix-t1' in RERUN:
                     gpus, '--out', out_dir, '--smoke-t2'], check=True)
     say(f'mix-t1: {(time.time() - t0) / 60:.1f} min wall clock')
     d2l.lm_save_rerun(ARTIFACTS['mix-t1'][1], lambda p: shutil.copy(
-        os.path.join(out_dir, 'lm-mix-runs-t1-v1.json'), p))
+        os.path.join(out_dir, C['runs_key'] + '.json'), p))
 RUNS_PATH = d2l.lm_artifact(RUNS_KEY, ARTIFACTS['mix-t1'][1]
                             if 'mix-t1' in RERUN else None)
 with open(RUNS_PATH) as f:
@@ -777,8 +790,14 @@ SEL, DOREMI_W = RUNS['selection'], RUNS['doremi']['weights']
 assert (SEL['kind'], SEL['target']) == (C['select'], C['target'])
 for s in C['arm_seeds']:  # the arms trained the selection and DoReMi's weights
     assert REC[f'regsel-s{s}']['weights'] == SEL['weights']
-    assert REC[f'staged-s{s}']['stages'] == [[C['stage_frac'], SEL['weights']]]
     assert REC[f'doremi-s{s}']['weights'] == DOREMI_W
+    if f'staged-s{s}' in REC:  # a design without the anneal entry
+        assert REC[f'staged-s{s}']['stages'] == [[C['stage_frac'],
+                                                   SEL['weights']]]
+for s in SPECS:  # fixed stages, rates and horizons as designed
+    for k in ('stages', 'lr', 'tokens', 'max_epochs'):
+        if s.get(k) is not None:
+            assert REC[s['run_id']][k] == s[k], (s['run_id'], k)
 say(TAG, f'{len(REC)} runs from {os.path.basename(RUNS_PATH)}; peak '
     f'learning rate {RUNS["lr_choice"]["chosen"]:g} (chosen on the uniform '
     'mixture: ' + ', '.join(f'{lr} -> {v:.4f} bpb' for lr, v in
@@ -869,7 +888,7 @@ def at_frac(rec, frac):
     return t_bpb(next(e for e in rec['evals'] if abs(e['frac'] - frac) < 1e-9)
                  ['domains'])
 
-def seed_sd(frac):  # t_dep spread of the uniform seeds, pooled (3 df)
+def seed_sd(frac):  # t_dep spread of the uniform seeds, pooled over both
     groups = [[at_frac(REC[f'{a}-s{s}'], frac) for s in C[k]] for a, k in (
         ('uniform-cos', 'cos_seeds'), ('uniform-wsd', 'arm_seeds'))]
     return math.sqrt(sum((len(g) - 1) * np.var(g, ddof=1) for g in groups)
@@ -1075,7 +1094,7 @@ a bound. The bound is $\sigma$, and a correct model with fewer fitted
 parameters comes closer to it; the mixing law has five parameters per domain
 and gradient boosting many more. A regression far above the floor is wrong
 about the shape of the function. The cell checks :eqref:`eq_lm_mix_floor` by
-simulation, estimates $\sigma$ from the two extra seeds of the uniform
+simulation, estimates $\sigma$ from the four extra seeds of the uniform
 mixture on the training runs' schedule, fits the three regressions on the
 training runs and judges them only on the held-out ones.
 
@@ -1114,8 +1133,8 @@ final = lambda r: [REC[r]['final'][d]['bpb'] for d in DOMAINS]
 cos = np.array([final(f'uniform-cos-s{s}') for s in C['cos_seeds']])
 wsd = np.array([final(f'uniform-wsd-s{s}') for s in C['arm_seeds']])
 sig_cos, sig_wsd = cos.std(0, ddof=1), wsd.std(0, ddof=1)
-SIG_COS = math.sqrt((sig_cos**2).mean())  # pooled: 3 degrees of freedom
-SIG_SEED = math.sqrt((sig_wsd**2).mean())  # pooled: 6
+SIG_COS = math.sqrt((sig_cos**2).mean())  # over the domains, which are
+SIG_SEED = math.sqrt((sig_wsd**2).mean())  # not independent: df = seeds - 1
 train_ids = [r['run_id'] for r in RUNS['runs'] if r['arm'] == 'train']
 held_ids = [r['run_id'] for r in RUNS['runs'] if r['arm'] == 'held']
 Wt, Lt = (np.array([REC[r]['weights'] for r in train_ids]),
@@ -1137,10 +1156,12 @@ say(TAG, f'{len(train_ids)} training and {len(held_ids)} held-out runs; '
     f'pooled sigma_cos {SIG_COS:.4f}, sigma_seed {SIG_SEED:.4f} bits per '
     f'byte (ratio {max(SIG_COS, SIG_SEED) / min(SIG_COS, SIG_SEED):.1f})')
 say(pd.DataFrame(noise, index=DOMAINS).T.round(4).to_string())
-FLOOR_CI = FLOOR * np.sqrt(3 / stats.chi2.ppf([0.975, 0.025], 3))  # 3 df
+DF = len(C['cos_seeds']) - 1  # the seeds, not the domains, are independent
+FLOOR_CI = FLOOR * np.sqrt(DF / stats.chi2.ppf([0.975, 0.025], DF))
 rmse = math.sqrt(((PRED[C['select']] - Lh)**2).mean())
-say(f'floor {FLOOR:.4f} (95% interval from 3 degrees of freedom '
-    f'{FLOOR_CI[0]:.4f}-{FLOOR_CI[1]:.4f}); {C["select"]} (the selecting '
+say(f'floor {FLOOR:.4f} (95% interval from {len(C["cos_seeds"])} seeds, '
+    f'{DF} degrees of freedom: {FLOOR_CI[0]:.4f}-{FLOOR_CI[1]:.4f}); '
+    f'{C["select"]} (the selecting '
     f'regression), held-out RMSE over all domains {rmse:.4f}:',
     'reaches only the noise floor' if rmse <= 1.5 * FLOOR else
     'does not reach the noise floor')
@@ -1176,11 +1197,13 @@ fig.tight_layout()
 ```
 
 The simulation matches the formula to within a few tenths of a percent. On
-the real runs, at T1 scale, the floor is about 0.02 bits per byte. Its
-$\sigma$ rests on only two runs, so it is known only roughly. The printed
-95% interval, 0.01 to 0.06, counts the three domains of those two runs as
-independent measurements, which they are not, and is therefore too narrow.
-No regression reaches the floor. Gradient boosting comes closest with a held-out error of about
+the real runs, at T1 scale, the floor is about 0.01 bits per byte. Its
+$\sigma$ rests on four runs, so it is known only roughly: the 95% interval,
+which counts the seeds and not the three correlated domains of each run as
+the independent measurements, runs from about 0.006 to 0.04. Over the three
+domains no regression reaches the floor, and on code none comes near it;
+only on web text, where every loss is close to every other, do the mixing
+law and gradient boosting fall below it. Gradient boosting comes closest with a held-out error of about
 0.03, ridge has about 0.06, and the mixing law about 0.07. The law's error is
 almost all in one domain: on web text it predicts to a few thousandths, on
 code it misses by about 0.12. Code's loss falls steeply as its weight rises
@@ -1241,8 +1264,9 @@ would least expect. For a target that puts 70% of its weight on web text, the
 mixing law chooses about a third of each domain, $(0.34, 0.31, 0.35)$. In
 the fitted law the web loss barely moves with the web weight, while the
 losses on code and mathematics fall steeply with their own weights, so the
-optimizer moves tokens from web text to code and mathematics. The choice is
-a statement about these proxies, not advice for a web-heavy deployment, and
+optimizer moves tokens from web text to code and mathematics; the next cell
+looks at the runs behind that flat curve. The choice is a statement about
+these proxies, not advice for a web-heavy deployment, and
 :numref:`subsec_lm_mix_transfer` finds that a larger proxy moves it toward
 web text. Without the hull bound the law picks the same point, so it is not
 pressed against the edge of its data. Ridge, as promised, picks a corner, the
@@ -1252,6 +1276,64 @@ mathematics, $(0.20, 0.36, 0.43)$. The bootstrap is sobering: across
 resamples each weight moves over a range of about 0.15, web from 0.25 to
 0.38, code from 0.24 to 0.43. The runs determine a neighbourhood, not a
 point.
+<!-- campaign: lm-mix-runs-t2-v1 -->
+
+The flat web curve deserves a look of its own, because the pure-web run
+scored worse on web text than several mixtures with less of it, which more
+web tokens should not do. The cell prints the web loss of every run on the
+training schedule against its web weight, the seed spread of the pure-domain
+runs, and three mixtures at the chosen peak rate and at half of it.
+
+```{.python .input #data-mixtures-web-weight}
+%%tab pytorch
+cos_runs = [r for r in REC if REC[r]['arm'] in (
+    'pure', 'pure-seed', 'train', 'held', 'uniform-cos')]  # the chosen rate
+WEB = pd.DataFrame(dict(web_weight=[REC[r]['weights'][0] for r in cos_runs],
+                        web_bpb=[REC[r]['final']['web']['bpb']
+                                 for r in cos_runs]))
+band = pd.cut(WEB.web_weight, [-0.01, 0.2, 0.4, 0.6, 0.85, 1.0])
+say(TAG, 'web bits per byte of the runs on the training schedule, by web '
+    f'weight (peak rate {RUNS["lr_choice"]["chosen"]:g}):')
+say(WEB.groupby(band, observed=True).web_bpb.agg(
+    ['count', 'mean', 'min', 'max']).round(4).to_string())
+same = lambda r, w: np.allclose(REC[r]['weights'], w)
+def spread(ids, d):  # mean and seed SD of a domain's bits per byte
+    v = np.array([REC[i]['final'][d]['bpb'] for i in ids])
+    return v.mean(), v.std(ddof=1) if len(v) > 1 else float('nan'), len(v)
+for d, w in zip(DOMAINS, np.eye(3)):
+    m, sd, n = spread([r for r in cos_runs if REC[r]['arm'].startswith(
+        'pure') and same(r, w)], d)
+    say(f'  pure-{d} on {d}: {m:.4f}, seed SD {sd:.4f} ({n} seeds)')
+m, sd, n = spread([f'uniform-cos-s{s}' for s in C['cos_seeds']], 'web')
+say(f'  uniform on web: {m:.4f}, seed SD {sd:.4f} ({n} seeds)')
+chk = C['lr_check']
+say(TAG, 'the same mixtures at two peak rates, web bits per byte:')
+for name, w in chk['mixtures'].items():
+    parts = []
+    for lr, ids in ((RUNS['lr_choice']['chosen'], [
+            r for r in cos_runs if same(r, w)]), (chk['lr'], [
+            f'lrcheck-{name}-s{s}' for s in chk['seeds']])):
+        m, sd, n = spread(ids, 'web')
+        parts.append(f'{lr:g}: {m:.4f}' + (f' (SD {sd:.4f}, {n} seeds)'
+                                           if n > 1 else ' (1 seed)'))
+    say(f'  {name:8s} {tuple(round(x, 3) for x in w)}  ' + '; '.join(parts))
+```
+
+Among the mixtures, the web loss at T1 scale is nearly flat: from 20% to 85%
+web text it moves from about 2.00 to about 1.98 bits per byte, while a run
+with less than 20% web text can lose half a bit. The pure-web runs do not
+continue the curve. Their mean, about 2.03, is worse than that of the
+mixtures with 60% to 85% web text, and their three seeds spread from 2.00 to
+2.05, a seed standard deviation of about 0.025 against 0.004 for the uniform
+mixture on the same text; the pure code and mathematics runs are just as
+unsteady on their own domains. At half the peak rate the pure-web runs are
+steadier and within about one of their seed deviations of the 80%-web
+mixture (2.04 against 2.03), while the uniform mixture falls behind them
+(2.07). The rate that the design chose on the uniform mixture is thus too
+high for a proxy that reads a single domain, and the drop at pure web text
+comes from it, not from the other domains teaching web text better than web
+text does. The selection does not rest on these runs: the regression is
+fitted on the fifteen training mixtures, none of which is a single domain.
 <!-- campaign: lm-mix-runs-t2-v1 -->
 
 Had we picked the regression after seeing the held-out errors, we would have
@@ -1402,10 +1484,9 @@ mixture to win on either target.
 ### Four Arms Compared
 :label:`subsec_lm_mix_arms`
 
-Four mixtures are now trained with three data-order seeds each: uniform, the
-regression's choice for `t_dep`, DoReMi's weights, and a staged arm that reads
-the uniform mixture for 80% of its tokens and the regression's choice for the
-rest. All four use the stable-then-decay schedule with the same peak, so that
+Three mixtures are now trained with three data-order seeds each: uniform,
+the regression's choice for `t_dep` and DoReMi's weights. All three use the
+stable-then-decay schedule with the same peak, so that
 only the data differ, and each arm's seed $s$ is compared with the uniform
 arm's seed $s$, which saw its data in the same order. With three seeds no
 bootstrap interval means much, so the rule is blunt: an arm differs from
@@ -1416,7 +1497,8 @@ each other, never with the regression's predictions.
 
 ```{.python .input #data-mixtures-arms}
 %%tab pytorch
-ARMS = ('uniform', 'regsel', 'doremi', 'staged')
+ARMS = ('uniform', 'regsel', 'doremi') + (('staged',) if 'staged-s0' in REC
+                                         else ())
 SEEDS = C['arm_seeds']
 T = {a: np.array([T_DEP @ final(f'{"uniform-wsd" if a == "uniform" else a}'
                                 f'-s{s}') for s in SEEDS]) for a in ARMS}
@@ -1432,11 +1514,9 @@ for a in ARMS:
                      diffs=np.round(d, 4).tolist(), real=real,
                      margin=abs(d.mean()) / (2 * sig_t)))  # rule needs > 1
 ARM_TABLE = pd.DataFrame(rows)
-(frac, w_dec), = REC['staged-s0']['stages']
 say(TAG, f'sigma_seed of t_dep bits per byte {sig_t:.4f} (3 uniform '
-    'seeds); differences seed-paired with uniform (staged: the weights '
-    f'below, then {np.round(w_dec, 3).tolist()} from {frac:.0%} of the '
-    'tokens); margin = |mean difference| / (2 sigma_seed):')
+    'seeds); differences seed-paired with uniform; margin = |mean '
+    'difference| / (2 sigma_seed):')
 say(ARM_TABLE.round(4).to_string(index=False))
 ARM_DOMAINS = pd.DataFrame({a: dict(zip(DOMAINS, np.mean([final(
     f'{"uniform-wsd" if a == "uniform" else a}-s{s}') for s in SEEDS], 0)))
@@ -1448,7 +1528,8 @@ say(ARM_DOMAINS.round(4).to_string())
 ax = d2l.plot_intervals(
     list(ARMS), {'mean': ([T[a].mean() for a in ARMS],) * 3}, 'arm',
     't_dep bits per byte', reference=T['uniform'].mean(),
-    marks={'seeds': ('.', {'mean': (np.repeat(np.arange(4), len(SEEDS)),
+    marks={'seeds': ('.', {'mean': (np.repeat(np.arange(len(ARMS)),
+                                              len(SEEDS)),
                                     np.concatenate([T[a] for a in ARMS]))})})
 band = ax.axhspan(T['uniform'].mean() - 2 * sig_t,
                   T['uniform'].mean() + 2 * sig_t, color='0.85', zorder=0)
@@ -1471,51 +1552,92 @@ objective is neither of ours.
 ## Annealing and Curricula
 :label:`subsec_lm_mix_anneal`
 
-The staged arm asks a different question: does it matter when in training a
-mixture is read? Under the stable-then-decay schedule of
+A different question is whether it matters when in training a mixture is
+read. Under the stable-then-decay schedule of
 :numref:`sec_scheduler` the learning rate stays at its peak for most of
 training and then falls to a small value over the last fifth of the steps.
 A model fits most closely what it reads while its learning rate falls, which
 suggests saving the best data for the end. This is *annealing*, and it is
 now standard. SmolLM2's last stage, the final 10% of its 11 trillion tokens,
 raises mathematics to 14% and code to 24% of the mixture, using FineMath and
-educational code that were held back until then to make them count most. The
-staged arm is the miniature of this recipe, and the cell
-compares its per-domain curves with the uniform arm's, with the stage
-boundary marked.
+educational code that were held back until then to make them count most.
+Our miniature is the *anneal* arm: the uniform mixture for 80% of the tokens,
+then the decay on the mathematics corner $(0.1, 0.1, 0.8)$. A *recency* arm
+does the same but returns to the uniform mixture for the last tenth of the
+steps, which asks whether the gain lasts once training continues on general
+data. Both are paired seed by seed with the uniform arm. The cell plots the
+per-domain curves with the stage boundaries marked and prints the change of
+each domain's loss during the decay, arm minus uniform. It also compares the
+two schedules on the uniform mixture at the run length of T1 and at four
+times the steps.
 
 ```{.python .input #data-mixtures-staged}
 %%tab pytorch
 curve = lambda a, d: np.mean([[e['domains'][d]['bpb'] for e in REC[
     f'{a}-s{s}']['evals']] for s in SEEDS], 0)
-x = [e['tokens'] for e in REC['staged-s0']['evals']]
-staged = REC['staged-s0']
-n_steps, frac = staged['steps'], staged['stages'][0][0]
-start = n_steps - round((1 - frac) * n_steps)  # first step of the decay
-boundary = start * staged['tokens'] // n_steps
+ANNEAL = 'anneal' if 'anneal-s0' in REC else 'staged'
+arms = ['uniform-wsd', ANNEAL] + (['recency'] if 'recency-s0' in REC else [])
+run0 = REC[f'{ANNEAL}-s0']
+x = [e['tokens'] for e in run0['evals']]
+n_steps = run0['steps']
+stages = REC[f'{arms[-1]}-s0']['stages']
+starts = [n_steps - round((1 - f) * n_steps) for f, _ in stages]
 fig, axes = d2l.plt.subplots(1, 3, figsize=(11, 3), sharex=True)
 for ax, d in zip(axes, DOMAINS):
-    d2l.plot(x, [curve('uniform-wsd', d), curve('staged', d)], 'tokens',
-             f'{d} bits per byte', legend=['uniform', 'staged'], axes=ax)
-    ax.axvline(boundary, color='black', linestyle=':', linewidth=1)
+    d2l.plot(x, [curve(a, d) for a in arms], 'tokens', f'{d} bits per byte',
+             legend=['uniform'] + arms[1:], axes=ax)
+    for st in starts:  # each stage boundary
+        ax.axvline(st * run0['tokens'] // n_steps, color='black',
+                   linestyle=':', linewidth=1)
 fig.tight_layout()
-dec = [k for k, e in enumerate(REC['staged-s0']['evals'])
-       if e['step'] > start]  # evaluations inside the decay
-say(TAG, 'change of bits per byte during the decay, staged minus uniform '
-    f'(mean over {len(SEEDS)} seeds; staged weights '
-    f'{np.round(REC["staged-s0"]["stages"][0][1], 3).tolist()}):')
-say({d: round(float((curve('staged', d) - curve('uniform-wsd', d))[dec[-1]]
-                    - (curve('staged', d) - curve('uniform-wsd', d))
-                    [dec[0] - 1]), 4) for d in DOMAINS})
+k0 = max(k for k, e in enumerate(run0['evals']) if e['step'] <= starts[0])
+def paired(a, d, k):  # arm minus uniform, seed by seed, at evaluation k
+    return np.array([REC[f'{a}-s{s}']['evals'][k]['domains'][d]['bpb']
+                     - REC[f'uniform-wsd-s{s}']['evals'][k]['domains'][d][
+                         'bpb'] for s in SEEDS])
+say(TAG, 'stages of the', ', '.join(f'{a}: {REC[a + "-s0"]["stages"]}'
+                                    for a in arms[1:]))
+say(f'change during the decay (from step {starts[0]}), arm minus uniform, '
+    f'seed-paired, bits per byte (mean, then the {len(SEEDS)} seeds):')
+CHANGE = {}
+for a in arms[1:]:
+    for d in DOMAINS:
+        c = paired(a, d, -1) - paired(a, d, k0)
+        CHANGE[a, d] = c
+        say(f'  {a:8s} {d:5s} {c.mean():+.4f}  {np.round(c, 4).tolist()}')
+if 'recency' in arms:
+    kept = CHANGE['recency', 'math'].mean() / CHANGE[ANNEAL, 'math'].mean()
+    say(f'share of the mathematics gain left after the last '
+        f'{1 - stages[1][0]:.0%} of the steps on uniform: {kept:.2f}')
+if 'horizon-cos-s0' in REC:  # the schedules at two horizons, uniform mixture
+    t_of = lambda a, seeds: np.array([T_DEP @ final(f'{a}-s{s}')
+                                      for s in seeds])
+    hs = C['horizon']['seeds']
+    say(TAG, 'uniform mixture, t_dep bits per byte, cosine and '
+        'stable-then-decay at the same peak:')
+    for k, (cos_, wsd_) in ((1, (t_of('uniform-cos', C['cos_seeds']),
+                                 t_of('uniform-wsd', SEEDS))),
+                            (C['horizon']['factor'], (t_of('horizon-cos', hs),
+                                                      t_of('horizon-wsd', hs)))):
+        say(f'  {k * n_steps:5d} steps: cosine {cos_.mean():.4f} '
+            f'({len(cos_)} seeds), stable-then-decay {wsd_.mean():.4f} '
+            f'({len(wsd_)} seeds), gap {cos_.mean() - wsd_.mean():.4f}')
 ```
 
-At T1 scale the staged arm cannot show the effect, and for a plain reason:
-it switches from the uniform mixture to the regression's choice, which is
-nearly uniform, so the decay reads almost the same data in both arms. The
-changes during the decay are a few thousandths of a bit per byte, and the
-curves lie on top of each other. The arm shows that a staged run is one
-argument to `train_proxy_lm`; what annealing on a different mixture does is
-the subject of an exercise.
+At T1 scale the decay does what the recipe expects, in all three seeds.
+Reading mathematics while the learning rate falls lowers the mathematics loss
+by about 0.04 bits per byte against the uniform arm and raises the web and
+code losses by about 0.02 and 0.07: the model fits most closely what it reads
+last. The recency arm keeps about two thirds of the mathematics gain after a
+tenth of the steps on uniform data and gives back about half of the cost on
+web text and code. Part of an annealing gain, at this scale about a third,
+is thus recency in the plainest sense, and it fades as soon as the data
+change. The schedule itself matters too. At the same peak rate, the uniform
+mixture under stable-then-decay ends about 0.1 bits per byte below cosine on
+`t_dep` after 256 steps and about 0.05 below after four times the steps; the
+gap shrinks with the length of the run, which is why the arms, all on one
+schedule, are compared only with each other.
+<!-- campaign: lm-mix-runs-t2-v1 -->
 <!-- campaign: lm-mix-runs-t2-v1 -->
 
 ### Annealing Gains and Recency
@@ -1666,11 +1788,13 @@ say(f'  {c2["select"]} held-out RMSE per domain {rmse2.round(4).tolist()}'
 say(f'  selected for t_dep {fmt(TEST["selection"]["weights"])} (T1 '
     f'{fmt(SEL["weights"])}); DoReMi {fmt(TEST["doremi"]["weights"])} '
     f'(T1 {fmt(DOREMI_W)})')
+ARMS2 = ('uniform', 'regsel', 'doremi') + (  # the test's staged arm decays
+    ('staged',) if 'staged-s0' in TR else ())  # on its selected mixture
 wsd2 = {a: np.array([fin(f'{"uniform-wsd" if a == "uniform" else a}-s{s}')
-                     for s in SEEDS]) for a in ARMS}
-T2T = {a: wsd2[a] @ T_DEP for a in ARMS}
+                     for s in SEEDS]) for a in ARMS2}
+T2T = {a: wsd2[a] @ T_DEP for a in ARMS2}
 sig2 = T2T['uniform'].std(ddof=1)
-for a in ARMS[1:]:
+for a in ARMS2[1:]:
     d = T2T[a] - T2T['uniform']
     real = len(set(np.sign(d))) == 1 and abs(d.mean()) > 2 * sig2
     say(f'  {a}: t_dep minus uniform {np.round(d, 4).tolist()} (2 '
@@ -1692,7 +1816,8 @@ $(0.44, 0.27, 0.30)$. That is a shift of about 0.1 in the web weight, about
 the width of the T1 bootstrap range, and here the regression's arm beats
 uniform beyond the noise, by about 0.01 bits per byte in all three seeds.
 DoReMi's weights move most, to $(0.29, 0.30, 0.41)$, and its arm, like the
-staged one, is within the noise of uniform. So the small proxies located the
+test's staged arm (which decays on the selected mixture), is within the noise
+of uniform. So the small proxies located the
 neighbourhood of a good mixture and did not fix the point: a model four
 times larger prefers more web text, and at that size its own choice beats
 uniform. Whether the trend continues to a model a hundred times larger, the
@@ -1709,13 +1834,16 @@ minimize a target loss fixed in advance. Bits per byte, not bits per token,
 make the domains comparable. No fitted function predicts a new run better
 than that run's noise $\sigma$, and a correct least-squares fit reaches
 $\sigma\sqrt{1 + p/n}$. At T1 scale, early rankings of mixtures predicted
-late ones, and no regression reached the floor of about 0.02 bits per byte;
+late ones, and no regression reached the floor of about 0.01 bits per byte;
 the exponential mixing law failed on code. Its choice for a web-heavy target
-was close to uniform, because in the fit the web loss barely moved with the
-web weight. DoReMi's objective moved weight to code and lost slightly on that
+was close to uniform, because among the mixtures the web loss barely moved
+with the web weight; the pure-web proxy fell off that curve only because the
+shared learning rate was too high for a single domain. DoReMi's objective moved weight to code and lost slightly on that
 target. In a test of a model four times larger, at half its planned tokens,
 the ranking of mixtures agreed only in part (rank correlation 0.7), and the
-chosen weights moved toward web text and beat uniform. Proxies locate a
+chosen weights moved toward web text and beat uniform. Annealing on
+mathematics lowered the mathematics loss, and a third of that gain faded when
+training returned to general data. Proxies locate a
 region of good mixtures rather than a point. Temperature sampling changes
 the mixture over sources and is limited by the value of repeated data, which
 saturates after a few epochs. Annealing changes it over time, and its gains
@@ -1785,15 +1913,17 @@ may be capability or recency.
    and with the floor. Does its choice for `t_dep` move?
    :exlabel:`ex_lm_mix-code-law`
 
-1. [code] **Annealing on mathematics.** Train the staged arm with the decay
-   on the fixed mixture $(0.1, 0.1, 0.8)$ instead of the regression's choice,
+1. [code] **Annealing on code.** Train the anneal and recency arms with the
+   decay on the code corner $(0.1, 0.8, 0.1)$ instead of the mathematics one,
    three seeds, paired with the uniform arm.
-    1. Before running, predict the change of the mathematics and web losses
-       during the decay.
-    1. Measure both. Then continue each annealed model and its uniform
-       partner for another 20% of the tokens on the uniform mixture at a low
-       constant learning rate. How much of the mathematics gain survives?
-       What does the answer say about recency?
+    1. Before running, predict the change of the code and web losses during
+       the decay, using the mathematics result of the annealing section
+       (:numref:`subsec_lm_mix_anneal`).
+    1. Measure both, and the share of the code gain that the recency arm
+       keeps. Then continue each annealed model and its uniform partner for
+       another 20% of the tokens on the uniform mixture at a low constant
+       learning rate. How much of the gain survives now? What does the
+       answer say about recency?
    :exlabel:`ex_lm_mix-anneal`
 
 1. [code] **Does the ranking transfer?** Train the T1 design with the T2
@@ -1844,7 +1974,7 @@ Domain weights are hyperparameters. Fit them on small proxy runs.
 - choose a mixture for a fixed target, and say what DoReMi optimizes instead;
 - judge whether a proxy's choice transfers.
 
-**Running example:** 41 runs of a 4.6M-parameter GPT, $2^{24}$ tokens each,
+**Running example:** 65 runs of a 4.6M-parameter GPT, $2^{24}$ tokens each,
 on web text (FineWeb-Edu), Python (CodeParrot, permissive licences) and
 mathematics (FineMath).
 :::
@@ -1949,8 +2079,10 @@ UniMax caps the epochs per language instead.
 |---|---|---|
 | 15 training | 6 Dirichlet(1), 6 Dirichlet(0.3), 3 corners | fit |
 | 4 held out | Dirichlet(1), another seed | judge the fit |
-| 3 pure, 5 uniform | one domain; seeds | matrix; noise |
-| 4 × 3 seeds | uniform, selected, DoReMi, staged | arms |
+| 9 pure, 7 uniform | one domain; seeds | matrix; noise |
+| 3 × 3 seeds | uniform, selected, DoReMi | arms |
+| 2 × 3 seeds | anneal on math, then back to uniform | annealing |
+| 9 + 4 | half the rate; 4× the steps | checks |
 
 - Peak learning rate chosen once on uniform: $2 \times 10^{-3}$ (interior of
   four values), never per mixture.
@@ -2005,12 +2137,12 @@ $$\mathbb{E}\bigl[(\hat y - y)^2\bigr] = \sigma^2 \bigl(1 + \mathbf{x}^\top (\ma
 Average over the design: $\operatorname{tr}$ of the hat matrix is $p$, so
 $\sigma^2 (1 + p/n)$.
 
-- Floor with $p = 3$: about 0.02 bits per byte; a yardstick, not a bound.
-- $\sigma$ rests on two seeds of the uniform mixture, so it is rough.
+- Floor with $p = 3$: about 0.01 bits per byte; a yardstick, not a bound.
+- $\sigma$ rests on four seeds of the uniform mixture, so it is rough.
 - Simulation: 4.79e-4 against 4.78e-4 predicted.
 :::
 
-::: {.slide title="On Held-Out Mixtures, Every Regression Misses the Floor"}
+::: {.slide title="On Held-Out Mixtures, Every Regression Misses the Floor on Code"}
 [Three regressions]{.kicker}
 
 Mixing law: $b_i(\mathbf w) = c_i + k_i \exp\bigl(\sum_j t_{ij} w_j\bigr)$.
@@ -2020,7 +2152,7 @@ Mixing law: $b_i(\mathbf w) = c_i + k_i \exp\bigl(\sum_j t_{ij} w_j\bigr)$.
 | ridge | 0.03 | 0.06 | 0.07 |
 | gradient boosting | 0.01 | 0.03 | 0.05 |
 | mixing law | 0.003 | 0.12 | 0.04 |
-| floor | 0.02 | 0.02 | 0.02 |
+| floor | 0.01 | 0.01 | 0.01 |
 
 ::: {.d2l-note .warn}
 The law fails on code, whose loss drops steeply near zero code weight. More
@@ -2078,7 +2210,7 @@ $$\alpha_{t+1,i} = \frac{\alpha_{t,i}\, e^{\eta g_{t,i}}}{\sum_j \alpha_{t,j}\, 
 | average over 256 steps | 0.17 | 0.47 | 0.36 |
 :::
 
-::: {.slide title="Four Arms: One Method, Two Targets, Two Verdicts"}
+::: {.slide title="Three Arms: One Method, Two Targets, Two Verdicts"}
 [Arms]{.kicker}
 
 Three seeds each, paired with uniform; real only if all three differences
@@ -2088,7 +2220,6 @@ share a sign and the mean exceeds $2\sigma_{\textrm{seed}}$ (about 0.01).
 |---|---|---|---|
 | regression's choice | about −0.007 | about −0.008 | 0.00 |
 | DoReMi | about +0.015 | about −0.025 | −0.10 |
-| staged | about 0 | about 0 | 0.00 |
 
 ::: {.d2l-note}
 DoReMi lowers code loss and raises web loss: worse on the web-heavy target,
@@ -2101,8 +2232,10 @@ at the edge of the noise; better on the average.
 
 - Stable-then-decay: peak rate for 80% of the steps, decay in the last 20%.
 - SmolLM2's last 10% of 11T tokens: 14% math, 24% code, held back until then.
-- Our staged arm decays on the selected mixture, which is nearly uniform:
-  no measurable change.
+- Our anneal arm decays on $(0.1, 0.1, 0.8)$: math −0.04 bpb, web +0.02,
+  code +0.07 against uniform, all 3 seeds.
+- Back to uniform for the last 10% of the steps: two thirds of the math gain
+  remain.
 
 ::: {.d2l-note .warn}
 Benchmark gains may be recency. Check held-out loss of the domain, then train
@@ -2165,7 +2298,7 @@ Rank correlation of 22 shared mixtures: 0.70.
   byte.
 - Temperature $\alpha = 0.3$ reads Swahili 143 times, worth 11% of fresh data.
 - Early rankings predict late ones: 0 of 105 pairs cross beyond the noise.
-- Floor of a correct fit about 0.02 bpb; best regression 0.03, mixing law
+- Floor of a correct fit about 0.01 bpb; best regression 0.03, mixing law
   0.07 (code).
 - Web-heavy target selects about one third web; DoReMi moves weight to code.
 - At 4× the size: rank correlation 0.70, the choice moves to web and wins.

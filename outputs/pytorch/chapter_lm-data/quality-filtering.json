@@ -136,12 +136,12 @@
       ]
     },
     "quality-filtering-label-regen": {
-      "code_fingerprint": "sha256:fefb98d5b57b2a3ec42505c5f90a78f254b86a04bc2c7c394dd0535e3b579301",
+      "code_fingerprint": "sha256:503378909d3dce497e464352b2befe5e52e33e9d717f0d2835de21f4b06a0a7c",
       "kind": "text",
       "outputs": []
     },
     "quality-filtering-agreement": {
-      "code_fingerprint": "sha256:b6f5188ab1ca8d56a8f3786f730f7c6836d4d8299c23c5ffffc35a7820f01a68",
+      "code_fingerprint": "sha256:b7af0a92df8aec9bd807450c73cfc6d530671b87037bb37122c5d582473644ad",
       "kind": "text",
       "outputs": [
         {
@@ -162,7 +162,7 @@
       ]
     },
     "quality-filtering-labels-choice": {
-      "code_fingerprint": "sha256:dbeb06868071b21b30559cf6ad20465d786d482034c1006db50270c577c8bf09",
+      "code_fingerprint": "sha256:2a19020d3cbbe3108d6586d3fa84e7b7e1fd4df657236b43e16b84cf21cf3f1d",
       "kind": "text",
       "outputs": [
         {
@@ -178,12 +178,12 @@
       ]
     },
     "quality-filtering-embed-def": {
-      "code_fingerprint": "sha256:0fd9445b74c92b0c42ca521f3fdaa2e6f39ceae48c50eb2e66225ae8aca31554",
+      "code_fingerprint": "sha256:bd3173eef3d6978aef71d3c63818e10363ed6e37c666876865e15b0b417e0ce0",
       "kind": "text",
       "outputs": []
     },
     "quality-filtering-embed": {
-      "code_fingerprint": "sha256:b899416e353690e2eadcb810e286ee373cd58094509aa9425e62bc046b0c73ad",
+      "code_fingerprint": "sha256:fb2a657d4432e534a76745fce324e3543c460f3b15631ac8261ac96e2d32c13e",
       "kind": "text",
       "outputs": [
         {
@@ -199,12 +199,12 @@
       ]
     },
     "quality-filtering-heads-def": {
-      "code_fingerprint": "sha256:d6b31e1015a38b95c2c9c689a94b7374b786cd3aa65ee6a4d0fad326fb694960",
+      "code_fingerprint": "sha256:b0db579ee9027b7f37039931f27b1e55a95c4c8a1edf7615f81839f8ad749032",
       "kind": "text",
       "outputs": []
     },
     "quality-filtering-heads": {
-      "code_fingerprint": "sha256:cc21c33082bb1c45544c7f22271302ad46e02e07cf34f06be66d3650f0ebd145",
+      "code_fingerprint": "sha256:af065809afd5378d8b8cff1ff5680c19b8f14df6211e2dee1e049574da8d59c0",
       "kind": "text",
       "outputs": [
         {
@@ -215,7 +215,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hashed bag: 66 s on the CPU\n"
+          "text": "hashed bag: 54 s on the CPU\n"
         },
         {
           "type": "stream",
@@ -230,13 +230,13 @@
       ]
     },
     "quality-filtering-clf-table": {
-      "code_fingerprint": "sha256:7215e1ce28ff2195df2cfdaab536b74df181600e64f9367764c05deb380dea61",
+      "code_fingerprint": "sha256:7e2d8e9bcfeeb61f861acf5dfb7a357382c7ba887920d5a1e961c9a80d964ab6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2,000 test rows (parameters: the trained part; the heads also run the frozen\n    Qwen/Qwen3-Embedding-0.6B; F1 lo/hi: bootstrap interval of F1 qwen_score)\n     classifier  threshold  retained    params  ms_per_doc   MAE\nregression head      1.611     0.036      1025       6.375 0.300\n  logistic head      0.160     0.023      1025       6.375   NaN\n     hashed bag      0.037     0.072  67108929       0.629   NaN\n       released      2.938     0.040 109483009       1.038 0.371\n     classifier  F1 qwen  AUC qwen  F1 llama  AUC llama  F1 lo  F1 hi\nregression head    0.444     0.983     0.419      0.912  0.318  0.552\n  logistic head    0.561     0.978     0.290      0.865  0.410  0.680\n     hashed bag    0.257     0.902     0.367      0.800  0.171  0.344\n       released    0.466     0.977     0.538      0.966  0.349  0.571\n"
+          "text": "2,000 test rows (parameters: the trained part; the heads also run the frozen\n    Qwen/Qwen3-Embedding-0.6B; F1 lo/hi: bootstrap interval of F1 qwen_score)\n     classifier  threshold  retained    params  ms_per_doc   MAE\nregression head      1.611     0.036      1025       6.375 0.300\n  logistic head      0.160     0.023      1025       6.375   NaN\n     hashed bag      0.037     0.072  67108929       0.621   NaN\n       released      2.938     0.040 109483009       1.038 0.371\n     classifier  F1 qwen  AUC qwen  F1 llama  AUC llama  F1 lo  F1 hi\nregression head    0.444     0.983     0.419      0.912  0.318  0.552\n  logistic head    0.561     0.978     0.290      0.865  0.410  0.680\n     hashed bag    0.257     0.902     0.367      0.800  0.171  0.344\n       released    0.466     0.977     0.538      0.966  0.349  0.571\n"
         },
         {
           "type": "stream",
@@ -246,18 +246,18 @@
       ]
     },
     "quality-filtering-ceiling": {
-      "code_fingerprint": "sha256:bdc45bf8b322f6dd9709e7b54cf3549ae74162b64f9f191767523a263cc3fc71",
+      "code_fingerprint": "sha256:6a12bfc76afd558f9564d922a87e731bfecc7c8d5f070f9bcb3f6b0d658a9b92",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "F1 = 2 pi TPR / (pi + rho) at 50 thresholds: largest gap 5.6e-17\n eta  closed_form  simulated  within_3se\n0.02       0.9007     0.9007        True\n0.05       0.7787     0.7782        True\n0.10       0.6250     0.6248        True\nthe two protocols disagree on 0.0095 of 2,000 test rows: eta 0.0048 [0.0028, 0.0068], ceiling F1\n    0.800 [0.675, 0.889]\nequal symmetric noise implies equal shares; Qwen3.8-27B 0.014 and Llama-3-70B 0.091 differ in scale,\n    so their disagreement does not estimate eta\nmeasured test F1: regression head 0.444, logistic head 0.561, hashed bag 0.257, released 0.466 | all\n    below the ceiling: True\n"
+          "text": "F1 = 2 pi TPR / (pi + rho) at 50 thresholds: largest gap 5.6e-17\n eta  closed_form  simulated  within_3se\n0.02       0.9007     0.9007        True\n0.05       0.7787     0.7782        True\n0.10       0.6250     0.6248        True\nthe two protocols disagree on 0.0095 of 2,000 test rows: eta 0.0048 [0.0028, 0.0068], ceiling F1\n    0.800 [0.675, 0.889]\nequal symmetric noise implies equal shares of positives; Qwen3.8-27B 0.014 against Llama-3-70B\n    0.091; on the test rows, digit protocol 0.0180 against justification first 0.0105\nof the 19 disagreements, 17 have digits >= 3 and justification first < 3, 2 the reverse: an even\n    split gives one this uneven with probability 0.0007\none protocol scored against the other (no noise model): F1 2 x 19 / (36 + 21) = 0.667 [0.500, 0.800]\nmeasured test F1: regression head 0.444, logistic head 0.561, hashed bag 0.257, released 0.466 | all\n    below the symmetric-model ceiling: True | all below the protocol F1: True\n"
         }
       ]
     },
     "quality-filtering-threshold": {
-      "code_fingerprint": "sha256:f4179b1dc28d2826d2f43e66c8398d27a81d3e04aef9117fdc044ac61be6e84e",
+      "code_fingerprint": "sha256:6124bcd34925af4fcb4599a7a88fba80a3827cb82e68e0f7896c101e9397f0ae",
       "kind": "mixed",
       "outputs": [
         {
@@ -265,7 +265,7 @@
           "mime": "image/svg+xml",
           "asset": "quality-filtering/quality-filtering-threshold-1.svg",
           "bytes": 66190,
-          "sha256": "sha256:751ca2b86718c44274d8ff6baf0dbe041bce7c1e4dd5ecca511d559ba8629ad3"
+          "sha256": "sha256:445d00cc664f087a1d2ab449ebf3ad2e067ebe800c23ca19902338954634c0ca"
         },
         {
           "type": "stream",
@@ -275,12 +275,12 @@
       ]
     },
     "quality-filtering-audit-def": {
-      "code_fingerprint": "sha256:db72dbb1ea377f4b28f0c9f662664e872e50724beaf2ffa346b046104f6ed11d",
+      "code_fingerprint": "sha256:597c914638aacb30a8afdeef0085e39f2b8ba55f5652845c3475352dd2c7056f",
       "kind": "text",
       "outputs": []
     },
     "quality-filtering-audit": {
-      "code_fingerprint": "sha256:8c661f01b9948491343dc1d7fdcd380c2469d4119fe6560df0089a4520afbe9a",
+      "code_fingerprint": "sha256:c699a4cd53b19d32c5b46d0099f48ecbe6f50587443268a98cf5493afeb2a009",
       "kind": "mixed",
       "outputs": [
         {
@@ -298,23 +298,23 @@
           "mime": "image/svg+xml",
           "asset": "quality-filtering/quality-filtering-audit-1.svg",
           "bytes": 77917,
-          "sha256": "sha256:ad39a0c1f4727021c1f13fe5dfca53ab8ab10173dcd5534eb276d21718d003a6"
+          "sha256": "sha256:d1730d5c4b21f9914be7dac72039c3b065696cb93a68e91228ed64697842f29e"
         }
       ]
     },
     "quality-filtering-review": {
-      "code_fingerprint": "sha256:8fa506f172dc64a4dc86944a24c4b306af64a63429360f9d30f90f552ea58fc4",
+      "code_fingerprint": "sha256:d97a5f956ca1ddc3149a6bb2a0be4bd50489263aeedd0c568889eae845c6ef2d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "removed-document pools: {'classifier only': 1838, 'heuristics': 317} | reviewed: {'classifier only':\n    100, 'heuristics': 100}\nlabeller: RedHatAI/Qwen3.8-27B-INT4@71dface38d4cbfa34121f1d446d4a0fa1025f13c thinking, max_tokens\n    12000; removal precision (share labelled \"drop\"):\n            arm   n  drop  precision    lo    hi\nclassifier only 100    11       0.11 0.063 0.186\n     heuristics 100    70       0.70 0.604 0.781\n\n[classifier only, score 1.32, label drop] The page is generic, vague, and likely machine-generated\n    SEO filler with little substantive information and a truncated contact address.\n  In the world of technology, adapters play a crucial role in ensuring compatibility between\n  different devices and systems. One such adapter that has gained popularity is the 21A adapter. In\n  this article, we will explore what a 21A adapter is, its functions, and why it is widely used in\n  various indust …\n\n[heuristics, score 1.37, label keep] The page is a concise, informative encyclopedia entry about a\n    figure in Greek mythology, providing coherent prose a reader could learn from.\n  Erisichthon (wool of the earth, much earth) In Greek mythology, a sacrilegious person, son of\n  Triopas and Hiscilla of Thessaly; brother of Iphimedeia, Messene, and Phorbas; father of Mestra.\n  Mestra could take any beast form, which was a gift from her lover, Poseidon. Erisichthon would\n  sell Mestra in …\n\n[heuristics, score 0.89, label keep] The page is a coherent, informative professional bio describing\n    a massage therapist's training, techniques, and services.\n  Laresa attended Vancouver College of Massage Therapy (VCMT) where she was honoured with the Heart\n  Award for ‘Unconditional positive regard for others combined with a passionate commitment to\n  excellence in the massage therapy profession’.Laresa’s holistic approach to massage focuses on\n  treating speci …\n\n[classifier only, score 1.57, label drop] The page is a disjointed, contradictory collection of\n    low-quality snippets about billionaire net worth that reads like machine-generated or scraped\n    SEO content rather than coherent, useful prose.\n  Elon Musk is an entrepreneur and business magnate who co-founded PayPal and Tesla Motors. He is\n  now the CEO of SpaceX. As of March 2017, Musk’s personal wealth is estimated to be $13.9 billion,\n  making him the 83rd richest person in the world. In contrast, the President of the United States\n  is only w …\n\n[heuristics, score 0.40, label drop] The page is a short e-commerce product description with\n    marketing copy and UI boilerplate, offering little general-purpose learning value.\n  Big jeans were synonymous with the nineties, but no matter the decade, it's been proven that these\n  '94 Baggy Bootcut jeans will never go out of style. They’re effortless, cool and feature a mid\n  rise and bootcut leg, making whatever you pair them with look just that much better. Fit and\n  Sizing Loose  …\n\nText: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 (ODC-By 1.0)\n"
+          "text": "removed-document pools: {'classifier only': 1838, 'heuristics': 317} | reviewed: {'classifier only':\n    100, 'heuristics': 100}\nlabeller: RedHatAI/Qwen3.8-27B-INT4@71dface38d4cbfa34121f1d446d4a0fa1025f13c thinking, max_tokens\n    12000; removal precision (share labelled \"drop\"):\n            arm   n  drop  precision    lo    hi\nclassifier only 100    11       0.11 0.063 0.186\n     heuristics 100    70       0.70 0.604 0.781\n\n[classifier only, score 1.32, label drop] The page is generic, vague, and likely machine-generated\n    SEO filler with little substantive information and a truncated contact address.\n  In the world of technology, adapters play a crucial role in ensuring compatibility between\n  different devices and systems. One such adapter that has gained popularity is the 21A adapter. In\n  this article, we will explore what a 21A adapter is, its functions, and why it is widely used in\n  various indust …\n\n[heuristics, score 1.37, label keep] The page is a concise, informative encyclopedia entry about a\n    figure in Greek mythology, providing coherent prose a reader could learn from.\n  Erisichthon (wool of the earth, much earth) In Greek mythology, a sacrilegious person, son of\n  Triopas and Hiscilla of Thessaly; brother of Iphimedeia, Messene, and Phorbas; father of Mestra.\n  Mestra could take any beast form, which was a gift from her lover, Poseidon. Erisichthon would\n  sell Mestra in …\n\n[heuristics, score 0.89, label keep] The page is a coherent, informative professional bio describing\n    a massage therapist's training, techniques, and services.\n  Laresa attended Vancouver College of Massage Therapy (VCMT) where she was honoured with the Heart\n  Award for ‘Unconditional positive regard for others combined with a passionate commitment to\n  excellence in the massage therapy profession’.Laresa’s holistic approach to massage focuses on\n  treating speci …\n\n[classifier only, score 1.57, label drop] The page is a disjointed, contradictory collection of\n    low-quality snippets about billionaire net worth that reads like machine-generated or scraped\n    SEO content rather than coherent, useful prose.\n  Elon Musk is an entrepreneur and business magnate who co-founded PayPal and Tesla Motors. He is\n  now the CEO of SpaceX. As of March 2017, Musk’s personal wealth is estimated to be $13.9 billion,\n  making him the 83rd richest person in the world. In contrast, the President of the United States\n  is only w …\n\n[heuristics, score 0.40, label drop] The page is a short e-commerce product description with\n    marketing copy and UI boilerplate, offering little general-purpose learning value.\n  Big jeans were synonymous with the nineties, but no matter the decade, it's been proven that these\n  '94 Baggy Bootcut jeans will never go out of style. They’re effortless, cool and feature a mid\n  rise and bootcut leg, making whatever you pair them with look just that much better. Fit and\n  Sizing Loose  …\n\nText: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 (ODC-By 1.0)\njudge replies: median 131 tokens, largest 723, cut off at max_tokens 0 of 200\n"
         }
       ]
     },
     "quality-filtering-agree-stream": {
-      "code_fingerprint": "sha256:310c4e6d144b19d1c61684144353f109959e6ff089d3670f27468905e8a3ee8b",
+      "code_fingerprint": "sha256:a879d4c6769a77ab63d175cd1acf8b0c5dcd881d031859e9a23e93f62a867ea0",
       "kind": "text",
       "outputs": [
         {
@@ -325,7 +325,7 @@
       ]
     },
     "quality-filtering-c1": {
-      "code_fingerprint": "sha256:9f58e574d139d8f8a71a77ba04e36b79a7b427e3b9b14915fe6feabf2c16d993",
+      "code_fingerprint": "sha256:34f619aa1904eaf379cc23c7f3e5ee10f889bbe5e8fb4d55628bc8bc45190f3c",
       "kind": "text",
       "outputs": [
         {
@@ -336,7 +336,7 @@
       ]
     },
     "quality-filtering-results": {
-      "code_fingerprint": "sha256:2d34f69528ec8c09e6ab6f27e497cc7ffc0f2b5a5f4f82aa3b1e1c7e24ced352",
+      "code_fingerprint": "sha256:7e3a1e0eaf982d21b0655cfeee40c47f1c38ed15e2c7f687cb02ddd4c4136b43",
       "kind": "text",
       "outputs": [
         {

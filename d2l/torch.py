@@ -10203,6 +10203,10 @@ d2l.DATA_HUB['lm-mix-runs-t1-v1'] = (  # the 41 T1 runs, the selection,
     # DoReMi's weights and the T2 smoke (mix-t1 regeneration, 20.4)
     d2l.LM_DATA_URL + 'lm-mix-runs-t1-v1.json',
     '92abf76a5e9891ba3efe5c5daa5f2a021f05c9e4')
+d2l.DATA_HUB['lm-mix-runs-t1-v2'] = (  # v1's runs without the staged arm,
+    # plus the 27 runs of the v2 design (20.4)
+    d2l.LM_DATA_URL + 'lm-mix-runs-t1-v2.json',
+    '8b44a65a466ac5a938dcbe58eef6a89a130a7249')
 d2l.DATA_HUB['lm-mix-runs-t2s-v1'] = (  # a small-scale test of the T2 code
     # path on four RTX 4090s: the T2 design at half its tokens (20.4)
     d2l.LM_DATA_URL + 'lm-mix-runs-t2s-v1.json',

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9ea983057ff5ea0917b846a36016fcbc5d5300918d55c3a9ba7d5f3adac24035",
+    "d2l_lib_fingerprint": "sha256:2fa2657a6eadf8232fbfdc5389e1f9597d4967dfd9bc4dbb3f4daaf13fa29f34",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -105,17 +105,17 @@
           "mime": "image/svg+xml",
           "asset": "dedup/dedup-jaccard-hist-1.svg",
           "bytes": 37264,
-          "sha256": "sha256:999533a7cbff414dc2665ddd7d375b65ca66b179571b253948d807665ebd5e17"
+          "sha256": "sha256:42e915d093f7fcbdcf368882a3a4ce7e31389e76b6217f5bedfe2d9e849787d9"
         }
       ]
     },
     "dedup-minhash-def": {
-      "code_fingerprint": "sha256:a987813a51af903f4ac567794d8601144f0b81580e228a0eee46730f5bff98e6",
+      "code_fingerprint": "sha256:dc570a8286fd33565c4220180a87167add3e78d253f49609e5e9d83c96654dc3",
       "kind": "text",
       "outputs": []
     },
     "dedup-minhash-check": {
-      "code_fingerprint": "sha256:79bb3be0323f249983c70ada61b982d006b1bd617f99b60241e9016489a79bc5",
+      "code_fingerprint": "sha256:96bc15ca968b15318378ff920324ba120bec33a2b34a7461929bff3f5bcfe252",
       "kind": "text",
       "outputs": [
         {
@@ -126,12 +126,12 @@
       ]
     },
     "dedup-lsh-def": {
-      "code_fingerprint": "sha256:15934f29f822573bf04b590dacf377f99c6f3122e678dda0ff7b109f28efb816",
+      "code_fingerprint": "sha256:70ce8b91f37b18857edede1441006f75222cd535613b814565a300e5b834034d",
       "kind": "text",
       "outputs": []
     },
     "dedup-scurve-check": {
-      "code_fingerprint": "sha256:b3ed8160d24ec17e08cd279666678e83e9f41e12c21570b25cf4ce013506b902",
+      "code_fingerprint": "sha256:9f2d81bec00fda16722b6faf975db8a909c69aac5a0850a0f9c87a65f91ac4b1",
       "kind": "text",
       "outputs": [
         {
@@ -147,12 +147,12 @@
       ]
     },
     "dedup-pairs-def": {
-      "code_fingerprint": "sha256:06e2ad8c78777a20f2c79b0bcee785e06d0f655f9fc32eec04e885b4e570e16f",
+      "code_fingerprint": "sha256:768591a2b59906865c7b0e320f2c082c8125fc92eee0e750f166894805cb8a0e",
       "kind": "text",
       "outputs": []
     },
     "dedup-pairs": {
-      "code_fingerprint": "sha256:c95283949a11a9b81c8877a1d9eba8f20726227036a3569110b9742e0ec08f58",
+      "code_fingerprint": "sha256:55163fb24902614537c1cd462b6c8cfb3dae5fd06d16c81fd294758474ee62c6",
       "kind": "text",
       "outputs": [
         {
@@ -163,13 +163,13 @@
       ]
     },
     "dedup-scurve-measure": {
-      "code_fingerprint": "sha256:4c1e6968286e9a1ec36911ac1f96dfb595c8f1c68b6cfa6f60ed4551931f6494",
+      "code_fingerprint": "sha256:2546786a21081f41034fa5b9e741bf108e2fcb5bb4b5a9645294b5bee1e6e60d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "16,934 distinct pair documents, 3 seeds, 13 settings: 33 s; bucket pipeline at (9, 13) = per-pair\n    band test on all 12,000 pairs\n"
+          "text": "16,934 distinct pair documents, 3 seeds, 13 settings: 32 s; bucket pipeline at (9, 13) = per-pair\n    band test on all 12,000 pairs\n"
         },
         {
           "type": "stream",
@@ -181,12 +181,12 @@
           "mime": "image/svg+xml",
           "asset": "dedup/dedup-scurve-measure-1.svg",
           "bytes": 195903,
-          "sha256": "sha256:f094bae68071c6944ef549bd775f5a6df723a6fd2b1b2853fda56130581dfc26"
+          "sha256": "sha256:7aa7a8db1b3285d78bf01a13fef029dde27690146388a0b98a174fabe5c467b7"
         }
       ]
     },
     "dedup-choose": {
-      "code_fingerprint": "sha256:188e628d0684d1df77fba723ea83eb329c81fdeb5f88465441d7fd14d443f0cb",
+      "code_fingerprint": "sha256:9cd1cedd3ba51f18f78d2baf6bd0f6598d66c16a0a58b84b40a2cdcea3055a24",
       "kind": "mixed",
       "outputs": [
         {
@@ -224,12 +224,12 @@
           "mime": "image/svg+xml",
           "asset": "dedup/dedup-choose-1.svg",
           "bytes": 47934,
-          "sha256": "sha256:b44be7525ded2e2846f4bf420625a7b5ba0bf3de875346653b83ff07edc6011f"
+          "sha256": "sha256:acf07b1544afa7c57b78cac0b5701b1f770c18cd73b9537bf77a4e55a68ef16b"
         }
       ]
     },
     "dedup-cost": {
-      "code_fingerprint": "sha256:1c34c761de78cda52d9caf94075a9abea350ec16795ecd72957517965739737c",
+      "code_fingerprint": "sha256:cd369c672f314d65aa8341d097bcde0ab21825d124de1796de68179b1bc1b719",
       "kind": "text",
       "outputs": [
         {
@@ -260,7 +260,7 @@
       ]
     },
     "dedup-dedup-run": {
-      "code_fingerprint": "sha256:697de6b82be168ecf553d9a05bb1c0a173b8438265a7c3fe810e863f178651e9",
+      "code_fingerprint": "sha256:b34653d0f11559980c5be60ab2a9a18793271589934339115cb5b0cc6ca1d2e0",
       "kind": "text",
       "outputs": [
         {
@@ -276,12 +276,12 @@
       ]
     },
     "dedup-sa-def": {
-      "code_fingerprint": "sha256:32f5ca631abb4edd9fbfe9e8da14ab2ac64127dd664b3de5b7fe837093c246a2",
+      "code_fingerprint": "sha256:f3e831b91abe74f14d684d17e3fd94ed4442cbc6dc5aafb50f28d5df3f6bcb5f",
       "kind": "text",
       "outputs": []
     },
     "dedup-substring": {
-      "code_fingerprint": "sha256:0e8573fcb922dfc0a5685a5db72a99a5c97ddfc9cfeb6e8f7106ef197a9afd75",
+      "code_fingerprint": "sha256:97083ffe34ee00bf68fe27b8d8070e060ee5ae2d08749e10281cdb3b1545b0e0",
       "kind": "text",
       "outputs": [
         {
@@ -292,7 +292,7 @@
       ]
     },
     "dedup-semantic": {
-      "code_fingerprint": "sha256:ea8e1fd3959c249e20843104383469121f67b1e6a658b719d4a61b314b914c70",
+      "code_fingerprint": "sha256:213db85e3e198a934e5424987ebe4ab6824449f8f940120b649ed00d8e5f7a72",
       "kind": "text",
       "outputs": [
         {
@@ -303,12 +303,12 @@
       ]
     },
     "dedup-index-def": {
-      "code_fingerprint": "sha256:a7e715d3426ff8638619ac99c20a75bdebd65060846cf5a428d4ac566dcae5da",
+      "code_fingerprint": "sha256:b6c768c72de95091b55ead2fb43930f6cc76ac3945216f7e7b3ec9c06305c159",
       "kind": "text",
       "outputs": []
     },
     "dedup-decontam-ngram": {
-      "code_fingerprint": "sha256:082ccacf2bd430c3f66c9f1ef39bb4cfc17ac0b729ac7e55eafde009365422a2",
+      "code_fingerprint": "sha256:a2c09967f5c4fb60a987e1dbd7d322fdeed6e2e1468b4b4fb9f01e478677eef9",
       "kind": "text",
       "outputs": [
         {
@@ -324,7 +324,7 @@
       ]
     },
     "dedup-decontam-emb": {
-      "code_fingerprint": "sha256:8248c35548a9c90421e9775a125db8926265a90a0f630529f1965f85e50c8dc1",
+      "code_fingerprint": "sha256:9641cc367912090a53e79e3229407a5193ad43e24c45ad9d839b4710adefb0fe",
       "kind": "text",
       "outputs": [
         {
@@ -345,7 +345,7 @@
       ]
     },
     "dedup-plants": {
-      "code_fingerprint": "sha256:a13cdfe61b56b0969c9c9f36150af3fa4d69de797d4944a14c2b477ff408e2ae",
+      "code_fingerprint": "sha256:42d2acbe6661291e61c8491ae4af37683d1c8fc5ea8b9a124a08d4843618a8c5",
       "kind": "text",
       "outputs": [
         {
@@ -356,7 +356,7 @@
       ]
     },
     "dedup-c2": {
-      "code_fingerprint": "sha256:458b2217062e46d0e0ed05e206ba8a9a98264f0347843aa12240259020c25b64",
+      "code_fingerprint": "sha256:3366b7e262118d4f57980de0357b9616058fd8c19fe1b395a9c5888fcd0eb505",
       "kind": "text",
       "outputs": [
         {
@@ -367,13 +367,13 @@
       ]
     },
     "dedup-results": {
-      "code_fingerprint": "sha256:5bc3f5a19f97f1d03bd3352371b9c4323746d845912b58c257bd32a70232ca40",
+      "code_fingerprint": "sha256:c5a2d58ed22cc35a1c8f0c189c9edf9d1936828b4c15c87e5a396779decd0aa9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "against lm-data-dedup-results-v1: 9185/9185 values equal, largest numeric difference 0; semantic,\n    decontam_emb within tolerance: True\nwall clock (s): all_pairs_1000 4, shingle_slice 13, pairs_regen 11, scurve_measure 33,\n    slice_signatures 22, near_dedup 23, suffix_array 1, index 3, c2_1 4, c2_4 8\nmemory: shingle sets 1.76 GiB; peak RSS of this process 7.0 GiB, plus up to 4 workers\n"
+          "text": "against lm-data-dedup-results-v1: 9185/9185 values equal, largest numeric difference 0; semantic,\n    decontam_emb within tolerance: True\nwall clock (s): all_pairs_1000 4, shingle_slice 13, pairs_regen 11, scurve_measure 32,\n    slice_signatures 22, near_dedup 23, suffix_array 1, index 3, c2_1 4, c2_4 8\nmemory: shingle sets 1.76 GiB; peak RSS of this process 7.0 GiB, plus up to 4 workers\n"
         }
       ]
     }

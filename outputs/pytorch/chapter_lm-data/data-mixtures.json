@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-temperature-1.svg",
           "bytes": 52783,
-          "sha256": "sha256:d3baadb25586c387bc03f0973694ee5d4fda5cc06b6709999f1326c139a7d6cb"
+          "sha256": "sha256:df0a67362009b27bc9156299f57340bfc403a6f696ed1a9196e052a1bb43c19a"
         }
       ]
     },
@@ -143,11 +143,6 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Downloading ../data/lm/lm-mix-runs-t1-v2/lm-mix-runs-t1-v2.json from https://d2l-data.smola.org/lm/lm-mix-runs-t1-v2.json...\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
           "text": "[at T1 scale] 65 runs from lm-mix-runs-t1-v2.json; peak learning rate 0.002 (chosen on the uniform\n    mixture: 0.0005 -> 3.0806 bpb, 0.001 -> 2.7013 bpb, 0.002 -> 2.5001 bpb, 0.004 -> 2.5868 bpb)\n"
         }
       ]
@@ -159,7 +154,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[at T1 scale] pure-web, steps 10-16: largest difference from the registered losses 0.0001 nats\n    (bf16; tolerance 0.02)\n"
+          "text": "[at T1 scale] pure-web, steps 10-16: largest difference from the registered losses 0.0000 nats\n    (bf16; tolerance 0.02)\n"
         }
       ]
     },
@@ -188,7 +183,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-opening-plot-1.svg",
           "bytes": 32398,
-          "sha256": "sha256:82f51953e41c115ddb73ca004b6cc851c115341faa7dc4222331d4923d285d1a"
+          "sha256": "sha256:ea40206152e0fc9c9320b542d66460a9dca1c1c1478ef2875c0af4c1609622e3"
         }
       ]
     },
@@ -216,7 +211,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-regression-1.svg",
           "bytes": 73142,
-          "sha256": "sha256:e2362fed789909c40ee53afaf478acc40f16757df24644f81127c5621c0fa9bd"
+          "sha256": "sha256:958de303f7034b8ee3c16be26fd6c7e4dc5325fa1c7e119d0f3f8b44d0a73dc8"
         }
       ]
     },
@@ -277,7 +272,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-arms-1.svg",
           "bytes": 26334,
-          "sha256": "sha256:33116ac00db37778f48fcde59906c4cba93c1155791d6e03e4298ba897206234"
+          "sha256": "sha256:30b73dbbed7bb9c615896e35072d761c5c1509b72432e317316affc5aa5f8098"
         }
       ]
     },
@@ -295,7 +290,7 @@
           "mime": "image/svg+xml",
           "asset": "data-mixtures/data-mixtures-staged-1.svg",
           "bytes": 57875,
-          "sha256": "sha256:6ae95b04d1a7ef2d29abfc5b545001a203047f74d862a7245c18f3ab01d83d78"
+          "sha256": "sha256:b2e6648f7138745ef1fa82a5789b038406b315f1de8c32504812385e945200e5"
         }
       ]
     },

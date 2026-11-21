@@ -561,12 +561,11 @@ $$
 $$
 :eqlabel:`eq_mdl-normal-equations`
 
-These are simply the matrix form of the $2 \times 2$ system we solved by hand:
+These are the matrix form of the $2 \times 2$ system we solved by hand:
 for the line fit, $\mathbf{A} = [\mathbf{1}\ \mathbf{t}]$ gives
 $\mathbf{A}^\top\mathbf{A} = \left(\begin{smallmatrix}3&3\\3&5\end{smallmatrix}\right)$
 and $\mathbf{A}^\top\mathbf{y} = (6, 0)$. Whenever the columns of $\mathbf{A}$
-are linearly independent, $\mathbf{A}^\top\mathbf{A}$ is invertible
-(:exref:`ex_mdl-geometry-linear-algebraic-ops-least-squares-line`) and the
+are linearly independent, $\mathbf{A}^\top\mathbf{A}$ is invertible and the
 optimal coefficients $\hat{\mathbf{x}}$ are unique. Even when the columns are
 dependent, the fitted vector $\mathbf{A}\hat{\mathbf{x}}$ remains unique
 because it is still the closest point in $\operatorname{col}(\mathbf{A})$,
@@ -793,9 +792,7 @@ about $0.29$, compared with only $0.06$ for $|\cos\theta| < 0.1$. In $d = 3$,
 the cosine is uniform on $[-1, 1]$, a classical result known to
 Archimedes. Starting at $d = 4$, the density peaks at $0$; by $d = 10$ it forms
 a bell of width $1/\sqrt{10} \approx 0.32$, and by $d = 1000$ it has narrowed
-into a sharp spike of width roughly $0.03$
-(:exref:`ex_mdl-geometry-linear-algebraic-ops-low-dim-cosine` works out the
-exact densities).
+into a sharp spike of width roughly $0.03$.
 
 ![Histograms of the cosine between independent random unit vectors in dimensions $d = 2$, $10$, and $1000$. In $d = 2$, the cosine piles up near $\pm 1$ even though the angle is uniform. By $d = 10$ it forms a bell around $0$, and by $d = 1000$ it concentrates into a narrow spike of width $\approx 1/\sqrt{d}$, matching the proposition.](../img/mdl-la-cosine-highd.svg)
 :label:`fig_mdl-la-cosine-highd`
@@ -962,8 +959,7 @@ classification is right and grows larger the deeper the point sits inside its
 own half-space. Rescaling $(\mathbf{w}, b) \to (c\mathbf{w}, cb)$ for any
 $c > 0$ leaves both the hyperplane and the margin unchanged, while multiplying
 the raw score $\mathbf{w}\cdot\mathbf{x} + b$ by $c$. Any learning objective
-that maximizes the raw score must therefore constrain the scale of $\mathbf{w}$
-(:exref:`ex_mdl-geometry-linear-algebraic-ops-signed-distance`).
+that maximizes the raw score must therefore constrain the scale of $\mathbf{w}$.
 
 ### The Nearest-Mean Classifier
 :label:`subsec_mdl-nearest-mean`
@@ -1151,34 +1147,6 @@ similar pairs where class spread along the boundary normal matters.
 
 ## Exercises
 
-1. **Fitting a line by projection.** Four measurements
-   $\mathbf{y} = (0, 8, 8, 20)$ are taken at times
-   $\mathbf{t} = (0, 1, 3, 4)$. Let $\mathbf{1} = (1, 1, 1, 1)$. This is the
-   four-point counterpart of the line fit in the text.
-    1. Project $\mathbf{y}$ onto the line through $\mathbf{1}$
-       using :eqref:`eq_mdl-projection`. Verify that the residual is orthogonal to
-       $\mathbf{1}$, check :eqref:`eq_mdl-pythagoras`, and compute the distance
-       from $\mathbf{y}$ to the line. Which familiar statistic of the
-       measurements is the projection coefficient?
-    1. Fit the line $C + Dt$ by least squares :eqref:`eq_mdl-least-squares`,
-       where $\mathbf{A}$ has columns $\mathbf{1}$ and $\mathbf{t}$. Write out
-       the normal equations :eqref:`eq_mdl-normal-equations`, solve them, and
-       compute the four errors along with the sum of their squares. Why does
-       $C$ differ from the coefficient found in part 1?
-    1. Suppose the columns of $\mathbf{A}$ are linearly independent, so that
-       Gram–Schmidt gives $\mathbf{A} = \mathbf{Q}\mathbf{R}$ with
-       $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}$ and an invertible upper
-       triangular $\mathbf{R}$. Show that $\mathbf{A}^\top\mathbf{A}$ is
-       invertible and that
-       $\mathbf{A}(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top =
-       \mathbf{Q}\mathbf{Q}^\top$. The normal equations therefore recover the
-       projection matrix $\mathbf{P}$ without forming an orthonormal basis.
-
-   *Adapted from Gilbert Strang,
-   [MIT 18.065 Matrix Methods in Data Analysis, Signal Processing, and Machine Learning, Problem Sets](https://www.ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/cd4c57b7e61b8ca9fdd3511a30aca052_MIT18_065S18PSets.pdf),
-   Problems for Lecture 10, Problems 12 and 17.*
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-least-squares-line`
-
 1. [code] **Cosines between random vectors.**
     1. Sample $1{,}000$ pairs of independent random unit vectors in
        $d = 10{,}000$ dimensions by normalizing standard Gaussian vectors, and
@@ -1195,28 +1163,6 @@ similar pairs where class spread along the boundary normal matters.
        unrelated key achieve as the top match among $10^5$ keys? How should a
        threshold for declaring two embeddings related scale with $n$ and $d$?
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-random-cosines`
-
-1. **Closest point and margin.**
-    1. Show that the point on the hyperplane $\mathbf{w}\cdot\mathbf{x} + b = 0$
-       closest to $\mathbf{x}$ is
-       $\mathbf{x} - \frac{\mathbf{w}\cdot\mathbf{x} + b}{\|\mathbf{w}\|^2}\,\mathbf{w}$,
-       and that its distance from $\mathbf{x}$ equals the absolute value of the
-       signed distance :eqref:`eq_mdl-signed-distance`. (Hint: pick any point
-       $\mathbf{x}_0$ on the hyperplane and subtract from
-       $\mathbf{x} - \mathbf{x}_0$ its shadow onto $\mathbf{w}$.)
-    1. For $\mathbf{w} = (3, 4)$ and $b = -10$, find the signed distance of
-       $\mathbf{x} = (1, 1)$, determine which side of the hyperplane it lies
-       on, and compute its closest point on the hyperplane.
-    1. Replace $(\mathbf{w}, b)$ by $(c\mathbf{w}, cb)$ with $c > 0$. Which of
-       the hyperplane, the raw score $\mathbf{w}\cdot\mathbf{x} + b$, and the
-       signed distance change? Now suppose training points $\mathbf{x}_i$ with
-       labels $y_i \in \{-1, +1\}$ are linearly separable, so some
-       $(\mathbf{w}, b)$ achieves $y_i(\mathbf{w}\cdot\mathbf{x}_i + b) > 0$
-       for every $i$. If a classifier tries to maximize the smallest score
-       $\min_i y_i(\mathbf{w}\cdot\mathbf{x}_i + b)$, why does the problem have
-       no finite maximum unless the scale of $\mathbf{w}$ is fixed? What
-       scale-invariant quantity should be maximized instead?
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-signed-distance`
 
 1. **Nearest means and invariance.** The nearest-mean rule assigns
    $\mathbf{x}$ to class $1$ when $\mathbf{w}\cdot\mathbf{x} + b > 0$, where
@@ -1264,23 +1210,6 @@ similar pairs where class spread along the boundary normal matters.
        that these two subspaces are orthogonal if and only if
        $\mathbf{P}^\top = \mathbf{P}$.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-projectors`
-
-1. **The cosine in two and three dimensions.**
-    1. In $d = 2$, the angle $\theta$ between a fixed direction and a uniformly
-       random direction is uniform on $[0, \pi]$. Derive the probability
-       density of $\cos\theta$, $f(c) = 1/(\pi\sqrt{1 - c^2})$ on $(-1, 1)$,
-       and use it to verify the probabilities quoted in the text for
-       $|\cos\theta| < 0.1$ and $|\cos\theta| > 0.9$.
-    1. In $d = 3$, show that $\cos\theta$ is uniform on $[-1, 1]$. (Hint: by a
-       theorem of Archimedes, the surface area of the band on a sphere between
-       two parallel cutting planes depends only on the distance between the
-       planes.)
-    1. In general dimension $d \ge 2$, the density of $\cos\theta$ is
-       proportional to $(1 - c^2)^{(d-3)/2}$ on $(-1, 1)$. Check, either
-       numerically or using a Beta integral, that its variance equals $1/d$ for
-       $d = 4$ and $d = 10$. Starting from which dimension $d$ does
-       $|\cos\theta| < 0.1$ become more likely than $|\cos\theta| > 0.9$?
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-low-dim-cosine`
 
 1. [code] **Tilting the boundary.** ● The mean-difference normal
    $\boldsymbol{\Delta} = \bar{\mathbf{x}}_1 - \bar{\mathbf{x}}_0$ ignores how

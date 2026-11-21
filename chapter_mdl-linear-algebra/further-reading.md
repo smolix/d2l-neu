@@ -1,20 +1,13 @@
 # Further Reading
 :label:`sec_mdl-linear-algebra-further-reading`
 
-Every chapter has to stop somewhere, and this one stops right where linear
-algebra begins to merge into numerical analysis, probability, and active
-research. What follows is a guide to the territory just past that border,
-arranged in the same order as the chapter's sections. (If instead you are
-looking for books or lectures covering the chapter's own material, see the
-reading list in :numref:`chap_mdl-linear-algebra`.)
-
-Not all of these entries are equally urgent. If your main interest is deep
-learning, start with random projections, iterative solvers, random matrices
-and trainable depth, and sketching, then jump to the final two entries, which
-connect directly back to the main text. Tensor decompositions, the QR
-algorithm, the Kreiss theorem, and Markov mixing times are here for curious
-readers who want to see how the ideas travel. Nothing elsewhere in the book
-depends on this section.
+This section connects the linear algebra developed in this chapter to numerical
+analysis, random matrix theory, and deep-learning applications, followed by a
+curated list of textbooks and courses covering the chapter's core material.
+If your main interest is deep learning, start with random projections,
+iterative solvers, random matrices and trainable depth, and sketching, then
+jump to the final two entries on low-rank attention and spectral-norm
+optimizers. Nothing elsewhere in the book depends on this section.
 
 ## Geometry and Linear Maps
 
@@ -201,8 +194,7 @@ stands in for vector sparsity, subject to matching all observed entries.
 an underlying low-rank matrix exactly, with high probability, from far fewer
 than $n^2$ randomly observed entries, provided its singular vectors are spread
 out across the coordinates rather than concentrated on a few spikes.
-Soft-Impute :cite:`Mazumder.Hastie.Tibshirani.2010`, the algorithm you
-implement in the matrix-completion exercise of :numref:`sec_mdl-svd-low-rank`,
+Soft-Impute :cite:`Mazumder.Hastie.Tibshirani.2010`
 solves the penalized version of this problem by alternating a fill-in step with
 soft-thresholding of the singular values.
 
@@ -269,5 +261,21 @@ under the $\ell_\infty$ norm), while Shampoo reduces to steepest descent under
 the spectral norm. From this viewpoint, choosing the right norm for each layer
 is the core design decision, and the update rule follows automatically. The
 spectral-norm optimizer built on this idea is developed in :numref:`sec_muon`.
+
+## Books, Courses, and Notes
+
+**Books**
+
+- [Mathematics for Machine Learning](https://mml-book.github.io/) by Deisenroth, Faisal, and Ong: a free textbook whose Chapters 2 (Linear Algebra), 3 (Analytic Geometry), and 4 (Matrix Decompositions) cover the material of this chapter from a machine-learning perspective.
+- [Introduction to Applied Linear Algebra: Vectors, Matrices, and Least Squares](https://web.stanford.edu/~boyd/vmls/) by Boyd and Vandenberghe: a free book with slides and code organized around least squares and data, pairing well with :numref:`sec_mdl-geometry-linear-algebraic-ops` and :numref:`sec_mdl-svd-low-rank`.
+- [Introduction to Linear Algebra, 6th ed.](https://math.mit.edu/~gs/linearalgebra/ila6/indexila6.html) and [Linear Algebra and Learning from Data](https://math.mit.edu/~gs/learningfromdata/) by Gilbert Strang: the classic introduction built around the column picture and the four fundamental subspaces, and its SVD-centered companion for data analysis and optimization.
+- [Linear Algebra Done Right, 4th ed.](https://linear.axler.net/) by Sheldon Axler: a free, determinant-free treatment of eigenvalues, operators, and the spectral theorem (:numref:`sec_mdl-eigendecompositions`).
+- [Numerical Linear Algebra](https://people.maths.ox.ac.uk/trefethen/text.html) by Trefethen and Bau: an accessible treatment of conditioning, stability, QR, and the floating-point algorithms behind `solve`, `eig`, and `svd`.
+
+**Courses and Tutorials**
+
+- [MIT 18.06 Linear Algebra](https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/) and [MIT 18.065 Matrix Methods in Data Analysis, Signal Processing, and Machine Learning](https://ocw.mit.edu/courses/18-065-matrix-methods-in-data-analysis-signal-processing-and-machine-learning-spring-2018/) by Gilbert Strang: complete lecture courses with notes and problem sets.
+- [Essence of Linear Algebra](https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab) by 3Blue1Brown and [Singular Value Decomposition](https://www.youtube.com/playlist?list=PLMrJAkhIeNNSVjnsviglFoY2nXildDCcv) by Steve Brunton: visual lectures on linear maps, determinants, eigenvectors, and the SVD.
+- [Linear Algebra Review and Reference](https://cs229.stanford.edu/section/cs229-linalg.pdf) by Kolter and Do (Stanford CS229) and [Immersive Linear Algebra](http://immersivemath.com/ila/index.html) by Ström, Åström, and Akenine-Möller.
 
 [Discussions](https://d2l.discourse.group/t/36856)

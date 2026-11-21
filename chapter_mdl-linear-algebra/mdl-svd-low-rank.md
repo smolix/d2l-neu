@@ -844,8 +844,7 @@ asymptotically optimal hard threshold is
 $\tfrac{4}{\sqrt3}\sqrt n\,\sigma_{\text{noise}}\approx2.309\sqrt n\,\sigma_{\text{noise}}$,
 sitting slightly above the noise edge $2\sqrt n\,\sigma_{\text{noise}}$
 :cite:`Gavish.Donoho.2014`. Exercise
-:exref:`ex_mdl-svd-low-rank-denoising-truncation` demonstrates this separation
-in code, and Exercise :exref:`ex_mdl-svd-low-rank-optimal-hard-threshold`
+:exref:`ex_mdl-svd-low-rank-optimal-hard-threshold`
 derives the constant $4/\sqrt3$.
 
 ### Principal Component Analysis
@@ -1410,8 +1409,7 @@ $\|\mathbf{W}\mathbf{v}\|$ as the estimate of $\sigma_1$. Each round pulls
 $\mathbf{v}$ closer to $\mathbf{v}_1$, shrinking the error by roughly
 $(\sigma_2/\sigma_1)^2$. :citet:`Miyato.Kataoka.Koyama.ea.2018` found
 empirically that a single round per training step suffices when warm-started
-from the previous step's vector, a behavior tested in Exercise
-:exref:`ex_mdl-svd-low-rank-warm-power-iteration`. (For a convolutional layer,
+from the previous step's vector. (For a convolutional layer,
 reshaping the kernel into a 2D matrix gives an approximation to the
 convolution's spectral norm, though not its exact value.)
 
@@ -1493,35 +1491,6 @@ the Lipschitz constant controlled by spectral normalization.
 
 ## Exercises
 
-1. **The SVD by hand.** Let
-   $\mathbf{A}=\left(\begin{smallmatrix}3&0\\4&5\end{smallmatrix}\right)$.
-    1. Form $\mathbf{A}^\top\mathbf{A}$ and show that its eigenvalues are 45
-       and 5, so that $\sigma_1=3\sqrt5$ and $\sigma_2=\sqrt5$.
-    1. Find unit eigenvectors $\mathbf{v}_1,\mathbf{v}_2$ and compute
-       $\mathbf{u}_i=\mathbf{A}\mathbf{v}_i/\sigma_i$. Check that
-       $\mathbf{u}_1\perp\mathbf{u}_2$ directly, without the proof of the
-       text.
-    1. Write the rank-one approximation $\mathbf{A}_1$ and compute
-       $\|\mathbf{A}-\mathbf{A}_1\|_2$ and $\|\mathbf{A}-\mathbf{A}_1\|_F$. Why
-       are the two equal here, and when are they not?
-    1. Compute $\mathbf{A}^{+}$ from the SVD, check it against
-       $\mathbf{A}^{-1}$, and compute $\kappa(\mathbf{A})$.
-    1. Let $\mathbf{A}$ be symmetric with eigendecomposition
-       $\mathbf{A}=\mathbf{V}\boldsymbol{\Lambda}\mathbf{V}^\top$. Construct an
-       SVD of $\mathbf{A}$ from $\mathbf{V}$ and $\boldsymbol{\Lambda}$ and
-       conclude that its singular values are the $|\lambda_i|$. Apply the
-       construction to $\operatorname{diag}(3,-2)$. Which factor absorbs the
-       minus sign?
-    1. Exercise :exref:`ex_mdl-eigendecomposition-spectral-radius-norms`a of
-       :numref:`sec_mdl-spectra-in-practice`, with $k=1$, gives $|\lambda|\le\sigma_1$ for
-       every eigenvalue $\lambda$ of a square matrix
-       $\mathbf{A}\in\mathbb{R}^{n\times n}$. Show that $\sigma_n\le|\lambda|$
-       as well; for a complex eigenvector, write
-       $\mathbf{x}=\mathbf{a}+i\,\mathbf{b}$ with real $\mathbf{a}$ and
-       $\mathbf{b}$. Check both bounds on the chapter's running matrix
-       $\left(\begin{smallmatrix}1&2\\-1&3\end{smallmatrix}\right)$.
-   :exlabel:`ex_mdl-svd-low-rank-by-hand`
-
 1. **Norms and the maximum stretch.** The text obtained
    :eqref:`eq_mdl-sigma1-variational` from the spectral theorem. The maximum
    stretch can also build the SVD on its own.
@@ -1578,29 +1547,6 @@ the Lipschitz constant controlled by spectral normalization.
        however large $\sigma_1(\boldsymbol{\Delta})$ is. Why does the bound of
        (a) not give these conclusions?
    :exlabel:`ex_mdl-svd-low-rank-weyl-perturbation`
-
-1. [code] **Denoising by truncation.** Generate a rank-5 signal
-   $\mathbf{B}=\mathbf{X}\mathbf{Y}^\top$ with
-   $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{200\times5}$ standard Gaussian, and
-   add noise $\mathbf{N}$ with i.i.d. $\mathcal{N}(0, 1)$ entries. This is
-   the model $\mathbf{A} = \mathbf{B}+\mathbf{N}$ of
-   :numref:`subsec_mdl-eckart-young` with $m = n = 200$ and
-   $\sigma_{\text{noise}} = 1$.
-    1. Plot the singular values of $\mathbf{A}$ on a log scale. Where does the
-       noise bulk end, compared with the edge
-       $(\sqrt{m}+\sqrt{n})\,\sigma_{\text{noise}}$, and how many singular
-       values lie above it?
-    1. Compute $\|\mathbf{A}_k-\mathbf{B}\|_F^2$ for $k = 0, \ldots, 20$, where
-       $\mathbf{A}_k$ is the rank-$k$ truncation of $\mathbf{A}$. Which $k$
-       minimizes the error, and how does the minimum compare with
-       $\|\mathbf{N}\|_F^2$?
-    1. A rank-$r$ matrix of size $m\times n$ has $r(m+n-r)$ degrees of
-       freedom. Compare the minimal error with
-       $\sigma_{\text{noise}}^2\,r(m+n-r)$ for $r = 5$. Why does only this
-       part of the noise survive the truncation? By about how much does each
-       component beyond the fifth increase the error, and which singular value
-       of $\mathbf{A}$ predicts the increase?
-   :exlabel:`ex_mdl-svd-low-rank-denoising-truncation`
 
 1. [code] **Centering in PCA, and Fashion-MNIST.** Let the rows of
    $\mathbf{X}\in\mathbb{R}^{n\times d}$ be data points with mean row
@@ -1713,38 +1659,6 @@ the Lipschitz constant controlled by spectral normalization.
        $\mathbf{Y}\mathbf{X}^{+}$.
    :exlabel:`ex_mdl-svd-low-rank-polar-procrustes`
 
-1. [code] **Warm-started power iteration.** ● Spectral normalization divides
-   a weight $\mathbf{W}$ by an estimate of $\sigma_1(\mathbf{W})$ at every
-   training step. One round of the estimator updates
-   $\mathbf{v}\leftarrow\mathbf{W}^\top\mathbf{u}/\|\mathbf{W}^\top\mathbf{u}\|$
-   and $\mathbf{u}\leftarrow\mathbf{W}\mathbf{v}/\|\mathbf{W}\mathbf{v}\|$
-   and reports $\hat\sigma = \mathbf{u}^\top\mathbf{W}\mathbf{v}$.
-   :citet:`Miyato.Kataoka.Koyama.ea.2018` run one round per training step and
-   start it from the $\mathbf{u}$ of the previous step.
-    1. Show that one round performs one step of power iteration on
-       $\mathbf{W}^\top\mathbf{W}$ for $\mathbf{v}$ and that
-       $\hat\sigma = \|\mathbf{W}\mathbf{v}\|$. Why can $\hat\sigma$ never
-       exceed $\sigma_1$? This is the one-round estimate whose adequacy
-       :numref:`subsec_mdl-spectrum-control` calls empirical; (c) tests it.
-    1. For a $256\times512$ matrix with i.i.d. $\mathcal{N}(0, 1/512)$
-       entries, run 200 rounds from a random $\mathbf{u}$. Plot the relative
-       error of $\hat\sigma$ and the squared sine of the angle between
-       $\mathbf{v}$ and $\mathbf{v}_1$ against the round, and compute
-       $\sigma_2/\sigma_1$. Since $\hat\sigma^2$ is the Rayleigh quotient of
-       $\mathbf{W}^\top\mathbf{W}$ at $\mathbf{v}$, Exercise
-       :exref:`ex_mdl-eigendecomposition-power-iteration-rates`b of
-       :numref:`sec_mdl-spectra-in-practice` bounds its error by the order of
-       the squared sine. Why is the relative error of $\hat\sigma$ smaller
-       than the squared sine by a further large factor?
-    1. Simulate training: for 300 steps, add $\epsilon\,\mathbf{G}_k$ to
-       $\mathbf{W}$, with a fresh $\mathbf{G}_k$ of i.i.d.
-       $\mathcal{N}(0, 1/512)$ entries at each step and
-       $\epsilon\in\{10^{-3}, 10^{-2}, 10^{-1}\}$, and run one round per step.
-       Compare the relative error of $\hat\sigma$ when each round starts from
-       the previous $\mathbf{u}$ and when it starts from a fresh random
-       $\mathbf{u}$.
-   :exlabel:`ex_mdl-svd-low-rank-warm-power-iteration`
-
 1. [code] **Randomized range finder.** ● The randomized SVD of
    :numref:`subsec_mdl-spectrum-control` multiplies $\mathbf{A}$ by a Gaussian
    $\boldsymbol\Omega\in\mathbb{R}^{n\times(k+p)}$, orthonormalizes
@@ -1804,42 +1718,7 @@ the Lipschitz constant controlled by spectral normalization.
     1. Check (a) and (b) for $n = 500$ and $\sigma_{\text{noise}} = 1/\sqrt n$,
        with $x\in\{0.5, 1.2, 1.5, \sqrt3, 2, 3\}$ and 10 draws each: compare
        $\sigma_1$, the squared cosines, and both errors with their limits.
-       How do the results bear on the choice of $k$ in exercise
-       :exref:`ex_mdl-svd-low-rank-denoising-truncation`?
    :exlabel:`ex_mdl-svd-low-rank-optimal-hard-threshold`
-
-1. [extended] **Matrix completion by soft-thresholding.** ●● Matrix
-   completion recovers a low-rank matrix $\mathbf{B}\in\mathbb{R}^{n\times n}$
-   from its entries in an observed index set $\Omega$. Recommender systems
-   face this problem with a sparsely observed ratings matrix. Instead of the
-   rank, which is not convex, one penalizes the *nuclear norm*
-   $\|\mathbf{Z}\|_* = \sum_i\sigma_i(\mathbf{Z})$, the convex stand-in for
-   rank :cite:`Candes.Recht.2009`, much as the $\ell_1$ norm stands in for
-   sparsity. Soft-Impute :cite:`Mazumder.Hastie.Tibshirani.2010` minimizes
-   $\tfrac12\sum_{(i,j)\in\Omega}(Z_{ij}-B_{ij})^2+\lambda\|\mathbf{Z}\|_*$.
-    1. Let $\mathbf{Y} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$. Show
-       that $\tfrac12\|\mathbf{Z}-\mathbf{Y}\|_F^2+\lambda\|\mathbf{Z}\|_*$ is
-       minimized by
-       $S_\lambda(\mathbf{Y}) = \mathbf{U}\max(\boldsymbol{\Sigma}-\lambda\mathbf{I}, \mathbf{0})\mathbf{V}^\top$,
-       with the maximum taken entrywise on the diagonal. Use von Neumann's
-       trace inequality
-       $\operatorname{tr}(\mathbf{Z}^\top\mathbf{Y})\le\sum_i\sigma_i(\mathbf{Z})\sigma_i(\mathbf{Y})$
-       :cite:`Horn.Johnson.2012`.
-    1. Let $P_\Omega$ keep the observed entries of a matrix and set the others
-       to zero, and let $P_\Omega^\perp$ do the opposite. Soft-Impute iterates
-       $\mathbf{Z}\leftarrow S_\lambda\bigl(P_\Omega(\mathbf{B})+P_\Omega^\perp(\mathbf{Z})\bigr)$.
-       Implement it for a decreasing sequence of $\lambda$ that ends near
-       $10^{-4}\,\sigma_1(P_\Omega(\mathbf{B}))$, starting each $\lambda$ from
-       the solution for the previous one.
-    1. Take $n = 100$, $\mathbf{B} = \mathbf{X}\mathbf{Y}^\top$ with
-       Gaussian $\mathbf{X},\mathbf{Y}\in\mathbb{R}^{n\times r}$ for
-       $r\in\{2, 5, 10\}$, and observe each entry independently with
-       probability $p\in\{0.1, 0.2, 0.3, 0.4, 0.6\}$. The deliverable is a
-       table of the relative error on the unobserved entries for every
-       $(r, p)$. Compare the boundary between failure and recovery with the
-       $r(2n-r)$ degrees of freedom of a rank-$r$ matrix. Why can no method
-       recover $\mathbf{B}$ from fewer observations than that?
-   :exlabel:`ex_mdl-svd-low-rank-matrix-completion`
 
 [Discussions](https://d2l.discourse.group/t/36826)
 

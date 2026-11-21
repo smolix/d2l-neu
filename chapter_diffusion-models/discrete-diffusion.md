@@ -1,40 +1,9 @@
 # Discrete Diffusion
 :label:`sec_diffusion-discrete`
 
-Add a little Gaussian noise to every pixel of a garment and it is still
-a garment, only grainier. Add a small real number to the index of the
-word "cat" and the result is not a slightly noisy cat. Every model in this
-chapter has relied on the first kind of noise, added to real numbers:
-coordinates of points, pixel intensities, latents of an autoencoder. Text
-is made of tokens, and the language model of :numref:`sec_gpt` writes it
-one token at a time, from left to right. That takes one network evaluation
-per token, one after another, so a text of 1,024 tokens costs 1,024
-sequential calls. Nor can a model that looks only to the left fill a gap
-using the words that follow it. Diffusion generates many positions per
-evaluation, each conditioned on everything around it. Can text, code or a
-quantized image be generated this way, with a likelihood bound to train
-against? The noise is the obstacle.
+Every model in the preceding sections relied on adding Gaussian noise to continuous vectors: points in $\mathbb{R}^2$, pixel intensities, or autoencoder latents. Discrete sequences—such as text tokens, source code, or quantized image tokens—cannot be perturbed by small additive real numbers. While autoregressive models (:numref:`sec_gpt`) generate $L$ tokens in $L$ sequential forward passes from left to right, discrete diffusion models generate multiple tokens in parallel per network evaluation with bidirectional context.
 
-Noise for tokens has to change values rather than nudge them.
-:citet:`Hoogeboom.Nielsen.Jaini.ea.2021` and
-:citet:`Austin.Johnson.Ho.ea.2021` made the noise a Markov chain on the
-vocabulary, and Austin et al. found that, for text, the best chain simply
-erases: it replaces tokens by a mask symbol until nothing is left.
-Generation runs the erasure backward and fills in masks. The other route
-keeps Gaussian noise and adds it to learned token embeddings, vectors in
-which a slightly noisy cat makes sense. Masked diffusion overtook it for
-language, although it has recently come back :cite:`Dieleman.2026b`; this
-section follows the masks.
-
-Does the variational bound of :numref:`sec_diffusion-design-space`
-survive the switch from numbers to tokens, and what does it become? What
-is lost when one network evaluation fills many masks at once, and how
-much? Two tokens are enough to answer the second question exactly, on a
-quantized version of the chapter's running example, and binary images
-show the answer at scale. Finally, how do the left-to-right language model
-of :numref:`sec_gpt` and the masked language model of
-:numref:`sec_transformer` relate to a masked diffusion model? The section,
-and with it the chapter, closes with a look back.
+To define diffusion on a finite vocabulary, :citet:`Hoogeboom.Nielsen.Jaini.ea.2021` and :citet:`Austin.Johnson.Ho.ea.2021` replaced Gaussian perturbation with a discrete-state Markov chain governed by transition matrices $\mathbf{Q}_t$. On text and discrete codes, the most effective corruption process is the *absorbing (masking) kernel*, which independently replaces tokens with a mask symbol $[\textrm{M}]$ until the sequence is completely erased. Under this absorbing chain, the variational lower bound of :numref:`sec_diffusion-design-space` simplifies to a weighted masked cross-entropy objective :cite:`Sahoo.Arriola.Schiff.ea.2024,Shi.Han.Wang.ea.2024`. In this section we derive the absorbing Markov chain and its variational bound, analyze the independence error incurred when unmasking multiple tokens in parallel on a quantized two-token version of the three-mode mixture and on binary Fashion-MNIST images, and connect masked diffusion to autoregressive and masked language models (:numref:`sec_transformer` and :numref:`sec_gpt`).
 
 ```{.python .input #discrete-diffusion}
 %%tab pytorch
@@ -1235,22 +1204,10 @@ it surveys (:numref:`sec_lm_architectures_fr`).
 
 ## Summary
 
-Diffusion does not need Gaussian noise: a chain that erases tokens has
-closed-form marginals and posteriors, and the variational bound becomes a
-cross-entropy on the masked positions, weighted by $1/t$ under the linear
-schedule; the best prediction at a mask does not depend on the time.
-Tokens revealed in the same step are drawn independently. On the
-quantized mixture an exact network's $S$-step sampler therefore lies
-$\mathrm{TV}(p^1 \otimes p^2, p)/S$ from the data, and its bound exceeds
-the entropy by $I/T$, the mutual information times the probability that
-both tokens are revealed together; the trained network sat about a
-thousandth of a nat above that floor. On binary Fashion-MNIST a U-Net
-reached about 0.17 bits per pixel, and four steps turned its garments
-into texture. A fixed order gives a left-to-right language model, a
-random order an order-agnostic one, and a single masking level BERT. With
-plentiful data, masked diffusion needs more compute than a left-to-right
-model to reach the same likelihood, and offers parallel decoding and
-infilling in return.
+- Discrete diffusion corrupts categorical tokens via transition matrices $\mathbf{Q}_t$. Under the absorbing kernel, each token survives $t$ steps with probability $\bar\alpha_t = \prod_{s \le t}(1 - \beta_s)$ and is otherwise replaced by $[\textrm{M}]$.
+- The variational bound (ELBO) on the negative log-likelihood simplifies to a weighted sum of masked-token cross-entropies, with weight $w_t = (\bar\alpha_{t-1} - \bar\alpha_t)/(1 - \bar\alpha_t)$ ($1/t$ under a linear schedule) and continuous-time limit $\int_0^1 \frac{1}{u}\, \mathbb{E}_u[\ell]\, du$. Under independent masking, the optimal clean-token distribution at a masked position is time-agnostic.
+- Because the reverse model factorizes across positions within a single step, unmasking multiple tokens simultaneously incurs an independence error: on a two-token distribution $p$, $S$ equal linear jumps sample from $(1 - 1/S)p + (1/S)p^1 \otimes p^2$ (total variation error $\propto 1/S$), and the $T$-step ELBO floor exceeds the entropy $H(X^1, X^2)$ by $I(X^1; X^2)/T$.
+- Masked diffusion unifies classical sequence models: revealing one token per step in a fixed left-to-right order recovers autoregressive modeling (:numref:`sec_gpt`), revealing one token per step in a random order recovers order-agnostic autoregression, and training at a single fixed masking rate $u = 0.15$ recovers BERT (:numref:`sec_transformer`).
 
 ## Exercises
 
@@ -1276,37 +1233,12 @@ infilling in return.
        evaluate than the summand of :eqref:`eq_diffusion-masked-loss`?
    :exlabel:`ex_discrete-diffusion-uniform-kernel`
 
-1. **Weights of other schedules.** The weight of step $t$ in
-   :eqref:`eq_diffusion-masked-loss` is
-   $w_t = (\bar{\alpha}_{t-1} - \bar{\alpha}_t)/(1 - \bar{\alpha}_t)$.
-    1. Compute $w_t$ for the schedule $\bar{\alpha}_t = 1 - (t/T)^2$ and
-       compare it with the weight $1/t$ of the linear schedule.
-    1. Show that a $T$-step sampling run from the all-mask sequence
-       reveals a given token at step $t$ with probability
-       $\bar{\alpha}_{t-1} - \bar{\alpha}_t$, independently of the other
-       positions, and that this probability equals $w_t$ times the
-       probability that the token is masked at step $t$ of the bound. In
-       which part of a sampling run does the schedule of (a) reveal most
-       of the tokens?
-    1. For a network that receives the masking probability $u$, the
-       continuous-time limit in :numref:`subsec_diffusion-masked-ce` is
-       $\int_0^1 \frac{1}{u}\, \mathbb{E}_u[\ell]\, du$ for every
-       schedule. Show that the integrand stays bounded as $u \to 0$,
-       although the weight $1/u$ diverges.
-    1. Training draws the time $\tau$ uniformly from $[0, 1]$. Which
-       density does the masking probability $u = 1 - \bar{\alpha}(\tau)$
-       then have? Why does the schedule change the variance of the
-       one-sample estimate of the bound, although it leaves the limiting
-       bound unchanged :cite:`Kingma.Salimans.Poole.ea.2021`?
-   :exlabel:`ex_discrete-diffusion-schedule-weights`
-
 1. [code] **Pairs revealed together.** Let the sampler use the levels
    $T = t_0 > t_1 > \cdots > t_S = 0$ under a schedule with
    $\bar{\alpha}_0 = 1$ and $\bar{\alpha}_T = 0$, and write
    $\Delta_k = \bar{\alpha}_{t_{k+1}} - \bar{\alpha}_{t_k}$ for the
    increase of $\bar{\alpha}$ in jump $k$, where $k = 0, \ldots, S - 1$.
-    1. By Exercise :exref:`ex_discrete-diffusion-schedule-weights`b,
-       applied to the coarser chain of the levels $t_k$, a token is
+    1. In the coarser chain on the levels $t_k$, a token is
        revealed in jump $k$ with probability $\Delta_k$, independently of
        the other positions. Show that two tokens are revealed in the same
        jump with probability $\rho = \sum_k \Delta_k^2$, and that, among
@@ -1337,31 +1269,6 @@ infilling in return.
        at 100 and at 784 jumps again. Which count falls, and what does that
        say about the share of the remaining excess that is the network's?
    :exlabel:`ex_discrete-diffusion-pairs-revealed`
-
-1. [code] **One token at a time.** An order-agnostic autoregressive
-   sampler reveals exactly one token per step. Use `pair_model` with the
-   linear `alpha_bar` of the quantized mixture and the mask index `K`.
-    1. The order that reveals position 1 first, from the prediction at the
-       all-mask input with time input $1$, and position 2 second, from the
-       prediction with time input $1/2$, defines a table over all 1,024
-       pairs,
-
-       $$q_{12}(a, b) = p_{\boldsymbol{\theta}}(\mathbf{x}_0^1 = a \mid [\textrm{M}], [\textrm{M}])\, p_{\boldsymbol{\theta}}(\mathbf{x}_0^2 = b \mid a, [\textrm{M}]),$$
-
-       and the reverse order defines a table $q_{21}$. Compute both from
-       `pair_model`, and their total variation distances to `table` and to
-       each other. An exact network makes the two tables equal. What does
-       their difference say about the trained network?
-    1. A two-step sampler reveals one of the two positions, chosen
-       uniformly at random, and then the other, with the predictions of
-       (a). Show that its output table is $(q_{12} + q_{21})/2$. Compute
-       its total variation distance to `table` and compare it with that of
-       `sampler_table` for `pair_model` with thirty-two steps.
-    1. Draw 20,000 pairs from `table` itself and compute the total
-       variation distance of their empirical table to `table`. Why does
-       this section compare samplers by exact tables rather than by
-       samples?
-   :exlabel:`ex_discrete-diffusion-one-token`
 
 1. **Two reverse parameterizations.** ● The reverse model
    :eqref:`eq_diffusion-x0-parameterization` averages the posterior over
@@ -1468,25 +1375,8 @@ infilling in return.
        $T \to \infty$.
     1. Use Jensen's inequality to show that the expression also bounds the
        negative log-likelihood of the model that draws an order uniformly
-       at random and then samples the tokens in that order. Which sampler
-       of Exercise :exref:`ex_discrete-diffusion-one-token` implements this
-       model for two tokens?
+       at random and then samples the tokens in that order.
    :exlabel:`ex_discrete-diffusion-order-agnostic`
-
-1. [code] **Confidence-ordered unmasking.** ● This section computed the
-   output table of confidence remasking on the quantized mixture exactly.
-    1. Under the rule of :citet:`Nie.Zhu.You.ea.2025`, both steps take the
-       most probable value instead of a draw: in the first step the
-       candidates are the modes of $p^1$ and $p^2$, the one with the higher
-       probability is kept, and in the second step the other token is the
-       mode of its conditional given the kept one. Which pair does this
-       sampler output, and with which probability? Compute its total
-       variation distance to `table`.
-    1. Repeat the comparison of the four orders on a coarser grid,
-       $K = 8$, on which each mode covers only a few cells. Which of the
-       two errors, that of the one-step draw and that of confidence
-       remasking, depends on the grid, and why?
-   :exlabel:`ex_discrete-diffusion-confidence-unmasking`
 
 1. [extended] **A masked diffusion language model.** ●●
    :citet:`Prabhudesai.Wu.Zadeh.ea.2025` report that masked diffusion

@@ -1,33 +1,9 @@
 # Latent Diffusion and Transformers
 :label:`sec_diffusion-latent`
 
-Suppose we asked the U-Net of :numref:`sec_diffusion-images` for a color
-photograph of $512 \times 512$ pixels instead of a garment. To draw a
-garment it reads all 784 pixels fifty times, and at $28 \times 28$ nobody
-minds. The photograph holds a thousand times as many numbers, and the
-network would read every one of them at every step. The previous section
-showed what most of them are for: the sampler fixes the silhouette of a
-garment while the noise is still heavy and spends its last steps on
-texture, the detail a viewer hardly notices. A wrong stitch goes unnoticed;
-a missing sleeve does not. Why, then, should every step of a diffusion
-model carry all of those numbers, when most of them describe the stitches?
+Running a diffusion model directly in pixel space evaluates the denoising network across every pixel at every sampling step. While $28 \times 28$ grayscale images contain only $784$ values, a $512 \times 512$ RGB photograph contains $786{,}432$, and as :numref:`subsec_diffusion-design-space-scales` showed, most of these high-frequency dimensions carry imperceptible fine texture. *Latent diffusion* :cite:`Rombach.Blattmann.Lorenz.ea.2022` separates perceptual compression from semantic generation: a variational autoencoder first compresses each image into a lower-dimensional spatial grid of *latents*, and the diffusion model trains and samples in this latent space at a fraction of the per-step FLOPs, running the decoder only once per generated sample.
 
-:citet:`Rombach.Blattmann.Lorenz.ea.2022` answered by splitting the work in
-two. An autoencoder compresses each image once into a small grid of
-numbers, its *latent*, from which a decoder restores the image with little
-visible loss. A diffusion model then learns the distribution of the
-latents, at a fraction of the cost per step. A year later
-:citet:`Peebles.Xie.2023` replaced the U-Net by a transformer that reads
-the grid as a sequence of patches, the *diffusion transformer* (DiT), and
-found that its samples kept improving as its computation grew. Most large
-image generators of the following years combined the two ideas.
-
-Both are choices a practitioner makes, and both have costs that a small
-experiment can expose. We train an autoencoder on Fashion-MNIST, run the
-regression of the earlier sections on its latents unchanged, and ask why the
-latent model falls short of what its decoder can draw. We then build the
-DiT, compare it with the U-Net at two sizes each, and end with when each of
-the two is the right choice.
+A second architectural shift replaces the convolutional U-Net with a *diffusion transformer* (DiT) :cite:`Peebles.Xie.2023` that processes the image or latent grid as a sequence of patch tokens modulated by adaptive layer normalization (`adaLN-Zero`). In this section we train a KL-regularized convolutional autoencoder on Fashion-MNIST, run velocity flow matching on its $7 \times 7 \times 4$ latents, diagnose the trade-off between decoder distortion and latent modelability :cite:`Dieleman.2025`, and compare U-Net and DiT backbones across compute scales.
 
 ```{.python .input #latent-diffusion-latent-diffusion-and-transformers}
 %%tab pytorch
@@ -1127,13 +1103,9 @@ eyes compare eight.
 Our four points cannot show the claim that made the transformer the backbone at
 scale: that it keeps improving over orders of magnitude of compute, by a recipe
 as simple as making it wider and deeper. That trend is Peebles and Xie's, not
-ours. Our plot shows the steeper slope but no crossing (Exercise
-:exref:`ex_latent-dit-large`). What makes the transformer attractive beyond the
+ours. Our plot shows the steeper slope but no crossing. What makes the transformer attractive beyond the
 trend is that its arithmetic runs as large matrix products, so the methods that
-train language models at scale carry over. The horizontal axis, moreover, is
-compute per update. Whether a large model trained for fewer updates beats a
-small one trained for more, at equal total compute, is a separate question
-(Exercise :exref:`ex_latent-total-compute`).
+train language models at scale carry over.
 
 ## Choice of Representation and Backbone
 
@@ -1169,10 +1141,7 @@ print(f'latent DiT-M, {gflops:.0f} GFLOP per step: FD '
 
 The latent DiT-M scores an FD of about 2 (1.8 to 2.2), about the same as
 the latent U-Nets (1.9 to 2.2), and like them it lands at about three times
-the reconstruction FD. Two KL weights and two backbones have now left the
-latent samples far above their reconstructions; whether more compute on the
-latents closes the gap is Exercise :exref:`ex_latent-scaling-in-latents`.
-Nor does the latent help the transformer here, since at equal compute the
+the reconstruction FD. Nor does the latent help the transformer here, since at equal compute the
 latent DiT-M is no better than the pixel one, and the best pixel model beats
 every latent model of the section.
 
@@ -1200,36 +1169,13 @@ and predict the clean image rather than the noise or the velocity (Exercise
 and attend only locally at the fine levels, so that their cost grows only
 linearly with the pixels.
 
-Our advice follows from all this. For small images, or whenever a pixel
-model fits the budget, diffuse pixels, and at small compute use a U-Net,
-which was ahead at every compute we tried. For large images, diffuse
-latents with a small KL weight, and treat the autoencoder as part of the
-model rather than as preprocessing. It decides both what a perfect latent
-model would score and how hard the latents are to learn; neither a larger
-backbone nor a more tolerant decoder brought our samples close to the
-reconstructions. Choose a transformer when the budget is large enough to
-keep growing it, the regime in which Peebles and Xie measured. Because the
-autoencoder shapes both numbers whatever the backbone, the design of image
-autoencoders, often called *tokenizers*, has become a field of its own.
-
-Latents and transformers make each network evaluation cheaper. Neither
-reduces the number of evaluations, fifty per sample in this section.
+In summary: for low-resolution images where pixel-space diffusion fits the compute budget, diffuse pixels directly with a U-Net. For high-resolution images, diffuse latents from a lightly KL-regularized autoencoder, treating the autoencoder as a core part of the generative pipeline that governs both reconstruction distortion and latent modelability, and use a DiT backbone when scaling across large compute budgets.
 
 ## Summary
 
-Diffusion does not need to run on pixels: an autoencoder with a small KL
-term compresses each image into a latent of known scale, the regression of
-the earlier sections runs on the latents unchanged, and each step costs a
-fraction of the arithmetic. The decoder's reconstructions show what a
-perfect latent model would score; on Fashion-MNIST the latent samples
-stayed at about three times that, and neither a more tolerant decoder nor a
-larger backbone closed the gap, which is the latent model's own error on
-latents whose difficulty the encoder decides. The diffusion transformer
-reads latents or pixels as patch tokens and lets the condition set a scale,
-a shift and a gate in every block, starting from the identity. At our scale
-the U-Net beat it at equal compute, while the transformer's FD fell faster
-as it grew. A latent helps when images are large, a transformer when
-budgets are.
+- Latent diffusion compresses images via a KL-regularized autoencoder into a lower-dimensional spatial grid, rescales the latents to unit standard deviation, and runs standard diffusion or flow-matching regression in latent space.
+- An autoencoder trades off rate (latent dimension), distortion (reconstruction FD), and modelability (how easily the diffusion model learns the latent distribution). Raising the KL weight $\beta$ makes the decoder more tolerant to random latent perturbations but degrades both reconstruction quality and generated sample FD.
+- A diffusion transformer (DiT) tokenizes the image or latent grid into patches and injects conditioning via `adaLN-Zero` (adaptive layer normalization with zero-initialized residual gates). At small compute on $28 \times 28$ images, the convolutional U-Net outperforms DiT at equal FLOPs, whereas DiT exhibits a steeper improvement slope as compute per step scales.
 
 ## Exercises
 
@@ -1314,52 +1260,6 @@ budgets are.
     [Generative AI](https://www.cs.cmu.edu/~mgormley/courses/10423/),
     Homework 4, Question 2.3 (Spring 2026).*
    :exlabel:`ex_latent-cross-attention`
-1. [code] **Compute per step, in total and from patches.** ● The
-   horizontal axis of the scaling plot is compute per update.
-    1. Score DiT-S, DiT-M and the two U-Nets after 5,000, 10,000 and 20,000
-       updates, and plot FD against total training compute, the FLOPs per
-       step times the number of updates, with one curve per model. At equal
-       total compute, does the larger model of each backbone reach the
-       lower FD? Compare with the plot of FD against total training compute
-       in the paper of Peebles and Xie, and say what longer runs could
-       change.
-    1. Train DiT-M with patches of size 2 on the pixels for 20,000 updates.
-       How many tokens does it see, and how many FLOPs per step does
-       `train_step_gflops` count? Is the increase over patch 4 what the cost
-       of attention predicts?
-    1. Where does the patch-2 model fall on the DiT line of the scaling
-       plot? Does FD depend on the compute per step alone, whatever
-       produces it?
-   :exlabel:`ex_latent-total-compute`
-1. [code] **A larger transformer.** ● Add DiT-L (width 384, depth 8, six
-   heads, so 64 dimensions per head as for DiT-S and DiT-M) to the scaling
-   run, trained for the same 20,000 updates. It spends more arithmetic per
-   step than any model of the section.
-    1. Print its parameters, its GFLOP per training step and its FD, and add
-       it to the plot. How much more compute per step does it spend than the
-       U-Net with `ch=64`?
-    1. Train the U-Net with `ch=64` and DiT-L once more each from another
-       seed. Is the difference between their FDs larger than the spread
-       between the two runs of each?
-    1. Fit a straight line on the logarithmic axes through the two DiT
-       points of the text, and one through the two U-Net points. Where
-       would the lines cross if they kept their slopes?
-    1. Train U-Nets with `ch=96` and `ch=128` as well. Which of the two
-       lines falls faster with compute per step over the range you can
-       afford, and what would the plot have to show to support the claim
-       that the transformer keeps improving where the U-Net does not?
-   :exlabel:`ex_latent-dit-large`
-1. [code] **Scaling in the latent space.** ● Train DiT-S on the latents as
-   DiT-M was trained above, and also DiT-L if you have done Exercise
-   :exref:`ex_latent-dit-large` already.
-    1. Add the latent models to the plot of FD against FLOPs per step, with
-       the reconstruction FD as a horizontal line. Does the latent line keep
-       falling with size, and how close does it come to the horizontal one?
-    1. The perturbed-latent test placed the gap in the latent model rather
-       than in the decoder. Does your line agree? What would you change to
-       move it down: the backbone, the length of training, or the
-       autoencoder?
-   :exlabel:`ex_latent-scaling-in-latents`
 1. [code] **Large patches and the clean-image target.** ● Train `DiT` on
    pixels with `patch_size=7`, so that each of its 16 tokens carries 49
    pixel values, at width 32 with one head and at width 256, for 10,000
@@ -1377,13 +1277,6 @@ budgets are.
        much lower dimension than its pixel count, while the noise fills
        every dimension. Compare with the finding of :citet:`Li.He.2026`.
    :exlabel:`ex_latent-large-patches`
-1. [extended] **Latent diffusion for sprites.** ●● Adapt this section's
-   autoencoder to the $64 \times 64$ color sprites of :numref:`sec_dcgan`,
-   which gives a $16 \times 16 \times 4$ latent, and train a latent U-Net on
-   it. Score the samples with the `d2l.FeatureCNN` of :numref:`sec_dcgan`
-   and compare them with the GANs trained there. Which of the two methods
-   needs more compute for the same FD?
-   :exlabel:`ex_latent-sprites`
 
 <!-- slides -->
 

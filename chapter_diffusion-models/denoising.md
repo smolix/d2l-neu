@@ -1,11 +1,9 @@
 # Denoising and the Score
 :label:`sec_diffusion-denoising`
 
-If a network can remove noise from a picture, does it know what pictures look like? The noise filter of a camera app, trained on millions of photographs, restores edges and faces in a grainy picture. Fed pure static, it does not return static: it sharpens whatever faint structure it finds into the kinds of shapes that photographs contain. So it knows something. Statisticians said what, long before deep learning. Herbert Robbins and Koichi Miyasawa showed that the best denoiser moves the noisy point along the gradient of the log-density of the noisy data, a gradient called the *score*. Robbins credited the result to Maurice Tweedie, and :citet:`Efron.2011` made it known as *Tweedie's formula*. A denoiser and a score are therefore one object, and :citet:`Vincent.2011` showed that training a denoiser by regression fits the score.
+A network trained by squared error learns the conditional expectation of its target given its input (:numref:`sec_gan_beyond`). When we corrupt a clean data point $\mathbf{x}_0 \sim p$ with isotropic Gaussian noise $\sigma \boldsymbol\epsilon$ to form $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma \boldsymbol\epsilon$, the optimal least-squares denoiser is therefore the posterior mean $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$. By *Tweedie's formula* :cite:`Robbins.1956,Miyasawa.1961,Efron.2011`, this posterior mean is directly determined by the gradient of the log-density of the noised data, $\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}})$, known as the *score* function. Moreover, :citet:`Vincent.2011` showed that regressing a network onto the score of the Gaussian perturbation kernel fits $\nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}})$ without requiring access to the underlying data density $p$.
 
-The regression is one we know. The previous chapter ended with a fact about squared error: a network trained by squared error learns the conditional mean of its target given its input, and where the input leaves the target ambiguous, that mean averages the possibilities. A denoiser is such a network: shown a noisy photograph, it returns the average of all clean photographs that could have produced it. For the generators of :numref:`chap_gans` that average was a defect. Here it is the starting point, because diffusion and flow models are trained by this same regression: add noise to a training example and ask the network for the clean example back.
-
-Why should we want the score rather than the density itself? A density needs a normalizer, an integral over all possible inputs that nobody can compute for images, while a score needs none and is enough to draw samples. We start simple, with a distribution on which every quantity can be computed exactly. On it we show that a denoiser is a posterior mean and find out what a denoiser trained at a single noise level can and cannot do; then we denoise images.
+Learning the score rather than the density itself sidesteps the intractable normalizing constant required by energy-based models, while still providing the vector field needed to generate samples via gradient-based MCMC such as Langevin dynamics. In this section, we first introduce a two-dimensional Gaussian mixture on which the density, score, and posterior mean are exact at every noise level. We use this benchmark to verify Tweedie's formula, examine why a score model trained at any single noise level $\sigma$ cannot simultaneously resolve local mode structure and global mode weights, and finally apply single-level denoising to Fashion-MNIST images.
 
 ```{.python .input #denoising-denoising-score-matching}
 %%tab pytorch
@@ -703,15 +701,11 @@ for name, x in zip(fields, samples):
 d2l.scatter_panels(samples, list(fields), data=data, size=2.3);
 ```
 
-The exact score of $p$ sends every chain to a mode with the right spread, but the weights stay those of the start, about a third each. The chains do not cross the valleys. These lie 10 to 12 nats above the modes in $-\log p$, and the expected crossing time is of the order of a million steps at this step size (Exercise :exref:`ex_denoising-escaping-mode`); 2,000 steps are not nearly long enough. The sampler is right within each mode and wrong about the weights, the same weights to which the Fisher divergence is blind.
+The exact score of $p$ drives every chain into a mode with the right local spread, but the mode weights remain at their initial values ($\approx 1/3$ each). Because the valleys between modes lie 10 to 12 nats above the modes in $-\log p$, the expected Kramers escape time is on the order of $10^6$ steps at $h = 0.05$ (Exercise :exref:`ex_denoising-escaping-mode`); 2,000 steps cannot mix across modes. Conversely, at $\sigma = 1$ the noise fills the valleys, allowing the chains to mix and recover the true weights ($0.5, 0.3, 0.2$), but they sample the wide distribution $p_1$ (with component variance $s^2 + \sigma^2 = 1.25$, yielding $\approx 41\%$ strays and a spread near $1$).
 
-The exact score of $p_\sigma$ at $\sigma = 1$ crosses freely, because the noise has filled the valleys, and its weights land within about $0.02$ of $0.5$, $0.3$ and $0.2$. Its strays and spread come out as predicted: these are good samples of the wrong distribution. The truncated spread understates the error; a variance five times too large shows up as a spread only twice the data's, and as about $40\%$ strays.
+The networks trained at $\sigma = 0.3$ approximate the score of $p_{0.3}$ (component variance $0.34$, $\approx 4\%$ strays, and spread $\approx 0.6$). Although the exact score of $p_{0.3}$ barely mixes across its 7-to-9-nat barriers in 2,000 steps (shifting the heaviest mode by at most $0.03$), the learned networks move more mass between modes because their approximation errors in the data-sparse valleys create artificial drift channels.
 
-The trained networks do neither job well. Each is the score it was trained to be, that of $p_{0.3}$, not that of $p$. The components of $p_{0.3}$ have variance $0.25 + 0.09 = 0.34$, and the calculation for the perfect sampler, now with $2 \cdot 0.34$ in place of $2s^2$, predicts about $4\%$ strays and a spread near $0.6$. The exact score of $p_{0.3}$ prints just that: $4.3$ to $4.4\%$ strays and a spread of $0.61$ to $0.63$. Both networks print a spread of about $0.6$ and roughly five to six and a half percent strays: as wide as $p_{0.3}$, or a little wider. In width, the networks are what they were trained to be.
-
-Their chains also cross the valleys, more than the field they imitate would allow. The barriers of $p_{0.3}$ are lower than those of $p$ but still 7 to 9 nats high, and its row shows how little they let through in 2,000 steps: the heaviest mode gains at most $0.03$ on its starting share (part 3 of Exercise :exref:`ex_denoising-escaping-mode` predicts how little). The networks, from the same start, carry it to $0.39$ to $0.46$, still below its weight of $0.5$, and the two of them split the rest differently. That extra mass did not climb the barriers of $p_{0.3}$; it moved along errors of the learned field between the modes, where few noisy training points land. Crossings that depend on the errors of the field cannot be trusted to deliver the weights, and even a run that landed on the right ones would prove nothing.
-
-Blindness and stuck chains have one cause: the weights live in the valleys, where the data seldom go and the chains seldom cross. One noise level either mixes or is sharp, never both. A chain that started at a large level and lowered it as it went might have both. That is the idea the rest of the chapter builds on, and Langevin steps survive in modern samplers mainly as a correction at each of many such levels.
+Thus, a single noise level faces a fundamental trade-off: small $\sigma$ preserves sharp modes but traps chains and leaves the Fisher divergence blind to mode weights, whereas large $\sigma$ mixes rapidly across modes but samples a heavily smoothed density. :numref:`sec_diffusion-gaussian-paths` resolves this by annealing across all noise levels from coarse to fine.
 
 ## Denoising Images
 
@@ -856,15 +850,14 @@ for name, xh in outputs.items():               # error of each of 1,000 images
 d2l.show_gray(jnp.concatenate([x[:8], xt[:8], x_lin[:8], x_net[0][:8]]), 4, 8);
 ```
 
-The noisy input has error $\sigma^2 = 0.25$ per pixel, the Wiener filter about $0.045$, and both networks about $0.03$, some $30\%$ less than the best linear map after only 600 steps. The gap of about $0.014$ is some thirty standard errors of these averages, which are $0.0004$ to $0.0005$, and more than twenty times the difference between the two networks, at most $0.0006$: this is not a lucky run. The networks win because the images are not Gaussian. A linear filter keeps or suppresses the same directions of pixel space for every image, and its outputs show blurred edges and a faint grain on the background. The network in the last row returns a clean background and sharper edges, and keeps lettering on a pullover that the filter smears. The optimal denoiser moves a noisy point toward the thin set the data occupy; for data on a line it projects onto the line (Exercise :exref:`ex_denoising-data-on-a-line`). A linear filter can only shrink toward one flat subspace, the same for every image. The set of garments is curved, and a convolutional network can follow its curvature from local shape.
-
-Both outputs are smooth. A posterior mean averages over every clean image consistent with the noisy one, so texture that the noise destroyed comes back as its average, the blur of :numref:`sec_gan_beyond`. A denoiser returns an average, and a generator must return a draw.
+The noisy input has a per-pixel squared error of $\sigma^2 = 0.25$, the optimal linear (Wiener) filter achieves $\approx 0.045$, and both four-layer convolutional networks reach $\approx 0.030$ ($30\%$ lower error, separated by roughly 30 standard errors). While the Wiener filter shrinks every image toward a single global linear subspace—leaving blurred edges and background grain—the convolutional network projects noisy points toward the nonlinear manifold of garment images (compare Exercise :exref:`ex_denoising-data-on-a-line`). Because the posterior mean averages over all clean images consistent with $\tilde{\mathbf{x}}$, however, fine high-frequency texture destroyed by the noise is still replaced by a smooth average. Turning a denoiser into a sharpness-preserving generator requires integrating across noise levels (:numref:`sec_diffusion-gaussian-paths` and :numref:`sec_diffusion-integration`).
 
 ## Summary
 
-A network trained by squared error to remove Gaussian noise learns the posterior mean of the clean point, and Tweedie's formula turns it into the score of the noisy data. Vincent's theorem makes the regression a way to fit that score without evaluating the score of the data, and a score, unlike a density, needs no normalizer and still suffices to draw samples. On images, a small convolutional denoiser beats the best linear one.
-
-One noise level cannot both describe the data and sample them: at a small level the targets are mostly noise, the field steepens across a thin data set, the score is blind to the mode weights, and Langevin chains do not cross between modes. At a large level the chains mix and find the right weights, but they sample a blurred distribution. :numref:`sec_diffusion-gaussian-paths` uses every noise level at once.
+- Minimizing the squared denoising error $\mathbb{E}\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2$ for $\tilde{\mathbf{x}} = \mathbf{x}_0 + \sigma\boldsymbol\epsilon$ recovers the posterior mean $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}]$.
+- By Vincent's theorem and Tweedie's formula, $\mathbb{E}[\mathbf{x}_0 \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} + \sigma^2 \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}})$, so predicting the clean point $\hat{\mathbf{x}}_0$, the noise $\hat{\boldsymbol\epsilon}$, and the score $\hat{\mathbf{s}} = -\hat{\boldsymbol\epsilon}/\sigma$ are affine reparameterizations of a single conditional expectation.
+- Learning the score avoids the intractable normalizing constant $Z_{\boldsymbol\theta}$ of energy-based models and the Jacobian trace $\nabla \cdot \mathbf{s}$ of explicit score matching.
+- At a single noise level $\sigma$, small $\sigma$ yields high-variance targets, steep gradients near low-dimensional data manifolds, blindness of the Fisher divergence to mode weights, and non-mixing Langevin chains; large $\sigma$ enables fast mixing and accurate mode weights but samples a heavily smoothed density $p_\sigma$.
 
 ## Exercises
 
@@ -950,25 +943,6 @@ One noise level cannot both describe the data and sample them: at a small level 
        rescaled floor vanishes as $\sigma \to 0$, and why it also vanishes as
        $\sigma \to \infty$.
    :exlabel:`ex_denoising-regression-identity`
-1. **Laplace noise.** ● Vincent's theorem holds for any noise kernel whose
-   logarithm is differentiable almost everywhere; Tweedie's formula does not. Perturb one-dimensional data with
-   Laplace noise, $\tilde{x} = x_0 + z$, where $z$ has density
-   $k(z) = e^{-|z| / b} / (2b)$.
-    1. Compute the conditional score
-       $\frac{d}{d\tilde{x}} \log k(\tilde{x} - x_0)$ for $\tilde{x} \neq x_0$.
-       Express the minimizer of the corresponding denoising objective in
-       terms of the posterior probability $P(x_0 < \tilde{x} \mid \tilde{x})$.
-    1. For the two-point data of Exercise :exref:`ex_denoising-regression-identity`,
-       compute the score of the perturbed density and the posterior mean
-       $\mathbb{E}[x_0 \mid \tilde{x}]$ for $|\tilde{x}| < 1$ and for
-       $\tilde{x} > 1$. Show that no relation
-       $\mathbb{E}[x_0 \mid \tilde{x}] = \tilde{x} + c\, \frac{d}{d\tilde{x}} \log p_k(\tilde{x})$
-       with a constant $c$ holds for all $\tilde{x}$, where $p_k$ is the
-       perturbed density.
-    1. Which property of the Gaussian conditional score
-       :eqref:`eq_diffusion-conditional-score` makes Tweedie's formula
-       possible?
-   :exlabel:`ex_denoising-laplace-noise`
 1. [code] **The best linear denoiser.**
     1. Show that the Wiener filter :eqref:`eq_diffusion-wiener` minimizes
        $\mathbb{E}\|D(\tilde{\mathbf{x}}) - \mathbf{x}_0\|^2$ among all affine
@@ -983,21 +957,6 @@ One noise level cannot both describe the data and sample them: at a small level 
        $\sigma \in \{0.25, 0.5, 1\}$, and plot a few of the corresponding
        eigenvectors as images. What does the filter keep at each noise level?
    :exlabel:`ex_denoising-linear-denoiser`
-1. [code] **Step size.** Repeat the Langevin run with the exact score of
-   $p$ at the step sizes $h = 0.0005$, $0.005$, $0.05$, $0.5$ and $1.2$.
-   Record the fraction of chains that remain finite, and the summary of the
-   finite chains.
-    1. The stationary variance of the discrete chain for a Gaussian of
-       variance $v$ is $v / (1 - h/(4v))$ (:numref:`sec_mdl-langevin-sampling`).
-       Apply `summary` to exact samples of a mixture whose components have this
-       variance instead of $0.25$, and compare with the spread and the stray
-       fraction of each run. Which runs does the formula explain, and what
-       happens at $h = 1.2$?
-    1. The discretization error is smallest at $h = 0.0005$. Why do the
-       statistics of this run nevertheless differ most from the target?
-    1. Among the runs whose chains all remain finite, which one moves the
-       mode weights away from those of the start, and why?
-   :exlabel:`ex_denoising-langevin-step-size`
 1. [code] **Escaping a mode.** ● Model the valley between the two lower modes
    of the running example in one dimension by the equal mixture of
    $\mathcal{N}(-2.5, 0.25)$ and $\mathcal{N}(2.5, 0.25)$, with potential
@@ -1026,32 +985,6 @@ One noise level cannot both describe the data and sample them: at a small level 
        The networks trained at $\sigma = 0.3$ move at least twice as much
        mass. What does that say about the learned field between the modes?
    :exlabel:`ex_denoising-escaping-mode`
-1. [code] **A denoiser at the wrong noise level.** The networks of this
-   section saw only the noise level $\sigma = 0.5$ in training; use the
-   first.
-    1. Noise 1,000 test images at
-       $\sigma' \in \{0.1, 0.25, 0.5, 0.75, 1\}$ and denoise them with
-       $\tilde{\mathbf{x}} - \sigma' \hat{\boldsymbol\epsilon}$. Plot the
-       per-pixel squared error against $\sigma'$ for the network, for the
-       Wiener filter built for $\sigma = 0.5$, for the Wiener filter
-       recomputed at each $\sigma'$, and for the noisy input. Where does the
-       network beat the matched Wiener filter, and on which side of $0.5$
-       does it fail? Explain with Tweedie's formula why the best denoiser
-       depends on the noise level, and name the input that would let one
-       network serve every level.
-    1. Retrain the network at $\sigma = 10$, where the input is nearly pure
-       noise. Compare its error with that of the Wiener filter at
-       $\sigma = 10$ and with $\mathrm{tr}(\boldsymbol\Sigma)/784$, the error
-       of always returning the mean image $\boldsymbol\mu$. Show that an
-       error $\delta$ in $\hat{\boldsymbol\epsilon}$ becomes an error
-       $\sigma\delta$ in the denoised image, and use this to explain what you
-       measure. Which quantity would you rather have the network predict at
-       this noise level?
-
-    *Adapted from Berkeley CS180/280A,
-    [Project 5B](https://cal-cs180.github.io/fa25/hw/proj5/partb.html)
-    (Fall 2025), Sections 1.2.2–1.2.3.*
-   :exlabel:`ex_denoising-wrong-noise-level`
 
 [Discussions](https://d2l.discourse.group/t/36818)
 

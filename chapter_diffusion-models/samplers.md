@@ -1,32 +1,9 @@
 # Samplers, Inversion and Editing
 :label:`sec_diffusion-samplers`
 
-Every step of the samplers we have met evaluates the U-Net once, and
-everything else the step does is a few additions, so a sample costs as many
-network evaluations as it takes steps. The last section drew its images with
-fifty Euler steps of the probability-flow ODE, and the thousand-step
-ancestral chain of :numref:`sec_diffusion-integration` scored only a little
-lower in FD, at twenty times the cost. Two questions are therefore worth
-asking. Which of the thousand steps do we need, and how few can we take? And
-once sampling is the integration of a field, can we run it backwards, from a
-real image to the noise that produces it, and edit the image from there?
+Every step of a diffusion sampler evaluates the score or velocity network once, so the computational cost of generating an image scales linearly with the number of steps. In :numref:`sec_diffusion-images`, 50 Euler steps of the probability-flow ODE approached the Fréchet distance (FD) of the 1,000-step ancestral chain at one-twentieth the cost. Because the training regression of :numref:`sec_diffusion-gaussian-paths` depends only on the marginal distributions of $\mathbf{x}_t$ at single time points $t$ rather than on multi-step joint distributions, a single trained network supports a continuous family of stochastic and deterministic reverse processes :cite:`Song.Meng.Ermon.2020`.
 
-:citet:`Song.Meng.Ermon.2020` answered the first question with an
-observation about training. The regression of
-:numref:`sec_diffusion-gaussian-paths` sees single noisy points
-$\mathbf{x}_t$ of training examples, never a chain of them, so it determines
-the distribution of $\mathbf{x}_t$ at each time and nothing more. Many
-samplers produce those distributions, among them a deterministic one that
-takes long strides and can be run in reverse, and one trained network serves
-all of them.
-
-We first derive this family of samplers and find that its deterministic
-member is Euler's method. How few steps it needs then becomes a question a
-numerical analyst would recognize: where should the steps go, and how
-accurate should each one be? We answer it with numbers, on the mixture whose
-exact field we know and on Fashion-MNIST, and turn the answer into a
-procedure for choosing a sampler. The last part runs the sampler backwards
-to edit images.
+In this section we derive the *denoising diffusion implicit model* (DDIM) family, show that its deterministic member ($\eta = 0$) coincides with Euler's method on the probability-flow ODE in $(\bar{\mathbf{x}}, \bar\sigma)$ coordinates, and compare first-order (Euler/DDIM), second-order (Heun), and multistep (Adams--Bashforth / DPM-Solver++) solvers across step budgets and time grids. Finally, we use the invertibility of the deterministic ODE for image-to-noise inversion, latent interpolation, partial-noising edits, and zero-shot inpainting.
 
 ```{.python .input #samplers-samplers-inversion-and-editing}
 %%tab pytorch
@@ -197,8 +174,7 @@ $$\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sigma_s \Big(\sqrt{1 - f}\, \hat
 Every member places the clean estimate at level $s$ in the same way; a
 fraction $f$ of the accompanying noise variance is fresh. On a fine grid $f$
 is small even at $\eta = 1$; on a grid of ten steps the $\eta = 1$ sampler
-replaces most of the noise at every step (Exercise
-:exref:`ex_samplers-admissible-noise`).
+replaces most of the noise at every step.
 
 There is a good argument for fresh noise. The ancestral step of
 :numref:`sec_diffusion-integration` splits, to first order, into a Langevin
@@ -789,45 +765,9 @@ d2l.plot([x for x, _ in curves.values()] + [[10, 1000]],
          figsize=(6, 4), fmts=('o-', 's-', '^-', 'v--', 'D--', 'x-.', 'k:'))
 ```
 
-The second-order methods level off first. Heun's method on the linear grid
-scores about 1.2 from twenty evaluations on, the multistep sampler gets
-there by fifty, and Euler's method needs fifty to a hundred. The level they
-reach, about 1.1 to 1.3, is where DDIM and the ancestral chain end at a
-thousand steps, about 0.3 above the floor, and no sampler gets below it. We
-call it the *plateau*: what remains there is the model's error, which no
-sampler removes.
+The second-order methods reach the model's asymptotic FD plateau ($\approx 1.1$–$1.3$, about $0.3$ above the finite-sample floor) first: Heun's method on the linear grid reaches $\approx 1.2$ at 20 function evaluations, the second-order multistep solver reaches it by 50, and Euler's method requires 50 to 100.
 
-The grid matters as much as the method. With ten evaluations Euler's method
-scores about 3.2 on the linear grid, a little over 5 on the
-variance-preserving one and about 6.5 on EDM; Heun's method scores about 1.5
-on the linear grid and 12 to 15 on EDM. The EDM grid loses for every method
-at every budget, by far at 10 and 20 evaluations. At 50 and 100 it still
-loses by 0.2 to 0.4 for Euler's method, well outside the half-ranges; for
-the second-order methods the gap there shrinks to 0.1 to 0.2, one to two
-half-ranges, so at those budgets crowding does not help them, and it
-probably still costs a little. Half of the one-dimensional result
-transfers, then: crowding the steps toward the data hurts Euler's method,
-but Heun's gain from crowding does not appear.
-
-Why does the paper's grid lose here? The grid printout suggests two
-culprits, the crowding at the data end and the four steps spent at high
-noise. The rows with $\rho = 3$ separate them, since they crowd the data end
-less and spend more steps at high noise. If the crowding were at fault they
-would do better; at ten and twenty evaluations they do worse (Heun's method
-scores 80 to 90 with nine evaluations), so the wasted steps are the ones at
-high noise. At 50 and 100 evaluations the two EDM grids differ by about 0.2
-or less. Above $\bar\sigma \approx 4$, several times the standard deviation
-of the pixels themselves (about 0.7), all noisy images look alike and the
-trajectories are nearly straight. The linear grid crosses that range in two
-steps, from infinity to 9 and from 9 to 4, while EDM spends four of its ten
-steps there and keeps three for the range in which a garment's shape is
-decided. Why the grid serves the models of Karras et al., we can only
-suggest. Their networks were trained on noise levels drawn log-normally
-around $\bar\sigma \approx 0.3$, the low-noise range their grid crowds, ours
-with $t$ uniform on the linear path; and they chose $\rho = 7$ at 35 to 79
-evaluations. The next section tests the first explanation and rejects it: a
-model trained at EDM's levels still scores lower on the linear grid
-(:numref:`sec_diffusion-design-space`). The second remains open.
+Step placement matters as much as solver order. At 10 evaluations, Euler's method scores $\approx 3.2$ on the linear grid, $\approx 5$ on the VP grid, and $\approx 6.5$ on the EDM ($\rho = 7$) grid, while Heun's method scores $\approx 1.5$ on the linear grid versus $12$–$15$ on EDM. Lowering $\rho$ to $3$ (which shifts steps from the data end toward high noise) degrades 10- and 20-evaluation performance even further. Above $\bar\sigma \approx 4$ (several times the pixel standard deviation $\approx 0.7$), the noisy image is nearly pure Gaussian noise and trajectories are almost straight; the linear grid crosses $\bar\sigma > 4$ in two steps ($\infty \to 9 \to 4$), whereas the 10-step EDM grid spends four steps there and leaves too few steps for the intermediate regime where garment structure forms.
 
 ### Integration Error, Guidance and the Choice of a Sampler
 
@@ -1274,38 +1214,13 @@ weighting change.
 
 ## Summary
 
-Training fixes only the distribution of the noisy point at each time, so one
-network serves a family of samplers: its deterministic member, DDIM, is
-Euler's method for the probability-flow ODE in the coordinates
-$(\mathbf{x}/\alpha, \sigma/\alpha)$, and its stochastic members add fresh
-noise. On the Fashion-MNIST model fresh noise never helped: both stochastic
-samplers scored worse at every budget up to two hundred steps, and at a
-thousand the better of them only tied the deterministic one. Heun's method
-on the model's own training grid reached the plateau, the model's own
-error, at about twenty evaluations and Euler's method at fifty to a
-hundred; the crowded grid of Karras et al. lost for every method, and under
-guidance only the multistep sampler reached the plateau by fifty
-evaluations. FD, which scores the set of samples, did not rank the solvers
-by their integration error. To choose a sampler for a new model, start
-deterministic on the training grid and double the evaluations until the
-score stops moving by more than its run-to-run range. Run backwards, the
-deterministic sampler gives every image a code; a sampler started from a
-partly noised image edits it, and one that overwrites the known pixels at
-every step inpaints.
+- Because training depends only on the marginal distribution of $\mathbf{x}_t$ at each time $t$, a single trained network supports the entire DDIM sampler family parameterized by the stochasticity strength $\eta \ge 0$.
+- At $\eta = 0$, DDIM is deterministic and coincides with Euler's method on the probability-flow ODE $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$ in rescaled coordinates $(\bar{\mathbf{x}}, \bar\sigma) = (\mathbf{x}/\alpha_t, \sigma_t/\alpha_t)$.
+- On our Fashion-MNIST model, deterministic ODE solvers consistently outperform stochastic samplers ($\eta = 1$ and the ancestral chain) at small and moderate budgets: Heun's second-order method on the linear grid reaches the model's FD plateau in $\approx 20$ evaluations, while the second-order Adams--Bashforth multistep solver reaches the guided plateau by 50 evaluations at one evaluation per step.
+- Running the deterministic ODE backward (`ddim_invert`) maps an image to a latent noise code, supporting spherical latent interpolation, partial-noising image edits, and replacement inpainting without retraining.
 
 ## Exercises
 
-1. **Admissible noise scales.** The family :eqref:`eq_diffusion-ddim-family`
-   needs $\tilde\sigma \leq \sigma_s$.
-    1. Show that a strength $\eta$ is admissible on a step from $t$ to $s$
-       exactly when $\eta^2 \leq 1 / (1 - \kappa^2)$, so that $\eta = 1$ is
-       admissible on every grid. At the largest admissible $\eta$, what does
-       the step keep of $\mathbf{x}_t$ beyond $\hat{\mathbf{x}}_0$?
-    1. Evaluate the fraction $f$ of fresh noise at $\eta = 1$ on every step
-       of the variance-preserving grids with 10 and with 200 steps. What does
-       the $\eta = 1$ sampler carry from one level to the next on the
-       ten-step grid?
-   :exlabel:`ex_samplers-admissible-noise`
 1. **The forward step and the Markov member.** ● Given $\mathbf{x}_0$, draw
    $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon$ and
    $\mathbf{x}_s$ from :eqref:`eq_diffusion-ddim-family` with the same
@@ -1351,39 +1266,6 @@ every step inpaints.
        Does a Gaussian mode predict the mixture's contraction, more of it,
        or less?
    :exlabel:`ex_samplers-gaussian-data`
-1. [code] **The strength $\eta$ on both examples.**
-    1. On the mixture with `pred_exact`, run `ddim_sample` with $\eta \in
-       \{0, 0.5, 1\}$ and `ancestral_sample` on the variance-preserving grids
-       with 200, 50, 20 and 10 steps from 20,000 starting points. Compare all
-       three `mix.summary` statistics with those of the data. Where does each
-       sampler break first: in the mode weights, in the spread or in the
-       stray fraction?
-    1. Relate the excess spread of the ancestral chain to the variance error
-       of one ancestral step, which Exercise
-       :exref:`ex_gaussian-paths-ancestral-first-order` of
-       :numref:`sec_diffusion-integration` computes, and to the factor
-       $\sigma_s^2 / \sigma_t^2$ between the two samplers' variances.
-    1. On the image model, compute the FD of $\eta \in \{0.25, 0.5\}$ at 10,
-       20 and 50 steps with `fd_runs`, and set it beside the two ends in the
-       first table of this section. Is any intermediate strength better than
-       both ends at some budget? Which $\eta$ would you use at each budget,
-       and which if the sample must be a function of its code?
-   :exlabel:`ex_samplers-eta-strength`
-1. [code] **Inversion on both examples.** The reconstruction cell sends
-   images and mixture points through `ddim_invert` and `ddim_sample` on the
-   linear path.
-    1. Repeat the mixture round trip on the variance-preserving grid with 10
-       to 200 steps. Does the error fall in proportion to the step size, and
-       does the path change the answer?
-    1. Compute the mean and the covariance of the 200-step codes of the
-       mixture points. Are they those of standard Gaussian noise?
-    1. A variant of `ddim_invert` reads the noise estimate of every step at
-       the upper level, $\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t,
-       \bar\sigma_{t'})$, as its first step must. Implement it and compare the
-       round-trip errors of the two variants on the mixture and on the images
-       at 10 to 200 steps. Which is better at ten steps, and which converges
-       faster as the steps shrink?
-   :exlabel:`ex_samplers-inversion-steps`
 1. [extended] **A second-order sampler in log-SNR.** ●● DPM-Solver-2
    :cite:`Lu.Zhou.Bao.ea.2022` takes a step from $\bar\sigma$ to
    $\bar\sigma'$ in two evaluations, the second at the midpoint
@@ -1458,24 +1340,6 @@ every step inpaints.
     1. Draw five completions of one test image for each $r$. How varied are
        they?
    :exlabel:`ex_samplers-repaint`
-1. [code] **A rescaled schedule.** ● Let $c_t = 1 + t(1 - t)$ and define a
-   path with $\alpha'_t = c_t (1 - t)$ and $\sigma'_t = c_t t$, which has the
-   same endpoints as the linear path.
-    1. Show that the two paths have the same log-SNR at every $t$, and that
-       the deterministic DDIM steps of :eqref:`eq_diffusion-ddim-step` on the
-       two paths produce the same $\hat{\mathbf{x}}_0$ at every step and
-       states that differ by the factor $c_t$. Check this with `ddim_sample`
-       and `pred` on the image model.
-    1. Implement Euler's method on the velocity, $\mathbf{x} \leftarrow
-       \mathbf{x} + (s - t)\, (\dot\alpha_t \hat{\mathbf{x}}_0 + \dot\sigma_t
-       \hat{\boldsymbol\epsilon})$, with the rates from `path.rates`, on both
-       paths with 10 steps. Show that the samples differ, and use Exercise
-       :exref:`ex_gaussian-paths-same-ratio-same-flow` of
-       :numref:`sec_diffusion-integration` to explain why.
-    1. :citet:`Gao.Hoogeboom.Heek.ea.2025` conclude that DDIM is unaffected
-       by such a rescaling. Which of the two choices, the path or the grid of
-       times, can change the samples of DDIM?
-   :exlabel:`ex_samplers-rescaled-schedule`
 1. [code] **Editing toward another class.** Use the class-conditional model
    of this section and steer with
    `d2l.make_pred(d2l.cfg(ema, c, gamma), lin, 'velocity')`, where `c` holds

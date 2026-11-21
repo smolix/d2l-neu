@@ -1,0 +1,285 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-data/crawl.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:749f0fbe0ca9eb5b48d6935f4aa9b3b16886dda228bf9024cafcc2d605e66278",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "crawl-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-extras": {
+      "code_fingerprint": "sha256:6a22cf089a79d9e4845afbddb42897d34e52cf2c6749430d281ff4a62d8c163f",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-config": {
+      "code_fingerprint": "sha256:7dcade4e92e1054a253b2a673285e9b1ff3d0806ca6db884ab15b114d3b6b644",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "CRAWL_MIB=256, LID_MIN=0.65, N_WORKERS=8, OFFLINE=False, writing: none\n"
+        }
+      ]
+    },
+    "crawl-data-hub": {
+      "code_fingerprint": "sha256:4d2cf5214d2573bff5352e7cfb564cd6a03b6ef81998b24b5f442218dc18e40f",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-sources": {
+      "code_fingerprint": "sha256:52a20e76b447cb962d4eda029ff95a078e886fd645b402c030da75a1de7f023f",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-warc-def": {
+      "code_fingerprint": "sha256:c36cfe782b2dc9416e4a23ce8e68626b99da219ffc08b1d18bf9c0e09dfc34eb",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-fetch-def": {
+      "code_fingerprint": "sha256:959d76a843401cedf9d564a7de95a0b51ff3f80f7a8afffda3884b3f5caae983",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-opening": {
+      "code_fingerprint": "sha256:38a40c279d130e7564d0b9ff566c3e0e7537658dcc51bcbebde348fc524d522a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "records in the first 4 MiB: warcinfo 1, request 286, response 285, metadata 285, truncated 1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rule: first HTTP-200 text/html response with <pre> or <table>,\n  >= 2,000 characters of trafilatura text and a FineWeb row; found in the first 4 MiB\nrecord <urn:uuid:b6a18b18-8f40-4156-aeca-92c7150ab355>\n  http://2013.widerstand.org/manual/zh-cn/misc/security_tips.html\n\n(1) HTML: 27,385 bytes; first 25 elements of <body>:\nbody\n  div\n    p\n      a  [text: 7 chars]\n      a  [text: 10 chars]\n      a  [text: 3 chars]\n      a  [text: 8 chars]\n      a  [text: 7 chars]\n    p  [text: 30 chars]\n    img\n  div\n    a\n      img\n  div\n    a  [text: 6 chars]\n    a  [text: 11 chars]\n    a  [text: 13 chars]\n    a  [text: 11 chars]\n    a  [text: 27 chars]\n  div\n    div\n      h1  [text: 13 chars]\n      div\n        p\n          span  [text: 20 chars]\n\n(2) WET text: 14,217 characters in 127 lines, 34% of them under 30 characters;\n  longest run of short lines (a menu signature): 6\n\n(3) FineWeb text: 11,159 characters; our trafilatura text: 12,658 characters;\n  character-5-gram F1 against FineWeb 0.96\nfirst 300 characters of FineWeb's text:\n  'Apache HTTP Server Version 2.4\\nSome hints and tips on security issues in setting up a web\n  server. Some of the suggestions will be general, others specific to Apache.\\nThe Apache HTTP\n  Server has a good record for security and a developer community highly concerned about\n  security issues. But it is inev'\n(text: FineWeb, HuggingFaceFW/fineweb CC-MAIN-2025-05, ODC-By 1.0)\n"
+        }
+      ]
+    },
+    "crawl-warcio-oracle": {
+      "code_fingerprint": "sha256:382e74a0a551b3eeae4ab6cdd2ff5276ddad94b8169365af3bf23166bd91b457",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "857/857 records identical (id, type, offset, length, body SHA-256);\nwarcio also yields 1 partial record(s) from the cut-off member,\n  which iter_warc counts as truncated (1)\n"
+        }
+      ]
+    },
+    "crawl-scan": {
+      "code_fingerprint": "sha256:cc53d89610137018b4c3557bb4b68e3eb258bd095fdccb082b1ef5ef1d1340ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "256 MiB: 29,195 complete records, 1 truncated member at the cut\ntype\nrequest     9732\nresponse    9731\nmetadata    9731\nwarcinfo       1 \n\n                          responses  status_200  median_body_bytes\nmime                                                              \ntext/html                      9591        9591            71308.0\napplication/pdf                  67          67           305371.0\napplication/atom+xml             14          14             4984.5\n(none)                           10          10              669.5\napplication/octet-stream          8           8            15377.0\ntext/plain                        8           8              169.5\n\n38.0 responses per MiB; extrapolated to the whole 1,141,586,184-byte file:\n  about 41,383 responses (assumes the prefix is representative)\n\nfirst 12 records (type, offset, compressed length):\n    type  offset  length\nwarcinfo       0     471\n request     471     432\nresponse     903    1903\nmetadata    2806     424\n request    3230     457\nresponse    3687   18833\nmetadata   22520     410\n request   22930     478\nresponse   23408    4329\nmetadata   27737     427\n request   28164     505\nresponse   28669   11869\n"
+        }
+      ]
+    },
+    "crawl-extract-def": {
+      "code_fingerprint": "sha256:743cde6c3ed92439205b05d98927d258c22f373b5a2ec9b5c5eeb74cfe93f245",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-naive-fixtures": {
+      "code_fingerprint": "sha256:c4a535ebb354b4618356ec6d76859262354fe2d381cb5a27bedc72f75463be91",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "article with sidebar   as expected\nforum                  as expected\ntable                  as expected\npre                    as expected\nempty                  as expected\n"
+        }
+      ]
+    },
+    "crawl-extract": {
+      "code_fingerprint": "sha256:77e550dda9da0442ca5e513d282d25bdb38bb39ac0f7afdd8a7d399d0d1c6b82",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "9,591 HTTP-200 HTML responses; charset from: header 8,606, meta 850, detector 125, fallback 10\npages per class (a page may be in several): {'prose': 3617, 'code': 79, 'table': 1569, 'math': 12}\n             empty output  documents/s per core\nwet                 0.016                   NaN\nnaive               0.066               285.185\ntrafilatura         0.032                36.592\nresiliparse         0.056               565.257\n(WET has no conversion record for 151 pages)\n"
+        }
+      ]
+    },
+    "crawl-metrics-def": {
+      "code_fingerprint": "sha256:8b8b2aae442a0bc3ae92e2525e216b3a2372ddfa6b35e3ba41b5399039e1d4bd",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-recall": {
+      "code_fingerprint": "sha256:26b484e8757a5ea628759313c0bb16f6b2981b84fcfb677deb4f56b7ed944b3f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3,024 pages English by their HTML (2,810 of them in c0);\nmissing or empty output, scored 0: wet 3, naive 62, trafilatura 25, resiliparse 86\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  cls                      pair    n   diff     lo     hi     p\nprose trafilatura - resiliparse 1434  0.010 -0.008  0.029 0.275\nprose       naive - trafilatura 1434  0.095  0.081  0.110 0.000\n code trafilatura - resiliparse   44  0.093 -0.029  0.225 0.143\n code       naive - trafilatura   44  0.036 -0.041  0.117 0.351\ntable trafilatura - resiliparse  391 -0.118 -0.175 -0.057 0.000\ntable       naive - trafilatura  391 -0.373 -0.428 -0.317 0.000\n math trafilatura - resiliparse    4 -0.277    NaN    NaN   NaN\n math       naive - trafilatura    4  0.027    NaN    NaN   NaN\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "crawl/crawl-recall-1.png",
+          "bytes": 41507,
+          "sha256": "sha256:993c5a96d3e1b0cfd602ce68166f152ea185e087f866ba654f455293d0f47ee7"
+        }
+      ]
+    },
+    "crawl-fineweb-agree": {
+      "code_fingerprint": "sha256:bc787f1322eaa483a3e6fd6a1b4ff2cb241850f4620c3e111e0c2795c0954d64",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1,002 of 1,002 FineWeb rows of this range joined by record id\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  extractor    n    f1    lo    hi\n        wet 1002 0.630 0.613 0.646\n      naive 1002 0.783 0.768 0.798\ntrafilatura 1002 0.920 0.907 0.933\nresiliparse 1002 0.763 0.745 0.781\n\nshare of 5-grams only in FineWeb / only in ours, by page class:\n            fineweb_only                   ours_only                  \ncls                 code  none prose table      code  none prose table\nextractor                                                             \nwet                 0.02  0.02  0.01  0.04      0.33  0.59  0.48  0.54\nnaive               0.07  0.07  0.03  0.09      0.26  0.37  0.27  0.40\ntrafilatura         0.01  0.11  0.02  0.06      0.18  0.15  0.08  0.14\nresiliparse         0.05  0.18  0.08  0.14      0.21  0.38  0.27  0.42\n\nlines FineWeb kept and an extractor lost (FineWeb's text, ODC-By; addresses masked on both sides):\n  naive: 'Requires Android | Android 6.0+ (Marshmallow) |'\n  resiliparse: 'Requires Android | Android 6.0+ (Marshmallow) |'\n  trafilatura: 'Haigh Hall 4 Mile Race - Wednesday 11th June 2025 at 7.30pmHaigh Hall, School\n    Lane, Haigh, WIGAN, Lancashire, WN2 1PE Scan this QR code to open the event locati'\n(text: FineWeb, HuggingFaceFW/fineweb CC-MAIN-2025-05, ODC-By 1.0)\n"
+        }
+      ]
+    },
+    "crawl-lid-def": {
+      "code_fingerprint": "sha256:8b0fafe352fa99a5700501b840ed05cf24632cbbb7e444157a8fb3143d9b2aad",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-lid": {
+      "code_fingerprint": "sha256:443129389da1bf3d8f954c3436c663d5d3155377dbd9b9c7622c676ffa28136a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fastText      en   zh   ru   ja   es   de   fr   pt  other\nCLD2 (WET)                                                \nen          3728   10   13   10   33   33   25   12     82\nzh            25  741    0   10    1    0    4    0      7\nru             3    0  682    0    0    0    0    0      4\nja             5   40    0  483    0    0    0    0      0\nes            13    0    0    0  465    0    0    5      2\nde             5    0    0    0    0  404    2    0      2\nfr             2    0    0    0    0    0  378    0      3\npt             2    0    0    0    1    0    0  214      0 \n\nat 0.65: 3,288 English documents, 997 (30%) of them in FineWeb\nsentence       [('en', 1.0), ('pl', 0.0)]\ncode comment   [('en', 0.98), ('vi', 0.0)]\ncode-switched  [('es', 0.9), ('gl', 0.06)]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "crawl/crawl-lid-1.svg",
+          "bytes": 32575,
+          "sha256": "sha256:79be4b988b872b9df094142de7657a844720380d4c7986c8bc1cca56cfa67c05"
+        }
+      ]
+    },
+    "crawl-unicode": {
+      "code_fingerprint": "sha256:b5de042752d699e3b21541e0944528e78f105ebe003c66e62968924572519214",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      documents_changed  share  code_points_rewritten  length_change\nNFC                 0.0  0.000                    0.0            0.0\nNFKC              619.0  0.188                 7911.0         2298.0 \n\n                        code_point  nfkc  count category\n             U+00A0 NO-BREAK SPACE   ' '   6245       Zs\n        U+2026 HORIZONTAL ELLIPSIS '...'    949       Po\n               U+2033 DOUBLE PRIME  '′′'    200       Po\n            U+2122 TRADE MARK SIGN  'TM'    103       So\n            U+FF1A FULLWIDTH COLON   ':'     71       Po\n            U+FF0C FULLWIDTH COMMA   ','     29       Po\n   U+00BD VULGAR FRACTION ONE HALF '1⁄2'     15       No\nU+00BC VULGAR FRACTION ONE QUARTER '1⁄4'     13       No\n U+1D41A MATHEMATICAL BOLD SMALL A   'a'     11       Ll\n U+1D422 MATHEMATICAL BOLD SMALL I   'i'     11       Ll \n\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "U+FFFD replacement         in     6 documents,      18 times\nU+00A0 NBSP                in   292 documents,   6,245 times\nU+200B zero-width space    in     0 documents,       0 times\nU+200D zero-width joiner   in     0 documents,       0 times\nU+FEFF byte-order mark     in     0 documents,       0 times\n"
+        }
+      ]
+    },
+    "crawl-pii-def": {
+      "code_fingerprint": "sha256:1cdcd35fe1a0ba7463e8faab0ad68c38bc705cc2dc487fc24ba0a2d6b0de63bb",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-pii": {
+      "code_fingerprint": "sha256:20c2730489afae15ce826244d0312e2f2fbbc2771dc6f17cea123151fe9bf182",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "120 fixture strings, 60 with personal data\npattern  positives  recall  precision  false_positives\n  email         30     1.0      0.909                3\n     ip         30     1.0      0.833                6\nfalse positives:\n  'Upgrade to version 4.2.1.0 now'\n  'Changelog for 1.2.3.4 (stable)'\n  'build 5.15.0.91 of the kernel'\n  'section 3.4.1.2 of the standard'\n  'the score was 3.14.15.92 in the puzzle'\n  'logo@2x.png in the assets folder'\n  'icon@3x.webp for retina screens'\n  'git@github.com:org/repo.git'\n  'model 7.1.2.3 of the router firmware'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "c0 (3,288 English documents), rule matches (not checked by hand):\n  emails in 173 documents, public IP addresses in 8;\n  421 and 27 replaced; UTF-8 bytes changed by -6,625\n"
+        }
+      ]
+    },
+    "crawl-doc-def": {
+      "code_fingerprint": "sha256:be915b42c272161aa41e9683fa74c60f016ff46d02d91037c87780806e0504d3",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-manifest-def": {
+      "code_fingerprint": "sha256:d000832ebbaa2a647f9dccda8d844ce29147df064200603b91125854252ad636",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-c0": {
+      "code_fingerprint": "sha256:1453f98c684eb5215cc423554ede685c56f31d3f5920758088af2668e00714f2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  stage  n_in  n_out                            dropped\nextract  9731   9286 not_200 0, not_html 140, empty 305\nlang_id  9286   3288        not_en 5,448, low_score 550\n    nfc  3288   3288                                  -\n    pii  3288   3288                                  -\nmanifest 45a63f710b73643e…, after save and load 45a63f710b73643e…;\ndocs_hash 803e7466effd8553…, permuted 803e7466effd8553…, one byte edited 6100ba91b6143c7a…\nagainst lm-c0-docs-v1: 3,288 registered rows, 3,288 now; ids and text hashes identical\n"
+        }
+      ]
+    },
+    "crawl-rebuild-def": {
+      "code_fingerprint": "sha256:1b6e280b9a5578cb857eb483abd45c1e1cb8ecee78dae435076b3931e356a349",
+      "kind": "text",
+      "outputs": []
+    },
+    "crawl-rebuild": {
+      "code_fingerprint": "sha256:d67e954cd4b01b0ef083edd744182f036aa3b5b6d70eeb31a30d8efaae070e76",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3,288 documents rebuilt from the rows and the pinned range, 0 mismatches;\ndocs_hash 803e7466effd8553… (manifest out_hash 803e7466effd8553…)\n"
+        }
+      ]
+    },
+    "crawl-card": {
+      "code_fingerprint": "sha256:04baf1c49f56461b2fc3f4d0a4d9a3222f856bc8047f1c470df890074874296b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "# Dataset card: c0\n\nSchema `d2l-corpus/1`, manifest SHA-256 `45a63f710b73643e…`.\n\n## Sources\n\n| id | uri | revision | license | documents | bytes |\n|---|---|---|---|---|---|\n| cc-main-2025-05-00000 | https://data.commoncrawl.org/crawl-data/CC-MAIN-2025-05/segments/1736703361941.29/warc/CC-MAIN-20250126135402-20250126165402-00000.warc.gz | ece35baafe3dc587bcf1875916028dce71b496cf4383895f8f8e2c6210467070 | none granted (Common Crawl terms of use); text not redistributed | 9731 | 268435456 |\n\n## Processing stages\n\n| stage | implementation | in | out | dropped (reason: count) |\n|---|---|---|---|---|\n| extract | trafilatura 2.1.0 | 9731 | 9286 | not_200: 0, not_html: 140, empty: 305 |\n| lang_id | fasttext 0.9.2 | 9286 | 3288 | not_en: 5448, low_score: 550 |\n| nfc | unicodedata 15.0.0 | 3288 | 3288 | — |\n| pii | d2l.scrub_pii | 3288 | 3288 | — |\n\n"
+        }
+      ]
+    },
+    "crawl-results": {
+      "code_fingerprint": "sha256:feb505c2d979ceb2225d5274f799ca4caee19d122b0fc0e693d7272e1a38bdb2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "against lm-data-crawl-results-v1: 409/409 values equal,\n  largest numeric difference 0; manifest identical\n"
+        }
+      ]
+    }
+  }
+}

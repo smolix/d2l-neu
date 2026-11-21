@@ -1,0 +1,325 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-data/data-mixtures.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:1a087b9cf5a2fb6b31387149ebc4ba7d1282edc69be6cff1953007148c603689",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "data-mixtures-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-mixtures-extras": {
+      "code_fingerprint": "sha256:2d035fe5ff9329a40331ca375d0b086ca111b67fa4be1d3b673cc4f337706700",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-mixtures-config": {
+      "code_fingerprint": "sha256:3c8d89dab6094c1947cd177084a337383f128a80ae034dfea1f03d283bec2fc3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "configuration t1 (the T2 campaign logs are not yet committed) | regenerating: none\n"
+        }
+      ]
+    },
+    "data-mixtures-data-hub": {
+      "code_fingerprint": "sha256:8977055f5ecb577fc46598776a7438af60eba21664fc9b6c5e9edd0a7044c6fb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "this section: registered lm-mix-web-20m-v1, lm-mix-math-20m-v1, lm-mix-val-1m-v1,\n    lm-mix-code-meta-v1, lm-mix-runs-t1-v1, lm-mix-runs-t1-v2, lm-mix-web-150m-v1,\n    lm-mix-math-150m-v1, lm-mix-val-2m-v1, lm-mix-code150-meta-v1, lm-mix-runs-t2s-v1 | pending:\n    lm-mix-runs-t2-v1\nupstream: registered lm-r2-tokenizer-v1 | pending: none\n"
+        }
+      ]
+    },
+    "data-mixtures-configs": {
+      "code_fingerprint": "sha256:8d73b4405c5e1ac1ecd69a6b267641a0ed5d138c2e7bfbd803e9ab4a34819002",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-mixtures-bucket-def": {
+      "code_fingerprint": "sha256:8fa2c31951f30566c50af416cc1c67c85d4e3f0f65b5a04619ed98fc4b5e2af4",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-mixtures-pools": {
+      "code_fingerprint": "sha256:2a4dc599a692cb5988701a3b3235ebe557ac3304b4abcc22387efb1c1087e9db",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "domain split   tokens  documents  bytes_per_token    tokenizer  here\n   web  pool 20000109      18963            4.534 b1b4b45c36aa  True\n   web   val  1001964        961            4.560 b1b4b45c36aa  True\n  code  pool 20001751       4793            2.394 b1b4b45c36aa  True\n  code   val  1001697        293            2.417 b1b4b45c36aa  True\n  math  pool 20000497      11750            2.968 b1b4b45c36aa  True\n  math   val  1000748        635            3.002 b1b4b45c36aa  True\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bucket rule: the first 1,000 web documents of the pool lie in buckets 1-7, those of the validation\n    set (up to 1,000) in bucket 8\n"
+        }
+      ]
+    },
+    "data-mixtures-mix-defs": {
+      "code_fingerprint": "sha256:8a025b56460cb25569c82dc1d02c2dc3d1ba2a0d9ffeb9cc4c3c10c70d4e084d",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-mixtures-temperature": {
+      "code_fingerprint": "sha256:98213a1c1227c667755886a592d6f34d13657a6d654acb8ee96c00f3b687a913",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "D1 (alpha 0.3, sizes 1000/100/10): p = [0.5707 0.286  0.1433] | epochs [  57.1  286.  1433.4] |\n    simulated [  56.9  287.2 1440.8]\n               p (alpha 1)  p (alpha 0.7)  p (alpha 0.3)  p (alpha 0)\neng (FineWeb)        0.915          0.758          0.345          0.1\nrus_Cyrl            0.0247         0.0605          0.117          0.1\ncmn_Hani            0.0225         0.0567          0.114          0.1\ndeu_Latn            0.0175         0.0476          0.105          0.1\njpn_Jpan            0.0141          0.041         0.0989          0.1\narb_Arab           0.00219         0.0111         0.0565          0.1\nkor_Hang           0.00215          0.011         0.0562          0.1\ntha_Thai           0.00127        0.00758          0.048          0.1\nhin_Deva          0.000783         0.0054         0.0415          0.1\nswh_Latn          4.31e-05        0.00071         0.0174          0.1\n               epochs (alpha 1)  epochs (alpha 0.7)  epochs (alpha 0.3)  epochs (alpha 0)\neng (FineWeb)             0.353               0.293               0.133            0.0386\nrus_Cyrl                  0.353               0.866                1.67              1.43\ncmn_Hani                  0.353               0.891                1.79              1.57\ndeu_Latn                  0.353                0.96                2.13              2.02\njpn_Jpan                  0.353                1.02                2.47               2.5\narb_Arab                  0.353                1.79                9.11              16.1\nkor_Hang                  0.353                 1.8                9.23              16.4\ntha_Thai                  0.353                2.11                13.4              27.8\nhin_Deva                  0.353                2.44                18.7              45.1\nswh_Latn                  0.353                5.82                 143               820\nread more than four times (the repeated-data limit below): {'1': [], '0.7': ['swh_Latn'], '0.3':\n    ['arb_Arab', 'kor_Hang', 'tha_Thai', 'hin_Deva', 'swh_Latn'], '0': ['arb_Arab', 'kor_Hang',\n    'tha_Thai', 'hin_Deva', 'swh_Latn']}\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "data-mixtures/data-mixtures-temperature-1.svg",
+          "bytes": 52783,
+          "sha256": "sha256:df0a67362009b27bc9156299f57340bfc403a6f696ed1a9196e052a1bb43c19a"
+        }
+      ]
+    },
+    "data-mixtures-repetition": {
+      "code_fingerprint": "sha256:f318d3ac3735643a8530f4d26a5f9285b01bcffd4983406f5ae83db2f931d4ba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "D'(4 epochs) / (4U) = 0.931; D'(R = 1000) / (U (1 + R*)) = 1.000000; U E overstates D' by 10% at E =\n    4.83 (R = 3.83)\n"
+        }
+      ]
+    },
+    "data-mixtures-proxy-defs": {
+      "code_fingerprint": "sha256:cd84a81d0b238439d156a1fd6f42d0c2967bb42fe2c6220df93a829fa7224c2a",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-mixtures-proxy-checks": {
+      "code_fingerprint": "sha256:4b0fea73e35c13d046b3ad03201840821702e2fe57b7d34bcaf977580d5e1daf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "same (seed, weights, tokens): the same 10 batches and the same loss at step 20 (10.302891); web\n    share after 10^4 sequences 0.7000, never more than 0.50 sequences from 0.7 n\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "uniform model: 3.573340 bits per byte = 15 / 4.1978 bytes per token\nt1: 4,587,904 parameters (arithmetic 4,587,520; embedding 4,194,304); 5.1e+14 FLOP per run\nt2: 20,319,040 parameters (arithmetic 20,316,160; embedding 10,485,760); 2.1e+16 FLOP per run\nthis page reads T1: 4.6M-parameter proxies, 2^24 tokens per run\n"
+        }
+      ]
+    },
+    "data-mixtures-design": {
+      "code_fingerprint": "sha256:3a586b1973fcc52e441ed84d689e3700736f6863698cbfa3378e863f2a36f715",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale] 15 training mixtures (Dirichlet(1), Dirichlet(0.3), 3 near the corners) and 4 held-out\n    ones (Dirichlet(1)), weights ('web', 'code', 'math'):\n            web   code   math\ntrain 0   0.395  0.593  0.012\ntrain 1   0.001  0.252  0.747\ntrain 2   0.159  0.178  0.663\ntrain 3   0.648  0.352  0.000\ntrain 4   0.665  0.021  0.314\ntrain 5   0.195  0.724  0.081\ntrain 6   0.283  0.000  0.717\ntrain 7   0.174  0.121  0.705\ntrain 8   0.301  0.684  0.015\ntrain 9   0.000  0.571  0.429\ntrain 10  0.495  0.502  0.002\ntrain 11  0.064  0.050  0.886\ntrain 12  0.800  0.100  0.100\ntrain 13  0.100  0.800  0.100\ntrain 14  0.100  0.100  0.800\nheld 0    0.159  0.046  0.796\nheld 1    0.161  0.051  0.789\nheld 2    0.462  0.511  0.028\nheld 3    0.375  0.511  0.113\n65 runs: 4 lr, 3 pure, 6 pure-seed, 15 train, 4 held, 4 uniform-cos, 3 uniform, 1 doremi-weights, 3\n    regsel, 3 doremi, 3 anneal, 3 recency, 9 lr-check, 4 horizon\n"
+        }
+      ]
+    },
+    "data-mixtures-regen": {
+      "code_fingerprint": "sha256:f30599233cf219594ed942eb4918260c5435b6d446009175eb7e36742e54107c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale] 65 runs from lm-mix-runs-t1-v2.json; peak learning rate 0.002 (chosen on the uniform\n    mixture: 0.0005 -> 3.0806 bpb, 0.001 -> 2.7013 bpb, 0.002 -> 2.5001 bpb, 0.004 -> 2.5868 bpb)\n"
+        }
+      ]
+    },
+    "data-mixtures-live-check": {
+      "code_fingerprint": "sha256:1188320241dc88add9595ba8355cce27c36173b03ef70e59597aa5c70d9d0652",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale] pure-web, steps 10-16: largest difference from the registered losses 0.0000 nats\n    (bf16; tolerance 0.02)\n"
+        }
+      ]
+    },
+    "data-mixtures-smoke": {
+      "code_fingerprint": "sha256:aa896781911b7b6dc2f88d859663a5cb3ff325453521dfaeb193a36871383500",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "smoke of the t2 configuration on NVIDIA GeForce RTX 4090 (100 steps of 65,536 tokens):\nn_params                 20319040\ntokens_per_s              300,000\ntokens_per_s_compiled     330,000\nmfu                          0.27\nmfu_compiled                  0.3\ncompile_seconds               2.5\npeak_mem_gib                  8.4\nresume_bf16_max_diff            0\nrerun_bf16_max_diff         0.028\nresume_fp32_max_diff            0\ncampaign_compile             True\ncampaign_flop             9.6e+17\npredicted_a100_hours          2.9\npredicted_hours_here          5.4\n"
+        }
+      ]
+    },
+    "data-mixtures-opening-plot": {
+      "code_fingerprint": "sha256:e9ad6ca6090dfba37c5bbfedaec8f29467d49362f81c3a80c28d0b8f880b6787",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale] 10 of 105 pairs of training mixtures cross, 0 with both gaps above 2 sqrt(2) seed SDs\n    (SD 0.0096 at 25%, 0.0055 at the end); none beyond the noise: the pair with the largest early\n    gap: gap -0.1487 at 25%, -0.1546 at the end\n[at T1 scale] bits per byte on each validation set (columns) of the pure-domain runs (rows):\n                   web   code   math\ntrained on web   2.049  5.229  3.312\ntrained on code  2.573  2.021  3.058\ntrained on math  2.149  3.455  2.238\neach proxy is best on its own domain: True\n[at T1 scale] uniform mixture (WSD, seed 0) per domain:\n                   web   code   math\nbytes_per_token  4.560  2.417  3.002\nbits_per_token   8.732  5.125  6.631\nbits_per_byte    1.915  2.120  2.209\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "data-mixtures/data-mixtures-opening-plot-1.svg",
+          "bytes": 32398,
+          "sha256": "sha256:ea40206152e0fc9c9320b542d66460a9dca1c1c1478ef2875c0af4c1609622e3"
+        }
+      ]
+    },
+    "data-mixtures-reg-defs": {
+      "code_fingerprint": "sha256:0122972a221d6853905c43584309787ab9cd5832aa321514801a42cc7a096a13",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-mixtures-regression": {
+      "code_fingerprint": "sha256:871a30c2c69600bda7d983c51742403cd88257e4b225097892bcc08e82a73d99",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "D4: mean squared error at new mixtures 4.785e-04, theory 4.775e-04; at the design points sigma^2 (1\n    + p/n) = 4.750e-04\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale] 15 training and 4 held-out runs; pooled sigma_cos 0.0104, sigma_seed 0.0091 bits per\n    byte (ratio 1.1)\n                                  web    code    math\nsigma_cos                      0.0037  0.0167  0.0053\nsigma_seed (WSD)               0.0033  0.0147  0.0044\nfloor sigma_cos sqrt(1 + p/n)  0.0113  0.0113  0.0113\nRMSE ridge                     0.0306  0.0593  0.0742\nRMSE gbm                       0.0080  0.0288  0.0510\nRMSE mixlaw                    0.0027  0.1189  0.0402\nMAE ridge                      0.0301  0.0557  0.0567\nMAE gbm                        0.0069  0.0257  0.0436\nMAE mixlaw                     0.0019  0.0997  0.0304\nSpearman ridge                 0.6000  1.0000  1.0000\nSpearman gbm                   0.7379  0.9487  0.9487\nSpearman mixlaw                0.6000  1.0000  1.0000\nfloor 0.0113 (95% interval from 4 seeds, 3 degrees of freedom: 0.0064-0.0423); mixlaw (the selecting\n    regression), held-out RMSE over all domains 0.0725: does not reach the noise floor\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "data-mixtures/data-mixtures-regression-1.svg",
+          "bytes": 73142,
+          "sha256": "sha256:958de303f7034b8ee3c16be26fd6c7e4dc5325fa1c7e119d0f3f8b44d0a73dc8"
+        }
+      ]
+    },
+    "data-mixtures-choose": {
+      "code_fingerprint": "sha256:7a9916c14e165a6bcc47e7bcbe2b474d04c53de0f69df0cd6f9fd407f92fedbf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale] selected mixtures (weights web, code, math) and their predicted target-weighted bits\n    per byte (the last one free of the hull bound):\n  ridge              w = (0.100, 0.800, 0.100), predicted 2.1417, inside the training mixtures\n  gbm                w = (0.239, 0.546, 0.215), predicted 2.0928, inside the training mixtures\n  mixlaw             w = (0.339, 0.313, 0.348), predicted 2.0884, inside the training mixtures\n  mixlaw, t_avg      w = (0.204, 0.362, 0.434), predicted 2.1867, inside the training mixtures\n  mixlaw, no hull    w = (0.339, 0.313, 0.348), predicted 2.0884, inside the training mixtures\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mixlaw on 200 bootstrap resamples of the training runs: predicted t_dep 2.0926 [2.0816, 2.1069];\n    weights from web 0.25-0.38, code 0.24-0.43, math 0.27-0.42\n"
+        }
+      ]
+    },
+    "data-mixtures-web-weight": {
+      "code_fingerprint": "sha256:7acfe0917cefe106d380922983776cc1f39409767dc3d331353146dff5c10ef7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale] web bits per byte of the runs on the training schedule, by web weight (peak rate\n    0.002):\n              count    mean     min     max\nweb_weight                                 \n(-0.01, 0.2]     16  2.1745  2.0189  2.5725\n(0.2, 0.4]        8  2.0002  1.9867  2.0179\n(0.4, 0.6]        2  1.9918  1.9893  1.9944\n(0.6, 0.85]       3  1.9841  1.9769  1.9931\n(0.85, 1.0]       3  2.0283  2.0002  2.0488\n  pure-web on web: 2.0283, seed SD 0.0251 (3 seeds)\n  pure-code on code: 2.0308, seed SD 0.0268 (3 seeds)\n  pure-math on math: 2.2179, seed SD 0.0176 (3 seeds)\n  uniform on web: 1.9915, seed SD 0.0037 (4 seeds)\n[at T1 scale] the same mixtures at two peak rates, web bits per byte:\n  web      (1.0, 0.0, 0.0)  0.002: 2.0283 (SD 0.0251, 3 seeds); 0.001: 2.0416 (SD 0.0116, 3 seeds)\n  edge     (0.8, 0.1, 0.1)  0.002: 1.9824 (1 seed); 0.001: 2.0287 (SD 0.0072, 3 seeds)\n  uniform  (0.333, 0.333, 0.333)  0.002: 1.9915 (SD 0.0037, 4 seeds); 0.001: 2.0722 (SD 0.0023, 3\n    seeds)\n"
+        }
+      ]
+    },
+    "data-mixtures-doremi-def": {
+      "code_fingerprint": "sha256:8cd924e66f0c335069fa89249c665e5ea6944c6a272bc14a1e4d80c51df3d3c3",
+      "kind": "text",
+      "outputs": []
+    },
+    "data-mixtures-doremi": {
+      "code_fingerprint": "sha256:06065b5b25a67d07a52e709034105043e9d265211c57e69d3dbc560e8641f0ca",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "D3: closed-form step = numerical maximizer to 3.5e-09; averaged weights [0.497 0.004 0.5  ] vs the\n    saddle [0.502 0.    0.498] (largest gap 0.005)\nexcess loss of a random batch: per token 0.0510, from the domain mean 0.0000; doremi_weights used\n    0.0510\n[at T1 scale] DoReMi weights (step average): {'web': 0.167, 'code': 0.474, 'math': 0.359} | alpha at\n    steps {1: [0.064, 0.687, 0.249], 65: [0.031, 0.746, 0.223], 129: [0.154, 0.245, 0.601], 256:\n    [0.2, 0.368, 0.432]}\n"
+        }
+      ]
+    },
+    "data-mixtures-arms": {
+      "code_fingerprint": "sha256:71b628d535ad648c24ef46a417525ea11ff1e7db968d6895c376e5a07122105c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale] sigma_seed of t_dep bits per byte 0.0051 (3 uniform seeds); differences seed-paired\n    with uniform; margin = |mean difference| / (2 sigma_seed):\n    arm               weights  t_dep_mean                       diffs  real  margin\nuniform [0.333, 0.333, 0.333]      1.9900             [0.0, 0.0, 0.0] False  0.0000\n regsel [0.339, 0.313, 0.348]      1.9827 [-0.0061, -0.0054, -0.0105] False  0.7225\n doremi [0.167, 0.474, 0.359]      2.0052    [0.0142, 0.0088, 0.0224]  True  1.4870\n[at T1 scale] mean bits per byte of each arm over its seeds:\n            web    code    math   t_dep   t_avg\nuniform  1.9156  2.1178  2.2095  1.9900  2.0810\nregsel   1.9086  2.1196  2.1916  1.9827  2.0732\ndoremi   1.9629  2.0158  2.1916  2.0052  2.0568\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "data-mixtures/data-mixtures-arms-1.svg",
+          "bytes": 26334,
+          "sha256": "sha256:30b73dbbed7bb9c615896e35072d761c5c1509b72432e317316affc5aa5f8098"
+        }
+      ]
+    },
+    "data-mixtures-staged": {
+      "code_fingerprint": "sha256:c904b5b2cbabae5095b90d122e5b5ca64eedc9ec2e7582660d9ddb0847337b06",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale] stages of the anneal: [[0.8, [0.1, 0.1, 0.8]]], recency: [[0.8, [0.1, 0.1, 0.8]],\n    [0.9, [0.3333333333333333, 0.3333333333333333, 0.3333333333333333]]]\nchange during the decay (from step 205), arm minus uniform, seed-paired, bits per byte (mean, then\n    the 3 seeds):\n  anneal   web   +0.0212  [0.0208, 0.0212, 0.0216]\n  anneal   code  +0.0682  [0.0706, 0.0669, 0.067]\n  anneal   math  -0.0415  [-0.0406, -0.0441, -0.0397]\n  recency  web   +0.0104  [0.0108, 0.0102, 0.0102]\n  recency  code  +0.0351  [0.036, 0.0354, 0.0341]\n  recency  math  -0.0266  [-0.0272, -0.0268, -0.026]\nshare of the mathematics gain left after the last 10% of the steps on uniform: 0.64\n[at T1 scale] uniform mixture, t_dep bits per byte, cosine and stable-then-decay at the same peak:\n    256 steps: cosine 2.0941 (4 seeds), stable-then-decay 1.9900 (3 seeds), gap 0.1041\n   1024 steps: cosine 1.7623 (2 seeds), stable-then-decay 1.7095 (2 seeds), gap 0.0527\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "data-mixtures/data-mixtures-staged-1.svg",
+          "bytes": 57875,
+          "sha256": "sha256:b2e6648f7138745ef1fa82a5789b038406b315f1de8c32504812385e945200e5"
+        }
+      ]
+    },
+    "data-mixtures-t2-package": {
+      "code_fingerprint": "sha256:acb5b24a6491261324ff57d50d6d5d401e02d35d7a63a183794c487fe5bf11e9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T2 campaign: python tools/run_mix_campaign.py --config t2 --gpus 0,1,2,3 --out\n    ../data/lm/rerun/mix-t2 (a faster node)\n20.4-mixtures-t2:\n  status: packaged, not run (author ruling 2026-11-14)\n  config: d2l.MIX_CONFIGS['t2'] (20.3M-parameter proxies, 2^27 tokens per run)\n  command: python tools/build_mix_pools.py --config t2 --check --tar data/lm/mix/upload && python\n    tools/run_mix_campaign.py --config t2 --gpus 0,1,2,3 --out data/lm/rerun/mix-t2\n  runs: 45 proxy runs (19 training mixtures, 3 of them the fixed corner mixtures MIX_EDGES) plus 4\n    learning-rate runs at 2^25 tokens (d2l.mix_run_specs)\n  flop: 9.6e17\n  predicted_a100_hours: 2.9\n  memory_gib_per_run: 8.4\n20.4-mixtures-t2s:\n  status: run 2026-11-21 on the four RTX 4090s (author ruling 2026-11-20) as a test of the T2 code\n    path; never the T2 result\n  config: run_mix_campaign.py's 't2s' (d2l.MIX_CONFIGS['t2'] at half its tokens, 2^26 per run, 2^24\n    per learning-rate run, on the T2 pools)\n  command: python tools/run_mix_campaign.py --config t2s --gpus 0,1,2,3 --out data/lm/rerun/mix-t2s\n    --max-hours 0.25, then the same with --resume --max-hours 3 (tests the time stop and the resume)\n  measured: 49 runs, 2.7 GPU-hours of runs (3.1 GPU-hours of reserved cards), 46 min wall on four\n    RTX 4090s; the time stop left 4 runs at their step-768 checkpoints, and the resume finished them\nfrom the smoke on NVIDIA GeForce RTX 4090: 9.6e+17 FLOP for 49 runs; A100-hours at the measured MFU\n    2.9, peak memory per run 8.4 GiB\nwrites: lm-mix-runs-t2-v1, lm-mix-math-150m-v1, lm-mix-val-2m-v1, lm-mix-web-150m-v1,\n    lm-mix-code150-meta-v1\n"
+        }
+      ]
+    },
+    "data-mixtures-t2-test": {
+      "code_fingerprint": "sha256:66de886fb5d232852abc610831471a5cdf8e6d4a98dcda028f1db57d50b958f5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[small-scale T2 test, 2^26 tokens per run: not the T2 result] 20.3M-parameter proxies; peak learning\n    rate 0.001 (T1: 0.002)\n  t_dep bits per byte of the 22 mixtures both scales trained: Spearman 0.70\n  best three at T1: held-03, train-a1-05, train-a1-02; in the test: train-a03-01, train-a1-02,\n    held-02\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  mixlaw held-out RMSE per domain [0.0139, 0.0677, 0.0519] against a floor of 0.0176\n  selected for t_dep (0.437, 0.267, 0.296) (T1 (0.339, 0.313, 0.348)); DoReMi (0.289, 0.302, 0.409)\n    (T1 (0.167, 0.474, 0.359))\n  regsel: t_dep minus uniform [-0.0115, -0.0107, -0.0145] (2 sigma_seed 0.0076), beyond the noise;\n    mean per domain [1.4601, 1.0769, 1.377]\n  doremi: t_dep minus uniform [0.0017, 0.0025, 0.0033] (2 sigma_seed 0.0076), within the noise; mean\n    per domain [1.4947, 1.0531, 1.3374]\n  staged: t_dep minus uniform [-0.0049, -0.0016, -0.0052] (2 sigma_seed 0.0076), within the noise;\n    mean per domain [1.4776, 1.0574, 1.3703]\n  uniform per domain [1.4872, 1.0457, 1.3631]; cosine schedule [1.5819, 1.1942, 1.5097]\n"
+        }
+      ]
+    }
+  }
+}

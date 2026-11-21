@@ -8779,6 +8779,2526 @@ def classify_failure(result, item, judge_out, corpus, depth=50):
         return 'unjudged'
     return 'ignored' if true(judge_out['faithful']) else 'unsupported'
 
+d2l.DATA_HUB['lm-cc-warc-256m-v1'] = (  # pin only: URLs, sizes, SHA-256s
+    d2l.LM_DATA_URL + 'lm-cc-warc-256m-v1.pin.json',
+    '9444225da3dd569d00b801ad9ae1455431dc1b01')
+d2l.DATA_HUB['lid.176.ftz'] = (  # fastText, 176 languages, CC BY-SA 3.0
+    'https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz',
+    '86d1b630ba55a5040231eda9fe24a7befdc411f2')
+d2l.DATA_HUB['lm-data-fineweb-ref-v1'] = (  # FineWeb rows of the range, ODC-By
+    d2l.LM_DATA_URL + 'lm-data-fineweb-ref-v1.parquet',
+    '45d4bbfee8c77d9f7d8955de9d03933254c77aaf')
+d2l.DATA_HUB['lm-c0-docs-v1'] = (  # c0 rows: ids, offsets, hashes; no text
+    d2l.LM_DATA_URL + 'lm-c0-docs-v1.jsonl.gz',
+    '90120ce99b35b51e0e77da6f2c94f2a5f3e5f24c')
+d2l.DATA_HUB['lm-data-crawl-results-v1'] = (  # the section's measured values
+    d2l.LM_DATA_URL + 'lm-data-crawl-results-v1.json',
+    '92c91643a63f00e8e1cd666cad58e22c18eeb43c')
+
+LM_DATA_SOURCES = {  # name: (kind, Hub repository, revision, licence)
+    'fineweb': ('dataset', 'HuggingFaceFW/fineweb',
+                '9bb295ddab0e05d785b879661af7260fed5140fc', 'odc-by'),
+    'fineweb-edu': ('dataset', 'HuggingFaceFW/fineweb-edu',
+                    '87f09149ef4734204d70ed1d046ddc9ca3f2b8f9', 'odc-by'),
+    'fineweb-2': ('dataset', 'HuggingFaceFW/fineweb-2',
+                  'af9c13333eb981300149d5ca60a8e9d659b276b9', 'odc-by'),
+    'edu-annotations': ('dataset', 'HuggingFaceFW/fineweb-edu-llama3-annotations',
+                        '72df4c92fb1b48beceb16016e8f695ec40a6c3a5', 'odc-by'),
+    'finemath': ('dataset', 'HuggingFaceTB/finemath',
+                 'e92b25a616738fe95dc186b64dfb19f9c8525594', 'odc-by'),
+    'codeparrot-clean': ('dataset', 'codeparrot/codeparrot-clean',
+                         '35a59fb025bc0a102f7d96eac09d145b896d487b', 'per-file'),
+    'belebele': ('dataset', 'facebook/belebele',
+                 '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2', 'cc-by-sa-4.0'),
+    'cosmopedia': ('dataset', 'HuggingFaceTB/cosmopedia',
+                   '0ae6ec63f91742bd2d1eaef4f02232c55d719385', 'apache-2.0'),
+    'mmlu': ('dataset', 'cais/mmlu',
+             'c30699e8356da336a370243923dbaf21066bb9fe', 'mit'),
+    'fineweb-edu-classifier': ('model', 'HuggingFaceFW/fineweb-edu-classifier',
+                               '284663cbb2dabf9bda30d8f8cc49601251ee1631',
+                               'apache-2.0')}
+
+WarcRecord = collections.namedtuple(
+    'WarcRecord', 'id type url date status mime offset length headers body')
+
+def iter_warc(source, n_bytes=None, types=('response',), *, stats=None):
+    """Yield the WARC records of the given types (None: all) from a local
+    path or a URL, reading only the first n_bytes (a Range request for a
+    URL). Each gzip member is decompressed on its own; offset and length
+    are the member's compressed byte range. A member cut off by the end of
+    the input is not yielded: it is counted in stats['truncated'], beside
+    one count per record type (stats is a dict the caller passes).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    for offset, length, raw in d2l._gzip_members(
+            d2l._warc_chunks(source, n_bytes)):
+        if raw is None:
+            if stats is not None:
+                stats['truncated'] = stats.get('truncated', 0) + 1
+            continue
+        rec = d2l._warc_parse(raw, offset, length)
+        if stats is not None:
+            stats[rec.type] = stats.get(rec.type, 0) + 1
+        if types is None or rec.type in types:
+            yield rec
+
+def fetch_warc_range(pin='lm-cc-warc-256m-v1', n_bytes=None, cache_dir=None,
+                     *, which='warc'):
+    """Local path of the pinned Common Crawl bytes: which='warc' gives the
+    first n_bytes of the pinned range (a multiple of the 16 MiB block; None
+    for the whole range), fetched with Range requests and checked block by
+    block against the pin's SHA-256s; which='wet' gives the whole WET file
+    of the same segment, checked as one file. With D2L_OFFLINE=1 only a
+    verified local copy is used. The bytes stay in cache_dir (default
+    ../data/lm/cc); they are never committed or uploaded.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import pathlib
+    with open(d2l.download_keyed(pin)) as f:
+        spec = json.load(f)
+    cache = pathlib.Path(cache_dir or os.path.join('..', 'data', 'lm', 'cc'))
+    cache.mkdir(parents=True, exist_ok=True)
+    offline = os.environ.get('D2L_OFFLINE') == '1'
+    if which == 'wet':
+        if n_bytes is not None:
+            raise ValueError('the WET file is fetched and checked whole')
+        return d2l._fetch_whole(spec['wet'], cache, offline)
+    if which != 'warc':
+        raise ValueError(f"which is 'warc' or 'wet', not {which!r}")
+    warc, block = spec['warc'], spec['warc']['block_bytes']
+    n_bytes = warc['n_bytes'] if n_bytes is None else n_bytes
+    if n_bytes % block or not 0 < n_bytes <= warc['n_bytes']:
+        raise ValueError(f'n_bytes must be a multiple of {block} up to '
+                         f'{warc["n_bytes"]}')
+    path = cache / f'{pin}.warc.gz'
+    have = d2l._verified_blocks(path, warc['block_sha256'], block,
+                                n_bytes // block)
+    if have * block < n_bytes:
+        if offline:
+            raise RuntimeError(
+                f'D2L_OFFLINE=1 and {path} holds {have} verified blocks of '
+                f'{n_bytes // block}: run once with network access, or fetch '
+                f'bytes 0-{n_bytes - 1} of {warc["url"]} into {path}')
+        d2l._fetch_blocks(warc, path, have, n_bytes // block)
+    return path
+
+NAIVE_BLOCK_TAGS = {'p', 'div', 'li', 'td', 'th', 'tr', 'pre', 'h1', 'h2',
+                    'h3', 'h4', 'h5', 'h6', 'section', 'article', 'main',
+                    'blockquote', 'ul', 'ol', 'table', 'header', 'footer',
+                    'nav', 'aside', 'form'}
+
+def naive_blocks(page):
+    """The text blocks of a page, split at block-level tags, as (text,
+    characters of link text) pairs; a <pre> block keeps its lines.
+    Comments, <head>, scripts and styles are removed first.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import html
+    page = re.sub(r'<!--.*?-->|<(head|script|style|noscript|template)\b'
+                  r'.*?</\1\s*>', ' ', page, flags=re.S | re.I)
+    blocks, parts, in_a, pre = [], [], 0, 0  # parts: (string, in a link)
+
+    def flush():
+        raw = ''.join(s for s, _ in parts)
+        text = ('\n'.join(l.rstrip() for l in raw.strip('\n').splitlines())
+                if pre else ' '.join(raw.split()))
+        links = sum(len(s.strip()) for s, link in parts if link)
+        if text:
+            blocks.append((text, min(links, len(text))))
+        parts.clear()
+
+    for m in re.finditer(r'<(/?)([A-Za-z][\w:-]*)[^>]*>|(<|[^<]+)', page):
+        close, tag, data = m.group(1), (m.group(2) or '').lower(), m.group(3)
+        if data is not None:
+            parts.append((html.unescape(data), in_a > 0))
+        elif tag in d2l.NAIVE_BLOCK_TAGS:
+            flush()  # a block tag, opening or closing, ends a block
+            pre = max(0, pre + (tag == 'pre') * (-1 if close else 1))
+        elif tag == 'a':
+            in_a = max(0, in_a + (-1 if close else 1))
+        elif tag == 'br':
+            parts.append(('\n', False))
+    flush()
+    return blocks
+
+def extract_text(html, method='trafilatura', url=None):
+    """The main text of a page, or None. 'naive': blocks with at least 40
+    characters of which at most a third is link text, plus their
+    neighbours within two blocks that have at least 15 characters and pass
+    the same link-density test; 'trafilatura' and 'resiliparse': the two
+    libraries' main-content extraction.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import logging
+    if method == 'naive':
+        blocks = d2l.naive_blocks(html)
+        dense = [len(t) >= 15 and l <= 0.33 * len(t) for t, l in blocks]
+        core = [i for i, (t, l) in enumerate(blocks)
+                if len(t) >= 40 and dense[i]]
+        keep = sorted({j for i in core for j in range(i - 2, i + 3)
+                       if 0 <= j < len(blocks) and dense[j]})
+        text = '\n'.join(blocks[j][0] for j in keep)
+    elif method == 'trafilatura':
+        import trafilatura
+        logging.getLogger('trafilatura').setLevel(logging.CRITICAL)
+        text = trafilatura.extract(html, url=url, include_tables=True,
+                                   favor_precision=False)
+    elif method == 'resiliparse':
+        from resiliparse.extract.html2text import extract_plain_text
+        text = extract_plain_text(html, main_content=True)
+    else:
+        raise ValueError(f'unknown method {method!r}')
+    return text if text and text.strip() else None
+
+NAIVE_FIXTURES = {  # name: (HTML, the naive extractor's expected output)
+    'article with sidebar': (
+        '<html><body><nav><a href="/">Home</a> <a href="/news">News</a> '
+        '<a href="/about">About us</a></nav><article><h1>Rain returns to '
+        'the valley</h1><p>After eleven dry months the first storm of the '
+        'season reached the valley on Tuesday night.</p><p>Farmers said '
+        'the rain came too late for the barley but in time for the '
+        'vines.</p></article><aside><ul><li><a href="/a">Most read: the '
+        'new bridge opens</a></li><li><a href="/b">Weather for the '
+        'weekend ahead</a></li></ul></aside></body></html>',
+        'Rain returns to the valley\nAfter eleven dry months the first '
+        'storm of the season reached the valley on Tuesday night.\nFarmers '
+        'said the rain came too late for the barley but in time for the '
+        'vines.'),
+    'forum': (
+        '<html><body><div class="post"><div class="user"><a href="/u/7">'
+        'mira_k</a></div><div class="msg">Has anyone managed to compile '
+        'the driver on the new kernel? It fails at the linking step for '
+        'me.</div></div><div class="post"><div class="user"><a href="/u/9">'
+        'ole</a></div><div class="msg">Yes, you need the headers package '
+        'for your exact kernel version, then rebuild.</div></div>'
+        '</body></html>',
+        'Has anyone managed to compile the driver on the new kernel? It '
+        'fails at the linking step for me.\nYes, you need the headers '
+        'package for your exact kernel version, then rebuild.'),
+    'table': (
+        '<html><body><p>Monthly rainfall at the station, in millimetres, '
+        'for the first quarter:</p><table><tr><th>Month</th><th>Rain</th>'
+        '</tr><tr><td>January</td><td>82</td></tr><tr><td>February</td>'
+        '<td>61</td></tr></table></body></html>',
+        'Monthly rainfall at the station, in millimetres, for the first '
+        'quarter:'),  # the cells are too short: the table is lost
+    'pre': (
+        '<html><body><p>The loop below sums the first hundred integers '
+        'and prints the result:</p><pre>total = 0\nfor i in range(100):\n'
+        '    total += i\nprint(total)</pre></body></html>',
+        'The loop below sums the first hundred integers and prints the '
+        'result:\ntotal = 0\nfor i in range(100):\n    total += i\n'
+        'print(total)'),
+    'empty': ('<html><head><title>x</title></head><body></body></html>',
+              None)}
+
+def structure_recall(html, text):
+    """Recall of a page's structural content in an extracted text: the
+    share of code lines, table cells and mathematics strings found in it,
+    the character-5-gram recall of the <p> text ('prose'), and a precision
+    proxy, the share of the text's characters on lines found in the page's
+    content elements. html is a page or its html_structure; a class absent
+    from the page gives None, and an empty text recalls nothing.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    s = html if isinstance(html, dict) else d2l.html_structure(html)
+    text = text or ''
+    flat, nows = d2l._ws(text), d2l._nows(text)
+    out = {}
+    out['code'] = (np.mean([l in flat for l in s['code']])
+                   if s['code'] else None)
+    for c in ('table', 'math'):
+        out[c] = np.mean([x in nows for x in s[c]]) if s[c] else None
+    grams = lambda t: {t[i:i + 5] for i in range(len(t) - 4)}
+    P = grams(s['prose'].replace('\n', ''))
+    out['prose'] = len(P & grams(nows)) / len(P) if P else None
+    lines = [d2l._nows(l) for l in text.splitlines()]
+    total = sum(map(len, lines))
+    out['precision'] = (sum(len(l) for l in lines if l in s['content'])
+                        / total if total else None)
+    return {k: (None if v is None else float(v)) for k, v in out.items()}
+
+_LID_MODEL = []  # the fastText model, loaded once per process
+
+def detect_lang(text, k=1):
+    """The top k (language, score) pairs of fastText's 176-language
+    identifier (lid.176.ftz) for a text; newlines become spaces first, as
+    fastText reads one line.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    if not d2l._LID_MODEL:
+        import fasttext
+        fasttext.FastText.eprint = lambda *args, **kwargs: None  # quiet load
+        d2l._LID_MODEL.append(fasttext.load_model(
+            str(d2l.download_keyed('lid.176.ftz'))))
+    labels, scores = d2l._LID_MODEL[0].predict(text.replace('\n', ' '), k=k)
+    return [(l.removeprefix('__label__'), min(float(s), 1.0))
+            for l, s in zip(labels, scores)]
+
+PII_PATTERNS = {
+    'email': re.compile(r'\b[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\.)+'
+                        r'[A-Za-z]{2,}\b'),
+    'ip': re.compile(r'(?<![\w.:])(?:(?:\d{1,3}\.){3}\d{1,3}|'
+                     r'(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|'
+                     r'(?:[0-9A-Fa-f]{1,4}:){1,6}:'
+                     r'(?:[0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})'
+                     r'(?![\w:]|\.\d)')}  # a sentence may end in a dot
+
+def scrub_pii(text):
+    """Replace email addresses by <EMAIL> and public IPv4 and IPv6
+    addresses by <IP> (an address must parse; private, loopback,
+    documentation and multicast ranges are kept); returns the text and
+    the counts.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import ipaddress
+    counts = {'email': 0, 'ip': 0}
+
+    def email(m):
+        counts['email'] += 1
+        return '<EMAIL>'
+
+    def ip(m):
+        try:
+            a = ipaddress.ip_address(m.group())
+            public = a.is_global and not a.is_multicast
+        except ValueError:
+            return m.group()
+        counts['ip'] += public
+        return '<IP>' if public else m.group()
+
+    text = d2l.PII_PATTERNS['email'].sub(email, text)
+    return d2l.PII_PATTERNS['ip'].sub(ip, text), counts
+
+PII_FIXTURE = [  # (string, kind it holds: 'email', 'ip' or None)
+    ('write to anna.berg@example.org for the slides', 'email'),
+    ('Contact: j.smith+news@mail.example.co.uk', 'email'),
+    ('send it to OPS@EXAMPLE.COM today', 'email'),
+    ('reach me at li_wei99@uni-example.edu.cn', 'email'),
+    ('Fragen an info@beispiel.de bitte', 'email'),
+    ('(maria.garcia@correo.example.es)', 'email'),
+    ('mailto:help-desk@example.net', 'email'),
+    ('cc: bob@sub.domain.example.io, alice@example.ai', 'email'),
+    ('Author: k.tanaka@example.jp', 'email'),
+    ('reply to noreply@notifications.example.com', 'email'),
+    ('email: first.last@company-example.com.', 'email'),
+    ('<a href="mailto:press@example.org">press</a>', 'email'),
+    ('orders: sales@shop.example.store', 'email'),
+    ('my address is pat_2001@example.travel', 'email'),
+    ('Ping x@example.dev if the build breaks', 'email'),
+    ('Webmaster - webmaster@example.museum', 'email'),
+    ('send CVs to jobs@example.careers', 'email'),
+    ('Report abuse: abuse@isp.example.net', 'email'),
+    ('questions -> q.and.a@forum.example.org', 'email'),
+    ('Kontakt: m.mueller@firma-beispiel.at', 'email'),
+    ('his email (tom.o@example.ie) was on the poster', 'email'),
+    ('chair: prof.chen@cs.example.edu', 'email'),
+    ('Email:support@example.com', 'email'),
+    ('a.b.c.d@example.co', 'email'),
+    ('Subscribe: list-request@lists.example.org', 'email'),
+    ('billing@example.biz handles refunds', 'email'),
+    ('user%host@example.com is an old relay form', 'email'),
+    ('Send photos to editor@news.example.com.au', 'email'),
+    ('Tel. 555-0100, mail: office@example.fr', 'email'),
+    ('Questions? Ask ivan.petrov@example.ru', 'email'),
+    ('server at 8.8.8.8 answered', 'ip'),
+    ('Client IP: 203.0.114.7', 'ip'),
+    ('ssh root@93.184.216.34', 'ip'),
+    ('blocked 45.33.32.156 after 5 tries', 'ip'),
+    ('origin=151.101.1.69;', 'ip'),
+    ('ping 1.1.1.1 -c 4', 'ip'),
+    ('from host 81.2.69.160 port 443', 'ip'),
+    ('X-Forwarded-For: 66.249.66.1', 'ip'),
+    ('the attack came from 185.220.101.4.', 'ip'),
+    ('[23.45.67.89]', 'ip'),
+    ('IP 104.16.132.229 resolved', 'ip'),
+    ('nameserver 9.9.9.9', 'ip'),
+    ('allowlist: 52.95.110.1', 'ip'),
+    ('log line 17.253.144.10 - - [26/Jan/2025]', 'ip'),
+    ('192.30.255.112 is listed', 'ip'),
+    ('visit http://200.147.67.142/index', 'ip'),
+    ('my VPS is 139.59.21.43', 'ip'),
+    ('peer: 77.88.55.60', 'ip'),
+    ('gateway (31.13.71.36)', 'ip'),
+    ('upstream 140.82.112.3', 'ip'),
+    ('AAAA 2a00:1450:4001:82a::200e', 'ip'),
+    ('v6: 2606:4700:4700::1111', 'ip'),
+    ('host 2620:fe::fe answers', 'ip'),
+    ('2a03:2880:f12f:83:face:b00c:0:25de', 'ip'),
+    ('from 2001:4860:4860::8888', 'ip'),
+    ('addr 2a01:4f8:c17:1234::1', 'ip'),
+    ('[2400:cb00:2048:1::c629:d7a2]', 'ip'),
+    ('client 2a02:6b8::2:242 connected', 'ip'),
+    ('route via 2600:1f18:6a3:4b00::12', 'ip'),
+    ('ns 2001:500:2f::f', 'ip'),
+    ('our router is at 192.168.1.1', None),
+    ('the cluster uses 10.0.0.0/8 internally', None),
+    ('localhost is 127.0.0.1', None),
+    ('documentation range 192.0.2.15', None),
+    ('link-local fe80::1ff:fe23:4567:890a', None),
+    ('test net 198.51.100.7', None),
+    ('private 172.16.254.3', None),
+    ('loopback ::1 only', None),
+    ('unique local fd12:3456:789a:1::1', None),
+    ('example 2001:db8::ff00:42:8329', None),
+    ('Upgrade to version 4.2.1.0 now', None),
+    ('Changelog for 1.2.3.4 (stable)', None),
+    ('build 5.15.0.91 of the kernel', None),
+    ('SNMP OID 1.3.6.1.4.1.2021', None),
+    ('section 3.4.1.2 of the standard', None),
+    ('ISBN 978-0-306-40615-7', None),
+    ('ISBN 0-306-40615-2 (paperback)', None),
+    ('phone +1 555 0100 222', None),
+    ('the score was 3.14.15.92 in the puzzle', None),
+    ('logo@2x.png in the assets folder', None),
+    ('icon@3x.webp for retina screens', None),
+    ('follow @d2l_ai for updates', None),
+    ('write to anna dot berg at example dot org', None),
+    ('the domain example.com hosts it', None),
+    ('price 1.299,00 EUR', None),
+    ('coordinates 52.5200, 13.4050', None),
+    ('date 2025.01.26', None),
+    ('time 13:54:02', None),
+    ('MAC 00:1A:2B:3C:4D:5E', None),
+    ('C++ uses std::vector<int>', None),
+    ('the ratio 16:9 screen', None),
+    ('PEP 8 says @decorator first', None),
+    ('the user name is root', None),
+    ('256.300.1.2 is not an address', None),
+    ('999.1.1.1 overflows', None),
+    ('vector 1:2:3 notation', None),
+    ('npm i pkg@1.2.3', None),
+    ('git@github.com:org/repo.git', None),
+    ('the hash a3f2:9c1e', None),
+    ('Bible verse John 3:16', None),
+    ('temperature 21.5 C', None),
+    ('a.b@c', None),
+    ('foo@bar', None),
+    ('10.10.10.10 on the lab switch', None),
+    ('the meeting is at 10.30', None),
+    ('patent US 7,654,321 B2', None),
+    ('IPv4 has 4.3 billion addresses', None),
+    ('the CIDR 0.0.0.0/0 means everything', None),
+    ('multicast 224.0.0.251 for mDNS', None),
+    ('broadcast 255.255.255.255', None),
+    ('shared address space 100.64.0.1', None),
+    ('benchmark range 198.18.0.1', None),
+    ('version v2.0.0.1-beta', None),
+    ('model 7.1.2.3 of the router firmware', None),
+    ('ISSN 0317-8471', None),
+    ('the regex \\d+@\\w+', None),
+    ('emoji :smile: in chat', None),
+    ('call 0800 123 4567 for help', None),
+    ('IBAN DE89 3704 0044 0532 0130 00', None),
+    ('ISBN-13 978.3.16.148410.0', None)]
+
+Doc = collections.namedtuple(
+    'Doc', 'id url date text lang lang_score src log flags')
+
+def write_docs(path, docs):
+    """Write documents (Doc or dicts with Doc's fields) as gzip-compressed
+    JSON lines, keys sorted and no time stamp in the gzip header, so equal
+    documents give equal bytes.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    with open(path, 'wb') as raw, gzip.GzipFile(
+            filename='', mode='wb', fileobj=raw, mtime=0) as f:
+        for d in docs:
+            row = d._asdict() if hasattr(d, '_asdict') else dict(d)
+            f.write((json.dumps(row, ensure_ascii=False, sort_keys=True)
+                     + '\n').encode('utf-8'))
+
+def read_docs(path):
+    """The documents of a file written by write_docs, as a list of Doc
+    (fields missing from a row are None).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        rows = [json.loads(line) for line in f]
+    return [d2l.Doc(**{k: r.get(k) for k in d2l.Doc._fields}) for r in rows]
+
+def docs_hash(docs):
+    """SHA-256 over the sorted (id, SHA-256 of the text) pairs: the content
+    of a document set, independent of its order. Takes Doc-like objects,
+    dicts or (id, text) pairs.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    def pair(d):
+        if isinstance(d, dict):
+            return d['id'], d['text']
+        if hasattr(d, 'text'):
+            return d.id, d.text
+        return d[0], d[1]
+    keys = sorted((str(i), hashlib.sha256((t or '').encode('utf-8'))
+                   .hexdigest()) for i, t in map(pair, docs))
+    h = hashlib.sha256()
+    for i, t in keys:
+        h.update(f'{i}\t{t}\n'.encode('utf-8'))
+    return h.hexdigest()
+
+class CorpusManifest:
+    """The provenance of a corpus (schema d2l-corpus/1): its sources, the
+    stages that turned them into documents, and, once tokenized, the
+    tokenizer, the shard format and the splits. Each stage satisfies
+    n_in == n_out + sum(drops), a document being charged to the first rule
+    that drops it. The canonical JSON has sorted keys, no spaces, floats
+    rounded to 4 decimals and no absolute paths; sha256() hashes it.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    SCHEMA = 'd2l-corpus/1'
+
+    def __init__(self, name, sources=None, stages=None, tokenizer=None,
+                 format=None, splits=None):
+        self.name, self.tokenizer, self.format = name, tokenizer, format
+        self.sources, self.stages = list(sources or []), list(stages or [])
+        self.splits = splits
+
+    def add_source(self, id, uri, revision=None, license=None, n_docs=None,
+                   bytes=None, **extra):
+        self.sources.append(dict(id=id, uri=uri, revision=revision,
+                                 license=license, n_docs=n_docs,
+                                 bytes=bytes, **extra))
+        return self
+
+    def add_stage(self, name, params, n_in, n_out, drops, in_hash, out_hash,
+                  *, impl=None, version=None, tokens_out=None):
+        drops = {str(k): int(v) for k, v in (drops or {}).items()}
+        if n_in != n_out + sum(drops.values()):
+            raise ValueError(f'stage {name}: n_in {n_in} != n_out {n_out} '
+                             f'+ drops {sum(drops.values())}')
+        self.stages.append(dict(
+            name=name, impl=impl, version=version, params=params,
+            n_in=int(n_in), n_out=int(n_out), tokens_out=tokens_out,
+            drops=drops, in_hash=in_hash, out_hash=out_hash))
+        return self
+
+    def to_dict(self):
+        return dict(schema=self.SCHEMA, name=self.name, sources=self.sources,
+                    stages=self.stages, tokenizer=self.tokenizer,
+                    format=self.format, splits=self.splits)
+
+    def canonical_json(self):
+        def clean(x, where):
+            if isinstance(x, float):
+                if x != x or x in (float('inf'), float('-inf')):
+                    raise ValueError(f'{where}: {x} has no JSON form')
+                return round(x, 4)
+            if isinstance(x, (np.integer, np.floating, np.bool_)):
+                return clean(x.item(), where)
+            if isinstance(x, str) and (x.startswith('/') or
+                                       re.match(r'[A-Za-z]:\\', x)):
+                raise ValueError(f'{where}: absolute path {x!r}')
+            if isinstance(x, dict):
+                return {str(k): clean(v, f'{where}.{k}')
+                        for k, v in x.items()}
+            if isinstance(x, (list, tuple)):
+                return [clean(v, f'{where}[{i}]') for i, v in enumerate(x)]
+            return x
+        return json.dumps(clean(self.to_dict(), 'manifest'), sort_keys=True,
+                          separators=(',', ':'), ensure_ascii=False)
+
+    def sha256(self):
+        return hashlib.sha256(self.canonical_json().encode('utf-8')
+                              ).hexdigest()
+
+    def save(self, path):
+        """Write the canonical JSON, so the file's SHA-256 is sha256()."""
+        with open(path, 'wb') as f:
+            f.write(self.canonical_json().encode('utf-8'))
+        return path
+
+    @classmethod
+    def load(cls, path):
+        with open(path, encoding='utf-8') as f:
+            d = json.load(f)
+        if d.get('schema') != cls.SCHEMA:
+            raise ValueError(f'{path}: schema {d.get("schema")!r}, '
+                             f'expected {cls.SCHEMA}')
+        return cls(d['name'], d.get('sources'), d.get('stages'),
+                   d.get('tokenizer'), d.get('format'), d.get('splits'))
+
+    def to_card(self):
+        """A Markdown dataset card generated from the manifest alone."""
+        lines = [f'# Dataset card: {self.name}', '',
+                 f'Schema `{self.SCHEMA}`, manifest SHA-256 '
+                 f'`{self.sha256()[:16]}…`.', '', '## Sources', '',
+                 '| id | uri | revision | license | documents | bytes |',
+                 '|---|---|---|---|---|---|']
+        for s in self.sources:
+            lines.append('| ' + ' | '.join(str(s.get(k, '')) for k in (
+                'id', 'uri', 'revision', 'license', 'n_docs', 'bytes')) + ' |')
+        lines += ['', '## Processing stages', '',
+                  '| stage | implementation | in | out | dropped (reason: count) |',
+                  '|---|---|---|---|---|']
+        for s in self.stages:
+            impl = ' '.join(str(v) for v in (s.get('impl'), s.get('version'))
+                            if v)
+            drops = ', '.join(f'{k}: {v}' for k, v in s['drops'].items()
+                              ) or '—'
+            lines.append(f'| {s["name"]} | {impl or "—"} | {s["n_in"]} | '
+                         f'{s["n_out"]} | {drops} |')
+        if self.tokenizer:
+            lines += ['', '## Tokenizer', '', '```',
+                      json.dumps(self.tokenizer, sort_keys=True), '```']
+        if self.format:
+            lines += ['', '## Format', '', '```',
+                      json.dumps(self.format, sort_keys=True), '```']
+        if self.splits:
+            lines += ['', '## Splits', '', '| split | documents | tokens | shards |',
+                      '|---|---|---|---|']
+            for k, v in sorted(self.splits.items()):
+                lines.append(f'| {k} | {v.get("n_docs")} | {v.get("n_tokens")}'
+                             f' | {len(v.get("shards", []))} |')
+        return '\n'.join(lines) + '\n'
+
+def rebuild_c0(manifest='lm-c0-docs-v1', warc_path=None, *, cache_dir=None,
+               workers=None):
+    """Rebuild the c0 documents from their manifest rows (a DATA_HUB key or
+    a path): each record is read from the verified WARC range by offset
+    and length and passed through the recorded stages again. A document is
+    kept only if its text hashes to the recorded text_sha256; the others
+    are listed in .mismatches (extractor drift), never kept. The texts are
+    written to cache_dir (default ../data/lm/c0), never uploaded.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import concurrent.futures
+    import multiprocessing
+    import pathlib
+    path = (d2l.download_keyed(manifest) if manifest in d2l.DATA_HUB
+            else manifest)
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        rows = [json.loads(line) for line in f]
+    warc_path = str(warc_path or d2l.fetch_warc_range())
+    d2l.download_keyed('lid.176.ftz')  # once, before the workers
+    with concurrent.futures.ProcessPoolExecutor(
+            workers or min(8, os.cpu_count()),
+            mp_context=multiprocessing.get_context('spawn')) as ex:
+        outs = list(ex.map(d2l._c0_rebuild_one,
+                           [(warc_path, r) for r in rows], chunksize=200))
+    docs = d2l.DocList()
+    docs.mismatches = []
+    for row, out in zip(rows, outs):
+        got = out['row']
+        if out['drop'] or got['text_sha256'] != row['text_sha256']:
+            docs.mismatches.append(dict(
+                id=row['id'], drop=out['drop'], recorded=row['text_sha256'],
+                rebuilt=got['text_sha256'],
+                versions=(row['extractor_version'],
+                          got['extractor_version'])))
+        else:
+            docs.append(d2l.Doc(row['id'], row['url'], row['date'],
+                                out['text'], row['lang'], row['lang_score'],
+                                row['src'], row['log'], None))
+    cache = pathlib.Path(cache_dir or os.path.join('..', 'data', 'lm', 'c0'))
+    cache.mkdir(parents=True, exist_ok=True)
+    d2l.write_docs(cache / 'c0-docs.jsonl.gz', docs)
+    return docs
+
+d2l.DATA_HUB['lm-data-audit-stream-v1'] = (  # FineWeb text, ODC-By: the
+    # audit stream, six FineWeb-2 slices, same-host documents (20.3);
+    # tools/build_lm_data_sources.py audit-stream
+    d2l.LM_DATA_URL + 'lm-data-audit-stream-v1.parquet',
+    '231fc997824464048a579b133d235f6103dbf957')
+d2l.DATA_HUB['lm-edu-annot-22k-v1'] = (  # FineWeb text, ODC-By: 22,000
+    # documents with Llama-3-70B's and Qwen3.8-27B's scores (20.2)
+    d2l.LM_DATA_URL + 'lm-edu-annot-22k-v1.parquet',
+    '4a1c7d61d13569c381eacf0421c9be071c06b201')
+d2l.DATA_HUB['lm-data-emb-qwen3emb-v1'] = (  # embeddings and released
+    # classifier scores of the annotations and the stream (20.2)
+    d2l.LM_DATA_URL + 'lm-data-emb-qwen3emb-v1.npz',
+    'dbd67d20099a04c590c1cfaaa7f19a9ea2256550')
+d2l.DATA_HUB['lm-data-quality-results-v1'] = (  # 20.2's numbers
+    d2l.LM_DATA_URL + 'lm-data-quality-results-v1.json',
+    'e7bb769dcf59c793d5a45b586fa4fcd7c798bef2')
+d2l.DATA_HUB['lm-quality-head-v1'] = (  # the regression head (20.2)
+    d2l.LM_DATA_URL + 'lm-quality-head-v1.npz',
+    '4f646fc8adb2503267b2904ecdff2521604e06fd')
+d2l.DATA_HUB['lm-c1-docs-v1'] = (  # c0 ids with rule codes and edu_score,
+    # no text (20.2)
+    d2l.LM_DATA_URL + 'lm-c1-docs-v1.jsonl.gz',
+    'd820ecb7bebfbcc9ca5e88e4e7f9edca8a4432de')
+d2l.DATA_HUB['lm-data-removal-labels-v1'] = (  # Qwen3.8-27B's keep or drop
+    # on 200 removed stream documents, ids and rationales (20.2)
+    d2l.LM_DATA_URL + 'lm-data-removal-labels-v1.jsonl',
+    '5d9dcdb686c6747538cbd512f2e1dfb881805f1c')
+
+GOPHER_CFG = {  # reason code: thresholds, in the order FineWeb applies them
+    # Gopher repetition (Rae et al., 2021, Table A1)
+    'gopher_dup_text': dict(para=0.3, para_chars=0.2, line=0.3,
+                            line_chars=0.2),
+    'gopher_top_ngram': dict(top={2: 0.2, 3: 0.18, 4: 0.16}),
+    'gopher_dup_ngram': dict(dup={5: 0.15, 6: 0.14, 7: 0.13, 8: 0.12,
+                                  9: 0.11, 10: 0.10}),
+    # Gopher quality
+    'gopher_words': dict(min=50, max=100_000),  # words with a letter or digit
+    'gopher_word_len': dict(min=3, max=10),     # their mean length
+    'gopher_symbols': dict(max=0.1),     # '#' or ellipses per token
+    'gopher_bullets': dict(max=0.9),     # lines starting with a bullet
+    'gopher_ellipsis': dict(max=0.3),    # lines ending with an ellipsis
+    'gopher_alpha': dict(min=0.8),       # tokens with a letter
+    'gopher_stop_words': dict(min=2, words=('the', 'be', 'to', 'of', 'and',
+                                            'that', 'have', 'with')),
+    # C4 (Raffel et al., 2020) as FineWeb ran it: no line-punctuation rule
+    'c4_quality': dict(min_sentences=5, min_line_words=3, max_word_len=1000),
+    # FineWeb's own rules (Penedo et al., 2024; datatrove 0.10.1 values)
+    'fw_line_punct': dict(min=0.12),     # lines ending in . ! ? (and CJK)
+    'fw_short_lines': dict(max=0.67, chars=30),
+    'fw_dup_chars': dict(max=0.01),      # characters in repeated lines
+    'fw_list_ratio': dict(max=0.3)}      # newlines per token
+
+def heuristic_filters(text, cfg=None):
+    """The reason codes of the rules in cfg (default GOPHER_CFG) that fire
+    on text, in cfg's order; an empty list keeps the document. Thresholds
+    and their direction follow datatrove's filters; words are word and
+    punctuation tokens (d2l._rule_words), so an unspaced script has few,
+    very long words.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    cfg = d2l.GOPHER_CFG if cfg is None else cfg
+    words = d2l._rule_words(text)
+    alnum = [w for w in words if not d2l._rule_is_symbol(w)]
+    n_tok, n_chr = max(len(words), 1), max(len(text), 1)
+    all_lines = text.splitlines() or ['']
+    lines = [l for l in text.split('\n') if l.strip()] or ['']
+    paras = re.split(r'\n{2,}', text.strip())
+    breaks = re.split(r'\n+', text)
+    stops = lambda c: len(set(words) & set(c['words']))
+    checks = {
+        'gopher_dup_text': lambda c: (
+            d2l._rule_dups(paras)[0] / len(paras) > c['para'] or
+            d2l._rule_dups(paras)[1] / n_chr > c['para_chars'] or
+            d2l._rule_dups(breaks)[0] / len(breaks) > c['line'] or
+            d2l._rule_dups(breaks)[1] / n_chr > c['line_chars']),
+        'gopher_top_ngram': lambda c: any(
+            d2l._rule_top_ngram(words, n) / n_chr > f
+            for n, f in c['top'].items()),
+        'gopher_dup_ngram': lambda c: any(
+            d2l._rule_dup_ngram(words, n) / n_chr > f
+            for n, f in c['dup'].items()),
+        'gopher_words': lambda c: not c['min'] <= len(alnum) <= c['max'],
+        'gopher_word_len': lambda c: bool(alnum) and not (
+            c['min'] <= np.mean([len(w) for w in alnum]) <= c['max']),
+        'gopher_symbols': lambda c: max(
+            text.count('#'), text.count('...') + text.count('…')
+        ) / n_tok > c['max'],
+        'gopher_bullets': lambda c: np.mean([
+            l.lstrip().startswith(('•', '-')) for l in all_lines]) > c['max'],
+        'gopher_ellipsis': lambda c: np.mean([
+            l.rstrip().endswith(('...', '…')) for l in all_lines]) > c['max'],
+        'gopher_alpha': lambda c: np.mean([
+            any(ch.isalpha() for ch in w) for w in words or ['']]) < c['min'],
+        'gopher_stop_words': lambda c: stops(c) < c['min'],
+        'c4_quality': lambda c: d2l._rule_c4(text, c),
+        'fw_line_punct': lambda c: np.mean([
+            l.endswith(d2l._TERMINAL_PUNCT) for l in lines]) < c['min'],
+        'fw_short_lines': lambda c: np.mean([
+            len(l) <= c['chars'] for l in lines]) > c['max'],
+        'fw_dup_chars': lambda c: d2l._rule_dups(lines)[1] / max(
+            len(text.replace('\n', '')), 1) > c['max'],
+        'fw_list_ratio': lambda c: text.count('\n') / n_tok > c['max']}
+    return [code for code, c in cfg.items() if checks[code](c)]
+
+_FIXTURE_BASE = (  # a plain paragraph that every rule keeps
+    'The river rises in the hills to the north and flows south through '
+    'the valley for about forty kilometres.\nFarmers along its banks have '
+    'used the water to irrigate their fields of wheat and barley for '
+    'centuries.\nIn spring the snow melts and the river floods the low '
+    'meadows, which is why the old villages stand on higher ground.\nToday '
+    'a small dam near the town holds back some of that water, and the lake '
+    'behind it is popular with anglers and families with children.\nThe '
+    'local museum has a fine exhibition that explains how the valley '
+    'changed over the last two hundred years.')
+
+QUALITY_FIXTURES = {  # reason code: a document that fires exactly that code
+    'keep': _FIXTURE_BASE,
+    'gopher_dup_text': '\n\n*\n\n'.join(_FIXTURE_BASE.split('\n')),
+    'gopher_top_ngram': _FIXTURE_BASE.replace(
+        'about forty kilometres.', 'about forty kilometres. ' +
+        'cheap flights cheap flights cheap flights cheap flights '
+        'cheap flights to the coast.'),
+    'gopher_dup_ngram': _FIXTURE_BASE.replace(
+        'centuries.', 'centuries. ' + ' '.join(
+            ['Each autumn they store the grain in wooden barns near the '
+             'mill.'] * 4)),
+    'gopher_words': (
+        'Rain fell on the hills overnight.\nThe river rose by morning.\n'
+        'Farmers moved their sheep uphill.\nSchools stayed open as usual.\nBy '
+        'noon the water began to drop.'),
+    'gopher_word_len': (
+        'Telecommunications infrastructure modernization necessitates '
+        'comprehensive interdisciplinary collaboration.\nInternationalization '
+        'requirements complicate straightforward implementation strategies '
+        'considerably.\nSophisticated electromechanical instrumentation '
+        'guarantees extraordinarily reproducible measurements.\nUnprecedented '
+        'computational capabilities revolutionized pharmaceutical development '
+        'methodologies.\nEnvironmental sustainability considerations '
+        'increasingly influence architectural decisionmaking.\nParliamentary '
+        'representatives overwhelmingly supported comprehensive '
+        'transportation legislation.\nMicroelectronics manufacturers '
+        'anticipate extraordinary semiconductor shortages throughout '
+        'Southeast Asia.\nThe '
+        'characteristically understated documentation and the '
+        'multidisciplinary acknowledgements impressed reviewers.'),
+    'gopher_symbols': _FIXTURE_BASE.replace(
+        'centuries.', 'centuries. ' + ' '.join(
+            '#' + t for t in ('farm wheat barley water valley river spring '
+                              'snow flood dam lake museum anglers families '
+                              'meadows villages hills history fishing').split()
+        ) + '.'),
+    'gopher_bullets': '\n'.join(
+        '- ' + s.strip() + '.' for s in _FIXTURE_BASE.split('.') if s.strip()),
+    'gopher_ellipsis': _FIXTURE_BASE.replace('.\n', ' and more...\n'),
+    'gopher_alpha': _FIXTURE_BASE.replace(
+        'centuries.', 'centuries. Yearly yields were ' +
+        ' '.join(str(v) for v in range(1903, 1990, 2)) + '.'),
+    'gopher_stop_words': (
+        'Fresh bread comes out from our ovens every morning at six.\nOur '
+        'bakers use stone mills for whole grain rye flour.\nCustomers love '
+        'almond croissants filled from pastry cream made in house.\nWe bake '
+        'wedding cakes for small or large parties on request.\nGluten free '
+        'loaves are available on Fridays at both shops.\nGift vouchers make '
+        'great presents for friends who enjoy good food.\nPlease ask staff '
+        'about seasonal specials before you order online.'),
+    'c4_quality': _FIXTURE_BASE.replace(
+        'centuries.', 'centuries. Lorem ipsum dolor sit amet, consectetur.'),
+    'fw_line_punct': _FIXTURE_BASE.replace('.\n', '\n').replace(
+        'years.', 'years'),
+    'fw_short_lines': (
+        'The river rises in the hills\nto the north and flows south\nthrough '
+        'the valley for about\nforty kilometres.\nFarmers along its banks '
+        'have\nused the water to irrigate\ntheir fields of wheat and\nbarley '
+        'for centuries.\nIn spring the snow melts and\nthe river floods the '
+        'low\nmeadows, which is why the\nold villages stand on higher\n'
+        'ground.\nToday a small dam near the\ntown holds back some of that\n'
+        'water, and the lake behind\nit is popular with anglers\nand '
+        'families with children.\nThe local museum has a fine\nexhibition '
+        'that explains how\nthe valley changed over the\nlast two hundred '
+        'years.'),
+    'fw_dup_chars': _FIXTURE_BASE + '\nRead more about the valley.\n'
+                    'Read more about the valley.',
+    'fw_list_ratio': (
+        'Blacksmiths tapestries fishermen\nOld town\nCathedrals architects '
+        'musicians\nWaterfalls farmhouses sculptors\nNew bridge\nCarpenters '
+        'woodcarvers gardeners\nStorytellers travellers lanterns.\nQuiet '
+        'lanes\nMonasteries shepherdess chestnuts\nInnkeepers fishermen '
+        'surveyors\nRiver mills\nTapestries musicians engineers\nArchitects '
+        'sculptors vineyards\nStone walls\nFarmhouses gardeners orchards.\n'
+        'Woodcarvers lanterns pilgrims\nOver the hills and\nTravellers '
+        'chestnuts blacksmiths\nShepherdess surveyors cathedrals\nGreen '
+        'fields\nFishermen engineers waterfalls\nMusicians vineyards '
+        'carpenters.\nBright mornings\nSculptors orchards storytellers\n'
+        'Gardeners pilgrims monasteries\nCold winters\nLanterns blacksmiths '
+        'innkeepers\nChestnuts cathedrals tapestries\nLong summers\nSurveyors '
+        'waterfalls architects.')}
+
+EDU_RUBRIC = (  # the released annotation prompt (HuggingFaceFW/fineweb-edu-
+    # llama3-annotations, ODC-By); the extract is the text's first 1,500
+    # characters (the released prompts hold such a cut)
+    'Below is an extract from a web page. Evaluate whether the page has a '
+    'high educational value and could be useful in an educational setting '
+    'for teaching from primary school to grade school levels using the '
+    'additive 5-point scoring system described below. Points are '
+    'accumulated based on the satisfaction of each criterion:\n\n'
+    '- Add 1 point if the extract provides some basic information relevant '
+    'to educational topics, even if it includes some irrelevant or '
+    'non-academic content like advertisements and promotional material.\n'
+    '- Add another point if the extract addresses certain elements '
+    'pertinent to education but does not align closely with educational '
+    'standards. It might mix educational content with non-educational '
+    'material, offering a superficial overview of potentially useful '
+    'topics, or presenting information in a disorganized manner and '
+    'incoherent writing style.\n'
+    '- Award a third point if the extract is appropriate for educational '
+    'use and introduces key concepts relevant to school curricula. It is '
+    'coherent though it may not be comprehensive or could include some '
+    'extraneous information. It may resemble an introductory section of a '
+    'textbook or a basic tutorial that is suitable for learning but has '
+    'notable limitations like treating concepts that are too complex for '
+    'grade school students. \n'
+    '- Grant a fourth point if the extract highly relevant and beneficial '
+    'for educational purposes for a level not higher than grade school, '
+    'exhibiting a clear and consistent writing style. It could be similar '
+    'to a chapter from a textbook or a tutorial, offering substantial '
+    'educational content, including exercises and solutions, with minimal '
+    'irrelevant information, and the concepts aren\'t too advanced for '
+    'grade school students. The content is coherent, focused, and valuable '
+    'for structured learning.\n'
+    '- Bestow a fifth point if the extract is outstanding in its '
+    'educational value, perfectly suited for teaching either at primary '
+    'school or grade school. It follows detailed reasoning, the writing '
+    'style is easy to follow and offers profound and thorough insights '
+    'into the subject matter, devoid of any non-educational or complex '
+    'content.\n\nThe extract:\n{extract}\n\nAfter examining the extract: \n'
+    '- Briefly justify your total score, up to 100 words.\n'
+    '- Conclude with the score using the format: “Educational score:  '
+    '<total points>”\n\nRemember to assess from the AI Assistant '
+    'perspective, utilizing web search knowledge as necessary. To evaluate '
+    'the response in alignment with this additive scoring model, we’ll '
+    'systematically attribute points based on the outlined criteria.')
+
+def edu_label_scores(model, tokenizer, prompts, batch_size=16, *,
+                     max_batch_tokens=24_576, prefix='Educational score: ',
+                     extra_space=False):
+    """(len(prompts), 6) float64: the probabilities of the next tokens
+    '0' ... '5' after each prompt as a user turn of the chat template
+    (non-thinking), the assistant's answer started with prefix. Prompts are
+    sorted by length and left-padded into batches of at most batch_size
+    rows and max_batch_tokens tokens with padding (a longer prompt runs
+    alone); only the last position's logits are computed; rows come back
+    in input order. The prompt is tokenized as if the digit followed the
+    prefix, so a prefix ending in spaces splits as in the model's own text.
+    With extra_space, the probability of digit d also counts the answers
+    that write one more space first: p(d) + p(space) p(d | space). The six
+    probabilities need not sum to one: the rest is what the model puts on
+    other tokens.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    ids, digits, space = d2l._edu_label_ids(tokenizer, prompts, prefix,
+                                            extra_space)
+    want = digits + ([space] if extra_space else [])
+    pad = tokenizer.pad_token_id
+    pad = tokenizer.eos_token_id if pad is None else pad
+    device = next(model.parameters()).device
+
+    def last_probs(ids):
+        out = np.empty((len(ids), len(want)))
+        for b in d2l._edu_batches([len(r) for r in ids], batch_size,
+                                  max_batch_tokens):
+            T = len(ids[b[0]])
+            X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i] for i in b],
+                             device=device)
+            mask = torch.tensor([[0] * (T - len(ids[i])) + [1] * len(ids[i])
+                                 for i in b], device=device)
+            pos = (mask.cumsum(-1) - 1).clamp(min=0)
+            with torch.inference_mode():
+                z = model(input_ids=X, attention_mask=mask, position_ids=pos,
+                          use_cache=False, logits_to_keep=1).logits[:, -1]
+                out[b] = z.float().log_softmax(-1)[:, want].exp().cpu().numpy()
+        return out
+
+    P = last_probs(ids)
+    if not extra_space:
+        return P
+    Q = last_probs([x + [space] for x in ids])
+    return P[:, :6] + P[:, 6:7] * Q[:, :6]
+
+def embed_docs(texts, model_id='Qwen/Qwen3-Embedding-0.6B', max_len=512,
+               batch=64, pool='last', device=None):
+    """(len(texts), d) float16 unit vectors of documents under a frozen
+    embedder, in input order: d2l.load_encoder and d2l.embed_texts with
+    the model's padding side (left for last-token pooling), the first
+    max_len tokens, batches of similar length; bf16 on a GPU, fp32 on the
+    CPU.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+    side = d2l._EMBEDDERS.get(model_id, {}).get(
+        'padding_side', 'left' if pool == 'last' else 'right')
+    model, tok = d2l.load_encoder(
+        model_id, dtype=torch.bfloat16 if device == 'cuda' else torch.float32,
+        device=device, padding_side=side)
+    Z = d2l.embed_texts(model, tok, list(texts), pooling=pool,
+                        batch_size=batch, max_len=max_len, padding_side=side)
+    del model
+    d2l.lm_free()
+    return Z.numpy().astype(np.float16)
+
+def fit_quality_head(X, y, kind='regression', epochs=200, lr=1e-3,
+                     weight_decay=0.0, seed=0):
+    """A linear head on fixed features, full-batch AdamW: kind='regression'
+    fits the score by squared error, kind='logistic' a 0/1 label by
+    logistic loss. Starts at zero weights and the best constant; returns
+    the nn.Linear and the loss per epoch.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    if kind not in ('regression', 'logistic'):
+        raise ValueError(f'kind is regression or logistic, not {kind!r}')
+    torch.manual_seed(seed)
+    X = torch.as_tensor(np.array(X, dtype=np.float32))
+    y = torch.as_tensor(np.array(y, dtype=np.float32))
+    head = nn.Linear(X.shape[1], 1)
+    with torch.no_grad():
+        head.weight.zero_()
+        m = y.mean()
+        head.bias.fill_(m if kind == 'regression' else
+                        torch.logit(m.clamp(1e-6, 1 - 1e-6)))
+    loss_fn = (nn.MSELoss() if kind == 'regression'
+               else nn.BCEWithLogitsLoss())
+    opt = torch.optim.AdamW(head.parameters(), lr=lr,
+                            weight_decay=weight_decay)
+    losses = []
+    for _ in range(epochs):
+        opt.zero_grad()
+        loss = loss_fn(head(X)[:, 0], y)
+        loss.backward()
+        opt.step()
+        losses.append(loss.item())
+    return head, losses
+
+class HashedBagClassifier(nn.Module):
+    """fastText's classifier: word n-grams of the lower-cased,
+    whitespace-split text, hashed into num_buckets rows (zlib.crc32) of an
+    embedding table, averaged, and mapped to num_outputs logits.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    def __init__(self, num_buckets=2**20, dim=64, ngrams=(1, 2),
+                 num_outputs=1):
+        super().__init__()
+        self.num_buckets, self.ngrams = num_buckets, tuple(ngrams)
+        self.bag = nn.EmbeddingBag(num_buckets, dim, mode='mean',
+                                   sparse=True)
+        self.out = nn.Linear(dim, num_outputs)
+        nn.init.uniform_(self.bag.weight, -1 / dim, 1 / dim)  # as fastText
+        nn.init.zeros_(self.out.weight)
+        nn.init.zeros_(self.out.bias)
+
+    def hash_ids(self, text):
+        import zlib
+        w = text.lower().split()
+        return [zlib.crc32(' '.join(w[i:i + n]).encode('utf-8'))
+                % self.num_buckets for n in self.ngrams
+                for i in range(len(w) - n + 1)]
+
+    def featurize(self, texts):
+        """(ids, offsets) of a batch of texts for nn.EmbeddingBag."""
+        ids = [self.hash_ids(t) for t in texts]
+        offsets = np.cumsum([0] + [len(x) for x in ids[:-1]])
+        return (torch.tensor([i for x in ids for i in x], dtype=torch.long),
+                torch.tensor(offsets, dtype=torch.long))
+
+    def forward(self, ids, offsets):
+        return self.out(self.bag(ids, offsets))
+
+def audit_removals(df, keep, by, ref=None, n_boot=2000, cluster=None,
+                   seed=0):
+    """Removal rate per group of df[by] with a 95% percentile bootstrap
+    interval, resampling whole clusters (df[cluster], e.g. the registered
+    domain; each row its own cluster if None) within each group; with ref,
+    the difference of each group's rate to ref's and its interval. keep is
+    a boolean array or a column name. Groups with fewer than 100 rows or
+    10 clusters are marked too_few.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    removed = ~np.asarray(df[keep] if isinstance(keep, str) else keep,
+                          dtype=bool)
+    groups = df[by].to_numpy()
+    clusters = (df[cluster].to_numpy() if cluster is not None
+                else np.arange(len(df)))
+    rng, reps, rows = np.random.default_rng(seed), {}, []
+    for g in sorted(set(groups)):
+        m = groups == g
+        cl = pd.factorize(clusters[m])[0]
+        G = cl.max() + 1
+        r = np.bincount(cl, removed[m], G)
+        n = np.bincount(cl, minlength=G)
+        draws = rng.integers(G, size=(n_boot, G))
+        reps[g] = r[draws].sum(1) / n[draws].sum(1)
+        lo, hi = np.quantile(reps[g], [0.025, 0.975])
+        rows.append(dict(group=g, n=int(m.sum()), n_clusters=int(G),
+                         removal=r.sum() / n.sum(), lo=lo, hi=hi))
+    out = pd.DataFrame(rows)
+    if ref is not None:
+        base = out.set_index('group').removal[ref]
+        out['diff'] = out.removal - base
+        d = np.array([np.quantile(reps[g] - reps[ref], [0.025, 0.975])
+                      for g in out.group])
+        out['diff_lo'], out['diff_hi'] = d[:, 0], d[:, 1]
+    out['too_few'] = (out.n < 100) | (out.n_clusters < 10)
+    return out
+
+d2l.DATA_HUB['lm-contam-plant-v1'] = (  # 100 GSM8K, ARC-Challenge and
+    # MMLU test items each, verbatim, reformatted and paraphrased by
+    # Qwen3.5-4B, with FineWeb ids and offsets (20.3); MIT, CC BY-SA 4.0
+    d2l.LM_DATA_URL + 'lm-contam-plant-v1.jsonl',
+    '54e171c603a7133729715881267efb4e2f35a503')
+d2l.DATA_HUB['lm-dedup-pairs-v1'] = (  # 12,000 labelled pairs as ids and
+    # edit parameters, no text (20.3)
+    d2l.LM_DATA_URL + 'lm-dedup-pairs-v1.jsonl.gz',
+    '366ff9d4242d86faffa6796c1af130cb022c8860')
+d2l.DATA_HUB['lm-data-dedup-emb-v1'] = (  # Qwen3-Embedding vectors of the
+    # benchmark items and of 128-word windows of FineWeb documents (20.3)
+    d2l.LM_DATA_URL + 'lm-data-dedup-emb-v1.npz',
+    'a1d73933ad4fa3a34b53427802c003962d2c0532')
+d2l.DATA_HUB['lm-c2-docs-v1'] = (  # keep or drop, stage and reason for
+    # every c0 document, no text (20.3)
+    d2l.LM_DATA_URL + 'lm-c2-docs-v1.jsonl.gz',
+    '9bb87a9e2572038a42f64fcd921ab8661f26b0d4')
+d2l.DATA_HUB['lm-corpus-manifest-v1'] = (  # the nine-stage manifest of
+    # lm-corpus-v1 (20.3)
+    d2l.LM_DATA_URL + 'lm-corpus-manifest-v1.json',
+    '4c2ff314b12af6863aadf776801939e2853637e2')
+d2l.DATA_HUB['lm-data-dedup-results-v1'] = (  # 20.3's numbers
+    d2l.LM_DATA_URL + 'lm-data-dedup-results-v1.json',
+    '90e8d6b236630aad59762b8d13824acf35492f5d')
+
+def shingles(text, n=5):
+    """The word n-grams of text as strings (the MinHash specification):
+    NFC, lowercase, the regex \\w+ tokens, n consecutive tokens joined by
+    one space. Empty if text has fewer than n words.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import unicodedata
+    import regex
+    words = regex.findall(r'\w+', unicodedata.normalize('NFC', text).lower())
+    return [' '.join(words[i:i + n]) for i in range(len(words) - n + 1)]
+
+def jaccard_exact(a, b):
+    """The resemblance |A & B| / |A | B| of two shingle collections taken
+    as sets; 0 if both are empty.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    a = a if isinstance(a, (set, frozenset)) else set(a)
+    b = b if isinstance(b, (set, frozenset)) else set(b)
+    inter = len(a & b)
+    union = len(a) + len(b) - inter
+    return inter / union if union else 0.0
+
+def containment(a, b):
+    """The containment |A & B| / |A| of A in B (Broder); 0 if A is empty.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    a = a if isinstance(a, (set, frozenset)) else set(a)
+    b = b if isinstance(b, (set, frozenset)) else set(b)
+    return len(a & b) / len(a) if a else 0.0
+
+MINHASH_PRIME = (1 << 61) - 1  # the Mersenne prime 2^61 - 1
+
+def minhash_signature(shingle_list, k=128, seed=0xD2):
+    """The MinHash signature, a (k,) uint64 array, of a shingle collection:
+    row i is the minimum over shingles of (a_i x + c_i) mod p, where x is
+    the shingle's blake2b hash (8 bytes, little-endian) mod p, p = 2^61 - 1
+    and (a, c) are drawn from numpy.random.default_rng(seed). None for an
+    empty collection (fewer words than the shingle size): such a document
+    never matches.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    if not shingle_list:
+        return None
+    x = np.unique(d2l._shingle_hashes(shingle_list)) % np.uint64(
+        d2l.MINHASH_PRIME)
+    a, c = d2l._minhash_params(k, seed)
+    return d2l._minhash_rows(x, a, c)  # exact mulmod: 32-bit halves
+
+MINHASH_FIXTURE = (  # five strings whose signatures the library pins
+    'The quick brown fox jumps over the lazy dog.',
+    'Deduplication keeps one copy of every document in the corpus.',
+    'Café crème: une boisson chaude, servie le matin avec du pain.',
+    'ONE two Three four FIVE six seven, eight; nine: ten!',
+    'Near-duplicate pages differ only by a date or a sidebar.')
+MINHASH_FIXTURE_SHA256 = (  # of their k = 128, seed 0xD2 signatures' bytes
+    'b9b07bf416ce76f2b5cf1ae3d12fc617bdfa5bc7e464230c6bca1ada3bda0195')
+
+def scurve(s, b, r):
+    """The probability that a pair of Jaccard s becomes a candidate under b
+    bands of r rows: 1 - (1 - s^r)^b.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    return 1 - (1 - np.asarray(s, dtype=float) ** r) ** b
+
+def _br_error(b, r, tau, w_fp=1.0, w_fn=1.0, n_grid=20_001):
+    """The weighted error areas of an S-curve against the step at tau:
+    w_fp times the area under P on [0, tau] (pairs below the threshold that
+    become candidates) plus w_fn times the area above P on [tau, 1]
+    (trapezoid rule on n_grid points).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    s = np.linspace(0, 1, n_grid)
+    P = d2l.scurve(s, b, r)
+    lo, hi = s <= tau, s >= tau
+    return (w_fp * np.trapezoid(P[lo], s[lo])
+            + w_fn * np.trapezoid(1 - P[hi], s[hi]))
+
+def best_br(k, tau, w_fp=1.0, w_fn=1.0):
+    """The (b, r) with b = k // r that minimizes the weighted error areas
+    of its S-curve against the step at tau (the smallest r on a tie).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    errors = {(k // r, r): d2l._br_error(k // r, r, tau, w_fp, w_fn)
+              for r in range(1, k + 1)}
+    return min(errors, key=errors.get)
+
+def lsh_candidates(sigs, b, r, *, max_bucket=1000, seed=0):
+    """Candidate pairs (i, j), i < j, of signatures (a sequence of arrays,
+    None for an empty document) that agree in all r rows of at least one of
+    b bands; the bucket key of band j is blake2b (8 bytes) of its rows'
+    bytes. A bucket with more than max_bucket members (templated pages) is
+    cut to max_bucket members drawn with default_rng((seed, j)). Returns
+    (set of pairs, report of bucket sizes and the cut buckets).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import itertools
+    pairs, sizes, cut = set(), collections.Counter(), []
+    rows = [i for i, s in enumerate(sigs) if s is not None]
+    for j in range(b):
+        buckets = collections.defaultdict(list)
+        for i in rows:
+            band = sigs[i][j * r:(j + 1) * r].astype('<u8')
+            buckets[hashlib.blake2b(band.tobytes(), digest_size=8)
+                    .digest()].append(i)
+        for members in buckets.values():
+            if len(members) < 2:
+                continue
+            sizes[len(members)] += 1
+            if max_bucket and len(members) > max_bucket:
+                cut.append((j, len(members)))
+                members = sorted(np.random.default_rng((seed, j)).choice(
+                    members, max_bucket, replace=False).tolist())
+            pairs.update(itertools.combinations(members, 2))
+    return pairs, dict(n_pairs=len(pairs), bucket_sizes=dict(sizes),
+                       largest=max(sizes, default=0), cut=cut)
+
+def union_find_clusters(n, pairs):
+    """Connected components of n items under pairs, by union-find (path
+    compression, union by size); each item's label is the smallest index
+    of its component, so the result does not depend on the pair order.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    parent, size = list(range(n)), [1] * n
+    def find(i):
+        root = i
+        while parent[root] != root:
+            root = parent[root]
+        while parent[i] != root:
+            parent[i], i = root, parent[i]
+        return root
+    for i, j in pairs:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            if size[ri] < size[rj]:
+                ri, rj = rj, ri
+            parent[rj] = ri
+            size[ri] += size[rj]
+    roots = np.array([find(i) for i in range(n)], dtype=np.int64)
+    low = np.full(n, n, dtype=np.int64)
+    np.minimum.at(low, roots, np.arange(n))
+    return low[roots]
+
+def near_dedup(texts, threshold=0.8, ngram=5, num_perm=128, seed=0, *,
+               workers=1):
+    """The indices of texts to keep after near-duplicate removal: MinHash
+    signatures (hash seed 0xD2 + seed), banding at best_br(num_perm,
+    threshold), union-find clusters; each cluster keeps its lowest index.
+    workers > 1 computes the signatures in separate processes.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    sigs = d2l._minhash_texts(texts, num_perm, (0xD2 + seed,), ngram,
+                              workers)[0xD2 + seed]
+    pairs, _ = d2l.lsh_candidates(sigs, *d2l.best_br(num_perm, threshold))
+    labels = d2l.union_find_clusters(len(sigs), pairs)
+    return [i for i in range(len(sigs)) if labels[i] == i]
+
+DUP_PAIRS_SPEC = dict(  # the labelled pair set lm-dedup-pairs-v1
+    n_base=2000, variants=3, min_words=50,
+    ops=('sub', 'del', 'boiler', 'shuffle', 'trunc'),
+    rates=(0.01, 0.02, 0.05, 0.1, 0.2, 0.3),  # of the words, sub and del
+    boiler_words=(20, 200), trunc=(0.3, 0.9),
+    n_neg_host=3000, n_neg_random=3000, ngram=5, tau=0.8)
+
+def pair_texts(row, texts, vocab=None):
+    """The two texts of a labelled pair: texts[a] and texts[b], or texts[a]
+    and its perturbed copy by row['op'] and row['params'] (vocab: the
+    substitution words, needed for 'sub').
+
+    Defined in :numref:`sec_lm_dedup`"""
+    a = texts[row['a']]
+    if row['b'] is not None:
+        return a, texts[row['b']]
+    return a, d2l._dup_perturb(a, row['op'], row['params'], vocab)
+
+def make_dup_pairs(docs, spec, seed=0):
+    """The labelled pairs of spec from docs (a DataFrame with id, url, text
+    and role 'stream' or 'host_pair'): spec['variants'] perturbed copies of
+    each of spec['n_base'] stream documents (the first of a seeded
+    permutation with at least spec['min_words'] words), pairs of different
+    documents of one host (neg_host) and random stream pairs (neg_random).
+    Each row: pair_id, a, b (None for a copy), op, params (with the copy's
+    seed), J, C (containment of the smaller shingle set in the larger),
+    label (J >= tau) and split (train or test by the SHA-256 of a).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import itertools
+    import regex
+    rng = np.random.default_rng(seed)
+    texts = dict(zip(docs.id, docs.text))
+    stream = docs.id[docs.role == 'stream'].tolist()
+    vocab = d2l._dup_vocab(texts[i] for i in stream)
+    long_enough = (stream[i] for i in rng.permutation(len(stream))
+                   if len(regex.findall(r'\w+', texts[stream[i]]))
+                   >= spec['min_words'])
+    todo = []
+    for a in itertools.islice(long_enough, spec['n_base']):
+        for _ in range(spec['variants']):
+            op = str(rng.choice(spec['ops']))
+            params = dict(seed=int(rng.integers(2**31)))
+            if op in ('sub', 'del'):
+                params['rate'] = float(rng.choice(spec['rates']))
+            elif op == 'boiler':
+                lo, hi = spec['boiler_words']
+                params['words'] = int(rng.integers(lo, hi + 1))
+            elif op == 'trunc':
+                params['frac'] = round(float(rng.uniform(*spec['trunc'])), 4)
+            todo.append((a, None, op, params))
+    hosts = docs[docs.role == 'host_pair'].assign(
+        host=[d2l._url_host(u) for u in docs.url[docs.role == 'host_pair']])
+    same = [p for ids in hosts.groupby('host').id.apply(list)
+            for p in itertools.combinations(ids, 2)]
+    for k in sorted(rng.choice(len(same), spec['n_neg_host'],
+                               replace=False).tolist()):
+        todo.append((*same[k], 'neg_host', {}))
+    seen = set()
+    while len(seen) < spec['n_neg_random']:
+        i, j = sorted(rng.choice(len(stream), 2, replace=False).tolist())
+        if (i, j) not in seen:
+            seen.add((i, j))
+            todo.append((stream[i], stream[j], 'neg_random', {}))
+    rows = []
+    for n, (a, b, op, params) in enumerate(todo):
+        row = dict(pair_id=f'p{n:05d}', a=a, b=b, op=op, params=params)
+        sa, sb = (set(d2l.shingles(t, spec['ngram']))
+                  for t in d2l.pair_texts(row, texts, vocab))
+        small, large = (sa, sb) if len(sa) <= len(sb) else (sb, sa)
+        J = d2l.jaccard_exact(sa, sb)
+        half = int(hashlib.sha256(a.encode('utf-8')).hexdigest(), 16) % 2
+        rows.append(dict(row, J=J, C=d2l.containment(small, large),
+                         label=bool(J >= spec['tau']),
+                         split=('train', 'test')[half]))
+    return rows
+
+def suffix_array(ids):
+    """The suffix array of an integer sequence by prefix doubling: sa[i] is
+    the start of the i-th smallest suffix (a suffix that is a prefix of
+    another sorts first). Ranks by the first 2^k tokens, sorted with
+    np.lexsort, until all ranks differ: O(n log^2 n).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    ids = np.asarray(ids, dtype=np.int64)
+    n = len(ids)
+    if n == 0:
+        return np.zeros(0, dtype=np.int64)
+    rank = np.unique(ids, return_inverse=True)[1].astype(np.int64)
+    k = 1
+    while True:
+        second = np.full(n, -1, dtype=np.int64)
+        second[:n - k] = rank[k:] if k < n else second[:0]
+        sa = np.lexsort((second, rank))
+        r1, r2 = rank[sa], second[sa]
+        new = np.empty(n, dtype=np.int64)
+        new[sa] = np.concatenate([[0], np.cumsum(
+            (r1[1:] != r1[:-1]) | (r2[1:] != r2[:-1]))])
+        rank = new
+        if rank[sa[-1]] == n - 1 or k >= n:
+            return sa
+        k *= 2
+
+def lcp_array(ids, sa):
+    """lcp[i] = the length of the longest common prefix of the suffixes
+    sa[i - 1] and sa[i] (lcp[0] = 0), by Kasai's algorithm in O(n).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    s, sa = [int(v) for v in ids], [int(v) for v in sa]
+    n = len(s)
+    rank = [0] * n
+    for i, p in enumerate(sa):
+        rank[p] = i
+    lcp, h = [0] * n, 0
+    for i in range(n):
+        if rank[i] > 0:
+            j = sa[rank[i] - 1]
+            while i + h < n and j + h < n and s[i + h] == s[j + h]:
+                h += 1
+            lcp[rank[i]] = h
+            h = max(h - 1, 0)
+        else:
+            h = 0
+    return np.array(lcp, dtype=np.int64)
+
+def repeated_spans(ids, sa, lcp, min_len):
+    """The maximal repeats of at least min_len tokens, as (start, length,
+    count): every interval of the suffix array whose suffixes share a
+    prefix of that length (found with a stack over lcp), kept if extending
+    it one token to the left would not keep all its occurrences equal.
+    start is the first position of an occurrence; longest first.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    n, out, stack = len(sa), [], [(0, 0)]  # (lcp value, left bound)
+    for i in range(1, n + 1):
+        cur, lb = (int(lcp[i]) if i < n else 0), i - 1
+        while cur < stack[-1][0]:
+            length, lb = stack.pop()
+            if length >= min_len:
+                occ = sa[lb:i]
+                left = {int(ids[p - 1]) if p > 0 else None for p in occ}
+                if len(left) > 1 or None in left:
+                    out.append((int(occ.min()), length, len(occ)))
+        if cur > stack[-1][0]:
+            stack.append((cur, lb))
+    return sorted(out, key=lambda t: (-t[1], -t[2], t[0]))
+
+class NgramIndex:
+    """Hashed word n-grams of indexed texts, for decontamination: a key is
+    blake2b (8 bytes) of n consecutive NFC-lowercased \\w+ words joined by
+    one space, so casing, punctuation and spacing do not matter.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    def __init__(self, n=13):
+        self.n, self.keys = n, {}
+
+    def _grams(self, text):
+        w = d2l.shingles(text, 1)  # the words, as the shingles see them
+        return {hashlib.blake2b(' '.join(w[i:i + self.n]).encode('utf-8'),
+                                digest_size=8).digest()
+                for i in range(len(w) - self.n + 1)}
+
+    def add(self, text, tag):
+        for g in self._grams(text):
+            self.keys.setdefault(g, set()).add(tag)
+        return self
+
+    def query(self, text):
+        """[(tag, number of the text's distinct n-grams in tag's text)],
+        most hits first."""
+        hits = collections.Counter()
+        for g in self._grams(text):
+            hits.update(self.keys.get(g, ()))
+        return sorted(hits.items(), key=lambda t: (-t[1], str(t[0])))
+
+MIX_DOMAINS = ('web', 'code', 'math')
+
+MIX_TARGETS = {  # target weights over MIX_DOMAINS, fixed before any run
+    't_avg': (1 / 3, 1 / 3, 1 / 3), 't_dep': (0.7, 0.15, 0.15)}
+
+d2l.DATA_HUB['lm-mix-web-20m-v1'] = (  # 20M reference-tokenizer tokens of
+    # FineWeb-Edu's side buckets 1-7 (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-web-20m-v1.tar',
+    '02e073e66edbf4a7a83fa0936e4222a1ce3eab2f')
+d2l.DATA_HUB['lm-mix-math-20m-v1'] = (  # 20M tokens of FineMath 4+ (20.4);
+    # ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-math-20m-v1.tar',
+    'aa1d5bf776548da1610d06148d339b33a57eb026')
+d2l.DATA_HUB['lm-mix-val-1m-v1'] = (  # the web and mathematics validation
+    # sets, 1M tokens each (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-val-1m-v1.tar',
+    '3b3aeb6a0b35c756b15d7fe05ea6a22ded3efd74')
+d2l.DATA_HUB['lm-mix-code-meta-v1'] = (  # the code pool's meta and per-file
+    # attribution, no code: CodeParrot's files are built locally (20.4)
+    d2l.LM_DATA_URL + 'lm-mix-code-meta-v1.tar',
+    '15ad995f32fb085771f2be54c5fd65b392c974c7')
+d2l.DATA_HUB['lm-mix-web-150m-v1'] = (  # the T2 pools: 150M tokens of
+    # FineWeb-Edu's side buckets 1-7 (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-web-150m-v1.tar',
+    'e38535606a46743f4d255d90cfab169f6f186297')
+d2l.DATA_HUB['lm-mix-math-150m-v1'] = (  # 150M tokens of FineMath 4+
+    # (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-math-150m-v1.tar',
+    '0b55675617bbd88e8cea96b99947e62a5ca76ddf')
+d2l.DATA_HUB['lm-mix-val-2m-v1'] = (  # the T2 web and mathematics
+    # validation sets, 2M tokens each (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-val-2m-v1.tar',
+    'dc2deae77f8ebc37a599d04c46b97ae229961edb')
+d2l.DATA_HUB['lm-mix-code150-meta-v1'] = (  # the T2 code pool's meta and
+    # attribution, no code (20.4)
+    d2l.LM_DATA_URL + 'lm-mix-code150-meta-v1.tar',
+    '139d6b2a3d463867cab48cd0b64986d7c0466996')
+d2l.DATA_HUB['lm-mix-runs-t1-v1'] = (  # the 41 T1 runs, the selection,
+    # DoReMi's weights and the T2 smoke (mix-t1 regeneration, 20.4)
+    d2l.LM_DATA_URL + 'lm-mix-runs-t1-v1.json',
+    '92abf76a5e9891ba3efe5c5daa5f2a021f05c9e4')
+d2l.DATA_HUB['lm-mix-runs-t1-v2'] = (  # v1's runs without the staged arm,
+    # plus the 27 runs of the v2 design (20.4)
+    d2l.LM_DATA_URL + 'lm-mix-runs-t1-v2.json',
+    '8b44a65a466ac5a938dcbe58eef6a89a130a7249')
+d2l.DATA_HUB['lm-mix-runs-t2s-v1'] = (  # a small-scale test of the T2 code
+    # path on four RTX 4090s: the T2 design at half its tokens (20.4)
+    d2l.LM_DATA_URL + 'lm-mix-runs-t2s-v1.json',
+    'dac131e52de0e8b0d8ae883f5005eee6c3dcf60d')
+
+ProxyCfg = collections.namedtuple('ProxyCfg', (
+    'num_hiddens num_heads num_blks seq_len batch micro_batch lr '
+    'warmup_frac schedule decay_frac final_lr_frac weight_decay betas dtype '
+    'vocab_size'), defaults=(1024, 64, 16, 1e-3, 0.02, 'cosine', 0.2, 0.1,
+                             0.1, (0.9, 0.95), 'bfloat16', 32768))
+
+MIX_EDGES = (  # seed-free training mixtures near the corners of the simplex
+    (0.8, 0.1, 0.1), (0.1, 0.8, 0.1), (0.1, 0.1, 0.8))
+
+MIX_CONFIGS = {  # the study's two tiers, fixed before any run
+    't1': dict(  # one RTX 4090
+        name='t1', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
+        proxy=ProxyCfg(num_hiddens=128, num_heads=2, num_blks=2),
+        tokens=2**24, pool='20m', val='1m', pool_tokens=20_000_000,
+        val_tokens=1_000_000, keys={
+            'web-20m': 'lm-mix-web-20m-v1', 'math-20m': 'lm-mix-math-20m-v1',
+            'web-val-1m': 'lm-mix-val-1m-v1',
+            'math-val-1m': 'lm-mix-val-1m-v1'},
+        code_meta='lm-mix-code-meta-v1', runs_key='lm-mix-runs-t1-v2',
+        train=((1.0, 6), (0.3, 6)), edges=MIX_EDGES, held=4,
+        design_seeds=(0, 1), cos_seeds=(1, 2, 3, 4), arm_seeds=(0, 1, 2),
+        max_weight=0.9, lr_grid=(5e-4, 1e-3, 2e-3, 4e-3), lr_tokens=2**23,
+        lr_tie=1e-3, eval_at=tuple(k / 8 for k in range(1, 9)),
+        arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='mixlaw',
+        compile=False, doremi=dict(eta=1.0, smooth=1e-3),
+        pure_seeds=(1, 2),  # added in v2, with the three entries below
+        lr_check=dict(lr=1e-3, seeds=(0, 1, 2), mixtures={
+            'web': (1.0, 0.0, 0.0), 'edge': MIX_EDGES[0],
+            'uniform': (1 / 3, 1 / 3, 1 / 3)}),
+        anneal=dict(weights=MIX_EDGES[2], recency_frac=0.9),
+        horizon=dict(factor=4, seeds=(0, 1), max_epochs=2)),
+    't2': dict(  # the campaign package: run on a faster node
+        name='t2', domains=MIX_DOMAINS, targets=MIX_TARGETS, target='t_dep',
+        proxy=ProxyCfg(num_hiddens=320, num_heads=5, num_blks=8),
+        tokens=2**27, pool='150m', val='2m', pool_tokens=150_000_000,
+        val_tokens=2_000_000, keys={
+            'web-150m': 'lm-mix-web-150m-v1',
+            'math-150m': 'lm-mix-math-150m-v1',
+            'web-val-2m': 'lm-mix-val-2m-v1',
+            'math-val-2m': 'lm-mix-val-2m-v1'},
+        code_meta='lm-mix-code150-meta-v1', runs_key='lm-mix-runs-t2-v1',
+        train=((1.0, 8), (0.3, 8)), edges=MIX_EDGES, held=8,
+        design_seeds=(0, 1), cos_seeds=(1, 2), arm_seeds=(0, 1, 2),
+        max_weight=0.9, lr_grid=(5e-4, 1e-3, 2e-3, 4e-3), lr_tokens=2**25,
+        lr_tie=1e-3, eval_at=tuple(k / 8 for k in range(1, 9)),
+        arm_eval_at=tuple(k / 20 for k in range(1, 21)), curve_windows=256,
+        log_every=10, ckpt_every=256, stage_frac=0.8, select='mixlaw',
+        compile=True, doremi=dict(eta=1.0, smooth=1e-3))}
+
+def fwedu_bucket(doc_id):
+    """The bucket (0-255) of a FineWeb-Edu document: the first 32 bits of
+    the SHA-256 of its id string (as released, <urn:uuid:...>) mod 256.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    return int(hashlib.sha256(doc_id.encode('utf-8')).hexdigest()[:8],
+               16) % 256
+
+FWEDU_BUCKETS = {  # bucket ranges of the chapter's FineWeb-Edu splits
+    'val': range(0, 1),         # the reference model's validation set
+    'side': range(1, 8),        # side pool: 20.4's and 20.5's web training text
+    'side_val': range(8, 9),    # side validation
+    'train': range(9, 256)}     # the reference model's training shards
+
+def temperature_weights(sizes, alpha):
+    """Sampling probabilities p_i proportional to n_i ** alpha: alpha = 1
+    samples in proportion to size, alpha = 0 uniformly. sizes is a dict or
+    a sequence; the result has the same form.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    n = np.array(list(sizes.values()) if isinstance(sizes, dict) else sizes,
+                 dtype=float)
+    p = np.exp(alpha * np.log(n) - (alpha * np.log(n)).max())
+    p = p / p.sum()
+    return dict(zip(sizes, p)) if isinstance(sizes, dict) else p
+
+def effective_tokens(unique, epochs, r_star=15.4):
+    """Effective data D' = U + U R* (1 - exp(-R / R*)) of `epochs` passes
+    over `unique` tokens (R = epochs - 1 repeats): the data-constrained law
+    of Muennighoff et al. with their fitted R*. Less than one epoch counts
+    what was read.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    E = np.asarray(epochs, dtype=float)
+    R = np.maximum(E - 1, 0)
+    return unique * np.minimum(E, 1) + unique * r_star * (1 - np.exp(
+        -R / r_star))
+
+def sample_mixtures(n, domains, concentration, seed, max_weight=0.9,
+                    min_weight=0.0):
+    """n mixtures over the domains, (n, m), drawn from the symmetric
+    Dirichlet(concentration) and kept only when every weight lies in
+    [min_weight, max_weight] (rejection), in the order drawn.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    rng, m, out = np.random.default_rng(seed), len(domains), []
+    while len(out) < n:
+        w = rng.dirichlet(np.full(m, concentration))
+        if min_weight <= w.min() and w.max() <= max_weight:
+            out.append(w)
+    return np.array(out)
+
+def bpb_from_nll(sum_nll_nats, n_bytes):
+    """Bits per byte from a summed negative log-likelihood in nats and the
+    number of UTF-8 bytes the scored tokens stand for.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    return float(sum_nll_nats) / (math.log(2) * n_bytes)
+
+def train_proxy_lm(pools, weights, tokens, cfg, seed=0, eval_sets=None,
+                   stages=None, log_every=50, *, max_epochs=1,
+                   stop_tokens=None, eval_at=(0.25, 0.5, 0.75, 1.0),
+                   curve_windows=None, byte_lengths=None, ckpt=None,
+                   ckpt_every=256, resume=None, compile=False, device=None):
+    """Train a proxy d2l.GPT on `tokens` tokens of the mixture `weights`
+    ({domain: weight}) of token pools, switching to the weights of each
+    (fraction, weights) of `stages` at that fraction of the run. Returns
+    the log [step, tokens, loss, seconds], the evaluations at the
+    fractions eval_at (per domain of eval_sets, on the first curve_windows
+    windows), the final evaluation on all windows, the epochs each pool was
+    read, throughput, parameter count and peak memory. stop_tokens ends the
+    run early on the same schedule and stream; ckpt/resume save and restore
+    a checkpoint every ckpt_every steps."""
+    device = device or d2l.try_gpu()
+    stream = d2l._ProxyStream(pools, weights, tokens, cfg.seq_len, cfg.batch,
+                              seed, stages, max_epochs)
+    steps, per_step = stream.steps, cfg.batch * cfg.seq_len
+    stop = steps if stop_tokens is None else min(steps,
+                                                 stop_tokens // per_step)
+    model = d2l._proxy_model(cfg, seed).to(device)
+    opt = d2l._proxy_optimizer(model, cfg)
+    if eval_sets and byte_lengths is None:
+        byte_lengths = d2l.token_byte_lengths(d2l.r2_tokenizer())
+    evaluate = lambda n: {d: d2l._proxy_eval(model, getattr(v, 'ids', v), cfg,
+                                             byte_lengths, n)
+                          for d, v in (eval_sets or {}).items()}
+    key = d2l._proxy_fingerprint(weights, stages, tokens, seed, cfg)
+    start, out = 0, dict(log=[], evals=[], final=None, seconds=0.0)
+    if resume is not None:
+        start, out = d2l._proxy_load(resume, model, opt, key)
+    fwd = torch.compile(model) if compile else model
+    at = {max(1, round(f * steps)): f for f in eval_at}
+    if device.type == 'cuda':
+        torch.cuda.reset_peak_memory_stats(device)
+    seconds = seconds0 = out['seconds']
+    for step in range(start, stop):
+        t0 = time.perf_counter()
+        for g in opt.param_groups:
+            g['lr'] = cfg.lr * d2l._lr_at(step, steps, cfg)
+        X = torch.from_numpy(stream.batch(step)[0]).to(device)
+        loss = 0.0
+        for Xm in X.split(cfg.micro_batch):  # gradient accumulation
+            l = d2l._per_token_nll(fwd, Xm, cfg).mean() * len(Xm) / len(X)
+            l.backward()
+            loss = loss + l.detach()
+        nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+        if ((step + 1) % log_every == 0 or step + 1 in at or step + 1 == stop
+                or ckpt and (step + 1) % ckpt_every == 0):
+            loss = float(loss)  # waits for the GPU, so the clock is right
+            seconds += time.perf_counter() - t0
+            out['log'].append([step + 1, (step + 1) * per_step, loss,
+                               round(seconds, 3)])
+        else:
+            seconds += time.perf_counter() - t0
+        if step + 1 in at and eval_sets:
+            out['evals'].append(dict(frac=at[step + 1], step=step + 1,
+                                     tokens=(step + 1) * per_step,
+                                     domains=evaluate(curve_windows)))
+        if ckpt and ((step + 1) % ckpt_every == 0 or step + 1 == stop):
+            out['seconds'] = seconds
+            d2l._proxy_save(ckpt, model, opt, step + 1, out, key)
+    if stop == steps and eval_sets:
+        out['final'] = evaluate(None)
+    out.update(steps=steps, stopped_at=stop, n_params=d2l.num_params(model),
+               epochs=stream.epochs, epoch_starts=stream.epoch_starts,
+               seconds=seconds, throughput=(stop - start) * per_step / max(
+                   seconds - seconds0, 1e-9),
+               peak_mem=(torch.cuda.max_memory_allocated(device) / 2**30
+                         if device.type == 'cuda' else None))
+    return out
+
+def fit_mixture_regression(W, L, kind='ridge', **kw):
+    """A predictor f(w) -> per-domain losses fitted on mixtures W (n, m)
+    and their losses L (n, k): 'ridge' on the first m - 1 weights and an
+    intercept (alpha=1e-3, intercept not shrunk), 'gbm' (scikit-learn
+    gradient boosting per output, seed 0) or 'mixlaw' (L_i = c_i + k_i
+    exp(sum_j t_ij w_j) per output, least squares from `starts` seeded
+    starts, default 8; init=params of an earlier fit is tried first).
+    f takes (m,) or (n', m); f.params holds the fitted parameters.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    W, L = np.asarray(W, dtype=float), np.asarray(L, dtype=float)
+    design = lambda w: np.hstack([np.ones((len(w), 1)), w[:, :-1]])
+    if kind == 'ridge':
+        X = design(W)
+        P = kw.get('alpha', 1e-3) * np.eye(X.shape[1])
+        P[0, 0] = 0
+        params = np.linalg.solve(X.T @ X + P, X.T @ L)
+        predict = lambda w: design(w) @ params
+    elif kind == 'gbm':
+        from sklearn.ensemble import GradientBoostingRegressor
+        opts = dict(n_estimators=200, learning_rate=0.05, max_depth=2)
+        models = [GradientBoostingRegressor(random_state=0, **{**opts, **kw})
+                  .fit(W, L[:, i]) for i in range(L.shape[1])]
+        params = None
+        predict = lambda w: np.stack([g.predict(w) for g in models], -1)
+    elif kind == 'mixlaw':
+        from scipy.optimize import least_squares
+        rng, params = np.random.default_rng(0), []
+        law = lambda p, w: p[0] + p[1] * np.exp(w @ p[2:])
+        init, starts = kw.get('init'), kw.get('starts', 8)
+        for i, y in enumerate(L.T):
+            x0 = [] if init is None else [np.asarray(init[i], dtype=float)]
+            x0 += [np.concatenate([[rng.uniform(0, y.min())],
+                                   [rng.uniform(0.1, 2)],
+                                   rng.normal(0, 1, W.shape[1])])
+                   for _ in range(starts - len(x0))]
+            fits = [least_squares(lambda p: law(p, W) - y, x, xtol=1e-15,
+                                  ftol=1e-15, gtol=1e-15, max_nfev=5000)
+                    for x in x0]
+            params.append(min(fits, key=lambda r: r.cost).x)
+        params = np.array(params)
+        predict = lambda w: np.stack([law(p, w) for p in params], -1)
+    else:
+        raise ValueError(f'unknown kind {kind!r}')
+    def f(w):
+        w = np.asarray(w, dtype=float)
+        return predict(w[None])[0] if w.ndim == 1 else predict(w)
+    f.params = params
+    return f
+
+def choose_mixture(f, target, n_grid=5000, seed=0, max_weight=0.9,
+                   within=None):
+    """The mixture w with no weight above max_weight that minimizes the
+    fitted target loss target @ f(w): the best of n_grid Dirichlet(1)
+    points, polished by Nelder-Mead on w = softmax(z). within (n, m), if
+    given, bounds the choice to the convex hull of those mixtures (where
+    f was fitted, so the choice never rests on extrapolation). Returns
+    (w, the predicted target loss).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    from scipy.optimize import minimize
+    from scipy.spatial import Delaunay
+    t = np.asarray(target, dtype=float)
+    hull = None if within is None else Delaunay(np.asarray(within)[:, :-1])
+    inside = lambda w: (np.ones(len(w), bool) if hull is None else
+                        hull.find_simplex(w[:, :-1]) >= 0)
+    G = d2l.sample_mixtures(n_grid, t, 1.0, seed, max_weight)
+    G = G[inside(G)]
+    vals = f(G) @ t
+    softmax = lambda z: np.exp(z - z.max()) / np.exp(z - z.max()).sum()
+    def loss(z):
+        w = softmax(z)
+        if w.max() > max_weight or not inside(w[None])[0]:
+            return np.inf
+        return float(f(w) @ t)
+    res = minimize(loss, np.log(G[vals.argmin()]), method='Nelder-Mead',
+                   options=dict(xatol=1e-8, fatol=1e-10, maxiter=4000))
+    if res.fun < vals.min():
+        return softmax(res.x), float(res.fun)
+    return G[vals.argmin()], float(vals.min())
+
+def doremi_weights(ref_model, proxy_model, domain_batches, steps, cfg,
+                   eta=1.0, smooth=1e-3, *, lr=None):
+    """DoReMi's domain weights: train proxy_model on the alpha-weighted
+    domain losses while alpha follows each domain's excess loss over the
+    frozen ref_model (per token, clipped at 0) by multiplicative weights.
+    domain_batches(step) gives {domain: LongTensor (b, seq_len + 1)};
+    lr(step) is the learning rate (default cfg.lr). Returns the
+    step-averaged alpha and the per-step trace.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    opt, trace, alpha = d2l._proxy_optimizer(proxy_model, cfg), [], None
+    ref_model.eval()
+    for step in range(steps):
+        batches = domain_batches(step)
+        if alpha is None:
+            alpha = np.full(len(batches), 1 / len(batches))
+        excess = []
+        with torch.no_grad():  # both models on the same tokens
+            for X in batches.values():
+                nll = [torch.cat([d2l._per_token_nll(m, Xm, cfg) for Xm in
+                                  X.split(cfg.micro_batch)])
+                       for m in (proxy_model, ref_model)]
+                excess.append(d2l._doremi_excess(*nll))
+        alpha = d2l._doremi_step(alpha, excess, eta, smooth)
+        for g in opt.param_groups:
+            g['lr'] = cfg.lr if lr is None else lr(step)
+        for a, X in zip(alpha, batches.values()):  # step on sum_i alpha_i l_i
+            for Xm in X.split(cfg.micro_batch):
+                (a * d2l._per_token_nll(proxy_model, Xm, cfg).mean()
+                 * len(Xm) / len(X)).backward()
+        nn.utils.clip_grad_norm_(proxy_model.parameters(), 1.0)
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+        trace.append(dict(alpha=alpha.tolist(), excess=excess))
+    return np.mean([t['alpha'] for t in trace], 0), trace
+
+d2l.DATA_HUB['lm-rephrase-fwedu-5m-v1'] = (  # FineWeb-Edu chunks and their
+    # wiki-style rewrites by Qwen3.5-2B, 4.7M tokens (20.5); ODC-By
+    d2l.LM_DATA_URL + 'lm-rephrase-fwedu-5m-v1.tar',
+    '1b8598668e0959eeef5f4b0045cc7ed6574880e1')
+d2l.DATA_HUB['lm-data-synth-results-v1'] = (  # the judge's verdicts, the 15
+    # proxy runs of the five arms and three Cosmopedia rows (20.5)
+    d2l.LM_DATA_URL + 'lm-data-synth-results-v1.json',
+    'd27e4094b3936e83efc89b6ccc69760f538c49fd')
+
+REPHRASE_PROMPTS = {  # style -> user prompt; {text} is the source chunk
+    'wiki': (
+        'Rewrite the following text as a clear, well-organized passage in '
+        'the style of an encyclopedia article, in plain prose paragraphs '
+        'without Markdown, headings or lists. Preserve every fact, name and '
+        'number; add nothing that the text does not say. Reply with the '
+        'passage only.\n\nText:\n{text}'),
+    'qa': (
+        'Rewrite the following text as a conversation of questions and '
+        'answers in plain text without Markdown: each question on its own '
+        'line starting with "Question:", each answer on its own line '
+        'starting with "Answer:". Preserve every fact, name and number; add '
+        'nothing that the text does not say. Reply with the conversation '
+        'only.\n\nText:\n{text}')}
+
+def _token_pieces(tokenizer):
+    """The text of every token id decoded on its own, cached on the
+    tokenizer (a byte of a multi-byte character decodes to U+FFFD).
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    pieces = getattr(tokenizer, '_d2l_pieces', None)
+    if pieces is None:
+        pieces = tokenizer.batch_decode([[i] for i in range(len(tokenizer))])
+        tokenizer._d2l_pieces = pieces
+    return pieces
+
+def chunk_doc(token_ids, tokenizer, max_tokens=400):
+    """Split a document's token ids into chunks of at most max_tokens ids:
+    sentences end at a line break or at ., ? or ! (closing quotes and
+    brackets allowed) before white space; each chunk takes whole sentences
+    while they fit, and a sentence longer than max_tokens is cut into
+    pieces of max_tokens. The chunks concatenate to the document.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    ids, pieces = [int(t) for t in token_ids], d2l._token_pieces(tokenizer)
+    ends = []  # positions after which a sentence ends
+    for k, t in enumerate(ids):
+        p = pieces[t]
+        after = pieces[ids[k + 1]] if k + 1 < len(ids) else ' '
+        core = p.rstrip().rstrip('"\')]”’»')
+        if k + 1 == len(ids) or '\n' in p or (core[-1:] in ('.', '?', '!')
+                                              and (p[-1:].isspace() or
+                                                   after[:1].isspace())):
+            ends.append(k + 1)
+    chunks, cur, start = [], [], 0
+    for end in ends:
+        sentence, start = ids[start:end], end
+        if len(cur) + len(sentence) <= max_tokens:
+            cur += sentence
+            continue
+        if cur:
+            chunks.append(cur)
+        while len(sentence) > max_tokens:  # an over-long sentence
+            chunks.append(sentence[:max_tokens])
+            sentence = sentence[max_tokens:]
+        cur = sentence
+    return chunks + [cur] if cur else chunks
+
+def _synth_generate(model, tokenizer, prompts, max_new_tokens, batch,
+                    temperature, top_p, seed, progress=None):
+    """Generate a chat reply to every prompt (non-thinking template) in
+    batches of similar length with left padding; batch k samples under the
+    seed (seed, k). Returns (text, n_out, finish) per prompt in input
+    order: finish is 'stop' when the model ended its turn and 'length'
+    when max_new_tokens ran out first. progress: seconds between lines.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    import transformers
+    chat = [tokenizer.apply_chat_template(
+        [{'role': 'user', 'content': p}], tokenize=False,
+        add_generation_prompt=True, enable_thinking=False) for p in prompts]
+    ids = tokenizer(chat, add_special_tokens=False)['input_ids']
+    stop = model.generation_config.eos_token_id
+    stop = [stop] if isinstance(stop, int) else list(stop)
+    pad = (tokenizer.pad_token_id if tokenizer.pad_token_id is not None
+           else stop[0])
+    sample = temperature > 0
+    cfg = transformers.GenerationConfig(  # nothing from the model's config
+        max_new_tokens=max_new_tokens, do_sample=sample,
+        temperature=temperature if sample else None,
+        top_p=top_p if sample else None, top_k=0 if sample else None,
+        eos_token_id=stop, pad_token_id=pad)
+    device = next(model.parameters()).device
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    out, t0, shown, n_new = [None] * len(ids), time.time(), time.time(), 0
+    for k, a in enumerate(range(0, len(order), batch)):
+        rows = order[a:a + batch]
+        T = max(len(ids[i]) for i in rows)
+        X = torch.tensor([[pad] * (T - len(ids[i])) + ids[i] for i in rows],
+                         device=device)
+        mask = torch.tensor([[0] * (T - len(ids[i])) + [1] * len(ids[i])
+                             for i in rows], device=device)
+        torch.manual_seed(int(np.random.SeedSequence(
+            [seed, k]).generate_state(1)[0]))
+        with torch.inference_mode():
+            G = model.generate(input_ids=X, attention_mask=mask,
+                               generation_config=cfg)
+        for i, new in zip(rows, G[:, T:].tolist()):
+            n = next((j for j, t in enumerate(new) if t in stop), None)
+            new = new if n is None else new[:n]
+            out[i] = (tokenizer.decode(new).strip(), len(new),
+                      'length' if n is None else 'stop')
+            n_new += len(new)
+        if progress and time.time() - shown > progress:
+            shown = time.time()
+            print(f'  {a + len(rows):,} of {len(ids):,} prompts, '
+                  f'{n_new / (shown - t0):,.0f} new tokens/s')
+    return out
+
+class _SynthRows(list):
+    """The rows rephrase_docs keeps; .dropped holds the rows it dropped.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    dropped = ()
+
+def rephrase_docs(chunks, style, model_id='Qwen/Qwen3.5-2B',
+                  max_new_tokens=512, batch=32, temperature=0.7, top_p=0.9,
+                  seed=0, backend='hf', *, model=None, progress=None):
+    """Rewrite each text of chunks in a style: a key of REPHRASE_PROMPTS,
+    a prompt template with {text}, or a list of either, one per chunk.
+    Non-thinking chat generation by model_id, or by model=(model,
+    tokenizer) loaded once by the caller; backend='vllm' generates with
+    vLLM instead (model: a vllm.LLM; request i samples under seed + i).
+    Returns dict(index, src, out, n_out, finish) rows in
+    input order; rows that ran out of tokens (finish 'length') are dropped
+    and kept in .dropped. A reply with thinking text fails an assertion.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    styles = style if isinstance(style, (list, tuple)) else [style] * len(
+        chunks)
+    prompts = [d2l.REPHRASE_PROMPTS.get(s, s).format(text=c)
+               for s, c in zip(styles, chunks)]
+    if backend == 'hf':
+        m, tok = model or d2l.load_hf(model_id)
+        outs = d2l._synth_generate(m, tok, prompts, max_new_tokens, batch,
+                                   temperature, top_p, seed, progress)
+    elif backend == 'vllm':  # the serving path, if vLLM is installed
+        from vllm import LLM, SamplingParams
+        rev = d2l.HF_REVISIONS.get(model_id)
+        llm = model or LLM(model_id, revision=rev, tokenizer_revision=rev,
+                           dtype='bfloat16', seed=seed,
+                           gpu_memory_utilization=0.5)  # a shared card
+        replies = llm.chat(
+            [[{'role': 'user', 'content': p}] for p in prompts],
+            [SamplingParams(temperature=temperature, top_p=top_p,
+                            max_tokens=max_new_tokens, seed=seed + i)
+             for i in range(len(prompts))],
+            chat_template_kwargs=dict(enable_thinking=False))
+        outs = [(r.outputs[0].text.strip(), len(r.outputs[0].token_ids),
+                 'length' if r.outputs[0].finish_reason == 'length'
+                 else 'stop') for r in replies]
+    else:
+        raise ValueError(f'unknown backend {backend!r}')
+    rows = d2l._SynthRows()
+    rows.dropped = []
+    for i, (c, (text, n, finish)) in enumerate(zip(chunks, outs)):
+        assert '<think>' not in text and '</think>' not in text, (
+            f'chunk {i}: thinking text in the reply')
+        (rows.dropped if finish == 'length' else rows).append(dict(
+            index=i, src=c, out=text, n_out=n, finish=finish))
+    return rows
+
+def synth_metrics(src, out):
+    """Fidelity of a rewrite out of src: copy_rate, the Jaccard similarity
+    of their sets of character 5-grams (1 for a copy); num_fidelity, the
+    share of src's distinct digit strings (7, 1,300, 3.14) that are digit
+    strings of out (1 if src has none); len_ratio, len(out) / len(src) in
+    characters.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    grams = lambda t: {t[i:i + 5] for i in range(len(t) - 4)}
+    nums = lambda t: set(re.findall(r'\d+(?:[.,]\d+)*', t))
+    a, b, s = grams(src), grams(out), nums(src)
+    return dict(copy_rate=len(a & b) / len(a | b) if a | b else float(
+        src == out), num_fidelity=len(s & nums(out)) / len(s) if s else 1.0,
+                len_ratio=len(out) / max(len(src), 1))
+
+def distinct_n(texts, n=4):
+    """The share of distinct word n-grams among all word n-grams of texts
+    (NFC, lowercase, \\w+ words, as d2l.shingles); 0.0 without n-grams.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    grams = [g for t in texts for g in d2l.shingles(t, n)]
+    return len(set(grams)) / len(grams) if grams else 0.0
+
+def collapse_sim(n, generations, mode='replace', reps=1000, seed=0, mu=0.0,
+                 sigma=1.0):
+    """The Gaussian refit: generation 0 is N(mu, sigma^2); fit t (t >= 1)
+    fits (mu, sigma^2) by maximum likelihood to the n points just sampled
+    from fit t - 1 ('replace') or to all points sampled so far
+    ('accumulate'). Returns, per generation 0..generations over reps
+    repetitions, the mean of mu_t, its variance var_mu, the mean of
+    sigma_t^2 and the Monte-Carlo standard errors se_var_mu, se_sigma2.
+
+    Defined in :numref:`sec_lm_synthetic_data`"""
+    if mode not in ('replace', 'accumulate'):
+        raise ValueError(f'unknown mode {mode!r}')
+    rng = np.random.default_rng(seed)
+    M, S = np.zeros((generations + 1, reps)), np.zeros((generations + 1,
+                                                        reps))
+    M[0], S[0] = mu, sigma**2
+    total = np.zeros(reps), np.zeros(reps), 0  # sum, sum of squares, count
+    for t in range(1, generations + 1):
+        x = rng.normal(M[t - 1][:, None], np.sqrt(S[t - 1])[:, None],
+                       (reps, n))
+        s1, s2, k = x.sum(1), (x**2).sum(1), n
+        if mode == 'accumulate':
+            total = total[0] + s1, total[1] + s2, total[2] + n
+            s1, s2, k = total
+        M[t] = s1 / k
+        S[t] = np.maximum(s2 / k - M[t]**2, 0)
+    dev = M - M.mean(1, keepdims=True)
+    var = (dev**2).mean(1) * reps / (reps - 1)
+    m4 = (dev**4).mean(1)
+    return dict(mean=M.mean(1), var_mu=var, mean_sigma2=S.mean(1),
+                se_var_mu=np.sqrt(np.maximum(m4 - var**2, 0) / reps),
+                se_sigma2=S.std(1, ddof=1) / math.sqrt(reps))
+
+d2l.DATA_HUB['belebele-eng_Latn'] = (  # FLORES passages, CC BY-SA 4.0
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/eng_Latn.jsonl',
+    '39c6796587fef3057a50ff60ecfa3d99c65ada99')
+d2l.DATA_HUB['belebele-deu_Latn'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/deu_Latn.jsonl',
+    '2492011aa4718237cfaf71256150acb453184401')
+d2l.DATA_HUB['belebele-rus_Cyrl'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/rus_Cyrl.jsonl',
+    '9c17bbd2594ec9ea831ad887587a4a401f80c48d')
+d2l.DATA_HUB['belebele-arb_Arab'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/arb_Arab.jsonl',
+    'd409a6fda63a97566583558886f0414c8edd152a')
+d2l.DATA_HUB['belebele-hin_Deva'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/hin_Deva.jsonl',
+    'e7017e822412dd49ef24f24419bc3e2e45175285')
+d2l.DATA_HUB['belebele-zho_Hans'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/zho_Hans.jsonl',
+    'f7da1fed3c0c6d7e43a324bf8739231f2b346b6e')
+d2l.DATA_HUB['belebele-jpn_Jpan'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/jpn_Jpan.jsonl',
+    '2a3755b2eaea864e066f4414c3f64e0a53cca41a')
+d2l.DATA_HUB['belebele-tha_Thai'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/tha_Thai.jsonl',
+    '4aae5d586fe29db59bf12bfcbc9b75e816ca4380')
+d2l.DATA_HUB['belebele-swh_Latn'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/swh_Latn.jsonl',
+    '1c327092d52031a5d7dfffe5b7419e0f2f584bc8')
+d2l.DATA_HUB['belebele-kor_Hang'] = (
+    'https://huggingface.co/datasets/facebook/belebele/resolve/'
+    '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/kor_Hang.jsonl',
+    '17fa36b78cef39784d497a7cf40caf678e83c955')
+d2l.DATA_HUB['lm-data-fw2-slice-v1'] = (  # FineWeb-2, FineWeb-Edu: ODC-By
+    d2l.LM_DATA_URL + 'lm-data-fw2-slice-v1.tar',
+    '80ddb29c077df2fa73fb85f45197e32459ba4f56')
+d2l.DATA_HUB['lm-r2-tokenizer-v1'] = (  # the reference tokenizer
+    d2l.LM_DATA_URL + 'lm-r2-tokenizer-v1.json',
+    '4e8dbe43379e205000c68cbec6798278761a38cd')
+d2l.DATA_HUB['lm-fwedu-val-v1'] = (  # FineWeb-Edu validation shard: ODC-By
+    d2l.LM_DATA_URL + 'lm-fwedu-val-v1.tar',
+    '2675d35e9e0fb6a8e5b287c3928f5c014a8a34ab')
+d2l.DATA_HUB['lm-fwedu-shards-100m-v1'] = (  # train-00000: ODC-By
+    d2l.LM_DATA_URL + 'lm-fwedu-shards-100m-v1.tar',
+    '66992765074d705d749c304b54f06fe5586f0c0f')
+d2l.DATA_HUB['lm-fwedu-manifest-4b-v1'] = (  # 40 shards under fwedu-r2-v1/
+    d2l.LM_DATA_URL + 'lm-fwedu-manifest-4b-v1.json',
+    '2d97947273a7df83f494ad20bbb561bfbd2b336c')
+d2l.DATA_HUB['lm-data-tok-results-v1'] = (  # small LMs and extension runs
+    d2l.LM_DATA_URL + 'lm-data-tok-results-v1.json',
+    'b0eb51e54b42e5273dc9b17ba416f9f998531548')
+
+def fertility_table(encoders, parallel, ref='eng_Latn'):
+    """Per encoder and language: passages, UTF-8 bytes, tokens, bytes per
+    token, tokens per passage, the share of byte-fallback tokens and the
+    premium, the tokens a language needs over the tokens ref needs for
+    translations of the same passages. encoders maps a name to encode(str)
+    -> ids, or to (encode, fallback_ids); parallel maps a language to its
+    passages, aligned across languages.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    rows = []
+    for name, enc in encoders.items():
+        enc, fallback = enc if isinstance(enc, tuple) else (enc, ())
+        fallback = set(fallback)
+        for lang, passages in parallel.items():
+            ids = [enc(p) for p in passages]
+            n = sum(map(len, ids))
+            n_bytes = sum(len(p.encode('utf-8')) for p in passages)
+            rows.append(dict(
+                encoder=name, lang=lang, passages=len(passages),
+                bytes=n_bytes, tokens=n, bytes_per_token=n_bytes / n,
+                tokens_per_passage=n / len(passages),
+                fallback_share=sum(i in fallback for x in ids for i in x)
+                / n))
+    df = pd.DataFrame(rows)
+    ref_tokens = df[df.lang == ref].set_index('encoder').tokens
+    df['premium'] = df.tokens / df.encoder.map(ref_tokens)
+    return df
+
+def _unigram_lattice(s, logp, max_len):
+    """Edges (i, j, piece) of the segmentation lattice of s, by start i:
+    s[i:j] is a piece of logp.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    return [(i, j, s[i:j]) for i in range(len(s))
+            for j in range(i + 1, min(len(s), i + max_len) + 1)
+            if s[i:j] in logp]
+
+def _unigram_fb(s, logp, max_len):
+    """log P(s), summed over all segmentations of s, and each piece's
+    posterior expected count in s (forward-backward on the lattice).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    n, edges = len(s), _unigram_lattice(s, logp, max_len)
+    fwd, bwd = [-math.inf] * (n + 1), [-math.inf] * (n + 1)
+    fwd[0] = bwd[n] = 0.0
+    for i, j, x in edges:  # by start: fwd[i] is complete when read
+        fwd[j] = d2l._logaddexp(fwd[j], fwd[i] + logp[x])
+    for i, j, x in reversed(edges):  # by start, descending
+        bwd[i] = d2l._logaddexp(bwd[i], logp[x] + bwd[j])
+    counts = collections.Counter()
+    for i, j, x in edges:
+        counts[x] += math.exp(fwd[i] + logp[x] + bwd[j] - fwd[n])
+    return fwd[n], counts
+
+def viterbi_segment(text, logp, max_len, *, unk=None):
+    """The most probable segmentation of text into pieces of logp (piece
+    -> log-probability) of at most max_len characters; ties go to fewer
+    pieces. With unk, a character that is no piece is a piece of
+    log-probability unk (SentencePiece's rule for unknown characters).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    n = len(text)
+    best, back = [(-math.inf, 0)] * (n + 1), [0] * (n + 1)
+    best[0] = (0.0, 0)  # (log-probability, minus the number of pieces)
+    for j in range(1, n + 1):
+        for i in range(max(0, j - max_len), j):
+            lp = logp.get(text[i:j], unk if j == i + 1 else None)
+            if lp is not None and best[i][0] > -math.inf:
+                cand = (best[i][0] + lp, best[i][1] - 1)
+                if cand > best[j]:
+                    best[j], back[j] = cand, i
+    if best[n][0] == -math.inf:
+        raise ValueError(f'no segmentation of {text!r}')
+    out, j = [], n
+    while j > 0:
+        out.append(text[back[j]:j])
+        j = back[j]
+    return out[::-1]
+
+def _unigram_sample(s, logp, max_len, alpha, rng):
+    """A segmentation of s drawn with probability proportional to
+    P(segmentation)^alpha: forward filtering, then backward sampling.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    fwd, into = [-math.inf] * (len(s) + 1), collections.defaultdict(list)
+    fwd[0] = 0.0
+    for i, j, x in _unigram_lattice(s, logp, max_len):
+        fwd[j] = d2l._logaddexp(fwd[j], fwd[i] + alpha * logp[x])
+        into[j].append((i, x))
+    out, j = [], len(s)
+    while j > 0:
+        w = np.array([fwd[i] + alpha * logp[x] for i, x in into[j]])
+        p = np.exp(w - w.max())
+        i, x = into[j][rng.choice(len(w), p=p / p.sum())]
+        out.append(x)
+        j = i
+    return out[::-1]
+
+class UnigramTokenizer:
+    """A unigram language model over pieces (Kudo 2018), trained by EM
+    with pruning: seed the vocabulary with every character and the
+    seed_size most frequent substrings (scored by count times length),
+    then alternate em_iters EM steps with keeping prune_frac of the pieces
+    until vocab_size remain. Words are split at whitespace and marked by a
+    leading U+2581, as SentencePiece marks them.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    def __init__(self, vocab_size, seed_size=100_000, em_iters=2,
+                 prune_frac=0.8, max_piece_len=12):
+        self.vocab_size, self.seed_size = vocab_size, seed_size
+        self.em_iters, self.prune_frac = em_iters, prune_frac
+        self.max_len, self.pieces, self.history = max_piece_len, {}, []
+
+    @staticmethod
+    def _words(sentences):
+        return collections.Counter('▁' + w for s in sentences
+                                   for w in s.split())
+
+    def _em_step(self, words, logp):
+        """E: expected piece counts under logp; M: probabilities
+        proportional to them. Returns the new log-probabilities and the
+        corpus log-likelihood under the old ones."""
+        counts, loglik = collections.Counter(), 0.0
+        for w, c in words.items():
+            logz, cw = d2l._unigram_fb(w, logp, self.max_len)
+            loglik += c * logz
+            for x, v in cw.items():
+                counts[x] += c * v
+        for x in logp:  # a character stays a piece, however rare
+            if len(x) == 1 and counts[x] <= 0:
+                counts[x] = 1e-6
+        log_total = math.log(sum(counts.values()))
+        return ({x: math.log(counts[x]) - log_total for x in logp
+                 if counts[x] > 0}, loglik)
+
+    def _prune(self, words, logp, keep):
+        """The keep pieces whose removal costs the most likelihood: a
+        piece's loss is its count in the Viterbi segmentations times what
+        its log-probability gains over the best segmentation of its own
+        string without it. Characters are always kept."""
+        freq = collections.Counter()
+        for w, c in words.items():
+            for x in d2l.viterbi_segment(w, logp, self.max_len):
+                freq[x] += c
+        loss, others = {}, dict(logp)
+        for x, lp in logp.items():
+            if len(x) > 1:
+                del others[x]
+                alt = d2l.viterbi_segment(x, others, self.max_len)
+                loss[x] = freq[x] * (lp - sum(others[a] for a in alt))
+                others[x] = lp
+        chars = [x for x in logp if len(x) == 1]
+        ranked = sorted(loss, key=lambda x: (-loss[x], x))
+        kept = set(chars) | set(ranked[:max(keep - len(chars), 0)])
+        return {x: lp for x, lp in logp.items() if x in kept}
+
+    def train(self, sentences):
+        words = self._words(sentences)
+        subs, chars = collections.Counter(), collections.Counter()
+        for w, c in words.items():
+            for i in range(len(w)):
+                chars[w[i]] += c
+                for j in range(i + 2, min(len(w), i + self.max_len) + 1):
+                    subs[w[i:j]] += c
+        seed = sorted(subs, key=lambda x: (-subs[x] * len(x), x))
+        seed = {x: subs[x] * len(x) for x in seed[:self.seed_size]}
+        seed.update(chars)
+        total = sum(seed.values())
+        logp = {x: math.log(v / total) for x, v in seed.items()}
+        while True:
+            for _ in range(self.em_iters):
+                logp, loglik = self._em_step(words, logp)
+                self.history.append((len(logp), loglik))
+            if len(logp) <= self.vocab_size:
+                break
+            logp = self._prune(words, logp, max(
+                self.vocab_size, int(len(logp) * self.prune_frac)))
+        self.pieces = logp
+        return self
+
+    def encode(self, text):
+        return [x for w in text.split() for x in d2l.viterbi_segment(
+            '▁' + w, self.pieces, self.max_len)]
+
+    def encode_sample(self, text, alpha=0.2, seed=0):
+        """A segmentation drawn with probability proportional to
+        P(segmentation)^alpha, word by word (subword regularization)."""
+        rng = np.random.default_rng(seed)
+        return [x for w in text.split() for x in d2l._unigram_sample(
+            '▁' + w, self.pieces, self.max_len, alpha, rng)]
+
+R2_SPLIT_REGEX = (r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+"""
+                  r"""|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)"""
+                  r"""|\s+""")
+
+def train_hf_bpe(texts, vocab_size, specials, regex=R2_SPLIT_REGEX,
+                 min_frequency=2):
+    """A byte-level BPE (Hugging Face tokenizers) trained on texts: NFC,
+    the split regex, bytes as 256 base symbols, the special tokens first
+    (ids 0, 1, ...), no BOS or EOS added on encode. Special-token strings
+    inside a text are encoded as text (encode_special_tokens is set; the
+    flag is not saved in tokenizer.json, so loaders set it again).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    from tokenizers import (Regex, Tokenizer, decoders, models, normalizers,
+                            pre_tokenizers, trainers)
+    tok = Tokenizer(models.BPE(dropout=None, byte_fallback=False,
+                               unk_token=None))
+    tok.normalizer = normalizers.NFC()
+    tok.pre_tokenizer = pre_tokenizers.Sequence([
+        pre_tokenizers.Split(Regex(regex), behavior='isolated', invert=False),
+        pre_tokenizers.ByteLevel(add_prefix_space=False, trim_offsets=False,
+                                 use_regex=False)])
+    tok.decoder = decoders.ByteLevel()
+    trainer = trainers.BpeTrainer(
+        vocab_size=vocab_size, min_frequency=min_frequency,
+        special_tokens=list(specials), show_progress=False,
+        initial_alphabet=pre_tokenizers.ByteLevel.alphabet())
+    tok.train_from_iterator(texts, trainer=trainer)
+    if tok.get_vocab_size() != vocab_size:
+        raise ValueError(f'trained {tok.get_vocab_size()} pieces, not '
+                         f'{vocab_size}: too little text for this vocabulary')
+    tok.encode_special_tokens = True
+    return tok
+
+def extend_vocab(model, tokenizer, new_pieces, init='random', seed=0):
+    """Add new_pieces to a Transformers tokenizer (as added tokens, which
+    are matched before the model's own segmentation) and rows for them to
+    the model's input and, if untied, output matrices, initialized by
+    init: 'random' (normal, the config's initializer_range), 'mean' (the
+    mean of the old rows plus noise of 1% of their standard deviation, so
+    that no two rows are equal) or 'decomp' (the mean of the old rows of
+    the pieces the old tokenizer splits the new piece into). Returns
+    (model, tokenizer) with config.vocab_size updated.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if init not in ('random', 'mean', 'decomp'):
+        raise ValueError(f'unknown init {init!r}')
+    pieces, n_old = list(new_pieces), len(tokenizer)
+    parts = tokenizer(pieces, add_special_tokens=False)['input_ids']
+    if tokenizer.add_tokens(pieces) != len(pieces):
+        raise ValueError('a new piece is in the vocabulary already')
+    out = model.get_output_embeddings()
+    tied = out is None or out.weight is model.get_input_embeddings().weight
+    old = [model.get_input_embeddings().weight] + ([] if tied
+                                                   else [out.weight])
+    old = [W.detach()[:n_old].float().cpu() for W in old]
+    model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
+    mats = [model.get_input_embeddings().weight] + (
+        [] if tied else [model.get_output_embeddings().weight])
+    g = torch.Generator().manual_seed(seed)
+    std = model.config.get_text_config().initializer_range
+    k, d = len(pieces), old[0].shape[1]
+    with torch.no_grad():
+        for W, W0 in zip(mats, old):
+            if init == 'random':
+                new = torch.randn(k, d, generator=g) * std
+            elif init == 'mean':
+                new = W0.mean(0) + 0.01 * W0.std() * torch.randn(
+                    k, d, generator=g)
+            else:
+                new = torch.stack([W0[ids].mean(0) for ids in parts])
+            W[n_old:n_old + k] = new.to(W.device, W.dtype)
+    model.config.get_text_config().vocab_size = len(tokenizer)
+    return model, tokenizer
+
+R2_TOKENIZER_SHA256 = (  # of lm-r2-tokenizer-v1 (tools/build_r2_shards.py)
+    'b1b4b45c36aac256ae4f4bd5e5fd595395242fc6949299cb0e2e25d2a5a656e3')
+
+def r2_tokenizer(raw=False):
+    """The reference tokenizer (artifact lm-r2-tokenizer-v1; its file is
+    checked against R2_TOKENIZER_SHA256): a Transformers
+    PreTrainedTokenizerFast with EOS <|endoftext|> = 0, pad <|pad|> = 1,
+    no BOS, and special-token strings in text encoded as text; raw=True
+    gives the tokenizers.Tokenizer itself.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if 'lm-r2-tokenizer-v1' not in d2l.DATA_HUB or not d2l.R2_TOKENIZER_SHA256:
+        raise KeyError('lm-r2-tokenizer-v1 is not registered yet: it is '
+                       'built by tools/build_r2_shards.py')
+    return d2l._r2_from_file(d2l.download_keyed('lm-r2-tokenizer-v1'),
+                             raw=raw, sha256=d2l.R2_TOKENIZER_SHA256)
+
+def write_shards(docs, tokenizer, out_dir, split, shard_tokens=100_000_000,
+                 eos_id=None, meta_fn=None, manifest=None, *, batch_docs=1000,
+                 max_shards=None):
+    """Tokenize documents into shards out_dir/{split}-{k:05d}.bin|.idx|
+    .meta.parquet and return the split's manifest entry. docs yields
+    (doc_id, text) or (doc_id, text, meta); each document becomes its ids
+    and one EOS (eos_id, default the tokenizer's <|endoftext|>); special
+    strings in a text stay text, and a special id inside a document is an
+    error. A shard closes at the first document boundary at or after
+    shard_tokens; ids are uint16 for vocabularies up to 65,536, else uint32.
+    meta_fn(doc_id, text, meta) gives a document's extra meta columns
+    (default: meta itself). With max_shards, writing stops when that many
+    shards are closed (the rest of docs is not read). The entry is stored
+    in manifest (a CorpusManifest, created if None), which is saved as
+    out_dir/manifest.json.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    import itertools
+    os.makedirs(out_dir, exist_ok=True)
+    vocab, eos, special = d2l._tok_info(tokenizer)
+    eos = eos if eos_id is None else eos_id
+    if eos is None:
+        raise ValueError('the tokenizer has no <|endoftext|>: pass eos_id')
+    dtype = np.dtype('uint16' if vocab <= 2**16 else 'uint32')
+    special = np.array(sorted(special | {eos}), dtype=np.int64)
+    shards, w, docs = [], None, iter(docs)
+    while (len(shards) != max_shards
+           and (batch := list(itertools.islice(docs, batch_docs)))):
+        batch = [(d[0], d[1], d[2] if len(d) > 2 else None) for d in batch]
+        for (doc_id, text, meta), ids in zip(
+                batch, d2l._doc_token_ids(tokenizer, [b[1] for b in batch])):
+            ids = np.asarray(ids, dtype=np.int64)
+            bad = np.isin(ids, special)
+            if bad.any():
+                raise ValueError(f'document {doc_id}: special id '
+                                 f'{int(ids[bad][0])} inside the text')
+            if w is None:
+                w = d2l._ShardWriter(out_dir, f'{split}-{len(shards):05d}',
+                                     dtype)
+            extra = meta_fn(doc_id, text, meta) if meta_fn else (meta or {})
+            w.add(doc_id, np.append(ids, eos).astype(dtype), extra)
+            if w.n_tokens >= shard_tokens:
+                shards.append(w.close())
+                w = None
+                if len(shards) == max_shards:
+                    break
+    if w is not None:
+        shards.append(w.close())
+    entry = dict(n_tokens=sum(s['n_tokens'] for s in shards),
+                 n_docs=sum(s['n_docs'] for s in shards), shards=shards)
+    manifest = manifest or d2l.CorpusManifest(os.path.basename(
+        os.path.normpath(out_dir)))
+    manifest.splits = dict(manifest.splits or {}, **{split: entry})
+    fmt = dict(dtype=dtype.name, eos_id=int(eos), endianness='little',
+               doc_end='eos', idx_dtype='uint32',
+               meta_required=['doc_id', 'n_tokens'])
+    if manifest.format not in (None, fmt):
+        raise ValueError(f'manifest format {manifest.format} != {fmt}')
+    manifest.format = fmt
+    manifest.tokenizer = manifest.tokenizer or dict(vocab_size=vocab)
+    manifest.save(os.path.join(out_dir, 'manifest.json'))
+    return entry
+
+class TokenShards:
+    """Read-only access to a shard set written by write_shards: documents
+    by global index, token ranges by global position, per-shard meta, and
+    verify(), which recomputes every file's SHA-256 and the EOS and offset
+    invariants. max_tokens keeps the smallest prefix of shards holding at
+    least that many tokens; fetch=True downloads missing files from the
+    manifest's url and checks sha1 and SHA-256. A pickled copy (a data
+    loader's worker) carries no memory maps; it opens its own.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    def __init__(self, root, split='train', fetch=False, max_tokens=None):
+        self.root, self.split, self.fetch = root, split, fetch
+        with open(os.path.join(root, 'manifest.json'), encoding='utf-8') as f:
+            self.manifest = json.load(f)
+        shards = self.manifest['splits'][split]['shards']
+        if max_tokens is not None:
+            total = np.cumsum([s['n_tokens'] for s in shards])
+            shards = shards[:int(np.searchsorted(total, max_tokens)) + 1]
+        self.shards = shards
+        fmt = self.manifest['format']
+        self.dtype = np.dtype(fmt['dtype']).newbyteorder('<')
+        self.eos_id = fmt['eos_id']
+        self.vocab_size = (self.manifest.get('tokenizer') or {}).get(
+            'vocab_size')
+        self._docs = np.cumsum([0] + [s['n_docs'] for s in shards])
+        self._toks = np.cumsum([0] + [s['n_tokens'] for s in shards])
+        self.n_docs, self.n_tokens = int(self._docs[-1]), int(self._toks[-1])
+        self.n_shards = len(shards)
+        self._mm, self._idx = {}, {}
+
+    def __getstate__(self):  # a worker process reopens the memory maps
+        return dict(self.__dict__, _mm={})
+
+    def _path(self, k, ext):
+        s = self.shards[k]
+        path = os.path.join(self.root, s['file'] + d2l._SHARD_EXT[ext])
+        if not os.path.exists(path):
+            if not self.fetch or 'url' not in s:
+                raise FileNotFoundError(path)
+            d2l._fetch_shard_file(s, ext, path)
+        return path
+
+    def shard(self, k):
+        if k not in self._mm:
+            self._mm[k] = np.memmap(self._path(k, 'bin'), dtype=self.dtype,
+                                    mode='r')
+        return self._mm[k]
+
+    def offsets(self, k):
+        if k not in self._idx:
+            self._idx[k] = np.fromfile(self._path(k, 'idx'), dtype='<u4')
+        return self._idx[k]
+
+    def locate(self, i):
+        """(shard, document within it, offset of its first token there)."""
+        if not 0 <= i < self.n_docs:
+            raise IndexError(i)
+        k = int(np.searchsorted(self._docs, i, side='right')) - 1
+        j = i - int(self._docs[k])
+        return k, j, int(self.offsets(k)[j])
+
+    def locate_token(self, t):
+        """(shard, position within it) of global token position t."""
+        if not 0 <= t < self.n_tokens:
+            raise IndexError(t)
+        k = int(np.searchsorted(self._toks, t, side='right')) - 1
+        return k, t - int(self._toks[k])
+
+    def doc(self, i):
+        k, j, a = self.locate(i)
+        return np.asarray(self.shard(k)[a:self.offsets(k)[j + 1]],
+                          dtype=np.int32)
+
+    def iter_docs(self, start=0):
+        for i in range(start, self.n_docs):
+            yield i, self.doc(i)
+
+    def read(self, start, n):
+        """n tokens from global position start, across shard boundaries."""
+        if start < 0 or start + n > self.n_tokens:
+            raise IndexError((start, n))
+        out = []
+        while n > 0:
+            k, a = self.locate_token(start)
+            take = min(n, self.shards[k]['n_tokens'] - a)
+            out.append(np.asarray(self.shard(k)[a:a + take], dtype=np.int32))
+            start, n = start + take, n - take
+        return np.concatenate(out) if out else np.zeros(0, dtype=np.int32)
+
+    def meta(self, k):
+        return pd.read_parquet(self._path(k, 'meta'))
+
+    def verify(self):
+        """Recompute every file's SHA-256 and check that offsets start at 0,
+        increase and end at the shard's token count, that EOS ends every
+        document and occurs nowhere else, and that the meta rows match."""
+        for k, s in enumerate(self.shards):
+            for ext in d2l._SHARD_EXT:
+                path = self._path(k, ext)
+                if d2l._sha256_file(path) != s['sha256'][ext]:
+                    raise ValueError(f'{path}: SHA-256 differs from the '
+                                     'manifest')
+            ids, idx = self.shard(k), self.offsets(k)
+            name = s['file']
+            if (len(idx) != s['n_docs'] + 1 or idx[0] != 0
+                    or idx[-1] != len(ids) or len(ids) != s['n_tokens']
+                    or (np.diff(idx.astype(np.int64)) <= 0).any()):
+                raise ValueError(f'{name}.idx: offsets do not match the '
+                                 'shard')
+            if (np.asarray(ids[idx[1:].astype(np.int64) - 1]) != self.eos_id
+                    ).any() or int((ids == self.eos_id).sum()) != s['n_docs']:
+                raise ValueError(f'{name}.bin: EOS not exactly at the '
+                                 'document ends')
+            m = self.meta(k)
+            if len(m) != s['n_docs'] or (m['n_tokens'].to_numpy()
+                                         != np.diff(idx)).any():
+                raise ValueError(f'{name}.meta.parquet: rows do not match '
+                                 'the offsets')
+        return True
+
+def fwedu_shards(which='100m', fetch=True, max_tokens=None):
+    """The reference shards of FineWeb-Edu under the reference tokenizer:
+    which='val' (2^23 validation tokens), '100m' (train-00000, 10^8 tokens)
+    or '4b' (the 40 training shards, downloaded one by one when first read).
+    Each lives in ../data/lm/fwedu-r2-v1/<which>/, extracted on the first
+    call (make that call once before starting several processes).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    keys = {'val': 'lm-fwedu-val-v1', '100m': 'lm-fwedu-shards-100m-v1',
+            '4b': 'lm-fwedu-manifest-4b-v1'}
+    if which not in keys:
+        raise ValueError(f'which is one of {tuple(keys)}')
+    key = keys[which]
+    if key not in d2l.DATA_HUB:
+        raise KeyError(f'{key} is not registered yet: it is built by '
+                       'tools/build_r2_shards.py')
+    root = os.path.join('..', 'data', 'lm', 'fwedu-r2-v1', which)
+    path, sha1 = d2l.download_keyed(key), d2l.DATA_HUB[key][1]
+    stamp = os.path.join(root, '.extracted-' + key)
+    old = None
+    if os.path.exists(stamp):
+        with open(stamp) as f:
+            old = f.read()
+    if old != sha1:
+        shutil.rmtree(root, ignore_errors=True)  # afresh when the
+        os.makedirs(root)                        # registered sha1 changes
+        if which == '4b':  # the manifest only; shards come when read
+            shutil.copyfile(path, os.path.join(root, 'manifest.json'))
+        else:
+            d2l.extract(path, root)
+        with open(stamp, 'w') as f:
+            f.write(sha1)
+    return d2l.TokenShards(root, 'val' if which == 'val' else 'train',
+                           fetch=fetch, max_tokens=max_tokens)
+
 def train_batch_ch13(net, X, y, loss, trainer, devices):
     """Train for a minibatch with multiple GPUs (defined in Chapter 13).
 
@@ -15522,6 +18042,2253 @@ def cuda_graphed(step, device, warmup=3):
                 step()
         graph.replay()
     return run
+
+def _warc_chunks(source, n_bytes=None, chunk=1 << 16):
+    """The first n_bytes (None: all) of a local file or URL in chunks of
+    64 KiB: small chunks keep zlib's copy of the unused input short.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    if str(source).startswith(('http://', 'https://')):
+        headers = {} if n_bytes is None else {
+            'Range': f'bytes=0-{n_bytes - 1}'}
+        with requests.get(str(source), headers=headers, stream=True,
+                          timeout=60) as r:
+            r.raise_for_status()
+            if n_bytes is not None and r.status_code != 206:
+                raise RuntimeError(f'{source}: the server ignored the Range')
+            yield from r.iter_content(chunk)
+        return
+    left = float('inf') if n_bytes is None else n_bytes
+    with open(source, 'rb') as f:
+        while left > 0:
+            b = f.read(int(min(chunk, left)))
+            if not b:
+                return
+            left -= len(b)
+            yield b
+
+def _gzip_members(chunks):
+    """(offset, length, data) of each gzip member in a byte stream, offset
+    and length in compressed bytes; a member cut off by the end of the
+    stream comes last, with data None.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import zlib
+    chunks = (c for c in chunks if c)
+    buf, offset = b'', 0
+    while True:
+        if not buf:
+            buf = next(chunks, None)
+            if buf is None:
+                return
+        d, out, used = zlib.decompressobj(31), [], 0
+        while True:
+            out.append(d.decompress(buf))
+            if d.eof:
+                used += len(buf) - len(d.unused_data)
+                buf = d.unused_data
+                break
+            used += len(buf)
+            buf = next(chunks, None)
+            if buf is None:
+                yield offset, used, None
+                return
+        yield offset, used, b''.join(out)
+        offset += used
+
+def _warc_parse(raw, offset, length):
+    """The WarcRecord in the decompressed bytes of one member. headers holds
+    the WARC header fields; for an HTTP request, response or revisit it also
+    holds headers['HTTP'], the HTTP header fields with lower-cased names,
+    and body is the HTTP payload, else the whole content block.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    head, _, rest = raw.partition(b'\r\n\r\n')
+    lines = head.split(b'\r\n')
+    if not lines[0].startswith(b'WARC/'):
+        raise ValueError(f'no WARC record at offset {offset}')
+    headers = {}
+    for line in lines[1:]:
+        k, _, v = line.decode('utf-8', 'replace').partition(':')
+        headers[k.strip()] = v.strip()
+    block = rest[:int(headers.get('Content-Length', len(rest)))]
+    kind = headers.get('WARC-Type')
+    ctype = headers.get('Content-Type', '')
+    status, mime, body = None, ctype.split(';')[0].strip().lower(), block
+    if (kind in ('response', 'request', 'revisit')
+            and ctype.startswith('application/http')):
+        http, _, body = block.partition(b'\r\n\r\n')
+        http = http.decode('iso-8859-1').split('\r\n')
+        fields = {}
+        for line in http[1:]:
+            k, _, v = line.partition(':')
+            k = k.strip().lower()
+            fields[k] = (fields[k] + ', ' if k in fields else '') + v.strip()
+        headers['HTTP'] = fields
+        mime = fields.get('content-type', '').split(';')[0].strip().lower()
+        parts = http[0].split()
+        if kind != 'request' and len(parts) > 1 and parts[1].isdigit():
+            status = int(parts[1])
+    return d2l.WarcRecord(headers.get('WARC-Record-ID'), kind,
+                          headers.get('WARC-Target-URI'),
+                          headers.get('WARC-Date'), status, mime or None,
+                          offset, length, headers, body)
+
+def _sha256_file(path, n_bytes=None):
+    """SHA-256 of the first n_bytes (None: all) of a file.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    h, left = hashlib.sha256(), float('inf') if n_bytes is None else n_bytes
+    with open(path, 'rb') as f:
+        while left > 0:
+            b = f.read(int(min(1 << 24, left)))
+            if not b:
+                break
+            h.update(b)
+            left -= len(b)
+    return h.hexdigest()
+
+def _verified_blocks(path, block_sha256, block, n_blocks):
+    """How many leading blocks of the file match the pinned SHA-256s (up to
+    n_blocks). The file is cut back to them, so a later fetch appends.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    if not path.exists():
+        return 0
+    good = 0
+    with open(path, 'rb') as f:
+        while good < n_blocks:
+            b = f.read(block)
+            if len(b) < block or (hashlib.sha256(b).hexdigest()
+                                  != block_sha256[good]):
+                break
+            good += 1
+    if path.stat().st_size > good * block and good < n_blocks:
+        with open(path, 'r+b') as f:
+            f.truncate(good * block)
+    return good
+
+def _fetch_blocks(warc, path, start, stop):
+    """Append blocks start..stop-1 of the pinned range to path, each one
+    checked against its SHA-256 before it is written.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    block = warc['block_bytes']
+    print(f'fetching bytes {start * block}-{stop * block - 1} of '
+          f'{warc["url"]}')
+    rng = f'bytes={start * block}-{stop * block - 1}'
+    with requests.get(warc['url'], headers={'Range': rng}, stream=True,
+                      timeout=60) as r, open(path, 'ab') as f:
+        r.raise_for_status()
+        if r.status_code != 206:
+            raise RuntimeError(f'{warc["url"]}: the server ignored the Range')
+        k, buf = start, bytearray()
+        for c in r.iter_content(1 << 20):
+            buf += c
+            while len(buf) >= block and k < stop:
+                got = hashlib.sha256(buf[:block]).hexdigest()
+                if got != warc['block_sha256'][k]:
+                    raise RuntimeError(f'block {k} of {warc["url"]}: '
+                                       f'SHA-256 {got}, the pin says '
+                                       f'{warc["block_sha256"][k]}')
+                f.write(buf[:block])
+                del buf[:block]
+                k += 1
+    if k != stop:
+        raise RuntimeError(f'{warc["url"]}: got {k - start} of '
+                           f'{stop - start} blocks')
+
+def _fetch_whole(spec, cache, offline):
+    """A whole file named in the pin, fetched once and checked by SHA-256.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    path = cache / spec['url'].rsplit('/', 1)[1]
+    if path.exists() and d2l._sha256_file(path) == spec['sha256']:
+        return path
+    if offline:
+        raise RuntimeError(f'D2L_OFFLINE=1 and no verified {path}: run once '
+                           f'with network access, or fetch {spec["url"]}')
+    print(f'fetching {spec["url"]}')
+    tmp = path.with_suffix(path.suffix + '.part')
+    with requests.get(spec['url'], stream=True, timeout=60) as r, \
+            open(tmp, 'wb') as f:
+        r.raise_for_status()
+        for c in r.iter_content(1 << 20):
+            f.write(c)
+    got = d2l._sha256_file(tmp)
+    if got != spec['sha256']:
+        tmp.unlink()
+        raise RuntimeError(f'{spec["url"]}: SHA-256 {got}, the pin says '
+                           f'{spec["sha256"]}')
+    tmp.replace(path)
+    return path
+
+_CC_PIN_SOURCE = dict(  # one archive file of the CC-MAIN-2025-05 crawl
+    crawl='CC-MAIN-2025-05',
+    warc_url='https://data.commoncrawl.org/crawl-data/CC-MAIN-2025-05/'
+             'segments/1736703361941.29/warc/'
+             'CC-MAIN-20250126135402-20250126165402-00000.warc.gz',
+    warc_size=1141586184, n_bytes=256 * 2**20, block_bytes=16 * 2**20,
+    wet_url='https://data.commoncrawl.org/crawl-data/CC-MAIN-2025-05/'
+            'segments/1736703361941.29/wet/'
+            'CC-MAIN-20250126135402-20250126165402-00000.warc.wet.gz',
+    wet_size=102325106)
+
+def _cc_pin(warc_path, wet_path, src=None):
+    """The pin of the crawl range from verified local copies: URLs, sizes,
+    the SHA-256 of the range, of each of its blocks and of the WET file.
+    It names Common Crawl bytes; it holds none.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    src = src or d2l._CC_PIN_SOURCE
+    n, block = src['n_bytes'], src['block_bytes']
+    if os.path.getsize(warc_path) < n:
+        raise ValueError(f'{warc_path} holds fewer than {n} bytes')
+    blocks = []
+    with open(warc_path, 'rb') as f:
+        for _ in range(n // block):
+            blocks.append(hashlib.sha256(f.read(block)).hexdigest())
+    if os.path.getsize(wet_path) != src['wet_size']:
+        raise ValueError(f'{wet_path} is not {src["wet_size"]} bytes')
+    _, cc, path = src['warc_url'].partition('commoncrawl.org/')
+    return dict(  # FineWeb's file_path column names the file this way
+        schema='d2l-cc-pin/1', crawl=src['crawl'],
+        fineweb_file_path='s3://commoncrawl/' + path if cc else None,
+        warc=dict(url=src['warc_url'], file_size=src['warc_size'],
+                  range=[0, n - 1], n_bytes=n,
+                  sha256=d2l._sha256_file(warc_path, n), block_bytes=block,
+                  block_sha256=blocks),
+        wet=dict(url=src['wet_url'], file_size=src['wet_size'],
+                 sha256=d2l._sha256_file(wet_path)))
+
+def _cc_pin_bytes(pin):
+    """The pin file's exact bytes: sorted keys, one space indent, newline.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    return (json.dumps(pin, sort_keys=True, indent=1) + '\n').encode('utf-8')
+
+_TLD_EXTRACT = []  # one tldextract instance per process, made on first use
+
+def registered_domain(url):
+    """The registered domain of a URL (example.co.uk for
+    a.b.example.co.uk), from tldextract's bundled public-suffix snapshot
+    (no network); the lower-cased host when there is none (an IP
+    address, localhost).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import urllib.parse
+    if not d2l._TLD_EXTRACT:
+        import tldextract
+        d2l._TLD_EXTRACT.append(tldextract.TLDExtract(
+            suffix_list_urls=(), cache_dir=None))
+    ext = d2l._TLD_EXTRACT[0](url)
+    dom = ext.top_domain_under_public_suffix
+    return (dom or urllib.parse.urlsplit(url).hostname or '').lower()
+
+_CHARSET_ALIASES = {  # WHATWG: these labels mean windows-1252 in a browser
+    'iso-8859-1': 'cp1252', 'iso8859-1': 'cp1252', 'latin1': 'cp1252',
+    'latin-1': 'cp1252', 'l1': 'cp1252', 'us-ascii': 'cp1252',
+    'ascii': 'cp1252'}
+
+def decode_body(body, headers):
+    """(text, charset, source) of an HTTP payload. The charset comes from
+    the first source that decodes it: the Content-Type header ('header'),
+    a <meta charset> or http-equiv tag in the first 4 KiB ('meta'),
+    charset_normalizer's detector ('detector'), else UTF-8 with
+    replacement characters ('fallback'). A declared charset is accepted if
+    it decodes strictly or with at most 0.1% replacement characters (the
+    U+FFFD count of a page is a symptom of a wrong or mixed encoding).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import codecs
+
+    def attempt(label):
+        label = label.strip().strip('"\'').lower()
+        try:
+            name = codecs.lookup(d2l._CHARSET_ALIASES.get(label, label)).name
+        except LookupError:
+            return None
+        try:
+            return body.decode(name), name
+        except UnicodeDecodeError:
+            text = body.decode(name, 'replace')
+            return (text, name) if text.count('�') <= 1e-3 * max(
+                len(text), 1) else None
+
+    http = headers.get('HTTP', {}) if headers else {}
+    m = re.search(r'charset\s*=\s*([^\s;,]+)', http.get('content-type', ''),
+                  re.I)
+    if m and (got := attempt(m.group(1))):
+        return got[0], got[1], 'header'
+    m = re.search(rb'<meta[^>]+charset\s*=\s*["\']?([\w.:-]+)', body[:4096],
+                  re.I)
+    if m and (got := attempt(m.group(1).decode('ascii', 'replace'))):
+        return got[0], got[1], 'meta'
+    from charset_normalizer import from_bytes
+    best = from_bytes(body).best()
+    if best is not None:
+        return str(best), codecs.lookup(best.encoding).name, 'detector'
+    return body.decode('utf-8', 'replace'), 'utf-8', 'fallback'
+
+def _ws(s):
+    """Whitespace runs collapsed to one space, ends stripped.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    return ' '.join(s.split())
+
+def _nows(s):
+    """All whitespace removed: inline tags split or join words differently
+    in every extractor, so short strings are compared without it.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    return re.sub(r'\s+', '', s)
+
+_CONTROL = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]')
+
+def _lxml_document(html):
+    """The lxml document of a page, or None: an XML declaration (which
+    lxml refuses in a str) and control characters are removed first.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import lxml.etree
+    import lxml.html
+    html = _CONTROL.sub(' ', re.sub(r'^\s*<\?xml[^>]*\?>', '', html))
+    try:
+        return lxml.html.document_fromstring(html)
+    except (ValueError, lxml.etree.ParserError):
+        return None
+
+_MATH_LOADERS = re.compile(r'mathjax|katex', re.I)
+
+_TEX_SPANS = re.compile(r'\\\((.+?)\\\)|\\\[(.+?)\\\]|\$\$(.+?)\$\$', re.S)
+
+def html_structure(html):
+    """The structural content of a page, read from its HTML alone (no
+    extractor involved): code lines of <pre>/<code> blocks with at least 3
+    lines of at least 3 characters; table cells (<td>/<th> without a
+    nested table, 3-200 characters); mathematics (MathML TeX annotations,
+    MathJax <script type="math/tex">, <img> alt text with a backslash, and
+    \\(..\\), \\[..\\], $$..$$ spans when the page loads MathJax or KaTeX);
+    the prose; and the content text behind the precision proxy (<p>,
+    <pre>, <table>, <li>, <h1>-<h6> outside <nav>, <header>, <footer>,
+    <aside> and <form>, a <li> only if under half of its text is link
+    text). Strings are whitespace-free except code lines (whitespace
+    collapsed); text holds the same content elements with whitespace
+    collapsed, one per line, the input of a language identifier that no
+    extractor has touched. classes lists 'code', 'table', 'math' when present, and
+    'prose' for a page with none of them and at least 200 characters of
+    prose. Prose is the text of the <p> elements with at least 100
+    characters outside <nav>, <header>, <footer>, <aside> and <form>:
+    short paragraphs are mostly form messages, banners and captions.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    out = dict(code=[], table=[], math=[], prose='', content='', text='',
+               classes=[])
+    root = _lxml_document(html)
+    if root is None:
+        return out
+    loads_math = any(_MATH_LOADERS.search(s.get('src') or '')
+                     for s in root.iter('script'))
+    for a in root.xpath('//*[local-name()="annotation"]'
+                        '[@encoding="application/x-tex"]'):
+        out['math'].append(_nows(a.text_content()))
+    for s in root.xpath('//script[starts-with(@type, "math/tex")]'):
+        out['math'].append(_nows(s.text_content()))
+    for img in root.iter('img'):
+        if '\\' in (img.get('alt') or ''):
+            out['math'].append(_nows(img.get('alt')))
+    for bad in root.xpath('//script|//style|//noscript|//template'):
+        bad.drop_tree()
+    if loads_math:
+        body = root.find('body')
+        for m in _TEX_SPANS.finditer(body.text_content() if body is not None
+                                     else ''):
+            out['math'].append(_nows(next(g for g in m.groups() if g)))
+    out['math'] = [m for m in out['math'] if len(m) >= 2]
+    for el in root.xpath('//pre|//code[not(ancestor::pre)]'):
+        lines = [_ws(l) for l in el.text_content().splitlines()]
+        lines = [l for l in lines if len(l) >= 3]
+        if len(lines) >= 3:
+            out['code'] += lines
+    for table in root.iter('table'):
+        cells = [_nows(' '.join(c.itertext()))
+                 for c in table.xpath('.//td[not(.//table)]|'
+                                      './/th[not(.//table)]')]
+        cells = [c for c in cells if 3 <= len(c) <= 200]
+        if len(cells) >= 4:
+            out['table'] += cells
+    outside = ('not(ancestor::nav or ancestor::header or ancestor::footer '
+               'or ancestor::aside or ancestor::form)')
+    paras = [_nows(' '.join(p.itertext()))
+             for p in root.xpath(f'//p[{outside}]')]
+    out['prose'] = '\n'.join(p for p in paras if len(p) >= 100)
+    content = []
+    for el in root.xpath(f'//*[self::p or self::pre or self::table or '
+                         f'self::li or self::h1 or self::h2 or self::h3 or '
+                         f'self::h4 or self::h5 or self::h6][{outside}]'):
+        text = _ws(' '.join(el.itertext()))
+        if el.tag == 'li':
+            links = sum(len(_nows(' '.join(a.itertext())))
+                        for a in el.iter('a'))
+            if links > 0.5 * len(_nows(text)):
+                continue
+        content.append(text)
+    out['content'] = '\n'.join(map(_nows, content))
+    out['text'] = '\n'.join(t for t in content if t)
+    out['classes'] = [c for c in ('code', 'table', 'math') if out[c]]
+    if not out['classes'] and len(out['prose']) >= 200:
+        out['classes'] = ['prose']
+    return out
+
+def html_skeleton(html, n=25):
+    """The first n elements of a page's <body> as indented tag names, each
+    text node replaced by its character count: the page's shape without
+    its words (and without attributes).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    root = _lxml_document(html)
+    body = None if root is None else root.find('body')
+    lines = []
+
+    def walk(el, depth):
+        if len(lines) >= n or not isinstance(el.tag, str):
+            return
+        text = len((el.text or '').strip())
+        lines.append('  ' * depth + el.tag + (f'  [text: {text} chars]'
+                                              if text else ''))
+        for child in el:
+            walk(child, depth + 1)
+
+    if body is not None:
+        walk(body, 0)
+    return lines
+
+def char_ngram_f1(a, b, n=5):
+    """(precision, recall, F1) of the character n-grams of text a against
+    those of the reference b, as sets, after collapsing whitespace; 0.0
+    for an empty side.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    A, B = (set(s[i:i + n] for i in range(len(s) - n + 1))
+            for s in (_ws(a or ''), _ws(b or '')))
+    hit = len(A & B)
+    p, r = (hit / len(A) if A else 0.0), (hit / len(B) if B else 0.0)
+    return p, r, (2 * p * r / (p + r) if p + r else 0.0)
+
+_HOST_CLASSES = (  # first matching rule wins; tested on the host name
+    ('edu_gov', r'(\.edu|\.gov|\.mil|\.ac\.[a-z]{2}|\.edu\.[a-z]{2}|'
+                r'\.gov\.[a-z]{2})$'),
+    ('wiki', r'wiki'),
+    ('forum', r'forum|board|community|discuss|answers|stackexchange|'
+              r'stackoverflow|reddit'),
+    ('news', r'news|times|post|herald|tribune|journal|gazette|daily'),
+    ('blog', r'blog|wordpress|medium\.com|substack|tumblr'),
+    ('shop', r'shop|store|market|buy|cart|deals|amazon|ebay|etsy'))
+
+def host_class(url):
+    """A coarse class of the host (edu_gov, wiki, forum, news, blog, shop,
+    other) from the rules in _HOST_CLASSES, matched on the lower-cased
+    host name: a cheap grouping for removal audits, not a site type.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import urllib.parse
+    host = (urllib.parse.urlsplit(url).hostname or '').lower()
+    for name, rule in d2l._HOST_CLASSES:
+        if re.search(rule, host):
+            return name
+    return 'other'
+
+_ISO639_3TO1 = dict(  # CLD2's WET labels (ISO 639-3) to fastText's codes
+    eng='en', deu='de', fra='fr', spa='es', rus='ru', jpn='ja', zho='zh',
+    ita='it', por='pt', pol='pl', nld='nl', tur='tr', ces='cs', vie='vi',
+    ind='id', kor='ko', swe='sv', fas='fa', ara='ar', ukr='uk', hun='hu',
+    ell='el', dan='da', fin='fi', ron='ro', nor='no', nob='no', heb='he',
+    tha='th', hin='hi', bul='bg', slk='sk', cat='ca', hrv='hr', lit='lt',
+    slv='sl', srp='sr', est='et', lav='lv', msa='ms', ben='bn', tam='ta')
+
+def warc_record_at(path, offset, length):
+    """The WarcRecord stored in bytes offset..offset+length-1 of a local
+    WARC file: one gzip member, decompressed on its own.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import zlib
+    with open(path, 'rb') as f:
+        f.seek(offset)
+        raw = f.read(length)
+    d = zlib.decompressobj(31)
+    data = d.decompress(raw)
+    if not d.eof:
+        raise ValueError(f'{path}: no complete gzip member at {offset}')
+    return d2l._warc_parse(data, offset, length)
+
+def _c0_extract_one(record, extractor='trafilatura', lid_min=0.65):
+    """One response record through the c0 stages: status and MIME,
+    decode_body, extract_text, detect_lang, NFC, scrub_pii. Returns a dict
+    with the manifest row (no text), the final text, the extracted text
+    before NFC and PII ('raw'), the decoded HTML, the reason the record
+    was dropped (None if kept, else the first rule that fired: not_200,
+    not_html, empty, not_en, low_score) and the extraction time. The
+    section's extract cell and rebuild_c0 both call it, so a rebuild
+    repeats the build exactly.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import importlib.metadata
+    import time
+    import unicodedata
+    if not isinstance(record, d2l.WarcRecord):  # (path, offset, length)
+        record = d2l.warc_record_at(*record)
+    src = dict(warc=d2l._CC_PIN_SOURCE['warc_url'].partition(
+        'commoncrawl.org/')[2], offset=record.offset, length=record.length)
+    row = dict(id=record.id, url=record.url, date=record.date, src=src,
+               charset=None, charset_source=None, lang=None, lang_score=None,
+               extractor=extractor,
+               extractor_version=(importlib.metadata.version(extractor)
+                                  if extractor != 'naive' else 'd2l'),
+               n_chars=0, text_sha256=None, log=[])
+    out = dict(row=row, text=None, raw=None, html=None, drop=None, secs=0.0,
+               pii={'email': 0, 'ip': 0})
+    if record.status != 200:
+        out['drop'] = 'not_200'
+        return out
+    if record.mime != 'text/html':
+        out['drop'] = 'not_html'
+        return out
+    html, row['charset'], row['charset_source'] = d2l.decode_body(
+        record.body, record.headers)
+    out['html'] = html
+    row['log'].append(f'decode:{row["charset"]}/{row["charset_source"]}')
+    t = time.perf_counter()
+    raw = d2l.extract_text(html, method=extractor, url=record.url)
+    out['secs'] = time.perf_counter() - t
+    out['raw'] = raw
+    row['log'].append(f'extract:{extractor} {row["extractor_version"]}')
+    if not raw:
+        out['drop'] = 'empty'
+        return out
+    lang, score = d2l.detect_lang(raw)[0]
+    row['lang'], row['lang_score'] = lang, round(score, 4)
+    row['log'].append(f'lang:{lang} {row["lang_score"]:.4f}')
+    if lang != 'en':
+        out['drop'] = 'not_en'
+        return out
+    if score < lid_min:
+        out['drop'] = 'low_score'
+        return out
+    text = unicodedata.normalize('NFC', raw)
+    row['log'].append('nfc:' + ('changed' if text != raw else 'unchanged'))
+    text, out['pii'] = d2l.scrub_pii(text)
+    row['log'].append('pii:' + ','.join(f'{k}={v}'
+                                        for k, v in out['pii'].items()))
+    row['n_chars'] = len(text)
+    row['text_sha256'] = hashlib.sha256(text.encode('utf-8')).hexdigest()
+    out['text'] = text
+    return out
+
+def extract_page(job):
+    """The extract cell's worker for one HTML response job = (path, offset,
+    length): the c0 pipeline with trafilatura (_c0_extract_one), the
+    naive and Resiliparse extractions of the same decoded HTML with their
+    times, html_structure, and html_lang, the top (language, score) of
+    detect_lang on the structure's text ((None, 0.0) if it has none): a
+    label that depends on no extractor. The decoded HTML stays in the
+    worker.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    import time
+    c0 = d2l._c0_extract_one(d2l.warc_record_at(*job))
+    html = c0.pop('html') or ''
+    texts, secs = {'trafilatura': c0.pop('raw')}, {'trafilatura': c0['secs']}
+    for m in ('naive', 'resiliparse'):
+        t = time.perf_counter()
+        texts[m] = d2l.extract_text(html, method=m)
+        secs[m] = time.perf_counter() - t
+    row, struct = c0['row'], d2l.html_structure(html)
+    lang, score = (d2l.detect_lang(struct['text'])[0] if struct['text']
+                   else (None, 0.0))
+    return dict(id=row['id'], url=row['url'], offset=job[1],
+                n_html=len(html), charset=row['charset'],
+                charset_source=row['charset_source'], texts=texts, secs=secs,
+                struct=struct, html_lang=(lang, round(score, 4)), c0=c0)
+
+class DocList(list):
+    """A list of Doc with the rows that failed to rebuild in .mismatches.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    mismatches = ()
+
+def _c0_rebuild_one(job):
+    """rebuild_c0's worker: job = (path, manifest row).
+
+    Defined in :numref:`sec_lm_crawl`"""
+    path, row = job
+    src = row['src']
+    out = d2l._c0_extract_one((path, src['offset'], src['length']),
+                              row['extractor'])
+    out.pop('html')
+    return out
+
+def json_agreement(new, old):
+    """How far two JSON-like results agree: the number of leaf values in
+    new, how many equal old's value at the same path, the largest
+    absolute difference between numeric leaves present in both, the paths
+    of unequal non-numeric leaves (strings, booleans, None, or a number
+    against a non-number) and the paths present on one side only.
+
+    Defined in :numref:`sec_lm_crawl`"""
+    def leaves(x, path=()):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                yield from leaves(v, path + (str(k),))
+        elif isinstance(x, (list, tuple)):
+            for i, v in enumerate(x):
+                yield from leaves(v, path + (i,))
+        else:
+            yield path, x
+    def is_num(v):
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
+    a, b = dict(leaves(new)), dict(leaves(old))
+    num = [max(v - b[k], b[k] - v)  # d2l.abs is torch.abs
+           for k, v in a.items() if k in b and is_num(v) and is_num(b[k])]
+    other = [k for k, v in a.items() if k in b and b[k] != v
+             and not (is_num(v) and is_num(b[k]))]
+    return dict(values=len(a), equal=sum(k in b and b[k] == v
+                                         for k, v in a.items()),
+                max_diff=max(num, default=0.0), mismatches=other,
+                missing=sorted(set(a) ^ set(b), key=str))
+
+# Word and punctuation tokens, close to NLTK's English word_tokenize (which
+# datatrove uses): a run of word characters joined by inner apostrophes,
+# hyphens, periods, commas, colons or slashes (don't, 1,000, 3.5, 10:30),
+# or a run of other non-space characters. A run of Han, kana or Thai
+# characters is one "word": the rules see unspaced scripts this way.
+_RULE_WORD = re.compile(r"\w+(?:[.,:/'’-]\w+)*|[^\w\s]+")
+# Terminal punctuation for FineWeb's line rule: the common marks of the
+# scripts in this chapter (datatrove 0.10.1 lists 159 code points)
+_TERMINAL_PUNCT = tuple('.!?。！？．｡؟।॥')
+_C4_POLICY = ('terms of use', 'privacy policy', 'cookie policy',
+              'uses cookies', 'use of cookies', 'use cookies')
+
+def _rule_words(text):
+    """The word and punctuation tokens of text (see _RULE_WORD).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    return d2l._RULE_WORD.findall(text)
+
+def _rule_is_symbol(word):
+    """True if a token has no letter or digit (punctuation, symbols).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    return not any(ch.isalnum() for ch in word)
+
+def _rule_dups(items):
+    """(number, characters) of the items that repeat an earlier item.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    seen, n, chars = set(), 0, 0
+    for x in items:
+        if x in seen:
+            n, chars = n + 1, chars + len(x)
+        else:
+            seen.add(x)
+    return n, chars
+
+def _rule_top_ngram(words, n):
+    """Characters covered by the most frequent word n-gram (joined by
+    spaces): its length times its count, as in Gopher's repetition rule.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    grams = collections.Counter(' '.join(words[i:i + n])
+                                for i in range(len(words) - n + 1))
+    if not grams:
+        return 0
+    gram, count = grams.most_common(1)[0]
+    return len(gram) * count
+
+def _rule_dup_ngram(words, n):
+    """Characters in word n-grams (joined without spaces) that repeat an
+    earlier n-gram, skipping past each repeat, as in Gopher's rule.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    seen, chars, i = set(), 0, 0
+    while i < len(words) - n + 1:
+        gram = ''.join(words[i:i + n])
+        if gram in seen:
+            chars, i = chars + len(gram), i + n
+        else:
+            seen.add(gram)
+            i += 1
+    return chars
+
+def _rule_c4(text, c):
+    """True if C4's document rules drop text: 'lorem ipsum' or a curly
+    brace on a line that survives the line rules, or fewer than
+    c['min_sentences'] sentences on those lines. As in FineWeb's run, a
+    line without terminal punctuation is not removed; sentences are split
+    at . ! ? followed by space (NLTK's punkt in datatrove).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    sentences = 0
+    for line in text.splitlines():
+        line = line.strip()
+        words = line.split()
+        if any(len(w) > c['max_word_len'] for w in words):
+            continue
+        line = re.sub(r'\[\d*\]|\[edit\]|\[citation needed\]', '', line)
+        if len(words) < c['min_line_words']:
+            continue
+        low = line.lower()
+        if 'lorem ipsum' in low:
+            return True
+        if 'javascript' in low:
+            continue
+        if '{' in line:
+            return True
+        if any(p in low for p in d2l._C4_POLICY):
+            continue
+        sentences += len([s for s in re.split(r'(?<=[.!?])\s+', line)
+                          if s.strip()])
+    return sentences < c['min_sentences']
+
+def cohen_kappa(a, b):
+    """Cohen's kappa of two label arrays: agreement beyond what the two
+    marginal distributions give by chance; nan if chance agreement is 1.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    a, b = np.asarray(a), np.asarray(b)
+    labels = np.union1d(a, b)
+    po = np.mean(a == b)
+    pe = sum(np.mean(a == k) * np.mean(b == k) for k in labels)
+    return float((po - pe) / (1 - pe)) if pe < 1 else float('nan')
+
+def quadratic_kappa(a, b, k=6):
+    """Quadratic-weighted kappa of two integer scores in 0..k-1: one minus
+    the observed mean squared disagreement over the one expected from the
+    marginals.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    a, b = np.asarray(a, dtype=int), np.asarray(b, dtype=int)
+    O = np.zeros((k, k))
+    np.add.at(O, (a, b), 1)
+    O /= O.sum()
+    E = np.outer(O.sum(1), O.sum(0))
+    W = (np.arange(k)[:, None] - np.arange(k)[None, :]) ** 2 / (k - 1) ** 2
+    return float(1 - (W * O).sum() / (W * E).sum())
+
+def wilson_ci(k, n, z=1.96):
+    """Wilson score interval for a binomial proportion k / n.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    if n == 0:
+        return float('nan'), float('nan')
+    p, z2 = k / n, z * z
+    mid = (p + z2 / (2 * n)) / (1 + z2 / n)
+    half = z * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / (1 + z2 / n)
+    return mid - half, mid + half
+
+def binary_f1(y, pred):
+    """F1 of boolean predictions against boolean labels (0 if none).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    y, pred = np.asarray(y, dtype=bool), np.asarray(pred, dtype=bool)
+    tp = np.sum(y & pred)
+    return float(2 * tp / (y.sum() + pred.sum())) if tp else 0.0
+
+def rank_auc(y, s):
+    """ROC AUC of scores s for boolean labels y (Mann-Whitney, ties at
+    half).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    y, s = np.asarray(y, dtype=bool), np.asarray(s, dtype=float)
+    r = pd.Series(s).rank().to_numpy()  # average ranks for ties
+    n1, n0 = y.sum(), (~y).sum()
+    return float((r[y].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
+
+def _edu_batches(lengths, batch_size, max_batch_tokens):
+    """Batches of indices, longest first: at most batch_size rows and at
+    most max_batch_tokens tokens with left padding (rows times the first,
+    longest, row's length); a row longer than the cap is alone.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    order = sorted(range(len(lengths)), key=lambda i: (-lengths[i], i))
+    batches = []
+    for i in order:
+        b = batches[-1] if batches else None
+        if (b is None or len(b) == batch_size or
+                lengths[b[0]] * (len(b) + 1) > max_batch_tokens):
+            batches.append([i])
+        else:
+            b.append(i)
+    return batches
+
+_EDU_ANNOT_ROWS = 467_424  # rows of the eight released files
+_EDU_ANNOT_SPLITS = (18_000, 2_000, 2_000)  # train, val, test
+
+# The rows of the released annotations that the released FineWeb-Edu
+# classifier did not train on (its card's hold-out of 46,867, reproduced
+# from its training code; 46,744 survive in the release):
+# tools/build_lm_edu_holdout.py
+d2l.DATA_HUB['lm-edu-holdout-v1'] = (
+    d2l.LM_DATA_URL + 'lm-edu-holdout-v1.json.gz',
+    'dc1759992f17805864e08da5c5dcce51928e1c03')
+
+def _edu_annot_sample():
+    """The 22,000 annotation rows of lm-edu-annot-22k-v1 before labelling,
+    in the order of p = default_rng(0).permutation(467,424) over the rows
+    of the eight released files read in order: train is p[:18,000]; val and
+    test are the next 2,000 and 2,000 rows of p[18,000:] that lie in the
+    released classifier's hold-out (lm-edu-holdout-v1), so its scores on
+    them are out-of-sample. Columns row, split, text, prompt (the
+    labeller's input as released), llama_score, url, dump; text and prompt
+    as released.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    import huggingface_hub
+    import pyarrow.parquet as pq
+    _, repo, rev, _ = d2l.LM_DATA_SOURCES['edu-annotations']
+    with gzip.open(d2l.download_keyed('lm-edu-holdout-v1'), 'rt') as f:
+        hold = json.load(f)
+    assert hold['release_revision'] == rev, 'another annotation revision'
+    n_train, n_val, n_test = d2l._EDU_ANNOT_SPLITS
+    p = np.random.default_rng(0).permutation(d2l._EDU_ANNOT_ROWS)
+    rest = p[n_train:]
+    rest = rest[np.isin(rest, hold['rows'])][:n_val + n_test]
+    perm = np.concatenate([p[:n_train], rest])
+    split = np.repeat(['train', 'val', 'test'], d2l._EDU_ANNOT_SPLITS)
+    frames, start = [], 0
+    for k in range(8):
+        path = huggingface_hub.hf_hub_download(
+            repo, f'data/train-{k:05d}-of-00008.parquet', revision=rev,
+            repo_type='dataset')
+        f = pq.ParquetFile(path)
+        n = f.metadata.num_rows
+        pos = np.flatnonzero((perm >= start) & (perm < start + n))
+        t = f.read(columns=['text', 'prompt', 'score', 'metadata']).take(
+            perm[pos] - start).to_pandas()
+        frames.append(pd.DataFrame(dict(
+            pos=pos, row=perm[pos], split=split[pos], text=t.text,
+            prompt=t.prompt, llama_score=t.score.astype(int),
+            url=[m['url'] for m in t.metadata],
+            dump=[m['dump'] for m in t.metadata])))
+        start += n
+    assert start == d2l._EDU_ANNOT_ROWS, start
+    df = pd.concat(frames).sort_values('pos', ignore_index=True)
+    return df.drop(columns='pos')
+
+# The quality labeller (from 2026-11-20; Qwen3.5-4B before): Qwen3.8-27B,
+# the judge of :numref:`sec_lm_rag`, in RedHat's W4A16 build (Apache-2.0),
+# one copy per 24 GB GPU served by vLLM, which lives in an environment of
+# its own (D2L_VLLM); 16.7 GiB of weights per card
+EDU_LABELLER_LOCAL = {'model': 'RedHatAI/Qwen3.8-27B-INT4',
+                      'revision': '71dface38d4cbfa34121f1d446d4a0fa1025f13c',
+                      'vllm': '0.33.0'}
+
+def edu_label_servers(gpus=None, vllm=None):
+    """One d2l.LocalChatServer per GPU (default: every visible GPU), each
+    serving EDU_LABELLER_LOCAL with vLLM on that GPU alone, offline from
+    the local Hub cache, from the executable vllm (default: the
+    environment variable D2L_VLLM, else `vllm` on the PATH). At the
+    defaults (0.9 of the memory, 64 sequences) vLLM refuses to start:
+    the linear-attention layers' state cache holds 54 sequences. A server
+    takes 0.95 of an idle card; on a card that already holds memory (this
+    process's own, say) it takes what is free less 1.5 GiB.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    import shutil  # not in the d2l library preamble
+    import subprocess
+    exe = vllm or os.environ.get('D2L_VLLM') or shutil.which('vllm')
+    if exe is None:
+        raise RuntimeError('no vLLM: install it in its own environment and '
+                           'set D2L_VLLM to its vllm executable')
+    if gpus is None:
+        vis = os.environ.get('CUDA_VISIBLE_DEVICES')
+        gpus = (vis.split(',') if vis else
+                [str(i) for i in range(torch.cuda.device_count())])
+    servers, j = [], d2l.EDU_LABELLER_LOCAL
+    for g in gpus:  # nvidia-smi reads memory without opening a CUDA context
+        used, total = map(int, subprocess.run(
+            ['nvidia-smi', '-i', str(g), '--query-gpu=memory.used,'
+             'memory.total', '--format=csv,noheader,nounits'], check=True,
+            capture_output=True, text=True).stdout.split(','))
+        frac = 0.95 if used <= 100 else min(0.95, (total - used - 1536)
+                                            / total)
+        servers.append(d2l.LocalChatServer([
+            'env', f'CUDA_VISIBLE_DEVICES={g}', 'HF_HUB_OFFLINE=1', exe,
+            'serve', j['model'], '--revision', j['revision'],
+            '--max-model-len', '16384', '--max-num-seqs', '32',
+            '--gpu-memory-utilization', f'{frac:.3f}', '--language-model-only',
+            '--limit-mm-per-prompt', '{"image": 0, "video": 0}',
+            '--reasoning-parser', 'qwen3', '--seed', '0', '--host',
+            '127.0.0.1', '--port', '{port}']))
+    return servers
+
+def _vllm_post(url, path, body, timeout=600.0, attempts=3):
+    """The JSON reply of an OpenAI-compatible server to a POST of body at
+    url + path, with up to attempts tries five seconds apart.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    import urllib.request
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    req = urllib.request.Request(url + path, json.dumps(body).encode(),
+                                 {'Content-Type': 'application/json'})
+    for k in range(attempts):
+        try:
+            with opener.open(req, timeout=timeout) as r:
+                return json.load(r)
+        except OSError:
+            if k == attempts - 1:
+                raise
+            time.sleep(5)
+
+def _edu_label_ids(tokenizer, prompts, prefix, extra_space=False):
+    """The prompts as edu_label_scores scores them: (token ids, the ids of
+    '0' ... '5', the id of one more space or None). Each prompt is a user
+    turn of the chat template (non-thinking) followed by prefix, tokenized
+    as if the digit followed, then cut, so a prefix that ends in spaces
+    splits as in the model's own text.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    digits = [tokenizer.encode(str(d), add_special_tokens=False)
+              for d in range(6)]
+    if any(len(t) != 1 for t in digits):
+        raise ValueError(f'the digits are not single tokens: {digits}')
+    digits = [t[0] for t in digits]
+    ids, space = [], None
+    for p in prompts:
+        chat = tokenizer.apply_chat_template(
+            [{'role': 'user', 'content': p}], tokenize=False,
+            add_generation_prompt=True, enable_thinking=False) + prefix
+        x = tokenizer(chat + '0', add_special_tokens=False)['input_ids']
+        if x[-1] != digits[0]:
+            raise ValueError(f'the digit after {prefix!r} merges with it')
+        ids.append(x[:-1])
+        if extra_space:  # the same text with one more space
+            y = tokenizer(chat + ' 0', add_special_tokens=False)['input_ids']
+            if y[:len(x) - 1] != x[:-1] or len(y) != len(x) + 1:
+                raise ValueError('one more space does not add one token')
+            if space not in (None, y[-2]):
+                raise ValueError('the extra space is not one token id')
+            space = y[-2]
+    return ids, digits, space
+
+def edu_label_scores_served(urls, tokenizer, prompts, *, model=None,
+                            prefix='Educational score: ', extra_space=False,
+                            concurrency=1):
+    """edu_label_scores computed by OpenAI-compatible vLLM servers at urls,
+    each serving model (default EDU_LABELLER_LOCAL's): the same token ids,
+    sent as the prompt of a one-token greedy completion with the top 20
+    log-probabilities; a digit outside them counts as 0. With extra_space,
+    the probability of digit d also counts the answers that write one more
+    space first: p(d) + p(space) p(d | space). Rows are spread over the
+    servers in turn, at most concurrency requests in flight per server;
+    they come back in input order. One at a time (the default), every
+    server returns the same bits for a prompt; a batch of concurrent
+    requests changes them (by up to about 0.08 for Qwen3.8-27B-INT4).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    import concurrent.futures
+    import threading
+    model = model or d2l.EDU_LABELLER_LOCAL['model']
+    ids, digits, space = d2l._edu_label_ids(tokenizer, prompts, prefix,
+                                            extra_space)
+    want = digits + ([space] if extra_space else [])
+    gates = [threading.Semaphore(concurrency) for _ in urls]
+
+    def top(i, x):
+        k = i % len(urls)
+        with gates[k]:
+            d = d2l._vllm_post(urls[k], '/completions', dict(
+                model=model, prompt=x, max_tokens=1, temperature=0,
+                logprobs=20, return_tokens_as_token_ids=True))
+        lp = d['choices'][0]['logprobs']['top_logprobs'][0]
+        lp = {int(t.rsplit(':', 1)[-1]): v for t, v in lp.items()}
+        return [math.exp(lp[t]) if t in lp else 0.0 for t in want]
+
+    with concurrent.futures.ThreadPoolExecutor(
+            concurrency * len(urls)) as ex:
+        P = np.array(list(ex.map(top, range(len(ids)), ids)))
+        if not extra_space:
+            return P
+        more = np.flatnonzero(P[:, 6] > 0)  # one more space, then a digit
+        Q = np.array(list(ex.map(top, more, [ids[i] + [space]
+                                             for i in more])))
+    out = P[:, :6].copy()
+    if len(more):
+        out[more] += P[more, 6:7] * Q[:, :6]
+    return out
+
+def _stream_half(domain):
+    """The audit stream's half ('A' or 'B') of a registered domain: the
+    parity of the first 32 bits of its SHA-256, so the halves share no
+    domain (the bootstrap's cluster).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    h = int(hashlib.sha256(domain.encode('utf-8')).hexdigest()[:8], 16)
+    return 'A' if h % 2 == 0 else 'B'
+
+def _cctld(url):
+    """The last label of the host's public suffix with a dot ('.uk' for
+    example.co.uk, '.com'), from the same tldextract snapshot as
+    registered_domain; '' for an IP address.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    d2l.registered_domain('http://example.com')  # makes the extractor
+    suffix = d2l._TLD_EXTRACT[0](url).suffix
+    return '.' + suffix.rsplit('.', 1)[-1].lower() if suffix else ''
+
+def released_edu_scores(texts, batch=64, device=None, dtype=None):
+    """Scores of the released FineWeb-Edu classifier (a regression head on
+    a frozen Snowflake arctic-embed-m encoder; Apache-2.0) at its pinned
+    revision: the first 512 tokens of each text, length-sorted batches,
+    float32 scores in input order. bf16 on a GPU, fp32 on the CPU.
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    import transformers
+    _, repo, rev, _ = d2l.LM_DATA_SOURCES['fineweb-edu-classifier']
+    device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+    dtype = dtype or (torch.bfloat16 if device == 'cuda' else torch.float32)
+    tok = transformers.AutoTokenizer.from_pretrained(repo, revision=rev)
+    model = transformers.AutoModelForSequenceClassification.from_pretrained(
+        repo, revision=rev, dtype=dtype).to(device).eval()
+    ids = tok(list(texts), truncation=True, max_length=512)['input_ids']
+    order = sorted(range(len(ids)), key=lambda i: -len(ids[i]))
+    out = np.empty(len(ids), dtype=np.float32)
+    for j in range(0, len(order), batch):
+        rows = order[j:j + batch]
+        enc = tok.pad({'input_ids': [ids[i] for i in rows]},
+                      return_tensors='pt').to(device)
+        with torch.inference_mode():
+            out[rows] = model(**enc).logits[:, 0].float().cpu().numpy()
+    del model
+    d2l.lm_free()
+    return out
+
+def c0_documents(manifest='lm-c0-docs-v1', cache_dir=None):
+    """The c0 documents: the cached rebuild in cache_dir (default
+    ../data/lm/c0) if its ids and text hashes equal the manifest rows,
+    else rebuild_c0 (which writes that cache).
+
+    Defined in :numref:`sec_lm_quality_filtering`"""
+    import pathlib
+    cache = pathlib.Path(cache_dir or os.path.join('..', 'data', 'lm', 'c0'))
+    path = (d2l.download_keyed(manifest) if manifest in d2l.DATA_HUB
+            else manifest)
+    with gzip.open(path, 'rt', encoding='utf-8') as f:
+        want = {r['id']: r['text_sha256'] for r in map(json.loads, f)}
+    if (cache / 'c0-docs.jsonl.gz').exists():
+        docs = d2l.read_docs(cache / 'c0-docs.jsonl.gz')
+        got = {d.id: hashlib.sha256(d.text.encode('utf-8')).hexdigest()
+               for d in docs}
+        if got == want:
+            return docs
+    docs = d2l.rebuild_c0(manifest, cache_dir=cache)
+    assert not docs.mismatches, f'{len(docs.mismatches)} c0 rows drifted'
+    return docs
+
+_MINHASH_PARAMS = {}  # (k, seed) -> the rows' (a, c), drawn once
+
+def _shingle_hashes(shingle_list):
+    """The 64-bit shingle hashes of the MinHash specification: blake2b with
+    an 8-byte digest of the UTF-8 shingle, read little-endian (uint64).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    digests = b''.join(hashlib.blake2b(s.encode('utf-8'), digest_size=8)
+                       .digest() for s in shingle_list)
+    return np.frombuffer(digests, dtype='<u8').astype(np.uint64)
+
+def _minhash_params(k, seed):
+    """The k rows' coefficients (a, c), each uint64 in [1, p), from
+    numpy.random.default_rng(seed) as the specification draws them.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    if (k, seed) not in d2l._MINHASH_PARAMS:
+        a, c = np.random.default_rng(seed).integers(
+            1, d2l.MINHASH_PRIME, size=(2, k), dtype=np.uint64)
+        d2l._MINHASH_PARAMS[k, seed] = (a, c)
+    return d2l._MINHASH_PARAMS[k, seed]
+
+def _mulmod61(a, x):
+    """(a * x) mod p for p = 2^61 - 1 and uint64 arrays a, x < 2^61
+    (broadcast), exact. The product needs 122 bits, so both factors are
+    split into 32-bit halves, whose partial products fit in 64 bits, and
+    the high bits fold back because 2^61 = 1 (mod p).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    p, m32 = np.uint64(d2l.MINHASH_PRIME), np.uint64(0xFFFFFFFF)
+    a_hi, a_lo = a >> np.uint64(32), a & m32
+    x_hi, x_lo = x >> np.uint64(32), x & m32
+    lo = a_lo * x_lo                     # < 2^64
+    mid = a_hi * x_lo + a_lo * x_hi      # < 2^62, weight 2^32
+    hi = a_hi * x_hi                     # < 2^58, weight 2^64 = 8 (mod p)
+    s = ((lo & p) + (lo >> np.uint64(61))
+         + ((mid & np.uint64((1 << 29) - 1)) << np.uint64(32))
+         + (mid >> np.uint64(29)) + (hi << np.uint64(3)))   # < 2^63
+    s = (s & p) + (s >> np.uint64(61))
+    return np.where(s >= p, s - p, s)
+
+def _minhash_rows(x, a, c, chunk=4096):
+    """min over the hashes x (mod p already) of (a_i x + c_i) mod p for
+    each row i: the signature, computed chunk by chunk of shingles.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    p = np.uint64(d2l.MINHASH_PRIME)
+    sig = np.full(len(a), p, dtype=np.uint64)
+    for j in range(0, len(x), chunk):
+        v = d2l._mulmod61(a[:, None], x[None, j:j + chunk]) + c[:, None]
+        v = np.where(v >= p, v - p, v)
+        sig = np.minimum(sig, v.min(axis=1))
+    return sig
+
+def _minhash_chunk(job):
+    """_minhash_texts' worker: job = (texts, k, seeds, ngram); one list of
+    signatures (None for fewer than ngram words) per seed.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    texts, k, seeds, ngram = job
+    out = {s: [] for s in seeds}
+    for t in texts:
+        sh = d2l.shingles(t, ngram)
+        x = (np.unique(d2l._shingle_hashes(sh)) % np.uint64(
+            d2l.MINHASH_PRIME)) if sh else None
+        for s in seeds:
+            out[s].append(None if x is None else
+                          d2l._minhash_rows(x, *d2l._minhash_params(k, s)))
+    return out
+
+def _minhash_texts(texts, k=128, seeds=(0xD2,), ngram=5, workers=1):
+    """{seed: [signature or None per text]} for many texts, each text
+    shingled and hashed once for all seeds; with workers > 1 in separate
+    processes (chunks of 500 texts, results in input order, so the output
+    does not depend on workers).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import concurrent.futures
+    import multiprocessing
+    texts = [str(t) for t in texts]
+    jobs = [(texts[i:i + 500], k, tuple(seeds), ngram)
+            for i in range(0, len(texts), 500)]
+    if workers <= 1 or len(jobs) < 2:
+        outs = map(d2l._minhash_chunk, jobs)
+    else:
+        ex = concurrent.futures.ProcessPoolExecutor(
+            workers, mp_context=multiprocessing.get_context('spawn'))
+        with ex:
+            outs = list(ex.map(d2l._minhash_chunk, jobs))
+    res = {s: [] for s in seeds}
+    for out in outs:
+        for s in seeds:
+            res[s] += out[s]
+    return res
+
+def _sig_matrix(sigs, k):
+    """Signatures (a list with None for empty documents) as a (n, k) uint64
+    array and the boolean mask of documents that have one.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    ok = np.array([s is not None for s in sigs])
+    S = np.zeros((len(sigs), k), dtype=np.uint64)
+    if ok.any():
+        S[ok] = np.stack([s for s in sigs if s is not None])
+    return S, ok
+
+def _band_match(SA, SB, b, r):
+    """Per pair, whether the signature rows SA[i] and SB[i] agree in all r
+    rows of at least one of the first b bands: lsh_candidates' decision
+    for one known pair, vectorized (equal up to 8-byte key collisions).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    eq = SA[:, :b * r] == SB[:, :b * r]
+    return eq.reshape(len(SA), b, r).all(axis=2).any(axis=1)
+
+DUP_BOILERPLATE = (  # 40 generic template blocks for the 'boiler' perturbation
+    'We use cookies to improve your experience on our site. By continuing '
+    'to browse you agree to our use of cookies. Learn more in our cookie '
+    'policy.',
+    'Subscribe to our newsletter and get the latest news, offers and '
+    'updates delivered straight to your inbox every week. You can '
+    'unsubscribe at any time.',
+    'Home | About Us | Services | Blog | Contact | Privacy Policy | Terms '
+    'and Conditions | Sitemap',
+    'Share this article: Facebook Twitter LinkedIn Pinterest Email Print',
+    'All rights reserved. No part of this website may be reproduced, '
+    'distributed or transmitted in any form without the prior written '
+    'permission of the publisher.',
+    'This post may contain affiliate links. If you buy something through '
+    'one of these links we may earn a small commission at no extra cost '
+    'to you.',
+    'Leave a Reply. Your email address will not be published. Required '
+    'fields are marked. Name Email Website Comment',
+    'Related posts: you might also like these articles from our archive, '
+    'chosen for readers who enjoyed this one.',
+    'Free shipping on all orders over fifty dollars. Easy returns within '
+    'thirty days. Secure checkout with all major cards.',
+    'Disclaimer: the information on this page is for general purposes only '
+    'and does not constitute professional advice. Consult a qualified '
+    'expert before acting on it.',
+    'Click here to download the free guide. Enter your name and email '
+    'address below and we will send it right away.',
+    'Posted in Uncategorized | Tagged news, updates, tips | Leave a comment',
+    'Previous article Next article Back to top',
+    'Skip to main content Search this site Menu Close menu Log in Register',
+    'Copyright the authors. Content on this site is licensed for personal '
+    'use only; please contact us for permission to republish.',
+    'Follow us on social media for daily updates, behind the scenes photos '
+    'and special announcements from our team.',
+    'Your cart is empty. Continue shopping or sign in to see items you '
+    'saved during an earlier visit.',
+    'This website uses analytics to understand how visitors use it. We do '
+    'not sell your personal data. Read our privacy notice for details.',
+    'Accept all cookies Reject non-essential cookies Manage preferences',
+    'Sign up for a free account to save your favourite pages, comment on '
+    'articles and receive personalised recommendations.',
+    'Advertisement. Continue reading below.',
+    'Was this page helpful? Yes No. Thank you for your feedback.',
+    'Terms of use: by accessing this site you accept these terms in full. '
+    'If you disagree with any part of them you must not use the site.',
+    'Contact us: send us a message using the form below and a member of '
+    'our team will get back to you within two working days.',
+    'Recent Posts Archives Categories Meta Log in Entries feed Comments feed',
+    'Print this page Email this page Bookmark this page',
+    'Last updated on the date shown above. Prices and availability are '
+    'subject to change without notice.',
+    'Join thousands of readers who already get our weekly digest. No spam, '
+    'we promise. Your details are safe with us.',
+    'You are here: Home > Articles > Current page',
+    'Read more Show less Load more comments',
+    'Our support team is available Monday to Friday from nine to five. '
+    'Call us or open a ticket in the help centre.',
+    'Images are for illustration purposes only and may not show the exact '
+    'product described on this page.',
+    'Tags: guide, how to, beginners, tips and tricks, frequently asked '
+    'questions',
+    'Download our app for a faster experience on your phone. Available for '
+    'all major platforms.',
+    'Please enable JavaScript in your browser to view this content and use '
+    'all the features of this site.',
+    'Rate this article: one star two stars three stars four stars five '
+    'stars. Average rating based on reader votes.',
+    'About the author: a writer and editor who covers everyday topics for '
+    'a general audience. Views expressed are their own.',
+    'Back to the list of all articles in this category.',
+    'Sponsored content. This article was produced in partnership with an '
+    'advertiser and reviewed by our editorial team.',
+    'Thank you for visiting. Come back soon for new articles every week.')
+
+def _dup_vocab(texts):
+    """The substitution vocabulary of make_dup_pairs: the sorted distinct
+    lowercased \\w+ words of texts.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import regex
+    return sorted({w for t in texts for w in regex.findall(r'\w+',
+                                                            t.lower())})
+
+def _dup_perturb(text, op, params, vocab=None):
+    """A perturbed copy of text by op (sub, del, boiler, shuffle, trunc)
+    with params; every random choice comes from default_rng(params['seed']).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import regex
+    rng = np.random.default_rng(params['seed'])
+    if op in ('sub', 'del'):
+        pat = r'\w+' if op == 'sub' else r'\w+[^\S\n]*'
+        spans = [m.span() for m in regex.finditer(pat, text)]
+        m = max(1, round(params['rate'] * len(spans)))
+        pick = set(rng.choice(len(spans), m, replace=False).tolist())
+        if op == 'sub' and vocab is None:
+            raise ValueError("'sub' needs the substitution vocabulary")
+        out, at = [], 0
+        for i, (s, e) in enumerate(spans):
+            if i in pick:
+                out.append(text[at:s])
+                if op == 'sub':
+                    out.append(vocab[int(rng.integers(len(vocab)))])
+                at = e
+        return ''.join(out) + text[at:]
+    paras = text.split('\n')
+    if op == 'boiler':
+        words = []
+        for j in rng.permutation(len(d2l.DUP_BOILERPLATE)):
+            words += d2l.DUP_BOILERPLATE[j].split()
+            if len(words) >= params['words']:
+                break
+        paras.insert(int(rng.integers(len(paras) + 1)),
+                     ' '.join(words[:params['words']]))
+        return '\n'.join(paras)
+    if op == 'shuffle':
+        return '\n'.join(paras[i] for i in rng.permutation(len(paras)))
+    if op == 'trunc':
+        ends = [m.end() for m in regex.finditer(r'\w+', text)]
+        return text[:ends[max(1, round(params['frac'] * len(ends))) - 1]]
+    raise ValueError(f'unknown op {op!r}')
+
+def _url_host(url):
+    """The lowercased host name of a URL ('' if it has none).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import urllib.parse
+    return (urllib.parse.urlsplit(url).hostname or '').lower()
+
+def _pb_interval(p, level=0.95):
+    """Central interval (lo, hi) of a Poisson-binomial count, the number of
+    successes of independent trials with probabilities p: lo is the
+    smallest count with P(X <= lo) > (1 - level) / 2 and hi the smallest
+    with P(X <= hi) >= (1 + level) / 2, from the exact distribution.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    p = np.asarray(p, dtype=float)
+    ones, p = int(np.sum(p >= 1.0)), p[(p > 0.0) & (p < 1.0)]
+    pmf = np.ones(1)
+    for q in p:
+        pmf = np.append(pmf * (1 - q), 0.0) + np.append(0.0, pmf * q)
+    cdf = np.cumsum(pmf)
+    alpha = (1 - level) / 2
+    lo = int(np.searchsorted(cdf, alpha, side='right'))
+    hi = int(np.searchsorted(cdf, 1 - alpha - 1e-12))
+    return lo + ones, hi + ones
+
+def benchmark_items():
+    """The test items of GSM8K (1,319), ARC-Challenge (1,172) and MMLU
+    (14,042) at their pinned files: dicts with item_id, benchmark,
+    question, choices (labels and texts, or None), gold (answer label or
+    final number) and text, the indexed form: question and gold answer
+    text.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    items = []
+    gsm = pd.read_parquet(d2l.download_keyed('gsm8k-test'))
+    for i, row in gsm.iterrows():
+        items.append(dict(item_id=f'gsm8k-{i}', benchmark='gsm8k',
+                          question=row.question.strip(), choices=None,
+                          gold=row.answer.split('####')[-1].strip(),
+                          text=row.question.strip() + '\n' + row.answer))
+    arc = pd.read_parquet(d2l.download_keyed('arc-challenge-test'))
+    for _, row in arc.iterrows():
+        labels = [str(x) for x in row.choices['label']]
+        texts = [str(x) for x in row.choices['text']]
+        gold = texts[labels.index(str(row.answerKey))]
+        items.append(dict(item_id=f'arc-{row.id}', benchmark='arc',
+                          question=row.question.strip(),
+                          choices=list(zip(labels, texts)),
+                          gold=str(row.answerKey),
+                          text=row.question.strip() + '\n' + gold))
+    rows = d2l._eval_load_rows(d2l.EVAL_TASKS['mmlu'], 'test')
+    for i, row in enumerate(rows):
+        texts = [str(x) for x in row['choices']]
+        items.append(dict(item_id=f'mmlu-{i}', benchmark='mmlu',
+                          question=row['question'].strip(),
+                          choices=list(zip('ABCD', texts)),
+                          gold='ABCD'[int(row['answer'])],
+                          text=row['question'].strip() + '\n'
+                          + texts[int(row['answer'])]))
+    return items
+
+def _plant_text(item, form):
+    """A benchmark item as a page would show it: the question, the lettered
+    options (ARC, MMLU) and an answer line. form 'reformat' changes it by
+    rule: lower case, one space for every whitespace run, commas and
+    semicolons before a space dropped, a space before '?', the options in
+    reverse order with their letters reassigned.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    choices = item['choices'] or []
+    gold = item['gold']
+    if form == 'reformat' and choices:
+        old = dict(choices)[gold]
+        choices = [(lab, t) for (lab, _), (_, t) in zip(
+            choices, reversed(choices))]
+        gold = next(lab for lab, t in choices if t == old)
+    fmt = '({}) {}' if item['benchmark'] == 'arc' else '{}. {}'
+    lines = [item['question']] + [fmt.format(lab, t) for lab, t in choices]
+    text = '\n'.join(lines + [f'Answer: {gold}'])
+    if form == 'reformat':
+        text = re.sub(r'[,;](?=\s)', '', text.lower())
+        text = re.sub(r'\s+', ' ', text.replace('?', ' ?')).strip()
+    return text
+
+def _sentence_starts(text):
+    """Positions where a sentence or a line starts (plant insertion points),
+    with 0 and len(text).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import regex
+    pos = {0, len(text)}
+    pos.update(m.end() for m in regex.finditer(r'(?<=[.!?])\s+|\n', text))
+    return sorted(pos)
+
+def make_plants(items, stream, paraphrase, n_per=100, n_controls=1000,
+                seed=0, min_words=13, max_words=180, prompt_sha256=None,
+                model_revision=None):
+    """The planted decontamination test set: n_per items of each benchmark
+    (items whose question has at least min_words words and whose page form
+    at most max_words), each in three forms (verbatim, reformat,
+    paraphrase = paraphrase(list of verbatim texts) -> list of texts),
+    inserted at a sentence start of distinct stream documents (stream: a
+    DataFrame with id and text), plus n_controls untouched documents. One
+    row per document: doc_id, item_id, benchmark, form ('control' for the
+    controls), text (the planted text), char_start, char_end (its span in
+    the planted document), prompt_sha256, model_revision and source_hash
+    (SHA-256 of the document before planting). All choices from
+    default_rng(seed).
+
+    Defined in :numref:`sec_lm_dedup`"""
+    import regex
+    rng = np.random.default_rng(seed)
+    nwords = lambda t: len(regex.findall(r'\w+', t))
+    chosen = []
+    for bench in ('gsm8k', 'arc', 'mmlu'):
+        ok = [it for it in items if it['benchmark'] == bench and
+              nwords(it['question']) >= min_words and
+              nwords(d2l._plant_text(it, 'verbatim')) <= max_words]
+        chosen += [ok[i] for i in rng.choice(len(ok), n_per, replace=False)]
+    verbatim = [d2l._plant_text(it, 'verbatim') for it in chosen]
+    para = list(paraphrase(verbatim))
+    assert len(para) == len(chosen)
+    plants = []
+    for it, v, ph in zip(chosen, verbatim, para):
+        plants += [(it, 'verbatim', v),
+                   (it, 'reformat', d2l._plant_text(it, 'reformat')),
+                   (it, 'paraphrase', ph)]
+    order = rng.permutation(len(stream))
+    assert len(order) >= len(plants) + n_controls
+    rows = []
+    for k, i in enumerate(order[:len(plants) + n_controls]):
+        doc = stream.iloc[int(i)]
+        row = dict(doc_id=doc.id, item_id=None, benchmark=None,
+                   form='control', text=None, char_start=None, char_end=None,
+                   prompt_sha256=None, model_revision=None,
+                   source_hash=hashlib.sha256(doc.text.encode('utf-8'))
+                   .hexdigest())
+        if k < len(plants):
+            it, form, text = plants[k]
+            at = d2l._sentence_starts(doc.text)
+            pos = at[int(rng.integers(len(at)))]
+            row.update(item_id=it['item_id'], benchmark=it['benchmark'],
+                       form=form, text=text, char_start=pos + 1,
+                       char_end=pos + 1 + len(text))
+            if form == 'paraphrase':
+                row.update(prompt_sha256=prompt_sha256,
+                           model_revision=model_revision)
+        rows.append(row)
+    return rows
+
+def contam_documents(plants, stream):
+    """The documents of the planted set, doc_id -> text: each planted text
+    inserted as its own line at char_start - 1 of the stream document
+    (document[:char_start - 1] + newline + text + newline + rest), the
+    controls unchanged; the source document's SHA-256 is checked.
+
+    Defined in :numref:`sec_lm_dedup`"""
+    text = dict(zip(stream.id, stream.text))
+    out = {}
+    for row in plants:
+        t = text[row['doc_id']]
+        got = hashlib.sha256(t.encode('utf-8')).hexdigest()
+        assert got == row['source_hash'], f'{row["doc_id"]} changed'
+        if row['form'] != 'control':
+            at = row['char_start'] - 1
+            t = t[:at] + '\n' + row['text'] + '\n' + t[at:]
+            assert t[row['char_start']:row['char_end']] == row['text']
+        out[row['doc_id']] = t
+    return out
+
+def word_windows(text, size=128, stride=64):
+    """Windows of size whitespace-separated words every stride words, the
+    last one ending at the text's end: [(first word index, text)].
+
+    Defined in :numref:`sec_lm_dedup`"""
+    words = text.split()
+    starts = list(range(0, max(len(words) - size, 0) + 1, stride))
+    if starts[-1] + size < len(words):
+        starts.append(len(words) - size)
+    return [(s, ' '.join(words[s:s + size])) for s in starts]
+
+_FWEDU_FILES = tuple(  # sample/10BT files read, in order; 005, 012, 013 are chapter 21's
+    f'sample/10BT/{k:03d}_00000.parquet' for k in (0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11))
+
+TokenPool = collections.namedtuple('TokenPool', 'ids meta')
+
+def load_pool(path_or_key, name=None):
+    """A token pool: a flat array of token ids (read-only memmap; every
+    document ends in EOS) and its meta dict. path_or_key is a DATA_HUB key
+    (a tar of <name>.bin files and their meta.json), a directory or a .bin
+    file. meta.json describes one pool, or maps each .bin file name to its
+    meta when a directory holds several (then name picks one).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    import pathlib
+    p = path_or_key
+    if isinstance(p, str) and p in d2l.DATA_HUB:
+        tar = d2l.download_keyed(p)
+        p = pathlib.Path(tar).with_suffix('')
+        if not (p / '.extracted').exists():
+            p.mkdir(exist_ok=True)
+            d2l.extract(tar, str(p))
+            (p / '.extracted').touch()
+    p = pathlib.Path(p)
+    if p.is_dir():
+        bins = sorted(b for b in p.glob('*.bin')
+                      if name is None or b.stem == name)
+        if len(bins) != 1:
+            raise ValueError(f'{p}: {len(bins)} pools match name={name!r} '
+                             f'({[b.stem for b in p.glob("*.bin")]})')
+        p = bins[0]
+    with open(p.parent / 'meta.json') as f:
+        meta = json.load(f)
+    meta = meta.get(p.name, meta)
+    ids = np.memmap(p, dtype=meta.get('dtype', 'uint16'), mode='r')
+    if 'n_tokens' in meta and len(ids) != meta['n_tokens']:
+        raise ValueError(f'{p}: {len(ids)} tokens, meta says '
+                         f'{meta["n_tokens"]}')
+    return d2l.TokenPool(ids, meta)
+
+def token_byte_lengths(tokenizer):
+    """np.ndarray of the UTF-8 bytes each token id stands for (0 for
+    special tokens): the denominator of bits per byte. Takes a Transformers
+    tokenizer, a tokenizers.Tokenizer or a tiktoken encoding.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    if hasattr(tokenizer, 'decode_single_token_bytes'):  # tiktoken
+        n = tokenizer.n_vocab
+        special = set(tokenizer.special_tokens_set)
+        out = np.zeros(n, dtype=np.int64)
+        for i in range(n):
+            try:
+                b = tokenizer.decode_single_token_bytes(i)
+            except KeyError:  # an unused id
+                continue
+            if b.decode('utf-8', 'replace') not in special:
+                out[i] = len(b)
+        return out
+    raw = getattr(tokenizer, 'backend_tokenizer', tokenizer)
+    vocab = raw.get_vocab(with_added_tokens=True)
+    special = {t.content for t in raw.get_added_tokens_decoder().values()
+               if t.special}
+    byte_level = 'ByteLevel' in raw.to_str()  # one character per byte
+    out = np.zeros(max(vocab.values()) + 1, dtype=np.int64)
+    for piece, i in vocab.items():
+        if piece in special:
+            continue
+        if byte_level:
+            out[i] = len(piece)
+        elif re.fullmatch(r'<0x[0-9A-Fa-f]{2}>', piece):  # byte fallback
+            out[i] = 1
+        else:  # SentencePiece-style: U+2581 marks a space
+            out[i] = len(piece.replace('▁', ' ').encode('utf-8'))
+    return out
+
+def _stage_weights(weights, stages, names, steps):
+    """(steps, m) array: the mixture each step samples from. weights maps a
+    domain to its weight from step 0; stages lists (fraction, weights)
+    pairs, each in force from step steps - round((1 - fraction) * steps)
+    on (so a stage at 0.8 starts with the decay of a WSD schedule whose
+    decay_frac is 0.2).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    def vec(w):
+        v = np.array([float(w.get(d, 0.0)) for d in names])
+        bad = v.min() < 0 or math.fabs(v.sum() - 1) > 1e-9
+        if set(w) - set(names) or bad:
+            raise ValueError(f'weights {w} are not a mixture over {names}')
+        return v
+    out = np.tile(vec(weights), (steps, 1))
+    for frac, w in sorted(stages or []):
+        out[steps - round((1 - frac) * steps):] = vec(w)
+    return out
+
+def _proxy_alloc(step_weights, batch):
+    """Domain of every sequence, in allocation order: sequence s goes to
+    the domain whose count lags its target (the running sum of its
+    weights) the most, ties to the lower index, so after n sequences each
+    domain holds its target count to within one sequence. Also returns
+    each sequence's ordinal among its domain's sequences.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    m = step_weights.shape[1]
+    target, count = [0.0] * m, [0] * m
+    dom, ordinal = [], []
+    for w in step_weights.tolist():
+        for _ in range(batch):
+            for i in range(m):
+                target[i] += w[i]
+            i = max(range(m), key=lambda j: (target[j] - count[j], -j))
+            dom.append(i)
+            ordinal.append(count[i])
+            count[i] += 1
+    return np.array(dom, dtype=np.int64), np.array(ordinal, dtype=np.int64)
+
+class _ProxyStream:
+    """The training stream of a proxy run: the domain and the window of
+    every sequence of every batch. A pool of N tokens has (N - 1) //
+    seq_len windows of seq_len + 1 tokens starting at multiples of
+    seq_len; a domain reads its windows in epochs, each a fresh
+    permutation seeded by (seed, the domain's name, epoch); the sequences
+    of a batch are shuffled by (seed, step). The stream depends only on
+    (seed, weights, stages, tokens) and the pools, and batch(step) keeps no
+    state, so a resumed run reads exactly the batches it would have read.
+    A domain that needs more than max_epochs passes over its pool raises
+    before any batch is drawn.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    def __init__(self, pools, weights, tokens, seq_len, batch, seed=0,
+                 stages=None, max_epochs=1):
+        import zlib
+        self.names = list(pools)
+        self.ids = [getattr(pools[d], 'ids', pools[d]) for d in self.names]
+        self.seq_len, self.batch_size, self.seed = seq_len, batch, seed
+        self.steps = tokens // (batch * seq_len)
+        if self.steps < 1:
+            raise ValueError(f'{tokens} tokens make no batch of {batch} x '
+                             f'{seq_len}')
+        self.windows = [(len(ids) - 1) // seq_len for ids in self.ids]
+        self.weights = _stage_weights(weights, stages, self.names, self.steps)
+        dom, ordinal = _proxy_alloc(self.weights, batch)
+        for k in range(self.steps):  # shuffle the order within each batch
+            sl = slice(k * batch, (k + 1) * batch)
+            perm = np.random.default_rng([seed, 1, k]).permutation(batch)
+            dom[sl], ordinal[sl] = dom[sl][perm], ordinal[sl][perm]
+        self.dom, self.ordinal = dom, ordinal
+        counts = np.bincount(dom, minlength=len(self.names))
+        self.epochs, self.epoch_starts = {}, {}
+        for i, d in enumerate(self.names):
+            W = self.windows[i]
+            if counts[i] and (W == 0 or counts[i] > max_epochs * W):
+                raise ValueError(
+                    f'{d}: the run reads {counts[i]:,} windows, the pool '
+                    f'holds {W:,} (max_epochs={max_epochs}): the pool is '
+                    'smaller than the run needs')
+            self.epochs[d] = counts[i] / W if W else 0.0
+            rows = np.flatnonzero((dom == i) & (ordinal % max(W, 1) == 0))
+            self.epoch_starts[d] = sorted(int(r // batch) for r in rows)
+        self._salt = [zlib.crc32(d.encode()) for d in self.names]
+        self._perms = {}
+
+    def window(self, i, ordinal):
+        """Index of the window that domain i's ordinal-th sequence reads."""
+        epoch, pos = divmod(int(ordinal), self.windows[i])
+        if (i, epoch) not in self._perms:
+            self._perms[i, epoch] = np.random.default_rng(
+                [self.seed, 0, self._salt[i], epoch]).permutation(
+                self.windows[i])
+        return self._perms[i, epoch][pos]
+
+    def batch(self, step):
+        """Token windows of the step's batch, np.int64 (batch, seq_len +
+        1), and the domain index of each row."""
+        sl = slice(step * self.batch_size, (step + 1) * self.batch_size)
+        L, rows = self.seq_len, []
+        for i, o in zip(self.dom[sl], self.ordinal[sl]):
+            j = self.window(i, o)
+            rows.append(self.ids[i][j * L:j * L + L + 1])
+        return np.stack(rows).astype(np.int64), self.dom[sl]
+
+def _lr_at(step, steps, cfg):
+    """Learning-rate factor of a proxy run at step (0-based): a linear
+    warmup over warmup_frac of the steps, then a cosine to final_lr_frac
+    (schedule 'cosine') or a constant rate and a linear decay to
+    final_lr_frac over the last decay_frac of the steps ('wsd').
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    warm = max(1, round(cfg.warmup_frac * steps))
+    if step < warm:
+        return (step + 1) / warm
+    f = cfg.final_lr_frac
+    if cfg.schedule == 'cosine':
+        p = min((step - warm + 1) / max(steps - warm, 1), 1.0)
+        return f + (1 - f) * 0.5 * (1 + math.cos(math.pi * p))
+    if cfg.schedule == 'wsd':
+        start = steps - round(cfg.decay_frac * steps)
+        if step < start:
+            return 1.0
+        return 1 - (1 - f) * min((step - start + 1) / (steps - start), 1.0)
+    raise ValueError(f'unknown schedule {cfg.schedule!r}')
+
+def _proxy_model(cfg, seed=0):
+    """A fresh proxy d2l.GPT of the configuration (RoPE, RMSNorm, SwiGLU,
+    tied embeddings), initialized on the CPU from the seed, so its weights
+    do not depend on the device it then runs on.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    torch.manual_seed(seed)
+    return d2l.GPT(cfg.vocab_size, num_hiddens=cfg.num_hiddens,
+                   num_heads=cfg.num_heads, num_blks=cfg.num_blks,
+                   max_len=cfg.seq_len)
+
+def _proxy_optimizer(model, cfg):
+    """AdamW with the configuration's betas and weight decay on the weight
+    matrices only (not on embeddings, norms or biases), as d2l.LMOptimizer;
+    the learning rate is set before every step.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    named = list(model.named_parameters())
+    decay = [p for n, p in named if p.ndim == 2 and 'emb' not in n]
+    rest = [p for n, p in named if p.ndim != 2 or 'emb' in n]
+    return torch.optim.AdamW([{'params': decay,
+                               'weight_decay': cfg.weight_decay},
+                              {'params': rest, 'weight_decay': 0.0}],
+                             lr=cfg.lr, betas=tuple(cfg.betas))
+
+def _per_token_nll(model, X, cfg):
+    """Negative log-likelihood in nats of every next token of the windows
+    X (batch, seq_len + 1), (batch, seq_len), in float32 (or the float64 of
+    a float64 model); bf16 autocast if the configuration says so.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    with torch.autocast(X.device.type, dtype=torch.bfloat16,
+                        enabled=cfg.dtype == 'bfloat16'):
+        logits = model(X[:, :-1])
+    if logits.dtype != torch.float64:
+        logits = logits.float()
+    return F.cross_entropy(logits.flatten(0, 1), X[:, 1:].flatten(),
+                           reduction='none').view(X.shape[0], -1)
+
+@torch.no_grad()
+def _proxy_eval(model, ids, cfg, byte_lengths, n_windows=None, device=None):
+    """Summed NLL (nats), scored tokens, the UTF-8 bytes they stand for and
+    bits per byte of model on the windows of a validation pool (all of
+    them, or the first n_windows).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    device = device or next(model.parameters()).device
+    L = cfg.seq_len
+    n = (len(ids) - 1) // L
+    n = n if n_windows is None else min(n, n_windows)
+    nll, n_bytes, was_training = 0.0, 0, model.training
+    model.eval()
+    for a in range(0, n, cfg.micro_batch):
+        X = np.stack([ids[j * L:j * L + L + 1]
+                      for j in range(a, min(n, a + cfg.micro_batch))])
+        X = X.astype(np.int64)
+        n_bytes += int(byte_lengths[X[:, 1:]].sum())
+        nll += _per_token_nll(model, torch.from_numpy(X).to(device),
+                              cfg).double().sum().item()
+    model.train(was_training)
+    return dict(nll=nll, n_tokens=n * L, n_bytes=n_bytes,
+                bpb=d2l.bpb_from_nll(nll, n_bytes))
+
+def _proxy_fingerprint(weights, stages, tokens, seed, cfg):
+    """SHA-256 of what determines a proxy run, so a checkpoint is never
+    resumed into another run.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    spec = dict(weights=weights, stages=stages, tokens=tokens, seed=seed,
+                cfg=cfg._asdict())
+    return hashlib.sha256(json.dumps(spec, sort_keys=True,
+                                     default=list).encode()).hexdigest()
+
+def _proxy_save(path, model, opt, step, out, fingerprint):
+    """Write a checkpoint atomically (a temporary file, then a rename): the
+    model, the optimizer, the next step, the results so far and the RNG
+    states. The data stream needs no cursor: batch(step) is stateless.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    tmp = f'{path}.tmp'
+    torch.save(dict(model=model.state_dict(), opt=opt.state_dict(),
+                    step=step, out=out, fingerprint=fingerprint,
+                    rng=torch.get_rng_state(),
+                    cuda_rng=(torch.cuda.get_rng_state_all()
+                              if torch.cuda.is_available() else None)), tmp)
+    os.replace(tmp, path)
+
+def _proxy_load(path, model, opt, fingerprint):
+    """Restore a checkpoint into model and opt; returns (step, out).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    ck = torch.load(path, map_location='cpu', weights_only=False)
+    if ck['fingerprint'] != fingerprint:
+        raise ValueError(f'{path} belongs to another run')
+    model.load_state_dict(ck['model'])
+    opt.load_state_dict(ck['opt'])
+    torch.set_rng_state(ck['rng'])
+    if ck['cuda_rng'] is not None and torch.cuda.is_available():
+        torch.cuda.set_rng_state_all(ck['cuda_rng'])
+    return ck['step'], ck['out']
+
+def proxy_flops(cfg, tokens, n_params):
+    """Training FLOP of a proxy run: 6 N D for the parameters plus
+    12 L d T D for attention (the non-causal convention, which counts the
+    masked half of the score matrix too).
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    return (6 * n_params * tokens
+            + 12 * cfg.num_blks * cfg.num_hiddens * cfg.seq_len * tokens)
+
+def _doremi_step(alpha, excess, eta, smooth):
+    """DoReMi's domain-weight update: alpha_i exp(eta excess_i),
+    normalized (the maximizer of <alpha, excess> - KL(alpha || alpha_t) /
+    eta on the simplex), then mixed with the uniform weights.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    a = np.log(np.asarray(alpha, float)) + eta * np.asarray(excess, float)
+    a = np.exp(a - a.max())
+    a = a / a.sum()
+    return (1 - smooth) * a + smooth / len(a)
+
+def _doremi_excess(nll_proxy, nll_ref):
+    """Per-domain excess loss of DoReMi: the mean over a domain's tokens of
+    max(loss of the proxy - loss of the reference, 0), clipped per token.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    return torch.clamp(nll_proxy - nll_ref, min=0).mean().item()
+
+def barycentric(W):
+    """2-D coordinates of three-domain mixtures (n, 3) in the triangle with
+    the first domain at (0, 0), the second at (1, 0) and the third at the
+    top.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    W = np.asarray(W, float)
+    return np.stack([W[:, 1] + 0.5 * W[:, 2], math.sqrt(3) / 2 * W[:, 2]], 1)
+
+def mix_run_specs(c):
+    """The run design of a MIX_CONFIGS entry c, in launch order: the
+    learning-rate runs, the pure-domain runs, the training mixtures (the
+    Dirichlet draws, then the fixed edges), the held-out mixtures, the
+    uniform seeds (cosine and WSD), the DoReMi proxy and the arms. Each
+    spec is a dict(run_id, arm, weights, stages, seed, schedule, tokens,
+    eval_at, depends); weights of None are resolved when the run starts
+    (the regression's choice, DoReMi's weights). Optional entries of c add
+    runs: pure_seeds (more seeds of the pure-domain runs), lr_check (the
+    mixtures of lr_check['mixtures'] at the rate lr_check['lr'], which the
+    spec's lr overrides), anneal (the staged arm decays on these fixed
+    weights, and a recency arm returns to uniform at recency_frac) and
+    horizon (uniform runs on both schedules at factor times the tokens,
+    reading each pool up to max_epochs times). Without anneal the staged
+    arm decays on the regression's choice.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    import itertools
+    D = c['domains']
+    uniform = [1 / len(D)] * len(D)
+    def spec(run_id, arm, weights, seed=0, schedule='cosine', stages=None,
+             tokens=c['tokens'], eval_at=c['eval_at'], depends=(), **extra):
+        return dict(run_id=run_id, arm=arm, weights=weights, stages=stages,
+                    seed=seed, schedule=schedule, tokens=tokens,
+                    eval_at=list(eval_at), depends=list(depends), **extra)
+    lr_ids = [f'lr-{lr:.0e}' for lr in c['lr_grid']]
+    runs = [spec(i, 'lr', uniform, tokens=c['lr_tokens'], eval_at=(1.0,))
+            for i in lr_ids]
+    after_lr = dict(depends=lr_ids)
+    runs += [spec(f'pure-{d}', 'pure', list(np.eye(len(D))[k]), **after_lr)
+             for k, d in enumerate(D)]
+    runs += [spec(f'pure-{d}-s{s}', 'pure-seed', list(np.eye(len(D))[k]),
+                  seed=s, **after_lr)
+             for s in c.get('pure_seeds', ()) for k, d in enumerate(D)]
+    train = []
+    for conc, n in c['train']:
+        W = d2l.sample_mixtures(n, D, conc, c['design_seeds'][0],
+                                c['max_weight'])
+        train += [spec(f'train-a{conc:g}-{k:02d}'.replace('.', ''),
+                       'train', list(w), **after_lr)
+                  for k, w in enumerate(W)]
+    train += [spec(f'train-edge-{k:02d}', 'train', [float(x) for x in w],
+                   **after_lr) for k, w in enumerate(c.get('edges', ()))]
+    runs += train
+    W = d2l.sample_mixtures(c['held'], D, 1.0, c['design_seeds'][1],
+                            c['max_weight'])
+    runs += [spec(f'held-{k:02d}', 'held', list(w), **after_lr)
+             for k, w in enumerate(W)]
+    runs += [spec(f'uniform-cos-s{s}', 'uniform-cos', uniform, seed=s,
+                  **after_lr) for s in c['cos_seeds']]
+    arm = dict(schedule='wsd', eval_at=c['arm_eval_at'])
+    runs += [spec(f'uniform-wsd-s{s}', 'uniform', uniform, seed=s, **arm,
+                  **after_lr) for s in c['arm_seeds']]
+    runs.append(spec('doremi-proxy', 'doremi-weights', uniform,
+                     depends=lr_ids + ['uniform-wsd-s0']))
+    picked = lr_ids + [r['run_id'] for r in train]
+    anneal = c.get('anneal')
+    for s in c['arm_seeds']:
+        runs.append(spec(f'regsel-s{s}', 'regsel', None, seed=s, **arm,
+                         depends=picked))
+        runs.append(spec(f'doremi-s{s}', 'doremi', None, seed=s, **arm,
+                         depends=lr_ids + ['doremi-proxy']))
+        if anneal is None:  # decay on the regression's choice
+            runs.append(spec(f'staged-s{s}', 'staged', uniform, seed=s,
+                             **arm, stages=None, depends=picked))
+            continue
+        a = [float(x) for x in anneal['weights']]
+        runs.append(spec(f'anneal-s{s}', 'anneal', uniform, seed=s, **arm,
+                         stages=[[c['stage_frac'], a]], **after_lr))
+        runs.append(spec(f'recency-s{s}', 'recency', uniform, seed=s, **arm,
+                         stages=[[c['stage_frac'], a],
+                                 [anneal['recency_frac'], uniform]],
+                         **after_lr))
+    check = c.get('lr_check')
+    for name, w in (check or {}).get('mixtures', {}).items():
+        runs += [spec(f'lrcheck-{name}-s{s}', 'lr-check',
+                      [float(x) for x in w], seed=s, lr=check['lr'],
+                      **after_lr) for s in check['seeds']]
+    h = c.get('horizon')
+    for sched, s in itertools.product(('cosine', 'wsd'),
+                                      (h or {}).get('seeds', ())):
+        runs.append(spec(f'horizon-{sched[:3]}-s{s}', 'horizon', uniform,
+                         seed=s, schedule=sched,
+                         tokens=h['factor'] * c['tokens'],
+                         max_epochs=h['max_epochs'], **after_lr))
+    return runs
+
+def mix_pools(c, root=os.path.join('..', 'data', 'lm', 'mix')):
+    """(pools, val), each {domain: TokenPool}, of a MIX_CONFIGS entry c:
+    the files tools/build_mix_pools.py wrote under root/<name>/ where they
+    exist, else the registered keys of c['keys']. A domain with neither is
+    left out.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    out = ({}, {})
+    for k, size in enumerate((c['pool'], 'val-' + c['val'])):
+        for d in c['domains']:
+            name = f'{d}-{size}'
+            local = os.path.join(root, c['name'], name + '.bin')
+            if os.path.exists(local):
+                out[k][d] = d2l.load_pool(local)
+            elif c['keys'].get(name) in d2l.DATA_HUB:
+                out[k][d] = d2l.load_pool(c['keys'][name], name)
+    return out
+
+def campaign_record(spec, result, cfg):
+    """The JSON record a finished proxy run leaves in a campaign file: its
+    spec, its learning rate and train_proxy_lm's results, every array
+    turned into a list.
+
+    Defined in :numref:`sec_lm_data_mixtures`"""
+    rec = dict(spec, lr=cfg.lr, **result)
+    return json.loads(json.dumps(rec, default=lambda x: (
+        x.tolist() if hasattr(x, 'tolist') else float(x))))
+
+R2_SPECIALS = (['<|endoftext|>', '<|pad|>', '<|im_start|>', '<|im_end|>']
+               + [f'<|reserved_{i}|>' for i in range(4, 32)])
+
+def _r2_from_file(path, raw=False, sha256=None):
+    """A reference-format tokenizer.json, its bytes checked against sha256
+    (if given): the Transformers wrapper (EOS id 0, pad id 1, no BOS,
+    special strings in text kept as text), or with raw=True the
+    tokenizers.Tokenizer. A fresh object on every call.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    with open(path, 'rb') as f:
+        data = f.read()
+    if sha256 is not None and hashlib.sha256(data).hexdigest() != sha256:
+        raise ValueError(f'{path}: SHA-256 {hashlib.sha256(data).hexdigest()}'
+                         f', expected {sha256}')
+    from tokenizers import Tokenizer
+    tok = Tokenizer.from_str(data.decode('utf-8'))
+    tok.encode_special_tokens = True
+    if raw:
+        return tok
+    import transformers
+    return transformers.PreTrainedTokenizerFast(
+        tokenizer_object=tok, eos_token='<|endoftext|>', pad_token='<|pad|>',
+        split_special_tokens=True, model_max_length=4096)
+
+def _tok_info(tokenizer):
+    """(vocabulary size, <|endoftext|> id or None, ids of special tokens)
+    of a Transformers tokenizer, a tokenizers.Tokenizer or a tiktoken
+    encoding.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if hasattr(tokenizer, 'encode_ordinary'):  # tiktoken
+        return (tokenizer.n_vocab, d2l._lm_boundary_id(tokenizer),
+                {tokenizer.encode_single_token(s)
+                 for s in tokenizer.special_tokens_set})
+    if hasattr(tokenizer, 'all_special_ids'):  # Transformers
+        special = set(tokenizer.all_special_ids) | {
+            i for i, t in tokenizer.added_tokens_decoder.items() if t.special}
+        return len(tokenizer), d2l._lm_boundary_id(tokenizer), special
+    special = {i for i, t in tokenizer.get_added_tokens_decoder().items()
+               if t.special}
+    return (tokenizer.get_vocab_size(with_added_tokens=True),
+            tokenizer.token_to_id('<|endoftext|>'), special)
+
+def _doc_token_ids(tokenizer, texts):
+    """Token ids of each document text, no special tokens added, and a
+    special-token string inside a text (a page about <|endoftext|>)
+    encoded as ordinary text, for a Transformers tokenizer, a
+    tokenizers.Tokenizer or a tiktoken encoding.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    texts = [str(t) for t in texts]
+    if not texts:
+        return []
+    if hasattr(tokenizer, 'encode_ordinary_batch'):  # tiktoken
+        return tokenizer.encode_ordinary_batch(texts)
+    if hasattr(tokenizer, 'all_special_ids'):  # Transformers
+        return tokenizer(texts, add_special_tokens=False,
+                         split_special_tokens=True,  # no warning about
+                         verbose=False)['input_ids']  # long documents
+    old = tokenizer.encode_special_tokens
+    tokenizer.encode_special_tokens = True
+    try:
+        return [e.ids for e in tokenizer.encode_batch(
+            texts, add_special_tokens=False)]
+    finally:
+        tokenizer.encode_special_tokens = old
+
+_SHARD_EXT = {'bin': '.bin', 'idx': '.idx', 'meta': '.meta.parquet'}
+
+FWEDU_META_COLUMNS = (  # (name, arrow type) of the FineWeb-Edu meta columns
+    ('url', 'string'), ('dump', 'string'), ('bucket', 'int16'),
+    ('edu_score', 'float32'), ('int_score', 'int8'), ('gpt2_tokens', 'int32'),
+    ('src_file', 'string'), ('src_row', 'int64'))
+
+def _meta_table(rows):
+    """The meta rows of one shard as a pyarrow Table: doc_id and n_tokens
+    first, then the FineWeb-Edu columns present, in their fixed order and
+    types, then any other column in order of first appearance.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    import pyarrow as pa
+    known = dict([('doc_id', 'string'), ('n_tokens', 'int32')]
+                 + list(d2l.FWEDU_META_COLUMNS))
+    seen = dict.fromkeys(k for r in rows for k in r)
+    cols = [c for c in known if c in seen] + [c for c in seen
+                                              if c not in known]
+    return pa.table({c: pa.array([r.get(c) for r in rows],
+                                  type=getattr(pa, known[c])()
+                                  if c in known else None) for c in cols})
+
+class _ShardWriter:
+    """One shard being written: ids appended to name.bin as they come,
+    offsets and meta rows kept until close() writes name.idx and
+    name.meta.parquet and returns the shard's manifest entry.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    def __init__(self, out_dir, name, dtype):
+        self.out_dir, self.name = out_dir, name
+        self.dtype = np.dtype(dtype).newbyteorder('<')
+        self.f = open(os.path.join(out_dir, name + '.bin'), 'wb')
+        self.offsets, self.rows, self.n_tokens = [0], [], 0
+
+    def add(self, doc_id, ids, extra):
+        self.f.write(np.asarray(ids, dtype=self.dtype).tobytes())
+        self.n_tokens += len(ids)
+        if self.n_tokens >= 2**32:
+            raise ValueError(f'{self.name}: offsets overflow uint32')
+        self.offsets.append(self.n_tokens)
+        self.rows.append(dict(doc_id=str(doc_id), n_tokens=len(ids),
+                              **(extra or {})))
+
+    def close(self):
+        import pyarrow.parquet as pq
+        self.f.close()
+        base = os.path.join(self.out_dir, self.name)
+        np.asarray(self.offsets, dtype='<u4').tofile(base + '.idx')
+        pq.write_table(d2l._meta_table(self.rows), base + '.meta.parquet',
+                       compression='zstd', compression_level=3,
+                       row_group_size=65536)
+        files = {k: base + e for k, e in d2l._SHARD_EXT.items()}
+        return dict(file=self.name, n_tokens=self.n_tokens,
+                    n_docs=len(self.rows),
+                    sha256={k: d2l._sha256_file(p) for k, p in files.items()},
+                    bytes={k: os.path.getsize(p) for k, p in files.items()})
+
+def _fetch_shard_file(shard, ext, path):
+    """Download one file of a shard from the manifest's url, checking its
+    sha1 and SHA-256 before it is moved into place. The partial file is
+    named per process, so ranks that fetch the same file at once never
+    write into each other's download.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    tmp = f'{path}.{os.getpid()}.part'
+    sha1, sha256 = hashlib.sha1(), hashlib.sha256()
+    with requests.get(shard['url'][ext], stream=True, timeout=60) as r, \
+            open(tmp, 'wb') as f:
+        r.raise_for_status()
+        for c in r.iter_content(1 << 20):
+            f.write(c)
+            sha1.update(c)
+            sha256.update(c)
+    if (sha1.hexdigest(), sha256.hexdigest()) != (shard['sha1'][ext],
+                                                  shard['sha256'][ext]):
+        os.remove(tmp)
+        raise ValueError(f'{shard["url"][ext]}: hash differs from the '
+                         'manifest')
+    os.replace(tmp, path)
+
+def normalize_url(url):
+    """A URL in the form the validation split deduplicates on: scheme and
+    host lower-cased, a leading www. removed, the fragment dropped, a
+    trailing / of the path removed, the query kept.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    import urllib.parse
+    p = urllib.parse.urlsplit(url.strip())
+    host = p.netloc.lower()
+    if host.startswith('www.'):
+        host = host[4:]
+    return urllib.parse.urlunsplit((p.scheme.lower(), host,
+                                    p.path.rstrip('/'), p.query, ''))
+
+def _byte_level_decoder():
+    """GPT-2's byte-level alphabet inverted: the printable character that
+    stands for each byte -> the byte (the alphabet of byte-level BPE).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    bs = (list(range(33, 127)) + list(range(161, 173))
+          + list(range(174, 256)))
+    cs, n = bs[:], 0
+    for b in range(256):
+        if b not in bs:
+            bs.append(b)
+            cs.append(256 + n)
+            n += 1
+    return {chr(c): b for b, c in zip(bs, cs)}
+
+def _vocab_bytes(tokenizer):
+    """The UTF-8 bytes behind every token id (None for special and unused
+    ids) of a tiktoken encoding, a Transformers tokenizer, a
+    tokenizers.Tokenizer or a SentencePieceProcessor.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if hasattr(tokenizer, 'decode_single_token_bytes'):  # tiktoken
+        out = [None] * tokenizer.n_vocab
+        special = set(tokenizer.special_tokens_set)
+        for i in range(tokenizer.n_vocab):
+            try:
+                b = tokenizer.decode_single_token_bytes(i)
+            except KeyError:
+                continue
+            if b.decode('utf-8', 'replace') not in special:
+                out[i] = b
+        return out
+    if hasattr(tokenizer, 'id_to_piece'):  # SentencePiece
+        out = []
+        for i in range(tokenizer.get_piece_size()):
+            piece = tokenizer.id_to_piece(i)
+            if tokenizer.is_byte(i):
+                out.append(bytes([int(piece[3:5], 16)]))
+            elif tokenizer.is_control(i) or tokenizer.is_unknown(i):
+                out.append(None)
+            else:
+                out.append(piece.replace('▁', ' ').encode('utf-8'))
+        return out
+    raw = getattr(tokenizer, 'backend_tokenizer', tokenizer)
+    vocab = raw.get_vocab(with_added_tokens=True)
+    special = {t.content for t in raw.get_added_tokens_decoder().values()
+               if t.special}
+    added = {t.content for t in raw.get_added_tokens_decoder().values()}
+    byte_level, dec = 'ByteLevel' in raw.to_str(), _byte_level_decoder()
+    out = [None] * (max(vocab.values()) + 1)
+    for piece, i in vocab.items():
+        if piece in special:
+            continue
+        if byte_level and piece not in added:
+            out[i] = bytes(dec[c] for c in piece)
+        else:
+            out[i] = piece.replace('▁', ' ').encode('utf-8')
+    return out
+
+def _fallback_ids(tokenizer):
+    """Ids that spell a character byte by byte: SentencePiece's byte pieces
+    and, in a byte-level vocabulary, the single bytes that are no
+    character on their own (0x80 and above).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if hasattr(tokenizer, 'is_byte'):
+        return {i for i in range(tokenizer.get_piece_size())
+                if tokenizer.is_byte(i)}
+    return {i for i, b in enumerate(_vocab_bytes(tokenizer))
+            if b is not None and len(b) == 1 and b[0] >= 0x80}
+
+def _bpe_prefix(tok, V):
+    """The byte-level BPE `tok` (a tokenizers.Tokenizer) cut to its first
+    V ids: the vocabulary entries below V and the merges that make them.
+    Encoding with it is encoding with the merges learned first (the prefix
+    property of BPE).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    from tokenizers import Tokenizer
+    spec = json.loads(tok.to_str())
+    vocab = spec['model']['vocab']
+    spec['model']['vocab'] = {p: i for p, i in vocab.items() if i < V}
+    spec['model']['merges'] = [m for m in spec['model']['merges']
+                               if vocab[''.join(m)] < V]
+    spec['added_tokens'] = [t for t in spec['added_tokens'] if t['id'] < V]
+    out = Tokenizer.from_str(json.dumps(spec))
+    out.encode_special_tokens = True
+    return out
+
+def sp_train(texts, model_type, vocab_size, **kw):
+    """A SentencePiece model trained on texts (one input line per line of
+    text) through a temporary file, as a SentencePieceProcessor. Defaults:
+    no normalization (the text is NFC already), whitespace kept as is,
+    byte fallback instead of <unk>, digits split, character_coverage
+    0.9995, 16 threads (the pieces depend on the thread count).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    import io
+    import tempfile
+    import sentencepiece as spm
+    args = dict(model_type=model_type, vocab_size=vocab_size,
+                normalization_rule_name='identity',
+                remove_extra_whitespaces=False, byte_fallback=True,
+                split_digits=True, character_coverage=0.9995,
+                num_threads=16, max_sentence_length=1 << 16,
+                minloglevel=2)
+    args.update(kw)
+    model = io.BytesIO()
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, 'input.txt')
+        with open(path, 'w', encoding='utf-8') as f:
+            for t in texts:
+                f.writelines(line + '\n' for line in t.split('\n')
+                             if line.strip())
+        spm.SentencePieceTrainer.train(input=path, model_writer=model,
+                                       **args)
+    return spm.SentencePieceProcessor(model_proto=model.getvalue())
+
+def _sp_fingerprint(sp):
+    """SHA-256 of a SentencePiece model's pieces and scores in id order
+    (the serialized model also records the training file's path).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    rows = [(sp.id_to_piece(i), round(sp.get_score(i), 6))
+            for i in range(sp.get_piece_size())]
+    return hashlib.sha256(json.dumps(rows, ensure_ascii=False).encode(
+        'utf-8')).hexdigest()
+
+def _sp_pieces_scores(sp):
+    """A unigram SentencePiece model as viterbi_segment's input: the
+    log-probabilities of its ordinary pieces, and the score SentencePiece
+    gives a character that is no piece (the lowest score minus 10).
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    logp = {sp.id_to_piece(i): sp.get_score(i)
+            for i in range(sp.get_piece_size())
+            if not (sp.is_byte(i) or sp.is_control(i) or sp.is_unknown(i))}
+    return logp, min(logp.values()) - 10.0
+
+def _logaddexp(a, b):
+    """log(exp(a) + exp(b)) for Python floats, -inf allowed.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    if a == -math.inf:
+        return b
+    if b == -math.inf:
+        return a
+    m = max(a, b)
+    return m + math.log1p(math.exp(-math.fabs(a - b)))
+
+def _rolling_ngram_hashes(ids, n, eos=None):
+    """64-bit polynomial hashes of every window of n consecutive token ids
+    (Horner's rule, arithmetic mod 2^64, vectorized over the windows); a
+    window that contains eos gets no hash (its slot is masked). Returns
+    (hashes, valid), both of length len(ids) - n + 1. Equal windows hash
+    equally; a match is confirmed on the ids themselves.
+
+    Defined in :numref:`sec_lm_tokenizers`"""
+    x = np.asarray(ids).astype(np.uint64) + np.uint64(1)
+    m = len(x) - n + 1
+    if m <= 0:
+        return np.zeros(0, np.uint64), np.zeros(0, bool)
+    h = np.zeros(m, dtype=np.uint64)
+    base = np.uint64(0x9E3779B97F4A7C15)
+    for k in range(n):
+        h *= base
+        h += x[k:k + m]
+    valid = np.ones(m, dtype=bool)
+    if eos is not None:
+        c = np.concatenate([[0], np.cumsum(np.asarray(ids) == eos)])
+        valid = c[n:n + m] == c[:m]
+    return h, valid
 
 
 ones_like = torch.ones_like

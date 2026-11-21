@@ -86,6 +86,20 @@ lm = [
     "pytrec-eval-terrier==0.5.11 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "seqeval==1.2.2 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "sentence-transformers==6.2.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Chapter 20 (data): WARC reading (warcio is the oracle for iter_warc),
+    # HTML extraction (trafilatura, resiliparse), language ID (fastText
+    # lid.176; the numpy-2 wheel is linux-only), MinHash oracle (datasketch),
+    # SentencePiece, registered domains (tldextract, bundled suffix list),
+    # and explicit pins of tokenizers/tiktoken (the reference tokenizer).
+    "warcio==1.8.2 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "trafilatura==2.1.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "resiliparse==1.1.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "datasketch==2.0.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sentencepiece==0.2.2 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "tldextract==5.4.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "fasttext-numpy2-wheel==0.9.2 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "tokenizers==0.23.3 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "tiktoken==0.13.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "torch==2.11.0 ; sys_platform == 'darwin'",
     "torchvision==0.26.0 ; sys_platform == 'darwin'",
     "transformers[serving]==5.22.2 ; sys_platform == 'darwin'",
@@ -99,6 +113,14 @@ lm = [
     "pytrec-eval-terrier==0.5.11 ; sys_platform == 'darwin'",
     "seqeval==1.2.2 ; sys_platform == 'darwin'",
     "sentence-transformers==6.2.0 ; sys_platform == 'darwin'",
+    "warcio==1.8.2 ; sys_platform == 'darwin'",
+    "trafilatura==2.1.0 ; sys_platform == 'darwin'",
+    "resiliparse==1.1.0 ; sys_platform == 'darwin'",
+    "datasketch==2.0.0 ; sys_platform == 'darwin'",
+    "sentencepiece==0.2.2 ; sys_platform == 'darwin'",
+    "tldextract==5.4.0 ; sys_platform == 'darwin'",
+    "tokenizers==0.23.3 ; sys_platform == 'darwin'",
+    "tiktoken==0.13.0 ; sys_platform == 'darwin'",
 ]
 mxnet = [
     # Custom MXNet 2.0 wheel built against CUDA 13 with Blackwell (sm_120) SASS.

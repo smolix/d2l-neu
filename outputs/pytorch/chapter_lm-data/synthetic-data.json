@@ -1,0 +1,261 @@
+{
+  "schema": 1,
+  "source": "chapter_lm-data/synthetic-data.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:211990bd03fff80c9813e110ef20cf3c13e93441ff2ed03a8c64133e002b35ff",
+    "venv": "lm",
+    "packages": {
+      "transformers": "transformers==5.22.2"
+    },
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "synthetic-data-imports": {
+      "code_fingerprint": "sha256:8a0aa9231c4f1dc0ea6f972c462d387fea4e5f75503e6a4f67819f9291e2aa89",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-data-extras": {
+      "code_fingerprint": "sha256:26460951c7462563dcb5aa39b642a50357dcfde97b21f80d9aefe3ce60a4f343",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-data-config": {
+      "code_fingerprint": "sha256:8d2732fbcac06417c2252b2935c574e28d1bcc01fc76bdfb2fa61938ff9ec062",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "proxy comparison at T1 (8.1M-parameter proxies, 2^24 tokens per run); GPU=True, SMALL=False,\n    regenerating: none\n  Qwen/Qwen3.5-2B@15852e8c\n  RedHatAI/Qwen3.8-27B-INT4@71dface3\n"
+        }
+      ]
+    },
+    "synthetic-data-data-hub": {
+      "code_fingerprint": "sha256:904690e3c6439facb87b0e68a72c06577477e0398ea227ba6a3c4b6c5cfb68c2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "this section: registered lm-rephrase-fwedu-5m-v1, lm-data-synth-results-v1 | pending: none\nupstream: registered lm-mix-web-20m-v1, lm-mix-val-1m-v1, lm-mix-runs-t1-v1, lm-r2-tokenizer-v1 |\n    pending: none\n"
+        }
+      ]
+    },
+    "synthetic-data-rephrase-defs": {
+      "code_fingerprint": "sha256:47c69e7d9695735ea1323d1f06e7e97bec3e897408921585735d94e407bc1a0c",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-data-metric-defs": {
+      "code_fingerprint": "sha256:af7c8ebe2d4adf4f28d4445690b8b82ee115502425115daa64e6de62f013f11a",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-data-opening": {
+      "code_fingerprint": "sha256:7adb9d18db553a28ef2102084b6092df69e95576fdbd63f0d616d541f715aad1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "split    pool  documents  chunks  tokens\n   S1     web       2033    6376 2097182\n   S2     web       1993    6345 2097442\n  val web val        502    1584  524661\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen/Qwen3.5-2B@15852e8c1636: Qwen3_5ForCausalLM, stop tokens [248044, 248046]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa, delta rule fla, short convolution PyTorch\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nS1-00008 (105 tokens), finish stop:\nsource                                         | rewrite\n The doctors chose to concoct a tetracaine-    | Doctors selected a tetracaine-based mouthwash\nbased mouthwash instead of a lidocaine-based   | over a lidocaine-based version because the\nversion because it was found to be four times  | former was found to be four times more\nmore effective, worked faster and produced a   | effective, acted faster, and provided a\nprolonged relief. The tetracaine was           | prolonged period of relief. The tetracaine was\nadministered by a mouthwash approximately 30   | administered via mouthwash approximately\nminutes before and after meals, or roughly six | thirty minutes before and after each meal, or\ntimes a day. Relief of oral pain was reported  | roughly six times daily. Reports of relief of\nin 48 of the 50 patients. Sixteen patients     | oral pain were recorded in 48 out of the 50\nreported that the mouthwash had an unpleasant  | patients. Additionally, sixteen patients\ntaste or altered the taste of their food.      | reported that the mouthwash had an unpleasant\n                                               | taste or altered the taste of their food.\n{'copy_rate': 0.535, 'num_fidelity': 0.667, 'len_ratio': 1.074}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n9 samples of the same prompt at temperature 0.7: distinct 4-grams 0.425 (one sample alone: 1.000);\n    their first words:\n   Doctors selected a tetracaine-based mouthwash over a lidocaine-based version because it [...]\n   Doctors selected a tetracaine-based mouthwash over a lidocaine-based version because the [...]\n   Doctors selected a tetracaine-based mouthwash over a lidocaine-based version because the [...]\nSource text: FineWeb-Edu (HuggingFaceFW/fineweb-edu, sample-10BT, ODC-By 1.0); rewrites by\n    Qwen/Qwen3.5-2B (Apache-2.0)\n"
+        }
+      ]
+    },
+    "synthetic-data-chunk-check": {
+      "code_fingerprint": "sha256:ee7a9ce6be5722d0e13a2fa6af8336fef049b0fe9d8bc770b25028849c4b8e0d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "20 pool documents (seed 0) -> 59 chunks, each the document's tokens in order; median 382 tokens,\n    longest 400; 2 of exactly 400 (a cut inside an over-long sentence, or a sentence that fit\n    exactly)\n"
+        }
+      ]
+    },
+    "synthetic-data-live-120": {
+      "code_fingerprint": "sha256:9d8b855369a88fa79d0f2921e6693f34a47a565b74517e419e424c2e88c5aaf0",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "wiki: 60 chunks in 27 s, 0 dropped (out of tokens)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "qa: 60 chunks in 34 s, 16 dropped (out of tokens)\npeak 5.4 GiB (6.7 GiB reserved) | no thinking text in any of the 120 replies (asserted)\nstyle prompt_sha256  kept  out_of_tokens  len_ratio_out  len_ratio  copy_rate  all_numbers  flagged\n wiki  d81cca47fc41    59              0              1      1.014      0.533        0.627    0.492\n   qa  128e10d6b531    34             16             10      1.048      0.472        0.500    0.500\n\nworst number fidelity: S1-00017, wiki, copy 0.29, numbers 0.00, length ratio 1.08\nsource                                         | rewrite\nI tell them, ‘No, we want you stop and think   | McClelland advises parents to instruct\nabout what you’re doing first.’” Another       | children to pause and consider their actions\nsimple activity to help build the              | before proceeding. A specific activity\nconcentration muscle is a dance game in which  | designed to strengthen concentration involves\nchildren are told they have to dance slowly    | a dance game where children are required to\nwhen the music is fast, and dance quickly when | dance slowly when the music is fast and dance\nthe music is slow. “When kids have to control  | quickly when the music is slow. McClelland\ntheir bodies, it’s more challenging for them,” | noted that when children must control their\nMcClelland said. “They actually have to stop   | bodies, the task becomes more challenging\ntheir movements and [...]                      | because they have to stop [...]\n\nhighest copy rate: S1-00213, wiki, copy 0.99, numbers 1.00, length ratio 0.99\nsource                                         | rewrite\nIf you have a medical concern or issue, please | If you have a medical concern or issue, please\nconsult your personal physician immediately.   | consult your personal physician immediately.\n\nlowest copy rate: S1-00510, wiki, copy 0.17, numbers 0.00, length ratio 0.71\nsource                                         | rewrite\nHow and Why You Should be Making Ghee This     | Ghee is the Sanskrit name for clarified\npost may contain Affiliate Links. Thank you    | butter, defined as butter in which all milk\nfor your support! What is this mysterious ghee | solids have been removed through a process of\nor clarified butter? First, Ghee is the        | simmering and straining. This method leaves\nSanskrit name for clarified butter. It is      | behind a pure combination of fats. Benefits of\nsimply butter that has had all of the milk     | Eating Ghee include suitability for\nsolids removed. It is simmered until all that  | individuals with dairy intolerance or allergy,\nremains after straining is a pure combination  | as the removal of milk proteins eliminates\nof fats. Benefits of Eating Ghee 1. Ghee is    | potential allergens. For instance, the\ngreat for those [...]                          | author's niece, who cannot [...]\n\nrandom 1: S1-04864, wiki, copy 0.48, numbers 0.67, length ratio 1.08\nsource                                         | rewrite\nIn a report to the admirals on budget          | In a report to the admirals regarding budget\ndevelopments, Burke provided some of the       | developments, Admiral Burke offered insights\nflavor of inter-service rivalries over nuclear | into inter-service rivalries concerning\nweapons systems. For the Navy, the key items   | nuclear weapons systems. The Navy's key items\nin the proposed add-on to the fiscal year 1959 | in the proposed addition to the fiscal year\nbudget were acceleration of the Polaris        | 1959 budget included the acceleration of the\nprogram and augmentation of anti-submarine     | Polaris program and the augmentation of anti-\nwarfare capabilities. With the Secretary of    | submarine warfare capabilities. In response,\nDefense giving the services an opportunity to  | the Secretary of Defense provided the services\ncomment on each other's [...]                  | with an [...]\n\nrandom 2: S1-05373, wiki, copy 0.39, numbers 1.00, length ratio 1.17\nsource                                         | rewrite\nAlguno can function as either an adjective or  | Alguno functions as either an adjective or a\npronoun. As a pronoun alguno (and alguna)      | pronoun. As a pronoun, alguno means someone or\nmeans someone/somebody/one, and as a pronoun   | somebody, while algunos means some. Examples\nalgunos (and algunas) means some. For example, | of usage include hay alguno aquí, which\nhay alguno aquí means there is someone/one     | indicates that there is someone here, and hay\nhere, and hay algunos aquí means there are     | algunos aquí, which indicates that there are\nsome here. In this sentence, Fue alguno de     | some people here. In the sentence Fue alguno\nustedes, alguno is a pronoun meaning one (of   | de ustedes, the word alguno functions as a\nyou). As an adjective, algún, alguna, algunos, | pronoun referring to one of the listeners. As\nalgunas mean [...]                             | an [...]\nSource text: FineWeb-Edu (HuggingFaceFW/fineweb-edu, sample-10BT, ODC-By 1.0); rewrites by\n    Qwen/Qwen3.5-2B (Apache-2.0)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "synthetic-data/synthetic-data-live-120-1.png",
+          "bytes": 19813,
+          "sha256": "sha256:9f2d42dec78de62443e9f1064716fa7ae37248752b9b33eb52130057c2f5fd59"
+        }
+      ]
+    },
+    "synthetic-data-seeds": {
+      "code_fingerprint": "sha256:8ab1803b095576ec1d03f1e80c0861832987f30a060a5c0ccc0dc91bf25327f4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosmopedia/web_samples_v2 row 0: format 'textbook_academic_tone', audience 'college_students', seed\n    data 'web_samples_v2', 726 tokens:\n   ' Behavior Change Communication (BCC) is a strategic approach that uses various forms of\n    communication to bring about positive changes in knowledge, attitudes, and practices among\n    individuals and commu'\ncosmopedia/stanford row 0: format 'textbook_narrative', audience 'researchers', seed data\n    'stanford', 527 tokens:\n   ' 1.1 Overview of the Course\\n\\nIn this comprehensive textbook, we delve into the lives and\n    achievements of ten influential French women who left indelible marks on history. Our focus\n    extends beyond mere'\ncosmopedia/stories row 0: format 'story_children', audience 'young_children', seed data 'ultrachat',\n    520 tokens:\n   ' Once upon a time, in a village called Kiwiland, there lived two best friends named Kiwi and\n    Koala. They loved exploring the world around them and learning new things every day! One day,\n    they stumbled'\nCosmopedia (HuggingFaceTB/cosmopedia, Apache-2.0)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\none seed (S1-00008), every output cut to its first 70 words, temperature 0.7:\n                setting  outputs  distinct_4  jaccard_5\n       one plain prompt        9       0.756      0.051\n3 formats x 3 audiences        9       0.995      0.000\n  rephrasings (opening)        9       0.444      0.194\nconditioning on format and audience raises distinct 4-grams by 0.239\none plain prompt, first output: To manage severe oral pain, the medical team opted for a\n    tetracaine-based mouthwash rather than one containing lidocaine. This decision was driven by\n    [...]\n3 formats x 3 audiences, first output: ### **The Magic of Mouthwash for Stomach Pain** Imagine\n    having a special spray that makes your stomach feel like it's floating on clouds, even when you\n    [...]\n"
+        }
+      ]
+    },
+    "synthetic-data-corpus-checks": {
+      "code_fingerprint": "sha256:7cc7039e77239f7eb695a0bc2e122bf7a627dc713c49cb7f42bc034ee7ab6fb1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         file  chunks  tokens   bytes  bytes_per_token\n train_src_S1    6376 2097182 9479945             4.52\ntrain_reph_S1    6165 1921340 9235499             4.81\n train_src_S2    6345 2097442 9489100             4.52\ntrain_reph_S2    6116 1913970 9219468             4.82\n      val_src    1584  524661 2371105             4.52\n     val_reph    1528  470466 2277176             4.84\nS1: rewrites / sources = 0.916 in tokens\nS2: rewrites / sources = 0.913 in tokens\nval: rewrites / sources = 0.897 in tokens\nkept and dropped of 14,305 chunks (length: out of tokens; len_ratio: outside (0.5, 1.5)):\ndrop   kept  len_ratio  length\nsplit                         \nS1     6165        180      31\nS2     6116        192      37\nval    1528         47       9\nsplit  kept  copy_rate  all_numbers  len_ratio_median  flag_copy  flag_numbers\n   S1  6165      0.607        0.700             1.000      0.246         0.300\n   S2  6116      0.605        0.701             1.000      0.241         0.299\n  val  1528      0.587        0.690             0.998      0.223         0.310\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "near-duplicates (MinHash at (b, r) = (9, 13), verified Jaccard >= 0.8): sources 0.03% of chunks (2\n    pairs); rewrites 0.00% of chunks (0 pairs)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "13-gram hits on GSM8K, ARC-Challenge, MMLU: sources 1 chunks, rewrites 0 chunks; rewrites with a hit\n    their source lacks: 0 Counter()\nSource text: FineWeb-Edu (HuggingFaceFW/fineweb-edu, sample-10BT, ODC-By 1.0); rewrites by\n    Qwen/Qwen3.5-2B (Apache-2.0)\n"
+        }
+      ]
+    },
+    "synthetic-data-regen-rephrase": {
+      "code_fingerprint": "sha256:d74fc367232c41f71fe1217269c3f67aeb05ec170db68841b4e4120ea27ca944",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-data-judge": {
+      "code_fingerprint": "sha256:236c8e37c3603923c4f547c298423427d30d51c79a468fb5c94e17ff7791cc83",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RedHatAI/Qwen3.8-27B-INT4, thinking, greedy, up to 12,000 new tokens on 60 S1 pairs: reply tokens\n    median 2,778, largest 12,000; 4 replies reached the limit before a verdict and are left out\nthe rewrite adds a claim in 39 of 56 (70%, Wilson 95% [57%, 80%])\na number lost        False  True \njudge: adds a claim              \nFalse                   14      3\nTrue                    25     14\nagreement with the number flags: 50%\nclaims the judge names where every number was kept (25 pairs; up to three):\n  S1-00034: The CMS Web Guide is an article\n  S1-00053: which had been known for years\n  S1-00106: The United States is increasingly involved in supporting the Sunni revolt in Syria and\n    the Shia revolt in Bahrain\n"
+        }
+      ]
+    },
+    "synthetic-data-bounds": {
+      "code_fingerprint": "sha256:4fc07769039bee64b1ea96bab064a285ddddf39a5dfa63394fc15d476d06f0b9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "D'(U, 8) = 6.625 U <= D'_B <= D'(2U, 4) = 7.452 U: B can gain at most 12.5% effective tokens over A\nmeasured: S1 2,097,182 tokens, its rewrites 1,921,340; in units of S1: D'_A = 6.62, the upper bound\n    for B 7.41 (11.9%)\n"
+        }
+      ]
+    },
+    "synthetic-data-arms-build": {
+      "code_fingerprint": "sha256:9ea9ac123c5230367b26322c0d5adac68d5ccbf1a85315d733203011c65c06ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale (8.1M-parameter proxies, 2^24 tokens per run)] 16,777,216 trained tokens per arm (256\n    steps of 64 x 1024):\narm              arm_is pool  unique_tokens  windows  epochs    effective\n  A   real S1, repeated real        2097182     2048   8.000 13893954.795\n  B S1 + rewrites of S1 real        2097182     2048   4.000  7813843.272\n  B S1 + rewrites of S1 reph        1921340     1876   4.367  7731732.239\n  C rewrites of S1 only reph        1921340     1876   8.733 13602529.423\n  D     fresh real text real       16777217    16384   1.000 16777217.000\n  E S1 + rewrites of S2 real        2097182     2048   4.000  7813843.272\n  E S1 + rewrites of S2 reph        1913970     1869   4.383  7727216.673\n"
+        }
+      ]
+    },
+    "synthetic-data-arms-run": {
+      "code_fingerprint": "sha256:7160787f4266f4e068166ffa8096419f564106564d1bb3b755cfa47e230f3ab1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale (8.1M-parameter proxies, 2^24 tokens per run)] arm A, seed 0, steps 4-16: largest\n    difference from the registered losses 0.0002 nats (bf16; tolerance 0.02)\n"
+        }
+      ]
+    },
+    "synthetic-data-arms-analysis": {
+      "code_fingerprint": "sha256:9037a04f6cd43a589a444e03e993e912ba0d126a95f01ea49937d8ff4ba5ac84",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[at T1 scale (8.1M-parameter proxies, 2^24 tokens per run)] pooled seed SD of bits per byte: real\n    0.0069, rephrased 0.0070 (10 df)\n                 claim difference  val                       diffs    mean  real  holds\n         C3: B beats A      B - A real   [0.013, -0.0011, -0.0063]  0.0019 False  False\n        C3b: B beats C      B - C real [-0.0589, -0.0739, -0.0587] -0.0638  True   True\n         C5: E beats B      E - B real   [-0.011, -0.0101, -0.007] -0.0094 False  False\n      C4: C loses to A      C - A real     [0.072, 0.0728, 0.0524]  0.0657  True   True\nC4: C wins on rewrites      C - A reph [-0.0562, -0.0545, -0.0769] -0.0625  True   True\n  C3: B beats A: no difference detected at this scale\n  C3b: B beats C: holds\n  C5: E beats B: no difference detected at this scale\n  C4: C loses to A: holds\n  C4: C wins on rewrites: holds\nlowest real-validation bits per byte: arm D (D, fresh text, is the reference bound)\n[at T1 scale (8.1M-parameter proxies, 2^24 tokens per run)] bits per byte (mean and the three seeds;\n    arms as above):\narm  unique_M  effective_M   real               real_seeds   reph               reph_seeds\n  A    2.0972      13.8940 1.9235  [1.9173, 1.927, 1.9261] 1.8043  [1.7978, 1.808, 1.8069]\n  B    4.0185      15.5456 1.9254  [1.9304, 1.926, 1.9198] 1.7582 [1.7622, 1.7602, 1.7521]\n  C    1.9213      13.6025 1.9892 [1.9893, 1.9999, 1.9785] 1.7417 [1.7416, 1.7535, 1.7301]\n  D   16.7772      16.7772 1.8899   [1.89, 1.8823, 1.8975] 1.7739 [1.7744, 1.7676, 1.7797]\n  E    4.0112      15.5411 1.9160 [1.9193, 1.9159, 1.9128] 1.7506  [1.754, 1.7503, 1.7475]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "synthetic-data/synthetic-data-arms-analysis-1.svg",
+          "bytes": 76354,
+          "sha256": "sha256:86d75fe4bdb8cbe3a946da99a40bbd3824e452d387f5cf137fa2dcf09cfe7046"
+        }
+      ]
+    },
+    "synthetic-data-collapse-def": {
+      "code_fingerprint": "sha256:f3b06c9ce2c6e26a6bf24c07462d4db262442a3a858761d4d8d216f8a89a3a69",
+      "kind": "text",
+      "outputs": []
+    },
+    "synthetic-data-collapse": {
+      "code_fingerprint": "sha256:10c89b8e39d4376b7c82f0a0903aa8d8e6d80f2cf98bde69d0a8536e8dba39ac",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "replace, T = 20: E[sigma^2] 0.8036 (closed form q^T = 0.8179, 0.8 SE), Var(mu) 0.1700 (1 - q^T =\n    0.1821, 1.5 SE)\naccumulate, T = 20: E[sigma^2] 0.9859, Var(mu) 0.01573 (sum of 1/t^2 over n: 0.01596; the bound pi^2\n    / (6n) = 0.01645)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bigram toy: 200,000 words, 20,000 types plus <unk>; the rarest 10% (2,000 types) hold 1.00% of the\n    words. Per generation: types the model can still emit, the share of the rarest types still among\n    them, and their probability mass:\n           replace                      accumulate                     \n             types tail_alive tail_mass      types tail_alive tail_mass\ngeneration                                                             \n0            20000     1.0000   0.01000      20000        1.0   0.01000\n1            16001     0.6165   0.00971      20000        1.0   0.00985\n2            13761     0.4625   0.01000      20000        1.0   0.00990\n5            10238     0.2725   0.01042      20000        1.0   0.00994\n10            7655     0.1665   0.01086      20000        1.0   0.00991\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "synthetic-data/synthetic-data-collapse-1.svg",
+          "bytes": 63732,
+          "sha256": "sha256:ae794858c3339c4880a31e686ab0277f37aa31b54f88238293b2cc82a2a635b7"
+        }
+      ]
+    },
+    "synthetic-data-manifest": {
+      "code_fingerprint": "sha256:d69cf8bfbe2bd82cea96cc44ae90aaeaeb4f50ff496a208ddd575d674d628495",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{\n \"drops\": {\n  \"len_ratio\": 419,\n  \"length\": 77\n },\n \"impl\": \"d2l.rephrase_docs\",\n \"in_hash\": \"187db47cd3d640dd57b9f93c25ace9516d2c43a40a6a1b99a61c1c90463a0075\",\n \"n_in\": 14305,\n \"n_out\": 13809,\n \"name\": \"rephrase\",\n \"out_hash\": \"4824bf7169889f3fc7f0a9b3006214b0a91acc29e80e7cddd402e00218a8717e\",\n \"params\": {\n  \"batch\": 96,\n  \"chunk_tokens\": 400,\n  \"drop_len_ratio\": [\n   0.5,\n   1.5\n  ],\n  \"flag_thresholds\": {\n   \"copy_rate\": 0.8,\n   \"num_fidelity\": 1.0\n  },\n  \"flags\": {\n   \"copy\": 3330,\n   \"numbers\": 4150\n  },\n  \"generator\": \"Qwen/Qwen3.5-2B@15852e8c16360a2fea060d615a32b45270f8a8fc\",\n  \"max_new_tokens\": 512,\n  \"order\": \"length\",\n  \"prompt_sha256\": \"d81cca47fc4159c0c6087ee2d4d5dde9a72c402c247e7725f723c6a446ea1635\",\n  \"seed\": 0,\n  \"splits\": {\n   \"S1\": {\n    \"chunks\": 6376,\n    \"documents\": 2033\n   },\n   \"S2\": {\n    \"chunks\": 6345,\n    \"documents\": 1993\n   },\n   \"val\": {\n    \"chunks\": 1584,\n    \"documents\": 502\n   }\n  },\n  \"style\": \"wiki\",\n  \"temperature\": 0.7,\n  \"top_p\": 0.9\n },\n \"tokens_out\": 4305776,\n \"version\": null\n}\n# Dataset card: lm-rephrase-fwedu-5m-v1\n\nSchema `d2l-corpus/1`, manifest SHA-256 `152ee87c5edab4c8…`.\n\n## Sources\n\n| id | uri | revision | license | documents | bytes |\n|---|---|---|---|---|---|\n| fineweb-edu | hf://datasets/HuggingFaceFW/fineweb-edu/sample/10BT | 87f09149ef4734204d70ed1d046ddc9ca3f2b8f9 | odc-by | 4527 | 21340150 |\n\n## Processing stages\n\n| stage | implementation | in | out | dropped (reason: count) |\n|---|---|---|---|---|\n| rephrase | d2l.rephrase_docs | 14305 | 13809 | length: 77, len_ratio: 419 |\n\nContains synthetic text: 48% of its tokens were written by Qwen/Qwen3.5-2B from the FineWeb-Edu\n    sources above.\n"
+        }
+      ]
+    }
+  }
+}

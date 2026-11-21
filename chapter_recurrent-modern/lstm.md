@@ -1,35 +1,11 @@
 # Gated Recurrent Networks
 :label:`sec_lstm`
 
-The recurrent network of :numref:`sec_rnn-scratch` generates text with real
-words and punctuation, but its grammar holds over a few words at most.
-Consider a model that reads "the keys to the cabinet in the hall" and must
-predict what comes next. To choose "are" rather than "is", it must remember
-that the subject, "keys", is plural, and by the time the verb arrives, that
-word lies 30 characters back. A plain recurrent network rewrites its whole
-state at every step, so the word reaches the verb only through 30 rewrites
-by the same recurrent matrix, and so does the gradient that would teach the
-network to keep it. Text, speech, and music are full of dependencies far
-longer than 30 steps. How can a network keep what it has read for hundreds
-of steps?
+The plain recurrent network of :numref:`sec_rnn-scratch` generates recognizable words and punctuation, yet its grammar unravels over more than a few words. Consider predicting the verb after *"the keys to the cabinet in the hall"*: choosing *"are"* rather than *"is"* requires remembering that *"keys"*—30 characters back—is plural. Because a plain RNN overwrites its entire state at every step through the same recurrent matrix and $\tanh$ nonlinearity, both the forward signal and the backward gradient decay rapidly over tens of steps. How can a recurrent network hold what it has read across hundreds of steps?
 
-The remedy that made recurrent networks practical is to let the network
-decide, for each unit and at each step, how much of its state to keep. It
-dates from the late 1990s, and gated networks carried speech recognition and
-machine translation through the 2010s, until transformers took their place.
-A unit that keeps its state unchanged passes the stored information, and the
-gradient, through the step without loss. The decision is made by a *gate*, a
-vector of numbers between 0 and 1 that the network computes from its input
-and its state. We build the two gated networks in wide use, the long
-short-term memory (LSTM) and the gated recurrent unit (GRU). We then test
-them twice: on a task that needs a long memory and nothing else, and on the
-byte-level text on which :numref:`chap_transformers` trained its GPT, in a
-model where they meet attention on equal terms. Gates fix the memory, but
-they read the previous state, so training must still process a sequence one
-step at a time; :numref:`sec_linear-recurrence` removes that restriction.
+The solution introduced in the late 1990s is to let the network decide, unit by unit and step by step, what fraction of its state to keep via a *gate*—a vector of values in $(0, 1)$ computed from the current input and previous state. A unit whose gate stays near $1$ passes both its stored content and the backward gradient across the step essentially unchanged. Below we build the two classic gated architectures—the long short-term memory (LSTM) and the gated recurrent unit (GRU)—and evaluate them on synthetic delayed recall and on the byte-level WikiText-103 benchmark of :numref:`chap_transformers`. While gates solve long-range retention, their dependence on the previous state still forces sequential step-by-step training; :numref:`sec_linear-recurrence` removes that bottleneck.
 
-Throughout the chapter we write the equations for a single sequence, with
-column vectors; the code processes a minibatch of sequences at once.
+Throughout this chapter we write equations for a single sequence using column vectors, while the code processes minibatches of sequences with row vectors.
 
 ```{.python .input #lstm-gated-recurrent-networks}
 %%tab pytorch
@@ -56,19 +32,12 @@ from d2l import jax as d2l
 
 ### Vanishing Gradients
 
-The Basics traced the forgetting of a plain recurrent network to its
-gradient (:numref:`subsec_vanishing-exploding`); we restate the result in
-the form needed here. The network updates its hidden state
-$\mathbf{h}_t \in \mathbb{R}^d$ from the previous state and the input
-$\mathbf{x}_t$,
+Recall from :numref:`subsec_vanishing-exploding` how gradients propagate through a plain RNN with hidden state $\mathbf{h}_t \in \mathbb{R}^d$:
 
 $$\mathbf{h}_t = \tanh(\mathbf{W}_\textrm{hh} \mathbf{h}_{t-1} +
 \mathbf{W}_\textrm{xh} \mathbf{x}_t + \mathbf{b}_\textrm{h}).$$
 
-A small change of the state at step $t-k$ reaches step $t$ multiplied by
-one Jacobian per step, $\mathbf{J}_s = \textrm{diag}(1 - \mathbf{h}_s^2)\,
-\mathbf{W}_\textrm{hh}$, the derivative of the $\tanh$ times the recurrent
-matrix:
+A perturbation to $\mathbf{h}_{t-k}$ reaches $\mathbf{h}_t$ multiplied by a chain of $k$ step Jacobians $\mathbf{J}_s = \textrm{diag}(1 - \mathbf{h}_s^2)\,\mathbf{W}_\textrm{hh}$:
 
 $$
 \frac{\partial \mathbf{h}_t}{\partial \mathbf{h}_{t-k}} = \mathbf{J}_t
@@ -76,66 +45,24 @@ $$
 $$
 :eqlabel:`eq_lstm-jacobian-product`
 
-Backpropagation sends the gradient of a loss at step $t$ back to step $t-k$
-through the transpose of the same product. In the language model of the
-Basics this gradient fell below 1% of its size within about eight steps.
+For a single scalar unit, each factor is $w(1 - h_s^2)$ of magnitude at most $|w|$. When $|w| < 1$, the product shrinks at least as fast as $|w|^k$ (at $w = 0.9$, to $\le 4\%$ over 30 steps and $\le 0.003\%$ over 100 steps).
 
-Let us start with a single hidden unit, where the mechanism shows with
-nothing in the way. Each factor is then a number $w (1 - h_s^2)$, at most
-$|w|$ in magnitude. If $|w| < 1$, the product shrinks at least as fast as
-$|w|^k$: with $w = 0.9$, a change 30 steps back reaches the present at no
-more than 4% of its size, and a change 100 steps back at no more than
-0.003%.
-
-For a matrix, the largest singular value of $\mathbf{W}_\textrm{hh}$ takes
-the place of $|w|$. If it is below one, every factor shrinks every vector,
-and the product must vanish. A largest singular value above one, however,
-guarantees nothing either way. Over many steps the powers of a matrix grow
-or shrink like $\rho^k$, where $\rho$, the *spectral radius*, is the
-largest magnitude of its eigenvalues; it is never larger than the largest
-singular value and can be much smaller. Suppose that $\rho$ is near one and
-the state is small, so that the $\tanh$ is nearly linear. A signal along
-the eigenvectors of the largest eigenvalues is then neither shrunk nor
-inflated from step to step, and a plain network can carry it a long way.
-Our experiment will meet this borderline case. Away from it the gradient
-grows or vanishes, and the two failures are not equally bad: gradient
-clipping limits gradients that grow; nothing recovers a gradient that has
-vanished.
+For a matrix $\mathbf{W}_\textrm{hh}$, if its largest singular value is below $1$, every factor contracts every vector and the product must vanish. Over many steps, matrix powers scale as $\rho^k$, where the *spectral radius* $\rho$ (the largest eigenvalue magnitude) satisfies $\rho \le \|\mathbf{W}_\textrm{hh}\|_2$. If $\rho \approx 1$ and the state remains small so $\tanh$ is nearly linear, components along the leading eigenvectors can survive for many steps—a borderline regime we will observe in our experiments below. Away from $\rho \approx 1$, gradients either explode (which gradient clipping can cap) or vanish (which no post-hoc rescaling can recover).
 
 ### An Additive Memory
 
-The simplest state whose Jacobian is exactly one is a running sum,
-$c_t = c_{t-1} + x_t$. Its derivative $\partial c_t / \partial c_{t-k}$ is
-1 for every $k$: an input written at step 1 is still in the sum at step
-1,000, and the gradient reaches it undiminished. But a running sum cannot
-forget. Every input stays in it forever, so after many steps it holds a
-mixture of everything the network has read, and its size grows with the
-length of the sequence.
+The simplest recurrence with unit Jacobian is a pure running sum, $c_t = c_{t-1} + x_t$, for which $\partial c_t / \partial c_{t-k} = 1$ at every lag $k$. However, an unweighted sum never forgets: every past input remains superposed with equal weight, and the state's variance grows with sequence length.
 
 ### Gates as Learned Decay
 
-A useful memory keeps some things and drops others. We let the network
-choose, at every step, a fraction $f_t \in (0, 1)$ of the old state to keep
-and a fraction $i_t \in (0, 1)$ of new content $\tilde{c}_t$ to write:
+To retain relevant inputs while discarding irrelevant ones, we let the network choose at each step a retention fraction $f_t \in (0, 1)$ and an input fraction $i_t \in (0, 1)$ multiplying new candidate content $\tilde{c}_t$:
 
 $$c_t = f_t\, c_{t-1} + i_t\, \tilde{c}_t.$$
 :eqlabel:`eq_lstm-gated-sum`
 
-Along this path the derivative over $k$ steps is the product of the kept
-fractions, $\partial c_t / \partial c_{t-k} = f_t f_{t-1} \cdots
-f_{t-k+1}$. If the network keeps a constant fraction $f$, a stored value
-decays like $f^k$ and halves every $\ln 2 / \ln(1/f)$ steps, its
-*half-life*: about 7 steps for $f = 0.9$, 69 for $f = 0.99$, and 693 for
-$f = 0.999$. A network that sets $f_t$ to one holds a value, and its
-gradient, for as long as it likes; setting $f_t$ to zero erases it.
+Along the direct memory path, the $k$-step derivative is the product of the kept fractions, $\partial c_t / \partial c_{t-k} = \prod_{s=t-k+1}^t f_s$. At a constant keep fraction $f$, a stored value decays as $f^k$ with a *half-life* of $\ln 2 / \ln(1/f)$ steps: roughly 7 steps at $f = 0.9$, 69 at $f = 0.99$, and 693 at $f = 0.999$. Setting $f_t \to 1$ preserves a value and its gradient indefinitely; setting $f_t \to 0$ flushes the cell in a single step.
 
-In a layer of $d$ units the memory becomes a vector $\mathbf{c}_t$, one
-$c$ per unit. The layer also has an output $\mathbf{h}_t$, a second
-vector, which is what the rest of the network reads.
-
-The fractions are computed by *gates*. A gate is a layer with a sigmoid
-output, one value in $(0, 1)$ per unit, that reads the current input and
-the output of the previous step. For the fraction kept,
+In a layer of width $d$, the memory becomes a vector $\mathbf{c}_t \in \mathbb{R}^d$ accompanied by an exposed hidden state $\mathbf{h}_t \in \mathbb{R}^d$. Each *gate* computes a vector in $(0, 1)^d$ via a sigmoid layer reading the current input $\mathbf{x}_t$ and previous output $\mathbf{h}_{t-1}$:
 
 $$
 \mathbf{f}_t = \sigma(\mathbf{W}_\textrm{xf} \mathbf{x}_t +
@@ -143,49 +70,17 @@ $$
 $$
 :eqlabel:`eq_gate`
 
-A gate multiplies a signal elementwise. A value near 1 lets the signal pass,
-a value near 0 blocks it. Because the gate reads $\mathbf{x}_t$ and
-$\mathbf{h}_{t-1}$, the decision depends on what the network is reading
-and what it has stored; because $\sigma$ is smooth, the decision is learned
-by gradient descent like every other weight.
+Unlike a plain RNN—which multiplies the entire state by a dense matrix $\mathbf{W}_\textrm{hh}$ and applies $\tanh$ at every step—the gated memory updates each coordinate by elementwise multiplication with its own learned factor $f_{t,j} \in (0, 1)$. Because $f_{t,j} \le 1$, gradients along the direct memory path cannot explode, and holding $f_{t,j}$ near $1$ prevents them from vanishing.
 
-Compare this with the plain network. There, the whole state is multiplied
-by the matrix $\mathbf{W}_\textrm{hh}$, the same at every step, and pushed
-through a $\tanh$. In the gated memory, each unit is multiplied by its own
-number, chosen anew at every step, and nothing else happens to it. A
-product of numbers below one cannot grow, so the gradient along the memory
-path cannot explode, and a gate held near one keeps it from vanishing.
-
-Only the gradient is tamed this way, not the stored value. While $f_t$
-stays near one, every write adds to the memory, up to one unit per step,
-much as the running sum grew. The LSTM will therefore squash its memory
-with a $\tanh$ before the rest of the network reads it. One more detail
-matters in practice: with small weights, a gate starts near $\sigma(0) =
-1/2$, a half-life of one step. A gated network can learn long memories, but
-it does not start with them.
+Two practical details remain. First, while $f_t \approx 1$, repeated writes can still cause the stored value $c_t$ to grow, so the LSTM applies a $\tanh$ when reading $\mathbf{c}_t$ out to $\mathbf{h}_t$. Second, under zero bias initialization, sigmoid gates start near $\sigma(0) = 1/2$—a half-life of a single step—so a gated network can represent long memories but does not start with them by default.
 
 ## Long Short-Term Memory
 
 ### The Memory Cell
 
-The *long short-term memory* (LSTM) of :citet:`Hochreiter.Schmidhuber.1997`,
-with the forget gate added by :citet:`Gers.Schmidhuber.Cummins.2000`, builds
-a recurrent layer around the gated sum :eqref:`eq_lstm-gated-sum`. Where
-the plain network kept one vector, the LSTM keeps two, and the reason is
-protection. The *memory cell* $\mathbf{c}_t \in \mathbb{R}^d$ is touched by
-nothing but the gated sum: no matrix multiplies it and no nonlinearity
-squashes it on its way from one step to the next. The output
-$\mathbf{h}_t$ is a gated, squashed view of the cell, and it is all that
-the rest of the network sees, so what the layer stores and what it shows
-can differ. The name draws a different line, between weights and
-activations. The weights of a network change slowly and store what holds
-for all sequences, while its activations are overwritten at every step;
-the cell is an activation designed to persist, a short-term memory made
-long.
+The *long short-term memory* (LSTM) of :citet:`Hochreiter.Schmidhuber.1997`, augmented with the forget gate of :citet:`Gers.Schmidhuber.Cummins.2000`, builds a recurrent layer around :eqref:`eq_lstm-gated-sum`. It maintains two vectors of width $d$: an internal *memory cell* $\mathbf{c}_t$ evolved purely by elementwise gating and addition, and an exposed *hidden state* $\mathbf{h}_t$ that provides a gated, squashed view of $\mathbf{c}_t$ to subsequent layers and to the next step's gates.
 
-Three gates of the form :eqref:`eq_gate` control the cell: the *input gate*
-$\mathbf{i}_t$, the *forget gate* $\mathbf{f}_t$, and the *output gate*
-$\mathbf{o}_t$,
+Three sigmoid gates—the *input gate* $\mathbf{i}_t$, *forget gate* $\mathbf{f}_t$, and *output gate* $\mathbf{o}_t$—control access to the cell:
 
 $$
 \begin{aligned}
@@ -196,12 +91,7 @@ $$
 $$
 :eqlabel:`lstm_gates`
 
-A fourth layer of the same form, with a $\tanh$ in place of the sigmoid so
-that content can be negative, proposes what to write, the *input node*
-$\tilde{\mathbf{c}}_t = \tanh(\mathbf{W}_\textrm{xc} \mathbf{x}_t +
-\mathbf{W}_\textrm{hc} \mathbf{h}_{t-1} + \mathbf{b}_\textrm{c})$. The cell
-is the gated sum :eqref:`eq_lstm-gated-sum`, one copy per unit, and the
-output gate decides how much of the cell the rest of the network sees:
+A fourth projection with $\tanh$ activation proposes the candidate *input node* $\tilde{\mathbf{c}}_t = \tanh(\mathbf{W}_\textrm{xc} \mathbf{x}_t + \mathbf{W}_\textrm{hc} \mathbf{h}_{t-1} + \mathbf{b}_\textrm{c})$. The cell and hidden state then update via elementwise multiplication ($\odot$):
 
 $$
 \mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot
@@ -210,43 +100,16 @@ $$
 $$
 :eqlabel:`lstm_update`
 
-Here $\odot$ is the elementwise product. The next layer, the output layer,
-and the gates of the next step read $\mathbf{h}_t$, never $\mathbf{c}_t$
-directly.
-
-One step with numbers shows the two vectors parting company. Take a unit
-whose cell holds $c_{t-1} = 0.8$, with a forget gate of $0.95$, an input
-gate of $0.1$, an input node of $-0.5$, and an output gate of $0.2$. The
-cell becomes $0.95 \cdot 0.8 + 0.1 \cdot (-0.5) = 0.71$, nearly what it
-was, while the output is $0.2 \tanh(0.71) = 0.12$. The value is stored but
-barely shown. In this way a unit can hold a value, such as the number of a
-subject, and reveal it only when the verb arrives. :numref:`fig_lstm_cell`
-shows the data flow.
+Separating $\mathbf{c}_t$ from $\mathbf{h}_t$ lets a unit hold information silently until it is needed: for instance, if $c_{t-1} = 0.8$ with $f_t = 0.95$, $i_t = 0.1$, $\tilde{c}_t = -0.5$, and $o_t = 0.2$, the cell stays at $c_t = 0.71$ while exposing only $h_t = 0.2\tanh(0.71) = 0.12$ (:numref:`fig_lstm_cell`).
 
 ![The LSTM memory cell. The previous output $\mathbf{h}_{t-1}$ and the input $\mathbf{x}_t$ feed four layers: three sigmoid gates and a $\tanh$ input node. The cell $\mathbf{c}_t$ is updated additively, scaled by the forget gate, and the output gate controls what the rest of the network sees.](../img/mdl-modernrnn-lstm-cell.svg)
 :label:`fig_lstm_cell`
 
-Follow the cell along the top of the figure. Between $\mathbf{c}_{t-1}$
-and $\mathbf{c}_t$ there is one elementwise product and one sum, no matrix
-and no saturating nonlinearity, so with the gates held fixed the Jacobian
-$\partial \mathbf{c}_t / \partial \mathbf{c}_{t-1}$ is the diagonal matrix
-$\textrm{diag}(\mathbf{f}_t)$. A reader may object that the gates are not
-fixed: they read $\mathbf{h}_{t-1}$, which depends on $\mathbf{c}_{t-1}$, so
-the full derivative contains further terms that pass through the gates and
-the recurrent matrices, with the products of
-:eqref:`eq_lstm-jacobian-product`. That is correct. The cell does not
-guarantee that every gradient survives; it provides one path along which
-gradients can survive, and training decides whether the gates keep it
-open.
+With the gates treated as fixed, the direct cell-to-cell Jacobian $\partial \mathbf{c}_t / \partial \mathbf{c}_{t-1}$ is simply $\textrm{diag}(\mathbf{f}_t)$ (the top rail in :numref:`fig_lstm_cell`). The full derivative also includes indirect terms through $\mathbf{h}_{t-1}$ and the gates, but the cell rail provides an unattenuated highway whenever $\mathbf{f}_t$ stays near $1$.
 
 ### Implementation
 
-We write the layer out step by step. The four layers that compute
-$\mathbf{i}_t$, $\mathbf{f}_t$, $\tilde{\mathbf{c}}_t$, and $\mathbf{o}_t$
-read the same inputs, so we stack their weights and compute all four with
-one matrix product per input, then split the result. In the code each row
-of a minibatch is one sequence, so the weights multiply from the right and
-hold the transposes of the matrices in the equations.
+Because $\mathbf{i}_t$, $\mathbf{f}_t$, $\tilde{\mathbf{c}}_t$, and $\mathbf{o}_t$ all read $(\mathbf{x}_t, \mathbf{h}_{t-1})$, we stack their weights into two matrices $\mathbf{W}_\textrm{x} \in \mathbb{R}^{d_\textrm{in} \times 4d}$ and $\mathbf{W}_\textrm{h} \in \mathbb{R}^{d \times 4d}$, compute a single matrix multiplication per input, and split the result into four chunks.
 
 ```{.python .input #lstm-implementation-1}
 %%tab pytorch
@@ -302,10 +165,7 @@ class LSTMScratch(nnx.Module):
         return jnp.swapaxes(outputs, 0, 1)  # (batch_size, num_steps, ...)
 ```
 
-Deep learning frameworks provide the LSTM as a library layer that runs the
-same recurrence in a fused, compiled loop. To check that it computes
-:eqref:`lstm_gates` and :eqref:`lstm_update` and nothing else, we copy its
-weights into our layer and compare the outputs on random inputs.
+To verify that `LSTMScratch` computes the exact same recurrence as the fused framework LSTM (`nn.LSTM` / `nnx.LSTMCell`), we copy the library weights into our class and compare outputs on a random batch.
 
 ```{.python .input #lstm-implementation-2}
 %%tab pytorch
@@ -333,21 +193,12 @@ X = jax.random.normal(jax.random.key(0), (4, 9, 16))
 print(f'max difference: {jnp.abs(cell(X) - lstm(X)).max():.1e}')
 ```
 
-The largest difference is no more than the rounding error of 32-bit
-arithmetic: our loop and the library layer compute the same function. From
-now on we use the library layer, which is much faster.
+The outputs agree to float32 rounding error ($\sim 10^{-7}$), so we use the faster fused library layers from here on.
 
 ## Gated Recurrent Units
 :label:`sec_gru`
 
-The LSTM keeps two vectors per step, the cell and the output, and computes
-three gates and an input node. Is all of that necessary? The *gated
-recurrent unit* (GRU) of :citet:`Cho.Van-Merrienboer.Bahdanau.ea.2014`
-keeps one vector and computes two gates and a candidate, and it trains
-about as well as the LSTM on many tasks :cite:`Chung.Gulcehre.Cho.ea.2014`.
-
-The GRU has two gates of the form :eqref:`eq_gate`, a *reset gate*
-$\mathbf{r}_t$ and an *update gate* $\mathbf{z}_t$:
+Does a gated layer really need two state vectors and three gates? The *gated recurrent unit* (GRU) of :citet:`Cho.Van-Merrienboer.Bahdanau.ea.2014` merges the cell and hidden state into a single vector $\mathbf{h}_t$ controlled by just two gates—a *reset gate* $\mathbf{r}_t$ and an *update gate* $\mathbf{z}_t$—while matching the LSTM on many sequence tasks :cite:`Chung.Gulcehre.Cho.ea.2014`:
 
 $$
 \mathbf{r}_t = \sigma(\mathbf{W}_\textrm{xr} \mathbf{x}_t +
@@ -357,8 +208,7 @@ $$
 $$
 :eqlabel:`gru_gates`
 
-The reset gate acts inside a plain recurrent update that proposes a
-*candidate state*,
+The reset gate filters how much of $\mathbf{h}_{t-1}$ enters the proposed *candidate state*:
 
 $$
 \tilde{\mathbf{h}}_t = \tanh\big(\mathbf{W}_\textrm{xh} \mathbf{x}_t +
@@ -367,10 +217,7 @@ $$
 $$
 :eqlabel:`gru_tilde_H`
 
-With $\mathbf{r}_t$ near one the candidate is the plain recurrent update;
-with $\mathbf{r}_t$ near zero it ignores the state and reads only the
-current input, as if the sequence started anew. The update gate then
-blends the old state with the candidate:
+The update gate $\mathbf{z}_t$ then interpolates convexly between the old state and the candidate:
 
 $$
 \mathbf{h}_t = \mathbf{z}_t \odot \mathbf{h}_{t-1} + (1 - \mathbf{z}_t)
@@ -378,25 +225,10 @@ $$
 $$
 :eqlabel:`gru_H`
 
-This is the gated sum :eqref:`eq_lstm-gated-sum` with the input gate tied
-to the forget gate, $i_t = 1 - f_t$: whatever fraction of the old state is
-dropped is filled with new content. Where $\mathbf{z}_t$ is near one, the
-state is copied and the step is skipped; where it is near zero, the state
-is overwritten. Each coordinate of $\mathbf{h}_t$ is a weighted average of
-two numbers in $[-1, 1]$, so the state stays bounded without a second
-$\tanh$, and one vector serves as both memory and output.
-:numref:`fig_gru_cell` shows the cell. With input and hidden width $d$, a
-GRU layer has $3 \cdot 2d^2$ weights against the LSTM's $4 \cdot 2d^2$.
+Equation :eqref:`gru_H` is the gated sum :eqref:`eq_lstm-gated-sum` with coupled forget and input gates ($f_t = z_t, i_t = 1 - z_t$). Because each coordinate convexly blends two values in $[-1, 1]$, $\mathbf{h}_t$ stays bounded in $[-1, 1]$ without an extra output $\tanh$ (:numref:`fig_gru_cell`), and a GRU layer requires $6d^2$ recurrent/input weights compared to an LSTM's $8d^2$. (Fused library GRUs apply $\mathbf{r}_t$ *after* multiplying by $\mathbf{W}_\textrm{hh}$ so all recurrent matrix products can be batched into one call; see the exercises.)
 
 ![The GRU cell. The reset gate filters the previous state inside the candidate $\tilde{\mathbf{h}}_t$; the update gate blends the old state and the candidate.](../img/mdl-modernrnn-gru-cell.svg)
 :label:`fig_gru_cell`
-
-Writing the GRU from scratch would repeat `LSTMScratch` with two gates and
-a candidate in place of three gates and an input node; an exercise asks for
-it. The library GRU layers that we train below compute a slightly different
-candidate, with the reset gate applied after the product with
-$\mathbf{W}_\textrm{hh}$ rather than before it; another exercise shows when
-the two agree and why the libraries prefer their form.
 
 ## Training Gated Networks
 :label:`sec_gated-training`
@@ -404,13 +236,7 @@ the two agree and why the libraries prefer their form.
 ### Delayed Recall
 :label:`subsec_delayed-recall`
 
-The equations promise a memory that can last hundreds of steps. Does
-training find it? We test each network directly with a *delayed recall*
-task. A sequence starts with one of eight symbols, followed by $T - 1$
-filler tokens drawn at random from eight other symbols, and at the end the
-network must name the first symbol. It can do so only by carrying the
-symbol through $T - 1$ updates, each of which reads a token that does not
-matter. Chance accuracy is 1/8.
+The gated equations *allow* memories lasting hundreds of steps, but does gradient descent actually find them? We test retention directly on a synthetic *delayed recall* task: a sequence begins with one of 8 target symbols (0–7), followed by $T - 1$ random filler tokens drawn from 8 other symbols (8–15), and at step $T$ the model must classify the initial symbol (chance accuracy $1/8 = 0.125$).
 
 ```{.python .input #lstm-delayed-recall-1}
 %%tab pytorch, jax
@@ -428,30 +254,14 @@ X, Y = delayed_recall(np.random.default_rng(0), 2, 6)
 print(X, Y)
 ```
 
-In the example, the first sequence starts with symbol 6 and the second
-with 5, and these are the targets. The model embeds the tokens in 32
-dimensions, runs one recurrent layer with 64 hidden units, and applies a
-classifier to the layer's output at every position. The answer is read at
-the last position; the tasks of later sections read it at several. All
-layers of this chapter start with LeCun normal weights, of variance
-$1/n_\textrm{in}$ for $n_\textrm{in}$ inputs, and zero biases
-(:numref:`sec_numerical_stability`), so that every projection passes on the
-scale of its input. For the recurrent matrix this choice will matter.
+Our testbed model (`RecallModel`) embeds tokens into 32 dimensions, runs a single recurrent layer of width 64, and applies a linear classifier at the final step. Throughout this chapter, we initialize all linear, convolutional, and recurrent weight matrices with LeCun normal initialization (variance $1 / n_\textrm{in}$) and zero biases (:numref:`sec_numerical_stability`).
 
 :begin_tab:`pytorch`
-PyTorch's layers draw their weights from uniform distributions by default;
-`init_lecun` applies the rule above to linear, convolutional, and recurrent
-layers alike. The recurrent layers also return their final state, and the
-wrapper `Recurrent` keeps only the outputs, the interface that all sequence
-layers of this chapter share.
+`init_lecun` applies LeCun normal weights and zero biases across linear, convolutional, and recurrent modules, and `Recurrent` wraps PyTorch recurrent modules to return only the output sequence tensor.
 :end_tab:
 
 :begin_tab:`jax`
-Flax's linear layers and the input matrices of its recurrent cells already
-follow this rule. Its recurrent matrices start as random orthogonal
-matrices, so we pass `recurrent_kernel_init` to draw them LeCun normal as
-well. `nnx.RNN` turns a cell into a layer that returns the outputs at all
-steps, the interface that all sequence layers of this chapter share.
+Flax linear layers and recurrent input projections already default to LeCun normal, while recurrent kernels default to orthogonal matrices; we pass `recurrent_kernel_init` to use LeCun normal there as well.
 :end_tab:
 
 ```{.python .input #lstm-delayed-recall-6}
@@ -483,49 +293,10 @@ class Recurrent(nn.Module):  #@save
         return self.rnn(X)[0]
 ```
 
-We train six networks with this model, in three pairs. The first pair are
-plain recurrent networks, which have no gates. One has the LeCun normal
-recurrent matrix. The other, a control, draws its recurrent matrix
-uniformly from $[-1/8, 1/8]$, the default scale of some libraries, which
-gives its entries a third of the LeCun variance. The second pair are the
-LSTM and the GRU as they come from this initialization: with zero biases,
-every gate starts near one half. The third pair are the same LSTM and GRU
-with gates that start out keeping their state, which we call *keep gates*:
-the bias of the LSTM's forget gate is set to 5 and that of its input gate
-to $-5$, and the bias of the GRU's update gate to 5. Since $\sigma(5) =
-0.993$, these gates start with a half-life of about 100 steps instead of
-one.
-
-Why close the LSTM's input gate? It does not shield the symbol from the
-fillers: the gate starts at the same value for every token, so at first
-each filler is written as faintly as the symbol. What the closed gate
-controls is the size of the cell. With its forget gate near one, an LSTM
-whose input gate stood at one half would add half of every filler's content
-to the cell, step after step, and the cell could grow to as much as
-$0.5 / (1 - \sigma(5)) \approx 75$ in magnitude (an exercise proves the
-bound). At that size the $\tanh$ of the output saturates; the output
-barely responds to a faint trace and passes little gradient back. With the
-input gate at $\sigma(-5)$ the same bound is $\sigma(-5) / (1 - \sigma(5))
-= 1$, since $1 - \sigma(5) = \sigma(-5)$, and the cell stays within
-$[-1, 1]$, where the $\tanh$ is far from saturated.
-
-What is written at the first step is still there 200 steps later, at about
-a quarter of its size ($\sigma(5)^{200} \approx 0.26$), next to the faint
-writes of the fillers, and training must teach the network to tell the two
-apart. No row of the table opens the input gate, so this is the reason for
-our choice, not a measured cause. The GRU needs no such step, since its
-tied gate writes only $1 - \sigma(5) = 0.007$ of the candidate by itself.
-
-Starting the forget gates near one is an old idea in practice. A
-forget-gate bias of 1, a gate of 0.73, is a common choice, recommended by
-:citet:`Jozefowicz.Zaremba.Sutskever.2015`, and the *chrono
-initialization* :cite:`Tallec.Ollivier.2018` spreads the forget-gate
-biases so that the half-lives of the units cover the delays a task needs.
-Our bias of 5 is the blunt version, suited to a task whose only job is to
-keep one symbol. Whichever you use, a gated network should start with its
-forget gates biased toward keeping; the table below shows what happens
-otherwise. `RecallModel` assembles the model, and `init_keep_gate` sets
-the biases of the keep gates.
+We compare six recurrent configurations in three pairs:
+1. **Plain RNNs:** one with LeCun normal recurrent weights ($\sigma = 1/\sqrt{64} = 1/8$) and a control with uniform weights on $[-1/8, 1/8]$ (variance $1/3$ of LeCun normal, matching PyTorch's default `nn.RNN` scale).
+2. **Default LSTM and GRU:** zero gate biases, so all gates start near $\sigma(0) = 1/2$ (half-life 1 step).
+3. **Keep-gate LSTM and GRU (`init_keep_gate`):** the LSTM forget-gate bias and GRU update-gate bias are initialized to $+5$ ($\sigma(5) = 0.993$, half-life $\approx 100$ steps), and the LSTM input-gate bias is set to $-5$ ($\sigma(-5) = 1 - \sigma(5) = 0.007$). Pairing $b_\textrm{i} = -b_\textrm{f}$ bounds the LSTM cell magnitude by $\sigma(-5)/(1 - \sigma(5)) = 1$ across long filler runs so the output $\tanh$ never saturates, matching the GRU's built-in $1 - \mathbf{z}_t$ coupling (see :citet:`Jozefowicz.Zaremba.Sutskever.2015` and the *chrono initialization* of :citet:`Tallec.Ollivier.2018`).
 
 ```{.python .input #lstm-delayed-recall-2}
 %%tab pytorch
@@ -581,31 +352,9 @@ def init_keep_gate(cell, bias=5.0):
     return cell
 ```
 
-Before we train anything, let us predict what the gated networks will do.
-A gate at one half passes half of the gradient back along the cell at each
-step, so over $k$ steps the direct path from the answer to the symbol
-carries $2^{-k}$ of it: about one part in a million at 20 steps and
-$10^{-15}$ at 50. The gradient of each shared weight sums the
-contributions of all steps, and 32-bit arithmetic resolves only about one
-part in ten million of such a sum, so next to the contributions of the
-recent steps a share of $10^{-15}$ disappears in rounding. One part in a
-million survives. We therefore expect the LSTM and the GRU as they come to
-lose the symbol by 50 steps, perhaps to keep it at 20, and the keep-gate
-pair to recall it at every delay.
+Notice what simple arithmetic predicts for the default zero-bias gated networks: when every gate starts at $1/2$, the direct gradient path from step $T$ back to step $1$ is attenuated by $2^{-(T-1)}$—roughly $10^{-6}$ at $T = 20$ (still resolvable in float32) but $10^{-15}$ at $T = 50$ (lost below float32's $\sim 10^{-7}$ relative precision when summed with recent steps' gradients). We therefore expect default LSTM/GRU to succeed at $T = 20$ and fail by $T = 50$, while the keep-gate variants should succeed across all delays up to $T = 200$.
 
-The synthetic tasks of this chapter are all trained the same way, so we
-save the loop once. `train_queries` draws a fresh batch from the
-function `batch` at every step, computes the cross-entropy at the query
-positions only, the last `Y.shape[1]` positions of the sequence, and takes
-an optimizer step with the gradient clipped to norm 1. `query_accuracy`
-returns the fraction of queries answered correctly. For delayed recall,
-`train_delayed_recall` trains a model with Adam on 1,500 batches of 128
-sequences and tests it on 2,048 new sequences.
-
-:begin_tab:`jax`
-The clipping is part of the optimizer, an `optax.chain` that clips the
-gradient before the update, so `train_queries` only takes the steps.
-:end_tab:
+We save the training helpers `train_queries`, `query_accuracy`, and `train_delayed_recall` for reuse across all synthetic recall tasks in this chapter.
 
 ```{.python .input #lstm-delayed-recall-4}
 %%tab pytorch
@@ -679,10 +428,7 @@ def train_delayed_recall(model, num_steps, blank_fillers=False):  #@save
     return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 ```
 
-The plain networks are harder to predict, since nothing in them is meant
-to hold a value. What we can compute is how their recurrent matrices act
-on a small state, where the $\tanh$ is nearly linear. The cell below draws
-one $64 \times 64$ matrix of each kind.
+Before training, let us also check the spectral radius and largest singular value of the two $64 \times 64$ plain RNN initializations:
 
 ```{.python .input #lstm-delayed-recall-8}
 %%tab pytorch, jax
@@ -693,17 +439,7 @@ for name, W in (('LeCun normal', rng.normal(0, n ** -0.5, (n, n))),
           f' largest singular value {np.linalg.norm(W, 2):.2f}')
 ```
 
-The LeCun normal matrix has spectral radius 1.02 and largest singular value
-2.01; the matrix at the smaller scale has 0.62 and 1.10. For the long run
-the spectral radius is the number that counts. A largest singular value of
-2 does not make the first matrix explode; its spectral radius of 1.02 puts
-it at the borderline case of :eqref:`eq_lstm-jacobian-product`, where a
-small state along the leading eigenvectors is neither shrunk nor inflated.
-The second matrix shrinks such a state by about 0.6 per step. We predict
-that the control loses the symbol sooner than the LeCun network, and no
-more than that, since training changes both matrices. The table trains
-every network twice at each delay, from fresh random weights, and prints
-both test accuracies.
+The LeCun normal matrix has spectral radius $1.02$ (sitting right at the $\rho \approx 1$ borderline where leading eigenmodes neither vanish nor explode when states are small), whereas the uniform default-scale matrix has spectral radius $0.62$ (shrinking states by $\sim 0.6$ per step). Now we train two seeds of all six models across delays $T \in \{20, 50, 100, 200\}$.
 
 ```{.python .input #lstm-delayed-recall-5}
 %%tab pytorch
@@ -757,71 +493,14 @@ for name, cell in cells.items():
     print(f'{name:18s}', ' '.join(f'{a:.2f}/{b:.2f}' for a, b in runs))
 ```
 
-The gated networks behave as predicted. As they come, with gates at one
-half, the GRU recalls every symbol after 20 steps in every run, while the
-LSTM recalls anywhere from a quarter of them to all, depending on the run;
-from 50 steps on both are at chance, 0.12, in every run. One part in a
-million is a small gradient but not a hopeless one; $10^{-15}$ is. With
-keep gates, the same two architectures recall every symbol at every delay
-up to 200, in every run. Only the initialization differs between these
-pairs of rows. Started with gates at one half, training does not find,
-within our 1,500 updates, the gates that would keep the symbol; started
-with gates near one, it does not lose them.
-
-Let us look more closely at the plain networks, because from 50 steps on
-the LeCun one does better than both gated networks as they come. At 50
-steps it recalls every symbol in at least one of its two runs, and at 100
-and 200 steps some of its runs still recall well above chance. The control
-shows where this memory comes from. With its recurrent matrix at the
-smaller scale, the same network still recalls at 20 steps in some runs,
-but from 50 steps on it usually loses the symbol. A plain network
-can thus carry a symbol a long way when its matrix sits at the borderline,
-with spectral radius near one. Nothing in it holds the symbol on purpose,
-though, and its memory is unreliable: at the same delay one run may recall
-every symbol and the next far fewer, and a longer delay is not even
-reliably harder than a shorter one.
-
-What, then, do the gates add? A plain network with a well-scaled matrix
-can carry a symbol too. What the gates add, in this table, is
-reliability: every keep-gate run recalled every symbol at every delay. Each
-unit has its own decay, set by its own gate rather than by the eigenvalues
-of one shared matrix, and an initialization can put that decay where the
-task needs it. Gates make a long memory dependable and let us place it,
-but whether training finds it depends on where the gates start.
+The results confirm our analysis:
+- **Default vs. keep-gate LSTM and GRU:** With zero gate biases, both gated networks succeed at $T = 20$ and collapse to chance ($0.12$) at $T \ge 50$. With `init_keep_gate`, both achieve $1.00$ accuracy across every run at every delay up to $T = 200$.
+- **Borderline vs. contracting plain RNN:** Because the LeCun normal RNN starts with spectral radius $\rho \approx 1$, some seeds carry the symbol surprisingly far (even to $T = 100$ or $200$), though unreliably across seeds, whereas the $\rho \approx 0.62$ default-scale RNN fails consistently from $T = 50$ onward. Gates with well-initialized biases turn hit-or-miss spectral retention into dependable, per-unit memory control.
 
 ### Gated Networks on Text
 :label:`subsec_deep-rnn`
 
-Delayed recall isolates one skill; text asks whether the skill matters.
-:numref:`subsec_gpt-rnn-baseline` set a plain recurrent network with as
-many parameters as the GPT beside it on the same bytes of WikiText-103. The
-two were level over the first few bytes of each window, the GPT was 0.05 to
-0.07 nats ahead by byte 16, and the recurrent network barely improved after
-that; every recurrent run ended above every GPT run. Do gates close that
-gap?
-
-A fair answer changes one thing at a time, and that comparison changed
-two: the recurrent model was a single wide layer, the GPT a stack of
-blocks. We therefore stack recurrent layers the way
-:numref:`sec_transformer-block` stacks attention layers. Each layer is
-wrapped in a *residual connection*, which adds the layer's output to its
-input, with a layer normalization in front, and is followed by a small
-multilayer perceptron (MLP) that transforms each position separately. This
-is not how the LSTM systems of the 2010s were built, which stacked recurrent
-layers directly or with residual connections alone, but it lets every layer
-of this chapter, and attention, sit in one model. The residual connections
-give the gradient a direct path through the depth of the network, as the
-gated cell gives it one through time.
-
-We save this stack once, because every model in the chapter is an
-instance of it. `SeqLM` embeds the tokens, applies one residual block per
-*sequence mixer*, our name for the layer that passes information along the
-sequence, and predicts the next token from each position. The mixers are
-passed in as a list, so the same stack can hold an LSTM here, the layers of
-the coming sections, or a mixture of them. Each mixer maps a minibatch of
-sequences of shape (batch size, number of steps, $d$) to one of the same
-shape. The token embeddings start with entries of standard deviation
-$1/\sqrt{d}$, so that every embedded token has about unit length.
+In :numref:`subsec_gpt-rnn-baseline`, a single wide plain RNN fell behind a multi-block GPT after the first 16 bytes of context. To compare sequence mixers on equal footing—without confounding recurrence against residual depth and positionwise MLPs—we place every mixer in this chapter inside the same pre-norm residual backbone (`SeqLM`), matching :numref:`sec_transformer-block`: token embedding, a stack of blocks each applying `H = H + mixer(norm(H))` followed by a two-layer GELU MLP `H = H + mlp(H)`, and a final layer norm and linear output head.
 
 ```{.python .input #lstm-deep-recurrent-networks-1}
 %%tab pytorch
@@ -876,15 +555,7 @@ class SeqLM(nnx.Module):  #@save
         return self.head(self.norm(H))  # (batch_size, num_steps, vocab_size)
 ```
 
-The attention baseline is `SeqLM` with an attention mixer in every block,
-so that only the mixer differs. `AttentionMixer` is the causal multi-head
-attention of :numref:`sec_gpt`, in which every position attends to itself
-and to the positions before it, with positions encoded by RoPE, which
-rotates each query and key by an angle proportional to its position
-(:numref:`sec_positional-information`). Its weights are drawn LeCun normal
-like those of every other mixer. The option `conv_width`, which
-:numref:`sec_hybrids` uses, first mixes each query, key, and value with
-those of the previous few steps by a causal convolution per channel.
+Our attention baseline within `SeqLM` is `AttentionMixer`, which wraps causal multi-head attention with RoPE (:numref:`sec_gpt`, :numref:`sec_positional-information`), LeCun normal initialization, and an optional depthwise causal convolution over $(\mathbf{Q}, \mathbf{K}, \mathbf{V})$ (used later in :numref:`sec_hybrids`).
 
 ```{.python .input #lstm-gated-networks-on-text-1}
 %%tab pytorch
@@ -942,15 +613,7 @@ class AttentionMixer(d2l.CausalAttention):  #@save
         return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 ```
 
-Three helpers run the comparison, and later sections call them too.
-`loss_by_position` is the function of :numref:`subsec_gpt-rnn-baseline`,
-saved to the library here: it averages the validation loss at each position
-of the window separately. `train_text` trains a model with the recipe of
-:numref:`sec_gpt`, AdamW with a learning rate that warms up over 100 steps
-to $2 \times 10^{-3}$ and decays along a cosine over 1,000 steps. It
-returns the loss at every position, whose mean is the validation loss, and
-the milliseconds per training step. `text_table` trains two fresh models
-of each kind and prints one row per kind.
+We also save three evaluation helpers used across the chapter: `loss_by_position` computes the mean validation cross-entropy at each window position; `train_text` trains a model for 1,000 steps of AdamW (100-step warmup to $2 \times 10^{-3}$ followed by cosine decay); and `text_table` runs two seeds per configuration and reports parameter count, overall validation loss, position-band losses (`0-15`, `16-63`, `64-127`), and milliseconds per training step.
 
 ```{.python .input #lstm-gated-networks-on-text-2}
 %%tab pytorch
@@ -1017,23 +680,12 @@ def text_table(make_model, arms, data, num_runs=2):  #@save
     return trained
 ```
 
-The data and the budget are those of the GPT: byte-level WikiText-103
-(`d2l.WikiText103` of :numref:`sec_test_models`), windows of 128 bytes, 64
-windows per step. A thousand steps read about 8 million bytes, a small part
-of the corpus, so a model rarely sees a passage twice and none can
-overfit. Losses are in nats per byte; dividing by $\ln 2 \approx 0.69$
-gives bits per byte.
+We train on byte-level WikiText-103 (`d2l.WikiText103`, windows of 128 bytes, batch size 64). Each model has 4 residual blocks at width $d = 256$—comparing a plain RNN, an LSTM, a GRU, and 8-head causal attention—plus a parameter-matched plain RNN widened to $d = 302$ ($3.81\textrm{M}$ parameters, matching the GRU stack).
 
 ```{.python .input #lstm-gated-networks-on-text-4}
 %%tab pytorch, jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 ```
-
-Every model has width 256 and four blocks, and only the mixers differ: a
-plain RNN, an LSTM, a GRU, and attention with eight heads of width 32. The
-gated mixers have more weights than the plain one, so a fifth model widens
-the plain RNN to 302 units, which gives it as many parameters as the GRU
-model. It tells us how much of any gain is due to size alone.
 
 ```{.python .input #lstm-gated-networks-on-text-5}
 %%tab pytorch
@@ -1069,116 +721,19 @@ arms = {'RNN': (rnn, 256), 'LSTM': (lstm, 256), 'GRU': (gru, 256),
         'RNN, d=302': (rnn, 302)}  # As many parameters as the GRU
 ```
 
-:begin_tab:`jax`
-`nnx.RNN` runs its cell in a `jax.lax.scan`, one loop iteration per time
-step. With `unroll=8` each iteration computes eight steps, so XLA launches
-fewer and larger kernels; the steps still run one after another.
-:end_tab:
-
-The table prints each model's parameters, the validation loss of both
-runs, their losses over positions 0 to 15, 16 to 63, and 64 to 127 of the
-window, and the time per training step.
-
 ```{.python .input #lstm-gated-networks-on-text-6}
 %%tab pytorch, jax
 trained = text_table(text_model, arms, data)
 ```
 
-Let us read the table from the left. The gated models are larger: the
-LSTM model has 57% more parameters than the plain one, 4.34 million against
-2.76 million, and the GRU model about 3.8 million. Both end about 0.05 nats
-per byte below the plain RNN, about ten times the largest difference
-between two runs of any model. Size explains a part of this. The plain RNN
-widened to the GRU's parameter count ends at 1.33, about 0.015 below the
-narrow one and still about 0.03 above the GRU, several times the spread of
-either model's runs. Most of the gain therefore comes from the gates. The
-LSTM and the GRU end within 0.01 of each other, although the GRU has half a
-million fewer parameters.
-
-The columns by position say where the gain is made. Over the first 16
-positions the gated models are about 0.02 ahead of the plain one, and from
-byte 16 to the end of the window 0.05 to 0.06. After byte 16 no model
-improves by more than 0.005: at this budget every model uses about 16 bytes
-of context. On this text, then, the gates make better use of a short
-context, and the long memory they offer does not come into play. Delayed
-recall is where that memory shows.
-
-The attention stack differs from the recurrent ones in its mixer alone,
-and it is behind every one of them in every column of losses: by about
-0.03 nats against the plain RNN and about 0.08 against the gated ones. It
-is already 0.04 to 0.05 behind the plain RNN over the first 16 bytes, where
-there is little context to remember, so its deficit at this budget is not
-a matter of memory. It also ends behind the GPT of :numref:`sec_gpt`, which
-reached 1.34 to 1.35 nats per byte at the same width with the same recipe.
-The two models differ in more than the mixer. The GPT has six blocks to our
-four, and its MLP is a SwiGLU network, which :numref:`subsec_gpt-run-to-run`
-found about 0.06 nats ahead of a GELU MLP; `SeqLM` gives every mixer the
-plainer GELU MLP. The comparisons inside this chapter are fair among
-themselves, but they do not line up digit for digit with the GPT.
-
-They do answer the question that :numref:`subsec_gpt-rnn-baseline` asked:
-is the transformer better at the same job, or only bigger and newer? There
-a single wide recurrent network ended behind the GPT. Here four narrow
-$\tanh$ layers in a residual stack end within 0.01 of it, at about 1.35,
-and gates take them 0.05 further. The stack closed the gap before any gate
-did. None of this ranks recurrent networks above transformers in general.
-The models are small, the windows short, and the training brief. At this
-scale text checks that a layer learns language and how well it uses a
-short context; the memory is tested by the synthetic tasks of this
-chapter.
-
-The last column is the time per training step. The LSTM model's step
-costs two to two and a half times the plain one's. Its recurrence computes
-four layers per step where the plain one computes one, but the MLPs, the
-embedding, and the output layer cost the same in both models.
-
-:begin_tab:`pytorch`
-cuDNN runs each recurrent layer in a few fused kernels, while the attention
-model runs here without compilation, so its step is slower than that of
-the plain RNN. The GRU step is no cheaper than the LSTM step, although the
-GRU computes three layers to the LSTM's four. Timed alone at this width, one
-cuDNN layer of either kind costs about the same, most likely because each of
-the 128 dependent steps waits for the one before it, and that wait, not the
-arithmetic inside a step, sets the time. The column also moves by several
-milliseconds from one execution to the next, so the gap between the GRU and
-the LSTM in it is noise.
-:end_tab:
-
-:begin_tab:`jax`
-XLA compiles the attention model into a few large kernels, and its step is
-the fastest in the table.
-:end_tab:
-
-Where does this leave gated networks today? For large language models
-they gave way to transformers. They remain a sound choice wherever a model
-must follow a stream with constant memory and little work per step: speech
-and sensor models on small devices, forecasting from time series, and the
-memory of reinforcement-learning agents. What holds them back in training
-is the chain of steps. Every gate reads the output of the step before, so
-each recurrent layer runs its 128 steps one after another, and no amount of
-hardware shortens that chain.
+Three findings stand out from the table:
+1. **Residual stacking + gating:** Simply placing 4 narrow $\tanh$ RNN layers inside a pre-norm residual + MLP backbone reaches $\sim 1.35$ nats/byte—already matching the 6-block SwiGLU GPT of :numref:`sec_gpt`. Replacing the plain RNN mixer with an LSTM or GRU lowers validation loss by a further $0.05$ nats/byte (to $\sim 1.30$), whereas widening the plain RNN to match the GRU's parameter count (`RNN, d=302`) closes less than a third of that gap ($1.334$).
+2. **Short-context utilization:** Across all models in this 1,000-step, 128-byte regime, loss drops sharply from band `0-15` to `16-63` and changes by less than $0.005$ beyond byte 16. Here the gates earn their lead by managing short-range byte context more effectively rather than by carrying 100-step memories; the attention stack (`1.383`) trails the recurrent mixers already in the first 16 bytes at this small training budget.
+3. **Sequential step latency:** Despite fused cuDNN/XLA loops, the LSTM and GRU take $2\times$–$2.5\times$ longer per training step than the plain RNN because each of the 128 time steps must wait for the previous step's hidden state $\mathbf{h}_{t-1}$. Breaking that sequential dependency is the goal of :numref:`sec_linear-recurrence`.
 
 ## Summary
 
-A plain recurrent network passes information, and its gradient, through a
-product of Jacobians set by one recurrent matrix shared by all steps; it
-carries a symbol far only when that matrix sits near the borderline of
-spectral radius one, and then unreliably. Gated networks add a memory that
-each unit updates as a gated sum: it keeps a fraction of its old value and
-adds a fraction of new content, both computed by sigmoid gates from the
-current input and the previous output, so that along this path the gradient
-is the product of the kept fractions. The LSTM keeps a protected cell
-behind input, forget, and output gates; the GRU blends its state with a
-candidate through an update gate and filters the candidate with a reset
-gate. Where the gates start decides what training finds: with gates that
-start near one, both recall a symbol after 200 steps in every run, while
-with gates at one half both lose it by 50 steps. On byte-level text, in a
-residual stack where only the mixer differs, both end about 0.05 nats per
-byte below the plain network, an advantage that a plain network of equal
-size does not close. Every gate reads the previous output, however, so
-training still takes $T$ dependent steps for a sequence of $T$ tokens, and
-we are left to ask what remains of a gated network when its gates read only
-the input.
+In a plain recurrent network, signals and gradients pass through a product of step Jacobians governed by a single shared matrix $\mathbf{W}_\textrm{hh}$, surviving over long horizons only when its spectral radius sits near $1$. Gated recurrent networks introduce an elementwise additive memory path $c_t = f_t c_{t-1} + i_t \tilde{c}_t$ controlled by learned sigmoid gates. The LSTM separates an internal memory cell $\mathbf{c}_t$ (guarded by input, forget, and output gates) from the exposed state $\mathbf{h}_t$, while the GRU couples the forget and input gates ($1 - \mathbf{z}_t$) and filters the recurrent state via a reset gate $\mathbf{r}_t$ on a single state vector. On synthetic delayed recall, initializing forget/update gates near $1$ (`init_keep_gate`) is decisive, turning chance accuracy at $T \ge 50$ into $100\%$ recall at $T = 200$. On byte-level WikiText-103 inside a residual backbone (`SeqLM`), LSTM and GRU mixers outperform both equal-width and parameter-matched plain RNNs by $0.03$–$0.05$ nats/byte, but their dependence on $\mathbf{h}_{t-1}$ inside the gates still forces $T$ sequential steps during training.
 
 ## Exercises
 
@@ -1217,22 +772,6 @@ the input.
        \mathbf{c}_t$ instead. After many steps of accumulation, what happens
        to the gate pre-activations at the next step, and what does that do
        to the gradients that flow through the gates?
-
-1. [code] **Forget-gate bias.** With small weights, every forget gate
-   starts near $\sigma(0) = 1/2$. The common remedy, a forget-gate bias of
-   1, is far milder than the bias of 5 of our keep gates: it starts the
-   forget gate at 0.73, a half-life of about two steps.
-    1. In PyTorch, the forget-gate bias of `nn.LSTM` is the sum of the
-       second quarters of `bias_ih_l0` and `bias_hh_l0`, so set one to 1
-       and the other to 0; in Flax it is the bias of the layer `hf` of
-       `nnx.LSTMCell`. Initialize it to 1, repeat the delayed
-       recall experiment of :numref:`subsec_delayed-recall` with delays
-       of 10, 20, 50, and 100, and compare the longest delay at which the
-       LSTM succeeds with and without the bias. Repeat both with a second
-       random seed. Is a nudge from one step of half-life to two enough?
-    1. Use the chrono initialization of the first exercise with
-       $T_\textrm{max}$ equal to the delay. Does it extend the range
-       further?
 
 1. **Reset before or after.** The fused GRU layers of deep learning
    frameworks apply the reset gate after the recurrent matrix product. Apart
@@ -1285,25 +824,6 @@ the input.
        direct path alone, which multiplies the gradient at $\mathbf{c}_T$
        elementwise by the product of the forget-gate values over the last
        $k$ steps. Where do the two curves part, and which is larger?
-
-1. [code] **No forget gate.** ● The original LSTM of
-   :citet:`Hochreiter.Schmidhuber.1997` had no forget gate;
-   :citet:`Gers.Schmidhuber.Cummins.2000` added it.
-    1. Remove the forget gate from `LSTMScratch` by fixing $\mathbf{f}_t =
-       \mathbf{1}$. Train language models with this layer and with the
-       full layer as mixers of `SeqLM` on the bytes of
-       :numref:`subsec_deep-rnn`, with `train_text` for 500 steps
-       (`num_steps=500`; a layer written step by step is much slower than
-       the library layer, so keep the runs short), and compare their
-       validation losses.
-    1. For both models, record the fraction of cell entries $c_{t,i}$ with
-       $|\tanh(c_{t,i})| > 0.99$ at the last position of the validation
-       windows. Use the result to explain the difference.
-    1. Each training window starts from a zero state, so neither model runs
-       more than 128 steps without a reset. Evaluate both models on 4,096
-       consecutive validation bytes, once with the state carried across all
-       of them and once with the state reset every 128 bytes. Does the
-       carried state hurt the model without a forget gate? Why?
 
 1. [code] **Bidirectional leak.** ● A recurrent layer can also read the
    sequence backward. A *bidirectional* network

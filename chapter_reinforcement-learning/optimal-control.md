@@ -7,13 +7,6 @@ Control theory solved this problem in continuous state and action spaces long be
 
 Most physical systems are nonlinear, and actuators saturate. Two ideas extend LQR to nonlinear continuous control and form the backbone of modern trajectory optimization and robotics :cite:`Tedrake.2023,Bertsekas.2025`. First, *iterative LQR* (iLQR) :cite:`Li.Todorov.2004` repeatedly linearizes the nonlinear dynamics and quadratizes the cost around a candidate trajectory, solving a time-varying LQR problem in the backward pass to improve the trajectory in the forward pass. Second, *Model Predictive Control* (MPC) :cite:`Rawlings.Mayne.Diehl.2017` turns finite-horizon trajectory optimization into a closed-loop policy: at every step $t$, it re-solves the control problem over a receding lookahead horizon from the current measured state $\mathbf{x}_t$, applies only the first control $\mathbf{u}_{t|t}^*$, and re-plans at step $t+1$. This section develops all three tools—LQR, iLQR, and receding-horizon MPC—and shows where local linear feedback suffices, where nonlinear energy pumping is required, and how MPC sets the stage for planning with learned neural dynamics in :numref:`sec_model_based`.
 
-```{.python .input #optimal-control-setup}
-%%tab jax
-import os
-os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
-                           ' --xla_gpu_deterministic_ops=true').strip()
-```
-
 ```{.python .input #optimal-control-imports}
 %%tab pytorch
 import math
@@ -131,7 +124,7 @@ Look at the two components of the stationary feedback law $u_t^* = -k_p p_t - k_
 
 ## Linearizing a Nonlinear System Around an Equilibrium
 
-### Automatic Linearization of `Pendulum-v1`
+### Analytical Linearization of `Pendulum-v1`
 
 Now consider the nonlinear pendulum of :numref:`sec_deeprl`, with state $\mathbf{x}_t = (\vartheta_t, \dot\vartheta_t)^\top$ measured from the upright vertical ($\vartheta = 0$ upright, $\vartheta = \pi$ hanging straight down) and torque $u_t \in [-2, 2]$. Over one simulator step of $\Delta t = 0.05\text{ s}$ with gravity $g = 10$, mass $m = 1$, and rod length $l = 1$, the semi-implicit Euler transition $f(\mathbf{x}_t, u_t)$ is
 
@@ -145,36 +138,19 @@ The upright posture $\mathbf{x}^* = (0, 0)^\top$ with zero torque $u^* = 0$ is a
 $$f(\mathbf{x}_t, u_t) - f(\bar{\mathbf{x}}, \bar{u}) \approx \mathbf{A}(\bar{\mathbf{x}}, \bar{u})\,\delta\mathbf{x}_t + \mathbf{B}(\bar{\mathbf{x}}, \bar{u})\,\delta u_t, \qquad \mathbf{A} = \frac{\partial f}{\partial \mathbf{x}}(\bar{\mathbf{x}}, \bar{u}), \quad \mathbf{B} = \frac{\partial f}{\partial u}(\bar{\mathbf{x}}, \bar{u}).$$
 :eqlabel:`eq_local_linearization`
 
-In classical control, engineers differentiate :eqref:`eq_pendulum_discrete` by hand to get $\partial\dot\vartheta_{t+1}/\partial\vartheta_t = \frac{3g}{2l}\cos(\vartheta_t)\Delta t = 0.75\cos\vartheta_t$. In PyTorch or JAX, automatic differentiation computes the exact Jacobian matrices $\mathbf{A}$ and $\mathbf{B}$ directly from the transition function:
-
-```{.python .input #optimal-control-autodiff-jacobian}
-%%tab pytorch
-def pendulum_f_close(x, u, dt=0.05, g=10.0):
-    th, thdot = x[0], x[1]
-    newthdot = thdot + (1.5 * g * torch.sin(th) + 3.0 * u[0]) * dt
-    newth = th + newthdot * dt
-    return torch.stack([newth, newthdot])
-
-x_eq, u_eq = torch.zeros(2), torch.zeros(1)
-A_p = torch.func.jacrev(pendulum_f_close, argnums=0)(x_eq, u_eq).numpy()
-B_p = torch.func.jacrev(pendulum_f_close, argnums=1)(x_eq, u_eq).numpy()
-```
-
-```{.python .input #optimal-control-autodiff-jacobian}
-%%tab jax
-def pendulum_f_close(x, u, dt=0.05, g=10.0):
-    th, thdot = x[0], x[1]
-    newthdot = thdot + (1.5 * g * jnp.sin(th) + 3.0 * u[0]) * dt
-    newth = th + newthdot * dt
-    return jnp.stack([newth, newthdot])
-
-x_eq, u_eq = jnp.zeros(2), jnp.zeros(1)
-A_p = np.asarray(jax.jacrev(pendulum_f_close, argnums=0)(x_eq, u_eq))
-B_p = np.asarray(jax.jacrev(pendulum_f_close, argnums=1)(x_eq, u_eq))
-```
+Differentiating :eqref:`eq_pendulum_discrete` with respect to $(\vartheta_t, \dot\vartheta_t)$ and $u_t$ yields $\partial\dot\vartheta_{t+1}/\partial\vartheta_t = \frac{3g}{2l}\cos(\vartheta_t)\Delta t$ and $\partial\dot\vartheta_{t+1}/\partial u_t = \frac{3}{ml^2}\Delta t$:
 
 ```{.python .input #optimal-control-upright-lqr}
 %%tab pytorch, jax
+def pendulum_jacobians(th, dt=0.05, g=10.0):
+    """Exact Jacobians (A, B) of Pendulum-v1 at angle th."""
+    dthdot_dth = 1.5 * g * np.cos(th) * dt
+    dthdot_du = 3.0 * dt
+    A = np.array([[1.0 + dthdot_dth * dt, dt], [dthdot_dth, 1.0]])
+    B = np.array([[dthdot_du * dt], [dthdot_du]])
+    return A, B
+
+A_p, B_p = pendulum_jacobians(0.0)
 Q_p, R_p = np.diag([1.0, 0.1]), np.array([[0.001]])
 Ps_p, Ks_p = riccati_lqr(A_p, B_p, Q_p, R_p, H=200)
 K_lqr = Ks_p[0][0]
@@ -186,7 +162,7 @@ print(f'LQR gain K_inf:          [{K_lqr[0]:.3f}, {K_lqr[1]:.3f}]')
 print(f'closed-loop eigenvalues: {eigs_closed[0]:.4f}, {eigs_closed[1]:.4f}')
 ```
 
-At the upright fixed point, the open-loop Jacobian $\mathbf{A}$ has an unstable eigenvalue $\lambda_1 = 1.2133 > 1$: any small tilt grows exponentially at over $21\%$ per step, as seen in the phase portrait of :numref:`sec_mdl_odes_solvers`. Solving the Riccati recursion with `Pendulum-v1`'s cost matrices $\mathbf{Q} = \textrm{diag}(1, 0.1)$ and $\mathbf{R} = [[0.001]]$ produces the feedback gain $\mathbf{K}_\infty = [19.693, 5.262]$, which pulls both closed-loop eigenvalues inside the unit circle ($\lambda_1 = 0.8537, \lambda_2 = 0.2467$).
+At the upright fixed point, the open-loop Jacobian $\mathbf{A}$ has an unstable eigenvalue $\lambda_1 = 1.2133 > 1$: any small tilt grows exponentially at over $21\%$ per step, as seen in the phase portrait of :numref:`sec_mdl_odes_solvers`. Solving the Riccati recursion with `Pendulum-v1`'s cost matrices $\mathbf{Q} = \textrm{diag}(1, 0.1)$ and $\mathbf{R} = [[0.001]]$ produces the feedback gain $\mathbf{K}_\infty = [19.693, 5.263]$, which pulls both closed-loop eigenvalues inside the unit circle ($\lambda_1 = 0.8537, \lambda_2 = 0.2467$).
 
 ### Where Local Linearization Fails: Torque Saturation and the Basin of Attraction
 
@@ -511,7 +487,7 @@ The optimal policy $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$ is linear in the
 
 $$\delta\mathbf{x}_{t+1} \approx \mathbf{A}\delta\mathbf{x}_t + \mathbf{B}\delta u_t, \qquad \mathbf{A} = \frac{\partial f}{\partial \mathbf{x}}(\mathbf{0}, 0), \quad \mathbf{B} = \frac{\partial f}{\partial u}(\mathbf{0}, 0)$$
 
-- Computed automatically via `torch.func.jacrev` / `jax.jacrev`:
+- Evaluated at the upright equilibrium $(\mathbf{0}, 0)$:
   - Open-loop eigenvalues of $\mathbf{A}$: $\lambda_1 = 1.2133 > 1$ (unstable), $\lambda_2 = 0.8242$.
   - LQR feedback gain $\mathbf{K}_\infty = [19.693, 5.263]$ places closed-loop eigenvalues at $0.8537$ and $0.2467$ (inside the unit circle).
 :::
@@ -568,7 +544,7 @@ TV-LQR handles small disturbances inside the linear tube around $\bar{\mathbf{x}
 [Wrap-up]{.kicker}
 
 - **LQR:** linear dynamics + quadratic cost $\implies$ exact quadratic value $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$ via the Riccati recursion and linear feedback $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$.
-- **Local linearization:** automatic differentiation (`jacrev`) around $(\mathbf{0}, 0)$ stabilizes `Pendulum` for $|\vartheta_0| \leq 0.41\text{ rad}$, where $|u| \leq 2$ can counter gravity.
+- **Local linearization:** analytical Jacobians around $(\mathbf{0}, 0)$ stabilize `Pendulum` for $|\vartheta_0| \leq 0.41\text{ rad}$, where $|u| \leq 2$ can counter gravity.
 - **iLQR:** backward Riccati passes along a nominal trajectory discover multi-pump nonlinear swing-up trajectories.
 - **MPC:** re-planning over a receding horizon at every step turns trajectory optimization into a global closed-loop controller.
 

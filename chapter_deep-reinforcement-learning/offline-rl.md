@@ -382,39 +382,6 @@ Offline reinforcement learning learns a policy from a fixed log, which only off-
 
 ## Exercises
 
-1. **Expected SARSA.** Expected SARSA replaces the sampled action $a'$ in
-   :eqref:`eq_sarsa` by an average under a policy $\pi$,
-   $$\delta = r + \gamma \sum_{a'} \pi(a' \mid s')\, Q(s', a') - Q(s, a).$$
-    1. Show that the target becomes the Q-learning target when $\pi$ is the
-       greedy policy of $Q$.
-    1. For $\pi \neq \pi_e$, Expected SARSA estimates $Q^\pi$ from
-       transitions collected by $\pi_e$, and its update contains no
-       importance ratio. Explain why the one-step action-value target needs
-       none, and why a state-value target $r + \gamma V^\pi(s')$ for
-       $V^\pi(s)$ would need the ratio $\pi(a \mid s) / \pi_e(a \mid s)$.
-
-    *Adapted from Richard S. Sutton and Andrew G. Barto,
-    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
-    Section 6.6.*
-
-1. [code] **Data from a better policy.** The narrow logs came from an
-   operator acting $\epsilon$-greedily on `Q_star` with $\epsilon = 0.2$.
-   Draw 40 logs of 100 episodes from a better operator with
-   $\epsilon = 0.1$, and 40 mixed logs of 50 uniform episodes followed by
-   50 episodes of the $\epsilon = 0.2$ operator (concatenate two
-   `d2l.Batch`es, shifting the second batch's `ep_ends` by the length of
-   the first).
-    1. Fit the naive table and the clone on every log and evaluate both
-       exactly. On which kind of log does the clone beat the naive table,
-       and how does the exact value of the behavior explain it?
-    1. On the $\epsilon = 0.1$ logs, count at each live cell how often the
-       log contains the action that the naive greedy policy picks there.
-       What do these counts explain about its return?
-    1. Which matters more for offline Q-learning on this lake: how well the
-       log covers the pairs, or how good its behavior is? Use the mixed logs
-       in your answer.
-   :exlabel:`ex_offline-rl-where-data-comes`
-
 1. [code] **How much pessimism.** Rerun `offline_q` with
    $\kappa \in \{0, 0.02, 0.05, 0.1, 0.2, 0.3, 1\}$ on the uniform and
    narrow logs, and on two more kinds of 40 logs each: 500 episodes of the
@@ -546,26 +513,6 @@ Offline reinforcement learning learns a policy from a fixed log, which only off-
        the penalty $\kappa / \sqrt{n(s, a)}$ of `offline_q` against
        $n(s, a)$. Which property of the data does each penalty respond to,
        and which pairs do the two treat differently?
-
-1. [extended] **Deep offline Q-learning.** Function approximation adds a
-   failure the table cannot show: a network extrapolates values to
-   actions and states the log never contains. Train the DQN of
-   :numref:`sec_dqn` on CartPole for about half its usual budget, then
-   freeze its replay buffer as an offline log.
-    1. Train a fresh network on the frozen buffer alone, with no
-       interaction, and record $\max_a \hat{Q}(s_0, a)$ at a few start
-       states every few thousand updates, together with the return of the
-       greedy policy in the environment. With $\gamma = 0.99$ and episodes
-       capped at 500 steps, no policy can earn a discounted return above
-       about $99.3$. Does the predicted value cross it?
-    1. Add to the temporal-difference loss the CQL term
-       $\alpha_{\textrm{c}}\big(\log\sum_{a'} e^{\hat{Q}(s, a')} - \hat{Q}(s, a)\big)$,
-       averaged over the minibatch, for
-       $\alpha_{\textrm{c}} \in \{0.1, 1\}$. Repeat part (a) with three
-       seeds for each setting. Does the predicted value stay below the
-       bound, and which learner's policy earns more?
-    1. Which part of the CQL term plays the role of $\kappa/\sqrt{n}$, and
-       which part of the log does it use in place of the counts?
 
 [Discussions](https://d2l.discourse.group/t/36806)
 

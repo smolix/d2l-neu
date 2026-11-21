@@ -888,26 +888,6 @@ SAC maximizes reward plus entropy with an off-policy actor-critic. Soft policy e
        the optimal policy on Pendulum?
    :exlabel:`ex_sac-entropy-in-target`
 
-1. [code] **Variance of the sampled bracket.** The target
-   :eqref:`eq_sac_target` estimates the soft value
-   $\mathbb{E}_{a \sim \pi}\big[Q(s', a) - \beta \log \pi(a \mid s')\big]$ from a
-   single action $\tilde{a}'$. Take the two actions with $Q = (1, 0)$ of the
-   example by hand, $\beta = 0.5$, and the policies
-   $\pi_T(a) \propto e^{Q(a)/T}$ for temperatures $T > 0$.
-    1. Show that under $\pi_T$ the bracket
-       $B(a) = Q(a) - \beta \log \pi_T(a)$ has variance
-       $(1 - \beta/T)^2\, \textrm{Var}_{\pi_T}[Q]$ and mean
-       $\beta \log Z - \beta D_{\textrm{KL}}(\pi_T \Vert \pi_\beta)$,
-       where $Z = \sum_a e^{Q(a)/\beta}$.
-    1. Evaluate the mean and the variance for
-       $T \in \{0.1, 0.25, 0.5, 1, 2\}$. For which $T$ does a single
-       sample give the exact soft value?
-    1. Repeat part b with $\beta = 0$, the target without entropy. For which
-       policies does the single-sample target have zero variance then? What
-       does the comparison imply for the noise in SAC's critic targets as the
-       actor approaches $e^{Q/\beta}/Z$?
-   :exlabel:`ex_sac-bracket-variance`
-
 1. [code] **Quadratic critic.** Near its best action $a^\star$, let a critic be
    quadratic in a one-dimensional action,
    $Q(s, a) = Q(s, a^\star) - \frac{h}{2} (a - a^\star)^2$ with
@@ -987,34 +967,6 @@ SAC maximizes reward plus entropy with an off-policy actor-critic. Soft policy e
        limited capacity?
    :exlabel:`ex_sac-off-policy-without-ratios`
 
-1. **Projection direction.** ● SAC moves its actor toward the reverse-KL
-   projection of $e^{Q/\beta}/Z$ onto its policy family $\Pi$. A method that
-   fits the policy by maximum likelihood to samples of $e^{Q/\beta}/Z$
-   computes the forward projection
-   $\arg\min_{\pi \in \Pi} D_{\textrm{KL}}\big(e^{Q/\beta}/Z \,\Vert\, \pi\big)$
-   instead.
-    1. The proof of the Proposition of
-       :numref:`subsec_sac-soft-improvement` uses a single property of
-       $\pi_{\textrm{new}}$ at each state. State it, and use
-       :eqref:`eq_sac_kl_identity` to show that the reverse-KL projection onto
-       any family that contains $\pi_{\textrm{old}}$ has this property.
-    1. Consider a single state with $\gamma = 0$, so that the soft value of a
-       policy is $\mathbb{E}_\pi[Q] + \beta H(\pi)$. Let
-
-       $$Q(a) = \beta \log\Big(\tfrac{1}{2}\, \mathcal{N}(a; -m, 1) + \tfrac{1}{2}\, \mathcal{N}(a; m, 1)\Big),$$
-
-       let $\Pi$ be the one-dimensional Gaussians, and let
-       $\pi_{\textrm{old}} = \mathcal{N}(m, 1)$. Show that the forward
-       projection is $\mathcal{N}(0, 1 + m^2)$. Evaluate the soft values of
-       $\pi_{\textrm{old}}$ and of the forward projection numerically, in
-       units of $\beta$, for $m \in \{1, 2, 3, 4\}$. For which $m$ does the
-       forward projection lower the soft value?
-    1. Explain part b with the coverage behavior of the two KL directions
-       described in :numref:`subsec_kl_direction`. Which direction does the
-       improvement guarantee require? Why does the forward projection fail
-       only when the modes of $e^{Q/\beta}$ are well separated?
-   :exlabel:`ex_sac-projection-direction`
-
 1. [code] **Restoring force of the Jacobian.** ● In the actor loss
    :eqref:`eq_sac_actor`, the term $\beta \log \pi_\theta$ contains
    $-\beta \log(1 - \tanh^2 u)$ for each action coordinate, with
@@ -1038,29 +990,6 @@ SAC maximizes reward plus entropy with an off-policy actor-critic. Soft policy e
        entropy trace, and the quadrature check of `squashed_logp` applied to
        the modified density. Which of the three readings expose the error?
    :exlabel:`ex_sac-jacobian-force`
-
-1. [code] **Twin-critic disagreement.** ● The calibration of
-   :numref:`subsec_sac-calibration` found that the minimum of two critics
-   predicts less than a single critic does.
-    1. Problem :exref:`ex_dqn-max-bias-closed-form`a of :numref:`sec_dqn`
-       wrote the maximum of two numbers through their mean and their
-       distance. Write the minimum the same way, and conclude that the
-       target :eqref:`eq_sac_target_twin` lies below the target built from
-       the average of the two target critics, at a nonterminal $s'$, by
-       $\frac{\gamma}{2} \big|Q_{w_1^-}(s', \tilde{a}') - Q_{w_2^-}(s', \tilde{a}')\big|$.
-    1. Suppose that every backup lowers the target by the same amount $b$.
-       Show that the fixed point of soft policy evaluation is lowered by
-       $b/(1 - \gamma)$, and evaluate this factor for $\gamma = 0.99$.
-    1. For each agent in `agents['UTD 10']`, run twenty stochastic episodes
-       as `calibration` does, and record
-       $|Q_{w_1}(s, a) - Q_{w_2}(s, a)|$ at every visited state $s$, with $a$
-       drawn from the policy. Predict from parts a and b how far the twin
-       critics' prediction should lie below that of a critic without the
-       minimum, and compare the prediction with the difference between the
-       printed gaps of the twin and the single critics at ten updates per
-       step.
-    1. Which effects does the constant offset of part b leave out?
-   :exlabel:`ex_sac-twin-disagreement`
 
 1. [code] **Update ratio.** The runs of
    :numref:`subsec_sac-sample-efficiency` took one and ten updates per

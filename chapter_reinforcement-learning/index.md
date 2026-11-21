@@ -10,9 +10,9 @@ Two questions follow. Which decisions deserve credit for a reward that arrives l
 
 These ideas train controllers, game players and, after pretraining, language models that reason toward answers a checker accepts. They also explain why imitation is not enough: a model fine-tuned on an expert's text never practices recovering from its own mistakes.
 
-:numref:`sec_mdp` asks how to write such a problem down. :numref:`sec_valueiter` asks how to find the best policy when the rules are known. :numref:`sec_qlearning` asks what can be learned from seeing only where each action leads. :numref:`sec_exploration` asks how often to try actions that look worse. :numref:`sec_imitation` asks what an expert's demonstrations teach, and why copying them fails over a long task. :numref:`sec_policygradient` asks how a policy can improve from its own attempts. :numref:`sec_baselines` asks how to make that estimate less noisy, the question behind the group-based updates that train language models. :numref:`sec_deeprl` asks what changes when a neural network replaces the table, and it ends with a map of the methods of this chapter and the next.
+:numref:`sec_mdp` asks how to write such a problem down. :numref:`sec_valueiter` asks how to find the best policy when the rules are known. :numref:`sec_qlearning` asks what can be learned from seeing only where each action leads. :numref:`sec_exploration` asks how often to try actions that look worse. :numref:`sec_imitation` asks what an expert's demonstrations teach, and why copying them fails over a long task. :numref:`sec_optimal_control` asks what dynamic programming becomes when states and actions are continuous and the physics are known: the Linear-Quadratic Regulator (LQR), iterative LQR (iLQR), and receding-horizon Model Predictive Control (MPC). :numref:`sec_policygradient` asks how a policy can improve from its own attempts when the dynamics are unknown. :numref:`sec_baselines` asks how to make that estimate less noisy, the question behind the group-based updates that train language models. :numref:`sec_deeprl` asks what changes when a neural network replaces the table, and it ends with a map of the methods of this chapter and the next.
 
-The code is in PyTorch and JAX, and most examples are small enough to solve exactly, so that every estimate can be checked against the exact answer. :numref:`chap_deep_rl` continues with value networks inside the update, reuse of past experience and fixed datasets. Problems with several agents are left out, and hidden state and learned models of the environment appear only briefly. The Language Models part treats post-training, including learning from human preferences, in more depth.
+The code is in PyTorch and JAX, and most examples are small enough to solve exactly, so that every estimate can be checked against the exact answer. :numref:`chap_deep_rl` continues with value networks inside the update, reuse of past experience, learned dynamics models, and fixed datasets. Problems with several agents are left out, and partial observability appears only briefly. The Language Models part treats post-training, including learning from human preferences, in more depth.
 
 ```toc
 :maxdepth: 2
@@ -22,6 +22,7 @@ value-iter
 qlearning
 exploration
 imitation
+optimal-control
 policy-gradient
 baselines
 deep-rl
@@ -266,7 +267,7 @@ from next.
 :::
 :::
 
-::: {.slide title="Eight Sections, One Question Each"}
+::: {.slide title="Nine Sections, One Question Each"}
 [Chapter map]{.kicker}
 
 | section | question |
@@ -276,6 +277,7 @@ from next.
 | Temporal-Difference Learning | what can be learned from seeing only where actions lead? |
 | Exploration | how often should the agent try actions that look worse? |
 | Learning from Demonstrations | what does an expert teach, and why does copying fail? |
+| Optimal Control, LQR, and MPC | how does dynamic programming extend to continuous states and known physics? |
 | Policy Gradient | how can a policy improve from its own attempts? |
 | Baselines and Variance Reduction | how can that estimate be made less noisy? |
 | Function Approximation | what changes when a network replaces the table? |
@@ -291,6 +293,7 @@ from next.
 | Temporal-Difference Learning | the slippery lake, from sampled transitions |
 | Exploration | a ten-armed bandit; a chain of states; groups of responses |
 | Learning from Demonstrations | the calm lake and the expert's six-move path |
+| Optimal Control, LQR, and MPC | double integrator; Pendulum linearized and swung up by iLQR & MPC |
 | Policy Gradient | the verifier task; the calm lake |
 | Baselines and Variance Reduction | the calm lake; groups of responses per prompt |
 | Function Approximation | CartPole; Pendulum, with a continuous torque |

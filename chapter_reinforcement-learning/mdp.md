@@ -40,6 +40,8 @@ The chapter uses the symbols of :numref:`tab_rl_notation`. Those of this section
 | $\pi_\theta$, $\theta$ | policy with parameters $\theta$ | :numref:`sec_mdp` (the verifier's preference table), :numref:`sec_imitation` |
 | $d^\pi_t$, $d^\pi_\gamma$ | distribution of $s_t$ under $\pi$; its discounted average over $t$ | :numref:`sec_imitation`, :numref:`sec_policygradient` |
 | $\varepsilon$ | per-step probability that a cloned policy disagrees with the expert | :numref:`sec_imitation` |
+| $\mathbf{x}_t$, $\mathbf{u}_t$, $\mathbf{A}$, $\mathbf{B}$, $\mathbf{Q}$, $\mathbf{R}$ | continuous state and control; linear dynamics and quadratic cost matrices | :numref:`sec_optimal_control` |
+| $\mathbf{P}_t$, $\mathbf{K}_t$ | Riccati cost-to-go matrix and linear state-feedback gain matrix | :numref:`sec_optimal_control` |
 | $J(\theta)$ | expected return of $\pi_\theta$ | :numref:`sec_policygradient` |
 | $\eta$ | step size of a policy update | :numref:`sec_policygradient` |
 | $\hat{G}_t$ | reward-to-go: the discounted sum of the rewards from step $t$ on | :numref:`sec_baselines` |

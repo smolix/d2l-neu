@@ -592,6 +592,7 @@ This chapter and the next present many methods. Two questions locate each of the
 | value iteration, policy iteration | $V^*$ exactly, by sweeping the Bellman operator; $V^\pi$ by policy evaluation | none: it consumes the kernel $P$ and reward $r$ | :numref:`sec_valueiter` |
 | behavior cloning | $\pi(a \mid s)$ by cross-entropy on demonstrations | a fixed expert dataset | :numref:`sec_imitation` |
 | DAgger | the same fit | the learner's own states, relabeled by an expert on call | :numref:`sec_imitation` |
+| LQR, iLQR, receding-horizon MPC | exact quadratic cost-to-go $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$ and linear feedback $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$ via the Riccati recursion | none: it differentiates the known dynamics $f(\mathbf{x}, \mathbf{u})$ and quadratic cost | :numref:`sec_optimal_control` |
 | Q-learning (tabular) | $Q^*$ from sampled backups | any behavior's transitions (off-policy) | :numref:`sec_qlearning` |
 | SARSA | the behavior's own $Q$, exploration included | its own transitions (on-policy) | :numref:`sec_qlearning` |
 | certainty-equivalent planning | $Q^*$ of the model counted from samples | any behavior's transitions, counted | :numref:`sec_qlearning` |
@@ -791,58 +792,6 @@ A table over continuous states would need a row for every visit, so the policy a
        that the batch never contains. Why can that change make the policy
        worse at those angles?
    :exlabel:`ex_deep-rl-tangent-kernel`
-
-1. [extended] **Parameter-space noise.** ●● Policy gradients inject noise
-   into the actions. Evolution strategies
-   :cite:`Salimans.Ho.Chen.ea.2017` inject it into the parameters instead:
-   they perturb the parameters $\boldsymbol{\theta} \in \mathbb{R}^d$ by
-   $\nu\mathbf{z}$ with
-   $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, I)$, run one episode
-   with the perturbed deterministic policy, and ascend the smoothed
-   objective
-
-   $$J_\nu(\boldsymbol{\theta}) = \mathbb{E}_{\mathbf{z}}\big[J(\boldsymbol{\theta} + \nu\mathbf{z})\big].$$
-
-    1. Apply the score-function identity of :eqref:`eq_score_vs_pathwise` to
-       the distribution $\mathcal{N}(\boldsymbol{\theta}, \nu^2 I)$ of the
-       parameters, and show that
-
-       $$\nabla J_\nu(\boldsymbol{\theta}) = \frac{1}{\nu}\, \mathbb{E}\big[J(\boldsymbol{\theta} + \nu\mathbf{z})\, \mathbf{z}\big].$$
-
-       Show that the antithetic estimate
-
-       $$\frac{1}{2\nu}\big(J(\boldsymbol{\theta} + \nu\mathbf{z}) - J(\boldsymbol{\theta} - \nu\mathbf{z})\big)\, \mathbf{z}$$
-
-       has the same mean. Which properties of the policy and of the
-       environment does the estimate not require?
-    1. For a linear objective
-       $J(\boldsymbol{\theta}) = \mathbf{c}^\top \boldsymbol{\theta}$, show
-       that the antithetic estimate equals
-       $(\mathbf{c}^\top \mathbf{z})\, \mathbf{z}$ and
-       that its expected squared norm is $(d + 2)\, \|\mathbf{c}\|^2$. How
-       does the noise of this estimate scale with $d$ and with the episode
-       length?
-       How do the same two quantities enter the noise of REINFORCE?
-    1. Implement the estimate on CartPole for the deterministic linear policy
-       that pushes right when $\boldsymbol{\theta}^\top s > 0$, so that
-       $d = 4$. Use eight antithetic pairs per update and divide the step by
-       the standard deviation of the sixteen returns, as in the random search
-       of :citet:`Mania.Guy.Recht.2018`. Start from $\nu = 0.1$ and a step
-       size of $0.02$. Count the sixteen perturbed episodes of every update
-       toward the budget, and measure progress by the mean return of the
-       unperturbed policy over five further episodes. Plot this return
-       against the number of episodes consumed for three seeds, together
-       with `train_reinforce` for a policy network replaced by a single
-       linear layer from the four state coordinates to the two action
-       preferences, keeping the value network of `ActorCritic.mlp`, and with
-       `runs`. Both of these consume eight episodes per update.
-    1. Repeat with a deterministic one-hidden-layer tanh network of width 64
-       whose single output selects the action by its sign, so that
-       $d = 385$. How many episodes does each method need until its mean
-       return first exceeds 400, with the small and with the large policy?
-       How do these numbers change with $d$ for each method? Which properties
-       of CartPole favor the search in parameter space, and on which kinds of
-       task would you expect the comparison to reverse?
 
 [Discussions](https://d2l.discourse.group/t/36800)
 

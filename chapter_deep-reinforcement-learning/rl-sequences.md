@@ -32,7 +32,20 @@ from d2l import jax as d2l
 
 ### One Gradient, Two Views
 
-A response $y = (a_1, \ldots, a_T)$ to a prompt $x$ is a trajectory whose actions are tokens. The state before token $t$ is the prefix $s_t = (x, a_1, \ldots, a_{t-1})$, and appending $a_t$ leads to $s_{t+1}$ with probability one, so the response probability is the product of the token probabilities, $\pi_\theta(y \mid x) = \prod_t \pi_\theta(a_t \mid s_t)$, and
+A response $y = (a_1, \ldots, a_T)$ to a prompt $x$ is a trajectory whose actions are tokens (:numref:`tab_rl_sequence_dictionary`). The state before token $t$ is the prefix $s_t = (x, a_1, \ldots, a_{t-1})$, and appending $a_t$ leads to $s_{t+1}$ with probability one, so the response probability is the product of the token probabilities, $\pi_\theta(y \mid x) = \prod_t \pi_\theta(a_t \mid s_t)$, and
+
+:Autoregressive text generation as a Markov decision process.
+:label:`tab_rl_sequence_dictionary`
+
+| Language modeling | Reinforcement learning |
+|:--|:--|
+| prompt $x \sim \mu_0$ | start state $s_1$ |
+| token $a_t$ | action $a_t$ |
+| prefix $(x, a_1, \ldots, a_{t-1})$ | state $s_t$ |
+| complete response $y = (a_1, \ldots, a_T)$ | trajectory $\tau$ |
+| prefix ending in EOS, $(x, y)$ | terminal state |
+| next-token distribution | policy $\pi_\theta(a_t \mid s_t)$ |
+| verifier or reward-model score $r(x, y)$ | terminal reward |
 
 $$\nabla_\theta \log \pi_\theta(y \mid x) = \sum_{t=1}^{T} \nabla_\theta \log \pi_\theta(a_t \mid s_t).$$
 :eqlabel:`eq_seq_factorization`

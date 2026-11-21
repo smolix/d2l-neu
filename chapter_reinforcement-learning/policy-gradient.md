@@ -1,7 +1,7 @@
 # Policy Gradient
 :label:`sec_policygradient`
 
-In the previous section a policy learned from an expert. Behavior cloning took one ascent step on the log-probability of each demonstrated action, with every action weighted by one. Now suppose there is no expert, only the agent's own attempts and the reward each attempt earned. An obvious guess keeps the update and changes the weights: push up the log-probability of every action the agent took, weighted by the return of the episode it belongs to, so that actions from episodes that paid off become more likely. Is this guess principled? How does the expected return change when the parameters $\theta$ of the policy move?
+In :numref:`sec_imitation` a policy learned from an expert, taking one ascent step on the log-probability of each demonstrated action with every action weighted by one. In :numref:`sec_optimal_control` a planner differentiated known transition equations $f(\mathbf{x}_t, \mathbf{u}_t)$ to compute backward Riccati gains. Now suppose there is neither an expert nor a known differentiable model of the environment—only the agent's own attempts and the reward each attempt earned. An obvious guess keeps the cloning update and changes the weights: push up the log-probability of every action the agent took, weighted by the return of the episode it belongs to, so that actions from episodes that paid off become more likely. Is this guess principled? How does the expected return change when the parameters $\theta$ of the policy move?
 
 Ronald Williams answered this question in 1992 :cite:`Williams.1992`. The average of the guessed update is the gradient of the expected return, so the guess is stochastic gradient ascent, and he called the algorithm REINFORCE. The return of an episode depends on the environment's transition probabilities, which the agent does not know, yet the estimate needs only sampled episodes and the policy's own log-probabilities. Writing the policy down as a function $\pi_\theta(a \mid s)$ also lifts a limit of the value tables of :numref:`sec_qlearning`. Acting greedily on a table needs a maximum over a finite list of actions, whereas a parameterized policy can output a torque, or a distribution over a vocabulary of tokens. The same identity, applied to the next-token distribution of a language model, trains reasoning models from a single reward given to the finished answer.
 
@@ -525,27 +525,6 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
        mean at $p = p_0$? How does the answer change as training raises the
        success probability?
    :exlabel:`ex_policy-gradient-sparse-rewards`
-1. **Shifted rewards.** A trajectory with return zero drops out of
-   :eqref:`eq_reinforce`, so subtracting one from every reward is a
-   tempting way to make failed episodes informative.
-    1. In the two-action setting of the smallest case, change the rewards
-       to $0$ for action 1 and $-1$ for action 2, which subtracts one from
-       every return. Show that the mean of the single-sample estimate is
-       unchanged and that the ratio of its standard deviation to its mean
-       becomes $\sqrt{p/(1-p)}$. For which policies does the shift help,
-       and for which does it hurt?
-    1. On FrozenLake, the same subtraction makes every step earn $-1$ and
-       the step into the goal earn $0$. Show that the return of an episode
-       of $T$ steps decreases by $(1 - \gamma^T)/(1 - \gamma)$. Does this
-       shift change $J$ by a constant, as in the two-action setting?
-    1. The shift is the per-step charge of problem
-       :exref:`ex_mdp-reward-design-its-failure`b of :numref:`sec_valueiter`,
-       taken to $c = -1$. At
-       $\gamma = 0.95$, compare the shifted return of the shortest path from
-       the start into a hole with that of a shortest path to the goal on the
-       calm lake. Which policy maximizes $J$ under the shifted
-       rewards? Among the failed episodes of a batch, which ones does the
-       estimate :eqref:`eq_reinforce` penalize least?
 1. [code] **The theorem in a table.** ● For the tabular softmax policy,
    write $\rho_\gamma(s) = \sum_{t \geq 0} \gamma^t d^{\pi_\theta}_t(s)$
    for the discounted number of visits to $s$, so that
@@ -667,20 +646,6 @@ Policy gradient methods improve a parameterized policy $\pi_\theta$ directly by 
        visited in sequence, together with a $\theta$ at which
        $F(\theta)\, \mathrm{d}J/\mathrm{d}\theta < 0$.
    :exlabel:`ex_policy-gradient-discount-that-implementations-drop`
-1. **The Gaussian step of the figure.** The policy of
-   :numref:`fig_rl_score_ascent` is $\mathcal{N}(a; \mu, 1)$ and the reward
-   is $R(a) = 0.4 + 2e^{-(a-2)^2/2}$.
-    1. Show that $J(\mu) = 0.4 + \sqrt{2}\, e^{-(\mu-2)^2/4}$, and check
-       the values $J = 0.92$ and $\mathrm{d}J/\mathrm{d}\mu = 0.52$ at
-       $\mu = 0$.
-    1. Show that the score with respect to $\mu$ is $a - \mu$ and verify
-       directly that $\mathbb{E}[R(a)(a - \mu)] = \mathrm{d}J/\mathrm{d}\mu$.
-       Compute the variance of the single-sample estimate $R(a)(a-\mu)$ at
-       $\mu = 0$, and the standard deviation of the twelve-sample estimate
-       relative to its mean. Is the figure's step to $0.32$ unusual?
-    1. [code] In NumPy, run the twelve-sample update with $\eta = 1$ for 50
-       steps from $\mu = 0$ with 100 seeds. Where does $\mu$ settle, and how
-       does its spread around that point depend on $\eta$?
 
 [Discussions](https://d2l.discourse.group/t/36798)
 

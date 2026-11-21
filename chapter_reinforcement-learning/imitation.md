@@ -550,25 +550,6 @@ Behavior cloning fits a policy $\pi_\theta(a \mid s)$ to an expert's state--acti
        $(T+1)/2$ of the two references.
    :exlabel:`ex_imitation-chain-closed-form`
 
-1. [code] **Where the clone's mass goes.** Use `visitation` to propagate the
-   state distributions of the expert and of the sampling clone `pi_bc` over
-   the 100 steps of the time limit.
-    1. Plot the total variation distance
-       $\frac{1}{2}\sum_s |d^{\pi^*}_t(s) - d^{\hat\pi}_t(s)|$ against $t$,
-       together with the mass that the clone places on the goal, on each
-       hole, and on the cells off the expert's path. Which holes take the
-       clone's lost successes? Around $t = 6$ the total variation exceeds
-       one half, although the mass off the path stays at about 5 percent.
-       What else makes the two distributions differ? Consider what a wrong
-       action does at states 0, 4 and 8.
-    1. Show that $|\mathbb{E}_{s \sim d}[f(s)] - \mathbb{E}_{s \sim d'}[f(s)]|$
-       is at most the total variation distance between $d$ and $d'$ for
-       every function $f$ with values in $[0, 1]$, with equality for the
-       indicator of the set where $d$ exceeds $d'$. Conclude that the two
-       success probabilities differ by at most the total variation distance
-       at $t = 100$. Why does the bound hold with equality there, and why is
-       the total variation at $t = 6$ a poor measure of distribution shift?
-
 1. **Fine-tuning as behavior cloning.** :numref:`subsec_il_sft` identifies
    supervised fine-tuning of a language model with behavior cloning: the
    context is the state, the next token is the action, and the curated
@@ -584,23 +565,6 @@ Behavior cloning fits a policy $\pi_\theta(a \mid s)$ to an expert's state--acti
        with one token. Write down the resulting loss, and show that it
        reduces to the behavior-cloning loss when the teacher puts all its
        probability on one token.
-
-1. **Two valid paths.** A robot faces an obstacle. Half of the
-   demonstrations pass it on the left and half on the right. Each maneuver
-   takes several steps, during which the robot's observations of the two
-   maneuvers barely differ.
-    1. A deterministic policy is fitted to the demonstrated steering angles
-       $-c$ and $+c$ by squared error. Which angle does it output in
-       front of the obstacle?
-    1. The steering is discretized into *left*, *straight*, and *right*, and
-       a categorical policy is fitted by cross-entropy, as `clone` does. What
-       does the fit converge to in front of the obstacle, and what does
-       `act_greedy` do there?
-    1. Diffusion policies :cite:`Chi.Feng.Du.ea.2023` sample a sequence of
-       several actions from one observation and execute it before sampling
-       again. Compare this with sampling one action per step with `act`
-       during the maneuver. What can go wrong with the per-step sampler, and
-       what does executing a sequence without replanning cost?
 
 1. [code] **Demonstrations needed for coverage.** ● The coverage cell of
    :numref:`subsec_il_distribution_shift` builds the slippery lake
@@ -644,21 +608,6 @@ Behavior cloning fits a policy $\pi_\theta(a \mid s)$ to an expert's state--acti
        queries it would need if it asked the expert only at states without a
        label.
    :exlabel:`ex_imitation-dagger-s-budget`
-
-1. [code] **A noisy expert.** Suppose that the expert reports a uniformly
-   random action instead of its own with probability 0.1, in the
-   demonstrations and in DAgger's labels alike.
-    1. To which distribution does cross-entropy converge at a state labeled
-       many times by this expert? What does `act_greedy` do there, and what
-       does `act` do?
-    1. Corrupt the labels of `demonstrations` and `relabel` in this way,
-       rerun `clone` and DAgger on the calm lake, and compare their exact
-       success rates with those of the section. Against which actions does
-       the stopping rule of `clone` now measure the disagreement, and how
-       does that change what $\varepsilon = 0.2$ means?
-    1. Which part of the clone's loss grows with the noise, the falls from
-       the path or the failures after leaving it? Which part can DAgger
-       still remove?
 
 1. **DAgger's guarantee.** ● In the analysis of
    :citet:`Ross.Gordon.Bagnell.2011`, the data-collecting policy $\pi_i$ of

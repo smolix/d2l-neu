@@ -626,16 +626,6 @@ An on-policy batch of thousands of environment steps should inform more than one
        $T$?
    :exlabel:`ex_ppo-exploding-product`
 
-1. [code] **Entropy of the dead seeds.** The ablation of
-   :numref:`subsec_ppo_ablation` explains the unclipped collapses by
-   saturation. The array `diag['no clip'][..., ENTROPY].mean(-1)` holds the
-   mean policy entropy over the epochs of each batch. Without new
-   training, split the unclipped seeds into dead and surviving ones by the
-   criterion of the ablation, a mean return below 100 over the last ten
-   updates, and plot the entropy of both groups against the update. Do the dead seeds end with a
-   saturated policy?
-   :exlabel:`ex_ppo-dead-seed-entropy`
-
 1. **What the diagnostics estimate.** ● Fix a state $s$, draw
    $a \sim \pi_{\theta_{\textrm{old}}}(\cdot \mid s)$, and let
    $\rho = \pi_\theta(a \mid s) / \pi_{\theta_{\textrm{old}}}(a \mid s)$.
@@ -672,26 +662,6 @@ An on-policy batch of thousands of environment steps should inform more than one
    estimators $k_1$ and $k_3$.*
    :exlabel:`ex_ppo-diagnostics-estimate`
 
-1. **Bootstrapping at the cut.** In :numref:`subsec_ppo_vectorized`, all
-   eight trajectories of the $32 \times 8$ rectangle end at the collection
-   horizon $T$, where $\hat{V}(s_T) \approx 100$. Suppose that GAE with
-   $\gamma = 0.99$ and $\lambda = 0.95$ treated each cut as a termination and
-   used $\hat{V}(s_T) = 0$ there.
-    1. The GAE advantage of a step before the cut is
-       $\hat{A}_t = \sum_{l=0}^{T-1-t} (\gamma\lambda)^l \delta_{t+l}$ with
-       $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$. Show that
-       $\hat{V}(s_T)$ enters only through $\delta_{T-1}$, and that the
-       advantage $\hat{A}_{T-1-k}$ of the step $k$ steps before the cut
-       therefore shifts by $-(\gamma\lambda)^k \gamma \hat{V}(s_T)$. Evaluate
-       the shift for $k \in \{0, 10, 31\}$ with $\hat{V}(s_T) = 100$.
-    1. For which $k$ does the shift exceed $1$, the reward of one step? Which
-       fraction of the steps of a trajectory is shifted by more than that
-       with the horizon $T = 32$ used there, and with $T = 128$,
-       the default of `cleanrl/ppo.py`?
-    1. The CartPole observation does not contain the time since the
-       rectangle began. What does a policy update with the shifted advantages
-       teach the policy about the actions it took shortly before each cut?
-
 1. [code] **KL early stopping.** ● Instead of clipping, an implementation can
    stop reusing a batch once the policy has moved far enough. Spinning Up's
    PPO computes the approximate KL before every pass and ends the passes on a
@@ -711,20 +681,6 @@ An on-policy batch of thousands of environment steps should inform more than one
    *Adapted from Joshua Achiam,
    [Spinning Up in Deep RL](https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/ppo/ppo.py),
    PPO implementation, early stopping on `target_kl`.*
-
-1. [code] **The width of the band.** The clip has one hyperparameter,
-   $\epsilon_{\textrm{clip}}$, and the section never varied it. Rerun the
-   clipped arm of :numref:`subsec_ppo_ablation`, twenty epochs at the same
-   learning rate on the same eight seeds, with
-   $\epsilon_{\textrm{clip}} \in \{0.05, 0.1, 0.2, 0.5, 10\}$.
-    1. For each width, count the seeds that hold the task and those that end
-       dead, and record the environment steps to the first batch at 475.
-    1. Which width behaves like the unclipped run of the ablation? What does
-       that say about the ratios the unclipped run reaches?
-    1. Plot the within-batch fraction of ratios outside the band for each
-       width, as in :numref:`subsec_ppo_diagnostics`. How do the narrowest
-       bands trade speed against safety, and how does the fraction outside
-       the band change with the width?
 
 1. [code] **The standard recipe.** ●● Build the loop that
    :numref:`subsec_ppo_vectorized` describes: eight environments in a

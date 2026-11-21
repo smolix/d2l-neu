@@ -268,25 +268,6 @@ note the environment and hardware needed to interpret any measurement.
        state?
    :exlabel:`ex_interactive-development-out-of-order`
 
-1. [code] **Cell reruns.** The cell
-   `#interactive-development-hidden-state-a` creates the generator `rng`
-   and draws `samples` in one step, so rerunning it and then
-   `#interactive-development-hidden-state-b` reproduces the displayed mean
-   $-0.2639$.
-    1. Split the cell into one that creates `rng` and one that draws
-       `samples`. Rerun the drawing cell twice and then
-       `#interactive-development-hidden-state-b`. Predict whether the mean
-       changes on each rerun, then check. Which value does restart and run
-       all print?
-    1. A cell rescales images with `pixels = pixels / 255`. What happens
-       when a reader runs it twice? Rewrite the cell so that running it again
-       leaves the kernel in the same state.
-    1. An experiment cell trains a model from random initial weights that it
-       draws from a generator created in an earlier cell. Restructure the
-       cell so that every rerun of that cell alone reproduces its result,
-       whichever other cells have run before it.
-   :exlabel:`ex_interactive-development-rerun`
-
 1. **Limits of a clean run.** Restart and run all replays the
    document in a fresh kernel, but on the same machine. Consider five
    notebooks that pass this test on their author's machine:
@@ -306,37 +287,6 @@ note the environment and hardware needed to interpret any measurement.
        clone of the repository. Which of the five failures does this
        catch? For the failures that remain, name a check that catches them.
 
-1. [code] **Broad exception handlers.** The following loop whitens the
-   batches of a dataset with 1001 examples, and it prints `failed` once.
-
-   ```python
-   import numpy as np
-
-   data = np.random.default_rng(0).normal(size=(1001, 4))
-
-   def whiten(batch):
-       cov = np.cov(batch, rowvar=False)
-       return batch @ np.linalg.inv(np.linalg.cholesky(cov)).T
-
-   for i in range(0, len(data), 100):
-       try:
-           out = whiten(data[i:i + 100])
-       except Exception:
-           print("failed")
-   ```
-
-    1. Remove the `try` statement, run the loop, and run `%debug` in the next
-       cell. The debugger starts in the innermost frame, inside NumPy; move up
-       to the frame of `whiten` and inspect `batch` and `cov`. Which batch
-       fails, and why?
-    1. Rewrite the handler so that the loop still processes the remaining
-       batches but a failure keeps the information that the diagnosis in
-       (a) needed.
-    1. A training pipeline shuffles the 1001 examples in every epoch and
-       splits them into batches of 100 as the loop does. Name two ways to
-       handle the batch that fails in (a), and state what each one changes
-       about the data the model sees.
-
 1. [code] **Use-before-define detector.** ● Restart and run all finds an
    out-of-order dependency only by executing the notebook. A static check
    reads the document without running it.
@@ -351,10 +301,10 @@ note the environment and hardware needed to interpret any measurement.
        false alarm for this reason, and one on which it misses a real
        failure. Fix the false alarm.
     1. Add two warnings: a name that a cell binds again after an earlier
-       cell has read it, and a cell that reads and rebinds the same name.
-       Which failure of exercise
-       :exref:`ex_interactive-development-out-of-order`a and of exercise
-       :exref:`ex_interactive-development-rerun`b does each warning target?
+       cell has read it, and a cell that reads and rebinds the same name
+       (such as `pixels = pixels / 255`). Which failure of exercise
+       :exref:`ex_interactive-development-out-of-order`a and of repeated
+       in-place cell execution does each warning target?
        Can either warning tell a harmless case from a harmful one?
    :exlabel:`ex_interactive-development-use-before-define`
 

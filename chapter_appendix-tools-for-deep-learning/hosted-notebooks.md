@@ -372,20 +372,6 @@ control.
        contains `content/drive`, and an empty one.
    :exlabel:`ex_hosted-notebooks-durable-paths`
 
-1. **Token in a traceback.** A cell reads an API token from the secret
-   manager into `token` and calls
-   `requests.get(f"https://api.example.com/v1/data?key={token}")`,
-   followed by `raise_for_status()`. The server answers with status 404,
-   and the error message of `raise_for_status` contains the full request
-   URL. The author saves a version of the notebook with **Save & Run
-   All**, then fixes the URL, saves a second version, and makes the
-   notebook public.
-    1. Where does the token appear in what the author published?
-    1. The author clears all outputs and saves a third version. Is the
-       token private again? What must the author do with the token
-       itself?
-    1. Rewrite the request so that an HTTP error cannot reveal the token.
-
 1. **Pretraining on a free quota.** ● BERT-base has about 110 million
    parameters. :citet:`Devlin.Chang.Lee.ea.2018` pretrained it for
    1,000,000 steps on batches of 256 sequences, with sequences of 128
@@ -409,29 +395,6 @@ control.
        about twenty training tokens per parameter. Which model size and
        token count would a single 12-hour T4 session train under this
        allocation? Compare the tokens per parameter of BERT-base with it.
-
-1. [extended] **Portable training notebook.** ● Turn the notebook of
-   :numref:`sec_softmax_concise` into one that runs unmodified on Colab,
-   on Kaggle with internet access disabled, and on a local Jupyter
-   kernel.
-    1. Build its setup from your solutions to exercises
-       :exref:`ex_hosted-notebooks-restart-after-install`,
-       :exref:`ex_hosted-notebooks-fingerprint-extension`,
-       and :exref:`ex_hosted-notebooks-durable-paths`. Make the training loop
-       save a checkpoint to the durable directory after every epoch and
-       resume from the newest checkpoint it finds.
-    1. On Kaggle with internet access disabled, every network access of
-       the notebook fails. `d2l.FashionMNIST` downloads its data, and the
-       setup cell at the top of the generated notebook downloads the `d2l`
-       helper modules from GitHub and installs missing packages. Change the
-       notebook so that on Kaggle it reads all of these from attached
-       inputs instead.
-    1. On each runtime, interrupt training after two epochs, resume in a
-       fresh session, and check that training continues with the third
-       epoch. On Kaggle, where `/kaggle/working` persists only into saved
-       versions and attached inputs are read-only, decide how the checkpoint
-       reaches the fresh session. Tabulate the three fingerprints. Which
-       lines of the finished notebook still depend on the provider?
 
 1. [code] **Checkpoint interval.** ●● Model the interruptions of a hosted
    session, such as idle disconnects and reclaimed machines, as a Poisson

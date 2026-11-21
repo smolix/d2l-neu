@@ -278,21 +278,6 @@ of the year eventually costs more to rent than to buy, and
        the run?
    :exlabel:`ex_cloud-instances-smoke-test`
 
-1. **Billing alert or quota.** A leaked credential lets an attacker launch
-   GPU instances up to the account's quota. Billing alerts lag behind usage:
-   AWS Budgets, for example, updates its cost data up to three times a day.
-    1. Suppose that 60 hours pass between the start of an attack and your
-       response, for example over a weekend. Compute the bill for a quota of
-       8 H100s and for a quota of 64 H100s at the AWS price
-       of :numref:`tab_cloud_prices`.
-    1. A lab runs one 8-GPU job at a time and accepts a worst-case loss of
-       \$5,000 from a leaked credential. Which H100 quota meets this limit
-       for a response time of 60 hours, and which for a response time of 8
-       hours? Which of the two quantities does a billing alert shorten?
-       Which bounds the loss when nobody reads the alert?
-    1. A budget action that blocks new instances once the alert fires still
-       leaves part of the bill. Which part, and why?
-
 1. **NVLink or PCIe.** ● Two providers offer eight H100s at the same price
    per GPU-hour. One node connects the GPUs with NVLink, the other only over
    PCIe 5.0. A data-parallel job trains a transformer with $N$ parameters
@@ -344,27 +329,5 @@ of the year eventually costs more to rent than to buy, and
        spot capacity is cheaper in expectation for $\delta = 2$ min,
        $R = 0.25$ h and $M = 24$, $8$, $4$, $2$ and $1$ h.
    :exlabel:`ex_cloud-instances-spot-restart`
-
-1. [extended] **Rented-machine drill.** ● Carry one training notebook of
-   this book through the lifecycle of :numref:`fig_tools_cloud_lifecycle` on
-   a rented GPU, and keep a log with timestamps.
-    1. Measure the notebook's peak memory as in exercise
-       :exref:`ex_cloud-instances-peak-memory`, and rent the cheapest
-       marketplace or specialist listing whose memory fits it. Boot
-       the provider's deep-learning image, and run the script of
-       exercise :exref:`ex_cloud-instances-smoke-test`. Does the assigned
-       GPU match the listing?
-    1. Train with checkpoints written by `d2l.save_checkpoint` and copied to
-       object storage every ten minutes. Terminate the instance in the middle
-       of an epoch, start a fresh one, and resume from object storage. How
-       long does recovery take? Do the loss curve and the step count continue
-       as if nothing had happened, and which state did you not save?
-    1. Delete every billable resource. Once the provider's bill shows the
-       session, compare each line item with the prediction of
-       `#cloud-instances-cost-model`, extended by the attended time of
-       exercise :exref:`ex_cloud-instances-engineering-time`. Which input was
-       furthest off?
-
-   *Adapted from Nicki Skafte Detlefsen, [DTU-MLOps](https://skaftenicki.github.io/dtu_mlops/latest/s6_the_cloud/using_the_cloud/), module M21 "Using the Cloud", Compute exercises.*
 
 [Discussions](https://d2l.discourse.group/t/36843)

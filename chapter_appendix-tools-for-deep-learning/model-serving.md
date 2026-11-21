@@ -298,22 +298,6 @@ it.
        causes. Why does such a difference matter to a client beyond
        billing?
 
-1. [code] **Static versus continuous batching.** The cell that builds
-   `timeline` admits a waiting request whenever a slot is free.
-    1. Change the cell into a static batcher, which admits new requests
-       only when every slot is empty. Compare the number of steps that both
-       versions take for the four requests of the cell, and the fraction of
-       slot-steps that produce a token. What is the smallest number of steps
-       that any scheduler with `capacity = 2` needs for these requests?
-    1. Draw 1,000 output lengths with a mean of about 100 tokens from three
-       distributions: a constant, a uniform distribution on 1 to 199, and a
-       geometric distribution. Schedule them with `capacity = 32`, and
-       compare the steps of both schedulers with the lower bound of the
-       first sub-problem. How does the gain from continuous batching depend
-       on the spread of the output lengths?
-    1. Even continuous batching misses the lower bound in the second
-       sub-problem. Where in its timeline does it lose steps?
-
 1. [code] **Prefix cache for an agent.** A coding agent calls a model 30
    times. The first prompt holds a system prompt and repository context of
    20,000 tokens. Every later prompt repeats the previous prompt and
@@ -338,25 +322,6 @@ it.
        three documents in different orders. Which blocks does the second
        request reuse? Propose an ordering that raises reuse, and state what
        it gives up.
-
-1. **Closed and open loops.** A load generator runs $C = 16$ clients in a
-   closed loop: each client sends its next request as soon as its previous
-   request completes. Little's law :cite:`Little.1961` relates the mean
-   number $L$ of requests in a system, their arrival rate $\lambda$, and
-   their mean time $W$ in the system by $L = \lambda W$.
-    1. The mean latency of the server is 4 s. At which rate does the
-       generator send requests? An engine change doubles the mean latency.
-       What happens to the rate? Why can the generator never build up a
-       queue of more than $C$ requests?
-    1. The benchmark reports a p95 time to first token of 300 ms. In
-       production, requests arrive as a Poisson process at the rate of the
-       first sub-problem, independently of how fast the server answers. Why
-       does the benchmark predict the production tail latency poorly?
-    1. `vllm bench serve` accepts a `--request-rate` and a
-       `--max-concurrency`. The rate defaults to `inf`, and a finite rate
-       draws Poisson arrivals at that rate. Which settings reproduce the
-       closed loop? What does a run measure that sets both?
-   :exlabel:`ex_model-serving-loops`
 
 1. [code] **Arrivals and a memory budget.** ● Extend the cell that builds
    `timeline` into a simulator in which time advances in decode steps.

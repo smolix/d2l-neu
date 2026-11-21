@@ -262,28 +262,6 @@ generated file, is what changed.
        prints something different from the stored output?
    :exlabel:`ex_developers-guide-stale-outputs`
 
-1. **Stable cell IDs.** The audit of exercise
-   :exref:`ex_developers-guide-stale-outputs` matches the stored outputs of
-   a notebook to its cells by ID. A stored ID that no cell of the notebook
-   carries any more is an error that stops `make html`, while a cell
-   without a stored output only causes a warning. Slide sources cite cells
-   by ID as well; the slides of :numref:`sec_resnet`, for example, cite
-   `@resnet-residual-blocks-2`.
-    1. In :numref:`sec_use_gpu`, the cell that adds `__init__` and
-       `prepare_batch` to `d2l.Trainer` for PyTorch has the ID
-       `gpus-devices-memory-the-trainer-now-with-devices-1`, although it
-       stands under the heading "Device-Aware Trainer". Why does the ID
-       name a different heading?
-    1. Suppose that the build derived every ID from the current heading. An
-       author renames a heading and changes no code. What does the audit
-       report, and what must the author run before `make html` passes
-       again?
-    1. Suppose instead that the build numbered the cells by position, and
-       an author inserts a code cell. Does the audit notice that the stored
-       outputs now sit under the IDs of other cells? Which other users of
-       the IDs receive no warning, and what do they show afterward?
-   :exlabel:`ex_developers-guide-cell-ids`
-
 1. [code] **Duplicate definitions.** `make lib` collects the `#@save`
    blocks of all sections in book order. When several blocks define the
    same function or method, the library keeps only one of them. The method
@@ -306,62 +284,6 @@ generated file, is what changed.
        notebooks of which sections can print different results: those
        before :numref:`sec_use_gpu` in book order, those after it, or both?
    :exlabel:`ex_developers-guide-duplicate-definitions`
-
-1. **Agent patches.** A contributor changes the format string of a `print`
-   call in the PyTorch variant of the last code cell of a section, and
-   `make html` stops because the committed text output of that cell is
-   stale. Asked to make the build pass, a coding agent proposes five
-   patches: (i) set the cell's `code_fingerprint` in
-   `outputs/pytorch/<chapter>/<stem>.json` to the fingerprint of the new
-   code; (ii) delete the cell's entry from that file, which the audit
-   reports only as a warning about a missing output; (iii) edit the
-   generated `.qmd` file of the section so that the page shows the new
-   output; (iv) re-execute the notebook with
-   `make -B _notebooks/pytorch/<chapter>/<stem>.executed` and then run
-   `make capture-outputs FILES=<chapter>/<stem>.md`; (v) change the
-   Makefile so that a stale text output only prints a warning.
-    1. For each patch, does it remove the cause, hide it, or leave it in
-       place? What does a reader of the page see after each?
-    1. After which patches does `make html` pass? What would you look for
-       in the pull request to confirm that the committed output came from
-       the committed code?
-    1. Write the task statement that you would have given the agent: the
-       change it may make, the files it must not edit, and the checks
-       whose results it must report.
-   :exlabel:`ex_developers-guide-agent-patches`
-
-1. **Execution stamps.** ● Make and the notebook scheduler
-   `tools/notebook_scheduler.py` re-execute a notebook when its stamp
-   `_notebooks/<fw>/<chapter>/<stem>.executed` is older than the generated
-   `.ipynb` or than one of the library block files that its `.d` file
-   lists. Besides `d2l/torch.py`, `make lib` writes one block file per
-   `#@save` symbol to `d2l/_blocks/<fw>/`, and the `.d` file of a section
-   lists the block files of every symbol `d2l.X` that its code mentions
-   and of the symbols that those blocks use in turn.
-   `make notebooks-pytorch` regenerates every PyTorch notebook and writes
-   each `.ipynb` anew. When the code cells of a regenerated notebook are
-   unchanged, `tools/gen_notebooks.py` then sets the modification times of
-   the `.ipynb` and of its stamp to the current time.
-    1. Why does the script advance the stamp, and not only the `.ipynb`?
-       What would a prose edit in one section cost otherwise?
-    1. An author edits a `#@save` method in one section and runs
-       `make run-notebooks-pytorch`, which rebuilds the library,
-       regenerates the notebooks, and then executes those that the
-       modification times call out of date. Notebook B lists the edited
-       block in its `.d` file, but its own source is unchanged. Order the
-       modification times of the block file, of the `.ipynb` of B, and of
-       the stamp of B. Is B executed? What does the audit of exercise
-       :exref:`ex_developers-guide-stale-outputs` report afterward?
-    1. Propose a stamp that keeps prose edits free of re-execution and
-       still executes B. What must it record that a modification time
-       cannot?
-    1. The repository guards against the failure of (b) twice:
-       `make refresh-stale` deletes the stamps of the notebooks that the
-       audit reports stale before it executes them, and
-       `make capture-outputs` refuses outputs whose fingerprints, recorded
-       when the notebook ran, differ from the current ones. Which route to
-       committing stale outputs does each guard close?
-   :exlabel:`ex_developers-guide-execution-stamps`
 
 1. [extended] **Dataflow staleness.** ●● The fingerprint of exercise
    :exref:`ex_developers-guide-stale-outputs` marks every cell from the

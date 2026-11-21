@@ -505,137 +505,89 @@ an exact posterior to keep its monotonicity guarantee.
 ::: {.cover}
 [Dive into Deep Learning · §36.7]{.kicker}
 
-A sum inside the logarithm, and the bound that removes it<br>**latent variables, EM, and the ELBO**
+Latent Variable Models, EM, and the ELBO<br>**mixture models · marginal log-likelihood · soft responsibilities · evidence lower bound · coordinate ascent · pitfalls**
 :::
 :::
 
-::: {.slide title="500 Points From Two Clusters, Labels Lost: Where Are the Means?"}
-[The problem]{.kicker}
+::: {.slide title="500 Points from Two Populations, Labels Lost"}
+[Motivation & Core Problem]{.kicker}
 
-- $300$ points from $\mathcal N(-2, 0.8^2)$ and $200$ from
-  $\mathcal N(1.5, 0.6^2)$. We see only the values.
-- With the labels, the fit is three one-line estimators per cluster.
-- Without them, each point's probability is a sum over the two clusters, and
-  the log of a sum does not split.
+Suppose we collect $n = 500$ measurements—$300$ drawn from $\mathcal{N}(-2.0, 0.8^2)$ and $200$ from $\mathcal{N}(1.5, 0.6^2)$—but no one recorded which population generated which observation:
 
-::: {.d2l-note .warn}
-How do we maximize a likelihood whose every term is a sum over hidden causes?
+- **With observed labels (complete data):** Fitting the model takes three closed-form sample statistics per population: the empirical fraction, sample mean, and sample variance.
+- **Without labels (latent variables):** Each measurement's probability is a sum over the hidden populations it could have come from, trapping a sum inside the logarithm of the likelihood.
+- **The unifying strategy:** Guess the missing labels using soft probabilities $q(z)$ rather than hard assignments, and optimize a tractable lower bound (**ELBO**) on the true log-likelihood.
+
+::: {.d2l-note}
+Unobserved quantities that explain hidden structure—cluster assignments, document topics, or generative latent codes—are called **latent variables**.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Joint and Marginal Likelihoods with Latent Variables"}
+[Generative Structure]{.kicker}
 
-- write the likelihood of a model with a hidden variable as a marginal;
-- bound the log-likelihood from below by the ELBO, and name its gap;
-- fit a mixture with EM, and prove that the likelihood never decreases;
-- say where EM gets stuck and where the likelihood has no maximum.
+A latent variable model specifies a joint distribution over the observed variable $x$ and a hidden variable $z$ in terms of prior probabilities and class-conditional likelihoods:
 
-**Running example:** two Gaussians on a line; one point at $x=0.5$.
-**Idea:** guess the hidden variable in probabilities, then fit as if the
-guess were data.
+$$p(x, z \mid \boldsymbol{\theta}) = p(z \mid \boldsymbol{\theta})\,p(x \mid z, \boldsymbol{\theta})$$
+
+- **Marginalizing out the unobserved cause:** Because we observe only $x$, the probability of $x$ sums (or integrates) over every possible value of the latent variable $z$:
+  $$p(x \mid \boldsymbol{\theta}) = \sum_{z} p(x, z \mid \boldsymbol{\theta}) = \sum_{z} p(z \mid \boldsymbol{\theta})\,p(x \mid z, \boldsymbol{\theta})$$
+- **The marginal likelihood (evidence):** Just as the Bayesian evidence $P(X)$ integrates out unobserved parameters, $p(x \mid \boldsymbol{\theta})$ sums out unobserved latent variables $z$ for each data point.
 :::
 
-::: {.slide title="After the Fits, Before the Posteriors"}
-[Where this fits]{.kicker}
+::: {.slide title="Complete-Data Oracle vs. Observed-Data Mixture NLL"}
+[Gaussian Mixture Models]{.kicker}
+
+In a $K$-component **Gaussian mixture model (GMM)**, $z_i \in \{1, \dots, K\}$ selects component $k$ with mixing weight $\pi_k$, and $x_i \mid z_i{=}k \sim \mathcal{N}(\mu_k, \sigma_k^2)$. Contrasting the oracle problem against our observed problem shows why optimization is hard:
+
+$$\ell(\boldsymbol{\theta}) = -\sum_{i=1}^n \log \Biggl(\sum_{k=1}^K \pi_k\,\mathcal{N}(x_i;\, \mu_k, \sigma_k^2)\Biggr)$$
+
+- **If an oracle revealed $z_i$:** The sum inside the logarithm disappears, and the log-likelihood decouples by component into $\hat{\pi}_k = n_k / n$, $\hat{\mu}_k = \frac{1}{n_k}\sum_{z_i=k} x_i$, and $\hat{\sigma}_k^2 = \frac{1}{n_k}\sum_{z_i=k} (x_i - \hat{\mu}_k)^2$.
+- **Why the log of a sum is hard:** In $\ell(\boldsymbol{\theta})$, the logarithm stops at the outer sum and never reaches $\exp\bigl(-(x_i-\mu_k)^2/(2\sigma_k^2)\bigr)$, coupling all $3K$ parameters across every observation.
+:::
+
+::: {.slide title="Soft Probabilistic Guesses via Bayes' Rule"}
+[Posterior Responsibilities]{.kicker}
+
+Suppose we hold the component parameters fixed at two equal-weight Gaussians $\mathcal{N}(-1, 1)$ and $\mathcal{N}(1, 1)$ and observe a single point at $x = 0.5$. Bayes' rule computes the posterior probability over which component generated $x$:
+
+$$P(z = 1 \mid x = 0.5) = \frac{0.5\,e^{-(0.5 - (-1))^2 / 2}}{0.5\,e^{-(0.5 - (-1))^2 / 2} + 0.5\,e^{-(0.5 - 1)^2 / 2}} = \frac{e^{-1.125}}{e^{-1.125} + e^{-0.125}} = \frac{1}{1 + e} \approx 0.27$$
+
+- **Soft fractional assignment:** Rather than forcing a brittle $0/1$ decision, Bayes' rule splits the observation $27\%$ to the left component and $73\%$ to the right component.
+- **Smooth adaptation to uncertainty:** At the midpoint $x = 0$, the posterior splits evenly ($50\% / 50\%$); far to the right at $x = 3$, it becomes $99.8\%$ certain ($0.2\% / 99.8\%$).
+:::
+
+::: {.slide title="Deriving the Evidence Lower Bound (ELBO)"}
+[Jensen's Inequality]{.kicker}
+
+To push the logarithm back inside the sum over $z$, we introduce *any* auxiliary probability distribution $q(z)$ over the latent variable ($q(z) \ge 0, \sum_z q(z) = 1$) and apply Jensen's inequality ($\log \mathbb{E}_q[\cdot] \ge \mathbb{E}_q[\log(\cdot)]$):
+
+$$\log p(x \mid \boldsymbol{\theta}) = \log \sum_{z} q(z)\,\frac{p(x, z \mid \boldsymbol{\theta})}{q(z)} \ge \sum_{z} q(z) \log \frac{p(x, z \mid \boldsymbol{\theta})}{q(z)} =: \mathcal{L}(q, \boldsymbol{\theta})$$
+
+- **Valid for every distribution $q$:** The inequality holds globally for every choice of $q(z)$ and every parameter vector $\boldsymbol{\theta}$.
+- **Decoupling the joint density:** Inside $\mathcal{L}(q, \boldsymbol{\theta})$, the logarithm acts directly on the complete-data joint density $p(x, z \mid \boldsymbol{\theta})$, canceling exponential factors just as in the oracle problem.
+:::
+
+::: {.slide title="Anatomy of the ELBO: Energy Plus Entropy"}
+[Decomposing the Lower Bound]{.kicker}
+
+Expanding the logarithm of the ratio $\log\frac{p(x, z \mid \boldsymbol{\theta})}{q(z)} = \log p(x, z \mid \boldsymbol{\theta}) - \log q(z)$ splits the **Evidence Lower Bound (ELBO)** into two interpretable terms:
+
+$$\mathcal{L}(q, \boldsymbol{\theta}) = \mathbb{E}_{q(z)}\bigl[\log p(x, z \mid \boldsymbol{\theta})\bigr] + H(q)$$
+
+- **Expected complete-data log-likelihood ($\mathbb{E}_q[\log p(x, z \mid \boldsymbol{\theta})]$):** The tractable oracle objective, weighted by our soft probabilistic guess $q(z)$ in place of hard oracle labels.
+- **Shannon entropy of the guess ($H(q) = -\sum_z q(z)\log q(z)$):** Measures how spread out the distribution $q$ is and depends *only* on $q$, dropping out completely when we optimize over $\boldsymbol{\theta}$.
+:::
+
+::: {.slide title="The Fundamental ELBO–KL Decomposition"}
+[Exact Gap Identity]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Random Variables | densities, moments, tail bounds |
-| Joint Distributions | conditioning, covariance, change of variables |
-| Distributions | the named distributions and their losses |
-| The Exponential Family | one form, convex fits, conjugacy |
-| Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP |
-| **Latent Variables and EM** | **the ELBO, EM** |
-| Bayesian Computation | averaging over a posterior |
-| Concentration Inequalities | exponential tails of averages |
-| Uniform Convergence | guarantees after selection |
-| Naive Bayes | one classifier, end to end |
-:::
-
-::: {.col .narrow}
-- **Uses:** maximum likelihood, Bayes' rule, the KL divergence.
-- **Skips:** continuous latent variables, variational autoencoders.
-:::
-:::
-:::
-
-::: {.slide title="With the Labels, the Fit Is Counting and Averaging"}
-[Mixtures]{.kicker}
-
-Mixture: a hidden label $z\in\{1,\dots,K\}$ with $P(z=k)=\pi_k$, then
-$x\sim\mathcal N(\mu_k,\sigma_k^2)$.
-
-If an oracle revealed every $z_i$:
-
-| parameter | estimator |
-|:--|:--|
-| weight $\pi_k$ | fraction of points with label $k$ |
-| mean $\mu_k$ | average of those points |
-| variance $\sigma_k^2$ | their sample variance |
-
-::: {.d2l-note}
-The problem is hard only because the labels are missing.
-:::
-:::
-
-::: {.slide title="Without the Labels, a Sum Sits Inside the Logarithm"}
-[Mixtures]{.kicker}
-
-We observe $x$ alone, so its probability sums over the hidden label:
-
-$$\ell(\boldsymbol\theta)=-\sum_{i=1}^n\log\Bigl(\sum_{k=1}^K\pi_k\,\mathcal N(x_i;\mu_k,\sigma_k^2)\Bigr).$$
-
-- The log stops at the sum and never reaches a single Gaussian.
-- Every parameter appears in every term.
-- Setting the gradient to zero has no closed-form solution.
-:::
-
-::: {.slide title="Guess the Label in Probabilities: x = 0.5 Is 27% Left, 73% Right"}
-[Mixtures]{.kicker}
-
-One point $x=0.5$; components $\mathcal N(-1,1)$ and $\mathcal N(1,1)$,
-equal weights. Bayes' rule:
-
-$$P(\textrm{left}\mid x)=\frac{e^{-1.5^2/2}}{e^{-1.5^2/2}+e^{-0.5^2/2}}=\frac{1}{1+e}=0.27 .$$
-
-- The point is split, not assigned.
-- At $x=0$ the split is even; at $x=3$ it is $99.8\%$ right.
-
-::: {.d2l-note}
-Plan: guess the labels this way, then solve the easy problem with the guess.
-:::
-:::
-
-::: {.slide title="I. Any Guess q Gives a Lower Bound on the Log-Likelihood"}
-[The ELBO]{.kicker}
-
-$q(z)$: any distribution over the hidden variable. The logarithm is concave,
-so $\log\mathbb{E}[\cdot]\ge\mathbb{E}[\log(\cdot)]$ (Jensen):
-
-$$\log p(x\mid\boldsymbol\theta)=\log\sum_z q(z)\frac{p(x,z\mid\boldsymbol\theta)}{q(z)}\;\ge\;\underbrace{\mathbb{E}_q\bigl[\log p(x,z\mid\boldsymbol\theta)\bigr]}_{\textrm{easy objective, averaged}}+\underbrace{H(q)}_{\textrm{entropy of the guess}}.$$
-
-The right side is the evidence lower bound, $\mathcal L(q,\boldsymbol\theta)$.
-
-::: {.d2l-note}
-The logarithm reaches the joint density again: the easy problem is back.
-:::
-:::
-
-::: {.slide title="II. The Gap Is the KL Divergence From the Guess to the Posterior"}
-[The ELBO]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$\log p(x\mid\boldsymbol\theta)=\mathcal L(q,\boldsymbol\theta)+D_{\textrm{KL}}\bigl(q\,\|\,p(z\mid x,\boldsymbol\theta)\bigr)$$
-
-*Proof.* Put $p(z\mid x)=p(x,z)/p(x)$ into the KL divergence; $\log p(x)$
-does not depend on $z$ and leaves the average. $\blacksquare$
-
-The bound touches exactly when $q$ is the posterior.
+- **Exact identity for the gap:** Substituting $p(x, z \mid \boldsymbol{\theta}) = p(z \mid x, \boldsymbol{\theta})\,p(x \mid \boldsymbol{\theta})$ into $\mathcal{L}(q, \boldsymbol{\theta})$ proves:
+  $$\log p(x \mid \boldsymbol{\theta}) = \mathcal{L}(q, \boldsymbol{\theta}) + D_{\mathrm{KL}}\bigl(q(z) \,\|\, p(z \mid x, \boldsymbol{\theta})\bigr)$$
+- **Non-negativity and tightness:** Because $D_{\mathrm{KL}} \ge 0$, $\mathcal{L}(q, \boldsymbol{\theta}) \le \log p(x \mid \boldsymbol{\theta})$ everywhere, with equality ($\mathcal{L} = \log p$) if and only if $q(z) = p(z \mid x, \boldsymbol{\theta})$.
+- **Geometric tangency:** Setting $q$ to the posterior at $\boldsymbol{\theta}^{(t)}$ makes the lower bound curve touch the true log-likelihood curve tangentially at $\boldsymbol{\theta}^{(t)}$.
 :::
 
 ::: {.col .fig}
@@ -644,138 +596,155 @@ The bound touches exactly when $q$ is the posterior.
 :::
 :::
 
-::: {.slide title="Check: What Does the 50/50 Guess Lose at x = 0.5?"}
-[Check]{.kicker}
+::: {.slide title="Worked Example: Measuring the ELBO Gap by Hand"}
+[Numerical Verification at x = 0.5]{.kicker}
 
-For $x=0.5$ the log-evidence is $\log p(x)=-1.42$, and the posterior is
-$(0.27, 0.73)$. How far below does the ELBO of the guess
-$q=(\tfrac12,\tfrac12)$ lie?
+For our single observation $x = 0.5$ under $0.5\,\mathcal{N}(-1, 1) + 0.5\,\mathcal{N}(1, 1)$, the true log-evidence is $\log p(x) = -1.42$ nats and the posterior is $p(z \mid x) = (0.27, 0.73)$. Comparing three guesses $q(z)$ verifies the identity $\log p(x) = \mathcal{L}(q) + D_{\mathrm{KL}}(q \,\|\, p)$:
 
-::: {.fragment .fade-up}
+| Latent Guess $q(z)$ | Expected Joint $\mathbb{E}_q[\log p(x,z)]$ | Entropy $H(q)$ | $\mathrm{ELBO}\ \mathcal{L}(q)$ | Gap $D_{\mathrm{KL}}(q \,\|\, p)$ |
+| :--- | :---: | :---: | :---: | :---: |
+| **Exact posterior** $(0.27, 0.73)$ | $-2.00$ | $+0.58$ | **$-1.42$** | **$0.00$ nats** |
+| **Undecided uniform** $(0.50, 0.50)$ | $-2.23$ | $+0.69$ | **$-1.54$** | **$0.12$ nats** |
+| **Hard assignment** $(0.00, 1.00)$ | $-1.73$ | $+0.00$ | **$-1.73$** | **$0.31$ nats** |
+
 ::: {.d2l-note}
-**Answer.** By the KL divergence
-$\tfrac12\log\tfrac{0.5}{0.27}+\tfrac12\log\tfrac{0.5}{0.73}=0.31-0.19=0.12$
-nats: the ELBO is $-1.54$. The posterior as guess loses nothing.
-:::
+Notice that a hard assignment to the more likely cluster ($q = (0, 1)$) loses **$0.31$ nats** ($\log\frac{1}{0.73}$) because its entropy $H(q) = 0$ forfeits the uncertainty bonus, losing more than twice as much as the $50/50$ guess!
 :::
 :::
 
-::: {.slide title="III. EM Alternates Two Maximizations and Never Loses Likelihood"}
-[EM]{.kicker}
+::: {.slide title="Expectation–Maximization as Coordinate Ascent"}
+[The EM Algorithm]{.kicker}
 
-- **E-step:** fix $\boldsymbol\theta^{(t)}$, set $q_i=p(z\mid x_i,\boldsymbol\theta^{(t)})$. The gap closes.
-- **M-step:** fix the $q_i$, maximize $\sum_i\mathbb{E}_{q_i}[\log p(x_i,z\mid\boldsymbol\theta)]$.
+For an independent dataset $X = \{x_1, \dots, x_n\}$, we introduce one distribution $q_i(z)$ per data point and perform **coordinate ascent** on the total ELBO $\sum_{i=1}^n \mathcal{L}(q_i, \boldsymbol{\theta})$:
 
-$$\log P(X\mid\boldsymbol\theta^{(t+1)})\;\underset{\textrm{bound}}{\ge}\;\sum_i\mathcal L\bigl(q_i,\boldsymbol\theta^{(t+1)}\bigr)\;\underset{\textrm{M-step}}{\ge}\;\sum_i\mathcal L\bigl(q_i,\boldsymbol\theta^{(t)}\bigr)\;\underset{\textrm{E-step}}{=}\;\log P(X\mid\boldsymbol\theta^{(t)})$$
+- **E-step (Expectation):** Hold $\boldsymbol{\theta}^{(t)}$ fixed and maximize over each $q_i$ by setting $q_i^{(t)}(z) = p(z \mid x_i, \boldsymbol{\theta}^{(t)})$. This drives every KL gap to zero so the bound touches the log-likelihood:
+  $$\sum_{i=1}^n \mathcal{L}\bigl(q_i^{(t)}, \boldsymbol{\theta}^{(t)}\bigr) = \log P(X \mid \boldsymbol{\theta}^{(t)})$$
+- **M-step (Maximization):** Hold the posterior responsibilities $q_i^{(t)}$ fixed and maximize the expected complete-data log-likelihood over $\boldsymbol{\theta}$ (since $H(q_i^{(t)})$ does not depend on $\boldsymbol{\theta}$):
+  $$\boldsymbol{\theta}^{(t+1)} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} \sum_{i=1}^n \mathbb{E}_{q_i^{(t)}(z)}\bigl[\log p(x_i, z \mid \boldsymbol{\theta})\bigr]$$
+:::
+
+::: {.slide title="Theorem: EM Monotonically Improves Likelihood"}
+[Convergence Guarantee]{.kicker}
+
+Why can an EM step never decrease the true observed-data log-likelihood $\log P(X \mid \boldsymbol{\theta})$? Chaining three relations proves monotonicity in one line:
+
+$$\log P(X \mid \boldsymbol{\theta}^{(t+1)}) \ge \sum_{i=1}^n \mathcal{L}\bigl(q_i^{(t)}, \boldsymbol{\theta}^{(t+1)}\bigr) \ge \sum_{i=1}^n \mathcal{L}\bigl(q_i^{(t)}, \boldsymbol{\theta}^{(t)}\bigr) = \log P(X \mid \boldsymbol{\theta}^{(t)})$$
+
+1. **Global lower bound ($\ge$):** The ELBO is a valid lower bound on $\log P(X \mid \boldsymbol{\theta})$ at the new parameters $\boldsymbol{\theta}^{(t+1)}$ for any $q_i^{(t)}$.
+2. **M-step optimization ($\ge$):** Choosing $\boldsymbol{\theta}^{(t+1)}$ to maximize the bound guarantees $\sum_i \mathcal{L}(q_i^{(t)}, \boldsymbol{\theta}^{(t+1)}) \ge \sum_i \mathcal{L}(q_i^{(t)}, \boldsymbol{\theta}^{(t)})$.
+3. **E-step tightness ($=$):** Because $q_i^{(t)}$ was set to the exact posterior at $\boldsymbol{\theta}^{(t)}$, the KL gap at $\boldsymbol{\theta}^{(t)}$ is zero.
 
 ::: {.d2l-note .rule}
-Each EM iteration leaves the likelihood at least as high as it was.
+**Why exact posteriors matter:** If an algorithm replaces the E-step with hard $0/1$ assignments, it still monotonically climbs the ELBO, but because the third step is no longer an equality, the true log-likelihood $\log P(X \mid \boldsymbol{\theta})$ is no longer guaranteed to increase.
 :::
 :::
 
-::: {.slide title="For a Mixture, Both Steps Are Soft Counting"}
-[EM]{.kicker}
+::: {.slide title="Closed-Form EM Updates for Gaussian Mixtures"}
+[Soft Counting and Averaging]{.kicker}
 
-**E-step**, the responsibility of component $k$ for point $i$:
+Applying the E-step and M-step to a $K$-component Gaussian mixture model yields simple responsibility-weighted sample statistics:
 
-$$r_{ik}=\frac{\pi_k\,\mathcal N(x_i;\mu_k,\sigma_k^2)}{\sum_j\pi_j\,\mathcal N(x_i;\mu_j,\sigma_j^2)}$$
+- **E-step (posterior responsibilities $r_{ik} = q_i(z=k)$):**
+  $$r_{ik} = \frac{\pi_k\,\mathcal{N}(x_i;\, \mu_k, \sigma_k^2)}{\sum_{j=1}^K \pi_j\,\mathcal{N}(x_i;\, \mu_j, \sigma_j^2)}$$
+- **M-step (weighted counts, means, and variances with $n_k = \sum_{i=1}^n r_{ik}$):**
+  $$\pi_k \leftarrow \frac{n_k}{n}, \qquad \mu_k \leftarrow \frac{1}{n_k}\sum_{i=1}^n r_{ik}\,x_i, \qquad \sigma_k^2 \leftarrow \frac{1}{n_k}\sum_{i=1}^n r_{ik}(x_i - \mu_k)^2$$
+- **K-means as the zero-variance limit:** When $\pi_k = 1/K$ and all components share a fixed variance $\sigma^2 \to 0$, the softmax responsibilities $r_{ik} \propto \exp\bigl(-(x_i-\mu_k)^2/(2\sigma^2)\bigr)$ harden into $0/1$ indicators for the nearest centroid.
+:::
 
-**M-step**, with effective counts $n_k=\sum_i r_{ik}$:
+::: {.slide title="Implementing 1D Gaussian Mixture EM in NumPy"}
+[Code Implementation]{.kicker}
 
-$$\pi_k=\frac{n_k}{n},\qquad\mu_k=\frac1{n_k}\sum_i r_{ik}x_i,\qquad\sigma_k^2=\frac1{n_k}\sum_i r_{ik}(x_i-\mu_k)^2$$
+In vectorized NumPy, the entire EM loop for $n = 500$ observations from $0.6\,\mathcal{N}(-2.0, 0.8^2) + 0.4\,\mathcal{N}(1.5, 0.6^2)$ takes a dozen lines:
+
+@maximum-likelihood-em-gmm
 
 ::: {.d2l-note}
-The oracle's estimators, with each point spreading its one vote. Shared
-$\sigma^2\to0$: hard votes, which is K-means.
+Broadcasting `x[:, None]` of shape `(n, 1)` against parameter arrays of shape `(K,)` evaluates the `(n, K)` joint density matrix `joint` in one step; normalizing across rows gives `r` (E-step), and summing down columns gives `n_k` (M-step).
 :::
 :::
 
-::: {.slide title="From a Poor Start, EM Finds Both Clusters in About Six Steps"}
-[EM]{.kicker}
+::: {.slide title="Rapid Convergence from an Asymmetric Initialization"}
+[Empirical Trajectory]{.kicker}
 
-Start: weights $(0.5, 0.5)$, means $\pm0.5$, scales $1$. Log-likelihood at
-steps 0 to 5 and at step 29, then the fit:
+Starting from two heavily overlapping unit-variance components centered at $\mu = (-0.5, 0.5)$ with equal weights $\pi = (0.5, 0.5)$, we run $30$ EM iterations:
 
 @!mdl-maximum-likelihood-expectation-maximization-1
 
-- The trace never goes down, and most of the climb is the first step.
-- Truth: weights $(0.6, 0.4)$, means $(-2, 1.5)$, scales $(0.8, 0.6)$.
+- **Monotonic climb:** The log-likelihood climbs by over $400$ nats (from $\approx -1{,}300$ to $\approx -870$), with nearly the entire gain achieved in the first $6$ steps.
+- **Missing information governs speed:** Near a fixed point, the linear convergence rate of EM equals $1 - I_{\mathrm{obs}}/I_{\mathrm{com}}$—the fraction of Fisher information hidden by the missing labels. Well-separated clusters ($I_{\mathrm{obs}} \approx I_{\mathrm{com}}$) converge in a few steps.
 :::
 
-::: {.slide title="A Symmetric Start Never Separates"}
-[Limits]{.kicker}
+::: {.slide title="Pitfall 1: Label Switching and Symmetry Traps"}
+[Non-Identifiability & Saddle Points]{.kicker}
 
-Both components start at $\mu=0$, $\sigma=1$:
+Permuting the $K$ component indices produces $K!$ identical global maxima (*label switching*). Far more dangerous is initializing two components identically at $\mu = (0, 0)$ and $\sigma = (1, 1)$:
 
 @!mdl-maximum-likelihood-expectation-maximization-2
 
-- Equal responsibilities for every point, so the M-step keeps the components
-  equal: EM fits one Gaussian, the mean and standard deviation of all data.
-- A stationary point, not a maximum, more than $100$ nats below.
+- **Locked responsibilities:** Because both components start identical, they receive identical responsibilities $r_{i1} = r_{i2} = 0.5$ on every observation $x_i$, so the M-step updates them to the exact same overall mean and standard deviation forever.
+- **Stationary point, not a maximum:** EM is trapped at a single-Gaussian saddle point more than $100$ nats below the two-cluster fit—the exact same symmetry trap that occurs if hidden units in a neural network layer are initialized with identical weights.
+:::
 
-::: {.d2l-note}
-Restart from several random initializations.
+::: {.slide title="Pitfall 2: Unbounded Likelihood and Variance Spikes"}
+[Degenerate Global Maxima]{.kicker}
+
+In a continuous Gaussian mixture with learned variances, the observed-data log-likelihood is **unbounded above** ($\ell(\boldsymbol{\theta})$ has no global minimum):
+
+$$\ell(\boldsymbol{\theta}) \le \log\bigl(n\sqrt{2\pi}\bigr) + \log\epsilon + \mathrm{const} \xrightarrow{\epsilon \to 0} -\infty$$
+
+- **Mechanism of a variance spike:** Center component $2$ directly on a single training point ($\mu_2 = x_1, \pi_2 = 1/n$) and shrink its scale $\sigma_2 = \epsilon \to 0$. Its density at $x_1$ explodes as $\frac{1}{n\sqrt{2\pi}\epsilon} \to \infty$ while component $1$ covers the remaining $n-1$ observations.
+- **Same pathology in heteroscedastic regression:** A neural network predicting both mean $\hat{y}(\mathbf{x}_i)$ and variance $\hat{\sigma}^2(\mathbf{x}_i)$ suffers the exact same $-\infty$ NLL spike whenever it interpolates one training point ($\hat{y}(\mathbf{x}_i) = y_i$) and drives $\hat{\sigma}^2(\mathbf{x}_i) \to 0$.
+- **Practical fix:** Impose a variance floor $\sigma_k^2 \ge \sigma_{\min}^2 > 0$ or place an inverse-gamma prior on the variances to eliminate degenerate spikes.
+:::
+
+::: {.slide title="From Exact EM to Variational Autoencoders (VAEs)"}
+[Amortized Variational Inference]{.kicker}
+
+What happens when the latent variable $z \in \mathbb{R}^d$ is a continuous code passed through a deep nonlinear generator $p_{\boldsymbol{\theta}}(x \mid z)$?
+
+- **Intractable exact posterior:** The marginal integral $p(x \mid \boldsymbol{\theta}) = \int p(z)\,p_{\boldsymbol{\theta}}(x \mid z)\,dz$ has no closed form, so Bayes' rule cannot evaluate the exact E-step posterior $p(z \mid x, \boldsymbol{\theta})$.
+- **Amortized variational approximation:** A **variational autoencoder (VAE)** replaces the per-example distribution $q_i(z)$ with an encoder neural network $q_{\boldsymbol{\phi}}(z \mid x)$ that predicts variational parameters (e.g., mean and diagonal log-variance) directly from $x$.
+- **Joint stochastic gradient ascent on the ELBO:** Instead of alternating exact E-steps and M-steps, a VAE maximizes $\sum_{i=1}^n \mathcal{L}\bigl(q_{\boldsymbol{\phi}}(\cdot \mid x_i),\, \boldsymbol{\theta}\bigr)$ jointly over decoder weights $\boldsymbol{\theta}$ and encoder weights $\boldsymbol{\phi}$ via the reparameterization trick.
+:::
+
+::: {.slide title="Unifying EM, VAEs, and Bayesian Variational Inference"}
+[Three Instances of One Bound]{.kicker}
+
+The decomposition $\log \text{Evidence} = \mathrm{ELBO}(q) + D_{\mathrm{KL}}(q \,\|\, \text{Posterior})$ unifies three major algorithms across statistical learning and deep generative modeling:
+
+| Method | Unobserved Variable | Variational Distribution $q$ | How $\mathrm{ELBO}$ Is Maximized | Does KL Gap Close to $0$? |
+| :--- | :--- | :--- | :--- | :--- |
+| **EM Algorithm** | Per-example discrete cluster $z_i \in \{1,\dots,K\}$ | Exact tabular distribution $q_i(z_i)$ per point | Coordinate ascent (closed-form E & M steps) | **Yes** ($q_i = p(z_i \mid x_i, \boldsymbol{\theta}^{(t)})$ after every E-step) |
+| **Variational Autoencoder** | Per-example continuous code $\mathbf{z}_i \in \mathbb{R}^d$ | Amortized encoder network $q_{\boldsymbol{\phi}}(\mathbf{z}_i \mid \mathbf{x}_i)$ | Joint SGD over $(\boldsymbol{\theta}, \boldsymbol{\phi})$ via reparameterization | **No** (bounded by encoder family capacity) |
+| **Bayesian VI (§36.8)** | Global model parameters $\boldsymbol{\theta} \in \mathbb{R}^p$ | Parametric family $q_{\boldsymbol{\psi}}(\boldsymbol{\theta})$ (e.g., Gaussian) | Gradient ascent on $\mathcal{L}(\boldsymbol{\psi})$ over variational $\boldsymbol{\psi}$ | **No** (minimizes reverse KL $D_{\mathrm{KL}}(q_{\boldsymbol{\psi}} \,\|\, p(\boldsymbol{\theta}\mid\mathcal{D}))$) |
+:::
+
+::: {.slide title="Concept Check: Latent Variables, EM, and the ELBO"}
+[Check Your Understanding]{.kicker}
+
+1. **Entropy bonus in the ELBO:** At $x = 0.5$ where the true posterior is $(0.27, 0.73)$, why does a hard guess $q = (0, 1)$ have a larger ELBO gap ($0.31$ nats) than an undecided $50/50$ guess ($0.12$ nats)?
+2. **Temperature limit of GMM EM:** If all $K$ Gaussian components have equal mixing weights $\pi_k = 1/K$ and a shared fixed variance $\sigma^2$, what happens to the E-step responsibilities $r_{ik}$ and M-step means $\mu_k$ as $\sigma^2 \to 0$?
+3. **Why hard EM can decrease likelihood:** If an algorithm replaces the E-step with hard assignments $q_i(z) = \mathbf{1}\{z = k^*(x_i)\}$, it still monotonically increases the ELBO. Why can the true log-likelihood $\log P(X \mid \boldsymbol{\theta})$ decrease?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. The hard guess puts zero mass on component $1$ ($H(q) = 0$) and incurs $D_{\mathrm{KL}} = 1 \cdot \log\frac{1}{0.73} = 0.31$ nats, whereas the $50/50$ guess retains $H(q) = \log 2 = 0.69$ nats of entropy and sits closer in KL divergence to $(0.27, 0.73)$.
+2. The responsibilities $r_{ik} = \frac{\exp(-(x_i-\mu_k)^2/(2\sigma^2))}{\sum_j \exp(-(x_i-\mu_j)^2/(2\sigma^2))}$ form a softmax with temperature $2\sigma^2$; as $\sigma^2 \to 0$, $r_{ik} \to 1$ for the nearest centroid $\mu_k$, reducing EM directly to **K-means**.
+3. Because a hard distribution $q_i$ never equals the soft posterior $p(z \mid x_i, \boldsymbol{\theta}^{(t)})$, the KL gap $D_{\mathrm{KL}}(q_i \,\|\, p) > 0$ does not vanish at $\boldsymbol{\theta}^{(t)}$, breaking the tangency equality $\mathcal{L}(q^{(t)}, \boldsymbol{\theta}^{(t)}) = \log P(X \mid \boldsymbol{\theta}^{(t)})$.
 :::
 :::
 
-::: {.slide title="The Mixture Likelihood Has No Maximum Without a Variance Floor"}
-[Limits]{.kicker}
+::: {.slide title="Summary: Latent Variables, EM, and the ELBO"}
+[Key Takeaways]{.kicker}
 
-Put component 2 on one data point: $\mu_2=x_1$, weight $1/n$, scale
-$\epsilon$.
-
-- Its density at $x_1$ is $\dfrac{1}{n\sqrt{2\pi}\,\epsilon}\to\infty$ as $\epsilon\to0$.
-- Component 1 still explains the other $n-1$ points.
-- So the likelihood is unbounded: the "best" fit is a spike on one point.
-
-::: {.d2l-note}
-A floor on the variances, or a prior on them, removes the spike.
-:::
+| Concept | Mathematical Form | Statistical & Deep Learning Role |
+| :--- | :--- | :--- |
+| **Marginal Log-Likelihood** | $\log p(x \mid \boldsymbol{\theta}) = \log \sum_z p(z \mid \boldsymbol{\theta})\,p(x \mid z, \boldsymbol{\theta})$ | Sum inside $\log$ couples all parameters and blocks closed-form MLE |
+| **Evidence Lower Bound** | $\mathcal{L}(q, \boldsymbol{\theta}) = \mathbb{E}_q[\log p(x, z \mid \boldsymbol{\theta})] + H(q)$ | Moves $\log$ back onto the joint density via Jensen's inequality |
+| **Exact KL Gap Identity** | $\log p(x \mid \boldsymbol{\theta}) = \mathcal{L}(q, \boldsymbol{\theta}) + D_{\mathrm{KL}}\bigl(q(z) \,\|\, p(z \mid x, \boldsymbol{\theta})\bigr)$ | Shows $\mathcal{L} \le \log p$ everywhere, with equality iff $q$ is the true posterior |
+| **EM Coordinate Ascent** | E-step: $q_i^{(t)} = p(z \mid x_i, \boldsymbol{\theta}^{(t)})$; M-step: $\operatorname{argmax}_{\boldsymbol{\theta}} \sum_i \mathcal{L}$ | Monotonically increases $\log P(X \mid \boldsymbol{\theta})$ at every iteration |
+| **GMM Soft Counting** | $r_{ik} \propto \pi_k \mathcal{N}(x_i; \mu_k, \sigma_k^2)$; $\mu_k = \frac{1}{n_k}\sum_i r_{ik}x_i$ | Softens oracle estimators; reduces to K-means as shared $\sigma^2 \to 0$ |
+| **EM Pitfalls** | Symmetry trap ($\mu_1 = \mu_2$) & variance spikes ($\sigma_k \to 0$) | Requires random restarts and variance floors or priors on $\sigma_k^2$ |
 :::
 
-::: {.slide title="When the Posterior Is Out of Reach, the Bound Is Climbed Approximately"}
-[Beyond EM]{.kicker}
-
-The E-step needs the exact posterior $p(z\mid x,\boldsymbol\theta)$. Without
-it the bound still holds, for any $q$:
-
-| method | hidden variable | guess $q$ |
-|:--|:--|:--|
-| EM | cluster label | exact posterior |
-| variational autoencoder | code of an image | a network $q_{\boldsymbol\phi}(z\mid x)$ |
-| variational inference | the parameters | a Gaussian, fitted |
-
-::: {.d2l-note}
-All three maximize the same ELBO. Only EM closes the gap, so only EM
-inherits the monotone likelihood.
-:::
-:::
-
-::: {.slide title="Check: Does a Hard Guess Lose More Than a 50/50 Guess?"}
-[Check]{.kicker}
-
-At $x=0.5$ the posterior is $(0.27, 0.73)$, and the 50/50 guess lost $0.12$
-nats. A hard guess puts all of $q$ on the right component. What is its gap?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $D_{\textrm{KL}}=1\cdot\log\tfrac{1}{0.73}=0.31$ nats, more than
-the undecided guess loses. Hard assignments still give a valid bound, but it
-does not touch the likelihood, so the monotonicity proof is lost.
-:::
-:::
-:::
-
-::: {.slide title="One Bound Turned a Hard Fit Into Repeated Easy Ones"}
-[Wrap-up]{.kicker}
-
-- A hidden variable puts a sum inside the logarithm of the likelihood.
-- ELBO $=$ easy objective averaged over a guess $q$, plus the entropy of $q$.
-- Gap $=$ KL from $q$ to the posterior: $0.12$ nats for the 50/50 guess at $x=0.5$.
-- EM: the E-step closes the gap, the M-step climbs; the likelihood never decreases.
-- EM stops at stationary points (the symmetric start); an unfloored variance is a spike.
-
-::: {.d2l-note}
-Next: the same bound, with the parameters as the hidden variable.
-:::
-:::

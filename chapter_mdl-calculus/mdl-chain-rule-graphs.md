@@ -504,166 +504,268 @@ respect to many parameters is always done backward.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §25.2]{.kicker}
+[Dive into Deep Learning · §34.3]{.kicker}
 
-The Chain Rule on Computational Graphs<br>
-**edge and total derivatives · sum over paths · one backward pass**
+The Chain Rule on Computational Graphs<br>**dependency DAGs · edge vs. total derivatives · sum over paths · forward mode · adjoints & backpropagation**
 :::
 :::
 
-::: {.slide title="One Call Returns Every Slope of the Loss"}
-[The problem]{.kicker}
+::: {.slide title="Why One Backward Pass Replaces a Million Perturbations"}
+[Motivation]{.kicker}
 
-`backward()` returns the slope of one loss with respect to every weight.
+Every training step calls `backward()` or `grad` to obtain the partial derivative of a scalar loss $f$ with respect to millions of parameters. Why doesn't computing $N$ derivatives require $N$ passes through the network?
 
-- Nudging one weight and rerunning the network: one run per weight.
-- Yet the slopes share most of their work: each passes through the last layer.
-- A formula hides the sharing. A graph of the computation shows it.
+::: {.cols}
+::: {.col}
+- **The cost of naive perturbation:** Nudging one parameter by $\epsilon$ and re-evaluating the network requires $N$ separate forward passes—completely infeasible when $N = 10^8$.
+- **Massive structural sharing:** In a deep composition of layers, every early parameter's influence must travel through the exact same downstream layers to reach the final loss $f$.
+:::
+
+::: {.col}
+- **Why graphs beat nested formulas:** A single nested algebraic formula hides shared subexpressions, whereas a **computational graph** (a directed acyclic graph, or DAG) represents each intermediate value once and each direct functional dependence as a directed edge.
+- **Backpropagation as path factoring:** On a DAG, the chain rule is a sum over directed paths; grouping that sum from the output backward reuses every downstream computation across all inputs.
+:::
+:::
+:::
+
+::: {.slide title="Representing a Function as a Computation Graph"}
+[Directed Acyclic Graphs]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Concrete 4-input integer benchmark:** Four inputs $(w, x, y, z)$ pass through Layer 1 nodes $a = (w + x + y + z)^2$ and $b = (w + x - y - z)^2$, then Layer 2 nodes $u = (a + b)^2$ and $v = (a - b)^2$, to produce scalar output:
+  $$f(u, v) = (u + v)^2$$
+- **Nodes and directed edges:** Each node stores one intermediate variable, and a directed edge $n \to c$ indicates that node $c$'s defining formula directly takes $n$ as an argument.
+- **Exact integer arithmetic:** Squaring keeps all node values and derivatives exact integers so we can verify every step without floating-point rounding.
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-chain-net1.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Propagating a Perturbation Across Parallel Branches"}
+[Multivariable Chain Rule]{.kicker}
+
+Consider the top sub-graph $f(u(a, b), v(a, b))$ and ask how $f$ responds when node $a$ is nudged by $\epsilon$ while $b$ is held fixed:
+
+- **Step 1 — Perturb the intermediate children:** Nudging $a \mapsto a + \epsilon$ shifts both children simultaneously according to their direct partial derivatives: $u$ moves by $\Delta u = \epsilon \frac{\partial u}{\partial a} + o(\epsilon)$ and $v$ moves by $\Delta v = \epsilon \frac{\partial v}{\partial a} + o(\epsilon)$.
+- **Step 2 — Substitute into the multivariable linear model of $f$:** Because $f(u, v)$ is differentiable at $(u, v)$, its first-order change is the dot product of $\nabla f$ with $(\Delta u, \Delta v)^\top$:
+  $$f\bigl(u(a+\epsilon, b), v(a+\epsilon, b)\bigr) = f(u, v) + \epsilon\left[\frac{\partial f}{\partial u}\frac{\partial u}{\partial a} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial a}\right] + o(\epsilon)$$
+- **Step 3 — Read off the coefficient of $\epsilon$:** The composite rate of change sums the products along both parallel routes $a \to u \to f$ and $a \to v \to f$:
+  $$\frac{\mathrm{d}f}{\mathrm{d}a} = \frac{\partial f}{\partial u}\frac{\partial u}{\partial a} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial a}$$
+:::
+
+::: {.slide title="Edge Derivatives (∂) vs. Total Derivatives (d)"}
+[Notation & Semantics]{.kicker}
+
+Confusing a single edge's local partial derivative with a node's total downstream sensitivity is the most common error in multivariable calculus:
+
+| Symbol | Name | Mathematical Definition & Graph Meaning |
+| :--- | :--- | :--- |
+| **$\dfrac{\partial c}{\partial n}$** | **Edge derivative** (local partial) | Derivative of child $c$'s defining formula $c(\text{parents of } c)$ with respect to direct parent $n$, holding **all other direct parents of $c$ fixed**. |
+| **$\dfrac{\mathrm{d}f}{\mathrm{d}n}$** | **Total derivative** (adjoint $\bar{n}$) | Total rate of change of the final output $f$ when node $n$ is nudged, allowing **every variable downstream of $n$ to respond** along all directed paths from $n$ to $f$. |
 
 ::: {.d2l-note .warn}
-On the graph the chain rule is a sum over paths. How should the sum be
-grouped so that shared work is done once?
+**Why differentiability of $f(u, v)$ is required:** If $f(u, v) = 2uv/(u^2+v^2)$ with $f(0,0)=0$ and $u(t)=v(t)=t$, both edge partials $\partial f/\partial u$ and $\partial f/\partial v$ vanish at $(0,0)$, so the chain rule formula predicts $0$ even though $f(t, t) = 1$ jumps discontinuously at $t = 0$.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The General Chain Rule as a Sum Over Paths"}
+[Path-Sum Formula]{.kicker}
 
-- tell an edge derivative from a total derivative;
-- write the derivative of a graph as a sum over its paths;
-- carry one input forward, or one output backward, through a graph by hand;
-- say why a loss with many inputs is differentiated backward.
+Applying the two-branch argument inductively across any directed acyclic graph expresses the total derivative as a sum over all directed paths from input to output:
 
-**Running example:** $f = (u+v)^2$ on four inputs $w, x, y, z$, all values integers.
-
-**The idea:** group the paths by their first edge, starting from the output.
+::: {.d2l-note .rule}
+**Path-Sum Chain Rule on a Computation Graph:** For any node $x$ and output $f$ in a differentiable DAG,
+$$\frac{\mathrm{d}f}{\mathrm{d}x} = \sum_{\text{directed paths } x \to \cdots \to f} \;\; \prod_{\text{edges }(u \to v)\text{ on path}} \frac{\partial v}{\partial u}$$
 :::
 
-::: {.slide title="From One Gradient to an Algorithm"}
-[Where this fits]{.kicker}
+- **Multiply along each path, add across parallel paths:** Every directed path from $x$ to $f$ amplifies or attenuates a perturbation by the product of local edge slopes along its links; parallel paths interfere additively at merge nodes.
+- **Why explicit path enumeration is intractable:** In a graph of $m$ sequential stages with just $2$ parallel nodes per stage (like our 4-input DAG), there are $2^m$ distinct paths—so enumerating paths one by one takes exponential $O(2^m)$ time unless shared sub-paths are factored out.
+:::
+
+::: {.slide title="Skip Connections and Multi-Path Interference"}
+[Worked Example]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Single Variable Calculus | derivative, Taylor, corners |
-| Multivariable Calculus | gradient, Hessian, critical points |
-| **The Chain Rule on Computational Graphs** | **sum over paths, backward pass** |
-| Matrix Calculus | Jacobians, a layer's backward rule |
-| Automatic Differentiation | forward and reverse mode |
-| Integral Calculus | areas, change of variables, the Gaussian integral |
-| Expectations and Their Gradients | score-function and pathwise estimators |
+- **A 5-node DAG with a skip edge:** Let $p = x + y$, $q = x - y$, $r = p^2$, $s = q^2$, and $f(r, p, s) = r + p + s$.
+- **Three paths from $y$ to $f$:** Path $y \to p \to r \to f$ contributes $1 \cdot 2p \cdot 1 = 2p$, the skip edge $y \to p \to f$ contributes $1 \cdot 1 = 1$, and path $y \to q \to s \to f$ contributes $1 \cdot 2q \cdot (-1) = -2q$:
+  $$\frac{\mathrm{d}f}{\mathrm{d}y} = 2p + 1 - 2q = 1 + 4y$$
+- **At $(x, y) = (1, 2)$ ($p = 3, q = -1$):** The three paths contribute $6 + 1 + 2 = 9 = 1 + 4(2)$.
+- **Edge vs. total at node $p$:** The direct skip edge has $\frac{\partial f}{\partial p} = 1$ (holding $r$ fixed), whereas the total derivative is $\frac{\mathrm{d}f}{\mathrm{d}p} = 2p + 1 = 7$.
 :::
 
-::: {.col .narrow}
-- **Uses:** the linear model of a differentiable function.
-- **Scope:** scalar nodes; layers come next.
+::: {.col .fig}
+![](../img/mdl-cal-chain-net2.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="A Nudge Reaches the Output along Every Path"}
-::: {.cols .vc}
+::: {.slide title="Architectural Lesson: ResNets and Gates Shape Paths"}
+[Deep Learning Connection]{.kicker}
+
+Viewing the chain rule as a sum over paths explains why skip connections and gating mechanisms transformed deep learning:
+
+::: {.cols}
 ::: {.col}
-$f(u(a,b), v(a,b))$: nudge $a$ by $\epsilon$, and both $u$ and $v$ move.
-
-$$\frac{\mathrm{d} f}{\mathrm{d} a} = \frac{\partial f}{\partial u}\frac{\partial u}{\partial a} + \frac{\partial f}{\partial v}\frac{\partial v}{\partial a}$$
-
-- $\partial$: one node's function, one argument, the others fixed (an *edge*).
-- $\mathrm{d}$: everything downstream responds (the *total*).
-- Two paths, $a \to u \to f$ and $a \to v \to f$: multiply along, add across.
+- **Residual networks as path ensembles:** In a 1D residual stack of $m$ blocks $x_{l+1} = x_l + g_l(x_l)$, each block branches into an identity skip edge (slope $1$) and a residual branch (slope $g_l'(x_l)$):
+  $$\frac{\mathrm{d}x_m}{\mathrm{d}x_0} = \prod_{l=0}^{m-1} \bigl(1 + g_l'(x_l)\bigr)$$
 :::
 
-::: {.col .fig .big}
-![](../img/mdl-cal-chain-net1.svg)
-:::
-:::
-:::
-
-::: {.slide title="The Chain Rule Sums Products over Paths"}
-::: {.cols .vc}
 ::: {.col}
-$$\frac{\mathrm{d} f}{\mathrm{d} x} = \sum_{\text{paths } x \to f}\ \prod_{\text{edges}} (\text{edge derivative})$$
+- **Why gradients don't vanish:** Expanding the product over all $2^m$ subsets $S \subseteq \{0, \ldots, m-1\}$ reveals $\binom{m}{k}$ paths passing through exactly $k$ nonlinear blocks and skipping the other $m - k$ blocks with unit slope.
+- **Empirical path length (Veit et al., 2016):** Even in an $m = 54$ block ResNet ($2^{54}$ total paths), most gradient signal flows along short paths passing through only $5$ to $17$ blocks!
+:::
+:::
+:::
 
-$p = x + y$, $q = x - y$, $r = p^2$, $s = q^2$, $f = r + p + s$.
+::: {.slide title="Forward Pass and Local Edge Derivatives"}
+[Hand Trace: Step 1]{.kicker}
 
-- Three paths from $y$: $2p\cdot 1 + 1 + 2q\cdot(-1) = 1 + 4y$.
-- Edge derivative $\partial f/\partial p = 1$; total $\mathrm{d}f/\mathrm{d}p = 2p + 1$.
+Let us trace our 4-input benchmark at $(w, x, y, z) = (1, 1, -2, 1)$ by first running the **forward pass** in topological order and evaluating each edge's local partial derivative:
+
+| Layer / Node | Forward Value at $(1, 1, -2, 1)$ | Local Edge Derivatives Leaving Parent Nodes |
+| :--- | :--- | :--- |
+| **Layer 1 ($a, b$)** | $a = (1+1-2+1)^2 = 1^2 = 1$ | $\frac{\partial a}{\partial w} = \frac{\partial a}{\partial x} = \frac{\partial a}{\partial y} = \frac{\partial a}{\partial z} = 2(w+x+y+z) = 2$ |
+| **Layer 1 ($b$)** | $b = (1+1+2-1)^2 = 3^2 = 9$ | $\frac{\partial b}{\partial w} = \frac{\partial b}{\partial x} = 2(w+x-y-z) = 6$, $\frac{\partial b}{\partial y} = \frac{\partial b}{\partial z} = -6$ |
+| **Layer 2 ($u, v$)** | $u = (1+9)^2 = 100$, $v = (1-9)^2 = 64$ | $\frac{\partial u}{\partial a} = \frac{\partial u}{\partial b} = 2(a+b) = 20$, $\frac{\partial v}{\partial a} = -16$, $\frac{\partial v}{\partial b} = +16$ |
+| **Output ($f$)** | $f = (100+64)^2 = 164^2 = 26896$ | $\frac{\partial f}{\partial u} = \frac{\partial f}{\partial v} = 2(u+v) = 328$ |
 
 ::: {.d2l-note}
-Requires $f$ to be differentiable, not only to have partials.
+Every edge derivative depends solely on a node and its immediate parents, so all 14 edge slopes are known as soon as the forward pass completes.
 :::
 :::
 
-::: {.col .fig .big}
-![](../img/mdl-cal-chain-net2.svg)
+::: {.slide title="Forward Mode: Factoring Paths from One Input Outward"}
+[Forward Accumulation]{.kicker}
+
+To compute $\mathrm{d}f/\mathrm{d}w$, **forward mode** fixes the single input $w$ and pushes its sensitivity $\mathrm{d}n/\mathrm{d}w$ forward through the graph layer by layer:
+
+- **Layer 1 sensitivities to $w$:** Direct edges give $\frac{\mathrm{d}a}{\mathrm{d}w} = \frac{\partial a}{\partial w} = 2$ and $\frac{\mathrm{d}b}{\mathrm{d}w} = \frac{\partial b}{\partial w} = 6$.
+- **Layer 2 sensitivities to $w$:** Combine contributions from $a$ and $b$ into $u$ and $v$:
+  $$\frac{\mathrm{d}u}{\mathrm{d}w} = \frac{\partial u}{\partial a}\frac{\mathrm{d}a}{\mathrm{d}w} + \frac{\partial u}{\partial b}\frac{\mathrm{d}b}{\mathrm{d}w} = 20(2) + 20(6) = 160, \qquad \frac{\mathrm{d}v}{\mathrm{d}w} = (-16)(2) + 16(6) = 64$$
+- **Output sensitivity to $w$:** Combine $u$ and $v$ into $f$:
+  $$\frac{\mathrm{d}f}{\mathrm{d}w} = \frac{\partial f}{\partial u}\frac{\mathrm{d}u}{\mathrm{d}w} + \frac{\partial f}{\partial v}\frac{\mathrm{d}v}{\mathrm{d}w} = 328(160) + 328(64) = 328 \cdot 224 = 73472$$
+- **The bottleneck:** Both intermediate sensitivities $\mathrm{d}u/\mathrm{d}w = 160$ and $\mathrm{d}v/\mathrm{d}w = 64$ are specific to $w$ and cannot be reused to find $\mathrm{d}f/\mathrm{d}y$ or $\mathrm{d}f/\mathrm{d}z$.
 :::
+
+::: {.slide title="Executing Forward Mode in Plain Python"}
+[Code Verification]{.kicker}
+
+Running the forward pass and pushing the sensitivity to $w$ forward in Python confirms $\mathrm{d}f/\mathrm{d}w = 73472$ at a cost of $6$ multiplications for that single input:
+
+@multivariable-calculus-the-backpropagation-algorithm-1
+
+::: {.d2l-note .warn}
+Computing the full gradient over all $4$ inputs by forward mode requires $4 \times 6 = 24$ multiplications ($N$ separate forward sweeps for $N$ inputs).
 :::
 :::
 
-::: {.slide title="Forward Mode Carries One Input through the Graph"}
-$f = (u+v)^2$, $u = (a+b)^2$, $v = (a-b)^2$, $a = (w+x+y+z)^2$, $b = (w+x-y-z)^2$
-at $(1, 1, -2, 1)$:
+::: {.slide title="Adjoints and Reverse-Mode Path Factoring"}
+[Backward Accumulation]{.kicker}
 
-@!multivariable-calculus-the-backpropagation-algorithm-1
-
-- $328\,(20\cdot 2 + 20\cdot 6) + 328\,(-16\cdot 2 + 16\cdot 6) = 73472$.
-- 6 multiplications per input; nothing is reused for $x, y, z$.
-:::
-
-::: {.slide title="One Backward Pass Gives All Four Partials"}
 ::: {.cols .vc}
 ::: {.col}
-Adjoint $\bar n = \mathrm{d}f/\mathrm{d}n$, the total derivative of the output. Group the paths by their first edge:
-
-$$\bar f = 1, \qquad \bar n = \sum_{\text{children } c}\bar c\,\frac{\partial c}{\partial n}$$
-
-- $\bar u = \bar v = 328$; $\bar a = 1312$, $\bar b = 11808$.
-- 12 multiplications instead of 24.
-- $N$ inputs: one backward pass instead of $N$ forward ones.
+- **Flip the perspective—fix the output $f$:** Define the **adjoint** $\bar{n} = \frac{\mathrm{d}f}{\mathrm{d}n}$ of node $n$ as the total derivative of the final output $f$ with respect to $n$, seeded at $\bar{f} = 1$.
+- **Group paths by their first outgoing edge:** Every path from $n$ to $f$ must step first to some immediate child $c$ of $n$, and the remaining paths from $c$ to $f$ sum to $\bar{c}$:
+  $$\bar{n} = \sum_{c \in \mathrm{children}(n)} \bar{c}\,\frac{\partial c}{\partial n}$$
+- **One reverse sweep for all inputs:** Visiting nodes in reverse topological order ensures every child adjoint $\bar{c}$ is ready before $\bar{n}$ is computed.
 :::
 
-::: {.col .fig .big}
-![](../img/mdl-cal-backward-sweep.svg)
+::: {.col .fig}
+![](../img/mdl-cal-backward-sweep.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Check: Input Gradients from Two Adjoints"}
-[Check]{.kicker}
+::: {.slide title="Tracing the Backward Sweep Across All Nodes"}
+[Hand Trace: Step 2]{.kicker}
 
-With $\bar a = 1312$, $\bar b = 11808$, $\partial a/\partial(\cdot) = 2$,
-and $\partial b/\partial w = 6$, $\partial b/\partial y = -6$: what are
-the adjoints $\bar w$ and $\bar y$?
+Starting from $\bar{f} = 1$ at the top of our 4-input graph and sweeping downward computes all intermediate and input adjoints in $12$ multiplications (half the $24$ of forward mode):
 
-::: {.fragment .fade-up}
+| Reverse Step | Node(s) | Adjoint Recursion $\bar{n} = \sum_{c} \bar{c}\,\frac{\partial c}{\partial n}$ | Numerical Value |
+| :--- | :--- | :--- | :--- |
+| **1. Seed output** | $f$ | $\bar{f} = \frac{\mathrm{d}f}{\mathrm{d}f}$ | $\bar{f} = 1$ |
+| **2. Layer 2** | $u, v$ | $\bar{u} = \bar{f}\frac{\partial f}{\partial u} = 1 \cdot 328$, $\bar{v} = \bar{f}\frac{\partial f}{\partial v} = 1 \cdot 328$ | $\bar{u} = 328$, $\bar{v} = 328$ |
+| **3. Layer 1 ($a$)** | $a$ | $\bar{a} = \bar{u}\frac{\partial u}{\partial a} + \bar{v}\frac{\partial v}{\partial a} = 328(20) + 328(-16)$ | $\bar{a} = 1312$ |
+| **4. Layer 1 ($b$)** | $b$ | $\bar{b} = \bar{u}\frac{\partial u}{\partial b} + \bar{v}\frac{\partial v}{\partial b} = 328(20) + 328(16)$ | $\bar{b} = 11808$ |
+| **5. Inputs ($w, x$)** | $w, x$ | $\bar{w} = \bar{x} = \bar{a}\frac{\partial a}{\partial w} + \bar{b}\frac{\partial b}{\partial w} = 1312(2) + 11808(6)$ | $\bar{w} = \bar{x} = 73472$ |
+| **6. Inputs ($y, z$)** | $y, z$ | $\bar{y} = \bar{z} = \bar{a}\frac{\partial a}{\partial y} + \bar{b}\frac{\partial b}{\partial y} = 1312(2) + 11808(-6)$ | $\bar{y} = \bar{z} = -68224$ |
+:::
+
+::: {.slide title="Executing the Backward Sweep in Plain Python"}
+[Code Verification]{.kicker}
+
+Because $\bar{a} = 1312$ and $\bar{b} = 11808$ already summarize the entire upper graph, each additional input costs only $2$ multiplications at the bottom layer:
+
+@multivariable-calculus-the-backpropagation-algorithm-2
+
 ::: {.d2l-note}
-**Answer.** $1312\cdot 2 + 11808\cdot 6 = 73472$ and
-$1312\cdot 2 - 11808\cdot 6 = -68224$. The sign flips because $y$ enters
-$b = (w+x-y-z)^2$ with a minus.
-:::
+Symmetry check: $w$ and $x$ enter $a$ and $b$ only through $w + x$, so $\bar{w} = \bar{x} = 73472$; similarly $y$ and $z$ enter only through $y + z$ with a minus sign in $b$, so $\bar{y} = \bar{z} = -68224$.
 :::
 :::
 
-::: {.slide title="Autograd Runs the Same Backward Pass"}
+::: {.slide title="Verifying Hand Adjoints Against Framework Autograd"}
+[Framework Execution]{.kicker}
+
+Every modern automatic differentiation engine executes this exact two-phase algorithm—recording values during the forward pass and accumulating adjoints during `backward()`:
+
 @multivariable-calculus-the-backpropagation-algorithm-3
 
-- The forward pass records values and edge derivatives; the backward pass accumulates adjoints.
-- The result equals the hand computation exactly: integers below $2^{24}$.
-- This is backpropagation.
-:::
-
-::: {.slide title="Recap: Sum over Paths, Grouped from the Output"}
-[Wrap-up]{.kicker}
-
-- Total derivative = sum over paths of products of edge derivatives.
-- Edge $\partial f/\partial p = 1$, total $\mathrm{d}f/\mathrm{d}p = 2p + 1 = 7$ on the skip-edge graph.
-- Forward mode: one input per pass, $24$ multiplications for four inputs.
-- Backward pass: every adjoint in one pass, $12$ multiplications; $\bar w = 73472$, $\bar y = -68224$.
-- One output and many inputs: go backward.
-
 ::: {.d2l-note}
-Next: a layer maps a vector to a vector, so its edge derivatives are
-matrices, and the order of multiplication decides the cost.
+The framework returns `[73472., 73472., -68224., -68224.]`, matching our hand calculation bit-for-bit because every integer intermediate is below $2^{24} \approx 1.68 \times 10^7$, the exact integer limit of IEEE 754 `float32`.
 :::
 :::
+
+::: {.slide title="Practical Pitfall: Gradient Checks in Float32"}
+[Numerical Verification]{.kicker}
+
+When verifying a custom backward pass against central finite differences $D_0 f(w) = \frac{f(w+h) - f(w-h)}{2h}$, why must gradient checks always run in `float64` rather than `float32`?
+
+::: {.cols}
+::: {.col}
+- **Two competing error sources:** By Taylor's theorem, central differencing has $O(h^2)$ **truncation error** $\tfrac{1}{6}f'''(\xi)h^2$ for large $h$, but subtracting two nearly equal floats $f(w+h) \approx f(w-h)$ amplifies **roundoff error** as $O(\varepsilon_{\text{mach}}|f|/h)$ for small $h$.
+- **Optimal step scaling:** Balancing $h^2 \sim \varepsilon_{\text{mach}}/h$ puts the optimal step at $h^\star \propto \varepsilon_{\text{mach}}^{1/3}$ and minimum relative error at $O(\varepsilon_{\text{mach}}^{2/3})$.
+:::
+
+::: {.col}
+- **Double precision (`float64`, $\varepsilon_{\text{mach}} \approx 2.2 \times 10^{-16}$):** Achieves $\sim 10^{-11}$ relative error near $h^\star \approx 10^{-5}$, cleanly catching subtle derivative bugs.
+- **Single precision (`float32`, $\varepsilon_{\text{mach}} \approx 1.2 \times 10^{-7}$):** Best relative error stalls around $\sim 10^{-4}$ near $h^\star \approx 10^{-2}$, and for $h \le 10^{-8}$ rounding makes $w + h == w$ in `float32`, returning an estimate of **exact zero**!
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: Chain Rule on Computation Graphs"}
+[Review & Practice]{.kicker}
+
+Work out these three questions on computation graphs and adjoints:
+
+1. **Edge vs. total derivative:** In the graph $p = x + y$, $r = p^2$, $f = r + 3p$, what are the edge derivative $\frac{\partial f}{\partial p}$ and the total derivative (adjoint) $\bar{p} = \frac{\mathrm{d}f}{\mathrm{d}p}$ at $p = 4$?
+2. **Shared intermediate adjoint:** In a network with two hidden units $h_1, h_2$, prediction $f = v_1 h_1 + v_2 h_2$, and loss $\ell = \tfrac{1}{2}(f - t)^2$, which adjoint is computed once and reused by every weight in the network?
+3. **Symmetry Pitfall (Weight Initialization):** If two hidden units $h_1 = \tanh(w_1 x + b_1)$ and $h_2 = \tanh(w_2 x + b_2)$ are initialized identically ($w_1 = w_2$, $b_1 = b_2$, $v_1 = v_2$), what happens to their adjoints $\bar{w}_1, \bar{w}_2$ during backpropagation?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. The direct edge derivative holding $r$ fixed is $\frac{\partial f}{\partial p} = 3$. The total derivative sums both paths out of $p$: $\bar{p} = \frac{\partial f}{\partial r}\frac{\partial r}{\partial p} + \frac{\partial f}{\partial p} = 1(2p) + 3 = 2(4) + 3 = 11$.
+2. Every parameter path to $\ell$ passes through $f$, so the prediction adjoint $\bar{f} = \frac{\mathrm{d}\ell}{\mathrm{d}f} = f - t$ is computed once and shared by all parameters.
+3. Because the two paths are symmetric, $\bar{h}_1 = \bar{h}_2$, $\bar{w}_1 = \bar{w}_2$, and $\bar{b}_1 = \bar{b}_2$ at every step—so gradient descent updates both units identically forever! Hidden units must be initialized with random asymmetry.
+:::
+:::
+
+::: {.slide title="Summary: Computation Graphs & Backpropagation"}
+[Key Takeaways]{.kicker}
+
+| Concept / Method | Mathematical Formula | Computational & Architectural Role |
+| :--- | :--- | :--- |
+| **Edge Derivative ($\partial$)** | $\frac{\partial c}{\partial n}$ (other direct parents of $c$ fixed) | Local sensitivity of a single elementary operation |
+| **Total Derivative ($\mathrm{d}$ / $\bar{n}$)** | $\bar{n} = \frac{\mathrm{d}f}{\mathrm{d}n}$ (all downstream nodes respond) | True sensitivity of final output $f$ to intermediate node $n$ |
+| **Path-Sum Chain Rule** | $\frac{\mathrm{d}f}{\mathrm{d}x} = \sum_{\text{paths } x \to f} \prod_{(u \to v)} \frac{\partial v}{\partial u}$ | Explains skip-connection gradient highways ($2^m$ paths in ResNets) |
+| **Forward-Mode Sweep** | $\dot{n} = \frac{\mathrm{d}n}{\mathrm{d}x_j} = \sum_{p \in \mathrm{parents}(n)} \frac{\partial n}{\partial p}\dot{p}$ | Pushes one input seed forward; requires $N$ sweeps for $N$ parameters |
+| **Reverse-Mode (Backprop)** | $\bar{f} = 1$, $\bar{n} = \sum_{c \in \mathrm{children}(n)} \bar{c}\frac{\partial c}{\partial n}$ | Pulls one output seed backward; computes all $N$ gradients in $1$ sweep |
+| **Central-Difference Check** | $\frac{f(w+h)-f(w-h)}{2h} = f'(w) + O(h^2) + O(\frac{\varepsilon_{\text{mach}}}{h})$ | Must run in `float64` ($h \approx 10^{-5}$) to avoid `float32` roundoff floor |
+:::
+

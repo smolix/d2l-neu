@@ -1390,391 +1390,428 @@ subgradient in floating point, the effect on training is negligible.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §23.1]{.kicker}
+[Dive into Deep Learning · §34.1]{.kicker}
 
-Single Variable Calculus<br>**the derivative · the rules · gradient descent · curvature and Taylor · corners**
+Single-Variable Calculus<br>**linear approximation · differentiation rules · Mean Value Theorem · Taylor remainder · descent lemma · Newton's method · subgradients**
 :::
 :::
 
-::: {.slide title="A Weight Moves by 0.1 and the Loss Drops by 0.0488"}
-[The problem]{.kicker}
+::: {.slide title="Local Slope Prediction and Curvature Drift"}
+[Motivation]{.kicker}
 
-One example, one weight, the logistic loss $\ell(w)=\log(1+e^{-w})$:
+Gradient descent inspects a loss surface only through its value and derivatives at the current parameter $w$. How accurately does the local slope predict the loss a short distance away?
 
-- $\ell(0)=0.6931$ and $\ell(0.1)=0.6444$;
-- a line of slope $-\tfrac12$ through $w=0$ predicts $0.6431$;
-- the $0.00125$ left over is the bend of the curve, about $\tfrac12\cdot\tfrac14\cdot0.1^2$.
+::: {.cols}
+::: {.col}
+- **Concrete 1D benchmark:** Take a single scalar weight $w$ and the logistic loss $\ell(w) = \log(1 + e^{-w})$, which equals the softplus $s(-w)$ where $s(x) = \log(1 + e^x)$.
+- **First-order prediction at $w = 0$:** The loss is $\ell(0) = \log 2 \approx 0.693147$ and the slope is $\ell'(0) = -\tfrac{1}{2}$. Stepping to $w = 0.1$ along the tangent line predicts $0.693147 - 0.5(0.1) = 0.643147$.
+:::
 
-::: {.d2l-note .warn}
-An optimizer sees only the slope and the bend. How far can a line be
-trusted, how large a step is safe, and what is the slope at a corner?
+::: {.col}
+- **Second-order curvature gap:** The true loss is $\ell(0.1) \approx 0.644397$, leaving a gap of $0.001250$.
+- **Why the gap has exact structure:** At $w = 0$, the curvature is $\ell''(0) = \tfrac{1}{4}$, and the prediction error is $\tfrac{1}{2}\ell''(0)(0.1)^2 = \tfrac{1}{8}(0.01) = 0.00125$. The slope makes the linear prediction; the curvature governs how fast that prediction drifts as the step grows.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- predict a change from the slope and bound the error from the curvature;
-- differentiate any closed form with three rules, e.g. $\mathrm{softplus}'=\sigma$;
-- certify a step size for gradient descent from a curvature bound;
-- tell a minimum from a maximum, and run Newton's method;
-- say what a slope means at a corner.
-
-**Running example:** the softplus $s(x)=\log(1+e^x)$, with $\ell(w)=s(-w)$.
-
-**The idea:** near a point a smooth function looks like a line, plus a bend.
+::: {.d2l-note}
+Every multivariable loss $\ell(w_1, \ldots, w_n)$ reduces to a single-variable slice when all weights except $w_i$ are held fixed.
+:::
 :::
 
-::: {.slide title="One Variable First, Then Many"}
-[Where this fits]{.kicker}
+::: {.slide title="Zooming In: Smooth Curves Flatten onto Tangents"}
+[Geometric Intuition]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| **Single Variable Calculus** | **derivative, Taylor, corners** |
-| Multivariable Calculus | gradient, Hessian, critical points |
-| The Chain Rule on Computational Graphs | sum over paths, backward pass |
-| Matrix Calculus | Jacobians, a layer's backward rule |
-| Automatic Differentiation | forward and reverse mode |
-| Integral Calculus | areas, change of variables, the Gaussian integral |
-| Expectations and Their Gradients | score-function and pathwise estimators |
+- **Local linearity:** When we magnify the graph of a smooth function $f(x)$ around a base point $x_0$, the curve flattens until it is visually indistinguishable from a straight line.
+- **Shrink the viewing window:** For $f(x) = \sin(x^x)$ near $x_0 = 2$, shrinking the half-width tenfold from $0.6$ to $0.06$ and then $0.006$ causes the curved graph (solid) to collapse onto its tangent line (dashed).
+- **The core optimization question:** The derivative is the slope of this limiting line, while the second derivative measures how rapidly the curve bends away from it as the window widens.
 :::
 
-::: {.col .narrow}
-- **Uses:** school calculus.
-- **Skips:** many variables, integrals.
-:::
-:::
-:::
-
-::: {.slide title="The Secant Slope Converges to the Tangent Slope"}
-[The derivative]{.kicker}
-
-::: {.cols .vc}
 ::: {.col .fig}
-![Zooming in: the curve flattens onto its tangent.](../img/mdl-cal-zoom-sequence.svg){width=98%}
+![](../img/mdl-cal-zoom-sequence.svg){width=100%}
+:::
+:::
 :::
 
+::: {.slide title="From Secant Difference Quotients to Tangents"}
+[The Derivative]{.kicker}
+
+::: {.cols .vc}
 ::: {.col}
-$f(x)=x^2+1701(x-4)^3$ at $x=4$: the secant slope is $8+\epsilon+1701\epsilon^2$.
+- **Secant slope (difference quotient):** The straight line joining $(x, f(x))$ and $(x+\epsilon, f(x+\epsilon))$ has slope:
+  $$\frac{f(x+\epsilon) - f(x)}{\epsilon}$$
+- **Passing to the limit:** As $\epsilon \to 0$, the secant line rotates into the tangent line, and its limiting slope defines the **derivative** $f'(x) = \frac{df}{dx}(x)$.
+- **When the limit exists:** We say $f$ is *differentiable* at $x$; if left and right secant limits disagree (as for $|x|$ at $x = 0$), no tangent line exists.
+:::
 
+::: {.col .fig}
+![](../img/mdl-cal-secant-to-tangent.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Why Finite-Difference Step Sizes Are Fragile"}
+[Numerical Pitfalls]{.kicker}
+
+How small must $\epsilon$ be before a finite difference $(f(x+\epsilon)-f(x))/\epsilon$ accurately estimates $f'(x)$? There is no universal threshold because higher-order terms can dominate at moderate step sizes:
+
+::: {.cols .vc}
+::: {.col}
+- **A high-curvature polynomial:** Take $f(x) = x^2 + 1701(x-4)^3$ at $x = 4$, where the true derivative is $f'(4) = 2(4) = 8$.
+- **Exact difference quotient:** Expanding $f(4+\epsilon) - f(4) = 8\epsilon + \epsilon^2 + 1701\epsilon^3$ yields the secant slope $8 + \epsilon + 1701\epsilon^2$.
+- **Delayed convergence:** At $\epsilon = 0.1$, the cubic term adds $17.01$, yielding $25.11$ (over $3\times$ the true slope). Automatic differentiation avoids choosing $\epsilon$ entirely by propagating exact derivative rules.
+:::
+
+::: {.col .fig}
 @!single-variable-calculus-differential-calculus-4
-
-The limit is $f'(4)=8$.
 :::
 :::
 :::
 
-::: {.slide title="The Derivative Is the Slope of the Linear Approximation"}
-[The derivative]{.kicker}
+::: {.slide title="Linear Approximation and Little-o Remainder"}
+[First-Order Model]{.kicker}
 
-$$f'(x)=\lim_{\epsilon\to0}\frac{f(x+\epsilon)-f(x)}{\epsilon}$$
+Rearranging the limit definition of $f'(x)$ into a local perturbation expansion provides the workhorse formulation used to prove multivariable and matrix calculus rules:
 
 ::: {.d2l-note .rule}
-$$f(x+\epsilon)=f(x)+\epsilon f'(x)+o(\epsilon),\qquad o(\epsilon)/\epsilon\to0$$
+**Equivalence of Derivative and Linear Approximation:** A function $f$ is differentiable at $x$ with derivative $f'(x)$ if and only if
+$$f(x + \epsilon) = f(x) + \epsilon f'(x) + o(\epsilon)$$
+where the remainder $r(\epsilon) = o(\epsilon)$ vanishes faster than the step itself: $\lim_{\epsilon \to 0} r(\epsilon)/\epsilon = 0$.
 :::
 
-- The problem slide's line is this with $\ell'(0)=-\tfrac12$.
-- Boundary: $|x|$ at $0$ has quotients $+1$ and $-1$, so no limit.
+- **Proof of equivalence:** Setting $r(\epsilon) = f(x+\epsilon) - f(x) - \epsilon a$ and dividing by $\epsilon$ gives $\frac{f(x+\epsilon)-f(x)}{\epsilon} - a = \frac{r(\epsilon)}{\epsilon}$, so the right side tends to $0$ as $\epsilon \to 0$ if and only if the difference quotient converges to $a = f'(x)$.
+- **Differentiability implies continuity:** Because $f(x+\epsilon) - f(x) = \epsilon f'(x) + o(\epsilon)$ $\to$ $0$ as $\epsilon \to 0$, every function differentiable at $x$ is necessarily continuous at $x$.
 :::
 
-::: {.slide title="The Product Rule Is Two Strips of a Growing Rectangle"}
-[The rules]{.kicker}
+::: {.slide title="Elementary Derivatives and Why Base e Is Special"}
+[Differentiation Rules]{.kicker}
 
-Sum: $(g+h)'=g'+h'$. Product: $(gh)'=gh'+g'h$. Chain: $(g\circ h)'=g'(h)\,h'$.
+Automatic differentiation engines decompose every loss into a short table of elementary primitives whose derivatives are known in closed form:
 
-Product, exactly: add and subtract $g(x+\epsilon)h(x)$,
+| Primitive Function | Derivative Formula | Domain & Key Property |
+| :--- | :--- | :--- |
+| **Constants & Linear** | $\frac{d}{dx}c = 0$, $\frac{d}{dx}(ax) = a$ | Exact zero curvature everywhere on $\mathbb{R}$ |
+| **Power Rule** | $\frac{d}{dx}x^n = nx^{n-1}$ | All real $n$ on $x > 0$ (via $x^n = e^{n\log x}$) |
+| **Exponential** | $\frac{d}{dx}e^x = e^x$, $\frac{d}{dx}a^x = (\log a)\,a^x$ | Unique base $e$ where slope at $0$ equals $1$ |
+| **Natural Logarithm** | $\frac{d}{dx}\log x = \frac{1}{x}$ | Inverse of $e^x$ on $x > 0$ |
+| **Sine & Cosine** | $\frac{d}{dx}\sin x = \cos x$, $\frac{d}{dx}\cos x = -\sin x$ | Periodic with period $2\pi$ on $\mathbb{R}$ |
 
-$$\frac{g h\big|_{x+\epsilon}-gh\big|_x}{\epsilon}=g(x+\epsilon)\frac{\Delta h}{\epsilon}+h(x)\frac{\Delta g}{\epsilon}\to gh'+hg'$$
-
-- The strips $g\,\Delta h$ and $h\,\Delta g$ give the rate.
-- The corner $\Delta g\,\Delta h$ is of order $\epsilon^2$ and drops out.
-:::
-
-::: {.slide title="Rates Multiply Along a Composition: $s' = \sigma$"}
-[The rules]{.kicker}
-
-- $s(x)=\log(1+e^x)$: outer $\log$, inner $1+e^x$, so $s'=\frac{e^x}{1+e^x}=\sigma(x)$.
-- $\sigma=(1+e^{-x})^{-1}$ gives $\sigma'=\sigma(1-\sigma)$: $\sigma(0)=\tfrac12$, $\sigma'(0)=\tfrac14$.
-- Inverse: $\mathrm{logit}'(p)=\frac{1}{p(1-p)}$, so $\mathrm{logit}'(\tfrac12)=4=1/\sigma'(0)$.
-- Loss: $\ell'(0)=-\sigma(0)=-\tfrac12$, $\ell''(0)=\tfrac14$.
-:::
-
-::: {.slide title="Check: How Large Is the Gap at $\epsilon = 0.01$?"}
-[Check]{.kicker}
-
-The line $\ell(0)-\tfrac12\epsilon$ misses $\ell(\epsilon)$ by about
-$\tfrac12\ell''(0)\,\epsilon^2$. What is the gap at $\epsilon=0.01$?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $\tfrac18\cdot10^{-4}=1.25\times10^{-5}$. The gap falls a
-hundredfold per tenfold smaller step:
+**Why $a^x$ has slope proportional to height:** The difference quotient factors as $\frac{a^{x+\epsilon}-a^x}{\epsilon} = a^x \frac{a^\epsilon - 1}{\epsilon}$ $\to$ $c_a a^x$, where $c_a = \lim_{\epsilon \to 0}(a^\epsilon - 1)/\epsilon = \log a$ is the slope at $x = 0$ ($c_2 \approx 0.69315$, $c_e = 1$, $c_{10} \approx 2.30259$).
 :::
+:::
+
+::: {.slide title="Proving Sum, Product, and Chain Rules Locally"}
+[Algebra of Derivatives]{.kicker}
+
+Substituting the linear approximation $g(x+\epsilon) = g(x) + \epsilon g'(x) + o(\epsilon)$ directly proves the combination rules without fragile divisions by zero:
+
+- **Sum rule $(g + h)'(x) = g'(x) + h'(x)$:** Adding the linear expansions gives $g(x+\epsilon) + h(x+\epsilon) = g(x) + h(x) + \epsilon(g'(x) + h'(x)) + o(\epsilon)$ because the sum of two $o(\epsilon)$ remainders is still $o(\epsilon)$.
+- **Product rule $(gh)'(x) = g(x)h'(x) + g'(x)h(x)$:** Adding and subtracting $g(x+\epsilon)h(x)$ splits the difference quotient into $g(x+\epsilon)\frac{h(x+\epsilon)-h(x)}{\epsilon} + h(x)\frac{g(x+\epsilon)-g(x)}{\epsilon}$, and continuity sends $g(x+\epsilon) \to g(x)$.
+- **Chain rule $\frac{d}{dx}g(h(x)) = g'(h(x))\,h'(x)$:** Write the outer expansion at $y = h(x)$ with error ratio $\rho(t) \to 0$ (extended by $\rho(0) = 0$) so it holds even when $t = h(x+\epsilon) - h(x) = 0$:
+  $$g(h(x) + t) - g(h(x)) = \bigl(g'(h(x)) + \rho(t)\bigr)\bigl(\epsilon h'(x) + o(\epsilon)\bigr) = \epsilon\, g'(h(x))\,h'(x) + o(\epsilon)$$
+:::
+
+::: {.slide title="Inverse Functions, Softplus, Sigmoid, and Logit"}
+[Running Example]{.kicker}
+
+Applying the chain rule and inverse-function rule to our running softplus function $s(x) = \log(1 + e^x)$ yields the core derivatives of binary classification:
+
+::: {.cols}
+::: {.col}
+- **Inverse-function rule:** Differentiating $g(f(x)) = x$ gives $g'(f(x))f'(x) = 1$, so $g'(y) = 1/f'(g(y))$ whenever $f'(g(y)) \ne 0$.
+- **Softplus $\to$ Sigmoid:** With outer $\log u$ and inner $u = 1 + e^x$:
+  $$s'(x) = \frac{e^x}{1 + e^x} = \frac{1}{1 + e^{-x}} = \sigma(x)$$
+:::
+
+::: {.col}
+- **Sigmoid curvature:** Differentiating $\sigma(x) = (1 + e^{-x})^{-1}$ gives:
+  $$\sigma'(x) = \frac{e^{-x}}{(1+e^{-x})^2} = \sigma(x)\bigl(1 - \sigma(x)\bigr)$$
+  which peaks at $x = 0$ with $\sigma(0) = \tfrac{1}{2}$ and $\sigma'(0) = \tfrac{1}{4}$.
+- **Logit inverse:** Since $\mathrm{logit}(p) = \log\frac{p}{1-p} = \sigma^{-1}(p)$, its slope is $\mathrm{logit}'(p) = \frac{1}{p(1-p)}$ (equal to $4 = 1/\sigma'(0)$ at $p = \tfrac{1}{2}$).
+:::
+:::
+:::
+
+::: {.slide title="Numerical Verification of Quadratic Error Decay"}
+[Empirical Check]{.kicker}
+
+For the logistic loss $\ell(w) = s(-w) = \log(1+e^{-w})$, the chain rule gives $\ell'(0) = -\sigma(0) = -\tfrac{1}{2}$ and curvature $\ell''(0) = \sigma(0)(1-\sigma(0)) = \tfrac{1}{4}$. Shrinking $\epsilon$ tenfold shrinks the linear-model gap a hundredfold:
 
 @!mdl-single-variable-calculus-the-softplus-the-sigmoid-and-the-logit-1
+
+::: {.d2l-note}
+The ratio $\text{gap}/\epsilon^2$ converges to $\tfrac{1}{2}\ell''(0) = \tfrac{1}{8} = 0.1250$. The slight discrepancy $0.1249$ at $\epsilon = 0.1$ comes from the fourth-order Taylor term $-\epsilon^4/192$.
 :::
 :::
 
-::: {.slide title="Some Interior Tangent Is Parallel to the Chord"}
-[Mean value theorem]{.kicker}
+::: {.slide title="Fermat's Lemma and the Mean Value Theorem"}
+[From Points to Intervals]{.kicker}
+
+To infer function behavior across an entire interval $[a, b]$ from pointwise derivatives, calculus relies on Fermat's lemma and the Mean Value Theorem (MVT):
 
 ::: {.cols .vc}
-::: {.col .fig}
-![The chord and the parallel tangent at $\xi$.](../img/mdl-cal-mvt.svg){width=98%}
-:::
-
 ::: {.col}
-$f$ continuous on $[a,b]$, differentiable inside:
-$$f'(\xi)=\frac{f(b)-f(a)}{b-a},\ \ \xi\in(a,b)$$
-
-- $x^2$ on $[0,2]$: slope $2$ at $\xi=1$.
-- $|x|$ on $[-1,1]$: flat chord, no slope $0$.
-- So $f'>0$ on an interval makes $f$ increasing.
-:::
-:::
+- **Fermat's lemma:** If $f$ attains an interior local extremum at $\xi$ and is differentiable there, left and right difference quotients have opposite signs, forcing $f'(\xi) = 0$.
+- **Mean Value Theorem:** If $f$ is continuous on $[a,b]$ and differentiable on $(a,b)$, subtracting the secant chord and applying Rolle's theorem yields an interior $\xi \in (a,b)$ where the tangent is parallel to the chord:
+  $$f'(\xi) = \frac{f(b) - f(a)}{b - a}$$
+- **Differentiability everywhere inside is essential:** On $[-1,1]$, $|x|$ has a horizontal chord ($|-1|=|1|$), yet no point has slope $0$.
 :::
 
-::: {.slide title="Stepping Against the Slope Lowers the Linear Model by $\eta f'(x)^2$"}
-[Gradient descent]{.kicker}
-
-::: {.cols .vc}
 ::: {.col .fig}
-![One gradient step against the slope.](../img/mdl-cal-gd-step.svg){width=98%}
-:::
-
-::: {.col}
-$$x_{t+1}=x_t-\eta f'(x_t),\quad \eta>0$$
-
-- Predicted change $-\eta f'(x)^2<0$ if $f'(x)\neq0$.
-- On $\ell$ from $w=0$: step $\eta/2$, predicted drop $\eta/4$.
-- The line cannot see the bend: a big step can overshoot.
+![](../img/mdl-cal-mvt.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="On $x^2$ the Iterates $(1-2\eta)^t x_0$ Converge for $0<\eta<1$"}
-[Gradient descent]{.kicker}
+::: {.slide title="Consequences of MVT and 1D Gradient Descent"}
+[First-Order Optimization]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .narrow}
+::: {.col}
+- **Interval guarantees from MVT:** Since $f(x_2) - f(x_1) = f'(\xi)(x_2 - x_1)$, $f' > 0$ on an interval implies $f$ is strictly increasing, $f' < 0$ implies strictly decreasing, and a sign change of $f'$ from $-$ to $+$ across $x_0$ certifies a strict local minimum.
+- **1D gradient descent update:** Stepping opposite the slope by $\epsilon = -\eta f'(x_t)$ with learning rate $\eta > 0$ gives:
+  $$x_{t+1} = x_t - \eta\, f'(x_t)$$
+- **First-order drop vs. overshoot:** The linear model predicts $f(x - \eta f'(x)) - f(x) \approx -\eta f'(x)^2 < 0$, but because a line ignores curvature, too large an $\eta$ overshoots the valley.
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-gd-step.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Five Step-Size Regimes on a Quadratic Bowl"}
+[Stability Threshold]{.kicker}
+
+On $f(x) = x^2$, where $f'(x) = 2x$ and curvature is $f''(x) \equiv 2$, gradient descent obeys the exact recurrence $x_{t+1} = (1 - 2\eta)x_t = (1 - 2\eta)^{t+1}x_0$, converging if and only if $|1 - 2\eta| < 1$ ($0 < \eta < 1 = 2/f''$):
+
+::: {.cols .vc}
+::: {.col}
+- **$0 < \eta < \tfrac{1}{2}$ (Cautious monotone):** At $\eta = 0.05$, iterates creep down one side of the bowl ($x_{10} = 0.349$).
+- **$\eta = \tfrac{1}{2} = 1/f''$ (Exact one-step):** Lands at $x_1 = 0$ immediately.
+- **$\tfrac{1}{2} < \eta < 1$ (Damped oscillation):** At $\eta = 0.9$, iterates jump across the valley and decay ($x_{10} = 0.107$).
+- **$\eta = 1 = 2/f''$ vs. $\eta > 1$:** At $\eta = 1$, iterates bounce forever between $\pm x_0$; at $\eta = 1.1$, they explode ($x_{10} = +6.19$).
+:::
+
+::: {.col .fig}
 @!single-variable-calculus-gradient-descent
 :::
-
-::: {.col}
-- $0<\eta<\tfrac12$: slow and monotone.
-- $\eta=\tfrac12$: one step.
-- $\tfrac12<\eta<1$: alternates inward.
-- $\eta=1$: the two-cycle $\pm x_0$.
-- $\eta>1$: diverges ($6.2$ after ten steps at $1.1$).
-:::
 :::
 :::
 
-::: {.slide title="The Sign of $f''$ at a Stationary Point Decides Minimum or Maximum"}
-[Curvature]{.kicker}
-
-::: {.cols .vc}
-::: {.col .fig .big}
-![Rows: bowl, dome, and the silent case.](../img/mdl-cal-second-derivative-1d.svg){width=98%}
-:::
-
-::: {.col}
-- $f'(x_0)=0$, $f''(x_0)>0$: $f'$ goes from $-$ to $+$, a minimum (via the mean value theorem).
-- $f''(x_0)=0$ is silent: $x^3$, $x^4$, $-x^4$.
-:::
-:::
-:::
-
-::: {.slide title="Matching $n$ Derivatives Gives the Taylor Polynomial $P_n$"}
-[Taylor]{.kicker}
+::: {.slide title="Curvature and the Second-Derivative Test"}
+[Second-Order Geometry]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$$P_n(x)=\sum_{i=0}^n\frac{f^{(i)}(x_0)}{i!}(x-x_0)^i$$
-
-- $n=1$: the tangent; $n=2$: the best parabola.
-- Softplus at $0$: $\log2+\tfrac x2+\tfrac{x^2}8-\tfrac{x^4}{192}$.
-- At $x=0.5$: $0.974072$ against $0.974077$.
+- **Second derivative $f'' = \frac{d^2 f}{dx^2}$:** Measures the rate of change of the slope $f'$.
+- **Strict local minimum ($f'(x_0)=0, f''(x_0)>0$):** Since $\lim_{\epsilon \to 0} f'(x_0+\epsilon)/\epsilon > 0$, the slope $f'$ is negative just left of $x_0$ and positive just right; by MVT, $f$ falls into $x_0$ and rises out of it (top row: bowl).
+- **Strict local maximum ($f'(x_0)=0, f''(x_0)<0$):** Slope $f'$ goes from $+$ to $-$ (middle row: dome).
+- **Inconclusive flat case ($f''(x_0)=0$):** At $x_0 = 0$, $x^3$ (inflection), $x^4$ (minimum), and $-x^4$ (maximum) all have $f'(0) = f''(0) = 0$ (bottom row).
 :::
 
 ::: {.col .fig}
-![](../img/mdl-cal-best-parabola.svg)
+![](../img/mdl-cal-second-derivative-1d.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Halving the Window Divides the Error of $P_n$ by $2^{n+1}$"}
+::: {.slide title="Higher-Order Local Models: Taylor Polynomials"}
+[Taylor Expansion]{.kicker}
+
 ::: {.cols .vc}
 ::: {.col}
-$$f=P_n+R_n,\quad R_n=\frac{f^{(n+1)}(\xi)}{(n+1)!}(x-x_0)^{n+1}$$
-
-with $\xi$ between $x_0$ and $x$. On $|x|\le h$ the error of $P_n$ for $e^x$ grows like $h^{n+1}$: log–log slopes $2, 3, 4$.
+- **Matching $n$ derivatives at $x_0$:** The unique degree-$n$ polynomial whose value and first $n$ derivatives match $f$ at $x_0$ is the **Taylor polynomial**:
+  $$P_n(x) = \sum_{i=0}^{n} \frac{f^{(i)}(x_0)}{i!}(x - x_0)^i$$
+- **Tangent line ($P_1$) vs. best parabola ($P_2$):** For $\sin x$, $P_2(x) = \sin x_0 + \cos x_0(x-x_0) - \tfrac{1}{2}\sin x_0(x-x_0)^2$ hugs the bend over a much wider window than $P_1$.
+- **Softplus at $x_0 = 0$:** Since $s'''(0) = 0$ and $s^{(4)}(0) = -\tfrac{1}{8}$, $P_4(x) = \log 2 + \tfrac{x}{2} + \tfrac{x^2}{8} - \tfrac{x^4}{192}$, matching $s(0.5)$ to $5 \times 10^{-6}$.
 :::
 
-::: {.col .narrow}
+::: {.col .fig}
+![](../img/mdl-cal-best-parabola.svg){width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Lagrange Remainder: Exact Error via Rolle's Theorem"}
+[Error Bounds]{.kicker}
+
+How far can we trust the degree-$n$ Taylor polynomial $P_n(x)$? Applying Rolle's theorem to a telescoping auxiliary function yields an exact formula for the remainder $R_n(x) = f(x) - P_n(x)$:
+
+::: {.d2l-note .rule}
+**Proposition (Lagrange Remainder):** If $f$ is $(n+1)$-times differentiable on an open interval containing $x_0$ and $x$, then for some $\xi$ strictly between $x_0$ and $x$,
+$$f(x) = P_n(x) + R_n(x), \qquad R_n(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!}(x - x_0)^{n+1}$$
+:::
+
+- **Proof mechanism:** Fix $x$ and vary the base point $t$ in $G(t) = f(x) - \sum_{k=0}^n \frac{f^{(k)}(t)}{k!}(x-t)^k - M\frac{(x-t)^{n+1}}{(n+1)!}$, choosing $M$ so $G(x_0) = 0$. Since $G(x) = 0$ as well, Rolle's theorem gives an interior $\xi$ with $G'(\xi) = 0$.
+- **Telescoping derivative:** By the product rule, adjacent terms in $G'(t)$ cancel pairwise, leaving $G'(t) = \bigl(M - f^{(n+1)}(t)\bigr)\frac{(x-t)^n}{n!}$, so $G'(\xi) = 0$ forces $M = f^{(n+1)}(\xi)$.
+- **Key special cases:** $n = 0$ recovers the Mean Value Theorem; $n = 1$ gives $f(x) = f(x_0) + f'(x_0)(x-x_0) + \tfrac{1}{2}f''(\xi)(x-x_0)^2$, the engine of the descent lemma and Newton's method.
+:::
+
+::: {.slide title="Verifying Taylor Remainder Scaling on Log-Log Axes"}
+[Order of Accuracy]{.kicker}
+
+When $|f^{(n+1)}|$ is bounded near $x_0$, the worst-case error of $P_n$ on $|x - x_0| \le h$ scales as $O(h^{n+1})$, so halving the window $h$ divides the error by $2^{n+1}$ ($4$ for $P_1$, $8$ for $P_2$, and $16$ for $P_3$):
+
+::: {.cols .vc}
+::: {.col}
+- **Testing $e^x$ around $x_0 = 0$:** Here $P_n(x) = \sum_{k=0}^n x^k/k!$ and $|e^x - P_n(x)| = \frac{e^\xi |x|^{n+1}}{(n+1)!}$.
+- **Successive halving ratios:** Across windows $h \in \{0.4, 0.2, 0.1, 0.05\}$, consecutive error ratios approach $2^{n+1} = 4, 8, 16$.
+- **Log-log slopes:** On log-log axes, $\log(\text{error}) \approx (n+1)\log h + c$ plots as straight lines of slopes $2$, $3$, and $4$.
+:::
+
+::: {.col .fig}
 @!single-variable-calculus-taylor-error-rate
 :::
 :::
 :::
 
-::: {.slide title="The Series of $e^x$ Converges to $e^x$; Not Every Smooth Function Is Its Series"}
-[Taylor]{.kicker}
+::: {.slide title="Analytic vs. Smooth Functions: When Series Fail"}
+[Analyticity Pitfall]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$$|e^x-P_n(x)|\le\frac{e^{|x|}|x|^{n+1}}{(n+1)!}\to0$$
-
-so $e^x=\sum x^n/n!$ on all of $\mathbb R$.
-
-$e^{-1/x^2}$ has every derivative $0$ at $0$: its series is $\equiv0$ and
-agrees with the function only at $0$. We rely on the finite $P_n$ and its
-remainder, never on the series.
+- **When the infinite series converges to $f$:** For $e^x$, $|R_n(x)| \le \frac{e^{|x|}|x|^{n+1}}{(n+1)!}$ $\to$ $0$ as $n \to \infty$ for every $x \in \mathbb{R}$ because factorials outgrow powers, proving $e^x = \sum_{n=0}^\infty x^n/n!$.
+- **Smooth ($C^\infty$) does not imply analytic:** The flat-valley function $f(x) = e^{-1/x^2}$ (with $f(0) = 0$) is infinitely differentiable everywhere, yet $f^{(n)}(0) = 0$ for every $n \ge 0$.
+- **Why optimization uses finite $P_n$:** Its Taylor series at $0$ is identically $0$, matching $f$ only at $x = 0$. All optimization proofs therefore use finite $P_1$ or $P_2$ with the exact Lagrange remainder $R_n$.
 :::
 
 ::: {.col .fig}
-![$e^{-1/x^2}$ against its Taylor series at $0$, the zero line.](../img/mdl-cal-smooth-not-analytic.svg){width=98%}
+![](../img/mdl-cal-smooth-not-analytic.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="A Curvature Bound $L$ Makes Every Step $\eta < 2/L$ a Descent Step"}
-[Descent lemma]{.kicker}
+::: {.slide title="The Descent Lemma and Safe Step Sizes"}
+[Optimization Guarantee]{.kicker}
+
+Applying the $n = 1$ Lagrange remainder converts a bound $L$ on curvature ($|f''| \le L$, or $L$-Lipschitz gradient $|f'(u)-f'(v)| \le L|u-v|$) into a guaranteed safe step size for gradient descent:
 
 ::: {.cols .vc}
-::: {.col .fig}
-![The quadratic ceiling and its minimizer at $\eta=1/L$.](../img/mdl-cal-descent-lemma.svg){width=92%}
-:::
-
 ::: {.col}
-$$f(x-\eta f')\le f(x)-\eta\Big(1-\frac{L\eta}2\Big)f'^2$$
-
-Proof: $R_1=\tfrac12f''(\xi)u^2\le\tfrac L2u^2$.
-:::
-:::
-
-[Assumes $|f''|\le L$ on the interval of the step and $f'(x)\neq0$.]{.small}
+- **Quadratic upper ceiling:** Since $f''(\xi) \le L$, any step $u$ obeys $f(x+u) \le f(x) + f'(x)u + \tfrac{L}{2}u^2$.
+- **Substituting $u = -\eta f'(x)$:**
+  $$f\bigl(x - \eta f'(x)\bigr) \le f(x) - \eta\Bigl(1 - \frac{L\eta}{2}\Bigr)f'(x)^2$$
+- **Safe range & optimal step:** The loss strictly decreases whenever $0 < \eta < 2/L$ and $f'(x) \ne 0$. The guaranteed decrease is maximized at $\eta = 1/L$ (the vertex of the ceiling parabola), yielding a drop of at least $f'(x)^2/(2L)$.
+- **Logistic loss check:** Since $\ell''(w) \le \tfrac{1}{4} = L$, every $\eta < 8$ is globally safe and $\eta = 1/L = 4$ is optimal.
 :::
 
-::: {.slide title="Check: Which Steps Are Safe for $\ell(w) = \log(1 + e^{-w})$?"}
-[Check]{.kicker}
-
-$\ell''(w)=\sigma(-w)\bigl(1-\sigma(-w)\bigr)$. Which step sizes does the
-descent lemma certify from every $w$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\ell''\le\tfrac14$, so $L=\tfrac14$ and every $\eta<8$.
-From $w=0$ with $\eta=1$: bound $0.4744$, actual $\ell(0.5)=0.4741$.
-With $\eta=4=1/L$: bound $0.1931$, actual $0.1269$.
+::: {.col .fig}
+![](../img/mdl-cal-descent-lemma.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Newton Minimizes the Local Parabola"}
-[Newton]{.kicker}
+::: {.slide title="Newton's Method: Jumping to the Parabola Minimum"}
+[Second-Order Optimization]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig}
-![One Newton step on $x^4/4-x$ from $x_t=2$.](../img/mdl-cal-newton-step.svg){width=98%}
-:::
-
 ::: {.col}
-$$x_{t+1}=x_t-\frac{f'(x_t)}{f''(x_t)}$$
-
-From $x_t=2$: $2-7/12=1.4167$.
-
-$$e_{t+1}=\frac{f'''(\xi_t)}{2f''(x_t)}\,e_t^2$$
-:::
+- **Using local curvature $f''(x_t)$ instead of global $L$:** Fit the local Taylor parabola $q(x) = f(x_t) + f'(x_t)(x-x_t) + \tfrac{1}{2}f''(x_t)(x-x_t)^2$.
+- **Minimizing $q(x)$ when $f''(x_t) > 0$:** Setting $q'(x) = f'(x_t) + f''(x_t)(x-x_t) = 0$ yields **Newton's update**:
+  $$x_{t+1} = x_t - \frac{f'(x_t)}{f''(x_t)}$$
+- **Quadratic convergence near $x^\star$:** Expanding $0 = f'(x^\star)$ around $x_t$ to first order with Lagrange remainder gives the error recurrence $e_{t+1} = \frac{f'''(\xi_t)}{2f''(x_t)}e_t^2$, squaring the error each step.
 :::
 
-[$e_t=x_t-x^\star$; $f$ three times differentiable, $f''(x_t)\neq0$.]{.small}
+::: {.col .fig}
+![](../img/mdl-cal-newton-step.svg){width=100%}
+:::
+:::
 :::
 
-::: {.slide title="Near the Minimizer Newton Squares the Error; Far from It the Full Step Can Diverge"}
-[Newton]{.kicker}
+::: {.slide title="Newton's Quadratic Convergence vs. Far-Out Divergence"}
+[Basin of Attraction]{.kicker}
+
+Near a minimizer with $f''(x^\star) > 0$, Newton's method doubles the number of correct digits per step—but far from $x^\star$, small local curvature makes the parabola nearly flat and flings iterates past the basin of attraction:
 
 @!mdl-single-variable-calculus-newton-s-method
 
-- On $x^4/4-x$: $10^{-2}\to10^{-4}\to10^{-8}$.
-- On the convex $x\arctan x-\tfrac12\log(1+x^2)$, from $1.4$: divergence.
-  From $1.3$ it converges.
-- Far from $0$ the parabola is flat and its minimizer lies far beyond $x^\star$.
-  The remedy is *damping*: shorten the step so that $f$ decreases.
+::: {.d2l-note .warn}
+On the strictly convex function $f(x) = x\arctan x - \tfrac{1}{2}\log(1+x^2)$, where $f'(x)=\arctan x$ and $f''(x)=1/(1+x^2)$, Newton converges from $x_0 = 1.3$ but diverges wildly from $x_0 = 1.4$ ($|x_0| \gtrsim 1.39$) unless the step is **damped**.
+:::
 :::
 
-::: {.slide title="At a Corner the One-Sided Slopes Disagree and Autograd Picks One"}
-[Corners]{.kicker}
+::: {.slide title="Nondifferentiable Corners and Subdifferentials"}
+[Nonsmooth Calculus]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .fig .big}
-![The fans of supporting lines at the corners of $|x|$ and ReLU.](../img/mdl-cal-relu-corner.svg){width=98%}
+::: {.col}
+- **Disagreeing one-sided slopes:** At $x = 0$, $|x|$ has $f'_-(0) = -1$ and $f'_+(0) = +1$, while $\mathrm{ReLU}(x) = \max(0, x)$ has $f'_-(0) = 0$ and $f'_+(0) = +1$.
+- **Convex subgradients:** A slope $g$ is a **subgradient** of a convex function $f$ at $x$ if its line supports the graph from below for all $y$:
+  $$f(y) \ge f(x) + g\,(y - x)$$
+- **The subdifferential $\partial f(x)$:** At a corner, supporting slopes form the interval $[f'_-(x), f'_+(x)]$, so $\partial |x|(0) = [-1, 1]$ and $\partial\,\mathrm{ReLU}(0) = [0, 1]$.
+- **Convex optimality:** A point $x^\star$ is a global minimum of convex $f$ if and only if $0 \in \partial f(x^\star)$.
 :::
 
-::: {.col}
-Subgradients $g$: $f(y)\ge f(x)+g(y-x)$ for all $y$.
+::: {.col .fig}
+![](../img/mdl-cal-relu-corner.svg){width=100%}
+:::
+:::
+:::
 
-$$\partial|x|(0)=[-1,1],\ \ \partial\,\mathrm{ReLU}(0)=[0,1]$$
+::: {.slide title="Smoothing ReLU Explains the Subdifferential Interval"}
+[Limiting Slopes]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Sharpened softplus approximation:** The smooth function $\mathrm{softplus}_\beta(x) = \frac{1}{\beta}\log(1 + e^{\beta x})$ converges uniformly to $\mathrm{ReLU}(x)$ as $\beta \to \infty$.
+- **Slopes fill $[0, 1]$ near the kink:** Its derivative is $\sigma(\beta x)$, which transitions smoothly from $0$ to $1$ across a window of width $O(1/\beta)$ around the origin.
+- **Framework convention at $x = 0$:** At the exact corner $x = 0$, frameworks return one fixed value from $\partial f(0)$ by convention:
 
 @!single-variable-calculus-one-sided
+:::
 
-The value autograd returns is a convention.
+::: {.col .fig}
+![](../img/mdl-cal-softplus-relu.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Smoothing $\mathrm{ReLU}$ Shows the Subdifferential as the Set of Limiting Slopes"}
-[Corners]{.kicker}
+::: {.slide title="Chained Subgradient Quirks in Floating Point"}
+[Autodiff at Kinks]{.kicker}
 
-![Left: $\mathrm{softplus}_\beta$ approaches ReLU. Right: the slopes $\sigma(\beta x)$.](../img/mdl-cal-softplus-relu.svg){width=90%}
+Chaining fixed subgradient conventions across a composite graph can produce a number that is not a valid subgradient of the composite function:
 
-- $\mathrm{softplus}_\beta(x)=\tfrac1\beta s(\beta x)$ has slope $\sigma(\beta x)$.
-- At $x=\pm0.1$: $0.40/0.60$ for $\beta=4$, $0.17/0.83$ for $\beta=16$.
-- $[0,1]$ is the set of slopes approached as $\beta\to\infty$ and $x\to0$ together.
-:::
-
-::: {.slide title="Check: Which of 0, 0.5, 1, 1.5 Are Subgradients of $\mathrm{ReLU}$ at 0?"}
-[Check]{.kicker}
-
-Test each $g$ against $\mathrm{ReLU}(y)\ge g\,y$ for all $y$.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $0$, $0.5$, and $1$: the interval $[0,1]$. The value $1.5$
-fails at $y=1$.
-:::
-
-- For convex $f$: $x$ is a global minimizer $\iff0\in\partial f(x)$.
-- Yet a subgradient step can go uphill: $g=\tfrac12\in\partial|x|(0)$.
-:::
-:::
-
-::: {.slide title="Chained Conventions Can Return a Value That Is Not a Subgradient"}
-[Corners]{.kicker}
-
-$\varphi(x)=\mathrm{ReLU}(x)-\mathrm{ReLU}(-x)=x$, and the chain rule gives
-$\varphi'(0)=0+0$:
+- **The identity function written with two kinks:** For $\varphi(x) = \mathrm{ReLU}(x) - \mathrm{ReLU}(-x) = x$, the true derivative is $1$ everywhere, yet at $x = 0$ mechanical chaining with $\mathrm{ReLU}'(0) = 0$ returns $0 + 0 = 0$:
 
 @!mdl-single-variable-calculus-why-sgd-shrugs
 
-- It needs a pre-activation of exactly $0$: probability zero for draws
-  with densities.
-- In 32-bit arithmetic it happens for a little under half of all
-  initializations, in 64-bit for none (Bertoin et al., 2021).
-- The gradients then differ by about $10^{-3}$, relatively, and training is
-  unaffected for $\mathrm{ReLU}'(0)\in[0,1]$.
+::: {.d2l-note}
+**Why SGD training is unaffected (Bertoin et al., 2021):** Triggering this mismatch requires a pre-activation to land on $0.0$ exactly. In 32-bit `float32` arithmetic, changing $\mathrm{ReLU}'(0)$ within $[0, 1]$ alters gradients on only a few minibatches per million by $\sim 10^{-3}$, producing identical training and test accuracy.
+:::
 :::
 
-::: {.slide title="Lines and Parabolas Predict the Loss; Corners Need a Set of Slopes"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Single-Variable Calculus"}
+[Review & Practice]{.kicker}
 
-- Line: $\ell(0.1)\approx0.6431$; the gap $0.00125\approx\tfrac18\cdot0.1^2$ is the bend.
-- Rules: $s'=\sigma$, $\sigma'=\sigma(1-\sigma)$.
-- Descent lemma: $L=\tfrac14$ makes every $\eta<8$ safe on $\ell$.
-- Newton squares the error near the minimizer, and can diverge far from it.
-- Corners: $\partial\,\mathrm{ReLU}(0)=[0,1]$; autograd returns one element.
+Work out these three questions using the Taylor remainder, descent lemma, and subdifferential definition:
 
-**Next:** millions of weights move together. Which direction lowers the
-loss, and what is curvature in many variables?
+1. **Taylor error scaling:** For a smooth function with bounded fourth derivative, by what factor does the worst-case error of the cubic Taylor polynomial $P_3(x)$ on $|x - x_0| \le h$ shrink when $h$ is cut by a factor of $3$?
+2. **Safe learning rate:** Suppose a loss $\ell(w)$ satisfies $|\ell''(w)| \le L = 10$ everywhere. Which step sizes $\eta$ are guaranteed by the descent lemma to decrease $\ell$, and which $\eta$ maximizes the guaranteed one-step drop?
+3. **Subgradient optimality:** For $F(x) = |x| + \frac{1}{2}(x - 1)^2$, use $\partial F(0) = \partial|x|(0) + (0 - 1)$ to check whether $x = 0$ is the global minimizer.
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. By the Lagrange remainder, $|R_3(x)| \le \frac{\max|f^{(4)}|}{4!}h^4$, so dividing $h$ by $3$ shrinks the error bound by $3^4 = 81$.
+2. Every step size $0 < \eta < 2/L = 0.2$ is guaranteed to decrease $\ell$, and $\eta^\star = 1/L = 0.1$ maximizes the guaranteed decrease $\ell'(w)^2 / (2L) = \ell'(w)^2 / 20$.
+3. At $x = 0$, $\partial F(0) = [-1, 1] - 1 = [-2, 0]$. Since $0 \in [-2, 0]$, the optimality condition $0 \in \partial F(0)$ holds and $x = 0$ is the unique global minimizer!
 :::
+:::
+
+::: {.slide title="Summary: Single-Variable Calculus Toolkit"}
+[Key Takeaways]{.kicker}
+
+| Concept / Theorem | Mathematical Formulation | Deep Learning & Optimization Role |
+| :--- | :--- | :--- |
+| **Linear Approximation** | $f(x+\epsilon) = f(x) + \epsilon f'(x) + o(\epsilon)$ | Local slope model; proves sum, product, and chain rules |
+| **Softplus & Sigmoid** | $s(x)=\log(1+e^x)$, $s'=\sigma$, $s''=\sigma(1-\sigma) \le \tfrac{1}{4}$ | Smooth counterpart of $\mathrm{ReLU}$; binary logistic loss curvature |
+| **Mean Value Theorem** | $f'(\xi) = \frac{f(b)-f(a)}{b-a}$ for some $\xi \in (a,b)$ | Connects pointwise derivatives to interval monotonicity |
+| **Taylor & Lagrange $R_n$** | $f(x) = \sum_{i=0}^n \frac{f^{(i)}(x_0)}{i!}(x-x_0)^i + \frac{f^{(n+1)}(\xi)}{(n+1)!}(x-x_0)^{n+1}$ | Quantifies $O(h^{n+1})$ truncation error of degree-$n$ local models |
+| **Descent Lemma** | $f(x-\eta f'(x)) \le f(x) - \eta(1 - \frac{L\eta}{2})f'(x)^2$ | Certifies safe learning rates $0 < \eta < 2/L$ and optimal $\eta = 1/L$ |
+| **Newton's Method** | $x_{t+1} = x_t - f'(x_t)/f''(x_t)$, $e_{t+1} \approx \frac{f'''(x^\star)}{2f''(x^\star)}e_t^2$ | Minimizes local parabola $P_2$; quadratic local convergence |
+| **Subdifferential** | $\partial f(x) = \{g : f(y) \ge f(x) + g(y-x)\ \forall y\}$ | Handles $\mathrm{ReLU}$ & $\|x\|$ kinks; global minimum iff $0 \in \partial f(x)$ |
+:::
+

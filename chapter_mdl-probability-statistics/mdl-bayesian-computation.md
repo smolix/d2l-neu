@@ -1637,101 +1637,61 @@ unnormalized distributions.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §27.6]{.kicker}
+[Dive into Deep Learning · §36.8]{.kicker}
 
-Averaging over a posterior known only up to a constant<br>**Bayesian computation**
+Bayesian Computation: Laplace, Importance Sampling, MCMC, and VI<br>**posterior predictive · Laplace approximation · importance sampling & ESS · Metropolis–Hastings · mixing diagnostics · variational inference**
 :::
 :::
 
-::: {.slide title="Far From the Data, One Fitted Model Hides Orders of Magnitude of Doubt"}
-[The problem]{.kicker}
+::: {.slide title="Why Point Estimates Fail Far from Training Data"}
+[Motivation & Core Problem]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- Logistic regression fitted to 20 points with $x\in[0,4]$. At $x=-3$ the
-  fitted line says $P(y=1)=0.004$.
-- Lines that fit almost as well say anything from $4\times10^{-5}$ to $0.09$.
-- Their weighted average is $0.019$: $4.6$ times the fitted answer.
-- At $x=2$, inside the data, the two agree to $0.01$.
+- **1D logistic regression on $n = 20$ points ($x_i \in [0, 4]$):** Inside the training range at $x_\star = 2$, the MAP plug-in ($0.524$) and the posterior average ($0.529$) agree to within $0.01$.
+- **Orders-of-magnitude disagreement outside data:** At $x_\star = -3$, plausible parameter vectors predict anywhere from $4 \times 10^{-5}$ to $0.09$.
+- **Five-fold rare-event shift:** The posterior predictive average is $0.019$—roughly **$4.6\times$ larger** than the MAP plug-in ($0.0041$), bending the log-odds curve back toward zero outside the data.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-2
 :::
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Posterior Predictive and Unnormalized Target"}
+[The Integration Problem]{.kicker}
 
-- fit a Laplace Gaussian at the mode, and say what it misses;
-- sample exactly by rejection, and with weights by importance sampling;
-- build a Metropolis chain and prove that it targets the posterior;
-- read the ESS, $\widehat R$, $\kappa$ and the MCSE;
-- fit a mean-field Gaussian by the ELBO and predict its error.
+Instead of trusting a single point estimate $\hat{\boldsymbol{\theta}}$, Bayesian prediction averages the predictions of all parameter vectors weighted by their posterior density:
 
-**Idea:** each method uses only ratios of $\widetilde p$, and the constant
-cancels. **Running examples:** the 20-point logistic posterior; the coin with
-9 heads and 4 tails.
+$$p(y_\star \mid \mathbf{x}_\star, \mathcal{D}) = \int p(y_\star \mid \mathbf{x}_\star, \boldsymbol{\theta})\,p(\boldsymbol{\theta} \mid \mathcal{D})\,d\boldsymbol{\theta}$$
+
+- **Bayesian logistic regression target:** With inputs $\mathbf{z}_i = (1, x_i)^\top$, likelihood $P(y_i = 1 \mid x_i, \boldsymbol{\theta}) = \operatorname{sigmoid}(\mathbf{z}_i^\top \boldsymbol{\theta})$, and prior $\theta_j \sim \mathcal{N}(0, \tau^2)$ ($\tau^2 = 4$), the unnormalized joint density is:
+  $$\widetilde{p}(\boldsymbol{\theta}) = p(\mathcal{D}, \boldsymbol{\theta}) = \Biggl[\prod_{i=1}^n \operatorname{sigmoid}(\mathbf{z}_i^\top \boldsymbol{\theta})^{y_i}\bigl(1 - \operatorname{sigmoid}(\mathbf{z}_i^\top \boldsymbol{\theta})\bigr)^{1-y_i}\Biggr] \exp\!\left(-\frac{\|\boldsymbol{\theta}\|^2}{2\tau^2}\right)$$
+- **The intractable normalizer:** A Gaussian prior is not conjugate to the logistic likelihood, so the evidence $p(\mathcal{D}) = \int \widetilde{p}(\boldsymbol{\theta})\,d\boldsymbol{\theta}$ has no closed form. Every algorithm in this section works solely with ratios or differences where $p(\mathcal{D})$ cancels.
 :::
 
-::: {.slide title="From One Parameter Vector to an Average Over All of Them"}
-[Where this fits]{.kicker}
+::: {.slide title="Slope and Curvature of the Log-Posterior"}
+[Gradient and Negative Hessian]{.kicker}
+
+Differentiating $\log \widetilde{p}(\boldsymbol{\theta})$ with respect to $\boldsymbol{\theta}$ gives the gradient and negative Hessian matrix used by optimization, Laplace, and gradient-guided samplers:
+
+$$\nabla \log \widetilde{p}(\boldsymbol{\theta}) = \mathbf{Z}^\top(\mathbf{y} - \mathbf{p}) - \tau^{-2}\boldsymbol{\theta}, \qquad \mathbf{H}(\boldsymbol{\theta}) = -\nabla^2 \log \widetilde{p}(\boldsymbol{\theta}) = \mathbf{Z}^\top \operatorname{diag}\bigl(p_i(1-p_i)\bigr)\mathbf{Z} + \tau^{-2}\mathbf{I}$$
+
+- **Residual-driven gradient:** Each observation $i$ pulls $\boldsymbol{\theta}$ along $\mathbf{z}_i$ in proportion to its prediction error $y_i - p_i$, while the prior pulls $\boldsymbol{\theta}$ radially toward the origin.
+- **Uncertainty-weighted curvature:** Because $p_i(1-p_i) \le 1/4$ peaks at $p_i = 1/2$, examples near the decision boundary contribute the most curvature to $\mathbf{H}(\boldsymbol{\theta})$.
+- **Strict log-concavity:** The prior adds $\tau^{-2}\mathbf{I}$, lifting every eigenvalue of $\mathbf{H}(\boldsymbol{\theta})$ to at least $\tau^{-2} > 0$ so the posterior has a unique, finite global mode $\boldsymbol{\theta}_{\mathrm{MAP}}$ even on linearly separable data.
+:::
+
+::: {.slide title="The Laplace Approximation: A Gaussian at the Mode"}
+[Method 1: Local Quadratic Fit]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Random Variables | densities, moments, tail bounds |
-| Joint Distributions | conditioning, covariance, change of variables |
-| Distributions | the named distributions and their losses |
-| The Exponential Family | one form, convex fits, conjugacy |
-| Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP |
-| Latent Variables and EM | the ELBO, EM |
-| **Bayesian Computation** | **averaging over a posterior** |
-| Concentration Inequalities | exponential tails of averages |
-| Uniform Convergence | guarantees after selection |
-| Naive Bayes | one classifier, end to end |
-:::
-
-::: {.col .narrow}
-- **Uses:** Bayes' rule, MAP, the Hessian, KL.
-- **Skips:** Gibbs, Hamiltonian Monte Carlo, network posteriors.
-:::
-:::
-:::
-
-::: {.slide title="The Posterior Is Known Only Up to Its Normalizer"}
-[The target]{.kicker}
-
-Model: $P(y_i=1\mid x_i,\boldsymbol\theta)=\operatorname{sigmoid}(\theta_0+\theta_1x_i)$;
-prior $\theta_j\sim\mathcal N(0,\tau^2)$, $\tau^2=4$. Bayes' rule:
-
-$$p(\boldsymbol\theta\mid\mathcal D)=\frac{\widetilde p(\boldsymbol\theta)}{p(\mathcal D)},\qquad\widetilde p=\textrm{likelihood}\times\textrm{prior},\qquad p(\mathcal D)=\int\widetilde p(\boldsymbol\theta)\,d\boldsymbol\theta .$$
-
-- $\widetilde p$: easy to evaluate anywhere. The evidence $p(\mathcal D)$: no closed form.
-- Goal, the posterior predictive:
-  $P(y_\star=1\mid x_\star,\mathcal D)=\int\operatorname{sigmoid}(\theta_0+\theta_1x_\star)\,p(\boldsymbol\theta\mid\mathcal D)\,d\boldsymbol\theta$.
-
-::: {.d2l-note}
-Data: 20 fixed points, the most typical of 1,500 simulated sets. With two
-parameters a fine grid gives the exact answer to check against.
-:::
-:::
-
-::: {.slide title="Newton at the Mode Gives a Gaussian for One More Hessian"}
-[Laplace]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$\log\widetilde p(\boldsymbol\theta)\approx\log\widetilde p(\boldsymbol\theta_{\mathrm{MAP}})-\tfrac12(\boldsymbol\theta-\boldsymbol\theta_{\mathrm{MAP}})^\top\mathbf H(\boldsymbol\theta-\boldsymbol\theta_{\mathrm{MAP}})$$
-
-so $p(\boldsymbol\theta\mid\mathcal D)\approx\mathcal N(\boldsymbol\theta_{\mathrm{MAP}},\mathbf H^{-1})$,
-with $\mathbf H$ the negative Hessian.
-
-- Gamma(4,1): mode 3, curvature $\tfrac13$, so $\mathcal N(3,3)$.
-- Truth: mean 4, variance 4; the Gaussian puts 4.2% below 0.
+- **Second-order Taylor expansion at $\boldsymbol{\theta}_{\mathrm{MAP}}$:** Because $\nabla \log \widetilde{p}(\boldsymbol{\theta}_{\mathrm{MAP}}) = \mathbf{0}$, expanding around the mode with $\mathbf{H} = \mathbf{H}(\boldsymbol{\theta}_{\mathrm{MAP}})$ gives:
+  $$\log \widetilde{p}(\boldsymbol{\theta}) \approx \log \widetilde{p}(\boldsymbol{\theta}_{\mathrm{MAP}}) - \frac{1}{2}(\boldsymbol{\theta} - \boldsymbol{\theta}_{\mathrm{MAP}})^\top \mathbf{H}(\boldsymbol{\theta} - \boldsymbol{\theta}_{\mathrm{MAP}})$$
+- **Exponentiating yields a Gaussian:** $p(\boldsymbol{\theta} \mid \mathcal{D}) \approx \mathcal{N}\bigl(\boldsymbol{\theta}_{\mathrm{MAP}},\, \mathbf{H}^{-1}\bigr)$.
+- **Blind to skewness and boundaries:** On $\mathrm{Gamma}(4,1) \propto \theta^3 e^{-\theta}$ ($\theta > 0$), Laplace fits $\mathcal{N}(3, 3)$ at the mode $\theta = 3$, missing the true mean $4$ and leaking $4.2\%$ mass below $\theta = 0$.
 :::
 
 ::: {.col .fig}
@@ -1740,135 +1700,112 @@ with $\mathbf H$ the negative Hessian.
 :::
 :::
 
-::: {.slide title="Check: Laplace on the Coin by Hand"}
-[Check]{.kicker}
+::: {.slide title="Computing the Laplace Approximation by Newton's Method"}
+[Mode and Curvature in Code]{.kicker}
 
-Posterior $\mathrm{Beta}(10,5)\propto\theta^9(1-\theta)^4$ (9 heads, 4 tails,
-uniform prior). Find the Laplace mean and standard deviation.
+Ten Newton steps $\boldsymbol{\theta} \leftarrow \boldsymbol{\theta} + \mathbf{H}(\boldsymbol{\theta})^{-1}\nabla \log \widetilde{p}(\boldsymbol{\theta})$ from the origin locate $\boldsymbol{\theta}_{\mathrm{MAP}}$, and one matrix inverse $\mathbf{H}(\boldsymbol{\theta}_{\mathrm{MAP}})^{-1}$ provides the covariance:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Mode $9/13=0.692$; curvature $9/\theta^2+4/(1-\theta)^2=61$, so
-sd $=1/\sqrt{61}=0.128$. Exact: mean $0.667$, sd $0.118$.
-:::
-:::
+@!bayesian-computation-map-predictive
+
+- **Shrinkage toward the origin:** The prior pulls the fitted mode $\boldsymbol{\theta}_{\mathrm{MAP}} = (-2.14, 1.12)$ toward zero relative to the true generating parameters $\boldsymbol{\theta}^\star = (-3.0, 1.5)$.
+- **Strong negative correlation ($\rho = -0.86$):** Because all training inputs $x_i \in [0, 4]$ are positive, increasing the slope $\theta_1$ requires decreasing the intercept $\theta_0$ so the decision boundary $-\theta_0/\theta_1 \approx 2$ stays inside the data cloud.
 :::
 
-::: {.slide title="The Mode Is Not the Mean"}
-[A grid reference]{.kicker}
+::: {.slide title="Exact Grid Benchmark: Skewness Shifts the Mean"}
+[Low-Dimensional Ground Truth]{.kicker}
 
-Grid of $241\times241$ points at MAP $\pm7$ Laplace sds:
+With $d = 2$ parameters, evaluating $\widetilde{p}(\boldsymbol{\theta})$ on a $241 \times 241$ lattice spanning $\boldsymbol{\theta}_{\mathrm{MAP}} \pm 7$ Laplace standard deviations provides an exact benchmark:
 
 @!bayesian-computation-grid
 
-- Slope: mean $1.24$ above the MAP $1.12$, by ¼ sd. Intercept: mean below, by ⅕ sd.
-- Laplace sds $4$ to $5\%$ small; correlation $-0.86$ in both.
-- The posterior is skewed toward steep lines, and a Gaussian at the mode has
-  its center in the wrong place.
+- **Skewness separates mean from mode:** Because steeper slopes remain plausible once all points far from the boundary are classified with probability near $0$ or $1$, the posterior is skewed toward larger slopes: the true mean slope ($1.24$) sits $+0.25$ standard deviations above the MAP slope ($1.12$).
+- **Curse of dimensionality:** A lattice with $m$ points per axis requires $m^d$ evaluations ($241^2 \approx 5.8 \times 10^4$ in $2\text{D}$, but $241^{100} \approx 10^{238}$ in $100\text{D}$), making grid integration purely a low-dimensional reference.
 :::
 
-::: {.slide title="Far From the Data the Average Is 4.6 Times the Plug-in"}
-[Prediction]{.kicker}
+::: {.slide title="Plug-In vs. Posterior Predictive Extrapolation"}
+[Predictive Moderation]{.kicker}
 
-Plug-in: $\operatorname{sigmoid}$ at the MAP alone. Predictive: the grid
-average. Middle 90%: the range of the plausible vectors' answers.
+Comparing the MAP plug-in $\operatorname{sigmoid}(\mathbf{z}_\star^\top \boldsymbol{\theta}_{\mathrm{MAP}})$ against the exact grid posterior predictive at $x_\star \in \{-3, 2, 7\}$ reveals how parameter uncertainty moderates extreme predictions:
 
 @!mdl-bayesian-computation-the-plug-in-and-the-posterior-predictive-1
 
-- $x=2$: the two agree. $x=-3$ and $x=7$: the average is pulled toward $\tfrac12$.
-- The generating line gives $0.0006$ at $x=-3$: below both, inside the 90% range.
+- **Why uncertainty pulls predictions toward $1/2$:** For negative logits $a = \mathbf{z}_\star^\top \boldsymbol{\theta} \ll 0$, $\operatorname{sigmoid}(a) \approx e^a$ is strictly convex. By Jensen's inequality, $\mathbb{E}[e^a] > e^{\mathbb{E}[a]}$: models with shallower slopes produce much larger probabilities at $x_\star = -3$ and dominate the posterior average.
 :::
 
-::: {.slide title="A Gaussian Logit Predicts a Rise of 2.9 Nats; the Posterior Delivers 1.5"}
-[Prediction]{.kicker}
+::: {.slide title="Accounting for the 1.51-Nat Predictive Shift at x = -3"}
+[Dissecting the Log-Probability]{.kicker}
 
-Small probabilities: $\operatorname{sigmoid}(a)\approx e^a$, and a Gaussian
-logit $a$ with variance $s^2$ has $\log\mathbb{E}[e^a]=\mu+s^2/2$.
+If the logit $a = \mathbf{z}_\star^\top \boldsymbol{\theta}$ at $x_\star = -3$ were exactly Gaussian $\mathcal{N}(\mu, s^2)$, its MGF would give $\log \mathbb{E}[e^a] = \mu + s^2/2$, predicting a $+2.87$-nat boost. Walking from the MAP plug-in to the exact predictive explains why the actual boost is $+1.51$ nats ($4.6\times$):
 
-| step at $x=-3$ | log-probability | change |
-|:--|--:|--:|
-| plug-in (logit at the mode) | $-5.49$ | |
-| mean logit: the mean is not the mode | $-6.06$ | $-0.57$ |
-| add $s^2/2$ | $-3.19$ | $+2.87$ |
-| actual logit: short tail toward 0 | $-3.66$ | $-0.47$ |
-| $\operatorname{sigmoid}$ flattens below $e^a$ | $-3.98$ | $-0.32$ |
-
-::: {.d2l-note}
-Net $+1.51$, a factor $4.6$. The formula gives direction and scaling:
-$s^2$ grows quadratically with the distance from the data.
-:::
+| Step in the Decomposition at $x_\star = -3$ | Log-Probability | Incremental Shift | Physical Explanation |
+| :--- | :---: | :---: | :--- |
+| **1. MAP plug-in** ($\log \operatorname{sigmoid}(\mathbf{z}_\star^\top \boldsymbol{\theta}_{\mathrm{MAP}})$) | $-5.49$ | — | Single point prediction at the posterior mode |
+| **2. Shift from mode logit to mean logit** ($\mu$) | $-6.06$ | $-0.57$ | Posterior skewness makes the mean slope steeper than MAP |
+| **3. Gaussian variance boost** ($\mu + s^2/2$) | $-3.19$ | $+2.87$ | Quadratic logit variance $s^2 = \mathbf{z}_\star^\top \operatorname{Cov}(\boldsymbol{\theta})\mathbf{z}_\star$ |
+| **4. Exact MGF of skewed logit** ($\log \mathbb{E}[e^a]$) | $-3.66$ | $-0.47$ | Short upper tail toward $0$ trims the Gaussian MGF |
+| **5. Sigmoid saturation** ($\log \mathbb{E}[\operatorname{sigmoid}(a)]$) | $-3.98$ | $-0.32$ | $\operatorname{sigmoid}(a) < e^a$ for the shallow-slope draws that dominate |
 :::
 
-::: {.slide title="Rejection Sampling Is Exact but Wasteful"}
-[Rejection sampling]{.kicker}
+::: {.slide title="Rejection Sampling and Dimensional Collapse"}
+[Method 2A: Envelope Acceptance]{.kicker}
 
-Envelope $Mq\ge\widetilde p$; keep $\boldsymbol\theta\sim q$ with probability
-$\widetilde p/(Mq)$. Kept draws are exact; rate $=p(\mathcal D)/M$.
+Given a tractable proposal $q(\boldsymbol{\theta})$ and an upper envelope constant $M$ such that $M q(\boldsymbol{\theta}) \ge \widetilde{p}(\boldsymbol{\theta})$ everywhere, **rejection sampling** accepts each draw $\boldsymbol{\theta} \sim q$ with probability $a(\boldsymbol{\theta}) = \frac{\widetilde{p}(\boldsymbol{\theta})}{M q(\boldsymbol{\theta})}$:
 
-| coin data | 9 H, 4 T | 90 H, 40 T | 900 H, 400 T |
-|---|---|---|---|
-| acceptance | 0.305 | 0.10 | 0.03 |
+@!mdl-bayesian-computation-rejection-sampling
 
-- Rate $\propto1/\sqrt n$ here, $n^{-d/2}$ in $d$ dimensions.
-- Needs a known bound $M$.
+- **Exactness without knowing $p(\mathcal{D})$:** The accepted draws follow $\widetilde{p}(\boldsymbol{\theta})/p(\mathcal{D}) = p(\boldsymbol{\theta} \mid \mathcal{D})$ exactly, while the unknown evidence determines only the marginal acceptance rate $\int \frac{\widetilde{p}(\boldsymbol{\theta})}{M}\,d\boldsymbol{\theta} = \frac{p(\mathcal{D})}{M}$.
+- **Exponential collapse in $d$:** Because the posterior contracts around $\boldsymbol{\theta}^\star$ at rate $n^{-1/2}$ along each of the $d$ coordinates, its volume relative to the prior shrinks as $n^{-d/2}$ ($30.5\%$ for $9\text{H}, 4\text{T}$ $\to$ $10\%$ for $90\text{H}, 40\text{T}$ $\to$ $3\%$ for $900\text{H}, 400\text{T}$).
 :::
 
-::: {.slide title="Importance Weights Keep Every Draw"}
-[Importance sampling]{.kicker}
+::: {.slide title="Self-Normalized Importance Sampling"}
+[Method 2B: Reweighting All Draws]{.kicker}
 
-I. The posterior is $\widetilde p/p(\mathcal D)$, so
-$\mathbb{E}_{p}[h]=\int h\,\widetilde p\,\big/\!\int\widetilde p$.
-II. Multiply and divide by $q$ inside both integrals:
+Instead of discarding proposals, **importance sampling** keeps every draw $\boldsymbol{\theta}_1, \dots, \boldsymbol{\theta}_N \sim q$ and weights it by the unnormalized ratio $w(\boldsymbol{\theta}) = \frac{\widetilde{p}(\boldsymbol{\theta})}{q(\boldsymbol{\theta})}$:
 
-$$\boxed{\mathbb{E}_{p}[h]=\frac{\mathbb{E}_q[wh]}{\mathbb{E}_q[w]},\quad w=\widetilde p/q}$$
+$$\mathbb{E}_{p(\cdot \mid \mathcal{D})}\bigl[h(\boldsymbol{\theta})\bigr] = \frac{\int h(\boldsymbol{\theta})\,\frac{\widetilde{p}(\boldsymbol{\theta})}{q(\boldsymbol{\theta})}\,q(\boldsymbol{\theta})\,d\boldsymbol{\theta}}{\int \frac{\widetilde{p}(\boldsymbol{\theta})}{q(\boldsymbol{\theta})}\,q(\boldsymbol{\theta})\,d\boldsymbol{\theta}} = \frac{\mathbb{E}_q\bigl[w(\boldsymbol{\theta})\,h(\boldsymbol{\theta})\bigr]}{\mathbb{E}_q\bigl[w(\boldsymbol{\theta})\bigr]} \approx \sum_{s=1}^N \bar{w}_s\,h(\boldsymbol{\theta}_s)$$
 
-- $\mathbb{E}_q[w]=p(\mathcal D)$: the constant cancels in the ratio.
-- Prior as $q$: weight $=$ likelihood.
-- ESS limit $(\mathbb{E}w)^2/\mathbb{E}w^2\ge p(\mathcal D)/M$, since $w\le M$.
+where $\bar{w}_s = \frac{w_s}{\sum_{r=1}^N w_r}$ are the self-normalized weights (computed stably via log-sum-exp) and $\mathbb{E}_q[w] = p(\mathcal{D})$ cancels in the ratio:
 
 @!mdl-bayesian-computation-the-effective-sample-size
 :::
 
-::: {.slide title="The ESS Measures Unequal Weights, Not Unseen Mass"}
-[Effective sample size]{.kicker}
+::: {.slide title="Effective Sample Size and Chi-Squared Divergence"}
+[Diagnosing Weight Degeneracy]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$N_{\mathrm{eff}}=1/\sum_s\bar w_s^2\ \to\ N/(1+\chi^2(p\|q))$.
-
-Gaussian target with sd $s_p$, Gaussian $q$ at the same center with sd
-$rs_p$: limit $\sqrt{2r^2-1}/r^2$, and zero for $r\le1/\sqrt2$.
+- **Effective sample size (ESS):** When one draw carries nearly all the weight, $N$ weighted samples are worth only one draw. The ESS quantifies this via the normalized weights $\bar{w}_s$:
+  $$N_{\mathrm{eff}} = \frac{1}{\sum_{s=1}^N \bar{w}_s^2}$$
+- **Large-sample limit:** As $N \to \infty$, $\frac{N_{\mathrm{eff}}}{N} \to \frac{(\mathbb{E}_q[w])^2}{\mathbb{E}_q[w^2]} = \frac{1}{1 + \chi^2(p \,\|\, q)} \ge \frac{p(\mathcal{D})}{M}$, always beating rejection sampling ($42.0\%$ vs $30.5\%$ on the coin).
+- **The unseen-mass hazard:** Empirical ESS measures weight inequality among observed draws, not whether $q$ covered all modes of $p$!
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:mdl-prob-bayes-importance
 :::
 :::
 :::
 
-::: {.slide title="Aim the Proposal: the Prior Keeps a Few Percent, Laplace Most"}
-[Importance sampling]{.kicker}
+::: {.slide title="Pitfall: Light Tails and Infinite Weight Variance"}
+[Proposal Tails on Logistic Regression]{.kicker}
+
+Comparing the broad Gaussian prior ($N = 20{,}000$) against the targeted Laplace Gaussian ($N = 5{,}000$) on our logistic posterior reveals a crucial tail hazard:
 
 @!bayesian-computation-importance
 
-- Posterior tails are the prior's (variance $\tau^2=4$); a Gaussian $q$
-  with a covariance eigenvalue below $\tau^2/2$ has infinite weight variance.
-- Both eigenvalues of the Laplace covariance ($1.17$, $0.05$) are below 2:
-  the ESS collapses in rare runs.
-- Fix: Student-$t$, or $0.9\,$Laplace $+\,0.1\,$prior.
+- **Why the Laplace proposal has infinite weight variance ($\mathbb{E}_q[w^2] = \infty$):** Along any ray $\boldsymbol{\theta} = t\mathbf{v}$, the logistic log-likelihood decays only linearly in $t$, so the posterior's tails are Gaussian with the *prior's* variance $\tau^2 = 4$. Consequently, $\int (\widetilde{p}^2 / q)\,d\boldsymbol{\theta} = \infty$ whenever any eigenvalue of the proposal covariance $\mathbf{S}$ satisfies $\lambda_{\min}(\mathbf{S}) \le \tau^2/2 = 2$.
+- **Defensive fixes:** Both Laplace eigenvalues ($1.17$ and $0.05$) are below $2$, causing rare catastrophic ESS collapses across repeated runs. Using a heavier-tailed **Student-$t$ proposal** or a **defensive mixture** $q = 0.9\,\mathcal{N}(\boldsymbol{\theta}_{\mathrm{MAP}}, \mathbf{H}^{-1}) + 0.1\,\text{prior}$ guarantees bounded weights $w \le 10$.
 :::
 
-::: {.slide title="Metropolis: Uphill Always, Downhill With Probability $\widetilde p'/\widetilde p$"}
-[MCMC]{.kicker}
+::: {.slide title="Markov Chain Monte Carlo and the Metropolis Rule"}
+[Method 3: Local Random Walks]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$$\alpha=\min\!\left(1,\frac{\widetilde p(\boldsymbol\theta')\,g(\boldsymbol\theta\mid\boldsymbol\theta')}{\widetilde p(\boldsymbol\theta)\,g(\boldsymbol\theta'\mid\boldsymbol\theta)}\right)$$
-
-- Propose $\boldsymbol\theta'\sim g(\cdot\mid\boldsymbol\theta)$; $\widetilde p'=\widetilde p(\boldsymbol\theta')$.
-- A rejection repeats the state, and the repeat counts.
-- Symmetric $g$: the Hastings factor $g(\boldsymbol\theta\mid\boldsymbol\theta')/g(\boldsymbol\theta'\mid\boldsymbol\theta)$ is 1.
-- Only a ratio of $\widetilde p$: the constant cancels.
+- **Stationary Markov chain:** Rather than one global proposal $q$, MCMC constructs a transition kernel $T(\boldsymbol{\theta}' \mid \boldsymbol{\theta})$ that leaves the posterior invariant: $\int \pi(\boldsymbol{\theta})T(\boldsymbol{\theta}' \mid \boldsymbol{\theta})\,d\boldsymbol{\theta} = \pi(\boldsymbol{\theta}')$.
+- **Metropolis–Hastings acceptance probability:** From state $\boldsymbol{\theta}$, propose $\boldsymbol{\theta}' \sim g(\cdot \mid \boldsymbol{\theta})$ and accept with probability:
+  $$\alpha(\boldsymbol{\theta}, \boldsymbol{\theta}') = \min\!\left(1,\, \frac{\widetilde{p}(\boldsymbol{\theta}')\,g(\boldsymbol{\theta} \mid \boldsymbol{\theta}')}{\widetilde{p}(\boldsymbol{\theta})\,g(\boldsymbol{\theta}' \mid \boldsymbol{\theta})}\right)$$
+- **Evidence cancels in the ratio:** For symmetric proposals $g(\boldsymbol{\theta}'\mid\boldsymbol{\theta}) = g(\boldsymbol{\theta}\mid\boldsymbol{\theta}')$, uphill moves ($\widetilde{p}' \ge \widetilde{p}$) always accept and downhill moves accept with probability $\widetilde{p}'/\widetilde{p}$.
 :::
 
 ::: {.col .fig}
@@ -1877,98 +1814,124 @@ $$\alpha=\min\!\left(1,\frac{\widetilde p(\boldsymbol\theta')\,g(\boldsymbol\the
 :::
 :::
 
-::: {.slide title="Check: Two States With $\pi=(1/4,3/4)$"}
-[Check]{.kicker}
+::: {.slide title="Why Rejected Proposals Must Repeat the Current State"}
+[Two-State Metropolis Worked Example]{.kicker}
 
-The proposal always names the other state. Write $\mathbf T$, check
-$\pi\mathbf T=\pi$, and say what counting only accepted states gives.
-
-::: {.fragment .fade-up}
 ::: {.cols .vc}
 ::: {.col}
-$\mathbf T=\begin{pmatrix}0&1\\1/3&2/3\end{pmatrix}$, $\pi\mathbf T=\pi$;
-accepted states alone alternate 2, 1, 2, 1: $(1/2,1/2)$.
+- **Target $\pi = (1/4, 3/4)$ with swap proposal:** When the proposal always suggests the *other* state, moving $1 \to 2$ is uphill ($\widetilde{p}_2/\widetilde{p}_1 = 3 \implies \alpha = 1$), while moving $2 \to 1$ is downhill ($\alpha = 1/3$).
+- **Stationarity check:** The transition matrix $\mathbf{T} = \begin{pmatrix}0 & 1 \\ 1/3 & 2/3\end{pmatrix}$ preserves $\pi$:
+  $$\bigl(\tfrac{1}{4},\, \tfrac{3}{4}\bigr)\begin{pmatrix}0 & 1 \\ 1/3 & 2/3\end{pmatrix} = \bigl(\tfrac{1}{4},\, \tfrac{3}{4}\bigr)$$
+- **Why repeats matter:** The self-loop $T_{22} = 2/3$ records rejected moves from state $2$. Discarding rejections would alternate $2, 1, 2, 1$ and converge to $(1/2, 1/2)$!
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:mdl-prob-bayes-two-state
 :::
 :::
 :::
+
+::: {.slide title="Detailed Balance Guarantees Posterior Stationarity"}
+[The Fundamental MCMC Theorem]{.kicker}
+
+A transition rule $T(\boldsymbol{\theta}' \mid \boldsymbol{\theta})$ satisfies **detailed balance** with respect to $\pi$ if the probability flux from $\boldsymbol{\theta}$ to $\boldsymbol{\theta}'$ equals the reverse flux from $\boldsymbol{\theta}'$ to $\boldsymbol{\theta}$ for every pair of states:
+
+$$\pi(\boldsymbol{\theta})\,T(\boldsymbol{\theta}' \mid \boldsymbol{\theta}) = \pi(\boldsymbol{\theta}')\,T(\boldsymbol{\theta} \mid \boldsymbol{\theta}')$$
+
+1. **Proof that Metropolis–Hastings satisfies detailed balance:** For $\boldsymbol{\theta}' \neq \boldsymbol{\theta}$, a transition occurs if and only if $\boldsymbol{\theta}'$ is proposed and accepted. Pulling $\pi(\boldsymbol{\theta})g(\boldsymbol{\theta}'\mid\boldsymbol{\theta}) > 0$ inside the minimum gives:
+   $$\pi(\boldsymbol{\theta})\,g(\boldsymbol{\theta}' \mid \boldsymbol{\theta})\,\alpha(\boldsymbol{\theta}, \boldsymbol{\theta}') = \min\bigl\{\pi(\boldsymbol{\theta})\,g(\boldsymbol{\theta}' \mid \boldsymbol{\theta}),\; \pi(\boldsymbol{\theta}')\,g(\boldsymbol{\theta} \mid \boldsymbol{\theta}')\bigr\}$$
+   which is symmetric in $\boldsymbol{\theta}$ and $\boldsymbol{\theta}'$.
+2. **Proof that detailed balance implies stationarity:** Summing (or integrating) both sides over $\boldsymbol{\theta}$ gives $\sum_{\boldsymbol{\theta}} \pi(\boldsymbol{\theta})T(\boldsymbol{\theta}' \mid \boldsymbol{\theta}) = \pi(\boldsymbol{\theta}')\sum_{\boldsymbol{\theta}} T(\boldsymbol{\theta} \mid \boldsymbol{\theta}') = \pi(\boldsymbol{\theta}')$.
 :::
 
-::: {.slide title="Detailed Balance Makes the Posterior Stationary"}
-[Proof]{.kicker}
+::: {.slide title="Implementing Preconditioned Metropolis in NumPy"}
+[Cholesky-Scaled Random Walk]{.kicker}
 
-I. For $\boldsymbol\theta'\ne\boldsymbol\theta$ a move needs a proposal and an acceptance:
-$\pi(\boldsymbol\theta)T(\boldsymbol\theta'\mid\boldsymbol\theta)=\min\{\pi(\boldsymbol\theta)g(\boldsymbol\theta'\mid\boldsymbol\theta),\,\pi(\boldsymbol\theta')g(\boldsymbol\theta\mid\boldsymbol\theta')\}$, symmetric in the two states.
+Shaping local Gaussian proposals $\boldsymbol{\theta}' = \boldsymbol{\theta} + s\mathbf{L}\boldsymbol{\epsilon}$ with the Cholesky factor $\mathbf{L}\mathbf{L}^\top = \mathbf{H}^{-1}$ of the Laplace covariance aligns the random walk with the posterior's $-0.86$ correlation:
 
-II. Sum $\pi(\boldsymbol\theta)T(\boldsymbol\theta'\mid\boldsymbol\theta)=\pi(\boldsymbol\theta')T(\boldsymbol\theta\mid\boldsymbol\theta')$ over $\boldsymbol\theta$:
+@bayesian-computation-metropolis
 
-$$\boxed{\textstyle\sum_{\boldsymbol\theta}\pi(\boldsymbol\theta)\,T(\boldsymbol\theta'\mid\boldsymbol\theta)=\pi(\boldsymbol\theta')}$$
+Launching $4$ chains from over-dispersed starts $\boldsymbol{\theta}_{\mathrm{MAP}} + 2\mathbf{L}\boldsymbol{\epsilon}$ with scale $s = 1.1$ and discarding $2{,}000$ warm-up steps yields roughly $50\%$ acceptance:
 
-Convergence also needs: every region reachable, no deterministic cycles.
+@!mdl-bayesian-computation-detailed-balance-and-stationarity-1
 :::
 
-::: {.slide title="Judge Mixing by $\widehat R$, $\kappa$ and the MCSE"}
-[Diagnostics]{.kicker}
+::: {.slide title="Three Diagnostics for MCMC Mixing and Accuracy"}
+[Split R-Hat, Autocorrelation Time, and MCSE]{.kicker}
 
-- $\widehat R^2=\big(\tfrac{N-1}{N}W+\tfrac1NB\big)/W$ on half-chains: they must agree.
-- $\kappa=1+2\sum_k\rho_k$; $c$ chains of $N$: $N_{\mathrm{eff}}=cN/\kappa$.
-- MCSE $=$ sd$/\sqrt{N_{\mathrm{eff}}}$.
+Because Markov chain states are serially correlated and start away from equilibrium, every MCMC run requires three quantitative checks:
 
-@!mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-1
+- **1. Split $\widehat{R}$ (potential scale reduction factor):** Split $c$ chains of length $N$ into $2c$ half-chains of length $N/2$, and compare between-chain variance $B$ to average within-chain variance $W$:
+  $$\widehat{R} = \sqrt{\frac{\frac{N-1}{N}W + \frac{1}{N}B}{W}} \qquad (\text{require } \widehat{R} < 1.01)$$
+- **2. Integrated autocorrelation time $\kappa$ and $N_{\mathrm{eff}}$:** With lag-$k$ autocorrelation $\rho_k$, $\kappa = 1 + 2\sum_{k \ge 1} \rho_k$ counts how many correlated steps equal one independent draw, giving $N_{\mathrm{eff}} = \frac{cN}{\kappa}$. For an AR(1) chain $x_t = \phi x_{t-1} + \varepsilon_t$, $\rho_k = \phi^k \implies \kappa = \frac{1+\phi}{1-\phi}$ ($\phi = 0.9 \implies \kappa = 19$; $\phi = 0.99 \implies \kappa = 199$).
+- **3. Monte Carlo standard error (MCSE):** By the Markov chain CLT, the standard error of the chain mean is $\mathrm{MCSE} = \frac{\hat{\sigma}_{\mathrm{post}}}{\sqrt{N_{\mathrm{eff}}}}$.
 :::
 
-::: {.slide title="An AR(1) Chain With $\phi=0.9$ Is Worth One Draw per 19 States"}
-[Worked example]{.kicker}
-
-$x_t=\phi x_{t-1}+\varepsilon_t$: $\rho_k=\phi^k$, so
-
-$$\kappa=1+2\sum_{k\ge1}\phi^k=\frac{1+\phi}{1-\phi}.$$
-
-| $\phi$ | $\kappa$ | 10,000 states are worth |
-|---|---|---|
-| 0.9 | 19 | about 530 draws |
-| 0.99 | 199 | about 50 draws |
-
-Logistic chains: $\rho_1\approx0.8$, $\kappa\approx10$.
-:::
-
-::: {.slide title="Tiny Steps Accept 97% and Go Nowhere; Huge Steps Accept 2%"}
-[Mixing failures]{.kicker}
-
-@!mdl-bayesian-computation-proposal-scale-and-mixing-failures
-
-- Scale 0.05: $\widehat R$ well above 1.01, a few dozen effective draws.
-- Scale 10: each state repeated, a few hundred effective draws.
-- The acceptance rate alone certifies nothing; aim between the extremes
-  (0.234 in high dimension).
-:::
-
-::: {.slide title="ELBO = Log Evidence − KL"}
-[Variational inference]{.kicker}
-
-I. $\log p(\mathcal D)=\log p(\mathcal D,\boldsymbol\theta)-\log p(\boldsymbol\theta\mid\mathcal D)$ for every $\boldsymbol\theta$.
-
-II. Take $\mathbb{E}_{q}$; add and subtract $\mathbb{E}_q[\log q]$:
-
-$$\boxed{\log p(\mathcal D)=\underbrace{\mathbb{E}_q[\log p(\mathcal D,\boldsymbol\theta)-\log q]}_{\mathcal L}+D_{\textrm{KL}}(q\,\|\,p(\cdot\mid\mathcal D))}$$
-
-Raising $\mathcal L$ lowers the KL; the constant does not move the optimum.
-:::
-
-::: {.slide title="A Factorized Gaussian Shrinks by $\sqrt{1-\rho^2}$"}
-[Mean field]{.kicker}
+::: {.slide title="Verifying MCMC Convergence on the Logistic Posterior"}
+[Diagnostics & Trace Plots in Action]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Target $\mathcal N(\boldsymbol\mu,\boldsymbol\Lambda^{-1})$: reverse-KL mean
-field gives mean $\boldsymbol\mu$, variances $1/\Lambda_{jj}$, the
-conditional variances.
+@!mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-1
 
-- Cannot tilt; width of a slice.
-- Full-covariance $q$ would be exact.
+- **Healthy mixing:** Split $\widehat{R} \le 1.002$, and the $4$ chains interleave tightly in the trace plot.
+- **Calibrated uncertainty:** With $\rho_1 \approx 0.80$, $\kappa \approx 10$ ($N_{\mathrm{eff}} \approx 4{,}000$ of $40{,}000$ steps), and the MCMC mean lands within $\sim 1\ \mathrm{MCSE}$ of the exact grid mean.
+:::
+
+::: {.col .fig}
+@!mdl-bayesian-computation-diagnostics-for-markov-chain-mixing-2
+:::
+:::
+:::
+
+::: {.slide title="The Goldilocks Proposal Scale and Gradient Guidance"}
+[Step-Size Trade-Offs]{.kicker}
+
+Why does the acceptance rate alone never certify convergence? Rerunning our $4$ chains at extreme proposal scales $s = 0.05$ and $s = 10$ exposes both failure modes:
+
+@!mdl-bayesian-computation-proposal-scale-and-mixing-failures
+
+- **Tiny steps ($s = 0.05$, acceptance $97\%$):** Almost every step is accepted, but the random walk diffuses so slowly that $\widehat{R} > 1.04$ and $40{,}000$ steps yield only $\sim 40$ effective draws.
+- **Huge steps ($s = 10$, acceptance $2\%$):** Proposals almost always jump into low-density tails and reject, leaving the chain stuck at the same state for dozens of steps.
+- **High-dimensional scaling & Langevin dynamics:** Random-walk Metropolis requires proposal variance $O(1/d)$ (targeting $23.4\%$ acceptance), whereas **Langevin proposals** $\boldsymbol{\theta}' = \boldsymbol{\theta} + \frac{\epsilon^2}{2}\mathbf{C}\nabla\log\widetilde{p}(\boldsymbol{\theta}) + \epsilon\mathbf{C}^{1/2}\boldsymbol{\xi}$ use gradient drift to move uphill purposefully.
+:::
+
+::: {.slide title="Variational Inference: Integration via Optimization"}
+[Method 4: Parametric ELBO Maximization]{.kicker}
+
+Instead of drawing correlated samples, **variational inference (VI)** posits a tractable family of densities $q_{\boldsymbol{\psi}}(\boldsymbol{\theta})$ and optimizes $\boldsymbol{\psi}$ to minimize KL divergence to the posterior. Treating $\boldsymbol{\theta}$ as the latent variable in our §36.7 ELBO identity yields:
+
+$$\log p(\mathcal{D}) = \underbrace{\mathbb{E}_{q_{\boldsymbol{\psi}}}\bigl[\log \widetilde{p}(\boldsymbol{\theta}) - \log q_{\boldsymbol{\psi}}(\boldsymbol{\theta})\bigr]}_{\mathcal{L}(\boldsymbol{\psi})\ (\mathrm{ELBO})} + D_{\mathrm{KL}}\bigl(q_{\boldsymbol{\psi}}(\boldsymbol{\theta}) \,\|\, p(\boldsymbol{\theta} \mid \mathcal{D})\bigr)$$
+
+- **Unknown evidence drops out:** Because $\log p(\mathcal{D})$ does not depend on $\boldsymbol{\psi}$, every $1$-nat increase in the computable ELBO $\mathcal{L}(\boldsymbol{\psi})$ reduces $D_{\mathrm{KL}}(q_{\boldsymbol{\psi}} \,\|\, p(\cdot \mid \mathcal{D}))$ by $1$ nat.
+- **Reparameterization gradients:** Writing $\boldsymbol{\theta} = \mathbf{m} + \mathbf{s} \odot \boldsymbol{\epsilon}$ with $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ moves $\boldsymbol{\psi} = (\mathbf{m}, \log\mathbf{s})$ inside $\log \widetilde{p}$, giving low-variance unbiased stochastic gradients $\nabla_{\mathbf{m}}\mathcal{L} = \mathbb{E}[\nabla_{\boldsymbol{\theta}}\log \widetilde{p}]$ and $\nabla_{\log\mathbf{s}}\mathcal{L} = \mathbb{E}[\nabla_{\boldsymbol{\theta}}\log \widetilde{p} \odot \mathbf{s} \odot \boldsymbol{\epsilon}] + \mathbf{1}$.
+:::
+
+::: {.slide title="Reverse KL (Mode-Seeking) vs. Forward KL"}
+[Asymmetry of KL Divergence]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Reverse KL ($D_{\mathrm{KL}}(q \,\|\, p) = \int q \log\frac{q}{p}$, used by VI):** Blows up to $+\infty$ wherever $p(\boldsymbol{\theta} \mid \mathcal{D}) \approx 0$ and $q(\boldsymbol{\theta}) > 0$. This **zero-avoiding** penalty forces $q$ to lock onto a single mode and underestimate support width.
+- **Forward KL ($D_{\mathrm{KL}}(p \,\|\, q) = \int p \log\frac{p}{q}$):** Blows up wherever $p > 0$ and $q \approx 0$. This **mass-covering** penalty forces $q$ to bridge across all modes (putting its peak in an empty valley), and requires expectations under the intractable $p$.
+:::
+
+::: {.col .fig}
+![](../img/mdl-prob-bayes-kl-modes.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Why Mean-Field VI Underestimates Posterior Uncertainty"}
+[Conditional vs. Marginal Variance]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Mean-field theorem on a correlated Gaussian:** When $p = \mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Lambda}^{-1})$ has precision matrix $\boldsymbol{\Lambda}$ and correlation $\rho$, minimizing $D_{\mathrm{KL}}(q \,\|\, p)$ over factorized Gaussians $q = \mathcal{N}(\mathbf{m}, \operatorname{diag}(\mathbf{s}^2))$ yields $\mathbf{m} = \boldsymbol{\mu}$ and:
+  $$s_j^2 = \frac{1}{\Lambda_{jj}} = \sigma_j^2(1 - \rho^2)$$
+- **Slice width vs. projection width:** Because an axis-aligned ellipse cannot tilt, reverse KL shrinks each $s_j$ by $\sqrt{1 - \rho^2}$ ($0.51\times$ for $\rho = -0.86$) to avoid low-density corners:
+
+@!bayesian-computation-variational
 :::
 
 ::: {.col .fig}
@@ -1977,64 +1940,47 @@ conditional variances.
 :::
 :::
 
-::: {.slide title="Check: With $\rho=-0.86$, How Narrow Is the Mean-Field Fit?"}
-[Check]{.kicker}
+::: {.slide title="Comparing Approximations on the Slope Marginal"}
+[Side-by-Side Synthesis]{.kicker}
 
-The logistic posterior has correlation $-0.86$. By what factor is each
-mean-field standard deviation too small, and what correlation does the fit
-report?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\sqrt{1-0.86^2}=0.51$: about half. It reports correlation 0.
-The run agrees:
-
-@!bayesian-computation-variational
-:::
-:::
+::: {.cols .vc}
+::: {.col}
+- **Metropolis (histogram):** Faithfully recovers the exact grid marginal, including its rightward skew and true width.
+- **Laplace (orange):** Centered at the MAP mode ($1.12$) to the left of the posterior mean ($1.24$), and $4\%$ too narrow.
+- **Mean-field VI (green):** Captures the posterior mean ($1.22$) accurately, but contracts to half the true marginal width ($s_1 = 0.25$ vs $0.48$) and assumes $\rho = 0$.
 :::
 
-::: {.slide title="One Marginal, Four Answers"}
-[Comparison]{.kicker}
-
+::: {.col .fig}
 @!bayesian-computation-comparison-plot
-
-- Metropolis follows the exact curve, skew included.
-- Laplace sits at the mode, left of the mean; mean field is half as wide.
 :::
-
-::: {.slide title="Choose a Method by How It Fails"}
-[Comparison]{.kicker}
-
-| method | gives | check | fails by |
-|---|---|---|---|
-| Laplace | Gaussian at mode | none of its own: compare with samples | skew, tails, modes |
-| rejection | exact draws | acceptance | rate $\propto n^{-d/2}$, needs $M$ |
-| importance | weighted draws | weight ESS | light or misplaced $q$ |
-| MCMC | correlated draws | $\widehat R$, ESS, MCSE | slow mixing, lost modes |
-| mean-field VI | fitted $q$ | none of its own: compare with samples | too narrow |
-
-::: {.d2l-note}
-A converged ELBO says that the optimization stopped, not that the family
-fits the posterior.
 :::
 :::
 
-::: {.slide title="Four Ratios in Which the Constant Cancels"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Bayesian Computation"}
+[Check Your Understanding]{.kicker}
 
-- Laplace: curvature at the mode; Gamma(4,1) gives $\mathcal N(3,3)$.
-- Rejection, importance: $\widetilde p/q$; coin keeps 30%, ESS 42%.
-- Metropolis: $\widetilde p'/\widetilde p$; two states keep $(1/4,3/4)$.
-- Diagnostics: $\kappa=19$ at $\phi=0.9$; error $\approx$ one MCSE.
-- VI: ELBO $=$ log evidence $-$ KL; mean field shrinks by $0.51$.
-- Logistic posterior at $x=-3$: predictive $0.019$ against plug-in $0.0041$.
+1. **Autocorrelation and effective sample size:** An MCMC chain of $N = 19{,}000$ post-warm-up steps behaves like an AR(1) process with lag-1 autocorrelation $\phi = 0.90$. What is its integrated autocorrelation time $\kappa$, and how many independent draws is the chain worth?
+2. **Diagnosing a $97\%$ acceptance rate:** Why is a Metropolis random walk with a $97\%$ acceptance rate almost certainly failing to explore the posterior, and which diagnostic reveals the failure?
+3. **Mean-field variance contraction:** A $2\text{D}$ Gaussian posterior has marginal standard deviations $(\sigma_1, \sigma_2) = (2.0, 1.0)$ and correlation $\rho = -0.80$. What standard deviations $(s_1, s_2)$ will mean-field variational inference converge to?
 
-::: {.d2l-note}
-The same tools return for other unnormalized distributions: the ELBO trains
-variational autoencoders, importance weights reuse old data in policy
-gradients, and Langevin steps sample diffusion models.
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $\kappa = \frac{1 + \phi}{1 - \phi} = \frac{1.90}{0.10} = 19$, so $N_{\mathrm{eff}} = \frac{19{,}000}{19} = 1{,}000$ independent draws (reducing Monte Carlo standard errors by $\sqrt{1000} \approx 31.6$, not $\sqrt{19000} \approx 137.8$).
+2. A $97\%$ acceptance rate means the proposal step size is tiny ($s \ll 1$), so the chain creeps diffusively; **split $\widehat{R} \gg 1.01$** and a tiny **$N_{\mathrm{eff}}$** immediately expose the slow mixing.
+3. By $s_j = \sigma_j\sqrt{1 - \rho^2}$ with $\sqrt{1 - (-0.80)^2} = \sqrt{0.36} = 0.60$, mean-field VI converges to $(s_1, s_2) = (1.20, 0.60)$—underestimating marginal uncertainty by $40\%$.
+:::
 :::
 
-**Next:** how far an average over a finite sample can be trusted.
+::: {.slide title="Summary: Bayesian Computation Methods"}
+[Key Takeaways]{.kicker}
+
+| Method | Posterior Representation | How Normalizer $p(\mathcal{D})$ Cancels | Primary Diagnostic | Characteristic Failure Mode |
+| :--- | :--- | :--- | :--- | :--- |
+| **Laplace Approximation** | $\mathcal{N}(\boldsymbol{\theta}_{\mathrm{MAP}}, \mathbf{H}^{-1})$ at mode | Additive constant $\log p(\mathcal{D})$ vanishes in $\nabla, \nabla^2$ | Compare against MCMC samples | Misses skewness, heavy tails, boundaries, multimodality |
+| **Rejection Sampling** | Independent exact draws | Appears only in acceptance rate $p(\mathcal{D})/M$ | Empirical acceptance rate | Rate collapses as $n^{-d/2}$; requires global bound $M$ |
+| **Importance Sampling** | Weighted draws $(\boldsymbol{\theta}_s, \bar{w}_s)$ | Cancels in self-normalized ratio $\frac{\sum w_s h_s}{\sum w_s}$ | Weight ESS $1/\sum \bar{w}_s^2$ & max weight | Infinite weight variance if $q$ has lighter tails than $p$ |
+| **Metropolis–Hastings** | Correlated Markov chain states | Cancels in acceptance ratio $\frac{\widetilde{p}(\boldsymbol{\theta}')}{\widetilde{p}(\boldsymbol{\theta})}$ | Split $\widehat{R} < 1.01$, ESS $cN/\kappa$, MCSE | Slow random-walk mixing in high $d$; trapped in single mode |
+| **Variational Inference** | Optimized parametric $q_{\boldsymbol{\psi}}(\boldsymbol{\theta})$ | Shifts ELBO $\mathcal{L}(\boldsymbol{\psi})$ by fixed constant | Compare against MCMC / held-out NLL | Mode-seeking reverse KL; mean-field shrinks sd by $\sqrt{1-\rho^2}$ |
 :::
+

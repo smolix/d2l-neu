@@ -880,74 +880,37 @@ samples, or a score.
 ::: {.cover}
 [Dive into Deep Learning · §37.5]{.kicker}
 
-Score-Based Comparisons<br>**comparisons that never see the normalizer**
+Score-Based Comparisons<br>**Stein score function · Fisher divergence · mode-weight blindness · Stein's identity · score matching · KSD**
 :::
 :::
 
-::: {.slide title="A Model Known up to a Constant Has No Computable Likelihood"}
-[The problem]{.kicker}
+::: {.slide title="The Intractable Normalizer of Energy-Based Models"}
+[Motivation: Unnormalized Densities]{.kicker}
 
-A network gives every input an energy $E(\mathbf x)$, low for plausible inputs. The model is
+When a neural network assigns a scalar energy $E_{\boldsymbol{\theta}}(\mathbf{x})$ to every input $\mathbf{x} \in \mathbb{R}^n$ (low energy for plausible inputs), it defines an **energy-based model (EBM)** up to a normalizing constant $Z(\boldsymbol{\theta})$:
 
-$$q(\mathbf x)=\tilde q(\mathbf x)/Z,\qquad\tilde q=e^{-E},\qquad Z=\int\tilde q(\mathbf x)\,d\mathbf x.$$
+$$q_{\boldsymbol{\theta}}(\mathbf{x}) = \frac{\tilde{q}_{\boldsymbol{\theta}}(\mathbf{x})}{Z(\boldsymbol{\theta})}, \qquad \tilde{q}_{\boldsymbol{\theta}}(\mathbf{x}) = e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}, \qquad Z(\boldsymbol{\theta}) = \int_{\mathbb{R}^n} e^{-E_{\boldsymbol{\theta}}(\mathbf{x})}\,d\mathbf{x}$$
 
-- For a $28\times28$ image, $Z$ is an integral over $784$ dimensions.
-- Likelihood: needs $q$, hence $Z$.
-- Comparing samples instead, by a critic (a second network trained to tell them apart), by kernel means (MMD) or by transport cost ($W_1$): needs samples of the model, each the end of a long random walk toward low energy.
+- **Why maximum likelihood fails:** Evaluating $\log q_{\boldsymbol{\theta}}(\mathbf{x}) = -E_{\boldsymbol{\theta}}(\mathbf{x}) - \log Z(\boldsymbol{\theta})$ or its parameter gradient $\nabla_{\boldsymbol{\theta}} \log Z(\boldsymbol{\theta})$ requires integrating over all $n$ dimensions (e.g., $n = 784$ for a $28 \times 28$ image).
+- **Why GANs, MMD, and $W_1$ struggle:** Sample-based methods avoid $Z(\boldsymbol{\theta})$ but require drawing model samples $\mathbf{x} \sim Q_{\boldsymbol{\theta}}$, which for an EBM requires running a long, expensive Langevin MCMC random walk at every training step.
 
-::: {.d2l-note .warn}
-What is left to compare when $Z$ is unknown?
+::: {.d2l-note .rule}
+**The Score Escape Hatch:** Differentiating $\log q_{\boldsymbol{\theta}}(\mathbf{x})$ with respect to the *input* $\mathbf{x}$ eliminates $\log Z(\boldsymbol{\theta})$ in a single backward pass!
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Score Function Eliminates the Normalizer Z"}
+[Log-Density Gradients]{.kicker}
 
-- compute the score of a model without its normalizing constant;
-- compare two distributions by the Fisher divergence, and say what it misses;
-- remove the unknown score of the data by one integration by parts;
-- test a sample against a model that is known only through its score;
-- choose a training objective from what the model can supply.
-
-**Running examples:** $P_w=w\,\mathcal N(-m,1)+(1-w)\,\mathcal N(m,1)$ at $w=0.7$ against $w=0.3$; the model $\mathcal N(0,1)$ against shifted and widened samples; the unnormalized quartic $e^{-x^4/4}$.
-
-**The idea:** compare slopes of log-densities. A constant has no slope.
-:::
-
-::: {.slide title="Slopes Are the Third Way to Compare, After Ratios and Averages"}
-[Where this fits]{.kicker}
+At every point $\mathbf{x} \in \mathbb{R}^n$, the **(Stein) score** points in the direction of steepest log-density ascent:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Entropy, Cross-Entropy, and KL | surprise, KL, the loss floor |
-| Codes, Compression, and Perplexity | the code behind the log-loss |
-| f-Divergences | one convex function of the ratio |
-| Test Functions and Transport | averages and moving mass |
-| **Score-Based Comparisons** | **slopes, no normalizer** |
-| Mutual Information | dependence and what it limits |
-| Estimating Mutual Information | what samples can show |
-:::
-
-::: {.col .narrow}
-- **Uses:** KL, kernels and MMD, integration by parts.
-- **Skips:** score matching in many dimensions and the diffusion loss (Dynamics).
-- $P$: data, as samples. $Q$: model, through its score $s_Q$.
-:::
-:::
-:::
-
-::: {.slide title="The Score Is a Field of Springs, and Z Drops Out of It"}
-[The score]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-- Score: $s_P(\mathbf x)=\nabla_{\mathbf x}\log p(\mathbf x)$, the gradient in the data point.
-- $q=\tilde q/Z$: $\ \nabla\log q=\nabla\log\tilde q$, since $Z$ is constant in $\mathbf x$.
-- Gaussian: $s(x)=-(x-\mu)/\sigma^2$, a spring of stiffness $1/\sigma^2$.
-- Mixture: $s=\sum_kr_k\,s_k$ with responsibilities $r_k=w_kp_k/p$.
-- $\tilde q=e^{-x^4/4}$: $s(x)=-x^3$; $Z\approx2.56$ never needed.
+- **Definition and $Z$-invariance:** Since $\nabla_{\mathbf{x}} \log Z = \mathbf{0}$:
+  $$s_Q(\mathbf{x}) = \nabla_{\mathbf{x}} \log q(\mathbf{x}) = -\nabla_{\mathbf{x}} E(\mathbf{x})$$
+- **Gaussian restoring spring:** For $\mathcal{N}(\mu, \sigma^2)$, $s(x) = -\frac{x - \mu}{\sigma^2}$ pulls $x$ toward $\mu$ with stiffness $1/\sigma^2$.
+- **Mixture hand-off:** For $p(x) = \sum_k w_k p_k(x)$, the chain rule weights each component's score by its posterior responsibility $r_k(x) = \frac{w_k p_k(x)}{p(x)}$:
+  $$s(x) = \sum_k r_k(x)\,s_k(x)$$
 :::
 
 ::: {.col .fig}
@@ -956,247 +919,218 @@ What is left to compare when $Z$ is unknown?
 :::
 :::
 
-::: {.slide title="The Fisher Divergence Is the Mean Squared Gap Between Two Score Fields"}
-[Fisher divergence]{.kicker}
+::: {.slide title="Stable Mixture Scores in Code"}
+[Log-Domain Responsibility Weighting]{.kicker}
 
-$$D_{\mathrm F}(P\Vert Q)=\tfrac12\,\mathbb{E}_{\mathbf x\sim P}\big\Vert s_P(\mathbf x)-s_Q(\mathbf x)\big\Vert^2$$
+Factoring out the maximum log-component $c_{\max}(x)$ prevents exponential underflow in the tails when evaluating mixture log-densities and responsibility-weighted scores:
 
-- Averaged where the data are, and nowhere else.
-- Zero only for $P=Q$, if both densities are positive on one connected region.
-- Two Gaussians, variance $\sigma^2$, means $\Delta$ apart: the scores differ by $\Delta/\sigma^2$.
-- $D_{\mathrm F}=\dfrac{\Delta^2}{2\sigma^4}$, where $D_{\textrm{KL}}=\dfrac{\Delta^2}{2\sigma^2}$.
+@mdl-scores-score-based-comparisons-3
 
-::: {.d2l-note}
-Not in nats: the unit is $1/x^2$, so the value changes with the units of the data.
-:::
+@divergences-distances-score
 :::
 
-::: {.slide title="Check: Fisher Against KL for Two Pairs of Gaussians"}
-[Check]{.kicker}
+::: {.slide title="The Fisher Divergence Compares Score Fields"}
+[Mean Squared Score Discrepancy]{.kicker}
 
-Compute $D_{\mathrm F}=\Delta^2/(2\sigma^4)$ and $D_{\textrm{KL}}=\Delta^2/(2\sigma^2)$ for
+The **Fisher divergence** measures the expected squared Euclidean distance between the data score $s_P(\mathbf{x})$ and model score $s_Q(\mathbf{x})$, averaged under the data distribution $P$:
 
-- $\mathcal N(0,1)$ against $\mathcal N(1,1)$;
-- $\mathcal N(0,4)$ against $\mathcal N(2,4)$, the same pair with $x$ doubled.
+$$D_{\textrm{F}}(P \| Q) = \frac{1}{2}\mathbb{E}_{\mathbf{x} \sim P}\Big[\big\|s_P(\mathbf{x}) - s_Q(\mathbf{x})\big\|_2^2\Big]$$
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** First pair: both $\tfrac12$. Second pair: KL $=\tfrac4{2\cdot4}=\tfrac12$ again; Fisher $=\tfrac4{2\cdot16}=\tfrac18$.
-KL ignores the scale of the axis. The Fisher divergence does not.
-:::
-:::
+- **Identity of indiscernibles on connected supports:** Clearly $D_{\textrm{F}}(P \| Q) \ge 0$. If $p$ and $q$ are strictly positive and smooth on a **connected** region, $s_P = s_Q$ $\implies$ $\nabla(\log p - \log q) = \mathbf{0}$ $\implies$ $p(\mathbf{x}) = c\,q(\mathbf{x})$, and $\int p = \int q = 1$ forces $c = 1$ ($P = Q$).
+- **Coordinate scale dependence ($1/x^2$ units vs. dimensionless nats):**
+  For two Gaussians $\mathcal{N}(\mu_1, \sigma^2)$ and $\mathcal{N}(\mu_2, \sigma^2)$ separated by $\Delta = |\mu_1 - \mu_2|$, the score difference is identically $\Delta/\sigma^2$, giving:
+  $$D_{\textrm{F}}(P \| Q) = \frac{\Delta^2}{2\sigma^4} \qquad \text{whereas} \qquad D_{\textrm{KL}}(P \| Q) = \frac{\Delta^2}{2\sigma^2}$$
+  Doubling the coordinate scale ($x \mapsto 2x$) leaves $D_{\textrm{KL}}$ invariant but divides $D_{\textrm{F}}$ by $4$!
 :::
 
-::: {.slide title="The Fisher Divergence Cannot See a 70/30 Split of Distant Modes"}
-[A blind spot]{.kicker}
+::: {.slide title="The Mode-Weight Blind Spot of Score Comparisons"}
+[Why Connected Support Matters]{.kicker}
 
-$P_w=w\,\mathcal N(-m,1)+(1-w)\,\mathcal N(m,1)$, with $w=0.7$ against $w=0.3$. The score of $P_w$ is
+What happens when $P$ and $Q$ share the exact same well-separated modes, but assign different probability weights to them? Compare $P_{0.7}$ and $P_{0.3}$ for $P_w = w\,\mathcal{N}(-m, 1) + (1 - w)\,\mathcal{N}(m, 1)$:
 
-$$s_w(x)=-x+m\tanh(mx-c_w),\qquad c_w=\tfrac12\log\tfrac w{1-w}.$$
+- **Exact score of a two-component mixture:**
+  $$s_w(x) = -x + m\tanh(mx - c_w), \qquad c_w = \frac{1}{2}\log\frac{w}{1 - w}$$
+- **Inside either mode ($x \approx -m$ or $x \approx +m$):** Because $\tanh(\pm m^2 - c_w) \approx \pm 1$ for both $w = 0.7$ and $w = 0.3$, *both* mixtures have the exact same restoring spring $-(x + m)$ on the left mode and $-(x - m)$ on the right mode!
+- **Disagreement hides in the empty valley ($x \approx 0$):** The mixing weight $w$ only shifts the transition point $x = c_w/m$ ($\pm 0.085$ at $m = 5$), where the data density is $p(0) \approx \frac{1}{\sqrt{2\pi}}e^{-m^2/2} \approx 1.5 \times 10^{-6}$.
+:::
 
-- The weight only moves the hand-over between the two springs: $x=\pm0.085$ at $m=5$, in the valley between the modes, where the density is $1.5\times10^{-6}$.
+::: {.slide title="Measuring Exponential Collapse of Fisher Divergence"}
+[Quadrature Demonstration]{.kicker}
+
+As mode separation $m$ increases from $1$ to $5$, $D_{\textrm{KL}}(P_{0.7} \| P_{0.3})$ converges to the discrete weight divergence $0.7\ln\frac{7}{3} + 0.3\ln\frac{3}{7} = 0.339\text{ nats}$, while $D_{\textrm{F}}(P_{0.7} \| P_{0.3})$ collapses by four orders of magnitude ($\sim e^{-m^2/2}$):
 
 @!mdl-divergences-distances-the-score-and-the-fisher-divergence-1
-
-::: {.d2l-note .warn}
-At $m=5$: KL $0.339$ nats, Fisher $4\times10^{-6}$.
-:::
 :::
 
-::: {.slide title="Noise Fills the Valley Where the Two Scores Disagree"}
-[A remedy]{.kicker}
+::: {.slide title="How Multi-Scale Noise Fixes Mode-Weight Blindness"}
+[Why Diffusion Models Perturb Data]{.kicker}
 
-Add independent Gaussian noise of standard deviation $2$ to both mixtures at $m=5$.
+If score-based losses cannot see relative weights between isolated modes, how do score-based diffusion models generate balanced samples across modes?
 
-| | clean | with noise |
-|:--|:--|:--|
-| variance of each mode | $1$ | $1+4=5$ |
-| distance between the modes | $10$ standard deviations | $10/\sqrt5\approx4.5$ |
-| density in the valley | $1.5\times10^{-6}$ | $0.015$ |
+| Mixture Property at $m = 5$ ($w = 0.7$ vs. $w = 0.3$) | Clean Data ($\sigma_{\textrm{noise}} = 0$) | Perturbed with $\mathcal{N}(0, 2^2)$ Noise |
+|:--|---:|---:|
+| **Component variance** $\sigma_{\textrm{total}}^2 = 1 + \sigma_{\textrm{noise}}^2$ | $1.00$ | $5.00$ |
+| **Effective mode separation** $2m / \sigma_{\textrm{total}}$ | $10.0\text{ std devs}$ | $10/\sqrt{5} \approx 4.47\text{ std devs}$ |
+| **Density in the transition valley** $p(0)$ | $1.5 \times 10^{-6}$ | $1.5 \times 10^{-2}$ ($10{,}000\times$ higher) |
+| **Visibility of mixing weight $w$ in $D_{\textrm{F}}$** | Invisible ($D_{\textrm{F}} \approx 4 \times 10^{-6}$) | Strongly visible in data expectation |
 
-- The data now visit the place where the two scores differ, and the weights show in the average.
-
-::: {.d2l-note}
-One reason why diffusion models add noise at many scales before they match scores.
-:::
+- **The multi-scale diffusion recipe (Song & Ermon, 2019):** High noise bridges valleys so score matching learns global mixing weights, while low noise resolves fine local mode shapes.
 :::
 
-::: {.slide title="Every Smooth Density Satisfies Stein's Identity with Its Own Score"}
-[Stein's identity]{.kicker}
+::: {.slide title="Expanding Fisher Divergence: The Unknown Data Score"}
+[The Sample-Estimation Obstacle]{.kicker}
 
-A density $p>0$ on the line with score $s=p'/p$, and a test function $g$ with $g\,p\to0$ at $\pm\infty$.
+Even on a single connected mode, how can we minimize $D_{\textrm{F}}(P \| Q)$ when we observe data $P$ only as a finite sample $\{x_i\}_{i=1}^N$ and have no formula for the data score $s_P(x)$?
 
-**I.** $p'=s\,p$.
-
-. . .
-
-**II.** By parts: $\int g'p\,dx=[g\,p]_{-\infty}^{\infty}-\int g\,p'\,dx=-\int g\,s\,p\,dx$.
-
-. . .
-
-**III.** $\;\boxed{\mathbb{E}_p[g'+g\,s]=0}$
-
-- $\mathcal N(0,1)$, $s=-x$: $\ \mathbb{E}[g'(X)]=\mathbb{E}[X\,g(X)]$. With $g=x$: $\mathbb{E}[X^2]=1$.
-
-::: {.d2l-note}
-A known slope becomes a statement about averages, and samples estimate averages.
-:::
+- **Expand the squared score gap in 1D:**
+  $$D_{\textrm{F}}(P \| Q) = \underbrace{\frac{1}{2}\mathbb{E}_{x \sim P}\big[s_P(x)^2\big]}_{\text{constant independent of } Q} - \underbrace{\mathbb{E}_{x \sim P}\big[s_P(x)\,s_Q(x)\big]}_{\text{cross term containing unknown } s_P} + \underbrace{\frac{1}{2}\mathbb{E}_{x \sim P}\big[s_Q(x)^2\big]}_{\text{direct data average of model score}}$$
+- **Isolating the obstacle:** Only the middle cross term $-\mathbb{E}_P[s_P(x)s_Q(x)]$ involves both the unknown data slope $s_P(x) = p'(x)/p(x)$ and the model $Q$.
+- **Key insight:** Because $p(x) s_P(x) = p'(x)$, the cross term is the integral $-\int p'(x) s_Q(x)\,dx$, which cries out for integration by parts!
 :::
 
-::: {.slide title="One Integration by Parts Removes the Score of the Data"}
-[Score matching]{.kicker}
+::: {.slide title="Stein's Identity: Integration by Parts on Densities"}
+[Eliminating Unknown Derivatives]{.kicker}
 
-Data are points, and a finite set of points has no slope: $s_P$ is unknown.
+Every smooth positive density $p(x) > 0$ on $\mathbb{R}$ satisfies an exact identity linking its score $s_p(x) = (\log p(x))' = p'(x)/p(x)$ to the derivative of any test function $g(x)$:
 
-**I.** On the line, $D_{\mathrm F}=\tfrac12\mathbb{E}_P[s_P^2]-\mathbb{E}_P[s_Q\,s_P]+\tfrac12\mathbb{E}_P[s_Q^2]$. The first term is the same for every model. The cross term is the obstacle.
-
-. . .
-
-**II.** Stein's identity for the data, with $s=s_P$ and $g=s_Q$: $\ \mathbb{E}_P[s_Q\,s_P]=-\mathbb{E}_P[s_Q']$.
-
-. . .
-
-**III.** $\;\boxed{D_{\mathrm F}(P\Vert Q)=\mathbb{E}_P\big[\tfrac12s_Q^2+s_Q'\big]+\textrm{const}}$
-
-::: {.d2l-note}
-Score matching: an average over data of what the model supplies. No $Z$, no $s_P$.
+::: {.d2l-note .rule}
+**Proposition (Stein's Identity):** For any differentiable density $p > 0$ and differentiable test function $g$ such that $\lim_{x \to \pm\infty} g(x)p(x) = 0$ with $\mathbb{E}_p|g'| < \infty$ and $\mathbb{E}_p|g\,s_p| < \infty$,
+$$\mathbb{E}_{x \sim p}\big[g'(x) + g(x)\,s_p(x)\big] = 0$$
 :::
 
-[Assumes that the data have a smooth positive density.]{.small}
+- **Two-line proof via integration by parts:** Since $p'(x) = s_p(x)p(x)$:
+  $$\int_{-\infty}^\infty g'(x)p(x)\,dx = \big[g(x)p(x)\big]_{-\infty}^\infty - \int_{-\infty}^\infty g(x)p'(x)\,dx = -\int_{-\infty}^\infty g(x)s_p(x)p(x)\,dx \quad \blacksquare$$
+- **Gaussian special case (Stein's Lemma):** For $X \sim \mathcal{N}(0, 1)$, $s_p(x) = -x$, so $\mathbb{E}[g'(X)] = \mathbb{E}[X g(X)]$ (e.g., setting $g(x) = x$ immediately yields $\mathbb{E}[X^2] = 1$).
 :::
 
-::: {.slide title="Score Matching Fits a Quartic from Two Moments of the Data"}
-[Worked example]{.kicker}
+::: {.slide title="Hyvärinen Score Matching via Stein's Identity"}
+[Training Unnormalized Models]{.kicker}
 
-Model $\tilde q_\theta(x)=e^{-\theta x^4/4}$ with unknown $Z(\theta)$. A bar is an average over the data.
+Applying Stein's identity to the data distribution $P$ with the model score chosen as the test function ($g(x) = s_Q(x)$) gives $\mathbb{E}_P[s_Q'(x) + s_P(x)s_Q(x)] = 0$, replacing the unknown cross term $-\mathbb{E}_P[s_P s_Q]$ with $+\mathbb{E}_P[s_Q'(x)]$:
 
-**I.** $s_Q=-\theta x^3$ and $s_Q'=-3\theta x^2$.
+$$D_{\textrm{F}}(P \| Q) = \mathbb{E}_{x \sim P}\!\left[\frac{1}{2}s_Q(x)^2 + s_Q'(x)\right] + \frac{1}{2}\mathbb{E}_{x \sim P}\big[s_P(x)^2\big]$$
 
-. . .
-
-**II.** $\overline{\tfrac12s_Q^2+s_Q'}=\tfrac12\theta^2\,\overline{x^6}-3\theta\,\overline{x^2}$, a parabola in $\theta$.
-
-. . .
-
-**III.** Its minimum: $\;\boxed{\hat\theta=3\,\overline{x^2}\,/\,\overline{x^6}}$
-
-::: {.d2l-note}
-Two moments of the sample fit the model. Maximum likelihood needs $Z(\theta)$.
+- **The Score Matching Objective (Hyvärinen, 2005):** Dropping the $Q$-independent constant $\tfrac12\mathbb{E}_P[s_P^2]$, we train $Q$ by minimizing $J(Q) = \mathbb{E}_{x \sim P}[\tfrac12 s_Q(x)^2 + s_Q'(x)]$ directly on data samples—requiring **neither the normalizer $Z$ nor the data score $s_P$**!
+- **Geometric meaning of the two terms:** Minimizing $\tfrac12 s_Q(x)^2$ pulls the model slope to $0$ (a stationary peak/trough) at data points, while minimizing $s_Q'(x) = (\log \tilde{q})''(x) < 0$ forces the log-density to curve *downward* (a local maximum rather than a minimum) at the data.
+- **Multivariate extension ($\mathbb{R}^n$):** $J(Q) = \mathbb{E}_{\mathbf{x} \sim P}\big[\tfrac12\|s_Q(\mathbf{x})\|_2^2 + \textrm{tr}(\nabla_{\mathbf{x}} s_Q(\mathbf{x}))\big]$.
 :::
 
-[In $n$ dimensions $s_Q'$ becomes a sum of $n$ second derivatives: $n$ backward passes.]{.small}
+::: {.slide title="Worked Example: Fitting an Unnormalized Quartic"}
+[Closed-Form Score Matching]{.kicker}
+
+Consider fitting the unnormalized quartic density $\tilde{q}_\theta(x) = e^{-\theta x^4/4}$ ($\theta > 0$) to data $x_1, \ldots, x_N$ without ever computing $Z(\theta) = \int_{-\infty}^\infty e^{-\theta x^4/4}\,dx$:
+
+- **Step 1 (Compute model score and its derivative):**
+  $$s_Q(x) = \frac{d}{dx}\!\left(-\frac{\theta x^4}{4}\right) = -\theta x^3, \qquad s_Q'(x) = -3\theta x^2$$
+- **Step 2 (Form the empirical score-matching objective):** Writing $\overline{f(x)} = \frac{1}{N}\sum_{i=1}^N f(x_i)$:
+  $$\hat{J}(\theta) = \overline{\frac{1}{2}s_Q(x)^2 + s_Q'(x)} = \frac{1}{2}\theta^2\,\overline{x^6} - 3\theta\,\overline{x^2}$$
+- **Step 3 (Solve the quadratic in $\theta$):** Setting $\hat{J}'(\theta) = \theta\,\overline{x^6} - 3\overline{x^2} = 0$ yields the closed-form estimator $\hat{\theta}_{\textrm{SM}} = \frac{3\overline{x^2}}{\overline{x^6}}$ from two empirical moments!
+  *(Note: In $\mathbb{R}^n$, computing $\textrm{tr}(\nabla_{\mathbf{x}} s_Q(\mathbf{x})) = \sum_{i=1}^n \partial_{x_i} s_{Q,i}(\mathbf{x})$ requires $n$ backward passes, motivating sliced and denoising score matching in Chapter 21.)*
 :::
 
-::: {.slide title="One Test Function Checks One Property of a Sample"}
-[Testing a sample]{.kicker}
+::: {.slide title="Stein's Operator as a Goodness-of-Fit Diagnostic"}
+[Testing Samples Against a Score]{.kicker}
 
-Model $Q=\mathcal N(0,1)$, $s_Q=-x$: under $Q$, $g'(x)-x\,g(x)$ averages to zero. Its average over $200{,}000$ sample points:
+What if we reverse the roles and apply Stein's identity to the *model* $Q$ instead of the data $P$? Define the linear **Stein operator** $\mathcal{A}_Q$ of model $Q$:
+
+$$(\mathcal{A}_Q g)(x) = g'(x) + s_Q(x)\,g(x) \implies \mathbb{E}_{x \sim Q}\big[(\mathcal{A}_Q g)(x)\big] = 0 \quad \text{for all test functions } g$$
+
+- **Goodness-of-fit testing without $Z$ or model samples:** Given data samples $x_1, \ldots, x_N \sim P$, if the empirical average $\frac{1}{N}\sum_{i=1}^N (\mathcal{A}_Q g)(x_i)$ deviates significantly from $0$, we can reject $P = Q$ using only $s_Q(x_i)$!
+- **What $\mathbb{E}_P[\mathcal{A}_Q g]$ actually measures:** Because $P$ satisfies its own Stein identity $\mathbb{E}_P[g'(x)] = -\mathbb{E}_P[s_P(x)g(x)]$, substituting into $\mathbb{E}_P[g' + s_Q g]$ yields:
+  $$\mathbb{E}_{x \sim P}\big[(\mathcal{A}_Q g)(x)\big] = \mathbb{E}_{x \sim P}\Big[\big(s_Q(x) - s_P(x)\big)\,g(x)\Big]$$
+  Each test function $g(x)$ probes the projection of the score gap $s_Q - s_P$ onto $g$.
+:::
+
+::: {.slide title="Probing Shifted and Widened Samples in Code"}
+[Single Test Functions Have Blind Spots]{.kicker}
+
+Testing $Q = \mathcal{N}(0, 1)$ ($s_Q(x) = -x$, so $(\mathcal{A}_Q g)(x) = g'(x) - x g(x)$) on $200{,}000$ draws from $\mathcal{N}(0, 1)$, $\mathcal{N}(0.5, 1)$, and $\mathcal{N}(0, 4)$ shows why no single test function $g$ suffices:
 
 @!divergences-distances-stein
 
-- $g=1$ checks the mean; $g=x$ checks the second moment: $1-1.25$ and $1-4$.
-- $\mathbb{E}_P[g'+g\,s_Q]=\mathbb{E}_P[(s_Q-s_P)\,g]$: the score gap is $-0.5$ for the shift, $-\tfrac34x$ for the wide sample.
-
-::: {.d2l-note .warn}
-$g=1$ misses a sample with four times the model's variance.
-:::
+- Because $P = \mathcal{N}(0, 4)$ has an odd score gap $s_Q(x) - s_P(x) = -x - (-x/4) = -\tfrac34 x$, the even function $g(x) = 1$ integrates to $0$ and completely misses a $4\times$ variance error!
 :::
 
-::: {.slide title="The Largest Violation over a Kernel Ball Has a Closed Form"}
-[Kernel Stein discrepancy]{.kicker}
+::: {.slide title="Kernel Stein Discrepancy (KSD) and Stein Kernel"}
+[Supremum Over an RKHS Ball]{.kicker}
 
-- Test functions $g=\langle\mathbf w,\boldsymbol\varphi\rangle$ with a feature vector $\boldsymbol\varphi(x)$ and $\Vert\mathbf w\Vert\le1$; kernel $k(x,x')=\langle\boldsymbol\varphi(x),\boldsymbol\varphi(x')\rangle$.
-- $\sup_g\mathbb{E}_P[g'+s_Q\,g]=\big\Vert\mathbb{E}_P[\boldsymbol\varphi'+s_Q\,\boldsymbol\varphi]\big\Vert$, and its square is
+To test *all* directions at once, we maximize $\mathbb{E}_P[\mathcal{A}_Q g]$ over all functions $g(x) = \langle \mathbf{w}, \boldsymbol{\varphi}(x) \rangle$ with $\|\mathbf{w}\|_2 \le 1$ in a reproducing kernel Hilbert space with kernel $k(x, x') = \langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x') \rangle$:
 
-$$\mathrm{KSD}^2(P,Q)=\mathbb{E}_{x,x'\sim P}\big[k_Q(x,x')\big]$$
+$$\mathrm{KSD}(P, Q) = \sup_{\|\mathbf{w}\|_2 \le 1} \mathbb{E}_{x \sim P}\big[(\mathcal{A}_Q g)(x)\big] = \Big\|\mathbb{E}_{x \sim P}\big[\boldsymbol{\varphi}'(x) + s_Q(x)\boldsymbol{\varphi}(x)\big]\Big\|_2$$
 
-$$k_Q(x,x')=s_Q(x)\,s_Q(x')\,k+s_Q(x)\,\partial_{x'}k+\partial_xk\,s_Q(x')+\partial_x\partial_{x'}k$$
-
-- From points $x_1,\ldots,x_N$ of the data: the average of $k_Q(x_i,x_j)$ over all pairs $i\ne j$.
-
-::: {.d2l-note}
-Needs the model's score and data samples. No $Z$, no samples of the model.
-:::
+- **Closed-form Stein kernel $k_Q(x, x')$:** Squaring the norm via two independent data draws $x, x' \sim P$ yields $\mathrm{KSD}^2(P, Q) = \mathbb{E}_{x, x' \sim P}[k_Q(x, x')]$ where:
+  $$k_Q(x, x') = s_Q(x)s_Q(x')k(x, x') + s_Q(x)\partial_{x'}k(x, x') + \partial_x k(x, x')\,s_Q(x') + \partial_x \partial_{x'}k(x, x')$$
+- **Kernel-smoothed Fisher divergence identity:** Applying Stein's identity on $P$ to both arguments turns $\mathrm{KSD}^2(P, Q)$ into:
+  $$\mathrm{KSD}^2(P, Q) = \mathbb{E}_{x, x' \sim P}\Big[\big(s_Q(x) - s_P(x)\big)\,k(x, x')\,\big(s_Q(x') - s_P(x')\big)\Big]$$
 :::
 
-::: {.slide title="Check: Predict the KSD of a Shifted Model"}
-[Check]{.kicker}
+::: {.slide title="Evaluating Unbiased KSD U-Statistics in Code"}
+[Goodness-of-Fit Without Sampling Q]{.kicker}
 
-Stein's identity for the data turns the KSD into a kernel-smoothed Fisher divergence:
-
-$$\mathrm{KSD}^2(P,Q)=\mathbb{E}_{x,x'\sim P}\big[(s_Q-s_P)(x)\,k(x,x')\,(s_Q-s_P)(x')\big]$$
-
-Data $\mathcal N(0,1)$, model $\mathcal N(1,1)$, kernel $k=e^{-(x-x')^2/2}$. What is $\mathrm{KSD}^2$?
-
-[Hint: $\mathbb{E}\,e^{-D^2/2}=(1+\tau^2)^{-1/2}$ for $D\sim\mathcal N(0,\tau^2)$.]{.small}
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The score gap is $-(x-1)+x=1$ everywhere, so $\mathrm{KSD}^2=\mathbb{E}[k(X,X')]$. With $X-X'\sim\mathcal N(0,2)$: $\mathrm{KSD}^2=1/\sqrt3\approx0.577$.
-:::
-:::
-:::
-
-::: {.slide title="KSD Tells Wrong Models from the Right One by Their Scores Alone"}
-[Kernel Stein discrepancy]{.kicker}
-
-One sample of $2{,}000$ points from $\mathcal N(0,1)$, tested against three scores; RBF kernel, length scale $1$. In parentheses: the value for infinitely many points.
-
-- $-x$: the true model. $-(x-1)$: the wrong model $\mathcal N(1,1)$, predicted $1/\sqrt3$.
-- $-x^3$: the quartic $e^{-x^4/4}$, whose $Z$ is never computed.
+Using a single sample of $N = 2{,}000$ data points from $P = \mathcal{N}(0, 1)$, the off-diagonal U-statistic $\widehat{\mathrm{KSD}}^2 = \frac{1}{N(N-1)}\sum_{i \neq j} k_Q(x_i, x_j)$ cleanly separates the true model from shifted and quartic models using only their scores $s_Q$:
 
 @!divergences-distances-ksd
-
-::: {.d2l-note}
-Between the three lines only the score function changed. No model was sampled.
 :::
 
-[Used to test goodness of fit and to check samplers. No training objective in the book uses it.]{.small}
+::: {.slide title="Taxonomy of Distribution Comparison Families"}
+[Ratio, Test-Function, Transport, Score]{.kicker}
+
+Across §§37.3–37.5 we have constructed four families of distribution comparisons:
+
+::: {.cols .vc}
+::: {.col}
+- **$f$-Divergences ($\mathbb{E}_Q[f(p/q)]$):** KL, Reverse KL, $\chi^2$, Hellinger, JS, TV. Scale-invariant, but freeze on disjoint supports.
+- **Integral Probability Metrics ($\sup_{g \in \mathcal{G}}(\mathbb{E}_P g - \mathbb{E}_Q g)$):** TV ($|g| \le 1/2$), MMD (RKHS ball), $W_1$ ($\textrm{Lip}_1$). Estimable directly from samples.
+- **Optimal Transport ($\inf_\gamma \mathbb{E}_\gamma[c(x, y)]$):** $W_1$, $W_2$ (FID), Sinkhorn. Geometry-aware at all distances.
+- **Score-Based ($D_{\textrm{F}}, \mathrm{KSD}$):** Compare $\nabla_{\mathbf{x}} \log q$ without normalizer $Z$, but blind to distant mode weights.
 :::
 
-::: {.slide title="Check: Which Comparisons Survive an Unknown Normalizer?"}
-[Check]{.kicker}
-
-An energy-based model $\tilde q(\mathbf x)$ with unknown $Z$, and a sample of data.
-Which of KL, JS, MMD, $W_1$, Fisher, KSD can you compute?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** KSD directly: model score, data samples. Fisher up to a
-constant that does not depend on the model, after the integration by parts.
-JS (through a critic), MMD and $W_1$ need samples of the model. KL from the
-data to the model, the likelihood, needs $Z$.
+::: {.col .fig}
+@fig:mdl-it-divergence-taxonomy
 :::
 :::
 :::
 
-::: {.slide title="What the Model Can Supply Decides the Objective"}
-[Choosing a comparison]{.kicker}
+::: {.slide title="Master Decision Guide: Choosing a Training Loss"}
+[Matching Objectives to Model Capabilities]{.kicker}
 
-| the model supplies | train on | it compares | caveat |
-|:--|:--|:--|:--|
-| a density, positive on the data | maximum likelihood | forward KL | $\infty$ if data fall where $q=0$ |
-| samples only | a critic (GAN, f-GAN) | JS, $D_f$ | biased low; flat when far |
-| samples only | a fixed kernel | MMD | flat beyond a few length scales |
-| samples only | a Lipschitz critic (WGAN) | $W_1$ | constraint is approximate |
-| samples and density; target up to $Z$ | variational inference | reverse KL | may settle on one mode |
-| a score | score matching, diffusion | Fisher | blind to weights of far modes |
+| What the Model / Target Supplies | Training / Evaluation Objective | Target Divergence | Point Masses $\delta_0$ vs. $\delta_d$ | Primary Caveat |
+|:--|:---|:---|:---|:---|
+| Normalized model density $q_{\boldsymbol{\theta}}(x) > 0$ | **Maximum Likelihood** (LLMs, flows) | Forward KL $D_{\textrm{KL}}(P \| Q)$ | $\infty$ | Blows up if $q_{\boldsymbol{\theta}}(x) = 0$ on data |
+| Model samples + tractable $q_{\boldsymbol{\theta}}$; unnormalized $\tilde{p}$ | **Variational Inference / ELBO** | Reverse KL $D_{\textrm{KL}}(Q \| P)$ | $\infty$ | Mode-seeking; underestimates variance |
+| Samples of $P$ and $Q$ + learned critic $T$ | **Original GAN / $f$-GAN** | $\textrm{JS}(P, Q)$ or $D_f(P \| Q)$ | Constant $f(0)+f'(\infty)$ | Biased low; zero gradient when disjoint |
+| Samples of $P$ and $Q$ + fixed kernel $k$ | **MMD / KID Two-Sample Test** | $\textrm{MMD}(P, Q)$ | $\sqrt{2 - 2e^{-d^2/(2\ell^2)}}$ | Gradient vanishes for $d \gg \ell$ |
+| Samples of $P$ and $Q$ + 1-Lipschitz critic | **WGAN / Sinkhorn OT** | Wasserstein $W_1(P, Q)$ | $d$ (linear) | Empirical $W_1$ rate $\mathcal{O}(N^{-1/n})$; approximate Lip |
+| Unnormalized model score $s_Q = \nabla_{\mathbf{x}}\log \tilde{q}$ | **Score Matching / Diffusion / KSD** | Fisher $D_{\textrm{F}}$ or $\mathrm{KSD}$ | Undefined (no slope) | Blind to weights of isolated modes without noise |
+:::
 
-::: {.d2l-note}
-A density: maximum likelihood. Samples only: a critic or a kernel. A score only: score matching.
+::: {.slide title="Concept Check: Fisher Scaling, KSD, Normalizers"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of score-based comparisons:
+
+1. **Coordinate rescaling ($D_{\textrm{F}}$ vs. $D_{\textrm{KL}}$):** Compute $D_{\textrm{F}}(P \| Q) = \frac{\Delta^2}{2\sigma^4}$ and $D_{\textrm{KL}}(P \| Q) = \frac{\Delta^2}{2\sigma^2}$ for $P = \mathcal{N}(0, 1)$ vs. $Q = \mathcal{N}(1, 1)$, and then for the doubled-coordinate pair $P = \mathcal{N}(0, 4)$ vs. $Q = \mathcal{N}(2, 4)$. Why does one change and not the other?
+2. **Closed-form KSD prediction:** Using $\mathrm{KSD}^2(P, Q) = \mathbb{E}_{x, x' \sim P}[(s_Q - s_P)(x)k(x, x')(s_Q - s_P)(x')]$, compute the exact population $\mathrm{KSD}^2$ between data $P = \mathcal{N}(0, 1)$ and shifted model $Q = \mathcal{N}(1, 1)$ under the RBF kernel $k(x, x') = e^{-(x-x')^2/2}$ ($\ell = 1$).
+3. **Energy-based model audit:** Given an EBM $\tilde{q}(\mathbf{x}) = e^{-E(\mathbf{x})}$ with intractable $Z$ and no MCMC sampler, plus a dataset $\{\mathbf{x}_i\}_{i=1}^N \sim P$, which of $D_{\textrm{KL}}(P \| Q)$, $\textrm{JS}$, $\textrm{MMD}$, $W_1$, $D_{\textrm{F}}$, and $\mathrm{KSD}$ can you compute or optimize?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Rescaling:** On $\mathcal{N}(0,1)\|\mathcal{N}(1,1)$ ($\Delta=1, \sigma^2=1$), both equal $1/2$. On $\mathcal{N}(0,4)\|\mathcal{N}(2,4)$ ($\Delta=2, \sigma^2=4$), $D_{\textrm{KL}} = \frac{4}{2(4)} = 1/2$ is invariant, whereas $D_{\textrm{F}} = \frac{4}{2(16)} = 1/8$ drops $4\times$ because scores carry units of $1/x$.
+2. **Shifted KSD:** Since $s_P(x) = -x$ and $s_Q(x) = -(x-1)$, the score gap is $s_Q(x) - s_P(x) = 1$ everywhere. Thus $\mathrm{KSD}^2 = \mathbb{E}_{X, X' \sim \mathcal{N}(0,1)}[e^{-(X-X')^2/2}] = (1 + 2/1)^{-1/2} = 1/\sqrt{3} \approx 0.577$ (since $X - X' \sim \mathcal{N}(0, 2)$).
+3. **EBM audit:** $\mathrm{KSD}^2(P, Q)$ can be computed directly, and $D_{\textrm{F}}(P \| Q)$ can be optimized up to the data constant $\tfrac12\mathbb{E}_P[s_P^2]$ via Hyvärinen score matching. Forward KL requires $Z$, while JS, MMD, and $W_1$ require samples from $Q$.
 :::
 :::
 
-::: {.slide title="Recap: Slopes Compare What Densities Cannot"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Score-Based Comparisons and Objectives"}
+[Key Takeaways]{.kicker}
 
-- **Score:** $\nabla_{\mathbf x}\log\tilde q$; the constant $Z$ drops out.
-- **Fisher:** $\tfrac12\mathbb{E}_P\Vert s_P-s_Q\Vert^2$; Gaussians $\Delta^2/(2\sigma^4)$.
-- **Blind spot:** at $m=5$, KL $0.339$ nats against Fisher $4\times10^{-6}$.
-- **Stein:** $\mathbb{E}_p[g'+g\,s]=0$. For the data it removes $s_P$; for the model it tests a sample: $-0.5$ on a shift, $-3$ on a wide sample.
-- **KSD:** $0$ for the right model, $1/\sqrt3$ for the shifted one, $0.32$ for the quartic; no sampling, no $Z$.
+| Concept / Method | Mathematical Formula | Key Property / Requirement | Deep Learning Role & Limitation |
+|:--|:---|:---|:---|
+| **Stein Score** | $s_Q(\mathbf{x}) = \nabla_{\mathbf{x}} \log q(\mathbf{x}) = -\nabla_{\mathbf{x}} E(\mathbf{x})$ | Drops normalizing constant $Z = \int e^{-E(\mathbf{x})}\,d\mathbf{x}$ | Vector field of restoring forces toward high-density modes |
+| **Fisher Divergence** | $D_{\textrm{F}}(P \| Q) = \tfrac12\mathbb{E}_P[\|s_P(\mathbf{x}) - s_Q(\mathbf{x})\|_2^2]$ | Units $1/x^2$; $0 \iff P = Q$ on connected support | Decays as $\sim e^{-m^2/2}$ on isolated modes with swapped weights |
+| **Stein's Identity** | $\mathbb{E}_{x \sim p}[g'(x) + g(x)s_p(x)] = 0$ | Integration by parts assuming $g(x)p(x) \to 0$ | Converts unknown density derivatives into sample expectations |
+| **Score Matching** | $J(Q) = \mathbb{E}_P[\tfrac12\|s_Q(\mathbf{x})\|_2^2 + \textrm{tr}(\nabla_{\mathbf{x}} s_Q(\mathbf{x}))]$ | Equals $D_{\textrm{F}}(P \| Q) - \tfrac12\mathbb{E}_P[\|s_P\|^2]$ | Trains EBMs & diffusion models (with multi-scale noise) without $Z$ |
+| **Kernel Stein (KSD)** | $\mathrm{KSD}^2(P, Q) = \mathbb{E}_{x,x' \sim P}[k_Q(x, x')]$ | Kernel-smoothed score gap $\mathbb{E}_P[\Delta s(x) k(x,x') \Delta s(x')]$ | Nonparametric goodness-of-fit test requiring only $s_Q$ and data samples |
+:::
 
-::: {.d2l-note}
-Next: how much does one variable tell about another, and how much of it can $n$ samples certify?
-:::
-:::

@@ -1205,96 +1205,43 @@ in practice.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §27.9]{.kicker}
+[Dive into Deep Learning · §36.11]{.kicker}
 
-A classifier from a model of each class<br>**count, smooth, add logs, then check the probabilities**
+Naive Bayes and Generative vs. Discriminative Classifiers<br>**generative vs. discriminative · conditional independence · Laplace smoothing · log-odds linearity · calibration & overconfidence**
 :::
 :::
 
-::: {.slide title="$10^{236}$ Black-and-White Images, 60,000 Training Images"}
-[The problem]{.kicker}
+::: {.slide title="10^236 Binary Images, Only 60,000 Training Examples"}
+[Motivation & Combinatorial Explosion]{.kicker}
 
-- Softmax regression on Fashion-MNIST: 7,850 numbers by gradient descent, about 83%.
-- Another route: model how each class produces its images, then apply Bayes' rule.
-- A model of "how coats look" gives a probability to every binary image.
-- 784 pixels: $2^{784}\approx10^{236}$ images, against 60,000 for training.
+In earlier chapters, we trained softmax regression on Fashion-MNIST by running gradient descent directly on the conditional label probability $p(y \mid \mathbf{x})$ ($7{,}850$ parameters, $\approx 83\%$ accuracy). What if we instead model how each garment class generates its images $p(\mathbf{x} \mid y)$ and invert it via Bayes' rule?
 
-::: {.d2l-note}
-Can a classifier be learned by counting instead of by gradient descent?
-:::
+- **The combinatorial wall:** Even if each of the $d = 28 \times 28 = 784$ pixels is simplified to a single binary bit $x_i \in \{0, 1\}$ (inked or blank), there are $2^{784} \approx 10^{236}$ distinct binary images.
+- **Unrestricted lookup tables are impossible:** Specifying an arbitrary distribution $p(\mathbf{x} \mid y)$ requires $2^{784} - 1$ free probabilities per class, whereas our entire training set has only $60{,}000$ images ($6{,}000$ per class).
+- **The naive Bayes shortcut:** Assume that once the class $y$ is known, the $d$ features are conditionally independent—reducing training to counting single-pixel frequencies and prediction to adding log-odds.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Bayes' Rule: Generative vs. Discriminative Routes"}
+[Two Families of Classifiers]{.kicker}
 
-- derive the naive Bayes rule from Bayes' rule and one assumption;
-- fit it by counting, with one pseudo-count against zero counts;
-- score it in log space and read it as a linear classifier;
-- report its accuracy with an error bar, its confusions and its calibration;
-- prove why it is overconfident.
+To minimize expected $0\text{--}1$ classification error, the Bayes-optimal decision rule picks the class with the largest posterior probability $p(y \mid \mathbf{x})$. Applying Bayes' rule rewrites this posterior in terms of the class-conditional likelihood and prior:
 
-**Running example:** Fashion-MNIST with "garment pixels". **By hand:** a spam
-filter with two words and ten mails.
+$$\hat{y} = \mathop{\mathrm{argmax}}_{y \in \{1,\dots,K\}} p(y \mid \mathbf{x}) = \mathop{\mathrm{argmax}}_{y} \frac{p(\mathbf{x} \mid y)\,p(y)}{p(\mathbf{x})} = \mathop{\mathrm{argmax}}_{y} \underbrace{p(\mathbf{x} \mid y)\,p(y)}_{\text{Bayes numerator}}$$
 
-**Idea:** if features are independent given the class, counting each one
-separately is enough; the ranking survives, the stated probabilities do not.
+- **Discriminative classifiers (e.g., logistic/softmax regression):** Model the decision boundary $p(y \mid \mathbf{x})$ directly without ever modeling how the input features $\mathbf{x}$ are distributed.
+- **Generative classifiers (e.g., naive Bayes, GMMs):** Model how each class produces its inputs via $p(\mathbf{x} \mid y)$ alongside the class prior $p(y)$, then normalize the $K$ Bayes numerators to recover $p(y \mid \mathbf{x})$.
+- **Where the explosion lives:** By the exact chain rule, $p(\mathbf{x} \mid y) = \prod_{i=1}^d p(x_i \mid x_1, \dots, x_{i-1}, y)$, where factor $i$ still requires conditioning on $2^{i-1}$ feature histories.
 :::
 
-::: {.slide title="One Classifier Built from the Chapter's Tools"}
-[Where this fits]{.kicker}
+::: {.slide title="The Naive Conditional Independence Assumption"}
+[Factorizing the Class-Conditional Density]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Random Variables | densities, moments, tail bounds |
-| Joint Distributions | conditioning, covariance, change of variables |
-| Distributions | the named distributions and their losses |
-| The Exponential Family | one form, convex fits, conjugacy |
-| Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP |
-| Latent Variables and EM | the ELBO, EM |
-| Bayesian Computation | averaging over a posterior |
-| Concentration Inequalities | exponential tails of averages |
-| Uniform Convergence | guarantees after selection |
-| **Naive Bayes** | **one classifier, end to end** |
-:::
-
-::: {.col .narrow}
-- **Uses:** Bayes' rule, MLE, the Beta posterior, the bootstrap.
-- **Skips:** mixtures and EM, text pipelines, deep generative models.
-:::
-:::
-:::
-
-::: {.slide title="Bayes' Rule Turns a Model of Each Class into a Classifier"}
-[Bayes' rule]{.kicker}
-
-$$\hat y=\operatorname*{argmax}_y p(y\mid\mathbf x)
-=\operatorname*{argmax}_y \frac{p(\mathbf x\mid y)\,p(y)}{p(\mathbf x)}
-=\operatorname*{argmax}_y p(\mathbf x\mid y)\,p(y).$$
-
-- $p(\mathbf x)$ is the same for every class, so it drops.
-- **Generative:** model $p(\mathbf x\mid y)$ and $p(y)$. **Discriminative:** model $p(y\mid\mathbf x)$.
-
-. . .
-
-Still $2^{784}$ entries per class: by the chain rule,
-$p(\mathbf x\mid y)=\prod_i p(x_i\mid x_1,\ldots,x_{i-1},y)$, and each factor
-remembers the whole history.
-:::
-
-::: {.slide title="Independence Turns $2^{784}-1$ Probabilities per Class into 784"}
-[The naive assumption]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-Once the class is known, one pixel says nothing about another:
-
-$$p(\mathbf x\mid y)=\prod_{i=1}^{784}p(x_i\mid y).$$
-
-- One number per class and pixel: $\theta_{iy}=p(x_i=1\mid y)$.
-- Pairwise independence is not enough: $x_3=x_1\oplus x_2$.
+- **Forgetting feature histories:** Naive Bayes assumes that given the class $y$, knowing one feature $x_i$ tells us nothing further about any other feature $x_j$:
+  $$p(\mathbf{x} \mid y) = \prod_{i=1}^d p(x_i \mid y)$$
+- **Exponential parameter reduction:** For $d = 784$ binary features and $K = 10$ classes, $2^{784} - 1$ parameters per class collapse to $784$ Bernoulli frequencies $\theta_{iy} = p(x_i = 1 \mid y)$ (each estimated to standard error $\le \frac{0.5}{\sqrt{6000}} \approx 0.0065$).
+- **Joint vs. pairwise independence:** Pairwise uncorrelated features do not imply joint conditional independence (e.g., if $x_1, x_2$ are fair bits and $x_3 = x_1 \oplus x_2$, every pair is independent yet $p(1,1,1) = 0 \neq \frac{1}{8}$).
 :::
 
 ::: {.col .fig}
@@ -1303,229 +1250,260 @@ $$p(\mathbf x\mid y)=\prod_{i=1}^{784}p(x_i\mid y).$$
 :::
 :::
 
-::: {.slide title="Two Words Classify a Mail: Posterior 0.90"}
-[Worked example]{.kicker}
+::: {.slide title="Worked Example: A Two-Word Spam Filter by Hand"}
+[Multiplicative Likelihood Ratios]{.kicker}
 
-| ten mails | spam (4) | ordinary (6) |
-|---|---|---|
-| contains "free" | 3 | 1 |
-| contains "meeting" | 0 | 4 |
+Consider a training corpus of $10$ emails—$4$ spam ($\hat{p}(\text{spam}) = 0.4$) and $6$ ordinary ($\hat{p}(\text{ordinary}) = 0.6$)—tracking two binary word indicators, `"free"` and `"meeting"`:
 
-New mail: "free", no "meeting".
+| Feature $x_i \in \{0, 1\}$ | Spam Emails ($n_1 = 4$) | Ordinary Emails ($n_0 = 6$) | Likelihood Ratio $\frac{p(x_i \mid \text{spam})}{p(x_i \mid \text{ord})}$ |
+| :--- | :---: | :---: | :---: |
+| **Contains `"free"`** ($x_1 = 1$) | $3 / 4 = 0.75$ | $1 / 6 \approx 0.167$ | $\frac{3/4}{1/6} = 4.5$ (when present) |
+| **Contains `"meeting"`** ($x_2 = 1$) | $0 / 4 = 0.00$ | $4 / 6 \approx 0.667$ | $\frac{1 - 0}{1 - 4/6} = 3.0$ (when absent) |
 
-- Numerators: $0.4\cdot\tfrac34\cdot1=0.30$ against $0.6\cdot\tfrac16\cdot\tfrac26=0.033$.
-- Odds: $\underbrace{\tfrac23}_{\text{prior}}\times\underbrace{4.5}_{\text{"free"}}\times\underbrace{3}_{\text{no "meeting"}}=9$, so $p(\text{spam}\mid\mathbf x)=0.90$.
-
-::: {.d2l-note}
-Each feature multiplies the odds by its likelihood ratio.
-:::
+- **Classifying a new email with `"free"` and no `"meeting"` ($\mathbf{x} = (1, 0)$):**
+  $$\frac{p(\text{spam} \mid \mathbf{x})}{p(\text{ordinary} \mid \mathbf{x})} = \underbrace{\frac{0.4}{0.6}}_{\text{prior odds}} \times \underbrace{\frac{3/4}{1/6}}_{\text{has ``free''}} \times \underbrace{\frac{1}{2/6}}_{\text{no ``meeting''}} = \frac{2}{3} \times 4.5 \times 3 = 9 \implies p(\text{spam} \mid \mathbf{x}) = \frac{9}{9+1} = 0.90$$
 :::
 
-::: {.slide title="How Many Numbers per Class?"}
-[Check]{.kicker}
+::: {.slide title="Maximum Likelihood Counting and Zero-Count Vetoes"}
+[Laplace Add-One Smoothing]{.kicker}
 
-An image has 784 binary pixels and there are ten classes. How many free
-probabilities does $p(\mathbf x\mid y)$ need per class, with and without the
-naive assumption?
+Under conditional independence, the training set log-likelihood decouples into an independent coin-flip log-likelihood for each class $y$ and feature $i$ (where $n_y$ is the class count and $n_{iy}$ is the active feature count in class $y$):
 
-. . .
+$$\log P(\mathcal{D} \mid \boldsymbol{\theta}) = \sum_{y=1}^K n_y \log p(y) + \sum_{y=1}^K \sum_{i=1}^d \Bigl[n_{iy}\log\theta_{iy} + (n_y - n_{iy})\log(1 - \theta_{iy})\Bigr]$$
 
-- Without: $2^{784}-1\approx10^{236}$.
-- With: $784$, each a frequency estimated from 6,000 images.
-- The prior adds $9$ in both cases.
+- **Zero-count pathology of the raw MLE ($\hat{\theta}_{iy} = n_{iy}/n_y$):** Whenever $n_{iy} = 0$ (such as `"meeting"` in our $4$ training spam emails), $\hat{\theta}_{iy} = 0$ and any future test example with $x_i = 1$ receives a Bayes numerator of $0$ for class $y$—one feature vetoes the entire class!
+- **Laplace smoothing (Beta posterior mean):** Appending one imaginary positive example and one imaginary negative example yields the posterior mean under a uniform $\mathrm{Beta}(1,1)$ prior:
+  $$\hat{\theta}_{iy} = \frac{n_{iy} + 1}{n_y + 2} \in (0, 1)$$
+  With smoothing, an email containing both `"free"` and `"meeting"` receives spam probability $0.32$ instead of $0$.
 :::
 
-::: {.slide title="Counting Is Maximum Likelihood; +1 Keeps Every Factor Positive"}
-[Smoothing]{.kicker}
+::: {.slide title="Preventing Floating-Point Underflow in Log Space"}
+[Additive Class Scores]{.kicker}
 
-- MLE: $\hat\theta_{iy}=n_{iy}/n_y$, the frequency, and $\hat p(y)=n_y/n$.
-- A zero count vetoes the class: "meeting" never in spam, so any mail with "meeting" is ordinary.
-- Laplace: $\hat\theta_{iy}=(n_{iy}+1)/(n_y+2)$, the posterior mean under $\mathrm{Beta}(1,1)$.
-- A coin with 9 heads in 13 flips: $9/13=0.69\to10/15=0.67$; with 0 heads: $0\to1/15$.
-- Mail with both words: spam probability $0\to0.32$.
+Multiplying $d = 784$ pixel probabilities $\prod_{i=1}^{784} p(x_i \mid y)$ directly in floating-point arithmetic fails catastrophically: if each factor is $1/2$, their product is $2^{-784} \approx 10^{-236}$, far below the `float32` minimum positive subnormal ($1.4 \times 10^{-45}$). Taking the logarithm converts the product into the additive **class score**:
+
+$$s_y(\mathbf{x}) = \log p(y) + \sum_{i=1}^d \log p(x_i \mid y), \qquad \hat{y} = \mathop{\mathrm{argmax}}_{y} s_y(\mathbf{x})$$
+
+Inspecting the decimal exponents $\log_{10} = s_y(\mathbf{x}) / \log 10$ on the $10{,}000$ Fashion-MNIST test images confirms why log space is mandatory:
+
+@!mdl-naive-bayes-test-accuracy-1
 :::
 
-::: {.slide title="The Raw Product Underflows: $2^{-784}\approx10^{-236}$"}
-[Log space]{.kicker}
+::: {.slide title="Theorem: Bernoulli Naive Bayes Is a Linear Classifier"}
+[Log-Odds Weight Matrix and Offset]{.kicker}
 
-- 785 factors below 1; smallest positive float32 $\approx1.4\cdot10^{-45}$.
-- $\log$ is increasing, so it keeps the argmax. The **class score**:
+For binary features $x_i \in \{0, 1\}$, we can write $\log p(x_i \mid y) = x_i \log\theta_{iy} + (1 - x_i)\log(1 - \theta_{iy})$. Collecting terms that multiply $x_i$ and terms independent of $x_i$ reveals that every class score is an **affine function of $\mathbf{x}$**:
 
-$$s_y(\mathbf x)=\log p(y)+\sum_{i=1}^{784}\log p(x_i\mid y).$$
+$$s_y(\mathbf{x}) = \mathbf{w}_y^\top \mathbf{x} + b_y, \qquad w_{iy} = \log\frac{\theta_{iy}}{1 - \theta_{iy}}, \qquad b_y = \log p(y) + \sum_{i=1}^d \log(1 - \theta_{iy})$$
 
-- Spam filter: $s=\log0.30=-1.20$ against $\log\tfrac1{30}=-3.40$; gap $\log 9=2.20$.
+- **Identical architecture to softmax regression:** Bernoulli naive Bayes stores a $10 \times 784$ weight matrix $\mathbf{W}$ (where $w_{iy}$ is the log-odds that pixel $i$ is inked in class $y$) and a $10$-element bias vector $\mathbf{b}$ (where $b_y$ is the log-score of an all-blank image).
+- **Binary equivalence to logistic regression:** For $K = 2$ classes, $p(y = 1 \mid \mathbf{x}) = \operatorname{sigmoid}\bigl((\mathbf{w}_1 - \mathbf{w}_0)^\top \mathbf{x} + b_1 - b_0\bigr)$.
+- **Gaussian naive Bayes boundaries:** For continuous $x_i \mid y \sim \mathcal{N}(\mu_{iy}, \sigma_{iy}^2)$, shared variances ($\sigma_{iy}^2 = \sigma_i^2$) cancel the quadratic $x_i^2$ terms to produce a **linear** boundary, whereas class-specific variances yield a **diagonal quadratic** boundary without cross terms $x_i x_j$.
 :::
 
-::: {.slide title="Bernoulli Naive Bayes Is a Linear Classifier"}
-[Linear boundaries]{.kicker}
+::: {.slide title="Geometry of Generative vs. Discriminative Hyperplanes"}
+[Why Correlated Features Tilt the Boundary]{.kicker}
 
-$\log p(x_i\mid y)=x_i\log\theta_{iy}+(1-x_i)\log(1-\theta_{iy})$, so
-
-$$s_y(\mathbf x)=\mathbf w_y^\top\mathbf x+b_y,\quad
-w_{iy}=\log\frac{\theta_{iy}}{1-\theta_{iy}},\quad
-b_y=\log p(y)+\sum_i\log(1-\theta_{iy}).$$
-
-- Each inked pixel adds its log-odds; $b_y$ scores the blank image.
-
-::: {.d2l-note}
-The same family as softmax regression, with arrays of the same shapes
-($784\times10$ weights, $10$ offsets), chosen by counting instead of gradient
-descent.
-:::
+::: {.cols .vc}
+::: {.col}
+- **Same linear hypothesis class, different fits:** Why do two linear classifiers in the exact same model family achieve different error rates?
+- **Naive generative fit (left, $19\%$ error):** When features $x_1, x_2$ are correlated within each class, the true clouds tilt diagonally. Gaussian naive Bayes fits axis-aligned ellipses ($\operatorname{Cov} = \operatorname{diag}$), and inverting those misspecified ellipses via Bayes' rule places the hyperplane at the wrong angle.
+- **Direct discriminative fit (right, $7\%$ error):** Fitting $p(y \mid \mathbf{x})$ directly aligns the hyperplane with the correlation tilt, achieving the Bayes-optimal error rate.
 :::
 
-::: {.slide title="Two Ways to Choose the Line: 19% Error Against 7%"}
-[Generative and discriminative]{.kicker}
-
+::: {.col .fig}
 @fig:mdl-prob-naive-genvdisc
-
-- Left: axis-aligned Gaussians ignore the tilt of the classes; Bayes' rule gives a poor line.
-- Right: the line fitted to $p(y\mid\mathbf x)$ directly follows the tilt.
+:::
+:::
 :::
 
-::: {.slide title="Training Is Two Counts"}
-[Fashion-MNIST]{.kicker}
+::: {.slide title="Training Naive Bayes on Fashion-MNIST in Four Lines"}
+[Single-Pass Counting in Code]{.kicker}
 
-$x_i=1$ where the pixel belongs to the garment; ink fraction $0.50$.
+After binarizing Fashion-MNIST ($x_i = 1$ wherever grayscale intensity $> 0$, giving an overall ink fraction of $0.50$), fitting all $7{,}850$ parameters requires a single counting pass with zero gradient steps:
 
 @naive-bayes-train
 
-::: {.d2l-note}
-Zero counts are rare here: only 5 test images ink a pixel their class never inked.
-:::
+- **Why Laplace smoothing is non-negotiable:** Sneakers never ink $57$ pixels near the top of the frame during training, and $5$ test images ink a pixel their true class never inked in $6{,}000$ training examples—without the $+1 / +2$ pseudo-counts, all $5$ would receive score $-\infty$ for their true class.
 :::
 
-::: {.slide title="Templates Are Means; Samples Show What the Model Forgets"}
-[What the model learned]{.kicker}
+::: {.slide title="Learned Class Templates vs. Generated Pixel Samples"}
+[What the Generative Model Remembers and Forgets]{.kicker}
 
+::: {.cols}
+::: {.col}
+**Per-Pixel Class Templates ($\hat{\theta}_{iy}$)**
+@!naive-bayes-templates
+:::
+
+::: {.col}
+**Independent Pixel-Coin Samples**
 @!mdl-naive-bayes-templates-and-samples-1
-
-- Template $\hat\theta_{iy}$ = per-pixel mean, a property of the data, not of the assumption.
-- Sample: each pixel its own coin. Same ink (0.50), ragged edges.
-- Ink/background switches per row: pullovers 5 against 3, sandals 8 against 3.
+:::
 :::
 
-::: {.slide title="Independence Predicts 30% for Two Hem Pixels; the Data Say 54%"}
-[The assumption, measured]{.kicker}
+- **Templates reflect data marginals:** Each template on the left is the exact per-pixel average of $6{,}000$ training images; any model matching the data marginals has the exact same templates.
+- **Samples expose the independence fallacy:** Flipping $784$ independent coins with probabilities $\hat{\theta}_{iy}$ (right) produces speckled, ragged edges because neighboring boundary pixels do not coordinate.
+:::
 
-Two neighbouring pixels on the bottom hem of pullovers:
+::: {.slide title="Quantifying the Independence Failure on Real Garments"}
+[Row Transitions and Pairwise Hem Correlations]{.kicker}
+
+We can measure the failure of conditional independence both globally (by counting ink-to-background switches along each horizontal scanline) and locally (on two adjacent pixels at row $26$, columns $14$ and $15$ along the bottom hem of pullovers):
+
+@!mdl-naive-bayes-templates-and-samples-2
 
 @!mdl-naive-bayes-checking-the-assumption
 
-- The hem reaches the row or it does not: nearly one feature recorded twice.
-- The model's samples follow the product by construction.
+- **Nearly one feature recorded twice:** Each hem pixel is inked in $55\%$ of pullovers. Independence predicts both are inked together in $0.55^2 = 30\%$ of pullovers, whereas in the real data both are inked together in **$54\%$** of pullovers!
 :::
 
-::: {.slide title="About 71% ± 0.9 Points on 10,000 Test Images"}
-[Accuracy and its error bar]{.kicker}
+::: {.slide title="Vectorized Inference and Bootstrap Error Bars"}
+[70.6% +/- 0.9% Test Accuracy]{.kicker}
 
-$s=\mathbf X\mathbf W^\top+\mathbf b$, one matrix product for all images:
+Using the affine form $s_y(\mathbf{x}) = \mathbf{w}_y^\top \mathbf{x} + b_y$, a single matrix multiplication `X_test @ W.T + b` classifies all $10{,}000$ test images, and $1{,}000$ bootstrap resamples verify the binomial standard error:
 
 @!naive-bayes-predict
 
 @!mdl-naive-bayes-calibration-1
 
-- Binomial: $\sqrt{0.706\cdot0.294/10^4}=0.0046$, times $1.96$ is $0.009$.
-- The digits after the decimal point of 70.59% are noise.
-- Training accuracy 72%, one point above: the errors are bias, not too
-  little data.
+- **High bias, near-zero overfitting gap:** Training accuracy ($71.6\%$) sits only $1.0$ percentage point above test accuracy ($70.6\% \pm 0.9\%$). Collecting more training data cannot fix the remaining $29\%$ error—the bottleneck is the **bias** of the independence assumption.
 :::
 
-::: {.slide title="The Same Hyperplanes, Fitted Directly: Higher or Lower?"}
-[Check]{.kicker}
+::: {.slide title="Head-to-Head: Naive Bayes vs. Softmax Regression"}
+[Same Linear Family, Different Objective]{.kicker}
 
-Softmax regression uses the same hyperplanes on the same binary pixels, but
-fits them by gradient descent on $p(y\mid\mathbf x)$. Will it beat 71%,
-and by how much?
-
-. . .
+Is $71\%$ the best any linear hyperplane classifier can do on binarized $28 \times 28$ pixels? Training softmax regression on the exact same binary vectors $\mathbf{X}$ by minimizing cross-entropy $-\sum_i \log p(y_i \mid \mathbf{x}_i)$ settles the question:
 
 @!mdl-naive-bayes-confusions-and-weights-2
 
-- About twelve points higher: the family of hyperplanes is not the limit.
-- The loss lies in how counting sets the weights.
+- **A $+12.5$ percentage-point jump within the same model family:** Softmax regression reaches **$83.1\%$** accuracy and cuts pullover$\leftrightarrow$coat confusions in half ($295$ vs $614$) because discriminative gradient descent adjusts weights jointly to avoid double-counting correlated pixel patches.
 :::
 
-::: {.slide title="Errors Sit Among Upper-Body Garments and Among Shoes"}
-[Confusions]{.kicker}
+::: {.slide title="Analyzing the Confusion Matrix across Garment Groups"}
+[Where Counting Struggles Most]{.kicker}
 
-Confusion matrix $N_{ij}$: class $j$ predicted as $i$ (rows predicted,
-columns true). Its largest errors, written true $\to$ predicted:
+Extracting the six largest off-diagonal entries of the $10 \times 10$ confusion matrix $N_{ij}$ (where column $j$ is the true class and row $i$ is the predicted class) pinpoints where naive Bayes loses those $12.5$ points:
 
 @!mdl-naive-bayes-confusions-and-weights-1
 
-- Coat and pullover: 614 errors between them; shirts are right only 17% of the time.
-- Trousers (91%) and sneakers (89%) are easy.
+- **Two major confusion clusters:** The four long-sleeved/upper-body garments (coat, pullover, shirt, t-shirt) and the three footwear classes (sandal, sneaker, ankle boot) account for the vast majority of mistakes, with shirts recognized only **$17\%$** of the time.
+- **Distinct silhouettes remain easy:** Classes with unique spatial footprints—such as trousers ($91\%$) and sneakers ($89\%$)—are separated cleanly even by independent pixel counts.
 :::
 
-::: {.slide title="The Torso Weights Cancel; the Sides Decide Pullover Against Coat"}
-[Weights]{.kicker}
+::: {.slide title="Visualizing the Log-Odds Discriminant Weights"}
+[Interpreting w_pullover - w_coat]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
+- **Linear log-odds difference ($\mathbf{w}_{\text{pullover}} - \mathbf{w}_{\text{coat}}$):** When pixel $i$ is inked ($x_i = 1$) rather than blank ($x_i = 0$), it shifts the log-odds between pullover and coat by $w_{i,\text{pullover}} - w_{i,\text{coat}}$ nats.
+- **Why the blue torso ($-1$ nat) does not vote for coat when inked:** Torso pixels are inked in $\approx 99.0\%$ of pullovers and $\approx 99.6\%$ of coats, so seeing an inked torso pixel shifts the log-ratio by $\log\frac{0.990}{0.996} \approx -0.006$ nats. The $-1$ nat weight comes from $-\log\frac{1-0.990}{1-0.996}$: it is the penalty when a torso pixel is left *blank*!
+- **Decisions happen along the red sides:** Outer sleeve and shoulder pixels drive the actual separation on inked garments.
+:::
+
+::: {.col .fig}
 @!mdl-naive-bayes-confusions-and-weights-3
 :::
-
-::: {.col .narrow}
-- $\mathbf w_{\text{pullover}}-\mathbf w_{\text{coat}}$, in nats.
-- Blue torso: inked in nearly every image of both classes.
-- Red sides: inked more often in pullovers.
-- The largest weight rests on a pseudo-count.
-:::
 :::
 :::
 
-::: {.slide title="Claimed 99%, Achieved 71%"}
-[Calibration]{.kicker}
+::: {.slide title="Calibration Audit: 99.2% Confidence vs. 70.6% Accuracy"}
+[Expected Calibration Error (ECE)]{.kicker}
 
-Confidence = largest softmax of the scores. Bin by confidence, compare with accuracy:
+Exponentiating and normalizing the class scores recovers the model's posterior probabilities $p(y \mid \mathbf{x}) = \frac{\exp s_y(\mathbf{x})}{\sum_{y'} \exp s_{y'}(\mathbf{x})}$. Grouping the $10{,}000$ test predictions into confidence bins exposes severe **overconfidence**:
 
 @!mdl-naive-bayes-calibration-3
 
 ::: {.d2l-note .warn}
-92% of the images claim 1.000 and are right 73% of the time; every bin is overconfident.
+**92% of test images claim $\ge 99.9\%$ confidence (`1.000`):** Across the test set, the median gap between the top two class scores is **$60$ nats** ($e^{-60} \approx 10^{-26}$), producing an Expected Calibration Error of $\mathrm{ECE} = 0.29$ (compared with $< 0.03$ for softmax regression).
 :::
 :::
 
-::: {.slide title="Duplicated Evidence Multiplies the Log-Odds"}
-[Overconfidence]{.kicker}
+::: {.slide title="Why Correlated Features Cause Extreme Overconfidence"}
+[The Duplicated-Evidence Theorem]{.kicker}
 
-Two classes, priors $\pi_0,\pi_1$; one feature $x$ with likelihood ratio
-$r(x)=p(x\mid1)/p(x\mid0)$, stored $k$ times.
+Why does naive Bayes rank classes reasonably well ($71\%$ accuracy) while reporting completely untrustworthy probabilities ($99.2\%$ confidence)? Consider a binary feature $x$ with likelihood ratio $r(x) = \frac{p(x \mid y=1)}{p(x \mid y=0)}$ that is stored **$k$ times** in the feature vector:
 
-$$\log\text{odds}_{\text{naive}}=\log\frac{\pi_1}{\pi_0}+k\log r(x)
-\quad\text{against}\quad\log\frac{\pi_1}{\pi_0}+\log r(x).$$
+$$\log\frac{p_{\mathrm{true}}(y=1 \mid \mathbf{x})}{p_{\mathrm{true}}(y=0 \mid \mathbf{x})} = \log\frac{\pi_1}{\pi_0} + \log r(x) \qquad \text{vs.} \qquad \log\frac{p_{\mathrm{NB}}(y=1 \mid \mathbf{x})}{p_{\mathrm{NB}}(y=0 \mid \mathbf{x})} = \log\frac{\pi_1}{\pi_0} + k\log r(x)$$
 
-- **Why:** the copies agree, so the truth uses $p(x\mid y)$; the model uses $p(x\mid y)^k$.
-- Equal priors: same prediction for every $k$, claimed confidence $\bar r^k/(1+\bar r^k)$, $\bar r=\max(r,1/r)$.
-- Unequal priors: prior odds $1/5$, $r=4$: one copy says class 0, two say class 1.
+- **Duplication multiplies log-odds by $k$:** Because the $k$ identical copies always agree, they carry no new information beyond copy $1$, yet naive Bayes multiplies $p(x \mid y)^k$.
+- **Under equal priors ($\pi_1 = \pi_0$), rankings survive while confidence explodes:** Multiplying $\log r(x)$ by $k > 0$ never changes its sign (so $\hat{y}$ is unchanged), but an $80\%$ clue ($r = 4$) copied $k = 5$ times reports posterior probability $\frac{4^5}{1 + 4^5} = \frac{1024}{1025} = 99.9\%$ while still being right only $80\%$ of the time!
+- **Under unequal priors, even the ranking can flip:** If $\pi_1/\pi_0 = 1/5$ and $r = 4$, one copy gives odds $4/5 < 1$ (class $0$, correct), whereas $k = 2$ copies give odds $16/5 > 1$ (flipping the prediction to class $1$).
 :::
 
-::: {.slide title="An 80% Clue Copied Five Times"}
-[Check]{.kicker}
+::: {.slide title="Post-Hoc Repair: Temperature Scaling and Label Shift"}
+[Fixing Probabilities Without Retraining]{.kicker}
 
-A clue is right 80% of the time ($r=4$), the priors are equal, and the
-feature is stored five times. What confidence does naive Bayes claim? And
-what do 784 correlated pixels do?
+Two operational adjustments repair naive Bayes probabilities at test time without touching the $7{,}840$ learned pixel frequencies $\hat{\theta}_{iy}$:
 
-. . .
-
-- $4^5/(1+4^5)=1024/1025=0.999$, for predictions right 80% of the time.
-- Fashion-MNIST: median gap between the two best scores about 60 nats.
-- $e^{-60}\approx10^{-26}$: the softmax returns 0 or 1.
+- **1. Temperature Scaling ($p_T(y \mid \mathbf{x}) = \operatorname{softmax}\bigl(s_y(\mathbf{x})/T\bigr)$):** Dividing every class score by a single scalar temperature $T > 1$ (fitted by minimizing NLL on a held-out validation split) shrinks the $60$-nat score gaps back to calibrated log-odds without changing $\operatorname{argmax}_y s_y(\mathbf{x})$. For $k$ duplicated features under equal priors, setting $T = k$ recovers the exact posterior.
+- **2. Zero-Retraining Label-Shift Adaptation:** If the deployment class prior $p_T(y)$ differs from the training prior $p_S(y)$ while $p(\mathbf{x} \mid y)$ remains fixed (*label shift*), a generative classifier updates its offset in one line:
+  $$s_y^{\mathrm{target}}(\mathbf{x}) = s_y^{\mathrm{source}}(\mathbf{x}) + \log\frac{p_T(y)}{p_S(y)}$$
+  (Note that temperature scaling must be applied *before* adding the prior shift so the $60$-nat feature sum does not drown out a $2.2$-nat prior shift!)
 :::
 
-::: {.slide title="Counting Ranks the Classes Usefully and Overstates Its Confidence"}
-[Wrap-up]{.kicker}
+::: {.slide title="Where Generative Classifiers Win: Missing Features"}
+[Exact Analytical Marginalization]{.kicker}
 
-- Naive assumption: $2^{784}-1$ probabilities per class become 784 counts.
-- Spam filter by hand: odds $\tfrac23\times4.5\times3=9$, posterior 0.90.
-- Log scores are affine: a linear classifier, $784\times10$ weights and $10$ offsets.
-- Fashion-MNIST: about $71\%\pm0.9$; the same lines fitted directly, about 83%.
-- Claimed 99% against 71% achieved: $k$ copies multiply the log-odds by $k$.
+Suppose half of the pixels in a test image are occluded behind an obstacle, partitioning the $d$ features into visible pixels $\mathcal{V}$ and unobserved pixels $\mathcal{U}$.
 
-::: {.d2l-note}
-Next: dividing every score by one fitted temperature repairs much of the
-overconfidence without refitting.
+- **Exact marginalization in naive Bayes:** Because the joint class-conditional distribution factorizes across features, summing out every unobserved pixel $x_j$ ($j \in \mathcal{U}$) removes its factor cleanly:
+  $$p(\mathbf{x}_{\mathcal{V}} \mid y) = \sum_{\mathbf{x}_{\mathcal{U}}} \prod_{i=1}^d p(x_i \mid y) = \Biggl[\prod_{i \in \mathcal{V}} p(x_i \mid y)\Biggr] \prod_{j \in \mathcal{U}} \underbrace{\sum_{x_j \in \{0,1\}} p(x_j \mid y)}_{=\,1} = \prod_{i \in \mathcal{V}} p(x_i \mid y)$$
+- **Log-space score on visible features:** We simply sum $\log p(x_i \mid y)$ over $i \in \mathcal{V}$ (`(X_test * M) @ np.log(P_xy).T + ((1 - X_test) * M) @ np.log1p(-P_xy).T + np.log(P_y)`).
+- **Pitfall of zero-imputation:** Setting missing pixels to $x_j = 0$ in the affine formula $\mathbf{w}_y^\top \mathbf{x} + b_y$ is *not* marginalization—it treats every occluded pixel as actively observed blank background, adding $\log(1 - \theta_{jy})$ via $b_y$. Discriminative classifiers lack $p(\mathbf{x})$ altogether and cannot marginalize missing features analytically.
+:::
+
+::: {.slide title="The Ng & Jordan (2002) Sample-Complexity Crossover"}
+[O(log d) vs. O(d) Learning Curves]{.kicker}
+
+With $n = 60{,}000$ images, discriminative softmax regression beat generative naive Bayes by $12.5$ points ($83.1\%$ vs $70.6\%$). Why does naive Bayes often win in the small-data regime ($n \ll d$)?
+
+- **Logarithmic sample complexity of Naive Bayes ($m = O(\log d)$):** Because each parameter $\hat{\theta}_{iy}$ is estimated independently from $m$ class-$y$ examples, Hoeffding's inequality and a union bound over all $2d$ parameters of a two-class model guarantee $\max_{i,y} \lvert\hat{\theta}_{iy} - \theta_{iy}\rvert \le \varepsilon$ with probability $\ge 1 - \delta$ once:
+  $$m \ge \frac{\log(4d/\delta)}{2\varepsilon^2} \qquad (\approx 2{,}230 \text{ examples at } d = 784,\, \varepsilon = 0.05,\, \delta = 0.05)$$
+- **Linear sample complexity of Logistic Regression ($n = O(d)$):** Fitting $d$ coupled weights jointly by conditional MLE requires $n = \Omega(d)$ examples to prevent overfitting (and on small $n < d$, the data are linearly separable so unregularized logistic NLL has no finite minimizer).
+- **The bias–variance crossover:** Naive Bayes has **lower variance** (reaching its higher asymptotic error floor in $O(\log d)$ examples), whereas logistic regression has **lower asymptotic bias** (reaching a lower error floor once $n \gg d$).
+:::
+
+::: {.slide title="Generative vs. Discriminative Classifiers Compared"}
+[Head-to-Head Synthesis]{.kicker}
+
+| Dimension | Bernoulli Naive Bayes (Generative) | Logistic / Softmax Regression (Discriminative) |
+| :--- | :--- | :--- |
+| **Probabilistic Objective** | Joint likelihood $\prod_i p(\mathbf{x}_i \mid y_i)\,p(y_i)$ | Conditional likelihood $\prod_i p(y_i \mid \mathbf{x}_i)$ |
+| **Decision Score $s_y(\mathbf{x})$** | Affine $\mathbf{w}_y^\top \mathbf{x} + b_y$ ($w_{iy} = \log\frac{\theta_{iy}}{1-\theta_{iy}}$) | Affine $\mathbf{w}_y^\top \mathbf{x} + b_y$ (fitted directly by SGD) |
+| **Training Algorithm** | Single-pass closed-form counting ($O(nd)$) | Iterative gradient optimization over epochs |
+| **Sample Complexity** | **$O(\log d)$** examples to reach asymptotic floor | **$O(d)$** examples to reach asymptotic floor |
+| **Asymptotic Accuracy ($n \gg d$)** | Lower ($70.6\%$ on Fashion-MNIST; high bias) | Higher ($83.1\%$ on Fashion-MNIST; low bias) |
+| **Probability Calibration** | Severely overconfident ($\mathrm{ECE} = 0.29$; double-counting) | Well calibrated ($\mathrm{ECE} < 0.03$) |
+| **Missing Features at Test Time** | Exact closed-form marginalization (drop factors) | No marginalization rule; requires imputation |
+:::
+
+::: {.slide title="Concept Check: Naive Bayes and Calibration"}
+[Check Your Understanding]{.kicker}
+
+1. **Can Bernoulli Naive Bayes learn XOR?** Suppose $y = x_1 \oplus x_2$ on the four binary points $(0,0), (0,1), (1,0), (1,1)$. Why can no choice of Bernoulli naive Bayes parameters $\theta_{iy} \in (0, 1)$ classify all four points correctly?
+2. **Duplicated clue against a strong prior:** Two classes have prior odds $\frac{\pi_1}{\pi_0} = \frac{1}{5}$. A binary feature $x=1$ has likelihood ratio $r = \frac{p(x=1\mid y=1)}{p(x=1\mid y=0)} = 4$, and the pipeline duplicates $x$ three times ($k = 3$). What class does the true posterior predict, and what class does naive Bayes predict?
+3. **Why zero-filling is not marginalization:** In the affine score $s_y(\mathbf{x}) = \mathbf{w}_y^\top \mathbf{x} + b_y$, why does setting an occluded pixel $x_i = 0$ fail to marginalize $x_i$ out of $p(\mathbf{x} \mid y)$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Bernoulli naive Bayes produces an affine log-odds score $(\mathbf{w}_1 - \mathbf{w}_0)^\top \mathbf{x} + (b_1 - b_0)$, whose decision boundary is a single straight hyperplane, whereas XOR is not linearly separable (and in fact each marginal frequency $\hat{\theta}_{iy} = 1/2$, making every weight $w_{iy} = \log 1 = 0$).
+2. The true posterior odds are $\frac{1}{5} \times 4 = \frac{4}{5} < 1$, predicting **class $0$** ($p(y=1\mid x=1) = 4/9 \approx 44\%$). Naive Bayes computes odds $\frac{1}{5} \times 4^3 = \frac{64}{5} = 12.8 > 1$, flipping the prediction to **class $1$** with $92.8\%$ claimed confidence!
+3. Because $b_y = \log p(y) + \sum_{j=1}^d \log(1 - \theta_{jy})$ already includes $\log(1 - \theta_{iy})$ for every pixel, setting $x_i = 0$ scores pixel $i$ as **observed blank background** ($p(x_i=0\mid y) = 1-\theta_{iy}$) rather than dropping pixel $i$'s factor ($1$).
 :::
 :::
+
+::: {.slide title="Summary: Naive Bayes and Generative Classification"}
+[Key Takeaways]{.kicker}
+
+| Concept | Mathematical Form | Statistical & Deep Learning Role |
+| :--- | :--- | :--- |
+| **Generative Bayes Rule** | $\hat{y} = \operatorname{argmax}_y p(\mathbf{x} \mid y)\,p(y)$ | Inverts a class-conditional data model into a classifier |
+| **Naive Factorization** | $p(\mathbf{x} \mid y) = \prod_{i=1}^d p(x_i \mid y)$ | Collapses $2^d - 1$ table entries per class to $d$ independent marginals |
+| **Laplace Smoothing** | $\hat{\theta}_{iy} = \frac{n_{iy} + 1}{n_y + 2}$ ($\mathrm{Beta}(1,1)$ mean) | Prevents unseen feature-class combinations ($n_{iy} = 0$) from vetoing class $y$ |
+| **Log-Odds Affine Score** | $s_y(\mathbf{x}) = \mathbf{w}_y^\top \mathbf{x} + b_y$, $w_{iy} = \log\frac{\theta_{iy}}{1-\theta_{iy}}$ | Proves Bernoulli naive Bayes is a linear classifier in the softmax family |
+| **Duplicated-Evidence Bias** | $\log\text{odds}_{\mathrm{NB}} = \log\frac{\pi_1}{\pi_0} + k\log r(x)$ | Correlated features multiply log-odds, inflating confidence ($\mathrm{ECE} = 0.29$) |
+| **Ng–Jordan Trade-Off** | Naive Bayes: $O(\log d)$ samples; Logistic: $O(d)$ | Generative counting converges faster at small $n$; discriminative SGD wins at large $n$ |
+:::
+

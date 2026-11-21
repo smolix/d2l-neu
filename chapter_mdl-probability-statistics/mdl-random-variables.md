@@ -924,106 +924,122 @@ descends from it.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §25.1]{.kicker}
+[Dive into Deep Learning · §36.1]{.kicker}
 
-A dart, a density, and the tools that follow<br>**random variables**
+Random Variables: Densities, Cumulative Distributions, Moments, and Tail Bounds<br>**probability density $p(x)$ · CDF $F'(x) = p(x)$ · inverse-transform sampling · expectation & variance · Markov & Chebyshev · heavy tails**
 :::
 :::
 
-::: {.slide title="A Dart Lands 0.5 From the Center: What Was the Probability?"}
-[The problem]{.kicker}
+::: {.slide title="A Dart Lands at Distance 0.5: What Was the Probability?"}
+[The Continuous Paradox]{.kicker}
 
-A dart lands anywhere on a round board of radius 1, all places equally likely.
-It stops at distance $0.5$ from the center.
+Continuous quantities in deep learning—pixel intensities, initialized weights, or diffusion noise—can take any real value in an interval. Consider a dart landing uniformly on a unit disk of radius $1$ at radial distance $R \in [0, 1]$:
 
-| distance rounded to | probability | probability / width |
-|:--|--:|--:|
-| $[0.45, 0.55]$ | $0.1$ | $1$ |
-| $[0.495, 0.505]$ | $0.01$ | $1$ |
-| $[0.4995, 0.5005]$ | $0.001$ | $1$ |
-| exactly $0.5$ | $0$ | |
+| Distance Interval Around $r = 0.5$ | Bin Width $\epsilon$ | Exact Disk Area Share $P(R \in \text{bin})$ | Ratio: $\text{Probability} / \epsilon$ |
+| :--- | ---: | ---: | ---: |
+| $[0.45, 0.55]$ | $0.1$ | $0.55^2 - 0.45^2 = 0.1$ | $1$ |
+| $[0.495, 0.505]$ | $0.01$ | $0.505^2 - 0.495^2 = 0.01$ | $1$ |
+| $[0.4995, 0.5005]$ | $0.001$ | $0.5005^2 - 0.4995^2 = 0.001$ | $1$ |
+| Exact point $R = 0.5$ | $0$ | $0$ | — |
 
 ::: {.d2l-note .warn}
-Every exact value has probability $0$, yet the dart lands somewhere.
+**Zero probability is not impossibility:** Every individual real number has probability $P(R = r) = 0$ because a point has zero width, yet the ratio of probability to bin width converges to a finite rate.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Probability Density Is Probability per Unit Length"}
+[Local Rate of Accumulation]{.kicker}
 
-- compute $P(a < X \le b)$ from a density, and sample it from uniform noise;
-- compute a mean and a variance, and bound a tail from them alone;
-- recognize a heavy tail, for which averaging fails.
+Because a disk of radius $r$ has area $\pi r^2$ inside a board of area $\pi$, the dart falls within distance $r$ with probability $P(R \le r) = r^2$. Over a short interval $[x, x + \epsilon)$, the **probability density** $p(x)$ is the limiting probability per unit length:
 
-**Running example:** the dart, with distance $R$: $P(R\le r)=r^2$.
-**Idea:** probability per unit length; sums become integrals.
+$$p(x) = \lim_{\epsilon \downarrow 0} \frac{P(x \le X < x + \epsilon)}{\epsilon} \iff P(x \le X < x + \epsilon) \approx \epsilon\,p(x)$$
+
+- **Deriving the dart's density:** On $[r, r + \epsilon)$, the probability is $(r + \epsilon)^2 - r^2 = 2r\epsilon + \epsilon^2$. Dividing by $\epsilon$ and sending $\epsilon \downarrow 0$ yields $p(r) = 2r$ for $0 \le r \le 1$.
+- **Why $p(r) = 2r$ grows linearly:** More of the board's area sits near the outer rim, proportional to the circle's circumference $2\pi r$.
+- **A density is a rate, not a probability:** At $r = 0.9$, $p(0.9) = 1.8 > 1$; a variable uniform on $[0, 0.1]$ has density $p(x) = 10$ across that interval of length $0.1$.
 :::
 
-::: {.slide title="First in the Chapter: the Language of Densities"}
-[Where this fits]{.kicker}
+::: {.slide title="Probability as Area Under the Density Curve"}
+[Formal Integral Definition]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| **Random Variables** | **densities, moments, tail bounds** |
-| Joint Distributions | conditioning, covariance, change of variables |
-| Distributions | the named distributions and their losses |
-| The Exponential Family | one form, convex fits, conjugacy |
-| Statistics | error bars, tests, intervals |
-| Maximum Likelihood | losses, Fisher information, MAP |
-| Latent Variables and EM | the ELBO, EM |
-| Bayesian Computation | averaging over a posterior |
-| Concentration Inequalities | exponential tails of averages |
-| Uniform Convergence | guarantees after selection |
-| Naive Bayes | one classifier, end to end |
+- Partitioning $(a, b]$ into bins of width $\epsilon$ and summing their probabilities $\sum_i \epsilon\,p(\epsilon i)$ forms a Riemann sum that converges to the definite integral:
+  $$P(X \in (a, b]) = \int_a^b p(x)\,dx$$
+- **Two conditions define any valid density:**
+  1. **Non-negativity:** $p(x) \ge 0$ for all $x \in \mathbb{R}$.
+  2. **Unit total area:** $\int_{-\infty}^{\infty} p(x)\,dx = 1$.
+- **Dart outer ring:** $\int_{0.5}^1 2r\,dr = [r^2]_{0.5}^1 = 0.75$—fully three quarters of the board lies beyond half the radius.
 :::
 
-::: {.col .narrow}
-- **Uses:** discrete probability, integrals.
-- **Skips:** named distributions, estimation.
+::: {.col .fig}
+@fig:mdl-prob-pdf-area
 :::
 :::
 :::
 
-::: {.slide title="Probability per Unit Length Is the Density"}
-[Densities]{.kicker}
+::: {.slide title="Simulating the Dart Board: From Bins to Ratios"}
+[Monte Carlo Verification]{.kicker}
 
-$$p(x)=\lim_{\epsilon\downarrow 0}\frac{P(x\le X<x+\epsilon)}{\epsilon}$$
+To throw darts uniformly on the unit disk without formulas, we sample uniformly on the bounding square $[-1, 1]^2$, keep points inside $x^2 + y^2 \le 1$, and divide bin frequencies at $r = 0.5$ by width $\epsilon$:
 
-- Dart: $P(r\le R<r+\epsilon)=2r\epsilon+\epsilon^2$, so $p(r)=2r$ on $[0,1]$.
-- At $r=0.5$: $p=1$, the ratio in the table.
-- $P(X=x)\le P(x\le X<x+\epsilon)\approx\epsilon\,p(x)\to0$: no single value has probability.
+@random-variables-density-to-probability
 
 ::: {.d2l-note}
-A density is a rate, not a probability: $p(0.9)=1.8$, and the uniform on
-$[0,0.1]$ has density $10$.
+**Finite-sample bin noise:** Narrowing $\epsilon$ tenfold reduces the hit count tenfold (only $\sim 3{,}100$ of $3.14 \times 10^6$ darts fall in the $\epsilon = 0.001$ bin), causing the empirical ratio to fluctuate by a few percent around $p(0.5) = 1$.
 :::
 :::
 
-::: {.slide title="Probability Is Area, and Simulated Darts Agree"}
-[Densities]{.kicker}
+::: {.slide title="Atoms, Densities, and Mixed Variables in Deep Learning"}
+[Discrete vs. Continuous vs. Mixed]{.kicker}
 
-$$p\ge0,\qquad \int_{-\infty}^{\infty}p(x)\,dx=1,\qquad P(a<X\le b)=\int_a^b p(x)\,dx.$$
+Not every random variable in a neural network is purely discrete or purely continuous. A single point $x$ carrying strictly positive probability $P(X = x) > 0$ is called an **atom**:
 
-Throw $4\cdot10^6$ darts at the square, keep those on the board, count a bin:
+| Variable Type | Atomic vs. Continuous Mass | Canonical Deep Learning Example |
+| :--- | :--- | :--- |
+| **Purely discrete** | $100\%$ of mass sits on countable atoms $\{x_i\}$ | Class label $Y \in \{1, \dots, K\}$ or vocabulary token ID |
+| **Purely continuous** | Zero atoms ($P(X=x)=0\ \forall x$); all mass in density $p(x)$ | Gaussian weight initialization $W_{ij} \sim \mathcal{N}(0, \sigma^2)$ |
+| **Mixed distribution** | Positive mass on atoms *plus* a continuous density elsewhere | ReLU output $Y = \max(0, X)$ fed $X \sim \mathcal{N}(0, 1)$ |
 
-@!random-variables-density-to-probability
-
-::: {.d2l-note}
-Dart: $\int_{0.5}^1 2r\,dr=0.75$ of the board lies beyond half the radius.
+::: {.d2l-note .rule}
+**The Rectified Gaussian (ReLU activation):** When $X \sim \mathcal{N}(0, 1)$, all negative inputs collapse onto $Y = 0$, creating an **atom of probability $P(Y = 0) = 1/2$**, while the remaining half spreads over $(0, \infty)$ with density $\frac{1}{\sqrt{2\pi}}e^{-y^2/2}$.
 :::
 :::
 
-::: {.slide title="The c.d.f. Accumulates Probability; Its Slope Is the Density"}
-[Densities]{.kicker}
+::: {.slide title="The Cumulative Distribution Function (CDF)"}
+[Unifying Discrete, Continuous, and Mixed Variables]{.kicker}
+
+The **cumulative distribution function** $F(x) = P(X \le x)$ sweeps from left to right across the real line, recording the total probability accumulated up to $x$:
+
+$$F(x) = P(X \le x) = \int_{-\infty}^x p(t)\,dt \quad \text{(when } X \text{ has density } p\text{)}$$
+
+::: {.cols}
+::: {.col}
+- **Universal properties of every CDF:**
+  - Monotone non-decreasing: $a < b \implies F(a) \le F(b)$.
+  - Boundary limits: $\lim_{x \to -\infty} F(x) = 0$ and $\lim_{x \to \infty} F(x) = 1$.
+  - **Right-continuous:** $\lim_{y \downarrow x} F(y) = F(x)$, taking the upper value at any jump.
+:::
+
+::: {.col}
+- **How $F(x)$ encodes distribution type:**
+  - **Continuous (Dart):** Smooth climb $F(r) = r^2$ on $[0, 1]$ with no jumps.
+  - **Discrete (Fair coin):** Staircase jumping by $1/2$ at $x = 0$ and $x = 1$.
+  - **Mixed (ReLU):** Flat $0$ on $(-\infty, 0)$, jump of $1/2$ at $x = 0$, then smooth Gaussian climb $\Phi(x)$ on $(0, \infty)$.
+:::
+:::
+:::
+
+::: {.slide title="The Density Is the Derivative of the CDF"}
+[Fundamental Theorem of Calculus]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$F(x)=P(X\le x)=\int_{-\infty}^x p$, and $F'=p$ where $p$ is continuous
-(fundamental theorem of calculus).
-
-Dart: $F(r)=r^2$, $F'(r)=2r$. A coin has a staircase $F$.
+- **Proposition:** If $X$ has a density $p$ that is continuous at $x$, then $F$ is differentiable at $x$ and
+  $$F'(x) = p(x)$$
+- **Proof idea:** Since $F(x) = \int_{-\infty}^x p(t)\,dt$ is the area-so-far function, the Fundamental Theorem of Calculus gives $F'(x) = p(x)$. Because single points carry zero mass,
+  $$\frac{P(x \le X < x + \epsilon)}{\epsilon} = \frac{F(x + \epsilon) - F(x)}{\epsilon} \xrightarrow{\epsilon \downarrow 0} F'(x)$$
+- **Area–slope duality:** Shaded area $\int_a^b p(x)\,dx$ on the left equals vertical rise $F(b) - F(a)$ on the right.
 :::
 
 ::: {.col .fig}
@@ -1032,16 +1048,16 @@ Dart: $F(r)=r^2$, $F'(r)=2r$. A coin has a staircase $F$.
 :::
 :::
 
-::: {.slide title="The Quantile Function Turns Uniform Noise Into Samples"}
-[Sampling]{.kicker}
+::: {.slide title="Quantiles, Quartiles, and Inverse-Transform Sampling"}
+[Turning Uniform Noise into Target Samples]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-If $F$ is continuous and strictly increasing where $0<F<1$, and $U$ is
-uniform on $[0,1]$, then $F^{-1}(U)$ has c.d.f. $F$:
-$P(F^{-1}(U)\le x)=P(U\le F(x))=F(x)$.
-
-Dart: $R=\sqrt U$. Naive $R=U$ puts $50\%$ inside $r<0.5$, not $25\%$.
+- **Quantile function $F^{-1}(u)$:** While $F$ maps a value $x$ to a probability level $u \in (0, 1)$, its inverse $F^{-1}(u)$ returns the threshold below which fraction $u$ of the distribution lies.
+  - Dart ($F(r) = r^2 \implies F^{-1}(u) = \sqrt{u}$): quartiles are $0.50$, **median $\sqrt{0.5} \approx 0.707$**, and $0.866$.
+- **Proposition (Inverse-Transform Sampling):** If $U \sim \mathrm{Unif}(0, 1)$, then $X = F^{-1}(U)$ has CDF $F$:
+  $$P\bigl(F^{-1}(U) \le x\bigr) = P\bigl(U \le F(x)\bigr) = F(x)$$
+- Where $p = F'$ is large, $F$ rises steeply and compresses uniform vertical levels into dense horizontal samples.
 :::
 
 ::: {.col .fig}
@@ -1050,68 +1066,90 @@ Dart: $R=\sqrt U$. Naive $R=U$ puts $50\%$ inside $r<0.5$, not $25\%$.
 :::
 :::
 
-::: {.slide title="Check: Can a Density Equal 5? Where Is the Dart's Median?"}
-[Check]{.kicker}
+::: {.slide title="Why the Naive Shortcut R = U Fails on the Disk"}
+[Sampling Pitfall & Verification]{.kicker}
 
-Can a density take the value $5$? At which distance does the dart's median
-lie?
+Comparing $10^6$ inverse-transform draws $R = \sqrt{U}$ against 2D rejection-sampled darts and the naive shortcut $R = U$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Yes: the uniform density on $[0,0.2]$ equals $5$. The median
-solves $r^2=\tfrac12$, so it is $\sqrt{1/2}\approx0.707$, not $0.5$.
+@mdl-random-variables-quantiles-and-inverse-transform-sampling
+
+::: {.d2l-note .warn}
+**Geometric distortion of $R = U$:** Setting $R = U$ spreads radial distances uniformly on $[0, 1]$, placing $50\%$ of darts inside $r < 0.5$ instead of $25\%$ and underestimating the mean radius ($0.500$ vs. $0.667$).
+:::
+:::
+
+::: {.slide title="Expectation: The Center of Mass of a Distribution"}
+[First Moment & Law of the Unconscious Statistician]{.kicker}
+
+Slicing a continuous variable into narrow bins of width $\epsilon$ weights each position $\epsilon i$ by probability $\approx \epsilon\,p(\epsilon i)$, turning the discrete average into an integral:
+
+$$\mu_X = \mathbb{E}[X] = \sum_i x_i p_i \quad \text{(discrete)}, \qquad \mu_X = \mathbb{E}[X] = \int_{-\infty}^{\infty} x\,p(x)\,dx \quad \text{(density)}$$
+
+- **Existence condition:** Requires absolute convergence $\int_{-\infty}^\infty |x|\,p(x)\,dx < \infty$ (so the balance point does not depend on how limits at $\pm\infty$ are taken).
+- **Dart mean vs. median:** $\mathbb{E}[R] = \int_0^1 r(2r)\,dr = \frac{2}{3} \approx 0.667$, sitting slightly below the median $0.707$ because the long left tail toward $r = 0$ pulls the center of mass inward.
+- **Law of the Unconscious Statistician (LOTUS):** We can average any function $g(X)$ directly against $p(x)$ without first deriving the density of the transformed variable $Y = g(X)$:
+  $$\mathbb{E}[g(X)] = \int_{-\infty}^{\infty} g(x)\,p(x)\,dx \quad \text{whenever } \int |g(x)|\,p(x)\,dx < \infty$$
+:::
+
+::: {.slide title="Linearity of Expectation Needs No Independence"}
+[Algebra of the Mean]{.kicker}
+
+**Proposition (Linearity of Expectation):** For any random variables $X, Y$ with finite means and constants $c, d \in \mathbb{R}$,
+
+$$\mathbb{E}[cX + d] = c\,\mathbb{E}[X] + d, \qquad \mathbb{E}[X + Y] = \mathbb{E}[X] + \mathbb{E}[Y]$$
+
+::: {.cols}
+::: {.col}
+- **Proof of additivity:** Weighting $x_i + y_j$ by the joint distribution $p_{ij} = P(X=x_i, Y=y_j)$ and marginalizing each sum separately gives
+  $$\sum_{i,j} (x_i + y_j)p_{ij} = \sum_i x_i \underbrace{\sum_j p_{ij}}_{p_X(x_i)} + \sum_j y_j \underbrace{\sum_i p_{ij}}_{p_Y(y_j)}$$
+:::
+
+::: {.col}
+- **Why this matters in deep learning:**
+  - $\mathbb{E}[X + Y] = \mathbb{E}[X] + \mathbb{E}[Y]$ holds **even when $X$ and $Y$ are strongly dependent**.
+  - The expected average loss over a correlated minibatch or sequence of tokens always equals the average of the individual expected losses.
 :::
 :::
 :::
 
-::: {.slide title="The Mean Is Linear, With No Independence Needed"}
-[Mean]{.kicker}
+::: {.slide title="Variance and Standard Deviation"}
+[Second Central Moment]{.kicker}
 
-$$\mathbb{E}[X]=\sum_i x_i p_i\quad\textrm{or}\quad\int x\,p(x)\,dx,
-\qquad\textrm{if }\textstyle\sum|x_i|p_i\textrm{ or }\int|x|\,p<\infty.$$
+The **variance** measures the expected squared deviation from the mean, and the **standard deviation** $\sigma_X = \sqrt{\mathrm{Var}(X)}$ restores the original physical units of $X$:
 
-- Dart: $\mathbb{E}[R]=\int_0^1 r\cdot2r\,dr=\tfrac23$: more area lies far out.
-- $\mathbb{E}[cX+d]=c\,\mathbb{E}[X]+d$.
-- $\mathbb{E}[X+Y]=\mathbb{E}[X]+\mathbb{E}[Y]$ for any dependence.
+$$\sigma_X^2 = \mathrm{Var}(X) = \mathbb{E}\bigl[(X - \mu_X)^2\bigr] = \mathbb{E}[X^2] - \mu_X^2$$
+
+- **Proof of the shortcut formula:** Expand $(X - \mu_X)^2 = X^2 - 2\mu_X X + \mu_X^2$ and apply linearity: $\mathbb{E}[X^2] - 2\mu_X\mathbb{E}[X] + \mu_X^2 = \mathbb{E}[X^2] - \mu_X^2$.
+- **Affine transformation rule:** Shifting by $d$ leaves spread unchanged, while scaling by $c$ squares the variance:
+  $$\mathrm{Var}(cX + d) = c^2\,\mathrm{Var}(X), \qquad \sigma_{cX + d} = |c|\,\sigma_X$$
+- **Worked benchmarks:**
+  - **Dart radius $R$:** $\mathbb{E}[R^2] = \int_0^1 r^2(2r)\,dr = \frac{1}{2}$ $\to$ $\mathrm{Var}(R) = \frac{1}{2} - \left(\frac{2}{3}\right)^2 = \frac{1}{18} \approx 0.056$ ($\sigma_R \approx 0.236$).
+  - **Uniform $U \sim \mathrm{Unif}(0, 1)$:** $\mu_U = \frac{1}{2}$ and $\mathbb{E}[U^2] = \frac{1}{3}$ $\to$ $\mathrm{Var}(U) = \frac{1}{3} - \frac{1}{4} = \frac{1}{12}$.
 :::
 
-::: {.slide title="Variance Is the Mean Square Minus the Squared Mean"}
-[Variance]{.kicker}
+::: {.slide title="Markov's Inequality: Tail Bounds from the Mean Alone"}
+[The Ancestor of All Concentration Bounds]{.kicker}
 
-$\textrm{Var}(X)=\mathbb{E}[(X-\mu)^2]=\mathbb{E}[X^2]-\mu^2$ and
-$\textrm{Var}(cX+d)=c^2\,\textrm{Var}(X)$.
+How much probability can sit far out in the tail when we know only the mean of a non-negative variable?
 
-- Dart: $\mathbb{E}[R^2]=\tfrac12$, $\textrm{Var}(R)=\tfrac12-\tfrac49=\tfrac1{18}$,
-  $\sigma_R\approx0.236$.
-- Three atoms: $a-2$, $a$, $a+2$ with probabilities $q$, $1-2q$, $q$
-  ($0\le q\le\tfrac12$): mean $a$, $\mathbb{E}[X^2]=a^2+8q$,
-  $\textrm{Var}=8q$.
+**Proposition (Markov's Inequality):** If $X \ge 0$ has finite mean $\mathbb{E}[X]$ and $t > 0$, then
+
+$$P(X \ge t) \le \frac{\mathbb{E}[X]}{t}$$
+
+- **One-line proof:** For every outcome, $X \ge t\,\mathbf{1}_{X \ge t}$ (since when $X \ge t$ the indicator is $1$ and $X \ge t$, while when $X < t$ the right side is $0 \le X$). Taking expectations gives $\mathbb{E}[X] \ge t\,\mathbb{E}[\mathbf{1}_{X \ge t}] = t\,P(X \ge t)$. $\blacksquare$
+- **Immediate rule of thumb ($t = 10\,\mathbb{E}[X]$):** At most $10\%$ of any non-negative population—whether gradient norms, training losses, or server latencies—can exceed $10$ times its average.
+- **Unifying role in Chapter 36:** Applying Markov's inequality to $(X - \mu)^2$ yields Chebyshev's inequality; applying it to $\exp(\lambda X)$ yields the exponential Chernoff and Hoeffding bounds of §36.9.
 :::
 
-::: {.slide title="The Mean Alone Bounds the Tail of a Non-Negative Variable"}
-[Markov]{.kicker}
-
-For $X\ge0$ and $t>0$:
-
-$$P(X\ge t)\le\frac{\mathbb{E}[X]}{t}.$$
-
-*Proof.* $X\ge t\,\mathbf 1_{X\ge t}$ for every outcome; take means. $\blacksquare$
-
-::: {.d2l-note}
-At most a tenth of any non-negative population exceeds ten times its mean.
-:::
-:::
-
-::: {.slide title="Chebyshev: at Most $1/\alpha^2$ Lies $\alpha\sigma$ Away, and This Is Sharp"}
-[Chebyshev]{.kicker}
+::: {.slide title="Chebyshev's Inequality and Its Three-Atom Sharpness"}
+[Two-Sided Variance Bound]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-For finite, nonzero variance: $P(|X-\mu|\ge\alpha\sigma)\le1/\alpha^2$.
-*Proof:* Markov on $(X-\mu)^2$ with $t=\alpha^2\sigma^2$.
-
-Three atoms with $q=1/(2\alpha^2)$: $\sigma=2/\alpha$, and the outer atoms
-give equality.
+- **Proposition (Chebyshev's Inequality):** For any $X$ with finite variance $\sigma_X^2 > 0$ and any $\alpha > 0$,
+  $$P\bigl(|X - \mu_X| \ge \alpha\sigma_X\bigr) \le \frac{1}{\alpha^2}$$
+- **Proof:** Apply Markov's inequality to the non-negative variable $Z = (X - \mu_X)^2$ (which has mean $\sigma_X^2$) at threshold $t = \alpha^2\sigma_X^2$.
+- **Why $1/\alpha^2$ cannot be improved:** A three-atom distribution at $a - 2, a, a + 2$ with probabilities $q, 1-2q, q$ has $\sigma_X = 2\sqrt{2q}$. Setting $q = \frac{1}{2\alpha^2}$ places the outer atoms right at $\alpha\sigma_X = 2$, achieving exact equality $P(|X - a| \ge \alpha\sigma_X) = 2q = 1/\alpha^2$.
 :::
 
 ::: {.col .fig}
@@ -1120,52 +1158,81 @@ give equality.
 :::
 :::
 
-::: {.slide title="Chebyshev Allows 25% Beyond 2σ; a Gaussian Puts 4.6% There"}
-[Chebyshev]{.kicker}
+::: {.slide title="Worst-Case vs. Typical Tails"}
+[Chebyshev vs. Smooth Distributions]{.kicker}
 
-| distance from the mean | Chebyshev | Gaussian | dart |
-|:--|--:|--:|--:|
-| $2\sigma$ or more | $25\%$ | $4.6\%$ | $3.8\%$ |
-| $3\sigma$ or more | $11\%$ | $0.27\%$ | $0\%$ |
+Chebyshev's inequality must cover the worst-case distribution that piles all of its tail mass right at the threshold $\pm \alpha\sigma$. Smooth distributions thin out much faster:
+
+| Distance from Mean $|X - \mu|$ | Chebyshev Upper Bound ($1/\alpha^2$) | Dart Distance $R$ ($p(r)=2r$) | Gaussian $\mathcal{N}(\mu, \sigma^2)$ |
+| :--- | ---: | ---: | ---: |
+| $\ge 2\sigma$ ($\alpha = 2$) | $25.0\%$ | $3.8\%$ ($R \le 0.195$) | $4.55\%$ |
+| $\ge 3\sigma$ ($\alpha = 3$) | $11.1\%$ | $0.0\%$ (outside $[0,1]$) | $0.27\%$ |
+| $\ge 5\sigma$ ($\alpha = 5$) | $4.0\%$ | $0.0\%$ | $5.7 \times 10^{-5}\%$ |
+| $\ge 10\sigma$ ($\alpha = 10$) | $1.0\%$ | $0.0\%$ | $1.5 \times 10^{-21}\%$ |
 
 ::: {.d2l-note}
-Tight for the worst case, which puts all its tail at one distance; loose for
-the distributions we usually meet.
+**Value of distribution-free bounds:** Although $1/\alpha^2$ is loose for a single Gaussian, applying it to a sample average $\bar{X}_n$ (whose variance is $\sigma^2/n$) suffices to prove the Weak Law of Large Numbers for *any* finite-variance distribution.
 :::
 :::
 
-::: {.slide title="The Cauchy Density Has No Mean, and Averaging Does Not Help"}
-[Heavy tails]{.kicker}
+::: {.slide title="Heavy Tails and the Cauchy Distribution"}
+[When Moments Fail to Exist]{.kicker}
 
-$p(x)=1/(\pi(1+x^2))$: $\int_{-L}^{L}|x|\,p=\tfrac1\pi\log(1+L^2)\to\infty$,
-and $\int_{-L}^{2L}x\,p\to\log 2/\pi$.
+A smooth, symmetric bell curve can fail to have either a variance or a mean if its tails decay only algebraically. The **standard Cauchy distribution** has density:
 
+$$p(x) = \frac{1}{\pi(1 + x^2)}, \qquad x \in \mathbb{R} \quad \left(\int_{-\infty}^{\infty} \frac{dx}{1 + x^2} = \bigl[\arctan x\bigr]_{-\infty}^{\infty} = \pi\right)$$
+
+- **Infinite second moment ($\mathbb{E}[X^2] = \infty$):** Since $x^2 / (1 + x^2) \to 1$, the truncated integral diverges linearly:
+  $$\int_{-L}^{L} x^2 p(x)\,dx = \frac{2}{\pi}(L - \arctan L) \xrightarrow{L \to \infty} \infty \quad (5.43 \text{ at } L=10;\ 636 \text{ at } L=1000)$$
+- **Why the mean does not exist ($\mathbb{E}[|X|] = \infty$):** Expectation requires $\int |x|\,p(x)\,dx < \infty$, but $\int_{-L}^L |x|\,p(x)\,dx = \frac{1}{\pi}\log(1 + L^2) \to \infty$. Without absolute convergence, asymmetric limits shift the integral arbitrarily:
+  $$\int_{-L}^{L} x\,p(x)\,dx = 0, \qquad \text{yet} \qquad \int_{-L}^{2L} x\,p(x)\,dx = \frac{1}{2\pi}\log\frac{1 + 4L^2}{1 + L^2} \xrightarrow{L \to \infty} \frac{\log 2}{\pi} \approx 0.221$$
+:::
+
+::: {.slide title="When Averaging Fails: Gaussian vs. Cauchy Draws"}
+[Breakdown of the Law of Large Numbers]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Catastrophic jumps:** As $n$ grows to $10^5$, the Gaussian running mean settles smoothly to $0$ at rate $1/\sqrt{n}$, whereas the Cauchy running mean suffers sudden $O(1)$ jumps whenever a single extreme tail draw arrives.
+- **Scale invariance of Cauchy averages:** The average of $n$ independent standard Cauchy draws has the *exact same distribution* as a single Cauchy draw ($P(|\bar{X}_{1000}| > 1) = 0.50$, identical to $P(|X_1| > 1) = 0.50$).
+- **Deep learning impact:** When minibatch SGD gradient noise exhibits heavy power-law tails ($P(|X| > t) \sim t^{-\alpha}$ with $\alpha < 2$), naive averaging fails and gradient clipping is required.
+:::
+
+::: {.col .fig}
 @!random-variables-cauchy-diverges
 :::
-
-::: {.slide title="Check: Var(3X + 7)? The Chance of 3σ or More?"}
-[Check]{.kicker}
-
-If $\textrm{Var}(X)=2$, what is $\textrm{Var}(3X+7)$? For any $X$ with
-$\sigma>0$, how large can $P(|X-\mu|\ge3\sigma)$ be?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $9\cdot2=18$: the shift drops out, the scale squares. At most
-$1/9\approx11\%$, by Chebyshev.
-:::
 :::
 :::
 
-::: {.slide title="One Dart Carried Every Tool of the Section"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Densities, Quantiles & Tail Bounds"}
+[Check Your Understanding]{.kicker}
 
-- $P(R\le r)=r^2$, density $2r$, median $0.707$, sampler $R=\sqrt U$.
-- $\mathbb{E}[R]=\tfrac23$, $\textrm{Var}(R)=\tfrac1{18}$; Chebyshev's $1/\alpha^2$ is sharp but loose.
-- Markov and Chebyshev bound a tail from the mean or the variance alone.
-- The Cauchy has neither a mean nor a variance: averaging its draws does nothing.
+Test your intuition on three foundational calculations from this section:
 
-::: {.d2l-note}
-Next: two coordinates of the dart at once, and the density of a transformed variable.
+1. **Power-law sampler and clipping:** Let $p(x) = 1/x^2$ for $x \ge 1$ ($0$ otherwise). What is its CDF $F(x)$, its inverse-transform sampler $X = F^{-1}(U)$, and its expected value $\mathbb{E}[X]$?
+2. **Affine variance and Chebyshev:** If $\mathrm{Var}(X) = 2$, what is $\mathrm{Var}(3X - 7)$? For any random variable with $\sigma_X > 0$, what is the maximum possible probability that $|X - \mu_X| \ge 4\sigma_X$?
+3. **He initialization and the Rectified Gaussian:** For a ReLU output $Y = \max(0, X)$ with $X \sim \mathcal{N}(0, 1)$, use symmetry ($X^2 = Y^2 + \min(0, X)^2$) to find $\mathbb{E}[Y^2]$. Why does He initialization multiply weight variance by $2$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $F(x) = \int_1^x t^{-2}\,dt = 1 - 1/x$ for $x \ge 1$. Solving $1 - 1/x = U$ gives sampler **$X = 1/(1 - U)$** (median $= 2$). Its mean $\int_1^\infty x(1/x^2)\,dx = [\log x]_1^\infty = \boldsymbol{\infty}$ (clipping at $c$ gives finite mean $1 + \log c$).
+2. $\mathrm{Var}(3X - 7) = 3^2 \mathrm{Var}(X) = \mathbf{18}$ (shift drops out, scale squares). By Chebyshev, $P(|X - \mu_X| \ge 4\sigma_X) \le 1/4^2 = \mathbf{1/16 = 6.25\%}$.
+3. Since $\mathbb{E}[X^2] = 1$ and $Y^2$ has the same distribution as $\min(0, X)^2$ with $Y \cdot \min(0, X) = 0$, we get $2\mathbb{E}[Y^2] = 1 \implies \boldsymbol{\mathbb{E}[Y^2] = 1/2}$. He initialization multiplies weight variance by $2$ to restore unit activation second moment across layers!
 :::
 :::
+
+::: {.slide title="Summary: Random Variables, Moments, and Tails"}
+[Key Takeaways]{.kicker}
+
+| Concept | Mathematical Definition / Rule | Dart Benchmark ($R$ on Unit Disk) | Deep Learning Role |
+| :--- | :--- | :--- | :--- |
+| **Probability Density $p(x)$** | $P(a < X \le b) = \int_a^b p(x)\,dx$, $p \ge 0$, $\int p = 1$ | $p(r) = 2r$ on $[0, 1]$ ($P(R = r) = 0$) | Continuous representations, weights & noise |
+| **CDF & Derivative** | $F(x) = P(X \le x) = \int_{-\infty}^x p(t)\,dt$, $F'(x) = p(x)$ | $F(r) = r^2$, $P(R > 0.5) = 1 - 0.5^2 = 0.75$ | Unifies continuous, discrete & mixed (ReLU) |
+| **Inverse-Transform Sampler** | $X = F^{-1}(U)$ for $U \sim \mathrm{Unif}(0, 1)$ has CDF $F$ | $R = \sqrt{U}$ (median $F^{-1}(0.5) \approx 0.707$) | Sampling arbitrary 1D distributions & calibration |
+| **Expectation & Linearity** | $\mathbb{E}[g(X)] = \int g(x)p(x)\,dx$; $\mathbb{E}[X+Y] = \mathbb{E}[X]+\mathbb{E}[Y]$ | $\mathbb{E}[R] = \int_0^1 2r^2\,dr = 2/3 \approx 0.667$ | Unbiased empirical risk & SGD gradients |
+| **Variance & Affine Scaling** | $\mathrm{Var}(X) = \mathbb{E}[X^2] - \mu^2$; $\mathrm{Var}(cX+d) = c^2\mathrm{Var}(X)$ | $\mathbb{E}[R^2] = 1/2 \implies \mathrm{Var}(R) = 1/18$ | Activation scale control & layer normalization |
+| **Markov & Chebyshev Bounds** | $P(X \ge t) \le \mathbb{E}[X]/t$; $P(\|X-\mu\| \ge \alpha\sigma) \le 1/\alpha^2$ | Exact $2\sigma$ tail $3.8\% \le 25\%$ bound | Distribution-free tail & convergence guarantees |
+| **Heavy Tails (Cauchy)** | Algebraic decay $p(x) \sim x^{-(\alpha+1)}$ ($\mathbb{E}[\|X\|^k] = \infty, k \ge \alpha$) | Cauchy ($\alpha=1$): no mean/var, $\bar{X}_n \stackrel{d}{=} X_1$ | Gradient clipping under heavy-tailed SGD noise |
+:::
+

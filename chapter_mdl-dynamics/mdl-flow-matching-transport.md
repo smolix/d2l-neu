@@ -1798,395 +1798,293 @@ data.
 ::: {.cover}
 [Dive into Deep Learning · §38.7]{.kicker}
 
-Can we choose the path from noise to data, and choose it straight?<br>**paths · velocities · reflow · couplings**
+Flow Matching, Rectified Flows, and Optimal Transport<br>**probability paths · Conditional Flow Matching · score–velocity dictionary · Reflow · Wasserstein optimal transport**
 :::
 :::
 
-::: {.slide title="Score Samplers Take Many Steps Because Their Paths Curve"}
-[The problem]{.kicker}
+::: {.slide title="Why Do Diffusion Samplers Need So Many Steps?"}
+[Motivation]{.kicker}
 
-- A diffusion sampler calls its network once per step: $1000$ steps for the
-  reverse chain, a few dozen for deterministic strides.
-- Nobody designed its paths. The noising process fixed them, and they curve.
-- A particle on a straight line at constant speed is integrated exactly by
-  **one** Euler step.
+Score-based diffusion samplers evaluate a neural network 1,000 times for ancestral reverse-SDE chains and 20–50 times for deterministic ODE solvers. Why can't they generate an image in **one** Euler step?
+
+- **Curved Forward Trajectories:** Diffusion models inherit their probability path $(p_t)_{t \in [0, 1]}$ from an Ornstein–Uhlenbeck noising process whose probability-flow trajectories curve across time and noise scales.
+- **The Straight-Line Ideal:** If every particle traveled from its noise point $\mathbf{x}_1 = \boldsymbol{\epsilon}$ to its data point $\mathbf{x}_0$ along a **straight line at constant speed**, $\dot{\mathbf{x}} = \mathbf{x}_1 - \mathbf{x}_0$, then a **single** Euler step of size $h = 1$ would integrate the trajectory with zero truncation error!
+- **The Flow Matching Paradigm:** Instead of deriving the path from an SDE, **prescribe** a probability path $p_t$ from simple per-sample interpolants and train a neural velocity field $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ directly by least squares.
+:::
+
+::: {.slide title="Time Convention: Data at t = 0 and Noise at t = 1"}
+[Unified Chapter Clock]{.kicker}
+
+To compare score-based diffusion (§38.6) and flow matching (§38.7) on the exact same footing, this book keeps **one clock** throughout: data $\mathbf{x}_0 \sim p_0$ sit at $t = 0$, and standard Gaussian noise $\mathbf{x}_1 = \boldsymbol{\epsilon} \sim p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ sits at $t = 1$.
+
+![](../img/mdl-dyn-time-conventions.svg)
+
+- **Sampling Integrates From $t = 1$ Down to $t = 0$:** Velocity $\mathbf{u}_t(\mathbf{x})$ points in the forward noising direction ($t: 0 \to 1$), so a generative Euler step subtracts $\Delta t\,\mathbf{u}_t(\mathbf{x})$.
+- **Translating Flow-Matching Papers:** Literature that puts noise at $t = 0$ and data at $t = 1$ is obtained by replacing $t \mapsto 1 - t$, swapping $(\mathbf{x}_0, \mathbf{x}_1)$, and negating the velocity $\mathbf{u} \mapsto -\mathbf{u}$.
+:::
+
+::: {.slide title="Probability Paths and the Marginal Velocity Field"}
+[Flow Matching Formulation]{.kicker}
+
+A velocity field $\mathbf{u}_t: \mathbb{R}^d \to \mathbb{R}^d$ **realizes** a probability path $(p_t)_{t \in [0, 1]}$ between $p_0$ and $p_1$ if the pair satisfies the continuity equation $\partial_t p_t + \nabla \cdot (p_t\,\mathbf{u}_t) = 0$. How do we construct $(p_t, \mathbf{u}_t)$ when $p_0$ is known only through samples?
+
+- **Assemble $p_t$ From Conditional Blobs:** Let $\mathbf{z} \sim q$ be a conditioning variable (a clean data point $\mathbf{x}_0$, or a coupled pair $(\mathbf{x}_0, \mathbf{x}_1)$), and choose a tractable conditional density $p_t(\mathbf{x} \mid \mathbf{z})$ with known velocity $\mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$ satisfying $\partial_t p_t(\mathbf{x} \mid \mathbf{z}) = -\nabla\cdot\big(p_t(\mathbf{x} \mid \mathbf{z})\mathbf{u}_t(\mathbf{x} \mid \mathbf{z})\big)$.
+- **Proposition (Marginal Velocity Is a Posterior Mean):** The mixture $p_t(\mathbf{x}) = \int p_t(\mathbf{x} \mid \mathbf{z})q(\mathbf{z})\,d\mathbf{z}$ satisfies the continuity equation $\partial_t p_t + \nabla\cdot(p_t\mathbf{u}_t) = 0$ with the **marginal velocity**:
+  $$\mathbf{u}_t(\mathbf{x}) = \mathbb{E}\!\left[\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \,\middle|\, \mathbf{x}_t = \mathbf{x}\right] = \int \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})\,\frac{p_t(\mathbf{x} \mid \mathbf{z})\,q(\mathbf{z})}{p_t(\mathbf{x})}\,d\mathbf{z}$$
+- **One-Line Proof:** Differentiating under the integral gives $\partial_t p_t(\mathbf{x}) = -\nabla\cdot\int p_t(\mathbf{x} \mid \mathbf{z})\mathbf{u}_t(\mathbf{x} \mid \mathbf{z})q(\mathbf{z})\,d\mathbf{z} = -\nabla\cdot\big(p_t(\mathbf{x})\mathbf{u}_t(\mathbf{x})\big)$.
+:::
+
+::: {.slide title="The Conditional Flow Matching (CFM) Theorem"}
+[Simulation-Free Training]{.kicker}
+
+The marginal Flow Matching objective $\mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) = \mathbb{E}_{t, \mathbf{x}\sim p_t}\|\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x})\|^2$ is intractable because $\mathbf{u}_t(\mathbf{x})$ integrates over all conditional blobs. Because $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \mid \mathbf{x}_t = \mathbf{x}]$, the Regression Lemma (§38.6) replaces $\mathbf{u}_t(\mathbf{x})$ with the closed-form per-sample target $\mathbf{u}_t(\mathbf{x} \mid \mathbf{z})$:
 
 ::: {.d2l-note .rule}
-Choose the path; learn only the velocity that moves mass along it.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute the velocity of a chosen path as a posterior mean;
-- show that per-pair regression has the gradients of the marginal loss;
-- convert a score or a noise prediction into a velocity;
-- explain why straight segments give a curved flow, and what re-pairing does;
-- compute $W_2$ between Gaussians on a line, and bound the kinetic energy of
-  every flow by it.
-
-**Running examples:** two points at $\pm2$ (closed form); two moons in the
-plane (trained network).
-
-**The idea:** the path is ours to choose, and the pairing of noise with data
-decides how straight the flow is.
+**Theorem (Conditional Flow Matching — Lipman et al., 2022; Tong et al., 2023):**
+$$\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathbb{E}_{t \sim \mathcal{U}[0,1],\, \mathbf{z} \sim q,\, \mathbf{x} \sim p_t(\cdot \mid \mathbf{z})}\!\left[\left\|\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t) - \mathbf{u}_t(\mathbf{x} \mid \mathbf{z})\right\|^2\right] = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$$
+where $C = \mathbb{E}\big[\|\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) - \mathbf{u}_t(\mathbf{x})\|^2\big]$ is independent of $\boldsymbol{\theta}$. Both objectives have the **exact same gradients and minimizers**.
 :::
 
-::: {.slide title="Flow Matching Chooses the Path That Diffusion Inherited"}
-[Where this fits]{.kicker}
+- **What the Floor $C$ Measures:** $C$ is the average conditional variance of per-sample velocities passing through the same space-time point $(\mathbf{x}, t)$. It equals zero if and only if distinct sample paths never cross!
+:::
+
+::: {.slide title="The Score–Velocity Dictionary on Gaussian Paths"}
+[Unifying Diffusion and Flow Matching]{.kicker}
+
+On any Gaussian path $\mathbf{x}_t = \alpha_t\mathbf{x}_0 + \sigma_t\boldsymbol{\epsilon}$ ($\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$), both the marginal score $\nabla\log p_t(\mathbf{x})$ and the marginal velocity $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\dot{\alpha}_t\mathbf{x}_0 + \dot{\sigma}_t\boldsymbol{\epsilon} \mid \mathbf{x}_t = \mathbf{x}]$ are affine functions of the single posterior mean $\hat{\mathbf{x}}_0(\mathbf{x}) = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$:
+
+$$\mathbf{u}_t(\mathbf{x}) = \frac{\dot{\alpha}_t}{\alpha_t}\,\mathbf{x} - \left(\sigma_t\dot{\sigma}_t - \sigma_t^2\,\frac{\dot{\alpha}_t}{\alpha_t}\right)\nabla\log p_t(\mathbf{x})$$
+
+| Network Target Parameterization | Posterior Mean Learned by Least Squares | Exact Conversion From Score $\mathbf{s} = \nabla\log p_t(\mathbf{x})$ |
+| :--- | :--- | :--- |
+| **Score ($\mathbf{s}_{\boldsymbol{\theta}}$)** | $\nabla\log p_t(\mathbf{x})$ | $\mathbf{s}$ |
+| **Noise ($\hat{\boldsymbol{\epsilon}}$)** | $\mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t = \mathbf{x}]$ | $-\sigma_t\,\mathbf{s}$ |
+| **Clean Data ($\hat{\mathbf{x}}_0$)** | $\mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$ | $(\mathbf{x} + \sigma_t^2\,\mathbf{s}) / \alpha_t$ |
+| **Flow Velocity ($\mathbf{u}_{\boldsymbol{\theta}}$)** | $\mathbb{E}[\dot{\alpha}_t\mathbf{x}_0 + \dot{\sigma}_t\boldsymbol{\epsilon} \mid \mathbf{x}_t = \mathbf{x}]$ | $\frac{\dot{\alpha}_t}{\alpha_t}\mathbf{x} - (\sigma_t\dot{\sigma}_t - \sigma_t^2\frac{\dot{\alpha}_t}{\alpha_t})\mathbf{s}$ ($= -\frac{\mathbf{x} + t\mathbf{s}}{1-t}$ for $\alpha_t=1-t, \sigma_t=t$) |
+| **$\mathbf{v}$-Prediction ($\hat{\mathbf{v}}$)** | $\mathbb{E}[\alpha_t\boldsymbol{\epsilon} - \sigma_t\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x}]$ | $-\frac{\sigma_t}{\alpha_t}\mathbf{x} - \sigma_t\frac{\alpha_t^2 + \sigma_t^2}{\alpha_t}\mathbf{s}$ |
+:::
+
+::: {.slide title="Worked Closed Form: Two Data Points at ±2"}
+[Analytic Flow Matching]{.kicker}
+
+Take two data points $x_0 \in \{-a, +a\}$ ($a = 2$, probability $\frac{1}{2}$ each) paired **independently** with noise $\epsilon \sim \mathcal{N}(0, 1)$ along the straight path $x_t = (1 - t)x_0 + t\epsilon$ ($\dot{x}_t = \epsilon - x_0 = \frac{x_t - x_0}{t}$):
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Ordinary Differential Equations | exact motion: uniqueness, eigenvalues |
-| Numerical Solvers | steps: their order and stability |
-| Neural ODEs | a learned field, its gradient, its density |
-| Stochastic Differential Equations | noise, Itô calculus, the OU process |
-| Fokker–Planck and Probability Flow | how the density moves; the score |
-| Score Matching and Diffusion | learning the score, sampling with it |
-| **Flow Matching and Transport** | **learning a velocity; straight paths** |
+- **Exact Marginal Velocity:** By Bayes' rule, $\mathbb{E}[x_0 \mid x_t = x] = a\tanh\!\big(\frac{(1-t)ax}{t^2}\big)$, yielding:
+  $$u_t(x) = \frac{x - a\tanh\!\big(\frac{(1-t)ax}{t^2}\big)}{t}$$
+- **Late Mode Decision ($t^* = 2\sqrt{2} - 2 \approx 0.83$):** The slope at the origin is $\partial_x u_t(0) = \frac{1}{t}\big(1 - \frac{(1-t)a^2}{t^2}\big)$. From $t = 1$ down to $t^* = 0.83$, $\partial_x u_t(0) > 0$ pulls particles *toward* $x = 0$; only below $t^* = 0.83$ does the origin repel particles toward $\pm 2$.
 :::
 
-::: {.col .narrow}
-- **Uses:** the continuity equation; least squares fits
-  $\mathbb{E}[Y\mid X]$; Euler and Heun.
-- **Skips:** images, guidance, few-step distillation.
+::: {.col .fig}
+![](../img/mdl-dyn-two-point-flow.svg)
 :::
 :::
 :::
 
-::: {.slide title="One Clock: Data at t = 0, Noise at t = 1"}
-[One clock]{.kicker}
+::: {.slide title="Why One Euler Step Collapses Independent Pairs to 0"}
+[The 1-Step Collapse]{.kicker}
 
-![](../img/mdl-dyn-time-conventions.svg){width=80%}
-
-Scores and velocities alike: train forward, sample from $t=1$ to $0$.
-Flow-matching papers run the other way: their $t$ is our $1-t$, their
-$(\mathbf x_0,\mathbf x_1)$ our $(\boldsymbol\epsilon,\mathbf x_0)$, their
-$\mathbf u$ our $-\mathbf u$.
-:::
-
-::: {.slide title="A Velocity Field That Moves the Density Along the Path Is a Generator"}
-[Flow matching]{.kicker}
-
-A path of densities $p_t$ from the data $p_0$ to the noise
-$p_1=\mathcal N(\mathbf 0,\mathbf I)$. A field $\mathbf u_t$ *realizes* it
-if mass is conserved:
-
-$$\partial_tp_t+\nabla\cdot(p_t\,\mathbf u_t)=0$$
-
-- Then $\dot{\mathbf x}=\mathbf u_t(\mathbf x)$, solved from
-  $\mathbf x(1)\sim p_1$ down to $t=0$, ends on $\mathbf x(0)\sim p_0$.
-- The natural loss
-  $\mathcal L_{\mathrm{FM}}=\mathbb{E}_{t,\,\mathbf x\sim p_t}\|\mathbf u_{\boldsymbol\theta}(\mathbf x,t)-\mathbf u_t(\mathbf x)\|^2$
-  is useless: $\mathbf u_t$ depends on the whole data law.
-
-::: {.d2l-note .rule}
-Build the path from pieces whose velocities we know.
-:::
-:::
-
-::: {.slide title="The Velocity of the Cloud Is the Posterior Mean of Per-Sample Velocities"}
-[Marginal velocity]{.kicker}
-
-Label $\mathbf z\sim q$ (a data point, or a data–noise pair). Blobs
-$p_t(\mathbf x\mid\mathbf z)$ with known velocities
-$\mathbf u_t(\mathbf x\mid\mathbf z)$; path $p_t=\int p_t(\cdot\mid\mathbf z)\,q(\mathbf z)\,d\mathbf z$.
-
-$$\mathbf u_t(\mathbf x)=\mathbb{E}\big[\mathbf u_t(\mathbf x\mid\mathbf z)\,\big|\,\mathbf x_t=\mathbf x\big]$$
-
-- **I.** Differentiate the mixture under the integral.
-- **II.** Substitute each blob's continuity equation.
-- **III.** Multiply and divide by $p_t(\mathbf x)$: the flux is $p_t\mathbf u_t$.
-
-::: {.d2l-note .rule}
-Where one blob passes, its velocity; where several pass, their average.
-:::
-:::
-
-::: {.slide title="Per-Pair Regression Has the Gradients of the Marginal Loss"}
-[Conditional flow matching]{.kicker}
-
-Least squares fits the conditional mean:
-$\mathbb{E}\|\mathbf v(X)-Y\|^2=\mathbb{E}\|\mathbf v(X)-\mathbb{E}[Y\mid X]\|^2+\mathbb{E}\|Y-\mathbb{E}[Y\mid X]\|^2$.
-
-$$\mathcal L_{\mathrm{CFM}}=\mathbb{E}\,\|\mathbf u_{\boldsymbol\theta}(\mathbf x,t)-\mathbf u_t(\mathbf x\mid\mathbf z)\|^2=\mathcal L_{\mathrm{FM}}+C$$
-
-- $X=(\mathbf x,t)$, $Y=\mathbf u_t(\mathbf x\mid\mathbf z)$: same gradients, same minimizer.
-- The floor $C$ is the disagreement of per-sample velocities through a point.
-- No solver in the loss: the number of steps is chosen afterwards.
-
-::: {.d2l-note .rule}
-A perfect field still has loss $C$, not $0$.
-:::
-:::
-
-::: {.slide title="On a Gaussian Path a Noise Predictor Is Already a Velocity Field"}
-[Score, noise, and velocity]{.kicker}
-
-Path $\mathbf x_t=\alpha_t\mathbf x_0+\sigma_t\boldsymbol\epsilon$ with
-$(\alpha_0,\sigma_0)=(1,0)$, $(\alpha_1,\sigma_1)=(0,1)$. Score, noise and
-velocity are affine in $\hat{\mathbf x}_0=\mathbb{E}[\mathbf x_0\mid\mathbf x_t=\mathbf x]$;
-eliminate it:
-
-$$\mathbf u_t(\mathbf x)=\frac{\dot\alpha_t}{\alpha_t}\mathbf x-\Big(\sigma_t\dot\sigma_t-\sigma_t^2\frac{\dot\alpha_t}{\alpha_t}\Big)\nabla\log p_t(\mathbf x),\qquad\hat{\boldsymbol\epsilon}=-\sigma_t\nabla\log p_t$$
-
-- If $\alpha_t^2+\sigma_t^2=1$: $\mathbf u_t=\frac{\dot\alpha_t}{\alpha_t}(\mathbf x+\nabla\log p_t)$,
-  the probability-flow velocity.
-- Data $\mathcal N(0,4)$, $\alpha_t=\cos\frac{\pi t}2$, $\sigma_t=\sin\frac{\pi t}2$,
-  $t=\tfrac12$: $p_t=\mathcal N(0,2.5)$, and the identity gives
-  $u_t(x)=-0.94\,x$, the rate $\dot s_t/s_t$ at which the cloud's width
-  $s_t$ changes.
-
-::: {.d2l-note .rule}
-The schedule fixes both multiples; no second training run is needed.
-:::
-:::
-
-::: {.slide title="Two Points at ±2: The Flow Contracts, Then Decides"}
-[The two-point example]{.kicker}
-
-![](../img/mdl-dyn-two-point-flow.svg){width=88%}
-
-Path $x_t=(1-t)x_0+t\epsilon$, independent pairs.
-$u_t(x)=\big(x-2\tanh\frac{2(1-t)x}{t^2}\big)/t$: $u_1=x$; as $t$ falls, the
-origin stops attracting at $t^*=2\sqrt2-2\approx0.83$.
-:::
-
-::: {.slide title="Check: Where Does One Euler Step of the Exact Field Land?"}
-[Check]{.kicker}
-
-Independent pairing, any data, one step from $t=1$ to $t=0$ from noise $\boldsymbol\epsilon$.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** At the data mean: $\mathbf u_1(\mathbf x)=\mathbb{E}[\boldsymbol\epsilon-\mathbf x_0\mid\boldsymbol\epsilon=\mathbf x]=\mathbf x-\mathbb{E}\mathbf x_0$.
-For the two points one step puts every sample on $0$ (first row); a few
-more steps reach the points:
-:::
+At $t = 1$, a noise draw $\mathbf{x}_1 = \boldsymbol{\epsilon}$ carries zero information about its independently drawn data partner $\mathbf{x}_0$, so $\mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_1 = \mathbf{x}] = \mathbb{E}[\mathbf{x}_0]$ and $\mathbf{u}_1(\mathbf{x}) = \mathbf{x} - \mathbb{E}[\mathbf{x}_0]$. A single Euler step of length $1$ from $t = 1$ to $t = 0$ therefore maps **every** sample to the data mean $\mathbf{x} - \mathbf{u}_1(\mathbf{x}) = \mathbb{E}[\mathbf{x}_0] = \mathbf{0}$:
 
 @!mdl-flow-matching-transport-example-two-points-in-one-dimension
 :::
+
+::: {.slide title="Rectified Flow: Straight Segments That Cross"}
+[Why the Marginal Flow Bends]{.kicker}
+
+**Rectified Flow** pairs $\mathbf{x}_0 \sim p_0$ and $\boldsymbol{\epsilon} \sim p_1$ along straight constant-speed segments $\mathbf{x}_t = (1-t)\mathbf{x}_0 + t\boldsymbol{\epsilon}$ and trains $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}_t, t)$ by least squares against the constant difference $\boldsymbol{\epsilon} - \mathbf{x}_0$:
+
+$$\mathcal{L}_{\text{RF}}(\boldsymbol{\theta}) = \mathbb{E}_{t,\, \mathbf{x}_0,\, \boldsymbol{\epsilon}}\!\left[\left\|\mathbf{u}_{\boldsymbol{\theta}}\big((1 - t)\mathbf{x}_0 + t\boldsymbol{\epsilon},\; t\big) - (\boldsymbol{\epsilon} - \mathbf{x}_0)\right\|^2\right]$$
+
+::: {.cols .vc}
+::: {.col}
+- **Crossing Segments vs. Non-Crossing ODE Flows:** When two straight segments $(\mathbf{x}_0, \boldsymbol{\epsilon})$ and $(\mathbf{x}_0', \boldsymbol{\epsilon}')$ cross at $(\mathbf{x}, t)$, they demand two different velocities.
+- **Averaging Causes Curvature:** The marginal field $\mathbf{u}_t(\mathbf{x})$ averages the crossing velocities. Because a Lipschitz ODE has a unique trajectory through every point, the integrated paths cannot cross—they **bend away from each other** and swap endpoints!
 :::
 
-::: {.slide title="Straight Segments That Cross Produce a Curved Flow"}
-[Rectified flow]{.kicker}
-
-Pairs $(\mathbf x_0,\boldsymbol\epsilon)$, path $(1-t)\mathbf x_0+t\boldsymbol\epsilon$,
-regression target $\boldsymbol\epsilon-\mathbf x_0$.
-
-![](../img/mdl-dyn-fm-paths.svg){width=60%}
-
-- A field has one value per point, so it averages crossing directions.
-- A Lipschitz ODE has one trajectory per point, so the flow bends.
+::: {.col .fig}
+![](../img/mdl-dyn-fm-paths.svg)
+:::
+:::
 :::
 
-::: {.slide title="Two Moons: The Loss Stops at 1.4, Just Above Its Floor"}
-[Training]{.kicker}
+::: {.slide title="Two-Moons Benchmark and Squared Energy Distance"}
+[Evaluating 2D Sample Quality]{.kicker}
 
-Data: two interleaved crescents in the plane, $8{,}192$ points, standardized.
-The floor $C$, from the posterior variance of $\mathbf x_0$ over the training
-points:
+To benchmark flow matching in $\mathbb{R}^2$, we standardize $8{,}192$ training points from the two-moons distribution and measure distributional distance to $2{,}048$ held-out points via the **squared energy distance**:
+
+$$\mathcal{E}^2(P, Q) = 2\,\mathbb{E}\|X - Y\| - \mathbb{E}\|X - X'\| - \mathbb{E}\|Y - Y'\| \ge 0 \qquad (\mathcal{E}^2 = 0 \iff P = Q)$$
+
+@!score-matching-diffusion-flow-two-moons
+
+- **Metric Calibration:** Two independent samples of size $2{,}048$ from the true data distribution score within $\pm 0.002$ of zero, whereas collapsing all samples onto the data mean $\mathbf{0}$ (what 1 Euler step of the exact independent field does) scores $0.905$.
+:::
+
+::: {.slide title="Predicting the CFM Loss Floor Before Training"}
+[The Crossing Variance Floor]{.kicker}
+
+Before training any neural network, we can compute the exact irreducible CFM loss floor $C = \frac{1}{2}\mathbb{E}_{t, \mathbf{x}_t}\big[\operatorname{Var}(\boldsymbol{\epsilon} - \mathbf{x}_0 \mid \mathbf{x}_t)\big]$ per coordinate by averaging the posterior variance of $\mathbf{x}_0$ over the $8{,}192$ training points:
 
 @!mdl-flow-matching-transport-example-two-moons-2
 
-A small tanh network, $4{,}000$ steps of $256$ independent pairs; loss per
-coordinate:
+- **Nearly 70% of Total Target Variance Is Floor:** Because independent straight segments cross heavily between the two moons and $\mathcal{N}(\mathbf{0}, \mathbf{I})$, $C \approx 1.37$ out of the total target second moment $2.00$ per coordinate is irreducible crossing disagreement.
+:::
+
+::: {.slide title="Training Rectified Flow on Independent Pairs"}
+[Reaching the Crossing Plateau]{.kicker}
+
+Training a 2-hidden-layer `tanh` MLP (64 units per layer) with Adam and cosine learning-rate decay over $4{,}000$ minibatches of $256$ independent $(\mathbf{x}_0, \boldsymbol{\epsilon})$ pairs:
 
 @!mdl-flow-matching-transport-example-two-moons-1
 
-- Almost all of the loss is the disagreement of crossing segments, which no
-  network can remove.
-- The excess over the floor, a few hundredths, is the error of the field.
+- **Why a Loss of $1.40$ Is a Good Fit:** By the CFM theorem, $\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$. The network's terminal loss of $1.40$ sits only $\approx 0.03$ above the population floor $C \approx 1.37$, meaning $\mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) \approx 0.03$ per coordinate.
 :::
 
-::: {.slide title="More Euler Steps Help Until Only the Network's Error Is Left"}
-[Sampling]{.kicker}
+::: {.slide title="Sampling Quality vs. Euler Steps on Two Moons"}
+[Discretization vs. Field Error]{.kicker}
 
-Score: squared energy distance
-$2\,\mathbb{E}\|X-Y\|-\mathbb{E}\|X-X'\|-\mathbb{E}\|Y-Y'\|$ to held-out data
-($0$ for equal laws; about $0.9$ for a point mass at the data mean).
+Integrating the trained velocity field $\mathbf{u}_{\boldsymbol{\theta}}(\mathbf{x}, t)$ backward from $t = 1$ to $t = 0$ on $2{,}048$ noise points across $K \in \{1, 2, 4, 8, 16, 32, 64\}$ Euler steps:
 
 @!score-matching-diffusion-flow-steps-quality
 
-One step: about $0.7$. Two: $0.16$. Eight: $0.01$ to $0.02$. Level from
-sixteen on.
+- **1-Step Collapse ($K = 1$, $\mathcal{E}^2 \approx 0.70$):** Mirrors the theoretical collapse toward the data mean $\mathbf{0}$.
+- **Curvature Penalty ($K = 16\text{–}32$, $\mathcal{E}^2 \le 0.01$):** Following the curved trajectories induced by independent pairing requires 16–32 network evaluations per sample.
 :::
 
-::: {.slide title="One Step Gives the Mean; Eight Give Blurred Moons"}
-[Sampling]{.kicker}
+::: {.slide title="Visualizing 1, 2, 8, and 32 Euler Steps on Two Moons"}
+[Solver Error vs. Network Blur]{.kicker}
+
+Plotting the generated point clouds across step counts separates the solver's discretization error from the network's approximation error:
 
 @!score-matching-diffusion-flow-cfm-panels
 
-Last panel: held-out data. More steps do not sharpen the samples, so the
-blur is the field's error, the excess of the loss over its floor. The energy
-distance hardly registers it.
+::: {.d2l-note}
+Increasing the step count from $K = 1$ to $K = 8$ unfolds the mean blob into two crescents (removing Euler truncation error), whereas increasing $K$ from $8$ to $32$ cannot remove the residual thickness of the crescents (caused by the $\approx 0.03$ excess regression loss above the floor $C$).
+:::
+:::
+
+::: {.slide title="Reflow: Straightening Flows by Model Re-Pairing"}
+[Rectified Flow Re-Pairing]{.kicker}
+
+How can we eliminate segment crossings so that $1$ Euler step suffices? **Reflow** integrates the trained ODE from noise draws $\mathbf{Z}_1 = \mathbf{X}_1 \sim p_1$ down to $t = 0$ to obtain model endpoints $\mathbf{Z}_0 = \hat{\mathbf{x}}_0(\mathbf{X}_1)$, and retrains on the deterministic pairs $(\mathbf{Z}_0, \mathbf{Z}_1)$:
 
 ::: {.d2l-note .rule}
-The curvature that independent pairs build in costs sixteen to thirty-two
-network calls per sample.
-:::
-:::
+**Proposition (Reflow Preserves Marginals and Lowers Convex Transport Cost):**
 
-::: {.slide title="Reflow Does Not Increase the Transport Cost"}
-[Reflow]{.kicker}
-
-**Reflow:** pair each noise point with the endpoint of its trajectory, then
-retrain. Old pairs $\mathbf{X}_t=(1-t)\mathbf{X}_0+t\mathbf{X}_1$, velocity
-$\mathbf u_t$; flow $\mathbf{Z}_t$ from the same noise. For convex $c$:
-
-$$\begin{aligned}\mathbb{E}\,c(\mathbf{Z}_1-\mathbf{Z}_0)&\le\int_0^1\mathbb{E}\,c(\mathbf u_t(\mathbf{Z}_t))\,dt\\&=\int_0^1\mathbb{E}\,c\big(\mathbb{E}[\mathbf{X}_1-\mathbf{X}_0\mid\mathbf{X}_t]\big)dt\le\mathbb{E}\,c(\mathbf{X}_1-\mathbf{X}_0)\end{aligned}$$
-
-- **I.** Jensen over time. **II.** $\mathbf{Z}_t\sim\mathbf{X}_t$: one
-  continuity equation. **III.** Conditional Jensen.
-
-::: {.d2l-note .rule}
-With $c=\|\cdot\|^2$ the cost falls by at least the floor $C$.
+1. **Marginal Preservation:** $\mathbf{Z}_t \sim \mathbf{X}_t$ for all $t \in [0, 1]$, so the new endpoints still follow $\mathbf{Z}_0 \sim p_0$.
+2. **Monotonic Cost Reduction:** For any convex cost $c: \mathbb{R}^d \to \mathbb{R}$, applying Jensen's inequality twice (first over the time integral $\mathbf{Z}_1 - \mathbf{Z}_0 = \int_0^1 \mathbf{u}_t(\mathbf{Z}_t)\,dt$, then over the conditional expectation $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}[\mathbf{X}_1 - \mathbf{X}_0 \mid \mathbf{X}_t = \mathbf{x}]$) yields:
+   $$\mathbb{E}\!\left[c(\mathbf{Z}_1 - \mathbf{Z}_0)\right] \le \int_0^1 \mathbb{E}\!\left[c\big(\mathbf{u}_t(\mathbf{Z}_t)\big)\right]dt = \int_0^1 \mathbb{E}\!\left[c\big(\mathbb{E}[\mathbf{X}_1 - \mathbf{X}_0 \mid \mathbf{X}_t]\big)\right]dt \le \mathbb{E}\!\left[c(\mathbf{X}_1 - \mathbf{X}_0)\right]$$
 :::
 
-[Assumes $\mathbf u_t$ Lipschitz in $\mathbf x$, uniformly in $t$; for data with atoms, only on $[\delta,1]$.]{.small}
+- **Quadratic Cost Drops by at Least $C$:** For $c(\mathbf{v}) = \|\mathbf{v}\|^2$, conditional Jensen loses exactly the conditional variance floor $C$, so $\mathbb{E}\|\mathbf{Z}_1 - \mathbf{Z}_0\|^2 \le \mathbb{E}\|\mathbf{X}_1 - \mathbf{X}_0\|^2 - C$.
 :::
 
-::: {.slide title="After One Reflow Round, One Step Matches Thirty-Two"}
-[Reflow on the two moons]{.kicker}
+::: {.slide title="One Reflow Round Drops the Loss From 1.40 to 0.002"}
+[Eliminating Segment Crossings]{.kicker}
 
-$8{,}192$ noise points paired with their $32$-step endpoints, then retrained:
+Generating $8{,}192$ coupled pairs $(\hat{\mathbf{x}}_0(\boldsymbol{\epsilon}), \boldsymbol{\epsilon})$ by integrating the first network for $32$ Euler steps and retraining the exact same architecture on these re-paired endpoints:
+
+@!mdl-score-matching-diffusion-flow-one-reflow-round-measured
+
+- **Crossing Floor Vanishes:** Because trajectories of the deterministic ODE flow never cross, the straight chords joining $\boldsymbol{\epsilon}$ to $\hat{\mathbf{x}}_0(\boldsymbol{\epsilon})$ almost never cross in space-time, collapsing the training loss floor from $1.37$ down to $< 0.002$!
+:::
+
+::: {.slide title="After One Reflow Round, 1 Step Matches 32 Steps"}
+[Reflow Measured on Two Moons]{.kicker}
+
+Comparing the original and reflowed networks across $K \in \{1, 2, 32\}$ Euler steps and pair displacement costs:
 
 @!mdl-flow-matching-transport-reflow-1
 
-- Reflow loss: a few thousandths or less, where the first loss stopped at $1.4$.
-- Pair cost: $4$ before; the bound allows about $1.25$; measured about $0.3$.
-- Distance of trajectories from their chords: $0.25\to0.01$.
+- **32x Speedup at Test Time:** A **single Euler step** of the reflowed network achieves the exact same squared energy distance ($\approx 0.004$) as $32$ steps of the original model, while mean squared pair length drops $13\times$ ($4.00 \to 0.30$, well below the theoretical bound $4.00 - 2.75 = 1.25$).
 :::
 
-::: {.slide title="Check: After Reflow on the Two Points, What Is the Floor C?"}
-[Check]{.kicker}
+::: {.slide title="Measuring Trajectory Straightness via Chord Deviation"}
+[Geometric Straightening]{.kicker}
 
-One round of reflow on data $\pm2$ with Gaussian noise. Hint: a flow on a
-line preserves order.
+How far do the $32$-step ODE trajectories wander from the straight line segment (chord) connecting their noise start $\mathbf{Z}_1$ and generated data endpoint $\mathbf{Z}_0$?
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $C=0$. The new pairing is $\epsilon\mapsto2\operatorname{sign}(\epsilon)$,
-its segments never cross, and it costs $5-4\sqrt{2/\pi}=1.81$ against $5$.
-One Euler step is then exact.
-:::
-:::
+@!mdl-flow-matching-transport-reflow-2
+
+- **25x Straighter Trajectories:** Original trajectories curve inward toward the origin $\mathbf{0}$ before turning out to the moons (mean chord deviation $0.25$), whereas reflowed trajectories travel along nearly straight lines (mean chord deviation $0.01$).
 :::
 
-::: {.slide title="In the Plane a Pairing Can Be Straight, Crossing-Free and Wrong"}
-[Couplings]{.kicker}
+::: {.slide title="Optimal Transport, Wasserstein Distance, & Rotations"}
+[Static vs. Dynamic Couplings]{.kicker}
 
-![](../img/mdl-dyn-couplings-energy.svg){width=92%}
+A **coupling** $\pi \in \Pi(p_0, p_1)$ is a joint distribution with marginals $p_0$ and $p_1$, and the squared **2-Wasserstein distance** is the minimum mean squared displacement across all couplings:
 
-- $W_2^2$: least $\mathbb{E}\|\mathbf x_1-\mathbf x_0\|^2$ over pairings of data ($t=0$) with noise ($t=1$). On a line sorting attains it: $m^2+(s-1)^2$ for data $\mathcal N(m,s^2)$.
-- Right: a quarter turn of $\mathcal N(\mathbf 0,\mathbf I)$. Chords never cross and cost $4$, yet $W_2^2=0$: a rotation is not the gradient of a convex function.
+$$W_2^2(p_0, p_1) = \min_{\pi \in \Pi(p_0, p_1)} \mathbb{E}_{(\mathbf{x}_0, \mathbf{x}_1) \sim \pi}\!\left[\|\mathbf{x}_1 - \mathbf{x}_0\|^2\right]$$
+
+![](../img/mdl-dyn-couplings-energy.svg)
+
+- **1D Monotone Sorting vs. 2D Quarter-Turn Carousel:** In 1D, non-crossing order-preservation is sufficient for optimality ($W_2^2(\mathcal{N}(0, 1), \mathcal{N}(m, s^2)) = m^2 + (s - 1)^2 = 1$ for $m=0, s=2$, vs. $5$ for independent pairs).
+- **Why Crossing-Free Is Not Enough in $\mathbb{R}^d$ ($d \ge 2$):** Pairing $\mathbf{x}_0 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ with its $90^\circ$ rotation $\mathbf{R}\mathbf{x}_0$ produces straight segments $((1-t)\mathbf{I} + t\mathbf{R})\mathbf{x}_0$ that **never cross** ($C = 0$, a fixed point of Reflow!), yet cost $\mathbb{E}\|\mathbf{R}\mathbf{x}_0 - \mathbf{x}_0\|^2 = 4$ when $W_2^2 = 0$. By **Brenier's theorem**, an optimal map must be the gradient of a convex function $\nabla\psi$ (symmetric Jacobian), whereas $\mathbf{R} \ne \mathbf{R}^\top$ has curl.
 :::
 
-::: {.slide title="Every Flow Costs at Least W₂²"}
-[Benamou–Brenier, lower bound]{.kicker}
+::: {.slide title="Theorem: Dynamic Optimal Transport (Benamou–Brenier)"}
+[Kinetic Energy Lower Bound]{.kicker}
 
-Kinetic energy $\int_0^1\mathbb{E}\|\mathbf u_t(\mathbf Z_t)\|^2dt$ of an
-admissible flow $\mathbf Z_t$ between $p_0$ and $p_1$: mean squared speed,
-summed over time.
-
-- **I.** Its endpoints $(\mathbf Z_0,\mathbf Z_1)$ are a coupling of $p_0,p_1$.
-- **II.** Jensen for the time average:
-
-$$W_2^2\le\mathbb{E}\|\mathbf Z_1-\mathbf Z_0\|^2=\mathbb{E}\Big\|\int_0^1\mathbf u_t(\mathbf Z_t)\,dt\Big\|^2\le\int_0^1\mathbb{E}\|\mathbf u_t(\mathbf Z_t)\|^2dt$$
-
-Equality in II iff every particle moves at constant velocity.
-
-[Admissible: $\mathbf u_t$ is $C^1$ and Lipschitz in $\mathbf x$, uniformly in $t$, and $(p_t,\mathbf u_t)$ solves the continuity equation from $p_0$ to $p_1$.]{.small}
-:::
-
-::: {.slide title="The Optimal Pairing, Joined by Straight Lines, Costs Exactly W₂²"}
-[Benamou–Brenier, upper bound]{.kicker}
-
-- **III.** Optimal coupling $\pi^\star$, straight path $\mathbf X_t$, velocity
-  $\mathbf u_t=\mathbb{E}[\mathbf X_1-\mathbf X_0\mid\mathbf X_t]$:
-
-$$\int_0^1\mathbb{E}\big\|\mathbb{E}[\mathbf X_1-\mathbf X_0\mid\mathbf X_t]\big\|^2dt\le\mathbb{E}_{\pi^\star}\|\mathbf X_1-\mathbf X_0\|^2=W_2^2$$
+How does the static Wasserstein distance $W_2^2(p_0, p_1)$ relate to the continuous velocity fields $\mathbf{u}_t(\mathbf{x})$ learned by flow matching?
 
 ::: {.d2l-note .rule}
-If this field is admissible, $W_2^2=\min\int_0^1\!\int\|\mathbf u_t\|^2p_t$ over
-admissible flows: straight constant-speed motion under an optimal pairing.
+**Theorem (Benamou–Brenier, 2000):** Across all admissible pairs $(p_t, \mathbf{u}_t)$ solving the continuity equation $\partial_t p_t + \nabla\cdot(p_t\mathbf{u}_t) = 0$ from $p_0$ to $p_1$, the minimum **kinetic energy** equals $W_2^2(p_0, p_1)$:
+$$W_2^2(p_0, p_1) = \min_{(p_t, \mathbf{u}_t)} \int_0^1 \int_{\mathbb{R}^d} \|\mathbf{u}_t(\mathbf{x})\|^2\,p_t(\mathbf{x})\,d\mathbf{x}\,dt$$
+and is achieved by moving each pair $(\mathbf{x}_0, \mathbf{x}_1)$ of the optimal Brenier coupling $\pi^\star$ along a straight line at constant speed ($C = 0$, exact in $1$ Euler step).
 :::
 
-Then III is an equality too: the segments of $\pi^\star$ do not cross, the
-floor is $0$, and one Euler step is exact.
-
-[In general the minimum is over weak solutions of the continuity equation (cited, not proved); the two-point optimum, with slope $1/t$, needs it.]{.small}
+@!mdl-flow-matching-transport-couplings-and-the-wasserstein-distance
 :::
 
-::: {.slide title="Check: Three Flows Between N(0, 4) and N(0, 1)"}
-[Check]{.kicker}
+::: {.slide title="Solver Order vs. Time-Grid Placement at Equal Budget"}
+[Euler vs. Heun on PF-ODE]{.kicker}
 
-What is $W_2^2$? What does the marginal flow of straight segments under
-independent pairs cost? Gaussian marginals $\mathcal N(0,s_t^2)$ move with
-$u=(\dot s_t/s_t)x$, so the energy is $\int_0^1\dot s_t^2\,dt$.
+When sampling from a curved probability-flow ODE on a tight budget of $10$ to $80$ function evaluations (NFE), does 2nd-order **Heun** ($2$ NFE/step) always beat 1st-order **Euler** ($1$ NFE/step)?
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $W_2^2=1$, attained by $s_t=2-t$. Independent straight segments:
-$s_t^2=4(1-t)^2+t^2$ shrinks as $t$ falls from $1$ to $0.8$ and costs $1.86$;
-the cosine path costs $1.23$.
-:::
-:::
+@!score-matching-diffusion-flow-euler-vs-heun
+
+- **Grid Sensitivity:** On a **uniform grid**, Euler beats Heun at 10 and 20 NFE! On a **squared grid** $t_k = (1 - k/K)^2$ crowded near the data end $t = 0$, Heun wins at every budget and cuts the 10-NFE error to $0.030$.
 :::
 
-::: {.slide title="On This Field the Grid Decides Which Solver Wins at Small Budgets"}
-[Solver order at equal cost]{.kicker}
+::: {.slide title="Why Euler Leads on Uniform Grids: Error Cancellation"}
+[Diagnosing Step Errors]{.kicker}
 
-Exact-score probability-flow ODE of $\tfrac12\mathcal N(-2,0.25)+\tfrac12\mathcal N(2,0.25)$;
-mean endpoint error against field evaluations (Heun: two per step):
+Decomposing the terminal error into individual signed step contributions $c_k$ carried to $t = 0$ reveals why grid placement interacts strongly with solver order:
 
-| grid, solver | 10 | 20 | 40 |
-|:--|--:|--:|--:|
-| equal steps, Euler | 0.04 | 0.02 | 0.010 |
-| equal steps, Heun | 0.08 | 0.03 | 0.009 |
-| squared grid, Euler | 0.11 | 0.05 | 0.03 |
-| squared grid, Heun | 0.03 | 0.015 | 0.005 |
-
-- Equal steps: Heun loses below $40$ evaluations.
-- Squared grid $t_k=(1-k/K)^2$, crowded toward the data: Heun wins at every
-  budget.
-:::
-
-::: {.slide title="Check: Why Does First-Order Euler Lead on Equal Steps?"}
-[Check]{.kicker}
-
-The endpoint error is a sum of signed step errors $c_k$. Which share
-$|\sum_kc_k|/\sum_k|c_k|$ survives?
-
-::: {.fragment .fade-up}
 @!mdl-flow-matching-transport-solver-order-at-equal-cost-1
 
-::: {.d2l-note}
-**Answer.** Cancellation: an eighth of Euler's step errors survives on equal
-steps, more than half of Heun's. On the squared grid the shares are a third
-and a quarter to two fifths; the totals $\sum_k|c_k|$ change by a seventh at
-most.
+- **91% of Motion Happens Below $t = 0.5$:** Because the noised law near $t = 1$ is almost $\mathcal{N}(0, 1)$ where the score cancels the drift, uniform steps waste half the NFE budget above $t = 0.5$ where trajectories move only $9\%$ of their length.
+- **Accidental Sign Cancellation:** Before summation, Euler's absolute step errors $\sum_k |c_k|$ are more than $2\times$ larger than Heun's on both grids—but on the uniform grid, opposite signs cancel $88\%$ of Euler's errors (surviving share $0.12$). Crowding the grid near $t = 0$ removes this cancellation and lets Heun's true $O(h^2)$ local accuracy dominate.
 :::
+
+::: {.slide title="Concept Check: Flow Matching, Reflow, and Transport"}
+[Concept Check]{.kicker}
+
+Test your understanding of Conditional Flow Matching, Reflow, and Optimal Transport:
+
+1. **One Euler Step Under Independent Pairing:** For a dataset in $\mathbb{R}^d$ with mean $\boldsymbol{\mu} = (3, -1)$ paired independently with $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ along $\mathbf{x}_t = (1-t)\mathbf{x}_0 + t\boldsymbol{\epsilon}$, where does a single Euler step from $t = 1$ to $t = 0$ with the exact marginal velocity $\mathbf{u}_1(\mathbf{x})$ send every noise point?
+2. **1D Reflow Optimality:** On 1D data $p_0$ and Gaussian noise $p_1$, why does **one** round of exact Reflow always reach the exact $W_2$-optimal transport coupling with loss floor $C = 0$?
+3. **2D Fixed Points of Reflow:** Give an example of a 2D coupling between $p_0 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ and $p_1 = \mathcal{N}(\mathbf{0}, \mathbf{I})$ whose straight segments never cross ($C = 0$, so Reflow does not change it) even though its transport cost is strictly greater than $W_2^2(p_0, p_1) = 0$.
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. At $t = 1$, $\mathbf{u}_1(\mathbf{x}) = \mathbb{E}[\boldsymbol{\epsilon} - \mathbf{x}_0 \mid \boldsymbol{\epsilon} = \mathbf{x}] = \mathbf{x} - \mathbb{E}[\mathbf{x}_0] = \mathbf{x} - \boldsymbol{\mu}$. One Euler step $\mathbf{x} - 1 \cdot \mathbf{u}_1(\mathbf{x}) = \boldsymbol{\mu} = (3, -1)$ collapses every point onto the data mean.
+2. In 1D, trajectories of a Lipschitz ODE cannot cross, so the flow map $\Phi_{1 \to 0}$ is strictly increasing (monotone). In 1D, the unique monotone map is the quantile-sorting coupling, which is the gradient of a convex function and minimizes every convex transport cost ($W_2^2$).
+3. The $90^\circ$ rotation pairing $\mathbf{x}_1 = \mathbf{R}\mathbf{x}_0$ with $\mathbf{R} = \left(\begin{smallmatrix}0 & -1 \\ 1 & 0\end{smallmatrix}\right)$: the matrix $(1-t)\mathbf{I} + t\mathbf{R}$ is invertible for all $t \in [0, 1]$ (eigenvalues $(1-t) \pm \mathrm{i}t \ne 0$), so segments never cross ($C = 0$), yet $\mathbb{E}\|\mathbf{R}\mathbf{x}_0 - \mathbf{x}_0\|^2 = 4 > W_2^2 = 0$.
 :::
 :::
 
-::: {.slide title="Choose the Path, Learn the Velocity, Pair Well"}
-[Recap]{.kicker}
+::: {.slide title="Summary: Flow Matching, Reflow, and Optimal Transport"}
+[Key Takeaways]{.kicker}
 
-- Marginal velocity = posterior mean; CFM = FM $+\,C$. On the moons the
-  floor is about $1.37$ per coordinate, the loss $1.4$.
-- Velocity and score are affine in $\hat{\mathbf x}_0$: one network serves both.
-- Independent pairs: $0.7$ at one step, a few thousandths or less at
-  thirty-two, still blurred.
-- Reflow: one step matches thirty-two; pair cost $4\to0.3$.
-- $W_2^2(\mathcal N(0,1),\mathcal N(0,4))=1$ against $5$; $W_2^2$ is the least
-  kinetic energy; the quarter-turn pairing costs $4$ where $W_2^2=0$.
-- Exact field, equal cost: Heun beats Euler from $40$ evaluations on equal
-  steps, at every budget on crowded steps.
-
-**Next:** the diffusion chapter, on pairings, guidance and few-step
-generators for images.
+| Concept / Theorem | Mathematical Form | Generative Modeling & Systems Role |
+| :--- | :--- | :--- |
+| **Marginal Velocity** | $\mathbf{u}_t(\mathbf{x}) = \mathbb{E}\big[\mathbf{u}_t(\mathbf{x} \mid \mathbf{z}) \mid \mathbf{x}_t = \mathbf{x}\big]$ | Posterior mean of per-sample velocities satisfies $\partial_t p_t + \nabla\cdot(p_t\mathbf{u}_t) = 0$ |
+| **CFM Theorem** | $\mathcal{L}_{\text{CFM}}(\boldsymbol{\theta}) = \mathcal{L}_{\text{FM}}(\boldsymbol{\theta}) + C$ | Trains $\mathbf{u}_{\boldsymbol{\theta}}$ by simulation-free least squares; floor $C$ measures path crossings |
+| **Score–Velocity Identity** | $\mathbf{u}_t(\mathbf{x}) = \frac{\dot{\alpha}_t}{\alpha_t}\mathbf{x} - (\sigma_t\dot{\sigma}_t - \sigma_t^2\frac{\dot{\alpha}_t}{\alpha_t})\nabla\log p_t$ | Converts any diffusion noise/score predictor into a flow velocity without retraining |
+| **Rectified Flow & Reflow** | $\mathbf{x}_t = (1-t)\mathbf{x}_0 + t\boldsymbol{\epsilon}$, re-pair $(\mathbf{Z}_0, \mathbf{Z}_1)$ | Eliminates crossings ($C \to 0$), lowers cost $\mathbb{E}\,c(\mathbf{Z}_1 - \mathbf{Z}_0)$, enables 1-step Euler generation |
+| **Benamou–Brenier Theorem** | $W_2^2(p_0, p_1) = \min_{(p_t, \mathbf{u}_t)} \int_0^1 \mathbb{E}_{p_t}\|\mathbf{u}_t\|^2\,dt$ | Minimum kinetic energy equals $W_2^2$, achieved by straight constant-speed Brenier maps |
 :::
+

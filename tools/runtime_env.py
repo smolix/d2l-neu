@@ -440,6 +440,12 @@ HEAVY_GPU_NOTEBOOKS = {
     # 20.5 generates with Qwen3.5-2B in bf16 at batch 32 (about 8 GiB) and
     # trains an 8.1M-parameter proxy (6.8 GiB peak, 2026-11-16 pilot).
     ("pytorch", "chapter_lm-data/synthetic-data.ipynb"): 2,
+    # 20.6's step-0 diagnostics score Qwen3-0.6B-Base in bf16 with 155,765-id
+    # logits over 1,024-token contexts: 4.0 GiB allocated, 11.2 GiB reserved
+    # (2026-11-21 regeneration). Its D2L_RERUN regeneration (12-13 GiB peak
+    # in the extension runs) takes a whole card: run it on a card masked for
+    # it alone.
+    ("pytorch", "chapter_lm-data/tokenizers.ipynb"): 2,
 }
 
 

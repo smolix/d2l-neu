@@ -10784,6 +10784,9 @@ d2l.DATA_HUB['lm-fwedu-shards-100m-v1'] = (  # train-00000: ODC-By
 d2l.DATA_HUB['lm-fwedu-manifest-4b-v1'] = (  # 40 shards under fwedu-r2-v1/
     d2l.LM_DATA_URL + 'lm-fwedu-manifest-4b-v1.json',
     '2d97947273a7df83f494ad20bbb561bfbd2b336c')
+d2l.DATA_HUB['lm-data-tok-results-v1'] = (  # small LMs and extension runs
+    d2l.LM_DATA_URL + 'lm-data-tok-results-v1.json',
+    'b0eb51e54b42e5273dc9b17ba416f9f998531548')
 
 def fertility_table(encoders, parallel, ref='eng_Latn'):
     """Per encoder and language: passages, UTF-8 bytes, tokens, bytes per

@@ -74,6 +74,7 @@ import json
 import os
 import shutil
 import tempfile
+import textwrap
 import time
 import unicodedata
 import warnings
@@ -104,8 +105,9 @@ TOK_PROXY = d2l.ProxyCfg(num_hiddens=256, num_heads=4, num_blks=4,
 SEEDS, LOG_EVERY, LIVE_TOKENS = (0, 1), 4, 2**19
 LM_EPOCHS = 1.0              # passes of each small LM over its 45 MB
 EXT_MODEL, N_NEW = 'Qwen/Qwen3-0.6B-Base', 4_096
-EXT_TRAIN = dict(lr=1e-4, warmup=10, steps=150, batch=8, micro_batch=4,
-                 seq_len=1024, eval_at=(0, 25, 50, 100, 150), seeds=(0, 1),
+EXT_TRAIN = dict(embed_steps=50, embed_lr=3e-3, lr=1e-5, warmup=10,
+                 steps=150, batch=8, micro_batch=4, seq_len=1024,
+                 eval_at=(0, 25, 50, 100, 150), seeds=(0, 1),
                  loss_chunk=1024, final_lr_frac=0.1, curve_docs=100,
                  pool_tokens=2**22)
 N_TOK_DOCS, R2_VOCAB = 80_000, 32_768  # the reference tokenizer
@@ -123,14 +125,21 @@ N_EXT = (dict(hindi=8, passages=24, english=8, contexts=4, ctx_len=256)
          if SMALL else dict(hindi=500, passages=488, english=200,
                             contexts=200, ctx_len=1024))
 RERUN_DIR = os.path.join('..', 'data', 'lm', 'rerun')
+
+def say(*args, sep=' '):
+    """print, each line wrapped to the page's 100 columns."""
+    print('\n'.join(l if len(l) <= 100 else textwrap.fill(
+        l, 100, subsequent_indent='    ', break_long_words=False,
+        break_on_hyphens=False) for l in sep.join(map(str, args)).split('\n')))
+
 with torch.device('meta'):
     N_PARAMS = d2l.num_params(d2l._proxy_model(TOK_PROXY))
 TIER = (f'at T1 scale ({N_PARAMS / 1e6:.1f}M-parameter LMs, one epoch over '
         f'45 MB; {EXT_MODEL.split("/")[1]}, {EXT_TRAIN["steps"]} steps of '
         f'{EXT_TRAIN["batch"]} x {EXT_TRAIN["seq_len"]:,} tokens)')
-print(f'small-LM comparison and extension {TIER.replace(" scale", "")}')
-print(f'GPU={GPU}, SMALL={SMALL}, regenerating:',
-      ', '.join(sorted(RERUN)) or 'none')
+say(f'small-LM comparison and extension {TIER.replace(" scale", "")}')
+say(f'GPU={GPU}, SMALL={SMALL}, regenerating:',
+    ', '.join(sorted(RERUN)) or 'none')
 ```
 
 <!-- Prose: the registry: Belebele (CC BY-SA 4.0) is downloaded from its
@@ -138,14 +147,11 @@ pinned commit, never re-hosted; the ten-language slice is FineWeb-2 and
 FineWeb-Edu text (ODC-By); the reference tokenizer and its shards are built
 once by tools/build_r2_shards.py, never by this notebook. -->
 
-<!-- Pending registration (2026-11-21): lm-data-tok-results-v1 (W12) joins
-this cell as a `#@save` entry once the GPU regeneration (tok-lm, tok-extend)
-is uploaded; until then a normal build stops at the first cell that reads it,
-with a KeyError. Its first generation makes both parts in one run
-(D2L_RERUN=1, one whole card through the part-runner: tok-extend's peak is
-above the notebook's class); a later single-part regeneration reads the
-other part from the registered file. The slice and the four reference keys
-are registered. -->
+<!-- Prose: the results of the two GPU regenerations (the six small LMs
+and the eight extension runs) are one registered file,
+lm-data-tok-results-v1, made in one run (D2L_RERUN=1, one whole RTX 4090,
+2026-11-21); a later single-part regeneration reads the other part from
+it. -->
 
 ```{.python .input #tokenizers-data-hub}
 %%tab pytorch
@@ -205,15 +211,18 @@ d2l.DATA_HUB['lm-fwedu-shards-100m-v1'] = (  # train-00000: ODC-By
 d2l.DATA_HUB['lm-fwedu-manifest-4b-v1'] = (  # 40 shards under fwedu-r2-v1/
     d2l.LM_DATA_URL + 'lm-fwedu-manifest-4b-v1.json',
     '2d97947273a7df83f494ad20bbb561bfbd2b336c')
+d2l.DATA_HUB['lm-data-tok-results-v1'] = (  # small LMs and extension runs
+    d2l.LM_DATA_URL + 'lm-data-tok-results-v1.json',
+    'b0eb51e54b42e5273dc9b17ba416f9f998531548')
 
 SLICE_KEY, RES_KEY = 'lm-data-fw2-slice-v1', 'lm-data-tok-results-v1'
 R2_KEYS = ('lm-r2-tokenizer-v1', 'lm-fwedu-val-v1',
            'lm-fwedu-shards-100m-v1', 'lm-fwedu-manifest-4b-v1')
 for name, keys in (('this section', (SLICE_KEY, RES_KEY) + R2_KEYS),
                    ('upstream', ('lm-mix-runs-t1-v1',))):
-    print(f'{name}: registered', ', '.join(
+    say(f'{name}: registered', ', '.join(
         k for k in keys if k in d2l.DATA_HUB) or 'none', '| pending:',
-          ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
+        ', '.join(k for k in keys if k not in d2l.DATA_HUB) or 'none')
 
 def open_tar(key):
     """The folder of a registered tar, extracted afresh whenever the
@@ -329,19 +338,19 @@ RELEASED = {'GPT-2': tiktoken.get_encoding('gpt2'),
             'Qwen3.5': hf_tokenizer('Qwen/Qwen3.5-0.8B-Base')}
 FERT = d2l.fertility_table({k: encoder(t) for k, t in RELEASED.items()},
                            BELE)
-print(f'{len(LINKS)} passages per language')
-print(FERT.pivot(index='lang', columns='encoder', values='premium')
-      .loc[list(LANGS)].round(2))
-print(FERT.pivot(index='lang', columns='encoder', values='bytes_per_token')
-      .loc[list(LANGS)].round(2))
-print(FERT.pivot(index='lang', columns='encoder', values='fallback_share')
-      .loc[list(LANGS)].round(3))
+say(f'{len(LINKS)} passages per language')
+say(FERT.pivot(index='lang', columns='encoder', values='premium')
+    .loc[list(LANGS)].round(2))
+say(FERT.pivot(index='lang', columns='encoder', values='bytes_per_token')
+    .loc[list(LANGS)].round(2))
+say(FERT.pivot(index='lang', columns='encoder', values='fallback_share')
+    .loc[list(LANGS)].round(3))
 PREM = FERT.set_index(['encoder', 'lang']).premium
 # C1: English-centred tokenizers charge non-Latin scripts several times
 assert min(PREM['GPT-2', l] for l in ('hin_Deva', 'tha_Thai')) > 3
 assert PREM['Qwen3.5', 'hin_Deva'] < PREM['Qwen3', 'hin_Deva']
-print(f"Hindi premium: Qwen3 {PREM['Qwen3', 'hin_Deva']:.1f}, "
-      f"Qwen3.5 {PREM['Qwen3.5', 'hin_Deva']:.1f}")
+say(f"Hindi premium: Qwen3 {PREM['Qwen3', 'hin_Deva']:.1f}, "
+    f"Qwen3.5 {PREM['Qwen3.5', 'hin_Deva']:.1f}")
 ```
 
 ## The Unigram Model
@@ -564,8 +573,8 @@ for _ in range(200):  # forward-backward and Viterbi against enumeration
     assert ''.join(v) == s and len(v) == min(top)
     assert sum(logp[x] for x in v) >= lps.max() - 1e-12
 assert err < 1e-9
-print(f'forward-backward vs enumeration: max difference {err:.1e}; '
-      f'Viterbi = argmax on 200 strings ({ties} with tied maxima)')
+say(f'forward-backward vs enumeration: max difference {err:.1e}; '
+    f'Viterbi = argmax on 200 strings ({ties} with tied maxima)')
 
 toy = [''.join(rng.choice(list('abc'), rng.integers(3, 9)))
        for _ in range(5000)]
@@ -577,7 +586,7 @@ for _ in range(6):  # EM never lowers the corpus log-likelihood
     logp, ll = uni._em_step(words, logp)
     lls.append(ll)
 assert all(b >= a - 1e-9 for a, b in zip(lls, lls[1:]))
-print('EM log-likelihood:', ', '.join(f'{ll:,.1f}' for ll in lls))
+say('EM log-likelihood:', ', '.join(f'{ll:,.1f}' for ll in lls))
 
 s, alpha = 'abcabc', 0.2  # sampled segmentations against posteriors
 logp = random_pieces(np.random.default_rng(2), n=40)
@@ -590,8 +599,8 @@ freq = collections.Counter(tuple(d2l._unigram_sample(s, logp, 4, alpha, rng))
 z = max(abs(freq[g] / draws - p) / math.sqrt(p * (1 - p) / draws)
         for g, p in post.items())
 assert z < 3
-print(f'{len(segs)} segmentations of {s!r}: sampled frequencies within '
-      f'{z:.1f} standard errors of their posteriors')
+say(f'{len(segs)} segmentations of {s!r}: sampled frequencies within '
+    f'{z:.1f} standard errors of their posteriors')
 ```
 
 <!-- Prose: the from-scratch trainer on 1 MB of English against
@@ -623,9 +632,9 @@ t_ours = time.time() - tic
 tic = time.time()
 sp_uni = d2l.sp_train(eng_1mb, 'unigram', 4096)
 t_sp = time.time() - tic
-print(f'from scratch: {len(uni.pieces):,} pieces in {t_ours:.0f} s '
-      f'({len(uni.history) // uni.em_iters} rounds); SentencePiece: '
-      f'{t_sp:.1f} s')
+say(f'from scratch: {len(uni.pieces):,} pieces in {t_ours:.0f} s '
+    f'({len(uni.history) // uni.em_iters} rounds); SentencePiece: '
+    f'{t_sp:.1f} s')
 
 def sp_viterbi(sp, text):
     """SentencePiece's segmentation recomputed by viterbi_segment from its
@@ -641,19 +650,19 @@ def sp_viterbi(sp, text):
 
 same = [sp_viterbi(sp_uni, l) == sp_uni.encode(l, out_type=str)
         for l in held_lines]
-print(f'viterbi_segment reproduces SentencePiece on {sum(same)} of '
-      f'{len(same)} held-out lines')
+say(f'viterbi_segment reproduces SentencePiece on {sum(same)} of '
+    f'{len(same)} held-out lines')
 for l, ok in list(zip(held_lines, same)):
     if not ok:  # the first disagreements and their cause
         a, b = sp_viterbi(sp_uni, l), sp_uni.encode(l, out_type=str)
         k = next(i for i, (x, y) in enumerate(zip(a, b)) if x != y)
-        print('  ours', a[k:k + 4], '| SentencePiece', b[k:k + 4])
+        say('  ours', a[k:k + 4], '| SentencePiece', b[k:k + 4])
 assert sum(same) >= 0.99 * len(same)  # C2
 
 logp_sp, _ = d2l._sp_pieces_scores(sp_uni)
 shared = set(uni.pieces) & set(logp_sp)
-print(f'vocabulary overlap: {len(shared):,} of {len(uni.pieces):,} pieces '
-      f'({len(shared) / len(uni.pieces):.0%})')
+say(f'vocabulary overlap: {len(shared):,} of {len(uni.pieces):,} pieces '
+    f'({len(shared) / len(uni.pieces):.0%})')
 two = []  # frequent words whose two best segmentations are close
 for w, _ in d2l.UnigramTokenizer._words(held_lines).most_common():
     if not 7 <= len(w) <= 13:
@@ -665,11 +674,11 @@ for w, _ in d2l.UnigramTokenizer._words(held_lines).most_common():
     if len(two) == 5:
         break
 for w, segs in two:
-    print(w, ' | '.join(f'{" ".join(g)} ({lp:.1f})' for lp, g in segs))
+    say(w, ' | '.join(f'{" ".join(g)} ({lp:.1f})' for lp, g in segs))
 sentence = held_lines[0][:80]
-print('Viterbi:', ' '.join(uni.encode(sentence)))
+say('Viterbi:', ' '.join(uni.encode(sentence)))
 for seed in range(5):
-    print(f'sample {seed}:', ' '.join(uni.encode_sample(sentence, 0.2, seed)))
+    say(f'sample {seed}:', ' '.join(uni.encode_sample(sentence, 0.2, seed)))
 ```
 
 <!-- Prose: SentencePiece's defaults change text before it is segmented
@@ -682,9 +691,9 @@ character_coverage below 1 the rarest characters fall back to bytes. -->
 probe = ['ﬁnance', 'x² + y²', 'ＡＢＣ１２',
          'café', 'Ⅳ ①']
 nfkc = spm.SentencePieceNormalizer(rule_name='nmt_nfkc')
-print(pd.DataFrame({'text': probe,
-                    'nmt_nfkc': [nfkc.normalize(s) for s in probe],
-                    'changed': [nfkc.normalize(s) != s for s in probe]}))
+say(pd.DataFrame({'text': probe,
+                  'nmt_nfkc': [nfkc.normalize(s) for s in probe],
+                  'changed': [nfkc.normalize(s) != s for s in probe]}))
 jpn = first_bytes(TRAIN['jpn_Jpan'], 1_000_000)
 rows = {}
 for cov in (0.9995, 1.0):
@@ -695,7 +704,7 @@ for cov in (0.9995, 1.0):
     rows[cov] = dict(single_characters=len(chars),
                      fallback_share=sum(i in fb for i in ids) / len(ids),
                      tokens=len(ids))
-print(pd.DataFrame(rows).T.round(4).rename_axis('character_coverage'))
+say(pd.DataFrame(rows).T.round(4).rename_axis('character_coverage'))
 ```
 
 ## Training Data Decides Who Pays
@@ -786,19 +795,19 @@ for a in ALPHAS:
     WEIGHTS[a] = w
     rows[a] = dict(MB=sum(len(t.encode()) for t in texts) / 1e6,
                    seconds=time.time() - tic, **script_counts(ALPHA_TOK[a]))
-print(pd.DataFrame(WEIGHTS).loc[list(LANGS)].round(4).rename(
+say(pd.DataFrame(WEIGHTS).loc[list(LANGS)].round(4).rename(
     columns=lambda a: f'weight, alpha={a}'))
-print(pd.DataFrame(rows).T.round(1).rename_axis('alpha'))
+say(pd.DataFrame(rows).T.round(1).rename_axis('alpha'))
 FERT_A = d2l.fertility_table(
     {f'alpha={a}': encoder(t) for a, t in ALPHA_TOK.items()}, BELE)
 PREM_A = FERT_A.pivot(index='lang', columns='encoder',
                       values='premium').loc[list(LANGS)]
-print(PREM_A.round(2))
+say(PREM_A.round(2))
 for l in ('swh_Latn', 'hin_Deva', 'tha_Thai'):  # C3: the smallest corpora
     p = [PREM_A.loc[l, f'alpha={a}'] for a in ALPHAS]
-    print(f'{l}: premium ' + ' -> '.join(f'{x:.2f}' for x in p) +
-          (' (falls as alpha falls)' if p[0] > p[1] > p[2] else
-           ' (not monotone in alpha)'))
+    say(f'{l}: premium ' + ' -> '.join(f'{x:.2f}' for x in p) +
+        (' (falls as alpha falls)' if p[0] > p[1] > p[2] else
+         ' (not monotone in alpha)'))
 ```
 
 <!-- Prose: the comparison that is fair across tokenizers is bits per byte
@@ -894,7 +903,7 @@ tic = time.time()
 LM_TOKS = {'SP unigram': d2l.sp_train(LM_TEXT, 'unigram', V_SMALL),
            'SP BPE': d2l.sp_train(LM_TEXT, 'bpe', V_SMALL),
            'HF BPE': ALPHA_TOK[0.0]}
-print(f'two SentencePiece models trained in {time.time() - tic:.0f} s')
+say(f'two SentencePiece models trained in {time.time() - tic:.0f} s')
 POOLS = {k: as_pool(t, LM_TEXT) for k, t in LM_TOKS.items()}
 EVAL_IDS = {k: {'heldout': {l: token_ids(t, HELD[l]) for l in LANGS},
                 'belebele': {l: token_ids(t, BELE[l]) for l in LANGS}}
@@ -908,8 +917,8 @@ TOK_INFO = {k: dict(fingerprint=fingerprint(t), train_tokens=len(POOLS[k]),
                                              for s, d in EVAL_IDS[k].items()})
             for k, t in LM_TOKS.items()}
 TEXT_HASH = d2l.docs_hash([(str(i), t) for i, t in enumerate(LM_TEXT)])
-print(f'{sum(len(t.encode()) for t in LM_TEXT) / 1e6:.1f} MB of training '
-      'text:', ', '.join(f'{k} {len(p):,} tokens' for k, p in POOLS.items()))
+say(f'{sum(len(t.encode()) for t in LM_TEXT) / 1e6:.1f} MB of training '
+    'text:', ', '.join(f'{k} {len(p):,} tokens' for k, p in POOLS.items()))
 ```
 
 <!-- Prose: one small LM per tokenizer and seed for one epoch over that
@@ -935,9 +944,9 @@ if 'tok-lm' in RERUN:
                 tokenizer=name, seed=seed, nll=nll, log=out['log'],
                 **{k: out[k] for k in ('steps', 'n_params', 'throughput',
                                        'peak_mem', 'seconds')}))
-            print(f'{name}, seed {seed}: {out["steps"]} steps of '
-                  f'{cfg.batch * cfg.seq_len:,} tokens, {out["seconds"]:.0f}'
-                  f' s, final loss {out["log"][-1][2]:.3f}', d2l.lm_peak())
+            say(f'{name}, seed {seed}: {out["steps"]} steps of '
+                f'{cfg.batch * cfg.seq_len:,} tokens, {out["seconds"]:.0f}'
+                f' s, final loss {out["log"][-1][2]:.3f}', d2l.lm_peak())
             del model
             d2l.lm_free()
     TOKLM = json.loads(json.dumps(dict(
@@ -957,8 +966,8 @@ assert TOKLM['text_hash'] == TEXT_HASH
 assert TOKLM['n_bytes'] == json.loads(json.dumps(N_BYTES))
 for name, info in json.loads(json.dumps(TOK_INFO)).items():
     assert TOKLM['tokenizers'][name] == info, f'{name} differs from its run'
-print(f'{len(TOKLM["runs"])} runs {TIER}, learning rate {LR:g} (from '
-      f'{TOKLM["config"]["lr_from"]})')
+say(f'{len(TOKLM["runs"])} runs {TIER}, learning rate {LR:g} (from '
+    f'{TOKLM["config"]["lr_from"]})')
 if GPU and 'tok-lm' not in RERUN:  # live check: the start of one run
     out, model, _ = train_small_lm(POOLS['HF BPE'], 0, LR,
                                    stop_tokens=LIVE_TOKENS)
@@ -966,8 +975,8 @@ if GPU and 'tok-lm' not in RERUN:  # live check: the start of one run
         r for r in TOKLM['runs'] if r['tokenizer'] == 'HF BPE'
         and r['seed'] == 0)['log']}
     diff = max(abs(l - reg[s]) for s, _, l, _ in out['log'] if s in reg)
-    print(f'live check, HF BPE seed 0, first {LIVE_TOKENS:,} tokens: '
-          f'largest loss difference {diff:.4f} nats', d2l.lm_peak())
+    say(f'live check, HF BPE seed 0, first {LIVE_TOKENS:,} tokens: '
+        f'largest loss difference {diff:.4f} nats', d2l.lm_peak())
     assert diff < 0.02
     del model
     d2l.lm_free()
@@ -996,8 +1005,8 @@ for name in LM_TOKS:  # 10 held-out documents per language: 100
     rows[name] = dict(loss_per_token=L, perplexity=math.exp(L),
                       bytes_per_token=bbar, bpb=ways[0],
                       max_difference=max(ways) - min(ways))
-print(f'100 held-out documents, seed 0 {TIER}')
-print(pd.DataFrame(rows).T.round(4))
+say(f'100 held-out documents, seed 0 {TIER}')
+say(pd.DataFrame(rows).T.round(4))
 ```
 
 <!-- Prose: the plot below puts each language at its premium under each
@@ -1022,8 +1031,11 @@ for name in TOKS:
                             bpb_belebele=np.mean(b), seed_range=np.ptp(b),
                             bpb_heldout=np.mean(h), heldout_range=np.ptp(h))
 TAB = pd.DataFrame(tab).T.rename_axis(['tokenizer', 'lang'])
-print(f'Belebele and held-out bits per byte {TIER}')
-print(TAB.unstack(0).loc[list(LANGS)].round(3).to_string())
+say(f'Belebele and held-out bits per byte {TIER}')
+WIDE = TAB.unstack(0).loc[list(LANGS)].round(3)
+for part in (['premium', 'bpb_belebele', 'seed_range'],
+             ['bpb_heldout', 'heldout_range']):
+    say(WIDE[part].to_string())
 
 def passage_bpb(name):
     """Per-passage bits per byte, averaged over languages and seeds."""
@@ -1035,23 +1047,23 @@ def passage_bpb(name):
 macro = {name: passage_bpb(name) for name in TOKS}
 for a, b in itertools.combinations(TOKS, 2):
     r = d2l.paired_bootstrap(macro[a], macro[b])
-    print(f'macro bits per byte, {a} - {b}: {r.mean:+.4f} '
-          f'[{r.ci[0]:+.4f}, {r.ci[1]:+.4f}] over {r.n} passages')
+    say(f'macro bits per byte, {a} - {b}: {r.mean:+.4f} '
+        f'[{r.ci[0]:+.4f}, {r.ci[1]:+.4f}] over {r.n} passages')
 bpb = TAB.bpb_belebele.unstack(0).loc[list(LANGS)]
 prem = TAB.premium.unstack(0).loc[list(LANGS)]
 rng_ = TAB.seed_range.unstack(0).loc[list(LANGS)]
 for l in LANGS:  # C4, per language: unigram against BPE at equal V
     d = bpb.loc[l, 'SP unigram'] - bpb.loc[l, 'SP BPE']
     noise = rng_.loc[l, ['SP unigram', 'SP BPE']].max()
-    print(f'{l}: unigram - BPE {d:+.3f} bits per byte (seed range '
-          f'{noise:.3f}): ' + ('not distinguished' if abs(d) <= noise
-                               else 'differs'))
+    say(f'{l}: unigram - BPE {d:+.3f} bits per byte (seed range '
+        f'{noise:.3f}): ' + ('not distinguished' if abs(d) <= noise
+                             else 'differs'))
 effect = (bpb['SP unigram'] - bpb['SP BPE']).abs() / bpb['SP BPE']
 spread = prem.max() / prem.min()  # per tokenizer, across languages
-print(f'unigram against BPE moves a language by at most {effect.max():.1%} '
-      f'of its bits per byte ({effect.idxmax()}); under one tokenizer the '
-      f'premium spans a factor of {spread.min():.2f}-{spread.max():.2f} '
-      'across languages')
+say(f'unigram against BPE moves a language by at most {effect.max():.1%} '
+    f'of its bits per byte ({effect.idxmax()}); under one tokenizer the '
+    f'premium spans a factor of {spread.min():.2f}-{spread.max():.2f} '
+    'across languages')
 
 d2l.plot([prem[t].to_numpy() for t in TOKS] +
          [prem.loc[l].to_numpy() for l in LANGS],
@@ -1100,10 +1112,10 @@ ENG = shard_texts(SHARDS, sum(len(t.encode()) for t in LM_TEXT))
 BIG = {'English': d2l.train_hf_bpe(ENG, 65_536, ['<|endoftext|>']),
        'ten languages': d2l.train_hf_bpe(LM_TEXT, 65_536,
                                          ['<|endoftext|>'])}
-print(f'two BPEs of 65,536 pieces, on {len(ENG):,} English documents and '
-      f'on the slice ({sum(len(t.encode()) for t in ENG) / 1e6:.0f} and '
-      f'{sum(len(t.encode()) for t in LM_TEXT) / 1e6:.0f} MB): '
-      f'{time.time() - tic:.0f} s')
+say(f'two BPEs of 65,536 pieces, on {len(ENG):,} English documents and '
+    f'on the slice ({sum(len(t.encode()) for t in ENG) / 1e6:.0f} and '
+    f'{sum(len(t.encode()) for t in LM_TEXT) / 1e6:.0f} MB): '
+    f'{time.time() - tic:.0f} s')
 GRID = [2**k for k in range(10, 17)]
 EVAL = {'English': HELD['eng_Latn'],
         'ten languages': [t for l in LANGS for t in HELD[l]]}
@@ -1124,27 +1136,27 @@ elasticity = lambda k, V: LOG_BBAR[k].derivative()(np.log(V))
 d, A = 1024, 12 * 24 * 1024**2   # the reference transformer of D3
 share = lambda V: V * d / (A + V * d)
 cost = lambda V, bb: 6 * (A + V * d) / bb  # FLOP per byte
-print(pd.concat([BBAR.round(3).add_prefix('bytes/token, '),
-                 pd.DataFrame({k: elasticity(k, np.array(GRID, float))
-                               for k in BIG}, index=GRID
-                              ).round(3).add_prefix('elasticity, '),
-                 pd.Series({V: share(V) for V in GRID},
-                           name='softmax share').round(3)], axis=1))
+say(pd.concat([BBAR.round(3).add_prefix('bytes/token, '),
+               pd.DataFrame({k: elasticity(k, np.array(GRID, float))
+                             for k in BIG}, index=GRID
+                            ).round(3).add_prefix('elasticity, '),
+               pd.Series({V: share(V) for V in GRID},
+                         name='softmax share').round(3)], axis=1))
 
 V = np.geomspace(1_000, 200_000, 20_001)  # D3 check on b-bar = c V^0.1
 v_star = 0.1 * A / (d * 0.9)
 v_grid = V[np.argmin(cost(V, V**0.1))]
 assert abs(v_grid / v_star - 1) < 0.01
-print(f'synthetic b-bar = c V^0.1: grid minimum {v_grid:,.0f}, formula '
-      f'{v_star:,.0f}')
+say(f'synthetic b-bar = c V^0.1: grid minimum {v_grid:,.0f}, formula '
+    f'{v_star:,.0f}')
 FINE = np.geomspace(GRID[0], GRID[-1], 2_001)
 for k in BIG:  # the measured minimum and the elasticity crossing
     v_min = FINE[np.argmin(cost(FINE, bbar(k, FINE)))]
     gap = elasticity(k, FINE) - share(FINE)
     cross = FINE[np.argmax(gap < 0)] if (gap < 0).any() else None
-    print(f'{k}: cost minimum at V = {v_min:,.0f}; elasticity falls to '
-          'the softmax share at ' + (f'V = {cross:,.0f}' if cross else
-                                     'no V in the grid'))
+    say(f'{k}: cost minimum at V = {v_min:,.0f}; elasticity falls to '
+        'the softmax share at ' + (f'V = {cross:,.0f}' if cross else
+                                   'no V in the grid'))
 ```
 
 <!-- Prose: where released tokenizers sit: each one's bytes per token on
@@ -1182,8 +1194,8 @@ for k, (Vk, dk, n) in FIT.items():
                    softmax_share=Vk * dk / (Ak + Vk * dk),
                    GFLOP_per_kB=6 * (Ak + Vk * dk) / bb * 1e3 / 1e9)
     rows[k] = row
-print('English held-out text; tied embeddings')
-print(pd.DataFrame(rows).T.round(3))
+say('English held-out text; tied embeddings')
+say(pd.DataFrame(rows).T.round(3))
 
 fig, axes = d2l.plt.subplots(1, 2, figsize=(7, 2.8))
 d2l.plot(GRID, [BBAR[k].to_numpy() for k in BIG], 'vocabulary size V',
@@ -1216,8 +1228,8 @@ def pieces(k, s):
     return '|'.join(VB[k][i].decode('utf-8', 'replace')
                     for i in d2l._doc_token_ids(TOKENIZERS[k], [s])[0])
 
-for s in ('12345678', '3.14159', '1,234,567'):
-    print(f'{s:>10}:', '   '.join(f'{k} {pieces(k, s)}' for k in TOKENIZERS))
+say(pd.DataFrame({s: {k: pieces(k, s) for k in TOKENIZERS}
+                  for s in ('12345678', '3.14159', '1,234,567')}))
 NUMBERS = ('In 2019 the plant produced 1,234,567 tonnes, up 12.5% from '
            '1,097,393 in 2018; the price rose from $3,456.78 to $3,901.25 '
            'per unit, and 47 of its 365 days ran at 98.6% capacity.\n'
@@ -1236,7 +1248,7 @@ for k, tok in TOKENIZERS.items():
                    code_tokens_per_line=len(code) / CODE.count('\n'),
                    code_bytes_per_token=len(CODE.encode()) / len(code),
                    longest_space_token=max(spaces, default=0))
-print(pd.DataFrame(rows).T.round(2))
+say(pd.DataFrame(rows).T.round(2))
 ```
 
 ## Extending a Trained Vocabulary
@@ -1322,8 +1334,8 @@ for i, b in enumerate(d2l._vocab_bytes(hi_bpe)):  # ids in merge order
         cand += 1
         if hi_bpe.id_to_token(i) not in in_qwen:
             NEW.append(s)
-print(f'Hindi BPE in {time.time() - tic:.0f} s: {cand:,} Devanagari '
-      f'pieces, {len(NEW):,} new to Qwen3; the first {N_NEW:,} are added')
+say(f'Hindi BPE in {time.time() - tic:.0f} s: {cand:,} Devanagari '
+    f'pieces, {len(NEW):,} new to Qwen3; the first {N_NEW:,} are added')
 assert len(NEW) >= N_NEW
 NEW = NEW[:N_NEW]
 EXT_TOK = copy.deepcopy(QWEN)
@@ -1332,14 +1344,14 @@ ascii_lines = [l for l in lines(HELD['eng_Latn']) if l.isascii()][:1000]
 assert len(ascii_lines) == 1000
 assert (QWEN(ascii_lines, add_special_tokens=False)['input_ids']
         == EXT_TOK(ascii_lines, add_special_tokens=False)['input_ids'])
-print(f'1,000 ASCII lines: the same ids before and after extension')
+say(f'1,000 ASCII lines: the same ids before and after extension')
 hb = sum(len(t.encode()) for t in HI_HELD)
 for name, tok in (('Qwen3', QWEN), ('Qwen3 + Hindi', EXT_TOK),
                   ('Qwen3.5', RELEASED['Qwen3.5'])):
     n = sum(map(len, d2l._doc_token_ids(tok, HI_HELD)))
-    print(f'{name}: {hb / n:.2f} bytes per token on 500 held-out Hindi '
-          'documents')
-print('new pieces:', ' '.join(NEW[:12]), '...', ' '.join(NEW[-6:]))
+    say(f'{name}: {hb / n:.2f} bytes per token on 500 held-out Hindi '
+        'documents')
+say('new pieces:', ' '.join(NEW[:12]), '...', ' '.join(NEW[-6:]))
 ```
 
 <!-- Prose: the step-0 diagnostics, before any training: how much
@@ -1434,34 +1446,49 @@ for init in ('random', 'mean', 'decomp'):
     assert model.config.get_text_config().vocab_size == len(tok) == LO + N_NEW
     STEP0[init] = step0(model, tok)
     if init == 'decomp':
-        print(f'decomposition identity: largest logit difference '
-              f'{decomp_check(model, tok):.2e} ({model.dtype})')
+        say(f'decomposition identity: largest logit difference '
+            f'{decomp_check(model, tok):.2e} ({model.dtype})')
     del model
     d2l.lm_free()
-print(f'step 0 on {len(HI_DOCS)} Hindi documents, {len(PASSAGES)} Belebele '
-      f'passages, {len(EN_DOCS)} English documents'
-      + (' (the small CPU path)' if SMALL else ''),
-      f'{time.time() - tic:.0f} s', d2l.lm_peak())
-print(pd.DataFrame({k: {c: v for c, v in s.items() if c != 'per_passage'}
-                    for k, s in STEP0.items()}).T.round(4))
+say(f'step 0 on {len(HI_DOCS)} Hindi documents, {len(PASSAGES)} Belebele '
+    f'passages, {len(EN_DOCS)} English documents'
+    + (' (the small CPU path)' if SMALL else ''),
+    f'{time.time() - tic:.0f} s', d2l.lm_peak())
+say(pd.DataFrame({k: {c: v for c, v in s.items() if c != 'per_passage'}
+                  for k, s in STEP0.items()}).T.round(4))
 per = {k: np.array(s['per_passage']) for k, s in STEP0.items()}
 for init in ('mean', 'decomp'):  # C5 at step 0, over passages
     r = d2l.paired_bootstrap(per[init], per['random'])
-    print(f'{init} - random, Belebele Hindi bits per byte: {r.mean:+.3f} '
-          f'[{r.ci[0]:+.3f}, {r.ci[1]:+.3f}];',
-          'lower than random' if r.ci[1] < 0 else 'not lower than random',
-          '| new-token mass', 'below' if STEP0[init]['new_mass']
-          < STEP0['random']['new_mass'] else 'NOT below', "random's")
+    say(f'{init} - random, Belebele Hindi bits per byte: {r.mean:+.3f} '
+        f'[{r.ci[0]:+.3f}, {r.ci[1]:+.3f}];',
+        'lower than random' if r.ci[1] < 0 else 'not lower than random',
+        '| new-token mass', 'below' if STEP0[init]['new_mass']
+        < STEP0['random']['new_mass'] else 'NOT below', "random's")
 ```
 
 <!-- Prose: continued training on Hindi (control: the unextended model
-with its own tokenizer; and the three initializations): AdamW at 1e-4
-after 10 warmup steps, cosine, 150 steps of 8 x 1,024 tokens, two
-data-order seeds; every arm reads the same documents, so the extended arms
-see more text per step; bf16 autocast over fp32 weights, gradient
-checkpointing, and the loss in chunks of 1,024 positions so the
-8,192 x 155,765 logit matrix never exists (D2L_RERUN=tok-extend, about 20
-minutes on one GPU, measured peak printed). -->
+with its own tokenizer; and the three initializations), 150 steps of
+8 x 1,024 tokens in two phases, the usual vocabulary-extension recipe
+(author ruling R4, 2026-11-20): for 50 steps only the new rows train
+(body and old rows frozen; the control has no new rows, so it waits),
+then every parameter at a low rate; each phase warms up over 10 steps
+and decays by a cosine; AdamW. Why not the spec's single phase at 1e-4:
+re-warming an annealed base model at that rate made the control itself
+worse at Hindi (0.627 -> 0.766 bits per byte after 10 steps, 2026-11-20
+probe), so "the arms converge" would partly have been the control
+degrading. The two rates were settled on Hindi documents outside the
+training pool and outside HI_HELD (2026-11-21 probe), so no reported
+metric was tuned: the new rows' rate 3e-3 had the lowest mean Hindi
+bits per byte of the three initializations after the first phase (grid
+3e-4 to 3e-2; at 3e-2 the new rows hijack English, 8-10 bits per byte);
+the body rate 1e-5 is the largest at which the control ends within 1% of
+its start on both Hindi and English (3e-6 to 1e-4; the mean over the four
+arms alone kept falling up to the spec's 1e-4, where the control lost
+0.04 bits per byte on Hindi and 0.07 on English). Two data-order seeds; every arm reads the same
+documents, so the extended arms see more text per step; bf16 autocast
+over fp32 weights, gradient checkpointing, and the loss in chunks of
+1,024 positions so the 8,192 x 155,765 logit matrix never exists
+(D2L_RERUN=tok-extend, measured time and peak printed). -->
 
 ```{.python .input #tokenizers-extend-train-def}
 %%tab pytorch
@@ -1483,9 +1510,27 @@ def chunk_ce(h, W, y):
         z = h @ W.T
     return F.cross_entropy(z.float(), y, reduction='sum')
 
+def phase_lr(step):
+    """(first phase?, learning rate) at step: the new rows alone at
+    embed_lr for the first embed_steps steps, then every parameter at lr;
+    each phase warms up over warmup steps and decays by a cosine."""
+    E = EXT_TRAIN
+    first = step < E['embed_steps']
+    s, n = ((step, E['embed_steps']) if first else
+            (step - E['embed_steps'], E['steps'] - E['embed_steps']))
+    sched = d2l.ProxyCfg(1, 1, 1, warmup_frac=E['warmup'] / n,
+                         final_lr_frac=E['final_lr_frac'])
+    return first, (E['embed_lr'] if first else E['lr']) * d2l._lr_at(
+        s, n, sched)
+
 def train_ext(arm, seed, docs):
+    """Continued training of one arm on docs: the new rows alone (body and
+    old rows frozen; the control has none, so it waits), then everything
+    at a low rate. Returns the Hindi curve, English before and after, the
+    batch losses (None while the control waits) and the cost."""
     E = EXT_TRAIN
     model, tok = d2l.load_hf(EXT_MODEL, dtype=torch.float32)
+    n_old = len(tok)
     if arm != 'control':
         model, tok = d2l.extend_vocab(model, tok, NEW, init=arm, seed=seed)
     eos = d2l._lm_boundary_id(tok)
@@ -1495,37 +1540,52 @@ def train_ext(arm, seed, docs):
         'batch'] * E['seq_len'], E['seq_len'], E['batch'], seed)
     model.gradient_checkpointing_enable()
     model.config.use_cache = False
-    opt = torch.optim.AdamW(model.parameters(), lr=E['lr'],
-                            betas=(0.9, 0.95), weight_decay=0.0)
-    sched = d2l.ProxyCfg(1, 1, 1, warmup_frac=E['warmup'] / E['steps'],
-                         final_lr_frac=E['final_lr_frac'])
-    W, curve, losses = model.get_output_embeddings().weight, [], []
+    W = model.get_output_embeddings().weight
+    assert W is model.get_input_embeddings().weight, 'tied embeddings'
+    for p in model.parameters():  # first phase: the new rows only
+        p.requires_grad_(p is W)
+    rows = torch.arange(len(W), device=W.device)[:, None] >= n_old
+    hook = W.register_hook(lambda g: g * rows)
+    opt = torch.optim.AdamW([W], lr=E['embed_lr'], betas=(0.9, 0.95),
+                            weight_decay=0.0)
+    curve, losses = [], []
     evaluate = lambda texts: bpb(model.eval(), tok, texts)
     english = {0: evaluate(EN_DOCS)}
     curve.append((0, evaluate(HI_HELD[:E['curve_docs']])))
     tic = time.time()
     for step in range(E['steps']):
-        model.train()
-        for g in opt.param_groups:
-            g['lr'] = E['lr'] * d2l._lr_at(step, E['steps'], sched)
-        X = torch.from_numpy(stream.batch(step)[0]).to(model.device)
-        total = 0.0
-        for Xm in X.split(E['micro_batch']):
-            with torch.autocast(X.device.type, dtype=torch.bfloat16,
-                                enabled=X.device.type == 'cuda'):
-                H = model.get_decoder()(input_ids=Xm[:, :-1]).last_hidden_state
-            h, y = H.flatten(0, 1), Xm[:, 1:].flatten()
-            loss = sum(checkpoint(
-                chunk_ce, h[i:i + E['loss_chunk']], W,
-                y[i:i + E['loss_chunk']], use_reentrant=False)
-                for i in range(0, len(y), E['loss_chunk'])) / (X.shape[0]
-                                                              * E['seq_len'])
-            loss.backward()
-            total += loss.item()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        opt.step()
-        opt.zero_grad(set_to_none=True)
-        losses.append(round(total, 4))
+        if step == E['embed_steps']:  # second phase: every parameter
+            hook.remove()
+            for p in model.parameters():
+                p.requires_grad_(True)
+            opt = torch.optim.AdamW(model.parameters(), lr=E['lr'],
+                                    betas=(0.9, 0.95), weight_decay=0.0)
+        first, lr = phase_lr(step)
+        if first and arm == 'control':  # no new rows to train
+            losses.append(None)
+        else:
+            model.train()
+            for g in opt.param_groups:
+                g['lr'] = lr
+            X = torch.from_numpy(stream.batch(step)[0]).to(model.device)
+            total = 0.0
+            for Xm in X.split(E['micro_batch']):
+                with torch.autocast(X.device.type, dtype=torch.bfloat16,
+                                    enabled=X.device.type == 'cuda'):
+                    H = model.get_decoder()(
+                        input_ids=Xm[:, :-1]).last_hidden_state
+                h, y = H.flatten(0, 1), Xm[:, 1:].flatten()
+                loss = sum(checkpoint(
+                    chunk_ce, h[i:i + E['loss_chunk']], W,
+                    y[i:i + E['loss_chunk']], use_reentrant=False)
+                    for i in range(0, len(y), E['loss_chunk'])) / (
+                        X.shape[0] * E['seq_len'])
+                loss.backward()
+                total += loss.item()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            opt.step()
+            opt.zero_grad(set_to_none=True)
+            losses.append(round(total, 4))
         if step + 1 in E['eval_at']:
             curve.append((step + 1, evaluate(HI_HELD[:E['curve_docs']])))
     english[E['steps']] = evaluate(EN_DOCS)
@@ -1550,9 +1610,9 @@ if 'tok-extend' in RERUN:
         for seed in EXT_TRAIN['seeds']:
             runs.append(train_ext(arm, seed, docs))
             r = runs[-1]
-            print(f'{arm}, seed {seed}: Hindi bits per byte '
-                  + ' -> '.join(f'{v:.3f}' for _, v in r['curve'])
-                  + f', {r["seconds"]:.0f} s, {r["peak"]}')
+            say(f'{arm}, seed {seed}: Hindi bits per byte '
+                + ' -> '.join(f'{v:.3f}' for _, v in r['curve'])
+                + f', {r["seconds"]:.0f} s, {r["peak"]}')
     TOKEXT = dict(schema='d2l-tok-extend/1', tier=TIER, model=EXT_MODEL,
                   revision=d2l.HF_REVISIONS[EXT_MODEL], config=EXT_TRAIN,
                   n_eval=N_EXT, new_pieces=NEW, n_docs=len(docs),
@@ -1573,10 +1633,10 @@ ARMS = ('control', 'random', 'mean', 'decomp')
 steps = [s for s, _ in TOKEXT['runs'][0]['curve']]
 curves = {a: np.array([[v for _, v in r['curve']] for r in TOKEXT['runs']
                        if r['arm'] == a]) for a in ARMS}
-print(f'continued training on Hindi {TIER}')
-print(pd.DataFrame({a: dict(zip(steps, c.mean(0))) for a, c in
-                    curves.items()}).round(3).rename_axis('step'))
-print(pd.DataFrame([dict(arm=r['arm'], seed=r['seed'], **{
+say(f'continued training on Hindi {TIER}')
+say(pd.DataFrame({a: dict(zip(steps, c.mean(0))) for a, c in
+                  curves.items()}).round(3).rename_axis('step'))
+say(pd.DataFrame([dict(arm=r['arm'], seed=r['seed'], **{
     f'English bpb, step {s}': v for s, v in r['english'].items()})
     for r in TOKEXT['runs']]).round(3).to_string(index=False))
 d2l.plot_intervals(steps, {a: (c.mean(0), c.min(0), c.max(0))
@@ -1615,11 +1675,11 @@ patches = [len(para[a:b].encode()) for a, b in zip(cuts, cuts[1:]
 toks = {k: [len(VB[k][i]) for i in
             d2l._doc_token_ids(TOKENIZERS[k], [para])[0]]
         for k in ('Qwen3', 'Qwen3.5', 'reference')}
-print(f'UTF-8 bytes per patch and per token, one Hindi paragraph of '
-      f'{len(para.encode()):,} bytes')
-print(pd.DataFrame({'entropy patches': pd.Series(patches).describe(),
-                    **{f'{k} tokens': pd.Series(v).describe()
-                       for k, v in toks.items()}}).round(2))
+say(f'UTF-8 bytes per patch and per token, one Hindi paragraph of '
+    f'{len(para.encode()):,} bytes')
+say(pd.DataFrame({'entropy patches': pd.Series(patches).describe(),
+                  **{f'{k} tokens': pd.Series(v).describe()
+                     for k, v in toks.items()}}).round(2))
 ```
 
 ## The Reference Tokenizer and Its Shards
@@ -1676,9 +1736,9 @@ the same documents (the dataset's own token_count column). -->
 
 ```{.python .input #tokenizers-r2-retrain}
 %%tab pytorch
-print(type(R2).__name__, f'| {len(R2):,} ids | eos {R2.eos_token_id} | '
-      f'bos {R2.bos_token_id} | pad {R2.pad_token_id} | SHA-256 '
-      f'{d2l.R2_TOKENIZER_SHA256[:16]}...')
+say(type(R2).__name__, f'| {len(R2):,} ids | eos {R2.eos_token_id} | '
+    f'bos {R2.bos_token_id} | pad {R2.pad_token_id} | SHA-256 '
+    f'{d2l.R2_TOKENIZER_SHA256[:16]}...')
 assert R2.eos_token_id == 0 and R2.bos_token_id is None
 assert d2l._lm_boundary_id(R2) == 0 and len(R2) == R2_VOCAB
 assert R2.encode('a b', add_special_tokens=False) == R2(
@@ -1688,7 +1748,7 @@ SPECIAL_TEXT = ('A page about chat templates: <|endoftext|> ends a document, '
                 'turn.')
 ids = R2.encode(SPECIAL_TEXT, add_special_tokens=False)
 assert min(ids) >= 32 and R2.decode(ids) == SPECIAL_TEXT
-print(f'special strings in text: {len(ids)} ordinary tokens, none below 32')
+say(f'special strings in text: {len(ids)} ordinary tokens, none below 32')
 
 assert SHARDS.n_docs >= N_TOK_DOCS
 tic = time.time()
@@ -1696,11 +1756,11 @@ DOCS = R2_RAW.decode_batch([SHARDS.doc(i)[:-1].tolist()
                             for i in range(N_TOK_DOCS)])
 retrained = d2l.train_hf_bpe(DOCS, R2_VOCAB, d2l.R2_SPECIALS)
 sha = hashlib.sha256(retrained.to_str(pretty=False).encode()).hexdigest()
-print(f'retrained on the first {N_TOK_DOCS:,} training documents '
-      f'({sum(map(len, DOCS)) / 1e6:.0f}M characters) in '
-      f'{time.time() - tic:.0f} s: SHA-256 {sha[:16]}...',
-      'equal to the committed file' if sha == d2l.R2_TOKENIZER_SHA256
-      else 'DIFFERENT')
+say(f'retrained on the first {N_TOK_DOCS:,} training documents '
+    f'({sum(map(len, DOCS)) / 1e6:.0f}M characters) in '
+    f'{time.time() - tic:.0f} s: SHA-256 {sha[:16]}...',
+    'equal to the committed file' if sha == d2l.R2_TOKENIZER_SHA256
+    else 'DIFFERENT')
 assert sha == d2l.R2_TOKENIZER_SHA256
 texts = [r['text'] for r in VAL_TEXT[:10_000]]
 assert R2_RAW.decode_batch([e.ids for e in R2_RAW.encode_batch(
@@ -1709,9 +1769,9 @@ assert [e.ids for e in R2_RAW.encode_batch(DOCS[:10_000])] == [
     SHARDS.doc(i)[:-1].tolist() for i in range(min(10_000, N_TOK_DOCS))]
 meta = SHARDS.meta(0).iloc[:N_TOK_DOCS]
 ratio = (meta.n_tokens - 1).sum() / meta.gpt2_tokens.sum()
-print(f'round trips: {len(texts):,} validation texts and '
-      f'{min(10_000, N_TOK_DOCS):,} training documents; reference tokens '
-      f'per GPT-2 token: {ratio:.3f}')
+say(f'round trips: {len(texts):,} validation texts and '
+    f'{min(10_000, N_TOK_DOCS):,} training documents; reference tokens '
+    f'per GPT-2 token: {ratio:.3f}')
 del DOCS, retrained
 ```
 
@@ -1970,24 +2030,24 @@ with tempfile.TemporaryDirectory() as tmp:
     t = entry['shards'][0]['n_tokens'] - 5  # across the first boundary
     assert np.array_equal(ts.read(t, 10), np.concatenate(
         [ts.shard(0)[-5:], ts.shard(1)[:5]]))
-    print(f'{ts.n_docs:,} documents, {ts.n_tokens:,} tokens in '
-          f'{ts.n_shards} shards; doc {i} is shard {k}, document {j}, '
-          f'token {off:,}; meta columns: {list(ts.meta(0).columns)}')
+    say(f'{ts.n_docs:,} documents, {ts.n_tokens:,} tokens in '
+        f'{ts.n_shards} shards; doc {i} is shard {k}, document {j}, '
+        f'token {off:,}; meta columns: {list(ts.meta(0).columns)}')
     q = d2l.write_shards(docs[:100] + docs[-1:], QWEN,
                          os.path.join(tmp, 'qwen'), 'val')
     tq = d2l.TokenShards(os.path.join(tmp, 'qwen'), 'val')
     assert tq.dtype == np.uint32 and tq.eos_id == 151643 and tq.verify()
-    print(f'Qwen3: {tq.dtype}, EOS {tq.eos_id}, {tq.n_tokens:,} tokens; '
-          f'the fixture ends in {tq.doc(tq.n_docs - 1)[-3:].tolist()}')
+    say(f'Qwen3: {tq.dtype}, EOS {tq.eos_id}, {tq.n_tokens:,} tokens; '
+        f'the fixture ends in {tq.doc(tq.n_docs - 1)[-3:].tolist()}')
 for name, ts in (('train', SHARDS), ('val', VAL)):
     i = ts.n_docs - 7
     k, j, off = ts.locate(i)  # the resume cursor of document i
     assert np.array_equal(next(ts.iter_docs(start=i))[1], ts.shard(k)[
         off:ts.offsets(k)[j + 1]]) and ts.verify()
-    print(f'{name}: {ts.n_docs:,} documents, {ts.n_tokens:,} tokens, '
-          f'{ts.n_shards} shard(s), {ts.dtype}, EOS {ts.eos_id}, '
-          f'vocabulary {ts.vocab_size:,}; verified')
-print(json.dumps(SHARDS.manifest['format']))
+    say(f'{name}: {ts.n_docs:,} documents, {ts.n_tokens:,} tokens, '
+        f'{ts.n_shards} shard(s), {ts.dtype}, EOS {ts.eos_id}, '
+        f'vocabulary {ts.vocab_size:,}; verified')
+say(json.dumps(SHARDS.manifest['format']))
 ```
 
 <!-- Prose: FineWeb-Edu is deduplicated within each crawl dump, not across
@@ -2000,8 +2060,8 @@ matching on token ids). -->
 ```{.python .input #tokenizers-leakage}
 %%tab pytorch
 stage = next(s for s in VAL.manifest['stages'] if s['name'] == 'val_dedup')
-print(f"val_dedup: {stage['n_in']:,} validation documents in, "
-      f"{stage['n_out']:,} out; dropped {stage['drops']}")
+say(f"val_dedup: {stage['n_in']:,} validation documents in, "
+    f"{stage['n_out']:,} out; dropped {stage['drops']}")
 N = 50
 tic = time.time()
 v_ids = np.concatenate([np.asarray(VAL.shard(k)) for k in
@@ -2030,10 +2090,10 @@ np.add.at(cover, starts, 1)
 np.add.at(cover, starts + N, -1)
 covered = (np.cumsum(cover)[:-1] > 0).sum()
 f_docs = len(hit_docs) / VAL.n_docs
-print(f'{len(starts):,} validation 50-grams also in train-00000 '
-      f'({SHARDS.shards[0]["n_docs"]:,} documents), {time.time() - tic:.0f}'
-      f' s: {len(hit_docs):,} of {VAL.n_docs:,} validation documents '
-      f'({f_docs:.2%}), {covered / VAL.n_tokens:.3%} of their tokens')
+say(f'{len(starts):,} validation 50-grams also in train-00000 '
+    f'({SHARDS.shards[0]["n_docs"]:,} documents), {time.time() - tic:.0f}'
+    f' s: {len(hit_docs):,} of {VAL.n_docs:,} validation documents '
+    f'({f_docs:.2%}), {covered / VAL.n_tokens:.3%} of their tokens')
 docs_of = collections.defaultdict(set)  # shared span -> its documents
 for h, k in zip(hv[starts].tolist(), hit_doc.tolist()):
     docs_of[h].add(k)
@@ -2043,11 +2103,11 @@ for h in sorted(docs_of, key=lambda h: (-len(docs_of[h]), first[h])):
     if not any(docs_of[h] & g for g in shown) and len(shown) < 3:
         shown.append(docs_of[h])
         s = first[h]
-        print(f'{len(docs_of[h])} documents: '
-              f'{R2_RAW.decode(v_ids[s:s + N].tolist())!r}'[:160])
+        say(f'{len(docs_of[h])} documents: '
+            f'{R2_RAW.decode(v_ids[s:s + N].tolist())!r}'[:100])
 if f_docs > 0.05:
-    print('more than 5% of validation documents overlap: inspect the spans'
-          ' above before reading this as boilerplate')
+    say('more than 5% of validation documents overlap: inspect the spans'
+        ' above before reading this as boilerplate')
 ```
 
 <!-- Prose: the chapter's manifest: what the next chapter reads, with
@@ -2056,21 +2116,21 @@ its hash, its sources and stages, and the sizes of the four artifacts. -->
 ```{.python .input #tokenizers-chapter-manifest}
 %%tab pytorch
 M = d2l.CorpusManifest.load(os.path.join(SHARDS.root, 'manifest.json'))
-print(f'{M.name} ({M.SCHEMA}), SHA-256 {M.sha256()[:16]}...')
+say(f'{M.name} ({M.SCHEMA}), SHA-256 {M.sha256()[:16]}...')
 src = M.sources[0]
-print(pd.DataFrame([{k: src.get(k) for k in ('id', 'uri', 'revision',
-                                             'license', 'n_docs')}]))
+say(pd.DataFrame([{k: src.get(k) for k in ('id', 'uri', 'revision',
+                                           'license', 'n_docs')}]))
 short = lambda files: ', '.join(f.split('/')[-1][:3] for f in files)
-print(f"validation files {short(src['val_files'])}; train scope "
-      f"{short(src['train_scope'])}; reserved {short(src['reserved'])}")
-print(pd.DataFrame([{k: s.get(k) for k in ('name', 'n_in', 'n_out',
-                                           'tokens_out', 'drops')}
-                    for s in M.stages]).to_string(index=False))
-print('tokenizer:', {k: v for k, v in M.tokenizer.items()
-                     if k != 'specials'})
+say(f"validation files {short(src['val_files'])}; train scope "
+    f"{short(src['train_scope'])}; reserved {short(src['reserved'])}")
+say(pd.DataFrame([{k: s.get(k) for k in ('name', 'n_in', 'n_out',
+                                         'tokens_out', 'drops')}
+                  for s in M.stages]).to_string(index=False))
+say('tokenizer:', {k: v for k, v in M.tokenizer.items()
+                   if k != 'specials'})
 for key in R2_KEYS:
     if key not in d2l.DATA_HUB:
-        print(f'{key}: pending')
+        say(f'{key}: pending')
         continue
     path = d2l.download_keyed(key)
     line = f'{key}: {os.path.getsize(path) / 1e6:,.2f} MB'
@@ -2080,7 +2140,7 @@ for key in R2_KEYS:
         gb = sum(s['bytes']['bin'] for s in split['shards']) / 1e9
         line += (f", listing {split['n_tokens']:,} tokens in "
                  f"{len(split['shards'])} shards ({gb:.1f} GB of .bin)")
-    print(line)
+    say(line)
 ```
 
 ```{.python .input #tokenizers-results}
@@ -2089,22 +2149,22 @@ PARTS = {'tok-lm': TOKLM, 'tok-extend': TOKEXT}
 if RERUN:  # the registered file holds both parts
     merged = dict(schema='d2l-tok-results/1', **PARTS)
     d2l.lm_save_rerun(RES_KEY + '.json', lambda p: write_json(p, merged))
-    print(f'regenerated: {", ".join(sorted(RERUN))}' + (
-        '; the other part is the registered one'
-        if len(RERUN) < len(ARTIFACTS) else ''))
+    say(f'regenerated: {", ".join(sorted(RERUN))}' + (
+      '; the other part is the registered one'
+      if len(RERUN) < len(ARTIFACTS) else ''))
 else:
     reg = RESULTS['tok-extend']['step0']
     diff = {k: max(abs(STEP0[k][c] - reg[k][c]) for c in
                    ('hindi_bpb', 'belebele_bpb', 'english_bpb'))
             for k in STEP0}
-    print('small-LM runs: tokenizers, texts and byte counts equal to the '
-          'registered runs')
+    say('small-LM runs: tokenizers, texts and byte counts equal to the '
+        'registered runs')
     if SMALL:
-        print('step 0: the small CPU path scores fewer texts than the '
-              'registered results; not compared')
+        say('step 0: the small CPU path scores fewer texts than the '
+            'registered results; not compared')
     else:
-        print('step 0, largest bits-per-byte difference from the registered '
-              'values:', {k: round(v, 4) for k, v in diff.items()})
+        say('step 0, largest bits-per-byte difference from the registered '
+            'values:', {k: round(v, 4) for k, v in diff.items()})
         assert max(diff.values()) < 0.01
 ```
 

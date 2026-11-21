@@ -158,12 +158,37 @@ class WrapperTest(unittest.TestCase):
         self.assertTrue(np.isfinite(bpb) and bpb > 0)
 
     def test_registry_guards(self):
-        with self.assertRaises(KeyError):
-            d2l.r2_tokenizer()
-        with self.assertRaises(KeyError):
-            d2l.fwedu_shards('100m')
+        from unittest import mock
+        hub = {k: v for k, v in d2l.DATA_HUB.items()
+               if k not in ('lm-r2-tokenizer-v1', 'lm-fwedu-shards-100m-v1')}
+        with mock.patch.dict(d2l.DATA_HUB, hub, clear=True):
+            with self.assertRaises(KeyError):
+                d2l.r2_tokenizer()
+            with self.assertRaises(KeyError):
+                d2l.fwedu_shards('100m')
+        with mock.patch.object(d2l, 'R2_TOKENIZER_SHA256', None):
+            with self.assertRaises(KeyError):
+                d2l.r2_tokenizer()
         with self.assertRaises(ValueError):
             d2l.fwedu_shards('1b')
+
+    @unittest.skipUnless(os.environ.get('D2L_TEST_NET') == '1',
+                         'network test (D2L_TEST_NET=1)')
+    def test_registered_tokenizer(self):
+        """The registered file (downloaded into a temporary folder) has the
+        pinned SHA-256 and the reference contract."""
+        with tempfile.TemporaryDirectory() as d:
+            path = d2l.download_keyed('lm-r2-tokenizer-v1', root=d)
+            tok = d2l._r2_from_file(path, sha256=d2l.R2_TOKENIZER_SHA256)
+            raw = d2l._r2_from_file(path, raw=True)
+        self.assertEqual(len(tok), 32_768)
+        self.assertEqual([raw.id_to_token(i) for i in range(32)],
+                         d2l.R2_SPECIALS)
+        self.assertEqual((tok.eos_token_id, tok.bos_token_id), (0, None))
+        ids = d2l._doc_token_ids(tok, [SPECIAL_DOC])[0]
+        self.assertTrue(min(ids) >= 32 and tok.decode(ids) == SPECIAL_DOC)
+        self.assertEqual([raw.id_to_token(i) for i in raw.encode('2026').ids],
+                         list('2026'))
 
 
 class TinyTiktoken:
@@ -307,6 +332,101 @@ class ShardTest(unittest.TestCase):
             f.write(bytes([b[0] ^ 1]))
         with self.assertRaisesRegex(ValueError, 'train-00001.bin'):
             d2l.TokenShards(self.out).verify()
+
+
+    def test_max_shards(self):
+        full = self.write()
+        self.tmp2 = tempfile.TemporaryDirectory()
+        self.out = os.path.join(self.tmp2.name, 'set')
+        part = self.write(max_shards=2)
+        self.tmp2.cleanup()
+        self.assertEqual(len(part['shards']), 2)
+        self.assertEqual(part['shards'], full['shards'][:2])
+
+
+def builder():
+    """tools/build_r2_shards.py as a module."""
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        'build_r2_shards.py')
+    spec = importlib.util.spec_from_file_location('build_r2_shards', path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class BuilderTest(unittest.TestCase):
+    """The stream, val split and val_dedup rules of build_r2_shards.py on
+    fixture streams."""
+    @classmethod
+    def setUpClass(cls):
+        cls.b = builder()
+
+    def test_shuffle_buffer(self):
+        sb = self.b.shuffle_buffer
+        a = list(sb(range(1000), seed=0, size=100))
+        self.assertEqual(a, list(sb(range(1000), seed=0, size=100)))
+        self.assertNotEqual(a, list(sb(range(1000), seed=1, size=100)))
+        self.assertEqual(sorted(a), list(range(1000)))
+        self.assertLess(max(a[:500]), 600)  # emits from its window
+        self.assertEqual(sorted(sb(range(30), size=100)), list(range(30)))
+        rng, buf, want = np.random.default_rng(0), list(range(4)), []
+        for x in range(4, 10):  # the rule, written out
+            j = int(rng.integers(4))
+            want.append(buf[j])
+            buf[j] = x
+        want += [buf[int(j)] for j in rng.permutation(4)]
+        self.assertEqual(list(sb(range(10), seed=0, size=4)), want)
+
+    def test_train_docs(self):
+        ids = [f'<urn:uuid:{i}>' for i in range(400)]
+        rows = [dict(id=i, text='' if k % 50 == 7 else
+                     unicodedata.normalize('NFD', f'café {k}'), url=f'u{k}',
+                     dump='CC-MAIN-2024-10', score=3.0, int_score=3,
+                     token_count=k) for k, i in enumerate(ids)]
+        stats = {}
+        docs = list(self.b.train_docs(
+            ['f0'], stats, rows_of=lambda name: enumerate(rows)))
+        buckets = [d2l.fwedu_bucket(i) for i in ids]
+        want = [k for k in range(400) if k % 50 != 7 and buckets[k] >= 9]
+        self.assertEqual([m['src_row'] for _, _, m in docs], want)
+        self.assertEqual(stats, dict(rows=400, empty=8))
+        self.assertTrue(all(t == unicodedata.normalize('NFC', t)
+                            and m['bucket'] >= 9 for _, t, m in docs))
+        self.assertEqual(sorted(m['src_row'] for _, _, m in self.b
+                                .train_stream(['f0'], rows_of=lambda n:
+                                              enumerate(rows), size=16)),
+                         want)
+
+    def test_val_split(self):
+        b = self.b
+        cand = [(f'v{i}', f'validation text {i} ' * (1 + i % 3),
+                 dict(url=f'https://www.e.org/p/{i}/')) for i in range(40)]
+        keys = {b.text_key(cand[3][1]), b.text_key(cand[5][1])}
+        urls = {d2l.normalize_url('HTTPS://e.org/p/5'),
+                d2l.normalize_url('https://e.org/p/8#top')}
+        count = lambda texts: [len(t.split()) for t in texts]
+        kept, drops, n, n_tok = b.val_split(cand, keys, urls, count,
+                                            quota=100, seed=1)
+        self.assertEqual(drops, dict(text_hash=2, url=1))  # 5: first rule
+        self.assertEqual(n, 37)
+        rest = [d for d in cand if d[0] not in ('v3', 'v5', 'v8')]
+        perm = [rest[int(i)] for i in np.random.default_rng(1)
+                .permutation(37)]
+        lens = np.cumsum([c + 1 for c in count([d[1] for d in perm])])
+        cut = int(np.argmax(lens >= 100)) + 1
+        self.assertEqual(kept, perm[:cut])
+        self.assertEqual(n_tok, int(lens[cut - 1]))
+        self.assertGreaterEqual(n_tok, 100)
+        self.assertLess(int(lens[cut - 2]), 100)
+        with self.assertRaisesRegex(ValueError, 'R10'):
+            b.val_split(cand, keys, urls, count, quota=10**6)
+
+    def test_docs_hash_of_pairs(self):
+        docs = [('b', 'two'), ('a', 'one')]
+        pairs = [(i, hashlib.sha256(t.encode()).hexdigest()) for i, t in docs]
+        self.assertEqual(self.b.docs_hash_of_pairs(pairs),
+                         d2l.docs_hash(docs))
 
 
 class UrlTest(unittest.TestCase):

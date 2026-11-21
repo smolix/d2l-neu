@@ -137,10 +137,10 @@ pinned commit, never re-hosted; the ten-language slice is FineWeb-2 and
 FineWeb-Edu text (ODC-By); the reference tokenizer and its shards are built
 once by tools/build_r2_shards.py, never by this notebook. -->
 
-<!-- Pending registrations (cells step, 2026-11-16): lm-data-fw2-slice-v1
-(W2), lm-data-tok-results-v1 (W12) and the four reference keys (W5) join
-this cell as `#@save` entries once uploaded; until then a normal build
-stops at the first cell that reads one, with a KeyError. -->
+<!-- Pending registration (2026-11-21): lm-data-tok-results-v1 (W12) joins
+this cell as a `#@save` entry once the GPU regeneration (tok-lm, tok-extend)
+is uploaded; until then a normal build stops at the first cell that reads it,
+with a KeyError. The slice and the four reference keys are registered. -->
 
 ```{.python .input #tokenizers-data-hub}
 %%tab pytorch
@@ -185,6 +185,21 @@ d2l.DATA_HUB['belebele-kor_Hang'] = (
     'https://huggingface.co/datasets/facebook/belebele/resolve/'
     '7899cdfa4e1e0d733fd77c848e2c273cb1d32be2/data/kor_Hang.jsonl',
     '17fa36b78cef39784d497a7cf40caf678e83c955')
+d2l.DATA_HUB['lm-data-fw2-slice-v1'] = (  # FineWeb-2, FineWeb-Edu: ODC-By
+    d2l.LM_DATA_URL + 'lm-data-fw2-slice-v1.tar',
+    '80ddb29c077df2fa73fb85f45197e32459ba4f56')
+d2l.DATA_HUB['lm-r2-tokenizer-v1'] = (  # the reference tokenizer
+    d2l.LM_DATA_URL + 'lm-r2-tokenizer-v1.json',
+    '4e8dbe43379e205000c68cbec6798278761a38cd')
+d2l.DATA_HUB['lm-fwedu-val-v1'] = (  # FineWeb-Edu validation shard: ODC-By
+    d2l.LM_DATA_URL + 'lm-fwedu-val-v1.tar',
+    '2675d35e9e0fb6a8e5b287c3928f5c014a8a34ab')
+d2l.DATA_HUB['lm-fwedu-shards-100m-v1'] = (  # train-00000: ODC-By
+    d2l.LM_DATA_URL + 'lm-fwedu-shards-100m-v1.tar',
+    '66992765074d705d749c304b54f06fe5586f0c0f')
+d2l.DATA_HUB['lm-fwedu-manifest-4b-v1'] = (  # 40 shards under fwedu-r2-v1/
+    d2l.LM_DATA_URL + 'lm-fwedu-manifest-4b-v1.json',
+    '2d97947273a7df83f494ad20bbb561bfbd2b336c')
 
 SLICE_KEY, RES_KEY = 'lm-data-fw2-slice-v1', 'lm-data-tok-results-v1'
 R2_KEYS = ('lm-r2-tokenizer-v1', 'lm-fwedu-val-v1',
@@ -1554,7 +1569,8 @@ text kept as text (chapter spec part 1.6a). -->
 ```{.python .input #tokenizers-r2-tok-def}
 %%tab pytorch
 #@save
-R2_TOKENIZER_SHA256 = None  # SHA-256 of tokenizer.json; set when it is built
+R2_TOKENIZER_SHA256 = (  # of lm-r2-tokenizer-v1 (tools/build_r2_shards.py)
+    'b1b4b45c36aac256ae4f4bd5e5fd595395242fc6949299cb0e2e25d2a5a656e3')
 
 #@save
 def r2_tokenizer(raw=False):
@@ -1626,7 +1642,8 @@ and offset invariants. -->
 %%tab pytorch
 #@save
 def write_shards(docs, tokenizer, out_dir, split, shard_tokens=100_000_000,
-                 eos_id=None, meta_fn=None, manifest=None, *, batch_docs=1000):
+                 eos_id=None, meta_fn=None, manifest=None, *, batch_docs=1000,
+                 max_shards=None):
     """Tokenize documents into shards out_dir/{split}-{k:05d}.bin|.idx|
     .meta.parquet and return the split's manifest entry. docs yields
     (doc_id, text) or (doc_id, text, meta); each document becomes its ids
@@ -1635,8 +1652,9 @@ def write_shards(docs, tokenizer, out_dir, split, shard_tokens=100_000_000,
     error. A shard closes at the first document boundary at or after
     shard_tokens; ids are uint16 for vocabularies up to 65,536, else uint32.
     meta_fn(doc_id, text, meta) gives a document's extra meta columns
-    (default: meta itself). The entry is stored in manifest (a
-    CorpusManifest, created if None), which is saved as
+    (default: meta itself). With max_shards, writing stops when that many
+    shards are closed (the rest of docs is not read). The entry is stored
+    in manifest (a CorpusManifest, created if None), which is saved as
     out_dir/manifest.json."""
     import itertools
     os.makedirs(out_dir, exist_ok=True)
@@ -1647,7 +1665,8 @@ def write_shards(docs, tokenizer, out_dir, split, shard_tokens=100_000_000,
     dtype = np.dtype('uint16' if vocab <= 2**16 else 'uint32')
     special = np.array(sorted(special | {eos}), dtype=np.int64)
     shards, w, docs = [], None, iter(docs)
-    while batch := list(itertools.islice(docs, batch_docs)):
+    while (len(shards) != max_shards
+           and (batch := list(itertools.islice(docs, batch_docs)))):
         batch = [(d[0], d[1], d[2] if len(d) > 2 else None) for d in batch]
         for (doc_id, text, meta), ids in zip(
                 batch, d2l._doc_token_ids(tokenizer, [b[1] for b in batch])):
@@ -1664,6 +1683,8 @@ def write_shards(docs, tokenizer, out_dir, split, shard_tokens=100_000_000,
             if w.n_tokens >= shard_tokens:
                 shards.append(w.close())
                 w = None
+                if len(shards) == max_shards:
+                    break
     if w is not None:
         shards.append(w.close())
     entry = dict(n_tokens=sum(s['n_tokens'] for s in shards),
@@ -1810,14 +1831,17 @@ def fwedu_shards(which='100m', fetch=True, max_tokens=None):
         raise KeyError(f'{key} is not registered yet: it is built by '
                        'tools/build_r2_shards.py')
     root = os.path.join('..', 'data', 'lm', 'fwedu-r2-v1', which)
-    os.makedirs(root, exist_ok=True)
-    path = d2l.download_keyed(key)
-    if which == '4b':
-        import shutil
+    path, sha1 = d2l.download_keyed(key), d2l.DATA_HUB[key][1]
+    stamp = os.path.join(root, '.extracted-' + key)
+    if which == '4b':  # the shards already fetched stay valid
+        os.makedirs(root, exist_ok=True)
         shutil.copyfile(path, os.path.join(root, 'manifest.json'))
-    elif not os.path.exists(os.path.join(root, '.extracted-' + key)):
+    elif not (os.path.exists(stamp) and open(stamp).read() == sha1):
+        shutil.rmtree(root, ignore_errors=True)  # extracted afresh when the
+        os.makedirs(root)                        # registered sha1 changes
         d2l.extract(path, root)
-        open(os.path.join(root, '.extracted-' + key), 'w').close()
+        with open(stamp, 'w') as f:
+            f.write(sha1)
     return d2l.TokenShards(root, 'val' if which == 'val' else 'train',
                            fetch=fetch, max_tokens=max_tokens)
 ```
@@ -1935,26 +1959,30 @@ its hash, its sources and stages, and the sizes of the four artifacts. -->
 %%tab pytorch
 M = d2l.CorpusManifest.load(os.path.join(SHARDS.root, 'manifest.json'))
 print(f'{M.name} ({M.SCHEMA}), SHA-256 {M.sha256()[:16]}...')
-print(pd.DataFrame(M.sources).drop(columns=['files'], errors='ignore'))
+src = M.sources[0]
+print(pd.DataFrame([{k: src.get(k) for k in ('id', 'uri', 'revision',
+                                             'license', 'n_docs')}]))
+short = lambda files: ', '.join(f.split('/')[-1][:3] for f in files)
+print(f"validation files {short(src['val_files'])}; train scope "
+      f"{short(src['train_scope'])}; reserved {short(src['reserved'])}")
 print(pd.DataFrame([{k: s.get(k) for k in ('name', 'n_in', 'n_out',
                                            'tokens_out', 'drops')}
                     for s in M.stages]).to_string(index=False))
 print('tokenizer:', {k: v for k, v in M.tokenizer.items()
                      if k != 'specials'})
-sizes = {}
 for key in R2_KEYS:
     if key not in d2l.DATA_HUB:
-        sizes[key] = dict(MB='pending')
+        print(f'{key}: pending')
         continue
     path = d2l.download_keyed(key)
-    sizes[key] = dict(MB=round(os.path.getsize(path) / 1e6, 1))
-    if key == 'lm-fwedu-manifest-4b-v1':
+    line = f'{key}: {os.path.getsize(path) / 1e6:,.2f} MB'
+    if key == 'lm-fwedu-manifest-4b-v1':  # shards are fetched when read
         with open(path) as f:
             split = json.load(f)['splits']['train']
-        sizes[key].update(tokens=split['n_tokens'], shards=len(
-            split['shards']), shard_GB=round(sum(
-                s['bytes']['bin'] for s in split['shards']) / 1e9, 2))
-print(pd.DataFrame(sizes).T)
+        gb = sum(s['bytes']['bin'] for s in split['shards']) / 1e9
+        line += (f", listing {split['n_tokens']:,} tokens in "
+                 f"{len(split['shards'])} shards ({gb:.1f} GB of .bin)")
+    print(line)
 ```
 
 ```{.python .input #tokenizers-results}

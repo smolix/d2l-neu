@@ -113,7 +113,7 @@ def _doc_token_ids(tokenizer, texts):
 _SHARD_EXT = {'bin': '.bin', 'idx': '.idx', 'meta': '.meta.parquet'}
 
 #@save
-FWEDU_META_COLUMNS = (  # (name, arrow type): the FineWeb-Edu meta columns, in order
+FWEDU_META_COLUMNS = (  # (name, arrow type) of the FineWeb-Edu meta columns
     ('url', 'string'), ('dump', 'string'), ('bucket', 'int16'),
     ('edu_score', 'float32'), ('int_score', 'int8'), ('gpt2_tokens', 'int32'),
     ('src_file', 'string'), ('src_row', 'int64'))

@@ -1,53 +1,43 @@
 # Quality Filtering
 :label:`sec_lm_quality_filtering`
 
-<!-- Author brief, copied verbatim from the Language Models part plan
-(docs/llm/language_models_part_plan.md, "3.2 Quality Filtering · T1").
-Blueprint: docs/llm/blueprints/ch03_data.md section 3.2.
-The plan is a specification, not book text; this comment is replaced
-when the section is written.
+The previous section turned a quarter of one Common Crawl archive file into
+3,288 English documents and ended on a puzzle: about seven in ten of them are
+not in FineWeb, although FineWeb was built from the same file. Something
+judged them not worth keeping. Anyone who has looked through a crawl will not
+need convincing that such a judgment is necessary. Next to manuals and news
+articles sit product catalogues, lists of links, pages of keywords written for
+search engines, articles run through a program that swaps words for synonyms,
+and advertisements for love spells. A model trained on all of it learns all of
+it.
 
-**Idea:** A quality filter is a classifier trained on model-annotated labels, and its false removals must be audited.
-**Opening:** A model rates a page low that a human would keep: a transcript of a town meeting, informative and plain. The reader's instinct is to tune the threshold, but the question is what the filter's definition of quality is and who it removes. The section trains the filter, audits it, and closes on how what the filter keeps is biased toward the annotator's taste.
-**Teaches:**
-- Heuristic rules (document length, repetition, symbol ratios, stop-word presence) with stable reason codes (`d2l.heuristic_filters`) and why word-based rules fail on unspaced scripts; perplexity filters under a small released decoder and why low perplexity is not quality.
-- A classifier on model labels as the current recipe: a frozen embedder (Qwen3-Embedding-0.6B, `d2l.embed_docs`) with a linear head on labels written by Qwen3.5-4B under an educational-value rubric, against a hashed bag-of-n-grams model as the T0 path; the label-noise ceiling from a second annotator.
-- The threshold as a precision-recall choice on held-out labels, converted to a retained-token fraction; what a classifier F1 does not say about training (3.4's proxy runs are the yardstick).
-- Auditing removals by language, domain and English variety with cluster-bootstrap intervals (`d2l.audit_removals`); the filter as a covariate shift keyed on a proxy label.
-**Derivation:** none.
-**Notebook:**
-1. Label 22,000 FineWeb documents with Qwen3.5-4B under the FineWeb-Edu rubric at authoring time (cached as `lm-edu-annot-22k`, 20,000 train and 2,000 test); embed them with the frozen embedder and fit the linear head; fit the hashed-bag classifier on the same labels; choose the threshold on a validation split carved from train.
-2. Apply heuristics, the classifier and both to the 3.1 documents and to a 20,000-document audit stream of the same crawl; write the keep and drop flags to the manifest (`lm-c1-docs`).
-3. Audit removal rates by country-code domain, host class and, under heuristics only, six FineWeb-2 languages; compare against 200 human labels on removed documents for precision of removal.
-4. Compare the notebook's classifier with the released FineWeb-Edu classifier on the 2,000 test labels with a paired bootstrap, and report their agreement on the audit stream.
-5. Claim that survives noise: the removal rate differs by domain group beyond its cluster-bootstrap interval and the classifier contributes to the gap beyond the heuristics; precision of removal against the human labels is stated with its interval; groups with fewer than 100 documents or 10 domains are marked "too few". A second stream seed must give the same sign for every reported group.
-6. Reused pieces: `d2l.Doc`, `d2l.read_docs`, `d2l.CorpusManifest`, `d2l.rebuild_c0`, `d2l.detect_lang` (3.1); `d2l.paired_bootstrap` (1.5); the embedder's pooling and padding conventions from 2.3 in one sentence; new `d2l.embed_docs`, `d2l.GOPHER_CFG`, `d2l.heuristic_filters`, `d2l.fit_quality_head`, `d2l.HashedBagClassifier`, `d2l.audit_removals`.
-**Figures:** `fig_lm_filter_audit` (plot: a forest plot of removal-rate differences to the reference group with intervals, for heuristics, classifier and both; a second panel of removal rates by language under heuristics only).
-**Restate / forward:** `sec_environment-and-distribution-shift` (a classifier that separates two sets measures their shift, and a filter keyed on its score induces one). Forward: 3.4 (the proxy runs that measure what a filter does to training).
-**Exercises:** 5 to 7. Load-bearing: measure the agreement between two labellers' classifiers (the notebook's Qwen3.5-4B labels and the released Llama-3 annotations) on the audit stream and locate where they disagree (measure); derive the cost of a false removal in retained tokens as a function of threshold and the label-noise ceiling (derive); check that the hashed-bag classifier's F1 on the test labels is within a stated margin of the embedding head's (check); open: design an audit for one language of FineWeb-2 with a native reader's 50 labels and report whether the heuristics' removals are quality or script artifacts.
-**Writer notes:**
-- Labeller: labels come from Qwen3.5-4B (the part's judge), produced once at authoring with the FineWeb-Edu additive 0 to 5 rubric and cached; the released Llama-3-70B annotations (`HuggingFaceFW/fineweb-edu-llama3-annotations`, ODC-By) are the comparison labeller, not the training set. State the rubric and the annotator model on the artifact's card; the rubric's prestige bias toward academic style is part of what the audit finds.
-- Exports: `d2l.embed_docs(texts, model_id='Qwen/Qwen3-Embedding-0.6B', max_len=512, batch=64, pool='last', device=None)` returning float16 L2-normalized arrays, equal to `sentence_transformers` encoding up to cosine 0.999 on 64 texts (the oracle test); `d2l.heuristic_filters(text, cfg=None)` returning ordered reason codes (empty means keep), checked against Datatrove's filters with the disagreement list reported; `d2l.audit_removals(df, keep, by, ref=None, n_boot=2000, cluster=None, seed=0)`.
-- Data: `HuggingFaceFW/fineweb` config `CC-MAIN-2025-05` for the audit stream (shuffle with a seeded buffer or take every 50th row of the first million, because rows are ordered by URL within a file); `HuggingFaceFW/fineweb-2` configs for six languages (500 documents each, ODC-By); the released `HuggingFaceFW/fineweb-edu-classifier` (Apache-2.0; read its card's F1 and class supports at authoring) and `HuggingFaceTB/SmolLM2-135M` for the perplexity filter; the FineWeb-Edu survival rate of this crawl (about 7% of documents) as the reference decision.
-- Memory and time: Qwen3-Embedding-0.6B in bf16 is about 1.2 GB plus activations at batch 64 × 512 tokens; embedding about 47,000 documents may exceed 15 minutes on the build box (reduce `audit_docs` and `max_len`, or use a 22M-parameter MiniLM embedder as the fallback); the T0 path is the hashed-bag model, about 3 minutes on CPU.
-- Pitfalls to state: selecting the threshold on the test labels; treating model labels as ground truth; evaluating a classifier on documents drawn after the filter (the audit stream is drawn before this notebook's filters but after FineWeb's own, which the text says); a country-code domain is a poor dialect proxy (the editor may substitute a dialect-labelled corpus with a clear licence); 3,000 documents from one site are not 3,000 samples.
-- Human labels for the 200-document removal review are produced by the authors; if unavailable, drop the human column and keep the agreement with the released classifier.
-- Committed artifacts: `lm-edu-annot-22k` (text truncated to 3,000 characters, scores, split; ODC-By attribution), `lm-quality-head` (the head's weights), `lm-c1-docs` (flags keyed by document id, no text), the audit table as JSON.
-- Do not re-teach: logistic regression and thresholds (one sentence to the linear-classification chapters), distribution shift beyond the one restated sentence.
-**Sources:**
-- Papers: [DataComp-LM](https://arxiv.org/abs/2406.11794) (the fastText quality classifier and the finding that classifier choice dominates other filters in their testbed; read to confirm wording); [Scaling Language Models: Methods, Analysis and Insights from Training Gopher](https://arxiv.org/abs/2112.11446) (the quality and repetition rules and their thresholds, appendix); [The FineWeb Datasets](https://arxiv.org/abs/2406.17557) (the educational classifier recipe and ablations); [Nemotron-CC](https://arxiv.org/abs/2412.02595) (classifier ensembling and quality buckets); [CCNet](https://arxiv.org/abs/1911.00359) (the perplexity-filter pipeline); [Whose Language Counts as High Quality?](https://arxiv.org/abs/2201.10474) (quality filters encode language ideologies; the audit's motivation).
-- Code and documentation: [FineWeb-Edu dataset card](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu) (the rubric and survival statistics); [FineWeb-Edu classifier](https://huggingface.co/HuggingFaceFW/fineweb-edu-classifier) and the [Llama-3 annotations](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu-llama3-annotations) (the comparison labeller, ODC-By); [Datatrove](https://github.com/huggingface/datatrove) (the heuristic filters as the parity oracle); [fastText](https://github.com/facebookresearch/fastText) (the hashed-bag model this section reimplements).
-- Courses, tutorials and blogs: [FineWeb blog post](https://huggingface.co/spaces/HuggingFaceFW/blogpost-fineweb-v1) (filters and their ablations); [fastText supervised tutorial](https://fasttext.cc/docs/en/supervised-tutorial.html); [CS336](https://cs336.stanford.edu/) (data filtering lecture).
--->
+Two kinds of filter make the judgment. The older kind is a set of rules,
+written by people who had read many bad pages: too few words, too many
+repeated lines, too few lines that end in a full stop. The newer kind is a
+classifier. A large language model reads a sample of a few hundred thousand
+pages and scores each one under a written rubric, a small model learns to
+predict the score, and a threshold on the prediction decides for the billions
+of pages that no large model will ever read. FineWeb-Edu
+:cite:`Penedo.Kydlicek.BenAllal.ea.2024` was built this way, with a rubric
+that asks how useful a page would be for teaching at school, and other open
+corpora of the same years, DCLM and Nemotron-CC among them, use variants of
+the same recipe.
 
-<!-- Placeholder (stage 2, cells step): the cells follow the section
-specification's cell table (S/spec/20.2.md part 3); one-line comments mark
-where prose goes. Rights rule P1: no cell prints text of our own crawl
-extraction (c0); displayed text is FineWeb's (ODC-By) from the audit stream
-or the annotation set, everything else about c0 is counts, codes and
-scores keyed by id. -->
+Both kinds of filter remove most of the web, and both apply a definition of
+quality that somebody wrote down. The rules define it by surface statistics.
+The classifier inherits it from a rubric and from the model that applied the
+rubric, that model's taste included. The two pages printed below show both
+definitions at work. One advertises "death spells" and passes every rule we
+implement. The other is a software company's guide to hiring engineers, plain
+and informative, and our classifier removes it. Faced with the second page,
+the natural instinct is to adjust the threshold. The better question is what
+the filter means by quality, and whose pages it removes.
 
-<!-- Prose: the opening (a plain, informative page the labeller scores low); the question: what is the filter's definition of quality, and who does it remove? -->
+This section builds both kinds of filter, trains a classifier on labels
+written by Qwen3.8-27B, chooses its threshold, and audits what it removes by
+country, kind of site and language. It ends where the audit points: a filter
+keeps what its annotator likes, and only the training runs of
+:numref:`sec_lm_data_mixtures` can say whether that is what a model needs.
 
 ```{.python .input #quality-filtering-imports}
 %%tab pytorch
@@ -79,7 +69,20 @@ import transformers
 from sentence_transformers import SentenceTransformer
 ```
 
-<!-- Prose: what the notebook computes, what runs on a GPU, and what a normal build reads from registered files (the labels, the vectors, the released classifier's scores); D2L_RERUN names the regenerations. -->
+Most of what this notebook computes is cheap. The rules run on eight CPU
+processes, a 0.6B-parameter language model scores perplexity, an embedding
+model encodes the crawl documents, and linear classifiers train in seconds;
+a build takes a few minutes on one GPU. Two steps are expensive, and a
+normal build reads their results from registered files. Labelling 22,000
+documents with Qwen3.8-27B took about an hour on four GPUs, and the review of
+200 removed documents by the same model a few minutes more. The vectors of the
+labelled documents and of the audit stream are registered as well, together
+with the scores that the released FineWeb-Edu classifier gives them. Without a
+GPU the notebook reads every registered result, scores perplexity on a small
+sample only, and takes the crawl documents' scores from the registered flags.
+Setting `D2L_RERUN` to names from `ARTIFACTS` regenerates those files under
+new names, and the last cell compares whatever this run computed with the
+registered results.
 
 ```{.python .input #quality-filtering-config}
 %%tab pytorch
@@ -129,7 +132,13 @@ for m, rev in pins.items():
     print(f'  {m}@{rev[:8]}')
 ```
 
-<!-- Prose: the registry; the annotation sample and the audit stream are FineWeb text (ODC-By), shipped with attribution; c0 vectors are never hosted. -->
+The registry adds seven files. The 22,000 labelled documents and the audit
+stream are FineWeb text, which its ODC-By licence lets us host with
+attribution, and every cell that prints their text prints the attribution
+too. Nothing derived from our own crawl text is hosted. The flags of the crawl
+documents hold ids, reason codes and scores; their vectors, computed from text
+we may not redistribute, are cached on the machine that computed them; and the
+review file holds document ids and the judge's one-sentence rationales.
 
 <!-- Registrations: the audit stream (2026-11-20) and the six artifacts of the 2026-11-21 regeneration (four RTX 4090s, vLLM 0.33.0, RedHatAI/Qwen3.8-27B-INT4 at 71dface3); a new regeneration writes new versions (-v2) and never overwrites these. -->
 
@@ -173,6 +182,14 @@ say('registered:', ', '.join(k for k in QUALITY_KEYS if k in d2l.DATA_HUB)
         k for k in QUALITY_KEYS if k not in d2l.DATA_HUB) or 'none')
 ```
 
+The first cell computes how much of this dump FineWeb-Edu keeps, from the row
+counts of the two datasets, and prints the two pages. Both come from the audit
+stream, a sample of FineWeb's output introduced below, and both are chosen by
+rule, not by us. The first is the page with the lowest score from our
+classifier among the pages that pass every rule and have at least 1,500
+characters. The second is the page with the lowest score among those our
+classifier removes and the review at the end of the section would keep.
+
 ```{.python .input #quality-filtering-opening}
 %%tab pytorch
 ATTRIBUTION = ('Text: FineWeb, HuggingFaceFW/fineweb, CC-MAIN-2025-05 '
@@ -207,12 +224,64 @@ else:
     print('\n' + ATTRIBUTION)
 ```
 
+FineWeb-Edu keeps about one FineWeb document in fourteen. The first page shows
+why rules alone cannot make that cut. It is long, its sentences end in full
+stops, it uses enough common English words and repeats no line, so it passes
+every rule; only a reader, human or model, notices that it sells spells and
+prints a phone number twice (masked here). The second page shows the opposite
+failure. It opens with a sales pitch for an interview platform and then turns
+into a guide to hiring software engineers, coherent and useful to the right
+reader. A rubric that asks for material to teach schoolchildren gives it
+almost nothing, and the classifier that learned the rubric removes it. Keep
+both pages in mind. Everything below is a way of deciding between pages like
+these, at the scale of billions.
+
 ## Heuristic Rules
 :label:`subsec_lm_quality_rules`
 
-<!-- Prose: Gopher quality and repetition rules, C4's rules, FineWeb's own rules (static table tab_lm_quality_rules below); one reason code per rule; a document is charged to the first rule that fires (20.1's charging rule). FineWeb's char-duplicate threshold: the paper's text says 0.1, the datatrove code that produced the release uses 0.01; the cell follows the code. -->
+Rules came first because they cost almost nothing and say why they fired.
+DeepMind's Gopher models were trained on text filtered by two families of
+them :cite:`rae2021scaling`. The *quality* rules bound simple statistics of a
+document: between 50 and 100,000 words, a mean word length between 3 and 10
+characters, few `#` symbols and ellipses, at most 90% of lines starting with a
+bullet and at most 30% ending with an ellipsis, at least 80% of words
+containing a letter, and at least two of eight common English words such as
+*the*, *of* and *with*. The *repetition* rules catch pages that say the same
+thing many times: duplicated lines and paragraphs, and too many characters
+inside the most frequent 2-, 3- and 4-grams or inside 5- to 10-grams that occur
+more than once. C4 :cite:`raffel2020exploring` added a rule about sentences:
+once short lines, JavaScript warnings and cookie notices are set aside, a
+document needs at least five sentences, and none of its lines may contain
+"lorem ipsum" or a curly brace.
 
-<!-- Prose (static table, `tab_lm_quality_rules`): family | source | reason codes | what it catches. Gopher repetition (Rae et al., Table A1): gopher_dup_text, gopher_top_ngram, gopher_dup_ngram. Gopher quality: gopher_words, gopher_word_len, gopher_symbols, gopher_bullets, gopher_ellipsis, gopher_alpha, gopher_stop_words. C4 (Raffel et al.; FineWeb's settings): c4_quality. FineWeb (Penedo et al.): fw_line_punct, fw_short_lines, fw_dup_chars, fw_list_ratio. -->
+FineWeb :cite:`Penedo.Kydlicek.BenAllal.ea.2024` kept both families and added
+rules of its own, chosen by training small models on the output of each
+candidate filter: too few lines ending in terminal punctuation, too many lines
+under 30 characters, too many characters in duplicated lines, and too many
+line breaks per word. Its paper reports that the first three together remove
+about 22% of the tokens and that it dropped C4's rule that removes every line
+without terminal punctuation, which alone removed about 30%. One threshold
+differs between the paper and the release: the paper's text puts the
+duplicated-character limit at 0.1, while the datatrove code that produced the
+corpus uses 0.01. We follow the code. :numref:`tab_lm_quality_rules` lists the
+sixteen rules with their reason codes.
+
+:The heuristic rules, in the order `heuristic_filters` applies them. The thresholds are those of datatrove 0.10.1, the code FineWeb ran.
+:label:`tab_lm_quality_rules`
+
+| family | source | reason codes | what it catches |
+|:--|:--|:--|:--|
+| Gopher repetition | Rae et al. (2021), Table A1 | `gopher_dup_text`, `gopher_top_ngram`, `gopher_dup_ngram` | repeated lines and paragraphs; text dominated by one phrase or by repeated 5- to 10-grams |
+| Gopher quality | Rae et al. (2021) | `gopher_words`, `gopher_word_len`, `gopher_symbols`, `gopher_bullets`, `gopher_ellipsis`, `gopher_alpha`, `gopher_stop_words` | fragments and walls of text, keyword lists, tables of numbers, hashtag clouds, text without English function words |
+| C4 | Raffel et al. (2020), as FineWeb ran it | `c4_quality` | fewer than five sentences, placeholder text, code |
+| FineWeb | Penedo et al. (2024) | `fw_line_punct`, `fw_short_lines`, `fw_dup_chars`, `fw_list_ratio` | menus, lists of links, navigation, repeated lines |
+
+Each rule has a stable reason code, and `heuristic_filters` returns, in this
+order, the codes of every rule that fires; an empty list keeps the document.
+A stage that removes documents charges each one to the first rule that fires,
+the charging rule of :numref:`sec_lm_crawl`, so the manifest can say how many
+documents each rule removed while the cells can still count every rule that
+fired.
 
 ```{.python .input #quality-filtering-rules-def}
 %%tab pytorch
@@ -293,7 +362,12 @@ def heuristic_filters(text, cfg=None):
     return [code for code, c in cfg.items() if checks[code](c)]
 ```
 
-<!-- Prose: one hand-written document per reason code, each firing exactly its rule; a plain paragraph fires none. -->
+Each rule comes with a fixture, a short hand-written document that fires that
+rule and no other. A plain paragraph about a river valley fires nothing, and
+each fixture changes it just enough to break one rule: a sentence repeated
+four times, every sentence turned into a bullet, a run of year numbers
+inserted. A threshold that drifts, or a new rule that overlaps an old one,
+fails this table at once.
 
 ```{.python .input #quality-filtering-rules-fixtures}
 %%tab pytorch
@@ -402,7 +476,10 @@ assert all(r['ok'] for r in rows), 'a fixture fires another rule'
 assert set(d2l.QUALITY_FIXTURES) - {'keep'} == set(d2l.GOPHER_CFG)
 ```
 
-<!-- Prose: our rules against datatrove's filters (FineWeb's code) on 2,000 c0 documents: agreement per rule family and the reasons for the disagreements (word tokenizer, sentence splitter, terminal punctuation set, C4's line removal before FineWeb's rules). -->
+Our rules are a reimplementation, and the code FineWeb actually ran is
+datatrove's. A table computed once with datatrove 0.10.1, in an environment of
+its own, compares the two on 2,000 of our crawl documents, for each family of
+filters and for the whole sequence as FineWeb ran it.
 
 ```{.python .input #quality-filtering-rules-parity}
 %%tab pytorch
@@ -427,7 +504,29 @@ else:
         print(f'  {count:4d}  {reason}')
 ```
 
-<!-- Prose: the rules on our crawl (c0, before any filter) and on the audit stream (FineWeb's output, so its rules have run: what still fires there is where our implementation and FineWeb's differ); the first-firing funnel; rule pairs that fire together; the six FineWeb-2 languages. -->
+The two implementations decide alike on more than 99% of the documents for
+the repetition, C4 and FineWeb families, and on about 96% for the Gopher
+quality rules and for the whole sequence. The disagreements have ordinary
+causes. The largest, 58 documents that datatrove removes for too few
+alphabetic words and we keep, comes from the word tokenizer: datatrove and our
+regular expression split text into words differently, so a document near the
+80% threshold can fall on either side. C4's 11 come from sentence splitting,
+which datatrove does with NLTK's sentence splitter and we do at a full stop
+followed by a space. In the sequence, 27 documents fail our line-punctuation
+rule and pass datatrove's, because datatrove's C4 filter deletes lines before
+FineWeb's rules see the text, and because datatrove accepts many more
+characters as terminal punctuation. We keep our implementation, which is short
+enough to read, and the table records where it departs from FineWeb's.
+
+Now the rules on two corpora. The first is c0, the crawl documents of
+:numref:`sec_lm_crawl`, which no quality filter has touched. The second is the
+*audit stream*: 20,000 documents of FineWeb's output for the same dump, every
+45th row of one of its files, without the rows of our archive file. FineWeb has
+already applied these rules to the stream, so a rule that still fires there
+marks a place where our implementation and FineWeb's disagree. The cell also
+applies the rules to 500 documents in each of six languages from FineWeb-2,
+FineWeb's multilingual successor, which filtered each language with rules
+adapted to it.
 
 ```{.python .input #quality-filtering-rules-run}
 %%tab pytorch
@@ -493,10 +592,51 @@ R['rules'] = dict(hist=hist.reset_index().to_dict('list'),
                   languages=LANG_TABLE.to_dict('records'))
 ```
 
+On c0 the rules remove 2,256 of 3,288 documents, about 69%; on the stream they
+remove 317 of 20,000, or 1.6%. The column `first` says which rule each removal
+is charged to: duplicated text leads with 571 documents, followed by too few
+alphabetic words (403) and too few words (322). The column `fired` tells a
+different story. The line-punctuation rule fires on 1,150 documents and the
+duplicated-character rule on 937, but both come late in the order, so their
+documents are usually charged to an earlier rule. The pairs that fire together
+most often, alphabetic words with line punctuation and line punctuation with
+short lines, describe one kind of page: a column of short lines without full
+stops, such as a menu, a list of links or a table of products. The drop
+counts of a manifest therefore depend on the order of the rules, while the set
+of documents kept does not.
+
+On the stream, FineWeb's four rules never fire, which is what a faithful
+reimplementation should give. What does fire are the word-based Gopher rules
+(alphabetic words 108 times, word count 104), the same rules on which the
+parity table found differences: most of the stream's 1.6% are documents near a
+word-count threshold that the two tokenizers count differently.
+
+The six languages show what English rules do elsewhere. German and Swahili
+lose 96% and 93% of their documents, almost all to the stop-word rule, which
+asks for two of eight English function words; without that rule they would
+lose 28% and 16%. Chinese, Japanese and Thai lose every document. These
+scripts do not separate words with spaces, so a run of characters between two
+punctuation marks counts as one "word", a page has few long words and many
+punctuation tokens, and the word-count or alphabetic-word rule fires on every
+page. Hindi does put spaces between words and loses every document too, for a
+subtler reason. Our word pattern uses Python's `\w`, which does not count the
+vowel signs of Devanagari as word characters, so each word breaks into
+fragments of one or two letters and the mean word length falls below 3. Every
+one of these documents had already passed FineWeb-2's own filters for its
+language. A removal rate of 100% on Thai measures the rules, not the Thai web.
+
 ### Perplexity Filters
 :label:`subsec_lm_quality_ppl`
 
-<!-- Prose: CCNet's idea (a model of a clean corpus scores documents; keep the likely buckets); here the mean negative log-likelihood per token under Qwen3-0.6B-Base on the first 512 tokens; the lowest are repetition and boilerplate, the highest code, tables and names; low perplexity is resemblance to the model's training text, not quality. -->
+A different cheap filter replaces the rules by a language model. CCNet
+(Wenzek et al., 2020) trained a small n-gram model on Wikipedia in each
+language, scored every crawled paragraph with it, and split the crawl into
+thirds of low, medium and high perplexity; the low third resembles Wikipedia
+most. The idea is appealing: a model of clean text should find clean text
+predictable. We test it with a small released decoder, Qwen3-0.6B-Base, as
+the model of clean text. The cell computes each document's mean negative
+log-likelihood per token over its first 512 tokens, for 3,000 stream
+documents, and prints the ten most and the ten least predictable.
 
 ```{.python .input #quality-filtering-ppl}
 %%tab pytorch
@@ -536,10 +676,50 @@ if not SMALL:
                     highest=order.id.tail(10).tolist())
 ```
 
+The median document costs about 2.9 nats per token. The most predictable
+documents are not the best ones. They are a forum's boilerplate ("Please be
+mindful of our community standards") and a run of fluent, generic explainers:
+"Operating systems are the software that manages ...", "In today's digital
+age, a strong online presence is crucial ...", "Greetings, readers! I am
+excited to delve into the topic of ...". Much of this reads as if a language
+model had written it, and a language model finds such text predictable for the
+obvious reason. The least predictable documents are mostly spun text ("As have
+a peek at these guys you can see regarding the a lot more than pokies"),
+together with a few honest informal pages, such as a comment on a garden blog
+and a site of railway photographs. Perplexity measures resemblance to the
+reference model's training data. Very low values flag boilerplate and
+machine-written prose, very high values flag spun text and also unusual but
+genuine writing, and neither end is a definition of quality.
+
 ## Classifiers on Model Labels
 :label:`subsec_lm_quality_classifier`
 
-<!-- Prose: the recipe (a large model scores a sample under a rubric, a cheap model learns to reproduce the score, a threshold selects); FineWeb-Edu's additive rubric, quoted from the released prompt; DCLM's and Nemotron-CC's variants in one clause each. -->
+The rules and the perplexity filter define quality by statistics that are easy
+to compute and far from what we care about. The classifier recipe moves the
+definition into words. Somebody writes a rubric, a large model applies it to a
+sample of documents, a small model learns to predict the large model's score
+from a document, and a threshold on the small model's prediction selects the
+corpus. The large model reads perhaps half a million documents; the small one
+reads billions. FineWeb-Edu is the best-known instance. Llama-3-70B-Instruct
+scored 450,000 FineWeb documents under an additive rubric, a regression head
+on a frozen encoder of 109M parameters learned the scores, and the corpus
+keeps the documents whose rounded prediction is at least 3. DCLM (Li et al.,
+2024) instead trained a fastText classifier to separate instruction-style text
+and well-rated answers from a forum of explanations from random web pages, and
+kept the top tenth of its pool by that classifier's score. Nemotron-CC (Su et
+al., 2024) combines several classifiers and sorts documents into quality
+buckets, which a mixture can weight separately instead of cutting at one
+threshold.
+
+The rubric is the definition. FineWeb-Edu's asks whether "the page has a high
+educational value and could be useful in an educational setting for teaching
+from primary school to grade school levels", and awards points one at a time:
+a first for "some basic information relevant to educational topics", a third
+if the extract "is appropriate for educational use and introduces key concepts
+relevant to school curricula", a fifth only if it "is outstanding in its
+educational value". A page about hiring engineers earns at most the first
+point, however well it is written. `EDU_RUBRIC` holds the released prompt word
+for word; the extract it scores is a document's first 1,500 characters.
 
 ```{.python .input #quality-filtering-label-def}
 %%tab pytorch
@@ -636,7 +816,33 @@ def edu_label_scores(model, tokenizer, prompts, batch_size=16, *,
 
 ```
 
-<!-- Prose: the labeller reads the score from its next-token probabilities, without writing a justification first; the probability of a score also counts the answers that write a second space before the digit (the released format has two; Qwen3.8-27B puts about 15% of its next-token mass on that space). The labeller is Qwen3.8-27B (RedHat's W4A16 build), one copy per RTX 4090 under vLLM, which edu_label_scores_served queries with the same token ids, one request at a time per server (a batch of concurrent requests changes the probabilities by up to about 0.08 and flips the labels of near ties; one at a time, every server returns the same bits); a build reads its labels and the pilot's stored check. -->
+The released protocol asks the model to write a justification of up to 100
+words and then "Educational score: N". Generating a hundred words per document
+is the slow part, and parsing them is fragile, so we skip it.
+`edu_label_scores` starts the model's answer with the text
+`Educational score: ` and reads, from one forward pass, the probabilities of
+the six digits as the next token. The label is the most probable digit, and
+the *expected score* $\sum_d d\,p(d) / \sum_d p(d)$ keeps the model's
+uncertainty as a number between 0 and 5. One detail matters more than it
+looks. The released format puts two spaces before the digit, so a model may
+write a second space and then the digit. With `extra_space` the probability
+of digit $d$ is $p(d) + p(\textrm{space})\, p(d \mid \textrm{space})$; for
+Qwen3.8-27B that second path holds about 15% of the probability, and ignoring
+it would change about one label in a hundred.
+
+The labeller is Qwen3.8-27B in RedHat's W4A16 build, with weights stored in 4
+bits and activations computed in 16 (:numref:`sec_lm_gptq`), which fits on
+one 24 GB RTX 4090 where the 54 GB of its bf16 weights would not. A vLLM
+server holds one copy per GPU, and `edu_label_scores_served` sends it the same
+token ids that `edu_label_scores` would feed a local model. Each server takes
+one request at a time. That is slower than it needs to be, and it is
+deliberate. A server that batches concurrent requests changes the order of its
+floating-point additions with the batch, and on our prompts the probabilities
+moved by up to 0.08, enough to flip the labels of near ties. One request at a
+time, every server returns the same bits for the same prompt
+(:numref:`sec_lm_deterministic_inference` explains why). A build reads the
+labels, checks the provenance stored with them, and prints the pilot's check:
+32 prompts scored again on another server, in reverse order.
 
 ```{.python .input #quality-filtering-label-live}
 %%tab pytorch
@@ -659,7 +865,17 @@ else:  # the labeller runs on four GPUs: a build reads its labels
           f'{np.mean(P1.argmax(1) == P.argmax(1)):.3f}')
 ```
 
-<!-- Prose: how the 22,000 labels were made (D2L_RERUN=edu-label-pilot, edu-label-0, edu-label-1; one vLLM server per RTX 4090, four in all; give the measured times): the pilot labels the 2,000 test rows and writes a justification-first answer for each, which fix the score prefix (the model writes one space before the digit) and give the second annotation of the label-noise ceiling. -->
+The check agrees to the last printed digit. The labels were made once, in
+three parts that `D2L_RERUN` can regenerate: `edu-label-pilot` labels the
+2,000 test rows, and `edu-label-0` and `edu-label-1` the 18,000 training and
+2,000 validation rows. Four servers, one per RTX 4090, labelled all 22,000
+rows in about an hour. The pilot does one more thing. It asks the model for a
+justification-first answer on each test row, under the released protocol, and
+counts what the model writes between the colon and the digit: 1,970 of the
+2,000 answers use one space and 30 use two, which fixed `SCORE_PREFIX` with
+one space and kept the correction for a second. The same answers are a second
+annotation of the test rows by the same model, which the label-noise ceiling
+below needs.
 
 ```{.python .input #quality-filtering-label-regen}
 %%tab pytorch
@@ -780,7 +996,15 @@ if RERUN & set(LABEL_PARTS):
               f'{hashlib.sha1(open(ANNOT_FILE, "rb").read()).hexdigest()}')
 ```
 
-<!-- Prose: our labels next to the released ones. FineWeb-Edu's 2024 annotations came from Llama-3-70B-Instruct; ours come from Qwen3.8-27B, a newer model, under the same prompt. The comparison is descriptive: agreement with any one labeller cannot show which labels are better; what a filter does to training decides that (:numref:`sec_lm_data_mixtures`'s proxy runs). Qwen's scale is stricter (state both shares at score >= 3 and the share table), while the two rank documents alike (Spearman of Qwen's expected score against Llama's score). "Educational" stays the rubric's own cutoff, score >= 3 on Qwen's scale, a stricter filter than FineWeb-Edu's (which kept about 8-10% with Llama's labels). The second protocol: the same model justifying first, as the released prompt asks, on the 2,000 test rows. -->
+Our labels come from a newer model than FineWeb-Edu's. The 22,000 documents
+are a sample of the released annotations, so each one also carries the score
+that Llama-3-70B-Instruct gave it in 2024 under the same prompt. Comparing the
+two is easy and easy to misread. Agreement with one labeller cannot show which
+labels are better: where two labellers disagree, either may be wrong, and a
+third model would only add a third opinion. What decides is the model trained
+on a filter's output, which :numref:`sec_lm_data_mixtures` measures. Here the
+comparison is descriptive. It tells us how the two models use the scale, and
+whether they order documents alike.
 
 ```{.python .input #quality-filtering-agreement}
 %%tab pytorch
@@ -886,6 +1110,29 @@ R['agreement'] = dict(n=len(lab), exact=np.mean(q == l), qwk=qwk,
                       digit_mass=[np.median(mass), np.quantile(mass, 0.01)])
 ```
 
+The two models use the scale very differently. Llama-3-70B gives a score of 3
+or more to about 9% of the documents, Qwen3.8-27B to about 1.4%; at 2 or more
+the shares are 31% and 6%. The cross-tabulation shows a shift of about one
+point. Of the 1,610 documents that Llama scored 3, Qwen scored 837 as 1, 634
+as 2 and 138 as 3. Yet the two order documents alike: the Spearman
+correlation of Qwen's expected score with Llama's score is about 0.76, with a
+narrow interval. The binary agreement at the threshold, a Cohen's kappa of
+0.24, is low because the two cut their scales at different places; cutting
+Qwen's expected score so that it keeps Llama's share raises the kappa to 0.65.
+The disagreement is mostly one of scale, not of ranking.
+
+We keep the rubric's own cut, a score of 3 or more on Qwen's scale, as this
+section's definition of "educational". On the stricter scale that makes a
+stricter filter than FineWeb-Edu's, and the threshold cells below say how much
+it keeps.
+
+The second protocol measures something else, the stability of one model's
+labels. Asked to justify first, the same Qwen3.8-27B gives the same score on
+only half of the test rows, mostly by moving 1s to 0s, yet agrees on the
+binary decision at 3 with a kappa of 0.66. Its scores run lower: 1.05% of the
+rows reach 3, against 1.80% under the digit protocol. The next cell fixes
+Qwen's scores as the training labels and splits the rows.
+
 ```{.python .input #quality-filtering-labels-choice}
 %%tab pytorch
 complete = ANNOT.qwen_score.notna().all()
@@ -904,7 +1151,12 @@ SPLIT = {k: ANNOT[ANNOT.split == k].reset_index(drop=True)
 print({k: len(v) for k, v in SPLIT.items()})
 ```
 
-<!-- Prose: a frozen embedder plus a linear head; pooling and padding as in :numref:`sec_lm_text_embeddings` (last token, left padding, no instruction for documents). -->
+The small model is a frozen embedder with a linear head. `embed_docs` encodes
+each document's first 512 tokens with Qwen3-Embedding-0.6B and pools as in
+:numref:`sec_lm_text_embeddings`: it takes the vector of the last token, pads
+on the left so that the last token is always a real one, and adds no
+instruction, which Qwen's embedders reserve for queries. The vectors have unit
+length and are stored in 16 bits.
 
 ```{.python .input #quality-filtering-embed-def}
 %%tab pytorch
@@ -929,7 +1181,13 @@ def embed_docs(texts, model_id='Qwen/Qwen3-Embedding-0.6B', max_len=512,
     return Z.numpy().astype(np.float16)
 ```
 
-<!-- Prose: registered vectors for the annotation rows and the stream; c0's vectors are computed in each build and cached locally (never hosted: they are derived from crawl text); two live checks. -->
+The vectors of the 22,000 labelled documents and the 20,000 stream documents
+are registered, together with the released classifier's scores for the same
+documents. The crawl documents' vectors cannot be hosted, so a build computes
+them once and caches them locally. Two live checks guard the registered
+vectors: 64 test documents are embedded again, by `embed_docs` and by the
+sentence-transformers library, and both must match the registered vectors to a
+cosine of 0.999.
 
 ```{.python .input #quality-filtering-embed}
 %%tab pytorch
@@ -1007,7 +1265,21 @@ print('c0 vectors:', f'{len(C0):,} from the local cache or this run'
       'are read from the registered flags')
 ```
 
-<!-- Prose: the two heads (a regression on the score, as the released classifier; a logistic regression on score >= 3), full-batch AdamW on the cached vectors (logistic regression and thresholds: one sentence to :numref:`sec_softmax`); fastText's model in PyTorch as the T0 path. -->
+Both match to a cosine of 0.9998 or better. The other line of the output
+matters as well: 29 of the 64 texts are longer than 512 tokens, so our
+classifier, like the released one, judges a long document by its beginning.
+
+On fixed vectors the classifier is a linear model and trains in seconds.
+`fit_quality_head` fits either a regression on the score, as the released
+classifier does, or a logistic regression on the binary label "score at least
+3", the two-class case of the softmax regression of :numref:`sec_softmax`.
+Both use full-batch AdamW, starting from zero weights and the best constant.
+`HashedBagClassifier` is the model of fastText (Joulin et al., 2017), the
+classifier that DCLM used, written in PyTorch. The word unigrams and bigrams of
+a document are hashed into a table of about a million embeddings, their
+vectors are averaged, and the average is mapped to a logit. It needs neither a
+GPU nor a pretrained model, which makes it the path for a reader without
+either.
 
 ```{.python .input #quality-filtering-heads-def}
 %%tab pytorch
@@ -1076,7 +1348,15 @@ class HashedBagClassifier(nn.Module):
         return self.out(self.bag(ids, offsets))
 ```
 
-<!-- Prose: the heads on the training labels, the hashed bag on the training texts, the released classifier's registered scores; each threshold t* chosen on the validation rows by the best F1, never on test. The validation and test rows come from the released classifier's own hold-out (reproduced from its training code: datasets' stratified 90/10 split, seed 42, on the annotations as first uploaded; the hold-out gives the card's confusion matrix up to bf16 rounding, 90 counts in all against about 1,700 for other rows of the same classes; tools/build_lm_edu_holdout.py), so the comparison is out-of-sample for the released classifier too. Our training rows may overlap the released classifier's training rows, which is harmless. -->
+The next cell trains the two heads on the training rows and the bag on their
+texts, and reads the released classifier's registered scores. Each classifier
+gets its own threshold $t^*$, the one with the best F1 on the validation rows;
+the test rows serve only for the final numbers. Choosing the threshold on the
+test labels would report the best of 400 tries as if it were a single one. The
+validation and test rows are the released classifier's own hold-out, which we
+reproduced from its training code (a stratified 90/10 split with seed 42; the
+reproduced hold-out gives the confusion matrix on the classifier's card up to
+rounding), so the comparison is out of sample for the released classifier too.
 
 ```{.python .input #quality-filtering-heads}
 %%tab pytorch
@@ -1161,6 +1441,20 @@ assert gap.max() < (0.05 if GPU else 0.1)
 R['thresholds'] = T_STAR
 ```
 
+The thresholds already say something. The regression head's $t^*$ is about
+1.6, far below the label's 3. A regression under squared loss predicts the
+conditional mean of the score, and with only 1.4% of the labels at 3 or more,
+hardly any document has a mean anywhere near 3. The head's predictions bunch
+between 0 and 2, and its threshold has to be read on that scale. The released
+classifier, trained on Llama's more generous scale, gets a threshold of about
+2.9 against Qwen's labels. The last line checks the released classifier live
+on the 2,000 test rows: its scores differ from the registered ones by at most
+0.016.
+
+The table compares the four classifiers on the test rows. The second half of
+it has an F1 and an AUC against each labeller's binary label, and an
+interval for the F1 against Qwen's.
+
 ```{.python .input #quality-filtering-clf-table}
 %%tab pytorch
 MAIN = 'regression head'  # "our classifier" from here on
@@ -1215,10 +1509,89 @@ R['classifiers'] = CLF.drop(columns='ms_per_doc').to_dict('records')
 R['f1_diff'] = [d_f1, lo, hi]
 ```
 
+The test rows hold only 36 positives among 2,000, so every F1 carries an
+interval about 0.12 wide on either side, and the table has to be read with
+it. Against Qwen's labels the regression head reaches an F1 of 0.44 and the
+logistic head 0.56; their intervals overlap, and we do not rank them. The
+hashed bag is clearly worse, at 0.26. The area under the ROC curve, which
+asks only whether positives score above negatives, is easier to read: the
+three embedding classifiers all reach about 0.98, the bag 0.90. The trained
+part of our heads is 1,025 numbers on top of a frozen 0.6B-parameter
+embedder; the bag's 67 million parameters are almost all its hash table; the
+released classifier's 109 million are a frozen encoder and a small head. The
+embedder is the slow part, a few milliseconds per document on a GPU and
+several times the released classifier's smaller encoder.
+
+The comparison that matters is our head against the released classifier. The
+paired bootstrap over test rows gives an F1 difference of $-0.02$ with an
+interval from $-0.14$ to $+0.09$, and no difference in accuracy. On Qwen's
+labels, a classifier trained on Llama's labels does as well as one trained on
+Qwen's, which is what a shared ranking predicts: each threshold absorbs its
+labeller's scale. On Llama's labels the released classifier is ahead (an F1
+of 0.54 against 0.42), as it should be on the labels it learned.
+
 ### Label Noise and the F1 Ceiling
 :label:`subsec_lm_quality_ceiling`
 
-<!-- Prose: F1 of a threshold from prior, recall and retention, F1 = 2 pi TPR / (pi + rho) (eq_lm_quality_f1_retention, three lines); the ceiling of a perfect classifier of the true label under symmetric label noise eta (eq_lm_quality_f1_ceiling, short proof); eta estimated from a second annotation of the test rows, the same labeller under the released protocol (justify, then score), under the stated assumption that both annotations flip the true label independently with the same rate. Errors that both protocols share are invisible to this estimate, so the ceiling is optimistic. The released Llama-3-70B labels cannot serve: equal symmetric noise implies equal shares, and the two labellers' shares differ several-fold (a scale, not noise). At a prevalence near 1.5%, a flip rate well under 1% already removes a large part of the attainable F1. A head trained on one labeller can learn that labeller's systematic errors, which the assumption excludes: an F1 above the ceiling is evidence of correlated errors between the head and its labeller, not a bug. -->
+How high could any classifier score on these labels? The labels are noisy, and
+a classifier that knew the truth would still be marked wrong wherever the
+labeller was. Two short derivations make this precise.
+
+Write $\pi$ for the share of positive labels, $\textrm{TPR}$ for the share of
+positives that the classifier keeps (its recall), and $\rho$ for the share of
+all documents it keeps, the *retained fraction*. The kept positives make up a
+share $\pi\,\textrm{TPR}$ of all documents, so the precision is
+$\pi\,\textrm{TPR}/\rho$, and the harmonic mean of precision $P$ and recall
+$R$ simplifies to
+
+$$
+\textrm{F1} = \frac{2PR}{P + R}
+= \frac{2\,(\pi\,\textrm{TPR}/\rho)\,\textrm{TPR}}{\textrm{TPR}\,(\pi + \rho)/\rho}
+= \frac{2\pi\,\textrm{TPR}}{\pi + \rho}.
+$$
+:eqlabel:`eq_lm_quality_f1_retention`
+
+The F1 depends on the threshold only through the recall and the retained
+fraction. At a fixed recall it falls as the filter keeps more, and the best a
+filter can do is to keep exactly the positives, $\rho = \pi$ with
+$\textrm{TPR} = 1$.
+
+Now let each document have a true label $y^*$, positive with probability
+$\pi^*$, and let the labeller flip it with probability $\eta$ in either
+direction, independently of the document. A classifier that predicts $y^*$
+perfectly keeps the true positives, and a share $1 - \eta$ of them carries a
+positive label, so its precision against the labels is $1 - \eta$. Its recall
+is the share of positive labels that belong to true positives:
+
+$$
+R_{\max} = \frac{\pi^*(1-\eta)}{\pi^*(1-\eta) + (1-\pi^*)\,\eta},
+\qquad
+\textrm{F1}_{\max} = \frac{2\,(1-\eta)\,R_{\max}}{(1-\eta) + R_{\max}}.
+$$
+:eqlabel:`eq_lm_quality_f1_ceiling`
+
+No classifier does better against these labels: the flips do not depend on
+the document, so nothing in the document can predict them. The recall is
+where a rare class suffers. Its denominator adds the negatives flipped to
+positive, $(1-\pi^*)\eta$, to the true positives, $\pi^*(1-\eta)$, and when
+positives are 1% of the documents, a flip rate of 0.5% already makes a third
+of the positive labels flipped negatives that no classifier can find.
+
+To use the ceiling we need $\eta$. Two annotations of the same documents that
+flip independently at the same rate disagree with probability
+$d = 2\eta(1-\eta)$, so $\eta = (1 - \sqrt{1 - 2d})/2$, and the observed share
+of positives, $\pi^*(1 - 2\eta) + \eta$, then gives $\pi^*$. Our second
+annotation is Qwen's justification-first answer on the test rows. Llama's
+labels cannot serve: under equal symmetric noise both annotations would have
+the same share of positives, and the two labellers' shares differ several-fold,
+a difference of scale, not of noise. The estimate is optimistic. Errors that
+both protocols of one model share are invisible to it, so the true ceiling is
+lower. A classifier above the ceiling would therefore be a warning sign: it
+would mean that the flips do depend on the document, and that the classifier
+has learned its labeller's systematic errors.
+
+The cell checks the identity at 50 thresholds and the ceiling against a
+simulation of a million documents, then estimates $\eta$ and the ceiling.
 
 ```{.python .input #quality-filtering-ceiling}
 %%tab pytorch
@@ -1285,10 +1658,34 @@ R['ceiling'] = dict(identity_gap=gap, simulation=rows,
                                                              .all()))
 ```
 
+The identity holds to rounding error, and the closed form agrees with the
+simulation at three noise levels. The two protocols disagree on 19 of the
+2,000 test rows, which gives $\eta \approx 0.005$ and a ceiling F1 of about
+0.80, with an interval from 0.68 to 0.89. All four classifiers are far below
+it, so label noise of this kind explains only part of their errors; an
+embedding and a linear head lose more than the labels do. Two caveats go with
+the number. With 36 positives the ceiling is itself uncertain, as its
+interval shows. And the 19 disagreements are not symmetric: 17 of them are
+rows that the digit protocol scores 3 and the justification-first protocol
+scores lower, so the symmetric model is a simplification, and an exercise
+asks for the asymmetric one.
+
 ## Choosing a Threshold
 :label:`subsec_lm_quality_threshold`
 
-<!-- Prose: the threshold is a precision-recall choice made on validation labels and read as a retained fraction; retained tokens for a stated corpus size; data-limited budgets favour low thresholds, compute-limited ones high; the manifest keeps the continuous score so 20.4 can use score bands. -->
+A threshold turns a score into a decision, and the right one depends on what
+the corpus is for. On the validation rows, $t^*$ maximizes the F1, which
+weighs precision and recall alike. Read through
+:eqref:`eq_lm_quality_f1_retention`, every threshold is also a retained
+fraction, and the retained fraction is what a pretraining run cares about:
+multiplied by the size of the crawl, it gives the tokens left to train on. A
+run limited by data, which would otherwise repeat its tokens
+(:numref:`sec_lm_budgets`), should keep more and accept a lower precision. A
+run limited by compute, which will never read all of its data anyway, can
+afford a high threshold and spend its steps on the best documents. The cell
+plots precision, recall and F1 against the retained fraction on the test
+rows, converts each classifier's $t^*$ into the shares of stream documents
+and tokens it keeps, and sweeps the regression head's cut.
 
 ```{.python .input #quality-filtering-threshold}
 %%tab pytorch
@@ -1351,10 +1748,53 @@ R['retention'] = RETAIN.to_dict('records')
 R['sweep'] = SWEEP.to_dict('records')
 ```
 
+Look at the retained shares first. FineWeb-Edu's own rule, the released
+classifier's rounded score at least 3, keeps 7.1% of our stream's documents
+and about 10% of its tokens, close to the 7.26% of documents that FineWeb-Edu
+kept of the whole dump. Our head at $t^*$ keeps about 3% of the documents and
+about 5% of the tokens, roughly half of FineWeb-Edu's tokens. This is the
+strict scale at work: a score of 3 is several times rarer on Qwen's scale than
+on Llama's, and a filter that looks for it keeps less. The token shares exceed
+the document shares because the kept documents are longer than average.
+
+The sweep shows the trade. A cut at 1.5 keeps 5% of the documents and finds
+92% of the educational test rows, at a precision of 0.27; $t^*$ keeps 3% at a
+recall of 0.67; a cut at 2.0 keeps 0.3% at a precision of 0.64 but finds only
+a fifth of the positives. At 2.5 and above the head keeps nothing at all, for
+the reason we met with $t^*$: its predictions never reach the label's own
+threshold. Of a trillion tokens of such a dump, $t^*$ keeps about 50 billion.
+A run that needs more tokens moves the cut down and accepts that most of what
+it adds is, by the rubric, not educational.
+
+The manifest therefore stores the score, not the decision. `lm-c1-docs-v1`
+records each crawl document's predicted score to three decimals, and the
+threshold is a parameter of its stage, so :numref:`sec_lm_data_mixtures` can
+weight bands of the score as separate sources without labelling anything
+again.
+
 ## Auditing Removals
 :label:`subsec_lm_quality_audit`
 
-<!-- Prose: what an audit is (removal rates by group with intervals, and a reading of examples); groups: English variety by country-code domain (a weak proxy, said so), host class by rule, six FineWeb-2 languages under the heuristics only (the classifier is English-only); cluster bootstrap by registered domain, because 3,000 documents from one site are not 3,000 samples; groups under 100 documents or 10 domains are "too few". -->
+A filter that removes 97% of the documents will remove some kinds of pages
+more than others, and an audit asks which. It has two parts, a table of
+removal rates by group, each with an interval, and a reading of removed
+documents. We form three groupings. The country-code domain (.uk, .au, .in and
+others, against .com) is a proxy for the variety of English, and a weak one:
+much British writing lives on .com, and a .in domain says where a site is
+registered, not who wrote it. The host class sorts hosts, by rules on their
+names, into edu_gov, wiki, forum, news, blog, shop and other. The six
+FineWeb-2 languages enter under the rules only, because the classifier was
+trained on English and has nothing to say about Thai. All of it is measured
+on FineWeb's output, so the audit cannot see what FineWeb's own filters and
+deduplication removed before the stream was drawn.
+
+The intervals need care. Documents from one site are alike: they share
+templates, authors and topics, and a filter tends to decide them alike. A
+bootstrap that resamples documents treats 3,000 pages of one site as 3,000
+samples and reports an interval far too narrow. `audit_removals` resamples
+whole registered domains within each group, a *cluster bootstrap*, and marks
+groups with fewer than 100 documents or fewer than 10 domains as too few to
+report.
 
 ```{.python .input #quality-filtering-audit-def}
 %%tab pytorch
@@ -1395,7 +1835,31 @@ def audit_removals(df, keep, by, ref=None, n_boot=2000, cluster=None,
     return out
 ```
 
-<!-- Prose: three decisions on the stream (heuristics, our classifier at t*, both); the audit by country-code domain against .com and by host class against "other"; the same audit on each half of the stream, the halves split by registered domain so they share no cluster; the filter as a covariate shift keyed on a proxy label (one sentence restating :numref:`sec_environment-and-distribution-shift`); Gururangan et al. and Dodge et al. Name what C4 tests: "the classifier contributes beyond the heuristics" is read from the classifier-alone arm (keep_clf), not from classifier-only removals or both minus heuristics; here these nearly coincide, because the rules remove few stream documents (the stream is FineWeb's output). -->
+The cell applies three decisions to the stream: the rules alone, our
+classifier alone at $t^*$, and both. For each group it reports the removal
+rate and its difference to the reference group, .com for the country codes
+and "other" for the host classes, with a cluster-bootstrap interval. It
+repeats the audit on two halves of the stream, split by registered domain so
+that no site appears in both, and keeps a finding only if its sign is the same
+in both halves. The claim under test is the one an audit exists for: that the
+combined filter removes some group at a rate that differs from the reference
+by more than the interval, and that the classifier contributes to the
+difference beyond the rules. That second part is read from the classifier-alone
+arm. On FineWeb's output the rules remove so little that the classifier-alone
+and combined arms nearly coincide.
+
+Why should anyone care which groups lose more? A filter keyed on a
+classifier's score is a covariate shift by construction: it changes the
+distribution of the inputs a model trains on, in the direction of whatever the
+classifier was trained to prefer (:numref:`sec_environment-and-distribution-shift`).
+Gururangan et al. (2022) found that the filter used for GPT-3, a classifier
+trained to tell curated text from random web pages, preferred articles from
+the newspapers of American high schools in larger, wealthier and more urban
+areas. Dodge et al. (2021) found that C4's list of banned words removed
+disproportionately much text in African-American and Hispanic-aligned
+English, and text that mentions gay and lesbian people. Neither filter was
+designed to do this. Both did it because their notion of quality was learned
+from text that was not drawn evenly from the people who write.
 
 ```{.python .input #quality-filtering-audit}
 %%tab pytorch
@@ -1474,7 +1938,37 @@ R['audit'] = dict(table=show[cols].to_dict('records'), too_few=few,
                   halves=S.half.value_counts().sort_index().to_dict())
 ```
 
-<!-- Prose: 200 removed documents read under a two-line rubric: 100 removed by our classifier alone with a score within 0.3 of t*, 100 removed by our heuristics (whatever the classifier decides: on FineWeb's output the rules remove few documents, and the classifier keeps few of those); the labels come from a model, not from people: the part's judge, Qwen3.8-27B with thinking on and no cap on its reasoning (D2L_RERUN=removal-labels), which also wrote the training labels under the educational rubric, so the review is not independent of the filter it checks; removal precision with Wilson intervals; five excerpts. -->
+The overall rates frame everything else: the rules remove 1.6% of the stream,
+the classifier 97.2%. Two groups pass every test. The classifier removes .au
+pages at a rate 1.9 points higher than .com pages, with an interval from 0.9 to
+2.7 points and the same sign in both halves, and shop hosts at a rate 2.6
+points higher than other hosts. A difference of two points matters more than it
+seems, because what reaches the corpus is what the filter keeps: about 3% of
+.com pages against about 1% of .au pages, so Australian sites enter the corpus
+at roughly a third of the rate of .com sites. The shops are the rubric working
+as written, since product pages teach little. The rules have one finding of
+their own: they remove news pages 1.4 points less often than other pages, in
+both halves. The other country codes show differences whose intervals include
+zero, and .ie, .ng, .ph and the wiki hosts are too few to report. These data
+cannot say why .au differs. The country code is a weak proxy, and the finding
+is a reason to read .au removals, not a conclusion about Australian English.
+
+Rates say how much each group loses, not whether the losses are mistakes. For
+that, someone has to read removed pages. We draw 100 documents that our
+classifier removed and the rules kept, all with a score within 0.3 of $t^*$,
+where a mistake is most likely, and 100 that the rules removed, whatever the
+classifier decided. The labels do not come from people. They come from
+Qwen3.8-27B again, this time as a judge with its reasoning switched on, under
+a two-line rubric that asks a different question from the training rubric:
+would a reader want this page in a general-purpose training corpus? The
+reasoning has no budget. A budget of, say, a thousand tokens can stop the
+model in mid-thought and force a verdict it has not reached, so each reply may
+use up to 12,000 tokens of the 16,384-token context; in practice the replies
+were short, with a median of about 130 tokens, and none was cut off. The
+review is not independent of the filter it checks, since the same model wrote
+the training labels, and a human reading of the same 200 pages would be the
+stronger test. The cell reports the share of each arm labelled "drop", the
+*removal precision*, with a Wilson interval, and prints five of the pages.
 
 ```{.python .input #quality-filtering-review}
 %%tab pytorch
@@ -1593,6 +2087,23 @@ if R['review'] is not None:
                                      if len(kept) else None)
 ```
 
+The two arms differ sharply. Of the classifier's removals near its threshold,
+the judge would have dropped about 1 in 10 (interval 6 to 19 in 100); of the
+rules' removals, about 70% (interval 60% to 78%). Near its threshold the
+classifier mostly removes pages that a general corpus would keep, like the
+hiring guide that opened the section. The rules mostly remove pages that
+nobody would miss, such as the product description of a pair of jeans, though
+not always: an encyclopedia entry on Erisichthon of Greek mythology and a
+massage therapist's professional profile were removed by rules and judged
+worth keeping. The classifier is doing what it was trained to do. It looks for
+pages that teach schoolchildren, and by that rubric the pages it removes are
+removed correctly; the judge's rubric is broader. The gap between 0.11 and
+0.70 is the gap between two definitions of quality, and choosing between them
+is a decision about the corpus, not about the classifier.
+
+The last comparison puts our classifier and the released one side by side on
+the whole stream, each at its own threshold.
+
 ```{.python .input #quality-filtering-agree-stream}
 %%tab pytorch
 a = SCORES[MAIN]['stream'] >= T_STAR[MAIN]
@@ -1605,10 +2116,22 @@ say(f'on the stream, {MAIN} and the released classifier keep '
 R['stream_kappa'] = [k, k_lo, k_hi]
 ```
 
+They keep 2.9% and 3.6% of the documents and agree on 96.7% of them, but most
+of that agreement is on documents both remove. Cohen's kappa, which discounts
+the agreement expected by chance, is about 0.47. Two classifiers with the same
+test F1 select noticeably different corpora.
+
 ## The Filter in the Pipeline
 :label:`subsec_lm_quality_pipeline`
 
-<!-- Prose: the two stage records on c0 (heuristics: drops by first reason code; edu_score: no drops, the threshold and the head's hash as parameters, the score kept in the flags), the lm-c1-docs-v1 flags (no text), the manifest extended. -->
+The filters enter the corpus of :numref:`sec_lm_crawl` as two stages of its
+manifest. The `heuristics` stage removes documents and charges each one to the
+first rule that fires. The `edu_score` stage removes nothing. It attaches the
+score and records the threshold, the head's SHA-256 and the embedder's
+revision as parameters, so a later stage, or a reader, can apply any threshold
+and know exactly which model produced the scores. The flags file
+`lm-c1-docs-v1` holds, for each crawl document, its id, its reason codes and
+its score, and no text.
 
 ```{.python .input #quality-filtering-c1}
 %%tab pytorch
@@ -1685,6 +2208,11 @@ elif C0_EMB is not None:  # GPU: live scores against the registered flags
 R['c1_manifest'] = m.to_dict()
 ```
 
+The rules keep 1,032 of the 3,288 crawl documents, and 20 of those score at or
+above $t^*$, about 2%, in line with the stream. The last cell compares every
+number this run computed with the registered results, and the manifest and the
+head's weights with their registered copies.
+
 ```{.python .input #quality-filtering-results}
 %%tab pytorch
 def rounded(x):
@@ -1733,10 +2261,487 @@ else:
     assert same and not bad and a['max_diff'] <= 0.005 and w_gap < 1e-5
 ```
 
+Every filter in this section removes documents because they differ from
+something: from English function words, from a reference model's training
+data, from what Llama or Qwen think a schoolteacher would use. What survives
+leans toward the annotator's taste. The audit can show where it leans, but
+not whether a model trained on the result is better or worse for it; that
+takes training runs, which :numref:`sec_lm_data_mixtures` carries out.
+
 ## Summary
 
-<!-- Prose: Summary (3-6 sentences). -->
+A quality filter decides which part of the web a model learns from, and it
+follows a definition of quality that somebody wrote down: rules over surface
+statistics, or a rubric that a large model applies and a small classifier
+learns. The Gopher, C4 and FineWeb rules remove about two thirds of our crawl
+documents and match FineWeb's code on about 96% of them, but they remove every
+document of four other languages for reasons of script, and the documents of
+lowest perplexity are boilerplate and machine-written prose. Qwen3.8-27B,
+scoring documents under FineWeb-Edu's rubric from its next-token
+probabilities, uses a far stricter scale than Llama-3-70B did (about 1.4%
+against 9% at 3 or more) yet orders documents alike. A linear head on a frozen
+embedder learns its labels about as well as the released classifier does,
+both far below a label-noise ceiling of about 0.8; since
+$\textrm{F1} = 2\pi\,\textrm{TPR}/(\pi + \rho)$, the threshold is a choice of
+retained fraction, here about 3% of the documents and 5% of the tokens. An
+audit whose intervals resample whole sites finds groups that the classifier
+removes more often, Australian domains and shops, and near its threshold the
+classifier mostly removes pages that a general corpus would keep. What a
+filter keeps reflects its annotator's taste, and only training runs can say
+whether that taste helps.
 
 ## Exercises
 
-<!-- Prose: Exercises (7; spec part 8). -->
+1. **Two F1 scores on one card.** The released classifier's card reports an
+   F1 of 82% "when converted to a binary classifier using a score threshold of
+   3", and a classification report in which score 5 has an F1 of 0.02.
+    1. Explain why both can be true, and what each says about using the
+       classifier as a filter at 3.
+    1. The card's confusion matrix over its 46,867 hold-out rows has these
+       rows, true scores 0 to 5, and columns, predicted scores 0 to 5:
+       (2791, 2858, 45, 0, 0, 0), (919, 22343, 3180, 69, 1, 0),
+       (3, 3225, 6330, 757, 7, 0), (1, 66, 1473, 1694, 173, 0),
+       (0, 4, 98, 420, 283, 2), (0, 0, 18, 85, 21, 1). Compute the F1 of the
+       positive class "score at least 3". Which average over the two classes
+       gives 82%?
+    1. [code] Our test rows are drawn from this hold-out. Compute the released
+       classifier's F1 against Llama's labels at its rounded score 3, and
+       compare it with the table's 0.54 at $t^*$. Why do the two differ?
+   :exlabel:`ex_lm_quality-card`
+
+1. **Thresholds on a regression.**
+    1. Why is the F1 at the threshold that maximizes F1 on the test rows an
+       optimistic estimate of the F1 at deployment? Name two ways to avoid
+       the bias.
+    1. A document's label is 3 with probability $q$ and 1 otherwise. Show
+       that the prediction minimizing the expected squared error is $1 + 2q$,
+       and find the $q$ at which it reaches 2.5. Use this to explain why our
+       regression head keeps nothing at a cut of 2.5.
+    1. Would the logistic head's probability have the same problem with a
+       cut at 0.5? Compare its $t^*$ with 0.5 and explain.
+   :exlabel:`ex_lm_quality-regression`
+
+1. **The cost of a false removal.** A crawl holds $T$ tokens in documents of
+   equal length, of which a share $\pi$ are labelled educational.
+    1. Using :eqref:`eq_lm_quality_f1_retention`, write the educational
+       tokens that a filter with retained fraction $\rho$ and score F1
+       removes, in terms of $T$, $\pi$, $\rho$ and F1.
+    1. Put in this section's numbers ($\pi \approx 0.014$, $\rho \approx
+       0.029$, $\textrm{F1} \approx 0.44$) for $T = 10^{12}$. How many
+       educational tokens does $t^*$ remove?
+    1. A classifier at the noise ceiling of
+       :eqref:`eq_lm_quality_f1_ceiling` keeps the same $\rho$. Bound the
+       educational tokens it removes, and say when your bound is vacuous.
+       Which part of the loss could a better classifier recover, and which
+       part is in the labels?
+   :exlabel:`ex_lm_quality-false-removal`
+
+1. **Asymmetric noise.** ● The labeller misses a true positive with
+   probability $\eta_1$ and invents a positive from a true negative with
+   probability $\eta_0$.
+    1. Derive the precision, recall and F1 against the labels of a perfect
+       classifier of the true label.
+    1. With $\pi^* = 0.0926$ and $\eta_1 = 0.02$, find the $\eta_0$ at which
+       this ceiling equals the symmetric ceiling at $\eta = 0.05$.
+    1. Our two protocols disagree on 19 test rows, 17 of them in one
+       direction. Can $\eta_0$ and $\eta_1$ of each protocol be estimated
+       from two annotations alone? What would a third annotation add?
+   :exlabel:`ex_lm_quality-asymmetric`
+
+1. [code] **Two labellers, two filters.** Train a second regression head on
+   Llama's scores, choose its threshold on the validation rows against
+   Llama's labels, and apply both heads to the stream. Report the share each
+   keeps, their Cohen's kappa with an interval, and the host classes and
+   country codes where their decisions differ most. Then predict which of the
+   two filtered corpora would train the better model, and say how the proxy
+   runs of :numref:`sec_lm_data_mixtures` could test your prediction.
+   :exlabel:`ex_lm_quality-two-labellers`
+
+1. [code] **How far behind is the bag?** Before measuring, state the largest
+   F1 gap between the hashed bag and the regression head that you would
+   accept for a filter that runs on a CPU. Measure the gap with a paired
+   bootstrap over the test rows. Then try to close it without a GPU: more
+   epochs, character n-grams, or training the bag on the score rather than
+   the binary label. Which change helps, and is the improvement larger than
+   its interval?
+   :exlabel:`ex_lm_quality-bag`
+
+1. [code] **A human review.** Read the 200 reviewed documents yourself and
+   label each one under the two-line rubric of the review cell, without
+   looking at the judge's labels. Compute the removal precision of each arm
+   with its Wilson interval and Cohen's kappa between your labels and the
+   judge's. Do your labels change the conclusion about the two arms? Where you
+   and the judge disagree, which of you followed the rubric?
+   :exlabel:`ex_lm_quality-human-review`
+
+1. [extended] **Quality or script?** Choose one of the six FineWeb-2
+   languages that you read. Draw 50 of its documents that the English rules
+   remove, label each as worth keeping or not, and record which rule fired
+   first. Are the removals quality or script artifacts? Rewrite the rules
+   that fire most so that they suit the language (a word tokenizer for the
+   script, stop words of the language), and report the removal rate and
+   your labels' precision again.
+   :exlabel:`ex_lm_quality-script`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §20.2]{.kicker}
+
+Quality Filtering<br>**heuristic rules · perplexity · classifiers on model labels · label noise · thresholds · audits**
+:::
+:::
+
+::: {.slide title="A Spell-Selling Page Passes Every Rule; a Hiring Guide Fails the Classifier"}
+[The problem]{.kicker}
+
+FineWeb-Edu keeps **7.26%** of FineWeb's 265,662,695 documents of one crawl.
+
+| page, from FineWeb's output | rules | our classifier |
+|---|---|---|
+| "I NEED REVENGE DEATH SPELL … Call/WhatsApp ‹phone›", 1,500+ characters | keep | lowest score among such pages |
+| a company's guide to hiring software engineers, after a sales pitch | keep | remove |
+
+::: {.d2l-note .warn}
+Before tuning a threshold: what does the filter mean by quality, and whose
+pages does it remove?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- implement the Gopher, C4 and FineWeb rules with reason codes, and check them
+  against FineWeb's code;
+- say what perplexity measures, and what it does not;
+- label documents with a large model's next-token probabilities, and train a
+  linear head on a frozen embedder;
+- bound the attainable F1 under label noise;
+- turn a threshold into retained tokens, and audit removals with
+  site-level intervals.
+
+**Running example:** our 3,288 crawl documents (c0) and 20,000 documents of
+FineWeb's output for the same crawl (the *audit stream*).
+:::
+
+::: {.slide title="Six Steps From a Crawl Record to a Token on Disk"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| step | section |
+|---|---|
+| get text | Document Extraction from Web Crawls |
+| choose text | **Quality Filtering** |
+| | Deduplication and Decontamination |
+| mix text | Data Mixtures |
+| | Synthetic and Rephrased Data |
+| cut text | Tokenizers at Scale |
+:::
+
+::: {.col .narrow}
+- **Here:** c0 → rules → score → flags in the manifest (c1).
+- **Skips:** duplicates, mixtures, and whether the filter helps training.
+:::
+:::
+:::
+
+::: {.slide title="Sixteen Rules, Each With a Reason Code"}
+[Heuristic rules]{.kicker}
+
+| family | catches | codes |
+|---|---|---|
+| Gopher repetition | repeated lines, paragraphs, n-grams | 3 |
+| Gopher quality | 50 to 100,000 words; mean length 3 to 10; 80% of words with a letter; 2 of 8 stop words (*the, of, with, …*) | 7 |
+| C4 | fewer than 5 sentences, "lorem ipsum", `{` | 1 |
+| FineWeb | lines without terminal punctuation, short lines, duplicated characters, line breaks per word | 4 |
+
+A document is charged to the **first** rule that fires.
+Thresholds: datatrove's code (duplicated characters 0.01; its paper says 0.1).
+:::
+
+::: {.slide title="The Rules Remove Two Thirds of Our Crawl and 1.6% of FineWeb's Output"}
+[The rules at work]{.kicker}
+
+| corpus | in | removed |
+|---|---|---|
+| c0, our crawl documents | 3,288 | 2,256 (69%) |
+| audit stream, FineWeb's output | 20,000 | 317 (1.6%) |
+
+- c0, first rule charged: duplicated text 571, alphabetic words 403, word
+  count 322.
+- Line punctuation *fires* on 1,150 c0 documents but comes late in the order.
+- Against datatrove on 2,000 c0 documents: same decision on 96% to 99.9%;
+  the gap is word and sentence splitting.
+
+::: {.d2l-note}
+On the stream, FineWeb's own four rules never fire.
+:::
+:::
+
+::: {.slide title="English Rules Remove Every Hindi, Chinese, Japanese and Thai Page"}
+[Unspaced scripts]{.kicker}
+
+| FineWeb-2, 500 pages each | removed | first rule |
+|---|---|---|
+| German | 96% | stop words |
+| Swahili | 93% | stop words |
+| Hindi | 100% | mean word length |
+| Chinese, Thai | 100% | alphabetic words |
+| Japanese | 100% | word count |
+
+- No spaces: one "word" per run between punctuation marks.
+- Hindi has spaces, but `\w` skips Devanagari vowel signs: words shatter.
+
+::: {.d2l-note .warn}
+Every page had passed FineWeb-2's rules for its language.
+:::
+:::
+
+::: {.slide title="Check: Drop the Stop-Word Rule. How Much German Is Left?"}
+[Check]{.kicker}
+
+The rule asks for 2 of *the, be, to, of, and, that, have, with*.
+With it, German loses 96%.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Without it German loses 28%, Swahili 16% instead of 93%. Chinese,
+Japanese, Thai and Hindi still lose 100%: their losses come from the word
+rules, not from English vocabulary.
+:::
+:::
+:::
+
+::: {.slide title="The Most Predictable Pages Read as Machine-Written"}
+[Perplexity]{.kicker}
+
+Mean NLL per token, first 512 tokens, Qwen3-0.6B-Base, 3,000 stream pages:
+median **2.9 nats**.
+
+| lowest NLL | highest NLL |
+|---|---|
+| "Please be mindful of our community standards" | "As have a peek at these guys you can see regarding the …" |
+| "In today's digital age, a strong online presence is crucial …" | spun text about pokies, loans, Discord |
+| "Greetings, readers! I am excited to delve into …" | a garden-blog comment, a railway photo site |
+
+::: {.d2l-note}
+Low perplexity means resemblance to the model's training text, not quality.
+:::
+:::
+
+::: {.slide title="A Large Model Labels a Sample; a Small Model Labels the Web"}
+[The recipe]{.kicker}
+
+1. A rubric: "useful … for teaching from primary school to grade school".
+2. A large model scores a sample, 0 to 5 points, one criterion per point.
+3. A small model learns the score; a threshold selects.
+
+| corpus | labeller | small model | rule |
+|---|---|---|---|
+| FineWeb-Edu | Llama-3-70B, 450k pages | frozen 109M encoder + regression | rounded score ≥ 3 |
+| DCLM | instruction data and explanations vs web | fastText | top 10% |
+| Nemotron-CC | several classifiers | ensemble | quality buckets |
+:::
+
+::: {.slide title="Read the Score From Six Next-Token Probabilities"}
+[Labelling]{.kicker}
+
+Answer prefix `Educational score: `; one forward pass:
+
+$$p(d) \;+\; p(\textrm{space})\,p(d \mid \textrm{space}), \qquad d = 0, \ldots, 5$$
+
+- Label: $\arg\max_d$. Expected score: $\sum_d d\,p(d) / \sum_d p(d)$.
+- The second-space path holds about 15% of the probability.
+- Qwen3.8-27B, 4-bit weights, one copy per 24 GB GPU; 22,000 pages in about
+  an hour on four.
+
+::: {.d2l-note .warn}
+Batched requests moved probabilities by up to 0.08. One request at a time:
+identical bits on any server.
+:::
+:::
+
+::: {.slide title="Qwen Is About a Point Stricter Than Llama, but Ranks Pages Alike"}
+[Two labellers]{.kicker}
+
+| share of 22,000 pages | score ≥ 1 | ≥ 2 | ≥ 3 | ≥ 4 |
+|---|---|---|---|---|
+| Llama-3-70B (2024) | 0.88 | 0.31 | **0.091** | 0.018 |
+| Qwen3.8-27B | 0.82 | 0.064 | **0.014** | 0.0001 |
+
+- Spearman, Qwen's expected score vs Llama's score: **0.76**.
+- Kappa at ≥ 3: 0.24; with Qwen cut at Llama's share: 0.65.
+
+::: {.d2l-note}
+Agreement with one labeller cannot show which labels are better; training
+runs decide.
+:::
+:::
+
+::: {.slide title="A Linear Head Matches the Released Classifier on Qwen's Labels"}
+[Classifiers]{.kicker}
+
+2,000 test rows, 36 positives (Qwen ≥ 3); $t^*$ from 2,000 validation rows.
+
+| classifier | trained parameters | F1 [95% interval] | AUC |
+|---|---|---|---|
+| regression head, frozen 0.6B embedder | 1,025 | 0.44 [0.32, 0.55] | 0.98 |
+| logistic head, same embedder | 1,025 | 0.56 [0.41, 0.68] | 0.98 |
+| hashed bag (fastText), CPU | 67M | 0.26 [0.17, 0.34] | 0.90 |
+| released, trained on Llama | head only | 0.47 [0.35, 0.57] | 0.98 |
+
+Paired: regression head − released F1 = −0.02 [−0.14, +0.09].
+:::
+
+::: {.slide title="Check: The Regression Head's Best Threshold Is 1.6. Why Not 3?"}
+[Check]{.kicker}
+
+The label is "score ≥ 3"; the head fits the score by squared error.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Squared error makes the head predict the conditional mean score.
+Only 1.4% of labels reach 3, so almost no page has a mean near 3: the
+predictions bunch between 0 and 2. A cut at 2.5 keeps nothing.
+:::
+:::
+:::
+
+::: {.slide title="F1 Depends on the Threshold Only Through Recall and Retention"}
+[An identity]{.kicker}
+
+$\pi$: share of positive labels; TPR: recall; $\rho$: share of documents kept.
+
+$$\textrm{precision} = \frac{\pi\,\textrm{TPR}}{\rho}
+\quad\Rightarrow\quad
+\textrm{F1} = \frac{2PR}{P+R} = \frac{2\pi\,\textrm{TPR}}{\pi + \rho}$$
+
+- Best case: keep exactly the positives, $\rho = \pi$, TPR $= 1$.
+- At fixed recall, keeping more lowers F1.
+- Checked at 50 thresholds: largest gap $6 \times 10^{-17}$.
+:::
+
+::: {.slide title="Label Noise of 0.5% Caps F1 Near 0.8 When Positives Are Rare"}
+[The ceiling]{.kicker}
+
+Labels flip the true label $y^*$ with probability $\eta$ either way; a
+perfect classifier of $y^*$ scores
+
+$$P = 1 - \eta, \qquad R = \frac{\pi^*(1-\eta)}{\pi^*(1-\eta) + (1-\pi^*)\eta}$$
+
+- Two Qwen protocols disagree on 19 of 2,000 rows: $2\eta(1-\eta) = 0.0095$,
+  $\eta \approx 0.005$.
+- Ceiling F1 **0.80** [0.68, 0.89]; every classifier is below it.
+
+::: {.d2l-note .warn}
+17 of the 19 disagreements go one way: the symmetric model is a simplification.
+:::
+:::
+
+::: {.slide title="Cutting at the Label's Own 3 Keeps Nothing"}
+[The threshold]{.kicker}
+
+Regression head, stream shares and test precision and recall (Qwen ≥ 3):
+
+| cut | documents | tokens | precision | recall |
+|---|---|---|---|---|
+| 1.5 | 5.1% | 8.0% | 0.27 | 0.92 |
+| $t^* = 1.61$ | 2.9% | 4.8% | 0.33 | 0.67 |
+| 2.0 | 0.3% | 0.5% | 0.64 | 0.19 |
+| 2.5, 3.0 | 0 | 0 | — | 0 |
+
+- FineWeb-Edu's rule on the same stream keeps 7.1% of documents, 9.9% of tokens.
+- Data-limited runs cut lower; compute-limited runs cut higher.
+:::
+
+::: {.slide title="Resample Sites, Not Pages, and Demand the Same Sign in Both Halves"}
+[The audit]{.kicker}
+
+- Groups: country-code domain (a weak proxy for English variety), host class
+  by name rules, six languages (rules only).
+- Intervals: bootstrap over **registered domains**; 3,000 pages of one site
+  are not 3,000 samples.
+- Too few: under 100 documents or 10 domains.
+- Halves split by domain; a finding needs one sign in both.
+
+::: {.d2l-note}
+A filter keyed on a classifier's score is a covariate shift toward what the
+classifier prefers.
+:::
+:::
+
+::: {.slide title="The Classifier Keeps .au Pages at a Third of the .com Rate"}
+[Audit results]{.kicker}
+
+| group | arm | removal − reference | 95% interval |
+|---|---|---|---|
+| .au vs .com | classifier | +1.9 points | [+0.9, +2.7] |
+| shop vs other | classifier | +2.6 points | [+1.9, +3.1] |
+| news vs other | rules | −1.4 points | [−1.7, −0.9] |
+| .uk, .ca, .in, .nz, .za | classifier | intervals include 0 | |
+
+The classifier removes 97.2% of the stream: it keeps about 3% of .com pages
+and about 1% of .au pages.
+:::
+
+::: {.slide title="Check: Removal Rates of 97.0% and 98.9%. A Small Difference?"}
+[Check]{.kicker}
+
+A filter removes 97.0% of group A and 98.9% of group B.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** No. The corpus receives what is kept: 3.0% of A and 1.1% of B,
+so B enters at about a third of A's rate. When a filter keeps little, compare
+retention, not removal.
+:::
+:::
+:::
+
+::: {.slide title="Near Its Threshold the Classifier Mostly Removes Pages Worth Keeping"}
+[Reading removals]{.kicker}
+
+Judge: Qwen3.8-27B, reasoning on and uncapped, rubric "would a reader want
+this page in a general-purpose corpus?"
+
+| 100 removed pages each | judged "drop" | 95% interval |
+|---|---|---|
+| classifier only, score within 0.3 of $t^*$ | 0.11 | [0.06, 0.19] |
+| rules | 0.70 | [0.60, 0.78] |
+
+- Rules removed, judged keep: an entry on a figure of Greek mythology.
+- The judge also wrote the labels: not independent.
+
+::: {.d2l-note}
+The classifier follows its rubric; the gap is between two definitions of quality.
+:::
+:::
+
+::: {.slide title="The Manifest Stores the Score; the Threshold Is a Parameter"}
+[In the pipeline]{.kicker}
+
+| stage | in | out | recorded |
+|---|---|---|---|
+| `heuristics` | 3,288 | 1,032 | drops by first reason code |
+| `edu_score` | 1,032 | 1,032 | threshold 1.611, head SHA-256, embedder revision |
+
+- Flags per c0 id: reason codes and score, no text.
+- 20 of the 1,032 score above $t^*$, about 2%.
+- Score bands can become mixture sources without relabelling.
+:::
+
+::: {.slide title="Recap"}
+[Recap]{.kicker}
+
+- Rules: c0 loses 69%, FineWeb's output 1.6%; 96% agreement with datatrove;
+  100% loss on unspaced scripts and Hindi.
+- Lowest perplexity: boilerplate and machine-written prose.
+- Qwen: 1.4% at ≥ 3 against Llama's 9%; Spearman 0.76.
+- Head F1 0.44, released 0.47: no difference; ceiling about 0.8.
+- $t^*$ keeps about 3% of documents, 5% of tokens.
+- Audit: .au and shops removed more; near $t^*$ the judge keeps 89 in 100.
+
+**Next:** the same page, or nearly the same, appears many times.
+:::

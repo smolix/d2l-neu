@@ -574,6 +574,35 @@ def configure_optimizers(self):
 
 With `LinearRegression` defined, training reduces to four lines: instantiate the model, instantiate `d2l.SyntheticRegressionData`, create a `d2l.Trainer(max_epochs=3)`, and call `trainer.fit(model, data)`:
 
+```{.python .input #linear-regression-concise-training-1}
+%%tab pytorch
+data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
+model = LinearRegression(lr=0.015)
+model(data.X[:1])  # Creates the parameters of the lazy layer
+model.net.apply(model.weight_init)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.board.yscale = 'log'
+trainer.fit(model, data)
+```
+
+```{.python .input #linear-regression-concise-training-1}
+%%tab mxnet, tensorflow
+data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
+model = LinearRegression(lr=0.015)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.board.yscale = 'log'
+trainer.fit(model, data)
+```
+
+```{.python .input #linear-regression-concise-training-1}
+%%tab jax
+data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
+model = LinearRegression(2, lr=0.015)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.board.yscale = 'log'
+trainer.fit(model, data)
+```
+
 ```{.python .input #linear-regression-concise-training-4}
 print(f"validation loss: {trainer.history['val_loss'][-1]:.2e}")
 ```

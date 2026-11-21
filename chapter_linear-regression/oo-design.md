@@ -14,7 +14,7 @@ To keep our focus on modeling while keeping every line of the training harness t
 2. **`DataModule` (data):** Encapsulates dataset downloading, preprocessing, and splitting, exposing `train_dataloader()` and `val_dataloader()` iterables.
 3. **`Trainer` (training loop):** Connects any `Module` to any `DataModule`, running the epoch-by-epoch minibatch training and validation passes, averaging metrics across batches, and plotting live learning curves on a `ProgressBoard`.
 
-![The three core classes of the `d2l` training harness: `DataModule` supplies training and validation minibatches, `Module` defines the model, loss, and optimizer, and `Trainer` drives the training and validation loops.](../img/oo-design.svg)
+![The three core classes of the `d2l` training harness: `DataModule` supplies training and validation minibatches, `Module` defines the model, loss, and optimizer, and `Trainer` drives the training and validation loops.](../img/mdl-linreg-oo-classes.svg)
 :label:`fig_oo_design`
 
 ```{.python .input #oo-design-object-oriented-design-for-implementation}

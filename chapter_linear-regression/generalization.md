@@ -117,6 +117,13 @@ def features(x, d):
     return x.reshape(-1, 1) ** np.arange(d + 1)
 
 def fit_degree(x, y, d):
+    """Least-squares weights of the degree-d polynomial fitted to (x, y)."""
+    return np.linalg.lstsq(features(x, d), y, rcond=None)[0]
+
+def mse(w, x, y):
+    """Mean squared error of the polynomial with weights w on (x, y)."""
+    return ((features(x, len(w) - 1) @ w - y) ** 2).mean()
+```
 
 Look at the three fitted curves and their losses:
 - **Degree $k = 1$ (underfitting):** A straight line cannot bend to follow $\cos(\frac{3\pi}{2}x)$; both training loss and validation loss are stuck around $0.2$–$0.3$, five times the $0.045$ noise floor.
@@ -317,8 +324,8 @@ d2l.plt.legend(['test', '5-fold cross-validation'], ncol=2, frameon=False,
 
 Without ever glancing at the test set, repeated 5-fold cross-validation reliably
 locates the bottom of the test-error bowl—usually selecting degree $3$, or
-occasionally a nearby degree whose test error is nearly indistinguishable (see
-exercise :exref:`ex_generalization-cv-reliability`). Near the minimum, the two
+occasionally a nearby degree whose test error is nearly indistinguishable.
+Near the minimum, the two
 curves track within a small factor, with cross-validation naturally a bit noisier
 since it averages over $20$ points instead of $1{,}000$. At high degrees, notice
 why cross-validation shoots up even earlier and higher than test error: each

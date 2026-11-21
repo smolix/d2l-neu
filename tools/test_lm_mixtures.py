@@ -345,7 +345,7 @@ class RegressionTest(unittest.TestCase):
         self.assertLessEqual(v, best + 1e-9)
 
     def test_run_design(self):
-        for k, n in (('t1', 40), ('t2', 48)):
+        for k, n in (('t1', 41), ('t2', 49)):
             c = d2l.MIX_CONFIGS[k]
             specs = d2l.mix_run_specs(c)
             self.assertEqual(len(specs), n)
@@ -435,10 +435,10 @@ class CampaignTest(unittest.TestCase):
             self.assertLessEqual(smoke['resume_fp32_max_diff'], 1e-6)
             self.assertTrue(smoke['resume_bf16_ok'])
             self.assertEqual(smoke['resume_bf16_max_diff'], 0.0)  # CPU
-            self.assertEqual(smoke['campaign_runs'], 48)
+            self.assertEqual(smoke['campaign_runs'], 49)
             self.assertFalse(smoke['campaign_compile'])  # no compile on CPU
             self.assertGreater(smoke['predicted_hours_here'], 0)
-            runs = 'lr-5e-04,lr-1e-03,lr-2e-03,pure-web'
+            runs = 'lr-5e-04,lr-1e-03,lr-2e-03,lr-4e-03,pure-web'
             r = subprocess.run(base + ['--runs', runs], env=env,
                                capture_output=True, text=True, timeout=900)
             self.assertEqual(r.returncode, 0, r.stderr[-3000:])

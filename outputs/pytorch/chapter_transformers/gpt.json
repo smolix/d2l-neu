@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:aa5475be0e70f6ed292457887910d2c94ce1ab2370e5c4d08b619f736ec382f0",
+    "d2l_lib_fingerprint": "sha256:4228d6ef4e91aac5f2c3a1f63d096032a4ffad6e58828ae2af0423d3336aa314",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -28,35 +28,8 @@
       "kind": "text",
       "outputs": []
     },
-    "gpt-from-blocks-to-a-language-model-2": {
-      "code_fingerprint": "sha256:bc3627817e4556216c9c2bd137c983737e56035ad2decbfd1230c3eb5fe54153",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "4.79M parameters; initial std: W_qkv 0.0200, W_o 0.0058\n"
-        }
-      ]
-    },
-    "gpt-from-blocks-to-a-language-model-3": {
-      "code_fingerprint": "sha256:8df9439a331a6a982a16e9c9a963bbd0172c3d66e518f867a6dd607ee135204f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "scaled=False: mean square after 8/16/32 blocks: 0.0583/0.1435/0.3022\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "scaled=True: mean square after 8/16/32 blocks: 0.0026/0.0033/0.0033\n"
-        }
-      ]
-    },
     "gpt-training-the-model-1": {
-      "code_fingerprint": "sha256:944a83a0c98d8efa364c865e2284545a096cfff82efa98072c7fed2f61dd2d44",
+      "code_fingerprint": "sha256:3617aa62e0273f1d1ecb36bd564d3b43784325cc74de08cbc43e0d6768444ebe",
       "kind": "text",
       "outputs": [
         {
@@ -66,36 +39,63 @@
         }
       ]
     },
-    "gpt-training-the-model-2": {
-      "code_fingerprint": "sha256:e5e384861e7605418fad99d5e31a761970d8171b012fe1ef5da323dc8029e6ce",
+    "gpt-training-the-model-3": {
+      "code_fingerprint": "sha256:d0bf9817b2ac5df86b5d94604fe0a69e2e67f83f9bbacdb44419dc651f5a95aa",
       "kind": "text",
       "outputs": []
     },
-    "gpt-training-the-model-3": {
-      "code_fingerprint": "sha256:5f0c828d72284cea67652cb83d5d702f783e654ba9b6f0cac6d9d91254ef3b12",
+    "gpt-the-objective": {
+      "code_fingerprint": "sha256:3c65b1b6cd1da5761222d88acc64e5a667eee7aa1a8cbeb1c15927a1ec497ba0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X[0]: 'the European lobster ) a'\nY[0]: 'he European lobster ) an'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[1 0 0 0 0]\n [1 1 0 0 0]\n [1 1 1 0 0]\n [1 1 1 1 0]\n [1 1 1 1 1]]\n"
+        }
+      ]
+    },
+    "gpt-from-blocks-to-a-language-model-2": {
+      "code_fingerprint": "sha256:b21015ec233bb981d4fcf023ff5676ac4cbc330dca5711f108da96c5e90b15a2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4.79M parameters; loss before training 5.71 nats per byte, log 256 = 5.55\n"
+        }
+      ]
+    },
+    "gpt-training-the-model-2": {
+      "code_fingerprint": "sha256:3cacb379696a43e65757cd41abc1ff1892e514450f449e3a5d9a803473bc2b12",
       "kind": "text",
       "outputs": []
     },
     "gpt-training-the-modern-configuration": {
-      "code_fingerprint": "sha256:e7827b48a3c68fadf9029784648b68b2ffa02f6642a4b6801352694ed52b2c00",
+      "code_fingerprint": "sha256:1d92490d35817c9f21e517be8bc1930c541628c2d8b0c1e5e2ba476b7897963b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.36, validation 1.34 nats per byte\n"
+          "text": "step 1000: train 1.36, validation 1.34 nats per byte; 14 s of training\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 24623,
-          "sha256": "sha256:864a2947577a0431c3d0133e1e9ffc27cb252ede75c7bbfd99dee7a0e0991a27"
+          "bytes": 24620,
+          "sha256": "sha256:577140b8b5167d450b8d17f1443fc5704e4ca11831836c23161a70d85c0cdbdd"
         }
       ]
     },
     "gpt-training-the-model-4": {
-      "code_fingerprint": "sha256:8fdd64836cf758798298b1cd506dce49b14fd757830a8f0e140f36a247bc04a7",
+      "code_fingerprint": "sha256:b03b4b500a05f3af059c3b2a1bfd6a9c6216d6a00b4dc89aad497c3ce1c7567c",
       "kind": "text",
       "outputs": [
         {
@@ -105,55 +105,86 @@
         }
       ]
     },
-    "gpt-breaking-it-with-one-flag": {
-      "code_fingerprint": "sha256:d157e7ec34c931c8f6bfc9551cec957ee6d741ad96b340890abe0383e19ab5b4",
+    "gpt-run-to-run-spread": {
+      "code_fingerprint": "sha256:2f1c2668788edd7e7c021fd53063a57ff658be0734df5783e60540e913097c21",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True, warmup=False: loss at step 100/200/400/800: 2.66/2.19/1.80/1.54\n"
+          "text": "swiglu (4,788,992 parameters): validation 1.343, 1.345, 1.345; mean 1.345, range 0.002\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=False: loss at step 100/200/400/800: 3.17/3.18/3.17/3.17\n"
+          "text": "  gelu (4,787,456 parameters): validation 1.397, 1.402, 1.400; mean 1.400, range 0.004\n"
+        }
+      ]
+    },
+    "gpt-against-a-recurrent-network-1": {
+      "code_fingerprint": "sha256:2868944997b9969ee181296a06921c3edeb5ab7570ca594bfa7b0885d1fb02f5",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpt-against-a-recurrent-network": {
+      "code_fingerprint": "sha256:4012484890f645071e0ff9c5ff4b55c4c1b8dd5c721600d344e3e85c9719dd72",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RNN (4,739,072 parameters), peak rate 0.001: validation 1.467, 1.470\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=False, warmup=True: loss at step 100/200/400/800: 3.34/2.54/1.89/1.55\n"
+          "text": "RNN (4,739,072 parameters), peak rate 0.002: validation 1.416, 1.406\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RNN (4,739,072 parameters), peak rate 0.004: validation 1.543, 1.656\nvalidation loss at positions 0, 1, 4, 16, 64, 127\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     GPT: 2.47 2.16 1.49 1.35 1.32 1.31; 14.3 ms per training step\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "best RNN: 2.49 2.14 1.52 1.40 1.39 1.38; 10.3 ms per training step\n"
         }
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:b471bf6d570bac3c526e3466748c653b8cc148a92cb425e9591bd71dc479d028",
+      "code_fingerprint": "sha256:d4ee9237ef3d6804e7ce18a1473241d1b6240e9b2da0fa0559f3ea70c8fa8c67",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:663a4bed1c758e9dbd2b5374604342f1a082932d0a597a15c65ee0aedb7d9782",
+      "code_fingerprint": "sha256:1fde2cba4bc8b2e8f3ee9dfcbdbcf5f9750634e5b9579c0d4fb0b6c271a932aa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the analysis to wound never the\n    transformation and withdrawing second gland steal confirmation of me who\n    resulted to that ad'\n"
+          "text": "T=1.0, top_k=None: \"The history of the Posite Entertainment 's Stadium . \\n\n    A gacors lide only also totalline Tendithology , the Intelligence\n    Toldwiger , and se\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the program was traded into the publication\n    of the period for an initial touchdown . The master for the city was the\n    plan an'\n"
+          "text": "T=0.7, top_k=8: 'The history of the season . \\n = = Morgan assistant = = \\n\n    = = Responsible = = \\n The song is a standard in compositional spices in\n    the 1948 .'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'The history of the Ia�vrounLAIJYu cyrlh�ckyogu 56�\\x12\n    �ߧ��cu�݁X����Oļ敥q���\\x1bӭ\\x02��ke E.75091 Ť6st54 waW�swirj* o.\n    3��쬭llbocusujg adB V'\n"
+          "text": "T=2.0, top_k=None: 'The history of the 榔\n    Itte�DF-@e866bula\\x05бX����5Ecu�ys�urul7oas� ����г\\x0c���ّ�\\x0f�1 ) is\n    ass\\x13 7 m qdon Rait 1 ce�katiokqu1 kgv�\\x02ٷ� JCCs�\\n��'\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:d6e8aea2927eff35d2aa3e278a9dd75f04a2197c16f5daaa0cb5265df4f1d716",
+      "code_fingerprint": "sha256:0a661e4a3896034bf601a9162920f8486e51f896ed0a0d64a923547dcfe8e894",
       "kind": "text",
       "outputs": [
         {
@@ -164,7 +195,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:00abffcce036db668c4443d64c54e8b90608fd8a667a49b233864d46454b4922",
+      "code_fingerprint": "sha256:273ac0a69c41f8bf92e00e1e20064763d95b3ee12ec6ff0a767290c0a6e2a589",
       "kind": "text",
       "outputs": [
         {
@@ -175,7 +206,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:0bd41c6f125559165b8bf6ca2201b80281a789074045238f3b813a90f345cade",
+      "code_fingerprint": "sha256:e47733fb960f16535e9e89f7d79e2a568a89dcae0258c7ec57e2782c359e2488",
       "kind": "text",
       "outputs": [
         {
@@ -186,24 +217,24 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:9928b7cb804b2817a1acfe55a02ff45ac945d23709a08f467da5f277a19967ce",
+      "code_fingerprint": "sha256:e6f03ccb5bd5e49b8dfb932adb446b6ae84dff3b09ebf33689acbfa944c88df1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Alan Turing theorized that computers would one day become the most powerful\n    machines on the planet.\n\nThe computer is a machine that\n"
+          "text": "Alan Turing theorized that computers would one day become the most powerful\n    machines on the planet.\n\nThe computer is a computer that\n"
         }
       ]
     },
     "gpt-loading-gpt-2-5": {
-      "code_fingerprint": "sha256:1914c4f46e73007429e0d9bf063cc01827623cb3c5b3b92f0c343ce8f85071f1",
+      "code_fingerprint": "sha256:3ffa073203c0371ef973882241d988df7fbe88960f8f097d9c53c527951985e2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is that every single one of them\n    needs to be written. But that is not always the case. If you want to\n    write an excellent deep learning textbook, it's a good idea to start by\n    writing two\n"
+          "text": "The secret of a good deep learning textbook is that it is easy to learn. And\n    that's what I have to do this year. I'm writing a book called \"Beyond\n    the Machine.\" I'm going to go over this one, and I\n"
         }
       ]
     }

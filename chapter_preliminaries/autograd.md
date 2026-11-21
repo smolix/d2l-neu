@@ -6,36 +6,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Automatic Differentiation
 :label:`sec_autograd`
 
-In :numref:`sec_calculus` we computed the gradient of a loss by hand, and it
-took some care even for a model with two parameters. A deep network has
-millions of parameters spread over dozens of layers, and every change to its
-design would mean deriving and coding its gradient again. Can the computer
-do this work for us, given nothing more than the code that computes the
-loss?
-
-Recall the line model of :numref:`sec_calculus`, whose loss is the squared
-norm of the errors $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ on three
-examples. At $\mathbf{w} = (1, 0)$ we found the gradient
-$\nabla_{\mathbf{w}} L = \mathbf{X}^\top (2\mathbf{r}) = (2, 4)$, but only
-after deriving a Jacobian and coding the product with it ourselves. A deep
-network would ask the same of us for every layer.
-
-Luckily, deep learning frameworks do this work for us, and the idea behind
-it is simple. While our code computes the loss, the framework records each
-operation that it executes, such as a matrix–vector product or a sum, along
-with the inputs of the operation. The derivative of every such operation is
-built into the framework. Once the loss is known, the framework walks through the record backward, from the loss to
-the parameters, and applies the chain rule at each operation, as we did by
-hand for the line model. This procedure is called *automatic
-differentiation*, or *autograd* for short. It returns the derivative of the
-computation up to floating-point rounding, at a small multiple of the cost
-of computing the loss, whatever the number of parameters.
-
-We first let the framework compute the gradient of the line model and
-compare it with $(2, 4)$. We then control which operations are recorded and
-differentiate programs with loops and branches. The end of the section goes
-further than the next chapters need: it explains why frameworks walk the
-record backward rather than forward.
+In :numref:`sec_calculus`, deriving the gradient $\nabla_{\mathbf{w}} L = \mathbf{X}^\top (2\mathbf{r}) = (2, 4)$ of our two-parameter line model by hand was straightforward, but doing so across dozens of layers and millions of parameters would be tedious and error-prone. Modern deep learning frameworks automate this via *automatic differentiation* (*autograd*): as the forward pass evaluates the loss, the framework records the sequence of elementary operations and their inputs in a *computational graph*, and then traverses that graph backward (*backpropagation*) to apply the chain rule automatically at a small constant multiple of the forward cost.
 
 ```{.python .input #autograd-automatic-differentiation}
 %%tab mxnet
@@ -63,12 +34,7 @@ from jax import numpy as jnp
 
 ### The Forward Pass
 
-We set up the line model with the framework's tensors. Each row
-$(1, \textrm{input})$ of $\mathbf{X}$ describes one of the three examples,
-$\mathbf{y}$ holds their labels, and the parameters start at
-$\mathbf{w} = (1, 0)$. The function `loss` computes
-$L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$. It is the forward
-pass only: no derivative appears anywhere in the code.
+We first set up the line model $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ at $\mathbf{w} = (1, 0)$ from :numref:`sec_calculus` using framework tensors, writing only the forward pass:
 
 ```{.python .input #autograd-a-simple-function-1}
 %%tab mxnet
@@ -111,35 +77,23 @@ def loss(w):
 ```
 
 :begin_tab:`mxnet, pytorch, tensorflow`
-Recording costs memory and time, so the framework records only the
-operations whose results depend on tensors that we mark as needing a
-gradient. We mark $\mathbf{w}$.
+Because recording operations and saving intermediate activations consumes memory, frameworks track only operations depending on tensors explicitly marked for gradients.
 :end_tab:
 
 :begin_tab:`mxnet`
-`attach_grad` marks `w` and allocates the array `w.grad`, in which the
-backward pass will store the gradient. It starts at zero. MXNet records
-operations only inside an `autograd.record()` scope.
+`w.attach_grad()` marks `w` and allocates `w.grad` (initialized to zeros); operations are recorded inside `with autograd.record():`.
 :end_tab:
 
 :begin_tab:`pytorch`
-`requires_grad_(True)` marks `w`; the trailing underscore is PyTorch's
-convention for a method that changes its tensor in place. From now on every
-operation on `w` is recorded, and the backward pass will store the gradient
-in the attribute `w.grad`.
+`w.requires_grad_(True)` marks `w` in place so PyTorch records operations involving `w` and stores the resulting gradient in `w.grad`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-A `tf.GradientTape` records the operations executed inside its `with` block.
-It marks trainable `tf.Variable`s automatically, so we turn `w` into one. An
-ordinary tensor is marked only by a call to the tape's `watch` method.
+A `tf.GradientTape` records operations executed inside its `with` block; wrapping `w` in `tf.Variable` causes the tape to track it automatically.
 :end_tab:
 
 :begin_tab:`jax`
-JAX works differently. It records operations only while a transformation
-such as `jax.grad` runs a function: `jax.grad` turns a Python function such
-as `loss` into a new function that computes its gradient. There is nothing
-to mark, and the forward pass is an ordinary call.
+JAX is purely functional: tensors carry no mutable gradient buffers, and `jax.grad(loss)` transforms `loss` into a function that computes its gradient.
 :end_tab:
 
 ```{.python .input #autograd-a-simple-function-2}
@@ -157,8 +111,6 @@ w.requires_grad_(True)
 %%tab tensorflow
 w = tf.Variable(w)
 ```
-
-We now run the forward pass.
 
 ```{.python .input #autograd-a-simple-function-3}
 %%tab mxnet
@@ -186,40 +138,28 @@ loss(w)
 ```
 
 :begin_tab:`pytorch`
-The loss carries `grad_fn=<SumBackward0>`: it remembers the operation that
-produced it, the last one in the record.
+Notice `grad_fn=<SumBackward0>` on `L`, recording the final operation in the computational graph.
 :end_tab:
 
-The record forms a *computational graph* (:numref:`fig_autograd_graph`). Its
-nodes are the values computed along the way, from the parameters to the
-loss, and an edge runs from each input of an operation to its result. The
-framework records operations at the level at which it knows their
-derivatives, so the loss of the line model becomes four operations: a
-matrix–vector product, the subtraction of the labels, an elementwise square,
-and a sum.
+The recorded trace forms the *computational graph* shown in :numref:`fig_autograd_graph`, breaking the loss into four primitive operations: $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w}$, $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y}$, $\mathbf{s} = \mathbf{r} \odot \mathbf{r}$, and $L = \sum_i s_i$.
 
 ![The computational graph of $L = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ at $\mathbf{w} = (1, 0)$, with one node for $\mathbf{w}$ and for each value computed from it; the constants $\mathbf{X}$ and $\mathbf{y}$ are not drawn, and $\mathbf{r} \odot \mathbf{r}$ is the elementwise square. Each node shows its value (black) and the gradient of $L$ with respect to it (red). The forward pass (blue) runs from left to right; the backward pass (red) starts from $1$ at $L$ and applies the local rule of each operation, from right to left.](../img/autograd-comp-graph.svg)
 :label:`fig_autograd_graph`
 
 ### The Backward Pass
 
-We now ask the framework for the gradient of the loss at $\mathbf{w}$ and
-compare it with the $(2, 4)$ that we derived by hand.
+Triggering the backward pass propagates sensitivities from $\partial L/\partial L = 1$ at the output back to $\mathbf{w}$ through each node's local derivative rule ($\nabla_{\mathbf{s}} L = \mathbf{1} \to \nabla_{\mathbf{r}} L = 2\mathbf{r} \to \nabla_{\hat{\mathbf{y}}} L = 2\mathbf{r} \to \nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r})$), reproducing $(2, 4)$:
 
 :begin_tab:`mxnet, pytorch`
-Calling `backward` on the loss runs the backward pass and stores the
-gradient in `w.grad`.
+`L.backward()` runs the backward pass and stores the gradient in `w.grad`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The tape's `gradient` method runs the backward pass over the recorded
-operations and returns the gradient of its first argument with respect to its
-second.
+`t.gradient(L, w)` computes the gradient of `L` with respect to `w` from the tape `t`.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.grad(loss)` is a function that returns the gradient of `loss`, and we
-call it at `w`.
+`jax.grad(loss)(w)` evaluates the gradient function at `w`.
 :end_tab:
 
 ```{.python .input #autograd-a-simple-function-4}
@@ -244,33 +184,14 @@ t.gradient(L, w)
 jax.grad(loss)(w)
 ```
 
-The result is $(2, 4)$, as it should be. How did the framework arrive at it
-without being told the formula
-$2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$? By hand we multiplied
-by two factors, $2\mathbf{r}$ and $\mathbf{X}^\top$. The backward pass of
-:numref:`fig_autograd_graph` produces them from four local rules, one per
-operation. It starts from the derivative $1$ of $L$ with respect to itself.
-The sum copies this gradient to each of its three inputs, the square
-multiplies it entry by entry by $2\mathbf{r}$, subtracting the constant
-labels leaves it unchanged, and the matrix–vector product multiplies it by
-$\mathbf{X}^\top$. Each rule uses only the local derivative of one operation
-and values saved during the forward pass, here $\mathbf{r}$ and
-$\mathbf{X}$. This is why training needs more memory than prediction: the
-framework must keep such values until the backward pass has used them.
+Because local backward rules require intermediate activations from the forward pass (such as $\mathbf{r}$ and $\mathbf{X}$), training consumes substantially more memory than inference.
 
 ### Gradient Accumulation
 
-Training computes a new gradient at every step, so it matters what happens
-to the gradient of the previous step.
-
-:begin_tab:`mxnet, pytorch, tensorflow`
-To find out, we run the forward and the backward pass a second time, at the
-same $\mathbf{w}$.
-:end_tab:
+What happens when we run a second backward pass at the same parameter vector $\mathbf{w}$?
 
 :begin_tab:`jax`
-`jax.grad` returns a new array at every call and keeps nothing between calls,
-so there is no stored gradient that could accumulate.
+Because `jax.grad` returns a fresh array on every call and stores no state on `w`, gradients never accumulate implicitly.
 :end_tab:
 
 ```{.python .input #autograd-a-simple-function-6}
@@ -296,64 +217,35 @@ t.gradient(L, w)  # a new tensor; nothing is stored in w
 ```
 
 :begin_tab:`mxnet`
-By default, MXNet overwrites `w.grad` with the new gradient, so it holds
-$(2, 4)$ again.
+MXNet overwrites `w.grad` on each new backward pass by default, returning $(2, 4)$.
 :end_tab:
 
 :begin_tab:`pytorch`
-The answer is $(4, 8)$, twice the gradient: PyTorch added the new gradient
-to the one already stored in `w.grad`. Accumulation is useful when a loss is
-a sum of parts whose gradients are computed separately, since calling
-`backward` on each part adds up their gradients. A training step that needs a
-fresh gradient must therefore first reset `w.grad`, for instance with
-`w.grad.zero_()`. A forgotten reset is a common bug, and no error message
-reveals it.
+In PyTorch, `w.grad` becomes $(4, 8)$: PyTorch *adds* each new gradient into `w.grad` (useful when accumulating gradients over micro-batches or multiple losses). In a standard training loop, always clear the buffer first via `w.grad.zero_()`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-A tape returns the gradient as a new tensor and stores nothing in `w`, so we
-get $(2, 4)$ again. A tape can compute gradients only once, unless it is
-created with `persistent=True`.
+`t.gradient(L, w)` returns a fresh tensor without mutating `w`, giving $(2, 4)$ again.
 :end_tab:
 
 ### Vector-Valued Functions
 
-So far the function that we differentiated returned a scalar. Often it
-returns a vector, for instance the loss of each example in a minibatch,
-before the losses are added up. What should the backward pass return then?
-It can differentiate only one number, so we have to say which. The choice
-that frameworks offer is a weighted sum
-$\mathbf{v}^\top \mathbf{u} = \sum_j v_j u_j$ of the outputs $\mathbf{u}$,
-with a vector of weights $\mathbf{v}$ that we supply. With
-$\mathbf{v} = \mathbf{1}$, the vector of all ones, this is the plain sum of
-the outputs, and for per-example losses that is what we want: the gradient
-of the total loss. Let us try it on the per-example squared errors $r_i^2$
-of the line model, whose sum is $L$.
+When an operation produces a vector of $m$ outputs $\mathbf{u} \in \mathbb{R}^m$ from $n$ inputs $\mathbf{x} \in \mathbb{R}^n$ with $m \times n$ Jacobian $\mathbf{J}$, a backward pass seeded with a weight vector $\mathbf{v} \in \mathbb{R}^m$ computes the transposed *vector--Jacobian product* $\mathbf{J}^\top \mathbf{v} = \nabla_{\mathbf{x}}(\mathbf{v}^\top \mathbf{u})$ without materializing $\mathbf{J}$. Passing $\mathbf{v} = \mathbf{1}$ on the per-example squared errors $(r_1^2, r_2^2, r_3^2)$ differentiates their sum:
 
 :begin_tab:`mxnet`
-`backward` takes $\mathbf{v}$ as its argument. Without one, it uses
-$\mathbf{v} = \mathbf{1}$ for an array that is not a scalar.
+`losses.backward(v)` accepts $\mathbf{v}$ (defaulting to $\mathbf{1}$ if omitted).
 :end_tab:
 
 :begin_tab:`pytorch`
-PyTorch does not choose $\mathbf{v}$ for us: calling `backward` on a tensor
-that is not a scalar raises an error unless we pass $\mathbf{v}$ as the
-argument `gradient`. The name reflects the chain rule, since $\mathbf{v}$ is
-the gradient arriving from the rest of a larger computation. Passing a
-vector of ones is the same as calling `losses.sum().backward()`.
+Calling `backward()` on a non-scalar tensor requires passing $\mathbf{v}$ explicitly via `gradient=torch.ones(3)` (equivalent to `losses.sum().backward()`).
 :end_tab:
 
 :begin_tab:`tensorflow`
-The tape's `gradient` method takes $\mathbf{v}$ as the argument
-`output_gradients`. Without it, `gradient` uses $\mathbf{v} = \mathbf{1}$
-for a tensor that is not a scalar.
+`t.gradient` accepts $\mathbf{v}$ via `output_gradients` (defaulting to $\mathbf{1}$ if omitted).
 :end_tab:
 
 :begin_tab:`jax`
-`jax.grad` accepts only functions with a scalar output. `jax.vjp(losses, w)`
-returns the value of `losses` at `w` and a function that maps $\mathbf{v}$
-to the gradient of the weighted sum. That function returns a tuple with one
-entry per argument of `losses`, here only `w`.
+`jax.vjp(losses, w)` returns the forward value and a function mapping $\mathbf{v}$ to $(\mathbf{J}^\top\mathbf{v},)$.
 :end_tab:
 
 ```{.python .input #autograd-backward-for-non-scalar-variables}
@@ -388,67 +280,25 @@ _, vjp = jax.vjp(losses, w)  # vjp maps v to J^T v
 vjp(jnp.ones(3))[0]  # v = 1
 ```
 
-The result is $(2, 4)$, the gradient of the total loss.
-
-It is instructive to write this in the terms of :numref:`sec_calculus`. Let
-$\mathbf{u}$ consist of $m$ values computed from $n$ inputs $\mathbf{x}$.
-Its derivative is the $m \times n$ Jacobian $\mathbf{J}$ with entries
-$J_{ji} = \partial u_j / \partial x_i$, whose row $j$ is the transposed
-gradient of $u_j$. The backward pass started from $\mathbf{v}$ returns
-
-$$\mathbf{J}^\top \mathbf{v} = \nabla_{\mathbf{x}} \left(\mathbf{v}^\top \mathbf{u}\right) = \sum_{j=1}^m v_j \nabla_{\mathbf{x}} u_j,$$
-
-and it does so without ever computing $\mathbf{J}$ itself. This is the
-chain rule $\nabla_{\mathbf{x}} z = \mathbf{J}^\top \nabla_{\mathbf{u}} z$
-for a scalar $z$ computed from $\mathbf{u}$ whose gradient
-$\nabla_{\mathbf{u}} z$ is $\mathbf{v}$. Choosing
-$\mathbf{v} = \mathbf{e}_j$, the coordinate vector with a $1$ in position
-$j$ and $0$ elsewhere (:numref:`sec_linear-algebra`), makes the backward pass
-return the gradient of $u_j$ alone, which is row $j$ of the Jacobian.
-:numref:`subsec_autograd_fwd_rev` uses this to compute whole Jacobians.
-
 ## Controlling the Graph
-
-Frameworks record every operation on a marked tensor, and sometimes that is
-more than we want. A value computed from the parameters may need to act as a
-constant, and some computations, such as the update of the parameters,
-should not be recorded at all.
 
 ### Detaching Values
 
-To *detach* a value is to keep the value but cut its connection to the
-parameters, so that the backward pass treats it as a constant. A small
-example shows what this does to a gradient. Let $u = x^2$ and
-$z = ux$ for each entry $x$ of $\mathbf{x} = (0, 1, 2, 3)$, so that
-$z = x^3$. In the graph of :numref:`fig_autograd_detach`(a), $x$ reaches $z$
-along two paths, through $u$ and directly. The chain rule adds their
-contributions, $x \cdot 2x$ and $u$, to give $\partial z / \partial x =
-3x^2$. If we replace $u$ by a detached copy $c$, which has the same value
-but no history, the path through $u$ disappears
-(:numref:`fig_autograd_detach`(b)), and $\partial z / \partial x = c = x^2$.
+*Detaching* a tensor creates a view or copy with the same numerical values but no link to its ancestors in the computational graph, so backpropagation treats it as a constant. Consider $u = x^2$ and $z = u x$ on $\mathbf{x} = (0, 1, 2, 3)$ (:numref:`fig_autograd_detach`): when $u$ is attached, gradient flows along both paths to give $\partial z/\partial x = 3x^2$; when $u$ is detached to $c$, differentiating $z = c x$ treats $c$ as a constant and gives $\partial z/\partial x = c = x^2$ (essential whenever a network computes its own bootstrap target, as in Q-learning, :numref:`sec_qlearning`).
 
 ![The product $z = ux$ with $u = x^2$, (a) attached and (b) detached. Blue arrows are operations of the forward pass; red arrows show the backward pass, labeled with the local derivatives it multiplies by. Detaching $u$ creates a constant $c$ with the same value and no connection to $x$.](../img/autograd-detach.svg)
 :label:`fig_autograd_detach`
 
-:begin_tab:`mxnet`
-`u.detach()` returns a new array with the values of `u` and no history.
-:end_tab:
-
-:begin_tab:`pytorch`
-`u.detach()` returns a new tensor with the values of `u` and no history.
+:begin_tab:`mxnet, pytorch`
+`u.detach()` returns a tensor sharing `u`'s values but stripped of its history.
 :end_tab:
 
 :begin_tab:`tensorflow`
-`tf.stop_gradient(u)` returns the values of `u` in the forward pass and lets
-no gradient through in the backward pass.
+`tf.stop_gradient(u)` passes `u` forward while blocking backward gradients.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.lax.stop_gradient(u)` returns the values of `u` and lets no gradient
-through. Since `jax.grad` differentiates a function, the call belongs inside
-the function that we differentiate. A value computed outside that function is
-a constant for `jax.grad` anyway, so `stop_gradient` would have no effect
-there.
+`jax.lax.stop_gradient(u)` blocks gradients inside a differentiated function.
 :end_tab:
 
 ```{.python .input #autograd-detaching-computation-1}
@@ -495,13 +345,6 @@ def z(x):
 jax.grad(lambda x: z(x).sum())(x)
 ```
 
-The gradient is $(0, 1, 4, 9)$, which is $c = x^2$. Without the detach,
-both paths carry gradient.
-
-:begin_tab:`pytorch`
-Detaching did not change `u`, which keeps its history, so we can reuse it.
-:end_tab:
-
 ```{.python .input #autograd-detaching-computation-2}
 %%tab mxnet
 with autograd.record():
@@ -532,52 +375,24 @@ t.gradient(z, x)
 jax.grad(lambda x: (x * x * x).sum())(x)
 ```
 
-The gradient is now $3x^2 = (0, 3, 12, 27)$, although $z$ has the same
-value $(0, 1, 8, 27)$ in both computations. Detaching changes the
-graph, not the values.
-
-The typical use is a target that the model computes itself. Q-learning
-(:numref:`sec_qlearning`), for instance, moves a prediction toward a target
-built from the model's own predictions. The target must then act as a
-constant, or else an update could lower the loss by moving the target toward
-the prediction, which improves nothing.
-
 ### Disabling Gradient Tracking
 
-When we need only values, as when a trained model makes predictions,
-recording wastes time and memory, and we switch it off. Updating the
-parameters is another such computation: the step
-$\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w})$ is not part
-of any loss that we want to differentiate. We take one step of gradient
-descent on the line model with the learning rate $\eta = 0.1$.
+During validation, inference, or parameter updates $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w})$, we disable gradient tracking so those operations are not recorded on the loss graph:
 
 :begin_tab:`mxnet`
-MXNet records only inside `autograd.record()`, so code outside such a scope
-is not recorded; inside one, `autograd.pause()` suspends recording. Writing
-the update as `w[:] = ...` changes the values of `w` in place and keeps the
-gradient buffer attached to `w`. The buffer holds the gradient $(2, 4)$
-computed above.
+Code outside `autograd.record()` runs unrecorded; `w[:] = ...` updates `w` in place while keeping `w.grad`.
 :end_tab:
 
 :begin_tab:`pytorch`
-Operations inside a `torch.no_grad()` block are not recorded. The update must
-happen inside such a block: while it records, PyTorch does not allow an
-in-place change of a *leaf tensor* that requires gradients, that is, of a
-tensor such as `w` that we marked ourselves and that is not the result of a
-recorded operation. The gradient in `w.grad` is the $(2, 4)$ computed above.
+`with torch.no_grad():` disables tracking (required when modifying a leaf tensor with `requires_grad=True` in place).
 :end_tab:
 
 :begin_tab:`tensorflow`
-A tape records only the operations inside its `with` block, so code outside
-every tape is not recorded; inside one, the tape's `stop_recording` method
-suspends recording. A variable is changed in place by methods such as
-`assign_sub`, which subtracts its argument.
+Code outside `tf.GradientTape` runs unrecorded; `w.assign_sub(...)` updates `w` in place.
 :end_tab:
 
 :begin_tab:`jax`
-JAX records operations only while a transformation such as `jax.grad` runs,
-so the update is ordinary arithmetic. It creates a new array, since JAX
-arrays cannot be changed in place.
+Outside `jax.grad`, array arithmetic runs untraced.
 :end_tab:
 
 ```{.python .input #autograd-turning-off-gradient-tracking-1}
@@ -608,37 +423,14 @@ w = w - 0.1 * jax.grad(loss)(w)
 w, loss(w)
 ```
 
-The step moves $\mathbf{w}$ to $(0.8, -0.4)$ and lowers the loss from
-$1$ to $0.4$, the very numbers that we computed by hand in
-:numref:`sec_calculus`. Repeating
-this step is how the models of the next chapter are trained.
-
-:begin_tab:`pytorch`
-The loss computed inside the block has no `grad_fn`: it is not attached to
-any graph.
-:end_tab:
+As in :numref:`sec_calculus`, one step with $\eta = 0.1$ moves $\mathbf{w}$ from $(1, 0)$ to $(0.8, -0.4)$ and lowers the loss from $1$ to $0.4$.
 
 ## Differentiating Programs
-
-The loss of the line model is a fixed formula. Programs often are not: how
-many times a loop runs, or which branch an `if` statement takes, can depend
-on the data. Automatic differentiation handles such programs as they are,
-and, since the backward pass is itself a program, it can differentiate a
-derivative that it computed.
 
 ### Control Flow
 :label:`subsec_autograd_control_flow`
 
-A language model reads sentences of different lengths, so its computation
-runs for a different number of steps on each input. No single formula
-describes such a program for all inputs, but none is needed. The framework
-records the operations that actually run for the input at hand, and these
-form an ordinary computational graph that the backward pass can walk. Let us
-try this on a much smaller program with the same two features, a loop whose
-length and a branch whose choice both depend on the input. The function `f`
-below doubles its input until the norm of the result reaches 1000, and then
-returns the result, multiplied by 100 unless its entries have a positive
-sum.
+Because autograd records the sequence of elementary operations that *actually executed* on a given input, it differentiates Python functions containing data-dependent `while` loops and `if`/`else` branches directly:
 
 ```{.python .input #autograd-gradients-and-python-control-flow-1}
 %%tab mxnet
@@ -692,11 +484,7 @@ def f(a):
     return c
 ```
 
-For a scalar input $a$, the result is $f(a) = ka$ with a factor $k$ that
-depends on $a$: a power of two, multiplied by $100$ when $a$ is negative.
-Between the inputs at which $k$ changes, $f$ is linear, and its derivative
-is $k = f(a)/a$. We compute both sides of this equation at $a = 0.3$ and at
-$a = -0.75$.
+For scalar $a$, `f(a) = k * a` is piecewise linear with slope $k = f(a)/a$ ($k = 2^{12} = 4096$ at $a = 0.3$; $k = 100 \cdot 2^{11} = 204{,}800$ at $a = -0.75$, :numref:`fig_autograd_dynamic`), which autograd recovers exactly:
 
 ```{.python .input #autograd-gradients-and-python-control-flow-2}
 %%tab mxnet
@@ -738,138 +526,45 @@ for value in (0.3, -0.75):
           f'gradient = {jax.grad(f)(a):6.0f}')
 ```
 
-The two inputs record different graphs (:numref:`fig_autograd_dynamic`).
-For $a = 0.3$, the function doubles $12$ times and keeps the result, so
-$k = 2^{12} = 4096$. For $a = -0.75$, it doubles $11$ times and multiplies
-by $100$, so $k = 100 \cdot 2^{11} = 204{,}800$. In both cases the gradient
-equals $f(a)/a$.
-
 ![The graphs recorded by `f` for two inputs. For $a = 0.3$, `f` doubles $a$ $12$ times and the first branch runs; for $a = -0.75$, it doubles $a$ $11$ times and the second branch runs. Each graph is linear in $a$, with its own slope.](../img/autograd-dynamic.svg)
 :label:`fig_autograd_dynamic`
 
-Automatic differentiation differentiates the operations that ran, not the
-function that the program represents. Where the number of doublings
-changes, at $a = 1000/2^{12} \approx 0.24$ for instance, $f$ jumps and has
-no derivative. Autograd still returns the slope of the piece that ran. For
-`f`, the result is the derivative wherever the derivative exists, and a
-number with no meaning at the jumps.
-
-The backward pass is itself a sequence of tensor operations, so the
-framework can record it like any other program and differentiate its result
-once more. This gives second derivatives, such as the curvature of a loss
-along a direction, and the exercises estimate what they cost.
+Keep in mind that autograd differentiates the *executed trace* rather than the abstract mathematical function: at a threshold point where the loop count jumps, $f(a)$ is discontinuous, yet autograd returns the slope of whichever branch ran.
 
 ## Forward and Reverse Mode
 :label:`subsec_autograd_fwd_rev`
 
-The rest of this section can be skipped on a first reading. The reader in a
-hurry needs one result from it: a single backward pass yields the whole
-gradient of a loss.
-
-Every backward pass in this section started at an output and worked toward
-the inputs. The chain rule does not prescribe this order. It multiplies the
-local derivatives along each path through the graph, and the products can
-be formed from either end. *Reverse mode*, the backward pass that we have
-used, starts at an output. *Forward mode* starts at an input and carries
-derivatives forward together with the values. Both compute the same
-derivatives, at very different costs, and the costs decide which mode
-trains networks.
-
-### Rows and Columns of the Jacobian
-
-One traversal of the graph, in either mode, is called a *sweep*; a reverse
-sweep is a backward pass. Consider a function with $n$ inputs and $m$
-outputs and its $m \times n$ Jacobian $\mathbf{J}$. The two kinds of sweep
-cost about the same, a few evaluations of the function, and each one fills
-one row or one column of $\mathbf{J}$ (:numref:`fig_autograd_fwd_rev`).
-
-As we saw for vector-valued functions, a reverse sweep starts from a vector
-$\mathbf{v}$ at the outputs and returns $\mathbf{J}^\top \mathbf{v}$, the
-transpose of the *vector–Jacobian product* $\mathbf{v}^\top \mathbf{J}$.
-With $\mathbf{v} = \mathbf{e}_j$, this is row $j$ of $\mathbf{J}$: the
-gradient of output $j$ with respect to all inputs. Filling the whole
-Jacobian takes $m$ reverse sweeps, one per row.
-
-A forward sweep starts from a direction $\mathbf{d}$ at the inputs and
-returns the *Jacobian–vector product* $\mathbf{J}\mathbf{d}$, the rate at
-which all outputs change as the inputs move along $\mathbf{d}$. With
-$\mathbf{d} = \mathbf{e}_i$, this is column $i$: the derivatives of all
-outputs with respect to input $i$. Filling the whole Jacobian takes $n$
-forward sweeps, one per column.
+For a mapping $\mathbf{f} : \mathbb{R}^n \to \mathbb{R}^m$ with $m \times n$ Jacobian $\mathbf{J}$, the chain rule can be traversed in either direction (:numref:`fig_autograd_fwd_rev`; see :citet:`Wengert.1964,Linnainmaa.1970` and :numref:`sec_mdl-matrix-calculus-autodiff`):
+* **Reverse mode (vector--Jacobian product, VJP):** A reverse sweep seeded with $\mathbf{v} \in \mathbb{R}^m$ at the outputs computes $\mathbf{J}^\top \mathbf{v}$, extracting one *row* of $\mathbf{J}$ per sweep ($m$ sweeps for the full Jacobian).
+* **Forward mode (Jacobian--vector product, JVP):** A forward sweep seeded with a tangent $\mathbf{d} \in \mathbb{R}^n$ at the inputs propagates derivatives forward alongside values to compute $\mathbf{J}\mathbf{d}$, extracting one *column* of $\mathbf{J}$ per sweep ($n$ sweeps for the full Jacobian, with constant $2\times$ memory overhead).
 
 ![Two ways to fill the $m \times n$ Jacobian $\mathbf{J}$ of a function with $n$ inputs and $m$ outputs: (a) forward mode, $n$ sweeps in all; (b) reverse mode, $m$ sweeps in all.](../img/autograd-fwd-vs-rev.svg)
 :label:`fig_autograd_fwd_rev`
 
-For the errors of the line model,
-$\mathbf{r}(\mathbf{w}) = \mathbf{X}\mathbf{w} - \mathbf{y}$, the
-Jacobian is $\mathbf{X}$, with $m = 3$ outputs and $n = 2$ inputs, so
-reverse mode fills it in three sweeps and forward mode in two.
-
 :begin_tab:`mxnet`
-MXNet implements only reverse mode.
+MXNet implements reverse-mode automatic differentiation only.
 :end_tab:
 
 :begin_tab:`pytorch`
-`torch.func.vjp` and `torch.func.jvp` compute one reverse and one forward
-sweep, and `torch.func.jacrev` and `torch.func.jacfwd` assemble a whole
-Jacobian from such sweeps.
+PyTorch provides `torch.func.vjp`, `torch.func.jvp`, `torch.func.jacrev`, and `torch.func.jacfwd`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The tape's `jacobian` method assembles a Jacobian from reverse sweeps, and
-`tf.autodiff.ForwardAccumulator` computes forward sweeps.
+TensorFlow provides `GradientTape.jacobian` (reverse mode) and `tf.autodiff.ForwardAccumulator` (forward mode).
 :end_tab:
 
 :begin_tab:`jax`
-`jax.vjp` and `jax.jvp` compute one reverse and one forward sweep, and
-`jax.jacrev` and `jax.jacfwd` assemble a whole Jacobian from such sweeps.
+JAX provides `jax.vjp`, `jax.jvp`, `jax.jacrev`, and `jax.jacfwd`.
 :end_tab:
 
-### The Cost of a Gradient
-
-For a loss, the comparison is lopsided. A loss has a single output, $m = 1$,
-so its Jacobian is one row, the transposed gradient, with an entry for each
-of the $n$ parameters. Reverse mode computes the whole gradient in one
-sweep, at a small multiple of the cost of computing the loss, whatever the
-number of parameters. Forward mode needs one sweep per parameter, $n$ in
-all, which is no better than finite differences. For a network with
-$n = 10^8$ parameters, one reverse sweep does the work of $10^8$ forward
-sweeps. This is why deep learning frameworks train networks in reverse mode.
-Backpropagation is reverse mode applied to a neural network.
-
-Note, however, that reverse mode needs more memory than forward mode, since
-the forward values that the backward pass uses grow with the number of
-operations. Forward mode carries one derivative along with each value, so it
-needs about twice the memory of evaluating the function, however many
-operations there are. It is the better choice for functions with few inputs
-and many outputs.
-
-Both modes are older than deep learning. Forward mode goes back to
-:citet:`Wengert.1964`, and reverse mode was developed by
-:citet:`Linnainmaa.1970`. :numref:`sec_mdl-matrix-calculus-autodiff`
-derives both modes in detail, including their costs in time and memory.
-
-We have not yet looked inside the backward pass of a network;
-:numref:`sec_backprop` does so for a network with one hidden layer. Note
-also what a gradient cannot tell us. It shows how to lower the loss on the
-data at hand. Whether a lower loss reflects a pattern that will hold on new
-data, or only noise in the data we have, is a question of probability and
-statistics, the subject of the next section.
+A scalar loss function has $m = 1$ output and $n$ parameters, so its Jacobian is a single row $\nabla_{\mathbf{w}} L^\top$. Reverse mode (*backpropagation*) computes all $n$ components of the gradient in *one sweep*, whereas forward mode would require $n$ sweeps—explaining why reverse mode is universal for training deep networks.
 
 ## Summary
 
-Automatic differentiation computes the gradient of a loss from the code
-that computes the loss, without any derivative written by hand. The
-framework records the operations of the forward pass as a computational
-graph and then applies the chain rule backward through the graph, one
-operation at a time; for the line model this reproduces the gradient
-$(2, 4)$ that we derived by hand.
-Detaching a value turns it into a constant for the backward pass, and
-disabling recording keeps computations such as parameter updates out of the
-graph. Since the graph records what actually ran, loops and branches need no
-special treatment, and the backward pass can itself be differentiated.
-Reverse mode computes a whole gradient in one sweep, which is why it trains
-the networks of this book.
+* Automatic differentiation records the forward pass on a computational graph and applies the chain rule backward to compute exact gradients (reproducing $\nabla_{\mathbf{w}} L = (2, 4)$ on our line model).
+* Detaching an intermediate tensor severs its graph history so backpropagation treats it as a constant, while disabling gradient tracking keeps parameter updates and inference evaluations off the graph.
+* Because the graph records the operations that actually ran, autograd differentiates programs with dynamic loops and branches.
+* One forward sweep computes one column of an $m \times n$ Jacobian ($\mathbf{J}\mathbf{d}$), whereas one reverse sweep computes one row ($\mathbf{J}^\top\mathbf{v}$); for a scalar loss ($m = 1$), a single reverse sweep yields the entire gradient.
 
 ## Exercises
 
@@ -958,22 +653,6 @@ the networks of this book.
     1. Write a program that returns $x^2$ for every input $x$ but whose
        automatic derivative at $x = 0$ is $1$ instead of $0$. Explain why
        automatic differentiation cannot detect the difference.
-
-1. [code] **Manual tracing.** Let $f(x, y, z) = (x + y) \cdot z$ with
-   $x = -2$, $y = 5$, and $z = -4$.
-    1. Draw the computational graph of $f$ with one node per value,
-       compute the forward pass by hand, and trace
-       $\partial f/\partial x$, $\partial f/\partial y$, and
-       $\partial f/\partial z$ backward from $f$ through the multiplication
-       and addition nodes (reverse mode).
-    1. Compute the same three derivatives in forward mode, propagating the
-       derivative with respect to one input at a time from the inputs to
-       $f$. Compare the number of sweeps each mode needs and the
-       intermediate values each must keep in memory.
-    1. Verify every value using automatic differentiation.
-
-    *Adapted from Stanford CS231n,
-    ["An Exercise in Backpropagation"](https://cs231n.stanford.edu/slides/2026/section_2_backprop.pdf).*
 
 1. **Cost of second derivatives.** ● The counting argument in
    :numref:`subsec_autograd_fwd_rev` puts the cost of the gradient of a

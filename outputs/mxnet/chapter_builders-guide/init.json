@@ -13,36 +13,25 @@
       "kind": "text",
       "outputs": []
     },
-    "init-defaults-and-when-to-override-them": {
-      "code_fingerprint": "sha256:5f3b325f9c4fec43322fcea977b9b789815e2fd46151fba62e653bc65220ae4e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "range [-0.0700, 0.0700], predicted bound 0.0700\nstd 0.0405, predicted 0.0404\nbias all zero: True\n"
-        }
-      ]
-    },
     "init-applying-initializers-1": {
-      "code_fingerprint": "sha256:b01436b4e2e36d43d9216ca76d47938e88519dd23ff8f1024932af38dd29a0bf",
+      "code_fingerprint": "sha256:1aace9212614ab8f8b796f686909463d31d2e4e14c30834aacba8c8548d47ab3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "default: mean square of the output 1.1e-07\nHe:      mean square of the output 0.97\n"
+          "text": "default: mean square of the output 2.2e-07\nHe:      mean square of the output 1.1\n"
         }
       ]
     },
     "init-truncated-normals": {
-      "code_fingerprint": "sha256:0404af2fccd56cce814ff9f3707b07b6652776c491265ac90549e9ebdd8e73ed",
+      "code_fingerprint": "sha256:99e8aebe654a70ba0baf3cb529d59a8107da73cd10fd2f7ad27e1386955f910f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.0986\n"
+          "text": "normal:    std 0.0200, max weight 0.0992\n"
         },
         {
           "type": "stream",
@@ -52,46 +41,46 @@
       ]
     },
     "init-custom-initializers-1": {
-      "code_fingerprint": "sha256:bce82afd0201ff7fe39b9057a7f769068b06c67c60d1e0e963c55105b8a470c2",
+      "code_fingerprint": "sha256:cc912ff390b91635c21879d2de490eaa79648f73c5aa70d33359c228df74b5cc",
       "kind": "text",
       "outputs": []
     },
     "init-custom-initializers-2": {
-      "code_fingerprint": "sha256:57add18b7eaf35ca91adc562bed41e191b98a2bfded5b0110f040b9b57b12da3",
+      "code_fingerprint": "sha256:f3e82f5a6dcc952c66923cc3f78a97bae3c92ee698655863b9e85811adc99de1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.97 before, 0.24 after\n"
+          "text": "1.1 before, 0.28 after\n"
         }
       ]
     },
     "init-watching-the-variance-compound-1": {
-      "code_fingerprint": "sha256:712195e6f12c0df6e7cb731506c26b287ecfbdfe4ff16e4ac97e538f1e8aa41f",
+      "code_fingerprint": "sha256:e5a254edadf8deedbd311b0b42c2561a60ba7ff9dada4e2349db790b51cdd033",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-2": {
-      "code_fingerprint": "sha256:7c3630119bf1c3dd209e4ec22542d3814b9f59ba2b74652de5095cf3ce375dd2",
+      "code_fingerprint": "sha256:de84be4e0157f47937eda6e47fb0d91ca227f7a5a942ca8649ea88670cdaa5c7",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-3": {
-      "code_fingerprint": "sha256:aab64dbad06481d0f67b481b9f1d8c4d9187b818d300a60c0ec068a1e98f7fa9",
+      "code_fingerprint": "sha256:0a896e432da2c88425b0829538b50d767bbdc1c99d801037a3d23fc7b3d5402e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      2.08      1.51     0.987\n  8      18.5      1.62         1\n 32  5.04e+04      1.64         1\n"
+          "text": "  N  unscaled    scaled      zero\n  2      2.08      1.47      1.01\n  8      18.1      1.56     0.988\n 32  2.86e+04      1.59         1\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 35674,
-          "sha256": "sha256:b47ee25548787b86a8a972ce18301dca8047bc8963c53d25a6f0d1cb27b84941"
+          "bytes": 34879,
+          "sha256": "sha256:6996b308685f37c05b54f0803c1d9aa1fc49972618e02445037fca01f08aa041"
         }
       ]
     }

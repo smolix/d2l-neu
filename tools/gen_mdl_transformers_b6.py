@@ -105,9 +105,10 @@ def fig_moe():
         tip = np.array([x_mid, y_sum]) - r * d / np.linalg.norm(d)
         fl.arrow(ax, tail, tuple(tip), color=GREEN, lw=2.2, mut=13)
         mid = (0.5 * (tail[0] + tip[0]), 0.5 * (tail[1] + tip[1]))
-        ax.text(mid[0] + side * 0.32, mid[1] - 0.12,
+        # above the arrow, on its outer side: clear of the line and the tip
+        ax.text(mid[0] + side * 0.22, mid[1] + 0.22,
                 rf"$\times\, p_{{{i + 1}}} = {PROBS[i]:.2f}$",
-                ha="left" if side > 0 else "right", va="center",
+                ha="right" if side < 0 else "left", va="bottom",
                 fontsize=14, color=INK)
     fl.arrow(ax, (x_mid, y_sum + r), (x_mid, y_out - 0.05), color=INK,
              lw=1.4, mut=11)

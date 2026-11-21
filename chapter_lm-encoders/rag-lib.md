@@ -19,7 +19,15 @@ which reads a verdict after the reasoning, from an endpoint or a
 Transformers model), and the plumbing of `RAGPipeline`: the prompts for
 query rewriting, HyDE, decomposition and sentence verification, the prompt
 variants of the pre-registered fixes, and the reader of the run files
-(`_rag_records`).
+(`_rag_records`). It also holds what :numref:`sec_lm_rag` and
+:numref:`sec_lm_rag_fixes` share, so that neither notebook repeats it: the
+models, artifacts and configurations of the runs (`RAG_ARTIFACTS`,
+`RAG_BASE`, `RAG_CONFIGS`, `RAG_STAGES`, `RAG_CONTROLS`, `RAG_FIXES`), the
+checked run order (`_rag_rerun`), each run's settings and file, the
+generator loaded once (`_rag_generator`), the runner of a configuration
+(`_rag_run_config`), the readers of the answer and judgment records, and the
+per-question scores with their document-resampled intervals (`_rag_scores`,
+`_rag_boot`, `_rag_paired`, `_rag_ready`).
 
 Every block is tagged `%%tab pytorch`; a module-level import would join the
 `_preamble` shard and move the freshness fingerprint of every notebook in the
@@ -319,4 +327,364 @@ def _rag_records(paths, on=('config', 'qid')):
         raise ValueError(f'{dup.sum()} records repeat {on}, e.g. '
                          f'{df[dup].iloc[0][list(on)].tolist()}')
     return df
+```
+
+The configurations and run files that :numref:`sec_lm_rag` and
+:numref:`sec_lm_rag_fixes` share: the models, the recorded artifacts, the
+baseline and every configuration that changes one stage of it, with the fix
+written down for each failure class before any class was counted; the
+settings that each run's records are checked against, where a run file is
+read from, and the generator, loaded once per process.
+
+```{.python .input #rag-lib-runs}
+%%tab pytorch
+#@save
+RAG_GENERATOR = 'Qwen/Qwen3.5-9B'  # revision pinned in the notebooks
+RAG_RERANKER = 'Qwen/Qwen3-Reranker-0.6B'
+RAG_ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
+    'rag-gen-base': ('lm-rag-gen-base-v2', 'lm-rag-gen-base.jsonl'),
+    'rag-gen-stages': ('lm-rag-gen-stages-v3', 'lm-rag-gen-stages.jsonl'),
+    'rag-gen-fix': ('lm-rag-gen-fix-v2', 'lm-rag-gen-fix.jsonl'),
+    'rag-judge': ('lm-rag-judge-v6', 'lm-rag-judge.jsonl'),
+    'rag-judge-cache': ('lm-rag-judge-cache-v6', 'lm-rag-judge-cache.zip'),
+    'rag-cards': ('lm-rag-cards-v2', 'lm-rag-cards.jsonl')}
+
+#@save
+# The baseline: section chunks, hybrid retrieval, the first five chunks in
+# rank order within 3,000 tokens, the fixed prompt, 300 new tokens, batches
+# of eight prompts
+RAG_BASE = dict(chunking='sections', context='retrieved', k=5, budget=3000,
+                order='rank', rewrite=None, rerank_k=None, prompt='fixed',
+                verify=False, abstain_below=None, max_new_tokens=300,
+                batch=8, shuffle=None)
+RAG_CONFIGS = {  # name: what changes against the baseline
+    'closed': dict(RAG_BASE, context='none'),  # no passages: closed book
+    'base': RAG_BASE,
+    'oracle': dict(RAG_BASE, context='gold'),  # the gold chunks only
+    'base-repeat': dict(RAG_BASE, shuffle=1),  # same prompts, other batches
+    'fixed': dict(RAG_BASE, chunking='fixed', k=None, budget='base'),
+    'fixed-over': dict(RAG_BASE, chunking='fixed', k=None, budget='base',
+                       over=255),  # up to a window past the base's tokens
+    'rewrite-rerank': dict(RAG_BASE, rewrite='generator', rerank_k=50),
+    'reverse': dict(RAG_BASE, order='reverse'),
+    'budget-1500': dict(RAG_BASE, k=None, budget=1500),
+    'budget-6000': dict(RAG_BASE, k=None, budget=6000, batch=4)}
+RAG_STAGES = ['fixed', 'rewrite-rerank', 'reverse', 'budget-1500',
+              'budget-6000']
+RAG_CONTROLS = ['fixed-over']  # checks a stage's result; not a candidate
+RAG_FIXES = {  # failure class: its fix, written down before any is counted
+    'not_retrieved': dict(RAG_BASE, rewrite='fuse'),  # the query's ranking
+    'ranked_low': dict(RAG_BASE, rerank_k=100, k=8),
+    'ignored': dict(RAG_BASE, prompt='quote', order='edges',
+                    max_new_tokens=500),
+    'unsupported': dict(RAG_BASE, verify=True),
+    'false_answer': dict(RAG_BASE, abstain_below='train'),  # tuned on train
+    'false_abstain': dict(RAG_BASE, prompt='rule_after')}
+RAG_CONFIGS.update({f'fix-{c}': v for c, v in RAG_FIXES.items()})
+
+#@save
+_RAG_LOADED = {}  # the generator and its tokenizer while they are loaded
+
+#@save
+def _rag_rerun():
+    """The RAG runs this run regenerates (d2l.lm_rerun of RAG_ARTIFACTS):
+    regenerating the judge's cache regenerates the judge; the runs must
+    come in their order, each result registered before the next."""
+    rerun = d2l.lm_rerun(d2l.RAG_ARTIFACTS)
+    if 'rag-judge-cache' in rerun:  # the judge's cache is written with it
+        rerun.add('rag-judge')
+    order = ('run order, each result registered before the next: '
+             'rag-gen-base; rag-judge (until every answer is judged); '
+             'rag-cards; rag-gen-stages; rag-judge; rag-gen-fix; rag-judge')
+    assert not ('rag-judge' in rerun and rerun & {'rag-gen-stages',
+                                                  'rag-gen-fix'}), order
+    assert not ('rag-gen-fix' in rerun and rerun & {'rag-gen-base',
+                                                    'rag-gen-stages'}), order
+    return rerun
+
+def _rag_settings(name):
+    """What the answers of configuration name are made with (JSON): its
+    entry of RAG_CONFIGS, the models at their revisions, the corpus, the
+    BM25 parameters, the embedder's task and the question set. Reading the
+    records checks it."""
+    gen, emb, rr = d2l.RAG_GENERATOR, d2l.DEFAULT_EMBEDDER, d2l.RAG_RERANKER
+    rev = {gen: d2l.HF_REVISIONS[gen],
+           **{m: d2l.HF_ENCODER_REVISIONS[m] for m in (emb, rr)}}
+    return json.dumps(dict(
+        d2l.RAG_CONFIGS[name], generator=f'{gen}@{rev[gen]}',
+        corpus=d2l.R3_VERSION, embedder=f'{emb}@{rev[emb]}',
+        reranker=f'{rr}@{rev[rr]}', bm25=d2l.BookRetriever.BM25_PARAMS,
+        task=d2l.BOOK_TASK, qa='lm-book-qa-v2'), sort_keys=True)
+
+def _rag_run_path(name, rerun):
+    """The file of RAG artifact name that this run regenerates (name in
+    rerun), else the registered one, else None (not registered yet)."""
+    key, file = d2l.RAG_ARTIFACTS[name]
+    if name in rerun:
+        return os.path.join('..', 'data', 'lm', 'rerun', file)
+    return d2l.lm_registered(key)
+
+def _rag_generator():
+    """The generator (RAG_GENERATOR) and its tokenizer, loaded on first use,
+    on the first GPU (never split over two visible cards)."""
+    if not d2l._RAG_LOADED:
+        gpu = torch.cuda.is_available()
+        d2l._RAG_LOADED['gen'] = d2l.load_hf(
+            d2l.RAG_GENERATOR, d2l.HF_REVISIONS[d2l.RAG_GENERATOR],
+            dtype=torch.bfloat16 if gpu else torch.float32,
+            device_map={'': 0} if gpu else 'auto')
+    return d2l._RAG_LOADED['gen']
+
+def _rag_free_generator():
+    """Drop the generator and free its memory."""
+    d2l._RAG_LOADED.clear()
+    d2l.lm_free()
+
+def _rag_gold_context(item, corpus):
+    """The chunks of an item's gold spans (not the alternatives), in span
+    order."""
+    ids = [i for s in item['gold_spans'] for i in corpus.span_to_chunk_ids(
+        s['doc_id'], s['char_start'], s['char_end'])]
+    return [corpus[i] for i in dict.fromkeys(ids)]
+
+def _rag_run_config(name, items, retrievers, keep_gen, depth=50,
+                    budgets=None, threshold=None):
+    """Answer records of configuration name (RAG_CONFIGS) on items, in item
+    order. retrievers maps each chunking to its BookRetriever; keep_gen:
+    the generator stays on the card while the retriever works; depth: the
+    ranking kept; budgets (qid: tokens) sets each question's budget for a
+    configuration whose budget is 'base'; threshold: the reranker score
+    below which the pipeline abstains."""
+    c, items = d2l.RAG_CONFIGS[name], list(items)
+    budget = d2l.RAG_BASE['budget']
+    assert (c['budget'] == 'base') == (budgets is not None), name
+    order = list(range(len(items)))
+    if c['shuffle'] is not None:  # other batches for the same prompts
+        random.Random(c['shuffle']).shuffle(order)
+    items = [items[i] for i in order]
+    if not (keep_gen or c['rewrite']):  # retrieval without the generator
+        d2l._rag_free_generator()
+    assert keep_gen or not c['rewrite'], 'the rewriter needs the card too'
+    pipe = d2l.RAGPipeline(  # the generator joins when it is needed
+        retrievers[c['chunking']],
+        *(d2l._rag_generator() if c['rewrite'] else (None, None)),
+        k=c['k'], order=c['order'],
+        budget_tokens=budget if c['budget'] == 'base' else c['budget'],
+        rewrite=c['rewrite'], rerank_k=c['rerank_k'], depth=depth,
+        max_new_tokens=c['max_new_tokens'], prompt=c['prompt'],
+        verify=c['verify'], abstain_below=threshold)
+    if c['context'] == 'none':
+        ctx = [dict(query_used=None, ranked_ids=[], context=None)
+               for _ in items]
+    else:
+        ctx = pipe.prepare(items, None if budgets is None else
+                           [budgets[q['qid']] for q in items])
+    if c['context'] == 'gold':  # unanswerable items keep the retrieved
+        corpus = retrievers['sections'].corpus
+        for p, q in zip(ctx, items):
+            if q['answerable']:
+                p['context'] = d2l.assemble_context(
+                    d2l._rag_gold_context(q, corpus), budget, k=c['k'])[0]
+    pipe.model, pipe.tokenizer = d2l._rag_generator()
+    res = pipe.answer(items, batch_size=c['batch'], contexts=ctx)
+    recs = [dict(config=name, split=q['split'],
+                 settings=d2l._rag_settings(name),
+                 **{k: v for k, v in r._asdict().items() if k != 'question'})
+            for q, r in zip(items, res)]
+    return [r for _, r in sorted(zip(order, recs), key=lambda t: t[0])]
+
+def _rag_run_configs(names, items, *args, **kwargs):
+    """_rag_run_config for each name, printing its minutes and peak
+    memory."""
+    recs = []
+    for name in names:
+        t = time.time()
+        recs += d2l._rag_run_config(name, items, *args, **kwargs)
+        print(f'{name}: {(time.time() - t) / 60:.1f} min, {d2l.lm_peak()}')
+    return recs
+```
+
+The recorded answers and verdicts: an answer's key (what its verdict
+depends on), the answer records of all runs with their settings checked,
+and the judgment records.
+
+```{.python .input #rag-lib-records}
+%%tab pytorch
+#@save
+def _rag_answer_key(r):
+    """What a verdict depends on: the answer, its context and citations
+    (a regenerated answer needs a new verdict)."""
+    return hashlib.sha1(json.dumps([r['answer'], list(r['context_ids']), [
+        int(n) for n in r['cited_ids']]]).encode()).hexdigest()[:16]
+
+def _rag_save_gens(name, recs):
+    """Save the answer records of RAG artifact name, a table keyed by
+    configuration and question."""
+    d2l.lm_save_table(d2l.RAG_ARTIFACTS[name][1], pd.DataFrame(recs),
+                      on=['config', 'qid'], key=d2l.RAG_ARTIFACTS[name][0])
+
+def _rag_load_gens(rerun):
+    """Every answer made so far, one row per (configuration, question),
+    with the answer_sha its verdict must carry; each configuration's
+    settings are checked against _rag_settings."""
+    df = d2l._rag_records([d2l._rag_run_path(n, rerun) for n in (
+        'rag-gen-base', 'rag-gen-stages', 'rag-gen-fix')])
+    for name, s in (df.groupby('config')['settings'] if len(df) else []):
+        assert (s == d2l._rag_settings(name)).all(), f'{name}: other settings'
+    if len(df):  # by the current rule, not the one of the run that wrote it
+        df['abstained'] = [d2l._rag_abstained(a) for a in df.answer]
+    return df.assign(answer_sha=[d2l._rag_answer_key(r)
+                                 for r in df.to_dict('records')])
+
+def _rag_load_judgments(path):
+    """Judgment records, verdicts as True, False or None; max_new_tokens
+    of rows from before the re-judging is the judge's default."""
+    df = d2l._rag_records([path], on=['config', 'qid', 'concurrency'])
+    for k in ('correct', 'faithful', 'supported'):
+        df[k] = [None if v is None or v != v else bool(v)
+                 for v in df.get(k, [])]
+    for k in ('backend', 'answer_sha'):
+        df[k] = df.get(k, [None] * len(df))
+    default = d2l.RAG_JUDGE_LOCAL['max_new_tokens']
+    df['max_new_tokens'] = [default if v is None or v != v else int(v)
+                            for v in df.get('max_new_tokens',
+                                            [None] * len(df))]
+    return df
+```
+
+Per-question scores of a configuration and their means with 95% intervals.
+Questions drafted from one document share its difficulty, so the bootstrap
+resamples documents (`_rag_clusters`); differences between configurations
+are paired by question.
+
+```{.python .input #rag-lib-scores}
+%%tab pytorch
+#@save
+def _rag_clusters(items, corpus):
+    """The document of each item (qid: doc_id), the unit the bootstrap
+    resamples: that of its first gold span, else of its anchor chunk."""
+    return {q['qid']: (q['gold_spans'] or [{'doc_id': corpus[
+        q['anchor_ids'][0]]['doc_id']}])[0]['doc_id'] for q in items}
+
+def _rag_signflip_p(d, cluster, n=10_000):
+    """Two-sided sign-flip p of the mean of per-document mean
+    differences."""
+    m = np.array([d[cluster == c].mean() for c in np.unique(cluster)])
+    flips = np.random.default_rng(0).choice([-1.0, 1.0], (n, len(m)))
+    return np.mean(np.abs(flips @ m) >= np.abs(m.sum()) - 1e-12)
+
+def _rag_ci(a, b=None, cluster=None):
+    """The bootstrap of the mean of per-question scores a (or of a - b,
+    paired), NaNs dropped, resampling documents when there are 30 or
+    more, else questions: (result or None, by documents, a, b,
+    cluster)."""
+    import warnings  # not in the d2l library preamble
+    a = np.asarray(a, float)
+    b = None if b is None else np.asarray(b, float)
+    keep = ~np.isnan(a) & (True if b is None else ~np.isnan(b))
+    a, cluster = a[keep], np.asarray(cluster)[keep]
+    b = None if b is None else b[keep]
+    by_doc = len(set(cluster)) >= 30
+    if len(a) < 2:
+        return None, by_doc, a, b, cluster
+    with warnings.catch_warnings():  # few items: _rag_boot's * says so
+        warnings.simplefilter('ignore')
+        r = (d2l.bootstrap_ci(a, cluster=cluster if by_doc else None)
+             if b is None else d2l.paired_bootstrap(
+                 a, b, cluster=cluster if by_doc else None))
+    return r, by_doc, a, b, cluster
+
+def _rag_boot(a, b=None, cluster=None):
+    """Mean of per-question scores a (or of a - b, paired), NaNs dropped,
+    with a 95% interval that resamples documents, marked * below 100
+    questions; below 30 documents questions are resampled instead, marked
+    + (and a paired difference gets a document-level sign-flip p)."""
+    r, by_doc, a, b, cluster = d2l._rag_ci(a, b, cluster)
+    if r is None:
+        return 'n/a'
+    f = '.3f' if b is None else '+.3f'
+    out = f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
+    if by_doc:
+        return out + ('' if len(a) >= 100 else '*')
+    if b is None:
+        return out + '+'
+    p = d2l._rag_signflip_p(a - b, cluster)
+    return out + f'+ (sign-flip p {p:.3f})'
+
+def _rag_paired(a, b, col, mask=None):
+    """Paired difference a - b of score col on the questions both score
+    tables have (mask: a filter of the merged rows)."""
+    m = a.merge(b, on='qid', suffixes=('_a', '_b'))
+    if mask is not None:
+        m = m[mask(m)]
+    return d2l._rag_boot(m[f'{col}_a'], m[f'{col}_b'], m.cluster_a)
+
+def _rag_scores(config, split, gens, jud, retrievers, items, cluster,
+                concurrency=8):
+    """One row per judged answer of a configuration on a split, with
+    per-question scores (NaN where a score does not apply, and accuracy NaN
+    where the judge gave no verdict: an unjudged answer is left out). gens:
+    the answer records (_rag_load_gens); jud: the judgment records, of
+    which those judged at concurrency count; retrievers maps a chunking to
+    its BookRetriever; items: qid to item; cluster: qid to document."""
+    verdicts = ['correct', 'faithful', 'supported']
+    k, budget = d2l.RAG_BASE['k'], d2l.RAG_BASE['budget']
+    g = gens[(gens.config == config) & (gens.split == split)]
+    j = jud[jud.concurrency == concurrency][['config', 'qid', 'answer_sha']
+                                            + verdicts]
+    df = g.merge(j, on=['config', 'qid', 'answer_sha']).sort_values(
+        'qid', ignore_index=True)
+    corpus = retrievers[d2l.RAG_CONFIGS[config]['chunking']].corpus
+    its = [items[q] for q in df.qid]
+    ans = np.array([q['answerable'] for q in its])
+    rel = [d2l.gold_chunk_ids(q, corpus) for q in its]
+    cm = d2l.citation_metrics(df.to_dict('records'), its, corpus)
+    has_ctx = df.context_ids.map(len).to_numpy() > 0
+    answered = has_ctx & ~df.abstained.to_numpy(bool)
+    flag = lambda col: np.array([np.nan if v is None else float(v)
+                                 for v in df[col]])
+    return pd.DataFrame({
+        'qid': df.qid, 'cluster': [cluster[q] for q in df.qid],
+        'answerable': ans, 'type': [q['type'] for q in its],
+        'book_specific': ['general_knowledge' not in q['flags']
+                          for q in its],
+        'accuracy': flag('correct'),  # NaN: unjudged, left out
+        'faithful': np.where(answered, flag('faithful'), np.nan),
+        'supported': np.where(answered, flag('supported'), np.nan),
+        'cite_precision': np.where(ans, cm.precision, np.nan),
+        'cite_recall': np.where(ans, cm.recall, np.nan),
+        'abstained': df.abstained.astype(float),
+        'hit': np.where(ans, [float(bool(r & set(c))) for r, c in zip(
+            rel, df.context_ids)], np.nan),
+        f'recall@{k}': np.where(ans & has_ctx, [float(bool(r & set(x[:k])))
+                                                for r, x in zip(
+                                                    rel, df.ranked_ids)],
+                                np.nan),
+        f'cov@{budget}': np.where(ans & has_ctx, [float(d2l.cov_at_budget(
+            x, q, corpus, budget)) for x, q in zip(df.ranked_ids, its)],
+            np.nan),
+        'answer': df.answer, 'n_prompt_tokens': df.n_prompt_tokens,
+        'n_new_tokens': df.n_new_tokens, 'latency_s': df.latency_s,
+        'record': df.to_dict('records'),
+        'verdicts': df[verdicts].to_dict('records')})
+
+def _rag_ready(configs, split, gens, jud, rerun, concurrency=8):
+    """Whether every answer of each configuration on split carries a
+    verdict on that very answer (answer_sha); says which do not. Partial
+    or stale judgments are never reported: between judging runs a
+    configuration is left out, and a normal run stops on one."""
+    k = jud[jud.concurrency == concurrency]  # not judged: gens may be new
+    j = set(zip(k.config, k.qid, k.answer_sha))
+    missing = {}
+    for c in configs:
+        g = gens[(gens.config == c) & (gens.split == split)]
+        n = sum(x not in j for x in zip(g.config, g.qid, g.answer_sha))
+        if n or not len(g):
+            missing[c] = (f'{n} of {len(g)} answers lack a verdict' if len(g)
+                          else 'no answers')
+    if missing:
+        print(f'not ready on {split}: {missing}')
+        assert rerun or all(m == 'no answers' for m in missing.values()), (
+            'registered answers without verdicts: register the judge run')
+    return not missing
 ```

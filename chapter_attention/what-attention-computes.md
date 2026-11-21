@@ -1,30 +1,26 @@
 # Attention Circuits
 :label:`sec_what-attention-computes`
 
-Since :numref:`sec_queries-keys-values` we have plotted attention weights
-as heatmaps, and that section warned that such a map is a hypothesis about
-what a layer does, not a proof. A map shows where each query looks, and it
-invites a simple reading: the model predicted *B* because it attended to
-*B*. The map shows only half of a head. What the head adds to its output
-also depends on its value and output projections, so a head that attends
-sharply to a token may pass on the token's identity, one feature of it, or
-nothing at all.
-Explaining what a trained model computes therefore takes both halves of
-every head, and experiments that tell a mechanism apart from a pattern that
-merely looks like one.
+As noted in :numref:`sec_queries-keys-values`, an attention heatmap is a
+hypothesis about what a layer computes, not a proof. The heatmap shows where
+a head looks, which is only half of its computation; what the head actually
+writes to the output depends on its value and output projections. A head that
+attends sharply to a token may copy that token's identity, extract a single
+subspace feature, or contribute a negligible vector.
 
-This section works through one complete case. In a transformer built from
-attention layers alone, each head factors into two matrices that can be read
-from its weights: a *QK circuit* that decides where the head attends and an
-*OV circuit* that decides what it moves
-:cite:`Elhage.Nanda.Olsson.ea.2021`. Expanding the layers algebraically
-shows which functions one and two layers can express. We then train the
-attention-only `TinyCharLM` of :numref:`sec_positional-information` on
-sequences that repeat a random pattern, find the two-layer *induction head*
-that completes the repetition, and test it four ways: through the loss, the
-attention maps, the weights, and the removal of heads. The same circuit
-appears in large language models, where it has been tied to their ability
-to learn from the context :cite:`Olsson.Elhage.Nanda.ea.2022`.
+To understand what trained attention heads compute, we adopt the mechanistic
+circuit formulation of :citet:`Elhage.Nanda.Olsson.ea.2021` on the
+attention-only language model `TinyCharLM` (:numref:`sec_positional-information`).
+Each head factors into two rank-$d_h$ bilinear/linear operators on the
+*residual stream*: a *QK circuit* that determines which positions are
+attended to, and an *OV circuit* that determines how attended vectors alter
+output logits. Using this decomposition, we show why a one-layer model can
+express bigrams and skip-trigrams (including single-token copying) but cannot
+perform in-context pattern completion ($[\mathrm{A}][\mathrm{B}] \ldots
+[\mathrm{A}] \to [\mathrm{B}]$), whereas a two-layer model can compose a
+*previous-token head* with a *match-and-copy head* to form an *induction
+head* :cite:`Olsson.Elhage.Nanda.ea.2022`. Finally, we test this circuit
+hypothesis via weight inspection and causal head ablations.
 
 ```{.python .input #what-attention-computes}
 %%tab pytorch
@@ -52,200 +48,104 @@ from d2l import jax as d2l
 import copy
 ```
 
-## The Residual Stream
-
-### Residual Representations Across Layers
-
-Reading a head from its weights requires an exact account of what each
-layer adds to a token's representation. We write it down for the model we
-will train. `TinyCharLM` has the simplest architecture that still counts as a
-transformer. Each of its $L$ blocks adds the output of $H$ causal attention
-heads to its input, and nothing else: there are no feed-forward layers and
-no normalization. The output head reuses the embedding matrix
-$\mathbf{E}$, whose rows are the token embeddings. Write
-$\mathbf{e}_{x_i} \in \mathbb{R}^d$ for the embedding of token $x_i$ and
-set $\mathbf{h}_i^{(0)} = \mathbf{e}_{x_i}$.
-Block $\ell$ computes, for every position $i$,
-
-$$
-\mathbf{h}_i^{(\ell)} = \mathbf{h}_i^{(\ell-1)} + \sum_{m=1}^{H} \sum_{j \leq i} \alpha_{ij}^{\ell m}\, \mathbf{W}_{\mathrm{OV}}^{\ell m}\, \mathbf{h}_j^{(\ell-1)},
-$$
-:eqlabel:`eq_stream-update`
-
-where $\alpha_{ij}^{\ell m}$ is the weight with which head $m$ of block
-$\ell$ attends from position $i$ to position $j$, and
-$\mathbf{W}_{\mathrm{OV}}^{\ell m}$ is a $d \times d$ matrix, defined
-below, that combines the head's value and output projections. The output
-head scores the final vector against every embedding,
-$\mathbf{z}_i = \mathbf{E}\, \mathbf{h}_i^{(L)}$. The sequence
-$\mathbf{h}_i^{(0)}, \ldots, \mathbf{h}_i^{(L)}$ is the *residual stream*
-of position $i$ (:numref:`fig_residual-stream`). Each block adds to this
-vector rather than replacing it. A head reads the streams at earlier
-positions, transforms what it reads linearly, and adds the result to the
-stream at the current position. Information that one block writes
-therefore stays available to every later block and to the output head.
-
-![The residual stream. Each position carries a vector from its embedding to the output logits. The QK circuit determines the attention weights $\alpha_{3j}$, and the OV circuit determines the contribution of each attended vector to the destination stream.](../img/mdl-attention-residual-stream.svg)
-:label:`fig_residual-stream`
-
-Once the attention weights $\alpha$ are fixed, the map from embeddings to
-logits in :eqref:`eq_stream-update` is linear, and expanding the recursion
-writes it as a sum of matrix products along paths through the network.
-This decomposition is exact for attention-only transformers
-:cite:`Elhage.Nanda.Olsson.ea.2021`, which is why `TinyCharLM` has no
-feed-forward layers or normalization. Full transformers have both, and
-claims about them need the experiments developed below, not algebra alone.
+## Circuits and the Residual Stream
 
 ### QK and OV Circuits
 
-Each head's term in :eqref:`eq_stream-update` splits into two parts. Its
-attention weights come from a softmax over scores that involve the query
-and key projections only through their product, and what it adds depends
-only on the value and output projections:
+In `TinyCharLM` (:numref:`subsec_tinycharlm`), token embeddings
+$\mathbf{e}_{x_i} \in \mathbb{R}^d$ ($d = 128$) pass through $N$ residual
+blocks, each consisting of $H = 4$ causal attention heads of width $d_h =
+d/H = 32$ with no MLP, normalization, or bias terms, followed by a tied
+unembedding projection $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$.
+
+Writing token vectors as column vectors $\mathbf{h}_j \in \mathbb{R}^d$, each
+head projects $\mathbf{h}_j$ via $\mathbf{W}_v \in \mathbb{R}^{d_h \times d}$
+and forms the weighted sum $\sum_{j \le i} \alpha_{ij} \mathbf{W}_v
+\mathbf{h}_j$. Partitioning the block's output matrix into $H$ column slices
+$\mathbf{W}_o \in \mathbb{R}^{d \times d_h}$ (one per head) expresses the
+concatenation-and-projection step as a sum of independent head contributions:
+
+$$
+\mathbf{W}_o \sum_{j \leq i} \alpha_{ij}\, \mathbf{W}_v \mathbf{h}_j = \sum_{j \leq i} \alpha_{ij}\, \mathbf{W}_o \mathbf{W}_v\, \mathbf{h}_j.
+$$
+
+Similarly, the pre-softmax score between query position $i$ and key position
+$j$ is $(\mathbf{W}_q \mathbf{h}_i)^\top (\mathbf{W}_k \mathbf{h}_j) /
+\sqrt{d_h}$ with $\mathbf{W}_q, \mathbf{W}_k \in \mathbb{R}^{d_h \times d}$.
+Each head is therefore completely characterized by two $d \times d$ matrices
+of rank at most $d_h$ :cite:`Elhage.Nanda.Olsson.ea.2021`:
 
 $$
 s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}}\, \mathbf{h}_j}{\sqrt{d_h}}, \qquad \mathbf{W}_{\mathrm{QK}} = \mathbf{W}_q^\top \mathbf{W}_k, \qquad \mathbf{W}_{\mathrm{OV}} = \mathbf{W}_o \mathbf{W}_v.
 $$
 :eqlabel:`eq_qkov`
 
-Vectors are columns here: $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v \in
-\mathbb{R}^{d_h \times d}$ map the stream into a head of width $d_h$, and
-$\mathbf{W}_o \in \mathbb{R}^{d \times d_h}$ maps the head's output back.
-The *QK circuit* $\mathbf{W}_{\mathrm{QK}}$ is a bilinear form that scores
-a query position against a key position. The *OV circuit*
-$\mathbf{W}_{\mathrm{OV}}$ maps an attended stream vector to what the head
-writes. The products, not the four projections, are the right objects to
-study, because the projections are not identifiable. Without rotary
-embeddings, replacing $\mathbf{W}_q$ by $\mathbf{R}\mathbf{W}_q$ and
-$\mathbf{W}_k$ by $\mathbf{R}^{-\top}\mathbf{W}_k$, for any invertible
-$d_h \times d_h$ matrix $\mathbf{R}$, changes nothing the model computes
-and leaves $\mathbf{W}_{\mathrm{QK}}$ as it was. With rotary embeddings the
-same holds for every $\mathbf{R}$ that commutes with the rotations, such as
-a rotation and scaling of each frequency pair.
+* The **QK circuit** $\mathbf{W}_{\mathrm{QK}}$ (or $\mathbf{W}_q^\top
+  \mathbf{R}_{j-i} \mathbf{W}_k$ under RoPE, :numref:`subsec_pos-rope`)
+  governs *where* the head attends.
+* The **OV circuit** $\mathbf{W}_{\mathrm{OV}}$ governs *what* vector the
+  head writes into the destination position when a source position is
+  attended to.
 
-Both circuits are $d \times d$ matrices of rank at most $d_h = d/H$, so a
-head reads and writes only a $d_h$-dimensional slice of the stream. With
-$d = 128$ and four heads, each head works through a rank-32 bottleneck. In
-`TinyCharLM` the four projections live in two fused layers: `qkv` stacks
-the query, key, and value maps, and `proj` holds the output maps of the
-heads side by side. Neither layer has a bias by default, so reshaping the
-two weight matrices to expose a head axis gives the circuits of every head
-at once. The function `circuits` forms them for one block, and the cell
-below prints those of head 0 in block 1 of a freshly initialized model.
+Studying the products $\mathbf{W}_{\mathrm{QK}}$ and
+$\mathbf{W}_{\mathrm{OV}}$ rather than the individual factors eliminates
+gauge freedom ($\mathbf{W}_o \mathbf{G}^{-1}$ and $\mathbf{G}\mathbf{W}_v$
+yield the exact same $\mathbf{W}_{\mathrm{OV}}$ for any invertible
+$\mathbf{G} \in \mathbb{R}^{d_h \times d_h}$) and makes the rank-$d_h$
+subspace bottleneck explicit.
 
-```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
-%%tab pytorch
-def circuits(model, blk):
-    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
-    W_qkv = model.blks[blk]['qkv'].weight           # (3D, D): W_q; W_k; W_v
-    W_o = model.blks[blk]['proj'].weight            # (D, D): heads in columns
-    H, D = model.num_heads, W_o.shape[0]
-    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
-    W_QK = W_q.mT @ W_k
-    W_OV = W_o.reshape(D, H, D // H).transpose(0, 1) @ W_v
-    return W_QK, W_OV
+### Residual Representations Across Layers
 
-model = d2l.TinyCharLM(vocab_size=64, pos='rope')
-W_QK, W_OV = circuits(model, 0)
-for name, M in (('W_QK', W_QK[0]), ('W_OV', W_OV[0])):
-    print(f'{name}: shape {tuple(M.shape)}, '
-          f'rank {torch.linalg.matrix_rank(M).item()}')
-```
+Setting $\mathbf{h}_i^{(0)} = \mathbf{e}_{x_i}$, block $\ell \in \{1, \ldots,
+N\}$ updates the representation at position $i$ additively:
 
-```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
-%%tab jax
-def circuits(model, blk):
-    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
-    W_qkv = model.blks[blk]['qkv'].kernel[...].T    # (3D, D): W_q; W_k; W_v
-    W_o = model.blks[blk]['proj'].kernel[...].T     # (D, D): heads in columns
-    H, D = model.num_heads, W_o.shape[0]
-    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
-    W_QK = W_q.mT @ W_k
-    W_OV = W_o.reshape(D, H, D // H).swapaxes(0, 1) @ W_v
-    return W_QK, W_OV
+$$
+\mathbf{h}_i^{(\ell)} = \mathbf{h}_i^{(\ell-1)} + \sum_{m=1}^{H} \sum_{j \leq i} \alpha_{ij}^{\ell m}\, \mathbf{W}_{\mathrm{OV}}^{\ell m}\, \mathbf{h}_j^{(\ell-1)},
+$$
+:eqlabel:`eq_stream-update`
 
-model = d2l.TinyCharLM(vocab_size=64, pos='rope',
-                       rngs=nnx.Rngs(d2l.get_key()))
-W_QK, W_OV = circuits(model, 0)
-for name, M in (('W_QK', W_QK[0]), ('W_OV', W_OV[0])):
-    print(f'{name}: shape {tuple(M.shape)}, '
-          f'rank {jnp.linalg.matrix_rank(M)}')
-```
+and the tied output head produces logits $\mathbf{z}_i = \mathbf{E}\,
+\mathbf{h}_i^{(N)}$. The sequence $\mathbf{h}_i^{(0)}, \ldots,
+\mathbf{h}_i^{(N)}$ is the *residual stream* at position $i$
+(:numref:`fig_residual-stream`): a shared communication channel into which
+every head reads and writes additively.
 
-:begin_tab:`pytorch`
-`nn.Linear` stores its weight with shape (output, input), the orientation
-of the column-vector equations above. The rows of `qkv.weight` therefore
-stack $\mathbf{W}_q$, $\mathbf{W}_k$, and $\mathbf{W}_v$, and the columns of
-`proj.weight` split by head.
-:end_tab:
-
-:begin_tab:`jax`
-`nnx.Linear` stores its kernel with shape (input, output), the transpose of
-the column-vector equations above. `circuits` therefore transposes both
-kernels first. The rows of the transposed `qkv.kernel` then stack
-$\mathbf{W}_q$, $\mathbf{W}_k$, and $\mathbf{W}_v$, and the columns of the
-transposed `proj.kernel` split by head.
-:end_tab:
-
-Both circuits are $128 \times 128$ and have rank 32, the head width.
-Rotary embeddings add position to the QK circuit and nowhere else. RoPE
-rotates the query at position $i$ and the key at position $j$ by angles
-proportional to their positions, so by :eqref:`eq_rope-goal` the score
-becomes $\mathbf{h}_i^\top \mathbf{W}_q^\top \mathbf{R}_{j-i}
-\mathbf{W}_k \mathbf{h}_j / \sqrt{d_h}$, with the relative rotation
-$\mathbf{R}_{j-i}$ between the two projections. The values are not
-rotated, so the OV circuit does not depend on position. We use
-`pos='rope'` throughout because rotary embeddings are the positional scheme
-of most current language models, including the GPT of :numref:`sec_gpt`.
+![The residual stream. Each position carries a vector from its embedding to the output logits. The QK circuit determines the attention weights $\alpha_{3j}$, and the OV circuit determines the contribution of each attended vector to the destination stream.](../img/mdl-attention-residual-stream.svg)
+:label:`fig_residual-stream`
 
 ### Bigrams, Skip-Trigrams, and the Limits of One Layer
 
-Expanding the residual stream shows how the class of functions a model can
-represent grows with depth. With *zero* blocks,
-$\mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i}$: the logits depend on the
-current token only, which makes the model a bigram model of a constrained
-kind. Because the output head is tied to the embedding, the logit of token
-$b$ after token $a$ is $\mathbf{e}_b^\top \mathbf{e}_a$. These logits form
-the Gram matrix of the embeddings, which is symmetric and of rank at most
-$d$, not an arbitrary $|\mathcal{V}| \times |\mathcal{V}|$ lookup table.
-Training on text fills it with as much of the bigram statistics as that
-form can hold. With *one* block,
+Expanding :eqref:`eq_stream-update` by depth reveals what functions $N$
+attention layers can express:
 
-$$
-\mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i} + \sum_{m=1}^{H} \sum_{j \leq i} \alpha_{ij}^{m}\; \mathbf{E}\,\mathbf{W}_{\mathrm{OV}}^{m}\,\mathbf{e}_{x_j}.
-$$
-:eqlabel:`eq_one-layer-paths`
+* **Zero blocks ($N = 0$):** $\mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i}$,
+  modeling only constrained token-bigram logits via the symmetric, positive
+  semidefinite Gram matrix $\mathbf{E}\mathbf{E}^\top$ (Exercise 1).
+* **One block ($N = 1$):**
 
-Each new term reads as an if--then rule. If the QK circuit sends attention
-from the current token to an earlier token $x_j$, the OV circuit adds
-$\mathbf{E}\,\mathbf{W}_{\mathrm{OV}}\,\mathbf{e}_{x_j}$ to the logits.
-Rules of this shape, "when $[\mathrm{A}]$ appears somewhere before
-$[\mathrm{B}]$, boost token $[\mathrm{C}]$", are called *skip-trigrams*,
-and they are all that one layer adds to bigrams. A useful special case is
-*copying*: attend to earlier occurrences of the current token and boost
-that same token's logit, so that a word that has appeared becomes more
-likely to appear again.
+  $$
+  \mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i} + \sum_{m=1}^{H} \sum_{j \leq i} \alpha_{ij}^{m}\; \mathbf{E}\,\mathbf{W}_{\mathrm{OV}}^{m}\,\mathbf{e}_{x_j}.
+  $$
+  :eqlabel:`eq_one-layer-paths`
 
-One task needs more. Suppose the sequence contains
-$[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}]$, and at the second
-$[\mathrm{A}]$ the model should predict $[\mathrm{B}]$, continuing the
-pattern by looking up what followed last time. No skip-trigram expresses
-this. The head would have to attend from the second $[\mathrm{A}]$ to the
-token *after* the first one, but in :eqref:`eq_one-layer-paths` the score
-$\alpha_{ij}$ sees only $\mathbf{e}_{x_i}$, $\mathbf{e}_{x_j}$, and the
-offset. The key at position $j$ carries no information about its neighbor
-at $j - 1$. A second layer can supply that information. A head in layer 1
-attends to the previous token and writes its identity into the stream, so
-the key at $[\mathrm{B}]$'s position now also says "follows
-$[\mathrm{A}]$". A head in layer 2 matches the query $[\mathrm{A}]$
-against these enriched keys, attends to position $j$, and its OV circuit
-copies $x_j = [\mathrm{B}]$ into the destination stream
-(:numref:`fig_induction-circuit`). This two-step circuit is the *induction
-head*: a previous-token head composed with a match-and-copy head through
-the residual stream. The argument shows that two layers can express
-induction and one layer cannot, apart from a position-only shortcut we will
-meet shortly. Whether gradient descent finds the circuit is a separate,
-empirical question, and the rest of the section answers it by experiment.
+  Each head term implements a *skip-trigram* rule of the form $x_j \ldots
+  x_i \to x_{\textrm{next}}$ (e.g., attending from *"in"* to an earlier
+  *"keep"* and boosting *"mind"*, or *copying* by boosting $x_j$ itself).
+* **Two blocks ($N = 2$) and the induction head:** Suppose a context contains
+  $[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}]$ and the model must predict
+  $[\mathrm{B}]$ by in-context lookup. A one-block model cannot do this by
+  content matching: to copy $[\mathrm{B}]$ from position $j$, a head must
+  attend to position $j$, but in :eqref:`eq_one-layer-paths` the key at
+  position $j$ depends only on $\mathbf{e}_{x_j} = \mathbf{e}_{[\mathrm{B}]}$
+  and knows nothing about its predecessor $x_{j-1} = [\mathrm{A}]$.
+
+  Two blocks solve this via *K-composition* (:numref:`fig_induction-circuit`,
+  Exercise :exref:`ex_what-attention-computes-paths`): in block 1, a
+  *previous-token head* attends to offset $-1$ and writes $x_{j-1} =
+  [\mathrm{A}]$ into the residual stream $\mathbf{h}_j^{(1)}$ at position $j$;
+  in block 2, an *induction head* matches its query $[\mathrm{A}]$ against
+  that key feature in $\mathbf{h}_j^{(1)}$ and uses its OV circuit to copy
+  $x_j = [\mathrm{B}]$ into the prediction logits.
 
 ![The induction circuit spans two layers. In layer 1 a previous-token head writes each token's predecessor into its stream, so the key at B's position can announce "follows A". In layer 2 the induction head's QK circuit matches the current A against that announcement, and its OV circuit copies B into the prediction.](../img/mdl-attention-induction-circuit.svg)
 :label:`fig_induction-circuit`
@@ -254,18 +154,13 @@ empirical question, and the rest of the section answers it by experiment.
 
 ### A Repeated-Sequence Task
 
-To see whether a model learns induction, we need a task that only
-induction solves. Real text mixes induction with memorized statistics, so
-we train on sequences of *repeated random tokens* instead: draw a pattern
-of tokens uniformly from a vocabulary of 64, then tile it until the
-sequence is full. Within one sequence the pattern repeats; across
-sequences nothing does, and every bigram is equally likely on average. The
-first pass over a pattern is therefore unpredictable, while every later
-pass is predictable from the context alone. The gap between the loss on
-the first copy and the loss on later copies measures how much the model
-retrieves from its context. The function `repeated_batch` draws a
-minibatch of such sequences, with pattern lengths uniform between `Lmin`
-and `Lmax`.
+To test whether gradient descent discovers this two-layer circuit, we train on
+synthetic sequences of *repeated random tokens*: each sequence draws a random
+pattern of length $L \in [L_{\min}, L_{\max}]$ uniformly from a vocabulary of
+size $64$ and tiles it to length $64$. Because every pattern is drawn fresh,
+the first copy ($t < L$) is unpredictable (chance cross-entropy $\log 64
+\approx 4.16$ nats), whereas later copies ($t \ge L$) can be predicted
+perfectly by in-context lookup.
 
 ```{.python .input #what-attention-computes-repetition-as-a-task-1}
 %%tab pytorch
@@ -297,14 +192,9 @@ print(f'pattern lengths: {L.tolist()}')
 print(x)
 ```
 
-Each row repeats its first $L$ tokens. Training uses `d2l.train_steps` from
-:numref:`sec_adam`, which takes a fixed number of optimizer steps on the
-mean next-token cross-entropy, here with Adam at learning rate $10^{-3}$. A
-small data module supplies it with an endless stream of fresh 64-token
-minibatches, so the model never sees the same pattern twice. Every 50
-steps, training pauses for a measurement on a fresh batch: `eval_copy`
-returns the loss on the first copy (targets before position $L$), the loss
-on later copies, and the accuracy on later copies.
+`eval_copy` measures the cross-entropy on the first copy ($t < L$), the
+cross-entropy on later copies ($t \ge L$), and the top-1 accuracy on later
+copies:
 
 ```{.python .input #what-attention-computes-repetition-as-a-task-2}
 %%tab pytorch
@@ -339,6 +229,11 @@ def train_repeat(model, num_steps, Lmin, Lmax, eval_every=50):
         x, L = repeated_batch(256, 64, 64, Lmin, Lmax, device)
         history.append(eval_copy(model, x, L)[:2])
     return history
+
+def drop_step(hist, eval_every=50):
+    """First step at which the later-copy loss is below 1 nat, or None."""
+    return next((eval_every * (k + 1) for k, (_, rep) in enumerate(hist)
+                 if rep < 1), None)
 ```
 
 ```{.python .input #what-attention-computes-repetition-as-a-task-2}
@@ -376,16 +271,19 @@ def train_repeat(model, num_steps, Lmin, Lmax, eval_every=50):
         x, L = repeated_batch(d2l.get_key(), 256, 64, 64, Lmin, Lmax)
         history.append(eval_copy(model, x, L)[:2])
     return history
+
+def drop_step(hist, eval_every=50):
+    """First step at which the later-copy loss is below 1 nat, or None."""
+    return next((eval_every * (k + 1) for k, (_, rep) in enumerate(hist)
+                 if rep < 1), None)
 ```
 
 ### A Fixed-Offset Solution
 :label:`subsec_fixed-offset-shortcut`
 
-We start with the simplest version of the task: every pattern has length
-32, so each sequence is one pattern followed by a copy of it. The analysis
-above rules out a one-layer solution that matches content. We train a
-one-block model on this task anyway and test it. For this experiment alone,
-the projections have biases (`bias=True`); their role becomes clear below.
+Before testing variable periods, suppose the pattern period is fixed at
+$L = 32$. A *one-block* model (`num_blks=1, bias=True`) easily achieves $100\%$
+second-copy accuracy:
 
 ```{.python .input #what-attention-computes-the-positional-shortcut-1}
 %%tab pytorch
@@ -409,14 +307,15 @@ print(f'first copy {first:.2f} nats, second copy {rep:.2f} nats, '
       f'second-copy accuracy {acc:.2f}')
 ```
 
-The one-block model predicts the second copy almost perfectly, but it
-cannot be running the content-based circuit. When the period is always 32,
-the source of every prediction in the second copy lies 31 positions back,
-and a RoPE head can attend to a fixed relative offset without comparing
-any content (:numref:`sec_positional-information`). The following probe
-tests this. It evaluates the same model on patterns of length 24, where the
-source lies 23 positions back, and measures each head's average attention
-weight at offsets 31 and 23.
+How can a single layer copy the successor when our circuit analysis proved
+that content-based induction requires two layers? When $L = 32$ is constant,
+the target token at position $i + 1$ always equals the token at fixed offset
+$j = i - 31$. A single RoPE head with constant bias queries and keys can
+attend purely by relative offset $-31$ without matching content at all
+(Exercise :exref:`ex_what-attention-computes-shortcut-bias`). Evaluating
+`model_shortcut` on patterns of period $L = 24$ (where the target lies at
+offset $-23$) immediately exposes the shortcut: attention remains locked at
+offset $-31$ and accuracy collapses to chance ($1/64 \approx 0.02$):
 
 ```{.python .input #what-attention-computes-the-positional-shortcut-2}
 %%tab pytorch
@@ -443,69 +342,53 @@ for offset in (31, 23):
           + ' '.join(f'{v:.2f}' for v in mass.tolist()))
 ```
 
-Accuracy falls to about chance, $1/64$, because the heads keep their
-attention at offset 31 and almost none of it moves to offset 23, where the
-new period puts the source. The model has learned a fixed-offset rule, not
-induction. The `qkv` bias makes this rule easy to express. It adds the same
-vector to every query and to every key, and the RoPE score of a constant
-query--key pair depends only on the offset. A single bias pair can
-therefore place a peak at a fixed distance whatever the tokens are
-(Exercise :exref:`ex_what-attention-computes-shortcut-bias` removes the
-bias). Every model analyzed below has no biases, so the circuit algebra
-above holds for it without correction.
-
-The general point is that a synthetic benchmark can admit a simpler
-solution than the mechanism it was designed to test. We therefore draw the
-pattern length uniformly from 16 to 32. No fixed offset then works, and
-predicting the later copies requires matching content against an earlier
-occurrence.
-
 ### A Two-Block Induction Circuit
 :label:`subsec_two-block-induction`
 
-With variable pattern lengths, we train two models for 5,000 steps each: a
-two-block model, the smallest that can express induction, and a one-block
-control. Both are then evaluated on the same fresh batch.
+Sampling the pattern period uniformly from $L \in \{16, \ldots, 32\}$
+eliminates any fixed-offset shortcut. We train three independent two-block
+models and a one-block control (all with `bias=False`) for $5{,}000$ steps:
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-1}
 %%tab pytorch
-model_two = d2l.TinyCharLM(vocab_size=64, num_blks=2, pos='rope')
-hist_two = train_repeat(model_two, 5000, Lmin=16, Lmax=32)
-model_one = d2l.TinyCharLM(vocab_size=64, num_blks=1, pos='rope')
-hist_one = train_repeat(model_one, 5000, Lmin=16, Lmax=32)
+runs = []  # (blocks, model, history): three two-block runs, one control
+for num_blks in (2, 2, 2, 1):
+    model = d2l.TinyCharLM(vocab_size=64, num_blks=num_blks, pos='rope')
+    runs.append((num_blks, model, train_repeat(model, 5000, 16, 32)))
+models_two = [model for _, model, _ in runs[:3]]
+_, model_two, hist_two = runs[0]   # Run 1: maps and curves shown for it
+_, model_one, hist_one = runs[3]
 x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
-for name, model in (('2 blocks', model_two), ('1 block', model_one)):
+print('blocks  first copy  later copies  accuracy  below 1 nat at step')
+for num_blks, model, hist in runs:
     first, rep, acc = eval_copy(model, x, L)
-    print(f'{name}: first copy {first:.2f}, later copies {rep:.2f}, '
-          f'accuracy {acc:.2f}')
+    print(f'{num_blks:6d}{first:12.2f}{rep:14.2f}{acc:10.2f}'
+          f'{drop_step(hist) or "never":>21}')
 ```
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-1}
 %%tab jax
-model_two = d2l.TinyCharLM(vocab_size=64, num_blks=2, pos='rope',
+runs = []  # (blocks, model, history): three two-block runs, one control
+for num_blks in (2, 2, 2, 1):
+    model = d2l.TinyCharLM(vocab_size=64, num_blks=num_blks, pos='rope',
                            rngs=nnx.Rngs(d2l.get_key()))
-hist_two = train_repeat(model_two, 5000, Lmin=16, Lmax=32)
-model_one = d2l.TinyCharLM(vocab_size=64, num_blks=1, pos='rope',
-                           rngs=nnx.Rngs(d2l.get_key()))
-hist_one = train_repeat(model_one, 5000, Lmin=16, Lmax=32)
+    runs.append((num_blks, model, train_repeat(model, 5000, 16, 32)))
+models_two = [model for _, model, _ in runs[:3]]
+_, model_two, hist_two = runs[0]   # Run 1: maps and curves shown for it
+_, model_one, hist_one = runs[3]
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
-for name, model in (('2 blocks', model_two), ('1 block', model_one)):
+print('blocks  first copy  later copies  accuracy  below 1 nat at step')
+for num_blks, model, hist in runs:
     first, rep, acc = eval_copy(model, x, L)
-    print(f'{name}: first copy {first:.2f}, later copies {rep:.2f}, '
-          f'accuracy {acc:.2f}')
+    print(f'{num_blks:6d}{first:12.2f}{rep:14.2f}{acc:10.2f}'
+          f'{drop_step(hist) or "never":>21}')
 ```
 
-The results agree with the composition argument. The two-block model
-brings the later-copy loss down to a few tenths of a nat in a typical run
-and predicts about nine in ten repeated tokens; an occasional run stalls
-near one nat. The one-block model stays above three nats and predicts
-fewer than one in five. That is better than chance, because copying heads
-can concentrate probability on the tokens present in the context, but it
-is far from retrieval. On the first copy, both models stay at or somewhat
-above the chance loss of $\log 64 \approx 4.16$ nats. A model that
-expects repetition assigns some probability to the context's tokens, and
-that probability is wasted whenever a newly sampled token does not repeat.
-The training curves show when the gap opens.
+All three two-block runs achieve $\sim 90\%$ later-copy accuracy (losses
+$0.3$--$0.4$ nats), whereas the one-block model stalls above $3$ nats ($\sim
+10\%$ accuracy, only boosting the unigram set of tokens present in the
+context). Furthermore, the training curve exhibits an abrupt phase transition
+after an initial plateau:
 
 ```{.python .input #what-attention-computes-two-blocks-learn-to-look-things-up-2}
 %%tab pytorch, jax
@@ -517,26 +400,18 @@ d2l.plot(steps, [[h[1] for h in hist_two], [h[1] for h in hist_one],
                  'first copy, 2 blocks', 'log 64'], figsize=(5, 3))
 ```
 
-For a long stretch of training, the later-copy curve of the two-block model
-stays at or slightly above that of the one-block model. It then drops by several nats, most of
-the way within a few hundred steps and sometimes in two stages, as the
-computation the model performs changes abruptly. The point at which the drop
-happens varies from run to run by up to a thousand steps. Larger language
-models show a similar abrupt change in their training loss, and it coincides
-with the formation of induction heads :cite:`Olsson.Elhage.Nanda.ea.2022`.
-
 ## Evidence for the Circuit
 
-The loss shows that two blocks solve the task; it does not show how. Three
-tests look inside the trained model. The attention maps show where each
-head looks, the OV circuits show what the heads move, and removing heads
-shows which of them the predictions need.
+To verify whether `model_two` actually implements the two-step induction
+circuit of :numref:`fig_induction-circuit`, we inspect (1) its attention maps,
+(2) its OV copy matrices, and (3) head ablations.
 
 ### Attention Patterns of the Learned Heads
 
-`TinyCharLM.attention_weights` returns the attention map of every head in
-every block. We feed one sequence with pattern length 24 and display all
-eight heads.
+On a test sequence of period $L = 24$, our circuit predicts that at least one
+block-1 head should attend one position back ($j = i - 1$), and block-2 heads
+should attend to the induction target $j = i + 1 - L = i - 23$ once $i \ge
+24$:
 
 ```{.python .input #what-attention-computes-the-heads-caught-in-the-act-1}
 %%tab pytorch
@@ -559,18 +434,10 @@ d2l.show_heatmaps(maps[:, 0], xlabel='key position',
                   figsize=(9, 4.5), cmap='Blues')
 ```
 
-The top row shows block 1 and the bottom row block 2, and both halves of
-the predicted circuit are visible. In block 1, at least one head draws a
-line one step below the diagonal: a previous-token head. The others draw
-mostly the diagonal itself, attending to their own position. In block 2,
-heads draw a line 23 steps below the diagonal, starting where the second
-copy starts. Each query there attends to the token *after* the previous
-occurrence of the query's own token, which for a period of 24 lies 23
-positions back. This is the induction stripe. To measure it, `head_scores`
-computes, for every head, the average attention on the previous token and
-on the induction target $j = i + 1 - L$, over a batch with pattern lengths
-from 16 to 32. The target score averages over the queries whose token has
-occurred before, $i \geq L$.
+To quantify both roles across variable pattern lengths $L \in \{16, \ldots,
+32\}$ and across all three runs, `head_scores` computes each head's mean
+attention weight on the previous token ($j = i - 1$) and on the induction
+target ($j = i + 1 - L$ for $i \ge L$):
 
 ```{.python .input #what-attention-computes-the-heads-caught-in-the-act-2}
 %%tab pytorch
@@ -588,12 +455,14 @@ def head_scores(model, x, L):
     ind = (ind * valid[:, None]).sum((1, 3)) / valid.sum()
     return torch.stack((prev, ind), 1)
 
-scores = head_scores(model_two, *repeated_batch(256, 64, 64, 16, 32,
-                                                d2l.try_gpu()))
-for b, rows in enumerate(scores.tolist()):
-    for name, row in zip(('previous', 'induction'), rows):
-        print(f'block {b + 1}, {name:<9}: '
-              + ' '.join(f'{v:.2f}' for v in row))
+x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
+all_scores = [head_scores(model, x, L) for model in models_two]
+scores = all_scores[0]  # Run 1, whose maps are shown above
+for r, run_scores in enumerate(all_scores):
+    for b, rows in enumerate(run_scores.tolist()):
+        for name, row in zip(('previous', 'induction'), rows):
+            print(f'run {r + 1}, block {b + 1}, {name:<9}: '
+                  + ' '.join(f'{v:.2f}' for v in row))
 ```
 
 ```{.python .input #what-attention-computes-the-heads-caught-in-the-act-2}
@@ -611,121 +480,146 @@ def head_scores(model, x, L):
     ind = (ind * valid[:, None]).sum((1, 3)) / valid.sum()
     return jnp.stack((prev, ind), 1)
 
-scores = head_scores(model_two, *repeated_batch(d2l.get_key(), 256, 64, 64,
-                                                16, 32))
-for b, rows in enumerate(scores.tolist()):
-    for name, row in zip(('previous', 'induction'), rows):
-        print(f'block {b + 1}, {name:<9}: '
-              + ' '.join(f'{v:.2f}' for v in row))
+x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
+all_scores = [head_scores(model, x, L) for model in models_two]
+scores = all_scores[0]  # Run 1, whose maps are shown above
+for r, run_scores in enumerate(all_scores):
+    for b, rows in enumerate(run_scores.tolist()):
+        for name, row in zip(('previous', 'induction'), rows):
+            print(f'run {r + 1}, block {b + 1}, {name:<9}: '
+                  + ' '.join(f'{v:.2f}' for v in row))
 ```
 
-Each line lists the four heads of one block. In block 1, one head, or in
-many runs two or three that split the role, puts much of its attention on
-the previous token and almost none on the induction target. The other
-heads of the block do neither. Block 2's heads do the reverse. They share the induction pattern,
-and the strongest puts more than a quarter of its attention, in many runs
-over half, on the single position the algorithm calls for, out of up to 63
-candidates. A uniform weighting would give that position about one fortieth.
+In every run, one or two block-1 heads specialize as previous-token heads,
+while block-2 heads concentrate attention on the induction target $j = i + 1
+- L$.
 
 ### The Copy Matrix
 
-The attention maps show where the heads look; the OV circuits show what
-they move. If block 2's heads copy, attending to token $a$ should raise the
-logit of token $a$ itself. Write
+Attending to position $j$ predicts $x_j$ only if block 2's OV circuit boosts
+the logit of token $x_j$. Let
 
 $$
 C_{ab} = \mathbf{e}_b^\top \mathbf{W}_{\mathrm{OV}}\, \bar{\mathbf{h}}_a
 $$
 :eqlabel:`eq_copy-matrix`
 
-for the boost that attending to token $a$ gives to the logit of token $b$.
-Here $\bar{\mathbf{h}}_a$ is what the head reads at a position that holds
-token $a$: the stream vector entering the block, averaged over the
-positions of $a$ in a batch. In the first block it is the embedding
-$\mathbf{e}_a$; in block 2 it also holds what block 1 wrote. Copying means
-that every row of the $64 \times 64$ matrix $\mathbf{C}$ is largest on its
-diagonal. Because block 2's heads share the copying, we sum their OV
-circuits and count the rows whose largest entry is the diagonal. The same
-count for the one-block model serves as a control, since that model cannot
-retrieve.
+denote the logit boost assigned to token $b$ when the summed OV circuit of a
+block reads the mean residual-stream vector $\bar{\mathbf{h}}_a$ at positions
+holding token $a$ (or the raw embedding $\mathbf{e}_a$). A copying OV circuit
+has its row maximum on the diagonal ($b = a$) across nearly all $64$ rows
+(versus $1/64 \approx 0.02$ by chance):
 
-```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
+```{.python .input #what-attention-computes-copy-matrix-definitions}
 %%tab pytorch
+def circuits(model, blk):
+    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
+    # nn.Linear stores its weight as (output, input), the orientation of the
+    # column-vector equations, so no transpose is needed
+    W_qkv = model.blks[blk]['qkv'].weight           # (3D, D): W_q; W_k; W_v
+    W_o = model.blks[blk]['proj'].weight            # (D, D): heads in columns
+    H, D = model.num_heads, W_o.shape[0]
+    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
+    W_QK = W_q.mT @ W_k
+    W_OV = W_o.reshape(D, H, D // H).transpose(0, 1) @ W_v
+    return W_QK, W_OV
+
 @torch.inference_mode()
-def copy_matrix(model, blk, X):
+def copy_matrix(model, blk, X=None):
     """C[a, b] = e_b^T W_OV h_a: W_OV summed over the heads of blk, h_a the
-    mean stream vector entering blk at the positions of token a in X."""
-    E = model.token_emb.weight
-    S = model.stream(X, blk)[0]                # The stream entering blk
-    h = torch.zeros_like(E).index_add_(0, X.flatten(), S.flatten(0, 1))
-    h = h / torch.bincount(X.flatten(), minlength=len(E))[:, None]
+    mean stream vector entering blk at the positions of token a in X, or the
+    embedding e_a if X is None."""
+    E = h = model.token_emb.weight
+    if X is not None:
+        S = model.stream(X, blk)[0]            # The stream entering blk
+        h = torch.zeros_like(E).index_add_(0, X.flatten(), S.flatten(0, 1))
+        h = h / torch.bincount(X.flatten(), minlength=len(E))[:, None]
     W_OV = circuits(model, blk)[1].sum(0)
     return h @ W_OV.T @ E.T
 
+def diagonal_share(C):
+    """Fraction of the rows of C whose largest entry is on the diagonal."""
+    rows = torch.arange(len(C), device=C.device)
+    return float((C.argmax(-1) == rows).float().mean())
+```
+
+```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
+%%tab pytorch
 x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
-for name, model, blk in (('2 blocks, block 2', model_two, 1),
-                         ('1 block', model_one, 0)):
-    C = copy_matrix(model, blk, x)
-    frac = (C.argmax(-1) == torch.arange(len(C), device=C.device)).float()
-    print(f'{name}: rows whose largest entry is the diagonal '
-          f'{frac.mean():.2f} (chance 1/64)')
+print('rows whose largest entry is the diagonal (chance 1/64)')
+print(f'{"":<32}   run 1   run 2   run 3')
+for name, X in (('2 blocks, block 2, mean stream', x),
+                ('2 blocks, block 2, embeddings', None)):
+    shares = [diagonal_share(copy_matrix(m, 1, X)) for m in models_two]
+    print(f'{name:<32}' + ''.join(f'{v:8.2f}' for v in shares))
+print(f'{"1 block, mean stream":<32}'
+      f'{diagonal_share(copy_matrix(model_one, 0, x)):8.2f}')
 d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None].cpu(),
                   xlabel='logit boosted', ylabel='token attended to',
                   figsize=(3.6, 3.6), cmap='Blues')
 ```
 
-```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
+```{.python .input #what-attention-computes-copy-matrix-definitions}
 %%tab jax
-def copy_matrix(model, blk, X):
+def circuits(model, blk):
+    """W_QK and W_OV of every head of block blk, each (heads, D, D)."""
+    # nnx.Linear stores its kernel as (input, output), the transpose of the
+    # column-vector equations, so both kernels are transposed first
+    W_qkv = model.blks[blk]['qkv'].kernel[...].T    # (3D, D): W_q; W_k; W_v
+    W_o = model.blks[blk]['proj'].kernel[...].T     # (D, D): heads in columns
+    H, D = model.num_heads, W_o.shape[0]
+    W_q, W_k, W_v = W_qkv.reshape(3, H, D // H, D)  # Each (H, d_h, D)
+    W_QK = W_q.mT @ W_k
+    W_OV = W_o.reshape(D, H, D // H).swapaxes(0, 1) @ W_v
+    return W_QK, W_OV
+
+def copy_matrix(model, blk, X=None):
     """C[a, b] = e_b^T W_OV h_a: W_OV summed over the heads of blk, h_a the
-    mean stream vector entering blk at the positions of token a in X."""
-    E = model.token_emb.embedding[...]
-    S = model.stream(X, blk)[0]                # The stream entering blk
-    h = jnp.zeros_like(E).at[X.flatten()].add(S.reshape(-1, E.shape[1]))
-    h = h / jnp.bincount(X.flatten(), length=len(E))[:, None]
+    mean stream vector entering blk at the positions of token a in X, or the
+    embedding e_a if X is None."""
+    E = h = model.token_emb.embedding[...]
+    if X is not None:
+        S = model.stream(X, blk)[0]            # The stream entering blk
+        h = jnp.zeros_like(E).at[X.flatten()].add(S.reshape(-1, E.shape[1]))
+        h = h / jnp.bincount(X.flatten(), length=len(E))[:, None]
     W_OV = circuits(model, blk)[1].sum(0)
     return h @ W_OV.T @ E.T
 
+def diagonal_share(C):
+    """Fraction of the rows of C whose largest entry is on the diagonal."""
+    return float((C.argmax(-1) == jnp.arange(len(C))).mean())
+```
+
+```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
+%%tab jax
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
-for name, model, blk in (('2 blocks, block 2', model_two, 1),
-                         ('1 block', model_one, 0)):
-    C = copy_matrix(model, blk, x)
-    frac = (C.argmax(-1) == jnp.arange(len(C))).mean()
-    print(f'{name}: rows whose largest entry is the diagonal '
-          f'{frac:.2f} (chance 1/64)')
+print('rows whose largest entry is the diagonal (chance 1/64)')
+print(f'{"":<32}   run 1   run 2   run 3')
+for name, X in (('2 blocks, block 2, mean stream', x),
+                ('2 blocks, block 2, embeddings', None)):
+    shares = [diagonal_share(copy_matrix(m, 1, X)) for m in models_two]
+    print(f'{name:<32}' + ''.join(f'{v:8.2f}' for v in shares))
+print(f'{"1 block, mean stream":<32}'
+      f'{diagonal_share(copy_matrix(model_one, 0, x)):8.2f}')
 d2l.show_heatmaps(copy_matrix(model_two, 1, x)[None, None],
                   xlabel='logit boosted', ylabel='token attended to',
                   figsize=(3.6, 3.6), cmap='Blues')
 ```
 
-In block 2 of the two-block model, the largest entry of most rows lies on
-the diagonal, whereas a random argmax would hit the diagonal
-in one row out of 64. Attending to a token raises that token's own logit
-more than any other. The heatmap shows the same thing as a bright diagonal.
-The average over the stream matters. With the raw embeddings $\mathbf{e}_a$
-in place of $\bar{\mathbf{h}}_a$, the same count for block 2 varies widely
-from run to run, because block 1 adds to each position a transformed copy of
-its own token, and block 2 has learned to read that copy. The control copies
-too. The one-block model's heads also raise the logit of the token they
-attend to, which is why its later-copy loss falls below chance, yet the
-model cannot retrieve. Copying OV circuits alone therefore do not explain
-retrieval. What the two-block model adds is the match on the QK side, which
-tells its copying heads where to look (Exercise
-:exref:`ex_what-attention-computes-k-composition` composes block 1's OV
-circuit into block 2's QK circuit). Neither the attention pattern nor the
-copy matrix shows that the model needs these heads. That is a separate
-question.
+Notice two instructive subtleties: (1) the one-block control *also* learns a
+diagonal OV copy matrix, proving that OV copying without QK K-composition
+cannot retrieve in-context successors (see Exercise
+:exref:`ex_what-attention-computes-k-composition`); and (2) block 2 copies
+much more reliably from the block-1 stream $\bar{\mathbf{h}}_a$ than from raw
+embeddings $\mathbf{e}_a$ alone.
 
 ### Head Ablation
 :label:`subsec_head-ablation`
 
-A head with the right pattern and the right OV circuit may still be one the
-model does not rely on. The direct test removes the head and measures what
-breaks. Since `proj` is the only path from a head into the stream, zeroing
-the head's columns of `proj` deletes its term from
-:eqref:`eq_stream-update` and leaves every other head in that block
-unchanged. The function `ablate` returns a copy of the model with the
-given heads of one block removed.
+To test causal necessity, `ablate` zeroes out the output-projection slice
+$\mathbf{W}_o^m$ of selected heads in a block. We compare removing block 1's
+previous-token heads (score $> 0.2$), removing block 1's remaining heads, and
+cumulatively removing block 2's induction heads from strongest to weakest:
 
 ```{.python .input #what-attention-computes-head-ablation-1}
 %%tab pytorch
@@ -749,88 +643,71 @@ def ablate(model, blk, heads):
     return model
 ```
 
-The head scores pick the candidates. In block 1 we count every head whose
-previous-token score exceeds 0.2 as a previous-token head, which catches
-every head that shares the role; the threshold falls in the gap
-between their scores and those of the heads that attend to their own
-position. We remove the previous-token heads together and, as a control,
-all the other heads of block 1 together. In block 2 we remove the heads
-cumulatively, in order of their induction scores, one, two, three, and all
-four. The one-block model is listed for reference, and every variant is
-evaluated on the same fresh batch.
-
 ```{.python .input #what-attention-computes-head-ablation-2}
 %%tab pytorch
-H = model_two.num_heads
-prev = [h for h in range(H) if scores[0, 0, h] > 0.2]  # Previous-token heads
-rest = [h for h in range(H) if h not in prev]
-order = scores[1, 1].argsort(descending=True).tolist()  # Strongest first
-variants = {'none': model_two,
-            'block 1, previous-token heads': ablate(model_two, 0, prev),
-            'block 1, all other heads': ablate(model_two, 0, rest)}
-for k in range(1, H + 1):
-    variants[f'block 2, top {k} induction'] = ablate(model_two, 1, order[:k])
-variants['one-block model'] = model_one
 x, L = repeated_batch(256, 64, 64, 16, 32, d2l.try_gpu())
-print(f'block 1, previous-token heads: {prev}, others: {rest}')
-print(f'{"heads removed":<31}later-copy loss  accuracy')
-for name, model in variants.items():
-    first, rep, acc = eval_copy(model, x, L)
-    print(f'{name:<31}{rep:15.2f}{acc:10.2f}')
+H, table = model_two.num_heads, {}  # Variant: (loss, accuracy) per run
+for r, (model, s) in enumerate(zip(models_two, all_scores)):
+    prev = [h for h in range(H) if s[0, 0, h] > 0.2]  # Previous-token heads
+    rest = [h for h in range(H) if h not in prev]
+    order = s[1, 1].argsort(descending=True).tolist()  # Strongest first
+    print(f'run {r + 1}: block 1 previous-token heads {prev}, others {rest}')
+    variants = {'none': model,
+                'block 1, previous-token heads': ablate(model, 0, prev),
+                'block 1, all other heads': ablate(model, 0, rest)}
+    for k in range(1, H + 1):
+        variants[f'block 2, top {k} induction'] = ablate(model, 1, order[:k])
+    for name, variant in variants.items():
+        table.setdefault(name, []).append(eval_copy(variant, x, L)[1:])
+table['one-block model'] = [eval_copy(model_one, x, L)[1:]]
+print(f'{"heads removed":<31}later-copy loss / accuracy: run 1, 2, 3')
+for name, cols in table.items():
+    print(f'{name:<31}'
+          + ''.join(f'{rep:7.2f} /{acc:5.2f}' for rep, acc in cols))
 ```
 
 ```{.python .input #what-attention-computes-head-ablation-2}
 %%tab jax
-H = model_two.num_heads
-prev = [h for h in range(H) if scores[0, 0, h] > 0.2]  # Previous-token heads
-rest = [h for h in range(H) if h not in prev]
-order = jnp.argsort(-scores[1, 1]).tolist()  # Strongest first
-variants = {'none': model_two,
-            'block 1, previous-token heads': ablate(model_two, 0, prev),
-            'block 1, all other heads': ablate(model_two, 0, rest)}
-for k in range(1, H + 1):
-    variants[f'block 2, top {k} induction'] = ablate(model_two, 1, order[:k])
-variants['one-block model'] = model_one
 x, L = repeated_batch(d2l.get_key(), 256, 64, 64, 16, 32)
-print(f'block 1, previous-token heads: {prev}, others: {rest}')
-print(f'{"heads removed":<31}later-copy loss  accuracy')
-for name, model in variants.items():
-    first, rep, acc = eval_copy(model, x, L)
-    print(f'{name:<31}{rep:15.2f}{acc:10.2f}')
+H, table = model_two.num_heads, {}  # Variant: (loss, accuracy) per run
+for r, (model, s) in enumerate(zip(models_two, all_scores)):
+    prev = [h for h in range(H) if s[0, 0, h] > 0.2]  # Previous-token heads
+    rest = [h for h in range(H) if h not in prev]
+    order = jnp.argsort(-s[1, 1]).tolist()  # Strongest first
+    print(f'run {r + 1}: block 1 previous-token heads {prev}, others {rest}')
+    variants = {'none': model,
+                'block 1, previous-token heads': ablate(model, 0, prev),
+                'block 1, all other heads': ablate(model, 0, rest)}
+    for k in range(1, H + 1):
+        variants[f'block 2, top {k} induction'] = ablate(model, 1, order[:k])
+    for name, variant in variants.items():
+        table.setdefault(name, []).append(eval_copy(variant, x, L)[1:])
+table['one-block model'] = [eval_copy(model_one, x, L)[1:]]
+print(f'{"heads removed":<31}later-copy loss / accuracy: run 1, 2, 3')
+for name, cols in table.items():
+    print(f'{name:<31}'
+          + ''.join(f'{rep:7.2f} /{acc:5.2f}' for rep, acc in cols))
 ```
 
-Removing block 1's previous-token heads breaks retrieval. The later-copy
-loss rises by several nats and the accuracy falls far below that of the
-intact model, because block 2 has nothing left to match against. Removing
-the other heads of block 1 breaks it about as badly, although their maps
-looked irrelevant. They attend to their own position and write a
-transformed copy of the current token into the stream, which block 2
-reads, as the copy matrix above showed. The maps had no way to show this;
-only the intervention did. Block 2's heads share the work. Removing the
-strongest alone costs only part of the accuracy, removing a second and a
-third costs more, and with all four removed the later-copy loss lies above
-even that of the one-block model. Each induction head can partly stand in
-for the others, so removing any single one underestimates how much the
-group matters. The ablations give the causal evidence that the maps could
-not give. To predict later copies, the model needs all of block 1, the
-previous-token heads and the heads that copy the current token, and the
-induction heads of block 2.
+Ablating block 1's previous-token heads collapses later-copy accuracy to
+$\le 0.10$, confirming their necessity. Interestingly, ablating block 1's
+*other* heads also breaks retrieval: because `copy_matrix` relied on block 1's
+transformed stream (and zero-ablation shifts stream norms in an unnormalized
+network; see Exercise :exref:`ex_what-attention-computes-circuit-ablation` on
+mean ablation), block 2 depends on those heads as well. In block 2, the four
+heads share the induction workload redundantly, requiring multiple heads to
+be ablated before accuracy drops to chance.
 
 ## In-Context Learning
 
 ### Generalization to Unseen Patterns
 :label:`subsec_unseen-patterns`
 
-Every test sequence is sampled at evaluation time, so the pattern it
-completes has almost surely never occurred in training, since there are at
-least $64^{16}$ patterns. Across training sequences, moreover, every pair of
-adjacent tokens is equally frequent. The parameters therefore cannot store
-which token follows which in this pattern. The match-and-copy circuit
-instead binds each token to its successor at inference time, inside the
-context window. This is *in-context learning* in miniature. The model
-learns each new pattern from a single exposure, without a gradient step.
-Accuracy per position on patterns of period 24 shows the single exposure
-directly.
+Because $64^{16} \approx 8 \times 10^{28}$ possible patterns exist, every test
+sequence is novel and all token pairs are equally likely across the training
+distribution. The induction circuit binds each token to its successor on the
+fly from a single exposure in the context window—a minimal instance of
+*in-context learning*:
 
 ```{.python .input #what-attention-computes-completing-patterns-it-has-never-seen}
 %%tab pytorch
@@ -849,210 +726,94 @@ d2l.plot([jnp.arange(1, 64), [24, 24]], [acc, [0, 1]],
          'target position', 'accuracy', fmts=('-', 'k:'))
 ```
 
-Accuracy is near zero across the first copy and stays low at position 24
-itself, where the dotted line marks the restart. Nothing in the context yet
-announces that repetition has begun, so no predictor can be confident of
-the restart there. The low accuracy is still a shortfall of `model_two`
-rather than a limit set by the context (Exercise
-:exref:`ex_what-attention-computes-bayes` computes the limit). From the
-next position on, accuracy is high, about 0.9 in a typical run, and it
-stays there for the rest of
-the sequence. One exposure to a pattern suffices to complete its second
-occurrence. The remaining errors have a cause that follows from the
-circuit. When a token occurs twice inside one pattern with different
-successors, a match on a single token is ambiguous, and our two-block
-circuit matches on exactly one preceding token. Disambiguating would
-require matching a longer prefix, through more block-1 heads at fixed
-offsets or through more layers.
+Accuracy jumps from $1/64$ on the first copy (and at the restart boundary
+$t = 24$, where content matching has not yet seen a repeated token; Exercise
+:exref:`ex_what-attention-computes-bayes`) to $> 0.90$ from position $25$
+onward.
+
+What accounts for the remaining $\sim 10\%$ error after the restart? When a
+token appears $K > 1$ times within the $L$-token pattern with different
+successors, matching on the current token alone is ambiguous: choosing
+uniformly among the $K$ occurrences succeeds with probability $1/K$. For
+$L = 24$ and $p = 1/64$, a token repeats in the pattern with probability
+$1 - (63/64)^{23} \approx 0.30$, and uniform single-token matching predicts
+an overall accuracy of
+
+$$
+\mathbb{E}\left[\frac{1}{K}\right] = \frac{1 - (1 - p)^L}{L p} \approx 0.84, \qquad p = \frac{1}{64},
+$$
+
+and $\approx 0.47$ on repeated tokens alone (Exercise
+:exref:`ex_what-attention-computes-repeated-tokens`). Splitting test positions
+by $K = 1$ (unique) versus $K > 1$ (repeated) shows that `model_two` reaches
+$\sim 0.99$ on unique tokens and $0.70$--$0.90$ on repeated tokens—exceeding
+the $0.47$ single-token baseline by combining longer $n$-gram context and
+RoPE offset preferences:
+
+```{.python .input #what-attention-computes-generalization-to-unseen-patterns-1}
+%%tab pytorch
+period, num_steps = 24, 64
+x, _ = repeated_batch(512, num_steps, 64, period, period, d2l.try_gpu())
+pattern = x[:, :period]
+K = (pattern[:, :, None] == pattern[:, None, :]).sum(-1)  # Count in pattern
+K = K[:, torch.arange(period, num_steps - 1) % period]  # Current token
+parts = (K == 1, K > 1, K > 0)           # Unique, repeated, all
+rows = {'share of targets': [p.float().mean() for p in parts],
+        'single-token match': [(1 / K[p]).mean() for p in parts]}
+for r, model in enumerate(models_two):
+    with torch.inference_mode():
+        hit = (model(x[:, :-1]).argmax(-1) == x[:, 1:])[:, period:]
+    rows[f'run {r + 1} accuracy'] = [hit[p].float().mean() for p in parts]
+print(f'{"current token":<18}   unique repeated      all')
+for name, row in rows.items():
+    print(f'{name:<18}' + ''.join(f'{v:9.2f}' for v in row))
+```
+
+```{.python .input #what-attention-computes-generalization-to-unseen-patterns-1}
+%%tab jax
+period, num_steps = 24, 64
+x, _ = repeated_batch(d2l.get_key(), 512, num_steps, 64, period, period)
+pattern = x[:, :period]
+K = (pattern[:, :, None] == pattern[:, None, :]).sum(-1)  # Count in pattern
+K = K[:, jnp.arange(period, num_steps - 1) % period]  # Current token
+parts = (K == 1, K > 1, K > 0)           # Unique, repeated, all
+rows = {'share of targets': [p.mean() for p in parts],
+        'single-token match': [(1 / K[p]).mean() for p in parts]}
+for r, model in enumerate(models_two):
+    hit = (model(x[:, :-1]).argmax(-1) == x[:, 1:])[:, period:]
+    rows[f'run {r + 1} accuracy'] = [hit[p].mean() for p in parts]
+print(f'{"current token":<18}   unique repeated      all')
+for name, row in rows.items():
+    print(f'{name:<18}' + ''.join(f'{v:9.2f}' for v in row))
+```
 
 ### Induction Heads in Larger Models
 :label:`subsec_induction-larger-models`
 
-The same circuit appears far beyond this 64-token model.
-:citet:`Olsson.Elhage.Nanda.ea.2022` found induction heads in transformer
-language models of many sizes, using the probe of this section: score each
-head by its attention from the current token to the token after that
-token's previous occurrence, on repeated random sequences. One of their
-observations matches what we measured: induction heads form abruptly, and
-their formation coincides with a visible change in the loss curve. Two
-others go beyond our experiment. Models gain most of their ability to use context in the same
-window, measured as the drop in loss from early to late positions of the
-context, and removing induction heads after training removes much of that
-gain in small models (Exercise :exref:`ex_what-attention-computes-text`
-tests this on text). And heads found on repeated random tokens also
-complete structured patterns and copy fragments of text, so prefix
-matching is a general algorithm, not a trick for exact repetition. In models with
-feed-forward layers and normalization, the attribution of behavior to
-single components is less direct, but the circuit found in `TinyCharLM`
-remains a small, explicit model of how earlier context shapes later
-predictions.
-
-### In-Context Regression
-:label:`subsec_in-context-regression`
-
-Induction heads learn from the context by copying. Large models also learn
-from the context when nothing is copied, for instance by inferring a rule
-from a few labeled examples. The simplest such task is linear regression in
-context. The sequence holds pairs $(\mathbf{x}_i, y_i)$ with
-$y_i = \mathbf{w}^\top \mathbf{x}_i$ for a weight vector $\mathbf{w}$
-drawn afresh for every sequence, followed by a query $\mathbf{x}_q$ whose
-label the model must predict. One step of gradient descent on the squared
-loss $\frac{1}{2}\sum_{i=1}^n (y_i - \mathbf{w}^\top \mathbf{x}_i)^2$,
-started at $\mathbf{w} = \mathbf{0}$ with learning rate $\eta$, gives
-$\mathbf{w}_1 = \eta \sum_i y_i \mathbf{x}_i$ and the prediction
-
-$$
-\hat{y}_q = \mathbf{w}_1^\top \mathbf{x}_q = \eta \sum_{i=1}^n y_i\, \mathbf{x}_i^\top \mathbf{x}_q.
-$$
-:eqlabel:`eq_icl-gd-step`
-
-The right-hand side has the form of attention without a softmax: the query
-$\mathbf{x}_q$ is compared with the keys $\mathbf{x}_i$ by inner products,
-and the scores weight the values $y_i$. It is the numerator of the linear
-attention :eqref:`eq_linear-attn` of :numref:`sec_attention-at-scale` with
-$\phi(\mathbf{x}) = \mathbf{x}$ and no normalizer. A single head computes
-it from a sequence of tokens. Give each example the token
-$\mathbf{z}_i = [\mathbf{x}_i; y_i] \in \mathbb{R}^{p+1}$ and the query the
-token $\mathbf{z}_q = [\mathbf{x}_q; 0]$. Let the head's query and key maps
-both be $[\mathbf{I}_p\ \mathbf{0}]$, which read the input part of a token,
-let its value map $[\mathbf{0}^\top\ 1]$ read the label, and drop the
-softmax. Its output at the query token is then
-$\eta \sum_i (\mathbf{x}_q^\top \mathbf{x}_i)\, y_i$, which is
-:eqref:`eq_icl-gd-step`. The query token also attends to itself, but its
-value is zero. The function `gd_head` builds the tokens and runs this head,
-and the cell compares its output with the prediction of one gradient step.
-
-```{.python .input #what-attention-computes-in-context-regression}
-%%tab pytorch
-def gd_head(X, y, x_q, eta):
-    """Softmax-free head on tokens [x_i; y_i] and the query token [x_q; 0]."""
-    p = X.shape[-1]
-    z_q = torch.cat((x_q, torch.zeros_like(x_q[..., :1])), -1)
-    Z = torch.cat((torch.cat((X, y[..., None]), -1), z_q[..., None, :]), -2)
-    W_Q = W_K = torch.eye(p, p + 1)        # Queries and keys read x
-    W_V = torch.eye(p + 1)[p:]             # Values read y
-    Q, K, V = Z @ W_Q.T, Z @ W_K.T, Z @ W_V.T
-    return eta * (Q[..., -1:, :] @ K.mT @ V)[..., 0, 0]  # At the query
-
-n, p, eta = 32, 8, 0.1
-X, w, x_q = torch.randn(n, p), torch.randn(p), torch.randn(p)
-y = X @ w                              # Context labels
-w_1 = eta * X.T @ y                    # One gradient step from w = 0
-print(f'one gradient step: {x_q @ w_1:.4f}, '
-      f'attention head: {gd_head(X, y, x_q, eta):.4f}')
-```
-
-```{.python .input #what-attention-computes-in-context-regression}
-%%tab jax
-def gd_head(X, y, x_q, eta):
-    """Softmax-free head on tokens [x_i; y_i] and the query token [x_q; 0]."""
-    p = X.shape[-1]
-    z_q = jnp.concatenate((x_q, jnp.zeros_like(x_q[..., :1])), -1)
-    Z = jnp.concatenate((jnp.concatenate((X, y[..., None]), -1),
-                         z_q[..., None, :]), -2)
-    W_Q = W_K = jnp.eye(p, p + 1)          # Queries and keys read x
-    W_V = jnp.eye(p + 1)[p:]               # Values read y
-    Q, K, V = Z @ W_Q.T, Z @ W_K.T, Z @ W_V.T
-    return eta * (Q[..., -1:, :] @ K.mT @ V)[..., 0, 0]  # At the query
-
-n, p, eta = 32, 8, 0.1
-k_X, k_w, k_q = jax.random.split(d2l.get_key(), 3)
-X, w = jax.random.normal(k_X, (n, p)), jax.random.normal(k_w, (p,))
-x_q = jax.random.normal(k_q, (p,))
-with jax.default_matmul_precision('highest'):  # Full fp32 for a check
-    y = X @ w                          # Context labels
-    w_1 = eta * X.T @ y                # One gradient step from w = 0
-    print(f'one gradient step: {x_q @ w_1:.4f}, '
-          f'attention head: {gd_head(X, y, x_q, eta):.4f}')
-```
-
-:begin_tab:`jax`
-On a GPU, JAX multiplies float32 matrices in the reduced-precision TF32 format by
-default, which is enough for training but blurs an exactness check in the
-fourth digit; the `with` block asks for full float32 precision.
-:end_tab:
-
-The two predictions agree to rounding error. The head's weights contain no
-information about $\mathbf{w}$. The rule comes from the examples in its
-context. With $\eta = 1/n$ the step gives $\mathbf{w}_1 = \frac{1}{n}
-\sum_i \mathbf{x}_i \mathbf{x}_i^\top \mathbf{w}$, and for standard normal
-inputs the average $\frac{1}{n}\sum_i \mathbf{x}_i \mathbf{x}_i^\top$
-tends to the identity as $n$ grows. A longer context should therefore give
-a better prediction, with the same weights. The cell measures the error
-relative to the variance of the label, averaged over 500 sequences.
-
-```{.python .input #what-attention-computes-in-context-regression-1}
-%%tab pytorch
-for n in (10, 100, 1000):
-    X = torch.randn(500, n, p)
-    w, x_q = torch.randn(500, p), torch.randn(500, p)
-    y, y_q = (X @ w[..., None])[..., 0], (x_q * w).sum(-1)
-    err = ((gd_head(X, y, x_q, 1 / n) - y_q) ** 2).mean() / (y_q ** 2).mean()
-    print(f'{n:4d} examples in context: relative squared error {err:.3f}')
-```
-
-```{.python .input #what-attention-computes-in-context-regression-1}
-%%tab jax
-for n in (10, 100, 1000):
-    k_X, k_w, k_q = jax.random.split(d2l.get_key(), 3)
-    X = jax.random.normal(k_X, (500, n, p))
-    w, x_q = jax.random.normal(k_w, (500, p)), jax.random.normal(k_q, (500, p))
-    y, y_q = (X @ w[..., None])[..., 0], (x_q * w).sum(-1)
-    err = ((gd_head(X, y, x_q, 1 / n) - y_q) ** 2).mean() / (y_q ** 2).mean()
-    print(f'{n:4d} examples in context: relative squared error {err:.3f}')
-```
-
-The error falls about tenfold for every tenfold increase of $n$. The head
-learns the regression from its context, and more examples teach it more.
-:citet:`Oswald.Niklasson.Randazzo.ea.2023` built such layers by hand and
-found that linear-attention transformers trained on in-context regression
-learn this solution, with deeper models learning refinements of it.
-Whether pretrained language models learn in context the same way is
-disputed :cite:`Shen.Mishra.Khashabi.2024`. The induction head remains the
-best-established mechanism.
+:citet:`Olsson.Elhage.Nanda.ea.2022` demonstrated that induction heads form
+during an abrupt phase transition in language models across scales, coinciding
+with the emergence of general in-context learning (Exercise
+:exref:`ex_what-attention-computes-text`). Beyond copying and fuzzy pattern
+completion, attention layers can also implement in-context gradient steps on
+regression tasks (Exercise
+:exref:`ex_what-attention-computes-in-context-regression`,
+:cite:`Oswald.Niklasson.Randazzo.ea.2023,Shen.Mishra.Khashabi.2024`).
 
 ## Attention Weights as Explanations
 
-An attention map fixes the mixture $\alpha_{ij}$, but the head's effect
-runs through its OV circuit. A head that attends sharply to a token might
-move the token's identity, some feature of it, or, if
-$\mathbf{W}_{\mathrm{OV}}$ annihilates the relevant directions, nothing at
-all. Conversely, diffuse maps can implement a precise computation. In
-:numref:`sec_multihead-attention`, two heads blend the same two values with
-different weights, neither of them sharp, and a linear readout of the two
-mixtures recovers both values exactly.
+Our investigation illustrates why attention heatmaps alone are insufficient as
+mechanistic explanations:
 
-Trained language models offer a common example of a sharp map with little
-effect. Many of their heads put most of their attention on the first token
-of the sequence, whatever that token is :cite:`Xiao.Tian.Chen.ea.2024`.
-The softmax forces every row of weights to sum to one, so a head with
-nothing to retrieve must put its weight somewhere, and the first token,
-visible to every query, becomes the place. This *attention sink* has a
-value vector of small norm, so the weight placed on it adds almost nothing
-to the stream :cite:`Gu.Pang.Du.ea.2025`. Read alone, the map says the
-first token matters most. Read with the OV circuit, it says the head is
-mostly idle. :numref:`sec_kv-cache` shows why a model's sinks must be kept when its
-memory of the context is truncated.
+* **Important heads can have unremarkable maps:** Block 1's non-previous-token
+  heads looked inert in the heatmaps, yet ablating them broke block 2's
+  retrieval.
+* **Sharp maps can have negligible effect:** In pretrained language models,
+  idle heads frequently place most of their weight on the first token (an
+  *attention sink*), whose OV vector has near-zero norm
+  :cite:`Xiao.Tian.Chen.ea.2024,Gu.Pang.Du.ea.2025`.
 
-The same mismatch between weights and effect appears in trained
-classifiers. :citet:`Jain.Wallace.2019` showed that, on many
-text-classification tasks, quite different attention distributions leave a
-model's predictions unchanged. :citet:`Wiegreffe.Pinter.2019` replied that
-adversarially chosen alternatives do not refute every explanatory use of
-attention, and the debate sharpened rather than settled. As an unqualified
-claim, "the attention weights explain the prediction" is false. A useful
-interpretation includes the value transformation that follows the weights,
-and a test of whether the model uses the computation at all.
-
-The evidence for the induction circuit in this section comes in levels of
-increasing strength, summarized in :numref:`tab_induction-evidence`. The
-lower loss of the deeper model is *behavioral* evidence that depth enables
-the task, but it identifies no component. Changing the period is an
-intervention on the input, which separated content matching from a
-positional shortcut. The attention pattern and the copy matrix are evidence
-from activations and weights. They show that candidate heads have the
-right form, not that the prediction depends on them. Ablation intervenes on
-the components themselves and shows that it does.
+:numref:`tab_induction-evidence` summarizes the hierarchy of evidence used to
+validate the induction circuit.
 
 :Evidence for the induction-head interpretation, by level.
 :label:`tab_induction-evidence`
@@ -1065,44 +826,22 @@ the components themselves and shows that it does.
 | copy matrix | weights and mean activations | block 2's OV circuits copy tokens | also present in a model that does not retrieve |
 | head ablation | component intervention | later-copy prediction needs all of block 1, not only its previous-token heads, and block 2's induction heads | zeroing moves the stream off its training distribution |
 
-Ablation asks whether a component is necessary. *Activation patching* asks
-what a component carries. It copies the component's output from a run on
-one input into a run on another and measures how much of the first run's
-behavior follows :cite:`Meng.Bau.Andonian.ea.2022`. With such
-interventions, :citet:`Wang.Variengien.Conmy.ea.2023` traced the circuit
-by which GPT-2 small finds the indirect object of a sentence, a circuit
-that includes induction heads.
-
-In an attention-only model these tests are comparatively direct, because
-fixing the attention patterns makes the stream update linear. The next
-chapter adds feed-forward layers and normalization to every block
-(:numref:`chap_transformers`), which removes that simplification. Large
-models also represent more features than the stream has dimensions, so
-features share directions (*superposition*) and a head rarely reads one
-clean feature. Analyzing them takes the same three kinds of evidence, from
-behavior, from weights, and from interventions, at a much larger scale;
-:numref:`sec_lm_interpretability` gathers it for a released language
-model.
-
 ## Summary
 
-An attention head consists of two circuits: a QK circuit $\mathbf{W}_q^\top
-\mathbf{W}_k$ that decides where it attends and an OV circuit $\mathbf{W}_o
-\mathbf{W}_v$ that decides what it adds to the residual stream, both of
-rank at most $d_h$ and both readable from the weights. In an attention-only
-transformer, expanding the stream shows that one layer adds skip-trigrams
-such as copying to the bigram statistics of the embeddings, while
-predicting what followed the previous occurrence of the current token takes
-two layers: a previous-token head composed with a match-and-copy induction
-head. Trained on repeated random tokens with a variable period, a two-block
-`TinyCharLM` learns this circuit after an abrupt drop in loss and completes
-patterns it has never seen, a small instance of in-context learning. With a
-fixed period, a one-block model finds a positional shortcut instead.
-Attention maps located the candidate heads, the copy matrix showed that
-they copy, as even the one-block model's heads do, and ablation showed that
-the model needs them, together with block-1 heads whose maps looked
-irrelevant. Attention weights alone explain little until the value
-transformation and an intervention are added.
+* Each attention head decomposes into a rank-$d_h$ **QK circuit**
+  $\mathbf{W}_q^\top \mathbf{W}_k$ (where it attends) and a rank-$d_h$ **OV
+  circuit** $\mathbf{W}_o \mathbf{W}_v$ (what it writes to the residual
+  stream).
+* A one-layer attention-only model can represent bigrams and skip-trigrams
+  (including single-token copying), whereas continuing an in-context pattern
+  $[\mathrm{A}][\mathrm{B}] \ldots [\mathrm{A}] \to [\mathrm{B}]$ requires a
+  two-layer **induction circuit** composing a previous-token head with a
+  match-and-copy head.
+* On repeated random patterns of variable period, a two-block model undergoes
+  a sharp training phase transition to $\sim 90\%$ in-context accuracy, while
+  a fixed period allows a one-block model to exploit a positional shortcut.
+* Establishing what a head computes requires combining attention-pattern
+  probes, OV weight analysis, and causal interventions (ablations).
 
 ## Exercises
 
@@ -1128,16 +867,16 @@ transformation and an intervention are added.
        applies to $\mathbf{E}\mathbf{M}\mathbf{E}^\top$.
 
 1. **Paths through two blocks.** Fix the attention patterns of a model with
-   $L$ blocks of $H$ heads on a sequence of $T$ tokens, and write
+   $N$ blocks of $H$ heads on a sequence of $T$ tokens, and write
    $\mathbf{A}^{\ell m}$ for the $T \times T$ matrix with entries
    $\alpha_{ij}^{\ell m}$.
-    1. Expand the logits of :eqref:`eq_stream-update` for $L = 2$ into a
+    1. Expand the logits of :eqref:`eq_stream-update` for $N = 2$ into a
        sum of path terms. Show that the path through head $m$ of block 1 and
        head $m'$ of block 2 acts like a single head with pattern
        $\mathbf{A}^{2m'}\mathbf{A}^{1m}$ and OV circuit
        $\mathbf{W}_{\mathrm{OV}}^{2m'}\mathbf{W}_{\mathrm{OV}}^{1m}$, and
        bound the rank of that circuit.
-    1. Count the path terms for $L$ blocks, and evaluate the count for
+    1. Count the path terms for $N$ blocks, and evaluate the count for
        `model_two`.
     1. In a trained model the patterns of block 2 are not fixed: they depend
        on $\mathbf{h}^{(1)}$ through the QK circuit of block 2. Substitute
@@ -1152,41 +891,14 @@ transformation and an intervention are added.
        $(x_{i-1}, x_i)$ when block 1 contains heads that attend to offsets
        $-1$ and $-2$, and name the composition term that carries each half
        of the match.
-
-1. [code] **A copying head by hand.** The skip-trigram
-   "$[\mathrm{A}] \ldots [\mathrm{A}] \to [\mathrm{A}]$" of
-   :eqref:`eq_one-layer-paths` can be built without training. Instantiate
-   `d2l.TinyCharLM(64, num_blks=1, pos='none')` and overwrite the slices of
-   head 0 in the fused `qkv` weight and in `proj`: set both the query and
-   the key map to $c\mathbf{Q}$ for a random $d_h \times d$ matrix
-   $\mathbf{Q}$ and a constant $c$, set the value map to a second random
-   matrix $\mathbf{V}$ and the head's output map to $\mathbf{V}^\top$, and
-   zero the output maps of the other heads.
-    1. Explain why the score $\mathbf{e}_a^\top \mathbf{W}_{\mathrm{QK}}
-       \mathbf{e}_b$ is large exactly when $a = b$, and why
-       $\mathbf{W}_{\mathrm{OV}} = \mathbf{V}^\top \mathbf{V}$ raises the
-       logit of the attended token more than any other logit.
-    1. Choose $c$ so that the keys holding the query's token receive more
-       than $0.9$ of the weight at every position of random 63-token
-       sequences, and verify that the head's contribution to the logits is
-       largest at the current token.
-    1. Predict the later-copy accuracy of this head on the
-       repeated-sequence task, then measure it with `eval_copy`.
-    1. With $c = 0$ the head weights all positions $j \leq i$ equally, so
-       it raises the logit of each context token roughly in proportion to
-       the token's count. As a reference for this behavior, compute the
-       later-copy loss and accuracy of a predictor proportional to the token
-       counts of the context, pooled over pattern lengths uniform in 16 to
-       32 as `eval_copy` pools them. Compare both numbers with
-       `eval_copy` of `model_one`, and name the information that the trained
-       one-block RoPE model can use and this head cannot.
+   :exlabel:`ex_what-attention-computes-paths`
 
 1. [code] **The shortcut without biases.** The fixed-offset model of
    :numref:`subsec_fixed-offset-shortcut` has projection biases.
     1. Let a head's query and key before rotation be the same constant
        vectors $\mathbf{q}$ and $\mathbf{k}$ at every position. Show with
-       :eqref:`eq_rope-goal` that the score depends only on the offset
-       $j - i$, and explain how $\mathbf{q}$ and $\mathbf{k}$ can be chosen
+       $\mathbf{R}_i^\top \mathbf{R}_j = \mathbf{R}_{j-i}$ that the score
+       depends only on the offset $j - i$, and explain how $\mathbf{q}$ and $\mathbf{k}$ can be chosen
        so that the score is largest at offset $-31$.
     1. Without biases, every query and key is a linear function of the
        stream. What must the token embeddings contain for a head to produce
@@ -1200,20 +912,23 @@ transformation and an intervention are added.
 1. **Weights that change nothing.** The output of a head at query $i$ is
    $\mathbf{W}_{\mathrm{OV}} \sum_j \alpha_{ij}\, \mathbf{h}_j$ by
    :eqref:`eq_stream-update`, and the softmax makes every weight
-   $\alpha_{ij}$ on an unmasked key positive.
+   $\alpha_{ij}$ on an unmasked key positive. :citet:`Jain.Wallace.2019`
+   found that in trained text classifiers quite different attention
+   distributions often leave the prediction unchanged, and concluded that
+   attention weights do not explain predictions.
     1. Show that the attention distributions over $n$ keys that give the
        same head output as $\boldsymbol{\alpha}_i$ contain, around
        $\boldsymbol{\alpha}_i$, a piece of an affine subspace of dimension
        at least $n - 1 - d_h$. Evaluate the bound for the last query of a
        63-token input to `model_two`.
     1. The alternatives of the first part are constructed for one input at
-       a time, as are those of :citet:`Jain.Wallace.2019`. State the
-       condition under which a family of alternatives can be the attention
-       patterns of one head with other QK weights on every input at once.
-       Explain why this condition, raised by
-       :citet:`Wiegreffe.Pinter.2019`, weakens the argument that the
-       existence of alternative distributions disqualifies attention
-       weights as explanations.
+       a time, as are those of :citet:`Jain.Wallace.2019`.
+       :citet:`Wiegreffe.Pinter.2019` argued that an alternative counts
+       against an explanation only if a single trained model produces such
+       alternatives on every input while making nearly the same
+       predictions. Explain why the dimension count of the first part says
+       nothing about whether such a model exists, and describe an
+       experiment that would decide it for `model_two`.
 
 1. [code] **Zero and mean ablation.** The ablations of
    :numref:`subsec_head-ablation` set a head's output to zero.
@@ -1229,7 +944,10 @@ transformation and an intervention are added.
        `model_two` into it with zero `qkv` biases, zero head $m$'s columns
        of `proj`, and set the bias of `proj` to the product of these
        columns, before zeroing, with $\bar{\mathbf{o}}_m$. Repeat the
-       ablations of the text. Do the conclusions change?
+       ablations of the text. Does removing the heads of block 1 that are
+       not previous-token heads still break retrieval, and which of the
+       two readings of :numref:`subsec_head-ablation` does the answer
+       support?
     1. Remove the second-strongest induction head of block 2 on its own.
        Compare the sum of the two single-head increases in later-copy loss
        with the increase when both heads are removed together. What does
@@ -1256,42 +974,46 @@ transformation and an intervention are added.
     1. Simulate the predictor and report its first-copy loss, later-copy
        loss, and later-copy accuracy, pooled over positions as `eval_copy`
        pools them. Compare the results with `model_two`.
-    1. :numref:`subsec_unseen-patterns` states that no predictor can be
-       confident of the restart at position 24 of a period-24 pattern, and
-       that the low accuracy of `model_two` there is a shortfall of the
-       model. Compute the probability that the Bayes-optimal predictor
-       assigns to the correct token there, and determine whether its most
-       probable token is correct. Why does the match-and-copy circuit of
-       `model_two` not predict that token?
+    1. :numref:`subsec_unseen-patterns` states that at target position
+       24 of a period-24 pattern the Bayes-optimal predictor gives the
+       first token of the pattern probability $1/8$, more than it gives
+       any other token. Derive both statements from the first part. What
+       is the predictor's accuracy at that position, and what is that of
+       `model_two`?
    :exlabel:`ex_what-attention-computes-bayes`
 
 1. [code] **Repeated tokens within a pattern.** ●
-   :numref:`subsec_unseen-patterns` attributes the remaining errors of
-   `model_two` to tokens that occur more than once in a pattern with
-   different successors, which a match on a single token cannot tell
-   apart.
+   :numref:`subsec_unseen-patterns` found that the errors after the
+   restart concentrate on tokens that occur more than once in their
+   pattern, and that the trained models nevertheless beat a uniform choice
+   among the occurrences of the current token.
     1. For a pattern of $L$ tokens drawn uniformly from 64 values, compute
        the probability that the token at a given position occurs elsewhere
        in the pattern. A circuit that picks one of the $K$ successors of the
        current token uniformly, when that token occurs $K$ times in the
-       pattern, is correct with probability $1/K$. Compute its expected
-       accuracy $\mathbb{E}[1/K]$ in closed form, and evaluate both
-       quantities for $L = 21$.
-    1. Evaluate `model_two` on patterns of length 21, which
-       `repeated_batch` tiles to three copies within 64 tokens. Split the
-       later-copy targets by whether the current token is unique in the
-       pattern, and report the accuracy of each group on the second and on
-       the third copy. Compare the overall accuracy with
-       $\mathbb{E}[1/K]$.
+       pattern, is correct with probability $1/K$. Show that its expected
+       accuracy is $\mathbb{E}[1/K] = (1 - (1-p)^L)/(Lp)$ with $p = 1/64$,
+       and derive its accuracy on repeated tokens alone. Check the three
+       values that the text gives for $L = 24$, and evaluate them for
+       $L = 21$.
+    1. Patterns of length 21 tile to three copies within 64 tokens.
+       Evaluate `model_two` on them and report its accuracy on repeated
+       tokens separately for the second and for the third copy.
     1. Explain the results through the single-token match. What does an
        additional earlier occurrence with the same successor do to the
        attention pattern and to the output, and what does one with a
        different successor do?
-    1. Two blocks can match on the two-token prefix $(x_{i-1}, x_i)$ when
-       block 1 contains heads that attend to offsets $-1$ and $-2$. Measure
-       the attention mass that each block-1 head of `model_two` places at
-       offset $-2$, and decide from this and your earlier measurements
-       whether `model_two` matches on more than one token.
+    1. The text names two ways to beat the uniform choice: a match on the
+       two-token prefix $(x_{i-1}, x_i)$, which Exercise
+       :exref:`ex_what-attention-computes-paths` shows two blocks can
+       express, and a preference of block 2 for keys 15 to 31 positions
+       back. Measure the attention mass that each block-1 head of
+       `model_two` places at offset $-2$. Then split the repeated tokens of
+       the period-24 evaluation by whether a wrong match lies inside or
+       outside offsets 15 to 31, and compare block 2's accuracy and its
+       attention on the correct key in the two groups. Which mechanism
+       does `model_two` use?
+   :exlabel:`ex_what-attention-computes-repeated-tokens`
 
 1. [code] **K-composition in the weights.** ● The match of the induction
    head works because the QK circuit of block 2 reads what the OV circuit
@@ -1308,10 +1030,45 @@ transformation and an intervention are added.
        heads. Which pairs of heads carry the match, and do they agree with
        the attention-based scores of `head_scores`?
     1. The computation ignores the rotation that RoPE applies inside the QK
-       circuit. Include it for a fixed offset with :eqref:`eq_rope-goal`,
-       and check whether doing so at offset $-23$ changes the ranking of the
-       pairs.
+       circuit. Include the relative rotation $\mathbf{R}_{j-i}$ for a
+       fixed offset, and check whether doing so at offset $-23$ changes
+       the ranking of the pairs.
    :exlabel:`ex_what-attention-computes-k-composition`
+
+1. [code] **A head that takes a gradient step.** ● Induction heads learn
+   from the context by copying. A model can also infer a rule from labeled
+   examples in its context. Let a sequence hold pairs $(\mathbf{x}_i,
+   y_i)$, $i = 1, \ldots, n$, with standard normal $\mathbf{x}_i \in
+   \mathbb{R}^p$ and $y_i = \mathbf{w}^\top \mathbf{x}_i$ for a vector
+   $\mathbf{w}$ drawn afresh for every sequence, followed by a query
+   $\mathbf{x}_q$ whose label is to be predicted.
+    1. Show that one step of gradient descent on $\frac{1}{2}\sum_i (y_i -
+       \mathbf{w}^\top \mathbf{x}_i)^2$, started at $\mathbf{w} =
+       \mathbf{0}$ with learning rate $\eta$, predicts $\hat{y}_q = \eta
+       \sum_i y_i\, \mathbf{x}_i^\top \mathbf{x}_q$. Read this as
+       attention without a softmax: what plays the query, the keys, and the
+       values? Compare it with the linear attention of
+       :numref:`sec_windowed-linear-attention` with feature map
+       $\phi(\mathbf{x}) = \mathbf{x}$.
+    1. Give each example the token $\mathbf{z}_i = [\mathbf{x}_i; y_i] \in
+       \mathbb{R}^{p+1}$ and the query the token $\mathbf{z}_q =
+       [\mathbf{x}_q; 0]$. Choose the query, key, and value maps of one
+       head without a softmax so that its output at the query token is
+       $\hat{y}_q$. Why does it not matter that the query token also
+       attends to itself? Implement the head and check it against the
+       gradient step. Do the head's weights depend on $\mathbf{w}$?
+    1. With $\eta = 1/n$, show that the step gives $\mathbf{w}_1 =
+       \big(\frac{1}{n}\sum_i \mathbf{x}_i \mathbf{x}_i^\top\big)
+       \mathbf{w}$ and that $\mathbb{E}\,\|\mathbf{w}_1 - \mathbf{w}\|^2 =
+       \frac{p+1}{n}\|\mathbf{w}\|^2$. Hint: for a standard normal
+       $\mathbf{x}$, $\mathbb{E}[(\mathbf{x}^\top \mathbf{w})^2
+       \|\mathbf{x}\|^2] = (p+2)\|\mathbf{w}\|^2$. Conclude that the
+       expected squared error of $\hat{y}_q$, relative to the variance of
+       $y_q$, is $(p+1)/n$.
+    1. For $p = 8$, measure the relative error over 500 sequences at $n =
+       10$, 100, and 1000 and compare it with the prediction $9/n$. At $n =
+       10$, how does the head compare with always predicting zero?
+   :exlabel:`ex_what-attention-computes-in-context-regression`
 
 1. [extended] **Induction heads in text.** ●●
    :citet:`Olsson.Elhage.Nanda.ea.2022` tie the formation of induction
@@ -1344,7 +1101,7 @@ transformation and an intervention are added.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §10.6]{.kicker}
+[Dive into Deep Learning · §10.7]{.kicker}
 
 Attention Circuits<br>**the residual stream · QK and OV circuits · induction heads · ablation · in-context learning**
 :::
@@ -1356,32 +1113,32 @@ Attention Circuits<br>**the residual stream · QK and OV circuits · induction h
 A one-block attention model, trained on 64-token sequences that repeat a
 random 32-token pattern:
 
-- predicts the second copy with accuracy about 1.0;
-- on patterns of period 24, its accuracy drops to chance, 1/64;
-- its heads still attend 31 positions back.
+- predicts the second copy with accuracy 1.00;
+- on patterns of period 24, its accuracy drops to 0.01, chance is 1/64;
+- its heads still put about 0.9 of their weight 31 positions back.
 
 ::: {.d2l-note .warn}
-The attention map looked like copying. Which measurements tell a mechanism
-from a shortcut?
+The map looked like copying. Which measurements tell a mechanism from a
+shortcut?
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- read a head as a QK circuit (where) and an OV circuit (what), from its
-  weights;
+- read a head as a QK circuit (where it looks) and an OV circuit (what it
+  writes), from its weights;
 - say what zero, one, and two attention layers can express;
-- recognize the induction circuit and the fixed-offset shortcut;
-- weigh five kinds of evidence: loss, period change, attention maps,
-  weights, ablation.
+- recognize the induction circuit and a fixed-offset shortcut;
+- weigh four kinds of evidence: loss, maps, weights, ablation.
 
-**Running example:** `TinyCharLM`, an attention-only model with two
-blocks of four heads, width $d = 128$, trained on repeated random tokens
-from a vocabulary of 64.
+**Idea:** a map shows half of a head; a claim needs an intervention.
+
+**Running example:** `TinyCharLM`, attention only, width $d = 128$, four
+heads per block, trained on repeated random tokens from 64.
 :::
 
-::: {.slide title="Reading What Trained Heads Compute"}
+::: {.slide title="Reading What Trained Heads Compute Closes the Chapter"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
@@ -1390,52 +1147,65 @@ from a vocabulary of 64.
 |---|---|
 | Queries, Keys, and Values | attention as a soft lookup |
 | Attention Scoring and Masking | scaled dot products, masks |
-| Multi-Head and Cross-Attention | several heads, shared keys and values |
+| Self-Attention and Multiple Heads | a sequence reads itself; several heads |
 | Positional Information | where a token sits |
 | The Cost of Attention | quadratic cost, fused kernels |
+| Windowed and Linear Attention | linear cost, and what it gives up |
 | **Attention Circuits** | **what trained heads compute** |
 :::
 
 ::: {.col .narrow}
 - **Uses:** `TinyCharLM`, RoPE, causal masks.
 - **Skips:** feed-forward layers and normalization (next chapter);
-  interpretability of large models.
+  circuits in large models.
 :::
 :::
+:::
+
+::: {.slide title="Concatenate-Then-Project Is a Sum Over Heads"}
+[The residual stream]{.kicker}
+
+Split the output matrix into one column slice $\mathbf{W}_o^m$
+($d \times d_h$) per head:
+
+$$\mathbf{W}_o\begin{bmatrix}\mathbf{u}_1\\ \vdots\\ \mathbf{u}_H\end{bmatrix} = \sum_{m=1}^{H} \mathbf{W}_o^m \mathbf{u}_m, \qquad \mathbf{u}_m = \sum_{j \le i} \alpha_{ij}^m\, \mathbf{W}_v^m \mathbf{h}_j$$
+
+- $\mathbf{h}_j$: vector at position $j$; $\alpha_{ij}^m$: weight of head
+  $m$ from $i$ to $j$; $d_h = d/H = 32$.
+- Each head adds $\sum_j \alpha_{ij}^m\, \mathbf{W}_o^m \mathbf{W}_v^m
+  \mathbf{h}_j$: value and output maps act only through their product.
+:::
+
+::: {.slide title="A Head Is Two Matrices: QK Decides Where, OV Decides What"}
+$$s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}} \mathbf{h}_j}{\sqrt{d_h}}, \qquad \mathbf{W}_{\mathrm{QK}} = \mathbf{W}_q^\top \mathbf{W}_k, \qquad \mathbf{W}_{\mathrm{OV}} = \mathbf{W}_o \mathbf{W}_v$$
+
+- Query and key maps $\mathbf{W}_q, \mathbf{W}_k$ are $d_h \times d$.
+- Only the products are identifiable: $\mathbf{G}\mathbf{W}_q$ with
+  $\mathbf{G}^{-\top}\mathbf{W}_k$ gives the same scores for any
+  invertible $\mathbf{G}$ (without RoPE).
+- Both are $128 \times 128$ with rank at most $d_h = 32$: one head cannot
+  raise the attended token's logit and leave the other 63 equal.
+- RoPE puts the rotation $\mathbf{R}_{j-i}$ inside the QK circuit; the OV
+  circuit ignores position.
+
+[Elhage et al., 2021]{.small}
 :::
 
 ::: {.slide title="Every Block Adds to a Residual Stream"}
-[The residual stream]{.kicker}
-
 $$\mathbf{h}_i^{(\ell)} = \mathbf{h}_i^{(\ell-1)} + \sum_{m=1}^{H} \sum_{j \leq i} \alpha_{ij}^{\ell m}\, \mathbf{W}_{\mathrm{OV}}^{\ell m}\, \mathbf{h}_j^{(\ell-1)}$$
 
 - $\mathbf{h}_i^{(\ell)}$: the stream of position $i$ after block $\ell$,
   from $\mathbf{h}_i^{(0)} = \mathbf{e}_{x_i}$ (token embedding) to the
-  logits $\mathbf{E}\,\mathbf{h}_i^{(L)}$ (tied output head).
-- $\alpha_{ij}^{\ell m}$: weight of head $m$ in block $\ell$ from $i$ to
-  $j$.
+  logits $\mathbf{E}\,\mathbf{h}_i^{(N)}$ (tied output head, $N$ blocks).
 - Blocks only **add**: what one block writes, every later block can read.
+- With the $\alpha$ fixed, the whole map is linear and expands exactly.
 :::
 
 ::: {.slide title="A Head Reads Earlier Streams and Writes to the Current One"}
 ![](../img/mdl-attention-residual-stream.svg){width=62%}
 
 The QK circuit sets the weights $\alpha_{3j}$; the OV circuit sets what
-each attended stream contributes. With the $\alpha$ fixed, the whole map
-is linear and expands exactly (Elhage et al., 2021).
-:::
-
-::: {.slide title="A Head Is Two Matrices: QK Decides Where, OV Decides What"}
-$$s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}} \mathbf{h}_j}{\sqrt{d_h}}, \qquad \mathbf{W}_{\mathrm{QK}} = \mathbf{W}_q^\top \mathbf{W}_k, \qquad \mathbf{W}_{\mathrm{OV}} = \mathbf{W}_o \mathbf{W}_v$$
-
-- Only the products are identifiable: $\mathbf{R}\mathbf{W}_q$ with
-  $\mathbf{R}^{-\top}\mathbf{W}_k$ computes the same scores (without RoPE).
-- Both are $d \times d$ with rank at most $d_h = d/H$:
-
-@!what-attention-computes-where-and-what-the-qk-and-ov-circuits
-
-- RoPE puts the rotation $\mathbf{R}_{j-i}$ inside the QK circuit; the OV
-  circuit ignores position.
+each attended stream contributes.
 :::
 
 ::: {.slide title="One Layer Adds Skip-Trigrams to Bigrams"}
@@ -1443,12 +1213,14 @@ $$s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}} \mathbf{h}_j}{\sqrt{
 
 $$\mathbf{z}_i = \underbrace{\mathbf{E}\,\mathbf{e}_{x_i}}_{\textrm{bigram}} + \sum_{m}\sum_{j \leq i} \alpha_{ij}^{m}\; \underbrace{\mathbf{E}\,\mathbf{W}_{\mathrm{OV}}^{m}\,\mathbf{e}_{x_j}}_{\textrm{skip-trigram}}$$
 
-- Zero layers: the logit of $b$ after $a$ is $\mathbf{e}_b^\top
-  \mathbf{e}_a$, a symmetric rank-$d$ bigram table.
-- One layer: "$[\mathrm{A}]$ somewhere before $[\mathrm{B}]$ → boost
-  $[\mathrm{C}]$", including copying ($[\mathrm{C}] = [\mathrm{A}]$).
+- Zero layers: logit of $b$ after $a$ is $\mathbf{e}_b^\top
+  \mathbf{e}_a$, a symmetric, positive semidefinite table.
+- One layer: "*keep* earlier, *in* now → boost *mind*"; copying is the case
+  that boosts the attended token itself. The softmax couples the rules.
 - **Not expressible:** attend to the token *after* an earlier
-  $[\mathrm{A}]$. The key at $j$ carries nothing about the token at $j-1$.
+  $[\mathrm{A}]$. The key at $j$ knows nothing about the token at $j-1$.
+
+[Elhage et al., 2021]{.small}
 :::
 
 ::: {.slide title="Induction Needs Two Layers"}
@@ -1488,23 +1260,13 @@ fresh patterns in every minibatch.
 - Later copies: predictable only from the context.
 :::
 
-::: {.slide title="With a Fixed Period of 32, One Block Copies Perfectly"}
-One block, four heads, projection biases on, 800 steps, $L = 32$:
+::: {.slide title="With a Fixed Period of 32, One Block Copies by Looking 31 Back"}
+One block, projection biases on, 800 steps, $L = 32$; then the same model
+on period 24:
 
 @!what-attention-computes-the-positional-shortcut-1
 
-The analysis says one layer cannot match content against an earlier
-occurrence. So what did it learn?
-:::
-
-::: {.slide title="The Shortcut Attends 31 Back Whatever the Period"}
-Probe: the same model on patterns of period 24 (source 23 back).
-
 @!what-attention-computes-the-positional-shortcut-2
-
-- A RoPE head attends to a fixed offset with no content comparison.
-- The `qkv` bias makes it easy: a constant query–key pair whose rotated
-  score depends only on the offset.
 
 ::: {.d2l-note .rule}
 A synthetic task can admit a simpler solution than the one it was built to
@@ -1513,21 +1275,23 @@ test. Drawing $L$ from 16 to 32 removes this one.
 :::
 
 ::: {.slide title="Variable Periods: Two Blocks Retrieve, One Block Cannot"}
-No biases, $L$ uniform on 16 to 32, 5,000 steps each:
+No biases, $L$ uniform on 16 to 32, 5,000 steps; three two-block runs:
 
 @!what-attention-computes-two-blocks-learn-to-look-things-up-1
 
-- Two blocks: later copies typically at a few tenths of a nat, about 9 in
-  10 tokens right.
-- One block: above three nats; copying heads help, retrieval is missing.
+- Two blocks: later copies at a few tenths of a nat, about 9 in 10 right.
+- One block: above three nats, about 1 in 10; copying without retrieval.
+- Crossing 1 nat: after one to three thousand steps, several hundred
+  apart.
 :::
 
 ::: {.slide title="The Two-Block Model Learns Abruptly"}
 @!what-attention-computes-two-blocks-learn-to-look-things-up-2
 
-- Two blocks track one block, then drop by several nats in one or two
-  steep stages of a few hundred steps.
-- Large models show such a drop as induction heads form (Olsson et al., 2022).
+- Later copies: close to the one-block curve, then about three nats down
+  within about a thousand steps (here in two stages).
+- First copy rises at each stage: the model starts to expect repetition,
+  and on the first copy nothing repeats.
 :::
 
 ::: {.slide title="Block 1 Looks One Back; Block 2 Looks Past the Last Match"}
@@ -1539,45 +1303,44 @@ Top, block 1: a line one below the diagonal (previous token). Bottom,
 block 2: a stripe 23 below it from the second copy on (induction).
 :::
 
-::: {.slide title="Head Scores Separate the Two Roles"}
-Mean attention on the previous token and on the induction target
-$j = i + 1 - L$, per head, $L$ from 16 to 32:
+::: {.slide title="Head Scores Separate the Two Roles in Every Run"}
+Mean attention per head on the previous token and on the target
+$j = i + 1 - L$:
 
 @!what-attention-computes-the-heads-caught-in-the-act-2
 
-- Block 1: one head, often two or three, on the previous token, none on
-  the target.
-- Block 2: every head on the target, the strongest with over a quarter of
-  its weight, often over half, on 1 of up to 63 keys.
+- Block 1: one or two heads on the previous token, none on the target.
+- Block 2: every head on the target; the strongest over a third, against
+  about 1/40 for uniform.
 :::
 
 ::: {.slide title="OV Circuits Copy, With or Without Retrieval"}
 ::: {.cols .vc}
-::: {.col}
-$C_{ab} = \mathbf{e}_b^\top \mathbf{W}_{\mathrm{OV}} \bar{\mathbf{h}}_a$: the
-boost that attending to $a$ gives the logit of $b$, with
-$\bar{\mathbf{h}}_a$ the stream the block reads where $a$ sits. Copying
-means each row peaks on the diagonal.
+::: {.col .narrow}
+$C_{ab} = \mathbf{e}_b^\top \mathbf{W}_{\mathrm{OV}} \bar{\mathbf{h}}_a$:
+boost to the logit of $b$ from attending to $a$; $\bar{\mathbf{h}}_a$ is
+the stream where $a$ sits. Copying: rows peak on the diagonal.
 
-The one-block control copies too, yet cannot retrieve: copying alone does
-not explain retrieval; the match on the QK side does.
+- On raw embeddings $\mathbf{e}_a$: weaker, varies by run.
+- The one-block control copies too, yet cannot retrieve.
 :::
 
-::: {.col .narrow}
+::: {.col}
 @!what-attention-computes-the-circuit-is-in-the-weights
 :::
 :::
 :::
 
-::: {.slide title="Removing the Heads Removes Retrieval"}
+::: {.slide title="Removing Block 1's Other Heads Breaks Retrieval Too"}
 @!what-attention-computes-head-ablation-2
 
-- Zero a head's columns of `proj`: its term leaves the stream.
-- Block 1: heads with previous-token score above 0.2 (one, or several
-  that split the role). Removing them breaks retrieval, and so does removing
-  the rest: they copy the current token for block 2.
-- Block 2: accuracy falls as induction heads go; with all four gone, the
-  loss passes the one-block level.
+- Zero a head's columns of the output projection: its term leaves the
+  stream.
+- Predicted: previous-token heads matter. Found: the other block-1 heads
+  matter as much.
+- Most losses exceed $\log 64$, worse than a uniform guess: confidently
+  wrong.
+- Block 2: accuracy falls as induction heads go; all four gone, chance.
 :::
 
 ::: {.slide title="Check: Why Does One Head Matter So Little?"}
@@ -1585,14 +1348,13 @@ not explain retrieval; the match on the QK side does.
 
 Removing block 2's strongest induction head costs only part of the
 later-copy accuracy; removing all four lifts the loss past the one-block
-level.
-What does that say about the heads?
+level. What does that say about the heads?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** They are redundant: each finds the target on its own, so the
-others stand in for any one that is removed. Single-head ablation
-underestimates how much a group of heads matters.
+**Answer.** They share the work: the remaining heads partly make up for
+any one that is removed, so single-head ablation underestimates how much
+the group matters. Remove two or three and accuracy falls steeply.
 :::
 :::
 :::
@@ -1600,64 +1362,78 @@ underestimates how much a group of heads matters.
 ::: {.slide title="One Exposure Suffices on Patterns Never Seen in Training"}
 [In-context learning]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 @!what-attention-computes-completing-patterns-it-has-never-seen
-
-- Period 24, fresh patterns: near zero up to the restart (dotted), then
-  about 0.9.
-- No weight update: the circuit binds tokens to successors in context.
 :::
 
-::: {.slide title="A Softmax-Free Head Takes One Gradient Step"}
-Context $(\mathbf{x}_i, y_i)$, query $\mathbf{x}_q$; one gradient step on
-$\frac{1}{2}\sum_i (y_i - \mathbf{w}^\top\mathbf{x}_i)^2$ from
-$\mathbf{w} = \mathbf{0}$:
-
-$$\hat{y}_q = \eta \sum_i y_i\, \mathbf{x}_i^\top \mathbf{x}_q$$
-
-Tokens $[\mathbf{x}_i; y_i]$ and $[\mathbf{x}_q; 0]$; queries and keys read
-$\mathbf{x}$, values read $y$, no softmax:
-
-@!what-attention-computes-in-context-regression
+::: {.col .narrow}
+- Period 24: chance on the first copy, then about 0.9 or more.
+- At the restart (dotted), nine periods (24 to 32) are still possible
+  and only 24 repeats now. The best predictor gives the repeat
+  $\tfrac{1}{9} + \tfrac{8}{9}\cdot\tfrac{1}{64} = \tfrac{1}{8}$: unsure,
+  yet its top guess is right. Matching content cannot find it.
+:::
+:::
 :::
 
-::: {.slide title="More Context Gives Better Predictions, With the Same Weights"}
-With $\eta = 1/n$, $\mathbf{w}_1 = \frac{1}{n}\sum_i \mathbf{x}_i
-\mathbf{x}_i^\top \mathbf{w} \to \mathbf{w}$ as $n$ grows:
+::: {.slide title="Errors Sit on Tokens That Repeat Inside Their Pattern"}
+Targets after the restart, split by how often the current token occurs in
+its pattern ($K$):
 
-@!what-attention-computes-in-context-regression-1
+@!what-attention-computes-generalization-to-unseen-patterns-1
 
-- The error falls about tenfold per tenfold more examples.
-- Trained linear-attention models learn this solution (von Oswald et al.,
-  2023); whether large pretrained models do is disputed.
+- A uniform choice among the $K$ occurrences is right with probability
+  $1/K$: 0.84 overall, 0.47 on repeated tokens.
+- Every run beats it: the model uses more than the current token.
+  Candidates: the token before it, or where the match sits (15 to 31
+  back).
 :::
 
 ::: {.slide title="Attention Maps Locate Candidates; Interventions Test Them"}
 [Attention weights as explanations]{.kicker}
 
-| check | evidence | shows |
-|---|---|---|
-| later-copy loss | behavioral | two blocks solve the task |
-| period change | input intervention | position vs content |
-| head scores | activation | heads with the predicted offsets |
-| copy matrix | weights, mean stream | block 2 copies |
-| head ablation | component intervention | the model needs these heads |
+| check | evidence | shows | leaves open |
+|---|---|---|---|
+| later-copy loss | behavioral | two blocks solve the task | which component |
+| period change | input intervention | position vs content | changes the task too |
+| head scores | activation | the predicted offsets | what is written |
+| copy matrix | weights | block 2 copies | control copies too |
+| head ablation | intervention | the model needs these heads | stream off-distribution |
+:::
 
+::: {.slide title="Check: Is a Head That Stares at the First Token Important?"}
+[Check]{.kicker}
+
+In a trained language model, a head puts 0.8 of its weight on the first
+token of every sequence. What would you measure before calling that token
+important?
+
+::: {.fragment .fade-up}
 ::: {.d2l-note}
-Attention sinks: heads in large models put most weight on the first token,
-whose value vector has small norm (Xiao et al., 2024; Gu et al., 2025). A
-sharp map, no effect.
+**Answer.** What the head writes: the OV output of that token, often of
+small norm (an *attention sink*), and the loss when the head is removed.
+A sharp map can come from a head with nothing to do.
 :::
 :::
 
-::: {.slide title="Wrap-up"}
+[Xiao et al., 2024; Gu et al., 2025]{.small}
+:::
+
+::: {.slide title="Two Blocks Learn Induction; Only Ablation Shows Which Heads Matter"}
+[Wrap-up]{.kicker}
+
 - A head is a QK circuit (where) and an OV circuit (what), each of rank at
   most $d_h = 32$ here.
 - One layer: bigrams and skip-trigrams. Induction needs two: a
   previous-token head, then match and copy.
 - Fixed period: one block finds a 31-back shortcut. Variable period: two
   blocks reach a few tenths of a nat; one block stays above three.
-- Maps locate the heads; ablation shows the model needs them. Copying
-  alone, which even one block has, does not retrieve.
+- In context: one exposure completes an unseen pattern (about 0.9 or more
+  after the restart); on repeated tokens every run beats a uniform choice
+  (0.47).
+- Maps located the heads; ablation showed which the model needs, including
+  "irrelevant" ones.
 
 **Next:** the full transformer block, which adds feed-forward layers and
 normalization to attention.

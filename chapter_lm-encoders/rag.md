@@ -12,16 +12,19 @@ Until then the text must say that the calibration labels were made on the earlie
 generator's answers. Details: scratch ch19/judge.md and AUTHOR_DECISIONS.md. -->
 
 In :numref:`sec_lm_retrieval` we built a retriever that finds, for nearly
-every question about this book, a passage that answers it. A reader will
-want more than a ranked list: hand the passages to a language model and read
-an answer. So let us wire the retriever to a generator, Qwen3.5-9B, and ask
-it what happens to PyTorch modules kept in a plain Python list instead of
-`nn.Sequential`. The passage that answers comes back first, and its last
-sentence reads "Modules in a plain list stay unregistered, without any
-warning." The model writes four fluent sentences about registration, cites
-the second and third passages, and never says that nothing warns you. Was
-the right passage ranked too low? Was it in the context and ignored? Did a
-neighboring passage say something else?
+every question about this book, a passage that answers it. Nobody asks a
+question in order to receive a ranked list, however. The obvious next step
+is to hand the passages to a language model and read its answer. So let us
+wire the retriever to a generator, Qwen3.5-9B, and ask it what happens to
+PyTorch modules kept in a plain Python list instead of `nn.Sequential`. The
+passage that answers comes back first, and its last sentence reads "Modules
+in a plain list stay unregistered, without any warning." The model writes
+four fluent sentences about registration, cites the second and third
+passages, and leaves out the one fact that the first passage adds: no
+warning is raised. So the passage was there, at the top. Did the model skip
+it, or did the passages it cited lead it elsewhere? Had the passage been
+ranked tenth and left out of the prompt, the answer might read just the
+same. How are we to tell these cases apart?
 
 Systems of this kind are called *retrieval-augmented generation* (RAG),
 after a 2020 paper that trained a retriever's query encoder together with a
@@ -29,19 +32,17 @@ generator :cite:`Lewis.Perez.Piktus.ea.2020`. Today the name covers any
 pipeline that retrieves passages and places them in a prompt. Such a
 pipeline is a chain of stages: a query is formed, passages are retrieved,
 reordered, packed into a context and read by the generator. When the answer
-is wrong, any stage may be at fault, and one accuracy number cannot say
-which, although each stage needs a different repair. The idea of this
-section is that a failure is located by measuring each stage on its own,
-with its own interval.
+is wrong, any stage may be at fault, and each stage needs a different
+repair. One accuracy number cannot say which. The idea of this section and
+the next is to locate a failure by measuring each stage on its own.
 
-We first build what such measurements need, questions about the book with
-known answers and known passages that answer them. Then we measure a
-baseline stage by stage, change one stage at a time, sort the failures by
-the stage that caused them and test a fix chosen in advance. A short
-derivation shows how the original RAG model makes retrieval part of a
-probabilistic model whose retriever can learn from the generator. The
-section ends on the question that longer context windows keep raising: is
-retrieval needed at all when whole chapters fit into the prompt?
+The pipeline itself is quickly built. Most of the work, and most of this
+section, goes into the instruments: questions whose answers and source
+passages we know, and a grader we have reason to trust. With both in hand we
+measure a baseline between two bounds, a floor without passages and a
+ceiling with only the passages that answer. :numref:`sec_lm_rag_fixes` then
+changes one stage at a time and sorts the failures by the stage that caused
+them.
 
 ```{.python .input #rag-imports}
 %%tab pytorch
@@ -56,7 +57,6 @@ from d2l import torch as d2l
 ```{.python .input #rag-extras}
 %%tab pytorch
 import collections
-import hashlib
 import json
 import os
 import pandas as pd
@@ -66,16 +66,16 @@ import shutil
 import textwrap
 import time
 import transformers
-import warnings
 import zipfile
 ```
 
-The generator, Qwen3.5-9B, runs in bf16 with thinking off. It is a hybrid
-of the kind described in :numref:`subsec_lm_hf_config`, in which only one
-layer in four keeps keys and values and the others carry a state of fixed
-size. The retriever brings the embedder and reranker of
-:numref:`sec_lm_retrieval`, and a larger Qwen model, introduced below,
-grades the answers.
+The two cells that follow are setup, and a reader can pass over them. They
+pin the models: Qwen3.5-9B generates, the embedder and reranker of
+:numref:`sec_lm_retrieval` retrieve, and a larger Qwen model, introduced
+with the judge below, grades. Generating and judging every answer takes GPU
+hours, so the answers and verdicts were recorded once. A normal run replays
+them and generates a few again as a live check; the environment variable
+`D2L_RERUN` regenerates them.
 
 ```{.python .input #rag-revisions}
 %%tab pytorch
@@ -85,91 +85,27 @@ d2l.HF_REVISIONS['Qwen/Qwen3.5-9B'] = (
     'c202236235762e1c871ad0ccb60c8ee5ba337b9a')
 ```
 
-Generating and judging every answer takes GPU hours, so a normal run
-replays the recorded answers and verdicts and generates a few again as a
-check; `D2L_RERUN` regenerates them. The next cell fixes the baseline
-(`BASE`) and the configurations that each change one stage of it
-(`CONFIGS`). It also fixes, for each kind of failure that
-:numref:`subsec_lm_rag_failures` sorts answers into, a repair (`FIXES`),
-written down before a single failure was counted.
-
 ```{.python .input #rag-config}
 %%tab pytorch
-GEN, RERANKER = 'Qwen/Qwen3.5-9B', 'Qwen/Qwen3-Reranker-0.6B'
+GEN, RERANKER = d2l.RAG_GENERATOR, d2l.RAG_RERANKER
 EMB, JUDGE = d2l.DEFAULT_EMBEDDER, d2l.RAG_JUDGE_LOCAL
+REV = {GEN: d2l.HF_REVISIONS[GEN],
+       **{m: d2l.HF_ENCODER_REVISIONS[m] for m in (EMB, RERANKER)}}
 GPU = torch.cuda.is_available()
-SMALL = not GPU  # the CPU path: two live answers, BM25-only coverage
 T0 = time.time()  # a judging run stops JUDGE_MINUTES after this
-ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
-    'rag-gen-base': ('lm-rag-gen-base-v1', 'lm-rag-gen-base.jsonl'),
-    'rag-gen-stages': ('lm-rag-gen-stages-v1', 'lm-rag-gen-stages.jsonl'),
-    'rag-gen-fix': ('lm-rag-gen-fix-v1', 'lm-rag-gen-fix.jsonl'),
-    'rag-judge': ('lm-rag-judge-v3', 'lm-rag-judge.jsonl'),
-    'rag-judge-cache': ('lm-rag-judge-cache-v3', 'lm-rag-judge-cache.zip'),
-    'rag-cards': ('lm-rag-cards-v1', 'lm-rag-cards.jsonl')}
-RERUN = d2l.lm_rerun(ARTIFACTS)
-if 'rag-judge-cache' in RERUN:  # the judge's cache is written with it
-    RERUN.add('rag-judge')
+ARTIFACTS, CONFIGS = d2l.RAG_ARTIFACTS, d2l.RAG_CONFIGS
+QA_KEY = 'lm-book-qa-v2'  # the question set
+RERUN = d2l._rag_rerun()  # D2L_RERUN, checked against the run order
 assert GPU or not RERUN - {'rag-cards'}, 'answers and judgments need GPUs'
-ORDER = ('run order, each result registered before the next: rag-gen-base; '
-         'rag-judge (until every answer is judged); rag-cards; '
-         'rag-gen-stages; rag-judge; rag-gen-fix; rag-judge')
-assert not ('rag-judge' in RERUN and RERUN & {'rag-gen-stages',
-                                              'rag-gen-fix'}), ORDER
-assert not ('rag-gen-fix' in RERUN and RERUN & {'rag-gen-base',
-                                                'rag-gen-stages'}), ORDER
-K, BUDGET, DEPTH = 5, 3000, 50  # passages; context tokens; ranking kept
-MAX_NEW, BATCH = 300, 8  # new tokens per answer; prompts per batch
+MAX_NEW = d2l.RAG_BASE['max_new_tokens']  # new tokens per answer
+BATCH, DEPTH = d2l.RAG_BASE['batch'], 50  # prompts per batch; ranking kept
 QUICK = False  # True: 80 stratified dev and test items (development only)
 assert not (QUICK and RERUN), 'QUICK results are never saved'
 N_LIVE = 8 if GPU else 2  # base answers generated again in a normal run
 JUDGE_MINUTES, CHUNK, CONCURRENCY = 50, 64, 8  # judging run; saves; flight
 RETRY_TOKENS = 6000  # the one re-judging of an answer left without verdict
-N_REPEAT, N_CARDS = 60, 50  # base answers judged twice; failure cards
-CARD_GIB = 21.5  # estimates; measured peaks add 1-2 (23.6 GiB usable)
-BASE = dict(chunking='sections', context='retrieved', k=K, budget=BUDGET,
-            order='rank', rewrite=None, rerank_k=None, prompt='fixed',
-            verify=False, abstain_below=None, max_new_tokens=MAX_NEW,
-            batch=BATCH, shuffle=None)
-CONFIGS = {  # name: what changes against the baseline
-    'closed': dict(BASE, context='none'),  # no passages: closed book
-    'base': BASE,
-    'oracle': dict(BASE, context='gold'),  # the gold chunks only
-    'base-repeat': dict(BASE, shuffle=1),  # the same prompts, other batches
-    'fixed': dict(BASE, chunking='fixed', k=None, budget='base'),
-    'rewrite-rerank': dict(BASE, rewrite='generator', rerank_k=50),
-    'reverse': dict(BASE, order='reverse'),
-    'budget-1500': dict(BASE, k=None, budget=1500),
-    'budget-6000': dict(BASE, k=None, budget=6000, batch=4)}
-STAGES = ['fixed', 'rewrite-rerank', 'reverse', 'budget-1500', 'budget-6000']
-FIXES = {  # failure class: its fix, written down before any class is counted
-    'not_retrieved': dict(BASE, rewrite='fuse'),  # the query's ranking too
-    'ranked_low': dict(BASE, rerank_k=100, k=8),
-    'ignored': dict(BASE, prompt='quote', order='edges', max_new_tokens=500),
-    'unsupported': dict(BASE, verify=True),
-    'false_answer': dict(BASE, abstain_below='train'),  # tuned on train
-    'false_abstain': dict(BASE, prompt='rule_after')}
-CONFIGS.update({f'fix-{c}': v for c, v in FIXES.items()})
-REV = {GEN: d2l.HF_REVISIONS[GEN],
-       **{m: d2l.HF_ENCODER_REVISIONS[m] for m in (EMB, RERANKER)}}
-QA_KEY = 'lm-book-qa-v2'
-
-def settings(name):
-    """What a configuration's answers are made with (JSON); reading the
-    records checks it."""
-    return json.dumps(dict(
-        CONFIGS[name], generator=f'{GEN}@{REV[GEN]}', corpus=d2l.R3_VERSION,
-        embedder=f'{EMB}@{REV[EMB]}', reranker=f'{RERANKER}@{REV[RERANKER]}',
-        bm25=d2l.BookRetriever.BM25_PARAMS, qa=QA_KEY), sort_keys=True)
-
-def run_path(name):
-    """The file of name that this run regenerates, else the registered
-    one, else None (not registered yet)."""
-    key, file = ARTIFACTS[name]
-    if name in RERUN:
-        return os.path.join('..', 'data', 'lm', 'rerun', file)
-    return d2l.lm_registered(key)
-
+N_REPEAT = 60  # base answers judged twice
+CARD_GIB = 21.5  # estimates; measured peaks add 0.4-1.5 (23.6 GiB usable)
 print(pd.DataFrame({'model': [GEN, EMB, RERANKER, JUDGE['model']],
                     'revision': [REV[GEN][:12], REV[EMB][:12],
                                  REV[RERANKER][:12], JUDGE['revision'][:12]]},
@@ -187,10 +123,13 @@ To measure a RAG system we need questions whose answers we know, and we need
 to know where in the corpus each answer is written. Public benchmarks give
 the first but not the second for our corpus, and any of them may have been
 in the training data of every model we use. So we build a set over the
-book: we know its content, every answerable question has a *gold span*, the
+book: we know its content, every answerable question has a gold span, the
 stretch of book text that answers it, and we decide how it is split. The
-book downloads the set together with the recorded model responses it was
-built from, so its construction can be replayed without any API call.
+recorded model responses the set was built from are published with it
+(`lm-book-qa-api-cache-v1`), so its construction can be checked without any
+API call. The next cell registers the set and, with it, every recorded
+artifact of this section and the next; for now only the question set
+matters.
 
 ```{.python .input #rag-data-hub}
 %%tab pytorch
@@ -210,15 +149,30 @@ d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
 d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
     d2l.LM_DATA_URL + 'lm-rag-gen-base-v1.jsonl',
     '78065bff472577631de5d7cac287323e77427e7f')
+d2l.DATA_HUB['lm-rag-gen-base-v2'] = (  # v1 with the model card's task
+    d2l.LM_DATA_URL + 'lm-rag-gen-base-v2.jsonl',
+    '9701221a6ec07e4c524b1ebd063af3dbdf5101f4')
 d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
     d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
     '7c08b175e12fe3138742f46e14720df1ab45e277')
+d2l.DATA_HUB['lm-rag-gen-stages-v2'] = (  # v1 and the control fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v2.jsonl',
+    'bfd5ba324efcc683b06ded6d96c04b56ca806cb0')
+d2l.DATA_HUB['lm-rag-gen-stages-v3'] = (  # v2 with the model card's task
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v3.jsonl',
+    '350230216f0f4a43c34b55bf6af720e537392b61')
 d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
     d2l.LM_DATA_URL + 'lm-rag-gen-fix-v1.jsonl',
     'd94ed6b1f942ea5ca0df0292c5e7cc81bd834d50')
+d2l.DATA_HUB['lm-rag-gen-fix-v2'] = (  # card's task: fix-unsupported
+    d2l.LM_DATA_URL + 'lm-rag-gen-fix-v2.jsonl',
+    '2a980b4961883ecdd3eac2a4a31b8de2d621f004')
 d2l.DATA_HUB['lm-rag-cards-v1'] = (  # 31 base failures, labelled by a model
     d2l.LM_DATA_URL + 'lm-rag-cards-v1.jsonl',
     'dd66f91cc44070f7e2256c63d5e5caf912c4054e')
+d2l.DATA_HUB['lm-rag-cards-v2'] = (  # 26 base failures with the card's task
+    d2l.LM_DATA_URL + 'lm-rag-cards-v2.jsonl',
+    'ed510addb6e39fe5c54cab40a6283be4d908a80d')
 d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
     d2l.LM_DATA_URL + 'lm-rag-judge-v1.jsonl',
     '8e128dbe149cf3f22b3d0979368c679c5d43c371')
@@ -237,6 +191,21 @@ d2l.DATA_HUB['lm-rag-judge-v3'] = (  # v2, missing verdicts judged again
 d2l.DATA_HUB['lm-rag-judge-cache-v3'] = (  # v2 and those longer replies
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v3.zip',
     '8711571c3c94646d17215c522aec15d7a3cd269c')
+d2l.DATA_HUB['lm-rag-judge-v4'] = (  # v3 and the verdicts on fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-judge-v4.jsonl',
+    '0169be597e978728e6559cd191c91cb8e30281c5')
+d2l.DATA_HUB['lm-rag-judge-cache-v4'] = (  # v3 and those replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v4.zip',
+    'cf57712b285710ee87c0a7c56aab0600d13dac7a')
+d2l.DATA_HUB['lm-rag-judge-v5'] = (  # card's task: base and stages
+    d2l.LM_DATA_URL + 'lm-rag-judge-v5.jsonl',
+    '664337072badcb67b147684cd7935c77b4169ab0')
+d2l.DATA_HUB['lm-rag-judge-v6'] = (  # v5 and the verdicts on the fix run
+    d2l.LM_DATA_URL + 'lm-rag-judge-v6.jsonl',
+    '16fe5b4040697906e84fc99476e42c151fc93dd7')
+d2l.DATA_HUB['lm-rag-judge-cache-v6'] = (  # every reply with the card's task
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v6.zip',
+    '3f6a32485e092cb233ab4fc5dec761843c8ba68a')
 ```
 
 Each item holds
@@ -246,8 +215,9 @@ Each item holds
 - gold spans, as character ranges in the cleaned documents of
   :numref:`sec_lm_retrieval`;
 - *alternative spans*, other passages of the book that answer it too;
-- flags such as `identifier` or `general_knowledge` (answerable without the
-  book).
+- flags such as `identifier` (the question or reference names a function
+  or variable of the book's code) or `general_knowledge` (answerable
+  without the book).
 
 Which chunks are relevant depends on how the corpus is cut, so items store
 spans, and `gold_chunk_ids` computes the chunks for any chunking.
@@ -288,26 +258,27 @@ The set was written and checked by models, in four steps:
    generator and judge.
 2. Rules removed a candidate whose evidence is not a substring of the book,
    whose wording assumes a context the reader lacks ("in the passage
-   above"), that copies the anchor's words (word overlap alone would then
-   find the answer and make retrieval look easy), or that nearly repeats
-   another.
+   above"), that copies a run of the anchor's words (word overlap alone
+   would then find the answer and make retrieval look easy), or that nearly
+   repeats another.
 3. A checker, Qwen3.8-27B, tested that each question stands alone and that
    its reference is supported, complete and unique. A search of neighboring
    passages collected other passages that answer it.
 4. A frontier model, Claude Opus 5.5, verified every `dev` and `test` item
    in a fresh context.
 
-The items were checked by models, not by people. Model checks are fast,
-cheap and recorded, so anyone can replay them. The verifier's 620 calls
-cost about \$7, and the whole set, drafts and checks included, about \$15;
-a person checking 480 items against their passages would need many hours.
-What the checks can miss is what the models share. A reference that
-drafter, checker and verifier misread in the same way passes every check,
-and the verifier may have read this public book and accept a question it can
-answer from memory. The checker is also the judge we use below, so a wrong
-reference that it passes is later used to grade answers. The protection
-against shared blind spots is agreement with models of other families, and
-the last exercise compares hand labels with the verifier's.
+The items were checked by models, not by people, and the choice is
+deliberate. Model checks are fast, cheap and recorded, so anyone can replay
+them. The verifier's 620 calls cost about \$7, and the whole set, drafts
+and checks included, about \$15; a person checking 480 items against their
+passages would need many hours. What the checks can miss is what the models
+share. A reference that drafter, checker and verifier misread in the same
+way passes every check, and the verifier may have read this public book and
+accept a question it can answer from memory. The checker is also the judge
+we use below, so a wrong reference that it passes is later used to grade
+answers. The protection against shared blind spots is agreement with models
+of other families, and Exercise :exref:`ex_lm_rag-hand-labels` compares
+hand labels with the verifier's.
 
 ```{.python .input #rag-qa-stats}
 %%tab pytorch
@@ -351,31 +322,57 @@ print(f'alternative spans: {sum(stats["s5_alt_spans"].values())} in '
 print('frontier verifier against the checker, per check (dev and test pool):')
 print(pd.DataFrame(MANIFEST['verifier_vs_checker']).T[['n', 'agree', 'kappa']]
       .astype(float).round(2))
+spend = MANIFEST['spend_usd']  # recorded by the build, per call
+print('API spend in US$ per model:\n' + pd.Series(spend['per_model']).round(2)
+      .to_string() + f'\n  total {sum(spend["per_model"].values()):.2f}; '
+      f'the verifier\'s check of dev and test: '
+      f'{spend["per_stage"]["s8-verify"]["calls"]} calls, '
+      f'{spend["per_stage"]["s8-verify"]["usd"]:.2f}')
 ```
 
 In `dev` and `test` the quotas are 120 questions answered by one passage,
 40 that ask for an explanation, and 20 each of numeric, code, multi-passage
-(`multihop`) and unanswerable questions; `train` passed only the rules and
-the checker. Copying the anchor's words was by far the most common reason
-for rejection. The closed-book flag comes from Qwen3-4B, an earlier
-generator, so below we measure our own generator without passages instead.
+(`multihop`) and unanswerable questions. `train` passed only the rules and
+the checker, and it carries no alternative spans, which are kept only where
+answers are scored. The column `closed-book correct` records whether
+Qwen3-4B, a smaller model than our generator, answered correctly without
+passages, as graded by the judge introduced below; for our own generator we
+measure this later.
 
-On whether an item passes, verifier and checker agree on 84% of the pool.
-That sounds like agreement, but both pass most items, so they agree by
-default. *Cohen's κ* corrects for this. It compares the observed agreement
-$p_o$ with the agreement $p_e$ that two raters with the same pass rates
-would reach by chance:
+Copying the anchor's words was the most common reason for rejection, more
+common than all the others together. The checker rejected 165 unanswerable
+and 133 code candidates but only 146 single-passage ones, although `dev`
+and `test` hold six times as many single-passage questions as either: a
+question the book does not answer, or one about its code, is the hardest
+kind to write well.
+Another 42 candidates meant to be unanswerable were answered by a
+neighboring passage.
+
+On whether an item passes, verifier and checker agree on 84% of the 536
+`dev` and `test` candidates that both of them checked. That sounds like
+agreement, but both pass most items, so they agree by default. *Cohen's κ*
+corrects for this. It compares the observed agreement $p_o$ with the
+agreement $p_e$ that two raters with the same pass rates would reach by
+chance:
 
 $$\kappa = \frac{p_o - p_e}{1 - p_e}.$$
 
-It is 1 for perfect agreement and 0 for agreement at chance level. Here
-κ is only 0.12. Solving for $p_e$ gives 0.82, the chance agreement of two
-raters who each pass about nine items in ten ($0.9^2 + 0.1^2 = 0.82$), so
-84% is barely above it. The few items each model rejects are mostly
-different ones, and the set very likely still holds items that a third
-check would reject: the verifier alone still rejected 67 items after every
-earlier step had passed them. Here is the first `dev` item of each type
-with its gold span.
+It is 1 for perfect agreement and 0 for agreement at chance level. Two
+raters who each pass about nine items in ten, independently of each other,
+agree on $p_e = 0.9^2 + 0.1^2 = 0.82$ of them. Two coins that each land
+heads nine times in ten would do as well. Against that, 84% is barely
+better, and κ is $(0.84 - 0.82)/0.18 \approx 0.1$; the measured value is
+0.12. The per-check table shows the extreme case. On whether the answer is
+unique, the two agree on 96% of the items, and κ is 0.00: both call almost
+every answer unique, and the few that one of them doubts are not the ones
+the other doubts. So the items each model rejects are mostly different
+ones, and the set very likely still holds items that a third check would
+reject: the verifier alone rejected 67 items after every earlier step had
+passed them. Here or anywhere else, an agreement rate means little until it
+is set against the rate that chance alone would give, and we will hold the
+judge of our answers to the same test.
+
+Here is the first `dev` item of each type with its gold span.
 
 ```{.python .input #rag-qa-examples}
 %%tab pytorch
@@ -400,7 +397,12 @@ for t in MANIFEST['quota']:
 The questions name what they ask about ("the book's `training_memory_gib`
 helper"), and most need the book: the 1000 W that NVIDIA specifies for an
 RTX 5090 system is not common knowledge. The unanswerable question is a
-plausible question about attention that the book does not answer.
+plausible question about attention that the book does not answer. The rule
+against copying is narrower than it may sound. It rejects a question that
+repeats a run of five words of its passage, or whose vocabulary mostly
+coincides with the passage's; the first item reuses the passage's words in
+another order and passes. We will meet the consequence when we measure
+retrieval.
 
 The split is made over documents, not questions: if two questions drafted
 from one passage landed in `train` and `dev`, a system tuned on `train`
@@ -436,13 +438,18 @@ print(pd.DataFrame({s: {
 print('every anchor and span lies in a document of its split; quotas met')
 ```
 
-`gold_chunk_ids` calls a chunk relevant to a question if it overlaps a gold
-or alternative span by at least half of the span's characters or half of
-the chunk's, the rule of :numref:`sec_lm_retrieval`. It serves the section
-chunks of that section (at most 512 tokens, cut at headings) as well as its
-fixed windows of 256 tokens, cut without regard to the text. Consecutive
-windows overlap, here by 64 tokens, so that a sentence cut at one boundary
-appears whole in the next.
+Whether a question has a relevant chunk depends on how the book is cut.
+`gold_chunk_ids` calls a chunk relevant if it overlaps a gold or
+alternative span by at least half of the span's characters or half of the
+chunk's, the rule of :numref:`sec_lm_retrieval`. We need it for two ways of
+cutting, since the next section compares them: the section chunks of
+:numref:`sec_lm_retrieval` (`sec512`: at most 512 tokens, cut at headings),
+and fixed windows of 256 tokens, cut without regard to the text, either
+without overlap (`fix256o0`) or overlapping by 64 tokens (`fix256o64`), so
+that a sentence cut at one boundary appears whole in the next.
+
+The next cell checks that every answerable item has a relevant chunk under
+each chunking, and shows how differently two chunkings cut one gold span.
 
 ```{.python .input #rag-qa-gold}
 %%tab pytorch
@@ -471,31 +478,25 @@ for tag in ('sec512', 'fix256o64'):
 ```
 
 Every answerable item has a relevant chunk under all three chunkings, as the
-rules demanded. The gold span of `dev-0001` lies in two section chunks but
-in five overlapping windows, so "a relevant chunk among the first five"
-means very different amounts of text under the two chunkings.
+rules demanded. The gold span of `dev-0001`, the `load_array` question of
+the chapter's introduction, lies in two section chunks but in five
+overlapping windows, so "a relevant chunk among the first five" means very
+different amounts of text under the two chunkings.
 
 ## The Pipeline and Its Measurements
 :label:`subsec_lm_rag_pipeline`
 
-A pipeline over this set has five stages, and each can be measured without
-the stages after it (:numref:`tab_lm_rag_stages` and
-:numref:`fig_lm_rag_stages`). Retrieval and reranking
-come from :numref:`sec_lm_retrieval`: BM25 and dense rankings fused by
-reciprocal ranks, optionally reordered by a cross-encoder reranker.
+A pipeline over this set has five stages (:numref:`fig_lm_rag_stages`).
+The query is the question, or a rewrite of it. First-stage retrieval and
+the optional reranking come from :numref:`sec_lm_retrieval`: BM25 and dense
+rankings fused by reciprocal ranks, then perhaps reordered by a
+cross-encoder. Context assembly decides which chunks enter the prompt, in
+what order, within a token budget, and the generator writes an answer with
+numbered citations or declines. Every stage but the first can be measured
+without the stages after it; the query shows itself only in what retrieval
+does with it. That property is what will let us locate a failure.
 
-:The stages of a retrieval-augmented generator, what each decides, and the measurement that sees it.
-:label:`tab_lm_rag_stages`
-
-| stage | what it decides | measured by |
-|---|---|---|
-| query | the text sent to the retriever: the question, or a rewrite | the stages after it |
-| first-stage retrieval | a ranking of chunks by BM25 and dense search, fused | Recall@$k$ |
-| reranking (optional) | the order of the first candidates | Recall@$k$ |
-| context assembly | which chunks enter the prompt, in what order, within a budget | coverage at the budget |
-| grounded generation | an answer with numbered citations, or the abstention sentence | accuracy, faithfulness, citations, abstentions |
-
-![The five stages of the retrieval-augmented generator, top to bottom, followed by the judge that grades its answers; beside each, the measurement that sees it on its own and the failure class that blames it. A wrong answer is blamed on the first stage that lost it: no relevant chunk among the first 50 is *not retrieved*; one there but not in the context is *ranked low*, which reranking and assembly share. The judge's verdicts on correctness and faithfulness give accuracy and faithfulness, and decide among the classes of the generation stage.](../img/mdl-lm-encoders-rag-stages.svg)
+![The five stages of the retrieval-augmented generator, top to bottom, with the measurement that sees each one on its own. The judge below them is not a stage but the instrument that grades the answers, giving accuracy and faithfulness. The failure classes on the right blame a wrong answer on the first stage that lost it; they are defined and counted in the next section.](../img/mdl-lm-encoders-rag-stages.svg)
 :label:`fig_lm_rag_stages`
 
 ### Context Assembly and the Prompt
@@ -572,8 +573,10 @@ The prompt is fixed. It asks for an answer from the numbered passages, each
 shown under its heading path, a citation after each statement, and, if the
 passages lack the answer, exactly the sentence "I cannot answer this from
 the provided passages." Without passages it becomes the closed-book prompt.
-Stage changes alter the context or the query, never this prompt; only the
-fixes of :numref:`subsec_lm_rag_failures` change it.
+The stage changes of the next section alter the context or the query and
+leave this prompt alone. Of all the details in this subsection, the
+abstention sentence matters most for the scores: it alone decides every
+unanswerable question.
 
 ```{.python .input #rag-prompt-defs}
 %%tab pytorch
@@ -617,15 +620,16 @@ def parse_citations(answer, n_chunks):
     return out
 ```
 
-`RAGPipeline` runs in three phases so that the generator and the
-retriever's models do not compete for memory. The generator writes
-rewritten queries if asked. The retriever searches, reranks and assembles
-while the generator waits. Then the retriever's models leave the GPU, and
-the generator answers greedily in left-padded batches of eight. At the
-prefill
-Transformers keeps only the last position's logits (`logits_to_keep=1`).
-Two more query options, `hyde` and `decompose`, are left unmeasured here;
-:numref:`sec_lm_encoders_fr` says what they do.
+`RAGPipeline` puts the pieces together. It is long because it carries
+every option that the next section switches on, and a first reading needs
+only `prepare` and `answer`. They run in three phases, so that the
+generator never generates while the embedder and reranker share its GPU.
+The generator writes a rewritten query if one is asked for. The retriever
+searches, reranks and assembles while the generator waits. Then the
+retriever's models leave the GPU, and the generator answers greedily, in
+left-padded batches of eight. Two query options, `hyde` and `decompose`,
+are never switched on in this chapter and can be skipped;
+:numref:`sec_lm_encoders_fr` describes both.
 
 ```{.python .input #rag-pipeline-def}
 %%tab pytorch
@@ -846,25 +850,33 @@ class RAGPipeline:
 
 ### A Judge for Free-Text Answers
 
-Answers in free text need a grader. `rag_judge` shows a second model,
-Qwen3.8-27B with thinking on, the question, the reference, the key facts,
-the passages and which of them the answer cites, and asks for three
-verdicts. An answer is *correct* if it states every key fact and nothing
-that contradicts the reference. It is *faithful* if every factual statement
-in it is supported by the passages in its context, whatever the reference
-says, and *supported* if the passages it cites suffice on their own. An
-answer from memory can be correct and unfaithful; one that faithfully
-repeats an incomplete passage, faithful and wrong. An answer that draws on
-passage [1] but cites only [2] is faithful and unsupported: the support is
-in the context, but the citation points elsewhere.
+Answers in free text cannot be graded by string match: "`is_train` is
+passed as `shuffle`" and "the data are shuffled exactly when `is_train` is
+true" give the same answer in different words. They need a grader that
+reads. `rag_judge` shows a second model, Qwen3.8-27B with thinking on, the
+question, the reference, the key facts, the passages and which of them the
+answer cites, and asks for verdicts. The first is the one accuracy rests
+on: an answer is *correct* if it states every key fact and nothing that
+contradicts the reference.
 
-Answers to unanswerable questions are decided by string match, without the
-judge. There the abstention sentence is correct, and any other reply,
-however it declines, counts as an answer and is incorrect. The abstention
-sentence on an answerable question is incorrect too. Two scores need no
-judge either. *Citation precision* is the share of cited passages that are
-relevant, and *citation recall* the share of relevant passages in the
-context that the answer cites.
+Two more verdicts ask where the answer came from, which is what a user who
+wants to check it relies on. An answer is *faithful* if every factual
+statement in it is supported by the passages in its context, whatever the
+reference says, and *supported* if the passages it cites suffice on their
+own. The three can disagree in every direction. An answer from memory can
+be correct and unfaithful; one that faithfully repeats an incomplete
+passage, faithful and wrong. The subtle case is the third: an answer that
+draws on passage [1] but cites only [2] is faithful and unsupported, since
+the support is in the context but the citation points elsewhere.
+
+Some scores need no judge. Answers to unanswerable questions are decided by
+string match: a reply that contains the abstention sentence is correct,
+alone or after an explanation, and any reply without it, however politely
+it declines, counts as an answer and is incorrect. A reply with the
+abstention sentence to an answerable question is incorrect too. *Citation
+precision* is the share of cited passages that are relevant, and *citation
+recall* the share of relevant passages in the context that the answer
+cites.
 
 ```{.python .input #rag-judge-defs}
 %%tab pytorch
@@ -960,42 +972,27 @@ def citation_metrics(results, items, corpus):
             precision=np.mean([c in rel for c in cited]) if cited else np.nan,
             recall=np.mean([c in cited for c in found]) if found else np.nan))
     return pd.DataFrame(rows)
-
-def classify_failure(result, item, judge_out, corpus, depth=50):
-    """The stage at which an answer failed: 'correct'; an unanswerable item
-    answered: 'false_answer'; an answerable one: 'not_retrieved' (no
-    relevant chunk in the first-stage top depth), 'ranked_low' (one there,
-    none in the context), 'false_abstain' (one in the context, yet the
-    answer abstains), 'ignored' (faithful to the context, not correct) or
-    'unsupported' (not faithful). 'unjudged' when the judge gave no
-    verdict that the class depends on: such an answer has no class."""
-    r = result._asdict() if hasattr(result, '_asdict') else result
-    true = lambda v: isinstance(v, (bool, np.bool_)) and bool(v)
-    given = lambda v: isinstance(v, (bool, np.bool_))
-    if not given(judge_out['correct']):
-        return 'unjudged'
-    if true(judge_out['correct']):
-        return 'correct'
-    if not item['answerable']:
-        return 'false_answer'
-    rel = d2l.gold_chunk_ids(item, corpus)
-    if not rel & set(r['context_ids']):
-        return ('ranked_low' if rel & set(list(r['ranked_ids'])[:depth])
-                else 'not_retrieved')
-    if d2l._rag_abstained(r['answer']):
-        return 'false_abstain'
-    if not given(judge_out.get('faithful')):
-        return 'unjudged'
-    return 'ignored' if true(judge_out['faithful']) else 'unsupported'
 ```
 
-### Baseline Answers
+## Baseline Answers
 
-Both models need whole cards. Before loading anything we check what fits,
-with `d2l.config_memory` of :numref:`subsec_lm_hf_memory`: generation at
-eight prompts of 3,300 tokens and at four of 6,300 for the largest budget
-below, the retrieval phase with the generator idle on the card, and the
-judge.
+The baseline uses section chunks, hybrid retrieval, the first five chunks in
+rank order within 3,000 tokens, and the fixed prompt. We answer the 240
+`dev` questions with it and with three other configurations. We call each
+such run an *arm*, borrowing the word for the groups of a clinical trial.
+The *closed-book* arm gives no passages: a floor. The *oracle* arm gives
+only the chunks of the gold spans, as a perfect retriever would: a ceiling
+for retrieval. (An unanswerable question has no gold span, so there the
+oracle keeps the retrieved passages.) And `base-repeat` answers the same
+questions with the same settings in other batches, which will tell us how
+large a difference noise alone produces.
+
+Generator and judge each need whole GPUs. Before loading anything we
+estimate what fits with `d2l.config_memory` of
+:numref:`subsec_lm_hf_memory`: generation at eight prompts of 3,300 tokens,
+and at four of 6,300 tokens, about the length of the largest context of the
+next section; the retrieval phase, with the generator idle on its GPU; and
+the judge.
 
 ```{.python .input #rag-memory}
 %%tab pytorch
@@ -1009,6 +1006,11 @@ B6 = CONFIGS['budget-6000']['batch']
 g8, g4 = mem(GEN, 3300, BATCH), mem(GEN, 6300, B6)
 e, r = mem(EMB, 512, 16), mem(RERANKER, 1024, 16)
 j = mem(JUDGE['model'], 3500, 16)  # 16 sequences in flight on the server
+jc = CFG[JUDGE['model']]  # FP8 except the modules the checkpoint keeps
+keep = jc.quantization_config['modules_to_not_convert']  # in bf16
+jt = getattr(jc, 'text_config', jc)
+emb = sum(m in keep for m in ('model.embed_tokens', 'lm_head')) * (
+    jt.vocab_size * jt.hidden_size * 2 / 2**30)  # GiB, two bytes per weight
 table = pd.DataFrame({  # GiB
     f'generation, 3,300 x {BATCH}': (g8['weights'], g8['kv_cache'] +
                                      g8['recurrent_state'],
@@ -1017,152 +1019,66 @@ table = pd.DataFrame({  # GiB
                                   g4['recurrent_state'], g4['activations']),
     'retrieval phase': (g8['weights'] + e['weights'] + r['weights'], 0.0,
                         max(e['activations'], r['activations'])),
-    'judge, FP8 weights': (j['params'], j['kv_cache'] + j['recurrent_state'],
-                           0.0)}, index=['weights', 'KV and state',
-                                         'activations']).T
+    'judge, FP8 weights': (j['params'] + emb / 2, j['kv_cache'] +
+                           j['recurrent_state'], 0.0)},
+    index=['weights', 'KV and state', 'activations']).T
 table['total'] = table.sum(axis=1)
 table['limit'] = ['one 24 GB GPU'] * 3 + ['two GPUs, 2 x 24 GB']
 print(table.to_string(float_format='{:.1f}'.format))
-print('GiB; the judge stores one byte per weight (FP8), split over two '
-      'cards,\nand vLLM reserves 90% of each card for its weights, cache and '
-      'activations')
+print(f'GiB; the judge stores one byte per weight (FP8), except its input '
+      f'and output\nembeddings, which stay in bf16 ({emb:.1f} GiB of the '
+      f'{table.weights.iloc[-1]:.1f}); its weights are split over\ntwo cards, '
+      f'and vLLM reserves 90% of each card for weights, cache and activations')
 assert table.total.iloc[:2].max() < CARD_GIB  # generation fits one card
 KEEP_GEN = table.total.iloc[2] < CARD_GIB  # the generator idles on the card
 print('retrieval phase: the generator stays on the card' if KEEP_GEN else
       'retrieval phase: the generator leaves the card and comes back')
 ```
 
-The generator's weights take 16.7 GiB, so it gets a whole 24 GB card. Its
-cache is small, since only 8 of its 32 layers store keys and values: eight
-prompts of 3,300 tokens need 1.2 GiB for cache and state together. The
-estimate leaves out the allocator's slack, and measured peaks reach
-21.7 GiB, so the batch stays at eight. The judge's FP8 weights alone take
-25 GiB, and it gets two cards.
+The generator's weights take 16.7 GiB, so it gets a whole 24 GB GPU. Its
+cache is small. Qwen3.5-9B is a hybrid of the kind described in
+:numref:`subsec_lm_hf_config`: only 8 of its 32 layers store keys and
+values, and the others carry a state of fixed size, so eight prompts of
+3,300 tokens need 1.2 GiB for cache and state together. The estimate of
+21.3 GiB leaves out the allocator's slack. The peaks measured in the full
+runs, 21.7 GiB for these batches and 22.4 GiB for the four long prompts,
+still fit, so the batch stays at eight. The judge needs two GPUs. Its
+checkpoint stores one byte per weight (FP8), except the input embeddings
+and the output matrix, which stay in bf16. Those two matrices, each a
+vocabulary wide, take 4.7 GiB of the judge's 27.4, about a sixth. With the
+cache for sixteen requests in flight the estimate reaches 33 GiB, more than
+one GPU holds and less than two do.
 
-The baseline uses section chunks, hybrid retrieval, the first five chunks in
-rank order within 3,000 tokens, and the fixed prompt. We answer the 240
-`dev` questions with it and with three other arms. The *closed-book* arm
-gives no passages, a floor. The *oracle* arm gives only the chunks of the
-gold spans, as a perfect retriever would. And `base-repeat` answers the same
-questions with the same settings in other batches. A normal run also
-generates the first recorded batch again and compares the pipeline's
-batched generation with the plain decoding loop `d2l.generate` of
-:numref:`sec_lm_d2l_checkpoint`; a difference would mean a padding bug.
+The next cell loads the recorded answers and lists the four arms of this
+section. A normal run also generates the first recorded batch again and
+compares the pipeline's batched generation with the plain decoding loop
+`d2l.generate` of :numref:`sec_lm_d2l_checkpoint`; a difference would mean a padding bug.
 
 ```{.python .input #rag-baseline}
 %%tab pytorch
 RET = {'sections': d2l.BookRetriever(CORPUS, reranker=RERANKER),
        'fixed': d2l.BookRetriever(FIXED, reranker=RERANKER)}
 CHUNKS = {c['id']: c for R in RET.values() for c in R.corpus.chunks}
-_LOADED = {}
-
-def generator():
-    """The generator and its tokenizer, loaded on first use, on the first
-    GPU (never split over two visible cards)."""
-    if not _LOADED:
-        _LOADED['gen'] = d2l.load_hf(
-            GEN, REV[GEN], dtype=torch.bfloat16 if GPU else torch.float32,
-            device_map={'': 0} if GPU else 'auto')
-    return _LOADED['gen']
-
-def free_generator():
-    _LOADED.clear()
-    d2l.lm_free()
-
-def run_config(name, items, budgets=None, threshold=None):
-    """Answer records of configuration name on items, in item order;
-    budgets (qid: tokens) sets each question's budget for a configuration
-    whose budget is 'base'."""
-    c, items = CONFIGS[name], list(items)
-    assert (c['budget'] == 'base') == (budgets is not None), name
-    order = list(range(len(items)))
-    if c['shuffle'] is not None:  # other batches for the same prompts
-        random.Random(c['shuffle']).shuffle(order)
-    items = [items[i] for i in order]
-    if not (KEEP_GEN or c['rewrite']):  # retrieval without the generator
-        free_generator()
-    assert KEEP_GEN or not c['rewrite'], 'the rewriter needs the card too'
-    pipe = d2l.RAGPipeline(  # the generator joins when it is needed
-        RET[c['chunking']], *(generator() if c['rewrite'] else (None, None)),
-        k=c['k'], order=c['order'],
-        budget_tokens=BUDGET if c['budget'] == 'base' else c['budget'],
-        rewrite=c['rewrite'], rerank_k=c['rerank_k'], depth=DEPTH,
-        max_new_tokens=c['max_new_tokens'], prompt=c['prompt'],
-        verify=c['verify'], abstain_below=threshold)
-    if c['context'] == 'none':
-        ctx = [dict(query_used=None, ranked_ids=[], context=None)
-               for _ in items]
-    else:
-        ctx = pipe.prepare(items, None if budgets is None else
-                           [budgets[q['qid']] for q in items])
-    if c['context'] == 'gold':  # unanswerable items keep the retrieved
-        for p, q in zip(ctx, items):
-            if q['answerable']:
-                p['context'] = d2l.assemble_context(
-                    gold_context(q), BUDGET, k=c['k'])[0]
-    pipe.model, pipe.tokenizer = generator()
-    res = pipe.answer(items, batch_size=c['batch'], contexts=ctx)
-    recs = [dict(config=name, split=q['split'], settings=settings(name),
-                 **{k: v for k, v in r._asdict().items() if k != 'question'})
-            for q, r in zip(items, res)]
-    return [r for _, r in sorted(zip(order, recs), key=lambda t: t[0])]
-
-def gold_context(q):
-    """The chunks of the gold spans (not the alternatives), in span
-    order."""
-    ids = [i for s in q['gold_spans'] for i in CORPUS.span_to_chunk_ids(
-        s['doc_id'], s['char_start'], s['char_end'])]
-    return [CORPUS[i] for i in dict.fromkeys(ids)]
-
-def save_gens(name, recs):
-    d2l.lm_save_table(ARTIFACTS[name][1], pd.DataFrame(recs),
-                      on=['config', 'qid'], key=ARTIFACTS[name][0])
-
-def answer_key(r):
-    """What a verdict depends on: the answer, its context and citations
-    (a regenerated answer needs a new verdict)."""
-    return hashlib.sha1(json.dumps([r['answer'], list(r['context_ids']), [
-        int(n) for n in r['cited_ids']]]).encode()).hexdigest()[:16]
-
-def load_gens():
-    """Every answer made so far, one row per (configuration, question),
-    with the answer_sha its verdict must carry; each configuration's
-    settings are checked against this notebook's."""
-    df = d2l._rag_records([run_path(n) for n in ('rag-gen-base',
-                                                 'rag-gen-stages',
-                                                 'rag-gen-fix')])
-    for name, s in (df.groupby('config')['settings'] if len(df) else []):
-        assert (s == settings(name)).all(), f'{name}: other settings'
-    if len(df):  # by the current rule, not the one of the run that wrote it
-        df['abstained'] = [d2l._rag_abstained(a) for a in df.answer]
-    return df.assign(answer_sha=[answer_key(r)
-                                 for r in df.to_dict('records')])
-
-def run_configs(names, items, **kw):
-    """run_config for each name, with its minutes and peak memory."""
-    recs = []
-    for name in names:
-        t = time.time()
-        recs += run_config(name, items, **kw)
-        print(f'{name}: {(time.time() - t) / 60:.1f} min, {d2l.lm_peak()}')
-    return recs
-
 if 'rag-gen-base' in RERUN:
-    save_gens('rag-gen-base', run_configs(
-        ['closed', 'base', 'oracle', 'base-repeat'], DEV))
-GENS = load_gens()
-print(GENS.assign(context_tokens=[sum(CHUNKS[i]['n_tokens'] for i in c)
-                                  for c in GENS.context_ids])
-      .groupby(['split', 'config'], sort=False).agg(
+    d2l._rag_save_gens('rag-gen-base', d2l._rag_run_configs(
+        ['closed', 'base', 'oracle', 'base-repeat'], DEV, RET, KEEP_GEN,
+        DEPTH))
+GENS = d2l._rag_load_gens(RERUN)  # every arm of this section and the next
+ARMS = ['closed', 'base', 'oracle', 'base-repeat']  # this section's arms
+G = GENS[(GENS.split == 'dev') & GENS.config.isin(ARMS)]
+print(G.assign(context_tokens=[sum(CHUNKS[i]['n_tokens'] for i in c)
+                               for c in G.context_ids])
+      .groupby('config').agg(
           answers=('qid', 'size'), context_tokens=('context_tokens', 'mean'),
           prompt_tokens=('n_prompt_tokens', 'mean'),
-          new_tokens=('n_new_tokens', 'mean')).round(0).astype(int))
+          new_tokens=('n_new_tokens', 'mean')).reindex(ARMS).round(0)
+      .astype(int))
 
-LIVE = d2l.BookQA(list(DEV)[:N_LIVE], 'dev')  # the registered run's first
-live = run_config('base', LIVE)               # batch, generated again
+LIVE = d2l.BookQA(list(DEV)[:N_LIVE], 'dev')  # the recorded run's first
+live = d2l._rag_run_config('base', LIVE, RET, KEEP_GEN, DEPTH)  # batch, rerun
 print(f'live generation: {d2l.lm_peak()}')
 ref = GENS[GENS.config == 'base'].set_index('qid')
-tok = generator()[1]  # no global name for the model: freeing it frees it
+tok = d2l._rag_generator()[1]  # only the tokenizer: freeing frees the model
 
 def prefix_share(a, b):
     """The share of tokens before the first difference of two texts."""
@@ -1173,10 +1089,10 @@ def prefix_share(a, b):
 
 same = [prefix_share(r['answer'], ref.answer[r['qid']]) for r in live]
 ctx = sum(r['context_ids'] == list(ref.context_ids[r['qid']]) for r in live)
-print(f'{N_LIVE} base answers generated again: {ctx} with the registered '
+print(f'{N_LIVE} base answers generated again: {ctx} with the recorded '
       f'context, {sum(s == 1 for s in same)} identical answers\n  tokens '
       f'agreeing before the first difference: {np.mean(same):.3f}')
-oracle = d2l.generate(*generator(), [d2l.rag_prompt(
+oracle = d2l.generate(*d2l._rag_generator(), [d2l.rag_prompt(
     q['question'], [CHUNKS[i] for i in r['context_ids']])
     for q, r in zip(LIVE, live)], chat=True, enable_thinking=False,
     max_new_tokens=MAX_NEW, batch_size=BATCH)
@@ -1189,7 +1105,7 @@ print(f'the same prompts through d2l.generate: {sum(s == 1 for s in same)} '
           'the two loops agree' if agree else
           'a padding or logits_to_keep bug'))
 assert agree, 'batched generation differs from the plain decoding loop'
-free_generator()  # the card goes to the retriever and the judge
+d2l._rag_free_generator()  # the card goes to the retriever and the judge
 ```
 
 Five section chunks hold about 1,700 tokens and never reach the budget,
@@ -1201,18 +1117,19 @@ recorded answers, and the two decoding loops agree token for token.
 
 ### Checking the Judge
 
-A regeneration judges with a vLLM server that splits the judge's FP8 weights
-over two 24 GB GPUs. vLLM pins its own PyTorch and lives in an environment
-of its own (`uv venv`, then `uv pip install vllm==0.33.0`), whose `vllm`
-executable `D2L_VLLM` names. Without two such GPUs, the same open weights
-can be called on OpenRouter for about \$3.3 per 1,000 judgments; local and
-API verdicts agreed on 194 of 200 answers in a check with thinking off. A
-reply cut off at 3,000 new tokens, or malformed twice, leaves an answer
-without a verdict, as happened to about 3% of them. Each was judged once
-more with 6,000 new tokens. An answer still without a verdict is
-*unjudged*: it is left out of accuracy and of the failure counts rather
-than blamed on the generator. A normal run replays the verdicts and judges
-twelve answers again from the recorded replies, with no GPU and no key.
+Every accuracy from here on rests on a model's verdicts. Why should we
+believe them? We answer in two steps: first we look at the verdicts
+themselves, then we check them against labels made without the judge.
+
+The next cell loads the recorded verdicts on every answer of this section
+and the next, and judges twelve of them again from the judge's recorded
+replies, which needs neither a GPU nor a key. Thinking has a drawback here:
+a judge that reasons at length can run out of tokens before it gives a
+verdict. About 3% of the replies were cut off at 3,000 new tokens or came
+back malformed twice, and each of those answers was judged once more with
+6,000 new tokens. An answer still without a verdict is *unjudged*. It is
+left out of accuracy and of the failure counts, rather than blamed on the
+generator.
 
 ```{.python .input #rag-judge}
 %%tab pytorch
@@ -1253,7 +1170,7 @@ def judge_records(client, recs, concurrency, backend, tokens=None):
                       [[passage(i) for i in r['context_ids']] for r in recs],
                       batch_size=concurrency, max_new_tokens=tokens)
     return [dict(config=r['config'], qid=r['qid'], concurrency=concurrency,
-                 backend=backend, answer_sha=answer_key(r),
+                 backend=backend, answer_sha=d2l._rag_answer_key(r),
                  max_new_tokens=tokens, **x) for r, x in zip(recs, v)]
 
 def no_verdict(v, rec):
@@ -1274,25 +1191,12 @@ def calibration_verdicts(cache, tokens=None, pairs=None, mode='replay',
                          [[passage(i) for i in p['context_ids']]
                           for p in pairs], max_new_tokens=tokens)
 
-def load_judgments(path):
-    """Judgment records, verdicts as True, False or None."""
-    df = d2l._rag_records([path], on=['config', 'qid', 'concurrency'])
-    for k in VERDICTS:
-        df[k] = [None if v is None or v != v else bool(v)
-                 for v in df.get(k, [])]
-    for k in ('backend', 'answer_sha'):
-        df[k] = df.get(k, [None] * len(df))
-    df['max_new_tokens'] = [  # rows from before the re-judging: the default
-        JUDGE['max_new_tokens'] if v is None or v != v else int(v)
-        for v in df.get('max_new_tokens', [None] * len(df))]
-    return df
-
 CAL_V0 = calibration_verdicts(os.path.join(  # as recorded at selection
     LABELS, 'api', 'judge-local-qwen38-27b-on.jsonl'))
 CAL_V = [dict(x) for x in CAL_V0]  # with the pairs judged again
-JUD_FILE = run_path('rag-judge')
+JUD_FILE = d2l._rag_run_path('rag-judge', RERUN)
 if 'rag-judge' in RERUN:
-    free_generator()
+    d2l._rag_free_generator()
     for R in RET.values():
         R.release()
     big = sum(torch.cuda.get_device_properties(i).total_memory > 22 * 2**30
@@ -1303,7 +1207,7 @@ if 'rag-judge' in RERUN:
     assert backend, ('judging needs vLLM (D2L_VLLM) and two 24 GB GPUs, '
                      'or OPENROUTER_API_KEY for the same model on OpenRouter')
     print(f'judge backend: {backend}')
-    old = load_judgments(JUD_FILE if os.path.exists(JUD_FILE) else
+    old = d2l._rag_load_judgments(JUD_FILE if os.path.exists(JUD_FILE) else
                          d2l.lm_registered(ARTIFACTS['rag-judge'][0]))
     key = dict(zip(zip(GENS.config, GENS.qid), GENS.answer_sha))
     rule = set(zip(GENS.config[GENS.abstained], GENS.qid[GENS.abstained]))
@@ -1385,7 +1289,7 @@ if 'rag-judge' in RERUN:
     d2l.lm_save_rerun(ARTIFACTS['rag-judge-cache'][1],
                       lambda p: d2l.lm_write_zip(p, members))
     print(f'rag-judge: {(time.time() - T0) / 60:.1f} min since the start')
-JUD = load_judgments(JUD_FILE)
+JUD = d2l._rag_load_judgments(JUD_FILE)
 judged = JUD[JUD.concurrency == CONCURRENCY].merge(  # on these answers
     GENS[['config', 'qid', 'answer_sha']], on=['config', 'qid',
                                                'answer_sha'])
@@ -1413,33 +1317,36 @@ if retry and os.path.exists(retry):  # the calibration pairs judged again
     for i, x in zip(redo, calibration_verdicts(retry, RETRY_TOKENS,
                                                [CAL[i] for i in redo])):
         CAL_V[i] = x
+here = judged.merge(G[['config', 'qid']])  # this section's dev arms
 print(pd.DataFrame({
-    'answers': GENS.groupby('config').size(),
-    'judged': judged.groupby('config').size(),
-    'judged again': judged.groupby('config').max_new_tokens.apply(
+    'answers': G.groupby('config').size(),
+    'judged': here.groupby('config').size(),
+    'judged again': here.groupby('config').max_new_tokens.apply(
         lambda t: (t == RETRY_TOKENS).sum()),
-    'unjudged': judged.assign(none=judged.correct.isna()).groupby(
-        'config').none.sum()}).fillna(0).astype(int).to_string())
+    'unjudged': here.assign(none=here.correct.isna()).groupby(
+        'config').none.sum()}).reindex(ARMS).fillna(0).astype(int).to_string())
 print(f'judged again: with {RETRY_TOKENS:,} new tokens, once\nunjudged: '
       'still no verdict on correctness (left out of accuracy)')
 ```
 
-The replayed verdicts match the recorded ones. Every baseline answer has a
-verdict, and seven answers of other arms stay unjudged.
+The replayed verdicts match the recorded ones. The baseline and the oracle
+each leave one answer unjudged; every answer of the other two arms has a
+verdict.
 
-Why this judge? It was chosen by measurement. Two frontier models from
-other families, Claude Opus 5.5 and Gemini 4 Argon, labeled 200 answers of
-an earlier generator, Qwen3-4B, and nine Qwen candidates of three sizes
-judged them, with thinking on and off. With thinking off every candidate was
-lenient, passing many answers that both labelers call wrong. With thinking
-on, a judge works through the key facts before it decides, which is what
-catches a missing fact, but the smaller candidates reasoned until their
-replies were cut off. Half of the 200 answers served this choice. The other
+The judge itself was chosen by measurement. Two frontier models from other
+families, Claude Opus 5.5 and Gemini 4 Argon, labeled 200 answers of
+another, smaller generator, Qwen3-4B, and nine Qwen candidates of three
+sizes judged the same answers, with thinking on and off. With thinking off
+every candidate was lenient, passing many answers that both labelers call
+wrong. With thinking on, a judge works through the key facts before it
+decides, which is what catches a missing fact; the smaller candidates,
+however, often reasoned until their replies were cut off, and agreed less
+with the labelers. Half of the 200 answers served this choice. The other
 100, the *calibration set*, test the chosen judge before we read any
 accuracy: against each labeler, and against their *consensus*, the answers
-on which both agree. The labels come from models, not from people, and they
-were made on answers of the earlier generator; ours may make subtler
-mistakes, which this check cannot see.
+on which both agree. On `correct`, ten of the hundred verdicts are the
+rule's rather than the judge's: four answers abstain, and six answer a
+question the book does not answer.
 
 ```{.python .input #rag-judge-validation}
 %%tab pytorch
@@ -1451,9 +1358,13 @@ graded = [not d2l._rag_abstained(p['answer']) for p in cal]
 assert all(x[k] == recorded[p['qid']][k] for p, x, g in zip(
     cal, CAL_V0, graded) if g for k in VERDICTS)  # the replies, replayed
 again = sum(no_verdict(x, p) for p, x in zip(cal, CAL_V0))
-print(f'{len(cal) - sum(graded)} of {len(cal)} calibration answers abstain '
-      f'(decided by rule); the judge grades the others\n  {again} without a '
-      f'verdict judged again with {RETRY_TOKENS:,} new tokens')
+unans = [not ITEMS[p['qid']]['answerable'] for p in cal]
+by_rule = sum(not g or u for g, u in zip(graded, unans))  # as rag_judge does
+print(f'{by_rule} of {len(cal)} calibration answers are decided by rule on '
+      f'correct ({len(cal) - sum(graded)} abstain,\n  '
+      f'{sum(g and u for g, u in zip(graded, unans))} answer an unanswerable '
+      f'question); {again} without a verdict judged again with '
+      f'{RETRY_TOKENS:,} new tokens')
 
 def kappa(a, b):
     """Cohen's kappa of two 0/1 arrays."""
@@ -1489,7 +1400,7 @@ print(f'unjudged (left out): {sum(x["correct"] is None for x in v)} of '
 for k in ('correct', 'faithful'):
     pairs = [(lab[p['qid']][f'{k}_frontier'], lab[p['qid']][f'{k}_second'])
              for p in cal]
-    print(f'the two labellers on {k}: kappa '
+    print(f'the two labelers on {k}: kappa '
           f'{kappa(*zip(*[t for t in pairs if None not in t])):.2f}')
 old = next(c for c in json.load(open(os.path.join(
     LABELS, 'candidates', 'table.json'))) if c['name'] == 'qwen35-4b-off')
@@ -1498,16 +1409,17 @@ print(f'the old judge (Qwen3.5-4B, thinking off) on correct: agreement '
       f'{oc["acc"]:.2f}, kappa {oc["kappa"]:.2f} [{oc["k_lo"]:.2f}, '
       f'{oc["k_hi"]:.2f}];\n  it passes '
       f'{old["calibration"]["false_correct"][0]} of the '
-      f'{old["calibration"]["false_correct"][1]} answers the labellers call '
+      f'{old["calibration"]["false_correct"][1]} answers the labelers call '
       'wrong')
 for k in ('correct', 'faithful'):  # the claims that rest on the judge
     (acc, _, _), (_, klo, _) = agreement(*zip(*[
         (x[k], lab[p['qid']][k]) for p, x in zip(cal, v)
         if None not in (x[k], lab[p['qid']][k])]))
-    print(f'C0 on {k} against the consensus: agreement {acc:.2f}, kappa '
-          f'interval from {klo:.2f}\n  ' + ('passes (>= 0.8, above 0.4)'
-          if acc >= 0.8 and klo > 0.4 else 'fails: claims on it carry the '
-          'agreement'))
+    print(f'judge against the consensus on {k}: agreement {acc:.2f}, kappa '
+          f'interval from {klo:.2f}:\n  ' + (
+              'accepted (agreement >= 0.8, kappa interval above 0.4)'
+              if acc >= 0.8 and klo > 0.4 else 'not accepted: claims that '
+              'rest on it carry the agreement'))
 print('the calibration answers come from the earlier generator, Qwen3-4B')
 if len(JUD) and 2 * CONCURRENCY in JUD.concurrency.values:
     J = JUD[JUD.config == 'base']
@@ -1523,146 +1435,85 @@ if len(JUD) and 2 * CONCURRENCY in JUD.concurrency.values:
           f'{n16 - len(changed)} were judged again with more tokens)')
 ```
 
-The judge agrees with the consensus on 0.95 of the `correct` verdicts,
-κ 0.85 [0.70, 0.97], and on 0.96 of the `faithful` ones, κ 0.87
-[0.71, 0.97]. These numbers flatter, because the consensus leaves out the
-hard answers on which the labelers disagree. Against each labeler alone
-the judge reaches κ 0.83 and 0.71 on `correct`, and the labelers reach 0.81
-with each other: the judge is about as reliable as a third labeler. The
-judge it replaced, a 4B model with thinking off, passed 14 of the 21 answers
-that both labelers call wrong.
+We accept a judge whose agreement with the consensus is at least 0.8 and
+whose κ interval stays above 0.4, well clear of chance. This one agrees
+with the consensus on 95% of the `correct` verdicts and on 96% of the
+`faithful` ones, with κ of 0.85 and 0.87, and both κ intervals start at
+0.7. These numbers flatter, because the consensus leaves out the hard
+answers on which the labelers disagree. The fair comparison is with each
+labeler alone. There the judge reaches κ 0.83 and 0.71 on `correct`, and
+the labelers reach 0.81 with each other: the judge is about as reliable as
+a third labeler. The judge it replaced, a 4B model with thinking off,
+passed 14 of the 21 answers that both labelers call wrong, which is the
+leniency the selection was meant to remove. One limit remains that no
+calibration on these labels can remove. The labels come from models, not
+from people, and they were made on the answers of another, smaller
+generator; ours may make subtler mistakes, which this check does not see.
+
+A practical note for readers who want to regenerate the verdicts. This
+takes vLLM, an inference server that batches many requests on the GPU,
+here splitting the judge's FP8 weights over two 24 GB GPUs. vLLM pins its
+own PyTorch, so it lives in an environment of its own (`uv venv`, then
+`uv pip install vllm==0.33.0`), whose `vllm` executable the variable
+`D2L_VLLM` names. Without two such GPUs the same model, in bf16, can be
+called on OpenRouter for about \$3.3 per 1,000 judgments. Local and API
+verdicts on `correct` agreed on 194 of 200 answers with thinking off, and
+about as often with thinking on.
 
 ### The Baseline Report
 
-Each 95% interval of the report comes from a bootstrap that resamples
-documents, since questions drafted from one document share its difficulty
-(:numref:`sec_lm_eval_suites`). Differences between arms are paired: both
-arms answer the same questions, and the interval is computed for the
-per-question differences, which removes the questions' difficulty from the
-comparison (:numref:`subsec_mdl-paired-comparisons`). Make a prediction
-first:
+Before the averages, one answer. The chapter began by asking how the book's
+old `load_array` helper decides whether to shuffle its data, and the
+retriever of :numref:`sec_lm_retrieval` ranks the passage that says so
+first. The next cell prints what the generator replies to that question
+without passages and with the baseline's five, each with the judge's
+verdicts.
+
+```{.python .input #rag-load-array}
+%%tab pytorch
+# The question of the chapter's introduction, about load_array (dev-0001),
+# answered without passages and by the baseline, with the judge's verdicts
+item = ITEMS['dev-0001']
+wrap = lambda t, first='': textwrap.fill(t, 96, initial_indent=first,
+                                         subsequent_indent='    ')
+print(wrap(f'question: {item["question"]}'))
+print(wrap(f'reference: {item["reference"]}'))
+for c in ('closed', 'base'):
+    rec = ANSWERS[c, item['qid']]
+    jv = judged[(judged.config == c) & (judged.qid == item['qid'])]
+    verdicts = ', '.join(f'{k} {jv[k].iloc[0]}' for k in VERDICTS
+                         if len(jv) and pd.notna(jv[k].iloc[0]))
+    print(f'\n{c}, {len(rec["context_ids"])} passages; judge: '
+          f'{verdicts or "no verdict"}')
+    print(wrap(rec['answer'], '    '))
+```
+
+Without passages the generator invents a plausible mechanism, a `shuffle`
+argument that the caller sets, and never mentions `is_train`; the judge
+marks the answer wrong. With the five retrieved chunks it says that
+`is_train` is passed to the `DataLoader` as `shuffle`, which is the book's
+answer, and it cites the passage it took this from. This is the system
+doing what it was built for: the judge calls the answer correct, faithful
+and supported.
+
+In the report each rate carries a 95% interval that resamples documents,
+since questions drafted from one document share its difficulty, and each
+difference between arms is paired over the same questions
+(:numref:`sec_lm_eval_suites`, :numref:`subsec_mdl-paired-comparisons`).
+
+One row of the report is worth predicting before it is read.
 `base-repeat` sends the same 240 prompts to the same model with greedy
-decoding, and only the neighbors in each batch of eight differ. How many
-answers will change?
+decoding, and only the neighbors in each batch of eight differ. How many of
+its answers will change?
 
 ```{.python .input #rag-baseline-report}
 %%tab pytorch
-CLUSTER = {q['qid']: (q['gold_spans'] or [{'doc_id': CORPUS[
-    q['anchor_ids'][0]]['doc_id']}])[0]['doc_id'] for q in ITEMS.values()}
-
-def signflip_p(d, cluster, n=10_000):
-    """Two-sided sign-flip p of the mean of per-document mean
-    differences."""
-    m = np.array([d[cluster == c].mean() for c in np.unique(cluster)])
-    flips = np.random.default_rng(0).choice([-1.0, 1.0], (n, len(m)))
-    return np.mean(np.abs(flips @ m) >= abs(m.sum()) - 1e-12)
-
-def ci(a, b=None, cluster=None):
-    """The bootstrap of the mean of per-question scores a (or of a - b,
-    paired), NaNs dropped, resampling documents when there are 30 or
-    more, else questions: (result or None, by documents, a, b,
-    cluster)."""
-    a = np.asarray(a, float)
-    b = None if b is None else np.asarray(b, float)
-    keep = ~np.isnan(a) & (True if b is None else ~np.isnan(b))
-    a, cluster = a[keep], np.asarray(cluster)[keep]
-    b = None if b is None else b[keep]
-    by_doc = len(set(cluster)) >= 30
-    if len(a) < 2:
-        return None, by_doc, a, b, cluster
-    with warnings.catch_warnings():  # few items: boot's * says so
-        warnings.simplefilter('ignore')
-        r = (d2l.bootstrap_ci(a, cluster=cluster if by_doc else None)
-             if b is None else d2l.paired_bootstrap(
-                 a, b, cluster=cluster if by_doc else None))
-    return r, by_doc, a, b, cluster
-
-def boot(a, b=None, cluster=None):
-    """Mean of per-question scores a (or of a - b, paired), NaNs dropped,
-    with a 95% interval that resamples documents, marked * below 100
-    questions; below 30 documents questions are resampled instead, marked
-    + (and a paired difference gets a document-level sign-flip p)."""
-    r, by_doc, a, b, cluster = ci(a, b, cluster)
-    if r is None:
-        return 'n/a'
-    f = '.3f' if b is None else '+.3f'
-    out = f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
-    if by_doc:
-        return out + ('' if len(a) >= 100 else '*')
-    if b is None:
-        return out + '+'
-    p = signflip_p(a - b, cluster)
-    return out + f'+ (sign-flip p {p:.3f})'
-
-def scores(config, split='dev'):
-    """One row per judged answer of a configuration on a split, with
-    per-question scores (NaN where a score does not apply, and accuracy NaN
-    where the judge gave no verdict: an unjudged answer is left out)."""
-    g = GENS[(GENS.config == config) & (GENS.split == split)]
-    j = JUD[JUD.concurrency == CONCURRENCY][['config', 'qid', 'answer_sha']
-                                            + VERDICTS]
-    df = g.merge(j, on=['config', 'qid', 'answer_sha']).sort_values(
-        'qid', ignore_index=True)
-    corpus = RET[CONFIGS[config]['chunking']].corpus
-    items = [ITEMS[q] for q in df.qid]
-    ans = np.array([q['answerable'] for q in items])
-    rel = [d2l.gold_chunk_ids(q, corpus) for q in items]
-    cm = d2l.citation_metrics(df.to_dict('records'), items, corpus)
-    has_ctx = df.context_ids.map(len).to_numpy() > 0
-    answered = has_ctx & ~df.abstained.to_numpy(bool)
-    flag = lambda col: np.array([np.nan if v is None else float(v)
-                                 for v in df[col]])
-    return pd.DataFrame({
-        'qid': df.qid, 'cluster': [CLUSTER[q] for q in df.qid],
-        'answerable': ans, 'type': [q['type'] for q in items],
-        'book_specific': ['general_knowledge' not in q['flags']
-                          for q in items],
-        'accuracy': flag('correct'),  # NaN: unjudged, left out
-        'faithful': np.where(answered, flag('faithful'), np.nan),
-        'supported': np.where(answered, flag('supported'), np.nan),
-        'cite_precision': np.where(ans, cm.precision, np.nan),
-        'cite_recall': np.where(ans, cm.recall, np.nan),
-        'abstained': df.abstained.astype(float),
-        'hit': np.where(ans, [float(bool(r & set(c))) for r, c in zip(
-            rel, df.context_ids)], np.nan),
-        'recall@5': np.where(ans & has_ctx, [float(bool(r & set(k[:K])))
-                                             for r, k in zip(
-                                                 rel, df.ranked_ids)], np.nan),
-        'cov@3000': np.where(ans & has_ctx, [float(d2l.cov_at_budget(
-            k, q, corpus, BUDGET)) for k, q in zip(df.ranked_ids, items)],
-            np.nan),
-        'answer': df.answer, 'n_prompt_tokens': df.n_prompt_tokens,
-        'n_new_tokens': df.n_new_tokens, 'latency_s': df.latency_s,
-        'record': df.to_dict('records'),
-        'verdicts': df[VERDICTS].to_dict('records')})
-
-def paired(a, b, col, mask=None):
-    """Paired difference a - b of a score on the questions both have."""
-    m = a.merge(b, on='qid', suffixes=('_a', '_b'))
-    if mask is not None:
-        m = m[mask(m)]
-    return boot(m[f'{col}_a'], m[f'{col}_b'], m.cluster_a)
-
-def ready(*configs, split='dev'):
-    """Whether every answer of each configuration on split carries a
-    verdict on that very answer (answer_sha); says which do not. Partial
-    or stale judgments are never reported: between judging runs a
-    configuration is left out, and a normal run stops on one."""
-    k = JUD[JUD.concurrency == CONCURRENCY]  # not judged: GENS may be new
-    j = set(zip(k.config, k.qid, k.answer_sha))
-    missing = {}
-    for c in configs:
-        g = GENS[(GENS.config == c) & (GENS.split == split)]
-        n = sum(k not in j for k in zip(g.config, g.qid, g.answer_sha))
-        if n or not len(g):
-            missing[c] = (f'{n} of {len(g)} answers lack a verdict' if len(g)
-                          else 'no answers')
-    if missing:
-        print(f'not ready on {split}: {missing}')
-        assert RERUN or all(m == 'no answers' for m in missing.values()), (
-            'registered answers without verdicts: register the judge run')
-    return not missing
-
+CLUSTER = d2l._rag_clusters(ITEMS.values(), CORPUS)  # qid: its document
+boot, paired = d2l._rag_boot, d2l._rag_paired  # 'mean [95% interval]'
+scores = lambda c, split='dev': d2l._rag_scores(  # per-question scores
+    c, split, GENS, JUD, RET, ITEMS, CLUSTER, CONCURRENCY)
+ready = lambda *c, split='dev': d2l._rag_ready(  # are all of c's verdicts in?
+    c, split, GENS, JUD, RERUN, CONCURRENCY)
 S = {c: scores(c) for c in ('closed', 'base', 'oracle', 'base-repeat')
      if ready(c)}
 METRICS = ['recall@5', 'cov@3000', 'accuracy', 'faithful', 'cite_precision',
@@ -1670,6 +1521,8 @@ METRICS = ['recall@5', 'cov@3000', 'accuracy', 'faithful', 'cite_precision',
 if len(S) == 4:
     rows = {c: {m: boot(S[c][m], cluster=S[c].cluster) for m in METRICS}
             for c in ('closed', 'base', 'oracle')}
+    for m in ('recall@5', 'cov@3000'):  # the oracle bypasses retrieval
+        rows['oracle'][m] = 'n/a'
     for c in rows:
         s = S[c]
         rows[c]['abstain, unanswerable'] = boot(
@@ -1693,6 +1546,7 @@ if len(S) == 4:
          paired(S['base-repeat'], B, 'accuracy'))],
         columns=['difference', 'questions', 'accuracy [95% CI]'])
           .to_string(index=False))
+    print(f'oracle - base on faithful: {paired(S["oracle"], B, "faithful")}')
     C = S['closed'][S['closed'].answerable & S['closed'].book_specific]
     Bs = B[B.answerable & B.book_specific]
     print(f'book-specific answerable questions ({len(C)}): closed book '
@@ -1713,757 +1567,115 @@ if {'base', 'base-repeat'} <= set(GENS.config):  # answers, not verdicts
     same_ctx = b.context_ids.map(tuple) == r.context_ids.map(tuple)
     differ = b.answer != r.answer
     print(f'base and base-repeat (same questions, other batches): '
-          f'{(~same_ctx).sum()} of {len(b)} contexts differ\n  (query '
-          f'embeddings batched differently); with the same context '
-          f'{differ[same_ctx].sum()} of {same_ctx.sum()} answers differ')
+          f'{(~same_ctx).sum()} of {len(b)} contexts differ\n  (the query '
+          f'embeddings were batched differently too);\n  with the same '
+          f'context {differ[same_ctx].sum()} of {same_ctx.sum()} answers '
+          f'differ')
 print('* fewer than 100 questions (documents resampled)\n+ fewer than 30 '
       'documents: questions resampled, an interval that is likely too '
       'narrow')
 ```
 
-A relevant chunk is among the first five for 0.97 of the answerable
-questions, so retrieval is nearly solved here. The generator answers 0.89
-[0.85, 0.93] of all `dev` questions correctly, and 0.30 without passages, a
-gain of +0.59 [+0.53, +0.66]. The closed-book score is not zero, nor should
-it be: the book is public, and some questions ask for general knowledge. On
-the 145 answerable questions that the checker marked as specific to the
-book, closed-book accuracy falls to 0.12 [0.06, 0.18], against 0.90 with
-retrieval.
+Not one of the 240 contexts changed, yet 95 of the 240 answers did: 40%.
+Accuracy did not move; the difference is $-0.004$, with an interval from
+$-0.03$ to +0.02. Nothing is broken. When the padding of a prompt's batch
+changes, so does the shape of every matrix product, and the GPU may add the
+same bf16 numbers in another order; the logits move by a few rounding steps.
+Wherever the two likeliest tokens are nearly tied, that flips the greedy
+choice, and from that token on the answer takes another path.
+:numref:`subsec_lm_hf_kernels` met the same near-ties when it changed a
+batch from one prompt to two.
 
-The oracle arm answers 0.92 [0.89, 0.95], and its gain over the baseline,
-+0.03 [$-0.02$, +0.08], is not distinguishable from zero. Why so little? Call
-a question a *hit* when its context holds a relevant chunk. Let $h$ be the
-share of hits among the answerable questions, and $a_1$ and $a_0$ the
-accuracy on hits and on misses. Then
+Greedy decoding is therefore deterministic only for a fixed batch,
+precision and kernel. An evaluation must batch the configurations it
+compares alike, or count re-batching as noise (:numref:`sec_lm_scoring`).
+Here re-batching moves accuracy by less than 0.03, and a change to the
+pipeline has to do better than that before we believe it. The judge's
+server batches its requests too, so the same effect reaches the verdicts:
+judged again with twice as many requests in flight, 2 of 51 answers changed
+a verdict. Every arm was judged at the same concurrency, so this noise
+widens the paired intervals rather than favoring one arm.
+
+With the size of the noise known, the rest of the report reads quickly. A
+relevant chunk is among the first five for 97% of the answerable
+questions: retrieval is nearly solved here. That should not surprise us.
+The questions were drafted from the book's passages and, like the first
+example, often reuse their words, and :citet:`Lee.Chang.Toutanova.2019`
+observed that when the people asking already know the answer, BM25 alone
+retrieves well. With those chunks the generator answers 0.89 of all `dev`
+questions correctly, and without them 0.30, a gain of about 0.6. The
+closed-book score is not zero, nor should it be: the book is public, and
+some questions ask for general knowledge. On the 145 answerable questions
+that the checker marked as specific to the book, closed-book accuracy falls
+to 0.12, against 0.89 with retrieval. That pair of numbers is the case for
+retrieval. Nor do the passages merely jog the generator's memory: the
+baseline answers about nine in ten answerable questions correctly, both
+where the closed-book arm was right and where it was wrong.
+
+The answers mostly come from their passages. The judge calls 0.90 of them
+faithful and finds the cited passages sufficient for 0.84. Citation
+precision is 0.72 and recall 0.88; precision from gold spans is strict,
+since a citation of a supporting passage that is not gold counts against
+it. The baseline abstains on 19 of the 20 unanswerable questions and on 1%
+of the answerable ones.
+
+The oracle arm answers 0.93 of all questions. Its context holds a relevant
+chunk for every answerable question, which is why its citation precision
+is 1.00 by construction, and its Recall@5 and coverage are `n/a`: it
+bypasses the retriever. Nor are its answers more faithful: 0.89 against
+the baseline's 0.90, a difference whose interval runs from $-0.06$ to
++0.04. On the answerable questions its gain over the baseline is +0.04,
+with an interval from $-0.01$ to +0.10, and cannot be told from zero. Why
+so little? Call a question a *hit*
+when its context holds a relevant chunk. Let $h$ be the share of hits among
+the answerable questions, and $a_1$ and $a_0$ the accuracy on hits and on
+misses. Then the accuracy on the answerable questions is
 
 $$\textrm{accuracy} = h\, a_1 + (1 - h)\, a_0.$$
 :eqlabel:`eq_lm_rag_hit`
 
 Accuracy is a mixture of how often retrieval succeeds and how well the
 generator does in each case. Here 213 of 220 contexts hold a relevant chunk,
-$h = 213/220$, with $a_1 = 0.91$, and $a_0 = 0.29$ on the seven misses. If
-the accuracy on hits stayed at $a_1$, a perfect retriever would add
-$(1 - h)(a_1 - a_0) \approx 0.032 \times 0.63 \approx 0.02$. The oracle
-measured +0.04 [$-0.01$, +0.09] on the answerable questions, within noise of
-that estimate. It may well add a little more, since it changes the hits
-too: it passes only the gold chunks, about 480 context tokens against the
-baseline's 1,700, and so removes the distracting passages as well. Either
-way the generator limits accuracy. Of the 24 errors on answerable questions,
-19 were made with a relevant passage in the context.
-
-Citation precision is 0.72 and recall 0.85, and the judge finds the cited
-passages sufficient for 0.82 of the answers. Precision from gold spans is
-strict, since a citation of a supporting passage that is not gold counts
-against it. The baseline abstains on 18 of the 20 unanswerable questions and
-on 0.02 of the answerable ones.
-
-And the batches? Not one of the 240 contexts changed, yet 108 of the 240
-answers did: 45%. Accuracy did not move: the difference is $-0.004$, with
-an interval from $-0.03$ to +0.02. Nothing is broken. In bf16 a prompt's
-logits move by 0.2 to 0.6 when the padding of its batch changes, a few
-rounding steps of 0.125 at logits near 25. That flips the greedy choice
-wherever the two likeliest tokens are nearly tied, and in two of eight
-prompts we checked they were tied exactly. In fp32, on a 2B model of the
-same family, padding moves the logits by at most $10^{-4}$ and never
-changes the most probable token.
-
-Greedy decoding is therefore deterministic only for a fixed batch and
-precision, the near-ties of :numref:`subsec_lm_hf_kernels` once more. An
-evaluation must batch the configurations it compares alike, or count
-re-batching as noise (:numref:`sec_lm_scoring`). Here re-batching moves
-accuracy by less than 0.03, and a stage change has to do better than that.
-The judge is batched by its server too, so the same effect reaches the
-verdicts: judged again with twice as many requests in flight, 5 of 54
-answers changed a verdict. Every arm was judged at the same concurrency, so
-this noise widens the paired intervals rather than favoring one arm.
-
-Now the failure of the opening, picked by a fixed rule: the first `dev`
-answer, by question id, whose context held a relevant chunk, that the judge
-called incorrect, and whose failure class (:numref:`subsec_lm_rag_failures`)
-a second grader confirmed on reading the case. The second grader is a
-frontier model that labels the failure cards of that subsection, so the rule
-makes it unlikely, though not impossible, that the example is a judge
-error.
-
-```{.python .input #rag-opening-item}
-%%tab pytorch
-# The rule: the first base dev answer (in qid order) with a relevant chunk
-# in its context that the judge called incorrect, and whose failure card
-# carries the same class from the second labeller as from the rule: a
-# failure of the pipeline that two graders agree on, not a judge error
-path = run_path('rag-cards')
-LABEL = {c['qid']: c['labeller']['label'] for c in (
-    d2l.read_jsonl(path).to_dict('records') if path else [])
-    if c.get('labeller')}
-if 'base' in S and LABEL:
-    B = S['base']
-    cls = [d2l.classify_failure(r, ITEMS[q], v, CORPUS, DEPTH)
-           for q, r, v in zip(B.qid, B.record, B.verdicts)]
-    pick = [(q, c) for q, c, h in zip(B.qid, cls, B.hit) if h == 1 and c in (
-        'ignored', 'unsupported', 'false_abstain') and LABEL.get(q) == c]
-    d2l.print_wrapped(f'{len(pick)} base answers qualify: ' + ', '.join(
-        f'{q} ({c})' for q, c in pick), width=96)
-    row = B.set_index('qid').loc[pick[0][0]]
-    q, rec = ITEMS[pick[0][0]], row.record
-    rel = d2l.gold_chunk_ids(q, CORPUS)
-    rank = next(i for i, c in enumerate(rec['ranked_ids'], 1) if c in rel)
-    wrap = lambda t: textwrap.fill(t, 96, subsequent_indent='    ')
-    print('\n' + wrap(f'{q["qid"]} ({q["type"]}): {q["question"]}'))
-    print(wrap(f'reference: {q["reference"]}'))
-    print(wrap(f'key facts: {q["key_facts"]}'))
-    print(f'first relevant chunk at rank {rank}; context:')
-    for n, c in enumerate(rec['context_ids'], 1):
-        print(f'  [{n}] {c.split(":")[1]}' + (' (relevant)' if c in rel
-                                               else ''))
-    print(wrap(f'answer: {rec["answer"]}'))
-    print(f'verdicts: {row.verdicts}\nclass: {pick[0][1]}, by the rule and '
-          'by the second labeller')
-```
-
-The answering passage was ranked first, and its last sentence, quoted at the
-start of this section, holds the missing key fact. The answer cites passages
-two and three and leaves out that no warning is given. The passage was
-neither missing nor contradicted. It was ignored.
-
-## Changing One Stage at a Time
-:label:`subsec_lm_rag_stages`
-
-The baseline leaves 26 questions wrong. Could another chunking, another
-query or another context have saved some of them? We now change one stage
-at a time and compare with the baseline on the same questions. Chunking
-comes first, and it can be measured before any answer is generated: section
-chunks follow the book's headings and paragraphs, fixed windows of 256
-tokens overlapping by 64 do not. Which covers more at equal budgets?
-
-```{.python .input #rag-coverage}
-%%tab pytorch
-ANS = [q for q in DEV if q['answerable']]
-mode = 'hybrid' if GPU else 'bm25'  # the CPU path: no dense vectors of
-COV = {}                            # the 9,447 fixed windows
-for name, tag in (('sections', 'sec512'), ('fixed', 'fix256o64')):
-    R = RET[name]
-    hits = R.search_batch([q['question'] for q in ANS], k=DEPTH, mode=mode)
-    R.release()
-    for T in (1000, 2000, 3000):
-        COV[tag, T] = np.array([d2l.cov_at_budget(
-            [h.chunk_id for h in hs], q, R.corpus, T)
-            for hs, q in zip(hits, ANS)], float)
-cl = np.array([CLUSTER[q['qid']] for q in ANS])
-print(f'{len(ANS)} answerable dev questions, {mode} retrieval')
-print(pd.DataFrame({T: {'sections': boot(COV['sec512', T], cluster=cl),
-                        'fixed 256/64': boot(COV['fix256o64', T], cluster=cl),
-                        'fixed - sections': boot(COV['fix256o64', T],
-                                                 COV['sec512', T], cl)}
-                    for T in (1000, 2000, 3000)}).T.rename_axis('cov@T')
-      .to_string())
-```
-
-At 1,000 tokens section chunks cover 0.91 of the questions and windows
-0.84, a difference of $-0.07$ [$-0.11$, $-0.02$]. A section holds a span
-whole where a window may cut it, and overlapping windows repeat text. By
-3,000 tokens both find room, and the difference shrinks to $-0.01$
-[$-0.04$, +0.02].
-
-Coverage says that the gold text is in the context, not that the generator
-can use it. The next cell answers with five changes:
-
-- fixed windows, each question getting at most the tokens of its baseline
-  context (packing stops before the window that would pass them, so the
-  windows get slightly fewer);
-- the question rewritten by the generator as a search query, with the
-  reranker, which reads the original question, reordering the fused top 50;
-  the two go together because the reranker decides which of the rewrite's
-  candidates reach the context, and so guards against a rewrite that drifts
-  from the question;
-- the baseline context in reverse order;
-- budgets of 1,500 and of 6,000 tokens, filled in rank order without the
-  limit of five chunks.
-
-Which of them, would you guess, changes accuracy with a paired interval
-that excludes zero?
-
-```{.python .input #rag-stages}
-%%tab pytorch
-def context_tokens(recs):
-    """Tokens of the context of each answer record: the budget that
-    'fixed' gets for the same question."""
-    return {r['qid']: sum(CHUNKS[i]['n_tokens'] for i in r['context_ids'])
-            for r in recs}
-
-if 'rag-gen-stages' in RERUN:
-    names = os.environ.get('D2L_RAG_STAGES', ','.join(STAGES)).split(',')
-    assert set(names) <= set(STAGES), names
-    path = run_path('rag-gen-stages')  # the other configurations are kept
-    if not os.path.exists(path):  # from an earlier run, else registered
-        path = d2l.lm_registered(ARTIFACTS['rag-gen-stages'][0])
-    recs = [r for r in d2l._rag_records([path]).to_dict('records')
-            if r['config'] not in names]
-    tokens = context_tokens(GENS[(GENS.config == 'base') &
-                                 (GENS.split == 'dev')].to_dict('records'))
-    for name in names:
-        recs += run_configs([name], DEV, budgets=tokens if CONFIGS[name][
-            'budget'] == 'base' else None)
-    save_gens('rag-gen-stages', recs)
-    GENS = load_gens()
-rows, BEST = [], None
-for c in STAGES:
-    if not (ready('base', c) and 'base' in S):
-        continue
-    s = scores(c)
-    d = s.merge(S['base'], on='qid', suffixes=('', '_b'))
-    r = ci(d.accuracy, d.accuracy_b, d.cluster)[0]
-    rows.append({'configuration': c,
-                 'accuracy': boot(s.accuracy, cluster=s.cluster),
-                 'faithful': boot(s.faithful, cluster=s.cluster),
-                 'cite precision': boot(s.cite_precision, cluster=s.cluster),
-                 'accuracy - base': boot(d.accuracy, d.accuracy_b, d.cluster),
-                 'prompt tokens': f'{s.n_prompt_tokens.mean():,.0f}',
-                 's per answer': f'{s.latency_s.mean():.2f}',
-                 'delta': r.mean, 'excludes 0': r.ci[0] > 0 or r.ci[1] < 0})
-if rows:
-    T = pd.DataFrame(rows)
-    for cols in (['accuracy', 'faithful', 'cite precision'],  # two tables:
-                 ['accuracy - base', 'prompt tokens', 's per answer']):
-        print(T[['configuration'] + cols].to_string(index=False))  # width
-    print(f'intervals excluding 0: {list(T.configuration[T["excludes 0"]])}')
-if len(rows) == len(STAGES):  # the rule of the fix step, on every stage
-    BEST = T.configuration[T.delta.idxmax()]
-    print(f'the largest dev gain: {BEST}')
-```
-
-None raised accuracy with an interval that excludes zero, at 240 questions
-in 32 documents. The largest gains, from reversing the order and from the
-6,000-token budget, were both +0.01, with intervals of [$-0.02$, +0.04] and
-[$-0.03$, +0.05].
-
-Two changes lowered accuracy. Fixed windows lost 0.08 [$-0.12$, $-0.04$],
-although at 2,000 tokens their coverage trails by only 0.03
-[$-0.06$, +0.01]. Similar coverage did not give similar answers, and chunks
-that follow the document's structure gave better ones. The 1,500-token
-budget, about 1,300 context tokens against the baseline's 1,700,
-cost 0.03 [$-0.06$, $-0.01$]. The 6,000-token budget, about 5,800 context
-tokens, gained nothing measurable and doubled the time per answer, from
-about 1.3 s to 2.6 s, partly because its longer prompts run in batches of
-four instead of eight. None of this should surprise us after
-:eqref:`eq_lm_rag_hit`. Retrieval already brings a relevant chunk for 213
-of 220 questions, so changes on its side had about 0.02 to gain if the
-accuracy on hits stayed put, less than 240 questions can detect.
-
-Is a gain this small real? A rule fixed in advance carries the stage change
-with the largest `dev` gain to `test`, read once, to find out. Three changes
-lie within 0.004 of one another on `dev`, so which of them leads depends on
-a handful of verdicts. `test` was read with the rewrite and reranker, which
-led when it was read; on the final verdicts reversing the order leads, as
-the cell prints, and `test` is not read again.
-
-## Failures by Stage
-:label:`subsec_lm_rag_failures`
-
-If no single stage change helps on average, perhaps the 26 wrong answers of
-the baseline fail in different ways, each needing its own repair. To find
-out, `classify_failure` asks of each wrong answer the questions below, in
-pipeline order, and blames the first stage that lost the answer (right of
-:numref:`fig_lm_rag_stages`):
-
-1. An unanswerable question was answered: a *false answer*.
-2. No relevant chunk is among the first-stage top 50: *not retrieved*.
-3. A relevant chunk is in the top 50 but not in the context: *ranked low*.
-4. A relevant chunk is in the context and the answer abstains: a *false
-   abstention*.
-5. A relevant chunk is in the context and the answer, faithful to the
-   passages, is incorrect: *ignored*. The generator used the passages, but
-   not the one that answers.
-6. A relevant chunk is in the context and the answer is not faithful:
-   *unsupported*.
-
-Each class has its own repair (:numref:`tab_lm_rag_fixes`), written into the
-configuration cell before any class was counted.
-
-:The failure classes, the stage each blames, and the fix written down for it before the failures were counted.
-:label:`tab_lm_rag_fixes`
-
-| class | stage | fix written down in advance |
-|---|---|---|
-| not retrieved | first-stage retrieval | add the rewritten question as a third ranking to the fusion |
-| ranked low | reranking, assembly | rerank the top 100 and pass eight chunks |
-| ignored | generation | quote the supporting sentences, then answer; best passages at both ends |
-| unsupported | generation | drop each sentence that its cited passages do not support, as the generator judges |
-| false answer | generation | abstain below a reranker score tuned on `train` |
-| false abstention | generation | state the abstention rule after the passages |
-
-Why write the fixes down first? A fix chosen after reading the failures is
-fitted to them, and its gain on the same questions is optimistic, like any
-choice made on test data. With the remedies fixed in advance, the data
-decide only which class is largest, and the notebook takes that decision by
-rule. Experimental science calls this *pre-registration*: the analysis is
-written down before the data are seen. The cell counts the classes with
-intervals and prints five *failure cards*, records of a failure with its
-question, answer, ranking and verdicts. Claude Opus 5.5 also read each card
-and labeled its class, and the cell compares these labels, again a
-model's, with the rule's.
-
-```{.python .input #rag-failures}
-%%tab pytorch
-CLASSES = ['not_retrieved', 'ranked_low', 'ignored', 'unsupported',
-           'false_answer', 'false_abstain']
-
-def classes(config, split='dev'):
-    """The failure class (or 'correct') of each judged answer."""
-    s = scores(config, split)
-    corpus = RET[CONFIGS[config]['chunking']].corpus
-    return s.assign(cls=[d2l.classify_failure(r, ITEMS[q], v, corpus, DEPTH)
-                         for q, r, v in zip(s.qid, s.record, s.verdicts)])
-
-def class_shares(cls):
-    """Count, share and 95% interval of each class among cls (items
-    resampled: a multinomial bootstrap)."""
-    out = {}
-    for c in CLASSES:
-        x = (cls == c).to_numpy(float)
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            r = d2l.bootstrap_ci(x) if len(x) > 1 else None
-        out[c] = (int(x.sum()), x.mean() if len(x) else np.nan,
-                  *(r.ci if r else (np.nan, np.nan)))
-    return pd.DataFrame(out, index=['count', 'share', 'lo', 'hi']).T
-
-LARGEST = FIX = None
-if ready('base'):
-    BC = classes('base')
-    fails = BC[~BC.cls.isin(['correct', 'unjudged'])]
-    SH = class_shares(fails.cls)
-    n_un = (BC.cls == 'unjudged').sum()
-    print(f'{len(fails)} of {len(BC) - n_un} judged base answers on dev are '
-          f'not correct ({n_un} unjudged, left out)')
-    print(SH.assign(share=lambda d: d.apply(
-        lambda r: f'{r.share:.2f} [{r.lo:.2f}, {r.hi:.2f}]', axis=1))
-          [['count', 'share']].to_string())
-    LARGEST = max(CLASSES, key=lambda c: SH.loc[c, 'count'])  # ties: order
-    nxt = max((c for c in CLASSES if c != LARGEST),
-              key=lambda c: SH.loc[c, 'count'])
-    most = SH.loc[LARGEST, 'lo'] > SH.loc[nxt, 'hi']
-    FIX = f'fix-{LARGEST}'
-    print(f'the largest class: {LARGEST} ({"most failures: its interval "
-          "lies above the next" if most else "the intervals overlap"}, '
-          f'next {nxt})\nits fix, written down before counting: '
-          f'{ {k: v for k, v in CONFIGS[FIX].items() if BASE[k] != v} }')
-    rng = random.Random(0)
-    sample = sorted(rng.sample(list(fails.qid), min(N_CARDS, len(fails))))
-    F_ = fails.set_index('qid')
-    cards = [dict(
-        qid=q, type=ITEMS[q]['type'], question=ITEMS[q]['question'],
-        reference=ITEMS[q]['reference'], key_facts=ITEMS[q]['key_facts'],
-        answer=F_.loc[q, 'answer'], ranked_ids=F_.loc[q, 'record'][
-            'ranked_ids'][:10], context_ids=F_.loc[q, 'record']['context_ids'],
-        relevant=sorted(d2l.gold_chunk_ids(ITEMS[q], CORPUS)),
-        cited_ids=F_.loc[q, 'record']['cited_ids'],
-        verdicts=F_.loc[q, 'verdicts'], rule=F_.loc[q, 'cls'], labeller=None)
-        for q in sample]
-    for card in cards[:5]:
-        hit = bool(set(card['relevant']) & set(card['context_ids']))
-        print('\n' + textwrap.fill(
-            f'[{card["rule"]}] {card["qid"]} ({card["type"]}): '
-            f'{card["question"]}', 96, subsequent_indent='    '))
-        print(textwrap.fill(f'answer: {card["answer"][:300]}', 96,
-                            initial_indent='  ', subsequent_indent='    '))
-        print(f'  relevant chunk in the context: {hit}\n  verdicts: '
-              f'{card["verdicts"]}')
-    if 'rag-cards' in RERUN:  # the agent's labels are added before upload
-        d2l.lm_save_table(ARTIFACTS['rag-cards'][1], pd.DataFrame(cards),
-                          on=['qid'], key=ARTIFACTS['rag-cards'][0])
-    path = run_path('rag-cards')
-    labelled = [c for c in (d2l.read_jsonl(path).to_dict('records')
-                            if path else []) if c.get('labeller')]
-    if labelled:
-        rule = dict(zip(BC.qid, BC.cls))  # by the current verdicts
-        agent = pd.Series({c['qid']: c['labeller']['label']
-                           for c in labelled})
-        now = agent.index.map(rule)
-        print(f'\nthe agent ({labelled[0]["labeller"]["model"]}) against the '
-              f'rule on {len(agent)} cards: agreement '
-              f'{np.mean(agent.values == now.values):.2f}')
-        print(pd.crosstab(pd.Series(now, name='rule'),
-                          pd.Series(agent.values, name='agent')))
-    else:
-        print('\nthe cards carry no labeller labels yet')
-```
-
-Of the 26 failures, 12 are ignored, 6 unsupported, 5 ranked low, 2 false
-answers and 1 a false abstention; none failed at first-stage retrieval.
-Ignored is the largest class, 0.46 [0.27, 0.65] of the failures, but its
-interval overlaps that of unsupported, 0.23 [0.08, 0.38], so 26 failures
-cannot tell which of the two is larger.
-
-The 31 cards cover all 26 failures and five answers that the judge counts
-as correct after its re-judging; the labeler calls those five correct
-too, the first row of the table. On the 26 failures, labeler and rule
-agree on 13. Of the 13 disagreements, 9 are answers that the labeler calls
-correct and our grading does not. In seven the judge insists on a key fact
-the labeler lets pass. In two, unanswerable questions were declined in
-words other than the abstention sentence, which the string rule counts as
-answers. Only four disagreements concern the stage. Rule and labeler disagree about whether an answer
-is wrong far more often than about where it went wrong.
-
-The rule picks the ignored class and its fix: the generator quotes the
-sentences that support its answer, with their passage numbers, and then
-answers, with the best passages at both ends and room for 500 new tokens.
-The cell applies it to `dev` and then reads `test` once.
-
-```{.python .input #rag-fix}
-%%tab pytorch
-def tune_threshold():
-    """The reranker score below which the false-answer fix abstains: the
-    cut that best separates train unanswerable items from as many train
-    answerable ones (balanced accuracy), by the best reranker score of
-    each base context."""
-    un = [q for q in QA['train'] if not q['answerable']]
-    an = d2l.BookQA([q for q in QA['train'] if q['answerable']],
-                    'train').subset(len(un), seed=0)
-    pipe = d2l.RAGPipeline(RET['sections'], None, None, k=K,  # retrieval
-                           budget_tokens=BUDGET, depth=DEPTH,
-                           abstain_below=0.0)
-    s = np.array([p['top_score'] for p in pipe.prepare(un + list(an))])
-    y = np.r_[np.ones(len(un)), np.zeros(len(an))]
-    cuts = np.unique(s)
-    bal = [((s[y == 1] < t).mean() + (s[y == 0] >= t).mean()) / 2
-           for t in cuts]
-    print(f'abstain below {cuts[np.argmax(bal)]:.3f} (train balanced '
-          f'accuracy {max(bal):.2f})')
-    return float(cuts[np.argmax(bal)])
-
-if 'rag-gen-fix' in RERUN:
-    assert FIX, 'the fix needs the judged base run (rag-judge)'
-    assert BEST, 'test is read once, with the best stage: judge every stage'
-    t = time.time()
-    thr = tune_threshold() if LARGEST == 'false_answer' else None
-    recs = run_config(FIX, DEV, threshold=thr)
-    base = run_config('base', TEST)  # the only reads of test in the chapter
-    recs += base
-    for name in [FIX] + ([BEST] if CONFIGS[BEST] != CONFIGS[FIX] else []):
-        recs += run_config(name, TEST, budgets=context_tokens(base) if
-                           CONFIGS[name]['budget'] == 'base' else None,
-                           threshold=thr if name == FIX else None)
-    rule = json.dumps(dict(largest=LARGEST, fix=FIX, best=BEST,
-                           threshold=thr))  # what test was read with
-    save_gens('rag-gen-fix', [dict(r, rule=rule) for r in recs])
-    GENS = load_gens()
-    print(f'rag-gen-fix regenerated in {(time.time() - t) / 60:.1f} min, '
-          f'{d2l.lm_peak()}')
-rules = set(GENS.rule.dropna()) if 'rule' in GENS else set()
-if rules:
-    RULE = json.loads(rules.pop())
-    print(f'test was read with the fix {RULE["fix"]} and the stage '
-          f'{RULE["best"]}' + ('' if RULE['threshold'] is None else
-                              f', abstaining below a reranker score of '
-                              f'{RULE["threshold"]:.3f} (tuned on train)'))
-    assert not rules and (RERUN or RULE['fix'] == FIX), (
-        'the rule now picks another fix')
-    if BEST != RULE['best']:  # stage deltas within noise: a tie can move
-        print(f'with the verdicts as they stand now the largest dev gain is '
-              f'{BEST};\n  test was read once, with {RULE["best"]}, and is '
-              'not read again')
-    BEST = RULE['best']  # the stage that test was read with
-
-if FIX and ready('base', FIX):
-    rows = []
-    for split in ('dev', 'test'):
-        for c in [FIX] + ([BEST] if BEST and BEST != FIX else []):
-            if not ready('base', c, split=split):
-                continue
-            a, b = scores(c, split), scores('base', split)
-            rows.append({'split': split, 'configuration': c,
-                         'accuracy - base': paired(a, b, 'accuracy'),
-                         'cite precision - base': paired(
-                             a, b, 'cite_precision')})
-    print(pd.DataFrame(rows).to_string(index=False))
-    after = classes(FIX)
-    print(pd.DataFrame({'base': BC.cls.value_counts(),
-                        FIX: after.cls.value_counts()})
-          .reindex(CLASSES + ['correct', 'unjudged']).fillna(0).astype(int)
-          .to_string())
-```
-
-The fix failed. It lowered accuracy by 0.08 [$-0.12$, $-0.05$] on `dev` and
-by 0.08 [$-0.12$, $-0.03$] on `test`. On `dev` it got 20 fewer answers
-right. Ignored answers, the class it aimed at, did not become rarer but rose
-from 12 to 19. False answers rose from 2 to 15: on the unanswerable
-questions the abstentions fell from 18 of 20 to 5. In most of the other 15
-the model said in its own words that the passages do not give the answer,
-instead of writing the abstention sentence, and the rest answered anyway.
-
-Is that a failure of the model or of our grading? The prompt asks for the
-abstention sentence word for word, and any system that acts on it, by
-showing a fallback for instance, breaks when the sentence is missing. The
-quoting format broke that agreement between prompt and grader, so a fix's
-prompt and the scoring rule have to be tested together. Even without the
-false answers, though, the fix did not shrink the class it aimed at. A
-change aimed at one class created another.
-
-The `dev` result could have been optimistic, since the fix was chosen from
-`dev` failures; it lost there anyway, and `test` agrees. Nor do we now
-search for a better fix: one found by looking at these results would need a
-fresh test set to be believed. The stage change, too, does nothing on
-`test`: $-0.004$, with an interval from $-0.05$ to +0.04.
-
-The plot shows the same results at a glance. On the left are the shares of
-`dev` questions in each failure class before and after the fix. On the
-right are the accuracy and citation precision on `dev` of the closed book,
-the baseline, the stage change and the fix, with the `test` points as
-crosses. The last two each change one thing in the baseline; they are not
-steps of a chain.
-
-```{.python .input #rag-failure-plot}
-%%tab pytorch
-if FIX and ready('closed', 'base', FIX):
-    d2l.use_svg_display()
-    _, axes = d2l.plt.subplots(1, 2, figsize=(9, 3.6), layout='constrained')
-    series = {}
-    for name, df in (('base', BC), ('fix', after)):
-        sh = class_shares(df.cls[df.cls != 'unjudged'])  # judged only
-        series[name] = (sh.share, sh.lo, sh.hi)
-    d2l.plot_intervals(CLASSES, series, 'failure class',
-                       'share of dev questions', axes=axes[0])
-    steps = ['closed', 'base'] + ([BEST] if BEST and BEST != FIX else []
-                                  ) + [FIX]
-    dev = {c: scores(c) for c in steps}
-    test = {c: scores(c, 'test') for c in steps[1:] if ready(c, split='test')}
-    waterfall, marks = {}, {'test': ('x', {})}
-    for m, label in (('accuracy', 'accuracy'),
-                     ('cite_precision', 'citation precision')):
-        est = [ci(dev[c][m], cluster=dev[c].cluster)[0] for c in steps]
-        waterfall[label] = tuple(  # closed book cites nothing: no point
-            [np.nan if r is None else f(r) for r in est]
-            for f in (lambda r: r.mean, lambda r: r.ci[0],
-                      lambda r: r.ci[1]))
-        xs = [i for i, c in enumerate(steps) if c in test]
-        marks['test'][1][label] = (xs, [test[steps[i]][m].mean()
-                                        for i in xs])
-    d2l.plot_intervals(steps, waterfall, 'configuration', 'dev score',
-                       axes=axes[1], marks=marks)
-```
-
-Beyond these fixes lies a large literature that this section does not
-measure, from transforming the query and retrieving again during generation
-to retrieval learned with reinforcement learning, compressed contexts and
-structured indexes (:numref:`sec_lm_encoders_fr`). Whichever we try, the
-procedure of this section decides whether it helps: one change at a time, a
-paired interval, and a test set read once.
-
-## Marginalizing over Retrieved Documents
-:label:`subsec_lm_rag_marginal`
-
-Our largest failure class lives in the generator: it is handed the right
-passage and does not use it. Could the generator teach the retriever which
-passages it can use? Our pipeline treats retrieval as preprocessing:
-passages are chosen, concatenated and read. The model that gave RAG its
-name :cite:`Lewis.Perez.Piktus.ea.2020` treats the retrieved document as a
-hidden variable instead, which makes the system a probabilistic model whose
-query encoder and generator can be trained together. Let $x$ be
-the question, $y = (y_1, \ldots, y_n)$ the answer and $z$ a document. The
-retriever gives each document a score $s_z$ and the probability
-$p(z \mid x) = \mathrm{softmax}(\mathbf{s})_z$, and the generator reads one
-document at a time. *RAG-Sequence* draws one document for the whole answer:
-
-$$p_S(y \mid x) = \sum_z p(z \mid x) \prod_{t=1}^{n} p(y_t \mid x, z, y_{<t}).$$
-:eqlabel:`eq_lm_rag_seq`
-
-*RAG-Token* may draw a new document for every token:
-
-$$p_T(y \mid x) = \prod_{t=1}^{n} \sum_z p(z \mid x)\, p(y_t \mid x, z, y_{<t}).$$
-:eqlabel:`eq_lm_rag_token`
-
-RAG-Sequence asks which single document explains the answer; RAG-Token lets
-each token be explained by whichever document supports it. For one document
-the two coincide. The smallest case in which they differ has two documents
-and two tokens. Let $p(z \mid x) = (0.6, 0.4)$, let document 1 give the two
-tokens the probabilities 0.9 and 0.2, and document 2 give 0.1 and 0.8. Then
-
-$$
-\begin{aligned}
-p_S &= 0.6 \cdot 0.9 \cdot 0.2 + 0.4 \cdot 0.1 \cdot 0.8 = 0.140,\\
-p_T &= (0.6 \cdot 0.9 + 0.4 \cdot 0.1)(0.6 \cdot 0.2 + 0.4 \cdot 0.8) = 0.2552.
-\end{aligned}
-$$
-
-Each document supports half of the answer, and only RAG-Token combines the
-halves: the multi-passage question in its smallest form. Our pipeline
-combines passages too, through attention over their concatenation, with one
-long prompt instead of one short pass per document.
-
-The sum over the corpus is too large, so it runs over the $k$ documents of
-largest $p(z \mid x)$, the retrieved set $\mathcal{K}$. What does that drop? Write
-$L_z = p(y \mid x, z)$, $p_S^{(k)}$ for the sum restricted to $\mathcal{K}$, and
-$m_k = \sum_{z \in \mathcal{K}} p(z \mid x)$ for the retriever's mass on $\mathcal{K}$. The
-dropped terms are nonnegative and each $L_z$ is at most $\max_z L_z$, so
-
-$$0 \le p_S - p_S^{(k)} = \sum_{z \notin \mathcal{K}} p(z \mid x)\, L_z \le (1 - m_k) \max_z L_z.$$
-:eqlabel:`eq_lm_rag_topk`
-
-The truncation error is at most the probability mass that the retriever
-puts outside the retrieved set, since no $L_z$ exceeds 1. A retriever with
-peaked probabilities loses little; one that spreads its mass can lose much,
-however good its ranking.
-
-How does the generator teach the retriever? We differentiate the logarithm
-of :eqref:`eq_lm_rag_seq` with respect to a score.
-
-**Proposition.** Let $p(z \mid x, y) = p(z \mid x) L_z / p_S(y \mid x)$ be
-the posterior over documents once the answer is known. Then
-
-$$\frac{\partial \log p_S(y \mid x)}{\partial s_z} = p(z \mid x, y) - p(z \mid x).$$
-:eqlabel:`eq_lm_rag_grad`
-
-**Proof.** Write $\log p_S = \log \sum_{z'} e^{s_{z'}} L_{z'} - \log
-\sum_{z'} e^{s_{z'}}$. The derivative of the first term with respect to
-$s_z$ is $e^{s_z} L_z / \sum_{z'} e^{s_{z'}} L_{z'}$, the posterior; that of
-the second is $e^{s_z} / \sum_{z'} e^{s_{z'}}$, the prior. $\blacksquare$
-
-The retriever raises the score of a document that explains the answer
-better than it expected and lowers the others, with no label saying which
-document was relevant. If the generator ignores the documents, $L_z$ is the
-same for all, the posterior equals the prior, and the retriever learns
-nothing. That qualifies the answer to our question: the retriever's signal
-is only as good as the generator's use of the passages, and a passage the
-generator ignores teaches the retriever nothing about it.
-
-The form is general. Take any marginal likelihood over a latent choice $z$,
-and differentiate its logarithm with respect to the parameters of
-$p(z \mid x)$. The result is an expectation under the posterior,
-$\nabla \log p(y \mid x) = \mathbb{E}_{p(z \mid x, y)}[\nabla \log p(z \mid x)]$,
-the same posterior that the E-step of :numref:`sec_mdl-latent-em-elbo`
-computes. For a softmax prior it is posterior minus prior. The cell checks
-the gradient against autograd, the bound for every $k$, the two
-marginalizations for one and three documents, and the case by hand.
-
-```{.python .input #rag-marginal}
-%%tab pytorch
-g = torch.Generator().manual_seed(0)
-s = torch.randn(8, dtype=torch.float64, generator=g, requires_grad=True)
-L = torch.rand(8, dtype=torch.float64, generator=g)  # p(y | x, z)
-prior = s.softmax(0)  # the retriever's p(z | x)
-torch.log((prior * L).sum()).backward()
-post = (prior * L / (prior * L).sum()).detach()
-err = (s.grad - (post - prior.detach())).abs().max().item()
-print(f'gradient of log p(y | x) - (posterior - prior): {err:.1e}')
-assert err < 1e-12
-p, gaps = (prior * L).sum().item(), []
-order = prior.argsort(descending=True)
-for k in range(1, 9):  # p_S^(k): the k documents of largest prior
-    top = order[:k]
-    gap = p - (prior[top] * L[top]).sum().item()
-    bound = (1 - prior[top].sum().item()) * L.max().item()
-    assert -1e-15 <= gap <= bound + 1e-15
-    gaps.append((k, gap, bound))
-print(pd.DataFrame(gaps, columns=['k', 'p - p_k', 'bound']).round(4)
-      .to_string(index=False))
-s2 = s.detach().clone().requires_grad_()
-torch.log((s2.softmax(0) * 0.3).sum()).backward()  # a constant likelihood
-assert s2.grad.abs().max() < 1e-15
-
-def p_seq_tok(pz, P):
-    """RAG-Sequence and RAG-Token probabilities of an answer: pz the
-    retriever's probabilities (D,), P the token probabilities (D, T)."""
-    return (pz * P.prod(1)).sum().item(), (pz @ P).prod().item()
-
-P3 = torch.rand(3, 3, dtype=torch.float64, generator=g)
-pz3 = torch.rand(3, dtype=torch.float64, generator=g).softmax(0)
-seq, tok_ = p_seq_tok(pz3, P3)
-one = p_seq_tok(torch.ones(1, dtype=torch.float64), P3[:1])
-assert abs(seq - tok_) > 1e-6 and abs(one[0] - one[1]) < 1e-15
-print(f'three documents, three tokens: p_S {seq:.4f}, p_T {tok_:.4f}; '
-      f'one document: both {one[0]:.4f}')
-pz = torch.tensor([0.6, 0.4], dtype=torch.float64)  # the case by hand
-P = torch.tensor([[0.9, 0.2], [0.1, 0.8]], dtype=torch.float64)
-print('two documents, two tokens:\n  p_S = 0.6 * 0.9 * 0.2 + 0.4 * 0.1 * '
-      '0.8 = {:.3f}\n  p_T = (0.6 * 0.9 + 0.4 * 0.1)(0.6 * 0.2 + 0.4 * 0.8) '
-      '= {:.4f}'.format(*p_seq_tok(pz, P)))
-```
-
-The gradient matches posterior minus prior to $6 \times 10^{-17}$, every
-truncation error lies below its bound (at $k = 5$, 0.028 against 0.037),
-and the case by hand gives 0.140 and 0.2552.
-
-Our pipeline concatenates instead of marginalizing, and every passage adds
-prompt tokens that the generator must read. What does that cost? The last
-cell reports the tokens and seconds per answer of each configuration and
-times retrieval and reranking, one question at a time.
-
-```{.python .input #rag-cost}
-%%tab pytorch
-print(GENS[GENS.split == 'dev'].groupby('config', sort=False).agg(
-    prompt_tokens=('n_prompt_tokens', 'mean'),
-    new_tokens=('n_new_tokens', 'mean'),
-    s_per_answer=('latency_s', 'mean')).round(2).to_string())
-R = RET['sections']
-qs = [q['question'] for q in DEV.subset(50 if GPU else 3, seed=1)]
-depth = DEPTH if GPU else 5  # the CPU path reranks five chunks of one
-R.search_batch(qs[:1], k=DEPTH)  # load the query encoder
-t = time.time()
-hits = [R.search(q, k=DEPTH) for q in qs]
-t_ret = (time.time() - t) / len(qs)
-pipe = d2l.RAGPipeline(R, None, None, rerank_k=depth)  # no generation
-pipe._rerank(qs[:1], [[h.chunk_id for h in hits[0][:2]]])  # load it
-rr = qs if GPU else qs[:1]
-t = time.time()
-pipe._rerank(rr, [[h.chunk_id for h in hs[:depth]] for hs in hits])
-t_rr = (time.time() - t) / len(rr)
-R.release()
-print(f'one question at a time: retrieval {1000 * t_ret:.0f} ms '
-      f'({len(qs)} questions), reranking {depth} chunks {1000 * t_rr:.0f} '
-      f'ms ({len(rr)} questions)')
-```
-
-First-stage retrieval is cheap, about 30 ms per question. Reranking 50
-chunks is not: about half a second, some 40% of the time of a baseline
-answer. Generation takes the rest and grows with the prompt, from about
-1.1 s per answer at 1,500 prompt tokens and 1.3 s at the baseline's 1,900 to
-2.6 s at 6,300 tokens in batches of four.
-
-That leaves the question raised by longer context windows. If the generator
-can read 6,000 tokens, why not whole chapters, and no retrieval? On this set
-a budget of 6,000 tokens, 3.4 times the baseline's context, gained nothing
-measurable at twice the time, and the oracle shows that the generator,
-given the right passage, still misses about one question in twelve. The
-agents of :numref:`chap_lm_agents` take a third path, retrieving when they
-decide that they need to. Whether whole chapters in the context would beat
-retrieval on the multi-passage questions, at equal cost, we leave open; it
-is an experiment for the exercises.
+$h = 213/220$, with $a_1 = 0.90$, and $a_0 = 0.43$ on the seven misses. A
+perfect retriever can only turn those seven misses into hits. If the
+accuracy on hits stayed at $a_1$, it would add
+$(1 - h)(a_1 - a_0) \approx 0.032 \times 0.47 \approx 0.02$: there is no
+room left for retrieval to show a gain, and the oracle's +0.04 lies within
+noise of that estimate. The bold step is the assumption that $a_1$ stays
+put. The oracle passes only the gold chunks, about 480 context tokens
+against the baseline's 1,700, and so also removes passages that might
+distract the generator. Whether that raises the accuracy on hits, 240
+questions cannot tell.
+
+Of everything in this section, the decomposition :eqref:`eq_lm_rag_hit` is
+the result to remember. Before a single change has been tried, it says
+which stage to improve first, and here it points at the generator: of the
+25 errors on answerable questions, 21 were made with a relevant passage in
+the context.
+
+The wrong answer that opened this section is one of those twenty-one: its
+passage was in the context, ranked first. Which stage lost each of them,
+and would another chunking, query or context have saved some?
+:numref:`sec_lm_rag_fixes` changes one stage at a time and sorts the
+failures by stage.
 
 ## Summary
 
 When a retrieval-augmented generator answers wrongly, one accuracy number
-cannot say which of its stages (query, retrieval, reranking, context
-assembly, generation) failed, and each stage needs a different repair. We
-located failures by measuring each stage on its own. That took a question
-set over the book with gold spans, drafted and checked by models rather
-than people, a judge checked against model labels before any accuracy was
-read, coverage at a token budget, paired intervals, and failure classes
-whose fixes were written down in advance. On this book retrieval is nearly
-solved and the generator limits accuracy. The baseline answers 0.89 of the
-`dev` questions against 0.30 without passages, and no single stage change
-helped. The fix for the largest class, passages ignored, lowered accuracy
-by 0.08 on `dev` and on `test`, mostly by creating false answers. The
-original RAG model
-marginalizes over retrieved documents instead of concatenating them, and
-its retriever learns from the generator through the posterior minus the
-prior. Whether whole documents in a long context can replace retrieval
-remains open.
+cannot say which of its stages failed, although each stage needs a
+different repair. Locating the failure takes instruments: questions over
+the corpus with known answers and gold spans, here drafted and checked by
+models rather than people; a judge checked against independent labels
+before any accuracy is read; and a measurement of each stage on its own,
+between a floor without passages and a ceiling with only the right ones. On
+this book the baseline answers 0.89 of the `dev` questions against 0.30
+without passages. Retrieval is nearly solved, the decomposition
+$h\,a_1 + (1-h)\,a_0$ leaves a perfect retriever almost nothing to add, and
+most wrong answers had a relevant passage in the context: the generator
+limits accuracy. Greedy decoding in bf16 also depends on the batch, which
+changed 40% of the answers and not accuracy.
 
 ## Exercises
-
-1. **The truncation error and recall.** Start from :eqref:`eq_lm_rag_topk`.
-    1. Show that the bound is tight: give scores and likelihoods for which
-       $p_S - p_S^{(k)} = (1 - m_k) \max_z L_z$.
-    1. Suppose exactly one document $z^*$ answers each question, and the
-       retriever is calibrated: $p(z \mid x)$ is the probability that $z$ is
-       $z^*$. Show that the expectation of $1 - m_k$ over questions equals
-       the probability that $z^*$ is not in the top $k$, one minus
-       Recall@$k$.
-    1. With Recall@5 = 0.97 from this section, what would the bound
-       promise for RAG-Sequence over five documents if the retriever were
-       calibrated? Why is a softmax over BM25 or dense scores rarely
-       calibrated in this sense, and how would you calibrate it on `train`?
-   :exlabel:`ex_lm_rag-topk`
 
 1. [code] **The position of the answering passage.** Take the answerable
    `dev` questions whose baseline context holds exactly one relevant chunk.
@@ -2477,7 +1689,8 @@ remains open.
        :citet:`Liu.Lin.Hewitt.ea.2024` found in long contexts? Build longer
        contexts from more chunks of the book until it does, or until 6,000
        tokens, and report the length at which the middle positions fall
-       behind, if any.
+       behind, if any. With one GPU, again count citations of the relevant
+       passage instead of judging.
    :exlabel:`ex_lm_rag-position`
 
 1. [code] **Citation precision against support.** Citation precision from
@@ -2490,57 +1703,36 @@ remains open.
        of the two is right more often?
    :exlabel:`ex_lm_rag-citations`
 
-1. [extended] **Long context against retrieval.** ●● Put whole chapters into
-   the prompt instead of five retrieved chunks.
-    1. Budget the memory first. From the configuration of Qwen3.5-9B
-       (8 full-attention layers of 32, 4 key-value heads of width 256,
-       bf16), compute the bytes of cache per token and the cache at 32,000
-       tokens, and check with `d2l.config_memory` whether such a prompt fits
-       beside the weights on a 24 GB card. Compare with Qwen3-4B, whose 36
-       layers all attend.
-    1. For the 20 `multihop` `dev` questions, build contexts of about
-       32,000 tokens from the documents of their gold spans, filled up with
-       other documents of the book. Compare accuracy and seconds per answer
-       with the baseline, with paired intervals.
-    1. Which wins, at what cost, and can 20 questions in this many
-       documents decide it?
-   :exlabel:`ex_lm_rag-long-context`
-
-1. **Two marginalizations.** Use :eqref:`eq_lm_rag_seq`
-   and :eqref:`eq_lm_rag_token`.
-    1. Show that RAG-Sequence and RAG-Token give the same probability for an
-       answer of one token, whatever the number of documents.
-    1. Is $p_T \ge p_S$ always? Prove it, or give a counterexample with two
-       documents and two tokens.
-    1. Which kind of answer does each marginalization favor, and which of
-       them can a greedy decoder evaluate one token at a time?
-   :exlabel:`ex_lm_rag-marginals`
-
-1. **Where to invest.** A colleague's pipeline puts a relevant chunk in the
-   context for 90% of the questions, and its accuracy is 0.7 with one and
-   0.2 without.
+1. **Which stage to improve first.** A colleague's pipeline puts a
+   relevant chunk in the context for 90% of the questions, and its
+   accuracy is 0.7 with one and 0.2 without.
     1. Use :eqref:`eq_lm_rag_hit` to compute its accuracy, and its accuracy
        with an oracle context, assuming that the accuracy given a hit stays
        at 0.7. Which gains more: a perfect retriever, or raising the
        accuracy given a hit to 0.8?
-    1. Why is "the accuracy given a hit stays at 0.7" an assumption? Which
-       way does the oracle arm of this section suggest it errs, and why?
+    1. Why is "the accuracy given a hit stays at 0.7" an assumption? Name a
+       way in which a perfect retriever would also change the accuracy
+       given a hit, and say why the oracle arm of this section cannot tell
+       whether it does.
     1. Suppose two configurations disagree on 10% of 240 questions. Estimate
        the standard error of the paired difference in accuracy, and the
        smallest gain a 95% interval would separate from zero. Which of the
        two improvements could 240 questions detect?
    :exlabel:`ex_lm_rag-invest`
 
-1. [code] **A smaller generator.** Replace Qwen3.5-9B by Qwen3.5-4B of the
-   same family and keep everything else fixed.
-    1. Before you run it, predict which failure class grows most and whether
-       the gain of the oracle context over the baseline becomes measurable.
-    1. Regenerate the `base`, `closed` and `oracle` arms, judge them, and
-       report the class shares with their intervals and the paired
-       differences with the larger generator. Without two GPUs for the
-       judge, compare what needs no judge: abstention rates, false
-       abstentions and citation precision.
-   :exlabel:`ex_lm_rag-smaller`
+1. **Agreement without information.** On whether an item's answer is
+   unique, the verifier and the checker agree on 96% of 536 items, with
+   κ = 0.00.
+    1. Write down a table of counts over the 536 items (both pass, only the
+       verifier passes, only the checker passes, both reject) with
+       agreement 0.96 and κ = 0. What must one of the two raters do?
+    1. Show that κ = 0 exactly when the share of items that both reject
+       equals the product of the two raters' rejection rates.
+    1. A judge passes 95% of the answers, and a labeler 90%. What is the
+       largest κ the two can reach, whatever the answers? What does this
+       mean for comparing κ across sets of answers that a generator gets
+       right at different rates?
+   :exlabel:`ex_lm_rag-kappa`
 
 1. [code] **Hand labels against the verifier.** Draw 20 `dev` items and 10
    candidates that the frontier verifier rejected (from the recorded
@@ -2561,7 +1753,7 @@ remains open.
 ::: {.cover}
 [Dive into Deep Learning · §19.5]{.kicker}
 
-Retrieval-Augmented Generation<br>**a question set over the book · stages and their measurements · a checked judge · one change at a time · failures by stage · marginalizing over documents**
+Retrieval-Augmented Generation<br>**a question set over the book · stages and their measurements · a checked judge · floor, baseline and ceiling**
 :::
 :::
 
@@ -2575,11 +1767,12 @@ list instead of `nn.Sequential`?
   unregistered, without any warning."
 - Answer: four sentences on registration, citing [2] and [3]. Nothing
   about the warning.
-- Judge: not correct, faithful, supported.
+- Judge: wrong; faithful; supported.
 
 ::: {.d2l-note .warn}
-The baseline answers 0.89 of 240 questions. Ranked too low? Ignored?
-Contradicted? One accuracy number cannot tell.
+The baseline answers 0.89 of 240 questions. Passage skipped? Misled by
+its neighbors? For other questions, ranked too low? One accuracy number
+cannot tell.
 :::
 :::
 
@@ -2590,11 +1783,12 @@ Contradicted? One accuracy number cannot tell.
 - measure each stage: recall, coverage at a token budget, accuracy,
   faithfulness, citations;
 - check a model judge before trusting its accuracy;
-- blame each failure on a stage, and test a fix chosen in advance;
-- derive RAG-Sequence, RAG-Token and the retriever's gradient.
+- bound what a better retriever can add, between a floor without passages
+  and an oracle ceiling.
 
 **Running example:** this book in 5,324 section chunks; 240 `dev`
-questions about 32 documents; Qwen3.5-9B answers, Qwen3.8-27B judges.
+questions about 32 documents, among them the chapter's `load_array`
+question; Qwen3.5-9B answers, Qwen3.8-27B judges.
 :::
 
 ::: {.slide title="A Retriever Finds Passages; This Deck Measures What Is Done with Them"}
@@ -2609,13 +1803,14 @@ questions about 32 documents; Qwen3.5-9B answers, Qwen3.8-27B judges.
 | | Text Embeddings from Contrastive Training |
 | finding | Sparse, Dense and Approximate Retrieval |
 | using | **Retrieval-Augmented Generation** |
+| | Failures and Fixes in RAG |
 :::
 
 ::: {.col .narrow}
 - **Uses:** BM25 + dense search fused by reciprocal ranks, a reranker,
   paired bootstrap intervals.
-- **Skips:** running joint training of retriever and generator (derived,
-  not run); retrieval inside agent loops.
+- **Skips:** changing stages, sorting failures and testing fixes (next
+  section); retrieval inside agent loops.
 :::
 :::
 :::
@@ -2629,8 +1824,8 @@ questions about 32 documents; Qwen3.5-9B answers, Qwen3.8-27B judges.
 
 - Item: question, reference, **key facts**, **gold spans** (character
   ranges), alternative spans, flags.
-- Split by **document**: 166 `train`, 32 `dev`, 32 `test`. No `dev`
-  passage sources a `train` question.
+- Split by **document**: 166 `train`, 32 `dev`, 32 `test`, so a system
+  tuned on `train` never saw the passage of a `dev` answer.
 - A chunk is relevant if it overlaps half a span, or half of itself.
 
 ::: {.d2l-note}
@@ -2671,6 +1866,10 @@ $\kappa \approx (0.84 - 0.82)/0.18 \approx 0.1$ (measured: 0.12). Barely
 above chance: the few items each rejects are mostly different ones.
 :::
 :::
+
+::: {.fragment .fade-up}
+Extreme case, "is the answer unique?": 96% agreement, κ = 0.00.
+:::
 :::
 
 ::: {.slide title="Five Stages, Each with Its Own Measurement"}
@@ -2702,27 +1901,87 @@ of a gold span? Equal text, not equal chunk counts.
 
 - Qwen3.5-9B: thinking off, greedy, bf16, batches of 8, left padding.
 - Closed book: the same, without passages.
-- Unanswerable question: the abstention sentence is correct, any other
-  reply is a false answer (string match, no judge).
+- Unanswerable question: a reply containing the abstention sentence is
+  correct; any other reply is a false answer (string match, no judge).
 :::
 
-::: {.slide title="The Judge Agrees with Each Frontier Labeler as They Agree with Each Other"}
+::: {.slide title="Correct, Faithful and Supported Are Three Different Verdicts"}
+[What the judge decides]{.kicker}
+
+| the answer | correct | faithful | supported |
+|---|---|---|---|
+| right, from memory, not from the passages | yes | no | no |
+| repeats an incomplete passage, citing it | no | yes | yes |
+| draws on [1], cites only [2] | either | yes | no |
+
+- **correct:** every key fact, nothing contradicting the reference.
+- **faithful:** every statement backed by the passages in the context.
+- **supported:** the cited passages suffice on their own.
+
+::: {.d2l-note}
+Accuracy rests on *correct*; the other two say whether a reader can check
+the answer against its sources.
+:::
+:::
+
+::: {.slide title="The Judge Agrees with the Labelers Almost as Well as They Agree with Each Other"}
 [A judge, checked first]{.kicker}
 
-Qwen3.8-27B, thinking on, FP8 on two 24 GB GPUs. Verdicts: **correct**
-(all key facts), **faithful** (passages support it), **supported** (cited
-passages suffice).
+Qwen3.8-27B, thinking on, FP8 on two 24 GB GPUs; 100 calibration answers
+labeled by two frontier models.
 
-| `correct`, 100 calibration answers | κ |
+| `correct` | κ |
 |---|---|
-| judge vs frontier labeler | 0.83 |
-| judge vs second labeler | 0.71 |
+| judge vs Claude Opus 5.5 | 0.83 |
+| judge vs Gemini 4 Argon | 0.71 |
 | the two labelers | 0.81 |
 | judge vs their consensus | 0.85 [0.70, 0.97] |
 | old judge, 4B, thinking off, vs consensus | 0.33 |
 
+::: {.fragment .fade-up}
+The consensus flatters: it drops the hard answers the labelers disagree on.
+Compare with each labeler alone.
+:::
+
 ::: {.d2l-note .warn}
-Labels by models, on answers of an earlier generator (Qwen3-4B).
+Labels by models, on answers of another, smaller generator (Qwen3-4B).
+:::
+:::
+
+::: {.slide title="Without Passages the Generator Invents; with Them It Finds `is_train`"}
+[One answer]{.kicker}
+
+**Question:** how does the book's legacy `load_array` decide whether its
+`DataLoader` shuffles? **Reference:** it passes `shuffle=is_train`.
+
+| context | answer, abridged | judge |
+|---|---|---|
+| none | "relies on the `shuffle` argument passed to the `DataLoader` constructor" | wrong |
+| five chunks, the right one first | "passes this `is_train` value directly to the `DataLoader` constructor as the `shuffle` parameter ... [1]" | correct, faithful, supported |
+
+::: {.d2l-note}
+Retrieval turns a plausible invention into the book's answer, and the
+answer cites the passage it came from.
+:::
+:::
+
+::: {.slide title="Check: The Same 240 Prompts in Other Batches. How Many Answers Change?"}
+[Check]{.kicker}
+
+`base-repeat`: same model, same contexts, greedy decoding; only the
+neighbors in each batch of 8 differ.
+
+::: {.fragment .fade-up}
+- 0 of 240 contexts differ; 95 of 240 answers differ.
+- Accuracy: $-0.004$, interval [$-0.03$, +0.02].
+- bf16: another padding changes the order of the sums; the logits move by
+  a few rounding steps and flip near-ties.
+- The judge's server batches too: 2 of 51 answers changed a verdict.
+:::
+
+::: {.d2l-note .rule}
+Greedy decoding is deterministic only for a fixed batch, precision and
+kernel. Batch alike, or count re-batching as noise.
 :::
 :::
 
@@ -2731,201 +1990,51 @@ Labels by models, on answers of an earlier generator (Qwen3-4B).
 
 | 240 `dev` questions | closed book | baseline | oracle |
 |---|---|---|---|
-| accuracy | 0.30 | 0.89 | 0.92 |
-| faithful | | 0.92 | 0.89 |
-| citation precision | | 0.72 | 1.00 |
-| abstains, unanswerable | 10 of 20 | 18 of 20 | 17 of 20 |
+| accuracy | 0.30 | 0.89 | 0.93 |
+| citation precision | | 0.72 | 1.00 (by construction) |
+| abstains, unanswerable | 10 of 20 | 19 of 20 | 18 of 20 |
 
-- Baseline − closed: +0.59 [+0.53, +0.66]; book-specific: 0.12 → 0.90.
-- Oracle − baseline: +0.03 [$-0.02$, +0.08].
+- Baseline − closed: +0.59 [+0.53, +0.66]; book-specific: 0.12 → 0.89.
+- Oracle − baseline, all questions: +0.03 [$-0.02$, +0.08]. Retrieval
+  has no room left to show a gain.
 :::
 
 ::: {.slide title="Check: 213 of 220 Hits. What Can a Perfect Retriever Add?"}
 [Check]{.kicker}
 
+Accuracy on answerable questions:
 $$\textrm{accuracy} = h\, a_1 + (1 - h)\, a_0$$
 
 $h = 213/220$: share of answerable questions whose context holds a relevant
-chunk (a *hit*); accuracy $a_1 = 0.91$ on hits, $a_0 = 0.29$ on the seven
+chunk (a *hit*); accuracy $a_1 = 0.90$ on hits, $a_0 = 0.43$ on the seven
 misses.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** If $a_1$ stays put, $(1 - h)(a_1 - a_0) \approx 0.032 \times
-0.63 \approx 0.02$. The oracle measures +0.04 [$-0.01$, +0.09]: it also
-drops distractors. 19 of 24 errors had the answer in the context.
+0.47 \approx 0.02$. The oracle measures +0.04 [$-0.01$, +0.10], within
+noise of 0.02. 21 of 25 errors had a relevant passage in the context.
 :::
 :::
-:::
-
-::: {.slide title="Same Prompts in Other Batches: 45% of Answers Change, Accuracy Does Not"}
-[Batch drift]{.kicker}
-
-- `base` vs `base-repeat`: 0 of 240 contexts differ; 108 of 240 answers
-  differ.
-- Accuracy: $-0.004$, interval [$-0.03$, +0.02].
-- bf16: padding moves logits by 0.2 to 0.6, a few rounding steps, and
-  flips near-ties. fp32 (2B model, same family): at most $10^{-4}$.
-- The judge's server batches too: 5 of 54 verdicts changed.
-
-::: {.d2l-note .rule}
-Greedy decoding is deterministic only for a fixed batch and precision.
-Batch alike, or count re-batching as noise.
-:::
-:::
-
-::: {.slide title="Section Chunks Cover More Than Fixed Windows at Small Budgets"}
-[Chunking at equal tokens]{.kicker}
-
-| `cov@T`, 220 questions | sections | fixed 256/64 | fixed − sections |
-|---|---|---|---|
-| 1,000 tokens | 0.91 | 0.84 | $-0.07$ [$-0.11$, $-0.02$] |
-| 2,000 tokens | 0.97 | 0.94 | $-0.03$ [$-0.06$, +0.01] |
-| 3,000 tokens | 0.98 | 0.97 | $-0.01$ [$-0.04$, +0.02] |
-
-- Fixed windows: 256 tokens, overlap 64. Sections: at most 512, cut at
-  headings.
-- Recall@$k$ would mislead: five sections hold more text than five
-  windows.
-:::
-
-::: {.slide title="No Stage Change Raised Accuracy; Two Lowered It"}
-[One change at a time]{.kicker}
-
-| change, 240 `dev` questions | accuracy − baseline | s per answer |
-|---|---|---|
-| fixed windows, equal tokens | $-0.08$ [$-0.12$, $-0.04$] | 1.11 |
-| rewrite + rerank top 50 | +0.00 [$-0.03$, +0.04] | 1.87 |
-| reverse order | +0.01 [$-0.02$, +0.04] | 1.14 |
-| budget 1,500, no limit of 5 chunks | $-0.03$ [$-0.06$, $-0.01$] | 1.08 |
-| budget 6,000, no limit of 5 chunks | +0.01 [$-0.03$, +0.05] | 2.59 |
-
-::: {.d2l-note}
-With 213 of 220 hits, retrieval-side changes had about 0.02 to gain.
-:::
-:::
-
-::: {.slide title="Six Failure Classes, Checked in Pipeline Order"}
-[Failures by stage]{.kicker}
-
-| class | test (first that holds) | of 26 |
-|---|---|---|
-| false answer | unanswerable, yet answered | 2 |
-| not retrieved | no relevant chunk in the top 50 | 0 |
-| ranked low | in the top 50, not in the context | 5 |
-| false abstention | in the context, answer abstains | 1 |
-| ignored | in the context, faithful, incorrect | 12 |
-| unsupported | in the context, not faithful | 6 |
-
-Ignored 0.46 [0.27, 0.65] and unsupported 0.23 [0.08, 0.38]: the intervals
-overlap.
-:::
-
-::: {.slide title="Fixes Are Written Down Before Any Failure Is Counted"}
-[Pre-registration]{.kicker}
-
-| class | its fix |
-|---|---|
-| not retrieved | rewritten query as a third ranking |
-| ranked low | rerank the top 100, pass 8 chunks |
-| ignored | quote the support, then answer; best at both ends |
-| unsupported | drop sentences their citations do not support |
-| false answer | abstain below a reranker score tuned on `train` |
-| false abstention | abstention rule after the passages |
-
-A model labeler agrees with the rule on 13 of the 26 failures; 9 of the
-13 disagreements are about *whether* an answer is wrong.
-:::
-
-::: {.slide title="The Fix Chosen in Advance Failed on Dev and on Test"}
-[Quote, then answer]{.kicker}
-
-| | accuracy − baseline |
-|---|---|
-| `dev` | $-0.08$ [$-0.12$, $-0.05$] |
-| `test`, read once | $-0.08$ [$-0.12$, $-0.03$] |
-
-- Ignored: 12 → 19. False answers: 2 → 15.
-- Abstentions on unanswerable questions: 18 → 5 of 20. Most replies
-  declined in their own words, without the abstention sentence.
-
-::: {.d2l-note .rule}
-A change aimed at one class can create another. Test a fix's prompt and
-the scoring rule together, and do not search for a better fix on the same
-data.
-:::
-:::
-
-::: {.slide title="RAG-Sequence Picks One Document per Answer; RAG-Token One per Token"}
-[Two marginalizations]{.kicker}
-
-Question $x$, answer $y_1 \ldots y_n$, document $z$ with retriever
-probability $p(z \mid x)$:
-
-$$p_S = \sum_z p(z \mid x) \prod_t p(y_t \mid x, z, y_{<t})$$
-
-$$p_T = \prod_t \sum_z p(z \mid x)\, p(y_t \mid x, z, y_{<t})$$
-
-Two documents, $p(z \mid x) = (0.6, 0.4)$; token probabilities
-$(0.9, 0.2)$ and $(0.1, 0.8)$. Which is larger?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $p_S = 0.140$, $p_T = 0.2552$: each document supports half the
-answer, and only RAG-Token combines the halves.
-:::
-:::
-:::
-
-::: {.slide title="The Retriever Learns Posterior Minus Prior; Truncation Loses the Mass Outside"}
-[Training signal]{.kicker}
-
-With $L_z = p(y \mid x, z)$ and $p(z \mid x) = \mathrm{softmax}(\mathbf{s})_z$:
-
-$$\frac{\partial \log p_S}{\partial s_z} = \underbrace{\frac{p(z \mid x) L_z}{p_S}}_{\text{posterior}} - \underbrace{p(z \mid x)}_{\text{prior}}$$
-
-Keep the top $k$, with retriever mass $m_k$ on them:
-
-$$0 \le p_S - p_S^{(k)} \le (1 - m_k) \max_z L_z$$
-
-::: {.d2l-note}
-A generator that ignores documents ($L_z$ constant) teaches the retriever
-nothing.
-:::
-:::
-
-::: {.slide title="First-Stage Retrieval Costs Milliseconds; Reranking and Long Prompts Cost Seconds"}
-[Cost]{.kicker}
-
-| per question | prompt tokens | seconds |
-|---|---|---|
-| retrieval | | 0.03 |
-| rerank 50 chunks | | 0.53 |
-| closed book | 90 | 0.95 |
-| baseline | 1,933 | 1.28 |
-| budget 6,000 | 6,336 | 2.59 |
-| fix: quote, then answer | 1,971 | 2.12 |
-
-Qwen3.5-9B on one RTX 4090, batches of 8 (4 at 6,000 tokens).
 :::
 
 ::: {.slide title="Recap"}
 [Recap]{.kicker}
 
 - 240 `dev` questions with gold spans, made and checked by models.
-- Judge ≈ a third frontier labeler (κ 0.71 to 0.83 vs their 0.81).
-- Closed 0.30, baseline 0.89, oracle 0.92: the generator limits accuracy.
-- No stage change helped; fixed windows $-0.08$, budget 1,500 $-0.03$.
-- Re-batching changed 45% of answers in bf16, not accuracy.
-- Largest class ignored; its fix lost 0.08 on `dev` and on `test`.
-- $p_S$, $p_T$; gradient = posterior − prior.
+- Five stages, each with its own measurement; `cov@T` compares chunkings.
+- `load_array`: a `shuffle` argument invented without passages, `is_train`
+  found with them.
+- Judge vs each labeler: κ 0.71 and 0.83; the labelers vs each other:
+  0.81.
+- Re-batching changed 40% of answers in bf16, not accuracy.
+- Closed 0.30, baseline 0.89, oracle 0.93: the generator limits accuracy.
 :::
 
-::: {.slide title="Next: Whole Chapters in Context, or Retrieval on Demand"}
+::: {.slide title="Next: Which Stage Lost Each Wrong Answer?"}
 [Next]{.kicker}
 
-A 6,000-token budget, 3.4 times the baseline's context, gained nothing at
-twice the time. Would whole chapters in a 32,000-token context beat
-retrieval on multi-passage questions? Agents take a third path: they
-retrieve when they decide they need to.
+The baseline leaves 26 `dev` answers wrong, 21 of the 25 answerable ones
+with a relevant passage in the context. The next section changes one stage
+at a time, sorts the failures by stage and tests a fix chosen in advance.
 :::

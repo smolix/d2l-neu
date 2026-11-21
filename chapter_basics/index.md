@@ -1,40 +1,15 @@
 # Basics
 
-The introduction described programs that learn from examples instead of
-following rules written by hand. Suppose we want such a program for a small
-photograph of a garment: it should say whether the photograph shows a
-shirt, a sneaker, or a bag. Nobody knows how to write rules for this. We
-can, however, collect tens of thousands of labeled photographs. How do we
-turn those examples into a classifier we can trust on photographs it has
-never seen?
+In the Introduction, we saw how machine learning replaces hand-written rules with parameterized programs that learn directly from examples. Suppose you are handed tens of thousands of small grayscale photographs of clothing and asked to build a system that identifies whether each image shows a T-shirt, a sneaker, a coat, or a handbag. No programmer knows how to write explicit `if`--`else` rules that map raw pixel intensities to clothing categories reliably. Yet by the end of the first three chapters of this part, you will have built and trained a working classifier that does exactly that---and by the end of the part, you will have progressed to deep convolutional networks that recognize complex visual scenes and recurrent networks that learn to generate English prose from scratch.
 
-Our answer is a recipe with three ingredients: a model with parameters, a
-loss that measures the model's errors, and an algorithm that reduces the
-loss by changing the parameters. The recipe itself is two centuries old,
-and astronomers used it first (:numref:`chap_regression` tells the
-story). What has changed is the model. A deep network composes many
-simple functions, and automatic differentiation computes the derivatives of
-the loss with respect to all of their parameters, so that nobody has to
-derive them by hand. Nearly every model in this book, including the largest
-language models, is trained this way.
+Our approach throughout *Basics* is guided by a simple principle: to truly understand deep learning, you should build its core mechanisms with your own hands before relying on black-box library calls. Across these eight chapters, we implement nearly every foundational model, layer, loss function, and optimizer twice: first *from scratch*, relying only on basic tensor arithmetic and automatic differentiation so that every mathematical operation is visible in code, and then *concisely*, using the high-level abstractions of modern deep learning frameworks (PyTorch, JAX, TensorFlow, and MXNet). Once you have seen how a component works from the ground up, we use its concise framework implementation as a building block in later chapters.
 
-The first three chapters teach the recipe on models small enough to
-understand completely. :numref:`chap_preliminaries` collects the tools:
-tensors, derivatives, and enough probability to reason about uncertainty.
-:numref:`chap_regression` fits a linear model to numbers and asks whether
-the fit will hold for new data, and :numref:`chap_classification` does the
-same for categories, which is where the garments return. The next two
-chapters make the model deep. :numref:`chap_perceptrons` adds hidden layers
-and deals with the troubles they bring, and :numref:`chap_computation`
-turns to the software that assembles such a model, saves it, and runs it on
-a GPU. The last three chapters build what we know about the data into the
-model. Pixels have neighbors, which leads to convolutional networks
-(:numref:`chap_cnn`) and to the ideas that let them grow to more than a
-hundred layers (:numref:`chap_modern_cnn`). Words come in order, which
-leads to models of text and other sequences (:numref:`chap_rnn`).
+The eight chapters of this part unfold in three stages:
 
-The Advanced part takes the engineering habits of this part
-(initialization, numerical stability, checkpointing, GPU memory) for
-granted. This part uses minibatch stochastic gradient descent, momentum, and
-learning-rate schedules as tools; :numref:`chap_optimization` studies why
-they work.
+* **The Toolkit and the Core Recipe (:numref:`chap_preliminaries`--:numref:`chap_classification`).** We begin on models simple enough to analyze completely. :numref:`chap_preliminaries` equips you with the essential working tools of deep learning: storing and manipulating data in multidimensional arrays (*tensors*), preprocessing tabular data, applying linear algebra and calculus in code, computing derivatives automatically via *autograd*, and reasoning about uncertainty with probability. :numref:`chap_regression` and :numref:`chap_classification` then introduce the universal training loop of machine learning on linear models. In :numref:`chap_regression`, we fit continuous targets with linear regression, squared-error loss, and minibatch stochastic gradient descent, and confront the central statistical challenge of *generalization*---why fitting our training data too closely leads to overfitting, and how regularization methods such as weight decay keep models honest. In :numref:`chap_classification`, we turn from continuous numbers to discrete categories, developing softmax regression and cross-entropy loss to classify clothing photographs on the Fashion-MNIST benchmark, while examining how deployed classifiers behave when the real-world data distribution shifts away from the training set.
+
+* **Going Deep and Mastering the Software Engine (:numref:`chap_perceptrons`--:numref:`chap_computation`).** Linear models can only draw flat decision boundaries between classes. :numref:`chap_perceptrons` breaks through that limitation by stacking hidden layers of units equipped with nonlinear activation functions to create *multilayer perceptrons* (MLPs). We trace how signals and gradients flow forward and backward through a deep network via backpropagation, explore why deep networks can suffer from vanishing or exploding gradients if initialized carelessly, and introduce *dropout* as a powerful regularizer for high-capacity networks. :numref:`chap_computation` then opens up the software architecture of modern deep learning frameworks: how complex networks are assembled from reusable modular blocks, how parameters are shared, inspected, and initialized, how custom layers and forward passes are defined, how trained weights are saved and loaded, and how computations are moved onto GPUs.
+
+* **Building Domain Structure into the Architecture (:numref:`chap_cnn`--:numref:`chap_rnn`).** Fully connected networks treat every input feature symmetrically, ignoring whether the inputs are pixels arranged on a two-dimensional image grid or words arranged in a sequential sentence. The final three chapters show how encoding the natural symmetries of the data directly into the network architecture leads to dramatic gains in statistical and computational efficiency. For images, :numref:`chap_cnn` develops *convolutional neural networks* (CNNs) from the principles of translation invariance and spatial locality, introducing padding, striding, multiple input/output channels, and pooling to build the classic LeNet architecture. :numref:`chap_modern_cnn` then traces the architectural milestones that carried computer vision into the modern era: AlexNet, repeatable block design (VGG), $1\times 1$ convolutions (NiN), multi-branch parallel blocks (GoogLeNet), *batch normalization*, *residual connections* (ResNet), and DenseNet, culminating in principled architecture design spaces (AnyNet and RegNet). Finally, :numref:`chap_rnn` turns to sequential data such as text and time series, developing autoregressive language modeling, tokenization, *recurrent neural networks* (RNNs), backpropagation through time, and the classical gated architectures---Gated Recurrent Units (GRUs), Long Short-Term Memory (LSTM) networks, deep stacked RNNs, and bidirectional RNNs---all tested by training a character-level language model to generate new passages in the style of H. G. Wells's *The Time Machine*.
+
+The first five chapters (:numref:`chap_preliminaries` through :numref:`chap_computation`) form a sequential spine and are best read in order. Once you have completed them, the computer vision chapters (:numref:`chap_cnn` and :numref:`chap_modern_cnn`) and the sequence modeling chapter (:numref:`chap_rnn`) do not depend on one another and can be studied in either order. Together, they establish the conceptual and engineering habits that the *Advanced* part builds upon.

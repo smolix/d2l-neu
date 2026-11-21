@@ -335,7 +335,7 @@ class ConfigParams(unittest.TestCase):
                            d2l.config_params(tiny_gemma_config()))
 
     def test_moe_raises(self):
-        message = 'use d2l.config_stats (14.1)'
+        message = 'mixture-of-experts layouts are not counted here'
         moe = dict(fixture_config('Qwen/Qwen3-0.6B'), num_experts=128)
         with self.assertRaisesRegex(NotImplementedError, re.escape(message)):
             d2l.config_params(moe)
@@ -446,6 +446,20 @@ class ConfigMemory(unittest.TestCase):
         m = d2l.config_memory(attention, 10, 1)
         self.assertEqual(m['activations'], 10 * 2 * max(
             4 * 2048 + 3 * 6144, 3 * 2048 + 7 * 8 * 256 + 4 * 2 * 256))
+
+    def test_activations_repeated_heads(self):
+        """With more value heads than key heads (Qwen3.5-4B and -9B: 16 key,
+        32 value heads), Transformers repeats q and k to the value heads
+        before the kernel: 2 H_v d_k more entries per token."""
+        cfg = json.loads(json.dumps(fixture_config(QWEN35)))
+        cfg['text_config']['linear_num_value_heads'] = 32  # key heads: 16
+        m = d2l.config_memory(cfg, 1024, 1)
+        K, V = 16 * 128, 32 * 128
+        C = 2 * K + V
+        self.assertEqual(m['activations'], 1024 * 2 * (
+            3 * 2048 + 2 * C + 3 * K + 4 * V + 2 * 32 * 128
+            + 32 * (128 * 128 // 64 + 64)))
+        self.assertEqual(m['activations'], 1024 * 2 * 63_488)
 
     def test_gemma_sharing_and_windows(self):
         cfg = fixture_config(GEMMA)

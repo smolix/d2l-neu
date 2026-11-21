@@ -155,7 +155,7 @@ Resolution order in `notebook_resource`:
    GPU.
 3. `uses_gpu` (the `file_uses_gpu` keyword heuristic, which also checks sibling
    frameworks) → `('gpu', 1, 1)`. The keywords are `runtime_env.GPU_KEYWORDS`
-   (`try_gpu`, `cuda`, `GPU`, `Trainer(`, `d2l.train`, `fit_lm(`, ...); a new
+   (`try_gpu`, `cuda`, `GPU`, `Trainer(`, `d2l.train`, ...); a new
    training helper whose name matches none of them must be added there, or
    its notebooks are scheduled on a CPU slot.
    The single-notebook path (`make -B _notebooks/<fw>/<ch>/<f>.executed`)
@@ -178,6 +178,7 @@ WHOLE_BOX_NOTEBOOKS = {            # every GPU, fully; nothing shares a card
 FULL_CARD_NOTEBOOKS = {            # n whole cards, whatever their size
     "chapter_builders-guide/gpus-devices-memory.ipynb": 2,     # timings
     "chapter_transformers/kv-cache.ipynb": 1,                  # timings
+    "chapter_transformers/encoders-decoders.ipynb": 1,         # timings
     "chapter_computational-performance/performance-model.ipynb": 1,
     "chapter_computational-performance/hardware.ipynb": 1,
     "chapter_computational-performance/compilation.ipynb": 1,

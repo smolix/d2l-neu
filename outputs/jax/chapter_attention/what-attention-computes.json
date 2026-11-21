@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:183ee4eb5f87c2fc2501e5c924e43fcf131b7d7216c81531beed0347e3b0772a",
+    "d2l_lib_fingerprint": "sha256:82bbe5723a7d23728f888d4da032e0f4a870565bc18b7a95f3294a5ae52b9b3f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,46 +13,35 @@
       "kind": "text",
       "outputs": []
     },
-    "what-attention-computes-where-and-what-the-qk-and-ov-circuits": {
-      "code_fingerprint": "sha256:6e2cf76509f9e1545613a6c0b766c9897ff5a60c59e9b47843f29e014e3fa06a",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "W_QK: shape (128, 128), rank 32\nW_OV: shape (128, 128), rank 32\n"
-        }
-      ]
-    },
     "what-attention-computes-repetition-as-a-task-1": {
-      "code_fingerprint": "sha256:8fe3d1291c63c275e6487d9c0a72e749bd890cc74dc7ca674fee713ec4e2b75a",
+      "code_fingerprint": "sha256:765ca3fe73e0842b4320b42b231f4867409d8e98511a13cf7b16517536071141",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pattern lengths: [5, 5]\n[[2 1 6 1 4 2 1 6 1 4 2 1 6 1 4 2]\n [7 2 3 9 9 7 2 3 9 9 7 2 3 9 9 7]]\n"
+          "text": "pattern lengths: [8, 5]\n[[0 3 8 3 2 5 3 2 0 3 8 3 2 5 3 2]\n [0 0 5 9 8 0 0 5 9 8 0 0 5 9 8 0]]\n"
         }
       ]
     },
     "what-attention-computes-repetition-as-a-task-2": {
-      "code_fingerprint": "sha256:5da00fe32e7077f7d13f93490b5b87be39b4ed6cfa56a9096df55bf9be690ee9",
+      "code_fingerprint": "sha256:fee704eb6f3c19dc90022f12290e88d877df33bf08e7b866f7286ead5e321d8d",
       "kind": "text",
       "outputs": []
     },
     "what-attention-computes-the-positional-shortcut-1": {
-      "code_fingerprint": "sha256:f7a6ae1897e83d353f70b5733745384b04d7ce4593d2ee942dba5224a9951f9b",
+      "code_fingerprint": "sha256:681710cb489aa92269d39cc79df9cf1eda8a5904da7efdebeb2c7e9e94ce3496",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "first copy 4.40 nats, second copy 0.08 nats, second-copy accuracy 1.00\n"
+          "text": "first copy 4.40 nats, second copy 0.07 nats, second-copy accuracy 1.00\n"
         }
       ]
     },
     "what-attention-computes-the-positional-shortcut-2": {
-      "code_fingerprint": "sha256:a1d754987c135877815d5d7275723c17531dd9626ce0b1e4a557527528e5ed3c",
+      "code_fingerprint": "sha256:b0de4f2a7361cf5c474f303e4769af9f53a9e5c4663bd3ad9ed917fb7bd27ce5",
       "kind": "text",
       "outputs": [
         {
@@ -63,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mass at offset 31, per head: 1.00 0.95 1.00 0.91\n"
+          "text": "mass at offset 31, per head: 0.93 0.94 0.96 0.91\n"
         },
         {
           "type": "stream",
@@ -73,94 +62,114 @@
       ]
     },
     "what-attention-computes-two-blocks-learn-to-look-things-up-1": {
-      "code_fingerprint": "sha256:0d339b9e6f775c64c0274b68aee8fd9d4e05519a824a69cd15b71d12869b41dd",
+      "code_fingerprint": "sha256:592a831384264dd286a91c5083403d6b397479402e50caf3cd8f13efdccaa561",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 blocks: first copy 4.32, later copies 0.22, accuracy 0.95\n1 block: first copy 4.30, later copies 3.56, accuracy 0.12\n"
+          "text": "blocks  first copy  later copies  accuracy  below 1 nat at step\n     2        4.37          0.47      0.88                 2200\n     2        4.42          0.38      0.92                 2350\n     2        4.29          0.22      0.95                 1900\n     1        4.28          3.59      0.11                never\n"
         }
       ]
     },
     "what-attention-computes-two-blocks-learn-to-look-things-up-2": {
-      "code_fingerprint": "sha256:df006aed95fc70b70d2e96f4558dd6114c5ab629172c89ee9a81c4659dd79318",
+      "code_fingerprint": "sha256:03c32b486115fe15463a40a0e08b9a9577ba9c64a7373c1374a9f3ef56c8bdd5",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-two-blocks-learn-to-look-things-up-2-1.svg",
-          "bytes": 39342,
-          "sha256": "sha256:74eac749f20534359669e44dada311fb4df9fc440856e0b54a59cb6b3bc4b8bc"
+          "bytes": 38656,
+          "sha256": "sha256:d4f44bb39e0c0d059468af026f079a9927c6f507965e1d8c5daf5e48693ebdd8"
         }
       ]
     },
     "what-attention-computes-the-heads-caught-in-the-act-1": {
-      "code_fingerprint": "sha256:1cf177ec84617a7c19c29887c74f6f1c1240e1493857ab7fe8c98a249ddfbc1b",
+      "code_fingerprint": "sha256:10bdc634921d72ade1292d12fe0c263a2b13a856ca7a4b19ce7e483182fd747a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-heads-caught-in-the-act-1-1.svg",
-          "bytes": 177018,
-          "sha256": "sha256:367998dc830ab990eb26414d2669309d2a9a5714d927b5660cb8b66d374cb9ef"
+          "bytes": 178770,
+          "sha256": "sha256:4becdff3f2c4f53496ce1f9f72ed19b00519c5dbaa120a3aec1fe972a86198f8"
         }
       ]
     },
     "what-attention-computes-the-heads-caught-in-the-act-2": {
-      "code_fingerprint": "sha256:ba3453b98de8eaee20cd73b63085eb6e291b64ddfc554bff43cd7af9b4b06e92",
+      "code_fingerprint": "sha256:217c5e506497920d06b6f48e81e600b6f8717418903a44acae4e1530be2aba4c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block 1, previous : 0.00 0.99 0.00 0.01\nblock 1, induction: 0.00 0.00 0.00 0.00\nblock 2, previous : 0.08 0.06 0.06 0.07\nblock 2, induction: 0.19 0.42 0.54 0.26\n"
+          "text": "run 1, block 1, previous : 0.48 0.00 0.06 0.38\nrun 1, block 1, induction: 0.00 0.00 0.01 0.01\nrun 1, block 2, previous : 0.06 0.05 0.09 0.06\nrun 1, block 2, induction: 0.39 0.37 0.36 0.33\nrun 2, block 1, previous : 0.51 0.00 0.04 0.43\nrun 2, block 1, induction: 0.01 0.00 0.02 0.01\nrun 2, block 2, previous : 0.05 0.07 0.06 0.07\nrun 2, block 2, induction: 0.61 0.37 0.37 0.34\nrun 3, block 1, previous : 0.00 0.99 0.00 0.03\nrun 3, block 1, induction: 0.00 0.00 0.00 0.01\nrun 3, block 2, previous : 0.07 0.06 0.06 0.08\nrun 3, block 2, induction: 0.32 0.55 0.55 0.19\n"
         }
       ]
     },
+    "what-attention-computes-copy-matrix-definitions": {
+      "code_fingerprint": "sha256:5200ffc9554dd37e80d213dcda18817200a59faa771f63de44d1dc8692f3f8ab",
+      "kind": "text",
+      "outputs": []
+    },
     "what-attention-computes-the-circuit-is-in-the-weights": {
-      "code_fingerprint": "sha256:4ee2fb2743bf8c24e2c8da4fa705ce3376cd95fae816a1da293f60d370c232c5",
+      "code_fingerprint": "sha256:2e4857ade45ae3537ebea7efb432d42450449d31923fd9e6dae4f3e69570c46e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 blocks, block 2: rows whose largest entry is the diagonal 1.00 (chance 1/64)\n1 block: rows whose largest entry is the diagonal 0.94 (chance 1/64)\n"
+          "text": "rows whose largest entry is the diagonal (chance 1/64)\n                                   run 1   run 2   run 3\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2 blocks, block 2, mean stream      1.00    1.00    1.00\n2 blocks, block 2, embeddings       0.70    0.38    0.75\n1 block, mean stream                1.00\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-circuit-is-in-the-weights-1.svg",
-          "bytes": 40798,
-          "sha256": "sha256:85ab5d8e8cfb191e519bd93aa7a7f4c0b8ba7ae31eb55d8ba590b3d2b9dd0799"
+          "bytes": 42536,
+          "sha256": "sha256:4afb63bac911962957080bf8935022de0622dafd2c693a780fef1c147e322037"
         }
       ]
     },
     "what-attention-computes-head-ablation-1": {
-      "code_fingerprint": "sha256:6081a092c48130970a2a86a7df891e79344202dcfefaa817c386ededc92ba505",
+      "code_fingerprint": "sha256:d5c5efce39cc2da33592280c07aa5f5d835fdbc77bd44cc1775821bfe0c0a085",
       "kind": "text",
       "outputs": []
     },
     "what-attention-computes-head-ablation-2": {
-      "code_fingerprint": "sha256:2c79c7d0028c0adfa5b5cd331cf4e921c4341ef822994c2311302574ecac24aa",
+      "code_fingerprint": "sha256:d9f48d56091074c651eb2fd8d169a2c92540e0d3ea6b0fc1a92fb389c2aec994",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block 1, previous-token heads: [1], others: [0, 2, 3]\nheads removed                  later-copy loss  accuracy\nnone                                      0.22      0.95\nblock 1, previous-token heads             3.55      0.13\nblock 1, all other heads                  4.11      0.05\nblock 2, top 1 induction                  3.16      0.42\nblock 2, top 2 induction                  4.81      0.25\nblock 2, top 3 induction                  5.79      0.13\n"
+          "text": "run 1: block 1 previous-token heads [0, 3], others [1, 2]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block 2, top 4 induction                  4.18      0.02\none-block model                           3.55      0.12\n"
+          "text": "run 2: block 1 previous-token heads [0, 3], others [1, 2]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "run 3: block 1 previous-token heads [1], others [0, 2, 3]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "heads removed                  later-copy loss / accuracy: run 1, 2, 3\nnone                              0.48 / 0.88   0.40 / 0.92   0.23 / 0.95\nblock 1, previous-token heads     4.54 / 0.03   4.30 / 0.05   3.61 / 0.11\nblock 1, all other heads          4.43 / 0.02   4.31 / 0.03   3.99 / 0.07\nblock 2, top 1 induction          1.39 / 0.74   0.64 / 0.89   0.55 / 0.91\nblock 2, top 2 induction          2.77 / 0.45   1.51 / 0.70   5.35 / 0.18\nblock 2, top 3 induction          3.43 / 0.25   2.53 / 0.47   6.45 / 0.02\nblock 2, top 4 induction          4.27 / 0.01   4.29 / 0.01   4.19 / 0.01\none-block model                   3.57 / 0.12\n"
         }
       ]
     },
     "what-attention-computes-completing-patterns-it-has-never-seen": {
-      "code_fingerprint": "sha256:cefbae3904395748b70b6193a5bf459bea77e887f2ea0ca7063c646420900b0b",
+      "code_fingerprint": "sha256:65d9eca1043e3d33261dcb3c0ecb77afe0aa14b160a4ccd4347488e811809007",
       "kind": "asset",
       "outputs": [
         {
@@ -168,39 +177,18 @@
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-completing-patterns-it-has-never-seen-1.svg",
           "bytes": 22111,
-          "sha256": "sha256:df54a2ba4689da2f29c8b9a8e589d58bd20bdf437aab855bd8930fe7e76f5891"
+          "sha256": "sha256:0ef8192019547edbf7e9c8f6826410a4daea386f2a54d8dedefce43966542945"
         }
       ]
     },
-    "what-attention-computes-in-context-regression": {
-      "code_fingerprint": "sha256:aa1c7bc3f68cd8760a53fc1061c4c6dd69e111660570b086c5b9d9f24a6642fe",
+    "what-attention-computes-generalization-to-unseen-patterns-1": {
+      "code_fingerprint": "sha256:c75914280c3b8cd28f8f997c2a4f238b61782a80958374b442d331a93e28fc7e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "one gradient step: -4.2743, attention head: -4.2743\n"
-        }
-      ]
-    },
-    "what-attention-computes-in-context-regression-1": {
-      "code_fingerprint": "sha256:063e526b9cfaecc63dbf6550d1cab4db66713f85cee422ddf5128c2834c670cc",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  10 examples in context: relative squared error 1.036\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 100 examples in context: relative squared error 0.092\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "1000 examples in context: relative squared error 0.009\n"
+          "text": "current token        unique repeated      all\nshare of targets       0.69     0.31     1.00\nsingle-token match     1.00     0.47     0.84\nrun 1 accuracy         1.00     0.68     0.90\nrun 2 accuracy         0.99     0.82     0.94\nrun 3 accuracy         1.00     0.91     0.97\n"
         }
       ]
     }

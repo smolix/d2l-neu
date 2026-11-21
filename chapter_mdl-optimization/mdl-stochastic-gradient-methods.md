@@ -1,34 +1,37 @@
 # Stochastic Gradient Methods
 :label:`sec_mdl-stochastic-gradient-methods`
 
-Training a network almost never uses the exact gradient of its loss. Each
-step computes the gradient on a minibatch of a few hundred examples instead
-of the whole training set. Every section so far assumed exact gradients:
-curvature set the number of steps, and convexity made a stationary point a
-global minimizer. A minibatch gradient is right on
-average, but it is noisy, and the noise changes the question from how many
-steps a run needs to how close to the minimizer it can get. This section
-asks what the noise costs and how that cost can be removed.
+Training a neural network almost never uses the exact gradient of its loss.
+Instead of sweeping through the entire dataset for every update, each step
+computes the gradient on a random minibatch of a few hundred examples. Every
+section so far assumed exact gradients, where curvature determines the number
+of steps and convexity turns any stationary point into a global minimizer. A
+minibatch gradient points in the right direction on average, but it is noisy,
+and that noise changes the central question of optimization from how many steps
+a run needs to how close to the minimizer it can get. This section asks what
+gradient noise costs and how we can overcome it.
 
-The simplest loss already shows the cost. Take $f(x) = \tfrac12 x^2$, whose
-minimizer is $0$, add noise of unit variance to every gradient, and use the
-step $\eta = 0.1$. With exact gradients each step would shrink $x$ by a tenth,
-and the iterate would approach $0$ as closely as we like. With noise it never
-settles: its mean square tends to $0.1/1.9 \approx 0.053$, so it stays about
-$0.23$ away from the minimizer however many steps we take. Three numbers set
-the loss at which a run ends: the size of the noise, the step, and the number
-of steps we can afford.
+Even the simplest possible loss reveals the cost. Consider
+$f(x) = \tfrac12 x^2$, whose minimizer is $0$, and suppose we add independent
+noise of unit variance to every gradient while taking constant steps of size
+$\eta = 0.1$. With exact gradients, each step would shrink $x$ by a tenth,
+driving the iterate as close to $0$ as we like. With noisy gradients, the
+iterate never settles: its mean square converges to $0.1/1.9 \approx 0.053$, so
+it wanders roughly $0.23$ away from the minimizer no matter how many steps we
+take. Three quantities determine how low the loss can get: the size of the
+noise, the step size, and the number of steps we can afford.
 
-We first measure the noise of a minibatch gradient. On a quadratic we then
-compute exactly where a fixed step stalls and how long it takes to get there.
-Next we show how a decaying step removes the stall and what its constant must
-be, and we bound the loss that a constant step tuned to a fixed budget reaches
-on convex and on nonconvex losses. Finally, we cancel the noise on a finite
-training set with a stored gradient. Three results are worth remembering:
-the floor is proportional to the step, a $1/k$ schedule needs a large enough
-constant, and a budget of $K$ steps calls for a step proportional to
-$1/\sqrt{K}$. Variance reduction, the last part, can be skipped on a first
-reading.
+We begin by quantifying the noise of a minibatch gradient. On a quadratic
+objective, we then compute where a fixed step size stalls and how many steps it
+takes to get there. Next, we show how decaying step sizes eliminate that stall
+and what constant a $1/k$ schedule requires, before bounding the error that a
+constant step tuned to a fixed budget achieves on both convex and nonconvex
+losses. Finally, we show how to cancel the noise on a finite training set using
+a stored snapshot gradient. Three takeaways are worth keeping in mind
+throughout: the noise floor is proportional to the step size, a $1/k$ schedule
+needs a large enough constant to achieve its rate, and a fixed budget of $K$
+steps calls for a step size proportional to $1/\sqrt{K}$. The final subsection
+on variance reduction can be skipped on a first reading.
 
 ```{.python .input #mdl-stochastic-gradient-methods-stochastic-gradient-methods}
 #@tab mxnet
@@ -74,22 +77,24 @@ from d2l import jax as d2l
 
 ### The Cost of a Full Gradient
 
-A training loss averages the losses of $n$ examples,
+A typical training objective averages the losses of $n$ examples,
 
 $$
 f(\mathbf{x}) = \frac{1}{n} \sum_{i=1}^n f_i(\mathbf{x}),
 $$
 
 where $f_i$ is the loss on example $i$ and $\mathbf{x} \in \mathbb{R}^d$ holds
-the parameters. Its gradient $\nabla f = \tfrac1n \sum_i \nabla f_i$ is an
-average too, so computing it touches all $n$ examples. With $n = 10^9$
-examples, one step of gradient descent is one pass over the data, and
-gradient descent needs thousands of steps. On the chapter's running example
-$\tfrac12(x_1^2 + 1000\,x_2^2)$, whose two curvatures differ by a factor of
-$1000$, even the best fixed step needs about $7{,}000$ of them to shrink the
-error a million-fold (:numref:`sec_mdl-gradient-based-optimization`).
-**Stochastic gradient descent** (SGD) replaces the average over all examples
-by the average over a random **minibatch** $\mathcal{B}$ of $b$ indices,
+the model parameters. Because its gradient
+$\nabla f = \tfrac1n \sum_i \nabla f_i$ is also an average, evaluating it
+touches all $n$ examples. When $n = 10^9$, a single step of gradient descent
+requires a full pass over the dataset, and gradient descent typically needs
+thousands of steps. Even on this chapter's running example,
+$\tfrac12(x_1^2 + 1000\,x_2^2)$, whose curvatures differ by a factor of
+$1000$, the optimal fixed step requires about $7{,}000$ iterations to shrink
+the error a million-fold (:numref:`sec_mdl-gradient-based-optimization`).
+**Stochastic gradient descent** (SGD) avoids this cost by replacing the full
+average with the average over a random **minibatch** $\mathcal{B}$ of $b$
+indices,
 
 $$
 \hat{\mathbf{g}}_b(\mathbf{x}) = \frac{1}{b} \sum_{i \in \mathcal{B}} \nabla f_i(\mathbf{x}),
@@ -98,23 +103,23 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-minibatch`
 
-A step now reads $b$ examples instead of $n$. A minibatch of $b = 256$ out
-of $10^9$ examples costs about four million times less than a full pass.
-Throughout
-the section, $k$ counts optimizer steps, and the step size $\eta_k$ may
-change with $k$. In the analysis, a fresh minibatch is drawn at every step
-and its $b$ indices are independent and uniform on $\{1, \ldots, n\}$, that
-is, drawn with replacement. Training loops usually shuffle the data and draw
-without replacement, which multiplies the variance below by $(n-b)/(n-1)$, a
-factor close to one when $b \ll n$ (:numref:`sec_sgd` derives it).
+Each step now inspects only $b$ examples instead of $n$: a minibatch of
+$b = 256$ out of $10^9$ examples is roughly four million times cheaper than a
+full pass. Throughout this section, $k$ indexes optimizer steps, and the step
+size $\eta_k$ may vary with $k$. For our analysis, we draw a fresh minibatch at
+every step whose $b$ indices are independent and uniform on $\{1, \ldots, n\}$
+(sampling with replacement). Real training loops usually shuffle the dataset
+and sample without replacement, which multiplies the gradient variance derived
+below by $(n-b)/(n-1)$—a factor close to one whenever $b \ll n$
+(:numref:`sec_sgd`).
 
 ### Unbiasedness and the $1/b$ Law
 
-How good is the estimate? Two numbers answer this: its mean, and its mean
-squared distance from the true gradient, which we call its noise power. The
-noise power depends on how much the
-example gradients spread around their average, which their covariance
-measures.
+How accurate is a minibatch gradient? Two quantities capture its quality: its
+mean, which tells us whether it points in the right direction on average, and
+its mean squared distance from the true gradient, which we call its *noise
+power*. That noise power depends on how widely individual example gradients
+scatter around their mean, as measured by their covariance matrix.
 
 **Proposition (minibatch gradients are unbiased with noise power
 $\operatorname{tr}\boldsymbol{\Sigma}/b$).** *Fix $\mathbf{x}$ and let*
@@ -123,7 +128,7 @@ $$
 \boldsymbol{\Sigma} = \frac{1}{n} \sum_{i=1}^n \big(\nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})\big)\big(\nabla f_i(\mathbf{x}) - \nabla f(\mathbf{x})\big)^\top
 $$
 
-*be the covariance of the gradient of one uniformly drawn example. If the $b$
+*be the covariance of a single uniformly drawn example gradient. If the $b$
 indices of $\mathcal{B}$ are independent and uniform on $\{1, \ldots, n\}$, then*
 
 $$
@@ -133,47 +138,49 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-variance`
 
-**Proof.** A uniform index $i$ gives
-$\mathbb{E}[\nabla f_i(\mathbf{x})] = \tfrac1n \sum_i \nabla f_i(\mathbf{x}) = \nabla f(\mathbf{x})$,
-so each of the $b$ terms has mean $\nabla f(\mathbf{x})$, and so does their
-average. The terms are independent, each with covariance $\boldsymbol{\Sigma}$.
-Covariances of independent terms add, so their sum has covariance
-$b\boldsymbol{\Sigma}$ and their average $b\boldsymbol{\Sigma}/b^2 = \boldsymbol{\Sigma}/b$.
-The expected squared norm of a mean-zero vector is the trace of its
-covariance. $\blacksquare$
+**Proof.** For a single uniform index $i$,
+$\mathbb{E}[\nabla f_i(\mathbf{x})] = \tfrac1n \sum_i \nabla f_i(\mathbf{x}) = \nabla f(\mathbf{x})$.
+Every term in the minibatch therefore has mean $\nabla f(\mathbf{x})$, and so
+does their average. Because the $b$ indices are independent and each term has
+covariance $\boldsymbol{\Sigma}$, the covariance of their sum is
+$b\boldsymbol{\Sigma}$, and dividing by $b$ scales the covariance by $1/b^2$ to
+give $\boldsymbol{\Sigma}/b$. Finally, the expected squared norm of any
+mean-zero random vector equals the trace of its covariance matrix.
+$\blacksquare$
 
-In a run, $\mathbf{x}$ is the current iterate $\mathbf{x}_k$ and the
-minibatch is drawn after it, so both statements hold conditionally on
-$\mathbf{x}_k$. Unbiasedness rests on
-uniform sampling: a sampler that draws example $i$ with probability $p_i$
-must weight its gradient by $1/(np_i)$ to stay unbiased.
+During optimization, $\mathbf{x}$ is the current iterate $\mathbf{x}_k$ and the
+minibatch is drawn independently of past steps, so both identities hold
+conditionally on $\mathbf{x}_k$. Note that unbiasedness depends on uniform
+sampling: if a sampler draws example $i$ with probability $p_i$, each gradient
+must be reweighted by $1/(np_i)$ to keep the estimator unbiased.
 
-The noise power falls like $1/b$, so its root mean square falls only like
-$1/\sqrt{b}$: a hundred times more examples per step make the gradient ten
-times quieter. The signal $\nabla f$ has power $\|\nabla f\|^2$ at every batch size, and the two
-powers are equal at the batch size
-$b_{\textrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma}/\|\nabla f\|^2$, which
-the main text calls the gradient-noise scale (:numref:`sec_batch_size`);
+Because the noise power decays like $1/b$, its root-mean-square amplitude
+decays only like $1/\sqrt{b}$: cutting the gradient noise in ten requires a
+hundred times as many examples per step. Meanwhile, the true gradient signal
+has squared norm $\|\nabla f\|^2$ regardless of batch size. Signal and noise
+have equal power at the batch size
+$b_{\textrm{noise}} = \operatorname{tr}\boldsymbol{\Sigma}/\|\nabla f\|^2$,
+which the main text calls the *gradient-noise scale* (:numref:`sec_batch_size`);
 exercise :exref:`ex_mdl-gradient-based-optimization-use-eqref-eq-mdl` derives
-the version weighted by curvature.
+its curvature-weighted counterpart.
 
-To see the size of this noise on data, we use a small logistic-regression
-problem, which the step-size experiment of the next part uses again. It has
-$n = 200$ examples
-$\mathbf{a}_i \in \mathbb{R}^5$ with standard normal entries, labels
-$y_i \in \{-1, +1\}$ drawn from the logistic model with weights
-$(1, -2, 1.5, 0, 2)$, and the loss
+To see how large this noise is on concrete data, we set up a small
+logistic-regression problem that we will reuse in the step-size experiment
+below. It has $n = 200$ examples $\mathbf{a}_i \in \mathbb{R}^5$ with standard
+normal features, labels $y_i \in \{-1, +1\}$ generated from a logistic model
+with true weights $(1, -2, 1.5, 0, 2)$, and the regularized loss
 
 $$
 f(\mathbf{x}) = \frac{1}{n} \sum_{i=1}^n \log\big(1 + e^{-y_i \mathbf{a}_i^\top \mathbf{x}}\big) + \frac{0.1}{2} \|\mathbf{x}\|^2.
 $$
 
-The penalty makes $f$ strongly convex with $\mu \ge 0.1$. The gradient of
-example $i$ is
+The quadratic penalty makes $f$ strongly convex with $\mu \ge 0.1$. The gradient
+of example $i$ is
 $\nabla f_i(\mathbf{x}) = -y_i s_i \mathbf{a}_i + 0.1\,\mathbf{x}$, where
 $s_i = 1/(1 + e^{y_i \mathbf{a}_i^\top \mathbf{x}})$ is the probability that
-the model assigns to the wrong label. The cell defines the data, the loss, and
-all $n$ example gradients at once, as the rows of an $n \times d$ matrix.
+the model assigns to the wrong label. The cell below generates the dataset and
+defines the loss together with a vectorized helper returning all $n$
+per-example gradients as the rows of an $n \times d$ matrix.
 
 ```{.python .input #mdl-stochastic-gradient-methods-unbiasedness-and-the-1-b-law-1}
 n, d, reg = 200, 5, 0.1                          # examples, parameters, l2 weight
@@ -192,10 +199,11 @@ def example_grads(x, A, y, reg):
     return -(y * s)[:, None] * A + reg * x
 ```
 
-The proposition is exact, so sampling can only agree with it. We sample
-once, at $\mathbf{x} = \mathbf{0}$ with $10{,}000$ minibatches of each size,
-mainly to learn how large $\operatorname{tr}\boldsymbol{\Sigma}$ is on this
-problem.
+Since the proposition is exact, simulation serves mainly as a sanity check and
+to show the actual scale of $\operatorname{tr}\boldsymbol{\Sigma}$ on this
+problem. Below, we evaluate $10{,}000$ random minibatches of each size at
+$\mathbf{x} = \mathbf{0}$ and compare the empirical error against
+$\operatorname{tr}\boldsymbol{\Sigma}/b$.
 
 ```{.python .input #gradient-based-optimization-sgd-variance}
 G = example_grads(np.zeros(d), A, y, reg)        # per-example gradients at x = 0
@@ -210,46 +218,46 @@ for b in [1, 4, 16, 64]:
 ```
 
 The single-example noise power $\operatorname{tr}\boldsymbol{\Sigma}$ is about
-$1.1$, and the measured error agrees with
-$\operatorname{tr}\boldsymbol{\Sigma}/b$ to within the sampling error, a few
-percent, at every batch size. What the noise does to a whole run is the next
-question.
+$1.1$, and across all four batch sizes the measured error matches
+$\operatorname{tr}\boldsymbol{\Sigma}/b$ to within a few percent of sampling
+fluctuation. Knowing the noise of a single step, we can now ask what that noise
+does over an entire optimization run.
 
 ### The Noise Floor
 
-Does the noise average out over a run, or does it accumulate? :numref:`sec_sgd`
-measured the cloud in which SGD settles on a valley and derived its size. Here
-we solve the whole trajectory, which also gives the time to get there. The
-smallest case suffices: one coordinate of a quadratic,
-$f(x) = \tfrac12 \lambda x^2$ with curvature $\lambda > 0$ and minimizer $0$. A
-stochastic gradient is the true gradient $\lambda x_k$ plus noise $\xi_k$ that
-has mean zero given $x_k$ and variance $\sigma^2$. This $\sigma^2$ plays the
-role of a diagonal entry of $\boldsymbol{\Sigma}/b$, so everything below that
-is proportional to $\sigma^2$ falls like $1/b$. One step reads
+Does gradient noise average out over many steps, or does it accumulate?
+:numref:`sec_sgd` measured the cloud in which SGD settles inside a valley and
+derived its radius. Here we solve the entire trajectory in closed form, which
+also tells us how many steps it takes to reach that cloud. The simplest case
+already contains the full mechanism: a single coordinate of a quadratic,
+$f(x) = \tfrac12 \lambda x^2$ with curvature $\lambda > 0$ and minimizer $0$.
+Model the stochastic gradient as the true gradient $\lambda x_k$ plus random
+noise $\xi_k$ with mean zero given $x_k$ and variance $\sigma^2$. Here
+$\sigma^2$ plays the role of a diagonal entry of $\boldsymbol{\Sigma}/b$, so
+every quantity proportional to $\sigma^2$ scales as $1/b$. One SGD step reads
 
 $$
 x_{k+1} = x_k - \eta\,(\lambda x_k + \xi_k) = \rho\, x_k - \eta\, \xi_k,
 \qquad \rho = 1 - \eta\lambda.
 $$
 
-Each step shrinks the distance to the minimizer by the factor $\rho$, as
-gradient descent does, and then adds a random kick $-\eta\xi_k$. We follow the
-size of the iterate through its second moment $e_k = \mathbb{E}[x_k^2]$.
-When we square the step and take expectations, the cross term
-$-2\rho\eta\,\mathbb{E}[x_k \xi_k]$ vanishes because the noise has mean zero
-given $x_k$:
+At each step, the deterministic part pulls the iterate toward the minimizer by
+the factor $\rho$, just as exact gradient descent does, while the stochastic
+part delivers a random kick $-\eta\xi_k$. To track the iterate's size, we
+follow its second moment $e_k = \mathbb{E}[x_k^2]$. Squaring the update and
+taking expectations, the cross term $-2\rho\eta\,\mathbb{E}[x_k \xi_k]$
+vanishes because $\xi_k$ has mean zero conditioned on $x_k$, leaving
 
 $$
 e_{k+1} = \rho^2 e_k + \eta^2 \sigma^2.
 $$
 
-The second moment contracts by the factor $\rho^2$ and gains the noise power
-$\eta^2\sigma^2$ at every step. Nearly everything in this section is read off
-this recursion. A linear recursion with a constant input is solved through
-its fixed point. The fixed
-point $V$ satisfies $V = \rho^2 V + \eta^2\sigma^2$; subtracting the two
-equations shows that the remainder $e_k - V$ is multiplied by $\rho^2$ at
-every step. Hence
+Every step contracts the second moment by $\rho^2$ and injects fresh noise
+power $\eta^2\sigma^2$. Nearly every result in this section can be read off
+this one recursion. A linear recurrence with a constant driving term is solved
+by finding its fixed point $V$, where $V = \rho^2 V + \eta^2\sigma^2$.
+Subtracting that fixed-point equation from the recursion shows that the
+remainder $e_k - V$ shrinks by $\rho^2$ at every step, giving
 
 $$
 e_k = V + \rho^{2k}\,(e_0 - V)
@@ -266,90 +274,95 @@ V = \frac{\eta^2 \sigma^2}{1 - \rho^2}
 $$
 :eqlabel:`eq_mdl-opt-noise-ball`
 
-The floor grows in proportion to the step and to the noise variance, and it
-shrinks as the curvature grows. These formulas hold for
-$0 < \eta < 2/\lambda$, below the stability ceiling of gradient descent on a
-quadratic. Above it the second moment grows even without noise.
+The floor grows linearly with the step size and the noise variance, and shrinks
+inversely with the curvature. Both formulas require $0 < \eta < 2/\lambda$, the
+same stability ceiling as exact gradient descent on a quadratic; above it, the
+second moment diverges even without noise.
 
-The second moment has two parts. The transient $\rho^{2k}(e_0 - V)$ is the one
-gradient descent also has, and it decays geometrically. The floor $V$ exists
-only because of the noise. Far from the minimizer the transient dominates and
-SGD moves like gradient descent. Near it, the noise kicks the iterate by the
-same amount at every step, while the pull $\eta\lambda x$ toward the minimizer
-weakens as the iterate approaches it, and the two balance at $e = V$. The
-iterate does not converge. Its distribution settles into a stationary one
-with mean square $V$, a **noise ball** around the minimizer whose radius, the
-root mean square distance of about $\sqrt{\eta\sigma^2/(2\lambda)}$, grows
-like $\sqrt{\eta}$. :numref:`fig_mdl-opt-sgd-noise-ball` shows both phases on
-a two-dimensional bowl.
+The trajectory splits cleanly into two phases. The transient
+$\rho^{2k}(e_0 - V)$ decays geometrically, just as in deterministic gradient
+descent, whereas the floor $V$ is purely an effect of noise. Far from the
+minimizer, the transient dominates and SGD behaves much like gradient descent.
+Close to the minimizer, the inward pull $\eta\lambda x$ weakens while the
+random kicks keep the same variance $\eta^2\sigma^2$, until the two balance at
+$e = V$. From then on the iterate never converges; instead, its distribution
+settles into a stationary **noise ball** around the minimizer whose
+root-mean-square radius, roughly $\sqrt{\eta\sigma^2/(2\lambda)}$, scales as
+$\sqrt{\eta}$. :numref:`fig_mdl-opt-sgd-noise-ball` illustrates both phases on
+a two-dimensional quadratic bowl.
 
-![Gradient descent and fixed-step SGD on $\tfrac12\|\mathbf{x}\|^2$ with $\eta=0.15$ and gradient noise of standard deviation $0.6$. The full-batch path converges to the minimizer; SGD descends like gradient descent and then fluctuates inside a noise ball. The dashed circles mark the noise ball at this step and at half of it; their radii, drawn at three times the per-coordinate root-mean-square distance $\sqrt{\eta\sigma^2/(2\lambda)}$ so that they enclose the scatter, differ by a factor $\sqrt2$.](../img/mdl-opt-sgd-noise-ball.svg)
+![Gradient descent and fixed-step SGD on $\tfrac12\|\mathbf{x}\|^2$ with $\eta=0.15$ and gradient noise of standard deviation $0.6$. The full-batch path converges to the minimizer, whereas SGD descends like gradient descent and then fluctuates inside a noise ball. Dashed circles mark the noise ball at this step size and at half the step size; their radii, drawn at three times the per-coordinate root-mean-square distance $\sqrt{\eta\sigma^2/(2\lambda)}$ to enclose the scatter, differ by a factor of $\sqrt{2}$.](../img/mdl-opt-sgd-noise-ball.svg)
 :label:`fig_mdl-opt-sgd-noise-ball`
 
-Training is judged by the loss rather than by the distance. Since
-$\mathbb{E} f(x_k) = \tfrac12 \lambda e_k$, the loss floor is
+In practice we care about the expected loss rather than the squared distance.
+Because $\mathbb{E} f(x_k) = \tfrac12 \lambda e_k$, the loss floor is
 
 $$
 \tfrac12 \lambda V = \frac{\eta\, \sigma^2}{2\,(2 - \eta\lambda)} \;\approx\; \frac{\eta\, \sigma^2}{4}.
 $$
 
-The loss floor is proportional to the step and to the noise power and, for
-small steps, independent of the curvature: a flat direction lets the iterate
-wander farther, by exactly the factor that its flatness takes off the loss.
+Surprisingly, for small steps the curvature $\lambda$ cancels out completely: a
+flatter direction lets the iterate wander farther, by precisely the factor that
+its flatness discounts from the loss.
 
-On a quadratic in $d$ dimensions, each coordinate along an eigenvector of the
-Hessian obeys this scalar recursion with its own eigenvalue $\lambda_i$ and
-the noise variance $\sigma_i^2$ along that eigenvector, so the loss floors
-$\eta\sigma_i^2/(2(2 - \eta\lambda_i))$ add. The $\sigma_i^2$ are the diagonal
-entries of $\boldsymbol{\Sigma}/b$ in the eigenbasis and sum to
-$\operatorname{tr}\boldsymbol{\Sigma}/b$. When every $\eta\lambda_i \ll 1$,
-the total floor is therefore about
-$\eta\operatorname{tr}\boldsymbol{\Sigma}/(4b)$, and it depends on the step
-and the batch only through $\eta/b$. Halving the step and doubling the batch
-lower it by the same factor. This coupling is behind the learning-rate rules
-for large batches in :numref:`sec_batch_size`.
+On a $d$-dimensional quadratic, the coordinates along the eigenvectors of the
+Hessian decouple into $d$ independent copies of this scalar recursion, each
+with its own eigenvalue $\lambda_i$ and noise variance $\sigma_i^2$. The total
+expected loss floor is therefore the sum
+$\sum_i \eta\sigma_i^2/(2(2 - \eta\lambda_i))$. Because the $\sigma_i^2$ are
+the diagonal entries of $\boldsymbol{\Sigma}/b$ in the eigenbasis, they sum to
+$\operatorname{tr}\boldsymbol{\Sigma}/b$. Whenever every $\eta\lambda_i \ll 1$,
+the total loss floor simplifies to approximately
+$\eta\operatorname{tr}\boldsymbol{\Sigma}/(4b)$, which depends on the step size
+and batch size only through their ratio $\eta/b$. Halving the step size and
+doubling the batch size therefore lower the floor by the same factor—the
+coupling behind the large-batch learning-rate rules in
+:numref:`sec_batch_size`.
 
-How long does the run take to reach the floor? Take $\lambda = \sigma = 1$,
-as in the opening, where $\eta = 0.1$ gave $V = 0.053$. At $\eta = 0.3$ the
-floor is $V = 0.176$, a little more than three times as high, and the loss
-floor is $0.088$. Starting from $x_0 = 3$, so $e_0 = 9$, the remainder
-$e_k - V$ falls below a tenth of $V$ after $36$ steps at $\eta = 0.1$ (where
-$\rho^2 = 0.81$) and after $9$ steps at $\eta = 0.3$ (where $\rho^2 = 0.49$).
-A third of the step gives about a third of the floor and takes four times as
-many steps to reach it. Every remedy in this section manages this trade-off
-between the floor and the speed.
+How quickly does a run reach its floor? Take $\lambda = \sigma = 1$, as in the
+opening example, where $\eta = 0.1$ produced $V = 0.053$. Raising the step to
+$\eta = 0.3$ raises the floor to $V = 0.176$ (a little more than three times as
+high, with a loss floor of $0.088$). Starting from $x_0 = 3$ ($e_0 = 9$), the
+transient $e_k - V$ drops below a tenth of $V$ after $36$ steps at $\eta = 0.1$
+($\rho^2 = 0.81$), compared with just $9$ steps at $\eta = 0.3$
+($\rho^2 = 0.49$). Cutting the step size by a third cuts the floor by roughly a
+third, but demands four times as many steps to reach it. Every method in the
+rest of this section is a different way of navigating this trade-off between
+speed and accuracy.
 
-On the running example $\tfrac12(x_1^2 + 1000\,x_2^2)$ we model the noise
-directly: to the gradient $(x_1, 1000\,x_2)$ we add noise of mean zero and
-variance $\sigma^2 = 1$ on each coordinate, drawn afresh at every step. The
-two coordinates then obey the scalar recursion with $\lambda_1 = 1$ and
-$\lambda_2 = 1000$. Take $\eta = 1/L = 10^{-3}$, where $L = 1000$ is the
-largest curvature; this step is half the stability ceiling $2/1000$. The
-stiff coordinate has $\rho_2 = 0$: one step erases its transient, and from
-then on it sits on its floor $V_2 = 10^{-3}/1000 = 10^{-6}$. The slow
-coordinate has $\rho_1 = 0.999$ and the floor
-$V_1 = 10^{-3}/1.999 = 5.0 \times 10^{-4}$, and its transient needs
-$\log 1000/(-2\log 0.999) \approx 3{,}450$ steps to fall a thousandfold. The
-loss floor is $7.5 \times 10^{-4}$: $2.5 \times 10^{-4}$ from the slow
-coordinate and $5 \times 10^{-4}$ from the stiff one. The coordinate that
-gradient descent handles in one step holds two thirds of the floor, because
-for this coordinate $\eta\lambda_2 = 1$, where the loss floor is
-$\eta\sigma^2/2$, twice the small-step value $\eta\sigma^2/4$.
-Ill-conditioning costs steps on the slow coordinate; noise costs loss on
-both.
+Now return to our running example $\tfrac12(x_1^2 + 1000\,x_2^2)$, modeling the
+noise directly by adding independent mean-zero noise of variance $\sigma^2 = 1$
+to each coordinate of the gradient $(x_1, 1000\,x_2)$ at every step. The two
+coordinates obey the scalar recursion with $\lambda_1 = 1$ and
+$\lambda_2 = 1000$. Set $\eta = 1/L = 10^{-3}$, half the stability ceiling
+$2/1000$. The stiff coordinate has $\rho_2 = 0$: a single step erases its
+transient completely, leaving it on its floor $V_2 = 10^{-3}/1000 = 10^{-6}$.
+The slow coordinate has $\rho_1 = 0.999$ and floor
+$V_1 = 10^{-3}/1.999 = 5.0 \times 10^{-4}$, and its transient takes
+$\log 1000/(-2\log 0.999) \approx 3{,}450$ steps to shrink a thousandfold. The
+total loss floor is $7.5 \times 10^{-4}$, split between $2.5 \times 10^{-4}$
+from the slow coordinate and $5 \times 10^{-4}$ from the stiff one. Notice the
+irony: the stiff coordinate that gradient descent eliminates in one step
+accounts for two-thirds of the loss floor, because at $\eta\lambda_2 = 1$ its
+loss floor is $\eta\sigma^2/2$, twice the small-step value $\eta\sigma^2/4$.
+Ill-conditioning slows down the flat direction, while noise raises the loss
+along both.
 
-The floor formula is exact only for a quadratic with additive noise. The
-next part tests the law "floor proportional to $\eta$" on the logistic loss.
+Our closed-form floor is exact only for a quadratic with additive noise. Next,
+we test whether the scaling "floor proportional to $\eta$" still holds on the
+non-quadratic logistic loss, and see how decaying step sizes break through the
+floor.
 
 ## Step-Size Decay
 :label:`subsec_mdl-step-size-decay`
 
 ### The Robbins--Monro Conditions
 
-The floor is proportional to $\eta$, so reaching the minimizer requires steps
-that shrink to zero. Steps that shrink too fast, however, stop the iterate
-short: a gradient of unit size moves it by at most $\sum_k \eta_k$ in total.
-The conditions of :citet:`Robbins.Monro.1951` state both demands,
+Because the noise floor scales linearly with $\eta$, actually reaching the
+minimizer requires shrinking the step size toward zero. Shrink it too fast,
+however, and the iterate stalls short of the goal: with unit-sized gradients,
+the total distance traveled cannot exceed $\sum_k \eta_k$. The classical
+conditions of :citet:`Robbins.Monro.1951` capture both requirements at once,
 
 $$
 \sum_{k} \eta_k = \infty,
@@ -358,27 +371,30 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-robbins-monro`
 
-The first condition lets the iterate travel any distance. The second keeps the
-total injected noise variance, $\sigma^2 \sum_k \eta_k^2$, finite. The steps
-$\eta_k = c/k$ satisfy both; $\eta_k = c/\sqrt{k}$ and a constant step satisfy
-only the first. Together with unbiased stochastic gradients whose variance
-grows at most quadratically with the distance from the minimizer, the two
-conditions make SGD converge to the minimizer of a strongly convex loss
+The first condition guarantees that the iterate can travel arbitrarily far from
+its starting point, while the second keeps the cumulative variance injected by
+the noise, $\sigma^2 \sum_k \eta_k^2$, finite. The schedule $\eta_k = c/k$
+satisfies both conditions, whereas $\eta_k = c/\sqrt{k}$ and a constant step
+satisfy only the first. Together with unbiased gradients whose variance grows
+at most quadratically with the distance to the minimizer, these two conditions
+guarantee that SGD converges to the minimizer of any strongly convex loss
 :cite:`Robbins.Monro.1951,Bottou.Curtis.Nocedal.2018`.
 
-On the quadratic model, mean-square convergence needs less. Unrolling the
-recursion shows that $e_k \to 0$ whenever $\eta_k \to 0$ and
-$\sum_k \eta_k = \infty$ (with $\eta_k < 2/\lambda$), and $\eta_k = c/\sqrt{k}$
-gives $e_k \approx c\sigma^2/(2\lambda\sqrt{k})$, the floor of the current step
+On our scalar quadratic, convergence in mean square actually needs less.
+Unrolling the recursion shows that $e_k \to 0$ whenever $\eta_k \to 0$ and
+$\sum_k \eta_k = \infty$ (with $\eta_k < 2/\lambda$); in particular,
+$\eta_k = c/\sqrt{k}$ yields $e_k \approx c\sigma^2/(2\lambda\sqrt{k})$, which
+simply tracks the instantaneous floor of the current step
 (exercise :exref:`ex_mdl-stochastic-gradient-methods-robbins-monro-quadratic`).
-The square-summable condition is what the general theorem needs for its
-stronger claim, the convergence of almost every run.
+The stronger square-summability condition is what the general theorem requires
+to guarantee convergence along almost every individual sample path.
 
-Two things remain to be seen on a loss that is not quadratic: whether the floor
-is still proportional to $\eta$, and whether a decaying step goes below it. On
-the logistic problem we need the optimal value $f^\star$, which $4{,}000$
-full-gradient steps supply, and a minibatch SGD loop with batch size $b$ that
-records the gap $f(\mathbf{x}_k) - f^\star$ after every step.
+Two questions remain for a non-quadratic objective: does the noise floor still
+scale linearly with $\eta$, and does a decaying schedule push below it? To
+check on our logistic-regression problem, we first compute the reference
+optimum $f^\star$ with $4{,}000$ full-gradient steps, then define a minibatch
+SGD loop that records the suboptimality gap $f(\mathbf{x}_k) - f^\star$ at
+every step.
 
 ```{.python .input #mdl-stochastic-gradient-methods-the-robbins-monro-conditions-1}
 x_star = np.zeros(d)
@@ -396,12 +412,12 @@ def sgd(schedule, A, y, reg, f_star, rng, steps=4000, b=8):
     return gaps
 ```
 
-If the quadratic model is a guide, halving a fixed step should halve the gap
-at which the run stalls. We run $4{,}000$ steps with $b = 8$ at $\eta = 0.8$
-and at $\eta = 0.4$, and with the decaying step $\eta_k = 80/(k + 100)$, which
-starts at $0.8$ and which the code writes as $0.8/(1 + k/100)$. The cell
-prints the mean gap over the last $1{,}000$ steps of each run and two ratios,
-and plots the gaps averaged over windows of $100$ steps.
+If the quadratic model is a reliable guide, halving a fixed step size should
+halve the gap at which SGD stalls. We run $4{,}000$ steps with $b = 8$ using
+constant steps $\eta = 0.8$ and $\eta = 0.4$, alongside the decaying schedule
+$\eta_k = 80/(k + 100) = 0.8/(1 + k/100)$, which begins at $0.8$. The cell
+prints the mean gap over the final $1{,}000$ steps of each run, reports the
+ratios between them, and plots $100$-step moving averages on log--log axes.
 
 ```{.python .input #gradient-based-optimization-sgd-schedule}
 rules = {'fixed 0.8': lambda k: 0.8, 'fixed 0.4': lambda k: 0.4,
@@ -416,102 +432,108 @@ d2l.plot(np.arange(100, 4001), [np.convolve(gap, window, 'valid') for gap in gap
          'step k', 'f(x_k) - f*', xscale='log', yscale='log', legend=list(gaps))
 ```
 
-Both fixed steps stall. The mean gap over the last $1{,}000$ steps is about
-$1$ to $2 \times 10^{-2}$ at $\eta = 0.8$, and halving the step about halves
-it. The ratio scatters between about $1.7$ and $2.8$ across runs, around the
-factor $2$ that the quadratic model predicts, although the loss is not
-quadratic. The decaying run ends roughly $20$ to $90$ times below the $\eta = 0.8$
-floor, and on the log–log plot its curve still trends down, jagged with
-minibatch noise. Its
-early large steps cover the distance to the minimizer, and its late small
-steps shrink the noise ball.
+Both fixed-step runs stall. At $\eta = 0.8$, the mean gap over the last
+$1{,}000$ steps settles around $1$ to $2 \times 10^{-2}$, and halving the step
+size cuts it roughly in half: across repeated runs, the ratio fluctuates
+between about $1.7$ and $2.8$, centered on the factor of $2$ predicted by the
+quadratic model even though the logistic loss is not quadratic. Meanwhile, the
+decaying schedule finishes roughly $20$ to $90$ times below the $\eta = 0.8$
+floor, and its curve on the log--log plot is still trending downward despite
+minibatch jitter. Its large early steps cover the distance to the minimizer
+quickly, while its small late steps shrink the noise ball.
 
 ### The Constant in a $1/k$ Schedule
 
 The schedule $\eta_k = c/(k + k_0)$ satisfies both Robbins--Monro conditions
-for every $c > 0$, and the shift $k_0$ keeps the first steps below the
-stability ceiling. Does every $c$ give the rate $1/k$? The scalar model with
-curvature $\lambda = \mu$ answers exactly. Writing $t = k + k_0$, its recursion
-becomes
+for any $c > 0$, with the shift $k_0$ keeping the initial steps safely below
+the stability ceiling. Does every choice of $c$ achieve an $O(1/k)$ rate? The
+scalar quadratic with curvature $\lambda = \mu$ gives an exact answer. Writing
+$t = k + k_0$, the second-moment recursion becomes
 
 $$
 e_{k+1} = \Big(1 - \frac{c\mu}{t}\Big)^2 e_k + \frac{c^2 \sigma^2}{t^2}.
 $$
 
-The contraction now weakens like $1/t$, while the injected noise falls like
-$1/t^2$. Which of the two wins depends on $c$. If $c$ is too small, the steps
-shrink faster than the iterate can use them, and the schedule limits the
-progress before the noise does.
+Here the contraction weakens like $1/t$, while the injected noise power falls
+like $1/t^2$. Which effect dominates depends critically on $c$: if $c$ is too
+small, the step size shrinks faster than the iterate can contract toward the
+minimizer, so the schedule itself becomes the bottleneck rather than the noise.
 
 **Proposition (the constant of a $1/k$ schedule).** *On the scalar model with
-curvature $\mu$ and steps $\eta_k = c/(k + k_0)$, if $2c\mu > 1$ then
-$k\, e_k \to A$ with*
+curvature $\mu$ and step sizes $\eta_k = c/(k + k_0)$, if $2c\mu > 1$ then
+$k\, e_k \to A$, where*
 
 $$
 A = \frac{c^2 \sigma^2}{2c\mu - 1}.
 $$
 :eqlabel:`eq_mdl-opt-one-over-k-constant`
 
-*If $2c\mu < 1$, then $e_k$ decays like $k^{-2c\mu}$, more slowly than $1/k$,
-and at the boundary $2c\mu = 1$ like $\log k/k$. For every $c > 0$,
-$e_k \to 0$.*
+*If $2c\mu < 1$, then $e_k$ decays like $k^{-2c\mu}$, strictly slower than
+$1/k$, and at the boundary $2c\mu = 1$ it decays like $\log k / k$. For every
+$c > 0$, $e_k \to 0$.*
 
-We do not prove the proposition here. We derive the constant by matching
-leading terms and argue the other two cases informally; exercise
-:exref:`ex_mdl-gradient-based-optimization-one-over-k-constant` supplies the
-proof of the two rates, by an induction above the threshold and by unrolling
-the recursion below it.
+We omit the full proof here, deriving the constant $A$ by matching leading
+terms and sketching the other two regimes informally; exercise
+:exref:`ex_mdl-gradient-based-optimization-one-over-k-constant` provides a
+complete proof by induction above the threshold and by unrolling the recursion
+below it.
 
-**Derivation of the constant.** Substitute $e_k \approx A/t$ into the
-recursion. The left side is
-$A/(t+1) \approx A/t - A/t^2$. On the right,
-$(1 - c\mu/t)^2 \approx 1 - 2c\mu/t$, so the right side is
+**Derivation of the constant.** Try the asymptotic form $e_k \approx A/t$. The
+left-hand side of the recursion is $A/(t+1) \approx A/t - A/t^2$. On the
+right-hand side, expanding $(1 - c\mu/t)^2 \approx 1 - 2c\mu/t$ gives
 $A/t - 2c\mu A/t^2 + c^2\sigma^2/t^2$ up to terms of order $t^{-3}$. The $1/t$
-terms agree, and matching the $1/t^2$ terms gives
-$-A = -2c\mu A + c^2\sigma^2$, that is, $A(2c\mu - 1) = c^2\sigma^2$. The step
-that is not routine is the shift on the left: moving from $t$ to $t + 1$
-contributes $-A/t^2$, of the same order as the contraction, and it is the
-source of the threshold. Without it we would find $A = c\sigma^2/(2\mu)$ for
-every $c$.
+terms match automatically, and equating the $1/t^2$ coefficients yields
+$-A = -2c\mu A + c^2\sigma^2$, or $A(2c\mu - 1) = c^2\sigma^2$. Notice the
+subtle term on the left: advancing from $t$ to $t+1$ contributes $-A/t^2$,
+which is of the same order as the contraction term and creates the threshold
+$2c\mu > 1$. Ignoring that shift would falsely predict $A = c\sigma^2/(2\mu)$
+for every $c > 0$.
 
-**Below the threshold (informally).** The contractions decide the rate, both
-for the initial error and for the noise injected early: their product is
-$\prod_{j}(1 - c\mu/(j + k_0))^2 \approx (k_0/t)^{2c\mu}$, because
-$\log(1 - u) \approx -u$ and $\sum_{j \le t} 1/j \approx \log t$, and for
-$2c\mu < 1$ this decays more slowly than $1/t$. At the boundary the noise
-injected at step $j$ survives as about $c^2\sigma^2/(jt)$, and the sum over
-$j$ produces the logarithm.
+**Below the threshold (informally).** When $2c\mu < 1$, the cumulative
+contraction sets the decay rate for both the initial error and the early noise.
+Because $\log(1 - u) \approx -u$ and $\sum_{j \le t} 1/j \approx \log t$, the
+product of contractions behaves as
+$\prod_{j}(1 - c\mu/(j + k_0))^2 \approx (k_0/t)^{2c\mu}$, which decays more
+slowly than $1/t$. At the boundary $2c\mu = 1$, noise injected at step $j$
+survives at step $t$ with weight roughly $c^2\sigma^2/(jt)$, and summing over
+$j$ produces the extra $\log k$ factor.
 
-Take $\mu = \sigma = 1$. The constant $c = 1$ gives $A = 1$; iterating the
-recursion from $e_0 = 1$ with $k_0 = 10$ gives $k\, e_k = 1.0001$ at
-$k = 10^6$. The constant $c = 2$ gives $A = 4/3$. Below the threshold,
-$c = 0.25$ gives a log–log slope of $-0.50$ between $k = 10^5$ and $10^6$, and
-$c = 0.1$ a slope of $-0.20$. The constant $A$ is smallest at $c = 1/\mu$,
-where $A = \sigma^2/\mu^2$: the best $1/k$ schedule reaches
-$e_k \approx \sigma^2/(\mu^2 k)$. Averaging the iterates of a run with a small
-constant step reaches the same constant, with no decay at all (exercise
-:exref:`ex_mdl-stochastic-gradient-methods-iterate-averaging`). The threshold
-makes the schedule fragile: the curvature $\mu$ is rarely known, and a constant
-chosen too small loses the rate itself. This is one reason practical schedules
-decay more slowly than $1/k$.
+To see the sensitivity in numbers, take $\mu = \sigma = 1$. Setting $c = 1$
+gives $A = 1$, and iterating the recursion from $e_0 = 1$ with $k_0 = 10$
+yields $k\, e_k = 1.0001$ at $k = 10^6$. Doubling to $c = 2$ raises the
+constant only modestly, to $A = 4/3$. Dropping below the threshold is far more
+damaging: $c = 0.25$ yields a log--log slope of $-0.50$ between $k = 10^5$ and
+$10^6$, and $c = 0.1$ yields a slope of just $-0.20$. Minimizing $A$ over $c$
+gives the optimal constant $c = 1/\mu$, where $A = \sigma^2/\mu^2$ and
+$e_k \approx \sigma^2/(\mu^2 k)$. Remarkably, averaging the iterates of a
+constant-step run achieves the exact same optimal constant without decaying the
+step size at all (exercise
+:exref:`ex_mdl-stochastic-gradient-methods-iterate-averaging`). The sharp
+threshold at $c = 1/(2\mu)$ makes $1/k$ schedules fragile in practice: the
+smallest curvature $\mu$ is rarely known, and underestimating $c$ sacrifices
+the convergence rate itself. This fragility is one major reason practical
+learning-rate schedules decay more slowly than $1/k$.
 
-On the running example the shift $k_0$ cannot be small either. The first step must respect the stiff
-coordinate's ceiling, $c/k_0 < 2/L$, so $k_0 > cL/2$, and the best constant
-for the slow coordinate, $c = 1/\mu = 1$, forces $k_0 > 500$. With
-$k_0 = 1000$ and $\mathbf{x}_0 = (1, 1)$, the slow coordinate's transient still holds a fraction
-$(k_0/(k + k_0))^2 \approx 0.008$ of its initial value at $k = 10^4$, and the
-expected loss ends at $4.2 \times 10^{-3}$, more than five times the constant
-step's floor of $7.5 \times 10^{-4}$. The small early steps that the stiff
-coordinate demands leave the slow coordinate far from its minimizer, and the
-condition number reappears in $k_0$.
+On the running example $\tfrac12(x_1^2 + 1000\,x_2^2)$, the shift $k_0$
+creates a second difficulty. Stability at the very first step requires
+$c/k_0 < 2/L$, or $k_0 > cL/2$. Choosing the optimal constant $c = 1/\mu = 1$
+for the slow coordinate therefore forces $k_0 > 500$. With $k_0 = 1000$ and
+$\mathbf{x}_0 = (1, 1)$, the slow coordinate's transient still retains a
+fraction $(k_0/(k + k_0))^2 \approx 0.008$ of its initial error after
+$k = 10^4$ steps, leaving the expected loss at $4.2 \times 10^{-3}$—more than
+five times worse than the constant-step floor of $7.5 \times 10^{-4}$. The
+small initial steps demanded by the stiff coordinate starve the slow
+coordinate, and the condition number reappears inside $k_0$.
 
 ### Schedule Shapes under the Exact Recursion
 
-Practice uses other shapes than $1/k$, above all cosine decay and
-warmup–stable–decay; :numref:`sec_scheduler` compares them on trained networks.
-No theorem ranks them there. On the quadratic model, however, the expected loss
-of any schedule can be computed exactly, with no runs and no random numbers.
-The derivation of the floor holds step by step when the step size changes, so
+Modern training rarely uses $1/k$ decay; instead, practitioners favor cosine
+decay and warmup--stable--decay, which :numref:`sec_scheduler` compares on
+neural networks. Although no general theorem ranks those schedules on deep
+networks, our quadratic model lets us compute the expected loss of *any*
+schedule exactly, with no sampling and no random noise. Because our earlier
+derivation of the second-moment recursion holds step by step even when $\eta_k$
+varies, we simply have
 
 $$
 e_{k+1} = (1 - \eta_k \lambda)^2 e_k + \eta_k^2 \sigma^2,
@@ -519,13 +541,13 @@ e_{k+1} = (1 - \eta_k \lambda)^2 e_k + \eta_k^2 \sigma^2,
 \mathbb{E} f(x_k) = \tfrac12 \lambda e_k.
 $$
 
-Iterating this recursion computes the expected loss of a whole run in $K$
-multiplications. We compare four shapes over a budget of $K$ steps, which
-:numref:`fig_mdl-opt-schedule-zoo` draws. They are a constant step $\eta_0$;
-the $1/k$ decay $c/(k + k_0)$ with $c = \eta_0 k_0$, so that it starts at
-$\eta_0$; **cosine decay** :cite:`Loshchilov.Hutter.2016`; and
-**warmup–stable–decay** (WSD) :cite:`Hu.Tu.Han.ea.2024`, which holds $\eta_0$
-for the first $80\%$ of the budget and then decays linearly to zero:
+Iterating this update computes the exact expected loss curve across a budget of
+$K$ steps in $K$ multiplications. We compare four shapes over the same budget
+$K$, illustrated in :numref:`fig_mdl-opt-schedule-zoo`: a constant step
+$\eta_0$; the $1/k$ schedule $c/(k + k_0)$ with $c = \eta_0 k_0$ so that it
+also starts at $\eta_0$; **cosine decay** :cite:`Loshchilov.Hutter.2016`; and
+**warmup--stable--decay** (WSD) :cite:`Hu.Tu.Han.ea.2024`, which holds $\eta_0$
+constant for the first $80\%$ of the budget and then decays linearly to zero:
 
 $$
 \eta_k^{\textrm{cos}} = \tfrac12 \eta_0 \Big(1 + \cos\frac{\pi k}{K}\Big),
@@ -537,23 +559,24 @@ $$
 \end{cases}
 $$
 
-Both start at $\eta_0$ and end at zero; cosine decays throughout the run, WSD
-only at its end. The warmup of its name, a short initial ramp that
-:numref:`subsec_mdl-schedules-warmup` discusses, is left out of the
-computation, because the quadratic model is stable at $\eta_0$ from the first
-step. WSD is popular for an operational reason: any checkpoint of
-its constant phase can be decayed to any budget, so the budget need not be
-fixed at launch. The quadratic model ranks the final losses of the shapes, not
-such operational merits.
+Both cosine and WSD start at $\eta_0$ and end at zero, but cosine decays
+continuously throughout the run while WSD delays all decay until the final
+fifth. We omit the brief initial warmup ramp (discussed in
+:numref:`subsec_mdl-schedules-warmup`) because the quadratic model is already
+stable at $\eta_0$ from step zero. WSD is popular in large-scale pretraining
+for an operational reason: any checkpoint from its constant plateau can be
+decayed to any chosen horizon, so the total budget need not be committed in
+advance. Our quadratic model evaluates final expected loss, not that
+flexibility.
 
-![Schedule shapes over one budget $K$: constant, the $1/k$ decay (labelled $c/k$), cosine, and warmup–stable–decay (WSD), each preceded by a short linear warmup, which the computation below omits. The figure shows the step sequences only; the expected loss each produces on the quadratic model is computed below.](../img/mdl-opt-schedule-zoo.svg)
+![Schedule shapes over one budget $K$: constant, the $1/k$ decay (labelled $c/k$), cosine, and warmup--stable--decay (WSD), each preceded by a short linear warmup omitted in the computation below. The figure plots the step-size sequences; the expected loss each produces on the quadratic model is computed below.](../img/mdl-opt-schedule-zoo.svg)
 :label:`fig_mdl-opt-schedule-zoo`
 
-Which shape ends lowest? The reader may want to guess before reading on. The
-cell iterates the exact recursion with $\lambda = \sigma = 1$, $K = 2000$,
-$\eta_0 = 0.3$, $x_0 = 3$ and $k_0 = 50$ for the $1/k$ decay, prints the
-expected loss at $80\%$ of the budget and at the end, and plots
-$\mathbb{E} f(x_k)$.
+Which of these four schedules reaches the lowest final loss? It is worth
+guessing before running the numbers. The cell below iterates the exact
+recursion with $\lambda = \sigma = 1$, $K = 2000$, $\eta_0 = 0.3$, $x_0 = 3$,
+and $k_0 = 50$ for the $1/k$ schedule, printing the expected loss at $80\%$ of
+the budget and at the end before plotting $\mathbb{E} f(x_k)$.
 
 ```{.python .input #adaptive-stochastic-methods-schedules}
 lam, sigma, K, eta0, x0 = 1.0, 1.0, 2000, 0.3, 3.0
@@ -581,140 +604,150 @@ d2l.plot(np.arange(1, K + 1), list(traces.values()), 'step k', 'E f(x_k)',
          yscale='log', legend=list(traces))
 ```
 
-The output is the same on every run. The constant step comes within a tenth
-of its loss floor $0.0882$ by step $9$ and stays there. WSD *is* the constant
-run until its decay begins, so at $80\%$ of the budget it sits on the same
-floor. Its last $400$ steps lower the loss $14.4$ times, to
-$6.1 \times 10^{-3}$, so all of its improvement comes from the decay. Cosine
-and the $1/k$ decay end close together, at $1.7 \times 10^{-3}$ and
-$1.9 \times 10^{-3}$, and WSD ends three to four times higher.
+Because the recursion is deterministic, the numbers are identical on every run.
+The constant step settles within a tenth of its loss floor $0.0882$ by step $9$
+and stays there. WSD *is* the constant run until its decay phase begins, so at
+$80\%$ of the budget it sits on the exact same floor; its final $400$ steps
+then drop the loss by a factor of $14.4$, down to $6.1 \times 10^{-3}$,
+accounting for all of its gain. Cosine decay and $1/k$ decay finish close
+together at $1.7 \times 10^{-3}$ and $1.9 \times 10^{-3}$, roughly three to
+four times lower than WSD.
 
-The value for the $1/k$ decay is the one the proposition predicts: here
-$c = 0.3 \cdot 50 = 15$, so $A = 225/29 = 7.8$ and
-$\mathbb{E} f(x_K) \approx \tfrac12 A/(K + k_0) = 1.9 \times 10^{-3}$. The
-ordering is exact for these parameters, and it need not carry over to a
-network. On the model itself the plateau does not help the final loss:
-lengthening WSD's decay phase lowers it steadily, down to
-$2.7 \times 10^{-3}$ for a linear decay over the whole run, as exercise
-:exref:`ex_mdl-stochastic-gradient-methods-wsd-fraction` computes.
+The $1/k$ endpoint matches our proposition closely: here
+$c = 0.3 \cdot 50 = 15$, giving $A = 225/29 \approx 7.8$ and
+$\mathbb{E} f(x_K) \approx \tfrac12 A/(K + k_0) = 1.9 \times 10^{-3}$. Keep in
+mind that this ranking is exact for these quadratic parameters and need not
+transfer directly to neural networks. On the quadratic itself, holding a
+constant plateau does not improve the final loss: lengthening WSD's decay phase
+reduces the final loss monotonically, reaching $2.7 \times 10^{-3}$ for a
+linear decay across the entire run (exercise
+:exref:`ex_mdl-stochastic-gradient-methods-wsd-fraction`).
 
 ## Rates for a Fixed Budget
 :label:`subsec_mdl-fixed-budget-rates`
 
-A decaying schedule is designed for a run of unlimited length. In practice the
-budget $K$ is fixed in advance, and the question becomes which constant step
-to use and what loss it guarantees. Without strong convexity there is no
-contraction factor and no exact floor, so we bound instead of compute. Both
-results of this part have the same two-term shape: a transient that falls like
-$1/(\eta K)$ plus a floor that grows like $\eta$. The two terms balance at
-$\eta \propto 1/\sqrt{K}$, as :numref:`fig_mdl-opt-budget-tradeoff` shows.
+A decaying schedule is built for an indefinite run. In practice, however, we
+usually know our compute budget $K$ ahead of time, which reframes the question:
+what constant step size should we choose for $K$ steps, and what accuracy does
+it guarantee? Without strong convexity, there is no geometric contraction
+factor and no exact noise floor, so we prove upper bounds rather than exact
+trajectories. Both bounds below share the same two-term structure: a transient
+term that decreases as $1/(\eta K)$ plus a noise term that grows as $\eta$.
+Balancing the two selects $\eta \propto 1/\sqrt{K}$, as shown in
+:numref:`fig_mdl-opt-budget-tradeoff`.
 
-![The two-term bound $D^2/(2\eta K)+\eta G^2/2$ of :eqref:`eq_mdl-opt-convex-averaged` against the step $\eta$ for $D=G=1$ and two budgets. The transient falls with $\eta$, the floor rises with it, and the minimum $DG/\sqrt{K}$ sits at $\eta^\star=D/(G\sqrt{K})$: a $100\times$ larger budget moves the best step down $10\times$ and the bound down $10\times$.](../img/mdl-opt-budget-tradeoff.svg)
+![The two-term bound $D^2/(2\eta K)+\eta G^2/2$ of :eqref:`eq_mdl-opt-convex-averaged` plotted against the step size $\eta$ for $D=G=1$ and two budgets. The transient falls with $\eta$ while the floor rises with it; their sum reaches its minimum $DG/\sqrt{K}$ at $\eta^\star=D/(G\sqrt{K})$, so a $100\times$ larger budget lowers both the optimal step and the bound by $10\times$.](../img/mdl-opt-budget-tradeoff.svg)
 :label:`fig_mdl-opt-budget-tradeoff`
 
 ### Averaged Iterates on Convex Losses
 
-The first result needs only convexity, through the subgradient inequality
-of :numref:`sec_mdl-convexity`:
-$f(\mathbf{y}) \ge f(\mathbf{x}) + \mathbf{s}^\top(\mathbf{y} - \mathbf{x})$ for
-all $\mathbf{y}$ and every subgradient
-$\mathbf{s} \in \partial f(\mathbf{x})$, which is the gradient wherever $f$ is
-differentiable.
+Our first bound requires nothing beyond convexity, applied through the
+subgradient inequality of :numref:`sec_mdl-convexity`:
+$f(\mathbf{y}) \ge f(\mathbf{x}) + \mathbf{s}^\top(\mathbf{y} - \mathbf{x})$
+for all $\mathbf{y}$ and every subgradient
+$\mathbf{s} \in \partial f(\mathbf{x})$ (which reduces to $\nabla f(\mathbf{x})$
+wherever $f$ is differentiable).
 
 **Proposition (SGD on a convex loss, averaged iterate).** *Let $f$ be convex
-with a minimizer $\mathbf{x}^\star$ and $f^\star = f(\mathbf{x}^\star)$. Run
-$\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\, \mathbf{g}_k$ from a point with
-$\|\mathbf{x}_0 - \mathbf{x}^\star\| \le D$, where the stochastic gradient
-satisfies $\mathbb{E}[\mathbf{g}_k \mid \mathbf{x}_k] \in \partial f(\mathbf{x}_k)$
-and $\mathbb{E}[\|\mathbf{g}_k\|^2 \mid \mathbf{x}_k] \le G^2$. Then the average
-$\bar{\mathbf{x}}_K = \frac1K \sum_{k=0}^{K-1} \mathbf{x}_k$ satisfies*
+with a minimizer $\mathbf{x}^\star$ and optimal value
+$f^\star = f(\mathbf{x}^\star)$. Run
+$\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\, \mathbf{g}_k$ from an initial point
+satisfying $\|\mathbf{x}_0 - \mathbf{x}^\star\| \le D$, where each stochastic
+gradient satisfies
+$\mathbb{E}[\mathbf{g}_k \mid \mathbf{x}_k] \in \partial f(\mathbf{x}_k)$ and
+$\mathbb{E}[\|\mathbf{g}_k\|^2 \mid \mathbf{x}_k] \le G^2$. Then the averaged
+iterate $\bar{\mathbf{x}}_K = \frac1K \sum_{k=0}^{K-1} \mathbf{x}_k$ satisfies*
 
 $$
 \mathbb{E}\big[f(\bar{\mathbf{x}}_K)\big] - f^\star \;\le\; \frac{D^2}{2\eta K} + \frac{\eta\, G^2}{2},
 $$
 :eqlabel:`eq_mdl-opt-convex-averaged`
 
-*and the step $\eta = D/(G\sqrt{K})$ gives
+*and choosing $\eta = D/(G\sqrt{K})$ gives
 $\mathbb{E}[f(\bar{\mathbf{x}}_K)] - f^\star \le DG/\sqrt{K}$.*
 
-**Proof.** We follow the squared distance to the minimizer. Expanding the
-step,
+**Proof.** We track the squared distance to the minimizer. Expanding one update
+gives
 
 $$
 \|\mathbf{x}_{k+1} - \mathbf{x}^\star\|^2
 = \|\mathbf{x}_k - \mathbf{x}^\star\|^2 - 2\eta\, \mathbf{g}_k^\top(\mathbf{x}_k - \mathbf{x}^\star) + \eta^2 \|\mathbf{g}_k\|^2.
 $$
 
-Take the expectation given $\mathbf{x}_k$. The middle term becomes
-$-2\eta\, \mathbf{s}_k^\top(\mathbf{x}_k - \mathbf{x}^\star)$ with the
-subgradient $\mathbf{s}_k = \mathbb{E}[\mathbf{g}_k \mid \mathbf{x}_k]$, and
-the subgradient inequality at $\mathbf{y} = \mathbf{x}^\star$ gives
+Now take the conditional expectation given $\mathbf{x}_k$. Writing
+$\mathbf{s}_k = \mathbb{E}[\mathbf{g}_k \mid \mathbf{x}_k]$, the cross term
+becomes $-2\eta\, \mathbf{s}_k^\top(\mathbf{x}_k - \mathbf{x}^\star)$. By the
+subgradient inequality at $\mathbf{y} = \mathbf{x}^\star$,
 $\mathbf{s}_k^\top(\mathbf{x}_k - \mathbf{x}^\star) \ge f(\mathbf{x}_k) - f^\star$.
-Everything rests on this inequality: the inner product of the gradient with the
-displacement from the minimizer is at least the loss gap, so a large gap forces
-the distance down. The last term is at most $\eta^2 G^2$. Taking total
-expectations and writing
-$r_k = \mathbb{E}\|\mathbf{x}_k - \mathbf{x}^\star\|^2$,
+The entire argument hinges on this step: whenever the loss gap is large, the
+gradient aligns with the displacement from $\mathbf{x}^\star$ and pulls the
+iterate closer. Bounding the final term by $\eta^2 G^2$, taking total
+expectations, and setting
+$r_k = \mathbb{E}\|\mathbf{x}_k - \mathbf{x}^\star\|^2$, we obtain
 
 $$
 2\eta\, \mathbb{E}\big[f(\mathbf{x}_k) - f^\star\big] \;\le\; r_k - r_{k+1} + \eta^2 G^2 .
 $$
 
-Summing over $k < K$ telescopes the distances, and $r_0 - r_K \le D^2$, so
+Summing over $k = 0, \ldots, K-1$ telescopes the distances, and since
+$r_0 - r_K \le r_0 \le D^2$, we have
 $2\eta \sum_{k<K} \mathbb{E}[f(\mathbf{x}_k) - f^\star] \le D^2 + K\eta^2 G^2$.
-Divide by $2\eta K$ and apply Jensen's inequality to the convex $f$,
-$f(\bar{\mathbf{x}}_K) \le \frac1K \sum_k f(\mathbf{x}_k)$. The two terms of the
-bound are equal at $\eta = D/(G\sqrt{K})$, where each is $DG/(2\sqrt{K})$.
-$\blacksquare$
+Dividing by $2\eta K$ and applying Jensen's inequality to the convex function
+$f$, $f(\bar{\mathbf{x}}_K) \le \frac1K \sum_{k<K} f(\mathbf{x}_k)$, yields
+:eqref:`eq_mdl-opt-convex-averaged`. The two terms match at
+$\eta = D/(G\sqrt{K})$, where each equals $DG/(2\sqrt{K})$. $\blacksquare$
 
-The transient $D^2/(2\eta K)$ is the distance that $K$ steps of size $\eta$
-must cover, and the floor $\eta G^2/2$ is the noise that each step injects. The
-proof needs no smoothness, so the loss may have corners, as the hinge loss
-does. A hundred times the budget lowers both the best step and the bound
-tenfold. This is also the best possible order: over the class of the
-proposition, no method that sees only unbiased stochastic gradients with
-$\mathbb{E}\|\mathbf{g}\|^2 \le G^2$ can guarantee less than a fixed positive
-multiple of $DG/\sqrt{K}$ in the worst case :cite:`Nemirovski.Yudin.1983`.
+The meaning of the two terms is transparent: $D^2/(2\eta K)$ is the transient
+cost of traversing distance $D$ in $K$ steps of size $\eta$, while
+$\eta G^2/2$ is the noise floor injected per step. Notably, the proof requires
+no smoothness at all, so the bound holds even for nonsmooth losses with
+corners such as the hinge loss. Multiplying the budget by $100$ reduces both
+the optimal step size and the guaranteed error by a factor of $10$. This
+$O(1/\sqrt{K})$ rate is unimprovable in the worst case: over the class of
+problems in the proposition, no algorithm that sees only unbiased stochastic
+gradients with $\mathbb{E}\|\mathbf{g}\|^2 \le G^2$ can guarantee better than
+a constant multiple of $DG/\sqrt{K}$ :cite:`Nemirovski.Yudin.1983`.
 
-Strong convexity changes the order. On the scalar quadratic, the best constant
-step for a budget $K$ reaches $e_K = \Theta(\log K/K)$ (exercise
-:exref:`ex_mdl-stochastic-gradient-methods-best-constant-step`), because the
-transient there decays geometrically, like $\rho^{2K}$, rather than like
-$1/(\eta K)$.
+Adding strong convexity changes the scaling dramatically. On our scalar
+quadratic, the optimal constant step for a budget $K$ achieves
+$e_K = \Theta(\log K / K)$ (exercise
+:exref:`ex_mdl-stochastic-gradient-methods-best-constant-step`), because strong
+convexity shrinks the transient geometrically like $\rho^{2K}$ rather than
+algebraically like $1/(\eta K)$.
 
-The proposition bounds the *average* of the iterates. The last iterate obeys a
-weaker bound, and for the last iterate the worst-case optimal schedule over a
-known budget decays linearly to zero :cite:`Defazio.Cutkosky.Mehta.ea.2023`.
-The hypothesis $\mathbb{E}\|\mathbf{g}_k\|^2 \le G^2$ also limits the result:
-it fails for a quadratic on all of $\mathbb{R}^d$, whose gradient is
-unbounded. It holds for Lipschitz losses with bounded features, such as the
-logistic loss without a quadratic penalty, or for iterates that stay in a
-bounded set. As a worst-case bound it can be loose on a particular problem:
-on the logistic problem of this section, restricted to a ball, it
-overestimates the gap by about an order of magnitude, as exercise
-:exref:`ex_mdl-stochastic-gradient-methods-convex-bound-logistic` measures.
+Two caveats are worth noting. First, the proposition bounds the *averaged*
+iterate $\bar{\mathbf{x}}_K$; the final iterate obeys a weaker bound, and for
+the final iterate over a known budget the worst-case optimal schedule decays
+linearly to zero :cite:`Defazio.Cutkosky.Mehta.ea.2023`. Second, the assumption
+$\mathbb{E}\|\mathbf{g}_k\|^2 \le G^2$ excludes unbounded-gradient losses such
+as a quadratic on all of $\mathbb{R}^d$, though it holds for Lipschitz losses
+with bounded features (such as unregularized logistic regression) or whenever
+the iterates remain inside a bounded set. Because it is a worst-case bound, it
+can also be conservative on benign problems: on our logistic-regression task
+restricted to a ball, it overestimates the true gap by roughly an order of
+magnitude (exercise
+:exref:`ex_mdl-stochastic-gradient-methods-convex-bound-logistic`).
 
 ### Random Iterates on Nonconvex Losses
 :label:`subsec_mdl-nonconvex-sgd`
 
-Networks have nonconvex losses *and* noisy gradients, and the results so far
-handle one of these at a time. For a function $f$ whose gradient is
-$L$-Lipschitz (an $L$-smooth function), the graph lies below a parabola of
-curvature $L$ tangent at any point,
+Neural networks confront us with nonconvex losses *and* noisy gradients at the
+same time, whereas our results so far have tackled one difficulty at a time.
+For a function $f$ whose gradient is $L$-Lipschitz (an $L$-smooth function),
+the loss surface lies everywhere below a tangent parabola of curvature $L$:
 
 $$
 f(\mathbf{y}) \;\le\; f(\mathbf{x}) + \nabla f(\mathbf{x})^\top(\mathbf{y} - \mathbf{x}) + \frac{L}{2}\|\mathbf{y} - \mathbf{x}\|^2
 \quad \textrm{for all } \mathbf{x}, \mathbf{y}.
 $$
 
-This quadratic ceiling bounds the loss after any step by the loss before it,
-a linear decrease, and a penalty for the length of the step. With exact
-gradients and $\eta = 1/L$, the ceiling gives
-$\min_{k<K}\|\nabla f(\mathbf{x}_k)\|^2 \le 2L\Delta/K$ without any convexity,
-where $f^\star$ is a lower bound of $f$ and $\Delta = f(\mathbf{x}_0) - f^\star$
+With exact gradients and $\eta = 1/L$, this quadratic upper bound yields
+$\min_{k<K}\|\nabla f(\mathbf{x}_k)\|^2 \le 2L\Delta/K$ without any convexity
+assumption, where $f^\star$ is a lower bound on $f$ and
+$\Delta = f(\mathbf{x}_0) - f^\star$
 (:numref:`sec_mdl-gradient-based-optimization`). With noisy gradients on a
-quadratic, a fixed step parks on a floor. The theorem of
-:citet:`Ghadimi.Lan.2013` combines the two. Model one SGD step as
+quadratic, a constant step stalls on a noise floor. The theorem of
+:citet:`Ghadimi.Lan.2013` combines both ingredients. Model each SGD step as
 $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\, \mathbf{g}_k$, where the stochastic
 gradient satisfies
 
@@ -725,19 +758,19 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-sgd-oracle`
 
-On average the stochastic gradient points the right way, and its error has
-mean square at most $\sigma^2$ wherever the iterate is. A minibatch gradient
-meets both conditions with $\sigma^2 = \sup_{\mathbf{x}} \operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x})/b$
-by :eqref:`eq_mdl-opt-variance`, provided this supremum is finite. It is
-finite for the bounded $\tanh$ model below; it is infinite for least squares
-on all of $\mathbb{R}^d$, whose gradient noise grows with the distance from
-the minimizer.
+In words, the stochastic gradient is unbiased and its noise power is uniformly
+bounded by $\sigma^2$. By :eqref:`eq_mdl-opt-variance`, a minibatch gradient
+satisfies both assumptions with
+$\sigma^2 = \sup_{\mathbf{x}} \operatorname{tr}\boldsymbol{\Sigma}(\mathbf{x})/b$,
+provided that supremum is finite. It is finite for the bounded $\tanh$ model
+below, though it is infinite for least squares on all of $\mathbb{R}^d$, where
+the gradient noise grows with the distance from the minimizer.
 
 **Proposition (SGD finds approximate stationary points).** *Let $f$ be
-$L$-smooth and bounded below by $f^\star$, write
+$L$-smooth and bounded below by $f^\star$, set
 $\Delta = f(\mathbf{x}_0) - f^\star$, and run SGD with stochastic gradients
-satisfying :eqref:`eq_mdl-opt-sgd-oracle` and a constant step $\eta \le 1/L$.
-Then*
+satisfying :eqref:`eq_mdl-opt-sgd-oracle` and a constant step size
+$\eta \le 1/L$. Then*
 
 $$
 \frac{1}{K} \sum_{k=0}^{K-1} \mathbb{E}\left[\|\nabla f(\mathbf{x}_k)\|^2\right]
@@ -745,8 +778,9 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-ghadimi-lan`
 
-*and the step $\eta = \min\bigl(1/L,\ \sqrt{2\Delta/(L\sigma^2 K)}\bigr)$ gives,
-for an index $R$ drawn uniformly from $\{0, \ldots, K-1\}$ independently of the
+*and choosing
+$\eta = \min\bigl(1/L,\ \sqrt{2\Delta/(L\sigma^2 K)}\bigr)$ ensures that for
+an index $R$ drawn uniformly from $\{0, \ldots, K-1\}$ independently of the
 run,*
 
 $$
@@ -755,78 +789,86 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-ghadimi-lan-balanced`
 
-**Proof.** Apply the quadratic ceiling to the step actually taken,
+**Proof.** Apply the $L$-smoothness upper bound to the actual step
 $\mathbf{y} - \mathbf{x} = -\eta\, \mathbf{g}_k$:
 
 $$
 f(\mathbf{x}_{k+1}) \;\le\; f(\mathbf{x}_k) - \eta\, \nabla f(\mathbf{x}_k)^\top \mathbf{g}_k + \tfrac{L\eta^2}{2}\, \|\mathbf{g}_k\|^2.
 $$
 
-Take the expectation given $\mathbf{x}_k$. Conditioning on the iterate does two
-things at once: it turns the middle term into
-$-\eta\,\|\nabla f(\mathbf{x}_k)\|^2$ by unbiasedness, and it splits the last
-term into signal plus noise,
+Taking the conditional expectation given $\mathbf{x}_k$ accomplishes two things
+at once: unbiasedness turns the middle term into
+$-\eta\,\|\nabla f(\mathbf{x}_k)\|^2$, and the variance decomposition splits
+the quadratic term into signal plus noise,
 $\mathbb{E}[\|\mathbf{g}_k\|^2 \mid \mathbf{x}_k] = \|\nabla f(\mathbf{x}_k)\|^2 + \mathbb{E}[\|\mathbf{g}_k - \nabla f(\mathbf{x}_k)\|^2 \mid \mathbf{x}_k] \le \|\nabla f(\mathbf{x}_k)\|^2 + \sigma^2$.
-Collecting,
+Collecting terms gives
 
 $$
 \mathbb{E}\left[f(\mathbf{x}_{k+1}) \mid \mathbf{x}_k\right]
 \;\le\; f(\mathbf{x}_k) - \eta\left(1 - \tfrac{L\eta}{2}\right) \|\nabla f(\mathbf{x}_k)\|^2 + \tfrac{L\eta^2 \sigma^2}{2}.
 $$
 
-This is the descent lemma of gradient descent with an extra variance term
-$\tfrac12 L\eta^2\sigma^2$ per step. For $\eta \le 1/L$ the bracket is at least
-$\tfrac12$. Take total expectations and sum over $k = 0, \ldots, K-1$: the
-losses telescope to $\mathbb{E}[f(\mathbf{x}_K)] - f(\mathbf{x}_0) \ge -\Delta$,
-and dividing by $\eta K/2$ gives :eqref:`eq_mdl-opt-ghadimi-lan`. The average
-over $k$ is the expectation at the uniformly random index $R$. For the
-balanced step there are two cases. If $\sqrt{2\Delta/(L\sigma^2K)} \le 1/L$,
-the two terms of :eqref:`eq_mdl-opt-ghadimi-lan` are equal, each
-$\sigma\sqrt{2L\Delta/K}$. Otherwise $\eta = 1/L$ and $\sigma^2 < 2L\Delta/K$,
-so the bound is $2L\Delta/K + \sigma^2 \le 2L\Delta/K + \sigma\sqrt{2L\Delta/K}$.
-Both are at most the stated bound. $\blacksquare$
+This is the standard descent lemma with one extra variance penalty
+$\tfrac12 L\eta^2\sigma^2$ per step. Whenever $\eta \le 1/L$, we have
+$1 - \tfrac{L\eta}{2} \ge \tfrac12$. Taking total expectations and summing over
+$k = 0, \ldots, K-1$, the losses telescope to
+$\mathbb{E}[f(\mathbf{x}_K)] - f(\mathbf{x}_0) \ge -\Delta$; dividing both
+sides by $\eta K/2$ yields :eqref:`eq_mdl-opt-ghadimi-lan`. The left-hand side
+is precisely $\mathbb{E}[\|\nabla f(\mathbf{x}_R)\|^2]$ for a uniformly random
+index $R$. Finally, for the balanced step size there are two cases. If
+$\sqrt{2\Delta/(L\sigma^2 K)} \le 1/L$, the two terms in
+:eqref:`eq_mdl-opt-ghadimi-lan` are equal, each giving
+$\sigma\sqrt{2L\Delta/K}$. Otherwise $\eta = 1/L$ and
+$\sigma^2 < 2L\Delta/K$, so the bound is
+$2L\Delta/K + \sigma^2 \le 2L\Delta/K + \sigma\sqrt{2L\Delta/K}$. Both cases
+are bounded by :eqref:`eq_mdl-opt-ghadimi-lan-balanced`. $\blacksquare$
 
-With $\sigma = 0$ the second term vanishes, and the deterministic rate
-$2L\Delta/K$ returns. With noise and $K > 2L\Delta/\sigma^2$, the case in which
-$\eta < 1/L$, the second term is the larger one, and it decays like $K^{-1/2}$.
-With $L = \Delta = \sigma = 1$ and $K = 10^4$, the step is $\eta = 0.014$ and
-the bound is $2 \times 10^{-4} + 0.028$: the noise term is $140$ times the
-deterministic rate $2L\Delta/K$. The bound controls the *squared* gradient
-norm: a hundred times the budget gives ten times less
-$\mathbb{E}\|\nabla f\|^2$, but a ten times smaller gradient norm needs $10^4$
-times the budget. With a biased estimator the proof leaves an extra inner
-product, and the bound acquires a term that does not shrink with $K$ (exercise
+When $\sigma = 0$, the second term disappears and we recover the deterministic
+rate $2L\Delta/K$. When noise is present and the budget is large enough that
+$K > 2L\Delta/\sigma^2$ (so $\eta < 1/L$), the noise term dominates and decays
+only like $K^{-1/2}$. With $L = \Delta = \sigma = 1$ and $K = 10^4$, for
+instance, the balanced step is $\eta \approx 0.014$ and the bound reads
+$2 \times 10^{-4} + 0.028$—the noise term is $140$ times larger than the
+deterministic term. Notice also that this bound controls the *squared* gradient
+norm: multiplying the budget by $100$ reduces $\mathbb{E}\|\nabla f\|^2$ by a
+factor of $10$, meaning that shrinking the gradient norm itself by a factor of
+$10$ requires $10^4$ times as many steps. If the gradient estimator is biased,
+an extra inner product survives the proof and adds a constant floor that never
+vanishes with $K$ (exercise
 :exref:`ex_mdl-stochastic-gradient-methods-biased-estimators`).
 
-Why does the guarantee speak of a *random* iterate? With exact gradients the
-best iterate can be identified, since $\|\nabla f(\mathbf{x}_k)\|$ is observed.
-With stochastic gradients it is not, so an algorithm cannot pick the iterate
-with the smallest gradient; drawing $R$ at random is a choice it can make, and
-the average over the run is what that choice controls.
+Why does the theorem return a *random* iterate $\mathbf{x}_R$ rather than the
+best one? With exact gradients, we observe $\|\nabla f(\mathbf{x}_k)\|$ at
+every step and can simply pick the iterate with the smallest gradient. With
+stochastic gradients, the true gradient norm is hidden from the algorithm;
+picking an index $R$ uniformly at random is an implementable rule, and the
+time-average in :eqref:`eq_mdl-opt-ghadimi-lan` is exactly its expected squared
+gradient norm.
 
-Compared with the convex case, the bound now controls a squared gradient at a
-random iterate instead of a function value at the average.
-Without convexity a small gradient is all that can be certified, and a
-stationary point need not be a minimizer. This rate is optimal as well: no
-method with access only to such stochastic gradients can guarantee a better
-order in the worst case over this class
-:cite:`Arjevani.Carmon.Duchi.ea.2023`.
+Compared with the convex case, two things changed: we bound the squared
+gradient norm instead of the loss gap, and we evaluate at a random iterate
+instead of the average. Without convexity, a small gradient is all a first-order
+method can certify, since a stationary point need not be a global minimizer.
+Like the convex bound, this $K^{-1/2}$ rate is worst-case optimal for any
+method given access only to stochastic gradients satisfying
+:eqref:`eq_mdl-opt-sgd-oracle` :cite:`Arjevani.Carmon.Duchi.ea.2023`.
 
 ### The Rate on a Single $\tanh$ Neuron
 
-The proposition is an upper bound, so an experiment cannot confirm its rate,
-only fail to violate it. We measure the random-iterate quantity, and beside
-it the best iterate, on a small nonconvex problem, a single $\tanh$ neuron
-fit by least squares to noisy labels: $n = 64$ examples in five dimensions
-and
+Because the proposition is an upper bound, an experiment cannot prove that the
+rate is tight; it can only check how real runs behave relative to the $K^{-1/2}$
+ceiling. Below, we measure both the random-iterate quantity and the best
+iterate on a small nonconvex problem—fitting a single $\tanh$ neuron by least
+squares to $n = 64$ noisy examples in five dimensions:
 
 $$
 f(\mathbf{x}) = \frac1n \sum_{i=1}^n \big(\tanh(\mathbf{a}_i^\top \mathbf{x}) - y_i\big)^2 .
 $$
 
-Each term is bounded and smooth, and none is convex: $\tanh$ flattens for
-large arguments, so the loss has plateaus. The cell defines the data and the
-exact gradient for a batch of iterates, one per row of $\mathbf{X}$.
+Each component is smooth and bounded, but none is convex because $\tanh$
+saturates into flat plateaus for large arguments. The cell below creates the
+data and defines a vectorized helper computing the exact full gradient for a
+batch of parameter vectors, one per row of `X`.
 
 ```{.python .input #mdl-stochastic-gradient-methods-the-measured-slope-1}
 n_nc, d_nc = 64, 5                                # a small nonconvex problem
@@ -839,12 +881,12 @@ def full_grad(X, A, y):
     return 2 * ((t - y) * (1 - t**2)) @ A / len(y)
 ```
 
-SGD with single-example gradients runs for the budgets
-$K = 125, 500, 2000, 8000$ at $\eta = 0.5/\sqrt{K}$, twenty runs at a time as
-the rows of `X`. The cell records the average of
-$\|\nabla f(\mathbf{x}_k)\|^2$ along each run, which is the random-iterate
-quantity, and its minimum, the best iterate, and prints their log–log slopes
-against $K$.
+We run single-example SGD for budgets $K \in \{125, 500, 2000, 8000\}$ using
+the theorem's scaling $\eta = 0.5/\sqrt{K}$, executing $20$ independent runs in
+parallel as the rows of `X`. For each budget, the cell records both the average
+of $\|\nabla f(\mathbf{x}_k)\|^2$ across the run (the random-iterate metric)
+and its minimum (the best iterate), prints their log--log slopes against $K$,
+and plots the random-iterate curve beside a reference slope of $-1/2$.
 
 ```{.python .input #adaptive-stochastic-methods-ghadimi-lan}
 runs, Ks, avg, best = 20, np.array([125, 500, 2000, 8000]), [], []
@@ -869,41 +911,46 @@ d2l.plot(Ks, [avg, avg[0] * (Ks / Ks[0])**-0.5], 'budget K', 'E |grad f(x_R)|^2'
          xscale='log', yscale='log', legend=['random iterate', 'slope -1/2'])
 ```
 
-The random-iterate quantity falls by a factor of about $12$ (between roughly
-$9$ and $16$ across runs) for a $64$ times larger budget, a log–log slope of
-about $-0.6$. The bound falls with slope $-1/2$; the measurement falls a
-little faster, as an upper bound permits. The best iterate of each run falls
-much faster, with a slope near $-1$ or steeper, but no algorithm that sees
-only noisy gradients can return it.
+Over a $64$-fold increase in budget, the random-iterate metric drops by a
+factor of about $12$ (typically between $9$ and $16$ across runs), corresponding
+to a log--log slope near $-0.6$. That is slightly steeper than the theorem's
+$-1/2$ upper bound, as expected. The best iterate falls much faster—with a
+slope around $-1$ or steeper—but as noted above, an algorithm that sees only
+noisy gradients has no way to identify it.
 
 ## Variance Reduction
 :label:`sec_mdl-variance-reduction`
 
 ### Control Variates
 
-A decaying step removes the floor by shrinking $\eta$, at the cost of slower
-progress. On a *finite* sum there is another way: remove the noise itself. At
-the minimizer the full gradient is zero, but each
-$\nabla f_i(\mathbf{x}^\star)$ is not, and these nonzero example gradients are
-the noise that a fixed step keeps injecting.
+Decaying the step size eliminates the noise floor by shrinking $\eta$, but only
+by slowing progress to an algebraic rate. When the objective is a *finite* sum
+over $n$ examples, there is a second option: eliminate the gradient noise
+itself. At the minimizer $\mathbf{x}^\star$, the full gradient vanishes, yet
+the individual example gradients $\nabla f_i(\mathbf{x}^\star)$ generally do
+not—and those nonzero component gradients are the noise that a constant step
+size keeps injecting.
 
-One case needs no remedy. When a model fits every example exactly, the
-example gradients vanish at the minimizer, and on a strongly convex loss a
-fixed step converges linearly with no floor (exercise
-:exref:`ex_mdl-stochastic-gradient-methods-interpolation`). Large networks
-can fit their training sets, which is one reason why constant-step SGD works
-better on them than the floor formula suggests.
+One important regime needs no remedy at all. If a model interpolates the
+training set—fitting every single example with zero loss—then every
+$\nabla f_i(\mathbf{x}^\star)$ vanishes at the minimizer, and constant-step
+SGD on a strongly convex objective converges linearly with no noise floor
+(exercise :exref:`ex_mdl-stochastic-gradient-methods-interpolation`). Large
+neural networks often interpolate their training sets, which helps explain why
+constant-step SGD performs much better on them than the additive-noise floor
+predicts.
 
-Otherwise the noise must be cancelled. The idea is to subtract from the noisy
-$\nabla f_i(\mathbf{x})$ a quantity that moves with it and whose mean we know,
-and then add the mean back. A quantity of this kind is called a **control
-variate**. The baseline of policy gradients (:numref:`sec_baselines`) is the
-control variate that this book relies on most. On a finite sum another one is
-available: the gradient $\nabla f_i(\tilde{\mathbf{x}})$ of the same example at
-a stored snapshot $\tilde{\mathbf{x}}$, whose mean over $i$ is the full
-gradient $\nabla f(\tilde{\mathbf{x}})$, computed once per pass over the data.
-The **SVRG** estimator (stochastic variance-reduced gradient)
-:cite:`Johnson.Zhang.2013` is
+When the component gradients do not vanish at $\mathbf{x}^\star$, we must
+cancel their variance directly. A standard Monte Carlo trick does this: from
+the noisy estimator $\nabla f_i(\mathbf{x})$, subtract a correlated random
+variable whose exact mean we know, and add that mean back. Such a correction
+is called a **control variate**; we meet it again in the baseline of policy
+gradients (:numref:`sec_baselines`). On a finite sum, a natural control
+variate is the gradient $\nabla f_i(\tilde{\mathbf{x}})$ of the same example
+evaluated at a saved snapshot $\tilde{\mathbf{x}}$, whose average over all $i$
+is the full gradient $\nabla f(\tilde{\mathbf{x}})$, computed once per pass
+over the dataset. This yields the **SVRG** (stochastic variance-reduced
+gradient) estimator :cite:`Johnson.Zhang.2013`,
 
 $$
 \tilde{\mathbf{g}}_i(\mathbf{x})
@@ -911,9 +958,10 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-svrg`
 
-It corrects the full gradient at the snapshot by the change of one example's
-gradient between the snapshot and the current point. For a uniformly drawn
-index it is unbiased,
+In words, SVRG starts from the exact full gradient at the snapshot and adjusts
+it by how much a single example's gradient has changed between
+$\tilde{\mathbf{x}}$ and $\mathbf{x}$. For a uniformly drawn index $i$, the
+estimator remains unbiased,
 
 $$
 \mathbb{E}_i\big[\tilde{\mathbf{g}}_i(\mathbf{x})\big]
@@ -921,11 +969,11 @@ $$
 = \nabla f(\mathbf{x}),
 $$
 
-and its advantage is its variance.
+while its variance shrinks to zero as the iterate and snapshot converge.
 
-**Proposition (the variance is bounded by the distance to the snapshot).**
-*If each $f_i$ has an $L_i$-Lipschitz gradient and
-$L_{\max} = \max_i L_i$, then for a uniformly drawn index $i$*
+**Proposition (SVRG variance is bounded by the distance to the snapshot).**
+*If each component $f_i$ has an $L_i$-Lipschitz gradient and
+$L_{\max} = \max_i L_i$, then for a uniformly drawn index $i$,*
 
 $$
 \mathbb{E}_i\big\|\tilde{\mathbf{g}}_i(\mathbf{x}) - \nabla f(\mathbf{x})\big\|^2
@@ -934,45 +982,48 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-svrg-variance`
 
-**Proof.** The left side is the variance of the random vector
+**Proof.** The left-hand side is the variance of the random vector
 $\nabla f_i(\mathbf{x}) - \nabla f_i(\tilde{\mathbf{x}})$, whose mean is
-$\nabla f(\mathbf{x}) - \nabla f(\tilde{\mathbf{x}})$; a variance is at most
-the second moment. Each term of the second moment is at most
-$L_i^2\|\mathbf{x} - \tilde{\mathbf{x}}\|^2$ by the Lipschitz gradient.
-$\blacksquare$
+$\nabla f(\mathbf{x}) - \nabla f(\tilde{\mathbf{x}})$. Because the variance of
+any random vector is at most its second moment, the first inequality follows
+immediately. Applying the $L_i$-Lipschitz bound to each term of the second
+moment gives the second inequality. $\blacksquare$
 
-The noise power of the estimator is at most a multiple of the squared distance
-between the iterate and the snapshot, so it vanishes as both approach
-$\mathbf{x}^\star$, and a fixed step no longer has a floor. Intuitively, two
-gradients of the same example at nearby points share most of their noise. Their
-difference keeps the change, which is small, and discards the shared part,
-which is large.
+Because the noise power is bounded by a multiple of
+$\|\mathbf{x} - \tilde{\mathbf{x}}\|^2$, it vanishes automatically as both
+$\mathbf{x}$ and $\tilde{\mathbf{x}}$ approach $\mathbf{x}^\star$, removing
+the noise floor even for a constant step size. Intuitively, evaluating the same
+example at two nearby points produces gradients that share nearly identical
+noise; taking their difference cancels that shared noise while retaining the
+small genuine change in the gradient.
 
 ### SVRG and SAGA
 
-The snapshot must follow the iterate, or the distance in
-:eqref:`eq_mdl-opt-svrg-variance` stops shrinking, and a full gradient at every
-step would defeat the purpose. SVRG therefore works in epochs. At the start of
-each epoch it stores a snapshot $\tilde{\mathbf{x}}$ and computes the full
-gradient $\nabla f(\tilde{\mathbf{x}})$; it then takes $m$ inner steps
+To keep the bound :eqref:`eq_mdl-opt-svrg-variance` shrinking, the snapshot
+must periodically catch up to the iterate; yet recomputing a full gradient at
+every step would defeat the purpose of stochastic optimization. SVRG resolves
+this by running in epochs. At the beginning of each epoch, it saves the current
+iterate as the snapshot $\tilde{\mathbf{x}}$ and computes its full gradient
+$\nabla f(\tilde{\mathbf{x}})$. It then performs $m$ inner updates
 $\mathbf{x} \leftarrow \mathbf{x} - \eta\, \tilde{\mathbf{g}}_i(\mathbf{x})$
-with fresh random indices, and the last inner iterate becomes the next
-snapshot. An epoch costs $n + 2m$ example gradients. The guarantee of
-:citet:`Johnson.Zhang.2013` (Theorem 1) asks that every $f_i$ be convex with an
-$L_{\max}$-Lipschitz gradient, that $f$ be $\mu$-strongly convex, and that
-$\eta < 1/(4L_{\max})$ with an inner loop long enough for the theorem's
-contraction factor to be below one. The expected gap
-$\mathbb{E}[f(\tilde{\mathbf{x}})] - f^\star$ at the snapshot then falls
-geometrically with the number of epochs. The theorem takes a random inner
-iterate as the next snapshot. Our code takes the last one, which in practice
-behaves the same.
+with fresh random indices, and sets the final inner iterate as the next
+snapshot. One epoch therefore costs $n + 2m$ example-gradient evaluations.
+:citet:`Johnson.Zhang.2013` (Theorem 1) prove that if every $f_i$ is convex
+with an $L_{\max}$-Lipschitz gradient, $f$ is $\mu$-strongly convex,
+$\eta < 1/(4L_{\max})$, and $m$ is large enough that the per-epoch contraction
+factor falls below one, then the expected suboptimality
+$\mathbb{E}[f(\tilde{\mathbf{x}})] - f^\star$ decays geometrically with the
+number of epochs. (The theorem selects a random inner iterate as the next
+snapshot; our implementation uses the last iterate, which behaves similarly in
+practice.)
 
-We test SVRG on ridge regression, a finite sum with
+We test SVRG on ridge regression, a strongly convex finite sum with
 $f_i(\mathbf{x}) = \tfrac12(\mathbf{a}_i^\top\mathbf{x} - y_i)^2 + \tfrac{0.1}{2}\|\mathbf{x}\|^2$,
-$n = 300$ examples and $d = 12$ parameters. Its minimizer solves the normal
-equations, and each $f_i$ has an $L_i$-Lipschitz gradient with
-$L_i = \|\mathbf{a}_i\|^2 + 0.1$. The cell defines the data and the component
-and full gradients, and prints $L_{\max}$.
+$n = 300$ examples, and $d = 12$ parameters. Its exact minimizer solves the
+normal equations, and each component gradient is $L_i$-Lipschitz with
+$L_i = \|\mathbf{a}_i\|^2 + 0.1$. The cell below generates the data, defines
+the component and full gradients, and prints $L_{\max}$ along with the
+theoretical step-size ceiling $1/(4L_{\max})$.
 
 ```{.python .input #mdl-stochastic-gradient-methods-svrg-and-saga-1}
 n_r, d_r, reg_r = 300, 12, 0.1                    # ridge regression, a finite sum
@@ -997,16 +1048,16 @@ L_max = (A_r**2).sum(axis=1).max() + reg_r       # largest per-example smoothnes
 print(f'L_max = {L_max:.0f}, 1 / (4 L_max) = {1 / (4 * L_max):.4f}')
 ```
 
-$L_{\max}$ is about $30$ (typically between $25$ and $40$ across draws of the
-data), so the theorem asks for $\eta$ below $1/(4L_{\max})$, the second number
-printed, between about $0.006$ and $0.01$.
+Across random draws of the data, $L_{\max}$ is typically between $25$ and $40$,
+putting the theorem's step-size ceiling $1/(4L_{\max})$ between roughly $0.006$
+and $0.01$.
 
-We run SVRG with $m = n$ and SGD with single-example gradients at the same
-fixed $\eta = 0.02$, more than twice the theorem's limit, for $12$ epochs of
-$3n$ example gradients each. For SGD the first part of this section makes a
-prediction that the run can miss: its floor should be the sum of the loss
-floors $\eta\sigma_i^2/(2(2 - \eta\lambda_i))$ over the eigenvectors of the
-Hessian, with $\sigma_i^2$ the variance of the example gradients at
+Next, we compare SVRG ($m = n$) against single-example SGD at the same constant
+step size $\eta = 0.02$—more than twice the theorem's bound—for $12$ epochs
+costing $3n$ example-gradient evaluations each. We also test our earlier
+quadratic-floor formula on SGD: its steady-state loss gap should equal the sum
+of $\eta\sigma_i^2/(2(2 - \eta\lambda_i))$ over the eigenvectors of the
+Hessian, where $\sigma_i^2$ is the variance of the example gradients at
 $\mathbf{x}^\star$ along eigenvector $i$.
 
 ```{.python .input #mdl-adaptive-svrg}
@@ -1038,54 +1089,61 @@ d2l.plot(np.arange(1, epochs + 1), [gaps_sgd, gaps_svrg], 'epoch (3n gradients)'
          'f(x) - f*', yscale='log', legend=['SGD', 'SVRG'])
 ```
 
-SGD drops quickly and then fluctuates at a few times $10^{-2}$, where the floor
-formula of the first part puts it. The plateau usually lies between about
-$10\%$ below and $40\%$ above the prediction, more often above. The formula
-counts only the noise at $\mathbf{x}^\star$, and the example gradients spread
-more away from it. SVRG loses early and wins late. After its first epoch, which
-takes only $n$ steps with a control variate anchored at the starting point, its
-gap is still far above SGD's. From then on it falls by a factor of about eight
-per epoch (between roughly five and thirteen across runs), to between about
-$10^{-13}$ and $10^{-8}$ by epoch $12$. It does so at a step more than twice
-the theorem's limit, so on this problem the theorem's step condition is not
-necessary. Three hypotheses carry the result: a finite sum, repeated passes
-over it, and strong convexity for the linear rate. On streaming data there is
-no sum to store.
+SGD drops rapidly at first and then plateaus at a few times $10^{-2}$, right
+where our floor formula predicts. Across runs, the measured plateau falls
+between roughly $10\%$ below and $40\%$ above the prediction—slightly above
+more often than below, because the formula evaluates gradient variance only at
+$\mathbf{x}^\star$, whereas the example gradients spread slightly more away
+from the minimizer. SVRG starts behind and finishes far ahead. After its first
+epoch—which takes only $n$ inner steps anchored at the starting point—its gap
+still exceeds SGD's. From epoch $2$ onward, however, it shrinks by roughly a
+factor of eight per epoch (between five and thirteen across runs), reaching
+$10^{-13}$ to $10^{-8}$ by epoch $12$. Notably, it achieves this linear
+convergence at a step size more than twice the theorem's limit, showing that
+the theoretical step condition is sufficient rather than necessary. Keep in
+mind the three assumptions behind this win: a finite sum, multiple passes over
+it, and strong convexity for the linear rate. On streaming data, where each
+example is seen only once, there is no finite sum to snapshot.
 
-**SAGA** :cite:`Defazio.Bach.Lacoste-Julien.2014` replaces the snapshot by a
-table $\mathbf{t}_1, \ldots, \mathbf{t}_n$ that holds the most recent gradient
-computed for each example. Its estimator is
-$\nabla f_i(\mathbf{x}) - \mathbf{t}_i + \tfrac1n\sum_j \mathbf{t}_j$, after
-which $\mathbf{t}_i$ is overwritten by $\nabla f_i(\mathbf{x})$. SAGA needs
-one new example gradient per step and no full passes, but its table holds
-$n \times d$ numbers, or one scalar per example for a generalized linear
-model (exercise :exref:`ex_mdl-adaptive-stochastic-methods-svrg-inner-loop`).
+**SAGA** :cite:`Defazio.Bach.Lacoste-Julien.2014` avoids periodic full passes
+altogether by replacing the snapshot with a table
+$\mathbf{t}_1, \ldots, \mathbf{t}_n$ storing the most recent gradient evaluated
+for each example. At each step it forms the estimator
+$\nabla f_i(\mathbf{x}) - \mathbf{t}_i + \tfrac1n\sum_j \mathbf{t}_j$ and then
+overwrites $\mathbf{t}_i$ with $\nabla f_i(\mathbf{x})$. SAGA computes only one
+new example gradient per step, at the price of storing $n \times d$ numbers (or
+just one scalar per example for generalized linear models; see exercise
+:exref:`ex_mdl-adaptive-stochastic-methods-svrg-inner-loop`).
 
-On deep networks, unfortunately, these estimators have not given consistent
-gains: the control variate goes stale when the loss landscape changes under
-the iterate, for instance through data augmentation.
-A second limit has been with us since the valley: all of these methods share
-one step size across coordinates, which the stiff coordinate of the running
-example capped at $2/1000$. The next section lets each coordinate set its own
-step from the gradients it has seen.
+On deep neural networks, unfortunately, neither SVRG nor SAGA has delivered
+consistent gains: the control variate quickly goes stale when the loss
+landscape shifts rapidly or when data augmentation perturbs each example on
+every pass. Meanwhile, a second limitation has been with us since the
+ill-conditioned valley: every method in this section applies a single global
+step size to all coordinates, forcing the stiffest direction of our running
+example to cap $\eta$ at $2/1000$. In the next section, we remove that
+bottleneck by letting each coordinate adapt its own step size from the
+gradients it has observed.
 
 ## Summary
 
-A minibatch gradient is unbiased, and its error has power
-$\operatorname{tr}\boldsymbol{\Sigma}/b$. On a quadratic, a fixed step $\eta$
-parks the second moment of each coordinate on the floor
-$\eta\sigma^2/(\lambda(2 - \eta\lambda))$, reached geometrically at the rate
-$(1 - \eta\lambda)^2$, and the loss floors $\eta\sigma^2/(2(2 - \eta\lambda))$
-add over coordinates. The floor is linear in $\eta$ while the transient decays
-faster for larger $\eta$, so no fixed step reaches the minimizer, and every
-remedy trades the two. A Robbins--Monro schedule removes the floor, and
-$\eta_k = c/k$ reaches $O(1/k)$ only for $c > 1/(2\mu)$. For a fixed budget
-$K$, a constant step $\eta \propto 1/\sqrt{K}$ gives $DG/\sqrt{K}$ for the
-averaged iterate of a convex loss and, for large $K$,
-$O(\sigma\sqrt{L\Delta/K})$ for the squared gradient at a random iterate of a
-smooth nonconvex loss. On a finite sum, the SVRG estimator is unbiased with
-variance at most $L_{\max}^2\|\mathbf{x} - \tilde{\mathbf{x}}\|^2$, so a fixed
-step converges linearly on a strongly convex loss.
+A minibatch gradient of size $b$ is an unbiased estimator of $\nabla f$ whose
+noise power is $\operatorname{tr}\boldsymbol{\Sigma}/b$. On a quadratic, a
+fixed step size $\eta$ drives the second moment of each coordinate
+geometrically at rate $(1 - \eta\lambda)^2$ onto the noise floor
+$\eta\sigma^2/(\lambda(2 - \eta\lambda))$, and the per-coordinate loss floors
+$\eta\sigma^2/(2(2 - \eta\lambda))$ add up across dimensions. Because the floor
+grows linearly with $\eta$ while the transient shrinks faster at larger $\eta$,
+no constant step reaches the minimizer, and every technique in this section
+manages that trade-off. A Robbins--Monro schedule removes the floor, with
+$\eta_k = c/k$ achieving $O(1/k)$ only when $c > 1/(2\mu)$. Over a fixed budget
+of $K$ steps, a constant step $\eta \propto 1/\sqrt{K}$ guarantees
+$DG/\sqrt{K}$ for the averaged iterate on convex losses and
+$O(\sigma\sqrt{L\Delta/K})$ for the expected squared gradient at a random
+iterate on smooth nonconvex losses. Finally, on a finite sum, the SVRG control
+variate stays unbiased with variance at most
+$L_{\max}^2\|\mathbf{x} - \tilde{\mathbf{x}}\|^2$, allowing a fixed step size
+to converge linearly on strongly convex problems.
 
 ## Exercises
 

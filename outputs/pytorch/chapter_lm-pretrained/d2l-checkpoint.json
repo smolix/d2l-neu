@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:69e1699bcb935b8607477e9b9774faad24cf04987b41e5c1acac4e15b83f64e4",
+    "d2l_lib_fingerprint": "sha256:f06a0e07c5b9b22b0c68739ccd08533f2e6f7bcd2568b4e0abfb9f9a5ff531d6",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -76,12 +76,12 @@
       ]
     },
     "d2l-checkpoint-gpt-kwargs": {
-      "code_fingerprint": "sha256:2c5aed0b67da7e34a65d3de95007b81433af3d56d52c0fe378ae8d5b3c37324b",
+      "code_fingerprint": "sha256:6c7107c97fe0404fc56a0d0ec50f9ea50a921f00ea6b347836d658443938ee34",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-param-count": {
-      "code_fingerprint": "sha256:8dc506d0f58d2557eb863cf8310a14775682acb1fab52dd96bb92dd601198301",
+      "code_fingerprint": "sha256:35332a3837bcde7f0d23fc0c52cdad774d73b29ac79cbd8c5ed549721f19fdf7",
       "kind": "text",
       "outputs": [
         {
@@ -97,7 +97,7 @@
       ]
     },
     "d2l-checkpoint-rope-permutation": {
-      "code_fingerprint": "sha256:359ad361b4fb632d92fdc1f301bf5ecce340aafe457d5694909939a9e93761ad",
+      "code_fingerprint": "sha256:4c9846a954f9b9ea84db75006fd94712828dc35aad004a14f092caee1bacf223",
       "kind": "text",
       "outputs": [
         {
@@ -108,17 +108,17 @@
       ]
     },
     "d2l-checkpoint-map-load": {
-      "code_fingerprint": "sha256:2322c198a9dcc7e18752c7cbc5260bfc24b8716a219df5eb0a5bd0400cac08e8",
+      "code_fingerprint": "sha256:f8c3a38ed3d276dce48ca1a43c069c62a867d661dff2f28d8c8c8eab330edf24",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-load-qwen3": {
-      "code_fingerprint": "sha256:1f59ff2ff6b6b5fd599470621fb12ad84a10abaab68be4f7166505bc2eb5afd1",
+      "code_fingerprint": "sha256:625b3baa33c2ee0dea7aee78f8afb66a9d2add064601400d2e1104434c30572c",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-strict-accounting": {
-      "code_fingerprint": "sha256:584144b1c2be5a6597a1e39a1676cea7bafb40583958b77d76fbe74193fe623f",
+      "code_fingerprint": "sha256:e7a9a59abc2e6a8f6dd66b5a794bbb1c43215d0a6c20b630ee4d77d6cc889ee1",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +134,7 @@
       ]
     },
     "d2l-checkpoint-load-models": {
-      "code_fingerprint": "sha256:c5b450708012830be6618bd0f08799d388506eabc7587c222db30f2f5d9b28fc",
+      "code_fingerprint": "sha256:761be416b7b517acd78c0b5869aef6df56e215663e061cca8303a7ac29466b90",
       "kind": "text",
       "outputs": [
         {
@@ -150,17 +150,17 @@
       ]
     },
     "d2l-checkpoint-ratio-interval": {
-      "code_fingerprint": "sha256:a74b4889285610a12798c3b485fe11f21b79f6f6464e59576a13b373a1f61739",
+      "code_fingerprint": "sha256:3de1ea507a15d30d9dd7697dff725f0bdd50ef739786fad4fea3c6d3fb9b4a23",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-read-logits": {
-      "code_fingerprint": "sha256:7b56f383d9268f5027a8953750bc75ca3b9b7e66270f2a963ecd4e7009f690d2",
+      "code_fingerprint": "sha256:bfbc4597df7748ae90b83b6a88e2bdfb77ec3368dee641ae4603428a23382d9f",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-fp32-check": {
-      "code_fingerprint": "sha256:7f9a6e4c604e47797aa83c18dcf9037e9f82b4afb7f79b6ee18f8bdc2190b57e",
+      "code_fingerprint": "sha256:7471390fa92875651573c6ab736a42a9ea5eeb150c7a208dcaea6bb677ec0610",
       "kind": "text",
       "outputs": [
         {
@@ -186,7 +186,7 @@
       ]
     },
     "d2l-checkpoint-long-prompt": {
-      "code_fingerprint": "sha256:8168dece624414c1373e2d77e79a197329d223441e034e9a92da3bc301210328",
+      "code_fingerprint": "sha256:56248672628565ecaeba3191bd96f3985737285426920b299296e3befe8ca8d4",
       "kind": "text",
       "outputs": [
         {
@@ -197,12 +197,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "long prompt: e_HF 5.7e-06 against the reference, 2.9e-05 against it with exact angles\nport angles ratio, reference            ratio, reference with exact angles\nreference   1.1 [1.1, 1.2] passes       1 [1, 1] passes\nbook        2.5 [2.2, 2.7] fails        0.97 [0.93, 1] passes\nexact       5.2 [4.7, 5.9] fails        0.23 [0.21, 0.26] passes\n"
+          "text": "long prompt: e_HF 6.7e-06 against the reference, 2.9e-05 against it with exact angles\nport angles   ratio, fp64                 ratio, fp64 with exact angles\ntransformers  0.97 [0.92, 1] passes       1 [0.99, 1] passes\nbook          2.1 [1.9, 2.3] fails        0.96 [0.91, 1] passes\nexact         4.5 [4, 5.1] fails          0.23 [0.21, 0.26] passes\n"
         }
       ]
     },
     "d2l-checkpoint-bf16-check": {
-      "code_fingerprint": "sha256:9d427541569822c9edc6c0e3e8e96689bc57198d6e380b936ff2f5b9802d5637",
+      "code_fingerprint": "sha256:5ebde1c1812442730d5ffad938baebaf4ae178c434adcb02bc6ad76642b1545f",
       "kind": "text",
       "outputs": [
         {
@@ -228,32 +228,32 @@
       ]
     },
     "d2l-checkpoint-sampler": {
-      "code_fingerprint": "sha256:51517bb2fb51ae0c8c817330414d55cf122ca2b8010b10f6a74171960e44a46a",
+      "code_fingerprint": "sha256:630fc375abf28ac99abfc9008cbd0fa84989c49a25757ffcbcdf2a55202332d9",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate-paths": {
-      "code_fingerprint": "sha256:080a1a5a84ea2f6fe2d07b77b630c5cf3634a912544b362c7f1eda9823a22c8b",
+      "code_fingerprint": "sha256:8812869d566da3967e0faacc191e01358850a9e626fde9cc066de95650ade280",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate-hf": {
-      "code_fingerprint": "sha256:9ae8bd7c81bd4b19abe4089577316768a3babb8a53ad536fe08c33fb8a566bff",
+      "code_fingerprint": "sha256:74e2391866cb33380db5811a0f3665df9004d8ed0619df7289aac74424d26667",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-finish": {
-      "code_fingerprint": "sha256:b58a8defed17b31bae86e04f76998e626cdd69d143025dd5c97ad4f01184f040",
+      "code_fingerprint": "sha256:8cede5100064d8215c67230ff32e57bfc1069562869f2a22ba7fe88831fd2125",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-generate": {
-      "code_fingerprint": "sha256:42d8983a4391f8d8d3006486c1a3ad7e38a57d958a2f4a50b65f12a805631993",
+      "code_fingerprint": "sha256:b8a09d42e19e6cbf88366d60bc33b4e4e63b2965c808d4e67825a106439ab271",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-greedy": {
-      "code_fingerprint": "sha256:6d792c927ea44b91fd85b9d07249002bbe7e09402da6bbe75697dc96437e787c",
+      "code_fingerprint": "sha256:5e3dddbb6166edb423e89ac0f174455b5d50417a178715a337f7faf12fcbe05f",
       "kind": "text",
       "outputs": [
         {
@@ -274,18 +274,18 @@
       ]
     },
     "d2l-checkpoint-chat": {
-      "code_fingerprint": "sha256:386327a7d2eb2b722d9f73900724d7dd37d999c7ce23e7418dadc7ba51898a5f",
+      "code_fingerprint": "sha256:26d60e965ae01a7b3fd25b07937907b7d8a23339b91e5faf4fc732b356448284",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "What does a key-value cache store, in one sentence?\n  A key-value cache stores data in a structured format, typically as key-value pairs, for\n    efficient lookup and retrieval.\n  (eos)\nName two differences between a base model and a chat model.\n  Two differences between a base model and a chat model are:\n  1. **Base models are typically used for general tasks, while chat models are designed for\n    conversational tasks.**\n  2. **Base models are often simpler and can be used for a wide range of tasks without requiring\n    extensive training, while chat models require more complex training to achieve high-quality\n    conversational responses.**\n  (eos)\n"
+          "text": "What does a key-value cache store, in one sentence?\n  A key-value cache stores data in a structured format, typically as key-value pairs, for\n    efficient access and retrieval.\n  (eos)\nName two differences between a base model and a chat model.\n  Two differences between a base model and a chat model are:\n  1. **Base models** are typically used for general tasks like text generation, summarization,\n    or information retrieval without requiring additional training. They are often simpler and\n    can be used for a wide range of tasks without needing fine-tuning.\n  2. **Chat models** are designed to interact with users in a conversational manner. They are\n    trained to understand context, generate responses in a natural and fluid way, and often\n    require more complex training and fine-tuning to achieve this level of interaction.\n  (eos)\n"
         }
       ]
     },
     "d2l-checkpoint-ladder": {
-      "code_fingerprint": "sha256:becdaba2a331af369c73594eb08b86b02e047e94eca0d13f7a7d3853ddbed520",
+      "code_fingerprint": "sha256:c8610827c0329c6fef85684a7b06216ac36dae92b228c53503e041eebf241257",
       "kind": "text",
       "outputs": [
         {
@@ -311,12 +311,12 @@
       ]
     },
     "d2l-checkpoint-hooks": {
-      "code_fingerprint": "sha256:20337ae6343755da167973a58d7dc421bc873479e9bd3c994b8e560e5b62a7a3",
+      "code_fingerprint": "sha256:05a0873587bb30b36db4a64bf052703faf5e2b406b02d9e01cd62831758e77e8",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-layer-errors": {
-      "code_fingerprint": "sha256:5a1b5c816b256592d832dee90342877dfe99ed1cda9164d00b587f154899321a",
+      "code_fingerprint": "sha256:2c4110315bda56557a666cc746f3b22fe0879fa3ef605c8832540cc84dafdb3e",
       "kind": "text",
       "outputs": [
         {
@@ -337,28 +337,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "median relative error of resid_post at layer\n              0        7       14       21       27\nours32  7.4e-07  1.4e-06  1.3e-06  1.2e-06  1.1e-06\nhf32    7.0e-07  1.3e-06  1.4e-06  1.2e-06  1.1e-06\nours16  5.0e-03  1.1e-02  1.2e-02  1.1e-02  1.1e-02\nhf16    9.0e-03  1.7e-02  1.8e-02  1.6e-02  1.5e-02\nport / Transformers (eager) over every layer and point\nfp32, port in batches of  1: 0.70 to 1.00, outside [0.5, 2]: []\nfp32, port in batches of  4: 0.89 to 1.06, outside [0.5, 2]: []\nfp32, port in batches of 16: 1.11 to 1.44, outside [0.5, 2]: []\nbf16, port in batches of  1: 0.43 to 0.79, outside [0.5, 2]: [0, 1]\nbf16, port in batches of  4: 0.46 to 0.77, outside [0.5, 2]: [1]\nbf16, port in batches of 16: 0.40 to 0.73, outside [0.5, 2]: [0, 1, 2]\nbf16, Transformers with SDPA:   0.84 to 0.94, outside [0.5, 2]: []\n"
+          "text": "median relative error of resid_post at layer\n              0        7       14       21       27\nours32  7.4e-07  1.4e-06  1.3e-06  1.2e-06  1.1e-06\nhf32    7.0e-07  1.3e-06  1.4e-06  1.2e-06  1.1e-06\nours16  5.0e-03  1.1e-02  1.2e-02  1.1e-02  1.1e-02\nhf16    9.0e-03  1.7e-02  1.8e-02  1.6e-02  1.5e-02\nport / Transformers (eager) over every layer and point\nfp32, port in batches of  1: 0.70 to 1.00\nfp32, port in batches of  4: 0.89 to 1.06\nfp32, port in batches of 16: 1.11 to 1.44\nbf16, port in batches of  1: 0.43 to 0.79, below 0.5 at layers [0, 1]\nbf16, port in batches of  4: 0.46 to 0.77, below 0.5 at layers [1]\nbf16, port in batches of 16: 0.40 to 0.73, below 0.5 at layers [0, 1, 2]\nbf16, Transformers with SDPA:   0.84 to 0.94\n"
         }
       ]
     },
     "d2l-checkpoint-bug-states": {
-      "code_fingerprint": "sha256:1ceea8002713c58a93aa805025e44db92649196d034d39206168ebdd097704c8",
+      "code_fingerprint": "sha256:3218991a05fd07984fdb1a40583991a4fe01b65e01011b91e2f3df19313ce7f4",
       "kind": "text",
       "outputs": []
     },
     "d2l-checkpoint-bugs": {
-      "code_fingerprint": "sha256:d6cd000611ff154390275af1a37f9da6ab2ad2fef69fee02b7d4c021e162e76d",
+      "code_fingerprint": "sha256:89eda6dabe473fc7dafe7b7efc5adae8d7c74cb9aea5c86a6ae9070fa4116693",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "every state dict passes strict accounting (load_state_dict)\n                          diverges at     x clean  fp32 rule      bf16 rule      top-1 of 2,048\nclean                     none                  -  0.99 passes    0.73 passes     2047\nB1 RoPE rows not permuted 0, attn_out     5.8e+05  4.8e+05 fails  39 fails         662\nB2 rope_theta 1e4         0, attn_out     1.9e+05  1.3e+05 fails  11 fails        1658\nB3 gate and up swapped    0, mlp_out      8.8e+05  9.4e+05 fails  77 fails           0\nB4 layers in string order 2, attn_out     2.4e+06  9e+05 fails    74 fails          86\nB5 every epsilon 1e-5     0, attn_out       1e+04  1.9e+03 fails  0.77 passes     2041\nB4: blocks 0 and 1 bitwise equal to the clean port: True\n"
+          "text": "every state dict passes strict accounting (load_state_dict)\n                          diverges at     x clean  fp32 rule      bf16 rule      top-1 of 2,048\nclean                     none                  -  0.99 passes    0.73 passes     2047\nB1 RoPE rows not permuted 0, attn_out     5.8e+05  4.8e+05 fails  39 fails         662\nB2 rope_theta 1e4         0, attn_out     1.9e+05  1.3e+05 fails  11 fails        1658\nB3 gate and up swapped    0, mlp_out      8.8e+05  9.4e+05 fails  77 fails           0\nB4 layers in string order 2, attn_out     2.4e+06  9e+05 fails    74 fails          86\nB5 every epsilon 1e-5     0, attn_out       1e+04  1.9e+03 fails  0.77 passes     2041\nthe same first divergence with Transformers fp32 as the floor: 6 of 6\nB4: blocks 0 and 1 bitwise equal to the clean port: True\n"
         }
       ]
     },
     "d2l-checkpoint-b5": {
-      "code_fingerprint": "sha256:1273f65439bbd185e3474b7b6a8d8c7760d4d394ece38faf1a37c5b5cec19546",
+      "code_fingerprint": "sha256:09fcd9db766c001aaed08cd58f57de23e046d1127bbfc4fa31f4f5ed70186227",
       "kind": "text",
       "outputs": [
         {
@@ -369,15 +369,15 @@
       ]
     },
     "d2l-checkpoint-divergence-plot": {
-      "code_fingerprint": "sha256:3a185d8431393641b88e413af5eb3930458d14d4e82b95f85a8e8808673cbe5f",
+      "code_fingerprint": "sha256:a8be91544f35221eea0af8a2bc4bab09e99ce9d08efeb2c78e885a8ab3cc9c8a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "d2l-checkpoint/d2l-checkpoint-divergence-plot-1.svg",
-          "bytes": 44176,
-          "sha256": "sha256:0fd706b3be36d2be82ff32f54221be35f4e2e1cee99584217884e00f0c433a35"
+          "bytes": 45855,
+          "sha256": "sha256:8ee30e2eb3b93e1a0dda2bb1e5c380f6dec20026747173323f19b98765dd7d4f"
         }
       ]
     }

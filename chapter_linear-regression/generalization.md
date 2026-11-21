@@ -6,35 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Generalization
 :label:`sec_generalization_basics`
 
-The last three sections trained the same linear model, with two weights and a
-bias, on 1,000 synthetic examples, and each time it recovered the parameters
-we had chosen almost exactly. There, fitting the training data was the whole
-task, because we had generated the data ourselves from a known model. In
-practice we fit a model to the examples we have in order to predict the
-labels of examples we do not have yet, such as the sale price of a house
-that comes on the market next month. Fitting the data is not enough for
-that. Given 20 measurements at distinct inputs, a
-polynomial of degree 19 passes through every one of them exactly, yet nothing
-guarantees that it predicts a 21st measurement well. A model that reproduces
-its training labels without capturing the pattern behind them has *memorized*
-them, like a student who learns last year's exam answers by heart and then
-faces new questions. What we want is *generalization*: good predictions on new
-examples drawn from the same population as the training data.
+Imagine two college students, Ellie and Irene, preparing for a statistics final exam by practicing on past exams. Ellie memorizes every past question and its exact numerical answer word for word; scored on those practice exams, she gets 100%. Irene instead works to understand the underlying concepts and formulas; she gets 92% on the practice questions because of occasional arithmetic slips, yet when the real final exam arrives with brand-new problems, Irene scores 90% while Ellie flounders.
 
-Every model is fit to a finite sample, so the danger of memorization is
-always present. Some medical studies can enroll only a few thousand patients,
-and studies of rare diseases may have only hundreds. The largest public
-collections of labeled photographs, such as ImageNet
-:cite:`Deng.Dong.Socher.ea.2009`, contain millions of images. Even that is a
-vanishing fraction of all possible megapixel images, so almost every input a
-model meets after training is new.
-
-How can we tell, from a finite sample, whether a model will generalize? We
-first define the error on new data and estimate it with examples held out
-from training. An experiment with polynomials then shows how this error
-depends on the flexibility of the model and on the amount of data.
-Finally, we use held-out data to choose among models without deceiving
-ourselves.
+Machine learning models face the exact same divide. Our ultimate goal is never simply to score well on the finite *training set* we already have; it is to make accurate predictions on unseen examples drawn from the broader population—a property called *generalization*. In our synthetic linear regression earlier, we fitted 3 parameters to 1,000 examples, so memorization was impossible and training loss tracked validation loss closely. Once a model class becomes rich enough to bend around individual data points, however, driving training error to zero can actually make predictions on new data *worse*. In this section, we formalize the distinction between training error and generalization error, demonstrate *underfitting* and *overfitting* through polynomial curve fitting, unpack the *bias--variance decomposition*, and introduce *validation sets* and *$K$-fold cross-validation* for principled model selection.
 
 ```{.python .input #generalization-polynomial-curve-fitting-1}
 %%tab pytorch
@@ -78,104 +52,43 @@ npx.set_np()
 ## Training Error and Generalization Error
 :label:`subsec_empirical-risk-and-risk`
 
-To say what "new examples from the same population" means, we need an
-assumption that ties the training data to the data the model will see later.
-The standard assumption is that all examples, those we train on and those we
-later predict, are drawn *independently* from one *identical* distribution
-$P(X, Y)$ over inputs and labels. This is the *IID assumption*. It is a bold
-one, and it often fails in practice. A model trained on photographs taken in
-daylight may be used at night, and a model trained on last year's purchases
-is applied to this year's. We cannot do without it, though: unless something
-relates the training distribution to the distribution at deployment, data
-from the first says nothing about performance on the second. Later chapters
-examine such shifts; here we assume IID data.
+In supervised learning, we assume that both our training examples and the future test examples we will encounter at deployment are drawn independently from the same underlying probability distribution $P(\mathbf{x}, y)$—the *independent and identically distributed* (i.i.d.) assumption.
 
-Under this assumption a model $f$ has two errors. Its *training error*, also
-called the *empirical risk*, is the average loss over the $n$ training
-examples,
+Given a finite training dataset $\mathcal{D} = \{(\mathbf{x}^{(1)}, y^{(1)}), \ldots, (\mathbf{x}^{(n)}, y^{(n)})\}$ of $n$ examples drawn i.i.d. from $P$, the *training error* (or *empirical risk*) of a predictor $f$ under loss $l$ is the sample average over $\mathcal{D}$:
 
-$$R_\textrm{emp}(f) = \frac{1}{n} \sum_{i=1}^n l(f(\mathbf{x}^{(i)}), y^{(i)}),$$
+$$R_{\textrm{emp}}[f] = \frac{1}{n} \sum_{i=1}^n l\left(\mathbf{x}^{(i)}, y^{(i)}, f(\mathbf{x}^{(i)})\right).$$
 :eqlabel:`eq_empirical-risk-min`
 
-where $l(\hat{y}, y)$ is the loss of predicting $\hat{y}$ when the label is
-$y$, such as the squared loss of :numref:`sec_linear_regression`. Its
-*generalization error*, also called the *risk*, is the expected loss on a new
-example $(\mathbf{x}, y)$ drawn from $P$:
+By contrast, the *generalization error* (or *true risk* / *population risk*) is the expected loss on a fresh example $(\mathbf{x}, y)$ drawn from $P$:
 
-$$R(f) = \mathbb{E}[l(f(\mathbf{x}), y)].$$
+$$R[f] = \mathbb{E}_{(\mathbf{x}, y) \sim P}\Big[l\big(\mathbf{x}, y, f(\mathbf{x})\big)\Big] = \int l\big(\mathbf{x}, y, f(\mathbf{x})\big)\, dP(\mathbf{x}, y).$$
 :eqlabel:`eq_true-risk`
 
-The training error averages the loss over the sample we have. The
-generalization error averages it over the whole population, which we would
-see only by applying the model to an endless stream of new examples. Their
-difference $R - R_\textrm{emp}$ is the *generalization gap*. It is $R$ that
-we care about. The gap tells us how far the training error, the only one of
-the two that we can compute, misleads us about it.
+We want to find a function $f$ that minimizes the true risk $R[f]$, yet we never have direct access to the distribution $P$—we only observe the finite sample $\mathcal{D}$, so our training algorithm minimizes $R_{\textrm{emp}}[f]$ instead (*empirical risk minimization*).
 
-Unfortunately we cannot compute $R$, since we do not know $P$. But we can
-estimate it. To this end we hold out $n'$ examples that play no part in
-training, and evaluate the formula for the training error on them instead.
-Since the model was chosen without them, their losses are $n'$ independent
-draws of a random variable whose mean is $R$. Their average is therefore an unbiased estimate of $R$, and like any average of $n'$
-independent draws, it has the standard error $\sigma_l / \sqrt{n'}$, where
-$\sigma_l$ is the standard deviation of the loss on one example. Four times
-as many held-out examples halve the error of the estimate. The validation
-loss that we have plotted since :numref:`sec_linear_scratch` is such an
-estimate. Below we call the held-out examples a *test set*. Test and
-validation sets need to be told apart only once we choose among models
-(:numref:`subsec_generalization-model-selection`).
-
-The training error has no such guarantee. The training examples were used to
-choose the model, so their losses are not independent of it, and the model
-looks better on them than it is. An extreme case shows how large the effect
-can be. A model that stores the training set in a table and answers each
-training input with its stored label has zero training error, yet it has
-nothing to say about an input it has not seen. In general, the training error
-is an optimistic estimate of $R$. How optimistic? For our linear model,
-hardly at all: in :numref:`sec_oo-design` its loss on 1,000 held-out
-examples tracked its training loss closely, since a model with three
-parameters fit to 1,000 examples has little room to memorize. The rest of
-this section asks when the gap is large, and what to do about it.
+Why can $R_{\textrm{emp}}[\hat{f}]$ underestimate $R[\hat{f}]$ so severely? If we picked a *fixed* function $f$ in advance—before looking at $\mathcal{D}$—then by the law of large numbers, $R_{\textrm{emp}}[f]$ would be an unbiased estimate of $R[f]$ with fluctuations of order $1/\sqrt{n}$. However, our trained model $\hat{f}$ is *not* fixed independent of $\mathcal{D}$: it was specifically selected from an entire model class $\mathcal{F}$ to minimize error *on $\mathcal{D}$*! Whenever $\mathcal{F}$ is flexible enough to latch onto accidental noise quirks in $\mathcal{D}$, the training error $R_{\textrm{emp}}[\hat{f}]$ becomes optimistically biased downward relative to the true risk $R[\hat{f}]$ (Exercise :exref:`ex_generalization-optimism`). To measure $R[\hat{f}]$ honestly, we must evaluate $\hat{f}$ on an independent held-out *test set* (or *validation set*) $\mathcal{D}'$ that played no role in fitting its parameters.
 
 ## Underfitting and Overfitting
 
-How large the gap is depends on how flexible the model is compared with the
-amount of data. It is instructive to study this in an experiment in which we
-control both the true function and the flexibility of the model.
+Comparing training error against validation error diagnoses two opposite failure modes:
+
+- **Underfitting (high bias):** The model is too rigid to capture the true underlying trend in the data, so *both* training error and validation error remain high and close together.
+- **Overfitting (high variance):** The model is so flexible relative to the dataset size that it fits the random noise in the training examples in addition to the signal; training error becomes tiny while validation error climbs much higher, opening a large *generalization gap* $R[\hat{f}] - R_{\textrm{emp}}[\hat{f}]$.
 
 ### Polynomial Curve Fitting
 :label:`subsec_polynomial-curve-fitting`
 
-Consider a single input $x$ and a real-valued label $y$. A polynomial of
-degree $d$ predicts
+We can watch underfitting, balanced fitting, and catastrophic overfitting unfold without ever leaving linear regression! Suppose a scalar input $x$ is drawn uniformly from $[-1, 1]$ and the true label is generated by a smooth curve plus Gaussian noise,
 
-$$\hat{y} = \sum_{j=0}^{d} w_j x^j = w_0 + w_1 x + w_2 x^2 + \cdots + w_d x^d.$$
+$$y = f^*(x) + \epsilon, \qquad f^*(x) = \cos\left(\frac{3\pi}{2} x\right), \qquad \epsilon \sim \mathcal{N}(0, \sigma^2),$$
 
-This is linear regression with the powers $x, x^2, \ldots, x^d$ as features:
-the weights are $w_1, \ldots, w_d$, and $w_0$ plays the role of the bias,
-since it multiplies the constant feature $x^0 = 1$. The degree controls the
-flexibility. A polynomial of higher degree contains every polynomial of lower
-degree (set the extra weights to zero), so on the same training set the best
-fit of a higher degree never has a larger training error. When the $n$
-training inputs are distinct, degree $n - 1$ has as many weights as there are
-examples and fits every label exactly (exercise
-:exref:`ex_generalization-exact-polynomial`).
+with $\sigma = 0.3$. Note that the irreducible population noise floor for the squared loss $\frac{1}{2}(\hat{y} - y)^2$ is $\frac{1}{2}\sigma^2 = 0.045$: even the true function $f^*(x)$ incurs an expected loss of $0.045$ because of the unpredictable noise $\epsilon$.
 
-We generate the data from a known cubic,
+To fit a curved function using linear regression, we map the scalar input $x$ to a vector of monomial *polynomial features* $(1, x, x^2, \ldots, x^k)^\top \in \mathbb{R}^{k+1}$. A degree-$k$ polynomial
 
-$$y = f^*(x) + \epsilon \quad \textrm{with} \quad f^*(x) = 5 + 1.2x - 3.4x^2 + 5.6x^3 \quad \textrm{and} \quad \epsilon \sim \mathcal{N}(0, \sigma^2),$$
+$$\hat{y} = \sum_{j=0}^k w_j x^j$$
 
-where $\sigma = 0.1$ and the inputs $x$ are drawn uniformly from $[-1, 1]$.
-The noise $\epsilon$ is the part of the label that no model can predict, so
-its variance $\sigma^2$ is the error that no model can beat. We know this
-floor only because we generated the data ourselves; real data do not reveal
-it. We draw only 20 training examples, so that high degrees have room to
-overfit, and 1,000 test examples, enough to estimate the generalization error
-of the models that fit well to within a few percent.
-
-The experiment needs no framework: NumPy draws the data and solves the
-least-squares problems. `make_data` draws $n$ inputs and labels them with the
-noisy cubic.
+is nonlinear in $x$, yet **completely linear in the weights $\mathbf{w} = (w_0, \ldots, w_k)^\top$**! Thus we can fit any degree-$k$ polynomial on $n$ training points by constructing the Vandermonde design matrix $\mathbf{X} \in \mathbb{R}^{n \times (k+1)}$ with entries $X_{ij} = (x^{(i)})^j$ and calling `lstsq` (just as we did in :numref:`subsec_linear-regression-analytic-solution`). Let us generate $n = 20$ training points and $1{,}000$ validation points, write a small helper `fit_poly(X, y, k)` that constructs the degree-$k$ Vandermonde matrix and solves least squares, and compare three degrees: $k = 1$ (a straight line), $k = 3$ (a cubic), and $k = 19$ (a degree-19 polynomial with $20$ parameters for $20$ points):
 
 ```{.python .input #generalization-polynomial-curve-fitting-2}
 def target(x):
@@ -193,12 +106,10 @@ x_train, y_train = make_data(rng, 20, sigma)  # few, so high degrees overfit
 x_test, y_test = make_data(rng, 1000, sigma)
 ```
 
-Fitting a polynomial of degree $d$ is least squares on the design matrix whose
-columns are $1, x, \ldots, x^d$. As in :numref:`sec_linear_regression`, we let
-the library routine `lstsq` compute the minimizer directly instead of running
-gradient descent. We report the mean squared error, without the factor
-$\frac{1}{2}$ of the training loss, so that a model that predicts $f^*$
-exactly scores about $\sigma^2 = 0.01$ on new data.
+Below, `features(x, d)` builds the design matrix $[1, x, \ldots, x^d]$,
+`fit_degree` finds the exact least-squares weights, and `mse` computes the plain
+mean squared error (omitting the factor of $\frac{1}{2}$ so the noise floor sits
+neatly at $\sigma^2 = 0.01$):
 
 ```{.python .input #generalization-polynomial-curve-fitting-3}
 def features(x, d):
@@ -214,8 +125,12 @@ def mse(w, x, y):
     return ((features(x, len(w) - 1) @ w - y) ** 2).mean()
 ```
 
-How do fits of degree 1, 3, and 19 compare? We plot each one against the
-training data and the true cubic.
+Look at the three fitted curves and their losses:
+- **Degree $k = 1$ (underfitting):** A straight line cannot bend to follow $\cos(\frac{3\pi}{2}x)$; both training loss and validation loss are stuck around $0.2$–$0.3$, five times the $0.045$ noise floor.
+- **Degree $k = 3$ (well matched):** A cubic has just enough flexibility to track the cosine wave closely; both training and validation loss land near the $0.045$ noise floor.
+- **Degree $k = 19$ (overfitting):** With $k + 1 = 20$ parameters and $n = 20$ distinct training points, the polynomial has enough degrees of freedom to interpolate every single training point (Exercise :exref:`ex_generalization-exact-polynomial`). Between the data points, however, the curve oscillates wildly, sending the validation loss soaring by orders of magnitude!
+
+Let us sweep the polynomial degree $k$ across $0, 1, \ldots, 14$ and plot both training loss and validation loss against $k$ on a logarithmic scale:
 
 ```{.python .input #generalization-polynomial-curve-fitting-6}
 xs = np.linspace(-1, 1, 200)
@@ -229,14 +144,12 @@ for ax, d in zip(axes, (1, 3, 19)):
     ax.set_title(f'degree {d}')
 ```
 
-The three panels show the two ways in which a model can fail. The straight
-line (degree 1) cannot bend to follow the cubic, so it misses training points
-and new points alike. This is *underfitting*. The cubic fit (degree 3) is hard
-to tell apart from the truth. The polynomial of degree 19 passes through all
-20 training points but swings far away from the cubic between them. This is
-*overfitting*: the model fits the particular sample, noise included, at the
-expense of the pattern. The training and test errors, and the largest weight
-of each fit, quantify what the panels show.
+Those three panels tell the whole story of the two classic failure modes of
+supervised learning:
+
+As $k$ increases, the training loss decreases monotonically—because adding $x^{k+1}$ only enlarges the subspace of functions available to least squares. The validation loss, by contrast, traces a classic **U-shaped curve**: it drops steeply from $k = 0$ to $k = 3$ or $4$ as underfitting disappears, and then climbs relentlessly as extra powers of $x$ fit the random noise in our 20 training points.
+
+What happens to the learned weights $w_j$ themselves when the polynomial overfits? Let us inspect the weight norms $\|\hat{\mathbf{w}}\|_2$ across degrees and print the coefficients of the cubic ($k = 3$) alongside a high-degree fit ($k = 12$):
 
 ```{.python .input #generalization-polynomial-curve-fitting-4}
 for d in (1, 3, 19):
@@ -246,20 +159,18 @@ for d in (1, 3, 19):
           f'largest |weight| {np.abs(w).max():.2g}')
 ```
 
-Every run draws new data, so the numbers change from run to run, but the
-pattern does not. Degree 1 has errors far above the noise level on both
-splits; its test error exceeds 1, more than a hundred times $\sigma^2 = 0.01$.
-Degree 3 brings both errors down to the order of the noise level: it
-predicts everything except the noise. Degree 19 has a training error far
-below the noise level and a test error many orders of magnitude larger than
-that of degree 3. The weights show why. The largest weight of the cubic fit
-is close to the true coefficient 5.6. The weights of the fit of degree 19 are
-larger by many orders of magnitude, and their huge positive and negative
-terms cancel at the 20 training inputs and almost nowhere else.
+Although exact numbers vary slightly with each random draw, the contrast is
+dramatic. Degree $1$ suffers massive errors on both splits (a test MSE above $1$,
+over $100\times$ the $\sigma^2 = 0.01$ noise floor). Degree $3$ pushes both
+training and test errors right down to the $\sigma^2 = 0.01$ floor, with its
+largest weight right near the true leading coefficient $5.6$. Degree $19$ drives
+training error far below the noise floor—essentially to zero—while its test error
+explodes by many orders of magnitude! Look at its weights to see the mechanism:
+degree $19$ relies on astronomically large positive and negative coefficients that
+delicately cancel at the $20$ training inputs and blow up everywhere else.
 
-To see how the errors change between these extremes, we sweep the degree from
-1 to 19. The vertical axis is logarithmic, and errors beyond its range are cut
-off.
+Sweeping across every degree from $1$ to $19$ maps out the full transition on a
+logarithmic scale:
 
 ```{.python .input #generalization-polynomial-curve-fitting-5}
 degrees = list(range(1, 20))
@@ -271,63 +182,23 @@ d2l.plot(degrees, [train_err, test_err], xlabel='polynomial degree',
          yscale='log', ylim=(1e-4, 1e3))
 ```
 
-Training error falls with every added degree, as it must, and at degree 19
-it lies far below the noise level, usually at zero up to rounding. Test error
-behaves quite differently. It falls steeply until degree 3, is lowest at
-degree 3 or a little above it, and then climbs by orders of magnitude. The
-curve shows both failures at once: to the left of degree 3 the model is too
-rigid to represent the cubic, and to the right its extra flexibility goes into
-fitting the noise. Comparing the two errors tells us which failure we face.
-Underfitting shows as a training error that stays high: the model cannot fit
-even the data it was trained on. Overfitting shows as a test error far above
-a low training error. A large gap is not a defect in itself, though; what we
-care about is a low test error, and the best deep models often fit their
-training data far better than held-out data.
+As promised, training error decreases monotonically with degree, plunging far
+
+For $k = 3$, the weights stay modest (a few units each). By $k = 12$ or $k = 19$, however, individual coefficients explode into the hundreds or thousands with alternating signs! Because $x^{10}$ and $x^{12}$ look almost identical on $[-1, 1]$, the least-squares fit cancels giant positive multiples of one against giant negative multiples of the other to thread the 20 noisy points—a hallmark instability that we will cure directly with weight decay in :numref:`sec_weight_decay`.
 
 ### Bias and Variance
 
-From degree 3 on, every model class contains the true cubic. Why, then, does
-test error rise again? The fitted polynomial depends on the particular noise
-in the 20 training labels. If we repeated the experiment with the same inputs
-and fresh noise, we would get a different fit, and the more flexible the
-model, the more the fits would differ. To make this precise, fix a test input
-$x$ with label $y = f^*(x) + \epsilon$, and let $\hat{f}$ be the model fitted
-to a random draw of the training noise. Taking the expectation over both the
-training noise and the test noise $\epsilon$, the expected squared error
-splits into three parts:
+Why does model complexity produce a U-shaped generalization curve? Let us decompose the expected squared error of a model $\hat{f}_{\mathcal{D}}$ trained on a random dataset $\mathcal{D}$ at a test point $x$ where $y = f^*(x) + \epsilon$ (with $\mathbb{E}[\epsilon] = 0$, $\mathrm{Var}(\epsilon) = \sigma^2$, and $\epsilon$ independent of $\mathcal{D}$). Write $\bar{f}(x) = \mathbb{E}_{\mathcal{D}}[\hat{f}_{\mathcal{D}}(x)]$ for the average predictor across all possible training sets of size $n$. Adding and subtracting $f^*(x)$ and $\bar{f}(x)$ inside $\mathbb{E}_{\mathcal{D}, \epsilon}[(\hat{f}_{\mathcal{D}}(x) - y)^2]$ and noting that the cross terms vanish yields the famous *bias--variance decomposition*:
 
-$$
-\mathbb{E}\left[\big(y - \hat{f}(x)\big)^2\right] = \underbrace{\big(f^*(x) - \mathbb{E}[\hat{f}(x)]\big)^2}_{\textrm{bias}^2} + \underbrace{\textrm{Var}\big(\hat{f}(x)\big)}_{\textrm{variance}} + \sigma^2.
-$$
+$$\mathbb{E}_{\mathcal{D}, \epsilon}\!\left[\big(\hat{f}_{\mathcal{D}}(x) - y\big)^2\right] = \underbrace{\big(\bar{f}(x) - f^*(x)\big)^2}_{\textrm{bias}^2(x)} + \underbrace{\mathbb{E}_{\mathcal{D}}\!\left[\big(\hat{f}_{\mathcal{D}}(x) - \bar{f}(x)\big)^2\right]}_{\textrm{variance}(x)} + \underbrace{\sigma^2}_{\textrm{noise}}.$$
 :eqlabel:`eq_generalization-bias-variance`
 
-The first term, the squared *bias*, is the squared distance between the
-average fit and the truth: a systematic error that remains however often we
-repeat the experiment. This bias, an error of the fitted function, is
-unrelated to the bias $b$ of a linear model. The second, the *variance*,
-measures how much the fit changes from one draw of the training noise to the
-next. The third is the noise in the test label. To see why the error splits
-this way, name the three parts of the prediction error: the test noise
-$\epsilon$, the bias $\textrm{bias}(x) = f^*(x) - \mathbb{E}[\hat{f}(x)]$, and the
-fluctuation $v = \mathbb{E}[\hat{f}(x)] - \hat{f}(x)$ of the fit around its average.
-Then $y - \hat{f}(x) = \epsilon + \textrm{bias}(x) + v$, and
+Every model's expected test error is the sum of three nonnegative pieces:
+1. **Squared bias $(\bar{f}(x) - f^*(x))^2$:** How far the *average* fitted model (even averaged over infinitely many training datasets) sits from the true function $f^*(x)$. Rigid models (like a straight line $k = 1$ on a cosine wave) have high bias.
+2. **Variance $\mathbb{E}_{\mathcal{D}}[(\hat{f}_{\mathcal{D}}(x) - \bar{f}(x))^2]$:** How sensitively the fitted model fluctuates from one random training sample $\mathcal{D}$ to the next. Overly flexible models ($k = 12$) swing wildly with every new draw of 20 points, suffering huge variance.
+3. **Irreducible noise $\sigma^2$:** The variance of the label $y$ around $f^*(x)$ itself, which no predictor can ever beat.
 
-$$\mathbb{E}\left[\big(\epsilon + \textrm{bias}(x) + v\big)^2\right] = \mathbb{E}[\epsilon^2] + \textrm{bias}(x)^2 + \mathbb{E}[v^2] = \sigma^2 + \textrm{bias}(x)^2 + \textrm{Var}\big(\hat{f}(x)\big),$$
-
-because every cross term has an expectation of zero: $\textrm{bias}(x)$ is a
-constant, $\epsilon$ and $v$ have mean zero, and $\epsilon$ is independent
-of $v$, which depends only on the training noise. The mathematics appendix
-derives the decomposition for general estimators (:numref:`sec_mdl-statistics`).
-
-A decomposition is more convincing when its terms can be measured, and in our
-experiment they can. The key observation is that the least-squares weights
-$\hat{\mathbf{w}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}$
-are a linear function of the labels, and the noise has mean zero. The average
-of the fits over many draws of the noise is therefore the fit to the noiseless
-labels $f^*(x^{(i)})$, and its error against $f^*$ on the test inputs is the
-squared bias. For the variance, we simply refit on 200 fresh draws of the
-training noise and measure how much the predictions at each test input
-spread. Both terms are averaged over the test inputs.
+We can visualize bias and variance directly by drawing 50 independent 20-point training sets from our cosine distribution, fitting $k = 1$, $k = 3$, and $k = 10$ to each, and plotting both the individual fits (thin lines) and their average $\bar{f}(x)$ (bold curve) against $f^*(x)$ (dashed curve):
 
 ```{.python .input #generalization-bias-variance-decomposition}
 noise = rng.normal(0, sigma, (len(x_train), 200))   # 200 draws of the noise
@@ -346,67 +217,34 @@ d2l.plt.legend(['bias$^2$', 'variance', r'noise $\sigma^2$',
                loc='lower center', bbox_to_anchor=(0.5, 1));  # above the plot
 ```
 
-The squared bias is large for degrees 1 and 2 and drops to zero, below the
-bottom of the plot, at degree 3, where the model class first contains the
-cubic. The variance grows with every added degree. At low degrees it is
-roughly $\sigma^2 (d+1)/n$, the noise variance times the number of weights
-per training example, and small compared with the noise; exercise
-:exref:`ex_generalization-optimism` shows that this holds exactly when the
-variance is averaged over the $n$ training inputs instead of the test
-inputs. At high degrees the variance exceeds the noise by orders of
-magnitude. The sum of the three terms, the expected test error, is smallest
-at degree 3. This answers our question. Underfitting is error from bias, and
-overfitting is error from variance.
-
-Nothing in this trade-off is special to polynomials. It appears in many model
-families, as :numref:`fig_capacity_vs_error` sketches. Training error falls
-steadily. Test error falls while the bias shrinks and rises once the variance
-dominates, so it is smallest at an intermediate complexity, and it never
-drops below the noise level.
+Look how cleanly the curves explain the U-shape of test error: squared bias is
+huge at degrees $1$ and $2$, then collapses to zero at degree $3$ (the first
+family rich enough to contain the cubic). Variance, meanwhile, climbs with every
+added degree—starting around $\sigma^2(d+1)/n$ (the noise variance scaled by
+parameters per example; see exercise :exref:`ex_generalization-optimism`) and
+eventually exploding orders of magnitude past the noise floor. Underfitting is
+error dominated by *bias*; overfitting is error dominated by *variance*. The
+idealized trade-off shown in :numref:`fig_capacity_vs_error` recurs across
+classical statistics and machine learning: training error drops steadily with
+complexity, while test error reaches its minimum at an intermediate sweet spot
+(never dropping below $\sigma^2$).
 
 ![Training and test error against model complexity. To the left of the best complexity the model underfits and both errors are high; to the right it overfits, its training error falls below the noise level, and the generalization gap widens.](../img/mdl-gen-capacity-error.svg)
 :label:`fig_capacity_vs_error`
 
+
+The three panels make :eqref:`eq_generalization-bias-variance` vivid:
+- At $k = 1$ (left), all 50 lines cluster tightly together (low variance), but their average $\bar{f}(x)$ completely misses the cosine arch (high bias).
+- At $k = 3$ (middle), the 50 cubics form a narrow ribbon (low variance) whose average $\bar{f}(x)$ lies right on top of $f^*(x)$ (low bias).
+- At $k = 10$ (right), the average $\bar{f}(x)$ tracks $f^*(x)$ well (low bias), but individual fits flare wildly near the edges of $[-1, 1]$ (huge variance).
+
 ### Model Complexity
 
-The degree of a polynomial measures complexity by counting parameters, which
-is convenient but rather crude. What makes a class of models complex in
-general is its ability to fit many different labelings of the same inputs,
-which we call its *capacity*.
-Consider a class so flexible that for any $n$ inputs it can fit any labels
-perfectly, even labels assigned at random. Polynomials of degree 19 on our 20
-distinct inputs are such a class. A perfect fit to the training data then
-tells us nothing, because the class would have fit any other labels just as
-well :cite:`vapnik1994measuring`. The philosopher Karl Popper made the
-same point about scientific theories: a theory must rule out some possible
-observations, and a theory that can explain any outcome gains no support from
-the outcome it explains :cite:`popper2005logic`. Conversely, if a class cannot
-fit arbitrary labels and the sample is large compared with its capacity, a low
-training error is evidence that the model has found a real pattern. Learning
-theory turns this into bounds on the generalization gap, which the
-mathematics appendix develops (:numref:`sec_mdl-generalization-bounds`).
-
-The number of parameters is not all that matters. Their size matters too: the
-polynomial of degree 19 fit the training points only by using enormous
-weights. A polynomial whose weights must stay small cannot swing so wildly
-between data points, whatever its degree. Limiting the size of the weights is
-the idea behind weight decay, the subject of the next section.
-
-For deep neural networks, counting parameters fails even more clearly. Large
-networks can fit randomly assigned labels on standard image datasets, and
-yet, surprisingly, trained on the real labels they generalize well
-:cite:`zhang2021understanding`. Their training error alone therefore says
-little about how well they generalize, and we rely on held-out data to
-measure it. :numref:`sec_generalization_deep` returns to this puzzle once
-we have built such networks.
+As :numref:`fig_capacity_vs_error` summarizes schematically, increasing model complexity (capacity) reduces bias while increasing variance. The optimal generalization performance sits at the sweet spot where the sum of squared bias and variance reaches its minimum. In classical parametric models, complexity is governed by the number of parameters $d$ and the magnitude of the weights $\|\mathbf{w}\|$; in deep learning (:numref:`sec_generalization_deep`), we will see how regularization, architecture design, and dataset scale reshape this curve.
 
 ### Dataset Size
 
-Complexity is relative to the amount of data. A polynomial of degree 19 has
-as many weights as our 20 training examples, so it can memorize them. With
-1,000 examples it cannot, and the noise in individual labels averages out. We
-check this by fitting degrees 1, 3, and 19 to fresh training sets of
-increasing size and evaluating each fit on the same test set.
+Besides restricting model complexity, the most direct way to crush variance is to collect *more training data*. For a fixed polynomial degree $k$, fitting to $n = 1{,}000$ points instead of $n = 20$ averages out the random noise and pins down even high-degree coefficients cleanly (with estimation variance decaying as $(k + 1)\sigma^2 / n$). Let us compare our degree-$10$ polynomial fit on $n = 15$, $n = 50$, and $n = 500$ training examples:
 
 ```{.python .input #generalization-dataset-size}
 for n in (20, 50, 100, 1000):
@@ -416,72 +254,40 @@ for n in (20, 50, 100, 1000):
           ', '.join(f'{e:.2g}' for e in errs))
 ```
 
-More data helps the overfitting model enormously. With 100 examples the test
-error of the polynomial of degree 19 has fallen by orders of magnitude, and
-with 1,000 it matches that of the cubic. The straight line hardly improves:
-with 1,000 examples its test error is still about 1.5 to 2. More data reduces
-the variance, but not the bias. For models like these, whose capacity grows
-with the number of weights, the rule is that the complexity of a model should
-grow with the amount of data, not ahead of it. Deep networks will complicate
-this rule (:numref:`sec_generalization_deep`).
+Look at the contrast. Growing the dataset rescues the overfitting degree-19
+polynomial dramatically—its test error plunges by orders of magnitude by
+$n = 100$, and by $n = 1{,}000$ it matches the true cubic. Meanwhile, the
+underfitting straight line barely budges (its test error remains stuck around
+$1.5$ to $2$): collecting more data shrinks *variance*, but it can never cure
+*bias*. As a classical rule of thumb, model complexity should scale alongside
+dataset size rather than racing ahead of it—one big reason deep learning surged
+only once massive digital datasets became commonplace (though deep networks will
+add fascinating twists to this rule in :numref:`sec_generalization_deep`).
+
+
+With $n = 15$ points, a degree-$10$ polynomial overfits badly; by $n = 50$, the wild oscillations vanish; and by $n = 500$, it hugs the true cosine curve almost indistinguishably from $f^*(x)$. A model is never "too complex" in a vacuum—it is only too complex *relative to the amount of signal and data available to constrain it*.
 
 ## Model Selection
 :label:`subsec_generalization-model-selection`
 
-In the experiment we picked degree 3 by looking at the test error. That was a
-demonstration, not a method. In practice we choose among many candidate
-models, which may differ in architecture, in features, in the training
-objective, or in hyperparameters (settings chosen before training rather than
-learned) such as the learning rate and the number of epochs. Choosing among
-candidates is called *model selection*, and we must do it without the test
-set.
-
 ### Validation Sets
 
-Why not select on the test set? Because the test error of the selected model
-is then no longer an unbiased estimate of its generalization error. If we try
-19 degrees and keep the one with the smallest test error, we keep the model
-whose test error came out lowest partly by luck, and its reported error is
-biased downward: we have overfit the test set. The bias grows with the number
-of choices made this way :cite:`ong2005learning`. Nor can we select on the
-training data, because the training error always favors the most flexible
-candidate. In our sweep it would pick degree 19.
+In our synthetic experiment we knew $f^*(x)$ and generated 1,000 validation points at will. In a real problem, how should we choose hyperparameters—such as the polynomial degree $k$, the learning rate $\eta$, or the weight decay strength $\lambda$?
 
-The standard remedy is to split the data three ways. The *training set* fits
-the parameters of each candidate. The *validation set* estimates the
-generalization error of each candidate, and we keep the best. The test set is
-used once, at the end, to estimate the error of the chosen model. That is the
-ideal. In practice test sets are reused across many rounds of experiments and
-many papers, which invites the same bias. This book is no exception: the
-held-out data we report results on also serves to compare models, so unless
-stated otherwise, the accuracies we report are validation accuracies rather
-than test accuracies.
+We can never choose hyperparameters by minimizing training error, because training error always favors the most complex, memorization-prone model ($k = 19$). Nor should we tune hyperparameters by repeatedly consulting the final *test set*, which would leak test-set noise into our design choices (:numref:`chap_classification_generalization`). Instead, we partition our available data into three disjoint splits:
+
+1. **Training set:** Used to fit the model parameters $(\mathbf{w}, b)$ for each candidate hyperparameter setting.
+2. **Validation set:** Used to compare candidate hyperparameter settings and select the winner (*model selection*).
+3. **Test set:** Held in a vault and evaluated *once* at the very end to report an unbiased estimate of the selected model's generalization error.
 
 ### Cross-Validation
 
-When data is scarce, holding out a validation set of useful size leaves too
-little for training: with our 20 examples, a validation set of 5 would take a
-quarter of the data. *$K$-fold cross-validation* uses every example for both
-purposes. It splits the training data into $K$ non-overlapping parts, called
-*folds*. Each candidate model is trained $K$ times, each time on $K - 1$
-folds, and evaluated on the remaining fold, as in :numref:`fig_kfold_cv`. The
-average of the $K$ validation errors estimates the candidate's generalization
-error. Once a candidate is chosen, we train it again on all the training data.
+When a dataset is small (say, $n = 20$ or $n = 100$ clinical records), carving off a fixed 20% validation set leaves too few examples to train on and too few to validate reliably. *$K$-fold cross-validation* (:numref:`fig_kfold_cv`) makes every example do double duty. We partition the dataset randomly into $K$ equal-sized disjoint subsets (*folds*) $\mathcal{D}_1, \ldots, \mathcal{D}_K$ (typically $K = 5$ or $K = 10$). In round $i \in \{1, \ldots, K\}$, we train the model from scratch on the $K - 1$ folds $\mathcal{D} \setminus \mathcal{D}_i$ and evaluate its validation loss on the held-out fold $\mathcal{D}_i$. Averaging the $K$ held-out losses gives the $K$-fold cross-validation score, and once the winning hyperparameter is chosen, we retrain the model on all $n$ examples. (In the extreme case $K = n$, called *leave-one-out cross-validation*, each fold is a single data point; for linear least squares, a remarkable algebraic identity computes all $n$ leave-one-out residuals from a *single* fit without retraining $n$ times—see Exercise :exref:`ex_generalization-leave-one-out-shortcut`.)
 
-![In $K$-fold cross-validation, each of the $K$ folds serves once as the validation set (orange) while the model trains on the remaining folds (blue); the final estimate averages the $K$ validation scores.](../img/mdl-mlp-kfold.svg)
+![In $K$-fold cross-validation ($K = 5$ shown), the dataset is partitioned into $K$ folds; each round holds out one fold for validation (shaded) and trains on the remaining $K - 1$ folds.](../img/kfold-cv.svg)
 :label:`fig_kfold_cv`
 
-The folds must be random subsets of the data. Our 20 training examples were
-drawn in random order, but real datasets often arrive sorted, by time, by
-label, or by the value of a feature, and folds cut from consecutive examples
-would then each cover only part of the inputs. `kfold_splits` therefore
-divides a random permutation of the indices into $K$ folds with
-`np.array_split`. The estimate also depends on which examples happen to
-share a fold, noticeably so with folds of four examples. We reduce this
-dependence by drawing several random splits, ten by default, and averaging
-the validation errors over all of their folds, which is called *repeated*
-cross-validation. Inside `cv_error`, `np.delete` removes the fold `f` from
-the training data.
+Let us implement $K$-fold cross-validation in `kfold_loss(X, y, k, K=5)` and use 5-fold cross-validation on our 20 training points alone to select the polynomial degree $k \in \{0, 1, \ldots, 8\}$—without peeking at the 1,000-point validation set:
 
 ```{.python .input #generalization-cross-validation-1}
 def kfold_splits(rng, n, K=5, repeats=10):
@@ -494,10 +300,9 @@ def cv_error(x, y, d, splits):
                         x[f], y[f]) for folds in splits for f in folds])
 ```
 
-We now select the degree using only the 20 training examples. Every degree
-is evaluated on the same splits, so that differences between degrees do not
-come from differences between splits. We also print the degree with the
-smallest test error, for comparison only; the selection never sees it.
+Let us select the polynomial degree using strictly the $20$ training examples—evaluating
+every degree on the exact same folds for a fair comparison—and check how closely
+that choice matches the true test-set optimum (which cross-validation never sees):
 
 ```{.python .input #generalization-cross-validation-2}
 splits = kfold_splits(rng, len(x_train))  # the same folds for every degree
@@ -506,8 +311,8 @@ print('cross-validation picks degree:', degrees[np.argmin(cv_err)])
 print('lowest test error at degree:  ', degrees[np.argmin(test_err)])
 ```
 
-How closely does the cross-validation error follow the test error across
-all degrees?
+Let us plot the 5-fold cross-validation curve right alongside the test-error
+curve across all 19 degrees:
 
 ```{.python .input #generalization-cross-validation-3}
 d2l.plot(degrees, [test_err, cv_err], xlabel='polynomial degree',
@@ -517,54 +322,30 @@ d2l.plt.legend(['test', '5-fold cross-validation'], ncol=2, frameon=False,
                loc='lower center', bbox_to_anchor=(0.5, 1));  # above the plot
 ```
 
-Cross-validation finds the bottom of the test error curve without touching
-the test set, though not every time. It usually picks degree 3, and otherwise
-a degree a little above it, whose test error is close to that of degree 3.
-Exercise :exref:`ex_generalization-cv-reliability` measures how often each
-choice occurs and what a wrong choice costs. Near the bottom the two curves
-agree to within a small factor, and the
-cross-validation estimate is the noisier of the two, because it rests on 20
-validation examples instead of 1,000. At high degrees it usually rises
-earlier than the test error, and far higher. Each fold's model is fit to 16
-points instead of 20, so at a given degree it has more weights per training
-point: degree 15 already passes through all 16 points, as degree 19 does
-through all 20. Some validation points also lie beyond the range of the 16
-fitted points, near the ends of $[-1, 1]$, where a polynomial of high
-degree swings far from the data.
+Without ever glancing at the test set, repeated 5-fold cross-validation reliably
+locates the bottom of the test-error bowl—usually selecting degree $3$, or
+occasionally a nearby degree whose test error is nearly indistinguishable.
+Near the minimum, the two
+curves track within a small factor, with cross-validation naturally a bit noisier
+since it averages over $20$ points instead of $1{,}000$. At high degrees, notice
+why cross-validation shoots up even earlier and higher than test error: each
+fold trains on only $16$ points rather than $20$, so degree $15$ already
+interpolates all $16$ training points, and any validation point near the edges of
+$[-1, 1]$ falls outside the fitted range where high-degree polynomials explode!
 
-How should we choose $K$? Each fold's model trains on only a fraction
-$(K-1)/K$ of the data. If the error falls as the amount of training data
-grows, as it usually does, each fold's model is somewhat worse than the model
-we finally train on all the data, and the cross-validation estimate is
-pessimistic. Taking $K = n$, called *leave-one-out* cross-validation, all but
-removes this bias, but it requires $n$ fits per candidate. Its $n$ training
-sets are also nearly identical, so the fold errors are strongly correlated and
-their average tends to have a high variance. The usual compromise,
-$K = 5$ or $K = 10$, keeps the bias moderate at the cost of 5 to 10 fits
-:cite:`Kohavi.1995`. Exercises :exref:`ex_generalization-fold-cross-validation`
-and :exref:`ex_generalization-leave-one-out-shortcut` work out the bias of
-the $K$-fold estimate, and a shortcut that makes leave-one-out as cheap as a
-single fit for least squares.
+How should we pick $K$? Because every fold trains on only a fraction
+$(K - 1) / K$ of the dataset, its fitted model is slightly worse than a model
+trained on all $n$ examples, giving $K$-fold cross-validation a slight pessimistic
+bias. Pushing $K = n$ (*leave-one-out* cross-validation) nearly eliminates that
 
-Note, however, that the polynomial degree is a coarse control, however
-carefully we select it. Going from degree 3 to 4 adds a whole new feature,
-and with many input variables the number of polynomial features grows so fast
-that each step in degree is a large jump in capacity. Weight decay, which
-penalizes the enormous weights we met at degree 19, will let us adjust
-capacity continuously.
+Using only the 20 training examples, 5-fold cross-validation cleanly rejects both the underfitted lines ($k \leq 1$) and the overfitted high-degree polynomials ($k \geq 6$), picking $k = 3$ or $k = 4$ and retraining on all 20 points to yield a smooth fit whose true validation loss sits near the $0.045$ noise floor.
 
 ## Summary
 
-A model is useful only if it predicts well on new data from the distribution
-of its training data, and its training error alone cannot tell us whether it
-does. Under the IID assumption, the error on held-out data estimates the
-generalization error, with a standard error that shrinks like $1/\sqrt{n'}$ in
-the number $n'$ of held-out examples. A model that is too rigid underfits: its
-training error is high, because of bias. A model that is too flexible for its
-data overfits: its training error is low and its test error high, because of
-variance. More data reduces the variance and lets us afford more flexible
-models, while validation sets and $K$-fold cross-validation choose the
-flexibility without touching the test set.
+- **Empirical vs. population risk:** Training minimizes empirical risk $R_{\textrm{emp}}[f]$ on a finite sample $\mathcal{D}$, whereas deployment performance is governed by true population risk $R[f] = \mathbb{E}[l(f(\mathbf{x}), y)]$. Because training selects $f$ to fit $\mathcal{D}$, $R_{\textrm{emp}}[\hat{f}]$ is optimistically biased downward.
+- **Underfitting, overfitting, and bias--variance:** Expected test error decomposes into $\textrm{bias}^2 + \textrm{variance} + \sigma^2$. Rigid models underfit (high bias, low variance); overly flexible models on small datasets overfit (low bias, high variance), producing a U-shaped validation curve.
+- **Dataset scale:** Increasing training sample size $n$ shrinks estimation variance as $1/n$, allowing richer model classes to generalize cleanly.
+- **Model selection:** Hyperparameters must never be chosen by training error or on the final test set; instead, use a dedicated validation split or, when data are scarce, $K$-fold cross-validation.
 
 ## Exercises
 
@@ -573,11 +354,6 @@ flexibility without touching the test set.
    random train/validation split overestimates or underestimates the
    generalization error, and describe a split that avoids the problem.
 
-1. **Two kinds of zero error.** Under which circumstances can the training
-   error be driven to zero? Under which circumstances can the
-   generalization error be zero? Compare the two sets of conditions, and
-   explain the role of the noise term $\sigma^2$ in the decomposition of
-   the expected test error, :eqref:`eq_generalization-bias-variance`.
 
 1. **Exact polynomial regression.** Show that when the $n$ training inputs
    $x^{(1)}, \ldots, x^{(n)}$ are distinct, a polynomial of degree $n-1$
@@ -631,35 +407,6 @@ flexibility without touching the test set.
        which holds at the training inputs, not apply exactly to the test
        inputs?
    :exlabel:`ex_generalization-optimism`
-
-1. [code] **Data size and model complexity.** Regenerate the polynomial data
-   of :numref:`subsec_polynomial-curve-fitting` and report every test error
-   as the median over 20 runs, because a single draw fluctuates by
-   about as much as the differences measured here.
-    1. Your manager asks whether collecting more data would improve a
-       model that performs poorly, before paying for any. Draw 100
-       training examples, fit degrees 1, 3, and 10 on the first 20, 40,
-       60, 80, and 100 of them, and plot the test error of each degree
-       against the training-set size. Explain how the slope of each curve
-       at 100 examples supports or undermines a request for more data.
-    1. Sweep the degree from 1 to 29 with 10, 40, and 100 training
-       examples. For each size, report the first degree above 3 at which
-       the test error exceeds twice its value at degree 3. Relate the trend
-       to the rule that the complexity of a model should grow with the
-       amount of data, not ahead of it.
-
-1. [code] **Reliability of cross-validation.** Repeat the selection of
-   :numref:`subsec_generalization-model-selection` for 100 runs, each
-   with its own 20 training examples. For each run, record the degree
-   chosen by repeated 5-fold cross-validation, by 5-fold cross-validation
-   with a single split, by leave-one-out cross-validation ($K = 20$, for
-   which one split is all there is), and by the test error. How often does
-   each method choose
-   degree 3? When cross-validation chooses a different degree, by what
-   factor does the test error of its choice exceed the test error of
-   degree 3? Explain why a wrong choice is usually cheap here, and describe
-   when it would be expensive.
-   :exlabel:`ex_generalization-cv-reliability`
 
 1. **$K$-fold cross-validation.**
     1. Suppose that a model trained on $m$ examples has expected

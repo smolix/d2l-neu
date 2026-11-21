@@ -541,14 +541,12 @@ chapter's definition under the last-writer-wins collision rule (except the
 files in `LIB_ONLY_EARLY_FILES`, which are prepended because a later chapter
 uses one of their symbols at import time). Members:
 
-- `chapter_recurrent-modern/legacy-attention-lib.md` holds only the
-  PyTorch/JAX `GRU` that `seq2seq.md` builds on (`lstm.md` teaches the GRU
-  without saving it). It came from the retired NLP Pretraining chapter
-  (2026-11) with the frozen 2017 `TransformerEncoderBlock`, the
-  tensorflow/mxnet attention primitives and the tensorflow/mxnet
-  `LSTMScratch`/`LSTM`/`GRU`; those lost their last user when `seq2seq.md`
-  went PyTorch/JAX-only (2026-11-14) and were removed. The file kept its
-  name.
+- `chapter_recurrent-modern/legacy-tokenizer-lib.md` keeps the two
+  `BPETokenizer` methods (`__getitem__` for special tokens, `to_tokens`) that
+  the retired translator of `seq2seq.md` attached (2026-11-19). They merge
+  into the tokenizer's class block, on which about 50 PyTorch/JAX notebooks
+  depend, so dropping them would stale those notebooks with no code change.
+  Delete the file at the next full re-execution.
 - `chapter_lm-encoders/legacy-datahub-lib.md` keeps the `DATA_HUB` entries of
   the two retired NLP chapters (SNLI, IMDb, GloVe, fastText `wiki.en`),
   byte-for-byte. Dropping them would change the `DATA_HUB` shard and mark
@@ -629,6 +627,16 @@ does not change.
 Each file repeats the `:label:` of the symbols' original home, so the
 "Defined in" docstring suffix, and with it every shard under `d2l/_blocks/`,
 stays byte-identical after a move.
+
+A rendered section that takes over saved blocks from another section can keep
+their shards the same way without a hidden label (a second `:label:` would
+fail the corpus label check): `DOCSTRING_LABEL_OVERRIDES` in
+`tools/build_lib.py` maps a source file to the label its "Defined in" suffixes
+use. `chapter_optimization/test-models.md` maps to `sec_adam`, because the
+test-model harness (`TinyLM`, `train_steps`, `lr_sweep`, ...) moved there out
+of `adam.md` in 2026-11 and about fourteen notebooks in chapters 10 to 13 and
+the Language Models part consume it. Remove the entry at the next full
+re-execution of the book.
 
 ### 3.5 "Regenerated when a new render occurs" (the requirement, made concrete)
 

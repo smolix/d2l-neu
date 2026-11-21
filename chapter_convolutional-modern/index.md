@@ -1,55 +1,18 @@
-# Modern Convnets
+# Modern Convolutional Neural Networks
 :label:`chap_modern_cnn`
 
-The LeNet of :numref:`sec_lenet` learns its convolution kernels from
-examples, and it classifies Fashion-MNIST slightly better than the MLP with
-fewer than a third of its parameters. A natural next step is to make it
-larger, with more layers and more channels. For a long time this did not
-work. Deeper stacks of sigmoid layers trained worse than shallow ones, since
-every sigmoid shrinks the gradient that passes back through it, and every
-new layer brought its own kernel size, width, and initialization to choose
-by hand. What does it take to make a convolutional network much
-deeper, and better?
+With the mechanics of convolutional layers and LeNet in hand (:numref:`chap_cnn`), we now trace the ten-year arc of modern convolutional architecture design—from AlexNet's 2012 ImageNet breakthrough to the early-2020s dialogue between convnets and Vision Transformers. Rather than treating each landmark model as an isolated museum piece, we examine the concrete bottleneck each architecture solved and carry a cumulative toolkit forward from section to section:
 
-The network that won the ImageNet competition in 2012 had 8 layers, and the
-winner three years later had more than 150. ImageNet is a benchmark of more
-than a million photographs in a thousand categories, and the 2012 winner, a
-convolutional network trained end to end on raw pixels, beat every system
-built on hand-designed features. Between the two networks lies a series of
-ideas that removed one obstacle at a time: repeated blocks, layers that
-keep the scale of the signals under control, and connections that let each
-block add a correction to its input instead of replacing it. The last two
-reappear in every transformer.
+1. **AlexNet** (:numref:`sec_alexnet`) shows why end-to-end learned representations overtook hand-crafted vision pipelines once large labeled datasets (ImageNet) and GPUs converged, introducing ReLU activations, dropout, and cosine learning-rate warmup while exposing a glaring parameter imbalance: 95% of its arithmetic sits in five convolutions, whereas 92% of its 46.8M weights sit in its dense classifier head.
+2. **VGG, NiN, and GoogLeNet** (:numref:`sec_blocks`) replace ad-hoc layer lists with repeatable *blocks*: VGG stacks narrow $3 \times 3$ convolutions inside stage templates; Network in Network (NiN) introduces $1 \times 1$ channel-mixing convolutions and replaces the 43M-parameter dense head with parameter-free global average pooling; and GoogLeNet combines multi-scale parallel branches with $1 \times 1$ bottlenecks inside the stem–body–head macro layout that every subsequent convnet inherits.
+3. **Normalization layers** (:numref:`sec_batch_norm`) stabilize deep optimization by standardizing intermediate activations—across the minibatch in *batch normalization* or within each example in *layer*, *group*, and *instance normalization*—making networks insensitive to weight scale and widening the usable learning-rate band by orders of magnitude.
+4. **ResNet, ResNeXt, and DenseNet** (:numref:`sec_resnet`) solve the *degradation problem* of deep plain networks via additive residual shortcuts $\mathbf{x} + g(\mathbf{x})$ that nest function classes and keep the identity map at $g = 0$, then generalize the block through grouped convolutions (ResNeXt) and feature concatenation (DenseNet).
+5. **Efficient convnets** (:numref:`sec_efficient_cnns`) bring latency, memory, and energy to the fore via depthwise-separable factorization (MobileNet), inverted bottlenecks (MobileNetV2), compound scaling and squeeze-and-excitation gates (EfficientNet), and train-time multi-branch blocks that algebraically fuse into single $3 \times 3$ convolutions for deployment (RepVGG)—while showing why multiply-add counts diverge from GPU wall-clock time.
+6. **Modern training recipes** (:numref:`sec_training_recipes`) decouple training procedure from architecture: upgrading a fixed 2015 ResNet with AdamW, cosine warmup, label smoothing, Mixup, stochastic depth, and exponential moving averages accounts for over four ImageNet top-1 points on its own.
+7. **ConvNeXt** (:numref:`sec_convnext`) holds the modern recipe fixed and modernizes a ResNet one component at a time—adopting $7 \times 7$ depthwise convolutions, $4\times$ inverted bottlenecks, a single GELU and LayerNorm per block, and separate downsampling layers—matching Vision Transformers without a single attention layer.
+8. **Convolutional network design spaces** (:numref:`sec_cnn-design`) shift the unit of analysis from individual networks to *populations* sampled from the AnyNet template, comparing empirical error CDFs to distil the simple structural rules of the RegNet family.
 
-Later gains came as much from how networks are trained as from new layers.
-This is awkward for anyone who compares two published accuracies, because
-the better number may belong to the better training recipe and not to the
-better network.
-
-The first four sections follow the growth in depth: the network of 2012
-(:numref:`sec_alexnet`), networks built from repeated blocks instead of layer
-by layer (:numref:`sec_blocks`), the normalization of activations
-(:numref:`sec_batch_norm`), and the residual connection
-(:numref:`sec_resnet`), where we train plain and residual networks side by
-side to see that depth alone was not enough.
-:numref:`sec_efficient_cnns` goes the other way and makes a network cheap
-enough for a phone, then asks what the saving is worth against a plain
-network of equal cost. From there on the chapter is about evidence as much
-as about layers. We ask how much of a reported accuracy comes from the
-training procedure (:numref:`sec_training_recipes`), modernize a ResNet a
-few changes at a time to find out which of them matter
-(:numref:`sec_convnext`), and sample two small populations of networks to
-test a design rule (:numref:`sec_cnn-design`).
-
-Every network in the chapter is trained on Fashion-MNIST, under one
-learning-rate schedule that :numref:`sec_alexnet` defines. A benchmark this
-small shows that a network trains and what it costs. The evidence that an
-idea matters at scale comes from the ImageNet results, which we quote from
-the papers. Vision transformers :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`
-follow in :numref:`chap_transformers`. With equal compute, convnets match
-them on image classification :cite:`smith2023convnets`, and they remain the
-default where data are limited, latency matters, or every pixel needs a
-prediction.
+Throughout the chapter, we evaluate every architecture and recipe on Fashion-MNIST under controlled schedules while citing large-scale ImageNet ablations wherever small $28 \times 28$ grayscale garments hit their ~94% dataset ceiling.
 
 ```toc
 :maxdepth: 2
@@ -63,45 +26,6 @@ training-recipes
 convnext
 cnn-design
 ```
-
-## Resources and Further Reading {.unnumbered}
-
-The references below cover the architectures of this chapter and current
-practice: the landmark networks from AlexNet to ConvNeXt, the training
-recipes that confound comparisons between them, and efficient networks for
-deployment. All are freely accessible online.
-
-**Books**
-
-- [Deep Learning for Coders with fastai and PyTorch](https://github.com/fastai/fastbook), by Howard and Gugger. Free notebooks that build ResNets from scratch and apply the augmentation, schedules, and mixed precision of :numref:`sec_training_recipes` in working code.
-- [Understanding Deep Learning](https://udlbook.github.io/udlbook/), by Simon J. D. Prince. Chapter 11 analyzes why residual connections ease optimization, with loss-surface and gradient-propagation arguments that complement :numref:`sec_resnet`.
-
-**Courses and video lectures**
-
-- [Michigan EECS 498-007, lecture on CNN architectures](https://web.eecs.umich.edu/~justincj/teaching/eecs498/), by Justin Johnson. Covers the networks of the first four sections, from AlexNet to ResNet, with the same accounting of parameters and arithmetic.
-- [MIT 6.5940: TinyML and Efficient Deep Learning](https://efficientml.ai/), by Song Han. Depthwise separability, quantization, pruning, and deployment on small devices: the systems side of :numref:`sec_efficient_cnns`.
-- [Hugging Face Computer Vision Course](https://huggingface.co/learn/computer-vision-course). Current practice with pretrained backbones, ConvNeXt among them, and transfer learning.
-
-**Tutorials, notes, and surveys**
-
-- [timm (pytorch-image-models)](https://huggingface.co/docs/timm), by Ross Wightman and contributors. Implementations of the architectures in this chapter with trained weights, and [results tables](https://github.com/huggingface/pytorch-image-models/tree/main/results) that compare them under one evaluation.
-- [A Recipe for Training Neural Networks](https://karpathy.github.io/2019/04/25/recipe/), by Andrej Karpathy. The discipline of debugging first, which :numref:`sec_training_recipes` assumes.
-- [Zoom In: An Introduction to Circuits](https://distill.pub/2020/circuits/zoom-in/), by Olah et al. (2020), *Distill*. Opens trained vision models to inspect the features they learn; a natural next step after the first-layer kernels of :numref:`sec_alexnet`.
-
-**Foundational papers**
-
-A selection of the primary sources for this chapter, all free on arXiv or the
-proceedings site and worth reading in the original. The papers on VGG, NiN,
-GoogLeNet, and RegNet are cited in their sections.
-
-- [ImageNet Classification with Deep Convolutional Neural Networks](https://papers.nips.cc/paper_files/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html), by Krizhevsky, Sutskever, and Hinton (2012), *NeurIPS*. AlexNet (:numref:`sec_alexnet`).
-- [Batch Normalization](https://arxiv.org/abs/1502.03167), by Ioffe and Szegedy (2015). Read it together with the later critique of its explanation in :numref:`sec_batch_norm`.
-- [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385), by He, Zhang, Ren, and Sun (2015). ResNet (:numref:`sec_resnet`), the most cited paper in deep learning.
-- [Bag of Tricks for Image Classification with CNNs](https://arxiv.org/abs/1812.01187), by He et al. (2019). The first systematic demonstration that details of the recipe rival changes of architecture (:numref:`sec_training_recipes`).
-- [ResNet Strikes Back](https://arxiv.org/abs/2110.00476), by Wightman, Touvron, and Jégou (2021). The controlled study of recipes and architecture behind :numref:`sec_training_recipes`.
-- [MobileOne: An Improved One Millisecond Mobile Backbone](https://arxiv.org/abs/2206.04040), by Vasu et al. (2023), *CVPR*. Re-parameterized networks designed against measured phone latency; continues :numref:`sec_efficient_cnns` toward deployment.
-- [A ConvNet for the 2020s](https://arxiv.org/abs/2201.03545), by Liu et al. (2022). ConvNeXt (:numref:`sec_convnext`), a cumulative ablation worth studying for its method as much as for its result.
-- [ConvNets Match Vision Transformers at Scale](https://arxiv.org/abs/2310.16764), by Smith et al. (2023). With matched pretraining compute, convnets and vision transformers scale alike; read it with :numref:`chap_transformers`.
 
 <!-- slides -->
 

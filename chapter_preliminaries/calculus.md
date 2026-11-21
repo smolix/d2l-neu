@@ -6,32 +6,14 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Calculus
 :label:`sec_calculus`
 
-Training a model means adjusting its parameters until the loss, a number
-that measures how badly the model fits its training data, is small. Suppose
-that a model has a single parameter, currently set to $1$, and that its loss
-is $1$. Should the parameter go up or down, and how much will the loss
-change if the parameter moves by $0.01$? With one parameter we could try
-both directions and compare. A deep network has millions of parameters, and
-probing each of them separately costs one evaluation of the loss per
-parameter for every update, which is far too slow.
+In Ancient Greece, Archimedes calculated the area of a circle by inscribing regular polygons with increasing numbers of sides $n \to \infty$ (:numref:`fig_circle_area`): as the triangles become thinner, their height approaches $r$ and their combined bases approach the circumference $2\pi r$, giving area $\frac{1}{2} r (2\pi r) = \pi r^2$. Approximating curved quantities by simple linear pieces in the limit of small steps lies at the root of both integral calculus and *differential calculus*.
 
-Calculus answers both questions with a formula instead of a probe. The
-derivative of the loss with respect to a parameter is the rate at which
-the loss changes when that parameter changes. Its sign tells us which way to
-move, and its size tells us how fast the loss responds. With many
-parameters, the derivatives form a vector, the gradient, which points in
-the direction in which the loss increases fastest. A small step against the
-gradient is the basic move of nearly every training algorithm in this book.
-Since a network computes its loss through many nested functions, we also
-need the chain rule, which assembles the derivative of a composition from
-the derivatives of its parts.
+![Regular polygons with 4, 5, 6, and 8 sides inscribed in a circle. As the number of sides grows, the area of the polygon approaches the area of the circle.](../img/polygon-circle.svg)
+:label:`fig_circle_area`
 
-We develop these three tools on a running example small enough that every
-number in it can be checked by hand, using the vectors and dot products of
-:numref:`sec_linear-algebra`. The next section lets the framework apply them
-for us. Note that calculus only tells us how to fit a model to its training
-data. Whether the fitted model predicts well on data that it has not seen,
-the problem of generalization, is a question for later chapters.
+In deep learning, differential calculus is the engine of *optimization*. Training a model means adjusting its parameters to minimize a scalar loss function measuring how poorly the model fits its training examples. With millions or billions of parameters, probing each parameter by trial and error would require millions of forward passes per update. Instead, the *derivative* gives the instantaneous rate at which the loss changes with respect to each parameter; collecting all partial derivatives into the *gradient* vector identifies the direction of steepest ascent, and the *chain rule* assembles gradients across nested layers in a single backward pass.
+
+In this section, we develop derivatives, gradients, and the chain rule on a running linear-regression example small enough that every number can be verified by hand. In :numref:`sec_autograd`, we will see how deep learning frameworks automate these calculations for arbitrary programs.
 
 ```{.python .input #calculus}
 %%tab mxnet
@@ -76,176 +58,69 @@ from d2l import jax as d2l
 
 ### The Derivative as a Limit
 
-Let us make the opening question concrete. A model predicts the same number
-$w$ for every example, and we measure its error on three examples with
-labels $1$, $1$, and $0$ by the sum of the squared differences between
-prediction and label:
+Suppose a single-parameter model predicts the constant value $w$ for every example, and we evaluate it on three training examples with labels $1$, $1$, and $0$. Summing the squared errors gives
 
 $$L(w) = (w-1)^2 + (w-1)^2 + (w-0)^2 = 3w^2 - 4w + 2.$$
 
-At $w = 1$ the first two predictions are correct and the third is off by
-one, so $L(1) = 1$.
+At $w = 1$, the loss is $L(1) = 1$:
 
 ```{.python .input #calculus-derivatives-and-differentiation-1}
 def loss(w):
     return 3 * w ** 2 - 4 * w + 2
 ```
 
-To see how the loss responds when $w$ changes, we move $w$ from $1$ to
-$1 + h$ and divide the change in the loss by the change in the parameter.
-The ratio
-
-$$\frac{L(1+h) - L(1)}{h}$$
-
-is the average rate of change of $L$ between $1$ and $1 + h$: the number of
-units by which the loss changes per unit of $w$. We compute it for $h$ from
-$10^{-1}$ down to $10^{-5}$.
+To see how $L(w)$ responds to a small perturbation $h \neq 0$, we evaluate the difference quotient $\frac{L(1+h) - L(1)}{h}$ as $h$ shrinks from $10^{-1}$ to $10^{-5}$:
 
 ```{.python .input #calculus-derivatives-and-differentiation-2}
 for h in 10.0 ** -np.arange(1, 6):
     print(f'h = {h:.0e}   ratio = {(loss(1 + h) - loss(1)) / h:.5f}')
 ```
 
-The ratios approach $2$, and algebra shows why. Expanding
-$L(1+h) = 3(1+h)^2 - 4(1+h) + 2 = 1 + 2h + 3h^2$ gives
-
-$$\frac{L(1+h) - L(1)}{h} = 2 + 3h,$$
-
-which is the printed sequence $2.3, 2.03, 2.003, \ldots$ and which comes as
-close to $2$ as we like once $h$ is small enough. The value $2$ is the
-*derivative* of $L$ at $w = 1$, written $L'(1) = 2$. In general, for a
-function $f: \mathbb{R} \rightarrow \mathbb{R}$ that maps a number to a
-number, the derivative of $f$ at $x$ is
+Expanding $L(1+h) = 1 + 2h + 3h^2$ shows that $\frac{L(1+h) - L(1)}{h} = 2 + 3h \to 2$ as $h \to 0$. Formally, for $f: \mathbb{R} \rightarrow \mathbb{R}$, the *derivative* of $f$ at $x$ is the limit
 
 $$f'(x) = \lim_{h \rightarrow 0} \frac{f(x+h) - f(x)}{h}.$$
 :eqlabel:`eq_derivative`
 
-The *limit* on the right is the value that the ratio approaches as $h$
-shrinks toward zero, from above and from below. The ratio itself is never
-evaluated at $h = 0$, where it would be $0/0$. When the limit exists, $f$ is
-*differentiable* at $x$.
-
-The ratio has a geometric meaning. It is the slope of the *secant*, the line
-through the two points $(x, f(x))$ and $(x+h, f(x+h))$ on the graph of $f$.
-As $h$ shrinks, the second point slides along the graph toward the first,
-and the secant turns into the *tangent*, the line that touches the graph at
-$(x, f(x))$. The derivative is the slope of the tangent
-(:numref:`fig_calc_secant_tangent`).
+Geometrically, the difference quotient is the slope of the *secant line* through $P = (x, f(x))$ and $Q = (x+h, f(x+h))$; as $h \to 0$, the secant rotates into the *tangent line* at $P$ with slope $f'(x)$ (:numref:`fig_calc_secant_tangent`).
 
 ![The difference quotient $(f(x+h)-f(x))/h$ is the slope of the secant through $P$ and $Q$. As $h \to 0$, $Q$ slides toward $P$ and the secant turns into the tangent at $P$, whose slope is $f'(x)$.](../img/calculus-secant-tangent.svg)
 :label:`fig_calc_secant_tangent`
 
-The device of the limit is much older than the derivative. Archimedes
-found the area of a circle of radius $r$ by squeezing it between inscribed
-and circumscribed regular polygons with more and more sides
-(:numref:`fig_circle_area` shows inscribed ones). An inscribed polygon with
-$n$ sides splits into $n$ triangles that meet at the center. As $n$ grows,
-the height of each triangle approaches $r$ and the bases add up to nearly
-the circumference $2\pi r$, so the area of the polygon approaches
-$\frac{1}{2} \cdot 2\pi r \cdot r = \pi r^2$. The derivative is found in the
-same way. We cannot compute a rate of change at a single point directly, so
-we compute the slopes of secants over shrinking intervals and take the
-limit.
-
-![Regular polygons with 4, 5, 6, and 8 sides inscribed in a circle. As the number of sides grows, the area of the polygon approaches the area of the circle.](../img/polygon-circle.svg)
-:label:`fig_circle_area`
-
-Not every function is differentiable everywhere. The absolute value $|x|$
-has no derivative at $x = 0$: the ratio $|h|/h$ equals $1$ for every
-$h > 0$ and $-1$ for every $h < 0$, so it approaches no single value.
-Classification accuracy, the fraction of correctly classified examples, is
-worse. A small change of a parameter rarely changes any predicted class, so
-the accuracy stays constant and its derivative is zero wherever it exists.
-At the parameter values where a prediction flips, the accuracy jumps, and
-the derivative does not exist. Neither tells us which way to move. We
-therefore train with a differentiable *surrogate* loss, such as the squared
-error above, and report the accuracy separately.
+Not every function is differentiable everywhere: $|x|$ has a corner at $x = 0$ (slope $-1$ from the left, $+1$ from the right). Even worse, discrete classification accuracy is flat ($f'(x) = 0$) almost everywhere and jumps discontinuously where a prediction flips, providing no gradient signal—which is why classifiers are trained by minimizing smooth surrogate losses such as cross-entropy.
 
 ### Rules of Differentiation
 
-Computing limits is tedious. Luckily, we almost never need to: a few
-derivatives of basic functions, combined with a few rules, cover every
-function built from them. For $y = f(x)$ we write the derivative either as
-$f'(x)$ or as $\frac{dy}{dx}$. The second form, due to Leibniz, recalls the
-ratio of a small change in $y$ to a small change in $x$, and it names the
-variable we differentiate with respect to, which helps once several variables
-are involved. The derivatives of the basic functions are
+Given $y = f(x)$, we write $f'(x) = y' = \frac{dy}{dx} = \frac{df}{dx} = \frac{d}{dx} f(x) = Df(x)$. Common elementary derivatives are
 
 $$
 \frac{d}{dx} C = 0, \quad \frac{d}{dx} x^n = n x^{n-1}, \quad
-\frac{d}{dx} e^x = e^x, \quad \frac{d}{dx} \log x = \frac{1}{x},
+\frac{d}{dx} e^x = e^x, \quad \frac{d}{dx} \log x = \frac{1}{x} \quad (x > 0),
 $$
 
-for any constant $C$ and any real exponent $n$, wherever the function is
-defined (the logarithm, for one, requires $x > 0$). A constant does not
-change, so its rate of change is zero, and $e^x$ is the function that grows
-at a rate equal to its own value.
-
-Multiples, sums, products, and quotients of differentiable functions $f$
-and $g$ are differentiable, with
+and combinations of differentiable functions $f, g$ obey
 
 $$
 \begin{aligned}
-\frac{d}{dx} [C f(x)] & = C f'(x) && \textrm{constant multiple rule,} \\
-\frac{d}{dx} [f(x) + g(x)] & = f'(x) + g'(x) && \textrm{sum rule,} \\
-\frac{d}{dx} [f(x) g(x)] & = f'(x) g(x) + f(x) g'(x) && \textrm{product rule,} \\
-\frac{d}{dx} \frac{f(x)}{g(x)} & = \frac{f'(x) g(x) - f(x) g'(x)}{g(x)^2} && \textrm{quotient rule,}
+\frac{d}{dx} [C f(x)] & = C f'(x), &
+\frac{d}{dx} [f(x) + g(x)] & = f'(x) + g'(x), \\
+\frac{d}{dx} [f(x) g(x)] & = f'(x) g(x) + f(x) g'(x), &
+\frac{d}{dx} \frac{f(x)}{g(x)} & = \frac{f'(x) g(x) - f(x) g'(x)}{g(x)^2}.
 \end{aligned}
 $$
 
-where the quotient rule requires $g(x) \neq 0$. The difference rule,
-$(f - g)' = f' - g'$, follows from the sum rule and the constant multiple
-rule with $C = -1$. The sum rule says that rates of change add. The product
-rule is the only one that may look arbitrary, and :numref:`fig_calc_product_rule`
-shows why it is not: $f(x) g(x)$ is the area of a rectangle, and when both
-sides grow a little, the area gains two thin strips, one per factor, plus a
-corner too small to matter. Each rule follows from the limit definition;
-:numref:`sec_mdl-single_variable_calculus` gives the proofs and a longer
-table of derivatives.
+:numref:`fig_calc_product_rule` illustrates the product rule geometrically via the area of a $f(x) \times g(x)$ rectangle (full proofs appear in :numref:`sec_mdl-single_variable_calculus`). Applying these rules to $L(w) = 3w^2 - 4w + 2$ immediately gives $L'(w) = 6w - 4$, so $L'(1) = 2$.
 
 ![The product rule as the area of a rectangle. When $x$ grows by $h$, the sides $f(x)$ and $g(x)$ grow by about $f'(x) h$ and $g'(x) h$, and the area grows by two thin strips and a corner of area $f'(x) g'(x) h^2$, which is negligible for small $h$.](../img/calculus-product-rule.svg)
 :label:`fig_calc_product_rule`
 
-For our loss the rules give
+### First-Order Linear Approximation and Minima
 
-$$L'(w) = \frac{d}{dw}\left[3w^2 - 4w + 2\right] = 3 \cdot 2w - 4 \cdot 1 + 0 = 6w - 4,$$
-
-and $L'(1) = 2$, the value that the ratios approached. Unlike a
-limit computed at one point, the formula gives the derivative at every $w$
-at once.
-
-### Linear Approximation and Minima
-
-The definition :eqref:`eq_derivative` says that for small $h$ the ratio
-$(f(x+h) - f(x))/h$ is close to $f'(x)$. Multiplying by $h$ turns this into
-a prediction of how $f$ changes:
+Multiplying $\frac{f(x+h) - f(x)}{h} \approx f'(x)$ by $h$ gives the *first-order linear approximation*
 
 $$f(x + h) \approx f(x) + f'(x)\, h.$$
 :eqlabel:`eq_calculus-linear-1d`
 
-The right-hand side is the tangent line at $x$, so near $x$ the function
-stays close to its tangent. This approximation answers the opening question.
-At $w = 1$ the derivative $L'(1) = 2$ is positive, so increasing $w$ by
-$0.01$ raises the loss by about $0.02$, and decreasing $w$ by $0.01$ lowers
-it by about as much. To lower the loss, we move $w$ against the sign of the
-derivative. A step of $0.1$ times the derivative, against its sign, moves
-$w$ by $-0.1 \cdot L'(1) = -0.2$ to $0.8$, where $L(0.8) = 0.72$. The
-approximation predicted $1 - 2 \cdot 0.2 = 0.6$. Where does the gap of
-$0.12$ come from? It is the term $3h^2$ of $L(1+h) = 1 + 2h + 3h^2$, with
-$h = -0.2$, which the tangent ignores. It grows with the square of the step,
-which is why steps must be small.
-
-The derivative also locates the best parameter. At a minimum of a
-differentiable function, the derivative is zero, since otherwise a small
-step against its sign would lower the function further. Solving
-$L'(w) = 6w - 4 = 0$ gives $w = 2/3$, the mean of the three labels, with
-loss $L(2/3) = 2/3$. The converse does not hold in general: the derivative
-is also zero at a maximum and at points such as $x = 0$ for $x^3$. Our
-parabola, however, curves upward everywhere, so $w = 2/3$ is its minimum.
-
-We plot $L$ together with its tangent at $w = 1$, the line
-$L(1) + L'(1)(w - 1) = 2w - 1$, with `d2l.plot`, which draws several curves
-in one figure; its code is in :numref:`sec_utils`.
+Because $L'(1) = 2 > 0$, decreasing $w$ reduces the loss: stepping opposite the derivative via $w \leftarrow w - \eta L'(w)$ with step size $\eta = 0.1$ moves $w$ from $1$ to $1 - 0.1(2) = 0.8$, lowering $L$ from $1$ to $L(0.8) = 0.72$ (close to the tangent prediction $1 + 2(-0.2) = 0.60$, with the $0.12$ difference equal to the quadratic curvature $3h^2$). At any smooth local minimum, the derivative must vanish ($f'(x) = 0$); setting $L'(w) = 6w - 4 = 0$ yields the unique global minimizer $w^* = 2/3$ (the mean of the labels $1, 1, 0$).
 
 ```{.python .input #calculus-visualization-utilities-5}
 w = np.linspace(0, 2, 101)
@@ -253,70 +128,29 @@ d2l.plot(w, [loss(w), 2 * w - 1], 'w', 'L(w)',
          legend=['L(w)', 'tangent at w = 1'])
 ```
 
-Near $w = 1$ the parabola and its tangent are hard to tell apart. Farther
-away the curvature separates them, and the lowest point of the parabola lies
-at $w = 2/3$, where its own tangent would be horizontal.
-
 ## Partial Derivatives and Gradients
 :label:`subsec_calculus-grad`
 
-A model with one parameter is rare. Let us therefore extend the derivative
-to functions of many variables. The extension turns out to answer a question
-that a single parameter could not even pose: among all the directions in
-which the parameters could move, which one lowers the loss fastest?
-
 ### Partial Derivatives
 
-Let us give our model a second parameter. The three examples now come with
-inputs $0$, $1$, and $2$, and the model predicts $w_1 + w_2 \cdot
-\textrm{input}$, a line with intercept $w_1$ and slope $w_2$. The loss is
-again the sum of the squared errors,
+Now give our three-example problem scalar inputs $0$, $1$, and $2$ paired with labels $1$, $1$, and $0$, and fit an affine line $w_1 + w_2 \cdot \textrm{input}$:
 
 $$L(w_1, w_2) = (w_1 - 1)^2 + (w_1 + w_2 - 1)^2 + (w_1 + 2 w_2 - 0)^2.$$
 
-Setting $w_2 = 0$ turns the line into the constant model, so $L(w_1, 0)$ is
-the loss $3w_1^2 - 4w_1 + 2$ from before. At $(w_1, w_2) = (1, 0)$ the loss
-is again $1$, and the opening question returns in two parts: how does the
-loss change when we change $w_1$, and how when we change $w_2$?
-
-The answer is the derivative with respect to one variable while all others
-are held fixed. For a function $f(x_1, \ldots, x_n)$ of $n$ variables, the
-*partial derivative* with respect to $x_i$ is
+For a multivariate function $y = f(x_1, \ldots, x_n)$, the *partial derivative* with respect to $x_i$ perturbs only coordinate $i$ while holding all other variables fixed:
 
 $$\frac{\partial f}{\partial x_i} = \lim_{h \rightarrow 0} \frac{f(x_1, \ldots, x_i + h, \ldots, x_n) - f(x_1, \ldots, x_i, \ldots, x_n)}{h}.$$
 
-Only the $i^\textrm{th}$ variable moves. The curly $\partial$ is a reminder
-that $f$ has other variables, which stay fixed. Since the other variables
-act as constants, a partial derivative is simply an ordinary derivative, and
-the rules of differentiation apply. Geometrically, fixing all variables but
-one cuts a curve out of the graph of $f$, and the partial derivative is the
-slope of that curve.
-
-For the line model, holding $w_2 = 0$ leaves the curve
-$L(w_1, 0) = 3w_1^2 - 4w_1 + 2$, whose derivative at $w_1 = 1$ we know, so
-$\partial L / \partial w_1 = 2$. Holding $w_1 = 1$ leaves
-$L(1, w_2) = w_2^2 + (1 + 2w_2)^2 = 5w_2^2 + 4w_2 + 1$, with derivative
-$10 w_2 + 4$, so $\partial L / \partial w_2 = 4$ at $w_2 = 0$. Increasing the
-slope raises the loss twice as fast as increasing the intercept
-(:numref:`fig_calc_partial_slices`).
+At $(w_1, w_2) = (1, 0)$, holding $w_2 = 0$ fixed gives $L(w_1, 0) = 3w_1^2 - 4w_1 + 2$, so $\frac{\partial L}{\partial w_1}(1, 0) = 2$; holding $w_1 = 1$ fixed gives $L(1, w_2) = 5w_2^2 + 4w_2 + 1$, with derivative $10w_2 + 4$, so $\frac{\partial L}{\partial w_2}(1, 0) = 4$ (:numref:`fig_calc_partial_slices`).
 
 ![The loss $L(w_1, w_2)$ of the line model near $\mathbf{w} = (1, 0)$ (black dot). Holding $w_2 = 0$ cuts out the orange curve, the loss of the constant model; holding $w_1 = 1$ cuts out the green curve. Their tangents at the dot (dashed) have slopes $\partial L / \partial w_1 = 2$ and $\partial L / \partial w_2 = 4$.](../img/calculus-partial-slices.svg)
 :label:`fig_calc_partial_slices`
 
-We can check these numbers as we checked $L'(1)$: evaluate the ratio
-$(f(x+h) - f(x))/h$ for one small, fixed $h$, moving one parameter at a
-time. Such a ratio is called a *finite difference*. For the code we write
-the model with vectors and matrices. Each example becomes a row
-$(1, \textrm{input})$ of a matrix $\mathbf{X}$, the labels form a vector
-$\mathbf{y}$, and the parameters a vector $\mathbf{w} = (w_1, w_2)$:
+In matrix--vector form (:numref:`sec_linear-algebra`), writing each example as a row $(1, \textrm{input}_i)$ of $\mathbf{X}$ gives
 
 $$\mathbf{X} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix}, \quad \mathbf{y} = \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix}, \quad L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2.$$
 
-Entry $i$ of the matrix–vector product $\mathbf{X}\mathbf{w}$ is the
-prediction $w_1 + w_2 \cdot \textrm{input}_i$, so $\mathbf{X}\mathbf{w} -
-\mathbf{y}$ is the vector of errors, and the squared norm adds up their
-squares. We use NumPy in float64: finite differences need every digit they
-can get, as we will see shortly.
+We can check $(2, 4)$ numerically by perturbing one coordinate at a time by $h = 10^{-6}$ in `float64`:
 
 ```{.python .input #calculus-partial-derivatives-1}
 X = np.array([[1.0, 0.0], [1.0, 1.0], [1.0, 2.0]])  # rows [1, input]
@@ -340,37 +174,11 @@ w = np.array([1.0, 0.0])
 numerical_gradient(line_loss, w)
 ```
 
-The finite differences agree with $2$ and $4$ to within $10^{-5}$. They
-also show what the opening called too slow: the loop evaluates the loss once
-more for every parameter. For a model with $10^8$ parameters, one estimate of
-all the partial derivatives costs $10^8$ evaluations of the loss, and
-training needs such an estimate at every step.
+Note that `numerical_gradient` requires $n$ extra evaluations of $f$ for $n$ parameters—prohibitive when $n = 10^8$.
 
-### Precision of Finite Differences
+### Numerical Precision Limits of Finite Differences
 
-Cost is not the only weakness of finite differences. Their error, $3h$ for
-the loss $L(w)$ of the constant model, shrinks with $h$, so why not simply
-choose a tiny $h$? In exact arithmetic this would work. On a computer it
-does not, and the reason is worth understanding, since it limits every
-numerical check of a gradient. A floating-point number keeps a fixed
-number of significant digits: about 16 decimal digits in the 64-bit format
-(`float64`, the default in NumPy) and about 7 in the 32-bit format
-(`float32`) that deep learning frameworks use by default
-(:numref:`sec_ndarray`). The relative rounding error of each arithmetic
-operation is at most about $\epsilon$, where
-$\epsilon \approx 2 \times 10^{-16}$ for float64 and
-$\epsilon \approx 10^{-7}$ for float32.
-
-When $h$ is small, $L(1+h)$ and $L(1)$ agree in their leading digits, and
-subtracting them cancels those digits. The rounding errors of the two
-values survive the subtraction. Each is of order $\epsilon$, since the loss
-is about $1$ here, and dividing by the small $h$ turns them into an error of
-up to about $\epsilon / h$ in the ratio. Shrinking $h$ therefore reduces one
-error, the *truncation error* $3h$, and increases the other, the *rounding
-error* $\epsilon / h$. We
-measure the total error $\left|(L(1+h) - L(1))/h - 2\right|$ for $h$ from
-$10^{-1}$ to $10^{-16}$, first in float64 with NumPy and then in float32
-with the framework's tensors.
+Finite differences also suffer from floating-point cancellation when $h$ is too small. In finite precision (machine epsilon $\epsilon \approx 2.2 \times 10^{-16}$ in `float64`, $\epsilon \approx 1.2 \times 10^{-7}$ in `float32`), subtracting nearly equal numbers $f(x+h) - f(x)$ cancels leading digits (*catastrophic cancellation*) and divides the $\sim \epsilon$ rounding residual by $h$. Thus *truncation error* ($\propto h$) and *rounding error* ($\propto \epsilon / h$) compete:
 
 ```{.python .input #calculus-derivatives-and-differentiation-3}
 def quotient_error(f, x, df, h):
@@ -400,10 +208,6 @@ h32 = tf.constant(h, dtype=tf.float32)
 h32 = jnp.asarray(h, dtype=jnp.float32)
 ```
 
-We draw the two error curves with `d2l.plot`. Two reference lines show the
-truncation error $3h$ and the bound $\epsilon / h$ on the rounding error in
-float32.
-
 ```{.python .input #calculus-finite-differences-2}
 eps32 = np.finfo(np.float32).eps
 d2l.plot(h, [quotient_error(loss, 1, 2, h), quotient_error(loss, 1, 2, h32),
@@ -412,223 +216,45 @@ d2l.plot(h, [quotient_error(loss, 1, 2, h), quotient_error(loss, 1, 2, h32),
          figsize=(5, 3.5))
 ```
 
-Both axes are logarithmic, and the plot is easiest to read from the right.
-Where $h$ is large, both curves follow the line $3h$ of slope $1$: the
-truncation error does not depend on the precision. Each curve leaves this line where
-rounding takes over, and from there on a smaller $h$ makes matters worse.
-The float32 error jumps from one $h$ to the next but stays below the line
-$\epsilon / h$ of slope $-1$, and the float64 error does the same below the
-corresponding line for its much smaller $\epsilon$, which is not drawn.
-Finally, once $h$ is so small that $1 + h$ rounds to $1$ itself, the computed
-ratio is $0$ and the error is $2$. In float32 this happens for every $h$
-below about $10^{-7}$, which is why the left half of that curve is flat.
+Balancing $3h \approx \epsilon / h$ puts the optimal step at $h^* \approx \sqrt{\epsilon / 3}$, losing half the format's digits (best error $\sim 10^{-8}$ at $h \approx 10^{-8}$ in `float64`, and $\sim 10^{-4}$ at $h \approx 10^{-4}$ in `float32`). Analytical differentiation via the chain rule avoids both the $O(n)$ cost and the $\sqrt{\epsilon}$ precision loss, leaving `float64` finite differences for unit-test gradient checking.
 
-The best $h$ balances the two errors, $3h \approx \epsilon / h$, which gives
-$h \approx \sqrt{\epsilon / 3}$. In float64 this is near $h = 10^{-8}$, with
-an error of about $10^{-8}$: half of the 16 available digits are lost. In
-float32 the best $h$ is near $10^{-4}$, and the derivative is accurate to
-only three or four digits.
+### The Gradient and Steepest Descent
 
-Cost and precision are the two reasons why frameworks do not compute
-derivatives by finite differences. They apply instead the rules of
-differentiation to the operations that computed the loss, combined by the
-chain rule of :numref:`subsec_calculus-chain-rule`, and obtain every digit
-that the arithmetic allows. Finite differences keep one job, which they do
-well: checking such a derivative, where three correct digits are plenty.
+Concatenating all $n$ partial derivatives of $f: \mathbb{R}^n \to \mathbb{R}$ forms the *gradient* vector $\nabla_{\mathbf{x}} f(\mathbf{x}) = (\frac{\partial f}{\partial x_1}, \ldots, \frac{\partial f}{\partial x_n})^\top$ (matching the shape of $\mathbf{x}$), which generalizes :eqref:`eq_calculus-linear-1d` to simultaneous perturbations $\mathbf{h} \in \mathbb{R}^n$:
 
-### The Gradient
-
-Each partial derivative tells us how the loss responds to one parameter
-while the others stay fixed. Training changes all the parameters at once, so
-it needs all of these numbers together.
-
-Collecting the partial derivatives of $f$ with respect to all $n$ variables
-$\mathbf{x} = (x_1, \ldots, x_n)$ gives a vector, the *gradient* of $f$:
-
-$$\nabla_{\mathbf{x}} f(\mathbf{x}) = \left(\frac{\partial f}{\partial x_1}, \frac{\partial f}{\partial x_2}, \ldots, \frac{\partial f}{\partial x_n}\right).$$
-
-We write $\nabla f(\mathbf{x})$ when the variable is clear. The gradient has
-one entry per variable, so it has the same shape as $\mathbf{x}$; the
-gradient of a loss has the shape of the parameters. For the line model,
-$\nabla L(\mathbf{w}) = (2, 4)$ at $\mathbf{w} = (1, 0)$.
-
-The gradient extends the approximation :eqref:`eq_calculus-linear-1d` to
-moves of all variables at once. Suppose that we change $\mathbf{x}$ by a
-small vector $\mathbf{h}$, one coordinate after another. Changing $x_1$ by
-$h_1$ changes $f$ by about $h_1\, \partial f / \partial x_1$, then changing
-$x_2$ by $h_2$ adds about $h_2\, \partial f / \partial x_2$, and so on. The
-changes add up to a dot product:
-
-$$f(\mathbf{x} + \mathbf{h}) \approx f(\mathbf{x}) + \sum_{i=1}^n \frac{\partial f}{\partial x_i} h_i = f(\mathbf{x}) + \nabla f(\mathbf{x})^\top \mathbf{h}.$$
+$$f(\mathbf{x} + \mathbf{h}) \approx f(\mathbf{x}) + \nabla f(\mathbf{x})^\top \mathbf{h}.$$
 :eqlabel:`eq_calculus-linear`
 
-The function changes by the dot product of the gradient with the move. Our
-argument is not quite a proof. It evaluates each partial derivative at a
-point that has already moved a little, so the approximation needs partial
-derivatives that change continuously;
-:numref:`sec_mdl-multivariable_calculus` states the condition and proves the
-approximation. For the line model, lowering both
-parameters by $0.01$ predicts a loss of $1 + 2 \cdot (-0.01) + 4 \cdot
-(-0.01) = 0.94$, and the exact value is $L(0.99, -0.01) = 0.9414$.
-
-### Steepest Descent
-
-Among all moves of a given small length, which one lowers $f$ the most? We
-write the move as $\mathbf{h} = t\mathbf{d}$, where the unit vector
-$\mathbf{d}$ gives the direction and the small number $t > 0$ gives the
-length. By :eqref:`eq_calculus-linear`, $f$ changes by about
-$t\, \nabla f(\mathbf{x})^\top \mathbf{d}$. Recall from
-:eqref:`eq_dot_cos` that the dot product of two vectors equals the product
-of their lengths and the cosine of the angle between them,
-$\mathbf{a}^\top \mathbf{b} = \|\mathbf{a}\| \|\mathbf{b}\| \cos \theta$.
-Since $\|\mathbf{d}\| = 1$,
-
-$$f(\mathbf{x} + t\mathbf{d}) - f(\mathbf{x}) \approx t\, \|\nabla f(\mathbf{x})\| \cos\theta,$$
-
-where $\theta$ is the angle between $\mathbf{d}$ and the gradient. The
-change depends on the direction only through $\cos\theta$, and three
-directions stand out. The change is largest for $\theta = 0$, when
-$\mathbf{d}$ points along the gradient. The gradient is therefore the
-direction of *steepest ascent*, and its length $\|\nabla f(\mathbf{x})\|$ is
-the rate at which $f$ grows in that direction. The change is most negative
-for $\theta = 180^\circ$, so the negative gradient $-\nabla f(\mathbf{x})$ is
-the direction of *steepest descent*.
-
-The change is zero for $\theta = 90^\circ$: to first order, moving
-perpendicular to the gradient leaves $f$ unchanged. The curves along which
-$f$ is constant are called its *level sets*, like the contour lines of a
-map, so the gradient is perpendicular to the level sets and points uphill
-(:numref:`fig_calc_gradient_field`).
+For a step $\mathbf{h} = t\mathbf{d}$ of length $t > 0$ along unit vector $\mathbf{d}$ ($\|\mathbf{d}\|_2 = 1$), :eqref:`eq_dot_cos` gives $f(\mathbf{x} + t\mathbf{d}) - f(\mathbf{x}) \approx t\,\|\nabla f(\mathbf{x})\|\cos\theta$. Thus $\nabla f(\mathbf{x})$ points in the direction of *steepest ascent* ($\theta = 0^\circ$), $-\nabla f(\mathbf{x})$ points in the direction of *steepest descent* ($\theta = 180^\circ$), and $\nabla f(\mathbf{x})$ is perpendicular to the level set passing through $\mathbf{x}$ ($\theta = 90^\circ$) (:numref:`fig_calc_gradient_field`).
 
 ![Level sets of the loss $L(w_1, w_2)$ of the line model. The gradients (red) are perpendicular to the level set through their base points and point uphill. From $\mathbf{w} = (1, 0)$ (black dot), gradient descent with $\eta = 0.1$ (orange) starts along $-\nabla L$, which does not point at the minimum, and zigzags toward it.](../img/calculus-gradient-field.svg)
 :label:`fig_calc_gradient_field`
 
-*Gradient descent* repeats a small step along the negative gradient,
+This motivates *gradient descent*, $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w})$: from $\mathbf{w} = (1, 0)$ with learning rate $\eta = 0.1$, one step moves to $(1, 0) - 0.1(2, 4) = (0.8, -0.4)$, cutting the loss from $1.0$ to $0.4$ (while zigzagging across the elliptical contours toward the global minimum $\mathbf{w}^* = (7/6, -1/2)$; see :numref:`chap_optimization`).
 
-$$\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w}),$$
+### Matrix Calculus Identities
 
-where the *learning rate* $\eta > 0$ sets the size of the step; the factor
-$0.1$ in the one-parameter step above was a learning rate. From
-$\mathbf{w} = (1, 0)$ with $\eta = 0.1$, one step reaches
-$(0.8, -0.4)$ and lowers the loss from $1$ to $0.4$. Note, however, that
-"steepest" is a local statement, and it says nothing about where the minimum
-lies. The minimum of the line model's loss lies at $(7/6, -1/2)$, and the
-negative gradient at $(1, 0)$ points $45^\circ$ away from it, because the
-level sets are elongated ellipses rather than circles. Repeated steps still
-approach the minimum, but along a zigzag path. Later chapters refine the
-step (:numref:`chap_optimization`), but every refinement starts from the
-gradient.
+Three vector gradient identities (:numref:`sec_mdl-matrix-calculus`) allow us to differentiate vector expressions without writing out coordinates:
 
-### Gradients of Common Functions
+$$\nabla_{\mathbf{x}}\, (\mathbf{a}^\top \mathbf{x}) = \mathbf{a}, \qquad \nabla_{\mathbf{x}}\, (\mathbf{x}^\top \mathbf{A} \mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}, \qquad \nabla_{\mathbf{x}} \|\mathbf{x}\|^2 = 2\mathbf{x}.$$
 
-So far we obtained the gradient $(2, 4)$ of the line model one coordinate at
-a time. To find it at every $\mathbf{w}$ at once, without writing out three
-squares, we need the gradients of a linear and of a quadratic function,
-which recur throughout the book. Each follows from writing the function out
-coordinate by coordinate and differentiating, much as the scalar rules
-follow from the limit. For a constant vector $\mathbf{a}$, the
-linear function $\mathbf{a}^\top \mathbf{x} = \sum_i a_i x_i$ has partial
-derivative $a_i$ with respect to $x_i$, so
-
-$$\nabla_{\mathbf{x}}\, \mathbf{a}^\top \mathbf{x} = \mathbf{a}.$$
-
-For a constant square matrix $\mathbf{A}$, the quadratic function
-$\mathbf{x}^\top \mathbf{A} \mathbf{x} = \sum_{i,j} x_i a_{ij} x_j$
-contains $x_k$ in the terms with $i = k$ and in those with $j = k$.
-Differentiating with respect to $x_k$ gives $\sum_j a_{kj} x_j + \sum_i
-a_{ik} x_i$, the $k^\textrm{th}$ entry of $\mathbf{A}\mathbf{x} +
-\mathbf{A}^\top\mathbf{x}$, so
-
-$$\nabla_{\mathbf{x}}\, \mathbf{x}^\top \mathbf{A} \mathbf{x} = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}.$$
-
-For a symmetric matrix this is $2\mathbf{A}\mathbf{x}$. The simplest case
-is the squared norm $\|\mathbf{x}\|^2 = \sum_i x_i^2$, with
-$\nabla_{\mathbf{x}} \|\mathbf{x}\|^2 = 2\mathbf{x}$. These are the vector
-versions of $\frac{d}{dx} ax = a$ and $\frac{d}{dx} ax^2 = 2ax$, and they
-are worth remembering; :numref:`sec_mdl-matrix-calculus` derives many more
-such identities.
-
-Now for the line model. Expanding the square,
-$L(\mathbf{w}) = \mathbf{w}^\top \mathbf{X}^\top \mathbf{X} \mathbf{w} - 2
-(\mathbf{X}^\top \mathbf{y})^\top \mathbf{w} + \mathbf{y}^\top \mathbf{y}$,
-and the symmetric matrix $\mathbf{X}^\top \mathbf{X}$ yields
+Expanding $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2 = \mathbf{w}^\top(\mathbf{X}^\top\mathbf{X})\mathbf{w} - 2(\mathbf{X}^\top\mathbf{y})^\top\mathbf{w} + \mathbf{y}^\top\mathbf{y}$ and applying these rules gives
 
 $$\nabla L(\mathbf{w}) = 2\mathbf{X}^\top \mathbf{X} \mathbf{w} - 2\mathbf{X}^\top \mathbf{y} = 2\mathbf{X}^\top (\mathbf{X}\mathbf{w} - \mathbf{y}).$$
 :eqlabel:`eq_calculus-line-grad`
 
-At $\mathbf{w} = (1, 0)$ the errors are $\mathbf{X}\mathbf{w} -
-\mathbf{y} = (0, 0, 1)$, and the gradient is $2 \cdot (1, 2) =
-(2, 4)$, as before.
-
 ## The Chain Rule
 :label:`subsec_calculus-chain-rule`
 
-A network computes its loss in stages. Each layer transforms the output of
-the previous one, and the loss compares the final output with the label. The
-loss is thus a *composition* of functions, and expanding it into one formula,
-as we just did for the line model, quickly becomes unmanageable. The *chain
-rule* differentiates a composition stage by stage instead.
+Deep networks compose many nested layers $y = f_L(f_{L-1}(\cdots f_1(\mathbf{x})\cdots))$; differentiating compositions without expanding them relies on the *chain rule*.
 
-### Functions of One Variable
+For scalar functions $z = f(u)$ and $u = g(x)$, rates of change multiply: $\frac{dz}{dx} = \frac{dz}{du}\frac{du}{dx}$. More generally, if $z = f(u_1, \ldots, u_m)$ where each $u_j = g_j(x_1, \ldots, x_n)$, rates multiply along each path $x_i \to u_j \to z$ and sum across all parallel paths:
 
-Suppose that $z = f(u)$ and $u = g(x)$ are differentiable, so that
-$z = f(g(x))$. Then
+$$\frac{\partial z}{\partial x_i} = \sum_{j=1}^m \frac{\partial z}{\partial u_j} \frac{\partial u_j}{\partial x_i} \quad \Longrightarrow \quad \nabla_{\mathbf{x}} z = \mathbf{J}^\top \nabla_{\mathbf{u}} z,$$
 
-$$\frac{dz}{dx} = \frac{dz}{du} \frac{du}{dx}.$$
+where $\mathbf{J} \in \mathbb{R}^{m \times n}$ is the *Jacobian matrix* of $\mathbf{u}$ with respect to $\mathbf{x}$, with entries $J_{ji} = \frac{\partial u_j}{\partial x_i}$. For an affine map $\mathbf{u} = \mathbf{A}\mathbf{x} - \mathbf{y}$, the Jacobian is simply $\mathbf{J} = \mathbf{A}$.
 
-Rates of change multiply. If $u$ changes twice as fast as $x$, and $z$
-changes three times as fast as $u$, then $z$ changes six times as fast as
-$x$. In terms of the linear approximation :eqref:`eq_calculus-linear-1d`, a
-small change $h$ in $x$ changes $u$ by about $g'(x) h$, which in turn
-changes $z$ by about $f'(u) g'(x) h$. The proof in
-:numref:`sec_mdl-single_variable_calculus` makes this argument precise.
-
-For example, the last term of the line model's loss, $(w_1 + 2 w_2)^2$, is
-$z = u^2$ with $u = w_1 + 2 w_2$. With respect to $w_2$, we have
-$dz/du = 2u$ and $\partial u / \partial w_2 = 2$, the input of the third
-example, so the term changes at the rate $2u \cdot 2 = 4$ at $(1, 0)$, where
-$u = 1$. The other two terms have zero error at that point and change at
-rate zero, which is why $\partial L / \partial w_2 = 4$.
-
-### Functions of Many Variables
-
-In a network, a parameter usually affects the loss along many paths.
-Suppose that $z$ depends on $m$ intermediate variables $u_1, \ldots, u_m$,
-each of which depends on $n$ inputs $x_1, \ldots, x_n$. A small change in
-$x_i$ changes every $u_j$, and each of those changes reaches $z$. The chain
-rule adds up the contributions of all paths:
-
-$$\frac{\partial z}{\partial x_i} = \sum_{j=1}^m \frac{\partial z}{\partial u_j} \frac{\partial u_j}{\partial x_i}.$$
-
-Each term multiplies the rates along one path $x_i \to u_j \to z$, as in
-the one-variable chain rule. To write the sum in vector form, we collect the
-derivatives of the intermediate variables in an $m \times n$ matrix
-$\mathbf{J}$, the *Jacobian* of $\mathbf{u}$ with respect to $\mathbf{x}$,
-with entries $J_{ji} = \partial u_j / \partial x_i$. Row $j$ of the
-Jacobian is the transposed gradient of $u_j$. The sum over $j$ is then entry
-$i$ of the matrix–vector product $\mathbf{J}^\top \nabla_{\mathbf{u}} z$:
-
-$$\nabla_{\mathbf{x}} z = \mathbf{J}^\top \nabla_{\mathbf{u}} z.$$
-
-The gradient with respect to the inputs is the gradient with respect to the
-intermediate variables, multiplied by the transposed Jacobian. For a linear
-map $\mathbf{u} = \mathbf{A}\mathbf{x}$, entry $u_j = \sum_i a_{ji} x_i$
-has $\partial u_j / \partial x_i = a_{ji}$, so the Jacobian is $\mathbf{A}$
-itself and $\nabla_{\mathbf{x}} z = \mathbf{A}^\top \nabla_{\mathbf{u}} z$.
-
-The line model has this structure. Its loss $L = \|\mathbf{r}\|^2$ is a
-function of the vector of errors $\mathbf{r} = \mathbf{X}\mathbf{w} -
-\mathbf{y}$, which depends linearly on $\mathbf{w}$, with Jacobian
-$\mathbf{X}$. Since $\nabla_{\mathbf{r}} L = 2\mathbf{r}$, the chain rule
-gives
-
-$$\nabla_{\mathbf{w}} L = \mathbf{X}^\top (2\mathbf{r}) = 2\mathbf{X}^\top (\mathbf{X}\mathbf{w} - \mathbf{y}),$$
-
-the gradient :eqref:`eq_calculus-line-grad`, obtained this time without
-expanding the square. The computation splits into two passes. The *forward
-pass* computes the errors and then the loss. The *backward pass* starts at
-the loss, computes its gradient with respect to the errors, and multiplies
-by the transposed Jacobian to reach the parameters.
+Decomposing our line loss $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$ into two stages—(1) inner residuals $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ with Jacobian $\mathbf{J} = \mathbf{X}$, and (2) outer squared norm $L = \|\mathbf{r}\|^2$ with gradient $\nabla_{\mathbf{r}} L = 2\mathbf{r}$—the multivariate chain rule immediately recovers $\nabla_{\mathbf{w}} L = \mathbf{X}^\top(2\mathbf{r})$ in two passes:
 
 ```{.python .input #calculus-functions-of-many-variables}
 r = X @ w - y    # forward: errors, from which the loss is r @ r
@@ -636,142 +262,42 @@ grad_r = 2 * r   # backward: gradient of the loss with respect to r
 X.T @ grad_r     # backward: gradient with respect to w
 ```
 
-The result is $(2, 4)$ once more. The forward and the
-backward pass each cost one matrix–vector product, so the whole gradient of
-the line model costs about as much as a second evaluation of the loss, where
-finite differences need one evaluation per parameter. A deep network repeats
-this pattern layer by layer. The forward pass evaluates the layers from the
-input to the loss, and the backward pass multiplies by one transposed
-Jacobian per layer, from the loss back to the parameters. This backward
-application of the chain rule is called *backpropagation*.
-
-What remains is the labor of deriving the Jacobian of every layer by hand,
-which is slow and error-prone for networks with dozens of layers and
-millions of parameters. It is also entirely mechanical: nothing in the
-backward pass above required insight, only care. :numref:`sec_autograd`
-hands this labor to the framework, which records the forward pass and runs
-the backward pass for us, and explains why the gradient of a deep network,
-like that of the line model, costs only a small multiple of computing its
-loss.
+The *forward pass* computes $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ and $L = \mathbf{r}^\top\mathbf{r}$; the *backward pass* (*backpropagation*) multiplies $2\mathbf{r}$ by $\mathbf{X}^\top$, computing the exact gradient with respect to all parameters at roughly the cost of one forward evaluation. In :numref:`sec_autograd`, we hand this mechanical backward pass over to the framework's automatic differentiation engine.
 
 ## Summary
 
-Training needs to know how the loss changes when the parameters change, and
-for one parameter the derivative answers this. It is the limit of the ratio of
-the change in the loss to a small change in the parameter, which is the slope
-of the tangent, and for small steps $f(x + h) \approx f(x) + f'(x) h$. For
-many parameters, the partial derivatives form the gradient, whose negative
-is the direction of steepest descent, and gradient descent takes small steps
-along it. Estimating the gradient by finite differences costs one loss
-evaluation per parameter, and the ratio with a small $h$ loses about half of
-the available digits in floating point, which in float32 leaves three or
-four. The chain rule differentiates compositions by multiplying rates along
-each path and adding over paths. In vector form it multiplies a gradient by
-transposed Jacobians, from the loss back to the parameters, which is
-backpropagation.
+The derivative $f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$ gives the slope of the tangent line and the local linear approximation $f(x+h) \approx f(x) + f'(x)h$. For $f: \mathbb{R}^n \to \mathbb{R}$, the gradient $\nabla_{\mathbf{x}} f(\mathbf{x})$ collects all partial derivatives, satisfies $f(\mathbf{x}+\mathbf{h}) \approx f(\mathbf{x}) + \nabla f(\mathbf{x})^\top \mathbf{h}$, and points in the direction of steepest ascent (perpendicular to level sets), motivating gradient descent $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla L(\mathbf{w})$. Unlike finite differences—which cost $O(n)$ evaluations and lose precision to catastrophic cancellation ($\sim \sqrt{\epsilon}$)—the multivariate chain rule $\nabla_{\mathbf{x}} z = \mathbf{J}^\top \nabla_{\mathbf{u}} z$ propagates exact gradients backward from the loss to all parameters in a single backward pass (*backpropagation*).
 
 ## Exercises
 
-1. **Derivatives from first principles.** The derivatives and rules of this
-   section were stated without proof. Prove the following from the limit
-   definition :eqref:`eq_derivative`.
-    1. $f(x) = C$ for a constant $C$, and $f(x) = x^n$ for a positive
-       integer $n$.
-    1. $f(x) = e^x$ and $f(x) = \log x$, taking as given that
-       $(e^h - 1)/h \to 1$ as $h \to 0$. For the logarithm, write
-       $\log(x + h) - \log x = \log(1 + h/x)$ and substitute
-       $1 + h/x = e^t$.
-    1. The sum, product, and quotient rules for differentiable $f$ and
-       $g$, assuming $g(x) \neq 0$ for the quotient rule.
+1. **Differentiating $x^x$ when both base and exponent vary.** For $x > 0$, consider the function $f(x) = x^x$, in which $x$ appears in both the base and the exponent.
+    1. Explain why applying the power rule alone (treating the exponent as constant to get $x \cdot x^{x-1} = x^x$) and applying the exponential rule alone (treating the base as constant to get $x^x \log x$) are both incorrect.
+    1. Rewrite $x^x = e^{x \log x}$ and apply the chain rule and product rule to find $f'(x)$. Notice that the true derivative is the *sum* of the two naive answers from Part 1; explain why this happens using the two-variable chain rule applied to $g(u, v) = u^v$ along $u = x, v = x$.
 
-1. **Predicting with the tangent.** The square root has derivative
-   $\frac{d}{dx}\sqrt{x} = 1/(2\sqrt{x})$, and $\sqrt{4} = 2$.
-    1. Use :eqref:`eq_calculus-linear-1d` at $x = 4$ to predict
-       $\sqrt{4.1}$ and $\sqrt{4.5}$ without a calculator, then compare
-       with the true values.
-    1. Both predictions err in the same direction. Explain why from the
-       shape of the graph, and check that the error grows about as the
-       square of the step, as it did for the loss in this section.
+1. **Why squared error yields the mean and absolute error yields the median.** Suppose a single-parameter model predicts the constant value $w \in \mathbb{R}$ for $n$ training examples with scalar labels $y_1, \ldots, y_n$.
+    1. Differentiate the sum of squared errors $L_2(w) = \sum_{i=1}^n (w - y_i)^2$ with respect to $w$, set the derivative to zero, and prove that the unique minimizer is the sample *mean* $w^* = \frac{1}{n}\sum_{i=1}^n y_i$.
+    1. Now consider the sum of absolute errors $L_1(w) = \sum_{i=1}^n |w - y_i|$. Show that at any point $w$ not equal to one of the labels $y_i$, the derivative $L_1'(w)$ equals the number of labels strictly less than $w$ minus the number of labels strictly greater than $w$. At which values of $w$ does $L_1'(w)$ fail to exist? Conclude that $L_1(w)$ is minimized by any sample *median* of $\{y_1, \ldots, y_n\}$.
+    1. For the four labels $\{1, 1, 0, 10\}$, compute the $L_2$ minimizer (mean) and the $L_1$ minimizer (median). What happens to each minimizer if the outlier label $10$ is corrupted to $100$?
 
-1. **Derivative of $x^x$.** For $x > 0$, the base and the exponent of
-   $f(x) = x^x$ both vary, so neither the power rule nor the rule for an
-   exponential applies.
-    1. Explain why the power-rule answer $x \cdot x^{x-1}$ and the
-       exponential-rule answer $x^x \log x$ are both wrong.
-    1. Write $x^x = e^{x \log x}$ and compute $f'(x)$ with the chain rule.
-       Show that the correct derivative is the sum of the two wrong
-       answers, and explain why.
+1. **Gradient of the Euclidean norm.** Compute the gradient $\nabla_{\mathbf{x}} f(\mathbf{x})$ of the unsquared Euclidean norm $f(\mathbf{x}) = \|\mathbf{x}\|_2 = \sqrt{\sum_{i=1}^n x_i^2}$ for any nonzero vector $\mathbf{x} \neq \mathbf{0}$, and verify that $\|\nabla_{\mathbf{x}} f(\mathbf{x})\|_2 = 1$ everywhere it exists. What happens to the gradient at the origin $\mathbf{x} = \mathbf{0}$, and why?
 
-1. **Mean and median.** A model predicts the same number $w$ for every
-   example, and the labels are $y_1, \ldots, y_n$.
-    1. Show that the squared error $\sum_i (w - y_i)^2$ is minimized by
-       the mean of the labels.
-    1. Show that, wherever it exists, the derivative of the absolute error
-       $\sum_i |w - y_i|$ equals the number of labels below $w$ minus the
-       number of labels above $w$. Where does it fail to exist? Conclude
-       that a median of the labels minimizes the absolute error.
-    1. For the labels $1$, $1$, $0$, $10$, find both minimizers. Which of
-       them changes when the label $10$ becomes $100$?
+1. **Step-size stability of gradient descent.** Consider minimizing the isotropic quadratic bowl $f(\mathbf{x}) = \|\mathbf{x}\|_2^2$ via the gradient descent update $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta \nabla f(\mathbf{x}_k)$ with learning rate $\eta > 0$.
+    1. Starting from $\mathbf{x}_0 = (1, 1)^\top$, compute $\mathbf{x}_1$ and the new objective value $f(\mathbf{x}_1)$ after a single step for three choices of learning rate: $\eta = 0.1$, $\eta = 1.0$, and $\eta = 2.0$.
+    1. Write $\mathbf{x}_{k+1}$ in closed form in terms of $\mathbf{x}_k$ and $\eta$. For what range of learning rates $\eta > 0$ does a gradient descent step strictly decrease $f(\mathbf{x})$ from any nonzero starting point $\mathbf{x}_k \neq \mathbf{0}$? Which special value of $\eta$ jumps directly to the global minimum $\mathbf{x}^* = \mathbf{0}$ in a single step, and what happens when $\eta > 1$?
+    1. Characterize the stationary points $\mathbf{x}$ at which a gradient descent step leaves the parameter vector unchanged ($\mathbf{x}_{k+1} = \mathbf{x}_k$), both for $f(\mathbf{x}) = \|\mathbf{x}\|_2^2$ and for a general differentiable objective $f$.
 
-1. **Gradient of the $\ell_2$ norm.** Find the gradient of the function
-   $f(\mathbf{x}) = \|\mathbf{x}\|$ for $\mathbf{x} \neq \mathbf{0}$ and
-   show that it has length $1$. State what happens at $\mathbf{x} =
-   \mathbf{0}$ and why.
+1. [code] **Central differences versus forward differences.** ● The one-sided *forward difference* $\frac{f(x+h) - f(x)}{h}$ analyzed in this section has truncation error $O(h)$. The symmetric *central difference*
 
-1. **Multivariate chain rule.** Let $z = u_1 u_2 u_3$, where
-   $u_1 = x_1 + x_2$, $u_2 = x_1 - x_2$, and $u_3 = x_1 x_2$.
-    1. Compute $\nabla_{\mathbf{u}} z$ and the Jacobian $\mathbf{J}$ of
-       $\mathbf{u}$ with respect to $\mathbf{x}$, and obtain
-       $\nabla_{\mathbf{x}} z$ as the product
-       $\mathbf{J}^\top \nabla_{\mathbf{u}} z$.
-    1. Substitute $u_1$, $u_2$, and $u_3$ into $z$, differentiate the
-       result with respect to $x_1$ and $x_2$ directly, and compare with
-       the product.
+   $$\frac{f(x+h) - f(x-h)}{2h}$$
 
-1. **Gradient-descent step.** Consider $f(\mathbf{x}) = \|\mathbf{x}\|^2$
-   and the gradient-descent step with learning rate $\eta > 0$,
-   $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
-    1. Starting from $\mathbf{x} = (1, 1)$, take one step for each of
-       $\eta = 0.1$, $\eta = 1$, and $\eta = 2$, and compute $f$ before
-       and after the step.
-    1. Write the step for this $f$ in closed form for arbitrary
-       $\mathbf{x}$ and $\eta$. Find the range of $\eta$ for which a step
-       decreases $f$ at every $\mathbf{x} \neq \mathbf{0}$, and the value
-       of $\eta$ that reaches the minimizer in one step.
-    1. Characterize the points at which a step leaves $\mathbf{x}$
-       unchanged, for this $f$ and for a general differentiable $f$.
+   evaluates $f$ at $x+h$ and $x-h$ so that the $O(h)$ quadratic terms cancel out! Write a central-difference version of `quotient_error` and evaluate it across our logarithmic grid of $h$ values in `float64`:
+    1. For the quadratic loss $L(w) = 3w^2 - 4w + 2$ at $w = 1$, plot the forward-difference and central-difference error curves on the same log--log axes. Why does the central-difference error drop straight to machine epsilon ($\sim 10^{-16}$) even at large $h = 10^{-1}$ on a quadratic function?
+    1. Now repeat the comparison on a non-quadratic function, $f(x) = e^x$ at $x = 0$ (where $f'(0) = 1$). Compare the slope of the large-$h$ truncation branch of the central-difference curve against the slope-$1$ forward-difference branch, identify the optimal step size $h^*$ and minimum achievable error for each method, and explain both using the Taylor expansion $e^{\pm h} = 1 \pm h + \frac{h^2}{2} \pm \frac{h^3}{6} + \cdots$.
 
-1. [code] **Central differences.** ● The forward difference
-   $(f(x+h) - f(x))/h$ of this section has a truncation error proportional
-   to $h$. The central difference $(f(x+h) - f(x-h))/(2h)$ evaluates $f$ on
-   both sides of $x$. Write a central-difference counterpart of
-   `quotient_error` and use the values of $h$ from this section, in float64.
-    1. For the loss $L(w) = 3w^2 - 4w + 2$ at $w = 1$, plot the errors of
-       the forward and the central difference in one figure, and explain
-       the shape of the new curve.
-    1. Repeat both computations for $f(x) = e^x$ at $x = 0$, where
-       $f'(0) = 1$. Compare the slopes of the large-$h$ branches of the two
-       curves and the $h$ at which each difference is most accurate, and
-       explain both with the expansion
-       $e^h = 1 + h + h^2/2 + h^3/6 + \cdots$.
-
-1. [code] **Gradient checking.** ● Finite differences are too slow for
-   training, but they are the standard test for a gradient derived or
-   coded by hand.
-    1. Write a function that estimates the gradient of
-       $f: \mathbb{R}^n \to \mathbb{R}$ with central differences. Use it in
-       float64 to check $\nabla_{\mathbf{x}}\, \mathbf{x}^\top \mathbf{A}
-       \mathbf{x} = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$ for a random
-       $5 \times 5$ matrix $\mathbf{A}$ that is not symmetric, at a random
-       $\mathbf{x}$, and report the largest relative error over the five
-       entries.
-    1. Check the incorrect formula $2\mathbf{A}\mathbf{x}$ in the same way.
-       How large is the relative error now?
-    1. Repeat the check of the correct formula in float32 with the
-       framework's tensors, for $h = 10^{-1}, 10^{-2}, \ldots, 10^{-6}$.
-       Which $h$ gives the smallest error, and why is it not the best $h$
-       of this section's experiment? Which tolerance on the relative error
-       separates the correct formula from the incorrect one in float32?
+1. [code] **Gradient checking in `float64` versus `float32`.** ● Although finite differences are far too slow for training, central finite differences are the gold standard for unit-testing hand-derived or custom-kernel gradients.
+    1. Write a function `central_gradient(f, x, h=1e-5)` that estimates $\nabla f(\mathbf{x})$ for $f: \mathbb{R}^n \to \mathbb{R}$ via central differences. Use it in `float64` to test the quadratic-form gradient identity $\nabla_{\mathbf{x}}(\mathbf{x}^\top \mathbf{A} \mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$ on a random *non-symmetric* $5 \times 5$ matrix $\mathbf{A}$ at a random vector $\mathbf{x} \in \mathbb{R}^5$, and report the maximum relative error across the five coordinates.
+    1. Now run the same check against the *buggy* formula $2\mathbf{A}\mathbf{x}$ (a common mistake made when forgetting that $\mathbf{A}$ is not symmetric). How large is the relative error now?
+    1. Finally, repeat the check of the correct formula $(\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$ in 32-bit `float32` using framework tensors across $h \in \{10^{-1}, 10^{-2}, \ldots, 10^{-6}\}$. Which $h$ achieves the smallest relative error in `float32`, why does it differ from the forward-difference optimum $h^* \approx 10^{-4}$, and what relative-error threshold cleanly separates a correct gradient implementation from a buggy one in `float32`?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/32)

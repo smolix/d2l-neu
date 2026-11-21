@@ -6,32 +6,13 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Generalization in Deep Learning
 :label:`sec_generalization_deep`
 
-In :numref:`sec_generalization_basics` we saw what usually happens when a
-model has as many parameters as training examples. A polynomial with one
-weight per training example passed through all 20 of its training points
-and missed new points by orders of magnitude. The MLP of
-:numref:`sec_mlp-implementation` would seem to be in greater danger still.
-It has 203,530 parameters, about 3.4 for each of the 60,000 Fashion-MNIST
-training images, plenty to memorize them. After 30 epochs it had not: its
-accuracy of about 89% on the training images was only a few points above the
-87% on validation images. That run was short, however, and proves little.
-What happens if we train such a network until it fits every training label?
-We will find that it still generalizes, so something other than the number
-of parameters must be responsible.
+In :numref:`sec_generalization_basics`, a degree-19 polynomial with $20$ parameters interpolated $20$ noisy data points and blew up on test data. By that classical intuition, our Fashion-MNIST MLP in :numref:`sec_mlp-implementation`—with $203{,}530$ parameters for $60{,}000$ training images ($3.4$ parameters per image)—ought to overfit severely, especially if trained until it interpolates every single training image. Yet even when driven to $100\%$ training accuracy, it still generalizes to $\sim 87\%$ on unseen images!
 
-We need to know what that is, because the width of a network, the length of
-its training, and its regularization are all chosen for the sake of
-generalization. The answer is not completely known, so this section measures.
-We first show that the MLP can fit labels that carry no information, so its
-capacity alone cannot explain why it generalizes. Then we follow the test
-error of a simpler network as its width grows past the number of training
-examples, and see it fall a second time. Both observations point to the
-training algorithm: among the many parameter settings that fit the data,
-gradient descent finds particular ones, and we work out which in two cases
-that can be solved exactly. Finally, the order in which gradient descent fits
-the examples turns stopping early into a regularizer. We stay with experiments
-and with exact results about simple models; theories that bound the test error
-of deep networks directly are still being developed.
+Understanding why heavily overparameterized networks generalize is one of the central open problems of modern machine learning. In this section, we combine controlled experiments with exact results on tractable models to uncover four key pieces of the puzzle:
+1. **Random-label memorization:** Standard MLPs easily reach $100\%$ training accuracy on completely random labels :cite:`zhang2021understanding`, proving that classical distribution-free capacity bounds (like VC dimension) cannot explain their generalization on real labels.
+2. **Double descent:** Sweeping model width past the interpolation threshold $h = n$ reveals a spike in test error at $h = n$ (where the feature matrix is nearly singular) followed by a *second descent* as extra parameters allow smaller-norm interpolators :cite:`Belkin.Hsu.Ma.ea.2019`.
+3. **Implicit bias of gradient descent:** Among infinitely many zero-loss solutions, gradient descent automatically selects the minimum-norm interpolator under squared loss and the maximum-margin separator under logistic loss :cite:`Soudry.Hoffer.Nacson.ea.2018`.
+4. **Clean-first learning and early stopping:** On noisy datasets, gradient descent fits clean structured patterns long before memorizing corrupted labels :cite:`Arpit.Jastrzebski.Ballas.ea.2017`, making *early stopping* a potent regularizer.
 
 ```{.python .input #generalization-deep-fitting-random-labels-1}
 %%tab mxnet
@@ -77,17 +58,7 @@ from d2l import jax as d2l
 ### Random Labels
 :label:`subsec_random_labels`
 
-The direct test of capacity is to train the network on labels drawn at
-random, independently of the images, as :citet:`zhang2021understanding` did
-for image classifiers. There is no pattern to learn from such labels, so a
-network that fits them has memorized them: its training accuracy reaches
-100% while its test accuracy stays at the 10% of guessing. To keep the
-experiment fast, we train on 1,000 Fashion-MNIST images, which gives the MLP
-about 200 parameters per image.
-
-We draw 2,000 training images at random, 1,000 to train on and 1,000 to hold
-out for validation later, and take the first 2,000 test images. All of them
-are flattened into NumPy arrays of 784 pixels.
+To test raw memorization capacity following :citet:`zhang2021understanding`, we draw $2{,}000$ Fashion-MNIST training images ($1{,}000$ for training, $1{,}000$ for validation) and $2{,}000$ test images, define `ArrayData` and `Tracker` helpers along with a He-initialized 256-unit `MLP`, and train for 200 epochs once on the true labels (`fraction=0`) and once on completely random labels (`fraction=1`):
 
 ```{.python .input #generalization-deep-fitting-random-labels-2}
 data = d2l.FashionMNIST(batch_size=2000)
@@ -98,10 +69,10 @@ X, X_test = X.reshape(2000, -1), X_test.reshape(2000, -1)
 X_train, y_train, X_val, y_val = X[:1000], y[:1000], X[1000:], y[1000:]
 ```
 
-Two small helpers run the experiments. `ArrayData` serves arrays as
-minibatches. `Tracker` is a `Trainer` that, after every epoch, measures the
-accuracy of the model on each of a set of named datasets and appends it to
-the list `accuracy[name]`.
+Two lightweight helpers streamline the experiments ahead: `ArrayData` wraps
+NumPy arrays into shuffled minibatches, and `Tracker` subclasses `Trainer`
+to log epoch-by-epoch accuracy across an arbitrary dictionary of named
+datasets.
 
 ```{.python .input #generalization-deep-fitting-random-labels-3}
 class ArrayData(d2l.DataModule):  #@save
@@ -129,11 +100,10 @@ class Tracker(d2l.Trainer):  #@save
         return {}
 ```
 
-The model is the MLP of :numref:`sec_mlp-implementation`, one hidden layer
-of 256 ReLUs, with one change. It draws its weights by the He initialization
-of :numref:`subsec_he_init` instead of with the fixed standard deviation of
-0.01, which made the hidden layer learn slowly at first. Its biases start at
-zero, and its inputs are already flattened.
+Our model is the same 256-unit ReLU MLP from
+:numref:`sec_mlp-implementation`, upgraded with He initialization
+(:numref:`subsec_he_init`) in place of `std=0.01` so training takes off
+immediately from epoch 1 (with zero biases and pre-flattened inputs).
 
 ```{.python .input #generalization-deep-fitting-random-labels-4}
 %%tab mxnet
@@ -193,11 +163,6 @@ class MLP(d2l.Classifier):
             nnx.Linear(num_hiddens, 10, kernel_init=he, rngs=rngs))
 ```
 
-`corrupt` replaces each label, with probability `fraction`, by a class drawn
-uniformly at random; with `fraction=1` no label depends on its image. Does the
-network fit true and random labels alike? We train it on both for 200 epochs
-of minibatch SGD, with learning rate 0.1 and minibatches of 64 images, and
-record the accuracy on the training images and on the test images.
 
 ```{.python .input #generalization-deep-fitting-random-labels-5}
 def corrupt(y, fraction, rng):  #@save
@@ -223,121 +188,23 @@ d2l.plt.legend(['train, true labels', 'test, true labels',
                loc='center right', bbox_to_anchor=(1, 0.4));
 ```
 
-With true labels, training accuracy passes 99% after 60 to 90 epochs, and
-test accuracy settles at about 80% to 83%. A network trained until it fits
-its training labels still gets about four of five new images right. With
-random labels the network needs longer, 110 to 150 epochs to pass 99%, but
-it fits them too, while test accuracy stays where guessing would put it. The
-network, the optimizer, and the images are the same in both runs; only the
-labels differ.
 
-For these 1,000 images, MLPs of this size come close to what
-:numref:`sec_generalization_basics` called a class too flexible for a
-perfect fit to mean anything. Whatever lets the network generalize from the
-true labels, it is not a lack of capacity to memorize.
+Look at what the two runs prove:
+- On **true labels**, training accuracy hits $100\%$ within 60–90 epochs while test accuracy plateaus above $80\%$ (even on just $1{,}000$ training images).
+- On **completely random labels**, the exact same architecture and optimizer still reach $100\%$ training accuracy (taking slightly longer, $\sim 120$–$150$ epochs) while test accuracy remains at $10\%$ random chance.
 
-### Capacity Bounds
+### Why Distribution-Free Capacity Bounds Fail, and Inductive Bias
 
-Learning theory turns capacity into guarantees. In
-:numref:`chap_classification_generalization` we met the VC bound: with
-probability at least $1 - \delta$ over the draw of $n$ training examples,
-every classifier $f$ in a class of VC dimension $v$ satisfies
+Because our MLP achieves zero training error ($\epsilon_{\mathcal{S}}(f) = 0$) on random labels where the true population error is $\epsilon(f) = 0.90$, *any* distribution-free bound of the form $\epsilon(f) \leq \epsilon_{\mathcal{S}}(f) + B(\mathcal{F}, n, \delta)$ that depends only on the hypothesis class $\mathcal{F}$ must have $B(\mathcal{F}, n, \delta) \geq 0.90$—making it completely vacuous on real labels as well (Exercise :exref:`ex_generalization-deep-complexity`).
 
-$$
-\epsilon(f) \leq \epsilon_\mathcal{S}(f) + c\sqrt{\frac{v + \log(1/\delta)}{n}},
-$$
-
-where $\epsilon(f)$ is the population error, $\epsilon_\mathcal{S}(f)$ the
-training error, and $c$ a constant. The bound guarantees that the training
-error carries over to new data once $n$ is large compared with $v$. For a
-linear classifier, $v$ is one more than the number of features, the number
-of its parameters. If we estimate $v$ the same way for the MLP trained on all
-60,000 images, the square root alone is
-$\sqrt{203{,}530/60{,}000} \approx 1.8$. An error never exceeds 1, so
-unless the constant $c$ is below about 0.55, the bound guarantees nothing.
-
-Could a smaller constant or a sharper estimate of $v$ rescue it?
-Unfortunately not, and the random labels tell us why. A bound whose second
-term depends only on the class, $n$, and $\delta$ holds for every
-distribution of the data, including images with random labels. On our
-1,000 images with such labels the network had training error 0, while its
-population error is 90%, so for this $n$ the second term is at least 0.9.
-The very same term applies when the labels are true, where it guarantees
-next to nothing (exercise :exref:`ex_generalization-deep-complexity`).
-
-### Inductive Bias
-
-If the class does not decide, the choice among the functions that fit the
-training data does. A learner that fits $n$ labeled examples must still
-label every other input, and the training data cannot settle how. Averaged
-over all ways in which the unseen inputs could be labeled, every learner has
-the same expected error, a result known as the *no free lunch theorem*
-:cite:`Wolpert.1996`. A learner generalizes on a particular problem when its
-preferences among the functions that fit match the way the problem labels
-new inputs. These preferences are its *inductive bias*.
-Different learners make different bets. The *1-nearest-neighbor* rule, for
-one, gives an input the label of the closest training input.
-
-| Learner | Inductive bias |
-|---|---|
-| Linear classifier | classes are separated by hyperplanes |
-| Polynomial fit with weight decay | small weights, hence slowly varying curves |
-| 1-nearest neighbor | nearby inputs have the same label |
-| MLP trained by gradient descent | not fully known; the rest of this section |
-
-The nearest-neighbor rule is instructive. It labels each training input
-correctly by construction, yet under mild conditions, as the training set
-grows, its error tends to at most twice the smallest error any classifier
-can achieve :cite:`Cover.Hart.1967`. Fitting the data exactly is thus
-compatible with generalizing. The error is decided by the labels the learner
-assigns between the training points.
+By the *no free lunch theorem* :cite:`Wolpert.1996`, no learner can generalize across all distributions; generalization depends on whether the learner's *inductive bias*—which interpolating function it prefers among infinitely many—matches the structure of real data (just as a 1-nearest-neighbor classifier interpolates $100\%$ of its training data yet generalizes well whenever nearby inputs share labels :cite:`Cover.Hart.1967`).
 
 ## Double Descent
 :label:`subsec_double_descent`
 
-### The Interpolation Threshold
+### The Interpolation Threshold and Conditioning
 
-The polynomial study of :numref:`sec_generalization_basics` stopped at
-degree 19, where the fit was exact and the test error at its worst, because
-beyond that degree the least-squares problem has infinitely many exact
-solutions. A network with more parameters than examples lives beyond that
-point. Let us therefore continue past it, with a model whose solutions we
-can compute.
-
-To this end we simplify the MLP rather drastically. Freeze the hidden layer
-at its random initialization and train only the output layer, which gives
-what is called a *random-features* model :cite:`Rahimi.Recht.2007`. We also
-drop the biases and, instead of cross-entropy, use the squared loss on
-one-hot labels, which turns training into linear least squares. Real
-networks change their hidden features during training; we give this up for
-a model we can solve. Let
-$\mathbf{H} = \textrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)})
-\in \mathbb{R}^{n \times h}$ be the hidden representation of the $n$
-training images with $h$ hidden units, and $\mathbf{Y} \in \mathbb{R}^{n
-\times 10}$ their one-hot labels. Fitting chooses the output weights
-$\mathbf{W}^{(2)} \in \mathbb{R}^{h \times 10}$ to minimize the squared
-error summed over all entries, $\|\mathbf{H}\mathbf{W}^{(2)} -
-\mathbf{Y}\|_F^2$.
-
-Each output is a separate least-squares problem with $n$ equations and $h$
-unknowns. The MLP of :numref:`subsec_random_labels` could fit 1,000 random
-labels with 256 hidden units because its hidden layer was trained too. With
-that layer frozen, an exact fit of $n$ labels needs $h \geq n$. For $h < n$
-the least-squares problem has a unique solution, which usually misses some
-labels. At $h = n$ the matrix $\mathbf{H}$ is square and, like almost every
-random square matrix, invertible, so exactly one solution reproduces every
-label. For $h > n$ there are
-infinitely many solutions that reproduce every label, and we take the one of
-smallest norm. `np.linalg.lstsq` returns this solution in all three cases.
-The width $h = n$, at which an exact fit first becomes possible, is the
-*interpolation threshold*.
-
-We compute the hidden representation once for 10,000 hidden units; the model
-with $h$ units uses its first $h$ columns. Before that we subtract the mean
-training image from every image. Since all pixels are nonnegative, a unit
-could otherwise be active on only a few images, or on none, and such nearly
-empty columns can make $\mathbf{H}$ lose rank. With centered images, every
-unit is active on a large share of them.
+What happens when we increase model width $h$ right past the sample size $n$? Let us test a tractable *random-features* model :cite:`Rahimi.Recht.2007`: freeze a He-initialized first layer $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 10000}$ on our $n = 1{,}000$ centered training images to form random ReLU features $\mathbf{H} = \mathrm{ReLU}((\mathbf{X} - \bar{\mathbf{x}})\mathbf{W}^{(1)})$, and fit the output weights $\mathbf{W}^{(2)} \in \mathbb{R}^{h \times 10}$ on the first $h$ features by minimum-norm least squares (`np.linalg.lstsq`) across widths $h \in [50, 10{,}000]$:
 
 ```{.python .input #generalization-deep-beyond-the-interpolation-threshold-1}
 W1 = rng.normal(0, np.sqrt(2 / 784), (784, 10000))  # He-initialized, frozen
@@ -350,10 +217,6 @@ def error(H, W2, y):
     """Fraction of examples whose largest output is not their label."""
     return (np.argmax(H @ W2, axis=1) != y).mean()
 ```
-
-How does the error depend on the width $h$? We fit the output layer for
-widths from 50 to 10,000 and record the smallest singular value of each
-feature matrix, which `lstsq` returns, and the norm of the solution.
 
 ```{.python .input #generalization-deep-beyond-the-interpolation-threshold-2}
 widths = [50, 100, 200, 400, 600, 800, 900, 1000, 1100, 1200, 1500, 2000,
@@ -369,33 +232,12 @@ d2l.plot([widths, widths, [1000, 1000]], [train_err, test_err, [0, 1]],
          xscale='log', fmts=('C0-', 'C1-', 'k:'), figsize=(5, 3))
 ```
 
-The left part of the curve is the U of :numref:`sec_generalization_basics`.
-Test error falls from about 30% at 50 hidden units to about 23% at a few
-hundred units, and then rises. At the interpolation threshold
-$h = n = 1{,}000$ it peaks at about 90%. The model now reproduces every
-training label, and on new images it does no better than a ten-sided die.
-Beyond the threshold every model fits all of its training labels, yet the
-test error falls again. At 10,000 hidden units it is back at about a fifth,
-a few points below the best width before the threshold.
-This shape is called *double descent* :cite:`Belkin.Hsu.Ma.ea.2019`.
 
-The training curve counts misclassified images, so it reaches zero already
-at 600 to 800 hidden units, although the squared error vanishes only from
-$h = n$ on. Past the threshold, the training error cannot tell the models
-apart; the test error can.
+This is the celebrated *double-descent* curve :cite:`Belkin.Hsu.Ma.ea.2019`:
+1. **Classical U-curve ($h < n$):** Test error drops from $\sim 30\%$ at $h = 50$ to $\sim 23\%$ around $h = 200$, then shoots up to $\sim 90\%$ right at the *interpolation threshold* $h = n = 1{,}000$.
+2. **Second descent ($h > n$):** As $h$ grows past $n = 1{,}000$ up to $10{,}000$, every model interpolates the training set perfectly, yet test error plunges back down to $\sim 20\%$—beating the best underparameterized model!
 
-### Conditioning at the Threshold
-
-Why does the error peak where the number of hidden units equals the number of
-examples? At $h = n$ the feature matrix $\mathbf{H}$ is square, and fitting
-must solve $\mathbf{H}\mathbf{W}^{(2)} = \mathbf{Y}$ exactly. A random square
-matrix is almost always invertible, but in some direction it is nearly
-singular: its smallest singular value $s_\textrm{min}$ is close to zero,
-and its inverse stretches that direction by $1/s_\textrm{min}$. To
-reproduce the labels, the solution needs a large component along it, and
-predictions on new images inherit that component. With fewer hidden units,
-least squares need not fit every label; with more, many solutions fit, and
-the one of smallest norm avoids the nearly singular direction.
+Why does test error spike so violently at $h = n$ and heal for $h \gg n$? Let us inspect the smallest singular value $s_{\min}$ of $\mathbf{H}_{:, :h}$ and the Frobenius norm $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$:
 
 ```{.python .input #generalization-deep-conditioning-at-the-threshold-1}
 for h in (200, 900, 1000, 1100, 10000):
@@ -403,20 +245,8 @@ for h in (200, 900, 1000, 1100, 10000):
           f'norm of W2 {norm[h]:6.1f}')
 ```
 
-At the threshold the smallest singular value is tens to thousands of times
-smaller than at 1,100 hidden units, depending on the draw of the features.
-The norm of the solution jumps from about 20 at 900 units to several hundred
-or more, sometimes thousands, against about 20 at 1,100 units and 2 at
-10,000.
-Beyond the threshold, the norm can only shrink as units are added: an exact
-fit with $h$ hidden units remains an exact fit with $h + 1$ (give the new
-unit zero weight), so the smallest norm among the exact fits cannot grow. The
-mathematics appendix analyzes this mechanism in a smaller example
-(:numref:`subsec_mdl-double-descent-example`).
 
-The threshold moves with the number of examples, which has a surprising
-consequence. With 1,000 hidden units, how does the test error change if we
-train on half as many images?
+At $h = n = 1{,}000$, $\mathbf{H}$ is a square $1000 \times 1000$ matrix with a tiny smallest singular value $s_{\min}$, so the unique exact inverse $\mathbf{H}^{-1}\mathbf{Y}$ divides label noise by $s_{\min}$ and explodes $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$ into the hundreds! For $h \gg n$, the extra columns open up an entire $(h - n)$-dimensional subspace of exact interpolators, allowing the *minimum-norm* solution to avoid poorly conditioned directions and shrink $\|\mathbf{W}^{(2)}\|_{\textrm{F}}$ all the way down to $\sim 2$. In fact, holding $h = 1{,}000$ fixed, doubling the training set from $n = 500$ to $n = 1{,}000$ lands the unregularized fit squarely on the $h = n$ cliff and drives test error *up* from $<30\%$ to $\sim 90\%$:
 
 ```{.python .input #generalization-deep-conditioning-at-the-threshold-2}
 for n in (500, 1000):
@@ -425,71 +255,24 @@ for n in (500, 1000):
     print(f'{n} training images: test error {test_error:.2f}')
 ```
 
-Doubling the training set from 500 to 1,000 images raises the test error
-from under a third to about 90%, because the larger set puts the model onto
-its interpolation threshold. More data can hurt.
-
-:citet:`nakkiran2021deep` observed the same peaks in deep networks, as the
-width, the number of training epochs, or the number of examples varies, each
-time where training can just barely fit the training set. That is an
-observation. Our explanation by a nearly singular matrix holds for the
-random-features model only.
 
 ## Implicit Bias of Gradient Descent
 :label:`subsec_implicit_regularization`
 
-The second descent depended on taking the smallest solution among the many
-that fit, a choice we made by hand when we called `lstsq`. Nothing in the
-loss asks for it: every exact fit has zero training loss. Which fit does
-gradient descent find? For two models the answer is known exactly. Such a
-preference of a training algorithm is called its *implicit bias*.
+The second descent above relied on `lstsq` picking the *minimum-norm* interpolator among infinitely many zero-loss solutions. Remarkably, gradient descent has that exact preference built in—an *implicit bias* (or *implicit regularization*) that operates even without any explicit penalty term.
 
-### Minimum-Norm Interpolation
+### Minimum-Norm Interpolation under Squared Loss
 
-We begin with the random-features model of the double-descent experiment.
-Its loss is quadratic, so the fit that gradient descent reaches can be
-written down. Consider one output of this model: weights
-$\mathbf{w} \in \mathbb{R}^h$, the loss
-$L(\mathbf{w}) = \frac{1}{2}\|\mathbf{H}\mathbf{w} - \mathbf{y}\|^2$ with
-$h > n$, and a matrix $\mathbf{H}$ whose $n$ rows are linearly independent.
-The exact fit of smallest norm is
+For an overparameterized linear system $\mathbf{H}\mathbf{w} = \mathbf{y}$ ($h > n$, full row rank), the unique minimum-norm interpolator is $\mathbf{w}^\star = \mathbf{H}^\top(\mathbf{H}\mathbf{H}^\top)^{-1}\mathbf{y}$.
 
-$$
-\mathbf{w}^\star = \mathbf{H}^\top(\mathbf{H}\mathbf{H}^\top)^{-1}\mathbf{y}.
-$$
+**Proposition.** Gradient descent on $L(\mathbf{w}) = \frac{1}{2}\|\mathbf{H}\mathbf{w} - \mathbf{y}\|_2^2$ initialized at $\mathbf{w}_0 = \mathbf{0}$ (with a converging step size) converges to the minimum-norm interpolator $\mathbf{w}^\star$.
 
-It is a combination of the rows of $\mathbf{H}$, and it reproduces the labels,
-since $\mathbf{H}\mathbf{w}^\star = \mathbf{y}$.
+**Proof.** Every gradient $\nabla L(\mathbf{w}) = \mathbf{H}^\top(\mathbf{H}\mathbf{w} - \mathbf{y})$ lies in the row space of $\mathbf{H}$. Starting at $\mathbf{w}_0 = \mathbf{0}$, every iterate $\mathbf{w}_t$—and hence the limit $\mathbf{w}_{\infty} = \mathbf{H}^\top\mathbf{a}$—remains in the row space of $\mathbf{H}$ (:numref:`fig_mdl-mlp-min-norm`). Since $\mathbf{H}\mathbf{w}_{\infty} = \mathbf{H}\mathbf{H}^\top\mathbf{a} = \mathbf{y}$, we have $\mathbf{a} = (\mathbf{H}\mathbf{H}^\top)^{-1}\mathbf{y}$ and $\mathbf{w}_{\infty} = \mathbf{w}^\star$. Any other interpolator $\mathbf{w}^\star + \mathbf{v}$ has $\mathbf{H}\mathbf{v} = \mathbf{0}$ (so $\mathbf{v} \perp \mathbf{w}^\star$) and strictly larger norm $\|\mathbf{w}^\star\|_2^2 + \|\mathbf{v}\|_2^2$. $\blacksquare$
 
-**Proposition.** Gradient descent on $L$ started at $\mathbf{w}_0 = \mathbf{0}$,
-with a learning rate small enough for it to converge, converges to
-$\mathbf{w}^\star$.
-
-**Proof.** The gradient $\mathbf{H}^\top(\mathbf{H}\mathbf{w} - \mathbf{y})$
-is a combination of the rows of $\mathbf{H}$. Starting from zero, every
-iterate is therefore a combination of the rows, $\mathbf{w}_t =
-\mathbf{H}^\top\mathbf{a}_t$ for some $\mathbf{a}_t \in \mathbb{R}^n$, and so
-is the limit. At the limit the gradient vanishes, so for this convex loss
-the limit is a minimizer. Since the rows of $\mathbf{H}$ are independent,
-exact fits exist, so the limit fits exactly:
-$\mathbf{H}\mathbf{H}^\top\mathbf{a} = \mathbf{y}$, which gives $\mathbf{a} =
-(\mathbf{H}\mathbf{H}^\top)^{-1}\mathbf{y}$ and the limit $\mathbf{w}^\star$.
-It remains to see that no exact fit is shorter. Every exact fit is
-$\mathbf{w}^\star + \mathbf{v}$ with $\mathbf{H}\mathbf{v} = \mathbf{0}$. Such
-a $\mathbf{v}$ is orthogonal to every row of $\mathbf{H}$, hence to
-$\mathbf{w}^\star$, so $\|\mathbf{w}^\star + \mathbf{v}\|^2 =
-\|\mathbf{w}^\star\|^2 + \|\mathbf{v}\|^2$. $\blacksquare$
-
-:numref:`fig_mdl-mlp-min-norm` shows the argument for one equation in two
-unknowns. Every step moves perpendicular to the line of exact fits, so the
-component of a start $\mathbf{w}_0$ along the line never changes. Only a
-start without such a component ends at the point closest to the origin.
-
-![Gradient descent on least squares with one equation $\mathbf{h}^\top\mathbf{w} = y$ in two unknowns. The exact fits form a line (green). Each gradient is a multiple of $\mathbf{h}$, so each step moves perpendicular to that line. Started at $\mathbf{0}$ (blue), gradient descent stops at the point of the line closest to the origin, where the dashed circle touches it. Started at $\mathbf{w}_0$ (orange), it stops at a longer exact fit.](../img/mdl-mlp-min-norm.svg)
+![Gradient descent on an underdetermined linear equation $\mathbf{h}^\top\mathbf{w} = y$ moves strictly perpendicular to the solution hyperplane, so starting from $\mathbf{0}$ (blue) lands at the minimum-norm solution $\mathbf{w}^\star$, whereas starting from $\mathbf{w}_0 \neq \mathbf{0}$ (orange) preserves the null-space component of $\mathbf{w}_0$.](../img/mdl-mlp-min-norm.svg)
 :label:`fig_mdl-mlp-min-norm`
 
-We check the proposition on a random problem with 20 equations and 100
-unknowns, starting once at zero and once at a random point.
+Let us verify this proposition numerically on $20$ equations in $100$ unknowns, comparing $\mathbf{w}_0 = \mathbf{0}$ against a random initialization:
 
 ```{.python .input #generalization-deep-minimum-norm-interpolation}
 H_small = rng.normal(size=(20, 100))
@@ -505,56 +288,18 @@ for name, w in (('zero', np.zeros(100)), ('random', rng.normal(size=100))):
           f'{np.linalg.norm(w - w_star):.1f}')
 ```
 
-Both runs fit every label. The run from zero ends at the minimum-norm
-solution of `lstsq` up to rounding; the run from a random start ends at
-another exact fit, more than ten times longer. The minimum-norm solutions
-of the double-descent experiment are therefore the ones gradient descent from
-zero would find.
 
-### Maximum-Margin Classification
+### Maximum-Margin Classification under Logistic Loss
 
-For classification with cross-entropy the situation differs. Take two classes
-with labels $y \in \{-1, +1\}$ and a linear score $\mathbf{w}^\top\mathbf{x}$,
-so that an example has the margin $m = y \mathbf{w}^\top\mathbf{x}$ and the
-loss $\log(1 + \exp(-m))$ of :numref:`sec_softmax`. If some $\mathbf{w}$
-classifies every training example correctly, no finite $\mathbf{w}$ minimizes
-the loss: scaling up a separating $\mathbf{w}$ raises every margin and lowers
-every loss. Gradient descent lets $\|\mathbf{w}\|$ grow without bound, and the
-question becomes which direction $\mathbf{w}/\|\mathbf{w}\|$ it approaches.
-:citet:`Soudry.Hoffer.Nacson.ea.2018` proved that it approaches the
-*maximum-margin* direction: of all separators, the one whose smallest distance
-to a training point is largest (an example lies at distance
-$m/\|\mathbf{w}\|$ from the separator). The intuition is that once
-$\|\mathbf{w}\|$ is large, the loss of an example is about $\exp(-m)$, so
-the examples with the smallest margins dominate the gradient, and gradient
-descent works mostly on raising them. It is in no hurry: in
-:numref:`fig_mdl-mlp-max-margin` the training error is zero from the first
-step, yet the separator is still turning after $10^5$ steps.
+On linearly separable binary classification data ($y_i \in \{-1, +1\}$) under the logistic (cross-entropy) loss $\sum_i \log(1 + \exp(-y_i \mathbf{w}^\top\mathbf{x}_i))$, $\|\mathbf{w}_t\|_2 \to \infty$ as $t \to \infty$, and :citet:`Soudry.Hoffer.Nacson.ea.2018` proved that the *direction* $\mathbf{w}_t / \|\mathbf{w}_t\|_2$ converges (at a $1/\log t$ rate) to the hard-margin SVM *maximum-margin separator* (:numref:`fig_mdl-mlp-max-margin`), because support vectors with the smallest margins dominate the exponentially decaying tail of $\log(1 + e^{-m})$ (see Exercise :exref:`ex_generalization-deep-implicit-bias` for how layer rescaling complicates parameter-norm margins in multi-layer ReLU networks).
 
-![Gradient descent on the logistic loss for two separable classes, with separators through the origin. Left: the separators after $t = 1$, $10^2$, and $10^4$ steps (gray to blue) turn toward the maximum-margin separator (black), whose margin is dashed; the two examples closest to it are ringed. Right: the angle between $\mathbf{w}_t$ and the maximum-margin direction keeps shrinking long after every training example is classified correctly.](../img/mdl-mlp-max-margin.svg)
+![Gradient descent on linearly separable logistic regression rotates $\mathbf{w}_t / \|\mathbf{w}_t\|_2$ toward the maximum-margin hyperplane (left) at a logarithmic rate that continues long after training accuracy reaches $100\%$ (right).](../img/mdl-mlp-max-margin.svg)
 :label:`fig_mdl-mlp-max-margin`
-
-Both results concern linear models, and they prove nothing about our MLP.
-For deep networks, statements this exact are rare. The parameter norm that
-gradient descent keeps small is not even a property of the function the
-network computes, because different parameters can compute the same function
-(exercise :exref:`ex_generalization-deep-implicit-bias`). What we can do
-with the MLP is watch it.
 
 ## Early Stopping
 :label:`subsec_early_stopping`
 
-### Label Noise
-
-Gradient descent also has a preference in time.
-:citet:`Arpit.Jastrzebski.Ballas.ea.2017` observed that networks trained on
-partly mislabeled data fit the correctly labeled examples first and the
-mislabeled ones later. We repeat their experiment on our 1,000 images,
-redrawing 20% of the labels at random. A redrawn label is correct one time
-in ten, so about 18% of the labels end up wrong. After every epoch we measure
-the accuracy on the correctly labeled training images, on the mislabeled
-training images against their wrong labels, and on the 1,000 held-out
-training images, our validation set.
+Even when an MLP has enough capacity to memorize corrupted labels, gradient descent learns *clean structured patterns first* and memorizes *label noise much later* :cite:`Arpit.Jastrzebski.Ballas.ea.2017`. Let us corrupt $20\%$ of the labels in our $1{,}000$-image training set and track accuracy separately on the clean training examples, the mislabeled training examples (scored against their corrupted labels), and the $1{,}000$ clean validation images over 200 epochs:
 
 ```{.python .input #generalization-deep-clean-labels-first}
 labels = corrupt(y_train, 0.2, rng)
@@ -572,23 +317,8 @@ d2l.plot(list(range(1, 201)), [acc['clean'], acc['mislabeled'],
                  'validation'], figsize=(5, 3))
 ```
 
-The two kinds of training images are fit at very different speeds. After 20
-epochs the network reproduces the labels of more than 80% of the correctly
-labeled images, but those of fewer than one in five of the mislabeled ones.
-Validation accuracy peaks in this first phase, within the first 50 epochs.
-Then the network memorizes the wrong labels, nearly all of them after about
-100 to 160 epochs, and validation accuracy declines by several points.
-Memorizing the mislabeled examples costs accuracy on new images.
 
-### The Stopping Rule
-
-*Early stopping* exploits this order. It monitors the validation accuracy
-after every epoch and keeps the parameters of the best epoch. In practice,
-training ends once the validation accuracy has not improved for a number of
-epochs called the *patience* (exercise
-:exref:`ex_generalization-deep-patience`). Here we pick the best epoch from
-the recorded history and judge the choice on the test images, which played no
-part in it.
+By epoch 20, the MLP gets over $80\%$ of the clean training images right while memorizing fewer than $20\%$ of the corrupted labels—and validation accuracy reaches its peak right in this early window before late-epoch noise memorization drags it down! *Early stopping*—halting training once validation performance fails to improve for a specified *patience* window (Exercise :exref:`ex_generalization-deep-patience`) and restoring the best validation checkpoint—recovers several percentage points of test accuracy while saving compute (and in linear least squares acts analogously to $\ell_2$ weight decay; see Exercise :exref:`ex_generalization-deep-early-stopping-ridge`):
 
 ```{.python .input #generalization-deep-stopping-rule}
 best = int(np.argmax(acc['validation']))
@@ -597,47 +327,17 @@ print(f'best validation accuracy after epoch {best + 1}: '
 print(f'after all 200 epochs: test accuracy {acc["test"][-1]:.3f}')
 ```
 
-Stopping at the best validation epoch gains test accuracy over training to
-the end: several points as a rule, and anywhere between one and nine in our
-runs. And it takes less work, not more, since the remaining epochs need not
-even be computed. Early stopping
-limits how far the parameters move from their initialization, much as weight
-decay limits their size; for least squares the two are nearly equivalent
-(exercise :exref:`ex_generalization-deep-early-stopping-ridge`).
 
-The rule assumes that validation accuracy does not rise again after a long
-plateau. On small algorithmic tasks such as addition modulo a prime it does
-:cite:`Power.Burda.Edwards.ea.2022`. Networks trained with weight decay fit
-their training set within about a thousand steps and generalize only after a
-hundred to a thousand times as many (:numref:`fig_grokking`), a phenomenon
-called *grokking*. A patience rule would have stopped long before.
+One famous exception to early stopping is *grokking* :cite:`Power.Burda.Edwards.ea.2022` (:numref:`fig_grokking`, Exercise :exref:`ex_generalization-deep-grokking`), where networks trained with weight decay on small algorithmic tasks (such as modular addition) memorize the training table rapidly while validation accuracy remains near chance for $100\times$ longer before suddenly jumping to $100\%$.
 
-![Grokking, schematically, after :citet:`Power.Burda.Edwards.ea.2022`. On a small algorithmic task, training accuracy (gray) saturates within about a thousand steps. Validation accuracy (blue) stays near chance for more than ten times as many steps and reaches the training accuracy two to three orders of magnitude after it.](../img/mdl-mlp-grokking.svg)
+![Grokking (:citet:`Power.Burda.Edwards.ea.2022`): on modular arithmetic, training accuracy saturates within $\sim 10^3$ steps while validation accuracy jumps to generalization only after $\sim 10^5$ steps.](../img/mdl-mlp-grokking.svg)
 :label:`fig_grokking`
-
-How much of the opening question have we answered? For the two linear
-models we could say exactly which fit gradient descent finds. For the MLP we
-have seen one preference, clean examples before noisy ones, and no complete
-account of why its fits generalize exists yet. The last experiment does
-suggest where to push. If memorizing wrong labels is what costs accuracy,
-then a training procedure that makes memorizing harder should help, and the
-next section studies one: dropout.
 
 ## Summary
 
-An MLP with more parameters than training examples generalizes, although it
-can also fit random labels. No capacity measure of the class alone can
-therefore explain its generalization, and the VC bound is vacuous for it. A
-random-features model shows what happens past the interpolation threshold:
-test error peaks where the number of hidden units equals the number of
-examples, because the feature matrix is nearly singular there, and falls
-again as the width grows. Which of the many exact fits a
-model finds is decided by the training algorithm. For linear models we know
-how: gradient descent from zero finds the minimum-norm fit for least squares
-and approaches the maximum-margin separator for the logistic loss. For the
-MLP we know it only in part. With noisy labels it fits the correctly labeled
-examples first, so stopping at the best validation epoch ends training
-before most of the noise is memorized.
+- **Memorization vs. capacity bounds:** Overparameterized MLPs can memorize $100\%$ of random labels while generalizing on true labels, rendering distribution-free capacity bounds vacuous and placing the burden of explanation on inductive bias.
+- **Double descent:** In random-features least squares, test error spikes at the interpolation threshold $h = n$ (where $s_{\min}(\mathbf{H}) \approx 0$ inflates $\|\mathbf{W}^{(2)}\|$) and descends a second time for $h \gg n$ as minimum-norm interpolation spreads weights across redundant features.
+- **Implicit bias and early stopping:** Gradient descent from zero converges to the minimum-norm interpolator under squared loss and the maximum-margin direction under logistic loss, and fits clean structure before label noise—making early stopping a simple, effective regularizer.
 
 ## Exercises
 
@@ -687,14 +387,7 @@ before most of the noise is memorized.
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap3.html),
     Chapter 3.*
    :exlabel:`ex_generalization-deep-patience`
-1. [code] **More data can hurt.** Fix the random-features model at 1,000
-   hidden units and fit it, as in :numref:`subsec_double_descent`, on the
-   first $n$ of 2,000 training images for $n$ from 100 to 2,000.
-    1. Plot the test error against $n$. Where does it peak, and how does the
-       peak compare with the error at $n = 2{,}000$?
-    1. Plot the smallest singular value of the feature matrix against $n$ and
-       explain the shape of the error curve with it.
-    1. Repeat with 500 and 2,000 hidden units. Where does the peak move?
+
 1. [code] **Weight decay at the threshold.** Replace the minimum-norm fit of
    the double-descent experiment by the ridge solution
    $\mathbf{W}^{(2)} = (\frac{1}{n}\mathbf{H}^\top\mathbf{H} + \lambda
@@ -751,23 +444,7 @@ before most of the noise is memorized.
        the network, unlike one measured with $\|\mathbf{w}\|$ for the linear
        predictor, is not a property of the function $f$ alone.
    :exlabel:`ex_generalization-deep-implicit-bias`
-1. [extended] **Epoch-wise double descent.** ● Take an MLP with one hidden
-   layer of 256 units, as in :numref:`sec_mlp-implementation`, on
-   Fashion-MNIST and randomly relabel
-   15% of the training examples. Train far past convergence (several hundred
-   epochs). After every epoch, record the test error and the training
-   accuracy on the relabeled examples, measured against their new labels.
-   Plot both against the epoch count on a log axis.
-    1. Does the test error descend a second time after the initial rise?
-    1. At which epoch does the test error peak, and what fraction of the
-       relabeled examples has the network fitted by then?
-    1. Repeat with 5% and 30% of the examples relabeled. How do the height
-       and the epoch of the peak change?
-    1. Suppose a patience rule with $k = 20$ and $\theta = 0$ monitored the
-       test-error curve of the 15% run as if it were a validation curve. At
-       which epoch would the rule stop, and how does the test error there
-       compare with the test error at the end of training?
-   :exlabel:`ex_generalization-deep-epoch-wise-double-descent`
+
 1. [extended] **Grokking.** ●● Reproduce the setup of
    :citet:`Power.Burda.Edwards.ea.2022`: train a small network (they use a
    two-layer transformer, but a wide MLP on one-hot pairs also works) to

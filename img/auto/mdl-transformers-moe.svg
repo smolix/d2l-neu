@@ -1473,7 +1473,7 @@ z
    </g>
    <g id="text_14">
     <!-- $\times\, p_{3} = 0.24$ -->
-    <g style="fill: #15181c" transform="translate(106.904507 103.489849) scale(0.14 -0.14)">
+    <g style="fill: #15181c" transform="translate(111.308252 79.235117) scale(0.14 -0.14)">
      <defs>
       <path id="Cmsy10-d" d="M 941 184 
 Q 941 234 972 275 
@@ -1621,7 +1621,7 @@ z
    </g>
    <g id="text_15">
     <!-- $\times\, p_{6} = 0.31$ -->
-    <g style="fill: #15181c" transform="translate(288.897076 103.489849) scale(0.14 -0.14)">
+    <g style="fill: #15181c" transform="translate(284.493331 79.235117) scale(0.14 -0.14)">
      <use xlink:href="#Cmsy10-d" transform="translate(0 0.390625)"/>
      <use xlink:href="#Cmmi10-80" transform="translate(94.352595 0.390625)"/>
      <use xlink:href="#Cmr10-45" transform="translate(144.645563 -14.609337) scale(0.7)"/>

@@ -14,93 +14,108 @@
       "outputs": []
     },
     "moe-conditional-computation": {
-      "code_fingerprint": "sha256:29fa7e3bbfe705211952c193bd7026ab6a86b2d8abe5ad20e509d76639356bcc",
+      "code_fingerprint": "sha256:1dac09c2671a80c11792dcb611bc0b1f07cefe9bbba5d95ac4798f6fdfe343bf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "        ours:   25.2M in experts,   3.2M active per token, ratio  8.0x\n DeepSeek-V3:  656.5B in experts,  23.1B active per token, ratio 28.4x\nMixtral 8x7B:   45.1B in experts,  11.3B active per token, ratio  4.0x\n              with attention and embeddings: 46.7B stored, 12.9B active\n"
+          "text": "        ours:   2.1M in experts, 0.264M active per token, ratio  7.9x\n DeepSeek-V3:   656B in experts,  23.1B active per token, ratio 28.4x\nMixtral 8x7B:  45.1B in experts,  11.3B active per token, ratio  4.0x\n              with attention and embeddings: 46.7B stored, 12.9B active\n"
         }
       ]
     },
     "moe-a-mixture-of-experts-layer-1": {
-      "code_fingerprint": "sha256:dc59b30b1d361bf289bfd14a3a0eb3611fcaa6dc410a7317adc8a17d29663d69",
+      "code_fingerprint": "sha256:63906add0ac546e0c1e3961cb220a6f1d37ec73b406c68a57c18bd7bbfdba36c",
       "kind": "text",
       "outputs": []
     },
     "moe-dispatching-tokens-to-experts-1": {
-      "code_fingerprint": "sha256:f9512659d1f13ab8e5c7243f38d55a583d4a07b587928deb7958842cc72df3f3",
+      "code_fingerprint": "sha256:2d41cc4110e8578c7deddbf21194845ec0214f837e2f3cb71c8a0ceb5f81ec76",
       "kind": "text",
       "outputs": []
     },
     "moe-a-mixture-of-experts-layer-2": {
-      "code_fingerprint": "sha256:77bda9b4465966e57f01a4cefc30ec689faca9d0d32121d05ac02ff128d35c5e",
+      "code_fingerprint": "sha256:baa31457fbf7f07aa2014526792122cdfd4805e6fcf611fc00b809425601dfa7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4198400 parameters stored, 1051136 active per token\nshares of the assignments: 0.11 0.16 0.13 0.12 0.13 0.12 0.12 0.11\n0% of them dropped\n"
+          "text": "4198400 parameters stored, 1051136 active per token\n"
         }
       ]
     },
     "moe-three-runs-one-budget-1": {
-      "code_fingerprint": "sha256:fa194dea50cbaeb7da4e53441fb0a421bf639e4165c0512230289db721fc6353",
+      "code_fingerprint": "sha256:8d87d5a960253832595bac0886b5792269e45d2a6495d4a9ca2d021b07fae099",
       "kind": "text",
       "outputs": []
     },
     "moe-three-runs-one-budget-2": {
-      "code_fingerprint": "sha256:2c212e5117396507fb72d9222a64e895e50fca25ce3d25accafa81433c1bd378",
+      "code_fingerprint": "sha256:cb9a2bb651a0a93df3e830a800144d53584e031f0b2d98f301992c7adcc90ada",
       "kind": "text",
       "outputs": []
     },
     "moe-balancing-methods-compared-1": {
-      "code_fingerprint": "sha256:12cb579efdf1735d820815b5f7a930d89ef1a312b59206e5f1d4e377daa71841",
+      "code_fingerprint": "sha256:5b253b12b22488482390757cc887e3dca7e5fcbcb4e9748ca2d63111c2ec5fe6",
+      "kind": "text",
+      "outputs": []
+    },
+    "moe-balancing-methods-compared-2": {
+      "code_fingerprint": "sha256:eca14fa8469438f3e0ee786c5b2eab16f1263ec12f01323071b24b8ba4c1bfa3",
       "kind": "text",
       "outputs": []
     },
     "moe-three-runs-one-budget-3": {
-      "code_fingerprint": "sha256:33e4c197b889b2b38853e5699f619e5f5a9a1ed0f4e69f387866c8ba0eb65044",
+      "code_fingerprint": "sha256:74fa67a24a87d03d531843b8caaff6c1a5ec15c97f96d9ab4f2f62356d86d964",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " initialization: validation loss 5.58, busiest expert at 4.1 times its share, 37% dropped\n"
+          "text": "spaces: 18.9% of the validation bytes\n  two runs each    loss     no drops    busiest   dropped\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   no balancing: validation loss 1.80, busiest expert at 3.4 times its share, 36% dropped\n"
+          "text": " initialization  5.49 5.53  5.49 5.53  3.4x 3.1x  22% 29%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " auxiliary loss: validation loss 1.55, busiest expert at 1.3 times its share, 0% dropped\n"
+          "text": "   no balancing  1.71 1.76  1.66 1.69  2.4x 2.7x  24% 29%\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bias controller: validation loss 1.63, busiest expert at 1.2 times its share, 0% dropped\n"
+          "text": "  frozen router  1.74 1.78  1.68 1.72  1.8x 2.7x  17% 23%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " auxiliary loss  1.57 1.56  1.57 1.56  1.1x 1.2x   0%  0%\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bias controller  1.60 1.56  1.59 1.55  1.8x 1.5x   3%  2%\n"
         }
       ]
     },
     "moe-three-runs-one-budget-4": {
-      "code_fingerprint": "sha256:c43a25c5893d5f5dd20c0c7fea8a0ea9b39f3fbeee9cc3f900fb022df20224d5",
+      "code_fingerprint": "sha256:bcd6a0ff682c052f4730c0823a6bca77bd7da77827d1be4ff383a5314e0f3030",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 38001,
-          "sha256": "sha256:520834da891018ec2b40d5effb2dc7994c7f201072c234d6527ec4f31d69ea13"
+          "bytes": 40266,
+          "sha256": "sha256:b814ac4365d68783e1431873aea3313b1610160e0f771074460b0ac6e220e927"
         }
       ]
     },
     "moe-a-mixture-of-experts-gpt-1": {
-      "code_fingerprint": "sha256:cdecbe649b0fa1aa89ac9c44f0c86cb6c7bdf664a33fdf6fd0ab04b24f7f28bf",
+      "code_fingerprint": "sha256:22d41eb61279f9f9384afc678168480e4bb8011610ee8bf090f30af9b079d67f",
       "kind": "text",
       "outputs": [
         {
@@ -111,25 +126,25 @@
       ]
     },
     "moe-a-mixture-of-experts-gpt": {
-      "code_fingerprint": "sha256:3126a33f0076a5ed442f751d7de0a8dd44a864d9c1ef5fbfa1596d6d3fbc8666",
+      "code_fingerprint": "sha256:72847afa66ecfec90bd943831cbb9c97b140bc735589c115c9bfb71f0e23e458",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dense: validation loss 1.32 nats\n"
+          "text": "run 1: dense 1.331, MoE 1.268; MoE ahead from step 1250, 0.0% dropped at the end\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  MoE: validation loss 1.27 nats\n"
+          "text": "run 2: dense 1.322, MoE 1.266; MoE ahead from step 1500, 0.0% dropped at the end\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-a-mixture-of-experts-gpt-1.svg",
-          "bytes": 21633,
-          "sha256": "sha256:b2543d4ce15a0b8174f68e895a627b64b12601e90f81496a5e0fe911bcde0a8e"
+          "bytes": 22562,
+          "sha256": "sha256:10cefce9afab363e52e54865816d5928fcf5a8a462d13fe83641b276fbe13f8e"
         }
       ]
     }

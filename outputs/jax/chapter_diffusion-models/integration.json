@@ -1,0 +1,146 @@
+{
+  "schema": 1,
+  "source": "chapter_diffusion-models/integration.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.12.0.1",
+    "d2l_lib_fingerprint": "sha256:ca06e8937f9dcfd2bc26a4ba5e1da3099afc8804a1edfef8a58f87f5f9b625b2",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "integration-sampling-by-integration-1": {
+      "code_fingerprint": "sha256:de0fe5cfcc565093f211c9576888bf4154bbf7a4cb8b46739ea3ffa2732ae02c",
+      "kind": "text",
+      "outputs": []
+    },
+    "integration-sampling-by-integration-3": {
+      "code_fingerprint": "sha256:98603bcfcbca7d4ac4cf79527b5a1dc0aa2e3ddd95eef360b79f903105898ee1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss over the last 1,000 steps: velocity 4.913, noise 0.536\n"
+        }
+      ]
+    },
+    "gaussian-paths-the-probability-flow-ode-and-euler-s-method": {
+      "code_fingerprint": "sha256:e111c45058283e2fb0c2afbeae1d96f5fac921f030aaa20c4c73bec9cdd9660c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "start          1 step          10 steps        100 steps\n( 0.00,  0.00)  (-0.50, -0.70)  (-1.91, -1.27)  (-1.98, -1.30)\n( 1.50,  0.00)  (-0.50, -0.70)  ( 2.73, -1.34)  ( 2.90, -1.36)\n(-1.50,  0.00)  (-0.50, -0.70)  (-2.92, -1.38)  (-3.06, -1.40)\n( 0.00,  1.50)  (-0.50, -0.70)  (-0.11,  2.59)  (-0.09,  2.77)\n( 0.00, -1.50)  (-0.50, -0.70)  (-1.98, -2.06)  (-2.05, -2.17)\n"
+        }
+      ]
+    },
+    "samplers-second-order-and-the-step-grid": {
+      "code_fingerprint": "sha256:a2b7f1b616bb4745bcc52b6fc134e5404be9a9279fce0f88d5d50ac7efd7e912",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-four-targets-one-oracle-1": {
+      "code_fingerprint": "sha256:9051c248656eceed9bad5b58ec5ee9f3df1cdaca76ca734b31d757cbd44f61ff",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-the-probability-flow-ode-and-euler-s-method-1": {
+      "code_fingerprint": "sha256:61d27e24ee0675f1869273185d646177797f0043f7628e7aaf14a17978a62576",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "one step: mean [-0.495, -0.706] std [0.053, 0.033]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "              data: {'weights': [0.512, 0.291, 0.197], 'stray': 0.0115, 'spread': 0.481}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 10 steps, network: {'weights': [0.496, 0.307, 0.197], 'stray': 0.0315, 'spread': 0.452}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "100 steps, network: {'weights': [0.485, 0.313, 0.203], 'stray': 0.0135, 'spread': 0.477}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  10 steps, oracle: {'weights': [0.495, 0.31, 0.195], 'stray': 0.0285, 'spread': 0.456}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ode_sample against the loop on the exact field: 5e-05\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "integration/gaussian-paths-the-probability-flow-ode-and-euler-s-method-1-1.png",
+          "bytes": 54478,
+          "sha256": "sha256:792f5972abfe32edc72d9b0615a65dbf7a7b2cc79cf12484eb685edffb3b41eb"
+        }
+      ]
+    },
+    "gaussian-paths-the-reverse-sde-and-the-ancestral-chain": {
+      "code_fingerprint": "sha256:df31fa21bc498eceaad30373aa1e0d8e7fcc535b19d9bdb838cd34a6445d185e",
+      "kind": "text",
+      "outputs": []
+    },
+    "gaussian-paths-the-reverse-sde-and-the-ancestral-chain-1": {
+      "code_fingerprint": "sha256:01475511eed353b49ac160c8fb5aa3da48413f04dfe8a760f3b3772e86773d32",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{'weights': [0.502, 0.291, 0.207], 'stray': 0.005, 'spread': 0.489}\n"
+        }
+      ]
+    },
+    "gaussian-paths-samples-from-both-samplers": {
+      "code_fingerprint": "sha256:57128d14a223ed219228ccd1fc89d4767ef41ef3afd069f64f6090130e79f592",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "              data: {'weights': [0.504, 0.299, 0.197], 'stray': 0.0111, 'spread': 0.478}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ancestral, network: {'weights': [0.504, 0.302, 0.194], 'stray': 0.012, 'spread': 0.485}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " ancestral, oracle: {'weights': [0.502, 0.303, 0.195], 'stray': 0.0114, 'spread': 0.485}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    Euler, network: {'weights': [0.498, 0.297, 0.205], 'stray': 0.0129, 'spread': 0.467}\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     Euler, oracle: {'weights': [0.498, 0.299, 0.203], 'stray': 0.0106, 'spread': 0.472}\nstandard error of a weight: [0.0035, 0.0032, 0.0028]\nancestral: network and oracle end in different modes for 0.48% of the starts\nEuler: network and oracle end in different modes for 0.31% of the starts\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "integration/gaussian-paths-samples-from-both-samplers-1.png",
+          "bytes": 55767,
+          "sha256": "sha256:153cedd18332c76bf0a6fd3bba73ea5c5a35942ac80bc105bd31c2b2558ef00e"
+        }
+      ]
+    }
+  }
+}

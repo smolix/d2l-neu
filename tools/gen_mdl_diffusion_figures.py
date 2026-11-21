@@ -24,30 +24,32 @@ Figures, by section:
   * ``mdl-diffusion-blueprint`` -- conditional and marginal path and field of
     the linear path on the mixture, exact.
 
-  17.3 image-diffusion.md
+  17.3 integration.md: no figures of its own.
+
+  17.4 image-diffusion.md
   * ``mdl-diffusion-unet`` -- the U-Net with its skips and its time/label
     embedding;
   * ``mdl-diffusion-guidance`` -- classifier-free guidance on the mixture as an
     extrapolation of posterior means.
 
-  17.4 samplers.md
+  17.5 samplers.md
   * ``mdl-diffusion-two-samplers`` -- DDIM at eta = 0 and eta = 1 on the
-    mixture with the exact predictor, from shared starts.
+    mixture with the exact predictor, from three shared starts.
 
-  17.5 design-space.md
+  17.6 design-space.md
   * ``mdl-diffusion-weightings`` -- weightings w(lambda) and the densities of
     lambda under uniform t;
   * ``mdl-diffusion-schedules`` -- lambda_t against t for four schedules.
 
-  17.6 latent-diffusion.md
+  17.7 latent-diffusion.md
   * ``mdl-diffusion-latent-pipeline`` -- encoder, latent diffusion, decoder;
   * ``mdl-diffusion-dit-block`` -- patchify, one adaLN-Zero block, depatchify.
 
-  17.7 few-step.md
+  17.8 few-step.md
   * ``mdl-diffusion-flow-map`` -- probability-flow trajectories of a 1-D
     two-Gaussian mixture, a jump of the flow map, and its three identities.
 
-  17.8 discrete-diffusion.md
+  17.9 discrete-diffusion.md
   * ``mdl-diffusion-masking`` -- the absorbing chain on a token sequence.
 
 Run with the repo's pytorch venv:
@@ -500,7 +502,7 @@ def fig_blueprint():
 
 
 # =========================================================================== #
-# 17.3 image-diffusion.md                                                     #
+# 17.4 image-diffusion.md                                                     #
 # =========================================================================== #
 
 def _ubox(ax, x, y, w, h, text, color, fs=TXT, fc="white", zorder=3):
@@ -637,7 +639,7 @@ def fig_guidance():
 
 
 # =========================================================================== #
-# 17.4 samplers.md                                                            #
+# 17.5 samplers.md                                                            #
 # =========================================================================== #
 
 def _ddim_paths(starts, eta, steps=200, seed=0):
@@ -659,19 +661,27 @@ def _ddim_paths(starts, eta, steps=200, seed=0):
 
 
 def fig_two_samplers():
-    """Left: DDIM at eta = 0 from six starts; right: eta = 1 from the same
-    starts.  Exact predictor, VP path, 200 steps."""
-    starts = np.random.default_rng(4).standard_normal((6, 2)) * vp(1.0)[1]
+    """Left: DDIM at eta = 0 from three starts; right: eta = 1 from the same
+    starts.  Exact predictor, VP path, 200 steps.  In (b) the first half of
+    each path (t > 1/2, where noise dominates) is faded so that the second
+    half of every path can be followed to its end."""
+    starts = np.random.default_rng(4).standard_normal((3, 2)) * vp(1.0)[1]
     data = data_cloud(500, seed=2)
-    colors = T.CYCLE[:6]
+    colors = T.CYCLE[:3]
     lim = 4.5
     fig, axes = plt.subplots(1, 2, figsize=(8.2, 4.2))
-    for ax, eta, seed in ((axes[0], 0.0, 0), (axes[1], 1.0, 5)):
-        P = _ddim_paths(starts, eta, seed=seed)
+    for ax, eta in ((axes[0], 0.0), (axes[1], 1.0)):
+        P = _ddim_paths(starts, eta)
+        half = len(P) // 2
         ax.scatter(*data.T, s=4, color=LIGHT, zorder=1, lw=0)
         for j, col in enumerate(colors):
-            ax.plot(P[:, j, 0], P[:, j, 1], color=col, lw=1.6 if eta == 0 else 0.8,
-                    zorder=2)
+            if eta == 0:
+                ax.plot(P[:, j, 0], P[:, j, 1], color=col, lw=1.8, zorder=2)
+            else:
+                ax.plot(P[:half + 1, j, 0], P[:half + 1, j, 1], color=col,
+                        lw=0.7, alpha=0.3, zorder=2)
+                ax.plot(P[half:, j, 0], P[half:, j, 1], color=col, lw=1.1,
+                        zorder=3)
             ax.plot(*P[0, j], "o", mfc="white", mec=col, mew=1.8, ms=7, zorder=4)
             ax.plot(*P[-1, j], "x", color=col, mew=2.2, ms=8, zorder=4)
         ax.set_xlabel("$x_1$", fontsize=LBL)
@@ -686,7 +696,7 @@ def fig_two_samplers():
 
 
 # =========================================================================== #
-# 17.5 design-space.md                                                        #
+# 17.6 design-space.md                                                        #
 # =========================================================================== #
 
 def _vp_dt_dlam(lam):
@@ -799,7 +809,7 @@ def fig_schedules():
 
 
 # =========================================================================== #
-# 17.6 latent-diffusion.md                                                    #
+# 17.7 latent-diffusion.md                                                    #
 # =========================================================================== #
 
 def _shirt(n=28):
@@ -1037,7 +1047,7 @@ def fig_dit_block():
 
 
 # =========================================================================== #
-# 17.7 few-step.md                                                            #
+# 17.8 few-step.md                                                            #
 # =========================================================================== #
 
 FM_MEANS = np.array([-1.5, 1.5])
@@ -1177,7 +1187,7 @@ def fig_flow_map():
 
 
 # =========================================================================== #
-# 17.8 discrete-diffusion.md                                                  #
+# 17.9 discrete-diffusion.md                                                  #
 # =========================================================================== #
 
 def fig_masking():

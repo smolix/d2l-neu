@@ -1,37 +1,42 @@
 # A Released Checkpoint in the Book's Own Code
 :label:`sec_lm_d2l_checkpoint`
 
-In :numref:`subsec_gpt-loading` we loaded GPT-2 into our own `GPT` class with
-a dictionary of names and one transpose, and the model wrote fluent English.
-In :numref:`sec_lm_hf_models` we loaded a current model through the
-Transformers library and read its configuration file field by field. Would
-such a model also run in the code we wrote ourselves? And if it ran, how
-would we know that it ran *correctly*: the same as what, and to which
-precision?
+When we loaded GPT-2 into our own `GPT` class, two checks satisfied us: the
+model gave an English sentence a plausible probability, and it wrote fluent
+text (:numref:`subsec_gpt-loading`). We asked for nothing stricter. In
+:numref:`sec_lm_hf_models` the Transformers library then ran a current model
+for us, and we took its modeling code on trust. Would such a model also run
+in the code we wrote ourselves? And if it ran, how would we know that it ran
+*correctly*: the same as what, and to which precision?
 
 Running released weights in an independent implementation is called
 *porting*. Inference engines and from-scratch reimplementations
 :cite:`Raschka.2024` do it for every architecture they support. A port has
 two parts. The first is a list of the ways in which the released block
-differs from a block we already have. For Qwen3
-:cite:`Yang.Li.Yang.ea.2025` the list is short: a wider attention head, a
+differs from a block we already have. For our example, Qwen3-0.6B
+:cite:`Yang.Li.Yang.ea.2025`, the list is short: a wider attention head, a
 normalization of queries and keys, another convention for rotary positions,
 and a few constants. The second is a comparison with the *reference
-implementation*, the code that the weights were released with, which for
-Qwen3 is Transformers. The comparison should be as tight as rounding allows
-and no tighter: two correct programs do not agree to the last bit, and a
-wrong one may well agree to the third digit.
+implementation*, the code that the weights were released with, here
+Transformers. The comparison should be as tight as rounding allows and no
+tighter: two correct programs do not agree to the last bit, and a wrong one
+may well agree to the third digit.
 
 The second part is where the care goes. Later chapters fine-tune, quantize,
-serve and take apart this very model. A wrong constant that moves the
-logits by a fraction of a percent does not show in a sample of text, but it
-shifts every measurement built on the model. In this section we port
-Qwen3-0.6B into subclasses of `d2l.GPT`, map its weights, and compare the
-result with Transformers in its logits, in the text it generates, and layer
-by layer. We port Qwen3 and not the Qwen3.5 of the previous section because
-Qwen3.5 mixes attention layers with the linear recurrences of
-:numref:`chap_modern_rnn`; :numref:`sec_lm_hybrids_at_scale` ports those.
-The section ends with a porting bug that the customary check accepts.
+serve and take apart models of this family in the code of this section. A
+wrong constant that moves the logits by a fraction of a percent does not
+show in a sample of text, but it shifts every measurement built on the
+model. In this section we write Qwen3-0.6B as subclasses of `d2l.GPT`, map
+its weights, and compare the result with Transformers in its logits, in the
+text it generates, and layer by layer. We port Qwen3 and not the Qwen3.5 of
+the previous section because Qwen3.5 mixes attention layers with the linear
+recurrences of :numref:`chap_modern_rnn`;
+:numref:`sec_lm_hybrids_at_scale` ports those. The section ends with a
+porting bug that a comparison of half-precision logits accepts, although
+half precision is how the weights are shipped and usually run. A reader who
+only wants to use the model can stop once the weights are loaded, at the end
+of :numref:`subsec_lm_port_name_map`. Whether the loaded model can be
+trusted is the subject of the second and longer half.
 
 ```{.python .input #d2l-checkpoint-imports}
 %%tab pytorch
@@ -69,13 +74,12 @@ d2l.DATA_HUB['lm-qwen3-port-prompts-v1'] = (
 
 The file holds 32 prompts of 64 tokens and one prompt of 4,096 tokens. The
 short prompts come in eight groups of four: English prose, Python code,
-Chinese, LaTeX, lines of arithmetic, four further languages, random tokens
-stated twice, and questions rendered by a chat template. A port that is
-wrong only for rare tokens, or only inside a chat turn, should not pass for
-lack of such inputs. The setup also names three checkpoints of the Qwen3
-family and asserts that PyTorch multiplies fp32 matrices in full precision,
-its default, and not in the reduced TF32 format of :numref:`sec_numerics`.
-Without a GPU, the notebook shrinks to three prompts of 32 tokens.
+Chinese, LaTeX, lines of arithmetic, four further languages, 32 random
+tokens followed by their own repetition (which a model can continue only by
+copying), and questions rendered by a chat template. A port that is wrong
+only for rare tokens, or only inside a chat turn, should not pass for lack
+of such inputs. Without a GPU, the notebook shrinks to three prompts of 32
+tokens.
 
 ```{.python .input #d2l-checkpoint-setup}
 %%tab pytorch
@@ -122,9 +126,9 @@ only if every shape fits.
 
 We build the book's `GPT` with the widths of Qwen3-0.6B (28 blocks of width
 1,024 with 16 query heads and 8 key--value heads) and set its tensors next
-to those of the released file. Nothing is downloaded or allocated for this.
-The model is built on PyTorch's meta device, which records shapes and holds
-no data (:numref:`subsec_count_without_alloc`), and
+to those of the released file. No weights are downloaded and no memory is
+allocated for this. The model is built on PyTorch's meta device, which
+records shapes and holds no data (:numref:`subsec_count_without_alloc`), and
 `d2l.safetensors_header` of :numref:`sec_lm_hf_models` reads names and
 shapes from the header of the file.
 
@@ -160,12 +164,13 @@ row looks like a match and is not one. The 2,048 rows of our `W_qkv` are
 three matrices stacked: 1,024 rows for the queries and 512 each for the keys
 and the values, whose 8 heads are 64 wide. In the released file the queries
 alone fill 2,048 rows, twice the width of the model, because each of the 16
-heads is 128 wide where ours has $d/H = 64$. Keys and values have matrices
-of their own, of 1,024 rows each. The two vectors of 128 gains, `q_norm` and
+heads is 128 wide, against 64 in ours. The output projection `o_proj`
+reads 2,048 columns for the same reason. Keys and values have matrices of
+their own, of 1,024 rows each. The two vectors of 128 gains, `q_norm` and
 `k_norm`, have no counterpart: they are the QK-norm of
 :numref:`subsec_qk-norm`, which our block left to an exercise. And the
-feed-forward network is 3,072 wide, where our SwiGLU chooses
-$\mathrm{round}(8d/3) = 2{,}731$.
+feed-forward network is 3,072 wide, three times the width of the model. Our
+SwiGLU takes eight thirds of the width, which rounds to 2,731.
 
 Other differences are settings that no shape reveals. Some are fields of
 the configuration file: the RoPE base, the $\epsilon$ of the norms, and
@@ -201,24 +206,26 @@ exception. It is a property of how the weights are stored, and
 `Qwen3Attention` is the book's `CausalAttention` (:numref:`sec_gpt`) with
 its projections replaced. It keeps the parent's `forward`, which calls `qkv`
 and hands the result to the fused attention kernel
-`F.scaled_dot_product_attention`, and it changes what `qkv` computes. Three
-matrices `W_q`, `W_k` and `W_v` produce $H$ query heads and
-$H_\textrm{kv}$ key and value heads of an explicit width `head_dim`, so
-the query width $H d_h$ need not equal the width of the model. With
-`qk_norm`, the query and the key of each head pass through an RMSNorm
-before they are rotated, which keeps the attention logits from growing with
-the weights. One vector of $d_h$ gains serves all heads.
+`F.scaled_dot_product_attention`, and it changes what `qkv` computes. The
+fourteen lines of `qkv` hold the idea of the port's model code, and the
+constructor around them is plumbing. Three matrices `W_q`, `W_k` and `W_v`
+produce $H$ query heads and $H_\textrm{kv}$ key and value heads of an
+explicit width `head_dim`, so the query width $H d_h$ need not equal the
+width of the model. With `qk_norm`, the query and the key of each head pass
+through an RMSNorm before they are rotated, which keeps the attention logits
+from growing with the weights. One vector of $d_h$ gains serves all heads.
 
-The constructor calls `nn.Module.__init__` directly, because the parent's
-would allocate a fused `W_qkv` only for us to discard it. A second method,
-`forward_step`, serves generation with a KV cache as in
+A second method, `forward_step`, serves generation with a KV cache as in
 :numref:`subsec_kv-cache-cached-forward`: it writes the keys and values of
 the new tokens into preallocated buffers and attends over everything
-stored so far. The cell also defines `qwen3_rope_tables`, the port's table
-of rotation angles. It differs from the book's `d2l.rope_tables` in one
-expression: the frequencies are computed as $1/\theta^{2i/d_h}$, the way
-Transformers computes them, where the book writes $\theta^{-2i/d_h}$. On
-paper the two are the same number.
+stored so far.
+
+One function precedes the class, and it looks superfluous.
+`qwen3_rope_tables` is the port's table of rotation angles. It differs from
+the book's `d2l.rope_tables` in one expression: the frequencies are computed
+as $1/\theta^{2i/d_h}$, the way Transformers computes them, and not as the
+book's $\theta^{-2i/d_h}$. On paper the two are the same number, and to keep
+a second function for the sake of this difference looks like pedantry.
 :numref:`subsec_lm_port_end_to_end` measures what the difference does in
 fp32.
 
@@ -295,14 +302,14 @@ class Qwen3Attention(d2l.CausalAttention):
 
 `SwiGLU` is the book's `FeedForward` with the width as an argument.
 `Qwen3GPT` assembles the model through two openings that `d2l.GPT` has had
-since :numref:`sec_gpt`: its argument `ffn_factory`, and its class attribute
-`CausalAttention`, which a subclass may replace, here by a method that
-returns a `Qwen3Attention`. Once the parent's constructor has built the
-blocks, the subclass sets $\epsilon$ in every norm and, for an untied
-checkpoint, adds an output layer `lm_head`. Its `forward` can apply the
-output layer to the last positions only (`logits_to_keep`). With 151,936
-tokens in the vocabulary, the logits of a 4,096-token prompt would otherwise
-fill 2.5 GB in fp32.
+since :numref:`sec_gpt`. One is its argument `ffn_factory`. The other is its
+class attribute `CausalAttention`, which a subclass may replace. Ours
+replaces it by a method that returns a `Qwen3Attention`. Once the parent's
+constructor has built the blocks, the subclass sets $\epsilon$ in every norm
+and, for an untied checkpoint, adds an output layer `lm_head`. Its `forward`
+can apply the output layer to the last positions only (`logits_to_keep`).
+With 151,936 tokens in the vocabulary, the logits of a 4,096-token prompt
+would otherwise fill 2.5 GB in fp32.
 
 ```{.python .input #d2l-checkpoint-swiglu-gpt}
 %%tab pytorch
@@ -364,13 +371,16 @@ class Qwen3GPT(d2l.GPT):
         return F.linear(H, self.token_emb.weight)
 ```
 
-Three further methods form the cached path. `init_cache` allocates keys and
-values for every block, `forward_cached` runs new tokens through the blocks
-with `forward_step`, and `generate_cached` samples with these two as
-:numref:`sec_kv-cache` did, from one prompt given as token ids. It is the
-counterpart of the parent's `generate`, against which we test it next. The
-interface for text and for batches of prompts, `d2l.generate`, is built on
-`forward_cached` later in this section.
+Three further methods form the cached path, and they hold nothing new: they
+are the cache of :numref:`sec_kv-cache`, written again for the new
+attention. `init_cache` allocates keys and values for every block,
+`forward_cached` runs new tokens through the blocks with `forward_step`, and
+`generate_cached` runs the loop of that section from one prompt given as
+token ids. It draws each token with `d2l.sample_logits`, the sampler that
+this section defines further down, and it is the counterpart of the parent's
+`generate`, against which we test it next. The interface for text and for
+batches of prompts, `d2l.generate`, is built on `forward_cached` later in
+this section.
 
 ```{.python .input #d2l-checkpoint-cached-path}
 %%tab pytorch
@@ -420,15 +430,17 @@ def generate_cached(self, prefix, num_tokens, temperature=1.0, top_k=None):
     return list(prefix) + torch.cat(tokens).tolist()
 ```
 
-Does the subclass still compute what `d2l.GPT` computes? With every Qwen3
-setting switched off it should. The cell copies the weights of a small
-`d2l.GPT` into a `Qwen3GPT` with the book's settings, splitting the fused
-`W_qkv` by rows, and compares the logits, the cached path against the full
-forward pass, and a greedy continuation. For the logits we expect agreement
-to rounding or better: the products by `W_q`, `W_k` and `W_v` are row
-blocks of the product by `W_qkv`, and every other operation is the same.
-The cached path evaluates attention in another order, so rounding error is
-the most we can ask of it.
+Does the subclass still compute what `d2l.GPT` computes? Let us start with
+the one case that we can check exactly, before anything is downloaded: with
+every Qwen3 setting switched off, the subclass should be the book's model.
+The cell copies the weights of a small `d2l.GPT` into a `Qwen3GPT` with the
+book's settings, splitting the fused `W_qkv` by rows. It then makes three
+comparisons: the logits of the two models, the cached path of the port
+against its full forward pass, and the greedy continuations that the two
+models write. For the logits we expect agreement to rounding or better: the
+products by `W_q`, `W_k` and `W_v` are row blocks of the product by `W_qkv`,
+and every other operation is the same. The cached path evaluates attention
+in another order, so rounding error is the most we can ask of it.
 
 ```{.python .input #d2l-checkpoint-generalization}
 %%tab pytorch
@@ -469,11 +481,11 @@ generalizes the book's model and does not replace it: code written for
 `d2l.GPT` in earlier chapters runs on it.
 
 The arguments of the constructor come from the configuration file of the
-checkpoint. `qwen3_gpt_kwargs` translates its field names into ours. As
-important, it refuses a configuration that the port does not implement: a
-sliding window, rescaled rotary angles, attention biases, the
-mixture-of-experts variants, and Qwen3.5. A port that ignores a field it
-does not know is wrong without notice.
+checkpoint. `qwen3_gpt_kwargs` translates its field names into ours. Just as
+important, it refuses what the port does not implement: settings that
+Qwen3-0.6B does not use, such as a sliding window or attention biases, and
+the mixture-of-experts and Qwen3.5 members of the family. A port that
+ignores a field it does not know is wrong without notice.
 
 ```{.python .input #d2l-checkpoint-gpt-kwargs}
 %%tab pytorch
@@ -489,8 +501,8 @@ def qwen3_gpt_kwargs(cfg):
         raise NotImplementedError('qwen3_moe: expert layers are not ported')
     if kind and kind.startswith('qwen3_5'):
         raise NotImplementedError(
-            f'{kind}: its Gated DeltaNet layers are ported in '
-            'sec_lm_hybrids_at_scale')
+            f'{kind}: Qwen3GPT has no Gated DeltaNet layers; '
+            'load this model with d2l.load_hf')
     if kind != 'qwen3':
         raise ValueError(f'not a Qwen3 configuration: {kind!r}')
     rope = c.get('rope_parameters') or {}  # where Transformers 5 keeps theta
@@ -513,12 +525,12 @@ def qwen3_gpt_kwargs(cfg):
         max_len=c['max_position_embeddings'], bias=False)
 ```
 
-The first test against the release is the parameter count.
-:numref:`sec_lm_hf_models` computed it from the configuration with
-`d2l.config_params`, and the file header gives it a third time, as the sum
-over the stored shapes. The file of Qwen3-0.6B stores its output layer as a
-copy of the embedding, which we subtract. Qwen3-8B has an output layer of
-its own.
+The first test against the release is the parameter count, and we can
+obtain it in three ways. We count the parameters of the port. We compute
+the count from the configuration, with the `d2l.config_params` of
+:numref:`sec_lm_hf_models`. And we sum the shapes that the file header
+lists. The file of Qwen3-0.6B stores its output layer as a copy of the
+embedding, which we subtract. Qwen3-8B has an output layer of its own.
 
 ```{.python .input #d2l-checkpoint-param-count}
 %%tab pytorch
@@ -545,9 +557,10 @@ for name, c, hdr in (('0.6B', cfg, header), ('8B', cfg_8b, header_8b)):
     assert counts[0] == counts[1] == counts[2]
 ```
 
-The three counts agree to the last parameter for both checkpoints. The port
-has the right shapes. Whether the right numbers reach the right places is
-the next question.
+The three counts agree to the last parameter for both checkpoints. This is
+a weaker statement than it sounds, since a matrix and its transpose count
+alike. Whether every tensor has the right shape, and whether the right
+numbers reach the right places, is the business of the weight map.
 
 ## The Weight Map
 :label:`subsec_lm_port_name_map`
@@ -556,8 +569,8 @@ For GPT-2, the map from the released file to our model was a dictionary of
 names and one rule, a transpose (:numref:`subsec_gpt-loading`). Qwen3 needs
 a dictionary of names and a permutation of four tensors per layer.
 :numref:`fig_lm_weight_map` shows both. Most of its lines are plain
-renames. The four marked tensors are another matter, and getting them wrong
-produces no error message.
+renames. The four marked tensors are the hard part of the port, because
+getting them wrong produces no error message.
 
 ![The weight map from the checkpoint of Qwen3-0.6B (left) to `d2l.Qwen3GPT` (right). Most tensors are renamed. The rows of `q_proj` and `k_proj` and the gains of `q_norm` and `k_norm` are also permuted within each head (P), because Transformers rotates the coordinate pairs $(i, i + d_h/2)$ and the book rotates the pairs $(2i, 2i+1)$. The inset shows the permutation for one head of width $d_h = 8$.](../img/mdl-lm-pretrained-weight-map.svg)
 :label:`fig_lm_weight_map`
@@ -651,29 +664,45 @@ print(f'max |score difference| / max |score|: rows and gain permuted '
 assert with_p <= 1e-5 and without > 1e-2
 ```
 
-With rows and gains permuted, the scores agree to fp32 rounding. With the
-gains forgotten, the largest difference is about 80% of the largest score.
-It is an easy mistake to make, since a vector of 128 gains has the same
-shape in either order. One consequence matters in later chapters: inside
-each head, the query and key coordinates of the port are in the book's
-interleaved order, not in the order of the file.
+The first line of the output is the index for a head of width 8, the case
+drawn in the inset of :numref:`fig_lm_weight_map`: rows 0 and 4 of the file
+become rows 0 and 1 of the port. With rows and gains permuted, the scores
+agree to fp32 rounding. With the gains forgotten, the largest difference is
+about 80% of the largest score. It is an easy mistake to make, since a
+vector of 128 gains has the same shape in either order.
+
+One consequence will matter when later chapters look inside a head. The
+query and key coordinates of the port are in the book's interleaved order,
+so they must be permuted back before they are compared with activations
+recorded from Transformers.
 
 ### Strict Accounting and Loading
 
 `map_qwen3_state_dict` turns the tensors read from the file into a state
 dictionary for `Qwen3GPT`. Its core is the table `layer`, which pairs each
 released name with ours and with a function, `keep` or `permute`. After
-applying the table, the function checks its work in both directions. Every
-tensor of the file must have been consumed, and every name that the port
-expects must have been produced; anything left over raises a `KeyError` that
-names it. The function never sees the port: it takes the expected names from
-its own table, built from the configuration, and
-`load_state_dict(strict=True)` later checks them against the parameters of
-the model itself. We call this *strict accounting*. It is cheap, and it
-catches the commonest porting mistakes (a renamed tensor, a forgotten
-module, a layer too many) before a single number is computed. The one tensor
-the function may drop is a stored copy of the embedding named
-`lm_head.weight`, and only after verifying that it is a copy.
+applying the table, the function checks its work in both directions, and a
+`KeyError` names whatever is left over on either side. The one tensor the
+function may drop is a stored copy of the embedding named `lm_head.weight`,
+and only after verifying that it is a copy.
+
+A PyTorch user will ask why `load_state_dict(strict=True)` does not
+suffice. It takes three comparisons to account for a checkpoint, and the
+strict load makes only the last of them.
+
+1. *The file against the table: no tensor is left over.* Suppose we had
+   forgotten QK-norm in the model and in the table alike. The strict load
+   would succeed in silence. Only this check sees the two tensors per layer
+   that nobody asked for.
+1. *The table against the file: no name stays unfilled.* This catches a
+   tensor that the file lacks, as the test below shows.
+1. *The names produced against the parameters of the model.* This is the
+   strict load. The mapper cannot make this comparison itself, since it
+   builds its table from the configuration and never sees the model.
+
+We call the three together *strict accounting*. It is cheap, and it catches
+the commonest porting mistakes (a renamed tensor, a forgotten module, a
+layer too many) before a single number is computed.
 
 ```{.python .input #d2l-checkpoint-map-load}
 %%tab pytorch
@@ -737,8 +766,8 @@ the model, maps the weights, and returns the model in evaluation mode. Two
 details keep it from allocating the model twice. It builds `Qwen3GPT` on
 the meta device, so the constructor initializes no weights that the next
 line would overwrite. And it loads with `assign=True`, which makes each
-parameter *be* the mapped tensor where the default would copy into the
-existing one; a meta tensor has no storage to copy into. For the 8 billion
+parameter *be* the mapped tensor. The default would copy into the existing
+parameter, and a meta tensor has no storage to copy into. For the 8 billion
 parameters of Qwen3-8B, this avoids filling 32 GB with random numbers
 first.
 
@@ -797,9 +826,9 @@ except KeyError as e:
 del hf_state, state
 ```
 
-The file holds 311 tensors: 11 for each of the 28 layers, the embedding,
-the final norm, and the stored copy of the embedding, which the mapper
-verified and dropped. That leaves the 310 parameters of the port. With one
+The file holds 311 tensors: 11 for each of the 28 layers, the embedding, the
+final norm, and the stored copy of the embedding, which the mapper verified
+and dropped. That leaves the 310 tensors that the port expects. With one
 `k_norm` removed, the error names the parameter that could not be filled,
 under our name and under the file's.
 
@@ -807,35 +836,45 @@ under our name and under the file's.
 :label:`subsec_lm_port_end_to_end`
 
 The model loads. Does it compute the function that Transformers computes
-from the same file? In :numref:`subsec_gpt-loading` we were content with a
-plausible loss and fluent text. That test passes ports that are slightly
-wrong, so we now compare logits, and the first thing to settle is what
-"equal" should mean.
+from the same file? A plausible loss and fluent text cannot tell us, since
+a port that is slightly wrong has both. So we compare logits.
+
+This is the longest part of the section, and three of its six steps form the
+main line. We settle what "equal" should mean and turn the answer into a
+rule, apply the rule in fp32, where rounding is small, and apply it in half
+precision, in which the weights are usually run. The other three are side
+trips. One long prompt settles the question of the two angle formulas that
+we left open, generated text is compared, and two larger models are loaded.
 
 ### A Reference and a Tolerance
 
 Two correct implementations of one model do not produce the same
 floating-point numbers. They add in a different order, fuse different
-operations, and round in different places. A tolerance picked by hand, say
-$10^{-3}$, is far too loose for fp32 and too tight for bf16. We measure it
-instead, against a run in higher precision. Three models, loaded from the
-same file, have one role each, and we keep their names fixed from here on.
-The port is our `Qwen3GPT`. The *fp64 reference* is Transformers run in
-fp64, whose results stand in for the exact ones. And Transformers at the
-working precision, fp32 or bf16, shows how far a correct program may be
-from the fp64 reference.
+operations, and round in different places. The obvious check, to subtract
+the port's logits from Transformers' and to allow a small tolerance, thus
+needs a number, and a number picked by hand will not do. Take $10^{-3}$,
+which Transformers' own guide for contributors asks of a newly added model.
+We shall see that it is far too loose for fp32 and too tight for bf16. So we
+measure the tolerance instead, against a run in higher precision.
 
-Transformers offers several implementations of attention, and two of them
-matter here. Its *eager* code is what :numref:`subsec_lm_hf_kernels` called
-the reference code: it writes out the score matrix, the softmax and the
-weighted sum as separate tensor operations. The other, SDPA, calls the fused
-kernel `F.scaled_dot_product_attention`, as our port does. At the working
-precision we run Transformers with eager attention. It is the arithmetic
-that the model's source file spells out, it does not change with the kernel
-that PyTorch selects, and it shares no attention code with the port. Where
-the choice matters, in bf16, we print the result for SDPA as well. The fp64
-reference uses SDPA, because the eager code computes its softmax in fp32 at
-any precision.
+Three models, loaded from the same file, have one role each, and we keep
+their names fixed from here on. The port is our `Qwen3GPT`. The *fp64
+reference* is Transformers run in fp64, that is in double precision, with 53
+significant bits against the 24 of fp32. Its results stand in for the exact
+ones. And Transformers at the working precision, fp32 or bf16, is the
+yardstick: it shows how far a correct program may be from the fp64
+reference.
+
+The yardstick needs one decision. Transformers has several implementations
+of attention, and two of them matter here. Its *eager* attention writes out
+the score matrix, the softmax and the weighted sum as separate tensor
+operations. The other is called SDPA after the function it calls,
+`F.scaled_dot_product_attention`, the fused kernel
+(:numref:`subsec_lm_hf_kernels`) that our port uses too. For the yardstick
+we take eager attention, and one reason is enough to remember: it shares no
+attention code with the port. Where the choice matters, in bf16, we print
+the result for SDPA as well. The fp64 reference alone uses SDPA, because the
+eager code computes its softmax in fp32 at any precision.
 
 ```{.python .input #d2l-checkpoint-load-models}
 %%tab pytorch
@@ -875,16 +914,18 @@ rule asks that the port be no further from the fp64 reference than
 Transformers is at the same precision, up to a factor. The factor 1.5 is a
 convention, as 5% is for significance tests.
 
-The 32 prompts are a sample, so the ratio
-$e^b_\textrm{ours} / e^b_\textrm{HF}$ gets an interval. We resample the
-prompts with replacement 2,000 times, each time taking the same prompts for
-both errors, and report the central 95% of the resulting ratios. Keeping
-the pairs together matters: both errors are large on the same prompts, and
-their ratio varies much less than either
-(:numref:`subsec_mdl-paired-comparisons`). The rule *passes* only if the
-whole interval lies at or below 1.5, and *fails* only if all of it lies
-above. The function is provisional; :numref:`sec_lm_eval_suites` builds
-the bootstrap that the rest of this part uses.
+The 32 prompts are a sample, and other prompts would give another ratio
+$e^b_\textrm{ours} / e^b_\textrm{HF}$. How different could it be? We have no
+second sample, so we draw new ones from the first: 32 of our prompts, with
+replacement, 2,000 times, each time taking the same prompts for both errors.
+The central 95% of the resulting ratios is our interval. The procedure is
+called the *bootstrap* (:numref:`subsec_mdl-bootstrap`). Keeping the pairs
+together matters: both errors are large on the same prompts, and their ratio
+varies less than either (:numref:`subsec_mdl-paired-comparisons`). The rule
+*passes* only if the whole interval lies at or below 1.5, and *fails* only
+if all of it lies above. The function below is provisional;
+:numref:`sec_lm_eval_suites` treats the bootstrap properly and builds the
+version that the rest of this part uses.
 
 ```{.python .input #d2l-checkpoint-ratio-interval}
 %%tab pytorch
@@ -912,8 +953,11 @@ def rule_text(rule):
     return f'{rule.ratio:.2g} [{rule.lo:.2g}, {rule.hi:.2g}] {rule.verdict}'
 ```
 
-Three helpers read logits from either kind of model, and `mean_abs`
-computes the error of :eqref:`eq_lm_port_rule` for each prompt.
+Four small helpers do the measuring. `logits` reads the logits of either
+kind of model, and `cached_logits` those of a Transformers model through its
+cache, a chunk of the prompt at a time. `mean_abs` computes the error of
+:eqref:`eq_lm_port_rule` for each prompt, and `batched_errors` applies it at
+a given batch size.
 
 ```{.python .input #d2l-checkpoint-read-logits}
 %%tab pytorch
@@ -949,10 +993,11 @@ def batched_errors(model, ref, ids, batch_size):
 ```
 
 Now the fp32 check, on the 32 prompts in batches of four. If the port is
-right, the ratio should be near 1. The cell also records the largest
-difference of a single logit and runs the port twice on one batch. As a
-control, it repeats the rule with the port in batches of 1, 4 and 16. How
-far does the ratio move under a change that leaves the model alone?
+right, the ratio should be near 1. The cell also prints the worst single
+logit and tests whether two runs on one batch give the same bits. Then comes
+a control. How far does the ratio move under a change that leaves the model
+alone? To find out, the cell repeats the rule with the port in batches of 1,
+4 and 16.
 
 ```{.python .input #d2l-checkpoint-fp32-check}
 %%tab pytorch
@@ -990,46 +1035,68 @@ if not SMALL:
 ```
 
 Both implementations are about $4\times10^{-6}$ from the fp64 reference on
-average, and no fp32 logit of Transformers is further than about $10^{-4}$
-from its fp64 value. The port passes, and it is deterministic: two runs on
-the same batch give the same bits.
+average. In the worst case a single fp32 logit of Transformers is about
+$10^{-4}$ from its fp64 value, and the largest difference between a logit
+of the port and the same logit of Transformers is of that size as well. The
+port passes, and it is deterministic: two runs on the same batch give the
+same bits.
 
-The table answers the question, and it is a warning about how to read the
-ratio. Its left column changes only how the port's prompts are batched,
-with Transformers kept in batches of four, and the ratio moves from about
-0.8 to about 1.25. A matrix product of another shape is carried out by
-another sequence of additions, and its rounding errors differ
-:cite:`He.2025`. The intervals in that column, a few hundredths wide,
-reflect the choice of prompts and nothing else. An interval answers the
-question it was built for and no other. In the right column both
-implementations are batched alike, and the ratio is about 1 at every batch
-size. We read no more digits than that.
+The table answers the question about batching, and the answer is a warning.
+Its left column changes only how the port's prompts are batched, with
+Transformers kept in batches of four, and the ratio moves from about 0.8 to
+about 1.2, although the model is the same. A matrix product of another shape
+is carried out by another sequence of additions, and its rounding errors
+differ :cite:`He.2025`. Here even their size differs: the port's error is
+about a fifth smaller with one prompt at a time than with four, and about a
+fifth larger with sixteen, for reasons that we have not traced. The
+intervals in that column are a few hundredths wide. They could not have
+warned us, because they were built from the choice of prompts. An interval
+answers the question it was built for and no other.
+
+In the right column both implementations are batched alike, and the ratio
+is about 1 at every batch size: whatever the shape of a batch does to the
+port's rounding, it does to Transformers' as well. This is how the rule
+should be applied, and how we apply it in the rest of the section. The
+factor of 1.5 then leaves ample room, whereas a correct port at 1.2 or 1.3
+would come uncomfortably close to it. Either way, the second digit of a
+ratio means little.
 
 ### Rotary Angles at Long Range
 
 The port computes its rotary frequencies with Transformers' expression
-$1/\theta^{2i/d_h}$ and not with the book's $\theta^{-2i/d_h}$, and in fp32
-the two need not round alike. How much can that matter? An angle is a
-frequency times a position, so a difference in the last bit of a frequency
-grows with the position. The cell counts the frequencies that differ and
-prints the largest difference in angle at three positions. It then runs the
-4,096-token prompt through the port three times, with three tables of
-angles. The row `reference` of its output is the port as built, with
-Transformers' formula. The row `book` uses the book's formula, and the row
-`exact` computes the angles in fp64 and rounds them to fp32 once. One would
-expect the most accurate angles to do best.
+$1/\theta^{2i/d_h}$ and not with the book's $\theta^{-2i/d_h}$. We called
+this pedantry and promised a measurement. In fp32 the two expressions need
+not round alike, and an angle is a frequency times a position, so a
+difference in the last bit of a frequency grows with the position. The
+short prompts end at position 63. To see the effect we need the prompt of
+4,096 tokens.
 
-There is only one long prompt, so the bootstrap cannot resample prompts.
-The rule is applied to the logits of the last 256 positions, and the items
-are 16 blocks of 16 consecutive positions: blocks and not single positions,
+The cell first counts the frequencies that differ and prints the largest
+difference in angle at three positions. It then runs the long prompt through
+the port three times, with three tables of angles. The row `transformers` of
+its output is the port as built, with Transformers' formula. The row `book`
+uses the book's formula. The row `exact` computes the angles and their
+cosines and sines in fp64 and rounds only the two finished tables to fp32.
+One would expect the most accurate angles to do best.
+
+The measurement differs from that on the short prompts in two ways. First,
+there is only one long prompt, so the bootstrap cannot resample prompts. The
+rule is applied to the logits of the last 256 positions, and the items are
+16 blocks of 16 consecutive positions: blocks and not single positions,
 since the errors at neighboring positions are not independent.
 
-Each variant is judged twice, and the reason is a detail of Transformers'
-Qwen3 code: it computes its RMSNorm and its rotary angles in fp32 whatever
-the precision of the model. The fp64 reference is therefore fp64 except in
-these two places. The first column of ratios measures all errors against
-the fp64 reference as it is, the second against the same model given fp64
-angles.
+Second, each variant is judged twice, and the reason is a detail of
+Transformers' Qwen3 code: it computes its rotary angles, and its RMSNorm as
+well, in fp32 whatever the precision of the model. The norm we can forget,
+since it rounds a vector in the same way at every position. The angles we
+cannot. The fp64 reference carries fp32 angles, so the first column of
+ratios measures all errors against the fp64 reference as it is, and the
+second against the same model given fp64 angles.
+
+One thing stays as it was. The port and Transformers in fp32 each read the
+prompt in one pass, so the two are batched alike. Only the fp64 reference
+reads it through its cache, a chunk at a time, and both errors are measured
+against that one reference, so the chunks favor neither program.
 
 ```{.python .input #d2l-checkpoint-long-prompt}
 %%tab pytorch
@@ -1053,13 +1120,13 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
     blocks = lambda L, R: (L.double() - R).abs().mean(-1).reshape(
         16, 16).mean(1).cpu().numpy()
     exact = torch.arange(4096, dtype=torch.float64)[:, None] * inv64
-    angles = {'reference': None,  # the port's default, qwen3_rope_tables
+    angles = {'transformers': None,  # the port's default, qwen3_rope_tables
               'book': d2l.rope_tables(4096, 128, base=1e6),
               'exact': (exact.cos().float(), exact.sin().float())}
     L_ours = {name: logits(ours32, X, logits_to_keep=256, tables=None
                            if t is None else tuple(u.to(device) for u in t))
               for name, t in angles.items()}
-    L_hf = cached_logits(hf32, X, 256)
+    L_hf = logits(hf32, X, logits_to_keep=256)  # one pass, as the port
     L64 = cached_logits(hf64, X, 256, chunk=512)  # Transformers: fp32 angles
     rotary, hf64.model.rotary_emb = hf64.model.rotary_emb, ExactRotary()
     L64_exact = cached_logits(hf64, X, 256, chunk=512)
@@ -1068,12 +1135,12 @@ if long_ids is not None:  # the last 256 of 4,096 positions, 16 blocks
     e_hf = [blocks(L_hf, R).mean() for R in refs]
     print(f'long prompt: e_HF {e_hf[0]:.1e} against the reference, '
           f'{e_hf[1]:.1e} against it with exact angles')
-    print(f'{"port angles":12}{"ratio, reference":28}'
-          'ratio, reference with exact angles')
+    print(f'{"port angles":14}{"ratio, fp64":28}'
+          'ratio, fp64 with exact angles')
     for name, L in L_ours.items():
         rules = [port_rule(blocks(L, R), blocks(L_hf, R)) for R in refs]
-        print(f'{name:12}{rule_text(rules[0]):28}{rule_text(rules[1])}')
-        if name == 'reference':
+        print(f'{name:14}{rule_text(rules[0]):28}{rule_text(rules[1])}')
+        if name == 'transformers':
             assert rules[0].verdict == 'passes'
     del L_ours, L_hf, L64, L64_exact
 ```
@@ -1086,34 +1153,40 @@ this model, $2\times10^{-3}$.
 
 The first column of the table is the verdict of our rule, and it turns the
 expectation upside down. With Transformers' formula the port passes at a
-ratio of about 1. With the book's formula it fails at about 2.5, and with
-the most accurate angles of the three it fails at about 5. The second
-column explains this odd ranking. Once the fp64 reference has exact angles,
-all three variants pass: the two formulas at a ratio of about 1, the exact
-angles at about a quarter. And the error of Transformers in fp32, about
-$6\times10^{-6}$ against the fp64 reference as it is, grows fivefold once
-that reference has exact angles. At 4,096 tokens the rounding of the angles
-is the largest error of Transformers' fp32 computation. The fp64 reference
-shares that error, so our rule cannot see it.
+ratio of about 1, as it did on the short prompts. With the book's formula it
+fails at about 2, and with the most accurate angles of the three it fails at
+about 4.5.
 
-The book's formula is therefore no less accurate than Transformers'; it
-rounds differently. And the rule measures agreement with a reference
-implementation, its rounding habits included, which is not the same as
-accuracy. For a port, agreement is the right target, because any remaining
-difference then points to a mistake. So compute a port's constants with the
-expressions of the reference implementation and in its precision, however
-innocent a rewriting looks, and decide separately whether its arithmetic is
-the one you want.
+The second column explains this odd ranking. Once the fp64 reference has
+exact angles, all three variants pass: the two formulas at a ratio of about
+1, the exact angles at about a quarter. Transformers' own fp32 error tells
+the same story from the other side. It is about $7\times10^{-6}$ against
+the fp64 reference as it is, and about $3\times10^{-5}$, more than four
+times as much, against the reference with exact angles. At 4,096 tokens,
+then, the rounding of the angles is the largest error of Transformers' fp32
+computation. The fp64 reference shares that error, so our rule cannot see
+it. And a port with any other angles, better ones included, is charged the
+whole difference as if it were a mistake of its own.
+
+The second function was not pedantry, then. The book's formula is no less
+accurate than Transformers'; it rounds differently. And the rule measures
+agreement with a reference implementation, its rounding habits included,
+which is not the same as accuracy. For a port, agreement is the right
+target, because any remaining difference then points to a mistake. So
+compute a port's constants with the expressions of the reference
+implementation and in its precision, however innocent a rewriting looks, and
+decide separately whether its arithmetic is the one you want.
 
 ### Half Precision
 
-Released weights are stored in bf16 and usually run in bf16, so the check
-applied in practice is the bf16 one. The rule is the same, with $b = 16$,
+Released weights are stored in bf16 and usually run in bf16, so this is the
+precision in which a port must hold up. The rule is the same, with $b = 16$,
 and we should expect much larger errors, since bf16 keeps 8 significant bits
-where fp32 keeps 24 (:numref:`sec_numerics`). The cell also measures the
-port's error against Transformers' fp32 logits instead of the fp64
-reference, the effect of batching, and the ratio against Transformers with
-SDPA, its default.
+and fp32 keeps 24 (:numref:`sec_numerics`). The cell answers three side
+questions as well. Could Transformers' fp32 logits serve in the place of the
+fp64 reference, which would spare us the fp64 run of a larger model? How far
+does batching move the ratio now? And what changes when Transformers uses
+SDPA, its default?
 
 ```{.python .input #d2l-checkpoint-bf16-check}
 %%tab pytorch
@@ -1144,7 +1217,7 @@ print('ratio with the port in batches of ' + ', '.join(
 hf16.set_attn_implementation('sdpa')  # Transformers' default attention
 e16_sdpa = np.concatenate([mean_abs(logits(hf16, X), logits(hf64, X))
                            for X in ids.split(4)])
-hf16.set_attn_implementation('eager')  # back to the yardstick above
+hf16.set_attn_implementation('eager')  # eager again, as in e16_hf
 print(f'Transformers bf16 with SDPA attention: e_HF {e16_sdpa.mean():.2e}, '
       f'ratio {rule_text(port_rule(e16_ours, e16_sdpa))}')
 if not SMALL:
@@ -1152,38 +1225,42 @@ if not SMALL:
 ```
 
 The errors are now a few hundredths of a logit, four orders of magnitude
-above those of fp32, and the port passes. Against errors of this size,
+above those of fp32, and the port passes. This settles the account of the
+hand-picked tolerance of $10^{-3}$. In fp32 the worst logit of Transformers
+was ten times closer to its fp64 value than that. Here its average logit is
+fifty times further away.
+
+The first side question has a plain answer. Against errors of this size,
 Transformers' fp32 logits can stand in for the fp64 reference: the port's
 error changes in the seventh digit. We use this below for a larger model.
 
-The ratio is about 0.7, and batching moves it by a few hundredths. The
-port's bf16 error is smaller than that of Transformers' eager code, which
-says something about where the two programs round and nothing about the
-model. Eager attention stores its scores and its attention weights as bf16
-tensors between operations, and against Transformers with SDPA the ratio
-is about 0.9. A second difference lies in RMSNorm. PyTorch's `nn.RMSNorm`
-rounds its result to bf16 once, whereas Transformers' norm rounds the
-normalized vector and, after multiplying by the gain, rounds again. Each
-program is a legitimate bf16 evaluation of the same weights, which is why
-the rule is one-sided: it bounds how much further from the fp64 reference a
-port may be, and asks nothing of a port that is closer.
+The ratio is about 0.7, and batching moves it by a few hundredths. A ratio
+below 1 is no merit of the port. It shows where the two programs round.
+Eager attention writes its scores and its attention weights to memory as
+bf16 tensors, one rounding each, which a fused kernel need not do. With the
+fused kernel on both sides, that is against Transformers with SDPA, the
+ratio rises to about 0.9, so most of the distance from 1 belonged to the
+attention code. A second difference lies in RMSNorm. PyTorch's `nn.RMSNorm`
+rounds its result to bf16 once. Transformers' norm rounds the normalized
+vector and, after multiplying by the gain, rounds again. Each program is a
+legitimate bf16 evaluation of the same weights, which is why the rule is
+one-sided: it bounds how much further from the fp64 reference a port may be,
+and asks nothing of a port that is closer.
 
-### Generating Text with the Port
+### One Decoding Loop for Every Model
 
 Logits are compared number by number. To compare what two implementations
-*write*, one decoding loop must drive them both, or a difference in the
-text could come from the sampler and not from the model. `d2l.generate` is
-that loop, for the port, for a Transformers model and for any module that
-maps token ids to logits, and the remaining chapters of this part take
-their text from it. Prompts go in as strings, and one `Generation` record
-comes out per prompt, with the text, the token ids, optionally the
-log-probabilities of the chosen tokens, and the reason why the generation
-ended.
+*write*, one decoding loop must drive them both, or a difference in the text
+could come from the sampler and not from the model. `d2l.generate` is that
+loop. It serves the port, a Transformers model, and any module that maps
+token ids to logits, and the later sections of this chapter take their text
+from it. Prompts go in as strings, and one `Generation` record per prompt
+comes out.
 
-The next five cells are library code and print nothing. Two of them hold
-an idea: a function `step` that hides how a model obtains its next logits,
-and the numbering of positions when prompts are padded on the left. A
-reader who is following the verification may pass on to the greedy
+The next five cells are library code and print nothing. Only two of them
+hold an idea: a function `step` that hides how a model obtains its next
+logits, and the numbering of positions when prompts are padded on the left.
+A reader who is following the verification may pass on to the greedy
 comparison of the next subsection and come back when a later section calls
 `d2l.generate`.
 
@@ -1206,7 +1283,8 @@ def truncated_probs(logits, temperature=1.0, k=None, p=None, min_p=None):
     """Rows of logits (batch, vocab) -> the temperature-scaled distribution
     truncated by top-k, top-p and min-p and renormalized; ties in rank go
     to the smaller token id. As in Transformers and vLLM (and unlike
-    sec_decoding's sample_next), top-p measures mass within the top k."""
+    sample_next of the book's section on decoding), top-p measures mass
+    within the top k."""
     probs = F.softmax(logits.float() / temperature, -1)
     ranked, order = torch.sort(probs, dim=-1, descending=True, stable=True)
     keep = torch.full_like(order[:, :1], probs.shape[-1])  # tokens kept
@@ -1325,9 +1403,7 @@ row ended. `generate` chooses the path, groups the prompts into batches (by
 equal length for a model without a mask), and runs the loop: sample,
 record, step. Library helpers that we do not show supply the defaults of
 its arguments, render chat prompts through the tokenizer's template, and
-set up the random streams. Qwen3's tokenizer puts no beginning-of-sequence
-token before a text, so an empty prompt has no position to predict from,
-and `generate` raises an error for it.
+set up the random streams.
 
 ```{.python .input #d2l-checkpoint-finish}
 %%tab pytorch
@@ -1413,15 +1489,21 @@ def generate(model, tokenizer, prompts, max_new_tokens=None, *,
 
 ### Greedy Agreement and Near-Ties
 
-Greedy decoding is a stricter test, since one different token changes
-everything after it. We generate 64 tokens from each of the 28 prompts that
-are text with four models, the port and Transformers in fp32 and in bf16,
-and check our loop against Transformers' own `generate` method. Where two
+What can a comparison of greedy text add to a comparison of logits? It is
+unforgiving, since one different token changes everything after it. It is
+not sensitive, however: a token changes only where the two best candidates
+are nearly equal, and a port can be wrong without that happening often. We
+use it for two narrower purposes, to test our decoding loop against
+Transformers' own `generate` method, and to see what rounding alone does to
+a text.
+
+We generate 64 tokens from each of the 28 prompts that are text with four
+models, the port and Transformers in fp32 and in bf16. Where two
 continuations differ, the cell looks up the gap between the two largest of
 Transformers' fp32 logits at the first differing token. If the port is
 right, a difference can arise only at a *near-tie*, where this gap is of the
-size of the rounding error: below about $10^{-4}$ in fp32, and around 0.05,
-which is common, in bf16.
+size of the rounding error. In fp32 that is a gap below about $10^{-4}$,
+which is rare. In bf16 it is a gap of around 0.05, which is common.
 
 ```{.python .input #d2l-checkpoint-greedy}
 %%tab pytorch
@@ -1478,34 +1560,36 @@ for name in ('ours32', 'ours16', 'hf16'):
         assert all(g < 10 * delta32 for g in gaps)
 ```
 
-Our loop reproduces Transformers' greedy loop on all 28 prompts, and in
-fp32 the port writes the same 64 tokens as Transformers on every one. In
-bf16 about half of the continuations part from the fp32 text somewhere along
-the way, for the port and for Transformers alike, at a gap of at most about
-0.2 that is in most cases below the bf16 logit error. (The counts depend on
-the batching and do not rank the two implementations.) This is the nature of
+Our loop reproduces Transformers' greedy loop on all 28 prompts, and in fp32
+the port writes the same 64 tokens as Transformers on every one. In bf16
+about half of the continuations part from the fp32 text somewhere along the
+way, for the port and for Transformers alike, and of those that part, half
+have done so within the first twenty tokens. The two counts depend on the
+batching and do not rank the implementations. What matters is the gap at the
+parting. In more than half of the cases it is smaller than the mean bf16
+logit error of 0.05, and it is never above about 0.2. A single logit can err
+by far more than the mean, as the fp32 run showed. This is the nature of
 bf16 inference: the same model, with rounding left to decide wherever two
 tokens are nearly tied. Whoever compares two bf16 runs token by token, be it
 two libraries, two batch sizes or two GPUs, should look at the gap before
 suspecting a bug.
 
-With agreement established, we let the port answer two questions through
-the chat template, with the sampling defaults of the checkpoint's
-`generation_config.json` and with the template's thinking mode switched off
-(:numref:`sec_lm_hf_models`). These defaults are the model card's settings
-for the thinking mode. For replies without thinking the card suggests a
-temperature of 0.7 and a top-$p$ of 0.8, which the reader may try.
+With agreement established, we let the port answer two questions through the
+chat template, with the template's thinking mode switched off
+(:numref:`sec_lm_hf_models`). The model card recommends one set of sampling
+settings for replies with thinking and another for replies without. The
+defaults in the checkpoint's `generation_config.json` are the first set, so
+the cell passes the second itself: a temperature of 0.7, a top-$k$ of 20
+and a top-$p$ of 0.8.
 
 ```{.python .input #d2l-checkpoint-chat}
 %%tab pytorch
-config = ours16.generation_config  # temperature, top-k, top-p of the repo
 questions = ['What does a key-value cache store, in one sentence?',
              'Name two differences between a base model and a chat model.']
-for q, g in zip(questions, generate(
+for q, g in zip(questions, generate(  # the card's settings without thinking
         ours16, tok, questions, 32 if SMALL else 128, chat=True,
-        enable_thinking=False, strategy='sample',
-        temperature=config.temperature, k=config.top_k, p=config.top_p,
-        seed=0)):
+        enable_thinking=False, strategy='sample', temperature=0.7, k=20,
+        p=0.8, seed=0)):
     print(q)
     for line in g.text.splitlines():  # the reply, wrapped
         if line.strip():
@@ -1513,9 +1597,9 @@ for q, g in zip(questions, generate(
     print(f'  ({g.finish_reason})')
 ```
 
-The replies are fluent. Whether they are right is another matter. Nothing
-tells a model of this size that the first question means the cache of
-:numref:`sec_kv-cache` rather than a key--value store, and a correct port
+The replies are fluent, and the first answers a question that we did not
+ask. Nothing tells a model of this size that we mean the cache of
+:numref:`sec_kv-cache` and not a key--value store, and a correct port
 reproduces a model's misconceptions as faithfully as its abilities.
 
 ### Larger Checkpoints
@@ -1564,20 +1648,21 @@ print(f'Qwen3-8B dry run: {len(meta)} tensors consumed, {len(state_8b)} '
 assert len(meta) == len(state_8b) and hasattr(port_8b, 'lm_head')
 ```
 
-The 1.7B model passes at a ratio of about 0.9 against eager attention. The
-dry run of the 8B model consumes all 399 tensors, its separate output layer
-among them. A dry run proves that names and shapes fit. It proves nothing
-about values, and a forgotten permutation would pass it.
+The 1.7B model passes at a ratio of about 0.9 against eager attention. For
+the 0.6B model the same comparison gave about 0.7. We have not pursued the
+difference; the rule is one-sided and does not ask. The dry run of the 8B
+model consumes all 399 tensors, its separate output layer among them. A dry
+run proves that names and shapes fit. It proves nothing about values, and a
+forgotten permutation would pass it.
 
 ## Localizing a Failing Port
 :label:`subsec_lm_port_layerwise`
 
 Suppose the logit rule had failed. It would have told us that something is
-wrong among 310 tensors and a dozen settings, and nothing more. A
-transformer is a sequence of layers, however, and an error cannot appear
-before the layer that causes it. Comparing the intermediate results of the
-port with those of the fp64 reference, in the order of execution, finds
-that layer.
+wrong, somewhere among 310 tensors and a dozen settings. A transformer is a
+sequence of layers, however, and an error cannot appear before the layer
+that causes it. Comparing the intermediate results of the port with those
+of the fp64 reference, in the order of execution, finds that layer.
 
 ### Relative Error per Layer
 
@@ -1593,14 +1678,18 @@ measure is relative because the stream grows by orders of magnitude from the
 first block to the last.
 
 The norm runs over positions 1 to $T-1$. Position 0 is left out for two
-reasons. As the attention sink of :numref:`subsec_kv-cache-sinks`, its
-hidden state is in most blocks so much larger than every other that it alone
-would decide the Frobenius norm. And the first token attends only to itself,
+reasons. First, the first token is the attention sink of
+:numref:`subsec_kv-cache-sinks`, the position on which heads place their
+weight when they find nothing to read, and in this model its hidden state
+is, in most blocks, so much larger than every other that it alone would
+decide the Frobenius norm. Second, the first token attends only to itself,
 so its attention output does not depend on queries or keys, and a bug in
-either leaves it exact. Finally, `first_divergence` returns the first layer
-and capture point, in execution order, at which the median error over the
-prompts exceeds ten times a *floor*: the error that a correct
-implementation has at the same point and the same precision.
+either leaves it exact.
+
+One definition remains, and it is the one to remember. `first_divergence`
+returns the first layer and capture point, in execution order, at which the
+median error over the prompts exceeds ten times a *floor*: the error that a
+correct implementation has at the same point and the same precision.
 
 ```{.python .input #d2l-checkpoint-hooks}
 %%tab pytorch
@@ -1673,8 +1762,10 @@ size of Transformers' own at every layer. The cell measures both
 implementations at both precisions. It prints the error of the stream after
 five of the 28 blocks, and then the range, over all layers and capture
 points, of the ratio between the port's median error and that of
-Transformers. As before, the port is also run in batches of 1 and 16 and, in
-bf16, compared with Transformers with SDPA.
+Transformers. Where the ratio leaves the band from 0.5 to 2, a factor of two
+either way, the line names the layers and the side on which they fall. As
+before, the port is also run in batches of 1 and 16 and, in bf16, compared
+with Transformers with SDPA.
 
 ```{.python .input #d2l-checkpoint-layer-errors}
 %%tab pytorch
@@ -1712,10 +1803,14 @@ for k, m in median.items():
 
 def ratio_range(e_ours, e_hf):
     """Port over Transformers, medians over prompts: its range over every
-    layer and point, and the layers where it leaves [0.5, 2]."""
+    layer and point, and the layers where it falls below 0.5 or rises
+    above 2."""
     r = np.median(e_ours, -1) / np.median(e_hf, -1)
-    out = sorted(set(np.nonzero((r < 0.5) | (r > 2))[0].tolist()))
-    return f'{r.min():.2f} to {r.max():.2f}, outside [0.5, 2]: {out}'
+    low = sorted(set(np.nonzero(r < 0.5)[0].tolist()))
+    high = sorted(set(np.nonzero(r > 2)[0].tolist()))
+    return (f'{r.min():.2f} to {r.max():.2f}'
+            + (f', below 0.5 at layers {low}' if low else '')
+            + (f', above 2 at layers {high}' if high else ''))
 
 print('port / Transformers (eager) over every layer and point')
 for bits, name in ((32, 'fp32'), (16, 'bf16')):
@@ -1728,23 +1823,27 @@ print('bf16, Transformers with SDPA:   '
 ```
 
 In fp32 both implementations stay near $10^{-6}$ from the first block to
-the last, and their ratio stays between 0.5 and 2 at every layer, capture
-point and batch size. In bf16 the errors are near $10^{-2}$, and the port's
-are about half to three quarters of those of Transformers' eager code at
-every layer, at or just below half in the first layers. Those are the
-layers that the output lists as outside $[0.5, 2]$. They are no alarm: the
-port is closer to the fp64 reference there than eager attention is, as it
-was in the bf16 logits, and for the same reasons. Against Transformers with
-SDPA, every ratio lies between about 0.85 and 0.95. The port agrees with
-Transformers all the way through. In bf16 it is, at every layer, no further
-from the fp64 reference than either of Transformers' two implementations of
-attention.
+the last, and their ratio stays inside the band at every layer, capture
+point and batch size. The port agrees with Transformers all the way
+through.
 
-The fp32 lines of the output matter for what follows. Whoever holds a
-failing port has no correct port to measure a floor on. But Transformers in
-fp32 is at hand, and at every layer and capture point its error against the
-fp64 reference is within a factor of two of the correct port's, however the
-prompts are batched.
+In bf16 the errors are near $10^{-2}$, and at every layer the port's error
+is the smaller one: about half of that of Transformers' eager code in the
+first layers, at some capture points just under half, and about three
+quarters in the last. The first layers are thus the ones that the output
+lists as below 0.5. The list is no alarm. In these layers the port is
+closer to the fp64 reference than eager attention is, as it was in the bf16
+logits, and for the same reasons. Against Transformers with SDPA, every
+ratio lies between about 0.85 and 0.95. At every layer, then, the bf16 port
+is no further from the fp64 reference than either of Transformers' two
+implementations of attention.
+
+The fp32 lines of the output do a second job, and for what follows it is
+the more important one. Whoever holds a failing port has no correct port on
+which to measure a floor. Luckily, Transformers in fp32 is at hand, and at
+every layer and capture point its error against the fp64 reference is
+within a factor of two of the correct port's, however the prompts are
+batched. Transformers itself can serve as the floor.
 
 ### Five Porting Bugs
 
@@ -1763,10 +1862,10 @@ every shape still fits.
 - **B5** leaves $\epsilon$ at the book's $10^{-5}$ in every norm.
 
 Forgetting QK-norm altogether is not on the list, because accounting
-rejects it at once: the gains of `q_norm` and `k_norm` would be left
-unconsumed. The cell builds each variant as a state dictionary and a set of
-changed constructor arguments, next to the correct port, which the tables
-call *clean*.
+rejects it at once, as we saw: the gains of `q_norm` and `k_norm` would be
+left unconsumed. The cell builds each variant as a state dictionary and a
+set of changed constructor arguments, next to the correct port, which the
+tables call *clean*.
 
 ```{.python .input #d2l-checkpoint-bug-states}
 %%tab pytorch
@@ -1810,16 +1909,22 @@ bugs = {  # name: (state dict, changed arguments of Qwen3GPT)
 del hf_state
 ```
 
-Where should each bug first show? B1, B2 and B5 change the first attention
-layer and should diverge at its output. B3 leaves attention alone, so it
-should first diverge at the third capture point of layer 0, the output of
-the feed-forward network. B4 is the instructive one: blocks 0 and 1 hold
-the right weights, so this port should be clean to the last bit until the
-attention of block 2. For each variant the cell reports the first
-divergence, with the clean port's fp32 error as the floor, and the error
-there as a multiple of the floor. It adds the verdicts of the two logit
-rules, and at how many of the 2,048 positions of the 32 prompts the
-variant's most likely next token is that of the fp64 reference.
+Where should each bug first show? B1 and B2 act in the first attention
+layer, and B5 in the norm just before it, so all three should diverge at
+the attention output of block 0, the first point that we capture. B3 leaves
+attention alone, so it should first diverge at the third capture point of
+block 0, the output of the feed-forward network. B4 is the instructive one:
+blocks 0 and 1 hold the right weights, so this port should be clean to the
+last bit until the attention of block 2.
+
+For each variant the cell reports the first divergence and the error there
+as a multiple of the floor. We do own a correct port, so the cell takes its
+fp32 error as the floor. A porter would take that of Transformers, so the
+cell repeats the search with that floor and counts the ports for which the
+answer stays the same. The table adds the verdicts of the two logit rules.
+Its last column answers a question of its own: at how many of the 2,048
+positions of the 32 prompts is the variant's most likely next token that of
+the fp64 reference?
 
 ```{.python .input #d2l-checkpoint-bugs}
 %%tab pytorch
@@ -1858,6 +1963,10 @@ for name, f in found.items():
     print(f'{name:26}{there:14}{times:>9}  ' + ''.join(
         f'{f"{r.ratio:.2g} {r.verdict}":15}' for r in f['rules'])
         + f'{f["top1"]:>5}')
+same = {name: first_divergence(f['errors'], err['hf32']) == f['where']
+        for name, f in found.items()}  # the floor a porter has
+print('the same first divergence with Transformers fp32 as the floor: '
+      f'{sum(same.values())} of {len(same)}')
 b4 = found['B4 layers in string order']
 exact = np.array_equal(b4['errors'][:2], found['clean']['errors'][:2])
 print(f'B4: blocks 0 and 1 bitwise equal to the clean port: {exact}')
@@ -1873,20 +1982,25 @@ if not SMALL:  # the clean port passes both logit rules, B1-B4 fail both
 Every prediction holds. Each bug first diverges where it first acts, and its
 error at that point is four to six orders of magnitude above the clean
 port's. Neither the threshold of ten nor the floor is therefore a delicate
-choice: a floor taken from Transformers in fp32, which is off by a factor of
-two at most, would give the same six answers. The first four bugs also fail
-both logit rules, the fp32 rule by factors above $10^5$ and the bf16 rule by
-factors of ten and more.
+choice. In particular, the floor that a porter has serves as well: with
+Transformers in fp32 in the place of the clean port, the output reports the
+same first divergence for all six ports, the clean port's "none" among
+them. It could hardly be otherwise. Transformers in fp32 was within a factor
+of two of the clean port at every layer, and a factor of two cannot matter
+against four orders of magnitude. The first four bugs also fail both logit
+rules, the fp32 rule at ratios above $10^5$ and the bf16 rule at ratios from
+11 to 77.
 
-The last column deserves a second look. With the wrong RoPE base, B2 still
-agrees with the fp64 reference on the most likely next token at four
-positions in five. Judged by a handful of sampled sentences, such a port
-could easily pass. B5 disagrees at 7 positions of 2,048, against 1 for the
-clean port.
+The last column shows how little a text can prove. With the wrong RoPE base,
+B2 still agrees with the fp64 reference on the most likely next token at
+four positions in five. Judged by a handful of sampled sentences, such a
+port could easily pass. B5 disagrees at fewer than ten of the 2,048
+positions, hardly more often than the clean port. Fluent text shows that
+most of a port is right, and a port has to be right in all of it.
 
 ### Limits of a Logit Check
 
-B5 differs from the other bugs. The fp32 rule rejects it by a factor of
+B5 differs from the other bugs. The fp32 rule rejects it at a ratio of
 about 2,000. The bf16 rule accepts it at a ratio of 0.77, next to the 0.73
 of the clean port. Why is a wrong $\epsilon$ invisible in bf16, and why
 does it matter at all, given that $\epsilon$ is a small number added for
@@ -1956,9 +2070,11 @@ reference after block 0 and 1% after block 27. The error of B5 is as large
 as that at the first block and smaller at the last. In its bf16 logits, B5
 is about 6% further from the fp64 reference than the clean port, with an
 interval that excludes zero. The bug can thus be detected in bf16, but only
-by someone who already owns a correct port to compare with. Against
-Transformers, batching alone moved a correct port between 0.71 and 0.76, and
-a ratio of 0.77 raises no suspicion.
+by someone who already owns a correct port to compare with, and such a
+person has no bug to find. Against Transformers, batching alone moved a
+correct port between 0.71 and 0.76, and a ratio of 0.77 raises no
+suspicion. We said that the second digit of a ratio means little. Here it
+would have to carry the whole verdict.
 
 Where do the six ports lie between the fp32 error and the bf16 error of a
 correct implementation? The last cell draws the error of the stream after
@@ -1969,31 +2085,54 @@ right, on one scale.
 %%tab pytorch
 resid_post = lambda e: np.median(e[:, 3], -1)  # median over prompts
 precision = [resid_post(err[k]) for k in ('ours32', 'hf32', 'ours16', 'hf16')]
+# right: the clean port in fp32 (from the bug cell) and in bf16, then B1-B5
 porting = [resid_post(f['errors']) for f in found.values()]
-names = [name.split()[0] for name in found]  # clean, B1, ..., B5
+porting.insert(1, precision[2])
+names = ['clean fp32', 'clean bf16'] + [name.split()[0] for name in found][1:]
 ylim = (min(map(min, precision + porting)) / 2,  # one scale for both
         max(map(max, precision + porting)) * 2)
-_, axes = d2l.plt.subplots(1, 2, figsize=(7, 2.6), sharey=True)
-with d2l.plt.rc_context({'legend.fontsize': 'x-small'}):
+# black and grey: a correct implementation in fp32 and bf16, in both panels
+_, axes = d2l.plt.subplots(1, 2, figsize=(6.4, 3), sharey=True)
+left = ['port fp32', 'Transformers fp32', 'port bf16', 'Transformers bf16']
+with d2l.plt.rc_context({'legend.fontsize': 'small'}):
     d2l.plot(np.arange(len(floor)), precision, 'layer', 'relative error',
-             ['port fp32', 'Transformers fp32', 'port bf16',
-              'Transformers bf16'], ylim=ylim, yscale='log',
-             fmts=('C0-', 'C0--', 'C1-', 'C1--'), axes=axes[0])
+             left, ylim=ylim, yscale='log',
+             fmts=('k-', 'k--', 'C7-', 'C7--'), axes=axes[0])
     d2l.plot(np.arange(len(floor)), porting, 'layer', None, names,
              ylim=ylim, yscale='log',
-             fmts=('C7--', 'C0-', 'C1-', 'C2-', 'C3-', 'C4-'), axes=axes[1])
-    axes[1].legend(names, ncol=3, loc='center', bbox_to_anchor=(0.58, 0.27))
+             fmts=('k-', 'C7-', 'C0-', 'C1-', 'C2-', 'C3-', 'C4-'),
+             axes=axes[1])
+    for ax, labels, ncol in ((axes[0], left, 2), (axes[1], names, 4)):
+        ax.legend(labels, ncol=ncol, loc='lower center', frameon=False,
+                  bbox_to_anchor=(0.5, 1), columnspacing=0.7,
+                  handlelength=1.3)  # above the panel, clear of the curves
 ```
 
-On the left, the port (solid) and Transformers with eager attention (dashed)
-coincide in fp32 and lie close together in bf16. On the right, B1, B2 and B3
-are far above the clean port from the first block on, and B3 ends above 100:
-the stream it produces is by then more than a hundred times larger than the
-one it should reproduce. B4 follows the clean curve for two blocks and then
-leaves it. B5 runs nearly flat, thousands of times above the fp32 curves. It
-starts at the height of the bf16 curves of the left panel and ends about
-five times below them: at no depth does the wrong $\epsilon$ rise above the
+Black curves belong to a correct implementation in fp32 and gray ones to a
+correct implementation in bf16, in both panels. On the left, the port
+(solid) and Transformers with eager attention (dashed) coincide in fp32 and
+lie close together in bf16. On the right, the black and the gray curve are
+the clean port once more, and the bugs are in color. B1, B2 and B3 are far
+above both from the first block on, and B3 ends above 100. The stream it
+produces is by then more than a hundred times larger than the one it should
+reproduce. B4 follows the black curve for two blocks and then leaves it. B5
+runs nearly flat, thousands of times above the black curve. The gray curve
+is the one to compare it with. B5 starts at its height and ends about five
+times below it: at no depth does the wrong $\epsilon$ rise above the
 rounding error of a correct bf16 run.
+
+Should we care about an error that is no larger than the rounding of a
+correct run? A reader who only samples text in bf16 need hardly care, and it
+would be wrong to pretend otherwise. But rounding has no preferred
+direction, and the wrong $\epsilon$ has one: it shortens the output of the
+first norm for every token and in every run, by about half a percent.
+Whoever runs the weights in fp32 carries an error 2,000 times that of a
+correct port. And whoever averages over many prompts to measure a small
+effect, say what quantization costs a model, averages much of the rounding
+away and keeps the bias. The cell on B5 did just that when it resolved a
+difference of 6% beneath rounding many times larger. So check a port in fp32
+against fp64, even a port that will only ever run in bf16. Half precision is
+good enough to run a model and too coarse to check one.
 
 With the port verified, the model holds no more surprises of our own
 making. What it writes is decided by its weights and by the tokens it is
@@ -2002,43 +2141,45 @@ by the latter, the prompt, is the next question.
 
 ## Summary
 
-A released model runs in the book's code once its differences from
-`d2l.GPT` are written down. For Qwen3 these are a wider head, QK-norm,
-separate projections, a few widths and constants, and a permutation that
-converts Transformers' pairing of rotary coordinates into the book's. A
-weight map with strict accounting, which consumes every tensor and
-produces every parameter, catches structural mistakes before any
-arithmetic. Whether the port computes the right function is decided
-against Transformers in fp64: the port may be no further from this
-reference than 1.5 times the error of Transformers at the working
-precision. Qwen3-0.6B passes in fp32 and in bf16, in its logits and at
-every layer. Its greedy text in fp32 is that of Transformers on all 28
-prompts, and in bf16 the texts part only where two tokens are nearly tied.
-Matching a reference implementation includes matching its rounding, down
-to the expression for the rotary frequencies. A failing port is localized
-by the first layer at which its error leaves that of a correct
-implementation. The customary check of released weights, a comparison of
-bf16 logits, cannot see an error of the size of bf16 rounding, such as a
-wrong $\epsilon$. The fp32 check rejects it, and the comparison layer by
-layer finds it in the first block.
+Later chapters fine-tune, quantize and take apart Qwen3 models inside the
+book's own code, so this section made sure that the code computes the
+released model and not a near relative of it. A port is a list of
+differences from `d2l.GPT`, turned into subclasses, and a weight map with
+strict accounting. For Qwen3 the map includes a permutation between two
+pairings of rotary coordinates. Whether the port computes the right function
+is decided against Transformers in fp64. The port may be no further from
+this reference than 1.5 times the error of Transformers at the working
+precision, with both programs batched alike. Matching a reference
+implementation includes matching its rounding, down to the expression for
+the rotary frequencies. Qwen3-0.6B passes in fp32 and in bf16, in its logits
+and at every layer. Its greedy text in fp32 is that of Transformers on all
+28 prompts, and in bf16 the texts part where two tokens are nearly tied. A
+failing port is localized by the first layer at which its error leaves that
+of a correct implementation. A comparison of logits in bf16, the precision
+in which released weights are usually run, cannot see an error of the size
+of bf16 rounding, such as a wrong $\epsilon$. The fp32 check rejects it, and
+the comparison layer by layer finds it in the first block. So check a port
+in fp32 against fp64, whatever precision it will run in.
 
 ## Exercises
 
-1. [code] **Embeddings and tying.** `d2l.safetensors_header` returns the
-   names and shapes of a checkpoint without downloading it.
-    1. From the headers of Qwen3-0.6B and Qwen3-8B, compute the share of
-       the parameters that the embedding and the output layer hold in each
-       model, counting a tied layer once. What would untying add to the
-       0.6B model, in parameters and in bytes of bf16?
-    1. Which tensor does the file of Qwen3-8B store that the file of
-       Qwen3-0.6B-Base does not? Give one reason why a large model can
-       afford it more easily than a small one.
-    1. If you have a GPU with more than 20 GB of free memory and about
-       40 GB of main memory, compute Transformers' fp32 logits of Qwen3-8B
+1. [code] **The untied output layer.** Qwen3-8B has an output layer of its
+   own, and the section tested the port's handling of it on shapes alone.
+    1. From the headers of Qwen3-0.6B and Qwen3-8B
+       (`d2l.safetensors_header`), compute the share of the parameters that
+       the embedding and the output layer hold in each model, counting a
+       tied layer once. What would untying add to the 0.6B model, in
+       parameters and in bytes of bf16? Why can a large model afford an
+       output layer of its own more easily than a small one?
+    1. Optional, for a GPU with more than 20 GB of free memory and about
+       40 GB of main memory: compute Transformers' fp32 logits of Qwen3-8B
        for eight prompts on the CPU, then load `d2l.load_qwen3(QWEN_8B)`
        and Transformers in bf16 one after the other and apply the bf16
        rule. This is the only test of the untied output layer with real
        weights.
+    1. Name a mistake in the handling of `lm_head.weight` that the dry run
+       of the section accepts and that a test with real weights rejects.
+       You need not have run the previous part to answer.
 
 1. **The permutation for a head of width 4.** Let $d_h = 4$ and let the
    two frequencies be $\omega_0$ and $\omega_1$.
@@ -2061,9 +2202,11 @@ layer finds it in the first block.
 
 1. **The size of a wrong $\epsilon$.**
     1. Derive the relative change $(\epsilon' - \epsilon)/(2m)$ of the
-       output of RMSNorm, and evaluate it for the eight values of $m$ that
-       the cell on B5 prints. By which factor does the largest change
-       exceed the second largest?
+       output of RMSNorm. The section evaluated it for the first norm of
+       the model. Evaluate it for the other seven values of $m$ that the
+       cell on B5 prints. By which factor does the first norm exceed the
+       next largest? Estimate from this the error of a port whose
+       $\epsilon$ is wrong in every norm but the first.
     1. For which $m$ does the change from $\epsilon = 10^{-6}$ to
        $\epsilon' = 10^{-5}$ equal one fp32 rounding of $2^{-24}$, and for
        which $m$ one bf16 rounding of $2^{-8}$? Use the second value to
@@ -2102,15 +2245,31 @@ layer finds it in the first block.
        with the fp32 Transformers model. On how many prompts do the two
        produce the same text? Repeat with the two bf16 models.
     1. Now run the bf16 Transformers model alone, once with
-       `batch_size=1` and once with `batch_size=8`, where its prompts are
-       padded. Explain why the samples of some prompts change although
-       their random numbers are the same and the sampler is correct.
+       `batch_size=1` and once with `batch_size=8`. All 28 prompts have 64
+       tokens, so nothing is padded in either run. Explain why the samples
+       of some prompts change although their random numbers are the same
+       and the sampler is correct.
     1. Do sampled texts part earlier or later than the greedy texts of
        the section? Explain your finding with the size of the bf16 logit
        error.
 
-1. [code] **Two roundings in RMSNorm.** The section attributes part of the
-   bf16 ratio of 0.9 against Transformers' fused kernel to the order of
+1. [code] **The floor that a porter has.** A porter owns no correct port
+   and takes the floor of `first_divergence` from Transformers in fp32,
+   `err['hf32']`. With this floor and the factor of ten, the section found
+   the same first divergence for all six ports as with the floor of the
+   correct port.
+    1. How small can the factor be made before a correct port, run in
+       batches of 1, 4 or 16 (`err['ours32']` and `err_batch`), is reported
+       against this floor? Compare with the smallest multiple of the floor
+       at which one of the five bugs diverged. How much room does the
+       factor of ten leave on either side?
+    1. Predict from the numbers of the section whether the comparison
+       layer by layer would report B5 if both the port and the floor ran in
+       bf16. Then check: reload the fp64 reference, build B5 in bf16 from
+       its entry in `bugs`, and use `err['hf16']` as the floor.
+
+1. [code] **Two roundings in RMSNorm.** ● The section attributes part of
+   the bf16 ratio of 0.9 against Transformers' fused kernel to the order of
    rounding in RMSNorm. Test this explanation.
     1. Write a module with the interface of `nn.RMSNorm` that normalizes
        in fp32, rounds to the input's precision, and then multiplies by
@@ -2123,7 +2282,7 @@ layer finds it in the first block.
        report your modified port? Say what a factor of ten can and cannot
        localize.
 
-1. [code] **Another family.** Choose a dense model family of
+1. [extended] **Another family.** ●● Choose a dense model family of
    :numref:`tab_modern-recipe` other than Qwen3 whose files you can
    access, and read the configuration and the file header of its smallest
    released checkpoint.
@@ -2151,13 +2310,15 @@ A Released Checkpoint in the Book's Own Code<br>
 ::: {.slide title="A Port Can Load, Write Fluent Text, and Still Be Wrong"}
 [The problem]{.kicker}
 
-Qwen3-0.6B is 596,049,920 released numbers. We run them in our own
-`d2l.GPT` code, and every shape fits.
+Qwen3-0.6B is 596,049,920 numbers, released with the Transformers library.
+We load them into our own `d2l.GPT` code, and every shape fits. Two wrong
+constants, and how often the most likely next token is still that of
+Transformers:
 
-- RoPE base $10^4$ where the model was trained with $10^6$: the most likely
-  next token still matches that of Transformers at 4 positions in 5.
-- RMSNorm $\epsilon = 10^{-5}$ where the model uses $10^{-6}$: it matches at
-  all but 7 of 2,048 positions.
+| constant | wrong | right | top token kept |
+|:--|:--|:--|:--|
+| RoPE base | $10^4$ | $10^6$ | at 4 positions in 5 |
+| RMSNorm $\epsilon$ | $10^{-5}$ | $10^{-6}$ | at more than 99% |
 
 ::: {.d2l-note .warn}
 Correct means the same as **what**, and to **which precision**?
@@ -2171,30 +2332,28 @@ Correct means the same as **what**, and to **which precision**?
   subclasses;
 - write a weight map that accounts for every tensor, with the permutation
   between two RoPE layouts;
-- decide agreement by a measured tolerance: no further from Transformers
-  in fp64 than 1.5 times Transformers' own error at the working precision;
-- localize a failing port to the first layer where its error leaves that
-  of a correct implementation;
-- say what a bf16 logit check cannot see.
+- decide agreement by a measured tolerance, not one picked by hand;
+- localize a failing port to the first layer that diverges;
+- say what a bf16 logit check cannot see, and what to run instead.
 
 **Running example:** Qwen3-0.6B (28 blocks of width 1,024, 16 heads of
 width 128, 8 key--value heads) on 32 prompts of 64 tokens.
 :::
 
-::: {.slide title="The Port Turns a Checkpoint into an Instrument"}
+::: {.slide title="Later Sections Measure on This Model, So We Check It First"}
 [Where this fits]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
+| movement | section |
 |---|---|
-| Pretrained Models with Hugging Face | files, configuration, memory, speed |
-| **A Released Checkpoint in the Book's Own Code** | **the same tensors in `d2l.GPT`, checked to rounding** |
-| Prompting and In-Context Learning | what the prompt decides |
-| Scoring Language Models | the conventions behind a score |
-| Evaluation Suites, Judges and Error Bars | when a difference is real |
-| Interpretability | claims about the inside, tested |
-| Models behind an API | what a hosted model withholds |
+| open a checkpoint | Pretrained Models with Hugging Face |
+| | **A Released Checkpoint in the Book's Own Code** |
+| measure it | Prompting and In-Context Learning |
+| | Scoring Language Models |
+| | Evaluation Suites, Judges and Error Bars |
+| inside and outside | Interpretability |
+| | Models behind an API |
 :::
 
 ::: {.col .narrow}
@@ -2202,13 +2361,15 @@ width 128, 8 key--value heads) on 32 prompts of 64 tokens.
   headers.
 - **Skips:** Qwen3.5 and other hybrids, whose recurrent layers are ported
   in the architectures chapter.
+- **Why now:** a constant that is off by a fraction of a percent shifts
+  every later measurement.
 :::
 :::
 :::
 
-::: {.slide title="The Book's GPT Almost Fits Qwen3-0.6B"}
-`d2l.GPT` at the size of Qwen3-0.6B against layer 0 of the released file,
-shapes as (rows, columns):
+::: {.slide title="At Qwen3's Size, Only the Norms of the Book's Block Fit"}
+`d2l.GPT` built with the widths of Qwen3-0.6B, against layer 0 of the
+released file. Shapes read (outputs, inputs).
 
 | role | `d2l.GPT` | Qwen3-0.6B |
 |:--|:--|:--|
@@ -2219,19 +2380,19 @@ shapes as (rows, columns):
 | FFN down | `W_2` (1024, 2731) | `down_proj` (1024, 3072) |
 | block norms | `norm1`, `norm2` (1024) | two norms (1024) |
 
-::: {.d2l-note}
-Only the two block norms fit.
+**Check:** `W_qkv` and `q_proj` are both (2048, 1024). Do they fit?
+
+::: {.fragment .fade-up}
+No. `W_qkv` stacks 1,024 query rows on 512 key rows and 512 value rows.
+`q_proj` holds queries alone: 16 heads of width 128.
 :::
 :::
 
 ::: {.slide title="Nine Settings Separate the Two Models"}
-$d$ = 1,024 model width, $H$ = 16 heads, $d_h$ head width, $\theta$ base of
-the RoPE frequencies.
-
 | setting | `d2l.GPT` | Qwen3-0.6B |
 |:--|:--|:--|
-| head width $d_h$ | $d/H = 64$ | 128 |
-| query width $H d_h$ | 1,024 | 2,048 |
+| head width $d_h$ | 1,024 / 16 = 64 | 128 |
+| query width, 16 heads | 1,024 | 2,048 |
 | projections | fused `W_qkv` | `q_proj`, `k_proj`, `v_proj` |
 | QK-norm | none | RMSNorm per head, before RoPE |
 | RoPE base $\theta$ | $10^4$ | $10^6$ |
@@ -2239,6 +2400,11 @@ the RoPE frequencies.
 | FFN width | 2,731 | 3,072 |
 | RMSNorm $\epsilon$ | $10^{-5}$ | $10^{-6}$ |
 | output layer | tied | tied; untied in Qwen3-8B |
+
+::: {.d2l-note}
+Eight rows are settings of two subclasses. The RoPE pairs are a property of
+the stored weights, and the weight map handles them.
+:::
 :::
 
 ::: {.slide title="QK-Norm and a Wider Head Are One Attention Subclass"}
@@ -2254,6 +2420,8 @@ def qkv(self, X, offset=0, tables=None):
     return q, k, v                          # (B, heads, T, d_h)
 ```
 
+- QK-norm: an RMSNorm on the query and the key of each head, before the
+  rotation. It keeps attention logits from growing with the weights.
 - `head_dim` = 128 is an argument: 16 heads give queries of width 2,048.
 - The fused attention kernel is inherited from `d2l.CausalAttention`.
 :::
@@ -2261,22 +2429,32 @@ def qkv(self, X, offset=0, tables=None):
 ::: {.slide title="With Its Features Off, the Subclass Is the Book's GPT"}
 @!d2l-checkpoint-generalization
 
-@!d2l-checkpoint-param-count
-
 - `Qwen3GPT(d2l.GPT)` replaces the parent's `CausalAttention`, passes its
   SwiGLU through `ffn_factory`, sets $\epsilon$, and adds `lm_head` if
   untied.
-- Top: weights of a small `d2l.GPT` in a `Qwen3GPT` with the book's
-  settings. Bottom: three counts of the parameters.
+- Test: the weights of a small `d2l.GPT` in a `Qwen3GPT` without QK-norm
+  and with the book's constants. Line 1 compares the logits, line 2 the
+  KV-cache path with the full forward pass.
+
+::: {.d2l-note}
+The subclass generalizes the book's model: code written for `d2l.GPT` runs
+on it.
+:::
 :::
 
 ::: {.slide title="A Strict Map Accounts for Every Tensor"}
 @!d2l-checkpoint-strict-accounting
 
 - 311 = 28 layers $\times$ 11 tensors + embedding + final norm + a stored
-  copy of the embedding, which is verified and dropped.
-- A tensor left unconsumed, or an expected name left unfilled, raises a
-  `KeyError` that names it. Here one `k_norm` was deleted.
+  copy of the embedding (verified, dropped).
+- **Strict accounting:** no tensor left over, no name unfilled (here one
+  `k_norm` was deleted), then a strict load.
+- Port, configuration and file header each count 596,049,920 parameters.
+
+::: {.d2l-note .warn}
+`load_state_dict(strict=True)` sees the model's side only. A port without
+QK-norm loads strictly and leaves two tensors per layer in the file.
+:::
 :::
 
 ::: {.slide title="The Two RoPE Layouts Differ by a Permutation of Four Tensors"}
@@ -2330,54 +2508,77 @@ reorders the rows of `q_proj`? Must `v_proj` be permuted as well?
 :::
 :::
 
-::: {.slide title="One Rule at Two Precisions: No Further from fp64 Than Transformers Is"}
+::: {.slide title="The Rule: No Further from fp64 Than Transformers Itself"}
 $$e^b_\textrm{ours} \le 1.5\, e^b_\textrm{HF},
 \qquad e^b = \textrm{mean}\,\bigl|\mathbf{L}^b - \mathbf{L}^{64}\bigr|$$
 
-$\mathbf{L}^{64}$: logits of Transformers in fp64, the fp64 reference. $b$:
-32 (fp32) or 16 (bf16). HF: Transformers with written-out (eager)
-attention. Ours: the port.
+$\mathbf{L}^{64}$: logits of Transformers in fp64 (double precision), the
+fp64 reference. $b$: the working precision, 32 (fp32) or 16 (bf16). HF:
+Transformers with attention written out operation by operation (eager).
+Ours: the port.
 
 - Two correct programs differ by rounding, so the tolerance is measured.
-- Interval of the ratio: resample the 32 prompts in pairs, 2,000 times.
-  Pass only if the whole 95% interval is at most 1.5.
+- Interval of the ratio: resample the 32 prompts in pairs, 2,000 times
+  (the bootstrap). Pass only if the whole 95% interval is at most 1.5.
 :::
 
 ::: {.slide title="In fp32 the Port Is as Close to fp64 as Transformers Is"}
 @!d2l-checkpoint-fp32-check
 
-- Both errors about $4 \times 10^{-6}$; two runs give the same bits.
+- Both errors about $4 \times 10^{-6}$; no logit differs by more than
+  about $10^{-4}$; two runs give the same bits.
 - Left column: only the port's batch size changes, and the ratio moves
-  from 0.8 to 1.25. Right column: equal batches, ratio about 1.
+  from 0.8 to 1.2. Right column: equal batches, ratio about 1.
 
 ::: {.d2l-note .warn}
-An interval over prompts says nothing about batching.
+An interval over prompts says nothing about batching. Apply the rule with
+both programs batched alike.
 :::
 :::
 
 ::: {.slide title="Matching a Reference Includes Its Rounding of the Angles"}
-@!d2l-checkpoint-long-prompt
+One prompt of 4,096 tokens, and three ways to compute the frequency of RoPE
+pair $i$ in the port. Ratio of the rule against two fp64 references:
 
-- Frequencies $1/\theta^{2i/d_h}$ (row `reference`, Transformers) and
-  $\theta^{-2i/d_h}$ (`book`) are equal on paper, not in fp32. `exact`:
-  fp64 angles, rounded once.
-- First column: against Transformers in fp64, whose angles stay fp32. The
-  most accurate angles fail. Second: the same model with fp64 angles. All
-  pass.
+| the port's frequencies | Transformers in fp64 as it is (fp32 angles) | the same with fp64 angles |
+|:--|:--|:--|
+| $1/\theta^{2i/d_h}$, as Transformers | about 1, passes | about 1, passes |
+| $\theta^{-2i/d_h}$, as the book | about 2, **fails** | about 1, passes |
+| angles and tables in fp64 | about 4.5, **fails** | about 0.25, passes |
+
+- In fp32, 24 of the 64 frequencies differ in the last bit. At position
+  4,095 the angles differ by $2.4 \times 10^{-4}$.
+- The rule measures agreement with Transformers, its rounding included.
+
+::: {.d2l-note}
+Compute a port's constants with the expressions of the reference
+implementation, in its precision.
+:::
 :::
 
 ::: {.slide title="In bf16 the Errors Are 10,000 Times Larger, and the Port Passes"}
-@!d2l-checkpoint-bf16-check
+Mean logit error against the fp64 reference in bf16, 32 prompts:
 
-- Ratio about 0.7 against Transformers' eager attention, about 0.9 against
-  its fused kernel (SDPA): the programs round in different places.
-- Against errors of this size, fp32 logits can replace the fp64 reference.
+| attention in Transformers | its error | the port's error | ratio |
+|:--|:--|:--|:--|
+| written out (eager) | 0.05 | 0.035 | about 0.7, passes |
+| fused kernel (SDPA, its default) | 0.04 | 0.035 | about 0.9, passes |
+
+- In fp32 both errors were $4 \times 10^{-6}$.
+- The programs round in different places. A ratio below 1 is no merit of
+  the port.
+- Batching moves the ratio between 0.71 and 0.76.
+
+::: {.d2l-note .warn}
+A tolerance fixed at $10^{-3}$ fits neither precision: the worst fp32 logit
+is 10 times inside it, the average bf16 logit 50 times outside.
+:::
 :::
 
 ::: {.slide title="Check: Can Rounding Flip a Greedy Token?"}
 [Check]{.kicker}
 
-In fp32 no logit is off by more than $10^{-4}$. In bf16 the mean logit
+In fp32 no logit is off by more than about $10^{-4}$. In bf16 the mean logit
 error is 0.05. At one step the two best tokens are 0.01 apart. In which
 precision can port and Transformers choose differently, and what follows
 for a greedy continuation of 64 tokens?
@@ -2389,7 +2590,7 @@ for a greedy continuation of 64 tokens?
 :::
 :::
 
-::: {.slide title="One Sampler Serves the Port, Transformers, and Any Module"}
+::: {.slide title="One Decoding Loop Drives the Port, Transformers, and Any Module"}
 | model | next logits from | batches |
 |:--|:--|:--|
 | `Qwen3GPT` | its KV cache | prompts of equal length |
@@ -2404,42 +2605,87 @@ for n in range(max_new_tokens):
 ```
 
 `d2l.generate`: strings in, one record per prompt out (text, token ids,
-log-probabilities, finish reason).
+log-probabilities, finish reason). One loop for both implementations, so a
+difference in text comes from the model and not from the sampler.
 :::
 
 ::: {.slide title="Greedy Text Is Identical in fp32 and Parts at Near-Ties in bf16"}
-@!d2l-checkpoint-greedy
+28 text prompts, 64 new tokens each, all through `d2l.generate`.
+Continuations identical to those of Transformers in fp32:
 
-- 28 prompts, 64 new tokens. Gap: difference of the two largest fp32
-  logits of Transformers at the first differing token.
-- The bf16 counts shift with batching and do not rank the two
-  implementations.
+| model | identical | the others |
+|:--|:--|:--|
+| Transformers in fp32, its own `generate` | 28 of 28 | |
+| port in fp32 | 28 of 28 | |
+| port in bf16 | about half | half part within 20 tokens |
+| Transformers in bf16 | about half | half part within 20 tokens |
+
+- Gap between the two best fp32 logits at the parting: $4 \times 10^{-4}$
+  to 0.2, mostly below the mean bf16 logit error of 0.05.
+- The bf16 counts shift with batching and do not rank the two programs.
+
+::: {.d2l-note}
+Before suspecting a bug in a comparison of two bf16 runs, look at the gap.
+:::
 :::
 
-::: {.slide title="The Port Matches Transformers at Every Layer"}
-::: {.cols .vc}
-::: {.col .fig .big}
-@!d2l-checkpoint-divergence-plot
+::: {.slide title="An Error Cannot Appear Before the Layer That Causes It"}
+Record four tensors per block, in execution order, in the port and in
+Transformers in fp64:
+
+| capture point | tensor |
+|:--|:--|
+| `attn_out` | output of attention |
+| `resid_mid` | residual stream after attention |
+| `mlp_out` | output of the feed-forward network |
+| `resid_post` | residual stream after the block |
+
+- Error of a tensor $\mathbf{A}$ against its fp64 value $\mathbf{A}^{64}$:
+  $\|\mathbf{A} - \mathbf{A}^{64}\|_F / \|\mathbf{A}^{64}\|_F$, median of
+  32 prompts.
+- Floor: the error of a correct implementation at the same point.
+  Divergence: the first point above 10 times the floor.
+
+::: {.d2l-note}
+A porter has no correct port for the floor. Transformers in fp32 serves: it
+stays within a factor of 2 of the correct port at every point.
+:::
 :::
 
-::: {.col}
-- Relative error of the residual stream after each block against the fp64
-  reference, median of 32 prompts.
-- Left: port (solid) and Transformers (dashed). fp32 near $10^{-6}$, bf16
-  near $10^{-2}$, the port at half to three quarters of eager attention.
-- Right: five ports with one bug each, and the correct port (clean).
-:::
+::: {.slide title="Check: Five One-Line Bugs That Pass Strict Accounting"}
+[Check]{.kicker}
+
+Every tensor is consumed and every shape fits. Where does each port first
+leave the correct one?
+
+| bug | the one change |
+|:--|:--|
+| B1 | RoPE permutation skipped |
+| B2 | RoPE base left at $10^4$ |
+| B3 | gate and up projections of every FFN swapped |
+| B4 | layers taken in string order, so block 2 gets layer 10 |
+| B5 | $\epsilon = 10^{-5}$ in every norm |
+
+::: {.fragment .fade-up}
+B1, B2, B5: `attn_out` of block 0. B3: `mlp_out` of block 0. B4:
+`attn_out` of block 2, with blocks 0 and 1 exact to the last bit.
 :::
 :::
 
 ::: {.slide title="Each Bug First Diverges Where It First Acts"}
-@!d2l-checkpoint-bugs
+| port | diverges at block, point | error / floor | fp32 rule | bf16 rule | top token kept |
+|:--|:--|:--|:--|:--|:--|
+| correct | nowhere | | passes | passes | 99.9% |
+| B1 | 0, `attn_out` | $10^6$ | fails | fails | 1 in 3 |
+| B2 | 0, `attn_out` | $10^5$ | fails | fails | 4 in 5 |
+| B3 | 0, `mlp_out` | $10^6$ | fails | fails | never |
+| B4 | 2, `attn_out` | $10^6$ | fails | fails | 1 in 25 |
+| B5 | 0, `attn_out` | $10^4$ | fails | **passes** | 99.7% |
 
-- Divergence: the first layer and capture point whose error exceeds 10
-  times that of the correct (clean) port. Transformers in fp32, within a
-  factor of 2 of it, serves as well.
-- B4 sorts layer names as strings, so block 2 receives layer 10. Blocks 0
-  and 1 stay exact to the last bit.
+- Floor: the correct port's fp32 error. Transformers in fp32, within a
+  factor of 2 of it, gives the same six answers.
+- Top token kept: share of 2,048 positions with the fp64 reference's most
+  likely next token. B2 would pass a reading of sampled sentences.
 :::
 
 ::: {.slide title="Check: The Size of a Wrong Epsilon"}
@@ -2460,25 +2706,61 @@ $2^{-24} \approx 6 \times 10^{-8}$ in fp32.
 :::
 
 ::: {.slide title="A Wrong Epsilon Passes the bf16 Logit Check and Fails the fp32 One"}
-@!d2l-checkpoint-b5
+Relative error of the residual stream against Transformers in fp64:
 
-- fp32 rule: fails by a factor of about 2,000. bf16 rule: 0.77, beside
-  0.73 for the correct port.
-- The layers say where: in block 0, before the attention output. The
-  smallest $m$ points to the first norm.
+| port | after block 0 | after block 27 |
+|:--|:--|:--|
+| correct, fp32 | $10^{-6}$ | $10^{-6}$ |
+| B5 (wrong $\epsilon$), fp32 | 0.45% | 0.2% |
+| correct, bf16 | 0.5% | 1% |
+
+- fp32 rule: B5 fails at a ratio of about 2,000, against a limit of 1.5.
+- bf16 rule: B5 passes at 0.77, beside 0.73 for the correct port. Batching
+  alone moves the correct port from 0.71 to 0.76.
+- Only next to a correct port does the bug show in bf16: its logit error
+  is about 6% larger.
+
+::: {.d2l-note .warn}
+The error of a wrong $\epsilon$ is one bf16 rounding where it is made, and
+less at every later layer.
+:::
+:::
+
+::: {.slide title="At No Depth Does a Wrong Epsilon Rise above bf16 Rounding"}
+::: {.cols .vc}
+::: {.col .fig .big}
+@!d2l-checkpoint-divergence-plot
+:::
+
+::: {.col}
+- Relative error of the residual stream after each block, median of 32
+  prompts.
+- Black: correct in fp32. Gray: correct in bf16. Left: the port (solid)
+  on Transformers (dashed).
+- Right: B1, B2, B3 leave the correct port in block 0, B4 in block 2. B5
+  runs flat, from the gray curve to five times below it.
+:::
+:::
+
+::: {.d2l-note .warn}
+Rounding has no direction; a wrong $\epsilon$ shifts every token the same
+way. Check a port in fp32 against fp64, even one that will only run in bf16.
+:::
 :::
 
 ::: {.slide title="Wrap-up"}
 [Wrap-up]{.kicker}
 
-- Qwen3-0.6B runs in subclasses of `d2l.GPT`: nine settings, a strict map
-  of 311 tensors, one permutation of four tensors per layer.
-- One rule, at most 1.5 times Transformers' own error against fp64: ratio
-  about 1 in fp32, about 0.7 in bf16.
-- Greedy text is identical in fp32 on all 28 prompts; in bf16 it parts at
-  near-ties.
-- Five bugs diverge where they first act. A wrong $\epsilon$ fails the
-  fp32 rule by about 2,000 and passes the bf16 rule at 0.77.
+- **Port:** nine settings in two subclasses of `d2l.GPT`, a strict map of
+  311 tensors, one permutation of four tensors per layer.
+- **Rule:** at most 1.5 times Transformers' own error against fp64, both
+  batched alike. Qwen3-0.6B: about 1 in fp32, about 0.7 in bf16.
+- **Constants:** computed as the reference implementation computes them.
+  The book's angle formula fails at about 2 on 4,096 tokens.
+- **A failing port:** find the first divergence, with Transformers in
+  fp32 as the floor. Five bugs diverge where they first act.
+- **Precision:** check in fp32. A wrong $\epsilon$ fails there at about
+  2,000 and passes in bf16 at 0.77.
 
 **Next:** how much of a model's behavior the prompt decides.
 :::

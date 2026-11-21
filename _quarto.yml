@@ -97,20 +97,17 @@ book:
         - chapter_preliminaries/calculus.qmd
         - chapter_preliminaries/autograd.qmd
         - chapter_preliminaries/probability.qmd
-        - chapter_preliminaries/lookup-api.qmd
         - chapter_linear-regression/index.qmd
         - chapter_linear-regression/linear-regression.qmd
         - chapter_linear-regression/synthetic-regression-data.qmd
         - chapter_linear-regression/linear-regression-scratch.qmd
         - chapter_linear-regression/oo-design.qmd
-        - chapter_linear-regression/linear-regression-concise.qmd
         - chapter_linear-regression/generalization.qmd
         - chapter_linear-regression/weight-decay.qmd
         - chapter_linear-classification/index.qmd
         - chapter_linear-classification/softmax-regression.qmd
         - chapter_linear-classification/image-classification-dataset.qmd
         - chapter_linear-classification/softmax-regression-scratch.qmd
-        - chapter_linear-classification/softmax-regression-concise.qmd
         - chapter_linear-classification/classification.qmd
         - chapter_linear-classification/generalization-classification.qmd
         - chapter_linear-classification/environment-and-distribution-shift.qmd
@@ -152,19 +149,18 @@ book:
         - chapter_recurrent-neural-networks/text-sequence.qmd
         - chapter_recurrent-neural-networks/language-model.qmd
         - chapter_recurrent-neural-networks/rnn.qmd
-        - chapter_recurrent-neural-networks/rnn-implementation.qmd
         - chapter_recurrent-neural-networks/bptt.qmd
         - chapter_recurrent-neural-networks/decoding.qmd
     - part: chapter_advanced/index.qmd
       chapters:
         - chapter_optimization/index.qmd
-        - chapter_optimization/optimization-intro.qmd
         - chapter_optimization/gd.qmd
         - chapter_optimization/sgd.qmd
+        - chapter_optimization/test-models.qmd
         - chapter_optimization/momentum.qmd
         - chapter_optimization/adam.qmd
-        - chapter_optimization/lr-scheduler.qmd
         - chapter_optimization/muon.qmd
+        - chapter_optimization/lr-scheduler.qmd
         - chapter_optimization/batch-size.qmd
         - chapter_optimization/scaling.qmd
         - chapter_optimization/practice.qmd
@@ -175,6 +171,7 @@ book:
         - chapter_attention/multihead-attention.qmd
         - chapter_attention/positional-information.qmd
         - chapter_attention/attention-at-scale.qmd
+        - chapter_attention/windowed-linear-attention.qmd
         - chapter_attention/what-attention-computes.qmd
         - chapter_attention/further-reading.qmd
         - chapter_transformers/index.qmd
@@ -183,12 +180,13 @@ book:
         - chapter_transformers/kv-cache.qmd
         - chapter_transformers/encoders-decoders.qmd
         - chapter_transformers/vision-transformer.qmd
-        - chapter_transformers/moe.qmd
         - chapter_transformers/scaling-laws.qmd
+        - chapter_transformers/moe.qmd
         - chapter_transformers/further-reading.qmd
         - chapter_recurrent-modern/index.qmd
         - chapter_recurrent-modern/lstm.qmd
         - chapter_recurrent-modern/seq2seq.qmd
+        - chapter_recurrent-modern/linear-recurrence.qmd
         - chapter_recurrent-modern/ssm.qmd
         - chapter_recurrent-modern/mamba.qmd
         - chapter_recurrent-modern/matrix-state.qmd
@@ -202,6 +200,7 @@ book:
         - chapter_computational-performance/memory-precision.qmd
         - chapter_computational-performance/multiple-gpus.qmd
         - chapter_computational-performance/multi-gpu-practice.qmd
+        - chapter_computational-performance/sharding.qmd
         - chapter_computational-performance/fast-transformer.qmd
         - chapter_computational-performance/further-reading.qmd
         - chapter_reinforcement-learning/index.qmd
@@ -235,6 +234,7 @@ book:
         - chapter_diffusion-models/index.qmd
         - chapter_diffusion-models/denoising.qmd
         - chapter_diffusion-models/gaussian-paths.qmd
+        - chapter_diffusion-models/integration.qmd
         - chapter_diffusion-models/image-diffusion.qmd
         - chapter_diffusion-models/samplers.qmd
         - chapter_diffusion-models/design-space.qmd
@@ -258,6 +258,7 @@ book:
         - chapter_lm-encoders/text-embeddings.qmd
         - chapter_lm-encoders/retrieval.qmd
         - chapter_lm-encoders/rag.qmd
+        - chapter_lm-encoders/rag-failures.qmd
         - chapter_lm-encoders/further-reading.qmd
         - chapter_lm-data/index.qmd
         - chapter_lm-data/crawl.qmd
@@ -428,6 +429,7 @@ book:
         - chapter_mdl-information-theory/further-reading.qmd
         - chapter_mdl-dynamics/index.qmd
         - chapter_mdl-dynamics/mdl-odes-solvers.qmd
+        - chapter_mdl-dynamics/mdl-numerical-solvers.qmd
         - chapter_mdl-dynamics/mdl-neural-odes.qmd
         - chapter_mdl-dynamics/mdl-sdes.qmd
         - chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.qmd

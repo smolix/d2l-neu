@@ -45,7 +45,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 2.301, fraction of active units 0.50\n"
+          "text": "loss 2.304, fraction of active units 0.47\n"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 37953,
-          "sha256": "sha256:874a36ec7b117580eff5af46342b5bdd8bce82a7b284e723b17829e18cba0bd5"
+          "bytes": 38549,
+          "sha256": "sha256:f3ab6c024d67b33efe59d94f80dfeddd7b9208ed972f7f7b7d37ac5b193f1c5f"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-accuracy-2-1.svg",
-          "bytes": 29413,
-          "sha256": "sha256:9a0cb540538b581fdcd0640425b53400fc2016969988a05738c58d238f7825fe"
+          "bytes": 30247,
+          "sha256": "sha256:500045fcfd90ab3bcaa662cd60eda0d99221dd9b03352196b73dafbabd121c4c"
         }
       ]
     },
@@ -92,46 +92,35 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.863\n  concise MLP: 0.865\n  softmax regression: 0.838\n"
+          "text": "validation accuracy averaged over the last 5 epochs\n  MLP from scratch: 0.865\n  concise MLP: 0.866\n  softmax regression: 0.834\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "training accuracy of the MLP from scratch: 0.883\n"
-        }
-      ]
-    },
-    "mlp-implementation-errors-by-class": {
-      "code_fingerprint": "sha256:8b97c9797435df5d4c7a8399e2b1b114857a36d0910bca5cf94960040c16f8f1",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "class             softmax  MLP, scratch  MLP, concise\nT-shirt              0.79          0.80          0.80\ntrouser              0.95          0.97          0.96\npullover             0.81          0.92          0.89\ndress                0.89          0.90          0.91\ncoat                 0.68          0.58          0.68\nsandal               0.92          0.96          0.93\nshirt                0.53          0.63          0.60\nsneaker              0.94          0.93          0.98\nbag                  0.95          0.95          0.96\nankle boot           0.93          0.95          0.88\n"
+          "text": "training accuracy of the MLP from scratch: 0.892\n"
         }
       ]
     },
     "mlp-implementation-what-the-hidden-units-compute-1": {
-      "code_fingerprint": "sha256:865d1b235c63622baacf92d9f2d9269f367cc9da5aa6952a5dcc454936a5a46c",
+      "code_fingerprint": "sha256:4683fc82a8a485fd0c4870fe599e5d044d133e65016aa528ec8ef2c514bfec30",
       "kind": "text",
       "outputs": []
     },
     "mlp-implementation-what-the-hidden-units-compute-2": {
-      "code_fingerprint": "sha256:4f39b8f6a547556c462e709b993fe262810e5f803b2ecaabd305d95b6555ab79",
+      "code_fingerprint": "sha256:0066ecceb5fb1bbd611ef0ec42352c38bd3627837ce49ac683a1e7cc11455a4d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-what-the-hidden-units-compute-2-1.svg",
-          "bytes": 72428,
-          "sha256": "sha256:92ba11839aa27bca770553370f72603245607d7130969f649e2027108d7e2a30"
+          "bytes": 72304,
+          "sha256": "sha256:9d59ce4bfa7dcf17bb07c26abe3c4335371feee43fd06711715d53c46ba7920f"
         }
       ]
     },
     "mlp-implementation-parameters-computation-and-time": {
-      "code_fingerprint": "sha256:dfbed4a39cb9e883607bc5462ec7f8bc210ddd53ac302035491679687cc02f48",
+      "code_fingerprint": "sha256:a1d816f5ecc61f8471adf699fdcd5b19129dfb027c88c08e1ece9b37c4472988",
       "kind": "text",
       "outputs": [
         {

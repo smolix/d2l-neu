@@ -2,20 +2,26 @@
 """Generate the illustrative figures for the Generative Adversarial Networks
 chapter (ch. 16) in the one shared house style defined in ``gen_mdl_figures.py``.
 
-Four figures:
+Seven figures, one per idea the prose draws on:
 
-  * ``mdl-gan-architecture`` -- the adversarial loop: a latent draw through the
-    generator, the generated and real batches meeting at the discriminator, and
-    the two updates with their opposite goals (replaces the legacy hand-drawn
-    ``img/gan.svg``, now deleted);
-  * ``mdl-gan-template`` -- the two knobs of the adversarial-objective template
-    ``d(p,q) = sup_T {E_p[a(T)] - E_q[b(T)]}``, with GAN/f-GAN, W_1 and MMD
-    placed on the (scoring functions, critic class) plane and RpGAN lifted off it;
-  * ``mdl-gan-pairing`` -- single-sample classification against a fixed
-    threshold versus pair ranking, with the additive shift flipping the
+  * ``mdl-gan-architecture`` (16.1, ``fig_gan``) -- the adversarial loop: a
+    latent draw through the generator, the generated and real batches meeting
+    at the critic, and the two updates with their opposite goals (replaces the
+    legacy hand-drawn ``img/gan.svg``, now deleted);
+  * ``mdl-gan-weights`` (16.1) -- the saturating and non-saturating generator
+    weights against the critic score;
+  * ``mdl-gan-critics-separated`` (16.2) -- the optimal JS, W_1 and MMD critics
+    on disjoint supports;
+  * ``mdl-gan-pairing`` (16.3) -- one sample against a fixed threshold versus
+    a pair judged by its difference, with the additive shift flipping the
     verdict on the left and cancelling on the right;
-  * ``mdl-gan-exits`` -- the three exits from unstable minimax training, each
-    with its named steps and its cost.
+  * ``mdl-gan-dcgan`` and ``mdl-gan-backbone`` (16.5) -- DCGAN and the minimal
+    backbone of the three arms, with parameter counts;
+  * ``mdl-gan-conditioning`` (16.6) -- three ways a condition enters.
+
+The networks are called generator and critic throughout, as in the prose.
+The backbone's parameter counts are asserted against the totals the dcgan
+notebook prints; DCGAN's are computed from its layer shapes.
 
 Run with the repo's pytorch venv:
 
@@ -36,10 +42,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_mdl_figures as fl  # importing applies the shared style + helpers
 
 np, plt = fl.np, fl.plt
-BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
+BLUE, ORANGE, GREEN, GRAY = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY
 PURPLE = "#9467bd"
 
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Polygon
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 
 # --------------------------------------------------------------------------- #
@@ -91,7 +97,7 @@ def _batch(ax, cx, cy, w, h, pts, color, fontsize=12.5, label=None,
 
 def fig_architecture():
     """The game of :numref:`fig_gan`: a latent draw z through the generator G
-    makes a batch of generated samples; the discriminator D sees it alongside a
+    makes a batch of generated samples; the critic D sees it alongside a
     batch of real data and scores every sample; the two updates push in
     opposite directions."""
     fig, ax = plt.subplots(figsize=(11.8, 5.2))
@@ -125,10 +131,10 @@ def fig_architecture():
     _batch(ax, 8.10, y_r, 2.4, 2.0, real, BLUE, label_below=False,
            label=r"real batch $x \sim p_{\mathrm{data}}$")
 
-    # --- both batches into the discriminator --------------------------------
+    # --- both batches into the critic ---------------------------------------
     _curved(ax, (9.35, y_r), (10.66, 4.28), 0.12, "black", lw=1.6)
     _curved(ax, (9.35, y_g), (10.66, 3.62), -0.12, "black", lw=1.6)
-    _network(12.00, 3.95, 2.62, r"$D$", "discriminator", GREEN)
+    _network(12.00, 3.95, 2.62, r"$D$", "critic", GREEN)
 
     # --- the score it produces ----------------------------------------------
     xs = 14.35
@@ -163,85 +169,6 @@ def fig_architecture():
 
     fl.clean_axes(ax, lim=((0.20, 16.70), (-0.75, 7.05)), hide=True)
     fl.save(fig, "mdl-gan-architecture")
-
-
-# =========================================================================== #
-# 16.2  The template's two knobs                                              #
-# =========================================================================== #
-
-def fig_template():
-    """One template, two choices: which scoring functions (a, b) and which critic class.
-    GAN/f-GAN, W_1 and MMD sit at three corners of that plane; RpGAN does not
-    sit on it at all, because its objective is quadratic in (p, q)."""
-    fig, ax = plt.subplots(figsize=(9.6, 6.0))
-
-    SH = np.array([0.44, 0.40])                  # shear: one unit of the scoring-function axis
-    U1, V1 = 7.4, 4.9                            # plane extent
-
-    def P(u, v):
-        return np.array([u + SH[0] * v, SH[1] * v])
-
-    # the plane itself
-    ax.add_patch(Polygon([P(0, 0), P(U1, 0), P(U1, V1), P(0, V1)],
-                         closed=True, fc=LIGHT, alpha=0.22, ec=GRAY, lw=1.2,
-                         zorder=1))
-    # the linear-scoring row: every integral probability metric lives here
-    ax.add_patch(Polygon([P(0, 0.35), P(U1, 0.35), P(U1, 1.75), P(0, 1.75)],
-                         closed=True, fc=GRAY, alpha=0.13, ec="none", zorder=2))
-    ax.text(*(P(U1, 1.05) + np.array([0.22, 0.0])),
-            "integral probability\nmetrics: $\\ell_p(T)=\\ell_q(T)=T$", ha="left",
-            va="center", fontsize=12.5, color="black")
-
-    # the two axes
-    fl.arrow(ax, P(0, 0), P(U1 + 0.55, 0), color="black", lw=1.5, mut=15)
-    fl.arrow(ax, P(0, 0), P(0, V1 + 0.45), color="black", lw=1.5, mut=15)
-    ax.text(*(P(U1 / 2, 0) + np.array([0.0, -0.62])), r"critic class $\mathcal{T}$",
-            ha="center", va="top", fontsize=14.5, color="black")
-    ax.text(*(P(0, V1 + 0.55) + np.array([-0.28, 0.10])), r"scoring functions $(\ell_p, \ell_q)$",
-            ha="right", va="bottom", fontsize=14.5, color="black")
-
-    # ticks along each axis
-    for u, name in [(1.15, "unrestricted"), (4.05, "Lipschitz ball"),
-                    (6.55, "RKHS ball")]:
-        ax.plot(*np.stack([P(u, 0), P(u, 0) - np.array([0.0, 0.16])]).T,
-                color="black", lw=1.2)
-        ax.text(*(P(u, 0) + np.array([0.0, -0.28])), name, ha="center",
-                va="top", fontsize=12.5, color="black")
-    for v, name in [(1.05, "linear"), (3.85, "nonlinear")]:
-        ax.plot(*np.stack([P(0, v), P(0, v) - np.array([0.16, 0.0])]).T,
-                color="black", lw=1.2)
-        ax.text(*(P(0, v) + np.array([-0.28, 0.0])), name, ha="right",
-                va="center", fontsize=12.5, color="black")
-
-    # the three template members
-    members = [
-        (1.15, 3.85, BLUE, "GAN, $f$-GAN ($f$-divergences)", (0.32, -0.02),
-         "left", "center"),
-        (4.05, 1.05, GREEN, "$W_1$", (0.0, 0.36), "center", "bottom"),
-        (6.55, 1.05, ORANGE, "MMD", (0.0, 0.36), "center", "bottom"),
-    ]
-    for u, v, col, name, off, ha, va in members:
-        p = P(u, v)
-        ax.plot(*p, "o", color=col, ms=11, zorder=6)
-        ax.text(p[0] + off[0], p[1] + off[1], name, ha=ha, va=va,
-                fontsize=13, color=col, zorder=7,
-                bbox=dict(fc="white", ec="none", pad=1.6, alpha=0.85))
-
-    # RpGAN: the same two knobs as the GAN, lifted clean off the plane -- its
-    # critic scores a pair, so the objective is not of the template's form.
-    foot = P(1.15, 3.85)
-    lifted = foot + np.array([0.0, 2.15])
-    ax.plot([foot[0], lifted[0]], [foot[1] + 0.14, lifted[1]], ls="--",
-            color=PURPLE, lw=1.6, zorder=5)
-    ax.plot(*lifted, "o", color=PURPLE, ms=11, zorder=6)
-    ax.text(lifted[0] + 0.32, lifted[1],
-            "relativistic pairing: the same two knobs,"
-            "\nbut the critic scores a pair, and the objective"
-            "\nis quadratic in $(p,q)$ — off the plane",
-            ha="left", va="center", fontsize=13, color=PURPLE, zorder=7)
-
-    fl.clean_axes(ax, lim=((-0.7, 11.4), (-0.95, 4.4)), hide=True, equal=True)
-    fl.save(fig, "mdl-gan-template")
 
 
 # =========================================================================== #
@@ -309,64 +236,6 @@ def fig_pairing():
     frame(axb, "a pair: is $D(x)$ above $D(x')$?")
 
     fl.save(fig, "mdl-gan-pairing")
-
-
-# =========================================================================== #
-# 16.6  Three exits from instability                                          #
-# =========================================================================== #
-
-def fig_exits():
-    """The de-heuristicization map: regularize the dynamics, constrain the
-    critic, or remove the game -- each branch with its named steps and its
-    cost.  (That the adversarial term returns at distillation is an
-    observation, not a step, so it lives in the caption.)"""
-    fig, ax = plt.subplots(figsize=(12.6, 5.4))
-
-    branches = [
-        (BLUE, "1. regularize the dynamics",
-         ["zero-centered\n$R_1$, $R_2$", "convergent\nobjective (RpGAN)",
-          "R3GAN"],
-         "cost: one more knob ($\\gamma$) and a minimax loop that remains"),
-        (ORANGE, "2. constrain the critic",
-         ["spectral norm", "frozen pretrained\nfeatures",
-          "controlled\naugmentation (ADA)"],
-         "cost: the critic is no longer free and inherits the features' bias"),
-        (GREEN, "3. remove the game",
-         ["MMD, IMLE", "diffusion and flow\nas regression"],
-         "cost: a fixed discrepancy weakens in high dimension; slow sampling"),
-    ]
-
-    xs = [4.60, 8.65, 12.70]                     # the three step columns
-    ys = [5.25, 3.10, 0.95]                      # the three branch lanes
-    bw, bh = 3.34, 0.90
-
-    _box(ax, 1.05, ys[1], 1.80, 1.35, "unstable\nminimax\ntraining", GRAY,
-         fontsize=13.5, lw=1.9)
-
-    # a short trunk leaves the source box; each branch turns off it with a
-    # rounded corner and arrives horizontally at its lane
-    xt = 2.38                                   # x of the branching trunk
-    ax.plot([1.99, xt], [ys[1], ys[1]], color=GRAY, lw=1.7, zorder=4,
-            solid_capstyle="butt")
-    for (col, name, steps, cost), y in zip(branches, ys):
-        ax.add_patch(FancyArrowPatch(
-            (xt, ys[1]), (xs[0] - bw / 2 - 0.10, y),
-            connectionstyle=("arc3,rad=0" if y == ys[1] else
-                             "angle,angleA=90,angleB=0,rad=14"),
-            arrowstyle="-|>", mutation_scale=15, color=col, lw=1.7,
-            shrinkA=0, shrinkB=0, zorder=4))
-        ax.text(xs[0] - bw / 2, y + bh / 2 + 0.16, name, ha="left",
-                va="bottom", fontsize=13.5, color=col)
-        for x, s in zip(xs, steps):
-            _box(ax, x, y, bw, bh, s, col, fontsize=12.5, fc="white")
-        for xa, xb in zip(xs[:len(steps) - 1], xs[1:len(steps)]):
-            fl.arrow(ax, (xa + bw / 2 + 0.08, y), (xb - bw / 2 - 0.08, y),
-                     color=col, lw=1.5, mut=13)
-        ax.text(xs[0] - bw / 2, y - bh / 2 - 0.18, cost, ha="left", va="top",
-                fontsize=12.5, color="black")
-
-    fl.clean_axes(ax, lim=((0.0, 14.55), (-0.05, 6.35)), hide=True, equal=False)
-    fl.save(fig, "mdl-gan-exits")
 
 
 # =========================================================================== #
@@ -561,7 +430,7 @@ def _shape(r, c):
 def fig_dcgan():
     """DCGAN (Radford et al., 2015) as two rows of feature maps.  Generator:
     1x1x100 -> 4 -> 8 -> 16 -> 32 -> 64, transposed 4x4 convolutions, batch
-    norm + ReLU except at the output (tanh, no BN).  Discriminator: 64 -> 32 ->
+    norm + ReLU except at the output (tanh, no BN).  Critic: 64 -> 32 ->
     16 -> 8 -> 4 -> logit, strided 4x4 convolutions, batch norm + leaky ReLU
     except at the input block (no BN).  The two no-BN blocks are washed gold."""
     fig, ax = plt.subplots(figsize=(13.0, 6.4))
@@ -600,7 +469,7 @@ def fig_dcgan():
         ["BN, ReLU"] * 4 + ["tanh\nno BN"], [False] * 4 + [True])
 
     ax.text(x_left, yd + 1.2,
-            f"discriminator $D$: convolutions $4{{\\times}}4$, stride 2"
+            f"critic $D$: convolutions $4{{\\times}}4$, stride 2"
             f" (the last: no padding)    {d_params:,} parameters",
             ha="left", va="bottom", fontsize=13.5, color=GREEN)
     row(yd, [(64, 3, "image"), (32, n, ""), (16, 2 * n, ""), (8, 4 * n, ""),
@@ -731,7 +600,7 @@ def fig_backbone():
 
 def fig_conditioning():
     """Concatenation at the input, modulation a(c) h + b(c) of a feature map,
-    and the projection critic's compatibility head e_c^T phi(x) + psi_0(x).
+    and the projection head e_c^T phi(x) + psi_0(x) of the critic.
     Condition-derived quantities are purple (the embedding role)."""
     E_FC, E_EC = "#F2EDF7", PURPLE
     fig, ax = plt.subplots(figsize=(14.6, 4.6))
@@ -774,7 +643,7 @@ def fig_conditioning():
     xh, xm, xp = x0 + 0.65, x0 + 2.25, x0 + 3.3
     xo = xp + 1.35
     _fmap(ax, xh, 1.75, 16)
-    ax.text(xh, 1.75 - a16 / 2 - 0.12, r"$\phi$", ha="center", va="top",
+    ax.text(xh, 1.75 - a16 / 2 - 0.12, r"$h$", ha="center", va="top",
             fontsize=15, color="black")
     circ(xm, 1.75, r"$\times$")
     circ(xp, 1.75, r"$+$")
@@ -794,12 +663,12 @@ def fig_conditioning():
                  (xx, 1.75 + 0.27), color=E_EC, lw=1.5, mut=12)
         ax.text(xx + 0.22 * sgn, 2.55, lab, ha=ha, va="center", fontsize=15,
                 color="black")
-    ax.text((xh + xo) / 2, yf, r"$a(c) \odot \phi + b(c)$", ha="center",
+    ax.text((xh + xo) / 2, yf, r"$a(c) \odot h + b(c)$", ha="center",
             va="center", fontsize=16, color="black")
 
-    # ---------------- (c) compatibility head ----------------
+    # ---------------- (c) projection head ----------------
     x0 = 10.85
-    ax.text(x0 + 0.2, ytop, "compatibility head", ha="left", va="bottom",
+    ax.text(x0 + 0.2, ytop, "projection head", ha="left", va="bottom",
             fontsize=14, color="black")
     a32 = _side(32)
     xx_, xphi, xh2 = x0 + 0.6, x0 + 1.95, x0 + 3.65
@@ -845,13 +714,11 @@ def fig_conditioning():
 FIGURES = [
     fig_architecture,
     fig_weights,
-    fig_template,
     fig_critics_separated,
     fig_pairing,
     fig_dcgan,
     fig_backbone,
     fig_conditioning,
-    fig_exits,
 ]
 
 

@@ -1,47 +1,16 @@
 # Linear Regression
 :label:`chap_regression`
 
-Looking at a house for sale, most of us estimate its price by comparison.
-We recall what similar houses sold for, and adjust for a larger or older
-house. A learning method does the same with numbers, finding in past sales
-a rule that maps area, age and other measurements to a price. How should we
-find the rule, and how far can we trust it for a house that has not been
-sold?
+*Regression* is the workhorse of quantitative prediction whenever the target is a meaningful number rather than a discrete category: estimating a home's sale price from its floor area and age, forecasting a patient's hospital stay from vital signs, or predicting next quarter's electricity demand. It is also the ideal proving ground for deep learning. Every essential ingredient of modern neural network training—parameterized forward passes, loss functions derived from maximum likelihood, minibatch stochastic gradient descent, object-oriented training harnesses, generalization diagnostics, and weight-norm regularization—already appears in its cleanest, most transparent form in *linear regression*.
 
-Linear regression answers with the simplest rule: the prediction is a
-weighted sum of the measurements plus a constant, with weights that make the
-squared errors on past sales small. Each weight is one adjustment, such as
-the price per square meter. The method comes from astronomy. Legendre
-published it in 1805 to compute the orbits of comets. Gauss, whose orbit for
-the lost asteroid Ceres let astronomers find it again in 1801, published his
-account in 1809 and said he had used the method since 1795
-:cite:`Legendre.1805,Gauss.1809`. Simple as it is, linear regression is a
-complete learning method, with a model, a loss, an algorithm that improves
-the parameters, and predictions for examples the model has not seen.
+In this chapter, we build linear regression from first principles all the way to a complete, reusable training pipeline:
 
-:numref:`chap_preliminaries` supplied the tools; this chapter assembles them
-into a learning procedure and asks what can go wrong. A model can fit its
-training data well and still predict new data badly, and an implementation
-can be wrong without raising an error. Neither failure announces itself,
-and both recur in every later chapter, so we study them here, where the
-model is simple enough to analyze.
-
-The mathematics comes first and takes one section:
-:numref:`sec_linear_regression` derives the model, its loss, and minibatch
-stochastic gradient descent, the algorithm that trains it. The next four
-sections turn it into code that we can trust, written first by hand and
-checked against data whose true parameters we know
-(:numref:`sec_synthetic-regression-data`, :numref:`sec_linear_scratch`).
-We then package that code into a few classes that every later chapter
-reuses (:numref:`sec_oo-design`), and replace our parts with those of a
-framework (:numref:`sec_linear_concise`). The last two sections return to
-the question of trust: when a model that fits its training data predicts
-new data well (:numref:`sec_generalization_basics`), and how to limit its
-flexibility by degrees rather than by dropping features
-(:numref:`sec_weight_decay`).
-
-The next chapter applies the same procedure to classification, and the one
-after replaces the linear model by a multilayer network.
+- **Theory and Statistical Foundations (:numref:`sec_linear_regression`):** We formulate the affine model and squared error loss, contrast the closed-form normal equations (and their geometric interpretation as orthogonal projection) with minibatch stochastic gradient descent (SGD), show why vectorization is essential on modern hardware, and ground squared loss in maximum-likelihood estimation under Gaussian noise.
+- **Controlled Synthetic Data (:numref:`sec_synthetic-regression-data`):** We generate a synthetic regression dataset with known ground-truth parameters $(\mathbf{w}^*, b^*)$ and known noise variance, giving us an exact benchmark for verifying our implementations.
+- **From-Scratch and Concise Implementations (:numref:`sec_linear_scratch`):** We first implement the model, squared loss, minibatch iterator, and SGD training loop from raw tensors and automatic differentiation—checking that the training loss lands near the theoretical noise floor—and then re-express the exact same model in a few lines using high-level framework layers, built-in losses, and optimizers.
+- **Object-Oriented Design (:numref:`sec_oo-design`):** To avoid rewriting training boilerplate in every chapter, we organize our code around three core abstractions—`Module` (models), `DataModule` (data loaders), and `Trainer` (the training loop)—that power the rest of the book.
+- **Generalization and Model Selection (:numref:`sec_generalization_basics`):** Using polynomial curve fitting, we distinguish training error from generalization error, unpack the bias--variance trade-off, and use validation splits and $K$-fold cross-validation to select model complexity.
+- **Weight Decay (:numref:`sec_weight_decay`):** Finally, we tame high-dimensional overfitting by adding an $\ell_2$ penalty (ridge regression), showing both how it acts as per-step weight decay in SGD and how it selectively shrinks poorly determined eigendirections of the features.
 
 ```toc
 :maxdepth: 2
@@ -50,34 +19,9 @@ linear-regression
 synthetic-regression-data
 linear-regression-scratch
 oo-design
-linear-regression-concise
 generalization
 weight-decay
 ```
-
-## Resources and Further Reading {.unnumbered}
-
-The resources are grouped into books, courses, and papers, and each names the section it accompanies. All are freely accessible online except the two papers, as noted.
-
-**Books**
-
-- [An Introduction to Statistical Learning (ISL) — James, Witten, Hastie & Tibshirani](https://www.statlearning.com/) — free PDF (R and Python editions); the gentlest rigorous treatment of regression, classification, and regularization, with worked labs; companion to :numref:`sec_linear_regression` and :numref:`sec_generalization_basics`.
-- [The Elements of Statistical Learning (ESL) — Hastie, Tibshirani & Friedman](https://hastie.su.domains/ElemStatLearn/) — free PDF; the graduate companion to ISL, with deep coverage of shrinkage, the bias–variance tradeoff, and model selection (:numref:`sec_generalization_basics`, :numref:`sec_weight_decay`).
-- [Pattern Recognition and Machine Learning — Christopher Bishop](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/) — free PDF from Microsoft Research; a probabilistic, Bayesian-flavoured account of linear models and regularization (:numref:`sec_linear_regression`, :numref:`sec_weight_decay`).
-- [Probabilistic Machine Learning: An Introduction — Kevin Murphy](https://probml.github.io/pml-book/book1.html) — free draft PDF; a modern, unifying probabilistic perspective spanning regression through deep learning (:numref:`sec_linear_regression`, :numref:`sec_generalization_basics`).
-- [Understanding Deep Learning (UDL) — Simon Prince](https://udlbook.github.io/udlbook/) — free PDF; a figure-rich modern treatment whose loss-function chapter generalizes the "match the loss to the noise model" recipe of :numref:`sec_linear_regression` into a full menu.
-- [Deep Learning: Foundations and Concepts — Bishop & Bishop (2024)](https://www.bishopbook.com/) — free to read online; the successor to PRML, connecting the probabilistic view of linear regression and regularization directly to deep networks (:numref:`sec_linear_regression`, :numref:`sec_weight_decay`).
-- [Introduction to Applied Linear Algebra: Vectors, Matrices, and Least Squares (VMLS) — Boyd & Vandenberghe](https://web.stanford.edu/~boyd/vmls/) — free PDF, slides, and code; an applications-first text built around least squares, the computation of :numref:`sec_linear_regression`.
-
-**Courses and video lectures**
-
-- [Supervised Machine Learning: Regression and Classification — Andrew Ng (Stanford / DeepLearning.AI)](https://www.coursera.org/learn/machine-learning) — free to audit; the foundational course covering both settings of this part of the book, starting from linear regression trained by gradient descent (:numref:`sec_linear_scratch`).
-- [Statistical Learning — Hastie & Tibshirani (Stanford Online, edX)](https://www.edx.org/learn/statistics/stanford-university-statistical-learning) — free to audit; lecture series following ISL, including regression, cross-validation, ridge, and the LASSO (:numref:`sec_generalization_basics`, :numref:`sec_weight_decay`).
-
-**Foundational papers**
-
-- [Ridge Regression: Biased Estimation for Nonorthogonal Problems — Hoerl & Kennard (1970), *Technometrics*](https://www.tandfonline.com/doi/abs/10.1080/00401706.1970.10488634) — the origin of $\ell_2$ regularization, the weight decay of :numref:`sec_weight_decay` (paywalled).
-- [Regression Shrinkage and Selection via the Lasso — Tibshirani (1996), *JRSS-B*](https://academic.oup.com/jrsssb/article/58/1/267/7027929) — introduces the $\ell_1$-penalized counterpart, contrasting sparse selection with ridge's shrinkage (paywalled).
 
 <!-- slides -->
 

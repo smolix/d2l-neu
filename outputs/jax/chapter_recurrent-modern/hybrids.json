@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:d37530904868b21f52970fdcb5a481e3948a5849c0db673d5c19272d09210326",
+    "d2l_lib_fingerprint": "sha256:27605863944f82358dc78d2ad4865fcdab560da73773c75c5457dc7a8e4f85b8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,78 +13,99 @@
       "kind": "text",
       "outputs": []
     },
-    "hybrids-hybrid-architectures-1": {
-      "code_fingerprint": "sha256:52aee88c35115f27d8cdb3221366f641404567963306590125d28c4fd429484b",
+    "hybrids-four-models-2": {
+      "code_fingerprint": "sha256:30066ae35527dd65c298933c8663644c810811efc04483d2886931a79e80c581",
       "kind": "text",
       "outputs": []
     },
-    "hybrids-associative-recall-1": {
-      "code_fingerprint": "sha256:7496df0a70e721d93cd6bbd3a9857d4f9e8304074b90801750a791b1a8606f98",
+    "hybrids-the-recall-sweep-2": {
+      "code_fingerprint": "sha256:742444e682f8407156c0a4672684e2bc6f600951312fd664f73716e3ef9c267d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tokens: [486   3 391   0 392   3 385   3] ... [486 385 391 392]  answers: [3 3 0 3]\n"
+          "text": "Gated DeltaNet            37,989 parameters\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "attention                 34,821 parameters\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "hybrid                    36,405 parameters\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Gated DeltaNet, 4x state  37,197 parameters\n"
         }
       ]
     },
-    "hybrids-four-models-1": {
-      "code_fingerprint": "sha256:6802f38b0a8f4863d9706fe56fa6b85b6bf8c93ccfd936be1ed514822ba9a679",
-      "kind": "text",
-      "outputs": []
-    },
-    "hybrids-four-models-2": {
-      "code_fingerprint": "sha256:67585cb5cb71fee3b8cccfa9e25393eb8462ff098ed05ac86a807431da4d1c9b",
-      "kind": "text",
-      "outputs": []
-    },
-    "hybrids-the-recall-sweep-1": {
-      "code_fingerprint": "sha256:f81d7411e7160eebb981e2392a847dc454711a8514ef6e7ed67273ed18dc7b32",
-      "kind": "text",
-      "outputs": []
-    },
-    "hybrids-the-recall-sweep-2": {
-      "code_fingerprint": "sha256:6abaa1614b5beff0b59fcb9d14665f959dd8df2d1139568b56c706f681ac7877",
-      "kind": "text",
-      "outputs": []
-    },
     "hybrids-the-recall-sweep-3": {
-      "code_fingerprint": "sha256:67a6881348452193e22605c3a01a2844d10b522794ec1bc1c4679bce435f3b3d",
+      "code_fingerprint": "sha256:ec3b8242aedf36a702d1cacbbe1e3fc53fce1a3cb8b86578620759fcae77a6e2",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pairs                       4    8   16   32   64\ngated linear attention   0.98 0.95 0.88 0.71 0.51\nGated DeltaNet           1.00 0.99 0.97 0.88 0.67\nattention                1.00 1.00 1.00 1.00 1.00\nhybrid                   1.00 1.00 1.00 1.00 1.00\n"
+          "text": "pairs                               4          8         16         32         64\nGated DeltaNet              0.99/0.98  0.96/0.93  0.84/0.80  0.67/0.61  0.54/0.48\nattention                   1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00\nhybrid                      1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00  1.00/1.00\nGated DeltaNet, 4x state    1.00/1.00  1.00/1.00  1.00/1.00  1.00/0.98  0.97/0.93\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-3-1.svg",
-          "bytes": 33539,
-          "sha256": "sha256:60c44112768b9940019b575424dad3db028ca595cc78ba1cd6c26f21e66b2d48"
+          "bytes": 39863,
+          "sha256": "sha256:97fb05bb93ddcb49b542e7cfe1a196bdb9d8103b28c7c724f3b4797ccbecd43f"
         }
       ]
     },
-    "hybrids-language-modeling-1": {
-      "code_fingerprint": "sha256:b66a812d278ab33bf9fe7f92c0ea8f85a17f820df85c2fae7a4b3f5e95ba1a7b",
-      "kind": "text",
-      "outputs": []
-    },
-    "hybrids-language-modeling-2": {
-      "code_fingerprint": "sha256:96da62174014a61f90a4d6a49c46734e0132167e6128a87cd38b64518ccef8c5",
+    "hybrids-the-recall-sweep-4": {
+      "code_fingerprint": "sha256:b0ab112c1737f301185f97f187b8bc205525058dfa1ca23a5b735845164d7910",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention (TinyLM)   perplexity 3.28\n"
+          "text": "pairs                               4          8         16         32         64\nGated DeltaNet              0.99/0.98  0.96/0.93  0.84/0.80  0.67/0.61  0.54/0.48\nwithout the convolution     0.92/0.89  0.74/0.76  0.55/0.60  0.43/0.47  0.36/0.40\n"
+        }
+      ]
+    },
+    "hybrids-language-modeling-3": {
+      "code_fingerprint": "sha256:fffed851017ea19fab554663906ececb17217c373567ebcb8966a8d60ad43266",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-language-modeling-4": {
+      "code_fingerprint": "sha256:bb45886f0d3fa0d9ce57e42d5a0a2651e8a2865888c90f547e9bbd4ea0d5324c",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-language-modeling-5": {
+      "code_fingerprint": "sha256:bde121c98b2ea7935fa253c6d0aa44a70cc2e0be761d4fd4671af2c6894c504c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                            validation        0-15       16-63      64-127   ms/step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "hybrid               perplexity 3.18\n"
+          "text": "Gated DeltaNet   3,573,536 1.327/1.328 1.521/1.521 1.301/1.302 1.299/1.298 16/17\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "hybrid           3,501,848 1.331/1.337 1.526/1.532 1.305/1.309 1.302/1.308 14/15\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "attention        3,286,784 1.377/1.381 1.558/1.559 1.352/1.357 1.350/1.355 8/9\n"
         }
       ]
     }

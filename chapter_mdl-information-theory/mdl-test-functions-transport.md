@@ -1,25 +1,26 @@
 # Test Functions and Transport
 :label:`sec_mdl-test-functions-transport`
 
-A model whose samples miss the data learns nothing from an f-divergence. On
-disjoint supports every member of that family is a constant
-(:numref:`sec_mdl-f-divergences`), and a constant has no gradient. The verdict
-rested on two point masses, the extreme case. Real distributions have spread:
-two Gaussians overlap everywhere, because their tails never reach zero. Does a
-little overlap bring the gradient back? The f-divergences left a second
-complaint as well. They need the ratio $p/q$, which samples do not supply, so a
-critic had to be trained before anything could be measured
-(:numref:`sec_mdl-f-gan-dual`). Can two samples be compared with no critic at
-all?
+A model whose samples miss the data learns nothing from an f-divergence: on
+disjoint supports, every member of that family reduces to a constant
+(:numref:`sec_mdl-f-divergences`), and a constant has zero gradient. That
+diagnosis came from an extreme example, two point masses. Real distributions
+usually have spread: two Gaussians overlap everywhere because their tails
+never reach zero. Does a little overlap bring the gradient back? The f-divergences also left us with a practical burden: because
+they depend on the density ratio $p/q$, which raw samples do not provide, we
+had to train a critic network just to estimate the divergence
+(:numref:`sec_mdl-f-gan-dual`). Can we compare two distributions from samples
+alone, with no critic at all?
 
-We can settle the first question with numbers. Let the data be
-$P = \mathcal{N}(0, 1)$ and the model $Q = \mathcal{N}(d, 1)$, the same bell
-curve $d$ standard deviations away, with $d$ the model's one parameter. After
-the imports, a cell evaluates the five comparisons of
-:numref:`tab_mdl-point-mass-table` on this pair, each with its slope in $d$,
-the gradient that the model receives. Its formulas are derived in this section
-and the last; for now, read only the output, which we shall call the opening
-table.
+To answer the first question with numbers, let the data distribution be
+$P = \mathcal{N}(0, 1)$ and the model be $Q = \mathcal{N}(d, 1)$, the same
+bell curve shifted by $d$ standard deviations, where $d$ is the model's single
+parameter. Below, after importing the libraries we need, we evaluate the five
+comparisons from :numref:`tab_mdl-point-mass-table` on this pair along with
+their slopes in $d$, which are the gradients the model would receive during
+training. The formulas used in the code are derived in the previous section
+and this one; for now, focus only on the printed numbers, which we will refer
+to as the opening table.
 
 ```{.python .input #mdl-test-functions-transport-test-functions-and-transport-1}
 #@tab mxnet
@@ -87,41 +88,47 @@ for d in (0.5, 1.0, 2.0, 4.0, 8.0):
         for f in comparisons.values()))
 ```
 
-At half a standard deviation all five slopes lie between $0.1$ and $1$, and any
-of the comparisons would train the model. At $d = 8$ the Jensen--Shannon
-divergence reads $0.693$ and total variation $1.000$, the constants $\log 2$
-and $1$ of the point masses, and both slopes are near $10^{-4}$. Overlap in the
-tails does not help. The KL divergence keeps a slope, $d$ itself, but only
-because a Gaussian model has a density at every data point; a model whose
-samples lie on a thin surface has none. That leaves the two comparisons that
-kept moving for the point masses. $\textrm{MMD}^2$ grows at first and has
-stalled by $d = 8$, at $1.155$ with a slope below $10^{-4}$. $W_1$ equals $d$,
-with slope $1$ at every distance.
+When the two Gaussians are half a standard deviation apart, all five slopes
+lie between $0.1$ and $1$, so any of these objectives would train the model
+effectively. By $d = 8$, however, the Jensen--Shannon divergence has saturated at $0.693$
+and total variation at $1.000$ (the same constants $\log 2$ and $1$ we saw for
+disjoint point masses), and both slopes have fallen to roughly $10^{-4}$. Overlapping tails do not rescue them. The KL divergence still has a
+healthy slope equal to $d$ itself, but only because a Gaussian model assigns
+positive density to every data point; an implicit generator whose samples lie
+on a low-dimensional surface has no such density. That leaves the two
+distances that remained informative for point masses. $\textrm{MMD}^2$ grows
+initially but stalls by $d = 8$, reaching $1.155$ with a slope below
+$10^{-4}$. Only $W_1$ stays linear, equaling $d$ with a slope of $1$ at every
+separation.
 
-Neither is built from the ratio $p/q$. MMD compares how $P$ and $Q$ *average* a
-class of functions; samples can estimate averages, and the class decides how
-far the comparison sees. $W_1$ asks how far mass must travel to turn one
-distribution into the other, and it turns out to be a comparison of averages
-too. Two results stand out. Over a fixed set of features the comparison of
-averages has a closed form, with no second network to train. And the cost of
-moving mass equals the largest gap in averages over functions of slope at most
-one, the theorem behind the Wasserstein GAN of :numref:`sec_gan_objectives`.
-$P$ is the data and $Q$ the model, as before, and the examples are on the line.
+Neither MMD nor $W_1$ relies on the density ratio $p/q$. Instead, MMD compares
+how $P$ and $Q$ *average* a class of functions: averages can be estimated
+directly from samples, and the choice of function class governs how far apart
+two distributions can be and still produce a useful signal. $W_1$ begins from a geometric question: how far must probability mass travel
+to reshape one distribution into the other? Surprisingly, it turns out to be a
+comparison of averages as well. Two results organize the rest of this section. Over a fixed
+set of features, the comparison of averages admits a closed form with no
+auxiliary network to train. Meanwhile, the minimum cost of moving mass equals
+the largest gap in averages over functions of slope at most one, which is the
+duality behind the Wasserstein GAN (:numref:`sec_gan_objectives`). Throughout,
+$P$ denotes the data and $Q$ the model, and we work with concrete examples on
+the real line.
 
 ## Integral Probability Metrics and MMD
 :label:`sec_mdl-ipm-mmd`
 
 ### Classes of Test Functions
 
-Total variation is a metric, and still it went flat in the opening table. Its
-second form shows why, and what to change: total variation is the largest
-disagreement between $P$ and $Q$ about the probability of any event $A$
-(:numref:`sec_mdl-tv-pinsker`), $\textrm{TV}(P, Q) = \sup_A |P(A) - Q(A)|$.
-The probability of an event is the average of its indicator function, so total
-variation is a supremum, over a class of functions, of the difference between
-two averages. Nothing obliges us to use indicators. For a class $\mathcal{G}$
-of *test functions* $g$, the **integral probability metric** (IPM)
-:cite:`Muller.1997` is
+Total variation is a proper metric, yet it still flattened out in the opening
+table. Its variational form explains both why that happened and how to fix it:
+total variation is the largest disagreement between $P$ and $Q$ over the
+probability of any event $A$ (:numref:`sec_mdl-tv-pinsker`), namely
+$\textrm{TV}(P, Q) = \sup_A |P(A) - Q(A)|$. Since the probability of an event
+is simply the expectation of its indicator function, total variation is a
+supremum, taken over a class of functions, of the difference between two
+averages. Nothing forces us to restrict ourselves to indicator functions.
+Given any class $\mathcal{G}$ of *test functions* $g$, the **integral
+probability metric** (IPM) :cite:`Muller.1997` is defined as
 
 $$
 \textrm{IPM}_{\mathcal{G}}(P, Q)
@@ -129,65 +136,80 @@ $$
 $$
 :eqlabel:`eq_mdl-ipm-def`
 
-The class $\mathcal{G}$ is a panel of auditors, and the IPM reports the largest
-gap in averages that any auditor in the panel can find. Our classes contain
-$-g$ along with every $g$, so the gap is never negative and is the same in
-both directions; whether it vanishes only for $P = Q$, as the word metric
-promises, depends on the class. The critic of
-:numref:`sec_mdl-f-gan-dual` was an auditor too. In its bound,
-$D_f(P\|Q) \geq \mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]$ for every function $T$,
-the conjugate $f^*$ keeps an unrestricted critic in check. An IPM averages $g$
-itself under both distributions, so nothing restrains $g$ except membership in
-$\mathcal{G}$, and everything depends on the class.
+Think of $\mathcal{G}$ as a panel of auditors, each scoring points in the
+space; the IPM reports the largest gap in average score that any auditor on
+the panel can uncover. Every class we consider is symmetric, meaning $-g$
+belongs to $\mathcal{G}$ whenever $g$ does, so the gap is always non-negative
+and symmetric in $P$ and $Q$. Whether the IPM vanishes only when $P = Q$, as
+the word "metric" promises, depends on whether $\mathcal{G}$ is rich enough to
+distinguish any two distinct distributions. The critic of
+:numref:`sec_mdl-f-gan-dual` played a similar auditing role, but with a crucial
+difference: in the variational bound
+$D_f(P\|Q) \geq \mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]$, the convex conjugate
+$f^*$ automatically keeps an unconstrained critic $T$ in check. In an IPM, $g$
+is averaged directly under both $P$ and $Q$, so nothing constrains $g$ except
+membership in $\mathcal{G}$. Everything therefore hinges on choosing the right
+class.
 
-Three classes matter to us. Functions with $|g| \leq \tfrac{1}{2}$ give total
-variation again: an indicator minus $\tfrac12$ is such a function, the constant
-cancels in the difference, and $g = \tfrac12\,\textrm{sign}(p - q)$ attains the
-supremum. Functions that are linear in a fixed set of features give the
-**maximum mean discrepancy** (MMD) :cite:`Gretton.Borgwardt.Rasch.ea.2012`,
-which we build next. Functions of slope at most one give the Wasserstein
-distance of :numref:`sec_mdl-optimal-transport`.
+Three function classes take center stage here:
 
-Why not take the largest class every time? A class has to meet two
-requirements, and size works against the first: averages over a sample must
-track averages over the distribution. Samples estimate expectations directly,
-with no density ratio, but a panel that is too large finds gaps that are not
-there. Two samples of $1{,}000$ points from the same continuous distribution
-share no point, so the indicator of the first sample has mean $1$ on it and $0$
-on the other: the empirical total variation is $1$ whatever the distributions
-are. A class must be small or smooth enough to exclude such functions.
+- Bounded functions with $|g| \leq \tfrac{1}{2}$ recover total variation. An
+  indicator function minus $\tfrac{1}{2}$ satisfies this bound, the constant
+  cancels in the difference of averages, and $g = \tfrac{1}{2}\,\textrm{sign}(p - q)$
+  attains the supremum.
+- Functions that are linear in a fixed set of features yield the **maximum
+  mean discrepancy** (MMD) :cite:`Gretton.Borgwardt.Rasch.ea.2012`, which we
+  construct next.
+- Functions with slope at most one yield the Wasserstein distance, covered in
+  detail in :numref:`sec_mdl-optimal-transport`.
 
-The second requirement is that the gap keep growing as the distributions move
-apart, and for that the class needs functions that grow. Total variation has
-none: its test functions are bounded, so its gap cannot exceed $1$. The
-largest disagreement is about the event $\{p > q\}$, which for the two
-Gaussians of the opening is the half-line $x < d/2$. Its two probabilities give
-$\textrm{TV} = \Phi(d/2) - \Phi(-d/2) = 2\Phi(d/2) - 1$, where $\Phi$ is the
-cumulative distribution function (CDF) of the standard normal. This is $0.954$
-at $d = 4$ and within $10^{-4}$ of $1$ at $d = 8$. Once an indicator separates
-the two bell curves almost perfectly, moving them further apart changes
-nothing. Total variation fails both requirements, and we shall hold the next
-two classes to them.
+Why not simply choose the largest possible class $\mathcal{G}$ every time? A
+useful class must satisfy two competing requirements, and making $\mathcal{G}$
+too large breaks the first. First, sample averages must track true
+expectations. While samples let us estimate expectations directly without a
+density ratio, an overly rich panel of auditors will always find spurious gaps
+between finite samples. For example, two independent samples of $1{,}000$
+points drawn from the *same* continuous distribution share no points at all.
+The indicator function of the first sample averages to $1$ on the first sample
+and $0$ on the second, so the empirical total variation is $1$ regardless of
+whether $P$ and $Q$ are identical. To avoid this, $\mathcal{G}$ must be small
+or smooth enough to exclude such spiky functions.
+
+Second, the gap should keep growing as $P$ and $Q$ move farther apart, which
+requires $\mathcal{G}$ to contain functions that grow with distance. Total
+variation has none: because its test functions are bounded by $\tfrac{1}{2}$,
+its gap can never exceed $1$. The largest disagreement occurs on the event
+$\{p > q\}$, which for the two Gaussians in the opening table is the half-line
+$x < d/2$. Computing the probability of that half-line under both Gaussians
+gives $\textrm{TV} = \Phi(d/2) - \Phi(-d/2) = 2\Phi(d/2) - 1$, where $\Phi$ is
+the standard normal cumulative distribution function (CDF). That value reaches
+$0.954$ at $d = 4$ and lies within $10^{-4}$ of $1$ at $d = 8$. Once a step
+function separates the two bell curves almost completely, pushing them farther
+apart changes the score by virtually nothing. Total variation fails both
+requirements, and we will judge our next two classes against both.
 
 ### Mean Features and Kernels
 
-We build a better class from the smallest panel up, and try each stage on one
-pair: $\mathcal{N}(0, 1)$ against $\mathcal{N}(0, 4)$, which differ in spread
-and not in mean. First, take linear test functions $g(x) = w\, x$ with
-$|w| \leq 1$. Then
-$\mathbb{E}_P g - \mathbb{E}_Q g = w\,(\mathbb{E}_P X - \mathbb{E}_Q X)$, and
-the supremum is $|\mathbb{E}_P X - \mathbb{E}_Q X|$: the IPM over linear
-functions is the difference of the means. It cannot see a change of spread, and
-on our pair it reports $0$.
+Let us build a better class from the ground up, starting from the smallest
+possible panel of auditors and testing each step on a single pair:
+$P = \mathcal{N}(0, 1)$ against $Q = \mathcal{N}(0, 4)$, which share the same
+mean but differ in variance.
 
-Second, add a feature. Take the feature vector
-$\boldsymbol{\varphi}(x) = (x, x^2)$ and the test functions
-$g(x) = \mathbf{w}^\top \boldsymbol{\varphi}(x)$ with $\|\mathbf{w}\| \leq 1$,
-and write $\mathbf{m}_P = \mathbb{E}_P[\boldsymbol{\varphi}(x)]$ for the *mean
-feature* of $P$. Then
-$\mathbb{E}_P g - \mathbb{E}_Q g = \mathbf{w}^\top(\mathbf{m}_P - \mathbf{m}_Q)$,
-and by the Cauchy--Schwarz inequality the largest value of a linear function on
-the unit ball is the norm of its coefficient vector:
+Start with the simplest choice, linear test functions $g(x) = w\, x$ with
+$|w| \leq 1$. Here
+$\mathbb{E}_P g - \mathbb{E}_Q g = w\,(\mathbb{E}_P X - \mathbb{E}_Q X)$, so
+taking the supremum over $|w| \leq 1$ gives $|\mathbb{E}_P X - \mathbb{E}_Q X|$,
+the distance between the two means. That panel is blind to variance, and on
+our test pair it reports $0$.
+
+To see spread as well as location, add a second feature. Define the feature
+map $\boldsymbol{\varphi}(x) = (x, x^2)$ and take linear combinations
+$g(x) = \mathbf{w}^\top \boldsymbol{\varphi}(x)$ with $\|\mathbf{w}\| \leq 1$.
+Writing $\mathbf{m}_P = \mathbb{E}_P[\boldsymbol{\varphi}(x)]$ for the *mean
+feature* of $P$ (and similarly $\mathbf{m}_Q$ for $Q$), the gap in averages is
+$\mathbb{E}_P g - \mathbb{E}_Q g = \mathbf{w}^\top(\mathbf{m}_P - \mathbf{m}_Q)$.
+By the Cauchy--Schwarz inequality, the maximum of a linear function over the
+unit ball is simply the Euclidean norm of its coefficient vector:
 
 $$
 \textrm{MMD}(P, Q) = \sup_{\|\mathbf{w}\| \leq 1} \mathbf{w}^\top(\mathbf{m}_P - \mathbf{m}_Q)
@@ -195,22 +217,25 @@ $$
 $$
 :eqlabel:`eq_mdl-mmd-features`
 
-MMD is the distance between the mean features, and the supremum has gone. On
-our pair the mean features are $(0, 1)$ and $(0, 4)$, so
-$\textrm{MMD}^2 = 0^2 + 3^2 = 9$: means and second moments are now both
-compared.
+Thus MMD is the distance between the mean feature vectors of $P$ and $Q$, and
+the supremum has disappeared altogether. On our test pair, the mean features
+are $\mathbf{m}_P = (0, 1)$ and $\mathbf{m}_Q = (0, 4)$, giving
+$\textrm{MMD}^2 = 0^2 + 3^2 = 9$: the comparison now detects differences in
+both means and second moments.
 
-Third, we expand the squared norm. A product of two means is the mean of a
-product over independent draws, so
+Next, expand the squared norm. Because the product of two expectations equals
+the expectation of a product over independent draws, we can write
 $\|\mathbf{m}_P\|^2 = \mathbb{E}\langle\boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x')\rangle$
-for independent $x, x'$ from $P$. With independent $y, y'$ from $Q$ as well,
+for independent $x, x' \sim P$. Doing the same for independent $y, y' \sim Q$
+and the cross term gives
 $\|\mathbf{m}_P - \mathbf{m}_Q\|^2 =
 \mathbb{E}\langle\boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x')\rangle +
 \mathbb{E}\langle\boldsymbol{\varphi}(y), \boldsymbol{\varphi}(y')\rangle -
 2\,\mathbb{E}\langle\boldsymbol{\varphi}(x), \boldsymbol{\varphi}(y)\rangle$.
-Only inner products of features appear. We call
-$k(x, x') = \langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x')\rangle$
-the **kernel** and obtain
+Notice that the features $\boldsymbol{\varphi}(x)$ never appear alone; only
+their inner products do. Defining the **kernel**
+$k(x, x') = \langle \boldsymbol{\varphi}(x), \boldsymbol{\varphi}(x')\rangle$,
+we obtain
 
 $$
 \textrm{MMD}^2(P, Q)
@@ -219,69 +244,76 @@ $$
 $$
 :eqlabel:`eq_mdl-mmd2`
 
-The first two terms measure similarity within each distribution and the third
-similarity across the two. If draws from $P$ and $Q$ interleave, the three
-terms cancel; if they form separate clumps, the within terms exceed the across
-term. The features of the first step have the *linear kernel*
-$k(x, x') = x x'$, and those of the second the *quadratic kernel*
-$x x' + x^2 x'^2$.
+This expression has an immediate geometric reading: the first two terms
+measure average similarity *within* $P$ and *within* $Q$, while the third
+measures similarity *across* them. When draws from $P$ and $Q$ intermingle,
+within-sample and cross-sample similarities match and the three terms cancel;
+when they separate into distinct clusters, the within terms dominate. Our
+first step corresponds to the *linear kernel* $k(x, x') = x x'$, and our
+second to the *quadratic kernel* $k(x, x') = x x' + x^2 x'^2$.
 
-The quadratic kernel still has a blind spot: two distributions with equal
-means and equal variances are at distance zero. We could add $x^3$, then
-$x^4$, and never finish. The fourth step therefore chooses the kernel directly,
-as a measure of similarity, and never writes the features down. The *RBF
-kernel* $k(x, x') = e^{-(x - x')^2/(2\ell^2)}$ calls two points similar when
-they lie within about a *length scale* $\ell$ of each other. It is an inner
-product of features all the same. It factors as
-$e^{-x^2/(2\ell^2)}\, e^{-x'^2/(2\ell^2)}\, e^{x x'/\ell^2}$, and the power
-series of the last factor writes it as an inner product of infinitely many
-features $\varphi_j(x) = x^j e^{-x^2/(2\ell^2)} / (\ell^j \sqrt{j!})$,
-$j = 0, 1, 2, \ldots$, damped monomials of every order with weights that
-decrease quickly. The panel now has infinitely many auditors, and its verdict
-is still three averages. In $\mathbb{R}^n$ the squared difference in the kernel
-becomes a squared norm and nothing else changes.
+Even the quadratic kernel still has a blind spot: any two distributions with
+the same mean and variance have distance zero. Adding $x^3$, then $x^4$, and
+so on would never end. The decisive step is therefore to choose the kernel
+directly as a similarity measure, without ever writing down a finite list of
+features. The *RBF kernel* $k(x, x') = e^{-(x - x')^2/(2\ell^2)}$ treats two
+points as similar when they lie within roughly a *length scale* $\ell$ of each
+other. Although we chose it directly, it is still an inner product of
+features: factoring it as
+$e^{-x^2/(2\ell^2)}\, e^{-x'^2/(2\ell^2)}\, e^{x x'/\ell^2}$ and expanding the
+last factor as a power series reveals an inner product over infinitely many
+features $\varphi_j(x) = x^j e^{-x^2/(2\ell^2)} / (\ell^j \sqrt{j!})$ for
+$j = 0, 1, 2, \ldots$, which are damped monomials of every order with rapidly
+decaying weights. Our panel now contains infinitely many auditors, yet
+evaluating its verdict still requires only the three averages in
+:eqref:`eq_mdl-mmd2`. In $\mathbb{R}^n$, we simply replace $(x - x')^2$ with
+$\|x - x'\|^2$ and nothing else changes.
 
-No blind spot is left. With the RBF kernel, $\textrm{MMD}(P, Q) = 0$ only if
-$P = Q$ :cite:`Gretton.Borgwardt.Rasch.ea.2012`, so this MMD is a metric. A
-kernel with this property is called *characteristic*; the linear and quadratic
-kernels are not.
+With this kernel, no blind spot remains: $\textrm{MMD}(P, Q) = 0$ if and only
+if $P = Q$ :cite:`Gretton.Borgwardt.Rasch.ea.2012`, making RBF-MMD a true
+metric. Kernels with this property are called *characteristic*; the linear and
+quadratic kernels are not.
 
-For Gaussians the RBF averages can be computed by hand. For
-$Z \sim \mathcal{N}(\mu, s^2)$, a Gaussian integral gives
+For Gaussians, we can evaluate the RBF expectations in closed form. If
+$Z \sim \mathcal{N}(\mu, s^2)$, a standard Gaussian integral gives
 
 $$
 \mathbb{E}\big[e^{-Z^2/(2\ell^2)}\big]
-= \Big(1 + \frac{s^2}{\ell^2}\Big)^{-1/2} \exp\!\Big(-\frac{\mu^2}{2(\ell^2 + s^2)}\Big),
+= \Big(1 + \frac{s^2}{\ell^2}\Big)^{-1/2} \exp\!\Big(-\frac{\mu^2}{2(\ell^2 + s^2)}\Big).
 $$
 :eqlabel:`eq_mdl-rbf-gaussian-integral`
 
-and the difference of two independent Gaussians is Gaussian with the variances
-added. On our pair at $\ell = 1$ the three differences $x - x'$, $y - y'$ and
-$x - y$ have mean zero and variances $2$, $8$ and $5$, so
+Because the difference of two independent Gaussians is again Gaussian with the
+sum of their variances, we can read off all three terms of :eqref:`eq_mdl-mmd2`
+immediately. On our test pair $\mathcal{N}(0, 1)$ versus $\mathcal{N}(0, 4)$
+at $\ell = 1$, the differences $x - x'$, $y - y'$, and $x - y$ all have mean
+zero and variances $2$, $8$, and $5$, yielding
 $\textrm{MMD}^2 = 3^{-1/2} + 9^{-1/2} - 2 \cdot 6^{-1/2} \approx 0.094$. For
-the two Gaussians of the opening the same integral gives
-$\tfrac{2}{\sqrt{3}}\big(1 - e^{-d^2/6}\big)$, the $\textrm{MMD}^2$ column of
-the opening table (Exercise
+the two shifted Gaussians of the opening table, the same integral gives
+$\tfrac{2}{\sqrt{3}}\big(1 - e^{-d^2/6}\big)$ (Exercise
 :exref:`ex_mdl-divergences-distances-q-mathcaln-delta`a). For the point masses
-of :numref:`tab_mdl-point-mass-table` there is nothing to average, and
-:eqref:`eq_mdl-mmd2` gives $1 + 1 - 2k(0, d) = 2 - 2e^{-d^2/2}$, the fourth row
-of that table. In both formulas only the cross term depends on $d$, and it is
-gone within a few length scales. The gap stops growing, and the second
-requirement is not met. An RBF auditor is smooth, and it is nearsighted.
+of :numref:`tab_mdl-point-mass-table`, there is no averaging to do at all, and
+:eqref:`eq_mdl-mmd2` immediately gives $1 + 1 - 2k(0, d) = 2 - 2e^{-d^2/2}$,
+matching the fourth row of that table. In both cases, only the cross term
+depends on $d$, and it decays rapidly once $d$ exceeds a few length scales.
+The gap therefore flattens out, failing our second requirement: an RBF auditor
+is smooth, but nearsighted.
 
 ### Estimation from Samples
 
-The first requirement is where a kernel does well. From samples, each
-expectation in :eqref:`eq_mdl-mmd2` becomes an average over pairs. The unbiased
-estimator :cite:`Gretton.Borgwardt.Rasch.ea.2012` leaves out the pairs of a
-point with itself, which would bias the within terms upward. We apply it to
-$N = 1{,}000$ draws from $\mathcal{N}(0, 1)$ and as many from
-$\mathcal{N}(0, 4)$ under the linear, quadratic and RBF kernels, for which we
-have just found $0$, $9$ and $0.094$. With the RBF kernel we also compare the
-first sample with a second one from $\mathcal{N}(0, 1)$, where the answer is
-$0$, and with one from $\mathcal{N}(0.5, 1)$, where the opening table says
-$0.047$. What the mathematics does not supply is the size of the sampling
-error.
+Where a kernel shines is our first requirement: reliable estimation from
+samples. Given finite samples from $P$ and $Q$, each expectation in
+:eqref:`eq_mdl-mmd2` becomes an average over pairs of points. To obtain an
+unbiased estimator :cite:`Gretton.Borgwardt.Rasch.ea.2012`, we omit the
+diagonal terms pairing a point with itself, which would otherwise bias the
+within-sample averages upward. Below, we evaluate this estimator on
+$N = 1{,}000$ draws from $\mathcal{N}(0, 1)$ and $1{,}000$ draws from
+$\mathcal{N}(0, 4)$ under the linear, quadratic, and RBF kernels, whose
+population values we just computed as $0$, $9$, and $0.094$. For the RBF
+kernel, we also test two additional pairs: a second independent sample from
+$\mathcal{N}(0, 1)$ (population value $0$), and a shifted sample from
+$\mathcal{N}(0.5, 1)$ (population value $0.047$ in the opening table). The
+goal is to see how tightly the sample estimates track these population values.
 
 ```{.python .input #divergences-distances-mmd}
 def mmd2_unbiased(x, y, k):
@@ -315,40 +347,45 @@ for name, y, k, pop in [
           f'(population {pop:.4f})')
 ```
 
-The linear kernel reports a value near zero because the means agree. Its
-estimate is the squared difference of the two sample means, less an estimate
-of the variance of that difference, about $(1 + 4)/1{,}000 = 0.005$. It
-therefore cannot fall much below $-0.005$, while about one run in twenty
-exceeds $+0.015$. The quadratic kernel reports about $9$, give or take $3$;
-its estimate involves fourth powers and is noisy. The RBF kernel reports about
-$0.094$, give or take $0.03$, and for the shifted pair about $0.047$, typically
-within $0.02$, an error that can reach a third of the value. Between the two
-samples of $\mathcal{N}(0, 1)$ the RBF estimate is far steadier, within a few
-thousandths of zero and sometimes below it, because the errors of the three
-averages then cancel to first order. Where the indicators found a gap of $1$
-between two samples of one distribution, the kernel finds none.
+The linear kernel returns a number close to zero because the two means match.
+Specifically, its unbiased estimate equals the squared difference of the two
+sample means minus an estimate of that difference's variance, roughly
+$(1 + 4)/1{,}000 = 0.005$; as a result, it rarely dips much below $-0.005$,
+while about one run in twenty exceeds $+0.015$. The quadratic kernel lands
+near $9$, give or take $3$, because fourth powers amplify sampling noise.
+Under the RBF kernel, the estimate is roughly $0.094 \pm 0.03$ for the
+variance-shifted pair and $0.047 \pm 0.02$ for the mean-shifted pair, so the
+sampling error can be a noticeable fraction of the signal. Between two
+independent samples from the *same* $\mathcal{N}(0, 1)$ distribution, however,
+the RBF estimate is remarkably tight, staying within a few thousandths of zero
+(and occasionally dipping slightly below it) because the first-order sampling
+errors in the three averages cancel out. Where total variation reported a spurious gap of
+$1$ between two samples from the same distribution, the RBF kernel sees none.
 
-The RBF estimator measures the size of a difference poorly and detects its
-presence well, and this makes it a *two-sample test*: from $1{,}000$ points, a
-value of a few hundredths is strong evidence that the samples differ in
-distribution. No critic was trained and no density was evaluated.
+In short, the RBF estimator has relatively large error when measuring a
+non-zero gap, yet extraordinary precision when $P = Q$. That makes it a
+powerful *two-sample test*: with $1{,}000$ points per sample, an RBF
+$\textrm{MMD}^2$ of even a few hundredths is strong evidence that the two
+distributions differ, obtained without training a critic or evaluating a
+single density.
 
 ### The Witness
 
-An IPM is a supremum, so one may ask which auditor found the gap. For MMD the
-supremum in :eqref:`eq_mdl-mmd-features` is attained by
-$\mathbf{w}^\star \propto \mathbf{m}_P - \mathbf{m}_Q$, and the corresponding
-test function, the **witness**,
+Because an IPM is defined as a supremum, it is natural to ask which test
+function actually achieved the maximum gap. For MMD, the supremum in
+:eqref:`eq_mdl-mmd-features` is attained by
+$\mathbf{w}^\star \propto \mathbf{m}_P - \mathbf{m}_Q$. The resulting test
+function, known as the **witness**, is
 $g^\star(x) \propto \langle \mathbf{m}_P - \mathbf{m}_Q, \boldsymbol{\varphi}(x)\rangle = \mathbb{E}_P[k(x, X)] - \mathbb{E}_Q[k(x, Y)]$,
-needs only kernel evaluations. For the shifted pair, $\mathcal{N}(0, 1)$
-against $\mathcal{N}(0.5, 1)$, the two densities are mirror images about
-$x = 0.25$, so the witness of the two distributions changes sign there. We
-estimate the witness by sample means on a grid and plot it with the two
-densities. The cell also prints $\mathbb{E}_P g - \mathbb{E}_Q g$ for the
-unscaled witness
-$g = \langle \mathbf{m}_P - \mathbf{m}_Q, \boldsymbol{\varphi}\rangle$. This gap
-is $\|\mathbf{m}_P - \mathbf{m}_Q\|^2$, which is $\textrm{MMD}^2$ once more,
-estimated this time with the self-pairs included.
+which again requires only kernel evaluations. For our shifted Gaussians
+$\mathcal{N}(0, 1)$ and $\mathcal{N}(0.5, 1)$, the two densities are mirror
+images across $x = 0.25$, so the population witness changes sign right at
+$0.25$. Below, we estimate the witness from our samples on a grid and plot it
+alongside the two densities. We also print $\mathbb{E}_P g - \mathbb{E}_Q g$
+for the unscaled witness
+$g = \langle \mathbf{m}_P - \mathbf{m}_Q, \boldsymbol{\varphi}\rangle$, which
+equals $\|\mathbf{m}_P - \mathbf{m}_Q\|^2 = \textrm{MMD}^2$, estimated here
+with the self-pairs included.
 
 ```{.python .input #mdl-divergences-distances-integral-probability-metrics-and-mmd-1}
 g = lambda s: (rbf(s[:, None], x_p[None, :]).mean(axis=1)    # the unscaled
@@ -363,81 +400,93 @@ d2l.plot(grid, [witness / np.abs(witness).max(), norm.pdf(grid),
          figsize=(5, 3))
 ```
 
-The witness is positive where $P$ has more mass and negative where $Q$ has
-more. It changes sign near $x = 0.25$; with $1{,}000$ points per sample the
-crossing moves by a tenth or two from draw to draw. The printed gap agrees with
-the last line of the previous output, the unbiased estimate for the same two
-samples, to about $0.001$, and the difference is the self-pairs.
+As expected, the witness is positive where $P$ has higher density and negative
+where $Q$ has higher density, crossing zero near $x = 0.25$ (with $1{,}000$
+points per sample, the crossing fluctuates by a tenth or two across runs). The
+printed gap matches the unbiased estimate from the previous cell to within
+about $0.001$, with the small discrepancy coming from the self-pairs.
 
-The ends of the plot say more than the crossing. A model that lowers the gap
-moves each of its samples uphill on the test function, so the slope of the test
-function at a sample is the push which that sample receives. The witness is
-steep between the two bell curves, and a few length scales away it levels off
-toward zero. A model sample out there is told nothing. This is the
-$\textrm{MMD}^2$ column of the opening table, seen from one sample.
+The tails of the witness plot tell an even more important story than the
+crossing. To shrink the gap $\mathbb{E}_P[g] - \mathbb{E}_Q[g]$, a generative
+model must push each of its samples uphill along $g$, so the slope of the
+witness at a model sample is the gradient signal that sample receives. Between
+the two bell curves, the witness is steep and provides a strong pull toward
+the data. A few length scales out in the tails, however, the witness flattens
+to zero, leaving any distant model sample with almost no gradient. We are
+seeing the $\textrm{MMD}^2$ column of the opening table from the vantage point
+of a single sample.
 
-MMD with a fixed kernel therefore serves twice: as a two-sample test, and as a
-loss on which a model is trained without an adversary
-:cite:`Li.Swersky.Zemel.2015`. The kernel inception distance by which generated
-images are scored is the unbiased estimate of the previous subsection, applied
-to image features with a cubic kernel (:numref:`sec_dcgan`). The length
-scale has to be chosen, and a poor choice is costly: at $\ell = 1$ the slope at
-$d = 8$ was $7 \times 10^{-5}$ (Exercise
-:exref:`ex_mdl-divergences-distances-q-mathcaln-delta`b tries longer scales).
-Common practice sets $\ell$ to the median distance between sample points, or
-adds RBF kernels of several length scales, as :numref:`sec_gan_objectives` does
-when it trains the model of a GAN, its *generator*, on MMD.
+Fixed-kernel MMD therefore plays two distinct roles in practice: as a
+non-parametric two-sample test, and as a training objective for generative
+models that avoids adversarial optimization :cite:`Li.Swersky.Zemel.2015`. For
+instance, the kernel inception distance used to evaluate image generators
+(:numref:`sec_dcgan`) is simply the unbiased MMD estimator applied to deep
+image features with a cubic kernel. Choosing the length scale $\ell$ carefully
+is essential: at $\ell = 1$, the slope at $d = 8$ collapsed to
+$7 \times 10^{-5}$ (Exercise
+:exref:`ex_mdl-divergences-distances-q-mathcaln-delta`b explores larger scales).
+In practice, one often sets $\ell$ to the median pairwise distance between
+samples or sums RBF kernels across multiple length scales, the strategy used
+when training a GAN *generator* with MMD in :numref:`sec_gan_objectives`.
 
 ## Optimal Transport and the Wasserstein Distance
 :label:`sec_mdl-optimal-transport`
 
-One column of the opening table never went flat. $W_1$ kept its slope because
-it measures distance itself, which the f-divergences ignore and a kernel sees
-only nearby: $\delta_{0.01}$ is near $\delta_0$ because its mass need only move
-$0.01$. The idea is old. In 1781 Gaspard Monge asked how a heap of soil can be
-moved into a pit of the same volume with the least work, and the least work is
-a measure of how far the heap is from the pit.
+One column of the opening table never flattened out. $W_1$ kept a constant
+slope of $1$ because it incorporates the geometry of the underlying space,
+which f-divergences ignore and a fixed kernel sees only locally. Under
+$W_1$, the point mass $\delta_{0.01}$ is close to $\delta_0$ simply because
+its mass need only travel a distance of $0.01$. The idea goes back to 1781,
+when Gaspard Monge asked how to move a pile of earth into a pit of equal
+volume with the least total work. That minimum work is a natural measure of
+how far apart two distributions are.
 
 ### Transport Plans
 
-Take two distributions on the points $0, 1, \ldots, 5$ of the line, with $P$
-mostly on the left and $Q$ mostly on the right, as in the top left panel of
-:numref:`fig_mdl-ot-transport-plan`. To turn $P$ into $Q$ we must say how much
-mass travels from each source $x$ to each destination $y$. Such a *transport
-plan* is a joint distribution $\gamma$ of pairs $(x, y)$ whose marginals are
-$P$ and $Q$: what leaves each $x$ is what $P$ has there, and what arrives at
-each $y$ is what $Q$ needs. A plan is also called a *coupling* of $P$ and $Q$.
-The **Wasserstein-1 distance**, also called the earth mover's distance, is the
-least total of mass times distance over all plans. Writing $\Pi(P, Q)$ for the
-set of plans, for $P$ and $Q$ on $\mathbb{R}^n$ with finite first moments,
+Consider two discrete distributions supported on the six points
+$0, 1, \ldots, 5$ of the real line, with $P$ concentrated on the left and $Q$
+on the right, as shown in the top left panel of
+:numref:`fig_mdl-ot-transport-plan`. To reshape $P$ into $Q$, we must specify
+how much mass moves from each source $x$ to each destination $y$. Such a
+*transport plan* is a joint distribution $\gamma$ over pairs $(x, y)$ whose
+marginals are $P$ and $Q$: the total mass leaving each $x$ equals $P(x)$, and
+the total mass arriving at each $y$ equals $Q(y)$. In probability theory, a
+transport plan is also called a *coupling* of $P$ and $Q$. The
+**Wasserstein-1 distance** (also known as the earth mover's distance) is the
+minimum expected distance traveled over all valid plans. Writing $\Pi(P, Q)$
+for the set of all couplings of $P$ and $Q$ on $\mathbb{R}^n$ with finite
+first moments,
 
 $$
 W_1(P, Q) = \inf_{\gamma \in \Pi(P, Q)} \mathbb{E}_{(x, y) \sim \gamma}\big[ \|x - y\| \big].
 $$
 :eqlabel:`eq_mdl-w1-primal`
 
-The $1$ in the name is the power of the distance; the second power comes later.
-Between the point masses $\delta_0$ and $\delta_d$ the only plan moves all mass
-from $0$ to $d$, so $W_1(\delta_0, \delta_d) = |d|$, with gradient $\pm 1$ for
-$d \neq 0$. For the two Gaussians of the opening, shifting every point by $d$
-is a plan of cost $d$, and none is cheaper, because
-$\mathbb{E}_\gamma|x - y| \geq |\mathbb{E}_\gamma[x - y]| = d$ for every plan.
-In both cases $W_1$ is the distance itself, the training signal that the
-f-divergences lack.
+The subscript $1$ refers to the first power of the distance; we will meet the
+squared-distance version $W_2$ shortly. Between two point masses $\delta_0$
+and $\delta_d$, there is only one possible plan, moving all mass from $0$ to
+$d$, so $W_1(\delta_0, \delta_d) = |d|$, with gradient $\pm 1$ for $d \neq 0$.
+For the two shifted Gaussians of the opening table, translating every point by
+$d$ is a valid plan of cost $d$, and no plan can do better because
+$\mathbb{E}_\gamma|x - y| \geq |\mathbb{E}_\gamma[x - y]| = d$ for every
+coupling $\gamma$. In both cases, $W_1$ recovers the separation $d$ itself,
+providing the clean gradient signal that f-divergences lack.
 
-![Transport on the line. Top left: a plan between two distributions on six points; each ribbon carries mass from a point of $P$ (top) to a point of $Q$ (bottom), and its width is the mass moved. Bottom left: the CDFs of the same $P$ and $Q$; the shaded area between them is $1.7$. Right: for two point masses at separation $d$, the Jensen--Shannon divergence (in nats) stays at $\log 2$ while $W_1$ (in units of $x$) grows with $d$.](../img/mdl-it-ot-transport-plan.svg)
+![Transport on the line. Top left: a transport plan between two distributions on six points; each ribbon carries mass from a point of $P$ (top) to a point of $Q$ (bottom), with width proportional to the mass moved. Bottom left: the CDFs of $P$ and $Q$; the shaded area between them is $1.7$. Right: for two point masses separated by $d$, the Jensen--Shannon divergence (in nats) stays flat at $\log 2$, whereas $W_1$ (in units of $x$) grows linearly with $d$.](../img/mdl-it-ot-transport-plan.svg)
 :label:`fig_mdl-ot-transport-plan`
 
 ### Kantorovich--Rubinstein Duality
 
-As a recipe for computation the definition is discouraging: it optimizes over
-joint distributions, which are hard even to parameterize from samples. On
-finitely many points it is at least a familiar kind of problem, a linear
-program. The unknowns are the entries of the plan, and the cost and the
-constraints on the marginals are linear in them. A linear program has a *dual*,
-a maximization over multipliers for its constraints
-(:numref:`subsec_mdl-dual-problem`). The dual of transport optimizes over a
-single function, and it is the reason $W_1$ matters to deep learning.
+As a computational recipe, :eqref:`eq_mdl-w1-primal` looks intimidating: it
+minimizes over joint distributions $\gamma$, which are awkward even to
+parameterize from samples. On finite point sets, however, it is a familiar
+optimization problem: a linear program. The unknowns are the entries of the
+plan, and both the transport cost and the marginal constraints are linear in
+those entries. Every linear program has a *dual* problem that maximizes over
+multipliers for its constraints (:numref:`subsec_mdl-dual-problem`). For
+optimal transport, the dual replaces the search over joint distributions with
+a maximization over a single function, and that reformulation is what makes
+$W_1$ practical in deep learning.
 
 **Proposition (Kantorovich--Rubinstein duality).** *For distributions $P$ and
 $Q$ on $\mathbb{R}^n$ with finite first moments,*
@@ -448,37 +497,46 @@ W_1(P, Q) = \sup_{\|g\|_{\textrm{Lip}} \leq 1}
 $$
 :eqlabel:`eq_mdl-kr-dual`
 
-*where the supremum runs over all 1-Lipschitz functions $g$, those with
+*where the supremum runs over all 1-Lipschitz functions $g$, meaning
 $|g(x) - g(y)| \leq \|x - y\|$ for all $x, y$.*
 
-An infimum over plans has become a supremum over one function: $W_1$ is the IPM
-:eqref:`eq_mdl-ipm-def` over test functions of slope at most $1$, the third of
-our classes. Such an auditor cannot jump, so it cannot pick out the points of a
-sample as an indicator does. It can climb without limit, however, and that is
-what the second requirement asked for. For the two Gaussians of the opening
-take $g(x) = -x$. Its averages are $0$ under $P$ and $-d$ under $Q$, a gap of
-$d$, which is $W_1$, so no auditor of slope one does better. Its slope is the
-same at every model sample, however far from the data the sample lies, and
-uphill on $g$ is the way to the data.
+An infimum over couplings has turned into a supremum over a single test
+function: $W_1$ is precisely the IPM :eqref:`eq_mdl-ipm-def` over functions
+with slope at most $1$, the third class we promised earlier. A 1-Lipschitz
+auditor cannot make sudden jumps, so it cannot memorize individual sample
+points the way an indicator function does. Yet unlike bounded functions or RBF
+kernels, it can grow without limit, satisfying our second requirement. On the
+two shifted Gaussians of the opening table, for example, $g(x) = -x$ is
+1-Lipschitz and has expectations $0$ under $P$ and $-d$ under $Q$, achieving a
+gap of $d = W_1(P, Q)$. Better still, its gradient points toward the data with
+magnitude $1$ everywhere, no matter how far a model sample lies from the data.
 
-A network can represent such a function, and the **WGAN**
-:cite:`Arjovsky.Chintala.Bottou.2017` trains this dual, with a neural critic in
-the role of $g$ that is constrained to be approximately 1-Lipschitz.
-:numref:`sec_gan_objectives` sets this critic beside the other adversarial
-losses, and :numref:`sec_gan_convergence` treats the gradient penalties that
-enforce the constraint. What an approximately Lipschitz critic reports is, of
-course, no longer exactly $W_1$.
+Because a neural network can approximate such a test function, the **WGAN**
+:cite:`Arjovsky.Chintala.Bottou.2017` trains the dual objective
+:eqref:`eq_mdl-kr-dual` directly, using a neural critic constrained to be
+approximately 1-Lipschitz in the role of $g$. :numref:`sec_gan_objectives`
+compares this objective with other adversarial losses and trains such a
+critic, whose slope a gradient penalty pulls toward one.
+:numref:`sec_gan_convergence` shows why later recipes center their penalties
+at zero instead: a penalty that prefers unit slope keeps pushing a generator
+that already matches the data, while one centered at zero only keeps the
+critic's gradient small at the samples and enforces no Lipschitz constraint.
+Keep in mind that when a critic is only
+approximately Lipschitz and restricted to a neural architecture, the score it
+reports is no longer exact $W_1$.
 
 ### Transport on the Line
 
-We prove the duality only on the line, where the proof also yields a closed
-form and transport needs no optimization at all; :citet:`Peyre.Cuturi.2019`
-give the general proof. The idea is to count crossings. At a point $t$, $P$ has
-a fraction $F_P(t)$ of its mass at or to the left of $t$ and $Q$ has $F_Q(t)$,
-so any plan must carry at least $|F_P(t) - F_Q(t)|$ of mass across $t$. A
-parcel moved from $x$ to $y$ crosses every $t$ between them, so its distance
-$|x - y|$ is the length of the set of points it crosses, and the total cost is
-the mass crossing each $t$, integrated over $t$.
+We prove Kantorovich--Rubinstein duality in one dimension, where the argument
+also delivers a closed-form formula requiring no optimization at all;
+:citet:`Peyre.Cuturi.2019` give the proof in higher dimensions. The intuition
+is simply to count how much mass crosses each point $t \in \mathbb{R}$. To the
+left of $t$ (including $t$), $P$ holds mass $F_P(t)$ and $Q$ holds mass
+$F_Q(t)$, so any valid transport plan must move at least $|F_P(t) - F_Q(t)|$
+of mass across $t$. Moreover, a parcel moved from $x$ to $y$ crosses every $t$
+between $x$ and $y$, so its distance $|x - y|$ equals the length of the
+interval of points it crosses. Summing over all parcels, the total transport
+cost is the integral over $t$ of the total mass crossing $t$.
 
 **Proposition ($W_1$ on the line).** *For distributions $P$ and $Q$ on
 $\mathbb{R}$ with CDFs $F_P$, $F_Q$ and finite first moments,*
@@ -490,12 +548,13 @@ W_1(P, Q) = \int_{-\infty}^{\infty} \lvert F_P(t) - F_Q(t) \rvert \, dt
 $$
 :eqlabel:`eq_mdl-w1-cdf`
 
-*so Kantorovich--Rubinstein duality holds on the line.*
+*so Kantorovich--Rubinstein duality holds on the real line.*
 
-**Proof.** *Step 1: every plan costs at least the area.* For
-$(X, Y) \sim \gamma$,
+**Proof.** *Step 1: Every plan costs at least the area between the CDFs.* For
+$(X, Y) \sim \gamma$, write
 $|X - Y| = \int \mathbf{1}(t \textrm{ lies between } X \textrm{ and } Y)\, dt$.
-The integrand is non-negative, so expectation and integral may be exchanged:
+Because the integrand is non-negative, we may exchange expectation and
+integration:
 
 $$
 \mathbb{E}_\gamma|X - Y|
@@ -503,63 +562,68 @@ $$
 \geq \int \big| \gamma(X \leq t < Y) - \gamma(Y \leq t < X) \big|\, dt.
 $$
 
-The step that is not routine is the difference inside the last integral. Add
-and subtract $\gamma(X \leq t, Y \leq t)$: then
+The key step is simplifying the difference inside the last integral. Adding
+and subtracting $\gamma(X \leq t, Y \leq t)$ gives
 $\gamma(X \leq t < Y) - \gamma(Y \leq t < X) = \gamma(X \leq t) - \gamma(Y \leq t) = F_P(t) - F_Q(t)$,
-because the marginals of $\gamma$ are $P$ and $Q$. So every plan costs at least
-$\int |F_P - F_Q|$.
+since $\gamma$ has marginals $P$ and $Q$. Thus every transport plan costs at
+least $\int |F_P - F_Q|$.
 
-*Step 2: one plan costs exactly the area.* Send quantile to quantile: the
-lowest tenth of $P$ goes to the lowest tenth of $Q$, and so on upward. In
-symbols, let $U$ be uniform on $(0, 1)$ and set $X = F_P^{-1}(U)$,
-$Y = F_Q^{-1}(U)$, with the quantile function
-$F^{-1}(\lambda) = \inf\{x : F(x) \geq \lambda\}$ for $\lambda \in (0, 1)$,
-which satisfies $F^{-1}(\lambda) \leq t$ exactly when $\lambda \leq F(t)$. This
-is a plan, because $\Pr(X \leq t) = \Pr(U \leq F_P(t)) = F_P(t)$ and likewise
-for $Y$. We call it the *monotone plan*, since $X$ and $Y$ rise together. Then
+*Step 2: One plan achieves this lower bound.* Match quantiles directly: send
+the lowest tenth of $P$ to the lowest tenth of $Q$, and so on up the line.
+Formally, let $U$ be uniform on $(0, 1)$ and set $X = F_P^{-1}(U)$ and
+$Y = F_Q^{-1}(U)$, where the quantile function
+$F^{-1}(\lambda) = \inf\{x : F(x) \geq \lambda\}$ for $\lambda \in (0, 1)$
+satisfies $F^{-1}(\lambda) \leq t$ if and only if $\lambda \leq F(t)$. This
+defines a valid coupling because $\Pr(X \leq t) = \Pr(U \leq F_P(t)) = F_P(t)$
+and similarly for $Y$. We call it the *monotone plan*, since $X$ and $Y$
+increase together. Under this coupling,
 $\gamma(X \leq t < Y) = \Pr\big(F_Q(t) < U \leq F_P(t)\big)$ and
-$\gamma(Y \leq t < X) = \Pr\big(F_P(t) < U \leq F_Q(t)\big)$. At least one of
-the two is zero: the monotone plan never carries mass both ways across a point.
-The inequality of Step 1 is therefore an equality for this plan, and the least
-cost over plans equals the area.
+$\gamma(Y \leq t < X) = \Pr\big(F_P(t) < U \leq F_Q(t)\big)$. At every $t$, at
+least one of these two probabilities is zero, meaning the monotone plan never
+sends mass in both directions across the same point. The inequality in Step 1
+therefore holds with equality, so the minimum transport cost equals the area
+between the CDFs.
 
-*Step 3: no test function beats any plan.* This is *weak duality*, and it holds
-in any dimension. For a 1-Lipschitz $g$ and a plan $\gamma$,
-$g(x) - g(y) \leq \|x - y\|$ at every pair, and taking the expectation under
-$\gamma$ gives
+*Step 3: No 1-Lipschitz test function beats any plan.* This *weak duality*
+argument holds in every dimension. For any 1-Lipschitz function $g$ and any
+coupling $\gamma$, we have $g(x) - g(y) \leq \|x - y\|$ pointwise; taking the
+expectation under $\gamma$ immediately gives
 $\mathbb{E}_P[g] - \mathbb{E}_Q[g] \leq \mathbb{E}_\gamma\|x - y\|$ (compare
 the weak duality of :numref:`subsec_mdl-dual-problem`).
 
-*Step 4: one test function attains the area.* It suffices to consider
-$g(x) = g(0) + \int_0^x g'(t)\, dt$ with $|g'| \leq 1$: every such $g$ is
-1-Lipschitz, and Step 3 already bounds all the others. The constant $g(0)$
-cancels in $\mathbb{E}_P[g] - \mathbb{E}_Q[g]$. Writing
+*Step 4: One 1-Lipschitz test function achieves the area.* It suffices to
+consider functions of the form $g(x) = g(0) + \int_0^x g'(t)\, dt$ with
+$|g'| \leq 1$: every such $g$ is 1-Lipschitz, and Step 3 already bounds all
+others. The constant $g(0)$ cancels in $\mathbb{E}_P[g] - \mathbb{E}_Q[g]$.
+Rewriting
 $\int_0^X g'(t)\,dt = \int_0^{\infty} g'(t)\, \mathbf{1}(X > t)\, dt - \int_{-\infty}^0 g'(t)\, \mathbf{1}(X \leq t)\, dt$
-and swapping expectation and integral (Fubini's theorem from
-:numref:`sec_mdl-integral_calculus`, which the finite first moments justify),
+and exchanging expectation and integration (justified by Fubini's theorem from
+:numref:`sec_mdl-integral_calculus`, given the finite first moments) yields
 
 $$
 \mathbb{E}_P[g] - \mathbb{E}_Q[g] = \int_{-\infty}^{\infty} g'(t)\, \big( F_Q(t) - F_P(t) \big)\, dt.
 $$
 
-The choice $g'(t) = \textrm{sign}\big(F_Q(t) - F_P(t)\big)$ makes the right
-side equal to the area. Together, the supremum over test functions is at least
-the area (Step 4) and at most the least cost over plans (Step 3), which equals
-the area (Steps 1 and 2). $\blacksquare$
+Choosing $g'(t) = \textrm{sign}\big(F_Q(t) - F_P(t)\big)$ turns the right-hand
+side into $\int |F_P(t) - F_Q(t)|\, dt$. Combining all four steps, the
+supremum over 1-Lipschitz functions is at least the area (Step 4) and at most
+the minimum plan cost (Step 3), which equals the area (Steps 1 and 2).
+$\blacksquare$
 
-On the line, then, $W_1$ is the area between the two CDFs, and for two samples
-of equal size it is the mean absolute difference of the sorted values (Exercise
-:exref:`ex_mdl-divergences-distances-eqref-eq-mdl-w1`a). It is rather
-surprising that a linear program should collapse this far. We watch it happen
-once, on the six points of :numref:`fig_mdl-ot-transport-plan`. Between
-neighboring points the two CDFs differ by $0.25$, $0.35$, $0.5$, $0.35$ and
-$0.25$, which sum to $1.7$, the shaded area in the figure. The cell computes
-$W_1$ three times. It adds up the five gaps. It solves the linear program over
-plans, where a plan is a $6 \times 6$ matrix with row sums $p$ and column sums
-$q$. And it builds the monotone plan of Step 2, in which each route carries the
-overlap of two quantile intervals, and adds up its cost. The last line of the
-output compares the plan that the linear program returned with the monotone
-plan.
+On the real line, then, $W_1$ is simply the area between the two CDFs, and for
+two equal-sized samples it reduces to the mean absolute difference of the
+sorted values (Exercise
+:exref:`ex_mdl-divergences-distances-eqref-eq-mdl-w1`a). It is remarkable that
+a full linear program collapses so cleanly. Let us verify this collapse on the
+six-point example from :numref:`fig_mdl-ot-transport-plan`. Across the five
+intervals between adjacent atoms, the CDF gaps are $0.25$, $0.35$, $0.5$,
+$0.35$, and $0.25$, summing to $1.7$, the shaded area in the figure. The code
+below computes $W_1$ in three ways: by summing the five CDF gaps, by solving
+the $36$-variable linear program over $6 \times 6$ transport matrices with row
+sums $p$ and column sums $q$, and by constructing the monotone plan of Step 2
+(where each route carries the overlap of the corresponding quantile intervals)
+and evaluating its cost. Finally, it checks whether the linear program
+returned the monotone plan.
 
 ```{.python .input #divergences-distances-w1}
 atoms = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
@@ -590,57 +654,64 @@ print(f'LP plan = monotone plan  : {np.allclose(plan_lp, mono)}, '
       f'mass the LP plan moves leftward: {np.tril(plan_lp, -1).sum():.2f}')
 ```
 
-All three computations give $W_1 = 1.7$: one sum over five gaps replaces a
-$36$-variable linear program. The last line is the unexpected one. The linear
-program did not return the monotone plan. It returned another plan of the same
-cost, which also moves no mass to the left.
+All three methods agree on $W_1 = 1.7$: summing five CDF gaps gives the exact
+same answer as solving a $36$-variable linear program. The last line, however,
+holds a small surprise: the linear program did not return the monotone plan.
+Instead, it found a different plan with the exact same cost, which likewise
+moves zero mass to the left.
 
-The optimal plan is not unique here, then, and the reason is simple.
-$F_P \geq F_Q$ at every point, so no mass has to move left, and for a plan
-that moves mass only rightward $|x - y| = y - x$. Its cost is then the
-difference of the two means, $3.35 - 1.65 = 1.7$, whatever else the plan does.
-The monotone plan, the one drawn in the figure, is one of many optimal plans.
+The optimal $W_1$ plan is therefore not unique here, and the reason is easy to
+spot. Because $F_P \geq F_Q$ everywhere, no mass ever needs to move leftward.
+For *any* plan that moves mass strictly rightward ($y \geq x$), we have
+$|x - y| = y - x$, so its total cost equals the difference of the two means,
+$3.35 - 1.65 = 1.7$, regardless of how the routes cross. The monotone plan
+drawn in the figure is simply one of many equally good plans.
 
-Two tools that we meet elsewhere measure transport with the square of the
-distance: the Fréchet inception distance, the other score for generated images
-(:numref:`sec_dcgan`), and the minibatch pairing of flow matching, which
-matches noise to data by the plan of least squared distance
+Two tools that appear elsewhere in the book replace the absolute distance with
+its square: the Fréchet inception distance for evaluating image generators
+(:numref:`sec_dcgan`), and minibatch optimal transport in flow matching, which
+pairs noise with data by minimizing squared distance
 (:numref:`sec_mdl-flow-matching-transport`). The **Wasserstein-2 distance**
-squares the distance before averaging and takes the square root afterwards,
+averages the squared distance and takes the square root afterwards:
 $W_2(P, Q) = \big(\inf_{\gamma} \mathbb{E}_\gamma \|x - y\|^2\big)^{1/2}$.
-Under the squared cost two ribbons that cross always cost more than the same
-two uncrossed, so on the line the monotone plan is the only optimum (Exercise
-:exref:`ex_mdl-divergences-distances-eqref-eq-mdl-w1`d). Between two Gaussians
-on the line with means $\mu_1, \mu_2$ and standard deviations
-$\sigma_1, \sigma_2$ it gives
+Under a squared cost, crossing two transport ribbons always costs strictly
+more than uncrossing them, so on the line the monotone plan becomes the
+*unique* optimum (Exercise
+:exref:`ex_mdl-divergences-distances-eqref-eq-mdl-w1`d). Between two
+one-dimensional Gaussians with means $\mu_1, \mu_2$ and standard deviations
+$\sigma_1, \sigma_2$, it evaluates cleanly to
 $W_2^2 = (\mu_1 - \mu_2)^2 + (\sigma_1 - \sigma_2)^2$ (Exercise
 :exref:`ex_mdl-test-functions-transport-w2-gaussians`a). The Fréchet inception
-distance is the same expression for Gaussians fitted to image features, with
-covariance matrices in place of the variances.
+distance is the multivariate counterpart of this formula applied to Gaussians
+fitted to image features, with covariance matrices replacing the variances.
 
 ### Entropic Regularization and Sinkhorn Iterations
 :label:`subsec_mdl-sinkhorn`
 
-This subsection can be skipped on a first reading. Off the line there is in
-general no CDF formula, and the linear program has $N^2$ variables for $N$
-points on each side. The standard remedy is **entropic regularization**
-:cite:`Cuturi.2013`: we add the term
+This subsection may be skipped on a first reading. Beyond one dimension, there
+is in general no closed-form CDF formula, and the linear program over $N$
+points on each side has $N^2$ variables. The standard way to make optimal
+transport fast and differentiable is **entropic regularization**
+:cite:`Cuturi.2013`: given a cost matrix $\mathbf{C}$ and a regularization
+strength $\varepsilon > 0$, we add
 $\varepsilon \sum_{ij} \gamma_{ij} (\log \gamma_{ij} - 1)$ to the transport
-cost $\sum_{ij} \gamma_{ij} C_{ij}$, for a cost matrix $\mathbf{C}$ and a
-regularizer $\varepsilon > 0$. On plans, $\sum_{ij}\gamma_{ij} = 1$, so the
-added term is $-\varepsilon$ times the entropy of $\gamma$ plus a constant; it
-penalizes plans that concentrate on few routes. With it, transport became
-usable as a loss in deep learning, and generative models are trained on the
-regularized cost directly :cite:`Genevay.Peyre.Cuturi.2018`.
+cost $\sum_{ij} \gamma_{ij} C_{ij}$. Because any valid plan satisfies
+$\sum_{ij}\gamma_{ij} = 1$, this extra term equals $-\varepsilon$ times the
+entropy of $\gamma$ plus a constant; it discourages plans that concentrate all
+their mass on a few sharp routes. Entropic regularization is what turned
+optimal transport into a practical loss function for deep learning, enabling
+generative models to be trained directly on regularized transport costs
+:cite:`Genevay.Peyre.Cuturi.2018`.
 
-The regularized problem can be solved almost in closed form. Its Lagrangian, as
-in :numref:`subsec_mdl-dual-problem`, adds a multiplier $\xi_i$ for each
-row-sum constraint $\sum_j \gamma_{ij} = p_i$ and $\zeta_j$ for each column-sum
-constraint $\sum_i \gamma_{ij} = q_j$. Setting its derivative in $\gamma_{ij}$
-to zero gives $C_{ij} + \varepsilon \log \gamma_{ij} - \xi_i - \zeta_j = 0$, so
-$\gamma_{ij} = e^{-(C_{ij} - \xi_i - \zeta_j)/\varepsilon}$: a route carries
-mass according to how far its cost exceeds $\xi_i + \zeta_j$, in units of
-$\varepsilon$. In matrix form,
+Remarkably, the regularized problem solves almost in closed form. Forming the
+Lagrangian (:numref:`subsec_mdl-dual-problem`) with a multiplier $\xi_i$ for
+each row-sum constraint $\sum_j \gamma_{ij} = p_i$ and a multiplier $\zeta_j$
+for each column-sum constraint $\sum_i \gamma_{ij} = q_j$, and setting the
+derivative with respect to $\gamma_{ij}$ to zero, we obtain
+$C_{ij} + \varepsilon \log \gamma_{ij} - \xi_i - \zeta_j = 0$, or
+$\gamma_{ij} = e^{-(C_{ij} - \xi_i - \zeta_j)/\varepsilon}$. Each route
+carries mass decaying exponentially in how far its cost $C_{ij}$ exceeds
+$\xi_i + \zeta_j$, measured in units of $\varepsilon$. In matrix form,
 
 $$
 \boldsymbol{\gamma}_\varepsilon = \textrm{diag}(\mathbf{a})\, \mathbf{K}\, \textrm{diag}(\mathbf{b}),
@@ -648,36 +719,39 @@ $$
 $$
 :eqlabel:`eq_mdl-sinkhorn-form`
 
-with positive scalings $\mathbf{a} = e^{\boldsymbol{\xi}/\varepsilon}$ and
-$\mathbf{b} = e^{\boldsymbol{\zeta}/\varepsilon}$. The regularized plan is the
-*Gibbs kernel* $\mathbf{K}$ (a matrix of positive weights, unrelated to the
-kernels of MMD), rescaled row by row and column by column. Only the scalings
-are unknown, and each half of the constraints determines one of them. With
-$\mathbf{b}$ fixed, $\mathbf{a} = \mathbf{p} / (\mathbf{K}\mathbf{b})$
-(entrywise) makes the row sums equal to $\mathbf{p}$. With $\mathbf{a}$ fixed,
-$\mathbf{b} = \mathbf{q} / (\mathbf{K}^\top \mathbf{a})$ makes the column sums
-equal to $\mathbf{q}$.
+where $\mathbf{a} = e^{\boldsymbol{\xi}/\varepsilon}$ and
+$\mathbf{b} = e^{\boldsymbol{\zeta}/\varepsilon}$ are positive scaling
+vectors. The regularized plan is simply the *Gibbs kernel* $\mathbf{K}$ (a
+matrix of positive weights, unrelated to the kernels of MMD), rescaled row by
+row and column by column. Only $\mathbf{a}$ and $\mathbf{b}$ remain to be
+found, and each set of marginal constraints determines one of them: with
+$\mathbf{b}$ fixed, setting $\mathbf{a} = \mathbf{p} / (\mathbf{K}\mathbf{b})$
+(entrywise) enforces the row sums $\mathbf{p}$; with $\mathbf{a}$ fixed,
+setting $\mathbf{b} = \mathbf{q} / (\mathbf{K}^\top \mathbf{a})$ enforces the
+column sums $\mathbf{q}$.
 
-The **Sinkhorn iterations** alternate these two updates, first $\mathbf{b}$
-and then $\mathbf{a}$. After the second update the row sums are right, and we
-stop once the column sums agree with $\mathbf{q}$ to within $10^{-9}$ as well.
-Each iteration costs two matrix-vector products, so the iterations run well on
-a GPU and can be differentiated through. We report the *entropic cost*, the
-transport cost
-$\sum_{ij} (\gamma_\varepsilon)_{ij} C_{ij}$ of the regularized plan without
-the entropy term. As $\varepsilon \to 0$ it approaches the unregularized
-optimum, but the iterations converge ever more slowly
-:cite:`Peyre.Cuturi.2019`, and the entries of $\mathbf{K}$ underflow, so
-practical code iterates on $\log \mathbf{a}$ and $\log \mathbf{b}$ (Exercise
+The **Sinkhorn iterations** alternate these two updates, updating $\mathbf{b}$
+and then $\mathbf{a}$ until both marginals match. After the $\mathbf{a}$
+update the row sums are exact, so we stop once the column sums match
+$\mathbf{q}$ within $10^{-9}$. Every step requires only two matrix-vector
+products, making the algorithm fast on GPUs and trivial to differentiate
+through. Below we report the *entropic cost*, meaning the transport cost
+$\sum_{ij} (\gamma_\varepsilon)_{ij} C_{ij}$ of the regularized plan (without
+the entropy penalty). As $\varepsilon \to 0$, this cost approaches the exact
+unregularized optimum, but convergence slows dramatically
+:cite:`Peyre.Cuturi.2019` and the entries of $\mathbf{K}$ can underflow;
+production implementations therefore work in log-space on $\log \mathbf{a}$
+and $\log \mathbf{b}$ (Exercise
 :exref:`ex_mdl-divergences-distances-sinkhorn-divergences`b).
 
-To see how small $\varepsilon$ must be, and what a small $\varepsilon$ takes,
-we use the squared cost $C_{ij} = (x_i - x_j)^2$ on the six-point example, for
-which the monotone plan of :numref:`fig_mdl-ot-transport-plan` is the only
-optimum and its ten routes cost $W_2^2 = 3.5$. The cell checks this value with
-the linear program and runs Sinkhorn at three values of $\varepsilon$. For each
-it prints the number of iterations, the entropic cost, and the number of routes
-that carry more than $10^{-3}$ of mass.
+To see how small $\varepsilon$ must be, and how expensive a small
+$\varepsilon$ becomes, we apply Sinkhorn to the six-point example with the
+squared cost $C_{ij} = (x_i - x_j)^2$, where the monotone plan of
+:numref:`fig_mdl-ot-transport-plan` is the unique optimum and its ten active
+routes cost $W_2^2 = 3.5$. The cell below verifies this optimum with a linear
+program and runs Sinkhorn at three values of $\varepsilon$, reporting the
+iteration count, entropic cost, and number of routes carrying mass above
+$10^{-3}$.
 
 ```{.python .input #divergences-distances-sinkhorn}
 def sinkhorn(p, q, C, eps, tol=1e-9, max_iters=10 ** 6):
@@ -708,57 +782,64 @@ d2l.show_heatmaps(d2l.tensor(np.stack(plans)[None]), 'destination j',
                   figsize=(9, 2.8), cmap='Blues')
 ```
 
-The linear program agrees on $3.5$. At $\varepsilon = 2$ the plan spreads each
-source's mass over several destinations ($25$ of the $36$ routes carry more
-than $10^{-3}$), and its cost, $4.06$, is well above the optimum. At
-$\varepsilon = 0.5$ the plan has $14$ routes and costs $3.57$. At
-$\varepsilon = 0.1$ only the ten routes of the monotone plan remain, and the
-cost, $3.50002$, lies above the optimum by $2 \times 10^{-5}$. In the heat
-maps a broad band sharpens into a staircase. The yardstick for $\varepsilon$
-is the difference in cost between competing routes, which is of order $1$ on
-this grid, and a tenth of it was small enough.
+The linear program confirms $W_2^2 = 3.5$. At $\varepsilon = 2$, the
+regularized plan smears each source's mass across many destinations ($25$ of
+the $36$ routes carry more than $10^{-3}$), pushing the cost up to $4.06$. At
+$\varepsilon = 0.5$, the plan tightens to $14$ active routes with cost $3.57$.
+By $\varepsilon = 0.1$, only the ten routes of the monotone plan survive, and
+the cost reaches $3.50002$, within $2 \times 10^{-5}$ of the exact optimum. In
+the heatmaps, a blurry band sharpens into a clean staircase. The natural scale
+for $\varepsilon$ is the cost gap between competing routes, which is of order
+$1$ on this grid; setting $\varepsilon$ to a tenth of that scale recovers the
+optimum accurately.
 
-The iteration counts show what this accuracy takes. About $50$ iterations were
-enough at $\varepsilon = 2$ and about $190$ at $\varepsilon = 0.5$, but
-$\varepsilon = 0.1$ needed some $150{,}000$. Between the last two runs
-$\varepsilon$ fell fivefold and the work grew $800$ times. Sinkhorn iterations
-are fast only as long as the plan may stay blurred (Exercise
-:exref:`ex_mdl-test-functions-transport-sinkhorn-iterations`b measures the
-growth).
+The iteration counts reveal the catch. Sinkhorn needed about $50$ iterations
+at $\varepsilon = 2$ and about $190$ at $\varepsilon = 0.5$, but roughly
+$150{,}000$ at $\varepsilon = 0.1$. Cutting $\varepsilon$ by a factor of five
+increased the work by a factor of nearly $800$. Sinkhorn iterations are fast
+only when you can afford a blurred transport plan (Exercise
+:exref:`ex_mdl-test-functions-transport-sinkhorn-iterations`b tracks this
+growth quantitatively).
 
 ## Fixed Kernels and Trained Critics
 
-MMD and $W_1$ divide the two requirements between them. The class behind a
-fixed kernel is small. MMD costs three averages, and the error of its estimate
-from $N$ points is of order $N^{-1/2}$ in any dimension
-:cite:`Gretton.Borgwardt.Rasch.ea.2012`, but it sees only a few length scales.
-The functions of slope at most one see at every distance, which is what a model
-far from its data needs. They cannot jump, and yet in many dimensions they are
-still a very large class: between two samples in dimension $n > 2$ the error of
-$W_1$ is of order $N^{-1/n}$ :cite:`Weed.Bach.2019`. In $100$ dimensions,
-halving that error takes $2^{100}$ times the data. Nobody estimates $W_1$ that
-way. A critic network searches a far smaller class than all functions of slope
-one, and Sinkhorn iterations serve where the problem is small.
+MMD and $W_1$ split our two requirements right down the middle. A fixed kernel
+defines a small, smooth function class: MMD reduces to three sample averages,
+and its estimation error from $N$ points decays as $O(N^{-1/2})$ in *any*
+dimension :cite:`Gretton.Borgwardt.Rasch.ea.2012`, yet it loses sight of the
+data beyond a few length scales. By contrast, 1-Lipschitz functions provide a
+steady gradient at every separation, which is exactly what a model far from
+its data needs. However, even though they cannot jump like indicators, the
+class of all 1-Lipschitz functions is still enormous in high dimensions: for
+two samples in dimension $n > 2$, the empirical $W_1$ error decays only as
+$O(N^{-1/n})$ :cite:`Weed.Bach.2019`. In $100$ dimensions, halving that
+estimation error would require $2^{100}$ times as much data. Nobody estimates
+$W_1$ directly from high-dimensional samples that way. Instead, a WGAN critic
+searches over a much smaller class of neural networks, while Sinkhorn
+iterations handle smaller discrete matching problems.
 
-Kernel and critic alike begin by drawing samples from the model. For some
-models that is the expensive step, and :numref:`sec_mdl-scores` asks what can
-be compared without it.
+Both kernels and adversarial critics start by drawing samples from the model.
+For some generative models, sampling itself is the bottleneck, and
+:numref:`sec_mdl-scores` asks how we can compare two distributions without
+drawing model samples at all.
 
 ## Summary
 
-A little overlap does not bring the gradient back: for two unit Gaussians eight
-standard deviations apart, the Jensen--Shannon divergence and total variation
-have slopes near $10^{-4}$. An integral probability metric compares instead how
-$P$ and $Q$ average a class of test functions, and the class decides both
-whether samples can estimate the gap and how far the comparison sees. Functions
-that are linear in fixed features give MMD, the distance between mean features:
-it is three kernel averages, which samples estimate with no critic, and it is
-blind beyond a few length scales. Functions of slope at most one give $W_1$,
-the least mass times distance that turns one distribution into the other, which
-keeps a slope of one at every separation and is what the critic of a
-Wasserstein GAN estimates. On the line $W_1$ is the area between the CDFs;
-elsewhere it needs a trained critic or, for small problems, Sinkhorn iterations
-on an entropically regularized plan.
+Overlapping tails do not rescue f-divergences: when two unit Gaussians sit
+eight standard deviations apart, both the Jensen--Shannon divergence and total
+variation have slopes near $10^{-4}$. Integral probability metrics sidestep
+density ratios by comparing how $P$ and $Q$ average a class of test functions,
+and the choice of class determines both sample efficiency and how far the
+metric can see. Test functions linear in fixed features yield MMD, the
+distance between mean feature vectors: it evaluates in closed form as three
+kernel averages with no critic to train, and estimates at rate $O(N^{-1/2})$
+regardless of dimension, though an RBF kernel goes blind beyond a few length
+scales. Functions of slope at most one yield $W_1$, the minimum mass-times-distance
+cost of transporting $P$ into $Q$, which maintains slope one at every
+separation and underpins the Wasserstein GAN critic. In one dimension, $W_1$
+collapses to the area between the two CDFs; in higher dimensions, it requires
+either a trained critic or, on small discrete problems, Sinkhorn iterations
+with entropic regularization.
 
 ## Exercises
 

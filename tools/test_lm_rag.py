@@ -5,7 +5,11 @@ corpus under two chunkings, with and without the alternative spans; the
 `book_qa` reader on a fixture question-set zip (splits, filters, the
 stratified `subset`, `stats`, the notice on a second `test` load); the prompt, citation and
 judge helpers (`rag_prompt`, `parse_citations`, `_rag_parse_json`,
-`rag_judge` with a stub judge); the pure functions of
+`rag_judge` with a stub judge); the run plumbing that sec_lm_rag and
+sec_lm_rag_fixes share (the configuration tables, `_rag_rerun`,
+`_rag_run_path`, `_rag_settings`, the record readers, `_rag_run_config`
+with a stub pipeline, `_rag_boot`, `_rag_scores`, `_rag_ready`); the pure
+functions of
 tools/build_book_qa.py (evidence spans, lexical filter, phrase blacklist,
 identifier flag, kappa, deterministic zip)."""
 import collections
@@ -15,10 +19,13 @@ import io
 import json
 import os
 import tempfile
+import types
 import unittest
+import unittest.mock
 import zipfile
 
 import numpy as np
+import pandas as pd
 import torch
 
 from d2l import torch as d2l
@@ -679,6 +686,342 @@ class BuildBookQA(unittest.TestCase):
             self.m.write_zip(b, {'x': b'1', 'y': b'2'})
             with open(a, 'rb') as f, open(b, 'rb') as g:
                 self.assertEqual(f.read(), g.read())
+
+
+class RunTables(unittest.TestCase):
+    """The configuration tables and run plumbing that sec_lm_rag and
+    sec_lm_rag_fixes share (rag-lib.md): the tables, the run order of
+    D2L_RERUN, where a run file is read from, the settings JSON, the
+    answer key, and the readers of answer and judgment records."""
+    GEN_REV = {d2l.RAG_GENERATOR: 'c' * 40}  # the notebooks pin it
+
+    def test_tables(self):
+        C = d2l.RAG_CONFIGS
+        self.assertIs(C['base'], d2l.RAG_BASE)
+        self.assertEqual(len(C), 10 + len(d2l.RAG_FIXES))
+        self.assertTrue(set(d2l.RAG_STAGES + d2l.RAG_CONTROLS) <= set(C))
+        for c, fix in d2l.RAG_FIXES.items():
+            self.assertIs(C[f'fix-{c}'], fix)
+        self.assertEqual(set(d2l.RAG_FIXES), {
+            'not_retrieved', 'ranked_low', 'ignored', 'unsupported',
+            'false_answer', 'false_abstain'})
+        for name, c in C.items():  # every entry has the baseline's keys
+            self.assertTrue(set(d2l.RAG_BASE) <= set(c), name)
+        self.assertEqual(C['closed']['context'], 'none')
+        self.assertEqual(C['fixed-over']['over'], 255)
+
+    def test_rerun_order(self):
+        def rerun(value):
+            with unittest.mock.patch.dict(os.environ, {'D2L_RERUN': value}):
+                return d2l._rag_rerun()
+        self.assertEqual(rerun('0'), set())
+        self.assertEqual(rerun('rag-judge-cache'),
+                         {'rag-judge-cache', 'rag-judge'})
+        self.assertEqual(rerun('rag-cards,rag-gen-stages'),
+                         {'rag-cards', 'rag-gen-stages'})
+        for bad in ('rag-judge,rag-gen-stages', 'rag-judge-cache,rag-gen-fix',
+                    'rag-gen-fix,rag-gen-base', '1'):
+            with self.assertRaises(AssertionError):
+                rerun(bad)
+
+    def test_run_path(self):
+        self.assertEqual(d2l._rag_run_path('rag-cards', {'rag-cards'}),
+                         os.path.join('..', 'data', 'lm', 'rerun',
+                                      'lm-rag-cards.jsonl'))
+        with unittest.mock.patch.dict(d2l.DATA_HUB, {}, clear=True):
+            self.assertIsNone(d2l._rag_run_path('rag-cards', set()))
+
+    def test_settings(self):
+        with unittest.mock.patch.dict(d2l.HF_REVISIONS, self.GEN_REV):
+            s = json.loads(d2l._rag_settings('fixed-over'))
+            self.assertEqual(d2l._rag_settings('base'),
+                             d2l._rag_settings('base'))
+            self.assertNotEqual(d2l._rag_settings('base'),
+                                d2l._rag_settings('reverse'))
+        self.assertEqual(s['generator'], f'{d2l.RAG_GENERATOR}@' + 'c' * 40)
+        self.assertEqual((s['over'], s['qa'], s['corpus']),
+                         (255, 'lm-book-qa-v2', d2l.R3_VERSION))
+        self.assertTrue(s['reranker'].startswith(d2l.RAG_RERANKER + '@'))
+        self.assertEqual(s['task'], d2l.BOOK_TASK)  # the embedder's task
+        with unittest.mock.patch.dict(d2l.HF_REVISIONS, self.GEN_REV), \
+                unittest.mock.patch.object(d2l, 'BOOK_TASK', 'other'):
+            self.assertNotEqual(json.loads(d2l._rag_settings('fixed-over')),
+                                s)  # another task: other answers
+        self.assertEqual(list(s), sorted(s))  # sorted keys: one string
+
+    def test_answer_key(self):
+        r = dict(answer='It is A [1].', context_ids=['a', 'b'],
+                 cited_ids=[1])
+        k = d2l._rag_answer_key(r)
+        self.assertRegex(k, '^[0-9a-f]{16}$')
+        self.assertEqual(k, d2l._rag_answer_key(dict(
+            r, cited_ids=np.array([1]), context_ids=('a', 'b'))))
+        for change in (dict(answer='It is B [1].'), dict(cited_ids=[2]),
+                       dict(context_ids=['b', 'a'])):
+            self.assertNotEqual(k, d2l._rag_answer_key(dict(r, **change)))
+
+    def test_load_records(self):
+        with tempfile.TemporaryDirectory() as d, \
+                unittest.mock.patch.dict(d2l.HF_REVISIONS, self.GEN_REV):
+            os.makedirs(os.path.join(d, 'nb'))
+            rerun = os.path.join(d, 'data', 'lm', 'rerun')
+            os.makedirs(rerun)
+            cwd = os.getcwd()
+            os.chdir(os.path.join(d, 'nb'))  # notebooks run one level down
+            try:
+                rec = lambda c, q, a: dict(
+                    config=c, qid=q, split='dev', answer=a, context_ids=['x'],
+                    cited_ids=[1], settings=d2l._rag_settings(c))
+                d2l.write_jsonl(os.path.join(rerun, 'lm-rag-gen-base.jsonl'),
+                                [rec('base', 'q1', 'A [1].'),
+                                 rec('base', 'q2', d2l.ABSTAIN)])
+                d2l.write_jsonl(os.path.join(
+                    rerun, 'lm-rag-gen-stages.jsonl'),
+                    [rec('reverse', 'q1', 'B [1].')])
+                names = {'rag-gen-base', 'rag-gen-stages', 'rag-gen-fix'}
+                g = d2l._rag_load_gens(names)
+                self.assertEqual(len(g), 3)
+                self.assertEqual(g.abstained.tolist(), [False, True, False])
+                self.assertEqual(g.answer_sha[0], d2l._rag_answer_key(
+                    g.to_dict('records')[0]))
+                d2l.write_jsonl(  # a record made with other settings
+                    os.path.join(rerun, 'lm-rag-gen-fix.jsonl'),
+                    [dict(rec('reverse', 'q2', 'C'),
+                          settings=d2l._rag_settings('base'))])
+                with self.assertRaises(AssertionError):
+                    d2l._rag_load_gens(names)
+                path = os.path.join(rerun, 'judge.jsonl')
+                d2l.write_jsonl(path, [
+                    dict(config='base', qid='q1', concurrency=8,
+                         correct=True, faithful=None, supported=False),
+                    dict(config='base', qid='q2', concurrency=8,
+                         correct=float('nan'), faithful=1, supported=0,
+                         max_new_tokens=6000, backend='local')])
+                j = d2l._rag_load_judgments(path)
+            finally:
+                os.chdir(cwd)
+        self.assertEqual(j.correct.tolist(), [True, None])
+        self.assertEqual(j.faithful.tolist(), [None, True])
+        self.assertEqual(j.supported.tolist(), [False, False])
+        self.assertEqual(j.max_new_tokens.tolist(), [
+            d2l.RAG_JUDGE_LOCAL['max_new_tokens'], 6000])
+        self.assertEqual(j.backend.tolist()[1], 'local')
+
+
+class RunConfig(unittest.TestCase):
+    """_rag_run_config with a stub pipeline and generator: the arms'
+    contexts (closed: none; oracle: the gold chunks of answerable items),
+    other batches in item order again, budgets only for a 'base' budget,
+    and the generator freed before retrieval when it may not stay."""
+    def setUp(self):
+        self.c = tokened('t', halves)
+        self.log = []
+        log = self.log
+
+        class Pipe:
+            def __init__(self, retriever, model, tokenizer, **kw):
+                log.append(('init', kw))
+                self.retriever = retriever
+
+            def prepare(self, items, budgets=None):
+                log.append(('prepare', [q['qid'] for q in items], budgets))
+                return [dict(context=[dict(id='retrieved')])
+                        for _ in items]
+
+            def answer(self, items, batch_size, contexts):
+                log.append(('answer', [q['qid'] for q in items],
+                            batch_size))
+                R = collections.namedtuple('R', 'qid question answer ctx')
+                return [R(q['qid'], q['question'], 'A', [
+                    h['id'] for h in p['context'] or []])
+                    for q, p in zip(items, contexts)]
+
+        self.patches = [
+            unittest.mock.patch.object(d2l, 'RAGPipeline', Pipe),
+            unittest.mock.patch.object(d2l, '_rag_generator',
+                                       lambda: ('model', 'tok')),
+            unittest.mock.patch.object(d2l, '_rag_free_generator',
+                                       lambda: log.append(('free',))),
+            unittest.mock.patch.object(d2l, '_rag_settings',
+                                       lambda name: f'settings of {name}'),
+            unittest.mock.patch.object(d2l, 'assemble_context',
+                                       lambda hits, budget, k=None: (
+                                           list(hits), 0))]
+        for p in self.patches:
+            p.start()
+        un = dict(ITEM, qid='dev-0001', answerable=False, gold_spans=[])
+        self.items = [dict(ITEM, question=f'Q{i}?', qid=f'dev-000{i}')
+                      for i in (2, 3, 4)] + [dict(un, question='U?')]
+        self.ret = {'sections': types.SimpleNamespace(corpus=self.c),
+                    'fixed': types.SimpleNamespace(corpus=self.c)}
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+    def test_arms(self):
+        run = lambda name, **kw: d2l._rag_run_config(
+            name, self.items, self.ret, True, **kw)
+        ids = [q['qid'] for q in self.items]
+        r = run('base')
+        self.assertEqual([x['qid'] for x in r], ids)
+        self.assertEqual(r[0]['settings'], 'settings of base')
+        self.assertNotIn('question', r[0])
+        self.assertEqual(r[0]['ctx'], ['retrieved'])
+        init = [e for e in self.log if e[0] == 'init'][0][1]
+        self.assertEqual((init['k'], init['budget_tokens'], init['depth']),
+                         (5, 3000, 50))
+        closed = run('closed')
+        self.assertEqual({tuple(x['ctx']) for x in closed}, {()})
+        oracle = run('oracle')  # the gold chunks of both spans
+        gold = [i for s in ITEM['gold_spans'] for i in
+                self.c.span_to_chunk_ids(s['doc_id'], s['char_start'],
+                                         s['char_end'])]
+        self.assertEqual(oracle[0]['ctx'], list(dict.fromkeys(gold)))
+        self.assertEqual(oracle[-1]['ctx'], ['retrieved'])  # unanswerable
+        self.log.clear()
+        rep = run('base-repeat')  # other batches, records in item order
+        self.assertEqual([x['qid'] for x in rep], ids)
+        asked = [e for e in self.log if e[0] == 'answer'][0][1]
+        self.assertEqual(sorted(asked), sorted(ids))
+        self.assertNotEqual(asked, ids)
+        with self.assertRaises(AssertionError):  # 'base' budget: needs them
+            run('fixed')
+        self.log.clear()
+        run('fixed', budgets={q: 10 for q in ids})
+        self.assertEqual(self.log[1], ('prepare', ids, [10] * 4))
+        with self.assertRaises(AssertionError):
+            run('base', budgets={q: 10 for q in ids})
+
+    def test_generator_memory(self):
+        d2l._rag_run_config('base', self.items, self.ret, False)
+        self.assertEqual(self.log[0], ('free',))  # off the card first
+        self.log.clear()
+        d2l._rag_run_config('base', self.items, self.ret, True)
+        self.assertNotIn(('free',), self.log)
+        with self.assertRaises(AssertionError):  # the rewriter needs it
+            d2l._rag_run_config('rewrite-rerank', self.items, self.ret,
+                                False)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), unittest.mock.patch.object(
+                d2l, 'lm_peak', lambda: 'peak'):
+            recs = d2l._rag_run_configs(['base', 'closed'], self.items,
+                                        self.ret, True)
+        self.assertEqual(len(recs), 8)
+        self.assertRegex(out.getvalue(), r'^base: 0\.0 min, peak\n'
+                                         r'closed: 0\.0 min, peak\n$')
+
+
+class Scores(unittest.TestCase):
+    """The scores of the RAG sections: the documents of the items, the
+    bootstrap strings (* below 100 questions, + below 30 documents, with a
+    sign-flip p for a paired difference), per-question scores of the judged
+    answers, and the readiness check."""
+    def test_clusters(self):
+        c = tokened('t', halves)
+        items = [ITEM, dict(ITEM, qid='dev-0001', gold_spans=[],
+                            anchor_ids=['t:chapter_b/three#001'])]
+        self.assertEqual(d2l._rag_clusters(items, c), {
+            'dev-0000': 'chapter_a/one', 'dev-0001': 'chapter_b/three'})
+
+    def test_boot(self):
+        rng = np.random.default_rng(0)
+        a = rng.integers(0, 2, 200).astype(float)
+        many = np.arange(200) % 40  # 40 documents
+        self.assertRegex(d2l._rag_boot(a, cluster=many),
+                         r'^0\.\d{3} \[0\.\d{3}, 0\.\d{3}\]$')
+        self.assertTrue(d2l._rag_boot(a[:50], cluster=many[:50])
+                        .endswith('*'))
+        few = np.arange(200) % 10  # 10 documents: questions resampled
+        self.assertTrue(d2l._rag_boot(a, cluster=few).endswith('+'))
+        b = rng.integers(0, 2, 200).astype(float)
+        self.assertRegex(d2l._rag_boot(a, b, few),
+                         r'^[+-]0\.\d{3} .*\+ \(sign-flip p [01]\.\d{3}\)$')
+        self.assertEqual(d2l._rag_boot([1.0, np.nan], cluster=[0, 1]), 'n/a')
+        r, by_doc, x, y, cl = d2l._rag_ci([1, np.nan, 0, 1], [0, 1, np.nan,
+                                                              1], [0, 1, 2, 3])
+        self.assertEqual((x.tolist(), y.tolist(), cl.tolist(), by_doc),
+                         ([1.0, 1.0], [0.0, 1.0], [0, 3], False))
+        p = d2l._rag_signflip_p(np.array([1.0, 1.0, 1.0]),
+                                np.array([0, 1, 2]))
+        self.assertAlmostEqual(p, 0.25, delta=0.02)  # 2 of 8 sign patterns
+
+    def tables(self):
+        c = tokened('t', halves)
+        rel = 't:chapter_a/one#001'  # relevant to ITEM
+        other = 't:chapter_b/three#000'
+        un = dict(ITEM, qid='dev-0003', answerable=False, gold_spans=[],
+                  flags=[], type='unanswerable')
+        items = {q['qid']: q for q in [
+            dict(ITEM, qid='dev-0001', flags=[]),
+            dict(ITEM, qid='dev-0002', flags=['general_knowledge']), un]}
+        gens = pd.DataFrame([
+            dict(config='base', split='dev', qid='dev-0001',
+                 answer='A [1].', context_ids=[rel], ranked_ids=[rel],
+                 cited_ids=[1], abstained=False, n_prompt_tokens=10,
+                 n_new_tokens=3, latency_s=0.1),
+            dict(config='base', split='dev', qid='dev-0002', answer='B',
+                 context_ids=[other], ranked_ids=[other, rel], cited_ids=[],
+                 abstained=False, n_prompt_tokens=10, n_new_tokens=3,
+                 latency_s=0.1),
+            dict(config='base', split='dev', qid='dev-0003',
+                 answer=d2l.ABSTAIN, context_ids=[other], ranked_ids=[other],
+                 cited_ids=[], abstained=True, n_prompt_tokens=10,
+                 n_new_tokens=3, latency_s=0.1)])
+        gens['answer_sha'] = [d2l._rag_answer_key(r)
+                              for r in gens.to_dict('records')]
+        jud = pd.DataFrame([
+            dict(config='base', qid='dev-0001', concurrency=8, correct=True,
+                 faithful=True, supported=True),
+            dict(config='base', qid='dev-0002', concurrency=8, correct=None,
+                 faithful=None, supported=None),  # unjudged
+            dict(config='base', qid='dev-0003', concurrency=8, correct=True,
+                 faithful=True, supported=None),
+            dict(config='base', qid='dev-0001', concurrency=16,
+                 correct=False, faithful=False, supported=False)])
+        jud['answer_sha'] = [dict(zip(gens.qid, gens.answer_sha))[q]
+                             for q in jud.qid]
+        ret = {'sections': types.SimpleNamespace(corpus=c)}
+        cluster = {q: 'doc-' + q for q in items}
+        return gens, jud, ret, items, cluster
+
+    def test_scores(self):
+        gens, jud, ret, items, cluster = self.tables()
+        s = d2l._rag_scores('base', 'dev', gens, jud, ret, items, cluster, 8)
+        self.assertEqual(s.qid.tolist(), ['dev-0001', 'dev-0002', 'dev-0003'])
+        self.assertEqual(s.accuracy.tolist()[0], 1.0)  # concurrency 8 only
+        self.assertTrue(np.isnan(s.accuracy[1]))  # unjudged: left out
+        self.assertEqual(s.hit.tolist()[:2], [1.0, 0.0])
+        self.assertTrue(np.isnan(s.hit[2]))  # unanswerable
+        self.assertEqual(s['recall@5'].tolist()[:2], [1.0, 1.0])
+        self.assertTrue(np.isnan(s.faithful[2]))  # an abstention
+        self.assertEqual(s.book_specific.tolist(), [True, False, True])
+        self.assertEqual(s.cite_precision.tolist()[0], 1.0)
+        self.assertEqual(s.cluster.tolist()[0], 'doc-dev-0001')
+        self.assertEqual(s.verdicts[0], dict(correct=True, faithful=True,
+                                             supported=True))
+        a = s.assign(accuracy=[1.0, 1.0, 1.0])  # paired: rows 1 and 3
+        self.assertRegex(d2l._rag_paired(a, s, 'accuracy'),
+                         r'^\+0\.000 .*\+ \(sign-flip p 1\.000\)$')
+        stale = jud.assign(answer_sha=['0' * 16] + list(jud.answer_sha[1:]))
+        self.assertEqual(d2l._rag_scores(  # a verdict on another answer
+            'base', 'dev', gens, stale, ret, items, cluster).qid.tolist(),
+            ['dev-0002', 'dev-0003'])
+
+    def test_ready(self):
+        gens, jud, ret, items, cluster = self.tables()
+        self.assertTrue(d2l._rag_ready(['base'], 'dev', gens, jud, set()))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertFalse(d2l._rag_ready(['closed'], 'dev', gens, jud,
+                                            set()))  # no answers: no error
+            self.assertFalse(d2l._rag_ready(['base'], 'dev', gens,
+                                            jud.iloc[1:], {'rag-judge'}))
+            with self.assertRaises(AssertionError):  # registered, unjudged
+                d2l._rag_ready(['base'], 'dev', gens, jud.iloc[1:], set())
+        self.assertIn("'closed': 'no answers'", out.getvalue())
+        self.assertIn("'base': '1 of 3 answers lack a verdict'",
+                      out.getvalue())
 
 
 if __name__ == '__main__':

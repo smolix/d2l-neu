@@ -1,19 +1,22 @@
 # Diffusion Models
 :label:`chap_diffusion`
 
-The generators of :numref:`chap_gans` learned to draw garments and sprites through a game between two networks, and that chapter closed with four limits the game leaves in place: no density, two networks and a tuned penalty, no cost for a missing mode, and instability at scale. It pointed instead to diffusion and flow models, trained by regression on a target computed from each training example. A classifier regresses onto a given label; a generator has nothing to copy, and its image must come out of noise. Regression onto what, then, and how can fitting a target produce something new?
+The generators of :numref:`chap_gans` learned to draw garments through a game between two networks, and that chapter closed with four limits of the game: no density, two networks and a tuned penalty, no cost for a missing mode, and instability at scale. Why does a generator need a game at all? A classifier needs none, because every training image comes with the label it is fitted to. A generator has nothing to copy; its image must come out of noise. Regression onto what, then, and how can fitting a target produce something new?
 
-The idea came from physics: in non-equilibrium thermodynamics, structure such as a drop of ink in water is destroyed by many small random steps, and a small step's reversal has the same simple form. :citet:`sohl2015deep` noised images in the same way and trained a network to undo each step; :citet:`ho2020denoising` made the undoing a regression onto the added noise and matched the sample quality of adversarial training. Others reached the same model from the gradient of the log-density :cite:`song2019generative` and from the velocity of a path between noise and data :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022,Albergo.Boffi.VandenEijnden.2023`. All routes arrive at one network that predicts the clean point from a noisy one at every noise level, and a sampler that integrates its predictions.
+The answer came from physics. Nobody has watched a drop of ink unmix itself in a glass of water. Yet each small step that mixed it adds a little Gaussian noise, and its reverse is again nearly Gaussian, so undoing it means learning mainly a mean. An image noised step by step is such a drop of ink. :citet:`sohl2015deep` trained a network to undo the steps, :citet:`ho2020denoising` found that the target is, of all things, the added noise, and a year later such models drew better images than the best GANs :cite:`Dhariwal.Nichol.2021`. Surprisingly, routes that started from the gradient of the log-density, the *score* :cite:`song2019generative`, and from paths between noise and data :cite:`Lipman.Chen.BenHamu.ea.2022,Liu.Gong.Liu.2022,Albergo.Boffi.VandenEijnden.2023` reach the same place: one network that predicts the clean point from a noisy one at every noise level, and a sampler that integrates its predictions.
 
-What does a network that removes noise know about the data (:numref:`sec_diffusion-denoising`)? How do we walk from noise to data, and which regression trains the walk (:numref:`sec_diffusion-gaussian-paths`)? What changes for images, and how do we steer and judge them (:numref:`sec_diffusion-images`)? Which sampling steps can we skip, and what does a sampler do when run backwards (:numref:`sec_diffusion-samplers`)? Is the regression maximum likelihood, and which of its choices matter (:numref:`sec_diffusion-design-space`)? Why do current systems diffuse a compressed code with a transformer (:numref:`sec_diffusion-latent`)? Why does a single step fail, and what fixes it (:numref:`sec_diffusion-few-step`)? What is noise for a token (:numref:`sec_diffusion-discrete`)?
+This regression answers three of the four limits. One network learns it with no critic, and its loss, suitably weighted, bounds the likelihood, which gives a density and charges a model for every point of a mode it drops. Stability at scale cannot be tested on garments of $28 \times 28$ pixels. How fitting a target can produce something new is harder than it looks. The best prediction of a heavily noised image is the average of all the images that could have produced it, and a sampler built on such averages draws new images. Why a network trained on a finite set does not simply return its training images is still open (:numref:`sec_diffusion-further-reading`).
 
-Along the way the four limits of the game find answers: a density, one regression instead of two networks, a loss under which every missing mode costs, and a transformer trained stably at scale. The mathematics lives in :numref:`chap_mdl-dynamics`, to which the chapter points instead of repeating it; image generation at scale, text-to-image and video belong to a later part of this book.
+Our default is the form many image generators adopted from 2024 on :cite:`Esser.Kulal.Blattmann.ea.2024`: a network predicts the velocity along a straight line from data to noise, and the sampler follows it back. Ho et al.'s noise predictor is a second target with the same information. We start simple: the first three sections build the whole model on three Gaussians in the plane, where every learned quantity can be checked against the truth. A reader who stops there understands diffusion models.
+
+:numref:`sec_diffusion-images` moves to Fashion-MNIST and builds the instruments that judge samples. The next four sections each change one choice (the sampler, the objective, pixels or a latent code, the number of steps) and say what to pick. A hurried reader can take the likelihood bound on trust and leave few-step generation, which needs a second training run, until speed matters. The last section makes the noise an erasure, for tokens. Longer proofs are in the optional :numref:`chap_mdl-dynamics`, and text-to-image and video generation lie outside the chapter (:numref:`sec_diffusion-further-reading`).
 
 ```toc
 :maxdepth: 2
 
 denoising
 gaussian-paths
+integration
 image-diffusion
 samplers
 design-space
@@ -25,13 +28,13 @@ further-reading
 
 ## Resources and Further Reading {.unnumbered}
 
-These resources accompany particular sections; :numref:`sec_diffusion-further-reading` turns to the methods the chapter does not teach.
+These resources accompany particular sections; :numref:`sec_diffusion-further-reading` turns to the methods the chapter does not teach. Start with one of the first three: the monograph for the same material at greater length and with proofs, the course for building each model in code, the interactive article for pictures.
 
 - [*The Principles of Diffusion Models*](https://arxiv.org/abs/2510.21890) :cite:`Lai.Song.Kim.ea.2025` derives diffusion models along the variational, score-based and flow-based routes and shows where they meet.
-- The [notes, lectures and labs](https://diffusion.csail.mit.edu/) of MIT's course 6.S184 :cite:`Holderrieth.Erives.2025` teach flow matching, latent spaces with transformer backbones, and discrete diffusion, with labs that build each model from scratch.
+- The [notes, lectures and labs](https://diffusion.csail.mit.edu/) of MIT's course 6.S184 :cite:`Holderrieth.Erives.2025` teach flow matching, latent spaces with transformer backbones, and discrete diffusion, with labs that build a flow-matching model and a latent diffusion transformer from scratch.
+- [*Diffusion Meets Flow Matching*](https://diffusionflow.github.io/) :cite:`Gao.Hoogeboom.Heek.ea.2025` shows with interactive figures that the DDIM sampler and the Euler sampler of flow matching are one algorithm under a rescaling of the schedule, and that for a fixed weighting of the noise levels the training schedule leaves the objective unchanged and affects only the variance of its estimate.
 - The [*Flow Matching Guide and Code*](https://arxiv.org/abs/2412.06264) :cite:`Lipman.Havasi.Holderrieth.ea.2024` and its [library](https://github.com/facebookresearch/flow_matching) give the training loop of :numref:`sec_diffusion-gaussian-paths` in full, with proofs.
-- [*Step-by-Step Diffusion*](https://arxiv.org/abs/2406.08929) :cite:`Nakkiran.Bradley.Zhou.ea.2025` builds the deterministic sampler up from a single point mass and derives the samplers of :numref:`sec_diffusion-samplers` without stochastic calculus.
-- [*Diffusion Meets Flow Matching*](https://diffusionflow.github.io/) :cite:`Gao.Hoogeboom.Heek.ea.2025` shows with interactive figures that diffusion and flow samplers are one algorithm under a change of schedule, and that the weighting matters more than the schedule.
+- [*Step-by-Step Diffusion*](https://arxiv.org/abs/2406.08929) :cite:`Nakkiran.Bradley.Zhou.ea.2025` builds the deterministic sampler of :numref:`sec_diffusion-integration` up from a single point mass and derives the stochastic and deterministic samplers of :numref:`sec_diffusion-samplers` (DDPM and DDIM) without stochastic calculus.
 - Sander Dieleman's [blog](https://sander.ai/) explains how noise acts on image frequencies :cite:`Dieleman.2024`, why generators work in a latent space :cite:`Dieleman.2025`, what flow maps learn :cite:`Dieleman.2026`, and how continuous and discrete diffusion compete for language :cite:`Dieleman.2026b`.
 - The [official DDPM implementation](https://github.com/hojonathanho/diffusion) of :citet:`ho2020denoising` and the [score SDE implementation](https://github.com/yang-song/score_sde_pytorch) of :citet:`song2021score` contain the full-scale networks and samplers that the small models of :numref:`sec_diffusion-images` imitate.
 - The [MDLM repository](https://github.com/kuleshov-group/mdlm) of :citet:`Sahoo.Arriola.Schiff.ea.2024` trains the masked diffusion language model of :numref:`sec_diffusion-discrete`.
@@ -45,7 +48,7 @@ These resources accompany particular sections; :numref:`sec_diffusion-further-re
 [Dive into Deep Learning · §17]{.kicker}
 
 Diffusion models<br>
-**regress onto the clean point · one clock from data to noise · samplers that integrate · eight sections**
+**regression onto the clean point · data at t = 0, noise at t = 1 · samplers that integrate · nine sections**
 :::
 :::
 
@@ -54,8 +57,8 @@ Diffusion models<br>
 
 ![](../img/mdl-diffusion-forward-reverse.svg){width=85%}
 
-- A classifier regresses onto a given label; a generator's image must come
-  out of noise, and no example says which image.
+- A classifier is fitted to the label that comes with each example; a
+  generator's image must come out of noise, and no example says which image.
 - Noise a training example in many small steps (a thousand for DDPM); learn
   to undo each step by regression.
 
@@ -64,15 +67,17 @@ Regression onto what, and how can fitting a target produce something new?
 :::
 :::
 
-::: {.slide title="Regression Answers the Four Limits the Game Left Open"}
+::: {.slide title="Regression Answers Three of the Game's Four Limits"}
 [Why diffusion]{.kicker}
 
 | limit of the adversarial game | answer in this chapter |
 |---|---|
 | no density | a likelihood bound, and an exact likelihood by an ODE |
 | two networks and a tuned penalty | one network, one regression |
-| no cost for a missing mode | a loss under which every missing mode costs |
-| unstable at scale | a transformer trained stably at scale |
+| no cost for a missing mode | bound $\geq H(p) + D_{\textrm{KL}}(p\,\|\,p_{\boldsymbol\theta})$: a dropped mode costs on each of its points |
+
+The fourth limit, instability at scale, needs far larger models than
+$28 \times 28$ garments to test.
 
 ::: {.d2l-note}
 The target of the regression is computed from each training example: no
@@ -84,11 +89,11 @@ critic, no game.
 [Goals]{.kicker}
 
 - convert a denoiser into a score, a noise predictor and a velocity;
-- train one network along a Gaussian path from data to noise by one
-  regression, and sample it by an ODE or a chain;
-- read the loss as a weighted likelihood bound, and compare paths, targets
-  and weightings;
-- train, guide and score image models in pixels and in latents;
+- train one network along a path from data to noise by one regression, and
+  sample it by an ODE or a chain;
+- read the loss as a weighted likelihood bound;
+- pick a sampler and step count, a weighting, a backbone, and a latent space
+  or pixels;
 - cut sampling to a few steps, and diffuse tokens by masking.
 
 **The idea:** one network predicts the clean point from a noisy one at
@@ -108,16 +113,15 @@ every noise level; a sampler integrates its predictions from noise to data.
 :::
 
 ::: {.col .narrow}
-- **Uses:** squared error learns a conditional mean; Gaussians; ODEs, SDEs
-  and Langevin dynamics from the appendix on dynamics; U-Nets;
-  transformers.
-- **Skips:** text-to-image and video at scale (a later part); proofs (the
-  appendix).
+- **Uses:** squared error learns a conditional mean; the Fréchet distance;
+  U-Nets; transformers on image patches.
+- **Skips:** text-to-image and video at scale; long proofs (the optional
+  appendix on dynamics).
 :::
 :::
 :::
 
-::: {.slide title="One Clock: Data at t = 0, Noise at t = 1"}
+::: {.slide title="The Clock Runs from Data at t = 0 to Noise at t = 1"}
 [Notation]{.kicker}
 
 ::: {.cols .vc}
@@ -127,8 +131,8 @@ $$\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon,
 
 - Variance-preserving (VP): $\alpha_t^2 + \sigma_t^2 = 1$.
 - Linear (flow matching): $\alpha_t = 1 - t$, $\sigma_t = t$.
-- Log-SNR $\lambda_t = \log(\alpha_t^2/\sigma_t^2)$ falls from $+\infty$
-  to $-\infty$.
+- Log signal-to-noise ratio $\lambda_t = \log(\alpha_t^2/\sigma_t^2)$ falls
+  from $+\infty$ to $-\infty$.
 :::
 
 ::: {.col .fig .big}
@@ -138,6 +142,25 @@ $$\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon,
 
 ::: {.d2l-note}
 Every sampler runs from $t = 1$ down to $t = 0$.
+:::
+:::
+
+::: {.slide title="The Default: Regress a Velocity on the Linear Path, Then Integrate Back"}
+[The chapter's model]{.kicker}
+
+On the linear path a training point moves with velocity
+$\boldsymbol\epsilon - \mathbf{x}_0$. The network $\mathbf{u}_{\boldsymbol\theta}$
+regresses onto it:
+
+$$\min_{\boldsymbol\theta}\ \mathbb{E}_{t,\, \mathbf{x}_0,\, \boldsymbol\epsilon}
+\big\|\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\boldsymbol\epsilon - \mathbf{x}_0)\big\|^2$$
+
+Sampling integrates $d\mathbf{x}/dt = \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t)$
+from noise at $t = 1$ to $t = 0$, for instance by Euler steps.
+
+::: {.d2l-note}
+DDPM's noise predictor on the VP path is the second model: another target,
+the same information.
 :::
 :::
 
@@ -175,13 +198,15 @@ To read such a paper:
 :::
 :::
 
-::: {.slide title="One Posterior Mean Gives the Clean Point, the Noise, the Score and the Velocity"}
+::: {.slide title="The Posterior Mean Gives the Clean Point, the Noise, the Score and the Velocity"}
 [The object]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 $\hat{\mathbf{x}}_0 = \mathbb{E}[\mathbf{x}_0 \mid \mathbf{x}_t]$, the
-average clean point that could have produced $\mathbf{x}_t$:
+average clean point that could have produced $\mathbf{x}_t$, and
+$\hat{\boldsymbol\epsilon} = \mathbb{E}[\boldsymbol\epsilon \mid \mathbf{x}_t]$;
+$p_t$ is the density of $\mathbf{x}_t$:
 
 $$\mathbf{x}_t = \alpha_t \hat{\mathbf{x}}_0 + \sigma_t \hat{\boldsymbol\epsilon},
 \qquad
@@ -201,19 +226,19 @@ A network trained on any one target defines all the others.
 :::
 :::
 
-::: {.slide title="Eight Sections, One Question Each"}
+::: {.slide title="Three Sections Build the Model; Four Each Change One Choice"}
 [Chapter map]{.kicker}
 
-| section | question |
+| movement | sections |
 |---|---|
-| Denoising and the Score | what does a network that removes noise know about the data? |
-| Gaussian Paths | how do we walk from noise to data, and which regression trains the walk? |
-| Diffusion for Images | what changes for images, and how do we steer and judge them? |
-| Samplers, Inversion and Editing | which steps can we skip; what does a sampler do run backwards? |
-| Likelihood and the Design Space | is the regression maximum likelihood; which choices matter? |
-| Latent Diffusion and Transformers | why diffuse a compressed code with a transformer? |
-| Few-Step Generation | why does a single step fail, and what fixes it? |
-| Discrete Diffusion | what is noise for a token? |
+| the whole model, on the mixture | Denoising and the Score · Gaussian Paths · Sampling by Integration |
+| images, and how to judge them | Diffusion for Images |
+| one choice each, with a recommendation | Samplers, Inversion and Editing (which sampler, how many steps) · Likelihood, Weighting and the Design Space (which objective) · Latent Diffusion and Transformers (which space, which network) · Few-Step Generation (one to four evaluations) |
+| another kind of noise | Discrete Diffusion (erasure, for tokens) |
+
+::: {.d2l-note}
+Stop after the first row and you understand diffusion models.
+:::
 :::
 
 ::: {.slide title="A Mixture Where Everything Is Exact, Then Garments"}
@@ -225,7 +250,7 @@ A network trained on any one target defines all the others.
   $s = 0.5$: density, score and posterior mean exact at every noise level;
   no model beats about 2.5 nats per point.
 - **Fashion-MNIST**, $28 \times 28$ in $[-1, 1]$: pixels, then
-  $7 \times 7 \times 4$ latents.
+  $7 \times 7 \times 4$ latents; each section trains its own models.
 - **Tokens:** the mixture quantized, and binary garments.
 :::
 
@@ -240,28 +265,32 @@ A network trained on any one target defines all the others.
 
 | section | result |
 |---|---|
-| Denoising | a trained score denoises within about 1% of the best denoiser |
-| Diffusion for Images | 50 Euler steps come close to 1,000 chain steps |
-| Design Space | the bound comes within about 0.01 of the true 2.5 nats |
-| Few-Step | four evaluations come within about 1.5 times the teacher's FD |
-| Discrete | binary garments at about 0.17 bits per pixel |
+| Denoising | Tweedie's step with a trained score: within about 1% of the best denoiser |
+| Images | the 1,000-step DDPM chain: FD 15 to 25% lower than 50 Euler steps |
+| Samplers | Heun (a second-order ODE solver), even steps on the linear path: the chain's FD in about 20 evaluations |
+| Likelihood | network within half a hundredth of a nat of the exact field (true value about 2.5 nats per point) |
+| Latents | at this scale, the best pixel model beats every latent one |
+| Few-Step | a distilled student in four evaluations: FD 1.4 to 1.5 times that of 50 teacher steps |
+| Discrete | binary garments: 0.17 bits per pixel, 0.70 for independent pixels |
 
 FD: Fréchet distance between generated and real images in a classifier's
-features; lower is better.
+features; lower is better. Differences smaller than its measured noise are
+not read.
 :::
 
 ::: {.slide title="Check: Which Section Answers Each Symptom?"}
 [Check]{.kicker}
 
-1. Langevin chains driven by a well-trained score keep the mode weights
-   they started with.
+1. Langevin chains that follow the exact score of the data keep the mode
+   weights they started with.
 2. A thousand network evaluations per image are too slow.
 3. You asked for a sneaker and got a random garment.
 4. The data are tokens, not real numbers.
 
 ::: {.fragment .fade-up}
 1. Gaussian Paths: walk through every noise level, coarse to fine.
-2. Samplers (about fifty steps), then Few-Step (one to four).
+2. Samplers (about twenty to fifty evaluations), then Few-Step (one to
+   four).
 3. Diffusion for Images: classifier-free guidance.
 4. Discrete Diffusion: masking as noise.
 :::
@@ -271,11 +300,13 @@ features; lower is better.
 [Wrap-up]{.kicker}
 
 - A generator has no target; noising a training example creates one.
-- One clock: $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
+- The clock: $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
   \boldsymbol\epsilon$, data at $t = 0$, noise at $t = 1$, samplers run
   from 1 to 0.
+- Default: a velocity on the linear path, integrated back by an ODE.
 - One posterior mean gives clean point, noise, score and velocity.
-- Eight sections; the three-mode mixture and Fashion-MNIST carry them.
+- Nine sections: three build the model, one moves it to images, four change
+  one choice each, one changes the noise.
 
 **Next:** what a denoiser learns, and what one noise level cannot do.
 :::

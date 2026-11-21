@@ -14,33 +14,33 @@
       "outputs": []
     },
     "kv-cache-the-cached-forward-pass-1": {
-      "code_fingerprint": "sha256:66be1e62689f0ec517f8a42a2c3a397fc2b08bbfe9732064b7f54f6965736759",
+      "code_fingerprint": "sha256:c0c19eae2fc1598266817fcd0f79f3255896f4cdb5d2b501299352ca77dd74ab",
       "kind": "text",
       "outputs": []
     },
     "kv-cache-the-cached-forward-pass-2": {
-      "code_fingerprint": "sha256:9c787a440478c6f54e69abc3d793050fed62cdfa1ccb087333bdd80a21050939",
+      "code_fingerprint": "sha256:10ecb61b4995963ed566270d6678a6f49d6a1e4e20366e93e80ecf2b1456d90b",
       "kind": "text",
       "outputs": []
     },
     "kv-cache-checking-the-cache-2": {
-      "code_fingerprint": "sha256:6aaf5aa21a912da3b69e60123308feb782df920b2c424d6c69276b7fa0abc8c0",
+      "code_fingerprint": "sha256:6a3657d5d32d314ead18707d563a81951e02a4a5ecfb81a30b152253e08a238f",
       "kind": "text",
       "outputs": []
     },
     "kv-cache-same-logits-measured-1": {
-      "code_fingerprint": "sha256:3c65b939ca9144c9ff8ee6838fbd45b2d1b5a0acc97c14a63d263e55ef677e14",
+      "code_fingerprint": "sha256:aadc4047e01baff9a2baf1ff6323d29b82b7a82fed8fecdfd6c8a9880964ce24",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rope: max |full - cached| = 7.2e-07\nlearned: max |full - cached| = 8.3e-07\n"
+          "text": "rope: max |full - cached| = 9.5e-07\nlearned: max |full - cached| = 6.0e-07\n"
         }
       ]
     },
     "kv-cache-same-logits-measured-2": {
-      "code_fingerprint": "sha256:f265db3820f2c046275d7779126bfda2528f476b2d50462990cc4dcbebd2d24d",
+      "code_fingerprint": "sha256:af6101368530b5d7e4965f29a06a645a813a9a2789b6ea0dd1884805692047d5",
       "kind": "text",
       "outputs": [
         {
@@ -51,77 +51,77 @@
       ]
     },
     "kv-cache-checking-the-cache-3": {
-      "code_fingerprint": "sha256:00b650abb2a4db4a589fd1b761facc0a1af11eb9d5476b9615272f31382e91ca",
+      "code_fingerprint": "sha256:66a0ba67ed45eed915521c3f85c53fb1e4ddaa192f709662994c7c2cdfbff659",
       "kind": "text",
       "outputs": []
     },
     "kv-cache-checking-the-cache-4": {
-      "code_fingerprint": "sha256:98f3ee7f92a6e084e5904938ede1ad3c00b8888d191b656f06a83444bb399a51",
+      "code_fingerprint": "sha256:88cb331388a7063694433401a35fa2d02db013dc0036f67b178690fa8c47c2f6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 256: naive   6.6 ms, cached  7.4 ms per token\n"
+          "text": "n= 256: naive   2.7 ms, cached  0.9 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 512: naive   6.7 ms, cached  7.3 ms per token\n"
+          "text": "n= 512: naive   3.3 ms, cached  0.9 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=1024: naive  10.0 ms, cached  7.3 ms per token\n"
+          "text": "n=1024: naive   6.5 ms, cached  0.9 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=2048: naive  21.4 ms, cached  7.2 ms per token\n"
+          "text": "n=2048: naive  13.6 ms, cached  1.0 ms per token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=4032: naive  48.3 ms, cached  7.7 ms per token\n"
+          "text": "n=4032: naive  33.2 ms, cached  1.2 ms per token\n"
         }
       ]
     },
     "kv-cache-checking-the-cache-1": {
-      "code_fingerprint": "sha256:175b1007d6c897902e1b1f672db843b36e01176c8270f7a6699438595a75f1e0",
+      "code_fingerprint": "sha256:a2a56ec5936a8ec280419ecee218e1f3998ed68055a16e2291118bbd1d6a2b1e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-checking-the-cache-1-1.svg",
-          "bytes": 23438,
-          "sha256": "sha256:6a97ad07476b3a859566cc0af4700931df1862832c124667c04d719df2c8684d"
+          "bytes": 25106,
+          "sha256": "sha256:ac91bb3fe960f09f8e2623e2d53dac0b6f37a598ad3bfaa8b590b6b7f85ec3af"
         }
       ]
     },
     "kv-cache-same-logits-measured-3": {
-      "code_fingerprint": "sha256:02debd97f361aa606c0c47094644c65fba0d6e0d6e0abb6b4d4104a4a7d7bd1f",
+      "code_fingerprint": "sha256:81e94dd2e4f48fd04b132c88c2ee8cbc84df481404854ffc830d6541567faa62",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive : 256 tokens in 11.1 s =  23.0 tokens/s\n"
+          "text": "naive : 256 tokens in  8.1 s =  31.5 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cached: 256 tokens in  1.9 s = 134.0 tokens/s\n"
+          "text": "cached: 256 tokens in  0.5 s = 557.2 tokens/s\n"
         }
       ]
     },
     "kv-cache-memory-required-by-the-kv-cache-1": {
-      "code_fingerprint": "sha256:caa6ca69795dea1d67b95f043335b917feafd02f7e5992d347b0c1e15348ac24",
+      "code_fingerprint": "sha256:a099d0dc65c022fa0789f06b6a77ac0226bef624df9466e4ba900bfbfe51fa8a",
       "kind": "text",
       "outputs": []
     },
     "kv-cache-the-memory-bill": {
-      "code_fingerprint": "sha256:fbd20bc1c98a639372d660745c517045dea360fe9170d5a5ba0b714b209e55e7",
+      "code_fingerprint": "sha256:b14b232681ff507354cc276930649f11b045fb73f047480c21aabc299016a72f",
       "kind": "text",
       "outputs": [
         {
@@ -132,94 +132,87 @@
       ]
     },
     "kv-cache-prefill-is-compute-bound-decode-is-memory-bound": {
-      "code_fingerprint": "sha256:4c0ce2d1cad40d01488e3dbf84984df1f604990b99f0ecf999a571411846bcea",
+      "code_fingerprint": "sha256:768b6a64f6794a22cc22775cfaba3fc5f23bdccaea891160346242dd8b8138ad",
       "kind": "text",
       "outputs": []
     },
     "kv-cache-prefill-and-decode-1": {
-      "code_fingerprint": "sha256:49a21b6669952a9a1e6fb3aafcd80f608a628000be765a043b2aa9f5ba7a4c59",
+      "code_fingerprint": "sha256:7465ab99bc980957d207a0f2373e16532639634b737e5d10d18eda00e3550332",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prefill:  95608 tokens/s\ndecode:     136 tokens/s, bandwidth ceiling 1550 tokens/s\nFLOPs per byte: decode 0.38, prefill about 784\n"
+          "text": "prefill: 150413 tokens/s\ndecode:     952 tokens/s, bandwidth ceiling 1550 tokens/s\nFLOPs per byte: decode 0.38, prefill about 784\n"
         }
       ]
     },
     "kv-cache-batched-decoding": {
-      "code_fingerprint": "sha256:cad53c7fb704b201fa7c5bb0a0d8708bef73556fa900da081c2295c8377fc76f",
+      "code_fingerprint": "sha256:1166377ae6d2eaa9edbe845fbbf5a22fab0ac7b39090f05b546e151c235e73da",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=128: 136, 542, 2116, 8529 tokens/s\n"
+          "text": "n=128: 1173, 3574, 12353, 32525 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=1024: 138, 535, 2090, 6717 tokens/s\n"
+          "text": "n=1024: 1104, 2783, 6507, 9902 tokens/s\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-batched-decoding-1.svg",
-          "bytes": 33650,
-          "sha256": "sha256:0340cce6c57ff2b33b2e814248ed6e4c0c6428196ae8ab014e0e5f2e186efe50"
+          "bytes": 31928,
+          "sha256": "sha256:d38c0ac5cd4bcd95a9431ee8bf2c59de0666a99b74aad020a008cb2526a6c558"
         }
       ]
     },
-    "kv-cache-a-pluggable-implementation-1": {
-      "code_fingerprint": "sha256:d476196fc1da7dcd7343d3212a29967943dff5bca7f53f33c2f058ed69c25ade",
+    "kv-cache-reduction-cache-size-and-validation-loss-1": {
+      "code_fingerprint": "sha256:bd4da2369c1e8df1a3af9a5ed733ec59077275ac6e1cc779ec810565d9cbd197",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "queries (2, 8, 10, 32), keys (2, 2, 10, 32), values (2, 2, 10, 32)\n"
-        }
-      ]
-    },
-    "kv-cache-a-pluggable-implementation-2": {
-      "code_fingerprint": "sha256:354ce4e6acec75d3afe2382cd3396b26e5a0f8ff756d467b2d5631dd8abda284",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "H_kv=8: 262144 parameters, cache  2048 bytes per token and block\nH_kv=4: 196608 parameters, cache  1024 bytes per token and block\nH_kv=2: 163840 parameters, cache   512 bytes per token and block\nH_kv=1: 147456 parameters, cache   256 bytes per token and block\n"
-        }
-      ]
+      "outputs": []
     },
     "kv-cache-cache-against-quality": {
-      "code_fingerprint": "sha256:cf0ccbca63d792ba0c9f80268a1d0aef6824fe60850ab0c69fa5184a57a9f497",
+      "code_fingerprint": "sha256:71c3e00ab2b543ed5d48ad9fdcd92c91050ec5c344d549aec49adc9f5fdea4ae",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=8: validation loss 1.34, cache 12.0 KiB per token\n"
+          "text": "run 1, trained from scratch: H_kv=8 1.34, H_kv=2 1.35, H_kv=2 for 50 steps only 2.66\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=4: validation loss 1.34, cache  6.0 KiB per token\n"
+          "text": "  H_kv=8 converted by mean : 2.76, after 50 steps 1.62, after 100 steps 1.47\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=2: validation loss 1.34, cache  3.0 KiB per token\n"
+          "text": "  H_kv=8 converted by first: 2.83, after 50 steps 1.89, after 100 steps 1.71\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "H_kv=1: validation loss 1.35, cache  1.5 KiB per token\n"
+          "text": "run 2, trained from scratch: H_kv=8 1.34, H_kv=2 1.35, H_kv=2 for 50 steps only 2.66\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  H_kv=8 converted by mean : 2.75, after 50 steps 1.62, after 100 steps 1.46\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  H_kv=8 converted by first: 2.71, after 50 steps 1.79, after 100 steps 1.64\n"
         }
       ]
     },
     "kv-cache-compressing-the-cache-further-1": {
-      "code_fingerprint": "sha256:adaa400d605ca3bfc55ecd15dec96955ba43e6f0e82afb6caf18134ddcb6ecb0",
+      "code_fingerprint": "sha256:bcee34f6ccc9577b67adf0c2bd336df2d6d78afa877f9bc33f2ccdb888f7e51e",
       "kind": "text",
       "outputs": [
         {
@@ -230,7 +223,7 @@
       ]
     },
     "kv-cache-compressing-the-cache-further-2": {
-      "code_fingerprint": "sha256:e5686173dcd5683b1c9f6fcd848b579c90f2c49e445388a9501f70293516c3d2",
+      "code_fingerprint": "sha256:c86f884e3568b2ed19b5df26f4635282c11d62546e994c74dcb1dabdd81436b7",
       "kind": "text",
       "outputs": [
         {
@@ -241,18 +234,18 @@
       ]
     },
     "kv-cache-low-rank-keys-and-values": {
-      "code_fingerprint": "sha256:580f88ccc3cd24273d55b751e609ce78a70ca0b30cb22f6b472807808f40d1dc",
+      "code_fingerprint": "sha256:70f82f2ac62938a220446e055b59eaa27ff6623a20bae11f809dd841ec1f4b1f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "rank 512 of 1536: loss 3.55, perplexity 35\nrank 256 of 1536: loss 3.61, perplexity 37\nrank 128 of 1536: loss 4.14, perplexity 63\n"
+          "text": "rank 512 of 768: loss 3.55, perplexity 35\nrank 256 of 768: loss 3.61, perplexity 37\nrank 128 of 768: loss 4.14, perplexity 63\n"
         }
       ]
     },
     "kv-cache-a-window-needs-a-sink-1": {
-      "code_fingerprint": "sha256:24a69a536c4dba3c516c0a8f400ad047387628379f6b08946482959acfa96faf",
+      "code_fingerprint": "sha256:54f0a6432d13e0c3d862c59b07db8a8530fc8cfc61781224436bdc4b98d312af",
       "kind": "text",
       "outputs": [
         {
@@ -263,13 +256,13 @@
       ]
     },
     "kv-cache-a-window-needs-a-sink-2": {
-      "code_fingerprint": "sha256:239c2b81b9330387f7b208cc40e51eaf81472623189d3fba1239aaba687314d9",
+      "code_fingerprint": "sha256:4d55bc3cd048579a36641f6531c65c2d91cf912ab5bfd11a34e2fb2e58e5f5a6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "window 256 + 0 sink tokens: loss 8.25, perplexity 3836\nwindow 256 + 1 sink tokens: loss 3.86, perplexity 47\nwindow 256 + 4 sink tokens: loss 3.76, perplexity 43\nfull attention:            loss 3.58, perplexity 36\n"
+          "text": "window 256 + 0 sink tokens: loss 8.25, perplexity 3842\nwindow 256 + 1 sink tokens: loss 3.86, perplexity 47\nwindow 256 + 4 sink tokens: loss 3.76, perplexity 43\nfull attention:            loss 3.58, perplexity 36\n"
         }
       ]
     }

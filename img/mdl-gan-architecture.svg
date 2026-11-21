@@ -1501,21 +1501,14 @@ z
     </g>
    </g>
    <g id="text_13">
-    <!-- discriminator -->
-    <g transform="translate(409.764562 138.3864) scale(0.12 -0.12)">
-     <use xlink:href="#SourceSans3-Regular-1f"/>
-     <use xlink:href="#SourceSans3-Regular-24" transform="translate(55.5 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2e" transform="translate(80.09375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1e" transform="translate(122 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(167.59375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-24" transform="translate(202.296875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-28" transform="translate(226.890625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-24" transform="translate(309.796875 0)"/>
-     <use xlink:href="#SourceSans3-Regular-29" transform="translate(334.390625 0)"/>
-     <use xlink:href="#SourceSans3-Regular-1c" transform="translate(389.09375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2f" transform="translate(438.09375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2a" transform="translate(470.484375 0)"/>
-     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(524.6875 0)"/>
+    <!-- critic -->
+    <g transform="translate(430.7955 138.3864) scale(0.12 -0.12)">
+     <use xlink:href="#SourceSans3-Regular-1e"/>
+     <use xlink:href="#SourceSans3-Regular-2d" transform="translate(45.59375 0)"/>
+     <use xlink:href="#SourceSans3-Regular-24" transform="translate(80.296875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-2f" transform="translate(104.890625 0)"/>
+     <use xlink:href="#SourceSans3-Regular-24" transform="translate(138.6875 0)"/>
+     <use xlink:href="#SourceSans3-Regular-1e" transform="translate(163.28125 0)"/>
     </g>
    </g>
    <g id="patch_14">

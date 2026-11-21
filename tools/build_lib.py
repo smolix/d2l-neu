@@ -32,7 +32,6 @@ from d2l_preprocess import (
 # with no imports cell — see each file's header). gen_notebooks.py imports
 # this list to keep them out of the notebook set.
 LIB_ONLY_FILES = [
-    'chapter_recurrent-modern/legacy-attention-lib.md',
     'chapter_computational-performance/legacy-multigpu-lib.md',
     'chapter_optimization/legacy-timer-lib.md',
     'chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md',
@@ -63,6 +62,12 @@ LIB_ONLY_FILES = [
     'chapter_lm-encoders/retrieval-lib.md',
     'chapter_lm-encoders/rag-lib.md',
     'chapter_lm-encoders/legacy-datahub-lib.md',
+    # Two BPETokenizer methods of the retired seq2seq translator, kept so
+    # the tokenizer's library block (and every notebook using it) is unchanged.
+    'chapter_recurrent-modern/legacy-tokenizer-lib.md',
+    # The CUDA-graph replay behind the 25-Gaussians training step of the GAN
+    # convergence section, explained there in one sentence.
+    'chapter_generative-adversarial-networks/convergence-lib.md',
     # Chapter 20: 20.1's WARC reader and block-checked fetch internals, the
     # crawl pin and registered domains; 20.4's token pools and byte lengths;
     # 20.6's shard writer, special-string-safe encoding and URL rule.
@@ -87,6 +92,17 @@ LIB_ONLY_EARLY_FILES = {
     # `d2l.HyperParameters`, the import-time base class of the classes in
     # sec_oo-design; the book shows only its method (utils.md).
     'chapter_appendix-tools-for-deep-learning/hyperparameters-lib.md',
+}
+
+# Source files whose saved blocks keep the "Defined in" label of the file
+# they moved out of. The label is part of each symbol's library shard, which
+# notebook freshness keys on: the test-model harness moved from adam.md
+# (sec_adam) to test-models.md (sec_test_models), and keeping sec_adam keeps
+# its many consumers outside the chapter fresh. Remove at the next full
+# re-execution of the book.
+DOCSTRING_LABEL_OVERRIDES = {
+    'chapter_optimization/test-models.md': 'sec_adam',
+    'chapter_optimization/gd.md': 'sec_gd',
 }
 
 # ──────────────────────────────────────────────────────────
@@ -303,6 +319,9 @@ def extract_save_blocks(src_path, framework):
 
     saved = []
     markdown_so_far = ''
+    label_override = next((label for rel, label
+                           in DOCSTRING_LABEL_OVERRIDES.items()
+                           if Path(src_path).as_posix().endswith(rel)), None)
     i = 0
 
     while i < len(lines):
@@ -342,7 +361,8 @@ def extract_save_blocks(src_path, framework):
             code = flatten_tab_branches(code, framework)
 
             for extracted in save_blocks(code):
-                label = find_section_label(markdown_so_far)
+                label = (label_override or
+                         find_section_label(markdown_so_far))
                 saved.append((extracted, label, str(src_path)))
         else:
             markdown_so_far += line + '\n'
@@ -993,6 +1013,14 @@ def main():
     late = [f for f in LIB_ONLY_FILES
             if f not in LIB_ONLY_EARLY_FILES and (args.source / f).exists()]
     files = early + list(CHAPTER_NUMBERING.keys()) + late
+    # oo-design.md defines base classes (Module, DataModule, Trainer) used by
+    # LinearRegression in linear-regression-scratch.md (#sec_linear_concise).
+    if ('chapter_linear-regression/linear-regression-scratch.md' in files
+            and 'chapter_linear-regression/oo-design.md' in files):
+        i_s = files.index('chapter_linear-regression/linear-regression-scratch.md')
+        i_o = files.index('chapter_linear-regression/oo-design.md')
+        if i_s < i_o:
+            files[i_s], files[i_o] = files[i_o], files[i_s]
 
     # Copy __init__.py
     init_src = args.source / 'd2l' / '__init__.py'

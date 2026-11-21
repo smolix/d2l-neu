@@ -6,63 +6,28 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Data Manipulation
 :label:`sec_ndarray`
 
-A photograph of a shirt reaches a model as a grid of numbers, one per
-pixel, and everything else the model touches is numbers too: its parameters,
-the values it computes along the way, and the gradients used to train it. A
-deep learning program spends nearly all of its time computing with such
-collections of numbers. How should we store them, and how can we compute
-with them quickly?
+To get anything done in machine learning, we need a way to store and manipulate data efficiently in memory. We start with $n$-dimensional arrays, which in deep learning are called *tensors*.
 
-Let us take one humble computation, the rescaling of images, to see what is
-at stake. Training a model processes its examples in small groups called
-*minibatches*, and a minibatch of 256 such photographs, grayscale and of
-$28 \times 28$ pixels each, holds $256 \times 28 \times 28 = 200{,}704$
-numbers. Image files store each pixel as an integer from 0 to 255, and
-before a model sees the images we rescale every pixel to a real number
-between 0 and 1 by dividing it by 255. In plain Python, this takes three
-nested loops over the images, the rows, and the columns, and the interpreter
-carries out the 200,704 divisions one at a time. In deep learning code it
-takes one expression, `images / 255`, which the library applies to the whole
-minibatch at once in compiled code, on a CPU or a GPU. This is how deep
-learning code computes throughout: with whole arrays, and hardly ever with
-loops over their elements.
+To see why specialized array containers are indispensable, consider a single *minibatch* of $256$ grayscale photographs of resolution $28 \times 28$ pixels, containing $256 \times 28 \times 28 = 200{,}704$ numbers. Image files store each pixel as an integer in $\{0, \ldots, 255\}$, which we rescale to $[0, 1]$ by dividing by $255$. In plain Python, three nested loops would execute $200{,}704$ separate scalar divisions in the interpreter. In a tensor library, the single expression `images / 255` dispatches to compiled C++ or CUDA kernels that divide all $200{,}704$ numbers in parallel on a CPU or GPU. Throughout deep learning, we operate on whole tensors at once rather than iterating over individual scalar elements in Python loops.
 
-An array of numbers arranged along any number of axes is called a *tensor*.
-If you know NumPy :cite:`Harris.Millman.Walt.ea.2020`, much of this section
-will look familiar, and you may read it quickly. The tensor classes of deep
-learning libraries (`ndarray` in MXNet, `Tensor` in PyTorch and TensorFlow,
-`jax.Array` in JAX) resemble NumPy's `ndarray`, with two additions, and it
-is these that make deep learning practical. They run their operations on
-GPUs and other accelerators as well as on CPUs, and the libraries can
-compute derivatives of computations on them automatically
-(:numref:`sec_autograd`).
-
-This section shows how to create tensors and inspect their shape and type,
-how to rearrange, select, and change their elements, and how to compute with
-whole tensors at once, including tensors whose shapes differ. It ends with
-what these computations cost in memory and how to convert tensors to other
-Python objects. The minibatch of images is our running example. Where a
-tensor lives, in main memory or on a GPU, changes no result in this chapter;
-a later chapter shows how to choose.
+Across all modern deep learning frameworks, the tensor class (`ndarray` in MXNet, `Tensor` in PyTorch and TensorFlow, and `jax.Array` in JAX) closely mirrors NumPy's `ndarray` :cite:`Harris.Millman.Walt.ea.2020`, with two crucial additions:
+1. **Hardware acceleration:** framework tensors execute across GPUs and specialized AI accelerators, whereas NumPy runs on CPUs.
+2. **Automatic differentiation:** frameworks track computations on tensors and compute gradients automatically via backpropagation (:numref:`sec_autograd`).
 
 :begin_tab:`mxnet`
-We import MXNet's array module, which follows the NumPy interface, under the
-name `mnp`, so that `np` can keep meaning NumPy. The module `npx` adds
-operations for deep learning, and `set_np` makes the rest of MXNet work with
-these arrays.
+We import MXNet's NumPy-compatible array module as `mnp` (keeping `np` for standard NumPy) along with `npx` (`numpy_extension`), and call `npx.set_np()` to activate NumPy-compatible tensor semantics.
 :end_tab:
 
 :begin_tab:`pytorch`
-We import PyTorch, whose package is called `torch`.
+We import PyTorch (`torch`).
 :end_tab:
 
 :begin_tab:`tensorflow`
-We import TensorFlow under its usual alias `tf`.
+We import TensorFlow under its customary alias `tf`.
 :end_tab:
 
 :begin_tab:`jax`
-We import `jax` and its NumPy-like interface `jax.numpy`, by convention
-under the alias `jnp`.
+We import `jax` and its NumPy-compatible array interface `jax.numpy` as `jnp`.
 :end_tab:
 
 ```{.python .input #ndarray-getting-started-1}
@@ -92,20 +57,12 @@ from jax import numpy as jnp
 
 ### Shape
 
-A tensor arranges its numbers along its *axes*. A vector has one axis and a
-matrix has two. The minibatch of images has four: one for the image, one for
-the color channel (a grayscale image has a single channel), and one each for
-the rows and the columns of pixels. Axes are numbered from 0, so for the
-minibatch, axis 0 indexes the images and axis 3 the columns. The number of
-axes is the *order* of a tensor (`ndim` in code), and the minibatch has
-order 4.
+A tensor arranges numerical values along one or more *axes*. A tensor with one axis is a *vector*, with two axes a *matrix*, and with $k > 2$ axes a $k^\textrm{th}$-*order tensor* (its number of axes is its *order*, exposed in code as `ndim`). Our running minibatch of grayscale images is a $4^\textrm{th}$-order tensor of shape $(256, 1, 28, 28)$: axis $0$ indexes the image in the batch, axis $1$ the color channel ($1$ for grayscale, $3$ for RGB), axis $2$ the vertical pixel row, and axis $3$ the horizontal pixel column.
 
-The simplest way to create a tensor is `arange(n)`, which returns a vector of
-the integers from 0 up to, but not including, $n$. We ask for 32-bit
-floating-point numbers, the type that we compute with throughout:
+Calling `arange(n)` creates a 1D vector of evenly spaced values from $0$ (included) to $n$ (excluded). Newly created tensors reside in main memory for CPU computation by default; here we request 32-bit floating-point values (`float32`):
 
 :begin_tab:`tensorflow`
-In TensorFlow, this function is called `range`.
+In TensorFlow, this function is named `tf.range`.
 :end_tab:
 
 ```{.python .input #ndarray-getting-started-2}
@@ -132,11 +89,10 @@ x = jnp.arange(12, dtype=jnp.float32)
 x
 ```
 
-The numbers in a tensor are its *elements*, and the number of elements is
-its *size*:
+Each value in a tensor is an *element*. We can query the total number of elements---its *size*---and its *shape* tuple (listing the length along each axis):
 
 :begin_tab:`pytorch`
-PyTorch calls the size `numel`, for "number of elements".
+In PyTorch, the total element count is returned by `numel()`.
 :end_tab:
 
 ```{.python .input #ndarray-getting-started-3}
@@ -154,66 +110,38 @@ x.numel()
 tf.size(x)
 ```
 
-The *shape* of a tensor lists its length along each axis. The shape of a
-vector has one entry, which equals the size:
-
 ```{.python .input #ndarray-getting-started-4}
 x.shape
 ```
 
-:numref:`fig_ndarray_shapes` shows tensors with zero to three axes. A single
-number, a *scalar*, is a tensor with no axes; its shape is empty. The size
-of every tensor is the product of the entries of its shape. For the minibatch
-of images, whose shape is $(256, 1, 28, 28)$, this is the count of 200,704
-from the opening, since the single channel contributes a factor of 1.
+:numref:`fig_ndarray_shapes` illustrates tensors of orders $0$ through $3$. A single number (*scalar*) is a $0^\textrm{th}$-order tensor with empty shape `()`. For any tensor, the size equals the product of the lengths in its shape tuple ($256 \times 1 \times 28 \times 28 = 200{,}704$ for our image minibatch).
 
 ![Tensors with zero, one, two, and three axes. The shape lists the length of each axis, and the size is the product of these lengths: 1, 4, 12, and 24 elements.](../img/ndarray-rank-ladder.svg)
 :label:`fig_ndarray_shapes`
 
 ### Data Types
 
-Every tensor also has a *data type*, its `dtype`, which fixes how each
-element is stored. Deep learning computes mostly with 32-bit floating-point
-numbers, `float32`, which take 4 bytes each and keep about 7 significant
-decimal digits. That is fewer digits than a pocket calculator shows, and it
-turns out to be enough. Other data need other types. The pixels of an image
-are 8-bit unsigned integers, `uint8`, which take one byte each and hold the
-integers from 0 to 255. The data type determines how much memory a tensor
-needs: the minibatch of images takes 200,704 bytes as `uint8` and four times
-as much, about 0.8 MB, as `float32`. Large models also compute with 16-bit
-floating-point numbers, which halve the memory again at some cost in
-precision (:numref:`sec_numerics`).
+Every tensor carries a *data type* (`dtype`) specifying the binary representation of each element. Deep learning models perform most arithmetic in 32-bit floating point (`float32`, $4$ bytes per element, $\approx 7$ decimal digits of precision) or 16-bit formats (`float16` / `bfloat16`, $2$ bytes per element; see :numref:`sec_numerics`). Raw image pixels are typically stored as 8-bit unsigned integers (`uint8`, $1$ byte per pixel for $\{0, \ldots, 255\}$), so our $200{,}704$-pixel minibatch occupies $0.2\textrm{ MB}$ as `uint8` and $0.8\textrm{ MB}$ as `float32`.
 
 :begin_tab:`mxnet`
-MXNet creates `float32` arrays by default, even from integers, so the `arange`
-cell above needs no `dtype`. The method `astype` converts an array to another
-type, as in `x.astype('int32')`.
+MXNet defaults to `float32`; cast with `x.astype('int32')`.
 :end_tab:
 
 :begin_tab:`pytorch`
-With integer arguments, `torch.arange` creates a tensor of 64-bit integers,
-hence the `float32` in the `arange` cell above. The method `to` converts a
-tensor to another type, as in `x.to(torch.int32)`.
+`torch.arange` defaults to `int64` on integer arguments; cast with `x.to(torch.int32)`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-With integer arguments, `tf.range` creates a tensor of 32-bit integers,
-hence the `float32` in the `arange` cell above. The function `tf.cast`
-converts a tensor to another type, as in `tf.cast(x, tf.int32)`.
+`tf.range` defaults to `int32` on integer arguments; cast with `tf.cast(x, tf.int32)`.
 :end_tab:
 
 :begin_tab:`jax`
-With integer arguments, `jnp.arange` creates an array of 32-bit integers,
-hence the `float32` in the `arange` cell above. The method `astype` converts
-an array to another type, as in `x.astype(jnp.int32)`.
+`jnp.arange` defaults to `int32` on integer arguments; cast with `x.astype(jnp.int32)`.
 :end_tab:
 
 ### Initial Values
 
-A model needs tensors with initial values before training can change them.
-The simplest choice is a constant: the functions `zeros` and `ones` create a
-tensor of a given shape filled with 0s or with 1s. Here is a tensor of zeros
-with the shape $(2, 3, 4)$ of :numref:`fig_ndarray_shapes`:
+The functions `zeros` and `ones` construct a tensor of any shape filled with $0$s or $1$s (used for biases or buffers):
 
 ```{.python .input #ndarray-getting-started-6}
 %%tab mxnet
@@ -235,12 +163,7 @@ tf.zeros((2, 3, 4))
 jnp.zeros((2, 3, 4))
 ```
 
-Most parameters of a model, however, must start at small random values.
-The reason has to wait until :numref:`sec_numerical_stability`; for now we
-only need to know how to draw them. The following tensor holds numbers
-drawn independently from the standard normal distribution, a bell-shaped
-distribution centered at 0 that places about 95% of its draws between $-2$
-and $2$:
+Neural network weights are typically initialized by sampling elements independently from a probability distribution (:numref:`sec_numerical_stability`). Below, we draw a $3 \times 4$ matrix from a standard Gaussian distribution (mean $0$, standard deviation $1$):
 
 ```{.python .input #ndarray-getting-started-8}
 %%tab mxnet
@@ -264,31 +187,22 @@ key = jax.random.key(random.getrandbits(32))  # A new seed on each run
 jax.random.normal(key, (3, 4))
 ```
 
-Random numbers differ from one run to the next, which is a nuisance when we
-hunt for a bug or want others to reproduce a result. The numbers are, of
-course, not random at all: a generator computes them from a starting value,
-the *seed*, and the same seed gives the same numbers. Below, `a` and `c`
-are the first draws from the same seed and agree, whereas `b` is a
-different draw:
+Computer-generated random numbers are *pseudorandom*: a deterministic algorithm computes them from an integer *seed*, so resetting the seed reproduces the exact same sequence (`a` and `c` below match, whereas `b` is drawn after the generator has advanced):
 
 :begin_tab:`mxnet`
-MXNet keeps one global generator, which every draw advances, and
-`mnp.random.seed` resets it.
+MXNet resets its global generator via `mnp.random.seed`.
 :end_tab:
 
 :begin_tab:`pytorch`
-PyTorch keeps one global generator, which every draw advances, and
-`torch.manual_seed` resets it.
+PyTorch resets its global generator via `torch.manual_seed`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow keeps one global generator, which every draw advances, and
-`tf.random.set_seed` resets it.
+TensorFlow resets its global generator via `tf.random.set_seed`.
 :end_tab:
 
 :begin_tab:`jax`
-JAX has no global generator. Every draw takes an explicit *key*, and
-`jax.random.split` derives new, independent keys from an existing one.
+JAX is purely functional and has no global random state: every random function takes an explicit PRNG *key*, and `jax.random.split` derives new independent subkeys deterministically.
 :end_tab:
 
 ```{.python .input #ndarray-initial-values-1}
@@ -330,17 +244,7 @@ c = jax.random.normal(key_a, (3,))  # Same key: c repeats a
 a, b, c
 ```
 
-Most experiments in this part of the book deliberately do not fix the seed.
-Every training run starts from freshly drawn weights and visits its data in
-a new random order, so its result is one draw from a distribution, and the
-numbers on your screen will differ a little from those printed here. This is why we
-report many results as a range, such as "between 82% and 84%": it is the
-spread that we saw when we repeated the experiment. A single number with
-four digits would claim more than one run can know. Our conclusions are
-meant to hold anywhere in such a range, and yours should too.
-
-Finally, we can write down the elements of a tensor ourselves, as nested
-Python lists in which the outermost list runs along axis 0:
+We can also supply exact values directly via nested Python lists:
 
 ```{.python .input #ndarray-getting-started-9}
 %%tab mxnet
@@ -362,10 +266,7 @@ tf.constant([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 jnp.array([[2, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 ```
 
-This is all we need to build the running example. Until we load a real
-dataset, random integers from 0 to 255 stand in for the pixels. Such images
-show static rather than shirts, but only the shape and the type of the
-minibatch matter here:
+Finally, we construct our running synthetic minibatch `images` of shape `(256, 1, 28, 28)` and type `uint8`, filled with random integers in $\{0, \ldots, 255\}$:
 
 ```{.python .input #ndarray-initial-values-2}
 %%tab mxnet
@@ -399,19 +300,11 @@ images = jax.random.randint(subkey, (256, 1, 28, 28), 0, 256,
 images.shape, images.dtype
 ```
 
-The shape reads: 256 images, 1 channel, 28 rows, and 28 columns.
-
 ## Reshaping and Indexing
 
 ### Reshaping
 
-The same numbers often need a different arrangement. A classifier that
-treats each image as a list of 784 pixel values needs the minibatch as a
-matrix with one image per row, of shape $(256, 784)$. The function `reshape`
-changes the shape of a tensor but neither its size nor the order of its
-elements. On a small example, we turn the vector `x` of shape $(12,)$ into a
-matrix `X` of shape $(3, 4)$. The elements fill the matrix one row at a
-time, so `x[3]` becomes `X[0, 3]` (:numref:`fig_ndarray_reshape`):
+Calling `reshape` reconfigures a tensor's axes while preserving its element count and row-major order in memory (:numref:`fig_ndarray_reshape`). Here we reshape our 12-element vector `x` into a $3 \times 4$ matrix `X`:
 
 ![Reshaping a vector of 12 elements into a $3 \times 4$ matrix. The elements keep their order and fill the matrix one row at a time.](../img/ndarray-reshape.svg)
 :label:`fig_ndarray_reshape`
@@ -428,15 +321,10 @@ X = tf.reshape(x, (3, 4))
 X
 ```
 
-Since the size is fixed, one entry of the target shape follows from the
-others: 12 elements in 3 rows make 4 columns. Writing $-1$ for one entry
-lets the library infer it, so `x.reshape(-1, 4)` and `x.reshape(3, -1)` give
-the same matrix as `x.reshape(3, 4)`. In the same way, we flatten every
-image of the minibatch into a row of 784 pixels without writing out 784:
+Because the total size is fixed, passing `-1` for one dimension lets the framework infer its length automatically—for example, flattening our $(256, 1, 28, 28)$ image minibatch into a $(256, 784)$ matrix with one image per row:
 
 :begin_tab:`tensorflow`
-In TensorFlow, `reshape` is a function rather than a method, as in
-`tf.reshape(x, (-1, 4))`.
+In TensorFlow, `reshape` is a function `tf.reshape(x, (-1, 4))`.
 :end_tab:
 
 ```{.python .input #ndarray-reshaping-1}
@@ -449,19 +337,14 @@ images.reshape(256, -1).shape
 tf.reshape(images, (256, -1)).shape
 ```
 
-Reshaping can also add or remove an axis of length 1, which leaves the
-elements and their order unchanged. The first image of the minibatch,
-`images[0]`, has shape $(1, 28, 28)$. A model that expects minibatches needs
-it as a minibatch of one image, of shape $(1, 1, 28, 28)$, while a plot
-needs a $28 \times 28$ matrix without the channel axis. The index `None`
-inserts an axis of length 1, and `squeeze` removes one:
+Indexing with `None` inserts a new singleton axis of length $1$ at that position, while `squeeze` removes an axis of length $1$:
 
 :begin_tab:`pytorch`
-The method `image.unsqueeze(0)` inserts the axis as well.
+In PyTorch, `image.unsqueeze(0)` also inserts a singleton axis at position `0`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-In TensorFlow, `squeeze` is the function `tf.squeeze`.
+In TensorFlow, `squeeze` is called as `tf.squeeze`.
 :end_tab:
 
 ```{.python .input #ndarray-reshaping-2}
@@ -478,45 +361,27 @@ image[None].shape, tf.squeeze(image, 0).shape
 
 ### Indexing and Slicing
 
-As with Python lists, we select elements of a tensor by *indexing*. Indices
-start at 0, and negative indices count from the end. A *slice* `start:stop`
-selects the positions from `start` up to, but not including, `stop`, and a
-colon alone selects all positions. Indices for several axes are separated by
-commas, and an index given alone applies to axis 0. Thus `X[-1]` selects the
-last row of `X`, and `X[1:3]` selects the second and third rows:
+Elements and sub-tensors are accessed via $0$-based integer indexing (negative indices count backward from the end) and half-open slices `start:stop` (including `start`, excluding `stop`), separated by commas across axes:
 
 ```{.python .input #ndarray-indexing-and-slicing-1}
 X[-1], X[1:3]
 ```
 
-Note that the two results differ in shape. An integer index removes its
-axis, so `X[-1]` is a vector, whereas a slice keeps its axis, so `X[1:3]` is
-a matrix with two rows (:numref:`fig_ndarray_index`). The distinction looks
-pedantic, but many an error about mismatched shapes goes back to it.
+Notice the shape difference (:numref:`fig_ndarray_index`): an integer index (`X[-1]`) collapses that axis to return a vector of shape `(4,)`, whereas a slice (`X[1:3]`) preserves the axis to return a matrix of shape `(2, 4)`.
 
 ![Indexing a $3 \times 4$ matrix. The integer index `X[-1]` selects the last row and removes axis 0, leaving shape $(4,)$. The slice `X[1:3]` selects rows 1 and 2 and keeps axis 0, leaving shape $(2, 4)$.](../img/ndarray-index-read.svg)
 :label:`fig_ndarray_index`
 
-On the minibatch, `images[0]` is the first image, `images[:32]` a smaller
-minibatch of the first 32 images, and `images[:, 0, 14, 14]` the pixel in row 14 and
-column 14 of every image:
+On our image minibatch of shape $(256, 1, 28, 28)$, `images[0]` extracts the first image $(1, 28, 28)$, `images[:32]` slices the first $32$ images $(32, 1, 28, 28)$, and `images[:, 0, 14, 14]` extracts the center pixel across all $256$ images $(256,)$:
 
 ```{.python .input #ndarray-indexing-and-slicing-4}
 images[0].shape, images[:32].shape, images[:, 0, 14, 14].shape
 ```
 
-An index can also be a tensor. Two tensors of integer positions, one for the
-rows and one for the columns, select one element for each pair of
-positions. This picks one entry from every row, as when we read off the
-score that a classifier gives to the correct category of each image. The
-matrix `X` holds the numbers 0 to 11 row by row, so the rows $(0, 1, 2)$ and
-the columns $(3, 0, 2)$ read `X[0, 3]`, `X[1, 0]`, and `X[2, 2]`, which are
-3, 4, and 10:
+We can also index a tensor using *integer index tensors* (*gather*): passing two 1D integer tensors `rows = (0, 1, 2)` and `cols = (3, 0, 2)` selects entries `(0, 3)`, `(1, 0)`, and `(2, 2)`:
 
 :begin_tab:`tensorflow`
-TensorFlow tensors do not accept tensors of positions as an index. The
-function `tf.gather` with `batch_dims=1` picks, in every row of `X`, the
-entry at the position that `cols` gives for that row:
+In TensorFlow, `tf.gather(X, cols, batch_dims=1)` gathers entry `cols[i]` from each row `i` of `X`:
 :end_tab:
 
 ```{.python .input #ndarray-indexing-and-slicing-5}
@@ -543,28 +408,16 @@ rows, cols = jnp.arange(3), jnp.array([3, 0, 2])
 X[rows, cols]
 ```
 
-A tensor of booleans with the shape of `X`, a *mask*, selects the elements
-of `X` where it is `True`. The comparison `X > 2` compares every element of
-`X` with 2 and gives such a mask, and the operator `&` combines two masks
-elementwise into one that is `True` where both are (*and*); `|` gives *or*.
-The selected elements need not form rows and columns, so the result is a
-vector:
+Similarly, an elementwise comparison produces a *Boolean mask* of `True`/`False` values (combinable with `&`, `|`, `~`). Indexing `X[mask]` extracts all `True` entries as a 1D vector, whereas `where(mask, A, B)` chooses from `A` or `B` elementwise while preserving the original shape:
 
 :begin_tab:`jax`
-The length of the result depends on the values in the mask, so indexing
-with a mask works only outside functions compiled with `jax.jit`. The
-function `where` below gives a result of fixed shape and works everywhere.
+Because the output length of `X[mask]` is data-dependent, Boolean mask indexing works only in eager mode; inside `jax.jit`-compiled functions, use `jnp.where`.
 :end_tab:
 
 ```{.python .input #ndarray-indexing-and-slicing-6}
 mask = (X > 2) & (X < 8)
 X[mask]
 ```
-
-To keep the shape instead, `where(mask, A, B)` takes the elements of `A`
-where the mask is `True` and those of `B` elsewhere. A single number in
-place of `A` or `B` stands for that number at every position, so the
-following sets every element outside the mask to 0:
 
 ```{.python .input #ndarray-indexing-and-slicing-7}
 %%tab mxnet
@@ -588,33 +441,18 @@ jnp.where(mask, X, 0)
 
 ### Writing Elements
 
-So far we have only read elements. Can we also change them? Here the
-libraries part ways, by design. MXNet and PyTorch tensors are *mutable*: an
-assignment overwrites their elements in place. TensorFlow and JAX tensors
-are *immutable*: once created, they never change.
-
-Writing raises a question that reading could not. When we reshaped `x` into
-`X`, did the library copy the elements? It need not have: the elements of
-`x` lie in memory one after another, and so do the rows of `X`, so recording
-a new shape for the same memory suffices. A tensor that shares its memory
-with another in this way is called a *view*, and a write through either name
-is then seen through both. For immutable tensors the question is idle. For
-mutable ones we had better know the answer.
+MXNet and PyTorch tensors are *mutable* (`X[i, j] = val` overwrites memory in place), whereas TensorFlow and JAX tensors are *immutable*. Moreover, when `reshape` returns a zero-copy *view* sharing the original buffer (as in PyTorch), mutating `X` also mutates `x`:
 
 :begin_tab:`mxnet, pytorch`
-An index on the left side of an assignment writes the element. We display
-`x`, from which `X` was reshaped, as well:
+We assign `17` to `X[1, 2]` (flat index $6$) and inspect both `X` and `x`:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Mutable state, such as the parameters of a model, is held in a `Variable`,
-whose elements the method `assign` overwrites. We copy `X` into a variable
-and change one element:
+Learnable parameters live in mutable `tf.Variable` containers updated via `.assign()`:
 :end_tab:
 
 :begin_tab:`jax`
-In place of an assignment, `X.at[1, 2].set(17)` returns a new array that
-agrees with `X` except at position $(1, 2)$, and leaves `X` unchanged:
+JAX provides functional updates `X.at[1, 2].set(17)`, returning a new array while leaving `X` unchanged:
 :end_tab:
 
 ```{.python .input #ndarray-indexing-and-slicing-2}
@@ -637,18 +475,14 @@ X_new
 ```
 
 :begin_tab:`mxnet`
-The vector `x` still holds 6 at this position: MXNet's `reshape` copied the
-data.
+In MXNet, `x[6]` remains `6.0` because `reshape` allocated a copy.
 :end_tab:
 
 :begin_tab:`pytorch`
-The vector `x` has changed too: its element 6 is now 17, although we never
-assigned to `x`. PyTorch's `reshape` returned a view. (When the arrangement
-in memory does not allow a view, `reshape` copies the data instead.)
+In PyTorch, `x[6]` changed to `17.` because `reshape` returned a view sharing storage with `x`.
 :end_tab:
 
-To give many elements the same value, we index with a slice. Here
-`[:2, :]` selects the first two rows, with the colon taking all columns:
+Slicing on the left-hand side assigns to an entire block at once:
 
 ```{.python .input #ndarray-indexing-and-slicing-3}
 %%tab mxnet, pytorch
@@ -672,11 +506,7 @@ X_new
 
 ### Elementwise Operations
 
-An operation is *elementwise* if it applies a function of numbers to each
-element of a tensor separately, or to each pair of elements at the same
-position in two tensors of the same shape. The arithmetic operators `+`,
-`-`, `*`, `/`, and `**` (power) all work this way. We try them on two new
-vectors, reusing the names `x` and `y`:
+Standard arithmetic operators (`+`, `-`, `*`, `/`, `**`) and unary functions (`exp`) lift scalar operations to act independently on every corresponding element of identically shaped tensors:
 
 ```{.python .input #ndarray-operations-2}
 %%tab mxnet
@@ -706,16 +536,6 @@ y = jnp.array([2.0, 2, 2, 2])
 x + y, x - y, x * y, x / y, x ** y
 ```
 
-Each result has the shape of the operands, and each element depends only on
-the two elements at its position: `x / y` halves every element of `x`, and
-`x ** y` squares it. In symbols, a function $f$ of two numbers turns two
-tensors $\mathbf{u}$ and $\mathbf{v}$ of the same shape into the tensor
-$\mathbf{c}$ with elements $c_i = f(u_i, v_i)$, where $i$ runs over all
-positions.
-
-Functions of a single number, such as $e^x$, apply to each element in the
-same way:
-
 ```{.python .input #ndarray-operations-1}
 %%tab mxnet
 mnp.exp(x)
@@ -736,41 +556,22 @@ tf.exp(x)
 jnp.exp(x)
 ```
 
-We are now in a position to carry out the rescaling from the beginning of
-the section. Dividing the minibatch by 255 divides every pixel and returns a
-new tensor. Division with `/` always returns floating-point numbers, here
-`float32`, even where a quotient happens to be an integer. (Addition makes
-no such promise: the sum of two `uint8` tensors is again `uint8`, with
-consequences that an exercise explores.) Strictly speaking, the definition
-above does not cover `images / 255`, since the second operand is a single
-number rather than a tensor of the same shape. We return to this case in
-the next subsection:
+Dividing our `uint8` minibatch `images` by `255` rescales all $200{,}704$ pixels at once and promotes the result to `float32`:
 
 ```{.python .input #ndarray-elementwise-operations-1}
 scaled = images / 255
 print(scaled.dtype, images[0, 0, 0, :4], scaled[0, 0, 0, :4], sep='\n')
 ```
 
-The type has changed from `uint8` to `float32`, and the first four pixels of
-the first image, integers from 0 to 255, have become numbers between 0
-and 1.
+Comparisons such as `x == y` return a Boolean tensor elementwise. Summing a tensor via `sum()` collapses its entries to a scalar; on a Boolean mask, `True` counts as $1$ and `False` as $0$, so `(x == y).sum()` counts matching entries:
 
-Comparisons, such as `X > 2` above, are elementwise too. They return a
-tensor of booleans that is `True` where the comparison holds:
+:begin_tab:`tensorflow`
+In TensorFlow, use `tf.reduce_sum` (casting Booleans via `tf.cast` first).
+:end_tab:
 
 ```{.python .input #ndarray-operations-4}
 x == y
 ```
-
-Not every operation is elementwise. Summing all the elements of a tensor
-gives a tensor with a single element. Summing a tensor of booleans counts
-its `True` entries, because `True` counts as 1 and `False` as 0; this is how
-we will count the correct predictions of a classifier:
-
-:begin_tab:`tensorflow`
-TensorFlow calls the sum `reduce_sum`, and booleans must first be converted
-to numbers with `tf.cast`.
-:end_tab:
 
 ```{.python .input #ndarray-operations-5}
 %%tab mxnet, pytorch, jax
@@ -782,23 +583,10 @@ x.sum(), (x == y).sum()
 tf.reduce_sum(x), tf.reduce_sum(tf.cast(x == y, tf.int32))
 ```
 
-A sum can also run along a single axis and leave, for instance, one sum per
-row of a matrix. Such reductions along an axis are the subject of
-:numref:`subsec_lin-alg-reduction`.
-
 ### Broadcasting
 :label:`subsec_broadcasting`
 
-Elementwise operations are simple when the two tensors have the same shape.
-Unfortunately, they rarely do. Model code constantly combines a minibatch,
-stored with one example per row, with a vector that holds one number per
-column: preprocessing, for instance, subtracts the same vector of column
-means from every example. Copying the vector once for every example, only to
-match the shape of the minibatch, would waste memory and time.
-*Broadcasting*, a convention that deep learning libraries adopted from
-NumPy, applies the vector to every row without copying it. Here we add the
-vector $(100, 200, 300, 400)$ to each row of a new $3 \times 4$ matrix `X`,
-which again holds the numbers 0 to 11:
+Often we combine tensors of *different* shapes, such as adding a 4-element bias vector `v` to every row of a $3 \times 4$ matrix `X`:
 
 ```{.python .input #ndarray-broadcasting-4}
 %%tab mxnet
@@ -828,23 +616,11 @@ v = jnp.array([100.0, 200, 300, 400])
 X + v
 ```
 
-Every row received the same four offsets, one per column.
+Rather than materializing physical copies, tensor libraries apply a two-step *broadcasting* rule:
+1. **Align shapes from the right:** Prepend $1$s on the left of the lower-order tensor's shape tuple until both shapes have the same length. Two aligned dimensions are compatible if they are equal or if one of them is $1$.
+2. **Stretch singleton axes:** Virtually replicate any length-$1$ axis to match the other tensor's length $k > 1$ without copying memory, then apply the elementwise operation.
 
-Broadcasting follows a simple rule, and it is worth knowing by heart. Line
-the two shapes up from the *right*
-and compare them axis by axis: two axes are compatible when they are equal
-or when one of them is $1$ (a missing leading axis counts as $1$). Each axis
-of length $1$ is then *stretched* to match the other, by virtually copying
-its entries, and the elementwise operation is applied to the results. If any
-pair of axes is incompatible, the operation raises an error rather than
-guessing. For `X + v`, the shapes $(3, 4)$ and $(4,)$ line up as $(3, 4)$
-and $(1, 4)$, so the single row of `v` is stretched to three rows. The
-division of the minibatch by 255 was the simplest case: a scalar has no axes,
-so it is stretched along all of them.
-
-Both operands can be stretched at once. In
-:numref:`fig_ndarray_broadcasting`, a column of shape $(3, 1)$ and a row of
-shape $(1, 2)$ are each stretched to shape $(3, 2)$:
+In :numref:`fig_ndarray_broadcasting`, a $3 \times 1$ column `a` and a $1 \times 2$ row `b` both stretch to produce a $3 \times 2$ matrix of pairwise sums:
 
 ![Broadcasting stretches axes of length 1. The column `a` of shape $(3, 1)$ and the row `b` of shape $(1, 2)$ are both expanded to shape $(3, 2)$ (dashed: virtual copies) before the elementwise addition.](../img/ndarray-broadcasting.svg)
 :label:`fig_ndarray_broadcasting`
@@ -877,24 +653,18 @@ b = jnp.arange(2).reshape(1, 2)
 a, b
 ```
 
-Their sum adds every element of the column to every element of the row:
-
 ```{.python .input #ndarray-broadcasting-2}
 a + b
 ```
 
-What if the shapes are not compatible? Lining up $(3, 2)$ and
-$(2, 3)$ from the right pairs $2$ with $3$ and $3$ with $2$; in both pairs
-the lengths differ and neither is $1$, so the library refuses:
+If any pair of aligned dimensions differs and neither is $1$---such as `(3, 2)` and `(2, 3)`---broadcasting raises an error:
 
 :begin_tab:`mxnet`
-MXNet reports the error with a traceback from its C++ code, so we print
-only the last line, which states the problem.
+We print the final summary line of MXNet's exception:
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow's error message also names the device and the internal operation
-that failed, so we print only the type of the error.
+We print the exception class name:
 :end_tab:
 
 ```{.python .input #ndarray-broadcasting-3}
@@ -929,24 +699,11 @@ except Exception as e:
     print(e)
 ```
 
-The rule also predicts what happens on the minibatch of images. Subtracting a
-mean image of shape $(28, 28)$ from the minibatch of shape $(256, 1, 28, 28)$
-works: the last two axes agree, and the mean image is stretched along the first
-two. Adding a vector of 256 numbers, one per image, to the flattened minibatch
-of shape $(256, 784)$ fails, because lining up the shapes from the right pairs
-256 with 784. Reshaping the vector to shape $(256, 1)$ repairs this, since
-$(256, 1)$ and $(256, 784)$ are compatible.
+Thus, subtracting a $(28, 28)$ mean image from `images` of shape $(256, 1, 28, 28)$ broadcasts cleanly as $(1, 1, 28, 28)$, whereas adding a per-image vector of shape $(256,)$ to flattened images $(256, 784)$ fails unless reshaped to a column $(256, 1)$.
 
 ### Concatenation
 
-Broadcasting combines tensors position by position. *Concatenation* instead
-joins tensors end to end along an existing axis. Joining two minibatches of
-256 images along axis 0 gives one minibatch of 512 images;
-joining two sets of features for the same examples along axis 1 gives every
-example more features. The lengths along all other axes must agree. We
-concatenate two $3 \times 4$ matrices, `X` (defined afresh) and `Y`, in both
-ways. Along axis 0, the result has $3 + 3 = 6$ rows; along axis 1, it has
-$4 + 4 = 8$ columns:
+`concatenate` (or `cat` / `concat`) joins tensors end to end along an *existing* axis (all other axes must match), whereas `stack` joins identically shaped tensors along a *new* axis:
 
 ```{.python .input #ndarray-operations-3}
 %%tab mxnet
@@ -976,12 +733,6 @@ Y = jnp.array([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
 jnp.concatenate((X, Y), axis=0), jnp.concatenate((X, Y), axis=1)
 ```
 
-*Stacking* joins tensors of the same shape along a new axis instead. This is
-how a minibatch arises from single examples: stacking 256 images of shape
-$(1, 28, 28)$ gives the minibatch of shape $(256, 1, 28, 28)$. Stacking `X`
-and `Y` along a new axis 0 gives shape $(2, 3, 4)$, and along a new last
-axis, shape $(3, 4, 2)$:
-
 ```{.python .input #ndarray-concatenation-1}
 %%tab mxnet
 mnp.stack([X, Y]).shape, mnp.stack([X, Y], axis=2).shape
@@ -1007,11 +758,7 @@ jnp.stack((X, Y)).shape, jnp.stack((X, Y), axis=2).shape
 ### Allocation and In-Place Updates
 :label:`subsec_saving_memory`
 
-Most operations return a new tensor, which needs new memory. The statement
-`Y = Y + X` computes the sum in newly allocated memory and then binds the
-name `Y` to the new tensor. Python's `id` function, which returns a number
-that identifies an object for as long as the object exists, shows that `Y`
-now names a different object:
+Standard expressions like `Y = Y + X` allocate a new buffer and rebind `Y` to the new address, as verified with Python's `id()`:
 
 ```{.python .input #ndarray-saving-memory-1}
 before = id(Y)
@@ -1019,41 +766,18 @@ Y = Y + X
 id(Y) == before
 ```
 
-For small tensors this costs little, and we can forget about it. A model
-with a billion parameters, however, needs 4 GB to store them as `float32`
-numbers, and training updates all of them at every step. If every update
-allocated new memory for its result, the program would need room for the old
-and the new values at the same time, and would spend time on the
-allocations. An *in-place* update writes the result into the memory that the
-tensor already occupies. It has a second effect, which is easily overlooked
-and matters just as much: it reaches every part of the program that refers
-to the tensor, whereas rebinding one name leaves other names pointing at the
-old values. In-place updates come with one restriction, whose reason will
-become clear in :numref:`sec_autograd`: a library that records operations to
-compute derivatives may still need an old value, and then an in-place update
-must not overwrite it.
+For models with gigabytes of parameters, unnecessary allocations waste memory bandwidth and can leave other references pointing to stale buffers (though inside forward passes, you must not overwrite activations still needed by automatic differentiation; see :numref:`sec_autograd`).
 
 :begin_tab:`mxnet, pytorch`
-Slice assignment, `Z[:] = <expression>`, writes the result into the
-existing tensor `Z`. We create `Z` with `zeros_like`, which returns zeros
-with the shape and type of its argument. After the assignment, `Z` names the
-same tensor as before, and its elements hold `X + Y`:
+In MXNet and PyTorch, slice assignment `Z[:] = X + Y` writes into an existing buffer `Z`, and augmented assignment `X += Y` updates `X` in place without even a temporary buffer:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Ordinary TensorFlow tensors are immutable, so every operation on them
-returns a new tensor. Model parameters are therefore stored in variables,
-and `assign` writes a new value into a variable in place. After the
-assignment, the variable `Z` is the same object as before, and its elements
-hold `X + Y`:
+In TensorFlow, `Z.assign(X + Y)` updates a `tf.Variable` in place, whereas `X += Y` on an immutable `Tensor` allocates a new tensor:
 :end_tab:
 
 :begin_tab:`jax`
-JAX arrays are immutable, so JAX has no in-place updates: `Y + X` and
-`X.at[...].set(...)` always produce a new array, and the memory of an old
-array is freed once no name refers to it. Avoiding the extra copy is the
-job of JAX's compiler: training code compiles its update step, and the
-compiled step can reuse memory that is no longer needed.
+In JAX, arrays are immutable (`X += Y` rebinds `X` to a new array); buffer reuse is handled automatically by the XLA compiler under `@jax.jit`:
 :end_tab:
 
 ```{.python .input #ndarray-saving-memory-2}
@@ -1080,22 +804,6 @@ Z.assign(X + Y)
 id(Z) == before
 ```
 
-:begin_tab:`mxnet, pytorch`
-Slice assignment still computes `X + Y` in a temporary tensor before copying
-it into `Z`. Augmented assignment avoids the temporary. If we no longer need
-the old value of `X`, then `X += Y` adds `Y` to `X` in place:
-:end_tab:
-
-:begin_tab:`tensorflow`
-For ordinary tensors, `X += Y` is shorthand for `X = X + Y`, so it binds
-`X` to a new tensor:
-:end_tab:
-
-:begin_tab:`jax`
-In particular, `X += Y` is shorthand for `X = X + Y`, so it binds `X` to a
-new array:
-:end_tab:
-
 ```{.python .input #ndarray-saving-memory-3}
 before = id(X)
 X += Y
@@ -1103,45 +811,31 @@ id(X) == before
 ```
 
 :begin_tab:`mxnet, pytorch`
-`X` is still the same object, and it now holds the sum.
+`id(X) == before` is `True`: `X` was updated in place.
 :end_tab:
 
 :begin_tab:`tensorflow, jax`
-The name `X` now refers to a new object that holds the sum.
+Because `X` is an immutable tensor, `id(X) == before` is `False`.
 :end_tab:
 
 ### Conversion to Other Python Objects
 
-Plotting, pandas, and many scientific libraries take NumPy arrays or Python
-numbers rather than tensors, so we convert tensors at the boundary between
-our code and theirs. Whether a conversion copies the data or shares the
-memory, as a view does, depends on the library.
+Converting between framework tensors and NumPy arrays is routine at the boundary with plotting or data libraries, but frameworks differ in whether conversion shares memory or copies:
 
 :begin_tab:`mxnet`
-The method `asnumpy` converts an MXNet array to a NumPy array, and
-`mnp.array` converts it back. Both copy the data: `asnumpy` waits until
-MXNet has finished computing the array, possibly on a GPU, and copies the
-result into main memory.
+`X.asnumpy()` and `mnp.array(A)` each allocate an independent copy.
 :end_tab:
 
 :begin_tab:`pytorch`
-The method `numpy` converts a tensor on the CPU to a NumPy array, and
-`torch.from_numpy` converts a NumPy array to a tensor. Neither copies the
-data: the tensor and the array share their memory, just as `X` and `x` did
-after the reshape, so an in-place change to one also changes the other.
+On the CPU, `X.numpy()` and `torch.from_numpy(A)` **share the exact same underlying memory buffer**, so mutating one in place immediately modifies the other!
 :end_tab:
 
 :begin_tab:`tensorflow`
-The method `numpy` copies a tensor into a NumPy array, and `tf.constant`
-converts the array back, again by copying.
+`X.numpy()` and `tf.constant(A)` each allocate an independent copy.
 :end_tab:
 
 :begin_tab:`jax`
-The function `jax.device_get` returns a JAX array as a NumPy array, and
-`jax.device_put` converts it back. For an array on an accelerator,
-`device_get` copies the data to main memory. For an array that is already in
-main memory, the NumPy array may share its memory with the JAX array.
-Either way, the NumPy array is read-only, so the JAX array stays immutable.
+`jax.device_get(X)` returns a read-only NumPy array (potentially zero-copy on CPU), and `jax.device_put(A)` transfers it back.
 :end_tab:
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-1}
@@ -1172,25 +866,6 @@ B = jax.device_put(A)
 type(A), type(B)
 ```
 
-:begin_tab:`mxnet`
-Writing an element of the NumPy array `A` leaves `X` and `B` unchanged,
-because each holds its own copy of the data:
-:end_tab:
-
-:begin_tab:`pytorch`
-Writing an element of the NumPy array `A` changes `X` and `B` as well,
-because all three use the same memory:
-:end_tab:
-
-:begin_tab:`tensorflow`
-Writing an element of the NumPy array `A` leaves `X` and `B` unchanged,
-because each holds its own copy of the data:
-:end_tab:
-
-:begin_tab:`jax`
-Writing an element of the NumPy array `A` fails, because `A` is read-only:
-:end_tab:
-
 ```{.python .input #ndarray-conversion-to-other-python-objects-3}
 %%tab mxnet
 A[0, 0] = 100  # Write to the NumPy copy
@@ -1217,16 +892,10 @@ except ValueError as e:
     print(e)
 ```
 
-A tensor with a single element converts to a Python number with the method
-`item` or with the built-in functions `float` and `int`. Printing a summary
-number such as an average error, or comparing it with a threshold in Python,
-needs such a conversion. It is not free, though: when the computation runs
-on a GPU, the conversion has to wait for it to finish, so training code
-converts as rarely as possible.
+To extract a single-element ($0^\textrm{th}$-order) tensor into a Python `float` or `int` (for example, when logging the scalar loss), call `.item()` or `float()`/`int()` (which forces the CPU to synchronize with any pending GPU kernels):
 
 :begin_tab:`tensorflow`
-TensorFlow tensors have no `item` method; the method `numpy` returns the
-value as a NumPy number instead.
+TensorFlow tensors use `.numpy()`, `float()`, or `int()` instead of `.item()`.
 :end_tab:
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-2}
@@ -1253,161 +922,53 @@ a = jnp.array(3.5)
 a, a.item(), float(a), int(a)
 ```
 
-The numbers in this section were made up. Real data arrive in files, often
-as tables with missing entries and with text in some of the columns, and
-they are rarely as tidy as the output of `arange`. The next section turns
-such a table into tensors.
+> **Tip: Exploring Framework APIs.** Whenever you encounter an unfamiliar module or function, use `dir(obj)` (or Tab completion) to list available attributes, `help(fn)` or `fn?` in Jupyter to inspect its signature and docstring (and `fn??` to view its Python source), and verify your understanding with a tiny test input whose expected output you can predict by hand.
 
 ## Summary
 
-Deep learning code stores its data, parameters, and intermediate results in
-tensors, arrays with a shape and a data type. It computes with whole tensors
-rather than with loops over their elements: one expression divides all
-200,704 pixels of a minibatch by 255. Reshaping, indexing, and
-concatenation rearrange, select, and join elements. Elementwise operations
-apply a function of numbers at every position, and broadcasting combines
-tensors of different shapes by lining up their shapes from the right and
-stretching axes of length 1. Most operations allocate a new tensor; where
-memory matters, libraries with mutable tensors update them in place, and
-libraries with immutable tensors reuse memory through mutable variables or
-through their compiler.
+Tensors store inputs, parameters, activations, and gradients as $n$-dimensional arrays characterized by a `shape` and a `dtype`. Deep learning code expresses computations over whole tensors at once—rescaling all $200{,}704$ pixels of a minibatch in a single compiled operation (`images / 255`). We reconfigure axes with `reshape`, extract or modify subsets with integer indices, slices, and Boolean masks (`where`), join tensors with `concatenate` and `stack`, and combine differently shaped tensors via *broadcasting* (aligning shapes from the right and stretching singleton axes). Finally, mutable frameworks (PyTorch and MXNet) support in-place updates (`Z[:] = ...`, `X += Y`), while immutable frameworks (TensorFlow and JAX) manage memory reuse through `Variable` containers or compiler optimizations.
 
 ## Exercises
 
-1. [code] **Inferred reshape axis.** A minibatch of $n$ grayscale images of
-   $28 \times 28$ pixels arrives as a tensor of shape $(n, 1, 28, 28)$.
-   Each image must be flattened into a row of 784 values. Check every
-   prediction below in code.
-    1. Predict the result of reshaping the minibatch to $(-1, 784)$ and to
-       $(256, -1)$, once for a full minibatch of $n = 256$ images and once
-       for a final minibatch of $n = 100$ images. State which of the two
-       targets works for every minibatch size.
-    1. Suppose the images were loaded with three color channels by
-       mistake, so that the minibatch has shape $(n, 3, 28, 28)$. Predict the
-       result of the reshape to $(-1, 784)$, and state whether this step
-       detects the mistake.
+1. [code] **Inferred reshape axes.** Suppose a minibatch of $n$ grayscale images of resolution $28 \times 28$ arrives as a tensor of shape $(n, 1, 28, 28)$, and each image must be flattened into a row vector of $784$ pixel values. Verify each prediction below in code:
+    1. Predict the output shape of reshaping the minibatch to `(-1, 784)` versus `(256, -1)`, first for a full minibatch of $n = 256$ images and then for the final, smaller minibatch of an epoch with $n = 100$ images. Which of the two target shapes works reliably for *any* batch size $n$?
+    1. Suppose the images were accidentally loaded in 3-channel RGB format of shape $(n, 3, 28, 28)$. What happens when you reshape that tensor to `(-1, 784)`? Does `reshape(-1, 784)` catch the channel-count mistake, or does it silently scramble the batch dimension?
 
-1. **Shifted slices.** A tensor `tokens` of shape $(4, 11)$ holds four
-   sequences of *tokens*, integers that stand for words, one sequence per
-   row. A model reads the first 10 tokens of each row and predicts, at
-   every position, the token that follows. Write slice
-   expressions for the input tensor and the target tensor, each of shape
-   $(4, 10)$, so that the target at position $t$ is the token that
-   follows the input at position $t$. Then give expressions for both
-   tensors that stay correct without change when each row holds $T + 1$
-   tokens and the model reads the first $T$, for every $T \geq 1$.
+1. [code] **Broadcasting shapes and silent bugs.** Broadcasting aligns two shape tuples from the right.
+    1. Construct two $3^\textrm{rd}$-order tensors `a` and `b` whose shapes differ along every single axis yet are broadcast-compatible. Predict the shape of `a + b` by hand, then run the code to verify your prediction.
+    1. A regression model outputs a column of predictions `y_hat` of shape $(5, 1)$ for five examples whose ground-truth targets `y` are stored as a 1D vector of shape $(5,)$. Predict the shape of the residual `y_hat - y`. Next, let `y` hold `[0.0, 1.0, 2.0, 3.0, 4.0]` and set `y_hat = y.reshape(5, 1)` so that every prediction equals its true label identically. Compute the mean of the squared entries of `y_hat - y`, explain why this "mean squared error" is nonzero even though the predictions are perfect, and show how to reshape `y` (or `y_hat`) so that each prediction is compared only against its own label.
 
-1. [code] **Broadcasting shapes.** Broadcasting aligns two shapes from the
-   right.
-    1. Replace `a` and `b` with two tensors that each have three axes,
-       whose shapes differ on every axis and that still broadcast. Predict the shape of `a + b`,
-       then run the code and check your prediction.
-    1. A model returns predictions `y_hat` of shape $(5, 1)$ for five
-       examples whose labels `y` form a vector of shape $(5,)$. Predict the
-       shape of `y_hat - y`. Then let `y` hold the labels $0, 1, 2, 3, 4$
-       as floating-point numbers and set `y_hat` to `y` reshaped to
-       $(5, 1)$, so that every prediction equals its label. Compute the
-       mean of the squared entries of `y_hat - y`, explain the value, and
-       give the reshape of `y` that pairs each prediction with its own
-       label.
-
-1. [code] **Limits of data types.** The pixels of `images` are stored as
-   `uint8`, and the rest of the book computes in `float32`.
-    1. Predict the result of adding 100 to a `uint8` tensor that holds the
-       value 200, and check your prediction. Explain the result, and
-       brighten the first image of the minibatch by 100 intensity levels
-       without this error by converting its type first.
-    1. A `float32` number stores 24 significant binary digits. Explain why
-       `float32` represents every integer up to $2^{24} = 16{,}777{,}216$,
-       and check that adding 1 to $2^{24}$ in `float32` leaves it
-       unchanged. A training loop counts the examples it has processed in a
-       `float32` tensor. After how many examples does the count stop
-       growing, and which data type should the counter have instead?
-
-1. [code] **Masks on the minibatch.** The pixels of `images` are random
-   integers from 0 to 255, so about half of them exceed 127.
-    1. With one comparison and one sum, count the pixels of the minibatch
-       that exceed 127, and compare the count with half of the size of
-       `images`. Explain why summing a mask counts.
-    1. Use `where` to make a thresholded copy of `images` in which every
-       pixel above 127 becomes 255 and every other pixel 0. Confirm that the
-       copy has the shape of `images` and holds only these two values.
-    1. `images[images > 127]` starts from the same mask. Predict its shape,
-       check, and explain why a mask used as an index must return a tensor
-       with one axis, whatever the shape of `images`, while `where` keeps
-       the shape. Name a task for which each form is the right one. Then
-       select the bright pixels of the first image alone, with a slice and
-       a mask.
+1. [code] **Arithmetic limits of data types.** Raw pixels in `images` are stored as 8-bit unsigned integers (`uint8`), whereas neural network layers compute in floating point (`float32`).
+    1. Predict the numerical result of adding `100` to a `uint8` tensor entry holding the value `200`, and verify your prediction in code. Explain why this wrap-around occurs, and show how to brighten the first image of `images` by $100$ intensity levels (clamped or promoted) without integer overflow.
+    1. An IEEE 754 `float32` number allocates $24$ bits of significand (mantissa) precision. Explain why `float32` can represent every consecutive integer up to $2^{24} = 16{,}777{,}216$ exactly, and verify in code that evaluating `float32(2**24) + float32(1)` leaves the number unchanged at $16{,}777{,}216$. If a training loop accumulates the total number of examples or tokens processed in a `float32` scalar counter (incrementing by $1$ each time), after how many examples will the counter freeze completely, and what data type should be used instead?
 
 :begin_tab:`pytorch`
-6. [code] **In-place composition.** ● Compute `(A + B) * (-A / 2)` for two
-   same-shaped tensors without allocating any intermediate tensor, using
-   only in-place methods such as `add_`, `div_`, `neg_`, and `mul_`, or
-   the `out=` argument of the corresponding functions. Confirm that
-   `A.data_ptr()` and `B.data_ptr()` are unchanged and that the result
-   equals the direct expression. Explain why `Z[:] = A + B` would not have
-   met the requirement.
+4. [code] **In-place composition.** ● Evaluate `(A + B) * (-A / 2)` for two identically shaped `float32` tensors `A` and `B` *without allocating any intermediate tensor*, using only PyTorch's in-place methods (`add_`, `div_`, `neg_`, `mul_`) or `out=` keyword arguments. Confirm that `A.data_ptr()` and `B.data_ptr()` remain unchanged and that the final result matches the out-of-place expression `(A + B) * (-A / 2)`. Explain why writing `A[:] = A + B` would *not* satisfy the zero-temporary-allocation requirement.
 
-    *Adapted from Nicolas P. Rougier,
-    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md),
-    problem 35.*
+    *Adapted from Nicolas P. Rougier, [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md), problem 35.*
 :end_tab:
 
 :begin_tab:`mxnet`
-6. [code] **In-place composition.** ● Compute `(A + B) * (-A / 2)` for two
-   same-shaped tensors without allocating any intermediate tensor, using
-   only the in-place operators `+=`, `*=`, and `/=`. Confirm that the
-   result equals the direct expression and explain why `Z[:] = A + B`
-   would not have met the requirement.
+4. [code] **In-place composition.** ● Evaluate `(A + B) * (-A / 2)` for two identically shaped `float32` arrays `A` and `B` *without allocating any intermediate array*, using only the in-place augmented assignment operators `+=`, `*=`, and `/=`. Confirm that the final result matches the out-of-place expression `(A + B) * (-A / 2)`, and explain why writing `A[:] = A + B` would *not* satisfy the zero-temporary-allocation requirement.
 
-    *Adapted from Nicolas P. Rougier,
-    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md),
-    problem 35.*
+    *Adapted from Nicolas P. Rougier, [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md), problem 35.*
 :end_tab:
 
 :begin_tab:`tensorflow`
-6. [code] **In-place composition.** ● Ordinary tensors are immutable, so
-   every arithmetic operation on them allocates a new tensor. Hold `A` and
-   `B` in `tf.Variable`s and compute `(A + B) * (-A / 2)` so that the
-   result ends up in one of the two variables, using `assign`,
-   `assign_add`, and related methods. List the steps of your solution,
-   mark each step that still allocates a temporary tensor, and explain why
-   eager execution cannot avoid these temporaries.
+4. [code] **In-place composition.** ● Because ordinary TensorFlow tensors are immutable, every arithmetic operator allocates a new tensor. Wrap two identically shaped `float32` tensors `A` and `B` in `tf.Variable` containers and compute `(A + B) * (-A / 2)` so that the final result is stored inside one of the two variables, using `assign`, `assign_add`, and related variable methods. List each step of your calculation, identify which steps still allocate a temporary `Tensor` under eager execution, and explain why eager execution cannot eliminate those temporaries without `@tf.function` graph compilation.
 
-    *Adapted from Nicolas P. Rougier,
-    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md),
-    problem 35.*
+    *Adapted from Nicolas P. Rougier, [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md), problem 35.*
 :end_tab:
 
 :begin_tab:`jax`
-6. [code] **In-place composition.** ● JAX arrays are immutable, so every
-   eager operation allocates a new array. Write `(A + B) * (-A / 2)` as a
-   function `f(A, B)` and count the intermediate arrays that eager
-   evaluation creates. The function `jax.jit(f)` compiles `f` into one optimized
-   program; inspect that program with
-   `jax.jit(f).lower(A, B).compile().as_text()` and report how many fused
-   computations remain. An in-place implementation, as in NumPy, writes
-   the result into the memory of `A` and allocates no new array. State
-   which of the eager allocations the compiled program removes, and
-   whether it still allocates an array that the in-place implementation
-   avoids.
+4. [code] **In-place composition and compiler fusion.** ● Because JAX arrays are immutable, every eager arithmetic operation allocates a new array. Write `(A + B) * (-A / 2)` inside a Python function `f(A, B)` and count how many intermediate arrays eager evaluation creates. Then compile `f` with `jax.jit(f)` and inspect the lowered HLO program via `jax.jit(f).lower(A, B).compile().as_text()` to see how many fused kernels remain. Compare this compiled execution with a mutable NumPy in-place implementation that overwrites `A`: which eager intermediate allocations does `jax.jit` eliminate automatically, and when does the compiled function still allocate an output buffer (unless `donate_argnums` is specified)?
 
-    *Adapted from Nicolas P. Rougier,
-    [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md),
-    problem 35.*
+    *Adapted from Nicolas P. Rougier, [100 numpy exercises](https://github.com/rougier/numpy-100/blob/master/100_Numpy_exercises.md), problem 35.*
 :end_tab:
 
-7. [code] **Loops against broadcasting.** ● For a vector `a` of 200
-   elements and a vector `b` of 300 elements, compute the table of all
-   absolute differences $d_{ij} = |a_i - b_j|$, of shape $(200, 300)$.
-    1. Compute the table once with two nested Python loops, and once with
-       a single broadcast expression after reshaping `a` to $(200, 1)$ and
-       `b` to $(1, 300)$. Confirm that the two results agree, time both,
-       and report the speedup.
-    1. The broadcast expression copies neither input. How many bytes does
-       its result take in `float32` when both vectors have 10,000
-       elements? What does this say about the memory that broadcasting
-       can create?
+5. [code] **Python loops versus broadcasting.** ● Given a 1D vector `a` of $200$ elements and a 1D vector `b` of $300$ elements, we want to compute the $200 \times 300$ pairwise absolute-difference matrix $D$ with entries $d_{ij} = |a_i - b_j|$.
+    1. Compute $D$ first using two nested Python `for` loops, and then using a single broadcasted subtraction after reshaping `a` to `(200, 1)` and `b` to `(1, 300)`. Verify that both matrices agree numerically, measure the wall-clock execution time of each method, and report the speedup factor.
+    1. Even though broadcasting avoids copying the inputs `a` and `b`, the output matrix $D$ must still be materialized in memory. How many megabytes does $D$ occupy in `float32` if `a` and `b` each contain $10{,}000$ elements? What lesson does this teach about the peak memory footprint of broadcasted outer operations?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/26)

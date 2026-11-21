@@ -1,66 +1,68 @@
 # Convolutional Neural Networks
 :label:`chap_cnn`
 
-Every image classifier in this book so far has treated an image as a list
-of numbers. The MLP of :numref:`chap_perceptrons` reads a Fashion-MNIST
-picture of a shirt or a sneaker as 784 pixel values, and the order of the
-list does not matter to it: if we shuffled the pixels of every image in the
-same way and retrained, it would do as well as before. To us the shuffled
-pictures would be noise. We recognize a sneaker by its outline, and an
-outline is a pattern among neighboring pixels. It also means the same thing
-wherever in the image it appears. What would a layer look like that knew
-these two facts about images?
+Every image classifier we have built so far has ignored the spatial geometry of
+images, flattening a two-dimensional pixel grid into a one-dimensional vector.
+The MLP in :numref:`chap_perceptrons` treats a $28 \times 28$ Fashion-MNIST
+photo as an unordered list of 784 numbers: if we applied the same fixed random
+permutation to the pixels of every image and retrained, the MLP would reach the
+exact same accuracy—even though the scrambled images would look like pure static
+to human eyes. Humans recognize a sneaker by its outline and textures, which
+are patterns formed by *neighboring* pixels, and an outline carries the same
+meaning wherever in the frame it appears.
 
-The visual cortex offers a hint. Hubel and Wiesel found that neurons in the
-early stages of the visual cortex of cats and monkeys respond to oriented
-edges and bars, each within a small region of the visual field, the
+Neuroscience offered an early clue. In classic experiments on cats and monkeys,
+Hubel and Wiesel discovered that neurons in the early visual cortex respond to
+oriented edges and bars within localized patches of the visual field—each
 neuron's *receptive field*
-:cite:`Hubel.Wiesel.1959,Hubel.Wiesel.1962,Hubel.Wiesel.1968`.
-:citet:`Field.1987` later modeled these responses on natural images with a
-few small filters, each applied at every position of the image
-(:numref:`field_visual`). Every filter responds to one local edge pattern,
-wherever in the image it occurs.
+:cite:`Hubel.Wiesel.1959,Hubel.Wiesel.1962,Hubel.Wiesel.1968`. Later,
+:citet:`Field.1987` modeled these responses on natural images using a small bank
+of local filters swept across every image location (:numref:`field_visual`).
 
 ![Six receptive-field filters and their responses to a natural image, adapted from :citet:`Field.1987`. The left panel shows the filters, the middle panel the input image, and the right panel the filtered responses sampled at intervals proportional to each filter's size. Different filters respond to different local edge patterns.](../img/field-visual.png)
 :label:`field_visual`
 
-Fukushima's Neocognitron :cite:`Fukushima.1980` modeled these cells as a
-network of local detectors repeated across the image. LeCun and his
-colleagues trained networks of this kind by backpropagation to read
-handwritten zip codes
-:cite:`LeCun.Boser.Denker.ea.1989,LeCun.Jackel.Bottou.ea.1995`. Features
-computed by deeper layers of networks trained on image classification
-correspond to responses in later stages of the visual system
-:cite:`Kuzovkin.Vicente.Petton.ea.2018`. We should not make too much of
-this. The analogy motivated the design. It does not show that a particular
-network works like the brain.
+Inspired by these findings, Fukushima's Neocognitron :cite:`Fukushima.1980`
+organized local detectors into hierarchical layers repeated across space, and
+LeCun and collaborators showed how to train such architectures end to end via
+backpropagation to recognize handwritten ZIP codes
+:cite:`LeCun.Boser.Denker.ea.1989,LeCun.Jackel.Bottou.ea.1995`. Deeper layers of
+trained vision networks even exhibit representational parallels with higher
+stages of the primate visual pathway :cite:`Kuzovkin.Vicente.Petton.ea.2018`—though
+biology served as architectural inspiration rather than a blueprint for silicon
+computation.
 
-The layer at the center of these networks, the *convolution*, applies one
-small set of weights to every neighborhood of the image. Each output then
-depends only on nearby pixels, and a shifted input gives a shifted output,
-which are the two facts of our opening question. A network that need not
-relearn a pattern at every position also needs far fewer parameters.
-*Convolutional neural networks* (CNNs) brought the jump in accuracy on
-ImageNet :cite:`Deng.Dong.Socher.ea.2009,Krizhevsky.Sutskever.Hinton.2012`
-that started the current era of deep learning. Vision transformers
-(:numref:`chap_transformers`) now share the field with them.
+At the heart of these architectures lies the *convolutional layer*, which slides
+a small shared kernel of weights across every neighborhood of an image. Each
+output unit depends only on nearby pixels, and shifting the input simply shifts
+the output—building locality and translation equivariance directly into the
+network while slashing parameter counts by orders of magnitude. These
+*convolutional neural networks* (CNNs) drove the watershed breakthrough on
+ImageNet :cite:`Deng.Dong.Socher.ea.2009,Krizhevsky.Sutskever.Hinton.2012` and
+remain a cornerstone of computer vision alongside vision transformers
+(:numref:`chap_transformers`).
 
-We derive the layer before we use it. :numref:`sec_why-conv` starts from the
-two facts and finds that they leave little choice: a fully connected layer
-made to respect both is a convolution. :numref:`sec_conv_layer` computes with
-the layer and lets it learn an edge detector from data. Three sections then
-supply the controls of a practical layer: padding, stride, and dilation,
-which set the size of the output and how far each output sees
-(:numref:`sec_padding`); channels, several in and several out
-(:numref:`sec_channels`); and pooling, which summarizes a neighborhood so
-that small shifts do not matter (:numref:`sec_pooling`). :numref:`sec_lenet`
-assembles a complete convolutional classifier, compares it with the MLP on
-the clothing images, and then shuffles the pixels to see how much of its
-advantage was knowledge of the grid.
+In this chapter, we derive and build CNNs from first principles:
 
-The chapter treats images and the classic building blocks; the deeper
-architectures and training methods that made CNNs dominant follow in
-:numref:`chap_modern_cnn`.
+* :numref:`sec_why-conv` proves that enforcing locality and translation
+  equivariance on a fully connected layer leaves essentially no linear choice
+  but convolution.
+* :numref:`sec_conv_layer` implements two-dimensional cross-correlation,
+  trains a single kernel to discover an edge detector from data, and introduces
+  *im2col* matrix multiplication and receptive fields.
+* :numref:`sec_padding` introduces padding, stride, and dilation to control
+  output resolution and expand receptive fields exponentially with depth.
+* :numref:`sec_channels` extends convolutions to multiple input and output
+  channels, accounting for parameter, FLOP, and activation-memory costs and
+  introducing $1 \times 1$ bottleneck convolutions.
+* :numref:`sec_pooling` introduces max-pooling, average pooling, and global
+  pooling to downsample feature maps and build tolerance to small spatial shifts.
+* :numref:`sec_lenet` assembles a complete CNN—LeNet—pits it against our MLP on
+  Fashion-MNIST, visualizes its learned filters, and runs the pixel-shuffling
+  experiment to isolate the value of spatial inductive bias.
+
+Modern deep convolutional architectures (AlexNet, VGG, NiN, GoogLeNet, BatchNorm,
+ResNet, DenseNet, and ConvNeXt) follow in :numref:`chap_modern_cnn`.
 
 ```toc
 :maxdepth: 2

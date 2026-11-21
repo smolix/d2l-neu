@@ -6,33 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Synthetic Data
 :label:`sec_synthetic-regression-data`
 
-We have derived linear regression, but we have not trained it yet. That
-takes data, a model, and a training loop in code, and we begin with the
-data. Which data should the first run use? Real datasets are what we
-ultimately care about, but they make a poor first test. Suppose that we
-fit a linear model to house prices like those of
-:numref:`sec_linear_regression` and its predictions are poor. Three
-explanations compete: the model may be
-misspecified, the optimization algorithm or its implementation may be
-flawed, or the data may be pathological. On real data we cannot easily tell
-which of the three it is.
+Real-world datasets are messy, and worse yet, they never come with an answer key: when you train a new algorithm on real housing records and get a weight vector $\hat{\mathbf{w}}$, you have no way of knowing the true data-generating parameters $\mathbf{w}^*$ or the irreducible noise floor. Before unleashing an implementation on real data, a seasoned researcher first tests it on *synthetic data* generated from a known ground-truth model.
 
-*Synthetic data* removes the ambiguity by construction. If we generate the
-data ourselves, we know the true weights $\mathbf{w}^*$, the true bias
-$b^*$, and the distribution of the noise. A model of the right form then has
-a known target, and any systematic failure to recover $\mathbf{w}^*$ and
-$b^*$, beyond what the noise explains, points to the algorithm or its
-implementation. It is good practice, and not only in this chapter, to try a
-new learning method first on a problem whose answer we chose ourselves, and
-only then on real data.
-
-This section builds such a test for linear regression. We generate examples
-from a linear function with the true parameters $\mathbf{w}^* = (2, -3.4)$
-and $b^* = 4.2$, and add a little Gaussian noise. We then work out how
-close a correct fit can come to these parameters. This is the step that
-matters most, since it turns the comparison into a test with a threshold.
-The next section trains a linear model on these data and holds its
-estimates to the threshold.
+On a synthetic dataset, we control the exact feature distribution, the true weights $\mathbf{w}^*$ and bias $b^*$, the sample size $n$, and the noise level $\sigma$. That gives us two priceless debugging superpowers: we can check whether our learned parameters $(\hat{\mathbf{w}}, \hat{b})$ converge to $(\mathbf{w}^*, b^*)$, and we can compare our final training loss against the exact theoretical noise floor $\frac{1}{2}\sigma^2$. In this section, we build the synthetic dataset that will serve as our testbed throughout the next three sections, inspect its scatter plots, and compute the exact least-squares fit as a reference benchmark.
 
 ```{.python .input #synthetic-regression-data}
 %%tab mxnet
@@ -75,37 +51,18 @@ from d2l import jax as d2l
 
 ## Generating the Data
 
-We draw the features of each example independently from a standard normal
-distribution, with mean $0$ and variance $1$, and stack the feature vectors
-as the rows of the design matrix $\mathbf{X}$. Two features keep the true
-parameters easy to compare; nothing below depends on that choice. Each label
-is the value of the true linear function plus noise:
+To keep visualization effortless while exercising multi-feature matrix algebra, we generate $n = 1{,}000$ examples with $d = 2$ features. We draw the design matrix $\mathbf{X} \in \mathbb{R}^{1000 \times 2}$ with independent standard normal entries $X_{ij} \sim \mathcal{N}(0, 1)$, and generate the labels from the linear model
 
-$$\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}.$$
+$$\mathbf{y} = \mathbf{X} \mathbf{w}^* + b^* + \boldsymbol{\epsilon},$$
 
-The bias $b^*$ is added to every entry, and the entries of the noise vector
-$\boldsymbol{\epsilon}$ are drawn independently from a normal distribution
-with mean $0$ and standard deviation $\sigma = 0.01$. Each label thus lies
-close to the plane $\mathbf{w}^{*\top}\mathbf{x} + b^*$, typically within a
-few hundredths. This is the model of
-:numref:`sec_linear_regression`: a linear function with Gaussian noise, for
-which minimizing the squared loss is the same as maximizing the likelihood
-(:numref:`subsec_normal_distribution_and_squared_loss`). A linear model
-trained with the squared loss is therefore correctly specified for these
-data, and the first of our three explanations is ruled out in advance.
+using ground-truth parameters
 
-We write the generator as a function, `synthetic_data`, and save it in the
-`d2l` library, since later sections use it again. It takes the true
-parameters `w` and `b`, the noise level `noise`, and the number `n` of
-examples, and returns the design matrix and the labels. The function draws
-the features first and the noise second.
+$$\mathbf{w}^* = (2,\, -3.4)^\top, \qquad b^* = 4.2,$$
+
+and additive Gaussian noise $\epsilon^{(i)} \sim \mathcal{N}(0, \sigma^2)$ with standard deviation $\sigma = 0.01$. Notice that the signal $(\mathbf{X}\mathbf{w}^* + b^*)$ varies on a scale of several units, whereas the noise $\sigma = 0.01$ is hundreds of times smaller—so any healthy optimizer should recover $\mathbf{w}^*$ and $b^*$ to within a few thousandths.
 
 :begin_tab:`jax`
-JAX has no global random state, so `synthetic_data` takes a key, splits it,
-and draws $\mathbf{X}$ and $\boldsymbol{\epsilon}$ from the two halves. The
-same key always produces the same dataset. `d2l.get_key()` returns a new
-key on every call, from a stream that the `d2l` library seeds anew on every
-run.
+Because JAX uses explicit functional pseudorandom keys (:numref:`sec_prob`), we first register a tiny stateful key helper `get_key` in `d2l` so our data generator can be called with the same arguments across all four frameworks.
 :end_tab:
 
 ```{.python .input #synthetic-regression-data-generating-the-data-1}
@@ -136,12 +93,12 @@ def synthetic_data(w, b, noise, n, key):  #@save
     return X, d2l.matmul(X, d2l.reshape(w, (-1, 1))) + b + eps
 ```
 
-We draw 2,000 examples with the parameters chosen above: the first 1,000
-for training and the other 1,000 for validation. The validation examples
-come from the same process but are not used to fit the model. The loss on
-them shows how well the model predicts examples it has not seen, a question
-we take up in :numref:`sec_generalization_basics`. The next section draws
-its data in the same way.
+Let us draw $2{,}000$ examples using $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, and
+$\sigma = 0.01$: we will reserve the first $1{,}000$ for training and the
+remaining $1{,}000$ for validation. Because the validation examples come from the
+exact same distribution but are never touched during fitting, evaluating our
+loss on them reveals how accurately the model predicts unseen data—a distinction
+we examine closely in :numref:`sec_generalization_basics`.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-2}
 %%tab pytorch, tensorflow, mxnet
@@ -155,10 +112,10 @@ w_star, b_star, noise = d2l.tensor([2, -3.4]), 4.2, 0.01
 X, y = synthetic_data(w_star, b_star, noise, 2000, d2l.get_key())
 ```
 
-Each row of `X` holds the two features of one example, and each row of `y`
-its label. It is instructive to look at one of them. For the first
-example we also compute the noise, the label minus the noise-free value
-$\mathbf{w}^{*\top}\mathbf{x} + b^*$.
+Each row of `X` stores a two-dimensional feature vector and each row of `y`
+stores its corresponding scalar label. Inspecting the very first example—and
+backing out its noise $\epsilon^{(1)} = y^{(1)} - (\mathbf{w}^{*\top}\mathbf{x}^{(1)} + b^*)$—gives
+us an immediate sanity check.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-3}
 x, label = X[0], y[0, 0]
@@ -167,63 +124,39 @@ print(f'features: ({float(x[0]):.4f}, {float(x[1]):.4f})')
 print(f'label: {float(label):.4f}, noise: {float(eps):.4f}')
 ```
 
-The label misses the value of the linear function only by the noise, and by
-no more than the few hundredths that we expected.
+Let us draw $1{,}000$ synthetic examples and inspect the first feature row and scalar label:
+
+plane.
 
 ## Recovering the Parameters
 :label:`subsec_synthetic-regression-data-recovery`
 
-A test needs a threshold. Even a perfect implementation does not recover
-$\mathbf{w}^*$ and $b^*$ exactly, because the noise moves the labels and,
-with them, the minimizer of the loss. How far does it move? The answer
-follows from the normal equations of
-:numref:`subsec_linear-regression-analytic-solution`. As there, we append a
-column of ones to the $n$ training examples and the bias to the weights:
-$\tilde{\mathbf{X}} = [\mathbf{X}, \mathbf{1}]$ has three columns, the
-true parameters are $\tilde{\mathbf{w}}^* = (2, -3.4, 4.2)$, and
-$\mathbf{y} = \tilde{\mathbf{X}}\tilde{\mathbf{w}}^* + \boldsymbol{\epsilon}$.
-The least-squares solution $\hat{\tilde{\mathbf{w}}}$ solves the normal
-equations
-$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\hat{\tilde{\mathbf{w}}} = \tilde{\mathbf{X}}^\top\mathbf{y}$.
-Substituting the labels gives
-$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}(\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*) = \tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}$,
+
+For our first example, verify the math by hand: $2 x_1^{(1)} - 3.4 x_2^{(1)} + 4.2$ matches $y^{(1)}$ up to the tiny $\mathcal{N}(0, 0.01^2)$ perturbation.
+
+## Inspecting the Data
+
+Before fitting any model, let us plot the label $y$ against each feature $x_1$ and $x_2$ individually:
+
+$\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}} (\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*) = \tilde{\mathbf{X}}^\top \boldsymbol{\epsilon}$,
 and therefore
 
 $$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon}.$$
 
-The *estimation error* $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$
-is a linear function of the noise, so without noise least squares would
-recover the parameters exactly.
+The *estimation error* $\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^*$ is a
+purely linear function of the noise $\boldsymbol{\epsilon}$: when $\sigma = 0$,
+least squares recovers $\tilde{\mathbf{w}}^*$ with zero error.
 
-In general the inverse of $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$ is
-awkward to reason about. For our data, luckily, the matrix is simple. Each
-of its entries is a sum over the $n$ examples of a product of two columns,
-so $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}/n$ is a matrix of averages.
-On the diagonal we average the square of the constant $1$ or of a standard
-normal feature, and either has mean $1$. Off the diagonal we average the product of a feature
-with the constant or with the other, independent feature, which has mean
-$0$. An average over $n = 1{,}000$ examples lies close to its mean, here to
-within a few percent. With
-$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} \approx n\mathbf{I}$, the
-estimation error becomes an average over the training examples,
+For arbitrary datasets, reasoning about $(\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}})^{-1}$
+can be messy, but for our standard normal features the matrix is remarkably
+clean. Each entry of $\tilde{\mathbf{X}}^\top \tilde{\mathbf{X}} / n$ is the
 
-$$\hat{\tilde{\mathbf{w}}} - \tilde{\mathbf{w}}^* \approx \frac{1}{n}\tilde{\mathbf{X}}^\top\boldsymbol{\epsilon} = \frac{1}{n}\sum_{i=1}^{n} \epsilon^{(i)}\tilde{\mathbf{x}}^{(i)},$$
+Each scatter plot reveals a clear linear trend with the expected sign: $y$ climbs with $x_1$ (slope $+2$) and falls more steeply with $x_2$ (slope $-3.4$). Why does each 2D scatter plot look like a thick band rather than a razor-thin line when $\sigma = 0.01$ is so tiny? Because plotting $y$ against $x_2$ alone ignores each point's variation in $x_1$: the unplotted term $2 x_1$ has standard deviation $2$, which spreads the vertical position of the points across a band several units wide! Viewing marginal 2D projections of a multivariate relationship always folds the other coordinates into apparent vertical scatter.
 
-where $\tilde{\mathbf{x}}^{(i)} = (\mathbf{x}^{(i)}, 1)$ is the $i$-th row of
-$\tilde{\mathbf{X}}$. Each coordinate of the estimation error averages $n$
-independent terms $\epsilon^{(i)} \tilde{x}^{(i)}_j$, each with mean $0$
-and variance $\sigma^2$, since the noise is independent of the features and
-$\tilde{x}_j^2$ has mean $1$.
-Such an average has standard deviation $\sigma/\sqrt{n}$, which
-:numref:`sec_prob` calls its standard error. With $\sigma = 0.01$ and
-$n = 1{,}000$ training examples, every coordinate of
-$\hat{\tilde{\mathbf{w}}}$, the bias included, misses its true value by about
-$0.01/\sqrt{1000} \approx 3 \times 10^{-4}$.
+## Recovering the Parameters
 
-We check this prediction by solving the least-squares problem on the
-training examples with `lstsq`, as in
-:numref:`subsec_linear-regression-analytic-solution`. In the code, `X1` is
-$\tilde{\mathbf{X}}$ and `w_hat` is $\hat{\tilde{\mathbf{w}}}$.
+Since we derived the closed-form normal equations in :numref:`subsec_linear-regression-analytic-solution`, let us compute the exact least-squares solution $(\hat{\mathbf{w}}, \hat{b})$ on our 1,000 examples right now using `lstsq` on the augmented design matrix $[\mathbf{X}, \mathbf{1}]$. This gives us the gold-standard finite-sample fit that minibatch SGD in :numref:`sec_linear_scratch` will aim to match:
+
 
 ```{.python .input #synthetic-regression-data-recovering-the-parameters-1}
 %%tab pytorch
@@ -253,8 +186,8 @@ X1 = mnp.concatenate((X[:n], mnp.ones((n, 1))), 1)  # A column of ones for b
 w_hat = mnp.linalg.lstsq(X1, y[:n], rcond=None)[0][:, 0]
 ```
 
-We print the estimation errors of the two weights and of the bias, and the
-standard error that we predicted for each.
+Now we print the actual estimation errors alongside our predicted standard error
+$\sigma / \sqrt{n}$.
 
 ```{.python .input #synthetic-regression-data-recovering-the-parameters-2}
 e_w = d2l.numpy(w_hat[:2] - w_star)
@@ -263,90 +196,17 @@ print(f'error in b: {float(w_hat[2] - b_star):.1e}')
 print(f'standard error: {noise / n ** 0.5:.1e}')
 ```
 
-All three estimation errors are at most a few times $10^{-4}$, the size of
-the standard error, as predicted. An error above $10^{-3}$, more than three
-standard errors, would be rare. This gives the next section its threshold.
-Of course, minibatch stochastic gradient descent does not solve the normal
-equations. It approaches the same least-squares estimate, and its random
-minibatches keep it fluctuating around that estimate by a similar amount
-(the noise ball of :numref:`sec_linear_regression`). A correct
-implementation, trained until the loss has converged, should therefore land
-within about $10^{-3}$ of the true parameters. An error of $0.1$ cannot be
-blamed on the noise: it points to a bug, or to an optimization that has not
-converged. The threshold depends on
-the data: it shrinks with more examples and less noise (exercise
-:exref:`ex_synthetic-regression-data-recovery-under-noise`), and it assumes
-features of unit scale (exercise
-:exref:`ex_synthetic-regression-data-feature-scale`).
-
-Note, however, how little the test claims. Passing it tells us that an
-implementation recovers the parameters it should recover, but not how the
-method behaves when the model does not match the data, which is the usual
-case with real data (exercise
-:exref:`ex_synthetic-regression-data-misspecified`).
+Even with `lstsq` solving the empirical loss to machine precision, $(\hat{\mathbf{w}}, \hat{b})$ differs from the true $(2, -3.4, 4.2)$ in the fourth decimal place. That tiny discrepancy is *statistical estimation error*, not numerical error: the 1,000 noise draws $\boldsymbol{\epsilon}$ happen to correlate slightly with the columns of $\mathbf{X}$, tilting the least-squares plane by a quantity of order $\sigma / \sqrt{n} = 0.01 / \sqrt{1000} \approx 3 \times 10^{-4}$ (Exercise :exref:`ex_synthetic-regression-data-recovery-under-noise`). No algorithm trained on these 1,000 noisy points can recover $(\mathbf{w}^*, b^*)$ more accurately than this statistical limit. And as Exercise :exref:`ex_synthetic-regression-data-misspecified` explores, when the true data-generating function is nonlinear, least squares finds the best linear approximation to it over the feature distribution.
 
 ## Summary
 
-A poor result on real data cannot tell a bug from a wrong model; a
-synthetic dataset can. For labels generated from a linear function with
-known parameters plus Gaussian noise, a linear model with the squared loss
-is correctly specified. The noise moves even the exact least-squares
-estimate away from the truth, by about the standard error
-$\sigma/\sqrt{n}$, here $3 \times 10^{-4}$, so a correct implementation
-trained to convergence should land within about $10^{-3}$ of the true
-parameters. The test says nothing about data that a linear model does not
-fit.
-
+- **Synthetic benchmarks:** Generating data from a known ground-truth model $\mathbf{y} = \mathbf{X}\mathbf{w}^* + b^* + \boldsymbol{\epsilon}$ with $\mathbf{w}^* = (2, -3.4)^\top$, $b^* = 4.2$, and $\sigma = 0.01$ lets us verify parameter recovery and loss convergence directly against known truth.
+- **Marginal projections:** Plotting $y$ against a single feature $x_j$ folds the variation of the remaining features into the vertical spread, making a nearly noiseless hyperplane look like a wide band in 2D.
+- **Statistical estimation floor:** On $n$ examples with noise standard deviation $\sigma$, even the exact least-squares solution deviates from $(\mathbf{w}^*, b^*)$ by $O(\sigma / \sqrt{n})$.
 
 ## Exercises
 
-:begin_tab:`mxnet`
-1. [code] **Reproducibility.** Two calls of `synthetic_data` with the same
-   arguments return different `X` and `y`. Make them identical
-   by fixing the seed with `npx.random.seed`. State where the call must be
-   placed relative to the draws of `X` and `eps`, and explain why seeding
-   once at the top of a notebook does not make the second dataset equal to
-   the first.
-   :exlabel:`ex_synthetic-regression-data-reproducibility`
-:end_tab:
-
-:begin_tab:`pytorch`
-1. [code] **Reproducibility.** Two calls of `synthetic_data` with the same
-   arguments return different `X` and `y`. Make them identical
-   by fixing the seed with `torch.manual_seed`. State where the call must be
-   placed relative to the draws of `X` and `eps`, and explain why seeding
-   once at the top of a notebook does not make the second dataset equal to
-   the first.
-   :exlabel:`ex_synthetic-regression-data-reproducibility`
-:end_tab:
-
-:begin_tab:`tensorflow`
-1. [code] **Reproducibility.** Two calls of `synthetic_data` with the same
-   arguments return different `X` and `y`. Make them identical
-   by fixing the seed with `tf.random.set_seed`. State where the call must
-   be placed relative to the draws of `X` and `eps`, and explain why seeding
-   once at the top of a notebook does not make the second dataset equal to
-   the first.
-   :exlabel:`ex_synthetic-regression-data-reproducibility`
-:end_tab:
-
-:begin_tab:`jax`
-1. [code] **Reproducibility.** `synthetic_data` splits its `key` into
-   `key1` for `X` and `key2` for `eps`.
-    1. Explain why two calls with the same `key` return identical data
-       without any global seed, and why two calls with keys from
-       `d2l.get_key()` do not.
-    1. Change both draws to use `key` itself instead of `key1` and `key2`,
-       and compare `eps / noise` with the entries of `X` numerically. State
-       what the split guarantees about `X` and `eps` that this version does
-       not.
-    1. Construct five datasets that are independent of each other, as
-       averaging an error over repeated trials requires, and state how you
-       derive their keys.
-   :exlabel:`ex_synthetic-regression-data-reproducibility`
-:end_tab:
-
-2. [code] **Recovery under noise.** ● Repeat the least-squares fit of
+1. [code] **Recovery under noise.** ● Repeat the least-squares fit of
    :numref:`subsec_synthetic-regression-data-recovery` on 1,000 independent
    datasets for each setting below, and measure the standard deviation of
    the estimation error $\hat{w}_1 - w_1^*$ of the first weight.
@@ -368,20 +228,7 @@ fit.
        distribution remain accurate when the weights do not.
    :exlabel:`ex_synthetic-regression-data-recovery-under-noise`
 
-3. [code] **A feature on another scale.** Draw the first feature with
-   standard deviation 10 instead of 1, and set $w_1^* = 0.2$, so that the
-   labels are distributed as before.
-    1. Predict $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}/n$, say which
-       step of the derivation in this section no longer holds, and predict
-       the standard errors of $\hat{w}_1$ and $\hat{w}_2$.
-    1. Check both predictions by repeating the least-squares fit on many
-       independent datasets.
-    1. A bug moves $\hat{w}_1$ by $5 \times 10^{-4}$. Does the threshold
-       of $10^{-3}$ catch it? Propose a threshold for each weight that does
-       not depend on the scale of its feature.
-   :exlabel:`ex_synthetic-regression-data-feature-scale`
-
-4. [code] **A model that does not fit.** ● Add the term $c\,x_1^2$ with
+1. [code] **A model that does not fit.** ● Add the term $c\,x_1^2$ with
    $c = 0.5$ to every label, so that the labels no longer follow a linear
    function of the features, and fit the linear model by least squares as
    in this section.
@@ -396,7 +243,7 @@ fit.
        this section can tell you when the model does not fit the data.
    :exlabel:`ex_synthetic-regression-data-misspecified`
 
-5. **The loss floor and its fluctuation.** The next section judges a
+1. **The loss floor and its fluctuation.** The next section judges a
    training run by its validation loss, the average of
    $\frac{1}{2}(\hat{y} - y)^2$ over the 1,000 validation examples.
     1. Show that a model with the true parameters has expected loss

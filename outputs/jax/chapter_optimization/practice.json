@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.12.0.1",
-    "d2l_lib_fingerprint": "sha256:68db9f94e6144e7258850adc293fee6db1d2183a74b6419eff10063787388a16",
+    "d2l_lib_fingerprint": "sha256:da5a657ef644529629cff51b0ae077790fab2e9a8a3ee994cf8a0dfaa4cbd16d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,85 +14,189 @@
       "outputs": []
     },
     "practice-gradient-clipping-1": {
-      "code_fingerprint": "sha256:b539aec772438a19def1980f2779a666df262d92d720162e6a28c70cd7188dd9",
+      "code_fingerprint": "sha256:d1b8a62d5afa2e61ff6f582af9fc65b66b6cd9ccb177f41c97811fedfecd4972",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-1": {
-      "code_fingerprint": "sha256:7c576e76cccf2b932f04a0e0ea579f01cec845fbee3f4c068542335f7d690a34",
+      "code_fingerprint": "sha256:be45171bf7a5d49adf497ac223ed11b76fd9d4f8009ba1f5a531cc60efd68b13",
       "kind": "text",
       "outputs": []
     },
-    "practice-a-nan-averted-4": {
-      "code_fingerprint": "sha256:ee3efa1a0f5edd327d89767f6298b2a75f58bfa77235e9a85093617e3ea97ce5",
+    "practice-preventing-a-numerical-failure-1": {
+      "code_fingerprint": "sha256:100436c648e3414cf8cda9ae1538e8143be7dcd1228963a524ce839737832af7",
       "kind": "text",
       "outputs": []
     },
     "practice-a-nan-averted-2": {
-      "code_fingerprint": "sha256:4249efd8e3e6e3c957b492a73dc7148f2affdf1618f0ffd40c5d3d194abd692b",
+      "code_fingerprint": "sha256:70497fbc22961d435d43f6c0ea8a7d7d5568f68e876f1603cce6f10cfc142fe8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unclipped: final loss nan\n"
+          "text": "  lr  clip at  final loss  steps clipped  last  median norm  largest / median\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1: final loss 1.645\n"
+          "text": "   1      inf         inf\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped 21 of 2000 steps, the last at step 35; median gradient norm 0.25\n"
-        }
-      ]
-    },
-    "practice-a-nan-averted-3": {
-      "code_fingerprint": "sha256:d92020ceee390cf3317409a1b718b0573fa769c687719d6eac255f3594bc84eb",
-      "kind": "asset",
-      "outputs": [
+          "text": "   1        1       1.613             14    13         0.26               1.7\n"
+        },
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 24721,
-          "sha256": "sha256:4f23d76776472a98c97a567cc65923797eb8b91ae66d340cda04c51f0887eeb6"
+          "type": "stream",
+          "name": "stdout",
+          "text": " 0.3      inf       1.669\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   3        1     197.921           2000  1999        43.59               1.7\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   1      inf         inf\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   1        1       1.616             15    23         0.26               1.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 0.3      inf       1.679\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   3        1     103.020           2000  1999        35.99              13.0\n"
         }
       ]
     },
     "practice-weight-averaging-1": {
-      "code_fingerprint": "sha256:a7282b32084a405b77cedb8d63ccff7538a038c1e53c1c9370bcd746ac98597d",
+      "code_fingerprint": "sha256:db4129065b43ca9af05a823b5d1cc2a11a684743aa384863eb73e0a79335f130",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-4": {
-      "code_fingerprint": "sha256:8d9164c79675eedccfe01916dce126f6d681ebee1bbe417d4427684d7c2b696b",
+      "code_fingerprint": "sha256:b01b897f3a01324809961073b3e1c2766631618503510eb23ec120cba38a34e2",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-averaging-at-a-constant-learning-rate-1": {
+      "code_fingerprint": "sha256:13d2d2af3a3fe5c030b5494b64f13f6fcc2f1528373411c11b675415c6d6bc69",
       "kind": "text",
       "outputs": []
     },
     "practice-weight-averaging-2": {
-      "code_fingerprint": "sha256:175f105f8be00cf08eb81aa00c72a63df6427b802ec5cde3c031d19e4ed4a824",
+      "code_fingerprint": "sha256:d354a2ba3193e0453347292a6fd99f804c10045c1a6fd7148902531033081abc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live: final test accuracy 0.895, last five epochs 0.843 to 0.901\nEMA: final test accuracy 0.907, last five epochs 0.883 to 0.907\n"
+          "text": "test accuracy    live, last five epochs  live, final  EMA, final\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "constant rate            0.890 to 0.906        0.890       0.913\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine decay             0.910 to 0.913        0.912       0.911\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "constant rate            0.863 to 0.904        0.904       0.911\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine decay             0.903 to 0.910        0.910       0.906\n"
         }
       ]
     },
     "practice-weight-averaging-3": {
-      "code_fingerprint": "sha256:6d419cca66151a84dcce4423634fd8cb8817cdb195e86106f36443f0e3f16989",
+      "code_fingerprint": "sha256:2e0ca481d196051ac073250edf917d4abb4ca7c5a2d7a850cd060ce9a885c98e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24007,
-          "sha256": "sha256:af4970ca1ab1e26d118cd10123ea0c3214c8d3f507e3a69c77740b9bf5854999"
+          "bytes": 31669,
+          "sha256": "sha256:03074697a7cd3d5ff1b1be96512f2568f9c03309482df3208171f360284ffe47"
+        }
+      ]
+    },
+    "practice-a-worked-configuration-1": {
+      "code_fingerprint": "sha256:a9035157f46e041c287c9e051aac5a14b5174a730c155c1986ede73ce214ea03",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-a-worked-configuration-3": {
+      "code_fingerprint": "sha256:76773476d09bbdccc18916f0294f7eccecea0714d25dd6ee828f16c68efd0c42",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-a-worked-configuration-4": {
+      "code_fingerprint": "sha256:530c3474db4266e80d33bf6c67421dd228538f28ba4853f02ef22210ca3ad18e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "noise scale at initialization: 2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.001: loss 1.880 after 300 steps, 2% of the steps clipped\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.003: loss 1.769 after 300 steps, 3% of the steps clipped\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lr 0.01: loss 2.482 after 300 steps, 6% of the steps clipped\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "peak rate 0.003; noise scale after its 300 steps: 173\n"
+        }
+      ]
+    },
+    "practice-a-worked-configuration-5": {
+      "code_fingerprint": "sha256:680aa0102d3dfac7ed1b1501ff00672f2fa08c6074ba4bf2d6b830fadadb1322",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation loss  configured  its EMA  clipped  baseline    gap\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed 1                1.247    1.247     0.6%     1.300  0.053\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "seed 2                1.249    1.249     0.6%     1.305  0.056\nspread between the seeds: configured 0.002, baseline 0.006\n"
         }
       ]
     }

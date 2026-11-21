@@ -1,42 +1,21 @@
 # Advanced
 
-The Basics ended with a small recurrent network trained on *The Time
-Machine*. Asked to continue the phrase "The Time Traveller", it writes real
-words and punctuation, but its grammar holds over a few words at most. The
-language models that answer questions and write programs today are built
-from the same parts: layers, a loss, its gradient and an optimizer. What
-does it take to get from one to the other? This part treats four problems
-that the small network never met.
+At the close of the *Basics* part, we trained a recurrent neural network on H. G. Wells's *The Time Machine*. Prompted with the words *"The Time Traveller"*, that small model produces recognizable English words and punctuation, yet its grammatical coherence unravels after a dozen characters. By contrast, today's frontier foundation models---built from the very same elementary primitives of parameterized layers, loss functions, automatic differentiation, and gradient-based optimizers---hold extended technical conversations, write and debug software, solve competitive mathematics problems, and synthesize photorealistic images and video from a sentence of text.
 
-The first is training. A learning rate tuned for one model may make a model
-ten times wider diverge. The second is memory. A recurrent network squeezes
-everything it has read into a state of fixed size, written before it knows
-what will be asked. In 2014 attention let a translation model consult every
-source word. In 2017 Ashish Vaswani and colleagues at Google built a
-translation model from attention alone, without recurrence. That model, the
-transformer, underlies most large language models built since.
+What separates a classroom prototype from a modern frontier system? Crossing that gap requires solving four fundamental challenges that small models on toy datasets never encounter:
 
-The third is hardware. A GPU computes much faster than it moves data, so a
-model's cost depends on how its operations use memory, not only on how many
-it performs. The fourth is the objective. An agent that plays a game learns
-from rewards rather than labels. A model that generates images has no label
-to match, so its loss must judge whether a new sample could have come from
-the data.
+1. **Optimization stability and scaling.** In *Basics*, we treated minibatch stochastic gradient descent, learning-rate schedules, and batch sizes largely as convenient recipes. As networks grow to millions or billions of parameters, however, a learning rate that trains a narrow layer smoothly can cause a wider or deeper network to diverge instantly, and poorly conditioned loss surfaces can stall progress for millions of steps.
+2. **Long-range memory and parallel sequence processing.** A classical recurrent network is forced to compress everything it has read into a single fixed-width hidden vector before knowing which details will matter later---and because each time step waits for the previous one, recurrent training cannot exploit the massive parallelism of modern GPUs.
+3. **Hardware bottlenecks and distributed systems.** Modern accelerators perform floating-point arithmetic far faster than they can move tensors between off-chip memory and on-chip registers, or across network links between GPUs. At scale, a model's real-world training and inference speed is governed as much by memory bandwidth, numerical precision, and communication topology as by its raw operation count.
+4. **Learning beyond static labels.** Supervised cross-entropy works whenever every input has a unique ground-truth label. Yet an autonomous agent acting in an environment must learn from delayed, sparse scalar rewards whose distribution shifts as the agent's own policy changes; and a generative model synthesizing high-resolution images has no single target label to match, requiring objectives that compare entire probability distributions or reverse continuous corruption processes.
 
-:numref:`chap_optimization` asks how gradient methods behave on curved,
-noisy losses, and how to choose a learning rate, schedule and batch size.
-:numref:`chap_attention` asks how a position can retrieve what it needs from
-any other. :numref:`chap_transformers` asks how attention and feed-forward
-layers stack into a deep model that trains reliably.
-:numref:`chap_modern_rnn` asks how a state of fixed size can be trained on
-all positions at once, and what it can store. :numref:`chap_performance`
-asks what limits the speed of a training step on one GPU and on several.
-:numref:`chap_reinforcement_learning` asks how an agent learns when its
-actions change the data it sees, and :numref:`chap_deep_rl` asks how to keep
-that learning stable with neural networks. :numref:`chap_gans` asks how to
-train a generator that offers samples but no density, and
-:numref:`chap_diffusion` asks how to generate data by learning to remove
-noise.
+The nine chapters of this part---implemented in both PyTorch and JAX---tackle these four challenges systematically:
 
-The Advanced chapters are implemented in PyTorch and JAX. The Language
-Models and Image Models parts apply them to text and images.
+* **Optimization and Scaling (:numref:`chap_optimization`).** We begin by examining what makes high-dimensional, nonconvex optimization hard---ill-conditioned curvature, saddle points, and minibatch gradient noise---and how modern optimizers overcome these obstacles. We trace the progression from stochastic gradient descent to momentum, AdaGrad, RMSProp, Adam, and decoupled weight decay (AdamW), paired with warmup and cosine learning-rate schedules, and conclude with the empirical *neural scaling laws* that govern how test loss falls as model capacity, dataset size, and compute budget grow together.
+* **Attention Mechanisms and Transformers (:numref:`chap_attention` and :numref:`chap_transformers`).** :numref:`chap_attention` breaks the fixed-vector memory bottleneck of classical sequence models by introducing *attention*: a differentiable content-addressable lookup over keys, values, and queries. Starting from Nadaraya--Watson kernel regression, we develop additive and scaled dot-product attention, Bahdanau attention for sequence-to-sequence alignment, and multi-head self-attention. :numref:`chap_transformers` then dispenses with recurrence altogether, assembling self-attention, positionwise feed-forward networks, layer normalization, residual connections, and positional encodings (including rotary position embeddings, RoPE) into the three foundational *Transformer* paradigms: bidirectional encoders (BERT), causal autoregressive decoders (GPT), and Vision Transformers (ViT). We also examine the computational bottlenecks of long-context attention, key--value caching during generation, and sparse Mixture-of-Experts (MoE) layers.
+* **Modern Recurrent Networks and State Space Models (:numref:`chap_modern_rnn`).** While quadratic self-attention dominates when every token must attend to every other token, maintaining a growing key--value cache over hundreds of thousands of tokens becomes expensive at inference time. :numref:`chap_modern_rnn` returns to recurrence with a fresh question: *how can we keep a fixed-size state at inference time while still training across all sequence positions in parallel?* We show how removing the nonlinear state recurrence enables exact parallel evaluation via associative *scans*, connect linear recurrences to continuous-time *state space models* (SSMs) and HiPPO polynomial projections, and progress to matrix-valued states (linear attention), input-dependent *selective* state space models (Mamba), and error-correcting delta rules (DeltaNet).
+* **Computational Performance (:numref:`chap_performance`).** :numref:`chap_performance` asks where the time and memory of a training step go. The roofline model separates operations limited by arithmetic from those limited by memory traffic, and a third limit, the host that issues every operation, explains why small operations leave a GPU idle. Compilation (`torch.compile` and `jax.jit`), bf16 arithmetic, larger minibatches, and activation checkpointing then about double the throughput of a GPT training step on one GPU. We then add GPUs: data parallelism written by hand and with production libraries, the allreduce and its cost model, the overlap of communication with the backward pass, and the sharding of weights, gradients, and optimizer state (ZeRO and FSDP) that trains a model no single card holds.
+* **Reinforcement Learning and Deep RL (:numref:`chap_reinforcement_learning` and :numref:`chap_deep_rl`).** :numref:`chap_reinforcement_learning` builds the mathematical and algorithmic foundations of decision-making under uncertainty: Markov decision processes, Bellman optimality equations, value and policy iteration, model-free Monte Carlo estimation, temporal-difference learning (SARSA and Q-learning), and exploration strategies in multi-armed bandits. :numref:`chap_deep_rl` then marries reinforcement learning with deep function approximation, addressing the deadly triad of instability through experience replay and target networks in Deep Q-Networks (DQN), and developing direct policy optimization via REINFORCE, Generalized Advantage Estimation (GAE), Actor--Critic architectures, Proximal Policy Optimization (PPO), and maximum-entropy Soft Actor--Critic (SAC) for continuous control.
+* **Generative Adversarial Networks and Diffusion Models (:numref:`chap_gans` and :numref:`chap_diffusion`).** The final two chapters develop modern deep generative modeling. :numref:`chap_gans` treats generation as a game between a generator and a critic that learns to tell generated samples from real ones: it asks which divergence each critic's loss measures (Jensen--Shannon, other $f$-divergences, MMD, $W_1$) and whether a far generator still gets a gradient, compares a critic that scores real and generated samples in pairs, shows on small games why the zero-centered gradient penalties $R_1$ and $R_2$ make gradient training converge near the data, builds and scores image generators, conditional ones included, and ends with the adversarial terms that still train vocoders, image autoencoders and one-step generators distilled from diffusion models. :numref:`chap_diffusion` develops the continuous-time generative paradigm behind today's flagship image, audio, and video models: corrupting data along a Gaussian probability path parameterized by its signal-to-noise ratio, training a deep denoiser to predict the clean data, the noise, or the *velocity field* (score), and generating new samples by integrating the reverse-time stochastic differential equation or probability-flow ODE. Along the way, we unify denoising diffusion (DDPM/DDIM) and *flow matching*, build U-Net and Diffusion Transformer (DiT) backbones with classifier-free guidance, and accelerate sampling to a handful of steps via consistency and average-velocity distillation.
+
+These chapters do not need to be read strictly in linear order; the dependency diagram in the Preface (:numref:`fig_book_org`) maps out which chapters build on which. Together, they provide the architectural, mathematical, and systems toolkit that the *Language Models* and *Image Models* parts apply to large-scale foundation models.

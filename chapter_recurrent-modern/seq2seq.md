@@ -1,35 +1,9 @@
-# Encoder-Decoder Models for Sequence Transduction
+# Sequence-to-Sequence Learning
 :label:`sec_seq2seq`
 
-The language models of :numref:`chap_rnn` read a sequence and continue it. Many
-of the most useful problems in machine learning have a different shape: read one
-sequence and emit a *different* one. Translate an English sentence into French,
-transcribe an audio clip into words, summarize a document, answer a question.
-The input and the output are both sequences, they usually have different lengths,
-and their tokens need not line up position by position. Problems of this kind are
-called *sequence transduction*, or *sequence-to-sequence* (seq2seq) learning, and
-they were the arena in which recurrent networks first beat classical pipelines at
-scale :cite:`Sutskever.Vinyals.Le.2014,Cho.Van-Merrienboer.Gulcehre.ea.2014`.
+The language models of the previous chapters continue a single sequence: they read text and predict the next token. Many tasks map one sequence to another of a different length, where positions do not align one-to-one: a translator reads an English sentence and writes a French one, or a speech recognizer transcribes an audio clip into words. Translation was the benchmark on which neural networks first rivaled statistical phrase-based systems in 2014 :cite:`Sutskever.Vinyals.Le.2014,Cho.Van-Merrienboer.Gulcehre.ea.2014`. Their architecture was simple: one recurrent network reads the source, a second writes the target, and a single fixed-width state vector passes between them.
 
-This section is deliberately historical: it builds the 2014 system that taught
-the field what sequence transduction demands, using the gated networks of
-:numref:`sec_lstm`. You have already met both of its successors — the
-attention of :numref:`chap_attention` grew directly out of this model's central
-weakness, and the transformer encoder-decoders of :numref:`sec_transformer`
-displaced it outright — so read it as the baseline against which much of the
-modern field is measured. We introduce the
-*encoder-decoder* abstraction that organizes almost every transduction model
-built since, assemble a small English-to-French translator from two GRUs, train
-it with the teacher forcing of :numref:`sec_rnn` and a masked loss, translate
-with the decoding strategies of :numref:`sec_decoding`, and score the results
-with a character-level metric. We end by *measuring* the weakness itself: the
-encoder squeezes the entire source through a single fixed-size vector, and that
-bottleneck is where attention began.
-
-```{.python .input}
-%load_ext d2lbook.tab
-tab.interact_select('pytorch', 'jax')
-```
+You have already met the successors of this design—cross-attention (:numref:`chap_attention`) and the Transformer encoder--decoder (:numref:`sec_transformer`)—which were invented to bypass its single-vector bottleneck. Why revisit the 2014 design here? Because that bottleneck is the central subject of this chapter: every recurrent model in the sections that follow compresses its past into a state of fixed size. Here we set up the encoder--decoder abstraction and the standard lexical translation metrics (`chrF` and `BLEU`), and then measure directly on a string-reversal benchmark how much information a single fixed state vector can carry as the input grows.
 
 ```{.python .input #seq2seq-imports}
 %%tab pytorch
@@ -53,636 +27,39 @@ from d2l import jax as d2l
 ```
 
 ```{.python .input #seq2seq-encoder-decoder-models-for-sequence-transduction-1}
+%%tab pytorch, jax
 import collections
 ```
 
-## Sequence Transduction and the Abstraction
+## The Encoder--Decoder Abstraction
 :label:`sec_encoder-decoder`
 
-The trick that makes transduction tractable is to split the model in two
-(:numref:`fig_encoder_decoder`). An *encoder* consumes the variable-length source
-sequence and compresses it into an intermediate state of fixed shape. A *decoder*
-consumes that state and produces the variable-length target, one token at a time.
-The state is the sole channel between them: everything the decoder ever learns
-about the source, it learns through that one object.
+Mapping one sequence to another of variable length (*sequence-to-sequence learning* or *sequence transduction*) splits naturally into two modules (:numref:`fig_encoder_decoder`): an *encoder* that consumes the source sequence and summarizes it into a state, and a *decoder* that consumes that state and generates the target one token at a time. Everything the decoder learns about the source must pass through that state.
 
-![The encoder-decoder architecture: the encoder maps a variable-length source into a fixed-shape state, and the decoder maps the state back into a variable-length target.](../img/mdl-modernrnn-encoder-decoder.svg)
+![The encoder--decoder architecture: the encoder reads the source sequence into a state, and the decoder generates the target sequence from that state.](../img/mdl-modernrnn-encoder-decoder.svg)
 :label:`fig_encoder_decoder`
 
-The decoder half should look familiar: it *is* a language model in the sense of
-:numref:`sec_language-model`, factorizing the target probability autoregressively,
-only now every factor is additionally conditioned on the encoder state
-$\mathbf{c}$,
+Given a source $x_1, \ldots, x_T$ and a target $y_1, \ldots, y_{T'}$ (where $T'$ need not equal $T$), the decoder factorizes the conditional probability autoregressively just like a language model (:numref:`sec_language-model`), except that every factor is conditioned on the encoder state $\mathbf{c}$:
 
 $$P(y_1, \ldots, y_{T'} \mid x_1, \ldots, x_T) = \prod_{t'=1}^{T'} P(y_{t'} \mid y_1, \ldots, y_{t'-1}, \mathbf{c}).$$
 :eqlabel:`eq_seq2seq_conditional`
 
-A decoder is a *conditional* language model, and conditioning is the whole game:
-the same next-token machinery, pointed at a source. This is why the abstraction
-long outlived the RNN that first filled it. Swap the encoder for a convolutional
-audio front-end and you have Whisper transcribing speech; swap it for a vision
-backbone and you have an image-captioning model; feed it text and images together
-and you have the multimodal front-ends of current assistants. The shape in
-:numref:`fig_encoder_decoder` survives; only the encoder changes.
+Notice that the source sequence disappears on the right-hand side, leaving only $\mathbf{c}$: the equation holds only if $\mathbf{c}$ retains everything about the source that the decoder will need. During training we minimize next-token cross-entropy under teacher forcing (:numref:`subsec_teacher-forcing`), feeding ground-truth previous target tokens; at inference time the decoder feeds back its own emitted tokens until it produces an end-of-sequence token.
 
-Because the abstraction is reused so widely, it pays to fix it in code as a pair
-of interfaces before committing to any particular network. The encoder exposes a
-single method that maps an input to outputs. Later stages may need side
-information, such as the length of the source excluding padding, so we allow
-extra positional arguments.
+Two groups introduced this recurrent design in 2014. :citet:`Cho.Van-Merrienboer.Gulcehre.ea.2014` used a GRU encoder--decoder (:numref:`sec_gru`) to score phrase pairs inside a statistical translation system, while :citet:`Sutskever.Vinyals.Le.2014` translated English to French end-to-end with deep LSTMs connected through a single vector. Notably, Sutskever et al. fed the source sentence to the encoder *backward* so that the first words of the translation sat only a few recurrent steps from the corresponding source words—shortening the gradient path without changing how much total information the state had to hold.
 
-```{.python .input #seq2seq-abstraction-encoder}
-%%tab pytorch
-class Encoder(nn.Module):  #@save
-    """The base encoder interface for the encoder-decoder architecture."""
-    def __init__(self):
-        super().__init__()
+While recurrent encoders and decoders were later superseded by Transformers (such as Whisper for speech :cite:`radford2023whisper` or vision-language captioners), the encoder--decoder abstraction endured. What changed in :numref:`sec_transformer` is that the state passed to the decoder became a sequence of one vector per source token rather than a single vector for the entire source. Here we keep the 2014 single-vector state because its capacity limit is the exact quantity we want to measure.
 
-    # Later there can be additional arguments (e.g., length excluding padding)
-    def forward(self, X, *args):
-        raise NotImplementedError
-```
+## Scoring Translations
+:label:`sec_translation-scoring`
 
-```{.python .input #seq2seq-abstraction-encoder}
-%%tab jax
-class Encoder(nnx.Module):  #@save
-    """The base encoder interface for the encoder-decoder architecture."""
-    # Later there can be additional arguments (e.g., length excluding padding)
-    def __call__(self, X, *args):
-        raise NotImplementedError
-```
+Because human evaluation is too slow to run inside a training loop, machine translation models are scored by lexical $n$-gram overlap against a reference translation. The 2014 papers reported BLEU; modern evaluation benchmarks recommend character-level chrF in its place :cite:`Popovic.2015,Kocmi.Federmann.Grundkiewicz.ea.2021`. We implement both here and reuse them in :numref:`sec_lm_scoring`.
 
-The decoder adds one method, `init_state`, that turns the encoder output into
-whatever the decoder wants to carry as its running state, plus a `forward` that
-maps the next input token and the current state to an output and an updated state.
+**chrF** compares character $n$-grams (with spaces stripped) for orders $n = 1, \ldots, 6$, avoiding tokenization sensitivity and granting partial credit for shared stems or near-miss inflections. For each order $n$, precision is the fraction of candidate $n$-grams present in the reference, and recall is the fraction of reference $n$-grams present in the candidate (using multiset intersection `p & r` so repeated $n$-grams are clipped at their reference count). Averaging precision and recall across the six orders to obtain $P$ and $R$, chrF computes the $F_\beta$-score:
 
-```{.python .input #seq2seq-abstraction-decoder}
-%%tab pytorch
-class Decoder(nn.Module):  #@save
-    """The base decoder interface for the encoder-decoder architecture."""
-    def __init__(self):
-        super().__init__()
+$$F_\beta = \frac{(1 + \beta^2)\, P R}{\beta^2 P + R}.$$
 
-    def init_state(self, enc_all_outputs, *args):
-        raise NotImplementedError
-
-    def forward(self, X, state):
-        raise NotImplementedError
-```
-
-```{.python .input #seq2seq-abstraction-decoder}
-%%tab jax
-class Decoder(nnx.Module):  #@save
-    """The base decoder interface for the encoder-decoder architecture."""
-    def init_state(self, enc_all_outputs, *args):
-        raise NotImplementedError
-
-    def __call__(self, X, state):
-        raise NotImplementedError
-```
-
-Wiring them together is a three-line class: run the encoder, hand its output to
-`init_state`, then run the decoder. Subclassing `d2l.Classifier` gives us the
-training loop and the softmax cross-entropy loss for free, so a concrete
-model needs to specify only the encoder, the decoder, and how the two
-connect.
-
-```{.python .input #seq2seq-abstraction-together}
-%%tab pytorch
-class EncoderDecoder(d2l.Classifier):  #@save
-    """The base class for the encoder-decoder architecture."""
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args)
-        dec_state = self.decoder.init_state(enc_all_outputs, *args)
-        # Return decoder output only
-        return self.decoder(dec_X, dec_state)[0]
-```
-
-```{.python .input #seq2seq-abstraction-together}
-%%tab jax
-class EncoderDecoder(d2l.Classifier):  #@save
-    """The base class for the encoder-decoder architecture."""
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args)
-        dec_state = self.decoder.init_state(enc_all_outputs, *args)
-        # Return decoder output only
-        return self.decoder(dec_X, dec_state)[0]
-```
-
-## The Machine Translation Dataset
-:label:`sec_machine_translation`
-
-To make the abstraction concrete we need data. We use a small English-French
-corpus of sentence pairs from the [Tatoeba Project](http://www.manythings.org/anki/):
-each line is a tab-separated pair, an English *source* and its French *target*.
-Statistical machine translation on corpora like this
-:cite:`Brown.Cocke.Della-Pietra.ea.1990` was, for decades, the flagship
-application that drove sequence modeling forward, and it remains the cleanest
-task on which to see an encoder-decoder learn.
-
-Tokenization follows :numref:`sec_text-sequence` exactly: a byte-level BPE
-tokenizer, trained here on both languages at once to yield a *single shared
-vocabulary*. Sharing one vocabulary across source and target is standard practice
-in translation :cite:`Sennrich.Haddow.Birch.2015`. English and French overlap
-heavily in the Latin alphabet, in punctuation, and in outright shared words
-("nation", "possible"), so a joint vocabulary spends its budget where it is
-actually needed and lets a token learned on one side transfer to the other; and
-because BPE starts from raw bytes, no word in either language is ever out of
-vocabulary. Our tokenizer reserves the three special ids the batching below
-needs: `<pad>`, `<bos>`, and `<eos>`.
-
-Batching pads or truncates every sentence to a fixed length `num_steps`. We append
-`<eos>` to mark where a sequence ends (so the decoder can learn to stop), pad
-short sentences with `<pad>` to a common length, and truncate long ones. Targets
-additionally get a `<bos>` prefix: the decoder is fed the target shifted right (by
-one, starting from `<bos>`), and is trained to predict the target shifted left
-(ending in `<eos>`), which is exactly the teacher forcing of :numref:`sec_rnn`.
-We also record each source's length excluding padding, the bookkeeping an
-attention-based decoder uses to mask padded positions
-(:numref:`sec_attention-scoring-functions`); our recurrent model here never
-reads it.
-
-```{.python .input #seq2seq-mtfraeng}
-%%tab pytorch, jax
-class MTFraEng(d2l.DataModule):  #@save
-    """The English-French dataset, tokenized with a shared byte-level BPE."""
-    def __init__(self, batch_size, num_steps=20, num_train=1024, num_val=128,
-                 vocab_size=4000):
-        super().__init__()
-        self.save_hyperparameters()
-        pairs = self._pairs(self._preprocess(self._download()))
-        # Train ONE shared byte-level BPE over both languages.
-        m = min(5000, len(pairs))
-        self.tokenizer = d2l.BPETokenizer(
-            vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
-        self.tokenizer.train('\n'.join([p[0] for p in pairs[:m]] +
-                                       [p[1] for p in pairs[:m]]))
-        # src_vocab / tgt_vocab both refer to the shared tokenizer.
-        self.src_vocab = self.tgt_vocab = self.tokenizer
-        pairs = pairs[:num_train + num_val]
-        self.src_sents = [p[0] for p in pairs]
-        self.tgt_sents = [p[1] for p in pairs]
-        self.arrays = self._encode(pairs)
-
-    def _download(self):
-        d2l.extract(d2l.download(
-            d2l.DATA_URL + 'fra-eng.zip', self.root,
-            '94646ad1522d915e7b0f9296181140edcf86a4f5'))
-        with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
-            return f.read()
-
-    def _preprocess(self, text):
-        # Normalize spaces, lowercase, and put a space before punctuation.
-        text = text.replace(' ', ' ').replace('\xa0', ' ').lower()
-        no_space = lambda c, prev: c in ',.!?' and prev != ' '
-        return ''.join([' ' + c if i > 0 and no_space(c, text[i - 1]) else c
-                        for i, c in enumerate(text)])
-
-    def _pairs(self, text):
-        return [ln.split('\t') for ln in text.split('\n') if ln.count('\t') == 1]
-```
-
-The `_encode` method turns a list of sentence pairs into the four arrays every
-batch carries: the padded source, the decoder input (target with `<bos>`), the
-source length excluding padding, and the label (target with `<eos>`). Because it
-takes an explicit list of pairs, we reuse it both to build the dataset and,
-later, to encode arbitrary sentences we want to translate.
-
-```{.python .input #seq2seq-mtfraeng-encode}
-%%tab pytorch, jax
-@d2l.add_to_class(MTFraEng)  #@save
-def _encode(self, pairs):
-    tok, t = self.tokenizer, self.num_steps
-    def row(sent, is_tgt):
-        ids = tok.encode(sent)
-        ids = (ids[:t - 1] + [tok.eos] if len(ids) >= t else
-               ids + [tok.eos] + [tok.pad] * (t - 1 - len(ids)))
-        return [tok.bos] + ids if is_tgt else ids
-    src = d2l.tensor([row(s, False) for s, _ in pairs])
-    tgt = d2l.tensor([row(t, True) for _, t in pairs])
-    valid_len = d2l.reduce_sum(d2l.astype(src != tok.pad, d2l.int32), 1)
-    return src, tgt[:, :-1], valid_len, tgt[:, 1:]
-
-@d2l.add_to_class(MTFraEng)  #@save
-def build(self, src_sentences, tgt_sentences):
-    return self._encode([(self._preprocess(s), self._preprocess(t))
-                         for s, t in zip(src_sentences, tgt_sentences)])
-
-@d2l.add_to_class(MTFraEng)  #@save
-def get_dataloader(self, train):
-    idx = slice(0, self.num_train) if train else slice(self.num_train, None)
-    return self.get_tensorloader(self.arrays, train, idx)
-```
-
-Two small shims let the shared tokenizer stand in for the `src_vocab` /
-`tgt_vocab` interface that later chapters expect, mapping a special token to its
-id and a list of ids back to token strings.
-
-```{.python .input #seq2seq-vocab-shims}
-%%tab pytorch, jax
-@d2l.add_to_class(d2l.BPETokenizer)  #@save
-def __getitem__(self, token):
-    return self.specials[token]
-
-@d2l.add_to_class(d2l.BPETokenizer)  #@save
-def to_tokens(self, ids):
-    return [self.decode([int(i)]) for i in ids]
-```
-
-Let us instantiate the dataset and read one small batch. The four tensors are the
-source, the decoder input (note the leading `<bos>` id), the source valid length,
-and the label (the target shifted one step left).
-
-```{.python .input #seq2seq-mtfraeng-batch}
-data = MTFraEng(batch_size=3)
-src, dec_in, src_valid_len, label = next(iter(data.train_dataloader()))
-print('source:', d2l.astype(src, d2l.int32))
-print('decoder input:', d2l.astype(dec_in, d2l.int32))
-print('source valid length:', d2l.astype(src_valid_len, d2l.int32))
-print('shared vocabulary size:', len(data.tokenizer))
-```
-
-Padding is a real cost, so it is worth seeing how much of it we do. The histogram
-below plots the distribution of tokenized sentence lengths for the two languages.
-Most sentences are short, which is why a modest `num_steps` suffices, and it is
-this same skew that makes a masked loss (below) worthwhile: without masking, the
-padding on short sentences would dominate the gradient.
-
-```{.python .input #seq2seq-length-hist-fn}
-%%tab pytorch, jax
-def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):  #@save
-    """Plot the histogram for list length pairs."""
-    d2l.set_figsize()
-    _, _, patches = d2l.plt.hist(
-        [[len(l) for l in xlist], [len(l) for l in ylist]])
-    d2l.plt.xlabel(xlabel)
-    d2l.plt.ylabel(ylabel)
-    for patch in patches[1].patches:
-        patch.set_hatch('/')
-    d2l.plt.legend(legend)
-```
-
-```{.python .input #seq2seq-length-hist}
-src_ids = [data.tokenizer.encode(s) for s in data.src_sents]
-tgt_ids = [data.tokenizer.encode(s) for s in data.tgt_sents]
-show_list_len_pair_hist(['source', 'target'], '# tokens per sentence',
-                        'count', src_ids, tgt_ids);
-```
-
-## The Seq2Seq Model
-
-We now fill the two interfaces with GRUs (:numref:`sec_gru`). The GRU is a natural
-choice: its gated additive state carries information across the sentence without
-the vanishing gradients that would cripple a vanilla RNN encoder.
-
-### The Encoder
-
-The encoder embeds each source token and runs a multilayer GRU over the sequence.
-It returns the per-step hidden states of the top layer together with the final
-hidden state of every layer; the latter is the context $\mathbf{c}$ of
-:numref:`fig_encoder_decoder`, a fixed-shape summary of the whole source.
-
-One detail of initialization matters enough to name. The seq2seq paper
-:cite:`Sutskever.Vinyals.Le.2014` initializes weights with Xavier-uniform, which
-frameworks do not all do by default. In PyTorch we apply a small helper via
-`module.apply`; the Flax NNX layers default to
-LeCun-normal input weights with orthogonal recurrent weights, a combination
-already well suited to RNNs, so we leave it in place.
-
-```{.python .input #seq2seq-init}
-%%tab pytorch
-def init_seq2seq(module):  #@save
-    """Initialize weights for sequence-to-sequence learning."""
-    if type(module) == nn.Linear:
-        nn.init.xavier_uniform_(module.weight)
-    if type(module) == nn.GRU:
-        for param in module._flat_weights_names:
-            if "weight" in param:
-                nn.init.xavier_uniform_(module._parameters[param])
-```
-
-```{.python .input #seq2seq-encoder}
-%%tab pytorch
-class Seq2SeqEncoder(d2l.Encoder):  #@save
-    """The RNN encoder for sequence-to-sequence learning."""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
-        self.apply(init_seq2seq)
-
-    def forward(self, X, *args):
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        outputs, state = self.rnn(embs)
-        # outputs: (num_steps, batch_size, num_hiddens)
-        # state: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-```
-
-```{.python .input #seq2seq-encoder}
-%%tab jax
-class Seq2SeqEncoder(d2l.Encoder):  #@save
-    """The RNN encoder for sequence-to-sequence learning."""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0, rngs=None):
-        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None else rngs
-        self.embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
-        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout,
-                           rngs=rngs)
-
-    def __call__(self, X, *args):
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        outputs, state = self.rnn(embs)
-        # outputs: (num_steps, batch_size, num_hiddens)
-        # state: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-```
-
-A quick shape check confirms the interface. On a batch of 4 sequences of length 9
-with a two-layer GRU of width 16, the per-step outputs have shape (`num_steps`,
-`batch_size`, `num_hiddens`) and the final state has one hidden vector per layer.
-
-```{.python .input #seq2seq-encoder-check}
-vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
-batch_size, num_steps = 4, 9
-encoder = Seq2SeqEncoder(vocab_size, embed_size, num_hiddens, num_layers)
-X = d2l.zeros((batch_size, num_steps))
-enc_outputs, enc_state = encoder(X)
-d2l.check_shape(enc_outputs, (num_steps, batch_size, num_hiddens))
-```
-
-### The Decoder
-
-The decoder generates the target autoregressively. At target step $t'$ it takes
-the previous target token $y_{t'-1}$, its own previous hidden state
-$\mathbf{s}_{t'-1}$, and the context $\mathbf{c}$, and produces a distribution
-over the next token:
-
-$$\mathbf{s}_{t'} = g(y_{t'-1}, \mathbf{c}, \mathbf{s}_{t'-1}).$$
-:eqlabel:`eq_seq2seq_s_t`
-
-We realize $g$ with two design choices. First, the decoder's initial hidden state
-is the encoder's final hidden state, which requires the two GRUs to share width
-and depth. Second, to keep the source in view at every step and not only the
-first, we concatenate the context $\mathbf{c}$ (the encoder's top-layer final
-state, broadcast across time) onto the decoder's input embedding at *every* step.
-A dense layer over the top-layer hidden states produces the vocabulary logits.
-
-```{.python .input #seq2seq-decoder}
-%%tab pytorch
-class Seq2SeqDecoder(d2l.Decoder):
-    """The RNN decoder for sequence-to-sequence learning."""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size + num_hiddens, num_hiddens,
-                           num_layers, dropout)
-        self.dense = nn.LazyLinear(vocab_size)
-        self.apply(init_seq2seq)
-
-    def init_state(self, enc_all_outputs, *args):
-        return enc_all_outputs
-
-    def forward(self, X, state):
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        enc_output, hidden_state = state
-        context = enc_output[-1]
-        context = context.repeat(embs.shape[0], 1, 1)
-        embs_and_context = d2l.concat((embs, context), -1)
-        outputs, hidden_state = self.rnn(embs_and_context, hidden_state)
-        outputs = d2l.swapaxes(self.dense(outputs), 0, 1)
-        return outputs, [enc_output, hidden_state]
-```
-
-```{.python .input #seq2seq-decoder}
-%%tab jax
-class Seq2SeqDecoder(d2l.Decoder):
-    """The RNN decoder for sequence-to-sequence learning."""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0, rngs=None):
-        rngs = nnx.Rngs(params=2, dropout=3, carry=4) if rngs is None else rngs
-        self.embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
-        self.rnn = d2l.GRU(embed_size + num_hiddens, num_hiddens,
-                           num_layers, dropout, rngs=rngs)
-        self.dense = nnx.Linear(num_hiddens, vocab_size, rngs=rngs)
-
-    def init_state(self, enc_all_outputs, *args):
-        return enc_all_outputs
-
-    def __call__(self, X, state):
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        enc_output, hidden_state = state
-        context = enc_output[-1]
-        context = jnp.tile(context, (embs.shape[0], 1, 1))
-        embs_and_context = d2l.concat((embs, context), -1)
-        outputs, hidden_state = self.rnn(embs_and_context, hidden_state)
-        outputs = d2l.swapaxes(self.dense(outputs), 0, 1)
-        return outputs, [enc_output, hidden_state]
-```
-
-Running the decoder on the same toy batch, the output has shape (`batch_size`,
-`num_steps`, `vocab_size`): a distribution over the vocabulary at every step.
-
-```{.python .input #seq2seq-decoder-check}
-decoder = Seq2SeqDecoder(vocab_size, embed_size, num_hiddens, num_layers)
-state = decoder.init_state(encoder(X))
-dec_outputs, state = decoder(X, state)
-d2l.check_shape(dec_outputs, (batch_size, num_steps, vocab_size))
-```
-
-:numref:`fig_seq2seq_details` unrolls the assembled model. The encoder consumes
-the source tokens; its final state becomes the context $\mathbf{c}$ that seeds and
-feeds the decoder; the decoder is driven by the teacher-forced target and predicts
-the target shifted by one, terminating at `<eos>`.
-
-![The unrolled RNN encoder-decoder with teacher forcing. The encoder's final state is the context, fed to the decoder at every step; the decoder input is the target prefixed by `<bos>` and its label is the target ending in `<eos>`.](../img/mdl-modernrnn-seq2seq.svg)
-:label:`fig_seq2seq_details`
-
-### The Loss with Masking
-
-Every batch is padded, but the padding is not real data, and letting the model be
-graded on predicting `<pad>` tokens would reward it for the wrong thing. We
-therefore compute the usual softmax cross-entropy at every position, then multiply
-by a mask that is zero at padded target positions and average over the real tokens
-only. This is worth doing carefully because it appears nowhere else in the book,
-and, as the exercises show, dropping it visibly degrades translation.
-
-The `Seq2Seq` class ties everything together and swaps SGD for Adam, which
-converges faster on this task.
-
-```{.python .input #seq2seq-model}
-%%tab pytorch
-class Seq2Seq(d2l.EncoderDecoder):  #@save
-    """The RNN encoder-decoder for sequence-to-sequence learning."""
-    def __init__(self, encoder, decoder, tgt_pad, lr):
-        super().__init__(encoder, decoder)
-        self.save_hyperparameters()
-
-    def validation_step(self, batch):
-        return self.loss(self(*batch[:-1]), batch[-1])
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
-```
-
-```{.python .input #seq2seq-model}
-%%tab jax
-class Seq2Seq(d2l.EncoderDecoder):  #@save
-    """The RNN encoder-decoder for sequence-to-sequence learning."""
-    def __init__(self, encoder, decoder, tgt_pad, lr):
-        super().__init__(encoder, decoder)
-        self.tgt_pad, self.lr = tgt_pad, lr
-
-    def validation_step(self, batch):
-        return self.loss(self(*batch[:-1]), batch[-1])
-
-    def configure_optimizers(self):
-        return optax.adam(learning_rate=self.lr)
-```
-
-```{.python .input #seq2seq-loss}
-%%tab pytorch
-@d2l.add_to_class(Seq2Seq)
-def loss(self, Y_hat, Y):
-    l = super(Seq2Seq, self).loss(Y_hat, Y, averaged=False)
-    mask = d2l.astype(d2l.reshape(Y, (-1,)) != self.tgt_pad, d2l.float32)
-    return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask)
-```
-
-```{.python .input #seq2seq-loss}
-%%tab jax
-@d2l.add_to_class(Seq2Seq)
-def loss(self, Y_hat, Y, averaged=False):
-    Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
-    Y = d2l.reshape(Y, (-1,))
-    fn = optax.softmax_cross_entropy_with_integer_labels
-    l = fn(Y_hat, Y)
-    mask = d2l.astype(Y != self.tgt_pad, d2l.float32)
-    return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask)
-```
-
-## Training, Decoding, and Evaluation
-:label:`sec_seq2seq_training`
-
-We now train the translator on our 1,024-pair training split. Two layers, width 256, dropout
-0.2, Adam at learning rate 0.005, gradients clipped to norm 1, for 30 epochs.
-
-```{.python .input #seq2seq-training}
-%%tab pytorch, jax
-data = d2l.MTFraEng(batch_size=128)
-embed_size, num_hiddens, num_layers, dropout = 256, 256, 2, 0.2
-encoder = Seq2SeqEncoder(
-    len(data.tokenizer), embed_size, num_hiddens, num_layers, dropout)
-decoder = Seq2SeqDecoder(
-    len(data.tokenizer), embed_size, num_hiddens, num_layers, dropout)
-model = Seq2Seq(encoder, decoder, tgt_pad=data.tokenizer.pad, lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
-trainer.fit(model, data)
-```
-
-### Greedy Translation
-
-To translate we run the decoder autoregressively: feed `<bos>`, take an output
-token, feed it back, and stop at `<eos>`. Two forms are useful. The batched
-`predict_step`, attached to `EncoderDecoder`, decodes a whole minibatch in one
-call, and we use it for the length sweep below.
-
-```{.python .input #seq2seq-predict-step}
-%%tab pytorch
-@d2l.add_to_class(d2l.EncoderDecoder)  #@save
-def predict_step(self, batch, device, num_steps,
-                 save_attention_weights=False):
-    self.eval()
-    batch = [d2l.to(a, device) for a in batch]
-    src, tgt, src_valid_len, _ = batch
-    enc_all_outputs = self.encoder(src, src_valid_len)
-    dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
-    outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
-    for _ in range(num_steps):
-        Y, dec_state = self.decoder(outputs[-1], dec_state)
-        outputs.append(d2l.argmax(Y, 2))
-        if save_attention_weights:
-            attention_weights.append(self.decoder.attention_weights)
-    return d2l.concat(outputs[1:], 1), attention_weights
-```
-
-```{.python .input #seq2seq-predict-step}
-%%tab jax
-@d2l.add_to_class(d2l.EncoderDecoder)  #@save
-def predict_step(self, batch, num_steps, save_attention_weights=False):
-    model = nnx.view(self, deterministic=True, use_running_average=True,
-                     raise_if_not_found=False)
-    src, tgt, src_valid_len, _ = batch
-    enc_all_outputs = model.encoder(src, src_valid_len)
-    enc_attention_weights = (getattr(model.encoder, 'attention_weights', [])
-                             if save_attention_weights else [])
-    dec_state = model.decoder.init_state(enc_all_outputs, src_valid_len)
-    outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
-    for _ in range(num_steps):
-        Y, dec_state = model.decoder(outputs[-1], dec_state)
-        outputs.append(d2l.argmax(Y, 2))
-        if save_attention_weights:
-            attention_weights.append(model.decoder.attention_weights)
-    return d2l.concat(outputs[1:], 1), (attention_weights,
-                                        enc_attention_weights)
-```
-
-A small helper turns one row of predicted ids into a string, cutting it at the
-first `<eos>`. We translate a few short English sentences whose French we know,
-decoding the whole batch at once with `predict_step`.
-
-```{.python .input #seq2seq-detok}
-def to_text(pred, tokenizer):  # Decode one row of ids, stop at <eos>
-    ids = [int(i) for i in d2l.numpy(pred)]
-    if tokenizer.eos in ids:
-        ids = ids[:ids.index(tokenizer.eos)]
-    return tokenizer.decode(ids)
-```
-
-```{.python .input #seq2seq-greedy}
-%%tab pytorch
-engs = ['i lost .', "i'm calm .", "i'm home ."]
-fras = ["j'ai perdu .", 'je suis calme .', 'je suis chez moi .']
-preds, _ = model.predict_step(data.build(engs, fras), d2l.try_gpu(),
-                              data.num_steps)
-translations = [to_text(p, data.tokenizer) for p in preds]
-for eng, out in zip(engs, translations):
-    print(f'{eng} => {out!r}')
-```
-
-```{.python .input #seq2seq-greedy}
-%%tab jax
-engs = ['i lost .', "i'm calm .", "i'm home ."]
-fras = ["j'ai perdu .", 'je suis calme .', 'je suis chez moi .']
-preds, _ = model.predict_step(data.build(engs, fras), data.num_steps)
-translations = [to_text(p, data.tokenizer) for p in preds]
-for eng, out in zip(engs, translations):
-    print(f'{eng} => {out!r}')
-```
-
-### Evaluation with chrF
-
-By what number do we call one translation better than another? For decades the
-default answer was BLEU (below), which counts matching word $n$-grams. The modern
-default for lexical scoring is chrF :cite:`Popovic.2015`, the metric the WMT
-evaluation campaigns recommend. chrF compares *character* $n$-grams rather than
-word $n$-grams, which sidesteps tokenization entirely and rewards getting a word
-*almost* right (a shared stem, a near-miss inflection) instead of scoring it a
-flat zero. For orders $n = 1, \ldots, N$ it computes the precision and recall of
-character $n$-grams, and combines them with an F-score weighted toward recall
-($\beta = 2$). It is about ten lines.
+With $\beta = 2$, recall weighs more heavily than precision.
 
 ```{.python .input #seq2seq-chrf}
 %%tab pytorch, jax
@@ -704,27 +81,12 @@ def chrf(pred, label, n=6, beta=2):  #@save
     return (1 + beta**2) * prec * rec / (beta**2 * prec + rec)
 ```
 
-Scoring our greedy translations, a correct translation earns a chrF near 1 while a
-wrong word costs partial credit rather than everything. At this toy scale
-translation quality varies from framework to framework: on some tabs the model
-returns a fluent but wrong French sentence, and chrF's partial credit, not an
-all-or-nothing zero, is exactly what you then see in its score.
-
-```{.python .input #seq2seq-chrf-eval}
-for eng, fra, out in zip(engs, fras, translations):
-    print(f'{eng} => {out!r}, chrF {chrf(out, data._preprocess(fra)):.3f}')
-```
-
-**A note on BLEU.** You will still meet BLEU :cite:`Papineni.Roukos.Ward.ea.2002`
-constantly, so it is worth naming. It is a geometric mean of word $n$-gram
-precisions $p_n$, damped by a *brevity penalty* that stops a model from gaming
-precision by emitting only a couple of sure words:
+**BLEU** :cite:`Papineni.Roukos.Ward.ea.2002` measures clipped word $n$-gram precisions $p_n$ ($n = 1, \ldots, k$) and multiplies their weighted geometric mean by a *brevity penalty* so short, high-precision fragments cannot game the score:
 
 $$\text{BLEU} = \exp\!\left(\min\!\left(0, 1 - \frac{\text{len}_{\text{label}}}{\text{len}_{\text{pred}}}\right)\right) \prod_{n=1}^{k} p_n^{1/2^n}.$$
 :eqlabel:`eq_bleu`
 
-We keep its implementation, `d2l.bleu`, in the library for the exercises, but
-chrF is the metric we teach.
+Because it is a product, a single zero precision $p_n = 0$ at any order $n \le k$ drives sentence-level BLEU to $0$. (Standard corpus-level BLEU weights orders $n \le 4$ equally by $1/4$ and pools counts across an entire test set, where zero counts are rare.)
 
 ```{.python .input #seq2seq-bleu}
 %%tab pytorch, jax
@@ -745,158 +107,218 @@ def bleu(pred_seq, label_seq, k):  #@save
     return score
 ```
 
-Both chrF and BLEU are surface-overlap metrics; neither knows whether a
-translation *means* the same thing. That gap is filled by learned neural metrics
-such as COMET and, increasingly, by prompting a large language model to judge —
-a model of exactly the kind :numref:`chap_transformers` builds.
+To see how the two metrics diverge on a single sentence, we score an exact copy, a near miss with one wrong inflection on the third of six words, and a valid paraphrase. Because every 4-gram in a six-word sentence touches the third word, $p_4 = 0$ on the near miss, driving BLEU with $k = 4$ to zero while chrF loses only the character $n$-grams overlapping the stray *s*.
 
-### Beam Search
-
-Greedy decoding commits to the single best token at each step, which need not
-produce the best sequence overall. Beam search keeps the $w$ best prefixes alive.
-The decoding toolkit of :numref:`sec_decoding` plugs straight in: everything
-downstream of the model speaks one narrow interface, a `step_fn` mapping the token
-ids so far to NumPy logits for the next token. Here the source is fixed and the
-"ids so far" are the target prefix, so we encode the source (padded exactly as in
-training) and wrap the decoder.
-
-```{.python .input #seq2seq-step-fn}
-%%tab pytorch
-def make_step_fn(model, src):  # src: padded source token ids
-    model.eval()
-    enc = model.encoder(d2l.tensor([src], device=d2l.try_gpu()))
-    def step_fn(tgt_ids):
-        state = model.decoder.init_state(enc)
-        Y, _ = model.decoder(d2l.tensor([tgt_ids], device=d2l.try_gpu()), state)
-        return d2l.numpy(Y)[0, -1]
-    return step_fn
-```
-
-```{.python .input #seq2seq-step-fn}
-%%tab jax
-def make_step_fn(model, src):  # src: padded source token ids
-    m = nnx.view(model, deterministic=True, use_running_average=True,
-                 raise_if_not_found=False)
-    enc = m.encoder(d2l.tensor([src]))
-    def step_fn(tgt_ids):
-        state = m.decoder.init_state(enc)
-        Y, _ = m.decoder(d2l.tensor([tgt_ids]), state)
-        return d2l.numpy(Y)[0, -1]
-    return step_fn
-```
-
-Greedy is the special case $k = 1$; we score it against beams of size 2 and 5
-with chrF, reusing the padded encoding of the training batch.
-
-```{.python .input #seq2seq-beam}
+```{.python .input #seq2seq-scoring-translations-1}
 %%tab pytorch, jax
-tok = data.tokenizer
-for eng, fra in zip(engs, fras):
-    src = [int(i) for i in d2l.numpy(data.build([eng], [eng])[0][0])]
-    step_fn = make_step_fn(model, src)
-    row = []
-    for k in (1, 2, 5):
-        ids = d2l.beam_search(step_fn, [tok.bos], data.num_steps,
-                              beam_size=k, eos_id=tok.eos)[0][1]
-        out = tok.decode([i for i in ids[1:] if i != tok.eos])
-        row.append(f'k={k}: {chrf(out, data._preprocess(fra)):.2f}')
-    print(f'{eng:<12} ' + '  '.join(row))
+reference = 'we will visit our grandparents tomorrow'
+candidates = {'copy': reference,
+              'near miss': 'we will visits our grandparents tomorrow',
+              'paraphrase': 'we are going to see our grandparents tomorrow'}
+for name, candidate in candidates.items():
+    print(f'{name:10s}  chrF {chrf(candidate, reference):.2f}  '
+          f'BLEU {bleu(candidate, reference, k=4):.2f}')
 ```
 
-On sentences this short the beams mostly agree with greedy, as expected: beam
-search buys the most where a locally suboptimal first token unlocks a better
-whole, which is rare here and common on the long sentences we turn to next.
+The near miss scores 0.91 on chrF and 0.00 on BLEU, while the meaning-preserving paraphrase scores 0.67 on chrF and 0.00 on BLEU. Because both metrics count surface overlap rather than semantics, modern evaluation pairs chrF (or corpus-level sacreBLEU :cite:`Post.2018` for historical comparisons) with learned neural evaluators such as COMET :cite:`Rei.Stewart.Farinha.ea.2020` or LLM judges.
 
-## The Fixed-Vector Bottleneck
+## The Fixed-State Bottleneck
 
-Everything the decoder knows about the source arrives through a single fixed-size
-vector $\mathbf{c}$. For "i'm home ." that is plenty. For a long, clause-laden
-sentence it is a tight squeeze: the same 256 numbers must encode a three-word
-sentence and a thirty-word one, and the longer the source, the more must be
-forgotten to fit. We can watch this happen. Below we translate a held-out set of
-sentence pairs and plot mean chrF against source length.
+How much of an input sequence fits through a single state vector? Natural language confounds length with syntactic rarity, so we isolate state capacity using the synthetic string-reversal benchmark of :numref:`subsec_reversal-task`: reversing a random string of $T$ independent letters drawn uniformly from an alphabet of 16 symbols. Because the letters are independent, previously decoded letters give zero information about the next letter—every letter must travel through the encoder's final state $\mathbf{c}$. Reversal also naturally gives the last encoder token first to the decoder, matching Sutskever et al.'s reversed-input ordering.
 
-```{.python .input #seq2seq-bottleneck}
+Each minibatch draws fresh random strings. `Reversal` packs the source string and the right-shifted reversed target (prefixed by a start token `V`) into a single tensor `X` for `d2l.train_steps`.
+
+```{.python .input #seq2seq-the-fixed-state-bottleneck-1}
 %%tab pytorch
-holdout = data._pairs(data._preprocess(data._download()))
-holdout = holdout[data.num_train + data.num_val::250][:600]
-h_src, h_tgt = [p[0] for p in holdout], [p[1] for p in holdout]
-h_preds, _ = model.predict_step(data.build(h_src, h_tgt), d2l.try_gpu(),
-                                data.num_steps)
+class Reversal:
+    """Fresh batches of random strings and their reversals."""
+    def __init__(self, length, batch_size=128, num_letters=16):
+        self.length, self.batch_size = length, batch_size
+        self.num_letters = num_letters
+
+    def batch(self, batch_size):
+        V = self.num_letters  # Letters 0 to V - 1; V is the start token
+        src = torch.randint(0, V, (batch_size, self.length),
+                            device=d2l.try_gpu())
+        tgt = src.flip(1)
+        dec_in = torch.cat([torch.full_like(tgt[:, :1], V), tgt[:, :-1]], 1)
+        return torch.cat([src, dec_in], 1), tgt
+
+    def train_dataloader(self):
+        while True:
+            yield self.batch(self.batch_size)
 ```
 
-```{.python .input #seq2seq-bottleneck}
+```{.python .input #seq2seq-the-fixed-state-bottleneck-1}
 %%tab jax
-holdout = data._pairs(data._preprocess(data._download()))
-holdout = holdout[data.num_train + data.num_val::250][:600]
-h_src, h_tgt = [p[0] for p in holdout], [p[1] for p in holdout]
-h_preds, _ = model.predict_step(data.build(h_src, h_tgt), data.num_steps)
+class Reversal:
+    """Fresh batches of random strings and their reversals."""
+    def __init__(self, length, batch_size=128, num_letters=16):
+        self.length, self.batch_size = length, batch_size
+        self.num_letters = num_letters
+
+    def batch(self, batch_size, key):
+        V = self.num_letters  # Letters 0 to V - 1; V is the start token
+        src = jax.random.randint(key, (batch_size, self.length), 0, V)
+        tgt = src[:, ::-1]
+        dec_in = jnp.concatenate([jnp.full_like(tgt[:, :1], V),
+                                  tgt[:, :-1]], 1)
+        return jnp.concatenate([src, dec_in], 1), tgt
+
+    def train_dataloader(self):
+        key = d2l.get_key()
+        while True:
+            key, subkey = jax.random.split(key)
+            yield self.batch(self.batch_size, subkey)
 ```
 
-```{.python .input #seq2seq-bottleneck-plot}
-buckets = collections.defaultdict(list)
-for s, t, p in zip(h_src, h_tgt, h_preds):
-    L = len(data.tokenizer.encode(s))
-    buckets[L].append(chrf(to_text(p, data.tokenizer), t))
-xs = sorted(L for L in buckets if len(buckets[L]) >= 8 and L <= data.num_steps)
-ys = [np.mean(buckets[L]) for L in xs]
-d2l.set_figsize()
-d2l.plt.plot(xs, ys, 'o-')
-d2l.plt.xlabel('source length (tokens)')
-d2l.plt.ylabel('mean chrF')
-d2l.plt.grid(True);
+In raw bit count, each of the 16 equiprobable letters carries $\log_2 16 = 4$ bits, so a length-$T$ string carries $4T$ bits (32 bits at $T = 8$; 256 bits at $T = 64$). In principle, 64 single-precision floats occupy 2,048 bits—room for 512 letters. How many letters can a trained GRU actually pack and unpack through 64 or 256 floats?
+
+Following :numref:`fig_seq2seq_details` and :citet:`Cho.Van-Merrienboer.Gulcehre.ea.2014`, the GRU encoder's final state $\mathbf{c}$ both initializes the GRU decoder ($\mathbf{s}_0 = \mathbf{c}$) and is concatenated to the input embedding at every decoding step:
+
+$$\mathbf{s}_{t'} = g(y_{t'-1}, \mathbf{c}, \mathbf{s}_{t'-1}).$$
+:eqlabel:`eq_seq2seq_s_t`
+
+![A GRU encoder--decoder on reversal, unrolled. The encoder reads the source; its final state $\mathbf{c}$ starts the decoder and enters every decoder step. The decoder reads the reversed string shifted right behind a start token and predicts the reversed string.](../img/mdl-modernrnn-seq2seq.svg)
+:label:`fig_seq2seq_details`
+
+```{.python .input #seq2seq-the-fixed-state-bottleneck-2}
+%%tab pytorch
+class Reverser(nn.Module):
+    """A GRU encoder whose final state starts and conditions a GRU decoder."""
+    def __init__(self, num_letters, num_hiddens, num_inputs=32):
+        super().__init__()  # One more embedding: the start token
+        self.embedding = nn.Embedding(num_letters + 1, num_inputs)
+        self.encoder = nn.GRU(num_inputs, num_hiddens, batch_first=True)
+        self.decoder = nn.GRU(num_inputs + num_hiddens, num_hiddens,
+                              batch_first=True)
+        self.head = nn.Linear(num_hiddens, num_letters)
+        d2l.init_lecun(self)
+        nn.init.normal_(self.embedding.weight, std=num_inputs ** -0.5)
+
+    def forward(self, X):  # X: the source, then the decoder input
+        src, dec_in = X.chunk(2, dim=1)
+        _, c = self.encoder(self.embedding(src))  # (1, batch, num_hiddens)
+        context = c[0, :, None].expand(-1, dec_in.shape[1], -1)
+        dec_X = torch.cat([self.embedding(dec_in), context], -1)
+        return self.head(self.decoder(dec_X, c)[0])
 ```
 
-The curve slopes down: as the source grows, translation quality falls off, and it
-falls off precisely because the model must funnel more and more information
-through an unchanged $\mathbf{c}$. This single bottleneck is where two large
-stories in this book began, and you have now read both. One escape lets the
-decoder look back at *all* the encoder's per-step states instead of only the
-final one, choosing what to attend to at each step — that is *attention*
-(:numref:`chap_attention`), born in 2014 as exactly this repair
-:cite:`Bahdanau.Cho.Bengio.2014`, and its transformer descendants
-(:numref:`chap_transformers`) retired this model from production. The other
-keeps a single running state but makes it a far better memory, one that decides
-what to store and what to discard as it goes — the linear and selective state
-space models of the rest of this chapter, from :numref:`sec_ssm` on. The same
-bottleneck, measured here on a fifty-line translator, motivated both.
+```{.python .input #seq2seq-the-fixed-state-bottleneck-2}
+%%tab jax
+class Reverser(nnx.Module):
+    """A GRU encoder whose final state starts and conditions a GRU decoder."""
+    def __init__(self, num_letters, num_hiddens, num_inputs=32, *, rngs):
+        lecun = {'recurrent_kernel_init': nnx.initializers.lecun_normal()}
+        self.embedding = nnx.Embed(num_letters + 1, num_inputs, rngs=rngs,
+            embedding_init=nnx.initializers.normal(num_inputs ** -0.5))
+        self.encoder = nnx.RNN(nnx.GRUCell(
+            num_inputs, num_hiddens, rngs=rngs, **lecun), return_carry=True)
+        self.decoder = nnx.RNN(nnx.GRUCell(
+            num_inputs + num_hiddens, num_hiddens, rngs=rngs, **lecun))
+        self.head = nnx.Linear(num_hiddens, num_letters, rngs=rngs)
+
+    def __call__(self, X):  # X: the source, then the decoder input
+        src, dec_in = jnp.split(X, 2, axis=1)
+        c, _ = self.encoder(self.embedding(src))  # (batch, num_hiddens)
+        context = jnp.broadcast_to(c[:, None], (*dec_in.shape, c.shape[-1]))
+        dec_X = jnp.concatenate([self.embedding(dec_in), context], -1)
+        return self.head(self.decoder(dec_X, initial_carry=c))
+```
+
+We train each model for 1,000 steps on minibatches of 128 fresh strings using AdamW with a cosine decay from $3 \times 10^{-3}$ to zero (`d2l.LMOptimizer` and `d2l.train_steps`), matching :numref:`sec_transformer`. We evaluate per-letter accuracy on 1,000 fresh strings under teacher forcing: because the letters are independent, feeding ground-truth previous tokens leaks nothing about the next target letter while preventing early decoding errors from confounding the state-capacity measurement.
+
+```{.python .input #seq2seq-the-fixed-state-bottleneck-3}
+%%tab pytorch
+def reversal_accuracy(num_hiddens, length):
+    """Train a fresh model for 1,000 steps; return its per-letter accuracy."""
+    data = Reversal(length)
+    model = Reverser(data.num_letters, num_hiddens).to(d2l.try_gpu())
+    optimizer = d2l.LMOptimizer(model, lr=3e-3, num_steps=1000, warmup=0,
+                                weight_decay=0.0)
+    d2l.train_steps(model, data, optimizer, 1000)
+    X, Y = data.batch(1000)
+    with torch.inference_mode():
+        return (model(X).argmax(-1) == Y).float().mean().item()
+```
+
+```{.python .input #seq2seq-the-fixed-state-bottleneck-3}
+%%tab jax
+def reversal_accuracy(num_hiddens, length):
+    """Train a fresh model for 1,000 steps; return its per-letter accuracy."""
+    data = Reversal(length)
+    model = Reverser(data.num_letters, num_hiddens,
+                     rngs=nnx.Rngs(d2l.get_key()))
+    optimizer = d2l.LMOptimizer(model, lr=3e-3, num_steps=1000, warmup=0,
+                                weight_decay=0.0)
+    d2l.train_steps(model, data, optimizer, 1000)
+    X, Y = data.batch(1000, d2l.get_key())
+    return float((model(X).argmax(-1) == Y).mean())
+```
+
+We run two seeds for state widths 64 and 256 across lengths $T \in \{8, 16, 32, 64\}$ (chance accuracy is $1/16 \approx 0.06$).
+
+```{.python .input #seq2seq-the-fixed-state-bottleneck-4}
+%%tab pytorch, jax
+lengths, widths = (8, 16, 32, 64), (64, 256)
+print('width' + ''.join(f'{f"T = {T}":>12}' for T in lengths))
+for num_hiddens in widths:
+    row = [[reversal_accuracy(num_hiddens, T) for _ in range(2)]
+           for T in lengths]
+    print(f'{num_hiddens:5d}' + ''.join(f'   {a:.2f}/{b:.2f}' for a, b in row))
+```
+
+At width 64, accuracy drops from 0.99 at $T = 8$ to 0.72 at $T = 16$ and 0.26–0.27 at $T = 64$. Quadrupling the state width to 256 holds accuracy at 0.99 through $T = 16$ and recovers roughly half the letters at $T = 64$. Even so, effective capacity is a small fraction of raw floating-point bits: at $T = 16$, the string carries just 64 bits (1 bit per state float at width 64), yet a quarter of the letters are lost. Moreover, scaling state width proportionally with sequence length still loses ground ($T = 8$ at width 64 reaches 0.99, whereas $T = 32$ at width 256 reaches ~0.80), because the network must also propagate early letters across a longer chain of nonlinear recurrent updates.
+
+Neural machine translation hit the exact same bottleneck in 2014 :cite:`Cho.Van-Merrienboer.Bahdanau.ea.2014`, prompting :citet:`Bahdanau.Cho.Bengio.2014` to introduce cross-attention so the decoder could look back at every encoder state (:numref:`sec_attention-scoring-functions`, :numref:`sec_transformer`)—solving length-12 reversal perfectly within 300 steps at the cost of a cache that grows linearly with input length. The remainder of this chapter explores the complementary path: keeping a fixed-size state, making it parallelizable to train, expanding it from a vector into a key--value matrix memory, and finally combining it with a small fraction of attention layers.
 
 ## Summary
 
-Sequence transduction maps one variable-length sequence to another. The
-encoder-decoder abstraction handles it by compressing the source into a
-fixed-shape state with an encoder and expanding that state into the target with a
-decoder, which is a conditional language model. We built a concrete instance from
-two GRUs, trained on English-French pairs tokenized by a shared byte-level BPE,
-using teacher forcing and a masked loss that ignores padding. At inference the
-decoding strategies of :numref:`sec_decoding` apply directly, from greedy to beam
-search, and we scored translations with chrF, the character-level metric that has
-displaced BLEU as the lexical default. The whole source passing through one fixed
-vector is a hard limit that degrades with sentence length, and escaping it,
-through attention or through better recurrent state, organizes everything that
-follows.
+The encoder--decoder architecture maps a variable-length source sequence to a variable-length target sequence by summarizing the source into an encoder state $\mathbf{c}$ and conditioning an autoregressive decoder on $\mathbf{c}$. Translation quality is commonly measured by character $n$-gram overlap (chrF) or word $n$-gram precision with a brevity penalty (BLEU), supplemented by learned semantic metrics. On synthetic string reversal, a single fixed-width GRU state vector degrades rapidly as sequence length grows, storing well under one effective bit per state coordinate and motivating both attention mechanisms and the structured higher-capacity recurrent states developed in the rest of this chapter.
 
 ## Exercises
 
-1. The dataset uses one shared vocabulary for both languages. Rebuild `MTFraEng`
-   with two separate tokenizers, one per language, and compare training loss and
-   translation quality. When would separate vocabularies help, and when hurt?
-1. Sweep the beam width $w \in \{1, 2, 4, 8, 16\}$ on the three example
-   sentences and on a handful of longer held-out sentences. Where does quality
-   stop improving, and why? Compare the model score of the winning
-   translation with its chrF score (:numref:`sec_beam-search`).
-1. `d2l.beam_search` normalizes scores by length raised to $\beta$ (the argument
-   `alpha`). Decode with $\beta \in \{0, 0.75, 1.5\}$ and relate the lengths of the winning
-   translations to :eqref:`eq_beam-search-score`.
-1. Rerun training with the masked loss replaced by a plain cross-entropy over all
-   positions, padding included. What happens to the translations, and why?
-1. Replace the GRU with an LSTM (:numref:`sec_lstm`) in both encoder and decoder.
-   Does translation quality change at this scale?
-1. Feed the context $\mathbf{c}$ only at the first decoder step (as in
-   :citet:`Sutskever.Vinyals.Le.2014`) instead of at every step. How does that
-   change the results, and why might repeating the context help a small model?
-1. Score the example translations with both `chrf` and `d2l.bleu`. Construct a
-   translation on which the two metrics most disagree, and explain the mechanism.
+1. **BLEU against chrF.** Score the near miss and the paraphrase with
+   `bleu` for $k = 1, 2, 3, 4$, and explain each value from the $n$-gram
+   counts. Then
+   construct a candidate on which chrF and BLEU disagree as much as
+   possible, in either direction, and explain which property of each
+   metric the candidate exploits.
+1. **Bits through the state.** The counting argument of this section says
+   that a state of $N$ numbers of $b$ bits each can take at most $2^{Nb}$
+   values.
+    1. Show that reversing every string of $T$ letters over 16 letters
+       without error requires $Nb \ge 4T$.
+    1. Let $p$ be the per-letter accuracy of the decoder, measured as in
+       this section with the correct previous letters as input. Use Fano's
+       inequality (:numref:`subsec_mdl-fano`) and the chain rule of mutual
+       information to show that at least
+       $T\,(4 - H_\textrm{b}(1 - p) - (1 - p)\log_2 15)$ bits about the
+       string came through $\mathbf{c}$, where $H_\textrm{b}$ is the binary
+       entropy in bits.
+    1. Evaluate this bound for each entry of the table and compare it with
+       $32N$. How many bits per number does the trained encoder use, and
+       does that number depend on $T$?
+    1. Train the width-64 model four times longer at each length. Which
+       lengths gain most, and does the fall with length disappear? What
+       does your answer say about whether the state or the training sets
+       the limit?
+1. **Sutskever's trick, undone.** Our reversal task already has the
+   layout that reversing the source gave Sutskever et al.: the first letter
+   to write is the last one read. Undo it by feeding the encoder the source
+   backward, so that the decoder has to copy the string in the order in
+   which the encoder read it.
+    1. For each letter, count the steps between reading it and writing it,
+       in reversal and in copying. Which task has the shorter dependencies
+       on average, and which has the shortest single dependency?
+    1. Train both tasks at width 64 and $T = 16$, and measure the accuracy
+       overall and at each output position. Which task is easier to learn?
+       Does the answer agree with the argument of
+       :citet:`Sutskever.Vinyals.Le.2014` for reversing the source?
+1. **Context at every step.** Pass the context $\mathbf{c}$ to the
+   decoder only as its initial state, as Sutskever et al. did, and not as
+   an input at every step. How does that change the accuracies at each
+   length, and why might repeating the context help a small model?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1062)
@@ -912,157 +334,238 @@ follows.
 ::: {.cover}
 [Dive into Deep Learning · §12.2]{.kicker}
 
-Encoder-decoder models<br>
-**two gated networks translate · masked loss · chrF · the fixed-vector bottleneck**
+Sequence-to-Sequence Learning<br>
+**the encoder--decoder · scoring translations · the cost of one fixed state, measured**
 :::
 :::
 
-::: {.slide title="Sequence transduction"}
-Read one sequence, emit a *different* one: translation, speech-to-text,
-summarization. Variable lengths, no positional alignment.
+::: {.slide title="One State Must Carry the Whole Source"}
+[The problem]{.kicker}
 
-- **Encoder** compresses the source into a fixed-shape state.
-- **Decoder** expands that state into the target, one token at a time.
+- Translation reads a whole sentence, then writes another of a different
+  length; positions do not line up.
+- 2014: an **encoder** RNN reads the source into one state $\mathbf{c}$,
+  a **decoder** RNN writes the target from $\mathbf{c}$.
+- Reverse 64 random letters through a GRU state of 64 numbers, trained
+  for 1,000 steps: about **1 letter in 4** comes out right. Guessing gets
+  1 in 16.
 
-The decoder is a *conditional* language model:
-$P(y_{t'} \mid y_{<t'}, \mathbf{c})$.
+::: {.d2l-note .warn}
+How much of the source fits through one state, and what are the ways out?
+:::
 :::
 
-::: {.slide title="The encoder-decoder abstraction"}
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- write the decoder as a conditional language model;
+- score a translation with chrF and BLEU, and predict when BLEU is zero;
+- count the bits a string carries and compare them with a state;
+- read accuracy against string length for two state widths;
+- name the two ways out: look back with attention, or build a better
+  state.
+
+**Running example:** random strings over 16 letters, to be reversed.
+:::
+
+::: {.slide title="This Deck Measures the Limit the Chapter Works Against"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Gated Recurrent Networks | gates decide what to keep |
+| **Sequence-to-Sequence Learning** | **what one fixed state costs** |
+| Linear Recurrences and Parallel Scans | training on all positions at once |
+| State Space Models | how fast a state forgets |
+| Selective State Space Models | the input decides what to keep |
+| Matrix-State Recurrences | a state of key-value pairs |
+| The Delta Rule | correcting a pair |
+| Hybrid Architectures | a little attention back |
+:::
+
+::: {.col .narrow}
+- **Uses:** the GRU, teacher forcing, cross-entropy.
+- **Skips:** a trained translator, subword vocabularies, beam search. The
+  modern encoder--decoder with cross-attention is in the transformer
+  chapter.
+:::
+:::
+:::
+
+::: {.slide title="The State Is the Only Channel from Encoder to Decoder"}
+[The abstraction]{.kicker}
+
 ![](../img/mdl-modernrnn-encoder-decoder.svg){width=88%}
 
-The state is the only channel. Swap the encoder and the same shape becomes
-Whisper (speech), image captioning, or a multimodal front-end.
+- **Encoder:** reads the whole source, of any length, into a state.
+- **Decoder:** writes the target one token at a time from that state.
 
-@seq2seq-abstraction-encoder
-
-@seq2seq-abstraction-decoder
+::: {.d2l-note}
+Everything the decoder learns about the source, it learns through the
+state.
+:::
 :::
 
-::: {.slide title="Wiring them together"}
-Run encoder, build state, run decoder. Subclass the classifier for the
-training loop and loss:
+::: {.slide title="The Decoder Is a Conditional Language Model"}
+[The abstraction]{.kicker}
 
-@seq2seq-abstraction-together
+$$P(y_1, \ldots, y_{T'} \mid x_1, \ldots, x_T) = \prod_{t'=1}^{T'} P(y_{t'} \mid y_{<t'}, \mathbf{c})$$
+
+- Source $x_1, \ldots, x_T$; target $y_1, \ldots, y_{T'}$, with $T' \ne T$
+  allowed; $y_{<t'}$ is the target written so far; $\mathbf{c}$ is the
+  encoder state.
+- Trained like a language model: next-token cross-entropy, correct
+  previous tokens fed in (teacher forcing). At test time it feeds back its
+  own tokens.
+- Both halves as transformers, audio in: Whisper. A vision encoder:
+  captioning.
+
+::: {.d2l-note .warn}
+The right side no longer sees the source, only $\mathbf{c}$. The equality
+holds only if $\mathbf{c}$ keeps everything the decoder needs.
+:::
 :::
 
-::: {.slide title="The MT dataset"}
-English-French sentence pairs. Tokenized with **one shared byte-level BPE**
-(4k vocab): the languages share the alphabet and many words, and BPE never
-hits an out-of-vocabulary word.
+::: {.slide title="In 2014 Two Recurrent Networks Were Joined Through One Vector"}
+[History]{.kicker}
 
-@seq2seq-mtfraeng
+- A GRU encoder--decoder scored phrase pairs inside a statistical
+  translator.
+- Deep LSTMs translated English to French end to end, through one vector.
+- Their trick: feed the source **backward**, so the first target words sit
+  a few steps from the source words they render. Short dependencies, the
+  authors argued, train more easily.
+- Soon measured: BLEU falls as sentences grow longer.
+
+::: {.d2l-note}
+Reversing the source does not change what the state must hold, only how
+far each word travels through the recurrence.
 :::
 
-::: {.slide title="Padding and teacher forcing"}
-Pad/truncate to `num_steps`; append `<eos>`; targets get a `<bos>` prefix.
-Decoder input = target shifted right, label = target shifted left.
-
-@seq2seq-mtfraeng-encode
-
-. . .
-
-@seq2seq-mtfraeng-batch
+[Cho et al., EMNLP 2014; Sutskever, Vinyals, Le, NeurIPS 2014; Cho et al., SSST 2014]{.small}
 :::
 
-::: {.slide title="Most sentences are short"}
-Which is why a small `num_steps` and a masked loss pay off:
+::: {.slide title="chrF Counts Characters, BLEU Counts Words"}
+[Scoring]{.kicker}
 
-@seq2seq-length-hist
+- **Precision:** the share of the candidate's $n$-grams found in the
+  reference; **recall:** the share of the reference's found in the
+  candidate. Counts are clipped: a repeated word scores only as often as
+  the reference has it.
+- **chrF:** character $n$-grams, $n \le 6$, spaces removed; $P$ and $R$
+  averaged over $n$; score $\frac{(1+\beta^2) P R}{\beta^2 P + R}$ with
+  $\beta = 2$, so a missed $n$-gram costs more than an extra one.
+- **BLEU:** $\text{BP} \prod_{n \le k} p_n^{w_n}$, with $p_n$ the
+  precision of word $n$-grams and brevity penalty
+  $\text{BP} = \exp(\min(0, 1 - \ell_\text{ref}/\ell_\text{cand}))$.
+  Here $w_n = 1/2^n$, sentence by sentence; the standard uses $w_n = 1/4$
+  for $n \le 4$, pooled over a test set.
+
+::: {.d2l-note .rule}
+Both score overlap with a reference translation, not meaning.
+:::
 :::
 
-::: {.slide title="Encoder: embed + GRU"}
-Embed source tokens, run a multilayer GRU, return per-step states and the
-final state (the context $\mathbf{c}$):
+::: {.slide title="Check: What Is BLEU for the Near Miss?"}
+[Check]{.kicker}
 
-@seq2seq-encoder
+Reference: `we will visit our grandparents tomorrow`<br>
+Near miss: `we will visits our grandparents tomorrow`
 
-. . .
+Predict BLEU with $k = 4$ before you compute anything.
 
-@seq2seq-encoder-check
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Zero.** A six-word sentence has three word 4-grams, and every one of
+them contains word 3. So $p_4 = 0$ and the product vanishes.
+:::
+:::
 :::
 
-::: {.slide title="Decoder: context-conditioned GRU"}
-$$\mathbf{s}_{t'} = g(y_{t'-1}, \mathbf{c}, \mathbf{s}_{t'-1})$$
+::: {.slide title="chrF Gives the Near Miss 0.91, BLEU Gives It Zero"}
+[Scoring]{.kicker}
 
-Initialize from the encoder state; concatenate $\mathbf{c}$ onto the input
-at **every** step; project to vocab logits:
+@!seq2seq-scoring-translations-1
 
-@seq2seq-decoder
+- Paraphrase: `we are going to see our grandparents tomorrow`.
+- The correct paraphrase scores **below** the ungrammatical near miss on
+  chrF and zero on BLEU.
+
+::: {.d2l-note}
+Use chrF for a quick lexical score, standard corpus BLEU (sacreBLEU) to
+compare with older work, and a learned metric (COMET) or an LLM judge for
+meaning.
+:::
 :::
 
-::: {.slide title="The unrolled model"}
+::: {.slide title="Reversal Forces Every Letter Through the State"}
+[The experiment]{.kicker}
+
 ![](../img/mdl-modernrnn-seq2seq.svg){width=86%}
 
-@seq2seq-model
+- Random letters are independent: the letters already written say nothing
+  about the next one.
+- The encoder's final state $\mathbf{c}$ starts the decoder and is fed to
+  every decoder step.
 :::
 
-::: {.slide title="Masked loss"}
-`<pad>` predictions must not count. Mask them out and average over real
-tokens only:
+::: {.slide title="Check: How Many Letters Could 64 Floats Hold?"}
+[Check]{.kicker}
 
-$$\mathcal{L} = \frac{\sum_{b,t} \mathbf{1}\{y_{b,t} \ne \texttt{<pad>}\}\, \ell(\hat{\mathbf{y}}_{b,t}, y_{b,t})}{\sum_{b,t} \mathbf{1}\{y_{b,t} \ne \texttt{<pad>}\}}$$
+A letter from 16 carries 4 bits. The state is 64 numbers of 32 bits.
 
-@seq2seq-loss
+::: {.fragment .fade-up}
+::: {.d2l-note}
+$64 \times 32 = 2{,}048$ bits, so **512 letters**, if training could use
+every bit. A string of 16 letters needs only 64 bits.
+:::
+:::
 :::
 
-::: {.slide title="Training"}
-2-layer GRU, width 256, dropout 0.2, Adam lr 0.005, clip 1, 30 epochs:
+::: {.slide title="Longer Strings Overflow a Fixed State Long Before Counting Says"}
+[The result]{.kicker}
 
-@seq2seq-training
+1,000 steps of 128 fresh strings per model, two models per entry;
+per-letter accuracy on fresh strings (guessing: 0.06):
+
+@!seq2seq-the-fixed-state-bottleneck-4
+
+- The two runs of each entry agree to within 0.02.
+- Width 64: 0.99 at 8 letters, about 0.73 at 16 (64 bits, one per
+  number), about 0.26 at 64.
+- Same letters per number, four times both: 8 through 64 gives 0.99, 32
+  through 256 about 0.8. Longer is harder even with a wider state.
+
+::: {.d2l-note}
+The code that 1,000 steps of training find, not the 2,048 bits, sets the
+limit.
+:::
 :::
 
-::: {.slide title="Greedy translation"}
-`predict_step` decodes a whole minibatch at once (feed `<bos>`, take argmax,
-feed back, stop at `<eos>`):
+::: {.slide title="Two Ways Out: Look Back, or Build a Better State"}
+[Where next]{.kicker}
 
-@seq2seq-predict-step
+- **Attention:** let the decoder read every encoder state. A
+  cross-attention encoder--decoder reverses fresh 12-letter strings without
+  a single error after 300 steps.
+- Its cost: a memory that grows with the input.
+- **A better state:** keep one state of fixed size, train it fast, and make
+  it a better memory. That is the rest of this chapter, until a little
+  attention comes back in its last section.
 
-. . .
-
-@seq2seq-greedy
-:::
-
-::: {.slide title="Beam search" only="pytorch,jax"}
-The decoding toolkit plugs straight in: wrap the decoder in a `step_fn` (source
-fixed, target prefix varies), then `d2l.beam_search`. Greedy is beam width 1;
-score it vs $w = 2, 5$ with chrF:
-
-@seq2seq-step-fn
-
-. . .
-
-@seq2seq-beam
-:::
-
-::: {.slide title="Evaluation: chrF"}
-Character $n$-gram F-score (Popovic, 2015): tokenization-free, partial credit
-for near-misses. The WMT default; BLEU demoted to a remark.
-
-@seq2seq-chrf
-
-. . .
-
-@seq2seq-chrf-eval
-:::
-
-::: {.slide title="The fixed-vector bottleneck"}
-Everything about the source crosses one vector $\mathbf{c}$. chrF falls as
-the source grows:
-
-@seq2seq-bottleneck-plot
-
-Two escapes, both already taken: **attention** (look back at all encoder
-states — where the attention chapters began) or a **better recurrent state**
-(the state space models you built).
+[Bahdanau, Cho, Bengio, ICLR 2015]{.small}
 :::
 
 ::: {.slide title="Recap"}
-- Encoder-decoder: source $\to$ fixed state $\to$ target; decoder is a
-  conditional LM.
-- Shared BPE vocab, teacher forcing, masked cross-entropy.
-- Decode with greedy or beam search (8.7's toolkit, unchanged).
-- chrF over BLEU for lexical scoring.
-- The single-vector bottleneck degrades with length and motivates the rest
-  of the book.
+- Encoder--decoder: source $\to$ state $\to$ target; the decoder is a
+  conditional language model.
+- chrF 0.91 against BLEU 0 for one wrong inflection; neither measures
+  meaning.
+- 64 numbers of state: 0.99 of 8 letters reversed, about 0.26 of 64, far
+  below the 512 letters counting allows; 256 numbers hold out longer.
+
+**Next:** keep the single state, and make it train on all positions at
+once.
 :::

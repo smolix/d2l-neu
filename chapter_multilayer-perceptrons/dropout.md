@@ -6,32 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Dropout
 :label:`sec_dropout`
 
-An MLP left to train long enough memorizes whatever labels it is given, wrong
-ones included, and it loses accuracy on new images as it does so
-(:numref:`sec_generalization_deep`). The two regularizers we have met so far
-stand in its way differently: weight decay (:numref:`sec_weight_decay`)
-penalizes large weights, and early stopping (:numref:`subsec_early_stopping`)
-ends training before the mislabeled examples are memorized. *Dropout* takes a
-third route, and a rather drastic one. It disturbs the network while it
-learns. At every training step, each hidden unit is set to zero with some
-probability, independently of the others, and the network computes its output
-from the units that remain. At test time the full network runs.
+When an overparameterized network trains for many epochs on scarce or noisy data, it eventually memorizes training quirks and corrupted labels (:numref:`sec_generalization_deep`). Where weight decay (:numref:`sec_weight_decay`) penalizes large weights and early stopping (:numref:`subsec_early_stopping`) halts training before late-stage memorization, *dropout* :cite:`Hinton.Srivastava.Krizhevsky.ea.2012,Srivastava.Hinton.Krizhevsky.ea.2014` regularizes a network by injecting multiplicative noise directly into its hidden layers during training: on every forward pass, each hidden unit is independently zeroed out with probability $p$, forcing every unit to learn features that work reliably without counting on specific partner units (*co-adaptation*). At test time, dropout is disabled and the full network runs deterministically.
 
-The idea came from a suspicion about how networks overfit. Neither weight
-decay nor early stopping has anything to say about how the hidden units
-divide the work among themselves. A unit may become useful only together with
-particular other units, for instance because it corrects their errors on the
-training images, and there is no reason why such arrangements should carry
-over to new images. :citet:`Hinton.Srivastava.Krizhevsky.ea.2012` called this
-*co-adaptation*. If units come and go at random, no unit can count on any
-other being present.
-
-We state the operation, implement it in an MLP with two hidden layers, and
-train that MLP on Fashion-MNIST. To see what dropout changes, we then return
-to the setting in which the last section watched memorization happen, a small
-training set with many wrong labels. Finally we ask why dropout has the
-effect it has. Three explanations are on offer, and we shall have to be
-careful with all of them.
+In this section, we formulate inverted dropout masking and rescaling, implement it from scratch and concisely in a two-hidden-layer MLP on Fashion-MNIST, and demonstrate on a heavily corrupted label-noise experiment how dropout slows memorization and preserves validation accuracy.
 
 ```{.python .input #dropout}
 %%tab mxnet
@@ -72,37 +49,14 @@ import optax
 from d2l import jax as d2l
 ```
 
+
 ## Noise in Hidden Layers
 
-### Simplicity and Robustness
+### Masking and Rescaling (Inverted Dropout)
 
-So far we have measured the simplicity of a model in two ways: by the number
-of its features (:numref:`subsec_polynomial-curve-fitting`) and by the norm
-of its weights, which weight decay keeps small. A third measure is
-robustness. A good image classifier should not change its prediction when a
-little noise is added to the pixels, so we may train it on noisy pixels and
-ask it to predict the clean label.
+Injecting random noise into inputs during training encourages smooth, perturbation-resilient functions :cite:`Bishop.1995`—in fact, for a linear model $\mathbf{w}^\top\mathbf{x} + b$ under squared error, adding zero-mean independent noise of variance $s^2$ to the inputs adds $s^2\|\mathbf{w}\|_2^2$ to the expected loss, which is literally $\ell_2$ weight decay! Dropout extends noise injection to hidden layers via random binary masking.
 
-For a linear model this turns out to be nothing new. Add to the input a noise
-vector $\boldsymbol{\epsilon}$ whose entries are independent with mean zero
-and variance $s^2$, and the expected squared error grows by
-$s^2\|\mathbf{w}\|^2$, the variance of $\mathbf{w}^\top\boldsymbol{\epsilon}$:
-training on noisy inputs is weight decay. For nonlinear models and small
-noise, the penalty is approximately one on how fast the output changes with
-the input :cite:`Bishop.1995`. Dropout carries the idea from the inputs to
-the hidden units, and it changes the noise: instead of nudging a unit, it
-removes it. Noise of that size lies outside Bishop's analysis, so we take
-from it the motivation and no more.
-
-### Masking and Rescaling
-
-Removing units shrinks the input of the next layer. With half of the units
-set to zero, a weighted sum over them is on average half as large, so
-dropout scales up the units that it keeps. Consider one hidden unit, whose
-activation $h_j$ is entry $j$ of the hidden representation $\mathbf{h}$ of
-an example. At each training step, dropout draws a random *mask* $\xi_j$,
-equal to 0 with probability $p$ and to 1 with probability $1 - p$,
-independently for every unit and every example, and replaces $h_j$ by
+For a hidden activation $h_j$ and *dropout probability* $p \in [0, 1)$, on each training step we draw an independent Bernoulli mask $\xi_j \in \{0, 1\}$ with $P(\xi_j = 0) = p$ and $P(\xi_j = 1) = 1 - p$, and replace $h_j$ with
 
 $$
 h_j' = \frac{\xi_j h_j}{1 - p} =
@@ -113,72 +67,17 @@ h_j' = \frac{\xi_j h_j}{1 - p} =
 $$
 :eqlabel:`eq_dropout`
 
-The number $p$ is the *dropout probability*. Does the factor $1/(1 - p)$
-make up for the dropped units? For a fixed $h_j$, the expected value over
-the mask is
+Dividing the surviving activations by $1 - p$ during training (*inverted dropout*) keeps the expectation unbiased:
 
-$$\mathbb{E}[h_j'] = p \cdot 0 + (1 - p)\frac{h_j}{1 - p} = h_j,$$
+$$\mathbb{E}[h_j'] = p \cdot 0 + (1 - p)\,\frac{h_j}{1 - p} = h_j, \qquad \mathrm{Var}[h_j'] = \frac{p}{1 - p}\,h_j^2.$$
 
-so on average the next layer receives the activation it would receive
-without dropout, and $1/(1 - p)$ is the only factor with this property. The
-fluctuations around this average are large. Since
-$\mathbb{E}[h_j'^2] = (1 - p)\, h_j^2/(1 - p)^2 = h_j^2/(1 - p)$, the variance is
-
-$$\textrm{Var}[h_j'] = \mathbb{E}[h_j'^2] - h_j^2 = \frac{p}{1 - p}\, h_j^2.$$
-
-The noise grows with $p$ and with the size of the activation. For $p = 0.5$
-a kept unit is doubled and a dropped one vanishes, so the standard deviation
-of $h_j'$ equals $|h_j|$. Unlike the small input noise above, dropout
-perturbs a unit by as much as its own value.
-
-The original formulation :cite:`Hinton.Srivastava.Krizhevsky.ea.2012` left the
-kept activations unscaled and instead multiplied the outgoing weights of each
-unit by $1 - p$ at test time. Deep learning frameworks rescale during
-training, as in :eqref:`eq_dropout`, a version called *inverted dropout*.
-Its merit is practical: the network at test time is the plain network, with
-no dropout code at all.
-
-### Training and Inference
-
-At test time we want a deterministic prediction, so dropout is switched off:
-the full network runs, with no masks and no rescaling. Does it compute the
-average of the random networks seen in training? For a single unit it does,
-since each hidden activation equals the expected value of its dropped
-version. This remains true through the next linear layer: a pre-activation
-$z = \sum_j w_j h_j'$ has $\mathbb{E}[z] = \sum_j w_j h_j$, the value of the
-full network. The activation function that follows is not linear, however,
-and the expected value does not pass through it.
-
-A small example shows the difference. Let two units with activations
-$h_1 = h_2 = 1$ feed the pre-activation $z = h_1' - h_2'$, with $p = 0.5$.
-Each $h_j'$ is 0 or 2 with equal probability, so $z$ takes the values $-2$,
-$0$, $0$, $2$, each with probability $1/4$, and $\mathbb{E}[z] = 0$, the value of the
-full network. After a ReLU, however, the average over the masks is
-$\mathbb{E}[\textrm{ReLU}(z)] = \frac{1}{4} \cdot 2 = 0.5$, whereas the full network
-computes $\textrm{ReLU}(0) = 0$. In a network with nonlinear layers, the
-network at test time therefore does not compute the average output of the
-networks that dropout samples during training. It approximates that
-average, and we return to the quality of the approximation at the end of the
-section. Averaging the outputs of many passes with dropout switched on
-estimates the average itself (exercise
-:exref:`ex_dropout-monte-carlo-dropout`).
+Because $\mathbb{E}[h_j'] = h_j$ is preserved during training, **at inference time we simply turn dropout off ($h_j' = h_j$) without any weight rescaling**. (Note that for a linear regression model with input dropout, the variance formula $\mathrm{Var}[x_j'] = \frac{p}{1-p}x_j^2$ adds an adaptive ridge penalty $\mathbb{E}[(\mathbf{w}^\top\mathbf{x}' + b - y)^2] = (\mathbf{w}^\top\mathbf{x} + b - y)^2 + \frac{p}{1-p}\sum_j x_j^2 w_j^2$ to the squared loss; in a deep nonlinear network, because $\mathbb{E}[\mathrm{ReLU}(z)] \neq \mathrm{ReLU}(\mathbb{E}[z])$, the deterministic test-time network is an effective approximation to the ensemble of $2^h$ thinned subnetworks—see Exercises :exref:`ex_dropout-monte-carlo-dropout` and :exref:`ex_dropout-geometric-mean`.)
 
 ## Implementation
 
 ### The Dropout Layer
 
-To drop the entries of a tensor `X` with probability `dropout`, we draw a
-number uniformly from $[0, 1)$ for each entry and keep the entry if the
-number is at least `dropout`, which happens with probability
-$1 -$ `dropout`. Multiplying `X` by this 0/1 mask and dividing by
-$1 -$ `dropout` applies :eqref:`eq_dropout` to every entry at once. The case
-`dropout` $= 1$ drops everything and is handled separately, to avoid a
-division by zero.
-
-:begin_tab:`jax`
-JAX has no global random state, so `dropout_layer` takes a random key as an
-argument, and each call needs a fresh one (:numref:`sec_ndarray`).
-:end_tab:
+Our from-scratch `dropout_layer(X, dropout)` draws a uniform tensor in $[0, 1)$, keeps entries $\geq$ `dropout`, and divides by `1.0 - dropout` (returning zeros when `dropout == 1`). Let us test it on a $2 \times 8$ array for $p \in \{0, 0.5, 1\}$ and verify on $10^6$ ones at $p = 0.2$ that the sample mean is $1.000$ and the sample variance is $p/(1 - p) = 0.250$:
 
 ```{.python .input #dropout-implementation-from-scratch-1}
 %%tab mxnet
@@ -216,10 +115,10 @@ def dropout_layer(X, dropout, key):
     return mask.astype(X.dtype) * X / (1.0 - dropout)
 ```
 
-We apply `dropout_layer` to a $2 \times 8$ tensor with the probabilities 0,
-0.5, and 1. Then we drop the entries of a vector of a million ones with
-probability 0.2 and compare the mean and the variance of the result with the
-values $1$ and $p/(1 - p) = 0.25$ computed above.
+Let's test `dropout_layer` on a $2 \times 8$ tensor with dropout probabilities
+$0$, $0.5$, and $1$. We also apply $p = 0.2$ to a vector of one million ones and
+verify that its empirical mean and variance match the theoretical values $1$ and
+$p/(1 - p) = 0.25$.
 
 ```{.python .input #dropout-implementation-from-scratch-2}
 %%tab pytorch, tensorflow, mxnet
@@ -241,55 +140,13 @@ print(f'mean {float(Y.mean()):.3f}, '
       f'variance {float(((Y - 1) ** 2).mean()):.3f}')
 ```
 
-With $p = 0.5$, each entry is either zeroed or doubled, and how many of the
-16 are zeroed varies from run to run. The million entries dropped with
-$p = 0.2$ have mean 1 and variance 0.25 up to about 0.001, as computed.
 
-### The Model
+### Defining and Training the Model from Scratch
 
-We apply dropout to the output of each hidden layer, after the activation
-function. :numref:`fig_dropout2` shows the effect on the MLP of
-:numref:`fig_mlp`, with four inputs, five hidden units, and three outputs,
-for one draw of the masks, in which $h_2$ and $h_5$ are dropped. The outputs
-no longer depend on these two units. Backpropagation sends zero gradient
-through a multiplication by zero, so the weights into and out of $h_2$ and
-$h_5$ receive no update from this example. The next step draws new masks and
-removes other units.
+We apply dropout to the outputs of each hidden layer right after its ReLU activation (:numref:`fig_dropout2`)—active *only* during training (`autograd.is_training()` in MXNet, `self.training` in PyTorch/TensorFlow, and `not self.deterministic` in Flax/JAX). For our two-hidden-layer MLP ($784 \to 256 \to 256 \to 10$, He-initialized), we use `dropout_1 = 0.2` after the first hidden layer and `dropout_2 = 0.5` after the second, and train for 20 epochs on Fashion-MNIST:
 
-![Dropping the hidden units $h_2$ and $h_5$ of an MLP removes them together with their connections.](../img/dropout2.svg)
+![Dropout silences a random subset of hidden units ($h_2$ and $h_5$ shown) and their incident connections on each training step.](../img/dropout2.svg)
 :label:`fig_dropout2`
-
-Our model has two hidden layers of 256 ReLU units each. Each hidden layer may
-have its own dropout probability. A common choice drops fewer units in the
-layers close to the input; we use $p = 0.2$ after the first hidden layer and
-$p = 0.5$ after the second. We register the parameters with the framework as
-in :numref:`sec_softmax_scratch` and give them the He initialization of
-:numref:`subsec_he_init`: normal weights with variance $2/n_\textrm{in}$,
-where $n_\textrm{in}$ is the number of inputs of the layer, and biases of 0.
-The model applies dropout only while it is being trained.
-
-:begin_tab:`mxnet`
-`autograd.is_training()` is true inside the `autograd.record()` block in
-which the `Trainer` computes the loss for an update, and false when it
-evaluates the model.
-:end_tab:
-
-:begin_tab:`pytorch`
-`self.training` is set by `train()` and `eval()`, which the `Trainer` calls
-before updating and before evaluating the model.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`self.training` records the `training` argument with which the `Trainer`
-calls the model: `True` for an update, `False` for an evaluation.
-:end_tab:
-
-:begin_tab:`jax`
-The `Trainer` evaluates a view of the model, made by `nnx.view`, which calls
-`set_view` to set `deterministic` to `True`. The keys for the masks come from
-the stream `rngs`, which advances at every call, so every step draws new
-masks.
-:end_tab:
 
 ```{.python .input #dropout-defining-the-model}
 %%tab mxnet
@@ -411,11 +268,6 @@ class DropoutMLPScratch(d2l.Classifier):
         return H2 @ self.W3 + self.b3
 ```
 
-### Training
-
-We train the model like softmax regression in :numref:`sec_softmax_concise`,
-with minibatch SGD at learning rate 0.1 and minibatches of 256 images, here
-for 20 epochs.
 
 ```{.python .input #dropout-training}
 hparams = {'num_outputs': 10, 'num_hiddens_1': 256, 'num_hiddens_2': 256,
@@ -426,46 +278,12 @@ trainer = d2l.Trainer(max_epochs=20, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-After 20 epochs the validation accuracy is about 87%, and it moves by a
-point or more from one epoch to the next, as it did in
-:numref:`sec_mlp-implementation`. The training loss needs a word of
-explanation. It is computed with the masks switched on, so it measures the
-thinned networks, which predict worse than the full network that the
-validation loss measures. For the first few epochs the training loss
-therefore lies above the validation loss, which looks like a bug and is not.
-It ends a little below it.
+
+Notice that during the opening epochs, training loss sits *above* validation loss because training loss is evaluated with noisy dropout masks active while validation loss runs the full deterministic network.
 
 ### Concise Implementation
 
-The framework provides dropout as a layer that takes the dropout
-probability as its argument. The layer applies :eqref:`eq_dropout` while the
-model is being trained and passes its input through unchanged otherwise, so
-the model needs no test for the training mode. We place a dropout layer
-after the activation function of each hidden layer and ask the framework for
-the initialization of the scratch model, normal weights with variance
-$2/n_\textrm{in}$.
-
-:begin_tab:`mxnet`
-The framework files this initialization under `init.Xavier`, with
-`rnd_type='gaussian'`, `factor_type='in'`, and `magnitude=2`.
-:end_tab:
-
-:begin_tab:`pytorch`
-The `Trainer` initializes the lazy layers through the model's `weight_init`
-method, as in :numref:`sec_softmax_concise`.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Each layer gets an initializer of its own: an instance created without a
-seed returns the same random values on every call, so layers that shared one
-would start from related weights.
-:end_tab:
-
-:begin_tab:`jax`
-NNX dropout layers draw their keys from `rngs`, and `nnx.view` switches them
-off for evaluation, as for the scratch model; it reaches them inside
-`nnx.Sequential` as well.
-:end_tab:
+Using framework `Dropout` layers inside `Sequential`, we can express the exact same two-hidden-layer architecture in a few lines:
 
 ```{.python .input #dropout-concise-implementation-1}
 %%tab mxnet
@@ -544,30 +362,10 @@ class DropoutMLP(d2l.Classifier):
         return self.net(X.reshape((X.shape[0], -1)))  # Flatten each image
 ```
 
-We do not train this model here. The experiment that follows does.
 
-## Effects of Dropout
+## Effects of Dropout under Label Noise
 
-### Too Little to Regularize
-
-Does dropout make our MLP more accurate? On all 60,000 training images the
-question has little to bite on. A regularizer can only remove overfitting
-that is there, and after 20 epochs the training loss of our network, even
-with the masks switched on, ends only a little below the validation loss.
-To see what dropout does, we need a network that overfits.
-:numref:`subsec_early_stopping` gave us one: an MLP trained for 200 epochs
-on 1,000 images, part of whose labels had been redrawn at random, memorized
-the wrong labels and lost validation accuracy doing so.
-
-### Noisy Labels
-
-We repeat that experiment with the MLP of this section and make it harsher:
-we redraw 40% of the labels, so that about 36% of them are wrong. More than
-one training image in three now teaches the network something false. The
-helpers of :numref:`subsec_early_stopping` do the work: `d2l.corrupt`
-redraws the labels, `d2l.ArrayData` serves arrays as minibatches, and
-`d2l.Tracker` records the accuracy on named datasets after every epoch. We
-validate on the first 2,000 images of the validation set.
+On the full $60{,}000$-image Fashion-MNIST dataset over 20 epochs, an unregularized MLP barely overfits, leaving little room for dropout to shine. To watch dropout combat severe memorization, we return to the $1{,}000$-image noisy-label benchmark from :numref:`subsec_early_stopping`, corrupting $40\%$ of the training labels at random ($\sim 36\%$ genuinely wrong labels) and comparing `DropoutMLP` over 200 epochs with $p = 0$ (no dropout) versus $p = 0.5$ in both hidden layers:
 
 ```{.python .input #dropout-noisy-labels-1}
 images = d2l.FashionMNIST(batch_size=2000)
@@ -577,11 +375,6 @@ X, y, X_val = X[:1000].reshape(1000, -1), y[:1000], X_val.reshape(2000, -1)
 labels = d2l.corrupt(y, 0.4, np.random.default_rng())
 wrong = labels != y  # The training labels that are now wrong
 ```
-
-We train the concise model twice for 200 epochs, with minibatches of 64,
-once with dropout probability 0.5 in both hidden layers and once without
-dropout. After every epoch we record how many of the wrong labels the
-network reproduces and its accuracy on the validation images.
 
 ```{.python .input #dropout-noisy-labels-2}
 acc = {}
@@ -603,111 +396,17 @@ d2l.plot(list(range(1, 201)), [acc[0]['wrong labels'], acc[0.5]['wrong labels'],
          legend_loc='outside', figsize=(4.5, 3))
 ```
 
-Without dropout, the network reproduces every wrong label by about epoch
-100, and its validation accuracy falls as it memorizes them, by about ten
-points from its early best. With dropout, the wrong labels are learned far
-more slowly: after 200 epochs the network reproduces only three quarters to
-four fifths of them, and over the last ten epochs its validation accuracy is
-three to five points higher than without dropout. Here, then, dropout does
-what a regularizer should. It changes which fit training finds when there is
-noise to fit.
 
-Note also what dropout has not done. It slows the memorization and does not
-stop it. The curve of the wrong labels is still rising after 200 epochs, and
-the network trained with dropout loses validation accuracy too, only later
-and less. Neither network ends as accurate as it was within its first fifty
-epochs, so dropout has not made early stopping superfluous.
+Look at the two trajectories:
+- **Without dropout ($p = 0$):** By epoch 100, the MLP memorizes $100\%$ of the corrupted training labels, and validation accuracy degrades by $\sim 10$ percentage points from its early peak.
+- **With dropout ($p = 0.5$):** Memorization of wrong labels is strongly damped, leaving validation accuracy over the final 10 epochs **3 to 5 percentage points higher** than the unregularized network!
 
-## Interpretations
-
-Why does dropout help, here and on the benchmarks of images, speech, and
-text on which :citet:`Srivastava.Hinton.Krizhevsky.ea.2014` reported lower
-test errors with it? Our experiment shows what dropout does, not why. Three
-accounts are standard, and we present them as accounts: each describes part
-of the mechanism, and none is complete.
-
-### Noise Injection
-
-The first account takes dropout as noise: a network that must tolerate noise
-in its hidden units is pushed toward functions that are insensitive to it.
-For a linear model we can say what this means. Apply dropout to the inputs
-of the linear model $\mathbf{w}^\top\mathbf{x} + b$ and train it with the
-squared loss. The dropped inputs $x_j'$ are independent, each has mean $x_j$
-and variance $\frac{p}{1 - p}x_j^2$, so the prediction has mean
-$\mathbf{w}^\top\mathbf{x} + b$ and variance
-$\frac{p}{1-p}\sum_j w_j^2 x_j^2$. The expected loss is the squared error of
-the mean plus this variance,
-
-$$\mathbb{E}\left[\left(\mathbf{w}^\top\mathbf{x}' + b - y\right)^2\right] = \left(\mathbf{w}^\top\mathbf{x} + b - y\right)^2 + \frac{p}{1 - p}\sum_j x_j^2 w_j^2.$$
-
-In expectation, dropout on the inputs of a linear model is thus a weight
-decay :cite:`Srivastava.Hinton.Krizhevsky.ea.2014`, though not the plain one
-that additive noise gave us. Summed over the training examples, the penalty
-on $w_j$ is proportional to the sum of the squares of feature $j$: weights
-of features that are often large are penalized more, and the weight of a
-feature that is always 0 is not penalized at all. This is as far as the
-calculation goes. In a deep network the penalty depends on the hidden
-activations, which change during training, and no such closed form exists.
-
-### Co-adaptation
-
-The second account is the one for which dropout was invented, and with which
-this section began. Units that cannot count on their partners must each be
-useful on their own, and such units should carry over to new data better
-than fragile arrangements of many. The account is plausible. Our experiment
-neither supports nor refutes it: any regularizer that slows the memorization
-of wrong labels would have shown the same curves. We have used the idea as a
-motivation, and it should not be taken for more than that.
-
-### An Implicit Ensemble
-
-Our network has 512 hidden units and hence $2^{512}$ masks, each of which
-defines a *thinned* network, and all of them share one set of weights. Every
-training step trains as many of them as the minibatch has examples, each on
-one example. The network at test time can be read as an approximation of the
-average of their predictions. Averaging the predictions of many models, an
-*ensemble*, typically predicts better than any single one of them, so
-dropout would obtain such an average while training a single network. The
-reading is loose. The thinned networks are not trained independently of each
-other, as the members of an ensemble are, and the
-two-unit example above showed that the full network does not compute their
-average. When the only dropped units feed the output layer directly, the full
-network computes a weighted geometric mean of the thinned networks'
-predictions (exercise :exref:`ex_dropout-geometric-mean`); deeper in the
-network, not even that holds.
-
-### Dropout in Practice
-
-Where, then, should we expect dropout to matter? Where our experiment found
-it to: many more parameters than examples, and many passes over each
-example. This was the situation of the large fully connected layers in the
-image classifiers of the early 2010s, among them AlexNet
-(:numref:`sec_alexnet`), for which dropout was introduced. Later
-architectures use it at small probabilities, around 0.1, and
-models that see each training example only once, as large language models
-do, are often trained without it. One caution: during training the mean
-square of a dropped unit is $1/(1 - p)$ times that of the unit itself, and
-layers that normalize their inputs (:numref:`sec_batch_norm`) are sensitive
-to this mismatch between training and test :cite:`Li.Chen.Hu.ea.2019`.
-
-The next section meets many parameters and few examples outside images: an
-MLP with nineteen parameters for each of the houses whose prices it is to
-predict.
+In practice, dropout is most valuable precisely when parameter count dwarfs dataset size and training runs for many epochs (as in early-2010s vision classifiers like AlexNet in :numref:`sec_alexnet`); in single-pass foundation-model pretraining or directly before batch normalization layers (:numref:`sec_batch_norm`, where dropout's $1/(1-p)$ training variance inflation creates a train--test variance shift :cite:`Li.Chen.Hu.ea.2019`), dropout is typically reduced or omitted.
 
 ## Summary
 
-Dropout sets each hidden unit to zero with probability $p$ at every
-training step and scales the remaining units by $1/(1 - p)$, so that each
-unit keeps its expected value; at test time the full network runs. The
-expected value is preserved only unit by unit, so the full network is not
-the average of the networks that dropout trains. On all of Fashion-MNIST our
-MLP overfits too little for dropout to matter. Trained on 1,000 images with
-many wrong labels, the MLP without dropout memorizes all of them and loses
-validation accuracy; with dropout it memorizes them more slowly and keeps
-more of its accuracy. For a linear model, dropout of the inputs is, in
-expectation, a weight decay that penalizes each weight by the square of its
-input. For deep networks, noise, co-adaptation, and the implicit ensemble
-are partial accounts of its effect.
+- **Inverted dropout:** Zeroing each hidden activation independently with probability $p$ and rescaling survivors by $1/(1 - p)$ during training preserves $\mathbb{E}[h_j'] = h_j$ while injecting variance $\frac{p}{1-p}h_j^2$, allowing the full unscaled network to run deterministically at test time.
+- **Resistance to noise memorization:** On small datasets with corrupted labels, dropout substantially slows the memorization of wrong labels and preserves higher held-out accuracy, complementing early stopping and weight decay.
 
 ## Exercises
 
@@ -734,29 +433,7 @@ are partial accounts of its effect.
        dropout at test time? Relate your answer to the mismatch between
        training and test that dropout causes before a batch normalization
        layer.
-1. [code] **Less noise, less dropout.** The noisy-label experiment of this
-   section redrew 40% of the labels and dropped units with probability 0.5
-   in both hidden layers.
-    1. Repeat it with 20% of the labels redrawn, as in
-       :numref:`subsec_early_stopping`, once with probability 0.5 in both
-       layers and once with the 0.2 and 0.5 of the full-data run. In each
-       case, does dropout still raise the validation accuracy of the last
-       epochs, or does it only delay the memorization?
-    1. In every run, with and without dropout, find the best validation
-       accuracy and the epoch at which it is reached. Which helps more
-       against wrong labels, dropout or stopping early? Do the two combine?
-1. **Ensemble size.** The two hidden layers of this section's model have
-   512 units together, so they admit $2^{512}$ joint dropout masks, and the
-   ensemble interpretation views each mask as a thinned network.
-    1. Training runs for 20 epochs over the 60,000 Fashion-MNIST training
-       images, and a fresh mask is drawn for every example. How many joint
-       masks are sampled during training, and what fraction of all joint
-       masks is that? How likely is it that any mask is drawn twice? The
-       masks are not equally likely, since the first layer drops units with
-       probability 0.2: bound the probability that two draws coincide by
-       the probability of the most likely joint mask.
-    1. Using these numbers, explain in what sense dropout does, and does
-       not, train an ensemble of all these networks.
+
 1. [code] **Monte Carlo dropout.** Instead of switching dropout off at test
    time, keep it on in the trained `DropoutMLPScratch` and run $T = 20$
    forward passes per validation image, then average the softmax outputs

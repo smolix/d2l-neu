@@ -6,25 +6,12 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multilayer Perceptrons
 :label:`sec_mlp`
 
-The softmax regression of :numref:`chap_classification` adds up evidence
-pixel by pixel, so each input moves a class score by a fixed amount,
-independently of all the others. What exactly does this rule out, and what
-must a model have beyond a weighted sum to escape it?
+In :numref:`chap_classification`, softmax regression scored each garment category by taking an affine weighted sum of the input pixels, $o_j = \sum_{i=1}^d x_i w_{ij} + b_j$. That linear form bakes in two severe restrictions:
 
-It is instructive to start with the smallest problem on which a weighted sum
-fails. It has four points. Label each corner of the unit square by whether
-its two coordinates differ, the *exclusive or* (XOR) of two bits. No line
-separates the two classes, so every linear classifier gets at least one of
-the four points wrong.
+1. **Monotonicity:** Increasing feature $x_i$ always pushes $o_j$ in the same direction (up if $w_{ij} > 0$, down if $w_{ij} < 0$). Yet many real relationships are non-monotonic: human health risk rises whenever body temperature strays from $37^\circ\textrm{C}$ in *either* direction.
+2. **No feature interactions:** Increasing $x_i$ by one unit changes $o_j$ by $w_{ij}$ regardless of the values of every other coordinate. In an image, however, a bright pixel at $(13, 17)$ means completely different things depending on whether the neighboring pixels form a collar, a sleeve, or a handbag strap.
 
-A *multilayer perceptron* (MLP) removes this limit by computing new features
-before it classifies. A hidden layer applies an affine map followed by a
-fixed nonlinear function, and an output layer, which is softmax regression,
-classifies the result. Both layers are trained together, with the loss and
-the minibatch stochastic gradient descent (SGD) of the previous chapter.
-This section defines the model and builds a network with two hidden units
-that computes XOR. It then asks which functions such networks can represent
-and compares the nonlinear functions in common use.
+A *multilayer perceptron* (MLP) overcomes both limitations by inserting one or more *hidden layers* that transform raw inputs into learned intermediate representations—applying an affine map followed by a nonlinear *activation function*—before a linear output layer makes the final prediction. In this section, we prove that no linear model can solve the four-point XOR problem, solve XOR explicitly with two ReLU hidden units, examine what functions shallow and deep networks can represent, and compare the activation functions used across modern deep learning.
 
 ```{.python .input #mlp-multilayer-perceptrons}
 %%tab mxnet
@@ -65,32 +52,10 @@ import optax
 from d2l import jax as d2l
 ```
 
-## Limits of Linear Models
 
-### Monotonicity and Interactions
+## Limits of Linear Models: The XOR Problem
 
-To see what a linear model cannot express, we look again at how it scores a
-class. In softmax regression (:numref:`sec_softmax`), an input
-$\mathbf{x} \in \mathbb{R}^d$ gives class $j$ the score
-
-$$o_j = \sum_{i=1}^d x_i w_{ij} + b_j.$$
-
-Each score is therefore *monotonic* in each input: it rises with $x_i$ if
-$w_{ij} > 0$ and falls if $w_{ij} < 0$. Moreover, the inputs do not
-interact: raising $x_i$ by one changes $o_j$ by $w_{ij}$, no matter what the
-other inputs are. Both properties often fail. The risk of illness rises as body
-temperature departs from 37°C in either direction. This case we can repair
-by hand, using the distance from 37°C as the input. Interactions are the
-more serious limit, and they occupy the rest of this section. Images resist
-repairs by hand: whether a bright pixel is evidence for a shirt or for a bag
-depends on its neighbors, and writing down features that capture all such
-dependencies is hopeless. We want the model to learn its features from data
-instead.
-
-### The XOR Problem
-
-The smallest problem in which inputs interact has two binary inputs and the
-label
+The starkest possible demonstration of feature interaction uses just four data points—the corners of the unit square $\{0, 1\}^2$ labeled by their *exclusive-OR* (XOR), where $y = 1$ if and only if *exactly one* coordinate equals $1$:
 
 | $x_1$ | $x_2$ | $y$ |
 |:---:|:---:|:---:|
@@ -99,130 +64,52 @@ label
 | 1 | 0 | 1 |
 | 1 | 1 | 0 |
 
-which is 1 if exactly one input is 1. Changing $x_1$ from 0 to 1 changes the
-label from 0 to 1 when $x_2 = 0$, but from 1 to 0 when $x_2 = 1$. With two
-classes, softmax regression predicts class 1 where the difference of the two
-logits is positive (:numref:`sec_softmax`). This difference is an affine
-score $o = w_1 x_1 + w_2 x_2 + b$, so the decision boundary is the line
-$o = 0$.
+Notice the interaction: flipping $x_1$ from $0$ to $1$ increases $y$ when $x_2 = 0$, but decreases $y$ when $x_2 = 1$.
 
-**Proposition.** For all $w_1, w_2, b$, the rule "predict class 1 if
-$w_1 x_1 + w_2 x_2 + b > 0$" misclassifies at least one of the four points
-of XOR.
+**Proposition.** For all $w_1, w_2, b \in \mathbb{R}$, the linear decision rule "predict class 1 if $w_1 x_1 + w_2 x_2 + b > 0$" misclassifies at least one of the four XOR points.
 
-**Proof.** Suppose that some $w_1, w_2, b$ classify all four points
-correctly. The two points of class 1 give $w_2 + b > 0$ and $w_1 + b > 0$,
-and adding the two inequalities gives $w_1 + w_2 + 2b > 0$. The two points
-of class 0 give $b \leq 0$ and $w_1 + w_2 + b \leq 0$, and adding these gives
-$w_1 + w_2 + 2b \leq 0$, a contradiction. $\blacksquare$
+**Proof.** Suppose for contradiction that some $w_1, w_2, b$ classify all four corners correctly. The two class-1 points $(0, 1)$ and $(1, 0)$ require $w_2 + b > 0$ and $w_1 + b > 0$, whose sum gives $w_1 + w_2 + 2b > 0$. Meanwhile, the two class-0 points $(0, 0)$ and $(1, 1)$ require $b \leq 0$ and $w_1 + w_2 + b \leq 0$, whose sum gives $w_1 + w_2 + 2b \leq 0$—an immediate contradiction. $\blacksquare$
 
-The proof can also be seen geometrically. Both pairs of points have the
-midpoint $(1/2, 1/2)$, where an affine score equals the average of its
-values at either pair, so it would have to be positive and not positive at
-once. Three out of four is the best a line can do: the line
-$x_1 + x_2 = 3/2$, for example, misclassifies only $(0, 0)$.
+Geometrically, both diagonals of the unit square share the midpoint $(1/2, 1/2)$, where any affine function equals the average of its values at either diagonal's endpoints—so no straight line can ever separate the two diagonals.
 
 ## Hidden Layers
 
 ### The Model
 
-An MLP first computes $h$ new features, each an affine function of the input
-followed by a fixed nonlinear function $\phi$, and then applies a linear
-model to them. The features form a *hidden layer* of *hidden units*, so
-called because their values are neither given by the data nor reported as
-outputs. :numref:`fig_mlp` shows an MLP with four inputs, five hidden units,
-and three outputs. Every input feeds every hidden unit, and every hidden
-unit feeds every output, so both layers are fully connected. The inputs
-involve no computation, so we count only the layers with parameters: this
-MLP has two layers, one of them hidden. The name comes from the perceptron,
-an early classifier that thresholds a weighted sum. Each hidden unit
-resembles one, with $\phi$ in place of the threshold, and an MLP arranges
-such units in layers.
-
-![An MLP with four inputs, a hidden layer of five units, and three outputs. Both layers are fully connected.](../img/mlp.svg)
-:label:`fig_mlp`
-
-We keep the layout of :numref:`subsec_softmax_vectorization`: the $n$
-examples of a minibatch are the rows of $\mathbf{X} \in \mathbb{R}^{n \times d}$,
-and each weight matrix has one row per input and one column per output of
-its layer. With a superscript numbering the layers, the hidden layer has
-weights $\mathbf{W}^{(1)} \in \mathbb{R}^{d \times h}$ and biases
-$\mathbf{b}^{(1)} \in \mathbb{R}^{h}$, the output layer has weights
-$\mathbf{W}^{(2)} \in \mathbb{R}^{h \times q}$ and biases
-$\mathbf{b}^{(2)} \in \mathbb{R}^{q}$, and the MLP computes
+To escape linearity, an MLP inserts one or more *hidden layers* between the input features and the output layer (:numref:`fig_mlp`). For a minibatch design matrix $\mathbf{X} \in \mathbb{R}^{n \times d}$ ($n$ examples, $d$ input features), a single hidden layer of width $h$ holds weights $\mathbf{W}^{(1)} \in \mathbb{R}^{d \times h}$ and biases $\mathbf{b}^{(1)} \in \mathbb{R}^h$, while the output layer holds weights $\mathbf{W}^{(2)} \in \mathbb{R}^{h \times q}$ and biases $\mathbf{b}^{(2)} \in \mathbb{R}^q$. The two-layer (one-hidden-layer) MLP computes
 
 $$
 \begin{aligned}
 \mathbf{H} &= \phi\left(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}\right),\\
-\mathbf{O} &= \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}.
+\mathbf{O} &= \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)},
 \end{aligned}
 $$
 :eqlabel:`eq_mlp`
 
-The biases are added to every row by broadcasting, and $\phi$ acts on each
-entry separately. Row $i$ of $\mathbf{H} \in \mathbb{R}^{n \times h}$ is the
-*hidden representation* of example $i$, and row $i$ of
-$\mathbf{O} \in \mathbb{R}^{n \times q}$ holds its logits, which the softmax
-turns into probabilities as before. For a single example $\mathbf{x}$, the
-model reads $\mathbf{h} = \phi(\mathbf{W}^{(1)\top}\mathbf{x} + \mathbf{b}^{(1)})$
-and $\mathbf{o} = \mathbf{W}^{(2)\top}\mathbf{h} + \mathbf{b}^{(2)}$. The
-transposes appear only because $\mathbf{x}$ and $\mathbf{h}$ are columns,
-while examples are rows of $\mathbf{X}$.
+where biases broadcast across rows and the nonlinear *activation function* $\phi$ acts elementwise on the *pre-activations* $\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}$ to produce the hidden *activations* $\mathbf{H} \in \mathbb{R}^{n \times h}$. Notice the parameter count: $(d + 1)h + (h + 1)q$. On Fashion-MNIST ($d = 784, q = 10$), a hidden layer of $h = 256$ units has $785 \times 256 + 257 \times 10 = 203{,}530$ parameters—26 times softmax regression's $7{,}850$.
 
-The function $\phi$ is the *activation function*. Its inputs, the entries of
-$\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}$, are called
-*pre-activations*, and its outputs *activations*. Minibatch SGD fits all
-four parameter arrays together on the cross-entropy loss, with gradients
-from automatic differentiation, so the network learns a representation and a
-linear classifier of that representation at once.
-
-The hidden layer adds parameters, and rather a lot of them. With $d$
-inputs, $h$ hidden units, and $q$ outputs, an MLP has
-$(d + 1)h + (h + 1)q$ parameters, against $(d + 1)q$ for softmax
-regression. For Fashion-MNIST, with $d = 784$ and $q = 10$, a hidden layer
-of $h = 256$ units gives
-$785 \cdot 256 + 257 \cdot 10 = 203{,}530$ parameters, 26 times the 7,850 of
-softmax regression.
+![An MLP with 4 inputs, 1 hidden layer of 5 hidden units, and 3 outputs. Both parameterized layers are fully connected.](../img/mlp.svg)
+:label:`fig_mlp`
 
 ### The Role of the Nonlinearity
 
-Why apply $\phi$ at all? Suppose that we omit it, so that
-$\mathbf{H} = \mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}$. Substituting
-$\mathbf{H}$ into the output layer gives
+Why is the nonlinear activation $\phi$ essential? Suppose we omitted $\phi$ (setting $\phi(z) = z$), so $\mathbf{H} = \mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}$. Substituting $\mathbf{H}$ into the output equation collapses the two layers back into a single affine transformation:
 
-$$\mathbf{O} = \left(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}\right)\mathbf{W}^{(2)} + \mathbf{b}^{(2)} = \mathbf{X}\mathbf{W} + \mathbf{b},$$
+$$\mathbf{O} = \left(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}\right)\mathbf{W}^{(2)} + \mathbf{b}^{(2)} = \mathbf{X}\underbrace{\mathbf{W}^{(1)}\mathbf{W}^{(2)}}_{\mathbf{W}} + \underbrace{\mathbf{b}^{(1)}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}}_{\mathbf{b}}.$$
 
-where $\mathbf{W} = \mathbf{W}^{(1)}\mathbf{W}^{(2)}$ and
-$\mathbf{b} = \mathbf{W}^{(2)\top}\mathbf{b}^{(1)} + \mathbf{b}^{(2)}$. The
-two layers compute an affine function of the input, the very one that
-softmax regression computes with the weights $\mathbf{W}$ and the bias
-$\mathbf{b}$.
-The hidden layer adds parameters but no new functions (it can even remove
-some, Exercise :exref:`ex_mlp-linear-networks`), and the network still fails
-on XOR.
-
-With a nonlinear $\phi$, the substitution no longer simplifies. The simplest
-useful choice, and the default in this book, is the *rectified linear unit*
-(ReLU),
+Without a nonlinearity, stacking any number of fully connected layers never expands the family of functions beyond a single linear layer (and if a hidden layer is narrower than $\min(d, q)$, it actually restricts $\mathbf{W}$ to low rank; see Exercise :exref:`ex_mlp-linear-networks`). Inserting an elementwise nonlinearity such as the *rectified linear unit* (ReLU),
 
 $$\mathrm{ReLU}(z) = \max(z, 0),$$
 
-which keeps positive values and replaces negative ones by zero.
+prevents this algebraic collapse.
 
-### Solving XOR
+### Solving XOR with Two ReLU Units
 
-How many hidden units does XOR need? Two ReLU units suffice. One choice of
-weights
-:cite:`Goodfellow.Bengio.Courville.2016` is
+With ReLU activations, a hidden layer of just $h = 2$ units solves XOR cleanly :cite:`Goodfellow.Bengio.Courville.2016`. Set
 
-$$\mathbf{W}^{(1)} = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}, \quad \mathbf{b}^{(1)} = (0, -1), \quad \mathbf{w}^{(2)} = (1, -2), \quad b^{(2)} = 0,$$
+$$\mathbf{W}^{(1)} = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}, \quad \mathbf{b}^{(1)} = (0, -1), \quad \mathbf{w}^{(2)} = (1, -2), \quad b^{(2)} = 0.$$
 
-where the output layer has a single output $o$, so its weights form one
-column $\mathbf{w}^{(2)}$. Both hidden units see the sum $s = x_1 + x_2$.
-The first, $h_1 = \mathrm{ReLU}(s) = s$, counts the inputs that are 1. The
-second, $h_2 = \mathrm{ReLU}(s - 1)$, is positive only when both inputs are
-1, and the output $o = h_1 - 2h_2$ subtracts 2 in that case. We check the
-network on the four inputs, stored as the rows of $\mathbf{X}$.
+Both hidden units depend on the coordinate sum $s = x_1 + x_2$: unit 1 computes $h_1 = \mathrm{ReLU}(s) = s$, while unit 2 computes $h_2 = \mathrm{ReLU}(s - 1)$, turning on *only* when $s = 2$ (at $(1, 1)$) so that $o = h_1 - 2h_2$ subtracts $2$ and folds the output back down to $0$:
 
 ```{.python .input #mlp-xor}
 X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
@@ -234,238 +121,64 @@ for x, h, out in zip(X, H, o):
     print(f'x = {x}, h = {h}, o = {out}')
 ```
 
-The output equals the XOR label on every input. As a function of $s$, the
-output $o = \mathrm{ReLU}(s) - 2\,\mathrm{ReLU}(s - 1)$ rises from 0 at
-$s = 0$ to 1 at $s = 1$ and falls back to 0 at $s = 2$. The second unit
-*folds* the line of values of $s$ at $s = 1$, so that its two ends reach the
-same output. In the hidden space (:numref:`fig_mdl-mlp-xor`, right), the two
-inputs of class 1 land on the same point $(1, 0)$, and the line
-$h_1 - 2h_2 = 1/2$ separates the classes. In the input space (left), the
-network predicts class 1 in the band $1/2 < x_1 + x_2 < 3/2$, a region that
-no single line can bound.
+Look at the geometry in :numref:`fig_mdl-mlp-xor`: the hidden layer maps *both* class-1 corners $(0, 1)$ and $(1, 0)$ onto the exact same hidden point $(1, 0)$, allowing the straight line $h_1 - 2h_2 = 1/2$ in hidden space (right) to carve out the non-halfspace diagonal band $1/2 < x_1 + x_2 < 3/2$ in input space (left).
 
-![XOR and the two-unit ReLU network that computes it. Left: the four inputs, labeled by XOR (blue: class 0, orange: class 1); the network predicts class 1 in the shaded band between the dashed lines $x_1 + x_2 = 1/2$ and $x_1 + x_2 = 3/2$. Right: the same inputs after the hidden layer $\mathbf{h} = \mathrm{ReLU}(\mathbf{W}^{(1)\top}\mathbf{x} + \mathbf{b}^{(1)})$, each marked with the input it came from; the two inputs of class 1 land on the same point $(1, 0)$, and the dashed line $h_1 - 2h_2 = 1/2$ separates the classes.](../img/mdl-mlp-xor.svg)
+![Solving XOR with two ReLU hidden units. Left: in input space $(x_1, x_2)$, the network predicts class 1 inside the diagonal band $1/2 < x_1 + x_2 < 3/2$. Right: in hidden space $(h_1, h_2)$, the two class-1 points collapse onto $(1, 0)$, where a single line $h_1 - 2h_2 = 1/2$ separates the classes.](../img/mdl-mlp-xor.svg)
 :label:`fig_mdl-mlp-xor`
-
-The hidden layer has re-represented the inputs so that a linear classifier
-suffices. Here we chose its weights by hand. For a problem such as
-Fashion-MNIST nobody could, and training has to choose them instead.
 
 ### Deeper Networks
 
-Nothing stops us from stacking more hidden layers. Starting from
-$\mathbf{H}^{(0)} = \mathbf{X}$, hidden layer $k$ computes
+More generally, a $K$-layer MLP stacks $K - 1$ hidden layers above $\mathbf{H}^{(0)} = \mathbf{X}$,
 
-$$\mathbf{H}^{(k)} = \phi\left(\mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}\right), \quad k = 1, \ldots, K-1,$$
+$$\mathbf{H}^{(k)} = \phi\left(\mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}\right) \quad (k = 1, \ldots, K-1), \qquad \mathbf{O} = \mathbf{H}^{(K-1)}\mathbf{W}^{(K)} + \mathbf{b}^{(K)},$$
 
-and the output layer computes
-$\mathbf{O} = \mathbf{H}^{(K-1)}\mathbf{W}^{(K)} + \mathbf{b}^{(K)}$. Such a
-network has $K$ layers, $K - 1$ of them hidden, and each hidden layer may
-have its own width. Each hidden layer computes a new representation from the
-one below it, and the output layer classifies the last one. For $K = 2$ this
-is :eqref:`eq_mlp`. Whether several narrow layers do better than one wide
-layer is a question we take up once we know what a single hidden layer can
-do.
+building a compositional hierarchy of representations from raw inputs to class logits.
 
 ## Expressive Power
 
 ### Universal Approximation
 
-Two hidden units sufficed for XOR. Can a network with one hidden layer
-approximate every function that we might want to learn? For a single input
-$x$ and ReLU units, a picture answers the question. A hidden unit with input
-weight 1, bias $-t$, and output weight $a$ adds $a\,\mathrm{ReLU}(x - t)$ to
-the output. This term is a *hinge*: zero to the left of its joint $t$ and a
-line of slope $a$ to the right of it. A sum of $h$ hinges and a constant is
-continuous and linear between the joints, so it has at most $h + 1$ linear
-pieces (:numref:`fig_mdl-mlp-uat-hinges`). Conversely, every polyline on a
-closed interval is such a sum: one hinge at the left end with the slope of
-the first piece, and one hinge at each later joint with the change of slope
-there.
+How rich is the class of functions computable by a single hidden layer ($K = 2$)? On the real line ($d = 1$), each ReLU hidden unit $a_j\,\mathrm{ReLU}(x - t_j)$ contributes a *hinge* that is flat to the left of its knot $t_j$ and changes slope by $a_j$ to the right (:numref:`fig_mdl-mlp-uat-hinges`). Summing $h$ hinges plus a constant produces any continuous piecewise-linear polyline with $h$ interior knots—and since any continuous function on a closed bounded interval $[a, b]$ can be approximated uniformly to within any $\epsilon > 0$ by a fine enough polyline, a single wide enough ReLU hidden layer approximates any continuous 1D function to arbitrary precision.
 
-![Approximation by hinges. Left: three hidden units, each contributing a hinge $a_j\,\mathrm{ReLU}(x - t_j)$ whose joint $t_j$ is marked. Right: added to a constant and to one more hinge whose joint lies at the left end of the interval, which gives the first piece its slope, the three hinges form a polyline with 4 pieces (blue) that follows a smooth target (gray); the shaded area is the error, which shrinks as more joints are added.](../img/mdl-mlp-uat-hinges.svg)
+![Approximating a smooth curve on an interval by a sum of ReLU hinges $a_j\,\mathrm{ReLU}(x - t_j)$, one hidden unit per slope change.](../img/mdl-mlp-uat-hinges.svg)
 :label:`fig_mdl-mlp-uat-hinges`
 
-The approximation result for one input follows. A continuous function $f$ on
-a closed interval changes by less than any given $\epsilon > 0$ between
-points that are close enough together. The polyline through the values of
-$f$ at such closely spaced points therefore stays within $\epsilon$ of $f$
-on the whole interval, and a hidden layer with one unit per joint computes
-it.
+The *universal approximation theorem* generalizes this fact to arbitrary input dimension $d$: a single-hidden-layer MLP can approximate *any* continuous function on any compact subset of $\mathbb{R}^d$ to arbitrary uniform accuracy using *any* continuous non-polynomial activation function $\phi$ :cite:`Cybenko.1989,Leshno.Lin.Pinkus.ea.1993` (see Exercise :exref:`ex_mlp-one-hidden-layer` for a 2D proof via ridge functions and the Stone--Weierstrass theorem).
 
-Neither the single input nor the ReLU is essential. The *universal
-approximation theorem* states that the same conclusion holds for any number
-of inputs, on any closed and bounded set, and for every continuous
-activation function that is not a polynomial (:citet:`Cybenko.1989` for
-sigmoids, :citet:`Leshno.Lin.Pinkus.ea.1993` in general). Polynomials must
-be excluded, because with a polynomial activation function the network
-computes a polynomial of bounded degree, and such polynomials cannot
-approximate every continuous function. The general proof is harder than our
-picture, and we skip it. Exercise :exref:`ex_mlp-one-hidden-layer` proves
-the theorem for two inputs.
+### Why Depth Matters
 
-### Limits of the Theorem
+If one hidden layer can already approximate anything, why build *deep* networks? Because universal approximation says nothing about *how many units* a single layer needs (which can grow exponentially in $d$), nor whether gradient descent can learn or generalize from finite data.
 
-The theorem says that good weights exist, and it leaves three questions
-open. The first is width. The construction above uses one unit per joint,
-and a target that changes direction often needs many joints. With many
-inputs, constructions of this kind cover the input space with small cells,
-and the number of cells, and with it the number of hidden units, can grow
-exponentially with the number of inputs. The second question is training:
-the theorem does not say that minibatch SGD, started from random weights,
-finds good weights. The third is generalization. Approximating a function
-that we know everywhere differs from learning it from $n$ examples, and a
-network flexible enough to approximate any function can also fit the noise
-in its training labels.
-
-### Depth
-
-Width adds linear pieces one unit at a time: on one input, $h$ hidden units
-give at most $h + 1$ pieces. Depth can multiply them. Consider the tent
+Depth achieves exponential parameter efficiency by *composing* space-folding maps :cite:`Telgarsky.2016`. Consider the 1D tent function on $[0, 1]$ computed by two ReLU units:
 
 $$g(z) = 2\,\mathrm{ReLU}(z) - 4\,\mathrm{ReLU}(z - 1/2),$$
 
-which rises from 0 to 1 on $[0, 1/2]$ and falls back to 0 on $[1/2, 1]$.
-It is the XOR network read along the diagonal: with $s = 2z$, the output
-$\mathrm{ReLU}(s) - 2\,\mathrm{ReLU}(s - 1)$ equals $g(z)$. Now feed $g$ its
-own output. As $z$ runs from 0 to 1/2, $g(z)$ runs from 0 to 1, so
-$g(g(z))$ traces the whole tent. As $z$ runs on from 1/2 to 1, $g(z)$ runs
-back from 1 to 0, and $g(g(z))$ traces the tent again in reverse. The first
-layer folds the interval $[0, 1]$ in half, and everything after it is
-computed on both halves. Each composition with $g$ doubles the number of
-pieces (:numref:`fig_mdl-mlp-depth-folding`). How many units does it take?
-Each copy of $g$ is a hidden layer of two ReLU units followed by a weighted
-sum, and the next copy begins with an affine map. Two affine maps in a row
-are one, as we saw for networks without activation functions, so each
-composition adds one hidden layer of two units and nothing else.
+which rises from $0$ to $1$ on $[0, 1/2]$ and falls back to $0$ on $[1/2, 1]$ (:numref:`fig_mdl-mlp-depth-folding`). Composing $g$ with itself folds $[0, 1]$ in half at every layer: $g \circ g$ has $4$ linear pieces, $g \circ g \circ g$ has $8$, and the $m$-fold composition $g^{\circ m}$—computed by $m$ hidden layers of $2$ ReLU units ($2m$ total units)—produces a sawtooth wave with $2^m$ linear pieces! Representing that same $2^m$-piece sawtooth with a *single* hidden layer requires at least $2^m - 1$ hidden units ($1{,}023$ units in one layer vs. $20$ units across $10$ layers when $m = 10$).
 
-![Depth folds the input. The tent $g$, computed by one hidden layer of two ReLU units, and its compositions $g \circ g$ and $g \circ g \circ g$, computed by two and three such layers. Each composition splits every piece of the previous function (dashed) in two.](../img/mdl-mlp-depth-folding.svg)
+![Composing the two-ReLU tent function $g$ with itself $m$ times doubles the number of linear segments at every layer, producing $2^m$ segments with only $2m$ hidden units.](../img/mdl-mlp-depth-folding.svg)
 :label:`fig_mdl-mlp-depth-folding`
-
-Thus composing $g$ with itself $m$ times gives a zigzag with $2^m$ pieces,
-computed by $m$ hidden layers of two units, $2m$ hidden units in all. A
-single hidden layer needs at least $2^m - 1$ units for the same function,
-by the count of pieces above. For $m = 10$, this means 20
-units in ten hidden layers against at least 1,023 in one.
-:citet:`Telgarsky.2016` used this construction to prove that some functions
-computed by deep, narrow networks require exponentially wide shallow
-networks. The zigzag is a rather special function, of course. Depth does
-not help with every function, and nothing guarantees that training finds
-such compact solutions when they exist.
 
 ## Activation Functions
 :label:`subsec_activation-functions`
 
-So far almost any $\phi$ would have served. Every nonlinear one prevents the
-collapse into a single affine map, and every continuous one that is not a
-polynomial makes one hidden layer a universal approximator. The choice
-begins to matter when the network is trained. Gradient descent changes each
-parameter in
-proportion to the derivative of the loss $l$ with respect to it. For one
-example, hidden unit $j$ computes $h_j = \phi(z_j)$ from its pre-activation
-$z_j = \sum_i x_i w^{(1)}_{ij} + b^{(1)}_j$, where $w^{(1)}_{ij}$ is an
-entry of $\mathbf{W}^{(1)}$. By the chain rule,
+While almost any non-polynomial $\phi$ suffices for universal approximation, optimization via gradient descent depends critically on the derivative $\phi'(z)$. For hidden unit $j$ with pre-activation $z_j = \sum_i x_i w^{(1)}_{ij} + b^{(1)}_j$ and activation $h_j = \phi(z_j)$, the chain rule scales every incoming weight gradient by the local slope $\phi'(z_j)$:
 
 $$\frac{\partial l}{\partial w^{(1)}_{ij}} = \frac{\partial l}{\partial h_j}\,\phi'(z_j)\,x_i.$$
 
-The gradient of every weight into unit $j$ contains the same factor
-$\phi'(z_j)$. Where this factor is close to zero, none of these weights
-moves, however wrong the prediction.
-:numref:`fig_mdl-mlp-activations` shows four activation functions in common
-use, with their derivatives.
+Wherever $\phi'(z_j) \approx 0$, gradient flow stalls. :numref:`fig_mdl-mlp-activations` compares the four principal activations and their derivatives.
 
-![Four activation functions $\phi$ (left) and their derivatives $\phi'$ (right). Top: the ReLU and its smooth relative, the GELU. Bottom: the sigmoid and tanh, which squash their inputs into bounded intervals. The two derivative panels share one vertical scale: the derivative of the sigmoid never exceeds $1/4$, and the derivatives of the sigmoid and tanh vanish in both tails.](../img/mdl-mlp-activations.svg)
+![Four activation functions $\phi(z)$ (left) and their derivatives $\phi'(z)$ (right): ReLU and GELU (top), sigmoid and $\tanh$ (bottom).](../img/mdl-mlp-activations.svg)
 :label:`fig_mdl-mlp-activations`
 
-### ReLU and GELU
-
-The derivative of the ReLU is 1 for $z > 0$ and 0 for $z < 0$. At $z = 0$,
-where the ReLU has no derivative, the built-in ReLU uses 0, a choice that
-rarely matters because a pre-activation is seldom exactly zero. For every
-positive pre-activation, however large, the gradient passes through a ReLU
-unit unchanged. This is the main reason why the ReLU replaced the sigmoid
-as the default activation of hidden layers
-:cite:`Nair.Hinton.2010,Glorot.Bordes.Bengio.2011`. It is also cheap: a
-single comparison.
-
-The flat side has a cost. A unit whose pre-activation is negative for every
-training example outputs zero, receives zero gradient, and never changes
-again. Such a unit is called *dead*. The leaky ReLU, $\max(z, \alpha z)$
-with a small slope such as $\alpha = 0.01$, keeps a small gradient for
-negative inputs, so its units cannot die.
-
-The *Gaussian error linear unit* (GELU) is a smooth relative of the ReLU,
-
-$$\mathrm{GELU}(z) = z\,\Phi(z),$$
-
-where $\Phi$ is the cumulative distribution function of the standard normal
-distribution. Since $\Phi(z)$ rises smoothly from 0 for very negative $z$ to
-1 for very positive $z$, the GELU matches the ReLU for $|z|$ beyond about 3
-and rounds off its corner in between. Its slope at $z = 0$ is 1/2, and
-unlike the ReLU it dips below zero, to about $-0.17$ near $z = -0.75$. Many
-transformer models use the GELU :cite:`Hendrycks.Gimpel.2016`. A close
-relative, the *SiLU* $z\,\sigma(z)$, replaces $\Phi$ by the sigmoid
-$\sigma$ of the next subsection.
-
-### Sigmoid and Tanh
-
-The sigmoid, $\sigma(z) = 1/(1 + \exp(-z))$, turns the logit of a two-class
-classifier into a probability (:numref:`sec_softmax`): it maps the real line
-onto the interval $(0, 1)$. Early neural networks used it in hidden layers
-as a smooth version of a threshold unit, which outputs 1 when its input
-exceeds a threshold and 0 otherwise :cite:`McCulloch.Pitts.1943`. Unlike the
-threshold, the sigmoid has a derivative that gradient descent can use,
-
-$$\sigma'(z) = \sigma(z)\,\bigl(1 - \sigma(z)\bigr).$$
-
-It is largest at $z = 0$, where it equals $1/4$, and approaches zero in both
-tails. A unit whose pre-activation is large in magnitude is *saturated*: its
-output barely changes with its input, so it passes almost no gradient to the
-weights below it. At $z = \pm 4$, the factor is
-$\sigma(4)\bigl(1 - \sigma(4)\bigr) \approx 0.018$.
-
-Even at $z = 0$, every sigmoid unit between a weight and the loss shrinks
-the gradient by a factor of 4. Through a chain of ten sigmoid units with
-weights of 1, the gradient therefore shrinks by a factor of at least
-$4^{10} \approx 10^6$. Such *vanishing gradients* made deep sigmoid networks
-hard to train; :numref:`sec_numerical_stability` analyzes them and their
-remedies.
-
-The *hyperbolic tangent*,
-
-$$\tanh(z) = \frac{1 - \exp(-2z)}{1 + \exp(-2z)},$$
-
-maps the real line onto $(-1, 1)$. It is a sigmoid stretched to this
-interval and centered at zero (Exercise :exref:`ex_mlp-sigmoid-tanh`), and
-its derivative, $1 - \tanh^2(z)$, reaches 1 at $z = 0$, so an unsaturated
-tanh unit passes the whole gradient. In the tails it vanishes even faster
-than that of the sigmoid: at $z = \pm 4$ it is about $0.0013$. Today the
-sigmoid serves mainly to produce probabilities and gates, numbers between 0
-and 1 that decide what fraction of a signal passes, and tanh to keep the
-state of recurrent networks bounded.
-
-We have not trained a single network in this section: every weight was
-chosen by hand. Whether training finds good weights, and whether they
-predict well on new data, are questions for experiment. The next section
-runs the first one, on Fashion-MNIST.
+- **ReLU and Leaky ReLU:** $\mathrm{ReLU}(z) = \max(z, 0)$ has derivative $1$ for $z > 0$ and $0$ for $z < 0$ (conventionally $0$ at $z = 0$). Because its slope is identically $1$ across the entire positive half-line, active ReLU units never attenuate gradients as $z$ grows :cite:`Nair.Hinton.2010,Glorot.Bordes.Bengio.2011`. If a unit's weights shift so that $z < 0$ on every training input, however, its gradient vanishes permanently (a *dead ReLU*); *leaky ReLU*, $\max(z, \alpha z)$ with $\alpha \approx 0.01$, keeps a small positive slope for $z < 0$ so dead units can recover.
+- **GELU and SiLU (Swish):** The *Gaussian error linear unit* $\mathrm{GELU}(z) = z\,\Phi(z)$ (where $\Phi$ is the standard normal CDF) and its cousin $\mathrm{SiLU}(z) = z\,\sigma(z)$ smooth out ReLU's kink at the origin (passing through $z = 0$ with slope $1/2$ and a gentle negative dip near $z \approx -0.75$) and serve as the default activations in modern Transformers :cite:`Hendrycks.Gimpel.2016`.
+- **Sigmoid and Tanh:** The logistic sigmoid $\sigma(z) = 1/(1 + e^{-z}) \in (0, 1)$ has derivative $\sigma'(z) = \sigma(z)(1 - \sigma(z)) \leq 1/4$, while the zero-centered hyperbolic tangent $\tanh(z) = (1 - e^{-2z})/(1 + e^{-2z}) = 2\sigma(2z) - 1 \in (-1, 1)$ (Exercise :exref:`ex_mlp-sigmoid-tanh`) has derivative $1 - \tanh^2(z) \leq 1$. Both saturate to flat horizontal asymptotes ($\phi'(z) \to 0$) as $|z|$ grows beyond $\sim 3$, and multiplying $\sigma'(z) \leq 1/4$ across $K$ layers shrinks gradients by at least $4^{-K}$ (*vanishing gradients*, analyzed in :numref:`sec_numerical_stability`). Today, sigmoid and $\tanh$ are used primarily as bounded *gates* and state squashers in recurrent architectures (:numref:`chap_modern_rnn`).
 
 ## Summary
 
-A linear classifier scores each class with a weighted sum of the inputs, so
-it cannot represent interactions between inputs, and the four points of XOR
-already defeat it. A multilayer perceptron first computes a hidden
-representation $\mathbf{H} = \phi(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$
-and then classifies it linearly,
-$\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$, training both
-layers together. Without the activation function $\phi$, the layers
-collapse into one affine map; with it, two ReLU units fold the XOR inputs so
-that a line separates them. One hidden layer can approximate any
-continuous function, possibly only with very many units, and depth can
-produce exponentially many linear pieces from a linear number of units.
-None of this says that training finds such weights. Which activation
-function lets it try is decided by the derivative: the ReLU passes gradients
-of 0 or 1 and is the default for hidden layers, while the sigmoid and tanh
-saturate and pass at most 1/4 and 1 of the gradient.
+- **Limits of linearity and hidden layers:** Linear models are monotonic in each coordinate and cannot capture feature interactions such as XOR. An MLP inserts hidden layers $\mathbf{H} = \phi(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$ before the linear output layer; without a nonlinear $\phi$, stacked affine layers collapse into a single linear layer.
+- **Expressive power and depth:** A single wide enough hidden layer with any continuous non-polynomial activation is a universal approximator on compact sets, while stacking $m$ hidden layers can compose space-folding functions to create $2^m$ linear regions with only $O(m)$ units.
+- **Activation functions:** ReLU ($\max(z, 0)$) and GELU ($z\Phi(z)$) pass gradients with unit slope for positive pre-activations, avoiding the tail saturation and $1/4$ slope attenuation of sigmoid and $\tanh$.
 
 ## Exercises
 
@@ -494,25 +207,7 @@ saturate and pass at most 1/4 and 1 of the gradient.
        computes the same function, and conversely. State how the weights and
        biases change.
    :exlabel:`ex_mlp-sigmoid-tanh`
-1. [code] **Vanishing gradients.** Consider a chain of $K$ sigmoid units of
-   width one, $h_k = \sigma(z_k)$ with pre-activation
-   $z_k = w_k h_{k-1} + b_k$. By the chain rule,
 
-    $$\frac{\partial h_K}{\partial h_0} = \prod_{k=1}^{K} w_k \sigma'(z_k).$$
-
-    1. Explain why the weight feeding a *saturated* unit, one operating at
-       large $|z_k|$, receives almost no gradient for any loss, and why
-       a single saturated unit also stalls every earlier layer of the chain.
-    1. Choose the biases so that every pre-activation equals $0$, where
-       $\sigma'$ attains its maximum $1/4$. Compute the product for
-       $K = 1, \ldots, 20$, once with every $w_k = 1$ and once with every
-       $w_k = 4$, and plot both curves on a logarithmic vertical axis.
-    1. Repeat with every pre-activation equal to $5$ and every $w_k = 1$.
-       Find the weight $w$ for which $w \sigma'(5) = 1$, and compare it with
-       the weight that keeps the product constant at the origin. State what
-       the comparison implies for training deep sigmoid networks in either
-       regime.
-   :exlabel:`ex_mlp-vanishing-gradients`
 1. **Depth and linear pieces.** ● A one-hidden-layer ReLU network with $h$
    hidden units on the real line has at most $h + 1$ linear pieces, while
    each composition with the two-unit tent of
@@ -561,20 +256,6 @@ saturate and pass at most 1/4 and 1 of the gradient.
     *Adapted from Michael Nielsen,
     [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap4.html),
     Chapter 4.*
-1. [code] **Weight scale and saturation.** ● Take the chain of Exercise
-   :exref:`ex_mlp-vanishing-gradients` with $K = 20$, every weight
-   $w_k = w$, and every bias $b_k = -w/2$, so that the input $h_0 = 1/2$
-   gives $z_k = 0$ at every layer.
-    1. Express $\partial h_K / \partial h_0$ as a function of $w$ for the
-       input $h_0 = 1/2$. For which $w$ does it not vanish as $K$ grows?
-    1. Implement the chain and run it from $h_0 = 0.6$ with $w = 4$ and with
-       $w = 8$. Report $h_{20}$ and $\partial h_{20} / \partial h_0$ in each
-       case.
-    1. Treat the map $h_{k-1} \mapsto h_k$ as a one-dimensional iteration
-       with fixed point $1/2$, and use its slope there to explain the
-       difference between the two runs. State what the result implies for
-       countering vanishing gradients in a sigmoid network by scaling up its
-       weights.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/90)

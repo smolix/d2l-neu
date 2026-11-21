@@ -1,49 +1,56 @@
 # Interpretability
 :label:`sec_lm_interpretability`
 
-<!-- Author brief, copied verbatim from the Language Models part plan
-(docs/llm/language_models_part_plan.md, "1.6 Interpretability · T1").
-Blueprint: docs/llm/blueprints/ch01_pretrained.md section 1.6.
-The plan is a specification, not book text; this comment is replaced
-when the section is written.
+When we ported Qwen3-0.6B to the book's own code, we recorded four tensors
+in every block, to find the layer at which a faulty port leaves its
+reference (:numref:`subsec_lm_port_layerwise`). A neuroscientist would envy
+us those hooks. We can read every intermediate result of the model, on any
+input and as often as we like, and we can also overwrite it and let the
+computation run on.
 
-**Idea:** Claims about what a model computes are tested by intervening on activations, not by reading them.
-**Opening:** The reader asks Qwen3-0.6B where the Eiffel Tower stands and watches the answer's rank rise through the layers under the logit lens. Reading the residual stream suggests where the fact is retrieved; only overwriting it says whether that is where. The section builds the interventions and closes on what pushing a feature costs the model elsewhere.
-**Teaches:**
-- The residual stream read by the logit lens and the tuned lens (`d2l.logit_lens`, `d2l.TunedLens`); linear probes with a control task, so selectivity separates what a representation encodes from what the probe learns.
-- Activation patching between a clean and a corrupted prompt as a causal effect per layer and position (`d2l.intervene`); attribution patching as its first-order estimate, with the gradient cached by the same hooks.
-- Sparse autoencoders as dictionary learning on the residual stream: the objective, bounded decoder norms, the top-k variant; a small SAE trained in the notebook (`d2l.TopKSAE`, `d2l.train_sae`) measured against a released Qwen-Scope SAE by L0, fraction of variance unexplained and loss recovered (`d2l.sae_metrics`).
-- One steering vector with its perplexity cost beside the behaviour change; chain-of-thought monitorability in one paragraph as the bridge to reasoning traces.
-- Gemma Scope 2 transcoders and an attribution graph as one exercise (the only place a third family appears, and only there).
-**Derivation:** Patching as a causal effect: the metric difference when one site's activation is replaced by its value under the corrupted prompt, summed over sites to recover the total effect; its first-order form, the inner product of the activation difference with the metric's gradient at that site, and when the linearization fails. The SAE objective: reconstruction plus an L1 penalty on codes with decoder columns constrained to unit norm (otherwise the penalty is defeated by scaling), and top-k as the L0-constrained alternative. Smallest numeric case: a two-site patch where the effects do not add, computed by hand.
-**Notebook:**
-1. Track the rank of the correct answer across layers on 40 committed recall prompts with the logit lens and with a tuned lens trained on cached activations (or loaded from the committed translators).
-2. Fit a part-of-speech probe on one layer with a control task of random tags per word type and report accuracy and selectivity.
-3. Patch `resid_post` and `attn_out` at every layer and position from the corrupted to the clean run and map the effect; then compute attribution patching from one backward pass and plot its agreement with the patched map.
-4. Train a top-k SAE on one layer's residual stream of Qwen3-1.7B-Base over a few million cached tokens and compare its reconstruction and loss recovered with the released Qwen-Scope SAE for the same layer; label three features by top examples and call the labels hypotheses.
-5. Add one steering direction (an SAE feature chosen by contrast and a difference-of-means vector) at a grid of strengths and plot the behaviour change against the perplexity cost on held-out English text, with a random direction of the same norm as the floor.
-6. Claim that survives noise: a few (layer, position) cells carry most of the patching effect for the recall behaviour (a cluster bootstrap over prompts gives the interval); attribution patching agrees with patching in rank order outside the near-zero cells; the random direction yields no behaviour change below the cost cap, and both informed directions do, with the cheaper one stated only if the frontier areas' bootstrap intervals separate.
-7. Reused pieces: `d2l.load_qwen3` and the module names of 1.2, `d2l.generate`, 1.4's cross-entropy for the cost, 1.5's `d2l.bootstrap_ci(cluster=)`.
-**Figures:** `fig_lm_patching` (clean and corrupted prompts, the sites, and the patching map as a heat map); `fig_lm_lens_rank` (plot: rank of the correct answer by layer under both lenses); `fig_lm_sae_frontier` (plot: the steering frontier, behaviour change against perplexity cost, for the three directions).
-**Restate / forward:** `sec_what-attention-computes` (induction heads were located by ablation; `tab_induction-evidence` orders behavioural, correlational and interventional evidence, and this section climbs it); `sec_mdl-svd-low-rank` (a linear probe is a rank-one read-out and the difference-of-means vector is its simplest case); `eq_stream-update` (every block adds to a shared stream the lens reads). Forward: Chapter 9 (monitoring reasoning traces).
-**Exercises:** 6 to 8. Load-bearing: derive attribution patching from the first-order expansion and bound its error by the second derivative along the patch (derive); measure the steering frontier of a second feature and of the difference-of-means direction at matched perplexity cost (measure); load a Gemma Scope 2 transcoder for one Gemma layer, build a one-step attribution graph for one prompt, and compare with the SAE view (open); check that the logit lens applied to the last layer reproduces the model's logits exactly (check).
-**Writer notes:**
-- Exports: `d2l.intervene(model, sites, *, record=(), record_grad=False)` as a context manager over `d2l.GPT` with site kinds `resid_post, resid_mid, attn_out, mlp_out, head_z`; `d2l.logit_lens(model, hidden, layer=None)` (applies the final norm and the tied head, fp32); `d2l.TunedLens(d_model, num_layers)` with translators initialized at zero so training starts at the logit lens; `d2l.TopKSAE(d_model, d_sae, k)` with the layout and names of Qwen-Scope's files (`W_enc (d_sae, d_model)`, `b_enc`, `W_dec (d_model, d_sae)`, `b_dec`), `normalize_decoder_()`; `d2l.load_qwen_scope_sae(repo_id, layer, revision=None, ...)` loading one `layer{n}.sae.pt` with `weights_only=True`; `d2l.sae_metrics` excluding position 0 and norm outliers (the first-token sinks the Qwen-Scope report filtered).
-- Models: patching, lenses and the probe run on the book's Qwen3-0.6B (28 layers, d = 1024); the SAE cells run on Qwen3-1.7B-Base through the same `d2l.load_qwen3`, because Qwen-Scope releases SAEs for Qwen3-1.7B-Base, Qwen3-8B-Base and Qwen3.5-2B-Base, not for 0.6B. One released layer is 537 MB in fp32; a layer sweep is optional. The `SMALL=True` path uses Qwen3-0.6B with its own notebook-trained SAE and no download.
-- Licence: the Qwen-Scope card is tagged `license: other` with a use-restriction "Caution" paragraph while its LICENSE file is Apache-2.0 text; the notebook takes the stricter reading: run-time download only, no committed or redistributed SAE weights, the Caution quoted verbatim from the downloaded README before first use. If the editor judges the restriction incompatible with the book's licence, the released SAE becomes a pointer and the frontier uses the notebook's own SAE feature.
-- Released-SAE convention: whether the encoder subtracts `b_dec` before `W_enc` is not stated on the card; decide by reconstruction, print both, and stop using the release if neither reconstructs (the instrument check fails loudly).
-- Qwen-Scope is the notebook's suite; Gemma Scope 2 transcoders and the attribution graph are one exercise (no Gemma 3 run in the notebook); a monitorability paragraph is included; the five cells beyond patching (two lenses, probe, SAE, steering) are one cell each and patching is the section's experiment.
-- Patching data: 40 committed (clean, corrupted, correct, distractor) prompt pairs of equal token length built from a landmark-and-city list; pairs where the clean top-1 is wrong are discarded and counted. Probe data: Universal Dependencies English EWT (CC BY-SA 4.0, pinned by commit), last sub-token per word. Contrast and cost data: FineWeb-Edu English (ODC-By) and Chinese Wikipedia (CC BY-SA 3.0) documents at run time.
-- Pitfalls to state: a probe's accuracy is not the model's use of the property; early logit-lens outputs are partly a scaling artifact; patching a corrupted prompt that differs in more than one variable; applying an SAE trained on one checkpoint to another is an assumption checked by reconstruction; steering strength is not comparable across directions unless normalized; `.pt` files load with `weights_only=True` only.
-- Hooks across versions: Transformers decoder-layer outputs changed between tensor and tuple; the oracle cell handles both and asserts the last-layer relation to the final-norm output; if TransformerLens lacks Qwen3 support at the pinned version, the oracle is Transformers with hooks.
-- Committed artifacts: tuned-lens translators (`lm-tuned-lens-qwen3-0.6b`, about 57 MB in fp16), probe weights, the notebook's small SAEs (`lm-sae-r1-l14`, `lm-sae-q17b-l14`, fp16), patching effect tables, steering results as CSV; none of the released SAE.
-- Read the exact Gemma Scope 2 transcoder repository and layer for the exercise from the Gemma Scope page at authoring. Run-time use of Qwen-Scope is approved (academic use) under the Caution terms above.
-**Sources:**
-- Papers: [Eliciting Latent Predictions from Transformers with the Tuned Lens](https://arxiv.org/abs/2303.08112) (the tuned lens); [Locating and Editing Factual Associations in GPT](https://arxiv.org/abs/2202.05262) (causal tracing, the template for the recall patching map); [Towards Best Practices of Activation Patching in Language Models](https://arxiv.org/abs/2309.16042) (metrics and methods); [Towards Monosemanticity](https://transformer-circuits.pub/2023/monosemantic-features) (dictionary learning on the residual stream); [Scaling and Evaluating Sparse Autoencoders](https://arxiv.org/abs/2406.04093) (top-k SAEs, the auxiliary loss, evaluation by loss recovered); [Qwen-Scope](https://arxiv.org/abs/2605.11887) (the released suite; its language-steering demonstration without a cost measurement, which the notebook adds); [Circuit Tracing](https://transformer-circuits.pub/2025/attribution-graphs/methods.html) (transcoders and attribution graphs, the exercise); [ADAG: Automatically Describing Attribution Graphs](https://arxiv.org/abs/2604.07615) (automated description of attribution graphs, one pointer); [Persona Vectors](https://arxiv.org/abs/2507.21509) (steering directions for traits, the monitorability paragraph); [Representation Engineering](https://arxiv.org/abs/2310.01405) and [Contrastive Activation Addition](https://arxiv.org/abs/2312.06681) (difference-of-means steering).
-- Code and documentation: the released [Qwen-Scope SAE for Qwen3-1.7B-Base](https://huggingface.co/Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50) (file layout, config, the Caution paragraph); [Gemma Scope](https://ai.google.dev/gemma/docs/gemma_scope) (Gemma Scope 2, transcoders; the exercise); [TransformerLens](https://github.com/TransformerLensOrg/TransformerLens) (the patching oracle where it supports Qwen3); [SAELens](https://github.com/decoderesearch/SAELens) (SAE training conventions to compare against); [tuned-lens](https://github.com/EleutherAI/tuned-lens) (the reference implementation of the lens).
-- Courses, tutorials and blogs: [ARENA](https://github.com/ARENA-education/ARENA_materials) (the curriculum this section follows: lenses, patching, SAEs); nostalgebraist, [Interpreting GPT: the logit lens](https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens); Neel Nanda, [Attribution Patching](https://www.neelnanda.io/mechanistic-interpretability/attribution-patching) (the first-order estimate at scale).
--->
+So let us ask the model something whose answer we know. Given the text "The
+Eiffel Tower is located in the city of", it continues with " Paris".
+Somewhere in its 28 blocks the name of a tower became the name of a city.
+Where? And once we have an answer, how would we know that it is true and
+not merely plausible?
 
+The obvious first step is to read. Every block adds its output to one
+vector per position, the residual stream, and at the end the output layer
+turns that vector into logits. Nothing stops us from applying the output
+layer to the stream after an earlier block. This is the *logit lens*
+:cite:`nostalgebraist.2020`, and it shows the answer taking shape on the
+way up. :citet:`Meng.Bau.Andonian.ea.2022` asked a sharper question. They
+damaged the input until the model no longer recognized what the sentence
+was about, then restored single activations from an undamaged run, and
+recorded which of them brought the answer back. We do the same with a
+gentler kind of damage. We replace the tower by the Colosseum, copy one
+activation from that run into the run on the Eiffel Tower, and see whether
+Paris gives way to Rome. Reading the stream suggests where the fact is
+handled. Overwriting it tests the suggestion.
+
+The distinction matters because explanations of neural networks are cheap
+to produce and hard to refute. A classifier that reads grammatical
+categories from the stream may be accurate because it has memorized the
+words, and a direction that we would happily name "Chinese text" may
+respond to under half of it. Both will happen below. The protection is an
+experiment that could have come out otherwise, and where a threshold
+decides its verdict, we fixed the threshold before the run. An intervention
+also has a cost. A model that has been pushed into writing Chinese and has
+forgotten what it was writing about is of little use, so we measure the
+damage beside the effect.
+
+The study of a network through its internal computations is called
+*mechanistic interpretability*. :numref:`tab_induction-evidence` ordered
+the evidence for the induction heads of a two-block model by strength, from
+behavior through activations and weights to interventions. This section
+goes through the same levels on a released model. It is long, and it holds
+two investigations. The first asks where a computation happens: we read the
+stream of Qwen3-0.6B with two lenses and a probe, and then overwrite it.
+The second asks whether the stream can be written in units that we can name
+and use. For it we move to Qwen3-1.7B-Base, for which a dictionary of such
+units has been released, and from landmarks to a concept that can be
+checked token by token, the language of a text. Each of the four parts ends
+on a result of its own and can be read in one sitting.
 
 ```{.python .input #interpretability-imports}
 %%tab pytorch
@@ -71,7 +78,18 @@ from scipy.stats import spearmanr
 from transformers import AutoTokenizer
 ```
 
-<!-- Placeholder (prose, opening): the flags of the CPU path and of regeneration (D2L_RERUN names the artifacts to regenerate: the tuned lens, the two SAEs, the results archive; 1 means all four); Qwen3-0.6B in fp32, as loaded in the d2l-checkpoint section. The plumbing (Hub range reads, the cluster bootstrap, the regeneration bookkeeping) is library code in interpretability-lib.md, not shown. -->
+The setup cell loads Qwen3-0.6B with `d2l.load_qwen3`
+(:numref:`sec_lm_d2l_checkpoint`), in fp32 and with its parameters frozen.
+A few objects of this section had to be trained, which takes longer than a
+reader should have to wait. As in :numref:`sec_lm_scoring`, a run with the
+environment variable `D2L_RERUN` set, the *regeneration run*, produced them
+once and published them under versioned names. An ordinary run downloads
+them and repeats every measurement. Without a GPU the notebook takes a
+reduced path, `SMALL`: it uses fewer examples, stays with Qwen3-0.6B to the
+end, and prints beside each of its results the number of the full run,
+which is the one that the text quotes. The `d2l` helpers that the cells
+call without showing them are plumbing: partial reads of files on the Hub,
+resampling for intervals, and the files of the regeneration run.
 
 ```{.python .input #interpretability-setup}
 %%tab pytorch
@@ -101,9 +119,10 @@ print(f'{MODEL_ID} at {model.revision}: '
       f'{sum(p.numel() for p in model.parameters()):,} parameters')
 ```
 
-<!-- Placeholder prose (stage 2): the section text is written after the runs. -->
-The released sparse autoencoder is pinned like the models of
-:numref:`sec_lm_hf_models`, by adding its repository to `d2l.HF_REVISIONS`.
+The model has 596 million parameters in 28 blocks of width 1,024. One more
+repository joins the pinned revisions of :numref:`sec_lm_hf_models`. It
+holds the released dictionary, which we meet in
+:numref:`subsec_lm_sae_release`.
 
 ```{.python .input #interpretability-revisions}
 %%tab pytorch
@@ -112,7 +131,9 @@ d2l.HF_REVISIONS['Qwen/SAE-Res-Qwen3-1.7B-Base-W32K-L0_50'] = (
     'ce1a79d9c5163932d65c417380e53230e1086370')
 ```
 
-<!-- Placeholder (stage 2): the probe's treebank, pinned to a commit, the recall pairs, and the files of the regeneration run (the tuned lens, the two SAEs, the results archive). -->
+The small files of the section are registered next: a treebank for the
+probe, a list of landmarks with their cities, and the trained objects just
+mentioned.
 
 ```{.python .input #interpretability-data-hub}
 %%tab pytorch
@@ -148,7 +169,16 @@ d2l.DATA_HUB['lm-interp-results-v3'] = (
     '75606ff34dc535f0705dfeb9194e4791c2820484')
 ```
 
-<!-- Placeholder (prose, ### The Residual Stream as a Sum): the data of the section, each subset resolved once by a declared rule (FineWeb-Edu, Chinese and English Wikipedia, the recall pairs), and the Han-character tokens of the vocabulary. Wikipedia files are ordered by article id and neighbours share topics (hundreds of consecutive biographies of generals), so the documents come from 20 blocks spread over each file. The held-out label documents come from 20 other Wikipedia blocks, halfway between the contrast blocks, so they are other articles on other topics, not the contrast documents' neighbours. -->
+Two sources supply text. Each is read at a pinned revision and in a fixed
+order, so that every subset below is the same in every run. FineWeb-Edu
+:cite:`Penedo.Kydlicek.BenAllal.ea.2024`, a collection of web pages
+selected for their educational content (ODC-By license), is our ordinary
+English text: we measure on it and cut prompts from it, and the trained
+objects were trained on it. The Chinese and the English Wikipedia
+(CC BY-SA) give us, for the second investigation, two sets of articles that
+differ in language and in little else. To these the cell adds our own list
+of 40 landmarks, `lm-interp-recall-v1`. Its printout lists what was read,
+and each set of documents is introduced where we first use it.
 
 ```{.python .input #interpretability-data}
 %%tab pytorch
@@ -214,7 +244,77 @@ if SMALL:
     assert not FULL['config']['small'], 'the archive of a CPU-path run'
 ```
 
-<!-- Placeholder (stage 2): reading and overwriting the five sites of every block through module hooks. -->
+## Reading the Residual Stream
+
+Before we can look for Paris we need two tools: a way to read and to
+overwrite the stream at any block, and the formula for what the output
+layer makes of the vector that it finds there. The first subsection
+supplies both, and the Eiffel prompt gets its answer in the second.
+
+### The Residual Stream as a Sum
+:label:`subsec_lm_stream_sum`
+
+In the attention-only model of :numref:`sec_what-attention-computes`, each
+block added the outputs of its heads to the vector at each position, and
+the output layer scored the final vector against the embeddings. The
+sequence of these vectors was the *residual stream*
+(:numref:`fig_residual-stream`). A block of Qwen3 adds twice
+(:numref:`sec_transformer-block`): first the output of its attention layer,
+then the output of its feed-forward network, each computed from a
+normalized copy of the stream. The interpretability literature calls the
+feed-forward network the MLP, and in this section so do we.
+
+We count blocks as the code does, from 0 to $L - 1 = 27$, and look at one
+position. Let $\mathbf{h}^{(\ell)}$ be the stream after block $\ell$, and
+$\mathbf{a}^{(\ell)}$ and $\mathbf{m}^{(\ell)}$ what the attention layer and
+the MLP of block $\ell$ add to it. (:numref:`sec_what-attention-computes`
+counted blocks from 1 and wrote $\mathbf{h}^{(0)}$ for the embedding, so
+its index is ours plus one.) The final stream is then the embedding
+$\mathbf{e}_x$ of the input token $x$ plus 56 additions:
+
+$$
+\mathbf{h}^{(L-1)} = \mathbf{e}_x + \sum_{\ell=0}^{L-1} \left(\mathbf{a}^{(\ell)} + \mathbf{m}^{(\ell)}\right).
+$$
+:eqlabel:`eq_lm_stream_sum`
+
+The identity holds for any network with skip connections and says nothing
+about how the blocks compute. Its use is that every term in it is a place
+where we can read or write. `d2l.intervene` names five such places in each
+block, which we call *sites*. The left half of :numref:`fig_lm_patching`
+shows them, and its right half belongs to :numref:`subsec_lm_patching`.
+`attn_out` and `mlp_out` are the two additions. `resid_mid` and
+`resid_post` are the stream after each of them, so that `resid_post` of
+block $\ell$ is $\mathbf{h}^{(\ell)}$. These are the four tensors of
+:numref:`subsec_lm_port_layerwise`. The fifth, `head_z`, is the input of
+the output projection $\mathbf{W}_o$ of the attention layer, where the
+outputs of the individual heads still lie side by side. A site is written
+as a pair such as `('resid_post', 14)`. The text works with `resid_post`,
+`attn_out` and `mlp_out`, and the other two wait for the exercises.
+
+![Activation patching. Left: the five sites at which `d2l.intervene` reads or overwrites one block. Right: the experiment that these sites serve. One activation is copied from the run on a corrupted prompt into the run on the clean prompt, and the change of the logit difference (LD) is measured at the final position. The shaded region is the part of the clean run that the patch can change: the same and later positions, in the blocks above.](../img/mdl-lm-pretrained-patching.svg)
+:label:`fig_lm_patching`
+
+The next cell implements the sites with PyTorch hooks, functions that a
+module calls before or after its `forward`. `d2l.intervene` returns a
+context manager. Inside its `with` block, every site listed in `record` is
+stored in `ctx.cache`, and every site in the dictionary `sites` is passed
+through the function given for it, whose return value takes the place of
+the activation. The smallest use is
+`with d2l.intervene(model, record=[site]) as ctx: model(X)`. Afterwards
+`ctx.cache[site]` is a list with one tensor for each forward pass made
+inside the block, of shape (batch, tokens, width). Most cells below make
+one pass and take `ctx.cache[site][0]`.
+
+The class is long because hooks are fiddly, and most of it can be skimmed.
+One detail is worth knowing. The stream is not the output of any module,
+since the block's own `forward` does the adding. To overwrite the stream
+with a value $\mathbf{y}$ where it would have been $\mathbf{r}$, the hook
+shifts the output of the sublayer by $\mathbf{y} - \mathbf{r}$ and lets the
+block add as usual. Of the remaining arguments, `stop_after` ends a forward
+pass at a site when nothing above it is needed, and `record_grad` waits for
+:numref:`subsec_lm_atp`. Libraries such as TransformerLens offer these
+operations for many models. We write them out so that nothing stands
+between us and the activations.
 
 ```{.python .input #interpretability-intervene}
 %%tab pytorch
@@ -345,7 +445,67 @@ def intervene(model, sites=None, *, record=(), record_grad=False,
     return _Intervention(model, sites, record, record_grad, stop_after)
 ```
 
-<!-- Placeholder (stage 2): the logit lens, the final norm and the head applied to any block. -->
+What does one term of :eqref:`eq_lm_stream_sum` contribute to the output?
+The output layer of Qwen3-0.6B is an RMSNorm followed by the embedding
+matrix $\mathbf{E}$, which the model uses a second time as its output
+weights. RMSNorm (:numref:`subsec_rmsnorm`) divides a vector
+$\mathbf{v} \in \mathbb{R}^d$ by its root mean square
+$\rho(\mathbf{v}) = \sqrt{\tfrac{1}{d} \sum_i v_i^2 + \epsilon}$ and
+multiplies the result, coordinate by coordinate, with a learned gain
+$\boldsymbol{\gamma}$. The logit of token $t$ is therefore
+
+$$
+z_t = \frac{\mathbf{e}_t^\top (\boldsymbol{\gamma} \odot \mathbf{h}^{(L-1)})}{\rho(\mathbf{h}^{(L-1)})} = \sum_{\mathbf{p}} c_t(\mathbf{p}), \qquad c_t(\mathbf{p}) = \frac{\mathbf{e}_t^\top (\boldsymbol{\gamma} \odot \mathbf{p})}{\rho(\mathbf{h}^{(L-1)})},
+$$
+:eqlabel:`eq_lm_dla`
+
+where $\mathbf{e}_t$ is the row of $\mathbf{E}$ for token $t$ and the sum
+runs over the 57 parts $\mathbf{p}$ of :eqref:`eq_lm_stream_sum`: the
+embedding, 28 attention outputs and 28 MLP outputs. Once the denominator is
+fixed, the logit is linear in the stream. Each part then has a contribution
+$c_t(\mathbf{p})$ of its own, and the contributions add up to the logit
+exactly.
+
+It is tempting to print the 57 contributions for " Paris" and to read off
+who wrote the answer. We shall not, because the list would mislead. A
+contribution counts only what a part writes directly into the output. A
+part that writes for the parts above it, say an early layer that works out
+which landmark is meant, may contribute next to nothing in this sense while
+the answer depends on it entirely. Contributions describe the last step of
+a computation. For the steps before it we need the interventions of
+:numref:`subsec_lm_patching`.
+
+The logit lens applies the same output layer to the stream after an
+earlier block:
+
+$$
+\mathbf{z}^{(\ell)} = \frac{\mathbf{E}\, (\boldsymbol{\gamma} \odot \mathbf{h}^{(\ell)})}{\rho(\mathbf{h}^{(\ell)})}.
+$$
+:eqlabel:`eq_lm_lens`
+
+It is instructive to compare this with :eqref:`eq_lm_dla`. The numerator
+holds the contributions that have arrived by block $\ell$. Only the
+denominator differs: the lens divides by the size of the stream at block
+$\ell$, the model by its size at the end. The lens at block $\ell$ is thus
+the partial sum of the model's own contributions, multiplied by the
+positive number $\rho(\mathbf{h}^{(L-1)}) / \rho(\mathbf{h}^{(\ell)})$. A
+positive factor on all logits changes how confident the read-out looks. It
+cannot change the order of two tokens.
+
+A case small enough to compute by hand shows both effects. Take $d = 2$,
+$\boldsymbol{\gamma} = \mathbf{1}$, $\epsilon = 0$ and
+$\mathbf{E} = \mathbf{I}$, an embedding $(1, 0)$ and a single block that
+adds $(0, 3)$. The final stream $(1, 3)$ has the root mean square
+$\sqrt{5} = 2.24$, so the logits are $(0.45, 1.34)$, the sum of the
+contributions $(0.45, 0)$ of the embedding and $(0, 1.34)$ of the block.
+The second token wins. The lens at the embedding sees $(1, 0)$, with root
+mean square $0.71$, and reads $(1.41, 0)$. It names the first token, as the
+partial sum $(0.45, 0)$ does, because the block that will decide otherwise
+has not written yet. The factor $2.24 / 0.71 = 3.2$ only makes the lens
+three times surer of its wrong answer.
+
+The function `d2l.logit_lens` is :eqref:`eq_lm_lens` in code, computed in
+fp32.
 
 ```{.python .input #interpretability-logit-lens}
 %%tab pytorch
@@ -364,7 +524,13 @@ def logit_lens(model, hidden):
     return F.linear(h, head.weight.float())
 ```
 
-<!-- Placeholder (prose, ### The Residual Stream as a Sum): check of eq_lm_dla on eight recall prompts (the contributions sum to the logit; the lens at the last block is the model), and the factor rho_L / rho_l by which the lens rescales an early block. -->
+How large is the factor in practice? The next cell records all 56
+additions and the stream after every block on eight prompts of the landmark
+list. It asserts that the 57 contributions to the logit of the correct city
+sum to that logit and that the lens at the last block returns the model's
+logits, and it prints the factor
+$\rho(\mathbf{h}^{(27)}) / \rho(\mathbf{h}^{(\ell)})$ at every fourth
+block.
 
 ```{.python .input #interpretability-dla-check}
 %%tab pytorch
@@ -391,7 +557,20 @@ print(pd.DataFrame(np.mean(ratios, 0)[None], index=['rho_27 / rho_l'],
     float_format='{:.1f}'.format))
 ```
 
-<!-- Placeholder (prose, opening and ### Logit Lens and Tuned Lens): the opening picture, the final top-5 for the Eiffel prompt and the logit lens's top-1 token and the rank of " Paris" at every fourth block. -->
+Both assertions pass. The stream grows about 55-fold from the first block
+to the last, and at block 20 it is still two and a half times too small. A
+lens at block 0 thus reports logits 55 times larger than the contribution
+of the same vector to the final logits. Its probabilities are far too
+sharp, and every measure built on probabilities, such as an entropy or a KL
+divergence, inherits the error. Ranks do not.
+
+### Logit Lens and Tuned Lens
+:label:`subsec_lm_lenses`
+
+Now for the question of the introduction. We print the five most probable
+next tokens for the Eiffel prompt, and then, at every fourth block, the
+token that the logit lens puts first and the rank that it gives to
+" Paris".
 
 ```{.python .input #interpretability-eiffel}
 %%tab pytorch
@@ -414,7 +593,33 @@ print(pd.DataFrame(lens_rows, columns=['block', 'logit-lens top-1',
     index=False))
 ```
 
-<!-- Placeholder (stage 2): the tuned lens, one affine translator per block, trained toward the final distribution. -->
+The model gives " Paris" a probability of 0.91. Through block 16 the lens
+has no idea of it: among some 150,000 tokens the city ranks in the
+thousands, and at the lowest blocks in the tens of thousands. At block 20
+it is third, and from block 24 on it is first. What the lens reads at the
+lowest blocks, " construction" and " substance", has nothing to do with
+towers or cities. So early, the last position knows little beyond its own
+token.
+
+Is the city really absent below block 20, or is it written in a form that
+the output layer cannot read? The logit lens assumes that every block
+writes in the coordinates in which the output layer reads, and nothing in
+training enforces that. The *tuned lens*
+:cite:`Belrose.Ostrovsky.McKinney.ea.2023` drops the assumption. For each
+block it learns an affine map, a *translator*, which is applied to the
+stream before the output layer,
+
+$$
+\mathbf{h}^{(\ell)} \mapsto \mathbf{h}^{(\ell)} + \mathbf{A}_\ell \mathbf{h}^{(\ell)} + \mathbf{b}_\ell,
+$$
+
+and it trains $\mathbf{A}_\ell$ and $\mathbf{b}_\ell$ on ordinary text so
+that the lens's distribution over the next token comes close, in KL
+divergence, to the final distribution of the model. Both start at zero, so
+training starts from the logit lens. A translator can correct the scale and
+a change of coordinates. It cannot do the work of the blocks above it,
+except for the part of that work that happens to be an affine function of
+the stream at the same position.
 
 ```{.python .input #interpretability-tuned-lens}
 %%tab pytorch
@@ -498,7 +703,9 @@ class TunedLens(nn.Module):
         return losses
 ```
 
-<!-- Placeholder (prose, ### Logit Lens and Tuned Lens): the translators are fitted on the first million training tokens under D2L_RERUN; a normal build loads the committed ones. -->
+Fitting the 27 translators takes 250 steps on a million tokens of
+FineWeb-Edu and belongs to the regeneration run. Your run loads the result
+and prints the hash of its file.
 
 ```{.python .input #interpretability-tuned-lens-fit}
 %%tab pytorch
@@ -520,7 +727,17 @@ else:
 lens.requires_grad_(False);
 ```
 
-<!-- Placeholder (prose, ### Logit Lens and Tuned Lens): the keep rule of the recall pairs, and the rank of the correct city by block under both lenses (scale-free): the first block where the median rank is at most 10, with a city-cluster interval. -->
+One prompt is an anecdote. We repeat the measurement on all 40 prompts of
+the list, "The X is located in the city of" for 40 landmarks X in 25
+cities. Each row of the list also names a second landmark in another city,
+which we need from :numref:`subsec_lm_patching` on. The cell keeps a row
+only if the model answers it correctly and tells the two landmarks apart:
+the logit of the right city minus that of the other city, the `LD` of the
+code, must fall by at least 2 when the landmark is exchanged. For each lens
+the cell finds the first block at which the median rank of the correct city
+is 10 or better. The interval comes from a bootstrap
+(:numref:`sec_lm_eval_suites`) that resamples cities and not prompts, since
+two landmarks in Paris share their answer.
 
 ```{.python .input #interpretability-lens-compare}
 %%tab pytorch
@@ -559,7 +776,17 @@ for name, R in ranks.items():
         print(f'  full run: {FULL[key]}')
 ```
 
-<!-- Placeholder (prose, ### Logit Lens and Tuned Lens): the KL to the final distribution on held-out text (with the scale), with document-cluster intervals; the plot below, caption from spec fig_lm_lens_rank (the 95% bands of panel (b) are narrower than the lines, and the dashed lines of panel (a) are the quartiles: the caption says both). -->
+The city becomes readable at block 22 under the logit lens and at block 20
+under the tuned lens, and the two intervals do not overlap. A bootstrap
+over as few as 25 clusters tends to understate the spread, so both
+intervals are somewhat too narrow. The conclusion does not hang on their
+last digit: under either lens the answer cannot be read at the last
+position during the first two thirds of the network, and training the lens
+gains two blocks.
+
+The plot shows the whole course, together with a second quantity: the KL
+divergence from the final distribution of the model to that of each lens,
+averaged over the positions of 200 held-out documents.
 
 ```{.python .input #interpretability-lens-kl}
 %%tab pytorch
@@ -593,7 +820,63 @@ d2l.plot(list(range(L - 1)), [KL[n][:, 0] for n in KL] + [
          fmts=('C0-', 'C1-', 'C0:', 'C0:', 'C1:', 'C1:'))
 ```
 
-<!-- Placeholder (prose, ### Linear Probes and Control Tasks): UD English EWT, every 10th training and every 5th dev and test sentence; each word read at its last token, from the embedding and after block 14. "Unseen" counts word types (about half); by word occurrence the share is about a fifth: never write "47% of test words". -->
+A logarithmic axis is hard to read to within a factor of two, so the next
+cell prints three points of each curve: the first block, the middle of the
+network, and the last block but one.
+
+```{.python .input #interpretability-lens-numbers}
+%%tab pytorch
+print('at blocks 0, 14 and 26:')  # the two panels in numbers
+for name in LENSES:
+    print(f'  {name}: median rank ' + ', '.join(
+        f'{np.median(ranks[name][:, l]):.0f}' for l in (0, 14, 26))
+          + '; KL to final ' + ', '.join(
+              f'{KL[name][l, 0]:.2f}' for l in (0, 14, 26)) + ' nats')
+```
+
+The left panel shows the median rank of the correct city (solid) and its
+quartiles (dashed), on a logarithmic axis with rank 1 at the top. Below
+block 20 the tuned lens ranks the city far better than the logit lens, and
+still far from well. At block 14 the median rank is 260 under the tuned
+lens and about 18,000 under the logit lens. Neither is a rank at which
+anybody would say that the lens reads the city. The translators of the
+tuned lens have removed what was a matter of coordinates. What remains, we
+suspect, is computation that has not happened yet, and
+:numref:`subsec_lm_patching` will put the suspicion to a test.
+
+The right panel shows the KL divergence in nats. Its 95% intervals over
+documents, the dotted lines, are so narrow that they hide behind the
+curves. The tuned lens is closer to the final distribution at every block:
+3.4 nats against 11 at block 0, 2.1 against 6.1 at block 14, and 0.2
+against 0.4 one block before the end. It has to be closer. It was trained
+to minimize this very quantity, and with zero weights it is the logit lens.
+The gap between the two curves is therefore no finding. Part of it is the
+scale error of the logit lens that we computed above. Ranks, on the left,
+do not see the scale.
+
+Both lenses are read-outs of activations. They show at which depth an
+answer can be decoded. They are silent on which component put it there, and
+on whether the model itself reads it in this way.
+
+### Linear Probes and Control Tasks
+:label:`subsec_lm_probes`
+
+A lens reads the model's own prediction. A *probe*, a linear classifier fit
+to the activations of a frozen model (:numref:`subsec_lm_icl_vs_probe`),
+reads anything that we have labels for. The classic question for a probe is
+whether a model that was trained only to predict the next token knows
+grammar. If the stream at some block records whether a word is a noun or a
+verb, a linear classifier should be able to read the part of speech from
+it.
+
+Our labels come from the English Web Treebank
+:cite:`Silveira.Dozat.DeMarneffe.ea.2014` in its Universal Dependencies
+version (CC BY-SA 4.0), in which every word carries a part-of-speech tag
+such as NOUN, VERB or ADP. The cell reads every tenth sentence of the
+training split and every fifth of the other two and runs the model on
+them. It keeps two vectors per word, both taken at the last token of the
+word: the token embedding, which knows nothing of the context, and the
+stream after block 14, halfway up.
 
 ```{.python .input #interpretability-probe-data}
 %%tab pytorch
@@ -616,7 +899,25 @@ print(f'unseen in training: {len(unseen) / len(test_types):.2f} of the test '
       'of the test words')
 ```
 
-<!-- Placeholder (prose, ### Linear Probes and Control Tasks): linear probes for the tags and for five control tasks (one random tag per word type), with the majority tag per type as baseline; the table above (spec tab_lm_probe_control) and the paired selectivity difference. -->
+This gives about 20,000 words for fitting and 5,000 each for choosing the
+weight decay and for testing. Almost half of the distinct words of the test
+set never occur in the training set. They are rare words, however, and make
+up only a fifth of the running text.
+
+A probe that reaches a high accuracy has shown less than it seems. Most
+words have one usual tag, so a classifier can score well by recognizing
+words, without any grammar in the representation.
+:citet:`Hewitt.Liang.2019` proposed a test. In a *control task* every
+distinct word, or word *type*, is assigned a tag at random, once and for
+all of its occurrences. These tags mean nothing, so a probe can learn them
+only by memorizing which word is which. The *selectivity* of a probe is its
+accuracy on the real task minus its accuracy on the control task, that is,
+the part of its success that memorization does not explain. We fit a
+multinomial logistic regression to each of the two representations, for
+the real tags and for five control tasks. Beside the probes stands a
+baseline that is all memory, a *lookup table*: for each word type it
+returns the most frequent tag that the type had in training. Intervals
+resample sentences.
 
 ```{.python .input #interpretability-probe}
 %%tab pytorch
@@ -687,7 +988,110 @@ if FULL is not None:
     print('full run:', json.dumps(FULL['probe'], indent=1))
 ```
 
-<!-- Placeholder (prose, ### Clean and Corrupted Runs): the recall pairs the model answers, their cities, the LD on clean and corrupted prompts, and the eight position classes of each prompt. -->
+The first surprise is in the first two rows. NOUN, the most frequent tag,
+covers 16% of the test words, and a probe on the bare token embedding
+reaches 0.88. Does the embedding encode grammar, then? The lookup table,
+the row "majority tag per type", encodes nothing and reaches 0.80. It even
+scores higher on the control task, 0.83, than on the real one, and its
+selectivity is negative. The reason is simple. A random tag is a function
+of the word, so the table reproduces it for every word that it has seen. A
+real tag depends on the sentence: *run* is a noun in one and a verb in the
+next. A lookup table is better at nonsense than at grammar.
+
+The stream at block 14 raises the accuracy by four points, to 0.92. If
+accuracy were all we had, we would conclude that the context adds little.
+The control task says otherwise. Its accuracy falls from 0.77 on the
+embedding to 0.51 at block 14. The stream has mixed in the context: it has
+become a worse record of which word stands at a position, and a better
+record of what the word does there. Selectivity rises from 0.11 to 0.41, a
+difference of 0.30 with an interval of 0.29 to 0.31. Accuracy barely
+separates the two representations. Selectivity does.
+
+Even a selective probe is evidence about activations only. It shows that
+the tag can be read from the stream by a linear map. Whether any later
+block reads it there, the probe cannot say, and to find out we must
+intervene. Before we do, note the simplest probe of all. For two classes
+it is the projection on the difference between the two class means, which
+needs no fitting. We use this direction twice below, once to detect and
+once to steer.
+
+## Activation Patching
+
+### Clean and Corrupted Runs
+:label:`subsec_lm_patching`
+
+An intervention takes three decisions: which behavior to measure, which
+activation to change, and what to change it to. The ablations of
+:numref:`sec_what-attention-computes` set a component to zero. That shows
+whether the component is needed, and it also pushes the stream to values
+that it never takes in ordinary operation. *Activation patching* replaces
+an activation by the value that it has on another input. The model then
+stays within its ordinary range, and the experiment isolates whatever
+differs between the two inputs.
+
+For recall, the two inputs are a *clean* prompt, "The Eiffel Tower is
+located in the city of", and a *corrupted* prompt, "The Colosseum is
+located in the city of". They differ only in the landmark, which this
+literature calls the *subject* of the prompt (:numref:`fig_lm_patching`,
+right). We measure the behavior by the *logit difference* at the final
+position,
+
+$$
+\mathrm{LD} = z_{\textrm{Paris}} - z_{\textrm{Rome}},
+$$
+
+in which each city stands for its first token, and Rome is the city of the
+corrupted prompt. LD is large and positive in the clean run and large and
+negative in the corrupted run. Now we run the clean prompt again and, at
+one site $s$ and at some of the positions, overwrite the activation
+$\mathbf{v}_s$ with the value $\mathbf{v}_s^{\mathrm{x}}$ that it had in
+the corrupted run. The *patching effect* is the logit difference that is
+lost, and the *normalized effect* divides it by the whole distance between
+the two runs:
+
+$$
+\mathrm{PE}(s) = \mathrm{LD}(\textrm{clean}) - \mathrm{LD}(\textrm{clean},\ \mathbf{v}_s \leftarrow \mathbf{v}_s^{\mathrm{x}}), \qquad
+\mathrm{NE}(s) = \frac{\mathrm{PE}(s)}{\mathrm{LD}(\textrm{clean}) - \mathrm{LD}(\textrm{corrupted})}.
+$$
+:eqlabel:`eq_lm_patch`
+
+An NE of 0 means that the patch made no difference, and an NE of 1 that it
+did all the damage that replacing the whole prompt would do. One case can
+be predicted. If we patch `resid_post` of some block at *every* position,
+everything above that block computes on the corrupted stream, the output is
+that of the corrupted run, and NE is 1. A complete cut through the network
+recovers the total effect. Do the effects of the single sites of a cut add
+up to 1 as well?
+
+Let us consider the smallest case: two sites $a$ and $b$ that are 1 in the
+clean run and 0 in the corrupted run. If the output is the product $ab$, an
+AND, patching either site alone destroys it. Each site has NE 1, and the
+two effects sum to 2 where the joint effect is 1. If the output is
+$\max(a, b)$, an OR, patching either site alone changes nothing. Each site
+has NE 0, and the joint effect is still 1. So the effects of single sites
+need not add. They count twice what two sites compute together, and they
+miss what one site can do in place of another. Copying from the corrupted
+run into the clean one, as we do, is called *noising*, and it tests whether
+a site is necessary. The opposite direction, *denoising*, copies clean
+activations into the corrupted run and tests whether a site is sufficient.
+There the two cases change roles :cite:`Heimersheim.Nanda.2024`.
+
+The corrupted prompt needs as much care as the metric. Meng et al.
+corrupted the subject by adding noise to its embeddings, which gives the
+model an input unlike any text. Later studies replace tokens by other
+tokens of the same kind
+:cite:`Wang.Variengien.Conmy.ea.2023,Zhang.Nanda.2024`, as we do. Three
+rules went into our list of pairs. The two prompts differ in one thing
+only, the landmark, or we could not say what an effect is an effect of. The
+two landmarks have the same number of tokens, so that positions correspond.
+And no two cities of the list begin with the same token: for New York and
+New Delhi the logit difference would compare " New" with itself.
+
+The next cell collects the pairs that passed the test of
+:numref:`subsec_lm_lenses` and sorts the tokens of each prompt into eight
+classes of positions. The tokens of the subject before its last are pooled
+into one class. The last token of the subject is a class of its own, and so
+is each of the six tokens of " is located in the city of".
 
 ```{.python .input #interpretability-recall-pairs}
 %%tab pytorch
@@ -722,7 +1126,19 @@ print('pairs per prompt length: ' + ', '.join(
     f'{T} tokens {len(by_length[T])}' for T in sorted(by_length)))
 ```
 
-<!-- Placeholder (prose, ### The Patching Map): the noising sweep, three site kinds at every block and position class, one batched forward per site and prompt length; the checks that a complete cut gives NE 1 and a null patch NE 0. -->
+All 40 pairs are kept. The mean logit difference is 8.6 on the clean
+prompts and $-8.9$ on the corrupted ones, so exchanging the landmark moves
+it by about 17.5. The prompts have 9 to 12 tokens.
+
+### The Patching Map
+
+We patch three kinds of site, `resid_post`, `attn_out` and `mlp_out`, at
+each of the 28 blocks and each of the eight classes of positions. This
+makes 672 patched runs per pair. `patched_ld` runs them in batches: one
+forward pass serves one site, with all pairs of one prompt length and all
+eight classes. After the sweep the cell checks the two cases that we can
+predict at every block, the complete cut with NE 1 and a patch that copies
+nothing with NE 0.
 
 ```{.python .input #interpretability-patch}
 %%tab pytorch
@@ -775,7 +1191,13 @@ print(f'effect tensor {NE.shape} (kinds, blocks, positions, pairs)')
 print(f'{NE.size:,} patched forwards, {NE[..., 0].size} per pair')
 ```
 
-<!-- Placeholder (prose, ### The Patching Map): additivity at the handover block, NE(subject last) + NE(final) against NE(both). The two-site toy shows that effects need not add; on this pair at the handover block they nearly do (review 18.6: 0.11 + 0.55 = 0.66 against 0.68): never title it "effects do not add". -->
+Before the map, we settle the question left by the AND and OR example. We
+expect the effect to sit at the subject in the lower blocks, where nothing
+else distinguishes the two prompts, and at the final position in the upper
+blocks, where the answer is read. Let us call the first block at which the
+final position has a larger effect than the last token of the subject the
+*handover* block. Both positions matter there, so we patch each of the two
+alone and then both together.
 
 ```{.python .input #interpretability-patch-additivity}
 %%tab pytorch
@@ -795,7 +1217,22 @@ print(f'block {handover}: NE(subject last) {mean[0, handover, SUBJ_LAST]:.2f}'
       f'NE(both) {float(both.mean()):.2f}')
 ```
 
-<!-- Placeholder (prose, ### The Patching Map): the map below with a city-cluster bootstrap: cells above the declared thresholds, the handover block with its interval (block 20 in every replicate: say so; the percentile interval is narrow), attn_out at the final position at the handover block (one attention layer moves the fact), negative cells (the one below -0.05 is mlp_out at block 27, final position: consistent with final-layer suppression, mention it); caption from spec fig_lm_patching_map (the colour is mean NE). Reading (verify 18.6, review 18.6): the subject-last column stays near 0.4 through blocks 0-19 and only the 0.5 threshold hides it: never write that there is no subject-last band; write that the subject's effect splits across its tokens (both subject classes together NE about 1) and neither class alone passes 0.5. Per pair, before the handover the subject's effect stays on the token or tokens that name the landmark: on the earlier tokens when the last word is generic (Bolshoi Theatre, Shibuya Crossing), on the last token when it is the distinctive one (Big Ben, Pantheon). The information moves to the final position at the handover. Do not write that the earlier tokens carry "the other half" of a per-prompt split; the class means average two kinds of pairs. Name the pitfall: a position class pools tokens with different roles. Single-layer noising shows no mid-depth MLP band (mlp_out passes 0.1 only at blocks 0-2 and 21-22): explain it by single-layer noising, redundancy and a different corruption, not as a refutation of causal tracing. -->
+The handover is at block 20. The single effects, 0.11 and 0.55, sum to
+0.66, and the joint patch gives 0.68. Here, then, the effects do add, to
+within 0.02. The example showed that this cannot be assumed, and it took
+one more run to find out. That the joint effect is 0.68 and not 1 has a
+plain reason: the two positions are not a complete cut. At block 20 the
+rest of the effect still sits on the earlier tokens of the subject and at
+" in".
+
+The next two cells give the map, first in numbers and then as a picture.
+Look at the picture first. The printed lines are the numbers that the
+paragraphs below the picture quote. They begin with the entries of the map
+(the printout calls them cells) whose effect is reliably large: the lower
+end of a 95% bootstrap interval over cities exceeds a threshold. The
+threshold is 0.5 for the stream and for attention, and 0.1 for the MLPs, of
+which no single one was expected to carry much. The remaining lines are
+explained as we use them.
 
 ```{.python .input #interpretability-patch-map}
 %%tab pytorch
@@ -837,6 +1274,10 @@ if FULL is not None:
     print('full run: handover', FULL['patching']['handover'])
     for kind in KINDS:
         print(f'  {kind}: {d2l.block_runs(FULL["patching"][kind], CLASSES)}')
+```
+
+```{.python .input #interpretability-patch-map-plot}
+%%tab pytorch
 d2l.show_heatmaps(torch.tensor(mean).clamp(min=0)[None], 'position', 'block',
                   titles=list(KINDS), figsize=(7, 4.5), xticklabels=CLASSES)
 for ax in d2l.plt.gcf().axes[:len(KINDS)]:  # the names read vertically
@@ -844,7 +1285,121 @@ for ax in d2l.plt.gcf().axes[:len(KINDS)]:  # the names read vertically
 d2l.plt.gcf().axes[-1].set_ylabel('mean NE');  # the colour bar
 ```
 
-<!-- Placeholder (prose, ### Attribution Patching): eq_lm_atp at every site from one clean forward and backward and one corrupted forward, timed against the sweep (quote "about 20 times faster": the pass-count ratio is 224, and batching the patches closes most of that gap). -->
+Each panel has the 28 blocks as rows and the eight classes of positions as
+columns, and its color is the mean NE over the 40 pairs. Negative means are
+drawn as zero.
+
+We start with `resid_post`, on the left. Its dark entries form two bands
+and little else. Up to block 19 the effect sits on the subject, and from
+block 20 on it sits at the final position, " of". Of the five tokens in
+between, only " in" shows at all, as a faint column from block 20 on. The
+bootstrap interval of the handover consists of block 20 alone. Block 20 is
+also where the tuned lens first read the city. The lens was right, then,
+about when the answer arrives at the last position. It is the map that
+tells us so.
+
+Two cautions apply to the band at the subject. First, its large values at
+blocks 0 to 3 teach us nothing. Overwriting the stream of a subject token
+just above the embedding is nearly the same as typing the other landmark.
+Second, the printed list ends at block 3, although the band in the plot
+runs down to block 19. The reason is that the effect of the subject is
+divided among its tokens. Through blocks 0 to 19 the two subject classes
+together have an NE near 1 (median 0.97 over the pairs), and neither class
+alone stays reliably above 0.5.
+
+Nor is the division the same for all pairs. In 17 pairs more than two
+thirds of the effect lies on the earlier tokens, as for the Bolshoi Theatre
+and the Shibuya Crossing. In 11 pairs it lies on the last token, as for Big
+Ben and the Pantheon, and the other 12 fall in between. It is tempting to
+look for a rule, for instance that the effect sits on the word that tells
+one landmark from another. The pairs do not bear it out. The White House
+and the Western Wall end in a generic word, as the Bolshoi Theatre does,
+and have their effect on that last word. A column of the map pools tokens
+that play different roles in different prompts, and its mean describes
+neither kind.
+
+How does the information get from the subject to the final position?
+Positions interact only through attention, so the middle panel should show
+it, and it does. One entry stands out at the final position, at block 20,
+with a mean NE of 0.42 (interval 0.38 to 0.47). The next largest attention
+layers at that position have 0.14 and 0.09. A single attention layer has by
+far the largest share, three times that of any other. It does not do the
+moving alone: its patch removes well under half of the logit difference.
+:citet:`Geva.Bastings.Filippova.ea.2023` describe the same sequence in
+other models: a representation of the subject is built up at the subject's
+own position, and attention in the upper part of the network extracts the
+attribute from there to the last position.
+
+The right panel is the quiet one. An MLP output passes its threshold of
+0.1 only at the tokens of the subject in blocks 0 to 2 and at the final
+position in blocks 21 and 22. The causal tracing of Meng et al. located
+factual recall in the MLPs of the middle blocks, at the last token of the
+subject, and our map shows no such band. The two results do not contradict
+each other. We replace the output of one MLP while the other 27 still
+compute on the clean subject. If several of them can supply the fact,
+single patches hide them all, as in the OR example. Meng et al. restored a
+window of several adjacent layers, in the denoising direction, after a
+different corruption and in a different model. Our map shows where single
+sites are necessary. It does not show where a fact is stored.
+
+One entry is clearly negative: the MLP of the last block at the final
+position, with $-0.17$. Giving this MLP the output that it had in the
+corrupted run *raises* the logit difference. The simplest reading is that
+the last MLP dampens whichever city leads, so that the copy taken from the
+Rome prompt dampens Rome.
+
+### Attribution Patching
+:label:`subsec_lm_atp`
+
+The map took 672 forward passes per pair, for three kinds of site and
+coarse classes of positions. Single heads or single positions would
+multiply that number, and a larger model multiplies the cost of each pass.
+*Attribution patching* :cite:`Nanda.2023` estimates all effects from three
+passes.
+
+Fix a site, and regard the logit difference of the clean run as a function
+$g(\mathbf{v})$ of the value at that site, with everything below the site
+as in the clean run. The patching effect is
+$g(\mathbf{v}^{\mathrm{c}}) - g(\mathbf{v}^{\mathrm{x}})$, where
+$\mathbf{v}^{\mathrm{c}}$ and $\mathbf{v}^{\mathrm{x}}$ are the clean and
+the corrupted value. A first-order expansion of $g$ around the clean value
+gives
+
+$$
+\mathrm{PE}(s) \approx -(\mathbf{v}^{\mathrm{x}} - \mathbf{v}^{\mathrm{c}})^\top \nabla g(\mathbf{v}^{\mathrm{c}}).
+$$
+:eqlabel:`eq_lm_atp`
+
+The estimate is the change of the activation times the sensitivity of the
+output to it. One forward and one backward pass on the clean prompt yield
+$\nabla g(\mathbf{v}^{\mathrm{c}})$ at every site at once, because
+backpropagation computes the gradient with respect to every intermediate
+result, and one forward pass on the corrupted prompt yields every
+$\mathbf{v}^{\mathrm{x}}$.
+
+The estimate is exact if $g$ is affine on the segment between the two
+values. Otherwise it follows the tangent of $g$ at the clean value,
+wherever the tangent leads (Exercise :exref:`ex_lm_interp_atp`). Let us
+consider a gate, $g(v) = 1 / (1 + e^{-v})$, that is open at the clean value
+6 and shut at the corrupted value $-6$. Exchanging the two takes $g$ from
+0.998 to 0.002, an effect of 0.995. At $v = 6$ the gate is saturated and
+its slope is 0.0025, so the estimate is $12 \times 0.0025 = 0.03$, too
+small by a factor of more than 30.
+
+Nothing is wrong with the gradient in this example. A gate that is firmly
+open does not respond to a small change, and the exchange is not a small
+change. In a transformer, functions that are flat where they stand and
+steep elsewhere are nothing exotic. A softmax that puts nearly all of its
+weight on one position is another.
+
+The cell computes :eqref:`eq_lm_atp` for all 672 entries of the map and
+times the computation against the sweep. It needs gradients at sites that
+are not parameters, and some of them not even the output of a module. With
+`record_grad=True` the hook therefore adds to each recorded activation a
+term that is exactly zero but depends on a fresh variable, a copy of the
+activation. The forward pass is unchanged, and a backward pass leaves in
+`ctx.grad_cache` the gradient with respect to that copy, which is the
+gradient at the site.
 
 ```{.python .input #interpretability-atp}
 %%tab pytorch
@@ -874,7 +1429,18 @@ print(f'patching: {sweep_time:.2f} s for {3 * L * 8} forwards per pair; '
       f'AtP: {atp_time:.2f} s for 3 passes; ratio {sweep_time / atp_time:.0f}')
 ```
 
-<!-- Placeholder (prose, ### Attribution Patching): rank agreement of AtP with exact patching outside the near-zero cells (the attn_out interval rests on few cells), the error by block band, and the plot below (caption from spec fig_lm_atp_vs_exact). Reading (verify 18.6): AtP misses the subject positions at every block before the handover, not only early (the subject classes together: exact NE about 1, AtP about 0.1); cite Kramar et al. 2024 (AtP*) on attention saturation. The effect passes through attention there and the patched path is flat at the clean end (the effect rises in an S-curve from clean to corrupted; the slope at the clean end, which AtP computes exactly, is small). After the handover AtP is close but low at the final position (about 40% low at the handover block, 11-18% low from block 22 on). Without the early subject cells resid_post's Spearman is about 0.88, but that cut was not declared: word it by block band only. -->
+The estimate is about 20 times faster. The count of passes, 3 against 672,
+promises more. The sweep recovers most of the difference by running about a
+hundred patches in one batch.
+
+Speed is of no use if the estimate is wrong, so we compare the two maps by
+the rank correlation between estimated and exact effects. It is taken over
+the entries whose exact effect exceeds 0.05 in absolute value, since among
+entries near zero the order is noise. Our bar was set in advance: the two
+maps agree if the lower end of the interval of the pooled correlation is at
+least 0.6. At its end the cell also walks from the clean stream to the
+corrupted one in eight equal steps, at one block. We shall need that walk
+to explain the verdict. The cell after it plots one map against the other.
 
 ```{.python .input #interpretability-atp-agreement}
 %%tab pytorch
@@ -907,6 +1473,35 @@ for what, cols, bs in (('both subject classes', [0, SUBJ_LAST],
           f'NE exact {e.mean():.2f}, AtP {a.mean():.2f} (block means)')
 if FULL is not None:
     print('full run:', json.dumps(FULL['atp spearman'], indent=1))
+
+def ne_path(site, cls, fractions):
+    """Mean NE over pairs with the stream at site, at the positions of
+    the classes cls, moved a fraction t from its clean toward its corrupted
+    value, for each t in fractions."""
+    out = torch.empty(len(fractions), len(pairs))
+    for g in groups:
+        with torch.no_grad(), d2l.intervene(model, record=[site]) as ctx:
+            model(g['X'].to(dev), logits_to_keep=1)
+        a, a_x = ctx.cache[site][0], g['acts'][site]
+        M = masks(g['cls'], [cls])[0].to(dev)[None, :, None]
+        for j, t in enumerate(fractions):
+            with torch.no_grad(), d2l.intervene(model, {site: lambda x: (
+                    torch.where(M, a + t * (a_x - a), x))}):
+                z = model(g['X'].to(dev), logits_to_keep=1)[:, -1]
+            out[j, g['idx']] = (z.gather(1, g['ab'].to(dev)) @ torch.tensor(
+                [1.0, -1.0], device=dev)).cpu()
+    return ((m_clean[None] - out) / gap[None]).mean(1)
+
+t = np.linspace(0, 1, 9)  # block 10: halfway to the handover
+path = ne_path(('resid_post', 10), (0, SUBJ_LAST), t)
+print('resid_post, block 10, both subject classes moved a fraction t of the '
+      'way\nto the corrupted stream:')
+print('  t   ' + ''.join(f'{a:6.3f}' for a in t))
+print('  NE  ' + ''.join(f'{v:6.2f}' for v in path.tolist()))
+```
+
+```{.python .input #interpretability-atp-agreement-plot}
+%%tab pytorch
 ends = [min(exact.min(), approx.min()), max(exact.max(), approx.max())]
 d2l.plot([exact[k].ravel() for k in range(3)] + [ends],
          [approx[k].ravel() for k in range(3)] + [ends], 'exact NE',
@@ -914,7 +1509,173 @@ d2l.plot([exact[k].ravel() for k in range(3)] + [ends],
          fmts=('o', 's', '^', 'k--'), figsize=(4, 4))
 ```
 
-<!-- Placeholder (stage 2): a top-k sparse autoencoder with the parameter layout of the released files. -->
+The estimate fails that test by a wide margin. The pooled correlation is
+0.42, with an interval of 0.17 to 0.56, and no kind of site does better.
+The intervals for attention, which rests on 14 entries, and for the MLPs
+include zero. The next three lines show where the error lies. In blocks 21
+to 27 the mean absolute error is 0.05, and at the final position from block
+20 on the estimate is low but close, 0.62 against 0.75. Below the handover
+it collapses. The two subject classes together have an exact effect of
+0.98, and the estimate says 0.10. Attribution patching misses the largest
+effects of the whole map.
+
+In the plot, every point is an entry of the map, and on the dashed diagonal
+the estimate would be exact. The points that run along the diagonal,
+somewhat below it, belong to the final position in the upper blocks. The
+cloud at the lower right, large exact effects with estimates near zero, is
+the subject below the handover.
+
+Why there? The estimate follows the tangent of $g$ at the clean value, and
+the tangent accounts for a tenth of the drop. The rest must come further
+along the segment between the two landmarks, and the last lines of the
+printout go and look. After block 10, halfway up to the handover, the cell
+moves the stream at the tokens of the subject a fraction $t$ of the way
+from its clean to its corrupted value and measures the NE. On a straight
+line an eighth of the way would cost an eighth of the effect, 0.12. It
+costs 0.02, and a quarter of the way costs 0.09. Then the curve turns
+steep. Between three eighths and five eighths the NE rises from 0.25 to
+0.71, almost half of the whole effect in a quarter of the way, and towards
+the corrupted end it flattens again, at 0.97.
+
+This is the gate of our small example, drawn by the model itself. A small
+step away from the Eiffel Tower still leaves the model with the Eiffel
+Tower. The gradient says what a small change of the activation would do,
+and it says so correctly: not much. Replacing one landmark by another is
+not a small change.
+
+The walk shows the shape of $g$ and not the mechanism behind it.
+:citet:`Kramar.Lieberum.Shah.ea.2024` study such misses and name two main
+sources, a saturated attention softmax and the cancellation of a direct
+effect by indirect ones. Which of them flattens $g$ at the subject, neither
+our three passes nor the nine points of the walk can say.
+
+In practice the estimate serves as a screen. Where it reports an effect, an
+exact patch confirms and measures it at little cost. Where it reports none,
+it has shown nothing, and no site can be ruled out with it.
+
+## Sparse Autoencoders
+
+### Dictionary Learning on the Residual Stream
+:label:`subsec_lm_sae`
+
+Patching told us where the stream matters, and when. It told us nothing
+about what the stream contains. So we turn to the second question: can a
+vector of the stream be written in units that we could name? For this
+question we leave the landmarks. Such units have to be learned from
+millions of positions. A good set has been published for Qwen3-1.7B-Base
+and none for Qwen3-0.6B, and a released set is what we want to examine.
+The model will therefore change below, and the concept with it, from the
+city of a landmark to one that can be checked token by token: the language
+of a text.
+
+The coordinates of the stream are of no help as units: no single one of
+them has a meaning that we could read. Besides, a model has many more
+things to represent than its stream has coordinates, so the things that it
+represents, its *features*, must share directions. This is called
+superposition :cite:`Elhage.Hume.Olsson.ea.2022`.
+
+A small case shows why sharing need not end in confusion. Take three
+features and give them three directions in the plane, 120 degrees apart.
+Two coordinates cannot give each of the three an axis of its own. But
+suppose that at most two of the features are present at a time, in
+nonnegative amounts. Every vector of the plane lies between two of the
+three directions, and it can then be written in one way only, as a
+combination of those two. Now let all three be present in equal amounts.
+They cancel, and the stream reads zero. Features that outnumber the
+coordinates can be told apart as long as few of them are active at once.
+
+The proposal for taking such a mixture apart is older than deep learning.
+:citet:`olshausen1996emergence` described patches of natural images as sums
+of a few elements chosen from a learned *dictionary*, which may hold more
+elements than a patch has pixels, and the elements that they learned
+resembled the receptive fields of simple cells in the visual cortex.
+Applied to a language model
+:cite:`Bricken.Templeton.Batson.ea.2023,Cunningham.Ewart.Riggs.ea.2024`,
+the idea is to write each stream vector $\mathbf{x} \in \mathbb{R}^d$, the
+stream $\mathbf{h}^{(\ell)}$ of one block at one position, as
+
+$$
+\mathbf{x} \approx \mathbf{W} \mathbf{z} + \mathbf{b}, \qquad \mathbf{z} \geq 0 \textrm{ with few nonzero entries}.
+$$
+
+The columns $\mathbf{w}_j$ of $\mathbf{W} \in \mathbb{R}^{d \times m}$ are
+$m \gg d$ candidate directions of features, and the entry $z_j$ of the
+*code* $\mathbf{z}$ says how strongly feature $j$ is present. We say that
+a feature *fires* at a position where its entry is positive. The letter
+$\mathbf{z}$ follows the literature and our code. Logits, which had it
+until now, do not occur in the rest of the section. A *sparse autoencoder*
+(SAE) computes the code with one linear layer and a nonlinearity, its
+encoder, and is trained to reconstruct $\mathbf{x}$
+(:numref:`fig_lm_sae_splice`).
+
+![A sparse autoencoder on the residual stream. The encoder keeps the $k$ largest of many feature activations, and the decoder adds up the directions of these features. Splicing the reconstruction $\hat{\mathbf{x}}$ into the stream in place of $\mathbf{x}$ drops the error $\mathbf{x} - \hat{\mathbf{x}}$ (dotted) and shows what the dictionary loses. The figure also marks two interventions on a single feature, of which we use the second: setting $z_j$ to 0, and adding a multiple of the direction $\mathbf{w}_j$ to the stream.](../img/mdl-lm-pretrained-sae-splice.svg)
+:label:`fig_lm_sae_splice`
+
+How is the code made sparse? The classical choice is a penalty on its
+size. With the bias left out,
+
+$$
+\min_{\mathbf{W},\, \mathbf{z} \geq 0}\ \tfrac{1}{2} \|\mathbf{x} - \mathbf{W} \mathbf{z}\|^2 + \lambda \|\mathbf{z}\|_1,
+$$
+:eqlabel:`eq_lm_sae`
+
+summed over the training vectors, each with a code of its own. Two
+properties of this objective explain the design of current SAEs.
+
+The first is a loophole. Multiply a column $\mathbf{w}_j$ by $c$ and divide
+$z_j$ by $c$: the reconstruction is unchanged and the penalty is $c$ times
+smaller. Without a bound on the columns the penalty can be scaled away, and
+the minimum is never attained. The columns are therefore held at unit norm.
+
+The second is a bias. Suppose that the columns are orthonormal. This
+requires $m \leq d$ and is not the case of interest, but it shows the
+mechanism. Write $y_j = \mathbf{w}_j^\top \mathbf{x}$. The objective then
+separates into one problem per feature, with the solution
+
+$$
+z_j = \max(y_j - \lambda,\, 0).
+$$
+:eqlabel:`eq_lm_sae_shrink`
+
+Features below the threshold $\lambda$ are switched off, which is the
+intent. Every active feature is also reported too small by $\lambda$, which
+is not. For $\mathbf{x} = 3 \mathbf{w}_1$ and $\lambda = 1$ the code is 2,
+and the reconstruction $2 \mathbf{w}_1$ misses the input by 1, although the
+dictionary holds the direction of the input exactly.
+
+*Top-$k$* autoencoders :cite:`Gao.DupreLaTour.Tillman.ea.2025` do without
+the penalty. The encoder keeps the $k$ largest entries of $\mathbf{y}$ and
+sets all others to zero. Sparsity is then a setting, at most $k$ active
+features at every position, and nothing shrinks: the top-1 code of
+$3 \mathbf{w}_1$ is 3. All dictionaries of this section are of this kind.
+They keep the unit norm, so that the activations of different features can
+be compared.
+
+### A Top-k Autoencoder
+
+Before we open a released dictionary we build one ourselves: 8,192
+features, of which $k = 50$ are active, for the stream after block 14,
+halfway up the network. It will not be a good one and does not have to be.
+Its use is to show what goes into such an object, and to stand beside the
+released one when we measure both. The code is a class, a training loop,
+and four short cells that train the dictionary in the regeneration run and
+download it otherwise. In your run these print a parameter count and a
+hash, and all of it may be skimmed. Two explanations on the way should not
+be missed: why the model changes, and why the first position of every
+window of text is left out.
+
+The class uses the parameter names and shapes of the released files that we
+load later, so that one class serves both: an encoder `W_enc` with bias
+`b_enc`, and a decoder `W_dec` with bias `b_dec`. With `center=True` the
+encoder first subtracts `b_dec` from its input, as Gao et al. do. Top-$k$
+and the unit norm we have just met, and `topk_relu` and
+`normalize_decoder_` implement them. One more idea deserves a sentence,
+that of *dead* features. A feature that is never among the $k$ largest
+receives no gradient and stays out for good. The method `loss` therefore
+returns an auxiliary term, in which the features that have not fired for a
+while are asked to reconstruct what the others left over. The last method,
+`remove_parallel_grad_`, removes the part of a gradient that the return to
+unit norm would undo anyway, and can be forgotten.
 
 ```{.python .input #interpretability-topk-sae}
 %%tab pytorch
@@ -1002,7 +1763,10 @@ class TopKSAE(nn.Module):
                 0, keepdim=True))
 ```
 
-<!-- Placeholder (stage 2): training the autoencoder on cached activations. -->
+The training loop, `d2l.train_sae`, is plain Adam over random rows of a
+table of activations. It starts the decoder bias at the mean of the data
+and the encoder at the transpose of the decoder, and it counts for each
+feature the steps since it last fired.
 
 ```{.python .input #interpretability-train-sae}
 %%tab pytorch
@@ -1038,7 +1802,8 @@ def train_sae(sae, activations, *, steps, batch_size=4096, lr=2e-4,
     return losses
 ```
 
-<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): caching the block-14 stream and training an SAE on it under D2L_RERUN; the CPU path loads the one trained for Qwen3-0.6B. -->
+Training takes 5,000 steps. The first of the four cells trains a dictionary
+for Qwen3-0.6B, which only the `SMALL` path uses. On a GPU it does nothing.
 
 ```{.python .input #interpretability-sae-r1}
 %%tab pytorch
@@ -1063,7 +1828,11 @@ elif SMALL:
     sae_06b, tokens_06b = load_ours(ARTIFACTS['sae-06b'])
 ```
 
-<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): Qwen3-1.7B-Base replaces Qwen3-0.6B, because the released dictionaries exist for it. -->
+Here is the change of models that we announced. It is a nuisance and cannot
+be helped, since the comparison with a released dictionary is the point of
+what follows. The cell frees the small model and loads Qwen3-1.7B-Base with
+the same loader, in bf16. Both models use the same vocabulary, so the token
+ids of our data remain valid.
 
 ```{.python .input #interpretability-load-17b}
 %%tab pytorch
@@ -1085,7 +1854,15 @@ else:
           f'{sum(p.numel() for p in model.parameters()):,} parameters')
 ```
 
-<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): under D2L_RERUN, the block-14 stream of Qwen3-1.7B-Base on the training windows. -->
+The last two cells record the stream of the new model after block 14 and
+train our dictionary on it, or download the result. One detail of the
+recording matters for every measurement that follows. The text is cut into
+windows of 256 tokens, and as in :numref:`subsec_lm_port_layerwise` the
+first position of every window is left out. The first token is an attention
+sink whose stream is far larger than any other
+(:numref:`subsec_kv-cache-sinks`), and it alone would decide a squared
+error. The few other positions of extreme norm are dropped for the same
+reason. About seven million positions of FineWeb-Edu remain.
 
 ```{.python .input #interpretability-act-cache}
 %%tab pytorch
@@ -1094,8 +1871,6 @@ if 'sae-17b' in RERUN:
     print(f'{len(acts):,} positions cached, {acts.numel() * 2 / 1e9:.1f} GB '
           'of host memory')
 ```
-
-<!-- Placeholder (prose, ### A Top-k Autoencoder Trained in the Notebook): our SAE for Qwen3-1.7B-Base, trained under D2L_RERUN and loaded otherwise (about 7 M tokens, not 8 M: the outliers and position 0 are left out). -->
 
 ```{.python .input #interpretability-sae-train-or-load}
 %%tab pytorch
@@ -1108,7 +1883,18 @@ else:
     sae, sae_tokens = load_ours(ARTIFACTS['sae-17b'])
 ```
 
-<!-- Placeholder (prose, ### A Released Dictionary): Qwen-Scope's Caution paragraph, quoted from the README at the pinned revision, and the size of the release. -->
+### A Released Dictionary
+:label:`subsec_lm_sae_release`
+
+A good dictionary takes far more data and care than we have spent, and
+research groups have begun to publish theirs, as they publish models.
+Qwen-Scope :cite:`Deng.Wang.Wang.ea.2026` is such a release for several
+Qwen models. Among its dictionaries is, for Qwen3-1.7B-Base, one top-$k$
+SAE with 32,768 features and $k = 50$ for the stream after each of the 28
+blocks. Its model card carries a paragraph headed "Caution", which
+restricts what the SAEs may be used for. Terms of this kind are part of
+what we download, so we print the paragraph from the pinned revision before
+anything else.
 
 ```{.python .input #interpretability-caution}
 %%tab pytorch
@@ -1124,7 +1910,18 @@ mb = ', '.join(str(m) for m in sorted({round(b / 1e6) for b in sizes}))
 print(f'{len(sizes)} files of {mb} MB; this notebook downloads one')
 ```
 
-<!-- Placeholder (stage 2): one layer of the released dictionary, loaded safely. -->
+Measuring what steering does to a base model is scientific research in the
+sense of the paragraph, and we use the SAE for nothing else. Its file is
+downloaded when the notebook runs, 537 MB for the one block that we need,
+and none of its contents is distributed with the book.
+
+The loader fetches one file and checks its tensors against the shapes in
+the configuration of the repository. One of its arguments deserves
+attention. A `.pt` file is a pickle, and unpickling can run code that the
+author of the file put there. With `weights_only=True`, `torch.load`
+refuses everything but tensors and plain containers. Current versions of
+PyTorch do so by default. We write the argument out all the same, and no
+downloaded `.pt` file should be loaded without it.
 
 ```{.python .input #interpretability-load-qwen-scope}
 %%tab pytorch
@@ -1159,7 +1956,23 @@ def load_qwen_scope_sae(repo_id, layer, revision=None, *, device=None,
     return sae.to(device=device, dtype=dtype)
 ```
 
-<!-- Placeholder (stage 2): reconstruction and loss recovered, on the positions the statistics keep. -->
+How good is a dictionary? `d2l.sae_metrics` computes three numbers on
+held-out text. $L_0$ is the mean number of active features per position.
+The *fraction of variance unexplained* (FVU) is the squared reconstruction
+error divided by the squared deviation of the stream from its mean, so 0 is
+perfect and 1 is no better than a constant. The third number asks what the
+model makes of the reconstruction. The function splices
+$\hat{\mathbf{x}}$ into the stream in place of $\mathbf{x}$, lets the model
+run on, and measures the cross-entropy of the next token. Two reference
+points turn this into a scale: the cross-entropy of the unchanged model,
+and that of a model whose stream is replaced by its mean, which is called
+*mean ablation*. Then
+
+$$
+\textrm{loss recovered} = \frac{\mathrm{CE}_{\textrm{mean}} - \mathrm{CE}_{\textrm{splice}}}{\mathrm{CE}_{\textrm{mean}} - \mathrm{CE}_{\textrm{orig}}}
+$$
+
+is 1 if the splice costs nothing and 0 if it is as bad as the mean.
 
 ```{.python .input #interpretability-sae-metrics}
 %%tab pytorch
@@ -1231,7 +2044,19 @@ def sae_metrics(sae, model, token_batches, layer):
             'n_tokens': n}
 ```
 
-<!-- Placeholder (prose, ### A Released Dictionary): the instrument check, both encoder conventions of the release by reconstruction on held-out text, and the declared rule that decides whether the release is used. The release reconstructs only with the raw residual (center=False): a good teaching point for the instrument check. -->
+Before we believe any feature of the release, we check that we apply it as
+its authors do. One convention is at stake: whether the encoder first
+subtracts the decoder bias from its input, as Gao et al. and our own class
+do, or reads the stream as it is, as the example on the model card does.
+Nothing in the tensors of a file says which convention it was trained with.
+A wrong guess raises no error. It yields a dictionary whose features fire,
+have contexts on which they fire most and can be given names, and which
+describes the model badly.
+
+So we do not take even the card's word for it. The cell tries both
+conventions on 200 held-out documents and keeps the one with the smaller
+FVU. By a rule set in advance, it uses the release only if its FVU is then
+below 0.5 and its loss recovered above 0.5.
 
 ```{.python .input #interpretability-sae-instrument}
 %%tab pytorch
@@ -1253,7 +2078,15 @@ else:
     print(f'kept center={release.center}; release used: {USE_RELEASE}')
 ```
 
-<!-- Placeholder (prose, ### A Released Dictionary): the table above (spec tab_lm_sae_compare), ours beside the release as context, not a contest; FVU and loss recovered are different instruments. Loss recovered compresses because mean ablation is a weak baseline (its cross-entropy is about 9.2); the cross-entropy the splice adds is the more telling number. "Unfired" counts the features that never fire on these held-out positions: never call them dead. -->
+The release reads the raw stream, as its card says. Under that convention a
+quarter of the variance is unexplained, and under the other 88%. The check
+is of the same kind as the one in :numref:`sec_lm_d2l_checkpoint`, where
+the port was compared with its reference before any use. A released
+artifact is an instrument, and an instrument is checked before it is read.
+Note also what the loss recovered says of the wrong convention: 0.95. We
+return to this number in a moment.
+
+Now our own dictionary, on the same positions.
 
 ```{.python .input #interpretability-sae-compare}
 %%tab pytorch
@@ -1281,7 +2114,58 @@ if FULL is not None:
     print('full run:', json.dumps(FULL['sae'], indent=1))
 ```
 
-<!-- Placeholder (prose, ### Features and Their Labels): a feature chosen by contrast (Chinese against English Wikipedia) and two by a density rule, their top contexts; never-firing and dense features (feature splitting and absorption named). -->
+The table is not a contest. The released dictionary is four times wider,
+and its card does not say on how many tokens it was trained, presumably far
+more than our seven million. That our FVU of 0.29 comes close to its 0.26
+is pleasant and proves little. The table is here for what it teaches about
+the instruments.
+
+FVU says that a quarter of the variance of the stream is missing from
+either reconstruction. Loss recovered says 0.98, which sounds as if almost
+nothing were lost. Both are right. Loss recovered is measured against mean
+ablation, and mean ablation is a catastrophe: it takes the cross-entropy
+from 2.48 to 9.2 nats per token, most of the way to the 11.9 nats of a
+uniform guess over the vocabulary (:numref:`subsec_lm_icl_copying`). On a
+scale that long, anything that leaves the model working scores close to 1,
+including the release under the wrong convention. The number to look at is
+the cross-entropy that the splice adds: 0.13 nats per token for the release
+and 0.17 for ours. That is a real loss. Even for the better dictionary the
+perplexity rises by about 14%. An analysis that goes through an SAE
+describes this slightly worse model, and not quite the one that we set out
+to understand.
+
+The last row counts the features that never fire on these 51,000
+positions: 3 of ours, and 8,147 of the release, a quarter of its
+dictionary. It would be rash to call them dead. Our held-out text is
+English prose from educational web pages, and a large dictionary has
+features for other languages, for code and for much else that such text
+does not offer. The next subsection meets a feature that fires on a third
+of all positions in Chinese text and hardly ever in English.
+
+One warning before we use the features. A dictionary describes the
+checkpoint that it was trained on. Applying it to another one, say to the
+post-trained sibling of a base model, is an assumption, and the
+reconstruction check tests it.
+
+### Features and Their Labels
+:label:`subsec_lm_sae_features`
+
+What do the features of the released dictionary stand for? The usual
+procedure is to look at the text on which a feature is most active and to
+give it a name. Which features we look at must not depend on whether we
+like what we see, so we choose three by rules. The first comes from a
+contrast: among all 32,768 features we take the one whose firing rate
+differs most between 300 Chinese and 300 English Wikipedia articles. Both
+sets have the same source, so language is what separates them. (The data
+cell took the articles from 20 places spread over each Wikipedia file,
+because neighbors in such a file share topics.) The other two features are
+drawn at random among those that fire on between 0.1% and 1% of the
+held-out positions.
+
+For each of the three we print its *top contexts*, the eight on which its
+activation is highest. A line shows the activation, the text up to and
+including the token at which the feature fires, and in brackets the token
+that follows.
 
 ```{.python .input #interpretability-features}
 %%tab pytorch
@@ -1319,7 +2203,46 @@ for j, f in enumerate(FEATS):  # top-8 contexts: 11 tokens, then [token]
         print(f'  {A[i, t, j]:6.1f}  {before}[{at}]'.replace('\n', '\\n'))
 ```
 
-<!-- Placeholder (prose, ### Features and Their Labels): the contrast feature's label "Chinese text" tested as a token rule on held-out documents, beside the difference-of-means probe and the five contrast features together (feature splitting). The rule counts a token as Chinese if it holds a CJK character, punctuation included, and leaves out byte-fragment tokens; an earlier rule ("holds a Han character") counted the fullwidth punctuation and the fragments of Chinese text as not Chinese: say that the rule corrects the instrument. -->
+The contrast is clear-cut. Feature 24946 fires on 35% of the Chinese
+positions and hardly ever on an English one, and four more features follow
+with rates between 14% and 27%. Its top contexts are Chinese prose on
+organizations, archaeology and software, and a label suggests itself:
+*Chinese text*. The printout also counts 12 *dense* features, which fire on
+more than a tenth of the held-out positions and can stand for nothing as
+specific as the examples here. The random draw leaves them out.
+
+Feature 24639 was drawn at random and is just as easy to name. It fires at
+" Fort" before " Worth", at " San" before " Francisco", and at " the"
+before " Atlanta", " Vancouver" and " Arizona": a place name is about to be
+written or completed. The feature concerns the token to come and not the
+one that it sits on. Its first context lies in a Chinese article, so it
+does not care about the language around it. Feature 11270, the third, fires
+in Chinese and in English, before " calls", " who" and "tra", and we cannot
+name it. Galleries of published features show the first two kinds. A random
+draw also returns the third.
+
+A name given on the strength of eight contexts is a hypothesis about the
+largest activations of a feature. It claims nothing about the weaker ones,
+nor about the text on which the feature should fire and does not. So we
+test the label "Chinese text" as a rule, on 100 Chinese and 100 English
+articles that took no part in the choice. A token counts as Chinese if it
+contains a *Han character*, which is Unicode's name for the characters of
+the Chinese script, or Chinese punctuation. The feature predicts "Chinese"
+wherever it fires. The rule is an instrument, too. A rule that asked for a
+Han character alone would score every Chinese comma on which the feature
+fires as a false alarm, and we would blame the feature for an error of the
+label. Tokens that are fragments of the bytes of a character cannot be
+labeled alone and are left out.
+
+Two competitors are scored beside the feature. One is the five features of
+the contrast table together, active where any of them is. The other needs
+no dictionary. It is the two-class probe of :numref:`subsec_lm_probes`: the
+projection of the stream on the difference between the mean Chinese and the
+mean English stream of the contrast articles, with its threshold halfway
+between the two means. Precision is the fraction of the predicted tokens
+that are Chinese, and recall the fraction of the Chinese tokens that are
+predicted. The AUC is the probability that a Chinese token receives a
+higher score than a token that is not Chinese.
 
 ```{.python .input #interpretability-label-test}
 %%tab pytorch
@@ -1372,7 +2295,81 @@ if FULL is not None:
     print('full run:', json.dumps(FULL['label test'], indent=1))
 ```
 
-<!-- Placeholder (prose, ### Steering Directions): three directions at block 14 (the feature's decoder column, the difference of means, random ones), and the median stream norm that makes their strengths comparable. The two informed directions have cosine only about 0.28, yet both steer. -->
+The label is right about where the feature fires and wrong about how much
+it covers. Where the feature is active, the token is Chinese in 88% of the
+cases. Since the feature fires in none of the English articles, the other
+12% are tokens inside Chinese articles that the rule does not count, such
+as numerals and Latin names. But the feature is active on only 44% of the
+Chinese tokens, with an interval of 37% to 51%. "Chinese text" would
+describe a feature that fires on all of them. This one fires on some
+Chinese text, and its top contexts do not reveal on which.
+
+The five features together reach a recall of 0.81. The dictionary has
+spread the concept over several features, each of which covers a part.
+This is known as *feature splitting*. A general feature may also fall
+silent in the cases that a more specific one has taken over
+:cite:`Chanin.WilkenSmith.Dulka.ea.2024`. Either way the label of a feature
+promises more than the feature keeps.
+
+As a detector, the plain projection beats them all. It finds 98% of the
+Chinese tokens, and its AUC of 0.97 exceeds the 0.70 of the feature by
+0.27, with an interval of 0.23 to 0.30. Its precision of 0.81 is lower, and
+it crosses its threshold somewhere in 65 of the 100 English articles, where
+the feature never fires. :citet:`Kantamneni.Engels.Rajamanoharan.ea.2025`
+and :citet:`Smith.Rajamanoharan.Conmy.ea.2025` report the same, the first
+over many probing datasets: for detecting a concept that is known in
+advance, the features of sparse autoencoders have not reliably beaten
+linear probes.
+
+A direction that is read from the stream while a model runs is called a
+*monitor*. :citet:`Chen.Arditi.Sleight.ea.2025` watch for traits of a
+model's character with directions of this kind, obtained from contrasting
+prompts. Our table shows what a monitor is: a detector, whose precision and
+recall have to be measured before its flag means anything.
+
+What a dictionary offers is of another kind. A probe answers a question
+that we thought to ask. The dictionary proposed "a place name comes next"
+without being asked, and every such proposal then has to be tested as we
+tested the first.
+
+## Steering
+
+### Steering Directions
+:label:`subsec_lm_steering`
+
+If a direction of the stream stands for Chinese, then adding it to the
+stream should make the model write Chinese. This is *steering*, the most
+direct intervention of all, and the Qwen-Scope report demonstrates it with
+features for languages. What such demonstrations tend to leave out is the
+cost. A vector added to the stream at every position disturbs everything
+else that the model computes there. We therefore measure both the behavior
+and the damage, as functions of the strength.
+
+At block 14 we replace the stream at every position $i \geq 1$ by
+
+$$
+\mathbf{h}_i^{(14)} + \alpha\, \bar{n}\, \mathbf{u},
+$$
+:eqlabel:`eq_lm_steer`
+
+where $\mathbf{u}$ is a direction of unit length and $\bar{n}$ is the
+median norm of the stream at this block on English text. The *strength*
+$\alpha$ is thus a fraction of the typical length of the stream. This puts
+the strengths of different directions on one scale. What a given strength
+costs still has to be measured. Position 0, the attention sink, is left
+alone.
+
+Four interventions compete. The first direction is the decoder column of
+feature 24946. The second is the difference between the mean streams on
+Chinese and on English text, which served as a probe above.
+:citet:`Rimsky.Gabrieli.Schulz.ea.2024` steer with such a difference of
+means, and :citet:`Zou.Phan.Chen.ea.2023` with a principal component of
+such differences. We call these two the *informed* directions, as the code
+does. Five random directions give the floor: they show what any vector of
+this length does. The fourth intervention changes no activation. It puts a
+Chinese sentence in front of the prompt, which announces that the text will
+continue in Chinese. We wrote the sentence down before any run and did not
+tune it.
 
 ```{.python .input #interpretability-directions}
 %%tab pytorch
@@ -1398,7 +2395,37 @@ if not SMALL:  # its decoder column is all we keep of the release
     d2l.lm_free()
 ```
 
-<!-- Placeholder (prose, ### The Steering Frontier): eq_lm_steer on a grid of strengths for each direction (half-octave from 1/16 to 2; for the two informed directions also every twelfth of an octave from 1/16 to 1/4: this fine grid was added after a first run showed the switch happening within a third of an octave; say so), and a fixed Chinese prefix that changes no activation: behaviour (switched prompts) and cost (cross-entropy on English text). The CPU path (Qwen3-0.6B with its own SAE, another model) uses half-octave steps up to 1/2 plus two quarter-octave points between 1/8 and 1/4, where its switch happens; its frontier numbers are not comparable with the full run's. Past the cliff the outputs degenerate ("（（（（" loops, repeated phrases); the switched fraction falls partly because fullwidth punctuation is not Han. Call it breakdown, never a return to English: the cost falls there only because a broken model predicts less confidently. -->
+The stream has a median norm of about 190. The two directions that both
+"mean" Chinese are far from parallel, with a cosine of 0.28. A concept does
+not single out one direction of the stream. The random directions are
+nearly orthogonal to both.
+
+### The Steering Frontier
+
+We measure behavior on 100 prompts, the first 32 tokens of English web
+documents. The steered model continues each of them greedily for 48 tokens,
+and a continuation counts as *switched* if at least 30% of its characters
+are Han characters. This rule is cruder than that of the label test, which
+also counted punctuation, and it can afford to be: at 30% of a whole
+continuation a few commas decide nothing.
+
+We measure cost on 200 other English documents, as the increase of the
+cross-entropy per token under the same intervention. The cost comes in two
+versions. The plain cross-entropy charges the model for all the probability
+that it moves to Chinese tokens, which is the very thing we asked for. The
+second version first renormalizes the distribution of the model over the
+tokens without Han characters. (The data cell marked the others, about one
+token in six of the vocabulary.) It measures the collateral damage: how
+much worse the model predicts English once we disregard its new inclination
+to switch. A cost of 0.5 nats per token, which raises the perplexity by
+about two thirds, is the largest that we consider, and we call it the
+*cap*.
+
+The strengths run from 1/16 to 2, each larger than the last by a factor of
+$\sqrt{2}$. A first run on this grid showed the whole transition of both
+informed directions inside one step, so between 1/16 and 1/4 these two get
+a finer grid, in steps of about 6%. For each of them the cell prints the
+largest strength whose plain cost stays below the cap, and the next one.
 
 ```{.python .input #interpretability-steer}
 %%tab pytorch
@@ -1464,7 +2491,8 @@ print(f'  random ({len(RANDOM)} draws): at most '
           f'{min(cost_of(n, a) for n in RANDOM):.2f}-'
           f'{max(cost_of(n, a) for n in RANDOM):.2f} at alpha {a:.3g}'
           for a in GRID[RANDOM[0]][i:i + 2]))
-print(f'prefix: switched {switched("prefix", 0.0):.2f}')
+print(f'prefix: switched {switched("prefix", 0.0):.2f} '
+      f'(cost {cost_of("prefix", 0.0):.2f})')
 RESULTS['steering_prompts.csv'] = pd.DataFrame(
     [(n, a, i, h) for (n, a), (hs, _) in runs.items()
      for i, h in enumerate(hs)],
@@ -1477,7 +2505,43 @@ RESULTS['steering_docs.csv'] = pd.DataFrame(
 ).to_csv(index=False).encode()
 ```
 
-<!-- Placeholder (prose, ### The Steering Frontier): the frontier plot below (caption from spec fig_lm_steering_frontier: the line is the frontier, the most switched at each cost or less; grey points are strengths past each direction's peak, where the output breaks down; every random draw switches nothing, so their mean is the floor), areas up to the cost cap with paired intervals under both costs (plain cross-entropy on English, which partly measures the intended shift to Chinese, and the same without Han tokens, the collateral damage), the random-direction floor, and the prefix against each direction at its own cost; the bootstrap resamples prompts (seed 0) and cost documents (seed 1) independently. Cost of half switched is read along the strengths, between the first strength that switches half and the one before it. Wording (verify 18.6, review 18.6): the area difference is marginal (lower bound near 0, about 2% of replicates at or below 0): the feature is "slightly cheaper at this sample size", not clearly cheaper; a step envelope without interpolation gives the same sign. The prefix is an instruction on a base model, which continues the document: at its cost every method switches only a few percent, so "worse than a direction" carries little; AxBench's comparison is about instruction-tuned models (author ruling pending, review 18.6 finding 5). Samples are taken at the largest strength below the cap, where only a minority of prompts switch: that is why most continuations stay English. -->
+Three things stand out. First, random directions do not switch a single
+prompt at any strength, although they do their share of damage: 0.35 to
+0.41 nats at $\alpha = 0.7$. The switch is the work of the direction and
+not of the disturbance. Surprisingly, the model tolerates a great deal of
+disturbance as long as it points nowhere in particular: a random vector 70%
+as long as the stream itself costs about as much as an informed one of 10%
+to 16%.
+
+Second, steering is not a dial with a comfortable range. Between
+$\alpha = 0.157$ and $\alpha = 0.167$, a step of about 6%, the feature goes
+from 29% to 52% of the prompts, and its cost from 0.25 to 0.62 nats. The
+difference of means makes the same jump near $\alpha = 0.1$. That it acts
+at a smaller strength is no advantage, since it does its damage at a
+smaller strength as well. A strength alone says little, then, and from here
+on we compare the two directions by cost.
+
+Third, the prefix switches 1 prompt in 100. Its cost is small, 0.05 nats
+per token, and so is its effect. A base model continues the document in
+front of it, and an instruction placed before an English document is one
+more sentence that the document then ignores.
+:citet:`Wu.Arora.Geiger.ea.2025` found prompting ahead of every steering
+method that they tried, on models trained to follow instructions. Our
+prefix does not test their claim. Exercise
+:exref:`ex_lm_interp_instruct` does.
+
+To compare the directions, we plot the fraction of switched prompts against
+the cost and take for each direction its *frontier*: the largest fraction
+that it reaches at a given cost or less. One number summarizes a frontier,
+the area under it between zero cost and the cap. A direction that switched
+every prompt at no cost would have an area of 0.5, the width of the cap.
+The cell computes the area under both versions of the cost, the fraction
+switched at the cap, and the cost at which half of the prompts switch. The
+cap falls between two measured strengths, in the middle of the cliff, so
+the fraction at the cap is read off the frontier by linear interpolation.
+The intervals come from 2,000 bootstrap replicates that resample prompts
+and documents and use the same resample for both directions, so that
+differences are paired.
 
 ```{.python .input #interpretability-frontier}
 %%tab pytorch
@@ -1543,6 +2607,15 @@ peak = {n: len(frac[n]) - 1 - int(np.argmax(frac[n][::-1]))
 env = {n: d2l.frontier_envelope(cost[n], frac[n]) for n in INFORMED}
 past = [np.concatenate([v[n][peak[n] + 1:] for n in INFORMED])
         for v in (cost, frac)]  # past the peak: the output breaks down
+RESULTS['summary.json'] = json.dumps(SUMMARY, indent=1, default=float,
+                                     ensure_ascii=False).encode()
+if 'results' in RERUN:  # the CPU path's numbers are never published
+    d2l.lm_save_rerun('lm-interp-results.zip',
+                      lambda p: d2l.lm_write_zip(p, RESULTS))
+```
+
+```{.python .input #interpretability-frontier-plot}
+%%tab pytorch
 d2l.plot([env[n][0] for n in INFORMED]
          + [np.mean([cost[n] for n in RANDOM], 0), [ce_p[:, 0].mean()],
             past[0]] + [cost[n][:peak[n] + 1] for n in INFORMED] + [[CAP, CAP]],
@@ -1558,15 +2631,52 @@ d2l.plot([env[n][0] for n in INFORMED]
 ax = d2l.plt.gca()
 ax.set_xscale('symlog', linthresh=0.01)  # linear up to 0.01 nats, then log
 ax.set_xlim(min(0, *(c.min() for c in cost.values())),
-            2 * max(c.max() for c in cost.values()))
-RESULTS['summary.json'] = json.dumps(SUMMARY, indent=1, default=float,
-                                     ensure_ascii=False).encode()
-if 'results' in RERUN:  # the CPU path's numbers are never published
-    d2l.lm_save_rerun('lm-interp-results.zip',
-                      lambda p: d2l.lm_write_zip(p, RESULTS))
+            2 * max(c.max() for c in cost.values()));
 ```
 
-<!-- Placeholder (prose, ### The Steering Frontier): continuations at each informed direction's operating point, beside the unsteered model and the prefix, including the Eiffel prompt. -->
+The first result is that the question "does steering work within the cap?"
+has no answer until we say what counts as damage. Under the plain cost
+neither direction switches half of the prompts within the cap. The largest
+strengths below it switch 29% and 17%, at the cap itself the frontiers
+stand at 45% and 37%, and half of the prompts takes about 0.6 and 0.9 nats.
+Under the cost without Han tokens the feature gets there, with half of the
+prompts at about 0.3 nats and 65% at the cap. The difference of means comes
+to about one half at the cap: 54%, with an interval of 45% to 63%. A report
+on steering has to say which cost it used.
+
+The second result reverses the order of the label test. As a detector, the
+difference of means was far better than the feature
+(:numref:`subsec_lm_sae_features`). As a direction to push along, it is no
+better. The direction that best separates two sets of activations need not
+be the best one for moving the model from one to the other. On these
+prompts the feature is in fact slightly ahead. Its area under the plain
+cost is 0.124, a quarter of the 0.5 that a free switch would give, against
+0.099. The paired difference of 0.025 has an interval of 0.001 to 0.052,
+and without Han tokens it is 0.036, with an interval of 0.007 to 0.067. One
+hundred prompts barely resolve a lead of this size: 2% of the replicates
+have the other sign. The reversal does not depend on it.
+
+The last lines of the printout add nothing new. Below the cap no random
+direction switches a prompt, and the prefix, with its one prompt, is no
+better than either direction at its cost of 0.05 nats.
+
+In the plot, the lines are the two frontiers, the markers on them the
+single strengths, and the dashed line is the cap. The cost axis is
+logarithmic above 0.01 nats, so the areas that we computed, which belong to
+a linear axis, cannot be compared by eye. Both curves do rise to nearly all
+prompts, far to the right of the cap.
+
+The gray points are strengths beyond the best one of each direction. There
+the fraction falls again, at the largest strengths to zero. More of a
+direction that stands for Chinese does not give more Chinese. What it gives
+instead is best seen in the text that the model writes.
+
+So, finally, what does a steered model write? The cell takes each direction
+at its largest strength below the cap, where 29% and 17% of the prompts
+switch. It prints the continuations of three of the prompts and of the
+Eiffel prompt, with the collateral cost of each setting. Then it goes to
+the gray points and prints the Eiffel prompt at two of them for each
+direction: the first strength past the peak, and the largest, $\alpha = 2$.
 
 ```{.python .input #interpretability-steer-samples}
 %%tab pytorch
@@ -1608,4 +2718,764 @@ for name, (fn, prefix, renorm) in conditions.items():
     print(f'--- {name} (cost without Han: {renorm:+.3f} nats per token)')
     for s, g in zip(samples, gens):
         print_folded(f'...{s[-30:]}|{g.text}'.replace('\n', ' '))
+print('--- past the peak: the Eiffel prompt, the next and the largest alpha')
+for n in INFORMED:
+    for i in sorted({peak[n] + 1, len(GRID[n]) - 1} - {len(GRID[n])}):
+        with steering(steer(GRID[n][i] * n_bar * directions[n])):
+            g, = d2l.generate(model, tok, [eiffel], max_new_tokens=48)
+        print(f'{n}, alpha {GRID[n][i]:.3g} (switched {frac[n][i]:.2f}, '
+              f'cost {cost[n][i]:.2f}):')
+        print_folded(f'    ...{eiffel[-30:]}|{g.text}'.replace('\n', ' '))
 ```
+
+None of the three web prompts switches to Chinese under any intervention,
+as most prompts do not at these strengths. The second is a Dutch title and
+stays Dutch. They are not untouched, though. Under the difference of means
+the apricot of the first prompt becomes "a popular fruit in China". A
+direction computed from the Chinese and the English Wikipedia separates
+more than the language.
+
+The Eiffel prompt switches under both directions, in the middle of a
+sentence. With the feature the model writes "It is 324米高" and goes on to
+say in Chinese what the unsteered model said in English: that the tower
+was built in 1889 for the hundredth anniversary of the French Revolution.
+The language changed and the facts did not. With the difference of means
+the sentence turns after "324米 high" into a school exercise that asks for
+the unit of the 324, and then into another exercise altogether. Two
+directions of almost the same cost produce very different text, and no
+number on the frontier shows it.
+
+The last four continuations belong to the gray points. One step past its
+peak, at $\alpha = 0.71$, the feature still switches 80% of the prompts,
+and its Eiffel Tower is Chinese from the first token on: the tower stands
+in the center of Paris (巴黎), rises into the clouds, and is made of iron.
+The city has survived. The engineer has not: he is now a Henry Edgar Edgar.
+The difference of means, one step past its peak at $\alpha = 0.35$,
+still switches 65% of the prompts. To this one it replies with a
+multiple-choice question, "A. Paris B. London C. Berlin D.莫斯科" (the
+last is Moscow). It gives A as the answer and starts on a second question,
+in which Chinese characters stand inside English words. It is the school
+exercise again. The prose is gone, and the answer is still Paris.
+
+At $\alpha = 2$ the two directions meet. Both print rows of brackets,
+full-width ones under the feature and plain ones under the difference of
+means, and no prompt counts as switched. The cost does not keep track of
+this decline. The difference of means costs 9.1 nats one step past its peak
+and 6.8 nats at $\alpha = 2$, and in the plot the gray points at the bottom
+reach as far left as about 1 nat. Past the peak, neither axis of the
+frontier orders the strengths any more, and only the text shows what has
+happened.
+
+### Levels of Evidence
+:label:`subsec_lm_interp_evidence`
+
+:numref:`tab_lm_interp_evidence` arranges the checks of this section as
+:numref:`tab_induction-evidence` arranged those of the induction heads, by
+the level of evidence that each provides. Its last column is the one to
+read. Every check that only read activations left open whether the model
+uses what was read, and each time it took an intervention to say more.
+
+:Evidence about Qwen3 gathered in this section, by level.
+:label:`tab_lm_interp_evidence`
+
+| check in this section | evidence level | supported conclusion | remaining limitation |
+|:--|:--|:--|:--|
+| continuation of the prompt | behavioral | the model recalls the city | identifies no component |
+| exchange of the landmark | input intervention | the answer follows the subject | says nothing about the inside |
+| logit lens, tuned lens | activation | the city can be decoded at the last position in the last third of the network only | a read-out; the scale of the logit lens is wrong |
+| probe with a control task | activation | the stream at mid-depth records the part of speech beyond the identity of the word | does not show that the model uses it |
+| activation patching | component intervention | recall needs the subject in the lower blocks and the final position in the upper ones; one attention layer has the largest share of the transfer | single sites, one direction, one corruption; redundancy stays hidden |
+| attribution patching | gradient | a fast estimate that is close in the upper blocks | misses the largest effects, at the subject below the handover |
+| splice of the reconstruction | component intervention | the release, applied as checked, leaves the model nearly as good a predictor | a quarter of the variance is not in the dictionary |
+| feature label | activation | one feature fires on Chinese text | drawn from the strongest activations only |
+| label as a tested rule | activation, with a baseline | the label is precise and covers under half of the concept; a difference of means detects better | one concept, one rule for the label |
+| steering against cost | component intervention | two directions switch the language, random ones do not | the cost rises as steeply as the effect; one concept |
+
+Every row below the second needed the weights of the model, and the
+interventions needed write access to its activations. The largest models
+cannot be opened in this way at all. They answer over a network, and what
+comes back is text. :numref:`sec_lm_api` has to make do with that.
+
+## Summary
+
+A claim about what a model computes is tested by changing its activations,
+and reading them only suggests what to test. Lenses and probes show what
+can be decoded from the residual stream, and a control task, or a baseline
+as plain as a lookup table, shows how much of a probe's accuracy is the
+model's doing. Activation patching located the recall of a landmark's city
+in Qwen3-0.6B at the subject up to block 19 and at the final position from
+block 20, with one attention layer carrying the largest share across. The
+fast first-order estimate of the same map missed its largest effects. A
+sparse autoencoder decomposes the stream into features that can be named,
+at a loss that the reconstruction measures. Such a name is a hypothesis:
+ours had a precision of 0.88 and a recall of 0.44, and a difference of
+means detected the same concept better. Steering along a
+direction changes the language of the model only near the strength at which
+it begins to damage everything else, so an effect is reported together with
+its cost and with a random direction as the floor.
+
+## Exercises
+
+1. **The lens at the embedding.**
+    1. The lens at block 0 multiplies the contributions that have arrived
+       there by the factor 55 that we measured. Suppose that these
+       contributions favor one token over another by 0.1. Which odds
+       between the two tokens does the lens report, and which odds do the
+       contributions imply? Why does the factor leave the rank of every
+       token as it is?
+    1. Applied to the embedding $\mathbf{e}_x$ alone, the lens is a
+       function of the current token only. Which statistics of text can
+       such a read-out reproduce at best?
+    1. [code] Compute this read-out for the 1,000 most frequent tokens of
+       the held-out documents. For how many of them is the first-ranked
+       token the input token itself? Explain the result from the fact that
+       the model uses $\mathbf{E}$ both as its embedding and as its output
+       weights.
+
+1. **Reading a control task.**
+    1. Our control task draws one tag for each word type. Suppose that it
+       drew a tag anew for every occurrence of a word. Which accuracy
+       could a probe then reach on the control task, whatever the
+       representation, and why would such a control say nothing about
+       memorization?
+    1. The lookup table reaches 0.83 on the control task. Predict this
+       value from two numbers that the section prints: the fraction of the
+       test words whose type does not occur in training, and the frequency
+       of the most frequent tag.
+    1. [code] Compute the task accuracy, the control accuracy and the
+       selectivity of a probe on the stream after blocks 0, 4, 8, 12, 16,
+       20, 24 and 27, with `d2l.lm_word_features`. At which depth is the
+       selectivity largest, and how does it change towards the last block?
+       Relate what you find to the job of the last blocks, which is to
+       predict the next token.
+
+1. [code] **Denoising.** ● Compute the map of
+   :numref:`subsec_lm_patching` in the denoising direction: run the
+   corrupted prompt, copy single sites from the clean run, and normalize
+   the gain in logit difference as in :eqref:`eq_lm_patch`.
+    1. List the entries in which the two maps differ by more than 0.2,
+       and explain each group with the AND and OR cases.
+    1. Does the `mlp_out` panel now show a band at the last token of the
+       subject? Restore the MLP outputs of five adjacent blocks at once
+       and compare.
+    1. Add `resid_mid` to both maps. In which blocks does it differ from
+       `resid_post`, and what does the difference isolate?
+
+1. **The error of attribution patching.**
+    1. Derive :eqref:`eq_lm_atp` from Taylor's theorem, and show that its
+       error is at most
+       $\tfrac{1}{2} \sup_{t \in [0, 1]} |\boldsymbol{\delta}^\top \mathbf{H}(\mathbf{v}^{\mathrm{c}} + t \boldsymbol{\delta})\, \boldsymbol{\delta}|$,
+       where $\boldsymbol{\delta} = \mathbf{v}^{\mathrm{x}} - \mathbf{v}^{\mathrm{c}}$
+       and $\mathbf{H}$ is the Hessian of $g$. When is the estimate exact?
+    1. For the gate of :numref:`subsec_lm_atp` the estimate was too small.
+       Let now $g(v) = v^2$, with the clean value 1 and the corrupted value
+       0, and compute the effect and the estimate. Then find a clean and a
+       corrupted value for which the estimate has the wrong sign.
+    1. Show that
+       $\mathrm{PE} = -\boldsymbol{\delta}^\top \int_0^1 \nabla g(\mathbf{v}^{\mathrm{c}} + t \boldsymbol{\delta})\, dt$
+       holds exactly.
+    1. [code] Approximate the integral by the mean of the gradients at 8
+       points of the segment, for `resid_post` at the two subject classes
+       in blocks 0 to 19. A site can be overwritten and recorded with its
+       gradient in the same `d2l.intervene` context. How close does the
+       estimate come to the exact effect of 0.98, and how many passes does
+       it take? Which of the 8 points contribute most to the mean? Compare
+       with the walk that the section printed for block 10. Then repeat the
+       walk at blocks 2 and 18. Does the curve keep its shape?
+   :exlabel:`ex_lm_interp_atp`
+
+1. **Shrinkage.** Let the columns of $\mathbf{W}$ be orthonormal.
+    1. Derive :eqref:`eq_lm_sae_shrink` from :eqref:`eq_lm_sae`.
+    1. Let $\mathbf{x} = \sum_{j \in S} y_j \mathbf{w}_j$ with $|S| = k$
+       and all $y_j > \lambda$. Show that the squared reconstruction error
+       of the L1 code is $k \lambda^2$, and that the top-$k$ code
+       reconstructs $\mathbf{x}$ exactly.
+    1. Give an input for which the L1 code and the top-$k$ code have
+       different sets of active features. Which of the two reconstructs it
+       better, and which one would you call sparser?
+
+1. [code] **A second concept.** ● Repeat
+   :numref:`subsec_lm_sae_features` and :numref:`subsec_lm_steering` for
+   French against English Wikipedia.
+    1. Report the precision, recall and AUC of the best contrast feature
+       and of the difference-of-means probe on held-out articles.
+    1. Report the areas of the two frontiers under both costs, with the
+       paired interval of their difference. The switching rule needs a
+       replacement for the test on Han characters. State yours.
+    1. Is the order of the two directions the same as for Chinese, in
+       detection and in steering?
+
+1. [code] **Prompting a model that follows instructions.** ● The prefix
+   of :numref:`subsec_lm_steering` was tested on a base model. Load the
+   post-trained Qwen3-1.7B with `d2l.load_qwen3`.
+    1. Compute the FVU and the loss recovered of the released dictionary
+       on this model. Does it pass the rule of
+       :numref:`subsec_lm_sae_release`?
+    1. Render the 100 prompts with the chat template, once with the
+       request to continue the text in Chinese and once without, and
+       measure the switched fraction and both costs of the request.
+    1. Steer the model with the two directions on the prompts without
+       the request, and put all three on one frontier. Does the request
+       beat both directions at equal cost, as
+       :citet:`Wu.Arora.Geiger.ea.2025` report for their models?
+   :exlabel:`ex_lm_interp_instruct`
+
+1. [code] **Induction heads by ablation.** ●● The experiment of
+   :numref:`subsec_lm_icl_copying` showed that Qwen3-1.7B-Base copies a
+   repeated random sequence and named no component.
+    1. With the `head_z` site, replace the output of one head at a time
+       by its mean over all positions and sequences, for every head of
+       the model, and record the rise of the loss on the second copy.
+    1. Which heads matter most, and in which blocks do they lie? Compare
+       their effect with that of five heads drawn at random.
+    1. Ablate the five most important heads together. Is the joint
+       effect larger or smaller than the sum of the single effects, and
+       which of the two cases of :numref:`subsec_lm_patching` does this
+       resemble?
+   :exlabel:`ex_lm_interp_induction`
+
+1. [extended] **Transcoders and an attribution graph.** ●● A
+   *transcoder* is a sparse dictionary that is trained to reproduce the
+   output of an MLP from its input. Since its features replace the MLP,
+   the effect of a feature in one block on a feature in a later block is
+   linear once the attention patterns and the normalization factors are
+   fixed, and these effects form an *attribution graph*
+   :cite:`Ameisen.Lindsey.Pearce.ea.2025`. Gemma Scope 2 publishes
+   transcoders for the Gemma 3 models, for instance
+   `transcoder/layer_13_width_16k_l0_small` in the repository
+   `google/gemma-scope-2-1b-pt` for `google/gemma-3-1b-pt`. The model is
+   gated: its terms have to be accepted on the Hub first. The
+   `config.json` beside the parameters names the two activations of block
+   13 that the transcoder connects, the outputs of
+   `pre_feedforward_layernorm` and of `post_feedforward_layernorm`, and its
+   nonlinearity, a JumpReLU: a feature is active, with the value of its
+   pre-activation, wherever that value exceeds the feature's own
+   threshold. This is a project for a weekend.
+    1. Load the model with Transformers and the parameters of the
+       transcoder from their safetensors file, and apply the
+       reconstruction check of :numref:`subsec_lm_sae_release` to the
+       activation that the transcoder predicts.
+    1. For one prompt of the landmark list, find the ten transcoder
+       features with the largest contribution to the logit of the correct
+       city in the sense of :eqref:`eq_lm_dla`, and look at their top
+       contexts on held-out text.
+    1. Test one of these features by intervention: set it to zero and
+       measure the change of the logit difference. Does the contribution
+       predict the change?
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §18.6]{.kicker}
+
+Interpretability<br>**lenses · probes and control tasks · activation patching · sparse autoencoders · steering and its cost**
+:::
+:::
+
+::: {.slide title="Reading Suggests Where a Fact Is Handled; Overwriting Tests It"}
+[The problem]{.kicker}
+
+Qwen3-0.6B continues "The Eiffel Tower is located in the city of" with
+" Paris", probability 0.91. Which of its 28 blocks decided that?
+
+Every block adds its output to one vector per position, the **residual
+stream**. **Logit lens:** the output layer applied to that vector after an
+earlier block.
+
+| after block | 0 | 8 | 16 | 20 | 24 | 27 |
+|---|---|---|---|---|---|---|
+| first token under the lens | construction | 's | . | (space) | Paris | Paris |
+| rank of Paris | 14,924 | 2,512 | 3,412 | 3 | 1 | 1 |
+
+- Reading: the city appears near block 20. That is a suggestion.
+- Test: swap in the Colosseum, copy one activation across, and see whether
+  Paris gives way to Rome.
+
+::: {.d2l-note .warn}
+An explanation counts once an experiment could have refuted it.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- read the residual stream with a lens and say what its scale distorts;
+- tell a probe that reads a property from one that memorizes words;
+- design a patching experiment and read its map;
+- say where the gradient estimate of a patch fails;
+- check a released sparse autoencoder and test the label of a feature;
+- report steering as an effect against a cost, with a random floor.
+
+**First question:** where does a computation happen? The Eiffel Tower and
+Paris in Qwen3-0.6B (28 blocks, width 1,024), 40 landmarks in 25 cities.
+**Second question:** can the stream be written in units with names?
+Qwen3-1.7B-Base, a released dictionary of 32,768 features, Chinese text.
+:::
+
+::: {.slide title="The Last Deck That Holds the Weights; the Next One Has Only Text"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| movement | section |
+|---|---|
+| open a checkpoint | Pretrained Models with Hugging Face |
+| | A Released Checkpoint in the Book's Own Code |
+| measure it | Prompting and In-Context Learning |
+| | Scoring Language Models |
+| | Evaluation Suites, Judges and Error Bars |
+| inside and outside | **Interpretability** |
+| | Models behind an API |
+:::
+
+::: {.col .narrow}
+- **Uses:** the port of Qwen3 with its four recorded tensors per block,
+  greedy generation, bootstrap intervals over clusters.
+- **Skips:** circuits of single heads, training dictionaries at scale,
+  attribution graphs.
+:::
+:::
+:::
+
+::: {.slide title="The Residual Stream Is an Exact Sum of 57 Parts"}
+One position, blocks $\ell = 0, \ldots, 27$. $\mathbf{h}^{(\ell)}$: the
+stream after block $\ell$. $\mathbf{a}^{(\ell)}$, $\mathbf{m}^{(\ell)}$:
+what its attention layer and its MLP add. $\mathbf{e}_x$: embedding of the
+input token.
+
+$$\mathbf{h}^{(27)} = \mathbf{e}_x + \sum_{\ell=0}^{27} \left(\mathbf{a}^{(\ell)} + \mathbf{m}^{(\ell)}\right)$$
+
+The output layer divides by the root mean square
+$\rho(\mathbf{h}^{(27)})$, scales by a gain $\boldsymbol{\gamma}$ and scores
+against the embedding $\mathbf{e}_t$ of token $t$. So each part
+$\mathbf{p}$ has its own share of the logit $z_t$:
+
+$$c_t(\mathbf{p}) = \frac{\mathbf{e}_t^\top (\boldsymbol{\gamma} \odot \mathbf{p})}{\rho(\mathbf{h}^{(27)})}, \qquad z_t = \sum_{\mathbf{p}} c_t(\mathbf{p})$$
+
+::: {.d2l-note}
+A share counts what a part writes directly into the output, not what it
+does for later blocks.
+:::
+:::
+
+::: {.slide title="An Early Lens Divides by the Wrong Size: 55 Times Too Sharp"}
+The lens at block $\ell$ divides by the size of the stream there:
+
+$$\mathbf{z}^{(\ell)} = \frac{\mathbf{E}\, (\boldsymbol{\gamma} \odot \mathbf{h}^{(\ell)})}{\rho(\mathbf{h}^{(\ell)})} = \frac{\rho(\mathbf{h}^{(27)})}{\rho(\mathbf{h}^{(\ell)})} \times \textrm{(shares that have arrived by block } \ell)$$
+
+@!interpretability-dla-check
+
+- On eight prompts the 57 shares sum to the logit within $10^{-3}$.
+- By hand: embedding $(1, 0)$, one block adds $(0, 3)$. Logits
+  $(0.45, 1.34)$. The lens at the embedding reads $(1.41, 0)$: the wrong
+  token, because the block has not written yet, and 3.2 times surer.
+
+::: {.d2l-note .rule}
+A positive factor changes probabilities, entropies and KL divergences. It
+never changes a rank.
+:::
+:::
+
+::: {.slide title="A Trained Lens Reads the City at Block 20, the Plain One at Block 22"}
+::: {.cols .vc}
+::: {.col}
+- **Tuned lens** (Belrose et al., 2023): an affine map per block,
+  $\mathbf{h} + \mathbf{A}_\ell \mathbf{h} + \mathbf{b}_\ell$, before the
+  output layer, trained to match the final distribution in KL.
+- 40 prompts, 25 cities. First block where the median rank of the city is
+  10 or better: **22** (interval 21 to 22) and **20** (20 to 20).
+- **Left:** rank of the city, 1 at the top. **Right:** KL divergence to
+  the final distribution.
+:::
+
+::: {.col .fig .big}
+@!interpretability-lens-kl
+:::
+:::
+
+::: {.d2l-note}
+The gap on the right is no finding: the tuned lens was trained to close it.
+:::
+:::
+
+::: {.slide title="Selectivity, Not Accuracy, Tells a Probe from a Lookup Table"}
+[Probes]{.kicker}
+
+- **Probe:** a linear classifier on activations of a frozen model. Here:
+  the part of speech of 5,000 test words.
+- **Control task** (Hewitt and Liang, 2019): each distinct word gets a
+  random tag, learnable only by memorizing words.
+- **Selectivity:** task accuracy minus control accuracy.
+
+| | task | control | selectivity |
+|---|---|---|---|
+| lookup table: each word's usual tag | 0.80 | 0.83 | $-0.03$ |
+| probe on the token embedding | 0.88 | 0.77 | 0.11 |
+| probe on the stream after block 14 | 0.92 | 0.51 | 0.41 |
+
+::: {.d2l-note}
+From the embedding to block 14, accuracy gains 4 points and selectivity
+30 (interval 29 to 31). The most frequent tag, NOUN, has 16%.
+:::
+:::
+
+::: {.slide title="Check: What Does a 95% Probe Show?"}
+[Check]{.kicker}
+
+A probe reaches 95% at some block, and 92% on the control task. What does
+the block encode? And why does the lookup table score higher on random
+tags (0.83) than on real ones (0.80)?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Selectivity is 3 points: the probe mostly recognizes words. A
+random tag is a function of the word, so the table gets every word right
+that it has seen. A real tag depends on the sentence: *run* is a noun in
+one and a verb in the next.
+:::
+:::
+:::
+
+::: {.slide title="Patching Copies One Activation from the Corrupted Run"}
+![](../img/mdl-lm-pretrained-patching.svg){height=415px}
+
+**Left:** the sites that `d2l.intervene` reads and overwrites in a block.
+**Right:** the experiment. The shaded part is what the patch can change.
+:::
+
+::: {.slide title="Single-Site Effects Need Not Add"}
+$$\mathrm{NE}(s) = \frac{\mathrm{LD}(\textrm{clean}) - \mathrm{LD}(\textrm{clean}, s \textrm{ patched})}{\mathrm{LD}(\textrm{clean}) - \mathrm{LD}(\textrm{corrupted})}$$
+
+**Normalized effect:** 0 for no change, 1 for a change of the whole prompt.
+
+| output of sites $a$, $b$ (clean 1, corrupted 0) | NE, patch $a$ | NE, patch $b$ | NE, patch both | sum of singles |
+|---|---|---|---|---|
+| $ab$ (AND) | 1 | 1 | 1 | 2 |
+| $\max(a, b)$ (OR) | 0 | 0 | 1 | 0 |
+
+- **Noising** (corrupted into clean, as here) tests necessity.
+  **Denoising** (clean into corrupted) tests sufficiency: the rows swap.
+
+@!interpretability-patch-additivity
+
+::: {.d2l-note}
+On the model the two effects add within 0.02. It took one more run to know.
+:::
+:::
+
+::: {.slide title="Recall Moves from the Subject to the Final Position at Block 20"}
+::: {.cols .vc}
+::: {.col}
+40 pairs of landmarks, one site patched at a time. Panels: the stream, the
+attention output, the MLP output. Color: mean NE.
+
+- **Stream:** the subject up to block 19 (its tokens together 0.98), the
+  final position from block 20 (0.75).
+- **Attention:** block 20, final position, 0.42 (0.38 to 0.47). Next
+  largest: 0.14.
+- **MLPs:** no band. One is patched while 27 others still see the clean
+  subject.
+
+::: {.d2l-note}
+One attention layer carries the largest share across: three times any
+other, and well under half of the whole.
+:::
+:::
+
+::: {.col .fig}
+@!interpretability-patch-map-plot
+:::
+:::
+:::
+
+::: {.slide title="Check: A Blank Map"}
+[Check]{.kicker}
+
+Noising either of two MLPs alone gives NE 0. Noising both gives NE 1. What
+will denoising each of them alone give? What does a blank entry of a
+noising map show?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** This is the OR case: either MLP can supply the fact.
+Denoising one alone restores the answer, NE 1. A blank entry of a noising
+map shows that the site is not necessary alone. It may still be
+sufficient.
+:::
+:::
+:::
+
+::: {.slide title="Three Passes Estimate Every Patch, and Miss the Largest Ones"}
+::: {.cols .vc}
+::: {.col}
+$g(\mathbf{v})$: LD of the clean run with the site set to $\mathbf{v}$
+(clean value $\mathbf{v}^{\mathrm{c}}$, corrupted
+$\mathbf{v}^{\mathrm{x}}$). Its tangent at the clean value gives
+
+$$\mathrm{PE} \approx -(\mathbf{v}^{\mathrm{x}} - \mathbf{v}^{\mathrm{c}})^\top \nabla g(\mathbf{v}^{\mathrm{c}})$$
+
+| mean NE of the stream | exact | estimate |
+|---|---|---|
+| subject, blocks 0 to 19 | 0.98 | 0.10 |
+| final position, blocks 20 to 27 | 0.75 | 0.62 |
+
+- 3 passes, not 672 per pair: about 20 times faster.
+- Rank correlation of the two maps: 0.42 (0.17 to 0.56). The bar set in
+  advance was 0.6.
+
+::: {.d2l-note}
+The cloud at the lower right is the subject below block 20.
+:::
+:::
+
+::: {.col .fig}
+@!interpretability-atp-agreement-plot
+:::
+:::
+:::
+
+::: {.slide title="The Effect Is Flat at the Clean Run and Steep on the Way"}
+- **By hand:** a gate $g(v) = 1 / (1 + e^{-v})$, open at the clean value
+  6 and shut at the corrupted value $-6$. Effect 0.995. Slope at 6:
+  0.0025. Estimate $12 \times 0.0025 = 0.03$.
+- **On the model:** the stream at the subject after block 10, moved a
+  fraction $t$ of the way to its corrupted value.
+
+| $t$ | 0 | 1/8 | 1/4 | 3/8 | 1/2 | 5/8 | 3/4 | 7/8 | 1 |
+|---|---|---|---|---|---|---|---|---|---|
+| NE | 0.00 | 0.02 | 0.09 | 0.25 | 0.47 | 0.71 | 0.86 | 0.94 | 0.97 |
+
+- A straight line would give 0.12 at $t = 1/8$. The gradient at the clean
+  run sees only the flat start.
+
+::: {.d2l-note .rule}
+A screen, not a verdict: a zero from the estimate rules nothing out.
+:::
+:::
+
+::: {.slide title="A Sparse Autoencoder Writes the Stream as a Few of Many Directions"}
+[Sparse autoencoders]{.kicker}
+
+![](../img/mdl-lm-pretrained-sae-splice.svg){height=300px}
+
+$\mathbf{x} \approx \mathbf{W} \mathbf{z} + \mathbf{b}$, with
+$\mathbf{z} \geq 0$ and few nonzero entries. $\mathbf{x}$: the stream at
+one position. Column $\mathbf{w}_j$: the direction of **feature** $j$.
+$z_j$: how strongly it is present.
+
+::: {.d2l-note}
+Three directions 120° apart in a plane: every vector has one code with at
+most two of them active. Features may outnumber coordinates if few are
+active at once.
+:::
+:::
+
+::: {.slide title="An L1 Penalty Can Be Scaled Away and Shrinks Every Code; Top-k Does Neither"}
+$$\min_{\mathbf{W},\, \mathbf{z} \geq 0}\ \tfrac{1}{2} \|\mathbf{x} - \mathbf{W} \mathbf{z}\|^2 + \lambda \|\mathbf{z}\|_1$$
+
+- **Loophole:** $\mathbf{w}_j \to c\, \mathbf{w}_j$, $z_j \to z_j / c$
+  keeps the reconstruction and divides the penalty by $c$. Remedy: columns
+  of unit norm.
+- **Shrinkage:** for orthonormal columns and
+  $y_j = \mathbf{w}_j^\top \mathbf{x}$, the minimizer is
+  $z_j = \max(y_j - \lambda, 0)$.
+- $\mathbf{x} = 3 \mathbf{w}_1$, $\lambda = 1$: code 2, reconstruction
+  short by 1.
+- **Top-$k$** (Gao et al., 2025): keep the $k$ largest $y_j$, zero the
+  rest. The code of $3 \mathbf{w}_1$ is 3.
+
+::: {.d2l-note}
+All dictionaries here: top-$k$ with $k = 50$, on the stream after block 14
+of Qwen3-1.7B-Base, the model for which a released dictionary exists.
+:::
+:::
+
+::: {.slide title="A Released Dictionary Is Checked by Reconstruction before Its Features Are Read"}
+Qwen-Scope: 32,768 features per block of Qwen3-1.7B-Base, in `.pt` files
+(pickles: load with `weights_only=True`). Does the encoder read the raw
+stream, as the card's example does, or first subtract the decoder bias
+(`center=True`), as ours does?
+
+@!interpretability-sae-instrument
+
+- **FVU:** squared error over squared deviation from the mean. 0 is
+  perfect.
+- **Loss recovered:** splice the reconstruction into the model. 1 if the
+  cross-entropy is unchanged, 0 if it equals that of the mean stream.
+- Rule set in advance: FVU below 0.5 and loss recovered above 0.5.
+
+::: {.d2l-note .warn}
+The wrong convention raises no error. Only the FVU shows it: 0.88 against 0.26.
+:::
+:::
+
+::: {.slide title="Loss Recovered 0.98 Hides a Quarter of the Variance and 0.13 Nats"}
+51,000 held-out positions, cross-entropy (CE) in nats per token:
+
+| | ours | Qwen-Scope |
+|---|---|---|
+| features | 8,192 | 32,768 |
+| FVU | 0.29 | 0.26 |
+| CE: model, with the splice, with the mean stream | 2.48, 2.64, 9.21 | 2.48, 2.61, 9.21 |
+| loss recovered | 0.975 | 0.981 |
+| features that never fire here | 3 | 8,147 |
+
+- The mean stream is a weak baseline: 9.2 of the 11.9 nats of guessing.
+  The release under the wrong convention still scores 0.95.
+
+::: {.d2l-note .rule}
+Report the cross-entropy that the splice adds.
+:::
+:::
+
+::: {.slide title="Check: Loss Recovered by Hand"}
+[Check]{.kicker}
+
+Our dictionary: the model has a cross-entropy of 2.477 nats, 2.643 with
+the splice, 9.208 with the mean stream. What is the loss recovered? By how
+much does the splice raise the perplexity?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $(9.208 - 2.643) / (9.208 - 2.477) = 0.975$. The splice adds
+0.166 nats, and $e^{0.166} = 1.18$: a perplexity 18% higher, behind a
+score that reads 97.5%.
+:::
+:::
+:::
+
+::: {.slide title="A Feature Named Chinese Text Fires on 44% of Chinese Tokens"}
+[Features and labels]{.kicker}
+
+Feature 24946 fires on 35% of Chinese Wikipedia positions and hardly ever
+on an English one. The label "Chinese text", tested token by token on 200
+other articles:
+
+| detector of Chinese tokens | precision | recall | AUC |
+|---|---|---|---|
+| feature 24946 | 0.88 | 0.44 | 0.70 |
+| any of the five best contrast features | 0.92 | 0.81 | 0.89 |
+| difference of means: one direction, no dictionary | 0.81 | 0.98 | 0.97 |
+
+- AUC, feature minus difference of means: $-0.27$ ($-0.30$ to $-0.23$).
+- Several features share the concept: **feature splitting**.
+
+::: {.d2l-note}
+A probe answers a question we asked. A dictionary proposes questions, and
+each proposal needs this test.
+:::
+:::
+
+::: {.slide title="Steering Is Measured as Behavior against Cost, with a Random Floor"}
+[Steering]{.kicker}
+
+$$\mathbf{h}_i^{(14)} \leftarrow \mathbf{h}_i^{(14)} + \alpha\, \bar{n}\, \mathbf{u}, \qquad i \geq 1$$
+
+$\mathbf{u}$: unit direction. $\bar{n} = 193$: median norm of the stream
+after block 14. $\alpha$: strength, a fraction of that norm.
+
+- **Directions:** the decoder column of feature 24946; the difference of
+  means, Chinese minus English (cosine 0.28 with the first); 5 random
+  ones. **No direction:** a Chinese sentence before the prompt.
+- **Behavior:** share of 100 English prompts whose 48-token continuation
+  is at least 30% Han characters, the characters of the Chinese script.
+- **Cost:** rise of the cross-entropy on 200 English documents, plain, and
+  renormalized over the tokens without Han characters. Cap: 0.5 nats.
+:::
+
+::: {.slide title="The Switch Is a Cliff: 29% to 52% within a 6% Step of Strength"}
+::: {.cols .vc}
+::: {.col}
+- Feature, $\alpha$ from 0.157 to 0.167: 29% to 52% of prompts switched,
+  cost 0.25 to 0.62 nats. The cap (dashed) falls on the cliff.
+- Random directions: 0 of 100 at any strength, at 0.35 to 0.41 nats for
+  $\alpha = 0.7$.
+- The sentence before the prompt: 1 of 100, at 0.05 nats.
+- Gray: past its peak a direction switches fewer prompts. At
+  $\alpha = 2$ both print rows of brackets.
+:::
+
+::: {.col .fig}
+@!interpretability-frontier-plot
+:::
+:::
+
+::: {.d2l-note}
+**Frontier** (the lines): the largest share switched at a given cost or
+less. The cost axis is logarithmic above 0.01 nats.
+:::
+:::
+
+::: {.slide title="The Far Better Detector Is No Better at Steering"}
+| | feature | difference of means |
+|---|---|---|
+| AUC as a detector of Chinese tokens | 0.70 | 0.97 |
+| switched at the cap (interpolated), plain cost | 45% | 37% |
+| the same, cost without Han tokens | 65% | 54% |
+| cost of switching half, plain | 0.6 nats | 0.9 nats |
+| area under the frontier, plain cost from 0 to the cap (at most 0.5) | 0.124 | 0.099 |
+
+- Paired difference of the areas: 0.025 (0.001 to 0.052). One hundred
+  prompts barely resolve it.
+- Which cost? Half of the prompts switch within the cap only when the
+  probability moved to Chinese tokens is not charged.
+
+::: {.d2l-note}
+The direction that best separates two sets of activations need not be the
+best one for moving the model between them.
+:::
+:::
+
+::: {.slide title="Steered by the Feature, the Model States the Same Facts in Chinese"}
+"The Eiffel Tower is located in the city of", 48 greedy tokens, each
+direction at its largest strength below the cap:
+
+| setting | continuation |
+|---|---|
+| unsteered | Paris, France. It was built in 1889 to celebrate the 100th anniversary of the French Revolution. The tower is 324 meters tall … |
+| feature, $\alpha = 0.157$ | Paris, France. It is 324米高，是世界上最高的铁塔。它建于1889年，是为了庆祝法国大革命100周年而建造的。… |
+| difference of means, $\alpha = 0.094$ | Paris, France. It is 324米 high,其中的324米是用____作单位的． … |
+
+- Feature: 324 meters, 1889, the hundredth anniversary, now in Chinese.
+- Difference of means: a school exercise about the unit of the 324.
+
+::: {.d2l-note}
+Two directions of almost the same cost write very different text. No
+number on the frontier shows it.
+:::
+:::
+
+::: {.slide title="Check: The Honesty Feature"}
+[Check]{.kicker}
+
+A report says: "Feature 123 is the honesty feature. Adding it to the
+stream makes the model honest." Which numbers do you ask for?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The reconstruction check of the dictionary on this
+checkpoint. Precision and recall of the label as a rule on held-out text,
+beside a difference of means. The cost of steering at the strength used,
+beside random directions of the same length. And whether a plain
+instruction does the same.
+:::
+:::
+:::
+
+::: {.slide title="Wrap-up"}
+- The stream is a sum of 57 parts. A lens reads Paris from block 20 or
+  22, and its scale is 55 times off at block 0.
+- A lookup table tags 80% correctly. Selectivity, 0.11 at the embedding
+  and 0.41 at block 14, shows what the probe adds.
+- Patching: the subject up to block 19, the final position from block 20,
+  one attention layer with NE 0.42 between them. The gradient estimate
+  says 0.10 where the effect is 0.98.
+- A released dictionary passes its check and still costs 0.13 nats. Its
+  "Chinese text" feature has recall 0.44, and a difference of means
+  detects better.
+- Steering switches the language only near the strength that breaks the
+  model. Random directions switch nothing.
+
+**Next:** models that return text and nothing else.
+:::

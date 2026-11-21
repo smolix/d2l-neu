@@ -1,25 +1,22 @@
 # Positional Information
 :label:`sec_positional-information`
 
-The sentences "dog bites man" and "man bites dog" contain the same three
-tokens. Fed to the self-attention layer of
-:numref:`sec_multihead-attention`, they produce the same three output
-vectors, only listed in a different order. Each output averages value
-vectors with weights computed from content alone, and nothing in that
-computation records where a token stands. A classifier that pools these
-outputs cannot tell who bit whom. Attention must therefore be told where
-each token stands.
+The sentences *"dog bites man"* and *"man bites dog"* contain the same three
+words. Passed through the unmasked self-attention layer of
+:numref:`sec_multihead-attention`, they produce the exact same output vectors
+in permuted order, because attention weights depend solely on token content.
+To distinguish word order, positional information must be injected into the
+representation or the scoring rule.
 
-There are several ways to do so. Absolute embeddings, designed or learned,
-add a position vector to each token. Rotary embeddings (RoPE) rotate queries
-and keys so that every score depends on the offset between two positions.
-Linear biases (ALiBi) penalize distant keys, and a causal model can even
-work without any explicit encoding (NoPE). All of them work at the sequence
-lengths a model was trained on; beyond those lengths they behave very
-differently. We first prove the symmetry that has to be broken and build
-each scheme. A small attention-only language model, trained at context 128,
-then shows what each scheme does at context 512 and how a trained RoPE model
-can be stretched to the longer context.
+Positional schemes fall into three main families: adding a position vector
+$\mathbf{p}_i$ to each token embedding, rotating queries and keys by
+position-dependent angles (*rotary position embeddings*, RoPE), or
+subtracting a distance penalty from the attention scores (*ALiBi*). While all
+three distinguish positions within the training context length, they behave
+very differently when asked to extrapolate to longer sequences. We first
+formalize the permutation symmetry of self-attention, then construct and
+compare five positional schemes on a two-layer attention-only byte language
+model (`TinyCharLM`) trained at length $128$ and evaluated up to length $512$.
 
 ```{.python .input #positional-information}
 %%tab pytorch
@@ -45,40 +42,31 @@ from d2l import jax as d2l
 ## Permutation Equivariance
 :label:`subsec_pos-ignores-order`
 
-Before choosing a remedy, we state the symmetry precisely, since every
-scheme in this section is a way of breaking it. Let
-$\mathbf{X} \in \mathbb{R}^{n \times d}$ hold a sequence of $n$ token
-representations. At evaluation time, with dropout disabled and with no mask
-or position-dependent bias, let $f$ be the self-attention layer
+Let $\mathbf{X} \in \mathbb{R}^{n \times d}$ hold $n$ token vectors and let
+$f(\mathbf{X}) = \mathrm{softmax}(\mathbf{S})\,\mathbf{X}\mathbf{W}_v$ with
+$\mathbf{S} = \mathbf{X}\mathbf{W}_q(\mathbf{X}\mathbf{W}_k)^\top/\sqrt{d_h}$
+denote unmasked self-attention :eqref:`eq_self-attention` with dropout
+disabled. Reordering the $n$ tokens corresponds to multiplying $\mathbf{X}$
+from the left by an $n \times n$ permutation matrix $\boldsymbol{\Pi}$.
 
-$$
-f(\mathbf{X}) = \mathrm{softmax}\!\left(\frac{\mathbf{X}\mathbf{W}_q (\mathbf{X}\mathbf{W}_k)^\top}{\sqrt{d}}\right) \mathbf{X}\mathbf{W}_v.
-$$
-:eqlabel:`eq_pos-selfattn`
-
-**Proposition (permutation equivariance).** For every permutation matrix
-$\boldsymbol{\Pi}$, $\;f(\boldsymbol{\Pi} \mathbf{X}) = \boldsymbol{\Pi}
+**Proposition (Permutation Equivariance).** For every permutation matrix
+$\boldsymbol{\Pi}$, $f(\boldsymbol{\Pi} \mathbf{X}) = \boldsymbol{\Pi}
 f(\mathbf{X})$.
 
-**Proof.** The projections act on each row separately, so
+**Proof.** Because linear projections act row-wise,
 $(\boldsymbol{\Pi}\mathbf{X})\mathbf{W} = \boldsymbol{\Pi}(\mathbf{X}\mathbf{W})$
-for each of $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v$. The score matrix
-becomes $\boldsymbol{\Pi} \mathbf{S} \boldsymbol{\Pi}^\top$, and since softmax
-normalizes each row by itself, it commutes with row and column permutations:
+for $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v$. The score matrix becomes
+$\boldsymbol{\Pi} \mathbf{S} \boldsymbol{\Pi}^\top$. Because row-wise softmax
+commutes with row and column permutations,
 $\mathrm{softmax}(\boldsymbol{\Pi} \mathbf{S} \boldsymbol{\Pi}^\top) =
 \boldsymbol{\Pi}\, \mathrm{softmax}(\mathbf{S})\, \boldsymbol{\Pi}^\top$.
-Multiplying by the permuted values,
-$\boldsymbol{\Pi}\, \mathrm{softmax}(\mathbf{S})\, \boldsymbol{\Pi}^\top
-\boldsymbol{\Pi} \mathbf{X}\mathbf{W}_v = \boldsymbol{\Pi} f(\mathbf{X})$
-because $\boldsymbol{\Pi}^\top \boldsymbol{\Pi} = \mathbf{I}$. Concatenating
-heads and applying $\mathbf{W}_o$ row-wise preserves the property, so it
-holds for multi-head attention too. $\blacksquare$
+Multiplying by the permuted values $\boldsymbol{\Pi}\mathbf{X}\mathbf{W}_v$
+and using $\boldsymbol{\Pi}^\top \boldsymbol{\Pi} = \mathbf{I}$ yields
+$\boldsymbol{\Pi} f(\mathbf{X})$. Concatenating heads and applying
+$\mathbf{W}_o$ row-wise preserves equivariance. $\blacksquare$
 
-Permuting the input applies the same permutation to the output: each token's
-output is unchanged except for its row index. Thus the layer does not use a
-token's position in the sequence. We check the proposition on the
-multi-head layer of :numref:`sec_multihead-attention` by shuffling eight
-random tokens and comparing the outputs:
+We verify permutation equivariance numerically on a four-head
+`MultiHeadAttention` layer:
 
 ```{.python .input #positional-information-attention-ignores-order}
 %%tab pytorch
@@ -102,37 +90,45 @@ Y_perm = attention(X[:, perm], X[:, perm], X[:, perm])
 print(f'max |Y[perm] - Y_perm|: {jnp.abs(Y[:, perm] - Y_perm).max():.2e}')
 ```
 
-The two outputs differ only by float32 round-off: the shuffled input
-produced the shuffled output. Two caveats qualify this result. First,
-equivariance is a property of the *layer*. Stacking equivariant layers and
-reading out per token leaves the model equivariant, so depth does not help.
-Second, the proposition is about unmasked attention. A causal mask singles
-out each position by how many predecessors it may see, which breaks the
-symmetry. NoPE, near the end of the section, relies on this asymmetry. The
-other schemes give each token explicit positional information.
+Stacking equivariant layers or token-wise MLPs preserves equivariance. Note,
+however, that a *causal mask* breaks permutation symmetry because position
+$i$ attends over $i+1$ predecessors—an asymmetry exploited by *NoPE* below.
 
 ## Absolute Position Embeddings
 
-The original transformer attaches a *position vector* $\mathbf{p}_i \in
-\mathbb{R}^d$ to each position $i$ and feeds $\mathbf{x}_i + \mathbf{p}_i$
-into the first layer :cite:`Vaswani.Shazeer.Parmar.ea.2017`. Two tokens with
-identical embeddings at different positions now enter attention as different
-vectors, and the equivariance proof fails at its first step. The two classic
-choices of these vectors differ in whether they are designed or learned.
+The original Transformer :cite:`Vaswani.Shazeer.Parmar.ea.2017` breaks
+permutation symmetry at the input by adding a position vector $\mathbf{p}_i
+\in \mathbb{R}^d$ (row $i$ of $\mathbf{P}$) to each token embedding
+$\mathbf{x}_i$: shuffling tokens maps $\mathbf{X} + \mathbf{P}$ to
+$\boldsymbol{\Pi}\mathbf{X} + \mathbf{P} \neq
+\boldsymbol{\Pi}(\mathbf{X} + \mathbf{P})$.
+
+### Learned Positions
+
+Models such as BERT :cite:`Devlin.Chang.Lee.ea.2018` and GPT-2
+:cite:`Radford.Wu.Child.ea.2019` treat $\mathbf{P} \in \mathbb{R}^{L_{\max}
+\times d}$ as a trainable embedding table with one parameter row per position
+up to a fixed maximum length $L_{\max}$. Because rows beyond the training
+context length never receive gradients, a learned table cannot extrapolate to
+unseen positions (Exercise :exref:`ex_positional-information-untrained-rows`).
 
 ### Sinusoidal Encodings
 :label:`subsec_pos-sinusoidal`
 
-The designed choice fills row $i$ of $\mathbf{P} \in \mathbb{R}^{n \times d}$
-with sines and cosines of geometrically spaced frequencies,
+To define position vectors for arbitrary lengths without learned parameters,
+:citet:`Vaswani.Shazeer.Parmar.ea.2017` populate row $i$ of $\mathbf{P}$ with
+sines and cosines at $d/2$ geometrically spaced frequencies $\omega_m =
+10000^{-2m/d}$:
 
 $$
 p_{i, 2m} = \sin\left(\frac{i}{10000^{2m/d}}\right), \qquad p_{i, 2m+1} = \cos\left(\frac{i}{10000^{2m/d}}\right).
 $$
 :eqlabel:`eq_sinusoidal-def`
 
-The design looks arbitrary until we plot it. We implement the table as a
-small function and look at four adjacent columns.
+As $\omega_m$ decreases from $1$ radian per token ($m = 0$) toward $10^{-4}$
+($m = d/2 - 1$), the column pairs act as a continuous analog of a binary
+counter: low-index columns oscillate rapidly to separate neighboring
+positions, while high-index columns vary slowly across broad regions.
 
 ```{.python .input #positional-information-sinusoidal-encodings-1}
 %%tab pytorch
@@ -162,124 +158,79 @@ d2l.plot(jnp.arange(60), P[:, 6:10].T, xlabel='position',
          figsize=(6, 2.5), legend=[f'column {d}' for d in range(6, 10)])
 ```
 
-Adjacent column pairs share a frequency (one sine, one cosine), and the
-frequency falls as the column index grows. This is a continuous version of
-binary counting. In the binary representations below, the
-lowest bit flips every number, the next every two numbers, the next every
-four. Fast dimensions distinguish neighboring positions, whereas slow
-dimensions distinguish broader regions.
-
-```{.python .input #positional-information-sinusoidal-encodings-2}
-%%tab pytorch, jax
-for i in range(8):
-    print(f'{i} in binary is {i:>03b}')
-```
-
-The heatmap of the whole table shows the same structure in continuous form.
-Each row is a unique multi-frequency fingerprint of its position. Unlike
-bits, the values vary smoothly, so nearby positions get nearby encodings.
-
 ```{.python .input #positional-information-sinusoidal-encodings-3}
 %%tab pytorch, jax
 d2l.show_heatmaps(P[None, None], xlabel='column (encoding dimension)',
                   ylabel='row (position)', figsize=(3.5, 4), cmap='Blues')
 ```
 
-### Learned Positions
-
-The alternative is to make $\mathbf{P}$ a trainable embedding table, one
-free vector per position, as in BERT and GPT-2
-:cite:`Devlin.Chang.Lee.ea.2018,Radford.Wu.Child.ea.2019`. It concedes that
-we do not know the right encoding and lets gradient descent find one. Its
-limitation is visible before any training. The table has one row for each
-position up to some maximum length, and a row that no training example ever
-used still holds its random initialization. To such a table, position 500 is
-not "a bit beyond position 128". Its row carries no information at all.
-
 ### Sinusoidal Encodings as Rotations
 
-Designed sinusoids have a relative-position structure absent from a learned
-table. The original paper chose them because, for every fixed offset
-$\delta$, the row $\mathbf{p}_{i+\delta}$ is a linear function of the row
-$\mathbf{p}_i$. The linear map can be written explicitly. Write
-$\omega_m = 1/10000^{2m/d}$ for the frequency shared by columns $2m$ and
-$2m{+}1$. Then
+By the trigonometric angle-addition identities, shifting position $i$ by an
+offset $\delta$ applies a $2 \times 2$ rotation depending only on $\delta$ to
+each frequency pair $(2m, 2m+1)$:
 
 $$
-\begin{bmatrix} \cos(\delta \omega_m) & \sin(\delta \omega_m) \\  -\sin(\delta \omega_m) & \cos(\delta \omega_m) \\ \end{bmatrix}
-\begin{bmatrix} p_{i, 2m} \\  p_{i, 2m+1} \\ \end{bmatrix}
-= \begin{bmatrix} \sin\left((i+\delta) \omega_m\right) \\  \cos\left((i+\delta) \omega_m\right) \\ \end{bmatrix}
-= \begin{bmatrix} p_{i+\delta, 2m} \\  p_{i+\delta, 2m+1} \\ \end{bmatrix},
+\begin{bmatrix} \cos(\delta \omega_m) & \sin(\delta \omega_m) \\ -\sin(\delta \omega_m) & \cos(\delta \omega_m) \end{bmatrix}
+\begin{bmatrix} p_{i, 2m} \\ p_{i, 2m+1} \end{bmatrix}
+= \begin{bmatrix} \sin\left((i+\delta) \omega_m\right) \\ \cos\left((i+\delta) \omega_m\right) \end{bmatrix}
+= \begin{bmatrix} p_{i+\delta, 2m} \\ p_{i+\delta, 2m+1} \end{bmatrix}.
 $$
 :eqlabel:`eq_sinusoidal-rotation`
 
-by the angle-addition identities. The map from position $i$ to position
-$i + \delta$ is a *rotation* of each two-column pair, by an angle $\delta
-\omega_m$ that depends only on the offset $\delta$, never on $i$. The
-encoding thus contains relative position, but only implicitly. The model
-receives $\mathbf{x}_i + \mathbf{p}_i$ and must learn projections
-that exploit the rotations. Moreover, a query--key product of two such sums
-expands into four terms, and only the position--position term retains the
-rotation directly. RoPE instead builds the relative rotation into the
-query--key comparison itself.
+However, because $\mathbf{p}_i$ is *added* to $\mathbf{x}_i$, the bilinear
+attention score with $\mathbf{A} = \mathbf{W}_q \mathbf{W}_k^\top /
+\sqrt{d_h}$ expands into four terms:
+
+$$
+(\mathbf{x}_i + \mathbf{p}_i)^\top \mathbf{A}\, (\mathbf{x}_j + \mathbf{p}_j)
+= \underbrace{\mathbf{x}_i^\top \mathbf{A}\, \mathbf{x}_j}_{\textrm{content--content}}
++ \underbrace{\mathbf{x}_i^\top \mathbf{A}\, \mathbf{p}_j}_{\textrm{content--position}}
++ \underbrace{\mathbf{p}_i^\top \mathbf{A}\, \mathbf{x}_j}_{\textrm{position--content}}
++ \underbrace{\mathbf{p}_i^\top \mathbf{A}\, \mathbf{p}_j}_{\textrm{position--position}}.
+$$
+:eqlabel:`eq_pos-four-terms`
+
+The two cross terms couple content with *absolute* position (varying when $i$
+and $j$ shift together), and even $\mathbf{p}_i^\top \mathbf{A}\,
+\mathbf{p}_j$ depends purely on $j - i$ only if $\mathbf{A}$ is block-diagonal
+with $2 \times 2$ scaled-rotation blocks (Exercise
+:exref:`ex_positional-information-additive-codes`).
 
 ## Rotary Position Embeddings
 :label:`subsec_pos-rope`
 
-*Rotary position embeddings* (RoPE) :cite:`Su.Lu.Pan.ea.2021` skip the
-addition and act on queries and keys at the point where they meet, the
-score. We want a transformation $\mathbf{R}_i$, applied to the query at
-position $i$ and the key at position $j$, such that the score depends only
-on the content vectors and the offset $j - i$:
+*Rotary position embeddings* (RoPE) :cite:`Su.Lu.Pan.ea.2021` apply position
+transformations *multiplicatively* to queries and keys so that every score
+depends only on the relative offset $j - i$:
 
 $$
-(\mathbf{R}_i \mathbf{q})^\top (\mathbf{R}_j \mathbf{k}) = \mathbf{q}^\top \mathbf{R}_i^\top \mathbf{R}_j \mathbf{k} \overset{!}{=} \mathbf{q}^\top \mathbf{R}_{j-i} \mathbf{k}.
+(\mathbf{R}_i \mathbf{q})^\top (\mathbf{R}_j \mathbf{k}) = \mathbf{q}^\top \mathbf{R}_i^\top \mathbf{R}_j \mathbf{k} = \mathbf{q}^\top \mathbf{R}_{j-i} \mathbf{k} \quad \textrm{for all } i, j.
 $$
 :eqlabel:`eq_rope-goal`
 
-The requirement $\mathbf{R}_i^\top \mathbf{R}_j = \mathbf{R}_{j-i}$ pins down
-the kind of map we need. With $i = j$ it reads $\mathbf{R}_i^\top
-\mathbf{R}_i = \mathbf{R}_0 = \mathbf{I}$ (position 0 is left as it is),
-so every $\mathbf{R}_i$ is orthogonal. With $j = 0$ it gives
-$\mathbf{R}_{-i} = \mathbf{R}_i^\top$, and substituting this back yields
-$\mathbf{R}_i \mathbf{R}_j = \mathbf{R}_{i+j}$. The $\mathbf{R}_i$ form a
-one-parameter group of orthogonal maps, and planar rotations are the
-simplest such group. RoPE therefore reuses the sinusoidal frequencies
-$\omega_m$, now *multiplicatively*. It splits the $d$ dimensions of each
-query into $d/2$ pairs, where $d$ is now the width of one attention head,
-and rotates pair $m$ of the query at position $i$ by the angle $i\,\omega_m$
-(and likewise for keys),
+Requiring $\mathbf{R}_i^\top \mathbf{R}_j = \mathbf{R}_{j-i}$ with full-rank
+$\mathbf{R}_0$ implies: (1) $\mathbf{R}_0 = \mathbf{I}$ (from $\mathbf{R}_0^\top
+\mathbf{R}_0 = \mathbf{R}_0$); (2) $\mathbf{R}_i^\top \mathbf{R}_i =
+\mathbf{I}$, so every $\mathbf{R}_i$ is orthogonal and norm-preserving; and
+(3) $\mathbf{R}_{i+j} = \mathbf{R}_i \mathbf{R}_j$, so $\mathbf{R}_i =
+\mathbf{R}_1^i$. In an appropriate orthonormal basis (absorbable into
+$\mathbf{W}_q, \mathbf{W}_k$), any orthogonal matrix $\mathbf{R}_1$ decomposes
+into $2 \times 2$ planar rotations. RoPE partitions the $d_h$ coordinates of
+each query and key into $d_h/2$ pairs and rotates pair $m$ at position $i$ by
+$i\omega_m$ with $\omega_m = 10000^{-2m/d_h}$ (:numref:`fig_rope-rotation`):
 
 $$
-\mathbf{R}_i = \begin{bmatrix} R(i\omega_0) & & \\ & \ddots & \\ & & R(i\omega_{d/2-1}) \end{bmatrix}, \qquad R(\alpha) = \begin{bmatrix} \cos\alpha & -\sin\alpha \\ \sin\alpha & \cos\alpha \end{bmatrix}.
+\mathbf{R}_i = \begin{bmatrix} R(i\omega_0) & & \\ & \ddots & \\ & & R(i\omega_{d_h/2-1}) \end{bmatrix}, \qquad R(\alpha) = \begin{bmatrix} \cos\alpha & -\sin\alpha \\ \sin\alpha & \cos\alpha \end{bmatrix}.
 $$
 :eqlabel:`eq_rope-def`
 
-:numref:`fig_rope-rotation` shows one pair plane. Shifting both positions by
-the same amount rotates query and key together, preserving their angle and
-their dot product. The score therefore depends on position only through the
-offset. Rotations also preserve norms, so RoPE never inflates or shrinks a
-token's content. The geometric spacing of the frequencies sets how fast
-position turns each pair. The fast pairs separate neighboring positions
-sharply, while the slow pairs barely move across a sentence and carry
-content largely unchanged. Only queries and keys are rotated; values pass through untouched.
-RoPE is the positional scheme of most open-weights language models released
-since 2023.
+Values are not rotated, ensuring that the layer's output remains invariant to
+global position shifts. RoPE is the standard positional encoding in modern
+open-weights language models.
 
 ![Rotary embeddings rotate each two-dimensional feature pair of the query and the key by an angle proportional to position. Shifting both positions by the same amount, here by 3, rotates both vectors together and leaves the angle between them ($2\theta + \varphi$ in both panels), and hence the attention score, unchanged. Here $\theta = \omega_m$ is the angle by which pair $m$ turns per position, and $\varphi$ is the angle between the unrotated query and key.](../img/mdl-attention-rope-rotation.svg)
 :label:`fig_rope-rotation`
-
-`rope_tables` computes the cosines and sines of the angles, and `rope`
-rotates the even/odd feature pairs with them. The argument `offset` shifts
-every position by the same amount, which we use to test the invariance. Two
-optional arguments change the angles themselves: `base` replaces the
-constant $10000$ in the frequencies, and `scale` multiplies the angle of
-each pair by its own factor.
-Both keep their defaults until :numref:`subsec_pos-context-extension`
-stretches a trained model to longer contexts. A caller that rotates many
-tensors at the same positions can compute the tables once and pass them to
-`rope` as `tables`; cached generation does this in
-:numref:`subsec_kv-cache-cached-forward`.
 
 ```{.python .input #positional-information-rotary-position-embeddings-1}
 %%tab pytorch
@@ -330,10 +281,9 @@ def rope(x, offset=0, base=10000.0, scale=None, tables=None):  #@save
                       x1 * sin + x2 * cos], -1).reshape(x.shape)
 ```
 
-To check :eqref:`eq_rope-goal` numerically, we shift all positions jointly;
-the full RoPE score matrix should not change. For contrast, we run the
-same test on the additive sinusoidal encoding, where the four-term expansion
-leaves absolute position in the score.
+Shifting all positions by an arbitrary offset leaves RoPE scores identical up
+to float32 rounding, whereas additive sinusoidal scores change by $O(1)$ due
+to the content--position cross terms of :eqref:`eq_pos-four-terms`:
 
 ```{.python .input #positional-information-rotary-position-embeddings-2}
 %%tab pytorch
@@ -370,77 +320,41 @@ print(f'additive sinusoidal, shifted by  17: max score change '
       f'{jnp.abs(added(17) - added(0)).max():.1e}')
 ```
 
-At every shift, RoPE's scores change only by float32 round-off, several
-orders of magnitude below the scores themselves. This holds even for a
-shift far beyond where any additive table would end. The additive encoding,
-in contrast, moves the scores by an amount comparable to the scores
-themselves. With RoPE, relative position is built into the architecture
-rather than learned from data. This property does not guarantee accurate
-predictions at offsets absent from the training data; the next experiment
-tests such predictions.
+## Distance Penalties and No Encoding
+
+Two additional schemes leave token, query, and key vectors untouched:
+
+* **ALiBi** (*Attention with Linear Biases*, :cite:`Press.Smith.Lewis.2022`)
+  subtracts a linear distance penalty directly from the causal attention
+  scores in head $h \in \{1, \ldots, H\}$:
+
+  $$
+  \mathrm{score}_{ij} = \frac{\mathbf{q}_i^\top \mathbf{k}_j}{\sqrt{d_h}} - m_h\,(i - j), \qquad m_h = 2^{-8h/H}.
+  $$
+  :eqlabel:`eq_alibi-def`
+
+  The geometric slopes $m_h$ (e.g., $1/4, 1/16, 1/64, 1/256$ for $H = 4$)
+  equip different heads with different recency horizons and require no fixed
+  table size.
+* **NoPE** (*No Positional Encoding*,
+  :cite:`Kazemnejad.Padhi.Ramamurthy.ea.2023`) adds no positional signal at
+  all, relying solely on the causal mask (which exposes $i + 1$ keys at
+  position $i$) to break permutation symmetry.
 
 ## Extrapolation Beyond the Training Length
 
-Every scheme above breaks the permutation symmetry on sequences as long as
-those seen in training. The schemes differ on longer ones. A length-extrapolation
-test trains at context $L$ and compares perplexity at $L$ with perplexity at,
-for example, $4L$. Two more schemes were designed for this setting.
+To compare how these five schemes perform in-distribution and when
+extrapolating to longer contexts, we train at length $L = 128$ bytes and
+evaluate perplexity at lengths $128$, $256$, and $512$.
 
-### ALiBi and NoPE
+### The Language Model TinyCharLM
+:label:`subsec_tinycharlm`
 
-*ALiBi* (attention with linear biases) :cite:`Press.Smith.Lewis.2022`
-encodes no positions at all. It instead subtracts a distance penalty from
-every attention score. For query position $i$ and key position $j \leq i$
-in head $h$ of $H$,
-
-$$
-\mathrm{score}_{ij} = \frac{\mathbf{q}_i^\top \mathbf{k}_j}{\sqrt{d}} - m_h\,(i - j), \qquad m_h = 2^{-8h/H}.
-$$
-:eqlabel:`eq_alibi-def`
-
-Each head discounts distant tokens at its own geometric rate. Head 1 uses a
-steep penalty and head $H$ a much smaller one. For $H = 4$ the slopes are
-$1/4, 1/16, 1/64, 1/256$. The formula $2^{-8h/H}$ is the paper's choice for
-head counts that are powers of two, and the paper gives a separate rule for
-other $H$. The bias depends only on distance, so it is defined for every
-context length. A distance of 400 is a valid input to the bias, not an
-unallocated table index. The drawback is a recency prior built into every
-score, which large content scores can offset but training cannot remove.
-With slope $1/4$, a key 40 positions back already loses a
-factor $e^{-10}$ of its weight, so the steep heads see only a short window
-whatever the context length.
-
-*NoPE* (no positional encoding) uses the asymmetry that the proposition
-leaves out :cite:`Kazemnejad.Padhi.Ramamurthy.ea.2023`. A causal model can
-do without explicit position representations, because the mask already
-breaks the symmetry. Position 0 attends over one token, position 100 over a
-hundred and one. The number of tokens competing in each softmax is itself
-positional information, and a decoder can in principle recover relative
-order from it.
-Because it uses neither a table nor a rotation, NoPE has no explicit
-position range. Its effectiveness depends on how much usable positional
-signal the mask supplies.
-
-### An Attention-Only Language Model
-
-To compare extrapolation, we train a deliberately minimal model that the
-chapter analyzes again later: a token embedding, a stack of residual
-causal attention blocks, and an output head tied to the embedding
-:cite:`Press.Wolf.2017`. There is no feed-forward network and no
-normalization layer, and the attention projections carry no bias terms by
-default (a `bias` switch restores them). Only attention mixes information
-across positions, which makes the model easy to analyze in
-:numref:`sec_what-attention-computes`. It is the attention-only cousin of
-the `TinyLM` of :numref:`subsec_tinylm`.
-
-The positional scheme is the one constructor argument that the experiment
-varies. `pos` takes `'learned'`, `'sinusoidal'`, `'rope'`, `'alibi'`, or
-`'none'`, and the constructor allocates what the scheme needs. With RoPE,
-the model keeps the base and the per-pair angle factors of `rope` as
-attributes, `rope_base` and `rope_scale`, so that they can be changed after
-training. The method `stream` runs the residual stream through the blocks
-and also returns the attention weights of each block, which
-:numref:`sec_what-attention-computes` inspects.
+`TinyCharLM` embeds 256 byte values into width $d = 128$, applies two causal
+self-attention blocks ($H = 4$ heads of width $d_h = 32$, with no MLP or
+normalization layers so position enters exclusively through `pos`), and
+projects back to byte logits via tied embedding weights
+:cite:`Press.Wolf.2017`.
 
 ```{.python .input #positional-information-an-attention-only-language-model}
 %%tab pytorch
@@ -529,12 +443,9 @@ class TinyCharLM(nnx.Module):  #@save
         return self.stream(X)[1]
 ```
 
-The absolute schemes act once, on the input: `embed` adds the learned or the
-sinusoidal table to the token embeddings. With the sinusoidal table, the
-token embeddings are multiplied by $\sqrt{d}$ before the table is added, as
-in the original transformer. Without this factor the table, whose entries
-have magnitude about $0.7$, would outweigh embeddings that start with
-entries of about $0.02$ by a factor of 35. With it, the factor is about 3.
+In `embed`, the sinusoidal table is scaled by $1/\sqrt{d}$ so its entries
+match the scale of the $\mathcal{N}(0, 0.02^2)$ token embeddings without
+altering the tied output logits:
 
 ```{.python .input #positional-information-an-attention-only-language-model-1}
 %%tab pytorch
@@ -544,8 +455,8 @@ def embed(self, X):
     H = self.token_emb(X)
     if self.pos == 'learned':
         H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
-    if self.pos == 'sinusoidal':  # Scale tokens up to the table
-        H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+    if self.pos == 'sinusoidal':  # Table scaled to the token embeddings
+        H = H + self.P[:X.shape[1]] / math.sqrt(H.shape[-1])
     return H
 ```
 
@@ -557,16 +468,13 @@ def embed(self, X):
     H = self.token_emb(X)
     if self.pos == 'learned':
         H = H + self.pos_emb(jnp.arange(X.shape[1]))
-    if self.pos == 'sinusoidal':  # Scale tokens up to the table
-        H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+    if self.pos == 'sinusoidal':  # Table scaled to the token embeddings
+        H = H + self.P[:X.shape[1]] / math.sqrt(H.shape[-1])
     return H
 ```
 
-The relative schemes act inside every block, on the queries, keys, and
-scores. `attend` is causal multi-head attention in which RoPE rotates the
-queries and the keys, and ALiBi subtracts the distance penalty of
-:eqref:`eq_alibi-def` from the scores. With every other scheme it is plain
-causal attention.
+In `attend`, RoPE rotates queries and keys, whereas ALiBi adds the distance
+bias $-m_h(i - j)$ to the pre-softmax scores:
 
 ```{.python .input #positional-information-an-attention-only-language-model-2}
 %%tab pytorch
@@ -624,64 +532,60 @@ def attend(self, blk, H):
     return blk['proj'](out), weights
 ```
 
-:begin_tab:`jax`
-The token table is `d2l.Embed` of :numref:`subsec_utils_embed`: on bytes of
-text, whose frequencies are skewed, it computes the gradient of the lookup
-faster than `nnx.Embed`.
-:end_tab:
-
 ### The Experiment
 :label:`subsec_pos-experiment`
 
-We train one model per scheme on `d2l.WikiText103`, the bytes of Wikipedia
-articles that :numref:`subsec_tinylm` introduced. Each model trains at
-context length 128 for 3000 steps of `d2l.train_steps`, the fixed-step training
-loop of :numref:`sec_adam`. The tokens are bytes, so each model has an embedding
-table of 256 rows. The learned and sinusoidal tables are allocated out to
-`max_len` $= 512$ positions so that the models can be evaluated on longer
-sequences, but only the first 128 rows of the learned table receive
-gradients.
+We train three seeds of each scheme for $3{,}000$ AdamW steps on 128-byte
+windows of `d2l.WikiText103` (:numref:`subsec_tinylm`).
 
 ```{.python .input #positional-information-the-experiment-1}
 %%tab pytorch
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 schemes = ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
-models = {}
+
+def train_tiny(**kwargs):
+    """A TinyCharLM after 3000 steps, and its final training loss."""
+    model = TinyCharLM(len(data.vocab), **kwargs)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
+                                  weight_decay=0.0)
+    return model, d2l.final_loss(d2l.train_steps(model, data, optimizer,
+                                                 3000))
+
+runs = {}  # Three independently initialized models per scheme
 for pos in schemes:
-    model = TinyCharLM(len(data.vocab), pos=pos)
-    losses = d2l.train_steps(model, data,
-                          torch.optim.AdamW(model.parameters(), lr=1e-3,
-                                            weight_decay=0.0), 3000)
-    models[pos] = model
-    print(f'{pos:>10}: final training loss {d2l.final_loss(losses):.2f}')
+    trained = [train_tiny(pos=pos) for _ in range(3)]
+    runs[pos] = [model for model, _ in trained]
+    print(f'{pos:>10}: final training loss '
+          + ', '.join(f'{loss:.2f}' for _, loss in trained))
+models = {pos: ms[0] for pos, ms in runs.items()}  # The first run of each
 ```
 
 ```{.python .input #positional-information-the-experiment-1}
 %%tab jax
 data = d2l.WikiText103(batch_size=64, num_steps=128)
 schemes = ('learned', 'sinusoidal', 'rope', 'alibi', 'none')
-models = {}
-for pos in schemes:
-    model = TinyCharLM(len(data.vocab), pos=pos,
+
+def train_tiny(**kwargs):
+    """A TinyCharLM after 3000 steps, and its final training loss."""
+    model = TinyCharLM(len(data.vocab), **kwargs,
                        rngs=nnx.Rngs(d2l.get_key()))
     optimizer = nnx.Optimizer(model, optax.adamw(1e-3, weight_decay=0.0),
                               wrt=nnx.Param)
-    losses = d2l.train_steps(model, data, optimizer, 3000)
-    models[pos] = model
-    print(f'{pos:>10}: final training loss {d2l.final_loss(losses):.2f}')
+    return model, d2l.final_loss(d2l.train_steps(model, data, optimizer,
+                                                 3000))
+
+runs = {}  # Three independently initialized models per scheme
+for pos in schemes:
+    trained = [train_tiny(pos=pos) for _ in range(3)]
+    runs[pos] = [model for model, _ in trained]
+    print(f'{pos:>10}: final training loss '
+          + ', '.join(f'{loss:.2f}' for _, loss in trained))
+models = {pos: ms[0] for pos, ms in runs.items()}  # The first run of each
 ```
 
-Every model was trained on length-128 sequences. We evaluate validation
-perplexity at that training context, $n = 128$, and at two and four times
-this length ($n = 256$ and $512$). The first point is in range; the other
-two measure extrapolation. All three read the same 1.1 million bytes of the
-validation split. We cut it into consecutive windows of 128 bytes with
-`data.windows` and regroup them into windows of 256 and 512, so that only
-the context available to each prediction changes. `d2l.lm_perplexity`
-(:numref:`sec_adam`) sums the cross-entropy over all predicted tokens and
-converts it to a perplexity once at the end.
-
-The table lists the perplexity of each model at the three context lengths.
+We evaluate validation perplexity on identical validation bytes regrouped
+into windows of $n \in \{128, 256, 512\}$, alongside a closed-form byte-bigram
+baseline.
 
 ```{.python .input #positional-information-the-experiment-3}
 %%tab pytorch, jax
@@ -695,68 +599,160 @@ for n in contexts:  # The same bytes, regrouped into windows of n
     Xn, Yn = X.reshape(-1, n), Y.reshape(-1, n)
     eval_sets[n] = [(Xn[i:i + batch], Yn[i:i + batch])
                     for i in range(0, len(Xn), batch)]
-ppls = {pos: [d2l.lm_perplexity(models[pos], eval_sets[n]) for n in contexts]
-        for pos in schemes}
-print(f'{"context":>10}: ' + ''.join(f'{n:>8}' for n in contexts))
-for pos in schemes:
-    print(f'{pos:>10}: ' + ''.join(f'{p:8.1f}' for p in ppls[pos]))
+
+def perplexities(model):
+    return [d2l.lm_perplexity(model, eval_sets[n]) for n in contexts]
+
+def mean_range(values):
+    """Mean and (min-max) of the runs, one column of the table."""
+    return f'{np.mean(values):5.1f} ({min(values):.1f}-{max(values):.1f})'
+
+ppls = {pos: [perplexities(model) for model in ms] for pos, ms in runs.items()}
+print(f'{num_bytes:,} validation bytes, mean (min-max) of three runs')
+print(f'{"context":>10}: ' + ''.join(f'{n:>18}' for n in contexts))
+for pos in schemes:  # zip(*...) turns runs x contexts into contexts x runs
+    print(f'{pos:>10}: '
+          + ''.join(f'{mean_range(col):>18}' for col in zip(*ppls[pos])))
 ```
 
-At the training length, every explicit scheme gives a lower perplexity than
-NoPE, and the sinusoidal table and RoPE give the lowest. Beyond the training
-length the schemes split into two groups. The learned table, the
-sinusoidal table, and RoPE all degrade at context 512, by up to
-several-fold, each for its own reason. The learned
-table reaches rows beyond position 127 that still hold their random
-initialization. The sinusoidal table supplies rows whose slow columns take
-values never seen in training. RoPE adds no position vector, but its slow
-pairs have periods longer than 128 positions. At offsets beyond 127 they
-turn through angles they never reached during training, and the
-projections were never fit to scores computed from those angles.
+```{.python .input #positional-information-byte-bigram-baseline}
+%%tab pytorch, jax
+V = len(data.vocab)
+counts = np.ones((V, V))  # Byte pair counts, plus one for unseen pairs
+for s in range(0, len(data.train) - 1, 10**7):  # Chunks of 10^7 bytes
+    a = data.train[s:s + 10**7 + 1].astype(np.int64)
+    counts += np.bincount(a[:-1] * V + a[1:], minlength=V * V).reshape(V, V)
+bigram = counts / counts.sum(1, keepdims=True)  # P(next byte | this byte)
+x, y = np.asarray(X).reshape(-1), np.asarray(Y).reshape(-1)
+print(f'byte bigram: perplexity {np.exp(-np.log(bigram[x, y]).mean()):.1f}')
+```
 
-The other two schemes hold their level. ALiBi stays nearly flat because its
-bias depends only on distance. NoPE, which has no table and no angles to
-run out of, stays flat from a higher starting point. A flat curve, however,
-does not mean that a model *uses* the longer context.
-ALiBi's steep heads hardly look past the training window at all, as
-Exercise :exref:`ex_positional-information-where-extrapolation-fails`
-measures.
+At the training length ($n = 128$), RoPE achieves the lowest perplexity
+($7.3$), ahead of learned ($9.3$), sinusoidal ($9.6$), and ALiBi ($9.7$), all
+of which improve on the byte-bigram baseline ($11.6$); NoPE remains at the
+bigram level in this small two-block model.
+
+At $n = 512$, the three schemes whose representations encounter out-of-range
+values degrade sharply: learned embeddings hit untrained rows ($128$--$511$),
+sinusoidal slow columns take unseen values, and RoPE's low-frequency pairs
+rotate to angles never seen during training. ALiBi's perplexity remains flat
+at $9.7$. To see why, we measure the fraction of attention weight that ALiBi's
+four heads place on keys at distance $\ge 128$, and compare against
+masking out all keys at distance $\ge 128$:
+
+```{.python .input #positional-information-alibi-weight-beyond-the-window}
+%%tab pytorch
+alibi_model, T = models['alibi'], max(contexts)
+device = next(alibi_model.parameters()).device
+X_eval = eval_sets[T][0][0].to(device)  # 16 windows of 512 bytes
+i = torch.arange(T, device=device)
+far = i[:, None] - i[None, :] >= train_len  # Offsets never trained on
+
+def far_weight(weights):
+    """Per head: mean weight on far keys, over queries from train_len on."""
+    return (weights * far).sum(-1)[..., train_len:].mean((0, -1)).tolist()
+
+with torch.inference_mode():
+    maps = alibi_model.attention_weights(X_eval)
+    bias_only = d2l.masked_softmax(alibi_model.alibi(T, device)[None],
+                                   d2l.causal_mask(T, device=device))
+print(f'{"head":>10}: ' + ''.join(f'{h:>9}' for h in range(1, 5)))
+for name, weights in [('bias alone', bias_only)] + [
+        (f'block {b}', w) for b, w in enumerate(maps, 1)]:
+    print(f'{name:>10}: ' + ''.join(f'{w:9.3f}' for w in far_weight(weights)))
+```
+
+```{.python .input #positional-information-alibi-weight-beyond-the-window}
+%%tab jax
+alibi_model, T = models['alibi'], max(contexts)
+X_eval = eval_sets[T][0][0]  # 16 windows of 512 bytes
+i = jnp.arange(T)
+far = i[:, None] - i[None, :] >= train_len  # Offsets never trained on
+
+def far_weight(weights):
+    """Per head: mean weight on far keys, over queries from train_len on."""
+    return (weights * far).sum(-1)[..., train_len:].mean((0, -1)).tolist()
+
+maps = alibi_model.attention_weights(X_eval)
+bias_only = d2l.masked_softmax(alibi_model.alibi(T)[None], d2l.causal_mask(T))
+print(f'{"head":>10}: ' + ''.join(f'{h:>9}' for h in range(1, 5)))
+for name, weights in [('bias alone', bias_only)] + [
+        (f'block {b}', w) for b, w in enumerate(maps, 1)]:
+    print(f'{name:>10}: ' + ''.join(f'{w:9.3f}' for w in far_weight(weights)))
+```
+
+```{.python .input #positional-information-alibi-without-far-keys}
+%%tab pytorch
+class WindowedALiBi(TinyCharLM):
+    """ALiBi whose queries see only the window most recent keys."""
+    def __init__(self, *args, window, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.window = window
+
+    def alibi(self, T, device):
+        i = torch.arange(T, device=device)
+        return super().alibi(T, device).masked_fill(
+            i[:, None] - i[None, :] >= self.window, -math.inf)
+
+full, windowed = [], []
+for model in runs['alibi']:
+    model_w = WindowedALiBi(len(data.vocab), pos='alibi',
+                            window=train_len).to(device)
+    model_w.load_state_dict(model.state_dict())  # Same trained weights
+    full.append(d2l.lm_perplexity(model, eval_sets[T]))
+    windowed.append(d2l.lm_perplexity(model_w, eval_sets[T]))
+for name, ppl in ('all keys', full), (f'keys < {train_len} back', windowed):
+    print(f'{name:>16}: perplexity at {T} {mean_range(ppl)}')
+```
+
+```{.python .input #positional-information-alibi-without-far-keys}
+%%tab jax
+class WindowedALiBi(TinyCharLM):
+    """ALiBi whose queries see only the window most recent keys."""
+    def __init__(self, *args, window, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.window = window
+
+    def alibi(self, T):
+        i = jnp.arange(T)
+        return jnp.where(i[:, None] - i[None, :] >= self.window, -jnp.inf,
+                         super().alibi(T))
+
+full, windowed = [], []
+for model in runs['alibi']:
+    model_w = WindowedALiBi(len(data.vocab), pos='alibi', window=train_len,
+                            rngs=nnx.Rngs(d2l.get_key()))
+    nnx.update(model_w, nnx.state(model))  # Same trained weights
+    full.append(d2l.lm_perplexity(model, eval_sets[T]))
+    windowed.append(d2l.lm_perplexity(model_w, eval_sets[T]))
+for name, ppl in ('all keys', full), (f'keys < {train_len} back', windowed):
+    print(f'{name:>16}: perplexity at {T} {mean_range(ppl)}')
+```
+
+Removing all keys at distance $\ge 128$ leaves ALiBi's perplexity unchanged:
+its steep heads already ignore distant keys, and its gentle heads compute a
+broad recency-weighted average that gains nothing from bytes beyond 128. Thus
+a flat extrapolation curve indicates that a scheme avoids breaking on distant
+keys, not necessarily that it extracts long-range information from them.
 
 ### Extending a Trained Model's Context
 :label:`subsec_pos-context-extension`
 
-Only some of RoPE's pairs meet anything new beyond the training length. A
-pair whose period $2\pi/\omega_m$ is at most 128 positions completes a
-full turn within the training offsets, so every angle it produces at offset
-400 lies within $\omega_m/2$ of an angle it already took during training.
-For the head width 32 of `TinyCharLM`, six of the 16 pairs are fast in this
-sense, with periods from 6 to 112 positions. The other ten pairs, whose
-periods exceed the training length, reach angles at long offsets that they
-never took during training. Because the angles vary continuously, they can
-be *rescaled* so that the deployed range maps into the trained one.
-Multiplying every angle by $128/512$ makes the offset $4\delta$ look like the
-familiar $\delta$, so the model interpolates instead of extrapolating.
-This is *position interpolation* :cite:`Chen.Wong.Chen.ea.2023`, which
-extended Llama models from 2,048 to 32,768 tokens with at most 1000
-fine-tuning steps.
+Why does RoPE break beyond the training length $L = 128$, and how can we
+repair it? For head width $d_h = 32$, the $16$ coordinate pairs have periods
+$2\pi / \omega_m = 2\pi \cdot 10000^{m/16}$. The first $6$ *fast* pairs have
+periods $\le 112 < 128$ and already complete full rotations within the
+training window; the remaining $10$ *slow* pairs have periods from $199$ to
+$35{,}000$ and rotate into unseen angular regions at $n = 512$.
 
-Uniform rescaling also compresses the fast pairs, which had already seen
-every angle, and blurs the angles they use to tell neighbors apart. YaRN
-:cite:`Peng.Quesnelle.Fan.ea.2024` therefore interpolates only the slow
-pairs, leaves the fast ones as trained, ramps between the two groups, and
-adds a softmax temperature. NTK-aware scaling, which the YaRN paper also
-describes, reaches a similar split by changing only the base $b = 10^4$.
-To grow the context by a factor $s$ (here $s = 4$), it replaces $b$ by
-$b' = b\, s^{d/(d-2)}$, which leaves the fastest pair unchanged and divides
-the frequency of the slowest pair by exactly $s$. Training with a larger base
-from the outset is the trained form of the same idea. Llama 2 Long, for
-example, raised the base from $10^4$ to $5 \times 10^5$ in continued
-pretraining on long sequences :cite:`Xiong.Liu.Molybog.ea.2024`.
-
-The attributes `rope_base` and `rope_scale` of `TinyCharLM` let us try two
-of these rescalings on the trained RoPE model without any training: a
-uniform factor $128/512$ for all pairs, and the same factor for the slow
-pairs only.
+*Position interpolation* :cite:`Chen.Wong.Chen.ea.2023` scales all angles by
+$128 / 512 = 1/4$ to map the new context range back into the trained interval
+$[0, 128)$. However, scaling the fast pairs without fine-tuning destroys the
+local phase differences used to distinguish neighboring bytes. Leaving the
+fast pairs untouched and scaling *only* the slow pairs—the core idea behind
+*YaRN* :cite:`Peng.Quesnelle.Fan.ea.2024` and *NTK-aware scaling* (which
+increases the base $b \mapsto b\, s^{d_h/(d_h - 2)}$)—recovers most of the
+extrapolation perplexity at zero training cost:
 
 ```{.python .input #positional-information-extending-a-trained-model-s-context}
 %%tab pytorch
@@ -771,11 +767,15 @@ ones = torch.ones(d_head // 2)
 shrink = train_len / max(contexts)  # Longest context into the trained one
 factors = {'unscaled': ones, 'all pairs': ones * shrink,
            'slow pairs': torch.where(slow, ones * shrink, ones)}
-for name, factor in factors.items():
-    rope_model.rope_scale.copy_(factor)
-    ppl = [d2l.lm_perplexity(rope_model, eval_sets[n]) for n in contexts]
-    print(f'{name:>10}: ' + ''.join(f'{p:8.1f}' for p in ppl))
-rope_model.rope_scale.copy_(ones);
+print(f'{"context":>10}: ' + ''.join(f'{n:>18}' for n in contexts))
+for name, factor in factors.items():  # Each of the three trained RoPE runs
+    ppl = []
+    for rope_model in runs['rope']:
+        rope_model.rope_scale.copy_(factor)
+        ppl.append(perplexities(rope_model))
+        rope_model.rope_scale.copy_(ones)
+    print(f'{name:>10}: ' + ''.join(f'{mean_range(col):>18}'
+                                    for col in zip(*ppl)))
 ```
 
 ```{.python .input #positional-information-extending-a-trained-model-s-context}
@@ -791,52 +791,41 @@ ones = jnp.ones(d_head // 2)
 shrink = train_len / max(contexts)  # Longest context into the trained one
 factors = {'unscaled': ones, 'all pairs': ones * shrink,
            'slow pairs': jnp.where(slow, ones * shrink, ones)}
-for name, factor in factors.items():
-    rope_model.rope_scale[...] = factor
-    ppl = [d2l.lm_perplexity(rope_model, eval_sets[n]) for n in contexts]
-    print(f'{name:>10}: ' + ''.join(f'{p:8.1f}' for p in ppl))
-rope_model.rope_scale[...] = ones
+print(f'{"context":>10}: ' + ''.join(f'{n:>18}' for n in contexts))
+for name, factor in factors.items():  # Each of the three trained RoPE runs
+    ppl = []
+    for rope_model in runs['rope']:
+        rope_model.rope_scale[...] = factor
+        ppl.append(perplexities(rope_model))
+        rope_model.rope_scale[...] = ones
+    print(f'{name:>10}: ' + ''.join(f'{mean_range(col):>18}'
+                                    for col in zip(*ppl)))
 ```
 
-Rescaling only the slow pairs brings the perplexity at context 512 far
-below that of the unscaled model, and close to its level at the training
-length. The uniform factor fails on this model. It compresses the fast
-pairs too, blurs the distinctions between neighboring bytes that they were
-trained to make. The perplexity jumps already at the training length and
-stays at that high level at every context, so at 512 it gains nothing
-reliable over leaving the angles alone and remains far above the rescaling
-of the slow pairs. This is the defect
-that YaRN's split into fast and slow pairs removes. Even so, at context
-512 neither rescaled model reaches the perplexity that the unscaled model
-has at the training length, because no weight was trained on compressed
-angles. The published recipes therefore pair the rescaling with a short
-fine-tune at the new length, which Exercise
-:exref:`ex_positional-information-position-interpolation` carries out on
-this model.
+Rescaling only the slow pairs cuts length-512 perplexity from $27.7$ down to
+$9.0$ without updating a single weight, and a brief fine-tune at the target
+length eliminates the remaining gap (Exercise
+:exref:`ex_positional-information-position-interpolation`).
 
 ## Summary
 
-Unmasked attention is permutation equivariant, so a model built from it
-cannot tell where a token stands unless it is told. Absolute embeddings add
-a position vector to each token. The vector comes from a designed
-sinusoidal table, whose shifts are rotations of column pairs, or from a
-learned table, whose rows are trained only at the positions seen in
-training. RoPE rotates query and key pairs so
-that every score depends on the offset alone, ALiBi subtracts a per-head
-linear distance penalty, and NoPE relies on the asymmetry of the causal
-mask. Trained at context 128, all explicit schemes beat NoPE in range, but
-the learned table, the sinusoidal table, and RoPE degrade at four times
-that length, while ALiBi and NoPE stay flat. For RoPE only the slow pairs
-reach unseen angles at long offsets, and rescaling the angles
-(position interpolation, YaRN, a larger base) maps a longer context back
-into the trained range.
+* Unmasked self-attention is permutation equivariant: $f(\boldsymbol{\Pi}
+  \mathbf{X}) = \boldsymbol{\Pi} f(\mathbf{X})$.
+* Additive position embeddings (learned or sinusoidal) break symmetry at the
+  input, but introduce content--position cross terms tied to absolute
+  positions and fail beyond the training length.
+* Requiring attention scores to depend solely on relative offset $j - i$
+  forces orthogonal planar rotations on queries and keys (*RoPE*), while
+  *ALiBi* subtracts a per-head linear distance penalty $-m_h(i - j)$.
+* Beyond the training window, RoPE fails only in low-frequency pairs whose
+  wavelengths exceed the training length; interpolating those slow pairs
+  while preserving high-frequency pairs restores long-context performance.
 
 ## Exercises
 
 1. **Distinct positions, distinct codes.** Let $\mathbf{p}_i$ be row $i$ of
    the sinusoidal table :eqref:`eq_sinusoidal-def` of width $d$, with the
-   frequencies $\omega_m = 1/10000^{2m/d}$
-   of :eqref:`eq_sinusoidal-rotation`.
+   frequencies $\omega_m = 1/10000^{2m/d}$.
     1. Show that
        $$\mathbf{p}_i^\top \mathbf{p}_{i+\delta} = \sum_{m=0}^{d/2-1} \cos(\delta\,\omega_m),$$
        derive $\|\mathbf{p}_i - \mathbf{p}_{i+\delta}\|^2$ from it, and
@@ -848,12 +837,11 @@ into the trained range.
     1. The fastest pair has period $2\pi$, so it nearly repeats at integer
        offsets close to multiples of $2\pi$. Find the offset $\delta < 512$
        at which its angle comes closest to a multiple of $2\pi$, and give
-       the residual angle.
-    1. For $d = 32$, evaluate $\|\mathbf{p}_i - \mathbf{p}_{i+\delta}\|$ at
-       this offset and at $\delta = 1$, and find the offset between $1$ and
-       $511$ at which the distance is smallest. Which pairs keep the two
-       positions of the near repeat apart? Relate the answer to the binary
-       counting of :numref:`subsec_pos-sinusoidal`.
+       the residual angle. For $d = 32$, compare
+       $\|\mathbf{p}_i - \mathbf{p}_{i+\delta}\|$ at this offset with its
+       value at $\delta = 1$, say which pairs keep the two positions of the
+       near repeat apart, and relate the answer to the binary counting
+       of :numref:`subsec_pos-sinusoidal`.
    :exlabel:`ex_positional-information-distinct-positions-distinct-codes`
 
 1. [code] **Untrained rows.** The table `pos_emb` of `models['learned']`
@@ -861,8 +849,9 @@ into the trained range.
    first 128.
     1. Construct a new `TinyCharLM` with `pos='learned'`, copy its table
        `pos_emb` before training, and train it as in the experiment
-       of :numref:`subsec_pos-experiment`. Explain why rows 128 to 511 of the
-       trained table are bitwise equal to the copy, and check the claim. By
+       of :numref:`subsec_pos-experiment`. Explain from Adam's two moment
+       estimates why rows 128 to 511 of the trained table are bitwise equal
+       to the copy, and check the claim. By
        what factor would decoupled weight decay with coefficient $0.1$ at
        the learning rate $10^{-3}$ have shrunk these rows over the 3000
        training steps?
@@ -870,24 +859,12 @@ into the trained range.
        table and display them with `d2l.show_heatmaps`. Describe the three
        blocks of the result: trained rows against trained rows, untrained
        against untrained, and trained against untrained.
-    1. By Exercise :exref:`ex_positional-information-distinct-positions-distinct-codes`, the dot products of the sinusoidal rows depend only on
-       $i - j$, so the sinusoidal similarity matrix is constant along each
-       diagonal $i - j = \textrm{const}$. For the trained rows 0 to 127,
-       compute the standard deviation of the cosine similarities along each
-       diagonal and average it over the diagonals. Compare the average with
-       the standard deviation of the diagonal means across diagonals, and
-       decide whether training produced a code whose similarities are
-       approximately invariant to shifts.
    :exlabel:`ex_positional-information-untrained-rows`
 
 1. **Additive codes in the score.** With the additive encoding of
-   :numref:`subsec_pos-sinusoidal`, a first-layer head of
-   :eqref:`eq_pos-selfattn` scores the inputs at positions $i$ and $j$ as
-
-   $$\mathrm{score}_{ij} = (\mathbf{x}_i + \mathbf{p}_i)^\top \mathbf{A}\, (\mathbf{x}_j + \mathbf{p}_j), \qquad \mathbf{A} = \mathbf{W}_q \mathbf{W}_k^\top / \sqrt{d}.$$
-
-    1. Expand the score into its four terms, and state which of them
-       depend on $i$, which on $j$, and which on both.
+   :numref:`subsec_pos-sinusoidal`, a first-layer head scores the inputs at
+   positions $i$ and $j$ by the four terms of :eqref:`eq_pos-four-terms`,
+   with $\mathbf{A} = \mathbf{W}_q \mathbf{W}_k^\top / \sqrt{d_h}$.
     1. Let $\mathbf{J}$ be the rotation of the plane by $\pi/2$. Using
        :eqref:`eq_sinusoidal-rotation`, show that the position--position
        term $\mathbf{p}_i^\top \mathbf{A}\, \mathbf{p}_j$ depends only on
@@ -901,15 +878,16 @@ into the trained range.
        shift of $j$. Use the answer to explain the score change of the
        additive encoding in the shift test of :numref:`subsec_pos-rope`,
        and why RoPE has no content--position term.
+   :exlabel:`ex_positional-information-additive-codes`
 
 1. [code] **Where extrapolation fails.** The perplexities of
    :numref:`subsec_pos-experiment` at context 512 average the loss over all
    positions of each sequence.
-    1. Show that in each of the five models the logits at positions 0 to
-       127 of a length-512 sequence agree, up to floating-point round-off,
-       with those computed from its first 128 tokens alone. What does this
-       imply about the positions at which the perplexity changes between
-       context 128 and context 512?
+    1. Check numerically that in each of the five models the logits at
+       positions 0 to 127 of a length-512 sequence agree, up to
+       floating-point round-off, with those computed from its first 128
+       tokens alone. Which two properties of `TinyCharLM` guarantee this
+       for every scheme?
     1. Compute the validation loss at every position of the length-512
        sequences for the five models, average it over windows of 16
        positions, and plot it against position. For each scheme, where does
@@ -922,21 +900,12 @@ into the trained range.
        curve beyond position 128 with the unwindowed curve below it. Do
        offsets beyond 127 account for the degradation of RoPE at context
        512?
-    1. ALiBi stays approximately flat at context 512. For the query at
-       position 511 and equal content scores for all keys, compute the
-       fraction of the weight that each of the slopes of
-       :eqref:`eq_alibi-def` with $H = 4$ leaves on the distances
-       $i - j \geq 128$, none of which occurred in training. Measure the
-       same fraction for the four heads of each block of
-       `models['alibi']` at context 512, and decide whether the stability
-       of ALiBi at that length comes from never attending beyond the
-       training range.
    :exlabel:`ex_positional-information-where-extrapolation-fails`
 
 1. **Biases that keep the symmetry.** ● Suppose that a fixed matrix
    $\mathbf{B} \in \mathbb{R}^{n \times n}$ is added to the score matrix
    $\mathbf{S}$ of the proof before the softmax, so that the layer
-   :eqref:`eq_pos-selfattn` computes $\mathrm{softmax}(\mathbf{S} +
+   :eqref:`eq_self-attention` computes $\mathrm{softmax}(\mathbf{S} +
    \mathbf{B})\, \mathbf{X}\mathbf{W}_v$.
     1. Show that the proposition still holds for every permutation matrix
        $\boldsymbol{\Pi}$ with $\boldsymbol{\Pi}^\top \mathbf{B}
@@ -952,24 +921,25 @@ into the trained range.
        :eqref:`eq_alibi-def` does not share this symmetry.
 
 1. **Offset preference in RoPE.** ● Split a query $\mathbf{q}$ and a key
-   $\mathbf{k}$ into the $d/2$ two-dimensional pairs $\mathbf{q}^{(m)},
+   $\mathbf{k}$ into the $d_h/2$ two-dimensional pairs $\mathbf{q}^{(m)},
    \mathbf{k}^{(m)} \in \mathbb{R}^2$ on which :eqref:`eq_rope-def` acts,
    and let $\delta = j - i$ be the offset of the key position $j$ from the
    query position $i$.
     1. Show that the RoPE score :eqref:`eq_rope-goal` equals
-       $$\sum_{m=0}^{d/2-1} \|\mathbf{q}^{(m)}\|\, \|\mathbf{k}^{(m)}\| \cos(\delta\,\omega_m - \varphi_m),$$
-       where $\varphi_m$ is the angle from $\mathbf{k}^{(m)}$ to
-       $\mathbf{q}^{(m)}$.
-    1. Choose the angles $\varphi_m$ so that every pair contributes its
+       $$\sum_{m=0}^{d_h/2-1} \|\mathbf{q}^{(m)}\|\, \|\mathbf{k}^{(m)}\| \cos(\delta\,\omega_m - \psi_m),$$
+       where $\psi_m$ is the angle from $\mathbf{k}^{(m)}$ to
+       $\mathbf{q}^{(m)}$ (the $\varphi$ of :numref:`fig_rope-rotation`
+       with the opposite sign).
+    1. Choose the angles $\psi_m$ so that every pair contributes its
        maximum at the offset $\delta = -1$, the previous token. With all
        products $\|\mathbf{q}^{(m)}\|\, \|\mathbf{k}^{(m)}\|$ equal to $c$,
        show that the score, as a function of $\delta$, is $c$ times a
        shifted copy of the dot product $\mathbf{p}_i^\top
        \mathbf{p}_{i+\delta}$ of Exercise :exref:`ex_positional-information-distinct-positions-distinct-codes` for a sinusoidal table of width
-       $d$.
-    1. Take $d = 32$ and the query at position 127, which attends to the
+       $d_h$.
+    1. Take $d_h = 32$ and the query at position 127, which attends to the
        offsets $\delta = -127, \ldots, 0$. Let the attention logits equal
-       these scores, with the factor $1/\sqrt{d}$ absorbed into $c$. Find
+       these scores, with the factor $1/\sqrt{d_h}$ absorbed into $c$. Find
        the $c$ at which the offset $-1$ receives half of the softmax
        weight, and identify the offsets that compete most with it. Which
        pairs set the gap between the score at $-1$ and the scores at its
@@ -977,24 +947,25 @@ into the trained range.
    :exlabel:`ex_positional-information-offset-preference-rope`
 
 1. [code] **The RoPE base.** ● In :eqref:`eq_rope-def` the frequencies are
-   $\omega_m = 10000^{-2m/d}$, and the constant $10000$ is a choice.
-    1. For the head width 32 of `TinyCharLM`, compute the periods
+   $\omega_m = 10000^{-2m/d_h}$, and the constant $10000$ is a choice.
+    1. For the head width $d_h = 32$ of `TinyCharLM`, compute the periods
        $2\pi/\omega_m$ of the 16 pairs for the bases $100$, $10^4$, and
        $10^6$, and count the pairs that complete at least one full rotation
        within 128 positions. Which period does not depend on the base?
     1. Retrain the `'rope'` variant of `TinyCharLM` with bases $100$ and
-       $10^6$ by setting its attribute `rope_base` after construction. Train
-       two models for each base and one more for base $10^4$, so that
-       differences between bases can be compared with the variation across
-       runs. Compare perplexity at 128, 256, and 512.
+       $10^6$ by setting its attribute `rope_base` after construction.
+       Train three models with each of the two bases, and compare them with
+       the three base-$10^4$ models of the experiment, so that differences
+       between bases can be set against the variation across runs. Compare
+       perplexity at 128, 256, and 512.
     1. Explain from the counts why the base is expected to matter more at
        length 512 than at 128, and check the expectation against your
        results.
    :exlabel:`ex_positional-information-rope-base`
 
 1. [extended] **Position interpolation.** ● The last cell of
-   :numref:`subsec_pos-context-extension` rescales the angles of
-   `models['rope']` without any training. This problem explains its
+   :numref:`subsec_pos-context-extension` rescales the angles of the
+   trained RoPE models without any training. This problem explains its
    result, adds the base change of NTK-aware scaling, and completes the
    recipe with a fine-tune.
     1. Show that a pair that completes a full rotation within the training
@@ -1002,12 +973,12 @@ into the trained range.
        $2\pi$, every angle that a longer offset produces. Compute the gap
        of Exercise :exref:`ex_positional-information-offset-preference-rope`
        between the score at offset $-1$ and the scores at its neighbors for
-       $d = 32$, before the rescaling, after the uniform rescaling by
+       $d_h = 32$, before the rescaling, after the uniform rescaling by
        $128/512$, and after the rescaling of only the pairs whose period
        exceeds 128 positions. Relate the result to the perplexities at
        context 128 in the cell.
-    1. Show that the base $b' = b\, s^{d/(d-2)}$ leaves $\omega_0$
-       unchanged and divides $\omega_{d/2-1}$ by $s$. Set `rope_base` of
+    1. Show that the base $b' = b\, s^{d_h/(d_h-2)}$ leaves $\omega_0$
+       unchanged and divides $\omega_{d_h/2-1}$ by $s$. Set `rope_base` of
        `models['rope']` to this base for $s = 4$, evaluate at 128, 256,
        and 512 without training, and compare with the two rescalings of
        the cell.
@@ -1028,7 +999,7 @@ into the trained range.
 [Dive into Deep Learning · §10.4]{.kicker}
 
 Positional Information<br>
-**permutation equivariance · sinusoids and tables · RoPE · train short, test long**
+**permutation equivariance · learned and sinusoidal tables · RoPE · train short, test long**
 :::
 :::
 
@@ -1036,14 +1007,14 @@ Positional Information<br>
 [The problem]{.kicker}
 
 - Self-attention maps a shuffled sentence to the **same outputs,
-  shuffled**: measured difference at float32 round-off (about $10^{-7}$).
+  shuffled**.
 - A classifier that pools the outputs cannot tell who bit whom.
-- GPT-2 small adds a learned table of **1,024** position vectors: token
-  1,025 has no position at all.
+- GPT-2 small learns a table of **1,024** position vectors: token 1,025
+  has no position at all.
 
 ::: {.d2l-note}
-How do we give attention a sense of position that still works beyond the
-training length?
+How do we give attention a sense of position, and what happens beyond the
+length it was trained on?
 :::
 :::
 
@@ -1051,15 +1022,17 @@ training length?
 [Goals]{.kicker}
 
 - prove that unmasked attention is permutation equivariant;
-- build sinusoidal and learned position tables, and read a sinusoidal shift
-  as a rotation;
-- derive RoPE from "scores depend only on the offset" and check it;
-- predict where each scheme fails beyond the training length, and why;
-- stretch a trained RoPE model to four times its context by rescaling
+- read a shift of the sinusoidal table as a rotation, and see why adding
+  it leaves absolute position in the score;
+- derive RoPE from "scores depend only on the offset";
+- predict which schemes break at four times the training length, and
+  test the prediction;
+- repair a trained RoPE model at four times its context by rescaling
   angles.
 
-**Running example:** `TinyCharLM`, an attention-only byte-level model with
-heads of width 32, trained at context 128 and evaluated at 512.
+**Running example:** `TinyCharLM`, an attention-only byte model (width 128,
+two blocks of four heads of width 32), trained at context 128, tested at
+512.
 :::
 
 ::: {.slide title="Positional Information Lets Attention See Order"}
@@ -1071,16 +1044,17 @@ heads of width 32, trained at context 128 and evaluated at 512.
 |---|---|
 | Queries, Keys, and Values | attention as a soft lookup |
 | Attention Scoring and Masking | scaled dot products, masks |
-| Multi-Head and Cross-Attention | several heads, shared keys and values |
+| Self-Attention and Multiple Heads | a sequence reads itself; several heads |
 | **Positional Information** | **where a token sits** |
 | The Cost of Attention | quadratic cost, fused kernels |
+| Windowed and Linear Attention | linear cost, and what it gives up |
 | Attention Circuits | what trained heads compute |
 :::
 
 ::: {.col .narrow}
-- **Uses:** multi-head attention, causal masks, the fixed-step training
-  loop.
-- **Skips:** learned relative-position embeddings, long-context training.
+- **Uses:** self-attention, causal masks, the byte data and training
+  loop of `TinyLM`.
+- **Skips:** learned relative-position vectors, long-context training.
 :::
 :::
 :::
@@ -1091,7 +1065,8 @@ heads of width 32, trained at context 128 and evaluated at 512.
 **Proposition.** $f(\boldsymbol{\Pi}\mathbf{X}) = \boldsymbol{\Pi}
 f(\mathbf{X})$ for every permutation matrix $\boldsymbol{\Pi}$, where
 $f(\mathbf{X}) = \mathrm{softmax}\big(\mathbf{X}\mathbf{W}_q
-(\mathbf{X}\mathbf{W}_k)^\top/\sqrt{d}\big)\, \mathbf{X}\mathbf{W}_v$.
+(\mathbf{X}\mathbf{W}_k)^\top/\sqrt{d_h}\big)\, \mathbf{X}\mathbf{W}_v$
+and $d_h$ is the head width.
 
 **Proof sketch.** Projections act row-wise; scores become
 $\boldsymbol{\Pi}\mathbf{S}\boldsymbol{\Pi}^\top$; row-softmax commutes with
@@ -1105,21 +1080,37 @@ permutations; $\boldsymbol{\Pi}^\top\boldsymbol{\Pi} = \mathbf{I}$. $\blacksquar
 ::: {.slide title="Shuffled Tokens Give Shuffled Outputs"}
 [Permutation equivariance]{.kicker}
 
-Eight random tokens through a four-head layer, then shuffled:
+Eight random tokens through a four-head layer, then shuffled; the outputs
+agree up to float32 round-off:
 
 @!positional-information-attention-ignores-order
 
 ::: {.d2l-note}
 A **causal mask** breaks the symmetry: position $i$ attends over $i+1$
-tokens. NoPE relies on this asymmetry.
+tokens.
 :::
 :::
 
-::: {.slide title="Sinusoids Give Each Position a Multi-Frequency Code"}
+::: {.slide title="A Learned Table Knows Only the Positions It Was Trained On"}
 [Absolute embeddings]{.kicker}
 
-Add $\mathbf{p}_i$ to the token at position $i$ (Vaswani et al., 2017);
-pair $m$ of the $d$ columns turns at frequency $\omega_m = 10000^{-2m/d}$:
+- Add a vector $\mathbf{p}_i$ to the token at position $i$: a shuffle
+  gives $\boldsymbol{\Pi}\mathbf{X} + \mathbf{P} \neq
+  \boldsymbol{\Pi}(\mathbf{X} + \mathbf{P})$, and the symmetry breaks.
+- **Learned** (BERT, GPT-2): one free vector per position.
+- A row that no training example used keeps its random initialization.
+
+::: {.d2l-note}
+Trained at context 128, rows 128 to 511 of a 512-row table never
+receive a gradient.
+:::
+:::
+
+::: {.slide title="Sinusoids Give Each Position a Code at Every Frequency"}
+[Absolute embeddings]{.kicker}
+
+Pair $m$ of the $d$ columns turns at $\omega_m = 10000^{-2m/d}$ radians
+per position (Vaswani et al., 2017):
 
 $$p_{i, 2m} = \sin(i\,\omega_m), \qquad p_{i, 2m+1} = \cos(i\,\omega_m)$$
 
@@ -1129,13 +1120,28 @@ $$p_{i, 2m} = \sin(i\,\omega_m), \qquad p_{i, 2m+1} = \cos(i\,\omega_m)$$
 ::: {.slide title="Sinusoids Are a Continuous Binary Counter"}
 [Absolute embeddings]{.kicker}
 
-Low bits flip quickly and high bits slowly; the table does the same,
-smoothly:
+Counting in binary, the lowest bit flips every step, the next every two,
+the next every four. The table does the same, smoothly:
 
 @!positional-information-sinusoidal-encodings-3
 
-A **learned table** (BERT, GPT-2) trains one free vector per position;
-rows beyond the training length keep their random initialization.
+Fast columns separate neighbors; slow columns separate regions.
+:::
+
+::: {.slide title="Check: Which of These Break the Symmetry?"}
+[Check]{.kicker}
+
+1. a second attention layer on top of the first;
+2. the same learned vector added to every token;
+3. a causal mask;
+4. a different vector $\mathbf{p}_i$ added at each position.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 3 and 4. A stack of equivariant layers is equivariant, and a
+vector shared by all rows moves with any shuffle.
+:::
+:::
 :::
 
 ::: {.slide title="A Shift Rotates Every Column Pair by an Angle Set by the Offset"}
@@ -1143,29 +1149,48 @@ rows beyond the training length keep their random initialization.
 
 $$\begin{bmatrix} \cos(\delta\omega_m) & \sin(\delta\omega_m) \\ -\sin(\delta\omega_m) & \cos(\delta\omega_m) \end{bmatrix}\begin{bmatrix} p_{i, 2m} \\ p_{i, 2m+1} \end{bmatrix} = \begin{bmatrix} p_{i+\delta, 2m} \\ p_{i+\delta, 2m+1} \end{bmatrix}$$
 
-- The rotation angle depends on the offset $\delta$, never on $i$.
-- But the model sees $\mathbf{x}_i + \mathbf{p}_i$: a query--key product of
-  two sums has four terms, and only one of them carries the rotation.
+- The angle $\delta\omega_m$ depends on the offset $\delta$, never on $i$.
 
 ::: {.d2l-note}
-RoPE puts the rotation directly into the score.
+The table contains relative position. Does attention see it?
 :::
 :::
 
-::: {.slide title="RoPE Makes Every Score Depend Only on the Offset"}
+::: {.slide title="An Added Code Ties the Score to Absolute Positions"}
+[Absolute embeddings]{.kicker}
+
+With $\mathbf{A} = \mathbf{W}_q\mathbf{W}_k^\top/\sqrt{d_h}$, the score of
+positions $i$ and $j$ has four terms:
+
+$$(\mathbf{x}_i + \mathbf{p}_i)^\top \mathbf{A} (\mathbf{x}_j + \mathbf{p}_j) = \mathbf{x}_i^\top\mathbf{A}\mathbf{x}_j + \mathbf{x}_i^\top\mathbf{A}\mathbf{p}_j + \mathbf{p}_i^\top\mathbf{A}\mathbf{x}_j + \mathbf{p}_i^\top\mathbf{A}\mathbf{p}_j$$
+
+- content–content: no position;
+- the two cross terms: content of one token, **absolute** position of the
+  other;
+- position–position: offset only if $\mathbf{A}$ acts on each frequency
+  pair as a scaled rotation and never mixes two pairs.
+:::
+
+::: {.slide title="Requiring Offset-Only Scores Forces Rotations"}
 [Rotary embeddings]{.kicker}
 
-Demand $(\mathbf{R}_i \mathbf{q})^\top(\mathbf{R}_j \mathbf{k}) =
-\mathbf{q}^\top \mathbf{R}_{j-i}\, \mathbf{k}$ for queries at $i$ and keys
+Require $(\mathbf{R}_i \mathbf{q})^\top(\mathbf{R}_j \mathbf{k}) =
+\mathbf{q}^\top \mathbf{R}_{j-i}\, \mathbf{k}$ for queries at $i$, keys
 at $j$:
 
-- $i = j$: $\mathbf{R}_i^\top \mathbf{R}_i = \mathbf{I}$, so each
-  $\mathbf{R}_i$ is orthogonal;
-- $j = 0$: $\mathbf{R}_{-i} = \mathbf{R}_i^\top$, hence
-  $\mathbf{R}_i\mathbf{R}_j = \mathbf{R}_{i+j}$: a rotation group.
+- I. $i = j = 0$: $\mathbf{R}_0$ is a projection; keep every direction,
+  so $\mathbf{R}_0 = \mathbf{I}$.
+- II. $i = j$: $\mathbf{R}_i^\top \mathbf{R}_i = \mathbf{I}$, each
+  $\mathbf{R}_i$ is orthogonal.
+- III. $j = 0$: $\mathbf{R}_{-i} = \mathbf{R}_i^\top$, so
+  $\mathbf{R}_i = \mathbf{R}_1^i$.
+- IV. An orthogonal $\mathbf{R}_1$ rotates coordinate pairs (in a basis the
+  projections absorb).
 
-**RoPE** (Su et al., 2021): rotate pair $m$ of every query and key at
-position $i$ by the angle $i\,\omega_m$; $d$ is now the head width.
+::: {.d2l-note}
+**RoPE:** rotate pair $m$ of every query and key at position $i$ by
+$i\,\omega_m$, with $\omega_m = 10000^{-2m/d_h}$.
+:::
 :::
 
 ::: {.slide title="Shifting Both Positions Rotates q and k Together"}
@@ -1173,8 +1198,26 @@ position $i$ by the angle $i\,\omega_m$; $d$ is now the head width.
 
 ![](../img/mdl-attention-rope-rotation.svg){width=80%}
 
-$\theta = \omega_m$ per position: the angle between the two vectors, and
-the score, stay the same.
+$\theta = \omega_m$ per position; $\varphi$ is the angle between the
+unrotated $\mathbf{q}$ and $\mathbf{k}$. After any common shift the angle
+between the two vectors, and the score, stay the same. Values are not
+rotated.
+:::
+
+::: {.slide title="Check: How Far Apart Are the Query and the Key?"}
+[Check]{.kicker}
+
+Pair 0 turns one radian per position. Before rotation, the pair-0 parts of
+a query and a key point the same way. The query sits at position 3, the
+key at position 5. What angle separates them after RoPE? And at positions
+103 and 105?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Two radians in both cases: the query turns by 3 or 103
+radians, the key by 5 or 105, and only the offset of 2 survives.
+:::
+:::
 :::
 
 ::: {.slide title="RoPE Rotates Even/Odd Pairs by Position Angles" only="pytorch"}
@@ -1221,125 +1264,52 @@ def rope(x, offset=0, base=10000.0):
 @!positional-information-rotary-position-embeddings-2
 
 ::: {.d2l-note}
-RoPE changes only at round-off, even at shift 480; the additive code moves
-the scores by as much as the scores themselves.
+RoPE changes only at round-off, even at shift 480. The additive code's
+cross terms move the scores by almost 3, as much as the scores vary.
 :::
 :::
 
-::: {.slide title="Check: Which Pairs Complete a Turn Within 128 Positions?"}
-[Check]{.kicker}
+::: {.slide title="ALiBi Penalizes Distance; NoPE Uses Only the Mask"}
+[Two more schemes]{.kicker}
 
-Heads of width $d = 32$, base $10^4$: pair $m$ has period
-$2\pi/\omega_m = 2\pi \cdot 10^{4 \cdot 2m/32}$. How many of the 16 pairs
-complete a full turn within 128 positions? Which period does not depend on
-the base?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Six: periods $6.3, 11, 20, 35, 63, 112$. The next is $199$. Pair
-0 has period $2\pi$ for every base.
-:::
-:::
+- **ALiBi** (Press et al., 2022): no position vectors; subtract a
+  per-head penalty,
+  $\mathrm{score}_{ij} = \mathbf{q}_i^\top\mathbf{k}_j/\sqrt{d_h} - m_h\,(i-j)$,
+  with $m_h = 2^{-8h/H}$; for $H = 4$: $1/4, 1/16, 1/64, 1/256$.
+- Slope $1/4$: a key 40 back loses a factor $e^{-10}$. A formula in the
+  distance, not a table, so nothing can break.
+- **NoPE** (Kazemnejad et al., 2023): no encoding; a causal model can
+  read position from how many keys each query sees.
 :::
 
-::: {.slide title="ALiBi and NoPE Need No Position Range"}
-[Extrapolation]{.kicker}
-
-- **ALiBi** (Press et al., 2022): no encoding; subtract a per-head distance
-  penalty,
-  $\mathrm{score}_{ij} = \mathbf{q}_i^\top\mathbf{k}_j/\sqrt{d} - m_h\,(i-j)$,
-  with slopes $m_h = 2^{-8h/H}$; for $H = 4$: $1/4, 1/16, 1/64, 1/256$.
-- With slope $1/4$, a key 40 positions back loses a factor $e^{-10}$:
-  a built-in recency window.
-- **NoPE** (Kazemnejad et al., 2023): no explicit positions; a causal
-  model reads position from the mask.
-:::
-
-::: {.slide title="TinyCharLM: Only Attention Mixes Positions"}
+::: {.slide title="Position Enters TinyCharLM in One of Three Places"}
 [The experiment]{.kicker}
 
-- Token embedding, two residual causal attention blocks of four heads,
-  output head tied to the embedding.
-- No feed-forward network, no normalization, no projection biases.
-- `pos` selects `'learned'`, `'sinusoidal'`, `'rope'`, `'alibi'`, or
-  `'none'`.
-- Sinusoidal: tokens scaled by $\sqrt{d}$ before the table is added, as in
-  the original transformer.
-- RoPE: base and per-pair angle factors stored as `rope_base`,
-  `rope_scale`.
+| scheme | acts on | how | in the code |
+|---|---|---|---|
+| learned, sinusoidal | the input | add $\mathbf{p}_i$ to the token embedding | `embed`, once |
+| RoPE | queries and keys | rotate them | `attend`, every block |
+| ALiBi | the scores | subtract $m_h\,(i - j)$ | `attend`, every block |
+| NoPE | nothing | only the causal mask | — |
+
+- Tied output head, no feed-forward layer, no normalization.
+- WikiText-103 bytes; 3,000 AdamW steps at context 128; three runs per
+  scheme.
 :::
 
-::: {.slide title="One Block: Rotate, Score, Bias, Mask, Average" only="pytorch"}
+::: {.slide title="Trained at 128: RoPE Is Lowest, NoPE Sits at Bigram Level"}
 [The experiment]{.kicker}
 
-~~~python
-def attend(self, blk, H):
-    B, T, D = H.shape
-    q, k, v = blk['qkv'](H).chunk(3, -1)
-    q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
-               for u in (q, k, v))
-    if self.pos == 'rope':
-        q = rope(q, base=self.rope_base, scale=self.rope_scale)
-        k = rope(k, base=self.rope_base, scale=self.rope_scale)
-    scores = q @ k.transpose(-2, -1) / math.sqrt(q.shape[-1])
-    if self.pos == 'alibi':
-        scores = scores + self.alibi(T, H.device)
-    weights = d2l.masked_softmax(scores,
-                                 d2l.causal_mask(T, device=H.device))
-    out = (weights @ v).transpose(1, 2).reshape(B, T, D)
-    return blk['proj'](out), weights
-~~~
-:::
-
-::: {.slide title="One Block: Rotate, Score, Bias, Mask, Average" only="jax"}
-[The experiment]{.kicker}
-
-~~~python
-def attend(self, blk, H):
-    B, T, D = H.shape
-    q, k, v = jnp.split(blk['qkv'](H), 3, axis=-1)
-    q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
-               for u in (q, k, v))
-    if self.pos == 'rope':
-        q = rope(q, base=self.rope_base, scale=self.rope_scale[...])
-        k = rope(k, base=self.rope_base, scale=self.rope_scale[...])
-    scores = q @ k.swapaxes(-2, -1) / math.sqrt(q.shape[-1])
-    if self.pos == 'alibi':
-        scores = scores + self.alibi(T)
-    weights = d2l.masked_softmax(scores, d2l.causal_mask(T))
-    out = (weights @ v).swapaxes(1, 2).reshape(B, T, D)
-    return blk['proj'](out), weights
-~~~
-:::
-
-::: {.slide title="Three Schemes Degrade at Four Times the Training Length"}
-[The experiment]{.kicker}
-
-Validation perplexity per byte on WikiText-103, trained at context 128 for
-3000 steps, one run per scheme:
+Validation perplexity per byte, mean (min–max) of three runs:
 
 @!positional-information-the-experiment-3
 
-::: {.d2l-note}
-In range, every explicit scheme beats NoPE; sinusoidal and RoPE are
-lowest. At 512, learned, sinusoidal, and RoPE degrade; ALiBi and NoPE stay
-flat.
-:::
-:::
-
-::: {.slide title="Each Scheme Holds or Fails Beyond 128 for Its Own Reason"}
-[The experiment]{.kicker}
-
-- **Learned:** rows 128 to 511 still hold their random initialization.
-- **Sinusoidal:** the slow columns take values never seen in training.
-- **RoPE:** at offsets beyond 127 the slow pairs reach unseen angles.
-- **ALiBi:** the bias depends only on distance, and the steep heads see a
-  short window anyway.
-- **NoPE:** no table and no angles to run out of; flat, from a weaker
-  start.
+@!positional-information-byte-bigram-baseline
 
 ::: {.d2l-note}
-Flat perplexity does not mean the model *uses* the longer context.
+At 128: RoPE lowest at 7.3; learned, sinusoidal, and ALiBi all about 15%
+below the bigram; NoPE at the bigram, whose current byte is already in the
+residual stream.
 :::
 :::
 
@@ -1359,46 +1329,103 @@ positions beyond the training length.
 :::
 :::
 
-::: {.slide title="Fast Pairs Have Seen Every Angle; Slow Pairs Have Not"}
-[Context extension]{.kicker}
+::: {.slide title="Each Scheme Holds or Fails Beyond 128 for Its Own Reason"}
+[The experiment]{.kicker}
 
-- Periods $\leq 128$ (6 pairs): every angle at offset 400 is within
-  $\omega_m/2$ of a trained one. Periods $> 128$ (10 pairs): new angles.
-- **Position interpolation** (Chen et al., 2023): multiply all angles by
-  $128/512$, then fine-tune briefly.
-- **YaRN** (Peng et al., 2024): interpolate only the slow pairs, add a
-  softmax temperature.
-- **NTK-aware base** $b' = b\, s^{d/(d-2)}$: fastest pair unchanged,
-  slowest slowed by exactly $s$.
+- **Learned:** rows 128 to 511 never trained; doubles or worse.
+- **Sinusoidal:** slow columns take new values, smoothly; about 60%
+  worse, the mildest.
+- **RoPE:** slow pairs reach unseen angles; nearly 4× worse on average.
+- **ALiBi:** a formula in the distance, nothing to run out of; flat.
+- **NoPE:** flat too, but at bigram level: no position learned, none to
+  lose.
+
+::: {.d2l-note}
+The model that used position best in range has the most to lose out of
+range.
+:::
 :::
 
-::: {.slide title="Rescaling Slow Pairs Lowers Perplexity at 512 Without Training"}
+::: {.slide title="ALiBi Stays Flat Because Far Keys Contribute Nothing"}
+[The experiment]{.kicker}
+
+Share of each head's weight on keys 128 or more back, then perplexity at
+512 with those keys removed:
+
+@!positional-information-alibi-weight-beyond-the-window
+
+@!positional-information-alibi-without-far-keys
+
+::: {.d2l-note}
+Heads 3 and 4 read far keys, as the bias dictates; removing them changes
+nothing. They average broadly, and the last 128 bytes say as much as the
+last 512. Flat perplexity does not mean the model uses the longer context.
+:::
+:::
+
+::: {.slide title="Only the Slow Pairs Meet New Angles Beyond 128"}
 [Context extension]{.kicker}
 
-The trained RoPE model, angle factors changed, no weight updated:
+- Head width 32, base $10^4$: periods $2\pi \cdot 10^{4m/16}$ are 6.3,
+  11, 20, 35, 63, 112 (fast) and 199 to 35,000 (slow).
+- A fast pair completes a turn within 128 positions: every angle at offset
+  400 was already seen in training.
+- A slow pair meets new angles. Rescale them so that 512 maps into 128.
+- **Position interpolation** (Chen et al., 2023) multiplies *all* angles by
+  $128/512$. All pairs, or only the slow ones?
+:::
+
+::: {.slide title="Rescaling Only the Slow Pairs Repairs Context 512 Without Training"}
+[Context extension]{.kicker}
+
+The three trained RoPE models, angle factors changed, no weight updated:
 
 @!positional-information-extending-a-trained-model-s-context
 
 ::: {.d2l-note}
-Rescaling all pairs blurs neighbors and costs already at the training
-length; leaving the fast pairs alone keeps them apart. A short fine-tune at the new length
-completes the recipe.
+All pairs: about 40 everywhere, worse than the bigram. Slow pairs: about 9
+at 512, a third of unscaled, at a cost of about 0.7 to 0.8 at 128. A short
+fine-tune completes the recipe.
+:::
+:::
+
+::: {.slide title="YaRN and NTK-Aware Scaling Spare the Fast Pairs"}
+[Context extension]{.kicker}
+
+- **YaRN** (Peng et al., 2024): interpolate only the slow pairs, ramp
+  between the groups, add a softmax temperature.
+- **NTK-aware base** $b' = b\, s^{d_h/(d_h-2)}$: pair $m$ slows by
+  $s^{2m/(d_h-2)}$, from 1 for the fastest pair to $s$ for the slowest.
+- Training with a larger base is the trained form of the same idea.
+:::
+
+::: {.slide title="Check: Which Base Grows the Context Fourfold?"}
+[Check]{.kicker}
+
+Head width $d_h = 32$, base $b = 10^4$, growth $s = 4$. Compute the
+NTK-aware base $b' = b\, s^{d_h/(d_h-2)}$. Which pair keeps its frequency?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $b' = 10^4 \cdot 4^{32/30} \approx 4.4 \times 10^4$. Pair 0
+turns one radian per position for every base; the slowest pair turns four
+times slower.
+:::
 :::
 :::
 
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
-- Unmasked attention is permutation equivariant; shuffled inputs give
-  shuffled outputs to round-off.
-- Absolute tables add position: sinusoids (shifts are rotations) or
-  learned rows (trained only in range).
-- RoPE rotates query and key pairs: scores depend only on the offset.
-- Trained at 128 and tested at 512: learned, sinusoidal, and RoPE degrade;
-  ALiBi and NoPE stay flat.
-- RoPE fails only in its slow pairs; rescaling their angles maps 512 back
-  into the trained range.
+- Unmasked attention is permutation equivariant: shuffled inputs give
+  shuffled outputs.
+- Added codes (learned, sinusoidal) leave absolute position in the score;
+  RoPE's rotations make it depend on the offset alone.
+- Trained at 128: RoPE 7.3, NoPE at the bigram's 11.6. At 512: learned,
+  sinusoidal, and RoPE degrade; ALiBi stays flat but reads nothing useful
+  beyond 128.
+- Rescaling RoPE's slow pairs brings 512 to about 9 without training.
 
-**Next:** attention reads all $n^2$ query--key pairs. What does that cost,
-and how do fused kernels and sparse patterns cut it?
+**Next:** attention scores every pair of positions. What does that cost,
+and how much of it can be avoided without changing the result?
 :::

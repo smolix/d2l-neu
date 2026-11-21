@@ -623,7 +623,7 @@ def fig_ivf_pq():
 # --------------------------------------------------------------------------- #
 
 # (stage, what it decides, accent, dashed, measured by, failure classes);
-# the rows of tab_lm_rag_stages and tab_lm_rag_fixes in rag.md
+# the rows of tab_lm_rag_stages (rag.md) and tab_lm_rag_fixes (rag-failures.md)
 RAG_STAGES = [
     ("query", "the question, or its rewrite", SLATE, False,
      "the stages after it", []),

@@ -64,12 +64,11 @@ _print_lock = threading.Lock()
 #   - transformer     : cold-start instability + rare-target over-regularization;
 #                       fixed with LR warmup + dropout 0.2->0.1 + max_epochs 30->40.
 #                       0/39 unseeded pytorch failures; all four 3.000 on attempt 1.
-# dcgan is kept at a light best-of-2: a systematic TF BatchNorm bug (the real
-# failure the retry could never fix) is now fixed at the source, leaving only
-# TF's thin convergence margin (min ~3.03) worth a single cheap second attempt.
-BEST_OF_N = {
-    "chapter_generative-adversarial-networks/dcgan.ipynb":                    (2, 3.0),
-}
+# 2026-11-20: the dcgan best-of-2 entry is removed. Its rationale (TF's thin
+# convergence margin) lapsed when ch. 16 dropped its TF tab, and rerunning a
+# notebook whose generator loss printed below a threshold picks a run by its
+# result, which the ch. 16 experiments must not do.
+BEST_OF_N = {}
 
 
 def score_notebook(nb_path):

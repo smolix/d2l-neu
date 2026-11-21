@@ -14,7 +14,7 @@ from pathlib import Path
 # Keywords that indicate a notebook/slide needs GPU access.
 GPU_KEYWORDS = ("gpu(", "cuda", "GPU", "num_gpus", "try_gpu", "try_all_gpus",
                 "device(", "/GPU:", "/device:GPU",
-                "Trainer(", "d2l.train", "fit_lm(")
+                "Trainer(", "d2l.train")
 
 # Notebooks that mention GPU-related terms in prose or discussion but whose
 # executable cells are CPU-only. Keep these out of the GPU scheduler bucket.
@@ -46,13 +46,28 @@ GPU_FRAMEWORK_NOTEBOOKS = set()
 # limit also bounds a single cell (nbconvert's per-cell timeout). Keyed by the
 # notebook path relative to _notebooks/<fw>/; applies to every framework.
 # Ruling 2026-11-06 (Alex): modern topics may run longer when the pedagogy
-# needs the experiment (17.6's DiT scaling curve: ~50 min PyTorch, ~20 JAX).
+# needs the experiment. latent-diffusion (17.7: two autoencoders and ten
+# diffusion trainings, DiT-L moved to an exercise) ran 64 min PyTorch and
+# 62 min JAX side by side on one shared RTX 4090 (2026-11-20), above 3600 s;
+# the scaling cell then gained a second seed per point (about 18 more GPU-min
+# per framework on a shared card), hence 10800 s. image-diffusion, samplers
+# and design-space each ran 30-47 min on a busy shared card in direct runs
+# (2026-11-20), close enough to 3600 s under scheduler contention to need
+# 7200 s.
 #
 # No ch. 18 entry: a normal build stays near 15 min per notebook, and a
 # D2L_RERUN regeneration run must finish within 30 min (ruling 2026-11-12),
 # both well inside the default.
 NOTEBOOK_TIMEOUTS = {
-    "chapter_diffusion-models/latent-diffusion.ipynb": 7200,
+    "chapter_diffusion-models/latent-diffusion.ipynb": 10800,
+    "chapter_diffusion-models/image-diffusion.ipynb": 7200,
+    "chapter_diffusion-models/samplers.ipynb": 7200,
+    "chapter_diffusion-models/design-space.ipynb": 7200,
+    # 16.5 and 16.6 train several image GANs each; a PyTorch run took about
+    # 40 min alone on one RTX 4090 (2026-11-20) and can pass 60 min when the
+    # card is shared.
+    "chapter_generative-adversarial-networks/dcgan.ipynb": 7200,
+    "chapter_generative-adversarial-networks/conditional.ipynb": 7200,
 }
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The
@@ -69,21 +84,39 @@ GPU_ONLY_NOTEBOOKS = {
     # CPU run with 4 threads) a GPU cut PyTorch runs 3-12x and JAX runs from
     # 7-51 min to 1-1.5 min; image-diffusion's JAX variant blew the 3600 s
     # per-cell timeout on CPU. denoising stays here although its 2-D cells are
-    # CPU-class: its JAX image denoiser is too slow on a CPU slot. Rebuild plan
-    # budget (2026-11, per framework): denoising ~1 min, image-diffusion 8-10,
-    # samplers 6-8, design-space 7-9, latent-diffusion ~21, few-step 5-8,
-    # discrete-diffusion 2-3 GPU-min; re-measure at the first scheduler run.
+    # CPU-class: its JAX image denoiser is too slow on a CPU slot. Measured in
+    # the scheduler run of 2026-11-20 (PyTorch / JAX, minutes, one RTX 4090
+    # shared by two or three of these notebooks): denoising 2 / 1.6,
+    # gaussian-paths 3 / 1.7, integration 1.7 / 1.5, discrete-diffusion
+    # 2.7 / 3.6, few-step 12 / 7.5, image-diffusion 49 / 31, samplers 24 / 25
+    # (14 alone, JAX), design-space 48 / 34, latent-diffusion 84 / 84.
     "chapter_diffusion-models/denoising.ipynb",
-    # gaussian-paths trains two 2-D models for 40k steps (pilot P0). Re-timed
-    # 2026-11-06 in the library phase: on a GPU PyTorch ~5 min and JAX < 1 min
-    # for both models, against ~8-9 min each on 8 CPU cores.
+    # gaussian-paths trains two 2-D models for 40k steps; integration retrains
+    # them for 20k steps for its samplers (no checkpoints pass between
+    # notebooks). Direct runs on one shared, busy RTX 4090 (2026-11-20):
+    # gaussian-paths 267 s PyTorch / 210 s JAX, of which training 75-90 s /
+    # 50-95 s per model; integration 80 s / 56 s. ~8-9 min per 40k-step model
+    # on 8 CPU cores (2026-11-06).
     "chapter_diffusion-models/gaussian-paths.ipynb",
+    "chapter_diffusion-models/integration.ipynb",
     "chapter_diffusion-models/image-diffusion.ipynb",
     "chapter_diffusion-models/samplers.ipynb",
     "chapter_diffusion-models/design-space.ipynb",
     "chapter_diffusion-models/latent-diffusion.ipynb",
     "chapter_diffusion-models/few-step.ipynb",
     "chapter_diffusion-models/discrete-diffusion.ipynb",
+    # 16.4 trains 13 GANs on 25 Gaussians and 16.7 trains nine students and
+    # an adversarial pair; the JAX tabs name no device, so the keyword scan
+    # reads them as CPU, where they would train on the host (2026-11-20).
+    "chapter_generative-adversarial-networks/convergence.ipynb",
+    "chapter_generative-adversarial-networks/adversarial-losses.ipynb",
+    # 16.1, 16.2 and 16.3 train small GANs and critics whose JAX tabs name no
+    # device either; freshly generated (output-free) notebooks scanned as CPU
+    # and ran JAX on the host, which also changes the JAX numbers against the
+    # store's GPU runs (2026-11-20).
+    "chapter_generative-adversarial-networks/gan.ipynb",
+    "chapter_generative-adversarial-networks/objectives.ipynb",
+    "chapter_generative-adversarial-networks/relativistic.ipynb",
     # 19.1 trains SGNS and GloVe on the GPU (a CPU run draws other random
     # numbers, so the grid agreement line holds only on the GPU).
     "chapter_lm-encoders/word-embeddings.ipynb",
@@ -213,12 +246,22 @@ CPU_ONLY_ENV = {
 SHARED_DATA_NOTEBOOKS = {
     "chapter_computer-vision/kaggle-cifar10.ipynb",
     "chapter_computer-vision/kaggle-dog.ipynb",
-    # chapter_transformers: gpt.md and kv-cache.md both download the pinned
-    # GPT-2 checkpoint into data/gpt2/; scaling-laws.md downloads PTB.
-    # Serialize them so concurrent first-run downloads cannot race.
+    # chapter_transformers: gpt.md and kv-cache-reduction.md both download
+    # the pinned GPT-2 checkpoint into data/gpt2/; scaling-laws.md downloads
+    # WikiText-103 (as do gpt, kv-cache-reduction, encoders-decoders and
+    # moe). The lock serializes one notebook across frameworks; different
+    # notebooks do not race, because d2l.download writes atomically
+    # (mkstemp, then os.replace).
     "chapter_transformers/gpt.ipynb",
     "chapter_transformers/kv-cache.ipynb",
     "chapter_transformers/scaling-laws.ipynb",
+    # chapter_recurrent-modern/lstm.md trains its text models on WikiText-103
+    # bytes, the data of gpt.md; linear-recurrence.md, mamba.md and hybrids.md
+    # train on the same bytes.
+    "chapter_recurrent-modern/lstm.ipynb",
+    "chapter_recurrent-modern/linear-recurrence.ipynb",
+    "chapter_recurrent-modern/mamba.ipynb",
+    "chapter_recurrent-modern/hybrids.ipynb",
 }
 
 MULTI_GPU_NOTEBOOKS = {
@@ -231,7 +274,7 @@ MULTI_GPU_NOTEBOOKS = {
 # card while one of these runs. Unlike MULTI_GPU_NOTEBOOKS (a fixed 2 GPUs,
 # 1-2 slots each, happy to share the rest of each card with other jobs),
 # these build a jax.sharding.Mesh over every jax.devices() entry in one
-# process (13.6/13.7's Mesh + NamedSharding + jitted sharded-training-step
+# process (13.6/13.8's Mesh + NamedSharding + jitted sharded-training-step
 # notebooks) and therefore must see ALL physical GPUs via CUDA_VISIBLE_DEVICES
 # with no other tenant preallocating VRAM on any of them. The PyTorch tabs of
 # the same notebooks launch torchrun --nproc-per-node over all physical GPUs,
@@ -260,6 +303,29 @@ FULL_CARD_NOTEBOOKS = {
     # 11.3 times naive and cached decoding, prefill, and batched decoding;
     # sharing a card halved the PyTorch timings in one run (2026-11-02).
     "chapter_transformers/kv-cache.ipynb": 1,
+    # 11.2 prints milliseconds per training step of the GPT and the RNN and
+    # the seconds of the main run; in a run with two co-tenants on the card
+    # (2026-11-19) both step times rose by 50 to 100%.
+    "chapter_transformers/gpt.ipynb": 1,
+    # 11.5 times a self-attention encoder against a Perceiver as N doubles;
+    # a shared card tripled the PyTorch time at N = 8192 (2026-11-18).
+    "chapter_transformers/encoders-decoders.ipynb": 1,
+    # The gated-network section of the state space chapter prints
+    # milliseconds per training step of recurrent and attention language
+    # models side by side; co-tenants slow them unevenly (dev, 2026-11-19).
+    "chapter_recurrent-modern/lstm.ipynb": 1,
+    # The linear-recurrence section times one GRU, minGRU and attention layer
+    # against sequence length (the cost of attention is its lesson) and
+    # prints milliseconds per training step of GRU and minGRU models.
+    "chapter_recurrent-modern/linear-recurrence.ipynb": 1,
+    # The selective-SSM section prints milliseconds per training step of
+    # Mamba, minGRU and attention language models; a co-tenant on the card
+    # doubled the PyTorch Mamba step (69 to 135 ms, dev, 2026-11-19).
+    "chapter_recurrent-modern/mamba.ipynb": 1,
+    # The hybrid section prints milliseconds per training step of Gated
+    # DeltaNet, hybrid and attention language models, and its recall sweep
+    # trains ten small models; co-tenants slow both (dev, 2026-11-19).
+    "chapter_recurrent-modern/hybrids.ipynb": 1,
     # 13.1-13.5 quote timings, bandwidths and peak memory measured on whole
     # cards (13.5 on two); another tenant on a card skews them.
     "chapter_computational-performance/performance-model.ipynb": 1,
@@ -267,6 +333,10 @@ FULL_CARD_NOTEBOOKS = {
     "chapter_computational-performance/compilation.ipynb": 1,
     "chapter_computational-performance/memory-precision.ipynb": 1,
     "chapter_computational-performance/multiple-gpus.ipynb": 2,
+    # 13.7 trains a 1.9-billion-parameter GPT sharded over two GPUs: about
+    # 16 GiB per GPU, measured (dev, 2026-11-19), and the seconds per step
+    # that the prose reads; it needs both cards whole.
+    "chapter_computational-performance/sharding.ipynb": 2,
     "chapter_hyperparameter-optimization/rs-async.ipynb": 1,
     "chapter_hyperparameter-optimization/sh-async.ipynb": 1,
     # 18.1 measures bandwidth, per-token decode time and a kernel profile of
@@ -289,6 +359,10 @@ FULL_CARD_NOTEBOOKS = {
     # serve Qwen3.8-27B with vLLM over two whole cards and are launched by
     # hand with CUDA_VISIBLE_DEVICES set, not through the scheduler.
     "chapter_lm-encoders/rag.ipynb": 1,
+    # 19.6 reads the recorded answers in a normal build, but times retrieval
+    # and reranking for the text, and its regeneration runs
+    # (D2L_RERUN=rag-gen-stages, rag-gen-fix) load the same generator.
+    "chapter_lm-encoders/rag-failures.ipynb": 1,
 }
 
 # rel → the physical GPUs (nvidia-smi indices) a notebook must run on, for
@@ -302,6 +376,9 @@ PINNED_GPU_NOTEBOOKS = {
     # 0,1, ~6.2 on 2,3, ~7.4 on 0,2 or 1,3 (2026-11-02); the prose quotes 0,1,
     # which is also the pair a standalone run uses.
     "chapter_computational-performance/multiple-gpus.ipynb": (0, 1),
+    # 13.7 measures beta_link of an all-gather and predicts its step from
+    # it; the same pair as 13.5 keeps the two sections' rates comparable.
+    "chapter_computational-performance/sharding.ipynb": (0, 1),
 }
 
 # (framework, relative-path) → number of global GPU slots to hold for
@@ -317,9 +394,6 @@ HEAVY_GPU_NOTEBOOKS = {
     # A5's fused-vs-naive timing cell transiently allocates ~4 GiB inside the
     # XLA arena; fine solo, OOMs when sharing a GPU at 2 slots. Run exclusive.
     ("jax", "chapter_attention/attention-at-scale.ipynb"): 2,
-    # 12.5's Gated-DeltaNet LM + chunked-WY cells peak ~8 GiB in the XLA
-    # arena; green solo, RESOURCE_EXHAUSTED at 2-slot sharing. Run exclusive.
-    ("jax", "chapter_recurrent-modern/deltanet.ipynb"): 2,
     # 11.3's batched decoding at b=64 compiles a ~5.5 GiB program and XLA
     # autotuning then OOMs a 1-slot (~7.5 GiB) arena. Run exclusive.
     ("jax", "chapter_transformers/kv-cache.ipynb"): 2,
@@ -327,6 +401,10 @@ HEAVY_GPU_NOTEBOOKS = {
     # (f32[500,64,64,64] activations) and OOMs/fails XLA autotuning at the
     # 1-slot (~7.5 GiB) arena, deterministically on both attempts.
     ("jax", "chapter_generative-adversarial-networks/dcgan.ipynb"): 2,
+    # 9.12's throughput cell takes one gradient of a four-block TinyLM at a
+    # batch of 1,024 windows: XLA asks for one 5.75 GiB buffer, which a
+    # 1-slot (~7.5 GiB) arena cannot hold after training. Run exclusive.
+    ("jax", "chapter_optimization/practice.ipynb"): 2,
     ("tensorflow", "chapter_computer-vision/ssd.ipynb"): 2,
     # fine-tuning: ResNet18 features at 224×224, batch=128, XLA-fused
     # train step allocates ~9.9 GiB in one go and OOMs the 8 GB budget.
@@ -379,18 +457,33 @@ NOTEBOOK_ENV = {
         "XLA_PYTHON_CLIENT_ALLOCATOR": "vmm",
         "NCCL_LOCAL_REGISTER": "0",
     },
-    # 13.7: XLA calls cuBLAS for the matrix products instead of generating
+    # 13.7: NCCL's buffer registration fails harmlessly on GPUs without
+    # peer-to-peer access (this box) and would print a warning at every
+    # collective of the sharded step.
+    ("jax", "chapter_computational-performance/sharding.ipynb"): {
+        "NCCL_LOCAL_REGISTER": "0",
+    },
+    # 13.8: XLA calls cuBLAS for the matrix products instead of generating
     # Triton kernels, which run the products of the large minibatches more
-    # slowly on the RTX 4090; NCCL as above.
+    # slowly on the RTX 4090; NCCL as above. The training check runs the
+    # fp32 step at batch 512, which asks for about 13 GiB in one piece after
+    # the data-parallel cells have come and gone. With PREALLOCATE=false, as
+    # set for every JAX notebook, the BFC allocator grows region by region
+    # and fails on that request (OOM at 12.92 GiB in two scheduler runs and
+    # in a run outside the scheduler, 2026-11-20); a preallocated BFC pool
+    # and the 'vmm' allocator both pass. 'vmm' maps each array into one
+    # contiguous range, as in 13.6; the throughputs are unchanged (every
+    # configuration within the run-to-run spread of the BFC runs).
     ("jax", "chapter_computational-performance/fast-transformer.ipynb"): {
         "XLA_FLAGS": "--xla_gpu_enable_triton_gemm=false",
         "NCCL_LOCAL_REGISTER": "0",
+        "XLA_PYTHON_CLIENT_ALLOCATOR": "vmm",
     },
-    # 13.7: detach the profiler's instrumentation from the GPU when a profile
-    # ends; otherwise every later kernel launch of the process is slowed.
-    ("pytorch", "chapter_computational-performance/fast-transformer.ipynb"): {
-        "TEARDOWN_CUPTI": "1",
-    },
+    # 13.1, 13.3, 13.4, 13.5, 13.8 (PyTorch) set TEARDOWN_CUPTI=1 in their
+    # first cells, before the first torch.profiler session: launches after a
+    # profile otherwise stay about 30% slower (12.4 -> 16.6 us per operation
+    # of a tanh stack, dev, 2026-11-20). Setting it inside the process works
+    # as well as setting it before the start (12.4 us after the profile).
     # 18.4: generation with KV caches of changing length leaves PyTorch's
     # caching allocator holding blocks it cannot reuse. In the D2L_RERUN
     # regeneration run tensors peaked at 10.8 GiB while the card showed
@@ -431,6 +524,9 @@ NOTEBOOK_ENV = {
     # 19.5: Qwen3.5-9B generates with prompts of changing length within 1-2
     # GiB of a 24 GB card's limit; cached fixed-size blocks would not fit.
     ("pytorch", "chapter_lm-encoders/rag.ipynb"): {
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    },
+    ("pytorch", "chapter_lm-encoders/rag-failures.ipynb"): {
         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
     },
 }

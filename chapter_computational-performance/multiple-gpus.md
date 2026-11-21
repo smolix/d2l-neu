@@ -9,25 +9,24 @@ agree after every step, so the GPUs exchange their gradients, and the
 exchange takes time that a single GPU never spends. When does a second GPU
 shorten a step, and when does the exchange cost more than it saves?
 
-On our machine the exchange is slow compared with the work. Each RTX 4090
-performs about 83 trillion fp32 operations per second and reads its own
+On our machine the exchange looks expensive. Each RTX 4090 reads its own
 memory at 1 TB/s. Gradients travel between the cards over PCIe and through
 host memory, because the cards cannot address each other directly
 (:numref:`subsec_hw-interconnects`). A PCIe 4.0 link carries a nominal
 32 GB/s in each direction, about thirty times less than a GPU reads from
-its own memory. A second GPU shortens training only if the computation it
-takes over lasts longer than the exchange it adds.
+its own memory. A second GPU can only shorten training if the computation
+it takes over lasts longer than the exchange it adds.
 
 This section builds the scheme, called *data parallelism*, by hand. We
 split each minibatch, compute gradients on every device, sum them with a
 collective operation called an *allreduce*, and apply the same update
 everywhere. We then derive the allreduce algorithm that collective
-libraries use. Finally, a cost model predicts the time of a step from
-three quantities that we measure: the time a device needs for its share
-of the minibatch, the fixed cost of one allreduce, and the bandwidth
-between devices. Our test case is LeNet on Fashion-MNIST. Its steps are
-so short that fixed costs dominate them, which makes it the hardest case
-for data parallelism and the easiest one to take apart.
+libraries use, and a cost model that predicts the time of a step from
+quantities that we measure one at a time. Our test case is LeNet on
+Fashion-MNIST. Its steps are so short that fixed costs dominate them,
+which makes it the hardest case for data parallelism and the easiest one
+to take apart. The cells from the data onward need two GPUs; the ring
+simulation and most of the exercises need none.
 
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles}
 %%tab pytorch
@@ -52,7 +51,11 @@ from d2l import jax as d2l
 
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles-1}
 %%tab pytorch
+import os
 import time
+# Detach PyTorch's profiler from the GPU when a profile ends; without this,
+# every kernel launch after the first profile stays about 30% slower
+os.environ['TEARDOWN_CUPTI'] = '1'
 ```
 
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles-1}
@@ -66,6 +69,7 @@ from jax.sharding import NamedSharding, PartitionSpec as P
 ```{.python .input #multiple-gpus-multi-gpu-from-first-principles-2}
 %%tab pytorch
 torch.set_float32_matmul_precision('high')
+torch.backends.cudnn.benchmark = True  # Time convolution algorithms per shape
 ```
 
 ## Three Ways to Split
@@ -94,7 +98,10 @@ AlexNet used such a split in 2012: each of its layers was divided between
 two GPUs, because the network did not fit into one card's 3 GB
 :cite:`Krizhevsky.Sutskever.Hinton.2012`. Today pipeline and tensor
 parallelism matter at the scale of the models in the Language Models part,
-and we leave them to it.
+and we leave them to it. Two exercises give a first look: exercise
+:exref:`ex_mg-pipeline` counts the bytes that a two-stage pipeline sends,
+and exercise :exref:`ex_mgp-tensor` of :numref:`sec_sharding` compares
+tensor and data parallelism on the MLP block of a transformer.
 
 Data parallelism does not let us train a larger model. Every device holds
 a full copy of the parameters, the gradients, and the optimizer state,
@@ -195,6 +202,8 @@ The 60,000 training images take 188 MB as floats, little enough to keep a
 copy on every GPU. A copy on every GPU takes the input pipeline out of the
 measurements below: each device reads its share of a minibatch from
 its own copy, and the only data that cross between devices are gradients.
+A data set too large for this must be fed to each GPU from host memory,
+over the PCIe path of :numref:`sec_hardware`.
 
 ```{.python .input #multiple-gpus-the-model-and-the-data-1}
 %%tab pytorch
@@ -235,9 +244,9 @@ for $k = 2$, each with its own copy of the training set.
 
 ### Broadcast and Allreduce
 
-Two operations make the step parallel. *Broadcast* copies one device's
-tensors to every other device; we need it once, to give every device the
-same initial parameters. Allreduce takes one tensor per device, sums
+Two operations make the step parallel. *Broadcast* copies one set of
+tensors to every device; we need it once, to give every device the same
+initial parameters. Allreduce takes one tensor per device, sums
 them, and leaves the sum on every device; we need it once per step, for
 the gradients. The simplest allreduce is a *star*: device 0 collects the
 tensors of all other devices and adds them up, then sends the sum back.
@@ -308,8 +317,16 @@ Each device computes the gradient of the mean loss over its own shard.
 With $k$ shards of equal size, the average of the $k$ shard gradients is
 the gradient of the mean loss over the whole minibatch. An allreduce
 followed by a division by $k$ therefore gives every device the full-batch
-gradient.
-(The exercises ask what changes when the shards differ in size.)
+gradient. Exercise :exref:`ex_mg-normalization` asks what changes when
+the shards differ in size.
+
+The sum has a second reading, on which :numref:`sec_multi_gpu_concise`
+relies. Regard the $k$ copies of a parameter as one parameter that has
+been copied to every device, and the sum of the $k$ shard losses as one
+loss. By the chain rule, the gradient of that loss with respect to the
+one parameter is the sum of the gradients with respect to the $k$ copies:
+the derivative of "copy to every device" is "sum over the devices". This
+sum is all that an allreduce computes.
 
 LeNet's gradient consists of ten tensors, and we could allreduce them one
 at a time. Every allreduce has a fixed cost, however few bytes it moves,
@@ -383,21 +400,21 @@ are already stored. The step runs in a single Python process, which drives
 all devices in turn: it issues the forward and backward pass for device 0,
 then for device 1, then the copies of the allreduce. The kernels of
 different devices can still run at the same time, because each GPU works
-through its own queue while Python fills the next one.
+through its own queue while Python fills the next one, as long as the GPUs
+take longer to empty their queues than Python takes to fill them. Whether
+they do, we measure in :numref:`subsec_mg-accounting`.
 :end_tab:
 
 :begin_tab:`jax`
-The parameters enter `shard_map` replicated (`P()`). If we differentiated
-the replicated copy directly, JAX's autodiff would insert a sum over the
-devices by itself: adding up every device's contribution is what the
-derivative of "copy to every device" requires. Our explicit `psum` would
-then count each contribution $k$ times. The `pcast(..., to='varying')`
-declares each device's copy its own, so that `jax.grad` returns this
-device's shard gradient and the `psum` in our code is the only allreduce.
-`jax.jit` compiles the gradient, the allreduce, and the update into one
-program that runs on all devices of the mesh at once. Without the `psum`,
-every device's copy differs from the others, so the step returns them all,
-one after another along the leading axis (`P('data')`).
+The parameters enter `shard_map` replicated (`P()`), so JAX's autodiff
+applies the rule above by itself and inserts the sum over the devices.
+Our explicit `psum` would then count each contribution $k$ times. The
+`pcast(..., to='varying')` declares each device's copy its own, so that
+`jax.grad` returns this device's shard gradient and the `psum` in our code
+is the only allreduce. `jax.jit` compiles the gradient, the allreduce, and
+the update into one program that runs on all devices of the mesh at once.
+Without the `psum` the copies differ, so the step returns them all, one
+after another along the leading axis (`P('data')`).
 :end_tab:
 
 ### A One-Step Check
@@ -409,12 +426,6 @@ accuracy curve hides. A step that sums the shard gradients instead of
 averaging them trains with a learning rate $k$ times too large, and it
 may still reach a plausible accuracy. From one random initialization, we take
 one step on one GPU and one step on two GPUs, on the same 256 examples.
-
-The check runs in true fp32. Elsewhere in this section the GPU's tensor
-cores multiply fp32 operands in tf32, with a 10-bit mantissa
-(:numref:`subsec_mp-mixed`). A minibatch of 256 and one of 128 can select
-different convolution algorithms, and their tf32 rounding errors would
-hide the small difference that we look for.
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-7}
 %%tab pytorch
@@ -448,25 +459,31 @@ diff = max(np.abs(u1 - u2).max() for u1, u2 in zip(*updates))
 print(f'largest update {largest:.1e}, largest difference {diff:.1e}')
 ```
 
-The two updates differ by less than a hundred-thousandth of the largest
-update. That is fp32 rounding, because the two steps add the same numbers
-in a different order. The parallel step computes what the single-device step
-computes, so any difference in speed that we measure below comes from how
-the work is spread over the devices.
+The two updates differ by less than a millionth of the largest update. That
+is fp32 rounding, because the two steps add the same numbers in a
+different order. We ran the check in true fp32 on purpose. In tf32, which
+the tensor cores use elsewhere in this section (:numref:`subsec_mp-mixed`),
+the two minibatch sizes may get different convolution algorithms, whose
+rounding errors are far larger than the difference we want to see. The
+parallel step computes what the single-device step computes, so any
+difference in speed that we measure below comes from how the work is
+spread over the devices.
 
 ## Ring Allreduce
 :label:`subsec_mg-ring`
 
 A star allreduce routes everything through device 0. For a gradient of
-$N$ bytes on $k$ devices, device 0 receives $(k-1)N$ bytes and sends
-$(k-1)N$ bytes, while the links of the other devices carry $N$ bytes each
-way and then sit idle. The time of the star therefore grows linearly
-in $k$. *Ring allreduce* :cite:`Patarasuk.Yuan.2009` spreads the traffic
-evenly over all devices.
+$S$ bytes on $k$ devices, the hub's link carries $(k-1)S$ bytes in each
+direction, while the links of the other devices carry $S$ bytes each way
+and then sit idle. The time of the star therefore grows linearly in $k$.
+*Ring allreduce* :cite:`Patarasuk.Yuan.2009` spreads the traffic evenly
+over all devices. It comes from high-performance computing and entered
+deep learning in 2017, when tools such as Horovod
+:cite:`Sergeev.Del-Balso.2018` used it to train one model on many GPUs.
 
 Arrange the $k$ devices in a ring in which each sends only to its
 successor, and split every device's gradient vector into $k$ chunks of
-$N/k$ bytes. The allreduce runs in two phases
+$S/k$ bytes. The allreduce runs in two phases
 (:numref:`fig_ring_allreduce`). In the first phase, called
 *reduce-scatter*, each device sends one chunk to its successor and adds
 the chunk it receives from its predecessor to its own copy of that chunk.
@@ -475,21 +492,21 @@ over all devices, a different chunk on each device. In the second phase,
 called *all-gather*, the finished chunks travel around the ring for
 another $k-1$ steps until every device has all of them. At every step
 every device sends one chunk and receives one chunk, so each device sends
-$(k-1)N/k$ bytes per phase, and the two phases together send
+$(k-1)S/k$ bytes per phase, and the two phases together send
 
 $$
-\frac{2(k-1)}{k}\, N \quad\textrm{bytes per device.}
+\frac{2(k-1)}{k}\, S \quad\textrm{bytes per device.}
 $$
 :eqlabel:`eq_ring_traffic`
 
-The traffic per device thus does not grow with $k$: it is $N$ bytes at
-$k = 2$ and approaches $2N$ from below as $k$ grows. For a ResNet-18,
-with 45 MB of fp32 gradients, on four GPUs each device sends 67 MB, where
-the hub of a star would send 134 MB and receive as much. The two phases
-are also useful on their own. Reduce-scatter leaves each device with the
-sum of one part of the gradient, and all-gather assembles a vector from
-parts held on different devices. The sharded training of the next section
-uses them separately.
+The traffic per device is thus bounded: it is $S$ at $k = 2$ and stays
+below $2S$ however many devices join. For the 4 GB of fp32
+gradients of our 1B-parameter GPT on four GPUs, each device of a ring
+sends 6 GB, where the hub of a star would send 12 GB and receive as much.
+The two phases are also useful on their own. Reduce-scatter leaves each
+device with the sum of one part of the gradient, and all-gather assembles
+a vector from parts held on different devices. Sharded training
+(:numref:`sec_sharding`) uses them separately.
 
 ![Ring allreduce on four GPUs, computed step by step. Reduce-scatter
 accumulates one chunk per device around the ring; all-gather then
@@ -499,7 +516,7 @@ outlined cell is the chunk that a GPU received in that step, and the ring
 in the last panel shows which GPU sends to which.](../img/mdl-perf-ring-allreduce.svg)
 :label:`fig_ring_allreduce`
 
-The chunk bookkeeping is easy to get wrong, so we check it in a simulation.
+The indices are easy to get wrong, so we check them in a simulation.
 Each NumPy vector stands for the gradient on one device, and one step of
 the ring copies every message before any device adds or stores what it
 receives, since all devices send at once. In reduce-scatter, device $j$
@@ -527,87 +544,95 @@ def ring_allreduce(xs):
     return [np.concatenate(c) for c in chunks], sent
 ```
 
-Four devices with vectors of 1,024 floats, $N = 4{,}096$ bytes each,
-should all end with the sum and each send
-$2 \cdot 3/4 \cdot N = 6{,}144$ bytes:
+We run the ring on 2, 4, 8, and 16 devices, each holding 1,024 floats,
+so $S = 4{,}096$ bytes. By :eqref:`eq_ring_traffic`, each device should
+send $1$, $3/2$, $7/4$, and $15/8$ times $S$:
 
 ```{.python .input #multiple-gpus-ring-allreduce-2}
 %%tab pytorch, jax
 rng = np.random.default_rng()
-xs = [rng.standard_normal(1024, dtype=np.float32) for _ in range(4)]
-results, sent = ring_allreduce(xs)
-print(f'every device holds the sum: '
-      f'{all(np.allclose(r, sum(xs), atol=1e-5) for r in results)}; '
-      f'sent per device: {sent} bytes, '
-      f'2(k - 1)N/k = {2 * 3 * xs[0].nbytes // 4} bytes')
+for k in (2, 4, 8, 16):
+    xs = [rng.standard_normal(1024, dtype=np.float32) for _ in range(k)]
+    results, sent = ring_allreduce(xs)
+    correct = all(np.allclose(r, sum(xs), atol=1e-5) for r in results)
+    print(f'k = {k:2d}: every device holds the sum: {correct}; '
+          f'sent per device: {sent / xs[0].nbytes:.2f} S')
 ```
 
-Every device ends with the sum, and each sends exactly the bytes of
-:eqref:`eq_ring_traffic`.
+Every device ends with the sum, and the bytes per device creep toward
+$2S$: each doubling of the ring adds less traffic per device than the one
+before.
 
-The byte count does not determine the time on its own. The ring takes
-$2(k-1)$ steps one after another, and each step includes the fixed time of
-a transfer, so the fixed cost of a ring allreduce grows linearly in $k$
-while its bytes do not. For small messages, where the fixed cost dominates, collective
-libraries switch to algorithms with fewer sequential steps, such as
-trees, whose depth grows only like $\log_2 k$; an exercise derives where
-the crossover lies. On our machine, the ring also has fewer independent links
-to spread its traffic over than its picture suggests. Without peer-to-peer
-access, a transfer from one GPU to its neighbor goes up one PCIe link
-into host memory and down another (:numref:`subsec_hw-interconnects`),
-so all hops share the host's memory system and two PCIe host bridges.
-:eqref:`eq_ring_traffic` says how many bytes each device must move. How
-fast they move is a property of the machine that we have to measure.
+The byte count does not determine the time on its own. The ring takes $2(k-1)$
+steps one after another, and each step includes the fixed time of a transfer,
+so the fixed cost of a ring allreduce grows linearly in $k$ while its bytes
+stay below $2S$. For small messages, where the fixed cost dominates, collective
+libraries switch to algorithms with fewer sequential steps, such as trees,
+whose depth grows only like $\log_2 k$; exercise :exref:`ex_mg-latency` derives
+where the crossover lies. On our machine the ring also has fewer independent
+links than its picture suggests. Every hop passes through host memory, so all
+hops share the host's memory system and two PCIe host bridges
+(:numref:`fig_pcie_topology`). :eqref:`eq_ring_traffic` says how many bytes
+each device must move. How fast they move is a property of the machine that we
+have to measure.
 
 ## Communication Cost and Scaling
 :label:`subsec_mg-accounting`
 
-We can now ask the question of the opening: does a second GPU shorten a
-step? The answer comes from comparing the computation that moves to the
-new device with the communication that it adds.
+We can now return to the question of the opening: does a second GPU
+shorten a step?
 
 ### A Cost Model for One Step
 
 On one device, a step on a minibatch of $B$ examples takes time
 $t_{\textrm{compute}}(B)$ for the device's local work: the forward and
 backward pass and the update. On $k$ devices, each device does this work
-for $B/k$ examples, and the step also waits for the allreduce of the $N$
-gradient bytes that every device holds. A transfer of $n$ bytes takes time
-$\alpha + n/\beta$, a fixed cost $\alpha$ plus the bytes divided by a
-bandwidth $\beta$ :cite:`Hockney.1994`.
+for $B/k$ examples, and the step also waits for the allreduce of the $S$
+gradient bytes that every device holds. We charge an allreduce as the
+latency-bandwidth model charges a single message :cite:`Hockney.1994`: a
+fixed cost $\alpha$ that every call pays however few bytes move, plus a
+time $\beta_{\textrm{link}}$ for every byte that a device sends. A message
+of $S$ bytes then costs $\alpha + S\,\beta_{\textrm{link}}$. Note that
+$\beta_{\textrm{link}}$ is a time per byte, the convention of the
+literature on collective communication :cite:`Thakur.Rabenseifner.Gropp.2005`,
+while $\beta$, the memory bandwidth in the roofline of
+:numref:`sec_perf_model`, is a rate in bytes per second.
 
-We apply this model to the allreduce as a whole and write its time as $\alpha + 2N/\beta$, which
-defines $\beta$ by measurement: $2N/\beta$ is the time of an allreduce so
-large that its fixed cost does not matter. On two devices, every allreduce
-makes each device send $N$ bytes and receive $N$, so $\beta$ counts the
-bytes that leave and enter a device together. For our star, whose two
-copies run one after the other, $\beta$ is the bandwidth of one copy. The
-step time on $k$ devices is then approximately
+Collective benchmarks report the rate at which one device sends while a
+large allreduce runs and call it the *bus bandwidth*;
+$\beta_{\textrm{link}}$ is its inverse. Each device of a ring sends the
+bytes of :eqref:`eq_ring_traffic`, so the step time on $k$ devices is
+approximately
 
 $$
-t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + m\,\alpha +
-\frac{2N}{\beta},
+t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + c\,\alpha +
+\frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}},
 $$
 :eqlabel:`eq_dp_cost`
 
-where $m$ is the number of allreduce calls per step, each with the fixed
-cost $\alpha$. At $k = 1$ both communication terms vanish. Only the first
-term shrinks as devices are added; the other two stay. A second device
-therefore shortens the step only if
-$t_{\textrm{compute}}(B) - t_{\textrm{compute}}(B/2)$, the computation it
-takes over, exceeds $m\alpha + 2N/\beta$, the communication it adds. The
-three quantities $t_{\textrm{compute}}$, $\alpha$, and $\beta$
-can each be measured on their own, and we do so for LeNet.
+where $c$ is the number of allreduce calls per step. At $k = 1$ there is
+no allreduce, so $c = 0$, and the last term vanishes too. At $k = 2$ the
+last term is simply $S\,\beta_{\textrm{link}}$. As devices are added, only
+the first term shrinks. The bytes per device grow from $S$ toward $2S$,
+and $\alpha$ grows as well: a ring allreduce makes $2(k-1)$ transfers one
+after another, and each pays its own start-up time, so for a ring $\alpha$
+grows linearly in $k$. A second device therefore shortens the step only
+if $t_{\textrm{compute}}(B) - t_{\textrm{compute}}(B/2)$, the
+computation it takes over, exceeds $c\alpha + S\,\beta_{\textrm{link}}$,
+the communication it adds. The three quantities $t_{\textrm{compute}}$,
+$\alpha$, and $\beta_{\textrm{link}}$ can each be measured on their own,
+and we do so for LeNet.
 
 ### Latency and Bandwidth of the Allreduce
 
-An allreduce of a single number moves almost no bytes, so its time is
-$\alpha$. An allreduce of 64M floats, 256 MB per device, takes so long
-that $\alpha$ hardly matters, and $\beta = 2N/(t - \alpha)$ follows from
-its time $t$. We measure both on two GPUs. A training loop does not wait
-for the devices after each allreduce; the next kernels queue behind
-it. We therefore time many calls in a row and wait once at the end, since
-a wait after every call would add its own delay to $\alpha$.
+Let us measure the two constants with two allreduces at the extremes. An
+allreduce of a single number moves almost no bytes, so its time is $\alpha$. An
+allreduce of $2^{26}$ floats, about 268 MB per device, takes so long that
+$\alpha$ hardly matters, and on two devices $\beta_{\textrm{link}}$ is $t -
+\alpha$ divided by those bytes, where $t$ is its time. A training loop does not
+wait for the devices after each allreduce; the next kernels queue behind it. We
+therefore time many calls in a row and wait once at the end, since a wait after
+every call would add its own delay to $\alpha$.
 
 ```{.python .input #multiple-gpus-the-accounting}
 %%tab pytorch
@@ -617,11 +642,12 @@ def allreduce_time(n, devices, calls):
     return d2l.Benchmark(lambda: allreduce(x), warmup=10 * calls,
                          repeats=3 * calls, devices=devices).time
 
-alpha = allreduce_time(1, devices, calls=100)
+alpha = allreduce_time(1, devices, calls=100)  # Our star: two copies in turn
 n = 2**26                                # 64M floats ...
-N = 4 * n                                # ... 256 MB
-beta = 2 * N / (allreduce_time(n, devices, calls=3) - alpha)
-print(f'alpha = {1e6 * alpha:.0f} us, beta = {beta / 1e9:.1f} GB/s')
+S = 4 * n                                # ... 268 MB (256 MiB) per device
+beta_link = (allreduce_time(n, devices, calls=3) - alpha) / S  # s per byte
+print(f'alpha = {1e6 * alpha:.0f} us, beta_link = {1e9 * beta_link:.2f} '
+      f'ns/byte (bus bandwidth {1e-9 / beta_link:.1f} GB/s)')
 ```
 
 ```{.python .input #multiple-gpus-the-accounting}
@@ -631,46 +657,77 @@ def allreduce_time(n, mesh, calls):
     x = jnp.zeros((mesh.size, n), device=NamedSharding(mesh, P('data')))
     return d2l.Benchmark(lambda: allreduce(x, mesh), repeats=calls).time
 
-alpha = allreduce_time(1, meshes[1], calls=100)
+def program_time(m, mesh, calls=300):
+    """Seconds per call of one compiled program that makes m allreduces of
+    one float, each on the result of the one before."""
+    def chain(x):
+        for _ in range(m):               # Each allreduce waits for the last
+            x = jax.lax.pmean(x, 'data')
+        return x
+    f = jax.jit(jax.shard_map(chain, mesh=mesh, in_specs=P('data'),
+                              out_specs=P('data')))
+    x = jnp.zeros((mesh.size, 1), device=NamedSharding(mesh, P('data')))
+    return d2l.Benchmark(lambda: f(x), warmup=10, repeats=calls).time
+
+# The training step's psum runs inside a program that is dispatched anyway,
+# so alpha is what each further allreduce adds to one program
+alpha = (program_time(10, meshes[1]) - program_time(1, meshes[1])) / 9
 n = 2**26                                # 64M floats ...
-N = 4 * n                                # ... 256 MB
-beta = 2 * N / (allreduce_time(n, meshes[1], calls=3) - alpha)
-print(f'alpha = {1e6 * alpha:.0f} us, beta = {beta / 1e9:.1f} GB/s')
+S = 4 * n                                # ... 268 MB (256 MiB) per device
+# Both calls dispatch a program of their own; their difference is the bytes
+beta_link = (allreduce_time(n, meshes[1], calls=3)
+             - allreduce_time(1, meshes[1], calls=100)) / S  # s per byte
+print(f'alpha = {1e6 * alpha:.0f} us, beta_link = {1e9 * beta_link:.2f} '
+      f'ns/byte (bus bandwidth {1e-9 / beta_link:.1f} GB/s)')
 ```
 
 :begin_tab:`pytorch`
 `d2l.Benchmark` waits for every device in `devices` before it starts and
-before it stops the clock. It warms up with ten times as many calls as it
-times, because the first few hundred allreduces of a run can be slower than
-the rest, which would inflate $\alpha$. The star allreduce reaches about 20 GB/s.
-On two devices it consists of two copies of $N$ bytes, one after the
-other, so each copy runs at about 20 GB/s as well. The GPUs' copy engines
-move the bytes over PCIe and through host memory, and this is about what
-one PCIe 4.0 link carries in one direction after that detour. The fixed
-cost $\alpha$ is that of two driver-managed copies.
+before it stops the clock. It warms up with more than three times as many
+calls as it times (ten rounds of `calls` against three), because the first
+few hundred allreduces of a run can be slower than the rest, which would
+inflate $\alpha$. This cell times the star that we wrote, which on two
+devices is two copies of all the bytes, one after the other. On our
+machine the bus bandwidth is about 9.5 GB/s ($\beta_{\textrm{link}}$
+about 0.1 ns per byte), so each copy runs at about 19 GB/s, a little
+below the 23 GB/s that a pinned copy from host memory reached in
+:numref:`sec_hardware`. The fixed cost $\alpha$ is that
+of two driver-managed copies.
 :end_tab:
 
 :begin_tab:`jax`
 `d2l.Benchmark` already makes its calls in a row and waits once, for the
-last result. The `psum` moves well under 10 GB/s per device. Without
-peer-to-peer access, NCCL falls back to a transport that moves fewer bytes
-per second than the PCIe links carry; :numref:`sec_multi_gpu_concise`
-measures this transport and a workaround for it. Its rate also depends on
-which two GPUs take part (:numref:`fig_pcie_topology`). On our machine,
-$\beta$ is 4.9 GB/s for GPUs 0 and 1, 6.2 GB/s for GPUs 2 and 3, the other
-pair behind one host bridge, and 7.3–7.4 GB/s for two GPUs behind
-different bridges. A measured $\beta$ thus describes a pair of GPUs, not
-the machine; ours is GPUs 0 and 1. Each call of `allreduce`
-dispatches a compiled program of its own, so $\alpha$ includes the time of
-that dispatch.
+last result. This cell times `psum`, which XLA hands to NCCL; on our
+machine the bus bandwidth is about 2.4 GB/s, so $\beta_{\textrm{link}}$
+is about 0.4 ns per byte. On the path through host memory between our
+GPUs, NCCL falls back to a transport that moves fewer bytes per second
+than the PCIe links carry; :numref:`sec_multi_gpu_concise` measures this
+transport and a workaround for it. A training step makes its allreduce
+inside a compiled program that it launches anyway, so we take $\alpha$ to
+be what one more allreduce adds to such a program: `program_time` times a
+program that makes one allreduce of a single number and one that makes
+ten, each waiting for the one before, and $\alpha$ is a ninth of the
+difference. A separate program for every allreduce would cost about ten
+times as much on our machine, since every program pays a start-up cost of
+its own. For $\beta_{\textrm{link}}$ that cost cancels, because the cell
+subtracts the time of a one-float call from that of the large one.
 :end_tab:
 
-At these bandwidths, moving LeNet's 247 KB of gradients takes
-$2N/\beta$, at most about a tenth of a millisecond. Does it matter whether
-they travel as one message or as ten? We allreduce LeNet's ten gradient
-tensors first one at a time, then all at once as one concatenated vector.
-The cell prints both times next to the predictions of
-:eqref:`eq_dp_cost`:
+A measured $\beta_{\textrm{link}}$ describes the allreduce that moved the
+bytes, the two GPUs that took part, and the path between them
+(:numref:`fig_pcie_topology`). It is not a constant of the machine, and
+ours comes from GPUs 0 and 1.
+
+At these rates, moving LeNet's 247 KB of gradients takes
+$S\,\beta_{\textrm{link}}$, at most about a tenth of a millisecond, while
+ten messages would pay $10\alpha$, more than that. For a gradient this
+small it should therefore matter a great deal whether the gradients travel
+as one message or as ten. We allreduce LeNet's ten gradient tensors first
+one at a time, then all at once as one concatenated vector. Both variants
+move the same bytes, so :eqref:`eq_dp_cost` with $c = 10$ and $c = 1$
+predicts that they differ by $9\alpha$. Neither time was used to obtain
+$\alpha$ or $\beta_{\textrm{link}}$, so this is the experiment that tests
+them.
 
 ```{.python .input #multiple-gpus-latency-and-bandwidth-of-the-allreduce-1}
 %%tab pytorch
@@ -679,59 +736,117 @@ flat = [torch.cat([g.flatten() for g in G]) for G in grads]
 def separately():
     for g in zip(*grads):              # One allreduce per tensor
         allreduce(list(g))
-n_bytes, m = flat[0].nbytes, len(base)
-for name, f, calls in (('separately', separately, m),
+n_bytes, c = flat[0].nbytes, len(base)
+for name, f, calls in (('separately', separately, c),
                        ('at once', lambda: allreduce(flat), 1)):
     t = d2l.Benchmark(f, warmup=1000, repeats=300, devices=devices).time
     print(f'{name:10s}: {1e6 * t:4.0f} us measured, '
-          f'{1e6 * (calls * alpha + 2 * n_bytes / beta):4.0f} us predicted')
+          f'{1e6 * (calls * alpha + n_bytes * beta_link):4.0f} us predicted')
 ```
 
 ```{.python .input #multiple-gpus-latency-and-bandwidth-of-the-allreduce-1}
 %%tab jax
 mesh = meshes[1]
-grads = [jnp.zeros((mesh.size, p.size), device=NamedSharding(mesh, P('data')))
-         for p in base]
-flat = jnp.concatenate(grads, axis=1)
-n_bytes, m = flat.nbytes // mesh.size, len(base)  # Bytes per device
-for name, f, calls in (
-        ('separately', lambda: [allreduce(g, mesh) for g in grads], m),
-        ('at once', lambda: allreduce(flat, mesh), 1)):
-    t = d2l.Benchmark(f, repeats=100).time
-    print(f'{name:10s}: {1e6 * t:4.0f} us measured, '
-          f'{1e6 * (calls * alpha + 2 * n_bytes / beta):4.0f} us predicted')
+sizes = [p.size for p in base]
+flat = jnp.zeros((mesh.size, sum(sizes)), device=NamedSharding(mesh, P('data')))
+n_bytes, c = flat.nbytes // mesh.size, len(base)  # Bytes per device
+
+def separately(g):
+    """One psum per gradient tensor, each after the one before; without the
+    barrier, XLA would merge the ten into one allreduce."""
+    out = []
+    for g_i in jnp.split(g, np.cumsum(sizes)[:-1], axis=1):
+        if out:
+            g_i, _ = jax.lax.optimization_barrier((g_i, out[-1]))
+        out.append(jax.lax.psum(g_i, 'data'))
+    return jnp.concatenate(out, axis=1)
+
+t = {}
+for name, f in (('separately', separately),
+                ('at once', lambda g: jax.lax.psum(g, 'data'))):
+    f = jax.jit(jax.shard_map(f, mesh=mesh, in_specs=P('data'),
+                              out_specs=P('data')))
+    t[name] = d2l.Benchmark(lambda: f(flat), warmup=10, repeats=300).time
+    print(f'{name:10s}: {1e6 * t[name]:4.0f} us measured')
+# Both programs are dispatched once and move the same bytes
+print(f'difference: {1e6 * (t["separately"] - t["at once"]):4.0f} us '
+      f'measured, {1e6 * (c - 1) * alpha:4.0f} us predicted by {c - 1} alpha')
 ```
 
-Ten calls take several times as long as one call that moves the same
-bytes.
+Ten messages take longer than one by about the $9\alpha$ of the
+prediction.
 
 :begin_tab:`pytorch`
-The two constants predict both times to within a few percent.
-:end_tab:
-
-:begin_tab:`jax`
-The single call takes about as long as $\alpha$, although the model adds
-0.1 ms for its bytes. Each call costs the host about $\alpha$ to dispatch,
-and the transfer of one call runs while the host dispatches the next.
-:eqref:`eq_dp_cost` adds the two terms, so it overestimates a call whose
-transfer is shorter than its dispatch. Ten calls take about ten times as
+Here every allreduce is a call of its own, and the two constants predict
+both times to within a few percent: ten calls take seven to ten times as
 long as one.
 :end_tab:
 
-For a gradient this small, the number of messages decides the communication time, and the
-bytes hardly matter. This is why collective libraries pack many small
+:begin_tab:`jax`
+Both programs also pay a cost that :eqref:`eq_dp_cost` does not count.
+The one with a single allreduce takes about 0.3 ms, of which
+$\alpha + S\,\beta_{\textrm{link}}$ accounts for about 0.13 ms; the rest
+is the start-up of a program on two GPUs, which a training step pays once,
+whatever the program contains. The difference of the two times cancels it
+and leaves the nine extra allreduces, and it comes within a sixth of
+$9\alpha$.
+:end_tab:
+
+For a gradient this small, nine more messages cost more than all of its
+bytes. An allreduce of LeNet's gradient is priced like a letter, and ten
+envelopes cost more than the weight of what is inside them. This is why the
+data-parallel tools of :numref:`sec_multi_gpu_concise` pack many small
 gradient tensors into a few large buffers before they send them, as our
 training step does by hand.
 
 ### LeNet on One and Two GPUs
 
-A step on two GPUs spends $\alpha + 2N/\beta$ on one allreduce. What it
-saves is the difference between $t_{\textrm{compute}}(256)$, the time of
-one device's local work on a minibatch of 256 examples, and
-$t_{\textrm{compute}}(128)$, the time of the same work on half of it. We
-measure both on one GPU with `communicate=False`. A third measurement runs
-the local work on two GPUs at once, 128 examples each, which is what the
-data-parallel step does before its allreduce:
+A step on two GPUs spends $\alpha + S\,\beta_{\textrm{link}}$ on one
+allreduce. What it saves depends on how the time of the local work
+depends on the batch, and the profiler of :numref:`subsec_perf-profiler`
+can tell us before we run anything on two GPUs. Recall from
+:numref:`sec_perf_model` that each call queued behind the others takes the
+longer of the host time $h$ to issue it and the device time to run it. If
+the device is busy for only a small fraction of a step, the step takes the
+host time of all its calls, which we write $h_{\textrm{step}}$, however
+many examples each kernel processes. We profile the local work of a
+one-GPU step on 256 examples:
+
+```{.python .input #multiple-gpus-lenet-on-one-and-two-gpus-2}
+%%tab pytorch
+params = [broadcast(base, devices[0])]
+step = lambda: train_step(params, train_data[:1], idx, 0.2, communicate=False)
+t = d2l.Benchmark(step, warmup=500, repeats=150, devices=devices[:1]).time
+d2l.show_profile(d2l.kernel_times(step, steps=100), 1e3 * t, rows=4)
+```
+
+```{.python .input #multiple-gpus-lenet-on-one-and-two-gpus-2}
+%%tab jax
+mesh, params = meshes[0], broadcast(base, meshes[0])
+i = jax.device_put(idx, NamedSharding(mesh, P('data')))
+step = lambda: train_step(params, train_data[0], i, 0.2, mesh,
+                          communicate=False)
+t = d2l.Benchmark(step, repeats=500).time
+d2l.show_profile(d2l.kernel_times(step, steps=100), 1e3 * t, rows=4)
+```
+
+The device sits idle for most of the step, so the step is overhead-bound
+and its time is $h_{\textrm{step}}$.
+
+:begin_tab:`pytorch`
+The device is busy for 0.30 ms of a step of 2.7 ms, about a tenth. Its
+largest kernels, the convolutions and their gradients, take a few
+hundredths of a millisecond each.
+:end_tab:
+
+:begin_tab:`jax`
+The device is busy for 0.17 ms of a step of 0.40 ms, about two fifths,
+and waits for the host the rest of the time.
+:end_tab:
+
+Halving the minibatch should then leave the local work about as long. We
+time it at 256 and at 128 examples on one GPU, and on two GPUs at once with
+128 examples each, which is the data-parallel step without its allreduce:
 
 ```{.python .input #multiple-gpus-lenet-on-one-and-two-gpus-1}
 %%tab pytorch
@@ -756,44 +871,78 @@ for k, b in ((1, 256), (1, 128), (2, 128)):
     print(f'{k} GPU(s), {b} examples each: {1e3 * t_local[k, b]:.2f} ms')
 ```
 
-On one GPU, halving the minibatch shortens the local work by far less
-than half. A LeNet layer applied to a few hundred small images is far too
-little work to occupy an RTX 4090, so each kernel finishes before the next
-one is ready to start. The step is close to the overhead-bound regime of
-:numref:`subsec_perf-regimes`: its time is set mostly by the number of
-kernels launched rather than by the arithmetic inside them, and halving the
-minibatch leaves the number of kernels unchanged.
+Halving the minibatch indeed leaves the local work about as long. On two
+GPUs, it takes about twice as long as on one GPU with the same 128
+examples. The one-launcher prediction below takes the one-GPU step from
+the training run that it predicts, so that the prediction and the
+measurement come from the same run.
+
+:begin_tab:`jax`
+The step at 256 examples takes 0.37 ms here and 0.40 ms in the profile,
+although the code is the same: the host time of a step differs by about a
+tenth from one cell to the next.
+:end_tab:
+
+Why twice? The host must prepare and issue the work of every device it
+feeds, and on our machine the work for two devices takes it about twice as
+long as the work for one. Each GPU finishes its short kernels and then
+waits for more, so the host time of a step on $k$ devices is about
+$k\,h_{\textrm{step}}$ (:numref:`fig_one_launcher`).
+
+To put this into the cost model, split the local work into its two parts.
+On one device, a shard of $b$ examples takes
+$t_{\textrm{compute}}(b) \approx \max\bigl(h_{\textrm{step}},
+t_{\textrm{dev}}(b)\bigr)$, where $t_{\textrm{dev}}(b)$ is the time the
+device is busy with it, the "device busy" of the profile; this is the
+$\max(h, \cdot)$ of the overhead-bound regime. :eqref:`eq_dp_cost` puts
+this one-device time into its first term, as if every device were fed as
+fast as it would be on its own. A data-parallel step whose host serves
+$k$ devices takes about
+
+$$
+t_{\textrm{step}}(k) \approx \max\bigl(k\,h_{\textrm{step}},\;
+t_{\textrm{dev}}(B/k)\bigr) + c\,\alpha +
+\frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}.
+$$
+:eqlabel:`eq_dp_one-launcher`
+
+The first term is the same $\max(h, \cdot)$, applied to a host that serves
+$k$ devices. For a device-bound step it is
+$t_{\textrm{dev}}(B/k) = t_{\textrm{compute}}(B/k)$, and
+:eqref:`eq_dp_cost` is recovered; for LeNet it is $k\,h_{\textrm{step}}$.
+
+![A host-bound step on two GPUs, drawn as one host that issues the work of
+GPU 0 and then that of GPU 1. Each GPU idles while the host serves the
+other, so a step whose kernels are short takes about $2h_{\textrm{step}}$
+of host time plus the exchange.](../img/mdl-perf-one-launcher.svg)
+:label:`fig_one_launcher`
 
 :begin_tab:`pytorch`
-On two GPUs, the local work takes about twice as long as on one GPU with
-the same 128 examples. One Python thread launches the kernels of both
-devices, one device after the other, so twice as many launches wait for a
-single interpreter, and each GPU idles while Python serves the other.
-:eqref:`eq_dp_cost` assumes that the devices work independently; here
-they share one launcher.
+In PyTorch the picture is literal: one Python thread issues the kernels of
+GPU 0, then those of GPU 1, and only then the copies of the allreduce.
 :end_tab:
 
 :begin_tab:`jax`
-On two GPUs, the local work takes far longer than on one GPU with the
-same 128 examples, and longer than on one GPU with all 256. The jitted
-`shard_map` is a single program, but launching it on two devices from one
-host thread takes several times as long as the work it launches, which
-keeps each device busy for little more than a tenth of a millisecond per
-step. Here, too, the launcher sets the pace.
+The jitted step is one program, and XLA's runtime launches it on each
+device from a thread of its own while the Python thread waits until every
+launch has been issued. On our machine the two launches together still
+take about twice as long as one, as the doubling of the local work shows.
+This section measures that cost; it does not take it apart.
 :end_tab:
 
-On two GPUs the local work thus takes longer than on one GPU with the
-whole minibatch, the allreduce adds $\alpha + 2N/\beta$ on top, and
-:eqref:`eq_dp_cost` predicts that a step on two GPUs takes longer than a
-step on one. The predicted step time is the
-one-GPU step, plus the difference between the local work on two GPUs and
-on one, plus $\alpha + 2N/\beta$. To test the prediction, we train for
-five epochs on one GPU and on two, from the same initialization `base`,
-with minibatches of 256 examples. Both runs visit the training set in the
-same five random orders, drawn once, so that they differ only in rounding.
-The function `train` takes the list of orders, one per epoch. It returns
-the average time per step over all epochs but the first, which includes
-start-up costs, and then the test accuracy:
+Both models predict the two-GPU training step from one-GPU step times and
+the measured exchange. :eqref:`eq_dp_cost` charges the local work on 128
+examples plus one exchange. :eqref:`eq_dp_one-launcher` charges twice the
+one-GPU step (a host-bound step, so $2h_{\textrm{step}}$) plus one
+exchange. A real training run tests both: it times the full step,
+allreduce included, over nearly a thousand steps, and it shows whether two
+GPUs learn what one does. We train for five epochs on one GPU and on two,
+from the same initialization `base`, with minibatches of 256 examples.
+Both runs visit the training set in the same five random orders, drawn
+once, so that they differ only in rounding. The function `train` takes the
+list of orders, one per epoch. It returns the average time per step over
+all epochs but the first, which includes start-up costs, and then the test
+accuracy:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-5}
 %%tab pytorch
@@ -839,13 +988,12 @@ def train(params, train_data, test_data, mesh, orders, batch_size=256,
 ```
 
 :begin_tab:`jax`
-Placing an array on the devices takes time on the host, more than a
-tenth of a millisecond for one minibatch of indices. `train` therefore
-places all minibatches of an epoch with one `jax.device_put` before the
-clock starts, as we placed the training set before any timing, so that
-the clock measures the steps alone. Placed inside the loop, the transfers
-would lengthen every step by about 0.2 ms per GPU, a cost that no term
-of :eqref:`eq_dp_cost` contains.
+Placing an array on the devices takes time on the host. `train`
+therefore places all minibatches of an epoch with one `jax.device_put`
+before the clock starts, as we placed the training set before any timing,
+so that the clock measures the steps alone. Placed inside the loop, the
+transfers would add a cost to every step that no term of
+:eqref:`eq_dp_one-launcher` contains.
 :end_tab:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-6}
@@ -856,9 +1004,10 @@ for k in (1, 2):
     t_step[k], acc = train(params, train_data[:k], test_data, orders)
     print(f'{k} GPU(s): {1e3 * t_step[k]:.2f} ms per step, '
           f'test accuracy {acc:.2f}')
-predicted = (t_step[1] + t_local[2, 128] - t_local[1, 256]
-             + alpha + 2 * n_bytes / beta)
-print(f'2 GPUs predicted: {1e3 * predicted:.2f} ms per step')
+exchange = alpha + n_bytes * beta_link    # One allreduce of the gradient
+print(f'2 GPUs predicted: {1e3 * (t_local[1, 128] + exchange):.2f} ms per '
+      f'step by eq_dp_cost, {1e3 * (2 * t_step[1] + exchange):.2f} ms with '
+      f'one launcher')
 ```
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-6}
@@ -870,52 +1019,51 @@ for k, mesh, data_k in zip((1, 2), meshes, train_data):
                            orders)
     print(f'{k} GPU(s): {1e3 * t_step[k]:.2f} ms per step, '
           f'test accuracy {acc:.2f}')
-predicted = (t_step[1] + t_local[2, 128] - t_local[1, 256]
-             + alpha + 2 * n_bytes / beta)
-print(f'2 GPUs predicted: {1e3 * predicted:.2f} ms per step')
+exchange = alpha + n_bytes * beta_link    # One allreduce of the gradient
+print(f'2 GPUs predicted: {1e3 * (t_local[1, 128] + exchange):.2f} ms per '
+      f'step by eq_dp_cost, {1e3 * (2 * t_step[1] + exchange):.2f} ms with '
+      f'one launcher')
 ```
 
-The step on two GPUs is slower than the step on one, as the separately
-measured terms predict. For LeNet, a second GPU makes training slower.
+The step on two GPUs takes about twice as long as the step on one, or
+longer.
+:eqref:`eq_dp_cost` predicts a shorter step than we measure, while
+:eqref:`eq_dp_one-launcher`, which knows only the one-GPU step and the
+exchange, predicts the slowdown.
 
 :begin_tab:`pytorch`
-The measured step usually lies within a few percent of the prediction.
-Both are bound by the one Python thread that drives the two GPUs, so they
-follow the speed of a single CPU core, and on a machine busy with other
-work the two can differ by a fifth or more.
+:eqref:`eq_dp_cost` predicts 2.8 ms, the time of one GPU, and the step
+takes 5.6 ms, within a few percent of the one-launcher prediction. The
+exchange, $\alpha + S\,\beta_{\textrm{link}}$, is 0.08 ms, about one percent
+of the step.
 :end_tab:
 
 :begin_tab:`jax`
-The measured step comes in below the prediction. Our $\alpha$ contains
-the dispatch of a separate program for every allreduce, while the training
-step's `psum` runs inside the program that the step dispatches anyway.
+:eqref:`eq_dp_cost` predicts about 0.5 ms, a little more than the
+one-GPU step, because the one-GPU step at 128 examples takes as long as
+the step at 256 and the exchange, $\alpha + S\,\beta_{\textrm{link}}$,
+adds about 0.13 ms. The step on two GPUs takes 0.9 to 1.1 ms in our runs,
+about the one-launcher prediction of 0.9 ms or somewhat more; it varies
+from run to run by more than the prediction does.
 :end_tab:
 
-Both runs reach the same test accuracy to within a point or two. They
-start from the same parameters and see the examples in the same order, so
-they differ only in rounding, which a thousand steps of SGD amplify. Two runs on one GPU differ about as much, because a
-GPU does not always add the same numbers in the same order.
+This is not the result that the opening prepared us for. Twice the
+one-GPU step accounts for most of the two-GPU step, so the exchange can
+account for no more than the rest. The exchange of gradients, which we
+were led to fear, takes a small part of the step. What hurts is that two
+GPUs are harder to keep fed than one.
 
-LeNet is too small for data parallelism. A second device shortens a step
-when the computation on each shard is long compared with
-$m\alpha + 2N/\beta$, and that requires two things. The per-device batch
-must be large enough to keep each GPU busy, so that
-$t_{\textrm{compute}}(B/k)$ is close to $t_{\textrm{compute}}(B)/k$. And the
-model must perform many operations per byte of gradient, so that the
-computation it moves outweighs the exchange it adds. LeNet performs 0.4
-million multiply-adds per image, under two per byte of its gradient. A
-ResNet-18 on Fashion-MNIST images enlarged to 64×64 pixels performs 2.2
-billion multiply-adds per image with 45 MB of gradients, about fifty per
-byte.
+Both runs reach the same test accuracy to within a point or two. Their only
+difference is rounding, which a thousand steps of SGD amplify.
 
 ### Strong and Weak Scaling
 
 Every reported speedup holds something fixed, and two conventions are
 common. :eqref:`eq_dp_cost` holds the global minibatch $B$ fixed while $k$
 grows: the same work, finished sooner if all goes well. This is *strong
-scaling*, and it is what we measured for LeNet. The alternative holds the
-per-device batch fixed, so that the global minibatch grows to
-$kB_{\textrm{device}}$: more work per unit of time. This is *weak
+scaling*, and it is what we measured for LeNet's training run. The
+alternative holds the per-device batch $b$ fixed, so that the global
+minibatch grows to $kb$: more work per unit of time. This is *weak
 scaling*, and its speedups are quoted as throughput, examples per second.
 Weak scaling is the easier test, because $t_{\textrm{compute}}$ per device
 does not shrink and only the communication has to stay small next to it.
@@ -924,49 +1072,171 @@ A larger global minibatch, however, changes the optimization itself
 scaling is not a gain of the same size in the time it takes to reach a
 given loss.
 
-We can now predict from three measurements whether more GPUs shorten a
-step, and we have seen why they do not for LeNet. Our hand-written
-version also leaves room for improvement. It waits for the whole backward
-pass before it communicates, although the gradients of the last layers
-are ready long before those of the first.
+### Larger Minibatches
+
+LeNet failed on two GPUs because its device had too little to do in each
+step. The cure for overhead in :numref:`sec_perf_model` works here too:
+give every kernel more data. We keep the model and the hand-written step
+and raise the number of examples per GPU, $b$, which makes the comparison
+one of weak scaling. Two GPUs process $2b$ examples in a step of time
+$t(2)$ and one GPU processes $b$ in $t(1)$, so the second GPU raises the
+throughput by the factor $2\,t(1)/t(2)$. By :eqref:`eq_dp_one-launcher`
+with one allreduce, it helps when
+
+$$
+\max\bigl(2h_{\textrm{step}},\; t_{\textrm{dev}}(b)\bigr) + \alpha +
+S\,\beta_{\textrm{link}} \;<\;
+2\max\bigl(h_{\textrm{step}},\; t_{\textrm{dev}}(b)\bigr).
+$$
+
+The left side is one step on two GPUs, the right side two steps on one.
+If the one-GPU step is host-bound, $t_{\textrm{dev}}(b) \le
+h_{\textrm{step}}$, the left side exceeds $2h_{\textrm{step}}$ and the
+right side equals it: no exchange, however fast, can help. If the device
+works long enough for the host to feed both GPUs,
+$t_{\textrm{dev}}(b) \ge 2h_{\textrm{step}}$, the condition becomes
+$t_{\textrm{dev}}(b) > \alpha + S\,\beta_{\textrm{link}}$: the device time
+that the second GPU takes over must exceed the exchange. In between, for
+$h_{\textrm{step}} < t_{\textrm{dev}}(b) < 2h_{\textrm{step}}$, the
+condition reads
+$t_{\textrm{dev}}(b) > h_{\textrm{step}} + (\alpha +
+S\,\beta_{\textrm{link}})/2$, and the gain, if any, stays below two. In
+short, a second GPU never helps a host-bound step, and it helps once the
+host can feed both devices and the work it takes over outlasts the
+exchange it adds. For LeNet's 247 KB the exchange is a fraction of a
+millisecond, so the host is the condition that binds.
+
+We try $b = 256$, 4,096, and 32,768, drawing indices with replacement,
+since two GPUs at the largest size need more images than the training set
+holds. At 256 we expect no gain. At 32,768, with 128 times the examples
+of the profiled step, the device should be busy for many milliseconds,
+much longer than twice the host time, and we expect a factor close to
+two. The cell measures $t_{\textrm{dev}}$ with the profiler, takes
+$h_{\textrm{step}}$ from the step at 256, and prints the predicted and the
+measured gain, with the spread of the measured gain over three timed
+windows. Since $h_{\textrm{step}}$ comes from the row at 256, the
+prediction there is calibrated on the row it predicts; only the other two
+rows test it.
+
+```{.python .input #multiple-gpus-larger-minibatches}
+%%tab pytorch
+for b in (256, 4096, 32768):                # Examples per GPU
+    batch = torch.randint(len(data.train), (2 * b,))  # With replacement
+    steps = [lambda k=k: train_step(params[:k], train_data[:k],
+                                    batch[:k * b], 0.2) for k in (1, 2)]
+    times = [[], []]                        # Three timed windows per k,
+    for w in range(3):                      # taken in turn for k = 1 and 2
+        for k in (1, 2):
+            params = [broadcast(base, d) for d in devices]  # Equal replicas
+            times[k - 1].append(d2l.Benchmark(
+                steps[k - 1], warmup=10 if w == 0 else 0,
+                repeats=max(20, 2**18 // b), devices=devices[:k]).time)
+    t = np.median(times, axis=1)
+    t_dev = sum(d2l.kernel_times(steps[0]).values()) / 1e3
+    if b == 256:              # The host sets this step's time (profile above)
+        h_step = t[0]
+    predicted = 2 * t[0] / (max(2 * h_step, t_dev) + exchange)
+    speedups = 2 * np.array(times[0]) / np.array(times[1])
+    print(f'b = {b:5d}: 1 GPU {1e3 * t[0]:6.2f} ms (device busy '
+          f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms\n'
+          f'           speedup {predicted:.2f} predicted, '
+          f'{2 * t[0] / t[1]:.2f} measured '
+          f'(windows {speedups.min():.2f} to {speedups.max():.2f})')
+```
+
+```{.python .input #multiple-gpus-larger-minibatches}
+%%tab jax
+rng = np.random.default_rng()
+for b in (256, 4096, 32768):                # Examples per GPU
+    batch = rng.integers(len(data.train[1]), size=2 * b)  # With replacement
+    steps = []
+    for k, mesh, data_k in zip((1, 2), meshes, train_data):
+        params = broadcast(base, mesh)
+        i = jax.device_put(batch[:k * b], NamedSharding(mesh, P('data')))
+        steps.append(partial(train_step, params, data_k, i, 0.2, mesh))
+    times = [[], []]                        # Three timed windows per k,
+    for w in range(3):                      # taken in turn for k = 1 and 2
+        for j, step in enumerate(steps):
+            times[j].append(d2l.Benchmark(
+                step, warmup=10 if w == 0 else 0,
+                repeats=max(20, 2**18 // b)).time)
+    t = np.median(times, axis=1)
+    t_dev = sum(d2l.kernel_times(steps[0]).values()) / 1e3
+    if b == 256:              # The host sets this step's time (profile above)
+        h_step = t[0]
+    predicted = 2 * t[0] / (max(2 * h_step, t_dev) + exchange)
+    speedups = 2 * np.array(times[0]) / np.array(times[1])
+    print(f'b = {b:5d}: 1 GPU {1e3 * t[0]:6.2f} ms (device busy '
+          f'{1e3 * t_dev:5.2f} ms), 2 GPUs {1e3 * t[1]:6.2f} ms\n'
+          f'           speedup {predicted:.2f} predicted, '
+          f'{2 * t[0] / t[1]:.2f} measured '
+          f'(windows {speedups.min():.2f} to {speedups.max():.2f})')
+```
+
+At 256 examples per GPU, two GPUs process no more examples per second than
+one, as predicted. At 32,768 they nearly double the throughput, to within
+a few percent of two and of the prediction. The device then works for
+longer than the host needs to feed both GPUs, and the 247 KB exchange is
+lost in a step of many milliseconds. The middle row sits near the
+boundary, and which of the three cases it falls into depends on how the
+device time at 4,096 examples compares with the host time of one step and
+of two.
 
 :begin_tab:`pytorch`
-It also drives every device from one Python thread, and its star routes
-all traffic through device 0 instead of a ring.
+At 4,096 examples the device is busy for nearly all of a 3.0 ms step,
+a little longer than the 2.8 ms of host time at 256: the step has just
+left the host-bound case for the middle one. Feeding two GPUs takes the
+host about 5.5 ms, longer than the 3 ms of work that each GPU does, and
+the model predicts a gain of 7 to 8%. The measurement finds anything from
+no gain, as in the run shown, to about a tenth. At the boundary a few
+tenths of a millisecond of host time decide the row, and the host time
+varies by that much from run to run.
 :end_tab:
 
-:numref:`sec_multi_gpu_concise` replaces our version with the frameworks'
-production tools and measures them on a model large enough to gain from
-more GPUs.
+:begin_tab:`jax`
+At 4,096 examples the device works for 1.7 ms of a 1.8 ms step, more than
+twice the host time of about 0.4 ms, so the step is in the device-bound
+case, and the second GPU raises the throughput by about 1.7 to 1.8. In
+every row the prediction lies a little above the measurement, by a few
+hundredths up to about a tenth: the step on two GPUs takes slightly longer
+than the sum of the device time and the exchange, and the model has no
+term for the difference.
+:end_tab:
+
+Data parallelism thus works, even for LeNet, once each GPU has enough to
+do that the host can keep both busy. The frameworks' own tools
+(:numref:`sec_multi_gpu_concise`) change how the host drives the GPUs and
+start the exchange while the backward pass is still running. Neither lets
+us train a model larger than one GPU can hold, since every GPU still keeps
+all 16 bytes per parameter.
 
 ## Summary
 
 Data parallelism trains a copy of the model on every device, each on its
-share of the minibatch. The copies stay equal because an allreduce sums
-their gradients before every update, and a one-step check confirms that
-the parallel step computes what one device computes. A ring
-allreduce, a reduce-scatter followed by an all-gather, moves
-$2(k-1)N/k$ bytes per device, at most $2N$ however many devices take
-part. Whether another device shortens a step follows from
-$t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + m\alpha + 2N/\beta$,
-whose terms can each be measured. For LeNet, the fixed cost $\alpha$ of
-an allreduce outweighs its bytes, which is why gradients travel as one
-message. Halving LeNet's minibatch does not halve its computation either,
-so a second GPU makes each step slower. Data parallelism shortens steps
-for models whose per-device computation is long compared with the
-exchange of their gradients. A reported speedup must say whether it holds
-the global or the per-device batch fixed.
+share of the minibatch, and an allreduce of the gradients before every
+update keeps the copies equal. A ring allreduce, a reduce-scatter followed
+by an all-gather, makes each device send $2(k-1)S/k$ bytes, never more than
+$2S$, in $2(k-1)$ sequential steps. The cost of a step follows from
+:eqref:`eq_dp_cost`, whose terms can each be measured; for LeNet's small
+gradient, nine more messages cost more than all of its bytes. When one host
+feeds $k$ devices, a host-bound step takes about $k$ times its host time, a
+term that :eqref:`eq_dp_one-launcher` adds to the cost model. A second GPU
+never helps while the one-GPU step is host-bound, and it helps once the
+device work per step outlasts both the host time of feeding two GPUs and
+the exchange: LeNet gains nothing at 256 examples per GPU and nearly
+doubles its throughput at 32,768. A reported speedup must say whether it
+holds the global minibatch fixed (strong scaling) or the per-device batch
+(weak scaling).
 
 ## Exercises
 
 1. **Data versus pipeline parallelism.** Consider a stack of $L$ fully
-   connected layers of width $d$, with fp32 weights and no biases, trained
-   on two GPUs with minibatch size $B$. Data parallelism allreduces the
-   gradients of all weights. Two-stage pipeline
-   parallelism (:numref:`fig_splitting`) places the first $L/2$ layers on one GPU and
-   the rest on the other, so the forward pass sends the $B \times d$
-   activations at the cut to the second GPU and the backward pass returns
-   their gradient.
+   connected layers of width $d$, with fp32 weights and no biases, trained on
+   two GPUs with minibatch size $B$. Data parallelism allreduces the gradients
+   of all weights. Two-stage pipeline parallelism (:numref:`fig_splitting`)
+   places the first $L/2$ layers on one GPU and the rest on the other, so the
+   forward pass sends the $B \times d$ activations at the cut to the second GPU
+   and the backward pass returns their gradient.
     1. Count the bytes that cross between the two GPUs per step in each
        scheme, and evaluate both for $L = 32$, $d = 4096$, and $B = 256$.
        For which relation between $B$, $L$, and $d$ does data parallelism
@@ -981,6 +1251,7 @@ the global or the per-device batch fixed.
        first. Assume that every micro-batch takes the same time on each
        stage. Derive the fraction of the step during which each GPU idles,
        and evaluate it for $m = 1$ and $m = 8$.
+   :exlabel:`ex_mg-pipeline`
 
 1. **Gradient normalization.** Two recipes compute a data-parallel
    gradient from $k$ shards of a minibatch of $B$ examples. In recipe A,
@@ -997,33 +1268,33 @@ the global or the per-device batch fixed.
     1. Modify recipe B so that it is exact for any shard sizes, and
        identify the extra quantity that the devices must communicate
        before the update.
+   :exlabel:`ex_mg-normalization`
 
 1. **Strong-scaling speedup.** Model the compute time of a shard of $s$
-   examples as $t_{\textrm{compute}}(s) = t_0 + c\,s$, where $t_0$ does not
-   shrink with the shard. Let each device send $b$ bytes per second over
-   its link, while it receives at the same rate. This per-direction rate
-   $b$ is not the $\beta$ of :eqref:`eq_dp_cost`, which counts the bytes
-   in both directions. By :eqref:`eq_ring_traffic`, one step at a fixed
-   global batch $B$ takes
-   $$t_{\textrm{step}}(k) = t_0 + \frac{c\,B}{k} + \frac{2(k-1)}{k}\,\frac{N}{b},$$
+   examples as $t_{\textrm{compute}}(s) = t_0 + s\,t_1$, where $t_0$ does
+   not shrink with the shard and $t_1$ is the time per example. Neglect
+   the fixed cost of the one allreduce per step. By :eqref:`eq_dp_cost`,
+   one step at a fixed global batch $B$ then takes
+   $$t_{\textrm{step}}(k) = t_0 + \frac{B\,t_1}{k} + \frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}},$$
    with no communication at $k = 1$. The strong-scaling speedup is
-   $S(k) = t_{\textrm{step}}(1) / t_{\textrm{step}}(k)$.
-    1. Show that $S(k) > 1$ holds for one $k > 1$ exactly when it holds
-       for every $k > 1$, and find the condition. Find the limit of $S(k)$
+   $R(k) = t_{\textrm{step}}(1) / t_{\textrm{step}}(k)$.
+    1. Show that $R(k) > 1$ holds for one $k > 1$ exactly when it holds
+       for every $k > 1$, and find the condition. Find the limit of $R(k)$
        as $k \to \infty$.
     1. A model with 11.2 million fp32 parameters has $t_0 = 2$ ms and
-       $c = 0.2$ ms per example, and it is trained with $B = 256$. Compute
-       $S(2)$, $S(4)$, and the limit for $b = 20$ GB/s and for
-       $b = 5$ GB/s. Find the rate $b$ below which no number of GPUs
-       speeds up this model.
-    1. Sending the gradients in bf16 instead of fp32 halves $N$. For
-       $b = 5$ GB/s, recompute $S(4)$ and the limit of $S(k)$, and
-       state which of the two gains more from the halving.
+       $t_1 = 0.2$ ms per example, and it is trained with $B = 256$. Compute
+       $R(2)$, $R(4)$, and the limit for a bus bandwidth of 20 GB/s
+       ($\beta_{\textrm{link}} = 0.05$ ns per byte) and of 5 GB/s
+       ($\beta_{\textrm{link}} = 0.2$ ns per byte). Find the bus bandwidth
+       below which no number of GPUs speeds up this model.
+    1. Sending the gradients in bf16 instead of fp32 halves $S$. For
+       a bus bandwidth of 5 GB/s, recompute $R(4)$ and the limit of
+       $R(k)$, and state which of the two gains more from the halving.
 
 1. **Parameter servers and the ring.** Before collective libraries became
    standard, distributed training often summed gradients through
-   *parameter servers* :cite:`Li.Andersen.Park.ea.2014`: $s$ server
-   machines each hold a slice of $N/s$ bytes of the parameters. In every
+   *parameter servers* :cite:`Li.Andersen.Park.ea.2014`: $r$ server
+   machines each hold a slice of $S/r$ bytes of the parameters. In every
    step, each of $k$ workers pushes its gradient for each slice to that
    slice's server, the server adds up the $k$ contributions and updates
    its slice, and every worker pulls the updated slices back.
@@ -1036,17 +1307,18 @@ the global or the per-device batch fixed.
        two phases of ring allreduce.
 
 :begin_tab:`pytorch`
-5. [code] **Ring allreduce by hand.** ● This exercise needs four GPUs.
-    The star pattern routes all traffic through device 0, while the ring
-    of :numref:`fig_ring_allreduce` spreads it over all $k$ devices.
-    1. For $k$ devices holding $N$ bytes each, count the bytes that the
-       star and the ring move in total, and the bytes that the busiest
-       device sends and receives. The star starts its broadcast only after
-       its sum is complete. Predict the ratio of their times under two
-       assumptions. In the first, each device has one link that carries
-       $b$ bytes per second in each direction at the same time, and all
-       links work concurrently. In the second, the machine runs one
-       transfer at a time at $b$ bytes per second.
+5. [code] **Ring allreduce by hand.** ● Parts 2 and 3 need four GPUs;
+    part 1 is on paper. The star pattern routes all traffic through
+    device 0, while the ring of :numref:`fig_ring_allreduce` spreads it
+    over all $k$ devices.
+    1. For $k$ devices holding $S$ bytes each, count the bytes that the star
+       and the ring move in total, and the bytes that the busiest device sends
+       and receives. The star starts its broadcast only after its sum is
+       complete. Predict the ratio of their times under two assumptions. In the
+       first, each device has one link that moves a byte in time
+       $\beta_{\textrm{link}}$ in each direction at the same time, and all
+       links work concurrently. In the second, the machine runs one transfer at
+       a time, again at $\beta_{\textrm{link}}$ per byte.
     1. Write `ring_allreduce(data)` with the interface of `allreduce`:
        split each tensor into $k$ chunks with `chunk`, and implement
        reduce-scatter and all-gather with explicit `.to()` copies. Check it
@@ -1058,17 +1330,18 @@ the global or the per-device batch fixed.
 :end_tab:
 
 :begin_tab:`jax`
-5. [code] **Ring allreduce by hand.** ● This exercise needs four GPUs.
-    The star pattern routes all traffic through device 0, while the ring
-    of :numref:`fig_ring_allreduce` spreads it over all $k$ devices.
-    1. For $k$ devices holding $N$ bytes each, count the bytes that the
-       star and the ring move in total, and the bytes that the busiest
-       device sends and receives. The star starts its broadcast only after
-       its sum is complete. Predict the ratio of their times under two
-       assumptions. In the first, each device has one link that carries
-       $b$ bytes per second in each direction at the same time, and all
-       links work concurrently. In the second, the machine runs one
-       transfer at a time at $b$ bytes per second.
+5. [code] **Ring allreduce by hand.** ● Parts 2 and 3 need four GPUs;
+    part 1 is on paper. The star pattern routes all traffic through
+    device 0, while the ring of :numref:`fig_ring_allreduce` spreads it
+    over all $k$ devices.
+    1. For $k$ devices holding $S$ bytes each, count the bytes that the star
+       and the ring move in total, and the bytes that the busiest device sends
+       and receives. The star starts its broadcast only after its sum is
+       complete. Predict the ratio of their times under two assumptions. In the
+       first, each device has one link that moves a byte in time
+       $\beta_{\textrm{link}}$ in each direction at the same time, and all
+       links work concurrently. In the second, the machine runs one transfer at
+       a time, again at $\beta_{\textrm{link}}$ per byte.
     1. Write `ring_allreduce` as a function under `jax.shard_map` that
        passes chunks to the neighboring device with `jax.lax.ppermute` and
        selects them with `jax.lax.axis_index`. Check it against
@@ -1083,7 +1356,9 @@ the global or the per-device batch fixed.
 6. [code] **Gradients in bf16.** ● Sending gradients in bf16
    halves their bytes but rounds them. In a ring, each reduce-scatter hop
    adds the incoming partial sum to the local chunk, so a bf16 ring
-   rounds the partial sum to bf16 once per hop.
+   rounds the partial sum to bf16 once per hop. The shards can be computed
+   one after another on a single device, so this exercise needs one GPU
+   or none.
     1. At the parameters returned by `new_params`, compute the gradients
        of `lenet` on $k$ disjoint Fashion-MNIST shards of 128 examples
        each, and flatten each shard's gradients into one vector. Add the
@@ -1096,49 +1371,56 @@ the global or the per-device batch fixed.
        the gradients of two shards, and decide whether the rounding matters
        for SGD.
 
-1. **Latency in the allreduce.** ● The byte count of
-   :eqref:`eq_ring_traffic` ignores the fixed cost of starting a transfer.
-   Let one transfer of $n$ bytes over a link take $\alpha + n/b$, where
-   $b$ is the rate of one link in one direction.
-    1. Derive the time $t_{\textrm{ring}}$ of a ring allreduce of $N$ bytes
-       on $k$ devices, and describe how each of its two terms behaves as
-       $k$ grows.
+1. **Latency in the allreduce.** ● The byte count of :eqref:`eq_ring_traffic`
+   ignores the fixed cost of starting a transfer. Let one transfer of $n$ bytes
+   over a link take $\alpha_{\textrm{hop}} + n\,\beta_{\textrm{link}}$, where
+   $\beta_{\textrm{link}}$ is the time per byte of one link in one direction;
+   in a ring every device sends over one link at a time, so this is also the
+   $\beta_{\textrm{link}}$ of :eqref:`eq_dp_cost`. A ring allreduce of $S$
+   bytes on $k$ devices makes $2(k-1)$ transfers of $S/k$ bytes one after
+   another, so
+   $$t_{\textrm{ring}} = 2(k-1)\left(\alpha_{\textrm{hop}} + \frac{S}{k}\,\beta_{\textrm{link}}\right).$$
     1. A binary-tree allreduce sums up the tree and broadcasts back down.
-       It takes $2\log_2 k$ steps, each of which sends the full $N$ bytes,
+       It takes $2\log_2 k$ steps, each of which sends the full $S$ bytes,
        so
-       $$t_{\textrm{tree}} = 2\log_2 k \left(\alpha + \frac{N}{b}\right).$$
-       For $k = 8$, $\alpha = 10\ \mu\textrm{s}$, and
-       $b = 20$ GB/s, find the message size below which the tree is
-       faster than the ring.
-    1. The allreduce of :eqref:`eq_dp_cost` takes $\alpha + 2N/\beta$.
-       The gradient size $N_{1/2}$ at which it spends half of its time on
-       the fixed cost is called its half-performance length. Express
-       $N_{1/2}$ in $\alpha$ and $\beta$, and compute it from the values
-       that you measured in :numref:`subsec_mg-accounting`. How many
-       copies of LeNet's gradient would one message have to carry to reach
-       it? Production data-parallel libraries pack gradients into buffers
-       of tens of megabytes (25 MB by default in PyTorch's
+       $$t_{\textrm{tree}} = 2\log_2 k \left(\alpha_{\textrm{hop}} + S\,\beta_{\textrm{link}}\right).$$
+       Describe how the fixed and the byte term of each algorithm grow
+       with $k$. For $k = 8$, $\alpha_{\textrm{hop}} = 10\ \mu\textrm{s}$,
+       and a bus bandwidth of 20 GB/s, find the message size below
+       which the tree is faster than the ring.
+    1. The $\alpha$ of :eqref:`eq_dp_cost` is the fixed cost of a whole
+       allreduce, $2(k-1)\alpha_{\textrm{hop}}$ for a ring. At $k = 2$
+       one allreduce takes $\alpha + S\,\beta_{\textrm{link}}$. The message
+       size $S_{1/2}$ at which it spends half of its time on the fixed cost
+       is called its half-performance length. Express $S_{1/2}$ in
+       $\alpha$ and $\beta_{\textrm{link}}$, and compute it from the
+       values that you measured in :numref:`subsec_mg-accounting`. How
+       many copies of LeNet's gradient would one message have to carry to
+       reach it?
+       Production data-parallel libraries pack gradients into buffers of
+       tens of megabytes (25 MB by default in PyTorch's
        `DistributedDataParallel`); judge that size against your
-       $N_{1/2}$.
+       $S_{1/2}$.
+   :exlabel:`ex_mg-latency`
 
-1. [extended] **Where data parallelism helps.** ● LeNet is too small for a
-   second GPU to help. Widen it, timing `train_step` with
-   `communicate=False` on one and on two GPUs to measure
+1. [extended] **Where data parallelism helps.** ● The section gave each
+   GPU more work by enlarging the minibatch. Enlarge LeNet instead, timing
+   `train_step` with `communicate=False` on one and on two GPUs to measure
    $t_{\textrm{compute}}(b)$, and find out which terms of
-   :eqref:`eq_dp_cost` the width changes.
+   :eqref:`eq_dp_one-launcher` the width changes.
     1. Generalize `new_params` and `lenet` so that the channel counts of
        both convolutions and the widths of the two hidden dense layers
-       scale with a factor $w$. Compute the gradient bytes $N(w)$ and the
+       scale with a factor $w$. Compute the gradient bytes $S(w)$ and the
        forward-pass multiply-adds per example, and show how their ratio
        depends on $w$.
     1. For $w \in \{1, 2, 4, 8, 16\}$, measure the time per step of
        `train` at $k = 1$ and $k = 2$ with global batch 256, and plot the
        speedup against $w$.
-    1. Overlay the speedup that :eqref:`eq_dp_cost` predicts from your
-       measured $t_{\textrm{compute}}(128)$ and $t_{\textrm{compute}}(256)$
-       and from the $\alpha$ and $\beta$ measured in the allreduce
-       experiment of :numref:`subsec_mg-accounting`. Find the speedup that
-       the prediction approaches as $w$ grows. Find the achieved compute rate
+    1. Overlay the speedups that :eqref:`eq_dp_cost` and
+       :eqref:`eq_dp_one-launcher` predict from your one-GPU measurements
+       and from the $\alpha$ and $\beta_{\textrm{link}}$ that you measured
+       in :numref:`subsec_mg-accounting`. Find the speedup that the
+       predictions approach as $w$ grows. Find the achieved compute rate
        in FLOP/s below which the second GPU helps at large $w$.
     1. Repeat the prediction and the measurement at $w = 16$ with global
        batch 1024, and explain why the batch size raises the limit of the
@@ -1152,23 +1434,22 @@ the global or the per-device batch fixed.
 ::: {.cover}
 [Dive into Deep Learning · §13.5]{.kicker}
 
-Multi-GPU from First Principles<br>**data parallelism by hand · allreduce · ring allreduce · a cost model for one step · strong and weak scaling**
+Multi-GPU from First Principles<br>**data parallelism by hand · allreduce · ring allreduce · a cost model for one step · one host, two GPUs · strong and weak scaling**
 :::
 :::
 
 ::: {.slide title="A Second GPU Adds Arithmetic and a Gradient Exchange"}
 [The problem]{.kicker}
 
-- One RTX 4090: 83 TFLOP/s in fp32, memory read at 1 TB/s.
-- Our machine has four. Data parallelism gives each a copy of the model
-  and a share of every minibatch.
-- The copies must sum their gradients after every step.
-- Our cards cannot address each other: every byte goes over PCIe through
+- One RTX 4090 reads its own memory at 1 TB/s. Our machine has four.
+- Data parallelism gives each GPU a copy of the model and a share of
+  every minibatch; the copies sum their gradients after every step.
+- Our cards cannot address each other: every byte crosses PCIe through
   host memory, 32 GB/s per direction at best, 30× slower than memory.
 
 ::: {.d2l-note .warn}
 Does the computation a second GPU takes over outlast the exchange it
-adds?
+adds? And is that enough?
 :::
 :::
 
@@ -1176,9 +1457,9 @@ adds?
 [Goals]{.kicker}
 
 - name three ways to split training over devices, and what each costs;
-- write a data-parallel step with broadcast and allreduce;
+- write a data-parallel step with broadcast and allreduce, and check it;
 - derive the bytes a ring allreduce moves per device;
-- predict a step's time from three measured quantities;
+- predict a step's time from separate measurements, the host included;
 - tell strong from weak scaling in a reported speedup.
 
 **Running example:** LeNet (61,706 parameters, 247 KB of fp32 gradients)
@@ -1193,18 +1474,19 @@ the estimates.
 ::: {.col}
 | section | adds |
 |---|---|
-| The Performance Model | roofline, three regimes, timing, profiling |
+| The Performance Model | roofline, three regimes, host time, profiling |
 | Hardware | where peak arithmetic and bandwidth come from |
-| Compute Graphs and Compilation | fusion and kernel replay |
-| Memory and Precision | what fits: bytes per parameter and per token |
+| Computation Graphs and Compilation | fusion and kernel replay |
+| Memory and Precision | bytes per parameter and per token |
 | **Multi-GPU from First Principles** | **data parallelism by hand, its cost model** |
-| Multi-GPU in Practice | production data parallelism, sharding |
+| Data Parallelism in Practice | the frameworks' tools, overlapped exchange |
+| Sharding the Training State | 16 bytes per parameter divided among GPUs |
 | Case Study: Optimizing a Transformer | the whole method on one GPT |
 :::
 
 ::: {.col .narrow}
-- **Uses:** LeNet, Fashion-MNIST, the overhead-bound regime, the PCIe
-  topology of our machine.
+- **Uses:** LeNet, Fashion-MNIST, the overhead-bound regime, the
+  profiler, the PCIe topology of our machine.
 - **Skips:** pipeline and tensor parallelism (Language Models part),
   production libraries (next deck), several machines.
 :::
@@ -1243,25 +1525,27 @@ The only exchange is the gradient sum.
 [Data parallelism by hand]{.kicker}
 
 Device $j$ averages the losses $\ell_i$ of the $B/k$ examples in its
-shard $S_j$ and differentiates with respect to the parameters
-$\boldsymbol{\theta}$; then every device takes the same SGD step:
+shard $\mathcal{B}_j$ and differentiates with respect to the parameters
+$\boldsymbol{\theta}$; then every device takes the same SGD step with
+learning rate $\eta$:
 
 $$
 \mathbf{g}_j = \nabla_{\boldsymbol{\theta}} \frac{k}{B}
-\sum_{i \in S_j} \ell_i, \qquad
+\sum_{i \in \mathcal{B}_j} \ell_i, \qquad
 \boldsymbol{\theta} \leftarrow \boldsymbol{\theta} -
 \frac{\eta}{k} \sum_{j=1}^{k} \mathbf{g}_j .
 $$
 
 - The average of the $\mathbf{g}_j$ is the full-minibatch gradient.
-- LeNet's 10 gradient tensors are concatenated into one flat vector:
-  one allreduce per step, not ten.
+- Chain rule: a parameter copied to $k$ devices gets the sum of the $k$
+  gradients. That sum is all an allreduce computes.
+- LeNet's 10 gradient tensors go as one flat vector: one allreduce.
 :::
 
 ::: {.slide title="One Step on Two GPUs Matches One Step on One"}
 [Data parallelism by hand]{.kicker}
 
-Same initialization, same 256 examples, one SGD step each:
+Same initialization, same 256 examples, one SGD step each, in true fp32:
 
 @!multiple-gpus-data-parallelism-by-hand-7
 
@@ -1282,24 +1566,24 @@ does the step really use?
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** $2\eta$: the sum of two averages is twice the average. On $k$
-devices, $k\eta$. Training may still converge, so only the one-step check
-exposes it.
+devices, $k\eta$. Training may still converge, so an accuracy curve may
+not show it; the one-step check does.
 :::
 :::
 :::
 
-::: {.slide title="A Star Sends (k − 1)N Bytes Through Device 0"}
+::: {.slide title="A Star Sends (k − 1)S Bytes Through Device 0"}
 [Ring allreduce]{.kicker}
 
-Gradient of $N$ bytes on each of $k$ devices:
+Gradient of $S$ bytes on each of $k$ devices:
 
-| | busiest device sends | grows with $k$? |
+| | busiest device sends | as $k$ grows |
 |---|---|---|
-| star (hub = device 0) | $(k-1)N$ | linearly |
-| ring | $2(k-1)N/k < 2N$ | no |
+| star (hub = device 0) | $(k-1)S$ | grows linearly |
+| ring | $2(k-1)S/k$ | stays below $2S$ |
 
-ResNet-18, $N$ = 45 MB, $k = 4$: the hub sends 134 MB and receives as much;
-each device of a ring sends 67 MB.
+Our 1B-parameter GPT, $S$ = 4 GB of fp32 gradients, $k = 4$: the hub
+sends 12 GB and receives as much; each device of a ring sends 6 GB.
 :::
 
 ::: {.slide title="Ring Allreduce: Reduce-Scatter, Then All-Gather"}
@@ -1307,122 +1591,176 @@ each device of a ring sends 67 MB.
 
 ![](../img/mdl-perf-ring-allreduce.svg){width=88%}
 
-$k-1$ steps per phase, one chunk of $N/k$ bytes per device and step:
-$\frac{2(k-1)}{k}N$ bytes per device, at most $2N$ for any $k$.
+$k-1$ steps per phase, one chunk of $S/k$ bytes per device and step:
+$\frac{2(k-1)}{k}S$ bytes per device, at most $2S$ for any $k$.
 :::
 
-::: {.slide title="A Ring Has 2(k − 1) Hops, So Its Fixed Cost Grows with k"}
+::: {.slide title="Bytes per Device Approach 2S; the Hops Grow with k"}
 [Ring allreduce]{.kicker}
 
-- Bytes per device: bounded by $2N$.
-- Hops in sequence: $2(k-1)$, each with a fixed start-up time.
+Simulated ring, 1,024 floats per device:
+
+@!multiple-gpus-ring-allreduce-2
+
+- $2(k-1)$ hops in sequence, each with a fixed start-up time.
 - Small messages: libraries switch to trees, $2\log_2 k$ hops.
-- On our machine every hop goes GPU → host memory → GPU; all hops share
-  the host's memory system.
+- On our machine every hop goes GPU → host memory → GPU.
 
 ::: {.d2l-note}
 The byte count says how much moves; the machine decides how fast.
-Measure it.
 :::
 :::
 
-::: {.slide title="Step Time = Shard Compute + Fixed Costs + Bytes over Bandwidth"}
+::: {.slide title="Step Time = Shard Compute + Fixed Costs + Bytes over the Link"}
 [Cost model]{.kicker}
 
 $$
-t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + m\,\alpha +
-\frac{2N}{\beta}
+t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + c\,\alpha +
+\frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}
 $$
 
 - $t_{\textrm{compute}}(b)$: forward, backward, and update on $b$
   examples;
-- $m$ allreduce calls per step, each with fixed cost $\alpha$;
-- $N$ gradient bytes per device; $2N/\beta$ is the time of a large
-  allreduce (at $k = 2$: $N$ sent plus $N$ received per device).
+- $c$ allreduce calls per step, each with fixed cost $\alpha$ (for a
+  ring, $2(k-1)$ start-up times);
+- $S$ gradient bytes per device; $\beta_{\textrm{link}}$: time per byte that a
+  device sends during a large allreduce, the inverse of the bus
+  bandwidth.
 
 ::: {.d2l-note .rule}
-Only the first term shrinks with $k$. A second GPU helps iff
-$t_{\textrm{compute}}(B) - t_{\textrm{compute}}(B/2) > m\alpha + 2N/\beta$.
+Only the first term shrinks with $k$; the bytes grow toward $2S$. A second
+GPU helps only if
+$t_{\textrm{compute}}(B) - t_{\textrm{compute}}(B/2) > c\alpha + S\,\beta_{\textrm{link}}$.
 :::
 :::
 
-::: {.slide title="Measured on Two RTX 4090s: α and β"}
+::: {.slide title="Measured on Two RTX 4090s: α and β_link"}
 [Cost model]{.kicker}
 
-An allreduce of one float gives $\alpha$; one of 64M floats (256 MB)
-gives $\beta$:
+Small allreduces give the fixed cost $\alpha$ of one more call; one of
+$2^{26}$ floats (268 MB) gives $\beta_{\textrm{link}}$, the extra time
+per byte:
 
 @!multiple-gpus-the-accounting
 
-LeNet's 247 KB: $2N/\beta$ takes at most about 0.1 ms at these rates.
+- Bus bandwidth far below PCIe's 32 GB/s: every byte is copied into
+  host memory and out again.
+- LeNet's 247 KB: $S\,\beta_{\textrm{link}}$ is at most about 0.1 ms;
+  ten messages pay $10\alpha$, more than that.
+- The value belongs to one allreduce, one pair of GPUs, and the path
+  between them.
 :::
 
-::: {.slide title="Ten Small Allreduces Cost Several Times One Large One"}
+::: {.slide title="Ten Small Allreduces Cost Nine α More Than One"}
 [Cost model]{.kicker}
 
-LeNet's 10 gradient tensors, sent one by one or concatenated:
+LeNet's 10 gradient tensors, sent one by one or concatenated: the same
+bytes, so the model predicts a difference of $9\alpha$:
 
 @!multiple-gpus-latency-and-bandwidth-of-the-allreduce-1
 
 ::: {.d2l-note .rule}
-For small gradients the number of messages sets the time. Libraries
-pack gradients into large buffers before sending.
+For small gradients nine more messages cost more than all the bytes: the
+price is set by the envelopes. Data-parallel tools pack gradients into
+large buffers before sending.
 :::
 :::
 
-::: {.slide title="Half a Minibatch Saves Little Time"}
+::: {.slide title="The Device Idles for Most of LeNet's Step"}
 [LeNet on one and two GPUs]{.kicker}
 
-Local work only (forward, backward, update), no communication:
+Profile of one GPU's local work on 256 examples:
 
-@!multiple-gpus-lenet-on-one-and-two-gpus-1
+@!multiple-gpus-lenet-on-one-and-two-gpus-2
 
-- One GPU: 128 examples take far more than half the time of 256. LeNet
-  on a few hundred images is too little work for an RTX 4090.
-- Close to overhead-bound: the number of kernels, not their arithmetic,
-  sets most of the time, and halving the batch keeps the number of kernels.
-- The last row is the local work of a two-GPU step.
+::: {.d2l-note}
+The step's time is the host time $h_{\textrm{step}}$ to issue its
+kernels, whatever the batch: half a minibatch saves little.
+:::
 :::
 
 ::: {.slide title="Check: Is LeNet's Step Faster on Two GPUs?"}
 [Check]{.kicker}
 
-Use the measurements: the local work on two GPUs, the local work on one
-GPU with all 256 examples, and $\alpha + 2N/\beta$.
+One GPU's step is host time $h_{\textrm{step}}$. The host must issue the
+work of both GPUs, and serving two takes it about twice as long as
+serving one. The exchange $\alpha + S\,\beta_{\textrm{link}}$ is a fraction
+of a millisecond. Predict the two-GPU step.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** No. The local work on two GPUs takes longer than on one GPU
-with all 256 examples, and the allreduce comes on top, so the step gets
-slower: by the difference of the two local times plus
-$\alpha + 2N/\beta$.
+**Answer.** About $2h_{\textrm{step}} + \alpha + S\,\beta_{\textrm{link}}$:
+twice the one-GPU step. Each GPU waits while the host serves the other,
+so the second GPU makes the step slower, whatever the exchange costs.
 :::
 :::
 :::
 
-::: {.slide title="Measured: Two GPUs Make LeNet's Step Slower"}
+::: {.slide title="One Host Feeds Two GPUs: The Local Work Doubles"}
 [LeNet on one and two GPUs]{.kicker}
 
-Five epochs, minibatch 256, same initialization, same example order:
+![](../img/mdl-perf-one-launcher.svg){width=50%}
+
+Local work only, without the allreduce:
+
+@!multiple-gpus-lenet-on-one-and-two-gpus-1
+
+::: {.d2l-note}
+Half the minibatch saves little; two GPUs at 128 examples each take about
+twice as long as one. The host's work adds up over the devices it feeds.
+:::
+:::
+
+::: {.slide title="Training: The Model with the Host Term Predicts the Slowdown"}
+[LeNet on one and two GPUs]{.kicker}
+
+$$
+t_{\textrm{step}}(k) \approx \max\bigl(k\,h_{\textrm{step}},\,
+t_{\textrm{dev}}(B/k)\bigr) + c\,\alpha +
+\frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}
+$$
+
+Five epochs at minibatch 256, predicted from one-GPU step times and the
+measured exchange:
 
 @!multiple-gpus-data-parallelism-by-hand-6
 
-- Slower, as predicted from the separately measured terms.
-- Test accuracy equal to within a point or two: the two runs differ only
-  in rounding.
+::: {.d2l-note .warn}
+The exchange is a small part of the step. Two GPUs are harder to keep
+fed than one.
+:::
 :::
 
-::: {.slide title="Data Parallelism Needs Long Shard Computations"}
+::: {.slide title="A Second GPU Helps Only When the Host Keeps Up and the Work Outlasts the Exchange"}
 [When it helps]{.kicker}
 
-| | multiply-adds per image | gradient | per gradient byte |
-|---|---|---|---|
-| LeNet, 28×28 | 0.4 M | 247 KB | < 2 |
-| ResNet-18, 64×64 | 2.2 G | 45 MB | ≈ 50 |
+$b$ examples per GPU; one step on two GPUs against two steps on one:
 
-- Per-device batch large enough to fill the GPU:
-  $t_{\textrm{compute}}(B/k) \approx t_{\textrm{compute}}(B)/k$.
-- Many operations per gradient byte; few, large messages.
+$$
+\max(2h_{\textrm{step}}, t_{\textrm{dev}}(b)) + \alpha +
+S\,\beta_{\textrm{link}} < 2\max(h_{\textrm{step}}, t_{\textrm{dev}}(b))
+$$
+
+- $t_{\textrm{dev}}(b)$: device-busy time for $b$ examples.
+- $t_{\textrm{dev}}(b) \le h_{\textrm{step}}$: never true.
+- $h_{\textrm{step}} < t_{\textrm{dev}}(b) < 2h_{\textrm{step}}$: a gain
+  below two at best.
+- $t_{\textrm{dev}}(b) \ge 2h_{\textrm{step}}$: true iff
+  $t_{\textrm{dev}}(b) > \alpha + S\,\beta_{\textrm{link}}$.
+:::
+
+::: {.slide title="At 32,768 Images per GPU, Two GPUs Nearly Double the Throughput"}
+[When it helps]{.kicker}
+
+The same LeNet step, $b$ examples per GPU:
+
+@!multiple-gpus-larger-minibatches
+
+- 256: host-bound, no gain.
+- 4,096: the device time, set against one host time and two, decides
+  which case the row is in and what the second GPU gains.
+- 32,768: the device outlasts the host time of both GPUs and the
+  247 KB exchange; close to two, and close to the prediction.
 :::
 
 ::: {.slide title="Check: A 1B-Parameter GPT on Two RTX 4090s"}
@@ -1430,17 +1768,18 @@ Five epochs, minibatch 256, same initialization, same example order:
 
 Training costs about 6 FLOPs per parameter and token. One step: 32,768
 tokens (micro-batches of about 2,000 tokens, gradients accumulated, one
-allreduce); about 35 TFLOP/s achieved per GPU in bf16; 4 GB of fp32
-gradients. Predict the speedup of two GPUs over one for
-$\beta$ = 20 GB/s and for $\beta$ = 7 GB/s.
+allreduce; the 16 GB of fp32 Adam state fits on each 24 GB card); about
+35 TFLOP/s achieved per GPU in bf16; $S$ = 4 GB of fp32 gradients.
+Predict the speedup of two GPUs over one for a bus bandwidth of
+10 GB/s and of 2.5 GB/s.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
 **Answer.** One GPU:
 $6 \cdot 10^9 \cdot 32{,}768 / (3.5 \cdot 10^{13}) \approx 5.6$ s.
-Two: $2.8$ s of compute plus $2 \cdot 4\,\textrm{GB}/\beta$:
-$5.6 / 3.2 \approx 1.75\times$ at 20 GB/s, $5.6 / 3.9 \approx 1.4\times$
-at 7 GB/s.
+Two: $2.8$ s of compute plus $S\,\beta_{\textrm{link}}$:
+$5.6 / 3.2 \approx 1.75\times$ at 10 GB/s, $5.6 / 4.4 \approx 1.3\times$
+at 2.5 GB/s. The host is no limit: every kernel is long.
 :::
 :::
 :::
@@ -1449,9 +1788,9 @@ at 7 GB/s.
 [Scaling]{.kicker}
 
 - **Strong:** global minibatch $B$ fixed, $t_{\textrm{compute}}(B/k)$
-  shrinks: the same work, sooner. Our LeNet experiment.
-- **Weak:** per-device batch fixed, global batch $kB_{\textrm{device}}$:
-  more examples per second; only communication must keep up.
+  shrinks: the same work, sooner. LeNet's training run.
+- **Weak:** per-device batch $b$ fixed, global batch $kb$: more examples
+  per second. The larger-minibatch run.
 - A larger global batch changes the optimization: more examples per
   second is not the same as less time to a given loss.
 
@@ -1463,14 +1802,13 @@ Read every speedup with its convention.
 ::: {.slide title="Wrap-up"}
 - Data parallelism: a copy per device, a share of every minibatch, one
   gradient allreduce per step; the one-step check matches to fp32 rounding.
-- Ring allreduce: $2(k-1)N/k \le 2N$ bytes per device, $2(k-1)$ hops.
-- $t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + m\alpha + 2N/\beta$,
-  with every term measured.
-- LeNet: ten messages cost several times one; half a batch is barely faster;
-  two GPUs make the step slower.
-- A 1B GPT on two RTX 4090s: 1.4× to 1.75× by the same cost model,
-  depending on $\beta$.
+- Ring allreduce: $2(k-1)S/k < 2S$ bytes per device, $2(k-1)$ hops.
+- $t_{\textrm{step}}(k) \approx t_{\textrm{compute}}(B/k) + c\alpha + \frac{2(k-1)}{k}S\,\beta_{\textrm{link}}$;
+  for LeNet, ten messages cost nine $\alpha$ more than one.
+- One host feeding two GPUs doubles LeNet's host-bound step; the
+  exchange is a small part.
+- At 32,768 images per GPU: nearly twice the throughput of one GPU.
 
-**Next:** production data parallelism, which overlaps communication with
-the backward pass, in Multi-GPU in Practice.
+**Next:** the frameworks' own tools and an exchange that overlaps the
+backward pass, in Data Parallelism in Practice.
 :::

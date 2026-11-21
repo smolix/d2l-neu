@@ -1233,112 +1233,6 @@ def get_airfoil(batch_size=10, n=1500):
                                             batch_size=None)
     return data_iter, data.shape[1]-1
 
-class Timer:
-    """Record multiple running times.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    def __init__(self):
-        self.times = []
-        self.start()
-
-    def start(self):
-        """Start the timer."""
-        self.tik = time.perf_counter()
-
-    def stop(self):
-        """Stop the timer and record the time in a list."""
-        self.times.append(time.perf_counter() - self.tik)
-        return self.times[-1]
-
-    def avg(self):
-        """Return the average time."""
-        return sum(self.times) / len(self.times)
-
-    def sum(self):
-        """Return the sum of time."""
-        return sum(self.times)
-
-    def cumsum(self):
-        """Return the accumulated time."""
-        return np.array(self.times).cumsum().tolist()
-
-def record_run(step, full_loss, data_iter, num_epochs=2, plot=True, *,
-               ylim=None):
-    """Call step(X, y) on every minibatch; about every 200 examples, record
-    full_loss() and the training time so far, and plot the loss in the range
-    ylim. Return the history.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    # Wait until the device has finished (CUDA runs asynchronously)
-    wait = torch.cuda.synchronize if torch.cuda.is_available() else (
-        lambda: None)
-    if plot:
-        animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                                xlim=[0, num_epochs], ylim=ylim)
-    history = {'examples': [], 'loss': []}
-    n, i, timer = 0, 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            step(X, y)
-            n, i = n + len(X), i + 1
-            if i % max(1, 200 // len(X)) == 0:  # About every 200 examples
-                wait()
-                timer.stop()
-                with torch.no_grad():
-                    l = float(full_loss())
-                history['examples'].append(n)
-                history['loss'].append(l)
-                if plot:
-                    animator.add(i / len(data_iter), (l,))
-                timer.start()
-    history['time'] = timer.cumsum()
-    print(f'loss: {l:.3f}, {timer.sum() / num_epochs:.3f} sec/epoch')
-    return history
-
-def train_with_rule(trainer_fn, states, hyperparams, data_iter,
-                    feature_dim, num_epochs=2, plot=True,
-                    ylim=(0.22, 0.35)):
-    """Train linear regression with an update rule; return its history. The
-    default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
-    w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
-                     device=Xs.device, requires_grad=True)
-    b = torch.zeros(1, device=Xs.device, requires_grad=True)
-    loss = lambda X, y: d2l.squared_loss(d2l.linreg(X, w, b), y).mean()
-
-    def step(X, y):
-        loss(X, y).backward()
-        trainer_fn([w, b], states, hyperparams)
-
-    loss(Xs, ys).backward()  # Warm-up, then clear the gradients
-    w.grad, b.grad = None, None
-    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
-                          plot, ylim=ylim)
-
-def train_with_optimizer(trainer_fn, hyperparams, data_iter, num_epochs=2,
-                         plot=True, ylim=(0.22, 0.35)):
-    """Train linear regression with a torch.optim optimizer class; return
-    its history. The default ylim is the range of the airfoil losses.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    Xs, ys = (torch.cat(t) for t in zip(*data_iter))  # The whole data
-    net = nn.Linear(Xs.shape[1], 1).to(Xs.device)
-    nn.init.normal_(net.weight, std=0.01)
-    nn.init.zeros_(net.bias)
-    optimizer = trainer_fn(net.parameters(), **hyperparams)
-    loss = lambda X, y: d2l.squared_loss(net(X), y).mean()
-
-    def step(X, y):
-        optimizer.zero_grad()
-        loss(X, y).backward()
-        optimizer.step()
-
-    loss(Xs, ys).backward()  # Warm-up; zero_grad clears it
-    return d2l.record_run(step, lambda: loss(Xs, ys), data_iter, num_epochs,
-                          plot, ylim=ylim)
-
 class WikiText103(d2l.DataModule):
     """WikiText-103 as UTF-8 bytes, cut into windows of num_steps bytes.
 
@@ -1415,6 +1309,37 @@ class TinyLM(nn.Module):
             H = H + blk['mlp'](blk['norm2'](H))
         return self.head(self.norm(H))
 
+class FashionCNN(nn.Module):
+    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, X):
+        X = F.max_pool2d(F.relu(self.conv1(X)), 2)
+        X = F.max_pool2d(F.relu(self.conv2(X)), 2)
+        return self.fc2(F.relu(self.fc1(X.flatten(1))))
+
+def evaluate_accuracy(model, batches):
+    """Fraction of the examples in batches that model classifies correctly.
+
+    Defined in :numref:`sec_adam`"""
+    device = next(model.parameters()).device
+    training, correct, total = model.training, 0, 0
+    model.eval()  # Dropout off, batch norm on running statistics
+    with torch.inference_mode():
+        for X, y in batches:
+            y_hat = model(X.to(device)).argmax(dim=1)
+            correct += (y_hat == y.to(device)).sum()
+            total += len(y)
+    model.train(training)
+    return float(correct) / total
+
 def train_steps(model, data, optimizer, num_steps, *, stop=None):
     """Minimize the mean cross-entropy of the logits model(X) for the labels
     Y over the minibatches (X, Y) of data, leaving out the labels -100, for
@@ -1470,36 +1395,15 @@ def smooth(losses, k=25):
     return [sum(losses[i:i + k]) / k
             for i in range(0, len(losses) - k + 1, k)]
 
-class FashionCNN(nn.Module):
-    """A compact CNN for Fashion-MNIST: two conv-pool stages, two linear.
+def steps_to_reach(losses, target, k=25):
+    """First step at which the smoothed losses reach target; None if they
+    never do.
 
     Defined in :numref:`sec_adam`"""
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(64 * 7 * 7, 128)
-        self.fc2 = nn.Linear(128, 10)
-
-    def forward(self, X):
-        X = F.max_pool2d(F.relu(self.conv1(X)), 2)
-        X = F.max_pool2d(F.relu(self.conv2(X)), 2)
-        return self.fc2(F.relu(self.fc1(X.flatten(1))))
-
-def evaluate_accuracy(model, batches):
-    """Fraction of the examples in batches that model classifies correctly.
-
-    Defined in :numref:`sec_adam`"""
-    device = next(model.parameters()).device
-    training, correct, total = model.training, 0, 0
-    model.eval()  # Dropout off, batch norm on running statistics
-    with torch.inference_mode():
-        for X, y in batches:
-            y_hat = model(X.to(device)).argmax(dim=1)
-            correct += (y_hat == y.to(device)).sum()
-            total += len(y)
-    model.train(training)
-    return float(correct) / total
+    for i, v in enumerate(smooth(losses, k)):
+        if v <= target:
+            return k * (i + 1)
+    return None
 
 def lr_sweep(make_model, make_optimizer, data, lrs, seed,
              num_steps=2000, *, evaluate=None, metric='score', every=None,
@@ -1526,23 +1430,34 @@ def lr_sweep(make_model, make_optimizer, data, lrs, seed,
             print(line)
     return curves, scores
 
-def lenet_bn():
-    """LeNet with ReLU, max-pooling, batch normalization, Xavier weights.
+def ce_loss(model, X, Y):
+    """Mean cross-entropy of the logits model(X) for the labels Y.
 
-    Defined in :numref:`sec_scheduler`"""
-    net = nn.Sequential(
-        nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.BatchNorm2d(6),
-        nn.ReLU(), nn.MaxPool2d(kernel_size=2, stride=2),
-        nn.Conv2d(6, 16, kernel_size=5), nn.BatchNorm2d(16), nn.ReLU(),
-        nn.MaxPool2d(kernel_size=2, stride=2), nn.Flatten(),
-        nn.Linear(16 * 5 * 5, 120), nn.BatchNorm1d(120), nn.ReLU(),
-        nn.Linear(120, 84), nn.BatchNorm1d(84), nn.ReLU(),
-        nn.Linear(84, 10))
-    for m in net.modules():  # Xavier weights, zero biases
-        if isinstance(m, (nn.Conv2d, nn.Linear)):
-            nn.init.xavier_uniform_(m.weight)
-            nn.init.zeros_(m.bias)
-    return net
+    Defined in :numref:`sec_batch_size`"""
+    logits = model(X)
+    return F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
+                           Y.reshape(-1))
+
+def grad_sq_norm(model, X, Y):
+    """Squared norm of the gradient of ce_loss over all parameters.
+
+    Defined in :numref:`sec_batch_size`"""
+    grads = torch.autograd.grad(ce_loss(model, X, Y),
+                                list(model.parameters()))
+    return sum((g ** 2).sum() for g in grads)
+
+def noise_scale(model, sample, b_small=16, b_big=2048, m=400):
+    """Gradient-noise scale from the mean squared gradient norms of m
+    minibatches of size b_small and m // 8 of size b_big from sample(b).
+
+    Defined in :numref:`sec_batch_size`"""
+    def mean_sq_norm(b, m):  # N_b, averaged over m random minibatches
+        return torch.stack([grad_sq_norm(model, *sample(b))
+                            for _ in range(m)]).mean()
+    n_small, n_big = mean_sq_norm(b_small, m), mean_sq_norm(b_big, m // 8)
+    tr_sigma = (n_small - n_big) / (1 / b_small - 1 / b_big)
+    sq_norm = (b_big * n_big - b_small * n_small) / (b_big - b_small)
+    return (tr_sigma / sq_norm).item()
 
 def masked_softmax(X, mask=None):
     """Softmax over the last axis with zero weight where mask is False.
@@ -1737,8 +1652,8 @@ class TinyCharLM(nn.Module):
         H = self.token_emb(X)
         if self.pos == 'learned':
             H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
-        if self.pos == 'sinusoidal':  # Scale tokens up to the table
-            H = H * math.sqrt(H.shape[-1]) + self.P[:X.shape[1]]
+        if self.pos == 'sinusoidal':  # Table scaled to the token embeddings
+            H = H + self.P[:X.shape[1]] / math.sqrt(H.shape[-1])
         return H
 
     def alibi(self, T, device):
@@ -2099,7 +2014,7 @@ def delayed_recall(rng, batch_size, num_steps, num_symbols=8,
                    blank_fillers=False):
     """A symbol, then num_steps - 1 fillers; the target is the symbol.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     Y = rng.integers(0, num_symbols, (batch_size, 1))  # One query, at the end
     X = rng.integers(num_symbols, 2 * num_symbols, (batch_size, num_steps))
     if blank_fillers:  # The same filler token at every step
@@ -2111,7 +2026,7 @@ def init_lecun(module):
     """LeCun normal weights and zero biases for all linear, convolutional,
     and recurrent layers.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     for layer in module.modules():
         if isinstance(layer, (nn.Linear, nn.Conv1d)):
             fan_in = layer.weight[0].numel()  # Inputs of one output unit
@@ -2129,7 +2044,7 @@ def init_lecun(module):
 class Recurrent(nn.Module):
     """A batch-first recurrent layer that returns only its outputs.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, rnn):
         super().__init__()
         self.rnn = rnn
@@ -2140,7 +2055,7 @@ class Recurrent(nn.Module):
 class RecallModel(nn.Module):
     """Embedding, a sequence layer, and a classifier at every position.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, layer, num_hiddens, vocab_size=16, num_inputs=32,
                  num_outputs=8):
         super().__init__()
@@ -2156,7 +2071,7 @@ def train_queries(model, batch, num_steps, optimizer,
                   scheduler=None):
     """Train on fresh batches; the queries are the last Y.shape[1] steps.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     device = next(model.parameters()).device
     for step in range(num_steps):
         X, Y = (torch.as_tensor(A, device=device) for A in batch(step))
@@ -2172,29 +2087,29 @@ def train_queries(model, batch, num_steps, optimizer,
 def query_accuracy(model, X, Y):
     """Fraction of queries answered correctly.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     device = next(model.parameters()).device
     X, Y = (torch.as_tensor(A, device=device) for A in (X, Y))
     with torch.inference_mode():
         return (model(X)[:, -Y.shape[1]:].argmax(-1) == Y).float().mean()
 
-def train_delayed_recall(model, num_steps, blank_fillers=False,
-                         num_updates=1500, lr=3e-3):
-    """Train on fresh batches of delayed recall; return the test accuracy.
+def train_delayed_recall(model, num_steps, blank_fillers=False):
+    """Train with Adam at rate 0.003 on 1,500 fresh batches of 128 sequences
+    of delayed recall; return the accuracy on 2,048 new sequences.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     task = lambda rng, n: delayed_recall(rng, n, num_steps,
                                          blank_fillers=blank_fillers)
     rng = np.random.default_rng(0)
     model.to(d2l.try_gpu())
-    train_queries(model, lambda step: task(rng, 128), num_updates,
-                  torch.optim.Adam(model.parameters(), lr=lr))
+    train_queries(model, lambda step: task(rng, 128), 1500,
+                  torch.optim.Adam(model.parameters(), lr=3e-3))
     return float(query_accuracy(model, *task(np.random.default_rng(1), 2048)))
 
 class SeqLM(nn.Module):
     """A language model of residual blocks: a sequence mixer, then an MLP.
 
-    Defined in :numref:`sec_gru`"""
+    Defined in :numref:`sec_gated-training`"""
     def __init__(self, vocab_size, num_hiddens, mixers):
         super().__init__()
         d = num_hiddens
@@ -2220,218 +2135,87 @@ class SeqLM(nn.Module):
     def first_mixer_input(self, X):
         """What the first mixer reads: the normalized token embeddings.
 
-        Defined in :numref:`sec_ssm`"""
+        Defined in :numref:`sec_linear-recurrence`"""
         return self.norms[0](self.embedding(X))
 
-d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
-                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
+class AttentionMixer(d2l.CausalAttention):
+    """Causal multi-head attention, with rotary positions unless rope is
+    False, as a sequence mixer; with conv_width, a causal convolution per
+    channel first mixes each query, key, and value with those of the
+    previous steps.
 
-class PennTreebank(d2l.DataModule):
-    """Character-level Penn Treebank, cut into windows of num_steps.
+    Defined in :numref:`sec_gated-training`"""
+    def __init__(self, num_hiddens, num_heads, conv_width=None, rope=True):
+        super().__init__(num_hiddens, num_heads, rope=rope)
+        d = 3 * num_hiddens  # Channels of q, k, and v; one filter each
+        self.conv = None if conv_width is None else nn.Conv1d(
+            d, d, conv_width, groups=d, padding=conv_width - 1)
+        init_lecun(self)  # Like every mixer of the chapter
 
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, batch_size, num_steps):
-        super().__init__()
-        self.save_hyperparameters()
-        data_dir = d2l.download_extract('ptb')
-        def read(split):
-            with open(os.path.join(data_dir, f'ptb.{split}.txt')) as f:
-                return f.read()
-        train, val = read('train'), read('valid')
-        self.vocab = d2l.Vocab(list(train))
-        self.train, self.val = self.windows(train), self.windows(val)
+    def qkv(self, X, offset=0, tables=None):
+        B, T, _ = X.shape
+        QKV = self.W_qkv(X)
+        if self.conv is not None:  # Causal: drop the last conv_width - 1 steps
+            QKV = self.conv(QKV.mT)[..., :T].mT
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+                   for u in QKV.chunk(3, -1))
+        if self.rope:
+            q, k = (d2l.rope(u, offset, tables=tables) for u in (q, k))
+        return q, k, v  # Each (batch_size, num_heads, num_steps, head width)
 
-    def windows(self, text):
-        corpus = d2l.tensor(self.vocab[list(text)])
-        n = (len(corpus) - 1) // self.num_steps * self.num_steps
-        return (corpus[:n].reshape(-1, self.num_steps),  # Inputs
-                corpus[1:n + 1].reshape(-1, self.num_steps))  # Next tokens
+@torch.inference_mode()
+def loss_by_position(model, data):
+    """Mean validation loss in nats at each position of the window.
 
-    def get_dataloader(self, train):
-        return self.get_tensorloader(self.train if train else self.val, train)
+    Defined in :numref:`sec_gated-training`"""
+    device = next(model.parameters()).device
+    total, count = 0, 0
+    for X, Y in data.val_dataloader():
+        logits = model(X.to(device))  # (batch, T, V)
+        total += F.cross_entropy(logits.transpose(1, 2), Y.to(device),
+                                 reduction='none').sum(0)
+        count += len(X)
+    return (total / count).tolist()
 
-def fit_lm(model, data, num_steps=3000, lr=2e-3):
-    """Train with AdamW for num_steps steps; return validation perplexity.
+def train_text(model, data, lr=2e-3, num_steps=1000):
+    """Train a language model with LMOptimizer; return its validation loss
+    in nats at each position and its milliseconds per training step.
 
-    Defined in :numref:`sec_gru`"""
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr,
-                                  weight_decay=0.01)
-    d2l.train_steps(model, data, optimizer, num_steps)
-    return d2l.lm_perplexity(model, data.val_dataloader())
+    Defined in :numref:`sec_gated-training`"""
+    optimizer = d2l.LMOptimizer(model, lr=lr, num_steps=num_steps, warmup=100)
+    # One untimed call of 50 steps warms up (JAX compiles), the rest is timed
+    bench = d2l.Benchmark(lambda: d2l.train_steps(model, data, optimizer, 50),
+                          warmup=1, repeats=num_steps // 50 - 1)
+    return loss_by_position(model, data), 1000 * bench.time / 50
 
-class Encoder(nn.Module):
-    """The base encoder interface for the encoder-decoder architecture.
+def text_table(make_model, arms, data, num_runs=2):
+    """Train num_runs fresh models make_model(*args) for each arm (a name
+    and its args); print the parameters, the validation loss of every run,
+    its losses at early, middle, and late positions of the window, and the
+    milliseconds per step. Return the trained models of each arm.
 
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self):
-        super().__init__()
-
-    # Later there can be additional arguments (e.g., length excluding padding)
-    def forward(self, X, *args):
-        raise NotImplementedError
-
-class Decoder(nn.Module):
-    """The base decoder interface for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self):
-        super().__init__()
-
-    def init_state(self, enc_all_outputs, *args):
-        raise NotImplementedError
-
-    def forward(self, X, state):
-        raise NotImplementedError
-
-class EncoderDecoder(d2l.Classifier):
-    """The base class for the encoder-decoder architecture.
-
-    Defined in :numref:`sec_encoder-decoder`"""
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, enc_X, dec_X, *args):
-        enc_all_outputs = self.encoder(enc_X, *args)
-        dec_state = self.decoder.init_state(enc_all_outputs, *args)
-        # Return decoder output only
-        return self.decoder(dec_X, dec_state)[0]
-
-    def predict_step(self, batch, device, num_steps,
-                     save_attention_weights=False):
-        self.eval()
-        batch = [d2l.to(a, device) for a in batch]
-        src, tgt, src_valid_len, _ = batch
-        enc_all_outputs = self.encoder(src, src_valid_len)
-        dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
-        outputs, attention_weights = [d2l.expand_dims(tgt[:, 0], 1), ], []
-        for _ in range(num_steps):
-            Y, dec_state = self.decoder(outputs[-1], dec_state)
-            outputs.append(d2l.argmax(Y, 2))
-            if save_attention_weights:
-                attention_weights.append(self.decoder.attention_weights)
-        return d2l.concat(outputs[1:], 1), attention_weights
-
-class MTFraEng(d2l.DataModule):
-    """The English-French dataset, tokenized with a shared byte-level BPE.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, batch_size, num_steps=20, num_train=1024, num_val=128,
-                 vocab_size=4000):
-        super().__init__()
-        self.save_hyperparameters()
-        pairs = self._pairs(self._preprocess(self._download()))
-        # Train ONE shared byte-level BPE over both languages.
-        m = min(5000, len(pairs))
-        self.tokenizer = d2l.BPETokenizer(
-            vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
-        self.tokenizer.train('\n'.join([p[0] for p in pairs[:m]] +
-                                       [p[1] for p in pairs[:m]]))
-        # src_vocab / tgt_vocab both refer to the shared tokenizer.
-        self.src_vocab = self.tgt_vocab = self.tokenizer
-        pairs = pairs[:num_train + num_val]
-        self.src_sents = [p[0] for p in pairs]
-        self.tgt_sents = [p[1] for p in pairs]
-        self.arrays = self._encode(pairs)
-
-    def _download(self):
-        d2l.extract(d2l.download(
-            d2l.DATA_URL + 'fra-eng.zip', self.root,
-            '94646ad1522d915e7b0f9296181140edcf86a4f5'))
-        with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
-            return f.read()
-
-    def _preprocess(self, text):
-        # Normalize spaces, lowercase, and put a space before punctuation.
-        text = text.replace(' ', ' ').replace('\xa0', ' ').lower()
-        no_space = lambda c, prev: c in ',.!?' and prev != ' '
-        return ''.join([' ' + c if i > 0 and no_space(c, text[i - 1]) else c
-                        for i, c in enumerate(text)])
-
-    def _pairs(self, text):
-        return [ln.split('\t') for ln in text.split('\n') if ln.count('\t') == 1]
-
-    def _encode(self, pairs):
-        tok, t = self.tokenizer, self.num_steps
-        def row(sent, is_tgt):
-            ids = tok.encode(sent)
-            ids = (ids[:t - 1] + [tok.eos] if len(ids) >= t else
-                   ids + [tok.eos] + [tok.pad] * (t - 1 - len(ids)))
-            return [tok.bos] + ids if is_tgt else ids
-        src = d2l.tensor([row(s, False) for s, _ in pairs])
-        tgt = d2l.tensor([row(t, True) for _, t in pairs])
-        valid_len = d2l.reduce_sum(d2l.astype(src != tok.pad, d2l.int32), 1)
-        return src, tgt[:, :-1], valid_len, tgt[:, 1:]
-
-    def build(self, src_sentences, tgt_sentences):
-        return self._encode([(self._preprocess(s), self._preprocess(t))
-                             for s, t in zip(src_sentences, tgt_sentences)])
-
-    def get_dataloader(self, train):
-        idx = slice(0, self.num_train) if train else slice(self.num_train, None)
-        return self.get_tensorloader(self.arrays, train, idx)
-
-def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
-    """Plot the histogram for list length pairs.
-
-    Defined in :numref:`sec_machine_translation`"""
-    d2l.set_figsize()
-    _, _, patches = d2l.plt.hist(
-        [[len(l) for l in xlist], [len(l) for l in ylist]])
-    d2l.plt.xlabel(xlabel)
-    d2l.plt.ylabel(ylabel)
-    for patch in patches[1].patches:
-        patch.set_hatch('/')
-    d2l.plt.legend(legend)
-
-def init_seq2seq(module):
-    """Initialize weights for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    if type(module) == nn.Linear:
-        nn.init.xavier_uniform_(module.weight)
-    if type(module) == nn.GRU:
-        for param in module._flat_weights_names:
-            if "weight" in param:
-                nn.init.xavier_uniform_(module._parameters[param])
-
-class Seq2SeqEncoder(d2l.Encoder):
-    """The RNN encoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
-                 dropout=0):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
-        self.apply(init_seq2seq)
-
-    def forward(self, X, *args):
-        embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        outputs, state = self.rnn(embs)
-        # outputs: (num_steps, batch_size, num_hiddens)
-        # state: (num_layers, batch_size, num_hiddens)
-        return outputs, state
-
-class Seq2Seq(d2l.EncoderDecoder):
-    """The RNN encoder-decoder for sequence-to-sequence learning.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def __init__(self, encoder, decoder, tgt_pad, lr):
-        super().__init__(encoder, decoder)
-        self.save_hyperparameters()
-
-    def validation_step(self, batch):
-        return self.loss(self(*batch[:-1]), batch[-1])
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+    Defined in :numref:`sec_gated-training`"""
+    T = data.num_steps
+    bands = [(0, T // 8), (T // 8, T // 2), (T // 2, T)]
+    width = max(len(name) for name in arms)
+    header = ['validation'] + [f'{a}-{b - 1}' for a, b in bands]
+    print(' ' * (width + 12), *(f'{h:>11}' for h in header), '  ms/step')
+    trained = {}
+    for name, args in arms.items():
+        models = [make_model(*args) for _ in range(num_runs)]
+        runs = [train_text(model, data) for model in models]  # (losses, ms)
+        columns = [[np.mean(loss) for loss, _ in runs]] + [
+            [np.mean(loss[a:b]) for loss, _ in runs] for a, b in bands]
+        print(f'{name:{width}s} {d2l.num_params(models[0]):11,d}',
+              *('/'.join(f'{v:.3f}' for v in column) for column in columns),
+              '/'.join(f'{ms:.0f}' for _, ms in runs))
+        trained[name] = models
+    return trained
 
 def chrf(pred, label, n=6, beta=2):
     """chrF (Popovic, 2015): character n-gram F-score.
 
-    Defined in :numref:`sec_seq2seq_training`"""
+    Defined in :numref:`sec_translation-scoring`"""
     def ngrams(s, k):
         s = s.replace(' ', '')
         return collections.Counter(s[i:i + k] for i in range(len(s) - k + 1))
@@ -2450,7 +2234,7 @@ def chrf(pred, label, n=6, beta=2):
 def bleu(pred_seq, label_seq, k):
     """Compute the BLEU.
 
-    Defined in :numref:`sec_seq2seq_training`"""
+    Defined in :numref:`sec_translation-scoring`"""
     pred_tokens, label_tokens = pred_seq.split(' '), label_seq.split(' ')
     len_pred, len_label = len(pred_tokens), len(label_tokens)
     score = math.exp(min(0, 1 - len_label / len_pred))
@@ -2468,8 +2252,9 @@ def bleu(pred_seq, label_seq, k):
 def associative_scan(combine, elems):
     """All prefixes of elems under an associative combine; time is axis 1.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     s = 1
+    # Autograd keeps the tensors of every round for the backward pass
     while s < elems[0].shape[1]:  # Combine every position with the one s back
         earlier = tuple(x[:, :-s] for x in elems)
         later = tuple(x[:, s:] for x in elems)
@@ -2481,7 +2266,7 @@ def associative_scan(combine, elems):
 def linear_scan(a, b, h0=None):
     """All states of h_t = a_t * h_{t-1} + b_t; time is the second axis.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     a = a.expand_as(b)  # Decays may omit axes on which they do not vary
     if h0 is not None:  # Fold the initial state into the first step
         b = torch.cat([a[:, :1] * h0.unsqueeze(1) + b[:, :1], b[:, 1:]], 1)
@@ -2493,7 +2278,7 @@ def linear_scan(a, b, h0=None):
 class MinGRU(nn.Module):
     """The minimal GRU: its gate and candidate read only the input.
 
-    Defined in :numref:`sec_ssm`"""
+    Defined in :numref:`sec_linear-recurrence`"""
     def __init__(self, num_inputs, num_hiddens):
         super().__init__()
         self.W_z = nn.Linear(num_inputs, num_hiddens)  # Update gate (decay)
@@ -2515,7 +2300,7 @@ class S4D(nn.Module):
     def __init__(self, num_hiddens, num_states=16, dt_min=1e-3, dt_max=1e-1):
         super().__init__()
         d, N = num_hiddens, num_states
-        # Rates lambda_n = -(n + 1), stored as log(-lambda) to stay negative
+        # lambda_n = -n for n = 1..N, stored as log(-lambda) to stay negative
         self.log_neg_rate = nn.Parameter(
             torch.log(torch.arange(1., N + 1)).repeat(d, 1))
         self.log_dt = nn.Parameter(  # Log-uniform in [dt_min, dt_max]
@@ -2532,6 +2317,7 @@ class S4D(nn.Module):
     def forward(self, X):  # X: (batch_size, num_steps, d)
         T = X.shape[1]
         a_bar, b_bar = self.discretize()
+        # All powers a_bar^k for k < T: d * N * T numbers held in memory
         powers = a_bar.unsqueeze(-1) ** torch.arange(T, device=X.device)
         K = ((self.C * b_bar).unsqueeze(-1) * powers).sum(1)  # Kernel, (d, T)
         Y = torch.fft.irfft(torch.fft.rfft(X, n=2 * T, dim=1) *
@@ -2581,38 +2367,52 @@ def adjoint_scan(a, b):
     return AdjointScan.apply(a.expand_as(b), b)
 
 class SelectiveSSM(nn.Module):
-    """A diagonal SSM whose step sizes and write and read vectors depend on
-    the input: N states for each of num_channels channels.
+    """A diagonal SSM with N states for each of num_channels channels. Its
+    step sizes and write and read vectors depend on the input, or, with
+    selective=False, are learned constants of each channel.
 
     Defined in :numref:`sec_mamba`"""
-    def __init__(self, num_channels, num_states=16, dt_min=1e-3, dt_max=1e-1):
+    def __init__(self, num_channels, dt_rank, num_states=16, dt_min=1e-3,
+                 dt_max=1e-1, selective=True):
         super().__init__()
-        H, N, R = num_channels, num_states, math.ceil(num_channels / 16)
+        H, N, R = num_channels, num_states, dt_rank
+        self.selective = selective
         self.log_neg_rate = nn.Parameter(  # Rates -1, ..., -N in every channel
             torch.log(torch.arange(1., N + 1)).repeat(H, 1))
-        self.W_dt = nn.Sequential(  # Step size per channel, through rank R
-            nn.Linear(H, R, bias=False), nn.Linear(R, H))
-        self.W_B = nn.Linear(H, N, bias=False)  # Write vector
-        self.W_C = nn.Linear(H, N, bias=False)  # Read vector
-        d2l.init_lecun(self)
         dt = dt_min * (dt_max / dt_min) ** torch.rand(H)
-        with torch.no_grad():  # Small up-projection, softplus(bias) = dt
-            nn.init.uniform_(self.W_dt[1].weight, -R ** -0.5, R ** -0.5)
-            self.W_dt[1].bias.copy_(dt + torch.log(-torch.expm1(-dt)))
+        dt_bias = dt + torch.log(-torch.expm1(-dt))  # softplus(dt_bias) = dt
+        if selective:
+            self.W_dt = nn.Sequential(  # Step size per channel, rank R
+                nn.Linear(H, R, bias=False), nn.Linear(R, H))
+            self.W_B = nn.Linear(H, N, bias=False)  # Write vector
+            self.W_C = nn.Linear(H, N, bias=False)  # Read vector
+            d2l.init_lecun(self)
+            with torch.no_grad():  # Small up-projection, step sizes dt
+                nn.init.uniform_(self.W_dt[1].weight, -R ** -0.5, R ** -0.5)
+                self.W_dt[1].bias.copy_(dt_bias)
+        else:  # Fixed dynamics: S4D with a learned write vector
+            self.dt_bias = nn.Parameter(dt_bias)
+            self.B = nn.Parameter(torch.ones(H, N))
+            self.C = nn.Parameter(torch.randn(H, N) / math.sqrt(N))
         self.D = nn.Parameter(torch.ones(H))
 
     def log_coefficients(self, U):
         """Log-decays and writes, each of shape (batch_size, T, H, N).
 
         Defined in :numref:`sec_mamba`"""
-        dt = F.softplus(self.W_dt(U))  # Step sizes, (batch_size, T, H)
+        if self.selective:  # Step sizes (batch_size, T, H), write vectors
+            dt, B = F.softplus(self.W_dt(U)), self.W_B(U).unsqueeze(-2)
+        else:  # One step size and one write vector per channel
+            dt, B = F.softplus(self.dt_bias), self.B
+        b = (dt * U).unsqueeze(-1) * B
         log_a = dt.unsqueeze(-1) * -torch.exp(self.log_neg_rate)
-        return log_a, (dt * U).unsqueeze(-1) * self.W_B(U).unsqueeze(-2)
+        return log_a.expand_as(b), b
 
     def forward(self, U):  # U: (batch_size, num_steps, num_channels)
         log_a, b = self.log_coefficients(U)
         H = adjoint_scan(torch.exp(log_a), b)  # States, (batch_size, T, H, N)
-        return (H * self.W_C(U).unsqueeze(-2)).sum(-1) + self.D * U
+        C = self.W_C(U).unsqueeze(-2) if self.selective else self.C  # Read
+        return torch.einsum('...n,...n->...', H, C) + self.D * U  # Sum over n
 
 class Mamba(nn.Module):
     """The Mamba layer: a gated selective SSM between two projections.
@@ -2626,8 +2426,9 @@ class Mamba(nn.Module):
         self.conv = nn.Conv1d(H, H, conv_width, groups=H,  # One per channel
                               padding=conv_width - 1)
         self.W_out = nn.Linear(H, num_hiddens, bias=False)
-        d2l.init_lecun(self)
-        self.ssm = SelectiveSSM(H, num_states, **ssm_args)  # Has its own init
+        d2l.init_lecun(self)  # The SSM, built next, has its own init
+        self.ssm = SelectiveSSM(H, math.ceil(num_hiddens / 16), num_states,
+                                **ssm_args)
 
     def ssm_input(self, X):
         """The input of the SSM and the gate branch."""
@@ -2650,37 +2451,28 @@ def decay_mask(log_a):
     return torch.exp(log_L.masked_fill(~causal, -torch.inf))
 
 def chunked_linear_attention(Q, K, V, log_a, chunk_size):
-    """y_t = S_t q_t with S_t = S_{t-1} diag(a_t) + v_t k_t^T, in chunks.
+    """y_t = S_t q_t with S_t = a_t S_{t-1} + v_t k_t^T, computed in chunks.
 
-    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size,
-    T, d_k) for a decay per key coordinate, or (batch_size, T) for one per step
+    Q, K: (batch_size, T, d_k); V: (batch_size, T, d_v); log_a: (batch_size, T)
 
     Defined in :numref:`sec_matrix-state`"""
     B, T, m = Q.shape[0], Q.shape[1], chunk_size
-    if log_a.dim() == 2:  # The same decay for every key coordinate
-        log_a = log_a.unsqueeze(-1)
-    Q, K, V, log_a = (X.reshape(B, T // m, m, -1) for X in (Q, K, V, log_a))
-    # 1. Within chunks: the dual form, with one mask per key coordinate
-    L = decay_mask(log_a.mT)  # (B, T / m, 1 or d_k, m, m), entries <= 1
-    if L.shape[2] == 1:  # One mask for all coordinates: a masked Q K^T
-        Y = (L[:, :, 0] * (Q @ K.mT)) @ V
-    else:
-        Y = (L * Q.mT.unsqueeze(-1) * K.mT.unsqueeze(-2)).sum(2) @ V
-    # 2. Across chunks: the writes of each chunk, decayed to its end, and
-    #    a scan over chunks for the state at every chunk's end
-    cum = log_a.cumsum(2)  # Log decay from the chunk's start to each step
+    Q, K, V = (X.reshape(B, T // m, m, -1) for X in (Q, K, V))
+    log_a = log_a.reshape(B, T // m, m)
+    # 1. Within chunks: the dual form, one m x m mask per chunk
+    Y = (decay_mask(log_a) * (Q @ K.mT)) @ V
+    # 2. Across chunks: S^(c) = gamma^(c) S^(c-1) + sum_t L_mt v_t k_t^T
+    cum = log_a.cumsum(-1).unsqueeze(-1)  # Log decay from the chunk's start
     writes = V.mT @ (K * torch.exp(cum[:, :, -1:] - cum))
-    S = d2l.linear_scan(torch.exp(cum[:, :, -1:]), writes)
-    S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the start
+    S = d2l.linear_scan(torch.exp(cum[:, :, -1:]), writes)  # At chunk ends
+    S = torch.cat([torch.zeros_like(S[:, :1]), S[:, :-1]], 1)  # At the starts
     # 3. Every step reads the state at its chunk's start, decayed to it
     return (Y + (Q * torch.exp(cum)) @ S.mT).reshape(B, T, -1)
 
 class GatedLinearAttention(nn.Module):
-    """Multi-head linear attention with a gated decay per key coordinate.
+    """Multi-head linear attention with one input-dependent decay per head.
 
     Defined in :numref:`sec_matrix-state`"""
-    gate_scale = 16  # log a = log sigmoid(z) / 16 keeps decays near one
-
     def __init__(self, num_hiddens, num_heads, chunk_size=16, conv_width=4,
                  timescales=(4, 256)):
         super().__init__()
@@ -2689,29 +2481,24 @@ class GatedLinearAttention(nn.Module):
         self.W_qkv = nn.Linear(d, 3 * d, bias=False)
         self.conv = nn.Conv1d(3 * d, 3 * d, conv_width, groups=3 * d,
                               padding=conv_width - 1)  # One filter per channel
-        self.W_a = self.decay_gate(d)
+        self.W_a = nn.Linear(d, num_heads)  # Decay gate, one per head
         self.W_g = nn.Linear(d, d)  # Output gate
         self.W_o = nn.Linear(d, d, bias=False)
         d2l.init_lecun(self)
         self.init_decays(*timescales)  # Memories of 4 to 256 steps by default
 
-    def decay_gate(self, d, rank=16):
-        """Low-rank projection to one gate per key coordinate."""
-        return nn.Sequential(nn.Linear(d, rank, bias=False), nn.Linear(rank, d))
-
     def init_decays(self, tau_min, tau_max):
-        """Start the gates at decays exp(-1/tau), tau log-uniform in range."""
-        b = self.W_a[-1].bias
+        """Start the decays at exp(-1/tau), tau log-uniform in range."""
+        b = self.W_a.bias
         tau = torch.logspace(math.log10(tau_min), math.log10(tau_max), len(b))
-        with torch.no_grad():  # log sigmoid(b) / gate_scale = -1 / tau
-            b.copy_(-torch.log(torch.expm1(self.gate_scale / tau)))
+        with torch.no_grad():  # log sigmoid(b) = -1 / tau
+            b.copy_(-torch.log(torch.expm1(1 / tau)))
 
     def decays(self, X):
-        """Log decays, (batch_size * num_heads, T, d_k).
+        """Log decays, (batch_size * num_heads, T).
 
         Defined in :numref:`sec_matrix-state`"""
-        return heads_to_batch(F.logsigmoid(self.W_a(X)) / self.gate_scale,
-                              self.num_heads)
+        return heads_to_batch(F.logsigmoid(self.W_a(X)), self.num_heads)[..., 0]
 
     def memory(self, X, Q, K, V, log_a):
         """Outputs of the decayed matrix memory of every head. X is unused here;
@@ -2744,6 +2531,59 @@ def batch_to_heads(Y, batch_size):
     _, T, e = Y.shape
     return Y.reshape(batch_size, -1, T, e).transpose(1, 2).flatten(2)
 
+def associative_recall(rng, batch_size, num_pairs, num_keys=512,
+                       num_values=4, num_steps=256, num_rebound=0, gap=None):
+    """Key-value pairs, filler, then every key again as a query. The first
+    num_rebound keys are written twice, the second time with a new value,
+    at any later write or, given gap, gap writes after the first one.
+    Returns the tokens (values, then keys, then the filler), the latest
+    value of each query's key, and a mask of the queries for rebound keys.
+
+    Defined in :numref:`sec_matrix-state`"""
+    n, r = num_pairs, num_rebound
+    keys = np.argsort(rng.random((batch_size, num_keys)), 1)[:, :n]
+    values = rng.integers(0, num_values, (batch_size, n + r))
+    values[:, n:] = (values[:, :r] + rng.integers(  # A new value
+        1, num_values, (batch_size, r))) % num_values
+    if gap is None:  # Random write order, each second write after the first
+        slots = np.argsort(rng.random((batch_size, n + r)), 1)
+        slots[:, :r], slots[:, n:] = (np.minimum(slots[:, :r], slots[:, n:]),
+                                      np.maximum(slots[:, :r], slots[:, n:]))
+    else:  # First writes in random order, second ones gap first writes later
+        first = np.argsort(rng.random((batch_size, n)), 1)
+        times = np.concatenate([first, first[:, :r] + gap - 0.5], 1)
+        slots = np.argsort(np.argsort(times, 1), 1)
+    X = np.full((batch_size, num_steps), num_values + num_keys)  # Filler
+    rows = np.arange(batch_size)[:, None]
+    X[rows, 2 * slots] = num_values + np.concatenate([keys, keys[:, :r]], 1)
+    X[rows, 2 * slots + 1] = values
+    order = np.argsort(rng.random((batch_size, n)), 1)  # Queries
+    X[:, -n:] = num_values + np.take_along_axis(keys, order, 1)
+    latest = np.concatenate([values[:, n:], values[:, r:n]], 1)
+    return X, np.take_along_axis(latest, order, 1), order < r
+
+def train_recall(model, pairs=(4, 8, 16, 32, 64), num_updates=2000,
+                 **task):
+    """Train on associative recall (task: options of associative_recall)
+    with a cycling number of pairs, 256 sequences per update, AdamW at peak
+    rate 0.01; return the accuracy per number of pairs.
+
+    Defined in :numref:`sec_matrix-state`"""
+    rng = np.random.default_rng()
+    length = lambda n: 32 * math.ceil(
+        (3 * n + 2 * task.get('num_rebound', 0)) / 32)
+    data = lambda n, size: associative_recall(
+        rng, size, n, num_steps=length(n), **task)[:2]
+    model.to(d2l.try_gpu())
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-2,
+                                  weight_decay=0.01)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda t: (
+        d2l.cosine_warmup(t, num_updates, num_updates // 10)))
+    d2l.train_queries(model, lambda step: data(pairs[step % len(pairs)],
+                      256), num_updates, optimizer, scheduler)
+    return {n: float(d2l.query_accuracy(model, *data(n, 1024)))
+            for n in pairs}
+
 def delta_rule_writes(K, V, beta, log_a):
     """W and Z with corrected values U = W - Z S_0^T, for every chunk.
 
@@ -2771,7 +2611,7 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     beta, log_a = beta.reshape(B, T // m, m), log_a.reshape(B, T // m, m)
     W, Z = delta_rule_writes(K, V, beta, log_a)
     L, cum = d2l.decay_mask(log_a), log_a.cumsum(-1)
-    # Each chunk maps the memory at its start to S A + W_end at its end
+    # Each chunk maps the memory S at its start to S A + W^T D K at its end
     to_end = torch.exp(cum[..., -1:] - cum).unsqueeze(-1)
     I = torch.eye(K.shape[-1], device=K.device)
     A = torch.exp(cum[..., -1, None, None]) * I - (Z * to_end).mT @ K
@@ -2785,26 +2625,15 @@ def chunked_delta_rule(Q, K, V, beta, log_a, chunk_size):
     return Y.reshape(B, T, -1)
 
 class GatedDeltaNet(d2l.GatedLinearAttention):
-    """Gated linear attention with one decay per head, whose memory is
-    written by the delta rule.
+    """Gated linear attention whose memory is written by the delta rule.
 
     Defined in :numref:`sec_deltanet`"""
-    gate_scale = 1  # For init_decays: log sigmoid(b) = -1 / tau
-
     def __init__(self, num_hiddens, num_heads, chunk_size=32, conv_width=4,
                  timescales=(4, 256)):
         super().__init__(num_hiddens, num_heads, chunk_size, conv_width,
                          timescales)
         self.W_beta = nn.Linear(num_hiddens, num_heads)  # Write strength
         d2l.init_lecun(self.W_beta)
-
-    def decay_gate(self, d):  # One gate per head
-        # Sequential, so that init_decays finds the bias at W_a[-1]
-        return nn.Sequential(nn.Linear(d, self.num_heads))
-
-    def decays(self, X):  # (batch_size * num_heads, T)
-        return d2l.heads_to_batch(F.logsigmoid(self.W_a(X)),
-                                  self.num_heads).squeeze(-1)
 
     def memory(self, X, Q, K, V, log_a):
         beta = d2l.heads_to_batch(torch.sigmoid(self.W_beta(X)),
@@ -2832,6 +2661,8 @@ def kernel_times(f, steps=10):
             for e in prof.key_averages()
             if e.device_type == torch.autograd.DeviceType.CUDA}
 
+PRODUCT_KERNELS = 'gemm|xmma|cutlass|matmul|sdpa'
+
 def show_profile(kernels, step_ms, rows=6):
     """Busy device time against the wall-clock time step_ms of a step, the
     share of the matrix products, and the kernels with the most time.
@@ -2839,7 +2670,7 @@ def show_profile(kernels, step_ms, rows=6):
     Defined in :numref:`sec_perf_model`"""
     busy = sum(kernels.values())
     products = sum(ms for name, ms in kernels.items()
-                   if re.search('gemm|xmma|cutlass|matmul|sdpa', name, re.I))
+                   if re.search(PRODUCT_KERNELS, name, re.I))
     print(f'wall clock {step_ms:.2f} ms per step, device busy {busy:.2f} ms '
           f'({busy / step_ms:.0%}), matrix products {products / busy:.0%}')
     for name, ms in sorted(kernels.items(), key=lambda kv: -kv[1])[:rows]:
@@ -2919,20 +2750,27 @@ def windows(corpus, batch_size, num_steps=128):
         W = corpus[starts + offsets].long()
         yield W[:, :-1], W[:, 1:]
 
-def make_step(model, forward=None, bf16=False):
+def make_step(model, forward=None, bf16=False, warmup=0):
     """An AdamW training step of `model` on a minibatch (X, Y); `forward`
-    replaces the model's forward pass, `bf16` turns on autocast.
+    replaces the model's forward pass, `bf16` turns on autocast, and a
+    `warmup` > 0 raises the learning rate linearly to 1e-3 over as many
+    steps.
 
     Defined in :numref:`sec_fast_transformer`"""
     forward = model if forward is None else forward
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3,
                                   weight_decay=0.01, fused=True)
+    if warmup:
+        schedule = torch.optim.lr_scheduler.LambdaLR(
+            optimizer, lambda i: min(1, (i + 1) / warmup))
     def step(X, Y):
         with torch.autocast('cuda', torch.bfloat16, enabled=bf16):
             loss = F.cross_entropy(forward(X).flatten(0, 1), Y.flatten())
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
+        if warmup:
+            schedule.step()
         return loss
     return step
 
@@ -3580,7 +3418,8 @@ class ReplayBufferC(d2l.ReplayBuffer):
         self.act = np.zeros((capacity, act_dim), np.float32)
 
 def update_D(X, Z, net_D, net_G, trainer_D):
-    """Update the critic; return the summed log loss, halved.
+    """Update the critic; return its log loss summed over both batches
+    (per sample, the sum of two means: 2 log 2 at equilibrium).
 
     Defined in :numref:`sec_basic_gan`"""
     trainer_D.zero_grad()
@@ -3590,7 +3429,7 @@ def update_D(X, Z, net_D, net_G, trainer_D):
     loss_D = (F.binary_cross_entropy_with_logits(
                   real_Y, torch.ones_like(real_Y), reduction='sum') +
               F.binary_cross_entropy_with_logits(
-                  fake_Y, torch.zeros_like(fake_Y), reduction='sum')) / 2
+                  fake_Y, torch.zeros_like(fake_Y), reduction='sum'))
     loss_D.backward()
     trainer_D.step()
     return loss_D
@@ -3604,15 +3443,17 @@ def update_G(Z, net_D, net_G, trainer_G):
     fake_Y = net_D(net_G(Z))
     loss_G = F.binary_cross_entropy_with_logits(
         fake_Y, torch.ones_like(fake_Y), reduction='sum')
-    loss_G.backward()
+    loss_G.backward()  # also fills net_D's .grad (update_D zeroes it)
     trainer_G.step()
     return loss_G
 
 def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
-              step_G=update_G, seed=None, on_epoch=None):
+              step_G=update_G, seed=None, on_epoch=None, ema=None):
     """Alternate update_D and step_G over the minibatches with Adam
-    (beta_1 = 0.5), calling on_epoch(epoch) after each epoch if given;
-    return the per-sample (loss_D, loss_G) of each epoch.
+    (beta_1 = 0.5), calling ema.update(net_G) after every generator step
+    and on_epoch(epoch) after each epoch if given; return each epoch's
+    per-sample losses (loss_D, the sum of the critic's two batch means,
+    and loss_G).
 
     Defined in :numref:`sec_basic_gan`"""
     if seed is not None:
@@ -3628,6 +3469,8 @@ def train_gan(net_D, net_G, data_iter, num_epochs, latent_dim, lr_D, lr_G,
             Z = torch.randn(X.shape[0], latent_dim, device=X.device)
             loss_D += update_D(X, Z, net_D, net_G, trainer_D).detach()
             loss_G += step_G(Z, net_D, net_G, trainer_G).detach()
+            if ema is not None:
+                ema.update(net_G)
             n += X.shape[0]
         history.append(torch.stack([loss_D, loss_G]) / n)
         if on_epoch is not None:
@@ -3646,6 +3489,60 @@ def make_mlp(sizes, act):
         layers += [linear, act]
     return nn.Sequential(*layers[:-1])
 
+mu_p = np.array([[0.0, 2.4], [-2.1, -1.2], [2.1, -1.2]])     # data
+A_p = np.stack([0.7 * np.eye(2)] * 3)
+
+def mixture_logpdf(x, mus, As):
+    """Log density of the uniform mixture of Gaussians N(mu_k, A_k^T A_k).
+
+    Defined in :numref:`sec_gan_objectives`"""
+    comps = []
+    for mu, A in zip(mus, As):
+        Sigma, diff = A.T @ A, x - mu
+        sol = np.linalg.solve(Sigma, diff.T).T
+        comps.append(-0.5 * ((diff * sol).sum(1)
+                             + np.linalg.slogdet(2 * np.pi * Sigma)[1]))
+    return np.logaddexp.reduce(np.stack(comps) - np.log(len(mus)), axis=0)
+
+def sample_mixture(n, mus, As, rng):
+    """n draws from the uniform mixture of Gaussians mu_k + z A_k.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    k = rng.integers(0, len(mus), n)
+    z = rng.standard_normal((n, 2))
+    return np.einsum('ni,nij->nj', z, As[k]) + mus[k]
+
+grid_1d = np.linspace(-7.0, 7.0, 281)
+grid_2d = np.stack([g.ravel() for g in np.meshgrid(grid_1d, grid_1d)], axis=1)
+cell_area = (grid_1d[1] - grid_1d[0]) ** 2
+
+def js_mixtures(mus_q, As_q, mus_p=mu_p, As_p=A_p):
+    """JS(p, q) between two known mixtures, p the data by default, by
+    quadrature on grid_2d.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    logp = mixture_logpdf(grid_2d, mus_p, As_p)
+    logq = mixture_logpdf(grid_2d, mus_q, As_q)
+    p, q = np.exp(logp), np.exp(logq)
+    logm = np.log(np.maximum((p + q) / 2, 1e-300))
+    return 0.5 * (p * (logp - logm) + q * (logq - logm)).sum() * cell_area
+
+TRUNC_STD = 0.8796  # standard deviation of N(0, 1) truncated at +-2
+
+def make_critic():
+    """Leaky-ReLU MLP with LeCun-normal weights and zero biases.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    D = nn.Sequential(nn.Linear(2, 64), nn.LeakyReLU(0.2),
+                      nn.Linear(64, 64), nn.LeakyReLU(0.2), nn.Linear(64, 1))
+    for layer in D[::2]:  # weight std 1/sqrt(fan_in) after truncation
+        s = layer.in_features ** -0.5 / TRUNC_STD
+        nn.init.trunc_normal_(layer.weight, std=s, a=-2 * s, b=2 * s)
+        nn.init.zeros_(layer.bias)
+    return D
+
+to_t = lambda a: torch.tensor(a, dtype=torch.float32)
+
 def mmd2_unbiased(K_pp, K_qq, K_pq):
     """Unbiased MMD^2 from the kernel matrices within p, within q, and
     across; the diagonals (a point with itself) are left out.
@@ -3656,21 +3553,129 @@ def mmd2_unbiased(K_pp, K_qq, K_pq):
             + (K_qq.sum() - K_qq.diagonal().sum()) / (n * (n - 1))
             - 2 * K_pq.mean())
 
+def gradient_penalty(D, X, fake, u, one_sided=False):
+    """Mean (|D'(x)| - 1)^2 at the points u X + (1 - u) fake (inputs 1-D);
+    one-sided, only slopes steeper than one pay: max(0, |D'(x)| - 1)^2.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    x = (u * X + (1 - u) * fake).requires_grad_()
+    grad, = torch.autograd.grad(D(x).sum(), x, create_graph=True)
+    excess = grad.abs() - 1
+    return ((excess.clamp(min=0) if one_sided else excess) ** 2).mean()
+
+class Shift(nn.Module):
+    """The generator x' = theta + z.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, theta0):
+        super().__init__()
+        self.theta = nn.Parameter(torch.tensor(theta0))
+
+    def forward(self, z):
+        return self.theta + z
+
+def train_shift(critic_loss, gen_loss, seed, gp=0.0, one_sided=False,
+                theta0=6.0, steps=1500, n_critic=5, batch=256, lr_D=1e-2,
+                lr_G=1e-2):
+    """Fit x' = theta + z to N(0, 1) by plain gradient steps on theta; return
+    theta0 and theta after every step, the gradient of every step, and the
+    critic.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    G, D = Shift(theta0), d2l.make_mlp([1, 32, 32, 1], nn.ReLU())
+    opt_G = torch.optim.SGD(G.parameters(), lr_G)
+    opt_D = torch.optim.Adam(D.parameters(), lr_D, betas=(0.5, 0.9))
+    n = n_critic if critic_loss else 0
+    thetas, grads = [theta0], []
+    for _ in range(steps):
+        X, Z = (to_t(rng.standard_normal((n + 1, batch, 1))) for _ in range(2))
+        U = to_t(rng.uniform(size=(n, batch, 1)))   # interpolation weights
+        for i in range(n):
+            fake = G(Z[i]).detach()
+            loss = critic_loss(D(X[i]), D(fake))
+            if gp:
+                loss = loss + gp * gradient_penalty(D, X[i], fake, U[i],
+                                                    one_sided)
+            opt_D.zero_grad()
+            loss.backward()
+            opt_D.step()
+        fake = G(Z[-1])
+        loss = (gen_loss(X[-1], fake) if critic_loss is None
+                else gen_loss(D(X[-1]), D(fake)))
+        opt_G.zero_grad()
+        loss.backward()
+        grads.append(G.theta.grad.item())
+        opt_G.step()
+        thetas.append(G.theta.item())
+    return np.array(thetas), np.array(grads), D
+
+mu_0 = np.array([[1.0, -1.0], [-4.3, -2.0], [-1.0, 3.8]])  # off the modes
+A_0 = np.stack([0.4 * np.eye(2)] * 3)      # below the data's scale of 0.7
+
+class MixtureGenerator(nn.Module):
+    """x = mu_k + z A_k for a uniformly drawn component k.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    def __init__(self, mu, A):
+        super().__init__()
+        self.mu = nn.Parameter(to_t(mu))
+        self.A = nn.Parameter(to_t(A))
+
+    def forward(self, z, k):
+        return torch.einsum('ni,nij->nj', z, self.A[k]) + self.mu[k]
+
+    def params_np(self):
+        return (self.mu.detach().numpy().copy(),
+                self.A.detach().numpy().copy())
+
+def train_toy(critic_loss, gen_loss, seed=0, steps=6000, batch=256, lr=1e-3):
+    """Fit a MixtureGenerator from (mu_0, A_0) to the data mixture, one
+    critic step per generator step. The losses act on the critic's scores of
+    the real and generated batch; with critic_loss None, gen_loss acts on the
+    two batches. Returns the exact JS(p, q_t) every 200 steps.
+
+    Defined in :numref:`sec_gan_objectives`"""
+    rng = np.random.default_rng(seed)
+    torch.manual_seed(seed)
+    G, D = MixtureGenerator(mu_0, A_0), make_critic()
+    opt_G = torch.optim.Adam(G.parameters(), lr)
+    opt_D = torch.optim.Adam(D.parameters(), 2 * lr)
+    trace = []
+    for t in range(steps):
+        X = to_t(sample_mixture(batch, mu_p, A_p, rng))
+        z = to_t(rng.standard_normal((batch, 2)))
+        k = torch.tensor(rng.integers(0, 3, batch))
+        if critic_loss is not None:
+            opt_D.zero_grad()
+            critic_loss(D(X), D(G(z, k).detach())).backward()
+            opt_D.step()
+        opt_G.zero_grad()
+        fake = G(z, k)
+        loss = (gen_loss(X, fake) if critic_loss is None
+                else gen_loss(D(X), D(fake)))
+        loss.backward()
+        opt_G.step()
+        if t % 200 == 0:
+            trace.append(js_mixtures(*G.params_np()))
+    return np.array(trace)
+
 def rpgan_loss_D(critic, real, fake):
     """Relativistic pairing critic loss -E[log sigma(D(x) - D(x'))].
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return F.softplus(critic(fake) - critic(real)).mean()
 
 def rpgan_loss_G(critic, real, fake):
     """Non-saturating pairing loss for the generator.
 
-    Defined in :numref:`sec_gan_convergence`"""
+    Defined in :numref:`sec_gan_relativistic`"""
     return F.softplus(critic(real) - critic(fake)).mean()
 
 def gan_loss_D(critic, real, fake):
     """Logistic critic loss -E[log sigma(D(x))] - E[log sigma(-D(x'))]: the
-    batch means, where update_D reports the halved sum.
+    sum of two batch means, 2 log 2 at equilibrium, as update_D.
 
     Defined in :numref:`sec_gan_convergence`"""
     return F.softplus(-critic(real)).mean() + F.softplus(critic(fake)).mean()
@@ -3724,7 +3729,7 @@ def load_pokemon(resolution=64):
     """All Pokemon sprites as one (n, 3, h, w) tensor in [-1, 1].
 
     Defined in :numref:`sec_dcgan`"""
-    import warnings  # not in the d2l library preamble
+    import warnings
     transform = torchvision.transforms.Compose([
         torchvision.transforms.Resize((resolution, resolution)),
         torchvision.transforms.PILToTensor()])
@@ -3735,6 +3740,24 @@ def load_pokemon(resolution=64):
     with warnings.catch_warnings():  # palette sprites with transparency
         warnings.filterwarnings('ignore', message='Palette images')
         return torch.cat([X for X, _ in loader]).float() / 127.5 - 1
+
+class EMA:
+    """Exponential moving average of a model's parameters, given as a
+    half-life in steps. Buffers such as batch-norm statistics are copied;
+    the average is kept in evaluation mode.
+
+    Defined in :numref:`sec_dcgan`"""
+    def __init__(self, model, half_life):
+        import copy  # the d2l library preamble does not import it
+        self.model = copy.deepcopy(model).requires_grad_(False).eval()
+        self.decay = 0.5 ** (1 / half_life)
+
+    def update(self, model):
+        with torch.no_grad():
+            for avg, p in zip(self.model.parameters(), model.parameters()):
+                avg.lerp_(p, 1 - self.decay)
+            for avg, b in zip(self.model.buffers(), model.buffers()):
+                avg.copy_(b)
 
 def fan_in_init(module):
     """Fan-in normal weights with the leaky-ReLU gain, zero offsets.
@@ -3777,8 +3800,9 @@ class Generator(nn.Module):
         return self.to_rgb(x)                        # no tanh: raw output
 
 class Discriminator(nn.Module):
-    """Mirror of the generator: conv + leaky ReLU + bilinear downsampling to
-    a 4x4 feature map phi(x), then a linear head on the flattened map.
+    """Critic that mirrors the generator: conv + leaky ReLU + bilinear
+    downsampling to a 4x4 feature map phi(x), then a linear head on the
+    flattened map.
 
     Defined in :numref:`sec_dcgan`"""
     def __init__(self, resolution, base_ch):
@@ -3801,24 +3825,6 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         return self.head(self.phi(x).flatten(1))
-
-class EMA:
-    """Exponential moving average of a model's parameters, given as a
-    half-life in steps. Buffers such as batch-norm statistics are copied;
-    the average is kept in evaluation mode.
-
-    Defined in :numref:`sec_dcgan`"""
-    def __init__(self, model, half_life):
-        import copy  # the d2l library preamble does not import it
-        self.model = copy.deepcopy(model).requires_grad_(False).eval()
-        self.decay = 0.5 ** (1 / half_life)
-
-    def update(self, model):
-        with torch.no_grad():
-            for avg, p in zip(self.model.parameters(), model.parameters()):
-                avg.lerp_(p, 1 - self.decay)
-            for avg, b in zip(self.model.buffers(), model.buffers()):
-                avg.copy_(b)
 
 def sample_real(images, n, labels=None):
     """Draw a training batch with random horizontal flips; return it with
@@ -3927,6 +3933,28 @@ def batched(f, X, batch_size=1000):
     with torch.no_grad():
         return torch.cat([f(X_k) for X_k in X.split(batch_size)])
 
+def precision_recall(feat_real, feat_gen, k=3, chunk=1000):
+    """k-NN precision and recall of two feature sets: the fraction of each
+    set inside the union of the other set's balls, each ball reaching to its
+    center's k-th nearest neighbor; return (precision, recall).
+
+    Defined in :numref:`sec_dcgan`"""
+    P = np.asarray(feat_real, np.float64)
+    Q = np.asarray(feat_gen, np.float64)
+    def dists(A, B):  # (len(A), len(B)) Euclidean distances
+        sq = (A ** 2).sum(1)[:, None] - 2 * A @ B.T + (B ** 2).sum(1)
+        return np.sqrt(np.maximum(sq, 0))
+    def chunks(A):
+        return (A[i:i + chunk] for i in range(0, len(A), chunk))
+    def radii(A):  # sorted distances start with the point itself, at 0
+        return np.concatenate([np.partition(dists(a, A), k, axis=1)[:, k]
+                               for a in chunks(A)])
+    def covered(A, B, r_B):  # is each row of A inside some ball of B?
+        return np.concatenate([(dists(a, B) <= r_B).any(1)
+                               for a in chunks(A)])
+    return (float(covered(Q, P, radii(P)).mean()),
+            float(covered(P, Q, radii(Q)).mean()))
+
 class GaussianMixture:
     """A mixture of isotropic Gaussians, exact at every noise level.
 
@@ -3974,13 +4002,6 @@ class GaussianMixture:
         return (torch.softmax(log_p, 1)[..., None]
                 * (self.means + a * self.std ** 2 / var * r)).sum(1)
 
-    def velocity(self, x, t):
-        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps."""
-        log_p, r, var, a = self._modes(x, 1 - t, t)
-        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
-        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
-        return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
-
     def nll(self, x):
         """Mean negative log-likelihood of clean points, in nats.
 
@@ -3999,6 +4020,15 @@ class GaussianMixture:
                     stray=round(1 - inside.float().mean().item(), 4),
                     spread=round(near[inside].mean().item(), 3))
 
+    def velocity(self, x, t):
+        """E[eps - x0 | x_t] on the linear path x_t = (1 - t) x0 + t eps.
+
+        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        log_p, r, var, a = self._modes(x, 1 - t, t)
+        eps = (1 - a) * r / var                        # E[eps | x_t, mode k]
+        x0 = self.means + a * self.std ** 2 / var * r  # E[x0 | x_t, mode k]
+        return (torch.softmax(log_p, 1)[..., None] * (eps - x0)).sum(1)
+
 def scatter_panels(samples, titles=None, data=None, lim=4.5,
                    size=3.0):
     """Scatter 2-D point sets side by side on equal, shared axes.
@@ -4015,23 +4045,25 @@ def scatter_panels(samples, titles=None, data=None, lim=4.5,
             ax.set_title(titles[i])
     return axes[0]
 
-def time_embedding(t, dim):
-    """Sines and cosines of t at dim / 2 geometric frequencies.
+def time_embedding(t, dim, freqs=(1.0, 64.0)):
+    """Sines and cosines of t at dim / 2 frequencies, geometric from freqs[0]
+    to freqs[1] radians per unit of t (t in [0, 1]).
 
     Defined in :numref:`sec_diffusion-denoising`"""
-    freqs = torch.exp(-math.log(10000) / (dim // 2)
-                      * torch.arange(dim // 2, device=t.device))
-    args = t.float()[:, None] * freqs
+    f = torch.exp(torch.linspace(math.log(freqs[0]), math.log(freqs[1]),
+                                 dim // 2, device=t.device))
+    args = t.float()[:, None] * f
     return torch.cat([args.sin(), args.cos()], 1)
 
 class TimeMLP(nn.Module):
-    """An MLP on a point x and the time features of one or more times.
+    """An MLP on a point x and the time features of one or more times;
+    time_freqs: see time_embedding.
 
     Defined in :numref:`sec_diffusion-denoising`"""
     def __init__(self, hidden=256, depth=3, *, dim=2, num_times=1,
-                 time_dim=64):
+                 time_dim=64, time_freqs=(1.0, 64.0)):
         super().__init__()
-        self.time_dim = time_dim
+        self.time_dim, self.time_freqs = time_dim, time_freqs
         self.embed = d2l.make_mlp([time_dim * num_times, hidden, hidden],
                                   nn.SiLU())
         self.inp = nn.Linear(dim, hidden)
@@ -4039,7 +4071,7 @@ class TimeMLP(nn.Module):
             nn.SiLU(), d2l.make_mlp([hidden] * depth + [dim], nn.SiLU()))
 
     def forward(self, x, *ts):
-        feats = [time_embedding(t, self.time_dim) for t in ts]
+        feats = [time_embedding(t, self.time_dim, self.time_freqs) for t in ts]
         return self.body(self.inp(x) + self.embed(torch.cat(feats, 1)))
 
 def train_regression(model, loss_fn, batch_fn, num_steps, *,
@@ -4047,8 +4079,16 @@ def train_regression(model, loss_fn, batch_fn, num_steps, *,
                      compiled=True):
     """Adam on loss_fn(model, batch_fn()) -> (model, EMA model, losses).
 
+    The learning rate is constant or, with cosine=True, decays to zero along
+    a cosine. The EMA model averages the weights (d2l.EMA): the weights of
+    ema_half_life updates ago count half as much as the current ones. On a
+    GPU, Adam is fused into one kernel and, with compiled=True, the loss and
+    its gradient run as CUDA graphs: the networks of this chapter are so
+    small that launching their kernels one at a time would cost more time
+    than running them.
+
     Defined in :numref:`sec_diffusion-denoising`"""
-    params = list(model.parameters())  # fused Adam: one kernel per step on a GPU
+    params = list(model.parameters())
     opt = torch.optim.Adam(params, lr=lr, fused=params[0].is_cuda)
     sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, num_steps)
              if cosine else None)
@@ -4178,23 +4218,23 @@ class GaussianPath:
         det = a * ds - s * da
         return (ds * x - s * out) / det, (a * out - da * x) / det
 
+    def sigma_bars(self, steps):
+        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
+
+        Defined in :numref:`sec_diffusion-integration`"""
+        a, s = self.grid(steps)
+        return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
+
     def time_at(self, log_snr):
         """The time with a given log-SNR, by bisection (lambda_t falls in t).
 
-        Defined in :numref:`sec_diffusion-gaussian-paths`"""
+        Defined in :numref:`sec_diffusion-integration`"""
         lo, hi = torch.zeros_like(log_snr), torch.ones_like(log_snr)
         for _ in range(50):
             mid = (lo + hi) / 2
             later = self.log_snr(mid) > log_snr      # the answer lies after mid
             lo, hi = torch.where(later, mid, lo), torch.where(later, hi, mid)
         return (lo + hi) / 2
-
-    def sigma_bars(self, steps):
-        """sigma_bar = sigma / alpha on the grid of steps; inf where alpha = 0.
-
-        Defined in :numref:`sec_diffusion-gaussian-paths`"""
-        a, s = self.grid(steps)
-        return [s_k / a_k if a_k > 0 else math.inf for a_k, s_k in zip(a, s)]
 
 def regression_loss(path, kind):
     """Squared error of net(x_t, t) against the target of a kind, t ~ U(0, 1).
@@ -4207,22 +4247,10 @@ def regression_loss(path, kind):
         return (error ** 2).flatten(1).sum(1).mean()  # ||error||^2 per example
     return loss_fn
 
-def make_pred(net, path, kind):
-    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
-
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
-    def pred(x, alpha, sigma):
-        log_snr = 2 * math.log(alpha / sigma) if alpha > 0 else -math.inf
-        t = path.time_at(torch.tensor(log_snr, dtype=torch.float64))
-        x = x * (path.sigma(t).item() / sigma)  # the same point on our path
-        t = torch.full((len(x),), t.item(), device=x.device)
-        return path.x0_eps(kind, net(x, t), x, t)
-    return pred
-
 def pred_bar(pred, xb, r):
-    """pred at x = alpha x_bar for sigma_bar = r; at r = inf, x_bar is noise.
+    """pred at x = alpha x_bar, sigma_bar = r; at r = inf, x_bar is noise.
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     if math.isinf(r):
         return pred(xb, 0.0, 1.0)
     a = 1 / math.sqrt(1 + r ** 2)
@@ -4233,7 +4261,7 @@ def ode_sample(pred, x, sigma_bars):
     """Euler (= DDIM) on d x_bar / d sigma_bar = eps, from x to data; x is the
     noisy point at the first level, unit-variance scale (noise if inf).
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     r0 = sigma_bars[0]
     xb = x if math.isinf(r0) else x * math.sqrt(1 + r0 ** 2)  # x / alpha
     for r_t, r_s in zip(sigma_bars[:-1], sigma_bars[1:]):
@@ -4241,11 +4269,23 @@ def ode_sample(pred, x, sigma_bars):
         xb = x0 + r_s * eps                    # the Euler (= DDIM) step
     return xb
 
+def make_pred(net, path, kind):
+    """pred(x, alpha, sigma) -> (x0, eps) from net(x, t) of a kind on path.
+
+    Defined in :numref:`sec_diffusion-integration`"""
+    def pred(x, alpha, sigma):
+        log_snr = 2 * math.log(alpha / sigma) if alpha > 0 else -math.inf
+        t = path.time_at(torch.tensor(log_snr, dtype=torch.float64))
+        x = x * (path.sigma(t).item() / sigma)  # the same point on our path
+        t = torch.full((len(x),), t.item(), device=x.device)
+        return path.x0_eps(kind, net(x, t), x, t)
+    return pred
+
 @torch.no_grad()
 def ancestral_sample(pred, x, path, steps, *, t_start=1.0):
     """Ho et al.'s sampler from x at t_start (1 is noise) to data at t = 0.
 
-    Defined in :numref:`sec_diffusion-gaussian-paths`"""
+    Defined in :numref:`sec_diffusion-integration`"""
     a, s = path.grid(steps, t_start)
     for i in range(steps):
         x0, eps = pred(x, a[i], s[i])
@@ -4278,13 +4318,18 @@ class UNetBlock(nn.Module):
         return h + self.skip(x)
 
 class UNet(nn.Module):
-    """A small U-Net on time t, a label y (num_classes = null), and cond.
+    """A small U-Net on an image x (n, c, h, w), times t (n,) and labels y.
+
+    y = num_classes is the null label. cond (n, emb_dim), if given, is added
+    to the time features; the flow map of the few-step section passes the
+    embedding of its step size there. time_freqs: see time_embedding.
 
     Defined in :numref:`sec_diffusion-images`"""
     def __init__(self, ch=64, num_classes=None, in_channels=1,
-                 out_channels=1, emb_dim=128):
+                 out_channels=1, emb_dim=128, time_freqs=(1.0, 64.0)):
         super().__init__()
         self.emb_dim, self.num_classes = emb_dim, num_classes
+        self.time_freqs = time_freqs
         self.label_emb = (nn.Embedding(num_classes + 1, emb_dim)
                           if num_classes else None)
         self.emb_mlp = d2l.make_mlp([emb_dim] * 3, nn.SiLU())
@@ -4300,7 +4345,7 @@ class UNet(nn.Module):
                                   nn.Conv2d(ch, out_channels, 3, padding=1))
 
     def forward(self, x, t, y=None, cond=None):
-        emb = d2l.time_embedding(t, self.emb_dim)
+        emb = d2l.time_embedding(t, self.emb_dim, self.time_freqs)
         if y is not None:
             emb = emb + self.label_emb(y)
         if cond is not None:
@@ -4315,16 +4360,11 @@ class UNet(nn.Module):
         h = self.up0(up(h, h1), emb)  # skip connection
         return self.outc(h)
 
-def cfg(net, c, gamma):
-    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
+def conditional(net, c):
+    """The field (x, t) -> net(x, t, c) with the labels c fixed.
 
     Defined in :numref:`sec_diffusion-images`"""
-    null = torch.full_like(c, net.num_classes)
-    def guided(x, t):
-        out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
-                         torch.cat([c, null])).chunk(2)
-        return out + gamma * (out_c - out)
-    return guided
+    return lambda x, t: net(x, t, c)
 
 def fashion_feature_cnn(X, y):
     """The feature network that judges Fashion-MNIST samples in this chapter.
@@ -4340,6 +4380,21 @@ def fd_features(cnn, imgs):
     Defined in :numref:`sec_diffusion-images`"""
     rgb = lambda x: x.clamp(-1, 1).expand(-1, 3, -1, -1)
     return d2l.batched(lambda x: cnn.features(rgb(x)), imgs).cpu()
+
+def cfg(net, c, gamma):
+    """Classifier-free guidance: (x, t) -> u + gamma (u_c - u), u unlabeled.
+
+    gamma is a Python number; at gamma = 1 this is conditional(net, c).
+
+    Defined in :numref:`sec_diffusion-images`"""
+    if gamma == 1:
+        return d2l.conditional(net, c)
+    null = torch.full_like(c, net.num_classes)
+    def guided(x, t):  # one doubled batch: labeled, then unlabeled
+        out_c, out = net(torch.cat([x, x]), torch.cat([t, t]),
+                         torch.cat([c, null])).chunk(2)
+        return out + gamma * (out_c - out)
+    return guided
 
 @torch.no_grad()
 def ddim_sample(pred, x, path, steps, eta=0.0, *, t_start=1.0, t_end=0.0):
@@ -4389,7 +4444,8 @@ def ddim_invert(pred, x, path, steps, t_end=1.0):
     Defined in :numref:`sec_diffusion-samplers`"""
     a, s = path.grid(steps, 0.0, t_end)
     for i in range(steps):
-        eps = pred(x, a[i + 1], s[i + 1])[1]    # x read at the next level
+        j = max(i, 1)  # at t = 0 (sigma = 0) x is read at the next level
+        eps = pred(x, a[j], s[j])[1]
         x = a[i + 1] * (x - s[i] * eps) / a[i] + s[i + 1] * eps
     return x
 
@@ -4432,7 +4488,8 @@ def train_step_gflops(net, loss_fn, shape, batch_size=128):
     of the given shape.
 
     Defined in :numref:`sec_diffusion-latent`"""
-    from torch.utils.flop_counter import FlopCounterMode  # not in the preamble
+    # A local import, so that d2l needs nothing beyond its header's imports
+    from torch.utils.flop_counter import FlopCounterMode
     x = torch.zeros(batch_size, *shape, device=next(net.parameters()).device)
     with FlopCounterMode(display=False) as counter:
         loss_fn(net, x).backward()
@@ -4524,19 +4581,20 @@ def flow_map_sample(u, x, steps, t_start=1.0):
     return x
 
 class UNetFlowMap(nn.Module):
-    """u(x, s, t): a copy of a velocity U-Net, plus a zero-initialized gap.
+    """u(x, s, t): a velocity U-Net, plus a zero-initialized input for the
+    gap t - s. The caller passes a copy of the teacher's U-Net.
 
     Defined in :numref:`sec_diffusion-few-step`"""
     def __init__(self, unet):
         super().__init__()
-        import copy  # the d2l library preamble does not import it
         # the teacher is an EMA copy with gradients off; the student trains
-        self.unet = copy.deepcopy(unet).requires_grad_(True)
+        self.unet = unet.requires_grad_(True)
         self.gap = nn.Linear(unet.emb_dim, unet.emb_dim)
         nn.init.zeros_(self.gap.weight), nn.init.zeros_(self.gap.bias)
 
     def forward(self, x, s, t):
-        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim))
+        gap = self.gap(d2l.time_embedding(t - s, self.unet.emb_dim,
+                                          self.unet.time_freqs))
         return self.unet(x, t, cond=gap)
 
 HF_REVISIONS = {
@@ -4715,7 +4773,8 @@ def config_params(config, include_vision=False, include_mtp=False,
     c, t = _hf_text_config(config)
     if (t.get('num_experts') or t.get('n_routed_experts')
             or t.get('enable_moe_block')):
-        raise NotImplementedError('use d2l.config_stats (14.1)')
+        raise NotImplementedError(
+            'mixture-of-experts layouts are not counted here')
     known = ('qwen3', 'qwen3_5_text', 'gemma4_text')  # QK norms, no biases
     if (t['model_type'] not in known or t.get('attention_bias')
             or t.get('mlp_bias')):
@@ -4815,8 +4874,11 @@ def config_memory(config, seq_len, batch_size, dtype_bytes=2, *,
             state += H_v * d_k * d_v * state_bytes + C * conv_taps * conv_bytes
             # Chunked kernel (64 tokens): the convolved q, k, v and their
             # copy, normalized q, k, w, u, new values, output, output gate,
-            # one d_k x d_v state per chunk and a 64 x 64 block per chunk
-            mixer = max(mixer, 2 * C + 3 * K + 4 * V
+            # one d_k x d_v state per chunk and a 64 x 64 block per chunk;
+            # with more value heads than key heads, q and k are first
+            # repeated to the value heads, two more tensors of H_v d_k
+            repeat = 2 * H_v * d_k if H_v > t['linear_num_key_heads'] else 0
+            mixer = max(mixer, 2 * C + 3 * K + 4 * V + repeat
                         + H_v * (d_k * d_v // 64 + 64))
             continue
         # Q (and gate), K, V, normalized and rotated Q and K, output (gated)
@@ -5075,8 +5137,8 @@ def qwen3_gpt_kwargs(cfg):
         raise NotImplementedError('qwen3_moe: expert layers are not ported')
     if kind and kind.startswith('qwen3_5'):
         raise NotImplementedError(
-            f'{kind}: its Gated DeltaNet layers are ported in '
-            'sec_lm_hybrids_at_scale')
+            f'{kind}: Qwen3GPT has no Gated DeltaNet layers; '
+            'load this model with d2l.load_hf')
     if kind != 'qwen3':
         raise ValueError(f'not a Qwen3 configuration: {kind!r}')
     rope = c.get('rope_parameters') or {}  # where Transformers 5 keeps theta
@@ -5200,7 +5262,8 @@ def truncated_probs(logits, temperature=1.0, k=None, p=None, min_p=None):
     """Rows of logits (batch, vocab) -> the temperature-scaled distribution
     truncated by top-k, top-p and min-p and renormalized; ties in rank go
     to the smaller token id. As in Transformers and vLLM (and unlike
-    sec_decoding's sample_next), top-p measures mass within the top k.
+    sample_next of the book's section on decoding), top-p measures mass
+    within the top k.
 
     Defined in :numref:`sec_lm_d2l_checkpoint`"""
     probs = F.softmax(logits.float() / temperature, -1)
@@ -7197,12 +7260,18 @@ d2l.DATA_HUB['conll2003-labels'] = (
 d2l.DATA_HUB['lm-enc-bert-sweep-v1'] = (  # D2L_RERUN=bert-sweep, RTX 4090
     d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v1.json',
     '06440f0e5acbd7b91deb6b66f8402f8bea8d6155')
+d2l.DATA_HUB['lm-enc-bert-sweep-v2'] = (  # at least 300 steps per run
+    d2l.LM_DATA_URL + 'lm-enc-bert-sweep-v2.json',
+    'e1ceabe56f1d40d2a71e3ef6a4ccb9dbc6d2d220')
 d2l.DATA_HUB['lm-enc-modernbert-mnli-v1'] = (  # its MNLI checkpoint, bf16
     d2l.LM_DATA_URL + 'lm-enc-modernbert-mnli-v1.zip',
     '36365804df9df70b812f52595ee6d092639285c1')
-d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # D2L_RERUN=bert-tagging
+d2l.DATA_HUB['lm-enc-bert-tagging-v1'] = (  # sentences alone, lr 5e-5
     d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v1.json',
     'f0f0f41d18ed997462891d0c6dece556ad57b680')
+d2l.DATA_HUB['lm-enc-bert-tagging-v2'] = (  # D2L_RERUN=bert-tagging
+    d2l.LM_DATA_URL + 'lm-enc-bert-tagging-v2.json',
+    'f527097b8650ace236226a4cda001fd99b5fce79')
 d2l.DATA_HUB['lm-enc-bert-decoder-v1'] = (  # D2L_RERUN=bert-decoder
     d2l.LM_DATA_URL + 'lm-enc-bert-decoder-v1.json',
     '22b140629d3aa486a601068dce61b8a0f0301beb')
@@ -7391,13 +7460,6 @@ def finetune_classifier(model, train, eval, lr, epochs, batch_size, seed,
                 peak_gib=(torch.cuda.max_memory_allocated(device) / 2**30
                           if cuda else float('nan')))
 
-def cost_per_example(n_params, n_tokens, n_embed=0):
-    """Forward FLOPs per example, 2 (n_params - n_embed) n_tokens: a
-    multiply and an add per weight and token, embedding lookups excluded.
-
-    Defined in :numref:`sec_lm_bert`"""
-    return 2 * (n_params - n_embed) * n_tokens
-
 def align_token_labels(word_ids, word_labels, scheme='first'):
     """Token labels from word labels; word_ids gives each token's word
     (None for a special token). scheme='first' labels the first sub-token
@@ -7447,6 +7509,13 @@ def span_f1(pred_tags, gold_tags, id2label):
     return dict(**prf(pred, gold), per_type={k: prf(
         {e for e in pred if e[0] == k}, {e for e in gold if e[0] == k})
         for k in kinds})
+
+def cost_per_example(n_params, n_tokens, n_embed=0):
+    """Forward FLOPs per example, 2 (n_params - n_embed) n_tokens: a
+    multiply and an add per weight and token, embedding lookups excluded.
+
+    Defined in :numref:`sec_lm_bert`"""
+    return 2 * (n_params - n_embed) * n_tokens
 
 d2l.HF_ENCODER_REVISIONS['Qwen/Qwen3-Embedding-0.6B'] = (
     '97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3')
@@ -7729,6 +7798,9 @@ d2l.DATA_HUB['lm-enc-r3-stress-emb-v1'] = (  # D2L_RERUN=ret-stress-emb
 d2l.DATA_HUB['lm-enc-ret-rerank-v1'] = (  # D2L_RERUN=ret-rerank
     d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v1.json',
     '93299ee93a052d3e21f4ed49d8b259400382dc81')
+d2l.DATA_HUB['lm-enc-ret-rerank-v2'] = (  # v1 with the model card's task
+    d2l.LM_DATA_URL + 'lm-enc-ret-rerank-v2.json',
+    '4ff13c3c0493e15313feda407b0dc20680539014')
 d2l.DATA_HUB['lm-enc-ann-v1'] = (  # D2L_RERUN=ret-ann, AMD EPYC 7502
     d2l.LM_DATA_URL + 'lm-enc-ann-v1.json',
     'aadf07c143fa936ca556c105644c35052c30bf18')
@@ -8195,15 +8267,30 @@ d2l.DATA_HUB['lm-rag-judge-labels-v1'] = (  # 200 pairs, frontier labels
 d2l.DATA_HUB['lm-rag-gen-base-v1'] = (  # closed, base, oracle, base-repeat
     d2l.LM_DATA_URL + 'lm-rag-gen-base-v1.jsonl',
     '78065bff472577631de5d7cac287323e77427e7f')
+d2l.DATA_HUB['lm-rag-gen-base-v2'] = (  # v1 with the model card's task
+    d2l.LM_DATA_URL + 'lm-rag-gen-base-v2.jsonl',
+    '9701221a6ec07e4c524b1ebd063af3dbdf5101f4')
 d2l.DATA_HUB['lm-rag-gen-stages-v1'] = (  # the five stage changes, dev
     d2l.LM_DATA_URL + 'lm-rag-gen-stages-v1.jsonl',
     '7c08b175e12fe3138742f46e14720df1ab45e277')
+d2l.DATA_HUB['lm-rag-gen-stages-v2'] = (  # v1 and the control fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v2.jsonl',
+    'bfd5ba324efcc683b06ded6d96c04b56ca806cb0')
+d2l.DATA_HUB['lm-rag-gen-stages-v3'] = (  # v2 with the model card's task
+    d2l.LM_DATA_URL + 'lm-rag-gen-stages-v3.jsonl',
+    '350230216f0f4a43c34b55bf6af720e537392b61')
 d2l.DATA_HUB['lm-rag-gen-fix-v1'] = (  # dev: fix; test: base, fix, stage
     d2l.LM_DATA_URL + 'lm-rag-gen-fix-v1.jsonl',
     'd94ed6b1f942ea5ca0df0292c5e7cc81bd834d50')
+d2l.DATA_HUB['lm-rag-gen-fix-v2'] = (  # card's task: fix-unsupported
+    d2l.LM_DATA_URL + 'lm-rag-gen-fix-v2.jsonl',
+    '2a980b4961883ecdd3eac2a4a31b8de2d621f004')
 d2l.DATA_HUB['lm-rag-cards-v1'] = (  # 31 base failures, labelled by a model
     d2l.LM_DATA_URL + 'lm-rag-cards-v1.jsonl',
     'dd66f91cc44070f7e2256c63d5e5caf912c4054e')
+d2l.DATA_HUB['lm-rag-cards-v2'] = (  # 26 base failures with the card's task
+    d2l.LM_DATA_URL + 'lm-rag-cards-v2.jsonl',
+    'ed510addb6e39fe5c54cab40a6283be4d908a80d')
 d2l.DATA_HUB['lm-rag-judge-v1'] = (  # verdicts on the base and stage answers
     d2l.LM_DATA_URL + 'lm-rag-judge-v1.jsonl',
     '8e128dbe149cf3f22b3d0979368c679c5d43c371')
@@ -8222,6 +8309,21 @@ d2l.DATA_HUB['lm-rag-judge-v3'] = (  # v2, missing verdicts judged again
 d2l.DATA_HUB['lm-rag-judge-cache-v3'] = (  # v2 and those longer replies
     d2l.LM_DATA_URL + 'lm-rag-judge-cache-v3.zip',
     '8711571c3c94646d17215c522aec15d7a3cd269c')
+d2l.DATA_HUB['lm-rag-judge-v4'] = (  # v3 and the verdicts on fixed-over
+    d2l.LM_DATA_URL + 'lm-rag-judge-v4.jsonl',
+    '0169be597e978728e6559cd191c91cb8e30281c5')
+d2l.DATA_HUB['lm-rag-judge-cache-v4'] = (  # v3 and those replies
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v4.zip',
+    'cf57712b285710ee87c0a7c56aab0600d13dac7a')
+d2l.DATA_HUB['lm-rag-judge-v5'] = (  # card's task: base and stages
+    d2l.LM_DATA_URL + 'lm-rag-judge-v5.jsonl',
+    '664337072badcb67b147684cd7935c77b4169ab0')
+d2l.DATA_HUB['lm-rag-judge-v6'] = (  # v5 and the verdicts on the fix run
+    d2l.LM_DATA_URL + 'lm-rag-judge-v6.jsonl',
+    '16fe5b4040697906e84fc99476e42c151fc93dd7')
+d2l.DATA_HUB['lm-rag-judge-cache-v6'] = (  # every reply with the card's task
+    d2l.LM_DATA_URL + 'lm-rag-judge-cache-v6.zip',
+    '3f6a32485e092cb233ab4fc5dec761843c8ba68a')
 
 def book_qa(split='dev', answerable=None, types=None, n=None, seed=0,
             root=os.path.join('..', 'data', 'lm')):
@@ -8655,7 +8757,9 @@ def classify_failure(result, item, judge_out, corpus, depth=50):
     none in the context), 'false_abstain' (one in the context, yet the
     answer abstains), 'ignored' (faithful to the context, not correct) or
     'unsupported' (not faithful). 'unjudged' when the judge gave no
-    verdict that the class depends on: such an answer has no class."""
+    verdict that the class depends on: such an answer has no class.
+
+    Defined in :numref:`sec_lm_rag_fixes`"""
     r = result._asdict() if hasattr(result, '_asdict') else result
     true = lambda v: isinstance(v, (bool, np.bool_)) and bool(v)
     given = lambda v: isinstance(v, (bool, np.bool_))
@@ -12879,15 +12983,34 @@ class CTRDataset(torch.utils.data.Dataset):
                              for i, v in enumerate(self.data[idx]['x'])])
         return feat + self.offsets, torch.tensor(self.data[idx]['y'])
 
-class GRU(d2l.RNN):
-    """The multilayer GRU model implemented with high-level APIs.
+class Timer:
+    """Record multiple running times.
 
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
-                          dropout=dropout)
+    Defined in :numref:`sec_minibatch_sgd`"""
+    def __init__(self):
+        self.times = []
+        self.start()
+
+    def start(self):
+        """Start the timer."""
+        self.tik = time.perf_counter()
+
+    def stop(self):
+        """Stop the timer and record the time in a list."""
+        self.times.append(time.perf_counter() - self.tik)
+        return self.times[-1]
+
+    def avg(self):
+        """Return the average time."""
+        return sum(self.times) / len(self.times)
+
+    def sum(self):
+        """Return the sum of time."""
+        return sum(self.times)
+
+    def cumsum(self):
+        """Return the accumulated time."""
+        return np.array(self.times).cumsum().tolist()
 
 _EVAL_ROWS = {}  # rows of the files read from the Hub in this process
 
@@ -17070,7 +17193,12 @@ _EMBEDDERS = {
     'Qwen/Qwen3-Embedding-0.6B': dict(
         pooling='last', padding_side='left',
         query_format='Instruct: {task}\nQuery:{query}')}
-BOOK_TASK = 'Given a question about the book, retrieve passages that answer it'
+# The task in the book's query instruction: the model cards' default. Our
+# own wording, 'Given a question about the book, retrieve passages that
+# answer it', lowered the embedder's MRR@10 on the dev questions, where
+# this one is level with no instruction (sec_lm_text_embeddings)
+BOOK_TASK = ('Given a web search query, retrieve relevant passages that '
+             'answer the query')
 # Registered chunk vectors (sec512 chunks, 'dense' view, float16) by embedder
 _R3_EMB_KEYS = {
     'Qwen/Qwen3-Embedding-0.6B': 'lm-enc-r3-emb-qwen3emb06b-sec512-v1'}
@@ -17375,6 +17503,341 @@ def _rag_records(paths, on=('config', 'qid')):
                          f'{df[dup].iloc[0][list(on)].tolist()}')
     return df
 
+RAG_GENERATOR = 'Qwen/Qwen3.5-9B'  # revision pinned in the notebooks
+RAG_RERANKER = 'Qwen/Qwen3-Reranker-0.6B'
+RAG_ARTIFACTS = {  # name: (registered key, the file a regeneration writes)
+    'rag-gen-base': ('lm-rag-gen-base-v2', 'lm-rag-gen-base.jsonl'),
+    'rag-gen-stages': ('lm-rag-gen-stages-v3', 'lm-rag-gen-stages.jsonl'),
+    'rag-gen-fix': ('lm-rag-gen-fix-v2', 'lm-rag-gen-fix.jsonl'),
+    'rag-judge': ('lm-rag-judge-v6', 'lm-rag-judge.jsonl'),
+    'rag-judge-cache': ('lm-rag-judge-cache-v6', 'lm-rag-judge-cache.zip'),
+    'rag-cards': ('lm-rag-cards-v2', 'lm-rag-cards.jsonl')}
+
+# The baseline: section chunks, hybrid retrieval, the first five chunks in
+# rank order within 3,000 tokens, the fixed prompt, 300 new tokens, batches
+# of eight prompts
+RAG_BASE = dict(chunking='sections', context='retrieved', k=5, budget=3000,
+                order='rank', rewrite=None, rerank_k=None, prompt='fixed',
+                verify=False, abstain_below=None, max_new_tokens=300,
+                batch=8, shuffle=None)
+RAG_CONFIGS = {  # name: what changes against the baseline
+    'closed': dict(RAG_BASE, context='none'),  # no passages: closed book
+    'base': RAG_BASE,
+    'oracle': dict(RAG_BASE, context='gold'),  # the gold chunks only
+    'base-repeat': dict(RAG_BASE, shuffle=1),  # same prompts, other batches
+    'fixed': dict(RAG_BASE, chunking='fixed', k=None, budget='base'),
+    'fixed-over': dict(RAG_BASE, chunking='fixed', k=None, budget='base',
+                       over=255),  # up to a window past the base's tokens
+    'rewrite-rerank': dict(RAG_BASE, rewrite='generator', rerank_k=50),
+    'reverse': dict(RAG_BASE, order='reverse'),
+    'budget-1500': dict(RAG_BASE, k=None, budget=1500),
+    'budget-6000': dict(RAG_BASE, k=None, budget=6000, batch=4)}
+RAG_STAGES = ['fixed', 'rewrite-rerank', 'reverse', 'budget-1500',
+              'budget-6000']
+RAG_CONTROLS = ['fixed-over']  # checks a stage's result; not a candidate
+RAG_FIXES = {  # failure class: its fix, written down before any is counted
+    'not_retrieved': dict(RAG_BASE, rewrite='fuse'),  # the query's ranking
+    'ranked_low': dict(RAG_BASE, rerank_k=100, k=8),
+    'ignored': dict(RAG_BASE, prompt='quote', order='edges',
+                    max_new_tokens=500),
+    'unsupported': dict(RAG_BASE, verify=True),
+    'false_answer': dict(RAG_BASE, abstain_below='train'),  # tuned on train
+    'false_abstain': dict(RAG_BASE, prompt='rule_after')}
+RAG_CONFIGS.update({f'fix-{c}': v for c, v in RAG_FIXES.items()})
+
+_RAG_LOADED = {}  # the generator and its tokenizer while they are loaded
+
+def _rag_rerun():
+    """The RAG runs this run regenerates (d2l.lm_rerun of RAG_ARTIFACTS):
+    regenerating the judge's cache regenerates the judge; the runs must
+    come in their order, each result registered before the next.
+
+    Defined in :numref:`sec_lm_rag`"""
+    rerun = d2l.lm_rerun(d2l.RAG_ARTIFACTS)
+    if 'rag-judge-cache' in rerun:  # the judge's cache is written with it
+        rerun.add('rag-judge')
+    order = ('run order, each result registered before the next: '
+             'rag-gen-base; rag-judge (until every answer is judged); '
+             'rag-cards; rag-gen-stages; rag-judge; rag-gen-fix; rag-judge')
+    assert not ('rag-judge' in rerun and rerun & {'rag-gen-stages',
+                                                  'rag-gen-fix'}), order
+    assert not ('rag-gen-fix' in rerun and rerun & {'rag-gen-base',
+                                                    'rag-gen-stages'}), order
+    return rerun
+
+def _rag_settings(name):
+    """What the answers of configuration name are made with (JSON): its
+    entry of RAG_CONFIGS, the models at their revisions, the corpus, the
+    BM25 parameters, the embedder's task and the question set. Reading the
+    records checks it."""
+    gen, emb, rr = d2l.RAG_GENERATOR, d2l.DEFAULT_EMBEDDER, d2l.RAG_RERANKER
+    rev = {gen: d2l.HF_REVISIONS[gen],
+           **{m: d2l.HF_ENCODER_REVISIONS[m] for m in (emb, rr)}}
+    return json.dumps(dict(
+        d2l.RAG_CONFIGS[name], generator=f'{gen}@{rev[gen]}',
+        corpus=d2l.R3_VERSION, embedder=f'{emb}@{rev[emb]}',
+        reranker=f'{rr}@{rev[rr]}', bm25=d2l.BookRetriever.BM25_PARAMS,
+        task=d2l.BOOK_TASK, qa='lm-book-qa-v2'), sort_keys=True)
+
+def _rag_run_path(name, rerun):
+    """The file of RAG artifact name that this run regenerates (name in
+    rerun), else the registered one, else None (not registered yet)."""
+    key, file = d2l.RAG_ARTIFACTS[name]
+    if name in rerun:
+        return os.path.join('..', 'data', 'lm', 'rerun', file)
+    return d2l.lm_registered(key)
+
+def _rag_generator():
+    """The generator (RAG_GENERATOR) and its tokenizer, loaded on first use,
+    on the first GPU (never split over two visible cards)."""
+    if not d2l._RAG_LOADED:
+        gpu = torch.cuda.is_available()
+        d2l._RAG_LOADED['gen'] = d2l.load_hf(
+            d2l.RAG_GENERATOR, d2l.HF_REVISIONS[d2l.RAG_GENERATOR],
+            dtype=torch.bfloat16 if gpu else torch.float32,
+            device_map={'': 0} if gpu else 'auto')
+    return d2l._RAG_LOADED['gen']
+
+def _rag_free_generator():
+    """Drop the generator and free its memory."""
+    d2l._RAG_LOADED.clear()
+    d2l.lm_free()
+
+def _rag_gold_context(item, corpus):
+    """The chunks of an item's gold spans (not the alternatives), in span
+    order."""
+    ids = [i for s in item['gold_spans'] for i in corpus.span_to_chunk_ids(
+        s['doc_id'], s['char_start'], s['char_end'])]
+    return [corpus[i] for i in dict.fromkeys(ids)]
+
+def _rag_run_config(name, items, retrievers, keep_gen, depth=50,
+                    budgets=None, threshold=None):
+    """Answer records of configuration name (RAG_CONFIGS) on items, in item
+    order. retrievers maps each chunking to its BookRetriever; keep_gen:
+    the generator stays on the card while the retriever works; depth: the
+    ranking kept; budgets (qid: tokens) sets each question's budget for a
+    configuration whose budget is 'base'; threshold: the reranker score
+    below which the pipeline abstains."""
+    c, items = d2l.RAG_CONFIGS[name], list(items)
+    budget = d2l.RAG_BASE['budget']
+    assert (c['budget'] == 'base') == (budgets is not None), name
+    order = list(range(len(items)))
+    if c['shuffle'] is not None:  # other batches for the same prompts
+        random.Random(c['shuffle']).shuffle(order)
+    items = [items[i] for i in order]
+    if not (keep_gen or c['rewrite']):  # retrieval without the generator
+        d2l._rag_free_generator()
+    assert keep_gen or not c['rewrite'], 'the rewriter needs the card too'
+    pipe = d2l.RAGPipeline(  # the generator joins when it is needed
+        retrievers[c['chunking']],
+        *(d2l._rag_generator() if c['rewrite'] else (None, None)),
+        k=c['k'], order=c['order'],
+        budget_tokens=budget if c['budget'] == 'base' else c['budget'],
+        rewrite=c['rewrite'], rerank_k=c['rerank_k'], depth=depth,
+        max_new_tokens=c['max_new_tokens'], prompt=c['prompt'],
+        verify=c['verify'], abstain_below=threshold)
+    if c['context'] == 'none':
+        ctx = [dict(query_used=None, ranked_ids=[], context=None)
+               for _ in items]
+    else:
+        ctx = pipe.prepare(items, None if budgets is None else
+                           [budgets[q['qid']] for q in items])
+    if c['context'] == 'gold':  # unanswerable items keep the retrieved
+        corpus = retrievers['sections'].corpus
+        for p, q in zip(ctx, items):
+            if q['answerable']:
+                p['context'] = d2l.assemble_context(
+                    d2l._rag_gold_context(q, corpus), budget, k=c['k'])[0]
+    pipe.model, pipe.tokenizer = d2l._rag_generator()
+    res = pipe.answer(items, batch_size=c['batch'], contexts=ctx)
+    recs = [dict(config=name, split=q['split'],
+                 settings=d2l._rag_settings(name),
+                 **{k: v for k, v in r._asdict().items() if k != 'question'})
+            for q, r in zip(items, res)]
+    return [r for _, r in sorted(zip(order, recs), key=lambda t: t[0])]
+
+def _rag_run_configs(names, items, *args, **kwargs):
+    """_rag_run_config for each name, printing its minutes and peak
+    memory."""
+    recs = []
+    for name in names:
+        t = time.time()
+        recs += d2l._rag_run_config(name, items, *args, **kwargs)
+        print(f'{name}: {(time.time() - t) / 60:.1f} min, {d2l.lm_peak()}')
+    return recs
+
+def _rag_answer_key(r):
+    """What a verdict depends on: the answer, its context and citations
+    (a regenerated answer needs a new verdict).
+
+    Defined in :numref:`sec_lm_rag`"""
+    return hashlib.sha1(json.dumps([r['answer'], list(r['context_ids']), [
+        int(n) for n in r['cited_ids']]]).encode()).hexdigest()[:16]
+
+def _rag_save_gens(name, recs):
+    """Save the answer records of RAG artifact name, a table keyed by
+    configuration and question."""
+    d2l.lm_save_table(d2l.RAG_ARTIFACTS[name][1], pd.DataFrame(recs),
+                      on=['config', 'qid'], key=d2l.RAG_ARTIFACTS[name][0])
+
+def _rag_load_gens(rerun):
+    """Every answer made so far, one row per (configuration, question),
+    with the answer_sha its verdict must carry; each configuration's
+    settings are checked against _rag_settings."""
+    df = d2l._rag_records([d2l._rag_run_path(n, rerun) for n in (
+        'rag-gen-base', 'rag-gen-stages', 'rag-gen-fix')])
+    for name, s in (df.groupby('config')['settings'] if len(df) else []):
+        assert (s == d2l._rag_settings(name)).all(), f'{name}: other settings'
+    if len(df):  # by the current rule, not the one of the run that wrote it
+        df['abstained'] = [d2l._rag_abstained(a) for a in df.answer]
+    return df.assign(answer_sha=[d2l._rag_answer_key(r)
+                                 for r in df.to_dict('records')])
+
+def _rag_load_judgments(path):
+    """Judgment records, verdicts as True, False or None; max_new_tokens
+    of rows from before the re-judging is the judge's default."""
+    df = d2l._rag_records([path], on=['config', 'qid', 'concurrency'])
+    for k in ('correct', 'faithful', 'supported'):
+        df[k] = [None if v is None or v != v else bool(v)
+                 for v in df.get(k, [])]
+    for k in ('backend', 'answer_sha'):
+        df[k] = df.get(k, [None] * len(df))
+    default = d2l.RAG_JUDGE_LOCAL['max_new_tokens']
+    df['max_new_tokens'] = [default if v is None or v != v else int(v)
+                            for v in df.get('max_new_tokens',
+                                            [None] * len(df))]
+    return df
+
+def _rag_clusters(items, corpus):
+    """The document of each item (qid: doc_id), the unit the bootstrap
+    resamples: that of its first gold span, else of its anchor chunk.
+
+    Defined in :numref:`sec_lm_rag`"""
+    return {q['qid']: (q['gold_spans'] or [{'doc_id': corpus[
+        q['anchor_ids'][0]]['doc_id']}])[0]['doc_id'] for q in items}
+
+def _rag_signflip_p(d, cluster, n=10_000):
+    """Two-sided sign-flip p of the mean of per-document mean
+    differences."""
+    m = np.array([d[cluster == c].mean() for c in np.unique(cluster)])
+    flips = np.random.default_rng(0).choice([-1.0, 1.0], (n, len(m)))
+    return np.mean(np.abs(flips @ m) >= np.abs(m.sum()) - 1e-12)
+
+def _rag_ci(a, b=None, cluster=None):
+    """The bootstrap of the mean of per-question scores a (or of a - b,
+    paired), NaNs dropped, resampling documents when there are 30 or
+    more, else questions: (result or None, by documents, a, b,
+    cluster)."""
+    import warnings  # not in the d2l library preamble
+    a = np.asarray(a, float)
+    b = None if b is None else np.asarray(b, float)
+    keep = ~np.isnan(a) & (True if b is None else ~np.isnan(b))
+    a, cluster = a[keep], np.asarray(cluster)[keep]
+    b = None if b is None else b[keep]
+    by_doc = len(set(cluster)) >= 30
+    if len(a) < 2:
+        return None, by_doc, a, b, cluster
+    with warnings.catch_warnings():  # few items: _rag_boot's * says so
+        warnings.simplefilter('ignore')
+        r = (d2l.bootstrap_ci(a, cluster=cluster if by_doc else None)
+             if b is None else d2l.paired_bootstrap(
+                 a, b, cluster=cluster if by_doc else None))
+    return r, by_doc, a, b, cluster
+
+def _rag_boot(a, b=None, cluster=None):
+    """Mean of per-question scores a (or of a - b, paired), NaNs dropped,
+    with a 95% interval that resamples documents, marked * below 100
+    questions; below 30 documents questions are resampled instead, marked
+    + (and a paired difference gets a document-level sign-flip p)."""
+    r, by_doc, a, b, cluster = d2l._rag_ci(a, b, cluster)
+    if r is None:
+        return 'n/a'
+    f = '.3f' if b is None else '+.3f'
+    out = f'{r.mean:{f}} [{r.ci[0]:{f}}, {r.ci[1]:{f}}]'
+    if by_doc:
+        return out + ('' if len(a) >= 100 else '*')
+    if b is None:
+        return out + '+'
+    p = d2l._rag_signflip_p(a - b, cluster)
+    return out + f'+ (sign-flip p {p:.3f})'
+
+def _rag_paired(a, b, col, mask=None):
+    """Paired difference a - b of score col on the questions both score
+    tables have (mask: a filter of the merged rows)."""
+    m = a.merge(b, on='qid', suffixes=('_a', '_b'))
+    if mask is not None:
+        m = m[mask(m)]
+    return d2l._rag_boot(m[f'{col}_a'], m[f'{col}_b'], m.cluster_a)
+
+def _rag_scores(config, split, gens, jud, retrievers, items, cluster,
+                concurrency=8):
+    """One row per judged answer of a configuration on a split, with
+    per-question scores (NaN where a score does not apply, and accuracy NaN
+    where the judge gave no verdict: an unjudged answer is left out). gens:
+    the answer records (_rag_load_gens); jud: the judgment records, of
+    which those judged at concurrency count; retrievers maps a chunking to
+    its BookRetriever; items: qid to item; cluster: qid to document."""
+    verdicts = ['correct', 'faithful', 'supported']
+    k, budget = d2l.RAG_BASE['k'], d2l.RAG_BASE['budget']
+    g = gens[(gens.config == config) & (gens.split == split)]
+    j = jud[jud.concurrency == concurrency][['config', 'qid', 'answer_sha']
+                                            + verdicts]
+    df = g.merge(j, on=['config', 'qid', 'answer_sha']).sort_values(
+        'qid', ignore_index=True)
+    corpus = retrievers[d2l.RAG_CONFIGS[config]['chunking']].corpus
+    its = [items[q] for q in df.qid]
+    ans = np.array([q['answerable'] for q in its])
+    rel = [d2l.gold_chunk_ids(q, corpus) for q in its]
+    cm = d2l.citation_metrics(df.to_dict('records'), its, corpus)
+    has_ctx = df.context_ids.map(len).to_numpy() > 0
+    answered = has_ctx & ~df.abstained.to_numpy(bool)
+    flag = lambda col: np.array([np.nan if v is None else float(v)
+                                 for v in df[col]])
+    return pd.DataFrame({
+        'qid': df.qid, 'cluster': [cluster[q] for q in df.qid],
+        'answerable': ans, 'type': [q['type'] for q in its],
+        'book_specific': ['general_knowledge' not in q['flags']
+                          for q in its],
+        'accuracy': flag('correct'),  # NaN: unjudged, left out
+        'faithful': np.where(answered, flag('faithful'), np.nan),
+        'supported': np.where(answered, flag('supported'), np.nan),
+        'cite_precision': np.where(ans, cm.precision, np.nan),
+        'cite_recall': np.where(ans, cm.recall, np.nan),
+        'abstained': df.abstained.astype(float),
+        'hit': np.where(ans, [float(bool(r & set(c))) for r, c in zip(
+            rel, df.context_ids)], np.nan),
+        f'recall@{k}': np.where(ans & has_ctx, [float(bool(r & set(x[:k])))
+                                                for r, x in zip(
+                                                    rel, df.ranked_ids)],
+                                np.nan),
+        f'cov@{budget}': np.where(ans & has_ctx, [float(d2l.cov_at_budget(
+            x, q, corpus, budget)) for x, q in zip(df.ranked_ids, its)],
+            np.nan),
+        'answer': df.answer, 'n_prompt_tokens': df.n_prompt_tokens,
+        'n_new_tokens': df.n_new_tokens, 'latency_s': df.latency_s,
+        'record': df.to_dict('records'),
+        'verdicts': df[verdicts].to_dict('records')})
+
+def _rag_ready(configs, split, gens, jud, rerun, concurrency=8):
+    """Whether every answer of each configuration on split carries a
+    verdict on that very answer (answer_sha); says which do not. Partial
+    or stale judgments are never reported: between judging runs a
+    configuration is left out, and a normal run stops on one."""
+    k = jud[jud.concurrency == concurrency]  # not judged: gens may be new
+    j = set(zip(k.config, k.qid, k.answer_sha))
+    missing = {}
+    for c in configs:
+        g = gens[(gens.config == c) & (gens.split == split)]
+        n = sum(x not in j for x in zip(g.config, g.qid, g.answer_sha))
+        if n or not len(g):
+            missing[c] = (f'{n} of {len(g)} answers lack a verdict' if len(g)
+                          else 'no answers')
+    if missing:
+        print(f'not ready on {split}: {missing}')
+        assert rerun or all(m == 'no answers' for m in missing.values()), (
+            'registered answers without verdicts: register the judge run')
+    return not missing
+
 d2l.DATA_HUB['SNLI'] = (
     'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
     '9fcde07509c7e87ec61c640c1b2753d9041758e4')
@@ -17393,6 +17856,34 @@ d2l.DATA_HUB['glove.42b.300d'] = (d2l.DATA_URL + 'glove.42B.300d.zip',
 
 d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
                            'c1816da3821ae9f43899be655002f6c723e91b88')
+
+def cuda_graphed(step, device, warmup=3):
+    """Return a function that calls step(). On a CUDA device it runs step()
+    eagerly for warmup calls on a side stream, then records one call as a
+    CUDA graph and replays it for every later call; elsewhere it calls step()
+    directly. Replay reuses the recorded memory addresses, so the optimizers
+    must keep their state and learning rate on the device (capturable=True,
+    learning rate as a tensor).
+
+    Defined in :numref:`sec_gan_convergence`"""
+    if torch.device(device).type != 'cuda':
+        return step
+    graph, calls = torch.cuda.CUDAGraph(), 0
+    def run():
+        nonlocal calls
+        calls += 1
+        if calls <= warmup:      # allocates optimizer state and workspaces
+            side = torch.cuda.Stream()
+            side.wait_stream(torch.cuda.current_stream())
+            with torch.cuda.stream(side):
+                step()
+            torch.cuda.current_stream().wait_stream(side)
+            return
+        if calls == warmup + 1:  # recording launches nothing
+            with torch.cuda.graph(graph):
+                step()
+        graph.replay()
+    return run
 
 def _warc_chunks(source, n_bytes=None, chunk=1 << 16):
     """The first n_bytes (None: all) of a local file or URL in chunks of

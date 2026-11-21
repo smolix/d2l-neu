@@ -1,206 +1,276 @@
 # Further Reading
 :label:`sec_mdl-optimization-further-reading`
 
-This section points past the chapter, and its topics are not of equal
-weight. Five bear directly on training networks and come first under their
-headings: the edge of stability, iterate averaging, interpolation, the
-Fisher matrix, and saddle-point methods. The others are classical
-optimization and numerical analysis, for when a problem calls for them.
-Textbooks and courses for what the chapter does teach are listed in its
-introduction (:numref:`chap_mdl-optimization`), and
-:numref:`sec_optimization-further-reading` surveys the practice of training.
-Nothing else in the book depends on this section.
+This section points beyond the chapter, and its topics are not all equally
+urgent. Five of them bear directly on training neural networks, so we place
+them first under their respective headings: the edge of stability, iterate
+averaging, interpolation, the Fisher matrix, and saddle-point methods. The
+remaining topics come from classical optimization and numerical analysis,
+useful to have on your radar for when a specific problem calls for them.
+Textbooks and courses covering the material the chapter does teach are
+listed in its introduction (:numref:`chap_mdl-optimization`), while
+:numref:`sec_optimization-further-reading` surveys the practical side of
+training. Nothing else in the book depends on this section, so feel free to
+browse selectively.
 
 ## Gradient Methods
 
 ### Self-Stabilization at the Edge of Stability
 
-Under full-batch gradient descent the sharpness of a network's loss rises to
-$2/\eta$ and stays there :cite:`Cohen.Kaur.Li.ea.2021`. The quadratic model
-of :numref:`subsec_mdl-edge-of-stability` explains why the top mode grows
-while the sharpness exceeds $2/\eta$, but not what brings the sharpness back
-down. :citet:`Damian.Nichani.Lee.2023` keep the cubic term of the Taylor
-expansion along the top eigenvector. The growing oscillation along that
-direction then moves the iterate against the gradient of the sharpness,
-which lowers it, so the sharpness and the oscillation cycle around $2/\eta$.
-Without the cubic term the oscillation simply grows.
+When you train a neural network with full-batch gradient descent, something
+surprising happens: the sharpness of the loss (its largest Hessian
+eigenvalue) climbs up to the stability limit $2/\eta$ and then hovers right
+around it rather than diverging :cite:`Cohen.Kaur.Li.ea.2021`. The quadratic
+model in :numref:`subsec_mdl-edge-of-stability` explains the first half of
+this behavior, showing why the top eigenmode grows as soon as the sharpness
+crosses $2/\eta$, yet a purely quadratic model predicts unbounded divergence
+and cannot explain what pulls the sharpness back down.
+:citet:`Damian.Nichani.Lee.2023` resolve the puzzle by keeping just one more
+term in the Taylor expansion: the cubic term along the top eigenvector. Once
+oscillations build along that direction, this cubic coupling pushes the
+iterate against the gradient of the sharpness itself. That lowers the
+sharpness back below $2/\eta$, letting the oscillation die down until the
+cycle repeats. Without the cubic term, the oscillation would simply grow
+unchecked.
 
 ### Optimal Polynomials and Conjugate Gradients
 
-Take the quadratic $f = \tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$ with
-eigenvalues in $[\mu, L]$ and minimizer $\mathbf{0}$. Every method whose
-$k$-th step lies in the span of the gradients seen so far arrives at
-$\mathbf{x}_k = p_k(\mathbf{A})\mathbf{x}_0$, for some polynomial $p_k$ of
-degree at most $k$ with $p_k(0) = 1$. The polynomial that is smallest on
-the whole interval is a scaled Chebyshev polynomial. Its maximum there is
-$2\rho^k/(1 + \rho^{2k})$, about $2\rho^k$, with the
-$\rho = (\sqrt\kappa - 1)/(\sqrt\kappa + 1)$ of heavy ball
+Consider minimizing a quadratic $f = \tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x}$
+whose eigenvalues lie in $[\mu, L]$ and whose minimizer is $\mathbf{0}$. Any
+first-order method whose $k$-th step stays inside the span of the gradients
+seen so far produces an iterate of the form
+$\mathbf{x}_k = p_k(\mathbf{A})\mathbf{x}_0$, where $p_k$ is a polynomial of
+degree at most $k$ satisfying $p_k(0) = 1$. Viewed this way, designing a fast
+gradient method on quadratics is equivalent to choosing a polynomial that is
+as small as possible across the interval $[\mu, L]$. The polynomial that
+achieves the smallest maximum over the whole interval is a scaled Chebyshev
+polynomial, whose peak value is $2\rho^k/(1 + \rho^{2k}) \approx 2\rho^k$,
+with the exact same contraction factor
+$\rho = (\sqrt\kappa - 1)/(\sqrt\kappa + 1)$ that appeared for heavy ball
 (:numref:`subsec_mdl-momentum-acceleration`). When the dimension $d$ is
-large compared with $k$, the eigenvalues can fill the interval, and no
-method of this kind then beats that rate in the worst case. Conjugate
-gradients finds at every step the polynomial that minimizes $f$ for the
-actual $\mathbf{A}$ and $\mathbf{x}_0$, without knowing $\mu$ or $L$, and in
-exact arithmetic stops after at most $d$ steps;
-:citet:`Nocedal.Wright.2006` (ch. 5) derive it and its preconditioned form.
+large compared with $k$, the eigenvalues can spread across the entire
+interval, so no method in this family can beat that worst-case rate. The
+conjugate gradient method does even better in practice: at every step it
+automatically finds the polynomial that minimizes $f$ for the *actual*
+matrix $\mathbf{A}$ and starting point $\mathbf{x}_0$, without ever needing
+to know $\mu$ or $L$, and in exact arithmetic it terminates after at most
+$d$ steps. :citet:`Nocedal.Wright.2006` (ch. 5) derive both the standard
+method and its preconditioned variant.
 
 ### Rates Certified by Semidefinite Programs
 
-The hand proof of :numref:`subsec_mdl-convergence-rates` gives the factor
-$1 - \mu/L$ per step, and the section quotes the exact $(1 - \mu/L)^2$,
-which halves the step count. The exact value comes from *performance
-estimation*. :citet:`Drori.Teboulle.2014` write the worst case of a method
-over all $L$-smooth convex functions as an optimization problem over the
-Gram matrix (all inner products) of its iterates and gradients, and bound it
-by a small semidefinite program, whose dual solution is a proof.
-:citet:`Taylor.Hendrickx.Glineur.2018` obtain the squared factor in this
-way. :citet:`Lessard.Recht.Packard.2016` treat the gradient as an unknown
-function inside a linear recursion, constrained only by $\mu$ and $L$, and
-certify rates by a semidefinite program whose size does not grow with the
-number of steps. This is how they found the function on which heavy ball
-fails (:numref:`subsec_mdl-momentum-acceleration`).
+Proving tight convergence rates by hand is famously delicate. Our hand proof
+in :numref:`subsec_mdl-convergence-rates` yielded a per-step contraction
+factor of $1 - \mu/L$, whereas the section quoted the exact factor
+$(1 - \mu/L)^2$, which cuts the required step count in half. That tighter
+bound comes from a technique called *performance estimation*. Instead of
+searching for a clever algebraic trick by hand, :citet:`Drori.Teboulle.2014`
+cast the worst-case performance of an algorithm over all $L$-smooth convex
+functions as an optimization problem over the Gram matrix (the table of all
+pairwise inner products) of its iterates and gradients. Bounding that
+problem leads to a small semidefinite program, whose dual solution
+literally produces a human-checkable proof.
+:citet:`Taylor.Hendrickx.Glineur.2018` obtain the squared factor in just
+this way. Taking a control-theoretic perspective,
+:citet:`Lessard.Recht.Packard.2016` view the gradient as an unknown
+nonlinearity inside a linear dynamical system constrained only by $\mu$ and
+$L$, certifying convergence rates with a semidefinite program whose size
+stays fixed regardless of the number of steps. Remarkably, the same
+machinery also uncovers counterexamples: it is how they discovered the
+function on which the heavy-ball method fails to converge
+(:numref:`subsec_mdl-momentum-acceleration`).
 
 ## Stochastic and Adaptive Methods
 
 ### Averaging with a Constant Step
 
-The noise floor of :numref:`subsec_mdl-stochastic-gradients` is proportional
-to $\eta$. A decaying step removes it but makes late progress slow. Averaging
-the iterates removes it differently. :citet:`Polyak.Juditsky.1992` show
-that the average of iterates with steps decaying more slowly than $1/k$
-reaches the asymptotically optimal covariance.
-:citet:`Bach.Moulines.2013` show that for least squares a *constant* step
-suffices: the averaged iterate reaches an error of order $1/n$ after $n$
-examples, without strong convexity.
+As we saw in :numref:`subsec_mdl-stochastic-gradients`, constant-step SGD
+settles into a noise floor proportional to the step size $\eta$. Shrinking
+$\eta$ over time eliminates that floor, but it also slows down late progress
+and makes the schedule sensitive to tuning. Averaging the iterates offers a
+cleaner way out: the individual iterates keep bouncing around the minimum,
+while their running average cancels the zero-mean noise.
+:citet:`Polyak.Juditsky.1992` show that averaging iterates obtained with
+step sizes decaying more slowly than $1/k$ achieves the asymptotically
+optimal covariance. For least squares, :citet:`Bach.Moulines.2013` go one
+step further and show that a *constant* step size is already enough: the
+averaged iterate reaches an error of order $1/n$ after $n$ examples, even
+without strong convexity.
 
 ### Interpolation
 
-When the model fits every example exactly, the per-example gradients vanish
-at the minimizer, the floor disappears, and on a strongly convex loss
-constant-step SGD converges linearly (:numref:`sec_mdl-variance-reduction`).
-:citet:`Ma.Bassily.Belkin.2018` analyze this regime and find, for least
-squares, the batch size beyond which larger batches stop helping. It is set
-by the ratio of per-example to full-batch curvature rather than by the
-noise. Under a *strong growth condition*, in which the gradient noise
-shrinks with the full gradient, SGD can even be accelerated
-:cite:`Vaswani.Bach.Schmidt.2019`.
+Classical stochastic optimization assumes that individual training examples
+pull the parameters in conflicting directions at the optimum, creating an
+unavoidable noise floor. Modern overparameterized neural networks often
+operate in a very different regime: when a model fits every training example
+exactly, every per-example gradient vanishes at the minimizer. The noise
+floor then disappears, and on a strongly convex loss constant-step SGD
+converges linearly without any variance reduction
+(:numref:`sec_mdl-variance-reduction`). :citet:`Ma.Bassily.Belkin.2018`
+analyze this interpolation regime for least squares and identify the
+critical batch size beyond which larger minibatches stop speeding up
+training; intriguingly, that threshold is governed by the ratio of
+per-example curvature to full-batch curvature rather than by gradient noise.
+Under a related *strong growth condition*, where the gradient variance
+shrinks in proportion to the squared norm of the full gradient, SGD can even
+be accelerated to match momentum rates :cite:`Vaswani.Bach.Schmidt.2019`.
 
 ### The Fisher and the Gauss–Newton Matrix
 
-K-FAC (:numref:`subsec_mdl-preconditioning-ladder`) approximates the Fisher
-matrix $\mathbf{F} = \mathbb{E}[\nabla\log p\,\nabla\log p^\top]$, with the
-labels drawn from the model :cite:`Amari.1998,Martens.Grosse.2015`. For
-softmax cross-entropy and squared loss, $\mathbf{F}$ equals the Gauss–Newton
-matrix $\mathbf{J}^\top\mathbf{H}_{\mathrm{out}}\mathbf{J}$, with
-$\mathbf{H}_{\mathrm{out}}$ the Hessian of the loss in the network's output.
-In general this needs the output to be the natural parameter of an
-exponential-family likelihood (:numref:`sec_mdl-exponential-family`). The
-*empirical* Fisher, built from the labels of the data, is cheaper and is
-often what code calls the Fisher, but it equals neither matrix in general
-:cite:`Martens.2020`.
+Second-order approximations such as K-FAC
+(:numref:`subsec_mdl-preconditioning-ladder`) aim to approximate the Fisher
+information matrix
+$\mathbf{F} = \mathbb{E}[\nabla\log p\,\nabla\log p^\top]$, where the
+expectation draws labels from the model's own predictive distribution
+:cite:`Amari.1998,Martens.Grosse.2015`. For standard losses like softmax
+cross-entropy and squared error, $\mathbf{F}$ coincides with the
+Gauss–Newton matrix $\mathbf{J}^\top\mathbf{H}_{\mathrm{out}}\mathbf{J}$,
+where $\mathbf{H}_{\mathrm{out}}$ is the Hessian of the loss with respect to
+the network's output. More generally, this identity holds whenever the
+network output parameterizes the natural parameter of an exponential-family
+likelihood (:numref:`sec_mdl-exponential-family`). A common pitfall in
+practice is substituting the *empirical* Fisher, which averages the same
+outer product over the ground-truth dataset labels instead of sampling from
+the model. It is cheaper to compute and is often labeled "Fisher" in
+codebases, yet in general it equals neither the true Fisher nor the
+Gauss–Newton matrix :cite:`Martens.2020`.
 
 ### Mirror Descent
 
-AdaGrad's metric view (:numref:`subsec_mdl-per-coordinate`) measures step
-length in a quadratic norm. On the probability simplex the natural steps are
-multiplicative. Mirror descent replaces $\tfrac12\|\mathbf{x} - \mathbf{y}\|^2$
-in the proximal form of the gradient step by a Bregman divergence
+In the metric view of AdaGrad (:numref:`subsec_mdl-per-coordinate`), step
+lengths are measured in a quadratic Euclidean norm. That geometry fits
+unconstrained spaces like $\mathbb{R}^d$, where all directions look alike,
+but it is awkward on the probability simplex, where coordinates must stay
+nonnegative and sum to one and multiplicative updates are far more natural.
+Mirror descent adapts the geometry of gradient descent by replacing the
+squared distance $\tfrac12\|\mathbf{x} - \mathbf{y}\|^2$ in the proximal
+form of the gradient step with a Bregman divergence
 $D_\phi(\mathbf{x}, \mathbf{y}) = \phi(\mathbf{x}) - \phi(\mathbf{y}) - \nabla\phi(\mathbf{y})^\top(\mathbf{x} - \mathbf{y})$
-:cite:`Nemirovski.Yudin.1983,Beck.Teboulle.2003`. With $\phi$ the negative
-entropy, the update becomes the exponentiated gradient
-$x_i \leftarrow x_i e^{-\eta g_i} / \sum_j x_j e^{-\eta g_j}$. For gradients
-bounded coordinatewise, the regret defined in that subsection then grows on
-the simplex in $d$ dimensions with $\sqrt{\log d}$ instead of the $\sqrt{d}$
-of projected gradient steps.
+:cite:`Nemirovski.Yudin.1983,Beck.Teboulle.2003`. Choosing $\phi$ to be the
+negative entropy turns the update into the exponentiated gradient rule
+$x_i \leftarrow x_i e^{-\eta g_i} / \sum_j x_j e^{-\eta g_j}$. When
+gradients are bounded coordinatewise, this choice improves the regret
+defined in :numref:`subsec_mdl-per-coordinate` on the $d$-dimensional
+simplex from the $\sqrt{d}$ scaling of projected gradient descent to a much
+gentler $\sqrt{\log d}$.
 
 ## Constraints and Duality
 
 ### Saddle-Point Methods
 
-The saddle points of :numref:`subsec_mdl-strong-duality` are also the
-solutions of two-player games such as GAN training
-(:numref:`sec_basic_gan`). Simultaneous gradient descent and ascent spirals
-away from the saddle of $xy$ for every step size (exercise
+The saddle points we met in Lagrangian duality
+(:numref:`subsec_mdl-strong-duality`) also arise directly as the equilibria
+of two-player games, including GAN training (:numref:`sec_basic_gan`).
+Unfortunately, the naive strategy of simultaneous gradient descent on one
+player and gradient ascent on the other behaves badly: on the simple
+bilinear game $xy$, it spirals outward from the saddle point for every
+positive step size (exercise
 :exref:`ex_mdl-lagrangian-duality-descent-ascent`). The extragradient method
-takes a trial step, evaluates the gradient there, and uses that gradient for
-the actual step from the original point. On convex–concave problems with
-Lipschitz gradients its averaged iterates converge at the rate $O(1/k)$
-:cite:`Nemirovski.2004`. Optimistic methods reuse the previous gradient in
-place of the trial one, which saves a gradient evaluation per step, and
-:citet:`Daskalakis.Ilyas.Syrgkanis.ea.2018` apply them to GANs.
+breaks this spiral by peeking ahead: it takes a trial step, evaluates the
+gradient at that lookahead point, and applies that gradient from the
+original iterate. On convex–concave problems with Lipschitz gradients, its
+averaged iterates converge at the rate $O(1/k)$ :cite:`Nemirovski.2004`.
+Optimistic methods achieve a similar stabilizing effect at half the gradient
+cost by reusing the previous step's gradient as a cheap proxy for the trial
+gradient, an idea that :citet:`Daskalakis.Ilyas.Syrgkanis.ea.2018` apply
+successfully to stabilize GAN training.
 
 ### Problem Classes and Interior-Point Methods
 
-The worked duals of :numref:`subsec_mdl-worked-duals` are quadratic
-programs. Convex problems come in nested classes: linear programs, quadratic
-programs, second-order cone programs, and semidefinite programs.
-Interior-point methods solve each to high accuracy in polynomial time. They
-replace the constraints $g_i(\mathbf{x}) \le 0$ by the barrier
-$-\tfrac1s\sum_i \log(-g_i(\mathbf{x}))$ and follow the minimizers as $s$
-grows, along the *central path*. At each such minimizer the numbers
-$-1/(s\,g_i(\mathbf{x}))$ are dual feasible multipliers, so the duality gap
-is $m/s$ for $m$ constraints, a certificate of the kind
-:numref:`sec_mdl-lagrangian-duality` builds by hand
+The dual problems we solved by hand in :numref:`subsec_mdl-worked-duals` are
+quadratic programs, which sit inside a standard nested hierarchy of convex
+optimization classes: linear programs, quadratic programs, second-order cone
+programs, and semidefinite programs. Modern interior-point methods solve all
+of these classes to high accuracy in polynomial time. Rather than handling
+the inequalities $g_i(\mathbf{x}) \le 0$ directly, they add a smooth
+logarithmic barrier $-\tfrac1s\sum_i \log(-g_i(\mathbf{x}))$ to the
+objective and track the unconstrained minimizers as $s$ grows, tracing out
+the *central path* toward the boundary. At each point along this path, the
+quantities $-1/(s\,g_i(\mathbf{x}))$ automatically form dual-feasible
+multipliers, certifying a duality gap of $m/s$ for $m$ constraints. This
+gives an automated version of the optimality certificates we built by hand in
+:numref:`sec_mdl-lagrangian-duality`
 :cite:`Boyd.Vandenberghe.2004,Nesterov.2018`.
 
 ### Operator Splitting and ADMM
 
-The proximal steps of :numref:`subsec_mdl-proximal-operators` handle a
-smooth loss plus one simple nonsmooth term. Problems of the form
-$\min_{\mathbf{x}} f(\mathbf{x}) + h(\mathbf{A}\mathbf{x})$, with both terms
-convex and possibly nonsmooth, have the Fenchel dual
+The proximal gradient steps of :numref:`subsec_mdl-proximal-operators`
+handle a smooth loss plus a single simple nonsmooth penalty. Many structured
+problems instead have the composite form
+$\min_{\mathbf{x}} f(\mathbf{x}) + h(\mathbf{A}\mathbf{x})$, where both
+terms are convex and possibly nonsmooth; its Fenchel dual is
 $\max_{\mathbf{y}} -f^*(-\mathbf{A}^\top\mathbf{y}) - h^*(\mathbf{y})$
-:cite:`Rockafellar.1970`. Introducing $\mathbf{z} = \mathbf{A}\mathbf{x}$
-and a quadratic penalty $\tfrac{\tau}{2}\|\mathbf{A}\mathbf{x} - \mathbf{z}\|^2$
-in the Lagrangian gives the alternating direction method of multipliers. It
-minimizes over $\mathbf{x}$, then over $\mathbf{z}$ (a proximal step on $h$),
-then takes a dual ascent step on $\mathbf{y}$, and it converges for every
-$\tau > 0$. :citet:`Boyd.Parikh.Chu.ea.2011` use it to split problems across
-machines; :citet:`Parikh.Boyd.2014` list closed-form proximal operators for
-common functions.
+:cite:`Rockafellar.1970`. To decouple the two terms so each can be handled
+separately, we introduce an auxiliary variable $\mathbf{z} = \mathbf{A}\mathbf{x}$
+and add a quadratic penalty $\tfrac{\tau}{2}\|\mathbf{A}\mathbf{x} - \mathbf{z}\|^2$
+to the Lagrangian. Minimizing alternately over $\mathbf{x}$, then over
+$\mathbf{z}$ (which reduces to a proximal step on $h$), and finally taking a
+dual ascent step on $\mathbf{y}$ gives the alternating direction method of
+multipliers (ADMM), which converges for every $\tau > 0$.
+:citet:`Boyd.Parikh.Chu.ea.2011` show how this splitting naturally
+distributes large optimization problems across machines, and
+:citet:`Parikh.Boyd.2014` provide a handy catalog of closed-form proximal
+operators for common regularizers and constraints.
 
 ### The Frank–Wolfe Method
 
-Projected gradient descent needs a projection, which onto a nuclear-norm ball
-(matrices whose singular values sum to at most a bound) costs a full SVD.
-The Frank–Wolfe method :cite:`Frank.Wolfe.1956` minimizes
-the linearization over the set instead,
-$\mathbf{s}_k = \operatorname{argmin}_{\mathbf{s} \in C} \nabla f(\mathbf{x}_k)^\top\mathbf{s}$,
-and moves to $\mathbf{x}_{k+1} = (1 - \gamma_k)\mathbf{x}_k + \gamma_k\mathbf{s}_k$
-with $\gamma_k = 2/(k + 2)$. Over the nuclear-norm ball this needs only the
-top singular pair of the gradient, and over the simplex only its smallest
-coordinate. The rate is
-$O(LD^2/k)$ on a set of diameter $D$, and the number
-$\nabla f(\mathbf{x}_k)^\top(\mathbf{x}_k - \mathbf{s}_k)$, an upper bound on
-$f(\mathbf{x}_k) - f^\star$, comes free with every step :cite:`Jaggi.2013`.
+Projected gradient descent requires projecting onto the constraint set at
+every iteration. That is effortless for a box or an $\ell_2$ ball, but on a
+nuclear-norm ball (matrices whose singular values sum to at most a given
+bound) a single projection costs a full SVD. The Frank–Wolfe method
+:cite:`Frank.Wolfe.1956` avoids projection altogether by minimizing a linear
+approximation of the objective over the constraint set instead: it finds
+$\mathbf{s}_k = \operatorname{argmin}_{\mathbf{s} \in C} \nabla f(\mathbf{x}_k)^\top\mathbf{s}$
+and takes a convex combination
+$\mathbf{x}_{k+1} = (1 - \gamma_k)\mathbf{x}_k + \gamma_k\mathbf{s}_k$
+with step size $\gamma_k = 2/(k + 2)$. On the nuclear-norm ball this linear
+subproblem needs only the top singular vector pair of the gradient, and on
+the probability simplex it reduces to finding the single smallest
+coordinate. The method converges at rate $O(LD^2/k)$ on a set of diameter
+$D$, and as a bonus the quantity
+$\nabla f(\mathbf{x}_k)^\top(\mathbf{x}_k - \mathbf{s}_k)$ provides an
+upper bound on $f(\mathbf{x}_k) - f^\star$ at every step with no extra
+computation :cite:`Jaggi.2013`.
 
 ## Floating Point
 
 ### Probabilistic Rounding-Error Analysis
 
-The summation bounds of :numref:`subsec_mdl-catastrophic-cancellation` grow
-like $nu$ for $n$ terms added in order, while measured errors are usually
-far smaller. :citet:`Higham.Mary.2019` model the rounding errors as
-independent random variables with mean zero and obtain bounds of order
-$\sqrt{n}\,u$ that hold with high probability. The model fails when the
-rounding errors are correlated, as in that subsection's sum of $10^7$ copies
-of $0.1$, where long runs of additions round the same way.
+The worst-case summation bounds in
+:numref:`subsec_mdl-catastrophic-cancellation` grow linearly as $nu$ when
+$n$ terms are added in sequence, yet measured rounding errors in practice
+are usually much smaller. The reason is that worst-case analysis assumes
+every single rounding error pushes in the same adversarial direction.
+:citet:`Higham.Mary.2019` instead model the individual rounding errors as
+independent, zero-mean random variables and prove bounds of order
+$\sqrt{n}\,u$ that hold with high probability, matching the random-walk
+cancellation typically seen in experiments. Just as importantly, their
+analysis clarifies when the optimistic $\sqrt{n}\,u$ behavior breaks down:
+whenever the rounding errors are strongly correlated, as in that
+subsection's sum of $10^7$ copies of $0.1$, where long stretches of
+additions all round in the same direction.
 
 ### Growth Factors and Iterative Refinement
 
-:numref:`subsec_mdl-conditioning-revisited` calls LU factorization with
-pivoting backward stable in practice. Its backward error is bounded by a
-low-degree polynomial in $n$ times $\rho_n u$, where the *growth factor*
-$\rho_n$ is the largest entry produced during elimination divided by the
-largest entry of $\mathbf{A}$. Wilkinson's example reaches
-$\rho_n = 2^{n-1}$, yet $\rho_n$ stays small for almost all matrices met in
-practice, and QR factorization removes the worst case at about twice the
-cost :cite:`Higham.2002,Trefethen.Bau.1997`. Mixed-precision iterative
-refinement factors $\mathbf{A}$ in fp32, computes residuals in fp64, and
-solves for corrections with the cheap factors; the last exercise of
-:numref:`sec_mdl-numerical-stability-conditioning` finds how ill conditioned
-$\mathbf{A}$ may be before it fails. Solving each correction with GMRES, an
-iterative solver for general linear systems, preconditioned by the
-low-precision factors, extends it to far worse conditioned matrices
+In :numref:`subsec_mdl-conditioning-revisited`, we noted that LU
+factorization with partial pivoting is backward stable in practice. Strictly
+speaking, its backward error is bounded by a low-degree polynomial in $n$
+times $\rho_n u$, where the *growth factor* $\rho_n$ measures the ratio of
+the largest intermediate entry created during elimination to the largest
+entry of $\mathbf{A}$. In the worst case, Wilkinson's famous pathological
+matrix drives $\rho_n$ all the way to $2^{n-1}$. Yet for almost every matrix
+encountered in real computations $\rho_n$ remains modest, and if you need an
+ironclad guarantee, QR factorization eliminates exponential growth
+altogether at roughly twice the arithmetic cost
+:cite:`Higham.2002,Trefethen.Bau.1997`. To recover high accuracy without
+paying for double precision everywhere, mixed-precision iterative refinement
+factors $\mathbf{A}$ cheaply in fp32, evaluates the residual in fp64, and
+solves for a correction using the low-precision factors; the final exercise
+of :numref:`sec_mdl-numerical-stability-conditioning` determines just how
+ill conditioned $\mathbf{A}$ can get before this basic loop stalls. Using
+the low-precision factors instead as a preconditioner inside GMRES, an
+iterative solver for general linear systems, pushes mixed-precision
+refinement to far more severely conditioned matrices
 :cite:`Carson.Higham.2018`.
 
 [Discussions](https://d2l.discourse.group/t/36861)

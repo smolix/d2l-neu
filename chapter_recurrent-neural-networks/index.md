@@ -1,47 +1,49 @@
 # Sequence Models
 :label:`chap_rnn`
 
-After two chapters on images, the last chapter of this part turns to
-sequences. Every model so far reads an input of fixed shape, such as a
-$28 \times 28$ image, and treats each example on its own. A sentence, a recording, or a series of measurements is different:
-it varies in length, and its entries depend on each other and on their
-order. Take the opening sentence of H. G. Wells' *The Time Machine*, which
-the models of this chapter read: "The Time Traveller (for so it will be
-convenient to speak of him) was expounding a recondite matter to us." To
-guess its last word, a reader uses the nineteen words before it, in order.
-How can a model do the same when the text before it can have any length?
+Having spent two chapters on images, we close this part of the book by turning
+to sequential data. Every model we have built so far expects an input of fixed
+shape—a tabular vector of attributes or a $28 \times 28$ grid of pixels—and
+treats each example independently. A sentence, an audio recording, a video, or
+a stream of sensor measurements behaves quite differently: its length varies
+from one example to the next, and its entries depend strongly on one another
+and on the order in which they arrive. Consider the opening sentence of H. G.
+Wells' *The Time Machine*, which serves as our running dataset throughout this
+chapter: "The Time Traveller (for so it will be convenient to speak of him)
+was expounding a recondite matter to us." Guessing the final word requires
+reading the nineteen words before it in order. How can a single model make
+that prediction when the preceding text might be arbitrarily long?
 
-Claude Shannon made a game of this. In 1951 he measured how predictable
-English is by asking people to guess a text one letter at a time. A
-*language model* plays the same game: it predicts each token, which may be
-a character or a word, from the tokens before it. A model that can predict
-can also write, by feeding each token it chooses back in as its next input.
+Claude Shannon framed this question as a guessing game :cite:`Shannon.1951`,
+estimating the predictability of printed English by asking human readers to
+guess a passage one character at a time. A *language model* plays the same
+game: it assigns a probability to the next *token*—whether a character, a
+subword, or a whole word—given the tokens that preceded it, and can generate
+new text by feeding each chosen token back in as its next input.
 
-The difficulty is the text already read, which grows with every token. A
-window of the last few tokens forgets everything older. A *recurrent neural
-network* instead summarizes all of it in a *hidden state* of fixed size,
-which the same layer updates after every token. Today's large language
-models also predict one token at a time, so what this chapter teaches about
-cutting text into tokens, scoring a model, and turning its predictions into
-text carries over to them.
+Because the history already read grows with every step, restricting attention
+to a fixed window of recent tokens discards everything earlier. A *recurrent
+neural network* (RNN) instead maintains a fixed-size *hidden state* that
+summarizes the sequence read so far, updating that state with the same
+parameters after every token. Even where modern large language models replace
+recurrence with attention (:numref:`chap_attention`) or structured state space
+models (:numref:`chap_modern_rnn`), the core machinery of this
+chapter—subword tokenization, perplexity and bits-per-byte evaluation, and
+autoregressive decoding—carries over unchanged.
 
-The chapter sets up the problem before any recurrent network appears. We
-predict a sequence from its own past and see why forecasting many steps ahead
-is harder than forecasting one (:numref:`sec_sequence`), cut text into tokens
-(:numref:`sec_text-sequence`), and build language models that only count,
-which also gives us the measure by which language models are compared
-(:numref:`sec_language-model`). The counts run out, and the recurrent network
-is our answer. :numref:`sec_rnn` replaces the window by a hidden state, and
-:numref:`sec_rnn-scratch` implements and trains the model. We then put it
-to the test: against the counts, without the safeguard that its training
-turns out to need, and position by position, to see how much of what it
-has read the model uses. :numref:`sec_bptt` explains what we find
-from the gradients of that same model. The last section,
-:numref:`sec_decoding`, turns next-token distributions into text.
-
-Gated cells and state space models, which let a recurrent network remember
-further back, follow in :numref:`chap_modern_rnn`, and attention, which
-keeps every past token, in :numref:`chap_attention`.
+We begin by formulating autoregressive sequence forecasting and observing why
+multistep rollouts degrade much faster than one-step predictions
+(:numref:`sec_sequence`). Next, we convert raw text into subword token
+sequences via byte-level Byte Pair Encoding (:numref:`sec_text-sequence`) and
+build count-based $n$-gram language models alongside the perplexity and
+bits-per-byte metrics (:numref:`sec_language-model`). We then formulate and
+implement recurrent neural network language models from scratch and with
+high-level APIs (:numref:`sec_rnn`), stabilizing training with gradient
+clipping and comparing the learned representations against Kneser--Ney
+$n$-grams. Finally, :numref:`sec_bptt` derives backpropagation through time to
+explain why vanilla RNN gradients vanish or explode, and
+:numref:`sec_decoding` studies greedy search, beam search, and truncated
+sampling methods for generating text.
 
 ```toc
 :maxdepth: 2
@@ -50,48 +52,9 @@ sequence
 text-sequence
 language-model
 rnn
-rnn-implementation
 bptt
 decoding
 ```
-
-## Resources and Further Reading {.unnumbered}
-
-The resources below accompany the sections of this chapter; each names the
-section it goes with. All are freely accessible online except where noted.
-
-**Books**
-
-- [Speech and Language Processing, 3rd ed. — Jurafsky & Martin](https://web.stanford.edu/~jurafsky/slp3/) — free draft (complete PDF, updated January 2026); Chapter 2 (words and tokens) and Chapter 3 ($n$-gram language models) are the standard treatment of :numref:`sec_text-sequence` and :numref:`sec_language-model`, and treat at length the interpolated and discounted smoothing schemes, of which :numref:`sec_language-model` derives Kneser–Ney; Chapter 13 covers RNNs and LSTMs.
-- [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 10 (Sequence Modeling) develops recurrent networks, teacher forcing, and backpropagation through time with fuller gradient derivations than :numref:`sec_rnn` and :numref:`sec_bptt`, and introduces the gated architectures of :numref:`chap_modern_rnn`.
-- [Natural Language Processing — Jacob Eisenstein](https://github.com/jacobeisenstein/gt-nlp-class/blob/master/notes/eisenstein-nlp-notes.pdf) — free PDF of the notes that became *Introduction to Natural Language Processing* (MIT Press, 2019); Chapter 6 treats $n$-gram and RNN language models as one story, the step this chapter takes from :numref:`sec_language-model` to :numref:`sec_rnn`.
-
-**Courses and video lectures**
-
-- [Stanford CS224N: Natural Language Processing with Deep Learning](https://web.stanford.edu/class/cs224n/) — free slides and notes, with complete lecture videos on YouTube; its language-modeling and RNN lectures cover the material from :numref:`sec_language-model` to :numref:`sec_bptt`, the vanishing-gradient argument included, before turning to transformers.
-- [Neural Networks: Zero to Hero — Andrej Karpathy](https://karpathy.ai/zero-to-hero.html) — free video series; the *makemore* lectures build character-level language models from a counting bigram model up to neural networks, the path from :numref:`sec_language-model` to :numref:`sec_rnn-scratch` typed live, and "Let's build the GPT Tokenizer" builds the byte-level BPE of :numref:`sec_text-sequence`.
-- [MIT 6.S191: Introduction to Deep Learning — Amini & Amini](https://introtodeeplearning.com/) — free, updated annually; the "Deep Sequence Modeling" lecture is a fast, visual pass over sequence tasks, RNNs, and their gradient pathologies (:numref:`sec_rnn`, :numref:`sec_bptt`).
-
-**Foundational papers**
-
-- [Prediction and Entropy of Printed English — Claude E. Shannon (1951), *Bell System Technical Journal*](https://www.princeton.edu/~wbialek/rome/refs/shannon_51.pdf) — free scan; frames language as a game of guessing the next symbol and measures the entropy of English with human predictors, the origin of the perplexity and bits per byte of :numref:`sec_language-model`.
-- [Finding Structure in Time — Jeffrey Elman (1990), *Cognitive Science*](https://doi.org/10.1207/s15516709cog1402_1) — paywalled, widely reproduced online; introduces the network of :numref:`sec_rnn`, whose hidden state, fed back on itself, discovers word boundaries and grammatical categories from raw sequences.
-- [A Neural Probabilistic Language Model — Bengio, Ducharme, Vincent & Jauvin (2003), *JMLR*](https://jmlr.org/papers/v3/bengio03a.html) — free; replaces the sparse count tables of :numref:`sec_language-model` by learned embeddings and a neural network, the neural $n$-gram of :numref:`sec_rnn` and the embedding and softmax layers of :numref:`sec_rnn-scratch`.
-- [A Hierarchical Bayesian Language Model Based on Pitman–Yor Processes — Yee Whye Teh (2006), *ACL*](https://aclanthology.org/P06-1124/) — free; gives the Kneser–Ney smoothing of :numref:`sec_language-model` a Bayesian reading, as approximate inference in a hierarchical Pitman–Yor process, a model that the sequence memoizer of Wood et al. (2011) extends to contexts of unbounded length.
-- [Recurrent Neural Network Based Language Model — Mikolov et al. (2010), *Interspeech*](https://www.isca-archive.org/interspeech_2010/mikolov10_interspeech.html) — free; shows that RNN language models beat smoothed $n$-grams in practice, with the model of :numref:`sec_rnn-scratch` evaluated by perplexity as in :numref:`sec_language-model`.
-- [On the Difficulty of Training Recurrent Neural Networks — Pascanu, Mikolov & Bengio (2013), *ICML*](https://proceedings.mlr.press/v28/pascanu13.html) — free; the analysis of vanishing and exploding gradients in :numref:`sec_bptt` and the source of the gradient-norm clipping of :numref:`sec_rnn-scratch`. The difficulty itself was first formalized by [Bengio, Simard & Frasconi (1994)](https://doi.org/10.1109/72.279181) (paywalled).
-- [Neural Machine Translation of Rare Words with Subword Units — Sennrich, Haddow & Birch (2016), *ACL*](https://aclanthology.org/P16-1162/) — free; brought byte pair encoding into NLP, the merge algorithm implemented from scratch in :numref:`sec_text-sequence`.
-- [Language Models are Unsupervised Multitask Learners — Radford et al. (2019)](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) — free; the GPT-2 report, source of the byte-level BPE with regex pre-tokenization that :numref:`sec_text-sequence` rebuilds and checks token for token against `tiktoken`, and of the top-$k$ sampling of :numref:`sec_decoding`.
-- [The Curious Case of Neural Text Degeneration — Holtzman et al. (2020), *ICLR*](https://arxiv.org/abs/1904.09751) — free; explains why maximization loops and why the unreliable tail spoils pure sampling, and proposes nucleus (top-$p$) sampling, the argument :numref:`sec_decoding` follows.
-- [Turning Up the Heat: Min-p Sampling for Creative and Coherent LLM Outputs — Nguyen et al. (2025), *ICLR*](https://arxiv.org/abs/2407.01082) — free; the min-$p$ rule in the sampler of :numref:`sec_decoding`, which keeps tokens in proportion to the model's confidence, with evidence that it degrades less than top-$p$ at high temperatures.
-
-**Tutorials, notes, and interactive**
-
-- [The Unreasonable Effectiveness of Recurrent Neural Networks — Andrej Karpathy](https://karpathy.github.io/2015/05/21/rnn-effectiveness/) — free; the 2015 essay in which character-level RNN language models write Shakespeare, Wikipedia markup, LaTeX, and C code, and single hidden units track quotes and line lengths; a larger version of what :numref:`sec_rnn-scratch` trains, sampled as in :numref:`sec_decoding`.
-- [minbpe — Andrej Karpathy](https://github.com/karpathy/minbpe) — free; a minimal, commented byte-level BPE codebase (the companion to the tokenizer video above) that reproduces GPT-4's `tiktoken` tokenizer, a second implementation to compare with the one of :numref:`sec_text-sequence`.
-- [Tiktokenizer](https://tiktokenizer.vercel.app/) — free, nothing to install; shows how production tokenizers segment text as it is typed, a quick way to repeat the fertility and digit experiments of :numref:`subsec_fertility-digits-glitch` on GPT-2 and current vocabularies.
-- [How to Generate Text — Patrick von Platen (Hugging Face)](https://huggingface.co/blog/how-to-generate) — free; greedy search, beam search, top-$k$, and top-$p$ with runnable `transformers` code, the experiments of :numref:`sec_decoding` repeated on models large enough to show each failure clearly.
-- [Hugging Face LLM Course, Chapter 6: Tokenizers](https://huggingface.co/learn/llm-course/en/chapter6/1) — free; trains and dissects production BPE, WordPiece, and Unigram tokenizers with the `tokenizers` library, a companion to the production tokenizers examined at the end of :numref:`sec_text-sequence`.
 
 <!-- slides -->
 

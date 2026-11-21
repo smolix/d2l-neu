@@ -1,53 +1,18 @@
 # Linear Classification
 :label:`chap_classification`
 
-The previous chapter taught a linear model to predict a number, such as the
-price of a house. Many questions ask for a category instead. A photo in an
-online clothing store shows a shirt, a coat or a sandal, not 5.5 of anything.
-We might be tempted to number the categories and regress on the numbers
-anyway. The model would then treat a name as a quantity, as if a pullover lay
-halfway between a trouser and a dress. Nor can a single number express doubt,
-and a classifier that cannot say "probably a shirt, possibly a pullover" is
-of limited use. How should a model predict a category, and when can we trust
-its prediction?
+In :numref:`chap_regression`, our goal was to predict a continuous quantity such as the sale price of a house. Many real-world tasks, however, ask for a discrete category instead: an online catalog photo depicts a shirt, a coat, or a sandal—never "5.5" of anything. Simply numbering the categories 1 through 10 and running linear regression fails badly, because it imposes an arbitrary ordering as though a pullover lay halfway between a pair of trousers and a dress, while leaving the model unable to express calibrated uncertainty ("most likely a shirt, possibly a pullover").
 
-Statisticians had a good answer long before anyone trained a neural network.
-In 1936 Ronald Fisher wanted to tell species of iris apart from four
-measurements of their flowers, and he did it with a weighted sum of the
-measurements, a linear score. Softmax regression, the model of this chapter,
-does much the same. It gives each class its own linear score and turns the
-scores into a probability distribution over the classes. Pleasantly little
-else has to change. Maximum likelihood, which turned Gaussian noise into the
-squared loss in :numref:`chap_regression`, now yields the cross-entropy loss,
-and minibatch stochastic gradient descent trains the model as before. The
-model is worth learning properly: nearly every classifier in this book, up to
-the largest language models, ends in the same softmax and is trained with the
-same loss.
+Happily, almost all of our regression training machinery—minibatch data loaders, vectorized forward passes, automatic differentiation, and minibatch SGD—carries straight over to *classification*. Only three ingredients change: we represent unordered categories via *one-hot vectors*, compute one linear score (*logit*) per category and normalize them via the *softmax* function into a probability distribution, and replace squared error with the *cross-entropy loss* (derived from maximum likelihood under a categorical label model, just as squared error arose from Gaussian noise). Virtually every neural classifier in this book—right up to today's largest language models—terminates in this exact softmax layer and trains under this exact loss.
 
-Evaluation is where classification really differs from regression. A
-probability is not yet a decision. Accuracy can flatter a classifier when one
-class is rare. And a test set vouches only for data that resemble it.
+Where classification departs sharply from regression is in *evaluation* and *deployment*. A predicted probability is not yet an action; raw accuracy can mislead whenever one class is rare or different mistakes carry asymmetric costs; a finite test set carries statistical error bars that erode under repeated reuse; and real deployment environments often shift away from the training distribution. This chapter unfolds in six sections:
 
-The chapter therefore has two halves. The first four sections build the
-classifier: we derive the model and its loss (:numref:`sec_softmax`), meet
-the clothing images on which we try it (:numref:`sec_fashion_mnist`), and
-implement the model twice. The version we write by hand
-(:numref:`sec_softmax_scratch`) trains to about 83% accuracy and shows us,
-in its mistakes and in its weights, what a linear classifier can and cannot
-see; it also fails numerically in an instructive way, which the framework's
-loss (:numref:`sec_softmax_concise`) repairs. The last three sections ask
-what that 83% is worth. Accuracy hides a great deal, and the predicted
-probabilities may or may not mean what they say
-(:numref:`sec_classification`). A number measured on 10,000 images has an
-error bar, which shrinks when the images are fresh and widens when the same
-test set is consulted again and again
-(:numref:`chap_classification_generalization`). And the data at deployment
-differ from the training data, as to some degree they always do
-(:numref:`sec_environment-and-distribution-shift`).
-
-Throughout the chapter, each example belongs to exactly one class, and the
-classes have no order. The next chapter keeps the loss and replaces the
-linear model by a multilayer network.
+- **Softmax Regression and Cross-Entropy (:numref:`sec_softmax`):** We formulate one-hot encodings, linear logits, the softmax transformation, and the cross-entropy loss, deriving its clean residual gradient $\hat{\mathbf{y}} - \mathbf{y}$ and connecting it to Shannon's information theory and temperature scaling.
+- **Image Classification Data (:numref:`sec_fashion_mnist`):** We introduce the Fashion-MNIST benchmark ($60{,}000$ training and $10{,}000$ validation images across 10 garment categories) and build a reusable `FashionMNIST` data module.
+- **Softmax Regression Implementation (:numref:`sec_softmax_scratch`):** We implement softmax regression both from scratch and concisely (:numref:`sec_softmax_concise`), introducing the `Classifier` base class, diagnosing misclassifications via the confusion matrix and learned $28 \times 28$ weight templates, and resolving floating-point overflow and underflow via the fused log-sum-exp cross-entropy loss.
+- **Measuring Classifiers (:numref:`sec_classification`):** We examine class imbalance, precision, recall, cost-sensitive decision thresholds, reliability diagrams, expected calibration error (ECE), and post-hoc temperature scaling.
+- **Generalization in Classification (:numref:`chap_classification_generalization`):** We quantify test-set confidence intervals (normal vs. Hoeffding), selection bias and adaptive overfitting from test-set reuse, and uniform convergence via the Vapnik--Chervonenkis (VC) dimension.
+- **Environment and Distribution Shift (:numref:`sec_environment-and-distribution-shift`):** We distinguish covariate, label, and concept shift, implement importance-weighted domain adaptation and confusion-matrix label-shift correction, and examine feedback loops in deployed decision systems.
 
 ```toc
 :maxdepth: 2
@@ -55,34 +20,10 @@ linear model by a multilayer network.
 softmax-regression
 image-classification-dataset
 softmax-regression-scratch
-softmax-regression-concise
 classification
 generalization-classification
 environment-and-distribution-shift
 ```
-
-## Resources and Further Reading {.unnumbered}
-
-The statistical texts listed with :numref:`chap_regression` cover
-classification as well; the resources below add what is specific to this
-chapter, and each names the section it accompanies. All are freely
-accessible online except where noted.
-
-**Books and notes**
-
-- [CS229 Machine Learning lecture notes — Andrew Ng & Tengyu Ma (Stanford)](https://cs229.stanford.edu/main_notes.pdf) — free PDF; derives logistic and softmax regression and the cross-entropy loss from maximum likelihood, the route of :numref:`sec_softmax`.
-- Information theory in this book's mathematics appendix (:numref:`chap_mdl-information-theory`) — entropy, cross-entropy, and the KL divergence with proofs, the background of the cross-entropy loss in :numref:`sec_softmax`.
-- [Patterns, Predictions, and Actions — Moritz Hardt & Benjamin Recht](https://mlstory.org/) — free online; a modern text on prediction whose chapters on generalization, datasets, and deployment accompany :numref:`chap_classification_generalization` and :numref:`sec_environment-and-distribution-shift`.
-- [Understanding Machine Learning: From Theory to Algorithms — Shai Shalev-Shwartz & Shai Ben-David](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/) — free PDF; uniform convergence and the VC dimension with full proofs (:numref:`chap_classification_generalization`).
-- [Dataset Shift in Machine Learning — Quiñonero-Candela, Sugiyama, Schwaighofer & Lawrence (eds.), MIT Press](https://mitpress.mit.edu/9780262545877/dataset-shift-in-machine-learning/) — the standard reference on covariate, label, and concept shift (:numref:`sec_environment-and-distribution-shift`; an open-access edition is available from MIT Press).
-- [Machine Learning in Non-Stationary Environments: Introduction to Covariate Shift Adaptation — Sugiyama & Kawanabe, MIT Press](https://mitpress.mit.edu/9780262017091/machine-learning-in-non-stationary-environments/) — importance weighting for covariate shift in depth (:numref:`sec_environment-and-distribution-shift`; print only).
-
-**Papers**
-
-- [Fashion-MNIST: a Novel Image Dataset for Benchmarking Machine Learning Algorithms — Xiao, Rasul & Vollgraf (2017)](https://arxiv.org/abs/1708.07747) — the dataset of :numref:`sec_fashion_mnist` and of the rest of the chapter.
-- [On Calibration of Modern Neural Networks — Guo, Pleiss, Sun & Weinberger (2017)](https://arxiv.org/abs/1706.04599) — when a classifier's probabilities can be read as probabilities, and how temperature scaling repairs them (:numref:`sec_softmax`, :numref:`sec_classification`).
-- [WILDS: A Benchmark of in-the-Wild Distribution Shifts — Koh, Sagawa, Marklund et al. (2021)](https://arxiv.org/abs/2012.07421) — ten datasets with real shifts between hospitals, cameras, regions, and time, each with the in-distribution and shifted test accuracy of standard models (:numref:`sec_environment-and-distribution-shift`).
-- [Do ImageNet Classifiers Generalize to ImageNet? — Recht, Roelofs, Schmidt & Shankar (2019)](https://arxiv.org/abs/1902.10811) — rebuilds a test set from scratch and finds accuracy drops that a slight distribution shift explains better than test-set reuse (:numref:`chap_classification_generalization`, :numref:`sec_environment-and-distribution-shift`).
 
 <!-- slides -->
 

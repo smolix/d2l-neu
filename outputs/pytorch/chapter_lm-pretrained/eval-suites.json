@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:86875de62f514db4df5469f887c1d734d5e0a095d96e5c12229a5d4e67715319",
+    "d2l_lib_fingerprint": "sha256:957bb86214ba3b8765499520901f825184f9fafb16710c71f555330d0f5e3382",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -23,7 +23,7 @@
       "outputs": []
     },
     "eval-suites-config": {
-      "code_fingerprint": "sha256:df16c270e03cc46ed88a52fe1c912514dcefb0b2613399ed48fcece85613b395",
+      "code_fingerprint": "sha256:371f9d2b8149536aa72db9429fa3622735d0046bde6a0d12439ffab43f091cc8",
       "kind": "text",
       "outputs": [
         {
@@ -34,17 +34,17 @@
       ]
     },
     "eval-suites-data-hub": {
-      "code_fingerprint": "sha256:878d348b19c8e1631ddf8f0dc585373c947ccb0b8234a18a000f5c27ccb8bdf6",
+      "code_fingerprint": "sha256:219e3a0d619d36faba93b271646c70c14b017ccdfc5d073fc7ed6a3b9a99530a",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-artifacts": {
-      "code_fingerprint": "sha256:5ad2e33efac26f97cbf461798699febe0dec75d8979566ae2aefc2f095eacb8e",
+      "code_fingerprint": "sha256:4eb76f7450ba67b8f5a13b84d8f6229d01794925473c7e70e20cb2b105d0cfbb",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-arc-load": {
-      "code_fingerprint": "sha256:4ebbac6e879347d4598ff1995a0600c9616d920acd736f08c84c60d69eaa2bb1",
+      "code_fingerprint": "sha256:a0dd69835e13d1f583caa10d32e13bbc33eaa2096ed474e883909e5610bd4639",
       "kind": "text",
       "outputs": [
         {
@@ -55,17 +55,17 @@
       ]
     },
     "eval-suites-bootstrap": {
-      "code_fingerprint": "sha256:300dad8db8f15ad358d7662b7a4c5c414f5be0045ef0c67ae1f6ea4f0b80bada",
+      "code_fingerprint": "sha256:665aecb982519208edbf37a10ce01bab6dde806e4c0ed3fcac50bbabeadc37f0",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-paired": {
-      "code_fingerprint": "sha256:602af2f187ebdc4ab204a28f2d9c9e3998163608e24ce58f4a3c8d5ca25bca41",
+      "code_fingerprint": "sha256:f159a06e33d00b0a43a8d5e71dae33504588a88b172a8f7977aec3a4f364964f",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-pair": {
-      "code_fingerprint": "sha256:b5dd934d4e65e29979cb94d0bc4d9e7bd949c581227cd666c4607d136251019a",
+      "code_fingerprint": "sha256:e3a0a86949e73f5fc9d59c9669cd2ec8f124a45ee2248fa974cf526ab7c8b252",
       "kind": "text",
       "outputs": [
         {
@@ -76,7 +76,7 @@
       ]
     },
     "eval-suites-paired-vs-unpaired": {
-      "code_fingerprint": "sha256:3d44d6da0cbbaae6dd53d5f63c1bceace7bd9bfe0236874d601bb236455614fe",
+      "code_fingerprint": "sha256:2992cbe528a89e06a5a06b024f7ad72f2a4c5878780ba76fdd8331e33c01f5af",
       "kind": "text",
       "outputs": [
         {
@@ -87,41 +87,47 @@
       ]
     },
     "eval-suites-cluster-pool": {
-      "code_fingerprint": "sha256:a1bd4b793104623ab052afc7874e29ad568f3151750efe6d7fe5befeebf52c16",
+      "code_fingerprint": "sha256:410667ae207af45293db8c1a3646c5fe92a8587f0121f7afb75ffad1045f8b69",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "100 problems by 8 samples, scored with d2l.extract_answer(text, 'gsm8k') == gold\n               mean           iid CI       cluster CI  width ratio   DEFF  rho (implied)\nQwen3-0.6B    0.416   [0.383, 0.451]   [0.338, 0.494]        2.273  5.301          0.614\nQwen3.5-0.8B  0.445   [0.411, 0.479]   [0.369, 0.519]        2.222  4.982          0.569\ndifference    0.029  [-0.005, 0.062]  [-0.026, 0.083]        1.611  2.518          0.217\nC2: sqrt(DEFF) > 1.5 for both models: True\n"
+          "text": "100 problems by 8 samples, scored with d2l.extract_answer(text, 'gsm8k') == gold\n               mean           iid CI       cluster CI  width ratio   DEFF  rho (implied)\nQwen3-0.6B    0.416   [0.383, 0.451]   [0.338, 0.494]        2.273  5.301          0.614\nQwen3.5-0.8B  0.445   [0.411, 0.479]   [0.369, 0.519]        2.222  4.982          0.569\ndifference    0.029  [-0.005, 0.062]  [-0.026, 0.083]        1.611  2.518          0.217\nstandard error more than 1.5 times as large with clusters, both models: True\n"
         }
       ]
     },
     "eval-suites-mde": {
-      "code_fingerprint": "sha256:3e033ef78729e76616a10fa5eebf8bbb2eb41b12fb97a8c00847d49b0b20ae1a",
+      "code_fingerprint": "sha256:e0a7407e6555f21178532d3e9fc2e47ab96873e0b98ff0df6871920fa551df52",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-mde-plot": {
-      "code_fingerprint": "sha256:e1b3e61ef98cc56ef6a063d1b5fd82dc1cc1e6a9948b80eee2745ec721928c12",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:42ec41423cfa5d2c900f817c8e5daa0666cdb4a68d25d44544eb8e13911c4f5f",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "MDE at 500 items, two independent samples: 0.085\nMDE at 500 items, paired: 0.064\nMDE at 500 items, paired, clusters of 8: 0.101\n                     pair  |diff| items needed\n         0.6B - 0.6B-Base   0.058          407\n3.5-0.8B-Base - 0.6B-Base   0.024        2,063\n     3.5-0.8B - 0.6B-Base   0.044          625\n         1.7B - 0.6B-Base   0.042        1,033\n     3.5-0.8B-Base - 0.6B   0.034        1,445\n          3.5-0.8B - 0.6B   0.014        7,601\n              1.7B - 0.6B   0.100          203\n 3.5-0.8B - 3.5-0.8B-Base   0.020        1,405\n     1.7B - 3.5-0.8B-Base   0.066          407\n          1.7B - 3.5-0.8B   0.086          215\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "eval-suites/eval-suites-mde-plot-1.svg",
           "bytes": 39007,
-          "sha256": "sha256:f1e24610b471fbaed72dab6b9c9fc851df27359abd24e536022c3474f44d557b"
+          "sha256": "sha256:fbaa25fa855f27dc7120ada3d8ee31c76666762cb328b0647fd6b296d2bec45e"
+        }
+      ]
+    },
+    "eval-suites-mde-table": {
+      "code_fingerprint": "sha256:2cd1bde6779a8e1d03bea4831d9995341687d88a2a23c0a52086de3410b34919",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "MDE at 500 items, two independent samples: 0.085\nMDE at 500 items, paired: 0.064\nMDE at 500 items, paired, clusters of 8: 0.101\n                     pair  |diff| items needed\n         0.6B - 0.6B-Base   0.058          407\n3.5-0.8B-Base - 0.6B-Base   0.024        2,063\n     3.5-0.8B - 0.6B-Base   0.044          625\n         1.7B - 0.6B-Base   0.042        1,033\n     3.5-0.8B-Base - 0.6B   0.034        1,445\n          3.5-0.8B - 0.6B   0.014        7,601\n              1.7B - 0.6B   0.100          203\n 3.5-0.8B - 3.5-0.8B-Base   0.020        1,405\n     1.7B - 3.5-0.8B-Base   0.066          407\n          1.7B - 3.5-0.8B   0.086          215\n"
         }
       ]
     },
     "eval-suites-lifecycle": {
-      "code_fingerprint": "sha256:2f4e6a029e18b3cd0d20605f131b81af3db1bd6bea68e6593331f32c05eb1e2d",
+      "code_fingerprint": "sha256:3cead9b992fb83d124c6d59aa77f74ec568bd2afbc3fc335665fc352725f6001",
       "kind": "text",
       "outputs": [
         {
@@ -132,37 +138,37 @@
       ]
     },
     "eval-suites-task": {
-      "code_fingerprint": "sha256:359bfcd31d00b4c24cb02003267f73c02d2d64c9c1c205afd47ea59d835ca992",
+      "code_fingerprint": "sha256:4a30f3b7a293921576cbf9f83523d1bda274b45283e987eb6c6438328395adf1",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-suite": {
-      "code_fingerprint": "sha256:11c79481b80955075437a72d9176d46523ce0c217e4daf16fccbc349710544e3",
+      "code_fingerprint": "sha256:a1b7b0356995d0e46735f6e5daff143a222621ce415b61c6df9c29d9a4ec9fd5",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-run-def": {
-      "code_fingerprint": "sha256:9d50323beb521c5118fbe6a074d12dea9ab30bfdc38c2b3c9de7f7a8d7fc6b78",
+      "code_fingerprint": "sha256:33c47bece07e570e93da410f23ea9a3a78cf5393d44407e3ead044e71bdd0570",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-run": {
-      "code_fingerprint": "sha256:8cf1cd3a3fadeeb8d319b31dc0e4d68468fda46159837f339aece0aa62a55a42",
+      "code_fingerprint": "sha256:395459c1e3ea49478ea00065672ffbd52f07c4a8c7f2c20f0ceef68107961b71",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-result": {
-      "code_fingerprint": "sha256:5836c681d06d9602989155c405ca9b45f3c54dca5089088fc60f5350908603f0",
+      "code_fingerprint": "sha256:a06ff2eae0617e6a677703afb079fb70e0e9835bc6b1cf864f7d9e2ef9387863",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-attach": {
-      "code_fingerprint": "sha256:816127014e1657df4d64532980b003b6f0c2e4345fb78acf869b18bbc0052d26",
+      "code_fingerprint": "sha256:d67f5dd45a0f835e6cf4cbcb995a2ce3f8aad89ca6ed5300c063fb0129831688",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-manifests": {
-      "code_fingerprint": "sha256:1bc95a4350c4bf516afdd757b1d2de2a5b3892432aaa710febb17a73fd577446",
+      "code_fingerprint": "sha256:ed91e5fdd2ddac10ed9156d1fb51dd44b5637815f65afce9b826577b8782d132",
       "kind": "text",
       "outputs": [
         {
@@ -173,12 +179,12 @@
       ]
     },
     "eval-suites-dev-def": {
-      "code_fingerprint": "sha256:f1968dc6023aff1888ac08aca0d16fd712fa7e7922845f9fde7dee0c33a2a9b5",
+      "code_fingerprint": "sha256:9f16c697cb25c45807938cd597c2071fa6c0fd5f8efaebc1ec995105088bc355",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-run-dev": {
-      "code_fingerprint": "sha256:0a078ec277d2f67ea51138217fb8caedb9fcfe8a2d5b2ec87608bcafd4bb7993",
+      "code_fingerprint": "sha256:af76ff9e01e8c2812d86452a0cf130363fcdac56ffce716436367da47a6e7413",
       "kind": "text",
       "outputs": [
         {
@@ -214,7 +220,7 @@
       ]
     },
     "eval-suites-survive": {
-      "code_fingerprint": "sha256:8c50552e209513624611ee228b86e047ce6eb95da8423b140cadaeeae990ffd5",
+      "code_fingerprint": "sha256:1a58856869694cc69379c998df8467de94b450ed42c75592d880b1af72d4394c",
       "kind": "text",
       "outputs": [
         {
@@ -225,7 +231,7 @@
       ]
     },
     "eval-suites-symbolic-data": {
-      "code_fingerprint": "sha256:fc65609eca89e7e84e0704d4d53071ca15440ec4c7045e82b6cdae11b30bb1fe",
+      "code_fingerprint": "sha256:6ef7fd2a561c7b2bcb0dd5cb21c4e3d5c4d5fe15b533a8922a0e62256458f319",
       "kind": "text",
       "outputs": [
         {
@@ -236,7 +242,7 @@
       ]
     },
     "eval-suites-symbolic-run": {
-      "code_fingerprint": "sha256:40496052bd09fa8aac51cb6698f2b63177386f2e012d553c145c2a59ee46a7f7",
+      "code_fingerprint": "sha256:20966b9718af22832486af16f3e6c3903dbb1a982365961e731d3b88cd40a1a2",
       "kind": "text",
       "outputs": [
         {
@@ -247,7 +253,7 @@
       ]
     },
     "eval-suites-symbolic-ref": {
-      "code_fingerprint": "sha256:885d38f38edd6490c803ebfe579631d97b4c3d93c2e35805cad12a69ba2f7f35",
+      "code_fingerprint": "sha256:73dfe6bb605a88b8951c40ff50d86d6242cc5e879e171f611b5870da671b173f",
       "kind": "text",
       "outputs": [
         {
@@ -258,7 +264,7 @@
       ]
     },
     "eval-suites-symbolic-test": {
-      "code_fingerprint": "sha256:d1bfad7211bfb13f4542abed02aa88a4d70c0da0ac564ff2c798bafffd0bbf65",
+      "code_fingerprint": "sha256:b946e0eb2bb0889982ee783b300a5e9d2fd5c2c07a3a233f6a852e7ee962897b",
       "kind": "text",
       "outputs": [
         {
@@ -274,17 +280,17 @@
       ]
     },
     "eval-suites-judge-def": {
-      "code_fingerprint": "sha256:03d600f03065cd926701c000abc80a32ab57acaf7bc0458f8084b8194815dd05",
+      "code_fingerprint": "sha256:67ab2cddea492341c2d77feb327ef672ca59b37c86c527a4b939bab5b291d3d4",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-judge": {
-      "code_fingerprint": "sha256:a85e091334f12185f75e893c0b61f4442b4f38b25125e58db3c0f6f7b46f7701",
+      "code_fingerprint": "sha256:f08d4599a2bf8dc78724019b6eb60939370b920986a58c997fe8463b95936f6a",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-prompts": {
-      "code_fingerprint": "sha256:e819665e40f5fc279b889fa7d08f18e2645ad342eac65828ea006aac4f998168",
+      "code_fingerprint": "sha256:9dd9226597c5f921066ffcc47e3c2ab910843ff565ea90c350bd8e894b34a16c",
       "kind": "text",
       "outputs": [
         {
@@ -295,7 +301,7 @@
       ]
     },
     "eval-suites-answers": {
-      "code_fingerprint": "sha256:a9fba058dba6095942dda266e6d1b33526cffa3aea7e437cd5bb74c405e9ff9d",
+      "code_fingerprint": "sha256:6cbc4f9690c0fa52a1f32d1eb11332af2c5b3a0e6d71f3ca13186e849be748ad",
       "kind": "text",
       "outputs": [
         {
@@ -306,7 +312,7 @@
       ]
     },
     "eval-suites-human-pairs": {
-      "code_fingerprint": "sha256:c358249e4f604f2bba233f39002d935accfd981dde1a429222778d164aacbe9e",
+      "code_fingerprint": "sha256:a96adce10968935097d44f0383c3f49fb446a853f75a9348d665227a50d85038",
       "kind": "text",
       "outputs": [
         {
@@ -317,12 +323,12 @@
       ]
     },
     "eval-suites-judge-human": {
-      "code_fingerprint": "sha256:57aea8d0ee32b7b7742bbb33036cd864994b03cfa680b652687070f1100d784f",
+      "code_fingerprint": "sha256:ea881fdd08c21ed0511835eb5b05ebbc3fe6df34c3031de55a3509cdd7c78b44",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-agreement": {
-      "code_fingerprint": "sha256:75940d9bf53df1bc4b8410228d080c04d005bfda47bcaa978f3c66097d1a901c",
+      "code_fingerprint": "sha256:cd2cad341331dd74315ae1476660078a83cd39c51144e1198e6c5f17f00a87a5",
       "kind": "text",
       "outputs": [
         {
@@ -333,18 +339,18 @@
       ]
     },
     "eval-suites-agreement-gpt4": {
-      "code_fingerprint": "sha256:55cf1066173870376205e5158088539a695f8c4383d21039480adc4940e7846c",
+      "code_fingerprint": "sha256:0fe7934be37aa0c3ea7d3e5b6774d31fb44f165359c6df8c548a51d2a3c733a3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "agreement minus GPT-4's, on the same votes:\n                  judge stratum  votes   diff          95% CI    p  questions\nQwen3.5-4B, both decide     all    478 -0.017 [-0.049, 0.011] 0.29         74\n  forced, GPT-4 decides     all    548 -0.016 [-0.057, 0.015] 0.36         75\nQwen3.5-4B, both decide    easy    304 -0.007 [-0.037, 0.019] 0.79         68\n  forced, GPT-4 decides    easy    338 +0.006 [-0.032, 0.048] 0.85         70\nQwen3.5-4B, both decide    hard    174 -0.034 [-0.106, 0.028] 0.37         61\n  forced, GPT-4 decides    hard    210 -0.052 [-0.143, 0.021] 0.21         63\nQwen3.5-4B gives GPT-4's verdict on 281 pairs both decide: 0.95 [0.92, 0.97]\n"
+          "text": "agreement minus GPT-4's, on the same votes:\n                  judge stratum  votes   diff          95% CI    p   MDE  questions\nQwen3.5-4B, both decide     all    478 -0.017 [-0.049, 0.011] 0.29 0.043         74\n  forced, GPT-4 decides     all    548 -0.016 [-0.057, 0.015] 0.36 0.052         75\nQwen3.5-4B, both decide    easy    304 -0.007 [-0.037, 0.019] 0.79 0.040         68\n  forced, GPT-4 decides    easy    338 +0.006 [-0.032, 0.048] 0.85 0.056         70\nQwen3.5-4B, both decide    hard    174 -0.034 [-0.106, 0.028] 0.37 0.095         61\n  forced, GPT-4 decides    hard    210 -0.052 [-0.143, 0.021] 0.21 0.119         63\nQwen3.5-4B gives GPT-4's verdict on 281 pairs both decide: 0.95 [0.92, 0.97]\n"
         }
       ]
     },
     "eval-suites-judge-pairs": {
-      "code_fingerprint": "sha256:b0b875401a0abdf9f699bbbb061d35e8ee23afba3d01a1fc30bbc81bffff8443",
+      "code_fingerprint": "sha256:752f8e0d6abee6f11e73dcac249d55ca27719649d1639c83f32898d96f3ca04d",
       "kind": "text",
       "outputs": [
         {
@@ -355,41 +361,47 @@
       ]
     },
     "eval-suites-position-bias": {
-      "code_fingerprint": "sha256:4cac602e9b0b232e1d58892f0153f9201649b3161475393519e0a2fbcd7ab26a",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:74ccf27df82c3c06baa4613a0cc3f8ff5822b1ef4defceb71877f9091556da93",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean position bias: 0.712 [0.637, 0.788]\nconsistent verdicts: 0.756 [0.731, 0.781]\nwinner changes, order 1 alone: 0.143 [0.126, 0.162]\nwinner changes, order 2 alone: 0.102 [0.086, 0.118]\nposition bias: median 0.655, IQR [0.131, 1.252]\ntotal-least-squares slope 0.997 [0.957, 1.037], intercept -1.426\n"
-        },
+          "text": "mean position bias: 0.712 [0.637, 0.788]\nconsistent verdicts: 0.756 [0.731, 0.781]\nwinner changes, order 1 alone: 0.143 [0.126, 0.162]\nwinner changes, order 2 alone: 0.102 [0.086, 0.118]\nposition bias: median 0.655, IQR [0.131, 1.252]\n129 pairs with |delta| < 0.25 (nearly tied): one order alone prefers\n  the answer shown first in 0.78 of their readings\ntotal-least-squares slope 0.997 [0.957, 1.037], intercept -1.426\n"
+        }
+      ]
+    },
+    "eval-suites-position-bias-plot": {
+      "code_fingerprint": "sha256:53037329149c2e105f1e016d2d78536d05b99ade938b5a25d067d3b928f7838a",
+      "kind": "asset",
+      "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "eval-suites/eval-suites-position-bias-1.svg",
-          "bytes": 224038,
-          "sha256": "sha256:44e6d0df057e582026f2c175dc0982e29d9e4543e2cd0d408f84f9b2a7c33f32"
+          "asset": "eval-suites/eval-suites-position-bias-plot-1.svg",
+          "bytes": 223211,
+          "sha256": "sha256:1bd71835b575928df289f1bad7cfbb63ba59b9b42001483d83adf11dae4bfb69"
         }
       ]
     },
     "eval-suites-verbosity": {
-      "code_fingerprint": "sha256:7015fef36855c4783fa4173b0f457655db53312b0dd1c1219bcd3c6ac118c367",
+      "code_fingerprint": "sha256:4b01ba8522c69db79379f4023176b2d389343a50d77fa794215f008ae2a2f158",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "(a) padded minus plain, 289 prompts, median 54 words added: delta -0.785 [-0.855, -0.718]\n    consistent verdicts: for the padded answer 0.007, for the plain one 0.453\n(b) 89 of 1800 pairs with a truncated or empty answer excluded\n(b) slope of delta on log(words_a / words_b): 0.297 [-0.048, 0.673]\n                    pairs  win rate (a)  mean log ratio  σ(mean delta)  σ(intercept)\n0.6B vs 1.7B          296         0.132          -0.215          0.073         0.077\n0.6B vs 3.5-2B        288         0.127          -0.568          0.059         0.069\n1.7B vs 3.5-2B        287         0.362          -0.350          0.267         0.288\n0.6B vs 3.5-0.8B      283         0.415          -0.514          0.373         0.409\n1.7B vs 3.5-0.8B      282         0.746          -0.294          0.807         0.820\n3.5-0.8B vs 3.5-2B    275         0.182          -0.066          0.131         0.133\n"
+          "text": "(a) padded minus plain, 289 prompts, median 54 words added: delta -0.785 [-0.855, -0.718], MDE 0.098\n    consistent verdicts: for the padded answer 0.007, for the plain one 0.453\n(b) 89 of 1800 pairs with a truncated or empty answer excluded\n(b) slope of delta on log(words_a / words_b): 0.297 [-0.048, 0.673]\n                    pairs  σ(mean delta)  σ(intercept)\n0.6B vs 1.7B          296          0.073         0.077\n0.6B vs 3.5-2B        288          0.059         0.069\n1.7B vs 3.5-2B        287          0.267         0.288\n0.6B vs 3.5-0.8B      283          0.373         0.409\n1.7B vs 3.5-0.8B      282          0.807         0.820\n3.5-0.8B vs 3.5-2B    275          0.131         0.133\n"
         }
       ]
     },
     "eval-suites-bt": {
-      "code_fingerprint": "sha256:2b3a73936236fa6c3f73051bdd168685d8a799923a07d669b8158c2affebbe34",
+      "code_fingerprint": "sha256:e1cba775e4bb6670e478b3ce450f4c90b2422d463c32e292ea327002313e96f6",
       "kind": "text",
       "outputs": []
     },
     "eval-suites-bt-fit": {
-      "code_fingerprint": "sha256:f23632ae4c40b15ffc99c3607e1be3caf440aee192a48a0905d31bfaa06b0c0d",
+      "code_fingerprint": "sha256:90a9ede5bb57aaeaeec58d13211da03b2bd4325ef1c70267c7cf1603da9db0af",
       "kind": "text",
       "outputs": [
         {
@@ -400,7 +412,7 @@
       ]
     },
     "eval-suites-answer-seed": {
-      "code_fingerprint": "sha256:949eeb6eb6f8d8e0dbc74b3dd70bded88c22fcf29aacf543290c3e04e6e8be67",
+      "code_fingerprint": "sha256:8714b65a4883035dfa4c9844659843757f31a7eebbc3754a4f44d2519a2a91e2",
       "kind": "text",
       "outputs": [
         {
@@ -411,12 +423,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  answer seed 0 0.623 [0.578, 0.668], seed 1 0.663 [0.620, 0.707]\nseed 1 minus seed 0: 0.040 [-0.007, 0.087], p 0.092\n"
+          "text": "  answer seed 0 0.623 [0.578, 0.668], seed 1 0.663 [0.620, 0.707]\nseed 1 minus seed 0: 0.040 [-0.007, 0.087], p 0.092, MDE 0.066\n"
         }
       ]
     },
     "eval-suites-protocol": {
-      "code_fingerprint": "sha256:d393dc981508e446ba805d92257ef431e6a627ddbbfcd4d80b8e68435285e5ed",
+      "code_fingerprint": "sha256:a3577593e95a533b4d543699c5664d8661c9b851c28fb9a7dc543b67c268b15f",
       "kind": "text",
       "outputs": [
         {
@@ -427,13 +439,13 @@
       ]
     },
     "eval-suites-protocol-alt": {
-      "code_fingerprint": "sha256:f9bf470f94dcd1f92caa8205cdd46c5947d00e775d9dfc5e10bea77d0446f420",
+      "code_fingerprint": "sha256:5c625fa34e685651e90f8df3560106c85288d4f33e5b77a5b63815e3c1b69e63",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the harness's gsm8k_cot (8 written chains of thought ending 'The answer is N.', Wei et al. 2022;\n  stop ['Q:'], 256 new tokens): 0.613 [0.587, 0.639]\ngsm8k_cot minus this protocol, paired: 0.102 [0.077, 0.128], p < 0.0001\npublished: 0.5959, 4-shot, CoT (Qwen3 Technical Report, Table 8);\n  outside this protocol's interval, inside gsm8k_cot's\n"
+          "text": "the harness's gsm8k_cot (8 written chains of thought ending 'The answer is N.', Wei et al. 2022;\n  stop ['Q:'], 256 new tokens): 0.613 [0.587, 0.639]\ngsm8k_cot minus this protocol, paired: 0.102 [0.077, 0.128], p < 0.0001, MDE 0.037\npublished: 0.5959, 4-shot, CoT (Qwen3 Technical Report, Table 8);\n  outside this protocol's interval, inside gsm8k_cot's\n"
         }
       ]
     }

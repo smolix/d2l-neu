@@ -1,61 +1,52 @@
 # Computation
 :label:`chap_computation`
 
-So far each model has been a few lines of code: a class with some layers, a
-loss, and a call to `fit`. When we trained the multilayer perceptron of
-:numref:`sec_mlp-implementation`, the framework handed its four parameter
-arrays to the optimizer, kept them on a device of its choosing, and discarded
-them when the notebook closed. We never had to ask how. Once a model grows,
-we have to. Take a language model with 8 billion parameters, to which most
-sections of this chapter return. Its weights alone take 32 GB in the 32-bit
-format we have used so far. Does the model fit in the memory of a GPU? Can
-its training resume after a crash? What if it needs a layer that the library
-lacks?
+Up to now we have relied on frameworks to manage model construction, parameters,
+initialization, and device execution behind the scenes. Moving from textbook
+prototypes to production-scale systems requires opening that black box. Training
+an 8-billion-parameter language model in 32-bit floating point with Adam
+demands 128 GB of parameter, gradient, and optimizer state before storing a
+single activation, and runs across thousands of GPUs where hardware failures
+interrupt training every few hours. At that scale, understanding how frameworks
+represent, initialize, compute with, and persist models is essential.
 
-Early neural network programs derived and coded the gradients of each model
-by hand. Around 1990 Léon Bottou and Yann LeCun built their network simulator
-from *modules* instead, each computing its outputs forward and its gradients
-backward, so that a new architecture is a new arrangement of existing
-modules. Torch and then PyTorch kept this design, and every framework in this
-book organizes a model as a tree of modules that own their parameters. The
-optimizer, the initializer, the checkpoint, and the move to a GPU all walk
-this tree. This is the one idea to take from the chapter. Knowing the tree
-lets us change the defaults when they fail, and they do fail: the badly
-initialized network of :numref:`sec_numerical_stability` did not train, and
-a model that is saved incompletely cannot resume its training.
+Everything in this chapter builds on one central data structure: a neural
+network is a *tree of modules* whose leaves hold its *state*—trainable
+parameters and fixed buffers alike—each addressed by its path from the root.
+Every framework operation walks that same tree:
 
-The chapter builds a model, then chooses the numbers it computes in, then
-runs it. Building takes four sections: how a model is assembled from modules
-(:numref:`sec_model_construction`), what state it holds and how much memory
-training it needs (:numref:`sec_parameters`), how to set that state before
-training (:numref:`sec_init_param`, which continues the analysis of
-:numref:`sec_numerical_stability`), and how to add a layer that the library
-lacks (:numref:`sec_custom_layer`). :numref:`sec_numerics` is about number
-formats: what a model saves by computing in 16 bits instead of 32, and what
-it can lose without any error message. The last three sections run the model.
-We save it and load weights trained by others (:numref:`sec_read_write`),
-place it on a GPU and account for the memory (:numref:`sec_use_gpu`), and ask
-when two runs of the same code give the same result (:numref:`sec_repro`).
-
-The chapter introduces no new models and no new datasets, which makes it
-tempting to skip. We advise against that: later chapters rely on it
-throughout. Parts of it are reference material, however, and the sections
-say which of their parts can be read quickly and consulted later. The
-chapter covers one device at a time; training on several devices follows in
-:numref:`chap_performance`.
-
-```toc
-:maxdepth: 2
-
-model-construction
-parameters-state-memory
-init
-custom-layers
-numerics
-saving-loading
-gpus-devices-memory
-reproducibility-inspection
-```
+* :numref:`sec_model_construction` shows how modules register child modules into
+  a hierarchy, why hiding layers in plain Python lists silently drops them from
+  training, how residual blocks and compiled forward passes work, how lazy
+  layers infer shapes on the fly, and how to separate architecture configs from
+  builder code.
+* :numref:`sec_parameters` opens the state tree to distinguish trainable
+  parameters from non-trainable buffers, derives the 16-byte-per-parameter
+  memory floor for fp32 Adam training, counts parameters abstractly without
+  allocating memory, and covers weight tying and parameter freezing.
+* :numref:`sec_init_param` moves from single-layer initialization to whole-tree
+  and residual-network initialization, showing why unscaled residual blocks blow
+  up activation variance by $(1 + g^2)^N$ and how scaling output projections by
+  $1/\sqrt{N}$ or zeroing them keeps deep stacks stable.
+* :numref:`sec_custom_layer` shows how to extend a framework with stateless
+  layers, parameterized layers (`RMSNorm`), layers holding fixed buffers
+  (`RandomFeatures`), and custom backward passes (the *straight-through
+  estimator* for non-differentiable rounding).
+* :numref:`sec_numerics` compares fp32, fp16, and bf16, showing why 16-bit
+  weights round away small updates and how mixed-precision training pairs fp32
+  master weights with 16-bit compute (and dynamic loss scaling for fp16).
+* :numref:`sec_read_write` covers safe weight serialization (`safetensors` vs.
+  arbitrary code execution in `pickle`), crash-safe atomic training checkpoints
+  that resume bit for bit, and auditing missing or unexpected keys when loading
+  pretrained weights.
+* :numref:`sec_use_gpu` places tensors and models on GPUs, explains asynchronous
+  command queues and accurate GPU benchmarking, dissects live vs. reserved vs.
+  driver memory, uses activation checkpointing to cut activation memory from
+  $O(K)$ to $O(\sqrt{K})$, and wires GPU support into `d2l.Trainer`.
+* :numref:`sec_repro` shows how to control pseudorandom seeds across workers and
+  devices, why parallel GPU atomic additions are non-associative, and how to
+  attach forward and backward hooks to inspect activation statistics, gradient
+  norms, and the first layer that emits a NaN.
 
 ## Resources and Further Reading {.unnumbered}
 

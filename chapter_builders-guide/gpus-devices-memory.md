@@ -6,31 +6,35 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # GPUs, Devices, and Memory
 :label:`sec_use_gpu`
 
-Since :numref:`sec_oo-design` our `Trainer` has accepted an argument
-`num_gpus` and ignored it. Nobody was harmed: the models of the earlier
-chapters were small enough that it hardly mattered where they ran. For larger
-models it matters a great deal. A current desktop GPU multiplies two
-$4096 \times 4096$ matrices in under 2 milliseconds, where a CPU takes a
-fifth of a second or more (:numref:`subsec_async_dispatch` measures both).
-Unfortunately the speed comes with a constraint: the GPU has its own memory,
-24 GB on such a card, and every array it computes with must be there.
+Since :numref:`sec_oo-design`, our `Trainer` has accepted a `num_gpus` argument
+and politely ignored it. For the tiny models of earlier chapters that hardly
+mattered, since CPU training finished in seconds. Once models scale up,
+however, device placement makes the difference between seconds and hours: a
+modern desktop GPU multiplies two $4096 \times 4096$ matrices in under 2
+milliseconds, whereas a CPU needs a fifth of a second or more (as we benchmark
+in :numref:`subsec_async_dispatch`). That raw speed comes with a strict hardware
+constraint: the GPU has its own dedicated memory—say 24 GB on a desktop card—and
+every tensor it operates on must reside there.
 
-Will a given model fit? The model with 8 billion parameters that this chapter
-keeps returning to needs 16 GB for its weights in bf16, which fits. Training
-it with Adam in fp32 needs 128 GB by the count of :numref:`sec_parameters`,
-before a single activation is stored. That does not fit. Whether a model fits
-on a device, and whether the device computes or waits, is decided by where
-each array lives and how many bytes each array takes.
+Will a target model even fit? Our running 8-billion-parameter model needs 16 GB
+for its weights in bf16, which fits easily for inference. Training it with Adam
+in fp32, however, requires 128 GB of static state (:numref:`sec_parameters`)
+before storing a single activation—far more than any single 24 GB or 80 GB card.
+Whether a model fits on a device, and whether the GPU stays busy computing or
+stalls waiting for data, comes down to where every tensor lives and how many
+bytes it consumes.
 
-We ask three questions in turn. Where does an array live, and how does it move
-between the CPU and a GPU? When does the CPU wait for the GPU, and how do we
-time GPU work correctly? What fills GPU memory during training, and how can we
-trade computation for memory? The answers go into the device-aware `Trainer`
-that every later chapter uses. :numref:`sec_parameters` and
-:numref:`sec_numerics` counted the bytes per parameter and per number; this
-section puts those bytes on a device. Training on several GPUs at once follows
-in :numref:`chap_performance`. All examples fall back to the CPU when no GPU
-is present. They then show that the code runs, not how fast it runs on a GPU.
+In this section, we answer three core questions: how tensors and models are
+placed on and copied between CPUs and GPUs; how asynchronous GPU execution
+works (and how to benchmark GPU kernels accurately); and what actually fills GPU
+memory during training, including how *activation checkpointing* trades extra
+compute for dramatic memory savings. We then wire everything into the
+device-aware `Trainer` used throughout the rest of the book. Whereas
+:numref:`sec_parameters` and :numref:`sec_numerics` accounted for bytes per
+parameter and per number, here we put those bytes onto real hardware (deferring
+multi-GPU training to :numref:`chap_performance`). Every code cell degrades
+gracefully to CPU if no GPU is available—confirming correctness even if timings
+require a GPU.
 
 ```{.python .input #gpus-devices-memory-setup}
 %%tab tensorflow
@@ -99,40 +103,30 @@ torch.set_float32_matmul_precision('high')  # allow tf32 in fp32 matmuls
 
 ### Device Objects
 
-Every array lives on a *device*: the CPU together with main memory, or one GPU
-together with its own memory. To see which GPUs a machine has, run
-`nvidia-smi` in a shell; it lists every card, its memory, and the processes
-using it. Each framework has its own names for devices. The names are soon
-forgotten; what matters in this part of the section is a single fact, which we
-reach in a moment: an operation runs on one device, and all its operands must
-be there.
+Every tensor lives on a specific *device*: either the CPU paired with host RAM,
+or an individual GPU paired with its onboard memory. Running `nvidia-smi` in a
+terminal lists every NVIDIA GPU on your machine, its total and occupied memory,
+and active processes. While each framework names devices slightly differently,
+all four follow one governing principle: an operation executes on a single
+device, so all of its operands must live on that device.
 
 :begin_tab:`mxnet`
-The CPU is `npx.cpu()`, `npx.gpu(i)` is the GPU with index $i$, and
-`npx.gpu()` is `npx.gpu(0)`. Most MXNet code online calls this object a
-*context* and writes `ctx=`, `.ctx`, and `as_in_ctx`; MXNet 2.0 renamed it to
-*device*, and this book uses the new spelling.
+`npx.cpu()` and `npx.gpu(i)` denote the CPU and GPU $i$ (called `ctx` prior to MXNet 2.0).
 :end_tab:
 
 :begin_tab:`pytorch`
-The CPU is `torch.device('cpu')`. `torch.device('cuda:0')` is the first GPU,
-`cuda:1` the second, and plain `'cuda'` is `cuda:0`.
+`torch.device('cpu')` and `torch.device(f'cuda:{i}')` denote the CPU and GPU $i$.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow names devices with strings, `'/CPU:0'` for the CPU and `'/GPU:0'`
-for the first GPU. `tf.device` turns a name into a *scope*: operations
-executed inside it run on the named device and store their results there.
+`tf.device('/CPU:0')` and `tf.device(f'/GPU:{i}')` create device placement scopes.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.devices(backend)` returns the device handles of a backend:
-`jax.devices('cpu')[0]` is the CPU, and `jax.devices('gpu')[i]` is the GPU
-with index $i$.
+`jax.devices('cpu')[0]` and `jax.devices('gpu')[i]` return hardware device handles.
 :end_tab:
-
-We wrap device construction in two functions that the rest of the book uses,
-and a third counts the GPUs that are available.
+We wrap device lookup in three small helpers that the rest of the book imports:
+one for CPU, one for GPU $i$, and one that counts available GPUs.
 
 ```{.python .input #gpus-devices-memory-devices-1}
 %%tab mxnet
@@ -197,32 +191,20 @@ def num_gpus():  #@save
         return 0  # No GPU backend found
 ```
 
-:begin_tab:`mxnet`
-Constructing a device object always succeeds, whether or not the hardware
-exists; the check happens only when data is put on the device.
-:end_tab:
-
-:begin_tab:`pytorch`
-Constructing a device object always succeeds, whether or not the hardware
-exists; the check happens only when data is put on the device.
+:begin_tab:`mxnet, pytorch`
+Constructing a device object always succeeds; hardware existence is checked only when a tensor is placed on it.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Constructing a device scope always succeeds, whether or not the hardware
-exists. Even an operation inside the scope of a missing GPU does not fail:
-TensorFlow's default *soft placement* runs it on the CPU instead. Convenient
-as this is, it can hide a placement mistake, so inspect `x.device` when
-placement matters.
+By default, TensorFlow uses *soft placement*, silently falling back to the CPU if a requested GPU scope does not exist.
 :end_tab:
 
 :begin_tab:`jax`
-A JAX device object is a handle to hardware that exists: `jax.devices('gpu')`
-raises an error when there is no GPU.
+`jax.devices('gpu')` queries live hardware immediately and raises an error when no GPU is present.
 :end_tab:
-
-With the count we write two functions that fall back to the CPU when the
-requested GPUs do not exist. They let the same code run on a laptop and on a
-GPU server.
+Building on `num_gpus`, we define two fallback helpers that select a GPU when
+present and fall back to CPU otherwise, allowing identical notebook code to run
+unchanged on both laptops and GPU servers.
 
 ```{.python .input #gpus-devices-memory-devices-3}
 def try_gpu(i=0):  #@save
@@ -239,61 +221,21 @@ def try_all_gpus():  #@save
 try_gpu(), try_gpu(10), try_all_gpus()
 ```
 
-Other accelerators, such as the GPUs of Apple-silicon Macs and Google's TPUs,
-have device names of their own. This book uses the CPU and CUDA GPUs, and the
-placement rules below carry over to the others.
+Other accelerators—such as Apple-silicon GPUs (`mps`) and Google TPUs—use their
+own device identifiers, though the placement principles below apply equally to
+all of them. Throughout this book we focus on CPUs and CUDA GPUs.
 
 ### Arrays on Devices
 
-The property `device` tells where an array lives. Where a new array is created
-by default depends on the framework.
+Every tensor exposes its location via its `device` attribute, while the default
+creation device varies by framework.
 
-:begin_tab:`mxnet`
-By default, arrays are created on the CPU.
-:end_tab:
-
-:begin_tab:`pytorch`
-By default, tensors are created on the CPU.
-:end_tab:
-
-:begin_tab:`tensorflow`
-By default, eager TensorFlow creates tensors on the first GPU if there is one
-and on the CPU otherwise.
-:end_tab:
-
-:begin_tab:`jax`
-By default, arrays are created on the *default device*, the first GPU if there
-is one and the CPU otherwise.
-:end_tab:
-
-It is better to create data directly on the device where it is used than to
-create it on the CPU and copy it: the array then never occupies main memory or
-crosses the bus between CPU and GPU.
-
-:begin_tab:`mxnet`
-To create an array on another device, pass the argument `device`.
-:end_tab:
-
-:begin_tab:`pytorch`
-To create a tensor on another device, pass the argument `device`.
-:end_tab:
-
-:begin_tab:`tensorflow`
-To create a tensor on a particular device, create it inside that device's
-scope.
-:end_tab:
-
-:begin_tab:`jax`
-`jax.device_put(x, device)` copies an array to a device, and the result is
-*committed* to that device: JAX keeps it, and every computation on it, where
-we put it. Arrays created without an explicit placement are *uncommitted*:
-they live on the default device, but JAX may move them when they meet
-committed arrays.
-:end_tab:
-
-We put an array `X` on the first GPU and an array `Y` on the second, and add
-them. On a machine with fewer GPUs, `try_gpu(1)` returns the CPU, and the
-examples below run without the second device.
+In MXNet and PyTorch, tensors default to the CPU unless `device=` is passed;
+in TensorFlow and JAX, tensors default to the first GPU when one is available
+(or can be placed explicitly via `with tf.device(...):` or `jax.device_put`).
+Allocating directly on the target device avoids an extra CPU-to-GPU copy.
+Let's place `X` on the first GPU and `Y` on the second GPU (falling back to CPU
+when fewer than two GPUs are present) and try adding them:
 
 ```{.python .input #gpus-devices-memory-copying-between-devices-4}
 %%tab mxnet
@@ -334,35 +276,19 @@ except ValueError as e:
     print(str(e).split('. ')[0])  # The first sentence names the problem
 ```
 
-:begin_tab:`mxnet`
-The addition fails: MXNet's execution engine does not find both operands on
-one device and refuses to choose where the result should live.
-:end_tab:
-
-:begin_tab:`pytorch`
-The addition fails: PyTorch requires the operands of an operation to be on
-the same device.
+:begin_tab:`mxnet, pytorch, jax`
+Adding tensors on different devices raises an error immediately, preventing accidental cross-device transfers.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The addition succeeds. Outside a device scope, TensorFlow runs an operation
-on its default device, the first GPU, and its default *device policy* copies
-any operand that lives elsewhere, without a warning.
-`tf.config.experimental.set_device_policy('explicit')` turns such silent
-copies into errors.
+Outside an explicit device scope, TensorFlow silently copies mismatched operands onto the default device (unless `tf.config.experimental.set_device_policy('explicit')` is enabled).
 :end_tab:
-
-:begin_tab:`jax`
-The addition fails: the two operands are committed to different devices, and
-JAX does not choose between two explicit placements.
-:end_tab:
-
 ### Copying Between Devices
 
-A transfer between devices is slow compared with arithmetic on either of
-them (:numref:`subsec_async_dispatch` measures how slow), so a framework that
-copied silently would hide a cost at the place where it occurs. We copy
-explicitly instead, as in :numref:`fig_copyto`, and then add.
+Moving tensors across devices is vastly slower than computing on them
+(:numref:`subsec_async_dispatch` measures the gap), so silently copying
+mismatched operands would hide severe performance bugs. Instead, we copy `X`
+explicitly onto `Y`'s device (:numref:`fig_copyto`) before adding them.
 
 ![X lives on GPU 0 and Y on GPU 1. The copy Z of X on GPU 1 (dashed) lets Y + Z run entirely on GPU 1.](../img/bg-copyto.svg)
 :label:`fig_copyto`
@@ -392,10 +318,10 @@ Z = jax.device_put(X, try_gpu(1))
 (Y + Z).device
 ```
 
-The sum lives on the second GPU, where both of its operands are. The rule that
-follows is to move data to the device at the boundary of a computation, once
-(a move to the device where the data already are costs next to nothing), and
-to keep the operations inside a training loop on one device.
+Now the sum runs and lands on the second GPU alongside both operands. The
+practical rule is simple: transfer data once at the boundary of your computation
+(moving a tensor to a device it already occupies is essentially a no-op) and
+keep every inner-loop operation on that single device.
 
 :begin_tab:`mxnet`
 The method for such a move is `to_device`, which returns the array itself
@@ -404,31 +330,10 @@ when it is already there; `copyto` always copies.
 
 ### Models on a Device
 
-A model computes with its parameters and its inputs together, so its
-parameters must live on the device of its data. Every framework places a
-whole model at once, without our listing its parameters.
-
-:begin_tab:`mxnet`
-`initialize(device=...)` creates the parameters of a Gluon model on the named
-device, so one call places the whole model.
-:end_tab:
-
-:begin_tab:`pytorch`
-A model is a tree of parameter tensors, and `net.to(device)` moves the whole
-tree in one call.
-:end_tab:
-
-:begin_tab:`tensorflow`
-A Keras model has no method to move it: its layers create their variables at
-the first call, on the device where that call runs. So we run the first
-forward pass inside a device scope, and the variables stay there.
-:end_tab:
-
-:begin_tab:`jax`
-An NNX model owns a tree of state, and `jax.device_put` accepts the whole
-tree. Updating the model with the placed state moves all its parameters
-together.
-:end_tab:
+Because a forward pass combines inputs with model parameters, the entire model
+must live on the same device as its minibatches. Thanks to the module tree from
+:numref:`sec_model_construction`, every framework moves or initializes all
+parameters in one call.
 
 ```{.python .input #gpus-devices-memory-models-on-a-device-1}
 %%tab mxnet
@@ -460,55 +365,26 @@ nnx.update(net, jax.device_put(nnx.state(net), try_gpu()))
 net(X)
 ```
 
-The input and the parameters are on the same device, so the output is
-computed and stored there too.
+With inputs and parameters colocated on the same device, the forward pass runs
+there and returns its output on that device as well.
 
-:begin_tab:`mxnet`
-Two rules keep a model on its device. Create the `gluon.Trainer` after
-`initialize`, so that the optimizer state is created next to the parameters
-it updates. And when `forward` needs a new array, create it on the input's
-device (`mnp.zeros(n, device=X.device)`) rather than on the CPU. To move a
-model that is already initialized, `net.reset_device(device)` reassigns
-every parameter.
-:end_tab:
-
-:begin_tab:`pytorch`
-Two rules keep a model on its device. Move the model *before* creating the
-optimizer, so that the optimizer state is created next to the parameters it
-updates. And when `forward` needs a new tensor, create it on the input's
-device (`torch.zeros(n, device=X.device)`) rather than on the CPU; state that
-belongs to the model but is not a parameter goes into a buffer
-(:numref:`sec_parameters`), which `.to(device)` moves with the parameters.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Placement in TensorFlow follows execution. A tensor created during the
-forward pass lives where the surrounding operations run, and a Keras
-optimizer creates its state at the first `apply_gradients`, next to the
-variables it updates. The one rule is the first-call rule above: build the
-variables under the device scope you intend, because moving them afterwards
-means rebuilding the model.
-:end_tab:
-
-:begin_tab:`jax`
-In JAX all state is explicit, so there is little to remember. The optimizer
-state is built from the parameters and lives where they live, and a compiled
-function runs where its inputs are. Keep the parameters and each minibatch on
-one device, and everything else follows.
-:end_tab:
-
+Keep two placement rules in mind: move or initialize the model on its target
+device *before* constructing the optimizer (so optimizer moments are allocated
+on the same device), and allocate any new tensors created inside `forward` on
+`X.device` rather than defaulting to the CPU.
 ## Asynchronous Execution
 
 ### The Execution Queue
 :label:`subsec_async_dispatch`
 
-A GPU does not execute operations at the moment Python calls them. Python
-places each operation in a queue on the device and moves on, while the GPU
-works through the queue in order. This lets Python prepare the next operation
-while the GPU computes, but it also means that the time a Python statement
-takes says nothing about the time its computation takes. We queue 32 products
-of $4096 \times 4096$ matrices and read the clock twice: when Python has
-issued them, and when the device has finished them.
+A GPU does not execute operations synchronously when Python invokes them.
+Instead, Python enqueues each kernel launch onto the device's command queue and
+returns immediately, letting the CPU prepare subsequent work while the GPU
+crunches through its queue in order. This pipelining hides Python overhead, but
+it comes with a crucial timing catch: measuring how long a Python loop takes
+measures *enqueueing*, not *execution*. Let's enqueue 32 products of
+$4096 \times 4096$ matrices and check the wall clock twice—right after Python
+finishes queuing them, and again once the device finishes computing them.
 
 ```{.python .input #gpus-devices-memory-don-t-break-the-pipeline-1}
 %%tab mxnet
@@ -569,60 +445,35 @@ B.block_until_ready()  # The device runs the products in order
 print(f'time until they all finished:     {time.perf_counter() - t:.4f} sec')
 ```
 
-:begin_tab:`mxnet`
-MXNet's execution engine is asynchronous on the CPU as well as on a GPU, and
-`npx.waitall()` waits until every queued operation has finished.
+:begin_tab:`mxnet, jax`
+Both MXNet and JAX dispatch asynchronously on CPU and GPU alike; `npx.waitall()` or `B.block_until_ready()` blocks until computation completes.
 :end_tab:
 
-:begin_tab:`pytorch`
-CUDA operations are asynchronous, and `torch.cuda.synchronize()` waits until
-every queued operation on the GPU has finished. Operations on the CPU run
-synchronously, which is why the cell needs a GPU. The imports cell allows
-tf32 for fp32 matrix products (:numref:`sec_numerics`), so that the matrix
-products timed in this section run on the tensor cores.
+:begin_tab:`pytorch, tensorflow`
+GPU kernels run asynchronously while CPU operations run synchronously; `torch.cuda.synchronize()` or `tf.test.experimental.sync_devices()` waits for all queued GPU work to finish.
 :end_tab:
-
-:begin_tab:`tensorflow`
-GPU operations are asynchronous, and `tf.test.experimental.sync_devices()`
-waits until every queued operation has finished. Eager operations on the CPU
-run synchronously, which is why the cell needs a GPU.
-:end_tab:
-
-:begin_tab:`jax`
-JAX dispatches asynchronously on the CPU as well as on a GPU.
-`block_until_ready()` waits until the array it is called on has been
-computed; since a device runs its queue in order, the last product finishing
-means that all of them have.
-:end_tab:
-
-Python issued the 32 products in a small fraction of the time the device
-needed to compute them. So when does Python wait at all? Only when it needs a
-value: converting a result to a Python number or a NumPy array, printing it,
-or branching on it in an `if`. Each such *synchronization point* blocks Python
-until the queue up to that value has drained, and then the device sits idle
-until Python sends more work, as :numref:`fig_bg_async_queue` shows. A
-training loop that prints `loss.item()` after every step synchronizes once per
-step. This is why the steps of the book's `Trainer` return their losses as
-arrays: `fit_epoch` adds them up on the device in a `d2l.Averager` and
-converts the sums into Python numbers once per epoch
-(:numref:`sec_oo-design`).
+Python finishes enqueuing all 32 matrix multiplications in a tiny fraction of
+the actual compute time. When does the CPU actually block and wait? Only when
+Python needs a concrete value back on the host—printing a tensor, calling
+`.item()`, converting to NumPy, or branching on a tensor in an `if` statement.
+Every such *synchronization point* stalls Python until the GPU drains its queue
+up to that value, leaving the GPU idle while Python catches up
+(:numref:`fig_bg_async_queue`). Logging `loss.item()` after every minibatch
+inserts a synchronization bubble on every step—which is why our `Trainer` keeps
+losses on-device inside a `d2l.Averager` and converts them to Python floats only
+once per epoch (:numref:`sec_oo-design`).
 
 ![Python queues operations op1 through op4 and continues while the GPU runs them in order. loss.item() is a synchronization point: the CPU blocks until the GPU has drained its queue; Python then resumes, and the GPU idles until it receives more work.](../img/bg-async-queue.svg)
 :label:`fig_bg_async_queue`
 
-Asynchronous execution also dictates how to time GPU code, and a timing that
-ignores it measures the queue, not the computation. Run the computation once
-before timing it, so that one-time costs such as memory allocation, library
-initialization, and compilation are excluded. Wait for the device before
-starting and before stopping the clock. Time several repetitions and divide,
-and read the clock with `time.perf_counter`, whose resolution is far finer
-than a millisecond. The cell above warms up, waits, and reads `perf_counter`,
-but it reports the total for its 32 products without dividing; the timings
-later in this section follow all four rules.
-
-`Benchmark` packages these rules for this and later chapters. It calls a
-function `warmup` times, waits for the device, times `repeats` further calls,
-waits again, and stores the average time per call in its attribute `time`.
+Asynchronous dispatch also dictates four rules for trustworthy GPU benchmarks:
+(1) run warm-up calls first to exclude one-time allocation, library setup, and
+JIT compilation; (2) synchronize the device both immediately *before* starting
+the timer and immediately *before* stopping it; (3) average over multiple
+repetitions; and (4) use `time.perf_counter` for sub-millisecond resolution.
+(The demonstration cell above warmed up and synchronized but reported the
+32-product total; our `Benchmark` helper below automates all four rules for this
+and later chapters.)
 
 ```{.python .input #gpus-devices-memory-the-execution-queue-1}
 %%tab mxnet
@@ -711,12 +562,12 @@ function must return what it computes, and `Benchmark` waits for the value
 returned by the last call.
 :end_tab:
 
-We put `Benchmark` to work at once on two claims made so far: that a GPU
-multiplies matrices far faster than a CPU, and that a transfer between devices
-is slow compared with arithmetic. We time the product of the queue experiment
-on the CPU and on the GPU, the same product in a 16-bit format, and the copy
-of the matrix from main memory to the GPU. On the GPU, the fp32 product runs
-in tf32 mode on the tensor cores (:numref:`sec_numerics`).
+Let's put `Benchmark` to work immediately on two claims from earlier: how much
+faster a GPU is than a CPU on large matrix multiplications, and how expensive
+host-to-device transfers are relative to compute. Below we time a
+$4096 \times 4096$ product on CPU (fp32), on GPU in tf32 (:numref:`sec_numerics`)
+and 16-bit precision, alongside copying a single $4096 \times 4096$ matrix from
+CPU RAM to the GPU.
 
 ```{.python .input #gpus-devices-memory-the-execution-queue-2}
 %%tab mxnet
@@ -801,69 +652,53 @@ TensorFlow uses tf32 for fp32 matrix products by default.
 JAX's default matrix-product precision chooses tf32 on this GPU.
 :end_tab:
 
-The GPU computes the product in under 2 ms. The CPU takes between a fifth of a
-second and two seconds, a hundred to a thousand times as long; where in that
-range it lands depends on how many CPU cores take part. In 16 bits the
-product takes about half the time that it takes in tf32, which is the speed
-that :numref:`sec_numerics` promised and could not show on a CPU.
+On a modern GPU, the $4096 \times 4096$ product finishes in under 2 ms, whereas
+the CPU requires 200 ms to 2 s—a $100\times$ to $1000\times$ speedup depending
+on CPU core count. Dropping to 16-bit precision cuts GPU time roughly in half
+again, delivering the tensor-core speedup promised in :numref:`sec_numerics`.
 
-The last line is the one to remember. Copying the matrix to the GPU takes
-about three to five times as long as multiplying it there, although the
-product performs 4096 multiplications and additions for every number copied.
-An ordinary copy from main memory first moves the data into *pinned*
-(page-locked) memory, which the GPU's copy engine can read directly. Data
-that are pinned already skip that step, and their copy can overlap with
-computation, as :numref:`sec_hardware` measures.
+Pay special attention to the final line: merely *copying* the matrix from CPU
+memory to the GPU takes three to five times *longer* than multiplying it once it
+arrives—even though the multiplication executes 4096 multiply-adds per copied
+element! Standard host copies first stage data through *pinned* (page-locked)
+host memory so the GPU's DMA engine can pull it directly; pre-pinning batches
+eliminates that extra copy and allows transfers to overlap with compute
+(:numref:`sec_hardware`).
 
 ## GPU Memory
 
 ### Three Views of Memory
 
-How much memory does a program use on a GPU? The answer depends on who is
-asked. A GPU *allocator* requests memory from the CUDA driver in large
-blocks and hands out pieces of them, and when an array is freed, it keeps the
-block for the next array instead of returning it, because requests to the
-driver are slow. There are therefore three nested views of memory,
-:numref:`fig_bg_allocator`: the bytes held by live arrays, the bytes the
-allocator has reserved, and the bytes the driver has given to the process,
-which `nvidia-smi` reports.
+Ask how much GPU memory a training script uses and you can get three different
+numbers, depending on which layer of the stack you query. Requesting memory
+directly from the CUDA driver is slow, so frameworks run an internal *caching
+allocator* that grabs large slabs from the driver and sub-allocates them to
+tensors, retaining freed slabs for reuse rather than releasing them immediately.
+This creates three nested memory views (:numref:`fig_bg_allocator`): the bytes
+currently occupied by live tensors, the larger pool reserved by the framework's
+allocator, and the total memory assigned by the CUDA driver to the process—the
+figure displayed by `nvidia-smi`.
 
 ![The three memory views nest: the driver's allocation to the process, which nvidia-smi reports, contains the allocator's reserved blocks, which contain the live arrays.](../img/bg-allocator.svg)
 :label:`fig_bg_allocator`
 
 :begin_tab:`mxnet`
-MXNet keeps a *memory pool* per device and has no counter of live bytes. Its
-only memory query is `npx.gpu_memory_info(i)`, which returns the free and
-total bytes of the whole device, the outermost view, as `nvidia-smi` does.
-That count includes other processes on the same GPU, so we report the
-*difference* from a reading at the start, taken after `gpu().empty_cache()`
-has returned the pool's unused blocks to the driver.
+`npx.gpu_memory_info(0)` queries device-wide free/total bytes from the CUDA driver after `gpu().empty_cache()`.
 :end_tab:
 
 :begin_tab:`pytorch`
-`torch.cuda.memory_allocated()` counts the bytes held by live tensors, and
-`torch.cuda.memory_reserved()` counts those bytes plus the blocks that
-PyTorch's *caching allocator* keeps for reuse.
+`torch.cuda.memory_allocated()` reports live tensor bytes, while `torch.cuda.memory_reserved()` reports the caching allocator's pool.
 :end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow reserves GPU memory for its own allocator.
-`tf.config.experimental.get_memory_info('GPU:0')` returns a dictionary whose
-entry `'current'` counts the bytes of live tensors and whose entry `'peak'`
-is their largest value so far. On the CPU there is no such allocator, and the
-call raises an error.
+`tf.config.experimental.get_memory_info('GPU:0')` reports `'current'` and `'peak'` live bytes inside TensorFlow's GPU allocator.
 :end_tab:
 
 :begin_tab:`jax`
-On its first use of a GPU, JAX *preallocates* a large fraction of its memory
-for its allocator, so `nvidia-smi` shows that whole block no matter how much
-of it is used. The method `memory_stats()` of a GPU device returns a
-dictionary whose entry `bytes_in_use` counts the bytes of live arrays and
-whose entry `peak_bytes_in_use` is their largest value so far. On the CPU it
-returns `None`.
+`gpu().memory_stats()` reports `'bytes_in_use'` and `'peak_bytes_in_use'` inside JAX's preallocated GPU pool.
 :end_tab:
-
-We create an array of 1 GiB and delete it again:
+Let's allocate a 1 GiB float32 tensor and immediately delete it to watch these
+counters respond:
 
 ```{.python .input #gpus-devices-memory-gpu-memory}
 %%tab mxnet
@@ -932,68 +767,24 @@ else:
     print('No GPU: memory_stats() returns None on the CPU backend.')
 ```
 
-:begin_tab:`mxnet`
-Creating `big` takes a gibibyte from the driver, and deleting it gives
-nothing back: the block returns to MXNet's pool, which still holds it. Only
-`empty_cache()` returns it to the driver. Do not call `empty_cache` inside a
-training loop, since the pool would then have to request the memory from the
-driver again at every step.
-:end_tab:
+Deleting `big` drops the live-tensor byte counter by 1 GiB (in PyTorch,
+TensorFlow, and JAX), yet the framework's caching allocator retains the freed
+1 GiB slab in its reserved pool so `nvidia-smi` does not budge. (Never call
+`empty_cache()` inside a training loop, as forcing slabs back to the CUDA
+driver adds slow driver allocations on every step.)
+The outermost driver view sets the hard out-of-memory ceiling, since the driver
+cannot hand out more RAM than the card physically holds. To diagnose *where*
+memory goes inside our code, we inspect live-byte counters—especially the *peak*
+memory reached during a call, which determines whether a step succeeds or
+crashes with out-of-memory (OOM).
 
 :begin_tab:`pytorch`
-After the deletion, `memory_allocated()` falls by a gibibyte while
-`memory_reserved()` does not move: the block went back to the cache, and
-`nvidia-smi` still counts it. (Most of what remains allocated is the
-matrices of the timing cells above: `A` and `B`, 64 MiB each, and the 32 MiB
-of `A16`.)
-`torch.cuda.empty_cache()` returns cached blocks to the driver, which helps
-when another process needs the GPU. Do not call it inside a training loop,
-since the allocator would then have to request the memory from the driver
-again at every step.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The count of live bytes falls by a gibibyte when `big` is deleted, to the 160
-MiB of the matrices `A`, `B`, and `A16` of the timing cells above, while
-`nvidia-smi` does not move: the block returns to TensorFlow's allocator, not
-to the driver, and TensorFlow keeps its reservation until the process ends. To share a GPU
-with another process, call
-`tf.config.experimental.set_memory_growth(gpu, True)`, which grows the
-reservation on demand instead, before the first computation.
+`torch.cuda.reset_peak_memory_stats()` and `torch.cuda.max_memory_allocated()` measure the exact peak live memory delta of any call:
 :end_tab:
 
 :begin_tab:`jax`
-The count of live bytes falls by a gibibyte when `big` is deleted, to the 160
-MiB of the matrices `A`, `B`, and `A16` of the timing cells above, while
-`nvidia-smi` does not move: the block returns to the preallocated pool. To
-share a GPU with another process, set the environment variable
-`XLA_PYTHON_CLIENT_PREALLOCATE=false` before the first computation; JAX then
-requests memory from the driver as it needs it.
+Because XLA statically plans memory for compiled functions, `compiled.memory_analysis().temp_size_in_bytes` reports the temporary workspace/activation bytes required beyond inputs and outputs:
 :end_tab:
-
-The memory that limits what fits is the outermost view, since the driver
-cannot give a process more than the device has. The counts of live bytes are
-what we use to find out where the memory goes. Of these, the one that decides
-whether a computation fits is its *peak*, the most memory it holds at any
-moment.
-
-:begin_tab:`pytorch`
-The allocator tracks this high-water mark:
-`torch.cuda.reset_peak_memory_stats()` clears it and
-`torch.cuda.max_memory_allocated()` reads it back. `peak_memory` returns the
-memory that a call needs beyond what was allocated before it; later chapters
-use it to compare implementations.
-:end_tab:
-
-:begin_tab:`jax`
-The arrays inside a compiled function exist only during the call, and
-`peak_bytes_in_use` cannot be reset, so the counters cannot show the peak of
-one call. XLA, however, plans the memory of a compiled function in advance,
-and `memory_analysis()` of the compiled function reports the temporary memory
-that it needs beyond its inputs and outputs. `peak_memory` returns this
-amount; later chapters use it to compare implementations.
-:end_tab:
-
 ```{.python .input #gpus-devices-memory-three-views-of-memory-1}
 %%tab pytorch
 def peak_memory(f, *args):  #@save
@@ -1018,43 +809,17 @@ def peak_memory(f, *args):  #@save
 ### Memory During Training
 :label:`subsec_memory_during_training`
 
-For a model with $N$ parameters that trains with Adam in fp32,
-:numref:`sec_parameters` counted $16N$ bytes: $4N$ each for the weights and
-their gradients, and $8N$ for Adam's two running averages. The remaining
-term, the *activations*, is of a different kind. Backpropagation needs the
-intermediate results of the forward pass to compute the gradients, so it
-stores them until the backward pass has used them. Their size grows with the
-minibatch size and with the width of every layer, while $16N$ does not. Let us
-predict the terms before we measure them. We take an MLP with three hidden
-layers of width 4096 on inputs of width 1024, $N \approx 3.8 \times 10^7$
-parameters, so that $4N \approx 144$ MiB, at a minibatch size of 4096. The
-activations that backpropagation keeps are mainly the outputs of the three
-hidden layers, each a $4096 \times 4096$ array of fp32 numbers, 64 MiB apiece:
-192 MiB in all, about a third more than the weights.
-
-:begin_tab:`mxnet`
-MXNet has no counter of live bytes, so this tab measures nothing here. The
-accounting itself holds, with one point of timing: Gluon allocates the
-gradient of each parameter at `initialize`, so the $4N$ bytes of gradients are
-there from the start.
-:end_tab:
-
-:begin_tab:`pytorch`
-We read `memory_allocated()` at four points of one training step.
-:end_tab:
-
-:begin_tab:`tensorflow`
-We read `'current'` at four points of one training step. `tf.GradientTape`
-records the forward pass and holds its intermediate results until we ask it
-for the gradients, so the activations appear in the second reading.
-:end_tab:
-
-:begin_tab:`jax`
-We read `bytes_in_use` after each piece of a training step. The activations
-exist only while `nnx.grad` runs, so no reading afterwards shows them.
-Instead we ask the compiler: `peak_memory` of the gradient function reports
-the temporary memory it needs, which here is the activations.
-:end_tab:
+In :numref:`sec_parameters`, we established the static memory floor for fp32
+Adam training: $16N$ bytes for $N$ parameters ($4N$ weights, $4N$ gradients, and
+$8N$ Adam moments). During an actual training step, a fourth term joins them:
+*activations*. Backpropagation must retain intermediate forward-pass outputs
+until the backward pass consumes them—and unlike the static $16N$, activation
+memory scales linearly with minibatch size and layer width. Let's calculate it
+before measuring: consider a three-hidden-layer MLP of width 4096 taking
+1024-dimensional inputs ($N \approx 3.8 \times 10^7$ parameters, so
+$4N \approx 144$ MiB) at minibatch size 4096. The three hidden-layer outputs are
+each $4096 \times 4096$ fp32 tensors of 64 MiB—192 MiB in total, already a third
+larger than the weights themselves!
 
 ```{.python .input #gpus-devices-memory-what-fills-memory-during-training}
 %%tab pytorch
@@ -1144,76 +909,50 @@ else:
     print('No GPU: run this cell on a GPU to see the terms arrive.')
 ```
 
-:begin_tab:`pytorch`
-The first reading is the weights, about $4N$ bytes, plus the input
-minibatch. The second adds the stored activations, here about a third more
-than the weights. The third *falls*: `backward` frees the activations as it
-uses them and leaves gradients of the same size as the weights. The fourth
-adds about $8N$ at the first `optimizer.step()`, when Adam creates its two
-running averages. From then on every step rises to the second reading and
-falls back to the third; weights, gradients, and optimizer state stay.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The first reading is the weights, about $4N$ bytes, plus the input
-minibatch. The second adds the activations that the tape holds, here about a
-third more than the weights. The third *falls*: `tape.gradient` frees the
-recorded forward pass and leaves gradients of the same size as the weights.
-The fourth adds about $8N$ at the first `apply_gradients`, when Adam creates
-its two running averages. From then on every step rises to the second
-reading and falls back to the third; weights, gradients, and optimizer state
-stay.
-:end_tab:
-
-:begin_tab:`jax`
-The first reading is the weights, about $4N$ bytes, plus the input
-minibatch. The second adds gradients of the same size as the weights: in JAX
-a gradient is not attached to a parameter but is a second tree of arrays,
-returned by `nnx.grad`. The third adds about $8N$ when `optax.adam` creates
-its two running averages. The activations, about a third more than the
-weights, exist only during the gradient computation.
-:end_tab:
-
-The minibatch size is the first memory control to try, because it scales the
-activations without changing the model. If memory instead grows from one step
-to the next, something keeps the arrays of earlier steps alive. The usual
-suspect is a Python list of losses: a loss that still carries its computation
-graph keeps the activations of its step alive with it, so detach the loss
-before storing it.
+The readings trace the exact lifecycle of a training step: weights ($4N$ bytes)
+plus inputs sit in memory first; the forward pass adds the stored activations
+(~192 MiB, exceeding the weights); the backward pass consumes and frees those
+activations while materializing gradients ($4N$); and the first optimizer step
+allocates Adam's two moments ($8N$). From step two onward, memory oscillates
+between the static $16N$ floor and the forward-pass activation peak.
+Shrinking the minibatch size is the quickest lever when activations push memory
+over the edge, since it cuts activation footprint without altering the
+architecture. By contrast, if memory climbs steadily *from step to step*, look
+for a leak keeping old computation graphs alive—the classic culprit being
+appending raw loss tensors to a Python list without detaching them first.
 
 ### Activation Checkpointing
 :label:`subsec_activation_checkpointing`
 
-The activations have a second control. Backpropagation stores every
-intermediate result only to read it once, on the way back. *Activation
-checkpointing* :cite:`Chen.Xu.Zhang.ea.2016` stores less: it keeps only the
-inputs of selected segments of the network, and during the backward pass it
-reruns the forward computation of each segment to regenerate the activations
-that segment needs. (The name has nothing to do with the checkpoint files of
-:numref:`sec_read_write`: here a checkpoint is an activation kept in memory.)
-For a stack of $K$ equally sized layers cut into segments of $s$ layers, the
-backward pass holds the $K/s$ segment inputs plus the activations of one
-segment, about $K/s + s$ layer activations instead of $K$. The sum is smallest
-at $s = \sqrt{K}$, where stored activations fall from $O(K)$ to $O(\sqrt{K})$.
-The saving costs computation, namely a second forward pass through every
-segment, :numref:`fig_bg_activation_checkpoint`. How much longer does a step
-take? A backward pass costs about twice a forward pass: for a linear layer it
-computes two matrix products, one for the gradient of the weights and one for
-the gradient of the input, where the forward pass computes one. A step then
-costs about four forward passes instead of three, a third more. This is a
-rather crude count, and the exact overhead depends on the layers and the
-hardware.
+There is a second, architectural lever for activation memory. Standard
+backpropagation stores every layer's intermediate output only to read it once on
+the backward sweep. *Activation checkpointing* (also called *gradient
+checkpointing* or *rematerialization*, :cite:`Chen.Xu.Zhang.ea.2016`) discards
+most intermediate activations during the forward pass, retaining only the inputs
+at the boundaries of chosen segments, and recomputes each segment's internal
+activations on the fly during the backward pass. (Despite the shared word, this
+in-memory technique is unrelated to the disk checkpoints of
+:numref:`sec_read_write`.)
+
+Partitioning $K$ uniform layers into segments of $s$ layers stores only $K/s$
+segment boundaries plus $s$ live activations inside the active segment—about
+$K/s + s$ tensors instead of $K$. Choosing $s = \sqrt{K}$ drops peak activation
+memory from $O(K)$ down to $O(\sqrt{K})$! The trade-off is one extra forward
+pass per segment during backpropagation (:numref:`fig_bg_activation_checkpoint`).
+Since a linear layer's backward pass computes two matrix products (input
+gradient and weight gradient) while its forward pass computes one, adding an
+extra forward pass increases total step compute from roughly 3 forward-pass
+equivalents to 4—about a 33% rough upper bound, depending on hardware and layer
+mix.
 
 ![(a) Standard backpropagation stores the activations of every layer. (b) Checkpointing stores only the inputs of the segments (filled) and recomputes the activations inside each segment (open) during the backward pass. With $K$ layers in segments of $\sqrt{K}$ layers, stored activations fall from $O(K)$ to $O(\sqrt{K})$ at the cost of one extra forward pass.](../img/bg-activation-checkpoint.svg)
 :label:`fig_bg_activation_checkpoint`
 
-Checkpointing suits deep stacks of identical blocks, such as the residual
-stack of :numref:`sec_model_construction` and the transformers of later
-chapters. We use the residual block of :numref:`sec_model_construction`,
-$\mathbf{X} + \textrm{Linear}(\textrm{ReLU}(\textrm{Linear}(\mathbf{X})))$,
-with its weights drawn from $\mathcal{N}(0, 0.01^2)$ and zero biases in every
-framework, so that all tabs build the same model. A function runs a stack of
-blocks in segments, with or without checkpointing.
+Activation checkpointing shines on deep stacks of identical blocks, such as our
+residual MLP (:numref:`sec_model_construction`) and modern transformers. Below
+we define `ResidualBlock` with $\mathcal{N}(0, 0.01^2)$ weights and zero biases
+across all frameworks, along with a `run_stack` helper that groups blocks into
+segments with optional checkpointing.
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1}
 %%tab pytorch
@@ -1298,43 +1037,23 @@ def run_stack(graphdef, states, X, use_checkpoint=False, segment_size=4):
 ```
 
 :begin_tab:`mxnet`
-MXNet has no per-segment activation checkpointing. There is only a global
-switch: the environment variable `MXNET_BACKWARD_DO_MIRROR=1`, read when the
-process starts, lets MXNet drop some intermediate results of a hybridized
-graph and recompute them during the backward pass, with no control over which
-ones. This tab therefore has no code in this subsection, and the minibatch
-size remains the control over activation memory.
+MXNet offers no per-segment checkpointing API in Python (only a process-wide `MXNET_BACKWARD_DO_MIRROR=1` flag for hybridized graphs), so this subsection runs in PyTorch, TensorFlow, and JAX.
 :end_tab:
 
 :begin_tab:`pytorch`
-`checkpoint(segment, X)` runs a segment without storing its intermediate
-results and keeps what it needs to rerun it. The recomputation must reproduce
-the original forward pass, so `checkpoint` also saves and restores the state
-of the random number generator, which keeps segments with dropout correct.
+`torch.utils.checkpoint.checkpoint(segment, X, use_reentrant=False)` discards intermediate activations inside `segment`, saves and restores RNG state (keeping dropout consistent), and reruns `segment` during `backward()`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-`tf.recompute_grad(segment)` returns a function that computes the same values
-as `segment` but tells the tape to store only its input, and reruns `segment`
-during the backward pass. It does not save the state of the random number
-generator, so a segment with stateful dropout can draw a different mask when
-it is recomputed.
+`tf.recompute_grad(segment)` wraps `segment` so `GradientTape` retains only its segment boundary input and recomputes internal activations on the backward sweep.
 :end_tab:
 
 :begin_tab:`jax`
-`jax.checkpoint` (also called `jax.remat`) is a function transformation like
-`grad` and `jit`: `jax.checkpoint(f)` computes the same values as `f`, but
-when it is differentiated, it saves only the inputs of `f` and recomputes the
-rest during the backward pass. JAX functions receive their random keys as
-arguments, so a recomputed segment with dropout draws the same mask by
-construction. The NNX model is split into its structure, `graphdef`, and its
-parameters, `states`, so that the segments are pure functions of the
-parameters.
+`jax.checkpoint` (or `jax.remat`) transforms a pure function (obtained via `nnx.split`) so `jax.grad` saves only segment boundary inputs and rematerializes interior activations during backpropagation.
 :end_tab:
-
-Recomputation must not change the result. We check that the gradients
-through a stack of eight blocks, run as two checkpointed segments, equal the
-ordinary ones.
+First, a sanity check: recomputing activations must never alter the math. Let's
+verify on an eight-block stack split into two checkpointed segments that all
+gradients match standard backpropagation.
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-2}
 %%tab pytorch
@@ -1385,11 +1104,10 @@ for g, g_ckpt in zip(stack_grads(False), stack_grads(True)):
 print('checkpointed gradients match the ordinary ones')
 ```
 
-The check runs on the CPU too. The memory effect needs a GPU and a stack deep
-enough for a clear difference: sixteen blocks of width 1024 at a minibatch
-size of 8192, in segments of four blocks. We report the *step memory*, the
-peak memory of a step beyond the parameters and the input it starts from,
-and the time per step that `Benchmark` measures.
+That correctness check runs anywhere; to measure the memory–compute trade-off,
+we move to a GPU with a deeper stack of 16 blocks (width 1024, batch size 8192)
+grouped into four-block segments, reporting both *step memory* (peak memory
+beyond parameters and inputs) and wall-clock time via `Benchmark`.
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-3}
 %%tab pytorch
@@ -1468,45 +1186,20 @@ gradients. `peak_bytes_in_use` would not do, since JAX cannot reset it and
 earlier cells have already raised it.
 :end_tab:
 
-Without checkpointing, the step holds the activations of all sixteen blocks.
-With segments of four blocks, it holds the four segment inputs plus the
-activations of one segment, and its memory falls from about 1.1 GiB to between
-0.4 and 0.5 GiB. The step takes about a quarter longer, a little less than
-the third that our crude count of forward passes predicted. This trade lets a
-model train when its activations would otherwise exceed the memory of the
-device, and it is common in the training of large transformers.
+Without checkpointing, the backward pass holds activations for all 16 blocks at
+once; grouping into four-block segments keeps only four segment boundaries plus
+one active segment, cutting step memory from roughly 1.1 GiB down to 0.4–0.5 GiB
+for roughly 25% more compute time—slightly better than our back-of-the-envelope
+33% estimate. That favorable exchange makes activation checkpointing standard
+practice when training large transformers and deep vision models.
 
 ## Device-Aware Trainer
 :label:`subsec_device_aware_trainer`
 
-The `Trainer` can at last put its argument `num_gpus` to use. It needs nothing
-beyond the rules of this section: the parameters are on the device before
-training starts, and every minibatch is moved there at the start of its step.
-
-:begin_tab:`mxnet`
-`prepare_model` moves the parameters with `reset_device`, and
-`prepare_batch` moves every minibatch, to the CPU as well when there is no
-GPU.
-:end_tab:
-
-:begin_tab:`pytorch`
-`prepare_model` moves the model before the `Trainer` creates the optimizer,
-and `prepare_batch` moves every minibatch.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`prepare_batch` copies every minibatch with `tf.identity` inside the device
-scope: `tf.data` produces minibatches on the CPU, and without the copy every
-operation on them would copy them silently. The variables need no code of
-their own. Keras creates them at the first call, and the `Trainer` makes that
-call, a forward pass on a minibatch from `prepare_batch`, when it compiles its
-steps.
-:end_tab:
-
-:begin_tab:`jax`
-The parameters need no code of their own: a JAX model creates them in its
-constructor, on the default device, which is the GPU whenever there is one.
-:end_tab:
+Now we can finally wire `num_gpus` into `d2l.Trainer`. Putting our rules into
+practice takes just two steps: place the model parameters on the target device
+before training begins, and move each minibatch to that device at the start of
+every step.
 
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-1}
 %%tab mxnet
@@ -1599,17 +1292,17 @@ def prepare_batch(self, batch):
     return batch
 ```
 
-The expression `min(num_gpus, d2l.num_gpus())` makes the request an upper
-limit rather than a demand. On a machine without a GPU, `self.gpus` is
-empty, nothing is moved to a GPU, and training runs on the CPU. Every
-`Trainer(num_gpus=1)` in the rest of the book relies on this fallback.
+Using `min(num_gpus, d2l.num_gpus())` treats `num_gpus` as an upper bound rather
+than a hard requirement: on CPU-only machines, `self.gpus` is empty and training
+runs seamlessly on the CPU—the exact fallback behind every `Trainer(num_gpus=1)`
+call throughout the rest of the book.
 
-Does a GPU pay off in training? The product of two large matrices ran more
-than a hundred times faster on the GPU than on the CPU, but a training step is
-more than one large product. We answer for a classifier built from the residual
-blocks of :numref:`subsec_activation_checkpointing`: a hidden layer of width
-256, two residual blocks, and 10 outputs, with all weights drawn from
-$\mathcal{N}(0, 0.01^2)$ and zero biases, as for the MLPs of earlier chapters.
+How much faster does a GPU actually train a small model? While our
+$4096 \times 4096$ matrix product sped up by over $100\times$, an end-to-end
+training loop includes data loading, Python dispatch, and smaller layers. Let's
+measure a Fashion-MNIST classifier built from two 256-wide residual blocks
+(:numref:`subsec_activation_checkpointing`) with $\mathcal{N}(0, 0.01^2)$
+weights and zero biases.
 
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-3}
 %%tab mxnet
@@ -1687,8 +1380,8 @@ version of the residual block of :numref:`sec_model_construction`; the
 model's `initialize` draws all its weights from $\mathcal{N}(0, 0.01^2)$.
 :end_tab:
 
-We train the model on Fashion-MNIST with `num_gpus=0` and with `num_gpus=1`,
-and time one epoch after one epoch of warm-up.
+We compare one post-warmup epoch on Fashion-MNIST with `num_gpus=0` versus
+`num_gpus=1`:
 
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-4}
 %%tab mxnet, pytorch
@@ -1743,50 +1436,37 @@ for gpus in (0, 1):
     print(f'num_gpus={gpus}: {epoch_time(num_gpus=gpus):.1f} sec per epoch')
 ```
 
-This is a sobering result. On the GPU an epoch runs at most a few times as
-fast as on the CPU, far from the factor of more than a hundred that the GPU
-gained on the large matrix product. A step of this model multiplies matrices
-with at most $784 \times 256$ entries, too little work to keep the GPU busy,
-and much of an epoch goes into loading the data and launching the many small
-operations of each step. A GPU pays off when large matrix products dominate
-the work, as they do in the larger models of the chapters to come.
+The speedup is a useful reality check: on this tiny Fashion-MNIST network, a GPU
+epoch runs at most a few times faster than CPU—nowhere near the $100\times$ gain
+on $4096 \times 4096$ matrix multiplies. Here the largest matrix is only
+$784 \times 256$, leaving the GPU vastly underutilized while data loading and
+kernel-launch overhead dominate the clock. GPUs earn their keep once large
+convolutions, attention heads, and wide linear layers dominate the workload—as
+they do starting in the next chapter.
 
-The memory of this run follows the accounting above: weights, gradients, and
-the state of the optimizer, which for SGD is nothing, plus the activations of
-one minibatch. It is a small model, and it fits with room to spare. And the
-8-billion-parameter model of the opening? A smaller minibatch and activation
-checkpointing shrink its activations, but its 128 GB of weights, gradients,
-and optimizer state are needed before the first activation is stored, and no
-setting of this section touches them. Note that the `Trainer` would not have
-warned us: it cannot tell whether a model fits before it runs out of memory.
-That estimate we still make by hand, from the bytes per parameter and the size
-of the activations. Training on more than one device is taken up in
+From a memory perspective, this small SGD model fits comfortably with gigabytes
+to spare. Return to our 8-billion-parameter model, however: shrinking batch size
+and enabling activation checkpointing tame activation memory, yet the 128 GB
+static floor of fp32 weights, gradients, and Adam moments remains untouched—and
+remember that `Trainer` cannot warn you ahead of time before hitting OOM.
+Back-of-the-envelope memory budgeting remains essential, and scaling past a
+single device's memory brings us to multi-GPU parallelism in
 :numref:`chap_performance`.
 
 ## Summary
 
-Every array and every parameter lives on a device, and an operation combines
-arrays on one device. Copies between devices are explicit and slow compared
-with arithmetic, so they belong at the boundary of a computation, not inside
-the training loop. A GPU executes its queue asynchronously, so Python waits
-only at synchronization points, such as converting a result to a Python
-number, and correct timing needs a warm-up, explicit waits, and repetitions.
-GPU memory during training holds the weights, their gradients, and the
-optimizer state, which depend only on the model, plus activations that grow
-with the minibatch size. Activation checkpointing stores only the inputs of
-segments and recomputes the rest, which lowers the peak memory at the cost of
-one extra forward pass. The device-aware `Trainer` moves the model once and
-every minibatch per step, and it falls back to the CPU when no GPU is present.
-
-:begin_tab:`mxnet`
-MXNet reports only device-wide memory, through `npx.gpu_memory_info`, and has
-no per-segment activation checkpointing.
-:end_tab:
-
-:begin_tab:`tensorflow`
-TensorFlow copies between devices silently by default, so in TensorFlow
-explicit copies are a discipline rather than a rule the framework enforces.
-:end_tab:
+Every tensor and model parameter resides on a specific device, and every
+operation requires its operands on the same device. Because host–device
+transfers are far slower than GPU compute, place models once upfront, transfer
+batches at step boundaries, and keep inner loops on-device. GPUs execute
+asynchronously from a command queue, meaning Python stalls only at
+synchronization points (such as `.item()` or NumPy conversions) and reliable
+benchmarks require warm-up, explicit synchronization, and repeated trials.
+Training memory consists of static model/optimizer state plus batch-dependent
+activations; activation checkpointing cuts activation memory from $O(K)$ to
+$O(\sqrt{K})$ at the cost of roughly one extra forward pass. Finally, our
+device-aware `Trainer` automates single-GPU placement while falling back cleanly
+to CPU when no GPU is present.
 
 ## Exercises
 
@@ -1826,23 +1506,7 @@ explicit copies are a discipline rather than a rule the framework enforces.
        identify sources of deviation from linear scaling. Guard the
        experiment with `num_gpus() >= 2`.
 
-4. [code] **Precision crossover.** ● Adapt the `train` function of
-   :numref:`sec_numerics` to a GPU: place the network and every batch on
-   the device, so that the 16-bit computation runs there, and let the
-   caller choose the hidden width of the MLP and the batch size. Time ten
-   steps of its fp32 run and of its mixed-precision run with `Benchmark`,
-   after one untimed step.
-    1. For hidden widths 256 and 4096, sweep the batch size from 8 to 4096
-       in powers of two and plot the mixed-precision speedup over fp32
-       against the batch size, one curve per width.
-    1. Below which batch size, if any, is mixed precision slower than fp32
-       at each width? Explain the reversal and why the crossover moves with
-       the width.
-
-    *Adapted from the PyTorch recipe
-    [Automatic Mixed Precision](https://docs.pytorch.org/tutorials/recipes/recipes/amp_recipe.html).*
-
-5. [code] **Synchronization points.** ● Consider the training run of
+4. [code] **Synchronization points.** ● Consider the training run of
    `ResMLPClassifier` in :numref:`subsec_device_aware_trainer` on a GPU.
     1. List every synchronization point in one training step, reading
        `Trainer.fit_epoch`, `Trainer.prepare_batch`, and `Averager` as
@@ -1859,30 +1523,6 @@ explicit copies are a discipline rather than a rule the framework enforces.
     *Adapted from the PyTorch documentation
     [CUDA semantics](https://docs.pytorch.org/docs/stable/notes/cuda.html).*
 
-:begin_tab:`pytorch, tensorflow`
-6. [code] **Activation checkpointing.** Revisit the comparison
-   of :numref:`subsec_activation_checkpointing`.
-    1. Increase the batch size until the run without checkpointing raises
-       an out-of-memory error. How much further can the checkpointed run go
-       before it does too? Explain the ratio from what each variant stores.
-    1. Run `run_stack` with `segment_size` equal to 1, 4, and the number of
-       blocks, and once without checkpointing. Plot step memory against
-       step time for the four configurations. Which segment size would you
-       choose here, and why?
-:end_tab:
-
-:begin_tab:`jax`
-6. [code] **Activation checkpointing.** Revisit the comparison
-   of :numref:`subsec_activation_checkpointing`.
-    1. Increase the batch size until the run without checkpointing raises
-       an out-of-memory error. How much further can the checkpointed run go
-       before it does too? Explain the ratio from what each variant stores.
-    1. Run `run_stack` with `segment_size` equal to 1, 4, and the number of
-       blocks, and once without checkpointing. Measure the step memory with
-       `memory_analysis()`, as in the section. Plot step memory against
-       step time for the four configurations. Which segment size would you
-       choose here, and why?
-:end_tab:
 
 [Discussions](https://d2l.discourse.group/t/36758)
 

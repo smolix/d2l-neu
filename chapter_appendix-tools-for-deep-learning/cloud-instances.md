@@ -295,19 +295,19 @@ of the year eventually costs more to rent than to buy, and
 
 1. **NVLink or PCIe.** ● Two providers offer eight H100s at the same price
    per GPU-hour. One node connects the GPUs with NVLink, the other only over
-   PCIe 5.0. A data-parallel job trains a transformer with $P$ parameters
-   and BF16 gradients, so that $N = 2P$ bytes enter the communication time
+   PCIe 5.0. A data-parallel job trains a transformer with $N$ parameters
+   and BF16 gradients, so that $S = 2N$ bytes enter the communication time
    of :eqref:`eq_dp_cost`. Each GPU processes $b$ tokens per step, which
-   costs $6Pb$ FLOPs by :eqref:`eq_six_nd`. Take the all-reduce bandwidth
-   $\beta$ as the nominal per-direction rate, 450 GB/s for NVLink and
-   64 GB/s for PCIe, and let both nodes sustain 40% of the H100's 989
-   TFLOPS of dense BF16 compute. Assume that communication does not overlap
-   with computation.
-    1. For $P = 1.3 \times 10^9$, compute the step time on each node at
+   costs $6Nb$ FLOPs by :eqref:`eq_six_nd`. Take the bus bandwidth
+   $1/\beta_\textrm{link}$ as the nominal per-direction rate, 450 GB/s for
+   NVLink and 64 GB/s for PCIe, and let both nodes sustain 40% of the
+   H100's 989 TFLOPS of dense BF16 compute. Assume that communication does
+   not overlap with computation.
+    1. For $N = 1.3 \times 10^9$, compute the step time on each node at
        $b = 16{,}384$ and at $b = 4{,}096$. By what fraction must the PCIe
        price drop to match the NVLink node in cost per token?
     1. The ratio of communication time to compute time does not depend on
-       $P$, because both times grow in proportion to
+       $N$, because both times grow in proportion to
        it (:numref:`sec_hardware`). On each node, find the number of tokens per
        GPU and step at which communication takes as long as computation.
     1. Gradient accumulation (:numref:`subsec_mp-accumulation`) communicates

@@ -78,16 +78,19 @@ def fig_chinchilla() -> None:
     # Budgets of equal compute, log D = log(C/6) - log N, dashed
     rot = _angle(ax, -1.0)
     C_chin = 5.76e23  # Chinchilla's budget as reported (6ND gives 5.9e23)
-    for C, label, lx in ((1e21, r"$C = 10^{21}$", 8.15),
-                         (C_chin, r"$C = 5.76 \times 10^{23}$", 8.62)):
+    for C in (1e21, C_chin):
         ax.plot(x, np.log10(C / 6) - x, color=T.MUTED, lw=1.1,
                 ls=(0, (5, 3)))
         n0, d0 = _optimum(C)
         ax.plot(n0, d0, "o", ms=6, color=T.ORANGE.base, zorder=4)
-        ax.text(lx, np.log10(C / 6) - lx + 0.16, label, fontsize=12,
-                color=INK, ha="left", va="bottom", rotation=rot,
-                rotation_mode="anchor",
-                bbox=dict(fc="white", ec="none", pad=0.5))
+    # Labels clear of the contours: the small budget along its line, where
+    # it runs inside the 2.4 contour, the large one past the line's end
+    ax.text(9.72, np.log10(1e21 / 6) - 9.72 + 0.12, r"$C = 10^{21}$",
+            fontsize=12, color=INK, ha="left", va="bottom", rotation=rot,
+            rotation_mode="anchor", bbox=dict(fc="white", ec="none", pad=0.5))
+    ax.text(XLIM[1] + 0.06, np.log10(C_chin / 6) - XLIM[1],
+            r"$C = 5.76 \times 10^{23}$", fontsize=12, color=INK,
+            ha="left", va="center", clip_on=False)
 
     # Compute-optimal path through the tangency points
     Cs = np.logspace(19.5, 26.8, 50)
@@ -101,8 +104,8 @@ def fig_chinchilla() -> None:
     for logN, logD, name, dx, dy, ha in (
             (np.log10(70e9), np.log10(1.4e12), "Chinchilla", 0.12, 0.0,
              "left"),
-            (np.log10(8e9), np.log10(15e12), "Llama 3 8B", -0.12, 0.0,
-             "right")):
+            (np.log10(8e9), np.log10(15e12), "Llama 3 8B", 0.2, 0.42,
+             "left")):
         ax.plot(logN, logD, "s", ms=6, color=INK, zorder=5)
         ax.text(logN + dx, logD + dy, name, fontsize=12, color=INK,
                 ha=ha, va="center",

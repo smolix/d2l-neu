@@ -1,28 +1,13 @@
 # The Transformer Block
 :label:`sec_transformer-block`
 
-:numref:`chap_attention` built attention, a layer in which each position
-reads from all the others. On its own it makes a weak model. Each output of an
-attention layer is a weighted average of value vectors, which are linear
-projections of the inputs. The softmax weights decide how much of each value
-to take, but nothing in the layer computes a nonlinear feature of what a
-single position holds. A language model needs that computation at every
-position, and it needs it stacked dozens of layers deep. Depth brings a
-problem of its own: a signal that passes through 32 layers can shrink,
-explode, or lose the differences between tokens before it reaches the
-output, and the gradient makes the same trip in reverse.
+Self-attention (:numref:`chap_attention`) mixes information across sequence positions: each token's output is a weighted average of value vectors from the positions it attends to. On its own, however, an attention layer applies only linear projections ($W_Q, W_K, W_V, W_O$) around the weighted sum. Without a position-wise nonlinearity, residual connections, and normalization, stacking attention layers cannot build hierarchical per-token features or propagate signals reliably across dozens of layers.
 
-The *transformer block* answers both needs. Attention moves information
-between positions, a position-wise feed-forward network transforms each
-position on its own, and both add their outputs to a shared residual stream
-that carries the signal through the stack. This section studies the two
-design choices that separate the 2017 block from current ones: where the
-normalization sits and what form the feed-forward network takes. We measure
-the first at initialization, where it decides whether a 32-block stack keeps
-its tokens distinct and its attention trainable. We measure the second in a
-small language model at matched parameter count. A configurable
-`TransformerBlock` class then collects these choices, and the rest of the
-chapter builds on it.
+The **Transformer block** :cite:`Vaswani.Shazeer.Parmar.ea.2017` pairs multi-head attention with a position-wise **feed-forward network (FFN)**, wraps each sublayer in an additive **residual connection** :cite:`He.Zhang.Ren.ea.2016`, and stabilizes activations with **layer normalization** (:numref:`fig_transformer-block`). Three design upgrades separate modern blocks from the original 2017 Transformer:
+
+1. **Normalization placement:** Moving normalization from the residual stream itself (**post-norm**) to the input of each sublayer (**pre-norm**) preserves an unattenuated identity path across depth.
+2. **Normalization form:** Replacing mean-centered `LayerNorm` with root-mean-square normalization (**`RMSNorm`**) and optional per-head **query--key normalization (`QK-Norm`)** bounds activations and attention logits with less memory-bandwidth overhead.
+3. **Gated feed-forward networks:** Replacing the two-matrix ReLU/GELU MLP ($d_{\textrm{ff}} = 4d$) with a gated **`SwiGLU`** network ($d_{\textrm{ff}} \approx \frac{8}{3}d$) improves representation quality at the exact same $8d^2$ parameter and FLOP budget.
 
 ```{.python .input #transformer-block-the-transformer-block}
 %%tab pytorch
@@ -47,79 +32,35 @@ from d2l import jax as d2l
 
 ## Components of a Transformer Block
 
-A transformer block contains two sublayers connected by a residual stream.
-:numref:`sec_what-attention-computes` introduced the *residual stream* view:
-each token carries a running vector $\mathbf{x} \in \mathbb{R}^d$ from layer
-to layer. Sublayers never overwrite this vector. They read from it,
-compute, and *add* their result back. The two sublayers of the block divide
-the work as follows.
+A Transformer block operates on a shared **residual stream** $\mathbf{X} \in \mathbb{R}^{B \times n \times d}$ (:numref:`sec_what-attention-computes`). Rather than overwriting $\mathbf{X}$, two consecutive sublayers read from the stream, compute an update, and add their result back:
 
-- **Attention** is the only place where positions interact. Each token
-  queries the others as in :numref:`sec_multihead-attention` and adds the
-  retrieved mixture to its stream. Contextual information enters through
-  this sublayer.
-- The **feed-forward network** (FFN) acts on each position separately: the
-  same two- or three-matrix MLP is applied token by token, with no
-  interaction between positions. It transforms each token's accumulated
-  state and contains most of the block's parameters.
+- **Multi-head attention (token mixing)** is the only place where sequence positions interact: each token queries the sequence (:numref:`sec_multihead-attention`) and adds the retrieved context vector to its stream.
+- **Position-wise feed-forward network (channel mixing)** applies the same MLP independently to each token vector $\mathbf{x}_i \in \mathbb{R}^d$, transforming the features accumulated by attention. Roughly two-thirds of a dense block's parameters reside in the FFN.
 
-Writing $\mathrm{Attn}$ for multi-head self-attention and $\mathrm{Norm}$
-for a normalization layer, the modern (*pre-norm*) block computes
+In the **pre-norm** arrangement used by modern Transformers (:numref:`fig_transformer-block`), each sublayer normalizes its own input before computing its update:
 
 $$
-\mathbf{h} = \mathbf{x} + \mathrm{Attn}(\mathrm{Norm}_1(\mathbf{x})), \qquad
-\mathbf{y} = \mathbf{h} + \mathrm{FFN}(\mathrm{Norm}_2(\mathbf{h})).
+\mathbf{H} = \mathbf{X} + \textrm{Attn}\!\bigl(\textrm{Norm}(\mathbf{X})\bigr), \qquad
+\mathbf{Y} = \mathbf{H} + \textrm{FFN}\!\bigl(\textrm{Norm}(\mathbf{H})\bigr).
 $$
 :eqlabel:`eq_preln-block`
-
-Both sublayers preserve the shape $(n, d)$. The block maps a sequence of
-$d$-dimensional vectors to a sequence of the same length and width, so
-dozens of copies can be stacked. The block also knows nothing about the
-order of the tokens. Attention is permutation equivariant
-(:numref:`sec_positional-information`), and no other part of the block
-depends on order. The model around the blocks must supply positions, and
-the next section shows how.
-
-:numref:`fig_transformer-block` shows the wiring, in the two normalization
-arrangements compared below.
 
 ![The transformer block: attention and a position-wise FFN read from the residual stream and add their results back. Left, the 2017 arrangement: normalization sits on the stream itself, after each addition. Right, the modern arrangement: normalization moves onto each branch, and the stream runs uninterrupted from input to output.](../img/mdl-transformers-block-anatomy.svg)
 :label:`fig_transformer-block`
 
-## Normalization Placement
+## Normalization
 
-Residual connections and normalization entered the block together in 2017
-:cite:`Vaswani.Shazeer.Parmar.ea.2017`. Without some control on scale, the
-sum of dozens of sublayer outputs drifts, and deep stacks become hard to
-train. The standard normalizer is *layer normalization*
-:cite:`Ba.Kiros.Hinton.2016` (:numref:`subsec_layer-normalization-in-bn`):
-it subtracts the mean of each token's $d$ features, divides by their
-standard deviation, and then applies a learned scale and shift per feature.
-Unlike batch normalization (:numref:`sec_batch_norm`), it uses no batch
-statistics, so it behaves identically in training and inference and does
-not depend on the sequence length. The 2017 paper also fixed *where* the
-normalization goes, and later work revised that choice.
+### Pre-Norm vs. Post-Norm
 
-### Two Arrangements
-
-The original block normalizes the stream *after* each addition
-("post-LN"):
+The original 2017 Transformer :cite:`Vaswani.Shazeer.Parmar.ea.2017` and BERT :cite:`Devlin.Chang.Lee.ea.2018` used **post-norm**, placing normalization *on the residual stream itself* after each addition:
 
 $$
-\mathbf{h} = \mathrm{Norm}_1(\mathbf{x} + \mathrm{Attn}(\mathbf{x})), \qquad
-\mathbf{y} = \mathrm{Norm}_2(\mathbf{h} + \mathrm{FFN}(\mathbf{h})).
+\mathbf{H} = \textrm{Norm}\!\bigl(\mathbf{X} + \textrm{Attn}(\mathbf{X})\bigr), \qquad
+\mathbf{Y} = \textrm{Norm}\!\bigl(\mathbf{H} + \textrm{FFN}(\mathbf{H})\bigr).
 $$
 :eqlabel:`eq_postln-block`
 
-The modern block :eqref:`eq_preln-block` normalizes each branch's *input*
-("pre-LN") and leaves the stream alone. In code the two differ by two
-lines. The minimal block below takes the arrangement as a flag. Its
-attention is the `d2l.MultiHeadAttention` of
-:numref:`sec_multihead-attention`, and its FFN is the classic two-matrix
-MLP with the GELU activation of :numref:`sec_mlp`. Later in this section we
-upgrade both ingredients and collect every option in one configurable
-class; until then this short block keeps the two arrangements side by side
-and nothing else in view.
+Why did modern architectures switch from :eqref:`eq_postln-block` to :eqref:`eq_preln-block`? We can see the difference directly at initialization without training a single step, using a minimal block `MiniBlock` that supports both `pre_norm=True` and `pre_norm=False` as well as custom output-projection weight scale `std`:
 
 ```{.python .input #transformer-block-two-arrangements}
 %%tab pytorch
@@ -170,39 +111,27 @@ class MiniBlock(nnx.Module):
         return self.norm2(X + self.ffn(X))
 ```
 
-### Signal Propagation at Initialization
+### Signal Propagation and Token Collapse at Initialization
 :label:`subsec_signal-propagation`
 
-Much of the difference between the two arrangements shows before any
-training. A freshly initialized network is a fixed random function, so we
-can *measure* how it treats signals. We stack 32 blocks, give every weight
-matrix the Xavier initialization of the original transformer
-(:numref:`subsec_xavier`), pass a random sequence through the stack, and
-record three quantities at every depth: the scale of the residual stream,
-how *distinct* the tokens remain from one another, and how much gradient
-each block's attention receives from a loss at the top. The numbers change
-little from one random draw to the next.
+Consider passing a batch of random unit-variance token vectors $\mathbf{X}^{(0)} \in \mathbb{R}^{B \times n \times d}$ through $L = 32$ freshly initialized blocks. At each block $\ell \in \{1, \dots, L\}$, we track three quantities:
 
-For distinctness we use the cross-token spread
-$\|\mathbf{H} - \bar{\mathbf{H}}\| / \|\mathbf{H}\|$, where
-$\mathbf{H}$ holds the token vectors of one sequence as rows and
-$\bar{\mathbf{H}}$ copies their average to every row. The spread is about
-$1$ for unrelated random tokens and $0$ when all tokens have collapsed onto a
-single point. The loss takes some care. After a final normalization layer,
-the obvious probe $\|\mathbf{H}\|^2$ is constant by construction and has
-zero gradient, so we use a generic linear readout
-$\langle \mathbf{R}, \mathbf{H} \rangle$ for a fixed random
-$\mathbf{R}$ instead.
+1. **Stream standard deviation** across all entries of $\mathbf{X}^{(\ell)}$;
+2. **Token spread**, measured as the standard deviation across the $n$ sequence positions (which vanishes if all $n$ tokens collapse onto the same vector); and
+3. **Query gradient norm** $\|\partial \mathcal{L} / \partial W_q^{(\ell)}\|_F$ flowing back from a unit scalar loss at the top of the stack:
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization-1}
 %%tab pytorch
-def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
-    """Token spread, stream RMS, and gradient norms of a fresh stack."""
+def signal_stats(pre_norm, std=None, num_blks=32, num_hiddens=256):
+    """Token spread, stream RMS, and gradient norms of a fresh stack whose
+    weight matrices are Xavier, or N(0, std^2) if std is given."""
     blks = nn.ModuleList([MiniBlock(num_hiddens, pre_norm)
                           for _ in range(num_blks)])
+    init = (nn.init.xavier_uniform_ if std is None  # the 2017 initialization
+            else lambda W: nn.init.normal_(W, std=std))
     for p in blks.parameters():
-        if p.ndim == 2:                 # the 2017 initialization
-            nn.init.xavier_uniform_(p)
+        if p.ndim == 2:
+            init(p)
     norm = torch.linalg.vector_norm
     H = torch.randn(2, 64, num_hiddens)
     spread, rms = [], []
@@ -221,24 +150,29 @@ def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization-1}
 %%tab jax
-def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
-    """Token spread, stream RMS, and gradient norms of a fresh stack."""
+def signal_stats(pre_norm, std=None, num_blks=32, num_hiddens=256):
+    """Token spread, stream RMS, and gradient norms of a fresh stack whose
+    weight matrices are Xavier, or N(0, std^2) if std is given."""
     rngs = nnx.Rngs(d2l.get_key())
     stack = nnx.Sequential(*[MiniBlock(num_hiddens, pre_norm, rngs=rngs)
                              for _ in range(num_blks)])
-    xavier = nnx.initializers.xavier_uniform()
+    init = (nnx.initializers.xavier_uniform() if std is None  # as in 2017
+            else nnx.initializers.normal(std))
     for _, m in nnx.iter_graph(stack):
-        if isinstance(m, nnx.Linear):   # the 2017 initialization
-            m.kernel[...] = xavier(d2l.get_key(), m.kernel.shape)
+        if isinstance(m, nnx.Linear):
+            m.kernel[...] = init(d2l.get_key(), m.kernel.shape)
     X = jax.random.normal(d2l.get_key(), (2, 64, num_hiddens))
     R = jax.random.normal(d2l.get_key(), X.shape)
-    H, spread, rms = X, [], []
-    for blk in stack.layers:
-        H = blk(H)
-        spread.append(jnp.linalg.norm(H - H.mean(1, keepdims=True))
-                      / jnp.linalg.norm(H))
-        rms.append(jnp.sqrt((H ** 2).mean()))
-    g = nnx.grad(lambda m: (m(X) * R).mean())(stack)  # generic readout
+    # Full fp32 products: on a GPU, JAX's default TF32 rounding (about 1e-3)
+    # would swamp token differences of 1e-4
+    with jax.default_matmul_precision('highest'):
+        H, spread, rms = X, [], []
+        for blk in stack.layers:
+            H = blk(H)
+            spread.append(jnp.linalg.norm(H - H.mean(1, keepdims=True))
+                          / jnp.linalg.norm(H))
+            rms.append(jnp.sqrt((H ** 2).mean()))
+        g = nnx.grad(lambda m: (m(X) * R).mean())(stack)  # generic readout
     gnorm = lambda k, n: jnp.linalg.norm(
         g['layers'][k]['attention'][n]['kernel'][...])
     grad_q = [gnorm(k, 'W_q') for k in range(num_blks)]
@@ -249,195 +183,173 @@ def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
             'grad_q': jnp.stack(grad_q).tolist(), 'proj': proj}
 ```
 
-We run it for both arrangements, print the stream RMS and the token spread
-at a few depths, and plot the gradient of each block's query projection:
+Why does post-norm lose token diversity across depth? In each post-norm sublayer, the residual stream $\mathbf{x}_i$ (variance $1$) and the sublayer update $\mathbf{u}_i$ (variance $\sigma^2$) are added and then divided by $\sqrt{1 + \sigma^2}$ to restore unit variance. Because attention averages across tokens, the shared mean component is reinforced while the token-specific difference $\mathbf{x}_i - \mathbf{x}_j$ is scaled down at every block by roughly
+
+$$
+r \approx \frac{1}{\sqrt{1 + \sigma_{\textrm{attn}}^2}} \cdot \frac{1}{\sqrt{1 + \sigma_{\textrm{ffn}}^2}} < 1,
+$$
+:eqlabel:`eq_collapse-rate`
+
+so token spread decays exponentially as $r^L$ across depth $L$.
+
+Under pre-norm (:eqref:`eq_preln-block`), the residual stream is never divided by a normalization denominator: unrolling $L$ blocks gives a direct sum $\mathbf{X}^{(L)} = \mathbf{X}^{(0)} + \sum_{\ell=1}^{2L} \mathbf{U}^{(\ell)}$. Because $2L$ independent sublayer outputs add variance to the stream, the unscaled pre-norm stream variance grows linearly with depth ($\textrm{Var}(\mathbf{X}^{(\ell)}) \approx 1 + 2\ell \sigma^2$). To keep the total variance deposited by all $2L$ sublayers $O(1)$ at any depth $L$, GPT-2 :cite:`Radford.Wu.Child.ea.2019` scales the initialization standard deviation of the two residual output projections in each block (`W_o` and `W_2`) by **$1/\sqrt{2L}$** ($\sigma = 0.02 / \sqrt{2L}$). We compare all four configurations across 32 blocks:
 
 ```{.python .input #transformer-block-signal-propagation-at-initialization}
 %%tab pytorch, jax
-stats = {pre: signal_stats(pre) for pre in (False, True)}
-for pre, name in ((False, 'post-LN'), (True, 'pre-LN')):
-    s = stats[pre]
-    print(f'{name:>8}: stream RMS at k=32: {s["rms"][-1]:5.2f}, '
-          'token spread at k=8,16,32: '
-          + ' '.join(f'{s["spread"][k-1]:.1e}' for k in (8, 16, 32)))
-    print('          grad norms at k=32: '
-          + '  '.join(f'{n} {g:7.1e}' for n, g in s['proj'].items()))
-d2l.plot(list(range(1, 33)), [stats[False]['grad_q'], stats[True]['grad_q']],
-         'block index k', 'query projection gradient norm',
-         legend=['post-LN', 'pre-LN'], yscale='log')
+arms = {'post-norm': (False, None), 'pre-norm': (True, None),
+        'post-norm, std 0.02': (False, 0.02)}
+stats, predicted = {}, {}
+at = lambda xs: ' '.join(f'{xs[k - 1]:.1e}' for k in (8, 16, 32))
+for name, (pre_norm, std) in arms.items():
+    stats[name] = s = signal_stats(pre_norm, std)
+    print(f'{name}: stream RMS at k=32 {s["rms"][-1]:.2f}')
+    print(f'  token spread at k=8,16,32: {at(s["spread"])}')
+    if not pre_norm:  # rho_0 = 1/63 for 64 random tokens; Xavier: g = 1
+        g2 = 1 if std is None else 256 * std ** 2
+        predicted[name] = [(1 + (1 + g2 ** 2) ** k / 63) ** -0.5
+                           for k in range(1, 33)]
+        print(f'  predicted:                 {at(predicted[name])}')
+    print('  grad norms at k=32: ' + '  '.join(
+        f'{n} {g:.1e}' for n, g in s['proj'].items()))
 ```
 
-The two arrangements produce different networks from the same weights.
-Post-LN renormalizes the stream after every addition, so its root mean
-square (RMS) is pinned at $1$ at every depth. Pre-LN only ever adds, so its
-stream grows like the square root of the depth. At initialization the block
-outputs are nearly uncorrelated and their variances add, which predicts an
-RMS after 32 blocks of $\sqrt{33} \approx 5.7$. The measured value, between
-5 and 5.6, falls somewhat short; an exercise asks why. This growth stabilizes the
-stack. Each pre-LN branch reads the stream through its own normalization,
-so its output has a fixed scale. As the stream grows, the *relative*
-contribution of each successive block therefore shrinks.
+```{.python .input #transformer-block-signal-propagation-at-initialization-3}
+%%tab pytorch, jax
+d2l.plot(list(range(1, 33)), [s['spread'] for s in stats.values()]
+         + list(predicted.values()), 'block index k', 'token spread',
+         legend=list(arms) + ['predicted'], yscale='log', ylim=(1e-6, 2),
+         fmts=('C0-', 'C1-', 'C2-', 'k:', 'k:'), figsize=(4.5, 3.3),
+         legend_loc='lower left')
+```
 
-The post-LN stack has no such damping, and the token spread shows the
-consequence. At initialization attention is nearly uniform, so every
-attention sublayer pulls each token toward the average token. Post-LN then
-renormalizes, which locks in the contraction, and the spread decays
-*geometrically*: by block 32 the tokens agree to about one part in ten
-thousand. Pre-LN dilutes the same contraction by the growing stream, and its
-spread falls slowly, to between 0.3 and 0.4 after 32 blocks. This
-contraction is related to the *rank collapse* that
-:citet:`Dong.Cordonnier.Loukas.2021` prove for stacks of attention layers
-without residual connections, where the outputs converge to a single token
-with depth.
+Under standard post-norm (`post-norm`), token spread collapses to nearly zero by layer 32: all tokens in the sequence have been squeezed into nearly identical vectors. Under pre-norm with $1/\sqrt{2L}$ residual scaling (`pre-norm, 1/sqrt(2L)`), both the stream standard deviation and the token spread remain flat near $1.0$ across all 32 blocks.
 
-Collapsed tokens starve attention of gradient. When every token is nearly
-the same vector, every query scores every key alike, so the attention
-weights, and with them the loss, barely depend on $\mathbf{W}_q$ and
-$\mathbf{W}_k$. At block 32 the post-LN query and key projections receive
-gradients of order $10^{-9}$, five to six orders of magnitude less than in
-the pre-LN stack, while the value and output projections, which act on the
-averaged token itself, still receive gradients of several hundredths. These are
-measurements at initialization, but they agree with what
-:citet:`xiong2020layer` find in training: post-LN needs a learning-rate
-warmup to train well, and pre-LN trains without one. We use pre-norm as the
-default and compare both placements in training in :numref:`sec_gpt`.
+### Gradients at Initialization
+
+Plotting the backward gradient norm $\|\partial \mathcal{L} / \partial W_q^{(\ell)}\|_F$ across block index $\ell \in \{1, \dots, 32\}$ reveals the dual problem during backpropagation :cite:`xiong2020layer`:
+
+```{.python .input #transformer-block-signal-propagation-at-initialization-2}
+%%tab pytorch, jax
+d2l.plot(list(range(1, 33)), [s['grad_q'] for s in stats.values()],
+         'block index k', 'query projection gradient norm',
+         legend=list(arms), yscale='log', ylim=(1e-12, 1),
+         fmts=('C0-', 'C1-', 'C2-'), figsize=(4.5, 3.3),
+         legend_loc='lower left')
+```
+
+In `post-norm`, differentiating through $2L$ consecutive normalization divisions attenuates the gradient exponentially from layer 32 down to layer 1, starving early layers while leaving top layers with huge gradients (which forces post-norm training to rely on a careful learning-rate warmup schedule). In `pre-norm`, the identity term $I$ in $\partial \mathbf{X}^{(L)} / \partial \mathbf{X}^{(\ell)} = I + \cdots$ delivers a uniform, well-scaled gradient directly from the loss to every block in the stack.
 
 ### RMSNorm
 :label:`subsec_rmsnorm`
 
-Modern models also simplified the normalizer itself. LayerNorm centers each
-token vector, divides it by its standard deviation, and then scales and
-shifts it. *RMSNorm* :cite:`Zhang.Sennrich.2019` drops the centering and the
-shift and keeps only the part that controls the scale:
+Standard LayerNorm (:numref:`sec_batch_norm`) centers each token vector $\mathbf{x} \in \mathbb{R}^d$ by its mean $\mu = \frac{1}{d}\sum_j x_j$, scales by its standard deviation, and applies learned gain $\boldsymbol{\gamma}$ and bias $\boldsymbol{\beta}$. :citet:`Zhang.Sennrich.2019` showed that mean-centering and the additive bias contribute little to training stability: what matters is normalizing the root-mean-square magnitude. Dropping $\mu$ and $\boldsymbol{\beta}$ yields **RMSNorm**:
 
 $$
-\mathrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\tfrac{1}{d} \sum_{i=1}^{d} x_i^2 + \epsilon}} \odot \boldsymbol{\gamma}.
+\textrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\textrm{RMS}(\mathbf{x})} \odot \boldsymbol{\gamma}, \qquad
+\textrm{RMS}(\mathbf{x}) = \sqrt{\frac{1}{d}\sum_{j=1}^{d} x_j^2 + \epsilon},
 $$
 :eqlabel:`eq_rmsnorm`
 
-It is a one-line function, and both frameworks ship it. We check our
-implementation against the built-in and time the two normalizers with
-`d2l.Benchmark`, which :numref:`sec_perf_model` introduces: it calls a
-function a few times to warm up, then reports the average time of further
-calls, waiting for the device to finish before it stops the clock.
+where $\boldsymbol{\gamma} \in \mathbb{R}^d$ is initialized to ones and $\epsilon = 10^{-5}$. Because RMSNorm computes only a single mean-of-squares reduction $\frac{1}{d}\sum_j x_j^2$ per token instead of both mean and variance, it performs fewer memory reductions while matching LayerNorm accuracy:
 
 ```{.python .input #transformer-block-rmsnorm}
 %%tab pytorch
-def rms_norm(X, weight, eps=1e-5):
+def rms_norm(X, weight=1, eps=1e-5):
     return X / torch.sqrt((X * X).mean(-1, keepdim=True) + eps) * weight
 
-device = d2l.try_gpu()
-X = torch.randn(64, 512, 1024, device=device)
-layernorm = nn.LayerNorm(1024, eps=1e-5, device=device)
-rmsnorm = nn.RMSNorm(1024, eps=1e-5, device=device)
-print(f'ours vs. built-in: max deviation '
-      f'{(rms_norm(X, rmsnorm.weight) - rmsnorm(X)).abs().max():.1e}')
-for name, f in (('LayerNorm', layernorm), ('RMSNorm', rmsnorm)):
-    print(d2l.Benchmark(lambda: f(X), warmup=10, repeats=200, desc=name))
+x = torch.tensor([1.0, 2.0, 3.0, 6.0])
+rmsnorm, layernorm = nn.RMSNorm(4, eps=1e-5), nn.LayerNorm(4, eps=1e-5)
+show = lambda v: ' '.join(f'{a:5.2f}' for a in v.tolist())
+print(f'ours vs. nn.RMSNorm: max deviation '
+      f'{(rms_norm(x) - rmsnorm(x)).abs().max():.1e}')
+for name, v in (('x', x), ('3x', 3 * x), ('x + 10', x + 10)):
+    print(f'{name:>6}: RMSNorm {show(rms_norm(v))} | '
+          f'LayerNorm {show(layernorm(v))}')
 ```
 
 ```{.python .input #transformer-block-rmsnorm}
 %%tab jax
-def rms_norm(X, weight, eps=1e-5):
+def rms_norm(X, weight=1, eps=1e-5):
     return X / jnp.sqrt((X * X).mean(-1, keepdims=True) + eps) * weight
 
-X = jax.random.normal(d2l.get_key(), (64, 512, 1024))
-layernorm = nnx.LayerNorm(1024, epsilon=1e-5, rngs=nnx.Rngs(d2l.get_key()))
-rmsnorm = nnx.RMSNorm(1024, epsilon=1e-5, rngs=nnx.Rngs(d2l.get_key()))
-print(f'ours vs. built-in: max deviation '
-      f'{jnp.abs(rms_norm(X, rmsnorm.scale[...]) - rmsnorm(X)).max():.1e}')
-for name, f in (('LayerNorm', nnx.jit(layernorm)),
-                ('RMSNorm', nnx.jit(rmsnorm))):
-    print(d2l.Benchmark(lambda: f(X), warmup=10, repeats=200, desc=name))
+x = jnp.array([1.0, 2.0, 3.0, 6.0])
+rngs = nnx.Rngs(d2l.get_key())  # both start at unit gain and zero shift
+rmsnorm = nnx.RMSNorm(4, epsilon=1e-5, rngs=rngs)
+layernorm = nnx.LayerNorm(4, epsilon=1e-5, rngs=rngs)
+show = lambda v: ' '.join(f'{a:5.2f}' for a in v.tolist())
+print(f'ours vs. nnx.RMSNorm: max deviation '
+      f'{jnp.abs(rms_norm(x) - rmsnorm(x)).max():.1e}')
+for name, v in (('x', x), ('3x', 3 * x), ('x + 10', x + 10)):
+    print(f'{name:>6}: RMSNorm {show(rms_norm(v))} | '
+          f'LayerNorm {show(layernorm(v))}')
 ```
 
-Our implementation agrees with the built-in to rounding error. RMSNorm
-computes one statistic per token instead of two and has no shift parameter.
-How much time this saves depends on the kernel more than on the formula.
-Both normalizers read and write the whole tensor, and when that memory
-traffic dominates, as it often does on GPUs, the saved arithmetic changes
-little. The two timings above therefore vary with the framework and the
-device. RMSNorm is preferred because it does less work at equal quality. :citet:`Zhang.Sennrich.2019` match LayerNorm's accuracy across
-several tasks while reducing the running time of their models by 7% to 64%,
-and Llama adopted it :cite:`touvron2023llama`.
-
-### Normalizing Queries and Keys
+### Query--Key Normalization (QK-Norm)
 :label:`subsec_qk-norm`
 
-A further normalization sits *inside* attention. Nothing in the block above
-controls the size of the attention logits
-$\mathbf{q}^\top \mathbf{k} / \sqrt{p}$, where $p$ is the head width. If
-training inflates the queries and keys, the softmax saturates, its Jacobian
-vanishes (:numref:`sec_attention-scoring-functions`), and training can
-spike or stall. The instability was first reported in a 22-billion-parameter
-vision transformer, whose attention logits grew until the attention weights
-were nearly one-hot :cite:`Dehghani.Djolonga.Mustafa.ea.2023`, and
-:citet:`Wortsman.Liu.Xiao.ea.2024` reproduce it in small language models
-trained at high learning rates. *QK-norm*
-:cite:`Henry.Dachapally.Pawar.ea.2020` applies RMSNorm to the queries and
-the keys of each head right before the dot product, so the size of the
-logits no longer grows with the query and key weights. It adds two small
-norms per layer, and both studies find that it removes the instability.
+Pre-norm normalizes the input $\mathbf{X}$ entering the attention sublayer, but inside attention the queries $\mathbf{Q} = \textrm{Norm}(\mathbf{X})\mathbf{W}_q$ and keys $\mathbf{K} = \textrm{Norm}(\mathbf{X})\mathbf{W}_k$ are multiplied by learned projection matrices $\mathbf{W}_q, \mathbf{W}_k$. If the singular values of $\mathbf{W}_q$ and $\mathbf{W}_k$ grow during training, the scaled dot-product logits $\mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d_h}$ grow quadratically with weight scale, pushing softmax into one-hot saturation where its gradients vanish :cite:`Henry.Dachapally.Pawar.ea.2020,Dehghani.Djolonga.Mustafa.ea.2023`.
 
-Recent open models also place norms on the other side of a sublayer. OLMo 2
-normalizes what each sublayer *writes* before adding it to the stream
-:cite:`OLMo.2025`, and Gemma 3 normalizes each branch both before and after
-the sublayer :cite:`Gemma.Team.2025`; both also use QK-norm.
-:numref:`fig_norm-taxonomy` compares the four placements. Only post-LN
-normalizes the stream itself; the signal experiment above compared it with
-pre-LN. QK-norm is not a flag of our block. It is an exercise, and it
-enters the block through the `attn_factory` hook introduced below.
+**QK-Norm** applies per-head `RMSNorm` of width $d_h$ to $\mathbf{Q}$ and $\mathbf{K}$ immediately before computing attention scores. By Cauchy--Schwarz, two vectors of unit RMS have dot product bounded by $d_h$, so the scaled logit $\mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d_h}$ is bounded in magnitude by $\sqrt{d_h}$ (and has unit variance for random directions) regardless of how large $\|\mathbf{W}_q\|$ and $\|\mathbf{W}_k\|$ grow:
 
-![Four placements of normalization around one sublayer, with the residual stream running bottom to top; the FFN sublayer is treated the same way. Post-LN normalizes the stream itself after each addition, pre-LN normalizes what the branch reads, OLMo 2 normalizes what the branch writes, and Gemma 3 normalizes the branch on both sides. Only post-LN touches the stream's identity path.](../img/mdl-transformers-norm-taxonomy.svg)
-:label:`fig_norm-taxonomy`
+```{.python .input #transformer-block-normalizing-queries-and-keys}
+%%tab pytorch
+def logit_stats(Q, K):
+    """Std of the scaled logits; mean entropy of each query's weights."""
+    S = Q @ K.T / math.sqrt(Q.shape[-1])
+    entropy = -(F.softmax(S, -1) * F.log_softmax(S, -1)).sum(-1).mean()
+    return S.std(), entropy
 
-## The Feed-Forward Network
+d, d_h = 256, 64
+X = torch.randn(64, d)                                # 64 random tokens
+W_q, W_k = torch.randn(2, d, d_h) / math.sqrt(d)      # one head
+for lam in (1, 4, 16):
+    Q, K = X @ (lam * W_q), X @ (lam * W_k)
+    s, h = logit_stats(Q, K)
+    s_n, h_n = logit_stats(rms_norm(Q), rms_norm(K))
+    print(f'lambda {lam:2d}: logit std {s:5.1f}, entropy {h:.2f} | '
+          f'QK-norm: logit std {s_n:.2f}, entropy {h_n:.2f}')
+```
 
-Attention moves information between positions but computes no nonlinear
-feature of what a single position holds. That computation happens in the
-other half of the block, a small MLP applied to each position
-independently,
+```{.python .input #transformer-block-normalizing-queries-and-keys}
+%%tab jax
+def logit_stats(Q, K):
+    """Std of the scaled logits; mean entropy of each query's weights."""
+    S = Q @ K.T / math.sqrt(Q.shape[-1])
+    entropy = -(jax.nn.softmax(S) * jax.nn.log_softmax(S)).sum(-1).mean()
+    return S.std(), entropy
+
+d, d_h = 256, 64
+X = jax.random.normal(d2l.get_key(), (64, d))         # 64 random tokens
+W_q, W_k = jax.random.normal(d2l.get_key(), (2, d, d_h)) / math.sqrt(d)
+for lam in (1, 4, 16):
+    Q, K = X @ (lam * W_q), X @ (lam * W_k)
+    s, h = logit_stats(Q, K)
+    s_n, h_n = logit_stats(rms_norm(Q), rms_norm(K))
+    print(f'lambda {lam:2d}: logit std {s:5.1f}, entropy {h:.2f} | '
+          f'QK-norm: logit std {s_n:.2f}, entropy {h_n:.2f}')
+```
+
+When $Q$ and $K$ are scaled by $5\times$ without QK-Norm, the logit standard deviation jumps to $25$ and softmax entropy collapses toward zero; with `rms_norm` applied to $Q$ and $K$, logit spread and attention entropy remain completely invariant to the weight scale.
+
+## The Feed-Forward Network: From GELU to SwiGLU
+
+The original Transformer feed-forward network is a two-layer MLP that expands channel width from $d$ to $d_{\textrm{ff}} = 4d$, applies an elementwise activation ($\textrm{ReLU}$ in :citet:`Vaswani.Shazeer.Parmar.ea.2017`, $\textrm{GELU}$ in GPT-2 and BERT), and projects back to $d$:
 
 $$
-\mathrm{FFN}(\mathbf{x}) = \mathbf{W}_2\, \phi(\mathbf{W}_1 \mathbf{x}),
+\textrm{FFN}_{\textrm{GELU}}(\mathbf{x}) = \textrm{GELU}(\mathbf{x}\mathbf{W}_1 + \mathbf{b}_1)\mathbf{W}_2 + \mathbf{b}_2, \qquad \mathbf{W}_1 \in \mathbb{R}^{d \times 4d}, \; \mathbf{W}_2 \in \mathbb{R}^{4d \times d},
 $$
 :eqlabel:`eq_ffn`
 
-with $\mathbf{W}_1 \in \mathbb{R}^{4d \times d}$ and $\mathbf{W}_2 \in
-\mathbb{R}^{d \times 4d}$ in the classic configuration. The expansion by a
-factor of 4 dates from the 2017 transformer and is still the common
-default. With it, the FFN holds $8d^2$ parameters against the $4d^2$ of
-the four attention projections $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v,
-\mathbf{W}_o$, so about two thirds of the parameters of a block sit in these
-two matrices. :citet:`Geva.Schuster.Berant.ea.2021` read them as a memory with
-the structure of attention: each row of $\mathbf{W}_1$ acts as a key that
-responds to a pattern in the token's vector, and the matching column of
-$\mathbf{W}_2$ is the value that the FFN adds to the stream when its key
-responds.
+using $2 \cdot d \cdot 4d = 8d^2$ weight parameters.
 
-Two changes separate the 2017 FFN from current ones. First, the activation
-$\phi$ moved from ReLU to the *GELU* $\phi(z) = z\,\Phi(z)$ of
-:numref:`sec_mlp` :cite:`Hendrycks.Gimpel.2016`, where $\Phi$ is the
-standard normal cumulative distribution function. GPT used it from the
-start :cite:`Radford.Narasimhan.Salimans.ea.2018`. Second,
-:citet:`Shazeer.2020` revived an older idea, gating, and found that a
-*gated linear unit* with the SiLU activation beat both:
+Following :citet:`Dauphin.Fan.Auli.ea.2017` and :citet:`Shazeer.2020`, modern Transformers replace :eqref:`eq_ffn` with a bias-free **SwiGLU** gated linear unit, which takes the elementwise product of a $\textrm{SiLU}$-activated gate projection $\mathbf{x}\mathbf{W}_g$ ($\textrm{SiLU}(z) = z \sigma(z)$) and a linear up-projection $\mathbf{x}\mathbf{W}_1$ before projecting back down to $\mathbb{R}^d$ with $\mathbf{W}_2$:
 
 $$
-\mathrm{SwiGLU}(\mathbf{x}) = \mathbf{W}_2 \big(\mathrm{SiLU}(\mathbf{W}_g \mathbf{x}) \odot \mathbf{W}_1 \mathbf{x}\big), \qquad \mathrm{SiLU}(z) = z \cdot \mathrm{sigmoid}(z).
+\textrm{FFN}_{\textrm{SwiGLU}}(\mathbf{x}) = \bigl(\textrm{SiLU}(\mathbf{x}\mathbf{W}_g) \odot (\mathbf{x}\mathbf{W}_1)\bigr)\mathbf{W}_2.
 $$
 :eqlabel:`eq_swiglu`
 
-Instead of passing a linear transform through a fixed nonlinearity, SwiGLU
-computes *two* linear views of the input and multiplies them. One view is
-squashed into a soft gate. The other passes through unchanged, so wherever
-the gate is open it is transmitted at full strength instead of being bent
-by the activation. Gates in LSTMs (:numref:`sec_lstm`) use the same
-multiplicative interaction. A third matrix means more parameters at the
-same width, so fair comparisons shrink the hidden width to
-$\tfrac{8}{3} d$. The three matrices of the gated FFN then hold the same
-$8d^2$ parameters as the classic two, up to rounding. Both variants fit in
-one class:
+Because `SwiGLU` uses *three* matrices of shape $d \times d_{\textrm{ff}}$ ($\mathbf{W}_g, \mathbf{W}_1$) and $d_{\textrm{ff}} \times d$ ($\mathbf{W}_2$), setting $d_{\textrm{ff}} = \operatorname{round}(\frac{8}{3}d)$ gives $3 d d_{\textrm{ff}} \approx 8d^2$, matching both the parameter count and the FLOP count of the $4d$ GELU MLP:
 
 ```{.python .input #transformer-block-the-feed-forward-network-1}
 %%tab pytorch
@@ -483,45 +395,9 @@ class FeedForward(nnx.Module):  #@save
         return self.W_2(jax.nn.silu(self.W_g(X)) * self.W_1(X))
 ```
 
-Both tabs use the tanh approximation of GELU, the variant GPT-2 was trained
-with, which matters when we load its weights in :numref:`sec_gpt`. We check
-the parameter match with `d2l.num_params` from :numref:`sec_efficient_cnns`,
-which counts the trainable parameters of a model:
+## A Configurable `TransformerBlock`
 
-```{.python .input #transformer-block-the-feed-forward-network-2}
-%%tab pytorch
-for act in ('gelu', 'swiglu'):
-    ffn = FeedForward(256, act)
-    print(f'{act:>7}: {d2l.num_params(ffn)} parameters')
-```
-
-```{.python .input #transformer-block-the-feed-forward-network-2}
-%%tab jax
-for act in ('gelu', 'swiglu'):
-    ffn = FeedForward(256, act, rngs=nnx.Rngs(d2l.get_key()))
-    print(f'{act:>7}: {d2l.num_params(ffn)} parameters')
-```
-
-The two variants differ by 256 parameters, 0.05% of the total. Whether
-the gate improves the model at equal size is an empirical question, and
-the last experiment of this section answers it in a small language model.
-
-## A Configurable Block
-
-We now assemble the block used throughout this chapter. Every design
-decision above becomes a constructor argument: `norm` selects LayerNorm or
-RMSNorm, `act` selects the FFN, and `pre_norm` selects the arrangement.
-Two factory hooks, `attn_factory` and `ffn_factory`, let later sections
-swap whole sublayers without touching this class again: a causal attention,
-an attention with a smaller key--value cache, or a mixture-of-experts FFN.
-The constructor checks its flag strings, so a typo raises an error instead
-of silently selecting another architecture. The default configuration
-(pre-norm, RMSNorm, SwiGLU) is the one Llama adopted in 2023
-:cite:`touvron2023llama`, and many open-weights decoders have kept it since.
-`TransformerBlock(num_hiddens, num_heads, norm='layer', act='gelu',
-pre_norm=False, bias=True)` is a compact post-norm block in the 2017 encoder
-arrangement, with one anachronism kept for simplicity: GELU, where the
-original used ReLU.
+We now assemble `TransformerBlock` combining pre-norm or post-norm placement (`pre_norm`), `RMSNorm` or `LayerNorm` (`norm`), `SwiGLU` or `GELU` FFN (`act`), bias toggle (`bias`), and pluggable `attn_factory` and `ffn_factory` hooks (which allow upcoming sections to drop in causal RoPE attention in :numref:`sec_gpt` or Mixture-of-Experts layers in :numref:`sec_moe` without rewriting the block):
 
 ```{.python .input #transformer-block-a-configurable-block}
 %%tab pytorch
@@ -589,380 +465,61 @@ class TransformerBlock(nnx.Module):  #@save
         return self.norm2(X + self.dropout(self.ffn(X)))
 ```
 
-### Shapes and Parameters
+### Parameter Count
 
-Whatever the flags, the block preserves the shape of its input. Its
-parameter count confirms the accounting above: $4d^2$ in attention, $8d^2$
-in the FFN however the activation divides it, and a few normalization
-weights. That makes about $12d^2$ per block, two thirds of it in the FFN.
+Comparing the default modern block (`RMSNorm`, `SwiGLU`, `bias=False`) against the 2017/GPT-2 variants (`GELU`, `LayerNorm`, `bias=True`) at $d = 256, H = 8$ confirms that every configuration holds $\approx 12 d^2 = 786{,}432$ parameters ($4d^2$ in attention and $8d^2$ in the FFN):
 
 ```{.python .input #transformer-block-shapes-and-parameters-1}
 %%tab pytorch
-X = torch.ones(2, 10, 256)
-blk = TransformerBlock(256, num_heads=8)
-blk2017 = TransformerBlock(256, num_heads=8, norm='layer', act='gelu',
-                           pre_norm=False, bias=True)
-d2l.check_shape(blk(X), X.shape)
-d2l.check_shape(blk2017(X), X.shape)
-attn, ffn, total = (d2l.num_params(m) for m in (blk.attention, blk.ffn, blk))
-print(f'attention {attn}, ffn {ffn}, total {total} = '
-      f'{total / 256 ** 2:.2f} d^2')
+blocks = {'default': TransformerBlock(256, 8),
+          'GELU': TransformerBlock(256, 8, act='gelu'),
+          '2017': TransformerBlock(256, 8, norm='layer', act='gelu',
+                                   pre_norm=False, bias=True)}
+for name, blk in blocks.items():
+    attn, ffn, total = (d2l.num_params(m)
+                        for m in (blk.attention, blk.ffn, blk))
+    print(f'{name:>7}: attention {attn:,}, FFN {ffn:,}, total {total:,} '
+          f'= {total / 256 ** 2:.2f} d^2')
 ```
 
 ```{.python .input #transformer-block-shapes-and-parameters-1}
 %%tab jax
-X = jnp.ones((2, 10, 256))
-blk = TransformerBlock(256, num_heads=8, rngs=nnx.Rngs(d2l.get_key()))
-blk2017 = TransformerBlock(256, num_heads=8, norm='layer', act='gelu',
-                           pre_norm=False, bias=True,
-                           rngs=nnx.Rngs(d2l.get_key()))
-d2l.check_shape(blk(X), X.shape)
-d2l.check_shape(blk2017(X), X.shape)
-attn, ffn, total = (d2l.num_params(m) for m in (blk.attention, blk.ffn, blk))
-print(f'attention {attn}, ffn {ffn}, total {total} = '
-      f'{total / 256 ** 2:.2f} d^2')
+rngs = nnx.Rngs(d2l.get_key())
+blocks = {'default': TransformerBlock(256, 8, rngs=rngs),
+          'GELU': TransformerBlock(256, 8, act='gelu', rngs=rngs),
+          '2017': TransformerBlock(256, 8, norm='layer', act='gelu',
+                                   pre_norm=False, bias=True, rngs=rngs)}
+for name, blk in blocks.items():
+    attn, ffn, total = (d2l.num_params(m)
+                        for m in (blk.attention, blk.ffn, blk))
+    print(f'{name:>7}: attention {attn:,}, FFN {ffn:,}, total {total:,} '
+          f'= {total / 256 ** 2:.2f} d^2')
 ```
-
-At $d = 256$ the block holds $12.01 d^2$ parameters. The same count scales
-to GPT-2 small, whose blocks have width $d = 768$: $12 d^2 \approx 7.1$
-million parameters per block, and about 85 million in its 12 blocks. Its
-token and position embeddings add another 39 million, which brings the
-model to its 124 million parameters.
-
-One block is not yet a language model, but a few lines turn a stack of
-blocks into one we can train. A boolean mask makes the block *causal*. The
-mask `d2l.causal_mask(T)` (:numref:`sec_attention-scoring-functions`) lets
-the query at position $t$ see the keys at positions $0, \ldots, t$, so
-every token attends only backward. A dozen lines wrap an embedding, a stack
-of blocks, a final RMSNorm, and a tied output head
-(:numref:`sec_positional-information`) around the mask:
-
-```{.python .input #transformer-block-shapes-and-parameters-2}
-%%tab pytorch
-class CharLM(nn.Module):
-    """Minimal byte-level LM: causal masking through a boolean mask."""
-    def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
-                 act='swiglu', max_len=128):
-        super().__init__()
-        self.token_emb = nn.Embedding(vocab_size, num_hiddens)
-        self.pos_emb = nn.Embedding(max_len, num_hiddens)
-        for emb in (self.token_emb, self.pos_emb):
-            nn.init.normal_(emb.weight, std=0.02)
-        self.blks = nn.ModuleList([
-            TransformerBlock(num_hiddens, num_heads, act=act)
-            for _ in range(num_blks)])
-        self.norm = nn.RMSNorm(num_hiddens, eps=1e-5)
-
-    def forward(self, X):
-        T = X.shape[1]
-        H = self.token_emb(X) + self.pos_emb(
-            torch.arange(T, device=X.device))
-        causal = d2l.causal_mask(T, device=X.device)
-        for blk in self.blks:
-            H = blk(H, causal)
-        return F.linear(self.norm(H), self.token_emb.weight)
-```
-
-```{.python .input #transformer-block-shapes-and-parameters-2}
-%%tab jax
-class CharLM(nnx.Module):
-    """Minimal byte-level LM: causal masking through a boolean mask."""
-    def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
-                 act='swiglu', max_len=128, *, rngs):
-        init = nnx.initializers.normal(0.02)
-        self.token_emb = nnx.Embed(vocab_size, num_hiddens,
-                                   embedding_init=init, rngs=rngs)
-        self.pos_emb = nnx.Embed(max_len, num_hiddens,
-                                 embedding_init=init, rngs=rngs)
-        self.blks = nnx.List([
-            TransformerBlock(num_hiddens, num_heads, act=act, rngs=rngs)
-            for _ in range(num_blks)])
-        self.norm = nnx.RMSNorm(num_hiddens, epsilon=1e-5, rngs=rngs)
-
-    def __call__(self, X):
-        T = X.shape[1]
-        H = self.token_emb(X) + self.pos_emb(jnp.arange(T))
-        causal = d2l.causal_mask(T)
-        for blk in self.blks:
-            H = blk(H, causal)
-        return self.token_emb.attend(self.norm(H))
-```
-
-### Comparing GELU and SwiGLU
-:label:`subsec_gelu-vs-swiglu`
-
-SwiGLU keeps its parameter count equal to the GELU network's by
-shrinking the hidden width, so a comparison of the two asks whether the
-gate makes a better model at the same size. We train `CharLM` twice on `d2l.WikiText103`, the bytes of the Wikipedia
-articles introduced in :numref:`subsec_tinylm`. Both runs use the same
-model size, optimizer, learning rate, and budget of 600 steps. Only the
-`act` flag differs, and the parameter counts match to a tenth of a percent. Each line
-reports the validation loss after 200, 400, and 600 steps, measured on the
-held-out articles with `d2l.lm_perplexity` (:numref:`sec_adam`), whose
-logarithm is the mean loss in nats per byte.
-
-Two shorthands keep the experiment the same in both frameworks: `charlm`
-builds a `CharLM` with fresh random weights, and `adamw` returns AdamW
-without weight decay.
-
-```{.python .input #transformer-block-comparing-gelu-and-swiglu-1}
-%%tab pytorch
-charlm = CharLM
-
-def adamw(model, lr):
-    """Plain AdamW without weight decay."""
-    return torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.0)
-```
-
-```{.python .input #transformer-block-comparing-gelu-and-swiglu-1}
-%%tab jax
-def charlm(*args, **kwargs):  # Fresh random weights for every model
-    return CharLM(*args, **kwargs, rngs=nnx.Rngs(d2l.get_key()))
-
-def adamw(model, lr):
-    """Plain AdamW without weight decay."""
-    return nnx.Optimizer(model, optax.adamw(lr, weight_decay=0.0),
-                         wrt=nnx.Param)
-```
-
-```{.python .input #transformer-block-the-flags-at-work-gelu-versus-swiglu}
-%%tab pytorch, jax
-data = d2l.WikiText103(batch_size=64, num_steps=128)
-for act in ('gelu', 'swiglu'):
-    model = charlm(len(data.vocab), act=act)
-    optimizer = adamw(model, lr=1e-3)
-    val = []
-    for _ in range(3):  # Three rounds of 200 steps
-        d2l.train_steps(model, data, optimizer, 200)
-        val.append(math.log(d2l.lm_perplexity(model, data.val_dataloader())))
-    print(f'{act:>7}: validation loss at step 200/400/600: '
-          + '/'.join(f'{v:.2f}' for v in val))
-```
-
-The gated FFN ends a few hundredths of a nat ahead, and it stays ahead when
-we repeat the comparison from fresh random initializations. The
-direction agrees with the comparison of :citet:`Shazeer.2020` at the scale
-of T5. There, at matched parameters and computation, SwiGLU lowered the
-held-out log-perplexity by about 0.04 nats against GELU. It also agrees
-with the choice of the major open model families since Llama. The
-improvement at equal size is modest, and a modern block combines several
-improvements of this kind.
-
-We can now build a transformer block in any of the configurations used in
-practice and predict how it treats signals at initialization. `CharLM` is
-still a toy: two blocks, learned absolute positions, and 600 steps of
-training. The next section builds a GPT from the same blocks, with rotary
-positions, trains it as a language model, and tests the placement of
-normalization in training.
 
 ## Summary
 
-Attention moves information between positions but computes no nonlinear
-feature of any one position. A transformer block therefore pairs it with a
-position-wise FFN, which holds about two thirds of the parameters of the
-block, and both add their outputs to a residual stream. In the original
-post-LN arrangement, normalization pins the scale of the stream. At
-initialization a 32-block stack then collapses its tokens geometrically,
-and the query and key projections of the top block receive gradients five
-to six orders of magnitude smaller than in the pre-norm stack. Pre-norm
-normalizes what each branch reads, lets the stream grow like the square
-root of the depth, and keeps every block trainable. RMSNorm keeps only the
-scale statistic of LayerNorm, and QK-norm bounds the attention logits.
-SwiGLU replaces the fixed activation with a learned gate; at matched
-parameter count it ends a few hundredths of a nat ahead of GELU in our
-byte-level model. The `TransformerBlock` class exposes these choices as
-options, with replaceable attention and FFN modules.
+* A **Transformer block** separates **token mixing** (multi-head attention across sequence positions) from **channel mixing** (a position-wise FFN across the $d$ features), adding both updates to a shared residual stream.
+* **Pre-norm** (:eqref:`eq_preln-block`) normalizes only the input to each sublayer, preserving an unattenuated identity path for both forward token diversity and backward gradients, whereas **post-norm** (:eqref:`eq_postln-block`) normalizes the residual stream itself and exponentially attenuates early-layer gradients and inter-token differences (:eqref:`eq_collapse-rate`).
+* Scaling the initialization standard deviation of each block's two residual output projections (`W_o` and `W_2`) by **$1/\sqrt{2L}$** keeps pre-norm residual stream variance $O(1)$ across arbitrary depth $L$.
+* **RMSNorm** (:eqref:`eq_rmsnorm`) drops LayerNorm's mean subtraction and additive bias, while per-head **QK-Norm** bounds attention logits by Cauchy--Schwarz regardless of projection weight growth.
+* **SwiGLU** (:eqref:`eq_swiglu`) replaces the two-matrix $4d$ FFN with a three-matrix gated product at width $d_{\textrm{ff}} = \operatorname{round}(\frac{8}{3}d)$, matching the $8d^2$ parameter and FLOP budget of a standard FFN.
 
 ## Exercises
 
-1. **Scale invariance.** Let RMSNorm act as in :eqref:`eq_rmsnorm` with
-   $\boldsymbol{\gamma} = \mathbf{1}$ and $\epsilon = 0$, and write
-   $r(\mathbf{x}) = (\tfrac{1}{d} \sum_i x_i^2)^{1/2}$ for the root mean
-   square of $\mathbf{x} \in \mathbb{R}^d$.
-    1. Show that $\mathrm{RMSNorm}(\alpha \mathbf{x}) =
-       \mathrm{RMSNorm}(\mathbf{x})$ for every $\alpha > 0$, and that
-       LayerNorm with unit gain and zero shift is also unchanged when the
-       same constant is added to every coordinate. Describe the set of
-       inputs that each normalizer maps to a given output.
-    1. Show that the Jacobian of RMSNorm at $\mathbf{x}$ is
-       $r(\mathbf{x})^{-1} (\mathbf{I} - \hat{\mathbf{x}}
-       \hat{\mathbf{x}}^\top)$ with $\hat{\mathbf{x}} = \mathbf{x} /
-       \|\mathbf{x}\|$. Conclude that the gradient
-       $\nabla_{\mathbf{x}} \ell$ is orthogonal to $\mathbf{x}$ for every
-       loss $\ell$ that depends on $\mathbf{x}$ only through
-       $\mathrm{RMSNorm}(\mathbf{x})$.
+1. **Scale invariance of RMSNorm and its Jacobian.** Let $\mathbf{y} = \textrm{RMSNorm}(\mathbf{x})$ act as in :eqref:`eq_rmsnorm` with $\epsilon = 0$ and $\boldsymbol{\gamma} = \mathbf{1}$.
+   1. Show that $\textrm{RMSNorm}(c\mathbf{x}) = \textrm{RMSNorm}(\mathbf{x})$ for every scalar $c > 0$.
+   2. Differentiate $\mathbf{y} = \sqrt{d}\, \mathbf{x} / \|\mathbf{x}\|_2$ to show that the Jacobian is $J(\mathbf{x}) = \frac{\sqrt{d}}{\|\mathbf{x}\|_2}\bigl(\mathbf{I} - \frac{\mathbf{x}\mathbf{x}^\top}{\|\mathbf{x}\|_2^2}\bigr)$, and verify that $J(\mathbf{x})\mathbf{x} = \mathbf{0}$. Why must any radial perturbation parallel to $\mathbf{x}$ lie in the null space of $J(\mathbf{x})$?
 
-1. **Unrolled residual stream.** Number the $2N$ sublayers of an
-   $N$-block stack by $j = 1, \ldots, 2N$, write $F_j$ for the $j$-th
-   sublayer (attention or FFN) and $\mathrm{Norm}_j$ for its
-   normalization, and let $\mathbf{x}_j$ be the residual stream after
-   sublayer $j$, so that $\mathbf{x}_0$ is the input.
-    1. For the pre-LN arrangement :eqref:`eq_preln-block`, write
-       $\mathbf{x}_{2N}$ as $\mathbf{x}_0$ plus a sum of $2N$ branch
-       outputs. Write the Jacobian $\partial \mathbf{x}_{2N} / \partial
-       \mathbf{x}_0$ as a product over sublayers, expand the product, and
-       identify the term that passes a gradient from the output to the
-       input unchanged.
-    1. For the post-LN arrangement :eqref:`eq_postln-block`, the stream is
-       $\mathbf{x}_j = \mathrm{Norm}_j(\mathbf{u}_j)$ with $\mathbf{u}_j =
-       \mathbf{x}_{j-1} + F_j(\mathbf{x}_{j-1})$. Model every normalization
-       as RMSNorm with unit gain and $\epsilon = 0$. Assume that the input
-       $\mathbf{x}_0$ has unit root mean square and that each branch output
-       is uncorrelated with the stream it is added to. The product of the
-       normalization Jacobians alone takes the place of the identity term
-       of the pre-LN expansion. Show that this product scales a vector
-       orthogonal to every $\mathbf{u}_j$ by $\prod_j r(\mathbf{u}_j)^{-1}$,
-       and write this factor as a function of the mean squares
-       $c_1, \ldots, c_{2N}$ of the branch outputs. Evaluate it for a
-       common mean square $c_j = c$, and compare its dependence on $N$
-       with that of the identity term of the pre-LN expansion.
-    1. `CharLM` applies a final RMSNorm, `norm`, before its tied output
-       head. Describe what the head would receive without it as a pre-LN
-       stack grows deeper, and explain why a post-LN stack needs no final
-       normalization.
+2. **Unrolled residual stream and gradient identity path.** Number the $2L$ sublayers of an $L$-block pre-norm stack as $f_1, f_2, \dots, f_{2L}$, where odd indices are attention sublayers and even indices are FFN sublayers.
+   1. Unroll :eqref:`eq_preln-block` to express $\mathbf{X}^{(L)}$ explicitly as $\mathbf{X}^{(0)} + \sum_{m=1}^{2L} f_m(\textrm{Norm}(\mathbf{X}^{(m-1)/2}))$.
+   2. Apply the chain rule to write $\partial \mathbf{X}^{(L)} / \partial \mathbf{X}^{(0)}$ as a product of $2L$ Jacobians, expand the leading terms, and contrast the resulting identity term $\mathbf{I}$ with the post-norm product where every factor is premultiplied by $J_{\textrm{Norm}}$.
 
-1. [code] **QK-norm as a factory.**
-   QK-norm (:numref:`subsec_qk-norm`) applies RMSNorm over the head dimension
-   $p = d/h$ to every query and key just before the scores are computed.
-    1. Write `QKNormAttention`, a subclass of `d2l.MultiHeadAttention`
-       whose `forward` (`__call__` in JAX) passes the per-head queries and
-       keys produced by `split_heads` through their own RMSNorm each
-       before the dot product. Build a `TransformerBlock` with it through
-       `attn_factory` and check the output shape.
-    1. Show that with unit gains every scaled logit
-       $\hat{\mathbf{q}}^\top \hat{\mathbf{k}} / \sqrt{p}$ lies in
-       $[-\sqrt{p}, \sqrt{p}]$, and generalize the bound to learned gains
-       $\boldsymbol{\gamma}_q$ and $\boldsymbol{\gamma}_k$. Compute the
-       largest possible ratio between two attention weights of one query
-       for $p = 64$ and unit gains.
-    1. Training can inflate the query and key weights. Mimic this at
-       initialization: multiply the weights of `W_q` and `W_k` of a
-       freshly initialized layer with $d = 256$ and $h = 4$ by
-       $\lambda \in \{1, 2, 4, 8\}$, and feed it 64 standard normal
-       tokens. Measure the standard deviation of the logits and the mean
-       entropy of the attention weights, with and without QK-norm. Compare
-       the entropies with $\log 64$, and explain the shape of each curve.
+3. **QK-Norm inside `TransformerBlock`.** Write an `attn_factory` that wraps `d2l.MultiHeadAttention` and applies `nn.RMSNorm(d // h)` (or `nnx.RMSNorm`) to queries and keys per head before computing attention scores. Verify on a 16-block stack with projection weights multiplied by $5\times$ that attention entropy remains bounded away from zero.
 
-1. **FFN width rounding.** `FeedForward` sets the SwiGLU width to
-   $\mathrm{round}(8d/3)$.
-    1. Write the exact parameter count of the default
-       `TransformerBlock(d, h)` as a function of $d$, and bound the
-       relative deviation of its FFN from $8d^2$.
-    1. The released 7B configuration of Llama :cite:`touvron2023llama` has
-       $d = 4096$ and SwiGLU width $11008$, the smallest multiple of 256
-       that is at least $\lfloor 8d/3 \rfloor$. Compute the relative excess
-       of its FFN parameters over $8d^2$, and the excess that the same
-       rule gives at $d = 256$ and at $d = 128$, the default `num_hiddens`
-       of `CharLM`. Explain what the comparison implies for
-       parameter-matched experiments with small models.
-   :exlabel:`ex_transformer-block-ffn-width-rounding`
+4. **Stream variance budget across depth.** In the pre-norm arrangement, every sublayer adds an update to the residual stream. Run `signal_stats(pre_norm=True, std=0.02 / math.sqrt(2 * L), num_blks=L)` for $L \in \{8, 16, 32, 64\}$ and compare against unscaled `std=None`. Verify that the final stream standard deviation at block $L$ grows as $\sqrt{L}$ without scaling but remains near a constant independent of $L$ under the $1/\sqrt{2L}$ rule.
 
-1. [code] **Causal masks.** `CharLM` passes the boolean mask
-   `causal = d2l.causal_mask(T)` to every block, so that the query at
-   position $t = 0, \ldots, T - 1$ attends to the keys at positions
-   $0, \ldots, t$.
-    1. Show by induction over the blocks that the logits of `CharLM` at
-       position $t$ depend only on the tokens at positions $0, \ldots, t$.
-       Which step of the induction fails if only the first block receives
-       `causal` and the other blocks receive no mask?
-    1. Give `CharLM` an argument `shift` and build the mask as
-       `torch.ones(T, T, dtype=torch.bool).tril(shift)` (PyTorch) or
-       `jnp.tril(jnp.ones((T, T), bool), shift)` (JAX), so that the query at
-       position $t$ sees the keys at positions $0, \ldots, t + s$, where
-       $s$ is the value of `shift`.
-       For `shift=-1`, the query at position 0 sees no key, and
-       `d2l.masked_softmax` gives it zero weights. For `shift=1` and for
-       `shift=-1`, predict the positions whose logits depend on the token
-       at position $j$ in a stack of $N$ blocks. Which of the two settings
-       can be trained as a next-token predictor?
-    1. Check your predictions on freshly initialized models with
-       `num_blks` $\in \{1, 2, 4\}$: change the token at position 16 of a
-       sequence of 32 random tokens, and find the positions whose logits
-       change.
-
-1. [code] **Stream variance budget.** ● In the pre-LN arrangement every
-   branch reads a normalized input. If each branch output is uncorrelated
-   with the stream it is added to, the mean square of the stream after $k$
-   blocks is
-   $$1 + \sum_{i=1}^{k} \big(c^\textrm{attn}_i + c^\textrm{ffn}_i\big),$$
-   where $c^\textrm{attn}_i$ and $c^\textrm{ffn}_i$ are the mean squares of
-   the attention and FFN outputs of block $i$. Use `MiniBlock` with the
-   Xavier initialization of `signal_stats` at $d = 256$.
-    1. Predict $c^\textrm{ffn}_1$. Compute the variance of the hidden
-       pre-activations of the FFN, and evaluate the second moment of GELU
-       at that variance numerically.
-    1. Predict $c^\textrm{attn}_1$. Treat the $n = 64$ input tokens as
-       independent, and treat the attention logits of one query as
-       independent Gaussians with the variance that the initialization
-       implies.
-    1. Record the mean square of each branch output in `signal_stats` and
-       plot $c^\textrm{attn}_k$ and $c^\textrm{ffn}_k$ against $k$.
-       Compare block 1 with your predictions, and explain the trend of
-       $c^\textrm{attn}_k$ using the token spread.
-    1. Fit a power law to the stream RMS, once over blocks 1 to 32 and once
-       over blocks 8 to 32. Compare both exponents with $1/2$, explain the
-       comparison with the variance budget, and state the regime in which
-       the square-root growth stated in :numref:`subsec_signal-propagation`
-       holds.
-
-1. [code] **Rate of token collapse.** ● Write the tokens of one sequence
-   as $\mathbf{x}_i = \boldsymbol{\mu} + \boldsymbol{\delta}_i$ for
-   $i = 1, \ldots, n$, where $\boldsymbol{\mu}$ is the mean token and
-   $\sum_i \boldsymbol{\delta}_i = \mathbf{0}$. With the ratio of common
-   to deviation energy
-   $$\rho = \frac{n \|\boldsymbol{\mu}\|^2}{\sum_i \|\boldsymbol{\delta}_i\|^2},$$
-   the token spread of `signal_stats` equals $(1 + \rho)^{-1/2}$. At
-   initialization the attention weights are nearly uniform, so a post-LN
-   attention sublayer adds approximately the same vector
-   $\mathbf{W}_o \mathbf{W}_v \boldsymbol{\mu}$ to every token, where
-   $\mathbf{W}_v, \mathbf{W}_o \in \mathbb{R}^{d \times d}$ are the value
-   and output projections.
-    1. Let the entries of $\mathbf{W}_v$ and $\mathbf{W}_o$ be independent
-       with mean zero and variance $\alpha^2 / d$, so that $\alpha = 1$ is
-       Xavier initialization of a square matrix. Treat the normalization as
-       a rescaling common to all tokens. Show that one attention sublayer
-       and its normalization multiply $\rho$ by about $1 + \alpha^4$, and
-       derive the spread after $k$ blocks for an input of $n$ independent
-       random tokens, ignoring the FFN sublayers.
-    1. Rerun `signal_stats` for post-LN with all Xavier weights multiplied
-       by $\alpha \in \{1, 0.7, 0.5\}$, once with the full `MiniBlock` and
-       once with its FFN sublayer removed. Compare both with your formula
-       at blocks 8, 16, and 32, and explain the remaining gap of the full
-       block.
-    1. GPT-1 stacked 12 post-LN blocks of width $d = 768$ and drew every
-       weight from $\mathcal{N}(0, 0.02^2)$
-       :cite:`Radford.Narasimhan.Salimans.ea.2018`. Compute $\alpha$ for its
-       attention projections, and predict the spread after 12 blocks for
-       $n = 64$, both for this initialization and for Xavier
-       initialization at the same width. Check both predictions with
-       `signal_stats`.
-
-1. [extended] **Learning-rate sensitivity.** ●
-   :citet:`Wortsman.Liu.Xiao.ea.2024` reproduce the growth of attention
-   logits reported for large training runs (:numref:`subsec_qk-norm`) in
-   small models trained at high learning rates, and find that QK-norm
-   removes it. They summarize the final loss $\ell(\eta)$ as a function of
-   the learning rate $\eta$ by the *learning-rate sensitivity*
-   $$\mathbb{E}_{\eta}\big[\min(\ell(\eta), \ell_0) - \ell^*\big],$$
-   where $\ell_0$ is the loss at initialization, $\ell^*$ is the best final
-   loss over the learning rates tried, and the average runs over learning
-   rates spanning three orders of magnitude.
-    1. Give `CharLM` an option that builds its blocks with
-       `QKNormAttention` through `attn_factory`. With `num_hiddens=256` and
-       `num_blks=6`, train it with and without QK-norm for 1000 steps at
-       each learning rate in $\{10^{-4}, 10^{-3.5}, \ldots, 10^{-1}\}$,
-       otherwise under the protocol of :numref:`subsec_gelu-vs-swiglu`.
-    1. Every 100 steps, record the training loss and the largest absolute
-       attention logit on a fixed batch. Plot the final loss against
-       $\eta$ for both models, and compute the learning-rate sensitivity
-       of each curve.
-    1. For every learning rate at which the model without QK-norm ends
-       worse than the model with it, decide from the recorded attention
-       logits whether attention-logit growth explains the gap. If it does
-       not, record the largest absolute output logit of both models at the
-       same steps, and decide whether its growth explains the gap.
-
-[Discussions](https://d2l.discourse.group/t/36774)
+5. **Rate of token collapse.** :numref:`subsec_signal-propagation` argued that in a post-norm block, only the attention sublayer mixes across tokens, while the FFN acts position-wise. Modify `MiniBlock` so that the attention sublayer is skipped ($\mathbf{H} = \textrm{Norm}(\mathbf{X})$) and only the post-norm FFN runs, and re-run `signal_stats(pre_norm=False)`. Does token spread still collapse to zero across 32 layers, or does it stabilize? Explain how this confirms each factor in :eqref:`eq_collapse-rate`.
+:exlabel:`ex_transformer-block-ffn-width-rounding`
 
 <!-- slides -->
 
@@ -971,36 +528,34 @@ options, with replaceable attention and FFN modules.
 [Dive into Deep Learning · §11.1]{.kicker}
 
 The Transformer Block<br>
-**residual stream · normalization placement · RMSNorm and QK-norm · GELU and SwiGLU · one configurable class**
+**residual stream · normalization placement · token collapse · RMSNorm and QK-norm · SwiGLU · one configurable class**
 :::
 :::
 
-::: {.slide title="Attention Alone Averages, and Depth Alone Collapses"}
+::: {.slide title="Thirty-Two Fresh Post-Norm Blocks Squeeze 64 Tokens onto One Point"}
 [The problem]{.kicker}
 
-- Attention outputs weighted averages of values: it moves information
-  between positions but computes no new feature of any one token.
-- A model needs per-token computation, stacked deep: GPT-2 small has 12
-  blocks, large models over 100.
-- Stack 32 blocks the 2017 way: at initialization the tokens agree to one
-  part in $10^4$, and $\mathbf{W}_q$ gets gradients of order $10^{-9}$.
+- Attention averages values: it mixes tokens but computes no new feature
+  of any one token.
+- Stack 32 blocks the 2017 way, with Xavier weights. Before any training
+  the tokens agree to one part in $10^4$; $\mathbf{W}_q$ gets gradients
+  near $10^{-9}$.
 
 ::: {.d2l-note .warn}
-What must a block contain, and where must its normalization sit, so that
-a deep stack stays trainable?
+What must a block contain, and what keeps a deep stack's tokens apart?
 :::
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- count the parameters of a block: $4d^2$ attention, $8d^2$ FFN;
-- predict how post-LN and pre-LN stacks treat signals at initialization;
-- explain why collapsed tokens starve $\mathbf{W}_q, \mathbf{W}_k$ of
-  gradient;
-- write RMSNorm, QK-norm, and a SwiGLU FFN at matched parameter count.
+- count a block's parameters: $4d^2 + 8d^2$;
+- predict a post-norm stack's token spread from its weight scale;
+- explain why collapsed tokens starve $\mathbf{W}_q, \mathbf{W}_k$;
+- write RMSNorm and QK-norm, and size SwiGLU to match the MLP.
 
-**Running example:** a GPT-2-small block, $d = 768$, 12 heads of width 64.
+**Running examples:** a GPT-2-small block ($d = 768$); 32 random blocks at
+$d = 256$, in three stacks.
 :::
 
 ::: {.slide title="The Block Is What Every Transformer Repeats"}
@@ -1010,18 +565,20 @@ a deep stack stays trainable?
 ::: {.col}
 | section | adds |
 |---|---|
-| **The Transformer Block** | **attention + FFN on a residual stream** |
+| **The Transformer Block** | **attention + FFN, residual stream** |
 | A GPT from Scratch | a trained language model; GPT-2 loaded |
-| Generation and the KV Cache | reuse keys and values while sampling |
+| The KV Cache | reuse past keys and values |
+| Shrinking the KV Cache | fewer heads, narrower or shorter caches |
 | Encoders, Decoders, and Cross-Attention | the other two wirings |
 | Vision Transformer | images as token sequences |
-| Mixture of Experts | more parameters per FLOP |
 | Scaling Laws | loss against parameters, data, compute |
+| Mixture of Experts | more parameters per FLOP |
+| The Modern Recipe | released models as settings |
 :::
 
 ::: {.col .narrow}
-- **Uses:** multi-head attention, masks, LayerNorm, GELU, Xavier init.
-- **Skips:** positions (next deck), training at scale.
+- **Uses:** multi-head attention, LayerNorm, GELU, Xavier initialization.
+- **Skips:** positions and the causal mask (next deck), training.
 :::
 :::
 :::
@@ -1033,50 +590,22 @@ Attention is the only place tokens interact; the FFN acts on each token
 alone. Both map $(n, d)$ to $(n, d)$, so blocks stack.
 :::
 
-::: {.slide title="The Pre-Norm Block in Two Lines"}
-For token vectors $\mathbf{x} \in \mathbb{R}^d$ on the residual stream:
+::: {.slide title="Post-Norm Normalizes the Stream; Pre-Norm Normalizes What Each Branch Reads"}
+Token vectors $\mathbf{x} \in \mathbb{R}^d$ on the residual stream. The
+literature also says post-LN and pre-LN, after layer normalization:
 
-$$\mathbf{h} = \mathbf{x} + \mathrm{Attn}(\mathrm{Norm}_1(\mathbf{x})), \qquad \mathbf{y} = \mathbf{h} + \mathrm{FFN}(\mathrm{Norm}_2(\mathbf{h}))$$
+$$\textrm{post-norm (2017):}\quad \mathbf{h} = \mathrm{Norm}_1(\mathbf{x} + \mathrm{Attn}(\mathbf{x})), \quad \mathbf{y} = \mathrm{Norm}_2(\mathbf{h} + \mathrm{FFN}(\mathbf{h}))$$
 
-- $\mathrm{Attn}$: multi-head self-attention, four $d \times d$
-  projections $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v, \mathbf{W}_o$.
-- $\mathrm{FFN}(\mathbf{x}) = \mathbf{W}_2\,\phi(\mathbf{W}_1\mathbf{x})$
-  with hidden width $4d$.
-- The stream itself is never rewritten, only added to.
+$$\textrm{pre-norm:}\quad \mathbf{h} = \mathbf{x} + \mathrm{Attn}(\mathrm{Norm}_1(\mathbf{x})), \quad \mathbf{y} = \mathbf{h} + \mathrm{FFN}(\mathrm{Norm}_2(\mathbf{h}))$$
+
+- $\mathrm{Attn}$: multi-head self-attention with projections
+  $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v, \mathbf{W}_o \in
+  \mathbb{R}^{d \times d}$.
+- $\mathrm{FFN}(\mathbf{x}) = \mathbf{W}_2\,\phi(\mathbf{W}_1\mathbf{x})$,
+  hidden width $4d$.
 :::
 
-::: {.slide title="A GPT-2-Small Block Holds 7.1 Million Parameters"}
-[Running example]{.kicker}
-
-| part | count | $d = 768$ |
-|---|---|---|
-| attention, 4 projections | $4d^2$ | 2.4M |
-| FFN, $\mathbf{W}_1$ and $\mathbf{W}_2$ | $8d^2$ | 4.7M |
-| block | $12d^2$ | 7.1M |
-| 12 blocks | | 85M |
-| + token and position embeddings | | 124M |
-
-::: {.d2l-note .rule}
-Two thirds of every block sit in the FFN.
-:::
-:::
-
-::: {.slide title="Check: Double the Width"}
-[Check]{.kicker}
-
-Double the width of GPT-2 small to $d = 1{,}536$ and keep its vocabulary
-of 50,257 tokens. By what factor does each part grow?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Every block grows $4\times$ (all terms are $\propto d^2$),
-to 28M parameters. The embeddings grow only $2\times$ (they are
-$\propto d$), from 39M to 79M.
-:::
-:::
-:::
-
-::: {.slide title="Post-LN and Pre-LN Differ in Where the Norm Sits"}
+::: {.slide title="In Code the Two Arrangements Differ in Two Lines"}
 ```{.python #transformer-block-exercises-1}
 def block(X, pre_norm):
     if pre_norm:                       # norm on each branch's input
@@ -1087,106 +616,162 @@ def block(X, pre_norm):
     return norm2(X + ffn(X))
 ```
 
-Same weights, two different functions. Which one keeps a deep stack
-trainable can be measured before any training.
+Same weights, two different functions. A fresh stack is a fixed random
+function, so how each treats signals can be measured before training.
 :::
 
-::: {.slide title="At Initialization, Post-LN Collapses the Tokens"}
-32 blocks, Xavier initialization as in 2017, one random sequence;
-token spread $\|\mathbf{H} - \bar{\mathbf{H}}\| / \|\mathbf{H}\|$ is 1
-for distinct tokens, 0 for identical ones:
-
-@!transformer-block-signal-propagation-at-initialization
-:::
-
-::: {.slide title="Uniform Attention Contracts; Post-LN Locks It In"}
-- At initialization attention weights are nearly uniform: each sublayer
-  pulls every token toward the mean token.
-- Post-LN renormalizes the stream after each addition, so the contraction
-  compounds: spread falls geometrically, to about $10^{-4}$ at block 32.
-- Pre-LN adds to a growing stream, so each block's relative pull shrinks:
-  spread is still 0.3–0.4 at block 32.
-
-::: {.d2l-note}
-The same contraction, without residuals, is rank collapse.
-:::
-
-[Dong et al., 2021]{.small}
-:::
-
-::: {.slide title="Identical Tokens Starve the Query and Key Weights"}
-- If all tokens are equal, every query scores every key alike: the
-  attention weights no longer depend on $\mathbf{W}_q, \mathbf{W}_k$.
-- Top post-LN block: $\mathbf{W}_q, \mathbf{W}_k$ gradients
-  $\sim 10^{-9}$, five to six orders below pre-LN.
-- $\mathbf{W}_v, \mathbf{W}_o$ act on the mean token itself and still
-  get gradients near 0.06.
+::: {.slide title="Fresh Attention Adds Nearly the Same Vector to Every Token"}
+- Fresh weights see content only through random $\mathbf{W}_q,
+  \mathbf{W}_k$. Bold step: treat them as unrelated to it.
+- Each token gets a mixture of all tokens with expectation
+  $\boldsymbol{\mu}$, the mean token; deviations largely cancel.
+- Every token gains about $\mathbf{W}_o\mathbf{W}_v\boldsymbol{\mu}$:
+  the shared part grows, the differences do not.
 
 ::: {.d2l-note .rule}
-In training, post-LN needs learning-rate warmup; pre-LN trains without it.
+Post-norm rescales all tokens alike, and LayerNorm's mean is per token,
+not $\boldsymbol{\mu}$: nothing undoes the growth.
+:::
 :::
 
-[Xiong et al., 2020]{.small}
+::: {.slide title="Each Post-Norm Block Multiplies the Shared Energy by $1 + g^4$"}
+- Tokens $\mathbf{x}_i = \boldsymbol{\mu} + \boldsymbol{\delta}_i$;
+  $\rho = n\|\boldsymbol{\mu}\|^2 / \sum_i \|\boldsymbol{\delta}_i\|^2$;
+  spread $s = (1+\rho)^{-1/2}$.
+- $\mathbf{W}_v, \mathbf{W}_o$ with entries of variance $g^2/d$: each
+  multiplies squared lengths by $g^2$, so $\rho \to (1+g^4)\rho$.
+- 64 random tokens: $\rho_0 = 1/63$, so
+  $s_k \approx \big(1 + (1+g^4)^k/63\big)^{-1/2}$.
+
+| predicted spread $s_k$, block $k$ | 8 | 16 | 32 |
+|---|---|---|---|
+| Xavier, $g = 1$: $\rho$ doubles per block | 0.44 | 0.031 | $1.2 \times 10^{-4}$ |
+| GPT-2's $\mathcal{N}(0, 0.02^2)$ at $d = 256$: $g^2 \approx 0.1$ | 0.99 | 0.99 | 0.99 |
 :::
 
-::: {.slide title="Pre-LN Lets the Stream Grow Like the Square Root of Depth"}
-- Each branch reads a normalized input, so its output has a fixed scale.
-- Outputs of different blocks are nearly uncorrelated: variances add.
-- After 32 blocks the stream RMS is about 5, close to
-  $\sqrt{33} \approx 5.7$; post-LN pins it at 1.
+::: {.slide title="The Measured Spread Follows the Prediction"}
+Post-norm and pre-norm with Xavier weights; post-norm with
+$\mathcal{N}(0, 0.02^2)$. Spread against depth, predictions dotted:
+
+@!transformer-block-signal-propagation-at-initialization-3
+:::
+
+::: {.slide title="Small Weights Do Not Collapse"}
+- Xavier: spread about 0.3, 0.02, $10^{-4}$; below prediction (by $< 2\times$),
+  since the FFN (GELU has a positive mean) adds a shared part too.
+- $\mathcal{N}(0, 0.02^2)$: $1 + g^4 \approx 1.01$; spread 0.97 after 32
+  blocks.
+- GPT-1 and BERT are post-norm; DeepNet trains 1,000 layers.
 
 ::: {.d2l-note .rule}
-A growing stream damps the relative contribution of each new block, so
-deep stacks stay trainable. Pre-norm is the default.
-:::
+Collapse needs post-norm and large weights: the size of the weights decides.
 :::
 
-::: {.slide title="Check: Which Weights Still Learn?"}
+[Wang et al., 2024 (DeepNet)]{.small}
+:::
+
+::: {.slide title="Check: Is 0.02 Small at Width 1024?"}
 [Check]{.kicker}
 
-In the collapsed post-LN stack, rank the gradients of $\mathbf{W}_q$,
-$\mathbf{W}_v$, and the FFN's $\mathbf{W}_1$ at the top block, and say
-why.
+A post-norm stack of 24 blocks at $d = 1024$, 64 random tokens, weights
+from $\mathcal{N}(0, 0.02^2)$. Predict the token spread at the top.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $\mathbf{W}_v$ and $\mathbf{W}_1$ act on the token vector
-itself, so they keep ordinary gradients. $\mathbf{W}_q$ enters only
-through the attention weights, which identical tokens make constant:
-its gradient vanishes.
+**Answer.** $g^2 = 1024 \cdot 0.02^2 = 0.41$, $g^4 = 0.17$;
+$\rho = 1.17^{24}/63 \approx 0.66$, spread $\approx 0.78$: the tokens are
+already partly merged. A fixed standard deviation is a larger $g$ at a
+larger width. (Xavier: $\rho = 2^{24}/63 \approx 2.7 \times 10^5$, spread
+$\approx 0.002$.)
 :::
 :::
 :::
 
-::: {.slide title="RMSNorm Keeps Only the Scale Statistic"}
+::: {.slide title="Identical Tokens Starve the Query and Key Weights"}
+::: {.cols .vc}
+::: {.col}
+@!transformer-block-signal-propagation-at-initialization-2
+:::
+
+::: {.col .narrow}
+- Equal tokens: every query scores every key alike, so the weights stop
+  depending on $\mathbf{W}_q, \mathbf{W}_k$.
+- Top post-norm block: $\sim 10^{-9}$; $\mathbf{W}_v, \mathbf{W}_o$ still
+  get several hundredths.
+- Lowest blocks: about $10^{-2}$. The starvation is local.
+:::
+:::
+:::
+
+::: {.slide title="Pre-Norm Adds to the Shared Part Instead of Multiplying It"}
+- Branches read normalized inputs, so their outputs have fixed scale.
+  Post-norm pins the stream RMS at 1.
+- If each block adds unit mean square: RMS $\sqrt{33} \approx 5.7$ after
+  32 blocks. Measured: about 5, somewhat below.
+- Shared vectors land on a growing stream: spread about a third at 32,
+  so $\rho = 8$, against $2^{32}/63 \approx 7 \times 10^7$ predicted for
+  post-norm with Xavier.
+
+::: {.d2l-note .rule}
+Keep every branch small against the stream: pre-norm by growth, small
+weights by size.
+:::
+:::
+
+::: {.slide title="RMSNorm Drops the Centering, and Ignores Scale but Not Shift"}
 $$\mathrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\tfrac{1}{d}\sum_{i=1}^d x_i^2 + \epsilon}} \odot \boldsymbol{\gamma}$$
 
-- LayerNorm subtracts the mean, divides by the standard deviation, then
-  scales and shifts; RMSNorm drops the mean and the shift.
-- One statistic instead of two, same quality; reported running time
-  7–64% lower. Llama adopted it.
-- When memory traffic dominates, both normalizers cost about the same.
+Learned gain $\boldsymbol{\gamma}$, small $\epsilon$. $\mathbf{x} = (1, 2,
+3, 6)$: RMS $\sqrt{12.5} = 3.54$; mean 3, standard deviation
+$\sqrt{3.5} = 1.87$. Unit gain, zero shift:
+
+@!transformer-block-rmsnorm
+
+::: {.d2l-note}
+Last row: an offset swamps RMSNorm's output. Centering would remove it,
+but in practice it did not matter, so current models leave it out.
+:::
 
 [Zhang & Sennrich, 2019]{.small}
 :::
 
 ::: {.slide title="QK-Norm Bounds the Attention Logits"}
-- Logits $\mathbf{q}^\top\mathbf{k}/\sqrt{p}$, head width $p$: if
-  training inflates $\mathbf{q}$ and $\mathbf{k}$, softmax saturates and
-  its gradient vanishes.
-- Seen in ViT-22B; reproduced in small LMs at high learning rates.
-- QK-norm: RMSNorm on each head's queries and keys before the dot
-  product. With unit gains $|\textrm{logit}| \le \sqrt{p} = 8$ for a
-  GPT-2-small head.
+- Logits $\mathbf{q}^\top\mathbf{k}/\sqrt{d_h}$, head width $d_h$.
+  Inflated $\mathbf{q}, \mathbf{k}$: one-hot softmax, vanishing gradient.
+- Seen while scaling ViTs (diverging at 8B parameters) and in small LMs
+  at high learning rates.
+- QK-norm: normalize each head's $\mathbf{q}, \mathbf{k}$ first. Unit
+  gains: $|\textrm{logit}| \le \sqrt{d_h} = 8$.
 
-[Dehghani et al., 2023; Wortsman et al., 2024]{.small}
+[Henry et al., 2020; Dehghani et al., 2023; Wortsman et al., 2024]{.small}
 :::
 
-::: {.slide title="Only Post-LN Normalizes the Stream Itself"}
-@fig:mdl-transformers-norm-taxonomy
+::: {.slide title="QK-Norm Keeps the Entropy Up When the Weights Grow"}
+64 random tokens, one head of width 64; $\mathbf{W}_q, \mathbf{W}_k$
+scaled by $\lambda$. Uniform weights: entropy $\log 64 = 4.16$; one-hot: 0.
 
-Pre-LN normalizes what a branch reads, OLMo 2 what it writes, Gemma 3
-both; the stream's identity path stays untouched.
+@!transformer-block-normalizing-queries-and-keys
+
+::: {.d2l-note}
+Without the norm the logits grow like $\lambda^2$; with it nothing changes.
+At $\lambda = 1$, entropy 3.7: fresh attention is not uniform, but its
+preferences are random.
+:::
+:::
+
+::: {.slide title="Check: Inflate the Query and Key Weights by 8"}
+[Check]{.kicker}
+
+At $\lambda = 1$ the logits have standard deviation about 1. What is it at
+$\lambda = 8$, without and with QK-norm?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Queries and keys both grow by 8, so the logits grow by
+$8^2 = 64$: standard deviation about 64, attention nearly one-hot. With
+QK-norm the scale cancels: still about 1.
+:::
+:::
 :::
 
 ::: {.slide title="FFN Rows Act as Keys, Columns as Values"}
@@ -1201,13 +786,19 @@ $$\mathrm{FFN}(\mathbf{x}) = \mathbf{W}_2\,\phi(\mathbf{W}_1\mathbf{x}) = \sum_{
 [Geva et al., 2021]{.small}
 :::
 
-::: {.slide title="SwiGLU Gates One Linear View with Another"}
+::: {.slide title="SwiGLU Multiplies Two Views of the Input"}
 $$\mathrm{SwiGLU}(\mathbf{x}) = \mathbf{W}_2\big(\mathrm{SiLU}(\mathbf{W}_g\mathbf{x}) \odot \mathbf{W}_1\mathbf{x}\big), \quad \mathrm{SiLU}(z) = z\,\mathrm{sigmoid}(z)$$
 
-- One view becomes a soft gate; the other passes at full strength where
-  the gate is open.
-- Three matrices: shrink the width from $4d$ to $\tfrac{8}{3}d$ to keep
-  $8d^2$. GPT-2 small: width $2{,}048$ instead of $3{,}072$.
+- SiLU is unbounded above, not a gate in $[0, 1]$. Where SiLU is nearly
+  linear, the product is quadratic in $\mathbf{x}$.
+- Width $\tfrac{8}{3}d$ keeps $8d^2$: $2{,}048$ instead of $3{,}072$ at
+  $d = 768$.
+- Matched size, held-out log-perplexity: 1.944, against 1.983 (GELU)
+  and 1.997 (ReLU); repeated runs differ by 0.005 to 0.01.
+
+::: {.d2l-note}
+"We offer no explanation as to why these architectures seem to work."
+:::
 
 [Shazeer, 2020]{.small}
 :::
@@ -1222,7 +813,38 @@ def ffn(x):
     return W_2(silu(W_g(x)) * W_1(x))   # W_g, W_1, W_2: 8 d^2
 ```
 
-At $d = 256$: 524,288 parameters for GELU, 524,544 for SwiGLU.
+At $d = 256$: 524,288 parameters for GELU, 524,544 for SwiGLU, since
+$\tfrac{8}{3} \cdot 256$ rounds to 683.
+:::
+
+::: {.slide title="A GPT-2-Small Block Holds 7.1 Million Parameters"}
+[Running example]{.kicker}
+
+| part | count | $d = 768$ |
+|---|---|---|
+| attention, 4 projections | $4d^2$ | 2.4M |
+| FFN, two or three matrices | $8d^2$ | 4.7M |
+| block | $12d^2$ | 7.1M |
+| 12 blocks | | 85M |
+| + token and position embeddings | | 124M |
+
+::: {.d2l-note .rule}
+Two thirds of every block sit in the FFN.
+:::
+:::
+
+::: {.slide title="One Constructor Covers 2017 and Today"}
+| argument | choices | default |
+|---|---|---|
+| `norm` | `'rms'`, `'layer'` | `'rms'` |
+| `act` | `'swiglu'`, `'gelu'` | `'swiglu'` |
+| `pre_norm` | `True`, `False` | `True` |
+| `bias` | `True`, `False` | `False` |
+| `attn_factory`, `ffn_factory` | replace a whole sublayer | `None` |
+
+The default is the Llama configuration (2023); `norm='layer'`,
+`act='gelu'`, `pre_norm=False`, `bias=True` gives the 2017 block, with GELU
+for ReLU.
 :::
 
 ::: {.slide title="Check: A Fair Comparison"}
@@ -1240,39 +862,18 @@ removes the confound.
 :::
 :::
 
-::: {.slide title="One Constructor Covers 2017 and Today"}
-| argument | choices | default |
-|---|---|---|
-| `norm` | `'rms'`, `'layer'` | `'rms'` |
-| `act` | `'swiglu'`, `'gelu'` | `'swiglu'` |
-| `pre_norm` | `True`, `False` | `True` |
-| `attn_factory` | causal attention, smaller KV cache | multi-head |
-| `ffn_factory` | mixture of experts | `FeedForward` |
+::: {.slide title="A Fresh Post-Norm Stack Collapses Only When Its Weights Are Large"}
+[Wrap-up]{.kicker}
 
-The default is the Llama configuration (2023); `norm='layer'`,
-`act='gelu'`, `pre_norm=False` gives the 2017 block.
-:::
-
-::: {.slide title="SwiGLU Ends a Few Hundredths of a Nat Ahead"}
-Byte-level LM on WikiText-103, 2 blocks, $d = 128$, 600 AdamW steps; only
-`act` differs, parameters matched to 0.1%; validation loss:
-
-@!transformer-block-the-flags-at-work-gelu-versus-swiglu
-
-SwiGLU stays ahead when the runs are repeated from fresh initializations;
-at T5 scale the gap is about 0.04 nats.
-:::
-
-::: {.slide title="Wrap-up"}
-- Attention moves information between tokens; the FFN computes per
-  token and holds two thirds of the $12d^2$ per block (7.1M in GPT-2
-  small).
-- Post-LN at initialization: tokens collapse to $10^{-4}$ spread by block
-  32, $\mathbf{W}_q$ gradients $\sim 10^{-9}$. Pre-LN: stream RMS grows
-  like $\sqrt{\textrm{depth}}$, every block trainable.
-- RMSNorm keeps the scale statistic; QK-norm bounds the logits.
-- SwiGLU at width $\tfrac{8}{3}d$ beats the GELU MLP at equal size.
+- Block: attention mixes tokens; the FFN holds two thirds of $12d^2$
+  (7.1M in GPT-2 small).
+- Post-norm: shared part $\times (1 + g^4)$ per block. Xavier: spread
+  $10^{-4}$ at 32; $\mathcal{N}(0, 0.02^2)$: 0.97.
+- Pre-norm only adds; stream RMS about 5 at 32, against
+  $\sqrt{33} \approx 5.7$ if every block added unit mean square.
+- RMSNorm drops centering; QK-norm bounds logits; SwiGLU multiplies two
+  views.
 
 **Next:** embeddings, positions, and a causal mask turn the block into a
-GPT.
+GPT, trained on bytes.
 :::

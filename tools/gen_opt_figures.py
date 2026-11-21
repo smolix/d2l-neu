@@ -58,7 +58,7 @@ def fig_critical_damping():
     # regime labels for the better-conditioned (blue) curve
     ax.text(0.145, 0.585, "overdamped:\nmonotone, slow", color="black",
             fontsize=12.5, ha="center", va="center")
-    ax.text(0.785, 0.60, "underdamped:\noscillates, rate $\\sqrt{\\beta}$",
+    ax.text(0.785, 0.60, "underdamped:\noscillates, factor $\\sqrt{\\beta}$",
             color="black", fontsize=12.5, ha="center", va="center")
     # the head stops just under the sqrt(beta) curve instead of piercing it
     ax.annotate("", xy=(0.86, np.sqrt(0.86) - 0.03), xytext=(0.86, 0.77),
@@ -68,9 +68,9 @@ def fig_critical_damping():
     ax.set_xlim(0.0, 0.97)
     ax.set_ylim(0.5, 1.06)
     ax.set_xlabel(r"momentum $\beta$", fontsize=13, color="black")
-    ax.set_ylabel("convergence rate per step", fontsize=13, color="black")
+    ax.set_ylabel("contraction factor per step", fontsize=13, color="black")
     # black ticks/spines, like the chapter's other function plots (_fn_axes)
-    ax.tick_params(labelsize=11, colors="black")
+    ax.tick_params(labelsize=12.5, colors="black")
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
     for s in ("left", "bottom"):
@@ -386,10 +386,10 @@ def fig_ns_maps():
 
 
 # =========================================================================== #
-# optimization-intro.md (Landscapes): risk vs empirical risk, the zero-        #
-# gradient traps (local minima, a stationary inflection, a saddle), and a      #
-# flat/saturated region.  Every curve is the real analytic function evaluated  #
-# on a grid, not a sketch.                                                     #
+# optimization-intro.md (Landscapes): risk vs empirical risk, the zero-       #
+# gradient traps (local minima, a saddle), and a flat/saturated region.       #
+# Every curve is the real analytic function evaluated on a grid, not a        #
+# sketch.                                                                     #
 # =========================================================================== #
 
 def _fn_axes(ax, xlabel, ylabel):
@@ -406,77 +406,6 @@ def _fn_axes(ax, xlabel, ylabel):
 
 _ANN = dict(arrowstyle="->", color="black", lw=1.2)
 _WBB = dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.9)
-
-
-def fig_risk_gap():
-    """The optimizer's target (empirical risk g) wobbles around what learning
-    wants (the risk f), and their minima sit in different places.
-    f(x)=x cos(pi x); g adds a fast ripple.  Minima located on the grid."""
-    x = np.linspace(0.5, 1.5, 600)
-    f = x * np.cos(np.pi * x)
-    g = f + 0.2 * np.cos(5 * np.pi * x)
-    i_f, i_g = int(np.argmin(f)), int(np.argmin(g))
-
-    fig, ax = plt.subplots(figsize=(5.8, 3.7))
-    ax.plot(x, f, color=BLUE, lw=2.6, label=r"risk $f$")
-    ax.plot(x, g, color=ORANGE, lw=1.8, label=r"empirical risk $g$")
-    ax.plot(x[i_f], f[i_f], "o", color=BLUE, ms=7, zorder=5)
-    ax.plot(x[i_g], g[i_g], "o", color=ORANGE, ms=7, zorder=5)
-
-    # from the empty lower right: from above, the leader crossed the orange
-    # empirical-risk curve right next to the dot
-    ax.annotate("min of risk", xy=(x[i_f], f[i_f]), xytext=(1.30, -1.17),
-                fontsize=12.5, color="black", ha="left", va="center",
-                arrowprops=dict(_ANN, shrinkB=4))
-    ax.annotate("min of\nempirical risk", xy=(x[i_g], g[i_g]),
-                xytext=(0.72, -0.98), fontsize=12.5, color="black",
-                ha="center", arrowprops=_ANN)
-    ax.set_xlim(0.5, 1.5)
-    ax.set_ylim(-1.38, 0.16)
-    _fn_axes(ax, r"$x$", "risk")
-    ax.legend(loc="upper center", ncol=2, fontsize=12, frameon=False,
-              handlelength=1.4, columnspacing=1.4)
-    fl.save(fig, "mdl-opt-risk-gap")
-
-
-def fig_local_minima():
-    """f(x)=x cos(pi x) on [-1, 2] has a local minimum that is not global; both
-    minima are found by a neighbour test on the grid, so the marks are exact."""
-    x = np.linspace(-1.0, 2.0, 700)
-    y = x * np.cos(np.pi * x)
-    loc = 1 + np.where((y[1:-1] < y[:-2]) & (y[1:-1] < y[2:]))[0]
-    gi = int(loc[np.argmin(y[loc])])          # global minimum
-    li = int(loc[np.argmax(y[loc])])          # the shallower (local) minimum
-
-    fig, ax = plt.subplots(figsize=(5.8, 3.7))
-    ax.plot(x, y, color=BLUE, lw=2.6)
-    ax.plot(x[li], y[li], "o", color=ORANGE, ms=7, zorder=5)
-    ax.plot(x[gi], y[gi], "o", color=GREEN, ms=7, zorder=5)
-    ax.annotate("local minimum", xy=(x[li], y[li]), xytext=(-0.95, -1.05),
-                fontsize=12.5, color="black", ha="left", arrowprops=_ANN)
-    ax.annotate("global minimum", xy=(x[gi], y[gi]), xytext=(0.35, 0.9),
-                fontsize=12.5, color="black", ha="left", arrowprops=_ANN)
-    ax.set_xlim(-1.0, 2.0)
-    _fn_axes(ax, r"$x$", r"$f(x)$")
-    fl.save(fig, "mdl-opt-local-minima")
-
-
-def fig_inflection():
-    """f(x)=x^3: at x=0 both f' and f'' vanish, yet it is no extremum -- a
-    stationary inflection (the 1-D cousin of a saddle).  The dashed horizontal
-    tangent marks the vanishing slope."""
-    x = np.linspace(-2.0, 2.0, 500)
-    y = x ** 3
-    fig, ax = plt.subplots(figsize=(5.4, 3.7))
-    ax.plot(x, y, color=BLUE, lw=2.6)
-    ax.plot([-0.8, 0.8], [0, 0], "--", color=GRAY, lw=1.5)   # tangent at 0
-    ax.plot(0, 0, "o", color=ORANGE, ms=8, zorder=5)
-    ax.annotate("stationary inflection\n" r"$f'(0)=f''(0)=0$", xy=(0, 0),
-                xytext=(-1.45, 3.4), fontsize=12.5, color="black", ha="left",
-                arrowprops=_ANN)
-    ax.set_xlim(-2.0, 2.0)
-    _fn_axes(ax, r"$x$", r"$f(x)=x^3$")
-    fl.save(fig, "mdl-opt-inflection")
 
 
 def fig_tanh_flat():
@@ -584,9 +513,6 @@ if __name__ == "__main__":
     fig_river_valley()
     fig_norm_balls()
     fig_ns_maps()
-    fig_risk_gap()
-    fig_local_minima()
-    fig_inflection()
     fig_tanh_flat()
     fig_saddle()
     for p in fl.WRITTEN:

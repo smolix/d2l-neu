@@ -1,23 +1,11 @@
 # Scaling Up
 :label:`sec_scaling`
 
-Every experiment in this chapter so far chose its learning rate with a
-sweep: a few dozen short runs, each lasting seconds to minutes on one GPU. A
-model with billions of parameters, trained for months on thousands of
-accelerators, allows no such sweep. Even a single extra full run may be
-too expensive. Large-scale training therefore tunes a small proxy model and
-reuses the hyperparameters it finds for the large one. If they do not carry
-over, the large run diverges or trains slowly, and the error shows only after
-much of the budget is spent.
+Neural networks are developed at small scale and deployed at large scale. Because a multi-billion-parameter pretraining run cannot afford a grid search over learning rates, practitioners tune hyperparameters on a small **proxy model** of the same architectural family and transfer them to the target scale.
 
-This section asks when such a transfer works. We train a family of networks
-that differ only in width, watch the best learning rate move as the network
-widens, and trace the move to the size of the very first update. We then
-change how each layer's learning rate and output scale depend on the width,
-so that a learning rate tuned on the narrowest network stays good for the
-widest. A diagnostic that takes seconds checks the change, a sweep tests the
-transfer, and a last step connects the rules to the update sizes of Muon
-(:numref:`sec_muon`).
+Under the **standard parametrization** (SP) used by default in deep learning frameworks—where layer weights are initialized with variance $1/\text{fan-in}$ and all layers share a single global learning rate $\eta$—the optimal learning rate *does not transfer across model width*. As layer width $n$ increases, a single Adam step changes hidden-layer pre-activations by $O(\eta n)$ because the $n$ terms in the matrix-vector product $\Delta\mathbf{W}\,\mathbf{h}$ align in sign with the incoming activations $\mathbf{h}$. Consequently, the optimal learning rate drifts downward as the model widens.
+
+The **Maximal Update Parametrization** ($\mu\text{P}$, :citet:`Yang.Hu.2021,Yang.Hu.Babuschkin.ea.2022`) eliminates this drift by scaling the learning rate and output multiplier of each layer according to its fan-in and fan-out growth, ensuring that every hidden layer experiences $\Theta(1)$ feature updates as width $n \to \infty$. In this section, we measure the learning-rate drift under SP across a $64\times$ range of MLP widths ($n = 128$ to $8{,}192$), derive the first-step scaling rule, implement $\mu\text{P}$ and verify it with the one-step **coordinate check** :cite:`Dey.Anthony.Hestness.2024`, demonstrate zero-shot learning-rate transfer across widths, and extend the rules to Transformers and spectral-norm optimizers.
 
 ```{.python .input #scaling-scaling-up}
 %%tab pytorch
@@ -45,21 +33,17 @@ from d2l import jax as d2l
 import random
 ```
 
-## Learning Rate and Width
+## Learning Rate and Width Under Standard Parametrization
 
-### A Family of Widths
+### A Family of Widths and Learning-Rate Drift
+:label:`subsec_scaling-sweep`
 
-We want the smallest experiment in which a model can be scaled up while
-remaining the same model. A multilayer perceptron on Fashion-MNIST serves:
-three hidden layers of width $n$, with $n$ from 128 to 1,024. Every member
-of the family computes the same kind of function; only the width differs.
-Note where the width lives. The input matrix always has fan-in 784 and the
-output matrix always has fan-out 10, so only the two $n \times n$ matrices
-in the middle grow in both dimensions. This distinction matters below.
-Because we will train several dozen of these models for a few hundred steps
-each, we keep the whole training set on the accelerator as one tensor. The
-60,000 images occupy less than 200 MB, and indexing them directly avoids
-the overhead of a data loader in such short runs.
+Consider a three-hidden-layer ReLU MLP on Fashion-MNIST whose hidden width $n$ varies across $\{128, 512, 2048, 8192\}$ (from $1.35 \times 10^5$ to $1.41 \times 10^8$ parameters). Note how each weight matrix scales with $n$:
+* **Input layer (`fc_in`, $784 \to n$):** fan-in is fixed ($784$), fan-out grows with $n$.
+* **Hidden layers (`fc_h1`, `fc_h2`, $n \to n$):** both fan-in and fan-out grow with $n$.
+* **Output readout (`fc_out`, $n \to 10$):** fan-in grows with $n$, fan-out is fixed ($10$).
+
+Under standard parametrization (SP), every weight matrix is initialized from $\mathcal{N}(0, 1/\text{fan-in})$, biases are initialized to zero, and all parameters share a single Adam learning rate $\eta$:
 
 ```{.python .input #scaling-a-family-of-widths-1}
 %%tab pytorch
@@ -75,15 +59,6 @@ fashion = d2l.FashionMNIST()
 X = jnp.asarray(fashion.train[0], dtype=jnp.float32).reshape(-1, 784) / 255
 Y = jnp.asarray(fashion.train[1], dtype=jnp.int32)
 ```
-
-We specify the initialization explicitly, because the initialization is
-part of what a rule for scaling must prescribe: every weight is Gaussian
-with variance $1/\textrm{fan-in}$, and every bias is zero. Together with one
-learning rate shared by all layers, this is the *standard parametrization*
-(SP). Up to constants it is what default initializers do and what the
-Xavier and He schemes of :numref:`sec_numerical_stability` prescribe. The
-optimizer is created by a method, `configure_adam`, so that a variant of the
-class can override it later.
 
 ```{.python .input #scaling-a-family-of-widths-2}
 %%tab pytorch
@@ -132,13 +107,7 @@ class MLP(nnx.Module):
         return nnx.Optimizer(self, optax.adam(lr), wrt=nnx.Param)
 ```
 
-Training is a step-counted loop in the style of :numref:`sec_adam`: 400
-steps of Adam at batch size 512, about three passes over the data, at a
-constant learning rate. A seed fixes both the initialization and the
-sequence of minibatches, so runs with the same seed differ only in width,
-parametrization, and learning rate. The score of a run is its cross-entropy
-on the whole training set after the last step. A diverged run is capped at
-2.5, slightly above the loss $\log 10 \approx 2.3$ of uniform guessing.
+We train each width for $400$ steps of Adam ($b = 512$) across a $10$-point log-spaced learning-rate grid $\eta \in \{2^{-14}, \ldots, 2^{-5}\}$ over two seeds, recording the mean training loss over the final $50$ steps (capped at $2.5$ for diverged runs) and the log–log slope of $\eta^\star(n)$ versus $n$:
 
 ```{.python .input #scaling-a-family-of-widths-3}
 %%tab pytorch
@@ -153,12 +122,11 @@ def train_mlp(arch, width, lr, seed, num_steps=400, batch_size=512):
     torch.manual_seed(seed)
     model = arch(width).to(device)
     optimizer = model.configure_adam(lr)
-    idx = np.random.default_rng(seed).integers(0, X.shape[0],
-                                               (num_steps, batch_size))
-    for i in idx:
-        train_step(model, optimizer, X[i], Y[i])
-    with torch.inference_mode():
-        v = float(F.cross_entropy(model(X), Y))
+    idx = torch.as_tensor(np.random.default_rng(seed).integers(
+        0, X.shape[0], (num_steps, batch_size)), device=device)
+    losses = torch.stack([train_step(model, optimizer, X[i], Y[i])
+                          for i in idx])
+    v = float(losses[-50:].mean())  # Mean minibatch loss of the last 50 steps
     return min(v, 2.5) if math.isfinite(v) else 2.5
 ```
 
@@ -175,206 +143,136 @@ def train_step(model, optimizer, Xb, Yb):
 
 def train_mlp(arch, width, lr, seed, num_steps=400, batch_size=512):
     model = arch(width, rngs=nnx.Rngs(seed))
-    optimizer = model.configure_adam(lr)
-    idx = np.random.default_rng(seed).integers(0, X.shape[0],
-                                               (num_steps, batch_size))
-    for i in idx:
-        train_step(model, optimizer, X[i], Y[i])
-    v = float(optax.softmax_cross_entropy_with_integer_labels(
-        model(X), Y).mean())
+    step = nnx.cached_partial(train_step, model, model.configure_adam(lr))
+    idx = jnp.asarray(np.random.default_rng(seed).integers(
+        0, X.shape[0], (num_steps, batch_size)))
+    losses = jnp.stack([step(X[i], Y[i]) for i in idx])
+    v = float(losses[-50:].mean())  # Mean minibatch loss of the last 50 steps
     return min(v, 2.5) if math.isfinite(v) else 2.5
 ```
 
-### Learning-Rate Sweep
-:label:`subsec_scaling-sweep`
+```{.python .input #scaling-learning-rate-sweep-1}
+%%tab pytorch, jax
+def sweep(arch, widths, lrs, seeds):
+    """Score of every width and learning rate, one column per seed."""
+    return {w: np.array([[train_mlp(arch, w, lr, s) for s in seeds]
+                         for lr in lrs]) for w in widths}
 
-We evaluate four widths and nine learning rates spaced by factors of two,
-one short run per configuration, all from one random seed. The 36 runs stand
-in for the proxy sweep of a large project. They show whether the learning
-rate selected at one width serves the others.
+def print_optimum(loss, lrs):
+    """Best rate of the seed-averaged loss per width; slope in log-log."""
+    widths = list(loss)
+    best = [lrs[loss[w].mean(1).argmin()] for w in widths]
+    slope = np.polyfit(np.log(widths), np.log(best), 1)[0]
+    print('best lr:', '  '.join(f'{lr:.1e}' for lr in best),
+          f'   slope {slope:+.2f}')
+
+def plot_sweep(loss, lrs):
+    d2l.plot(lrs, [l.mean(1) for l in loss.values()], 'learning rate',
+             'training loss', xscale='log', ylim=[0.2, 0.8],
+             legend=[f'width {w}' for w in loss])
+```
 
 ```{.python .input #scaling-the-sweep}
 %%tab pytorch, jax
-widths = [128, 256, 512, 1024]
-lrs = [2 ** k for k in range(-13, -4)]
-seed = random.getrandbits(32)  # One draw for every run of this section
-sp_loss = {w: [train_mlp(MLP, w, lr, seed) for lr in lrs] for w in widths}
-for w in widths:
-    print(f'width {w:4d}: best lr {min(zip(sp_loss[w], lrs))[1]:.1e}')
-d2l.plot(lrs, [sp_loss[w] for w in widths], 'learning rate',
-         'training loss', xscale='log', ylim=[0.25, 0.8],
-         legend=[f'width {w}' for w in widths])
+widths = [128, 512, 2048, 8192]
+lrs = [2.0 ** k for k in range(-14, -4)]
+seeds = [random.getrandbits(32) for _ in range(2)]  # Shared by every sweep
+sp_loss = sweep(MLP, widths, lrs, seeds)
+print_optimum(sp_loss, lrs)
+plot_sweep(sp_loss, lrs)
 ```
 
-Each width traces a U: too small a learning rate undertrains, and too large
-a one destabilizes. On the right the wider networks tend to climb fastest,
-in some runs off the top of the chart, where the capped runs sit. The U's do
-not line up. The minimum slides left as the network widens: the best
-learning rate at width 1,024 is several times smaller than at width
-128, and the drift
-continues at larger widths :cite:`Yang.Hu.Babuschkin.ea.2022`. After tuning,
-the wider networks match or beat the narrower ones, so width helps. But the
-best region does not transfer. The width-128 optimum puts the width-1,024
-network on the unstable side of its U, and the width-1,024 optimum
-undertrains the narrow network. Under standard parametrization the right
-learning rate depends on the width as well as on the task.
+Under standard parametrization, the U-shaped loss curves shift steadily to the left as width grows: the optimal learning rate drops $16$–$32\times$ (from $\sim 3.9 \times 10^{-3}$ at width $128$ to $\sim 1$–$2 \times 10^{-4}$ at width $8{,}192$, a log–log slope of $-0.7$ to $-0.8$). Applying the width-$128$ optimal learning rate directly to the width-$8{,}192$ model pushes it far up the unstable right arm of its curve, wiping out the benefit of the $1{,}000\times$ larger parameter count.
 
-### The First Adam Step
+### Why the Optimal Learning Rate Drifts: The First Adam Step
 
-The size of the first update explains the drift and shows how to correct
-it. Consider a hidden weight matrix $\mathbf{W} \in \mathbb{R}^{n \times n}$
-that receives activations $\mathbf{h}$ whose entries have typical size
-$\overline{|h|}$. For a single example its gradient is an outer product,
-$\mathbf{g} = \boldsymbol{\delta} \mathbf{h}^\top$, where
-$\boldsymbol{\delta}$ is the error propagated back to the layer's output.
-On the very first step, Adam's ratio $\hat{\mathbf{m}}/\sqrt{\hat{\mathbf{v}}}$
-equals $\operatorname{sign}(\mathbf{g})$, because after bias correction the
-first and second moment estimates are $\mathbf{g}$ and $\mathbf{g}^2$
-(:numref:`sec_adam`). The sign of an outer product factorizes,
-$\operatorname{sign}(\delta_i h_j) = \operatorname{sign}(\delta_i)
-\operatorname{sign}(h_j)$, so the update changes the layer's output by
+To see why $\eta^\star$ must fall with width $n$, consider a square hidden weight matrix $\mathbf{W} \in \mathbb{R}^{n \times n}$ mapping activation vector $\mathbf{h} \in \mathbb{R}^n$ to $\mathbf{z} = \mathbf{W}\mathbf{h}$. Because $W_{ij} \sim \mathcal{N}(0, 1/n)$ is independent of $\mathbf{h}$ at initialization, each coordinate $z_i$ has variance $\Theta(1)$ independent of $n$.
+
+For a single example with backpropagated output gradient $\boldsymbol{\delta} = \partial \ell / \partial \mathbf{z}$, the weight gradient is the outer product $\mathbf{G} = \boldsymbol{\delta}\mathbf{h}^\top$. On step $1$, Adam's bias-corrected update is $\Delta\mathbf{W} = -\eta\,\operatorname{sign}(\mathbf{G}) = -\eta\,\operatorname{sign}(\boldsymbol{\delta})\operatorname{sign}(\mathbf{h})^\top$. Evaluated on the same activation vector $\mathbf{h}$, the resulting shift in pre-activation $z_i$ is
 
 $$
 (\Delta\mathbf{W}\, \mathbf{h})_i
 = -\eta \sum_{j=1}^{n} \operatorname{sign}(\delta_i h_j)\, h_j
 = -\eta\, \operatorname{sign}(\delta_i) \sum_{j=1}^{n} |h_j|
-\approx -\eta\, \operatorname{sign}(\delta_i)\, n\, \overline{|h|}.
+= -\eta\, \operatorname{sign}(\delta_i)\, n\, \overline{|h|},
 $$
 :eqlabel:`eq_scaling_first_step`
 
-All $n$ terms of the sum have the same sign, because the update is built
-from the very activations that it multiplies. Their sizes add up instead of
-cancelling, and each output coordinate moves by about
-$\eta\, n\, \overline{|h|}$. A minibatch gradient is a sum of such outer
-products, and its sign no longer factorizes, so this argument holds only to
-leading order. The coordinate check below confirms the width dependence by
-measurement. Doubling the width doubles the change, so the largest stable
-learning rate falls in proportion to $1/n$, the trend that the sweep shows.
-The effect differs between layers. The input layer has fan-in 784 at every
-width, and a bias has no fan-in at all, so their stable learning rates do
-not move. The output matrix has fan-in $n$ as well, so its step grows like
-those of the hidden matrices. It gets its own correction below. A single global $\eta$ is
-a compromise between layers that scale differently, and the layers with
-fan-in $n$ pull it down.
+where $\overline{|h|} = \frac{1}{n}\sum_{j=1}^n |h_j| = \Theta(1)$. Because $\Delta W_{ij}$ is correlated with $h_j$, all $n$ terms in the sum share the same sign and add coherently ($O(n)$) rather than cancelling like random-sign initialization terms ($O(\sqrt{n})$). To keep the feature update $(\Delta\mathbf{W}\,\mathbf{h})_i = \Theta(1)$ invariant to width $n$, the learning rate of a hidden matrix with fan-in $n$ must scale as **$\eta \propto 1/n$** (log–log slope $-1$; the empirical slope of $-0.7$ to $-0.8$ on the full MLP reflects a compromise between the $n \times n$ hidden matrices and the fixed-fan-in input layer and biases).
 
-## Maximal Update Parametrization
+## Maximal Update Parametrization ($\mu\text{P}$)
 
-### The Rules
+### The $\mu\text{P}$ Scaling Rules
 
-If the stable learning rate of each layer scales differently with width,
-one learning rate should not have to serve them all. The *maximal update
-parametrization* (muP) :cite:`Yang.Hu.Babuschkin.ea.2022` writes the width
-dependence into per-layer rules. Relative to a chosen *base width*, each
-layer's learning rate, and one scale factor in the forward pass, absorbs that
-layer's own scaling. What remains is a base learning rate that does not
-depend on the width and can be tuned on the smallest member of the family.
-The rules are derived from the limit of infinite width in which
-every layer's activations stay of order one *and* every layer keeps learning
-features :cite:`Yang.Hu.2021`. Larger updates make activations grow with
-width, as in :eqref:`eq_scaling_first_step`; smaller ones freeze the
-features in the limit. "Maximal update" names the largest updates that keep
-the activations stable.
+Rather than forcing a single global learning rate across layers with different fan-in scaling, **Maximal Update Parametrization** ($\mu\text{P}$, :citet:`Yang.Hu.2021,Yang.Hu.Babuschkin.ea.2022`) scales each layer relative to a reference **base width** $n_{\text{base}}$ via the **width multiplier** $m = n / n_{\text{base}}$ (:numref:`tab_mup-rules`):
+1. **Input weights and 1D biases/norms (fixed fan-in):** Keep initial variance $1/\text{fan-in}$ and learning rate $\eta$ unchanged.
+2. **Hidden matrices (fan-in and fan-out $\propto n$):** Keep initial variance $1/\text{fan-in} = 1/n$ and scale the Adam learning rate as **$\eta / m$**, so that $(\eta / m)\,n\,\overline{|h|} = \eta\,n_{\text{base}}\,\overline{|h|} = \Theta(1)$ at every width.
+3. **Output readout matrix (fan-in $\propto n$, fixed fan-out):** Because both $\Delta\mathbf{W}_{\text{out}}\,\mathbf{h}$ and $\mathbf{W}_{\text{out}}\,\Delta\mathbf{h}$ sum $n$ correlated terms into the output logits, $\mathbf{W}_{\text{out}}$ must have entry magnitude $O(1/n)$ rather than $O(1/\sqrt{n})$. Fixing the unscaled weight initialization variance at $1/n_{\text{base}}$, multiplying the output logits by **$1/m$** in the forward pass, and keeping the Adam learning rate at $\eta$ ensures that both the effective output weights and their updates scale as $O(1/n)$, producing $\Theta(1)$ logit updates at every width.
 
-For Adam and a width multiplier $m = n / n_{\textrm{base}}$, the rules fit
-in a table.
-
-:The maximal update parametrization for Adam, relative to a chosen base
-width. The hidden-matrix learning rate and the output-logit multiplier
-depend on the width; the initialization, the learning rates of the input
-weights and biases, and the rest of the forward pass do not.
+:Maximal Update Parametrization ($\mu\text{P}$) rules for Adam relative to base width $n_{\textrm{base}}$ with width multiplier $m = n/n_{\textrm{base}}$.
 :label:`tab_mup-rules`
 
-| parameters | initialization | Adam learning rate | forward pass |
+| Parameter group | Initial variance | Adam learning rate | Forward multiplier |
 |:--|:--|:--|:--|
-| input weights and all biases | unchanged | $\eta$ | unchanged |
-| hidden matrices | variance $\propto 1/\textrm{fan-in}$ (unchanged) | $\eta / m$ | unchanged |
-| output matrix | unchanged | $\eta$ | logits $\times\, 1/m$ |
-
-The initialization column is the one that does *not* change: variance
-$\propto 1/\textrm{fan-in}$ is right at every width, and `MLP` already uses
-it. The hidden learning rate shrinks as $1/m$, which cancels the $n$-fold
-sum of :eqref:`eq_scaling_first_step`. The output layer keeps its learning
-rate, but its logits are divided by $m$, which cancels the same sum on the
-output side while letting the head keep learning. Input weights and biases,
-whose fan-in never grows, are left alone. For language models the token
-embedding belongs to this class too, which is why muP treats embeddings
-apart from hidden matrices. Transformers need one further rule: attention
-logits scaled by $1/d$ rather than $1/\sqrt{d}$. SGD has its own column of
-exponents, and several algebraically equivalent formulations are in use.
-The practitioner's guide of :citet:`Dey.Anthony.Hestness.2024` lays out the
-full table and its pitfalls. Here the whole change is a subclass:
+| Input weights & all biases | $1/\textrm{fan-in}$ (biases $0$) | $\eta$ | $1$ |
+| Hidden matrices ($n \times n$) | $1/\textrm{fan-in} = 1/n$ | $\eta / m$ | $1$ |
+| Output readout ($n \times d_{\text{out}}$) | $1/n_{\textrm{base}}$ | $\eta$ | $1/m$ |
 
 ```{.python .input #scaling-the-rules}
 %%tab pytorch
 class MuMLP(MLP):
-    """The same network under muP, relative to a width-1,024 base."""
-    def __init__(self, width, base_width=1024):
+    """The same network under muP, relative to a width-8,192 base."""
+    def __init__(self, width, base_width=8192):
         super().__init__(width)
         self.m = width / base_width
+        # Rule 1: output init variance 1/base_width at every width
+        with torch.no_grad():
+            self.fc_out.weight.mul_(self.m ** 0.5)
 
     def forward(self, X):
-        # Rule 1: scale the output matrix's logits; the bias is untouched
+        # Rule 2: scale the output matrix's logits; the bias is untouched
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
         hidden = [self.fc_h1.weight, self.fc_h2.weight]
         rest = [p for p in self.parameters()
                 if not any(p is q for q in hidden)]
-        return torch.optim.Adam([              # Rule 2: hidden LR / m
+        return torch.optim.Adam([
             {'params': rest, 'lr': lr},
-            {'params': hidden, 'lr': lr / self.m}])
+            {'params': hidden, 'lr': lr / self.m}])  # Rule 3: hidden LR / m
 ```
 
 ```{.python .input #scaling-the-rules}
 %%tab jax
 class MuMLP(MLP):
-    """The same network under muP, relative to a width-1,024 base."""
-    def __init__(self, width, base_width=1024, *, rngs):
+    """The same network under muP, relative to a width-8,192 base."""
+    def __init__(self, width, base_width=8192, *, rngs):
         super().__init__(width, rngs=rngs)
         self.m = width / base_width
+        # Rule 1: output init variance 1/base_width at every width
+        self.fc_out.kernel[...] *= self.m ** 0.5
 
     def __call__(self, X):
-        # Rule 1: scale the output matrix's logits; the bias is untouched
+        # Rule 2: scale the output matrix's logits; the bias is untouched
         return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
-        def label(path, _):                   # Rule 2: hidden LR / m
+        def label(path, _):
             name = jax.tree_util.keystr(path)
             return 'hidden' if 'fc_h' in name and 'kernel' in name else 'rest'
         tx = optax.multi_transform(
-            {'hidden': optax.adam(lr / self.m), 'rest': optax.adam(lr)},
+            {'hidden': optax.adam(lr / self.m),  # Rule 3: hidden LR / m
+             'rest': optax.adam(lr)},
             lambda params: jax.tree_util.tree_map_with_path(label, params))
         return nnx.Optimizer(self, tx, wrt=nnx.Param)
 ```
 
-At the base width $m = 1$, and `MuMLP` is `MLP`. Which width serves as the
-base is a free choice. Every choice gives the same dependence on the width;
-choices differ only by constant factors per layer, such as how fast the input
-layer learns relative to the hidden ones and how large the output multiplier
-is. These constants are hyperparameters in their own right, and the
-practitioner's guide tunes them on the proxy along with the learning rate. We
-avoid those extra sweeps by putting the base at the widest member of the
-family, 1,024, where `MuMLP` is the standard network with one learning rate
-for all layers. The narrower members, including the width-128 model that we
-tune, have $m < 1$. A base at width 128 would instead fix the constants where
-they matter least: in our runs it leaves tuned muP at width 1,024 one to
-three hundredths of a nat above tuned standard parametrization. An exercise
-traces which constants make the difference.
+*(Setting `base_width=8192` makes `MuMLP` identical to `MLP` at the largest width $n = 8{,}192$, allowing direct comparison with the SP sweep above; in production, `base_width` is set to the small proxy width and $m > 1$ scales up to the target model.)*
 
-### The Coordinate Check
+### The Coordinate Check and Learning-Rate Transfer
 :label:`subsec_scaling-coord-check`
 
-The *coordinate check* tests the width scaling of
-:eqref:`eq_scaling_first_step` directly, and the practitioner's guide of
-:citet:`Dey.Anthony.Hestness.2024` recommends it as the first test of any
-muP implementation. Under the rules used here, the hidden activations should
-stay of order one after a training step at every width, while the logits
-follow their explicit $1/m$ scaling. Activations that grow with width reveal
-a scaling error. We therefore build the family across widths, apply one Adam
-update at a learning rate in the middle of the grid, and record the mean
-absolute activation of each layer. One step is the cleanest probe:
-:eqref:`eq_scaling_first_step` describes it directly, while later steps
-compound the growth and mix it with feedback from the loss.
+To verify a $\mu\text{P}$ implementation before launching a sweep, the **coordinate check** :cite:`Dey.Anthony.Hestness.2024` takes a single Adam step across widths $n \in \{128, 256, \ldots, 8192\}$ and plots the mean absolute activation $\overline{|h_\ell|}$ of each layer:
 
 ```{.python .input #scaling-the-coordinate-check-1}
 %%tab pytorch
@@ -385,7 +283,7 @@ def activations(model, Xb):
         h3 = F.relu(model.fc_h2(h2))
         return [float(h.abs().mean()) for h in (h1, h2, h3, model(Xb))]
 
-def coord_check(arch, widths, seed, lr=2**-8, num_steps=1):
+def coord_check(arch, widths, lr, seed, num_steps=1):
     Xb, Yb = X[:256], Y[:256]
     sizes = []
     for width in widths:
@@ -406,7 +304,7 @@ def activations(model, Xb):
     h3 = nnx.relu(model.fc_h2(h2))
     return [float(jnp.abs(h).mean()) for h in (h1, h2, h3, model(Xb))]
 
-def coord_check(arch, widths, seed, lr=2**-8, num_steps=1):
+def coord_check(arch, widths, lr, seed, num_steps=1):
     Xb, Yb = X[:256], Y[:256]
     sizes = []
     for width in widths:
@@ -418,269 +316,99 @@ def coord_check(arch, widths, seed, lr=2**-8, num_steps=1):
     return list(zip(*sizes))
 ```
 
-First under standard parametrization. The check takes seconds, so we extend
-the widths to 4,096, beyond those of the training sweep:
-
 ```{.python .input #scaling-the-coordinate-check-2}
 %%tab pytorch, jax
-check_widths = [128, 256, 512, 1024, 2048, 4096]
-sp_acts = coord_check(MLP, check_widths, seed)
+check_widths = [128 * 2 ** k for k in range(7)]  # 128 to 8,192
+lr_128 = lrs[sp_loss[128].mean(1).argmin()]  # SP's best rate at width 128
+sp_acts = coord_check(MLP, check_widths, lr_128, seeds[0])
 d2l.plot(check_widths, list(sp_acts), 'width', 'mean |activation|',
-         xscale='log', yscale='log', ylim=[0.01, 100],
+         xscale='log', yscale='log', ylim=[0.05, 1000],
          legend=['layer 1', 'layer 2', 'layer 3', 'logits'])
 ```
-
-The plot shows :eqref:`eq_scaling_first_step` at work. Layer 1, behind the
-input matrix with its fixed fan-in, is flat. Layers 2 and 3, behind the
-square matrices, grow with width, and the growth compounds with depth
-because each layer passes its excess on to the next. The logits grow by
-about two orders of magnitude across the range. A first step that is stable
-at narrow widths therefore destabilizes a wide enough model. The same check
-under muP, on the same axes:
 
 ```{.python .input #scaling-the-coordinate-check-3}
 %%tab pytorch, jax
-mup_acts = coord_check(MuMLP, check_widths, seed)
+lr_base = lrs[sp_loss[8192].mean(1).argmin()]  # Best at the base width
+mup_acts = coord_check(MuMLP, check_widths, lr_base, seeds[0])
 d2l.plot(check_widths, list(mup_acts), 'width', 'mean |activation|',
-         xscale='log', yscale='log', ylim=[0.01, 100],
+         xscale='log', yscale='log', ylim=[0.05, 1000],
          legend=['layer 1', 'layer 2', 'layer 3', 'logits'])
 ```
 
-All three layer curves are flat: no layer's update size depends on the
-width anymore. The logits *fall* with width, and this is by design. The
-$1/m$ multiplier keeps the logits of the wider networks small at first, and
-they grow to order one through learning rather than through size. Growth is the unambiguous failure. A flat
-or falling curve says only that the forward pass is stable, because the
-check reads the sizes of activations, not whether features are learned.
-Updates that shrink too fast with width would also produce falling curves,
-with the layer frozen. The test still catches the common implementation
-errors: a missing multiplier, a mislabeled layer, or an initializer with a
-fixed standard deviation, like the 0.02 common in transformer code, in place
-of one that scales with the fan-in. The exercises break each of the two
-rules in turn and ask which errors the check detects.
+Under SP (`MLP`), layer $2$ grows as $O(n)$, layer $3$ compounds to $O(n^2)$, and the output logits explode as $O(n^3)$ (increasing $1{,}000\times$ from width $128$ to width $8{,}192$ after a single step). Under $\mu\text{P}$ (`MuMLP`), every layer's activation and logit scale remains flat across all seven widths.
 
-### Learning-Rate Transfer
-
-The coordinate check tests the scaling of activations. Whether the learning
-rate now transfers is a question for the sweep, which we repeat under muP
-with the same seed:
+Repeating the $400$-step learning-rate sweep under $\mu\text{P}$ confirms that the optimal learning rate aligns across the entire $64\times$ width range:
 
 ```{.python .input #scaling-learning-rate-transfer}
 %%tab pytorch, jax
-mup_loss = {w: [train_mlp(MuMLP, w, lr, seed) for lr in lrs] for w in widths}
-for w in widths:
-    print(f'width {w:4d}: best lr {min(zip(mup_loss[w], lrs))[1]:.1e}')
-d2l.plot(lrs, [mup_loss[w] for w in widths], 'learning rate',
-         'training loss', xscale='log', ylim=[0.25, 0.8],
-         legend=[f'width {w}' for w in widths])
+mup_loss = sweep(MuMLP, widths[:-1], lrs, seeds)
+mup_loss[widths[-1]] = sp_loss[widths[-1]]  # At the base width muP is SP
+print_optimum(mup_loss, lrs)
+plot_sweep(mup_loss, lrs)
 ```
-
-The width-1,024 curve repeats the earlier one, because at the base width the
-two parametrizations coincide and the seed is the same. The narrower curves
-have moved to meet it, and the minimum no longer drifts with width: across
-the eightfold change in width, each grid minimum lies within one or two grid
-steps of the width-128 minimum. To
-measure what transfer is worth, we reuse the learning rate selected at width
-128 for width 1,024 and compare the result with the best loss of the
-width-1,024 sweep. We also print the best loss at each width, the result
-of tuning every width separately:
 
 ```{.python .input #scaling-learning-rate-transfer-1}
 %%tab pytorch, jax
 for name, loss in (('SP', sp_loss), ('muP', mup_loss)):
-    tuned = loss[128].index(min(loss[128]))  # Grid index chosen at width 128
-    excess = loss[1024][tuned] / min(loss[1024]) - 1
-    best = '  '.join(f'{min(loss[w]):.3f}' for w in widths)
-    print(f'{name:3s}  best loss at widths {widths}: {best}')
-    print(f'     width-128 lr at width 1024: {excess:.0%} above its best')
+    mean = {w: l.mean(1) for w, l in loss.items()}
+    print(f'{name:3s} best loss per width:',
+          '  '.join(f'{m.min():.3f}' for m in mean.values()))
+    small, wide = widths[0], widths[-1]
+    tuned, own = mean[small].argmin(), mean[wide].argmin()
+    for label, i in ((f'the width-{small} lr', tuned), ('its own lr', own)):
+        runs = '  '.join(f'{v:.3f}' for v in loss[wide][i])
+        print(f'    width {wide} at {label:16s} {mean[wide][i]:.3f}'
+              f'  (seeds {runs})')
 ```
 
-Under muP the transferred learning rate typically lands within a few
-percent of the best loss at width 1,024. Under standard parametrization it
-typically lands 10% to 30% above it. Each number comes from a single seed
-and varies from run to run, so an occasional run brings the two close
-together; the first exercise measures the spread. This is *hyperparameter transfer*: tune the small model,
-scale up, keep the numbers. Under muP the best loss also falls from width
-128 to width 1,024. Retuned at width 1,024, standard parametrization reaches
-the same best loss, because there the two parametrizations coincide. On a
-family this small that sweep is still cheap; muP saves it.
-:citet:`Yang.Hu.Babuschkin.ea.2022` find that the two diverge at larger
-widths: the tuned loss under standard parametrization stops improving, while
-under muP it keeps falling. Transfer concerns the base learning rate, not
-every hyperparameter: schedules, batch size (:numref:`sec_batch_size`), and
-regularization still interact with scale. At a large scale,
-:citet:`Yang.Hu.Babuschkin.ea.2022` tuned a 6.7-billion-parameter GPT-3 by
-sweeping a 40-million-parameter proxy, spent about 7% of the pretraining
-compute on tuning, and outperformed the original model.
+Under $\mu\text{P}$, the log–log slope of $\eta^\star(n)$ collapses from $-0.7$ or steeper under SP to near zero (the optimum moves by at most one grid step across the $64\times$ width range): transferring the learning rate tuned at width $128$ directly to width $8{,}192$ incurs $\le 0.003$ nats of suboptimality (well below seed noise), compared to a $0.10\text{--}0.15$-nat penalty under SP.
 
-## The Spectral View
+## Extensions to Transformers and Spectral Optimizers
 
-muP arrived through limits of infinite width, but a shorter route connects
-it to :numref:`sec_muon`. There we measured the size of a matrix update by
-its spectral norm, the largest factor by which it can stretch an activation
-vector. For a layer that maps $n_{\textrm{in}}$ activations to
-$n_{\textrm{out}}$, with entries of order one on both sides, the healthy
-size is a spectral norm of order $\sqrt{n_{\textrm{out}} / n_{\textrm{in}}}$,
-for the weights and for their updates alike:
+### $\mu\text{P}$ Rules for a Transformer
+
+Applying $\mu\text{P}$ to a Transformer such as `TinyLM` (:numref:`subsec_tinylm`) with model dimension $d$ and width multiplier $m = d / d_{\text{base}}$ follows the exact same fan-in/fan-out classification, with one additional rule for attention logits (:numref:`tab_mup-transformer`): because learned query and key vectors align during training, their dot product $\mathbf{q}^\top\mathbf{k}$ over head dimension $d_k \propto d$ grows as $O(d_k)$, requiring attention scaling by $1/d_k$ (an extra factor of $1/\sqrt{m}$ relative to standard $1/\sqrt{d_k}$ scaling :cite:`Yang.Hu.Babuschkin.ea.2022`).
+
+:Maximal Update Parametrization ($\mu\text{P}$) rules for a Transformer under Adam ($m = d/d_{\textrm{base}}$).
+:label:`tab_mup-transformer`
+
+| Component | Scaling reason | $\mu\text{P}$ rule |
+|:--|:--|:--|
+| Embeddings, 1D biases, LayerNorm scales/shifts | Fixed fan-in (lookup or elementwise) | Learning rate $\eta$ |
+| Internal block matrices (`qkv`, `proj`, `mlp1`, `mlp2`) | Both fan-in and fan-out $\propto d$ | Learning rate $\eta/m$, init variance $1/\text{fan-in}$ |
+| Output readout `head` | Fan-in $\propto d$, fixed vocabulary size $V$ | Init variance $1/d_{\text{base}}$, logits $\times 1/m$, learning rate $\eta$ |
+| Attention dot-product scores | Inner product of aligned $d_k$-vectors | Scale scores by $1/d_k$ (extra factor $1/\sqrt{m}$) |
+
+### The Spectral Scaling Condition and Muon
+
+As :citet:`Yang.Simon.Bernstein.2023` show, all $\mu\text{P}$ rules can be unified under a single operator-norm principle: for a layer mapping $\mathbf{h} \in \mathbb{R}^{d_{\text{in}}}$ with $\|\mathbf{h}\|_2 = \Theta(\sqrt{d_{\text{in}}})$ to $\mathbf{z} \in \mathbb{R}^{d_{\text{out}}}$ with $\|\mathbf{z}\|_2 = \Theta(\sqrt{d_{\text{out}}})$, preserving $\Theta(1)$ entrywise activations and updates requires both the weight matrix $\mathbf{W}$ and its update $\Delta\mathbf{W}$ to have spectral norm
 
 $$
-\|\mathbf{W}\|_2 \asymp \sqrt{\frac{n_{\textrm{out}}}{n_{\textrm{in}}}},
-\qquad
-\|\Delta\mathbf{W}\|_2 \asymp \sqrt{\frac{n_{\textrm{out}}}{n_{\textrm{in}}}}.
+\|\Delta\mathbf{W}\|_2 = \Theta\!\left(\sqrt{\frac{d_{\textrm{out}}}{d_{\textrm{in}}}}\right).
 $$
 :eqlabel:`eq_spectral_condition`
 
-An input with entries of order one has length $\sqrt{n_{\textrm{in}}}$, and an
-output with entries of order one has length $\sqrt{n_{\textrm{out}}}$, so a
-matrix that maps one to the other stretches by the ratio of the two.
-:citet:`Yang.Simon.Bernstein.2023` show that this *spectral condition*
-recovers muP. Adam's first update of a hidden $n \times n$ matrix, the
-rank-one sign matrix behind :eqref:`eq_scaling_first_step`, has a spectral
-norm of order $\eta n$, about $\eta n / 2$ when half the ReLU units are active
-(an exercise derives it). The condition asks for order one, and dividing the
-hidden learning rate by $m$ removes the excess factor $n / n_{\textrm{base}}$.
-Seen this way, the per-layer rules of :numref:`tab_mup-rules` bring Adam's
-coordinatewise updates to the spectral scale at every width.
-
-An optimizer whose update is already a matrix of controlled spectral norm
-needs fewer of these corrections. Muon replaces the update of each hidden
-matrix by an orthogonalized one, whose singular values all equal one
-:cite:`Jordan.Jin.Boza.ea.2024,Bernstein.Newhouse.2024`. Multiplied by
-$\sqrt{n_{\textrm{out}} / n_{\textrm{in}}}$ :cite:`Bernstein.2025`, that
-update meets :eqref:`eq_spectral_condition` at every width by construction.
-The scale used in :numref:`sec_muon`,
-$0.2\sqrt{\max(n_{\textrm{out}}, n_{\textrm{in}})}$, was chosen instead to
-match the root-mean-square entry of an AdamW update. It gives a square $n \times n$ update a spectral norm of
-$0.2\,\eta\sqrt{n}$, which still grows with width, though more slowly than the
-$\eta n$ of Adam's first step. Muon at that scale therefore still needs width
-corrections for its learning rate to transfer, and
-:citet:`Shah.Polloreno.Stratos.ea.2025` pair it with muP to transfer
-hyperparameters across model sizes.
-
-Width is only one direction of scaling. Transfer across depth, batch size,
-and training length needs rules of its own, and whether weight decay rather
-than parametrization keeps long runs stable is still debated
-:cite:`Kosson.Welborn.Liu.ea.2025`. The coordinate check is worth running on
-any family of models one intends to scale, whatever the parametrization.
+For a square $n \times n$ hidden matrix, :eqref:`eq_spectral_condition` requires $\|\Delta\mathbf{W}\|_2 = \Theta(1)$. Under Adam, a rank-$1$ sign update has $\|\Delta\mathbf{W}\|_2 = \Theta(\eta n)$, requiring $\eta \propto 1/n$. Under Muon (:numref:`sec_muon`), the orthogonalized update $\mathrm{NS}_5(\cdot)$ has unit spectral norm by construction; if scaled by $\sqrt{d_{\text{out}}/d_{\text{in}}}$ :cite:`Bernstein.2025`, its learning rate transfers across widths directly with no $1/m$ correction (whereas the AdamW-matched factor $0.2\sqrt{\max(d_{\text{out}}, d_{\text{in}})}$ of :eqref:`eq_muon-update` has spectral norm $\Theta(\eta\sqrt{n})$ and therefore scales as $\eta \propto 1/\sqrt{n}$; Exercise :exref:`ex_scaling-spectral`).
 
 ## Summary
 
-Hyperparameters tuned on a small model do not transfer by default: the best
-learning rate falls as the network widens, because one Adam step perturbs a
-hidden layer's activations in proportion to its fan-in
-(:eqref:`eq_scaling_first_step`). The maximal update parametrization removes
-the width dependence with per-layer rules: the usual initialization with
-variance $\propto 1/\textrm{fan-in}$, hidden-matrix learning rates divided by
-the width multiplier $m$, logits divided by $m$, and input weights and biases
-left alone. These rules fix how each layer scales with the width; the choice
-of base width fixes the constant factors. In our family of networks, with
-the base at the widest member, the best learning rate then stays within a
-grid step or two of its width-128 value across an eightfold change in width.
-The coordinate check tests such rules in seconds: after a training step,
-activations should follow the width dependence that the parametrization
-prescribes, without unintended growth. In spectral terms, muP makes Adam's updates land at the
-norm that a layer's shape prescribes, and Muon's orthogonalized updates
-carry part of that scaling by construction.
+* Under standard parametrization (SP), a single Adam step changes the output of a hidden layer with fan-in $n$ by $\Theta(\eta n)$, causing the optimal learning rate $\eta^\star(n)$ to drift downward as the network widens.
+* **Maximal Update Parametrization ($\mu\text{P}$)** scales hidden-matrix learning rates by $1/m$ (where $m = n/n_{\text{base}}$), fixes output-layer initialization variance at $1/n_{\text{base}}$ while scaling logits by $1/m$, and scales Transformer attention scores by $1/d_k$, achieving $\Theta(1)$ feature updates and zero-shot learning-rate transfer across widths.
+* The one-step **coordinate check** verifies across a geometric progression of widths that layer activation magnitudes remain flat after an optimizer step.
 
 ## Exercises
 
-1. [code] **Transfer across seeds.** `sp_loss` and `mup_loss` hold one run
-   per width and learning rate, all from one seed, so the transfer cost
-   that they show carries no error bar.
-    1. Under each parametrization, sweep `lrs` at widths 128 and 1,024 for
-       three seeds. For each seed, apply that seed's width-128 optimum at
-       width 1,024 and report, in percent, how far its loss lies above the
-       minimum of the same seed's width-1,024 sweep.
-    1. Is the difference between the two parametrizations' transfer costs
-       larger than the spread of each cost across seeds?
+1. [code] **Diagnosing broken $\mu\text{P}$ rules with the coordinate check.** Set `base_width=128` in `MuMLP` and use `coord_check` at `lr_128` to test three deliberate bugs one at a time: (a) omitting the $1/m$ logit multiplier, (b) omitting the $\eta/m$ hidden learning-rate scaling, and (c) scaling the hidden learning rate by $\eta/m^2$. Identify which errors `coord_check` catches immediately and why over-shrinking updates ($\eta/m^2$) requires a multi-step loss sweep to detect.
+   :exlabel:`ex_scaling-breaking-mup`
 
-1. [code] **Breaking muP on purpose.** The coordinate check is a test for
-   implementation errors.
-    1. Delete the $1/m$ logit scaling from `MuMLP` but keep the hidden
-       learning-rate rule and rerun `coord_check`. Which curve exposes the
-       bug?
-    1. Restore the multiplier and instead give the hidden matrices the full
-       learning rate. Which curve exposes this bug?
-    1. Restore the hidden learning-rate rule, but divide the learning rate
-       by $m^2$ instead of $m$. Does `coord_check` flag this error? Sweep
-       `lrs` at width 1,024 with this variant, and compare its best
-       learning rate and best loss with those of `MuMLP` in `mup_loss`.
+1. [code] **Effect of the reference base width.** Rerun the $\mu\text{P}$ sweep with `base_width=128` across widths $\{128, 512, 2048, 8192\}$, verify that the log–log slope of $\eta^\star(n)$ remains near zero, and identify which constant ratio (input-to-hidden learning-rate ratio vs. initial logit scale) accounts for the loss difference at width $8{,}192$.
+   :exlabel:`ex_scaling-base`
 
-1. [code] **Choosing the base.** `MuMLP` puts its base at width 1,024, the
-   widest member of the family.
-    1. Rerun the muP sweep with `base_width=128`, so that muP coincides with
-       standard parametrization at the tuned width instead. Does the best
-       learning rate still transfer from width 128 to width 1,024? Compare
-       the best loss at each width with `mup_loss` and `sp_loss`.
-    1. The two bases differ only by constant factors per layer. List them,
-       and find which of them accounts for the difference at width 1,024 by
-       changing one at a time.
+1. **Spectral norm condition across layers and optimizers.** ● Using :eqref:`eq_spectral_condition`, verify that the $\mu\text{P}$ rules of :numref:`tab_mup-rules` give input, hidden, and output layers updates of spectral norm $\Theta(\sqrt{d_{\text{out}}/d_{\text{in}}})$ under a rank-$1$ Adam step, and derive the width scaling of $\eta$ required for Muon :eqref:`eq_muon-update` on the four block matrices of `TinyLM`.
+   :exlabel:`ex_scaling-spectral`
 
-1. [code] **Fitting the drift.** Instead of removing the drift, a large
-   project can measure it: :citet:`Bi.Chen.Chen.ea.2024` fitted power laws
-   for the optimal learning rate and batch size as functions of the compute
-   budget across many small runs and extrapolated them to the target scale.
-   In the first-step analysis of :eqref:`eq_scaling_first_step`, the largest
-   stable learning rate scales as $1/n$.
-    1. From `sp_loss`, fit a power law $\eta^\star(n) = c\, n^{-\gamma}$ to
-       the best learning rate at each width. Since `lrs` is spaced by
-       factors of two, each optimum is resolved only to within a factor of
-       $\sqrt{2}$. Give the range of $\gamma$ consistent with this
-       resolution, and state whether it contains $\gamma = 1$.
-    1. Extrapolate the fit to widths 2,048 and 4,096. Sweep directly at
-       those widths with `train_mlp`, extending `lrs` downward if a
-       prediction falls below its smallest value, and report how many grid
-       steps separate each prediction from the measured optimum.
-
-1. [code] **Depth and the coordinate check.** ● `coord_check` varies width
-   at a fixed depth of three hidden layers. Generalize `MLP` and `MuMLP` to
-   $L$ hidden layers and run the check across $L \in \{3, 6, 12, 24\}$ at
-   width 512 under both parametrizations. The variance-$1/\textrm{fan-in}$
-   initialization of `MLP` halves the second moment of the ReLU
-   activations at every layer (:numref:`subsec_he_init`), so for this
-   problem initialize the input and hidden matrices with variance
-   $2/\textrm{fan-in}$.
-    1. Under standard parametrization, how does the growth of the logits
-       with depth compare with their growth with width in
-       :numref:`subsec_scaling-coord-check`?
-    1. Does muP's width scaling keep the activations flat across depth?
-       State what the rules of :numref:`tab_mup-rules` promise and what
-       they do not.
-
-1. **First update in spectral norm.** ● For a single example, Adam's first
-   update of a weight matrix
-   $\mathbf{W} \in \mathbb{R}^{n_{\textrm{out}} \times n_{\textrm{in}}}$ is
-   $\Delta\mathbf{W} = -\eta\, \operatorname{sign}(\boldsymbol{\delta})\,
-   \operatorname{sign}(\mathbf{h})^\top$, as in the derivation
-   of :eqref:`eq_scaling_first_step`. Let $k_{\textrm{out}}$ and
-   $k_{\textrm{in}}$ be the numbers of nonzero entries of
-   $\boldsymbol{\delta}$ and $\mathbf{h}$.
-    1. Compute $\|\Delta\mathbf{W}\|_2$ as a function of $\eta$,
-       $k_{\textrm{out}}$, and $k_{\textrm{in}}$.
-    1. Assume that $k_{\textrm{out}}$ and $k_{\textrm{in}}$ are fixed
-       fractions of $n_{\textrm{out}}$ and $n_{\textrm{in}}$. For the input,
-       hidden, and output matrices of `MLP`, find how $\eta$ must scale
-       with the width $n$ for $\Delta\mathbf{W}$ to satisfy the spectral
-       condition :eqref:`eq_spectral_condition`.
-    1. Show that the learning rates and the logit multiplier of
-       :numref:`tab_mup-rules` give every layer an update at this scale.
-
-1. [code] **Weight decay and parametrization.** ●
-   :citet:`Kosson.Welborn.Liu.ea.2025` argue that in long runs weight
-   decay, not parametrization, stabilizes the update dynamics across
-   widths. Override `configure_adam` in a subclass of `MLP` to return
-   AdamW (:numref:`sec_adamw`) with decay coefficient
-   $\lambda = 10^{-3}/\eta$, so that every run averages its updates over
-   the horizon $1/(\eta\lambda) = 1{,}000$ steps described
-   in :numref:`subsec_wd-at-scale`.
-    1. Run the standard-parametrization sweep of
-       :numref:`subsec_scaling-sweep` at widths 128 and 1,024 with
-       `num_steps=4000`, once with this AdamW and once with Adam. Report
-       the best learning rate at each width for both optimizers. Does the
-       optimum drift less with width under AdamW?
-    1. `MLP` has no normalization layer. Given the equilibrium argument of
-       :numref:`subsec_wd-at-scale`, state what your result can and cannot
-       say about the cited claim.
+1. [code] **Implementing $\mu\text{P}$ and the coordinate check on `TinyLM`.** ● Apply :numref:`tab_mup-transformer` to `d2l.TinyLM` across `d_model` $\in \{64, 128, 256, 512, 1024\}$ (`num_heads=2`, `base_width=64`) and verify with a one-step coordinate check at $\eta = 3 \times 10^{-3}$ that all sublayer output and logit magnitudes remain flat with width.
+   :exlabel:`ex_scaling-tinylm`
 
 [Discussions](https://d2l.discourse.group/t/36766)
 
@@ -691,219 +419,413 @@ carry part of that scaling by construction.
 [Dive into Deep Learning · §9.11]{.kicker}
 
 Scaling Up<br>
-**the drifting optimum · the first Adam step · muP · the coordinate check · the spectral view**
+**the drifting optimum · the first Adam step · muP · the coordinate check · transfer across widths**
 :::
 :::
 
-::: {.slide title="The Best Learning Rate Moves When the Network Widens"}
+::: {.slide title="A Learning Rate Tuned at Width 128 Wastes a Network a Thousand Times Larger"}
 [The problem]{.kicker}
 
-- A 7B-parameter model trained for months allows no learning-rate sweep:
-  tune a small proxy, then reuse its settings.
-- Fashion-MNIST MLP, 400 Adam steps: the best learning rate at width
-  1,024 is several times smaller than at width 128.
-- Reusing the width-128 optimum at width 1,024 typically costs 10% to 30%
-  in loss (one seed; the cost varies from run to run).
+MLP on Fashion-MNIST, 400 Adam steps, training loss:
+
+| network | learning rate | loss |
+|:--|:--|--:|
+| width 128, 135 thousand parameters | its own best | 0.32 to 0.33 |
+| width 8,192, 141 million parameters | the one tuned at width 128 | 0.31 to 0.38, by seed |
+| width 8,192 | its own best | 0.22 to 0.24, by seed |
 
 ::: {.d2l-note .warn}
-Why does the optimum move, and can a parametrization pin it?
+A large run allows no sweep. Its learning rate comes from a small proxy,
+and by default that rate is wrong.
 :::
+
+With width-aware rules, a 6.7-billion-parameter GPT-3 was tuned on a
+40-million-parameter proxy for about 7% of its pretraining compute.
+
+[Yang et al., 2022]{.small}
 :::
 
 ::: {.slide title="By the End of This Deck You Can"}
 [Goals]{.kicker}
 
-- explain the drift with the size of Adam's first update;
-- state the muP rules for Adam and implement them as a subclass;
-- run a coordinate check and read what it can and cannot detect;
-- measure the cost of transferring a learning rate across widths;
-- relate muP to spectral norms and to Muon's update scale.
+- explain why the best learning rate falls with width;
+- state the muP rules for Adam and implement them;
+- run a coordinate check and say what it cannot detect;
+- read a sweep for its optimum and for the cost of transfer;
+- compute the spectral norm of a first update.
+
+**Idea:** a layer with $n$ inputs sums $n$ terms of one sign in every
+update; per-layer rules divide the width out.
 
 **Running example:** an MLP $784 \to n \to n \to n \to 10$ on
-Fashion-MNIST, $n = 128$ to $1{,}024$, 400 Adam steps.
+Fashion-MNIST, $n = 128$ to $8{,}192$, 400 Adam steps, two seeds.
 :::
 
-::: {.slide title="Scaling Up Asks Which Settings Survive a Wider Model"}
+::: {.slide title="Scaling Up Moves the Learning Rate with the Model"}
 [Where this fits]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | adds |
+| part | decks |
 |---|---|
-| Landscapes | curvature and noise slow training |
-| Gradient Descent | step size against curvature |
-| Stochastic and Minibatch GD | sampled gradients, noise ball, batching |
-| Momentum | averaging over time |
-| Adam and AdamW | a step size per coordinate, decoupled decay |
-| Schedules | warmup and decay |
-| Muon | orthogonalized updates for matrices |
-| Batch Size | how many examples per step |
-| **Scaling Up** | **learning rates across widths** |
-| Practice | clipping, averaging, fair comparisons |
-:::
+| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
+| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
+| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · **Scaling Up** · Practice |
 
-::: {.col .narrow}
-- **Uses:** Adam's first step is a sign step; Muon's spectral norm.
-- **Skips:** transfer across depth, batch size, and training length.
-:::
-:::
+- **Uses:** Adam's first step is $\eta$ times the sign of the gradient;
+  the spectral norm and Muon's update; AdamW's settled relative step.
+- **Skips:** growth in depth, batch size and training length; the
+  exponents for SGD.
 :::
 
 ::: {.slide title="Only the Two Middle Matrices Grow in Both Dimensions"}
-MLP $784 \to n \to n \to n \to 10$, $n = 128, \ldots, 1{,}024$:
+[A family of widths]{.kicker}
 
-| matrix | shape | grows with $n$ |
-|:--|:--|:--|
-| input | $n \times 784$ | fan-out only |
-| hidden (two) | $n \times n$ | **both** |
-| output | $10 \times n$ | fan-in only |
+MLP $784 \to n \to n \to n \to 10$, $n$ = 128, 512, 2,048, 8,192:
 
-**Standard parametrization (SP):** weights with variance
-$1/\textrm{fan-in}$, zero biases, one learning rate for all layers. One
-random seed fixes initialization and minibatches for every run.
+| matrix | shape | fan-in (inputs) | grows with $n$ |
+|:--|:--|:--|:--|
+| input | $n \times 784$ | 784 | outputs only |
+| hidden (two) | $n \times n$ | $n$ | **inputs and outputs** |
+| output | $10 \times n$ | $n$ | inputs only |
+
+**Standard parametrization (SP):** weights of variance
+$1/\textrm{fan-in}$, zero biases, one learning rate $\eta$ for all layers.
+
+**Score of a run:** mean training loss of the last 50 of 400 steps.
 :::
 
-::: {.slide title="Under SP the Best Learning Rate Slides Left with Width"}
-Nine learning rates × four widths, 400 Adam steps each:
+::: {.slide title="Under SP the Best Learning Rate Falls Sixteenfold over a 64-Fold Widening"}
+[Learning-rate sweep]{.kicker}
+
+Four widths, ten learning rates a factor of two apart, two seeds:
 
 @!scaling-the-sweep
 
-Wider is better once tuned, but each width needs its own learning rate.
+Slope of log best rate against log width: about $-0.7$. Each end of the
+family, run at the other end's best rate, loses about 0.1 nats.
 :::
 
-::: {.slide title="Adam's First Step Adds n Coherent Terms"}
-Single example: $\mathbf{g} = \boldsymbol{\delta}\mathbf{h}^\top$. First
-Adam step $= \operatorname{sign}(\mathbf{g})$, and
-$\operatorname{sign}(\delta_i h_j) = \operatorname{sign}(\delta_i)
-\operatorname{sign}(h_j)$:
+::: {.slide title="Adam's First Step Adds n Terms of One Sign"}
+[The first Adam step]{.kicker}
 
-$$(\Delta\mathbf{W}\mathbf{h})_i = -\eta \operatorname{sign}(\delta_i)
-\sum_{j=1}^n |h_j| \approx -\eta \operatorname{sign}(\delta_i)\, n\,
-\overline{|h|}.$$
+One example. Hidden matrix $\mathbf{W}$ ($n \times n$), input activations
+$\mathbf{h}$, output $\mathbf{z} = \mathbf{W}\mathbf{h}$, backpropagated
+error $\boldsymbol{\delta}$ at $\mathbf{z}$, learning rate $\eta$.
 
-- All $n$ terms share a sign: doubling the width doubles the change.
-- Largest stable $\eta \propto 1/n$ for the hidden matrices.
-- Input layer (fan-in 784) and biases: no growth. Output matrix (fan-in
-  $n$): grows too.
+I. $\;$Gradient: $\mathbf{g} = \boldsymbol{\delta}\mathbf{h}^\top$
+
+II. $\;$First Adam step:
+$\Delta\mathbf{W} = -\eta\operatorname{sign}(\mathbf{g})
+= -\eta\operatorname{sign}(\boldsymbol{\delta})\operatorname{sign}(\mathbf{h})^\top$
+
+III. Its effect on $\mathbf{z}$:
+
+$$\boxed{(\Delta\mathbf{W}\mathbf{h})_i = -\eta \operatorname{sign}(\delta_i)
+\sum_{j=1}^n |h_j| = -\eta \operatorname{sign}(\delta_i)\, n\,
+\overline{|h|}}$$
+
+$\overline{|h|}$: mean absolute activation, about the size of $z_i$
+itself. One step changes $z_i$ by about $\eta n$ times its size.
 :::
 
-::: {.slide title="Check: How Much Larger Is the First Update at Width 1,024?"}
+::: {.slide title="The Same η Is a Nudge at Width 128 and a Thirtyfold Change at Width 8,192"}
+[The first Adam step]{.kicker}
+
+Relative change of a hidden layer in one step, $\eta n$, at
+$\eta = 2^{-8} \approx 0.004$:
+
+| width $n$ | 128 | 512 | 2,048 | 8,192 |
+|:--|--:|--:|--:|--:|
+| $\eta n$ | 0.5 | 2 | 8 | 32 |
+
+- Equal steps at every width need $\eta \propto 1/n$: a slope of $-1$.
+- Measured: $-0.7$. The count is crude: one example, one step, and only
+  the matrices with $n$ inputs.
+
+::: {.d2l-note .rule}
+One step moves a layer's output by about $\eta$ times its fan-in.
+:::
+:::
+
+::: {.slide title="Check: Which Matrices Take Larger Steps When the Width Doubles?"}
 [Check]{.kicker}
 
-Width grows from 128 to 1,024. By what factor does the first Adam step
-change a hidden layer's output? Which learning rate restores the width-128
-change?
+The width $n$ of the MLP doubles at a fixed learning rate. By what factor
+does the first Adam step change the output of the input matrix
+($n \times 784$), of a hidden matrix ($n \times n$), and of the output
+matrix ($10 \times n$)?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** The sum has $n$ coherent terms: $1{,}024 / 128 = 8\times$.
-Dividing the hidden learning rate by $m = 8$ restores it; the input layer
-and biases need no change.
+**Answer.** A step moves the output by about $\eta$ times the fan-in.
+Input matrix: fan-in 784, no change. Hidden and output matrices: fan-in
+$n$, twice as far.
 :::
 :::
 :::
 
-::: {.slide title="muP Moves the Width Dependence into Two Rules"}
-Width multiplier $m = n / n_{\textrm{base}}$ (Yang et al., 2022):
+::: {.slide title="muP Writes the Width into Three Per-Layer Rules"}
+[The rules]{.kicker}
 
-| parameters | init | Adam LR | forward |
+Base width $n_{\textrm{base}}$, width multiplier
+$m = n / n_{\textrm{base}}$, Adam:
+
+| parameters | initial variance | learning rate | forward pass |
 |:--|:--|:--|:--|
-| input weights, biases | unchanged | $\eta$ | unchanged |
-| hidden matrices | $\propto 1/\textrm{fan-in}$ | $\eta/m$ | unchanged |
-| output matrix | unchanged | $\eta$ | logits $\times 1/m$ |
+| input weights, all biases | $1/\textrm{fan-in}$; biases 0 | $\eta$ | unchanged |
+| hidden matrices | $1/\textrm{fan-in}$ | $\eta/m$ | unchanged |
+| output matrix | $1/n_{\textrm{base}}$ at every width | $\eta$ | logits $\times\, 1/m$ |
 
-Derived from the infinite-width limit where activations stay $O(1)$
-**and** every layer keeps learning. At $m = 1$ muP is SP.
+"Maximal update": the largest updates that do not grow with the width.
+Smaller ones leave a wide layer where its initialization put it.
+
+[Yang and Hu, 2021; Yang et al., 2022]{.small}
 :::
 
-::: {.slide title="In Code, muP Is a Subclass with Two Changes"}
-- Rule 1, forward pass: `self.fc_out(self.features(X) / self.m)`.
-- Rule 2, optimizer: two parameter groups, hidden matrices at `lr / m`,
-  everything else at `lr`.
-- PyTorch: `torch.optim.Adam` with parameter groups. JAX:
-  `optax.multi_transform` with labels from the parameter paths.
-- Base at width 1,024, where muP is SP: any base gives the same width
-  scaling; the base fixes the per-layer constants.
-- Embeddings in a language model count as input weights; attention needs
-  $1/d$ instead of $1/\sqrt{d}$; SGD has its own column.
+::: {.slide title="The Hidden Rule Cancels the Sum, and the Output Layer Averages"}
+[The rules]{.kicker}
+
+- **Hidden matrices:** first step
+  $(\eta/m)\, n\, \overline{|h|} = \eta\, n_{\textrm{base}}\, \overline{|h|}$
+  at every width.
+- **Output matrix, its own update:** logits
+  $= \frac{1}{m}\mathbf{W}\mathbf{h}$, so every update acts $m$ times
+  less.
+- **Output matrix, updates of the features $\mathbf{h}$:** the error
+  reached them through $\mathbf{W}$, so $\mathbf{W}\,\Delta\mathbf{h}$
+  sums $n$ terms of one sign. It stays bounded only for weights of size
+  $1/n$: variance $1/n_{\textrm{base}}$, times $1/m$.
+- **Code:** output weights $\times \sqrt{m}$ once, features $\div\, m$,
+  hidden rate $\eta/m$.
+
+::: {.d2l-note}
+A standard output layer sums over $n$ hidden units. Under muP it
+averages, and the initial logits shrink as $1/\sqrt{m}$.
+:::
 :::
 
-::: {.slide title="The Coordinate Check Exposes SP's Growth in Seconds"}
-Mean |activation| per layer after one Adam step, widths 128 to 4,096:
+::: {.slide title="The Base Width Fixes the Constants That the Rules Leave Open"}
+[The rules]{.kicker}
+
+- At $n = n_{\textrm{base}}$, $m = 1$: muP is SP.
+- The rules give exponents. The base gives constants: the input rate
+  relative to the hidden rate, and the size of the initial logits.
+- A project puts the base at its proxy. Here it is 8,192, the widest
+  network: the same network under SP and muP, already tuned by the sweep.
+
+| width | $m$ | hidden rate | initial logits, relative to SP |
+|:--|--:|--:|--:|
+| 8,192 | 1 | $\eta$ | 1 |
+| 128 | 1/64 | $64\,\eta$ | 8 |
+:::
+
+::: {.slide title="One Adam Step under SP: Slopes of One, Two and Three"}
+[The coordinate check]{.kicker}
+
+Mean |activation| of each layer after one Adam step on one minibatch, at
+the rate tuned for width 128:
 
 @!scaling-the-coordinate-check-2
 
-Layer 1 flat; layers behind the square matrices grow, compounding with
-depth; logits grow about 100×.
+Layer 1 is flat. Each later layer multiplies the excess by a further
+factor of order $\eta n$; the logits end about 1,000 times larger at width
+8,192.
 :::
 
-::: {.slide title="Under muP Every Hidden Layer Stays Flat"}
+::: {.slide title="Under muP All Four Curves Are Flat"}
+[The coordinate check]{.kicker}
+
+The same check, at the rate tuned for the base width. At width 128 the
+hidden matrices learn at $64\eta$, four times the rate of the SP check:
+
 @!scaling-the-coordinate-check-3
 
-Logits *fall* by design (the $1/m$ multiplier) and grow to $O(1)$ by
-learning. Growth is the failure; the check reads sizes, not feature
-learning.
+::: {.d2l-note .warn}
+Growth with width convicts an implementation. Flat curves do not acquit
+it: updates that shrink too fast with width are flat too.
+:::
 :::
 
 ::: {.slide title="Check: Which Curve Shows a Missing Logit Multiplier?"}
 [Check]{.kicker}
 
-You keep the hidden learning rate at $\eta/m$ but forget the $1/m$ on the
-logits. What does the coordinate check show?
+An implementation of muP with $m \geq 1$ gives the hidden matrices
+$\eta/m$ but forgets to divide the logits by $m$. What does the coordinate
+check show?
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** The hidden layers stay flat, but the output layer's first step
-again sums $n$ coherent terms: the logits curve grows in proportion to the
-width.
+**Answer.** The hidden layers stay flat. The output matrix still sums $n$
+terms of one sign in its first step, so the logit curve grows in
+proportion to the width.
 :::
 :::
 :::
 
-::: {.slide title="Under muP the Optimum Stops Drifting"}
-Same sweep, same seed, muP:
+::: {.slide title="Under muP the Best Learning Rate Stays in One Place"}
+[Learning-rate transfer]{.kicker}
+
+The same sweep with the same seeds, under muP:
 
 @!scaling-learning-rate-transfer
 
-Each width's minimum lies within one or two grid steps of width 128's.
+Best rate $2.4 \times 10^{-4}$ or one grid step below, at every width.
+Slope within 0.2 of zero, against $-0.7$ under SP.
 :::
 
-::: {.slide title="Transfer Typically Costs a Few Percent Under muP, 10–30% Under SP"}
-Reuse the width-128 learning rate at width 1,024:
+::: {.slide title="muP Leaves a Narrow Network Less Room above Its Optimum"}
+[Learning-rate transfer]{.kicker}
+
+A hidden weight has size about $1/\sqrt{n}$; Adam moves it by up to
+$\eta/m$ per step. The two are equal at $\eta = \sqrt{n}/n_{\textrm{base}}$:
+
+| width $n$ | 128 | 512 | 2,048 | 8,192 |
+|:--|--:|--:|--:|--:|
+| step = weight at $\eta$ = | $1.4 \times 10^{-3}$ | $2.8 \times 10^{-3}$ | $5.5 \times 10^{-3}$ | $1.1 \times 10^{-2}$ |
+| loss passes 0.5 at $\eta$ = | $2.0 \times 10^{-3}$ | $3.9 \times 10^{-3}$ | $7.8 \times 10^{-3}$ | $1.6 \times 10^{-2}$ or above |
+
+- The three narrower curves pass 0.5 at the first grid point above their
+  rate, from about 0.4 one point below it.
+
+::: {.d2l-note}
+The safe way round: we tune narrow and run wide, and the wide network has
+more room.
+:::
+:::
+
+::: {.slide title="Transfer Costs a Tenth of a Nat under SP and Nothing under muP"}
+[Learning-rate transfer]{.kicker}
+
+Width 8,192 at the rate tuned for width 128, and at its own best rate:
 
 @!scaling-learning-rate-transfer-1
 
-- muP: the best loss falls with width. At width 1,024 muP is SP, so
-  retuned SP matches it there; muP saves that sweep.
-- Wider still, SP's tuned loss stops improving while muP's keeps falling.
-- GPT-3 6.7B tuned on a 40M proxy for about 7% of the pretraining compute
-  (Yang et al., 2022).
+- SP: either seed loses 0.09 to 0.15 nats; two seeds at one rate differ
+  by at most 0.05.
+- muP: at most 0.003 above its own best.
 :::
 
-::: {.slide title="muP Is a Spectral-Norm Condition on Every Update"}
-Healthy layer size: $\|\mathbf{W}\|_2 \asymp \|\Delta\mathbf{W}\|_2 \asymp
-\sqrt{n_{\textrm{out}}/n_{\textrm{in}}}$ (Yang, Simon, Bernstein, 2023).
+::: {.slide title="For a Transformer, Ask Whether Inputs and Outputs Grow with the Width"}
+[Rules for a transformer]{.kicker}
 
-- Adam's first hidden update: spectral norm of order $\eta n$ (about
-  $\eta n/2$ with half the units active); $\eta/m$ removes the excess.
-- Muon's orthogonalized update has all singular values 1: scaled by
-  $\sqrt{n_{\textrm{out}}/n_{\textrm{in}}}$ it meets the condition at
-  every width.
-- RMS-matched Muon ($0.2\sqrt{\max(n_{\textrm{out}}, n_{\textrm{in}})}$):
-  spectral norm $0.2\,\eta\sqrt{n}$, still width-dependent.
+`TinyLM`, a small transformer language model of width $d$;
+$m = d/d_{\textrm{base}}$; Adam:
+
+| part | rule |
+|:--|:--|
+| embeddings, biases, normalization scales and shifts (no sum over the width) | learning rate $\eta$ |
+| the four matrices of a block (inputs and outputs grow with $d$) | learning rate $\eta/m$ |
+| output head ($d$ inputs, always 256 outputs) | initial variance fixed, logits $\times\, 1/m$ |
+| attention scores (dot product of two learned vectors) | extra factor $1/\sqrt{m}$ |
+
+Training aligns the two vectors, so their dot product grows as the
+dimension, not as its square root.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Adam's First Update Has Spectral Norm η√(k_out k_in)"}
+[Muon and width]{.kicker}
+
+Spectral norm $\|\Delta\mathbf{W}\|_2$: the largest factor by which
+$\Delta\mathbf{W}$ stretches a vector.
+
+I. $\;\Delta\mathbf{W} = -\eta\,\mathbf{s}\mathbf{t}^\top$,
+$\mathbf{s} = \operatorname{sign}(\boldsymbol{\delta})$,
+$\mathbf{t} = \operatorname{sign}(\mathbf{h})$: rank one
+
+II. $\;\|\mathbf{s}\mathbf{t}^\top\|_2 = \|\mathbf{s}\|_2\,\|\mathbf{t}\|_2$
+
+III. With $k_{\textrm{out}}$, $k_{\textrm{in}}$ nonzero entries of
+$\boldsymbol{\delta}$, $\mathbf{h}$:
+
+$$\boxed{\|\Delta\mathbf{W}\|_2 = \eta\sqrt{k_{\textrm{out}}\,k_{\textrm{in}}}}$$
+
+ReLU, $n \times n$: half the entries are nonzero on either side, so the
+norm is about $\eta n/2$. It grows with the width.
+:::
+
+::: {.slide title="Check: How Large Should the Spectral Norm of an Update Be?"}
+[Check]{.kicker}
+
+A matrix has $d_{\textrm{in}}$ inputs and $d_{\textrm{out}}$ outputs. An
+input with entries of order one has length $\sqrt{d_{\textrm{in}}}$. How
+large must $\|\Delta\mathbf{W}\|_2$ be for the update to change every
+output entry by an amount of order one?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The change of the output must have length
+$\sqrt{d_{\textrm{out}}}$, so
+$\|\Delta\mathbf{W}\|_2 \approx \sqrt{d_{\textrm{out}}/d_{\textrm{in}}}$,
+the *spectral condition*. For an $n \times n$ matrix this is a constant,
+while Adam's $\eta n/2$ grows with $n$.
+:::
+:::
+
+[Yang, Simon and Bernstein, 2023]{.small}
+:::
+
+::: {.slide title="Muon at AdamW's Entry Scale Still Grows as √n"}
+[Muon and width]{.kicker}
+
+Muon's update: the averaged gradient with its singular values pushed to
+about one, times a shape factor ($d_{\textrm{in}}$ inputs,
+$d_{\textrm{out}}$ outputs). For an $n \times n$ matrix:
+
+| update | spectral norm | $\eta$ must scale as |
+|:--|:--|:--|
+| Adam, first step | $\eta n/2$ | $1/n$ |
+| Muon $\times\; 0.2\sqrt{\max(d_{\textrm{out}}, d_{\textrm{in}})}$, entries as large as AdamW's | $0.2\,\eta\sqrt{n}$ | $1/\sqrt{n}$ |
+| Muon $\times \sqrt{d_{\textrm{out}}/d_{\textrm{in}}}$ | $\eta$ | constant |
+
+[Bernstein, 2025; Shah et al., 2025 combine Muon with muP]{.small}
+:::
+
+::: {.slide title="Check the Family, Move the Rate with the Width, Sweep Once More"}
+[Limits of transfer]{.kicker}
+
+- Coordinate check on every family you scale: seconds.
+- Never carry $\eta$ across a large change of width unchanged: per-layer
+  rules, or a fitted slope under SP ($-0.7$ here; the first-step count
+  gives $-1$).
+- Sweep the transferred rate once more, a factor of two each way.
+
+::: {.d2l-note .warn}
+Open: under AdamW every matrix settles at a relative step
+$\sqrt{2\eta\lambda}$ ($\lambda$: weight decay), whatever its width. muP
+may then act mainly as a warmup.
+:::
+
+[Bi et al., 2024; Kosson et al., 2025]{.small}
+:::
+
+::: {.slide title="Check: By What Factor Should the Learning Rate Fall from Width 128 to 2,048?"}
+[Check]{.kicker}
+
+A network is widened from 128 to 2,048, so $m = 16$. Give the factor for
+(a) the hidden matrices under muP with Adam, (b) Muon at AdamW's entry
+scale, (c) the shared rate under SP, from the measured slope of $-0.7$.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** (a) $m = 16$. (b) $\sqrt{m} = 4$. (c) $16^{0.7} \approx 7$;
+in the sweep the best rate fell from about $4 \times 10^{-3}$ to about
+$5 \times 10^{-4}$, a factor of 8.
+:::
+:::
+:::
+
+::: {.slide title="Wider Layers Sum More Terms, and muP Divides the Sum Out"}
 [Wrap-up]{.kicker}
 
-- **Drift:** under SP the best learning rate falls with width, because
-  Adam's first step sums $n$ coherent terms.
-- **muP:** hidden learning rate $\eta/m$, logits $\times 1/m$, the rest
-  unchanged; the optimum stops drifting with width.
-- **Coordinate check:** flat or falling activations across widths after
-  one step; growth means a scaling error.
-- **Spectral view:** muP sets every update's spectral norm to
-  $\sqrt{n_{\textrm{out}}/n_{\textrm{in}}}$; Muon builds part of this in.
+- **Drift:** one Adam step moves a layer by about $\eta$ times its
+  fan-in; under SP the best rate fell sixteenfold from width 128 to 8,192.
+- **muP:** hidden rate $\eta/m$, logits $\times\, 1/m$; the best rate
+  stays within one grid step.
+- **Transfer:** the width-128 rate costs 0.1 nats at width 8,192 under
+  SP, at most 0.003 under muP.
+- **Coordinate check:** growth convicts, flat curves do not acquit.
+- **Muon** at AdamW's entry scale: spectral norm $0.2\,\eta\sqrt{n}$, so
+  its rate must fall as $1/\sqrt{n}$.
 
-**Next:** clipping, averaging, and tuning budgets for long runs.
+**Next:** configuring, protecting and finishing a run that cannot be
+repeated.
 :::

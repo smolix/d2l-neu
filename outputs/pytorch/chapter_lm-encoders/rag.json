@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:712270a1f6f2ee5b99abeca1374e14dbeb47f0505d54a085de360089d780e812",
+    "d2l_lib_fingerprint": "sha256:3649d61136f7bb71f8be1c727f63c0e3bb6c3451e008ef67e60ac996cdd4204d",
     "venv": "lm",
     "packages": {
       "transformers": "transformers==5.22.2"
@@ -18,17 +18,17 @@
       "outputs": []
     },
     "rag-extras": {
-      "code_fingerprint": "sha256:e222da3199fa8653381240ca5e0a18fda4c8d702b4274a49584a9782b25f4b31",
+      "code_fingerprint": "sha256:7b229c1cf94673c97c96be4cc4424d6cd4bfd280fdfd2c8c622a1f5599b9756c",
       "kind": "text",
       "outputs": []
     },
     "rag-revisions": {
-      "code_fingerprint": "sha256:814eaf54c31b94e2d0cb59b638dfdd4a936ddf81308598ccae6c76642012091c",
+      "code_fingerprint": "sha256:b22b16606f708596f89e71ff04e730a29f6bbdd5165b7ad8b3aa9eedcc06fae7",
       "kind": "text",
       "outputs": []
     },
     "rag-config": {
-      "code_fingerprint": "sha256:53d82be4bf2b00f0899bc45b34889cb791ab33b4bc7d90d58cafaf1df3808bc7",
+      "code_fingerprint": "sha256:5592e043797f4e1cce78931cf9217bc1300959d5c25412cbce757e0af62b5393",
       "kind": "text",
       "outputs": [
         {
@@ -39,28 +39,28 @@
       ]
     },
     "rag-data-hub": {
-      "code_fingerprint": "sha256:26d8c07ec1c547dc84844a9c2e4ba7fbf8da38c020de55fd01a9f856c09ccd8f",
+      "code_fingerprint": "sha256:e1cabf37fb230f28a3ae745719c58dc4849d28febffe4e4ecdb8ceaa29ae8906",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-def": {
-      "code_fingerprint": "sha256:509164d11fb83340074ba66e7b48834a02340ffd197a87bc66cd005115d02079",
+      "code_fingerprint": "sha256:7f98a404147346530fbef5051a1276bbb83d7a6e5b44782490218f8982c2a05a",
       "kind": "text",
       "outputs": []
     },
     "rag-qa-stats": {
-      "code_fingerprint": "sha256:1188b52a37a38acc4b1de1091cf01f00a47246fa31f02a1537307f1bb95e26c9",
+      "code_fingerprint": "sha256:21428299c2677dde1cfa7beb97296bb6325a326aa13bcfe91ae6805b8b9f1343",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "              train  dev  test\ntype                          \nsingle         3251  120   120\nexplain        1093   40    40\nnumeric         460   20    20\ncode            582   20    20\nmultihop        228   20    20\nunanswerable    251   20    20\ntotal          5865  240   240\ndrafter: ['deepseek/deepseek-v4.1-flash-1017 (Novita)']\nchecker: ['qwen/qwen3.8-27b (DeepInfra)']\nevery dev and test item verified by anthropic/claude-opus-5.5-20260921\n                                train  dev  test\nanswerable                       5614  220   220\nbook-specific                    3618  160   170\nclosed-book correct (Qwen3-4B)   1197   38    45\nwith alternative spans              0   45    41\nidentifier                       2529   85    99\n                              single  explain  numeric  code  multihop  unanswerable\nevidence not verbatim             35       15        4     2         8             0\ncontext phrase                    56       24       19     5        20            13\nlexical copy                     983      316      215    30       176            68\nnear duplicate                    94       23       23    12         7             5\nchecker (Qwen3.8-27B)            146       44       72   133        24           165\na neighbour answers better         9        8        0     0         2             0\na neighbour contradicts            1        0        1     1         1             0\nunanswerable, but answered         0        0        0     0         0            42\nalternative in another split      71        8       17     4         4             0\nverifier (frontier)               22       13        4     6        11            11\nalternative spans: 410 in 252 candidates\nfrontier verifier against the checker, per check (dev and test pool):\n                         n  agree  kappa\nself_contained       587.0   0.92   0.23\nreference_supported  536.0   0.98   0.23\nkey_facts_complete   536.0   0.93   0.05\nunique_answer        536.0   0.96   0.00\ngeneral_knowledge    587.0   0.61   0.32\noverall_pass         536.0   0.84   0.12\n"
+          "text": "              train  dev  test\ntype                          \nsingle         3251  120   120\nexplain        1093   40    40\nnumeric         460   20    20\ncode            582   20    20\nmultihop        228   20    20\nunanswerable    251   20    20\ntotal          5865  240   240\ndrafter: ['deepseek/deepseek-v4.1-flash-1017 (Novita)']\nchecker: ['qwen/qwen3.8-27b (DeepInfra)']\nevery dev and test item verified by anthropic/claude-opus-5.5-20260921\n                                train  dev  test\nanswerable                       5614  220   220\nbook-specific                    3618  160   170\nclosed-book correct (Qwen3-4B)   1197   38    45\nwith alternative spans              0   45    41\nidentifier                       2529   85    99\n                              single  explain  numeric  code  multihop  unanswerable\nevidence not verbatim             35       15        4     2         8             0\ncontext phrase                    56       24       19     5        20            13\nlexical copy                     983      316      215    30       176            68\nnear duplicate                    94       23       23    12         7             5\nchecker (Qwen3.8-27B)            146       44       72   133        24           165\na neighbour answers better         9        8        0     0         2             0\na neighbour contradicts            1        0        1     1         1             0\nunanswerable, but answered         0        0        0     0         0            42\nalternative in another split      71        8       17     4         4             0\nverifier (frontier)               22       13        4     6        11            11\nalternative spans: 410 in 252 candidates\nfrontier verifier against the checker, per check (dev and test pool):\n                         n  agree  kappa\nself_contained       587.0   0.92   0.23\nreference_supported  536.0   0.98   0.23\nkey_facts_complete   536.0   0.93   0.05\nunique_answer        536.0   0.96   0.00\ngeneral_knowledge    587.0   0.61   0.32\noverall_pass         536.0   0.84   0.12\nAPI spend in US$ per model:\ndeepseek/deepseek-v4.1-flash-1017    4.93\nqwen/qwen3.8-27b                     3.02\nanthropic/claude-opus-5.5            7.06\n  total 15.02; the verifier's check of dev and test: 620 calls, 6.98\n"
         }
       ]
     },
     "rag-qa-examples": {
-      "code_fingerprint": "sha256:3212fbe9785d893e8050dc791cd69e3057fddf63429e64f3d215187d27045450",
+      "code_fingerprint": "sha256:5a60ca2ed94addceb8be13fcd326da2b164b31f79032a1638431eb2b8f1ddfca",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +71,7 @@
       ]
     },
     "rag-qa-leakage": {
-      "code_fingerprint": "sha256:6b4c14051b3a4134310cd970319a8b94639cf5cc3e3acd88c1cde3e09b2aa9db",
+      "code_fingerprint": "sha256:c308399e05a1ddd64861cd9e92d739e74c974c7c04dcf2dc2b4ce765d7240b1c",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "rag-qa-gold": {
-      "code_fingerprint": "sha256:7add85ff7467a873e795899813b4d862bedbb266a2a0c57d8355249561fb4046",
+      "code_fingerprint": "sha256:624b3999da73622c58e261621b75f75eeb635d5162f0a9b1bb37e57b25199bd3",
       "kind": "text",
       "outputs": [
         {
@@ -93,44 +93,44 @@
       ]
     },
     "rag-stage-defs": {
-      "code_fingerprint": "sha256:419f72a9af3b0ba9aa321c891d50ba82f2e6085151a1be67206819505fd1362f",
+      "code_fingerprint": "sha256:145c547c4200e1527910a74ad138b9c6d32a8e56638bf0f537246c04d962732d",
       "kind": "text",
       "outputs": []
     },
     "rag-prompt-defs": {
-      "code_fingerprint": "sha256:e5dcc7ce9a302f49aacf603ce8f757a017ea02ad4277da7f6a588ee615a6b6da",
+      "code_fingerprint": "sha256:e690d315785467f5b4eee0394b79c296b05fa3049d23f3612e91112dad53bd90",
       "kind": "text",
       "outputs": []
     },
     "rag-pipeline-def": {
-      "code_fingerprint": "sha256:e3098d4b3487e3f08c0af414b30afa3446c3bfa6f1ca993d856ce01ed844e427",
+      "code_fingerprint": "sha256:af1e487f1e5c862d083659a171059028b7d24b32bb38d647b515dc260eef1347",
       "kind": "text",
       "outputs": []
     },
     "rag-judge-defs": {
-      "code_fingerprint": "sha256:f84e635ceb04e9d6fe86b4f5599668c7b9e077362680a06e1cc1d43af0b87430",
+      "code_fingerprint": "sha256:b30146aa69cf01b8a27c67b1f3d82f42f20c1c344a63c7fc88691af5ba24a2fb",
       "kind": "text",
       "outputs": []
     },
     "rag-memory": {
-      "code_fingerprint": "sha256:50c308be12ac7dfdf683ccf61c812119dc03fcd7f960c49328d745c0bd102b76",
+      "code_fingerprint": "sha256:0986b252f5171fa8965ed13aaae8341e50d57fab9cfb1ec267b52666892fa800",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                       weights  KV and state  activations  total                limit\ngeneration, 3,300 x 8     16.7           1.2          3.0   20.9        one 24 GB GPU\ngeneration, 6,300 x 4     16.7           1.0          2.9   20.5        one 24 GB GPU\nretrieval phase           18.9           0.0          0.4   19.3        one 24 GB GPU\njudge, FP8 weights        25.0           5.7          0.0   30.8  two GPUs, 2 x 24 GB\nGiB; the judge stores one byte per weight (FP8), split over two cards,\nand vLLM reserves 90% of each card for its weights, cache and activations\nretrieval phase: the generator stays on the card\n"
+          "text": "                       weights  KV and state  activations  total                limit\ngeneration, 3,300 x 8     16.7           1.2          3.4   21.3        one 24 GB GPU\ngeneration, 6,300 x 4     16.7           1.0          3.3   20.9        one 24 GB GPU\nretrieval phase           18.9           0.0          0.4   19.3        one 24 GB GPU\njudge, FP8 weights        27.4           5.7          0.0   33.1  two GPUs, 2 x 24 GB\nGiB; the judge stores one byte per weight (FP8), except its input and output\nembeddings, which stay in bf16 (4.7 GiB of the 27.4); its weights are split over\ntwo cards, and vLLM reserves 90% of each card for weights, cache and activations\nretrieval phase: the generator stays on the card\n"
         }
       ]
     },
     "rag-baseline": {
-      "code_fingerprint": "sha256:ccd3385e9ded425473eeb020f8bbd0eb9b06dfe3278f0ad0c089f94099c8c945",
+      "code_fingerprint": "sha256:a16760b02eff008453d972debd60529894b889f8caf6302bd83d41a3e069b862",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                      answers  context_tokens  prompt_tokens  new_tokens\nsplit config                                                            \ndev   base                240            1697           1933         110\n      base-repeat         240            1697           1933         111\n      closed              240               0             90         100\n      oracle              240             477            628         102\n      budget-1500         240            1318           1529         110\n      budget-6000         240            5806           6336         115\n      fixed               240            1578           1842         108\n      reverse             240            1697           1933         111\n      rewrite-rerank      240            1716           1953         112\ntest  base                240            1714           1951         107\ndev   fix-ignored         240            1697           1971         221\ntest  fix-ignored         240            1714           1989         221\n      rewrite-rerank      240            1702           1937         111\n"
+          "text": "             answers  context_tokens  prompt_tokens  new_tokens\nconfig                                                         \nclosed           240               0             90         100\nbase             240            1701           1937         111\noracle           240             479            630         102\nbase-repeat      240            1701           1937         111\n"
         },
         {
           "type": "stream",
@@ -145,7 +145,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "live generation: peak 20.4 GiB (20.4 GiB reserved)\n8 base answers generated again: 8 with the registered context, 8 identical answers\n  tokens agreeing before the first difference: 1.000\n"
+          "text": "live generation: peak 20.7 GiB (20.8 GiB reserved)\n8 base answers generated again: 8 with the recorded context, 8 identical answers\n  tokens agreeing before the first difference: 1.000\n"
         },
         {
           "type": "stream",
@@ -155,170 +155,61 @@
       ]
     },
     "rag-judge": {
-      "code_fingerprint": "sha256:06279ea3a638d12aedc749d73338f8dffa9171a59f1744abb5a9e7fd7dd8f66b",
+      "code_fingerprint": "sha256:4b53b6c39a906d9cc5d34a6a88215899cef3570b2180a17f62ca7075e4f095a0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "8 base judgments with 3,000 new tokens replayed from the judge cache: identical\n4 base judgments with 6,000 new tokens replayed from the judge cache: identical\n                answers  judged  judged again  unjudged\nconfig                                                 \nbase                480     480            17         0\nbase-repeat         240     240             8         2\nbudget-1500         240     240             8         0\nbudget-6000         240     240             8         1\nclosed              240     240             1         0\nfix-ignored         480     480            17         0\nfixed               240     240             8         0\noracle              240     240             9         1\nreverse             240     240            10         1\nrewrite-rerank      480     480            16         2\njudged again: with 6,000 new tokens, once\nunjudged: still no verdict on correctness (left out of accuracy)\n"
+          "text": "8 base judgments with 3,000 new tokens replayed from the judge cache: identical\n4 base judgments with 6,000 new tokens replayed from the judge cache: identical\n             answers  judged  judged again  unjudged\nconfig                                              \nclosed           240     240             1         0\nbase             240     240             9         1\noracle           240     240             8         1\nbase-repeat      240     240            11         0\njudged again: with 6,000 new tokens, once\nunjudged: still no verdict on correctness (left out of accuracy)\n"
         }
       ]
     },
     "rag-judge-validation": {
-      "code_fingerprint": "sha256:b961bca67b9044441b0a4a3b08e56b507c53beaee10bf10a1453e49d1db68cbe",
+      "code_fingerprint": "sha256:b7a6f37cdfe6d3d0fb34a8c8ba3d12f73474934808b0534249b2fdbfa2389a08",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4 of 100 calibration answers abstain (decided by rule); the judge grades the others\n  3 without a verdict judged again with 6,000 new tokens\n"
+          "text": "10 of 100 calibration answers are decided by rule on correct (4 abstain,\n  6 answer an unanswerable question); 3 without a verdict judged again with 6,000 new tokens\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " verdict   against  pairs         agreement             kappa\n correct  frontier    100 0.94 [0.89, 0.98] 0.83 [0.68, 0.95]\n correct    second    100 0.89 [0.83, 0.95] 0.71 [0.55, 0.85]\n correct consensus     93 0.95 [0.89, 0.99] 0.85 [0.70, 0.97]\nfaithful  frontier    100 0.94 [0.89, 0.98] 0.81 [0.64, 0.94]\nfaithful    second    100 0.93 [0.88, 0.98] 0.79 [0.62, 0.92]\nfaithful consensus     95 0.96 [0.92, 0.99] 0.87 [0.71, 0.97]\nunjudged (left out): 0 of 100 calibration pairs\nthe two labellers on correct: kappa 0.81\nthe two labellers on faithful: kappa 0.85\nthe old judge (Qwen3.5-4B, thinking off) on correct: agreement 0.81, kappa 0.33 [0.11, 0.56];\n  it passes 14 of the 21 answers the labellers call wrong\nC0 on correct against the consensus: agreement 0.95, kappa interval from 0.70\n  passes (>= 0.8, above 0.4)\nC0 on faithful against the consensus: agreement 0.96, kappa interval from 0.71\n  passes (>= 0.8, above 0.4)\nthe calibration answers come from the earlier generator, Qwen3-4B\n"
+          "text": " verdict   against  pairs         agreement             kappa\n correct  frontier    100 0.94 [0.89, 0.98] 0.83 [0.68, 0.95]\n correct    second    100 0.89 [0.83, 0.95] 0.71 [0.55, 0.85]\n correct consensus     93 0.95 [0.89, 0.99] 0.85 [0.70, 0.97]\nfaithful  frontier    100 0.94 [0.89, 0.98] 0.81 [0.64, 0.94]\nfaithful    second    100 0.93 [0.88, 0.98] 0.79 [0.62, 0.92]\nfaithful consensus     95 0.96 [0.92, 0.99] 0.87 [0.71, 0.97]\nunjudged (left out): 0 of 100 calibration pairs\nthe two labelers on correct: kappa 0.81\nthe two labelers on faithful: kappa 0.85\nthe old judge (Qwen3.5-4B, thinking off) on correct: agreement 0.81, kappa 0.33 [0.11, 0.56];\n  it passes 14 of the 21 answers the labelers call wrong\njudge against the consensus on correct: agreement 0.95, kappa interval from 0.70:\n  accepted (agreement >= 0.8, kappa interval above 0.4)\njudge against the consensus on faithful: agreement 0.96, kappa interval from 0.71:\n  accepted (agreement >= 0.8, kappa interval above 0.4)\nthe calibration answers come from the earlier generator, Qwen3-4B\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "judged again at concurrency 16 (first run 8): 5 of 54 answers changed a verdict\n  (of 60 drawn, 6 abstentions are decided by rule and 0 were judged again with more tokens)\n"
+          "text": "judged again at concurrency 16 (first run 8): 2 of 51 answers changed a verdict\n  (of 60 drawn, 6 abstentions are decided by rule and 3 were judged again with more tokens)\n"
+        }
+      ]
+    },
+    "rag-load-array": {
+      "code_fingerprint": "sha256:af59bb25f6e34a2d04b27beccb3973de3dc7fd10b897edbfaad07685dceb4e7f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "question: In the book's legacy PyTorch helper `load_array`, how does the returned `DataLoader`\n    decide whether to shuffle the data?\nreference: It passes `shuffle=is_train`, so shuffling is enabled exactly when `is_train` is\n    true.\n\nclosed, 0 passages; judge: correct False\n    The `load_array` function in the legacy PyTorch helper does not automatically shuffle the\n    data by default. Instead, it relies on the `shuffle` argument passed to the\n    `torch.utils.data.DataLoader` constructor when the dataset is created. If the `shuffle`\n    parameter is set to `True`, the returned `DataLoader` will randomize the order of the data\n    batches during each epoch. Otherwise, if `shuffle` is `False` or not specified, the data\n    will be returned in the original order defined by the dataset.\n\nbase, 5 passages; judge: correct True, faithful True, supported True\n    The `load_array` function accepts an optional argument `is_train` which defaults to `True`.\n    It passes this `is_train` value directly to the `DataLoader` constructor as the `shuffle`\n    parameter. Consequently, the data is shuffled if `is_train` is `True` and remains in its\n    original order if `is_train` is `False`. This behavior is defined in the function signature\n    and implementation within the provided code [1].\n"
         }
       ]
     },
     "rag-baseline-report": {
-      "code_fingerprint": "sha256:5b61f87bd0a3bdf5b56199cf8a0c34e3bae4d076d948ba105dc1125e093791d6",
+      "code_fingerprint": "sha256:c684067af5b193ccd5ab0a52a2892a67390dfcf5c96164409df3cc5eb772d26c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.941, 0.991]   0.968 [0.941, 0.991]\ncov@3000                                 n/a   0.982 [0.957, 1.000]   0.982 [0.957, 1.000]\naccuracy                0.300 [0.234, 0.363]   0.892 [0.849, 0.927]   0.921 [0.891, 0.948]\nfaithful                                 n/a   0.917 [0.876, 0.952]   0.892 [0.847, 0.934]\ncite_precision                           n/a   0.719 [0.667, 0.767]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.849 [0.803, 0.892]   0.914 [0.874, 0.950]\nsupported                                n/a   0.817 [0.767, 0.862]   0.824 [0.770, 0.878]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.900 [0.750, 1.000]+  0.850 [0.700, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.018 [0.004, 0.037]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 0, oracle 1, base-repeat 2\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.592 [+0.526, +0.655]\n     oracle - base                       all +0.029 [-0.016, +0.078]\n     oracle - base                answerable +0.037 [-0.013, +0.088]\n     base - closed book-specific, answerable +0.786 [+0.710, +0.858]\nbase-repeat - base  all (other batches only) -0.004 [-0.026, +0.018]\nbook-specific answerable questions (145): closed book 0.117 [0.062, 0.183],\n  base 0.903 [0.852, 0.948]\nbase accuracy, a relevant chunk in the context (213): 0.911 [0.866, 0.948]\nbase accuracy, no relevant chunk in the context (7): 0.286 [0.000, 0.571]+\nbase accuracy, closed-book arm correct (62): 0.871 [0.774, 0.952]+\n"
+          "text": "                                      closed                   base                 oracle\nrecall@5                                 n/a   0.968 [0.942, 0.990]                    n/a\ncov@3000                                 n/a   0.986 [0.969, 1.000]                    n/a\naccuracy                0.300 [0.234, 0.363]   0.891 [0.845, 0.931]   0.925 [0.897, 0.950]\nfaithful                                 n/a   0.899 [0.858, 0.937]   0.891 [0.846, 0.933]\ncite_precision                           n/a   0.716 [0.663, 0.766]   1.000 [1.000, 1.000]\ncite_recall                              n/a   0.879 [0.841, 0.913]   0.914 [0.874, 0.950]\nsupported                                n/a   0.835 [0.790, 0.877]   0.828 [0.770, 0.884]\nabstain, unanswerable  0.500 [0.300, 0.700]+  0.950 [0.850, 1.000]+  0.900 [0.750, 1.000]+\nabstain, answerable     0.145 [0.095, 0.202]   0.009 [0.000, 0.024]   0.000 [0.000, 0.000]\nunjudged, left out of accuracy: closed 0, base 1, oracle 1, base-repeat 0\n        difference                 questions       accuracy [95% CI]\n     base - closed                       all +0.594 [+0.532, +0.656]\n     oracle - base                       all +0.034 [-0.015, +0.084]\n     oracle - base                answerable +0.041 [-0.013, +0.096]\n     base - closed book-specific, answerable +0.772 [+0.702, +0.840]\nbase-repeat - base  all (other batches only) -0.004 [-0.028, +0.017]\noracle - base on faithful: -0.009 [-0.059, +0.044]\nbook-specific answerable questions (145): closed book 0.117 [0.062, 0.183],\n  base 0.890 [0.840, 0.936]\nbase accuracy, a relevant chunk in the context (213): 0.901 [0.852, 0.942]\nbase accuracy, no relevant chunk in the context (7): 0.429 [0.143, 0.714]+\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "base accuracy, closed-book arm wrong (158): 0.899 [0.848, 0.944]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (query embeddings batched differently); with the same context 108 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
-        }
-      ]
-    },
-    "rag-opening-item": {
-      "code_fingerprint": "sha256:dfd6cc5eaac11c2a4ce00ece1b7f3054cf215f716991af517614e9c62003dd01",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "8 base answers qualify: dev-0008 (ignored), dev-0033 (unsupported), dev-0100 (ignored), dev-0133\n    (ignored), dev-0150 (ignored), dev-0152 (ignored), dev-0156 (ignored), dev-0209 (ignored)\n\ndev-0008 (single): In PyTorch, what happens to modules that are placed in a plain Python list\n    rather than in a registered container such as `nn.Sequential` or `nn.ModuleList`?\nreference: They stay unregistered, and no warning is given.\nkey facts: ['modules in a plain list stay unregistered', 'no warning is issued']\nfirst relevant chunk at rank 1; context:\n  [1] chapter_builders-guide/model-construction#012 (relevant)\n  [2] chapter_builders-guide/model-construction#004\n  [3] chapter_builders-guide/model-construction#005\n  [4] chapter_builders-guide/model-construction#001\n  [5] chapter_builders-guide/model-construction#002\nanswer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the forward pass may still execute if the code\n    explicitly loops over the list, the optimizer will not receive their parameters for gradient\n    updates [3]. This results in a \"partly registered\" model where only the weights of\n    registered outer layers change during training, causing the model to learn incorrectly or\n    fail on GPU devices [3].\nverdicts: {'correct': False, 'faithful': True, 'supported': True}\nclass: ignored, by the rule and by the second labeller\n"
-        }
-      ]
-    },
-    "rag-coverage": {
-      "code_fingerprint": "sha256:74fda21813e79858255063f02f23b7a2f19bf6c53af922707eb404841c184108",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "220 answerable dev questions, hybrid retrieval\n                   sections          fixed 256/64         fixed - sections\ncov@T                                                                     \n1000   0.905 [0.866, 0.940]  0.836 [0.786, 0.882]  -0.068 [-0.114, -0.023]\n2000   0.968 [0.942, 0.990]  0.941 [0.915, 0.965]  -0.027 [-0.059, +0.005]\n3000   0.982 [0.957, 1.000]  0.973 [0.954, 0.990]  -0.009 [-0.035, +0.022]\n"
-        }
-      ]
-    },
-    "rag-stages": {
-      "code_fingerprint": "sha256:556f63d35f3d14f0b73ec9be519db6cbd47fbc5d00cd88829ef1b97663faa78b",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " configuration             accuracy             faithful       cite precision\n         fixed 0.817 [0.766, 0.862] 0.850 [0.794, 0.900] 0.645 [0.596, 0.690]\nrewrite-rerank 0.899 [0.858, 0.936] 0.913 [0.873, 0.951] 0.703 [0.663, 0.742]\n       reverse 0.904 [0.862, 0.938] 0.918 [0.880, 0.952] 0.758 [0.703, 0.811]\n   budget-1500 0.858 [0.816, 0.897] 0.897 [0.857, 0.935] 0.721 [0.670, 0.767]\n   budget-6000 0.900 [0.860, 0.935] 0.878 [0.824, 0.925] 0.706 [0.658, 0.752]\n configuration         accuracy - base prompt tokens s per answer\n         fixed -0.075 [-0.116, -0.035]         1,842         1.11\nrewrite-rerank +0.004 [-0.028, +0.038]         1,953         1.87\n       reverse +0.008 [-0.020, +0.037]         1,933         1.14\n   budget-1500 -0.033 [-0.059, -0.005]         1,529         1.08\n   budget-6000 +0.008 [-0.029, +0.051]         6,336         2.59\nintervals excluding 0: ['fixed', 'budget-1500']\nthe largest dev gain: reverse\n"
-        }
-      ]
-    },
-    "rag-failures": {
-      "code_fingerprint": "sha256:8018c81d64cd3f40f2de5288e9f16ab4bec6cbbdfd22cdc7ba0a5e967cfaf07f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "26 of 240 judged base answers on dev are not correct (0 unjudged, left out)\n               count              share\nnot_retrieved    0.0  0.00 [0.00, 0.00]\nranked_low       5.0  0.19 [0.04, 0.35]\nignored         12.0  0.46 [0.27, 0.65]\nunsupported      6.0  0.23 [0.08, 0.38]\nfalse_answer     2.0  0.08 [0.00, 0.19]\nfalse_abstain    1.0  0.04 [0.00, 0.12]\nthe largest class: ignored (the intervals overlap, next unsupported)\nits fix, written down before counting: {'order': 'edges', 'prompt': 'quote', 'max_new_tokens': 500}\n\n[ignored] dev-0000 (single): On unified-memory machines, how does the book say large mixture-of-\n    experts models compare in fitting and decoding speed to dense models with about the same\n    total size?\n  answer: On unified-memory machines, large models fit but decode slowly due to the lower\n    bandwidth of system RAM compared to VRAM [1]. However, a mixture-of-experts (MoE) model runs\n    only a few of its expert networks for each token, so it reads only its active parameters\n    [1]. Consequently, an MoE model decode\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ignored] dev-0008 (single): In PyTorch, what happens to modules that are placed in a plain\n    Python list rather than in a registered container such as `nn.Sequential` or\n    `nn.ModuleList`?\n  answer: Modules placed in a plain Python list are not registered by the framework because the\n    list itself is not a module [2]. Consequently, methods like `net.parameters()`,\n    `net.to(device)`, and `net.state_dict()` will fail to find or manage these layers, leaving\n    them untrained or unsaved [2]. While the fo\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': True, 'supported': True}\n\n[ranked_low] dev-0014 (single): When the book trains its fully convolutional network for\n    semantic segmentation, on what basis is the accuracy computed?\n  answer: The provided passages do not contain information about the specific basis on which\n    accuracy is computed when training the fully convolutional network. While the text explains\n    that semantic segmentation involves classifying images at the pixel level [2] and that the\n    input image and label correspond o\n  relevant chunk in the context: False\n  verdicts: {'correct': False, 'faithful': True, 'supported': None}\n\n[unsupported] dev-0021 (single): What two weights make up the hand-designed vertical edge\n    detector that subtracts each pixel's right-hand neighbor in a grayscale image?\n  answer: The hand-designed vertical edge detector uses the weights $(1, -1)$ [1]. This kernel\n    subtracts the value of each pixel from its right-hand neighbor to detect edges [1].\n    Specifically, it computes the difference between horizontally adjacent pixels, where the\n    first weight is 1 and the second is -1 [3]\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\n[unsupported] dev-0033 (single): In the masked diffusion variational lower bound, what\n    coefficient multiplies the expectation of the summed negative log-likelihood over positions\n    that remain masked at step t?\n  answer: Under the linear schedule, the coefficient that multiplies the negative log-likelihood\n    is $1/t$ [2]. This weight $w_t$ is derived from the formula $(1 - \\bar{\\alpha}_t)/(1 -\n    \\bar{\\alpha}_t - (1 - \\bar{\\alpha}_{t-1}))$, which simplifies to $1/t$ when $\\bar{\\alpha}_t\n    = 1 - t/T$ [2]. The text explicitl\n  relevant chunk in the context: True\n  verdicts: {'correct': False, 'faithful': False, 'supported': False}\n\nthe agent (claude-opus-5.5) against the rule on 31 cards: agreement 0.58\nagent          correct  ignored  ranked_low  unsupported\nrule                                                    \ncorrect              5        0           0            0\nfalse_abstain        0        0           1            0\nfalse_answer         2        0           0            0\nignored              4        7           1            0\nranked_low           0        0           5            0\nunsupported          3        1           1            1\n"
-        }
-      ]
-    },
-    "rag-fix": {
-      "code_fingerprint": "sha256:94c85ba09ecd622f789ae5ba46c750c7a7b8b54451dd2c50f12c698ff3dc8475",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "test was read with the fix fix-ignored and the stage rewrite-rerank\nwith the verdicts as they stand now the largest dev gain is reverse;\n  test was read once, with rewrite-rerank, and is not read again\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "split  configuration         accuracy - base   cite precision - base\n  dev    fix-ignored -0.083 [-0.122, -0.045] -0.055 [-0.086, -0.025]\n  dev rewrite-rerank +0.004 [-0.028, +0.038] -0.021 [-0.052, +0.012]\n test    fix-ignored -0.075 [-0.121, -0.030] -0.027 [-0.075, +0.022]\n test rewrite-rerank -0.004 [-0.045, +0.037] -0.014 [-0.046, +0.016]\n               base  fix-ignored\ncls                             \nnot_retrieved     0            0\nranked_low        5            4\nignored          12           19\nunsupported       6            7\nfalse_answer      2           15\nfalse_abstain     1            1\ncorrect         214          194\nunjudged          0            0\n"
-        }
-      ]
-    },
-    "rag-failure-plot": {
-      "code_fingerprint": "sha256:c3bfbdbe3b93288641144291f8f938c9c30a7e3902f17644e4ab643ac9bc5bd6",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "rag/rag-failure-plot-1.svg",
-          "bytes": 64380,
-          "sha256": "sha256:a773ab96ad4f5e3d2d1177e2f949f0617f431456822ee0a0abc1694afebbc5dc"
-        }
-      ]
-    },
-    "rag-marginal": {
-      "code_fingerprint": "sha256:6d6564ed6abdf20a0fc847d0652b3b8b2bbc257a3430a0e81d4c42bd09373205",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "gradient of log p(y | x) - (posterior - prior): 5.6e-17\n k  p - p_k  bound\n 1   0.2218 0.3734\n 2   0.1346 0.2504\n 3   0.1079 0.1565\n 4   0.0462 0.0768\n 5   0.0278 0.0372\n 6   0.0175 0.0192\n 7   0.0044 0.0060\n 8   0.0000 0.0000\nthree documents, three tokens: p_S 0.0586, p_T 0.0696; one document: both 0.0556\ntwo documents, two tokens:\n  p_S = 0.6 * 0.9 * 0.2 + 0.4 * 0.1 * 0.8 = 0.140\n  p_T = (0.6 * 0.9 + 0.4 * 0.1)(0.6 * 0.2 + 0.4 * 0.8) = 0.2552\n"
-        }
-      ]
-    },
-    "rag-cost": {
-      "code_fingerprint": "sha256:d1b9ab8509d3fd4554a3982ec1dd1cd3541b9eb80ee74fe845601b26d80c4d5e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "                prompt_tokens  new_tokens  s_per_answer\nconfig                                                 \nbase                  1933.44      110.41          1.28\nbase-repeat           1933.44      111.10          1.19\nclosed                  89.96      100.11          0.95\noracle                 627.81      101.93          0.96\nbudget-1500           1528.92      109.75          1.08\nbudget-6000           6336.41      114.88          2.59\nfixed                 1841.95      107.90          1.11\nreverse               1933.44      111.47          1.14\nrewrite-rerank        1952.95      112.00          1.87\nfix-ignored           1971.44      220.57          2.12\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen/Qwen3-Embedding-0.6B@97b0c614be4d: Qwen3Model\n    torch.bfloat16, cuda, attention sdpa\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Qwen/Qwen3-Reranker-0.6B@e61197ed4502: Qwen3ForCausalLM, stop tokens [151645, 151643]\n0 missing keys; unexpected keys: none\nkernels: attention sdpa\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "one question at a time: retrieval 29 ms (50 questions), reranking 50 chunks 525 ms (50 questions)\n"
+          "text": "base accuracy, closed-book arm correct (62): 0.934 [0.869, 0.984]+\nbase accuracy, closed-book arm wrong (158): 0.867 [0.806, 0.923]\nbase and base-repeat (same questions, other batches): 0 of 240 contexts differ\n  (the query embeddings were batched differently too);\n  with the same context 95 of 240 answers differ\n* fewer than 100 questions (documents resampled)\n+ fewer than 30 documents: questions resampled, an interval that is likely too narrow\n"
         }
       ]
     }

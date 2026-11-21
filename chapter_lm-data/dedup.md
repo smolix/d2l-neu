@@ -548,7 +548,7 @@ def minhash_signature(shingle_list, k=128, seed=0xD2):
     return d2l._minhash_rows(x, a, c)  # exact mulmod: 32-bit halves
 
 #@save
-MINHASH_FIXTURE = (  # five strings whose signatures assignment A3 pins
+MINHASH_FIXTURE = (  # five strings whose signatures the library pins
     'The quick brown fox jumps over the lazy dog.',
     'Deduplication keeps one copy of every document in the corpus.',
     'Café crème: une boisson chaude, servie le matin avec du pain.',

@@ -926,8 +926,8 @@ def label_part(name, base, urls, tok):
     part = pd.DataFrame(dict(row=rows.row.to_numpy(), qwen_probs=list(P)))
     part = part.assign(**PROVENANCE)  # checked when the parts are merged
     if name == 'edu-label-pilot':
-        # a server batches concurrent requests, which changes the bits (by
-        # up to about 0.08 here, 2026-11-21), so each server takes one at a
+        # a server batches concurrent requests, which changes the order of
+        # the additions and so the bits, so each server takes one at a
         # time; then 32 prompts across the length range give the same bits
         # on the last server, in reverse order
         order = np.argsort(rows.prompt.str.len().to_numpy(), kind='stable')
@@ -1663,12 +1663,29 @@ say(f'the two protocols disagree on {np.mean(q1 != q2):.4f} of '
     f'ceiling F1 {ceil:.3f} [{ceil_lo:.3f}, {ceil_hi:.3f}]')
 p_q, p_l = (np.mean(ANNOT[c].to_numpy() >= THRESH_LABEL)
             for c in ('qwen_score', 'llama_score'))
-say(f'equal symmetric noise implies equal shares; Qwen3.8-27B {p_q:.3f} '
-    f'and Llama-3-70B {p_l:.3f} differ in scale, so their disagreement '
-    'does not estimate eta')
+say('equal symmetric noise implies equal shares of positives; '
+    f'Qwen3.8-27B {p_q:.3f} against Llama-3-70B {p_l:.3f}; on the test '
+    f'rows, digit protocol {q1.mean():.4f} against justification first '
+    f'{q2.mean():.4f}')
+up, down = int((q1 & ~q2).sum()), int((~q1 & q2).sum())
+n_dis = up + down  # two-sided binomial test of an even split
+p_split = min(1.0, 2 * sum(math.comb(n_dis, k) for k in range(
+    min(up, down) + 1)) / 2**n_dis)
+say(f'of the {n_dis} disagreements, {up} have digits >= 3 and justification '
+    f'first < 3, {down} the reverse: an even split gives one this uneven '
+    f'with probability {p_split:.4f}')
+pp_f1 = lambda i: 2 * np.sum(q1[i] & q2[i]) / (q1[i].sum() + q2[i].sum())
+rng2 = np.random.default_rng(1)
+pp_lo, pp_hi = np.quantile([pp_f1(rng2.integers(len(q1), size=len(q1)))
+                            for _ in range(1000)], [0.025, 0.975])
+PP_F1 = pp_f1(np.arange(len(q1)))
+say(f'one protocol scored against the other (no noise model): F1 2 x '
+    f'{int(np.sum(q1 & q2))} / ({int(q1.sum())} + {int(q2.sum())}) = '
+    f'{PP_F1:.3f} [{pp_lo:.3f}, {pp_hi:.3f}]')
 f1s = CLF.set_index('classifier')[f'F1 {TRAIN_LABEL}']
 say('measured test F1:', ', '.join(f'{m} {v:.3f}' for m, v in f1s.items()),
-    '| all below the ceiling:', bool((f1s < ceil).all()))
+    '| all below the symmetric-model ceiling:', bool((f1s < ceil).all()),
+    '| all below the protocol F1:', bool((f1s < PP_F1).all()))
 R['ceiling'] = dict(identity_gap=gap, simulation=rows,
                     eta=[eta, eta_lo, eta_hi], f1=[ceil, ceil_lo, ceil_hi],
                     second='justification first', below=bool((f1s < ceil)
@@ -2102,6 +2119,9 @@ else:
         print(textwrap.fill(r.text[:300].replace('\n', ' ') + ' …', 100,
                             initial_indent='  ', subsequent_indent='  '))
     print('\n' + ATTRIBUTION)
+    say(f'judge replies: median {labels.tokens.median():.0f} tokens, largest '
+        f'{labels.tokens.max()}, cut off at max_tokens '
+        f'{(labels.finish == "length").sum()} of {len(labels)}')
     R['review'] = PREC.to_dict('records')
     R['review_judge'] = dict(labeller=REVIEW.labeller.iloc[0],
                              tokens_median=float(labels.tokens.median()),

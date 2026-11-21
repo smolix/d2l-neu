@@ -5,6 +5,16 @@ revisions (chapter 20 specification, part 1.4, "Experiment slices").
 Sources built here (one subcommand each; more join as their sections are
 finished):
 
+  fineweb-ref lm-data-fineweb-ref-v1.parquet, 20.1's reference text: the
+              FineWeb rows (CC-MAIN-2025-05, data/CC-MAIN-2025-05/
+              000_00000.parquet at the pinned revision) whose file_path is
+              the pinned WARC file and whose id is a response record in the
+              pinned 256 MiB range. Columns id, url, date, text,
+              language_score, token_count; sorted by id; zstd parquet. The
+              build checks that the file's rows are complete: they are
+              contiguous, followed by another file's rows in the same shard,
+              and absent from the next shard.
+
   fw2-slice   lm-data-fw2-slice-v1.tar, the ten-language tokenizer slice of
               20.6: slice.parquet, hindi.parquet, meta.json, README.md.
 
@@ -36,6 +46,7 @@ lm-data-fw2-slice-v1
 """
 
 import argparse
+import hashlib
 import io
 import json
 import os
@@ -194,14 +205,91 @@ def fw2_slice(out_dir):
     print('wrote', path, os.path.getsize(path), flush=True)
 
 
+FW_FILE = 'data/CC-MAIN-2025-05/000_00000.parquet'
+FW_COLS = ('id', 'url', 'date', 'text', 'language_score', 'token_count')
+
+
+def fineweb_ref(out_dir):
+    """lm-data-fineweb-ref-v1.parquet (see the module docstring)."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    from huggingface_hub import HfFileSystem, hf_hub_download
+    rev = d2l.LM_DATA_SOURCES['fineweb'][2]
+    out_dir = os.path.abspath(out_dir)
+    # The library's data paths are ../data/lm/..., relative to a notebook's
+    # folder; from tools/ they name this checkout's data/lm.
+    os.chdir(os.path.join(ROOT, 'tools'))
+    with open(d2l.download_keyed('lm-cc-warc-256m-v1')) as f:
+        pin = json.load(f)
+    want = pin['fineweb_file_path']
+    warc = d2l.fetch_warc_range()
+    resp = {r.id: r for r in d2l.iter_warc(warc)}
+    print('responses in the range', len(resp), flush=True)
+    pf = pq.ParquetFile(hf_hub_download('HuggingFaceFW/fineweb', FW_FILE,
+                                        revision=rev, repo_type='dataset'))
+    rows, pos, first, last, after = [], 0, None, None, None
+    for g in range(pf.metadata.num_row_groups):
+        t = pf.read_row_group(g, columns=[*FW_COLS, 'file_path']).to_pylist()
+        for i, r in enumerate(t):
+            if r['file_path'] == want:
+                if last is not None and last != pos + i - 1:
+                    raise AssertionError('the file\'s rows are not contiguous')
+                first = pos + i if first is None else first
+                last = pos + i
+                if r['id'] in resp:
+                    rows.append(r)
+            elif last is not None and after is None:
+                after = (pos + i, r['file_path'])
+        pos += len(t)
+        if after is not None:
+            break
+    if first is None or after is None:
+        raise AssertionError('the file\'s rows do not end inside the shard')
+    print(f'{want}: rows {first}-{last} of {FW_FILE}, followed by '
+          f'{after[1]} at row {after[0]}', flush=True)
+    fs = HfFileSystem()
+    nxt = FW_FILE.replace('000_00000', '000_00001')
+    with fs.open(f'datasets/HuggingFaceFW/fineweb@{rev}/{nxt}', 'rb',
+                 block_size=8 << 20) as f:
+        paths = set(pq.ParquetFile(f).read(columns=['file_path'])
+                    .column('file_path').to_pylist())
+    if want in paths:
+        raise AssertionError(f'{nxt} also holds rows of {want}')
+    print(f'{nxt}: no row of the file ({len(paths)} other files)',
+          flush=True)
+    bad = [(r['id'], k) for r in rows for k in ('url', 'date')
+           if r[k] != getattr(resp[r['id']], k)]
+    if bad:
+        raise AssertionError(f'url/date differ from the WARC: {bad[:5]}')
+    rows.sort(key=lambda r: r['id'])
+    schema = pa.schema([('id', pa.string()), ('url', pa.string()),
+                        ('date', pa.string()), ('text', pa.string()),
+                        ('language_score', pa.float64()),
+                        ('token_count', pa.int64())])
+    table = pa.Table.from_pylist([{k: r[k] for k in FW_COLS} for r in rows],
+                                 schema=schema)
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, 'lm-data-fineweb-ref-v1.parquet')
+    pq.write_table(table, path + '.part', compression='zstd',
+                   compression_level=3, row_group_size=65536,
+                   use_dictionary=False, write_statistics=False)
+    os.replace(path + '.part', path)
+    print(json.dumps(dict(path=path, rows=len(rows), file_rows=last - first
+                          + 1, bytes=os.path.getsize(path),
+                          sha1=hashlib.sha1(open(path, 'rb').read())
+                          .hexdigest())), flush=True)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    ap.add_argument('source', choices=['fw2-slice'])
+    ap.add_argument('source', choices=['fw2-slice', 'fineweb-ref'])
     ap.add_argument('--out', default=os.path.join(ROOT, 'data', 'lm',
                                                   'build-sources-v1'))
     a = ap.parse_args(argv)
     if a.source == 'fw2-slice':
         fw2_slice(a.out)
+    elif a.source == 'fineweb-ref':
+        fineweb_ref(a.out)
 
 
 if __name__ == '__main__':

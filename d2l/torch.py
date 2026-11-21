@@ -8785,6 +8785,15 @@ d2l.DATA_HUB['lm-cc-warc-256m-v1'] = (  # pin only: URLs, sizes, SHA-256s
 d2l.DATA_HUB['lid.176.ftz'] = (  # fastText, 176 languages, CC BY-SA 3.0
     'https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz',
     '86d1b630ba55a5040231eda9fe24a7befdc411f2')
+d2l.DATA_HUB['lm-data-fineweb-ref-v1'] = (  # FineWeb rows of the range, ODC-By
+    d2l.LM_DATA_URL + 'lm-data-fineweb-ref-v1.parquet',
+    '45d4bbfee8c77d9f7d8955de9d03933254c77aaf')
+d2l.DATA_HUB['lm-c0-docs-v1'] = (  # c0 rows: ids, offsets, hashes; no text
+    d2l.LM_DATA_URL + 'lm-c0-docs-v1.jsonl.gz',
+    '90120ce99b35b51e0e77da6f2c94f2a5f3e5f24c')
+d2l.DATA_HUB['lm-data-crawl-results-v1'] = (  # the section's measured values
+    d2l.LM_DATA_URL + 'lm-data-crawl-results-v1.json',
+    '92c91643a63f00e8e1cd666cad58e22c18eeb43c')
 
 LM_DATA_SOURCES = {  # name: (kind, Hub repository, revision, licence)
     'fineweb': ('dataset', 'HuggingFaceFW/fineweb',

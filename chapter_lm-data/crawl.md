@@ -73,6 +73,7 @@ import multiprocessing
 import os
 import pathlib
 import re
+import textwrap
 import unicodedata
 import warnings
 import pandas as pd
@@ -99,8 +100,6 @@ print(f'CRAWL_MIB={CRAWL_MIB}, LID_MIN={LID_MIN}, N_WORKERS={N_WORKERS}, '
 
 <!-- Prose: the registry; the crawl range is a pin (URLs and hashes), never a copy of Common Crawl bytes. -->
 
-<!-- Pending registrations (cells step, 2026-11-15): `lm-data-fineweb-ref-v1` (builder, W2; read by the opening, fineweb-agree and lid cells), `lm-c0-docs-v1` and `lm-data-crawl-results-v1` (regeneration `c0,crawl-results`, W6) join this cell when uploaded; until then a normal build stops at the opening cell with a KeyError. -->
-
 ```{.python .input #crawl-data-hub}
 %%tab pytorch
 #@save
@@ -110,6 +109,15 @@ d2l.DATA_HUB['lm-cc-warc-256m-v1'] = (  # pin only: URLs, sizes, SHA-256s
 d2l.DATA_HUB['lid.176.ftz'] = (  # fastText, 176 languages, CC BY-SA 3.0
     'https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz',
     '86d1b630ba55a5040231eda9fe24a7befdc411f2')
+d2l.DATA_HUB['lm-data-fineweb-ref-v1'] = (  # FineWeb rows of the range, ODC-By
+    d2l.LM_DATA_URL + 'lm-data-fineweb-ref-v1.parquet',
+    '45d4bbfee8c77d9f7d8955de9d03933254c77aaf')
+d2l.DATA_HUB['lm-c0-docs-v1'] = (  # c0 rows: ids, offsets, hashes; no text
+    d2l.LM_DATA_URL + 'lm-c0-docs-v1.jsonl.gz',
+    '90120ce99b35b51e0e77da6f2c94f2a5f3e5f24c')
+d2l.DATA_HUB['lm-data-crawl-results-v1'] = (  # the section's measured values
+    d2l.LM_DATA_URL + 'lm-data-crawl-results-v1.json',
+    '92c91643a63f00e8e1cd666cad58e22c18eeb43c')
 ```
 
 ```{.python .input #crawl-sources}
@@ -223,7 +231,8 @@ path = d2l.fetch_warc_range(n_bytes=16 * 2**20)  # block 0, SHA-256 checked
 head_stats = {}
 head = list(d2l.iter_warc(path, n_bytes=4 * 2**20, types=None,
                           stats=head_stats))
-print('records in the first 4 MiB:', head_stats)
+print('records in the first 4 MiB:',
+      ', '.join(f'{k} {v}' for k, v in head_stats.items()))
 fineweb = pd.read_parquet(d2l.download_keyed('lm-data-fineweb-ref-v1')
                           ).set_index('id')
 
@@ -245,9 +254,10 @@ if found is None:
     found, where = (pick(d2l.iter_warc(path, n_bytes=16 * 2**20)),
                     'the first 16 MiB block')
 record, page, ours_text = found
-print(f'rule: first HTTP-200 text/html response with <pre> or <table>, >= 2,000 '
-      f'characters of trafilatura text and a FineWeb row; found in {where}')
-print(f'record {record.id}, {record.url}\n')
+print(f'rule: first HTTP-200 text/html response with <pre> or <table>,\n'
+      f'  >= 2,000 characters of trafilatura text and a FineWeb row; found in '
+      f'{where}')
+print(f'record {record.id}\n  {record.url}\n')
 print(f'(1) HTML: {len(record.body):,} bytes; first 25 elements of <body>:')
 print('\n'.join(d2l.html_skeleton(page, 25)))
 wet_record = next(r for r in d2l.iter_warc(d2l.fetch_warc_range(which='wet'),
@@ -258,15 +268,18 @@ short = [len(l.strip()) < 30 for l in lines]
 run = max(len(list(g)) for k, g in itertools.groupby(short) if k) \
     if any(short) else 0
 print(f'\n(2) WET text: {sum(map(len, lines)):,} characters in {len(lines)} '
-      f'lines, {np.mean(short):.0%} of them under 30 characters, longest run '
-      f'of short lines (a menu signature): {run}')
+      f'lines, {np.mean(short):.0%} of them under 30 characters;\n'
+      f'  longest run of short lines (a menu signature): {run}')
 fw = fineweb.loc[record.id, 'text']
 mask = lambda t: re.sub(r'\S+@\S+|\b(?:\d{1,3}\.){3}\d{1,3}\b', '<PII>',
                         t or '')  # FineWeb replaced emails and IPv4s too
 f1 = d2l.char_ngram_f1(mask(ours_text), mask(fw))[2]
 print(f'\n(3) FineWeb text: {len(fw):,} characters; our trafilatura text: '
-      f'{len(ours_text):,} characters, character-5-gram F1 against FineWeb {f1:.2f}')
-print(f'first 300 characters of FineWeb\'s text:\n  {fw[:300]!r}')
+      f'{len(ours_text):,} characters;\n  character-5-gram F1 against FineWeb '
+      f'{f1:.2f}')
+print('first 300 characters of FineWeb\'s text:')
+print(textwrap.fill(repr(fw[:300]), 96, initial_indent='  ',
+                    subsequent_indent='  '))
 print('(text: FineWeb, HuggingFaceFW/fineweb CC-MAIN-2025-05, ODC-By 1.0)')
 ```
 
@@ -290,8 +303,8 @@ mine = [(r.id, r.type, r.offset, r.length, hashlib.sha256(r.body).hexdigest())
         for r in head]
 same = sum(a == b for a, b in zip(mine, theirs))
 print(f'{same}/{len(mine)} records identical (id, type, offset, length, '
-      f'body SHA-256); warcio also yields {len(theirs) - len(mine)} partial '
-      f'record(s) from the cut-off member, which iter_warc counts as '
+      f'body SHA-256);\nwarcio also yields {len(theirs) - len(mine)} partial '
+      f'record(s) from the cut-off member,\n  which iter_warc counts as '
       f'truncated ({head_stats.get("truncated", 0)})')
 assert same == len(mine) and len(theirs) - len(mine) == head_stats.get(
     'truncated', 0)
@@ -319,8 +332,8 @@ by_mime = resp.groupby(resp.mime.fillna('(none)')).agg(
 print(by_mime.sort_values('responses', ascending=False).head(6).to_string())
 per_mib = len(resp) / CRAWL_MIB
 print(f'\n{per_mib:.1f} responses per MiB; extrapolated to the whole '
-      f'1,141,586,184-byte file: about {per_mib * 1141586184 / 2**20:,.0f} '
-      f'responses (extrapolated, assumes the prefix is representative)')
+      f'1,141,586,184-byte file:\n  about {per_mib * 1141586184 / 2**20:,.0f} '
+      f'responses (assumes the prefix is representative)')
 print('\nfirst 12 records (type, offset, compressed length):')
 print(index[['type', 'offset', 'length']].head(12).to_string(index=False))
 ```
@@ -544,7 +557,7 @@ for p in ev:
                          **d2l.structure_recall(p['struct'], p['texts'][m])))
 rec = pd.DataFrame(rows)
 in_c0 = sum(p['c0']['drop'] is None for p in ev)
-print(f'{len(ev):,} pages English by their HTML ({in_c0:,} of them in c0); '
+print(f'{len(ev):,} pages English by their HTML ({in_c0:,} of them in c0);\n'
       'missing or empty output, scored 0: ' + ', '.join(
           f'{m} {sum(not p["texts"][m] for p in ev)}' for m in EXTRACTORS))
 
@@ -659,7 +672,9 @@ for m in ['naive', 'resiliparse', 'trafilatura']:
         lost = [l for l in mask(ref[i]).splitlines()
                 if len(l) >= 40 and d2l._ws(l) not in out]
         if lost:
-            print(f'  {m}: {lost[0][:160]!r}')
+            print(textwrap.fill(f'{m}: {lost[0][:160]!r}', 96,
+                                initial_indent='  ',
+                                subsequent_indent='    '))
             break
 print('(text: FineWeb, HuggingFaceFW/fineweb CC-MAIN-2025-05, ODC-By 1.0)')
 ```
@@ -948,8 +963,10 @@ for k in kinds:
 print(f'{len(d2l.PII_FIXTURE)} fixture strings, '
       f'{sum(t is not None for _, t in d2l.PII_FIXTURE)} with personal data')
 print(pd.DataFrame(table).round(3).to_string(index=False))
-print('false positives:', [s for p, (s, t) in zip(pred, d2l.PII_FIXTURE)
-                           if t is None and any(p.values())])
+print('false positives:')
+for hits, (fixture, kind) in zip(pred, d2l.PII_FIXTURE):
+    if kind is None and any(hits.values()):
+        print(f'  {fixture!r}')
 scrub = [d2l.scrub_pii(unicodedata.normalize('NFC', p['texts']['trafilatura']))
          for p in en]
 assert all(c == p['c0']['pii'] for (_, c), p in zip(scrub, en))
@@ -959,8 +976,8 @@ delta = sum(len(t.encode()) - len(unicodedata.normalize(
     'NFC', p['texts']['trafilatura']).encode())
             for (t, _), p in zip(scrub, en))
 print(f'c0 ({len(en):,} English documents), rule matches (not checked by '
-      f'hand): emails in {n_email} documents, public IP addresses in {n_ip}; '
-      f'{sum(c["email"] for _, c in scrub)} and '
+      f'hand):\n  emails in {n_email} documents, public IP addresses in '
+      f'{n_ip};\n  {sum(c["email"] for _, c in scrub)} and '
       f'{sum(c["ip"] for _, c in scrub)} replaced; UTF-8 bytes changed by '
       f'{delta:+,}')
 ```
@@ -1200,7 +1217,7 @@ last = docs[1].text[-1]
 edited = docs[:1] + [docs[1]._replace(  # one character changed
     text=docs[1].text[:-1] + ('#' if last != '#' else '%'))] + docs[2:]
 print(f'manifest {m.sha256()[:16]}…, after save and load '
-      f'{again.sha256()[:16]}…; docs_hash {d2l.docs_hash(docs)[:16]}…, '
+      f'{again.sha256()[:16]}…;\ndocs_hash {d2l.docs_hash(docs)[:16]}…, '
       f'permuted {d2l.docs_hash([docs[i] for i in order])[:16]}…, '
       f'one byte edited {d2l.docs_hash(edited)[:16]}…')
 assert again.sha256() == m.sha256()
@@ -1273,7 +1290,7 @@ def rebuild_c0(manifest='lm-c0-docs-v1', warc_path=None, *, cache_dir=None,
 rebuilt = d2l.rebuild_c0(d2l.lm_artifact(
     C0_KEY, C0_FILE if 'c0' in RERUN else None), path, workers=N_WORKERS)
 print(f'{len(rebuilt):,} documents rebuilt from the rows and the pinned '
-      f'range, {len(rebuilt.mismatches)} mismatches; docs_hash '
+      f'range, {len(rebuilt.mismatches)} mismatches;\ndocs_hash '
       f'{d2l.docs_hash(rebuilt)[:16]}… (manifest out_hash '
       f'{m.stages[-1]["out_hash"][:16]}…)')
 for x in rebuilt.mismatches[:5]:
@@ -1325,8 +1342,8 @@ else:
         reg = json.load(f)
     a = d2l.json_agreement(results, reg)
     same = reg['c0_manifest'] == results['c0_manifest']
-    print(f'against {R_KEY}: {a["equal"]}/{a["values"]} values equal, '
-          f'largest numeric difference {a["max_diff"]:.2g}; manifest '
+    print(f'against {R_KEY}: {a["equal"]}/{a["values"]} values equal,\n'
+          f'  largest numeric difference {a["max_diff"]:.2g}; manifest '
           f'{"identical" if same else "DIFFERS"}')
     assert same and a['equal'] == a['values']  # deterministic given the pins
 P_KEY, P_FILE = ARTIFACTS['pin']

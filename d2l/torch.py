@@ -10502,6 +10502,15 @@ def doremi_weights(ref_model, proxy_model, domain_batches, steps, cfg,
         trace.append(dict(alpha=alpha.tolist(), excess=excess))
     return np.mean([t['alpha'] for t in trace], 0), trace
 
+d2l.DATA_HUB['lm-rephrase-fwedu-5m-v1'] = (  # FineWeb-Edu chunks and their
+    # wiki-style rewrites by Qwen3.5-2B, 4.7M tokens (20.5); ODC-By
+    d2l.LM_DATA_URL + 'lm-rephrase-fwedu-5m-v1.tar',
+    '1b8598668e0959eeef5f4b0045cc7ed6574880e1')
+d2l.DATA_HUB['lm-data-synth-results-v1'] = (  # the judge's verdicts, the 15
+    # proxy runs of the five arms and three Cosmopedia rows (20.5)
+    d2l.LM_DATA_URL + 'lm-data-synth-results-v1.json',
+    'd27e4094b3936e83efc89b6ccc69760f538c49fd')
+
 REPHRASE_PROMPTS = {  # style -> user prompt; {text} is the source chunk
     'wiki': (
         'Rewrite the following text as a clear, well-organized passage in '

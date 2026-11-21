@@ -73,6 +73,10 @@ NOTEBOOK_TIMEOUTS = {
     # judges 200 removals in one run (about 100 min on four RTX 4090s,
     # 2026-11-21); a normal build reads the results in minutes.
     "chapter_lm-data/quality-filtering.ipynb": 10800,
+    # 20.5's corpus regeneration rewrites 4.7M tokens with Qwen3.5-2B on one
+    # GPU (three parts, about 50 min at batch 96, 2026-11-16 pilot); its judge
+    # and proxy runs follow in a second run; a normal build takes minutes.
+    "chapter_lm-data/synthetic-data.ipynb": 7200,
 }
 
 # Notebooks that must run on a GPU no matter what the keyword scan finds. The
@@ -433,6 +437,9 @@ HEAVY_GPU_NOTEBOOKS = {
     # 19.3 fine-tunes the encoder into an embedder (about 5-7 GiB) next to
     # the released embedder and reranker.
     ("pytorch", "chapter_lm-encoders/text-embeddings.ipynb"): 2,
+    # 20.5 generates with Qwen3.5-2B in bf16 at batch 32 (about 8 GiB) and
+    # trains an 8.1M-parameter proxy (6.8 GiB peak, 2026-11-16 pilot).
+    ("pytorch", "chapter_lm-data/synthetic-data.ipynb"): 2,
 }
 
 

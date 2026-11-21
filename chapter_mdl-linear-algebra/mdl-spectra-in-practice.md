@@ -727,29 +727,6 @@ $2\sqrt{n}$.
 
 ## Exercises
 
-1. **A defective limit.** For $\varepsilon\ge0$, let
-
-   $$
-   \mathbf{A}_\varepsilon=\begin{pmatrix}2&1\\\varepsilon&2\end{pmatrix}.
-   $$
-
-    1. Find the eigenvalues and eigenvectors of $\mathbf{A}_\varepsilon$ for
-       $\varepsilon>0$ and for $\varepsilon=0$. Which multiplicities differ at
-       $\varepsilon=0$?
-    1. Collect the unit eigenvectors of $\mathbf{A}_\varepsilon$ in the columns
-       of $\mathbf{V}_\varepsilon$. How do the angle between them and the
-       condition number $\kappa_2(\mathbf{V}_\varepsilon)$ of
-       :eqref:`eq_mdl-nonnormal-power-bound` behave as $\varepsilon\to0$?
-       Show that $\sqrt\varepsilon\,\kappa_2(\mathbf V_\varepsilon)$ tends to
-       a constant as $\varepsilon\to0$, and find it.
-    1. By how much do the eigenvalues of $\mathbf{A}_0$ move when its
-       lower-left entry changes from $0$ to $\varepsilon=10^{-10}$? Compare
-       with the eigenvalues of the symmetric matrix
-       $2\mathbf{I}+\varepsilon\left(\begin{smallmatrix}0&1\\1&0\end{smallmatrix}\right)$.
-       This is the smallest case of Exercise
-       :exref:`ex_mdl-eigendecomposition-computed-eigenvalue-accuracy`a.
-   :exlabel:`ex_mdl-eigendecomposition-defective-limit`
-
 1. **Spectral radius and norms.** The spectral radius bounds every power of
    a matrix from below, and for normal matrices it also bounds them from
    above.
@@ -823,37 +800,6 @@ $2\sqrt{n}$.
        in :numref:`subsec_mdl-transient-growth`. Find $K(\boldsymbol\Lambda)$
        by hand.
    :exlabel:`ex_mdl-eigendecomposition-pseudospectra-transient-growth`
-
-1. [code] **Shifted inverse iteration.** ● Power iteration finds only the
-   dominant eigenvalue. *Inverse iteration* with shift $\mu$ runs power
-   iteration with $(\mathbf{A}-\mu\mathbf{I})^{-1}$ instead, solving one linear
-   system per step :cite:`Golub.Van-Loan.1996`. Parts (a) to (c) use the
-   symmetric matrix
-
-   $$
-   \mathbf A_4=\begin{pmatrix}1&0.1&0.1&0.1\\0.1&3&0.2&0.3\\0.1&0.2&5&0.5\\0.1&0.3&0.5&9\end{pmatrix},
-   $$
-
-   whose Gershgorin centres are 1, 3, 5, 9 and whose eigenvalues are about
-   0.99, 2.97, 4.95, and 9.08.
-    1. Show that $(\mathbf{A}-\mu\mathbf{I})^{-1}$ has the same eigenvectors as
-       $\mathbf{A}$, and find its eigenvalues. Which eigenpair of $\mathbf{A}$
-       does inverse iteration find, and at which rate does it converge?
-    1. Run inverse iteration on $\mathbf A_4$ with each of the four disc centres
-       as the shift. How many iterations does each run need until the sine of
-       the angle between the iterate and the eigenvector returned by
-       `np.linalg.eigh` falls below $10^{-10}$? Compare with plain power
-       iteration for the largest eigenvalue.
-    1. *Rayleigh quotient iteration* replaces the fixed shift by the Rayleigh
-       quotient of the current iterate at every step. Repeat (b) with the disc
-       centres as initial shifts. Relate the iteration counts to Exercise
-       :exref:`ex_mdl-eigendecomposition-power-iteration-rates`b.
-    1. Run inverse iteration on the $3\times3$ matrix
-       :eqref:`eq_mdl-gershgorin-example` with the real shift $\mu=4$. Why does
-       it never converge? Replace the shift by $4+i$ (complex arithmetic) and
-       explain the observed rate of about 0.02 per step from the distances
-       $|\lambda-\mu|$ of the three eigenvalues.
-   :exlabel:`ex_mdl-eigendecomposition-shifted-inverse-iteration`
 
 1. [code] **Damping in PageRank.** ● Let $\mathbf{P}$ be a column-stochastic
    $n\times n$ matrix and

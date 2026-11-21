@@ -1202,9 +1202,8 @@ above the upper bulk edge signal real structure.
    a matrix $\mathbf{A}+\mathbf{E}$ with $\|\mathbf{E}\|_2$ of the order of
    $\epsilon_{\textrm{mach}}\|\mathbf{A}\|_2$, where
    $\epsilon_{\textrm{mach}}\approx2.2\times10^{-16}$ in double precision
-   :cite:`Golub.Van-Loan.1996`. Exercise
-   :exref:`ex_mdl-eigendecomposition-defective-limit` shows how strongly such
-   a perturbation can move a defective eigenvalue.
+   :cite:`Golub.Van-Loan.1996`. A small perturbation can move a defective
+   eigenvalue by a fractional power of $\varepsilon$.
     1. Let $\mathbf{e}_1,\ldots,\mathbf{e}_m$ be the standard basis vectors.
        Show that $\mathbf{J}_m(\lambda)+\varepsilon\,\mathbf{e}_m\mathbf{e}_1^\top$,
        which places $\varepsilon$ in the lower-left corner of the Jordan

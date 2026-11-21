@@ -532,8 +532,7 @@ $$
 $$
 
 which has rank $2$: its first two columns are linearly independent, yet every
-one of the $\binom{5}{3} = 10$ triples of columns is linearly dependent
-(:exref:`ex_mdl-geometry-linear-algebraic-ops-rank-of-c`).
+one of the $\binom{5}{3} = 10$ triples of columns is linearly dependent.
 
 Remarkably, the number of dimensions that survive the map and the number of
 dimensions crushed to zero always add up to the dimension of the input space.
@@ -1290,24 +1289,6 @@ directly to eigenvalues and singular values.
        every dot product, and conclude that $\mathbf{A}$ is orthogonal.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-angle-preserving`
 
-1. **Rank and nullity of C.** The $4 \times 5$ matrix $\mathbf{C}$ of
-   :numref:`subsec_mdl-rank` has rank two. Write $\mathbf{c}_1, \ldots,
-   \mathbf{c}_5$ for its columns.
-    1. Express $\mathbf{c}_2$, $\mathbf{c}_4$, and $\mathbf{c}_5$ as linear
-       combinations of $\mathbf{c}_1$ and $\mathbf{c}_3$, and check that
-       $\mathbf{c}_1$ and $\mathbf{c}_3$ are linearly independent. Why does
-       this show that every collection of three columns is linearly
-       dependent?
-    1. Turn the three relations into three vectors of the null space of
-       $\mathbf{C}$. Show that they are linearly independent, and use
-       rank--nullity to show that they form a basis of the null space.
-    1. Express the third and the fourth row of $\mathbf{C}$ as linear
-       combinations of the first two rows, and read off the row rank. Then
-       write down the factorization $\mathbf{C} = \mathbf{G}\mathbf{H}$ of
-       :eqref:`eq_mdl-row-rank` in which $\mathbf{G}$ has the columns
-       $\mathbf{c}_1$ and $\mathbf{c}_3$.
-   :exlabel:`ex_mdl-geometry-linear-algebraic-ops-rank-of-c`
-
 1. **Rank of a product.** A linear autoencoder sends a $d$-dimensional input
    through a hidden layer of width $k < d$,
    $\mathbf{x} \mapsto \mathbf{W}_2\mathbf{W}_1\mathbf{x}$ with
@@ -1328,34 +1309,6 @@ directly to eigenvalues and singular values.
     1. Construct a $2 \times 3$ matrix and a $3 \times 2$ matrix, both of
        rank two, whose $2 \times 2$ product has rank one.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-rank-of-product`
-
-1. [code] **Rank of a sum and of a low-rank update.** Fine-tuning methods
-   often change a large weight matrix by adding the product of two thin
-   matrices. How much can such an update change the rank?
-    1. Show that every column of $\mathbf{A} + \mathbf{B}$ lies in the span
-       of the columns of $\mathbf{A}$ and $\mathbf{B}$ together, and conclude
-       $\operatorname{rank}(\mathbf{A} + \mathbf{B}) \le
-       \operatorname{rank}\mathbf{A} + \operatorname{rank}\mathbf{B}$.
-    1. A $4096 \times 4096$ weight matrix $\mathbf{W}$ is changed by adding
-       $\boldsymbol{\Delta} = \mathbf{U}\mathbf{V}^\top$ with
-       $\mathbf{U}, \mathbf{V} \in \mathbb{R}^{4096 \times 8}$. Show that
-       $\boldsymbol{\Delta}$ has rank at most $8$, and that the rank of
-       $\mathbf{W} + \boldsymbol{\Delta}$ differs from that of $\mathbf{W}$
-       by at most $8$ in either direction (hint: apply the first part also to
-       $\mathbf{W} = (\mathbf{W} + \boldsymbol{\Delta}) +
-       (-\boldsymbol{\Delta})$).
-    1. Give $2 \times 2$ examples with $\operatorname{rank}\mathbf{A} =
-       \operatorname{rank}\mathbf{B} = 1$ and
-       $\operatorname{rank}(\mathbf{A} + \mathbf{B}) = 0$, and with
-       $\operatorname{rank}(\mathbf{A} + \mathbf{B}) = 2$.
-    1. Build a $50 \times 50$ matrix of rank $10$ as the product of a
-       $50 \times 10$ and a $10 \times 50$ matrix with independent standard
-       Gaussian entries, add a rank-$3$ product of the same kind, and check
-       that `np.linalg.matrix_rank` returns $13$. Explain why this happens for
-       every draw (hint: write the sum as one product of a $50 \times 13$ and
-       a $13 \times 50$ matrix, and use that Gaussian columns are linearly
-       independent with probability one).
-   :exlabel:`ex_mdl-linear-maps-rank-of-sum`
 
 1. **Matrices that commute with a rotation.** Matrix products do not commute
    in general. This problem finds the exceptions for $\mathbf{R}_{90}$.
@@ -1420,29 +1373,6 @@ directly to eigenvalues and singular values.
        1\end{smallmatrix}\right)$ singular. Verify it, and show that no
        smaller change of a single entry does.
    :exlabel:`ex_mdl-geometry-linear-algebraic-ops-det-near-singular`
-
-1. [code] **Area of the image of the unit disk.** The determinant scales the
-   area of every region, not only of squares.
-    1. Use the tiling argument of :numref:`subsec_mdl-multiplicativity` to
-       explain why $\mathbf{A}$ maps any region of area $V$ to a region of
-       area $|\det\mathbf{A}|\,V$, so that the running matrix maps the unit
-       disk to a region of area $5\pi \approx 15.71$.
-    1. Show that the image lies in the rectangle
-       $[-\sqrt{5}, \sqrt{5}] \times [-\sqrt{10}, \sqrt{10}]$ (hint: by
-       Cauchy--Schwarz, $|(\mathbf{A}\mathbf{x})_i|$ is at most the length of
-       row $i$ times $\|\mathbf{x}\|$).
-    1. Estimate the area by Monte Carlo. Draw $N = 10^5$ points
-       $\mathbf{p}$ uniformly in the rectangle with
-       `np.random.default_rng()`, count those whose preimage
-       $\mathbf{A}^{-1}\mathbf{p}$ lies in the unit disk, and multiply the
-       fraction by the area $4\sqrt{50} \approx 28.28$ of the rectangle.
-       Show that the standard error of the estimate is about $0.04$, and check
-       that the interval of two standard errors around your estimate
-       contains $5\pi$, as it will in about 95% of runs.
-    1. Why does this method fail for $\mathbf{B}$? What is the area of the
-       image of the unit disk under $\mathbf{B}$, and how does it relate to
-       $\det\mathbf{B}$?
-   :exlabel:`ex_mdl-linear-maps-disk-area`
 
 1. **Determinant of a rank-one update.** ● A *planar flow*
    :cite:`rezende2015variational` transforms

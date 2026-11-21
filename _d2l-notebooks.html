@@ -86,6 +86,10 @@
   }
 
   function selectedFramework() {
+    // A single-framework page (SINGLE_FRAMEWORK_PARTS in
+    // tools/d2l_preprocess.py) names its one framework.
+    var solo = document.getElementById('d2l-single-framework');
+    if (solo && FW_DISPLAY[solo.dataset.framework]) return solo.dataset.framework;
     try {
       var data = JSON.parse(localStorage.getItem('quarto-persistent-tabsets-data') || '{}');
       if (DISPLAY_TO_FW[data.framework]) return DISPLAY_TO_FW[data.framework];

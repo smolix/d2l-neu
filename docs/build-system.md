@@ -38,6 +38,7 @@ stable: code comments and other docs cite them.
 | 6.8 | Why the HTML render is one `quarto render` | render failures, speed |
 | 6.9 | Makefile layout, deploy targets, R2 buckets, data uploads (`make upload-data`), timings | publishing, uploading a `DATA_HUB` file, Makefile edits |
 | 6.10 | The hidden standard-imports cell | first cell of every notebook |
+| 6.11 | Single-framework parts (LM): no framework tab bar in the HTML | `SINGLE_FRAMEWORK_PARTS`, adding a part |
 | 7–9 | Git LFS; tool contracts; checks before merging | tooling work |
 | 11 | Runbook: first checkout, quick reference | — |
 | 12 | Slides and the store | slide work |
@@ -2242,6 +2243,50 @@ not placed, and freshness (§3) reads the notebooks, which still hold the cell.
 `_pdf/%/.generated` and `_slides/%/.built`, not of the notebooks: changing the
 canonical text re-renders the book, while the notebooks go stale only when
 `tools/normalize_imports.py --apply` rewrites their source.
+
+### 6.11 Single-framework parts: no framework tab bar (HTML)
+
+Every page of the Language Models part is PyTorch only, so a "PyTorch" tab
+above each code cell says nothing. One table in `tools/d2l_preprocess.py`
+switches the tab bar off for whole parts:
+
+```python
+SINGLE_FRAMEWORK_PARTS = {
+    'chapter_lm-': 'pytorch',
+}
+```
+
+Keys are chapter-directory prefixes, values the part's one framework. To
+switch the Image Models part on, add one line,
+`'chapter_image-models': 'pytorch',` (not done yet). For a page whose
+chapter directory matches, `convert_file` (the HTML path only):
+
+| Source | HTML elsewhere | HTML on a single-framework page |
+|---|---|---|
+| `%%tab pytorch` cell (a code tabset) | `::: {.panel-tabset group="framework"}` + `## PyTorch` + the cell | the cell alone: ```` ```{python} ```` with its `#\| label: <id>` |
+| `:begin_tab:` tab note | a panel-tabset (nav hidden by the text-only script) | the note's text alone |
+| cell or note for another framework | its own tab | not rendered; the preprocessor prints a WARNING naming it |
+| page marker | none | `<div id="d2l-single-framework" data-framework="pytorch" hidden>` at the page end |
+
+Outputs need nothing new: `inject_outputs.py` treats an untabbed cell as
+shared and collects its outputs, by cell id, from every framework store that
+has the id, which for these parts is only `outputs/pytorch/`; the image
+names (`<stem>-<id>-<fw>`) and the rendered output markup are the same as
+inside the tab. The marker matters because `_d2l-tabs.html` hides every
+framework tabset that lacks the reader's chosen framework and the Slides and
+notebook buttons follow that choice: a reader who chose JAX on a Basics page
+used to find an LM page with every code cell hidden and "Notebook
+unavailable". Now the page has no tabsets to hide, and both buttons read the
+marker first (`getCurrentFw` in `_d2l-tabs.html`, `selectedFramework` in
+`_d2l-notebooks.html`), so they offer PyTorch there whatever the stored
+choice. The stored choice itself is untouched.
+
+PDFs (`gen_pdf.py`), slides (`gen_slides.py`), notebooks (`gen_notebooks.py`)
+and hence Colab/Kaggle are one framework each already and do not read the
+table; their output for these parts is unchanged. Other chapters render as
+before: their `.qmd` files are byte-identical, and their HTML differs only by
+the eight lines of marker lookup in the two inlined scripts.
+`tools/test_single_framework_pages.py` covers the behavior.
 
 ---
 

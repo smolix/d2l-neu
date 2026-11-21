@@ -840,8 +840,7 @@ There is a limit to this construction. As $v_0\to0$ the velocity at small
 times is $g^2x/(2g^2t)=x/(2t)$, which is unbounded as $t\to0$. A
 deterministic flow can spread a point mass into a Gaussian only through a
 field that blows up at the start, because a Lipschitz flow maps one point to
-one point (Exercise
-:exref:`ex_mdl-fokker-planck-probability-flow-affine-gaussian-flow`).
+one point.
 
 The next cell runs this example. From one draw of $20{,}000$ points of
 $\mathcal N(0,1)$ it forms a Brownian cloud at $t=3$ (adding an independent
@@ -1417,49 +1416,6 @@ only unknown is the score $\nabla\log p_t$.
        the unstable drift $f(x) = \theta x$ with $\theta > 0$?
    :exlabel:`ex_mdl-fokker-planck-probability-flow-stationary-density`
 
-1. **Affine Gaussian flow.** Start the OU process from
-   $X_0 \sim \mathcal{N}(x_0, v_0)$ with $v_0 > 0$. Then
-   $p_t = \mathcal{N}(m_t, v_t)$, where $m_t$ and $v_t$ solve the moment
-   ODEs :eqref:`eq_mdl-dyn-moment-odes`. This is the heat-equation example
-   of :numref:`sec_mdl-continuity-equation` with a drift and a moving
-   center.
-    1. Write the probability-flow velocity :eqref:`eq_mdl-dyn-pf-velocity`
-       for this $p_t$ and show that it is affine in $x$. Show that the
-       standardized coordinate $z = (x - m_t)/\sqrt{v_t}$ is constant along
-       every trajectory, and write the trajectory $x(t)$ in closed form.
-       Compare it with :eqref:`eq_mdl-dyn-heat-pf-solution`.
-    1. Compute $\partial_x u_t$, evaluate the time integral in the likelihood
-       identity :eqref:`eq_mdl-dyn-pf-likelihood` along a trajectory, and
-       verify the identity by comparing the two Gaussian log-densities.
-    1. Let $v_0 \to 0$, so that the process starts from the point mass at
-       $x_0$ of :eqref:`eq_mdl-dyn-ou-marginal`. Show that near $t = 0$ the
-       velocity is $(x - x_0)/(2t)$ to leading order, whatever $\theta$ and
-       $g$ are. How many trajectories leave the point $x_0$ at $t = 0$, and
-       which hypothesis of the existence and uniqueness theorem of
-       :numref:`sec_mdl-ode-existence-uniqueness` fails?
-   :exlabel:`ex_mdl-fokker-planck-probability-flow-affine-gaussian-flow`
-
-1. [code] **Same marginals, different couplings.** The cell that defines
-   `pf_velocity` launches the SDE cloud and the ODE cloud from one shared
-   sample of $p_0$. Store a copy of that sample before the loop.
-    1. At each snapshot time, compute for both clouds the fraction of
-       particles whose sign differs from the sign of their starting point,
-       that is, the fraction that has switched modes. The order-preservation
-       proposition of :numref:`subsec_mdl-flow-order` says that the time-$T$
-       map of a field on $\mathbb{R}$ that is continuous in $t$ and globally
-       Lipschitz in $x$ is strictly increasing. Use this and the symmetry of $p_0$ to
-       explain why the fraction is zero for the exact flow. Does Heun's
-       method keep it at zero? (Hint: the slope of $u_t$ at $0$ near $t=0$
-       is $-\theta-\tfrac12g^2s_0'(0)=-61$.)
-    1. Compute the correlation between starting and current positions for
-       both clouds. Predict the value for the SDE cloud from the OU
-       solution $X_t=e^{-\theta t}X_0+g\int_0^te^{-\theta(t-s)}\,dW_s$ of
-       :numref:`sec_mdl-ornstein-uhlenbeck` and the variance $4.25$ of the
-       mixture $p_0$, and compare.
-    1. Which uses of a diffusion model need the deterministic coupling of
-       the probability-flow ODE, and not only its marginals?
-   :exlabel:`ex_mdl-fokker-planck-probability-flow-couplings`
-
 1. **Mode merging.** Consider the symmetric two-component mixture with the
    score :eqref:`eq_mdl-dyn-tanh-score`.
     1. Derive :eqref:`eq_mdl-dyn-tanh-score` from the responsibility
@@ -1600,25 +1556,6 @@ only unknown is the score $\nabla\log p_t$.
        recover the reverse step :eqref:`eq_mdl-dyn-reverse-step`, including
        the full factor $g^2$ in front of the score.
    :exlabel:`ex_mdl-fokker-planck-probability-flow-gaussian-reverse-step`
-
-1. [code] **Mismatched drift and noise.** ● Consider a reverse-time sampler
-   in the reversed clock $\bar t = T - t$ with drift
-   $-\mathbf{f} + c\, g^2 \nabla \log p_t$ and noise $\lambda g$. The family
-   :eqref:`eq_mdl-dyn-reverse-family` uses $c = (1 + \lambda^2)/2$.
-    1. Take Gaussian data $p_0 = \mathcal{N}(0, v_0)$ and the OU forward
-       process, so that $p_t = \mathcal{N}(0, v_t)$. Derive the ODE for the
-       variance $V(\bar t)$ of the sampler's state, and show that
-       $V(\bar t) = v_{T-\bar t}$ solves it for every $v_0$ only when
-       $c = (1 + \lambda^2)/2$.
-    1. From the sign of the mismatch term in your ODE, predict whether the
-       generated distribution is too wide or too narrow for $c = \tfrac12$,
-       $\lambda = 1$ (the ODE's correction with the SDE's noise) and for
-       $c = 1$, $\lambda = 0$ (the SDE's correction without noise).
-    1. Modify the reverse sampler of :numref:`sec_mdl-time-reversal` (the
-       cell that defines `uneven`) to run both settings on its mixture.
-       Report the recovered mode means and widths against the targets
-       $\pm 2$ and $0.5$.
-   :exlabel:`ex_mdl-fokker-planck-probability-flow-mismatched-drift-noise`
 
 1. [code] **Placing the steps.** ● The function `em_reverse_width` returns
    the exact output width of reverse Euler--Maruyama on the data

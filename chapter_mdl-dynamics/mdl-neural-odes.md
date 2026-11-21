@@ -491,12 +491,11 @@ program; a field trained through an accurate one is a flow.
 The accuracy has to be supplied in every iteration, however. Training
 through RK4 evaluates the field forty times per iteration and backpropagates
 through all forty evaluations; training through Euler, ten times. A hundred
-Euler steps or a second-order solver would change the count and nothing else
-(Exercise :exref:`ex_mdl-odes-solvers-step-count-transfer`). The alternative is to
-take the solver out of training altogether: fit the field by regression onto
-targets that are known in closed form, at one field evaluation per example,
-so that what is fitted is a flow from the start. This is how
-:numref:`sec_mdl-score-matching-diffusion-flow` and
+Euler steps or a second-order solver would change the count and nothing else.
+The alternative is to take the solver out of training altogether: fit the
+field by regression onto targets that are known in closed form, at one field
+evaluation per example, so that what is fitted is a flow from the start. This
+is how :numref:`sec_mdl-score-matching-diffusion-flow` and
 :numref:`sec_mdl-flow-matching-transport` learn their fields.
 
 ## The Adjoint Method
@@ -1261,39 +1260,6 @@ that training averages out and a single likelihood does not.
 
 ## Exercises
 
-1. [code] **The learned field at other step counts.** The training cell
-   fits one field through ten Euler steps and one through ten RK4 steps, and
-   the text found that only the second is fitted to its flow. The function
-   `train` takes the solver step as an argument, so the variants below need
-   only a new step function or a changed step count.
-    1. Evaluate the Euler-trained field with $N=1$, $2$ and $5$ Euler steps
-       ($Nh=1$), as the evaluation cell does for larger $N$. Why is the
-       error at $N=1$ large although ten steps of the same field are
-       accurate to a few thousandths or better? Which map does one Euler
-       step of the trained field compute?
-    1. Integrate the Euler-trained field backward from the targets `Y` with
-       $N=10$, $100$ and $1000$ Euler steps (a negative horizon does this)
-       and compare the result with `X`. The forward--backward round trip of
-       the text went to zero like $1/N$; this error settles at a few
-       hundredths. Why? *Hint: at large $N$ the backward integration applies
-       the exact inverse flow to the ellipse, not to the ten-step image of
-       the circle.*
-    1. Write a step function for Heun's method,
-       $\mathbf{x}+\tfrac h2\big[\mathbf{f}(\mathbf{x})+\mathbf{f}(\mathbf{x}+h\mathbf{f}(\mathbf{x}))\big]$,
-       and train a third field through ten Heun steps from the same seed.
-       Evaluate it with Heun's method at $N=10$, $100$ and $1000$. Does its
-       error rise like that of the Euler-trained field or stay put like
-       that of the RK4-trained one? Heun evaluates the field twice per step.
-       What does the result say about how accurate the training solver has
-       to be for this task?
-    1. Train a field through $N=100$ Euler steps of size $0.01$ and
-       evaluate it with Euler at $N=10$, $100$ and $1000$. Where is its
-       error small now, and how much does it change between $N=100$ and
-       $N=1000$? Count the field evaluations per training iteration for
-       this run, the Heun run and the RK4 run. Which is the cheapest way to
-       a field whose step count is free?
-   :exlabel:`ex_mdl-odes-solvers-step-count-transfer`
-
 1. [code] **What a flow cannot represent.** ● Two trajectories of a field
    with Lipschitz constant $L$ satisfy
    $e^{-Lt}\|\mathbf{x}-\mathbf{y}\|\le\|\Phi_t(\mathbf{x})-\Phi_t(\mathbf{y})\|\le e^{Lt}\|\mathbf{x}-\mathbf{y}\|$
@@ -1490,29 +1456,6 @@ that training averages out and a single likelihood does not.
        refine it first. Which slope do you measure? Which order does the
        gradient computed through a solver of order $p$ inherit?
    :exlabel:`ex_mdl-odes-solvers-re-derive-adjoint-equations`
-
-1. **Checkpointing arithmetic.** ● A forward pass of $N$ Euler steps is
-   differentiated by the discrete adjoint
-   :eqref:`eq_mdl-ode-discrete-adjoint`, whose backward sweep needs
-   $\mathbf{x}_n$ at step $n$.
-    1. Storing every state holds $N$ states and recomputes nothing. Suppose
-       instead that only every $k$-th state is stored as a checkpoint, and
-       that when the backward sweep enters a segment of $k$ steps, the
-       segment is recomputed forward from its checkpoint and its states are
-       held until the sweep leaves it. How many states are held at the peak,
-       and how many extra forward steps are computed in total?
-    1. Minimize the peak over $k$. Show that the minimum is near
-       $k=\sqrt N$, and that the extra work is about one forward pass
-       whatever $k$ is. Check the $63$ states that the text quoted for
-       $N=1000$.
-    1. Recursive checkpointing applies the same idea inside each segment and
-       holds $O(\log N)$ states at the cost of $O(\log N)$ forward passes
-       :cite:`Griewank.1992`. Compare it with the continuous adjoint, whose
-       memory is constant but whose backward re-integration amplifies an
-       error by $e^{\lambda T}$ on $\dot{x}=-\lambda x$. For which
-       $\lambda T$ does re-integration from a state stored in single
-       precision ($\delta\approx6\times10^{-8}$) lose all accuracy?
-   :exlabel:`ex_mdl-neural-odes-checkpoint-arithmetic`
 
 1. [code] **Liouville's formula.** ●● The instantaneous change of variables
    followed a density along a trajectory. This exercise proves it a second

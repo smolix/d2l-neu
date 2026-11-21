@@ -2,56 +2,47 @@
 :label:`chap_performance`
 
 Until now we have trained every model by writing the network, starting the
-training loop, and waiting. We took the time of a step and its memory as
-given. That stops working when a run takes days, a model does not fit on
-the card, or a second GPU makes training slower. Consider the GPT of
-:numref:`sec_gpt`, made twice as wide to give the GPU more work.
-Dividing the arithmetic of one training step by the peak rate of the GPU
-gives the shortest time the step could take. The measured step takes
-several times longer. Where does the rest of the time go?
+training loop, and waiting, taking step time and memory as given. That stops
+working when a run takes days, a model does not fit on the card, or a second
+GPU makes training slower. Consider the GPT of :numref:`sec_gpt`, made twice
+as wide to give the GPU more work. Dividing the arithmetic of one training
+step by the GPU's peak rate gives the shortest time the step could take, yet
+the measured step takes several times longer. Where does the rest of the time
+go?
 
-Computer architects met this question long before deep learning did. By
-the 1990s processors had become so much faster than their memory that many
-programs spent much of their time waiting for data. In 2009 Williams,
-Waterman, and Patterson drew the consequence as one picture, the
-*roofline* :cite:`Williams.Waterman.Patterson.2009`: a program runs no
-faster than its arithmetic units allow, and no faster than memory can
-deliver the bytes it needs. A GPU driven from Python adds a third limit,
-the cost of issuing each operation. Which of the three holds a step back
-decides which change speeds it up. This view explains choices that earlier
-chapters made, such as large minibatches and 16-bit numbers
-(:numref:`sec_numerics`). It also gives a method: count the arithmetic and
-the bytes of a step, predict its time, measure it, and explain the
-difference. The difference is where the time went.
+Computer architects met this question long before deep learning did. By the
+1990s processors had outpaced their memory so far that many programs spent
+most of their time waiting for data. In 2009 Williams, Waterman, and
+Patterson summarized the consequence in the *roofline* model
+:cite:`Williams.Waterman.Patterson.2009`: a program runs no faster than its
+arithmetic units allow, and no faster than memory can deliver the bytes it
+needs. A GPU driven from Python adds a third limit, the host cost of issuing
+each operation. Which of the three holds a step back decides which change
+speeds it up. This view explains choices made in earlier chapters, such as
+large minibatches and 16-bit numbers (:numref:`sec_numerics`), and gives a
+method: count the arithmetic and the bytes of a step, predict its time,
+measure it, and explain the difference.
 
-Everything rests on the first section (:numref:`sec_perf_model`), which
-introduces one quantity, the arithmetic an operation performs per byte it
-moves, and puts the method to work. Hardware (:numref:`sec_hardware`)
-explains where the peak rate and the bandwidth come from; a hurried reader
-can take its tables. Compilation (:numref:`sec_compilation`) and the
-memory techniques of :numref:`sec_memory_precision` are the one-GPU tools
-most readers will use every day. Three sections then add
-GPUs. A second GPU helps only when each card has enough work, and on our
-cards, which meet only through host memory, the wires between them matter
-as much as the GPUs. Dividing the weights, gradients, and optimizer state
-among the GPUs trains a model that no single card holds, but every step
-must move them between the cards. The case study
-(:numref:`sec_fast_transformer`) returns to the GPT above, which fits on
-one card, and accounts for its step in milliseconds.
+Everything rests on :numref:`sec_perf_model`, which introduces *arithmetic
+intensity*—the FLOPs an operation performs per byte it moves—and puts the
+method to work. Hardware (:numref:`sec_hardware`) explains where peak
+arithmetic and bandwidth come from. Compilation (:numref:`sec_compilation`)
+and the memory techniques of :numref:`sec_memory_precision` are the single-GPU
+tools most practitioners use every day. Three sections then add GPUs: data
+parallelism from first principles (:numref:`sec_multi_gpu`) and in practice
+(:numref:`sec_multi_gpu_concise`), followed by sharding the weights,
+gradients, and optimizer state across cards (:numref:`sec_sharding`) so that
+models larger than any single GPU can train. Finally, the case study
+(:numref:`sec_fast_transformer`) returns to the GPT above on one and four
+GPUs and accounts for its step in milliseconds.
 
 We assume you can time GPU code and read its peak memory
 (:numref:`sec_use_gpu`), know bf16 and tf32 (:numref:`sec_numerics`), and
 have met the GPT and its key–value cache (:numref:`sec_gpt`,
 :numref:`sec_kv-cache`). Every measurement comes from one host with four
 RTX 4090 cards, PyTorch 2.11, and JAX 0.12. On your machine the times will
-differ; the counts of FLOPs and bytes will not, and neither will the
-method that turns them into predictions. The first four sections need one
-GPU and the later ones up to four; reading needs none.
-
-Kernels written by hand are left to
-:numref:`sec_performance-further-reading`, and training across machines,
-serving engines, and quantization for inference to the Language Models
-part.
+differ; the counts of FLOPs and bytes will not, nor will the method that
+turns them into predictions.
 
 ```toc
 :maxdepth: 2
@@ -66,45 +57,6 @@ sharding
 fast-transformer
 further-reading
 ```
-
-## Resources and Further Reading {.unnumbered}
-
-The resources below accompany the sections of this chapter; each names the
-section it goes with, and all are freely accessible online. Read Horace He's
-essay before or beside :numref:`sec_perf_model`: it takes about fifteen minutes
-and describes the same three limits in another voice. The scaling book of
-Austin et al. is the natural second text for the whole chapter. Related topics
-that the chapter does not teach, such as other accelerators, kernels written by
-hand, compressed optimizer state, and collective algorithms beyond the ring,
-are collected in :numref:`sec_performance-further-reading`.
-
-**Books and long-form texts**
-
-- [How to Scale Your Model — Austin et al., Google DeepMind (2025)](https://jax-ml.github.io/scaling-book/) — rooflines, sharding notation, and the cost of collectives worked out for TPUs and GPUs in JAX; the arithmetic of :numref:`sec_perf_model` and the cost model of :numref:`sec_multi_gpu`, carried on to clusters of thousands of chips.
-- [The Ultra-Scale Playbook — Hugging Face (2025)](https://huggingface.co/spaces/nanotron/ultrascale-playbook) — the memory budget of a training step, data parallelism, and ZeRO sharding, each with measurements, from :numref:`sec_memory_precision` through :numref:`sec_sharding`, and on to parallelism across many machines.
-- [Making Deep Learning Go Brrrr From First Principles — Horace He (2022)](https://horace.io/brrr_intro.html) — the division of a program's time into compute, memory bandwidth, and overhead that :numref:`sec_perf_model` measures, in a short essay by a PyTorch compiler developer.
-
-**Courses and lectures**
-
-- [Stanford CS336: Language Modeling from Scratch](https://stanford-cs336.github.io/) — assignments that profile a transformer, apply compilation and mixed precision, and train it on several GPUs, the work of :numref:`sec_perf_model` through :numref:`sec_fast_transformer` as graded problems; lectures on YouTube.
-- [CMU 15-442/15-642: Machine Learning Systems](https://mlsyscourse.org/) — a full course on the hardware, compilers, and parallelism of :numref:`sec_hardware` through :numref:`sec_sharding`, with lecture notes and assignments.
-- [GPU MODE lecture series](https://www.youtube.com/@GPUMODE) — CUDA, Triton, and the internals of fused attention kernels, for readers who want to write the kernels that :numref:`sec_compilation` only generates or calls.
-
-**Foundational papers**
-
-- [Roofline: An Insightful Visual Performance Model for Multicore Architectures — Williams, Waterman & Patterson (2009)](https://doi.org/10.1145/1498765.1498785) — the original roofline and its ridge point, the model of :numref:`sec_perf_model`.
-- [PyTorch 2: Faster Machine Learning Through Dynamic Python Bytecode Transformation and Graph Compilation — Ansel et al. (2024)](https://doi.org/10.1145/3620665.3640366) — how TorchDynamo captures a graph from Python bytecode and Inductor compiles it, the PyTorch side of :numref:`sec_compilation`.
-- [Mixed Precision Training — Micikevicius et al. (2018)](https://arxiv.org/abs/1710.03740) — fp32 master weights and loss scaling, the recipe of :numref:`subsec_mp-mixed`, and why the narrow exponent range of fp16 needs a loss scaler, a reason that the eight exponent bits of bf16 remove.
-- [Training Deep Nets with Sublinear Memory Cost — Chen et al. (2016)](https://arxiv.org/abs/1604.06174) — recomputing activations in the backward pass instead of storing them, the trade of :numref:`subsec_mp-checkpointing`, with a placement of the stored layers that makes memory grow as the square root of the depth.
-- [PyTorch Distributed: Experiences on Accelerating Data Parallel Training — Li et al. (2020)](https://arxiv.org/abs/2006.15704) — gradient buckets and the overlap of the allreduce with the backward pass, the design of DDP in :numref:`sec_multi_gpu_concise`.
-- [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models — Rajbhandari et al. (2020)](https://arxiv.org/abs/1910.02054) — the three stages of sharding optimizer state, gradients, and weights of :numref:`sec_sharding`.
-
-**Tutorials and notes**
-
-- [PyTorch Performance Tuning Guide](https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html) and [Automatic Mixed Precision recipe](https://pytorch.org/tutorials/recipes/recipes/amp_recipe.html) — a checklist of settings that :numref:`sec_hardware` and :numref:`sec_memory_precision` explain, from pinned memory to autocast.
-- [torch.compile tutorial](https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html), [JAX: just-in-time compilation](https://docs.jax.dev/en/latest/jit-compilation.html), and [JAX: sharded computation](https://docs.jax.dev/en/latest/sharded-computation.html) — the framework documentation behind :numref:`sec_compilation`, :numref:`sec_multi_gpu_concise`, and :numref:`sec_sharding`, including graph breaks, recompilation, and sharded arrays.
-- [Understanding GPU Memory — PyTorch blog (2023)](https://pytorch.org/blog/understanding-gpu-memory-1/) — recording and reading snapshots of the allocator's memory over a training step, the tool of :numref:`subsec_mp-measuring`.
-- [How to Train Really Large Models on Many GPUs? — Lilian Weng (2021)](https://lilianweng.github.io/posts/2021-09-25-train-large/) — a survey of data, pipeline, and tensor parallelism and of ZeRO, the background of :numref:`sec_multi_gpu` through :numref:`sec_sharding`.
 
 <!-- slides -->
 

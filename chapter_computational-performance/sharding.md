@@ -1,30 +1,22 @@
 # Sharding the Training State
 :label:`sec_sharding`
 
-In :numref:`sec_memory_precision` we counted what a training step keeps in
-memory and found one part that none of its techniques reduces: 16 bytes
-for every parameter, for the weight, its gradient, and Adam's two moment
-estimates. For the billion-parameter GPT of that section these bytes fill
-15 GiB of a 24 GiB card in fp32 before the model has read a single token.
-The two sections on data parallelism did nothing about them. They copied
-all 16 bytes onto every GPU.
+In :numref:`sec_memory_precision`, we saw that training with Adam in fp32
+stores 16 bytes per parameter—four bytes each for the weight, its gradient,
+and Adam's two moment estimates. For our 18-block, 1B-parameter GPT, that
+fixed state fills 15.1 GiB of a 24 GiB card before reading a single token, and
+data parallelism (:numref:`sec_multi_gpu`, :numref:`sec_multi_gpu_concise`)
+replicates all 16 bytes on every GPU. If we double the depth of our GPT to 36
+blocks (1.92B parameters, 28.6 GiB of state), data parallelism on four 24 GiB
+GPUs cannot train it any more than one GPU can.
 
-Let us make that GPT twice as deep, with 36 blocks instead of 18. It then
-has almost two billion parameters, and its training state no longer fits
-on any of our cards. Data parallelism on four GPUs cannot train it any
-more than one GPU can. Can several GPUs train a model that none of them
-can hold?
-
-They can, because a GPU needs most of its state only for a moment. It
-needs the full weights of a block only while it computes with that block,
-and it never needs the full gradient or the full optimizer state at all.
-Each of $k$ GPUs can therefore keep $1/k$ of everything, gather a block's
-weights when the block computes, and scatter each gradient as soon as it
-exists. The state then fits, but every step must move weights and
-gradients between the GPUs. On our machine, whose GPUs talk to each other
-through host memory, the question is how long that takes. We first divide
-the state, then predict the memory and the time of a step for the 36-block
-GPT on two GPUs, and finally run the step and compare.
+Can $k$ GPUs train a model that no single card can hold? They can, because a
+GPU needs the full weights of a block only while computing that block's
+forward or backward pass, and it never needs the full gradient or full
+optimizer state at all. Each of the $k$ GPUs can therefore store $1/k$ of the
+weights, gradients, and optimizer moments, gather each block's weights on the
+fly just before the block runs, and reduce-scatter each block's gradients as
+soon as they are produced.
 
 ```{.python .input #sharding-setup}
 %%tab jax
@@ -73,12 +65,8 @@ import re
 from jax.sharding import NamedSharding, PartitionSpec as P
 ```
 
-The next cell runs on any machine, even one without a GPU. All cells
-after it need two GPUs, and their stored outputs come from two RTX 4090s
-without peer-to-peer access, which exchange data through host memory. We
-count the parameters $N$ of the 36-block GPT without allocating memory for
-them, and compare its $16N$ bytes of training state with the memory of one
-GPU, if there is one.
+We first verify on a meta/shape-only device that the 36-block GPT's $16N$
+bytes of training state exceed the 24 GiB capacity of a single RTX 4090:
 
 ```{.python .input #sharding-sharding-the-training-state-2}
 %%tab pytorch
@@ -107,28 +95,30 @@ if jax.default_backend() == 'gpu':
     print(f'JAX may allocate {limit / 2**30:.1f} GiB of one GPU')
 ```
 
-At 28.6 GiB the state alone is several GiB larger than one GPU offers, and
-the activations still have to fit beside it.
-
 ## Partitioning the Optimizer State, Gradients, and Weights
 :label:`subsec_mgp-fsdp`
 
-Let us look at when a GPU in data parallelism actually uses each part of
-its state. The weights of a block are used twice per step, in the block's
-forward pass and in its backward pass. A gradient is used once, by the
-optimizer, and Adam's moment estimates are used only inside the update.
-Moreover, all $k$ GPUs compute the same update from the same summed
-gradient, so they hold $k$ identical copies of the optimizer state and do
-the same arithmetic $k$ times. The ZeRO family of methods
-:cite:`Rajbhandari.Rasley.Ruwase.ea.2020`, developed at Microsoft to
-train models with tens of billions of parameters on GPUs of 32 GB,
-removes the redundant copies in three stages. Stage 1 partitions the
-optimizer state: each GPU keeps Adam's moment estimates for $1/k$ of the
-parameters and updates only those parameters. Stage 2 also partitions the
-gradients, and stage 3 also the weights. Stage 3 is also known as *fully
-sharded data parallelism* (FSDP) :cite:`Zhao.Gu.Varma.ea.2023`.
-:numref:`tab_mgp-zero` lists what each GPU then holds at the end of the
-backward pass.
+In standard data parallelism, all $k$ GPUs hold identical copies of Adam's
+moment estimates and perform identical optimizer updates. The *ZeRO*
+(*Zero Redundancy Optimizer*) family :cite:`Rajbhandari.Rasley.Ruwase.ea.2020`
+eliminates this redundancy in three cumulative stages (:numref:`tab_mgp-zero`):
+* **ZeRO Stage 1** partitions only the optimizer state: each GPU holds Adam's
+  two moments for $1/k$ of the parameters ($8 + 8/k$ bytes/parameter). Instead
+  of an allreduce ($=\text{reduce-scatter} + \text{all-gather}$,
+  :numref:`subsec_mg-ring`), the GPUs reduce-scatter the gradients so each GPU
+  receives the summed gradient for its $1/k$ shard, updates its own parameters,
+  and all-gathers the updated weights—moving the exact same bytes as data
+  parallelism.
+* **ZeRO Stage 2** also partitions the gradients ($4 + 12/k$ bytes/parameter):
+  as each gradient bucket fills during the backward pass, it is immediately
+  reduce-scattered and the non-owned $1 - 1/k$ gradient shards are freed,
+  again at zero extra byte cost over data parallelism.
+* **ZeRO Stage 3**, or *Fully Sharded Data Parallelism* (FSDP)
+  :cite:`Zhao.Gu.Varma.ea.2023`, shards the weights as well ($16/k$
+  bytes/parameter). Before a block runs in the forward or backward pass, an
+  all-gather assembles its full weights; immediately after the block finishes,
+  the non-owned weight shards are freed, and the block's gradients are
+  reduce-scattered (:numref:`fig_fsdp_lifecycle`).
 
 :Training state per GPU at the end of the backward pass, with Adam in fp32 on $k$ GPUs, and for the GPT with 36 blocks and 1.92 billion parameters on $k = 2$.
 :label:`tab_mgp-zero`
@@ -140,62 +130,6 @@ backward pass.
 | ZeRO stage 2 | all | $1/k$ | $1/k$ | $4 + 12/k$ | 17.9 GiB |
 | ZeRO stage 3 (FSDP) | $1/k$ | $1/k$ | $1/k$ | $16/k$ | 14.3 GiB |
 
-During the backward pass a GPU briefly holds more than the table says: in
-stage 2 a bucket of gradients that have not yet been summed and scattered,
-and in stage 3 also one or two gathered blocks. On two GPUs, stage 1
-already brings the 36-block GPT below 24 GiB, but it leaves less than
-3 GiB of the card for everything else. Stage 3 leaves almost 10.
-
-:begin_tab:`pytorch`
-DDP needs more than the first row of the table: its buckets hold a second
-copy of the gradients, 4 more bytes per parameter, unless the argument
-`gradient_as_bucket_view=True` makes the gradients views into the buckets.
-:end_tab:
-
-A GPU in stage 1 updates only its $1/k$ of the parameters, so how do the
-other GPUs get the updated values? The identity of
-:numref:`subsec_mg-ring` answers it: an allreduce is a reduce-scatter
-followed by an all-gather. The reduce-scatter leaves each GPU with the
-summed gradient of the parameters it owns, which is all that its optimizer
-needs. Each GPU then updates its $1/k$ of the parameters, and an
-all-gather assembles the updated parameters on every GPU. The two phases
-move the same bytes as the allreduce of data parallelism, now separated by
-the update, so stage 1 reduces the memory per GPU at no cost in bytes. It
-is not quite free in time. The all-gather now sits between the update and
-the next forward pass, and unless the implementation overlaps it with
-that forward pass, block by block, or with the backward pass, bucket by
-bucket, it adds to the step.
-
-Stage 2 needs a word of explanation. Every GPU runs a full backward pass,
-which produces every gradient, so how can a GPU hold only $1/k$ of them? It
-never holds them all at once. The tools of :numref:`sec_multi_gpu_concise`
-already exchange the gradients in *buckets*, groups of tensors sent as
-soon as the backward pass has produced them. Stage 2 reduce-scatters each
-bucket instead of allreducing it, so every GPU keeps the summed gradient
-of the parameters it owns and frees the rest. The full gradient exists
-only one bucket at a time. The collectives are those of stage 1, so
-stage 2, too, saves memory at no cost in bytes.
-
-:begin_tab:`jax`
-XLA keeps to this order only with its latency-hiding scheduler, which the
-first cell of this notebook turns on. Without it, XLA starts each
-reduce-scatter as soon as its gradient exists but finishes them all at the
-end of the backward pass, so the full gradients of all blocks are alive
-together and the step needs more memory than JAX allows itself by default.
-:end_tab:
-
-In FSDP each GPU keeps only its shard of every block's weights. An
-all-gather assembles a block's weights just before the block computes,
-and they are released right after (:numref:`fig_fsdp_lifecycle`). The
-backward pass gathers each block's weights once more, releases them after
-the block's backward pass, and reduce-scatters the block's gradients. Let
-$S = 4N$ be the bytes of the fp32 weights, which is also the size of the
-gradients. A step then performs two all-gathers and one reduce-scatter of
-$S$ bytes each, three phases where an allreduce has two, so FSDP
-communicates 1.5 times as much as data parallelism. No full copy of a
-block lives longer than the block's computation, so each GPU holds $16/k$
-bytes per parameter plus the activations and one or two gathered blocks.
-
 ![The life of one block's weights under FSDP on one GPU. Between uses the
 block is sharded, and each GPU holds $1/k$ of it; the other blocks stay
 sharded throughout. An all-gather assembles the whole block for its forward
@@ -205,8 +139,11 @@ leaves each GPU with its share of the
 gradients.](../img/mdl-perf-fsdp-lifecycle.svg)
 :label:`fig_fsdp_lifecycle`
 
-:numref:`tab_collectives` lists the collectives of this chapter, and one
-more that the mixtures of experts of :numref:`sec_moe` need.
+Because FSDP performs two all-gathers (forward and backward) and one
+reduce-scatter of $S = 4N$ bytes per step—three collective phases where a ring
+allreduce performs two—it moves **$1.5\times$ the communication volume of data
+parallelism**. :numref:`tab_collectives` summarizes the four primary
+collectives used across parallel training.
 
 :The collective operations behind data-parallel and sharded training.
 :label:`tab_collectives`
@@ -214,50 +151,37 @@ more that the mixtures of experts of :numref:`sec_moe` need.
 | collective | what every GPU ends with | where it appears |
 |---|---|---|
 | allreduce | the full sum | gradients in data parallelism |
-| reduce-scatter | one part of the sum | gradients in ZeRO and FSDP |
-| all-gather | every part, concatenated | weights in ZeRO and FSDP |
-| all-to-all | a different part from each GPU | tokens routed to the experts of a mixture of experts (:numref:`sec_moe`) |
+| reduce-scatter | one $1/k$ shard of the sum | gradients in ZeRO and FSDP |
+| all-gather | every shard, concatenated | weights in ZeRO and FSDP |
+| all-to-all | a distinct slice from each GPU | token routing in mixtures of experts (:numref:`sec_moe`) |
 
 ## Memory and Communication
 
-Before we run FSDP, let us predict what a step of the 36-block GPT should
-cost on two GPUs, the fewest on which its sharded state fits. Each GPU
-processes two sequences of 1,024 tokens per step, and every block is
-checkpointed as in :numref:`subsec_mp-checkpointing`, so that it keeps
-only its input for the backward pass.
+Let us predict the peak memory and step time of our 36-block GPT under FSDP on
+$k = 2$ GPUs, with 2 sequences of 1,024 tokens per GPU and per-block activation
+checkpointing (:numref:`subsec_mp-checkpointing`).
 
-Memory is the easy part. The training state takes $16N/2 = 14.3$ GiB per
-GPU. For the 18-block GPT, :numref:`subsec_mp-checkpointing` bounded the
-activations under checkpointing by about 1 MiB per token: the input that
-each block keeps, 8 KiB per token in fp32, plus one recomputed block, the
-output layer, and the loss. Eighteen more stored inputs add only 144 KiB,
-so the bound stays at about 1 MiB per token, or 2 GiB for 2,048 tokens.
-One or two gathered blocks of 0.2 GB each bring each GPU to at most about
-17 GiB, well under the 24 GiB of a card.
+* **Memory:** The sharded training state takes $16N/2 = 14.3$ GiB per GPU.
+  Checkpointed activations take ~1 MiB/token (~2 GiB for 2,048 tokens), and one
+  or two currently gathered blocks (~0.2 GB each) bring peak memory to at most
+  **~17 GiB** per GPU—comfortably below 24 GiB.
+* **Communication:** Each of the three collective phases sends $(k-1)S/k$
+  bytes per GPU, giving a total communication time of
 
-Communication sets the time of the step. In an all-gather or a
-reduce-scatter of $S$ bytes, each of the $k$ GPUs sends $(k-1)S/k$ bytes:
-it is one of the two phases of the ring allreduce of
-:numref:`subsec_mg-ring`. FSDP runs three such phases per step. Let
-$\beta_\textrm{link}$ be the time per byte that each GPU sends during a
-large collective (:numref:`subsec_mg-accounting`). The communication of a step
-then takes
+  $$
+  t_\textrm{comm} = \frac{3(k-1)}{k}\,S\,\beta_\textrm{link}.
+  $$
+  :eqlabel:`eq_fsdp_comm`
 
-$$
-t_\textrm{comm} = \frac{3(k-1)}{k}\,S\,\beta_\textrm{link}.
-$$
-:eqlabel:`eq_fsdp_comm`
+  Notice the key scaling property of FSDP: **adding more GPUs divides the
+  state memory per GPU by $k$, but the bytes each GPU sends per step grow from
+  $1.5S$ (at $k = 2$) toward $3S$ (at large $k$)**. Only processing more tokens
+  per GPU or using a faster interconnect reduces the communication share of a
+  step.
 
-The size of the model sets this time. The number of GPUs, at a fixed
-$\beta_\textrm{link}$, changes it by at most a factor of two: each GPU
-sends $1.5S$ per step at $k = 2$, and close to $3S$ when $k$ is large.
-Adding GPUs therefore divides the memory of the state by $k$, while the
-bytes that each GPU sends per step grow instead of falling. If you remember
-one property of FSDP from this section, let it be this one. Only more
-tokens per GPU, or a faster link, lower the share of the step that goes to
-communication. For our GPT, $1.5S$ is 11.5 GB. The rate depends on the
-collective and on which GPUs take part, so we measure it for the
-collective that FSDP uses most, an all-gather, on the two GPUs of the run.
+We measure $\beta_\textrm{link}$ for an all-gather of 256 MiB across two GPUs
+and evaluate our paper predictions for memory, communication time, and compute
+time ($8N$ FLOPs/token with checkpointing at 82.6 TFLOP/s in tf32):
 
 ```{.python .input #sharding-memory-and-communication-1}
 %%tab pytorch
@@ -294,18 +218,6 @@ print(f'bus bandwidth = {1e-9 / beta_link:.1f} GB/s in an all-gather on {k} '
       f'GPUs (beta_link = {1e9 * beta_link:.2f} ns/byte)')
 ```
 
-Each GPU sends at a little over 2 GB/s, close to what the allreduces of
-:numref:`sec_multi_gpu_concise` reached between the same two GPUs through
-host memory. The 11.5 GB of a step should therefore take about 5 s.
-
-The arithmetic takes far less time. A forward and a backward pass take
-about six floating-point operations per parameter and token
-(:numref:`sec_scaling-laws`), and checkpointing repeats the forward pass,
-two of the six, for $8N$ per token. For 2,048 tokens per GPU at the tf32
-rate of the RTX 4090, about 83 TFLOP/s, that is
-$8 \cdot 1.92 \times 10^{9} \cdot 2048 / (8.3 \times 10^{13}) \approx 0.4$ s.
-The cell evaluates the three predictions.
-
 ```{.python .input #sharding-memory-and-communication-2}
 %%tab pytorch, jax
 b, T = 2, 1024        # Sequences of T tokens per GPU and step
@@ -318,31 +230,20 @@ print(f'arithmetic at the peak, 8N bT/P: '
       f'{8 * N * b * T / peak_flops:.2f} s per step')
 ```
 
-At best, overlap hides the 0.4 s of arithmetic under the 5 s of
-communication. No schedule can hide 5 s of communication under 0.4 s of
-arithmetic. The prediction for a step is therefore about 5 s, of which the
-arithmetic would fill less than a tenth.
+At ~2.2 GB/s bus bandwidth over host memory, moving $1.5S = 11.5$ GB per step
+takes ~5 s, whereas the 2,048 tokens of arithmetic take only ~0.4 s. Because
+0.4 s of compute cannot hide 5 s of communication, the step should take ~5 s.
 
 ## Sharded Training on Two GPUs
 
-Now we run the training step. Both tabs build the model without ever
-placing all of it on one GPU, divide the weights, gradients, and moment
-estimates of every block between the two GPUs, and take one warm-up step
-and three timed ones. One more step, profiled, shows how much of its time
-GPU 0 spends in communication kernels. The tokens are random, since only
-the shapes of a step decide its memory and its time, and five steps are
-far too few to see a loss fall. What we test is whether two GPUs can hold
-the step, and how long it takes.
+Now we run the sharded 36-block GPT step on two GPUs, constructing the model
+so that no single GPU ever materializes the full 28.6 GiB state at once.
 
 :begin_tab:`pytorch`
-In PyTorch, `fully_shard` from `torch.distributed.fsdp` applies FSDP to a
-module. `TRAIN_FSDP` calls it once for every block, so that each block is
-gathered and released on its own, and once for the whole model, which
-covers the embeddings and the final norm. The model is built on the meta
-device, which records shapes but stores nothing; `to_empty` then allocates
-only this GPU's shards, and we initialize them as `d2l.GPT` does. With
-`fused=True` Adam updates all tensors in a few fused kernels, without the
-temporaries of the default update, which are as large as the gradients.
+In PyTorch, we construct the model on the `'meta'` device, wrap each
+checkpointed block and the top-level model with `fully_shard` from
+`torch.distributed.fsdp`, materialize only this rank's shards via
+`model.to_empty(device=device)`, and initialize them in place.
 :end_tab:
 
 ```{.python .input #sharding-memory-and-communication-3}
@@ -403,11 +304,6 @@ dist.destroy_process_group()
 '''
 ```
 
-:begin_tab:`pytorch`
-Like the scripts of :numref:`sec_multi_gpu_concise`, `TRAIN_FSDP` is a
-complete program, and `d2l.torchrun` starts one copy of it per GPU.
-:end_tab:
-
 ```{.python .input #sharding-memory-and-communication-4}
 %%tab pytorch
 ranks = d2l.torchrun(TRAIN_FSDP, k, json.dumps(config), b, T)
@@ -416,19 +312,10 @@ times, comm = ranks[0]['times'], ranks[0]['comm']  # GPU 0
 ```
 
 :begin_tab:`jax`
-In JAX, sharding the training state is a change of placement, as data
-parallelism was. `fsdp_sharding` splits each array with `P('data')` along
-its first axis whose length is a multiple of $k$. For most weight matrices
-that is the leading axis. Two kinds of array are split along their width
-instead, because two GPUs cannot share their rows evenly: the output matrix
-of every feed-forward network, with 5,461 rows, and the embedding table,
-with 50,257. `create` builds the model and the optimizer inside `nnx.jit`
-under this placement, so that each GPU computes only its own shards. Split
-weights alone would let the partitioner choose another scheme, such as
-products with split weights followed by an allreduce of the activations.
-The constraint on the output of every block in `loss_fn` keeps the
-activations split along the batch, and the compiled step below shows that
-FSDP's collectives then follow.
+In JAX, `fsdp_sharding` shards each parameter tensor along its first axis
+divisible by $k$ (`P('data')`), and constraining each block's activation
+output to remain batch-sharded (`data`) causes XLA to emit FSDP's
+all-gathers and reduce-scatters automatically:
 :end_tab:
 
 ```{.python .input #sharding-memory-and-communication-5}
@@ -487,15 +374,6 @@ print(f'per GPU: weights and moments '
       f'{mem.temp_size_in_bytes / 2**30:.1f} GiB')
 ```
 
-:begin_tab:`jax`
-Each GPU keeps 10.7 GiB of weights and moment estimates, the $12N/k$ bytes
-of its shards, all of it donated so that the update can write into it.
-The other $4N/k$ bytes of the table's last row, the gradient shards, live
-among the temporaries, about 5 GiB, together with the activations and the
-gathered blocks. The compiled program also tells which collectives the
-compiler wrote.
-:end_tab:
-
 ```{.python .input #sharding-memory-and-communication-8}
 %%tab jax
 def collective_megabytes(compiled):
@@ -521,17 +399,6 @@ for kind, mb in sorted(collective_megabytes(compiled).items(),
     print(f'{kind}: {mb / 1e3:.2f} GB')
 ```
 
-:begin_tab:`jax`
-The compiler wrote FSDP's collectives and little else. The sizes are those
-of what each collective returns: the all-gathers return the weights of the
-36 blocks twice and the embedding table once, and the reduce-scatter
-returns this GPU's half of the gradient, $S/2$. At $k = 2$ a GPU sends half
-of each gathered result, and in the reduce-scatter as many bytes as it
-keeps, so it sends $7.5 + 3.8 = 11.3$ GB per step, close to the $1.5S$ of
-the prediction. The small all-to-all comes from the embedding table, which
-is split along its width.
-:end_tab:
-
 ```{.python .input #sharding-memory-and-communication-10}
 %%tab jax
 train_step(model, opt, X).block_until_ready()  # Warm-up, finished
@@ -550,270 +417,124 @@ print(f'per GPU: peak memory {peak_bytes / 2**30:.1f} GiB; '
       f'communication kernels')
 ```
 
-Two GPUs hold the step. Each peaks at about 16 GiB, under the bound of
-17 GiB. A step takes about 5.5 s, a little longer than the predicted
-communication, and the three timed steps agree within a few percent. GPU 0
-spends nearly all of the step in communication kernels, so the arithmetic
-adds little beside them, and the step lasts about as long as its
-communication. Three byte counts and one measured rate predicted it to
-within a sixth. On our machine, sharding lets the model train on two
-GPUs, at about 7% of the speed that its arithmetic would allow.
+Both GPUs hold the 36-block model at a peak of ~16 GiB per card (under our 17
+GiB bound), and each step takes ~5.5 s, with GPU 0 spending over 90% of the
+step in NCCL communication kernels—within a sixth of our 5 s paper prediction.
+Over NVLink 5 (900 GB/s per direction), the same 11.5 GB of collectives takes
+only ~13 ms, less than a thirtieth of the 0.4 s compute time.
 
-What 7% means becomes clear over a whole run. A compute-optimal run of
-this model, at 20 tokens per parameter (:numref:`sec_scaling-laws`), reads
-about 38 billion tokens. At 4,096 tokens per step and about 5.5 s per step
-our two cards would need about 600 days. Their arithmetic alone, at the
-peak rate, would finish in about six weeks. This is why nobody trains a
-model of this size over host memory.
-
-The same three phases over NVLink 5, at 900 GB/s in each direction
-(:numref:`tab_gpu_specs`), take about 13 ms, a thirtieth of the arithmetic
-of our step. FSDP is the standard way to train models whose state does
-not fit on one GPU, and on such links it costs little.
-
-The arithmetic also says when to shard. A model whose training state fits
-on one GPU next to its activations trains fastest with data parallelism.
-On a 24 GiB card with Adam in fp32 that limit lies at about a billion
-parameters, fewer for long sequences. The 18-block GPT of
-:numref:`sec_memory_precision` sits at this limit. Stage 3 on two GPUs
-would cut its 15.1 GiB per GPU to 7.5 GiB and free 7.5 GiB for
-activations. Larger micro-batches would then save at most the accumulator
-traffic of :numref:`subsec_mp-accumulation`, a fraction $2I^*/n$ of the
-arithmetic, which at micro-batches of 2,048 tokens in tf32 is 8%, about a
-hundredth of a second per micro-batch. FSDP, on the other hand, gathers
-the weights twice for every micro-batch, about 2 s on our link. Data
-parallelism with gradient accumulation exchanges the gradient once per
-optimizer step, however many micro-batches the step takes. On our machine
-we therefore shard the 36-block GPT, and not the 18-block one.
-
-FSDP still gathers each block whole before the block computes, so a block
-must fit on one GPU. *Tensor parallelism* removes that limit by splitting
-every weight matrix across the GPUs (exercise :exref:`ex_mgp-tensor`). It
-belongs, with the forms of parallelism that span several machines, to
-:numref:`chap_lm_parallelism`. The case study that ends this chapter
-returns to a model that fits on one GPU, where the causes of a slow step
-that we took apart one at a time act together.
+This comparison also shows *when* to shard: a model whose training state fits
+on a single GPU alongside a reasonable micro-batch (such as our 18-block GPT)
+trains much faster with data parallelism and gradient accumulation (which
+communicates once per global step) than with FSDP over PCIe (which re-gathers
+the weights twice on every micro-batch).
 
 ## Summary
 
-Data parallelism keeps all 16 bytes per parameter of the training state on
-every GPU, so it cannot train a model whose state exceeds one card. ZeRO
-divides the state among the $k$ GPUs: stage 1 the optimizer state, and
-stage 2 also the gradients, reduce-scattered bucket by bucket, both at no
-cost in bytes. Stage 3, FSDP, also divides the weights and gathers each
-block for its forward and backward pass, at 1.5 times the communication of
-data parallelism. More GPUs divide its memory per GPU, but not the bytes
-that each GPU sends per step. Three phases of $S$ bytes and one measured
-link rate predict the step. On two of our GPUs the 36-block GPT, which no
-card of ours holds, runs at about 5.5 s per step, nearly all of it
-communication through host memory, or about 7% of its arithmetic speed.
-Sharding is worth its communication where the state does not fit, and over
-a fast link the same bytes take milliseconds.
+Data parallelism replicates all $16N$ bytes of fp32 Adam state on every GPU.
+ZeRO partitions this state across $k$ GPUs: Stage 1 shards the optimizer
+moments ($8 + 8/k$ bytes/parameter) and Stage 2 also shards the gradients
+($4 + 12/k$ bytes/parameter), both moving the exact same $2(k-1)S/k$ bytes per
+step as a ring allreduce. Stage 3 (FSDP) shards the weights as well ($16/k$
+bytes/parameter), gathering each block's weights for the forward and backward
+pass and reduce-scattering gradients at $1.5\times$ the communication volume
+of data parallelism ($3(k-1)S/k$ bytes per GPU). Sharding enables two 24 GiB
+GPUs to train a 36-block GPT whose 28.6 GiB state fits on neither card alone.
 
 ## Exercises
 
 1. **Cost of sharding.** ● Count communication per GPU and step in units
-   of $S$, the bytes of one full set of fp32 weights or gradients.
-    1. A variant of ZeRO stage 3 keeps every gathered block from its
-       forward pass until its backward pass. Which collective does this
-       remove, and how much of the memory saving of stage 3 does it give
-       up, in bytes per parameter of :numref:`tab_mgp-zero`?
-    1. Mixed-precision FSDP gathers the weights in bf16 and reduce-scatters
-       the gradients in bf16, while every GPU keeps its shard of the fp32
-       weights and of Adam's state. Compare its bytes per step with those
-       of data parallelism in fp32, and its memory per parameter with the
-       last row of :numref:`tab_mgp-zero`.
-    1. For the 36-block GPT on $k = 2$ GPUs, with the $\beta_\textrm{link}$
-       measured in this section (the stored output of your tab gives it if
-       you have no two GPUs), find the number of tokens per GPU and step at
-       which the computation, $8N$ operations per token with checkpointing
-       at 83 TFLOP/s, takes as long as the communication
-       of :eqref:`eq_fsdp_comm`. How many sequences of 1,024 tokens is that,
-       and do their activations fit next to the training state
-       (:numref:`subsec_mp-checkpointing`)? How does gradient accumulation
-       change the answer when FSDP gathers the weights anew for every
-       micro-batch?
+   of $S = 4N$, the bytes of one full set of fp32 weights or gradients.
+    1. A variant of ZeRO Stage 3 keeps every gathered block in memory from its
+       forward pass until its backward pass finishes. Which collective does
+       this eliminate, and how much memory saving from :numref:`tab_mgp-zero`
+       does it give up?
+    1. Mixed-precision FSDP all-gathers weights in bf16 and reduce-scatters gradients in bf16 while keeping each GPU's master weight and Adam shards in fp32. Compare its bytes transferred per step with fp32 data parallelism, and its memory per parameter with the last row of :numref:`tab_mgp-zero`.
+    1. For the 36-block GPT on $k = 2$ GPUs at the measured
+       $\beta_\textrm{link}$, how many tokens per GPU would a step need for
+       checkpointed compute ($8N$ FLOPs/token at 83 TFLOP/s) to match the
+       communication time :eqref:`eq_fsdp_comm`? Do those activations fit on
+       the card, and why does gradient accumulation not help when FSDP
+       re-gathers weights on every micro-batch?
 
 :begin_tab:`pytorch`
-2. [extended] **Sharded optimizer state.** ● This section ran stage 3 with
-    `fully_shard`; here you implement ZeRO stage 1
-    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` by hand and measure what it
-    saves. Start from `TRAIN_DDP` of :numref:`sec_multi_gpu_concise`, with
-    `torch.optim.Adam` in place of SGD.
-    1. Assign every parameter tensor to one owner process, so that the
-       processes own nearly equal numbers of values, and give each process
-       an Adam optimizer over its own tensors only. After the backward pass
-       and the owners' steps, send each tensor from its owner to all
-       processes with `dist.broadcast`. Check that after a few steps the
-       parameters match those of DDP with a full Adam from the same
-       initialization, and compare with
-       `torch.distributed.optim.ZeroRedundancyOptimizer`.
-    1. Read `torch.cuda.memory_allocated` after initialization, before the
-       first optimizer step, and after it, with and without sharding at
-       $k = 2$ and $k = 4$, and account for the differences with
-       :numref:`tab_mgp-zero`; then read `torch.cuda.max_memory_allocated`
-       after the second step and compare its change under sharding with
-       the change in live memory.
-    1. Measure the step time with and without sharding. DDP's allreduce
-       hands every process the full summed gradient, of which stage 1 uses
-       only the part that the process owns. Count the bytes per GPU that the
-       allreduce and the broadcasts of your implementation send together,
-       and compare them with the reduce-scatter and all-gather of stage 1
-       in :numref:`subsec_mgp-fsdp`.
-
-    *Adapted from Stanford CS336,
-    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
-    Problems optimizer_state_sharding and
-    optimizer_state_sharding_accounting.*
+2. [extended] **Sharded optimizer state.** ● Implement ZeRO Stage 1
+    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` by hand starting from
+    `TRAIN_DDP` (:numref:`sec_multi_gpu_concise`) with `torch.optim.Adam`.
+    1. Partition the parameter tensors across ranks so each rank owns roughly
+       $1/k$ of the parameters and runs Adam only on its owned tensors, then
+       broadcast each updated tensor from its owner with `dist.broadcast`.
+       Verify that the parameters match full DDP Adam after several steps, and
+       compare with `torch.distributed.optim.ZeroRedundancyOptimizer`.
+    1. Measure allocated and peak GPU memory at $k = 2$ and $k = 4$ with and
+       without sharding, and compare the total bytes sent by DDP allreduce plus
+       owner broadcasts against Stage 1's reduce-scatter plus all-gather.
 
 3. [code] **Tensor versus data parallelism.** ● Consider the MLP block
     $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
-    $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
-    step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
-    $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$, and an elementwise
-    activation $\phi$, on $k$ devices. Tensor
-    parallelism (:numref:`fig_splitting`) splits $\mathbf{W}_1$ by columns and
-    $\mathbf{W}_2$ by rows :cite:`shoeybi2019megatron`.
-    1. Show that each device can compute, without communication, an
-       $n \times d$ partial result from its columns of $\mathbf{W}_1$ and
-       its rows of $\mathbf{W}_2$, and that $\mathbf{Y}$ is the sum of the
-       $k$ partial results. Which collective forms that sum, and which
-       collective does the backward pass need for the gradient with
-       respect to $\mathbf{X}$?
-    1. Data parallelism on the same $k$ devices allreduces the gradients
-       of $\mathbf{W}_1$ and $\mathbf{W}_2$ once per step. Count the values
-       that each scheme sends per device and step, and find the number of
-       tokens $n$ below which tensor parallelism sends less.
-    1. Tensor parallelism is in practice confined to the GPUs of one NVLink
-       domain even where it sends less. Explain why, using when each
-       scheme's communication happens relative to the computation that
-       needs its result.
-    1. In a script launched with `d2l.torchrun`, apply `parallelize_module`
-       to `nn.Sequential(nn.Linear(d, 4 * d), nn.GELU(), nn.Linear(4 * d, d))`
-       on `init_device_mesh("cuda", (k,))`, with `ColwiseParallel()` for
-       submodule `"0"` and `RowwiseParallel()` for submodule `"2"`. Count
-       the collectives of the forward and the backward pass with
-       `CommDebugMode` from `torch.distributed.tensor.debug`, once for an
-       input with `requires_grad=True` and once without, and explain the
-       difference.
-
-    *Adapted from Stanford CS336,
-    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
-    Problems data_parallel_calcs and tp_calcs.*
+    $\mathbf{X} \in \mathbb{R}^{n \times d}$,
+    $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$, and
+    $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$ across $k$ devices. Tensor
+    parallelism (:numref:`fig_splitting`, :cite:`shoeybi2019megatron`) splits
+    $\mathbf{W}_1$ column-wise and $\mathbf{W}_2$ row-wise.
+    1. Show that each device can compute a partial $n \times d$ output without
+       communication and that summing the $k$ partial outputs gives
+       $\mathbf{Y}$. Which collective does the forward pass need, and which
+       does the backward pass need for $\nabla_{\mathbf{X}}$?
+    1. Compare the values sent per device and step under tensor parallelism
+       versus data parallelism, and find the token count $n$ below which
+       tensor parallelism sends less data. Why is tensor parallelism
+       nevertheless restricted to fast intra-node NVLink domains?
+    1. Using `parallelize_module` with `ColwiseParallel()` and
+       `RowwiseParallel()` on a 1D `DeviceMesh`, count the forward and
+       backward collectives with `CommDebugMode`.
    :exlabel:`ex_mgp-tensor`
 :end_tab:
 
 :begin_tab:`jax`
-2. [extended] **Sharded optimizer state.** ● This section ran stage 3 by
-    placement; here you implement ZeRO stage 1
-    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` declaratively and measure
-    what it saves. Start from the `train_step` of
-    :numref:`sec_multi_gpu_concise` and use `optax.adam` in
-    `nnx.Optimizer` instead of SGD. Keep the model replicated, and place
-    every leaf of `nnx.state(opt)` with a `NamedSharding` that splits the
-    first of its axes whose length is divisible by $k$, replicating the
-    leaves that have no such axis, as `fsdp_sharding` does.
-    1. Run `train_step` once and show the layout of a weight afterwards.
-       Stage 1 needs replicated parameters at the start of every step; if
-       the compiler did not keep them replicated, restore the layout inside
-       the step with `jax.sharding.reshard` and a replicated
-       `NamedSharding`. Check that after a few steps the parameters match
-       those of replicated Adam from the same initialization.
-    1. Read the collectives of the compiled step with
-       `collective_megabytes`. Which collective is new compared with the
-       replicated step, and is the gradient sum an allreduce or a
-       reduce-scatter? Compare the bytes per GPU of the compiled step with
-       the reduce-scatter and all-gather that stage 1 needs
-       (:numref:`subsec_mgp-fsdp`).
-    1. In fresh processes, read `'bytes_in_use'` and `'peak_bytes_in_use'`
-       from `jax.devices()[0].memory_stats()` after a completed step, and
-       measure the step time, with and without sharding at $k = 2$ and
-       $k = 4$. Account for the differences in live memory with
-       :numref:`tab_mgp-zero`, and compare them with the change in the
-       peak.
-
-    *Adapted from Stanford CS336,
-    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
-    Problems optimizer_state_sharding and
-    optimizer_state_sharding_accounting.*
+2. [extended] **Sharded optimizer state.** ● Implement ZeRO Stage 1
+    :cite:`Rajbhandari.Rasley.Ruwase.ea.2020` declaratively starting from
+    `train_step` (:numref:`sec_multi_gpu_concise`) with `optax.adam`. Keep the
+    model parameters replicated (`P()`), and place the leaves of
+    `nnx.state(opt)` with `fsdp_sharding`.
+    1. Ensure parameters remain replicated at the end of `train_step` via
+       `jax.sharding.reshard` if needed, and verify that multi-step parameter
+       updates match replicated Adam.
+    1. Inspect the compiled step with `collective_megabytes` and compare its collectives and live/peak memory at $k = 2$ and $k = 4$ against :numref:`tab_mgp-zero`.
 
 3. [code] **Tensor versus data parallelism.** ● Consider the MLP block
     $\mathbf{Y} = \phi(\mathbf{X}\mathbf{W}_1)\mathbf{W}_2$ with
-    $\mathbf{X} \in \mathbb{R}^{n \times d}$ holding the $n$ tokens of one
-    step, $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$,
-    $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$, and an elementwise
-    activation $\phi$, on $k$ devices. Tensor
-    parallelism (:numref:`fig_splitting`) splits $\mathbf{W}_1$ by columns and
-    $\mathbf{W}_2$ by rows :cite:`shoeybi2019megatron`.
-    1. Show that each device can compute, without communication, an
-       $n \times d$ partial result from its columns of $\mathbf{W}_1$ and
-       its rows of $\mathbf{W}_2$, and that $\mathbf{Y}$ is the sum of the
-       $k$ partial results. Which collective forms that sum, and which
-       collective does the backward pass need for the gradient with
-       respect to $\mathbf{X}$?
-    1. Data parallelism on the same $k$ devices allreduces the gradients
-       of $\mathbf{W}_1$ and $\mathbf{W}_2$ once per step. Count the values
-       that each scheme sends per device and step, and find the number of
-       tokens $n$ below which tensor parallelism sends less.
-    1. Tensor parallelism is in practice confined to the GPUs of one NVLink
-       domain even where it sends less. Explain why, using when each
-       scheme's communication happens relative to the computation that
-       needs its result.
-    1. Build the mesh with `jax.make_mesh` and
-       `axis_types=(jax.sharding.AxisType.Auto,)`, so that the compiler
-       chooses the layout of each product. Place $\mathbf{W}_1$ with
-       `P(None, 'data')`, $\mathbf{W}_2$ with `P('data', None)`, and
-       $\mathbf{X}$ replicated, and show the layout of $\mathbf{W}_1$ with
-       `jax.debug.visualize_array_sharding`. Then `jit` the block and its
-       gradient with respect to all three inputs, and find the collectives
-       of the first sub-problem in the compiled programs.
-
-    *Adapted from Stanford CS336,
-    [Assignment 2 (Systems)](https://github.com/stanford-cs336/assignment2-systems),
-    Problems data_parallel_calcs and tp_calcs.*
+    $\mathbf{X} \in \mathbb{R}^{n \times d}$,
+    $\mathbf{W}_1 \in \mathbb{R}^{d \times 4d}$, and
+    $\mathbf{W}_2 \in \mathbb{R}^{4d \times d}$ across $k$ devices. Tensor
+    parallelism (:numref:`fig_splitting`, :cite:`shoeybi2019megatron`) splits
+    $\mathbf{W}_1$ column-wise (`P(None, 'data')`) and $\mathbf{W}_2$ row-wise
+    (`P('data', None)`).
+    1. Show that each device can compute a partial $n \times d$ output without
+       communication and that summing the $k$ partial outputs gives
+       $\mathbf{Y}$. Which collective does the forward pass need, and which
+       does the backward pass need for $\nabla_{\mathbf{X}}$?
+    1. Compare the values sent per device and step under tensor parallelism
+       versus data parallelism, and find the token count $n$ below which
+       tensor parallelism sends less data. Why is tensor parallelism
+       nevertheless restricted to fast intra-node NVLink domains?
+    1. Place $\mathbf{W}_1$ with `P(None, 'data')`, $\mathbf{W}_2$ with
+       `P('data', None)`, and $\mathbf{X}$ replicated on an `Auto` mesh, jit
+       the forward and backward pass, and inspect the emitted collectives.
    :exlabel:`ex_mgp-tensor`
 :end_tab:
 
-4. **Other machines, other counts.** Use :eqref:`eq_fsdp_comm`, the bound
-   of about 1 MiB of activations per token, and $8N$ operations per token
-   at 83 TFLOP/s for the 36-block GPT with two sequences of 1,024 tokens
-   per GPU.
-    1. Predict the training state and the peak memory per GPU, and the
-       seconds per step, on four of our GPUs, assuming that
-       $\beta_\textrm{link}$ keeps its two-GPU value. Which assumption of
-       this prediction is the least safe on a machine whose GPUs all
-       exchange data through the same host memory
-       (:numref:`subsec_hw-interconnects`)?
-    1. Predict the seconds per step on four GPUs joined by NVLink 4, at
-       450 GB/s in each direction, keeping the arithmetic rate of an
-       RTX 4090 so that only the link changes. Which resource now limits
-       the step?
-    1. Now hold the global minibatch at 64 sequences of 1,024 tokens,
-       divided among the $k$ GPUs. For each of the two links, find the $k$
-       at which the communication of a step equals its arithmetic,
-       ignoring whether the activations fit and treating the tokens per
-       GPU as continuous. What
-       does the answer say about adding GPUs to a sharded run on our
-       machine?
-
-5. **Prefetching the next block.** In the forward pass under FSDP, let $g$
-   be the time of the all-gather of one block and $c$ the time that the
-   block computes. Without overlap, the forward pass of $L$ blocks takes
-   $L(g + c)$. FSDP can instead issue the all-gather of the next block
-   while the current one computes.
-    1. Show that the forward pass then takes about
-       $g + (L-1)\max(g, c) + c$. Which term of the prediction shrinks,
-       and to what? Why can no schedule make the forward pass shorter than
-       $L\max(g, c)$?
-    1. Compute $g$ and $c$ for one block of the 36-block GPT on our two
-       GPUs: $12d^2 \approx 50$ million parameters per block, 2,048 tokens
-       per GPU, two operations per parameter and token in the forward pass
-       at 83 TFLOP/s, and the $\beta_\textrm{link}$ of this section. How
-       much can prefetching save per step, and why does the measured step
-       leave so little room for it?
-    1. Repeat the computation for NVLink 5 at 900 GB/s in each direction.
-       Which of $g$ and $c$ is now larger, and what fraction of the forward
-       pass does prefetching remove?
+4. **Prefetching the next block.** In the forward pass under FSDP, let $g$ be
+   the all-gather time of one block and $c$ its compute time. Without overlap,
+   $L$ blocks take $L(g + c)$; prefetching issues the all-gather of block
+   $l + 1$ while block $l$ computes.
+    1. Show that prefetching reduces the forward pass time to
+       $g + (L-1)\max(g, c) + c$, and explain why no schedule can do better
+       than $L\max(g, c)$.
+    1. Evaluate $g$ and $c$ for one block of the 36-block GPT ($50$M
+       parameters, 2,048 tokens/GPU, 83 TFLOP/s) on our PCIe link versus
+       NVLink 5 (900 GB/s), and state how much prefetching saves on each
+       interconnect.
 
 [Discussions](https://d2l.discourse.group/)
 

@@ -5,307 +5,220 @@ The sections of this chapter teach one representative of each idea: one
 roofline with one memory bandwidth, one GPU and its links, one compiler per
 framework, three ways to save memory on one card, one collective algorithm,
 one way to divide a model's state among GPUs, and one transformer made fast
-on one machine. A real training run brings the rest of the field one
-problem at a time, and the problems are not equally urgent. Four of the
-entries below, in the order of the chapter, will matter in a first real
-run: "The Input Pipeline" (for anyone who trains on images or audio),
-"Fragmentation and Preallocation", "Compile Time at Scale", and
-"Utilization and Time to a Target Loss". The finer performance models and
-the collective algorithms are for readers who will write kernels or run
-clusters. Theano is history, and parameter servers mostly so. Function and
-flag names are those of late 2026; the ideas will outlast the names.
-Implementations, tutorials, and courses for what the chapter does teach are
-listed in its introduction (:numref:`chap_performance`).
+on one machine. Two open-access books make natural companions to the whole
+chapter: [How to Scale Your Model](https://jax-ml.github.io/scaling-book/)
+(Austin et al., 2025) works out rooflines, sharding notation, and collective
+costs for TPUs and GPUs, and [The Ultra-Scale Playbook](https://huggingface.co/spaces/nanotron/ultrascale-playbook)
+(Hugging Face, 2025) surveys memory budgets, data parallelism, ZeRO, and
+multi-node parallelism with empirical measurements. For a quick introduction
+to the three regimes of :numref:`sec_perf_model`, see Horace He's essay
+:cite:`He.2022`.
 
 ## Measuring and Modeling
 
 ### Finer Performance Models
 
-The roofline of :numref:`sec_perf_model` errs in both directions. Some
-kernels run above its bandwidth roof, because tensors that stay in the
-72 MB L2 cache, or data reused from shared memory, arrive faster than
-$\beta$.
-The cache-aware roofline :cite:`Ilic.Pratas.Sousa.2014` draws one bandwidth
-roof per level of the memory hierarchy; the hierarchical roofline also
-gives a kernel one intensity per level, and the lowest bound limits it.
+The roofline of :numref:`sec_perf_model` :cite:`Williams.Waterman.Patterson.2009`
+errs in both directions. Some kernels run above its bandwidth roof because
+tensors that fit in the 72 MB L2 cache or shared memory arrive faster than
+$\beta$. The cache-aware roofline :cite:`Ilic.Pratas.Sousa.2014` draws one
+bandwidth roof per level of the memory hierarchy, and
 :citet:`Yang.Wang.Farrell.ea.2020` read these per-level bytes from hardware
-counters for deep learning kernels. Other kernels stay below the roof
-because they keep too few bytes in flight (Little's law,
-:numref:`subsec_hw-gpu`). :citet:`Volkov.2016` shows that independent
-instructions within one thread can stand in for extra warps, and that
-earlier GPU performance models mispredict throughput by up to 1.7 times,
-mostly by misapplying Little's law. For a first diagnosis the plain
-roofline is enough; the refinements matter once a kernel sits near a roof
-and the question is which one.
+counters for deep learning kernels. Other kernels stay below the roof because
+they keep too few bytes in flight (Little's law, :numref:`subsec_hw-gpu`).
+:citet:`Volkov.2016` shows that independent instructions within one thread can
+stand in for extra warps, and that earlier GPU performance models mispredict
+throughput by up to 1.7 times by misapplying Little's law.
 
 ### Device Timers and System Profilers
 
-The `Benchmark` of :numref:`sec_perf_model` drains the queue before it
-reads the clock, which would slow the training loop it measures. CUDA
-events (`torch.cuda.Event`) take timestamps on the GPU's stream without
-draining it, but their interval includes the gaps in which the GPU waited
-for the host: they time an overhead-bound step without diagnosing it. The
-profiler of :numref:`subsec_perf-profiler` separates busy from idle time
-for one process, and its traces open as a timeline in a viewer such as
-Perfetto. NVIDIA's Nsight Systems adds what lies outside the framework,
-putting the operating system's threads, the copies, and the NCCL calls of
-all processes on one timeline; Nsight Compute measures a single kernel
-against both roofs.
+`d2l.Benchmark` (:numref:`sec_perf_model`) drains the queue before reading the
+clock, which would slow a live training loop. CUDA events
+(`torch.cuda.Event`) take timestamps on the GPU's stream without draining it,
+though their interval includes any gaps in which the GPU waited for the host.
+The profiler of :numref:`subsec_perf-profiler` separates busy from idle time
+for one process and exports traces for Perfetto. NVIDIA's Nsight Systems
+places OS threads, memory copies, and NCCL calls across all processes on one
+timeline, while Nsight Compute measures a single kernel against both roofs.
 
 ### The Input Pipeline
 
-Readers who train on images or audio often meet a starved loader before
+Readers who train on images or audio often meet a starved data loader before
 they meet Python overhead: the GPU waits while the CPU decodes and augments
-the next minibatch. The case study never meets it, because its corpus sits
-on the GPU. Once :numref:`subsec_hw-cpu` has given the number of worker
-processes the GPU needs, the remaining question is what to do when the host
-has fewer free cores than that; the usual answer is to decode on the GPU,
-as NVIDIA's DALI library does. :citet:`Mohan.Phanishayee.Raniwala.ea.2021`
-measure such data stalls and remove much of the stall time with a cache
-built for the access pattern of training and by sharing preprocessing among
-the jobs of a hyperparameter search.
+the next minibatch. When the host has fewer free cores than the GPU needs
+(:numref:`subsec_hw-cpu`), decoding can move to the GPU (e.g., via NVIDIA
+DALI). :citet:`Mohan.Phanishayee.Raniwala.ea.2021` analyze data stalls across
+training jobs and remove much of the stall time with a training-aware cache
+and shared preprocessing across hyperparameter sweeps.
 
 ### Utilization and Time to a Target Loss
 
-The account that ends the case study (:numref:`subsec_ft-account`) was made
-for BERT by :citet:`Ivanov.Dryden.Ben-Nun.ea.2021`, who went on to fuse the
-bandwidth-bound kernels between the products and made an encoder layer 1.3
-times faster. The case study's `MFU` column is the number that reports of
-large runs quote :cite:`chowdhery2022palm`. *Hardware FLOPs utilization*
-also counts recomputed FLOPs, so under activation checkpointing it exceeds
-MFU, which checkpointing lowers :cite:`Korthikanti.Casper.Lym.ea.2022`.
-Only MFU compares systems fairly, because it credits only the work that the
-model needs.
+The kernel breakdown that ends the case study (:numref:`subsec_ft-account`)
+was carried out for BERT by :citet:`Ivanov.Dryden.Ben-Nun.ea.2021`, who fused
+the bandwidth-bound kernels between matrix products to speed up an encoder
+layer by $1.3\times$. The case study's `MFU` column is the standard metric
+reported for large training runs :cite:`chowdhery2022palm`. *Hardware FLOPs
+utilization* (HFU) also counts recomputed FLOPs, so under activation
+checkpointing it exceeds MFU :cite:`Korthikanti.Casper.Lym.ea.2022`; only MFU
+compares systems fairly because it credits only the work the model requires.
 
-Throughput in tokens per second rewards any change that makes a step
-faster, even one that makes training need more steps. In the case study the
-larger minibatch raised tokens per second and still ended at a higher loss,
-after more tokens, than the GPT of :numref:`sec_gpt`
-(:numref:`subsec_ft-waterfall`). The modded-nanoGPT speedrun
-:cite:`Jordan.2024` therefore ranks changes by the wall-clock time to train
-a small GPT to a fixed validation loss on eight GPUs, a number that a
-faster step improves only if it does not cost more steps than it saves. Its
-records at the time of writing pair this chapter's kernels and formats with
-the Muon optimizer (:numref:`sec_muon`).
+Throughput in tokens per second rewards any change that shortens a step, even
+one that requires more steps to converge. The modded-nanoGPT speedrun
+:cite:`Jordan.2024` therefore ranks changes by wall-clock time to train a GPT
+to a fixed validation loss on eight GPUs, pairing compiled kernels and
+low-precision formats with the Muon optimizer (:numref:`sec_muon`).
 
 ## Hardware and Number Formats
 
 ### Other Accelerators
 
-The chapter applies unchanged to accelerators that :numref:`tab_gpu_specs`
-does not list. AMD's Instinct MI355X, Google's TPU7x, Intel's Gaudi 3, and
-AWS's Trainium2 all place stacked memory beside a die of matrix units.
-Their ridge points (published dense bf16 rate over memory bandwidth) range
-from about 230 FLOP/byte (Trainium2) to 450 or more (Gaudi 3), 1.4 to 3
-times the 164 of our RTX 4090. The regimes of :numref:`sec_perf_model`
-carry over, and more of a step falls under the bandwidth roof, so fusion
-and narrow formats matter more on these chips, not less. What differs is
-the software, the formats each chip runs fast, and the price, which
-:numref:`sec_hardware_buyers` weighs.
+The roofline analysis applies unchanged to accelerators beyond
+:numref:`tab_gpu_specs`. AMD's Instinct MI355X, Google's TPU7x, Intel's
+Gaudi 3, and AWS's Trainium2 all pair stacked HBM with matrix units. Their
+bf16 ridge points range from about 230 FLOP/byte (Trainium2) to over 450
+(Gaudi 3)—$1.4\times$ to $3\times$ the 164 FLOP/byte of our RTX 4090—making
+fusion and narrow formats even more important.
 
 ### Unified Memory
 
-A single stream of text is decoded no faster than the memory bandwidth
-divided by the bytes of the weights (:numref:`subsec_hw-two-workloads`),
-and only if the weights fit at all. Apple's M3 Ultra shares up to 512 GB of
-memory between its CPU and GPU at 819 GB/s. A 70-billion-parameter model in
-8 bits, about 70 GB, does not fit on an RTX 4090, while on the M3 Ultra the
-bound allows about a dozen tokens per second. Machines of this kind trade a
-low compute roof for capacity, which suits decoding a single stream of a
-large model and suits training poorly.
+Single-stream decoding runs no faster than memory bandwidth divided by the
+weight bytes (:numref:`subsec_hw-two-workloads`), provided the weights fit.
+Apple's M3 Ultra shares up to 512 GB of memory between CPU and GPU at
+819 GB/s. A 70B model in 8 bits (~70 GB) does not fit on a 24 GB card, whereas
+on the M3 Ultra the bandwidth bound allows roughly a dozen tokens per second.
+Such unified-memory machines trade a lower compute roof for high capacity,
+suiting single-stream inference rather than training.
 
 ### Block-Scaled Formats in Detail
 
-The block scales of :numref:`subsec_hw-gpu` cost bits. In the OCP microscaling
-formats :cite:`Rouhani.Zhao.More.ea.2023` an 8-bit power-of-two scale shared by
-32 values adds a quarter bit per value. NVIDIA's NVFP4 shares an fp8 scale
-among 16 values, half a bit per value, plus one fp32 scale per tensor. For the
-extra quarter bit its scales need not be powers of two, so they can bring each
-block's largest value close to 6, the top of the fp4 range, where a
-power-of-two scale can only bring it within a factor of two. Either way a 4-bit
-number costs at most 4.5 bits, under a third of the 16 bits of bf16.
+The block scales of :numref:`subsec_hw-gpu` add a small bit overhead. In the
+OCP microscaling formats :cite:`Rouhani.Zhao.More.ea.2023`, an 8-bit
+power-of-two scale shared by 32 values adds 0.25 bits per value. NVIDIA's
+NVFP4 shares an fp8 scale among 16 values (0.5 bits per value) plus one fp32
+scale per tensor, allowing each block's largest value to map near 6 (the top
+of the fp4 range) rather than only within a factor of two. Either way, a
+4-bit weight or activation costs at most 4.5 bits.
 
 ## Compilers and Kernels
 
 ### Writing Fused Kernels
 
-The compilers of :numref:`sec_compilation` fuse chains of elementwise
-operations and reductions, but they do not find algorithmic rewrites such
-as FlashAttention. Triton :cite:`Tillet.Kung.Cox.2019` makes a block of a
-tensor the unit of programming: the author decides the tiling and which
-values stay on the chip, and the compiler handles threads, vector
-instructions, and shared memory. Pallas is JAX's language of the same kind.
-Most readers will never write a kernel, and those who do usually start by
-reading one: Inductor's Triton output for a familiar model. The versions of
-FlashAttention show a kernel following the hardware: FlashAttention-2
-:cite:`Dao.2024` divides the work among thread blocks by query tiles, and
-FlashAttention-3 :cite:`Shah.Bikshandi.Zhang.ea.2024` overlaps data
-movement with the products and exponentials on Hopper GPUs and adds fp8.
+The compilers of :numref:`sec_compilation` fuse elementwise chains and
+reductions (:cite:`Ansel.Yang.He.ea.2024` for PyTorch 2), but they do not
+discover tiled algorithmic rewrites such as FlashAttention. Triton
+:cite:`Tillet.Kung.Cox.2019` (and JAX's Pallas) makes a tensor tile the unit
+of programming: the author specifies the tiling and on-chip buffering while
+the compiler manages threads, vector instructions, and shared memory.
+FlashAttention-2 :cite:`Dao.2024` parallelizes across query tiles, and
+FlashAttention-3 :cite:`Shah.Bikshandi.Zhang.ea.2024` overlaps data movement
+with tensor-core products and exponentials on Hopper GPUs while adding fp8
+support.
 
 ### Compile Time at Scale
 
-Compiling the small step of :numref:`subsec_comp-wholestep` takes seconds;
-compiling a large model takes minutes, again in every process and for every
-new shape. Regional compilation compiles one repeated block, such as a
-transformer layer, once for all its copies
-(`torch.compiler.nested_compile_region`), and caches keep compiled programs
-across processes (`torch.compiler.save_cache_artifacts`,
-`jax_compilation_cache_dir`). Autotuning spends compile time instead of
-saving it: it times several tilings of each matrix product and keeps the
-fastest (`mode='max-autotune'`; XLA autotunes as it compiles). It lengthens
-the first run for a gain in every step, a trade that the break-even count
-$n^*$ of that subsection weighs.
+Compiling a small step (:numref:`subsec_comp-wholestep`) takes seconds,
+whereas compiling a large model can take minutes per process and shape.
+Regional compilation compiles a repeated block (such as a Transformer layer)
+once for all its copies (`torch.compiler.nested_compile_region`), and
+persistent caches share compiled artifacts across processes
+(`torch.compiler.save_cache_artifacts`, `jax_compilation_cache_dir`).
+Autotuning (`mode='max-autotune'` in PyTorch; built into XLA) benchmarks
+multiple matrix-product tilings at compile time, trading a longer initial
+compilation for faster steps (:numref:`subsec_comp-wholestep`).
 
 ### Kernel Replay in Training
 
-A recorded CUDA graph fixes its shapes and addresses
-(:numref:`subsec_comp-overhead`), and a training loop strains both. Shapes
-change, as with the short last minibatch of an epoch; the CUDA graph trees
-behind `mode='reduce-overhead'` record the forward and backward passes once
-per shape, all in one shared memory pool. Tensors kept across steps, such
-as a logged loss, are overwritten by the next replay unless they are cloned
-first. The trees report an error when an overwritten output is read, and
-where they cannot tell that a new step has begun, the loop marks it
-(`torch.compiler.cudagraph_mark_step_begin`) so that the previous step's
-memory can be reused.
+A recorded CUDA graph fixes shapes and memory addresses
+(:numref:`subsec_comp-overhead`). The CUDA graph trees behind
+`mode='reduce-overhead'` record forward and backward passes once per shape in
+a shared memory pool. Tensors retained across steps (such as a logged loss)
+are overwritten on the next replay unless cloned, and when the runtime cannot
+detect a step boundary automatically, `torch.compiler.cudagraph_mark_step_begin`
+marks it explicitly.
 
-### Exporting a Captured Graph
+### Exporting and Earlier Graph Designs
 
-A captured graph can also leave Python. `torch.export` captures a whole
-program, failing with an error where `torch.compile` would insert a graph
-break, and replaces the older TorchScript; a jitted JAX function lowers to
-StableHLO, a versioned format that other compilers accept. Exported graphs
-are how models reach phones, browsers, and serving systems.
-
-### Earlier Graph-Building Designs
-
-Theano :cite:`Bergstra.Breuleux.Bastien.ea.2010` and TensorFlow 1
-:cite:`Abadi.Barham.Chen.ea.2016` made the user build a symbolic graph and
-then run it, which gave the compiler the whole program and made the program
-hard to write and to debug. Eager frameworks reversed the choice, and
-tracing compilers recover the graph from eager code;
-:citet:`Frostig.Johnson.Leary.2018` describe the tracing into XLA from
-which `jax.jit` grew.
+A captured graph can also run outside Python: `torch.export` captures a full
+graph strictly without graph breaks, and a jitted JAX function lowers to
+StableHLO for deployment on mobile, web, and serving runtimes. Earlier
+frameworks such as Theano :cite:`Bergstra.Breuleux.Bastien.ea.2010` and
+TensorFlow 1 :cite:`Abadi.Barham.Chen.ea.2016` required users to construct
+static symbolic graphs explicitly; tracing compilers recover the same whole-program
+graph from ordinary eager code :cite:`Frostig.Johnson.Leary.2018`.
 
 ## Memory
 
 ### Smaller Optimizer State
 
-Adam's two moment estimates take 8 of the 16 bytes per parameter of
-:numref:`subsec_mp-anatomy`. Rather than divide them among GPUs
-(:numref:`sec_sharding`), two methods shrink them. Eight-bit Adam
-:cite:`Dettmers.Lewis.Shleifer.ea.2022` quantizes both block by block and
-reaches the accuracy of 32-bit Adam with 2 bytes of state per parameter
-instead of 8. Adafactor :cite:`Shazeer.Stern.2018` by default keeps no
-first moment, and of each weight matrix's second moment only the row and
-column sums, so its state grows with the sum of the dimensions, not their
-product. Of the two, 8-bit Adam changes less: it is still Adam, while
-Adafactor is another optimizer with its own settings to tune.
+Adam's two moment estimates occupy 8 of the 16 bytes per parameter in
+:numref:`subsec_mp-anatomy`. Rather than sharding them across GPUs
+(:numref:`sec_sharding`), 8-bit Adam :cite:`Dettmers.Lewis.Shleifer.ea.2022`
+quantizes both moments block-by-block to 2 bytes per parameter without losing
+accuracy, while Adafactor :cite:`Shazeer.Stern.2018` omits the first moment
+and factors the second moment into row and column sums.
 
 ### Offloading to Host Memory and Disk
 
-Host memory is an order of magnitude larger than GPU memory and cheaper per
-byte. A model of three billion parameters needs 48 GB at the 16 bytes per
-parameter of :numref:`subsec_mp-anatomy`, twice our card. ZeRO-Offload
-:cite:`Ren.Rajbhandari.Aminabadi.ea.2021` keeps the fp32 weights and both
-moments in host memory and runs the update on the CPU, leaving the card
-12 GB of 16-bit weights and gradients. Gradients out and weights back then
-move 12 GB per step, about half a second at the 23 GB/s of our pinned
-copies (:numref:`subsec_hw-cpu`). At six FLOPs per parameter and
-token and half the bf16 peak, the card processes about 4,600 tokens per
-second, so a minibatch of a few thousand tokens computes long enough to
-hide the copy. The CPU's Adam step over all three billion parameters is the
-other cost. ZeRO-Infinity :cite:`Rajbhandari.Ruwase.Rasley.ea.2021` adds
-NVMe drives to the hierarchy.
+Host DRAM is an order of magnitude larger and cheaper than GPU memory.
+ZeRO-Offload :cite:`Ren.Rajbhandari.Aminabadi.ea.2021` keeps fp32 master
+weights and Adam moments in host memory and runs the optimizer update on the
+CPU, leaving only 16-bit weights and gradients on the GPU; ZeRO-Infinity
+:cite:`Rajbhandari.Ruwase.Rasley.ea.2021` extends offloading to NVMe drives.
 
 ### Choosing What to Recompute
 
-Storing the input of every block, as :numref:`subsec_mp-checkpointing`
-does, is one choice among many. Binomial checkpointing
-:cite:`Griewank.Walther.2008` minimizes the recomputation of a chain for a
-given number of stored states, and Checkmate
-:cite:`Jain.Jain.Nrusimha.ea.2020` solves a general graph as an integer
-linear program. Compilers choose too: AOTAutograd recomputes cheap
-elementwise results when that saves memory traffic, and more under a memory
-budget (a private setting,
-`torch._functorch.config.activation_memory_budget`). In JAX the choice is a
-policy passed to `jax.checkpoint`, such as saving the matrix products and
-recomputing the rest.
+Storing only block inputs (:numref:`subsec_mp-checkpointing`,
+:cite:`Chen.Xu.Zhang.ea.2016`) is one point on a trade-off curve. Binomial
+checkpointing :cite:`Griewank.Walther.2008` minimizes recomputation for a
+fixed number of stored states in a chain, and Checkmate
+:cite:`Jain.Jain.Nrusimha.ea.2020` solves general computation graphs via
+integer linear programming. Modern compilers also apply selective
+recomputation automatically (AOTAutograd's min-cut partitioner in PyTorch) or
+via explicit policies (`jax.checkpoint_policies` in JAX).
 
 ### Fragmentation and Preallocation
 
-A training step can run out of memory with gigabytes free. PyTorch's caching
-allocator keeps freed blocks for reuse. When shapes change from step to step,
-as with variable sequence lengths, the free memory splits into pieces that no
-new tensor fits, and the error reports a large amount "reserved but
-unallocated". Letting the allocator grow a segment in place removes most of
-this waste (`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`), as the error
-message suggests. Under JAX the first surprise is a card that `nvidia-smi`
-shows nearly full whatever the model: a process reserves 75% of the card's
-memory at its first operation, so a second JAX process on the same card can
-fail (`XLA_PYTHON_CLIENT_PREALLOCATE=false` turns this off,
-`XLA_CLIENT_MEM_FRACTION` sets the share).
+When tensor shapes vary across steps, PyTorch's caching allocator can split
+free memory into non-contiguous fragments ("reserved but unallocated");
+setting `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` allows segments to
+grow in place. In JAX, the default allocator preallocates 75% of GPU memory on
+startup (`XLA_PYTHON_CLIENT_PREALLOCATE=false` disables preallocation, and
+`XLA_PYTHON_CLIENT_ALLOCATOR=vmm` uses CUDA virtual memory management).
 
 ## Communication and Scale
 
 ### Collective Algorithms beyond the Ring
 
-The ring allreduce of :numref:`subsec_mg-ring` moves the fewest bytes but
-takes $2(k-1)$ sequential steps, each with a fixed cost, which dominates
-for small messages on many devices. Trees need a number of steps that grows
-like $\log_2 k$; NCCL combines two binary trees in which every device is a
-leaf in one and an inner node in the other, so all links stay busy.
-Recursive halving and doubling reach the bandwidth of the ring with the
-step count of a tree when $k$ is a power of two
-:cite:`Thakur.Rabenseifner.Gropp.2005`. For four GPUs and gradients of tens
-of megabytes the ring is the right choice; the others pay off for small
-messages or many devices, and libraries pick among them by message size and
-topology. NVIDIA's nccl-tests prints the inverse of our
-$\beta_\textrm{link}$ (:numref:`sec_multi_gpu`) as *bus bandwidth*, next
-to an *algorithm bandwidth*, the message size over the time, which equals
-the bus bandwidth at $k = 2$ and falls to about half of it for large $k$.
+The ring allreduce (:numref:`subsec_mg-ring`) minimizes total bytes moved but
+takes $2(k-1)$ sequential hops. Tree algorithms scale their hop count as
+$\log_2 k$, and NCCL pairs two complementary binary trees so that every device
+is a leaf in one and an internal node in the other. When $k$ is a power of
+two, recursive halving and doubling achieves the ring's byte volume in
+$\log_2 k$ steps :cite:`Thakur.Rabenseifner.Gropp.2005`.
 
 ### Parameter Servers and Asynchronous Updates
 
-Before collectives became the default, large-scale learning summed
-gradients on parameter servers: machines that each hold a shard of the
-parameters and answer two requests, *push* a gradient and *pull* the
-current values :cite:`Li.Andersen.Park.ea.2014`. The interface admits
-updates computed from stale parameters, as in DistBelief
-:cite:`Dean.Corrado.Monga.ea.2012`. Asynchrony stops waiting for the
-slowest worker, and local SGD :cite:`Stich.2019` averages the replicas only
-every few steps; both change the optimization, not just its speed.
-Synchronous data parallelism therefore remains the default for dense
-models. Parameter servers survive where the parameters are too large and
-too sparse for every device to hold, as in the embedding tables of
-recommender systems (:numref:`chap_recsys`).
+Before collective libraries became standard, distributed training aggregated
+gradients on parameter servers :cite:`Dean.Corrado.Monga.ea.2012,Li.Andersen.Park.ea.2014`,
+supporting asynchronous updates and local SGD :cite:`Stich.2019`. Because
+stale gradients alter optimization dynamics, synchronous allreduce/ZeRO
+(:cite:`Li.Zhao.Varma.ea.2020,Rajbhandari.Rasley.Ruwase.ea.2020`) is now
+standard for dense models, while parameter servers remain common for massive
+sparse recommender tables (:numref:`chap_recsys`).
 
-### Parallelism Interfaces
+### Parallelism Interfaces and Beyond One Machine
 
-PyTorch offers each form of parallelism as its own interface
-(`DistributedDataParallel`, `fully_shard` for the sharding of
-:numref:`sec_sharding`, `torch.distributed.tensor.parallel`,
-`torch.distributed.pipelining`) and combines them on a device mesh. JAX
-expresses all of them as placements of arrays on a mesh with named axes,
-and the compiler inserts the collectives, a design that GSPMD
-:cite:`Xu.Lee.Chen.ea.2021` introduced.
-
-### Beyond One Machine
-
-The Language Models part takes up the topics that need several machines or
-serve trained models. Tensor, pipeline, and expert parallelism split a
-model whose step is too slow or too communication-heavy under sharded data
-parallelism
-:cite:`shoeybi2019megatron,Narayanan.Shoeybi.Casper.ea.2021,Lepikhin.Lee.Xu.ea.2021`
-(:numref:`chap_lm_parallelism`). Training in fp8 needs scales per tensor or
-per block and fp32 accumulation
+PyTorch exposes each parallelism strategy through a composable API
+(`DistributedDataParallel`, `fully_shard`, `torch.distributed.tensor.parallel`,
+`torch.distributed.pipelining`) on a device mesh, whereas JAX expresses all of
+them declaratively via array placements on a named mesh compiled with GSPMD
+/ Shardy :cite:`Xu.Lee.Chen.ea.2021`. Multi-node tensor, pipeline, and expert
+parallelism :cite:`shoeybi2019megatron,Narayanan.Shoeybi.Casper.ea.2021,Lepikhin.Lee.Xu.ea.2021`
+(:numref:`chap_lm_parallelism`), fp8 training
 :cite:`Micikevicius.Stosic.Burgess.ea.2022,Liu.Feng.Xue.ea.2024`
-(:numref:`sec_lm_low_precision`). Serving engines batch requests
-continuously :cite:`Yu.Jeong.Kim.ea.2022` and page the key–value cache
-:cite:`Kwon.Li.Zhuang.ea.2023` (:numref:`chap_lm_serving`). Quantization
-compresses trained weights to 4 or 8 bits (:numref:`chap_lm_compression`),
-and :eqref:`eq_hw_decode_bound` says why it pays: halving the bytes of the
-weights doubles the bound on single-stream decoding, while faster
-arithmetic does not move it at all.
+(:numref:`sec_lm_low_precision`), continuous batching and PagedAttention
+:cite:`Yu.Jeong.Kim.ea.2022,Kwon.Li.Zhuang.ea.2023`
+(:numref:`chap_lm_serving`), and weight quantization
+(:numref:`chap_lm_compression`) are developed in the Language Models part.
 
 [Discussions](https://d2l.discourse.group/t/36854)

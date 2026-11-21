@@ -1,53 +1,32 @@
 # Document Extraction from Web Crawls
 :label:`sec_lm_crawl`
 
-<!-- Author brief, copied verbatim from the Language Models part plan
-(docs/llm/language_models_part_plan.md, "3.1 Document Extraction from Web Crawls · T0").
-Blueprint: docs/llm/blueprints/ch03_data.md section 3.1.
-The plan is a specification, not book text; this comment is replaced
-when the section is written.
+Every text in this book so far has arrived clean: *The Time Machine* as a
+plain file in :numref:`sec_text-sequence`, the book's own sources as the
+retrieval corpus of :numref:`sec_lm_retrieval`. The models of :numref:`chap_lm_pretrained` were
+trained mostly on the public web, and the web does not arrive as text. It
+arrives as pages. Open a news article in a browser and you see the article,
+but the page also holds a navigation menu, a cookie banner, a column of
+related links, a footer of legal notices, and perhaps a table or a block of
+code inside the article itself. Something has to decide which of these is
+the document.
 
-**Idea:** Extraction decides what the model can ever learn.
-**Opening:** One crawl record holds a navigation menu, a cookie banner and an article. Two extractors render it differently: one keeps the article and loses the code block inside it, the other keeps the code and half the menu. The section follows the record from the archive format to a documented, normalized document, measures what each extractor loses by page class, and closes on the question of what "quality" should mean once the text is clean.
-**Teaches:**
-- WARC and WET records (`d2l.iter_warc` over a pinned byte range of one archive file); why WET is not the text of the web (no main-content detection, a different record set); charset detection before decoding.
-- HTML extraction (a from-scratch link-density extractor against two libraries) and how it fails on code, tables and mathematics; the FineWeb text of the same records as a reference, reported as agreement, never as accuracy.
-- Language identification with a small released classifier and what a score is not; Unicode normalization (NFC) and what NFKC silently rewrites in code and mathematics.
-- Personal data scrubbing, provenance, licences and opt-outs as engineering inputs; a manifest with record ids, offsets, extractor versions, text hashes and a transformation log per document (`d2l.CorpusManifest`, with a dataset card generated from it); FineWeb-2 as the multilingual pipeline.
-**Derivation:** none.
-**Notebook:**
-1. Fetch the pinned 256 MiB range of one Common Crawl archive file (`d2l.fetch_warc_range`), verify its per-block SHA-256, and iterate the records; count responses, requests and metadata records and the truncated final member.
-2. Keep English (score at least 0.65), HTTP 200, `text/html` responses; extract with the naive extractor, trafilatura and Resiliparse, and join WET conversions by record id; apply NFC and the PII scrubber; log every transformation.
-3. Classify pages by structural markers (code, table, mathematics, prose-only) and compute per-document recall of each class's content against the FineWeb text of the same record, plus a precision proxy for boilerplate.
-4. Plot recall by class and extractor with a paired bootstrap clustered by registered domain; write the manifest and rebuild the documents from it (`d2l.rebuild_c0`) to show the hash round trip.
-5. Claim that survives noise: extractor disagreement is concentrated in code and table pages, with prose recall alike across extractors; classes with fewer than 30 documents are marked and carry no interval. Extractors are deterministic, so the bootstrap over documents is the whole noise statement.
-6. Reused pieces: `d2l.download`, `d2l.paired_bootstrap`; the byte view of `sec_text-sequence` for the Unicode paragraph; new `d2l.iter_warc`, `d2l.extract_text`, `d2l.detect_lang`, `d2l.scrub_pii`, `d2l.Doc`, `d2l.write_docs`, `d2l.read_docs`, `d2l.CorpusManifest`, `d2l.docs_hash`, `d2l.fetch_warc_range`, `d2l.rebuild_c0`.
-**Figures:** `fig_lm_crawl_pipeline` (one record through the stages, with the manifest row it leaves behind at each stage).
-**Restate / forward:** `sec_text-sequence` (a tokenizer sees bytes, so the normalization chosen here decides which byte sequences exist). Forward: 3.2 (the filter that decides which documents stay).
-**Exercises:** 5 to 7. Load-bearing: measure extraction loss on one page class of your choice against a hand-labelled sample of 20 pages (measure); derive the expected number of documents per language under an identifier with a stated error matrix and a threshold, and the threshold that maximizes retained English documents at a target purity (derive); check that the manifest hash is unchanged by re-ordering the input records and changed by one edited byte (check); open: draft the dataset card for the extracted documents from the manifest alone and list what a reader cannot learn from it.
-**Writer notes:**
-- The pin: one archive file of the `CC-MAIN-2025-05` crawl (URL in blueprint ch03 3.1), bytes 0 to 268,435,455, with per-16 MiB block hashes so a shorter prefix verifies; the first 4 MiB held 285 complete responses at blueprint time, so the range holds on the order of 18,000 responses (to be measured). The SHA-256 is measured by one download at authoring. `D2L_OFFLINE=1` uses only a verified local copy and stops with fetch instructions if it is missing.
-- Exports with contracts: `d2l.iter_warc(source, n_bytes=None, types=('response',))` yields exactly the records `warcio.ArchiveIterator` yields for the same bytes (the oracle test) and drops a truncated final member with a count; `d2l.extract_text(html, method='trafilatura'|'resiliparse'|'naive', url=None)`; `d2l.detect_lang(text, k=1)` wraps the 176-language fastText model with newlines replaced first; `d2l.CorpusManifest.add_stage(name, params, n_in, n_out, drops, in_hash, out_hash)`, `.canonical_json()`, `.sha256()`, `.to_card()`; `d2l.docs_hash(docs)` is the SHA-256 over sorted `(id, sha256(text))`, order-independent; `d2l.rebuild_c0` returns `.mismatches` on extractor drift, never silently.
-- Silent breakages: decoding bodies as UTF-8 without the `Content-Type` charset, the `<meta charset>` and a detector in that order (log the choice); counting request and metadata records as documents; joining FineWeb by URL instead of record id (the same URL is crawled many times; confirm on the prefix that FineWeb's `id` equals the WARC record id, else join on normalized URL plus date and report it as weaker); timestamps or absolute paths in the manifest, which break its hash; NFKC "to clean up".
-- Packages and wheels: `warcio`, `trafilatura` (pin the exact version in the manifest; extractor drift changes every text hash), `resiliparse` (wheels may be missing on macOS ARM build hosts: run the other two and mark its rows as from the committed table), `fasttext` (does not build cleanly against NumPy 2; use the NumPy-2 wheel or `lingua-language-detector` and say so); the 217-language fastText model is CC BY-NC and is only an aside.
-- Reference: the FineWeb and FineWeb-Edu configs of the same crawl, streamed with `datasets` and stopped when the `file_path` changes; rows inside a file are ordered by URL, not offset.
-- Name FineWeb-2 as the multilingual corpus; keep the manifest and the rights rule; the section stays T0.
-- Committed artifacts: `lm-cc-warc-256m` (the pin), `lm-c0-docs` (manifest rows with ids, offsets, hashes and logs; no text), the stage manifest, the aggregated metric table as JSON.
-- Do not re-teach: tokenization (3.6 owns the rest), the byte view beyond one paragraph.
-**Sources:**
-- Papers: [The FineWeb Datasets](https://arxiv.org/abs/2406.17557) (WARC with trafilatura against WET, the language threshold, PII; the pipeline this section mirrors); [FineWeb2: One Pipeline to Scale Them All](https://arxiv.org/abs/2506.20920) (the multilingual counterpart, per-language thresholds); [Quality at a Glance](https://arxiv.org/abs/2103.12028) (an audit of language labels in crawled multilingual data); [Documenting Large Webtext Corpora](https://arxiv.org/abs/2104.08758) (the audit method the dataset-card exercise follows); [Consent in Crisis](https://arxiv.org/abs/2407.14933) (opt-outs and the shrinking crawlable web); [Datasheets for Datasets](https://arxiv.org/abs/1803.09010) (the documentation standard).
-- Code and documentation: [Common Crawl, get started](https://commoncrawl.org/get-started) (access and record formats); [warcio](https://github.com/webrecorder/warcio) (the iterator oracle); [Trafilatura documentation](https://trafilatura.readthedocs.io/) (extraction options and its evaluation page); [fastText language identification](https://fasttext.cc/docs/en/language-identification.html) (the 176-language model and its licence); [Unicode Standard Annex 15](https://www.unicode.org/reports/tr15/) (NFC and NFKC, with test cases); [Datatrove](https://github.com/huggingface/datatrove) (readers and extraction stages); [Hugging Face dataset cards](https://huggingface.co/docs/hub/datasets-cards).
-- Courses, tutorials and blogs: [CS336](https://cs336.stanford.edu/) (data sources lecture and assignment A4); [FineWeb blog post](https://huggingface.co/spaces/HuggingFaceFW/blogpost-fineweb-v1) (the extraction ablation).
--->
+That something is an *extractor*, a program that turns a page's HTML into
+plain text, and its decision is final. A paragraph it drops is never seen by
+the model, however long we train; a menu it keeps is learned as if someone
+had written it as prose. Extraction decides what the model can ever learn,
+and it decides before any filter, deduplication or tokenizer has a say.
 
-<!-- Placeholder (stage 2, cells step): the cells follow the section
-specification's cell table (S/spec/20.1.md part 3); one-line comments mark
-where prose goes. Rights rule P1: no cell prints text that we extracted from
-the crawl (HTML, WET text, extractor output); displayed text is FineWeb's
-(ODC-By) for the same record id, everything else is counts, code points,
-tag skeletons and hashes. -->
-
-<!-- Prose: the opening (one record holds a menu, a cookie banner and an article); the question of the section. -->
+This section follows one archive file of Common Crawl, the public crawl
+behind nearly every open pretraining corpus, from its raw bytes to a set of
+documents with a manifest that lets anyone rebuild them. On the way we
+compare three extractors with the text Common Crawl ships beside its
+archives, measure what each loses on prose, code, tables and mathematics,
+and identify the language, normalize the characters and remove the email
+addresses of every document that survives. Our reference is FineWeb
+:cite:`Penedo.Kydlicek.BenAllal.ea.2024`, a released corpus built from the
+same archive file, so for every record we can set our text beside the text
+that a production pipeline kept.
 
 ```{.python .input #crawl-imports}
 %%tab pytorch
@@ -80,7 +59,12 @@ import pandas as pd
 from warcio.archiveiterator import ArchiveIterator
 ```
 
-<!-- Prose: what the notebook computes and how long it takes; every result is recomputed in each build (the steps are deterministic), and D2L_RERUN only selects which files are written. -->
+Everything below runs on a CPU, in a few minutes with eight worker processes
+for the extraction; the first run also downloads 256 MiB of the archive and
+the 102 MB text file that goes with it. Every step is deterministic given the
+pinned bytes and package versions, so every build recomputes every number,
+and the last cell checks them against the registered copies. Setting
+`D2L_RERUN` only chooses which result files a run writes.
 
 ```{.python .input #crawl-config}
 %%tab pytorch
@@ -98,7 +82,16 @@ print(f'CRAWL_MIB={CRAWL_MIB}, LID_MIN={LID_MIN}, N_WORKERS={N_WORKERS}, '
       f'OFFLINE={OFFLINE}, writing: {", ".join(sorted(RERUN)) or "none"}')
 ```
 
-<!-- Prose: the registry; the crawl range is a pin (URLs and hashes), never a copy of Common Crawl bytes. -->
+The registry holds no Common Crawl bytes. The entry `lm-cc-warc-256m-v1` is a
+*pin*: a small file with the archive's URL, the byte range we read and a
+SHA-256 hash for every 16 MiB block of it. The bytes come from Common
+Crawl's own servers and stay in a local cache. Common Crawl grants no
+licence for the pages it archives, so this book neither commits nor hosts
+them. What it does publish is FineWeb's text for the records of our range
+(FineWeb is released under the ODC-By licence), fastText's language
+identifier, and two files of counts, offsets and hashes. The second cell
+pins, by revision, the released datasets and models that the whole chapter
+uses.
 
 ```{.python .input #crawl-data-hub}
 %%tab pytorch
@@ -147,10 +140,35 @@ LM_DATA_SOURCES = {  # name: (kind, Hub repository, revision, licence)
                                'apache-2.0')}
 ```
 
-## What a Crawl Contains
+## Crawl Archives
 :label:`subsec_lm_crawl_warc`
 
-<!-- Prose: WARC record types (warcinfo, request, response, metadata), WAT and WET; one gzip member per record, so a byte prefix is a valid sample and Range requests are legal. -->
+Since 2008 Common Crawl has crawled the web again and again, lately every
+month or two and a few billion pages at a time, and it publishes each crawl
+as tens of thousands of archive files in the WARC format (Web ARChive, a standard of the web-archiving community). A WARC
+file is a sequence of *records*, and every fetch leaves three of them: a
+`request` record with the HTTP request the crawler sent, a `response` record
+with the server's whole reply, headers and body, and a `metadata` record
+with what the crawler noted about the fetch. One `warcinfo` record at the
+start describes the crawl itself. Each record begins with a header that
+holds a unique record id, the URL, the date and the length of what follows.
+
+From each WARC file Common Crawl derives two more. A WAT file holds the
+metadata and links of each page as JSON, and a WET file holds plain text in
+`conversion` records, each pointing back to its response through a
+`WARC-Refers-To` header. A WET file is about a tenth of the size of its WARC
+file, and it is the cheapest way to get text out of a crawl. Several early
+corpora used it. We will see what that costs.
+
+One design decision makes the format easy to sample. Each record is
+compressed as its own gzip member, and a gzip file may be a concatenation of
+members, so decompression can start at any member boundary. A client that
+asks the server for the first $n$ bytes with an HTTP `Range` request gets a
+valid sequence of complete records followed by one member that the cut has
+split. That last member has to be counted and dropped, never parsed into half
+a record. `iter_warc` does this. It decompresses member by member, parses
+each record's WARC header and, for a response, the HTTP status line and
+headers, and counts every record type in `stats`.
 
 ```{.python .input #crawl-warc-def}
 %%tab pytorch
@@ -179,7 +197,12 @@ def iter_warc(source, n_bytes=None, types=('response',), *, stats=None):
             yield rec
 ```
 
-<!-- Prose: the pinned range, fetched block by block and checked against the pin; D2L_OFFLINE. -->
+`fetch_warc_range` reads the pin, requests the bytes block by block, and
+checks each 16 MiB block against its hash before it writes the block to the
+cache. A shorter prefix can therefore be verified on its own, and an
+interrupted download resumes at the first missing block. With
+`D2L_OFFLINE=1` the function uses only a verified local copy and otherwise
+stops with instructions for fetching one.
 
 ```{.python .input #crawl-fetch-def}
 %%tab pytorch
@@ -223,7 +246,13 @@ def fetch_warc_range(pin='lm-cc-warc-256m-v1', n_bytes=None, cache_dir=None,
     return path
 ```
 
-<!-- Prose: the opening record, three ways: its HTML as a tag skeleton, the WET text as counts, FineWeb's text for the same record id. -->
+We start with one record. The next cell parses the first 4 MiB of the range
+and picks, by a rule it prints, the first successful HTML response that holds
+a table or a block of preformatted text and that FineWeb kept. It shows the
+record three ways: the HTML as a skeleton of its first 25 elements, each run
+of text replaced by its length; the WET text as counts; and the text FineWeb
+extracted from the same record. We print no text of our own from the crawl,
+only FineWeb's, whose licence lets us show it.
 
 ```{.python .input #crawl-opening}
 %%tab pytorch
@@ -283,7 +312,31 @@ print(textwrap.fill(repr(fw[:300]), 96, initial_indent='  ',
 print('(text: FineWeb, HuggingFaceFW/fineweb CC-MAIN-2025-05, ODC-By 1.0)')
 ```
 
-<!-- Prose: iter_warc is checked against warcio, the reference reader, on the same bytes. -->
+Before reading those three views, look at the record counts. The first 4 MiB
+hold 285 responses, and 572 records that are not documents at all: requests,
+metadata and the description of the crawl. A pipeline that counted records
+would overstate its corpus threefold.
+
+The record is a page of the Apache HTTP Server manual on security. Its URL
+contains `zh-cn`, yet its text is English, and FineWeb kept it as English: a
+URL is no guide to a page's language. The skeleton is the boilerplate made
+visible. The body opens with five short links (the manual's menu bar), a line
+of 30 characters, a logo and a trail of five more links (the breadcrumbs)
+before the first heading. The WET text shows the signature of that
+boilerplate. A third of its 127
+lines are shorter than 30 characters, with a run of six in a row, which is
+what a menu looks like once the layout is gone. FineWeb's text begins with
+the 30-character line, "Apache HTTP Server Version 2.4", and continues with
+the article. The menu, the breadcrumbs and, curiously, the heading "Security
+Tips" are gone. Our own trafilatura text agrees with FineWeb's to a
+character-5-gram F1 of 0.96, the harmonic mean of the shares of each text's
+five-character substrings found in the other. The WET text is about 3,000
+characters longer than FineWeb's.
+
+Our reader is short enough to read and too new to trust. `warcio`, the
+library that web archives use, serves as the oracle: on the same 4 MiB both
+must yield the same records, with the same ids, types, offsets, lengths and
+body hashes.
 
 ```{.python .input #crawl-warcio-oracle}
 %%tab pytorch
@@ -310,7 +363,12 @@ assert same == len(mine) and len(theirs) - len(mine) == head_stats.get(
     'truncated', 0)
 ```
 
-<!-- Prose: the whole range: record counts, the truncated member, responses by MIME type and status; the arithmetic for the whole file is an extrapolation. -->
+All 857 complete records agree. The one difference is the member the cut has
+split: warcio hands it to the caller as a record, cut short, and a pipeline
+that trusted it would store half a page. `iter_warc` counts it as truncated
+instead.
+
+Now the whole range, 256 MiB, a little under a quarter of the file.
 
 ```{.python .input #crawl-scan}
 %%tab pytorch
@@ -338,15 +396,79 @@ print('\nfirst 12 records (type, offset, compressed length):')
 print(index[['type', 'offset', 'length']].head(12).to_string(index=False))
 ```
 
+The range holds 29,195 complete records, of which 9,731 are responses, and
+every response has status 200: Common Crawl keeps redirects and errors in
+separate files. Almost all, 9,591, are HTML pages, with a median body of
+about 71 KB. The first twelve records show the pattern of the file: one
+`warcinfo` record, then a request, a response and a metadata record for each
+fetch, each a separate member of a few hundred bytes to tens of kilobytes.
+
+The last line of arithmetic deserves suspicion. At 38 responses per MiB, the
+whole file would hold about 41,000 responses, but only if the range is
+representative of the file. The first 4 MiB already show why that is a real
+assumption: they held 285 responses, about 71 per MiB, and extrapolating from
+them would have predicted some 18,000 responses in the range, almost twice
+the number it holds.
+
+A crawl is not the web either. It samples URLs by the crawler's own
+priorities, it misses pages behind logins, paywalls and `robots.txt`
+exclusions, and it sees only the HTML a server sends, not what JavaScript
+adds later in the browser. In the terms of
+:numref:`sec_environment-and-distribution-shift`, a corpus built from it is
+a shifted sample of what people write.
+
 ### Charsets and Decoding
 :label:`subsec_lm_crawl_charset`
 
-<!-- Prose: the charset chain (Content-Type header, then <meta charset>, then a detector), logged per document; decode_body is in the library. -->
+A response body is bytes, and an extractor wants characters. Decoding every
+body as UTF-8 is the obvious choice and a silent mistake. A page served in
+Windows-1251 or Shift-JIS and decoded as UTF-8 turns into replacement
+characters (U+FFFD), and a UTF-8 page decoded as Latin-1 turns into the wrong
+letters without any error at all. Browsers settle the question with a chain
+of evidence, and so does `d2l.decode_body`. It tries, in order, the charset
+named in the HTTP `Content-Type` header, a `<meta charset>` declaration in
+the first 4 KiB of the page, and the statistical detector of the
+`charset_normalizer` package; only then does it fall back to UTF-8 with
+replacements. A declared charset is accepted if it decodes the body with at
+most one replacement character per thousand, because servers sometimes
+declare a charset that their pages do not use. The function returns which
+link of the chain decided, and every document's log records it. On our range
+(the extraction cell below prints the counts) the header decides for 8,606
+of the 9,591 HTML pages, the meta tag for 850 and the detector for 125;
+10 pages fall through to the fallback.
 
-## From HTML to Text
+## Main-Content Extraction
 :label:`subsec_lm_crawl_extract`
 
-<!-- Prose: boilerplate; WET has no main-content detection; trafilatura scores the DOM; Resiliparse (DCLM's extractor); the naive link-density extractor written out below. -->
+Most of a page's text is not its content. Menus, breadcrumbs, cookie
+notices, share buttons, lists of related articles and footers make up the
+*boilerplate*, repeated on every page of a site, and a model trained on it
+learns to write menus. A main-content extractor tries to keep the article and
+drop the rest, and its only evidence is the page's structure: which blocks
+are long, which consist mostly of links, which tags and class names surround
+them. We compare four sources of text for every HTML page.
+
+- **WET**, Common Crawl's own conversion, keeps all visible text, one line
+  per block. It has no main-content detection at all.
+- **trafilatura** (Barbaresi, 2021) walks the document tree and scores
+  elements by their text length, their link density and their tag and class
+  names, falling back to older algorithms when its own result looks too
+  short. RefinedWeb :cite:`penedo2023refinedweb` and FineWeb extracted their
+  text with it.
+- **Resiliparse**, from the ChatNoir web search project, is written in C++
+  for speed. DCLM (Li and colleagues, 2024) compared it with trafilatura and
+  WET text by training models on each: both libraries gave better models than
+  WET text, by similar margins, and DCLM chose Resiliparse because it is much
+  faster.
+- **naive** is our own, and it shows the mechanism in forty lines. It splits
+  the page into blocks at block-level tags, counts each block's characters
+  and the characters inside its links, and keeps a block with at least 40
+  characters of which at most a third is link text. A shorter block of at
+  least 15 characters that passes the same link test is kept too if it lies
+  within two blocks of a kept one, so that a short line between two
+  paragraphs survives. The rule follows the link-density heuristics of
+  earlier boilerplate removers such as jusText, and its thresholds are round
+  numbers chosen before any measurement, not tuned.
 
 ```{.python .input #crawl-extract-def}
 %%tab pytorch
@@ -418,7 +540,11 @@ def extract_text(html, method='trafilatura', url=None):
     return text if text and text.strip() else None
 ```
 
-<!-- Prose: five hand-built pages fix what the naive extractor keeps. -->
+Five hand-built pages pin down what the naive extractor keeps: an article
+with a menu and a sidebar, a forum thread, a table, a code block and an empty
+page. The table records a failure on purpose. Its cells are too short to be
+blocks, so the extractor keeps the sentence above the table and loses the
+table.
 
 ```{.python .input #crawl-naive-fixtures}
 %%tab pytorch
@@ -471,7 +597,14 @@ for name, (page, want) in d2l.NAIVE_FIXTURES.items():
     assert got == want, (name, got)
 ```
 
-<!-- Prose: the run over every HTTP-200 HTML response of the range, three extractors per page in worker processes, WET joined by WARC-Refers-To; page classes come from markers in the HTML. -->
+Now the real pages. The next cell runs the three extractors on every HTML
+response of the range in eight worker processes and joins the WET text by
+`WARC-Refers-To`. It also sorts each page into classes by markers in its
+HTML: *code* if it has a `<pre>` or `<code>` block of at least three lines,
+*table* if a table has at least four cells, *math* if it holds TeX in MathML
+annotations, MathJax scripts or the alt text of images, and *prose* if it has
+none of these and at least 200 characters of paragraph text. A page may be in
+several classes.
 
 ```{.python .input #crawl-extract}
 %%tab pytorch
@@ -509,10 +642,46 @@ print(pd.DataFrame({
 print(f'(WET has no conversion record for {len(pages) - len(wet):,} pages)')
 ```
 
+Two of the counts are worth a second look. WET has no conversion record for
+151 of the pages, so it is not only a cruder text of the same pages but a
+different set of pages; any comparison has to join by record id and count
+the missing ones. And mathematics is rare: 12 pages in 9,591, with code not
+much more common at 79. Tables, by contrast, appear on one page in six. The
+speeds differ by more than an order of magnitude: Resiliparse is about 15
+times faster than trafilatura, and the naive extractor about 8 times.
+
 ### Code, Tables and Mathematics
 :label:`subsec_lm_crawl_structure`
 
-<!-- Prose: the metrics, defined from the HTML alone so that no extractor is the reference: code-line, table-cell and math recall, prose 5-gram recall, and a precision proxy for boilerplate. Say plainly that the definitions (a prose paragraph has at least 100 characters outside nav/header/footer/aside/form, a prose page at least 200 such characters, the precision proxy's content set) were set by looking at pages of this same sample, so they are not held out; the naive extractor's thresholds (40, a third, 15, two blocks) come from the plan. The precision proxy matches a line anywhere in the content text, so short menu lines can count as content: it flatters WET and the naive extractor, which only strengthens their low scores. -->
+How do we score an extractor without a correct answer? Labelling the main
+content of thousands of pages by hand is out of reach, and using one
+extractor as the reference would crown it by definition. We therefore
+measure recall against strings read from the HTML alone, with no extractor
+involved (`d2l.structure_recall`):
+
+- *code recall*: the share of the lines of the page's code blocks that
+  appear in the output;
+- *table recall*: the share of table cells (3 to 200 characters) found in the
+  output;
+- *math recall*: the share of the page's TeX strings found in the output;
+- *prose recall*: the share of the five-character substrings of the page's
+  paragraphs (`<p>` elements of at least 100 characters outside the
+  navigation, header, footer, aside and form elements) found in the output.
+
+Recall alone rewards keeping everything, so we add a *precision proxy*: the
+share of the output's characters on lines that occur in the page's content
+elements (paragraphs, code, tables, headings and list items that are not
+mostly links, all outside the navigation and its relatives). It is a
+generous proxy. A line counts as content if it appears anywhere in the
+content text, so a short menu entry such as "Home" can match by accident.
+The bias favors WET and the naive extractor, which keep the most such lines,
+so it can only flatter their scores.
+
+One weakness should be stated plainly. The definitions above, the
+100-character paragraph, the 200-character prose page and the content
+elements behind the precision proxy, were settled while looking at pages of
+this same sample. They are not held out, and another sample might have
+suggested other thresholds.
 
 ```{.python .input #crawl-metrics-def}
 %%tab pytorch
@@ -542,7 +711,18 @@ def structure_recall(html, text):
     return {k: (None if v is None else float(v)) for k, v in out.items()}
 ```
 
-<!-- Prose: the headline measurement: recall by page class and extractor, with intervals from a bootstrap over registered domains (one site's templated pages count once). The pages are chosen without any compared extractor (fastText on the HTML's content text, the same 0.65 threshold), and a missing or empty output scores 0 for every extractor; choosing them by language of trafilatura's text, as the c0 funnel does, would drop exactly the pages trafilatura fails on. Precision is compared on the pages where all four outputs are non-empty. -->
+The evaluation pages are chosen without consulting any extractor. We run the
+language identifier of :numref:`subsec_lm_crawl_lid` on the content text
+read from the HTML and keep the pages that are English with a score of at
+least 0.65. Choosing them by the language of trafilatura's output, as the
+corpus will later do, would drop exactly the pages on which trafilatura
+returns nothing. A missing or empty output scores 0 on every measure. Many
+pages come from one site and share its template, so the intervals come from
+the clustered bootstrap of :numref:`sec_lm_eval_suites` with the registered
+domain as the cluster: a site's hundred templated pages count as one draw,
+not a hundred. A class with fewer than 30 pages or 30 domains gets no
+interval. Since the extractors are deterministic, the bootstrap over pages
+and domains is the whole statement of noise.
 
 ```{.python .input #crawl-recall}
 %%tab pytorch
@@ -624,7 +804,41 @@ fig.tight_layout()
 print(deltas.round(3).to_string(index=False))
 ```
 
-<!-- Prose: agreement with FineWeb's text for the same records; agreement, never accuracy. FineWeb's text comes from datatrove's Trafilatura step, whose defaults (checked in the datatrove 0.10.1 source) are favor_precision=True, deduplicate=True, include_comments=False; ours uses favor_precision=False and trafilatura's own defaults (comments kept), so even our trafilatura text is not FineWeb's. FineWeb then replaced emails and public IPv4 addresses by fixed placeholders (datatrove's PIIFormatter: email@example.com, firstname.lastname@example.org, six fixed IPs); both sides are masked alike before comparing, so a scrubbed address does not count as a lost line. A page that the WET file lacks counts as empty. -->
+Extractors differ most on tables. Resiliparse finds about 0.73 of the table
+cells, trafilatura about 0.61 (a paired difference of $-0.12$, with an
+interval from $-0.18$ to $-0.06$), and the naive extractor only 0.24, because
+cells are too short to be blocks, exactly as the fixture predicted. On prose
+the two libraries do not differ: each recovers a little under 0.9 of the
+paragraph text, and the paired interval includes 0. On code, 44 English
+pages are too few to separate them. Mathematics we wanted to measure and could not, with 4
+English pages from 2 domains. A general crawl is the wrong place to study
+mathematical extraction; corpora such as FineMath start from pages selected
+for it.
+
+WET recalls nearly everything, of course, since it keeps everything, and its
+precision proxy shows the cost: 0.44, against 0.60 to 0.64 for the three
+extractors, so more than half of WET's characters sit on lines outside the
+content elements. The naive extractor is the surprise. It keeps more
+paragraph text than either library, about 0.1 more, because it has no notion
+of "the article" and keeps every dense paragraph, whether it belongs to the
+article or not. It pays with tables and with boilerplate. Between the two
+libraries the verdict is clear for this sample: Resiliparse is at least as
+good as trafilatura wherever we can tell them apart, and about 15 times
+faster. Trafilatura's lead on code (0.92 against 0.82) is within the noise of
+44 pages.
+
+FineWeb's text for the same records offers a second view, and it must be
+read carefully. It is not ground truth. FineWeb extracted it with
+trafilatura, so agreement with it measures closeness to FineWeb's pipeline,
+and an extractor that copied trafilatura's mistakes would score perfectly.
+Even our trafilatura text is not FineWeb's. FineWeb ran trafilatura through
+the datatrove library, whose defaults favor precision, remove repeated lines
+and drop comments, while we call trafilatura with `favor_precision=False` and
+its own defaults, which keep comments. FineWeb also replaced email addresses
+and public IP addresses with fixed placeholders, so we mask addresses on both
+sides before comparing; otherwise every scrubbed address would count as a
+lost line. We join by record id, never by URL, because the same URL is
+fetched again in later crawls, with different content.
 
 ```{.python .input #crawl-fineweb-agree}
 %%tab pytorch
@@ -679,10 +893,40 @@ for m in ['naive', 'resiliparse', 'trafilatura']:
 print('(text: FineWeb, HuggingFaceFW/fineweb CC-MAIN-2025-05, ODC-By 1.0)')
 ```
 
+All 1,002 FineWeb rows of the range join by record id. They are the pages
+that FineWeb kept after all of its filters, about one HTML page in ten.
+Trafilatura agrees with them best, at an F1 of 0.92; the naive extractor and
+Resiliparse reach 0.76 to 0.78, and WET 0.63. The split by class says where
+the disagreement lies: between a third and three fifths of WET's
+five-character substrings, depending on the class, occur nowhere in
+FineWeb's text, against 0.08 for trafilatura on prose pages. The lines
+printed at the end are lines FineWeb kept and an extractor lost: a
+row of an app's specification table, lost by both the naive extractor and
+Resiliparse, and a line of an event listing, lost by our own trafilatura run.
+Here is the reason never to read agreement as accuracy. Resiliparse recalled
+more of the table text than trafilatura did, yet it agrees less with FineWeb,
+because FineWeb's text is trafilatura's.
+
 ## Language Identification
 :label:`subsec_lm_crawl_lid`
 
-<!-- Prose: fastText lid.176 is a linear model on hashed character n-grams; its score is a softmax over 176 labels, not the probability that a page is English text; FineWeb keeps English at 0.65. -->
+Pretraining corpora are split by language before anything else, because
+every later rule, from quality filters to tokenizers, is tuned per language.
+The standard tool is the language identifier of fastText (Joulin and
+colleagues, 2017), which comes as a model of under 1 MB for 176 languages.
+It is about as simple as a classifier can be. The text is cut into words and
+their character n-grams, each is mapped to an embedding (the n-grams through
+a hash table of fixed size), the embeddings are averaged, and a linear layer
+with a softmax gives one score per language. Word order beyond the n-grams
+is ignored, which is why it is fast enough to run on billions of pages.
+
+The score is a softmax output, and it is tempting to read it as the
+probability that a page is English. It is not. It is the model's preference
+for English over 175 other labels, and a page that is half navigation, half
+Python or half Spanish has no correct label among the 176. FineWeb keeps a
+page if its top label is English with a score of at least 0.65, and so do
+we. `detect_lang` replaces newlines by spaces first, since fastText reads a
+single line.
 
 ```{.python .input #crawl-lid-def}
 %%tab pytorch
@@ -704,7 +948,12 @@ def detect_lang(text, k=1):
             for l, s in zip(labels, scores)]
 ```
 
-<!-- Prose: our identifier against Common Crawl's CLD2 labels on the same records, the retention curve against the threshold, and what FineWeb kept of our English documents. -->
+Common Crawl labels each WET record with the languages found by CLD2, the
+compact language detector of the Chrome browser, so we can check one
+identifier against another. The next cell crosses the two labels for the
+eight most common languages. It then sweeps the English threshold from 0.5 to
+0.9 and counts, at each value, the English documents we keep and how many of
+those FineWeb kept. Three short strings at the end probe what a score is not.
 
 ```{.python .input #crawl-lid}
 %%tab pytorch
@@ -743,10 +992,55 @@ for name, s in [
         s, k=2)])
 ```
 
+The two identifiers mostly agree: the diagonal dominates for every language.
+The largest disagreements are telling. On 40 pages CLD2 says Japanese and
+fastText Chinese, which share many characters, and on 25 pages CLD2 says
+Chinese and fastText English. On 82 pages that CLD2 calls English, fastText's
+top label is a language outside the eight.
+
+At the threshold of 0.65 we keep 3,288 English documents, and FineWeb kept
+997 of them, about 30%. The rest fell to FineWeb's later stages, rules about
+what a good document looks like and deduplication against the rest of the
+crawl, the subjects of :numref:`sec_lm_quality_filtering` and
+:numref:`sec_lm_dedup`. The curve has a surprise of its own. Raising the
+threshold from 0.5 to 0.8 removes 857 of our English documents, but only 14
+of those FineWeb kept. A low language score tends to mark a page that the
+later filters remove anyway. Only above 0.8
+does the threshold start to cut pages that the full pipeline wanted.
+
+The three strings show what a score is not. A plain English sentence scores
+1.00. The same sentence as a comment in two lines of code still scores 0.98
+for English: the identifier sees English words and ignores the code, and a
+filter would call the snippet English prose. A sentence that switches from
+English to Spanish halfway gets one label, Spanish, at 0.90. A score measures
+confidence in the top label, not the share of the text written in that
+language.
+
 ### Unicode Normalization
 :label:`subsec_lm_crawl_unicode`
 
-<!-- Prose: NFC versus NFKC (TR15), what NFKC rewrites in code and mathematics, the zero-width joiner, NBSP and U+FFFD; the rule: NFC once, before any tokenizer, and bytes for bits per byte counted after it. -->
+The same visible text can be different sequences of code points. The letter
+é is one code point, U+00E9, or two, `e` followed by the combining acute
+accent U+0301, and a page may use either. Unicode defines *normalization
+forms* that map such equivalent sequences to one representative (Unicode
+Standard Annex 15). NFC composes canonically equivalent sequences: é becomes
+one code point, Korean jamo become syllables, and nothing on the screen
+changes. NFKC goes further and also maps *compatibility* characters to plain
+ones: the ligature ﬁ to `fi`, the superscript of x² to `2`, the mathematical
+italic 𝑥 to `x`, full-width letters to ASCII. It reads like a cleanup, and
+that is its danger. Once x² has become x2, a formula or a variable name means
+something else.
+
+Why normalize at all? Recall from :numref:`sec_text-sequence` that a
+byte-level tokenizer sees the UTF-8 bytes of a text, not its characters. A
+composed é is two bytes, `C3 A9`, and a decomposed one three, `65 CC 81`, so
+two documents that look identical give different token sequences.
+Bits per byte, the measure this chapter uses to compare data mixtures and
+tokenizers, would then be computed over different byte counts for the same
+text. The rule this book follows is short: apply NFC once, to every document,
+before any tokenizer sees it, and count bytes after it. The next cell
+measures what NFC and NFKC would change in the English documents of our
+range.
 
 ```{.python .input #crawl-unicode}
 %%tab pytorch
@@ -781,10 +1075,38 @@ for name, ch in [('U+FFFD replacement', '�'), ('U+00A0 NBSP', '\xa0'),
           f'{sum(s.count(ch) for s in docs_en):7,} times')
 ```
 
+NFC changes none of the 3,288 documents (and applying it twice changes
+nothing, as the assertion checks): the English text of this range is
+already composed. NFKC
+changes 619 of them, 19%, rewriting 7,911 code points. Most of the rewrites
+are harmless. No-break spaces become spaces and the ellipsis becomes three
+dots. Further down the list they are not: the double prime of inches and
+arc-seconds becomes two primes, ™ becomes the letters TM, full-width colons
+and commas in Chinese text become ASCII punctuation, ½ and ¼ become digits
+around a fraction slash, and mathematical bold letters become plain ones,
+erasing what may be the only mark of a vector. No-break spaces occur in 292
+documents, and 6 documents still carry U+FFFD, decoding failures that the
+charset chain did not catch. This sample has no zero-width joiners, but a
+multilingual corpus does, and there they matter: in Devanagari the joiner
+selects a half-form of a consonant, and in emoji it joins a family into one
+symbol. A rule that strips "invisible" characters changes those texts. NFC,
+and nothing else, is the normalization of this chapter.
+
 ## Personal Data, Rights and the Manifest
 :label:`subsec_lm_crawl_rights`
 
-<!-- Prose: what rules can remove (emails, public IP addresses) and what they cannot (names, addresses, health information in prose). -->
+A crawl holds whatever people have put on public pages: their email
+addresses, phone numbers and home addresses, and, in forum threads, their
+health. A corpus repeats it, and a language model can memorize and reproduce
+text it has seen several times. Some of it can be removed by rule. An email
+address has a fixed shape, and so has an IP address, which can identify a
+household. FineWeb replaces both with placeholders, and so does `scrub_pii`,
+which parses every candidate IP address and keeps private, loopback,
+documentation and multicast addresses (192.168.1.1 identifies nobody). Names,
+street addresses and a sentence about someone's diagnosis have no fixed
+shape. No regular expression finds them, and model-based detectors find some
+of them at the price of many false alarms. We implement what rules can do,
+and it is the easy part.
 
 ```{.python .input #crawl-pii-def}
 %%tab pytorch
@@ -824,7 +1146,12 @@ def scrub_pii(text):
     return d2l.PII_PATTERNS['ip'].sub(ip, text), counts
 ```
 
-<!-- Prose: precision and recall per pattern on a fixture of 60 strings that hold personal data and 60 that do not; the false positives are the lesson. The fixture was written together with the rules (the sentence-final dot was added while writing it), so it specifies what the rules match and miss; its recall of 1.0 holds by construction and is never the scrubber's recall on web text. The c0 counts are rule matches, not checked by hand. -->
+How good are two regular expressions? The fixture below holds 60 strings with
+an address and 60 without, many of the latter chosen to look like one. We
+wrote it together with the rules (the case of an address at the end of a
+sentence came from it), so it is a specification of what the rules match and
+miss, not an estimate of their accuracy on web text. Its recall of 1.0 holds
+by construction.
 
 ```{.python .input #crawl-pii}
 %%tab pytorch
@@ -982,12 +1309,81 @@ print(f'c0 ({len(en):,} English documents), rule matches (not checked by '
       f'{delta:+,}')
 ```
 
-<!-- Prose: provenance fields; Common Crawl is an archive, not a licence; Consent in Crisis; opt-outs (The Stack v2); why this section shows FineWeb's text and never its own extraction of a crawl page; not legal advice; FineWeb-2 as the multilingual pipeline. -->
+The false positives are the interesting output. Four numbers below 256
+joined by dots parse as an address, and most such addresses are public, so
+version numbers, a kernel build, the section number of a standard and a
+puzzle score are all replaced. The
+names `logo@2x.png` and `icon@3x.webp`, which web designers give to images
+for high-resolution screens, look like email addresses, and so does the git
+address `git@github.com:org/repo.git`. Every one of them is code or
+documentation, exactly the text a model should learn character for
+character. On the 3,288 documents the rules match emails in 173 documents
+(421 replacements) and public IP addresses in 8 (27 replacements); these are
+rule matches, not checked by hand. The replacements shorten the corpus by
+6,625 UTF-8 bytes, one more reason to scrub before bytes are counted.
+
+Personal data is one kind of right attached to a page; copyright and the
+site's terms are others. Common Crawl is an archive. It honors `robots.txt`
+when it crawls, but it grants no licence for what it stores, and a page's
+being public does not make its text free to copy. Site owners have noticed.
+*Consent in Crisis* (Longpre and colleagues, 2024) audited the `robots.txt`
+files and terms of service behind widely used corpora and found
+restrictions aimed at AI crawlers spreading within a single year, most of
+all among the actively maintained sites that supply much of the useful text.
+
+Rights therefore enter a pipeline as engineering inputs, like any other
+field. Each of our documents records where it came from: the WARC file, the
+byte offset and length of its record, the URL and the fetch date. A licence
+field, an opt-out list checked at build time and a log of removals make a
+request enforceable. The Stack v2 (Lozhkov and colleagues, 2024), a corpus of
+source code, records the licence of every file and removes the repositories
+of developers who opt out before each release. With byte offsets in every
+row, a takedown request is the deletion of one row, and the next rebuild no
+longer contains the page. This book applies the same rule to itself: it
+publishes no text extracted from the crawl, only pins, ids, offsets and
+hashes, and the notebook rebuilds the text from Common Crawl's servers. The
+crawl text it prints is FineWeb's, released by its authors under ODC-By.
+None of this is legal advice; the law differs between countries and is
+changing.
+
+Everything in this section was English, and that was a choice, not a
+necessity. FineWeb-2 (Penedo and colleagues, 2025) runs a pipeline of the
+same shape over Common Crawl for more than a thousand languages and finds
+that rules tuned for English fail elsewhere. Its language identifier covers
+far more languages than fastText's 176, its thresholds are set per language
+from the distribution of scores, and its filters and deduplication are
+adjusted per language as well. Its per-language pages return in
+:numref:`sec_lm_tokenizers`, where one tokenizer meets ten languages.
 
 ### The Manifest
 :label:`subsec_lm_crawl_manifest`
 
-<!-- Prose: the schema d2l-corpus/1 (table tab_lm_crawl_manifest_schema, static Markdown, written with the prose); a document and its provenance. -->
+Every number in this section came from a decision: which bytes, which
+charset, which extractor at which version, which threshold. A corpus that
+does not record its decisions cannot be rebuilt, audited or corrected after a
+takedown. We record them at two levels. Each document is a `d2l.Doc` holding
+its text, id, URL, date, language and score, its source (`src`: the WARC
+file, offset and length) and a log of what was done to it. The corpus as a
+whole is described by a *manifest*, a JSON file in the schema
+`d2l-corpus/1` (:numref:`tab_lm_crawl_manifest_schema`), which the rest of
+the chapter extends: filters in :numref:`sec_lm_quality_filtering`,
+deduplication in :numref:`sec_lm_dedup`, and the tokenizer, shard format and
+splits in :numref:`sec_lm_tokenizers`.
+
+:The corpus manifest, schema `d2l-corpus/1`. This section fills the sources and four stages; later sections add stages and the last three fields.
+:label:`tab_lm_crawl_manifest_schema`
+
+| field | holds | example in this section |
+|:--|:--|:--|
+| `schema`, `name` | the schema version and the corpus name | `d2l-corpus/1`, `c0` |
+| `sources[]` | `id`, `uri`, `revision` (a content hash or commit), `license`, `n_docs`, `bytes` | the WARC file, its SHA-256, 9,731 responses, 268,435,456 bytes |
+| `stages[]` | `name`, `impl`, `version`, `params`, `n_in`, `n_out`, `drops` (reason: count), `in_hash`, `out_hash`, `tokens_out` | `extract` with trafilatura 2.1.0; `lang_id` with `min_score` 0.65 |
+| `tokenizer` | file, SHA-256, vocabulary size, special tokens | empty until :numref:`sec_lm_tokenizers` |
+| `format` | token dtype, end-of-document id, byte order | empty until :numref:`sec_lm_tokenizers` |
+| `splits` | per split: documents, tokens and shard files with their hashes | empty until :numref:`sec_lm_tokenizers` |
+
+The documents are written as gzip-compressed JSON lines with sorted keys and
+no time stamp in the gzip header, so equal documents give equal bytes.
 
 ```{.python .input #crawl-doc-def}
 %%tab pytorch
@@ -1034,7 +1430,23 @@ def docs_hash(docs):
     return h.hexdigest()
 ```
 
-<!-- Prose: the stage identity n_in = n_out + sum(drops) with first-rule charging; canonical JSON and its hash. -->
+Two rules make a manifest checkable. First, every stage balances: each
+document that enters either leaves or is charged to exactly one reason for
+dropping it,
+
+$$n_\textrm{in} = n_\textrm{out} + \sum_r \textrm{drops}_r,$$
+
+and a document that several rules would drop is charged to the first of them
+in the stage's order. The order is therefore a parameter of the stage, since
+it changes the counts. Second, the manifest has one canonical byte form:
+sorted keys, no spaces, floats rounded to four decimals, no time stamps and
+no absolute paths. Its SHA-256 then names the corpus, and two builds that
+made the same decisions produce the same hash on any machine. A time stamp or
+a path such as `/home/user/data` would make every build unique and the hash
+useless, which is why `canonical_json` refuses absolute paths. The content of
+a set of documents has a hash of its own, `docs_hash`: the SHA-256 over the
+sorted pairs of document id and text hash. It ignores the order of the
+documents and changes with any byte of any text.
 
 ```{.python .input #crawl-manifest-def}
 %%tab pytorch
@@ -1153,7 +1565,12 @@ class CorpusManifest:
         return '\n'.join(lines) + '\n'
 ```
 
-<!-- Prose: the c0 manifest: four stages, the funnel they record, and the hash round trip. -->
+We now write the manifest of *c0*, the chapter's first corpus: the English
+documents of the range after extraction with trafilatura (FineWeb's
+extractor), language identification at FineWeb's threshold, NFC and the
+scrubbing of addresses. The cell then tests the hashes. The manifest must
+survive a save and a load, and the document hash must survive a permutation
+of the documents and change when one character of one document changes.
 
 ```{.python .input #crawl-c0}
 %%tab pytorch
@@ -1238,7 +1655,23 @@ else:
     assert same
 ```
 
-<!-- Prose: the c0 rows hold no text; rebuild_c0 recovers every document from the pinned range and checks its hash, so a takedown is honoured by deleting a row. -->
+The funnel is steep. Of 9,731 responses, 9,286 yield text (140 are not HTML
+and 305 give empty output), and 3,288 of those are English at a score of at
+least 0.65: 5,448 have another top language and 550 score too low. Nearly
+three in five pages with text are in another language. NFC and the
+scrubber drop nothing; they only rewrite. Note that c0 is not the set of
+pages on which we compared extractors. c0 follows FineWeb's rule, the
+language of trafilatura's text, while the comparison chose pages by the
+language of their HTML; 2,810 pages are in both.
+
+The registered artifact `lm-c0-docs-v1` holds one row per c0 document with
+everything except the text: id, URL, date, source offsets, charset, language
+and score, extractor and version, character count, text hash and log.
+`rebuild_c0` turns the rows back into documents. It reads each record from
+the verified range by offset and length, runs the recorded stages again, and
+keeps a document only if its text hashes to the recorded value. A document
+that hashes differently, because a newer trafilatura extracts one more line,
+say, goes into `.mismatches` and is reported, never kept.
 
 ```{.python .input #crawl-rebuild-def}
 %%tab pytorch
@@ -1299,14 +1732,33 @@ assert not rebuilt.mismatches
 assert d2l.docs_hash(rebuilt) == m.stages[-1]['out_hash']
 ```
 
-<!-- Prose: a dataset card generated from the manifest alone, and what it cannot say. -->
+All 3,288 documents come back, with no mismatch and the manifest's output
+hash. Deleting a row from the manifest removes the page from every later
+build, and that is the whole takedown procedure.
+
+*Datasheets for Datasets* :cite:`Gebru.Morgenstern.Vecchione.ea.2021` asks
+every dataset to answer questions about its motivation, composition,
+collection, preprocessing, uses, distribution and maintenance. Some of the
+answers are already in the manifest, and `to_card` writes them out as a
+Markdown dataset card in the format of the Hugging Face Hub.
 
 ```{.python .input #crawl-card}
 %%tab pytorch
 print(m.to_card())
 ```
 
-<!-- Prose: the results this section registers, and their agreement with the registered copies. -->
+The card states the source, its licence status, every stage with its
+implementation and version, and every drop count. It cannot say why the
+corpus exists, whose writing is in it, what it should not be used for, or
+who answers a takedown request. A manifest records what was done, not why or
+for whom, and those parts of a datasheet have to be written by a person.
+Audits of released corpora, such as Dodge and colleagues' study of C4
+(2021), show how much of that only reading the documents reveals.
+
+The last cell gathers every value this section reports and compares it with
+the registered copy, `lm-data-crawl-results-v1`. Every step is deterministic
+given the pins, so the comparison expects equality, and a package update
+that changes a single count fails here.
 
 ```{.python .input #crawl-results}
 %%tab pytorch
@@ -1359,10 +1811,500 @@ if 'pin' in RERUN:  # a consistency check, not a new pin: fetch_warc_range
     print(f'pin {"identical to" if same else "DIFFERS from"} {P_KEY}')
 ```
 
+All values agree. The 3,288 documents of c0 are English, decoded, normalized,
+scrubbed and documented, and seven in ten of them are absent from FineWeb,
+which started from the same file with the same extractor and threshold. Its
+later stages removed them by judging what a good document is. What should
+"good" mean once the text is clean, and who checks what such a judgment
+throws away? :numref:`sec_lm_quality_filtering` takes up quality.
+
 ## Summary
 
-<!-- Prose: Summary (3-6 sentences). -->
+A web page is mostly not its content, and the extractor that turns its HTML
+into text decides what a model trained on it can ever learn. Common Crawl
+stores each fetch as separately compressed WARC records, so a byte range is a
+valid sample, a record can be fetched again from its offset, and a corpus can
+be published as pins and hashes instead of text. On 256 MiB of one archive
+file, the extractors differed most on tables (Resiliparse about 0.73 of the
+cells, trafilatura about 0.61, our link-density extractor 0.24) and not at all
+between the two libraries on prose, while Common Crawl's own WET text kept
+the most boilerplate; agreement with FineWeb measures closeness to its
+trafilatura pipeline, not accuracy. A language score is a preference among
+176 labels, not the probability that a text is English; NFC is the one safe
+normalization, while NFKC rewrote a fifth of the documents; rules remove
+email and IP addresses and also version numbers, and nothing else. A
+manifest whose stages balance and whose canonical form has a hash makes the
+3,288 documents of c0 rebuildable, auditable and removable row by row.
 
 ## Exercises
 
-<!-- Prose: Exercises (7; spec part 8). -->
+1. **Prefixes of archives.**
+    1. Explain why a prefix of a WARC file can be parsed record by record
+       without the rest of the file, why the last record of a `Range`
+       request must be dropped, and why neither holds for a prefix of a
+       `.tar.gz` file.
+    1. [code] The first 4 MiB of the range held about 71 responses per MiB,
+       the whole range 38. Count the responses in each 16 MiB block of the
+       `index` table. Is the density stable after the first block? What
+       does your answer imply for the estimate of 41,000 responses in the
+       whole file, and how would you test it without downloading the file?
+   :exlabel:`ex_lm_crawl-prefix`
+
+1. **What normalization changes.** For each of `ﬁ` (U+FB01), `x²`, `é`
+   written as `e` followed by U+0301, `𝑥` (U+1D465) and the zero-width
+   joiner in `क्‍ष`, say whether NFC, NFKC, both or neither change it, and
+   check your answers with `unicodedata`. For each change made only by
+   NFKC, give one text in which it changes the meaning.
+   :exlabel:`ex_lm_crawl-normalize`
+
+1. **The order of the rules.** A stage drops documents by the ordered rules
+   $R_1, \ldots, R_m$, and a document is charged to the first rule that
+   fires. Rule $R_j$ fires on a document with probability $p_j$,
+   independently of the others, and costs $c_j$ to evaluate; evaluation stops
+   at the first rule that fires.
+    1. Show that the expected fraction charged to $R_j$ is
+       $p_j \prod_{i<j}(1 - p_i)$, so the drop counts of the manifest depend
+       on the order, while $n_\textrm{out}$ does not.
+    1. Show that the expected cost per document is smallest when the rules
+       are sorted by increasing $c_j / p_j$. (Hint: swap two adjacent rules.)
+    1. The `lang_id` stage charges `not_en` before `low_score`. What would
+       the two counts be in the other order, given the c0 funnel?
+   :exlabel:`ex_lm_crawl-rule-order`
+
+1. **A threshold for purity.** ● A corpus holds $N_\ell$ documents in each
+   language $\ell$. An identifier gives an English document the label `en`
+   with probability $a$ and a score at least $t$ with probability $F_1(t)$,
+   decreasing in $t$; a document in language $\ell \neq$ English is labelled
+   `en` with probability $e_\ell$ and then scores at least $t$ with
+   probability $F_\ell(t)$.
+    1. Write the expected numbers of English and non-English documents kept
+       at threshold $t$, and the purity of the kept set.
+    1. Find the threshold that keeps the most English documents subject to a
+       purity of at least $1 - \epsilon$, and show that it is the smallest
+       $t$ at which the purity constraint holds when the purity increases
+       with $t$.
+    1. Take $N_\textrm{en} = 3{,}800$ and 5,500 other documents, $a = 0.97$,
+       $e_\ell = 0.01$ for all other languages, $F_1(t) = 1 - t^4$ and
+       $F_\ell(t) = 1 - t$. Compute the best threshold for $\epsilon = 0.01$
+       and compare it with 0.65.
+   :exlabel:`ex_lm_crawl-lid-threshold`
+
+1. **What the document hash detects.** `docs_hash` hashes the sorted pairs
+   of id and text hash.
+    1. Show that it does not depend on the order of the documents and that
+       it changes when one byte of one text changes, and check both on c0.
+    1. What happens when two documents share an id, or when a document is
+       duplicated? Would the exclusive or of per-document hashes, which is
+       also independent of order, detect a duplicated document?
+    1. Construct a change to the corpus that leaves `docs_hash` unchanged but
+       changes what a tokenizer reads. What must the manifest record
+       besides the hash to rule it out?
+   :exlabel:`ex_lm_crawl-docs-hash`
+
+1. [code] **FineWeb's settings.** Our trafilatura text agrees with FineWeb's
+   at an F1 of 0.92, and the text blamed the gap on settings. Predict how
+   the F1, the table recall and the precision proxy change, then rerun
+   trafilatura on the 1,002 joined pages with datatrove's settings
+   (`favor_precision=True`, `deduplicate=True`, `include_comments=False`)
+   and measure them with domain-clustered intervals. Which part of the gap
+   remains, and what could explain it?
+   :exlabel:`ex_lm_crawl-fineweb-settings`
+
+1. [code] **Loss on one class, by hand.** Pick one page class (tables, code,
+   or a class of your own such as recipes or forum threads) and draw 20
+   pages of it from the range at random. For each page, mark by hand which
+   parts of the rendered page are content, and measure each extractor's
+   recall and precision against your labels. Do your labels agree with the
+   automatic measures of this section? Where they disagree, which measure is
+   wrong?
+   :exlabel:`ex_lm_crawl-hand-labels`
+
+1. [extended] **A card from the manifest alone.** Write a full dataset card
+   for c0 in the order of *Datasheets for Datasets*, using only the manifest
+   and the c0 rows. List every question of the datasheet that you could not
+   answer, and for each say what would have to be added to the manifest, or
+   which documents someone would have to read, to answer it.
+   :exlabel:`ex_lm_crawl-card`
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §20.1]{.kicker}
+
+Document Extraction from Web Crawls<br>**WARC records · charsets · main-content extraction · language identification · Unicode normalization · personal data · the manifest**
+:::
+:::
+
+::: {.slide title="One Page, Three Texts: WET Keeps 3,000 More Characters Than FineWeb"}
+[The problem]{.kicker}
+
+A page of the Apache HTTP Server manual, crawled in January 2025:
+
+| view of the same record | size |
+|---|---|
+| HTML | 27,385 bytes; a menu bar of 5 links and a breadcrumb trail of 5 before the heading |
+| WET, Common Crawl's text | 14,217 characters; 34% of its 127 lines under 30 characters |
+| FineWeb's text | 11,159 characters; menu and breadcrumbs gone |
+| our trafilatura text | 12,658 characters; character-5-gram F1 0.96 against FineWeb |
+
+::: {.d2l-note .warn}
+What the extractor drops, the model never sees; what it keeps, the model learns.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- read a WARC file record by record from a byte range, and check the reader;
+- decode a page by a logged chain of charset evidence;
+- measure what an extractor loses on prose, code and tables, without a
+  reference extractor;
+- set a language threshold, and say what its score is not;
+- choose a Unicode normalization and a PII rule, and name their failures;
+- write a manifest whose hash names the corpus.
+
+**Running example:** the first 256 MiB of one Common Crawl archive file of
+January 2025, and FineWeb's text for the same records.
+:::
+
+::: {.slide title="Six Steps From a Crawl Record to a Token on Disk"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| step | section |
+|---|---|
+| get text | **Document Extraction from Web Crawls** |
+| choose text | Quality Filtering |
+| | Deduplication and Decontamination |
+| mix text | Data Mixtures |
+| | Synthetic and Rephrased Data |
+| cut text | Tokenizers at Scale |
+:::
+
+::: {.col .narrow}
+- **Here:** bytes → records → characters → text → English → NFC → scrubbed,
+  each step in one manifest.
+- **Skips:** quality, duplicates, tokenization.
+:::
+:::
+:::
+
+::: {.slide title="Each Record Is Its Own Gzip Member, So Any Byte Prefix Is a Valid Sample"}
+[WARC]{.kicker}
+
+| type | offset | compressed bytes |
+|---|---|---|
+| warcinfo | 0 | 471 |
+| request | 471 | 432 |
+| response | 903 | 1,903 |
+| metadata | 2,806 | 424 |
+| request, response, metadata, … | 3,230 | … |
+
+- An HTTP `Range` request for bytes $0..n-1$ returns complete members plus
+  one that the cut splits: count it, drop it.
+- `iter_warc` against `warcio` on 4 MiB: 857 of 857 records identical.
+
+::: {.d2l-note .warn}
+`warcio` yields the split member as a record, cut short.
+:::
+:::
+
+::: {.slide title="Two Records in Three Are Not Documents"}
+[The range]{.kicker}
+
+| 256 MiB of a 1.14 GB file | records |
+|---|---|
+| request | 9,732 |
+| response, all HTTP 200 | 9,731 |
+| metadata | 9,731 |
+| warcinfo | 1 |
+| truncated member at the cut | 1 |
+
+Responses: 9,591 HTML (median body 71 KB), 67 PDF.
+WET, Common Crawl's text of the same file: 102 MB, one `conversion` record
+per HTML page, but none for 151 of ours.
+:::
+
+::: {.slide title="Check: 285 Responses in the First 4 MiB. How Many in 256 MiB?"}
+[Check]{.kicker}
+
+Same file, same crawl, 64 times the bytes.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Proportion says $285 \times 64 = 18{,}240$. Measured: 9,731.
+The first 4 MiB hold 71 responses per MiB, the range 38. A prefix is a
+valid sample of records, not a representative one; the 41,000 for the whole
+file is an extrapolation of the same kind.
+:::
+:::
+:::
+
+::: {.slide title="Decode by Evidence, Not by Assuming UTF-8"}
+[Charsets]{.kicker}
+
+| link of the chain | HTML pages decided |
+|---|---|
+| `Content-Type` header | 8,606 |
+| `<meta charset>` in the first 4 KiB | 850 |
+| statistical detector (`charset_normalizer`) | 125 |
+| UTF-8 with replacements | 10 |
+
+- A declared charset counts only if it decodes with at most 1 U+FFFD per
+  1,000 characters.
+- UTF-8 read as Latin-1: wrong letters, no error.
+
+::: {.d2l-note}
+Each document's log records which link decided.
+:::
+:::
+
+::: {.slide title="Four Texts per Page: One Keeps Everything, Three Guess the Article"}
+[Extractors]{.kicker}
+
+| source | mechanism | speed |
+|---|---|---|
+| WET | all visible text, one line per block | precomputed |
+| trafilatura | scores the document tree; FineWeb's extractor | 1× |
+| Resiliparse | C++, main-content rules; DCLM's extractor | about 15× |
+| naive, ours | dense blocks with few links | about 8× |
+
+Naive rule, block of $t$ characters with $l$ in links: keep if $t \ge 40$
+and $l \le t/3$; keep neighbors within 2 blocks if $t \ge 15$ and
+$l \le t/3$.
+
+*DCLM: both libraries trained better models than WET text.*
+:::
+
+::: {.slide title="Score Extractors Against Strings Read From the HTML, Not Against Another Extractor"}
+[Measures]{.kicker}
+
+| measure | share found in the output |
+|---|---|
+| code recall | lines of `<pre>`/`<code>` blocks of 3+ lines |
+| table recall | cells of 3 to 200 characters |
+| math recall | TeX strings |
+| prose recall | 5-grams of `<p>` text, 100+ characters, outside menus |
+| precision proxy | output characters on lines of the content elements |
+
+- Pages: English by their HTML, score $\ge 0.65$; no extractor chooses them.
+- Intervals: bootstrap over registered domains (one site counts once).
+
+::: {.d2l-note .warn}
+Thresholds were set while looking at this sample: not held out.
+:::
+:::
+
+::: {.slide title="Extractors Differ Most on Tables; on Prose the Two Libraries Agree"}
+[Recall by page class]{.kicker}
+
+| class (pages) | WET | naive | trafilatura | Resiliparse |
+|---|---|---|---|---|
+| prose (1,434) | 0.99 | 0.96 | 0.87 | 0.86 |
+| code (44) | 0.99 | 0.95 | 0.92 | 0.82 |
+| table (391) | 1.00 | 0.24 | 0.61 | 0.73 |
+| math (4) | too few | | | |
+| precision proxy | **0.44** | 0.60 | 0.64 | 0.63 |
+
+Paired, trafilatura − Resiliparse: tables −0.12 [−0.18, −0.06]; prose +0.01,
+interval includes 0; code too few pages to separate.
+
+::: {.d2l-note}
+WET recalls everything and keeps the menus: more than half of its characters
+are boilerplate.
+:::
+:::
+
+::: {.slide title="Agreement With FineWeb Is Closeness to Its Pipeline, Not Accuracy"}
+[A second view]{.kicker}
+
+1,002 FineWeb rows of the range, joined by **record id**, never by URL.
+
+| extractor | character-5-gram F1 against FineWeb |
+|---|---|
+| WET | 0.63 |
+| naive | 0.78 |
+| trafilatura | **0.92** |
+| Resiliparse | 0.76 |
+
+- FineWeb's text is trafilatura's, with other settings (precision first, no
+  comments) and addresses replaced: mask both sides before comparing.
+
+::: {.d2l-note .warn}
+Resiliparse finds more table cells yet agrees less: the reference is
+trafilatura.
+:::
+:::
+
+::: {.slide title="fastText's Score Is a Preference Among 176 Labels, Not P(English)"}
+[Language identification]{.kicker}
+
+Words and character n-grams → embeddings (n-grams hashed) → mean → linear
+layer → softmax over 176 languages. FineWeb keeps `en` $\ge 0.65$.
+
+| text | top labels |
+|---|---|
+| an English sentence | en 1.00 |
+| the same sentence as a code comment | en 0.98 |
+| half English, half Spanish | es 0.90 |
+
+Against Common Crawl's CLD2 labels: mostly diagonal; 40 pages Japanese → Chinese.
+:::
+
+::: {.slide title="Check: Your Filter Keeps en ≥ 0.65. What Happens to a Python File?"}
+[Check]{.kicker}
+
+Two lines of code with an English comment.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** It is kept as English, at 0.98. The identifier sees English
+words and ignores the code; a score says how sure it is of the top label,
+not how much of the text is in that language.
+:::
+:::
+:::
+
+::: {.slide title="Raising the Threshold to 0.8 Removes 857 Documents, 14 of Which FineWeb Kept"}
+[The threshold]{.kicker}
+
+| threshold on `en` | 0.50 | 0.65 | 0.80 | 0.90 |
+|---|---|---|---|---|
+| English documents kept | 3,546 | 3,288 | 2,689 | 1,941 |
+| of them in FineWeb | 999 | 997 | 985 | 866 |
+
+- At 0.65: 30% of our English documents are in FineWeb; quality filters
+  and deduplication removed the rest.
+- A low score tends to mark pages that later filters drop anyway.
+:::
+
+::: {.slide title="NFC Changes No Document; NFKC Rewrites One in Five"}
+[Unicode]{.kicker}
+
+| on 3,288 English documents | NFC | NFKC |
+|---|---|---|
+| documents changed | 0 | 619 (19%) |
+| code points rewritten | 0 | 7,911 |
+
+| NFKC rewrites | becomes | count |
+|---|---|---|
+| no-break space, ellipsis | space, `...` | 6,245, 949 |
+| ″ (double prime), ™ | ′′, `TM` | 200, 103 |
+| ½, mathematical bold 𝐚 | 1⁄2, `a` | 15, 11 |
+
+::: {.d2l-note .warn}
+x² → x2: NFKC changes formulas and code.
+:::
+:::
+
+::: {.slide title="Normalize Once, With NFC, Before Any Tokenizer; Count Bytes After It"}
+[The rule]{.kicker}
+
+| é written as | code points | UTF-8 bytes |
+|---|---|---|
+| U+00E9 | 1 | `C3 A9` |
+| `e` + U+0301 | 2 | `65 CC 81` |
+
+- A byte-level tokenizer sees bytes: two identical-looking documents give
+  different tokens.
+- Bits per byte divides by the byte count, so it must be the count of the
+  normalized text, the same for every tokenizer compared.
+- Keep the zero-width joiner: in Devanagari it selects a half-form.
+:::
+
+::: {.slide title="Two Regular Expressions Remove Addresses, and Also Version Numbers"}
+[Personal data]{.kicker}
+
+| pattern, 120-string fixture | precision | false positives |
+|---|---|---|
+| email | 0.91 | `logo@2x.png`, `icon@3x.webp`, `git@github.com:…` |
+| public IP address | 0.83 | `4.2.1.0`, kernel build `5.15.0.91`, section `3.4.1.2` |
+
+- Recall 1.0 by construction: the fixture was written with the rules.
+- On c0, unchecked rule matches: emails in 173 documents, IPs in 8.
+- No rule finds names, street addresses or a diagnosis in prose.
+:::
+
+::: {.slide title="Common Crawl Is an Archive, Not a Licence"}
+[Rights]{.kicker}
+
+- Public is not permitted: copyright and site terms still apply.
+- *Consent in Crisis* (2024): restrictions on AI crawlers spread within a
+  year, most among actively maintained sites.
+- The Stack v2: a licence per file, opt-out repositories removed before
+  each release.
+- This book ships a pin (URL, range, SHA-256 per 16 MiB), ids, offsets and
+  hashes; the text is rebuilt from Common Crawl.
+
+::: {.d2l-note}
+With a byte offset in every row, a takedown is the deletion of one row.
+:::
+:::
+
+::: {.slide title="Every Stage Balances: 9,731 Responses Become 3,288 Documents"}
+[The manifest]{.kicker}
+
+$$n_\textrm{in} = n_\textrm{out} + \sum_r \textrm{drops}_r \quad\text{(first rule that fires is charged)}$$
+
+| stage | in | out | dropped |
+|---|---|---|---|
+| extract (trafilatura 2.1.0) | 9,731 | 9,286 | not HTML 140, empty 305 |
+| lang_id (`en` $\ge 0.65$) | 9,286 | 3,288 | other language 5,448, low score 550 |
+| nfc | 3,288 | 3,288 | — |
+| pii | 3,288 | 3,288 | — |
+
+Canonical JSON: sorted keys, floats to 4 decimals, no time stamps, no
+absolute paths.
+:::
+
+::: {.slide title="A Hash Names the Corpus: Same Decisions, Same Hash, on Any Machine"}
+[Round trip]{.kicker}
+
+`docs_hash`: SHA-256 over the sorted pairs (id, SHA-256 of the text).
+
+| test | result |
+|---|---|
+| manifest saved and loaded | hash unchanged |
+| documents permuted | `docs_hash` unchanged |
+| one character edited | `docs_hash` changed |
+| 3,288 documents rebuilt from rows without text | 0 mismatches, same hash |
+
+::: {.d2l-note}
+A dataset card from the manifest states sources, stages and counts; it
+cannot say why the corpus exists or whose writing is in it.
+:::
+:::
+
+::: {.slide title="Check: Swap the Order of Two Drop Rules. What Changes?"}
+[Check]{.kicker}
+
+A filter stage drops by `too_short`, then `low_quality`; 100 documents
+fire both rules. Swap the order.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The documents kept, $n_\textrm{out}$ and `out_hash` stay the
+same; 100 drops move from `too_short` to `low_quality`, and the manifest's
+hash changes. The order is part of the stage's parameters.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Recap]{.kicker}
+
+- 256 MiB: 29,195 records, 9,731 responses; `iter_warc` matches `warcio` on
+  857 of 857.
+- Tables separate the extractors (Resiliparse 0.73, trafilatura 0.61, naive
+  0.24); prose does not; WET's precision proxy 0.44.
+- Agreement with FineWeb: trafilatura 0.92, the others 0.63 to 0.78, closeness
+  to a pipeline, not accuracy.
+- At `en` $\ge 0.65$: 3,288 documents, 30% of them in FineWeb.
+- NFC changes none, NFKC 19%; the PII rules also hit version numbers.
+- The manifest balances every stage and rebuilds c0 with 0 mismatches.
+
+**Next:** which of the 3,288 documents are worth training on, and who checks
+what a quality filter removes.
+:::

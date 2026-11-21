@@ -74,41 +74,12 @@ from d2l import jax as d2l
 ## VGG: Blocks as the Unit of Design
 :label:`sec_vgg`
 
-Much like software engineering moved from assembly instructions to reusable
-subroutines, VGG replaced ad hoc layers with a single repeating building block
-instantiated at increasing channel widths. That block simultaneously resolves
-two architectural questions: how to build deeper networks without collapsing
-spatial resolution prematurely, and what kernel size gives the best
-representational power per parameter.
-
 ### Stacks of $3 \times 3$ Convolutions
 :label:`subsec_vgg-blocks`
 
-Notice first that if we followed every convolutional layer with stride-2
-pooling, an input image of width $d$ could support at most
-$\lfloor\log_2 d\rfloor$ layers before shrinking down to a single pixel
-($224 \to 112 \to 56 \to 28 \to 14 \to 7 \to 3 \to 1$ terminates after seven
-halvings). Building deeper networks therefore requires stacking multiple
-shape-preserving, stride-1 convolutions at each spatial resolution before
-downsampling.
+If every convolutional layer were followed by stride-2 pooling, an input of width $d$ could support at most $\lfloor\log_2 d\rfloor$ layers before collapsing to $1 \times 1$ ($224 \to 112 \to 56 \to 28 \to 14 \to 7 \to 3 \to 1$). Going deeper requires stacking several stride-1, shape-preserving convolutions at each spatial resolution before downsampling.
 
-What kernel size should those stacked layers use? VGG settled on $3 \times 3$
-kernels—the smallest symmetric spatial filter capable of inspecting adjacent
-pixels. Stacking two $3 \times 3$ convolutions gives the exact same
-$5 \times 5$ receptive field as a single $5 \times 5$ convolution, yet for $c$
-input and $c$ output channels it requires only $2 \cdot 9c^2 = 18c^2$ weights
-instead of $25c^2$. Likewise, three stacked $3 \times 3$ convolutions match a
-$7 \times 7$ receptive field using $27c^2$ weights rather than $49c^2$. Beyond
-saving parameters, a deep stack of small kernels inserts multiple ReLU
-nonlinearities across the same receptive field, allowing it to represent
-nonlinear spatial patterns that a single large linear filter cannot. For
-nearly a decade afterward, deep stacks of $3 \times 3$ convolutions served as
-the workhorse of computer vision.
-
-Accordingly, a *VGG block* consists of `num_convs` padded $3 \times 3$
-convolutions (each preserving spatial dimensions and followed by a ReLU),
-capped by a single $2 \times 2$ max-pooling layer with stride 2 that halves
-both height and width.
+VGG :cite:`Simonyan.Zisserman.2014` standardized on $3 \times 3$ kernels—the smallest symmetric filter that captures left/right and up/down neighbors. Two stacked $3 \times 3$ layers cover the same $5 \times 5$ receptive field as one $5 \times 5$ layer using $2 \cdot 9c^2 = 18c^2$ weights instead of $25c^2$; three stacked $3 \times 3$ layers cover a $7 \times 7$ window with $27c^2$ weights instead of $49c^2$ while inserting three ReLU nonlinearities instead of one. A *VGG block* stacks `num_convs` padded $3 \times 3$ convolutions with ReLU, followed by $2 \times 2$ stride-2 max-pooling:
 
 ```{.python .input #vgg-vgg-blocks  n=2}
 %%tab mxnet
@@ -1063,45 +1034,13 @@ accuracy.
 | NiN | $224 \times 224$ | 3.4M | 798M | 0.03 | 89% |
 | GoogLeNet | $96 \times 96$ | 6.0M | 276M | 0.03 | 91% |
 
-We should interpret a small benchmark like this cautiously: 10 epochs on
-upsampled $28 \times 28$ garments separate all of these architectures by only
-about four percentage points, and changing the peak learning rate alone shifts
-VGG by 1.5 points. Still, three robust lessons emerge across repeated runs.
+Three lessons stand out from :numref:`tab_blocks_scoreboard`:
 
-First, raw arithmetic count does not determine accuracy: our quarter-width VGG
-achieves the highest accuracy at either learning rate using roughly half of
-AlexNet's multiply-adds, whereas NiN spends nearly as much compute as AlexNet
-yet finishes two points behind. Second, GoogLeNet matches AlexNet's accuracy
-with one-eighth as many parameters and less than a fifth as many input pixels.
-Bear in mind, however, that GoogLeNet's low arithmetic count here comes from
-its smaller $96 \times 96$ input rather than from the Inception block itself:
-since convolutional compute scales with spatial area, GoogLeNet at
-$224 \times 224$ performs roughly 1.5 billion multiply-adds, more than
-AlexNet. Third, on this small benchmark the dense head genuinely helps a
-narrow body: swapping `VGG`'s dense head for global average pooling and one
-linear layer cuts 99% of the parameters while costing about two percentage
-points. Even so, GoogLeNet shows that a deeper, richer convolutional body with
-a pooled head can easily match AlexNet—and on ImageNet the verdict was
-decisive, with GoogLeNet winning the 2014 competition using ~7 million
-parameters and lower error than VGG models containing up to 144 million.
+1. **Raw arithmetic does not dictate accuracy:** Quarter-width VGG achieves the highest accuracy at half of AlexNet's multiply-adds, whereas NiN spends nearly as much compute as AlexNet yet finishes two points lower.
+2. **Bottlenecks and stem downsampling slash parameter and pixel budgets:** GoogLeNet matches AlexNet's 91% accuracy with $8\times$ fewer parameters (6.0M vs. 46.8M) and $96 \times 96$ inputs (276M multiply-adds, though at $224 \times 224$ GoogLeNet performs ~1.5B multiply-adds).
+3. **Global average pooling trades a small accuracy margin on narrow trunks for massive parameter savings:** Swapping `VGG`'s dense head for global average pooling (`PooledVGG`) removes 99% of its parameters (43.1M $\to$ 0.6M) at a cost of ~2 percentage points on Fashion-MNIST, while on ImageNet GoogLeNet's deeper body with a pooled head decisively beat 144M-parameter VGG models.
 
-Of the three architectures, GoogLeNet's bespoke, hand-tuned branch widths
-proved the hardest to scale and are rarely used verbatim today. Its core
-multi-branch insight survived in a much cleaner, symmetric form: *grouped
-convolutions* in ResNeXt (:numref:`subsec_resnext`), where all parallel
-branches share an identical structure.
-
-Finally, step back and notice a shared limitation across every network we have
-built so far: none of them normalizes intermediate activations, and none
-comfortably exceeds roughly twenty layers. To train their deepest variants,
-VGG's authors had to pretrain shallower networks and copy weights across,
-while GoogLeNet injected auxiliary classification heads midway through the
-network just to keep gradients alive (we omitted both workarounds above). We
-also encountered a third symptom directly in our own runs: every network
-required a carefully chosen peak learning rate right below an instability cliff
-where training stalls or diverges. All three symptoms point to the exact same
-missing ingredient—a mechanism that keeps activation and gradient scales well
-behaved at every layer.
+Notice also a shared ceiling across all four networks: none normalizes intermediate activations, none exceeds ~22 layers without auxiliary heads or staged pretraining, and NiN, `PooledVGG`, and GoogLeNet all become unstable when the peak learning rate rises from 0.03 to 0.1. In :numref:`sec_batch_norm`, we fix this scale fragility directly.
 
 ## Summary
 
@@ -1121,80 +1060,19 @@ roughly two percentage points.
 
 ## Exercises
 
-1. [code] **Translations and the head.** Train `VGG` and `PooledVGG` as in
-   this section, both at a peak of 0.03, and keep the two trained networks.
-    1. Shift every resized $224 \times 224$ validation image horizontally
-       by 32 pixels, filling with zeros, and measure how much the
-       validation accuracy of each network drops.
-    1. Relate the result to the argument about translations in this
-       section. Why is the pooled network not exactly invariant to the
-       shift?
+1. **VGG-16 from its configuration.** VGG-16 stacks 13 convolutional layers in five blocks with `arch=((2, 64), (2, 128), (3, 256), (3, 512), (3, 512))` and three fully connected layers of 4096, 4096, and 1000 units on $224 \times 224$ RGB images.
+    1. Count its parameters and multiply-adds by hand, separately for the convolutional body and the fully connected head, and verify your total against the 138 million parameters reported by :citet:`Simonyan.Zisserman.2014`.
+    1. Which single layer holds the most parameters? Which layers perform the most multiply-adds, and why do several convolutional layers tie?
 
-1. [code] **The $1 \times 1$ convolutions of NiN.** Remove both
-   $1 \times 1$ convolutions from every `nin_block`, so that each block is
-   a single convolution followed by a ReLU. In the last block the
-   $3 \times 3$ convolution must then emit the ten class scores itself,
-   without a ReLU. Train the network as `NiN`.
-    1. How many parameters and multiply-adds does the network lose?
-    1. Compare the validation accuracy with that of `NiN`. Which of the
-       four blocks needs its $1 \times 1$ convolutions most? Test your
-       answer by restoring them in one block at a time.
+1. [code] **Native resolution.** Fashion-MNIST images are $28 \times 28$, so upsampling to $224 \times 224$ spends compute without adding information.
+    1. Train quarter-width `VGG` (`arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128))`, `lr=0.1`) on images resized to $56 \times 56$ and $84 \times 84$. State the spatial size of the feature map entering the dense head at each resolution, and compare validation accuracy and epoch time against the $224 \times 224$ run.
+    1. `GoogLeNet` accepts a $28 \times 28$ input as written because every stride-2 step pads to halve resolution (rounding up). Compute the spatial resolution at which each of the three Inception stages operates on a $28 \times 28$ input. What do the $3 \times 3$ and $5 \times 5$ branches compute at the final stage?
 
-1. **VGG-16 from its configuration.** VGG-16 has 13 convolutional layers in
-   five blocks with `arch=((2, 64), (2, 128), (3, 256), (3, 512), (3,
-   512))`, and three fully connected layers of 4096, 4096, and 1000 units,
-   on $224 \times 224$ color images.
-    1. Count its parameters and multiply-adds by hand, separately for the
-       convolutional and the fully connected layers, and check your total
-       against the 138 million parameters reported by
-       :citet:`Simonyan.Zisserman.2014`.
-    1. Which layer has the most parameters? Which layers perform the most
-       multiply-adds, and why do several of them tie?
+1. **Where the savings come from.** ● Using the layer counts of this section and :numref:`tab_alexnet_cost`:
+    1. For VGG-11, `NiN`, and `GoogLeNet` on a single-channel $224 \times 224$ image with 10 classes, split the parameters and multiply-adds between the convolutional layers and the classification head.
+    1. Relative to VGG-11, does `NiN` save more parameters in its body or in its head? What about `GoogLeNet`? Answer the same questions for multiply-adds and name the design choice responsible for each saving.
 
-
-1. [code] **Native resolution.** Fashion-MNIST images are
-   $28 \times 28$, and the training runs of this section upsample them
-   eightfold to $224 \times 224$, which spends computation without adding
-   information.
-    1. Train `VGG` as in this section, with
-       `arch=((1, 16), (1, 32), (2, 64), (2, 128), (2, 128))` and
-       `lr=0.1`, on images resized to $56 \times 56$ and to
-       $84 \times 84$. The input size of the first fully connected layer
-       changes with the resolution. Compare validation accuracy and time
-       per epoch with the same model
-       trained at $224 \times 224$, and give the spatial size of the
-       feature map that enters the fully connected layers at each of the
-       three resolutions.
-    1. `GoogLeNet` accepts a $28 \times 28$ input as written, because its
-       convolutions and pooling layers pad so that every stride-2 step
-       halves the resolution, rounding up. Compute the resolution at which
-       each of the three groups of Inception blocks operates on a
-       $28 \times 28$ input. What do the $3 \times 3$ and $5 \times 5$
-       branches compute at the smallest of these resolutions?
-
-1. **Where the savings come from.** ● Use the counts of this section and
-   the table of AlexNet's layers, :numref:`tab_alexnet_cost`.
-    1. For VGG-11, `NiN`, and `GoogLeNet` on a single-channel
-       $224 \times 224$ image with ten classes, split the parameters and
-       the multiply-adds between the convolutional layers and the
-       classification head.
-    1. Relative to VGG-11, does `NiN` save more parameters in its body or
-       in its head? And `GoogLeNet`? Answer the same questions for the
-       multiply-adds, and name the design choice responsible for each
-       saving.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 10.18.*
-
-1. [code] **Single-branch ablation.** ● Build a variant of `GoogLeNet` whose
-   Inception blocks keep only the $3 \times 3$ branch with its
-   $1 \times 1$ reduction. Let the $3 \times 3$ convolution emit as many
-   channels as the original block, and choose the width of the
-   $1 \times 1$ reduction so that each block's parameter count stays
-   within 10% of the original. Train both networks as `GoogLeNet` is
-   trained in this section and compare validation accuracy. What does the
-   result say about the value of mixing kernel sizes within one block?
+1. [code] **Single-branch Inception ablation.** ● Build a variant of `GoogLeNet` whose Inception blocks keep only the $3 \times 3$ branch with its $1 \times 1$ reduction: let the $3 \times 3$ convolution emit as many channels as the full four-branch block, and choose the $1 \times 1$ reduction width so each block's parameter count stays within 10% of the original. Train both networks on $96 \times 96$ Fashion-MNIST and compare validation accuracy. What does the result say about mixing kernel sizes within a block?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/77)

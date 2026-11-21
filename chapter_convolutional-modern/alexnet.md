@@ -6,47 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # AlexNet and Learned Image Representations
 :label:`sec_alexnet`
 
-In :numref:`sec_lenet`, LeNet learned every operation in its pipeline directly
-from training examples—both its convolutional filters and its final
-classifier. Although Yann LeCun and his colleagues had already trained such a
-network end to end in 1989, for the next two decades mainstream computer
-vision moved in a different direction. Classical vision pipelines split
-representation from prediction: hand-engineered descriptors such as SIFT
-:cite:`Lowe.2004`, SURF :cite:`Bay.Tuytelaars.Van-Gool.2006`, HOG
-:cite:`Dalal.Triggs.2005`, and bags of visual words
-:cite:`Sivic.Zisserman.2003` converted raw pixels into fixed feature vectors,
-which were then fed into a linear model or kernel classifier. Because the
-training objective could adjust only the classifier and never the features,
-progress depended largely on human ingenuity in designing better feature
-extractors. By contrast, a representation is *learned* when the loss function
-shapes the feature extractors jointly with the classifier. Why did learned
-representations take over twenty years to overtake engineered ones, and what
-finally tipped the balance?
+In :numref:`sec_lenet`, LeNet trained every stage of its pipeline—both convolutional filters and final classifier—end to end from raw pixels. Yet for two decades after LeCun's 1989 results, mainstream computer vision split feature extraction from classification: hand-engineered descriptors such as SIFT :cite:`Lowe.2004`, SURF :cite:`Bay.Tuytelaars.Van-Gool.2006`, HOG :cite:`Dalal.Triggs.2005`, and bags of visual words :cite:`Sivic.Zisserman.2003` mapped pixels into fixed feature vectors that fed a linear or kernel classifier. Because the training loss updated only the classifier and never the features, progress relied on human feature engineering.
 
-The turning point arrived at the 2012 ImageNet challenge, which evaluated
-models on sorting natural photographs into 1000 object categories using
-*top-5 error*—the fraction of validation images whose true label does not
-appear among the model's five highest-probability predictions. *AlexNet*
-:cite:`Krizhevsky.Sutskever.Hinton.2012` replaced the traditional two-stage
-pipeline with a single deep convolutional network trained end to end on raw
-pixels, cutting top-5 error to 15.3% compared with 26.2% for the strongest
-hand-engineered entry. Whereas the winning error had improved by roughly two
-percentage points the year before, AlexNet slashed it by more than ten in a
-single leap.
-
-Architecturally, AlexNet is essentially LeNet scaled up: a stack of
-convolutional stages that trade spatial resolution for channel depth, topped
-by a block of fully connected layers. Because that blueprint was already more
-than two decades old, its sudden triumph points straight to the real
-catalysts. Three ingredients converged in 2012: a labeled dataset large enough
-to constrain tens of millions of parameters, GPUs fast enough to train them in
-days rather than months, and key modeling practices—ReLU activations, dropout,
-and data augmentation—that made deep networks both trainable and resistant to
-overfitting.
-
-In this section, we examine why each of these three ingredients mattered,
-implement AlexNet, account for where its parameters and arithmetic reside, and
-train it on Fashion-MNIST.
+The watershed came at the 2012 ImageNet challenge (1,000 object categories evaluated by *top-5 error*, the fraction of validation images whose true label falls outside the model's top five predictions). *AlexNet* :cite:`Krizhevsky.Sutskever.Hinton.2012` trained a single eight-layer convolutional network end to end on raw pixels, slashing top-5 error from 26.2% (for the best hand-engineered pipeline) to 15.3% in a single leap. Architecturally, AlexNet is LeNet scaled up, so its sudden triumph points straight to three catalysts that converged in 2012: a million-image labeled dataset (ImageNet), GPUs fast enough to train tens of millions of weights in days rather than months, and key modeling practices—ReLU activations, dropout, and data augmentation—that made deep networks trainable and resistant to memorization.
 
 ```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet  n=2}
 %%tab mxnet
@@ -89,70 +51,21 @@ from d2l import jax as d2l
 
 ## Learned Features, Data, and Hardware
 
-Learning visual features from data was not brand new in 2012: beyond LeNet,
-unsupervised sparse coding had already demonstrated that edge-like image
-filters can emerge without labels :cite:`olshausen1996emergence`. What changed
-in 2012 was that hierarchically learned features decisively outperformed
-hand-crafted descriptors on a large-scale natural-image benchmark. Inspecting
-AlexNet's first convolutional layer reveals what backpropagation discovered on
-its own. :numref:`fig_filters` displays its 96 learned $11 \times 11$ kernels:
-oriented edge and frequency detectors alongside color-opponent blobs—strikingly
-reminiscent of the oriented-gradient filters built into SIFT and HOG by hand.
-No engineer programmed these filters; the network discovered them purely to
-minimize classification loss, and then composed them layer by layer into
-higher-level parts and object representations that no human could specify by
-hand.
+What did backpropagation discover on ImageNet that hand-crafted descriptors missed? :numref:`fig_filters` shows the 96 learned $11 \times 11$ kernels of AlexNet's first convolutional layer: oriented edge and frequency detectors alongside color-opponent blobs, found purely by minimizing classification loss and composed by deeper layers into textures, parts, and object categories.
 
 ![The 96 kernels of the first convolutional layer of AlexNet, learned on ImageNet. Reproduction courtesy of :citet:`Krizhevsky.Sutskever.Hinton.2012`.](../img/filters.png)
 :width:`400px`
 :label:`fig_filters`
 
-### Data
+### Data and Hardware
 
-Deep models with tens of millions of parameters quickly memorize small
-benchmarks such as PASCAL VOC, which contained only on the order of ten
-thousand images. The ImageNet dataset :cite:`Deng.Dong.Socher.ea.2009` broke
-that bottleneck: its 2012 competition split :cite:`russakovsky2015imagenet`
-provided roughly 1.2 million labeled training photographs spanning 1000
-categories. Even so, 60 million parameters still outnumber 1.2 million images
-by fifty to one, so AlexNet's authors expanded the effective dataset via data
-augmentation—extracting random $224 \times 224$ crops from images resized to
-$256 \times 256$ along with horizontal reflections. Because a crop can start
-at any of roughly $32 \times 32$ offsets and be flipped or unflipped, each
-photograph yields up to $32 \cdot 32 \cdot 2 = 2{,}048$ distinct training
-views. Although these views overlap strongly, they significantly boost sample
-diversity—yet even with augmentation, AlexNet still overfit severely without
-dropout :cite:`Krizhevsky.Sutskever.Hinton.2012`.
+Models with 60 million parameters quickly memorize small benchmarks such as PASCAL VOC (~$10^4$ images). The 2012 ImageNet training split :cite:`Deng.Dong.Socher.ea.2009,russakovsky2015imagenet` supplied 1.2 million labeled photographs across 1,000 categories, and AlexNet multiplied effective sample diversity via data augmentation—extracting random $224 \times 224$ crops and horizontal reflections from $256 \times 226$ images (up to $32 \cdot 32 \cdot 2 = 2{,}048$ views per photograph).
 
-### Hardware
+Hardware supplied the second half of the breakthrough. Convolving a filter across every spatial location and channel executes millions of independent multiply-adds—the exact workload graphics processing units (GPUs) were built to run across hundreds of parallel cores connected to high-bandwidth memory. Each of the two NVIDIA GTX 580 GPUs used for AlexNet delivered ~1.6 TFLOPS and 192 GB/s of memory bandwidth, versus ~0.2 TFLOPS and 20 GB/s for a contemporary quad-core CPU. One forward pass of AlexNet on a $224 \times 224$ RGB image costs ~$10^9$ multiply-adds; counting a backward pass at twice the forward pass and 2 FLOPs per multiply-add, 90 epochs over 1.2 million images require
 
-Training a deep CNN means executing the same simple arithmetic operations in
-massive parallel batches: applying a kernel across every spatial position and
-output channel involves millions of independent multiply-adds. A *graphics
-processing unit* (GPU) is tailor-made for this workload. Rather than dedicating
-silicon to a handful of complex, high-clock cores optimized for branching
-control flow, a GPU packs hundreds or thousands of streamlined arithmetic
-units behind a wide, high-bandwidth memory bus. Each of the two NVIDIA GTX
-580 GPUs used to train AlexNet delivered roughly 1.6 trillion single-precision
-floating-point operations per second (TFLOPS) and 192 GB/s of memory
-bandwidth, compared with about 0.2 TFLOPS and 20 GB/s for a 2011 quad-core
-desktop CPU.
+$$10^9 \cdot 3 \cdot 2 \cdot 1.2 \times 10^6 \cdot 90 \approx 6.5 \times 10^{17} \text{ FLOPs}$$
 
-A quick back-of-the-envelope estimate shows how decisive that gap was. A
-forward pass through AlexNet on one $224 \times 224$ RGB image requires about
-a billion multiply-adds. A full training step costs roughly three times as
-much: one pass forward, plus two comparable passes backward per layer (one to
-compute weight gradients and another to propagate gradients to the layer
-below). Counting two floating-point operations per multiply-add, training for
-90 epochs across 1.2 million images demands approximately
-$10^9 \cdot 3 \cdot 2 \cdot 1.2 \times 10^6 \cdot 90 \approx 6.5 \times 10^{17}$
-operations. At theoretical peak, two GTX 580s could finish in two to three
-days, and the actual run took five to six days—whereas a CPU running at peak
-throughput would have required more than a month for every single experiment.
-In 2012, Alex Krizhevsky had to write custom CUDA kernels by hand
-([cuda-convnet](https://code.google.com/archive/p/cuda-convnet/)) to harness
-those GPUs; today, the exact same architecture takes a dozen lines of
-framework code.
+—five to six days on two GTX 580s using Krizhevsky's custom CUDA kernels ([cuda-convnet](https://code.google.com/archive/p/cuda-convnet/)), compared with well over a month on a CPU.
 
 ## The AlexNet Architecture
 
@@ -165,66 +78,15 @@ critical components: the activation function, pooling, and regularization.
 ![LeNet as built in :numref:`sec_lenet` (left) and AlexNet as built in this section (right), both for single-channel Fashion-MNIST images and ten classes; the input is at the bottom. AlexNet is deeper and wider, uses ReLU activations and max-pooling, and regularizes its dense layers with dropout.](../img/arch-alexnet.svg)
 :label:`fig_alexnet`
 
-### Depth and Width
+### Depth, Width, ReLU, and Dropout
 
-AlexNet comprises eight parameterized layers—five convolutional layers and
-three fully connected layers—compared with LeNet's two and three. Because
-ImageNet photographs are eight times wider and taller than Fashion-MNIST
-images, the first layer deploys a large $11 \times 11$ kernel with stride 4 to
-capture broad spatial patterns while immediately downsampling the feature map.
-The second layer narrows to $5 \times 5$ kernels, and the final three
-convolutional layers use $3 \times 3$ kernels. Overlapping $3 \times 3$
-max-pooling layers with stride 2 follow the first, second, and fifth
-convolutions, replacing LeNet's average pooling so strong local activations
-are preserved rather than diluted (:numref:`sec_pooling`). Layer widths expand
-dramatically as well: convolutional channels climb from 96 to 384 (versus 6
-and 16 in LeNet), and the hidden dense layers widen to 4096 units each (versus
-120 and 84).
+AlexNet expands LeNet from five parameterized layers to eight—five convolutions and three dense layers (:numref:`fig_alexnet`). Because $224 \times 224$ inputs are eight times wider than $28 \times 28$ thumbnails, layer 1 uses an $11 \times 11$ kernel with stride 4, layer 2 uses a $5 \times 5$ kernel, and layers 3--5 use $3 \times 3$ kernels, with overlapping $3 \times 3$ stride-2 max-pooling after the first, second, and fifth convolutions. Channel widths grow from 96 to 384 (vs. 6 and 16 in LeNet), and the two hidden dense layers widen to 4096 units each (vs. 120 and 84). Our implementation omits two historical 2012 artifacts: splitting layers across two 3 GB GPUs and local response normalization (superseded by batch normalization in :numref:`sec_batch_norm`).
 
-For clarity, our implementation omits two historical artifacts from the 2012
-paper that are no longer needed. First, because a single GTX 580 had only
-3 GB of memory, the original authors split each layer across two GPUs—a
-workaround unnecessary on modern hardware. Second, the paper included local
-response normalization across neighboring channels, a heuristic that later
-architectures abandoned in favor of batch normalization.
+Three modeling choices made this larger network effective:
 
-### ReLU Activations
-
-Whereas LeNet relied on saturating nonlinearities (sigmoid in our version,
-scaled $\tanh$ in 1998), every sigmoid in a backward pass shrinks gradients by
-at least a factor of $1/4$, forcing LeNet to use an unusually large learning
-rate of 2.0 (:numref:`sec_lenet`). AlexNet replaces saturating units with the
-rectified linear unit, $\textrm{ReLU}(x) = \max(x, 0)$
-(:numref:`subsec_activation-functions`). Because its derivative is identically
-1 for all positive inputs, ReLU passes gradients backward across active units
-without attenuation, leaving only the weight-matrix scaling controlled by
-proper initialization. ReLU is also faster to evaluate because it avoids
-expensive exponentials. The empirical speedup was dramatic: on a small
-CIFAR-10 convnet, :citet:`Krizhevsky.Sutskever.Hinton.2012` reached 25%
-training error six times faster with ReLU than with $\tanh$.
-
-### Dropout and Augmentation
-
-Because AlexNet's two 4096-unit fully connected layers contain the vast
-majority of its parameters, they are the primary site of potential
-overfitting. AlexNet guards against memorization by applying dropout with
-probability 0.5 after each hidden dense layer (:numref:`sec_dropout`), whereas
-LeNet used no dropout at all. Alongside dropout, random cropping, horizontal
-flipping, and color jittering artificially multiply the diversity of the
-training images—an idea that has since evolved into an essential pillar of
-modern vision training pipelines (:numref:`sec_training_recipes`).
-
-### Implementation
-
-Our implementation translates :numref:`fig_alexnet` directly from input to
-output. Rather than relying on framework defaults, we initialize all weights
-explicitly. While Xavier initialization preserves activation variance across
-linear layers, a ReLU zeros out roughly half of its inputs and thus halves the
-output second moment. *He initialization* (:numref:`subsec_he_init`) offsets
-this factor of two by drawing weights for a layer with $n_\textrm{in}$ inputs
-per output ($n_\textrm{in} = c_\textrm{i} k^2$ for a convolution) from a
-zero-mean Gaussian with variance $2/n_\textrm{in}$. All biases are initialized
-to zero (already the default in every framework below except PyTorch).
+1. **ReLU activations:** Replacing saturating sigmoids (whose derivative $\le 1/4$ attenuates deep gradients by $4^{-K}$) with $\textrm{ReLU}(x) = \max(x, 0)$ keeps derivatives at 1 on active units, reaching 25% CIFAR-10 training error six times faster than $\tanh$ :cite:`Krizhevsky.Sutskever.Hinton.2012`.
+2. **Dropout and augmentation:** Applying dropout ($p = 0.5$, :numref:`sec_dropout`) after both 4096-unit dense layers prevents the classifier head from memorizing the training set.
+3. **He initialization:** Because ReLU zeroes out roughly half its inputs, we draw weights from $\mathcal{N}(0, 2/n_{\textrm{in}})$ (:numref:`subsec_he_init`, with $n_{\textrm{in}} = c_{\textrm{i}} k^2$ for convolutions) and initialize biases to zero.
 
 :begin_tab:`mxnet`
 `init.MSRAPrelu('in', 0)` draws normal weights with variance
@@ -663,89 +525,22 @@ arithmetic per image.
 
 ## Exercises
 
-1. **Memory and compute ledger.** Extend :numref:`tab_alexnet_cost` to the
-   memory that `AlexNet` needs in 32-bit floating point.
-    1. Compute the number of activations that the forward pass of one
-       $224 \times 224$ image stores, layer by layer, counting the output
-       of every convolutional, pooling, and fully connected layer. Where is
-       the memory for activations concentrated, and where is the memory for
-       parameters concentrated?
-    1. During training, the parameters, their gradients, and the stored
-       activations of a whole minibatch must fit in memory. At which batch
-       size does the memory for activations exceed the memory for
-       parameters and gradients?
-    1. Repeat the parameter count of :numref:`tab_alexnet_cost` for the
-       ImageNet version, with three input channels, 1000 classes, and
-       $227 \times 227$ inputs, which make the last convolutional stage
-       $6 \times 6$ instead of $5 \times 5$. Compare your total with the 60
-       million parameters reported by
-       :citet:`Krizhevsky.Sutskever.Hinton.2012`.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 10.16.*
+1. **Memory and compute ledger.** Extend :numref:`tab_alexnet_cost` to the memory that `AlexNet` needs in 32-bit floating point.
+    1. Compute the number of activations that the forward pass of one $224 \times 224$ image stores, layer by layer, counting the output of every convolutional, pooling, and fully connected layer. Where is activation memory concentrated, and where is parameter memory concentrated?
+    1. During training, parameters, their gradients, and stored activations for a whole minibatch must fit in memory. At what batch size does activation memory exceed the memory for parameters and gradients?
+    1. Repeat the parameter count of :numref:`tab_alexnet_cost` for the ImageNet version (3 input channels, 1000 classes, $227 \times 227$ inputs so the final convolutional stage is $6 \times 6$ instead of $5 \times 5$), and compare your total against the 60 million parameters reported by :citet:`Krizhevsky.Sutskever.Hinton.2012`.
    :exlabel:`ex_alexnet-memory-compute-ledger`
 
-1. **Receptive fields of the early layers.** A stack of layers with kernel
-   sizes $k_i$ and strides $s_i$ gives its top unit a receptive field of
-   side $r = 1 + \sum_{i} (k_i - 1) \prod_{j<i} s_j$
-   (:numref:`sec_padding`). Apply it to `AlexNet`, counting each
-   max-pooling layer as a layer with its own kernel size and stride, to
-   compute the receptive field of one unit after each of the five
-   convolutional layers. What fraction of the $224 \times 224$ input side
-   does each receptive field span, and where does a unit first see the
-   whole image?
+1. **Receptive fields of the early layers.** A stack of layers with kernel sizes $k_i$ and strides $s_i$ gives its top unit a receptive field of side $r = 1 + \sum_{i} (k_i - 1) \prod_{j<i} s_j$ (:numref:`sec_padding`). Counting each max-pooling layer with its own kernel size and stride, compute the receptive field of one unit after each of the five convolutional layers of `AlexNet`. What fraction of the $224 \times 224$ input side does each receptive field span, and at which layer does a unit first see the entire image?
 
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 10.17.*
+1. **Arithmetic intensity.** ● The *arithmetic intensity* of a layer is the number of multiply-adds it performs per byte of parameters read from memory. Using :numref:`tab_alexnet_cost`:
+    1. Compute the arithmetic intensity of every layer of `AlexNet` for a batch of 1 image and for a batch of 128 images (assuming each parameter is read once per batch).
+    1. Consider an accelerator that performs 10 multiply-adds in the time it reads one byte from memory, where each layer takes the maximum of its compute time and parameter-read time. Does doubling compute throughput or doubling memory bandwidth speed up single-image inference ($B = 1$) more? Which speeds up training at $B = 128$ more?
 
-1. [code] **Change per layer.** Training moved the first-layer kernels by
-   about 4% of the size of their initial values.
-    1. Keep a copy of every weight array before training and compute the
-       same ratio for each of the eight layers with weights. Which layers
-       moved most, and which least? Relate the order to the number of
-       weights in each layer.
-    1. The text attributes the smoothness of the first layer's change to
-       the eightfold upsampling. Test this: train on images resized to
-       $112 \times 112$, which are upsampled fourfold (the last
-       convolutional stage is then $2 \times 2$, so the first fully
-       connected layer has 1024 inputs), and draw the change of the first
-       layer again. At which scale does it vary now?
-
-1. [code] **Dropout.** The fully connected layers of `AlexNet` hold 92% of
-   its parameters, and dropout is its only regularizer.
-    1. Train `AlexNet` as in this section with both dropout layers removed,
-       and compare the training loss, the validation loss, and the
-       validation accuracy after 10 epochs with those of the original.
-    1. Train both networks on a random subset of 6,000 training images for
-       the same number of gradient steps. How do the differences change, and
-       why?
-
-1. **Arithmetic intensity.** ● The *arithmetic intensity* of a layer is
-   the number of multiply-adds it performs per byte of parameters it reads
-   from memory. Use :numref:`tab_alexnet_cost`.
-    1. Compute the arithmetic intensity of every layer of `AlexNet`, once
-       for a batch of 1 image and once for a batch of 128 images, assuming
-       that each parameter is read once per batch.
-    1. Consider a chip that performs 10 multiply-adds in the time it reads
-       one byte from memory. Assume that each layer takes the longer of its
-       arithmetic time and its parameter-reading time. A designer can spend
-       extra chip area on doubling either the arithmetic throughput or the
-       memory bandwidth. Which choice speeds up single-image inference more,
-       and which speeds up training at batch size 128 more?
-
-1. [code] **Batch size, throughput, and memory.** ● Train `AlexNet` as in
-   this section while varying only the batch size.
-    1. Using your answer to problem
-       :exref:`ex_alexnet-memory-compute-ledger`, predict the largest
-       training batch size that fits in the memory of your GPU.
-    1. Starting from a batch size of 32 and doubling it, find the largest
-       batch size that trains without running out of memory. Compare it
-       with your prediction and name the main source of any discrepancy.
-    1. Measure the throughput in images per second over a fixed number of
-       training steps for at least four batch sizes up to that limit.
-       Beyond which batch size does throughput stop growing, and why?
+1. [code] **Batch size, throughput, and memory.** ● Train `AlexNet` as in this section while varying only the batch size.
+    1. Using problem :exref:`ex_alexnet-memory-compute-ledger`, predict the largest training batch size that fits in your GPU's memory.
+    1. Starting from batch size 32 and doubling, find the largest batch size that trains without running out of memory and explain the main source of any gap against your prediction.
+    1. Measure training throughput (images/second) across at least four batch sizes up to that limit. Beyond which batch size does throughput plateau, and why?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/75)

@@ -817,21 +817,7 @@ normalized network works smoothly across a factor of 300—just as our
 scale-invariance analysis predicted (though the ceiling cannot extend forever,
 since the final output layer remains unnormalized).
 
-Ironically, while *what* batch normalization computes is elementary, *why* it
-works so extraordinarily well in very deep networks remains an active subject
-of debate. Its inventors originally credited it with reducing *internal
-covariate shift*—the drift in intermediate activation distributions as earlier
-layers update :cite:`Ioffe.Szegedy.2015`. Subsequent experiments challenged
-that account, showing that batch normalization does not consistently reduce
-distribution shift, and instead makes the optimization landscape and its
-gradients significantly smoother :cite:`Santurkar.Tsipras.Ilyas.ea.2018`. What
-stands on solid ground is narrower and practical: batch normalization keeps
-forward signals and backward gradients well scaled across depth, makes hidden
-layers invariant to weight scaling so much larger learning rates stay stable,
-and injects mild stochastic noise through minibatch statistics that acts as a
-regularizer akin to dropout :cite:`Luo.Wang.Shao.ea.2018,brock2021nfnet`. As
-often happens in deep learning, empirical success raced well ahead of
-complete theoretical explanation :cite:`Lipton.Steinhardt.2018`.
+Why batch normalization helps deep networks so dramatically goes beyond internal covariate shift :cite:`Ioffe.Szegedy.2015`: subsequent studies showed that it smooths the loss landscape and gradients :cite:`Santurkar.Tsipras.Ilyas.ea.2018`, keeps activation and gradient scales balanced across depth, renders hidden weights scale-invariant so large learning rates self-stabilize, and injects mild minibatch noise that regularizes like dropout :cite:`Luo.Wang.Shao.ea.2018,brock2021nfnet`.
 
 ## Normalization without Batch Statistics
 :label:`subsec_beyond_bn`
@@ -992,90 +978,24 @@ hundred layers.
 
 ## Exercises
 
-1. **Bias before batch norm.** `BNLeNet` builds its four normalized layers
-   without a bias. Show from :eqref:`eq_batchnorm` that adding a bias
-   $\mathbf{b}$ before the normalization changes neither the output in
-   training mode nor the gradient with respect to the weights, and that the
-   gradient with respect to $\mathbf{b}$ is zero. What happens to such a
-   bias in prediction mode?
-1. [code] **Learning-rate ceiling.** In the sweep of this section `BNLeNet`
-   trained at every peak rate up to 10.
-    1. Extend the sweep for `BNLeNet` to peak rates of 30, 100, and 300.
-       Where does training fail?
-    1. The output layer is the only layer with weights that no
-       normalization follows. Test whether it sets the ceiling: give it a
-       learning rate of its own, fixed at 0.1, and repeat the first part.
-    1. Replace the sigmoids of both networks by ReLUs, with He
-       initialization, and repeat the sweep of this section. How does the
-       band of good rates of the plain network change, and why?
-1. [code] **Leave-one-out ablation.** Does every layer need batch
-   normalization? `BNLeNet` normalizes the output of each of its four
-   hidden layers. Remove batch normalization from one layer at a time and
-   retrain. Report, as a table, the validation-accuracy cost of each
-   removal, and identify the layer whose removal hurts most.
-1. [code] **Running averages and recomputed statistics.** The decay
-   $\rho$ in :eqref:`eq_bn_running` sets how many minibatches the running
-   estimates remember.
-    1. After how many steps does the weight of a minibatch in the running
-       mean fall below 1% of the weight of the newest minibatch, for
-       $\rho = 0.9$ and for $\rho = 0.99$? Compare both with the 469
-       steps of an epoch.
-    1. Train `BNLeNet` for 10 epochs with a constant learning rate of 0.1,
-       the `configure_optimizers` of `d2l.Classifier`, instead of the
-       cosine schedule. After every epoch, evaluate a copy of the model
-       twice: once in prediction mode as it is, and once after
-       recomputing its statistics for the current weights. To recompute
-       them, reset the running estimates and pass 100 training
-       minibatches through the copy in training mode, without updating the
-       weights, averaging the minibatch statistics with equal weights. Plot
-       both validation curves, add the curve of this section's cosine
-       schedule, and explain the differences.
-    1. Repeat the second part with $\rho = 0.99$. Does a longer memory
-       remove the difference? Why or why not?
-1. [code] **Minibatch coupling.** The output of batch normalization for
-   one example depends on the other examples in its minibatch. Train
-   `BNLeNet` as in this section. Measure its validation accuracy in
-   prediction mode, then in training mode with validation batches of 128
-   images, and then in training mode with validation batches of one image.
-   Measure in prediction mode first, since every training-mode forward
-   pass updates the running estimates. Explain the three accuracies.
-   If the layer refuses a training-mode minibatch of one example, explain
-   why, and measure with minibatches of two instead.
-1. [code] **Small-batch training.** ● Build a variant of `BNLeNet` that
-   uses group normalization with two groups after each convolutional layer
-   and layer normalization (:numref:`subsec_layer-normalization-in-bn`)
-   after each hidden fully connected layer, in place of batch
-   normalization. Train `BNLeNet` and the variant for two epochs at batch
-   size 4 and again at batch size 128, keeping the other hyperparameters
-   of this section. Report the validation accuracy of all four runs. How
-   does the accuracy of each network change when the batch size drops from
-   128 to 4, and why?
-1. [code] **Backward pass of batch norm.** ● The batch statistics in
-   :eqref:`eq_batchnorm` depend on every element of the minibatch, so the
-   backward pass is not elementwise.
-    1. Derive, by hand, the gradient of a scalar loss with respect to each
-       input of the batch-norm layer, working through the forward steps:
-       mean, centering, variance, normalization, and the affine scale and
-       shift.
-    1. Implement your expression and verify it against the gradient
-       computed by automatic differentiation.
-    1. Show from your expression that the gradient with respect to the
-       inputs sums to zero over the minibatch, and explain why.
+1. **Bias before batch norm.** `BNLeNet` builds its four normalized layers without a bias. Show from :eqref:`eq_batchnorm` that adding a bias $\mathbf{b}$ before batch normalization changes neither the training-mode output nor the weight gradients, and that $\partial L / \partial \mathbf{b} = \mathbf{0}$. What happens to such a bias in prediction mode?
 
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 11.5.*
-1. [extended] **Beyond mean and variance.** ●● Batch normalization
-   standardizes each channel separately. For each of the following
-   alternatives, describe how it would be applied at a layer and what it
-   costs in computation, parameters, and estimation variance. Implement
-   at least one of them in place of our `BatchNorm` in a copy of `BNLeNet`
-   and compare its validation accuracy with that of batch normalization.
-    1. The probability integral transform, which maps each channel through
-       its empirical cumulative distribution function.
-    1. Whitening with a full covariance estimate across the $c$ channels.
-    1. Whitening with a structured covariance estimate, for example a
-       block-diagonal or a low-rank-plus-diagonal matrix.
+1. [code] **Learning-rate ceiling.** In the sweep of this section, `BNLeNet` trained cleanly at every peak rate up to 10.
+    1. Extend the sweep for `BNLeNet` to peak rates of 30, 100, and 300. Where does training break down?
+    1. The output linear layer is the only weight layer not followed by batch normalization. Test whether it sets the ceiling by fixing the output layer's learning rate at 0.1 while sweeping the normalized layers' peak rate across 30, 100, and 300.
+    1. Replace the sigmoids in both `CosineLeNet` and `BNLeNet` with ReLUs (using He initialization) and repeat the learning-rate sweep. How does the workable band of the unnormalized network change, and why?
+
+1. [code] **Running averages and recomputed statistics.** The decay $\rho$ in :eqref:`eq_bn_running` determines how many recent minibatches the running statistics average over.
+    1. After how many steps does a minibatch's weight in the running mean fall below 1% of the newest minibatch's weight for $\rho = 0.9$ and $\rho = 0.99$? Compare both horizons against the 469 steps of one Fashion-MNIST epoch.
+    1. Train `BNLeNet` for 10 epochs at a constant learning rate of 0.1 (`d2l.Classifier.configure_optimizers`). After every epoch, evaluate the model twice: once in prediction mode using its running averages, and once after recomputing fresh statistics over 100 training minibatches with weights frozen. Plot both validation curves alongside the cosine-schedule curve and explain the gap.
+
+1. [code] **Minibatch coupling.** Because batch normalization couples examples within a minibatch, evaluate a trained `BNLeNet` on the validation set in three ways (measuring prediction mode first so training-mode passes do not overwrite the running statistics): (i) prediction mode, (ii) training mode with validation batch size 128, and (iii) training mode with validation batch size 2 (or 1). Explain the three resulting accuracies.
+
+1. [code] **Small-batch training: BatchNorm vs. GroupNorm/LayerNorm.** ● Build a variant of `BNLeNet` that replaces `BatchNorm` with group normalization (2 groups) after the two convolutional layers and layer normalization (:numref:`subsec_layer-normalization-in-bn`) after the two hidden dense layers. Train both `BNLeNet` and this variant for 2 epochs at batch size 4 and at batch size 128. How does each model's validation accuracy change when the batch size drops from 128 to 4, and why?
+
+1. [code] **Backward pass of batch norm.** ● Because $\hat{\mu}_\mathcal{B}$ and $\hat{\sigma}^2_\mathcal{B}$ in :eqref:`eq_batchnorm` depend on every element of the minibatch, the backward pass of batch normalization couples all $m$ examples.
+    1. Derive by hand the gradient $\partial L / \partial x_i$ of a scalar loss $L$ with respect to each input $x_i$ of a 1D batch-norm layer, and show from your formula that $\sum_{i=1}^m \partial L / \partial x_i = 0$ identically.
+    1. Implement your backward formula and verify that it matches automatic differentiation to machine precision.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/83)

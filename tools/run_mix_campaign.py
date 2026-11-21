@@ -37,6 +37,8 @@ hours of the t2 campaign.
 Usage (from the repository, .venv-lm):
   python tools/run_mix_campaign.py --config t1 --gpus 0 --out DIR --smoke-t2
   python tools/run_mix_campaign.py --config t2 --gpus 0,1,2,3 --out DIR
+  python tools/run_mix_campaign.py --config t2s --gpus 0,1,2,3 --out DIR \
+      --max-hours 3   (the small-scale t2 test on four RTX 4090s)
 The test configuration 'tiny' (CPU, seconds per run) exists for
 tools/test_lm_mixtures.py and smoke runs.
 """
@@ -70,9 +72,13 @@ def d2l_module():
 
 
 def configs(d2l):
-    """d2l.MIX_CONFIGS plus the test configuration 'tiny' (CPU, fp32): the
-    t1 design and file names at a 2-block, d = 32 proxy, 2^15 tokens and
-    the first 64 windows of each validation set."""
+    """d2l.MIX_CONFIGS plus two configurations of the launcher only: 'tiny'
+    (CPU, fp32; tests): the t1 design and file names at a 2-block, d = 32
+    proxy, 2^15 tokens and the first 64 windows of each validation set; and
+    't2s', the small-scale test of the t2 campaign on four RTX 4090s: the t2
+    proxy, design and pools at half its tokens (2^26 per run, 2^24 per
+    learning-rate run). Its run set is a test of the t2 code path, never
+    the t2 result."""
     c = dict(d2l.MIX_CONFIGS)
     c['tiny'] = dict(
         c['t1'], name='tiny', runs_key='lm-mix-runs-tiny-v1',
@@ -80,7 +86,14 @@ def configs(d2l):
                            dtype='float32'),
         tokens=2**15, lr_tokens=2**14, curve_windows=16, ckpt_every=32,
         val_windows=64)
+    c['t2s'] = dict(c['t2'], name='t2s', runs_key='lm-mix-runs-t2s-v1',
+                    tokens=2**26, lr_tokens=2**24, pools_of='t2')
     return c
+
+
+def pool_config(c):
+    """The configuration whose pool files c reads (t2s reads t2's)."""
+    return dict(c, name=c.get('pools_of', c['name']))
 
 
 def atomic_json(path, obj):
@@ -108,6 +121,7 @@ def byte_lengths(d2l, tokenizer):
 
 
 def load_pools(d2l, c, args):
+    c = pool_config(c)
     pools, vals = d2l.mix_pools(c, args.pools)
     missing = [d for d in c['domains'] if d not in pools or d not in vals]
     if missing:
@@ -466,7 +480,7 @@ def environment(d2l):
 
 def merge(d2l, c, args, specs, t_start):
     D = c['domains']
-    pools, vals = d2l.mix_pools(c, args.pools)
+    pools, vals = d2l.mix_pools(pool_config(c), args.pools)
     keep = ('n_tokens', 'n_docs', 'n_bytes_nfc', 'n_bytes_scored', 'sha256',
             'tokenizer_sha256', 'source', 'revision', 'files')
     runs = [read_json(args.out / 'runs' / f'{s["run_id"]}.json')

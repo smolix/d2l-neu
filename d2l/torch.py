@@ -10167,6 +10167,39 @@ MIX_DOMAINS = ('web', 'code', 'math')
 MIX_TARGETS = {  # target weights over MIX_DOMAINS, fixed before any run
     't_avg': (1 / 3, 1 / 3, 1 / 3), 't_dep': (0.7, 0.15, 0.15)}
 
+d2l.DATA_HUB['lm-mix-web-20m-v1'] = (  # 20M reference-tokenizer tokens of
+    # FineWeb-Edu's side buckets 1-7 (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-web-20m-v1.tar',
+    '02e073e66edbf4a7a83fa0936e4222a1ce3eab2f')
+d2l.DATA_HUB['lm-mix-math-20m-v1'] = (  # 20M tokens of FineMath 4+ (20.4);
+    # ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-math-20m-v1.tar',
+    'aa1d5bf776548da1610d06148d339b33a57eb026')
+d2l.DATA_HUB['lm-mix-val-1m-v1'] = (  # the web and mathematics validation
+    # sets, 1M tokens each (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-val-1m-v1.tar',
+    '3b3aeb6a0b35c756b15d7fe05ea6a22ded3efd74')
+d2l.DATA_HUB['lm-mix-code-meta-v1'] = (  # the code pool's meta and per-file
+    # attribution, no code: CodeParrot's files are built locally (20.4)
+    d2l.LM_DATA_URL + 'lm-mix-code-meta-v1.tar',
+    '15ad995f32fb085771f2be54c5fd65b392c974c7')
+d2l.DATA_HUB['lm-mix-web-150m-v1'] = (  # the T2 pools: 150M tokens of
+    # FineWeb-Edu's side buckets 1-7 (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-web-150m-v1.tar',
+    'e38535606a46743f4d255d90cfab169f6f186297')
+d2l.DATA_HUB['lm-mix-math-150m-v1'] = (  # 150M tokens of FineMath 4+
+    # (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-math-150m-v1.tar',
+    '0b55675617bbd88e8cea96b99947e62a5ca76ddf')
+d2l.DATA_HUB['lm-mix-val-2m-v1'] = (  # the T2 web and mathematics
+    # validation sets, 2M tokens each (20.4); ODC-By
+    d2l.LM_DATA_URL + 'lm-mix-val-2m-v1.tar',
+    'dc2deae77f8ebc37a599d04c46b97ae229961edb')
+d2l.DATA_HUB['lm-mix-code150-meta-v1'] = (  # the T2 code pool's meta and
+    # attribution, no code (20.4)
+    d2l.LM_DATA_URL + 'lm-mix-code150-meta-v1.tar',
+    '139d6b2a3d463867cab48cd0b64986d7c0466996')
+
 ProxyCfg = collections.namedtuple('ProxyCfg', (
     'num_hiddens num_heads num_blks seq_len batch micro_batch lr '
     'warmup_frac schedule decay_frac final_lr_frac weight_decay betas dtype '

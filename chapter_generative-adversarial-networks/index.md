@@ -1,15 +1,16 @@
 # Generative Adversarial Networks
 :label:`chap_gans`
 
-Take a hundred numbers drawn at random, pass them through a network, and out comes a picture of a shoe. Writing such a network down takes a few lines; training it is the hard part. A classifier learns by raising the probability of the correct label, a language model by raising that of the next token. Nothing in our network computes the probability of the image it returns, so there is no likelihood to raise. Can a learned comparison take its place?
+Suppose we draw a 100-dimensional random vector $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ and pass it through a neural network $G(\mathbf{z})$ to generate an image. Writing down such a generator network takes only a few lines of code; training it is the challenge. Unlike classifiers or autoregressive language models—which maximize the log-likelihood of observed labels or tokens—a direct generator defines an implicit distribution over images without an explicit density $q(\mathbf{x})$ to maximize. How can we train a generative model when we can sample from it, but cannot evaluate its likelihood?
 
-We have trained such a comparison before. To correct for covariate shift in :numref:`subsec_covariate-shift-correction`, we taught a classifier to tell training inputs from test inputs, and its logit estimated the log ratio of the two densities, up to a constant. :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` turned this into a way to train a generator: the *generative adversarial network* (GAN) is a game between two networks. The *critic*, which they called the discriminator, learns to tell generated samples from real ones, and the generator learns to make that hard. The critic's output tells the generator where its samples are too dense and where too sparse, although neither density is ever written down.
+We have already seen how a classifier can compare two distributions from samples alone. When correcting for covariate shift in :numref:`subsec_covariate-shift-correction`, we trained a binary classifier to distinguish training inputs from test inputs, and its optimal logit recovered the log density ratio between the two distributions. :citet:`Goodfellow.Pouget-Abadie.Mirza.ea.2014` turned this two-sample comparison into a generative training principle: in a *generative adversarial network* (GAN), a *discriminator* (or *critic*) $D$ is trained to distinguish real data from generated samples, while the *generator* $G$ is trained to produce samples that the discriminator cannot tell apart from real data. Through the discriminator's gradients, the generator learns where its samples are over- or under-represented relative to the data distribution, without either density ever being written down explicitly.
 
-Diffusion and flow models (:numref:`chap_diffusion`) have since replaced stand-alone GANs for most image synthesis, yet the learned comparison survives. An adversarial term still trains many speech vocoders, the autoencoders on which many image generators run, and several one-step generators distilled from diffusion models.
+Although diffusion and flow-matching models (:numref:`chap_diffusion`) have largely superseded standalone GANs for general-purpose image synthesis, adversarial objectives remain a core component of modern generative systems—training the latent autoencoders behind latent diffusion models, neural audio vocoders, and one-step generators distilled from multi-step diffusion teachers.
 
-The chapter moves in three steps. First, what does the game measure, and does the generator still get a signal when its samples miss the data? :numref:`sec_basic_gan` asks this of the original game, :numref:`sec_gan_objectives` of other losses and critics, and :numref:`sec_gan_relativistic` of a critic that compares a real sample with a generated one. Second, does gradient training converge at all? :numref:`sec_gan_convergence` answers on a game with two parameters, and its answer completes the recipe the rest of the chapter takes as its reference. Last, we build: an image generator and the scores that judge it, a generator that takes a request, and the reason an adversarial term outlived the stand-alone GAN. A reader in a hurry to build can read :numref:`sec_basic_gan` and :numref:`sec_gan_convergence` and go straight to the images. The appendix (:numref:`chap_mdl-information-theory`) proves the divergence facts in general; the chapter reads without it.
-
-From :numref:`sec_gan_convergence` on, one recipe serves as our reference: R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024`, a critic that compares a real sample with a generated one (:numref:`sec_gan_relativistic`) and two penalties that keep its gradient small at both. The experiments change one part of it at a time, the loss or the penalty, and only the conditional generator of :numref:`sec_gan_conditional` trains the whole recipe on its own. We chose this recipe because it has few parts and each part has an analysis we can carry out. Its authors report that it beats the far more elaborate StyleGAN2 on faces, ImageNet and CIFAR-10, with compute far beyond ours. Our notebooks show something narrower: on small problems, each part does what its analysis predicts. They do not show that the recipe wins: in our runs, comparing pairs does not visibly help the generator reach every cluster of the data, and on the sprites of :numref:`sec_dcgan` a convolutional network from 2015 scores at least as well. The planar experiments take minutes at most, the image notebooks up to about forty minutes on one GPU, partly because the penalty, a function of the critic's gradient, costs a second backward pass at every critic step.
+This chapter is organized in three parts:
+1. **Objectives and Divergences (:numref:`sec_basic_gan`–:numref:`sec_gan_relativistic`):** :numref:`sec_basic_gan` derives the optimal discriminator and the Jensen–Shannon divergence for the classic logistic objective, and explains why the non-saturating generator loss is needed when generated samples lie far from the data. :numref:`sec_gan_objectives` generalizes this analysis to $f$-divergences (least-squares, hinge) and integral probability metrics (Maximum Mean Discrepancy and Wasserstein-1 distance). :numref:`sec_gan_relativistic` analyzes relativistic paired objectives (RpGAN) that train the critic to rank real–generated pairs via a Bradley–Terry model.
+2. **Training Dynamics and Gradient Penalties (:numref:`sec_gan_convergence`):** Minimax gradient training does not automatically converge to an equilibrium; even on a two-parameter bilinear problem (the Dirac-GAN), unregularized gradient updates rotate or spiral outward. :numref:`sec_gan_convergence` shows how zero-centered input-gradient penalties ($R_1$ and $R_2$) damp these oscillations, completing the modernized R3GAN training recipe :cite:`Huang.Gokaslan.Kuleshov.ea.2024` used in the rest of the chapter.
+3. **Architectures, Conditioning, and Modern Applications (:numref:`sec_dcgan`–:numref:`sec_gan_beyond`):** :numref:`sec_dcgan` builds convolutional image generators (both the classic 2015 DCGAN and a normalization-free backbone) and introduces quantitative evaluation metrics—Fréchet Distance (FID), Kernel Inception Distance (KID), and $k$-NN precision and recall. :numref:`sec_gan_conditional` extends training and evaluation to class-conditional generation on CIFAR-10 using feature modulation and projection discriminators. Finally, :numref:`sec_gan_beyond` explains why regression losses ($L_2$ and $L_1$) blur ambiguous targets toward conditional averages, and how adversarial losses prevent this blurring in diffusion distillation, image tokenizers, and speech vocoders.
 
 ```toc
 :maxdepth: 2
@@ -26,48 +27,25 @@ further-reading
 
 ## Notation {.unnumbered}
 
-:numref:`tab_gan_notation` collects the symbols that carry through the chapter. Letters that live in one paragraph, figure or exercise are local to it, such as the intercept $b$ of a logistic critic or the feature map $h$ of :numref:`sec_gan_conditional`. The last column gives another common notation only where a reader of the literature will meet it.
+:numref:`tab_gan_notation` summarizes the notation used across this chapter. Divergences and entropies are measured in nats and follow :numref:`chap_mdl-information-theory`: $D_{\textrm{KL}}$ denotes the Kullback–Leibler divergence, $\mathrm{JS}$ the Jensen–Shannon divergence, $H$ differential or discrete entropy, and $H_b(t)$ the binary entropy of a Bernoulli distribution with parameter $t$.
 
-:Notation of this chapter.
+:Notation used in this chapter.
 :label:`tab_gan_notation`
 
-| symbol | meaning | first used | often written |
+| symbol | meaning | first used | common alternative |
 |:--|:--|:--|:--|
-| $p$, $q$, $m = \tfrac12(p + q)$ | data, generator and mixture densities | :numref:`sec_basic_gan` | $p_{\textrm{data}}$, $p_g$ for $p$, $q$ |
-| $x \sim p$, $x' \sim q$; $y$ | a real and a generated sample; the source label, $1$ for real | :numref:`sec_basic_gan` | |
-| $z$, $G$, $d_z$; $d_x$ | latent variable, generator, latent dimension; data dimension | :numref:`sec_basic_gan` | |
-| $D$; $V$ | the critic's realness logit; the value of the log-loss game | :numref:`sec_basic_gan` | discriminator for $D$ |
-| $\rho = p/q$, $\lambda = \log \rho$ | density ratio and its logarithm | :numref:`sec_basic_gan` | |
-| $\mu$; $\delta_\theta$ | a mean; a point mass at $\theta$ | :numref:`sec_basic_gan` | |
-| $w_{\textrm{sat}}$, $w_{\textrm{ns}}$ | per-sample weights of the saturating and non-saturating generator updates | :numref:`sec_basic_gan` | |
-| $\eta = p/(p + q)$ | class posterior | :numref:`sec_gan_objectives` | |
-| $\ell$, $L$, $\Delta_\ell$; $V_\ell$ | payoff of a score, its conditional Bayes risk, its Bayes-risk gap; the value of the game with payoff $\ell$ | :numref:`sec_gan_objectives` | a loss $-\ell$ for $\ell$ |
-| $T \in \mathcal{T}$, $\ell_p$, $\ell_q$; $\mathcal{F}$; $d(p, q)$ | a critic and its class, scores of real and generated samples; the class of an integral probability metric; a discrepancy | :numref:`sec_gan_objectives` | $f$ for the functions in $\mathcal{F}$ |
-| $f$, $D_f$; $k$, $s$ | divergence function, $f$-divergence; kernel, bandwidth | :numref:`sec_gan_objectives` | $\sigma$ for $s$ |
-| $\Phi$, $d_{\mathrm{Rp}}$ | pairing objective, its value at the optimal critic | :numref:`sec_gan_relativistic` | |
-| $w_{\textrm{Rp}}$ | per-sample weight of the pairing generator update | :numref:`sec_gan_relativistic` | |
-| $(a_1, a_2)$, $P$, $Q$ | a real--generated pair, its orderings $p \otimes q$ and $q \otimes p$ | :numref:`sec_gan_relativistic` | |
-| $\mathcal{E}_{\mathrm{GAN}}$, $\mathcal{E}_{\mathrm{diag}}$, $\mathcal{E}_{\mathrm{all}}$ | classical, paired and all-pairs losses at the best response | :numref:`sec_gan_relativistic` | |
-| $\gamma$ | weight of a gradient penalty | :numref:`sec_gan_objectives` | |
-| $R_1$, $R_2$ | zero-centered gradient penalties at real and at generated samples | :numref:`sec_gan_convergence` | |
-| $h$, $\nu_{1,2}$, $\psi$, $\mathbf{u}$; $\omega$ | Dirac-GAN step size, eigenvalues, critic slope, field; a wavenumber or frequency | :numref:`sec_gan_convergence` | $\lambda_{1,2}$ for $\nu_{1,2}$ |
-| $\phi$ | a feature map | :numref:`sec_dcgan` | |
-| $c$, $e_c$, $a(c)$, $b(c)$, $\psi_0$, $\zeta_c$ | condition, its embedding, modulation scale and shift, unconditional head, per-class constant | :numref:`sec_gan_conditional` | $\gamma(c)$, $\beta(c)$ for $a(c)$, $b(c)$ |
-| $g$, $\hat x = g(c)$; $\xi$, $\tau$; $\vartheta$ | predictor of $x$ from $c$ and its prediction; standard normal noise and its scale; a phase | :numref:`sec_gan_beyond` | $\epsilon$ for $\xi$ |
-
-Divergences and entropies are in nats and follow :numref:`chap_mdl-information-theory`: $D_{\textrm{KL}}$ is the Kullback--Leibler divergence, $\mathrm{JS}$ the Jensen--Shannon divergence, $H$ an entropy and $H_b(t)$ that of a coin with bias $t$.
-
-## Resources and Further Reading {.unnumbered}
-
-These resources accompany particular sections; :numref:`sec_gan-further-reading` turns to the methods the chapter does not teach.
-
-- The [NIPS 2016 tutorial](https://arxiv.org/abs/1701.00160) :cite:`Goodfellow.2016` explains the original intuition and surveys the field as it stood in 2016, a companion to :numref:`sec_basic_gan`.
-- [GAN Lab](https://poloclub.github.io/ganlab/) :cite:`Kahng.Thorat.Chau.ea.2018` runs two-dimensional games in a browser and shows the critic's decision surface as training proceeds. Use it beside :numref:`sec_basic_gan`, and again beside the circling dynamics of :numref:`sec_gan_convergence`.
-- The [GAN stability repository](https://github.com/LMescheder/GAN_stability) of :citet:`Mescheder.Geiger.Nowozin.2018` implements the Dirac-GAN and the $R_1$/$R_2$ penalties of :numref:`sec_gan_convergence`.
-- The [R3GAN implementation](https://github.com/brownvc/R3GAN) :cite:`Huang.Gokaslan.Kuleshov.ea.2024` is the authors' code for the recipe we adopt from :numref:`sec_gan_convergence` on, at the scale of their paper.
-- [StyleGAN3](https://github.com/NVlabs/stylegan3) :cite:`Karras.Aittala.Laine.ea.2021` is a mature StyleGAN implementation whose metric tools compute FID and KID at full scale, the scores that :numref:`sec_dcgan` builds in miniature.
-- In [a large-scale study](https://arxiv.org/abs/1711.10337), :citet:`Lucic.Kurach.Michalski.ea.2018` find that, given equal tuning budgets, many objectives of :numref:`sec_gan_objectives` attain similar scores.
-- [ganhacks](https://github.com/soumith/ganhacks), a 2016 training checklist, shows the stabilizers that the penalties of :numref:`sec_gan_convergence` are meant to make unnecessary.
+| $p$, $q$, $m = \tfrac12(p + q)$ | data, generator, and balanced mixture densities | :numref:`sec_basic_gan` | $p_{\textrm{data}}$, $p_g$ |
+| $x \sim p$, $x' \sim q$; $y \in \{0, 1\}$ | real sample, generated sample, and source label ($1$ = real) | :numref:`sec_basic_gan` | |
+| $z \in \mathbb{R}^{d_z}$, $G$ | latent vector and generator network ($x' = G(z)$) | :numref:`sec_basic_gan` | |
+| $D$; $V(D)$ | critic/discriminator realness logit; minimax value function | :numref:`sec_basic_gan` | |
+| $\rho = p/q$, $\lambda = \log(p/q)$ | density ratio and log density ratio | :numref:`sec_basic_gan` | |
+| $w_{\textrm{sat}}$, $w_{\textrm{ns}}$, $w_{\textrm{Rp}}$ | per-sample generator gradient weights (saturating, non-saturating, relativistic) | :numref:`sec_basic_gan`, :numref:`sec_gan_relativistic` | |
+| $\eta = p/(p + q)$ | Bayes class posterior $P(y = 1 \mid x)$ | :numref:`sec_gan_objectives` | |
+| $\ell$, $L(\eta)$, $\Delta_\ell(p, q)$ | margin payoff, conditional Bayes risk, and Bayes-risk gap | :numref:`sec_gan_objectives` | |
+| $D_f(p \,\|\, q)$; $k(x, x')$ | $f$-divergence with convex function $f$; positive-definite kernel | :numref:`sec_gan_objectives` | |
+| $\Phi(D)$, $d_{\mathrm{Rp}}(p, q)$ | relativistic pairing objective and pairing divergence | :numref:`sec_gan_relativistic` | |
+| $R_1$, $R_2$; $\gamma$ | zero-centered gradient penalties at real and generated samples; penalty weight | :numref:`sec_gan_convergence` | |
+| $c$, $e_c$, $\phi(x)$ | conditioning variable, condition embedding, and feature representation | :numref:`sec_dcgan`, :numref:`sec_gan_conditional` | |
 
 <!-- slides -->
 

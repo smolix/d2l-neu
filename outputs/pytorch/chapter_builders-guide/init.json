@@ -13,80 +13,69 @@
       "kind": "text",
       "outputs": []
     },
-    "init-defaults-and-when-to-override-them": {
-      "code_fingerprint": "sha256:1e918636a28f828c04a8900e4ec6f1249328e3b0b317863ed76505eebdbb7d1f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "range [-0.0442, 0.0442], predicted bound 0.0442\nstd 0.0255, predicted 0.0255\n"
-        }
-      ]
-    },
     "init-applying-initializers-1": {
-      "code_fingerprint": "sha256:8f870bbf25fc535ae89a6babb805484746f98541fd1fc96156b9dceb02e13555",
+      "code_fingerprint": "sha256:dc7952f3d72cb8996f071a8edb4857ac1afff861882d661f9dcc7d58e936cbb4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "default: mean square of the output 1.7e-08\nHe:      mean square of the output 0.8\n"
+          "text": "default: mean square of the output 1.9e-08\nHe:      mean square of the output 1.1\n"
         }
       ]
     },
     "init-truncated-normals": {
-      "code_fingerprint": "sha256:a3721e6a3a5091efe8949441334936f93ad36b804f019374ee4a3eee682b06cf",
+      "code_fingerprint": "sha256:153c72637c246d9eec7d0f80218558a426a076f6c17e2b95e04c8616948ed049",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.0979\ntruncated: std 0.0176, max weight 0.0400\n"
+          "text": "normal:    std 0.0200, max weight 0.0998\ntruncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },
     "init-custom-initializers-1": {
-      "code_fingerprint": "sha256:f7fd43fec204e2d496d21e9440cdd426d0d00f8b86101921a04357f1434a0a83",
+      "code_fingerprint": "sha256:3488caed04f4d08e1745ca797da63d5c9dd56aef196e4a539a0ab527dacd73b0",
       "kind": "text",
       "outputs": []
     },
     "init-custom-initializers-2": {
-      "code_fingerprint": "sha256:555ef444ed95dbc7f3498adc5b4b9a6e31f135b0e22dcec0756580445362793c",
+      "code_fingerprint": "sha256:19767df67fd7c907f5f59dc440293b13e5f74392d6b78903b0396d2f7dece26c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.8 before, 0.2 after\n"
+          "text": "1.1 before, 0.28 after\n"
         }
       ]
     },
     "init-watching-the-variance-compound-1": {
-      "code_fingerprint": "sha256:c5e7924f5dd54f58c60e322cc06e5e27c924e1d314860eaf38564850af187aec",
+      "code_fingerprint": "sha256:4c0b5791c8baba5ead3cff3c3c8a57329621a52626210ab9947d8c963c99de0c",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-2": {
-      "code_fingerprint": "sha256:f4c88b30b49d686de01c66a635d3737e2f6c1111b1b8276d3899ad61a81d2476",
+      "code_fingerprint": "sha256:924c6b23beecba13367bbf65ef0f36ec7800dcb2fc20fd114d42c7ff5af81b75",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-3": {
-      "code_fingerprint": "sha256:0af874bc221db5cf062e86079894d682e517acca40ccd0430f295f59150ff446",
+      "code_fingerprint": "sha256:eacb68c197bd971ecec504537f8222ee89a586923f6574a8ad1b3e5d081a6a8a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N  unscaled    scaled      zero\n  2      2.01      1.47     0.998\n  8      13.9      1.61         1\n 32  5.21e+04      1.64     0.997\n"
+          "text": "  N  unscaled    scaled      zero\n  2      2.04      1.49     0.996\n  8      13.8      1.55     0.988\n 32  5.24e+04      1.57      1.01\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "init/init-watching-the-variance-compound-3-1.svg",
-          "bytes": 35671,
-          "sha256": "sha256:7863a3cea78e1073177adc4a65c0149be00020b698ce786391bdbe80fe068203"
+          "bytes": 35870,
+          "sha256": "sha256:fd893578821dcc9f9b33d15a90683f2bd25a025310fca0522c6893a9423db681"
         }
       ]
     }

@@ -63,28 +63,8 @@
         }
       ]
     },
-    "parameters-state-memory-parameters-and-buffers-3": {
-      "code_fingerprint": "sha256:b3137009155955186eb1ec2efc3f466045656f59a5d3b13d057a9cc594f48b0e",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(dtype('float16'), dtype('float32'))"
-        }
-      ]
-    },
-    "parameters-state-memory-parameters-and-buffers-4": {
-      "code_fingerprint": "sha256:2231585de2a948c91148c909c487907079fcf6c7ca3d7eb4aafb40bd33b3b4b7",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "CudaDevice(id=0)"
-        }
-      ]
-    },
     "parameters-state-memory-counting-parameters-counting-bytes-1": {
-      "code_fingerprint": "sha256:0fe30b052bbf450b428ad3c478cfa2e05e2c55beb68d2b47c43299ae66e15b27",
+      "code_fingerprint": "sha256:40c4dacaf0c2781c171dd5a573c4821be6df5fb134293a0a7ecf2d87cf46656c",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +75,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-2": {
-      "code_fingerprint": "sha256:f4996cbef416562b2f78c38b30023635966bca0d88fb5c31499353a0dba05fd1",
+      "code_fingerprint": "sha256:861d5724737f7fe696d29a65d1ba2551f4f0050a3de39591535a5173756dce02",
       "kind": "text",
       "outputs": [
         {
@@ -105,7 +85,7 @@
       ]
     },
     "parameters-state-memory-counting-without-allocating-1": {
-      "code_fingerprint": "sha256:b437e8691b91d143331b46152f27300d3ca44314a39cd6b0b16f007ed0c239c9",
+      "code_fingerprint": "sha256:1e18d6279f56229ffb81b1d8a5792b7d10d607d3dcc57020267700f11ac95e4a",
       "kind": "text",
       "outputs": [
         {
@@ -116,7 +96,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-1": {
-      "code_fingerprint": "sha256:fabe7d0eb1b2de1936d2335fc91f9ae3312ab06769b418830cd4e6bfe4ed7d43",
+      "code_fingerprint": "sha256:facc527103aec0f832ef0e88a819beaf259d34ba380a07d852dc2b475fc1417f",
       "kind": "text",
       "outputs": [
         {
@@ -126,7 +106,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-2": {
-      "code_fingerprint": "sha256:aaf78828e2c7d0e5794306314b371e5022f4d0fd7bcfe30ed8136d35db856784",
+      "code_fingerprint": "sha256:9dce5ff16ef3c2cf5ae4bd18846399144d6ad86602d82a71dcf0f0d6ab90e9c7",
       "kind": "text",
       "outputs": [
         {
@@ -136,7 +116,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-4": {
-      "code_fingerprint": "sha256:60ea034eb16cde0cde3833314ec6f6a5511f5b20fe7a7f2aba5902462e84f5a4",
+      "code_fingerprint": "sha256:6711faf2a0cfe20ff3ca42885683eea922548b31bb26cc473efb3a7834ef8611",
       "kind": "text",
       "outputs": [
         {
@@ -146,7 +126,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-1": {
-      "code_fingerprint": "sha256:545cb662feab84165f6853e64cff3a7d087f9a93cc2c88f4c3f5227025dff866",
+      "code_fingerprint": "sha256:8b9154686a6f89cdef83d2e47177d973c50fdb400f8c33f696638fb0de6cd1af",
       "kind": "text",
       "outputs": [
         {
@@ -156,7 +136,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-2": {
-      "code_fingerprint": "sha256:4b26f54f13128f8517f1443ad5e212f4c318079debce53ce6e729854c424b977",
+      "code_fingerprint": "sha256:3e529f1aa73e7074a52bf6a84ee5a92d9969b0560fed6f74152836f156819194",
       "kind": "text",
       "outputs": [
         {
@@ -166,22 +146,12 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-4": {
-      "code_fingerprint": "sha256:e2be5cee8219d72e0ce6c802d952b9f907f8a92dcc2d2d321e0173e7abccafb7",
+      "code_fingerprint": "sha256:6a5ced56364b3768488b3e1558b01600d1db774f41c416d3dad1c86a3aaeb8eb",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "False"
-        }
-      ]
-    },
-    "parameters-state-memory-freezing-parameters-5": {
-      "code_fingerprint": "sha256:24a87d96fd7f89b80acea4289d60d9e63f2f98875afc97abdd2d80a6bb56f3ab",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "0.36855626106262207"
         }
       ]
     }

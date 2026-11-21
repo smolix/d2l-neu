@@ -90,14 +90,18 @@
     // tools/d2l_preprocess.py) names its one framework.
     var solo = document.getElementById('d2l-single-framework');
     if (solo && FW_DISPLAY[solo.dataset.framework]) return solo.dataset.framework;
+    // Follow the active tab on the page when framework tabsets are present
+    // (already resolved by _d2l-tabs.html's effectiveFramework fallback).
+    var active = document.querySelector(
+      '.panel-tabset[data-group="framework"] .nav-link.active');
+    if (active && DISPLAY_TO_FW[active.textContent.trim()]) {
+      return DISPLAY_TO_FW[active.textContent.trim()];
+    }
     try {
       var data = JSON.parse(localStorage.getItem('quarto-persistent-tabsets-data') || '{}');
       if (DISPLAY_TO_FW[data.framework]) return DISPLAY_TO_FW[data.framework];
     } catch (_) {}
-    var active = document.querySelector(
-      '.panel-tabset[data-group="framework"] .nav-link.active');
-    return active && DISPLAY_TO_FW[active.textContent.trim()]
-      ? DISPLAY_TO_FW[active.textContent.trim()] : 'pytorch';
+    return 'pytorch';
   }
 
   function variantFor(entry) {

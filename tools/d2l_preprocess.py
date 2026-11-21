@@ -453,14 +453,14 @@ def translate_directives(text):
     # ── Display equation + label (next line) ──
     # $$..$$\n:eqlabel:`eq_foo`  →  $$...$$ {#eq-foo}
     text = re.sub(
-        r'(\$\$[^\n]*\$\$)\s*\n:eqlabel:`([^`]+)`',
+        r'(\$\$[^\n]*\$\$)[ \t]*\n[ \t]*:eqlabel:`([^`]+)`',
         lambda m: f'{m.group(1)} {{#{eqlabel_to_eq(m.group(2))}}}',
         text, flags=re.MULTILINE)
 
     # ── Multi-line display equation labels ──
-    # $$\n...\n$$\n:eqlabel:`eq_foo`
+    # $$\n...\n$$\n:eqlabel:`eq_foo`  (also indented inside a list item)
     text = re.sub(
-        r'^(\$\$)\s*\n:eqlabel:`([^`]+)`',
+        r'^([ \t]*\$\$)[ \t]*\n[ \t]*:eqlabel:`([^`]+)`',
         lambda m: f'{m.group(1)} {{#{eqlabel_to_eq(m.group(2))}}}',
         text, flags=re.MULTILINE)
 

@@ -257,7 +257,6 @@ print(f'{d2l.num_params(moe)} parameters stored, '
 
 ### Uneven Load and Positive Feedback
 :label:`subsec_moe-init-load`
-:label:`subsec_moe-feedback`
 
 Even at initialization, random router weights send more tokens to some experts than others. During training without a load-balancing mechanism, a **positive-feedback loop** amplifies this asymmetry into **routing collapse** :cite:`Shazeer.Mirhoseini.Maziarz.ea.2017`: whichever experts receive more tokens at step 1 receive larger gradient updates, reduce the language-modeling loss faster on step 2, get rewarded by $\nabla_{\mathbf{W}_r}\mathcal{L}$ with higher router logits on step 3, and rapidly monopolize $100\%$ of the top-$k$ slots while the remaining $E - k$ experts go dead!
 

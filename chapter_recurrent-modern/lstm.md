@@ -32,7 +32,7 @@ from d2l import jax as d2l
 
 ### Vanishing Gradients
 
-Recall from :numref:`subsec_vanishing-exploding` how gradients propagate through a plain RNN with hidden state $\mathbf{h}_t \in \mathbb{R}^d$:
+Recall from :numref:`subsec_bptt_analysis` how gradients propagate through a plain RNN with hidden state $\mathbf{h}_t \in \mathbb{R}^d$:
 
 $$\mathbf{h}_t = \tanh(\mathbf{W}_\textrm{hh} \mathbf{h}_{t-1} +
 \mathbf{W}_\textrm{xh} \mathbf{x}_t + \mathbf{b}_\textrm{h}).$$

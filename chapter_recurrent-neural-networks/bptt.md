@@ -74,7 +74,6 @@ from d2l import jax as d2l
 
 ## Vanishing and Exploding Gradients
 :label:`subsec_bptt_analysis`
-:label:`subsec_vanishing-exploding`
 
 Consider an RNN unrolled across $T$ steps with shared recurrent parameters and
 average sequence loss $L = \frac{1}{T}\sum_{t=1}^T l(\mathbf{y}_t,
@@ -399,7 +398,7 @@ required to preserve gradients over long horizons.
        $\rho = 1.1$.
 
 1. [code] **Window length and memory horizon.** ● In the model of
-   :numref:`subsec_vanishing-exploding`, the gradient of the last loss
+   :numref:`subsec_bptt_analysis`, the gradient of the last loss
    falls below 1% of its size within about eight steps, well inside the
    training window of 32 tokens.
     1. Before running anything: if the model is retrained with

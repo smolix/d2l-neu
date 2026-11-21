@@ -666,24 +666,6 @@ The score of a policy's own action has zero mean, and so does its product with a
    expected contribution of step $t$ after the subtraction. What does the
    result say about baselines that depend on the action?
    :exlabel:`ex_baselines-admissible`
-1. **Baselines on stale data.** The zero-mean lemma averages the score under
-   the same policy that is being differentiated. Suppose instead that the
-   action at state $s$ was drawn from an older policy
-   $\pi_{\theta_{\textrm{old}}}$, as happens when a batch is reused for a
-   second update, while the score is still
-   $\nabla_\theta \log \pi_\theta(a \mid s)$.
-    1. Use the softmax score
-       $\partial \log \pi_\theta(a \mid s) / \partial \theta_{s,a'} = \mathbf{1}(a' = a) - \pi_\theta(a' \mid s)$
-       to compute, for a constant $b$,
-
-       $$\mathbb{E}_{a \sim \pi_{\theta_{\textrm{old}}}(\cdot \mid s)}\big[b\, \nabla_\theta \log \pi_\theta(a \mid s)\big].$$
-
-       Which values of $b$ introduce no bias, and how does the bias depend
-       on the difference between the two policies?
-    1. Show that multiplying each term by the ratio
-       $\pi_\theta(a \mid s) / \pi_{\theta_{\textrm{old}}}(a \mid s)$
-       restores the zero mean for every $b$. Methods that update more than
-       once on the same batch build on this ratio.
 1. **Optimal constant baseline.** Fix a state $s$, write
    $\boldsymbol{\psi} = \nabla_\theta \log \pi_\theta(a \mid s)$ for the
    score of the sampled action, and consider the single-step estimator
@@ -708,22 +690,6 @@ The score of a policy's own action has zero mean, and so does its product with a
        $e^{-(a-2)^2/2}$ is proportional to another normal density. Why does
        $b^*$ exceed $\mathbb{E}[R] = 0.92$?
    :exlabel:`ex_baselines-optimal-constant-baseline`
-1. [code] **Baseline step size and timing.** ● The value-baseline arm of
-   `train` updates its table $\hat{V}$ by :eqref:`eq_value_baseline` after
-   `policy_step`, so the baseline used on each batch was fitted on earlier
-   batches only.
-    1. Sweep $\eta_V$ (`eta_v`) over $\{0.01, 0.1, 0.5, 1\}$ at
-       $\eta = 16$, the step size of `large`, and report the median and
-       the range over twenty seeds of the number of updates to 90% success.
-       How sensitive is the arm to $\eta_V$?
-    1. Move the value update above the line that computes the weights `w`,
-       so that the baseline of each batch has already seen that batch, and
-       repeat the sweep. At
-       $\eta_V = 1$, what is the weight $\hat{G}_t - \hat{V}(s_t)$ of the
-       last visit to each state in the batch?
-    1. Explain both sweeps with the conditional zero-mean identity. Which of
-       its conditions does the second ordering violate, and why does the
-       damage grow with $\eta_V$?
 1. [code] **Bias of batch centering.** ● :numref:`subsec_leave_one_out`
    obtains the factor $(n-1)/n$ by which per-trajectory batch centering
    shrinks the expected gradient from the leave-one-out identity
@@ -850,41 +816,6 @@ The score of a policy's own action has zero mean, and so does its product with a
        to the excess variance found in
        problem :exref:`ex_baselines-optimal-constant-baseline`a.
    :exlabel:`ex_baselines-optimal-state-baseline`
-1. [extended] **Length bias at small scale.** ●● Dividing the loss of each
-   episode by its own length changes the direction of the
-   gradient (:numref:`subsec_pg_loss_divisor`), and GRPO divides the loss of
-   each response by its own length. :citet:`Liu.Chen.Li.ea.2025` argue that this
-   favors short correct responses and long incorrect ones. This project
-   derives the effect in a toy model and looks for it on FrozenLake.
-    1. Take a single prompt with three responses and a softmax over one logit
-       per response: one correct response with reward $1$ and length $L_c$,
-       and two incorrect responses with reward $0$ and lengths $L_s < L_l$.
-       Weight the score of each response by $(r - p)/L$, where $p$ is the
-       probability of the correct response and $L$ the length of the
-       response. When the two
-       incorrect responses are equally likely, compute the expected change of
-       the logit difference $z_l - z_s$ after one ascent step of size
-       $\eta$, and compare it with the change under a constant divisor.
-    1. On FrozenLake, sample batches of eight episodes and weight every step
-       of episode $i$ by its centered return
-       $A_i = R(\tau_i) - \frac{1}{8}\sum_{j=1}^8 R(\tau_j)$, divided either
-       by the episode's own length $T_i$ or by the constant $10$, where
-       $R(\tau_i)$ is the discounted return `b.episode_returns(gamma)`. Since
-       `policy_step` averages over all steps of the batch, pass the weight
-       $A_i N / (8 T_i)$, or $A_i N / 80$, at every step of episode $i$,
-       where $N$ is `len(b)`, the number of steps in the batch. Train twenty
-       seeds with each divisor for 200 updates of plain SGD at $\eta = 16$
-       (both divisors are about ten times larger than the per-episode divisor
-       of `train`, so $\eta = 16$ here acts roughly like $\eta = 1.6$ there,
-       close to the step size of `shared`; log the step lengths to check), and
-       record per update the batch success rate and the mean length of the
-       failed episodes.
-    1. The two divisors learn at different speeds, so compare them at
-       matched success rates: group the updates of all seeds into bins of
-       success rate of width $0.2$ and plot the mean length of failed
-       episodes per bin for both divisors. Does FrozenLake show the predicted
-       bias? What does the same mechanism do to the incorrect responses of a
-       language model during GRPO training?
 1. [code] **Reward-to-go, taken apart.** ● The reward-to-go weight of
    :eqref:`eq_rtg` makes two changes to the trajectory return: it drops the
    rewards collected before each action, which the conditional identity

@@ -704,23 +704,6 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
        normalizing a weight that shrinks toward critic noise can hurt late
        in training, and what the cap changes under Adam.
    :exlabel:`ex_actor-critic-gradient-norms`
-1. [code] **Correlation of the two weights.** ● Suppose the critic is
-   exact, $\hat{V} = V^{\pi}$, and the episodes have no time limit.
-    1. With the identity
-       $\hat{G}_t - \hat{V}(s_t) = \delta_t + \gamma \big( \hat{G}_{t+1} - \hat{V}(s_{t+1}) \big)$
-       and the proposition on the interior optimum, show that the
-       covariance of $\delta_t$ with the Monte Carlo advantage equals the
-       variance of $\delta_t$, so that their correlation is the square root
-       of the ratio of the two variances.
-    1. Extend the cell that fills `trace` to record also the correlation
-       $q$ of `delta` with `A_mc` in every batch, and write
-       $v_{\textrm{TD}}$ and $v_{\textrm{MC}}$ for the two variances.
-       Compute $\kappa = q \sqrt{v_{\textrm{MC}} / v_{\textrm{TD}}} - 1$,
-       the covariance of $\delta_t$ with the remaining tail in units of the
-       variance of $\delta_t$, and plot it against the update. It is zero
-       for an exact critic. How does $\kappa$ behave early and late in
-       training?
-   :exlabel:`ex_actor-critic-uncorrelated-td-errors`
 1. [code] **Bias of GAE.** ● Problem
    :exref:`ex_actor-critic-why-baseline-argument-does` found the bias of
    the weight $\delta_t$ in terms of the critic's error
@@ -754,23 +737,6 @@ An actor-critic method weights the policy gradient by the TD error of a learned 
        toward the $\lambda = 0$ that the proposition predicts for an exact
        critic?
    :exlabel:`ex_actor-critic-bias-of-gae`
-1. **A critic on a one-step task.** The verifier task of :numref:`sec_mdp`
-   is an episode of one step: the prompt $x$ is the state, the response
-   $y$ the action, and the episode terminates with reward $r(x, y)$, one
-   for a correct answer and zero otherwise.
-    1. Write the TD error of a critic $\hat{V}(x)$ on this task and show
-       that it is the reward minus a per-prompt baseline. Which value of
-       $\hat{V}(x)$ is the exact critic, and how does its TD error compare
-       with the group-centered weight of :numref:`sec_baselines` for a
-       group of $K$ responses to the same prompt?
-    1. What can a learned critic do on this task that the group baseline
-       cannot, and what does it cost? Consider a policy that changes after
-       every update and a critic fitted from the same samples.
-    1. Now let the response be generated one token at a time, with the
-       reward only after the last token. With an exact critic of every
-       prefix, which TD errors along a response are nonzero, and what must
-       the critic predict that the group baseline never needs?
-   :exlabel:`ex_actor-critic-verifier-critic`
 
 [Discussions](https://d2l.discourse.group/t/36801)
 

@@ -428,20 +428,6 @@ A reward fitted to comparisons is accurate only where the comparisons are. Compa
        per-trajectory values are negative. Why does this not contradict
        Gibbs' inequality?
    :exlabel:`ex_regularized-trajectory-divergence`
-1. [code] **Tilting by the unregularized value.** :numref:`subsec_soft_backup`
-   tilts $\pi_{\textrm{ref}}$ by the soft value $Q_\beta$. Tilting instead by
-   the unregularized action value $Q^*$ gives a different family of policies,
-   which in general contains the optimum for no value of $\beta$.
-    1. Compute $Q^*$ for $\hat r$ by value iteration and form
-       $\pi(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{Q^*(s, a) / \beta}$
-       for every $\beta$ of the sweep in :numref:`subsec_kl_budget`. Plot
-       the fitted return of this family against its discounted divergence
-       from $\pi_{\textrm{ref}}$, together with `fit_ret` against `kls`.
-    1. Why can no member of the heuristic family lie above the curve of the
-       exact optima?
-    1. In which limits of $\beta$ do the two families approach each other,
-       and why do they differ in between? Why do they coincide for a single
-       decision?
 1. [code] **Soft backup on the lake.** The proof in
    :numref:`subsec_vi_contraction` used one property of the maximum,
    $|\max_a f(a) - \max_a g(a)| \leq \max_a |f(a) - g(a)|$.
@@ -479,21 +465,6 @@ A reward fitted to comparisons is accurate only where the comparisons are. Compa
        Which representation needs the penalty? Which property of its input
        explains the difference?
    :exlabel:`ex_regularized-neural-reward-models`
-1. [code] **Exploited reward errors.** ● Each run below modifies $\hat r$
-   and repeats the sweep of :numref:`subsec_kl_budget` with the same
-   reference $\pi_{\textrm{ref}}$.
-    1. Add $\delta \in \{0.25, 0.5, 1, 2\}$ to `r_hat[9, 3]`, the move up from
-       state 9 into hazard cell 5, which never occurs in the data. How do the
-       height and the divergence of the peak of the true return move with
-       $\delta$?
-    1. Subtract $2$ from `r_hat[9, 3]` instead. In a second run, subtract
-       $2$ from `r_hat[1, 1]`, a move into the hazard lane that $\hat r$
-       prices near zero. Before running them, predict how each change moves
-       the peak of the true return. Explain both outcomes.
-    1. Refit $\hat r$ from 1000 trajectories of the uniform policy, and keep
-       $\pi_{\textrm{ref}}$ as the reference of the penalty. Which error of
-       the new fit does `plan` exploit? Does the true return still peak at
-       an intermediate divergence?
 1. **Slope of the frontier.** ● Write $u = 1 / \beta$, and let
    $R(u)$ and $D(u)$ denote the expected reward and the
    divergence $D_{\textrm{KL}}(\pi^\star \Vert \pi_{\textrm{ref}})$ of the
@@ -558,32 +529,6 @@ A reward fitted to comparisons is accurate only where the comparisons are. Compa
        forward penalty, and how does this match
        :numref:`subsec_kl_direction`?
    :exlabel:`ex_regularized-forward-kl-penalty`
-1. [code] **Error modulo shaping.** ●● Potential-based shaping
-   (:numref:`sec_valueiter`, :cite:`Ng.Harada.Russell.1999`) adds
-   $$F(s, a) = \gamma \sum_{s'} P(s' \mid s, a)\, \Phi(s') - \Phi(s)$$
-   to the reward, for a potential $\Phi$ on the states with $\Phi(15) = 0$ at
-   the absorbing goal.
-    1. Show that if $Q_\beta$ solves the soft backup :eqref:`eq_soft_backup`
-       for the reward $r$, then $Q_\beta(s, a) - \Phi(s)$ solves it for
-       $r + F$. Conclude that, for every $\beta$, the shaped reward has the
-       same optimum $\pi_\beta$ with the same divergence from
-       $\pi_{\textrm{ref}}$, and that every policy's return from state $0$
-       changes by $-\Phi(0)$.
-    1. Show that $F$ changes the discounted return $\mathbf{c}(\tau)^\top r$
-       of every trajectory that reaches the goal by exactly $-\Phi(0)$.
-       Which trajectories in `X` carry information about $F$, and through
-       which factor?
-    1. The pairs of `core` neither start in nor enter the hazard cells 5
-       and 6, so they do not determine $\Phi(5)$ and $\Phi(6)$. On which
-       pairs of `core` is the shaping term `F @ Phi` computed in this section
-       largest? Why does the weight decay of the logistic regression push the
-       fit in this direction?
-    1. :citet:`Christiano.Leike.Brown.ea.2017` compare short trajectory
-       segments that start at different states. Comparisons of this kind
-       identify the reward up to transitions that the dynamics rule out
-       :cite:`Skalse.Farrugia-Roberts.Russell.ea.2023`. Which step of part b
-       fails for such segments?
-   :exlabel:`ex_regularized-error-modulo-shaping`
 
 [Discussions](https://d2l.discourse.group/t/36803)
 

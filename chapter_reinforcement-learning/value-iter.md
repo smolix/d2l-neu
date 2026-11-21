@@ -586,43 +586,6 @@ Dynamic programming computes the best policy of a known MDP from the values of i
        without bound at $\gamma = 1$. Which property of FrozenLake used in
        part b does it lack?
    :exlabel:`ex_value-iter-undiscounted-lake`
-1. **Ties in policy iteration.** A common implementation of policy iteration
-   stops when the greedy policy equals the current one, `(new == pi).all()`.
-   On the slippery lake, *left* and *right* are both optimal at cell 6. On
-   the $8 \times 8$ map, *left* and *up* are both optimal at state 51, and
-   rounding errors can make the greedy policy of value iteration switch
-   between them long after consecutive iterates differ only in the last
-   digits.
-    1. Explain how ties can keep this loop from terminating.
-    1. The loop of :numref:`subsec_vi_policy_iteration` stops instead when
-       the greedy step gains nothing at any state. Use the
-       policy-improvement proposition to show that this test is reached
-       after finitely many rounds, whichever way ties are broken, and that
-       the policy at which it stops is optimal. Why does the test need a
-       tolerance such as $10^{-12}$ in floating point?
-
-    *Adapted from Sutton and Barto,
-    [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf),
-    2nd edition, Exercise 4.4.*
-   :exlabel:`ex_value-iter-ties`
-1. [code] **Discount on calm and slippery ice.** On calm ice a cell $j$ moves
-   from the goal has optimal value $\gamma^{j-1}$, as
-   :numref:`fig_rl_value_wavefront` shows.
-    1. Run `value_iteration` on the calm map for
-       $\gamma \in \{0, 0.5, 0.9, 0.99\}$ and compare each greedy policy with
-       `shortest`. Use the closed form to explain why the policy does not
-       depend on $\gamma$ for $\gamma > 0$. What is special about
-       $\gamma = 0$?
-    1. Repeat on the slippery map for $\gamma \in \{0.5, 0.9, 0.99\}$. At
-       which states does the optimal action change? For each of the three
-       optimal policies, compute the probability of eventually reaching the
-       goal. By the argument of problem
-       :exref:`ex_value-iter-undiscounted-lake`b, this probability is the
-       policy's value at $\gamma = 1$, which a few thousand sweeps of
-       `policy_evaluation` on `d2l.TabularMDP.from_gym(env, 1.0)` compute.
-    1. Explain the trend in these probabilities. Why do slips make the
-       optimal policy depend on $\gamma$?
-   :exlabel:`ex_value-iter-discount`
 1. [code] **In-place sweeps.** ● `value_iteration` computes all of $V_{k+1}$
    from $V_k$. An *in-place* sweep instead visits the states in a fixed order
    and overwrites $V(s)$ immediately, so that states later in the same sweep
@@ -688,46 +651,6 @@ Dynamic programming computes the best policy of a known MDP from the values of i
     1. Check the identity numerically at the start state for $\pi$ =
        `uniform` and $\pi' = \pi^*$.
    :exlabel:`ex_value-iter-improvement-quantified`
-1. [code] **When the greedy policy is optimal.** ● In
-   :numref:`subsec_vi_policy_iteration` the greedy policy of value iteration
-   is optimal from sweep 14 on, while the certificate needs 164 sweeps. Let
-   $V$ be any table, let $e = \|V - V^*\|_\infty$, and let $\pi$ be
-   greedy with respect to $V$, so that $\pi(s)$ maximizes `mdp.backup(V)[s]`.
-   Write $\mathcal{T}^\pi$ for the policy-evaluation operator
-   of :eqref:`eq_policy_eval`.
-    1. Show that $V^\pi(s) \geq V^*(s) - 2\gamma e/(1-\gamma)$ at
-       every state :cite:`Singh.Yee.1994`, by inserting $\mathcal{T}^{\pi^*} V$
-       and $\mathcal{T}^\pi V$ between $V^* = \mathcal{T}^{\pi^*} V^*$ and
-       $V^\pi = \mathcal{T}^\pi V^\pi$. Evaluate the bound at sweep 14 on the
-       slippery lake. What does it guarantee there?
-    1. Let the *action gap* $\Delta$ be the smallest difference
-       $V^*(s) - Q^*(s, a)$ over all states $s$ and all actions $a$ that are
-       not optimal at $s$, with $Q^*$ from :eqref:`eq_bellman_optimality_q`.
-       Show that $2\gamma e < \Delta$ implies that $\pi$ is optimal.
-    1. Compute $\Delta$ for the slippery lake from `mdp.backup(V_star)`,
-       treating actions within $10^{-9}$ of the maximum as optimal, and find
-       the first sweep at which the condition of part b holds. Compare it with
-       sweep 14. Why can the greedy policy be optimal long before the
-       condition holds?
-   :exlabel:`ex_value-iter-greedy-optimal`
-1. [code] **Time limits under the optimal policy.** `gym.make` wraps
-   FrozenLake in a time limit: after 100 steps the episode ends with
-   `truncated=True` (:numref:`subsec_mdp-termination`).
-    1. Propagate the state distribution $d^\pi_t$ of problem
-       :exref:`ex_mdp-kernel-predicts-episodes`b of :numref:`sec_mdp` under
-       `pi_star` instead of the random policy. Compute the probabilities that
-       an episode reaches the goal, falls into a hole, or is truncated, and
-       check the first against the $0.730$ computed
-       in :numref:`subsec_vi_slippery_ice`. Compare the truncated fraction with
-       the one that $d^\pi_{100}$ gives for the random policy.
-    1. If the limit is part of the task, the best command can depend on the
-       number of steps that remain (problem :exref:`ex_mdp-time-limits`).
-       Show that $V_k$, the $k$-th iterate of value iteration at $\gamma = 1$
-       from $V_0 = 0$, is the largest probability of reaching the goal within
-       $k$ steps, attained by commanding the greedy action of $V_{k-1}$ when
-       $k$ steps remain. Compute it for $k = 100$. How much more often than
-       $\pi^*$ does this policy reach the goal within the limit?
-   :exlabel:`ex_value-iter-time-limits`
 1. [code] **Potential-based shaping.** ● The proposition of
    :numref:`subsec_vi_shaping` holds for every potential when the terminal
    states are absorbing, as in `TabularMDP`, but only for potentials that

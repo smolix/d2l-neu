@@ -557,32 +557,6 @@ A network in place of the Q-table combines function approximation, bootstrapping
        discount?
    :exlabel:`ex_dqn-baird-on-policy`
 
-1. **Huber loss and norm clipping.** `fit_q` regresses with the Huber loss
-   of threshold 1, $\ell(e) = e^2/2$ for $|e| \leq 1$ and
-   $\ell(e) = |e| - 1/2$ otherwise, where $e = Q_w(s, a) - y$ is the residual
-   of one transition, and averages it over the $B$ transitions of a
-   minibatch. The update then rescales the minibatch gradient to norm
-   `grad_clip` $= 10$ whenever its norm exceeds 10 and passes it to Adam.
-    1. Show that $\ell'(e) = \max\big(-1, \min(1, e)\big)$. In which sense
-       is Huber regression squared-loss regression with clipped residuals?
-    1. Show that the minibatch gradient has norm at most
-       $\max_i \|\nabla_w Q_w(s_i, a_i)\|$, and explain why this bound can
-       grow while every residual stays the same.
-    1. Adam divides a running average of the gradients by the square root
-       of a running average of their squares. Apart from the small constant
-       it adds for numerical stability, multiplying every gradient of a run
-       by one constant therefore leaves its steps unchanged. Which gradient
-       sequences does the norm clip change? How does it change the Adam
-       steps that follow a single gradient of very large norm, such as one
-       that may follow a target-network synchronization?
-    1. An Adam step moves each parameter by roughly the learning rate, here
-       $10^{-3}$, whatever the size of its gradient. The run without a target
-       network takes about $25{,}000$ such steps, and its start-state values
-       reach about $10^8$. Estimate how far one parameter can travel during
-       the run, and explain how steps of that size can produce values of
-       $10^8$ in the three linear layers of `make_qnet`, whose hidden layers
-       have 128 units.
-
 1. **Terminated, not done.** `train_dqn` stores `float(terminated)`, so a
    transition into CartPole's 500-step time limit still bootstraps. Consider
    an implementation that stores `float(terminated or truncated)` instead.
@@ -697,29 +671,6 @@ A network in place of the Q-table combines function approximation, bootstrapping
     1. The $n$-step returns of :numref:`sec_actorcritic` did not raise the
        question of part (c). Why not?
    :exlabel:`ex_dqn-nstep-replay`
-
-1. **Prioritized sampling.** ● Prioritized replay
-   :cite:`Schaul.Quan.Antonoglou.ea.2016` samples stored transition $i$ with
-   probability $P(i)$ instead of $1/N$ and multiplies its loss by a weight
-   $u_i$. Let $\mathbf{g}_i$ be the gradient of the loss of transition $i$,
-   so that uniform replay estimates
-   $\bar{\mathbf{g}} = \frac{1}{N} \sum_i \mathbf{g}_i$.
-    1. Show that a single sampled transition with weight
-       $u_i = 1/\big(N P(i)\big)$ gives an unbiased estimate of
-       $\bar{\mathbf{g}}$.
-    1. Find the distribution $P$ that minimizes the expected squared error
-       $\mathbb{E}\|u_i \mathbf{g}_i - \bar{\mathbf{g}}\|^2$ of this estimate. For the
-       squared loss, $\mathbf{g}_i = e_i \nabla_w Q_w(s_i, a_i)$ with residual
-       $e_i$. Under which condition is sampling in proportion to $|e_i|$
-       optimal?
-    1. :citet:`Schaul.Quan.Antonoglou.ea.2016` sample with
-       $P(i) \propto (|e_i| + c)^{p}$ for a small constant $c > 0$, and
-       use the weights
-       $u_i = \big(N P(i)\big)^{-q}$ divided by $\max_j u_j$, with
-       $q$ annealed toward 1 over training; the exponents $p$ and $q$ are
-       the paper's $\alpha$ and $\beta$. Which of the two changes to
-       the weights of part (a) affects only the step size, and which changes
-       the point to which the updates converge?
 
 1. [code] **Baird with a target network.** ●● DQN computes its bootstrap
    from a frozen copy of the weights. In the computation of Baird's

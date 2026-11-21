@@ -19,9 +19,10 @@ pages and scores each one under a written rubric, a small model learns to
 predict the score, and a threshold on the prediction decides for the billions
 of pages that no large model will ever read. FineWeb-Edu
 :cite:`Penedo.Kydlicek.BenAllal.ea.2024` was built this way, with a rubric
-that asks how useful a page would be for teaching at school, and other open
-corpora of the same years, DCLM and Nemotron-CC among them, use variants of
-the same recipe.
+that asks how useful a page would be for teaching at school. Other open
+corpora of the same years also select with a cheap classifier, though not
+always one trained on a large model's scores: DCLM's learns to tell
+instruction data from random web pages, and Nemotron-CC combines several.
 
 Both kinds of filter remove most of the web, and both apply a definition of
 quality that somebody wrote down. The rules define it by surface statistics.
@@ -70,18 +71,16 @@ import transformers
 from sentence_transformers import SentenceTransformer
 ```
 
-Most of what this notebook computes is cheap. The rules run on eight CPU
-processes, a 0.6B-parameter language model scores perplexity, an embedding
-model encodes the crawl documents, and linear classifiers train in seconds;
-a build takes a few minutes on one GPU. Two steps are expensive, and a
-normal build reads their results from registered files. Labelling 22,000
-documents with Qwen3.8-27B took about an hour on four GPUs, and the review of
-200 removed documents by the same model a few minutes more. The vectors of the
-labelled documents and of the audit stream are registered as well, together
-with the scores that the released FineWeb-Edu classifier gives them. Without a
-GPU the notebook reads every registered result, scores perplexity on a small
-sample only, and takes the crawl documents' scores from the registered flags.
-Setting `D2L_RERUN` to names from `ARTIFACTS` regenerates those files under
+Most of what this notebook computes is cheap: the rules run on eight CPU
+processes, a 0.6B-parameter model scores perplexity, an embedder encodes the
+crawl documents, and linear classifiers train in seconds, so a build takes a
+few minutes on one GPU. Two steps are expensive, and a build reads their
+results from registered files: labelling 22,000 documents with Qwen3.8-27B
+took about an hour on four GPUs, and the review of 200 removed documents a few
+minutes more. The vectors of the labelled documents and of the audit stream
+are registered too, with the released FineWeb-Edu classifier's scores.
+Without a GPU the notebook reads every registered result and scores
+perplexity on a small sample only. Setting `D2L_RERUN` to names from `ARTIFACTS` regenerates those files under
 new names, and the last cell compares whatever this run computed with the
 registered results.
 
@@ -237,8 +236,14 @@ almost nothing, and the classifier that learned the rubric removes it. Keep
 both pages in mind. Everything below is a way of deciding between pages like
 these, at the scale of billions.
 
-## Heuristic Rules
+## Filters Without Labels
 :label:`subsec_lm_quality_rules`
+
+The oldest filters need no labelled data at all. Either people write down what
+a bad page looks like, or a language model of clean text says how surprising a
+page is.
+
+### Heuristic Rules
 
 Rules came first because they cost almost nothing and say why they fired.
 DeepMind's Gopher models were trained on text filtered by two families of
@@ -261,11 +266,10 @@ candidate filter: too few lines ending in terminal punctuation, too many lines
 under 30 characters, too many characters in duplicated lines, and too many
 line breaks per word. Its paper reports that the first three together remove
 about 22% of the tokens and that it dropped C4's rule that removes every line
-without terminal punctuation, which alone removed about 30%. One threshold
-differs between the paper and the release: the paper's text puts the
-duplicated-character limit at 0.1, while the datatrove code that produced the
-corpus uses 0.01. We follow the code. :numref:`tab_lm_quality_rules` lists the
-sixteen rules with their reason codes.
+without terminal punctuation, which alone removed about 30%. Our thresholds
+are those of datatrove, the code that produced the corpus, and
+:numref:`tab_lm_quality_rules` lists the fifteen rules with their reason
+codes.
 
 :The heuristic rules, in the order `heuristic_filters` applies them. The thresholds are those of datatrove 0.10.1, the code FineWeb ran.
 :label:`tab_lm_quality_rules`
@@ -619,12 +623,15 @@ lose 28% and 16%. Chinese, Japanese and Thai lose every document. These
 scripts do not separate words with spaces, so a run of characters between two
 punctuation marks counts as one "word", a page has few long words and many
 punctuation tokens, and the word-count or alphabetic-word rule fires on every
-page. Hindi does put spaces between words and loses every document too, for a
-subtler reason. Our word pattern uses Python's `\w`, which does not count the
-vowel signs of Devanagari as word characters, so each word breaks into
-fragments of one or two letters and the mean word length falls below 3. Every
-one of these documents had already passed FineWeb-2's own filters for its
-language. A removal rate of 100% on Thai measures the rules, not the Thai web.
+page. Hindi does put spaces between words and loses every document too, but
+the cause lies in our code, not in the rules. Our word pattern uses Python's
+`\w`, which does not count the vowel signs of Devanagari as word characters,
+so each word breaks into fragments of one or two letters and the mean word
+length falls below 3. Datatrove's word tokenizer keeps the signs with their
+letters, so the 100% for Hindi measures our reimplementation, not the rules as
+FineWeb ran them. Every one of these documents had already passed FineWeb-2's
+own filters for its language. A removal rate of 100% on Thai measures the
+rules, not the Thai web.
 
 ### Perplexity Filters
 :label:`subsec_lm_quality_ppl`
@@ -838,9 +845,10 @@ server holds one copy per GPU, and `edu_label_scores_served` sends it the same
 token ids that `edu_label_scores` would feed a local model. Each server takes
 one request at a time. That is slower than it needs to be, and it is
 deliberate. A server that batches concurrent requests changes the order of its
-floating-point additions with the batch, and on our prompts the probabilities
-moved by up to 0.08, enough to flip the labels of near ties. One request at a
-time, every server returns the same bits for the same prompt
+floating-point additions with the batch, so the probabilities of a prompt
+depend on which other prompts share its batch, and a near tie can flip its
+label. One request at a time, every server returns the same bits for the same
+prompt
 (:numref:`sec_lm_deterministic_inference` explains why). A build reads the
 labels, checks the provenance stored with them, and prints the pilot's check:
 32 prompts scored again on another server, in reverse order.
@@ -1002,12 +1010,10 @@ are a sample of the released annotations, so each one also carries the score
 that Llama-3-70B-Instruct gave it in 2024 under the same prompt. Comparing the
 two is easy and easy to misread. Agreement with one labeller cannot show which
 labels are better: where two labellers disagree, either may be wrong, and a
-third model would only add a third opinion. What decides is the model trained
-on a filter's output, measured with proxy runs like those of
-:numref:`sec_lm_data_mixtures`, and exercise
-:exref:`ex_lm_quality-two-labellers` sets up that comparison for the two
-labellers. Here the comparison is descriptive. It tells us how the two
-models use the scale, and whether they order documents alike.
+third model would only add a third opinion. Here the comparison is
+descriptive. It tells us how the two models use the scale, and whether they
+order documents alike; exercise :exref:`ex_lm_quality-two-labellers` compares
+the filters that the two labellers produce.
 
 ```{.python .input #quality-filtering-agreement}
 %%tab pytorch
@@ -1445,10 +1451,12 @@ R['thresholds'] = T_STAR
 ```
 
 The thresholds already say something. The regression head's $t^*$ is about
-1.6, far below the label's 3. A regression under squared loss predicts the
-conditional mean of the score, and with only 1.4% of the labels at 3 or more,
-hardly any document has a mean anywhere near 3. The head's predictions bunch
-between 0 and 2, and its threshold has to be read on that scale. The released
+1.6, far below the label's 3. Each document has one label, but a linear head
+on a frozen vector cannot tell every document apart, and under squared loss it
+predicts the mean score of the documents it confuses with one another. With
+only 1.4% of the labels at 3 or more, a group of such documents hardly ever
+has a mean near 3. The head's predictions bunch between 0 and 2, and its
+threshold has to be read on that scale. The released
 classifier, trained on Llama's more generous scale, gets a threshold of about
 2.9 against Qwen's labels. The last line checks the released classifier live
 on the 2,000 test rows: its scores differ from the registered ones by at most
@@ -1581,17 +1589,23 @@ positives are 1% of the documents, a flip rate of 0.5% already makes a third
 of the positive labels flipped negatives that no classifier can find.
 
 To use the ceiling we need $\eta$. Two annotations of the same documents that
-flip independently at the same rate disagree with probability
-$d = 2\eta(1-\eta)$, so $\eta = (1 - \sqrt{1 - 2d})/2$, and the observed share
-of positives, $\pi^*(1 - 2\eta) + \eta$, then gives $\pi^*$. Our second
-annotation is Qwen's justification-first answer on the test rows. Llama's
-labels cannot serve: under equal symmetric noise both annotations would have
-the same share of positives, and the two labellers' shares differ several-fold,
-a difference of scale, not of noise. The estimate is optimistic. Errors that
-both protocols of one model share are invisible to it, so the true ceiling is
-lower. A classifier above the ceiling would therefore be a warning sign: it
-would mean that the flips do depend on the document, and that the classifier
-has learned its labeller's systematic errors.
+flip independently, symmetrically and at the same rate disagree with
+probability $d = 2\eta(1-\eta)$, so $\eta = (1 - \sqrt{1 - 2d})/2$, and the
+observed share of positives, $\pi^*(1 - 2\eta) + \eta$, then gives $\pi^*$.
+The same model makes a prediction that can be checked before any estimate:
+both annotations have the same expected share of positives. We have two
+candidates for the second annotation, and the check applies to both. Llama's
+labels fail it by a wide margin, 9.1% positive against Qwen's 1.4%, a
+difference of scale rather than of noise. Qwen's own justification-first
+answers on the test rows fail it as well, less obviously: 1.05% positive
+against 1.80% under the digit protocol. The ceiling that the cell computes
+from them is therefore the value under a symmetric model that our data do not
+support, and we read it beside a number that needs no model of the noise: the
+F1 of one protocol scored against the other. The symmetric estimate is also
+optimistic. Errors that both protocols of one model share are invisible to it,
+so the true ceiling is lower. A classifier above the ceiling would therefore
+be a warning sign: it would mean that the flips do depend on the document, and
+that the classifier has learned its labeller's systematic errors.
 
 The cell checks the identity at 50 thresholds and the ceiling against a
 simulation of a million documents, then estimates $\eta$ and the ceiling.
@@ -1663,15 +1677,22 @@ R['ceiling'] = dict(identity_gap=gap, simulation=rows,
 
 The identity holds to rounding error, and the closed form agrees with the
 simulation at three noise levels. The two protocols disagree on 19 of the
-2,000 test rows, which gives $\eta \approx 0.005$ and a ceiling F1 of about
-0.80, with an interval from 0.68 to 0.89. All four classifiers are far below
-it, so label noise of this kind explains only part of their errors; an
-embedding and a linear head lose more than the labels do. Two caveats go with
-the number. With 36 positives the ceiling is itself uncertain, as its
-interval shows. And the 19 disagreements are not symmetric: 17 of them are
-rows that the digit protocol scores 3 and the justification-first protocol
-scores lower, so the symmetric model is a simplification, and an exercise
-asks for the asymmetric one.
+2,000 test rows, which under the symmetric model gives $\eta \approx 0.005$
+and a ceiling F1 of about 0.80, with an interval from 0.68 to 0.89. The
+disagreements themselves reject that model. In 17 of the 19, the digit
+protocol scores 3 or more and the justification-first protocol less; if the
+two directions were equally likely, a split at least this uneven would occur
+less than once in a thousand. The number that needs no noise model comes from
+the cross-tabulation of the two protocols printed earlier: 36 positives under
+the digit protocol, 21 under the justification-first protocol, 19 under both.
+One protocol scored against the other therefore reaches an F1 of
+$2 \cdot 19 / (36 + 21) \approx 0.67$, which says how well Qwen3.8-27B
+reproduces its own labels when it is asked a second way. All four classifiers
+are below the 0.80, and their F1 values, 0.26 to 0.56, are below the 0.67 as
+well, although the logistic head's interval, which reaches 0.68, does not
+exclude it. Label noise thus accounts for part of the classifiers' errors,
+and with 36 positives no estimate of it is precise. An exercise asks for the
+ceiling under asymmetric noise.
 
 ## Choosing a Threshold
 :label:`subsec_lm_quality_threshold`
@@ -1947,8 +1968,10 @@ pages at a rate 1.9 points higher than .com pages, with an interval from 0.9 to
 2.7 points and the same sign in both halves, and shop hosts at a rate 2.6
 points higher than other hosts. A difference of two points matters more than it
 seems, because what reaches the corpus is what the filter keeps: about 3% of
-.com pages against about 1% of .au pages, so Australian sites enter the corpus
-at roughly a third of the rate of .com sites. The shops are the rubric working
+.com pages against about 1% of .au pages, 6 of the 544, so Australian sites
+enter the corpus at roughly a third of the rate of .com sites. Six pages are
+few, so the third is a rough figure; the interval on the difference is the
+measured statement. The shops are the rubric working
 as written, since product pages teach little. The rules have one finding of
 their own: they remove news pages 1.4 points less often than other pages, in
 both halves. The other country codes show differences whose intervals include
@@ -1967,7 +1990,10 @@ would a reader want this page in a general-purpose training corpus? The
 reasoning has no budget. A budget of, say, a thousand tokens can stop the
 model in mid-thought and force a verdict it has not reached, so each reply may
 use up to 12,000 tokens of the 16,384-token context; in practice the replies
-were short, with a median of about 130 tokens, and none was cut off. The
+were short, and none was cut off. Unlike the labeller, the judge takes ten
+requests per server at a time, which makes the review faster but not
+reproducible to the bit: batching changes the arithmetic, as we saw above,
+so a regenerated review can change the verdicts of pages near a tie. The
 review is not independent of the filter it checks, since the same model wrote
 the training labels, and a human reading of the same 200 pages would be the
 stronger test. The cell reports the share of each arm labelled "drop", the
@@ -2279,21 +2305,20 @@ A quality filter decides which part of the web a model learns from, and it
 follows a definition of quality that somebody wrote down: rules over surface
 statistics, or a rubric that a large model applies and a small classifier
 learns. The Gopher, C4 and FineWeb rules remove about two thirds of our crawl
-documents and match FineWeb's code on about 96% of them, but they remove every
-document of four other languages for reasons of script, and the documents of
-lowest perplexity are boilerplate and machine-written prose. Qwen3.8-27B,
-scoring documents under FineWeb-Edu's rubric from its next-token
-probabilities, uses a far stricter scale than Llama-3-70B did (about 1.4%
-against 9% at 3 or more) yet orders documents alike. A linear head on a frozen
-embedder learns its labels about as well as the released classifier does,
-both far below a label-noise ceiling of about 0.8; since
-$\textrm{F1} = 2\pi\,\textrm{TPR}/(\pi + \rho)$, the threshold is a choice of
-retained fraction, here about 3% of the documents and 5% of the tokens. An
-audit whose intervals resample whole sites finds groups that the classifier
-removes more often, Australian domains and shops, and near its threshold the
-classifier mostly removes pages that a general corpus would keep. What a
-filter keeps reflects its annotator's taste, and only training runs can say
-whether that taste helps.
+documents and match FineWeb's code on about 96% of them. They remove every
+Chinese, Japanese and Thai document, whose words are not separated by spaces,
+and our word pattern removes every Hindi one. The documents of lowest
+perplexity are boilerplate and machine-written prose. Qwen3.8-27B, scoring
+documents under FineWeb-Edu's rubric from its next-token probabilities, uses a
+far stricter scale than Llama-3-70B did (about 1.4% against 9% at 3 or more)
+yet orders documents alike. A linear head on a frozen embedder learns its
+labels about as well as the released classifier does. Both stay below the F1
+of about 0.67 at which Qwen reproduces its own labels when asked a second
+way. Since $\textrm{F1} = 2\pi\,\textrm{TPR}/(\pi + \rho)$, a threshold is a
+choice of retained fraction, here about 3% of the documents. An audit that
+resamples whole sites finds that the classifier removes Australian domains and
+shops more often, and near its threshold it mostly removes pages that a
+general corpus would keep.
 
 ## Exercises
 
@@ -2318,8 +2343,9 @@ whether that taste helps.
     1. Why is the F1 at the threshold that maximizes F1 on the test rows an
        optimistic estimate of the F1 at deployment? Name two ways to avoid
        the bias.
-    1. A document's label is 3 with probability $q$ and 1 otherwise. Show
-       that the prediction minimizing the expected squared error is $1 + 2q$,
+    1. Among the documents that a head cannot tell apart, a share $q$ is
+       labelled 3 and the rest 1. Show that the prediction minimizing the
+       expected squared error on them is $1 + 2q$,
        and find the $q$ at which it reaches 2.5. Use this to explain why our
        regression head keeps nothing at a cut of 2.5.
     1. Would the logistic head's probability have the same problem with a
@@ -2452,7 +2478,7 @@ FineWeb's output for the same crawl (the *audit stream*).
 :::
 :::
 
-::: {.slide title="Sixteen Rules, Each With a Reason Code"}
+::: {.slide title="Fifteen Rules, Each With a Reason Code"}
 [Heuristic rules]{.kicker}
 
 | family | catches | codes |
@@ -2463,7 +2489,7 @@ FineWeb's output for the same crawl (the *audit stream*).
 | FineWeb | lines without terminal punctuation, short lines, duplicated characters, line breaks per word | 4 |
 
 A document is charged to the **first** rule that fires.
-Thresholds: datatrove's code (duplicated characters 0.01; its paper says 0.1).
+Thresholds: datatrove 0.10.1, the code that built FineWeb.
 :::
 
 ::: {.slide title="The Rules Remove Two Thirds of Our Crawl and 1.6% of FineWeb's Output"}
@@ -2485,19 +2511,21 @@ On the stream, FineWeb's own four rules never fire.
 :::
 :::
 
-::: {.slide title="English Rules Remove Every Hindi, Chinese, Japanese and Thai Page"}
-[Unspaced scripts]{.kicker}
+::: {.slide title="English Rules Remove Every Chinese, Japanese and Thai Page; Our Word Pattern Every Hindi Page"}
+[Other languages]{.kicker}
 
 | FineWeb-2, 500 pages each | removed | first rule |
 |---|---|---|
 | German | 96% | stop words |
 | Swahili | 93% | stop words |
-| Hindi | 100% | mean word length |
+| Hindi | 100% | mean word length (our `\w`) |
 | Chinese, Thai | 100% | alphabetic words |
 | Japanese | 100% | word count |
 
-- No spaces: one "word" per run between punctuation marks.
-- Hindi has spaces, but `\w` skips Devanagari vowel signs: words shatter.
+- Chinese, Japanese, Thai: no spaces, so one "word" per run between
+  punctuation marks.
+- Hindi has spaces, but our `\w` skips Devanagari vowel signs and words
+  shatter; datatrove's tokenizer keeps them. An artifact of our code.
 
 ::: {.d2l-note .warn}
 Every page had passed FineWeb-2's rules for its language.
@@ -2514,7 +2542,7 @@ With it, German loses 96%.
 ::: {.d2l-note}
 **Answer.** Without it German loses 28%, Swahili 16% instead of 93%. Chinese,
 Japanese, Thai and Hindi still lose 100%: their losses come from the word
-rules, not from English vocabulary.
+rules (for Hindi, from our word pattern), not from English vocabulary.
 :::
 :::
 :::
@@ -2563,7 +2591,7 @@ $$p(d) \;+\; p(\textrm{space})\,p(d \mid \textrm{space}), \qquad d = 0, \ldots, 
   an hour on four.
 
 ::: {.d2l-note .warn}
-Batched requests moved probabilities by up to 0.08. One request at a time:
+Batching changes the arithmetic, and near ties flip. One request at a time:
 identical bits on any server.
 :::
 :::
@@ -2607,8 +2635,9 @@ The label is "score ≥ 3"; the head fits the score by squared error.
 
 ::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** Squared error makes the head predict the conditional mean score.
-Only 1.4% of labels reach 3, so almost no page has a mean near 3: the
+**Answer.** A linear head on a frozen vector cannot tell every page apart;
+under squared error it predicts the mean score of the pages it confuses. Only
+1.4% of labels reach 3, so such a group hardly ever has a mean near 3: the
 predictions bunch between 0 and 2. A cut at 2.5 keeps nothing.
 :::
 :::
@@ -2628,21 +2657,21 @@ $$\textrm{precision} = \frac{\pi\,\textrm{TPR}}{\rho}
 - Checked at 50 thresholds: largest gap $6 \times 10^{-17}$.
 :::
 
-::: {.slide title="Label Noise of 0.5% Caps F1 Near 0.8 When Positives Are Rare"}
-[The ceiling]{.kicker}
+::: {.slide title="Qwen Reproduces Its Own Labels at an F1 of About 0.67"}
+[Label noise]{.kicker}
 
-Labels flip the true label $y^*$ with probability $\eta$ either way; a
+If labels flip the true label $y^*$ with probability $\eta$ either way, a
 perfect classifier of $y^*$ scores
 
 $$P = 1 - \eta, \qquad R = \frac{\pi^*(1-\eta)}{\pi^*(1-\eta) + (1-\pi^*)\eta}$$
 
-- Two Qwen protocols disagree on 19 of 2,000 rows: $2\eta(1-\eta) = 0.0095$,
-  $\eta \approx 0.005$.
-- Ceiling F1 **0.80** [0.68, 0.89]; every classifier is below it.
-
-::: {.d2l-note .warn}
-17 of the 19 disagreements go one way: the symmetric model is a simplification.
-:::
+- Two Qwen protocols disagree on 19 of 2,000 rows: $\eta \approx 0.005$,
+  ceiling **0.80** [0.68, 0.89], *if* the noise is symmetric.
+- It is not: 1.80% against 1.05% positive; 17 of the 19 go one way.
+- No model needed: one protocol against the other, 36 and 21 positives, 19
+  shared: F1 $= 2 \cdot 19/(36+21) \approx$ **0.67**.
+- Classifiers 0.26 to 0.56: below both (the logistic head's interval reaches
+  0.68).
 :::
 
 ::: {.slide title="Cutting at the Label's Own 3 Keeps Nothing"}
@@ -2688,7 +2717,7 @@ classifier prefers.
 | .uk, .ca, .in, .nz, .za | classifier | intervals include 0 | |
 
 The classifier removes 97.2% of the stream: it keeps about 3% of .com pages
-and about 1% of .au pages.
+and about 1% of .au pages (6 of 544), so the third is rough.
 :::
 
 ::: {.slide title="Check: Removal Rates of 97.0% and 98.9%. A Small Difference?"}
@@ -2741,10 +2770,10 @@ The classifier follows its rubric; the gap is between two definitions of quality
 [Recap]{.kicker}
 
 - Rules: c0 loses 69%, FineWeb's output 1.6%; 96% agreement with datatrove;
-  100% loss on unspaced scripts and Hindi.
+  100% loss on unspaced scripts, and on Hindi through our word pattern.
 - Lowest perplexity: boilerplate and machine-written prose.
 - Qwen: 1.4% at ≥ 3 against Llama's 9%; Spearman 0.76.
-- Head F1 0.44, released 0.47: no difference; ceiling about 0.8.
+- Head F1 0.44, released 0.47: no difference; Qwen against itself 0.67.
 - $t^*$ keeps about 3% of documents, 5% of tokens.
 - Audit: .au and shops removed more; near $t^*$ the judge keeps 89 in 100.
 

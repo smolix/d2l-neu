@@ -81,115 +81,24 @@ from d2l import jax as d2l
 
 ## Function Classes and Depth
 
-To reason cleanly about scaling up a network, consider its *function class*
-$\mathcal{F}$—the set of all input--output mappings achievable as its
-parameters range over all possible values. Training searches $\mathcal{F}$ for
-the function minimizing the empirical loss. When is a larger architecture with
-function class $\mathcal{F}'$ guaranteed to contain a solution at least as
-good as $\mathcal{F}$? Whenever the classes are *nested*,
-$\mathcal{F}\subseteq\mathcal{F}'$: because every function in $\mathcal{F}$
-remains available inside $\mathcal{F}'$, the best achievable training loss can
-only stay the same or drop. If the classes are *not* nested, expanding the
-model can inadvertently shift away from the target function $f^*$.
-:numref:`fig_functionclasses` illustrates both cases. Bear in mind, however,
-that nesting is purely a statement about the *existence* of a good function
-inside $\mathcal{F}'$—it guarantees neither that SGD will locate it nor that
-it will generalize better.
+Consider the *function class* $\mathcal{F}$ of an architecture—the set of input--output mappings achievable as its parameters vary. When is a larger architecture $\mathcal{F}'$ guaranteed to contain a solution with training loss at least as low as the best in $\mathcal{F}$? Whenever the classes are *nested*, $\mathcal{F} \subseteq \mathcal{F}'$ (:numref:`fig_functionclasses`). If $\mathcal{F} \not\subseteq \mathcal{F}'$, a larger class can drift away from the target $f^*$.
 
 ![Function classes of increasing size. On the left the classes are not nested: a larger class need not contain the functions of a smaller one, and need not come closer to the target $f^*$. On the right each class contains the previous ones, so the best function available can only improve as the class grows.](../img/functionclasses.svg)
 :label:`fig_functionclasses`
 
-Adding a layer yields nested function classes whenever the new layer can
-represent the identity function $f(\mathbf{x}) = \mathbf{x}$, ensuring the
-deeper architecture strictly subsumes the shallower one. Notice that a plain
-convolutional block $\mathbf{x} \mapsto \textrm{ReLU}(\textrm{BN}(\mathbf{W}\mathbf{x} +
-\mathbf{b}))$ *can* represent the identity on nonnegative inputs—just only at
-delicate, non-trivial settings of its weights. Plain and residual networks
-therefore both belong in the right-hand panel of
-:numref:`fig_functionclasses`: lack of nesting is *not* why plain networks
-degrade. Rather, gradient descent struggles to approximate the identity
-through a long chain of nonlinear layers. A residual block reparameterizes the
-layer so that the identity sits at the simplest point in parameter space,
-where the block's residual weights are zero.
+Adding a layer nests the function classes whenever the added layer can represent the identity mapping $f(\mathbf{x}) = \mathbf{x}$. A plain block $\mathbf{x} \mapsto \textrm{ReLU}(\textrm{BN}(\mathbf{W}\mathbf{x} + \mathbf{b}))$ *can* represent the identity on nonnegative inputs, so plain networks already lie in the nested right-hand panel of :numref:`fig_functionclasses`—their degradation is not a capacity failure, but an optimization failure: SGD struggles to approximate the identity across dozens of nonlinear layers. A residual block reparameterizes the layer so the identity sits at the origin $g(\mathbf{x}) = 0$ where the residual branch weights vanish.
 
 ## Residual Blocks
 :label:`subsec_residual-blks`
 
-:numref:`fig_residual_block` contrasts a standard block with a residual block.
-Both take an input $\mathbf{x}$ and pass their output into an activation
-function. Whereas the standard block on the left must learn the target
-mapping $f(\mathbf{x})$ directly, the residual block on the right learns the
-*residual mapping* $g(\mathbf{x}) = f(\mathbf{x}) - \mathbf{x}$ and adds
-$\mathbf{x}$ back via a bypass path, outputting $\mathbf{x} + g(\mathbf{x})$.
-Whenever the identity mapping is optimal, the residual block simply drives $g$
-toward zero—something achievable by zeroing out its final layer alone,
-regardless of earlier weights. The bypass arrow carrying $\mathbf{x}$ directly
-to the summation is called a *residual connection* or *shortcut connection*.
+Instead of learning a target mapping $f(\mathbf{x})$ directly, a residual block (:numref:`fig_residual_block`) learns the *residual* $g(\mathbf{x}) = f(\mathbf{x}) - \mathbf{x}$ and adds the input back through a *shortcut* (or *skip*) connection, outputting $\mathbf{x} + g(\mathbf{x})$. Driving the block to the identity requires only zeroing out the final layer of $g$.
 
 ![A regular block (left) must learn the mapping $f(\mathbf{x})$ directly. A residual block (right) learns the residual mapping $g(\mathbf{x}) = f(\mathbf{x}) - \mathbf{x}$ and adds the input back, so the identity mapping $f(\mathbf{x}) = \mathbf{x}$ corresponds to $g(\mathbf{x}) = 0$.](../img/arch-residual-concept.svg)
 :label:`fig_residual_block`
 
-Shortcut connections transform backward gradient flow just as profoundly.
-Consider stacking two residual blocks:
-$\mathbf{x}_1 = \mathbf{x}_0 + g_1(\mathbf{x}_0)$ and
-$\mathbf{x}_2 = \mathbf{x}_1 + g_2(\mathbf{x}_1)$, giving
-$\mathbf{x}_2 = \mathbf{x}_0 + g_1(\mathbf{x}_0) + g_2(\mathbf{x}_1)$. Its
-Jacobian with respect to $\mathbf{x}_0$ is
-$(\mathbf{I} + \partial g_2 / \partial \mathbf{x}_1)
-(\mathbf{I} + \partial g_1 / \partial \mathbf{x}_0)$, which expands into the
-identity matrix $\mathbf{I}$ plus terms routed through one or both residual
-branches. Extending this to arbitrary depth, the loss gradient always has an
-unimpeded identity highway reaching every block directly, without having to
-multiply through dozens of intervening convolutional matrices. In a plain
-network, by contrast, gradients can reach early layers only by passing through
-every single layer above them. From a continuous-time perspective, the update
-$\mathbf{x}_{l+1} = \mathbf{x}_l + g_l(\mathbf{x}_l)$ also resembles a
-unit-step Euler discretization of an ordinary differential equation
-$\dot{\mathbf{x}} = g(\mathbf{x}, t)$—a connection explored in depth in
-:numref:`sec_mdl-neural-odes-cnf`.
+Shortcuts also create a direct gradient highway. For two stacked blocks $\mathbf{x}_1 = \mathbf{x}_0 + g_1(\mathbf{x}_0)$ and $\mathbf{x}_2 = \mathbf{x}_1 + g_2(\mathbf{x}_1)$, the Jacobian $\partial \mathbf{x}_2 / \partial \mathbf{x}_0 = (\mathbf{I} + \partial g_2 / \partial \mathbf{x}_1)(\mathbf{I} + \partial g_1 / \partial \mathbf{x}_0)$ expands into the identity matrix $\mathbf{I}$ plus branch terms, letting loss gradients reach early blocks without multiplying through every intermediate weight matrix. (From a continuous-time viewpoint, $\mathbf{x}_{l+1} = \mathbf{x}_l + g_l(\mathbf{x}_l)$ is a unit-step Euler discretization of an ODE $\dot{\mathbf{x}} = g(\mathbf{x}, t)$, :numref:`sec_mdl-neural-odes-cnf`.) Note that :citet:`He.Zhang.Ren.ea.2016` verified that batch-normalized plain networks already maintain healthy gradient norms—so residual connections cure degradation even when gradients do not vanish.
 
-Strictly speaking, standard ResNet blocks depart slightly from this pure
-identity path in two places: the post-addition ReLU zeroes out gradients
-wherever the sum is negative, and downsampling shortcuts insert a
-$1 \times 1$ convolution with batch normalization to match tensor shapes. (An
-exercise below explores *pre-activation* ResNets, which remove the ReLU from
-the shortcut path.)
-
-It is worth being candid about how much these two arguments explain. They make
-it completely clear why residual networks optimize so cleanly—as we verify in
-:numref:`subsec_plain_residual`—yet they still do not fully diagnose why plain
-networks degrade in the first place. Vanishing gradients might seem the
-obvious culprit, but :citet:`He.Zhang.Ren.ea.2016` observed that batch-normalized
-plain networks maintained healthy gradient norms throughout training while
-still suffering degradation. Just as with batch normalization, the empirical
-remedy is currently better understood than the underlying pathology.
-
-Concretely, ResNet's basic block adopts VGG's $3 \times 3$ design: two
-$3 \times 3$ convolutions with the same output channel count, each followed by
-batch normalization, with a ReLU between them. Both convolutions omit biases
-because the ensuing batch normalization cancels any additive offset
-(:numref:`sec_batch_norm`). The block then adds the shortcut input to the
-output of the second batch normalization and passes the sum through a final
-ReLU.
-
-Let us check when this concrete block computes the identity. Because the
-residual branch terminates in batch normalization, setting that layer's scale
-$\gamma$ and shift $\beta$ to zero zeroes out the entire branch. Passing
-$\mathbf{x} + 0$ through the final ReLU then yields $\mathbf{x}$ verbatim
-whenever $\mathbf{x} \ge 0$—which holds for every block in the network, since
-each sits directly after a ReLU. Note that with standard initialization
-($\gamma = 1$), the block does not *start* as the identity; rather, the
-identity lies at an effortless zero-scale point in parameter space. (Later
-training recipes such as :citet:`He.Zhang.Zhang.ea.2019` indeed initialize
-each block's final $\gamma$ to zero; we keep the standard $\gamma = 1$ here.)
-
-Finally, adding $\mathbf{x}$ and $g(\mathbf{x})$ requires matching tensor
-shapes. Whenever a block alters the channel count or downsamples spatially
-with stride 2, we insert a $1 \times 1$ convolution with matching stride and
-batch normalization along the shortcut to project $\mathbf{x}$ to the target
-shape. (At stride 2, a $1 \times 1$ convolution samples only one of every
-four spatial entries—a minor flaw repaired by an exercise below.) The
-`Residual` class implements both variants seamlessly.
+Concretely, ResNet's basic `Residual` block stacks two bias-free $3 \times 3$ convolutions with batch normalization and an intermediate ReLU, adds the shortcut input $\mathbf{x}$ to the second batch norm's output, and applies a final ReLU. Setting the second batch norm's $\gamma = \beta = 0$ zeroes out the branch and recovers $\textrm{ReLU}(\mathbf{x}) = \mathbf{x}$ on nonnegative inputs. Whenever `use_1x1conv=True` or `strides != 1` changes channel width or spatial resolution, the shortcut applies a stride-matched $1 \times 1$ convolution and batch normalization so the addition is well defined.
 
 ```{.python .input #resnet-residual-blocks-1}
 %%tab mxnet
@@ -1296,160 +1205,30 @@ of nearly every modern architecture, including the Transformers of
 
 ## Exercises
 
-1. **Inception versus residual blocks.** In the `arch` of
-   GoogLeNet (:numref:`sec_googlenet`), the second block of the middle group has
-   branch widths $c_1 = 160$, $c_2 = (112, 224)$, $c_3 = (24, 64)$, and
-   $c_4 = 64$, and it maps 512 input channels to 512 output channels.
-   Compare it with a 512-channel `Residual` block that uses an identity
-   shortcut.
-    1. Count the convolution weights and the multiply-adds per output
-       pixel of both blocks, ignoring biases and normalization
-       parameters.
-    1. A `Residual` block whose residual branch outputs zero is the
-       identity on nonnegative inputs. Determine whether any choice of
-       parameters makes the Inception block the identity on nonnegative
-       inputs, and state what the answer implies for deepening GoogLeNet
-       by inserting Inception blocks.
+1. **Inception versus residual blocks.** In GoogLeNet's `arch` (:numref:`sec_googlenet`), the second block of the middle stage has branch widths $c_1 = 160$, $c_2 = (112, 224)$, $c_3 = (24, 64)$, and $c_4 = 64$, mapping 512 input channels to 512 output channels. Compare it with a 512-channel `Residual` block with an identity shortcut:
+    1. Count the convolutional weights and multiply-adds per output pixel of both blocks (ignoring biases and batch-norm parameters).
+    1. A `Residual` block whose branch outputs zero computes the identity on nonnegative inputs (which hold whenever the block follows a ReLU); check what `bn2` outputs in training and prediction modes when `conv2` is zeroed, and state which `bn2` parameters make the block the exact identity in both modes. Can any choice of parameters make the four-branch Inception block compute the identity on nonnegative inputs?
 
-1. **Pre-activation ordering.** :citet:`He.Zhang.Ren.ea.2016*1`
-   moved batch normalization and the ReLU in front of each convolution of
-   the residual branch and removed the ReLU after the addition (their
-   Figure 1), so that a block computes $\mathbf{x} + g(\mathbf{x})$ with
-   the identity path left untouched. The DenseNet convolution block in
-   :numref:`sec_densenet` uses this "normalization, activation,
-   convolution" order.
-    1. Stack $K$ pre-activation blocks,
-       $\mathbf{x}_k = \mathbf{x}_{k-1} + g_k(\mathbf{x}_{k-1})$ for
-       $k = 1, \ldots, K$. Write $\mathbf{x}_K$ in terms of
-       $\mathbf{x}_0$ and the branch outputs, and show that the Jacobian
-       $\partial \mathbf{x}_K / \partial \mathbf{x}_0$ contains the
-       identity matrix as an additive term.
-    1. Now stack $K$ `Residual` blocks with identity shortcuts, each of
-       which applies a ReLU after the addition. Which factor takes the
-       place of the identity term in
-       $\partial \mathbf{x}_K / \partial \mathbf{x}_0$, and what does it
-       imply for the gradient that reaches the first block through the
-       shortcuts?
+1. **Pre-activation ordering.** :citet:`He.Zhang.Ren.ea.2016*1` moved batch normalization and ReLU *in front* of each convolution ($	extrm{BN} \to \textrm{ReLU} \to \textrm{Conv}$) and removed the post-addition ReLU, so each block computes $\mathbf{x}_k = \mathbf{x}_{k-1} + g_k(\mathbf{x}_{k-1})$ with an untouched identity highway (the same ordering used inside DenseNet blocks in :numref:`sec_densenet`).
+    1. For $K$ stacked pre-activation blocks, express $\mathbf{x}_K$ in terms of $\mathbf{x}_0$ and the branch outputs, and show that the Jacobian $\partial \mathbf{x}_K / \partial \mathbf{x}_0$ contains the exact identity matrix $\mathbf{I}$ as an additive term.
+    1. For $K$ standard post-activation `Residual` blocks (each applying a ReLU after the addition), what factor replaces $\mathbf{I}$ in $\partial \mathbf{x}_K / \partial \mathbf{x}_0$?
 
-1. **Nested function classes.** The containment argument of
-   :numref:`fig_functionclasses` applies to a deeper network when each
-   added block can represent the identity on every input it receives.
-   Every `Residual` block in `ResNet18` receives nonnegative inputs.
-    1. Set the weights of `conv2` in a `Residual` block with an identity
-       shortcut to zero. Determine the output of `bn2` in
-       training mode and in prediction mode, and decide in each mode
-       whether the block is then the identity on nonnegative inputs.
-       Name parameter values of `bn2` that make the block the identity
-       in both modes.
-    1. ResNet-34 (Table 1 of :citet:`He.Zhang.Ren.ea.2016`) has the same
-       stage widths as `ResNet18` and more blocks per stage. Decide
-       whether ResNet-34 represents every function that `ResNet18`
-       represents, and justify the answer block by block.
+1. [code] **Gradients of plain networks.** ● :citet:`He.Zhang.Ren.ea.2016` noted that batch-normalized plain networks do not suffer from vanishing gradients despite degrading with depth. Verify this on the four 20- and 56-layer networks of :numref:`subsec_plain_residual`:
+    1. At initialization and after 1 epoch of training, compute the loss gradient on one minibatch and plot the Frobenius norm of each convolutional layer's weight gradient against its layer index for all four networks. Do the 56-layer plain network's gradients vanish toward the input?
+    1. Train the 56-layer plain network for 20 epochs instead of 5. Does its training loss catch up with the 20-layer plain network?
 
-1. [code] **Gradients of plain networks.** ● According to
-   :citet:`He.Zhang.Ren.ea.2016`, the gradients of their plain networks
-   kept a healthy size. Check this on the four networks that
-   :numref:`subsec_plain_residual` trains.
-    1. At initialization, compute the gradient of the loss on one minibatch
-       and plot the norm of the gradient of each convolutional layer's
-       weights against the index of the layer, for all four networks. Do
-       the gradients of the 56-layer plain network shrink toward the input?
-    1. Repeat the measurement after one epoch of training.
-    1. Train the 56-layer plain network for 20 epochs instead of 5. Does
-       its training loss catch up with that of the 20-layer plain network
-       trained equally long? What does the answer say about whether the
-       deep plain network is slow or stuck?
+1. [code] **ResNet-34 and ResNet-50 bottlenecks.** ● Table 1 of :citet:`He.Zhang.Ren.ea.2016` defines ResNet-18 through ResNet-152 by stage depths and block type.
+    1. Build ResNet-34 (`arch=((3, 64), (4, 128), (6, 256), (3, 512))`) using `ResNet` and compare its parameter count with `ResNet18`.
+    1. ResNet-50 replaces the two-layer `Residual` block with a three-layer bottleneck block ($1 \times 1$ reducing width $4\times$, $3 \times 3$, and $1 \times 1$ restoring width—implemented by `ResNeXtBlock` with `groups=1, bot_mul=0.25`) at $4\times$ wider stage outputs `(256, 512, 1024, 2048)`. Compare the parameter count and multiply-adds of one ResNet-50 bottleneck block of width $4c$ against one ResNet-34 `Residual` block of width $c$, then override `stage` in a subclass of `ResNet` to build ResNet-50 and verify its total parameter count.
 
-1. **Paths through a residual stack.** A stack of $K$ residual blocks can
-   be unraveled into an ensemble of paths: on each block, the signal
-   either passes through the block's body or skips it
-   :cite:`Veit.Wilber.Belongie.2016`.
-    1. How many end-to-end paths pass through exactly $\ell$ of the $K$
-       bodies? Verify your formula by explicit enumeration for $K = 4$.
-    1. Relate the distribution of path lengths to why very deep residual
-       networks remain trainable where equally deep plain networks are
-       not.
+1. [code] **ResNet-D downsampling shortcut.** In a stride-2 `Residual` block, the $1 \times 1$ stride-2 shortcut convolution samples only one of every four spatial positions, discarding the other three. :citet:`He.Zhang.Zhang.ea.2019` replace it with $2 \times 2$ stride-2 average pooling followed by a stride-1 $1 \times 1$ convolution and batch normalization. Implement this ResNet-D shortcut in a subclass of `Residual`, confirm that it leaves output shapes and parameter counts unchanged, and compare its 10-epoch Fashion-MNIST validation accuracy against `ResNet18` across several runs.
 
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 11.2.*
+1. [code] **Pre-activation ResNet-18.** ● Implement the pre-activation block of :citet:`He.Zhang.Ren.ea.2016*1` as a variant of `Residual`, override `stage` in a subclass of `ResNet` to stack it, and compare its training curve against `ResNet18`.
 
-1. [code] **ResNet variants.** ● Table 1 of :citet:`He.Zhang.Ren.ea.2016`
-   specifies ResNet-18 to ResNet-152 by the number of blocks per stage and
-   by the block type.
-    1. Build ResNet-34 by passing its block counts as `arch` to `ResNet`
-       and report its parameter count against `ResNet18`.
-    1. ResNet-50 and its deeper relatives use a bottleneck block: a
-       $1 \times 1$ convolution that reduces the width fourfold, a
-       $3 \times 3$ convolution, and a $1 \times 1$ convolution that
-       restores the width. `ResNeXtBlock` with `groups=1` and
-       `bot_mul=0.25` implements this block. Compare its parameter count
-       and multiply-adds with those of `Residual` at the same input and
-       output width, and with those of `Residual` at a quarter of that
-       width, which is the width of the matching ResNet-34 stage.
-    1. Override `stage` in a subclass of `ResNet` so that it stacks
-       bottleneck blocks, build ResNet-50, and compare its parameter count
-       with ResNet-34's.
-
-1. [code] **ResNet-D shortcut.** In a downsampling `Residual` block, the
-   stride-2 $1 \times 1$ convolution on the shortcut reads one of every
-   four input positions. :citet:`He.Zhang.Zhang.ea.2019` replace it by
-   $2 \times 2$ average pooling with stride 2, followed by a stride-1
-   $1 \times 1$ convolution and batch normalization.
-    1. Implement this shortcut in a subclass of `Residual` and check on a
-       random input that the new block has the same output shape and the
-       same number of parameters as the original one.
-    1. Build a ResNet-18 from the new block and train it with the settings
-       of this section. Compare its validation accuracy with that of
-       `ResNet18` over several runs of each network. Is the difference
-       larger than the variation between runs?
-
-1. [code] **Pre-activation ResNet-18.** ● Implement the pre-activation
-   block of :citet:`He.Zhang.Ren.ea.2016*1` as a variant of `Residual`,
-   override `stage` in a subclass of `ResNet` so that it stacks the new
-   block, and compare the training curves of the resulting ResNet-18 with
-   those of `ResNet18`.
-
-1. [code] **DenseNet.** ● Build and train the DenseNet of
-   :numref:`sec_densenet`, then account for its parameters and its memory.
-    1. Implement the convolution block of a dense block (batch
-       normalization, a ReLU, and a $3 \times 3$ convolution without bias),
-       a `DenseBlock` that applies `num_convs` such blocks and concatenates
-       the output of each one to its input along the channel axis, and a
-       transition layer (batch normalization, a ReLU, a $1 \times 1$
-       convolution without bias, and $2 \times 2$ average pooling with
-       stride 2). Check on a random input with 3 channels that a dense
-       block with two convolutions and growth rate 10 returns
-       $3 + 10 + 10 = 23$ channels, and that a transition layer with 10
-       channels reduces them to 10 and halves the height and the width.
-    1. Assemble a DenseNet from the stem of `ResNet`, four dense blocks of
-       four convolutions each with growth rate 32, a transition layer that
-       halves the number of channels between consecutive dense blocks, and
-       batch normalization and a ReLU before the head of `ResNet`. Train it
-       with the settings of this section and compare its parameter count,
-       validation accuracy, and time per epoch with those of `ResNet18`.
-    1. :citet:`Huang.Liu.Van-Der-Maaten.ea.2017` report that DenseNets
-       match the accuracy of comparable ResNets with fewer parameters,
-       whereas :citet:`pleiss2017memory` had to devise memory-efficient
-       implementations for them. Consider a dense block whose $n$
-       convolutions each emit $r$ channels on an input with $c$ channels,
-       and compare it with $n$ `Residual` blocks of constant width $c$.
-       Ignore biases and batch normalization parameters. Your `DenseBlock`
-       builds the input of each convolution as a new concatenated tensor,
-       and a naive implementation keeps all of these inputs for the
-       backward pass. How many channels does the $i$-th convolution
-       consume? Sum them over the block and compare the sum with the $2n$
-       inputs of width $c$ that the $3 \times 3$ convolutions of the
-       residual blocks keep.
-    1. Count the weights of the dense block's $3 \times 3$ convolutions
-       and compare them with those of the $n$ residual blocks. For which
-       growth rates $r$ does the dense block use fewer parameters?
-    1. :citet:`pleiss2017memory` store only the $c + nr$ channels of
-       distinct feature maps and discard each concatenated tensor and its
-       normalized version after use. For $c = 64$, $r = 32$, and $n = 6$,
-       compare this storage with your sum from the third part. Explain
-       why the backward pass must then recompute concatenations, batch
-       normalizations, and ReLUs, but no convolution.
+1. [code] **DenseNet.** ● Build and train the DenseNet of :numref:`sec_densenet`, then account for its parameters and activation memory.
+    1. Implement a `DenseBlock` that applies `num_convs` units of $(\textrm{BN} \to \textrm{ReLU} \to \textrm{Conv}_{3\times 3}\text{ without bias})$ and concatenates each output of `growth_rate` channels to its input along the channel axis, together with a transition layer $(\textrm{BN} \to \textrm{ReLU} \to \textrm{Conv}_{1\times 1}\text{ without bias} \to \textrm{AvgPool}_{2\times 2, s=2})$. Check on a 3-channel input that a dense block with 2 convolutions and growth rate 10 returns $3 + 10 + 10 = 23$ channels, and a transition layer with 10 channels reduces them to 10 while halving height and width.
+    1. Assemble a DenseNet from `ResNet`'s stem, four dense blocks of 4 convolutions each with growth rate 32, transition layers that halve channels between consecutive dense blocks, and $\textrm{BN} \to \textrm{ReLU}$ before `ResNet`'s head. Train it on $96 \times 96$ Fashion-MNIST and compare its parameter count, validation accuracy, and time per epoch with `ResNet18`.
+    1. Consider a dense block whose $n$ convolutions each emit $r$ channels on a $c$-channel input, versus $n$ `Residual` blocks of constant width $c$. In a naive implementation that keeps every concatenated input tensor for the backward pass, how many channels does the $i$-th convolution consume, and what is their sum over $i = 1, \ldots, n$? Compare this sum with the $2nc$ channels kept by $n$ residual blocks and the $c + nr$ distinct channels stored by :citet:`pleiss2017memory` for $c = 64, r = 32, n = 6$.
    :exlabel:`ex_resnet-densenet`
 
 :begin_tab:`mxnet`

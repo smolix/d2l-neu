@@ -244,88 +244,6 @@ d2l.plot([[t / steps_per_epoch for t in steps_a],
          legend=['step decay (30 epochs)', 'cosine decay (45 epochs)'])
 ```
 
-Let us construct Recipe B's cosine schedule with a peak rate of 0.002 and
-verify its values at step 0, at the end of warmup, halfway through decay, and
-at the final step.
-
-:begin_tab:`mxnet`
-A Gluon optimizer calls a schedule object with the number of the update,
-counted from 1. The class `Schedule` turns the multiplier
-`d2l.cosine_warmup` into such an object.
-:end_tab:
-
-:begin_tab:`pytorch`
-`LambdaLR` multiplies the base rate of the optimizer by a function of the
-step. Calling `scheduler.step()` after every optimizer step advances it by
-one minibatch.
-:end_tab:
-
-:begin_tab:`tensorflow`
-A Keras optimizer calls a `LearningRateSchedule` object with its step
-counter. The class `Schedule` turns the multiplier `d2l.cosine_warmup` into
-such an object.
-:end_tab:
-
-:begin_tab:`jax`
-Optax accepts any function of the step as a learning rate, so the schedule
-is a plain function.
-:end_tab:
-
-```{.python .input #training-recipes-cosine-schedules-with-warmup-2}
-%%tab mxnet
-class Schedule(mx.lr_scheduler.LRScheduler):
-    """The rate base_lr * factor(t), with t counted from 0."""
-    def __init__(self, factor, base_lr=0.01):
-        super().__init__(base_lr)
-        self.factor = factor
-
-    def __call__(self, num_update):  # MXNet counts updates from 1
-        return self.base_lr * self.factor(num_update - 1)
-
-T, t_w = 45 * 79, 3 * 79
-schedule = Schedule(lambda t: d2l.cosine_warmup(t, T, t_w), base_lr=2e-3)
-[round(schedule(t + 1), 6) for t in (0, t_w, (T + t_w) // 2, T - 1)]
-```
-
-```{.python .input #training-recipes-cosine-schedules-with-warmup-2}
-%%tab pytorch
-T, t_w = 45 * 79, 3 * 79
-optim = torch.optim.SGD([nn.Parameter(torch.zeros(1))], lr=2e-3)
-scheduler = torch.optim.lr_scheduler.LambdaLR(
-    optim, lambda t: d2l.cosine_warmup(t, T, t_w))
-rates = []
-for t in range(T):  # One optimizer step and one scheduler step per minibatch
-    rates.append(scheduler.get_last_lr()[0])
-    optim.step()
-    scheduler.step()
-[round(rates[t], 6) for t in (0, t_w, (T + t_w) // 2, T - 1)]
-```
-
-```{.python .input #training-recipes-cosine-schedules-with-warmup-2}
-%%tab tensorflow
-class Schedule(tf.keras.optimizers.schedules.LearningRateSchedule):
-    """The rate base_lr * factor(step)."""
-    def __init__(self, factor, base_lr):
-        self.factor, self.base_lr = factor, base_lr
-
-    def __call__(self, step):
-        return self.base_lr * self.factor(step)
-
-T, t_w = 45 * 79, 3 * 79
-schedule = Schedule(lambda t: d2l.cosine_warmup(t, T, t_w), base_lr=2e-3)
-[round(float(schedule(t)), 6) for t in (0, t_w, (T + t_w) // 2, T - 1)]
-```
-
-```{.python .input #training-recipes-cosine-schedules-with-warmup-2}
-%%tab jax
-T, t_w = 45 * 79, 3 * 79
-schedule = lambda t: 2e-3 * d2l.cosine_warmup(t, T, t_w)
-[round(float(schedule(t)), 6) for t in (0, t_w, (T + t_w) // 2, T - 1)]
-```
-
-The schedule prints 0, 0.002, 0.001, and nearly 0, matching
-:eqref:`eq_cosine_warmup` exactly.
-
 ### Mixup
 
 *Mixup* :cite:`zhang2018mixup` regularizes a classifier by training on convex
@@ -925,6 +843,15 @@ objective.
 
 ```{.python .input #training-recipes-one-network-two-recipes-2}
 %%tab mxnet
+class Schedule(mx.lr_scheduler.LRScheduler):
+    """The rate base_lr * factor(t), with t counted from 0."""
+    def __init__(self, factor, base_lr=0.01):
+        super().__init__(base_lr)
+        self.factor = factor
+
+    def __call__(self, num_update):  # MXNet counts updates from 1
+        return self.base_lr * self.factor(num_update - 1)
+
 class ClassicRecipe(ResNet18):
     """Recipe A: SGD with momentum, weight decay, warmup, step decay."""
     def configure_optimizers(self):
@@ -983,6 +910,14 @@ class ModernRecipe(ResNet18):
 
 ```{.python .input #training-recipes-one-network-two-recipes-2}
 %%tab tensorflow
+class Schedule(tf.keras.optimizers.schedules.LearningRateSchedule):
+    """The rate base_lr * factor(step)."""
+    def __init__(self, factor, base_lr):
+        self.factor, self.base_lr = factor, base_lr
+
+    def __call__(self, step):
+        return self.base_lr * self.factor(step)
+
 class CoupledSGD(tf.keras.optimizers.SGD):
     """SGD that adds weight decay to the gradient (L2 regularization)."""
     # The weight_decay of a Keras optimizer would shrink the weights directly
@@ -1090,161 +1025,33 @@ $96 \times 96$; validation accuracy, range over repeated runs).
 | A (2015): SGD, warmup, step decay | 30 | 89–90.5% |
 | Compact modern: AdamW, cosine, smoothing, Mixup | 45 | 90.5–91% |
 
-The improvement is modest in absolute scale yet remarkably reliable: in every
-paired run, the compact modern recipe beats Recipe A on the same data split by
-roughly 0.5 to 1.5 percentage points. (On ImageNet, the full modern recipe
-adds over 4 points; here we use only 10,000 small grayscale images, 45 epochs,
-and a subset of the menu.) Notice also what a bundled comparison *cannot*
-reveal: because we swapped optimizer, schedule, loss, augmentation, and epoch
-count simultaneously, this experiment cannot isolate which single ingredient
-earned the gain—pinning that down requires a one-at-a-time ablation study,
-explored in the exercises below.
+In every paired run on the same 10,000-image subset, `ModernRecipe` beats `ClassicRecipe` by 0.5--1.5 percentage points (even while omitting RandAugment, CutMix, stochastic depth, and EMA). Three practical lessons accompany this comparison:
 
-Inspecting the loss curves teaches two equally important practical lessons.
-Under Recipe A, training loss collapses toward zero while validation loss
-climbs back up to 0.4--0.5 even as validation accuracy keeps rising—a textbook
-display of the logit overconfidence that label smoothing targets. Under the
-modern recipe, validation loss decreases smoothly below 0.4, yet *training*
-loss remains higher than Recipe A's—and even higher than its own validation
-loss—simply because Mixup and label smoothing evaluate a harder, softer
-training objective than plain validation cross-entropy. Never compare raw
-training losses across different recipes. Equally important, hyperparameters
-do not transfer across optimizers (AdamW's learning rate is $25\times$ smaller
-than SGD's), so honest ablations must retune around every change—which is
-why rigorous recipe studies like :citet:`wightman2021resnet` demand heavy
-compute.
-
-## Comparing Published Results
-
-How should a skeptical reader approach tables of published benchmark
-accuracies? With healthy caution. When training recipes alone can move a
-fixed ResNet-50 by more than four points on ImageNet, a one-point advantage
-between two architectures means very little unless both were trained under
-comparable, properly tuned recipes. Rigorous papers therefore retrain
-baselines using the same modern recipe rather than copying stale numbers from
-older publications.
-
-Even under perfectly matched recipes, single-benchmark test sets carry their
-own limits once accuracies cluster tightly. When researchers collected
-ImageNet-V2 following the original dataset-construction protocol
-:cite:`Deng.Dong.Socher.ea.2009`, every model dropped 11 to 14 points—yet
-their relative ranking held steady :cite:`Recht.Roelofs.Schmidt.ea.2019`,
-showing that models had not overfit the original validation set so much as
-encountered slightly harder images. Meanwhile, multi-label re-annotation of
-ImageNet's validation set revealed that many apparent "errors" stem from
-ambiguous photographs containing multiple valid objects
-:cite:`beyer2020imagenetreal`, so sub-point ImageNet gains do not always
-reflect genuine visual superiority. When two backbones sit within a point on
-ImageNet top-1, evaluating downstream transfer to object detection or
-segmentation is often far more revealing.
+1. **Bundled comparisons vs. ablations:** Because optimizer, schedule, loss, augmentation, and epoch budget changed together, only a one-at-a-time ablation (Exercise 4) can isolate which ingredient contributed most—and because optimal learning rates differ $25\times$ between AdamW ($0.002$) and SGD ($0.05$), any optimizer swap must retune the learning rate.
+2. **Never compare raw training losses across recipes:** Under `ClassicRecipe`, training loss plunges toward zero while validation loss rebounds to 0.4--0.5 as logits grow overconfident; under `ModernRecipe`, validation loss drops below 0.4 while training loss stays *higher* than validation loss because Mixup and label smoothing evaluate a soft, blended training objective.
+3. **Reading published leaderboards:** Because training recipes alone move a fixed ResNet-50 by $>4$ ImageNet points :cite:`wightman2021resnet`, a 1-point claim over a baseline copied from an older paper confounds recipe with architecture. Even under matched recipes, test-set noise and multi-object ambiguity on ImageNet :cite:`Recht.Roelofs.Schmidt.ea.2019,beyer2020imagenetreal` mean that transfer to detection or segmentation is often a sharper test of backbone quality than sub-point ImageNet top-1 deltas.
 
 ## Summary
 
-Between 2015 and the early 2020s, high-accuracy convnet recipes evolved across
-every dimension—optimizer (AdamW), schedule (warmup with cosine decay),
-augmentation (RandAugment, Mixup, CutMix), regularization (label smoothing,
-stochastic depth), training duration, and weight averaging (EMA)—boosting an
-unchanged ResNet-50 by more than four ImageNet points. Each mechanism takes
-only a few lines of code, and on a 10,000-image Fashion-MNIST benchmark, even
-a compact subset of the modern recipe consistently beats a 2015 SGD recipe on
-the same ResNet-18 by 0.5--1.5 percentage points. Fair architectural
-comparisons therefore require matched, well-tuned training recipes—and in
-practice, upgrading a training recipe is often cheaper and more rewarding than
-inventing a new architecture. Next, :numref:`sec_convnext` fixes the modern
-recipe and asks how far a classic ResNet architecture can be pushed by
-modernizing its design one component at a time.
+Between 2015 and the early 2020s, convnet training recipes evolved across every axis—AdamW with decoupled weight decay, cosine warmup schedules, RandAugment/Mixup/CutMix, label smoothing, stochastic depth, longer training horizons, and EMA weight averaging—lifting an unchanged ResNet-50 from 76.1% to 80.4% on ImageNet. Each ingredient takes only a few lines of code, and a compact subset reliably improves ResNet-18 on `FashionMNIST10k`. Next, :numref:`sec_convnext` holds the modern recipe fixed and modernizes the ResNet architecture itself one step at a time.
 
 ## Exercises
 
-1. **Binary cross-entropy and Mixup.** :citet:`wightman2021resnet` train
-   with a binary cross-entropy loss that treats each class as an independent
-   yes/no target. Explain why this loss pairs naturally with Mixup and
-   CutMix. Consider an image that contains parts of two classes,
-   and contrast how softmax and sigmoid outputs can represent it.
+1. **Binary cross-entropy and Mixup.** :citet:`wightman2021resnet` train ImageNet classifiers with binary cross-entropy (treating each of the $K$ classes as an independent sigmoid binary classification task) rather than $K$-way softmax cross-entropy. Explain why independent sigmoid outputs pair naturally with Mixup and CutMix when a blended image contains objects from two distinct classes at once.
 
-1. [code] **CutMix.** CutMix :cite:`yun2019cutmix` draws $\lambda$
-   uniformly from $[0, 1]$, that is, from $\mathrm{Beta}(1, 1)$ rather than
-   the $\mathrm{Beta}(0.2, 0.2)$ the compact modern recipe uses for Mixup.
-   It pastes into each image a rectangle from its shuffled partner that
-   covers a fraction $1 - \lambda$ of the image area. Implement CutMix as a
-   variant of `mixup`, and mix the labels as in :eqref:`eq_mixup` with
-   $\lambda$ replaced by the fraction of the area actually kept, since a
-   rectangle clipped at the image border covers less than $1 - \lambda$.
-   Train the compact modern recipe on `FashionMNIST10k` once with CutMix in
-   place of Mixup and once with the two alternating at random from
-   minibatch to minibatch, as modern recipes do. Compare the validation
-   accuracy of both runs with the range in :numref:`tab_recipe_results`.
+1. [code] **CutMix.** CutMix :cite:`yun2019cutmix` samples $\lambda \sim \mathrm{Beta}(1, 1) = \mathrm{Uniform}(0, 1)$ and pastes a random rectangular patch from a shuffled partner image covering a target area fraction $1 - \lambda$. Implement `cutmix` as a drop-in variant of `mixup`, mixing the one-hot labels using the *exact* fraction of pixels kept after clipping the rectangle to the image borders. Train `ModernRecipe` on `FashionMNIST10k` once with CutMix in place of Mixup and once alternating randomly between Mixup and CutMix each minibatch, and compare validation accuracy against :numref:`tab_recipe_results`.
 
-1. [code] **Weight averaging horizon.** Add the `EMA` class to
-   `ModernRecipe`: update the shadow copy after every optimizer step, by
-   subclassing `d2l.Trainer`, and evaluate with the shadow weights. Sweep
-   the decay $\rho$ of :eqref:`eq_ema` over 0.9, 0.99, and 0.999. Count
-   the optimizer steps at which `d2l.cosine_warmup` holds the learning rate
-   below a tenth of its peak, and relate the best decay to that count
-   through the averaging horizon of about $1/(1-\rho)$ steps. Batch
-   normalization keeps running statistics that are not parameters; which
-   statistics should the averaged model use?
+1. [code] **Weight averaging horizon (EMA).** Integrate the `EMA` class into `ModernRecipe` by updating the shadow weights after every optimizer step and evaluating validation accuracy with the shadow parameters. Sweep the decay $\rho \in \{0.9, 0.99, 0.999\}$ in :eqref:`eq_ema`. Relate the best-performing $\rho$ to the effective horizon $1/(1-\rho)$ and the total number of steps ($45 \times 79 = 3{,}555$), and explain how batch-normalization running statistics should be handled when evaluating EMA weights.
 
-1. [code] **Recipe ablation.** ● In :numref:`tab_recipe_results` the
-   compact modern recipe beats recipe A by half a point to a point and a
-   half. Whenever a configuration below changes the optimizer, retune the
-   learning rate.
-    1. Train both recipes on `FashionMNIST10k` five times each and estimate
-       the standard deviation of the validation accuracy across runs. How large
-       must the difference between two configurations be before one run of
-       each resolves it?
-    1. Starting from the compact modern recipe, replace one ingredient at a
-       time by its recipe A counterpart: remove Mixup, remove label
-       smoothing, replace the warmup and cosine decay by recipe A's step
-       decay, replace AdamW by recipe A's SGD with momentum, and shorten the
-       budget from 45 to 30 epochs. Which of the five changes in validation
-       accuracy exceed the threshold of (a), and do the five add up to the
-       total gap?
-    1. Train the compact modern recipe with both the optimizer and the
-       schedule of recipe A. Together with the compact modern recipe and the
-       optimizer and schedule replacements of (b), this run fills a
-       $2 \times 2$ table of optimizer against schedule. Do the effects of
-       the two ingredients interact?
+1. [code] **One-at-a-time recipe ablation.** ● In :numref:`tab_recipe_results`, `ModernRecipe` beats `ClassicRecipe` by 0.5--1.5 percentage points when all five ingredients change at once.
+    1. Run both `ClassicRecipe` and `ModernRecipe` five times on `FashionMNIST10k` to estimate the run-to-run standard deviation of validation accuracy.
+    1. Starting from `ModernRecipe`, revert one ingredient at a time to its `ClassicRecipe` counterpart: (i) remove Mixup, (ii) remove label smoothing, (iii) replace cosine warmup with `step_decay`, (iv) replace AdamW with momentum SGD (retuning the peak learning rate to $0.05$), and (v) shorten training from 45 to 30 epochs. Which individual changes exceed the run-to-run noise floor?
+    1. Complete the $2 \times 2$ table of optimizer (SGD vs. AdamW) $\times$ schedule (`step_decay` vs. `cosine_warmup`) with Mixup and label smoothing enabled. Do the optimizer and schedule interact?
 
-1. [code] **Weight decay and batch normalization.** ● The training
-   refinements collected by :citet:`He.Zhang.Zhang.ea.2019` apply weight
-   decay (:numref:`sec_weight_decay`) only to the weights of convolutional
-   and linear layers and exempt every bias and every scale
-   $\boldsymbol{\gamma}$ and shift $\boldsymbol{\beta}$ of batch
-   normalization.
-    1. When batch statistics are used, the output of batch normalization
-       applied to a convolution is unchanged if the convolution's weights
-       $\mathbf{W}$ are multiplied by any $c > 0$. What does weight decay on
-       $\mathbf{W}$ then do to the loss, to $\|\mathbf{W}\|$ over the course
-       of training, and to the effective step size of each gradient update?
-    1. Implement both variants, decaying every parameter and decaying only
-       the convolutional and linear weights, on `FashionMNIST10k` under the
-       compact modern recipe. Compare validation accuracy and plot the norms of
-       the exempted parameters over training.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 11.7.*
-
-1. [code] **Stochastic depth in the recipe.** ● The compact modern recipe
-   omits stochastic depth. Add it back.
-    1. Extend `StochasticResidual` to the downsampling blocks and build the
-       ResNet-18 of :numref:`sec_resnet` from it, with the drop probability
-       growing linearly from 0 in the first block to $p_{\max}$ in the last.
-       What is the expected number of residual branches kept ($b = 1$) for
-       one training example, as a function of $p_{\max}$?
-    1. Sweep $p_{\max}$ over 0.1, 0.2, and 0.5 on `FashionMNIST10k` under
-       the compact modern recipe, which is itself the case $p_{\max} = 0$.
-       Does any value raise validation accuracy by more than the run-to-run
-       spread of :numref:`tab_recipe_results`? How does the best value
-       compare with the range of 0.1 to 0.5 used for much deeper networks?
-    1. The per-example implementation of `StochasticResidual` computes
-       every branch before masking it. Implement the original per-minibatch
-       variant of :citet:`huang2016stochasticdepth`, which draws one $b$ in
-       :eqref:`eq_stochastic_depth` per block and step and skips the branch
-       entirely when $b = 0$. Use (a) to predict the fraction of residual
-       branches it skips at $p_{\max} = 0.5$. Then measure the fraction of
-       training time it saves and compare the two.
+1. [code] **Stochastic depth in the recipe.** ● Our compact modern recipe omitted stochastic depth. Add it back to `ResNet18`:
+    1. Extend `StochasticResidual` to support stride-2 downsampling blocks with $1 \times 1$ shortcuts, and build `ResNet18` with drop probabilities growing linearly from $0$ in block 1 to $p_{\max}$ in block 8. What is the expected number of active residual branches per forward pass as a function of $p_{\max}$?
+    1. Sweep $p_{\max} \in \{0.1, 0.2, 0.5\}$ under `ModernRecipe` on `FashionMNIST10k` (compared against $p_{\max} = 0$). Why does a shallow 8-block network benefit less from large $p_{\max}$ than a 50- or 100-block network?
+    1. Implement the per-minibatch variant of :citet:`huang2016stochasticdepth`, which draws a single Bernoulli variable $b$ per block and skips evaluating the residual branch altogether when $b = 0$. At $p_{\max} = 0.5$, compare the theoretical fraction of skipped branches against the measured reduction in wall-clock training time.
 
 [Discussions](https://d2l.discourse.group/t/36761)
 

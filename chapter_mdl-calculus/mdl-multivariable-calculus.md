@@ -490,8 +490,7 @@ mixed partials at $\mathbf{x}$ sends the two expressions to the two mixed
 partials at $\mathbf{x}$. Because they agree for every $h$, their limits must
 agree as well. $\blacksquare$
 
-The continuity hypothesis is genuinely needed: Exercise
-:exref:`ex_mdl-multivariable-calculus-mixed-partials` constructs a function
+The continuity hypothesis is genuinely needed: there exist functions
 whose mixed partials exist everywhere yet fail to be continuous at the
 origin, where they disagree.
 
@@ -769,9 +768,7 @@ origin of $x^2 + y^4$, finite differences return $2h^2 = 2 \times 10^{-8}$
 along the flat direction; because this sits below our tolerance, the program
 rightly reports "inconclusive" even though the origin is a strict minimum.
 Second-order information simply cannot see the quartic rise, and only the
-tolerance prevents the numerical test from claiming otherwise. Exercise
-:exref:`ex_mdl-multivariable-calculus-classify` walks through classifying a
-saddle by hand.
+tolerance prevents the numerical test from claiming otherwise.
 
 ### Saddles in High Dimension
 
@@ -942,13 +939,6 @@ $\nabla f = \mathbf{0}$ with the Lagrange condition $\nabla f = \mu\nabla g$.
        What does the result imply for a gradient-descent step on such a loss
        as $\kappa$ grows?
 
-1. **Classifying critical points.** Let $f(x, y) = x^3 - 3x + y^2$. Show that
-   the critical points are $(\pm 1, 0)$. Determine whether each is a minimum,
-   a maximum, or a saddle by examining $f$ along the lines $y = 0$ and
-   $x = \pm 1$, and confirm the classification with the eigenvalues of the
-   Hessian.
-   :exlabel:`ex_mdl-multivariable-calculus-classify`
-
 1. **Flat directions.**
     1. Give three functions of $(x, y)$ that have a critical point at the
        origin with Hessian $\operatorname{diag}(2, 0)$ there: one with a
@@ -967,20 +957,6 @@ $\nabla f = \mathbf{0}$ with the Lagrange condition $\nabla f = \mu\nabla g$.
        saddle $x^2 - y^2$? What does this imply for gradient descent started
        near each of the two saddles?
    :exlabel:`ex_mdl-multivariable-calculus-flat`
-
-1. **Mixed partials that disagree.** ● Second-order methods treat the Hessian
-   as a symmetric matrix. Let $f(x, y) = xy(x^2 - y^2)/(x^2 + y^2)$ for
-   $(x, y) \neq (0, 0)$ and $f(0, 0) = 0$.
-    1. Compute $\frac{\partial f}{\partial x}(0, y)$ and
-       $\frac{\partial f}{\partial y}(x, 0)$, and from them the two mixed
-       partials at the origin in the notation of :eqref:`eq_mdl-hess_def`.
-    1. Evaluate the symmetric second difference
-       :eqref:`eq_mdl-second-difference` at the origin for this $f$. Which
-       step of the proof of the Clairaut–Schwarz theorem fails?
-    1. What does the function `hessian` of this section return as the
-       off-diagonal entry at the origin? What does a symmetric
-       finite-difference formula miss here?
-   :exlabel:`ex_mdl-multivariable-calculus-mixed-partials`
 
 1. [code] **Random Hessians.** ● A local minimum requires all $n$ eigenvalues
    of the Hessian to be nonnegative, and a nondegenerate one requires them all

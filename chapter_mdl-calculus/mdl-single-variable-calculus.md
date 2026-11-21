@@ -286,7 +286,7 @@ Rates multiply along a composition. Applied layer by layer to a neural
 network, the chain rule produces a product of local slopes, and evaluating
 that product efficiently is precisely what backpropagation does. The quotient
 rule follows immediately by applying the product and chain rules to
-$g\cdot h^{-1}$ (exercise :exref:`ex_mdl-single-variable-calculus-quotient-rule`).
+$g\cdot h^{-1}$.
 
 ### Inverse Functions
 
@@ -592,9 +592,8 @@ eigenvalues of the matrix of second derivatives will play this same role.
 When $f''(x_0)=0$ at a stationary point, the test is silent
 (:numref:`fig_mdl-second-derivative-test`, bottom row): $x^3$, $x^4$, and
 $-x^4$ all satisfy $f'(0)=f''(0)=0$, yet $0$ is an inflection point for the
-first, a minimum for the second, and a maximum for the third. Exercise
-:exref:`ex_mdl-single-variable-calculus-flat-stationary` derives the
-higher-derivative test that settles such flat stationary points.
+first, a minimum for the second, and a maximum for the third; higher-order
+derivatives decide such flat stationary points.
 
 ### The Taylor Polynomial
 :label:`subsec_mdl-taylor-series`
@@ -1152,10 +1151,9 @@ choice of $\mathrm{ReLU}'(0)$ in $[0,1]$ yields virtually identical training
 loss and test accuracy; training degrades only for extreme choices such as
 $\mathrm{ReLU}'(0)=10^4$, and batch normalization and Adam tame even those. The
 convention is therefore a real source of minor numerical differences between
-runs, yet a harmless one. Exercises
-:exref:`ex_mdl-single-variable-calculus-chained-subgradients` and
-:exref:`ex_mdl-single-variable-calculus-relu-precision` let you reproduce these
-measurements on a small scale.
+runs, yet a harmless one. Exercise
+:exref:`ex_mdl-single-variable-calculus-chained-subgradients`
+examines this behavior on a small scale.
 
 Everything in this section concerned a single scalar weight. A neural network
 has millions of weights moving together: which joint direction lowers the loss,
@@ -1187,15 +1185,6 @@ subgradient in floating point, the effect on training is negligible.
 
 ## Exercises
 
-1. **Quotient rule.** Write a quotient as a product,
-   $\frac{g(x)}{h(x)} = g(x)\,\bigl(h(x)\bigr)^{-1}$, on an interval where
-   $h(x) \neq 0$.
-    1. Derive the quotient rule of :numref:`sec_mdl-derivative_table` from
-       the product rule, the chain rule, and the power rule with $n = -1$.
-    1. Use $\tanh x=2\sigma(2x)-1$ and the chain rule to show
-       $\tanh'=1-\tanh^2$. Check both sides numerically at $x=0.7$, where
-       they equal $0.6347$.
-   :exlabel:`ex_mdl-single-variable-calculus-quotient-rule`
 1. **Smoothness of the logistic loss.** The descent lemma
    :eqref:`eq_mdl-descent` requires a bound $L$ on the curvature.
     1. Use the Mean Value Theorem :eqref:`eq_mdl-mvt` to show that if
@@ -1258,21 +1247,6 @@ subgradient in floating point, the effect on training is negligible.
     [Session 33 problems](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/resources/mit18_01scf10_ex33prb/),
     "Cube Root of x".*
    :exlabel:`ex_mdl-single-variable-calculus-newton-degenerate`
-1. **Flat stationary points.** The second-derivative test is silent at a
-   stationary point with $f''(x_0)=0$, as $x^3$, $x^4$, and $-x^4$ show.
-    1. Suppose that $f^{(k)}(x_0) = 0$ for $1 \le k \le n-1$, that
-       $f^{(n)}(x_0) \neq 0$, and that $f^{(n)}$ is continuous near $x_0$. Use
-       the Lagrange remainder :eqref:`eq_mdl-lagrange` of degree $n-1$ to
-       show that $x_0$ is a local minimum if $n$ is even and
-       $f^{(n)}(x_0) > 0$, a local maximum if $n$ is even and
-       $f^{(n)}(x_0) < 0$, and neither if $n$ is odd.
-    1. Classify the stationary point $0$ of $x - \sin x$ and of
-       $\cos x - 1 + x^2/2$.
-    1. Apply the test to the running function with its best parabola
-       removed, $s(x)-\log2-\tfrac{x}{2}-\tfrac{x^2}{8}$, at $x_0=0$. Which
-       derivative decides, and what is the answer? Check it by evaluating the
-       function at $x=\pm0.5$.
-   :exlabel:`ex_mdl-single-variable-calculus-flat-stationary`
 1. [code] **Minimizers at kinks.** A support vector machine with one weight
    $x$, weight decay $\lambda > 0$, and a single training example whose label
    times input equals $1$ minimizes
@@ -1358,24 +1332,6 @@ subgradient in floating point, the effect on training is negligible.
    gradient-check exercise of :numref:`sec_mdl-chain-rule-graphs`
    balances it against the truncation error of (a).
    :exlabel:`ex_mdl-single-variable-calculus-central-differences`
-1. [code] **Argument reduction for exp.** ● Libraries do not evaluate a
-   Taylor polynomial of $e^x$ at the input itself. They reduce the argument
-   to a small interval and evaluate a polynomial with controlled error there.
-   Write $x = k\log 2 + r$ with an integer $k$ and $|r| \le \tfrac12\log 2$,
-   so that $e^x = 2^k e^r$ and only $e^r$ needs a polynomial. Let $P_n$ be
-   the degree-$n$ Taylor polynomial of $e^x$ at $x_0 = 0$
-   (:numref:`subsec_mdl-taylor-series`).
-    1. Use the Lagrange remainder :eqref:`eq_mdl-lagrange` to find the
-       smallest degree $n$ for which $P_n(r)$ approximates $e^r$ with relative
-       error below $2^{-53} \approx 1.1 \times 10^{-16}$, the unit roundoff
-       of float64, for every $|r| \le \tfrac12\log 2$. Repeat the calculation
-       for $P_n(x)$ on $|x| \le 10$ without reduction.
-    1. Evaluate $P_n(-10)$ in float64 with the unreduced degree of (a), and
-       compare the result with `math.exp(-10)`. Explain the size of the error
-       from the largest term of the sum.
-    1. Implement $e^x = 2^k P_n(r)$ with the reduced degree of (a), and
-       compare it with `math.exp` on a grid over $[-20, 20]$. Which step
-       limits the accuracy of the implementation for large $|x|$?
 1. [code] **Gradient descent past $2/L$.** ●● On $f(x) = x^2$, every step
    size $\eta > 2/L$ diverges. On other functions, gradient descent past this
    threshold can settle into an oscillation instead :cite:`Chen.Bruna.2023`,
@@ -1411,51 +1367,6 @@ subgradient in floating point, the effect on training is negligible.
        $\log\cosh x$ and on $x^2/2 + x^4/4$, both of which have
        $x^\star = 0$ and $f''(x^\star) = 1$. Confirm the predictions by
        running both from $x_0 = 0.01$ for $500$ steps.
-1. [extended] **$\mathrm{ReLU}'(0)$ in low precision.** ●● In exact
-   arithmetic, the parameters at which backpropagation with
-   $\mathrm{ReLU}'(0) = 0$ and with $\mathrm{ReLU}'(0) = 1$ disagree form a
-   set of measure zero, which a draw from a density hits with probability
-   zero. :citet:`Bertoin.Bolte.Gerchinovitz.ea.2021` call this set the
-   bifurcation zone and measure how often floating-point computations meet
-   it. This project reproduces the frequency measurement at small scale on
-   Fashion-MNIST (:numref:`sec_fashion_mnist`).
-    1. Write the forward pass and the backward pass (:numref:`sec_backprop`)
-       of a fully connected network with three hidden $\mathrm{ReLU}$ layers
-       of width $256$ and a softmax cross-entropy loss by hand in NumPy. Make
-       the value $g_0$ used for $\mathrm{ReLU}'(0)$ and the floating-point type
-       arguments. Check the gradient in float64 against finite differences.
-    1. Draw $10$ parameter vectors with weights uniform on
-       $[-\sqrt{6/m}, \sqrt{6/m}]$ for a layer with $m$ inputs, as in the
-       paper. For each vector, compute the gradient on each of the $40$
-       minibatches of $256$ images among the first $10{,}240$ training images
-       with $g_0 = 0$ and with $g_0 = 1$, in float16, float32, and float64. The
-       two backward passes can differ only on a minibatch whose forward pass
-       produces an exact zero pre-activation. Report the fraction of
-       parameter vectors with at least one disagreeing minibatch, the
-       fraction of disagreeing minibatches, and the median relative $\ell_2$
-       difference of disagreeing gradients. Table 1 of the corrected version
-       of the paper reports these quantities for MNIST and $1000$ parameter
-       vectors. In float16, float32, and float64, respectively, $100\%$,
-       $43\%$, and $0\%$ of the parameter vectors have a disagreeing
-       minibatch, and $0.005\%$, $0.0002\%$, and $0\%$ of the minibatches
-       disagree. The median relative difference is $2 \times 10^{-3}$ in both
-       float16 and float32. Compare your fractions with these.
-    1. Repeat the float16 measurement with matrix products that accumulate
-       in float32 and round only their results to float16. Explain the
-       difference from (b).
-    1. Count the exact zeros among the pre-activations in each setting.
-       Suppose that the rate of exact zeros is proportional to the unit
-       roundoff $u$, which is $2^{-11}$, $2^{-24}$, and $2^{-53}$ for the
-       three formats. Predict the float32 and float64 counts from the
-       float16 count, and compare.
-    1. Train the network with minibatch SGD for one epoch in float32 twice,
-       from the same initialization and with the same minibatch order, once
-       with $g_0 = 0$ and once with $g_0 = 1$. Plot the $\ell_1$ distance
-       between the two parameter vectors against the iteration. Repeat with
-       $g_0 = 10^4$. Compare with what
-       :numref:`subsec_mdl-nonsmooth-training` reports about the influence
-       of $\mathrm{ReLU}'(0)$ on training.
-   :exlabel:`ex_mdl-single-variable-calculus-relu-precision`
 
 
 :begin_tab:`mxnet`

@@ -101,9 +101,11 @@ When a density and a field satisfy it, points that follow the field keep the den
 Take one clean point $\mathbf{x}_0$ first. Its noisy versions form the Gaussian cloud $\mathcal{N}(\alpha_t \mathbf{x}_0, \sigma_t^2 \mathbf{I})$, and each point of the cloud moves with the conditional velocity $\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon$, where $\boldsymbol\epsilon = (\mathbf{x} - \alpha_t \mathbf{x}_0)/\sigma_t$ is the noise that put it at $\mathbf{x}$. This field, call it $\mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)$, moves this one cloud correctly: a point that keeps its noise $\boldsymbol\epsilon$ sits at $\alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon$ at every time, a draw from the cloud, so the cloud and its field satisfy the continuity equation. The marginal density $p_t$ is the average of the clouds over the data, and the equation is linear in the density, so averaging the clouds' equations gives one for $p_t$ with the averaged mass flow on the right. By Bayes' rule, $p(\mathbf{x}_0)\, p_t(\mathbf{x} \mid \mathbf{x}_0) = p_t(\mathbf{x})\, p(\mathbf{x}_0 \mid \mathbf{x}_t = \mathbf{x})$, so this flow is
 
 $$
+\begin{aligned}
 \mathbb{E}_{\mathbf{x}_0}\big[p_t(\mathbf{x} \mid \mathbf{x}_0)\, \mathbf{u}_t(\mathbf{x} \mid \mathbf{x}_0)\big]
-= p_t(\mathbf{x})\, \mathbb{E}\big[\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon \,\big|\, \mathbf{x}_t = \mathbf{x}\big]
-= p_t(\mathbf{x})\, \mathbf{u}_t(\mathbf{x}).
+&= p_t(\mathbf{x})\, \mathbb{E}\big[\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon \,\big|\, \mathbf{x}_t = \mathbf{x}\big] \\
+&= p_t(\mathbf{x})\, \mathbf{u}_t(\mathbf{x}).
+\end{aligned}
 $$
 
 The posterior average in the middle is how the marginal velocity was defined. So the mass that all the clouds together carry across $\mathbf{x}$ is the density there times the marginal velocity, and $p_t$ and $\mathbf{u}_t$ satisfy the continuity equation. The samplers of the following sections rest on this result. :numref:`sec_mdl-flow-matching-transport` proves it with the conditions it needs.
@@ -374,7 +376,10 @@ $$
 Is this a new sampler or the old one with noise added? It is instructive to expand $1/\sqrt{1 - \beta} \approx 1 + \beta/2$ and keep the terms of first order in $\beta$, together with the noise $\sqrt\beta\, \mathbf{z}$. The step then splits into two:
 
 $$
-\mathbf{x}_s \approx \Big[ \mathbf{x}_t + \tfrac{\beta}{2} \nabla \log p_t(\mathbf{x}_t) + \sqrt{\beta}\, \mathbf{z} \Big] + \tfrac{\beta}{2} \big( \mathbf{x}_t + \nabla \log p_t(\mathbf{x}_t) \big).
+\begin{aligned}
+\mathbf{x}_s &\approx \Big[ \mathbf{x}_t + \tfrac{\beta}{2} \nabla \log p_t(\mathbf{x}_t) + \sqrt{\beta}\, \mathbf{z} \Big] \\
+&\quad + \tfrac{\beta}{2} \big( \mathbf{x}_t + \nabla \log p_t(\mathbf{x}_t) \big).
+\end{aligned}
 $$
 
 The bracket is the Langevin step $\mathbf{x} \leftarrow \mathbf{x} + \frac{h}{2} \nabla \log p + \sqrt{h}\, \boldsymbol\xi$ of :numref:`sec_diffusion-denoising` with step size $h = \beta$ on the density $p_t$: it leaves $p_t$ in place and pulls stray points back toward it. The second term is one Euler step of the probability-flow ODE from $t$ back to $s$. On the VP path the marginal velocity is $\mathbf{u}_t = -\tfrac12 \beta(t)\, (\mathbf{x} + \nabla \log p_t)$: this is the score–velocity identity of :numref:`sec_diffusion-gaussian-paths` with $\dot\alpha_t/\alpha_t = -\beta(t)/2$ and $\alpha_t^2 + \sigma_t^2 = 1$. Here $\beta(t) = 0.1 + 19.9\, t$ is the rate of the VP schedule, and a short step has $\beta \approx \beta(t)\, (t - s)$. The Euler step from $t$ back to $s$ therefore moves the point by $-(t - s)\, \mathbf{u}_t = \tfrac12 \beta(t)\, (t - s)\, (\mathbf{x}_t + \nabla \log p_t) \approx \tfrac{\beta}{2} (\mathbf{x}_t + \nabla \log p_t)$, which is the second term. An ancestral step is a flow step plus a Langevin correction at the current noise level. The chain does what the ODE does, and its Langevin half pulls points back toward $p_t$, which can undo part of an earlier error; whether it does so in practice is measured in :numref:`sec_diffusion-samplers`.
@@ -390,9 +395,11 @@ $$
 a deterministic *drift* $\mathbf{f}$ plus Gaussian noise whose variance grows in proportion to the time step. The forward chain of DDPM is such a step with $\Delta t = 1/T$, $\mathbf{f} = -\tfrac12 \beta(t)\, \mathbf{x}$ and $g^2 = \beta(t)$, because $\sqrt{1 - \beta_k} \approx 1 - \beta_k/2$ and $\beta_k \approx \beta(t)\, \Delta t$. :citet:`Anderson.1982` showed that such a process is reversed, from $t = 1$ down to $t = 0$, by the steps $\mathbf{x} \leftarrow \mathbf{x} - [\mathbf{f} - g^2 \nabla \log p_t(\mathbf{x})]\, \Delta t + g \sqrt{\Delta t}\, \mathbf{z}$ in the limit $\Delta t \to 0$: in that limit they have the same marginals $p_t$ as the forward process. Papers write the reversal as an SDE in which time runs backward,
 
 $$
-d\mathbf{x} = \big[ \mathbf{f} - g^2 \nabla \log p_t(\mathbf{x}) \big]\, dt + g\, d\bar{\mathbf{W}},
-\qquad\textrm{with the same marginals as}\qquad
-\frac{d\mathbf{x}}{dt} = \mathbf{f} - \tfrac12 g^2 \nabla \log p_t(\mathbf{x}),
+\begin{aligned}
+d\mathbf{x} &= \big[ \mathbf{f} - g^2 \nabla \log p_t(\mathbf{x}) \big]\, dt + g\, d\bar{\mathbf{W}}, \\
+\textrm{with the same marginals as}\quad
+\frac{d\mathbf{x}}{dt} &= \mathbf{f} - \tfrac12 g^2 \nabla \log p_t(\mathbf{x}),
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-reverse`
 

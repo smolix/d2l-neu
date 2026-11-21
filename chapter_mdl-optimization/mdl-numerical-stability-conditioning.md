@@ -888,9 +888,11 @@ $m_k - m_{k-1} = d_k/k$ and $x_k - m_k = d_k\,(k-1)/k$, we split off the
 $k$-th term and recenter the first $k-1$ terms around $m_{k-1}$:
 
 $$
+\begin{aligned}
 \sum_{i=1}^{k} (x_i - m_k)^2
-= \sum_{i=1}^{k-1} \left( (x_i - m_{k-1}) - \tfrac{d_k}{k} \right)^2 + (x_k - m_k)^2
-= M_{k-1} + (k-1)\tfrac{d_k^2}{k^2} + \tfrac{(k-1)^2}{k^2}d_k^2 .
+&= \sum_{i=1}^{k-1} \left( (x_i - m_{k-1}) - \tfrac{d_k}{k} \right)^2 + (x_k - m_k)^2 \\
+&= M_{k-1} + (k-1)\tfrac{d_k^2}{k^2} + \tfrac{(k-1)^2}{k^2}d_k^2 .
+\end{aligned}
 $$
 
 The cross term vanishes because $\sum_{i \le k-1} (x_i - m_{k-1}) = 0$, and

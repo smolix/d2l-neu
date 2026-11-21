@@ -214,7 +214,7 @@ ranges.
 :label:`tab_example_configspace`
 
 | Name                | Type        |Hyperparameter Ranges           | log-scale |
-| :----:              | :----:      |:------------------------------:|:---------:|
+|:-----------:|:---------:|:---------------------:|:-------:|
 | learning rate       | float       |      $[10^{-6},10^{-1}]$       |    yes    |
 | batch size          | integer     |           $[8,256]$            |    yes    |
 | momentum            | float       |           $[0,0.99]$           |    no     |

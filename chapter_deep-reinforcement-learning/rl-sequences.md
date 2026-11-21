@@ -179,7 +179,12 @@ A band of fixed width in ratio space permits different changes in probability: a
 
 Group Relative Policy Optimization (GRPO) :cite:`Shao.Wang.Zhu.ea.2024` assembles the pieces. It samples $K$ responses per prompt from $\pi_{\theta_{\textrm{old}}}$ and gives every token of response $j$ the standardized weight $\hat{A}_j = (r_j - \bar{r}) / (\sigma_r + 10^{-8})$ of :numref:`sec_baselines`, where $\bar{r}$ and $\sigma_r$ are the mean and the standard deviation of the group's rewards. It then maximizes, for several epochs on the same group,
 
-$$\frac{1}{K} \sum_{j=1}^{K} \frac{1}{T_j} \sum_{t=1}^{T_j} \Big[ \min\big(\rho_{j,t}\, \hat{A}_j,\ \textrm{clip}(\rho_{j,t}, 1 - \epsilon_{\textrm{clip}}, 1 + \epsilon_{\textrm{clip}})\, \hat{A}_j\big) - \beta\, k_3(j, t) \Big],$$
+$$
+\begin{aligned}
+&\frac{1}{K} \sum_{j=1}^{K} \frac{1}{T_j} \sum_{t=1}^{T_j} \Big[ \min\big(\rho_{j,t}\, \hat{A}_j,\ \textrm{clip}(\rho_{j,t}, 1 - \epsilon_{\textrm{clip}}, 1 + \epsilon_{\textrm{clip}})\, \hat{A}_j\big) \\
+&\qquad\qquad\qquad - \beta\, k_3(j, t) \Big],
+\end{aligned}
+$$
 
 where $T_j$ is the length of response $j$ and $k_3 = \pi_{\textrm{ref}}/\pi_\theta - \log(\pi_{\textrm{ref}}/\pi_\theta) - 1$ is evaluated at the sampled token. The minimum drops a sample's gradient once its ratio is past the band on the favorable side. The clip compares with the sampling policy and limits each update; the penalty compares with the frozen reference and changes the optimum.
 

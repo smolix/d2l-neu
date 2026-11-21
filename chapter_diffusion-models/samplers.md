@@ -341,7 +341,12 @@ whole run falls only in proportion to the step size. Heun's method
 evaluates the slope again at the trial point, and moves with the average of
 the two slopes:
 
-$$\bar{\mathbf{x}}' = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\, \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t), \qquad \bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\, \frac{\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t) + \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}', \bar\sigma_s)}{2}.$$
+$$
+\begin{aligned}
+\bar{\mathbf{x}}' &= \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\, \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t), \\
+\bar{\mathbf{x}}_s &= \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\, \frac{\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t) + \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}', \bar\sigma_s)}{2}.
+\end{aligned}
+$$
 
 Its error falls with the square of the step size, at two evaluations per
 step. For standard Gaussian data the noise estimate is
@@ -1019,7 +1024,12 @@ $\sqrt{2}$ when the codes are nearly orthogonal, as independent noise images
 are, and the decoder has never been started from so short a code. Spherical
 interpolation moves along the great circle between the two codes instead,
 
-$$\mathbf{z}_u = \frac{\sin\big((1 - u)\omega\big)\, \mathbf{z}_0 + \sin(u \omega)\, \mathbf{z}_1}{\sin \omega}, \qquad \cos \omega = \frac{\mathbf{z}_0^\top \mathbf{z}_1}{\|\mathbf{z}_0\| \|\mathbf{z}_1\|},$$
+$$
+\begin{aligned}
+\mathbf{z}_u &= \frac{\sin\big((1 - u)\omega\big)\, \mathbf{z}_0 + \sin(u \omega)\, \mathbf{z}_1}{\sin \omega}, \\
+\cos \omega &= \frac{\mathbf{z}_0^\top \mathbf{z}_1}{\|\mathbf{z}_0\| \|\mathbf{z}_1\|},
+\end{aligned}
+$$
 
 which keeps the norm of the endpoints. We decode eight points between the
 50-step codes of two ankle boots among the test images; one class for the

@@ -422,9 +422,10 @@ quotient rule gives $\partial p_i/\partial x_j = p_i\delta_{ij} - p_ip_j$,
 where $\delta_{ij}$ is $1$ when $i = j$ and $0$ otherwise. In matrix form,
 
 $$
-\mathbf{H}_f = \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top,
-\qquad
-\mathbf{H}_f(0, \log 2) = \begin{bmatrix} \tfrac13 - \tfrac19 & -\tfrac29 \\ -\tfrac29 & \tfrac23 - \tfrac49 \end{bmatrix} = \frac{2}{9}\begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}.
+\begin{aligned}
+\mathbf{H}_f &= \operatorname{diag}(\mathbf{p}) - \mathbf{p}\mathbf{p}^\top, \\
+\mathbf{H}_f(0, \log 2) &= \begin{bmatrix} \tfrac13 - \tfrac19 & -\tfrac29 \\ -\tfrac29 & \tfrac23 - \tfrac49 \end{bmatrix} = \frac{2}{9}\begin{bmatrix} 1 & -1 \\ -1 & 1 \end{bmatrix}.
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-lse-hessian`
 
@@ -473,9 +474,11 @@ difference of first partials inside $\varphi'$, gives numbers $\tau$ and
 $\sigma$ between $0$ and $h$ such that
 
 $$
-\varphi(h)-\varphi(0) = h\,\varphi'(\tau)
-= h\Bigl[\frac{\partial f}{\partial x_i}(\mathbf{x}+\tau\mathbf{e}_i+h\mathbf{e}_j) - \frac{\partial f}{\partial x_i}(\mathbf{x}+\tau\mathbf{e}_i)\Bigr]
-= h^2\,\frac{\partial^2 f}{\partial x_j \partial x_i}(\mathbf{x}+\tau\mathbf{e}_i+\sigma\mathbf{e}_j).
+\begin{aligned}
+\varphi(h)-\varphi(0) &= h\,\varphi'(\tau)
+= h\Bigl[\frac{\partial f}{\partial x_i}(\mathbf{x}+\tau\mathbf{e}_i+h\mathbf{e}_j) - \frac{\partial f}{\partial x_i}(\mathbf{x}+\tau\mathbf{e}_i)\Bigr] \\
+&= h^2\,\frac{\partial^2 f}{\partial x_j \partial x_i}(\mathbf{x}+\tau\mathbf{e}_i+\sigma\mathbf{e}_j).
+\end{aligned}
 $$
 
 Thus
@@ -547,7 +550,10 @@ $\tfrac12\|\mathbf{H}_f(\boldsymbol{\xi}) - \mathbf{H}_f(\mathbf{x}_0)\|\,\|\bol
 That yields the *second-order Taylor approximation*:
 
 $$
-f(\mathbf{x}) = f(\mathbf{x}_0) + \nabla f (\mathbf{x}_0) \cdot (\mathbf{x}-\mathbf{x}_0) + \frac{1}{2}(\mathbf{x}-\mathbf{x}_0)^\top \mathbf{H}_f (\mathbf{x}_0) (\mathbf{x}-\mathbf{x}_0) + o(\|\mathbf{x}-\mathbf{x}_0\|^2).
+\begin{aligned}
+f(\mathbf{x}) &= f(\mathbf{x}_0) + \nabla f (\mathbf{x}_0) \cdot (\mathbf{x}-\mathbf{x}_0) \\
+&\quad + \frac{1}{2}(\mathbf{x}-\mathbf{x}_0)^\top \mathbf{H}_f (\mathbf{x}_0) (\mathbf{x}-\mathbf{x}_0) + o(\|\mathbf{x}-\mathbf{x}_0\|^2).
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-second_taylor`
 

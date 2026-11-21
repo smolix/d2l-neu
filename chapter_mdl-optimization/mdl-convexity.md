@@ -920,18 +920,22 @@ Now comes the clever step: complete the square so that the right side turns
 into a difference of two squared distances to $\mathbf{x}^\star$,
 
 $$
-\nabla f(\mathbf{x}_k)^\top (\mathbf{x}_k - \mathbf{x}^\star) - \frac{1}{2L} \|\nabla f(\mathbf{x}_k)\|^2
-= \frac{L}{2} \left( \|\mathbf{x}_k - \mathbf{x}^\star\|^2
+\begin{aligned}
+\nabla f(\mathbf{x}_k)^\top (\mathbf{x}_k - \mathbf{x}^\star) &- \frac{1}{2L} \|\nabla f(\mathbf{x}_k)\|^2 \\
+&= \frac{L}{2} \left( \|\mathbf{x}_k - \mathbf{x}^\star\|^2
 - \left\|\mathbf{x}_k - \mathbf{x}^\star - \tfrac{1}{L}\nabla f(\mathbf{x}_k)\right\|^2 \right).
+\end{aligned}
 $$
 
 Notice that the second norm is simply $\|\mathbf{x}_{k+1} - \mathbf{x}^\star\|^2$.
 Summing over $j = 0, \ldots, k - 1$, the right side telescopes cleanly:
 
 $$
+\begin{aligned}
 \sum_{j=0}^{k-1} \left( f(\mathbf{x}_{j+1}) - f(\mathbf{x}^\star) \right)
-\;\le\; \frac{L}{2} \left( \|\mathbf{x}_0 - \mathbf{x}^\star\|^2 - \|\mathbf{x}_k - \mathbf{x}^\star\|^2 \right)
-\;\le\; \frac{L}{2}\, \|\mathbf{x}_0 - \mathbf{x}^\star\|^2.
+&\le \frac{L}{2} \left( \|\mathbf{x}_0 - \mathbf{x}^\star\|^2 - \|\mathbf{x}_k - \mathbf{x}^\star\|^2 \right) \\
+&\le \frac{L}{2}\, \|\mathbf{x}_0 - \mathbf{x}^\star\|^2.
+\end{aligned}
 $$
 
 Because the descent lemma ensures that $f(\mathbf{x}_j)$ never increases, the
@@ -980,9 +984,11 @@ $$
 Second, substitute :eqref:`eq_mdl-opt-pl` directly into the descent lemma:
 
 $$
+\begin{aligned}
 f(\mathbf{x}_{k+1}) - f(\mathbf{x}^\star)
-\;\le\; f(\mathbf{x}_k) - f(\mathbf{x}^\star) - \frac{1}{2L} \|\nabla f(\mathbf{x}_k)\|^2
-\;\le\; \left(1 - \frac{\mu}{L}\right) \left( f(\mathbf{x}_k) - f(\mathbf{x}^\star) \right).
+&\le f(\mathbf{x}_k) - f(\mathbf{x}^\star) - \frac{1}{2L} \|\nabla f(\mathbf{x}_k)\|^2 \\
+&\le \left(1 - \frac{\mu}{L}\right) \left( f(\mathbf{x}_k) - f(\mathbf{x}^\star) \right).
+\end{aligned}
 $$
 
 Applying this contraction $k$ times completes the proof. $\blacksquare$

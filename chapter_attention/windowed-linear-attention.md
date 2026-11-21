@@ -315,16 +315,17 @@ factoring $\phi(\mathbf{q}_t)^\top$ out of the numerator and denominator sums
 yields
 
 $$
+\begin{aligned}
 \mathbf{o}_t^\top
-= \frac{\sum_{s \leq t} \phi(\mathbf{q}_t)^\top \phi(\mathbf{k}_s)\,
+&= \frac{\sum_{s \leq t} \phi(\mathbf{q}_t)^\top \phi(\mathbf{k}_s)\,
         \mathbf{v}_s^\top}
        {\sum_{s \leq t} \phi(\mathbf{q}_t)^\top \phi(\mathbf{k}_s)}
 = \frac{\phi(\mathbf{q}_t)^\top \mathbf{S}_t}
-       {\phi(\mathbf{q}_t)^\top \mathbf{z}_t},
+       {\phi(\mathbf{q}_t)^\top \mathbf{z}_t}, \\
+\mathbf{S}_t &= \sum_{s \leq t} \phi(\mathbf{k}_s) \mathbf{v}_s^\top,
 \qquad
-\mathbf{S}_t = \sum_{s \leq t} \phi(\mathbf{k}_s) \mathbf{v}_s^\top,
-\quad
 \mathbf{z}_t = \sum_{s \leq t} \phi(\mathbf{k}_s).
+\end{aligned}
 $$
 :eqlabel:`eq_linear-attn`
 
@@ -334,9 +335,10 @@ the denominator against float32 underflow). The prefix sums $(\mathbf{S}_t,
 \mathbf{z}_t)$ satisfy the linear recurrence
 
 $$
-\mathbf{S}_t = \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\, \mathbf{v}_t^\top,
-\qquad
-\mathbf{z}_t = \mathbf{z}_{t-1} + \phi(\mathbf{k}_t),
+\begin{aligned}
+\mathbf{S}_t &= \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\, \mathbf{v}_t^\top, \\
+\mathbf{z}_t &= \mathbf{z}_{t-1} + \phi(\mathbf{k}_t),
+\end{aligned}
 $$
 :eqlabel:`eq_linear-attn-recurrence`
 

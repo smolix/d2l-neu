@@ -287,6 +287,38 @@ def fix_all(content):
         r'An interactive deep learning book with code, math, and discussions\.',
         '', content)
 
+    # ── Phase 11: Clamp explicit-width \includegraphics and side-by-side pairs ──
+    # 1. Pandoc emits \includegraphics[width=7.29167in,...] for {width="700px"}
+    #    without \pandocbounded, overflowing \linewidth. Wrap standalone
+    #    \includegraphics[width=...] in \pandocbounded{...}.
+    content = re.sub(
+        r'(?<!\\pandocbounded\{)(\\includegraphics\[width=[0-9.]+in[^\]]*\]\{[^}]+\})',
+        r'\\pandocbounded{\1}',
+        content)
+
+    # 2. Consecutive \pandocbounded{\includegraphics...} lines in the same paragraph
+    #    (e.g. side-by-side figure pairs in gp-intro.qmd) exceed \linewidth when
+    #    each image is ~0.55\linewidth. Cap side-by-side pairs to 0.48\linewidth each.
+    content = re.sub(
+        r'(?m)^(\\pandocbounded\{\\includegraphics\[)([^\]]*\]\{[^}]+\}\})\n'
+        r'(\\pandocbounded\{\\includegraphics\[)([^\]]*\]\{[^}]+\}\})$',
+        r'\\includegraphics[width=0.48\\linewidth,\2\\hfill\n'
+        r'\\includegraphics[width=0.48\\linewidth,\4',
+        content)
+
+    # ── Phase 12: Allow line breaks after '.', '/', ',', '(' inside \texttt{...} ──
+    def _break_texttt(m):
+        inner = m.group(1)
+        inner = re.sub(r'([./,(])(?=[A-Za-z0-9_<])', r'\1\\allowbreak{}', inner)
+        return f'\\texttt{{{inner}}}'
+
+    content = re.sub(r'\\texttt\{([^{}\n]{25,})\}', _break_texttt, content)
+
+    # ── Phase 13: Shorten 72-char section running header that overflows in uppercase ──
+    content = content.replace(
+        '\\section{Forward Propagation, Backward Propagation, and Computational\nGraphs}\\label{sec-backprop}',
+        '\\section{Forward Propagation, Backward Propagation, and Computational\nGraphs}\\sectionmark{Forward and Backward Propagation}\\label{sec-backprop}')
+
     return content
 
 

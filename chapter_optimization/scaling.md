@@ -192,10 +192,12 @@ To see why $\eta^\star$ must fall with width $n$, consider a square hidden weigh
 For a single example with backpropagated output gradient $\boldsymbol{\delta} = \partial \ell / \partial \mathbf{z}$, the weight gradient is the outer product $\mathbf{G} = \boldsymbol{\delta}\mathbf{h}^\top$. On step $1$, Adam's bias-corrected update is $\Delta\mathbf{W} = -\eta\,\operatorname{sign}(\mathbf{G}) = -\eta\,\operatorname{sign}(\boldsymbol{\delta})\operatorname{sign}(\mathbf{h})^\top$. Evaluated on the same activation vector $\mathbf{h}$, the resulting shift in pre-activation $z_i$ is
 
 $$
+\begin{aligned}
 (\Delta\mathbf{W}\, \mathbf{h})_i
-= -\eta \sum_{j=1}^{n} \operatorname{sign}(\delta_i h_j)\, h_j
-= -\eta\, \operatorname{sign}(\delta_i) \sum_{j=1}^{n} |h_j|
-= -\eta\, \operatorname{sign}(\delta_i)\, n\, \overline{|h|},
+&= -\eta \sum_{j=1}^{n} \operatorname{sign}(\delta_i h_j)\, h_j
+= -\eta\, \operatorname{sign}(\delta_i) \sum_{j=1}^{n} |h_j| \\
+&= -\eta\, \operatorname{sign}(\delta_i)\, n\, \overline{|h|},
+\end{aligned}
 $$
 :eqlabel:`eq_scaling_first_step`
 

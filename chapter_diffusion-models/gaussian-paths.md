@@ -50,9 +50,10 @@ starting from $(\alpha_0, \sigma_0) = (1, 0)$. Unlike the VE path, the two paths
 The *variance-preserving* (VP) path of DDPM :cite:`ho2020denoising` keeps $\alpha_t^2 + \sigma_t^2 = 1$, so data of unit variance keep unit variance. A rate $\beta(t) = \beta_{\min} + (\beta_{\max} - \beta_{\min})\, t$, growing linearly from $\beta_{\min} = 0.1$ to $\beta_{\max} = 20$, sets how fast it forgets the data. In each instant $dt$ the signal loses the fraction $\beta(t)\, dt$ of its variance, so the surviving fraction is the exponential of minus the integrated rate:
 
 $$
-\bar\alpha_t := \alpha_t^2 = \exp\Big(-\int_0^t \beta(r)\, dr\Big),
-\qquad
-\log \bar\alpha_t = -\big(0.1\, t + 9.95\, t^2\big).
+\begin{aligned}
+\bar\alpha_t &:= \alpha_t^2 = \exp\Big(-\int_0^t \beta(r)\, dr\Big), \\
+\log \bar\alpha_t &= -\big(0.1\, t + 9.95\, t^2\big).
+\end{aligned}
 $$
 
 The numbers $0.1$ and $20$ are not arbitrary. They are DDPM's first and last step variances, $10^{-4}$ and $0.02$, multiplied by its $1{,}000$ steps, and the next subsection shows how the steps become a rate. At the end of the path $\bar\alpha_1 = e^{-10.05} \approx 4 \cdot 10^{-5}$, close enough to pure noise for any purpose. Followed through time, one point of the VP path performs an Ornstein--Uhlenbeck process, a random walk pulled toward the origin (:numref:`sec_mdl-ornstein-uhlenbeck`), on a clock that speeds up: the pull and the variance of the noise both scale with $\beta(t)$, which is two hundred times larger at the end than at the start.
@@ -348,8 +349,10 @@ def velocity(self, x, t):
 For real data we cannot compute this field, yet we can learn it. Least squares recovers a conditional mean, so a conditional expectation is learned by regressing on the quantity inside it. This is how denoising score matching recovered the score. For the velocity the regression gives the *conditional flow matching* loss, which differs from the regression onto the unknown marginal field only by a constant $C$ that does not depend on the network:
 
 $$
-\mathbb{E}_{t,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, \big\| \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon) \big\|^2
-= \mathbb{E}_{t,\, \mathbf{x}_t}\, \big\| \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t) \big\|^2 + C.
+\begin{aligned}
+&\mathbb{E}_{t,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, \big\| \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\dot\alpha_t \mathbf{x}_0 + \dot\sigma_t \boldsymbol\epsilon) \big\|^2 \\
+&\qquad = \mathbb{E}_{t,\, \mathbf{x}_t}\, \big\| \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \mathbf{u}_t(\mathbf{x}_t) \big\|^2 + C.
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-cfm-loss`
 
@@ -562,7 +565,10 @@ Which target should we train, then? A network that reached the oracle would not 
 DDPM's *simple loss* :cite:`ho2020denoising` regresses onto the noise,
 
 $$
-L_{\textrm{simple}}(\boldsymbol\theta) = \mathbb{E}_{t,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, \big\| \boldsymbol\epsilon - \boldsymbol\epsilon_{\boldsymbol\theta}(\alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon,\, t) \big\|^2 .
+\begin{aligned}
+L_{\textrm{simple}}(\boldsymbol\theta)
+&= \mathbb{E}_{t,\, \mathbf{x}_0,\, \boldsymbol\epsilon}\, \big\| \boldsymbol\epsilon - \boldsymbol\epsilon_{\boldsymbol\theta}(\alpha_t \mathbf{x}_0 + \sigma_t \boldsymbol\epsilon,\, t) \big\|^2 .
+\end{aligned}
 $$
 :eqlabel:`eq_diffusion-simple-loss`
 

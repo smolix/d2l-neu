@@ -154,7 +154,12 @@ With $\gamma = 0.95$ a reward one step away counts $0.95$, and a reward twenty s
 
 The discount also controls how far ahead the agent looks. If every reward satisfies $|r_t| \leq r_{\max}$, discounting keeps the return finite and bounds the part of it that lies beyond step $k$:
 
-$$|R(\tau)| \leq \frac{r_{\max}}{1 - \gamma}, \qquad \Big| \sum_{t \geq k} \gamma^t r_t \Big| \leq \frac{\gamma^k \, r_{\max}}{1 - \gamma}.$$
+$$
+\begin{aligned}
+|R(\tau)| &\leq \frac{r_{\max}}{1 - \gamma}, \\
+\Big| \sum_{t \geq k} \gamma^t r_t \Big| &\leq \frac{\gamma^k \, r_{\max}}{1 - \gamma}.
+\end{aligned}
+$$
 
 The first bound makes the objective finite. The second says that rewards beyond step $k$ can move the return by at most a fraction $\gamma^k$ of its largest possible size. This suggests measuring the reach of the discount in steps, by the *effective horizon* $1/(1-\gamma)$. For $\gamma$ near one, $\gamma^{1/(1-\gamma)} \approx e^{-1}$, so the weights fall by a factor of about $e$ per horizon. For a constant reward stream, 95 percent of the discounted weight then lies within $\log(0.05)/\log(\gamma)$ steps, about three horizons. The table below lists both step counts for four discounts, together with the weight $\gamma^5$ that the goal's reward receives at the end of the six-move shortest path on calm ice:
 

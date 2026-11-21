@@ -148,11 +148,13 @@ At a constant decay $a$, a pair written $\ell$ steps ago carries weight $a^\ell$
 Stacking the $H$ channel states $\mathbf{h}_t^{(c)} \in \mathbb{R}^N$ of Mamba's selective SSM (:eqref:`eq_selective_ssm` in :numref:`sec_mamba`, omitting the skip connection $D_c x_{t,c}$) as rows of a matrix $\mathbf{S}_t \in \mathbb{R}^{H \times N}$ reveals that Mamba is already a decayed matrix-state recurrence:
 
 $$
-\mathbf{S}_t = \mathbf{E}_t \odot \mathbf{S}_{t-1} + (\boldsymbol{\Delta}_t
-\odot \mathbf{x}_t)\, \mathbf{B}_t^\top, \qquad
-\mathbf{y}_t = \mathbf{S}_t \mathbf{C}_t, \qquad
+\begin{aligned}
+\mathbf{S}_t &= \mathbf{E}_t \odot \mathbf{S}_{t-1} + (\boldsymbol{\Delta}_t
+\odot \mathbf{x}_t)\, \mathbf{B}_t^\top, \\
+\mathbf{y}_t &= \mathbf{S}_t \mathbf{C}_t, \qquad
 \mathbf{E}_t = \exp(\textrm{diag}(\boldsymbol{\Delta}_t)\,
 \boldsymbol{\Lambda}).
+\end{aligned}
 $$
 
 Matching terms against :eqref:`eq_ms-decay`, the value vector is $\mathbf{v}_t = \boldsymbol{\Delta}_t \odot \mathbf{x}_t \in \mathbb{R}^H$, the key vector is $\mathbf{k}_t = \mathbf{B}_t \in \mathbb{R}^N$, and the query vector is $\mathbf{q}_t = \mathbf{C}_t \in \mathbb{R}^N$. The only difference is that Mamba's decay matrix $\mathbf{E}_t \in \mathbb{R}^{H \times N}$ varies across both channels and states; restricting $\mathbf{E}_t$ to a single scalar $a_t$ per head yields Mamba-2 :cite:`Dao.Gu.2024` (Exercise :exref:`ex_ms-mamba`) and unlocks the matrix-multiplication dual form below.

@@ -100,6 +100,74 @@ h1 code, h2 code, h3 code, h4 code {
   font-size: inherit;
 }
 
+/* ── Math equations: responsive scroll & mobile scaling ── */
+
+/* Pandoc wraps display equations in `<span id="eq-...">` + `<span class="math display">`
+   (both `display: inline` by default). Promoting them to `display: block` with
+   `max-width: 100%; overflow-x: auto` creates the scroll container *outside*
+   MathJax 3's `<mjx-container display="true" width="full">`, which carries an
+   inline `style="min-width: XXem"` to keep `<mjx-labels>` (the equation number)
+   clear of the formula. Scrolling `.math.display` scrolls the formula and its
+   tag together so they never collide, while vertical padding prevents
+   `overflow-y: hidden` from clipping tall integrals, fractions, or underbraces. */
+span[id^="eq-"] {
+  display: block;
+  max-width: 100%;
+}
+
+.math.display,
+.katex-display {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+mjx-container[jax="CHTML"][display="true"]:not([width="full"]) {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+.math.inline {
+  max-width: 100%;
+}
+.math.inline mjx-container[jax="CHTML"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+}
+
+@media (max-width: 600px) {
+  .math.display,
+  .katex-display {
+    font-size: 0.92em;
+    padding: 0.3rem 0;
+  }
+
+  .math.display mjx-container[jax="CHTML"][display="true"] {
+    margin: 0.65em 0 !important;
+  }
+
+  .math.display::-webkit-scrollbar,
+  .katex-display::-webkit-scrollbar {
+    height: 5px;
+  }
+  .math.display::-webkit-scrollbar-track,
+  .katex-display::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .math.display::-webkit-scrollbar-thumb,
+  .katex-display::-webkit-scrollbar-thumb {
+    background: #C7CCD3;
+    border-radius: 3px;
+  }
+}
+
 /* ── Equalize tabbed and non-tabbed code blocks ────────── */
 
 /* Bootstrap's compiled CSS applies padding:1em to both

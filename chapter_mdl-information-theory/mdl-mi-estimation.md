@@ -548,10 +548,12 @@ $X$, the differential entropy $h(X)$ replaces $H(X)$.*
 right-hand side of :eqref:`eq_mdl-ba_bound`:
 
 $$
+\begin{aligned}
 I(X; Y) - H(X) - \mathbb{E}\left[\log q(x \mid y)\right]
-= \mathbb{E}\left[\log \frac{p(x \mid y)}{q(x \mid y)}\right]
-= \mathbb{E}_{y}\left[D_{\textrm{KL}}\big(p(\cdot \mid y) \,\|\, q(\cdot \mid y)\big)\right]
+&= \mathbb{E}\left[\log \frac{p(x \mid y)}{q(x \mid y)}\right] \\
+&= \mathbb{E}_{y}\left[D_{\textrm{KL}}\big(p(\cdot \mid y) \,\|\, q(\cdot \mid y)\big)\right]
 \geq 0.
+\end{aligned}
 $$
 
 The inequality follows from Gibbs' inequality applied for each $y$ and averaged
@@ -622,10 +624,12 @@ density $\tilde{q}(x) = q(x)\, e^{T(x)} / Z$, where $Z = \mathbb{E}_Q[e^T]$ is
 the normalizing constant. Then
 
 $$
+\begin{aligned}
 D_{\textrm{KL}}(P \| Q) - \left(\mathbb{E}_P[T] - \log Z\right)
-= \mathbb{E}_P\left[\log \frac{p}{q} - T + \log Z\right]
-= \mathbb{E}_P\left[\log \frac{p}{\tilde{q}}\right]
+&= \mathbb{E}_P\left[\log \frac{p}{q} - T + \log Z\right] \\
+&= \mathbb{E}_P\left[\log \frac{p}{\tilde{q}}\right]
 = D_{\textrm{KL}}(P \| \tilde{Q}) \geq 0
+\end{aligned}
 $$
 
 by Gibbs' inequality. Equality holds if and only if $P = \tilde{Q}$, which
@@ -771,9 +775,11 @@ ratios $e^{T(x, Y_i)} / \left(\frac{1}{N}\sum_j e^{T(x, Y_j)}\right)$ have the
 same expectation under $p(v)$, and for every fixed $x$ we have
 
 $$
+\begin{aligned}
 \mathbb{E}_{p(v)}\left[\gamma(x, V)\right]
-= \frac{1}{N}\sum_{i=1}^{N} \mathbb{E}_{p(v)}\left[\frac{e^{T(x, Y_i)}}{\frac{1}{N}\sum_{j} e^{T(x, Y_j)}}\right]
-= \mathbb{E}_{p(v)}\left[\frac{\frac{1}{N}\sum_{i} e^{T(x, Y_i)}}{\frac{1}{N}\sum_{j} e^{T(x, Y_j)}}\right] = 1.
+&= \frac{1}{N}\sum_{i=1}^{N} \mathbb{E}_{p(v)}\left[\frac{e^{T(x, Y_i)}}{\frac{1}{N}\sum_{j} e^{T(x, Y_j)}}\right] \\
+&= \mathbb{E}_{p(v)}\left[\frac{\frac{1}{N}\sum_{i} e^{T(x, Y_i)}}{\frac{1}{N}\sum_{j} e^{T(x, Y_j)}}\right] = 1.
+\end{aligned}
 $$
 
 Thus $q(v \mid x) = p(v)\, \gamma(x, v)$ is a valid conditional probability

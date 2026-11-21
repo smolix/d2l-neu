@@ -97,7 +97,12 @@ A freshly initialized critic predicts values near $0$ everywhere. Then every ste
 
 With a perfect critic, the TD error estimates the same quantity as the Monte Carlo weight. Suppose for a moment that $\hat{V} = V^\pi$. The action value satisfies $Q^\pi(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^\pi(s')$, the Bellman equation of :numref:`sec_valueiter` written with $V^\pi$. Averaging :eqref:`eq_td_error_v` over the next state therefore gives
 
-$$\mathbb{E}\big[ \delta_t \mid s_t, a_t \big] = r(s_t, a_t) + \gamma \sum_{s'} P(s' \mid s_t, a_t)\, V^{\pi}(s') - V^{\pi}(s_t) = Q^{\pi}(s_t, a_t) - V^{\pi}(s_t).$$
+$$
+\begin{aligned}
+\mathbb{E}\big[ \delta_t \mid s_t, a_t \big] &= r(s_t, a_t) + \gamma \sum_{s'} P(s' \mid s_t, a_t)\, V^{\pi}(s') - V^{\pi}(s_t) \\
+&= Q^{\pi}(s_t, a_t) - V^{\pi}(s_t).
+\end{aligned}
+$$
 
 The right-hand side is the advantage $A^\pi(s_t, a_t)$, how much better the action taken is than the policy's average at that state. The learned baseline of :numref:`sec_baselines` estimated it with $\hat{G}_t - \hat{V}(s_t)$. One transition, with one reward and two critic evaluations, gives an unbiased sample of the advantage, where the Monte Carlo weight needed the entire rest of the episode.
 

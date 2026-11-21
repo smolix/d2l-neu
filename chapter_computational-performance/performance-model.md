@@ -102,9 +102,11 @@ output once ($BD + DF + BF$ numbers). With $b$ bytes per number, its
 intensity is
 
 $$
+\begin{aligned}
 \frac{2BDF}{b\,(BD + DF + BF)}
-\;=\; \frac{2}{b}\left(\frac{1}{F} + \frac{1}{B} + \frac{1}{D}\right)^{-1}
-\;\approx\; \frac{2B}{b} \quad \textrm{for } B \ll D, F.
+&\;=\; \frac{2}{b}\left(\frac{1}{F} + \frac{1}{B} + \frac{1}{D}\right)^{-1} \\
+&\;\approx\; \frac{2B}{b} \quad \textrm{for } B \ll D, F.
+\end{aligned}
 $$
 :eqlabel:`eq_matmul_intensity`
 

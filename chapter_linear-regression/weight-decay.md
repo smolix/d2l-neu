@@ -287,7 +287,12 @@ $$L_{\lambda}(\mathbf{w}) = \frac{1}{2n}\|\mathbf{X}\mathbf{w} - \mathbf{y}\|_2^
 
 Setting the gradient $\nabla_{\mathbf{w}} L_{\lambda}(\mathbf{w}) = \frac{1}{n}\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y}) + \lambda \mathbf{w} = \mathbf{0}$ gives the regularized normal equations:
 
-$$\left(\frac{1}{n}\mathbf{X}^\top\mathbf{X} + \lambda \mathbf{I}\right) \hat{\mathbf{w}}_{\lambda} = \frac{1}{n}\mathbf{X}^\top\mathbf{y}, \qquad \textrm{so} \qquad \hat{\mathbf{w}}_{\lambda} = \left(\mathbf{X}^\top\mathbf{X} + n\lambda \mathbf{I}\right)^{-1}\mathbf{X}^\top\mathbf{y}.$$
+$$
+\begin{aligned}
+\left(\frac{1}{n}\mathbf{X}^\top\mathbf{X} + \lambda \mathbf{I}\right) \hat{\mathbf{w}}_{\lambda} &= \frac{1}{n}\mathbf{X}^\top\mathbf{y}, \\
+\hat{\mathbf{w}}_{\lambda} &= \left(\mathbf{X}^\top\mathbf{X} + n\lambda \mathbf{I}\right)^{-1}\mathbf{X}^\top\mathbf{y}.
+\end{aligned}
+$$
 :eqlabel:`eq_wd-ridge-normal`
 
 Notice the immediate algebraic miracle: even when $\mathbf{X}^\top\mathbf{X}$ is singular (as in our $n = 20, d = 200$ experiment, where $\mathbf{X}^\top\mathbf{X}$ has 180 zero eigenvalues!), adding $n\lambda\mathbf{I}$ for any $\lambda > 0$ shifts every eigenvalue upward by $n\lambda > 0$, making $\mathbf{X}^\top\mathbf{X} + n\lambda\mathbf{I}$ strictly positive definite and invertible!
@@ -298,7 +303,12 @@ To see how :eqref:`eq_wd-ridge-normal` acts along each direction in feature spac
 
 In this eigenbasis, $\mathbf{S}$ acts on $\mathbf{v}_j$ by multiplying it by $s_j$, while $(\mathbf{S} + \lambda\mathbf{I})^{-1}$ acts on $\mathbf{v}_j$ by dividing by $s_j + \lambda$. Whenever $s_j > 0$, comparing the ridge component $\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda}$ against the unregularized least-squares component $\mathbf{v}_j^\top \hat{\mathbf{w}}_0$ yields
 
-$$\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} = \frac{s_j}{s_j + \lambda}\, \left(\mathbf{v}_j^\top \hat{\mathbf{w}}_0\right), \qquad \textrm{and} \qquad \mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} = 0 \quad \textrm{whenever } s_j = 0.$$
+$$
+\begin{aligned}
+\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} &= \frac{s_j}{s_j + \lambda}\, \left(\mathbf{v}_j^\top \hat{\mathbf{w}}_0\right), \\
+\mathbf{v}_j^\top \hat{\mathbf{w}}_{\lambda} &= 0 \quad \textrm{whenever } s_j = 0.
+\end{aligned}
+$$
 
 Each eigendirection $\mathbf{v}_j$ is multiplied by its own *shrinkage factor* (:numref:`fig_ridge_shrinkage`):
 

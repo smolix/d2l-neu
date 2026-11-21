@@ -146,7 +146,12 @@ all $i, j, a, b$.
 **Proof.** If neither weights nor bias depend on $(i, j)$, then shifting the
 input by $v$ directly shifts the output by $v$:
 
-$$[f(T_v \mathbf{X})]_{i,j} = u + \sum_a \sum_b [\mathbf{K}]_{a,b} [\mathbf{X}]_{i - v_1 + a, j - v_2 + b} = [f(\mathbf{X})]_{i - v_1, j - v_2} = [T_v f(\mathbf{X})]_{i,j}.$$
+$$
+\begin{aligned}
+[f(T_v \mathbf{X})]_{i,j} &= u + \sum_a \sum_b [\mathbf{K}]_{a,b} [\mathbf{X}]_{i - v_1 + a, j - v_2 + b} \\
+&= [f(\mathbf{X})]_{i - v_1, j - v_2} = [T_v f(\mathbf{X})]_{i,j}.
+\end{aligned}
+$$
 
 Conversely, assume the layer is equivariant. The all-zero image is invariant
 under every shift and maps to $\mathbf{U}$, forcing $\mathbf{U} = T_v \mathbf{U}$

@@ -493,7 +493,12 @@ Offline reinforcement learning learns a policy from a fixed log, which only off-
    $\mu(a \mid s)$ and raises them under the log's empirical action
    distribution $\hat{\pi}_e(a \mid s) = n(s, a) / n(s)$, where
    $n(s) = \sum_a n(s, a)$. In a table, one iteration chooses
-   $$\hat{Q}_{k+1} = \operatorname*{argmin}_Q\; \alpha_{\textrm{c}} \Big( \mathbb{E}_{s \sim \mathcal{D},\, a \sim \mu(\cdot \mid s)}\big[Q(s, a)\big] - \mathbb{E}_{(s, a) \sim \mathcal{D}}\big[Q(s, a)\big] \Big) + \frac{1}{2} \mathbb{E}_{(s, a) \sim \mathcal{D}} \Big[ \big( Q(s, a) - \hat{\mathcal{T}} \hat{Q}_k(s, a) \big)^2 \Big],$$
+   $$
+   \begin{aligned}
+   \hat{Q}_{k+1} &= \operatorname*{argmin}_Q\; \alpha_{\textrm{c}} \Big( \mathbb{E}_{s \sim \mathcal{D},\, a \sim \mu(\cdot \mid s)}\big[Q(s, a)\big] - \mathbb{E}_{(s, a) \sim \mathcal{D}}\big[Q(s, a)\big] \Big) \\
+   &\quad + \frac{1}{2} \mathbb{E}_{(s, a) \sim \mathcal{D}} \Big[ \big( Q(s, a) - \hat{\mathcal{T}} \hat{Q}_k(s, a) \big)^2 \Big],
+   \end{aligned}
+   $$
    where $\mathbb{E}_{\mathcal{D}}$ averages over the transitions of the log,
    $\alpha_{\textrm{c}} > 0$ sets the strength of the penalty, and
    $\hat{\mathcal{T}} \hat{Q}_k(s, a)$ averages the Q-learning target

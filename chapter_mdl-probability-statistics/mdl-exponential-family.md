@@ -517,10 +517,12 @@ Dividing by $Z=e^{A}$ brings the factor $e^{-A}$ inside the integral,
 completing the density :eqref:`eq_mdl-exp_family`:
 
 $$
+\begin{aligned}
 \nabla_{\boldsymbol\eta} A
-= \frac{1}{Z}\int h(\mathbf x)\,T(\mathbf x)\,e^{\boldsymbol\eta^\top T(\mathbf x)}\,d\mathbf x
-= \int T(\mathbf x)\,\underbrace{h(\mathbf x)\,e^{\boldsymbol\eta^\top T(\mathbf x) - A(\boldsymbol\eta)}}_{p(\mathbf x\mid\boldsymbol\eta)}\,d\mathbf x
+&= \frac{1}{Z}\int h(\mathbf x)\,T(\mathbf x)\,e^{\boldsymbol\eta^\top T(\mathbf x)}\,d\mathbf x \\
+&= \int T(\mathbf x)\,\underbrace{h(\mathbf x)\,e^{\boldsymbol\eta^\top T(\mathbf x) - A(\boldsymbol\eta)}}_{p(\mathbf x\mid\boldsymbol\eta)}\,d\mathbf x
 = \mathbb{E}[T(\mathbf x)] . \quad\blacksquare
+\end{aligned}
 $$
 
 Differentiating $\nabla A=(\nabla Z)/Z$ a second time, under the same

@@ -279,11 +279,13 @@ fixed count $k$ as $n\to\infty$. Rewriting the binomial pmf exposes four
 factors, three of which have elementary limits:
 
 $$
+\begin{aligned}
 \binom{n}{k}\Bigl(\frac\lambda n\Bigr)^k\Bigl(1-\frac\lambda n\Bigr)^{n-k}
-= \underbrace{\frac{n(n-1)\cdots(n-k+1)}{n^k}}_{\to\,1}
-  \cdot \frac{\lambda^k}{k!}
-  \cdot \underbrace{\Bigl(1-\frac\lambda n\Bigr)^{n}}_{\to\,e^{-\lambda}}
+&= \underbrace{\frac{n(n-1)\cdots(n-k+1)}{n^k}}_{\to\,1}
+  \cdot \frac{\lambda^k}{k!} \\
+&\quad\cdot \underbrace{\Bigl(1-\frac\lambda n\Bigr)^{n}}_{\to\,e^{-\lambda}}
   \cdot \underbrace{\Bigl(1-\frac\lambda n\Bigr)^{-k}}_{\to\,1} .
+\end{aligned}
 $$
 
 The first factor is a product of $k$ fractions that each approach $1$; the
@@ -433,10 +435,11 @@ sums $\sum_{i=1}^n i=\tfrac{n(n+1)}2$ and
 $\sum_{i=1}^n i^2=\tfrac{n(n+1)(2n+1)}6$:
 
 $$
-\mathbb{E}[X] = \frac1n\sum_{i=1}^n i = \frac{n+1}{2},
-\qquad
-\textrm{Var}(X) = \frac{(n+1)(2n+1)}{6} - \frac{(n+1)^2}{4}
-= \frac{(n+1)\bigl(2(2n+1)-3(n+1)\bigr)}{12} = \frac{n^2-1}{12}.
+\begin{aligned}
+\mathbb{E}[X] &= \frac1n\sum_{i=1}^n i = \frac{n+1}{2}, \\
+\textrm{Var}(X) &= \frac{(n+1)(2n+1)}{6} - \frac{(n+1)^2}{4} \\
+&= \frac{(n+1)\bigl(2(2n+1)-3(n+1)\bigr)}{12} = \frac{n^2-1}{12}.
+\end{aligned}
 $$
 
 The mean sits right at the midpoint, while the variance grows like $n^2$
@@ -758,9 +761,11 @@ plane, switching to polar coordinates $x=r\cos\theta$, $y=r\sin\theta$ with
 area element $dx\,dy=r\,dr\,d\theta$ makes the integrand elementary:
 
 $$
-I^2 = \int_{-\infty}^{\infty}\!\int_{-\infty}^{\infty} e^{-(x^2+y^2)/2}\,dx\,dy
-= \int_0^{2\pi}\!\!\int_0^\infty e^{-r^2/2}\,r\,dr\,d\theta
-= 2\pi\,\Bigl[-e^{-r^2/2}\Bigr]_0^\infty = 2\pi .
+\begin{aligned}
+I^2 &= \int_{-\infty}^{\infty}\!\int_{-\infty}^{\infty} e^{-(x^2+y^2)/2}\,dx\,dy
+= \int_0^{2\pi}\!\!\int_0^\infty e^{-r^2/2}\,r\,dr\,d\theta \\
+&= 2\pi\,\Bigl[-e^{-r^2/2}\Bigr]_0^\infty = 2\pi .
+\end{aligned}
 $$
 
 Hence $I=\sqrt{2\pi}$. The extra factor of $r$ from the polar Jacobian gives
@@ -1209,9 +1214,10 @@ $\boldsymbol\Sigma_{11}-\mathbf B\boldsymbol\Sigma_{21}-\boldsymbol\Sigma_{12}\m
 so $\mathbf x_1\mid\mathbf x_2$ is Gaussian with parameters
 
 $$
-\boldsymbol\mu_{1\mid 2} = \boldsymbol\mu_1 + \boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}(\mathbf x_2-\boldsymbol\mu_2),
-\qquad
-\boldsymbol\Sigma_{1\mid 2} = \boldsymbol\Sigma_{11} - \boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}.
+\begin{aligned}
+\boldsymbol\mu_{1\mid 2} &= \boldsymbol\mu_1 + \boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}(\mathbf x_2-\boldsymbol\mu_2), \\
+\boldsymbol\Sigma_{1\mid 2} &= \boldsymbol\Sigma_{11} - \boldsymbol\Sigma_{12}\boldsymbol\Sigma_{22}^{-1}\boldsymbol\Sigma_{21}.
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-mvn_conditional`
 
@@ -1278,7 +1284,7 @@ represented as a one-hot vector, matching how cross-entropy loss encodes class
 labels.
 
 | Distribution | pmf or pdf | Mean | Variance | Model assumption |
-|:--|:--|:--|:--|:--|
+|:----------|:------------|:----|:-------|:------------|
 | $\mathrm{Bernoulli}(p)$ | $p^x(1-p)^{1-x}$ | $p$ | $p(1-p)$ | one yes/no outcome |
 | $\mathrm{Binomial}(n,p)$ | $\binom nk p^k(1-p)^{n-k}$ | $np$ | $np(1-p)$ | $n$ fixed, independent trials, one $p$ |
 | $\mathrm{Poisson}(\lambda)$ | $\lambda^k e^{-\lambda}/k!$ | $\lambda$ | $\lambda$ | many rare independent chances; mean equals variance |

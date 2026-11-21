@@ -232,7 +232,10 @@ $$
 where
 
 $$
-a \;=\; \frac{\beta}{\alpha + \beta}, \qquad b \;=\; \frac{\alpha}{\alpha + \beta}, \qquad G \;=\; \left(\frac{\alpha A}{\beta B}\right)^{\frac{1}{\alpha + \beta}}.
+\begin{aligned}
+a &\;=\; \frac{\beta}{\alpha + \beta}, \qquad b \;=\; \frac{\alpha}{\alpha + \beta}, \\
+G &\;=\; \left(\frac{\alpha A}{\beta B}\right)^{\frac{1}{\alpha + \beta}}.
+\end{aligned}
 $$
 :eqlabel:`eq_chinchilla_allocation`
 

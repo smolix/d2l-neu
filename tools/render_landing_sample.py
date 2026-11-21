@@ -183,8 +183,8 @@ def render(cells: dict[str, dict[str, str]]) -> str:
             out.append(f'<img src="{src}" width="{w}" height="{h}" loading="lazy" '
                        f'alt="Training loss, validation loss and validation accuracy per epoch '
                        f'({LABELS[fw]})">')
-            out.append(f'<figcaption>The stored output of the last cell, from the book&#8217;s '
-                       f'{LABELS[fw]} run. <a href="{page}">Read this section</a> &middot; '
+            out.append(f'<figcaption>Training loss, validation loss, and validation accuracy '
+                       f'over ten epochs ({LABELS[fw]}). <a href="{page}">Read this section</a> &middot; '
                        f'<a href="{colab}">Open in Colab</a></figcaption>')
             out.append("</figure>")
         out.append("</div>")
@@ -194,8 +194,8 @@ def render(cells: dict[str, dict[str, str]]) -> str:
     counts = notebook_counts()
     if counts:
         parts = [f"{counts[fw]} in {LABELS[fw]}" for fw in FRAMEWORKS if fw in counts]
-        out.append(f'<p class="d2l-sample-note">Every output in the book comes from running its '
-                   f'notebooks: {", ".join(parts[:-1])} and {parts[-1]}.</p>')
+        out.append(f'<p class="d2l-sample-note">Every figure and result in the book comes from '
+                   f'its runnable notebooks ({", ".join(parts[:-1])}, and {parts[-1]}).</p>')
     out.append(END)
     return "\n".join(out)
 

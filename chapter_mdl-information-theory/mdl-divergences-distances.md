@@ -208,8 +208,10 @@ $P = (0.6, 0.3, 0.1)$ and $Q = (0.2, 0.5, 0.3)$. Here the ratios are $u = 3$,
 $0.6$, and $\tfrac13$, weighted by $0.2$, $0.5$, and $0.3$:
 
 $$
-0.2\,(3 \log 3) + 0.5\,(0.6 \log 0.6) + 0.3\,\big(\tfrac13 \log \tfrac13\big)
-= 0.659 - 0.153 - 0.110 = 0.396 \textrm{ nats},
+\begin{aligned}
+0.2\,(3 \log 3) &+ 0.5\,(0.6 \log 0.6) + 0.3\,\big(\tfrac13 \log \tfrac13\big) \\
+&= 0.659 - 0.153 - 0.110 = 0.396 \textrm{ nats},
+\end{aligned}
 $$
 
 matching the KL divergence we found earlier.

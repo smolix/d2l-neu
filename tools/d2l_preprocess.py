@@ -1108,8 +1108,9 @@ def number_all_equations(text, file_slug):
         stripped = line.strip()
         no_auto = skip[i]
 
-        # Single-line display equation: $$...$$ (opens and closes on one line)
-        if stripped.startswith('$$') and stripped.endswith('$$') and len(stripped) > 4:
+        # Single-line display equation: $$...$$ (opens and closes on one line,
+        # optionally followed by {#eq-*} or trailing text on the same line)
+        if stripped.startswith('$$') and stripped.count('$$') >= 2 and len(stripped) > 4:
             if '{#eq-' in line or no_auto:
                 result.append(line)
             else:

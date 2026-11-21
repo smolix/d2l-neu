@@ -361,7 +361,7 @@ $$
 
 The *resemblance* or Jaccard similarity $J$ is symmetric and equals 1 only for
 equal sets. The *containment* $C$ of $A$ in $B$ asks how much of $A$ is found
-in $B$. The two disagree exactly in the case of the opening pair. When $A$
+in $B$. The opening pair is the case in which the two disagree. When $A$
 lies inside $B$, the containment is 1 and the resemblance is $|A|/|B|$, so a
 page cut to half its length is a perfect match by $C$ and a poor one by $J$.
 FineWeb and this section use $J$. A truncated copy therefore counts as a
@@ -370,14 +370,13 @@ recognised as one. Readers who met the intersection over union of boxes in
 :numref:`sec_anchor` know $J$ already, with areas of pixels in place of counts
 of shingles.
 
-The code follows a specification that assignment A3 also uses, so that
-signatures can be compared bit for bit. Text is normalized to NFC and
-lowercased, and a word is a match of the regular expression `\w+`. A document
-with fewer than five words has no shingles, and later no signature, so it
-never matches anything. Shingles are hashed with blake2b, never with Python's
-built-in `hash`, which is salted afresh in every process: signatures built on
-it would change from run to run, and so would every manifest hash computed
-from them.
+The code follows a fixed specification, so that two implementations can be
+compared bit for bit. Text is normalized to NFC and lowercased, and a word is
+a match of the regular expression `\w+`. A document with fewer than five
+words has no shingles, and later no signature, so it never matches anything.
+Shingles are hashed with blake2b, never with Python's built-in `hash`, which
+is salted afresh in every process: signatures built on it would change from
+run to run, and so would every manifest hash computed from them.
 
 ```{.python .input #dedup-shingle-def}
 %%tab pytorch
@@ -467,8 +466,7 @@ and the work worth saving is the work of looking at those pairs at all.
 Let us start with a thought experiment that is too expensive to run. Put all
 possible shingles in a random order $\pi$, and let $h_\pi(A)$ be the shingle
 of $A$ that comes first in this order, the *minimum* of $A$ under $\pi$. Two
-documents agree in this one value with a probability that we can compute
-exactly.
+documents agree in this one value with a probability that we can compute.
 
 **Proposition.** *For a uniformly random order $\pi$ and non-empty sets $A$
 and $B$, $\Pr[h_\pi(A) = h_\pi(B)] = J(A, B)$.*
@@ -514,8 +512,7 @@ $(a_i x + c_i) \bmod p$ over the document's shingles. For $a_i \neq 0$ this
 map is a bijection of $\{0, \ldots, p - 1\}$, so it does order the shingles,
 but it is one of about $p^2$ such maps rather than a uniform choice among all
 orders, and the proposition holds only approximately. Whether that matters is
-a question for measurement. The specification, shared with assignment A3,
-fixes every remaining choice:
+a question for measurement. The specification fixes every remaining choice:
 
 1. NFC, lower case, `\w+` words, shingles of five words joined by one space;
 2. each shingle hashed by blake2b with an 8-byte digest, read as a
@@ -566,9 +563,9 @@ We check the estimator on sets whose similarity we choose: for each $J$ from
 behaves like random orders, the mean of $\hat J$ lies within three standard
 errors of $J$ and the variance across pairs is close to $J(1 - J)/k$. The same
 pairs go through datasketch's `MinHash`, an independent implementation.
-Finally, the signatures of the five fixture strings that A3 grades with are
-compared position by position with a version of the specification in Python
-integers, which never overflow.
+Finally, the signatures of five fixed strings, whose hash the library pins,
+are compared position by position with a version of the specification in
+Python integers, which never overflow.
 
 ```{.python .input #dedup-minhash-check}
 %%tab pytorch
@@ -628,8 +625,8 @@ R['minhash'] = dict(table=D1.to_dict('list'), fixture=fix.hexdigest(),
 In every bin the bias is within two standard errors (the largest $|z|$ is
 1.85), and the variance is between 0.88 and 1.16 times its formula. Datasketch
 behaves the same way. The fixture signatures are equal to the integer
-reference in all five strings, and their hash equals the pinned one, so a
-solution of A3 that follows the specification reproduces ours exactly. For
+reference in all five strings, and their hash equals the pinned one, so any
+implementation of the specification can test itself against these five. For
 sets of this size, then, the $(a x + c) \bmod p$ family is as good as a random
 order, and the 95% half-width at $J = 0.8$ is $1.96 \sqrt{0.8 \cdot 0.2 / 128}
 = 0.069$, as the formula says.
@@ -817,7 +814,7 @@ probabilities of 0.56, 0.77, 0.92 and 0.988 at similarities 0.7, 0.75, 0.8 and
 because FineWeb aimed at pages about 75% similar. The steepest points agree
 with the formula to four decimals. Under equal weights the best split of 128
 positions for $\tau = 0.8$ is $(9, 13)$, found alike by `best_br`, by a
-brute-force search over all $br \leq 128$ and by datasketch. A pair exactly at
+brute-force search over all $br \leq 128$ and by datasketch. A pair at
 the threshold becomes a candidate with probability 0.40 there, and the
 steepest point lies at 0.84, so this optimum misses more borderline duplicates
 than it admits borderline non-duplicates. Weighting misses five times as
@@ -1064,10 +1061,10 @@ holds 813 pairs and expects 445 candidates, with an interval from 418 to 473,
 and the three seeds give 431, 438 and 429; below 0.5 no pair becomes a
 candidate at all. The figure shows the same agreement against five theoretical
 curves, among them RefinedWeb's 450 bands of 20 rows
-:cite:`penedo2023refinedweb`, and the bucket pipeline gives exactly the
-per-pair decisions. The intervals treat the pairs of a bin as independent,
-although the three copies of one document share shingles, but the margin to
-the bound is wide. The sketch does what the derivation says.
+:cite:`penedo2023refinedweb`, and the bucket pipeline makes the same
+decisions as the pair-by-pair test. The intervals treat the pairs of a bin as
+independent, although the three copies of one document share shingles, but
+the margin to the bound is wide. The sketch does what the derivation says.
 
 Now we choose $(b, r)$ like a hyperparameter. On the training pairs we count
 false positives and false negatives of each setting, averaged over the three
@@ -1206,7 +1203,7 @@ between 0 and 1 equally, and the pairs do not: most negatives sit at $J = 0$,
 where every setting is right, and the copies crowd around the threshold.
 Replace the uniform weight by the pairs' own similarities, so that the
 expected weighted error is $\sum_i [P(J_i)(1 - y_i) + w_{\textrm{fn}}(1 -
-P(J_i))\, y_i]$, and its minimum lies exactly at $(11, 11)$ and at $(14, 9)$,
+P(J_i))\, y_i]$, and its minimum lies at $(11, 11)$ and at $(14, 9)$,
 the two settings that the hashed decisions chose; the cell asserts it. The
 derivation is right about the curve and wrong about the data. A deployment
 should tune $(b, r)$ on the similarities of the pairs it will actually decide,
@@ -1258,7 +1255,7 @@ two settings expect about $3 \times 10^6$ and $3 \times 10^7$ candidates. On
 our slice neither setting produces a single candidate, and even the loose
 $(32, 4)$ finds only 104 pairs, about four per thousand documents, with no
 bucket above six members. This is a measurement of an already deduplicated
-corpus, not an estimate for a raw crawl, which is exactly where the giant
+corpus, not an estimate for a raw crawl, which is where the giant
 buckets live.
 
 ## From Pairs to a Deduplicated Corpus
@@ -2237,10 +2234,10 @@ uniform-weight optimum only because the pairs' similarities are not uniform.
 Suffix arrays find repeated spans inside different documents, and embeddings
 find rewordings and, at loose thresholds, pages that merely share a topic. A
 13-gram index finds every verbatim and reformatted test item planted in
-FineWeb pages and almost no paraphrase, an embedding detector finds about half
+FineWeb pages and almost no paraphrase. An embedding detector finds about half
 of the copies and two in five paraphrases, limited by the host text around
-short items, and on our crawl the three stages remove 1.7% of the documents
-and leave a manifest whose hash does not depend on the number of workers.
+short items. On our crawl the three stages remove 1.7% of the documents and
+leave a manifest whose hash does not depend on the number of workers.
 
 ## Exercises
 
@@ -2274,7 +2271,7 @@ and leave a manifest whose hash does not depend on the number of workers.
        count for $N = 10^8$, $\phi = 10^{-4}$, $s = 0.3$ and $(b, r) =
        (14, 8)$.
     1. Keeping $b$ fixed, by what factor does lowering $r$ by one multiply
-       this count? Why is that factor large exactly where the count matters?
+       this count? Why is that factor large where the count matters most?
    :exlabel:`ex_lm_dedup-bulk`
 
 1. **Limits of the S-curve.**
@@ -2536,7 +2533,7 @@ the minimum of $E$?
 ::: {.d2l-note}
 **Answer.** $E$ weighs every $s \in [0,1]$ equally; the copies crowd near
 $\tau$ and most negatives sit at 0. With the pairs' own $J$ in place of the
-uniform weight, the expected error is least exactly at $(11, 11)$ and, for
+uniform weight, the expected error is least at $(11, 11)$ and, for
 $w_{\textrm{fn}} = 5$, at $(14, 9)$. Right about the curve, wrong about the
 data.
 :::
@@ -2632,8 +2629,8 @@ in three forms into 900 FineWeb pages; 1,000 controls.
 | reformatted (case, punctuation, options reversed) | 100 | 100 | 100 |
 | paraphrased by Qwen3.5-4B | 2 | 0 | 6 |
 
-- Reformatted: found **by construction**, since the index ignores exactly
-  these changes.
+- Reformatted: found **by construction**, since the index ignores
+  these very changes.
 - One control flagged: it quotes the Declaration of Independence, as MMLU
   item 3828 does. Look at the span.
 :::

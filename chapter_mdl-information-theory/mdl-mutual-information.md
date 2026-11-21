@@ -729,9 +729,7 @@ which lies below $H(Y\mid X)=\ln2$.
 
 In the simplest case, Fano's bound is exact. For the flipped bit with the
 estimate $\hat Y=X$, we have $P_e=0.1$ and $k=2$, so the left-hand side equals
-$H_b(0.1)+0.1\ln1=0.325$, matching $H(Y\mid X)$ exactly. Exercise
-:exref:`ex_mdl-mutual-information-fano-tightness` characterizes when equality
-holds in general.
+$H_b(0.1)+0.1\ln1=0.325$, matching $H(Y\mid X)$ exactly.
 
 No classifier, regardless of architecture or training procedure, can beat
 Fano's bound. For $1{,}000$ balanced classes, $H(Y)=\ln1000=6.91$ nats;
@@ -1018,9 +1016,7 @@ blocks of samples jointly. Any scalar code that quantizes one sample at a time
 stays strictly above the curve. The simplest example keeps only the sign of
 $X$: it spends $\ln2=0.693$ nats and reconstructs $\pm\sqrt{2/\pi}$ (the mean
 of $|X|$), incurring squared error $1-2/\pi=0.363$, whereas the
-rate–distortion curve asks only $0.506$ nats for that distortion. Exercise
-:exref:`ex_mdl-information-theory-scalar-quantization` quantifies this gap for
-finer scalar quantizers.
+rate–distortion curve asks only $0.506$ nats for that distortion.
 
 The right panel of :numref:`fig_mdl-it-capacity-rd` shows the full curve. As
 $D\to0$, the required rate climbs without bound—reflecting the infinite
@@ -1302,25 +1298,6 @@ rate penalty becomes the familiar KL regularizer of a variational autoencoder.
 
 ## Exercises
 
-1. **Gaussian pointwise mutual information.** Let $(X, Y)$ be the
-   Gaussian pair of :numref:`subsec_mdl-mi-gaussian` with standard normal
-   marginals and correlation $\rho$.
-    1. Show that
-       $\textrm{pmi}(x,y)=-\tfrac12\log(1-\rho^2)-\frac{\rho^2x^2-2\rho xy+\rho^2y^2}{2(1-\rho^2)}$.
-    1. Average it over $P_{X,Y}$ and recover :eqref:`eq_mdl-gaussian_mi`
-       without the entropy identities. Use $\mathbb{E}[X^2]=\mathbb{E}[Y^2]=1$
-       and $\mathbb{E}[XY]=\rho$.
-    1. Average it over $P_X \otimes P_Y$ instead, where $\mathbb{E}[XY]=0$.
-       Show that the result is
-       $-\tfrac12\log(1-\rho^2)-\rho^2/(1-\rho^2)
-       =-D_{\textrm{KL}}(P_X \otimes P_Y \,\|\, P_{X,Y})$, and evaluate the
-       reverse divergence at $\rho = 0.99$. Compare it with $I(X;Y)$.
-    1. Let $(X_i,Y_i)$, $i=1,\ldots,m$, be independent copies of the pair.
-       Show from the KL form that
-       $I(\mathbf X;\mathbf Y)=\sum_iI(X_i;Y_i)=-\tfrac m2\log(1-\rho^2)$,
-       and evaluate it for $\rho=0.9$ and $m=16$.
-   :exlabel:`ex_mdl-mutual-information-gaussian-pmi`
-
 1. [code] **Rare pairs and PMI.** Pointwise mutual information
    :eqref:`eq_mdl-pmi_def` corrects co-occurrence counts for the frequencies
    of the two words (:numref:`subsec_mdl-pmi`).
@@ -1415,22 +1392,6 @@ rate penalty becomes the familiar KL regularizer of a variational autoencoder.
        (c) the same factor?
    :exlabel:`ex_mdl-mutual-information-dpi-from-f-divergence`
 
-1. **Fano's tightness.** ● The proof of :eqref:`eq_mdl-fano` uses three
-   inequalities.
-    1. For the flipped bit with $\hat Y=X$, verify that all three are
-       equalities: the error event $W$ is independent of $\hat Y$ (the error
-       probability is $\delta$ for both values of $X$), given an error the
-       label is uniform over the $k-1=1$ wrong values, and
-       $Y\to\hat Y\to X$ is a Markov chain.
-    1. Show that Fano's inequality is an equality if and only if all three
-       conditions hold: the error event is independent of the estimate, given
-       an error and the estimate the label is uniform over the $k-1$ wrong
-       values, and $\hat Y$ is a sufficient statistic of $X$ for $Y$.
-    1. Let $Y$ be uniform on $\{0,1,2\}$, let $X=Y$, and let $g(0)=0$,
-       $g(1)=1$, $g(2)=0$. Compute both sides of :eqref:`eq_mdl-fano` and say
-       which of the three conditions fail.
-   :exlabel:`ex_mdl-mutual-information-fano-tightness`
-
 1. **Fano and a converse.** ● Fano's inequality :eqref:`eq_mdl-fano` bounds
    from below the error of any estimate $\hat Y = g(X)$ of a label $Y$ with
    $k$ values.
@@ -1499,32 +1460,6 @@ rate penalty becomes the familiar KL regularizer of a variational autoencoder.
        about $X$, whatever the distribution of $X$, and evaluate the bound at
        $a=0.5$ and $a=0.01$. For which data is it attained?
    :exlabel:`ex_mdl-mutual-information-gaussian-channel`
-
-1. [code] **Scalar quantization and rate–distortion.** ● A uniform scalar
-   quantizer with step $\Delta$ replaces $X$ by the nearest multiple of
-   $\Delta$, the center of its bin, and an entropy coder then spends about
-   $H(X_\Delta)$ nats per sample on the index $X_\Delta$ of the bin. For a
-   continuous density, $H(X_\Delta) + \log \Delta \to h(X)$ as
-   $\Delta \to 0$ (:numref:`sec_mdl-information_theory`); use this fact.
-    1. Let $X \sim \mathcal{N}(0, \sigma_X^2)$. For small $\Delta$ the mean
-       squared error is approximately $\Delta^2/12$. Combine this
-       approximation with the limit above to show that the rate exceeds the
-       Gaussian rate–distortion function :eqref:`eq_mdl-gaussian-rd` at the
-       same distortion by $\tfrac{1}{2}\ln(2\pi e/12)$ nats
-       ($\approx 0.255$ bits) per sample, independently of $\sigma_X$ and
-       $\Delta$.
-    1. Check the gap numerically for $\sigma_X = 1$ and
-       $\Delta = 2, 1, 0.5, 0.25, 0.1$, computing the bin probabilities and
-       the distortion by numerical integration. Part (a) uses two
-       approximations, $D \approx \Delta^2/12$ and
-       $H(X_\Delta) \approx h(X) - \log \Delta$. Which of them accounts for
-       the deviation of the gap from its limit at $\Delta = 1$ and
-       $\Delta = 0.5$?
-    1. A learned codec rounds each coordinate of its latent vector to the
-       nearest integer and entropy-codes the result. What does the gap of
-       (a) imply for such a codec at high rate? Which kind of quantizer can
-       close the gap?
-   :exlabel:`ex_mdl-information-theory-scalar-quantization`
 
 1. **The rate bound of a variational autoencoder.** Let
    $X\sim\mathcal N(0,1)$, let the encoder be $Z=X+\sigma\epsilon$ as in

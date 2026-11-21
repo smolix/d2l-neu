@@ -129,7 +129,7 @@ question, and each codeword records the sequence of answers leading to a
 symbol. Taking $0$ for yes, the code $0, 10, 110, 111$ asks "Is it the
 first symbol?", then "Is it the second?", then "Is it the third?". The
 previous section used $1$ for yes and obtained the mirror image,
-$1, 01, 001, 000$ (Exercise :exref:`ex_mdl-coding-compression-questions`).
+$1, 01, 001, 000$.
 
 **Proposition (Kraft inequality).** *A prefix-free binary code with
 codeword lengths $\ell_1, \ldots, \ell_k$ exists if and only if*
@@ -276,8 +276,7 @@ in only two ways: by implying a distribution $Q$ that differs from $P$, or
 by leaving part of its Kraft budget unspent ($Z < 1$). For our running
 distribution $P$, the Shannon code wastes $1.6 - 1.295 = 0.305$ bits per
 symbol, of which only $0.005$ bits come from mismatch while $0.300$ bits
-come from unspent budget
-(Exercise :exref:`ex_mdl-coding-compression-slack`).
+come from unspent budget.
 
 Together, the two halves of the proposition sandwich the optimal expected
 length of any symbol code between $H_2(P)$ and $H_2(P) + 1$ bits. This is
@@ -1013,8 +1012,7 @@ $2^H = 1.38$. Even under the true model, a ten-symbol string scores below
 $1.38$ whenever it contains no `b` at all, which occurs with probability
 $0.9^{10} = 35\%$. Even for a long text from this source, the perplexity
 still falls below $2^H$ nearly half the time, though by a margin that
-vanishes as length grows
-(Exercise :exref:`ex_mdl-coding-compression-perplexity-floor`). More
+vanishes as length grows. More
 generally, for an ergodic source scored by the true model, the perplexity
 of a single long text converges to $2^{H_{\textrm{rate}}}$ as
 $n \to \infty$, a fact we grant.
@@ -1073,22 +1071,6 @@ only after converting back to bits per character or bits per byte.
 
 ## Exercises
 
-1. **Questions as codewords.** A friend draws one of $k$ outcomes from a
-   known distribution $P$, and you identify it with yes/no questions. Each
-   question may depend on the answers so far.
-    1. Show that every such strategy is a prefix-free code, with the list
-       of answers as the codeword, and that every prefix-free code is a
-       strategy. Use the Kraft inequality :eqref:`eq_mdl-kraft` to show
-       that no strategy identifies every one of $k$ outcomes within $m$
-       questions unless $k \leq 2^m$. How many objects can the parlor game
-       of twenty questions tell apart?
-    1. *Guessing* asks "Is it outcome $1$?", then "Is it outcome $2$?", and
-       so on, most probable outcome first. Find its codeword lengths. Show
-       that it needs $1.75$ questions on average for the dyadic source,
-       which is the entropy, and $(k+1)/2 - 1/k$ questions for $k$ equally
-       likely outcomes. For $k = 8$, name a strategy that needs fewer.
-   :exlabel:`ex_mdl-coding-compression-questions`
-
 1. **McMillan's theorem.** A code is uniquely decodable if every
    concatenation of codewords parses in only one way.
     1. Show that the code $\{0, 01, 011\}$ is uniquely decodable but not
@@ -1125,37 +1107,14 @@ only after converting back to bits per character or bits per byte.
        algorithm and check the text's $0.645$ bits per original symbol. Do
        the same for triples. How does the slack over the entropy compare
        with the bound $1/n$ in each case?
-    1. The guessing strategy of Exercise
-       :exref:`ex_mdl-coding-compression-questions` is the code with
-       lengths $1, 2, \ldots, k-1, k-1$. Sort the probabilities,
+    1. Consider the linear guessing code with lengths
+       $1, 2, \ldots, k-1, k-1$. Sort the probabilities,
        $p_1 \geq \cdots \geq p_k$, and show that Huffman's algorithm can
        return these lengths whenever $p_i \geq \sum_{j > i} p_j$ for every
-       $i$, so that guessing is then a best strategy. The source
-       $(0.4, 0.3, 0.2, 0.1)$ violates the condition. Is guessing a best
-       strategy for it?
+       $i$, so that linear guessing is then an optimal prefix code. The
+       source $(0.4, 0.3, 0.2, 0.1)$ violates the condition. Is linear
+       guessing optimal for it?
    :exlabel:`ex_mdl-coding-compression-huffman`
-
-1. **Where the slack goes.** A code with lengths $\ell_i$ spends
-   $Z = \sum_i 2^{-\ell_i} \leq 1$ of its budget and implies the
-   distribution $q_i = 2^{-\ell_i}/Z$, and :eqref:`eq_mdl-code-length-decomp`
-   writes $\mathbb{E}[\ell] - H_2(P) = D_{\textrm{KL}}^{(2)}(P\|Q) -
-   \log_2 Z$.
-    1. The text splits the waste of the Shannon code of
-       $P = (0.6, 0.3, 0.1)$ into $0.005$ bits of mismatch and $0.300$ of
-       unspent budget. Check the split by computing $Z$ and $Q$ for its
-       lengths $1, 2, 4$, and do the same for Huffman's lengths $1, 2, 2$.
-       Which code wastes bits on unspent budget, and which on mismatch?
-    1. Two codes are built from the model $Q = (0.2, 0.5, 0.3)$ and used on
-       data from $P$: the Shannon code, with lengths $3, 1, 2$, and
-       Huffman's, with lengths $2, 1, 2$. Split the excess of each over
-       $H_2(P)$ into the two terms. The distribution implied by the Shannon
-       code is further from $P$ than $Q$ itself, for which
-       $D_{\textrm{KL}}^{(2)}(P\|Q) = 0.571$ bits. Which symbol is
-       responsible?
-    1. Show that the Shannon code of any $P$ leaves less than one bit
-       unspent, $-\log_2 Z < 1$, and that it leaves nothing unspent only
-       when every probability is a power of $\tfrac12$.
-   :exlabel:`ex_mdl-coding-compression-slack`
 
 1. [code] **Exact arithmetic coding.** ● The interval narrowing of
    :numref:`subsec_mdl-arithmetic-coding` stores `lo` and `hi` as
@@ -1281,22 +1240,6 @@ only after converting back to bits per character or bits per byte.
    [EE376A/Stats376A: Information Theory, Homework 2](https://web.stanford.edu/~kedart/ee376a_winter1617/hw2.pdf),
    Problem 6.*
    :exlabel:`ex_mdl-information-theory-typical-sets`
-
-1. **The perplexity floor.**
-    1. A Bernoulli source emits `a` with probability $0.9$ and `b`
-       otherwise, and its own true model scores a text of $n$ symbols.
-       Write the loss $\textrm{CE}$ of :eqref:`eq_mdl-perplexity-def` as a
-       function of the number $j$ of `b`'s and show that
-       $\textrm{PPL} < 2^{H}$ exactly when $j < n/10$. The text gives the
-       probability of this event for $n = 10$. Compute it for $n = 100$
-       and $n = 1000$. What does it tend to, and how does the typical
-       distance of $\textrm{PPL}$ from $2^H$ change with $n$?
-    1. A leaderboard reports one perplexity on one held-out set. Explain why
-       :eqref:`eq_mdl-ppl-floor` does not bound that number, and why a
-       *lower* reported perplexity, under the same tokenizer, nevertheless
-       always means a smaller total surprisal of that set, which is its
-       arithmetic code length to within two bits.
-   :exlabel:`ex_mdl-coding-compression-perplexity-floor`
 
 1. **Perplexity across tokenizers.** Perplexity is computed per token, so
    it depends on how a text is split into tokens.

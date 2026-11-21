@@ -522,300 +522,225 @@ Offline reinforcement learning learns a policy from a fixed log, which only off-
 ::: {.cover}
 [Dive into Deep Learning · §15.7]{.kicker}
 
-Offline Reinforcement Learning<br>
-**learning from a fixed log · distribution shift · stitching · pessimism · choosing the penalty**
+Offline Reinforcement Learning: Distribution Shift and Pessimism<br>**fixed datasets · trajectory stitching · out-of-distribution extrapolation · lower confidence bounds · CQL & policy constraints**
 :::
 :::
 
-::: {.slide title="A Table Learned from 100 Logged Episodes Predicts 0.25 Where No Policy Earns More Than 0.18"}
-[The problem]{.kicker}
+::: {.slide title="Learning When No New Action May Be Tried"}
+[Motivation]{.kicker}
 
-- A hospital has treatment records but will not experiment on patients; a
-  company has last year's logs. No new trial is allowed.
-- Online, an overestimated action is eventually taken, and the outcome
-  corrects the estimate. Offline, nothing ever tests it.
-- Slippery lake, 100 episodes of a competent operator: Q-learning on the log
-  predicts **0.25** at the start; the optimum is **0.18**; its policy earns
-  about **0.1**.
+Every algorithm in §15.1–§15.6 relied on **online interaction** to correct its mistakes: if a Q-network or world model overrated an action, the agent tried that action, observed the disappointing outcome, and updated its estimate.
 
-::: {.d2l-note .warn}
-The maximum in the target picks the luckiest estimates, and in a fixed log
-the luckiest estimates rest on the fewest samples.
-:::
+::: {.cols}
+::: {.col}
+- **Purely Offline Settings:** Clinical treatment logs, historical recommender trajectories, and teleoperated robot demonstrations provide a fixed dataset $\mathcal{D}$ collected by a behavior policy $\pi_e$, with **zero further interaction**.
+- **The Offline Dilemma:** To outperform $\pi_e$, the learner must select actions that $\pi_e$ took rarely—yet rarely sampled actions have the noisiest value estimates!
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- say which update rules can learn from another policy's log;
-- learn from a fixed log by solving its empirical MDP, and score the
-  prediction against the exact optimum;
-- explain distribution shift, and why the backup stitches episodes together;
-- pick the safer arm with a lower confidence bound, and put $\kappa/\sqrt{n}$
-  into the backup;
-- predict when pessimism helps and when it costs.
-
-**Running example:** slippery 4×4 FrozenLake, $\gamma = 0.95$,
-$V^*(s_0) = 0.18$; 40 uniform and 40 narrow logs.
-
-**The idea:** distrust an estimate in proportion to how little data it rests on.
+::: {.col}
+- **Unchecked Maximization Bias:** On the slippery $4 \times 4$ FrozenLake ($\gamma = 0.95$, exact optimum $V^*(s_0) = 0.180$), running Q-learning on 100 logged episodes predicts **$0.25$** at the start cell while its policy actually earns only **$0.10$**.
+- **The Remedy (Pessimism):** Distrust every value estimate in proportion to its epistemic uncertainty $1/\sqrt{n(s, a)}$.
+:::
+:::
 :::
 
-::: {.slide title="A Fixed Log Replaces the Environment"}
-[Where this fits]{.kicker}
+::: {.slide title="Three Data Regimes: On-Policy, Off-Policy, and Offline"}
+[Data & Target Compatibility]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Actor-Critic Methods | a critic in place of the full return |
-| Trust Regions and PPO | several steps on one batch |
-| KL-Regularized Policy Optimization | a KL penalty toward a reference |
-| Deep Q-Networks | replay and a target network |
-| Soft Actor-Critic | continuous actions, entropy |
-| Learned Models and Planning | a model to plan in |
-| **Offline Reinforcement Learning** | **a fixed log, no new trials** |
-| RL for Sequence Generation | a checker's verdict on a response |
+- **On-Policy (REINFORCE, A2C, PPO):** Requires trajectories from the current policy $\pi_\theta$; ratios $\rho_t$ stretch a batch for only a few epochs.
+- **On-Policy TD ($\delta_{\textrm{SARSA}} = r + \gamma Q(s', a') - Q(s, a)$):** Because $a' \sim \pi_e(\cdot \mid s')$, SARSA on a fixed log converges to $Q^{\pi_e}$ (evaluating the collector, not improving on it).
+- **Off-Policy Optimality ($r + \gamma \max_{a'} Q(s', a')$):** Does not depend on $\pi_e$, targeting $Q^*$—provided $\mathcal{D}$ satisfies the **coverage condition** over all pairs visited by the greedy policy.
 :::
 
-::: {.col .narrow}
-- **Uses:** tabular Q-learning, value iteration, exact policy values,
-  behavior cloning, the UCB rule.
-- **Skips:** deep offline methods at scale (named only); off-policy
-  evaluation (an exercise).
+::: {.col .fig}
+![](../img/mdl-rl-data-rules.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="The Q-Learning Target Does Not Depend on Who Chose the Action"}
-[Which data]{.kicker}
+::: {.slide title="Two Fixed Logs on the Slippery FrozenLake"}
+[Experimental Testbed]{.kicker}
 
-![](../img/mdl-rl-data-rules.svg){width=96%}
-
-$r + \gamma \max_{a'} Q(s', a')$ is a valid sample from any collector; a
-policy gradient needs the current policy's own trajectories.
-:::
-
-::: {.slide title="SARSA Learns the Collector's Values; Q-Learning Learns Q*"}
-[Which data]{.kicker}
-
-$$\delta_{\textrm{SARSA}} = r + \gamma\, Q(s', a') - Q(s, a), \qquad
-a' \sim \pi_e(\cdot \mid s')$$
-
-- Averaged over $a'$, SARSA's target is the Bellman expectation backup of
-  the behavior policy $\pi_e$: it learns $Q^{\pi_e}$.
-- Q-learning's $\max_{a'}$ targets $Q^*$ from any log, **if** the log covers
-  the pairs the greedy policy picks: the *coverage condition*.
-- Offline, the coverage of the log is all there is.
-:::
-
-::: {.slide title="Two Logs: Broad Coverage, or a Competent Operator"}
-[Two logs]{.kicker}
-
-- **uniform:** 500 episodes of random actions;
-- **narrow:** 100 episodes of $\epsilon$-greedy on $Q^*$, $\epsilon = 0.2$
-  (best action with probability 0.85).
+On the $4 \times 4$ slippery FrozenLake ($11$ nonterminal cells $\times 4$ actions $= 44$ live pairs, exact optimal start value $V^*(s_0) = 0.180$), we generate 40 datasets each of two contrasting behavior policies:
 
 @!offline-rl-distribution-shift-measured
 
-Coverage and competence pull in opposite directions.
+- **Coverage vs. Competence Trade-off:**
+  - **Uniform Log (500 random episodes):** Terrible behavior return ($0.008$), but tries all $44/44$ live pairs with median support $n(s, a) = 42$.
+  - **Narrow Log (100 $\epsilon$-greedy expert episodes, $\epsilon = 0.2$):** Strong behavior return ($0.087$), but concentrates $85\%$ of its actions on $\pi^*$, leaving median support at just $8$ samples per pair.
 :::
 
-::: {.slide title="Swept Q-Learning on a Log Converges to the Log's Empirical MDP"}
-[Learning from a log]{.kicker}
+::: {.slide title="Sweeping Tabular Q-Learning Over a Fixed Log"}
+[Incremental Offline Q]{.kicker}
 
-```{.python #offline-rl-exercises-1}
-def offline_q(batch, gamma, num_iters=500):
-    n = count(batch)                          # n(s, a)
-    P, r = np.zeros((16, 4, 16)), np.zeros((16, 4))
-    np.add.at(P, (batch.obs, batch.act, batch.next_obs), 1)
-    np.add.at(r, (batch.obs, batch.act), batch.rew)
-    m = np.maximum(n, 1)                      # untried: zero rows
-    mdp_hat = d2l.TabularMDP(P / m[..., None], r / m, gamma)
-    Q = np.zeros((16, 4))
-    for _ in range(num_iters):
-        Q = mdp_hat.backup(Q.max(axis=1))
-    return Q
-```
+We can run standard tabular Q-learning (`offline_q_sweeps`) over a fixed log $\mathcal{D}$ by shuffling the recorded transitions for 200 epochs with decaying step size $\alpha_n = 1/(1 + 0.1 n(s, a))$:
+
+@offline-rl-the-experiment-with-a-behavior-cloning-bar-1
+:::
+
+::: {.slide title="Certainty Equivalence: Solving the Empirical MDP"}
+[The Empirical Fixed Point]{.kicker}
+
+Because every sweep revisits the exact same logged transitions, incremental Q-learning converges to the optimal value table of the log's **empirical MDP** ($\hat{P}(s' \mid s, a) = n(s, a, s')/n(s, a)$, $\hat{r}(s, a) = \sum r / n(s, a)$):
+
+@offline-rl-distribution-shift-against-the-exact-optimum-1
 
 @!offline-rl-distribution-shift-against-the-exact-optimum-2
-
-The 200-sweep loop with step $1/(1+0.1n)$ and the solve agree.
 :::
 
-::: {.slide title="The Naive Table Predicts More Than the Optimum and Earns Less"}
-[Distribution shift]{.kicker}
+::: {.slide title="Behavior Cloning and Trajectory Stitching"}
+[Stitching Sub-Trajectories]{.kicker}
 
-Prediction = $\max_a \hat{Q}(s_0, a)$; earned = exact value of the greedy
-policy; 40 logs each.
+Our baseline learner is **Behavior Cloning** (`clone_policy`), which recovers the empirical action frequencies $\hat{\pi}_e(a \mid s) = n(s, a) / n(s)$ and predicts the log's mean discounted episode return:
+
+@offline-rl-the-experiment-with-a-behavior-cloning-bar-2
+
+- **How Offline Q-Learning Outperforms Its Collector (Stitching):** Suppose Episode 1 reaches cell 10 from the start and falls into a hole, while Episode 2 reaches cell 10 by a long detour and slides into the goal.
+- Per-transition Bellman backups propagate Episode 2's goal continuation at cell 10 backward along Episode 1's prefix—composing a high-value path that no single logged episode ever executed!
+:::
+
+::: {.slide title="Naive Offline Q-Learning vs. Behavior Cloning"}
+[Empirical Comparison]{.kicker}
+
+Comparing what each learner **predicts** at the start cell ($\max_a \hat{Q}(s_0, a)$) against what its policy **actually earns** ($V^\pi(s_0)$ solved exactly in the true MDP) across 40 uniform and 40 narrow logs:
 
 @!offline-rl-the-experiment-with-a-behavior-cloning-bar-5
 
-Narrow logs: above $V^* = 0.18$ on 39 of 40, while the policy earns about 0.1.
+- **Trajectory Stitching on Uniform Logs:** Behavior cloning copies a random walk and earns **$0.01$**, whereas naive Q-learning stitches good segments from different random episodes to earn **$0.14$** (beating the clone on $40/40$ logs!).
+- **Overestimation on Narrow Logs:** Naive Q-learning predicts **$0.25 > V^* = 0.18$** on $39/40$ narrow logs while earning only **$0.10$** (barely edging out the clone's $0.09$ on $27/40$ logs).
 :::
 
-::: {.slide title="The Greedy Policy Picks Thin Pairs Whose Errors Happen to Be High"}
-[Distribution shift]{.kicker}
+::: {.slide title="Where the Inflated Predictions Come From"}
+[Out-of-Distribution Picks]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+- Plotting the estimation error $\hat{Q}(s, a) - Q^*(s, a)$ against the pair's sample count $n(s, a)$ on the first narrow log reveals why naive Q-learning fails:
+- For thinly sampled pairs ($n \le 10$), empirical transitions have huge variance, spreading errors from $-0.15$ to **$+0.26$**.
+- The greedy operator $\operatorname{argmax}_a \hat{Q}(s, a)$ systematically picks the thinly supported pairs ($n = 2$ or $n = 5$) that suffered lucky positive errors!
+:::
+
+::: {.col .fig}
 @!offline-rl-the-experiment-with-a-behavior-cloning-bar-6
-
-First narrow log: error $\hat{Q} - Q^*$ of every tried pair against its
-support. Well-sampled pairs inherit a small upward error from later cells.
+:::
+:::
 :::
 
-::: {.slide title="A Quarter of the Picks Rest on Five Samples or Fewer, Overestimated by 0.2"}
-[Distribution shift]{.kicker}
+::: {.slide title="Pooling Greedy Picks Across All 40 Narrow Logs"}
+[Distribution Shift Measured]{.kicker}
 
-Pooled over all 40 narrow logs:
+Pooling the greedy policy's chosen state-action pairs across all 40 narrow datasets confirms that the $\max_a$ operator acts as a selection filter for thin, overestimated actions:
 
 @!offline-rl-distribution-shift-against-the-exact-optimum-3
 
-- The maximum selects the thin pairs with positive errors; the backup
-  passes their values to earlier cells.
-- *Distribution shift:* the learned policy takes actions the log rarely
-  contains. Online the next trial would correct them; offline nothing does.
+::: {.d2l-note .warn}
+**Offline Distribution Shift:** Fully **$26\%$ of the greedy policy's picks** rest on $1$ to $5$ logged transitions, carrying a median upward error of **$+0.20$** (larger than the true optimal value $V^*(s_0) = 0.180$ itself!). Because the log is fixed, no online rollout ever refutes these phantom values.
+:::
 :::
 
-::: {.slide title="Check: Calibrated but Weak, or Overconfident but Better?"}
-[Check]{.kicker}
+::: {.slide title="Pessimism Under Uncertainty: A Two-Armed Bandit"}
+[Lower Confidence Bounds]{.kicker}
 
-Uniform logs: the clone predicts 0.01 and earns 0.01; the naive table
-predicts 0.20 and earns 0.14. Why is the clone calibrated, and how does the
-table beat a random collector?
+Consider an offline bandit log with $n(1) = 100$ pulls of deterministic Arm 1 ($r(1) = 0.5$) and $n(2) = 1$ lucky pull of Bernoulli Arm 2 (true mean $r(2) = 0.25$, logged $\hat{r}(2) = 1.0$ with probability $1/4$):
 
-. . .
-
-- The clone predicts the log's own average return, an unbiased estimate of
-  the behavior's value, which the clone nearly matches.
-- The backup joins one episode's route to cell 10 with another's walk from
-  cell 10 to the goal, a path no episode followed: *stitching*.
-- Narrow logs: the clone copies a good operator (0.09); the naive table
-  beats it on only 27 of 40.
+- **Naive Empirical Argmax:** Picks Arm 2 whenever its single pull paid $1$ ($\hat{r}(2) = 1.0 > 0.5$), earning expected return $\frac{3}{4}(0.5) + \frac{1}{4}(0.25) = \mathbf{0.4375}$.
+- **Lower Confidence Bound (LCB):** Subtract Hoeffding's uncertainty radius $b(a) = \sqrt{\log(2K/q) / (2n(a))}$ (at $K = 2, q = 0.1$: $b(1) = 0.136$, $b(2) = 1.358$):
+  $$\hat{r}_{\textrm{LCB}}(1) = 0.500 - 0.136 = \mathbf{+0.364} \quad > \quad \hat{r}_{\textrm{LCB}}(2) = 1.000 - 1.358 = \mathbf{-0.358}$$
+- **The Price of Pessimism:** LCB safely picks Arm 1 (earning **$0.50$**), but if Arm 2 actually had true mean $0.70$, LCB would refuse it until the log contained at least **$n(2) \ge 17$ pulls**!
 :::
 
-::: {.slide title="A Lower Confidence Bound Picks the Right Arm from 100 Pulls and 1"}
-[Pessimism]{.kicker}
+::: {.slide title="Pessimistic Value Iteration on the Lake"}
+[Tabular Pessimism]{.kicker}
 
-Arm 1 paid $1/2$ on 100 pulls; arm 2 paid 1 on its single pull (true mean
-$1/4$). Hoeffding radius, $K = 2$ arms, failure probability $q = 0.1$:
+In an MDP, **Pessimistic Value Iteration** (Jin, Yang, & Wang, 2021) subtracts an inverse-square-root count penalty $\kappa / \sqrt{n(s, a)}$ inside every Bellman backup (clipping at the environment's known floor $0$):
 
-$$b(a) = \sqrt{\frac{\log(2K/q)}{2\,n(a)}}:\quad b(1) = 0.136,\ \
-b(2) = 1.358$$
+$$Q(s, a) \leftarrow \max\Big(\hat{r}(s, a) + \gamma \sum_{s'} \hat{P}(s' \mid s, a) \max_{a'} Q(s', a') - \frac{\kappa}{\sqrt{n(s, a)}},\ 0\Big)$$
 
-- Empirical best: arm 2 (1 against 0.5), earning 0.25.
-- Lower bounds: $0.5 - 0.136 = 0.364$ against $1 - 1.358 = -0.358$: arm 1.
-- Averaged over the single pull: 0.44 for the empirical best, 0.50 for the
-  bound.
+- **Mirror Image of UCB Exploration (§14.4):** Online UCB *adds* $+\kappa \sqrt{\log t / n(s, a)}$ to entice the agent to visit uncertain pairs and gather corrective data; offline LCB *subtracts* $-\kappa / \sqrt{n(s, a)}$ to repel the policy from unsupported pairs where no new data will ever arrive.
 :::
 
-::: {.slide title="Check: When Does the Bound Accept a Better Arm?"}
-[Check]{.kicker}
+::: {.slide title="When Pessimism Helps—and When It Hurts"}
+[Narrow vs. Uniform Logs]{.kicker}
 
-Arm 2 now pays 0.7 on average, and its empirical mean is 0.7. Arm 1's lower
-bound stays at 0.364. How many pulls of arm 2 must the log hold before the
-bound prefers it?
-
-. . .
-
-- Need $0.7 - \sqrt{\log 40 / (2 n_2)} > 0.364$.
-- $n_2 = 16$: $0.360$; $n_2 = 17$: $0.371$. **17 pulls.**
-- Pessimism refuses good actions until the data vouch for them.
-:::
-
-::: {.slide title="On the Lake, Pessimism Is One Line Inside the Backup"}
-[Pessimism]{.kicker}
-
-$$Q(s, a) \leftarrow \max\Big( \hat{r}(s, a) + \gamma\, \hat{P}(\cdot \mid s, a)
-\cdot \max_{a'} Q(\cdot, a') - \frac{\kappa}{\sqrt{n(s, a)}},\ 0 \Big)$$
-
-```{.python #offline-rl-exercises-2}
-penalty = np.where(n > 0, kappa / np.sqrt(m), np.inf)
-Q = np.maximum(mdp_hat.backup(Q.max(axis=1)) - penalty, 0.0)
-```
-
-- Untried pairs: the clip turns the infinite penalty into 0, the value they
-  already had.
-- Mirror of UCB's $+\kappa\sqrt{\log t / n}$: online, optimism buys a trial
-  that corrects the estimate; offline, no trial comes.
-:::
-
-::: {.slide title="Pessimism Helps on the Narrow Log and Costs on the Uniform One"}
-[Narrow and uniform]{.kicker}
-
-$\kappa = 0.1$, the same 80 logs:
+Running pessimistic value iteration at $\kappa = 0.1$ across all 40 narrow and 40 uniform logs demonstrates the exact theoretical boundary of offline pessimism (Rashidinejad et al., 2021):
 
 @!offline-rl-kappa-over-root-n
 
-- Narrow: better than naive on 29 of 40, beats the clone on 39.
-- Uniform: no prediction above $V^*$, but worse on 28 of 40.
-- The guarantee needs the log to cover the **optimal** policy's pairs, not
-  every pair.
+- **On Narrow Expert Logs ($\kappa = 0.1$ Wins):** Eliminates overestimation ($0.25 \to 0.13$), beats naive Q-learning on **$29/40$ logs** (losing on only $1$), and beats behavior cloning on **$39/40$ logs**!
+- **On Uniform Random Logs ($\kappa = 0.1$ Hurts):** When every pair is already well-covered ($n \approx 42$), there are no thin lucky outliers to prune, and uneven count penalties distort valid value differences (losing to naive Q on $28/40$ logs).
 :::
 
-::: {.slide title="At 100 Episodes, Kappa = 0.3 Drives Nearly Every Start Value to Zero"}
-[Choosing the penalty]{.kicker}
+::: {.slide title="Over-Pessimism and the Offline Model-Selection Dilemma"}
+[Choosing Kappa]{.kicker}
+
+What happens if we crank the penalty up to $\kappa = 0.3$ on the 100-episode narrow logs?
 
 @!offline-rl-choosing-the-penalty
 
-- Charged at every backup, the penalty adds up along a path to at most about
-  $\kappa / (\sqrt{n}\,(1 - \gamma))$: 20 times the per-step charge.
-- At $\kappa = 0.3$ the bound drops below $0.18$ only past 1,000 samples per
-  pair; with five times the data the realized charge is already small.
-- The penalty has to match the amount of data.
+- **Cumulative Horizon Charge:** Because $-\kappa/\sqrt{n(s,a)}$ is subtracted at *every* backup step, penalties accumulate along a trajectory up to $\sim \frac{\kappa}{\sqrt{n}(1 - \gamma)} = 20 \frac{\kappa}{\sqrt{n}}$, driving start values to $0.00$ at $\kappa = 0.3$.
+- **Why Tuning $\kappa$ Offline Is Hard:** Without a simulator, off-policy evaluation via trajectory importance weights $\prod_t \frac{\pi(a_t \mid s_t)}{\pi_e(a_t \mid s_t)}$ assigns weight $0$ to most episodes under a deterministic policy and explodes in variance on the rest.
 :::
 
-::: {.slide title="Check: Why Can Kappa Not Be Chosen from the Log?"}
-[Check]{.kicker}
+::: {.slide title="Deep Offline RL: Policy Constraints and Value Penalties"}
+[Beyond Tabular Counts]{.kicker}
 
-Every comparison so far used the exact value of each policy in the true lake.
-What could an offline deployment use instead, and what goes wrong?
+In continuous or high-dimensional spaces where exact visit counts $n(s, a)$ do not exist, deep offline RL algorithms enforce pessimism through two neural mechanisms:
 
-. . .
+| Offline RL Family | Mathematical Objective / Loss Modification | Tabular Counterpart | Representative Deep Methods |
+| :--- | :--- | :--- | :--- |
+| **1. Policy Constraint** | $\max_\pi \mathbb{E}_{a \sim \pi}[\hat{Q}(s, a)] - \beta D_{\textrm{KL}}(\pi(\cdot \mid s) \Vert \pi_e(\cdot \mid s))$ | Behavior cloning ($\beta \to \infty$) | **TD3+BC** (adds $+\lambda \|a - a_{\textrm{log}}\|^2$), **IQL**, **DPO** (§15.8) |
+| **2. Value Penalty** | $\min_w \mathcal{L}_{\textrm{TD}}(w) + \alpha_{\textrm{c}}\, \mathbb{E}_s\big[\log \sum_{a'} e^{Q_w(s, a')} - Q_w(s, a_{\textrm{log}})\big]$ | $-\kappa / \sqrt{n(s, a)}$ inside backup | **Conservative Q-Learning (CQL)** (Kumar et al., 2020) |
 
-- Importance weights $\prod_t \pi(a_t \mid s_t)/\pi_e(a_t \mid s_t)$: a
-  greedy candidate gives most logged episodes weight zero; the rest vary
-  wildly.
-- The empirical MDP of held-out data: thin exactly where the candidate's
-  choices differ from the log's.
-- In practice: learn from the log, then collect a little new data.
+- **How CQL Works Without Counts:** Minimizing $\log \sum_{a'} \exp(Q_w(s, a'))$ pushes *down* all action values (especially high out-of-distribution peaks), while $-Q_w(s, a_{\textrm{log}})$ pushes *up* actions proportional to their empirical dataset frequency $\hat{\pi}_e(a \mid s)$!
 :::
 
-::: {.slide title="Deep Offline Methods Constrain the Policy or the Values"}
-[Beyond the table]{.kicker}
+::: {.slide title="Return-Conditioned Sequence Modeling and Its Traps"}
+[Return Conditioning]{.kicker}
 
-- **Policy constraint:** the KL-regularized objective with the behavior
-  policy as reference,
-  $\mathbb{E}_{a\sim\pi}[\hat{Q}(s, a)] - \beta\, D_{\textrm{KL}}(\pi \,\Vert\, \pi_e)$;
-  TD3+BC adds a cloning term.
-- **Value penalty:** CQL adds
-  $\alpha_{\textrm{c}}\big(\log\sum_{a'} e^{Q(s, a')} - Q(s, a)\big)$
-  to the TD loss; no counts needed.
+**Decision Transformer** (Chen et al., 2021) bypasses Bellman backups and $\max_{a'}$ entirely by training an autoregressive sequence model on $(g_0, s_0, a_0, g_1, s_1, a_1, \dots)$ to predict $a_t$ given a desired return-to-go $g_t$:
+
+::: {.cols}
+::: {.col}
+- **Advantage (No Deadly Triad):** Pure supervised cross-entropy/MSE loss on logged sequences—no bootstrapping and no out-of-distribution value divergence.
+- **Limitation 1 (Weak Stitching):** Conditioned on a high return $g$, the model imitates whole trajectories that achieved $g$ rather than stitching sub-trajectories across failed episodes.
 :::
 
-::: {.slide title="Conditioning on a High Return Imitates the Lucky Episodes"}
-[Return conditioning]{.kicker}
-
-One step: action A pays 1 with probability 1/2, action B always pays 0.6;
-a random behavior logged both many times.
-
-- Every logged return of 1 came from A, so "act like the episodes that got
-  1" always picks A and earns **0.5**.
-- A Q-learner averages each action's outcomes and picks B: **0.6**.
-- Return conditioning needs no maximum, but cannot stitch and trusts luck.
+::: {.col}
+- **Limitation 2 (The Stochastic Luck Trap):** In a 1-step bandit where **Action A** pays $1$ with probability $0.5$ ($0$ otherwise, mean $0.5$) and **Action B** deterministically pays $0.6$:
+  - Every logged episode with return $g = 1.0$ took Action A!
+  - Conditioning on the maximum return $g = 1.0$ therefore selects Action A ($0.50$) instead of optimal Action B ($0.60$).
+:::
+:::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Stitching, LCB Thresholds, and CQL"}
+[Check Your Understanding]{.kicker}
 
-- Only off-policy targets can use a log, and only where it covers the
-  greedy policy's pairs.
-- Naive table on narrow logs: predicts 0.25, optimum 0.18, earns about 0.1;
-  a quarter of its picks rest on 5 samples or fewer.
-- Stitching: on uniform logs it earns 0.14 against the clone's 0.01.
-- $\kappa/\sqrt{n}$ inside the backup: narrow logs better on 29 of 40;
-  uniform logs worse on 28 of 40; $\kappa = 0.3$ zeroes nearly every start
-  value of the 100-episode logs.
+Test your grasp of offline RL fundamentals:
 
-**Next:** a fixed dataset of human preferences, and the same KL constraint,
-for language models.
+1. **Calibration vs. Return:** On the uniform random FrozenLake logs, why is Behavior Cloning perfectly calibrated ($\text{pred } 0.01 \approx \text{earned } 0.01$) yet $14\times$ worse than naive offline Q-learning ($\text{earned } 0.14$)?
+2. **Minimum Support for LCB:** In our 2-armed bandit ($b(a) = \sqrt{\log 40 / (2n(a))}$, Arm 1 LCB $= 0.364$), if Arm 2 has empirical mean $\hat{r}(2) = 0.70$, why does LCB reject Arm 2 at $n(2) = 10$ pulls and accept it at $n(2) = 17$ pulls?
+3. **Tabular CQL Fixed Point:** In tabular CQL, one step sets $\hat{Q}(s, a) = \hat{\mathcal{T}}\hat{Q}(s, a) - \alpha_{\textrm{c}}\big(\frac{\mu(a \mid s)}{\hat{\pi}_e(a \mid s)} - 1\big)$. Which state-action pairs have their values lowered, and which have their values raised?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Behavior cloning estimates the average return of the random collector without any $\max_a$ bias; offline Q-learning **stitches** a random episode that reached an intermediate cell with a *different* episode that reached the goal from that cell.
+2. At $n(2) = 10$, $0.70 - \sqrt{\log 40 / 20} = 0.70 - 0.430 = \mathbf{0.270 < 0.364}$; at $n(2) = 17$, $0.70 - \sqrt{\log 40 / 34} = 0.70 - 0.329 = \mathbf{0.371 > 0.364}$.
+3. Actions chosen by $\mu$ *more often* than by the behavior log ($\mu(a \mid s) > \hat{\pi}_e(a \mid s)$) are **pushed down**, while actions common in the log ($\mu(a \mid s) < \hat{\pi}_e(a \mid s)$) are **pushed up**.
+:::
+:::
+
+::: {.slide title="Summary: Offline Reinforcement Learning Methods"}
+[Key Takeaways]{.kicker}
+
+| Method | What It Optimizes | Stitching Capability | Protection Against OOD Actions | Behavior on Narrow vs. Uniform Logs |
+| :--- | :--- | :---: | :--- | :--- |
+| **Behavior Cloning (BC)** | Supervised $\max_\pi \mathbb{E}_{\mathcal{D}}[\log \pi(a \mid s)]$ | **None** | Complete (stays on $\hat{\pi}_e$) | Strong on narrow expert logs ($0.09$), fails on uniform ($0.01$) |
+| **Offline SARSA** | On-policy TD $r + \gamma Q(s', a'_{\textrm{log}})$ | **None** | Evaluates $Q^{\pi_e}$ only | Converges to collector's value without improvement |
+| **Naive Offline Q** | Empirical Bellman $\max_{a'} \hat{Q}(s', a')$ | **High** | **None** (picks thin lucky pairs) | Excels on uniform ($0.14$), overestimates on narrow ($0.25$ vs. $0.10$) |
+| **Pessimistic Q / CQL** | Penalizes backup by $-\kappa/\sqrt{n}$ or log-sum-exp | **High** | **Strong** (suppresses thin pairs) | Wins on narrow logs ($0.14$, beats BC on $39/40$); hurts if over-applied |
+| **Return Conditioning (DT)** | Autoregressive $\pi(a_t \mid s_{\le t}, g_{\le t})$ | **Limited** | Avoids $\max_{a'}$ operator | Vulnerable to stochastic "lucky trajectory" bias |
 :::

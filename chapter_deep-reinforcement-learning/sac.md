@@ -1032,404 +1032,295 @@ SAC maximizes reward plus entropy with an off-policy actor-critic. Soft policy e
 ::: {.cover}
 [Dive into Deep Learning · §15.5]{.kicker}
 
-Soft Actor-Critic<br>
-**maximum entropy · squashed Gaussian actions · twin critics · learned temperature · the update ratio**
+Continuous Control: DDPG, TD3, and Soft Actor–Critic<br>**maximum-entropy RL · pathwise gradients · squashed Gaussian Jacobian · twin critics · automatic temperature · update-to-data ratio**
 :::
 :::
 
-::: {.slide title="REINFORCE Swung the Pendulum Up Only After a Few Hundred Thousand Steps"}
-[The problem]{.kicker}
+::: {.slide title="Why Continuous Control Needs Replay and Pathwise Slopes"}
+[Motivation]{.kicker}
 
-Pendulum: a torque $u \in [-2, 2]$ on a hanging pendulum, angle
-$\vartheta$ from upright; each step costs
-$\vartheta^2 + 0.1\,\dot\vartheta^2 + 0.001\,u^2$; episodes of 200 steps.
+In Chapter 14, swinging up Pendulum-v1 ($s = (\cos\vartheta, \sin\vartheta, \dot\vartheta)$, torque $u \in [-2, 2]$, step cost $\vartheta^2 + 0.1\dot\vartheta^2 + 0.001u^2$, 200-step episodes) with REINFORCE took $\sim 300{,}000$ environment steps:
 
-- random torques return about $-1{,}200$; swinging up and balancing,
-  $-200$ or better
-- REINFORCE with a learned baseline: 1,600 steps per update, then thrown
-  away; a few hundred thousand steps to reach $-200$
-- a simulator makes steps cheap; a robot arm does not
-
-::: {.d2l-note .warn}
-Goal: the same controller from a few thousand steps.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute the soft value and the optimal policy of a state with two actions;
-- write SAC's critic target and actor loss from the KL-regularized optimum;
-- build a bounded Gaussian policy with a correct density, and check it;
-- learn the temperature from an entropy target;
-- trade environment steps for gradient steps, and test the critic's predictions.
-
-**Running example:** Pendulum, three seeds, at most 20,000 steps.
-**Idea:** add the entropy to the reward, learn its value from replay, and
-differentiate the critic through the sampled action.
-:::
-
-::: {.slide title="SAC Adds Entropy to Replay and a Differentiable Critic"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
+::: {.cols}
 ::: {.col}
-| section | adds |
-|---|---|
-| Actor-Critic Methods | a bootstrapped critic, multi-step returns |
-| Trust Regions and PPO | several clipped steps per batch |
-| KL-Regularized Policy Optimization | a KL penalty to a reference |
-| Deep Q-Networks | replay, target networks |
-| **Soft Actor-Critic** | **entropy, a pathwise actor, twin critics** |
-| Learned Models and Planning | a model of the dynamics |
-| Offline Reinforcement Learning | learning from a fixed log |
-| RL for Sequence Generation | tokens as actions, checkable rewards |
+- **Why DQN Cannot Apply Directly:** When actions are continuous torques $u \in [-2, 2]$, evaluating $\max_{u'} Q_w(s', u')$ inside every Bellman target requires solving an inner continuous optimization problem at every transition.
+- **Replacing the Max with an Actor:** We keep DQN's **replay buffer** and **target networks**, but train an actor network $\pi_\theta(s)$ to propose high-value continuous actions.
 :::
 
-::: {.col .narrow}
-- **Uses:** the replay buffer, target copies, the pathwise gradient, the
-  KL-regularized optimum.
-- **Skips:** a model of the environment (the next deck).
+::: {.col}
+- **Pathwise Policy Gradient:** Instead of weighting log-probabilities by scalar returns, the actor differentiates the critic $Q_w(s, a)$ directly with respect to the sampled action $a = \tilde{a}_\theta(s, z)$ ($\sim 20\times$ lower variance).
+- **From $300{,}000$ to $3{,}000$ Steps:** Combining off-policy replay, pathwise critic gradients, twin critics, and entropy regularization cuts Pendulum's sample cost by two orders of magnitude.
 :::
 :::
 :::
 
-::: {.slide title="Replay Reuses Transitions; the Pathwise Gradient Reuses the Critic's Slope"}
-[Ingredients]{.kicker}
+::: {.slide title="From DDPG and TD3 to Soft Actor–Critic (SAC)"}
+[Algorithmic Evolution]{.kicker}
 
-- **replay:** every transition drives many updates, if a critic can learn
-  from actions an older policy chose
-- **pathwise gradient:** $\nabla_\mu \mathbb{E}[Q(a)] = \mathbb{E}[Q'(\mu + \sigma z)]$;
-  single-sample variance 1.0 against 21.75 for the score function on one
-  example
-- **DDPG:** both, with a deterministic actor; brittle, because the actor
-  climbs the critic's errors
-- **TD3:** two critics, trust the lower one
-- **SAC:** both repairs, plus a reward for entropy, so the actor keeps
-  exploring
+Continuous off-policy actor-critic evolved through three milestones to overcome critic exploitation and premature collapse:
 
-[Lillicrap et al. 2016; Fujimoto et al. 2018; Haarnoja et al. 2018]{.small}
+| Algorithm | Actor Policy & Exploration | Critic Target & Overestimation Guard | Primary Failure Mode or Strength |
+| :--- | :--- | :--- | :--- |
+| **DDPG (2016)** | Deterministic $\mu_\theta(s)$ + external noise | Single critic $Q_{w^-}(s', \mu_{\theta^-}(s'))$ | **Brittle:** deterministic actor climbs narrow peaks of critic error |
+| **TD3 (2018)** | Deterministic $\mu_\theta(s)$ + target smoothing | **Twin critics** $\min_{j=1,2} Q_{w_j^-}(s', \tilde{a}')$ | Eliminates upward maximization bias; still relies on ad-hoc exploration noise |
+| **SAC (2018)** | **Stochastic** squashed Gaussian $\pi_\theta(\cdot \mid s)$ | Twin critics + **entropy reward** $-\beta \log \pi_\theta$ | Principled maximum-entropy exploration and state-dependent action spread |
+
+::: {.d2l-note}
+In one sentence: **Soft Actor–Critic** adds the policy's entropy to the reward, evaluates that augmented objective off-policy from replay, and improves the actor via pathwise gradients through twin critics.
+:::
 :::
 
-::: {.slide title="Against a Uniform Reference the KL Penalty Is an Entropy Bonus"}
-[Maximum entropy]{.kicker}
+::: {.slide title="The Maximum-Entropy Reinforcement Learning Objective"}
+[Maximum-Entropy RL]{.kicker}
 
-$$D_{\textrm{KL}}(\pi \Vert \textrm{uniform}) = \log|\mathcal{A}| - H(\pi), \qquad H(\pi) = -\mathbb{E}_{a \sim \pi}[\log \pi(a)]$$
+In §15.3, we penalized divergence from a reference policy by $-\beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$. When $\pi_{\textrm{ref}}$ is uniform on $[-c, c]$ (density $1/(2c)$, entropy $\log(2c) = \log 4 \approx 1.39\text{ nats}$), $-D_{\textrm{KL}}(\pi \Vert \textrm{unif}) = H(\pi) - \log(2c)$, turning the KL penalty into an **entropy bonus** at every step:
 
-$$J(\pi) = \mathbb{E}_{\pi}\Big[ \sum_t \gamma^t \big( r_t + \beta\, H(\pi(\cdot \mid s_t)) \big) \Big]$$
+$$J(\pi) = \mathbb{E}_{\pi}\Big[\sum_{t \ge 0} \gamma^t \big(r_t + \beta\, H(\pi(\cdot \mid s_t))\big)\Big], \qquad H(\pi(\cdot \mid s)) = -\mathbb{E}_{a \sim \pi(\cdot \mid s)}\big[\log \pi(a \mid s)\big]$$
 
-- temperature $\beta$: reward per nat of entropy (the papers write $\alpha$)
-- uniform density on $[-2, 2]$: $\log 4 \approx 1.39$ nats, the most on
-  that interval
-- differential entropy is negative for a density on an interval shorter
-  than 1
-- part of the objective: the optimum stays random where actions nearly tie
+- **Temperature $\beta > 0$ (written $\alpha$ in the SAC papers):** Sets the exchange rate in units of **reward per nat of entropy**.
+- **Differential Entropy Nuance:** Unlike discrete Shannon entropy ($H \ge 0$), continuous differential entropy $\int -\pi(a)\log\pi(a)\,da$ becomes **negative** whenever the density concentrates on an interval shorter than $1$.
+- **Why Put Entropy in the Objective?** Unlike PPO's small auxiliary bonus, SAC pays $\beta H(\pi(\cdot \mid s'))$ at *future* states inside the critic's target, encouraging actions that lead to high-entropy, multi-option states.
 :::
 
-::: {.slide title="Two Actions: the Soft Value 1.06 Exceeds the Hard Maximum 1"}
-[Maximum entropy]{.kicker}
+::: {.slide title="Two Actions by Hand: Exact Single-Sample Soft Values"}
+[Concrete Intuition]{.kicker}
 
-$Q = (1, 0)$, $\beta = 0.5$: the optimum is
-$\pi^\star = e^{Q/\beta}/Z = (0.88, 0.12)$ with value $\beta \log Z$.
+Consider a single state with two actions of value $Q = (1, 0)$ at temperature $\beta = 0.5$. By §15.3, the tilted optimum is $\pi^\star \propto e^{Q/\beta} = (e^2, 1)/(e^2 + 1) = (0.88, 0.12)$ with soft value $\beta \log(e^2 + 1) = 1.063$:
 
 @!sac-soft-evaluation-one-new-term-in-the-target
 
-::: {.d2l-note}
-At the optimum, $Q(a) - \beta \log \pi^\star(a)$ is the same for both
-actions: one sampled action gives the soft value exactly.
+::: {.d2l-note .rule}
+**Zero-Variance Property at $\pi^\star$:** At the tilted optimum $\pi^\star(a) = e^{Q(a)/\beta}/Z$, the soft bracket $Q(a) - \beta \log \pi^\star(a) = \beta \log Z = 1.063$ takes the **exact same value for every action $a$**!
 :::
 :::
 
-::: {.slide title="Check: What Does One Sampled Bracket Estimate?"}
-[Check]{.kicker}
+::: {.slide title="Soft Policy Evaluation: One Fresh Action in the Target"}
+[Soft Policy Evaluation]{.kicker}
 
-With $Q = (1, 0)$ and $\beta = 0.5$, draw one action $a \sim \pi$ and
-compute $B = Q(a) - \beta \log \pi(a)$. What are the mean and the
-standard deviation of $B$ under the tilted policy $(0.88, 0.12)$, and
-under the uniform policy?
+Because the soft state value is $V^\pi(s) = \mathbb{E}_{a \sim \pi}[Q^\pi(s, a) - \beta \log \pi(a \mid s)]$, SAC's critic approximates $V^\pi(s')$ in its Bellman target using a **single fresh action** $\tilde{a}' \sim \pi_\theta(\cdot \mid s')$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Tilted: $B = 1.063$ for either action, so the mean is $1.063$
-and the spread zero. Uniform: $B = 1.35$ or $0.35$ with probability
-$1/2$ each, mean $0.85$, standard deviation $0.5$. A one-sample target is
-exact only at the tilted optimum.
+$$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\Big(Q_{w^-}(s', \tilde{a}') - \beta \log \pi_\theta(\tilde{a}' \mid s')\Big), \qquad \tilde{a}' \sim \pi_\theta(\cdot \mid s')$$
+
+- **Why No Importance Ratios Are Needed:** The transition $(s, a, r, s')$ is drawn from the replay buffer (collected by older policies), but the continuation action $\tilde{a}'$ is sampled *freshly* from the live policy $\pi_\theta$.
+- **Contraction Guarantee:** Soft policy evaluation is standard Bellman expectation evaluation for the entropy-augmented reward $r(s, a) + \gamma \beta H(\pi(\cdot \mid s'))$, so the exact operator is a $\gamma$-contraction for bounded rewards and entropies.
+:::
+
+::: {.slide title="Soft Policy Improvement via Reverse-KL Projection"}
+[Soft Policy Improvement]{.kicker}
+
+At each state $s$, maximizing $\mathbb{E}_{a \sim \pi}[Q_w(s, a)] + \beta H(\pi(\cdot \mid s))$ is equivalent to minimizing the **reverse KL divergence** to the Boltzmann distribution $e^{Q_w(s, \cdot)/\beta} / Z(s)$:
+
+$$L_\pi(\theta) = \mathbb{E}_{s \sim \mathcal{D},\, z \sim \mathcal{N}(0, I)}\Big[\beta \log \pi_\theta\big(\tilde{a}_\theta(s, z) \mid s\big) - Q_w\big(s, \tilde{a}_\theta(s, z)\big)\Big]$$
+
+- **Mode-Seeking Behavior:** When $Q_w(s, \cdot)$ has two separated peaks, minimizing reverse KL $D_{\textrm{KL}}(\pi_\theta \Vert e^{Q/\beta}/Z)$ penalizes placing probability mass in the valley between them, so a unimodal policy cleanly locks onto one peak.
+- **Reparameterization (Pathwise Gradient):** Writing $\tilde{a}_\theta(s, z) = c \tanh\big(\mu_\theta(s) + \sigma_\theta(s) z\big)$ allows $\nabla_\theta L_\pi(\theta)$ to flow directly through $\partial Q_w(s, a) / \partial a$ via the chain rule.
+- **Soft Policy Improvement Theorem:** If each state's reverse-KL projection improves on $\pi_{\textrm{old}}$, then $V^{\pi_{\textrm{new}}}(s) \ge V^{\pi_{\textrm{old}}}(s)$ holds across all states $s$.
+:::
+
+::: {.slide title="Why Hard Clipping Breaks the Pathwise Gradient"}
+[Bounded Continuous Actions]{.kicker}
+
+In Chapter 14, our score-function Gaussian policy sampled unbounded $u \sim \mathcal{N}(\mu, \sigma^2)$ and let the environment clip torques to $[-2, 2]$. Under SAC's pathwise gradient, hard clipping fails in two ways:
+
+::: {.cols}
+::: {.col}
+- **1. Zero Pathwise Derivative Outside $[-c, c]$:** For any sample $|u| > c$, $\frac{d}{du}\textrm{clip}(u, -c, c) = 0$. The actor receives **zero gradient** from out-of-bounds samples, even when full torque $\pm c$ is optimal!
+- **2. Undefined Boundary Density:** Hard clipping piles all tail probability $\Pr(u \ge c)$ into a discrete point mass at $a = +c$, so $\log \pi(a \mid s)$ in the soft target and actor loss is undefined.
+:::
+
+::: {.col}
+- **The Smooth Squashed Gaussian Solution:** Sample an unconstrained Gaussian $u \sim \mathcal{N}(\mu_\theta(s), \sigma_\theta(s)^2)$ and apply a smooth, strictly increasing bijection:
+  $$a = c \tanh(u) \in (-c, c)$$
+- Because $da/du = c(1 - \tanh^2 u) > 0$ everywhere, gradients flow smoothly and the density $\pi(a \mid s)$ is well-defined via change of variables.
 :::
 :::
 :::
 
-::: {.slide title="The Soft Critic Target Adds One Term"}
-[Maximum entropy]{.kicker}
+::: {.slide title="The Tanh Change-of-Variables Jacobian"}
+[Density Derivation]{.kicker}
 
-$$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \Big( Q_{w^-}(s', \tilde{a}') - \beta \log \pi_\theta(\tilde{a}' \mid s') \Big), \qquad \tilde{a}' \sim \pi_\theta(\cdot \mid s')$$
-
-- $(s, a, r, s')$ from the buffer; $\tilde{a}'$ **fresh** from the current
-  policy, because $V^\pi$ is an expectation under $\pi$
-- $-\beta \log \pi_\theta(\tilde{a}' \mid s')$: the entropy bonus at
-  $s'$, estimated by one draw
-- $Q_{w^-}$: a slowly moving copy of the critic $Q_w$
-- evaluation for reward plus entropy; it contracts by $\gamma$ when rewards
-  and entropies are bounded
+::: {.cols .vc}
+::: {.col}
+- Because $a_i = c \tanh(u_i)$ compresses intervals near the boundaries $\pm c$ by the Jacobian factor $da_i / du_i = c(1 - \tanh^2 u_i)$, conservation of probability $\pi(a)\,da = \mathcal{N}(u; \mu, \sigma)\,du$ yields:
+  $$\log \pi(a \mid s) = \sum_{i=1}^d \Big[\log \mathcal{N}(u_i; \mu_i, \sigma_i) - \log(1 - \tanh^2 u_i) - \log c\Big]$$
+- Near $a = \pm 2$, compressing the upper tail of $u$ produces a boundary density spike; omitting the Jacobian misses this pile-up and integrates to $1.13 \neq 1$.
 :::
 
-::: {.slide title="Improvement Projects the Policy onto Its Family in Reverse KL"}
-[Maximum entropy]{.kicker}
-
-$$\mathbb{E}_\pi[Q] + \beta H(\pi) = \beta \log Z - \beta\, D_{\textrm{KL}}\big(\pi \,\Vert\, e^{Q/\beta}/Z\big)$$
-
-$$L_\pi(\theta) = \mathbb{E}_{s, z}\big[\beta \log \pi_\theta(\tilde a \mid s) - Q_w(s, \tilde a)\big], \qquad \tilde a = c \tanh\big(\mu_\theta(s) + \sigma_\theta(s) z\big)$$
-
-- reverse KL penalizes mass where $e^{Q/\beta}$ is small: a Gaussian picks
-  one peak
-- the gradient flows through $\tilde a$ into the critic: $Q_w$ must be
-  differentiable in the action
-- exact maximization at every state raises the soft value everywhere
+::: {.col .fig}
+![](../img/mdl-rl-squashed-density.svg){.nostretch width=100%}
+:::
+:::
 :::
 
-::: {.slide title="Clipping Breaks the Pathwise Gradient; a Tanh Squash Does Not"}
-[Squashed Gaussian]{.kicker}
+::: {.slide title="Implementing the Squashed Gaussian Policy"}
+[Policy Implementation]{.kicker}
 
-Clip the torque to $[-2, 2]$, as the score-function agent did:
+`SquashedGaussianPolicy` wraps a 2-layer ReLU trunk and state-dependent mean and log-std heads (`state_std=True`), computing $\log \pi(a \mid s)$ directly from the pre-squash draw $u$ without ever calling `arctanh`:
 
-- beyond $\pm 2$ the clip's derivative is zero: no gradient, even where
-  $\pm 2$ is the best torque
-- the tail lands on $\pm 2$ as point masses: no density, and
-  $\beta \log \pi$ is undefined
-
-Squash instead: $u \sim \mathcal{N}(\mu, \sigma^2)$, $a = c \tanh u$,
-$c = 2$, which is smooth and invertible.
-
-$$\log \pi(a \mid s) = \sum_i \Big[ \log \mathcal{N}(u_i; \mu_i, \sigma_i) - \log\big(1 - \tanh^2 u_i\big) - \log c \Big]$$
+@sac-the-change-of-variables
 :::
 
-::: {.slide title="Without Its Jacobian the Squashed Density Integrates to 1.13"}
-[Squashed Gaussian]{.kicker}
+::: {.slide title="Numerically Stable Log-Determinant and Quadrature Check"}
+[Numerical Precision]{.kicker}
 
-![](../img/mdl-rl-squashed-density.svg){width=88%}
+In `float32`, $\tanh(u)$ rounds to $1.000000$ for $|u| \ge 10$, making $\log(1 - \tanh^2 u) = -\infty$ (while a naive $+10^{-6}$ guard freezes at $-13.82$ and kills the restoring gradient $-2\tanh u$). Algebraic rewriting eliminates the catastrophic cancellation:
 
-Near $a = 2$ the squash packs the upper tail of $u$ into a short interval,
-so the true density rises; the uncorrected one misses it.
-:::
-
-::: {.slide title="The Stable Log-Determinant Keeps Registering Saturation"}
-[Squashed Gaussian]{.kicker}
-
-$$\log(1 - \tanh^2 u) = 2\big(\log 2 - u - \operatorname{softplus}(-2u)\big)$$
+$$\log\big(1 - \tanh^2 u\big) = \log \frac{4 e^{-2u}}{(1 + e^{-2u})^2} = 2\big(\log 2 - u - \operatorname{softplus}(-2u)\big)$$
 
 @!sac-the-stable-form-and-what-the-epsilon-hides-1
 
-- the direct form is $-\infty$ from $u = 10$; the guard sticks at
-  $\log 10^{-6}$
-- quadrature: the density integrates to 1.000000 with the term, to 1.65
-  and 1.13 without
+@!sac-the-stable-form-and-what-the-epsilon-hides-2
 :::
 
-::: {.slide title="Twin Critics Take the Minimum; Their Copies Drift by Polyak Averaging"}
-[The algorithm]{.kicker}
-
-![](../img/mdl-rl-sac-update.svg){width=80%}
-
-- the maximum of two noisy estimates is about $0.56\sigma$ too high; an
-  actor climbing a critic does the same, so the target uses $\min_j Q_{w_j^-}$
-- $w^-_j \leftarrow \nu w_j + (1 - \nu) w^-_j$, $\nu = 0.005$: half-life 139 updates
-:::
-
-::: {.slide title="The Temperature Is the Multiplier of an Entropy Constraint"}
-[The algorithm]{.kicker}
-
-Constraint: $\mathbb{E}_s\big[H(\pi(\cdot \mid s))\big] \geq \bar H = -\dim \mathcal{A} = -1$.
-
-$$J(\beta) = -\log \beta \; \mathbb{E}\big[\log \pi_\theta(a \mid s) + \bar H\big], \qquad \frac{\partial J}{\partial \log \beta} = \hat H - \bar H$$
-
-- entropy above the target: $\beta$ falls; below it: $\beta$ rises
-- rewards $\times 10$ act like $\beta \div 10$: a fixed $\beta$ depends on
-  the reward's units
-- Adam from $\beta = 1$ at learning rate $3 \times 10^{-4}$: $\log\beta$ falls
-  by about that much per update, so $\beta \approx e^{-1.8} \approx 0.17$
-  after 6,000 updates
-:::
-
-::: {.slide title="One Update: Two Critic Regressions, an Actor Step, a Temperature Step" only="pytorch"}
-[The algorithm]{.kicker}
-
-```{.python #sac-exercises-1}
-beta = agent.beta
-with torch.no_grad():                      # the target is data
-    a2, logp2 = agent.actor.sample(next_obs)
-    y = rew + gamma * (1 - term) * (
-        agent.min_q(next_obs, a2, agent.targets) - beta * logp2)
-x = torch.cat([obs, act], -1)              # replayed (s, a)
-loss_q = sum(((q(x).squeeze(-1) - y) ** 2).mean() for q in agent.qs)
-a, logp = agent.actor.sample(obs)          # fresh action
-loss_pi = (beta * logp - agent.min_q(obs, a)).mean()
-loss_beta = -agent.log_beta * (logp.detach().mean() + target_entropy)
-# one Adam step per loss; Polyak, nu = 0.005, for every target weight:
-w_target = (1 - nu) * w_target + nu * w
-```
-:::
-
-::: {.slide title="One Update: Two Critic Regressions, an Actor Step, a Temperature Step" only="jax"}
-[The algorithm]{.kicker}
-
-```{.python #sac-exercises-2}
-k1, k2 = jax.random.split(key)
-beta = agent.beta
-a2, logp2 = agent.actor.sample(next_obs, k1)   # fresh, live policy
-y = rew + gamma * (1 - term) * (               # outside every gradient
-    agent.min_q(next_obs, a2, agent.targets) - beta * logp2)
-x = jnp.concatenate([obs, act], -1)            # replayed (s, a)
-loss_q = sum(((q(x).squeeze(-1) - y) ** 2).mean() for q in agent.qs)
-a, logp = agent.actor.sample(obs, k2)          # fresh action
-loss_pi = (beta * logp - agent.min_q(obs, a)).mean()
-loss_beta = -agent.temp.log_beta[...] * (logp.mean() + target_entropy)
-# one Adam step per loss; Polyak, nu = 0.005, for every target weight:
-w_target = (1 - nu) * w_target + nu * w
-```
-:::
-
-::: {.slide title="Check: Set the Temperature and the Spread to Zero"}
-[Check]{.kicker}
-
-Take $\beta = 0$ and $\sigma_\theta = 0$ in SAC's actor loss. Which
-algorithm is left, and where must its exploration come from?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The loss becomes $-\min_j Q_{w_j}\big(s, c \tanh \mu_\theta(s)\big)$:
-a deterministic actor climbing the minimum of two critics, DDPG with TD3's
-twin critics. The policy no longer samples, so exploration must come from
-noise added to its actions.
-:::
-:::
-:::
-
-::: {.slide title="Every Seed Crosses −200 After Five to Eleven Thousand Steps"}
-[Sample efficiency]{.kicker}
+::: {.slide title="Twin Critics and Polyak-Averaged Target Networks"}
+[Critic Architecture]{.kicker}
 
 ::: {.cols .vc}
+::: {.col}
+- **Clipped Double-Q (Twin Critics):** Because an actor climbing $\nabla_a Q_w(s, a)$ systematically seeks out overestimated actions, SAC trains two independent critics $Q_{w_1}, Q_{w_2}$ and takes their **pointwise minimum** in both the target and the actor loss:
+  $$y = r + \gamma(1 - \textrm{term})\Big(\min_{j=1,2} Q_{w_j^-}(s', \tilde{a}') - \beta \log \pi_\theta(\tilde{a}' \mid s')\Big)$$
+- **Polyak Averaging ($\nu = 0.005$):** Instead of hard jumps every $250$ steps, target weights drift after every update: $w_j^- \leftarrow \nu w_j + (1 - \nu) w_j^-$ (half-life $\ln 2 / \nu \approx 139$ updates).
+:::
+
+::: {.col .fig}
+![](../img/mdl-rl-sac-update.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Automatic Temperature Tuning via Dual Gradient Descent"}
+[Entropy Constraint]{.kicker}
+
+A fixed temperature $\beta$ depends on the arbitrary units of the reward (multiplying rewards by $10$ acts like dividing $\beta$ by $10$). Haarnoja et al. (2018b) instead enforce a target expected entropy $\bar{H} = -\dim(\mathcal{A})$ ($-1.0\text{ nat}$ on Pendulum):
+
+$$\max_{\pi}\ \mathbb{E}_\pi\Big[\sum_{t \ge 0} \gamma^t r_t\Big] \quad \textrm{subject to} \quad \mathbb{E}_{s \sim \mathcal{D}}\big[H(\pi(\cdot \mid s))\big] \ge \bar{H}$$
+
+- **Dual Objective for $\log \beta$:** Treating $\beta = \exp(\log \beta) > 0$ as a Lagrange multiplier gives the temperature loss:
+  $$J(\beta) = -\log \beta\, \mathbb{E}_{s \sim \mathcal{D},\, a \sim \pi_\theta}\big[\log \pi_\theta(a \mid s) + \bar{H}\big], \qquad \frac{\partial J}{\partial \log \beta} = \hat{H}_{\textrm{batch}} - \bar{H}$$
+- **Automatic Feedback Loop:** While the policy is more random than $\bar{H}$ ($\hat{H}_{\textrm{batch}} > \bar{H}$), $\log \beta$ decreases (making entropy cheaper to give up); if the policy collapses below $\bar{H}$, $\log \beta$ rises to restore exploration.
+:::
+
+::: {.slide title="The SoftActorCritic Container and Loss Functions"}
+[Modular Components]{.kicker}
+
+`SoftActorCritic` packages the squashed Gaussian actor, the twin action-value critics $Q_{w_1}, Q_{w_2}$ (taking concatenated $[s, a] \in \mathbb{R}^4$), their Polyak target copies, and $\log \beta$:
+
+@sac-the-update-step-and-the-loop-2
+:::
+
+::: {.slide title="Executing One Complete SAC Update Step"}
+[The Update Step]{.kicker}
+
+Each call to `sac_step` regresses both critics onto the shared twin-minimum soft target $y$, updates the actor via the pathwise gradient of $\beta \log \pi_\theta - \min_j Q_{w_j}$, updates $\log \beta$ toward $\bar{H} = -1$, and blends the target networks by $\nu = 0.005$:
+
+@sac-one-update-1
+:::
+
+::: {.slide title="The Off-Policy Continuous Training Loop"}
+[Training Loop]{.kicker}
+
+After `warmup = 1000` uniformly random steps, `train_sac` executes `utd` (**update-to-data ratio**) gradient steps per environment step—allowing us to trade compute for real-world interaction:
+
+@sac-the-update-step-and-the-loop-3
+:::
+
+::: {.slide title="Sample Efficiency on Pendulum: UTD 1 vs. UTD 10"}
+[Sample Efficiency]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **1 Update per Step (`UTD 1`):** Every seed crosses $-200$ in **$5{,}400$ to $11{,}200$ steps**—nearly $50\times$ fewer steps than REINFORCE!
+- **10 Updates per Step (`UTD 10`):** Crosses $-200$ in **$2{,}400$ to $4{,}000$ steps** ($2.5\times$ fewer real transitions, near the theoretical $2{,}000$-step warm-up + window floor), paying $\sim 3\times$ more gradient steps up to the crossing.
+:::
+
 ::: {.col .fig}
 @!sac-sample-efficiency-on-the-axis-that-bills
 :::
-
-::: {.col}
-- one update per step: $-200$ after about 5,000 to 11,000 steps;
-  REINFORCE needed a few hundred thousand
-- replay: one gradient step per environment step, not one per 1,600
-- bootstrapping: the critic learns from single transitions
-- pathwise gradient: the critic's slope in the torque goes to the actor
-:::
 :::
 :::
 
-::: {.slide title="The Dip Is Damping: the Actor First Holds the Pendulum at the Bottom"}
-[Sample efficiency]{.kicker}
+::: {.slide title="Diagnosing the Early Return Dip: Damping Before Pumping"}
+[Behavioral Analysis]{.kicker}
 
-Returns fall to about $-1{,}600$ before they rise. Mean return,
-$\cos\vartheta$ and speed of fixed controllers and of SAC's mean action:
+Why do returns drop from the random policy's $-1{,}200$ down to $-1{,}700$ around step $2{,}000$ before climbing to $-170$? Comparing the $2{,}000$-step actor against three analytic controllers explains the dip:
 
-- zero torque: $-1{,}290$; spinning: $-1{,}610$, fast, $\cos\vartheta \approx 0$
-- damping: $-1{,}886$, $\cos\vartheta = -0.96$, nearly still
-- SAC after 2,000 steps, every seed: about $-1{,}700$ to $-1{,}800$,
-  $\cos\vartheta \approx -0.93$, under 1 rad/s: it damps
-- SAC after 20,000 steps: about $-170$, $\cos\vartheta \approx 0.83$
-
-Hanging at the bottom costs $\pi^2 \approx 9.9$ per step, the most of any
-resting position.
-:::
-
-::: {.slide title="Ten Updates per Step Reach −200 About 2.5 Times Sooner"}
-[Sample efficiency]{.kicker}
-
-- ten updates per step: $-200$ after 2,400 to 4,000 environment steps; one
-  update per step: 5,400 to 11,200 (twenty runs each)
-- up to the crossing, about three times as many gradient steps
-- whole runs: 30,000 gradient steps on 4,000 environment steps, against
-  19,000 on 20,000
-- floor: 1,000 random warm-up steps and a five-episode average, so no run
-  can cross before step 2,000
+@!sac-return-against-environment-steps-2
 
 ::: {.d2l-note}
-The update ratio exchanges computation for interaction.
+**Myopic Damping Phase:** At $2{,}000$ steps, the young critic has only propagated rewards a few steps ahead, where reducing angular velocity cost $0.1\dot\vartheta^2$ dominates. The actor therefore **damps motion** ($|\dot\vartheta| < 1\text{ rad/s}$), leaving the pendulum hanging still at the bottom ($\cos\vartheta \approx -0.93$, costing $\pi^2 \approx 9.9$ per step) until multi-step swing-up value propagates!
 :::
 :::
 
-::: {.slide title="A Learned Temperature Holds the Entropy at the Target"}
-[Entropy and temperature]{.kicker}
+::: {.slide title="Policy Entropy Dynamics: Learned vs. Fixed Beta"}
+[Entropy Trajectory]{.kicker}
 
 ::: {.cols .vc}
+::: {.col}
+- **Learned $\beta$ (blue):** Smoothly brings policy entropy from $+1.1\text{ nats}$ down onto the target $\bar{H} = -1.0\text{ nat}$ and holds it flat from $15{,}000$ steps onward.
+- **Fixed $\beta = 0.2$ (orange):** Entropy dips to $-1.3\text{ nats}$ during swing-up learning, then **rebounds upward** once balancing is mastered—because a balanced critic has flat curvature $h$, and a quadratic critic's optimal Gaussian variance scales as $\sigma^2 = \beta / h$.
+:::
+
 ::: {.col .fig}
 @!sac-the-entropy-the-policy-keeps-1
 :::
-
-::: {.col}
-- learned $\beta$: onto $-1$ nat, flat from about 15,000 steps
-- fixed $\beta = 0.2$: dips a few tenths below zero, then rises again
-- once the pendulum balances the critic is flat near the best torque;
-  for curvature $h$ the best Gaussian has $\sigma^2 = \beta/h$
-- both cross $-200$ in the same range of steps
-:::
 :::
 :::
 
-::: {.slide title="The Learned Temperature Falls at Adam's Rate, as Predicted"}
-[Entropy and temperature]{.kicker}
+::: {.slide title="Dual Temperature Trajectory and Sampling Cost"}
+[Temperature & Evaluation]{.kicker}
 
 ::: {.cols .vc}
+::: {.col}
+- **Log-Linear Decay:** While $\hat{H} > -1$, Adam steps $\log \beta$ downward by its learning rate $\approx 3 \times 10^{-4}$ per update, matching the predicted $e^{-1.8} \approx 0.17$ at $6{,}000$ updates ($7\text{k}$ env steps) before settling near $0.03$.
+- **Zero-Cost Exploration at Convergence:** Evaluating the deterministic mean action $c\tanh\mu_\theta(s)$ vs. stochastic sampling shows that state-dependent spread costs at most $\sim 10$ return points!
+:::
+
 ::: {.col .fig}
 @!sac-entropy-and-temperature-2
-:::
 
-::: {.col}
-- a straight line on the log scale until about 10,000 steps:
-  $\log\beta$ falls by about the learning rate per update while the
-  entropy exceeds the target
-- about 0.2 at the crossing (predicted: 0.17 after 6,000 updates)
-- then slower, to a few hundredths at 20,000 steps
+@!sac-the-entropy-the-policy-keeps-2
 :::
 :::
 :::
 
-::: {.slide title="The Twin Minimum Predicts Too Little, a Single Critic Too Much"}
-[Calibration]{.kicker}
+::: {.slide title="Critic Calibration: Twin Minimum vs. Single Critic"}
+[Value Calibration]{.kicker}
+
+Comparing the start-state prediction $\min_j Q_{w_j}(s_0, a_0)$ against the realized 200-step discounted soft return $\sum_{t=0}^{199} \gamma^t (r_t - \beta \log \pi_\theta(a_t \mid s_t))$ reveals what the twin-critic minimum prevents:
 
 @!sac-honest-promises-predicted-against-delivered
 
-Predicted $\min_j Q_{w_j}(s_0, a_0)$ against the realized discounted soft
-return over 20 episodes. The single critic's returns match the twin's;
-only the calibration separates them.
-:::
-
-::: {.slide title="Check: Why Does the Entropy Rise Again at a Fixed Temperature?"}
-[Check]{.kicker}
-
-At $\beta = 0.2$ the entropy dips below zero while the
-pendulum is learned and then rises while it balances. Use
-$\sigma^2 = \beta/h$ for a critic of curvature $h$ in the
-action. Why does it rise, and why does a learned $\beta$ prevent it?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** Once the pendulum balances, the critic is nearly flat around
-the best torque: $h$ shrinks, so the best $\sigma$ grows at a fixed
-$\beta$. The learned $\beta$ falls whenever the entropy exceeds $-1$,
-which keeps $\beta/h$, and the entropy, at the target.
-:::
+While both reach $-200$ on Pendulum, the **single critic systematically overestimates** the true soft return on nearly every seed, whereas the **twin minimum** provides a conservative lower bound!
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Limits, Curvature, and Jacobian Forces"}
+[Check Your Understanding]{.kicker}
 
-- Entropy bonus = KL penalty to a uniform reference; $Q = (1, 0)$,
-  $\beta = 0.5$: $\pi^\star = (0.88, 0.12)$, soft value 1.06.
-- Soft target with one fresh action; the actor descends a reverse-KL
-  projection by the pathwise gradient.
-- A tanh squash with its Jacobian integrates to 1.000000 (1.13 without).
-- Twin minimum, Polyak copies (half-life 139); $\beta$: 1 to 0.2 to a few hundredths.
-- Pendulum: $-200$ after 5,000 to 11,000 steps at one update per step,
-  2,400 to 4,000 at ten; the early dip is damping.
-- The twin minimum predicts too little, a single critic too much.
+Test your understanding of SAC's mathematical mechanics:
 
-**Next:** each transition taught the critic one number; the next deck
-learns the pendulum's physics and plans with it, from a few hundred steps.
+1. **Deterministic Limit:** If you set both the temperature $\beta = 0$ and the policy standard deviation $\sigma_\theta = 0$ in SAC's actor loss and twin-critic target, which algorithm do you recover, and how must it explore?
+2. **Reward Rescaling:** If you multiply all Pendulum rewards by $10$, how must $\beta$ change to leave the exact optimal policy $\pi^\star$ unchanged, and how does automatic temperature tuning respond?
+3. **Jacobian Restoring Force:** Using $\log(1 - \tanh^2 u) = 2(\log 2 - u - \operatorname{softplus}(-2u))$, what is $\frac{\partial}{\partial u}\big[-\beta \log(1 - \tanh^2 u)\big]$ in the actor loss, and what happens if you use the guarded formula $\log(1 - \tanh^2 u + 10^{-6})$ at $u = 12$ in `float32`?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. The actor loss becomes $-\min_{j=1,2} Q_{w_j}(s, c\tanh\mu_\theta(s))$: **DDPG with TD3's twin critics**. Because the policy is deterministic, external noise must be added to actions during collection.
+2. Scaling $r \to 10r$ requires **$\beta \to 10\beta$** so $r/\beta$ stays invariant; automatic temperature tuning automatically settles at a $10\times$ larger $\beta$ because $\partial J(\beta)/\partial \log\beta = \hat{H} - \bar{H}$ depends only on entropy!
+3. The exact derivative is **$+2\beta \tanh(u)$**, which pulls saturated pre-squash activations $u$ back toward $0$; in `float32` at $u = 12$, $1 - \tanh^2(12)$ underflows to $0$, so the guarded formula's derivative vanishes to **$0$**!
+:::
+:::
+
+::: {.slide title="Summary: Soft Actor–Critic Components and Roles"}
+[Key Takeaways]{.kicker}
+
+| SAC Component | Mathematical Expression | Problem Solved | Measured Effect on Pendulum |
+| :--- | :--- | :--- | :--- |
+| **Soft Critic Target** | $r + \gamma(1-\textrm{term})\big(\min_j Q_{w_j^-}(s', \tilde{a}') - \beta \log \pi_\theta(\tilde{a}' \mid s')\big)$ | Off-policy value estimation without importance ratios | Evaluates reward + future entropy from 1 fresh draw $\tilde{a}'$ |
+| **Pathwise Actor Loss** | $\mathbb{E}_{s, z}\big[\beta \log \pi_\theta(\tilde{a}_\theta \mid s) - \min_j Q_{w_j}(s, \tilde{a}_\theta)\big]$ | High variance of score-function gradients | Direct $\partial Q / \partial a$ slope; $\sim 50\times$ fewer steps than REINFORCE |
+| **Tanh Log-Det Jacobian** | $-2\big(\log 2 - u - \operatorname{softplus}(-2u)\big) - \log c$ | Undefined density & dead gradients of hard clipping | Density integrates to $1.000000$ without `float32` underflow |
+| **Twin Critics + Polyak** | $\min(Q_{w_1^-}, Q_{w_2^-})$, $w_j^- \leftarrow 0.005 w_j + 0.995 w_j^-$ | Continuous maximization bias as actor climbs $Q$ | Keeps predicted soft values calibrated below realized returns |
+| **Dual Temperature ($\beta$)** | $\min_{\log\beta} -\log\beta\, \mathbb{E}[\log \pi_\theta(a \mid s) + \bar{H}]$ | Sensitivity of fixed $\beta$ to reward scale and critic curvature | Locks policy entropy at $\bar{H} = -1\text{ nat}$ as critic flattens |
 :::

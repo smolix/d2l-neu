@@ -924,372 +924,314 @@ across sequence lengths (:numref:`sec_positional-information`).
 ::: {.cover}
 [Dive into Deep Learning · §10.2]{.kicker}
 
-Attention Scoring and Masking<br>
-**scaled dot products · the 1/√d factor · masks and their algebra · attention as two matrix products · a learned alignment**
+Attention Scoring Functions, Scaled Dot-Product, and Masking<br>**dot-product vs. additive scoring · 1/√d variance scaling · softmax Jacobian · boolean mask algebra · learned alignment**
 :::
 :::
 
-::: {.slide title="One Causal Head Scores a Million Pairs and Must Discard Half"}
-[The problem]{.kicker}
+::: {.slide title="Two Requirements for a Trainable Attention Layer"}
+[Motivation]{.kicker}
 
-One GPT-2-small head at a context of 1,024 tokens:
-
-- $1{,}024^2 = 1{,}048{,}576$ query–key scores per layer;
-- a fixed kernel cannot learn which of them should be large;
-- a language model must ignore the future: $523{,}776$ scores excluded;
-- a padded minibatch must ignore the padding.
-
-::: {.d2l-note .warn}
-We need a learnable score that is fast for every pair, and a way to
-exclude pairs.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- derive the dot-product score from the Gaussian kernel;
-- explain and measure why scores are divided by $\sqrt{d}$;
-- build padding and causal masks and combine them by AND;
-- compute attention for three keys by hand, then as two matrix products;
-- read an alignment that a model learns from its outputs alone.
-
-**Running example:** one GPT-2-small head, $d = 64$, context
-$n = 1{,}024$.
-:::
-
-::: {.slide title="Learned Scores and Masks Turn Lookup into a Layer"}
-[Where this fits]{.kicker}
+Turning soft key–value lookup into a general sequence-modeling layer requires solving two computational and structural problems at scale:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Queries, Keys, and Values | attention as a soft lookup |
-| **Attention Scoring and Masking** | **scaled dot products, masks** |
-| Self-Attention and Multiple Heads | a sequence reads itself; several heads |
-| Positional Information | where a token sits |
-| The Cost of Attention | quadratic cost, fused kernels |
-| Windowed and Linear Attention | linear cost, and what it gives up |
-| Attention Circuits | what trained heads compute |
+- **1. Fast, Learnable Scoring ($n^2$ Pairs):** A single attention head reading $n = 1{,}024$ tokens evaluates $1{,}024^2 = 1{,}048{,}576$ query–key pairs per layer. The scoring rule $a(\mathbf{q}, \mathbf{k})$ must map directly onto dense GPU matrix-multiplication hardware.
 :::
 
-::: {.col .narrow}
-- **Uses:** soft lookup, softmax, padding of minibatches.
-- **Skips:** self-attention and heads (next deck), positions.
+::: {.col}
+- **2. Excluding Invalid Pairs (Masking):** Not every stored key is legal to read: padded minibatches contain `<blank>` tokens, and causal language models must block $n(n-1)/2 = 523{,}776$ future pairs so position $t$ cannot peek at tokens $> t$.
 :::
 :::
-:::
-
-::: {.slide title="The Gaussian Kernel Is a Dot Product Plus Two Norms"}
-$$-\tfrac{1}{2}\|\mathbf{q} - \mathbf{k}_i\|^2 = \mathbf{q}^\top \mathbf{k}_i - \tfrac{1}{2}\|\mathbf{k}_i\|^2 - \tfrac{1}{2}\|\mathbf{q}\|^2$$
-
-- $\|\mathbf{q}\|^2$ is the same for every key: the softmax removes it.
-- $\|\mathbf{k}_i\|^2$ drops out when all keys have equal norm.
-- Keeping only $\mathbf{q}^\top\mathbf{k}_i$ is a modeling choice: a long
-  key now draws weight from every query pointing its way.
 
 ::: {.d2l-note}
-The dot product turns the key norm from a penalty into a prior.
+In this section we derive **scaled dot-product attention** ($\mathbf{q}^\top\mathbf{k}/\sqrt{d}$), prove why $1/\sqrt{d}$ prevents gradient collapse, and build a composable boolean mask algebra.
 :::
 :::
 
-::: {.slide title="Additive Scores Fill an n × m × r Array; Dot Products Are One Matrix Product"}
-The first attention models scored with a one-hidden-layer network:
+::: {.slide title="From Gaussian Distance to the Dot-Product Score"}
+[Deriving the Score]{.kicker}
 
-$$a(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k}), \quad \mathbf{W}_q \in \mathbb{R}^{r \times d_q}, \ \mathbf{W}_k \in \mathbb{R}^{r \times d_k}$$
+Expanding the negative squared Euclidean distance of the unit-bandwidth Gaussian kernel reveals an inner product plus two squared norms:
 
-- $n$ queries, $m$ keys: about $nmr$ operations, but in an
-  $n \times m \times r$ array of $\tanh$ activations.
-- Dot products of all pairs: one matrix product $\mathbf{Q}\mathbf{K}^\top$.
-- Keep the projections, drop $\tanh$: $\mathbf{q}^\top\mathbf{W}_q^\top\mathbf{W}_k\mathbf{k}$
-  is still learned, and still one matrix product.
-- Small $\mathbf{W}_q, \mathbf{W}_k$: $\tanh$ is almost linear,
-  $\mathbf{w}_v^\top\mathbf{W}_q\mathbf{q}$ is the same for every key, the
-  softmax removes it, and the weights barely depend on the query.
+$$a(\mathbf{q}, \mathbf{k}_i) = -\frac{1}{2}\|\mathbf{q} - \mathbf{k}_i\|^2 = \mathbf{q}^\top \mathbf{k}_i - \frac{1}{2}\|\mathbf{k}_i\|^2 - \frac{1}{2}\|\mathbf{q}\|^2$$
+
+- **Query Norm Cancels Exactly:** Because $-\frac{1}{2}\|\mathbf{q}\|^2$ is identical across all keys $i = 1, \ldots, m$, softmax shift invariance cancels it out completely.
+- **Key Norm Cancels Under Unit Normalization:** If all keys have equal norm $\|\mathbf{k}_i\| = c$, the term $-\frac{1}{2}\|\mathbf{k}_i\|^2$ also cancels in the softmax.
+- **Dropping Norms Turns Key Length into a Prior:** Defining $a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i$ without norm penalties lets the network use $\|\mathbf{k}_i\|$ as a multiplicative prior: longer keys attract larger weight from every aligned query.
 :::
 
-::: {.slide title="At d = 64 a Typical Unscaled Score Is ±8"}
-Entries of $\mathbf{q}, \mathbf{k} \in \mathbb{R}^d$ independent, mean 0,
-variance 1:
+::: {.slide title="Additive (MLP) vs. Dot-Product Scoring"}
+[Hardware Efficiency]{.kicker}
 
-$$\textrm{Var}(\mathbf{q}^\top \mathbf{k}) = \sum_{j=1}^d \textrm{Var}(q_j k_j) = d$$
+Early neural machine translation (Bahdanau et al., 2014) scored query–key pairs with a one-hidden-layer MLP called **additive attention**:
 
-- $d = 64$: standard deviation $8$.
-- Divide by $\sqrt{d}$: variance 1 at every width.
+$$a_{\textrm{add}}(\mathbf{q}, \mathbf{k}) = \mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k}), \qquad a_{\textrm{dot}}(\mathbf{q}, \mathbf{k}) = \frac{(\mathbf{W}_q \mathbf{q})^\top (\mathbf{W}_k \mathbf{k})}{\sqrt{d}}$$
 
-$$a(\mathbf{q}, \mathbf{k}) = \mathbf{q}^\top \mathbf{k} / \sqrt{d}$$
-
-::: {.d2l-note}
-$1/\sqrt{d}$ is the kernel's bandwidth knob, set by the width instead of by
-hand.
-:::
+| Property | Additive Attention ($\mathbf{w}_v^\top \tanh(\mathbf{W}_q \mathbf{q} + \mathbf{W}_k \mathbf{k})$) | Scaled Dot-Product Attention ($\mathbf{Q}\mathbf{K}^\top / \sqrt{d}$) |
+| :--- | :--- | :--- |
+| **Asymptotic FLOPs ($n$ queries, $m$ keys)** | $O(nmr)$ where $r$ is MLP hidden width | $O(nmd)$ where $d$ is head width |
+| **Intermediate Memory Tensor** | Materializes a 3D $(n, m, r)$ activation tensor | Materializes only the 2D $(n, m)$ score matrix |
+| **Hardware Kernel Primitive** | Broadcasted 3D elementwise addition + `tanh` | Single Tensor Core GEMM ($\mathbf{Q}\mathbf{K}^\top$) |
+| **Small-Weight Initialization Hazard** | Near $0$, $\tanh(u) \approx u$ is linear, so query terms cancel in softmax! | Bilinear product $(\mathbf{W}_q\mathbf{q})^\top(\mathbf{W}_k\mathbf{k})$ couples $\mathbf{q}$ and $\mathbf{k}$ at all scales |
 :::
 
-::: {.slide title="Two Queries, Three Keys, by Hand"}
-[Worked example]{.kicker}
+::: {.slide title="Why Unscaled Dot Products Grow as √d"}
+[Variance Calibration]{.kicker}
 
-$d = 4$, so scale by $1/2$. $\mathbf{q}_1 = (2,2,0,0)$,
-$\mathbf{q}_2 = (0,0,2,0)$; keys $(1,1,0,0)$, $(0,0,1,1)$, $(0,0,1,-1)$;
-values $(1,0)$, $(0,1)$, $(1,1)$.
+Suppose the coordinates of $\mathbf{q}, \mathbf{k} \in \mathbb{R}^d$ are independent random variables with mean $0$ and variance $1$:
 
-| | scores | scaled | weights | output |
-|---|---|---|---|---|
-| $\mathbf{q}_1$ | $(4, 0, 0)$ | $(2, 0, 0)$ | $(0.787, 0.107, 0.107)$ | $(0.893, 0.213)$ |
-| $\mathbf{q}_2$ | $(0, 2, 2)$ | $(0, 1, 1)$ | $(0.155, 0.422, 0.422)$ | $(0.578, 0.845)$ |
+$$\mathbb{E}[\mathbf{q}^\top \mathbf{k}] = \sum_{j=1}^d \mathbb{E}[q_j]\,\mathbb{E}[k_j] = 0, \qquad \textrm{Var}(\mathbf{q}^\top \mathbf{k}) = \sum_{j=1}^d \textrm{Var}(q_j k_j) = d$$
 
-- A perfect match still leaves a fifth of the weight elsewhere.
-- Query 2 is zero where keys 2 and 3 differ: it splits its weight equally.
-
-::: {.d2l-note}
-Without the factor $1/2$, query 1 would put $0.96$ on key 1: the same
-vectors, a sharper choice.
-:::
+- **Growing Spread:** At head width $d = 64$ (GPT-2 small), unscaled dot products have standard deviation $\sqrt{64} = 8$; at $d = 512$, standard deviation reaches $\approx 22.6$.
+- **Restoring Unit Variance:** Dividing by $\sqrt{d}$ rescales the score variance to $1$ for every head width $d$:
+  $$a(\mathbf{q}, \mathbf{k}_i) = \frac{\mathbf{q}^\top \mathbf{k}_i}{\sqrt{d}}, \qquad \alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(\mathbf{q}^\top \mathbf{k}_i / \sqrt{d})}{\sum_{j=1}^m \exp(\mathbf{q}^\top \mathbf{k}_j / \sqrt{d})}$$
+- **Automatic Temperature:** The factor $1/\sqrt{d}$ acts as the inverse bandwidth $1/\sigma^2$ of §10.1, keeping initial softmax sharpness invariant to head width.
 :::
 
-::: {.slide title="Unscaled Scores Collapse the Softmax Entropy"}
-2,048 random queries, 64 keys each; entropy of the weights:
+::: {.slide title="Worked Example: Scaled Dot-Product by Hand"}
+[Step-by-Step Trace]{.kicker}
 
+Let $d = 4$ ($1/\sqrt{d} = 1/2$) with queries $\mathbf{q}_1 = (2,2,0,0)$, $\mathbf{q}_2 = (0,0,2,0)$, keys $\mathbf{k}_1 = (1,1,0,0)$, $\mathbf{k}_2 = (0,0,1,1)$, $\mathbf{k}_3 = (0,0,1,-1)$, and values $\mathbf{v}_1 = (1,0)$, $\mathbf{v}_2 = (0,1)$, $\mathbf{v}_3 = (1,1)$:
+
+| Query | Raw Dots $\mathbf{q}^\top\mathbf{k}_j$ | Scaled Scores $\mathbf{q}^\top\mathbf{k}_j / 2$ | Softmax Weights $\boldsymbol{\alpha}$ | Output $\sum_j \alpha_j \mathbf{v}_j$ |
+| :--- | :---: | :---: | :---: | :---: |
+| **$\mathbf{q}_1 = (2, 2, 0, 0)$** | $(4,\; 0,\; 0)$ | $(2,\; 0,\; 0)$ | $\left(\frac{e^2}{e^2+2}, \frac{1}{e^2+2}, \frac{1}{e^2+2}\right) \approx (0.787, 0.107, 0.107)$ | $(0.893,\; 0.213)$ |
+| **$\mathbf{q}_2 = (0, 0, 2, 0)$** | $(0,\; 2,\; 2)$ | $(0,\; 1,\; 1)$ | $\left(\frac{1}{1+2e}, \frac{e}{1+2e}, \frac{e}{1+2e}\right) \approx (0.155, 0.422, 0.422)$ | $(0.578,\; 0.845)$ |
+
+- **Orthogonal Keys Still Receive Weight:** Keys $\mathbf{k}_2, \mathbf{k}_3$ are orthogonal to $\mathbf{q}_1$ (score $0$), yet $e^0 = 1$ gives each $10.7\%$ of the weight.
+- **Effect of $1/\sqrt{d}$:** Omitting the $1/2$ factor sharpens $\mathbf{q}_1$'s weight on $\mathbf{k}_1$ from $0.787$ to $e^4 / (e^4 + 2) \approx 0.965$.
+:::
+
+::: {.slide title="Softmax Saturation and the Softmax Jacobian"}
+[Gradient Dynamics]{.kicker}
+
+Why does a sharp softmax distribution at initialization stall gradient descent? Differentiating $\boldsymbol{\alpha} = \mathrm{softmax}(\mathbf{a})$ with respect to the score vector $\mathbf{a} \in \mathbb{R}^m$ yields the symmetric Jacobian matrix:
+
+$$\frac{\partial \boldsymbol{\alpha}}{\partial \mathbf{a}} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top, \qquad \frac{\partial \alpha_i}{\partial a_j} = \alpha_i(\delta_{ij} - \alpha_j)$$
+
+- **Vanishing Jacobian at One-Hot Corners:** When one score dominates ($\alpha_{i^*} \to 1$ and $\alpha_j \to 0$ for $j \neq i^*$), every diagonal entry $\alpha_i(1 - \alpha_i) \to 0$ and every off-diagonal entry $-\alpha_i \alpha_j \to 0$:
+  $$\mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top \;\xrightarrow{\;\boldsymbol{\alpha} \to \mathbf{e}_{i^*}\;}\; \mathbf{0}$$
+- **Training Consequence:** In a saturated row, backpropagated score gradients $\partial \mathcal{L} / \partial \mathbf{a} = (\partial \boldsymbol{\alpha}/\partial \mathbf{a})\,\partial \mathcal{L}/\partial \boldsymbol{\alpha}$ vanish, making it hard for unselected keys to ever gain weight.
+:::
+
+::: {.slide title="Measuring Entropy Collapse Across Head Widths"}
+[Empirical Verification]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Experimental Setup:** $2{,}048$ standard normal queries attend over $m = 64$ standard normal keys across widths $d \in \{4, \ldots, 512\}$.
+- **Scaled Invariance:** With $1/\sqrt{d}$, weight entropy stays flat near $\log 64 - \frac{1}{2} \approx 3.66$ nats (an effective pool of $\approx 39$ keys) across all widths.
+- **Unscaled Collapse:** Without $1/\sqrt{d}$, entropy plunges to $0.21$ nats by $d = 512$—nearly one-hot before a single gradient update!
+:::
+
+::: {.col .fig}
 @!attention-scoring-score-variance-and-the-1-sqrt-d-factor-1
-
-- Uniform over 64 keys: 4.16 nats. Scaled: about 3.7 at every $d$, as
-  even as a uniform choice among about 40 keys.
-- Unscaled: about 0.2 nats at $d = 512$, barely more than one key.
+:::
+:::
 :::
 
-::: {.slide title="Saturation Shrinks the Gradient That Reaches the Scores"}
-Scores $\mathbf{a}$ of one query, weights $\boldsymbol{\alpha} = \mathrm{softmax}(\mathbf{a})$:
+::: {.slide title="Largest Weight and Jacobian Norm vs. Dimension d"}
+[Quantitative Diagnostics]{.kicker}
 
-$$\frac{\partial \boldsymbol{\alpha}}{\partial \mathbf{a}} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top \to \mathbf{0} \quad \textrm{as } \boldsymbol{\alpha} \to \textrm{one-hot}$$
+Comparing the mean maximum weight $\max_i \alpha_i$ and the mean Frobenius norm $\|\mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha}\boldsymbol{\alpha}^\top\|_F$ confirms how $1/\sqrt{d}$ stabilizes gradients:
 
 @!attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2
 
-- Scaled: largest weight 0.11, Jacobian norm 0.18 at every $d$.
-- Unscaled: the norm rises to $d = 16$, drops below the scaled value by
-  $d = 128$, and is about half of it at $d = 512$.
-:::
-
-::: {.slide title="Check: Two Keys One Standard Deviation Apart"}
-[Check]{.kicker}
-
-In a $d = 64$ head, two keys score one standard deviation apart. What is
-the ratio of their weights without and with the factor $1/\sqrt{d}$?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** Unscaled, the scores differ by 8: ratio $e^8 \approx 3{,}000$.
-Scaled, they differ by 1: ratio $e \approx 2.7$. Without the factor and
-with unit-variance queries and keys, one key takes most of the weight
-(about 80% over 64 random keys).
+Why does the unscaled Jacobian norm rise from $d = 4$ ($0.292$) to $d = 16$ ($0.338$) before falling? $\|\mathbf{J}\|_F$ is maximized when weight splits evenly between $k = 2$ competing keys ($1/\sqrt{2} \approx 0.707$), which occurs transiently as weights transition from uniform ($m = 64$) toward one-hot ($k = 1$).
+:::
+:::
+
+::: {.slide title="Why Sequence Models Need Boolean Attention Masks"}
+[Attention Masking]{.kicker}
+
+Dense GPU matrix multiplication evaluates all $n \times m$ query–key pairs at once, so structural constraints are enforced by masking out forbidden pairs prior to softmax normalization:
+
+::: {.cols}
+::: {.col}
+- **1. Padding Masks (Variable-Length Batches):** When sequences of length $2, 3, 4$ are padded with `<blank>` tokens to share a `(batch, 4)` tensor, no query should ever read a `<blank>` key.
+- Broadcast shape `(batch, 1, keys)` applies the same valid key prefix to every query in a sequence.
+:::
+
+::: {.col}
+- **2. Causal Masks (Autoregressive Decoding):** When predicting token $t + 1$ from positions $\le t$, query $i$ may attend to key $j$ only if $j \le i$.
+- A lower-triangular boolean matrix of shape `(queries, keys)` excludes all $n(n-1)/2$ upper-triangular future pairs.
 :::
 :::
 :::
 
-::: {.slide title="Padding and Causality Both Exclude Query–Key Pairs"}
-**Padding:** sequences of different lengths share a minibatch.
+::: {.slide title="Pitfall: Choosing the Fill Value for Masked Softmax"}
+[Floating-Point Hazards]{.kicker}
 
-```
-Dive  into  Deep    Learning
-Learn to    code    <blank>
-Hello world <blank> <blank>
-```
+Replacing excluded scores (`~mask`) with a negative fill value before `softmax` has two subtle floating-point traps across `float32`, `bfloat16`, and `float16`:
 
-**Causality:** the query at position $t$ must not see keys after $t$, or
-it can copy the token it should predict.
+| Candidate Fill Value | Behavior on Partially Masked Row | Behavior on Fully Masked Row (`all False`) | Low-Precision (`float16`) Safety |
+| :--- | :--- | :--- | :--- |
+| **Hardcoded `-1e6` or `-1e9`** | Excluded weights underflow to `0.0` in `float32` | Returns uniform $1/m$ weights over invalid keys! | **Fails in `float16`** (max finite magnitude is $65{,}504$) |
+| **Literal `-inf`** | Excluded weights evaluate to $\exp(-\infty) = 0$ | **Produces `NaN`!** Row max is $-\infty$, giving $-\infty - (-\infty) = \mathrm{NaN}$ | Safe on non-empty rows; **corrupts entire network** if any row is empty |
+| **`finfo(dtype).min` + zeroing** | Underflows $\exp$ to exact `0.0` in every dtype | Finite subtraction gives $0$, then `where(mask.any(-1))` zeroes the row | **Works identically in `float16`, `bfloat16`, and `float32`** |
 
-::: {.d2l-note .rule}
-One object for both: a boolean mask, true where query $i$ may attend to
-key $j$.
+::: {.d2l-note .warn}
+Even if a fully masked padding query's output is discarded in layer 1, a `NaN` in its vector enters layer 2's matrix multiplication $\mathbf{Q}\mathbf{K}^\top$ and infects *every* valid token (`0 * NaN = NaN`)!
 :::
 :::
 
-::: {.slide title="Fill Excluded Scores with the Most Negative Finite Value"}
-| fill value | excluded key | row with every key excluded |
-|---|---|---|
-| $-10^6$ | weight 0 in float32, bfloat16; float16 overflows or refuses | uniform; float16: NaN or an error |
-| $-\infty$ | weight 0 | NaN: $-\infty - (-\infty)$ |
-| `finfo(dtype).min` | weight 0 at any precision | uniform, then set to zero |
+::: {.slide title="Implementing Safe Masked Softmax and Padding Masks"}
+[Implementation]{.kicker}
 
-::: {.d2l-note}
-float16 stops at $6.5 \times 10^4$; bfloat16 has float32's range.
-`finfo(dtype).min` is right without knowing which dtype is in use.
-:::
-:::
+`masked_softmax` fills excluded entries with `finfo(X.dtype).min` and explicitly zeroes any query row that has no valid keys:
 
-::: {.slide title="The Masked Softmax Fills, Normalizes, and Zeroes Empty Rows"}
 @attention-scoring-the-masked-softmax-operation-1
 
-The mask only has to broadcast against the scores
-(…, queries, keys).
-:::
-
-::: {.slide title="Equal Scores Make the Masked Weights Predictable"}
-Two sequences, two queries, four keys, every score 0; valid lengths 2
-and 3. Prediction: rows $(\tfrac12, \tfrac12, 0, 0)$ and
-$(\tfrac13, \tfrac13, \tfrac13, 0)$.
-
 @attention-scoring-the-masked-softmax-operation-2
-
-- The padding mask has shape (batch, 1, keys), broadcast over queries.
 :::
 
-::: {.slide title="Masks Compose by AND: Padding and Causal on Equal Scores"}
+::: {.slide title="Composing Masks via Boolean Algebra (Logical AND)"}
+[Mask Composition]{.kicker}
+
 ::: {.cols .vc}
 ::: {.col}
-![](../img/mdl-attention-mask-algebra.svg){width=100%}
+- **Conjunction Rule:** When multiple constraints apply simultaneously, query $i$ may attend to key $j$ if and only if *every* constraint permits $(i, j)$:
+  $$\texttt{mask} = \texttt{padding\_mask} \;\mathbin{\&}\; \texttt{causal\_mask}$$
+- **Broadcasted Intersection:** A `(batch, 1, n)` padding mask and an `(n, n)` causal mask broadcast under `&` to `(batch, n, n)` cleanly.
+:::
+
+::: {.col .fig}
+![Padding and causal masks compose via logical AND under broadcasting.](../img/mdl-attention-mask-algebra.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Visualizing Composite and Packed-Document Masks"}
+[Mask Heatmaps]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Padding `&` Causal (Top):** On uniform zero scores, row $i$ averages over $\min(i+1, \ell_{\textrm{valid}})$ keys, truncating the second sequence at key $3$.
+- **Document Packing (Bottom):** Concatenating short documents `doc = [0,0,0, 1,1, 2]` into one row and computing `(doc[:, None] == doc[None, :]) & causal_mask(6)` forms a block-diagonal causal mask with zero cross-document leakage.
 :::
 
 ::: {.col .fig}
 @!attention-scoring-composing-masks
-:::
-:::
-
-- On equal scores, causal row $i$ holds $1/(i+1)$ on keys $0, \ldots, i$:
-  $n(n-1)/2$ of $n^2$ pairs excluded. Valid length 3 stops rows at the
-  third key.
-:::
-
-::: {.slide title="Packed Documents Need a Block-Diagonal Mask"}
-Three documents of lengths 3, 2, 1 in one row: same document AND causal.
 
 @!attention-scoring-composing-masks-1
-
-Each position attends only to earlier positions of its own document.
-:::
-
-::: {.slide title="Check: An Empty Row"}
-[Check]{.kicker}
-
-A query's row of the composite mask is all false. What does the softmax
-return if the excluded scores are filled with $-\infty$? With
-`finfo.min`? What does `masked_softmax` return?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** NaN, which then spreads to every later layer; a uniform
-average over invalid values; a row of zeros. Masks that are harmless
-alone can still intersect to an empty row.
 :::
 :::
 :::
 
-::: {.slide title="Attention Is Two Matrix Products and a Softmax"}
-$\mathbf{Q} \in \mathbb{R}^{n \times d}$: one query per row;
-$\mathbf{K} \in \mathbb{R}^{m \times d}$; $\mathbf{V} \in \mathbb{R}^{m \times d_v}$.
+::: {.slide title="Batched Attention as Two Matrix Multiplications"}
+[Matrix Formulation]{.kicker}
 
-$$\mathrm{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d}}\right)\mathbf{V} \in \mathbb{R}^{n \times d_v}$$
-
-![Shapes of Q, K, the scores, the masked weights, V, and the output.](../img/mdl-attention-shapes.svg){width=48%}
-
-::: {.d2l-note}
-Row $i$ of the output is what query $i$ alone would produce; the worked
-example is two rows of it.
-:::
+::: {.cols .vc}
+::: {.col}
+- Stacking $n$ queries into $\mathbf{Q} \in \mathbb{R}^{n \times d}$, $m$ keys into $\mathbf{K} \in \mathbb{R}^{m \times d}$, and $m$ values into $\mathbf{V} \in \mathbb{R}^{m \times d_v}$ computes all $n$ lookups in two GEMMs:
+  $$\textrm{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \mathrm{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d}}\right)\mathbf{V} \in \mathbb{R}^{n \times d_v}$$
+- **GPT-2 Small Head ($n=m=1{,}024, d=d_v=64$):** Score matrix holds $1{,}024^2 = 1{,}048{,}576$ floats ($4\text{ MiB}$ in `float32`); the two products cost $4n^2 d \approx 0.27\text{ GFLOPs}$.
 :::
 
-::: {.slide title="One GPT-2 Head at 1,024 Tokens: 4 MiB of Scores, 0.27 GFLOP"}
-$n = m = 1{,}024$, $d = d_v = 64$, float32:
-
-- scores: $1{,}024^2 = 1{,}048{,}576$ entries, $\times 4$ bytes = 4 MiB;
-- FLOPs: $2 \cdot n^2 d$ for $\mathbf{Q}\mathbf{K}^\top$ plus
-  $2 \cdot n^2 d_v$ for $\mathbf{A}\mathbf{V}$ $\approx 0.27$ billion.
-
-**Check.** How large is the score matrix at $n = 8{,}192$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-$8{,}192^2 \times 4$ bytes = 256 MiB per head and layer: 64 times more
-for 8 times the context.
+::: {.col .fig}
+![Tensor shapes in batched scaled dot-product attention.](../img/mdl-attention-shapes.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="The Layer Is Three Lines" only="pytorch"}
-The core of `DotProductAttention.forward`:
+::: {.slide title="The DotProductAttention Module"}
+[Module Implementation]{.kicker}
 
-```{.python #attention-scoring-exercises-1}
-# queries (..., n, d), keys (..., m, d), values (..., m, d_v)
-scores = queries @ keys.transpose(-2, -1) / math.sqrt(d)
-weights = masked_softmax(scores, mask)  # (..., n, m)
-output = dropout(weights) @ values      # (..., n, d_v)
-```
+Operating over the last two axes allows `DotProductAttention` to carry arbitrary leading batch and head dimensions automatically:
 
-- Leading axes (batch, later heads) are carried along by `@`.
-- Attention dropout defaults to 0, as in most current language models.
+@attention-scoring-the-dotproductattention-class-1
 :::
 
-::: {.slide title="The Layer Is Three Lines" only="jax"}
-The core of `DotProductAttention.__call__`:
+::: {.slide title="Verifying the Hand Calculation in Code"}
+[Sanity Check]{.kicker}
 
-```{.python #attention-scoring-exercises-2}
-# queries (..., n, d), keys (..., m, d), values (..., m, d_v)
-scores = queries @ keys.swapaxes(-2, -1) / math.sqrt(d)
-weights = masked_softmax(scores, mask)  # (..., n, m)
-output = dropout(weights) @ values      # (..., n, d_v)
-```
-
-- Leading axes (batch, later heads) are carried along by `@`.
-- Attention dropout defaults to 0, as in most current language models.
-:::
-
-::: {.slide title="The Class Reproduces the Hand Computation"}
-The worked example, through `DotProductAttention`:
+Passing the two $4\text{D}$ queries and three $4\text{D}$ keys from our worked example into `DotProductAttention` reproduces our exact hand-computed weights and outputs:
 
 @attention-scoring-the-dotproductattention-class-2
 
-- The same weights and outputs as by hand, to the last printed digit.
-:::
-
-::: {.slide title="Equal Letters Score √32 ≈ 5.7, So We Know the Answer"}
-Random letter embeddings of width 32; "attention" queries "translation":
-
-@!multihead-attention-an-alignment-you-can-read
-
-- `i`, `o`: one partner, most of the weight.
-- `a`, `t`, `n`: two equal keys, weight split; content cannot tell copies
-  apart.
-- `e`: no partner; the softmax spends its mass anyway.
-:::
-
-::: {.slide title="Keys That Carry Positions Let a Toy Model Learn a Permutation"}
-In translation (Bahdanau et al.) the weights came out as word alignments.
-Toy: output $j$ copies source $\pi(j)$, 8 tokens from 16, one pair swapped.
-Queries: one learned vector per output; keys: $\mathbf{W}_k$[one-hot token;
-one-hot position]; values: one-hot tokens.
-
-@!attention-scoring-attention-as-learned-alignment-4
-
-- Untrained: a fifth to a quarter right, weight on $\pi(j)$ near $1/8$.
-  Trained (three runs): accuracy 1.000, largest weight on $\pi(j)$.
-- Repeated tokens are told apart: the keys carry the position.
-:::
-
-::: {.slide title="Check: A Toy Without Positions"}
-[Check]{.kicker}
-
-Remove the one-hot position from the toy's keys. Can output $j$ still put
-its weight on source position $\pi(j)$?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** No. Equal tokens then have equal keys, and every position with
-the same token gets the same weight, as with the letters of
-"attention". The output can depend only on which tokens occur, not where.
+Always verify custom attention and masking modules on small inputs with known closed-form softmax outputs before training at scale.
+:::
+:::
+
+::: {.slide title="What Content-Only Matching Can and Cannot Do"}
+[Content-Only Lookup]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Assign each distinct letter in `"attention"` and `"translation"` a random embedding $\mathbf{e} \in \mathbb{R}^{32}$ (identical letters score $\approx \sqrt{32} \approx 5.7$; distinct letters score $\approx 0 \pm 1$):
+- **Unique matches (`i`, `o`):** Concentrate nearly $100\%$ of their weight on their partner.
+- **Repeated matches (`a`, `t`, `n`):** Split weight *equally* across all copies—content alone cannot distinguish positions!
+- **Unmatched query (`e`):** Forced to sum to $1$, spreading mass across random keys (motivating **attention sinks** in LLMs).
+:::
+
+::: {.col .fig}
+@!multihead-attention-an-alignment-you-can-read
 :::
 :::
 :::
 
-::: {.slide title="Scaled Scores and Boolean Masks Make Attention a Trainable Layer"}
-[Wrap-up]{.kicker}
+::: {.slide title="Learning Sequence Alignments End to End"}
+[Learned Alignment]{.kicker}
 
-- Score $\mathbf{q}^\top\mathbf{k}/\sqrt{d}$: the Gaussian kernel without
-  the norms; at $d = 64$ the factor turns a ±8 score into ±1.
-- Unscaled scores of random vectors saturate the softmax: about 0.2 nats
-  of entropy at $d = 512$ instead of 3.7.
-- Masks are booleans that compose by AND; fill with the dtype's most
-  negative finite value; empty rows become zeros.
-- One GPT-2 head at 1,024 tokens: 1M scores, 4 MiB, 0.27 GFLOP.
-- Equal keys split the weight; keys with positions learn an alignment.
+Can gradient descent discover a word reordering from output supervision alone? In `ToyAligner`, output position $j$ must copy source token $\pi(j)$ where $\pi = (0, 1, 2, 4, 3, 5, 6, 7)$ swaps positions $3$ and $4$:
 
-**Next:** a sequence that queries itself, and several heads.
+::: {.cols .vc}
+::: {.col}
+- **Model Architecture:** Each output position $j$ holds a trainable query $\mathbf{q}_j \in \mathbb{R}^{16}$.
+- **Position-Aware Keys:** Source position $i$ concatenates its one-hot token ($16\text{D}$) and one-hot position ($8\text{D}$) before multiplying by $\mathbf{W}_k \in \mathbb{R}^{24 \times 16}$.
+- **Values:** One-hot source tokens, so the attention output directly gives the predicted token distribution.
+:::
+
+::: {.col .fig}
+@attention-scoring-attention-as-learned-alignment-1
+:::
+:::
+:::
+
+::: {.slide title="Emergence of the Permutation Matrix in ToyAligner"}
+[Training Results]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- After $100$ Adam steps minimizing negative log-likelihood on random sequences, all three runs reach $100\%$ test accuracy and place $> 0.999$ of their weight on $\pi(j)$:
+- Even when source tokens repeat (`c`, `o`), the learned key projection routes each query cleanly to $\pi(j)$, visible as the off-diagonal crossing in rows 3 and 4.
+:::
+
+::: {.col .fig}
+@!attention-scoring-attention-as-learned-alignment-4
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: Scaling, Masking, and Invariances"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of scaled dot-product scoring and boolean masking:
+
+1. **Score Ratio Without Scaling:** In a head of width $d = 64$, two keys lie one standard deviation apart in raw dot-product score ($\Delta = \sqrt{64} = 8$). What is the ratio of their softmax weights without $1/\sqrt{d}$ versus with $1/\sqrt{d}$?
+2. **Affine Key Bias Invariance:** Suppose keys are produced by an affine layer $\mathbf{k}_i = \mathbf{W}_k \mathbf{y}_i + \mathbf{b}_k$. Why does the bias vector $\mathbf{b}_k$ have zero gradient ($\nabla_{\mathbf{b}_k} \mathcal{L} = \mathbf{0}$) in dot-product attention?
+3. **Composite Window + Padding Hazard:** Suppose sequence 2 has valid length $3$ in a padded length-$6$ tensor, and we apply `padding_mask & sliding_window(w=2)`. What happens to the mask row for query position $i = 5$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Unscaled:** $e^8 \approx 2{,}981 : 1$. **Scaled by $1/\sqrt{64} = 1/8$:** $\Delta' = 1$, giving $e^1 \approx 2.72 : 1$.
+2. Expanding $\mathbf{q}^\top(\mathbf{W}_k\mathbf{y}_i + \mathbf{b}_k) = \mathbf{q}^\top\mathbf{W}_k\mathbf{y}_i + \mathbf{q}^\top\mathbf{b}_k$ shows that $\mathbf{q}^\top\mathbf{b}_k$ is independent of key index $i$, so softmax shift invariance cancels it out identically!
+3. **Row $i = 5$ is completely empty (`all False`)!** The window allows keys $\{4, 5\}$ while padding allows $\{0, 1, 2\}$, whose intersection is $\emptyset$—why `masked_softmax` must safely zero out empty rows.
+:::
+:::
+
+::: {.slide title="Summary: Attention Scoring and Masking"}
+[Key Takeaways]{.kicker}
+
+| Mechanism / Operation | Mathematical Form / Rule | Complexity / Behavior | Deep Learning Purpose |
+| :--- | :--- | :--- | :--- |
+| **Scaled Dot-Product** | $a(\mathbf{q}, \mathbf{k}) = \dfrac{\mathbf{q}^\top \mathbf{k}}{\sqrt{d}}$ | $2nmd$ FLOPs via one GEMM $\mathbf{Q}\mathbf{K}^\top$ | Fast, hardware-native pairwise similarity scoring |
+| **Additive Scoring** | $\mathbf{w}_v^\top \tanh(\mathbf{W}_q\mathbf{q} + \mathbf{W}_k\mathbf{k})$ | $O(nmr)$ FLOPs, $n \times m \times r$ memory | Historical NMT score; superseded by projected dot products |
+| **$1/\sqrt{d}$ Scaling** | $\textrm{Var}(\mathbf{q}^\top\mathbf{k}/\sqrt{d}) = 1$ | Keeps entropy $\approx \log m - \frac{1}{2}$ at init | Prevents softmax Jacobian $\mathrm{diag}(\boldsymbol{\alpha})-\boldsymbol{\alpha}\boldsymbol{\alpha}^\top \to \mathbf{0}$ |
+| **Padding Mask** | `keys < valid_lens[..., None]` | Shape `(batch, 1, m)` broadcasts to queries | Excludes `<blank>` tokens in variable-length minibatches |
+| **Causal Mask** | `j <= i + (m - n)` | Excludes $n(n-1)/2$ upper-triangular pairs | Prevents autoregressive models from peeking at future tokens |
+| **Mask Algebra & Fill** | `mask1 & mask2`, fill `finfo(dtype).min` | Zeroes all-`False` rows via `where(mask.any(-1))` | Composes constraints without `float16` overflow or `NaN` |
 :::

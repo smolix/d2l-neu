@@ -446,365 +446,277 @@ print(f'spread between the seeds: configured {abs(c1 - c2):.3f}, '
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §9.12]{.kicker}
+[Dive into Deep Learning · §9.10]{.kicker}
 
-Practice<br>
-**gradient clipping · weight averaging · a worked configuration**
+Practical Optimization Diagnostics and Recipes<br>**global-norm gradient clipping · guard vs. brake · AdamW spike recovery · weight EMA · end-to-end configuration**
 :::
 :::
 
-::: {.slide title="PaLM's Loss Spiked about 20 Times with Gradient Clipping On"}
-[The problem]{.kicker}
+::: {.slide title="Three Pillars of a Production Pretraining Run"}
+[Motivation]{.kicker}
 
-A run that takes a day on one GPU:
+In small experiments, a diverged run costs seconds to restart. When pretraining a foundation model across thousands of accelerators for weeks—such as the $540\text{B}$-parameter PaLM model on $6{,}144$ TPUs, which suffered $\sim 20$ sudden loss spikes despite active clipping (Chowdhery et al., 2022)—reliable execution rests on three operational pillars:
 
-- **Guard:** one oversized update can undo hours. PaLM, 540 billion
-  parameters on 6,144 TPU chips: about 20 loss spikes, with clipping
-  enabled.
-- **Finish:** the final weights are one draw from a noisy trajectory.
-- **Configure:** a sweep over four learning rates costs four days.
-
-::: {.d2l-note .warn}
-How do we guard, finish and configure a run that we get to do once?
+::: {.cols}
+::: {.col}
+- **1. Guards against transient instabilities:**
+  - Global-norm **gradient clipping** prevents early high-curvature blow-ups under SGD and protects AdamW's second-moment accumulator $\mathbf{v}_t$ from anomalous gradient spikes, paired with checkpoint-and-rewind recovery.
+- **2. Iterate smoothing (Weight EMA):**
+  - Maintaining an exponential moving average of model weights cancels late-stage noise-ball fluctuations without requiring a full decay to zero.
 :::
 
-[Chowdhery et al., 2022]{.small}
+::: {.col}
+- **3. Calibration from short proxy runs:**
+  - Rather than sweeping a full $3{,}000$-step (or $300{,}000$-step) run across a grid, we select $b$ from hardware throughput and $b_{\text{noise}}$ (§9.8), adopt published AdamW defaults, calibrate peak $\eta_0$ on a $10\%$-horizon run, and execute a warmup + cosine/WSD schedule (§9.7).
+:::
+:::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Global-Norm Gradient Clipping: Direction-Preserving Cap"}
+[Clipping Mechanics]{.kicker}
 
-- set a clipping threshold and tell a guard from a brake;
-- compute how long a gradient spike stays in Adam's state;
-- recover from a loss spike;
-- choose the window and the start of a weight average;
-- configure a new model: batch size, optimizer, peak rate, schedule.
+::: {.cols .vc}
+::: {.col}
+Global-norm gradient clipping treats the concatenated gradient across all parameters as a single vector $\mathbf{g} \in \mathbb{R}^d$ and rescales it whenever its Euclidean norm $\|\mathbf{g}\|_2$ exceeds a threshold $\theta > 0$:
 
-**Idea:** the settings of a long run come from short runs of the same
-model; a guard and an average cover what short runs cannot foresee.
+$$\mathbf{g} \leftarrow \min\!\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right)\mathbf{g}$$
 
-**Running example:** `TinyLM` (transformer, 0.47 million parameters, next
-byte of Wikipedia text) under SGD at a diverging rate; then a `TinyLM` of
-3.3 million parameters, configured from nothing.
+- **Preserves cross-layer relative magnitudes:** Unlike elementwise clipping (which distorts each layer's direction into a sign vector), global-norm clipping multiplies every parameter's gradient by the same scalar $\theta / \|\mathbf{g}\|_2 < 1$.
+- **Bounds SGD step length:** Under plain SGD, no parameter update can exceed Euclidean length $\eta\theta$.
 :::
 
-::: {.slide title="Practice Assembles the Chapter into One Configured Run"}
-[Where this fits]{.kicker}
-
-| part | decks |
-|---|---|
-| **1 · Two problems:** uneven curvature, noisy gradients | Landscapes · Gradient Descent · Stochastic and Minibatch GD |
-| **2 · Direction:** which way to step | Two Test Models · Momentum · Adam · AdamW · Muon |
-| **3 · The run:** step size over time, noise level, model width | Schedules · Batch Size · Scaling Up · **Practice** |
-
-- **Uses:** SGD's diverging rates on `TinyLM`; Adam's two averages; the
-  noise ball; warmup and cosine decay; the gradient-noise scale.
-- **Skips:** automated hyperparameter search; training on several
-  devices.
+::: {.col .fig}
+@-practice-gradient-clipping-1
+:::
+:::
 :::
 
-::: {.slide title="Global-Norm Clipping Caps the Step and Keeps Its Direction"}
-[Gradient clipping]{.kicker}
+::: {.slide title="Testing Two Hypotheses for SGD Divergence at η = 1.0"}
+[Guard vs. Brake Experiment]{.kicker}
 
-All gradients as one vector $\mathbf{g}$, threshold $\theta$:
+In §9.5, SGD with momentum ($\beta = 0.9$) on `TinyLM` trained at $\eta = 0.3$ but diverged to `inf` within $20$ steps at $\eta = 1.0$. Why did $\eta = 1.0$ diverge?
 
-$$\mathbf{g} \leftarrow \min\left(1,\; \frac{\theta}{\|\mathbf{g}\|_2}\right) \mathbf{g}$$
-
-- $\|\mathbf{g}\|_2 = 5$, $\theta = 1$: multiply by 0.2.
-- One norm over all layers: their relative sizes are kept.
-- Plain SGD with learning rate $\eta$: no step is longer than
-  $\eta\theta$.
+| Competing Hypothesis | Prediction Under Global-Norm Clipping ($\theta = 1.0$) | Resulting Training Behavior |
+| :--- | :--- | :--- |
+| **Hypothesis A — Transient initial sharpness:** $\eta = 1.0$ is only too large during the opening steps before the iterate leaves the steep initial region | Clipping fires on the **first few dozen steps**, then falls completely silent ($\|\mathbf{g}_t\|_2 < \theta$) for the rest of the run | **Clipping acts as a guard:** The run survives the opening transient and trains cleanly at $\eta = 1.0$! |
+| **Hypothesis B — Globally excessive learning rate:** $\eta = 1.0$ exceeds $2/L$ throughout the entire loss landscape | Clipping fires on **almost every step** ($>50\text{--}100\%$), permanently rescaling the step to fixed length $\eta\theta$ | **Clipping acts as a brake:** Changes the algorithm into fixed-step normalized descent and still fails to converge |
 :::
 
-::: {.slide title="Two Readings of a Diverging Rate Predict Different Clip Counts"}
-[Gradient clipping]{.kicker}
+::: {.slide title="Clipping Fires on <2% of Steps and Rescues η = 1.0"}
+[Empirical Clipping Diagnostics on TinyLM]{.kicker}
 
-SGD with momentum 0.9 on `TinyLM`: best at $\eta = 0.3$, every run
-diverges at $\eta = 1$.
-
-| if $\eta = 1$ is too large | clipping at $\theta = 1$ acts | and the run |
-|:--|:--|:--|
-| for the first steps only | early, then never | trains at $\eta = 1$ |
-| throughout | on most steps | is no longer SGD at $\eta = 1$ |
-
-**Test:** $\eta = 1$ unclipped and clipped at $\theta = 1$, $\eta = 0.3$
-unclipped, $\eta = 3$ clipped; two seeds, 2,000 steps; count the clipped
-steps.
+::: {.cols .vc}
+::: {.col}
+- Running $2{,}000$ steps across $(\eta, \theta) \in \{(1.0, \infty), (1.0, 1.0), (0.3, \infty), (3.0, 1.0)\}$ over two seeds confirms **Hypothesis A** at $\eta = 1.0$:
+  - **At $\eta = 1.0, \theta = \infty$:** Diverges to `inf` within $20$ steps.
+  - **At $\eta = 1.0, \theta = 1.0$ (Guard):** Clipping fires on only **$15\text{--}35$ steps (all before step $50$)**, never fires again over the remaining $1{,}950$ steps (median $\|\mathbf{g}_t\|_2 \approx 0.25$), and reaches **$1.61\text{--}1.64$ nats** (beating unclipped $\eta = 0.3$)!
+  - **At $\eta = 3.0, \theta = 1.0$ (Brake):** Fires on **every single step** until overflowing or stalling above $100$ nats.
 :::
 
-::: {.slide title="At η = 1, Clipping Separates Divergence from Training"}
-[Gradient clipping · TinyLM, first 50 steps]{.kicker}
-
-@!practice-a-nan-averted-3
-
-- Unclipped: the loss falls for a step or two, then grows by orders of
-  magnitude and is gone within about 20 steps.
-- Clipped at 1: hard to tell from $\eta = 0.3$ on this scale.
-:::
-
-::: {.slide title="Clipping Changed a Few Dozen Early Steps, Then Fell Silent" layout="tight"}
-[Gradient clipping]{.kicker}
-
+::: {.col .fig}
 @!practice-a-nan-averted-2
-
-[`last`: last clipped step. `largest / median`: after step 100.]{.small}
-
-::: {.d2l-note}
-$\eta = 1$ was too large for the first 50 steps only, and SGD's limit
-moved from about 0.5 to between 1 and 3. When a run of a sweep diverges,
-ask when.
-:::
-:::
-
-::: {.slide title="A Guard Fires Rarely; a Brake Fires Always and Changes the Algorithm"}
-[Gradient clipping]{.kicker}
-
-| | guard ($\eta = 1$) | brake ($\eta = 3$) |
-|:--|:--|:--|
-| clipped steps | a few dozen of 2,000 | practically all |
-| gradient norm | median $\theta/4$ | tens of $\theta$ |
-| update | SGD, a few steps shortened | fixed length: normalized descent |
-| run | trains | fails |
-
-- **Threshold:** a few times the median norm of a run that trains. Log
-  the share of clipped steps.
-- **Fires on most steps:** lower $\eta$ first.
-:::
-
-::: {.slide title="Check: Does Clipping Shorten an Adam Step?"}
-[Check]{.kicker}
-
-One gradient coordinate $g$ arrives that dwarfs all earlier ones. Adam:
-$m \leftarrow \beta_1 m + (1-\beta_1) g$,
-$v \leftarrow \beta_2 v + (1-\beta_2) g^2$, step $\eta\, m/\sqrt{v}$, with
-$\beta_1 = 0.9$, $\beta_2 = 0.999$. How long is the step?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $m/\sqrt{v} \approx (1-\beta_1)/\sqrt{1-\beta_2} =
-0.1/\sqrt{0.001} \approx 3.2$ for any $g$. The step is bounded at
-$3.2\,\eta$, and clipping $g$ barely changes it. So clipping does not
-rescue Adam from a learning rate that is too large.
 :::
 :::
 :::
 
-::: {.slide title="Clipping Protects Adam's State: a 100× Spike Stays in v for 2,300 Steps"}
-[Gradient clipping]{.kicker}
+::: {.slide title="Distinguishing a Guard from a Brake in Training Logs"}
+[Setting the Clipping Threshold θ]{.kicker}
 
-An unclipped gradient 100 times the typical one, $\beta_2 = 0.999$:
-
-- $v$ gains $(1-\beta_2) \cdot 100^2 = 10$ times its usual value: the
-  steps shrink to $1/\sqrt{11} \approx 30\%$;
-- $10 \cdot 0.999^t < 1$ only after $t \approx 2{,}300$ steps, and the
-  steps are still at 70%;
-- clipped at 4 times the median norm: $v$ gains $0.001 \cdot 4^2$, under
-  2%.
-
-$\beta_2 = 0.95$: $v$ gains 500 times, the steps fall below 5%, and the
-spike is forgotten within about 120 steps.
+| Diagnostic Dimension | Clipping as a **Guard** ($\eta = 1.0, \theta = 1.0$) | Clipping as a **Constant Brake** ($\eta = 3.0, \theta = 1.0$) |
+| :--- | :--- | :--- |
+| **Fraction of steps clipped** | **$<2\%\text{--}5\%$** (concentrated in early transient or rare spikes) | **$>50\%\text{--}100\%$** (active continuously throughout training) |
+| **Steady-state median $\|\mathbf{g}_t\|_2$** | $\approx 0.25 \approx \theta / 4$ (well below threshold $\theta$) | Tens or hundreds of $\theta$ (permanently saturated) |
+| **Effective update rule** | Standard SGD/AdamW with rare outlier steps capped | Fixed-step normalized descent; masks an oversized learning rate |
+| **Engineering action** | **Healthy setting:** Keep $\theta \approx 3\text{--}5\times$ median norm (typically $\theta = 1.0$) | **Lower the learning rate $\eta$ first** before tuning $\theta$! |
 :::
 
-::: {.slide title="When a Spike Gets Through, Rewind and Skip"}
-[Gradient clipping]{.kicker}
+::: {.slide title="Why Clipping Under AdamW Protects the Second Moment v_t"}
+[AdamW Spike Dynamics]{.kicker}
 
-- PaLM: restart about **100 steps** before the spike, skip **200–500
-  minibatches**. No spike there again.
-- Same minibatches, earlier checkpoint: no spike. Data and parameter
-  state cause it together; the report gives no further cause.
-- A penalty on drifting logits (z-loss) was on throughout and did not
-  prevent the spikes.
+Under AdamW (§9.5), a single massive gradient coordinate $g_t \gg \sqrt{v_{t-1}}$ *already* produces a bounded immediate parameter step because $g_t$ appears in both $\mathbf{m}_t$ and $\sqrt{\mathbf{v}_t}$:
 
-::: {.d2l-note}
-A checkpoint holds model, optimizer state, step count and data position.
+$$|\Delta x_t| \approx \eta\,\frac{(1 - \beta_1)\,|g_t|}{\sqrt{(1 - \beta_2)\,g_t^2}} = \eta\,\frac{1 - \beta_1}{\sqrt{1 - \beta_2}} \approx \begin{cases} 3.16\,\eta & (\beta_1 = 0.9,\; \beta_2 = 0.999) \\ 0.45\,\eta & (\beta_1 = 0.9,\; \beta_2 = 0.95) \end{cases}$$
+
+- **What clipping actually protects in AdamW is the denominator state $\mathbf{v}_t$:**
+  - An unclipped **$100\times$ gradient spike** injects $(1 - \beta_2) \times 100^2$ times the typical squared gradient into $v_t$:
+  - At $\beta_2 = 0.999$: $v_t$ jumps to $11\times$ its normal level, shrinking subsequent effective learning rates to $1/\sqrt{11} \approx 30\%$ and taking **$t \approx \frac{\ln 10}{1 - 0.999} \approx 2{,}300$ steps** just to decay back below $2\times$!
+  - Clipping at $\theta = 4\times$ median norm limits the injection into $v_t$ to $0.001 \times 16 < 2\%$, and using **$\beta_2 = 0.95$** shortens any residual recovery window **$20\times$** (from $2{,}300$ steps to $\sim 120$ steps).
 :::
 
-[Chowdhery et al., 2022]{.small}
+::: {.slide title="Operational Spike Recovery and Softmax z-Loss"}
+[Surviving Mid-Run Instabilities]{.kicker}
+
+When a sudden loss spike occurs mid-run despite gradient clipping ($\theta = 1.0$) and shorter second-moment memory ($\beta_2 = 0.95$):
+
+- **Coincidence of parameter state and anomalous minibatch (PaLM, Chowdhery et al., 2022):**
+  - Replaying the offending minibatch from an *earlier* checkpoint does not spike, and continuing from just *before* the spike with different minibatches does not spike—the instability is triggered by the interaction of a marginal parameter state with a specific data batch.
+- **Standard operational recovery protocol:**
+  1. **Rewind** to a checkpoint saved **$\sim 100$ steps before** the spike onset.
+  2. **Skip** the **$200\text{--}500$ minibatches** surrounding the spike window.
+  3. **Full state checkpointing:** Every checkpoint must serialize model weights, optimizer moments $(\mathbf{m}_t, \mathbf{v}_t)$, scheduler step $t$, and the deterministic data-loader offset!
+- **Auxiliary logit stabilization ($z$-loss):** Adding $10^{-4}\log^2\!\left(\sum_{j=1}^V e^{o_j}\right)$ pulls the log-partition function $\log Z \to 0$ via restoring gradient $2{\times}10^{-4}(\log Z)\,\mathbf{p}$, preventing softmax logit drift without altering $\mathbf{p} = \operatorname{softmax}(\mathbf{o})$.
 :::
 
-::: {.slide title="An Average Needs Iterates That Are Different Draws"}
-[Weight averaging]{.kicker}
+::: {.slide title="Weight Averaging (EMA): Smoothing the Noise Ball"}
+[Polyak–Ruppert Iterate Averaging]{.kicker}
 
-Which weights do we keep? The last ones are one draw from the *noise
-ball*, in which the weights fluctuate at a constant rate.
-
-Exponential moving average (EMA) of the weights $\mathbf{x}_t$, decay
-$\alpha$:
-
-$$\bar{\mathbf{x}}_t = \alpha\, \bar{\mathbf{x}}_{t-1} + (1-\alpha)\, \mathbf{x}_t,
-\qquad \textrm{window} \approx \frac{1}{1-\alpha}\ \textrm{steps}$$
-
-- Valley, curvature $c = 0.2$, learning rate $\eta = 0.1$: a coordinate
-  forgets its position in $1/(\eta c) = 50$ steps.
-- So the window is long: $\alpha = 0.999$, 1,000 steps.
+::: {.cols .vc}
+::: {.col}
+- At any non-zero learning rate $\eta$, the live weights $\mathbf{x}_t$ represent a single random draw from the stationary noise ball (§9.2).
+- Maintaining an **exponential moving average (EMA)** $\bar{\mathbf{x}}_t$ of the live parameters with decay $\alpha \in [0.99, 0.9999]$ (Polyak & Juditsky, 1992):
+  $$\bar{\mathbf{x}}_t = \alpha\,\bar{\mathbf{x}}_{t-1} + (1 - \alpha)\,\mathbf{x}_t$$
+  averages over a trailing window of **$\tau_{\text{EMA}} = \frac{1}{1 - \alpha}$ steps** without altering the live training trajectory.
+- **Choosing $\alpha$ and start step:** $\tau_{\text{EMA}}$ must exceed the noise-ball autocorrelation time $\frac{1}{\eta\lambda_{\text{curv}}}$ (e.g., $\alpha = 0.999 \implies 1{,}000$ steps), and averaging should start after the initial rapid descent phase so early high-loss weights do not lag the average.
 :::
 
-::: {.slide title="At a Constant Rate the EMA Is Steadier Than the Live Weights"}
-[Weight averaging · CNN on Fashion-MNIST, SGD, η = 0.3, 235 steps per epoch]{.kicker}
+::: {.col .fig}
+@-practice-weight-averaging-4
+:::
+:::
+:::
 
+::: {.slide title="Constant-Rate Weight EMA vs. Live Weights on FashionCNN"}
+[Eliminating Epoch-to-Epoch Jitter]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Training `FashionCNN` for $15$ epochs ($235$ steps/epoch $= 3{,}525$ steps) with plain SGD at a constant learning rate $\eta = 0.3$:
+  - **Live weights (blue):** Bounce wildly inside the noise ball, jittering across a **$2\text{--}6$ percentage-point test-accuracy band** ($86\%\text{--}91\%$) over the last five epochs!
+  - **Weight EMA ($\alpha = 0.999$, started at epoch 5, orange):** Smoothly tracks the very top of the band at **$>91\%$ test accuracy** on every single epoch, matching the full cosine-decayed trajectory (green)!
+:::
+
+::: {.col .fig}
 @!practice-weight-averaging-3
-
-- EMA ($\alpha = 0.999$) started after epoch 5. From step 0, the
-  initialization would still weigh $0.999^{235} \approx 0.79$ after one
-  epoch.
-- Each epoch the live weights, the ones that training updates, show one
-  point of the noise ball.
+:::
+:::
 :::
 
-::: {.slide title="The EMA Matches a Decayed Run; after a Decay It Adds Nothing" layout="tight"}
-[Weight averaging]{.kicker}
+::: {.slide title="Weight EMA Matches Cosine Decay Without Lowering η"}
+[Two-Seed Quantitative Comparison]{.kicker}
 
-Two seeds per schedule, test accuracy:
+::: {.cols .vc}
+::: {.col}
+- Comparing constant-rate SGD ($\eta = 0.3$) against cosine decay ($\eta: 0.3 \to 0$) across two seeds on `FashionCNN`:
+  - **At a constant learning rate:** The EMA improves final test accuracy by $+1\text{--}5$ percentage points over the noisy live checkpoint, matching the **$91.1\%\text{--}91.4\%$** accuracy of a full cosine decay!
+  - **After cosine decay to zero:** The live weights have already settled at the center of the noise ball ($\eta_T = 0$), so taking an EMA on top of a fully decayed run adds nothing (or lags slightly by $0.1\text{--}0.3\%$).
+- **When to use Weight EMA:** During constant-rate / WSD plateau training to obtain an immediately deployable model at any step without waiting for a cooldown branch!
+:::
 
+::: {.col .fig}
 @!practice-weight-averaging-2
-
-- Constant rate, live: two to six points of scatter. EMA: a little above
-  91%.
-- Cosine decay to zero: about 91% as well. A tie.
-- EMA of the decayed run: a few tenths of a point behind at most.
-
-::: {.d2l-note}
-Use an EMA when no decay is planned, or for a model needed before the
-decay.
-:::
-:::
-
-::: {.slide title="Check: When Does an EMA Not Help?"}
-[Check]{.kicker}
-
-Name two situations in which the EMA of the weights is no better than
-the last iterate.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** (1) After the schedule has decayed the rate to nearly zero:
-the weights barely move, and the average only lags. (2) While the weights
-improve faster than the window follows: start the average late.
 :::
 :::
 :::
 
-::: {.slide title="Four Large Runs Agree on Most Settings and Differ on the Peak Rate"}
-[A worked configuration]{.kicker}
+::: {.slide title="Published Frontier Pretraining Recipes: What Agrees"}
+[Industry Reference Configurations]{.kicker}
 
-| run | optimizer | $\beta_1,\beta_2$ | peak rate | warmup | clip | weight decay |
-|:--|:--|:--|:--|:--|:--|:--|
-| Llama 3 405B | AdamW | — | $8{\times}10^{-5}$ | 8k | — | — |
-| DeepSeek-V3 | AdamW | 0.9, 0.95 | $2.2{\times}10^{-4}$ | 2k | 1.0 | 0.1 |
-| OLMo 2 7B | AdamW | 0.9, 0.95 | $3{\times}10^{-4}$ | 2k | 1.0 | 0.1 |
-| Kimi K2 | MuonClip | — | $2{\times}10^{-4}$ | 500 | — | 0.1 |
+Comparing four frontier LLM pretraining runs shows remarkable agreement on optimizer structure alongside scale-dependent learning rates and batch sizes:
 
-- All four warm up and later lower the rate along a cosine.
-- The widest model has the smallest peak rate.
-- MuonClip: Muon with a cap on attention scores. A dash is missing
-  evidence, not a default.
-
-[Grattafiori et al., 2024; Liu et al., 2024; OLMo Team, 2025; Kimi Team, 2025]{.small}
+| Model & Scale | Optimizer | Moments $(\beta_1, \beta_2)$ | Peak LR $\eta_0$ & Schedule | Warmup | Clip $\theta$ | Weight Decay $\lambda$ | Batch Size Policy |
+| :--- | :--- | :---: | :--- | :---: | :---: | :---: | :--- |
+| **Llama 3 405B** (Grattafiori et al., 2024) | AdamW | — | $8{\times}10^{-5}$, cosine to $8{\times}10^{-7}$ | $8{,}000$ steps | — | — | Ramp $4\text{M} \to 16\text{M}$ tokens |
+| **DeepSeek-V3 671B** (Liu et al., 2024) | AdamW | $(0.9, 0.95)$ | $2.2{\times}10^{-4}$, WSD cosine to $2.2{\times}10^{-5}$ | $2{,}000$ steps | $1.0$ | $0.1$ | Ramp $3{,}072 \to 15{,}360$ seqs |
+| **OLMo 2 7B** (OLMo Team, 2025) | AdamW | $(0.9, 0.95)$ | $3{\times}10^{-4}$, cosine to $3{\times}10^{-5}$ | $2{,}000$ steps | $1.0$ | $0.1$ (no emb) | $1{,}024$ seqs ($\sim 4\text{M}$ tokens) |
+| **Kimi K2 1T** (Kimi Team, 2025) | MuonClip | — | $2{\times}10^{-4}$, WSD cosine to $2{\times}10^{-5}$ | $500$ steps | — | $0.1$ | $67\text{M}$ tokens |
 :::
 
-::: {.slide title="A New Model Is Configured from Short Runs, One Decision at a Time"}
-[A worked configuration · TinyLM, 4 blocks, width 256, 3.3M parameters]{.kicker}
+::: {.slide title="Diagnostic Playbook: Reading Failure Signatures in Logs"}
+[From Telemetry to Action]{.kicker}
 
-The run we pretend we cannot repeat: 3,000 steps.
+Always log four curves on every run: **training loss**, **pre-clip global gradient norm $\|\mathbf{g}_t\|_2$**, **clipping indicator ($\|\mathbf{g}_t\|_2 > \theta$)**, and **relative weight update $\|\Delta\mathbf{W}\|_{\text{RMS}}/\|\mathbf{W}\|_{\text{RMS}}$**:
 
-| decision | choice | source |
-|:--|:--|:--|
-| batch size | fills the device, not above the noise scale | Batch Size |
-| optimizer | AdamW (0.9, 0.95), weight decay 0.1 on matrices | published runs, AdamW |
-| precautions | clip at 1, log the clip rate; EMA, window 200 | this deck |
-| peak rate | best of three 300-step runs, 3× apart | Two Test Models, Adam |
-| schedule | 60-step warmup (2%), cosine to zero | Schedules, published runs |
-| verdict | two seeds: gap against spread | Two Test Models |
+| Logged Telemetry Signature | Root-Cause Diagnosis | Primary Engineering Remedy |
+| :--- | :--- | :--- |
+| **Loss diverges in first few steps; $\|\mathbf{g}_t\|_2$ explodes** | Step size exceeds initial local sharpness ceiling $2/L$ | Add linear warmup ($1\text{--}5\%$) or global-norm clipping ($\theta = 1.0$) |
+| **Loss stalls high under AdamW; step-1 $\|\Delta\mathbf{W}\|/\|\mathbf{W}\| > 10\%$** | Unaveraged cold-start $\pm\eta_0$ jump corrupts initialization | Add linear warmup over $W \ge \frac{1}{1-\beta_1}$ steps ($1\text{--}5\%$ of $T$) |
+| **Loss stalls high under AdamW *behind* a warmup** | Peak learning rate $\eta_0$ is globally too large | Lower peak learning rate $\eta_0$ by $2\text{--}3\times$ ($1$ grid step) |
+| **Clipping fires on $>20\text{--}50\%$ of steps throughout run** | Clipping is acting as a permanent brake, not a guard | Lower $\eta_0$ first before adjusting threshold $\theta$ |
+| **Loss plateaus early with high step-to-step jitter** | Iterates trapped in stationary noise ball at current $\eta/b$ | Decay $\eta_t \to 0$, evaluate weight EMA $\bar{\mathbf{x}}_t$, or increase batch size $b$ |
+| **Loss descends smoothly at constant slope until step $T$** | Under-budgeted cumulative travel $B_T = \sum_t \eta_t$ | Raise peak rate $\eta_0$ or extend total step horizon $T$ |
 :::
 
-::: {.slide title="The Device Is Full by 256 Sequences" layout="tight"}
-[A worked configuration]{.kicker}
+::: {.slide title="Case Study: Configuring a 3.3M-Parameter TinyLM"}
+[Putting All 10 Sections Together]{.kicker}
 
-Time of one gradient of the 3.3M-parameter model:
+::: {.cols .vc}
+::: {.col}
+We configure a $3{,}000$-step training run for a new $4$-block, width-$256$, $4$-head `TinyLM` ($3.3\text{M}$ parameters, $7\times$ larger than our $2$-block model) without repeating the full $3{,}000$-step run across a grid:
 
-@!practice-a-worked-configuration-2
-
-- 32 to 128: four times the batch, far less than four times the time.
-- From 256: the time doubles with the batch, and the sequences per second
-  stop rising.
-- 256 is the floor for the batch. The ceiling is the *noise scale*: the
-  batch at which gradient noise equals the gradient.
+1. **Batch size ($b = 256$ sequences):** Chosen where GPU throughput saturates and comparable to post-warmup $b_{\text{noise}} \sim 100$.
+2. **Optimizer & guards:** AdamW with $(\beta_1, \beta_2) = (0.9, 0.95)$, decoupled weight decay $\lambda = 0.1$ on 2D matrices only, global-norm clipping $\theta = 1.0$, and weight EMA ($\alpha = 0.995$).
+3. **Short-horizon peak LR calibration ($10\%$ budget):** Sweep $\eta \in \{10^{-3}, 3{\times}10^{-3}, 10^{-2}\}$ for $300$ steps.
+4. **Schedule:** $60$-step linear warmup ($2\%$) + cosine decay to zero.
 :::
 
-::: {.slide title="Three Runs of 300 Steps Pick the Peak Rate" layout="tight"}
-[A worked configuration]{.kicker}
+::: {.col .fig}
+@-practice-a-worked-configuration-3
+:::
+:::
+:::
 
+::: {.slide title="300-Step Proxy Calibration of Peak LR and Noise Scale"}
+[10%-Horizon Calibration]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Before launching the $3{,}000$-step run, we execute three $300$-step trial runs ($900$ steps total, $<30\%$ of one full run) across $\eta \in \{10^{-3}, 3{\times}10^{-3}, 10^{-2}\}$:
+  - **$\eta = 10^{-3}$:** Slow ($2.14$ nats, $0\%$ clipped).
+  - **$\eta = 3 \times 10^{-3}$:** **Optimal ($1.84$ nats, $4\%$ early steps clipped—a healthy guard!)**.
+  - **$\eta = 10^{-2}$:** Stalls at $2.50$ nats ($23\%$ clipped).
+- **Noise-scale check:** $b_{\text{noise}}$ grows from $\approx 2$ sequences at step 0 to $\sim 100$ sequences at step 300, confirming that $b = 256$ sits right at the critical batch size knee.
+:::
+
+::: {.col .fig}
 @!practice-a-worked-configuration-4
-
-- 0.001: slow. 0.01: stalls near 2.5, though clipped most often. 0.003:
-  best, a factor of 3 below the first rate that stalls.
-- Noise scale: 2 sequences, then of the order of 100. The floor of 256
-  is at or above it: stay at 256.
-- Cost: 900 steps, under a third of the final run.
-
-[Cold start, constant rate. Bold assumption: the best rate of 300 constant steps is the right peak for 3,000 decayed ones.]{.small}
+:::
+:::
 :::
 
-::: {.slide title="Four Logged Curves Tell the Failures of a Run Apart" layout="tight"}
-[A worked configuration]{.kicker}
+::: {.slide title="Full 3,000-Step Verification Across Seeds"}
+[Configured Recipe vs. Constant-Rate Baseline]{.kicker}
 
-Log the gradient norm before clipping, the share of clipped steps, the
-learning rate, and the update size relative to the weights.
-
-| in the log | reading | first remedy |
-|:--|:--|:--|
-| loss leaves in the first steps, norms climb | steps too long for the start | warmup or clipping |
-| loss stalls under Adam, first updates large against the weights | start too rough | warmup |
-| loss stalls under Adam behind a warmup | rate too large throughout | one grid point down |
-| clipping acts on most steps | a brake, not a guard | lower rate |
-| loss flat and jittery | noise of the current rate | decay or average |
-| loss smooth, still falling | slow | higher rate, more steps |
+::: {.cols .vc}
+::: {.col}
+- Running the full $3{,}000$-step warmup + cosine schedule at the calibrated peak rate $\eta_0 = 3 \times 10^{-3}$ across two independent seeds:
+  - **Configured recipe:** Reaches **$1.337\text{--}1.339$ validation nats**, beating the constant-rate baseline ($1.390\text{--}1.395$) by **$0.052\text{--}0.056$ nats** ($>25\times$ the $0.002$-nat inter-seed spread!).
+  - **Guard verification:** Clipping fires on only **$0.6\%$ of steps** ($\sim 18$ steps out of $3{,}000$).
+  - **Post-decay EMA:** Matches the live weights to within $0.001$ nats because cosine decay already reduced $\eta_T \to 0$.
 :::
 
-::: {.slide title="The Schedule Lowers the Loss by 0.05 Nats, Many Times the Seed Spread" layout="tight"}
-[A worked configuration]{.kicker}
-
-Configured: 60-step warmup, cosine to zero. Baseline: the same AdamW and
-clipping at a constant 0.003.
-
+::: {.col .fig}
 @!practice-a-worked-configuration-5
-
-- EMA = final weights: nothing left to average after a decay to zero.
-- Clipped under 1% of the steps: a guard. Whether the run needed it, the
-  table cannot say.
-- Known to have done work: the peak rate and the decay.
-:::
-
-::: {.slide title="Check: Diagnose a Stalled Run"}
-[Check]{.kicker}
-
-AdamW at a rate of 0.01 on the 3.3M-parameter `TinyLM`: the loss stalls
-near 2.5 without diverging, and clipping at 1 fires more often than at
-lower rates. What do you change?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Not the threshold: Adam moves a coordinate by about $\eta$
-whatever the size of its gradient, so tighter clipping does not shorten
-the step. Lower the rate by a grid point: 0.003 trains.
 :::
 :::
 :::
 
-::: {.slide title="A Long Run Is Configured Short, Guarded, and Finished with an Average or a Decay"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Clipping, Spike Recovery, and Weight EMA"}
+[Check Your Understanding]{.kicker}
 
-- **Guard:** clipping at $\theta = 1$ changed a few dozen early steps and
-  let SGD train `TinyLM` at $\eta = 1$; at $\eta = 3$ it fired on
-  practically every step and the run failed.
-- **Adam:** step bounded at $3.2\,\eta$; an unclipped 100× spike stays
-  in $v$ for 2,300 steps (120 at $\beta_2 = 0.95$).
-- **Finish:** EMA at a constant rate = cosine decay, about 91% for the
-  CNN on Fashion-MNIST.
-- **Configure:** batch 256 from the device; peak 0.003 from three 300-step
-  runs; warmup and cosine: 0.05 nats below the constant rate, seed spread
-  under 0.01.
+Diagnose and solve each practical training scenario:
 
-**Still open:** what a step costs, in seconds and in bytes. **Next
-chapter:** attention, the mechanism inside `TinyLM`.
+1. **Diagnosing a stalled AdamW run:** On the $3.3\text{M}$-parameter `TinyLM` at $\eta = 10^{-2}$ with clipping at $\theta = 1.0$, the loss stalls near $2.5$ nats and clipping fires on $23\%$ of steps. A colleague proposes lowering the clipping threshold to $\theta = 0.2$ to shorten the steps. Will that fix the stall?
+2. **AdamW second-moment recovery time:** Suppose an unclipped gradient spike of $100\times$ normal magnitude hits AdamW and multiplies $v_t$ by $1 + (1-\beta_2)10^4$. How many steps does it take for that excess contribution in $v_t$ to decay by $e^{-3} \approx 5\%$ under $\beta_2 = 0.999$ versus $\beta_2 = 0.95$?
+3. **When does Weight EMA add zero gain?** In our final $3{,}000$-step verification table, why did the configured run's live weights and its weight EMA achieve the exact same validation loss ($1.338$ vs. $1.339$)?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **No!** Because AdamW divides $\hat{\mathbf{m}}_t$ by $\sqrt{\hat{\mathbf{v}}_t}$, rescaling $\mathbf{g}_t$ by a tighter global clipping threshold $\theta = 0.2$ rescales both numerator and denominator and leaves the steady-state coordinate step length $\approx \eta$ unchanged! You must **lower the learning rate $\eta$** (e.g., to $3 \times 10^{-3}$).
+2. Decay by $e^{-3}$ takes $3\,\tau_2 = \frac{3}{1 - \beta_2}$ steps: **$3{,}000$ steps at $\beta_2 = 0.999$** versus only **$60$ steps at $\beta_2 = 0.95$** ($20\times$ faster recovery!).
+3. Because the configured run ended with **cosine decay to $\eta_T = 0$**, the noise ball had already shrunk to zero during the final steps; weight EMA shines when evaluating **uncooled constant-rate or WSD-plateau checkpoints**.
 :::
+:::
+
+::: {.slide title="Summary: Practical Optimization Diagnostics and Recipes"}
+[Key Takeaways]{.kicker}
+
+| Operational Pillar | Mathematical Rule / Mechanism | Healthy Telemetry Target | Production Role |
+| :--- | :--- | :--- | :--- |
+| **Global-Norm Clipping** | $\mathbf{g} \leftarrow \min\!\left(1, \frac{\theta}{\|\mathbf{g}\|_2}\right)\mathbf{g}$ ($\theta = 1.0$) | Fires on $<2\%\text{--}5\%$ of steps (guard); if $>20\%$, lower $\eta$ | Caps early SGD steps; protects AdamW's $\mathbf{v}_t$ from spikes |
+| **$\beta_2 = 0.95$ & Rewind** | $\tau_2 = \frac{1}{1-\beta_2} = 20$ steps (vs. $1{,}000$ at $0.999$) | Rewind $\sim 100$ steps & skip $200\text{--}500$ batches on spike | Prevents a single spike from paralyzing $\sqrt{\hat{\mathbf{v}}_t}$ for $2{,}300$ steps |
+| **Weight Averaging (EMA)** | $\bar{\mathbf{x}}_t = \alpha\bar{\mathbf{x}}_{t-1} + (1-\alpha)\mathbf{x}_t$ ($\alpha \in [0.995, 0.9999]$) | Window $\frac{1}{1-\alpha} > \frac{1}{\eta\lambda_{\text{curv}}}$; start after early descent | Matches cosine-decayed accuracy on constant-rate trajectories |
+| **Short-Run Calibration** | Sweep $\eta_0$ over $10\%$ horizon ($300$ of $3{,}000$ steps) | Pick $\eta_0$ $3\times$ below stall threshold; check $b_{\text{noise}}$ | Calibrates peak LR for $<30\%$ of a single full training run |
+| **Modern Default Recipe** | AdamW $(0.9, 0.95)$, matrix-only $\lambda = 0.1$, clip $1.0$ | $1\text{--}5\%$ linear warmup + cosine or WSD decay to $\le 0.1\eta_0$ | Reliable baseline across Transformers and modern deep networks |
+:::
+

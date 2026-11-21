@@ -446,266 +446,242 @@ Discretizing a continuous-time diagonal state space model $\mathbf{h}'(t) = \mat
 ::: {.cover}
 [Dive into Deep Learning · §12.4]{.kicker}
 
-State Space Models<br>
-**a rate and a step size give a decay · N states make a learned kernel · fixed dynamics make a convolution · timescales decide long recall**
+Structured State Space Models (S4D)<br>**continuous-time dynamics · zero-order-hold discretization · ODE–recurrence–convolution trinity · multi-timescale initialization**
 :::
 :::
 
-::: {.slide title="Gates That Start at One Half Forget in One Step"}
-[The problem]{.kicker}
+::: {.slide title="Why Multi-Timescale Memory Needs Structured Decays"}
+[Motivation]{.kicker}
 
-- Keep a symbol for 1,000 steps: a decay near **0.999**, half-life 693
-  steps.
-- A learned gate starts near $\sigma(0) = 1/2$: half-life **one step**.
-- A gradient carried back 1,000 steps through decays of 1/2 is multiplied
-  by $2^{-1000}$: in single precision, zero.
+Language dependencies span three orders of magnitude—a verb agrees across $10$ tokens, a paragraph topic persists for $200$ tokens, and a character's name matters for $1{,}000+$ tokens:
 
-::: {.d2l-note .warn}
-Can we choose how long each memory lasts before training starts?
+- **The zero-bias underflow wall:** Holding a signal across $1{,}000$ steps requires a per-step decay near $\bar{a} = 0.999$ ($\tau_{1/2} \approx 693$ steps). Gates initialized at $\sigma(0) = 1/2$ ($\tau_{1/2} = 1$ step) attenuate a $1{,}000$-step gradient by $2^{-1000} = 0$ in `float32`.
+- **Single-timescale limitation:** Even if we shift a `minGRU` gate bias to a single positive constant, every unit starts at the *same* timescale and each channel holds only one scalar memory.
+
+::: {.d2l-note}
+Continuous-time dynamical systems give each channel a **bank of $N$ decay rates** $\lambda_1, \ldots, \lambda_N$ scaled by a **step size** $\Delta$, covering half-lives from $< 1$ to $\sim 700$ steps before training begins.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Continuous-Time Linear State Space Models (ODE View)"}
+[Continuous-Time Dynamics]{.kicker}
 
-- turn $h' = \lambda h + x$ into an exact recurrence and read the step
-  size as a gate;
-- set half-lives from under a step to 693 steps by initialization;
-- say what $N$ states per channel add: a learned kernel, not one
-  exponential;
-- compute a time-invariant SSM as a convolution with the FFT;
-- read a recall experiment whose controls separate timescales from
-  architecture.
+Start with a scalar state $h(t)$ decaying at rate $\lambda < 0$ under continuous input $x(t)$, then generalize to an $N$-dimensional state vector $\mathbf{h}(t) \in \mathbb{R}^N$:
 
-**Running example:** delayed recall of one of eight symbols after 100 and
-1,000 identical fillers.
+$$h'(t) = \lambda\, h(t) + x(t) \quad\longrightarrow\quad \mathbf{h}'(t) = \mathbf{A}\,\mathbf{h}(t) + \mathbf{B}\,x(t), \qquad y(t) = \mathbf{C}\,\mathbf{h}(t) + D\,x(t)$$
+
+- **Exponential stability ($\lambda < 0$):** With $x(t) = 0$, the homogeneous solution is $h(t) = e^{\lambda t} h(0)$. At $\lambda = -1$, a fraction $e^{-1} \approx 0.37$ remains after one unit of *continuous time* (not one token step!).
+- **Four structural operators:** $\mathbf{B} \in \mathbb{R}^N$ writes the scalar channel input into the state, the **state matrix** $\mathbf{A} \in \mathbb{R}^{N \times N}$ governs autonomous decay/rotation, $\mathbf{C} \in \mathbb{R}^{1 \times N}$ projects the state to the output, and $D \in \mathbb{R}$ is a direct skip connection.
 :::
 
-::: {.slide title="Decays From a Rate Sit Between Linear Recurrences and Selection"}
-[Where this fits]{.kicker}
+::: {.slide title="Diagonal State Matrices: N Leaky Integrators/Channel"}
+[Diagonal Structure]{.kicker}
+
+While a dense state matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$ costs $O(N^2)$ per step and $O(N^3)$ per associative scan combine, restricting $\mathbf{A} = \textrm{diag}(\lambda_1, \ldots, \lambda_N)$ to be diagonal decouples the ODE into $N$ independent scalar equations:
+
+$$h_n'(t) = \lambda_n\, h_n(t) + b_n\, x(t) \quad (n = 1, \ldots, N), \qquad y(t) = \sum_{n=1}^{N} c_n\, h_n(t) + D\, x(t)$$
+
+- **Independent channels, $N$-times wider state:** An SSM layer of width $d$ runs one such $N$-state bank per channel, expanding total layer state to $d \times N$ numbers ($N\times$ larger than a width-$d$ `minGRU`) at $O(dN)$ cost per step.
+- **Why diagonal loses almost nothing:** Over $\mathbb{C}$, almost every matrix is diagonalizable and $(\mathbf{B}, \mathbf{C})$ absorb the eigenvector basis change (Gu et al., 2022). Using **real rates** $\lambda_n = -e^{\theta_n} < 0$ trades oscillatory modes ($\lambda = -\alpha + i\omega$) for purely real arithmetic.
+:::
+
+::: {.slide title="Exact Discretization via Zero-Order Hold (ZOH)"}
+[From Continuous to Discrete]{.kicker}
+
+To apply $h'(t) = \lambda h(t) + x(t)$ to discrete tokens, sample at step size $\Delta > 0$ ($t_k = k\Delta$) and hold the input constant at $x_t$ over $((t-1)\Delta, t\Delta]$ (**zero-order hold**):
+
+1. **Shift to a homogeneous ODE:** Since $x_t$ is constant on the interval, $\frac{\textrm{d}}{\textrm{d}\tau}\big(h(\tau) + \frac{x_t}{\lambda}\big) = \lambda\big(h(\tau) + \frac{x_t}{\lambda}\big)$.
+2. **Integrate across one interval of length $\Delta$:** $h_t + \frac{x_t}{\lambda} = e^{\Delta\lambda}\big(h_{t-1} + \frac{x_t}{\lambda}\big)$.
+3. **Rearrange into an exact discrete linear recurrence:**
+
+$$h_t = \bar{a}\, h_{t-1} + \bar{b}\, x_t, \qquad \bar{a} = e^{\Delta\lambda}, \qquad \bar{b} = \frac{e^{\Delta\lambda} - 1}{\lambda}$$
+
+::: {.d2l-note}
+In code, always evaluate $(e^{\Delta\lambda} - 1)/\lambda$ as `expm1(dt * rate) / rate` to avoid catastrophic cancellation when $\Delta|\lambda| \ll 1$.
+:::
+:::
+
+::: {.slide title="The Step Size Δ Acts as a Timescale Dilation Gate"}
+[Step Size vs. Update Gate]{.kicker}
+
+At rate $\lambda = -1$, zero-order hold yields $\bar{b} = 1 - e^{-\Delta} = 1 - \bar{a}$, turning the discretized ODE into the exact convex blend of a GRU / `minGRU`:
+
+$$h_t = \bar{a}\, h_{t-1} + (1 - \bar{a})\, x_t, \qquad \bar{a} = e^{-\Delta} \in (0, 1)$$
+
+| Step size $\Delta$ (at $\lambda = -1$) | $\Delta = 0.001$ | $\Delta = 0.01$ | $\Delta = 0.1$ | $\Delta = 1.0$ |
+| :--- | :---: | :---: | :---: | :---: |
+| **Discrete retention** $\bar{a} = e^{-\Delta}$ | $0.9990$ | $0.9900$ | $0.9048$ | $0.3679$ |
+| **Half-life** $\tau_{1/2} = \ln 2 / (\Delta|\lambda|)$ | **$693\text{ steps}$** | **$69\text{ steps}$** | **$7\text{ steps}$** | **$0.7\text{ steps}$** |
+
+::: {.d2l-note .rule}
+**Inverse scaling law:** A smaller continuous time step $\Delta$ means fine-grained sampling and a **longer discrete memory** ($\tau_{1/2} \propto 1/\Delta$).
+:::
+:::
+
+::: {.slide title="Factored Half-Lives and the S4D Initialization Band"}
+[Multi-Timescale Initialization]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Gated Recurrent Networks | gates as learned decay |
-| Sequence-to-Sequence Learning | one state between two networks |
-| Linear Recurrences and Parallel Scans | $h_t = a_t h_{t-1} + b_t$, the scan, the minGRU |
-| **State Space Models** | **decays from rates; kernels; convolution** |
-| Selective State Space Models | the input sets the step size |
-| Matrix-State Recurrences | a state of key and value pairs |
-| The Delta Rule | correct a pair instead of adding |
-| Hybrid Architectures | a little attention back |
+- **Factored half-life:** With $\lambda_n < 0$ and channel step size $\Delta_c > 0$, state $(c, n)$ has half-life:
+  $$\tau_{1/2}(c, n) = \frac{\ln 2}{\Delta_c\, |\lambda_n|}$$
+- **Real S4D initialization:** Sets $\lambda_n = -n$ for $n = 1, \ldots, 16$ (the diagonal of the HiPPO Legendre matrix, Gu et al., 2020) and draws $\Delta_c$ log-uniformly on $[0.001, 0.1]$.
+- **Spectrum at step 0:** Initial half-lives span from $\ln 2 / (0.1 \times 16) = \mathbf{0.43\text{ steps}}$ to $\ln 2 / (0.001 \times 1) = \mathbf{693\text{ steps}}$.
 :::
 
-::: {.col .narrow}
-- **Uses:** the linear recurrence and its scan, the minGRU, delayed
-  recall.
-- **Skips:** complex rates, the HiPPO theory behind the rates.
+::: {.col .fig}
+![](../img/mdl-modernrnn-discretization.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Continuous Time Gives a Decay a Rate"}
-$$h'(t) = \lambda h(t) + x(t), \qquad h(t) = e^{\lambda t} h(0) \textrm{ without input}$$
+::: {.slide title="The Convolutional View of Time-Invariant SSMs"}
+[LTI Duality]{.kicker}
 
-- $\lambda = -1$: $e^{-1} \approx 0.37$ remains after one unit of time.
-- $\lambda$ is a rate **per unit of time**, not per step.
+When $(\bar{a}_n, \bar{b}_n, c_n)$ are **linear time-invariant (LTI)**—fixed across token positions $t$—unrolling $h_{t,n} = \bar{a}_n h_{t-1,n} + \bar{b}_n x_t$ from $\mathbf{h}_0 = \mathbf{0}$ turns the readout into a 1D causal convolution:
 
-A state space model with $N$ states:
+$$y_t = \sum_{k=0}^{t-1} K_k\, x_{t-k} + D\, x_t, \qquad K_k = \sum_{n=1}^{N} c_n\, \bar{a}_n^k\, \bar{b}_n$$
 
-$$\mathbf{h}'(t) = \mathbf{A}\mathbf{h}(t) + \mathbf{B}x(t), \qquad y(t) = \mathbf{C}\mathbf{h}(t) + D x(t)$$
-
-$\mathbf{B}$: input in · $\mathbf{A}$: dynamics · $\mathbf{C}$: readout ·
-$D$: skip.
+- **Multi-exponential impulse response:** The length-$T$ filter $\mathbf{K} = (K_0, K_1, \ldots, K_{T-1})$ is a learned linear combination of $N$ decaying exponentials $\bar{a}_n^k$.
+- **Fast Fourier Transform (FFT) evaluation:** Instead of materializing the 4D state tensor $(B, T, d, N)$ across the minibatch, we compute $\mathbf{K} \in \mathbb{R}^{d \times T}$ once per batch and convolve all $T$ positions in $O(T \log T)$ via zero-padded length-$2T$ `rfft` / `irfft`.
 :::
 
-::: {.slide title="Each Channel Drives Its Own N Leaky Integrators"}
-- $\mathbf{A} = \textrm{diag}(\lambda_1, \ldots, \lambda_N)$: $N$
-  independent scalar equations.
-- Channel 7 drives its own 16 states; output 7 is a learned mix of them.
-  Channels never mix.
-- State per layer: $d \times N$, $N$ times a minGRU of width $d$.
-- Diagonal: a scan combine costs $N$, not $N^3$.
+::: {.slide title="One System, Three Views: ODE, Recurrence, Convolution"}
+[The SSM Trinity]{.kicker}
 
-::: {.d2l-note}
-A complex diagonal loses almost nothing; a real one loses oscillation
-($-\alpha + i\omega$ decays while it rotates). We build the real variant.
-:::
+![](../img/mdl-modernrnn-ssm-views.svg){.nostretch width=92%}
+
+| Representation | Mathematical Form | Primary Deep Learning Role |
+| :--- | :--- | :--- |
+| **1. Continuous-Time ODE** | $\mathbf{h}'(t) = \mathbf{A}\mathbf{h}(t) + \mathbf{B}x(t)$ | Principled multi-timescale initialization ($\lambda_n, \Delta$) & resolution invariance |
+| **2. Discrete Recurrence** | $\mathbf{h}_t = \bar{\mathbf{a}} \odot \mathbf{h}_{t-1} + \bar{\mathbf{b}} x_t$ | Fast $O(1)$-state, $O(dN)$-work autoregressive token generation (`step`) |
+| **3. Causal Convolution** | $y = \mathbf{K} * x + D x$ | Fast $O(Td\log T)$ parallel LTI training via zero-padded length-$2T$ FFT |
 :::
 
-::: {.slide title="Holding the Input Over a Step Gives an Exact Recurrence"}
-Hold $x$ at $x_t$ on the step of length $\Delta$ that ends at $t$
-(zero-order hold).
+::: {.slide title="What N Real Exponentials Can—and Cannot—Approximate"}
+[Kernel Expressivity & Conditioning]{.kicker}
 
-I. $h + x_t/\lambda$ obeys the equation without input:
-$\;(h + x_t/\lambda)' = \lambda\,(h + x_t/\lambda)$.
-
-II. So it shrinks by $e^{\Delta\lambda}$:
-$\;h_t + x_t/\lambda = e^{\Delta\lambda}(h_{t-1} + x_t/\lambda)$.
-
-III. Rearrange:
-
-$$\boxed{h_t = \bar a\, h_{t-1} + \bar b\, x_t, \qquad \bar a = e^{\Delta\lambda},\ \bar b = \frac{e^{\Delta\lambda} - 1}{\lambda}}$$
-
-No approximation at the step boundaries.
-:::
-
-::: {.slide title="The Step Size Is a Gate"}
-For $\lambda = -1$: $h_t = \bar a\,h_{t-1} + (1 - \bar a)\,x_t$, the GRU's
-blend.
-
-| $\lambda = -1$ | $\Delta = 0.01$ | $\Delta = 0.1$ | $\Delta = 1$ |
-|---|---|---|---|
-| keeps $\bar a$ | 0.990 | 0.905 | 0.37 |
-| half-life (steps) | 69 | 7 | 0.7 |
-
-::: {.d2l-note .rule}
-A small step size means a long memory.
-:::
-:::
-
-::: {.slide title="A Rate Makes the Half-Life a Number You Set and Read"}
-::: {.cols .vc}
-::: {.col .fig .big}
-![](../img/mdl-modernrnn-discretization.svg)
-:::
-
-::: {.col .narrow}
-- $\lambda = -e^\theta$: $\bar a \in (0, 1)$ for every $\theta$, as for a
-  sigmoid gate. Nothing new.
-- New: half-life $= \ln 2 / (\Delta|\lambda|)$ steps. The rates tell the
-  states apart; one $\Delta$ per channel scales all of them at once.
-:::
-:::
-:::
-
-::: {.slide title="S4D Starts With Half-Lives From Under a Step to 693"}
-- S4D: a diagonal state space layer, $N = 16$ real states per channel.
-- Rates $\lambda_n = -n$, $n = 1, \ldots, 16$.
-- One step size per channel, log-uniform in $[0.001, 0.1]$.
-- Half-life $\ln 2/(\Delta|\lambda_n|)$: from $\ln 2/(0.1 \cdot 16) =
-  0.43$ to $\ln 2/(0.001 \cdot 1) = 693$ steps.
-
-::: {.d2l-note}
-The rates are the diagonal of the HiPPO matrix, designed so that the state
-holds a polynomial summary of the input's history.
-:::
-
-[Gu, Dao, Ermon, Rudra, Ré, 2020 (HiPPO); Gu, Gupta, Goel, Ré, 2022 (S4D)]{.small}
-:::
-
-::: {.slide title="Check: A Thousand-Step Memory"}
-For $\lambda = -1$, which step size $\Delta$ gives a half-life of 1,000
-steps?
-
-::: {.fragment .fade-up}
-$e^{-\Delta \cdot 1000} = 1/2$, so $\Delta = \ln 2 / 1000 \approx 0.0007$,
-just below S4D's smallest initial step size.
-:::
-:::
-
-::: {.slide title="Fixed Dynamics Make the Model a Convolution"}
-$$y_t = \sum_{k=0}^{t-1} K_k\, x_{t-k} + D x_t, \qquad K_k = \sum_n c_n\, \bar a_n^k\, \bar b_n$$
-
-![](../img/mdl-modernrnn-ssm-views.svg){width=95%}
-
-- One kernel per channel: a sum of $N$ decaying exponentials.
-- FFT: $O(T \log T)$. It convolves circularly, so pad to $2T$ and the end
-  cannot wrap around.
-:::
-
-::: {.slide title="Real Exponentials Peak Late Only by Cancelling"}
-Fit the readout $\mathbf{c}$ by least squares, $\Delta = 0.05$, 100 steps.
-Targets: a spike at $k = 20$; a bump $e^{-(k-20)^2/32}$.
+Can a sum of $N$ monotone real exponentials $K_k = \sum_{n=1}^N c_n \bar{a}_n^k \bar{b}_n$ ($\lambda_n = -n, \Delta = 0.05$) peak at lag $k = 20$ to read a past token? We fit $\mathbf{c} \in \mathbb{R}^N$ by least squares to a sharp lag-20 **spike** and a smooth lag-20 **Gaussian bump**:
 
 @!ssm-what-the-continuous-time-view-adds
 
-::: {.d2l-note .rule}
-One exponential peaks at $k = 0$. Sixteen match the bump (0.03), not the
-spike (0.89), and both fits need weights near $10^{11}$ that cancel.
-With ordinary weights: roughly when, not exactly when.
+::: {.d2l-note .warn}
+**Look at `bump |c|` ($\mathbf{6 \times 10^{10}}$):** While $N = 16$ real exponentials fit the lag-20 bump in least squares ($0.03$ error), doing so requires readout weights of magnitude $\sim 10^{11}$ with alternating signs that cancel to $10$ decimal places!
 :::
 :::
 
-::: {.slide title="Convolution, Scan, and Steps Agree"}
+::: {.slide title="Pitfall: Ill-Conditioning of Real Exponential Bases"}
+[Why Real SSMs Average Windows]{.kicker}
+
+Why do real-exponential fits require $\|\mathbf{c}\|_\infty \sim 10^{11}$ to peak away from $k = 0$?
+
+- **Non-orthogonal monotone basis:** Every real mode $e^{-n\Delta k}$ peaks at $k = 0$ and decays monotonically; creating a bump at $k = 20$ requires subtracting nearly colinear curves with huge opposite coefficients (**Vandermonde ill-conditioning**).
+- **Unreachable by gradient descent:** First-order optimizers (Adam/SGD) initialized with $O(1/\sqrt{N})$ weights never reach $10^{11}$ cancelling weights, so real-valued S4D kernels act as **smooth multi-scale moving averages** that encode *roughly when* an input occurred, not *exactly which step*.
+- **When exact lag filters matter:** Using complex conjugate rates $\lambda_m = -\alpha \pm i\omega_m$ (`S4D-Lin`) produces damped sinusoids $e^{-\alpha\Delta k}\cos(\omega_m \Delta k + \varphi)$—an orthogonal Fourier-like basis that fits delayed spikes with $O(1)$ weights (Exercise 3).
+:::
+
+::: {.slide title="Implementing S4D: Discretization, FFT, and Step"}
+[The S4D Code Architecture]{.kicker}
+
+`S4D` parameterizes `log_neg_rate` ($\lambda_n = -e^{\theta_n} < 0$) and `log_dt` ($\Delta = e^\phi > 0$), fixes $\mathbf{B} = \mathbf{1}$ (since only $b_n c_n$ enters $K_k$), and supports both FFT training and $O(1)$-state generation:
+
+```python
+a_bar, b_bar = self.discretize()  # exp(dt * rate), expm1(dt * rate) / rate
+powers = a_bar.unsqueeze(-1) ** torch.arange(T, device=X.device)  # (d, N, T)
+K = ((self.C * b_bar).unsqueeze(-1) * powers).sum(1)  # Impulse kernel, (d, T)
+Y = torch.fft.irfft(torch.fft.rfft(X, n=2*T, dim=1) * torch.fft.rfft(K.T, n=2*T, dim=0), n=2*T, dim=1)
+```
+
+- **Memory advantage during LTI training:** The FFT path forms only the $(d, N, T)$ power tensor once per batch rather than materializing the 4D $(B, T, d, N)$ state across sequences.
+:::
+
+::: {.slide title="Numerical Equivalence of Convolution, Scan, and Step"}
+[The S4D Layer Verified]{.kicker}
+
+Our `S4D` module stores `log_neg_rate` ($\lambda_n = -e^{\theta_n} < 0$), `log_dt` ($\Delta = e^{\phi} > 0$), readout `C`, and skip `D` (fixing $\mathbf{B} = \mathbf{1}$ since only $b_n c_n$ enters $K_k$). Comparing FFT `forward`, `linear_scan`, and token-by-token `step` on $T = 50$:
+
 @!ssm-the-s4d-layer-4
 
 ::: {.d2l-note .rule}
-Differences of $10^{-7}$ are single-precision rounding: one function,
-three forms.
-:::
-
-- Train with the FFT: no state stored per position per sequence; the
-  $d \times N \times T$ powers once per batch.
-- Generate with `step`: a $d \times N$ state, whatever the length.
-:::
-
-::: {.slide title="Four Layers Separate Timescales From Architecture"}
-Name the first of eight symbols after $T - 1$ identical fillers; chance
-1/8. Identical fillers: the symbol's trace is the only difference between
-sequences.
-
-| layer | half-lives at the start |
-|---|---|
-| minGRU | about one step (gates near 1/2) |
-| S4D | under one to 693 steps |
-| S4D, short timescales | at most 7 steps |
-| minGRU, S4D timescales | 7 to 693 steps |
-
-::: {.fragment .fade-up}
-Predict: if the timescales decide, the two controls change sides.
+All three evaluation algorithms compute the exact same mathematical function up to `float32` rounding ($\sim 10^{-7}$).
 :::
 :::
 
-::: {.slide title="Timescales, Not Architecture, Decide Long Recall"}
+::: {.slide title="Disentangling Timescales from Architecture on Recall"}
+[Controlled Ablation Design]{.kicker}
+
+Does `S4D` solve long-range recall because of its $N$-state convolutional architecture, or because of its initial decay timescales? We test a $2 \times 2$ design on delayed recall across $T = 100$ and $T = 1{,}000$ identical blank fillers:
+
+| Model Configuration | States / Channel | Initial Step Sizes / Biases | Initial Half-Life Range |
+| :--- | :---: | :--- | :--- |
+| **`minGRU` (default)** | $1$ | Zero gate bias ($\mathbf{b}_\textrm{z} = \mathbf{0}$) | $\approx 1\text{ step}$ ($\sigma(0) = 0.5$) |
+| **`S4D` (default)** | $16$ | $\Delta \in [0.001, 0.1]$ log-uniform | $0.43\text{ to } \mathbf{693\text{ steps}}$ |
+| **`S4D, short timescales`** | $16$ | $\Delta \in [0.1, 1.0]$ log-uniform | $0.04\text{ to } \mathbf{6.9\text{ steps}}$ |
+| **`minGRU, S4D timescales`** | $1$ | $b_c = -\log(e^{\Delta_c} - 1)$ ($\sigma(b_c) = e^{-\Delta_c}$) | $6.9\text{ to } \mathbf{693\text{ steps}}$ |
+:::
+
+::: {.slide title="1,000-Step Delayed Recall: Initial Timescales Decide"}
+[Long-Range Recall Results]{.kicker}
+
+Test accuracy (chance $= 0.125$) and post-training slowest half-life ($\ln 2 / \min(\Delta|\lambda_n|)$) across two seeds at $T = 100$ and $T = 1{,}000$:
+
 @!ssm-long-range-recall-2
 
 ::: {.d2l-note .rule}
-The minGRU **with S4D's decays** recalls at 1,000; S4D **with short
-half-lives** fails there. At 1,000 steps the initialization decides.
+**The controls swap places:** At $T = 1{,}000$, `minGRU` initialized with S4D's timescales achieves **$1.00$ accuracy**, whereas `S4D` initialized with short timescales ($\le 7$ steps) collapses to **$0.12$ (chance)**!
 :::
 :::
 
-::: {.slide title="Check: Half-Lives of 7 Steps, Recall After 100"}
-Why does the short-timescale S4D still recall after 100 steps?
+::: {.slide title="Why 7-Step Initial Half-Lives Succeed at 100, Not 1000"}
+[Floating-Point Gradient Horizon]{.kicker}
 
-::: {.fragment .fade-up}
-- The symbol's weight after 99 steps: $e^{-9.9} \approx 5 \times 10^{-5}$.
-- Small, but it carries a gradient to the step sizes and rates: training
-  lengthens the slowest half-lives from 7 to **100–200 steps**.
-- After 999 steps: $e^{-100} \approx 10^{-44}$, below rounding error. No
-  gradient from the symbol: the half-lives stay within a few steps of 7.
+Look closely at the bottom rows of the output table (`slowest half-life after training`):
+
+- **At $T = 100$ (`S4D, short timescales` succeeds):** With slowest initial rate $\Delta|\lambda_1| = 0.1$, the initial signal attenuation over $99$ filler steps is $e^{-0.1 \times 99} = e^{-9.9} \approx \mathbf{5 \times 10^{-5}}$. Because $5 \times 10^{-5}$ is well above `float32` precision ($\sim 10^{-7}$), Adam receives a nonzero gradient and stretches the slowest half-life from **$7$ steps to $107$–$170$ steps**!
+- **At $T = 1{,}000$ (`S4D, short timescales` freezes):** Over $999$ steps, initial attenuation is $e^{-0.1 \times 999} \approx \mathbf{4 \times 10^{-44}}$—underflowing `float32` gradient accumulation completely, so the slowest half-life stays frozen at **$7$ steps**.
+:::
+
+::: {.slide title="The Blind Spot of LTI Models: Content Blindness"}
+[From LTI to Selectivity]{.kicker}
+
+Why did we use *identical blank fillers* (`blank_fillers=True`) in the $1{,}000$-step S4D recall test?
+
+- **Fixed lag weights:** In a time-invariant convolution $y_t = \sum_{k=0}^{t-1} K_k x_{t-k} + D x_t$, the weight $K_k$ depends **only on the distance $k$**, never on the token $x_{t-k}$ itself.
+- **Cannot ignore noisy fillers or variable lags:** If salient tokens appear at unpredictable positions among varying filler tokens, any fixed filter $K_k$ blends target tokens and filler noise with fixed weights.
+
+::: {.d2l-note}
+**Up next (§12.5 Selective State Space Models):** Make the step size $\boldsymbol{\Delta}_t$, write vector $\mathbf{B}_t$, and read vector $\mathbf{C}_t$ functions of the input token $\mathbf{x}_t$—combining S4D's multi-timescale state bank with `minGRU`'s content-based gating.
 :::
 :::
 
-::: {.slide title="The SSM Adds a Kernel and a Step Size"}
-- One $\Delta$ per channel scales all $N$ timescales together: the knob
-  the next deck makes input-dependent.
-- $N$ states per channel: a learned kernel, not one exponential.
-- Fixed dynamics: train as a convolution.
-- The decays themselves: a gate bias does as well,
-  $b = -\log(e^\Delta - 1)$.
+::: {.slide title="Concept Check: ZOH Discretization and FFT Padding"}
+[Check Your Understanding]{.kicker}
+
+Test your grasp of continuous-time state space models with these three questions:
+
+1. For a continuous-time state with rate $\lambda = -2$, what step size $\Delta$ yields a discrete half-life of $500$ token steps under zero-order hold?
+2. Why does `S4D.forward` pad both the input sequence $\mathbf{X}$ and the kernel $\mathbf{K}$ from length $T$ to length $2T$ before calling `rfft` and `irfft`?
+3. How can you transfer S4D's initial decay spectrum $\bar{a} = e^{-\Delta}$ ($\Delta \in [0.001, 0.1]$) to the update-gate bias $b$ of a standard sigmoid gate $\sigma(b)$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $\tau_{1/2} = \ln 2 / (\Delta|\lambda|) = 500 \implies \Delta = \ln 2 / (2 \times 500) \approx \mathbf{0.000693}$.
+2. Multiplication in the DFT frequency domain computes **circular convolution** of period $N_{\text{FFT}}$; without zero-padding to at least $2T - 1$ (rounded to $2T$), late tokens at $t \approx T$ wrap around and corrupt early outputs at $t \approx 0$ (violating causality!).
+3. Solve $\sigma(b) = 1/(1 + e^{-b}) = e^{-\Delta} \implies e^{-b} = e^\Delta - 1 \implies \mathbf{b = -\log(e^\Delta - 1)}$ (computed via `-log(expm1(dt))`).
+:::
 :::
 
-::: {.slide title="S4D Weighs an Input by Its Distance, Not Its Content"}
-- $K_4$ is the same number whether the character four steps back ended a
-  word or sat in its middle.
-- The minGRU chooses its decays from each input; S4D cannot.
+::: {.slide title="Summary: Structured State Space Models (S4D)"}
+[Key Takeaways]{.kicker}
 
-::: {.d2l-note .warn}
-Can one layer have the minGRU's choice and S4D's timescales?
-:::
+| Concept / Component | Mathematical Form | Practical & Systems Role |
+| :--- | :--- | :--- |
+| **Diagonal ODE Bank** | $h_n'(t) = \lambda_n h_n(t) + x(t)$, $\lambda_n = -e^{\theta_n} < 0$ | $N$ independent rates per channel; $O(dN)$ state and per-step work |
+| **Zero-Order Hold (ZOH)** | $\bar{a}_n = e^{\Delta \lambda_n}$, $\bar{b}_n = (e^{\Delta \lambda_n} - 1)/\lambda_n$ | Exact discrete recurrence for piecewise-constant inputs over step $\Delta$ |
+| **Factored Half-Life** | $\tau_{1/2} = \ln 2 / (\Delta|\lambda_n|)$ | Rates $\lambda_n = -n$ separate states; $\Delta \in [10^{-3}, 10^{-1}]$ scales half-lives to $693$ steps |
+| **Convolutional Duality** | $K_k = \sum_{n=1}^N c_n \bar{a}_n^k \bar{b}_n$, $y = \mathbf{K} * x + D x$ | Zero-padded length-$2T$ FFT evaluates LTI training pass in $O(Td\log T)$ |
+| **Real vs. Complex Rates** | $\lambda_n \in \mathbb{R}_-$ vs. $\lambda_n = -\alpha + i\omega$ | Real rates form smooth window averages; complex rates fit sharp delay spikes |
+| **LTI Limitation** | Fixed lag weights $K_k$ independent of $x_{t-k}$ | Solves $1{,}000$-step fixed-lag recall, but fails when target positions vary (§12.5) |
 :::
 
-::: {.slide title="Recap"}
-| | decay | trains by | recall at 100 | recall at 1,000 |
-|---|---|---|---|---|
-| minGRU | from the input, starts near 1/2 | scan | chance | chance |
-| minGRU, S4D decays | from the input, long | scan | 1.00 | 1.00 |
-| S4D, short timescales | fixed, half-lives ≤ 7 at the start | FFT or scan | 1.00 | chance |
-| S4D | fixed, half-lives to 693 at the start | FFT or scan | 1.00 | 1.00 |
-
-**Next:** let the input set the step size, keeping $N$ states and S4D's
-timescales.
-:::

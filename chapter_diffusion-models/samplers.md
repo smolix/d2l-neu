@@ -1375,391 +1375,279 @@ weighting change.
 ::: {.cover}
 [Dive into Deep Learning · §17.5]{.kicker}
 
-Samplers, Inversion and Editing<br>
-**one network, a family of samplers · DDIM is Euler's method · order and step grid · a procedure for choosing · codes, edits and inpainting**
+Fast Diffusion Samplers, Inversion, and Editing<br>**DDIM family (η) · Heun & multistep ODE solvers · step-grid placement · ODE inversion & slerp · partial-noising edits · inpainting**
 :::
 :::
 
-::: {.slide title="The Thousand-Step Chain Costs Twenty Times What Fifty Steps Cost"}
-[The problem]{.kicker}
+::: {.slide title="Why One Trained Network Supports Many Samplers"}
+[Motivation]{.kicker}
 
-- Every sampler step evaluates the U-Net once; the ancestral chain takes
-  1,000 steps per image.
-- On Fashion-MNIST, fifty deterministic steps score a Fréchet distance (FD,
-  lower is better) within about a third of the chain's.
+Every sampling step evaluates the denoising network once, making generation latency proportional to the step count. How can we cut $1{,}000$ ancestral steps down to $20$–$50$ evaluations without retraining the network?
 
-::: {.d2l-note .warn}
-Which of the thousand steps do we need, and how few can we take? And can we
-run sampling backwards, from an image to its noise?
-:::
+- **Training depends only on single-time marginals $p_t(\mathbf{x}_t)$:** The regression loss $\mathbb{E}_{t, \mathbf{x}_0, \boldsymbol\epsilon}\|\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - \dot{\mathbf{x}}_t\|^2$ never depends on the joint transition $q(\mathbf{x}_s, \mathbf{x}_t \mid \mathbf{x}_0)$ between two noise levels $s < t$.
+- **Non-Markovian reverse families (Song, Meng & Ermon, 2020):** Any transition from $t$ to $s$ that preserves the marginal $q(\mathbf{x}_s \mid \mathbf{x}_0) = \mathcal{N}(\alpha_s\mathbf{x}_0, \sigma_s^2\mathbf{I})$ is consistent with the trained predictor $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$.
+- **Three levers for fast sampling:** (1) deterministic vs. stochastic transitions ($\eta$), (2) higher-order ODE integration (Heun and multistep solvers), and (3) noise-level grid placement ($\bar\sigma_i$).
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The DDIM Family: Splitting the Noise Budget"}
+[Marginal-Preserving Reverse Steps]{.kicker}
 
-- derive a family of samplers that one trained network serves;
-- show that its deterministic member, DDIM, is Euler's method;
-- compute the error of an Euler and a Heun step by hand;
-- choose a solver, a grid and a number of evaluations for a new model;
-- invert an image to its code, edit it, and inpaint it.
+To step from time $t$ to an earlier time $s < t$, pick any fresh noise standard deviation $0 \le \tilde\sigma \le \sigma_s$ and split the target noise variance $\sigma_s^2$ between the kept noise $\boldsymbol\epsilon$ and independent fresh noise $\boldsymbol\xi \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$:
 
-**Running examples:** the three-mode mixture with its exact predictor;
-a 1.2M-parameter class-conditional U-Net on Fashion-MNIST.
+$$\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sqrt{\sigma_s^2 - \tilde\sigma^2}\,\hat{\boldsymbol\epsilon} + \tilde\sigma\,\boldsymbol\xi$$
+
+- **Why every $\tilde\sigma \in [0, \sigma_s]$ preserves the marginal:** Conditioned on $\mathbf{x}_0$, the two orthogonal Gaussian noise terms have variances $(\sigma_s^2 - \tilde\sigma^2) + \tilde\sigma^2 = \sigma_s^2$, so $\mathbf{x}_s \sim \mathcal{N}(\alpha_s\mathbf{x}_0, \sigma_s^2\mathbf{I})$ for every choice of $\tilde\sigma$.
+- **The DDIM stochasticity parameter $\eta \ge 0$:** Parameterizes $\tilde\sigma$ relative to the Markov forward-posterior standard deviation using the SNR ratio $\kappa = \frac{\sigma_s \alpha_t}{\alpha_s \sigma_t} = \frac{\bar\sigma_s}{\bar\sigma_t} < 1$:
+  $$\tilde\sigma = \eta\,\sigma_s\sqrt{1 - \kappa^2}, \qquad \kappa^2 = \frac{\mathrm{SNR}_t}{\mathrm{SNR}_s}$$
 :::
 
-::: {.slide title="This Deck Turns a Trained Network into Fast Samplers"}
-[Where this fits]{.kicker}
+::: {.slide title="Comparing DDIM (η = 0, 1) and the Ancestral Chain"}
+[Deterministic ODE vs. Stochastic Chains]{.kicker}
+
+Setting $\eta = 0$, $\eta = 1$, or using Ho et al.'s ancestral variance defines three distinct reverse processes from the exact same network predictions $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | asks |
-|---|---|
-| Denoising and the Score | what a denoiser knows about the data |
-| Gaussian Paths | which regression trains the walk to data |
-| Sampling by Integration | how to follow the field |
-| Diffusion for Images | what changes for images |
-| **Samplers, Inversion and Editing** | **which steps to skip; running backwards** |
-| Likelihood, Weighting and the Design Space | is the regression maximum likelihood? |
-| Latent Diffusion and Transformers | why diffuse a compressed code |
-| Few-Step Generation | why one step fails |
-| Discrete Diffusion | what noise is for a token |
+- **$\eta = 0$ (Deterministic DDIM = Euler ODE):** $\tilde\sigma = 0$, so $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sigma_s\hat{\boldsymbol\epsilon}$, or $\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\hat{\boldsymbol\epsilon}$—an exact Euler step of $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}$!
+- **$\eta = 1$ (Posterior-variance DDIM):** $\tilde\sigma^2 = \sigma_s^2(1 - \kappa^2)$ is the exact conditional variance of $q(\mathbf{x}_s \mid \mathbf{x}_t, \mathbf{x}_0)$ (exact when data is a single point).
+- **Ancestral chain:** Uses the larger forward-step variance $\sigma_t^2(1 - \kappa^2) = (\sigma_t^2/\sigma_s^2)\tilde\sigma_{\eta=1}^2$ (exact for $\mathcal{N}(\mathbf{0}, \mathbf{I})$ data on VP).
 :::
 
-::: {.col .narrow}
-- **Uses:** the path $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
-  \boldsymbol\epsilon$, data at $t = 0$, noise at $t = 1$; the
-  probability-flow ODE; FD.
-- **Skips:** one- and two-step models; solvers beyond second order.
+::: {.col .fig}
+![](../img/mdl-diffusion-two-samplers.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Training Fixes Only the Marginals, so Many Steps Are Valid"}
-The network gives $(\hat{\mathbf{x}}_0, \hat{\boldsymbol\epsilon})$ at any
-noisy point. It was trained on single points $\mathbf{x}_t$, never chains, so
-a step from $t$ to $s < t$ only has to produce the law of $\mathbf{x}_s$.
-For any $0 \le \tilde\sigma \le \sigma_s$:
+::: {.slide title="First-Order Stride Error on the 2D Mixture"}
+[Exact Predictor Across Step Budgets]{.kicker}
 
-$$\mathbf{x}_s = \alpha_s \hat{\mathbf{x}}_0 + \sqrt{\sigma_s^2 - \tilde\sigma^2}\, \hat{\boldsymbol\epsilon} + \tilde\sigma\, \boldsymbol\xi, \qquad \boldsymbol\xi \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
+Running DDIM ($\eta = 0, 1$) and the ancestral chain with the exact mixture predictor `pred_exact` from $20{,}000$ starts across $N \in \{5, 10, 20, 50, 200, 1000\}$ steps isolates pure discretization error:
 
-::: {.d2l-note}
-The two noise variances add to $\sigma_s^2$: with the true
-$\mathbf{x}_0, \boldsymbol\epsilon$ in place of the estimates, every
-$\tilde\sigma$ gives $\mathbf{x}_s$ its correct distribution.
-:::
-:::
-
-::: {.slide title="The Strength η Sets How Much of the Noise Is Fresh"}
-$$\tilde\sigma = \eta\, \sigma_s \sqrt{1 - \kappa^2}, \qquad \kappa^2 = \frac{\mathrm{SNR}_t}{\mathrm{SNR}_s} < 1, \qquad \mathrm{SNR} = \frac{\alpha^2}{\sigma^2}$$
-
-- **$\eta = 0$, DDIM:** no fresh noise; the sample is a function of its start.
-- **$\eta = 1$:** the posterior variance of the noising chain.
-- **Ancestral chain:** same mean, the forward-step variance, larger by
-  $\sigma_t^2 / \sigma_s^2$.
-
-::: {.d2l-note}
-Posterior variance: exact for one data point. Forward-step variance: exact
-for standard Gaussian data. Data narrower than the noise need a variance in
-between. The ancestral chain is not a member: its variances sum to more
-than $\sigma_s^2$.
-:::
-
-[Song, Meng and Ermon, 2020; Bao et al., 2022]{.small}
-:::
-
-::: {.slide title="DDIM Is Euler's Method in the Coordinates x/α and σ/α"}
-Let $\bar{\mathbf{x}} = \mathbf{x}/\alpha_t$ and $\bar\sigma_t =
-\sigma_t/\alpha_t$; every Gaussian path reads $\bar{\mathbf{x}}_t =
-\mathbf{x}_0 + \bar\sigma_t \boldsymbol\epsilon$.
-
-$$\bar{\mathbf{x}}_s = \hat{\mathbf{x}}_0 + \bar\sigma_s \hat{\boldsymbol\epsilon} = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\, \hat{\boldsymbol\epsilon}$$
-
-One Euler step of $d\bar{\mathbf{x}} / d\bar\sigma =
-\hat{\boldsymbol\epsilon}$: with the exact $\hat{\boldsymbol\epsilon}$, the
-probability-flow ODE with the noise level as clock.
-
-::: {.d2l-note}
-The step holds $\hat{\boldsymbol\epsilon}$ fixed across the stride; its
-error is the change of $\hat{\boldsymbol\epsilon}$ along the trajectory.
-:::
-:::
-
-::: {.slide title="Check: How Much Noise Does η = 1 Replace on Ten Steps?"}
-[Check]{.kicker}
-
-On the ten-step VP grid the first step runs from $\bar\sigma = 152$ to
-$59$. With $\mathrm{SNR} = 1/\bar\sigma^2$, what fraction
-$f = 1 - \mathrm{SNR}_t/\mathrm{SNR}_s$ of the noise is fresh? On a
-1,000-step grid?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $f = 1 - (59/152)^2 \approx 0.85$: most of the noise is
-replaced. On a fine grid neighboring levels have nearly equal SNR, so $f$
-is small even at $\eta = 1$.
-:::
-:::
-:::
-
-::: {.slide title="Fresh Noise Pulls toward the Data but Errs on Long Steps"}
 ::: {.cols .vc}
-::: {.col .fig .big}
-![](../img/mdl-diffusion-two-samplers.svg)
-:::
-
 ::: {.col}
-200 steps from three starts (circles) to $t = 0$ (crosses). (a) $\eta = 0$:
-smooth curves. (b) $\eta = 1$: jagged paths (first half faded) that may
-change mode.
-:::
-:::
-
-- **For noise:** a stochastic step is a Langevin step plus a flow step; the
-  Langevin part pulls stray points back.
-- **Against:** over a long step the true reverse step is far from Gaussian.
+- **$O(1/N)$ first-order convergence:** The mean $L_2$ distance of $\eta = 0$ samples to the 1,000-step trajectory halves each time $N$ doubles ($0.40$ at $5$ steps $\to$ $0.21$ at $10$ $\to$ $0.04$ at $50$).
+- **Systematic mode contraction at coarse steps:** At $N = 10$ steps, deterministic DDIM ($\eta = 0$) contracts within-mode spread to **$0.38$** (vs. $0.48$ for true data) because holding $\hat{\boldsymbol\epsilon}$ constant across a stride over-removes noise.
+- **Why $\eta = 1$ contracts even more ($0.32$):** Replacing correlated kept noise $\hat{\boldsymbol\epsilon}$ with orthogonal fresh noise $\boldsymbol\xi$ eliminates the positive cross-term with $\hat{\mathbf{x}}_0$, whereas the ancestral chain over-inflates spread to **$0.52$**.
 :::
 
-::: {.slide title="On the Mixture, the Stride Error Halves When the Steps Double"}
+::: {.col .fig}
 @!samplers-skipping-steps-on-the-running-example
-
-Exact predictor, VP grid; distance 0.4, 0.2, 0.04 at 5, 10, 50 steps: first order.
 :::
-
-::: {.slide title="At Ten Steps, η = 1 Ends Too Tight and the Chain Too Wide"}
-Spread: mean squared distance to the nearest mode; the data's is 0.47 to 0.48.
-
-- Ten steps: $\eta = 0$ 0.38, $\eta = 1$ 0.32 (too tight), ancestral 0.52
-  (too wide).
-- Kept noise lines up with $\hat{\mathbf{x}}_0$; fresh noise does not, so
-  $\eta = 1$ ends tighter.
-:::
-
-::: {.slide title="On Gaussian Data Euler Shrinks the Sample; Heun Nearly Fixes It"}
-Standard Gaussian data: $\hat{\boldsymbol\epsilon} = \bar\sigma
-\bar{\mathbf{x}} / (1 + \bar\sigma^2)$. Step from $\bar\sigma_t = 1$ to
-$\bar\sigma_s = 0.5$:
-
-| | factor on $\bar{\mathbf{x}}$ | error |
-|:--|:--|:--|
-| exact flow $\sqrt{(1 + \bar\sigma_s^2)/(1 + \bar\sigma_t^2)}$ | 0.791 | |
-| Euler, slope at the start | 0.75 | 0.041 |
-| Heun, average of start and trial slopes | 0.80 | 0.009 |
-
-Heun: trial $\bar{\mathbf{x}}' = \bar{\mathbf{x}}_t + \Delta\,
-\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t)$, then
-$\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + \Delta\,
-\tfrac12\big(\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t) +
-\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}', \bar\sigma_s)\big)$, with
-$\Delta = \bar\sigma_s - \bar\sigma_t$.
-
-::: {.d2l-note}
-Euler always removes too much noise from Gaussian data. Heun: about a
-quarter of the error for two evaluations per step.
 :::
 :::
 
-::: {.slide title="Grids Even in Time Look Nothing Alike in σ̄"}
-Levels $\bar\sigma = \sigma/\alpha$ of three ten-step grids; EDM is even in
-$\bar\sigma^{1/7}$ from 80 to 0.002:
+::: {.slide title="Second-Order Integration: Heun's Predictor–Corrector"}
+[Cutting Discretization Error from O(h) to O(h²)]{.kicker}
+
+Euler's method (DDIM at $\eta = 0$) holds the slope $\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t)$ constant across the interval $\Delta = \bar\sigma_s - \bar\sigma_t$. **Heun's method** takes an Euler trial step to $\bar{\mathbf{x}}'$ and averages the start and end slopes:
+
+$$\bar{\mathbf{x}}' = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\,\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t), \qquad \bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\,\frac{\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t) + \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}', \bar\sigma_s)}{2}$$
+
+| Method on $\mathcal{N}(\mathbf{0}, \mathbf{I})$ ($\bar\sigma_t = 1 \to \bar\sigma_s = 0.5$) | Multiplicative Factor on $\bar{\mathbf{x}}$ | Absolute Error vs. Exact Flow | Function Evaluations (NFE) |
+| :--- | :--- | :--- | :--- |
+| **Exact probability-flow ODE** | $\sqrt{(1 + 0.5^2)/(1 + 1^2)} = \mathbf{0.7906}$ | $0.0000$ | — |
+| **1st-Order Euler (DDIM)** | $1 - 0.5(1 / 2) = \mathbf{0.7500}$ | $-0.0406$ (too narrow) | $1$ evaluation |
+| **2nd-Order Heun** | $\frac{1}{2}(0.75 + 1 - 0.5 \cdot \frac{0.5 \cdot 0.75}{1.25}) = \mathbf{0.8000}$ | $+0.0094$ (**$4.3\times$ smaller error**) | $2$ evaluations |
+:::
+
+::: {.slide title="Exponential Integrators and Multistep Solvers"}
+[Second-Order Accuracy at One Evaluation per Step]{.kicker}
+
+Can we achieve second-order $O(\Delta^2)$ accuracy without paying for a second network evaluation per step?
+
+- **Exponential integrator coordinates:** Transforming from $\mathbf{x}_t$ to $\bar{\mathbf{x}}_t = \mathbf{x}_t / \alpha_t$ integrates the linear drift term $-(\dot\alpha_t/\alpha_t)\mathbf{x}_t$ analytically, leaving $d\bar{\mathbf{x}}/d\bar\sigma = \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}, \bar\sigma)$ driven purely by the neural network (Zhang & Chen, 2023; Lu et al., 2022).
+- **2nd-order Adams–Bashforth multistep update (`multistep_sample`):** Reuses the cached noise prediction $\hat{\boldsymbol\epsilon}'$ from the previous step of size $\Delta'$ to extrapolate the slope linearly to the midpoint of the current step $\Delta = \bar\sigma_s - \bar\sigma_t$:
+  $$\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + \Delta\!\left(\hat{\boldsymbol\epsilon}_t + \frac{\Delta}{2\Delta'}\big(\hat{\boldsymbol\epsilon}_t - \hat{\boldsymbol\epsilon}'\big)\right) = \hat{\mathbf{x}}_0 + \bar\sigma_s\hat{\boldsymbol\epsilon}_t + \frac{\Delta^2}{2\Delta'}\big(\hat{\boldsymbol\epsilon}_t - \hat{\boldsymbol\epsilon}'\big)$$
+- **DPM-Solver++(2M) (Lu et al., 2025):** Applies this exact two-step extrapolation in log-SNR coordinates ($\log \bar\sigma = -\lambda/2$) to $\hat{\mathbf{x}}_0$, requiring only **1 NFE per step**.
+:::
+
+::: {.slide title="Step-Grid Placement: Linear vs. VP vs. EDM Grids"}
+[Where Should a Solver Spend Its Evaluations?]{.kicker}
+
+Karras et al. (2022) decoupled the **sampling step grid** $\{\bar\sigma_0, \ldots, \bar\sigma_N\}$ from the training schedule, proposing the polynomial **EDM grid** spaced evenly in $\bar\sigma^{1/\rho}$ ($\bar\sigma_{\max} = 80, \bar\sigma_{\min} = 0.002, \rho = 7$):
+
+$$\bar\sigma_i = \Big(\bar\sigma_{\max}^{1/\rho} + \frac{i}{N - 1}\big(\bar\sigma_{\min}^{1/\rho} - \bar\sigma_{\max}^{1/\rho}\big)\Big)^\rho, \qquad i = 0, \ldots, N - 1, \quad \bar\sigma_N = 0$$
 
 @!samplers-second-order-and-the-step-grid
 
-- VP and EDM: four steps above $\bar\sigma = 4$.
-- Linear: two steps above 4 ($\infty$ to 9 to 4), then seven between 4 and
-  0.11.
-
-[Karras et al., 2022]{.small}
+- **Contrast in $\bar\sigma = \sigma/\alpha$ allocation:** On a 10-step budget, the VP and EDM grids spend $4$ steps at very high noise ($\bar\sigma > 4$, where images are nearly pure Gaussian noise and trajectories are straight), whereas the linear grid jumps $\infty \to 9 \to 4$ and places **$7$ of its $10$ steps in the critical structure-forming band $\bar\sigma \in [0.11, 4.0]$**.
 :::
 
-::: {.slide title="A Multistep Solver Gets Second Order from One Evaluation per Step"}
-Dividing by $\alpha$ removes the linear part of the ODE: DDIM is the
-first-order *exponential integrator*. Reuse the last estimate
-$\hat{\boldsymbol\epsilon}'$ (step $\Delta'$) to extrapolate over the
-current step $\Delta = \bar\sigma_s - \bar\sigma_t$:
+::: {.slide title="Deterministic vs. Stochastic Samplers on Garments"}
+[Empirical Benchmark Across Step Counts]{.kicker}
 
-$$\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + \Delta \Big(\hat{\boldsymbol\epsilon}_t + \frac{\Delta}{2\Delta'}\big(\hat{\boldsymbol\epsilon}_t - \hat{\boldsymbol\epsilon}'\big)\Big)$$
-
-::: {.d2l-note}
-Second-order Adams--Bashforth. Constant $\hat{\boldsymbol\epsilon}$: DDIM.
-Heun reaches second order with two evaluations per step.
-:::
-
-[Lu et al., 2022, 2025]{.small}
-:::
-
-::: {.slide title="Fresh Noise Never Beat η = 0 on This Model"}
-VP grid, three paired draws of 1,000 noise images, mean ± half the range;
-real against real about 0.9:
+On our trained class-conditional Fashion-MNIST U-Net, we evaluate 1,000-sample FD across three paired noise draws (mean $\pm$ half-range; real-vs.-real floor is $0.90 \pm 0.08$):
 
 @!samplers-quality-against-evaluations-on-images-3
 
-- $\eta = 0$ a third or more below $\eta = 1$ at every budget up to 200
-  steps.
-- At 1,000 steps all three within about 0.2; the ancestral chain ties.
-- Ancestral at 50 steps (8 to 11) loses to DDIM at 10.
+- **Deterministic DDIM ($\eta = 0$) dominates at every budget $\le 200$ steps:** Scores $33\%$–$50\%$ lower FD than $\eta = 1$ across $10$–$200$ steps, and at $50$ steps ($1.76$) already approaches the $1{,}000$-step plateau ($1.35$).
+- **Why the ancestral chain fails at $\le 100$ steps:** Its forward-step variance $\sigma_t^2(1 - \kappa^2)$ injects far too much noise for images on coarse grids, scoring $\mathrm{FD} \approx 9.5$ at $50$ steps (worse than 10-step DDIM at $5.2$!) and only tying $\eta = 0$ at $1{,}000$ steps.
 :::
 
-::: {.slide title="Second-Order Solvers Reach the Plateau at About 20 Evaluations"}
-@!samplers-quality-against-evaluations-on-images-4
+::: {.slide title="Solver Order vs. Step Grid at Equal Evaluations"}
+[Benchmarking Euler, Heun, and Multistep Solvers]{.kicker}
 
-- Heun on the linear grid: about 1.2 at 20 evaluations; Euler needs
-  50 to 100.
-- Plateau 1.1 to 1.3, where DDIM and the ancestral chain end at 1,000
-  steps: the model's error.
-:::
-
-::: {.slide title="The Paper's Crowded Grid Loses to the Even Linear Grid"}
-FD at equal network evaluations (Heun: one fewer on the EDM grids):
+Comparing Euler, Heun ($2$ NFE/step), and 2nd-order Adams–Bashforth multistep ($1$ NFE/step) at equal **network function evaluations (NFE)** across three grids shows that grid placement and solver order interact strongly:
 
 @!samplers-quality-against-evaluations-on-images-6
-
-::: {.d2l-note}
-$\rho = 3$ crowds the data end less and spends more steps at high noise; it
-loses more at 10 and 20 evaluations, so the wasted steps are above
-$\bar\sigma \approx 4$, where all noisy images look alike.
-:::
 :::
 
-::: {.slide title="Under Guidance the Multistep Sampler Reaches the Plateau First"}
-$\tilde{\mathbf{u}} = \mathbf{u}_\varnothing + \gamma(\mathbf{u}_c -
-\mathbf{u}_\varnothing)$: $\gamma = 1$ is the conditional field; two network
-passes per evaluation. FD and RMS distance per pixel to a 200-evaluation Heun
-reference:
+::: {.slide title="FD Convergence vs. Network Function Evaluations"}
+[Reaching the Model's Asymptotic Plateau]{.kicker}
+
+Plotting FD against total network evaluations on log–log axes shows how quickly each solver saturates the model's asymptotic quality ceiling ($\mathrm{FD} \approx 1.15$–$1.30$):
+
+::: {.cols .vc}
+::: {.col}
+- **20 evaluations suffice with 2nd-order Heun:** On the linear grid, Heun reaches $\mathrm{FD} \approx \mathbf{1.22}$ at just $20$ evaluations ($11$ steps)—matching $1{,}000$ ancestral steps at **$1/50\text{th}$ the compute**!
+- **50 evaluations for Euler & multistep:** Both reach the $\approx 1.2$ plateau by $50$ evaluations on the linear grid.
+- **Why EDM grids trail at $10$–$20$ NFE here:** Spending $40\%$ of steps at $\bar\sigma > 4$ starves the middle regime where $28 \times 28$ garments form.
+:::
+
+::: {.col .fig}
+@!samplers-quality-against-evaluations-on-images-4
+:::
+:::
+:::
+
+::: {.slide title="Trajectory Error vs. FD Under Guidance (γ = 1, 2)"}
+[Comparing Solvers Against a 200-NFE Reference]{.kicker}
+
+Does lower FD always mean smaller per-image ODE integration error? We measure per-pixel RMS distance to a 200-NFE Heun reference alongside FD at $\gamma = 1$ (un-guided conditional) and $\gamma = 2$ (CFG):
 
 @!samplers-quality-against-evaluations-on-images-7
 
-- FD does not rank solvers by integration error: Heun at 10 is farthest
-  from the reference, yet scores half of Euler's FD.
-- $\gamma = 2$, 50 evaluations: multistep at the reference; Heun and Euler
-  still above.
+- **Distributional FD vs. pointwise trajectory accuracy:** At $10$ NFE ($\gamma = 1$), Heun has *larger* pointwise RMS error than Euler ($0.125$ vs. $0.101$) yet **half the FD** ($1.52$ vs. $3.20$): Euler blurs images toward the mean, whereas Heun draws sharp garments that slightly overshoot the exact trajectory!
+- **Under guidance ($\gamma = 2$), multistep wins:** Extrapolating $(1-\gamma)\mathbf{u}_\varnothing + \gamma\mathbf{u}_c$ stiffens the ODE; 2nd-order multistep achieves both the lowest RMS trajectory error and reaches the $\gamma = 2$ FD plateau by $50$ evaluations.
 :::
 
-::: {.slide title="Deterministic Samplers Approximate One Map from Noise to Images"}
+::: {.slide title="Visualizing Sampler Artifacts from Shared Noise"}
+[Deterministic Convergence vs. Ancestral Speckle]{.kicker}
+
+Generating eight garments from the exact same initial noise $\mathbf{z}$ and class labels across four samplers makes the quantitative table visible at a glance:
+
+::: {.cols .vc}
+::: {.col}
+- **Row 1 (Ancestral, 50 steps):** Excess forward-step variance leaves visible salt-and-pepper speckle across backgrounds and fabrics.
+- **Row 2 (DDIM, 10 steps):** Smooths away fine prints and collar edges.
+- **Rows 3 & 4 (DDIM 50 vs. Heun 20 NFE):** Match column-by-column in pose, shading, and sharp details—confirming both converge to the same deterministic ODE map!
+:::
+
+::: {.col .fig}
 @!samplers-quality-against-evaluations-on-images-5
-
-Rows: ancestral 50 steps; DDIM 10; DDIM 50; Heun on the linear grid, 20
-evaluations. The last three match column by column; ten steps blur. The
-ancestral row speckles.
-:::
-
-::: {.slide title="Check: Why Does the Ancestral Chain Speckle at Fifty Steps?"}
-[Check]{.kicker}
-
-At 50 steps the ancestral chain scores worse than DDIM at 10, while at
-1,000 steps it ties DDIM. What changes between the two grids?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** It adds the forward-step variance, larger than the posterior
-variance by $\sigma_t^2/\sigma_s^2$. On a fine grid that factor is near one
-except in the last steps, where both variances are tiny. A garment is nearly
-determined at low noise, so its right variance is close to the posterior's;
-the excess shows as speckle.
 :::
 :::
 :::
 
-::: {.slide title="Choose by Doubling the Evaluations until the Score Stops Moving"}
-1. Fix the noise images and a score; start deterministic, on the training
-   grid.
-2. Double the evaluations until the change is within the run-to-run range.
-3. What remains is the model's error; no sampler removes it.
+::: {.slide title="Practical Protocol for Selecting a Sampler"}
+[How to Tune Sampling for a New Model]{.kicker}
 
-| this model | plateau reached at |
-|:--|:--|
-| Heun, $\gamma = 1$ | about 20 evaluations |
-| Euler, $\gamma = 1$ | 50 to 100 |
-| multistep, $\gamma = 2$ | about 50; Heun and Euler need more |
-| fresh noise | never better |
+Because optimal step counts depend on image resolution, training schedule, and guidance scale $\gamma$, use a paired doubling protocol whenever deploying a new model:
+
+1. **Fix paired noise seeds and a calibrated metric:** Draw a fixed validation noise tensor $\mathbf{Z}$ ($n \ge 1{,}000$) and measure FD against the real-vs.-real reference floor at the same $n$.
+2. **Start deterministic on the model's native training grid:** Use 2nd-order Heun (for $\gamma = 1$) or 2nd-order multistep / DPM-Solver++(2M) (for guided generation $\gamma > 1$) on the training path's grid.
+3. **Double NFE until FD changes by less than run-to-run spread:** Once doubling evaluations ($10 \to 20 \to 50 \to 100$) moves FD by less than the multi-seed range, solver discretization error is negligible—any remaining gap to the real floor is model capacity or training error.
 :::
 
-::: {.slide title="Running the Euler Steps Upward Gives Every Image a Code"}
-Encoder: $\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar\sigma_{t'} -
-\bar\sigma_t)\, \hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t,
-\bar\sigma_t)$; the decoder reads $\hat{\boldsymbol\epsilon}$ at the upper end.
+::: {.slide title="Deterministic ODE Inversion: Image to Latent Code"}
+[Running the Probability-Flow ODE Forward]{.kicker}
+
+Because the probability-flow ODE is deterministic and reversible, running Euler steps upward from $t = 0$ to $1$ (`ddim_invert`) encodes any real image $\mathbf{x}_0$ into a latent noise code $\mathbf{z} = \mathbf{x}_1$:
+
+$$\bar{\mathbf{x}}_{t'} = \bar{\mathbf{x}}_t + (\bar\sigma_{t'} - \bar\sigma_t)\,\hat{\boldsymbol\epsilon}(\bar{\mathbf{x}}_t, \bar\sigma_t), \qquad t' > t$$
 
 @!samplers-the-latent-code-1
-
-- Same rate on the exact field: the error is the steps'. Codes are narrower than noise.
 :::
 
-::: {.slide title="Spherical Interpolation Keeps Codes at the Norm of Their Endpoints"}
-$$\mathbf{z}_u = \frac{\sin\big((1 - u)\omega\big)\, \mathbf{z}_0 + \sin(u \omega)\, \mathbf{z}_1}{\sin \omega}, \qquad \cos \omega = \frac{\mathbf{z}_0^\top \mathbf{z}_1}{\|\mathbf{z}_0\| \|\mathbf{z}_1\|}$$
+::: {.slide title="Analyzing Round-Trip Inversion Error and Code Norm"}
+[Why Inverted Codes Are Narrower Than N(0, I)]{.kicker}
+
+Why does `ddim_invert` followed by `ddim_sample` have nonzero reconstruction error at finite step counts, and why is `code.std()` around $0.70$–$0.88$ instead of $1.0$?
+
+- **Local slope mismatch between forward and reverse Euler:** The forward step from $t$ to $t'$ evaluates $\hat{\boldsymbol\epsilon}$ at the lower end $t$, whereas the reverse step from $t'$ to $t$ evaluates $\hat{\boldsymbol\epsilon}$ at the upper end $t'$.
+- **Discretization error, not field roughness:** As step count increases from $10 \to 50 \to 200$, per-pixel round-trip MSE drops from $0.036 \to 0.003 \to 0.0003$ at the same rate on our trained U-Net as on the exact 2D mixture oracle.
+- **Code norm contraction (`std` $< 1$):** Because finite-step forward Euler under-amplifies variance on curved trajectories, inverted codes have standard deviation $\approx 0.8$—a key pitfall when editing real photographs under strong CFG (motivating null-text optimization).
+:::
+
+::: {.slide title="Spherical Interpolation (Slerp) in Latent Space"}
+[Traversing Between Two Real Images]{.kicker}
+
+Why can we not interpolate linearly ($(1 - u)\mathbf{z}_0 + u\mathbf{z}_1$) between two inverted noise codes $\mathbf{z}_0, \mathbf{z}_1 \in \mathbb{R}^{784}$?
+
+- **The high-dimensional norm-collapse hazard:** Two independent Gaussian vectors in $d = 784$ dimensions are nearly orthogonal ($\omega \approx \pi/2$) with norm $r \approx \sqrt{d}$. Their linear midpoint $\frac{1}{2}(\mathbf{z}_0 + \mathbf{z}_1)$ has norm $r / \sqrt{2} \approx 0.71\,r$—lying completely outside the $\mathcal{N}(\mathbf{0}, \mathbf{I})$ shell where the denoiser was trained!
+- **Spherical linear interpolation (Slerp):** Rotates along the great circle of constant radius $r$ connecting $\mathbf{z}_0$ and $\mathbf{z}_1$ at angle $\cos\omega = \frac{\mathbf{z}_0^\top \mathbf{z}_1}{\|\mathbf{z}_0\|\|\mathbf{z}_1\|}$:
+  $$\mathbf{z}_u = \frac{\sin\big((1 - u)\omega\big)\,\mathbf{z}_0 + \sin(u\omega)\,\mathbf{z}_1}{\sin\omega}, \qquad u \in [0, 1]$$
 
 @!samplers-the-latent-code-2
-
-A straight line's midpoint has norm $r\cos(\omega/2)$: about $r/\sqrt2$ for
-orthogonal codes. Two ankle boots; middle frames overlay the two.
 :::
 
-::: {.slide title="Partial Noising Trades Fidelity to the Input for Realism"}
+::: {.slide title="Editing by Partial Noising (SDEdit)"}
+[Trading Input Fidelity for Sample Realism]{.kicker}
+
+Given a coarse user sketch or blurred composite $\mathbf{y}$ (here the 10 blurred class-mean silhouettes, $\mathrm{FD} \approx 86$), **SDEdit** (Meng et al., 2022) corrupts $\mathbf{y}$ to an intermediate time $t_0 \in (0, 1]$ and integrates backward from $t_0$ to $0$:
+
 ::: {.cols .vc}
 ::: {.col}
+$$\mathbf{x}_{t_0} = \alpha_{t_0}\mathbf{y} + \sigma_{t_0}\boldsymbol\epsilon \implies \hat{\mathbf{x}}_0$$
+
+- **Small $t_0 = 0.3$ (high fidelity, poor realism):** Keeps pixel MSE to the input small ($0.025$), but noise is too weak to erase unnatural blur ($\mathrm{FD} \approx 30$).
+- **Sweet spot $t_0 = 0.7$:** Noise erases high-frequency blur while $\alpha_{0.7} = 0.3$ preserves coarse pose and silhouette, synthesizing sharp textures ($\mathrm{FD} \approx 4.1$).
+- **Full noise $t_0 = 1.0$:** Forgets $\mathbf{y}$ completely ($\mathrm{FD} \approx 1.7$).
+:::
+
+::: {.col .fig}
 @!samplers-editing-by-partial-noising
 :::
-
-::: {.col .narrow}
-Noise a rough input $\mathbf{y}$ to $\mathbf{x}_{t_0} = \alpha_{t_0}
-\mathbf{y} + \sigma_{t_0} \boldsymbol\epsilon$, then sample from $t_0$.
-Inputs: the ten class-mean images.
-
-- Rows: $t_0 = 0, 0.3, 0.5, 0.7, 1$.
-- FD 85 to 87, about 30, 11 to 12, about 4, under 2: realism only once
-  little input is left.
-
-[Meng et al., 2022]{.small}
-:::
 :::
 :::
 
-::: {.slide title="Replacement Inpainting Approximates Conditioning on the Known Pixels"}
+::: {.slide title="Zero-Shot Replacement Inpainting"}
+[Conditioning on Partial Pixel Observations]{.kicker}
+
+Given known pixels $\mathbf{y}$ on a binary mask $\mathbf{m} \in \{0, 1\}^{28 \times 28}$ (here the top half of an image), **replacement inpainting** (Song et al., 2021) runs standard DDIM steps and overwrites the masked region at every level $s$ with a freshly noised copy of $\mathbf{y}$:
+
 ::: {.cols .vc}
 ::: {.col}
+$$\mathbf{x}_s \leftarrow \mathbf{m} \odot \big(\alpha_s\mathbf{y} + \sigma_s\boldsymbol\xi\big) + (\mathbf{1} - \mathbf{m}) \odot \mathbf{x}_s$$
+
+- **Zero retraining required:** Diverse lower-half completions emerge from different initial noise draws.
+- **Boundary seam limitation:** Because the unmasked step and the overwrite happen separately, texture mismatches can appear at the row-14 seam (remedied by RePaint's back-and-forth resampling steps; Lugmayr et al., 2022).
+:::
+
+::: {.col .fig}
 @!samplers-inpainting-and-posterior-sampling-2
 :::
-
-::: {.col}
-Mask $\mathbf{m}$ (one on known pixels), values $\mathbf{y}$; after each
-DDIM step:
-
-$$\mathbf{x}_s \leftarrow \mathbf{m} \odot \big(\alpha_s \mathbf{y} + \sigma_s \boldsymbol\xi\big) + (\mathbf{1} - \mathbf{m}) \odot \mathbf{x}_s$$
-
-- Rows: known half, three completions, originals.
-- Halves meet only through the network: seams.
-:::
 :::
 :::
 
-::: {.slide title="Check: When Is the DDIM Round Trip Exact?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: DDIM, Heun, and Slerp Geometry"}
+[Check Your Understanding]{.kicker}
 
-The encoder reads $\hat{\boldsymbol\epsilon}$ at the lower end of each
-step, the decoder at the upper end. With the exact field, for which data is
-the round trip exact at any number of steps? What does its error measure
-otherwise?
+Test your understanding of fast diffusion solvers and deterministic inversion:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** When $\hat{\boldsymbol\epsilon}$ is constant along each
-trajectory, as for a single data point: both ends then read the same
-estimate. Otherwise the error is the change of $\hat{\boldsymbol\epsilon}$
-over a step, first order in the step size. One field runs both ways, so the
-error measures the steps, not whether the field is right.
+1. **Noise replacement fraction at $\eta = 1$:** On a 10-step VP grid, the first step drops from $\bar\sigma_t = 152$ to $\bar\sigma_s = 59$. Since $\mathrm{SNR} = 1/\bar\sigma^2$, what fraction $f = 1 - \mathrm{SNR}_t/\mathrm{SNR}_s$ of the noise variance at level $s$ is replaced by fresh noise $\boldsymbol\xi$ when $\eta = 1$?
+2. **Why ancestral sampling speckles at 50 steps:** Why does the 50-step ancestral chain produce grainy images ($\mathrm{FD} \approx 9.5$) while 50-step DDIM ($\eta = 0$) is crisp ($\mathrm{FD} \approx 1.8$), even though both tie at $1{,}000$ steps?
+3. **When is DDIM round-trip inversion exact?** Under an exact velocity oracle, for what data distribution is `ddim_sample(ddim_invert(x0))` exact in just $1$ step, and why does linear interpolation between two codes $\mathbf{z}_0, \mathbf{z}_1$ fail?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $\kappa^2 = \mathrm{SNR}_t / \mathrm{SNR}_s = (\bar\sigma_s / \bar\sigma_t)^2 = (59 / 152)^2 \approx 0.151$, so $f = 1 - \kappa^2 \approx \mathbf{84.9\%}$ of the noise variance is replaced by fresh noise!
+2. The ancestral chain injects the forward-step variance $\sigma_t^2(1 - \kappa^2) = (\sigma_t^2/\sigma_s^2)\tilde\sigma_{\eta=1}^2$. On a 50-step grid at low noise, $\sigma_t^2/\sigma_s^2 \gg 1$, injecting excessive noise when the garment is already nearly determined; at $1{,}000$ steps, $\sigma_t^2/\sigma_s^2 \approx 1$.
+3. Inversion is exact in 1 step when $\hat{\boldsymbol\epsilon}$ is constant along trajectories (a single data point). For two orthogonal codes of norm $r$, the linear midpoint $\frac{1}{2}(\mathbf{z}_0 + \mathbf{z}_1)$ shrinks in norm to $r/\sqrt{2} \approx 0.71r$, falling outside the unit Gaussian shell.
 :::
 :::
-:::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Fast Samplers, Inversion, and Editing"}
+[Key Takeaways]{.kicker}
 
-- **One network, a family:** $\eta = 0$ is DDIM, Euler's method in
-  $(\mathbf{x}/\alpha, \sigma/\alpha)$; fresh noise never helped here.
-- **Mixture:** stride error 0.4, 0.2, 0.04 at 5, 10, 50 steps.
-- **Images:** floor about 0.9, plateau 1.1 to 1.3; Heun reaches it at about
-  20 evaluations; under guidance the multistep sampler at about 50.
-- **Procedure:** double the evaluations until the score stops moving.
-- **Backwards:** codes give interpolation; partial runs give edits and
-  inpainting.
-
-**Next:** is the regression maximum likelihood, and which choices matter?
+| Method / Tool | Update Rule in $(\bar{\mathbf{x}}, \bar\sigma) = (\mathbf{x}/\alpha, \sigma/\alpha)$ | Order & Cost per Step | Key Empirical Result & Role |
+| :--- | :--- | :--- | :--- |
+| **DDIM ($\eta = 0$)** | $\bar{\mathbf{x}}_s = \bar{\mathbf{x}}_t + (\bar\sigma_s - \bar\sigma_t)\hat{\boldsymbol\epsilon}_t$ | 1st-order ($O(h)$), 1 NFE | Exact Euler on flow ODE; reaches plateau in $50$ NFE |
+| **Stochastic DDIM ($\eta > 0$)** | $\mathbf{x}_s = \alpha_s\hat{\mathbf{x}}_0 + \sqrt{\sigma_s^2 - \tilde\sigma^2}\hat{\boldsymbol\epsilon} + \tilde\sigma\boldsymbol\xi$ | 1st-order SDE, 1 NFE | $\eta = 1$ uses posterior variance; trails $\eta = 0$ at $\le 200$ steps |
+| **Heun's Method** | Average of Euler start & trial slopes | 2nd-order ($O(h^2)$), 2 NFE | Reaches asymptotic FD plateau in **$20$ NFE** on linear grid |
+| **Multistep (AB2 / DPM++)** | $\bar{\mathbf{x}}_t + \Delta\big(\hat{\boldsymbol\epsilon}_t + \frac{\Delta}{2\Delta'}(\hat{\boldsymbol\epsilon}_t - \hat{\boldsymbol\epsilon}')\big)$ | 2nd-order ($O(h^2)$), 1 NFE | Reuses previous slope; best solver under CFG ($\gamma = 2$) |
+| **DDIM Inversion & Slerp** | Forward Euler $t: 0 \to 1$; great-circle arc | $O(h)$ round-trip error | Encodes real images to noise codes $\mathbf{z}$ while preserving $\|\mathbf{z}\|$ |
+| **SDEdit & Inpainting** | Start at $t_0 \in (0, 1)$ or overwrite mask $\mathbf{m}$ | Zero-shot (no retraining) | $t_0$ trades fidelity vs. realism; mask overwrite fills missing regions |
 :::

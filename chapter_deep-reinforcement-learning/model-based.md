@@ -719,226 +719,232 @@ A transition records how the environment moves, and a network fitted to transiti
 ::: {.cover}
 [Dive into Deep Learning · §15.6]{.kicker}
 
-Learned Models and Planning<br>
-**a dynamics model from data · compounding error · model-predictive control · search distilled into a policy**
+Model-Based Deep RL: Learned World Models and Planning<br>**dynamics regression · compounding rollout error · random shooting MPC · warm starts · policy distillation · Dyna & MBPO**
 :::
 :::
 
-::: {.slide title="Soft Actor-Critic Used Each Transition as One Regression Target"}
-[The problem]{.kicker}
+::: {.slide title="Why Each Transition Teaches More Than a Scalar Value"}
+[Motivation]{.kicker}
 
-Pendulum: torque $a \in [-2, 2]$, angle $\vartheta$ from upright; each step
-costs $\vartheta^2 + 0.1\,\dot\vartheta^2 + 0.001\,a^2$; 200 steps per episode.
+In §15.5, Soft Actor–Critic swung up Pendulum-v1 in $2{,}400$–$7{,}500$ steps by treating each transition $(s_t, a_t, r_t, s_{t+1})$ solely as a scalar regression target $y_t \in \mathbb{R}$ for its critic:
 
-- soft actor-critic, on ten fixed starts: $-200$ after 5,000 to 7,500 real
-  steps at one update per step, 1,600 to 4,000 at ten
-- every transition $(s, a, r, s')$ only fed a critic target $r + \gamma V(s')$
-- but it also shows how the pendulum moves, by the same physics at every visit
-
-::: {.d2l-note .warn}
-Can an agent learn the physics from a few hundred steps and plan its way up?
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- fit a model $\hat f_\phi(s, a) \to (\hat s', \hat r)$ by regression;
-- measure how its error grows along a rollout, and where it is wrong;
-- plan with it: random shooting, warm starts, replanning at every step;
-- compare a planner with soft actor-critic in real steps and in computation;
-- turn search into a better policy, and say why the policy lags behind.
-
-**Running example:** Pendulum; one random episode, then a few more.
-**Idea:** learn the dynamics, search in the model, execute the first torque.
-:::
-
-::: {.slide title="A Model of the Dynamics Lets the Agent Search Before It Acts"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
+::: {.cols}
 ::: {.col}
-| section | adds |
-|---|---|
-| Actor-Critic Methods | a bootstrapped critic, multi-step returns |
-| Trust Regions and PPO | several clipped steps per batch |
-| KL-Regularized Policy Optimization | a KL penalty to a reference |
-| Deep Q-Networks | replay, target networks |
-| Soft Actor-Critic | entropy, a pathwise actor, twin critics |
-| **Learned Models and Planning** | **a model of the dynamics, search in it** |
-| Offline Reinforcement Learning | learning from a fixed log |
-| RL for Sequence Generation | tokens as actions, checkable rewards |
+- **Richer Supervisory Signal:** Every transition also reveals the underlying *physics* $s_{t+1} - s_t \in \mathbb{R}^3$ and reward $r_t \in \mathbb{R}$ produced by torque $a_t$ at state $s_t$.
+- **Global Physics Generalization:** Because gravity and inertia obey the same differential equations everywhere, fitting a smooth network $\hat{f}_\phi(s, a) \to (\hat{s}', \hat{r})$ transfers knowledge across nearby angles.
 :::
 
-::: {.col .narrow}
-- **Uses:** the counted model of the lake, the replay buffer, the squashed
-  Gaussian actor, behavior cloning.
-- **Skips:** model ensembles, latent models, value at the end of a plan.
+::: {.col}
+- **Substituting Compute for Experience:** Inside a learned world model, an agent can simulate $12{,}500$ imagined steps before executing a single real motor command.
+- **From Thousands of Steps to Hundreds:** Planning in a learned dynamics model swings up the pendulum after just **1 to 3 episodes ($200$–$600$ real steps)**—with no critic and no policy network required!
 :::
 :::
 :::
 
-::: {.slide title="Regression Replaces Counting"}
-[A model from data]{.kicker}
+::: {.slide title="Fitting a Neural Dynamics Model by Least Squares"}
+[World Model Regression]{.kicker}
 
-On the lake: count transitions, $\hat P(s' \mid s, a) = N(s, a, s')/N(s, a)$.
-Continuous states cannot be counted, so fit a network:
+On the discrete FrozenLake (§14.3), we estimated $\hat{P}(s' \mid s, a)$ by counting visits. For continuous states $s = (\cos\vartheta, \sin\vartheta, \dot\vartheta) \in \mathbb{R}^3$ and torques $a \in [-2, 2]$, we fit a neural network $\hat{f}_\phi(s, a) = (\hat{s}', \hat{r})$ by least squares:
 
-$$\min_\phi \sum_i \big\| \hat f_\phi(s_i, a_i) - (s'_i, r_i) \big\|^2$$
+$$\min_{\phi} \sum_{i=1}^{N} \big\|\hat{f}_\phi(s_i, a_i) - (s'_i, r_i)\big\|^2$$
 
-- two hidden layers of 64 units; predicts the change $s' - s$ and the reward
-- inputs and targets standardized: $\dot\vartheta \in [-8, 8]$, $r \in [-16, 0]$
-- one parameter vector for all states: one transition teaches nearby angles
-- data: one episode of random torques, 200 transitions
+- **1. Predict State Deltas ($s' - s$):** Over one control step ($\Delta t = 0.05\text{ s}$), the state changes only slightly; predicting the residual $\Delta s = s' - s$ and adding it back ($\hat{s}' = s + \Delta\hat{s}$) prevents the network from wasting capacity on the identity map.
+- **2. Coordinate Standardization:** Because $\cos\vartheta, \sin\vartheta \in [-1, 1]$, angular velocity $\dot\vartheta \in [-8, 8]$, and reward $r \in [-16.2, 0]$, we standardize every input and target dimension to zero mean and unit variance so the reward does not dominate the $L_2$ loss.
 :::
 
-::: {.slide title="One Step Is Predicted to a Fraction of a Degree"}
-[A model from data]{.kicker}
+::: {.slide title="DynamicsModel Architecture and Standardization"}
+[Model Implementation]{.kicker}
+
+`DynamicsModel` uses a 2-layer MLP with $64$ smooth `SiLU` units and stores the dataset's standardization statistics $(\mu_x, \sigma_x, \mu_y, \sigma_y)$ directly inside the module:
+
+@model-based-regression-in-place-of-counting-3
+:::
+
+::: {.slide title="One-Step Accuracy on a Single Random Episode"}
+[Single-Step Verification]{.kicker}
+
+Fitting `DynamicsModel` for $1{,}000$ Adam steps on just **one random episode ($200$ transitions)** and inspecting transition $i = 100$ in physical units:
+
+@!model-based-regression-in-place-of-counting-4
 
 @!model-based-one-step-by-hand-2
 
-- the pendulum swings from $-160.2°$ to $-144.6°$ in 0.05 s
-- reward by hand: $-(2.795^2 + 0.1 \cdot 5.690^2 + 0.001 \cdot 0.08^2) = -11.05$
+::: {.d2l-note}
+At step 100 ($\vartheta = -160.2^\circ$, $\dot\vartheta = 5.69\text{ rad/s}$), the pendulum rotates by $15.6^\circ$ in $0.05\text{ s}$; the learned model predicts the next angle to within **$0.06^\circ$** and the reward ($-11.05$) to within $0.25$!
+:::
 :::
 
-::: {.slide title="Errors Compound When the Model Feeds on Its Own Predictions"}
-[A model from data]{.kicker}
+::: {.slide title="Autoregressive Rollouts and Compounding Model Error"}
+[The Horizon Bottleneck]{.kicker}
 
-Open loop: follow recorded torques, feed each prediction back as input.
+To evaluate a candidate sequence of $n = 25$ torques, the model must roll out **autoregressively** (open-loop), feeding each predicted state $\hat{s}_{t+1}$ back in as the input for step $t+1$:
+
+@model-based-one-step-by-hand-1
 
 @!model-based-compounding-error-2
 
-- ten steps: several times the one-step error
-- 25 steps stay modest here: random torques keep the pendulum near the bottom
+- **Why Errors Compound:** The model was trained only on true states, never on its own slightly perturbed predictions; a small angle error alters the predicted gravitational torque, which perturbs velocity and snowballs over $k = 10 \to 25$ steps.
 :::
 
-::: {.slide title="Check: How Fast Does a Small Error Grow?"}
-[Check]{.kicker}
+::: {.slide title="Random Shooting: Ranking Candidates in Imagination"}
+[Planning by Search]{.kicker}
 
-A one-step angle error of 0.01 radians grows tenfold every fifteen steps.
-After how many steps is it of order one radian, about 57 degrees?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** A factor of 100 is two factors of ten: about 30 steps. A plan of
-25 steps is near the edge, so its last steps are the least reliable.
-:::
-:::
-:::
-
-::: {.slide title="Random Shooting: Try Torque Sequences in the Model, Keep the Best"}
-[Planning in the model]{.kicker}
-
-$$\hat G^{(j)} = \sum_{t=0}^{n-1} \hat r^{(j)}_t, \qquad j = 1, \ldots, 500, \quad n = 25$$
+At state $s$, **random shooting** draws $J$ candidate action sequences $A^{(j)} = (a_0^{(j)}, \dots, a_{n-1}^{(j)})$, rolls all $J$ sequences out in parallel through $\hat{f}_\phi$, and scores each by its predicted $n$-step return $\hat{G}^{(j)} = \sum_{t=0}^{n-1} \hat{r}_t^{(j)}$:
 
 @!model-based-random-shooting-1
 
-- hanging still: $-25 \times 9.9 \approx -247$; real returns: $-223$ to $-242$
-- the model is 40 to 70 points too optimistic, yet its best is truly the best
-- execute the first torque of the best; plan again from the real next state
+::: {.d2l-note}
+**Ranking vs. Calibration:** From the resting bottom state ($\vartheta = \pi$, where hanging still for 25 steps loses $-247$), the model overestimates every sequence by $40$–$70$ points because the random training episode swept past the bottom rapidly—yet the model still **ranks the best real sequence first**!
+:::
 :::
 
-::: {.slide title="A Warm Start Searches Around the Previous Plan"}
-[Planning in the model]{.kicker}
+::: {.slide title="Receding-Horizon MPC with Shifted Warm Starts"}
+[Model-Predictive Control]{.kicker}
 
-![](../img/mdl-rl-model-planning.svg){width=80%}
-
-- previous best plan, shifted by one step, plus Gaussian noise of scale $c = 2$
-- fresh random sequences at every step: still 40 to 110 points worse after
-  1,000 real steps
+::: {.cols .vc}
+::: {.col}
+- **Receding-Horizon Execution (MPC):** Execute *only the first torque* $a_0^\star$ of the winning 25-step plan, observe the real next state $s_{t+1}$, and re-plan from scratch—preventing open-loop model errors from accumulating along the real trajectory.
+- **Warm-Started Search:** Instead of drawing 500 fresh random sequences at step $t+1$, shift step $t$'s winning plan forward by 1 step, append $0$, and perturb it with Gaussian noise ($\sigma = c = 2$, keeping the unperturbed shifted plan as candidate $0$).
 :::
 
-::: {.slide title="From One to Three Episodes, the Planner Swings Up on Every Run"}
-[Planning in the model]{.kicker}
+::: {.col .fig}
+![](../img/mdl-rl-model-planning.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Implementing Vectorized Random-Shooting Search"}
+[Search Implementation]{.kicker}
+
+For a batch of $B$ states, `plan` perturbs an initial $n$-step action sequence into `num_cand = 500` candidates (keeping the unperturbed sequence at index $0$), clips torques to $[-c, c]$, and evaluates all $B \times 500 \times 25$ steps in one batched `rollout_model` call:
+
+@model-based-random-shooting-2
+:::
+
+::: {.slide title="Implementing Warm-Started Receding-Horizon MPC"}
+[MPC Controller]{.kicker}
+
+`mpc` maintains the previous step's winning plan in a closure, shifts it forward by one step (`plans[:, 1:]` followed by a zero torque), and executes only the first torque `plans[:, 0]` of the newly refined plan:
+
+@model-based-warm-starts
+
+::: {.d2l-note}
+Across 5 seeds at 600 real steps, warm-starting improves 10-start test returns from $[-555, -165]$ (fresh random shooting at every step) to **$[-155, -115]$**.
+:::
+:::
+
+::: {.slide title="Swinging Up Pendulum in 200 to 600 Environment Steps"}
+[Few-Episode Swing-Up]{.kicker}
+
+Starting from 1 random episode (200 steps), `mpc_run` alternates refitting the model on all collected transitions, scoring the MPC planner on 10 fixed test starts, and collecting 1 new episode with MPC:
 
 @!model-based-swing-up-from-a-few-episodes-2
 
-- a good controller scores about $-170$ on these ten starts
-- after 600 real steps: $-165$ to $-215$ on every run
+- **10-Start Benchmark ($\approx -170$ ceiling):** By **600 real steps (3 episodes)**, every seed scores between $-165$ and $-215$—and 3 of the 5 seeds already swing up after the **single random episode (200 steps)**!
 :::
 
-::: {.slide title="The Model Is Wrong Where the Data Never Went"}
-[Planning in the model]{.kicker}
+::: {.slide title="Out-of-Support Extrapolation and Self-Correction"}
+[Coverage Analysis]{.kicker}
 
-Model of the random episode, tested along the planner's episodes:
+Why did seeds 3 and 4 score $\sim -1{,}500$ after the first random episode (200 steps) but succeed by 600 steps? Evaluating the 200-step model along the planner's *later* swing-up trajectories exposes the cause:
 
 @!model-based-coverage
 
-- seeds 3 and 4: the random episode never left the bottom
-- the planner's failed swings collect the missing data; then it succeeds
-:::
-
-::: {.slide title="Check: What Does the Planner Do Where Its Data Never Went?"}
-[Check]{.kicker}
-
-Seed 4's model has seen only the lower half circle. The planner asks it what
-happens if the pendulum rises. What does it get, and why is the episode
-still useful?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** An extrapolation, wrong by tens of degrees within five steps, so
-the plan fails. But the attempt carries the pendulum higher than random
-torques did, and the next refit has data there.
-:::
+**Implicit Exploration via Model Optimism:** On seeds 3 and 4, the initial random episode never lifted the pendulum above horizontal, so the 200-step model had **$20^\circ$–$40^\circ$ errors within 5 steps** in the upper half-plane. Yet even a failed MPC swing-up pushes the pendulum into those unvisited upper angles, recording the true physics there so the next refit succeeds!
 :::
 :::
 
-::: {.slide title="A Few Hundred Real Steps, Thousands of Model Evaluations per Action"}
-[Planning in the model]{.kicker}
+::: {.slide title="Experience vs. Computation: MPC Planner vs. SAC"}
+[Systems Trade-off]{.kicker}
 
-| first score $\geq -200$ on the ten starts | real steps | work per real step |
-|---|---|---|
-| planner | 200 to 800 | $500 \times 25 = 12{,}500$ model evaluations |
-| SAC, 1 update per step | 5,000 to 7,500 | 1 gradient step |
-| SAC, 10 updates per step | 1,600 to 4,000 | 10 gradient steps |
+| Method on Pendulum-v1 | Real Steps to Score $\ge -200$ | Compute per Real Step | Test-Time Action Latency |
+| :--- | :---: | :--- | :--- |
+| **Warm-Started MPC Planner** | **$200$ to $800$ steps** ($1$–$4$ eps) | $1{,}000$ Adam steps / ep | **$12{,}500$ model calls** ($\sim \text{ms}$, must fit $50\text{ ms}$ control loop) |
+| **SAC (`UTD = 10`)** | $1{,}600$ to $4{,}000$ steps | $10$ critic/actor gradient steps | **$1$ actor forward pass** ($\sim \mu\text{s}$) |
+| **SAC (`UTD = 1`)** | $5{,}000$ to $7{,}500$ steps | $1$ critic/actor gradient step | **$1$ actor forward pass** ($\sim \mu\text{s}$) |
+| **REINFORCE + Baseline** | $240{,}000$ to $480{,}000$ steps | $1$ update per $1{,}600$ steps | **$1$ actor forward pass** ($\sim \mu\text{s}$) |
 
-- the planner also searches when it acts, within the 0.05 s control period
-- the model moves the cost from experience to computation
+::: {.d2l-note}
+A world model does not make control free—it shifts the bottleneck from **physical interaction** (scarce on hardware) to **test-time computation** (scarce on embedded microcontrollers).
+:::
 :::
 
-::: {.slide title="Search Seeded by the Actor Never Predicts Less than the Actor"}
-[Search as policy improvement]{.kicker}
+::: {.slide title="Search as a Policy Improvement Operator"}
+[Actor-Seeded Search]{.kicker}
 
-- actor's plan in the model: $a_t = \bar a_\theta(\hat s_t)$, $\hat s_{t+1}$ from
-  $\hat f_\phi(\hat s_t, a_t)$, for 25 steps
-- perturb it into 500 candidates, keep the plan itself as one of them
-- best candidate: predicted return $\geq$ the actor's own
-- the greedy step of policy iteration, judged by the model over 25 steps
-- only inside the model and over the horizon: a wrong model certifies wrongly
+To get fast test-time execution without losing planning power, we seed the search with a policy network $\bar{a}_\theta(s) = c\tanh\mu_\theta(s)$ (`actor_plan`) and use `improve` as an expert policy improvement operator:
+
+@model-based-search-seeded-by-the-actor
+
+- **Monotonic Improvement Inside the Model:** Because candidate $0$ of `plan` is the actor's own unperturbed rollout, the winning candidate always achieves a predicted $n$-step return **at least as high as the actor's own plan**.
 :::
 
-::: {.slide title="Distillation Teaches the Actor Part of the Search"}
-[Search as policy improvement]{.kicker}
+::: {.slide title="Distilling Search Labels into an Actor Network"}
+[Policy Distillation]{.kicker}
 
+Because `improve(model, actor, obs)` returns continuous torques improved by 500-candidate lookahead search, we can train the actor's deterministic mean $c\tanh\mu_\theta(s)$ to imitate the search via $L_2$ regression (`distill`):
+
+@model-based-distillation-into-the-actor-1
+:::
+
+::: {.slide title="Iterated Search and Distillation (AlphaZero Loop)"}
+[Search & Distillation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Each round of `search_and_distill` refits $\hat{f}_\phi$, labels 200 buffer states with actor-seeded search `improve`, regresses $\bar{a}_\theta(s)$ onto those labels (`distill`), and collects 1 episode acting with search.
+- **Acting with search (blue):** reliably swings up within $2$–$3$ rounds ($400$–$600$ steps).
+- **Actor alone (orange):** improves from $-1{,}400$ toward $-200$, but lags behind live search due to covariate shift (imitation without DAgger aggregation) and noisy 500-sample shooting labels.
+:::
+
+::: {.col .fig}
 @!model-based-distillation-into-the-actor-3
-
-- with search: swing-up in two or three rounds; actor alone: improves, but lags
+:::
+:::
 :::
 
-::: {.slide title="Imagined Transitions Did Not Cut SAC's Real Steps at Equal Updates"}
-[Search as policy improvement]{.kicker}
+::: {.slide title="Dyna and MBPO: Imagined Transitions vs. High UTD"}
+[Model-Generated Data]{.kicker}
 
-Dyna, MBPO: roll the actor out 3 steps in the model, 95% of each batch imagined.
+Instead of planning at test time, **Dyna** (Sutton, 1990) and **MBPO** (Janner et al., 2019) branch short $k=3$-step rollouts from buffer states inside $\hat{f}_\phi$ to supply synthetic training transitions for SAC:
 
-| ten updates per real step | first score $\geq -200$ |
-|---|---|
-| SAC with imagined transitions | 1,500 to 3,000 steps |
-| SAC without a model | 1,500 to 2,500 steps |
+| Training Configuration (5 Seeds, $\beta = 0.2$, `UTD = 10`) | Batch Composition | Real Environment Steps to Score $\ge -200$ |
+| :--- | :--- | :---: |
+| **MBPO-Style SAC + Learned World Model** | $5\%$ real + $95\%$ imagined ($3$-step rollouts) | **$1{,}500$ to $3{,}000$ steps** |
+| **Model-Free SAC at Matched Update Ratio** | $100\%$ real replay transitions (`UTD = 10`) | **$1{,}500$ to $2{,}500$ steps** |
 
-- five seeds per arm
-- the gain over one update per step comes from the extra updates
+::: {.d2l-note}
+**Crucial Ablation Lesson (Chen et al., 2021):** Much of MBPO's headline speedup over `UTD = 1` SAC comes from taking $10$–$20$ gradient updates per environment step; at a matched `UTD = 10`, real replay data match 3-step synthetic rollouts on Pendulum without risking compounding model bias!
+:::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Horizons, Deltas, and Ensembles"}
+[Check Your Understanding]{.kicker}
 
-- $\hat f_\phi(s, a) \to (\hat s', \hat r)$ by least squares: the counted model, for continuous states.
-- One step: a fraction of a degree. Along a rollout the error compounds; off the data it is tens of degrees.
-- Warm-started random shooting with replanning: $-200$ on the ten starts after 200 to 800 real steps.
-- Soft actor-critic: 5,000 to 7,500 steps at one update per step; the planner: 12,500 model evaluations per action.
-- Search seeded by the actor improves on it inside the model; distilled, the actor learns part of it.
-- Imagined transitions: no fewer real steps at a matched update ratio.
+Reason through these three model-based design questions:
 
-**Next:** no interaction at all. What can be learned from a fixed log?
+1. **Planning Horizon Trade-off:** On Pendulum ($\Delta t = 0.05\text{ s}$), what goes wrong if you shorten the random-shooting horizon from $n = 25$ to $n = 5$, and what goes wrong if you lengthen it to $n = 100$?
+2. **Why Predict State Deltas?** Why do we train the MLP to predict standardized residuals $(s' - s)/\sigma_{\Delta s}$ rather than predicting $s'$ directly in raw coordinates?
+3. **Model Ensembles:** If you train an ensemble of $M = 5$ dynamics networks $\hat{f}_{\phi_1}, \dots, \hat{f}_{\phi_5}$ from different random initializations on seed 4's single random episode, where will their predictions disagree most?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. At **$n = 5$ ($0.25\text{ s}$)**, the planner is too myopic to see that pumping energy at the bottom pays off $20$ steps later near upright; at **$n = 100$ ($5.0\text{ s}$)**, compounding open-loop errors render the late predicted rewards pure noise.
+2. When $\Delta t = 0.05\text{ s}$, $s' \approx s$, so direct prediction spends most of its capacity learning the identity map $s' = s$, and unstandardized MSE is dominated by the reward $r \in [-16, 0]$ ($\text{var} \sim 20$) over $\Delta\cos\vartheta$ ($\text{var} \sim 0.01$).
+3. The 5 networks agree closely in the lower half-circle (where training data lie) and **disagree strongly in the unvisited upper half-circle**—making ensemble variance an effective epistemic uncertainty signal (PETS; Chua et al., 2018)!
+:::
+:::
+
+::: {.slide title="Summary: Model-Based Deep Reinforcement Learning"}
+[Key Takeaways]{.kicker}
+
+| Method / Component | Mathematical Mechanism | Primary Advantage | Primary Limitation |
+| :--- | :--- | :--- | :--- |
+| **State-Delta MLP ($\hat{f}_\phi$)** | $\hat{s}' = s + \sigma_{\Delta s} f_\phi((s,a-\mu_x)/\sigma_x) + \mu_{\Delta s}$ | Learns global physics from $200$ steps | Compounding error over $k$-step rollouts |
+| **Random Shooting MPC** | $\operatorname{argmax}_{A^{(j)}} \sum_{t=0}^{n-1} \hat{r}_t^{(j)}$, execute $a_0^\star$ only | Replanning prevents error accumulation | High test-time compute ($J \times n$ model calls) |
+| **Shifted Warm Start** | Center candidates on $A^\star_{1:n}$ from step $t-1$ | Carries good multi-step plans across time | Can get stuck in local trajectory modes |
+| **Search Distillation** | Regress actor $\bar{a}_\theta(s)$ onto actor-seeded `improve(s)` | Fast $O(1)$ policy inference at test time | Covariate shift unless labels are aggregated (DAgger) |
+| **Dyna / MBPO Rollouts** | Train critic on short $k$-step model rollouts | Multiplies data for critic updates | Matched `UTD` on real replay often performs equally well |
 :::

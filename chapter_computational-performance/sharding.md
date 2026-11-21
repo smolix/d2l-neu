@@ -547,203 +547,169 @@ GPUs to train a 36-block GPT whose 28.6 GiB state fits on neither card alone.
 ::: {.cover}
 [Dive into Deep Learning · §13.7]{.kicker}
 
-Sharding the Training State<br>**ZeRO stages 1–3 · FSDP · a model no card holds, run on two GPUs**
+ZeRO and Fully Sharded Data Parallelism (FSDP)<br>**16N state bottleneck · ZeRO stages 1–3 · all-gather & reduce-scatter · FSDP lifecycle · communication vs. memory**
 :::
 :::
 
-::: {.slide title="29 GiB of State, 24 GiB per Card"}
-[The problem]{.kicker}
+::: {.slide title="When the 16N Parameter State Alone Exceeds GPU Memory"}
+[Motivation]{.kicker}
+
+Doubling our 1B-parameter GPT from $18$ to $36$ blocks (width $d = 2048$) produces a $1.92\text{B}$-parameter model whose `float32` Adam state ($16N$ bytes) no longer fits on a $24\text{ GiB}$ RTX 4090:
 
 @!sharding-sharding-the-training-state-2
 
-- The 1B GPT made twice as deep: 36 blocks, width 2,048.
-- Adam in fp32: weight, gradient, two moments, 16 bytes per parameter.
-- Data parallelism puts all 16 bytes on every GPU.
-
-::: {.d2l-note .warn}
-Can $k$ GPUs train a model that none of them holds?
-:::
+- **Why data parallelism cannot help:** Standard DDP replicates all $16\text{ B/param}$ ($28.6\text{ GiB}$) on every GPU, so four $24\text{ GiB}$ cards run out of memory before processing a single token just like one card does.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Why Replicating State Across k GPUs Is Redundant"}
+[Core Insight]{.kicker}
 
-- size the memory per GPU of ZeRO stages 1, 2, and 3;
-- explain how stage 2 avoids ever holding the full gradient;
-- count the bytes that FSDP sends per step, and how they change with $k$;
-- predict a sharded step's memory and seconds, and check them;
-- decide when sharding is worth its communication.
+Look at *when* a GPU actually touches each of the four `float32` arrays that make up the $16N$ bytes of Adam training state:
 
-**Running example:** the 36-block GPT, $N = 1.92$ billion parameters, on
-two RTX 4090s that exchange data through host memory.
-:::
-
-::: {.slide title="Data Parallelism Copied the State; Now We Divide It"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| The Performance Model | roofline, three regimes, timing, profiling |
-| Hardware | where peak arithmetic and bandwidth come from |
-| Computation Graphs and Compilation | fusion and kernel replay |
-| Memory and Precision | 16 bytes per parameter, activations, checkpointing |
-| Multi-GPU from First Principles | the ring allreduce, its cost model |
-| Data Parallelism in Practice | one process per GPU, buckets, scaling |
-| **Sharding the Training State** | **ZeRO and FSDP, measured** |
-| Case Study: Optimizing a Transformer | the whole method on one GPT |
-:::
-
-::: {.col .narrow}
-- **Uses:** reduce-scatter and all-gather, $\beta_\textrm{link}$,
-  checkpointing.
-- **Skips:** tensor, pipeline, and expert parallelism; several machines.
-:::
-:::
-:::
-
-::: {.slide title="A GPU Needs Each Part of Its State Only Briefly"}
-[The idea]{.kicker}
-
-| state | bytes per parameter | needed |
-|---|---|---|
-| weights | 4 | in its block's forward and backward pass |
-| gradients | 4 | once, by the optimizer |
-| Adam's two moments | 8 | only inside the update |
-
-All $k$ GPUs of data parallelism run the same update: $k$ identical
-copies.
+| State Component | Bytes / Param | Total ($1.92\text{B}$ GPT) | When a GPU Actually Needs It During a Step |
+| :--- | :---: | :---: | :--- |
+| **Weights ($\mathbf{W}_\ell$)** | $4\text{ B}$ | $7.15\text{ GiB}$ | Only while block $\ell$ is executing its forward or backward pass |
+| **Gradients ($\nabla \mathbf{W}_\ell$)** | $4\text{ B}$ | $7.15\text{ GiB}$ | Only from the moment block $\ell$'s backward finishes until the optimizer update |
+| **Adam 1st & 2nd Moments ($\mathbf{m}, \mathbf{v}$)** | $8\text{ B}$ | $14.3\text{ GiB}$ | **Only inside the elementwise optimizer update** at the very end of the step |
 
 ::: {.d2l-note .rule}
-Keep $1/k$ of each; gather a block when it computes, scatter each gradient
-as soon as it exists.
+**The ZeRO / FSDP Principle:** Partition weights, gradients, and optimizer moments so each of the $k$ GPUs permanently stores only **$1/k$ of each**, materializing a single block's full weights on the fly via collectives only while that block computes.
 :::
 :::
 
-::: {.slide title="Each ZeRO Stage Divides One More Kind of State by k"}
-[ZeRO stages]{.kicker}
+::: {.slide title="The Three ZeRO Stages: Memory per GPU vs. Stage"}
+[ZeRO Taxonomy]{.kicker}
 
-Per GPU at the end of the backward pass, Adam in fp32, $k$ GPUs:
+The *Zero Redundancy Optimizer* (ZeRO; Rajbhandari et al., 2020) partitions the three components of the $16N$ `float32` Adam state across $k$ GPUs in three cumulative stages:
 
-| each GPU holds | weights | grads | Adam | bytes/param | GPT, $k = 2$ |
-|---|---|---|---|---|---|
-| data parallel | all | all | all | 16 | 28.6 GiB |
-| ZeRO-1 | all | all | $1/k$ | $8 + 8/k$ | 21.4 GiB |
-| ZeRO-2 | all | $1/k$ | $1/k$ | $4 + 12/k$ | 17.9 GiB |
-| ZeRO-3 (FSDP) | $1/k$ | $1/k$ | $1/k$ | $16/k$ | 14.3 GiB |
+| Parallelism Strategy | Weights | Gradients | Adam Moments | Bytes / Param per GPU | 36-Block GPT ($k = 2$) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Data Parallelism (DDP)** | All ($4$) | All ($4$) | All ($8$) | $16\text{ B}$ | $28.6\text{ GiB}$ (OOM!) |
+| **ZeRO Stage 1 ($P_{\textrm{os}}$)** | All ($4$) | All ($4$) | $1/k$ ($8/k$) | $8 + \frac{8}{k}\text{ B}$ | $21.4\text{ GiB}$ |
+| **ZeRO Stage 2 ($P_{\textrm{os+g}}$)** | All ($4$) | $1/k$ ($4/k$) | $1/k$ ($8/k$) | $4 + \frac{12}{k}\text{ B}$ | $17.9\text{ GiB}$ |
+| **ZeRO Stage 3 / FSDP ($P_{\textrm{os+g+p}}$)** | $1/k$ ($4/k$) | $1/k$ ($4/k$) | $1/k$ ($8/k$) | **$\frac{16}{k}\text{ B}$** | **$14.3\text{ GiB}$** |
 
-::: {.d2l-note .rule}
-On 24 GiB cards, ZeRO-1 leaves under 3 GiB free; ZeRO-3 almost 10.
-:::
-:::
-
-::: {.slide title="Stage 1 Moves the Same Bytes as an Allreduce"}
-[ZeRO stage 1]{.kicker}
-
-allreduce = reduce-scatter + all-gather. Split them:
-
-1. reduce-scatter: each GPU gets the summed gradient of the parameters
-   it owns;
-2. each GPU updates its $1/k$ with its $1/k$ of Adam's state;
-3. all-gather: the updated weights reach every GPU.
-
-::: {.d2l-note .rule}
-Same bytes, less memory. The all-gather sits between the update and the
-next forward pass, and adds to the step unless it is overlapped.
-:::
-:::
-
-::: {.slide title="Stage 2 Scatters Each Bucket as Soon as It Exists"}
-[ZeRO stage 2]{.kicker}
-
-- Every GPU's backward pass produces every gradient.
-- Gradients leave in buckets, as soon as the backward pass makes them.
-- Reduce-scatter each bucket: keep the summed $1/k$ that this GPU owns,
-  free the rest.
-
-::: {.d2l-note .rule}
-The full gradient never exists at once: one bucket at a time. The
-collectives, and the bytes, are those of stage 1.
-:::
-:::
-
-::: {.slide title="FSDP Gathers Each Block Twice: 1.5× the Communication"}
-[ZeRO stage 3]{.kicker}
-
-![](../img/mdl-perf-fsdp-lifecycle.svg){width=70%}
-
-Per step: two all-gathers and one reduce-scatter of $S = 4N$ bytes. With
-$\beta_\textrm{link}$ the time per byte that each GPU sends in a large
-collective:
-
-$$t_\textrm{comm} = \frac{3(k-1)}{k}\,S\,\beta_\textrm{link}$$
-
-::: {.d2l-note .rule}
-From $1.5S$ per GPU at $k = 2$ towards $3S$: more GPUs divide the memory,
-not the bytes each one sends.
-:::
-:::
-
-::: {.slide title="Check: Predict Memory and Time on Two GPUs"}
-[Check]{.kicker}
-
-$N = 1.92$ B, $S = 4N = 7.7$ GB, $k = 2$, a bus bandwidth of
-2.2 to 2.3 GB/s per GPU, 2,048 tokens per GPU, checkpointing at about
-1 MiB per token, $8N$ FLOPs per token at 83 TFLOP/s. Peak memory,
-communication, arithmetic?
-
-::: {.fragment .fade-up}
 ::: {.d2l-note}
-**Answer.** $16N/2 = 14.3$ GiB, plus 2 GiB of activations and a block or
-two: at most 17 GiB. Each phase sends $S/2$, so $1.5S = 11.5$ GB
-take about 5 s. Arithmetic:
-$8 \cdot 1.92 \cdot 10^9 \cdot 2048 / (8.3 \cdot 10^{13}) \approx 0.4$ s.
-:::
+On two $24\text{ GiB}$ GPUs ($k = 2$), ZeRO-1 leaves $< 3\text{ GiB}$ for activations, whereas ZeRO-3 (**Fully Sharded Data Parallelism**, FSDP) cuts steady-state memory in half to $14.3\text{ GiB}$, leaving nearly $10\text{ GiB}$ for activations and temporary buffers.
 :::
 :::
 
-::: {.slide title="The Step Runs at About 7% of Its Arithmetic Speed"}
-[Measured]{.kicker}
+::: {.slide title="Collective Primitives Behind Sharded Training"}
+[Collective Operations]{.kicker}
 
-@!sharding-memory-and-communication-11
+Recall from §13.5 that a ring **allreduce** of an $S$-byte buffer decomposes into two half-collectives that each transmit $\frac{k-1}{k}S$ bytes per GPU:
 
-- Peak about 16 GiB per GPU, under the predicted 17.
-- About 5.5 s per step, a little over the predicted 5 s.
-- Nearly all of it in communication kernels; the 0.4 s of arithmetic adds
-  little.
+| Collective Primitive | Per-GPU Input $\to$ Output | Bytes Sent / GPU | Role in Data-Parallel & Sharded Training |
+| :--- | :--- | :---: | :--- |
+| **Allreduce** | Full vector $S \to$ Full sum $S$ | $\frac{2(k-1)}{k}S$ | Sums replicated gradients in standard DDP |
+| **Reduce-Scatter** | Full vector $S \to$ Summed $1/k$ shard ($S/k$) | $\frac{k-1}{k}S$ | Sums & partitions gradients to their owner GPU in ZeRO 1–3 |
+| **All-Gather** | Owned $1/k$ shard ($S/k$) $\to$ Full vector $S$ | $\frac{k-1}{k}S$ | Reconstructs full weights across GPUs in ZeRO 1–3 |
+| **All-to-All** | $k$ slices $\to$ Transposed slices across GPUs | $\frac{k-1}{k}S$ | Routes tokens to expert GPUs in Mixture-of-Experts (MoE) |
+:::
+
+::: {.slide title="ZeRO Stage 1: Sharding Optimizer Moments at Free Comm"}
+[ZeRO Stage 1]{.kicker}
+
+In DDP, every GPU receives the full summed gradient via an allreduce ($\text{reduce-scatter} + \text{all-gather}$) and performs the exact same Adam update on all $N$ parameters. **ZeRO Stage 1** simply inserts the Adam update *between* the two halves of the allreduce:
+
+1. **Reduce-scatter gradients ($\frac{k-1}{k}S$ bytes):** Sum the gradients across GPUs and deliver only shard $j$ ($N/k$ parameters) to GPU $j$.
+2. **Sharded Adam step ($O(N/k)$ memory & compute):** GPU $j$ updates its owned $1/k$ slice of master weights using its owned $1/k$ slice of Adam moments ($\mathbf{m}_j, \mathbf{v}_j$).
+3. **All-gather updated weights ($\frac{k-1}{k}S$ bytes):** Broadcast each GPU's newly updated $1/k$ weight shard so every GPU holds the full updated weights for the next step.
 
 ::: {.d2l-note .rule}
-A compute-optimal run, 20 tokens per parameter: about 600 days on these two
-cards, six weeks for their arithmetic alone.
+**Zero extra communication bytes:** ZeRO Stage 1 sends $\frac{k-1}{k}S + \frac{k-1}{k}S = \frac{2(k-1)}{k}S$ bytes per GPU—the **exact same communication volume as a standard DDP allreduce**, while cutting Adam moment memory by $k\times$!
 :::
 :::
 
-::: {.slide title="fully_shard per Block Makes Each Block a Unit" only="pytorch"}
+::: {.slide title="ZeRO Stage 2: Streaming Reduce-Scatter of Gradients"}
+[ZeRO Stage 2]{.kicker}
+
+Why hold all $4N$ bytes of gradients until the end of the backward pass if each GPU only updates $1/k$ of the parameters? **ZeRO Stage 2** fuses gradient release into the backward pass:
+
+- **Bucketed reduce-scatter during `backward()`:** As soon as backpropagation finishes computing the gradients for a block or bucket, the GPUs immediately launch a **reduce-scatter** on that bucket.
+- **Immediate deallocation of non-owned shards:** Each GPU retains only the summed $1/k$ gradient slice that it owns and immediately frees the other $(k-1)/k$ gradient slices before the next backward block runs.
+- **Same communication volume as DDP:** Across the entire backward pass and post-step weight all-gather, each GPU still transmits $\frac{2(k-1)}{k}S$ bytes total, while never materializing the full $4N$ gradient tensor at once.
+:::
+
+::: {.slide title="ZeRO Stage 3 (FSDP): Block Weight Gather and Release"}
+[Fully Sharded Data Parallel]{.kicker}
+
+![](../img/mdl-perf-fsdp-lifecycle.svg){width=72%}
+
+- **Sharding the weights ($16N/k$ total state):** Between uses, each GPU stores only $1/k$ of every block's weights.
+- **Per-block lifecycle:** Before block $\ell$ runs in the **forward pass**, an **all-gather** assembles its full weights in a temporary buffer, which is freed as soon as block $\ell$ finishes. In the **backward pass**, a second **all-gather** re-assembles block $\ell$'s weights, followed by a **reduce-scatter** of block $\ell$'s gradients and immediate weight release.
+:::
+
+::: {.slide title="FSDP Communication Cost: 1.5× Data-Parallel Volume"}
+[Communication Model]{.kicker}
+
+Counting the collective phases across one full FSDP step ($S = 4N$ bytes of `float32` weights/gradients) yields the FSDP communication time bound:
+
+$$t_{\textrm{comm (FSDP)}} \;=\; \underbrace{\frac{k-1}{k}S\beta_{\textrm{link}}}_{\textrm{forward all-gather}} \;+\; \underbrace{\frac{k-1}{k}S\beta_{\textrm{link}}}_{\textrm{backward all-gather}} \;+\; \underbrace{\frac{k-1}{k}S\beta_{\textrm{link}}}_{\textrm{backward reduce-scatter}} \;=\; \frac{3(k-1)}{k}\,S\,\beta_{\textrm{link}}$$
+
+- **$1.5\times$ the traffic of DDP / ZeRO-1 / ZeRO-2:** Because FSDP frees gathered weights after the forward pass to save memory, it must pay one extra all-gather during the backward pass ($3$ collective phases instead of $2$).
+- **Crucial scaling law:** Adding more GPUs ($k \uparrow$) divides the steady-state memory per GPU ($16N/k \downarrow$), **but the bytes each GPU transmits per step grow from $1.5\,S$ (at $k = 2$) toward $3S$ (as $k \to \infty$)**!
+:::
+
+::: {.slide title="Measuring All-Gather Bandwidth on Two RTX 4090s"}
+[Link Calibration]{.kicker}
+
+Before running our 36-block GPT on $k = 2$ GPUs, we calibrate $\beta_{\textrm{link}}$ for a $256\text{ MiB}$ all-gather across two RTX 4090s:
+
+@!sharding-memory-and-communication-1
+
+- **Consistent host-staged link rate:** Each GPU sends $(k-1)/k = 1/2$ of the $256\text{ MiB}$ output ($128\text{ MiB}$) at a bus bandwidth of $\sim 2.2\text{--}2.3\text{ GB/s}$ ($\beta_{\textrm{link}} \approx 0.43\text{--}0.45\text{ ns/B}$), matching the bare allreduce link rate from §13.6.
+:::
+
+::: {.slide title="Predicting Memory, Comm, and Compute for the 1.9B GPT"}
+[Step Prediction]{.kicker}
+
+Now we predict the peak memory, communication time, and compute time of one FSDP step of our 36-block, $1.92\text{B}$-parameter GPT ($S = 4N = 7.7\text{ GB}$) on $k = 2$ GPUs with $b = 2$ sequences of $T = 1{,}024$ tokens per GPU and per-block activation checkpointing:
+
+@!sharding-memory-and-communication-2
+
+- **Memory prediction ($\le 17\text{ GiB} < 24\text{ GiB}$):** Sharded state $16N/2 = 14.3\text{ GiB}$ + checkpointed activations ($\sim 1\text{ MiB/token} \times 2{,}048 \approx 2\text{ GiB}$) + 1–2 live gathered blocks ($\sim 0.4\text{ GiB}$) $\approx 16.7\text{ GiB}$.
+- **Time prediction ($\sim 5\text{ s}$ communication vs. $0.4\text{ s}$ compute):** At $k = 2$, each GPU transmits $1.5\,S = 11.5\text{ GB}$ over the $2.2\text{ GB/s}$ PCIe link ($\sim 5.0\text{ s}$), dwarfing the $0.4\text{ s}$ of `tf32` arithmetic ($8N$ FLOPs/token with checkpointing).
+:::
+
+::: {.slide title="Meta-Device Initialization and fully_shard in PyTorch" only="pytorch"}
 [FSDP in PyTorch]{.kicker}
 
+To avoid ever allocating the full $28.6\text{ GiB}$ state on any single GPU during startup, we construct the model on the zero-memory `'meta'` device, shard each block with `fully_shard`, and materialize only local shards via `to_empty`:
+
 ```{.python #sharding-exercises-1}
-with torch.device('meta'):      # shapes only, no memory
+with torch.device('meta'):      # zero-memory shape/dtype construction
     model = d2l.GPT(**config)
-for blk in model.blks:          # each block gathered on its own
+for blk in model.blks:          # unit of all-gather & release: 1 Transformer block
     fully_shard(blk)
-fully_shard(model)              # embeddings and final norm
-model.to_empty(device=device)   # this GPU's shards only
-...                             # initialize them as d2l.GPT does
+fully_shard(model)              # shard remaining embeddings and final RMSNorm
+model.to_empty(device=device)   # allocate only this rank's 1/k parameter shards
+...                             # initialize local shards in-place
 opt = torch.optim.Adam(model.parameters(), lr=1e-4, fused=True)
 ```
 
-- One process per GPU, started by `torchrun`.
-- `fused=True`: no Adam temporaries as large as the gradients.
+- **Why `fully_shard` wraps each block individually:** Wrapping at the block boundary ensures that only one $50\text{M}$-parameter block ($\sim 200\text{ MB}$) is all-gathered at a time rather than the entire $1.92\text{B}$-parameter model.
 :::
 
-::: {.slide title="Keep Activations Split, and XLA Writes FSDP's Collectives" only="jax"}
+::: {.slide title="Avoiding Host OOM During Multi-Process FSDP Startup" only="pytorch"}
+[Initialization Discipline]{.kicker}
+
+When `torchrun` launches $k$ worker processes on a single host machine, naive model initialization can crash host RAM or GPU VRAM before FSDP even starts:
+
+- **Pitfall 1 — Materializing on GPU before `fully_shard`:** Calling `d2l.GPT(**config).to(device)` before `fully_shard` allocates $4N = 7.7\text{ GB}$ on the card; for larger models ($7\text{B+}$), this immediately triggers a CUDA OOM.
+- **Pitfall 2 — $k$ copies in host RAM:** If all $k = 8$ processes construct and initialize a $30\text{ GB}$ model in CPU RAM simultaneously, they consume $8 \times 30 = 240\text{ GB}$ of host DRAM.
+- **Production pattern:** Construct on `torch.device('meta')` $\to$ apply `fully_shard` per block $\to$ allocate local $1/k$ GPU storage with `model.to_empty(device=device)` $\to$ initialize or stream checkpoints directly into the sharded `DTensor`s.
+:::
+
+::: {.slide title="Declarative Parameter and Activation Sharding in JAX" only="jax"}
 [FSDP in JAX]{.kicker}
+
+In JAX, FSDP requires zero manual all-gather or reduce-scatter code: we shard each parameter tensor along its first axis divisible by $k$ (`fsdp_sharding`) and constrain each block's activation output to stay batch-sharded (`P('data')`):
 
 ::: {.cols .vc}
 ::: {.col}
 ```{.python #sharding-exercises-2}
-def fsdp_sharding(x):  # first axis that k divides
+def fsdp_sharding(x):  # shard first axis divisible by k
     for i, n in enumerate(x.shape):
         if n % k == 0:
             return NamedSharding(
@@ -751,65 +717,89 @@ def fsdp_sharding(x):  # first axis that k divides
     return NamedSharding(mesh, P())
 ```
 
-Every block's output constrained to stay split by batch.
+- Because block weights are sharded on `'data'` and block activations are *also* sharded on `'data'`, XLA automatically emits an all-gather of each block's weights before the matmul and a reduce-scatter of its weight gradients in the backward pass.
 :::
 
-::: {.col}
+::: {.col .fig}
 @!sharding-memory-and-communication-9
 
-- Sizes are results: weights gathered twice, gradient shard $S/2$.
-- Sent per GPU: $7.5 + 3.8 = 11.3$ GB, against $1.5S = 11.5$ GB.
+- **Exact traffic match:** In HLO result sizes ($2 \times$ sent bytes at $k=2$), all-gather produces $2S \approx 15.0\text{ GB}$ (sent $S = 7.5\text{ GB}$) and reduce-scatter produces $S/2 \approx 3.8\text{ GB}$ (sent $3.8\text{ GB}$), totaling $11.3\text{ GB} \approx 1.5\,S$!
 :::
 :::
 :::
 
-::: {.slide title="Shard Only When the State Does Not Fit"}
-[When to shard]{.kicker}
+::: {.slide title="Inspecting XLA's Planned Per-GPU Memory and Donation" only="jax"}
+[Compiler Memory Plan]{.kicker}
 
-- Fits next to its activations: data parallelism is fastest.
-- 24 GiB card, Adam in fp32: the limit is about 1B parameters.
-- 18-block GPT: ZeRO-3 on two GPUs cuts 15.1 GiB to 7.5 GiB per GPU.
-- Larger micro-batches would save at most 8% of the arithmetic in
-  accumulator traffic, about 0.01 s per micro-batch.
-- FSDP gathers the weights twice per micro-batch, about 2 s on our link;
-  data parallelism with accumulation exchanges once per step.
+Querying `compiled.memory_analysis()` before running a single step confirms that XLA's static memory plan fits comfortably inside $24\text{ GiB}$ per GPU:
 
-::: {.d2l-note}
-On our machine: shard the 36-block GPT, not the 18-block one.
+@!sharding-memory-and-communication-7
+
+- **Buffer donation (`donate_argnums=(0, 1)`):** Marks the old sharded weight and Adam moment buffers ($10.7\text{ GiB} = 12N/2$) as reusable in place for the updated state; without buffer donation, holding both old and new states simultaneously during the optimizer update would require $2 \times 10.7 = 21.4\text{ GiB}$ and trigger an OOM!
+:::
+
+::: {.slide title="Measured FSDP Step: 16 GiB Peak, 90% Communication"}
+[Experimental Verification]{.kicker}
+
+Running our 36-block, $1.92\text{B}$-parameter GPT step on two $24\text{ GiB}$ RTX 4090s confirms both our memory and timing predictions:
+
+@!sharding-memory-and-communication-11
+
+- **Memory fits cleanly:** Each GPU peaks at **$\sim 16\text{ GiB}$** (below our $17\text{ GiB}$ bound), training a $28.6\text{ GiB}$-state model that neither card could hold alone.
+- **Communication dominates over PCIe:** Each step takes **$\sim 5.5\text{ s}$**, with GPU 0 spending over **$90\%$ of the step ($\sim 5.0\text{ s}$) inside NCCL communication kernels** and only $\sim 0.4\text{ s}$ in arithmetic.
+:::
+
+::: {.slide title="FSDP Over Host-Staged PCIe vs. NVLink 5 Fabrics"}
+[Interconnect Sensitivity]{.kicker}
+
+Comparing our host-staged PCIe workstation against an NVLink 5 node ($900\text{ GB/s}$ per direction) for the exact same $11.5\text{ GB}$ FSDP traffic per step explains why large-model sharding was designed for high-bandwidth fabrics:
+
+| Interconnect Fabric | Bus Bandwidth | FSDP Comm Time ($1.5\,S = 11.5\text{ GB}$) | Compute Time ($8N b T / P$) | Step Regime & Utilization |
+| :--- | :---: | :---: | :---: | :--- |
+| **PCIe 4.0 via Host DRAM (Ours)** | $\sim 2.2\text{ GB/s}$ | **$\approx 5.0\text{ s}$** | $0.40\text{ s}$ (`tf32`) | **Link-bound** ($\sim 7\%$ compute share) |
+| **NVLink 4 (H100, $450\text{ GB/s}$)** | $450\text{ GB/s}$ | **$\approx 26\text{ ms}$** | $\sim 32\text{ ms}$ (`bf16`) | Balanced (hidden via block prefetching) |
+| **NVLink 5 (B200, $900\text{ GB/s}$)** | $900\text{ GB/s}$ | **$\approx 13\text{ ms}$** | $\sim 14\text{ ms}$ (`bf16`) | **Compute-bound** (hidden via prefetching) |
+
+- **Block prefetching:** Issuing the all-gather for block $\ell + 1$ on a communication stream while block $\ell$ computes reduces forward time from $L(g + c)$ to $g + (L-1)\max(g, c) + c$, completely hiding communication whenever $g \le c$!
+:::
+
+::: {.slide title="When to Shard vs. Replicate with Gradient Accumulation"}
+[Decision Guide]{.kicker}
+
+Should we also use FSDP on our 18-block, 1B-parameter GPT ($16N = 15.1\text{ GiB}$) across two RTX 4090s so each GPU holds $7.5\text{ GiB}$ of state and fits larger micro-batches?
+
+- **Why gradient accumulation + DDP wins over PCIe when the state fits:**
+  - Under **DDP with gradient accumulation** over $m$ micro-batches, the GPUs communicate **only once per global step** (after all $m$ micro-batches complete).
+  - Under **FSDP (ZeRO-3)**, because non-owned weight shards are freed after every block, the GPUs must **re-gather all weights twice on every single micro-batch** ($2\text{ s}$ of PCIe traffic per micro-batch vs. saving $0.01\text{ s}$ of accumulator memory traffic!).
+- **Practical rule:** On slow interconnects, use **DDP + gradient accumulation** whenever $16N$ fits alongside a reasonable micro-batch; escalate to **ZeRO-1 / ZeRO-2** (which keep full weights and communicate only once per global step), and use **ZeRO-3 / FSDP** only when $4N + \textrm{activations}$ exceeds single-GPU memory.
+:::
+
+::: {.slide title="Concept Check: ZeRO Memory, FSDP Traffic, and Links"}
+[Check Your Understanding]{.kicker}
+
+Work out the memory and communication counts for three sharding scenarios ($S = 4N$ denotes the byte size of one full copy of `float32` weights or gradients):
+
+1. A model with $N = 4 \times 10^9$ parameters ($16N = 64\text{ GB}$ of `float32` Adam state) is trained across $k = 4$ GPUs. How many gigabytes of training state does each GPU hold at the end of the backward pass under **DDP**, **ZeRO-1**, **ZeRO-2**, and **ZeRO-3 (FSDP)**?
+2. Mixed-precision FSDP keeps each GPU's $1/k$ master weight and Adam moment shards in `float32`, but all-gathers weights in `bfloat16` ($2\text{ B}$) and reduce-scatters gradients in `bfloat16` ($2\text{ B}$). How many bytes per GPU does mixed-precision FSDP transmit per step compared to `float32` DDP?
+3. As you scale FSDP from $k = 2$ GPUs to $k = 64$ GPUs, by what factor does per-GPU state memory change, and by what factor does per-GPU communication volume per step change?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **DDP ($16N$):** $\mathbf{64\text{ GB}}$; **ZeRO-1 ($(8 + 8/k)N = 10N$):** $\mathbf{40\text{ GB}}$; **ZeRO-2 ($(4 + 12/k)N = 7N$):** $\mathbf{28\text{ GB}}$; **ZeRO-3 / FSDP ($16N/k = 4N$):** $\mathbf{16\text{ GB}}$ per GPU.
+2. **Less traffic than `float32` DDP!** Halving the collective dtype to `bfloat16` halves $S_{\textrm{comm}}$ from $4N \to 2N = S/2$, so 3 FSDP phases move $\frac{3(k-1)}{k} \frac{S}{2} = \mathbf{1.5\,\frac{k-1}{k}S}$ bytes—$25\%$ *fewer* bytes than `float32` DDP's $\frac{2(k-1)}{k}S$!
+3. **Memory drops by $32\times$** ($16N/2 \to 16N/64$), while **communication per GPU grows by nearly $2\times$** (from $3(1/2)S = 1.5\,S$ at $k=2$ to $3(63/64)S \approx 2.95\,S$ at $k=64$).
 :::
 :::
 
-::: {.slide title="Check: The Same Step over NVLink"}
-[Check]{.kicker}
+::: {.slide title="Summary: ZeRO Stages 1–3 and FSDP Trade-Offs"}
+[Key Takeaways]{.kicker}
 
-The same 11.5 GB per GPU and step, $k = 2$, over NVLink 5 at 900 GB/s
-per direction. How long is the communication, and what limits the step?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $11.5 / 900 \approx 13$ ms, a thirtieth of the 0.4 s of
-arithmetic.
-
-| link | bus bandwidth | communication per step |
-|---|---|---|
-| ours: PCIe through host memory | 2.2 to 2.3 GB/s | about 5 s |
-| NVLink 5 | 900 GB/s | 13 ms |
-
-The arithmetic limits the step; on such links FSDP costs little.
-:::
-:::
-:::
-
-::: {.slide title="Divide the State by k; Every Step Gathers It Back"}
-[Recap]{.kicker}
-
-- Data parallelism: 16 bytes per parameter on every GPU; 28.6 GiB does
-  not fit.
-- ZeRO-1 and ZeRO-2: optimizer state, then gradients, at no cost in
-  bytes.
-- FSDP: also the weights, 14.3 GiB per GPU at $k = 2$, at 1.5× the
-  communication; more GPUs do not cut the bytes each one sends.
-- Measured: about 16 GiB and 5.5 s per step, 7% of the arithmetic speed.
-
-**Next:** one GPU again, and a GPT step whose causes of slowness act all at once.
+| Strategy | Sharded Across $k$ GPUs | Memory / Param (`fp32` Adam) | Collectives per Step | Bytes Sent / GPU ($S = 4N$) |
+| :--- | :--- | :---: | :--- | :---: |
+| **Standard DDP** | Minibatch only | $16\text{ B}$ | 1 Allreduce | $\frac{2(k-1)}{k}S < 2S$ |
+| **ZeRO Stage 1** | Optimizer moments ($\mathbf{m}, \mathbf{v}$) | $8 + \frac{8}{k}\text{ B}$ | 1 Reduce-Scatter + 1 All-Gather | $\frac{2(k-1)}{k}S < 2S$ |
+| **ZeRO Stage 2** | Moments + Gradients ($\nabla \mathbf{W}$) | $4 + \frac{12}{k}\text{ B}$ | Bucketed Reduce-Scatter + 1 All-Gather | $\frac{2(k-1)}{k}S < 2S$ |
+| **ZeRO Stage 3 (FSDP)** | Moments + Grads + Weights ($\mathbf{W}$) | **$\frac{16}{k}\text{ B}$** | 2 All-Gathers + 1 Reduce-Scatter | **$\frac{3(k-1)}{k}S < 3S$** |
+| **`bf16`-Comm FSDP** | All state (master shards in `fp32`) | $\frac{16}{k}\text{ B}$ (+ live block) | 2 `bf16` All-Gathers + 1 `bf16` RS | $\frac{1.5(k-1)}{k}S < 1.5S$ |
 :::

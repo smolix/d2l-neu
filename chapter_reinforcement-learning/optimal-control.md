@@ -438,118 +438,209 @@ For linear dynamics $\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\math
 ::: {.cover}
 [Dive into Deep Learning · §14.6]{.kicker}
 
-Optimal Control, LQR, and Model Predictive Control<br>
-**linear-quadratic regulation · the Riccati recursion · local linearization · iterative LQR · receding-horizon MPC**
+Optimal Control, LQR, and Model Predictive Control<br>**linear-quadratic regulation · backward Riccati recursion · local linearization · iterative LQR · receding-horizon MPC**
 :::
 :::
 
-::: {.slide title="When States and Actions Are Continuous, Tables Explode"}
-- Dynamic programming on the lake swept a table of $16$ state values.
-- A continuous state $\mathbf{x}_t \in \mathbb{R}^d$ partitioned into $100$ bins per coordinate requires $100^d$ cells: Bellman's *curse of dimensionality*.
-- For a robot arm with $d = 14$ angles and velocities, $100^{14} = 10^{28}$ cells.
-- Question: when does Bellman's backward sweep have an exact closed form in continuous space?
+::: {.slide title="Continuous State Spaces and Bellman's Curse"}
+[Motivation & Mental Model]{.kicker}
 
-::: {.d2l-note}
-Kalman (1960): when the dynamics are linear and the cost is quadratic, the value function stays quadratic at every step.
-:::
-:::
+Tabular dynamic programming (§14.2) swept a table of $16$ cells, but physical systems have continuous states $\mathbf{x}_t \in \mathbb{R}^d$ and continuous controls $\mathbf{u}_t \in \mathbb{R}^m$:
 
-::: {.slide title="The Linear-Quadratic Regulator (LQR)"}
-- Linear dynamics and quadratic cost over horizon $H$:
-
-$$\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t, \qquad J = \sum_{t=0}^{H-1}\big(\mathbf{x}_t^\top\mathbf{Q}\mathbf{x}_t + \mathbf{u}_t^\top\mathbf{R}\mathbf{u}_t\big) + \mathbf{x}_H^\top\mathbf{Q}_H\mathbf{x}_H$$
-
-- Here $\mathbf{Q} \succeq \mathbf{0}$ penalizes state error and $\mathbf{R} \succ \mathbf{0}$ penalizes control effort.
-- Cost-to-go at step $t$: $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$, parameterized by a symmetric $d \times d$ matrix $\mathbf{P}_t$ ($d(d+1)/2$ numbers instead of $100^d$).
+- **The curse of dimensionality:** Discretizing each of $d$ state coordinates into $100$ bins requires $100^d$ grid cells—already $10^{28}$ cells for a 7-joint robot arm ($d = 14$ angles and velocities).
+- **Kalman's algebraic insight (1960):** When the dynamics are linear in $(\mathbf{x}_t, \mathbf{u}_t)$ and the stage cost is quadratic, Bellman's backward dynamic programming preserves the exact quadratic form of the value function at every step.
+- **Polynomial complexity:** Instead of $100^d$ grid entries, $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$ is parameterized by a symmetric $d \times d$ matrix $\mathbf{P}_t$ with only $d(d+1)/2$ independent numbers.
 :::
 
-::: {.slide title="Bellman's Backup Becomes the Riccati Recursion"}
-- Minimize $Q_t(\mathbf{x}, \mathbf{u}) = \mathbf{x}^\top\mathbf{Q}\mathbf{x} + \mathbf{u}^\top\mathbf{R}\mathbf{u} + (\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u})^\top\mathbf{P}_{t+1}(\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u})$ over $\mathbf{u}$:
+::: {.slide title="The Linear-Quadratic Regulator (LQR) Problem"}
+[Linear Dynamics and Quadratic Costs]{.kicker}
 
-$$\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t, \qquad \mathbf{K}_t = (\mathbf{R} + \mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{B})^{-1}\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{A}$$
+In optimal control notation, we drive a discrete-time linear system toward the origin $\mathbf{x} = \mathbf{0}$ by minimizing cumulative quadratic cost over horizon $H$:
 
-- Substituting $\mathbf{u}_t^*$ back yields the backward *Riccati recursion*:
+$$\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t, \qquad J(\mathbf{x}_0, \mathbf{u}_{0:H-1}) = \sum_{t=0}^{H-1}\big(\mathbf{x}_t^\top\mathbf{Q}\mathbf{x}_t + \mathbf{u}_t^\top\mathbf{R}\mathbf{u}_t\big) + \mathbf{x}_H^\top\mathbf{Q}_H\mathbf{x}_H$$
 
+- **Dynamics matrices:** $\mathbf{A} \in \mathbb{R}^{d \times d}$ governs unforced state evolution and $\mathbf{B} \in \mathbb{R}^{d \times m}$ maps control inputs into state changes.
+- **State and control penalties:** $\mathbf{Q} \succeq \mathbf{0}$ and $\mathbf{Q}_H \succeq \mathbf{0}$ penalize state deviations from the origin, while $\mathbf{R} \succ \mathbf{0}$ strictly penalizes control effort so every one-step minimization has a unique finite solution.
+:::
+
+::: {.slide title="Exact Continuous Dynamic Programming"}
+[Expanding the Bellman Backup]{.kicker}
+
+Assuming by backward induction from $t = H$ ($\mathbf{P}_H = \mathbf{Q}_H$) that the cost-to-go at step $t+1$ is quadratic, $V_{t+1}(\mathbf{x}') = {\mathbf{x}'}^\top\mathbf{P}_{t+1}\mathbf{x}'$, Bellman's optimality equation becomes:
+
+$$V_t(\mathbf{x}) = \min_{\mathbf{u} \in \mathbb{R}^m} \Big\{\mathbf{x}^\top\mathbf{Q}\mathbf{x} + \mathbf{u}^\top\mathbf{R}\mathbf{u} + (\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u})^\top\mathbf{P}_{t+1}(\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u})\Big\}$$
+
+- **Strictly convex quadratic in $\mathbf{u}$:** Expanding the action-value bracket $Q_t(\mathbf{x}, \mathbf{u})$ groups into quadratic terms in $\mathbf{x}$, cross terms $2\mathbf{u}^\top\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{A}\mathbf{x}$, and a quadratic control term $\mathbf{u}^\top(\mathbf{R} + \mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{B})\mathbf{u}$.
+- **First-order optimality:** Setting $\nabla_{\mathbf{u}} Q_t(\mathbf{x}, \mathbf{u}) = 2(\mathbf{R} + \mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{B})\mathbf{u} + 2\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{A}\mathbf{x} = \mathbf{0}$ solves the backup analytically in closed form.
+:::
+
+::: {.slide title="The Backward Riccati Recursion and Gain Matrix"}
+[Closed-Form Linear State Feedback]{.kicker}
+
+Solving $\nabla_{\mathbf{u}} Q_t = \mathbf{0}$ yields a linear state-feedback law $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$ and the backward **discrete-time Riccati recursion** for $\mathbf{P}_t$:
+
+$$\mathbf{K}_t = (\mathbf{R} + \mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{B})^{-1}\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{A}$$
 $$\mathbf{P}_t = \mathbf{Q} + \mathbf{A}^\top\mathbf{P}_{t+1}\mathbf{A} - \mathbf{A}^\top\mathbf{P}_{t+1}\mathbf{B}(\mathbf{R} + \mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{B})^{-1}\mathbf{B}^\top\mathbf{P}_{t+1}\mathbf{A}$$
 
-::: {.d2l-note}
-The optimal policy $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$ is linear in the state and independent of $\mathbf{x}_0$ (and of additive zero-mean Gaussian noise).
-:::
+- **Three structural properties:** (1) Each backup costs $O(d^3 + m^3)$ matrix arithmetic; (2) the optimal gain $\mathbf{K}_t$ is independent of the start state $\mathbf{x}_0$; (3) additive zero-mean Gaussian transition noise $\mathbf{w}_t \sim \mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma})$ leaves $\mathbf{K}_t$ completely unchanged (*certainty equivalence*).
 :::
 
-::: {.slide title="Double Integrator: LQR Derives a PD Controller"}
+::: {.slide title="The Double Integrator: LQR Derives a PD Controller"}
+[Infinite-Horizon Stationary Feedback]{.kicker}
+
+Applying `riccati_lqr` to a 1D vehicle $\mathbf{x}_t = (p_t, v_t)^\top$ driven by acceleration $u_t$ automatically derives a proportional-derivative (PD) controller $u_t^* = -k_p p_t - k_v v_t$:
+
 @optimal-control-riccati-lqr
 
-- For $\mathbf{x}_t = (p_t, v_t)^\top$, $u_t^* = -k_p p_t - k_v v_t$ pushes against position error and damps velocity.
-- Cheap control ($R = 0.01$): aggressive gains $\mathbf{K}_\infty = [7.613, 4.585]$, contraction rate $\rho(\mathbf{A}-\mathbf{B}\mathbf{K}_\infty) = 0.761$.
-- Expensive control ($R = 1.00$): gentle gains $\mathbf{K}_\infty = [0.930, 1.395]$, contraction rate $\rho = 0.930$.
+- **Asymptotic stability:** As $H \to \infty$, $\mathbf{P}_t \to \mathbf{P}_\infty$ (the Discrete Algebraic Riccati Equation), placing all eigenvalues of $\mathbf{A} - \mathbf{B}\mathbf{K}_\infty$ strictly inside the unit circle ($\rho < 1$).
 :::
 
-::: {.slide title="Linearizing Pendulum at the Upright Equilibrium"}
-- Nonlinear transition $\mathbf{x}_{t+1} = f(\mathbf{x}_t, u_t)$ around the unstable fixed point $\mathbf{x}^* = (0, 0)^\top, u^* = 0$:
+::: {.slide title="Control Effort Penalty vs. Damping Speed"}
+[Closed-Loop Trajectories of the Double Integrator]{.kicker}
 
-$$\delta\mathbf{x}_{t+1} \approx \mathbf{A}\delta\mathbf{x}_t + \mathbf{B}\delta u_t, \qquad \mathbf{A} = \frac{\partial f}{\partial \mathbf{x}}(\mathbf{0}, 0), \quad \mathbf{B} = \frac{\partial f}{\partial u}(\mathbf{0}, 0)$$
+Sweeping the control penalty $R \in \{0.01, 0.10, 1.00\}$ from initial position $\mathbf{x}_0 = (1, 0)^\top$ shows how $\mathbf{R}$ trades actuator effort against convergence speed:
 
-- Evaluated at the upright equilibrium $(\mathbf{0}, 0)$:
-  - Open-loop eigenvalues of $\mathbf{A}$: $\lambda_1 = 1.2133 > 1$ (unstable), $\lambda_2 = 0.8242$.
-  - LQR feedback gain $\mathbf{K}_\infty = [19.693, 5.263]$ places closed-loop eigenvalues at $0.8537$ and $0.2467$ (inside the unit circle).
+::: {.cols .vc}
+::: {.col}
+- **Cheap control ($R = 0.01$):** High gains $\mathbf{K}_\infty = [7.613, 4.585]$ contract state error rapidly ($\rho = 0.761$, value $P_{00} = 6.02$).
+- **Expensive control ($R = 1.00$):** Gentle gains $\mathbf{K}_\infty = [0.930, 1.395]$ brake slowly ($\rho = 0.930$, value $P_{00} = 15.00$).
 :::
 
-::: {.slide title="Where Local Linearization Fails: Torque Saturation"}
-- Gravity pulls with torque $5\sin\vartheta$; the motor supplies at most $|u| \leq 2$.
-- Static holding limit: $|\vartheta| \leq \arcsin(2/5) \approx 0.412\text{ rad}$ ($23.6^\circ$).
-
-| starting angle $\vartheta_0$ | 200-step return | final angle $\vartheta_{200}$ | outcome |
-|---|---|---|---|
-| $0.20\text{ rad}$ | $-0.32$ | $+0.000\text{ rad}$ | balanced at upright |
-| $0.40\text{ rad}$ | $-2.97$ | $+0.000\text{ rad}$ | balanced at upright |
-| $0.50\text{ rad}$ | $-770.94$ | $+2.592\text{ rad}$ | torque saturates; falls past bottom |
-| $\pi\text{ rad}$ (bottom) | $-1471.86$ | $-2.249\text{ rad}$ | cannot swing up without energy pumping |
+::: {.col .fig}
+@!optimal-control-riccati-plot
 :::
-
-::: {.slide title="Check: Why Can't Upright LQR Swing the Pendulum Up?"}
-[Check]{.kicker}
-
-1. Why does the linear policy $u = \textrm{clip}(-\mathbf{K}_\infty\mathbf{x}, -2, 2)$ succeed at $\vartheta_0 = 0.40\text{ rad}$ and fail at $\vartheta_0 = 0.50\text{ rad}$?
-2. At $\vartheta_0 = \pi$, what sign of torque does $-\mathbf{K}_\infty\mathbf{x}$ command throughout, and what is required instead?
-
-::: {.fragment .fade-up}
-1. At $\vartheta = 0.40$, gravity torque is $5\sin(0.40) = 1.95 < 2$; at $\vartheta = 0.50$, $5\sin(0.50) = 2.40 > 2$, exceeding the motor limit.
-2. It always commands $u = -2$ toward $\vartheta = 0$; swinging up requires reversing torque across multiple swings to pump mechanical energy.
 :::
 :::
 
-::: {.slide title="Iterative LQR (iLQR): Linearizing Along a Trajectory"}
-- Given a nominal sequence $(\bar{\mathbf{x}}_{0:H}, \bar{v}_{0:H-1})$ with smooth torque $u_t = 2\tanh(v_t)$:
-  1. **Backward pass:** linearize $\mathbf{A}_t = \frac{\partial f}{\partial \mathbf{x}}(\bar{\mathbf{x}}_t, \bar{v}_t)$, $\mathbf{B}_t = \frac{\partial f}{\partial v}(\bar{\mathbf{x}}_t, \bar{v}_t)$ and run the time-varying Riccati pass for feedforward steps $k_t$ and feedback gains $\mathbf{K}_t$.
-  2. **Forward pass (line search):** roll out the *true nonlinear dynamics* with
+::: {.slide title="Linearizing Nonlinear Physics at an Equilibrium"}
+[First-Order Taylor Approximation]{.kicker}
 
-$$v_t^{\textrm{new}} = \bar{v}_t + \alpha\, k_t + \mathbf{K}_t(\mathbf{x}_t^{\textrm{new}} - \bar{\mathbf{x}}_t)$$
+For a smooth nonlinear system $\mathbf{x}_{t+1} = f(\mathbf{x}_t, u_t)$ near a fixed point $f(\mathbf{x}^*, u^*) = \mathbf{x}^*$, a first-order Taylor expansion gives a local linear model in $(\delta\mathbf{x}_t, \delta u_t)$:
 
-- In 35 iterations from $(\pi, 0)$, iLQR discovers the three-phase swing-up: push left ($u = -1.78$), pump right to $\vartheta_{30} = 4.04\text{ rad}$ ($u = +1.68$), whip through bottom at $\dot\vartheta_{40} = -4.44\text{ rad/s}$ ($u = -1.83$), and settle at $\vartheta_{80} = 0.0001\text{ rad}$.
+$$\delta\mathbf{x}_{t+1} \approx \mathbf{A}\,\delta\mathbf{x}_t + \mathbf{B}\,\delta u_t, \qquad \mathbf{A} = \frac{\partial f}{\partial \mathbf{x}}(\mathbf{x}^*, u^*), \quad \mathbf{B} = \frac{\partial f}{\partial u}(\mathbf{x}^*, u^*)$$
+
+- **`Pendulum-v1` dynamics:** With angle $\vartheta_t$ from upright ($\vartheta = 0$ top, $\vartheta = \pi$ bottom) and torque $u_t \in [-2, 2]$, $\dot{\vartheta}_{t+1} = \dot{\vartheta}_t + (\frac{3g}{2l}\sin\vartheta_t + \frac{3}{ml^2}u_t)\Delta t$ has an unstable fixed point at $(\mathbf{0}, 0)$.
+:::
+
+::: {.slide title="Stabilizing Upright Pendulum via Local LQR"}
+[Shifting Unstable Eigenvalues Inside the Unit Circle]{.kicker}
+
+Computing the exact Jacobians $(\mathbf{A}_p, \mathbf{B}_p)$ of `Pendulum-v1` at the upright equilibrium $\vartheta = 0$ and running the Riccati recursion stabilizes the saddle point:
+
+@!optimal-control-upright-lqr
+
+- **Open-loop instability vs. closed-loop stability:** The open-loop Jacobian has an unstable eigenvalue $\lambda_1 = 1.2133 > 1$ (tilts grow $21\%$ per step); LQR gain $\mathbf{K}_\infty = [19.693, 5.263]$ pulls both eigenvalues inside the unit circle ($0.8537$ and $0.2467$).
+:::
+
+::: {.slide title="Where Local LQR Fails: Torque Saturation"}
+[Underactuation and the Catch Basin]{.kicker}
+
+Gravity pulls the pendulum down with torque $\frac{1}{2}mgl\sin\vartheta = 5\sin\vartheta$, whereas the motor is clipped to $|u_t| \leq 2$, setting a static holding boundary at $|\vartheta| = \arcsin(2/5) \approx 0.412\text{ rad}$ ($23.6^\circ$):
+
+@!optimal-control-lqr-basin
+
+- **Sharp basin threshold:** Starting at $\vartheta_0 = 0.20$ or $0.40\text{ rad}$, clipped linear LQR catches and balances the rod at $\vartheta_{200} = 0.000\text{ rad}$.
+- **Failure outside the basin:** At $\vartheta_0 = 0.50\text{ rad}$ ($5\sin 0.50 = 2.40 > 2$) or from the bottom ($\vartheta_0 = \pi$), full torque $u = -2$ cannot arrest gravity; swinging up requires multi-swing **energy pumping**.
+:::
+
+::: {.slide title="Iterative LQR (iLQR): Trajectory Linearization"}
+[Gauss-Newton Trajectory Optimization]{.kicker}
+
+Instead of linearizing at a single point, **iterative LQR** (Li & Todorov, 2004) repeatedly linearizes the dynamics and quadratizes the cost around an entire nominal trajectory $(\bar{\mathbf{x}}_{0:H}, \bar{v}_{0:H-1})$:
+
+$$\mathbf{A}_t = \frac{\partial f}{\partial \mathbf{x}}(\bar{\mathbf{x}}_t, \bar{v}_t), \quad \mathbf{B}_t = \frac{\partial f}{\partial v}(\bar{\mathbf{x}}_t, \bar{v}_t), \quad v_t^{\textrm{new}} = \bar{v}_t + \alpha\,k_t + \mathbf{K}_t(\mathbf{x}_t^{\textrm{new}} - \bar{\mathbf{x}}_t)$$
+
+- **Smooth torque squashing:** Parameterizing $u_t = 2\tanh(v_t)$ enforces $u_t \in (-2, 2)$ differentiably without hard-clipping kinks.
+- **Backward Riccati pass + forward line search:** The backward pass computes feedforward improvements $k_t = -q_{v,t}/q_{vv,t}$ and time-varying feedback gains $\mathbf{K}_t = -\mathbf{q}_{v\mathbf{x},t}/q_{vv,t}$; the forward pass rolls out the *true nonlinear dynamics* with backtracking step $\alpha \in \{1, 1/2, \ldots\}$.
+:::
+
+::: {.slide title="iLQR Discovers Multi-Phase Energy Pumping"}
+[Nonlinear Swing-Up from the Bottom]{.kicker}
+
+In 35 iterations from the hanging equilibrium $(\pi, 0)$, iLQR discovers a three-phase swing-up and catch trajectory over $H = 80$ steps ($4.0\text{ s}$):
+
+::: {.cols .vc}
+::: {.col}
+- **Steps 0–10 (back-swing):** Pushes left ($u_0 = -1.78$) to $\vartheta_{10} = 2.65\text{ rad}$.
+- **Steps 10–30 (energy pump):** Reverses torque ($u_{20} = +1.68$) to swing through the bottom to $\vartheta_{30} = 4.04\text{ rad}$.
+- **Steps 30–80 (whip & catch):** Reverses again ($u_{40} = -1.83$), hitting peak speed $\dot{\vartheta}_{40} = -4.44\text{ rad/s}$ and braking to rest at $\vartheta_{80} = 0.0001\text{ rad}$.
+:::
+
+::: {.col .fig}
+@!optimal-control-ilqr-swingup
+:::
+:::
 :::
 
 ::: {.slide title="Open-Loop vs. TV-LQR vs. Receding-Horizon MPC"}
-![](../img/mdl-rl-optimal-control.svg){width=94%}
+[From Trajectory Plans to Closed-Loop Control]{.kicker}
 
-| impulse at $t = 45$ | Open-loop $(\bar{u}_t)$ | TV-LQR $(\bar{v}_t + \mathbf{K}_t\delta\mathbf{x}_t)$ | Receding-horizon MPC |
-|---|---|---|---|
-| $0.0\text{ rad/s}$ | $\vartheta_{120} = +0.075$, ret $-333.6$ | $\vartheta_{120} = +0.000$, ret $-333.7$ | $\vartheta_{120} = +0.000$, ret $-331.6$ |
-| $+0.5\text{ rad/s}$ | $\vartheta_{120} = -2.939$, ret $-502.3$ | $\vartheta_{120} = -0.001$, ret $-333.9$ | $\vartheta_{120} = +0.000$, ret $-331.7$ |
-| $+2.2\text{ rad/s}$ | $\vartheta_{120} = +2.941$, ret $-621.1$ | $\vartheta_{120} = +1.959$, ret $-797.9$ | $\vartheta_{120} = +0.000$, ret $-558.2$ |
+An optimal trajectory $(\bar{\mathbf{x}}_{0:H}, \bar{u}_{0:H-1})$ can be executed in three ways when unexpected disturbances strike:
 
-::: {.d2l-note}
-TV-LQR handles small disturbances inside the linear tube around $\bar{\mathbf{x}}_t$; receding-horizon MPC re-solves from $\mathbf{x}_t$ and plans a new swing-up when knocked back down.
+1. **Open-loop execution ($u_t = \bar{u}_t$):** Applies the precomputed torques blind to $\mathbf{x}_t$; even tiny drift or a knock at the top causes the unstable saddle to fall away.
+2. **Time-varying LQR tracking ($v_t = \bar{v}_t + \mathbf{K}_t(\mathbf{x}_t - \bar{\mathbf{x}}_t)$):** Wraps the nominal path in a local linear feedback tube using iLQR's backward gains $\mathbf{K}_t$ at zero online planning cost, but fails if a strong knock pushes $\mathbf{x}_t$ out of the tube.
+3. **Receding-horizon Model Predictive Control (MPC):** At every step $t$, re-solves the finite-horizon iLQR problem over lookahead $H_{\textrm{mpc}}$ starting from the current measured state $\mathbf{x}_t$, applies *only the first control* $u_{t|t}^*$, and re-plans at $t+1$.
+:::
+
+::: {.slide title="Disturbance Rejection Under an Impulse at t = 45"}
+[Testing Open-Loop, TV-LQR, and MPC]{.kicker}
+
+Applying an external angular-velocity kick $\Delta\dot{\vartheta} \in \{0.0, +0.5, +2.2\}\text{ rad/s}$ at step $t = 45$ (just as the pendulum climbs toward the catch basin) separates the three controllers:
+
+@!optimal-control-mpc-comparison
+:::
+
+::: {.slide title="Phase Portraits and Recovery from Strong Knocks"}
+[Why Online Re-Planning Is Essential]{.kicker}
+
+Comparing the three panels below shows how local LQR, trajectory optimization, and receding-horizon re-planning fit together:
+
+![](../img/mdl-rl-optimal-control.svg){.nostretch width=95%}
+
+- **Moderate knock ($\Delta\dot{\vartheta} = +0.5$):** Open-loop falls ($\vartheta_{120} = -2.94$), while both TV-LQR and MPC absorb the perturbation inside the linear tube ($\vartheta_{120} = 0.000$).
+- **Strong knock ($\Delta\dot{\vartheta} = +2.2$):** Arrests the upward climb; TV-LQR saturates its linear feedback around the old plan and fails ($\vartheta_{120} = +1.96$), whereas **MPC detects the miss, plans a fresh swing-up pump, and restores $\vartheta_{120} = 0.000$**.
+:::
+
+::: {.slide title="Classical Optimal Control vs. Reinforcement Learning"}
+[Unifying Dictionary Across Communities]{.kicker}
+
+Classical optimal control and reinforcement learning solve the same sequential decision problem under different assumptions about dynamics and differentiability:
+
+| Concept | Classical Optimal Control | Reinforcement Learning |
+|:--|:--|:--|
+| **Variables & objective** | State $\mathbf{x}_t \in \mathbb{R}^d$, control $\mathbf{u}_t \in \mathbb{R}^m$; min cost $\sum_t c_t$ | State $s_t \in \mathcal{S}$, action $a_t \in \mathcal{A}$; max return $\mathbb{E}[\sum_t \gamma^t r_t]$ |
+| **Value & backup** | Cost-to-go $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$; Riccati recursion | Value $V^\pi(s)$ or $Q^\pi(s, a)$; Bellman operator $\mathcal{T}$ |
+| **Known nonlinear $f$** | Gradient-based iLQR / DDP + receding-horizon MPC | Tree search or sampling-based MPC (CEM / MPPI) |
+| **Unknown dynamics** | System identification $\hat{f}_\phi$ + certainty-equivalent MPC | Model-based RL (§15.5) or model-free policy gradients (§14.7) |
+:::
+
+::: {.slide title="Concept Check: LQR, iLQR, and MPC"}
+[Check Your Understanding]{.kicker}
+
+Test your intuition on Riccati backups, torque saturation, and receding-horizon control:
+
+1. **Riccati dimensionality:** For a humanoid robot with $d = 36$ state dimensions, how many entries would a coarse $10$-bin-per-axis grid require versus the symmetric Riccati matrix $\mathbf{P}_t$?
+2. **Certainty equivalence:** If zero-mean Gaussian wind gusts $\mathbf{w}_t \sim \mathcal{N}(\mathbf{0}, \boldsymbol{\Sigma})$ perturb the linear double integrator $\mathbf{x}_{t+1} = \mathbf{A}\mathbf{x}_t + \mathbf{B}\mathbf{u}_t + \mathbf{w}_t$, how does the optimal feedback gain $\mathbf{K}_t$ change?
+3. **TV-LQR vs. MPC:** Why did TV-LQR recover from the $+0.5\text{ rad/s}$ impulse at $t = 45$ but fail completely under the $+2.2\text{ rad/s}$ impulse?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. A 10-bin grid requires $10^{36}$ cells, whereas $\mathbf{P}_t \in \mathbb{R}^{36 \times 36}$ has only $d(d+1)/2 = 36 \times 37 / 2 = 666$ unique numbers.
+2. $\mathbf{K}_t$ does not change at all! In $\mathbb{E}[(\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u} + \mathbf{w})^\top\mathbf{P}_{t+1}(\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u} + \mathbf{w})]$, the linear cross term in $\mathbf{w}$ vanishes and $\mathbb{E}[\mathbf{w}^\top\mathbf{P}_{t+1}\mathbf{w}] = \textrm{tr}(\mathbf{P}_{t+1}\boldsymbol{\Sigma})$ adds only a constant independent of $\mathbf{u}$.
+3. The $+0.5\text{ rad/s}$ push kept the rod inside the local linear tube around the nominal trajectory, whereas $+2.2\text{ rad/s}$ knocked it back down where torque saturates and a brand-new multi-swing energy pump (re-planned by MPC) is required.
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Classical Optimal Control Methods"}
+[Key Takeaways]{.kicker}
 
-- **LQR:** linear dynamics + quadratic cost $\implies$ exact quadratic value $V_t(\mathbf{x}) = \mathbf{x}^\top\mathbf{P}_t\mathbf{x}$ via the Riccati recursion and linear feedback $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$.
-- **Local linearization:** analytical Jacobians around $(\mathbf{0}, 0)$ stabilize `Pendulum` for $|\vartheta_0| \leq 0.41\text{ rad}$, where $|u| \leq 2$ can counter gravity.
-- **iLQR:** backward Riccati passes along a nominal trajectory discover multi-pump nonlinear swing-up trajectories.
-- **MPC:** re-planning over a receding horizon at every step turns trajectory optimization into a global closed-loop controller.
-
-**Next:** when the transition dynamics $f$ are unknown, policy gradient methods differentiate the policy's log-probabilities instead of the physics.
+| Method | Dynamics & Cost Model | Policy Form & Capabilities |
+|:--|:--|:--|
+| **Finite/Infinite LQR** | Linear $\mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u}$, quadratic $\mathbf{x}^\top\mathbf{Q}\mathbf{x} + \mathbf{u}^\top\mathbf{R}\mathbf{u}$ | Exact linear feedback $\mathbf{u}_t^* = -\mathbf{K}_t\mathbf{x}_t$ via backward Riccati recursion |
+| **Local Equilibrium LQR** | Jacobian linearization $(\mathbf{A}, \mathbf{B})$ at fixed point $(\mathbf{x}^*, u^*)$ | Stabilizes unstable equilibria locally inside actuator saturation limits |
+| **Iterative LQR (iLQR)** | Time-varying Jacobians $(\mathbf{A}_t, \mathbf{B}_t)$ along nominal rollout | Discovers nonlinear multi-swing trajectories via backward Riccati + line search |
+| **TV-LQR Tracking** | Linear perturbation tube around nominal $(\bar{\mathbf{x}}_t, \bar{v}_t)$ | Closed-loop feedback $v_t = \bar{v}_t + \mathbf{K}_t(\mathbf{x}_t - \bar{\mathbf{x}}_t)$ for small disturbances |
+| **Receding-Horizon MPC** | Re-solves horizon-$H_{\textrm{mpc}}$ optimization from $\mathbf{x}_t$ online | Global closed-loop recovery; plans fresh swing-ups after large knocks |
 :::
+

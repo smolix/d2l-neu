@@ -804,158 +804,126 @@ and warm-up runs (`d2l.Benchmark`), while `d2l.kernel_times` and
 ::: {.cover}
 [Dive into Deep Learning · §13.1]{.kicker}
 
-The Performance Model<br>
-**arithmetic intensity · the roofline · GPU timing · three regimes · profiling**
+The Roofline Model: Compute, Bandwidth, and Overhead Regimes<br>**arithmetic intensity · roofline bound · ridge point · asynchronous timing · kernel profiling**
 :::
 :::
 
-::: {.slide title="The Same Product Runs Below 2% or Near 100% of the Peak"}
-[The problem]{.kicker}
+::: {.slide title="Why Do Matrix Products Run at 2% or 100% of Peak?"}
+[Motivation]{.kicker}
 
-RTX 4090, bf16 tensor cores, peak $P$ = 165 TFLOP/s (derived from the
-card's design).
+On an RTX 4090 (`bfloat16` Tensor Core peak $P = 165.2\text{ TFLOP/s}$), two calls to the exact same matrix-multiplication primitive behave completely differently:
 
-- $256 \times 256$ times $256 \times 256$: under 2% of $P$.
-- $8192 \times 8192$ times $8192 \times 8192$: within a few percent of $P$.
-
-Same operation, same chip, timed correctly.
+- **Large square product ($8192 \times 8192$):** Sustains nearly $100\%$ of the $165.2\text{ TFLOP/s}$ hardware peak.
+- **Small square product ($256 \times 256$):** Achieves **less than $2\%$ of peak**—over $50\times$ lower hardware utilization on the same chip.
+- **Implication for training:** Because a training step executes hundreds of operations of varying sizes, buying a faster GPU or adding a second card helps only if we know whether **arithmetic**, **memory bandwidth**, or **host dispatch overhead** limits the step.
 
 ::: {.d2l-note}
-A training step is a long sequence of such operations. **What limits the
-small one, and can we predict it before running?**
+Two paper counts—**FLOPs performed** and **bytes moved**—plus one measured constant, the **host launch time $h$**, determine which regime governs any operation.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Counting FLOPs, Bytes, and Arithmetic Intensity"}
+[Arithmetic Intensity]{.kicker}
 
-- count the FLOPs and bytes of an operation and compute its intensity;
-- bound its time by $\max(h,\ \textrm{FLOPs}/P,\ \textrm{bytes}/\beta)$ and
-  name its regime;
-- time GPU code correctly and find hidden synchronization points;
-- predict a training step and check the prediction against a profile.
+Every tensor operation draws from two hardware budgets: peak arithmetic throughput $P$ ($\text{FLOP/s}$) and main-memory bandwidth $\beta$ ($\text{bytes/s}$; $\beta = 1.008\text{ TB/s}$ on the RTX 4090).
 
-**Running example:** one RTX 4090 ($P$ = 165 TFLOP/s in bf16,
-$\beta$ = 1.008 TB/s) and the width-2048 linear layers of a 1B-parameter
-GPT.
+$$I \;=\; \frac{\textrm{FLOPs performed}}{\textrm{bytes moved between off-chip DRAM and on-chip processors}}$$
 
-**Idea:** two counts and one measured constant predict which resource
-limits an operation.
+- **Why the ratio matters:** While moving $1\text{ byte}$ from DRAM takes $1/\beta \approx 1\text{ ps}$, the Tensor Cores can execute $P/\beta \approx 164\text{ FLOPs}$ in that same picosecond.
+- **Elementwise benchmark ($y_i = x_i + 1$):** Performs $1\text{ FLOP}$ per element while reading $b$ bytes and writing $b$ bytes ($2b$ bytes total), yielding $I = \frac{1}{2b} = 0.25\text{ FLOP/byte}$ in `bfloat16` ($b = 2$) regardless of tensor size.
 :::
 
-::: {.slide title="The Performance Model Opens the Chapter"}
-[Where this fits]{.kicker}
+::: {.slide title="Arithmetic Intensity of a Linear Layer Matmul"}
+[Matrix Multiplication]{.kicker}
+
+Multiplying an activation batch $\mathbf{X} \in \mathbb{R}^{B \times D}$ by a weight matrix $\mathbf{W} \in \mathbb{R}^{D \times F}$ performs $2BDF$ FLOPs (one multiply and one add per inner-product term) and transfers at least $b(BD + DF + BF)$ bytes:
+
+$$I \;=\; \frac{2BDF}{b\,(BD + DF + BF)} \;=\; \frac{2}{b}\left(\frac{1}{F} + \frac{1}{B} + \frac{1}{D}\right)^{-1} \;\approx\; \frac{2B}{b} \quad (\textrm{for } B \ll D, F)$$
+
+- **The smallest dimension governs intensity:** The harmonic-sum form shows that whichever of $(B, D, F)$ is smallest bottlenecks data reuse.
+- **Batch reuse of weights:** When $B \ll D, F$, fetching the weight matrix ($bDF$ bytes) dominates memory traffic, and every weight fetched from DRAM is reused across all $B$ rows of the batch.
+:::
+
+::: {.slide title="One GPT Layer Spans a Factor of 1,000 in Intensity"}
+[Training vs. Decoding]{.kicker}
+
+Consider a linear projection of width $D = F = 2048$ inside a 1B-parameter GPT in `bfloat16` ($b = 2\text{ B}$):
+
+| Workload Regime | Token Rows $B$ | FLOPs ($2BD^2$) | Minimum DRAM Traffic | Arithmetic Intensity $I$ |
+| :--- | :---: | :---: | :---: | :---: |
+| **Elementwise ($x + 1$)** | Any $n$ | $n$ | $4n\text{ B}$ | **$0.25\text{ FLOP/byte}$** |
+| **Single-token decode** | $B = 1$ | $8.4 \times 10^6$ | $8.4\text{ MB}$ (weights) | **$\approx 1.0\text{ FLOP/byte}$** |
+| **Batched decoding** | $B = 64$ | $5.4 \times 10^8$ | $8.9\text{ MB}$ | **$\approx 60\text{ FLOP/byte}$** |
+| **Training step ($8 \times 1024$)** | $B = 8192$ | $6.9 \times 10^{10}$ | $75.5\text{ MB}$ | **$\approx 910\text{ FLOP/byte}$** |
+
+::: {.d2l-note}
+During autoregressive decoding ($B = 1$), the GPU streams $8.4\text{ MB}$ of weights just to use each weight once ($I \approx 1$); during training ($B = 8192$), the layer width $D = 2048$ becomes the smallest dimension ($I \approx 910$).
+:::
+:::
+
+::: {.slide title="The Roofline Bound and the Ridge Point"}
+[The Roofline Model]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| **The Performance Model** | **roofline, host time, timing, profiling** |
-| Hardware | where peak arithmetic and bandwidth come from |
-| Computation Graphs and Compilation | fusion and kernel replay |
-| Memory and Precision | what fits: bytes per parameter and per token |
-| Multi-GPU from First Principles | data parallelism by hand, its cost model |
-| Data Parallelism in Practice | one process per GPU, overlap |
-| Sharding the Training State | training state divided among GPUs |
-| Case Study: Optimizing a Transformer | the whole method on one GPT |
+- An operation with arithmetic intensity $I$ runs no faster than memory delivers operands ($I\beta$) and no faster than the compute units execute arithmetic ($P$):
+  $$\textrm{Throughput} \;\leq\; \min(P,\; I \beta)$$
+- **Below the ridge ($I < I^*$):** The kernel is **bandwidth-bound**; arithmetic units wait for DRAM, so fusing extra math onto loaded registers is nearly free.
+- **Above the ridge ($I > I^*$):** The kernel is **compute-bound**; arithmetic units are saturated, and only faster math formats or fewer FLOPs help.
 :::
 
-::: {.col .narrow}
-- **Uses:** matrix products, bf16 and tf32, the GPU's asynchronous queue.
-- **Skips:** writing GPU kernels; machines with more than one node.
+::: {.col .fig}
+![](../img/mdl-perf-roofline.svg){width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Intensity Is FLOPs per Byte Moved"}
-$$I = \frac{\textrm{FLOPs performed}}{\textrm{bytes moved}}$$
+::: {.slide title="Ridge Point on the RTX 4090: 164 FLOP/Byte in bf16"}
+[Hardware Thresholds]{.kicker}
 
-Product $\mathbf{X}\mathbf{W}$, $\mathbf{X}$: $B \times D$, $\mathbf{W}$:
-$D \times F$, $b$ bytes per number:
+The **ridge point** $I^* = P/\beta$ is the minimum arithmetic intensity required to reach peak compute throughput:
 
-$$I = \frac{2BDF}{b\,(BD + DF + BF)} \;\approx\; \frac{2B}{b}
-\quad \textrm{for } B \ll D, F$$
+$$I^*_{\textrm{bf16}} \;=\; \frac{165.2\textrm{ TFLOP/s}}{1.008\textrm{ TB/s}} \;\approx\; 164\textrm{ FLOP/byte}, \qquad I^*_{\textrm{tf32}} \;=\; \frac{82.6\textrm{ TFLOP/s}}{1.008\textrm{ TB/s}} \;\approx\; 82\textrm{ FLOP/byte}$$
 
-Elementwise $y_i = x_i + 1$: one FLOP per $2b$ bytes, $I = 0.25$ in bf16.
-
-::: {.d2l-note}
-Each weight fetched from memory is used once per row of the batch.
-:::
+- **Data-center accelerators have even higher ridge points:** On an H100 ($P = 989\text{ TFLOP/s}$, $\beta = 3.35\text{ TB/s}$), $I^* \approx 295\text{ FLOP/byte}$ because Tensor Core FLOP/s has scaled faster than HBM bandwidth.
+- **Square matrix multiplication ($B = D = F = n$ in `bf16`):** Since $I = \frac{2n^3}{2(3n^2)} = \frac{n}{3}$, the roofline model predicts that square products become compute-bound once $n \gtrsim 3 I^* \approx 500$.
+- **Cache caveat:** Here $\beta$ is off-chip DRAM bandwidth; operands small enough to stay inside the $72\text{ MB}$ on-die L2 cache can exceed the DRAM bandwidth roof.
 :::
 
-::: {.slide title="One GPT Layer Spans a Factor of a Thousand in Intensity"}
-Linear layer of width $D = F = 2048$, bf16 ($b = 2$):
+::: {.slide title="Asynchronous Dispatch and the GPU Timing Trap"}
+[Accurate Benchmarking]{.kicker}
 
-| use | rows $B$ | intensity |
-|---|---|---|
-| training, 8 sequences of 1,024 tokens | 8,192 | $\approx 910$ FLOP/byte |
-| generating text, one token | 1 | $\approx 1$ FLOP/byte |
+![](../img/mdl-perf-async-timeline.svg){width=80%}
 
-- Training: the width, not the batch, is the smallest dimension.
-- Generation: every weight is read to be used once.
+- **Asynchronous execution:** Python enqueues kernel descriptors into the GPU driver queue and immediately advances to the next Python statement while the GPU works behind it.
+- **Why naive timers lie:** Starting and stopping `time.perf_counter()` around an unsynchronized kernel call measures only the CPU enqueue time $h$ ($\sim 10\,\mu\text{s}$), not the GPU execution time $t_{\textrm{dev}}$.
 :::
 
-::: {.slide title="The Roofline Caps Throughput at min(P, Iβ)"}
-![](../img/mdl-perf-roofline.svg){width=72%}
+::: {.slide title="Hidden Host-Device Barriers Serialize Execution"}
+[Synchronization Hazards]{.kicker}
 
-$P$: peak FLOP/s; $\beta$: memory bandwidth; ridge $I^* = P/\beta$.
-Below it: **bandwidth-bound**, extra arithmetic costs no time. Above it:
-**compute-bound**, fewer bytes do not help.
-:::
+When Python requests a tensor value living on the GPU, the host blocks until all queued kernels finish, adding a device-to-host transfer latency $\sigma$ and destroying host–device overlap:
 
-::: {.slide title="The RTX 4090 Needs 164 FLOPs per Byte"}
-$$I^* = \frac{P}{\beta} = \frac{165.2 \textrm{ TFLOP/s}}{1.008 \textrm{ TB/s}}
-\approx 164 \textrm{ FLOP/byte}$$
-
-- $P$ depends on the format: tf32 products run at 82.6 TFLOP/s, ridge 82.
-- Square bf16 product, $B = D = F = n$: $I = n/3$, compute-bound from
-  $n \approx 500$, on paper.
-- $\beta$ is main memory: the model covers operands larger than the 72 MB
-  on-chip cache.
-:::
-
-::: {.slide title="Check: Bound the Time of Each Operation"}
-[Check]{.kicker}
-
-RTX 4090, bf16, ridge 164 FLOP/byte. Bound the time of each operation.
-
-1. $x + 1$ on $10^8$ elements.
-2. The width-2048 layer applied to one token.
-3. A product of two $4096 \times 4096$ matrices.
-
-::: {.fragment .fade-up}
-1. $I = 0.25$: moves $4 \times 10^8$ bytes, at least 0.4 ms.
-2. $I \approx 1$: reads 8.4 MB of weights, at least 8 µs.
-3. $I \approx 1365$: $1.4 \times 10^{11}$ FLOPs at 165 TFLOP/s, at least
-   0.83 ms.
-:::
-:::
-
-::: {.slide title="A Clock Without a Barrier Measures the Enqueue"}
-![](../img/mdl-perf-async-timeline.svg){width=82%}
-
-- Python queues kernels and moves on; the GPU runs them behind it.
-- Correct timing: warm up, wait for the device before starting and before
-  stopping, average many calls.
-:::
-
-::: {.slide title="Reading a Value Every Step Makes Host and Device Take Turns"}
-$h$: host time to issue a call (a step of several calls: their sum);
-$t_\textrm{dev}$: device time of a step; $\sigma$: round trip of a read.
-
-$$t_\textrm{once} \approx \max(h, t_\textrm{dev}), \qquad
-t_\textrm{every} \lesssim h + t_\textrm{dev} + \sigma$$
-
-1,000 steps of a $1024 \times 1024$ product, total read every step or once:
+$$t_{\textrm{once}} \;\approx\; \max(h,\, t_{\textrm{dev}}), \qquad t_{\textrm{every}} \;\lesssim\; h + t_{\textrm{dev}} + \sigma$$
 
 @!performance-model-measuring-without-lying-2
 
-::: {.d2l-note}
-Hidden reads: `float(x)`, `print(x)`, `if loss < 0.1:`, `x[x > 0]`.
+::: {.d2l-note .warn}
+**Hidden barriers in training loops:** `float(loss)`, `loss.item()`, `print(x)`, host branches `if loss < 0.1:`, and data-dependent shapes (`x[x > 0]`). Always accumulate metrics on the GPU and synchronize only at logging intervals.
 :::
 :::
 
-::: {.slide title="Benchmark Packages the Timing Rules"}
+::: {.slide title="Benchmarking Properly with Warm-Up and Barriers"}
+[Benchmarking Discipline]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- `d2l.Benchmark` runs **warm-up iterations** first to absorb JIT compilation, cuBLAS handle creation, and kernel loading.
+- It then places explicit **device barriers** before starting and before stopping the clock across `repeats` calls.
+- **Verification ($4096 \times 4096$ `bf16` matmul):** Intensity $I = 4096/3 \approx 1365 \gg 164$, so the roofline predicts $2 \cdot 4096^3 / P \approx 0.83\text{ ms}$, matching measurement within $\sim 10\%$.
+:::
+
+::: {.col .fig}
 ```{.python #performance-model-benchmark-rules}
 for _ in range(warmup):       # load kernels, compile
     f()
@@ -968,160 +936,141 @@ seconds_per_call = (time.perf_counter() - t0) / repeats
 ```
 
 @!performance-model-measuring-without-lying-4
-
-Predicted: $2 \cdot 4096^3 / P$ = 0.83 ms. Measured: within about a tenth.
+:::
+:::
 :::
 
-::: {.slide title="One Matrix Reaches Both Roofs"}
-$16{,}384 \times 16{,}384$ bf16 weight (512 MiB) times $B$ rows. Predicted:
-0.53 ms for every $B$ below the ridge ($B \approx 164$), then $\propto B$.
+::: {.slide title="Crossing the Ridge: One Matrix Reaches Both Roofs"}
+[Bandwidth vs. Compute Roof]{.kicker}
+
+Multiplying $B$ activation rows by a $16384 \times 16384$ `bfloat16` weight matrix ($512\text{ MiB}$) gives intensity $I \approx B$, crossing the ridge $I^* = 164$ between $B = 128$ and $B = 256$:
 
 @!hardware-batched-decoding
 
 ::: {.d2l-note}
-Up to $B = 128$ the time hardly moves. A thousand times the work costs
-five to six times the time.
+From $B = 1$ to $B = 128$, execution time stays flat near $0.6\text{ ms}$ (the time to stream $512\text{ MiB}$ at $\sim 0.9\text{ TB/s}$) despite $128\times$ more arithmetic; above $B = 256$, time grows linearly with $B$ along the compute roof.
 :::
 :::
 
-::: {.slide title="Check: Which Elementwise Kernel Is Slowest?"}
-[Check]{.kicker}
+::: {.slide title="Elementwise Kernels Run at the Bandwidth Roof"}
+[Bandwidth-Bound Regime]{.kicker}
 
-$8192 \times 8192$ fp32 (256 MiB): `x + 1`, `x * 1.5`, `sin(x)`,
-`sigmoid(x)`. Which takes longest, and how long?
+On an $8192 \times 8192$ `float32` matrix ($256\text{ MiB}$), unary operations (`x + 1`, `x * 1.5`, `sin(x)`, `sigmoid(x)`) each read $256\text{ MiB}$ and write $256\text{ MiB}$ ($512\text{ MiB}$ total, or $0.53\text{ ms}$ at $1.008\text{ TB/s}$):
 
-::: {.fragment .fade-up}
 @!performance-model-three-regimes-1
 
-None: each moves 512 MiB, at least 0.53 ms at $\beta$. Measured: about
-0.9 TB/s, whatever the kernel computes.
-:::
+- **Arithmetic is free under the bandwidth roof:** Because $I \le 1 \ll 82\text{ FLOP/byte}$, transcendental operations (`sin`, `sigmoid`) take the exact same $\sim 0.6\text{ ms}$ ($\sim 0.9\text{ TB/s}$) as simple addition.
 :::
 
-::: {.slide title="An Unfused Chain Moves Nine Times the Bytes"}
+::: {.slide title="Eager Elementwise Chains Multiply Memory Traffic"}
+[Unfused Chains]{.kicker}
+
+In eager execution, each operation in the 8-op GELU approximation `gelu_ish` launches a separate kernel that reads its inputs from DRAM and writes its output back to DRAM:
+
 ```{.python #performance-model-gelu-chain}
-0.5 * x * (1 + tanh(0.8 * (x + 0.04 * x**3)))   # 8 operations
+0.5 * x * (1 + tanh(0.8 * (x + 0.04 * x**3)))   # 6 unary + 2 binary = 8 ops
 ```
-
-Predicted: 8 kernels read and write 18 tensors of 256 MiB; one addition
-moves 2.
 
 @!performance-model-three-regimes-2
 
 ::: {.d2l-note}
-One fused kernel would move 2 tensors instead of 18.
+Six unary ops move $6 \times 2 = 12$ tensors and two binary ops move $2 \times 3 = 6$ tensors ($18$ array transfers vs. $2$ for `x + 1`), making the eager chain **$8\text{--}9\times$ slower** until a compiler fuses it into one kernel (§13.3).
 :::
 :::
 
-::: {.slide title="Small Products Run Far Below the Roofline"}
+::: {.slide title="Small Matrix Products Fall Far Below the Roofline"}
+[Size Sweep]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Sweeping square `bfloat16` products from $n = 256$ to $8192$ tests whether compute saturation begins at the paper threshold $n \approx 500$ ($I = n/3 = 164$).
+- At $n = 4096$ and $8192$, measured throughput approaches the $165\text{ TFLOP/s}$ roof.
+- For $n \le 1024$, however, throughput falls far below the bandwidth line and climbs with a **log–log slope of $3$**—the signature of a constant time per call while FLOPs scale as $2n^3$.
+:::
+
+::: {.col .fig}
 @!performance-model-matrix-products-across-sizes-1
-
-Up to $n = 1024$ the time per call grows far less than the work, and the
-points climb with slope three, the mark of a fixed time per call. By
-$n = 4096$ the products reach the roof.
-
-::: {.d2l-note}
-On paper compute-bound from $n \approx 500$; in fact from 1,000 to 2,000,
-depending on the host time per call.
+:::
 :::
 :::
 
-::: {.slide title="The Device Works a Few Microseconds of Each Small Call"}
-$256 \times 256$ bf16: wall-clock time per call against the device's busy
-time, from the profiler.
+::: {.slide title="Host Dispatch Latency Dominates Small Operations"}
+[Overhead-Bound Regime]{.kicker}
+
+Comparing wall-clock time per call (`d2l.Benchmark`) against actual GPU kernel execution time (`d2l.kernel_times`) on a $256 \times 256$ `bfloat16` tensor exposes where the constant time goes:
 
 @!performance-model-matrix-products-across-sizes-3
 
-The rest of each call is the host time $h$: Python, the framework, and the
-driver that launches the kernel.
-
 ::: {.d2l-note}
-For a 256 × 256 product, the most expensive part of the computation is the
-line of Python that asks for it.
+The GPU finishes either operation in $\sim 2\,\mu\text{s}$; the remaining $10\text{--}100\,\mu\text{s}$ is **host dispatch latency $h$** (Python interpreter, framework dispatcher, and CUDA driver launch). For a $256 \times 256$ product, the most expensive part is the line of Python that asks for it.
 :::
 :::
 
-::: {.slide title="Each Call Costs at Least the Largest of Three Floors"}
-$$t \;\gtrsim\; \max\left(h,\ \frac{\textrm{FLOPs}}{P},\
-\frac{\textrm{bytes}}{\beta}\right)$$
+::: {.slide title="The Three-Floor Time Bound and Crossover Knee"}
+[Unified Time Model]{.kicker}
 
-- The largest term names the regime: **overhead-**, compute-, or
-  bandwidth-bound.
-- $h$ is measured: from about 10 µs to 0.1 ms per call on our machine,
-  depending on the software stack.
-- Square product: knee at $n \approx (hP/2)^{1/3}$; near 1,000 for
-  $h$ = 13 µs, near 2,000 for $h$ = 0.1 ms.
-- $h$ = 10 µs: under $1.6 \times 10^9$ FLOPs and 10 MB, an operation costs
-  one launch. The width-2048 layer on one token moves 8.4 MB in about
-  8 µs: limited by the launch before the bandwidth.
+Combining host dispatch latency $h$, arithmetic throughput $P$, and memory bandwidth $\beta$ yields the fundamental lower bound for a single dispatched operation:
+
+$$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes}}{\beta}\right)$$
+
+- **The dominant floor names the regime:** **Overhead-bound** ($h$), **compute-bound** ($\textrm{FLOPs}/P$), or **bandwidth-bound** ($\textrm{bytes}/\beta$).
+- **Overhead crossover knee for square matmuls:** Compute time $2n^3/P$ overtakes host dispatch $h$ at $n^* \approx (hP/2)^{1/3}$ ($n^* \approx 1{,}000$ for PyTorch at $h \approx 13\,\mu\text{s}$; $n^* \approx 1{,}800$ for single-op JAX dispatch at $h \approx 70\,\mu\text{s}$).
+- **Why faster GPUs are harder to keep fed:** Because $n^* \propto P^{1/3}$, increasing $P$ by $14\times$ (from an RTX 4090 to a B200) requires matrix dimensions $14^{1/3} \approx 2.4\times$ wider to avoid becoming overhead-bound at the same host latency $h$.
 :::
 
-::: {.slide title="Check: Faster GPUs Need Larger Operations"}
-[Check]{.kicker}
+::: {.slide title="Diagnosing and Fixing the Three Performance Regimes"}
+[Diagnosis & Remedies]{.kicker}
 
-Where is the knee $n \approx (hP/2)^{1/3}$ of a square bf16 product?
+![](../img/mdl-perf-regimes.svg){width=68%}
 
-1. RTX 4090 ($P$ = 165 TFLOP/s) with a host time of $h$ = 5 µs.
-2. B200 ($P$ = 2,250 TFLOP/s) with the same $h$ = 5 µs.
-
-::: {.fragment .fade-up}
-1. $(5 \times 10^{-6} \cdot 1.65 \times 10^{14} / 2)^{1/3} \approx 740$.
-2. $(5 \times 10^{-6} \cdot 2.25 \times 10^{15} / 2)^{1/3} \approx 1800$.
-
-With the same host, a 14 times faster GPU needs products
-$14^{1/3} \approx 2.4$ times wider to stay busy.
-:::
+| Regime | Profiler & Timing Symptom | Standard Systems Remedies |
+| :--- | :--- | :--- |
+| **Compute-bound** | GPU busy $\approx 100\%$; $I > I^*$; time $\propto \textrm{FLOPs}$ | Narrower precision (`bf16`/`fp8`), fewer FLOPs, more GPUs |
+| **Bandwidth-bound** | GPU busy $\approx 100\%$; $I < I^*$; time $\propto \textrm{bytes}$ | Operator fusion, larger batch $B$, narrower types, on-chip tiling |
+| **Overhead-bound** | GPU idle between kernels; time $\approx h$ independent of size | Compile whole step (`jax.jit`), CUDA graph replay, larger batches |
 :::
 
-::: {.slide title="Each Regime Has Its Standard Fixes"}
-![](../img/mdl-perf-regimes.svg){width=70%}
+::: {.slide title="Predicting and Profiling a Complete MLP Training Step"}
+[Step Accounting]{.kicker}
 
-| regime | symptom | fix |
-|---|---|---|
-| compute | busy, $I$ above the ridge | less arithmetic, a format with faster tensor cores, more GPUs |
-| bandwidth | busy, $I$ below the ridge | larger batch, narrower format, fusion |
-| overhead | idle, time independent of size | larger batch, replay the whole step without Python |
-:::
+Consider one SGD step of a 3-layer MLP ($4096 \to 4096 \to 4096 \to 10$) on batch $B = 1024$ in `float32` using `tf32` Tensor Cores ($P = 82.6\text{ TFLOP/s}$, $I^* = 82\text{ FLOP/byte}$):
 
-::: {.slide title="Check: Predict the Time of the MLP Step"}
-[Check]{.kicker}
+- **Paper prediction ($2.5\text{ ms}$):** Five large $1024 \times 4096 \times 4096$ matmuls (2 forward, 2 weight-grad, 1 input-grad) at $I \approx 340 > 82$ take $5 \times \frac{2 \cdot 1024 \cdot 4096^2}{82.6 \times 10^{12}} = 5 \times 0.42 = 2.1\text{ ms}$, plus $0.40\text{ ms}$ to stream $12\text{ B} \times 33.6\text{M} = 0.40\text{ GB}$ in the SGD update.
 
-MLP $4096 \to 4096 \to 4096 \to 10$, minibatch 1,024, fp32 with tf32
-products ($P$ = 82.6 TFLOP/s), one SGD step. Predict its time.
-
-::: {.fragment .fade-up}
-- Five large products (2 forward, 3 backward), $3.4 \times 10^{10}$ FLOPs
-  each: $5 \times 0.42$ ms.
-- SGD: 12 bytes × 34 M weights = 0.4 GB, 0.4 ms.
-- Step: about **2.5 ms**.
-:::
-:::
-
-::: {.slide title="The Profile Confirms the Prediction within a Tenth"}
 @!performance-model-profiling-a-training-step-2
 
-- Device busy almost all the time: not overhead-bound.
-- Products: three quarters or more of the device time, about 0.42 ms per
-  product, more where the update is fused in.
-- The update: its own 0.4 ms kernel, or fused into the products.
+::: {.d2l-note}
+The profile matches our $2.5\text{ ms}$ paper prediction within $10\%$: the GPU is busy nearly $100\%$ of the step, and `gemm` kernels account for $> 75\%$ of device time (with XLA fusing the SGD update directly into the backward matmuls in JAX).
+:::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Roofline Bounds and Overhead Knees"}
+[Check Your Understanding]{.kicker}
 
-- Method: **count** FLOPs and bytes, **predict** with
-  $\max(h,\ \textrm{FLOPs}/P,\ \textrm{bytes}/\beta)$, **measure** with
-  `Benchmark` and a profiler, **explain** the difference. A failed
-  prediction points at what we did not count.
-- Roofline: performance $\leq \min(P, I\beta)$; ridge 164 FLOP/byte in
-  bf16, 82 in tf32.
-- One $16{,}384^2$ weight: flat at about 0.6 ms up to $B = 128$, then
-  $\propto B$ at the compute roof.
-- Elementwise kernels run at about 0.9 TB/s; an unfused chain of 8 moves
-  9 times the bytes of one.
-- Small calls cost $h$: a $256 \times 256$ product reaches under 2% of the
-  peak.
-- The MLP step: predicted 2.5 ms, measured within a tenth.
+On an RTX 4090 (`bfloat16` peak $P = 165\text{ TFLOP/s}$, bandwidth $\beta = 1.0\text{ TB/s}$, ridge $I^* = 164\text{ FLOP/byte}$, host launch $h = 10\,\mu\text{s}$), predict the binding floor and minimum time for each `bfloat16` operation:
 
-**Next:** where $P$ and $\beta$ come from: the hardware.
+1. Elementwise addition `x + 1` on $10^8$ numbers ($200\text{ MB}$ read + $200\text{ MB}$ write).
+2. Applying a $2048 \times 2048$ linear layer ($8.4\text{ MB}$ of weights) to a single token ($B = 1$).
+3. Multiplying two $4096 \times 4096$ matrices ($1.37 \times 10^{11}\text{ FLOPs}$, $100\text{ MB}$ total traffic).
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Bandwidth-bound ($I = 0.25 < 164$):** Moves $4 \times 10^8\text{ B}$ at $1.0\text{ TB/s}$ $\to$ **$t \ge 0.40\text{ ms}$** ($\gg h = 10\,\mu\text{s}$).
+2. **Overhead-bound ($h > \textrm{bytes}/\beta > \textrm{FLOPs}/P$):** Streaming $8.4\text{ MB}$ takes $8.4\,\mu\text{s}$ and compute takes $0.05\,\mu\text{s}$, so host dispatch $h$ binds $\to$ **$t \ge 10\,\mu\text{s}$**.
+3. **Compute-bound ($I = 1365 > 164$):** $1.37 \times 10^{11}\text{ FLOPs}$ at $165\text{ TFLOP/s}$ $\to$ **$t \ge 0.83\text{ ms}$** (vs. $0.10\text{ ms}$ memory floor).
+:::
+:::
+
+::: {.slide title="Summary: The Roofline and Three-Regime Model"}
+[Key Takeaways]{.kicker}
+
+| Concept / Quantity | Formula / Definition | Value on RTX 4090 | Systems Role in Deep Learning |
+| :--- | :--- | :--- | :--- |
+| **Arithmetic Intensity ($I$)** | $\textrm{FLOPs} / \textrm{bytes moved}$ | $0.25$ (add) to $> 10^3$ (GEMM) | Separates memory-starved ops from math-saturated ops |
+| **Matmul Intensity ($\mathbf{X}\mathbf{W}$)** | $\approx 2B/b$ for $B \ll D, F$ | $\sim 1$ ($B=1$) to $910$ ($B=8192$) | Explains why batching speeds up linear layers |
+| **Roofline Bound** | $\textrm{Throughput} \le \min(P, I\beta)$ | $P = 165\text{ TF/s}$, $\beta = 1\text{ TB/s}$ | Upper bound on achievable FLOP/s at intensity $I$ |
+| **Ridge Point ($I^*$)** | $P / \beta$ | $164\text{ FLOP/B}$ (`bf16`), $82$ (`tf32`) | Minimum intensity required to saturate Tensor Cores |
+| **Three-Floor Step Bound** | $t \gtrsim \max(h, \textrm{FLOPs}/P, \textrm{bytes}/\beta)$ | $h \approx 13\text{--}100\,\mu\text{s}$ | Diagnoses overhead-, compute-, and bandwidth-bound ops |
+| **Synchronization Rule** | Warm up + barrier outside loop | `d2l.Benchmark`, `kernel_times` | Prevents host–device serialization and enqueue-only timing |
 :::

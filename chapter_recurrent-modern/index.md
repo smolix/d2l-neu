@@ -29,104 +29,103 @@ further-reading
 ::: {.cover}
 [Dive into Deep Learning · §12]{.kicker}
 
-A memory of fixed size<br>
-**trained in parallel, taught what to forget, made to store and correct pairs, and helped by a little attention**
+State Space Models and Modern Recurrent Architectures<br>**gated recurrences · parallel associative scans · structured & selective SSMs · matrix memories · delta rule · hybrids**
 :::
 :::
 
-::: {.slide title="A Transformer's Cache Grows With the Context; a Recurrent State Does Not"}
-[The problem]{.kicker}
+::: {.slide title="The Long-Context Dilemma: KV Cache vs. Fixed State"}
+[Motivation]{.kicker}
 
-- Attention keeps a key and a value per token. With 8 key–value heads of
-  width 128 in 16-bit numbers: $2 \times 8 \times 128 \times 2$ bytes
-  $= 4$ KB per token and layer, 512 MB at 128K tokens.
-- A recurrent layer of a width-4,096 model, with the sizes of Mamba-2,
-  keeps 8,192 channels of 128 numbers: $8{,}192 \times 128 \times 2$ bytes
-  $= 2$ MB, at any length.
+Answering questions over a long report or codebase exposes a fundamental memory trade-off between attention and recurrence:
 
-**Check:** after how many tokens does the cache outgrow the state?
+::: {.cols}
+::: {.col}
+- **Causal Attention ($O(T)$ KV Cache):** Retains a key and value vector for every past token. With $8$ KV heads of width $128$ in $16$-bit floats, each layer stores $2 \times 8 \times 128 \times 2 = 4\text{ KB}$ per token—reaching **$512\text{ MB}$ per layer** ($16\text{ GB}$ across $32$ layers) at $T = 128\text{K}$ tokens.
+- **Quadratic training work:** Pairwise scores grow as $O(T^2 d)$, dominating projection FLOPs once $T \gg d$.
+:::
 
-::: {.fragment .fade-up}
+::: {.col}
+- **Modern Recurrent Layers ($O(1)$ State):** Compress past context into a fixed-size state. A Mamba-2 layer at width $4{,}096$ ($8{,}192$ channels $\times$ $128$ states in $16$-bit floats) stores **$2\text{ MB}$ total** at any sequence length.
+- **Crossover at 512 tokens:** Beyond $2\text{ MB} / 4\text{ KB} = 512$ tokens, the recurrent state is smaller, and generating token $1{,}000{,}000$ costs the same as token $10$.
+:::
+:::
+
 ::: {.d2l-note}
-$2\text{ MB} / 4\text{ KB} = 512$ tokens. Beyond that, the recurrent layer
-holds less, and the millionth token costs as much as the tenth.
+Can a fixed-size recurrent state train in parallel on GPUs and match Transformer quality—and what can no fixed state ever recall?
 :::
 :::
+
+::: {.slide title="Two Obstacles to Modernizing Recurrent Networks"}
+[Core Challenges]{.kicker}
+
+Classical RNNs fell behind Transformers for two structural reasons that this chapter resolves step by step:
+
+::: {.cols}
+::: {.col}
+- **Obstacle 1 — Sequential Training ($O(T)$ Depth):** Classical RNNs, LSTMs, and GRUs pass $\mathbf{h}_{t-1}$ through nonlinear activations at every step, forcing $T$ sequential updates that leave GPU Tensor Cores idle.
+- **The Parallel Fix (§12.3–12.5):** Make the state transition *affine* in the state so steps compose via parallel associative scans in $O(\log_2 T)$ rounds or FFT convolutions.
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
-
-- explain why a gate keeps a value for hundreds of steps, and why its
-  starting value decides whether training finds that memory;
-- compute a linear recurrence at all $T$ positions in $\log_2 T$ rounds;
-- set a state's decays by timescale, and let each token choose them;
-- store key–value pairs in a matrix state, predict how many it holds, and
-  correct a pair by reading before writing;
-- say what no fixed state can recall, and what a few attention layers
-  cost and repair.
-
-**Idea:** every model is a state, an update and a readout.
+::: {.col}
+- **Obstacle 2 — Fixed-Capacity Forgetting:** A fixed state vector overwrites old signals or superposes values without key-addressable lookup or targeted erasure.
+- **The Memory Fix (§12.4–12.8):** Discretize multi-timescale decay rates, make step sizes input-selective, expand the state into a key–value matrix updated by the delta rule, and interleave sparse attention.
+:::
 :::
 
-::: {.slide title="Gates, the Linear Update and the Matrix Memory Are the Core"}
-[Scope and place]{.kicker}
-
-- **Assumes:** recurrent networks and BPTT; attention, including linear
-  attention.
-- **Core:** gates as a learned decay; the parallel linear update; the
-  matrix memory and its capacity; the delta rule (read before writing);
-  recall of many pairs, with and without attention.
-- **History:** the 2014 encoder–decoder and its one-state bottleneck.
-- **Can wait:** the derivation from continuous time; the chunked
-  algorithms.
-- **Leaves out:** GPU kernels, rankings of current models.
+::: {.d2l-note .rule}
+**Unifying Abstraction:** Every sequence mixer in this chapter is defined by a **state**, a **transition/write update** folding in token $t$, and a **readout** producing the output.
+:::
 :::
 
-::: {.slide title="Make the Update Linear, Then Selective, Then Correct; Then Put Attention Back"}
-[Chapter map]{.kicker}
+::: {.slide title="Architectural Progression Across Chapter 12"}
+[Chapter Roadmap]{.kicker}
 
-| section | question | answer |
-|---|---|---|
-| Gated Recurrent Networks | how to keep a value for long? | gates, a learned decay |
-| Sequence-to-Sequence Learning | how much of an input fits through one state? | less as the input grows |
-| Linear Recurrences and Parallel Scans | how to train on all positions at once? | a linear update and a scan |
-| State Space Models | how fast should a state forget? | decays set by timescale |
-| Selective State Space Models | how to keep only what matters? | step sizes chosen by the token |
-| Matrix-State Recurrences | how to store pairs, and how many? | outer products; capacity set by size |
-| The Delta Rule | how to overwrite a pair? | read before writing |
-| Hybrid Architectures | what can no fixed state do? | recall of many pairs; a few attention layers |
-| Further Reading | what does the chapter leave out? | practice, other memories, theory, other domains |
+Each section upgrades one mathematical component of the recurrent state machine:
+
+| Section | Core Innovation | State Transition & Write Rule | Training Algorithm |
+| :--- | :--- | :--- | :--- |
+| **§12.1 Gated RNNs** | Learned elementwise decay gates (LSTM, GRU) | $\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t$ | Sequential ($T$ steps) |
+| **§12.2 Seq2Seq** | Single-vector encoder–decoder bottleneck | $\mathbf{c} = \mathbf{h}_T^{\text{enc}} \to \mathbf{s}_{t'} = g(y_{t'-1}, \mathbf{c}, \mathbf{s}_{t'-1})$ | Sequential ($T + T'$ steps) |
+| **§12.3 Linear Recurrence** | Input-only gates (`MinGRU`) & associative scan | $\mathbf{h}_t = \mathbf{a}(\mathbf{x}_t) \odot \mathbf{h}_{t-1} + \mathbf{b}(\mathbf{x}_t)$ | Parallel scan ($\lceil\log_2 T\rceil$ rounds) |
+| **§12.4 State Space Models** | Discretized ODE rates $\lambda_n$ & step $\Delta$ (`S4D`) | $h_{t,n} = e^{\Delta \lambda_n} h_{t-1,n} + \bar{b}_n x_t$ | FFT convolution or scan |
+| **§12.5 Selective SSMs** | Token-dependent $\boldsymbol{\Delta}_t, \mathbf{B}_t, \mathbf{C}_t$ (`Mamba`) | $\mathbf{S}_t = \mathbf{E}_t \odot \mathbf{S}_{t-1} + (\boldsymbol{\Delta}_t \odot \mathbf{x}_t)\mathbf{B}_t^\top$ | Parallel scan + reverse-scan VJP |
+| **§12.6 Matrix-State RNNs** | Outer-product KV memory & duality (`GLA`) | $\mathbf{S}_t = a_t \mathbf{S}_{t-1} + \mathbf{v}_t \mathbf{k}_t^\top$ | Chunked matmuls + scan |
+| **§12.7 The Delta Rule** | Read-before-write error step (`GatedDeltaNet`) | $\mathbf{S}_t = a_t \mathbf{S}_{t-1}(\mathbf{I} - \beta_t \mathbf{k}_t \mathbf{k}_t^\top) + \beta_t \mathbf{v}_t \mathbf{k}_t^\top$ | Chunked triangular solve + scan |
+| **§12.8 Hybrid Models** | Sparse full attention among recurrent blocks | Fixed matrix states + sparse KV caches | Chunked recurrence + attention |
 :::
 
-::: {.slide title="Small Synthetic Tasks Test Memory; One Text Benchmark Tests Language"}
-[Running examples]{.kicker}
+::: {.slide title="Synthetic Stress Tests and the Language Benchmark"}
+[Empirical Methodology]{.kicker}
 
-- **Delayed recall:** a symbol, then random fillers, then name the symbol.
-- **Reversal:** read a random string, then write it backwards.
-- **Selective copying:** a few marked symbols among fillers; output them
-  in order.
-- **Associative recall:** key–value pairs, then every key again as a
-  query; answer its value.
-- **Text:** WikiText-103 bytes in windows of 128; four blocks of width 256
-  (wider for the controls matched in parameters), and only the mixing
-  layer changes.
+We pair synthetic tasks that isolate individual memory mechanisms with a unified byte-level language model (`SeqLM`):
 
-Each task needs one mechanism and nothing else; the text checks that a
-layer still learns language.
+| Benchmark Task | Task Structure | What It Measures & Where It Appears |
+| :--- | :--- | :--- |
+| **Delayed Recall** | 1 target symbol followed by $T-1$ fillers ($T \le 1{,}000$) | Gradient propagation & initial decay timescales (**§12.1, §12.4**) |
+| **String Reversal** | Reversing $T \in [8, 64]$ random letters through 1 state vector | Effective bits packed per state coordinate (**§12.2**) |
+| **Selective Copying** | 4 marked symbols at random positions among $1{,}024$ fillers | Content-selective gating vs. time-invariant lag filters (**§12.5**) |
+| **Associative Recall** | $n \in [4, 64]$ key–value pairs queried in random order | Outer-product capacity $O(d_k d_v)$ & Welch overlap floor (**§12.6, §12.8**) |
+| **Key Rebinding** | Overwriting 8 of 16 keys with new values after a short gap | Error-correcting delta rule vs. additive superposition (**§12.7**) |
+| **WikiText-103 Bytes** | 4-block pre-norm `SeqLM` ($d = 256$, $128$-byte windows) | Controlled language modeling loss (nats/byte) & step latency (**§12.1–12.8**) |
 :::
 
-::: {.slide title="Each Section Tests Its Mechanism on One of These"}
-[Running examples]{.kicker}
+::: {.slide title="How to Navigate Chapter 12"}
+[Study Guide]{.kicker}
 
-| section | example |
-|---|---|
-| Gated Recurrent Networks | delayed recall over 20 to 200 steps; gated stacks and attention on text |
-| Sequence-to-Sequence Learning | reversing strings of 8 to 64 letters through one state |
-| Linear Recurrences and Parallel Scans | GRU against a minimal GRU on text; GRU, scan and attention timed up to 16,384 tokens |
-| State Space Models | delayed recall over 1,000 steps |
-| Selective State Space Models | selective copying, with and without selectivity; the selective model on text |
-| Matrix-State Recurrences | random keys in a matrix; associative recall at three head sizes |
-| The Delta Rule | a key written twice; recall after keys are rebound |
-| Hybrid Architectures | associative recall of 4 to 64 pairs; the cache of a 32-layer model |
+::: {.cols}
+::: {.col}
+- **Core architectural line:** Follow **§12.1 (Gates)** $\to$ **§12.3 (Linear Recurrences & Parallel Scans)** $\to$ **§12.5 (Selective SSMs / Mamba)** $\to$ **§12.6–12.7 (Matrix Memories & DeltaNet)** $\to$ **§12.8 (Hybrid Architectures)**.
+- **Historical & information-theoretic foundation (§12.2):** Revisits the 2014 encoder–decoder and translation metrics (`chrF`, `BLEU`) to measure how rapidly a single state vector saturates as input length grows.
 :::
+
+::: {.col}
+- **Mathematical derivations that can wait on first reading:** Continuous-time zero-order-hold discretization in **§12.4** and the block-semiseparable chunked algorithms in **§12.6–12.7**.
+- **Controlled code comparisons:** Every mixer plugs into the identical pre-norm residual `SeqLM` backbone with LeCun initialization so differences reflect the sequence mixer alone.
+:::
+:::
+
+::: {.d2l-note}
+**Up next (§12.1 Gated Recurrent Networks):** How sigmoid gates create a learned elementwise decay path—and why gate bias initialization decides whether training discovers long-range memory.
+:::
+:::
+

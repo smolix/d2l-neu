@@ -422,3 +422,337 @@ datasheets, named reviewers, and numbers that pass the decode-bound check.
        sources of :numref:`subsec_hardware-buyers-current`.
 
 [Discussions](https://d2l.discourse.group/t/36844)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §39.4]{.kicker}
+
+Hardware: Memory Capacity, Bandwidth Bounds, Unified Memory, and TCO<br>**training memory budget · decode bandwidth bound · discrete GDDR7 GPUs · unified LPDDR5X · MoE arithmetic · rent-vs.-buy break-even**
+:::
+:::
+
+::: {.slide title="Three Quantities Decide Every Hardware Purchase"}
+[Motivation]{.kicker}
+
+A hardware datasheet lists dozens of clock speeds, core counts, and marketing metrics, but three physical quantities govern deep learning workloads:
+
+::: {.cols}
+::: {.col}
+- **1. Memory Capacity (GB / GiB):** Decides **what can run at all**. If parameters, gradients, optimizer states, and activations exceed device memory, peak FLOP/s is irrelevant.
+- **2. Memory Bandwidth (GB/s or TB/s):** Decides **how fast a model generates tokens**. Autoregressive decoding reads every active weight and KV-cache entry from memory once per output token.
+:::
+
+::: {.col}
+- **3. Compute Throughput (TFLOP/s):** Decides **training and prompt-prefill speed**. Processing hundreds or thousands of tokens in parallel reuses each weight across the batch, making the workload compute-bound.
+:::
+:::
+
+::: {.d2l-note .rule}
+**Hardware selection method:** Identify which of the three quantities binds your target workload, then buy the machine that maximizes that binding constraint per dollar.
+:::
+:::
+
+::: {.slide title="The Memory Capacity Constraint in Training"}
+[Capacity Budget]{.kicker}
+
+Why does training or full fine-tuning require $4\times\text{--}8\times$ more memory than loading the same model for inference?
+
+::: {.cols .vc}
+::: {.col}
+- **Mixed-precision Adam state ($16\text{ B/param}$):**
+  - BF16 parameters ($2\text{ B}$) + BF16 gradients ($2\text{ B}$).
+  - FP32 master weights ($4\text{ B}$) + two FP32 Adam moments $m, v$ ($8\text{ B}$).
+  - Without a separate master copy ($12\text{ B/param}$), state alone is already $6\times$ the BF16 model size.
+- **Activations and workspace:** Forward activations saved for backpropagation (scaling with batch $\times$ sequence length) plus cuBLAS/cuDNN scratch workspace add several GiB on top.
+:::
+
+::: {.col .fig}
+![](../img/tools-memory-fit.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Estimating Peak Training Memory by Model Scale"}
+[Full Fine-Tune vs. QLoRA]{.kicker}
+
+Our sizing function sums parameter state ($12\text{ B/param}$ without master weights, or $16\text{ B/param}$ with them) plus activation and workspace overhead:
+
+::: {.cols .vc}
+::: {.col}
+- **Full 7B fine-tune ($\approx 86\text{--}112\text{ GiB}$):** Exceeds every consumer desktop GPU ($16\text{--}32\text{ GB}$).
+- **How QLoRA fits 7B–8B on a 16 GB card:**
+  - Freezes the base weights in 4-bit NormalFloat ($\sim 0.52\text{ B/param} \approx 4\text{ GiB}$ for 8B).
+  - Trains low-rank adapters on $\sim 1\%$ of parameters ($\approx 0.08\text{B} \times 12\text{ B} \approx 1\text{ GiB}$), leaving $\sim 11\text{ GiB}$ for activations and logits!
+:::
+
+::: {.col .fig}
+@hardware-memory-estimate
+:::
+:::
+:::
+
+::: {.slide title="The Autoregressive Decode Bandwidth Bound"}
+[Inference Roofline]{.kicker}
+
+During batch-1 text generation, producing each new token requires streaming every active weight byte $B_w$ and the stored key–value cache $B_{\text{kv}}(n)$ across the memory bus:
+
+$$\text{decode tokens/s} \lesssim \frac{\text{memory bandwidth } \beta}{B_w + B_{\text{kv}}(n)}$$
+
+::: {.cols}
+::: {.col}
+- **Worked example (8B dense model at 4 bits):**
+  - Weight bytes: $8 \times 10^9 \times 0.5\text{ B} = 4.0\text{ GB}$.
+  - Short-context KV cache ($\sim 4\text{K}$ tokens in BF16): $\approx 0.5\text{ GB}$.
+  - Total memory traffic per token: $B_{\text{active}} \approx 4.5\text{ GB/token}$.
+:::
+
+::: {.col}
+- **Why compute is idle during batch-1 decode:**
+  - An 8B token step does $2 \times 8 \times 10^9 = 16\text{ GFLOPs}$ while reading $4.5\text{ GB}$—an arithmetic intensity of just **$3.5\text{ FLOPs/byte}$**, roughly $50\times\text{--}100\times$ below a modern GPU's compute ridge point!
+:::
+:::
+:::
+
+::: {.slide title="Ranking Hardware by the Decode Bandwidth Bound"}
+[Bandwidth Ordering]{.kicker}
+
+Applying $\beta / (4.5\text{ GB})$ across consumer discrete cards, unified-memory boxes, and a datacenter H100 predicts generation speed to within a factor of two:
+
+::: {.cols .vc}
+::: {.col}
+- **Bandwidth sets the ceiling:**
+  - An H100 SXM ($3{,}350\text{ GB/s}$) bounds decode at $\le 744\text{ tok/s}$.
+  - An RTX 5090 or PRO 6000 ($1{,}792\text{ GB/s}$) reaches $\le 398\text{ tok/s}$.
+  - A DGX Spark ($273\text{ GB/s}$) and Strix Halo ($256\text{ GB/s}$) both cap near $\le 57\text{--}61\text{ tok/s}$, even though the Spark costs twice as much and has far more compute!
+:::
+
+::: {.col .fig}
+@hardware-decode-bound
+:::
+:::
+:::
+
+::: {.slide title="How Long Contexts Shift the Bottleneck to KV Cache"}
+[Long-Context Arithmetic]{.kicker}
+
+A transformer with $L$ layers and $H_{\text{kv}}$ key–value heads of dimension $d_h$ stored in BF16 ($2\text{ B}$) reads and grows its KV cache at every token:
+
+$$B_{\text{kv}}(n) = 2 \cdot L \cdot H_{\text{kv}} \cdot d_h \cdot 2\text{ B} \cdot n$$
+
+::: {.cols}
+::: {.col}
+- **Concrete numbers for Llama 3.1 8B ($L = 32$, $H_{\text{kv}} = 8$, $d_h = 128$):**
+  - Per-token KV cache: $2 \times 32 \times 8 \times 128 \times 2 = 131{,}072\text{ B}$ ($128\text{ KiB/token}$).
+  - At **$4\text{K}$ tokens:** $B_{\text{kv}} \approx 0.5\text{ GB}$ ($11\%$ of the $4.5\text{ GB}$ traffic).
+  - At **$32\text{K}$ tokens:** $B_{\text{kv}} \approx 4.0\text{ GB}$ (**$50\%$** of traffic—equals the 4-bit weights!).
+  - At **$128\text{K}$ tokens:** $B_{\text{kv}} \approx 16.0\text{ GB}$ (**$80\%$** of traffic—no longer fits on a 16 GB card!).
+:::
+
+::: {.col}
+- **Hardware consequence for long-context buyers:**
+  - Quantizing weights from BF16 ($16\text{ GB}$) to 4-bit ($4\text{ GB}$) speeds up decode by **$3.6\times$ at 4K context** ($16.5 / 4.5$), but only **$1.6\times$ at 128K context** ($32 / 20$) unless the KV cache itself is also quantized or compressed.
+:::
+:::
+:::
+
+::: {.slide title="Two Families of Local Hardware"}
+[The Hardware Landscape]{.kicker}
+
+Plotting machines on **memory capacity** (vertical) versus **memory bandwidth** (horizontal) reveals a sharp architectural split:
+
+::: {.cols .vc}
+::: {.col}
+- **Discrete consumer GPUs (bottom right):** Pair ultra-fast GDDR6X/GDDR7 ($896\text{--}1792\text{ GB/s}$) with modest capacity ($16\text{--}32\text{ GB}$). Fast for training and small/medium models.
+- **Unified-memory systems (top left):** Pair massive LPDDR5X capacity ($64\text{--}512\text{ GB}$) with lower bandwidth ($256\text{--}1200\text{ GB/s}$). Run huge models locally at lower token rates.
+- **Workstation & datacenter cards (upper right):** RTX PRO 6000 ($96\text{ GB}$, $1.79\text{ TB/s}$) and H100 ($80\text{ GB}$, $3.35\text{ TB/s}$) deliver both at five-figure prices.
+:::
+
+::: {.col .fig}
+![](../img/tools-hardware-menu.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Entry Discrete Training GPUs: 5070 Ti vs. Used 3090"}
+[16 GB to 24 GB Desktop Cards]{.kicker}
+
+For a first local training and fine-tuning build, $16\text{ GB}$ of VRAM sets the practical floor (every single-GPU notebook in this book peaks below $13\text{ GiB}$):
+
+| Attribute (Nov 2026 Snapshot) | NVIDIA RTX 5070 Ti (New) | NVIDIA RTX 3090 (Used) |
+| :--- | :--- | :--- |
+| **VRAM Capacity & Bandwidth** | **16 GB GDDR7** at **$896\text{ GB/s}$** | **24 GB GDDR6X** at **$936\text{ GB/s}$** |
+| **Typical Street Price** | $\approx \$1{,}100\text{--}1{,}300$ (MSRP $\$749$) | $\approx \$1{,}250\text{--}1{,}450$ (used market) |
+| **Tensor Core Formats** | BF16, FP16, **FP8, FP4** (Blackwell) | BF16, FP16 (Ampere; **no FP8/FP4**) |
+| **Board Power & Warranty** | **300 W**, full retail warranty | **350 W**, no manufacturer warranty |
+| **Sweet Spot Workload** | All D2L notebooks, 7B–8B QLoRA, FP8/FP4 inference | Workloads requiring the extra $8\text{ GB}$ of VRAM on a budget |
+:::
+
+::: {.slide title="High-End Desktop Training: The RTX 5090 Workstation"}
+[Balanced System Design]{.kicker}
+
+Stepping up to **32 GB GDDR7 at $1.79\text{ TB/s}$** (RTX 5090, street price $\approx \$6{,}000\text{--}8{,}000$ in Nov 2026) supports full fine-tunes up to $\sim 2\text{B}$ parameters and QLoRA up to $\sim 30\text{B}$:
+
+::: {.cols .vc}
+::: {.col}
+- **Thermal & electrical envelope:** The GPU alone dissipates **$575\text{ W}$**; NVIDIA specifies a **$1000\text{ W}$** PSU, high-airflow chassis, and a dedicated wall circuit capacity.
+- **Feeding the GPU ($\approx \$8{,}500\text{--}12{,}500$ total build):** Pair with a 16-core CPU, $64\text{--}128\text{ GB}$ DDR5 RAM, and fast PCIe Gen4/5 NVMe SSDs so data loading and checkpointing never bottleneck compute.
+- **Multi-GPU consumer limits:** No consumer card since the 3090 has NVLink, and desktop motherboards rarely offer multiple full x16 PCIe lanes without Threadripper/EPYC platforms.
+:::
+
+::: {.col .fig}
+![](../img/tools-workstation.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Unified-Memory Architecture: Capacity Over Bandwidth"}
+[Local Large-Model Inference]{.kicker}
+
+How can a mini-PC or Mac Studio run a 70B or 120B language model that does not fit on an RTX 5090?
+
+::: {.cols .vc}
+::: {.col}
+- **Eliminating the PCIe copy bottleneck:** Discrete GPUs copy tensors across PCIe between host DDR5 and a small pool of soldered GDDR7 VRAM.
+- **Shared LPDDR5X memory pool:** Unified-memory systems attach both CPU and GPU cores directly to a single large pool of wide-bus LPDDR5X ($64\text{--}512\text{ GB}$).
+- **The physical trade-off:** You gain $4\times\text{--}16\times$ more memory capacity than a desktop GPU, at $15\%\text{--}65\%$ of an RTX 5090's memory bandwidth.
+:::
+
+::: {.col .fig}
+![](../img/tools-memory-path.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Comparing Unified-Memory Systems (Nov 2026)"}
+[Unified-Memory Menu]{.kicker}
+
+Five representative unified-memory systems illustrate the progression in capacity, bandwidth, and software ecosystem:
+
+| System | Unified Memory | Bandwidth | $\approx\text{ Price (Nov 2026)}$ | Software Stack & Distinguishing Trait |
+| :--- | :--- | :--- | :--- | :--- |
+| **AMD Strix Halo** (Ryzen AI Max+ 395) | 128 GB | $256\text{ GB/s}$ | $\$3{,}400\text{--}4{,}400$ | Linux ROCm / Vulkan; lowest-cost 128 GB box |
+| **NVIDIA DGX Spark** (GB10 Blackwell) | 64 or 128 GB | $273\text{ GB/s}$ | $\$5{,}000\text{ / }\$6{,}950$ | Native CUDA stack; $2.5\times$ faster prompt prefill |
+| **Mac Studio M5 Max** | Up to 128 GB | $614\text{ GB/s}$ | From $\$2{,}500$ | Apple MLX / `llama.cpp`; $2.3\times$ Spark bandwidth |
+| **MacBook Pro M5 Max** | Up to 128 GB | $614\text{ GB/s}$ | From $\$3{,}600$ | Mobile workstation with full 128 GB M5 Max |
+| **Mac Studio M5 Ultra** | 96–512 GB | $1{,}200\text{ GB/s}$ | From $\$5{,}500$ | Highest capacity ($512\text{ GB}$) & bandwidth ($1.2\text{ TB/s}$) |
+:::
+
+::: {.slide title="Why Mixture-of-Experts (MoE) Shines on Unified Memory"}
+[Dense vs. Sparse Decode]{.kicker}
+
+Unified memory's combination of high capacity and moderate bandwidth is tailor-made for **Mixture-of-Experts (MoE)** models:
+
+::: {.cols}
+::: {.col}
+- **Dense 70B at 4 bits ($\sim 40\text{ GB}$ read per token):**
+  - Fits easily in 64–128 GB, but reading $40\text{ GB}$ every token limits decode to **$< 7\text{ tok/s}$** on Strix Halo / DGX Spark ($256\text{--}273\text{ GB/s}$) and **$< 30\text{ tok/s}$** on M5 Ultra ($1{,}200\text{ GB/s}$).
+- **MoE `gpt-oss-120b` (117B total, $\sim 5.1\text{B}$ active per token):**
+  - Requires **$\sim 59\text{ GiB}$ of capacity** to hold all 128 experts per layer in memory (excluding 16–32 GB discrete cards!).
+:::
+
+::: {.col}
+- **MoE decode speed matches a 5B dense model:**
+  - Because each token routes to only 4 of 128 experts per layer, a decode step reads only **$\sim 3\text{--}3.5\text{ GB}$ of active weights**!
+  - Measured `llama.cpp` / MLX decode rates on `gpt-oss-120b`:
+    - **Strix Halo ($256\text{ GB/s}$):** $\approx 50\text{ tok/s}$
+    - **DGX Spark ($273\text{ GB/s}$):** $\approx 60\text{ tok/s}$
+    - **M5 Ultra ($1{,}200\text{ GB/s}$):** $\approx 115\text{--}120\text{ tok/s}$
+:::
+:::
+:::
+
+::: {.slide title="Prefill Compute Separates Equal-Bandwidth Machines"}
+[Prompt Processing vs. Decode]{.kicker}
+
+Why does the DGX Spark cost nearly twice as much as a Strix Halo mini-PC when both have $\sim 260\text{--}273\text{ GB/s}$ bandwidth and similar decode speeds?
+
+::: {.cols}
+::: {.col}
+- **Prefill is compute-bound:** Processing a prompt in chunks reuses expert weights across hundreds of tokens, shifting the bottleneck from LPDDR5X bandwidth to tensor-core TFLOP/s (where DGX Spark's Blackwell GPU prefills at $\sim 2{,}400\text{ tok/s}$ vs. Strix Halo's $\sim 1{,}000\text{ tok/s}$ on `gpt-oss-120b`).
+- **Short chat request (500-token prompt + 500-token reply):**
+  - Prefill takes $0.21\text{ s}$ (Spark) vs. $0.50\text{ s}$ (Strix Halo); decode takes $8.3\text{ s}$ vs. $10.0\text{ s}$—total time differs by only **$1.2\times$** ($8.5\text{ s}$ vs. $10.5\text{ s}$).
+:::
+
+::: {.col}
+- **Coding-agent request (30,000-token repository prompt + 500-token reply):**
+  - Time to first token (TTFT): **$12.5\text{ s}$ on DGX Spark vs. $30.0\text{ s}$ on Strix Halo** ($2.4\times$ faster!).
+  - Total request time: **$20.8\text{ s}$ vs. $40.0\text{ s}$** ($1.9\times$ faster).
+- **Takeaway:** Bandwidth predicts interactive chat generation, whereas prefill compute and CUDA software maturity justify their premium on long-context agent and RAG workloads.
+:::
+:::
+:::
+
+::: {.slide title="Workstation GPUs and the Rent-vs.-Buy Break-Even"}
+[Total Cost of Ownership]{.kicker}
+
+The **RTX PRO 6000 Blackwell** packs **96 GB GDDR7 at $1.79\text{ TB/s}$** (listed at $\$16{,}000$ in Nov 2026; four 300 W Max-Q cards put $384\text{ GB}$ in one chassis for $\$64{,}000$, communicating over PCIe 5.0 at $64\text{ GB/s}$). When does buying beat renting?
+
+::: {.cols .vc}
+::: {.col}
+- **Simple break-even:** Dividing a $\$10{,}500$ RTX 5090 workstation by a $\$2.00/\text{hr}$ marketplace H100 rate gives **$5{,}250$ productive hours** ($\approx 1.8\text{ years}$ at $8\text{ hr/day}$, every day).
+- **Full TCO break-even with power, resale, and relative speed $s$:**
+  $$H = \frac{C_{\text{buy}} - R_{\text{resale}}}{s \cdot r_{\text{cloud}} - p_{\text{kW}} \cdot e_{\text{kWh}}}$$
+  Accounting for the H100's $\sim 2\times\text{--}3\times$ higher throughput $s$ and $0.9\text{ kW} \times \$0.20/\text{kWh}$ electricity pushes break-even to **3–5+ years** of heavy utilization. Buy for privacy, instant access, and hardware tinkering; rent for bursty scale.
+:::
+
+::: {.col .fig}
+@hardware-break-even
+:::
+:::
+:::
+
+::: {.slide title="Verifying Benchmarks and Filtering Out Synthetic Noise"}
+[Evidence Discipline]{.kicker}
+
+Search results for GPU comparisons are flooded with machine-generated pages quoting fabricated token-per-second tables:
+
+::: {.cols}
+::: {.col}
+- **Sanity-check every number with the decode bound:**
+  - If a blog claims a card with $900\text{ GB/s}$ bandwidth decodes a dense 70B 4-bit model ($35\text{ GB}$ of weights) at $45\text{ tok/s}$ ($45 \times 35 = 1{,}575\text{ GB/s} > 900\text{ GB/s}$), the claim violates physics (unless speculative decoding or sparsity is active).
+- **Calibrated empirical model:** Real decode time per token follows an affine roofline:
+  $$\frac{1}{\text{rate}} = t_0 + \frac{\text{bytes read}}{\eta \cdot \beta}$$
+  where $\eta \in [0.6, 0.85]$ is achieved bandwidth efficiency and $t_0$ is per-token kernel dispatch overhead.
+:::
+
+::: {.col}
+- **High-signal primary hardware sources:**
+  - **`llama.cpp` GitHub Discussions:** Standardized `llama-bench` runs on identical GGUF files across CPUs, Apple silicon, CUDA, and ROCm.
+  - **ServeTheHome & Level1Techs:** Independent power, thermal, PCIe topology, and multi-GPU workstation reviews.
+  - **`r/LocalLLaMA` hardware megathreads:** Community street prices, quantization benchmarks, and build logs.
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: Hardware Sizing and Roofline Bounds"}
+[Check Your Understanding]{.kicker}
+
+Work out these three hardware sizing calculations:
+
+1. You want to fine-tune Llama 3.1 8B using LoRA ($1\%$ trainable parameters, $6\text{ GiB}$ activations, $2\text{ GiB}$ workspace) on a **16 GB RTX 5070 Ti**. Does standard LoRA (frozen BF16 base weights) fit, or do you need QLoRA (frozen 4-bit base weights)?
+2. Compare a dense 30B model and a **30B-A3B MoE** model ($30\text{B}$ total parameters, $3\text{B}$ active per token), both quantized to 4 bits ($0.5\text{ B/param}$). Ignoring KV cache, what is the decode bandwidth bound on a Mac Studio M5 Max ($614\text{ GB/s}$)?
+3. Why does the 30B-A3B MoE model fail to run on a 16 GB RTX 5070 Ti even though it only reads $1.5\text{ GB}$ of weights per token?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **Standard BF16 LoRA does not fit:** Frozen BF16 weights alone take $8\text{B} \times 2\text{ B} \approx 14.9\text{ GiB}$, plus $1\text{ GiB}$ adapter state $+ 8\text{ GiB}$ activations/workspace $\approx 23.9\text{ GiB} > 16\text{ GB}$. **QLoRA fits easily:** 4-bit base weights take $\approx 3.9\text{ GiB} + 0.9\text{ GiB}$ adapters $+ 8\text{ GiB} \approx 12.8\text{ GiB} < 16\text{ GB}$.
+2. **Dense 30B** reads $15\text{ GB/tok}$ $\implies$ $614 / 15 \approx \mathbf{41\text{ tok/s}}$. **30B-A3B MoE** reads $1.5\text{ GB/tok}$ $\implies$ $614 / 1.5 \approx \mathbf{409\text{ tok/s}}$ ($10\times$ faster!).
+3. **Capacity vs. bandwidth:** All $30\text{B}$ parameters ($\approx 15\text{ GB}$ plus KV cache and runtime buffers $> 16\text{ GB}$) must stay resident in memory because any expert can be routed on the next token!
+:::
+:::
+
+::: {.slide title="Summary: Workload-Driven Hardware Selection"}
+[Key Takeaways]{.kicker}
+
+| Workload Profile | Binding Physical Constraint | Recommended Hardware Class (Nov 2026) |
+| :--- | :--- | :--- |
+| **D2L notebooks & 7B–8B QLoRA** | $\ge 16\text{ GB}$ VRAM + CUDA software stack | **RTX 5070 Ti (16 GB)** or **Used RTX 3090 (24 GB)** |
+| **Desktop training & 30B QLoRA** | $32\text{ GB}$ VRAM + high GDDR7 bandwidth ($1.79\text{ TB/s}$) | **RTX 5090 Workstation** ($1000\text{ W}$ PSU, 64–128 GB RAM) |
+| **Local 70B–120B MoE inference (chat)** | $64\text{--}128\text{ GB}$ capacity at low purchase price | **AMD Strix Halo (128 GB)** or **Mac Studio M5 Max** |
+| **Local 70B–120B MoE + long-prompt agents** | $128\text{ GB+}$ capacity + fast prefill / higher bandwidth | **NVIDIA DGX Spark (128 GB)** or **Mac Studio M5 Ultra (up to 512 GB)** |
+| **Local 70B LoRA / unquantized 70B** | $96\text{--}384\text{ GB}$ at full $1.79\text{ TB/s}$ bandwidth | **1–4$\times$ RTX PRO 6000 (96 GB)** (price against rented H100 hours first!) |
+| **Multi-GPU tensor-parallel training** | High-speed GPU-to-GPU interconnect ($450+\text{ GB/s}$) | **Rent NVLink cloud nodes** (consumer/workstation cards use $64\text{ GB/s}$ PCIe) |
+:::

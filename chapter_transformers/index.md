@@ -33,97 +33,74 @@ further-reading
 ::: {.cover}
 [Dive into Deep Learning · §11]{.kicker}
 
-One block, many models<br>
-**the block · GPT · KV cache · encoders and decoders · ViT · scaling laws · experts · the modern recipe**
+Transformers: From One Block to Frontier Architectures<br>**residual stream · pre-norm & SwiGLU · GPT · KV cache & roofline · encoders & ViT · scaling laws · Mixture of Experts**
 :::
 :::
 
-::: {.slide title="Twelve Copies of One Block Make GPT-2 Small"}
-[The problem]{.kicker}
+::: {.slide title="Why Attention Alone Is Not Enough"}
+[Motivation]{.kicker}
 
-- One block: attention ($4d^2$ parameters) and a feed-forward network
-  ($8d^2$), each adding to a residual stream. At width $d = 768$ that is
-  $12d^2 \approx 7.1$M.
-- Deeper, it can fail before training starts: after 32 post-norm blocks
-  with Xavier weights, all tokens agree to about one part in $10^4$.
-- Generating, every token reads all the weights and a growing cache: at
-  4,096 tokens a GPT-2-sized model reads 288 MiB of cache besides 471 MiB
-  of weights.
+Multi-head attention mixes information across sequence positions, but on its own it applies only linear projections around a weighted sum of values.
 
-**Check:** twelve blocks hold 85M parameters, but GPT-2 small has 124M.
-Where are the other 39M?
+::: {.cols}
+::: {.col}
+- **Missing per-token nonlinearity:** Without a position-wise feed-forward network (FFN), stacked attention layers cannot compute hierarchical nonlinear features within each token vector.
+- **Depth instability at initialization:** Stacking 32 post-norm blocks with standard Xavier weights collapses all token representations onto a single vector (token spread $\sim 10^{-4}$) before training even begins.
+:::
 
-::: {.fragment .fade-up}
+::: {.col}
+- **The memory-bandwidth wall of generation:** Autoregressive decoding streams all model weights and a growing key–value (KV) cache from GPU HBM for every single generated token.
+- **Unifying architectural insight:** Nearly every modern foundation model across text, code, speech, and vision is built by repeating and rewiring **one configurable Transformer block**.
+:::
+:::
+
 ::: {.d2l-note}
-In the token embedding, $50{,}257 \times 768 \approx 38.6$M, which the
-output layer reuses, and in 1,024 learned positions, 0.8M.
+In GPT-2 Small ($124\text{M}$ parameters, $L = 12, d = 768$), the 12 blocks hold $12 \times 12 d^2 \approx 85\text{M}$ parameters ($4d^2$ in attention, $8d^2$ in the FFN), while the weight-tied token embedding table ($50{,}257 \times 768 \approx 38.6\text{M}$) and $1{,}024$ learned positions ($0.8\text{M}$) hold the remaining $39\text{M}$.
 :::
 :::
+
+::: {.slide title="The Four Architectural Pillars of Chapter 11"}
+[Architectural Roadmap]{.kicker}
+
+We progress from a single residual block to frontier training, serving, and scaling in seven connected sections:
+
+| Pillar | Chapter 11 Sections | Core Engineering & Mathematical Question |
+| :--- | :--- | :--- |
+| **1. Build & Train** | **§11.1** Transformer Block · **§11.2** GPT | Why do pre-norm, `RMSNorm`, `QK-Norm`, $1/\sqrt{2L}$ scaling, and `SwiGLU` stabilize deep language models? |
+| **2. Serve & Compress** | **§11.3** The KV Cache & Cache Reduction | How does KV caching turn $O(T^2)$ decoding into $O(T)$, and how do GQA, MLA, and sinks beat the bandwidth roofline? |
+| **3. Rewire Modalities** | **§11.4** Encoders–Decoders · **§11.5** ViT | When should we use bidirectional MLM, cross-attention, latent bottlenecks, or image patch tokens? |
+| **4. Scale Capacity** | **§11.6** Scaling Laws · **§11.7** MoE | How do we allocate a $C \approx 6ND$ FLOP budget (Chinchilla) or decouple stored capacity from active FLOPs? |
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="Concrete Single-GPU Benchmarks Across Chapter 11"}
+[Running Examples]{.kicker}
 
-- build the block, and say when a deep post-norm stack maps all tokens
-  toward one vector and what pre-norm changes;
-- train a GPT beside a recurrent network of its size, and load GPT-2 into
-  it;
-- implement a KV cache, bound the speed of decoding by its bandwidth, and
-  shrink the cache by sharing key–value heads;
-- count parameters and FLOPs, split a compute budget, and route tokens to
-  experts;
-- wire encoders, encoder–decoders and ViTs, and read a released model as
-  settings of the block.
+Every architectural mechanism in this chapter is tested on reproducible models that train or run on a single GPU in minutes:
 
-**Idea:** most problems of depth and scale are answered by a setting of
-one block. **Running examples:** a 4.8M-parameter byte-level GPT; GPT-2
-small (124M, 12 blocks of width 768).
+| Section | Concrete Benchmark & Empirical Verification |
+| :--- | :--- |
+| **§11.1 Transformer Block** | 32-layer signal propagation & gradient audit comparing post-norm vs. pre-norm with $1/\sqrt{2L}$ scaling |
+| **§11.2 Decoder-Only (GPT)** | 4.8M-parameter byte-level GPT on WikiText-103 vs. matched 4.7M RNN; loading OpenAI's 124M GPT-2 Small |
+| **§11.3 KV Cache & Reduction** | RTX 4090 roofline profiling of prefill vs. batched decode; GQA uptraining, SVD low-rank KV, and attention sinks |
+| **§11.4 Encoders & Cross-Attn** | Masked byte modeling on WikiText-103; exact sequence reversal alignment; Perceiver $O(MN)$ latent bottleneck |
+| **§11.5 Vision Transformer** | 6.5M-parameter ViT ($6 \times 6$ grid of $16 \times 16$ patches) vs. parameter-matched ResNet on $96 \times 96$ Fashion-MNIST |
+| **§11.6–11.7 Scaling & MoE** | 15-model IsoFLOP scaling grid ($N \in [0.3\text{M}, 14\text{M}]$); 8-expert Top-1 MoE GPT vs. dense GPT with loss-free bias control |
 :::
 
-::: {.slide title="The Block and GPT Are the Core; the Cache Comes Next"}
-[Scope and place]{.kicker}
+::: {.slide title="From the 2017 Transformer to the Modern Recipe"}
+[The Modern Recipe]{.kicker}
 
-- **Assumes:** attention with masks and rotary positions; AdamW with
-  warmup.
-- **Core:** the block and GPT.
-- **Next:** the KV cache and how to shrink it, which explain why a long
-  conversation costs more per word.
-- **Can wait:** the vision transformer; encoders until the encoder chapter
-  of the language-model part.
-- **Cost:** one RTX 4090; every notebook under a quarter of an hour.
-- **Leaves out:** data, fine-tuning, serving, quantization, kernels,
-  parallelism.
+Every model in this chapter is an instance of one parameterized constructor whose defaults match frontier open-weights LLMs:
+
+| Component | 2017 Transformer / GPT-2 Baseline | Modern Frontier Recipe (Llama 3, Qwen3, DeepSeek-V3) |
+| :--- | :--- | :--- |
+| **Normalization** | Mean-centered `LayerNorm` with bias | Pre-norm **`RMSNorm`** (no bias) + optional per-head **`QK-Norm`** |
+| **Positional Encoding** | Sinusoidal or learned absolute table $\mathbf{P}$ | **Rotary Position Embeddings (RoPE)** inside every attention layer |
+| **Feed-Forward Network** | Two-matrix ReLU/GELU MLP ($d_{\text{ff}} = 4d$) | Three-matrix gated **`SwiGLU`** ($d_{\text{ff}} \approx \frac{8}{3}d$, matched $8d^2$ budget) |
+| **KV Cache Footprint** | Multi-head attention ($H_{\text{kv}} = H$) | **Grouped-Query Attention (GQA)**, low-rank **MLA**, or sliding windows + sinks |
+| **Capacity vs. FLOPs** | Dense FFN ($N_{\text{active}} = N_{\text{total}}$) | **Sparse Mixture of Experts (MoE)** with fine-grained + shared experts |
+
+::: {.d2l-note}
+**Up next (§11.1 The Transformer Block):** How pre-norm placement, `RMSNorm`, `QK-Norm`, and `SwiGLU` prevent token collapse and keep gradients well-behaved across depth.
 :::
-
-::: {.slide title="Build a GPT, Make It Generate, Then Rewire, Scale and Read It"}
-[Chapter map]{.kicker}
-
-| | section | question |
-|--------|------------------------------|------------------------------------------|
-| **build** | The Transformer Block | what does a block need besides attention? |
-| | A GPT from Scratch | how do blocks become a trained language model? |
-| **generate** | The KV Cache | how do we generate without recomputing? |
-| | Shrinking the KV Cache | which factor of the cache can shrink? |
-| **rewire** | Encoders, Decoders, and Cross-Attention | which wiring suits which task? |
-| | Vision Transformer | can the same blocks classify images? |
-| **scale** | Scaling Laws | what does a run cost, and how is a budget split? |
-| | Mixture of Experts | how do we store many FFNs and run few? |
-| **read** | The Modern Recipe | which settings do released models choose? |
-| | Further Reading | what does the chapter leave out? |
-:::
-
-::: {.slide title="Every Section Runs on Models That Fit One GPU"}
-[Running examples]{.kicker}
-
-| section | example |
-|------------------------------|--------------------------------------------------|
-| The Transformer Block | 32 random blocks: post-LN and pre-LN with Xavier weights, post-LN at GPT-2's weight scale; one vector through LayerNorm and RMSNorm |
-| A GPT from Scratch | a 4.8M-parameter GPT on WikiText-103 bytes; a recurrent network of the same size on the same bytes; GPT-2 small |
-| The KV Cache | an untrained GPT-2-sized model: cached decoding, prefill, batched decode |
-| Shrinking the KV Cache | the byte GPT with 8 and with 2 key–value heads; GPT-2 small: low-rank keys, sinks |
-| Encoders, Decoders, and Cross-Attention | masked bytes; sequence reversal; learned queries |
-| Vision Transformer | Fashion-MNIST at $96 \times 96$, 36 patches |
-| Scaling Laws | fifteen GPTs: five sizes, three data budgets |
-| Mixture of Experts | an 8-expert GPT against a dense one |
-| The Modern Recipe | GPT-2, Llama 3 8B and Qwen3-32B as constructor calls at our model's size |
 :::

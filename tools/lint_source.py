@@ -28,6 +28,9 @@ Checks performed (per file):
   - A wrapped list-item line that starts `<n>. ` or `<n>) ` (warn): pandoc
     starts a new (or nested) list item there. `1.` and the next sibling
     number are exempt.
+  - A bullet list, a list starting at `1.`, or an ATX heading directly
+    after a paragraph line (error): pandoc folds it into the paragraph,
+    so the markers or hashes print as text.
   - Cell-ID derivation drift (warn): the existing ID no longer matches
     the slug derivation from its surrounding section.
   - The installation page quotes each framework's standard preamble
@@ -230,6 +233,9 @@ def lint_file(path: Path, corpus_labels=None, check_preamble=False):
 
     # ── A wrapped list-item line that pandoc reads as a new list item ──
     issues += _check_numbered_line_starts(path, lines)
+
+    # ── A list or heading with no blank line after a paragraph ──
+    issues += _check_block_starts(path, lines)
 
     # ── The teach-once page quotes the standard preamble verbatim ──
     issues += _check_teach_preamble(path, text)
@@ -624,6 +630,93 @@ def _check_numbered_line_starts(path, lines):
         elif not line[0].isspace() and (not prev_text or stripped.startswith('#')):
             items = {}   # an unindented block after a blank line ends the list
         prev_text = True
+    return issues
+
+
+_BLOCK_START_RE = re.compile(r'^(\s*)(?:([-*+])|(1)[.)])\s+\S')
+_HEADING_START_RE = re.compile(r'^#{1,6}\s')
+_TABLE_ROW_RE = re.compile(r'^\s*\|')
+
+
+def _check_block_starts(path, lines):
+    """Error on a list or heading that pandoc folds into the paragraph above.
+
+    The book's reader (`from: markdown-example_lists`) needs a blank line
+    between a paragraph and a following list or ATX heading. Without one,
+    "two patterns:" / "* **A** ..." / "* **B** ..." renders as the single
+    paragraph "two patterns: * A ... * B ...", and "text." / "## Title"
+    prints the hashes and the section label. A display equation (`$$`), a
+    figure and a `:label:` line all belong to the paragraph, so they need
+    the blank line too. A nested list inside a list item, and a list or
+    heading right after a heading, a code fence, a `:::` fence, an HTML
+    block or a table, are separate blocks and are not flagged. Only bullets
+    and lists that start at 1 are checked: a wrapped line that starts with
+    another number stays a paragraph line (rewrap a prose line that starts
+    with `1. `). Jupyter's CommonMark renderer lets a list interrupt a
+    paragraph, so the notebooks hide this break; the book does not.
+    """
+    issues = []
+    in_fence = in_comment = False
+    in_list = False       # inside a list item (marker or its continuation)
+    prev = 'blank'        # kind of the previous line that counts
+    dollar_odd = False    # an inline $...$ is open across lines
+    in_math = False       # inside a multi-line $$ display
+    for i, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if in_math:
+            if stripped.endswith('$$'):
+                in_math, prev = False, 'para'
+            continue
+        if in_comment:
+            if '-->' in line:
+                in_comment = False
+                prev = 'block'
+            continue
+        if line.lstrip().startswith(('```', '~~~')):
+            in_fence = not in_fence
+            prev = 'block'
+            continue
+        if in_fence:
+            continue
+        if stripped.startswith('<!--'):
+            in_comment = '-->' not in stripped
+            prev = 'block'
+            continue
+        if not stripped:
+            prev, dollar_odd = 'blank', False
+            continue
+        if stripped.startswith(':begin_tab:') or stripped == ':end_tab:':
+            prev, in_list = 'block', False   # becomes a tabset fence
+            continue
+        bullet = _BLOCK_START_RE.match(line)
+        heading = _HEADING_START_RE.match(line)
+        if (bullet or heading) and prev == 'para' and not dollar_odd \
+                and not (bullet and in_list):
+            what = 'heading' if heading else 'list'
+            issues.append(Issue(path, i, 1, 'error',
+                f'{what} directly after a paragraph line: pandoc folds it '
+                f'into the paragraph and prints the `{stripped.split()[0]}`; '
+                f'insert a blank line before it'))
+        if heading:
+            prev, in_list = 'heading', False
+            continue
+        if stripped.startswith((':::', '<')) or _TABLE_ROW_RE.match(line):
+            prev, in_list = 'block', False
+            continue
+        if re.match(r':(?:label|eqlabel):`', stripped) and prev == 'heading':
+            continue   # a heading's label merges into the heading
+        if bullet or _LIST_MARKER_RE.match(line):
+            in_list = True
+        elif prev == 'blank' and not line[0].isspace():
+            in_list = False  # an unindented paragraph after a blank line
+        prev = 'para'
+        if stripped == '$$' or (stripped.startswith('$$')
+                                and not stripped[2:].rstrip().endswith('$$')):
+            in_math = True
+            continue
+        bare = line.replace('\\$', '').replace('$$', '')
+        if bare.count('$') % 2:
+            dollar_odd = not dollar_odd
     return issues
 
 

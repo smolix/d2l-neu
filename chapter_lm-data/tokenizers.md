@@ -3000,6 +3000,7 @@ also cuts हिन्दी into ह·िन·्द·ी before any merge.
 [The fair measure]{.kicker}
 
 $L$: loss per token (nats), $\bar b$: bytes per token.
+
 $$\textrm{bpb} = \frac{L}{\bar b \ln 2}$$
 
 Small LMs on the same 45 MB, 100 held-out documents:
@@ -3032,6 +3033,7 @@ more than how well it is predicted.
 [Vocabulary size]{.kicker}
 
 $A$: non-embedding parameters, $d$: width, tied embeddings.
+
 $$C(V) = \frac{6\,(A + Vd)}{\bar b(V)} \ \text{FLOP per byte}$$
 
 $$\frac{d \log C}{d \log V} = \underbrace{\frac{Vd}{A + Vd}}_{s(V)} - \underbrace{\frac{d \log \bar b}{d \log V}}_{\varepsilon(V)} = 0 \;\Rightarrow\; \boxed{V^* = \frac{\varepsilon}{1-\varepsilon}\cdot\frac{A}{d}}$$

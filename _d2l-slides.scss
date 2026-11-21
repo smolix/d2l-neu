@@ -28,8 +28,8 @@ $heading-font:           $main-font;
 $code-font:              'JetBrains Mono', ui-monospace, 'Cascadia Code',
                          Menlo, monospace;
 
-$main-font-size:         30px;
-$presentation-font-size-root: 30px;
+$main-font-size:         28px;
+$presentation-font-size-root: 28px;
 $heading-color:          $ink;
 $heading-text-shadow:    none;
 $heading-font-weight:    600;
@@ -37,10 +37,10 @@ $heading-line-height:    1.15;
 $heading-letter-spacing: -0.005em;
 $heading-text-transform: none;
 
-$h1-size:                1.55em;
-$h2-size:                1.3em;
-$h3-size:                1.12em;
-$h4-size:                1.0em;
+$h1-size:                1.5em;
+$h2-size:                1.24em;
+$h3-size:                1.06em;
+$h4-size:                0.96em;
 
 $link-color:             $blue-dark;
 $link-color-hover:       $blue;
@@ -76,6 +76,7 @@ $code-block-padding:     0.45em 0.7em;
   letter-spacing: $heading-letter-spacing;
   margin-bottom: 0.4em;
   margin-top: 0;
+  text-wrap: balance;
 }
 
 // Deck title (the file H1). Intentionally no underline — the
@@ -95,10 +96,14 @@ $code-block-padding:     0.45em 0.7em;
 
 .reveal p, .reveal li {
   color: $ink-2;
-  line-height: 1.3;
+  line-height: 1.32;
+  text-wrap: pretty;
 }
 
-.reveal p { margin: 0.35em 0; }
+.reveal p {
+  font-size: 0.84em;
+  margin: 0.28em 0;
+}
 
 .reveal a, .reveal a:visited {
   color: $blue-dark;
@@ -123,9 +128,17 @@ $code-block-padding:     0.45em 0.7em;
 // ── Lists ────────────────────────────────────────────────
 .reveal ul, .reveal ol {
   display: block;
-  margin: 0.25em 0 0.25em 1.2em;
+  margin: 0.2em 0 0.2em 1.1em;
 }
-.reveal li { margin: 0.15em 0; }
+.reveal ul > li, .reveal ol > li {
+  font-size: 0.84em;
+  line-height: 1.36;
+  margin: 0.18em 0;
+}
+.reveal li ul > li, .reveal li ol > li {
+  font-size: 0.94em;
+  margin: 0.12em 0;
+}
 .reveal ul li::marker { color: $blue; }
 
 // ── Code blocks ──────────────────────────────────────────
@@ -209,25 +222,41 @@ $code-block-padding:     0.45em 0.7em;
 
 // ── Tables ───────────────────────────────────────────────
 .reveal table {
-  font-size: 0.7em;
+  font-size: 0.64em;
+  line-height: 1.28;
   border-collapse: collapse;
-  margin: 0.5em 0;
+  margin: 0.3em 0;
 }
 .reveal table th {
   background: $blue-50;
   color: $ink;
   font-weight: 600;
   border-bottom: 2px solid $blue-light;
-  padding: 0.3em 0.6em;
+  padding: 0.22em 0.5em;
   text-align: left;
 }
 .reveal table td {
   border-bottom: 1px solid $line;
-  padding: 0.3em 0.6em;
+  padding: 0.2em 0.5em;
 }
 
 // ── KaTeX / MathJax ──────────────────────────────────────
 .reveal .katex, .reveal .MathJax { color: $ink; }
+.reveal .nowrap,
+.reveal .math.inline,
+.reveal .math.inline .katex {
+  white-space: nowrap;
+}
+.reveal .katex-display {
+  margin: 0.25em 0 !important;
+  font-size: 0.9em;
+}
+.reveal .cols > .col .katex-display {
+  font-size: 0.84em;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
 
 // ── Slide-number / controls coloring ─────────────────────
 .reveal .slide-number {
@@ -531,7 +560,8 @@ $note-bg:   #F2F8FE;
 // width:100% fills the column; max-height caps portrait diagrams (e.g. the
 // stacked saving-memory figure) so they don't blow past the slide — wide
 // figures never hit it, tall ones shrink-to-fit and center.
-.reveal .dgm-svg { width: 100%; height: auto; max-height: 470px; display: block; margin: 0 auto; }
+.reveal .dgm-svg { width: 100%; height: auto; max-height: 440px; display: block; margin: 0 auto; }
+.reveal .slides section > .dgm .dgm-svg { width: auto; max-width: 100%; max-height: 260px; }
 .reveal .dgm-cap { font-size: 0.62em; color: $ink-3; margin-top: 0.2em; }
 
 // In/Out card chrome. Quarto emits the input and its injected output as
@@ -550,7 +580,8 @@ $note-bg:   #F2F8FE;
   margin: 0.32em 0;
 }
 .reveal .cell { background: $bg-soft; }
-.reveal .cell-output { max-height: 44vh; overflow: auto; }
+.reveal .cell-output { max-height: 36vh; overflow: auto; }
+.reveal .cols .cell-output { max-height: 30vh; }
 
 // The pill tag sits in a left gutter; pad the content past it.
 .reveal .cell .sourceCode.cell-code,
@@ -585,7 +616,7 @@ $note-bg:   #F2F8FE;
 // Wrap long source lines (verbose comments, full tensor literals) instead
 // of showing a horizontal scrollbar — avoids the scroll affordances that
 // clutter dense cells. Indentation is preserved; continuations soft-wrap.
-.reveal .cell pre code { white-space: pre-wrap; word-break: break-word; }
+.reveal .cell pre code { padding: 0.25em 0.2em; white-space: pre-wrap; word-break: break-word; }
 .reveal .cell-output pre { color: #455a64; }
 
 // Merge an In card immediately followed by its Out card into one unit.
@@ -604,4 +635,4 @@ $note-bg:   #F2F8FE;
 
 // In a two-column body, code is denser still so it sits beside a diagram.
 .reveal .cols .cell pre,
-.reveal .cols .cell-output pre { font-size: 0.56em; }
+.reveal .cols .cell-output pre { font-size: 0.52em; }

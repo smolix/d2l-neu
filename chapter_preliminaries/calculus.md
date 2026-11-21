@@ -319,163 +319,60 @@ The derivative $f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$ gives the slope 
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §2.4]{.kicker}
+[Dive into Deep Learning · §1.4]{.kicker}
 
-Derivatives for the line model<br>
-**the derivative · the gradient · finite differences · steepest descent · the chain rule**
+Differential Calculus: Derivatives, Gradients, Jacobians, and the Chain Rule<br>**local linear approximations · tangent slopes · steepest descent · computation DAGs · finite-difference limits**
 :::
 :::
 
-::: {.slide title="Probing Costs One Loss Evaluation per Parameter per Step"}
-[The problem]{.kicker}
+::: {.slide title="Why Calculus Drives Learning: The Compass of Optimization"}
+[Motivation]{.kicker}
 
-A model predicts the same number $w$ for three examples with labels
-$1, 1, 0$:
+Training a deep network means finding parameters $\mathbf{w} \in \mathbb{R}^d$ (where $d$ ranges from $10^6$ to $10^{12}$) that minimize a differentiable scalar loss $\mathcal{L}(\mathbf{w})$.
 
-$$L(w) = (w-1)^2 + (w-1)^2 + (w-0)^2 = 3w^2 - 4w + 2, \qquad L(1) = 1.$$
-
-- Should $w$ go up or down? Probe: evaluate $L(1.01)$ and compare.
-- A network with $10^8$ parameters: $10^8$ evaluations for **one** update.
-
-::: {.d2l-note}
-Calculus replaces the probe by a formula: the **derivative** gives the
-direction and the rate, for every parameter at once.
-:::
+::: {.cols}
+::: {.col}
+- **Why trial-and-error probing fails:** Perturbing one coordinate $w_i \mapsto w_i + h$ to test whether $\mathcal{L}$ decreases requires **$d + 1$ forward passes** for a *single* parameter update—utterly infeasible at $d = 10^9$.
+- **Why smooth surrogate losses matter:** Classification accuracy is flat ($0$ derivative) almost everywhere and jumps discontinuously when a prediction flips; we minimize smooth surrogates (squared error, cross-entropy) instead.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute a derivative as a limit and with the rules;
-- say how accurate a finite difference can be in float32 and float64;
-- compute a gradient and the direction of steepest descent;
-- apply the chain rule to a composition, in vector form.
-
-**Running example:** labels $1, 1, 0$, fit by a constant $w$, then by a
-line $w_1 + w_2 \cdot \textrm{input}$.
+::: {.col}
+- **First-order linear approximation:** Differential calculus approximates any smooth function locally by its tangent:
+  $$f(x + h) \approx f(x) + f'(x)\,h$$
+- Knowing the derivative $f'(x)$ (or gradient $\nabla_{\mathbf{w}}\mathcal{L}$) reveals **which direction** decreases the loss and **at what rate** across all $d$ parameters simultaneously.
+:::
+:::
 :::
 
-::: {.slide title="Calculus Finds the Way Down the Loss"}
-[Where this fits]{.kicker}
+::: {.slide title="From Secant Slopes to the Derivative"}
+[Single-Variable Calculus]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | tool |
-|---|---|
-| Data Manipulation | tensors |
-| Data Preprocessing | pandas |
-| Linear Algebra | matrix products, norms, eigenvalues |
-| **Calculus** | **derivatives, gradients, chain rule** |
-| Automatic Differentiation | autograd |
-| Probability and Statistics | standard error, Bayes' theorem |
-| Documentation | `help`, small tests |
-:::
-
-::: {.col .narrow}
-- **Uses:** dot products, norms, and matrix–vector products.
-- **Skips:** integrals and the proofs, in the mathematics appendix.
-:::
-:::
-:::
-
-::: {.slide}
-::: {.divider}
-[01]{.dnum}
-
-[Derivatives]{.dtitle}
-
-[one parameter: which way, and how fast]{.dsub}
-:::
-:::
-
-::: {.slide title="The Difference Quotient Approaches 2"}
-[Derivatives]{.kicker}
-
-Move $w$ from $1$ to $1 + h$ and divide the change in $L$ by $h$:
+- The **derivative** $f'(x)$ is the instantaneous rate of change—the limit of the **secant slope** between $(x, f(x))$ and $(x+h, f(x+h))$ as $h \to 0$:
+  $$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$$
+- On $f(x) = 3x^2 - 4x$ at $x = 1$, expanding $f(1+h) = -1 + 2h + 3h^2$ gives $\frac{f(1+h)-f(1)}{h} = 2 + 3h \to 2$:
 
 @calculus-derivatives-and-differentiation-2
-
-Algebra: $L(1+h) = 1 + 2h + 3h^2$, so
-
-$$\frac{L(1+h) - L(1)}{h} = 2 + 3h \;\to\; 2 = L'(1).$$
 :::
 
-::: {.slide title="The Derivative Is the Slope of the Tangent"}
-[Derivatives]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$$
-
-- The ratio is the slope of the **secant** through $P$ and $Q$.
-- As $h \to 0$, the secant turns into the **tangent** at $P$.
-:::
-
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:calculus-secant-tangent
 :::
 :::
 :::
 
-::: {.slide title="Some Functions Have No Derivative Where It Matters"}
-[Derivatives]{.kicker}
-
-- $|x|$ at $0$: the ratio $|h|/h$ is $+1$ for $h > 0$ and $-1$ for
-  $h < 0$. No limit.
-- Classification accuracy: flat almost everywhere (derivative $0$), with
-  jumps where a prediction flips (no derivative).
-
-::: {.d2l-note}
-Neither tells us which way to move. We train on a differentiable
-**surrogate** loss, such as the squared error, and report the accuracy.
-:::
-:::
-
-::: {.slide title="A Handful of Rules Replaces the Limit"}
-[Derivatives]{.kicker}
-
-::: {.cols}
-::: {.col}
-**Basic functions**
-
-::: {.d2l-note .rule}
-$\dfrac{d}{dx} C = 0, \quad \dfrac{d}{dx} x^n = n\,x^{n-1},$
-
-$\dfrac{d}{dx} e^x = e^x, \quad \dfrac{d}{dx}\log x = \dfrac{1}{x}$
-:::
-
-**Combinations**
-
-::: {.d2l-note .rule}
-Constant multiple: $(Cf)' = C f'$
-
-Sum: $(f+g)' = f' + g'$
-
-Product: $(fg)' = f' g + f g'$
-
-Quotient: $\left(\dfrac{f}{g}\right)' = \dfrac{f' g - f g'}{g^2}$
-:::
-:::
-
-::: {.col .fig}
-@fig:calculus-product-rule
-:::
-:::
-
-The product rule is the area of a rectangle gaining two strips. For the
-running example: $L'(w) = 6w - 4$, so $L'(1) = 2$, at every $w$ at once.
-:::
-
-::: {.slide title="The Sign Says Which Way, the Size Says How Fast"}
-[Derivatives]{.kicker}
+::: {.slide title="Visualizing the Tangent Line as a Local Linear Approximation"}
+[Local Linearity]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$$L(w + h) \approx L(w) + L'(w)\, h$$
-
-- $w = 1$: $+0.01$ raises $L$ by about $0.02$.
-- Step $w \leftarrow w - 0.1\,L'(w)$: $L(0.8) = 0.72$ (tangent: $0.6$).
-- $L'(w) = 0$ at $w = 2/3$, the mean of the labels.
+- **First-order Taylor expansion around $a$:**
+  $$f(x) \approx f(a) + f'(a)(x - a)$$
+  At $w = 1$ ($L(1) = 1$, $L'(1) = 2$), the tangent line is $T(w) = 1 + 2(w - 1) = 2w - 1$.
+- **Why local linearity justifies gradient descent:** For a small step $\Delta w = -\eta L'(w)$ with learning rate $\eta > 0$:
+  $$L\big(w - \eta L'(w)\big) \approx L(w) - \eta \big[L'(w)\big]^2 < L(w)$$
+- Stepping from $w = 1$ with $\eta = 0.1$ gives $w = 1 - 0.1(2) = 0.8$, lowering $L$ from $1.0$ to $0.72$ (tangent prediction: $0.60$). Setting $L'(w^*) = 6w^* - 4 = 0$ locates the global minimum $w^* = 2/3$.
 :::
 
 ::: {.col .fig .big}
@@ -484,40 +381,37 @@ $$L(w + h) \approx L(w) + L'(w)\, h$$
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[02]{.dnum}
-
-[Partial derivatives and gradients]{.dtitle}
-
-[many parameters: the steepest way down]{.dsub}
-:::
-:::
-
-::: {.slide title="A Line Model Adds a Second Parameter"}
-[Gradients]{.kicker}
-
-Inputs $0, 1, 2$; prediction $w_1 + w_2 \cdot \textrm{input}$:
-
-$$L(w_1, w_2) = (w_1 - 1)^2 + (w_1 + w_2 - 1)^2 + (w_1 + 2w_2)^2 = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$$
-
-$$\mathbf{X} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix}, \qquad \mathbf{y} = \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix}$$
-
-- $w_2 = 0$ gives back the constant model; $L(1, 0) = 1$ again.
-:::
-
-::: {.slide title="A Partial Derivative Is the Slope of a Slice"}
-[Gradients]{.kicker}
+::: {.slide title="Elementary Differentiation Rules and the Product Rule"}
+[Analytical Differentiation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Hold every variable but one fixed:
+| Function | Derivative $\frac{d}{dx}$ | Rule | Formula |
+| :--- | :--- | :--- | :--- |
+| Constant $C$ | $0$ | **Linearity** | $(\alpha u + \beta v)' = \alpha u' + \beta v'$ |
+| Power $x^n$ | $n x^{n-1}$ | **Product** | $(u\,v)' = u'v + u\,v'$ |
+| Exp $e^x$ | $e^x$ | **Quotient** | $(u/v)' = (u'v - u\,v')/v^2$ |
+| Log $\ln x$ | $1/x$ | **$3x^2 - 4x$** | $3(2x) - 4(1) = 6x - 4$ |
 
-- $w_2 = 0$: $L = 3w_1^2 - 4w_1 + 2$, so $\partial L / \partial w_1 = 2$.
-- $w_1 = 1$: $L = 5w_2^2 + 4w_2 + 1$, so $\partial L / \partial w_2 = 4$.
+- **Product rule geometry:** Expanding a rectangle $f(x)g(x)$ by $h$ adds two strips $g(x)f'(x)h + f(x)g'(x)h$ plus an $O(h^2)$ corner that vanishes as $h \to 0$.
+:::
 
-Raising $w_2$ (the slope of the line) increases the loss twice as fast
-as raising $w_1$.
+::: {.col .fig}
+@fig:calculus-product-rule
+:::
+:::
+:::
+
+::: {.slide title="Partial Derivatives: Slicing a Multivariate Surface"}
+[Multivariate Calculus]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- For $f: \mathbb{R}^n \to \mathbb{R}$, the **partial derivative** $\frac{\partial f}{\partial x_i}$ holds all coordinates fixed except $x_i$, measuring the slope of a 1D slice:
+  $$\frac{\partial f}{\partial x_i} = \lim_{h \to 0} \frac{f(x_1, \ldots, x_i + h, \ldots, x_n) - f(x_1, \ldots, x_n)}{h}$$
+- On $f(x_1, x_2) = x_1^2 + 2x_2^2$ at $(1, 1)$ (and line loss $L(w_1, w_2)$ at $(1, 0)$), $\frac{\partial f}{\partial x_1} = 2$ and $\frac{\partial f}{\partial x_2} = 4$:
+
+@calculus-partial-derivatives-2
 :::
 
 ::: {.col .fig}
@@ -526,144 +420,56 @@ as raising $w_1$.
 :::
 :::
 
-::: {.slide title="Check: Two Slices Through the Origin"}
-[Check]{.kicker}
-
-Compute $\partial L / \partial w_1$ and $\partial L / \partial w_2$ at
-$(w_1, w_2) = (0, 0)$ by slicing. Which parameters should grow?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $L(w_1, 0) = 3w_1^2 - 4w_1 + 2$ gives $-4$;
-$L(0, w_2) = 5w_2^2 - 2w_2 + 2$ gives $-2$. Both are negative: increasing
-either parameter lowers the loss.
-:::
-:::
-:::
-
-::: {.slide title="The Gradient Collects One Partial Derivative per Parameter"}
-[Gradients]{.kicker}
-
-$$\nabla f(\mathbf{x}) = \left(\frac{\partial f}{\partial x_1}, \ldots, \frac{\partial f}{\partial x_n}\right), \qquad \nabla L(1, 0) = (2, 4)$$
-
-Finite differences, one parameter at a time, in float64:
-
-@!calculus-partial-derivatives-2
-
-- Correct to within $10^{-5}$, but one extra loss evaluation per
-  parameter: $10^8$ for a large network, at every step.
-:::
-
-::: {.slide title="Float32 Finite Differences Are Good to Three or Four Digits"}
-[Gradients · finite differences]{.kicker}
+::: {.slide title="The Gradient Vector: Steepest Ascent, Descent, and Level Curves"}
+[Gradient Geometry]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Error of $\big(L(1+h) - L(1)\big)/h$ against $L'(1) = 2$:
-
-- Right branch: truncation error $3h$, slope $+1$.
-- Left branch: rounding error below $\epsilon/h$, slope $-1$, with
-  $\epsilon \approx 2 \times 10^{-16}$ (float64) or $10^{-7}$ (float32).
-- Below $h \approx 10^{-7}$ in float32, $1 + h$ rounds to $1$: the ratio
-  is $0$ and the error is $2$.
+- Stacking all $n$ partial derivatives forms the **gradient** $\nabla_{\mathbf{x}} f(\mathbf{x}) = \big[\frac{\partial f}{\partial x_1}, \ldots, \frac{\partial f}{\partial x_n}\big]^\top \in \mathbb{R}^n$.
+- By Cauchy–Schwarz, the directional rate of change along unit vector $\mathbf{u}$ at angle $\theta$ to $\nabla f(\mathbf{x})$ is $D_{\mathbf{u}} f(\mathbf{x}) = \nabla f(\mathbf{x})^\top \mathbf{u} = \|\nabla f(\mathbf{x})\|_2 \cos\theta$:
+  - **Steepest ascent ($\theta = 0^\circ$):** $\nabla f(\mathbf{x})$ points directly uphill.
+  - **Steepest descent ($\theta = 180^\circ$):** $-\nabla f(\mathbf{x})$ points directly downhill.
+  - **Orthogonal to level curves ($\theta = 90^\circ$):** $D_{\mathbf{u}} f = 0$ along contours $f(\mathbf{x}) = c$.
 :::
 
-::: {.col .fig .big}
-@!calculus-finite-differences-2
-:::
-:::
-:::
-
-::: {.slide title="Check: The Best Step in Float32"}
-[Check]{.kicker}
-
-Balance the two errors, $3h = \epsilon / h$, with $\epsilon = 10^{-7}$.
-Which $h$ is best, and how large is the error there?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $h = \sqrt{\epsilon/3} \approx 2 \times 10^{-4}$, and the
-error is at most $3h + \epsilon/h \approx 10^{-3}$. The plot shows about
-$3 \times 10^{-4}$ near $h = 10^{-4}$: three to four correct digits of
-$L'(1) = 2$. Cost and precision together are why frameworks differentiate
-by the rules instead.
-:::
-:::
-:::
-
-::: {.slide title="The Negative Gradient Is the Steepest Way Down"}
-[Gradients · derivation]{.kicker}
-
-**Step 1.** Changes add up, one coordinate at a time:
-$f(\mathbf{x} + \mathbf{h}) \approx f(\mathbf{x}) + \nabla f(\mathbf{x})^\top \mathbf{h}$.
-
-**Step 2.** Move a small $t > 0$ along a unit vector $\mathbf{d}$. With
-$\mathbf{a}^\top\mathbf{b} = \|\mathbf{a}\|\|\mathbf{b}\|\cos\theta$, the
-change is $t\, \|\nabla f(\mathbf{x})\| \cos\theta$, where $\theta$ is the
-angle between $\mathbf{d}$ and $\nabla f(\mathbf{x})$.
-
-**Step 3.** Largest at $\theta = 0$, most negative at $\theta = 180^\circ$, zero
-at $\theta = 90^\circ$.
-
-::: {.d2l-note .rule}
-$\nabla f$ points uphill and is perpendicular to the level sets;
-$-\nabla f$ is the direction of steepest descent.
-:::
-:::
-
-::: {.slide title="Gradient Descent Zigzags Down the Line Model's Valley"}
-[Gradients]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-$$\mathbf{w} \leftarrow \mathbf{w} - \eta\, \nabla L(\mathbf{w})$$
-
-- Learning rate $\eta = 0.1$: $(1, 0) \to (0.8, -0.4)$, loss $1 \to 0.4$.
-- $-\nabla L$ points $45^\circ$ away from the minimum $(7/6, -1/2)$:
-  steepest is a local property.
-:::
-
-::: {.col .fig .big}
+::: {.col .fig}
 @fig:calculus-gradient-field
 :::
 :::
 :::
 
-::: {.slide title="Linear and Quadratic Functions Have One-Line Gradients"}
-[Gradients]{.kicker}
+::: {.slide title="Multivariate Linear Approximation and the Gradient Descent Step"}
+[First-Order Optimization]{.kicker}
 
-::: {.d2l-note .rule}
-$\nabla_{\mathbf{x}}\, \mathbf{a}^\top\mathbf{x} = \mathbf{a}, \qquad
-\nabla_{\mathbf{x}}\, \mathbf{x}^\top\mathbf{A}\mathbf{x} = (\mathbf{A} + \mathbf{A}^\top)\,\mathbf{x}, \qquad
-\nabla_{\mathbf{x}}\, \|\mathbf{x}\|^2 = 2\mathbf{x}$
+Perturbing all $n$ coordinates simultaneously by $\boldsymbol{\epsilon} \in \mathbb{R}^n$ sums the linear changes across every axis:
+
+$$f(\mathbf{x} + \boldsymbol{\epsilon}) \approx f(\mathbf{x}) + \nabla_{\mathbf{x}} f(\mathbf{x})^\top \boldsymbol{\epsilon}$$
+
+::: {.cols}
+::: {.col}
+- **Guaranteed local decrease:** Choosing the gradient descent step $\boldsymbol{\epsilon} = -\eta \nabla_{\mathbf{x}} f(\mathbf{x})$ with a small learning rate $\eta > 0$ gives:
+  $$f\big(\mathbf{x} - \eta \nabla_{\mathbf{x}} f(\mathbf{x})\big) \approx f(\mathbf{x}) - \eta \big\|\nabla_{\mathbf{x}} f(\mathbf{x})\big\|_2^2 \le f(\mathbf{x})$$
+- So long as $\nabla_{\mathbf{x}} f(\mathbf{x}) \neq \mathbf{0}$ and $\eta$ is small enough for the linear approximation to hold, every step strictly decreases $f$.
 :::
 
-- Why: $\frac{\partial}{\partial x_k} \sum_{i,j} x_i a_{ij} x_j = (\mathbf{A}\mathbf{x})_k + (\mathbf{A}^\top\mathbf{x})_k$.
-- Line model: $\nabla L = 2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$.
-  At $(1, 0)$ the errors are $(0, 0, 1)$, so $\nabla L = 2\,(1, 2) = (2, 4)$.
+::: {.col}
+- **Why gradient descent zigzags:** On our line model at $\mathbf{w}_0 = [1, 0]^\top$, $\nabla L(\mathbf{w}_0) = [2, 4]^\top$. One step with $\eta = 0.1$ updates:
+  $$\mathbf{w}_1 = \begin{bmatrix} 1 \\ 0 \end{bmatrix} - 0.1 \begin{bmatrix} 2 \\ 4 \end{bmatrix} = \begin{bmatrix} 0.8 \\ -0.4 \end{bmatrix}, \quad L(\mathbf{w}_1) = 0.40 < 1.0$$
+- Because $-\nabla L$ is perpendicular to the *elliptical* contours rather than pointing at the center $\mathbf{w}^* = [7/6, -1/2]^\top$, the trajectory zigzags down the valley.
 :::
-
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[The chain rule]{.dtitle}
-
-[compositions, differentiated stage by stage]{.dsub}
 :::
 :::
 
-::: {.slide title="Rates Multiply Along a Chain"}
-[Chain rule]{.kicker}
+::: {.slide title="The Multivariate Chain Rule and Computation DAGs"}
+[Compositions & DAGs]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- If $u$ changes $2\times$ as fast as $x$ and $z$ changes $3\times$ as
-  fast as $u$, then $z$ changes $6\times$ as fast as $x$.
-- Last term of the line loss: $z = u^2$ with $u = w_1 + 2w_2$. At
-  $(1, 0)$, where $u = 1$:
-
-$$\frac{\partial z}{\partial w_2} = \frac{dz}{du}\,\frac{\partial u}{\partial w_2} = 2u \cdot 2 = 4.$$
+- **Single-path chain rule:** When $z = f(u)$ and $u = g(x)$, local sensitivities multiply along the edge sequence $x \to u \to z$:
+  $$\frac{dz}{dx} = \frac{dz}{du}\frac{du}{dx}$$
+- **Multivariate chain rule on a DAG:** When $y = f(\mathbf{u})$ depends on intermediate nodes $u_1, \ldots, u_m$ and each $u_i = g_i(\mathbf{x})$ depends on inputs $x_1, \ldots, x_n$:
+  $$\frac{\partial y}{\partial x_j} = \sum_{i=1}^m \frac{\partial y}{\partial u_i} \frac{\partial u_i}{\partial x_j} \quad \Longleftrightarrow \quad \nabla_{\mathbf{x}} y = \mathbf{J}^\top \nabla_{\mathbf{u}} y$$
+- **Graph rule:** Multiply edge weights (local derivatives) along each directed path from $x_j$ to $y$, then **sum over all parallel paths**.
 :::
 
 ::: {.col .fig .big}
@@ -672,63 +478,117 @@ $$\frac{\partial z}{\partial w_2} = \frac{dz}{du}\,\frac{\partial u}{\partial w_
 :::
 :::
 
-::: {.slide title="Many Paths Add Up to a Transposed-Jacobian Product"}
-[Chain rule]{.kicker}
+::: {.slide title="Worked Example: Summing Parallel Paths on a Computation DAG"}
+[Multivariate Chain Rule in Action]{.kicker}
 
-$z$ depends on $u_1, \ldots, u_m$, each of which depends on
-$x_1, \ldots, x_n$:
+Consider $z = u^2 + v$ where $u = x_1 x_2$ and $v = x_2^2$, evaluated at $\mathbf{x} = (x_1, x_2) = (1, 2)$:
 
-$$\frac{\partial z}{\partial x_i} = \sum_{j=1}^m \frac{\partial z}{\partial u_j} \frac{\partial u_j}{\partial x_i}
-\quad\Longrightarrow\quad
-\nabla_{\mathbf{x}} z = \mathbf{J}^\top \nabla_{\mathbf{u}} z, \quad J_{ji} = \frac{\partial u_j}{\partial x_i}$$
+::: {.cols}
+::: {.col}
+**1. Forward Pass (Inputs $\to$ Output)**
 
-- One term per path $x_i \to u_j \to z$.
-- For a linear map $\mathbf{u} = \mathbf{A}\mathbf{x}$ the Jacobian is
-  $\mathbf{A}$.
+- Evaluate intermediate nodes at $(x_1, x_2) = (1, 2)$:
+  $$u = x_1 x_2 = 1 \cdot 2 = 2, \qquad v = x_2^2 = 2^2 = 4$$
+- Evaluate final output:
+  $$z = u^2 + v = 2^2 + 4 = 8$$
+- Notice that $x_1$ influences $z$ through **one path** ($x_1 \to u \to z$), whereas $x_2$ fans out across **two parallel paths** ($x_2 \to u \to z$ and $x_2 \to v \to z$).
 :::
 
-::: {.slide title="Backpropagation Runs the Chain Rule From the Loss Backward"}
-[Chain rule]{.kicker}
+::: {.col}
+**2. Backward Pass (Output $\to$ Inputs)**
 
-Line model: $L = \|\mathbf{r}\|^2$ with errors
-$\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$ (Jacobian $\mathbf{X}$).
+- Upstream sensitivities: $\frac{\partial z}{\partial u} = 2u = 4$ and $\frac{\partial z}{\partial v} = 1$.
+- **Gradient w.r.t. $x_1$ (single path via $u$):**
+  $$\frac{\partial z}{\partial x_1} = \frac{\partial z}{\partial u}\frac{\partial u}{\partial x_1} = (2u)(x_2) = 4 \cdot 2 = 8$$
+- **Gradient w.r.t. $x_2$ (sum of two paths via $u$ and $v$):**
+  $$\frac{\partial z}{\partial x_2} = \frac{\partial z}{\partial u}\frac{\partial u}{\partial x_2} + \frac{\partial z}{\partial v}\frac{\partial v}{\partial x_2} = 2u x_1 + 2x_2 = 4(1) + 4 = 8$$
+:::
+:::
 
+::: {.d2l-note}
+Assembling both coordinates yields $\nabla_{\mathbf{x}} z(1, 2) = [8, 8]^\top$—computed by reusing $\frac{\partial z}{\partial u} = 4$ and $\frac{\partial z}{\partial v} = 1$ without ever expanding $z(x_1, x_2) = x_1^2 x_2^2 + x_2^2$ symbolically.
+:::
+:::
+
+::: {.slide title="Matrix Calculus Identities and Vector-Valued Jacobians"}
+[Vector & Matrix Calculus]{.kicker}
+
+| Expression | Function $f(\mathbf{x})$ | Gradient / Jacobian | Deep Learning Application |
+| :--- | :--- | :--- | :--- |
+| **Linear form** | $\mathbf{a}^\top \mathbf{x}$ | $\nabla_{\mathbf{x}}(\mathbf{a}^\top \mathbf{x}) = \mathbf{a}$ | Linear neuron $\mathbf{w}^\top \mathbf{x} + b$ |
+| **Quadratic form** | $\mathbf{x}^\top \mathbf{A} \mathbf{x}$ | $\nabla_{\mathbf{x}}(\mathbf{x}^\top \mathbf{A} \mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$ | Hessian terms ($2\mathbf{A}\mathbf{x}$ if $\mathbf{A} = \mathbf{A}^\top$) |
+| **Squared $L_2$ norm** | $\|\mathbf{x}\|_2^2 = \mathbf{x}^\top \mathbf{x}$ | $\nabla_{\mathbf{x}}\|\mathbf{x}\|_2^2 = 2\mathbf{x}$ | Weight decay & MSE residuals |
+| **Least squares** | $\|\mathbf{X}\mathbf{w} - \mathbf{y}\|_2^2$ | $\nabla_{\mathbf{w}} L = 2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$ | Linear regression batch gradient |
+| **Vector map** | $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$ | $\mathbf{J}_{\mathbf{f}}(\mathbf{x}) \in \mathbb{R}^{m \times n},\; (\mathbf{J}_{\mathbf{f}})_{ij} = \frac{\partial f_i}{\partial x_j}$ | Chaining layers: $\mathbf{J}_{\mathbf{f} \circ \mathbf{g}} = \mathbf{J}_{\mathbf{f}}\mathbf{J}_{\mathbf{g}}$ |
+
+::: {.d2l-note}
+For any affine map $\mathbf{u} = \mathbf{A}\mathbf{x} + \mathbf{b}$, $\mathbf{J}_{\mathbf{u}}(\mathbf{x}) = \mathbf{A}$, so propagating $\nabla_{\mathbf{u}} y$ backward multiplies by $\mathbf{A}^\top$: $\nabla_{\mathbf{x}} y = \mathbf{A}^\top \nabla_{\mathbf{u}} y$.
+:::
+:::
+
+::: {.slide title="From Chain Rule to Backpropagation: Vector–Jacobian Products"}
+[Forward & Backward Passes]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Decompose $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|_2^2$ into a 2-stage graph $\mathbf{w} \to \mathbf{r} \to L$:
+
+1. **Forward pass:** Compute residual $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y} \in \mathbb{R}^m$ ($\mathbf{J}_{\mathbf{r}} = \mathbf{X}$) and loss $L = \|\mathbf{r}\|_2^2$.
+2. **Backward pass (VJP):** Propagate sensitivity from $L$ to $\mathbf{w}$ in $O(mn)$ FLOPs:
+   $$\nabla_{\mathbf{r}} L = 2\mathbf{r} \;\Longrightarrow\; \nabla_{\mathbf{w}} L = \mathbf{J}_{\mathbf{r}}^\top \nabla_{\mathbf{r}} L = \mathbf{X}^\top (2\mathbf{r})$$
+:::
+
+::: {.col}
 @calculus-functions-of-many-variables
-
-::: {.d2l-note}
-Forward: errors, then loss. Backward: $2\mathbf{r}$, then
-$\mathbf{X}^\top(2\mathbf{r})$. Each pass is one matrix–vector product, so
-the whole gradient costs about one more evaluation of the loss.
-:::
-:::
-
-::: {.slide title="Check: One More Step"}
-[Check]{.kicker}
-
-From $\mathbf{w} = (0.8, -0.4)$ with $\eta = 0.1$: run the forward pass
-(errors), the backward pass (gradient), and take the step.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Errors $(-0.2, -0.6, 0)$; gradient
-$2\mathbf{X}^\top(-0.2, -0.6, 0) = (-1.6, -1.2)$; next point
-$(0.96, -0.28)$, with loss $0.264$.
 :::
 :::
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.slide title="Why Not Just Use Numerical Finite Differences?"}
+[Numerical vs. Analytical Differentiation]{.kicker}
 
-- **Derivative:** $L'(1) = \lim (2 + 3h) = 2$; $L(w + h) \approx L(w) + L'(w)h$;
-  minimum at the mean, $w = 2/3$.
-- **Gradient:** $\nabla L(1, 0) = (2, 4)$; $-\nabla L$ is the steepest way
-  down; one step lowers the loss from $1$ to $0.4$.
-- **Finite differences:** one loss evaluation per parameter, and a best
-  error of about $10^{-8}$ in float64 and $3 \times 10^{-4}$ in float32.
-- **Chain rule:** $\nabla_{\mathbf{w}} L = \mathbf{X}^\top (2\mathbf{r})$,
-  forward then backward: backpropagation.
+::: {.cols .vc}
+::: {.col}
+Approximating $f'(x) \approx \frac{f(x+h) - f(x)}{h}$ has **two fatal flaws** in deep learning:
 
-**Next:** automatic differentiation records the forward pass of any
-program and runs the backward pass for us.
+1. **The Numerical V-Curve:**
+   - **Too large $h$:** Taylor truncation error grows as $O(h)$ (or $O(h^2)$ for central differences).
+   - **Too small $h$:** Subtracting nearly equal floats $f(x+h) - f(x)$ erases mantissa bits (**catastrophic cancellation**, error $\sim \epsilon / h$, capping `float32` at $\sim 4$ valid digits!).
+2. **Computational $O(d)$ Blowup:** Perturbing $d = 10^9$ weights requires **$10^9 + 1$ forward passes** per step, whereas reverse-mode AD (§1.5) takes **one backward pass**.
 :::
+
+::: {.col .fig .big}
+@!calculus-finite-differences-2
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: Gradients, Level Curves, and the Chain Rule"}
+[Check Your Understanding]{.kicker}
+
+1. **Gradient geometry:** At $\mathbf{x} = (1, 2)$, $\nabla f(\mathbf{x}) = [3, -4]^\top$. What is the unit vector $\mathbf{u}^*$ of **steepest descent**, the rate $D_{\mathbf{u}^*} f(\mathbf{x})$, and a vector tangent to the level curve?
+2. **Matrix calculus trap:** For non-symmetric $\mathbf{A} = [[1, 2], [0, 1]]$ and $\mathbf{x} = [1, 1]^\top$, what is $\nabla_{\mathbf{x}}(\mathbf{x}^\top \mathbf{A} \mathbf{x})$? Why is $2\mathbf{A}\mathbf{x}$ wrong?
+3. **Scaling to deep networks:** For $d = 10^8$ parameters, how many forward passes does central differencing require per step versus backpropagation?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $\|\nabla f\|_2 = 5 \implies \mathbf{u}^* = \mathbf{[-3/5,\, 4/5]^\top}$ with rate $-\|\nabla f\|_2 = \mathbf{-5}$. Tangent vector: $\mathbf{[4, 3]^\top}$ ($3(4) - 4(3) = 0$).
+2. $\nabla_{\mathbf{x}}(\mathbf{x}^\top \mathbf{A} \mathbf{x}) = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x} = \mathbf{[4, 4]^\top}$ (since $\mathbf{A} \neq \mathbf{A}^\top$, $2\mathbf{A}\mathbf{x} = [6, 2]^\top$ misses the transposed product-rule term).
+3. Central differences require **$2d = 2 \times 10^8$ forward passes**; backpropagation takes **1 forward + 1 backward pass** ($\approx 2\text{--}3\times$ one forward pass).
+:::
+:::
+
+::: {.slide title="Summary: Calculus Objects, Shapes, Geometry, and Optimization Roles"}
+[Key Takeaways]{.kicker}
+
+| Calculus Object | Formula | Shape | Geometric Meaning | Deep Learning Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **Derivative** $f'(x)$ | $\lim_{h \to 0} \frac{f(x+h)-f(x)}{h}$ | `()` | Tangent slope at $x$ | 1D linear approx $f(x+h) \approx f(x) + f'(x)h$ |
+| **Partial** $\frac{\partial f}{\partial x_i}$ | Derivative with $x_{j \neq i}$ fixed | `()` | Axis-$i$ slice slope | Sensitivity of loss to single weight $w_i$ |
+| **Gradient** $\nabla_{\mathbf{x}} f(\mathbf{x})$ | $[\partial f/\partial x_1, \ldots, \partial f/\partial x_n]^\top$ | **`(n,)`** | Points uphill $\perp$ contours | Descent step $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla_{\mathbf{w}}\mathcal{L}$ |
+| **Jacobian** $\mathbf{J}_{\mathbf{f}}(\mathbf{x})$ | $(\mathbf{J}_{\mathbf{f}})_{ij} = \partial f_i / \partial x_j$ | **`(m, n)`** | Local linear map $\mathbf{J}\mathbf{h}$ | Layer-to-layer sensitivity matrix |
+| **Chain rule (VJP)** | $\nabla_{\mathbf{x}} y = \mathbf{J}_{\mathbf{u}}(\mathbf{x})^\top \nabla_{\mathbf{u}} y$ | `(n,)` | Sum over all DAG paths | Reverse-mode backpropagation (§1.5) |
+| **Finite difference** | $\frac{f(x+h)-f(x-h)}{2h}$ | $2d$ evals | Secant slope on $[x-h, x+h]$ | Unit-test gradient checks in `float64` |
+:::
+

@@ -783,24 +783,20 @@ Linear algebra expresses whole-minibatch models compactly: stacking $256$ flatte
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §2.3]{.kicker}
+[Dive into Deep Learning · §1.3]{.kicker}
 
-Linear algebra for one minibatch of images<br>**shapes · reductions · dot and matrix products · cost · norms · eigenvalues**
+Linear Algebra: The Computational Engine of Deep Learning<br>**tensors & symmetry · axis reductions · projections & matrix products · norms · spectral dynamics**
 :::
 :::
 
-::: {.slide title="One Matrix Product Turns 256 Images Into 2,560 Scores"}
-[The problem]{.kicker}
+::: {.slide title="Why Linear Algebra Powers Deep Learning"}
+[Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- A linear classifier for $28 \times 28$ images: 784 pixels, 10
-  categories, $784 \times 10 + 10 = 7{,}850$ parameters, minibatches
-  of 256.
-- $256 \times 10 \times 784 \approx 2$ million multiply--adds per
-  minibatch, about $4 \times 10^6$ FLOPs.
-- The scores $\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$ are one
-  expression whose shape and cost we can read off before anything runs.
+- **Alternating linear and nonlinear maps:** Every dense, convolutional, and attention layer alternates between **linear transformations** ($\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$) and **nonlinear activations**.
+- **From single vectors to hardware batches:** Stacking $256$ flattened Fashion-MNIST images into $\mathbf{X} \in \mathbb{R}^{256 \times 784}$ and $10$ class templates into $\mathbf{W} \in \mathbb{R}^{784 \times 10}$ runs $256$ evaluations as **one matrix product** on GPU Tensor Cores.
+- **Predictable shapes and cost:** Output shape $(256, 10)$ and work ($2 \times 256 \times 784 \times 10 \approx 4.0 \times 10^6\text{ FLOPs}$) are known before execution.
 :::
 
 ::: {.col .fig .big}
@@ -809,118 +805,149 @@ Linear algebra for one minibatch of images<br>**shapes · reductions · dot and 
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- read the shape of every object in $\mathbf{X}\mathbf{W} + \mathbf{b}$;
-- reduce along an axis and broadcast the result back;
-- predict the shape and the FLOPs of a matrix product;
-- measure errors and weights with norms;
-- say how 50 layers of matrices scale a signal.
-
-**Running example:** a minibatch
-$\mathbf{X} \in \mathbb{R}^{256 \times 784}$, weights
-$\mathbf{W} \in \mathbb{R}^{784 \times 10}$.
-:::
-
-::: {.slide title="Every Layer of a Network Starts With a Matrix Product"}
-[Where this fits]{.kicker}
+::: {.slide title="Scalars, Vectors, and Dimensionality vs. Tensor Order"}
+[Building Blocks]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | tool |
-|---|---|
-| Data Manipulation | tensors |
-| Data Preprocessing | pandas |
-| **Linear Algebra** | **matrix products, norms, eigenvalues** |
-| Calculus | derivatives, gradients, chain rule |
-| Automatic Differentiation | autograd |
-| Probability and Statistics | standard error, Bayes' theorem |
-| Documentation | `help`, small tests |
+- **Scalars ($x \in \mathbb{R}$):** $0^\textrm{th}$-order tensors with empty shape `()` (e.g., loss $\mathcal{L}$ or learning rate $\eta$).
+- **Vectors ($\mathbf{x} \in \mathbb{R}^d$):** $1^\textrm{st}$-order tensors of shape `(d,)`, treated mathematically as column vectors $\mathbf{x} = [x_1, \ldots, x_d]^\top$.
+- **Terminology trap:** A vector's **dimensionality** $d$ is its length along axis 0 (`len(x)`), whereas a tensor's **order (rank)** is its number of axes (`ndim`). A $784$-D vector is a $1^\textrm{st}$-order tensor!
+
+@linear-algebra-scalars
 :::
 
-::: {.col .narrow}
-- **Uses:** tensors, reshaping, and broadcasting, from the first deck.
-- **Skips:** determinants, solving linear systems, and the SVD, which the
-  mathematics appendix covers.
+::: {.col}
+@linear-algebra-vectors-1
+
+@linear-algebra-vectors-4
 :::
 :::
 :::
 
-::: {.slide title="Order Counts Axes; Dimensionality Counts Elements"}
-[Objects]{.kicker}
+::: {.slide title="Matrices, Transposition, and Symmetry"}
+[2D Representations]{.kicker}
 
-| object | example | order | shape |
-|---|---|---|---|
-| scalar | one pixel | 0 | $()$ |
-| vector | one flattened image | 1 | $(784,)$ |
-| matrix | the minibatch $\mathbf{X}$ | 2 | $(256, 784)$ |
-| tensor | the minibatch of images | 4 | $(256, 1, 28, 28)$ |
-
-- A vector in $\mathbb{R}^{784}$ has order 1 and dimensionality 784.
-- $\mathbf{X}$: one example per row, one feature (pixel position) per
-  column.
-
-::: {.d2l-note}
-"Dimension" is used for both; libraries call the order `ndim`.
-:::
+::: {.cols .vc}
+::: {.col}
+- **Matrices ($\mathbf{A} \in \mathbb{R}^{m \times n}$):** $2^\textrm{nd}$-order tensors indexing row $i$ and column $j$ as $a_{ij}$. Design matrices $\mathbf{X} \in \mathbb{R}^{n \times d}$ store one example per row and one feature per column.
+- **Transpose ($\mathbf{A}^\top \in \mathbb{R}^{n \times m}$):** Swaps row and column axes so $[\mathbf{A}^\top]_{ij} = a_{ji}$.
+- **Symmetric matrices ($\mathbf{S} = \mathbf{S}^\top$):** Square matrices with $s_{ij} = s_{ji}$, such as covariance $\frac{1}{n}\mathbf{X}^\top\mathbf{X}$ and loss Hessians $\nabla^2 \mathcal{L}$.
 :::
 
-::: {.slide title="A Reduction Deletes an Axis; keepdims Keeps It as Length 1"}
+::: {.col}
+@linear-algebra-matrices-1
+
+@linear-algebra-matrices-2
+:::
+:::
+:::
+
+::: {.slide title="Higher-Order Tensors and Elementwise (Hadamard) Arithmetic"}
+[Tensors & Hadamard Product]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Higher-order tensors ($\mathsf{X}, \mathsf{Y}$):** 3D token sequences `(batch, seq, d_model)` and 4D image batches `(256, 1, 28, 28)`. Flattening via `reshape(256, -1)` bridges spatial grids to a 2D matrix $\mathbf{X} \in \mathbb{R}^{256 \times 784}$.
+
+@linear-algebra-tensors
+:::
+
+::: {.col}
+- **Linearity and the Hadamard product ($\mathbf{A} \odot \mathbf{B}$):** Addition $\mathbf{A} + \mathbf{B}$ and scalar multiplication $a\mathbf{X}$ act entry-by-entry and preserve shape.
+- In code, `A * B` computes the elementwise **Hadamard product** $[\mathbf{A} \odot \mathbf{B}]_{ij} = a_{ij} b_{ij}$—used for multiplicative gating in LSTMs, GRUs, and SwiGLU layers—*not* matrix multiplication.
+
+@linear-algebra-basic-properties-of-tensor-arithmetic-1
+:::
+:::
+:::
+
+::: {.slide title="Axis Reductions: Collapsing Dimensions"}
 [Reductions]{.kicker}
 
 ::: {.cols .vc}
-::: {.col .narrow}
-`axis=0` sums over rows: one sum per column. `axis=1`: one sum per row.
+::: {.col}
+- Reductions (`.sum()`, `.mean()`) aggregate entries along a chosen axis and **remove that axis from the shape**:
+  - **All axes (`A.sum()`):** collapses `(2, 3) -> ()` ($0^\textrm{th}$-order scalar).
+  - **Down rows (`axis=0`):** sums over row index $i$ ($c_j = \sum_{i=1}^m a_{ij}$), collapsing axis 0 and leaving column totals of shape **`(3,)`**.
+  - **Across columns (`axis=1`):** sums over column index $j$ ($r_i = \sum_{j=1}^n a_{ij}$), collapsing axis 1 and leaving row totals of shape **`(2,)`**.
 
-Broadcasting aligns shapes from the right: $(2,)$ cannot meet 3 columns,
-but $(2, 1)$ stretches across them.
+@linear-algebra-reduction-2
 :::
 
-::: {.col}
+::: {.col .fig .big}
 @fig:linear-algebra-reduce-axes
 :::
 :::
 :::
 
-::: {.slide title="Centering Images Needs keepdims; Centering Pixels Does Not"}
-[Reductions]{.kicker}
-
-@linear-algebra-keeping-reduced-axes-1
-
-- Column means $(784,)$ align with the last axis of $(256, 784)$.
-- Row means need shape $(256, 1)$. Without `keepdims` the shape is
-  $(256,)$ and $256 \neq 784$: an error.
-- For a square matrix the same mistake gives **no error**, just wrong
-  numbers.
-:::
-
-::: {.slide title="A Score Is a Dot Product"}
-[Dot products]{.kicker}
-
-$$\mathbf{w}^\top \mathbf{x} + b = \sum_{i=1}^{784} w_i x_i + b$$
-
-- Image $\mathbf{x}$, weights $\mathbf{w}$ of one category, offset $b$.
-- Multiply matching entries, add them up.
-- With all weights equal to 1: the sum of the pixels. With weights
-  $\geq 0$ that sum to 1: a weighted average.
-:::
-
-::: {.slide title="Ax Takes One Dot Product per Row"}
-[Matrix–vector]{.kicker}
-
-$(\mathbf{A}\mathbf{x})_i = \mathbf{a}_i^\top\mathbf{x}$ for each row
-$\mathbf{a}_i^\top$ of $\mathbf{A}$, so an $m \times n$ matrix maps
-$\mathbb{R}^n$ to $\mathbb{R}^m$.
-
-@linear-algebra-matrix-vector-products
+::: {.slide title="Non-Reduction Sums (keepdims=True) and Broadcasting Normalization"}
+[Reduction + Broadcasting]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-::: {.d2l-note}
-$\mathbf{X}\mathbf{w} + b$: one score per image. Fitted to one
-real-valued label per example, such as a price, it is linear regression.
+- **Why `A / A.sum(axis=1)` fails:** Dividing `(2, 3)` by `(2,)` right-aligns as `(2, 3)` vs. `(1, 2)`—trailing dimensions $3 \neq 2$ clash!
+- **`keepdims=True` retains length 1 (`(2, 1)`):** Now `A / sum_A` broadcasts across columns so each row sums to $1$ (**softmax**, **attention**).
+- **Centering $\mathbf{X} \in \mathbb{R}^{256 \times 784}$:** Per-pixel means (`axis=0`, `(784,)`) broadcast directly; per-image means (`axis=1`, `(256, 1)`) need `keepdims=True` (**LayerNorm**).
 :::
+
+::: {.col}
+@linear-algebra-non-reduction-sum-1
+
+@linear-algebra-non-reduction-sum-2
+:::
+:::
+:::
+
+::: {.slide title="The Dot Product: Weighted Sums and Geometric Projection"}
+[Inner Products]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Given $\mathbf{x}, \mathbf{y} \in \mathbb{R}^d$, their **dot product** (inner product) sums the products of corresponding coordinates:
+  $$\mathbf{x}^\top \mathbf{y} = \langle \mathbf{x}, \mathbf{y} \rangle = \sum_{i=1}^{d} x_i y_i = \|\mathbf{x}\|_2 \|\mathbf{y}\|_2 \cos\theta$$
+- **Deep learning role:** A single neuron's pre-activation $\mathbf{w}^\top \mathbf{x} + b$ is an offset dot product; when $w_i \geq 0$ and $\sum_i w_i = 1$, $\mathbf{w}^\top \mathbf{x}$ computes a convex weighted average.
+
+@linear-algebra-dot-products-1
+:::
+
+::: {.col .fig}
+@fig:linear-algebra-dot
+
+@linear-algebra-dot-products-2
+:::
+:::
+:::
+
+::: {.slide title="Cosine Similarity and the Cauchy–Schwarz Inequality"}
+[Angles in High Dimensions]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Dividing by Euclidean lengths defines **cosine similarity** in any dimension $d$:
+  $$\cos\theta = \frac{\mathbf{x}^\top \mathbf{y}}{\|\mathbf{x}\|_2 \|\mathbf{y}\|_2} \in [-1, 1]$$
+- **Scale invariance:** Rescaling brightness or embedding magnitude (`2 * x`) leaves $\cos\theta$ unchanged—making it the workhorse similarity score for token, image, and retrieval embeddings.
+- **Cauchy–Schwarz ($|\mathbf{x}^\top\mathbf{y}| \leq \|\mathbf{x}\|_2\|\mathbf{y}\|_2$):** Follows directly from $0 \leq \|\mathbf{u} \mp \mathbf{v}\|_2^2 = 2 \mp 2\mathbf{u}^\top\mathbf{v}$ on unit vectors $\mathbf{u}, \mathbf{v}$.
+:::
+
+::: {.col}
+![](../img/mdl-prelim-cosine.svg){.nostretch width=100%}
+
+@linear-algebra-dot-products-3
+:::
+:::
+:::
+
+::: {.slide title="Matrix–Vector Products: Linear Maps on Feature Spaces"}
+[Matrix–Vector Products]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- A matrix $\mathbf{A} \in \mathbb{R}^{m \times n}$ defines a linear map $\mathbb{R}^n \to \mathbb{R}^m$ (`A @ x` or `tf.linalg.matvec(A, x)`), with two complementary views:
+  1. **Row-wise ($m$ parallel dot products):** $[\mathbf{A}\mathbf{x}]_i = \mathbf{a}_i^\top \mathbf{x}$ projects input $\mathbf{x}$ onto each of the $m$ row templates of $\mathbf{A}$.
+  2. **Column-wise (basis combination):** $\mathbf{A}\mathbf{x} = \sum_{j=1}^n x_j \mathbf{a}_{:,j}$ forms a linear combination of the columns of $\mathbf{A}$ weighted by the coordinates of $\mathbf{x}$.
+
+@linear-algebra-matrix-vector-products
 :::
 
 ::: {.col .fig}
@@ -929,247 +956,172 @@ real-valued label per example, such as a price, it is linear regression.
 :::
 :::
 
-::: {.slide title="A Matrix Moves Space: Its Columns Are the Images of e₁ and e₂"}
-[Matrix–vector]{.kicker}
+::: {.slide title="Geometric View: How Matrices Transform Space"}
+[Linear Geometry]{.kicker}
 
-![](../img/mdl-prelim-linear-maps.svg){.nostretch width=100%}
+![](../img/mdl-prelim-linear-maps.svg){.nostretch width=95% fig-align="center"}
 
-Rotation by 90°, scaling by 2 and 1/2, shear. The unit square (dashed)
-becomes the parallelogram spanned by the columns $\mathbf{A}\mathbf{e}_1$
-and $\mathbf{A}\mathbf{e}_2$.
+- Because $\mathbf{A}\mathbf{e}_j$ extracts the $j^\textrm{th}$ column of $\mathbf{A}$, the columns show where the standard basis vectors $\mathbf{e}_1, \mathbf{e}_2$ land:
+  - **Rotations, axis rescalings, and shears** deform the dashed unit square into the parallelogram spanned by $\mathbf{A}\mathbf{e}_1$ and $\mathbf{A}\mathbf{e}_2$.
+  - Across layers of a neural network, each weight matrix $\mathbf{W}$ rotates, stretches, and projects feature space so that tangled classes become linearly separable.
 :::
 
-::: {.slide title="A Linear Layer Compares Each Image With Ten Templates"}
-[Matrix–matrix]{.kicker}
+::: {.slide title="Matrix–Matrix Multiplication: Batching Linear Layers"}
+[Matrix–Matrix Products]{.kicker}
 
-$$o_{ij} = \sum_{l=1}^{784} x_{il}\, w_{lj} + b_j = (\textrm{image } i)^\top (\textrm{template } j) + b_j$$
+::: {.cols .vc}
+::: {.col}
+- For $\mathbf{A} \in \mathbb{R}^{m \times k}$ and $\mathbf{B} \in \mathbb{R}^{k \times n}$, $\mathbf{C} = \mathbf{A}\mathbf{B} \in \mathbb{R}^{m \times n}$ (`A @ B`) computes $mn$ dot products of length $k$:
+  $$c_{ij} = \mathbf{a}_i^\top \mathbf{b}_{:,j} = \sum_{l=1}^{k} a_{il}\, b_{lj}$$
+- **Shape rule:** $(m, k) \times (k, n) \to (m, n)$—inner dimensions $k$ must match and contract away.
+
+@linear-algebra-matrix-matrix-multiplication
+:::
+
+::: {.col}
+- **Batching a 10-class classifier ($\mathbf{O} = \mathbf{X}\mathbf{W} + \mathbf{b}$):** `(256, 784) @ (784, 10) + (10,) -> (256, 10)` evaluates all $2{,}560$ logits at once; `argmax` along axis 1 predicts each image's class:
 
 @linear-algebra-matrix-matrix-products-1
-
-- $(256 \times 784)(784 \times 10) = 256 \times 10$: inner sizes must match.
-- `argmax` along axis 1 picks one category per image.
 :::
-
-::: {.slide title="Check: A Shape Mismatch"}
-[Check]{.kicker}
-
-You stored the weights as $\mathbf{W}^\top \in \mathbb{R}^{10 \times 784}$,
-one row per category. Does $\mathbf{X}\mathbf{W}^\top$ work? What should
-you compute instead?
-
-::: {.d2l-note .fragment .fade-up}
-**Answer.** No: the inner sizes 784 and 10 differ. Transpose the stored
-matrix: $(256 \times 784)(784 \times 10) = 256 \times 10$, the same scores.
 :::
 :::
 
-::: {.slide title="AB Costs 2mkn FLOPs: About 4 Million for the Minibatch"}
-[Cost]{.kicker}
+::: {.slide title="Computational Complexity and Arithmetic Intensity of Matmul"}
+[Systems & FLOPs]{.kicker}
 
-$(m \times k)(k \times n)$: $mn$ entries, each a dot product of length $k$
-($k$ multiplies, $k - 1$ adds).
+Multiplying $(m, k) \times (k, n)$ computes $mn$ dot products of length $k$ ($k$ multiplies and $k - 1$ adds each), costing **$\approx 2mkn\text{ FLOPs}$**:
 
-| product | FLOPs | numbers involved |
-|---|---|---|
-| (256 × 784)(784 × 10) | $2 \cdot 256 \cdot 784 \cdot 10 \approx 4.0 \times 10^6$ | $2.1 \times 10^5$ |
-| (4096 × 4096)(4096 × 4096) | $2 \cdot 4096^3 \approx 1.4 \times 10^{11}$ | $5.0 \times 10^7$ |
+| Operation | Tensor Shapes | Memory Elements | Arithmetic Work (FLOPs) | FLOPs per Element |
+| :--- | :--- | :--- | :--- | :--- |
+| **Hadamard Product (`A * B`)** | `(n, n) * (n, n)` | $3n^2$ | $n^2$ | $0.33$ (memory-bound) |
+| **Matrix–Vector (`W @ x`)** | `(n, n) @ (n,)` | $n^2 + 2n$ | $2n^2$ | $\approx 2$ (memory-bound) |
+| **Fashion-MNIST Batch (`X @ W`)** | `(256, 784) @ (784, 10)` | $2.11 \times 10^5$ | $2 \cdot 256 \cdot 784 \cdot 10 \approx 4.01 \times 10^6$ | $\approx 19\text{ FLOPs / elem}$ |
+| **LLM Hidden Layer (`X @ W`)** | `(4096, 4096) @ (4096, 4096)` | $5.03 \times 10^7$ | $2 \cdot 4096^3 \approx 1.37 \times 10^{11}$ | $\approx 2{,}730\text{ FLOPs / elem}$ |
 
 ::: {.d2l-note}
-For square matrices the work $2n^3$ grows faster than the $3n^2$ numbers:
-doubling $n$ means 8× the work for 4× the numbers. How fast hardware gets
-through them is a question for the Computational Performance chapter.
+For $n \times n$ matrices, data transfer grows as $O(n^2)$ while compute grows as $O(n^3)$. This $O(n)$ **arithmetic intensity** is why batching vectors into matrices unlocks GPU Tensor Core throughput!
 :::
 :::
 
-::: {.slide title="Two Rulers for (3, −4): ℓ₂ Reads 5, ℓ₁ Reads 7"}
+::: {.slide title="Concept Check: Predicting Reduction, Broadcast, and Matmul Shapes"}
+[Check Your Understanding]{.kicker}
+
+Given flattened minibatch `X` of shape `(256, 784)` and weight matrix `W_T` stored row-wise with shape `(10, 784)`:
+
+1. Why does `X @ W_T` fail, and what expression computes the `(256, 10)` logit matrix?
+2. What are the shapes of `X.sum(axis=0)` and `X.sum(axis=1, keepdims=True)`?
+3. Suppose a minibatch happens to contain $n = 784$ images so `X` is square `(784, 784)`. What happens if you evaluate `X - X.mean(axis=1)` *without* `keepdims=True`?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Inner dimensions $784 \neq 10$ mismatch; transposing via **`X @ W_T.T`** aligns `(256, 784) @ (784, 10) -> (256, 10)`.
+2. `X.sum(axis=0)` has shape **`(784,)`** (per-pixel totals); `X.sum(axis=1, keepdims=True)` has shape **`(256, 1)`** (per-image totals).
+3. **Silent broadcasting bug!** `X.mean(axis=1)` has shape `(784,)`, which right-aligns to `(1, 784)` and subtracts *image $j$'s mean from pixel $j$ of every image* without raising an error!
+:::
+:::
+
+::: {.slide title="Vector and Matrix Norms: Measuring Magnitude"}
 [Norms]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$$\|\mathbf{x}\|_2 = \sqrt{\textstyle\sum_i x_i^2}, \qquad \|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|$$
+- Every norm $\|\cdot\|$ satisfies $\|\alpha\mathbf{x}\| = |\alpha|\|\mathbf{x}\|$, $\|\mathbf{x} + \mathbf{y}\| \leq \|\mathbf{x}\| + \|\mathbf{y}\|$, and $\|\mathbf{x}\| > 0$ for $\mathbf{x} \neq \mathbf{0}$:
+  - **Euclidean ($\ell_2$):** $\|\mathbf{x}\|_2 = \sqrt{\sum_i x_i^2}$ (for $(3, -4)$, $\|\mathbf{x}\|_2 = 5$).
+  - **Manhattan ($\ell_1$):** $\|\mathbf{x}\|_1 = \sum_i |x_i|$ (for $(3, -4)$, $\|\mathbf{x}\|_1 = 7$).
+  - **$\ell_p$ & Frobenius:** $\|\mathbf{x}\|_p = (\sum_i |x_i|^p)^{1/p}$, $\|\mathbf{A}\|_\textrm{F} = \sqrt{\sum_{i,j} a_{ij}^2}$.
 
 @linear-algebra-norms-2
-
-::: {.d2l-note}
-$\|\mathbf{x}\|_2 = \sqrt{\mathbf{x}^\top\mathbf{x}}$ is the length. A
-norm scales with $|\alpha|$, obeys the triangle inequality, and is zero
-only at $\mathbf{0}$.
-:::
-:::
-
-::: {.col .narrow}
-@fig:linear-algebra-norms
-:::
-:::
-:::
-
-::: {.slide title="Normalized, the Dot Product Is a Cosine"}
-[Norms · angles]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-In the plane, the law of cosines gives
-
-$$\mathbf{x}^\top\mathbf{y} = \|\mathbf{x}\|\,\|\mathbf{y}\|\cos\theta.$$
-
-In 784 dimensions, this *defines* the angle:
-
-$$\cos\theta = \frac{\mathbf{x}^\top\mathbf{y}}{\|\mathbf{x}\|\,\|\mathbf{y}\|}.$$
-
-::: {.d2l-note}
-Cosine similarity ignores length: an image and the same image at twice
-the brightness have cosine 1.
-:::
 :::
 
 ::: {.col .fig}
-@fig:linear-algebra-dot
+@fig:linear-algebra-norms
+
+@linear-algebra-norms-3
 :::
 :::
 :::
 
-::: {.slide title="Cosines Run From 1 (Aligned) to −1 (Opposed)"}
-[Norms · angles]{.kicker}
+::: {.slide title="Why Choice of Norm Matters: Outliers, Weight Decay, and Sparsity"}
+[Norms in Machine Learning]{.kicker}
 
-![](../img/mdl-prelim-cosine.svg){.nostretch width=100%}
+On residual error vector $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y} = (1, -1, 1, -1, 10)$, the single outlier $10$ accounts for $100 / 104 \approx \mathbf{96\%}$ of squared $\ell_2$ error $\|\mathbf{r}\|_2^2$, versus $10 / 14 \approx \mathbf{71\%}$ of $\ell_1$ error $\|\mathbf{r}\|_1$:
 
-$\mathbf{x} = (1, 1, 1, 1)$, $\mathbf{y} = (1, 1, 1, -1)$: lengths 2 and
-2, dot product 2, so $\cos\theta = 1/2$ and $\theta = \pi/3$:
-
-@!linear-algebra-dot-products-3
+| Norm Quantity | Deep Learning Objective | Geometric & Optimization Behavior |
+| :--- | :--- | :--- |
+| $\frac{1}{n}\|\hat{\mathbf{y}} - \mathbf{y}\|_2^2$ | **Mean Squared Error (MSE) loss** | Smooth gradient proportional to residual; heavily penalizes outliers |
+| $\frac{1}{n}\|\hat{\mathbf{y}} - \mathbf{y}\|_1$ | **Mean Absolute Error (L1) loss** | Constant-magnitude gradient ($\pm 1$); robust to corrupted outlier targets |
+| $\frac{\lambda}{2}\|\mathbf{W}\|_\textrm{F}^2$ | **$\ell_2$ Regularization (Weight Decay)** | Isotropic round $\ell_2$ ball shrinks large weights smoothly toward zero |
+| $\lambda\|\mathbf{w}\|_1$ | **$\ell_1$ Regularization (Lasso / Sparsity)** | Sharp axis corners of the $\ell_1$ diamond drive small weights to *exact zero* |
+| $\|\mathbf{g}\|_2 \leq \tau$ | **Global Gradient Clipping** | Rescales $\mathbf{g} \leftarrow \frac{\tau}{\|\mathbf{g}\|_2}\mathbf{g}$ when $\|\mathbf{g}\|_2 > \tau$ to prevent unstable steps |
 :::
 
-::: {.slide title="Cauchy–Schwarz Keeps the Cosine in [−1, 1]"}
-[Norms · angles]{.kicker}
+::: {.slide title="Eigendecomposition: Invariant Directions and the Spectral Theorem"}
+[Eigendecomposition]{.kicker}
 
-$|\mathbf{x}^\top\mathbf{y}| \le \|\mathbf{x}\|\,\|\mathbf{y}\|$ in any
-dimension. Proof for unit vectors $\mathbf{u} = \mathbf{x}/\|\mathbf{x}\|$,
-$\mathbf{v} = \mathbf{y}/\|\mathbf{y}\|$:
+::: {.cols .vc}
+::: {.col}
+- A nonzero $\mathbf{v}$ is an **eigenvector** of $\mathbf{A} \in \mathbb{R}^{n \times n}$ with **eigenvalue** $\lambda$ if $\mathbf{A}\mathbf{v} = \lambda \mathbf{v} \Longrightarrow \mathbf{A}^k \mathbf{v} = \lambda^k \mathbf{v}$.
+- **Spectral theorem:** Every real symmetric matrix $\mathbf{S} = \mathbf{S}^\top$ has $n$ **real eigenvalues** and an **orthonormal eigenbasis** (`linalg.eigh`).
 
-**Step 1:** $0 \le \|\mathbf{u} - \mathbf{v}\|^2 = 1 - 2\mathbf{u}^\top\mathbf{v} + 1$,
-so $\mathbf{u}^\top\mathbf{v} \le 1$.
-
-**Step 2:** $0 \le \|\mathbf{u} + \mathbf{v}\|^2 = 1 + 2\mathbf{u}^\top\mathbf{v} + 1$,
-so $\mathbf{u}^\top\mathbf{v} \ge -1$.
-
-**Step 3:** multiply by $\|\mathbf{x}\|\,\|\mathbf{y}\|$. $\blacksquare$
-
-::: {.d2l-note}
-Equality only when one vector is a multiple of the other.
-:::
+@linear-algebra-eigenvalues-1
 :::
 
-::: {.slide title="Check: Three Cosines"}
-[Check]{.kicker}
-
-Compute the cosine similarity of each pair.
-
-1. $(1, 2, 2)$ and $(2, 1, -2)$
-2. $(1, 0, 1)$ and $(2, 0, 2)$
-3. $(1, 1)$ and $(1, -1)$
-
-::: {.d2l-note .fragment .fade-up}
-**Answers.**
-
-1. Dot product $2 + 2 - 4 = 0$: perpendicular, cosine 0.
-2. The second is twice the first: cosine 1.
-3. Dot product $1 - 1 = 0$: perpendicular. These are the eigenvector
-   directions at the end of the deck.
+::: {.col .fig}
+![](../img/mdl-prelim-eigen.svg){.nostretch width=100%}
+:::
 :::
 :::
 
-::: {.slide title="Squared Errors Chase Outliers"}
-[Norms]{.kicker}
+::: {.slide title="Power Iteration and the Spectral Norm"}
+[Repeated Matrix Multiplication]{.kicker}
 
-Errors $\mathbf{r} = \hat{\mathbf{y}} - \mathbf{y} = (1, -1, 1, -1, 10)$
-(predictions minus labels): the one large error is
-
-- $100/104 \approx 96\%$ of the squared $\ell_2$ norm,
-- $10/14 \approx 71\%$ of the $\ell_1$ norm.
-
-| norm | appears as |
-|---|---|
-| $\|\mathbf{r}\|_2^2 / n$ for $n$ examples | mean squared error |
-| $\|\mathbf{W}\|_\textrm{F}^2$ | weight decay: shrinks all weights |
-| $\|\mathbf{w}\|_1$ | sparsity: sets many weights to 0 |
-| $\|\mathbf{g}\|_2$, $\mathbf{g}$ the gradient | gradient clipping |
+::: {.cols .vc}
+::: {.col}
+- Expanding any input $\mathbf{x} = \sum_{i=1}^n c_i \mathbf{v}_i$ in the orthonormal eigenbasis shows how repeated multiplication evolves:
+  $$\mathbf{A}^k \mathbf{x} = \sum_{i=1}^n c_i \lambda_i^k \mathbf{v}_i$$
+- **Power iteration:** As $k$ grows, the term with the largest $|\lambda_i|$ dominates—aligning $\mathbf{A}^k\mathbf{x}$ with the dominant eigenvector and stretching its norm by $\max_i |\lambda_i|$ per step.
+- For symmetric $\mathbf{A}$, $\max_i |\lambda_i|$ equals the **spectral norm** $\|\mathbf{A}\|_2 = \max_{\mathbf{x}\neq\mathbf{0}} \|\mathbf{A}\mathbf{x}\|_2 / \|\mathbf{x}\|_2$ (maximum stretch factor).
 :::
 
-::: {.slide title="Eigenvectors Are Only Stretched"}
-[Eigenvalues]{.kicker}
-
-$\mathbf{A}\mathbf{v} = \lambda\mathbf{v} \;\Rightarrow\; \mathbf{A}^k\mathbf{v} = \lambda^k\mathbf{v}$ after $k$ multiplications.
-For $\mathbf{S} = \left(\begin{smallmatrix} 2 & 1 \\ 1 & 2 \end{smallmatrix}\right)$:
-$(1, 1) \mapsto (3, 3)$ and $(-1, 1) \mapsto (-1, 1)$, so $\lambda = 3$ and $1$.
-
-![](../img/mdl-prelim-eigen.svg){.nostretch width=72% fig-align="center"}
-:::
-
-::: {.slide title="Repeated Multiplication Finds the Largest Eigenvalue"}
-[Eigenvalues]{.kicker}
-
-Write $\mathbf{x} = \sum_i c_i\mathbf{v}_i$ in the perpendicular
-eigenvectors of a symmetric $\mathbf{A}$. Then
-$\mathbf{A}^k\mathbf{x} = \sum_i c_i\lambda_i^k\mathbf{v}_i$: the largest
-$|\lambda_i|$ takes over.
-
+::: {.col}
 @linear-algebra-eigenvalues-2
-
-Growth per step 3, direction $(1, 1)/\sqrt{2}$. Rescaling to length 1
-after each step is *power iteration*.
 :::
-
-::: {.slide title="Fifty Layers Turn 1.1 Into 117 and 0.9 Into 0.005"}
-[Eigenvalues]{.kicker}
-
-$\mathbf{M} = \left(\begin{smallmatrix} 1 & 0.1 \\ 0.1 & 1 \end{smallmatrix}\right)$
-has eigenvalues 1.1 and 0.9. Each layer multiplies the part of a signal
-along an eigenvector by its eigenvalue:
-
-| layers *k* | 10 | 20 | 50 |
-|---|---|---|---|
-| 1.1^*k*^ | 2.59 | 6.73 | 117 |
-| 0.9^*k*^ | 0.35 | 0.12 | 0.005 |
-
-Applying $\mathbf{M}$ 50 times to both eigenvectors gives the last column:
-
-@!linear-algebra-powers-of-a-matrix-1
-
-::: {.d2l-note .rule}
-Unless each layer stretches by a factor close to 1, signals and gradients
-explode or vanish exponentially with depth.
 :::
 :::
 
-::: {.slide title="Check: The Cost of One Layer"}
-[Check]{.kicker}
+::: {.slide title="Spectral Dynamics in Deep Networks: Exploding and Vanishing Signals"}
+[Why Initialization & Normalization Matter]{.kicker}
 
-A minibatch of 256 vectors of width 4096 passes through a layer with a
-$4096 \times 4096$ weight matrix, on a GPU that sustains $10^{14}$ FLOP/s.
+::: {.cols .vc}
+::: {.col}
+- Passing activations or backpropagating gradients through $L = 50$ layers multiplies by $50$ weight matrices. Even a $10\%$ deviation from unit eigenvalues ($\lambda_1 = 1.1$, $\lambda_2 = 0.9$) causes exponential blow-up or decay:
 
-1. How many FLOPs?
-2. About how long?
+| Depth $k$ | $\lambda_1^k = 1.1^k$ (Exploding) | $\lambda_2^k = 0.9^k$ (Vanishing) |
+| :---: | :---: | :---: |
+| $10$ | $2.59$ | $0.349$ |
+| $20$ | $6.73$ | $0.122$ |
+| $50$ | **$117.4$** | **$0.0052$** |
 
-::: {.d2l-note .fragment .fade-up}
-**Answers.**
-
-1. $2 \times 256 \times 4096 \times 4096 \approx 8.6 \times 10^9$ FLOPs.
-2. $8.6 \times 10^9 / 10^{14} \approx 86$ µs, if the arithmetic is the
-   bottleneck.
-:::
+- Keeping layer singular values near $1$ motivates **Xavier/He initialization**, **residual connections**, and **LayerNorm / BatchNorm**.
 :::
 
-::: {.slide title="Recap"}
-[Wrap-up]{.kicker}
+::: {.col}
+@linear-algebra-powers-of-a-matrix-1
+:::
+:::
+:::
 
-| rule | running example |
-|---|---|
-| shape: $(m \times k)(k \times n) = m \times n$ | $(256 \times 784)(784 \times 10) = 256 \times 10$ |
-| `keepdims` keeps a reduced axis as length 1 | row means $(256, 1)$ |
-| cost $2mkn$ FLOPs | $\approx 4 \times 10^6$ per minibatch |
-| $\ell_2$ and $\ell_1$ norms | $(3, -4)$: 5 and 7 |
-| $\cos\theta = \mathbf{x}^\top\mathbf{y} / (\|\mathbf{x}\|\,\|\mathbf{y}\|) \in [-1, 1]$ | brighter image, same cosine |
-| each layer multiplies an eigenvector by $\lambda$ | 50 layers: $1.1^{50} \approx 117$, $0.9^{50} \approx 0.005$ |
+::: {.slide title="Summary: Linear Algebra Operations, Shapes, and Roles"}
+[Key Takeaways]{.kicker}
 
-**Next:** how the error changes when a parameter changes: calculus.
+| Operation | Form | Shape Rule | FLOPs | Deep Learning Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **Hadamard Product** | $\mathbf{A} \odot \mathbf{B}$ (`A * B`) | $(m, n) \to (m, n)$ | $mn$ | Gating in LSTMs, SwiGLU, masks |
+| **Axis Reduction** | `sum(axis=1, keepdims=True)` | $(m, n) \to (m, 1)$ | $mn$ | Softmax normalization, LayerNorm |
+| **Dot Product & Cosine** | $\mathbf{x}^\top\mathbf{y} = \|\mathbf{x}\|_2\|\mathbf{y}\|_2\cos\theta$ | $(d,), (d,) \to ()$ | $2d$ | Neuron logit, query–key similarity |
+| **Matrix–Vector** | $\mathbf{A}\mathbf{x}$ (`A @ x`) | $(m, n) \times (n,) \to (m,)$ | $2mn$ | Single-example linear map |
+| **Matrix–Matrix** | $\mathbf{C} = \mathbf{X}\mathbf{W}$ (`X @ W`) | $(n, k) \times (k, m) \to (n, m)$ | $2nkm$ | Batched dense & attention layers |
+| **Norms ($\ell_2, \ell_1, \textrm{F}$)** | $\|\mathbf{x}\|_2, \|\mathbf{x}\|_1, \|\mathbf{W}\|_\textrm{F}$ | Any tensor $\to ()$ | $2N$ | MSE/MAE loss, weight decay, clipping |
+| **Eigendecomposition** | $\mathbf{A}\mathbf{v} = \lambda\mathbf{v} \Rightarrow \mathbf{A}^k\mathbf{v} = \lambda^k\mathbf{v}$ | $(n, n) \to (\lambda_i, \mathbf{v}_i)$ | $O(n^3)$ | Exploding/vanishing signals, curvature |
 :::

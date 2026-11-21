@@ -625,6 +625,16 @@ _PHANTOM_TITLE_SLIDE_RE = re.compile(
     re.DOTALL)
 
 
+def _bind_parenthesized_inline_boxes(html: str) -> str:
+    """Prevent dangling '(' before or orphaned ')' after inline math/code."""
+    html = re.sub(
+        r'(\([~≈≤≥±]?\s*)(<span class="math inline">[^<]*</span>|<code>[^<]*</code>)([)\],.;:!?]*)',
+        r'<span class="nowrap">\1\2\3</span>',
+        html,
+    )
+    return html
+
+
 def _strip_phantom_title_slide(html: str) -> str:
     """Remove Quarto's auto-generated `quarto-title-block` cover slide.
 
@@ -1032,6 +1042,7 @@ def main():
                 # _strip_phantom_title_slide). Applies to every deck;
                 # a no-op when no phantom is present.
                 new_text = _strip_phantom_title_slide(new_text)
+                new_text = _bind_parenthesized_inline_boxes(new_text)
                 if new_text != text:
                     deck_html.write_text(new_text, encoding='utf-8')
                 if per_deck_libs.exists():

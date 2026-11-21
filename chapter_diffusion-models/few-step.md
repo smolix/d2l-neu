@@ -390,9 +390,7 @@ the flow maps pass `time_freqs=slow`, frequencies from $10^{-4}$ to one,
 which the code below defines as `slow`. Large frequencies put large factors
 into the derivative (code that embeds $1000\, t$ multiplies it by up to a
 thousand), a source of instability that :citet:`Lu.Song.2025` report for
-consistency models. Exercise :exref:`ex_few-step-time-pairs` trains the image
-teacher and student of the next section with the faster features and
-compares the two.
+consistency models.
 
 A flow map takes $\mathbf{x}_t$ to $\mathbf{x}_s$ in one jump,
 $\mathbf{x}_s = \mathbf{x}_t - (t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s,
@@ -426,8 +424,7 @@ With the velocity $\mathbf{u}_t$ in place of $\bar{\mathbf{u}}$, the same
 function is Euler's method, so one sampler serves the teacher and the
 student. The jumps go one way only: every loss of this section draws
 $s \leq t$, so inverting a sample, as :numref:`sec_diffusion-samplers`
-inverted the ODE, would need the map trained in the other direction too
-(Exercise :exref:`ex_few-step-invert`).
+inverted the ODE, would need the map trained in the other direction too.
 
 For the image experiment at the end of the next section, the student
 starts as a copy of the teacher's U-Net. The gap $t - s$ enters through
@@ -1014,20 +1011,10 @@ sequence of tokens, the subject of :numref:`sec_diffusion-discrete`.
 
 ## Summary
 
-Long Euler steps fail because the trajectories bend; one step from noise
-lands every sample on the data mean. Reflow straightens the paths, but the
-original work still distilled the reflowed model for its best one-step
-results. A flow map replaces the velocity by the jump itself, written
-through the average velocity over an interval; differentiating it along the
-trajectory gives the MeanFlow identity, a regression target that needs one
-Jacobian-vector product, a stop-gradient, and either a teacher's velocity
-or each example's own. On the mixture, students distilled from a teacher
-match it in one or two evaluations in every run, while MeanFlow gets the
-mode weights right in one jump but draws the modes too tight; on
-Fashion-MNIST a distilled student scores four to five times the teacher's
-fifty-step FD in one jump and 1.4 to 1.5 times in four. Matching
-distributions, with a critic or a difference of scores, is the other route
-to one step.
+- A single Euler step of the probability-flow ODE from $t = 1$ to $t = 0$ collapses every starting point onto the data mean $\mathbb{E}[\mathbf{x}_0]$ because it follows the initial tangent of a curved trajectory.
+- A flow map $\Phi_{t \to s}(\mathbf{x}_t) = \mathbf{x}_t - (t - s)\, \bar{\mathbf{u}}(\mathbf{x}_t, s, t)$ predicts the integrated displacement along the ODE trajectory via the average velocity $\bar{\mathbf{u}}$. Differentiating with respect to $t$ yields the Eulerian / MeanFlow identity $\bar{\mathbf{u}} = \mathbf{u}_t - (t - s)\, \frac{d}{dt}\bar{\mathbf{u}}$, which can be trained with one forward-mode Jacobian-vector product and a stop-gradient target.
+- Pairing the reference velocity $\mathbf{u}_{\textrm{ref}}$ (a pretrained teacher $\hat{\mathbf{u}}$ versus the conditional velocity $\boldsymbol\epsilon - \mathbf{x}_0$) with the time domain ($s = 0$ versus $s \le t$) unifies consistency distillation, consistency training, flow-map distillation, and MeanFlow.
+- On the three-mode mixture and Fashion-MNIST, flow-map distillation from a teacher accurately preserves within-mode spread and matches 10–20 teacher Euler steps in 2–4 student jumps, whereas teacher-free MeanFlow contracts mode variance when trained on noisy per-example velocities.
 
 ## Exercises
 
@@ -1062,25 +1049,6 @@ to one step.
     1. Which of the teacher's errors does reflow remove, which does it
        inherit, and which does it add? What would a second round do to each?
    :exlabel:`ex_few-step-reflow`
-1. [extended] **Composition instead of a derivative.** ●● Progressive
-   distillation :cite:`Salimans.Ho.2022` trains a student so that one of
-   its steps reproduces two steps of the teacher, then makes the student
-   the teacher and repeats. A shortcut model
-   :cite:`Frans.Hafner.Levine.ea.2025` conditions a velocity model on the
-   step size $d$ and trains it from scratch with two losses: flow matching
-   at $d = 0$, and self-consistency, which asks one step of size $2d$ to
-   equal two steps of size $d$ computed by the model itself and held fixed.
-    1. Which identity of the flow map does each method enforce, and why
-       does neither need a Jacobian-vector product?
-    1. On the mixture, start from 64 Euler steps of the teacher of this
-       section and halve the number of steps six times, training each
-       student for a fifth of the teacher's updates. Report the strays
-       after each round. Where do the errors of the rounds come from?
-    1. Implement a shortcut model on the mixture with step sizes $2^{-k}$,
-       $k = 0, \ldots, 6$. Compare its strays and spread at one, two and
-       four steps with those of the progressive student and of the MeanFlow
-       student of this section at equal total training steps.
-   :exlabel:`ex_few-step-composition`
 1. **The Lagrangian loss.** ● :citet:`Boffi.Albergo.VandenEijnden.2025`
    train flow maps with the Lagrangian identity.
     1. Substitute :eqref:`eq_diffusion-flow-map` into $\partial_s
@@ -1118,54 +1086,6 @@ to one step.
        across times. What does the experiment on the mixture tell you about
        the recipe on images, and what does it not?
    :exlabel:`ex_few-step-stop-gradient`
-1. [code] **Which times to train on, on what grid, and how to embed them.**
-   The MeanFlow student drew every pair with $s < t$ from two uniform
-   times, the image student half of its pairs with $s = t$, and consistency
-   distillation as published uses a grid. All of them saw the times through
-   the slow features `slow`.
-    1. Train the MeanFlow student on the mixture with a share of $0.25$,
-       $0.5$, $0.75$ and $1$ of the pairs having $s < t$, and report the
-       strays and spread at one and two jumps. Which share serves one jump
-       best?
-    1. Replace the uniform times by a logit-normal distribution of $t$ with
-       mean $-0.4$ and standard deviation $1$, which concentrates the times
-       in the middle of the path. What changes, and why?
-    1. Song et al. :cite:`Song.Dhariwal.Chen.ea.2023` use a grid of
-       $N = 18$ times, one Heun step of the teacher from $t_n$ to
-       $t_{n-1}$, and a target held fixed at the earlier point. Write the
-       student as $f(\mathbf{x}, t) = \mathbf{x} - t\,
-       \bar{\mathbf{u}}(\mathbf{x}, 0, t)$ and show that the difference of
-       its outputs at the two points, divided by $t_n - t_{n-1}$, tends to
-       the Eulerian derivative :eqref:`eq_diffusion-eulerian` at $s = 0$ as
-       $N$ grows.
-    1. Implement this discrete loss without a Jacobian-vector product,
-       train it on the mixture with the teacher of this section for $N = 8$
-       and $N = 64$, and compare its one-step strays with those of the
-       continuous student. Does a finer grid help, and why?
-    1. Train the image teacher and student of this section again with the
-       default time features of the chapter, frequencies up to 64 (leave
-       out `time_freqs`), and compare the student's FD at one and two jumps
-       with that of the student on slow features, each against its own
-       teacher's fifty-step FD. Explain the difference with the factor
-       $\omega$ that each feature contributes to $\frac{d}{dt}
-       \bar{\mathbf{u}}$. Is a velocity model without a derivative in its
-       loss hurt by the slow features?
-   :exlabel:`ex_few-step-time-pairs`
-1. [code] **Inverting a student.** The exact flow map is a bijection, so
-   $\Phi_{0 \to 1}$ undoes $\Phi_{1 \to 0}$.
-    1. For the Gaussian data with $m = 2$ and $\varsigma = 0.5$, write
-       $\Phi_{0 \to 1}$ and the average velocity $\bar{u}(x, 1, 0)$ that
-       :eqref:`eq_diffusion-flow-map` assigns to this backward jump. Does the
-       derivation of :eqref:`eq_diffusion-meanflow` need $s \leq t$?
-    1. Can the students of this section map a sample back to its noise?
-       Which pairs $(s, t)$ did their losses never see?
-    1. Train the MeanFlow student on the mixture with pairs drawn in both
-       orders. Write a backward version of `flow_map_sample`, invert 2,000
-       of the student's one-jump samples with one and with four backward
-       jumps, and report the root-mean-square distance to the noise they
-       came from. Compare with inverting the teacher by fifty Euler steps
-       run from $t = 0$ to $t = 1$.
-   :exlabel:`ex_few-step-invert`
 1. [code] **A guided student.** ● Classifier-free guidance, as in
    :numref:`subsec_diffusion-images-guided`, evaluates the network twice
    per step. :citet:`Meng.Rombach.Gao.ea.2023` distill the guided velocity
@@ -1184,14 +1104,6 @@ to one step.
        How would you draw the strengths during training, and what does the
        student then offer that a student distilled at $\gamma = 2$ does not?
    :exlabel:`ex_few-step-guided-student`
-1. [code] **Quality against cost.** Measure the wall-clock time per 1,000
-   images and the FD of the teacher of this section with 1 to 50 Euler
-   steps, with Heun's method on the crowded grid of
-   :numref:`sec_diffusion-samplers`, and of the student with 1 to 4 jumps.
-    1. Plot FD against time. At which FD do the curves cross?
-    1. The student cost extra training. How many images must be generated
-       before that training is repaid at the FD of two jumps?
-   :exlabel:`ex_few-step-cost-curve`
 1. **Matching noised distributions.** ● Distribution matching distillation
    :cite:`Yin.Gharbi.Zhang.ea.2024` trains a one-step generator
    $\mathbf{x} = g_{\boldsymbol\theta}(\mathbf{z})$ along the gradient

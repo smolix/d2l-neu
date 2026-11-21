@@ -1,9 +1,9 @@
 # Gradient Penalties and Convergence
 :label:`sec_gan_convergence`
 
-The garment generator of :numref:`sec_basic_gan` learned to draw tops and shoes, but its losses never settled. After twenty epochs the critic's loss was still climbing toward the value it takes at the equilibrium, and the generator's was still falling toward its own. Is that slow progress, or does the game move around its equilibrium without reaching it? The last three sections cannot say. They computed what the game is worth when the critic answers optimally, and training never gives the critic that chance: both networks take small gradient steps, and each step of one player changes the objective of the other. Knowing where the equilibrium lies does not tell us whether these steps lead there.
+In the Fashion-MNIST experiment of :numref:`sec_basic_gan`, neither the discriminator loss nor the generator loss settled to its theoretical equilibrium value. Does alternating gradient descent converge slowly, or can it orbit an equilibrium indefinitely without reaching it? The population divergence analyses of :numref:`sec_basic_gan`–:numref:`sec_gan_relativistic` characterize the minimax objective when the critic is at its exact optimum $D^\star$, but in practice both networks take small simultaneous or alternating gradient steps, with each update shifting the other network's objective.
 
-:citet:`Mescheder.Geiger.Nowozin.2018` asked which training methods for GANs converge, and they answered with the smallest game there is: one data point, one generated point and a straight-line critic. Plain gradient steps fail even on this game, and a penalty on the critic's slope repairs them. The same penalty, added to the pairing loss of :numref:`sec_gan_relativistic`, gives the R3GAN recipe :cite:`Huang.Gokaslan.Kuleshov.ea.2024` that the rest of the chapter trains.
+To analyze the dynamics of gradient training directly, :citet:`Mescheder.Geiger.Nowozin.2018` introduced the *Dirac-GAN*—a minimal two-parameter problem consisting of a point-mass data distribution, a point-mass generator, and a linear critic. Even on this two-parameter system, unregularized gradient descent fails to converge, whereas penalizing the squared norm of the critic's input gradient ($R_1$ and $R_2$) makes the equilibrium locally asymptotically stable. Combining these zero-centered gradient penalties with the relativistic pairing objective of :numref:`sec_gan_relativistic` yields the R3GAN recipe :cite:`Huang.Gokaslan.Kuleshov.ea.2024` used across the remainder of this chapter.
 
 ```{.python .input #convergence-gradient-penalties-and-convergence}
 %%tab pytorch
@@ -28,17 +28,9 @@ from d2l import jax as d2l
 
 ## The Dirac-GAN
 
-The smallest game can be solved exactly, and it shows both obstacles of this section: its value is flat in the generator's position, and gradient steps rotate around the solution instead of approaching it.
+### A Two-Parameter Minimax System
 
-### The Game on Two Points
-
-Place the data at the origin and let the generator produce a single point on the real line: $p = \delta_0$ and $q_\theta = \delta_\theta$, so $q = p$ exactly when $\theta = 0$. Let the critic be linear, $D_\psi(x) = \psi x$. :numref:`sec_gan_objectives` scored a real sample $x$ by $\ell(D(x))$ and a generated sample $x'$ by $\ell(-D(x'))$ for a classification loss $\ell$, giving the margin objective
-
-$$
-V_\ell(D) = \mathbb{E}_{x \sim p}\big[\ell(D(x))\big] + \mathbb{E}_{x' \sim q}\big[\ell(-D(x'))\big].
-$$
-
-For two point masses both expectations are single evaluations:
+Let the data distribution be a point mass at the origin, $p = \delta_0$, let the generator place a point mass at $\theta \in \mathbb{R}$, $q_\theta = \delta_\theta$ (so $q_\theta = p$ if and only if $\theta = 0$), and let the critic be linear without bias, $D_\psi(x) = \psi x$. Under the symmetric margin objective $V_\ell(D) = \mathbb{E}_{x \sim p}[\ell(D(x))] + \mathbb{E}_{x' \sim q}[\ell(-D(x'))]$ (:numref:`sec_gan_objectives`), both expectations reduce to single evaluations:
 
 $$
 V(\theta, \psi) \;=\; \ell\big(D_\psi(0)\big) + \ell\big({-D_\psi(\theta)}\big)
@@ -46,13 +38,13 @@ V(\theta, \psi) \;=\; \ell\big(D_\psi(0)\big) + \ell\big({-D_\psi(\theta)}\big)
 $$
 :eqlabel:`eq_gan_dirac_value`
 
-This is the *Dirac-GAN* of :citet:`Mescheder.Geiger.Nowozin.2018`. Any differentiable loss that increases everywhere will do, and we use the logistic loss $\ell = \log\sigma$, whose derivatives are $\ell'(t) = \sigma(-t)$ and $\ell''(t) = -\sigma(t)\sigma(-t)$, so $\ell'(0) = \tfrac12$ and $\ell''(0) = -\tfrac14$.
+We take the logistic payoff $\ell(t) = \log \sigma(t)$, which satisfies $\ell'(t) = \sigma(-t) > 0$ and $\ell''(t) = -\sigma(t)\sigma(-t) < 0$, with $\ell'(0) = \tfrac12$ and $\ell''(0) = -\tfrac14$.
 
-For every $\theta \neq 0$ the two point masses have disjoint supports. The critic's best response sends $\psi\theta \to -\infty$, so $\sup_\psi V = \ell(0) + \sup_t \ell(t)$, the same number for every $\theta \neq 0$. A value that does not depend on $\theta$ gives the generator no gradient, however close to the data it starts. This is the saturation of :numref:`sec_basic_gan` in its smallest form.
+For any $\theta \neq 0$, the supports of $p$ and $q_\theta$ are disjoint: maximizing $V(\theta, \psi)$ over $\psi$ sends $\psi\theta \to -\infty$, yielding the constant $\sup_\psi V(\theta, \psi) = \ell(0)$ for all $\theta \neq 0$, which provides zero gradient with respect to $\theta$.
 
-### Circles in Continuous Time
+### Undamped Oscillations in Continuous Time
 
-Training does not compute a best response. Both players take gradient steps from where they are. The game has one stationary point, $(\theta, \psi) = (0, 0)$, where the generated point matches the data and the critic is flat. In the simultaneous gradient flow the generator descends $V$ and the critic ascends it:
+Instead of solving for $\sup_\psi V(\theta, \psi)$, gradient training updates $\theta$ and $\psi$ incrementally from their current values. The unique stationary point of :eqref:`eq_gan_dirac_value` is the equilibrium $(\theta, \psi) = (0, 0)$. Under simultaneous continuous-time gradient flow ($\dot\theta = -\partial_\theta V$, $\dot\psi = +\partial_\psi V$),
 
 $$
 \dot\theta \;=\; -\partial_\theta V \;=\; \psi\, \ell'(-\psi\theta),
@@ -61,48 +53,44 @@ $$
 $$
 :eqlabel:`eq_gan_dirac_flow`
 
-Both components are the same positive scalar $\ell'(-\psi\theta)$ times the vector $(\psi, -\theta)$, which is orthogonal to the position $(\theta, \psi)$. The squared distance to the equilibrium therefore does not change:
+Because the velocity vector $\mathbf{u}(\theta, \psi) = \ell'(-\psi\theta)\,(\psi, -\theta)$ is everywhere orthogonal to the state vector $(\theta, \psi)$, the squared distance to the origin is conserved:
 
 $$
 \frac{d}{dt}\big(\theta^2 + \psi^2\big)
 = 2\theta\psi\,\ell'(-\psi\theta) - 2\psi\theta\,\ell'(-\psi\theta) = 0 .
 $$
 
-Every trajectory is a circle around the solution, for every loss that increases everywhere. The generated point passes the data again and again without settling there. (A loss with a flat stretch, such as the hinge beyond its margin, has $\ell' = 0$ there and stops the motion wherever $-\psi\theta$ lands on it.)
+Every trajectory is a closed circle of constant radius around $(0, 0)$ for any strictly increasing payoff $\ell$: the generator parameter $\theta$ oscillates back and forth across $0$ without ever converging.
 
-The standard local test is linearization. Near a point where a smooth field vanishes, the field behaves like its linear part, the Jacobian $J$ at that point. If every eigenvalue of $J$ has negative real part, nearby trajectories approach the point at a linear rate. If the eigenvalues are purely imaginary, the linear part only rotates, the point is a *center*, and higher-order terms decide whether the orbits close, tighten or open (:numref:`subsec_mdl-ode-linearization`). Here
+Linearizing :eqref:`eq_gan_dirac_flow` around $(\theta, \psi) = (0, 0)$ (:numref:`subsec_mdl-ode-linearization`) yields the Jacobian matrix and eigenvalues:
 
 $$
 J = \begin{pmatrix} 0 & \ell'(0) \\ -\ell'(0) & 0 \end{pmatrix},
 \qquad
-\nu_{1,2} = \pm\, i\, \ell'(0),
+\nu_{1,2} = \pm\, i\, \ell'(0).
 $$
 :eqlabel:`eq_gan_dirac_eigs`
 
-a center. The test agrees with the circles but could not have found them on its own; the conservation law decides what the linear part leaves open, and the orbits close.
+Purely imaginary eigenvalues correspond to a linear *center* (the bilinear saddle problem $\min_\theta \max_\psi \theta\psi$, :citet:`Daskalakis.Ilyas.Syrgkanis.ea.2018`). Notice that the scalar factor $\ell'(-\psi\theta) = \sigma(D_\psi(\theta)) = w_{\textrm{sat}}$ multiplies both components simultaneously and therefore only rescales angular velocity along the circle.
 
-Linearized, $V \approx 2\ell(0) - \ell'(0)\,\theta\psi$, so up to a constant, the factor $\ell'(0)$ and the sign of $\psi$ the Dirac-GAN is the *bilinear game* $\min_\theta \max_\psi \theta\psi$. It is the standard example of the min-max literature, where methods such as optimistic gradient steps converge and plain gradient steps do not :cite:`Daskalakis.Ilyas.Syrgkanis.ea.2018`.
+### Outward Spirals and Limit Cycles in Discrete Time
 
-The common factor $\ell'(-\psi\theta) = \sigma(D_\psi(\theta))$ is the weight $w_{\textrm{sat}}$ with which the saturating generator of :numref:`sec_basic_gan` scales the update of a generated sample. Because it multiplies both components, it sets how fast the parameters turn and not where they go, so no factor common to both players' updates turns the circle into a spiral. A factor on one player alone can, as the non-saturating generator below shows.
-
-### Outward Spirals in Discrete Time
-
-Discrete steps do worse than the flow. Write $\mathbf{u}(\theta, \psi)$ for the right-hand side of :eqref:`eq_gan_dirac_flow`. A simultaneous step of size $h > 0$ maps $(\theta, \psi)$ to $(\theta, \psi) + h\,\mathbf{u}$. Since $\mathbf{u}$ is orthogonal to $(\theta, \psi)$, the Pythagorean theorem gives
+In discrete time, simultaneous gradient descent with step size $h > 0$ updates $(\theta, \psi) \mapsto (\theta, \psi) + h\,\mathbf{u}(\theta, \psi)$. Because $\mathbf{u}(\theta, \psi) \perp (\theta, \psi)$, the Pythagorean theorem gives:
 
 $$
 \big\| (\theta, \psi) + h\, \mathbf{u} \big\|^2
-\;=\; \big\| (\theta, \psi) \big\|^2 + h^2 \big\| \mathbf{u} \big\|^2 ,
+\;=\; \big\| (\theta, \psi) \big\|^2 + h^2 \big\| \mathbf{u} \big\|^2 .
 $$
 
-so each step adds $h^2\|\mathbf{u}\|^2$ to the squared distance. For the logistic loss $\mathbf{u}$ vanishes only at the equilibrium, so every step from any other point moves away from the solution, and a smaller step only slows the outward spiral (exercise :exref:`ex_convergence-discrete-simultaneous-update-dirac`).
+Thus, every simultaneous discrete step strictly *increases* the distance from the equilibrium for any $h > 0$, causing the iterates to spiral outward (Exercise :exref:`ex_convergence-discrete-simultaneous-update-dirac`).
 
-Every training loop in this chapter, however, alternates: the critic steps first, and the generator then steps against the updated critic. Linearized at the equilibrium, each half of such an update is a shear, which changes one coordinate by an amount that depends only on the other, and a shear preserves area. The composite update therefore has determinant one: no direction can shrink unless another grows, so the iterates cannot approach the solution at a linear rate. For $h\,\ell'(0) \leq 2$ both eigenvalues lie on the unit circle :cite:`Mescheder.Geiger.Nowozin.2018`, so the iterates do not escape at a linear rate either, and in practice they circle in a band around the solution (exercise :exref:`ex_convergence-alternating-updates`). Alternating is better than simultaneous play, and still not convergent.
+Alternating gradient updates (updating $\psi$ first, then $\theta$ using the updated $\psi$) fare slightly better: near $(0, 0)$, each half-step is an area-preserving linear shear, so the composite Jacobian has determinant $1$. For $h\,\ell'(0) \leq 2$, both eigenvalues lie on the unit circle :cite:`Mescheder.Geiger.Nowozin.2018`, so alternating iterates orbit within a bounded band around the origin without converging (Exercise :exref:`ex_convergence-alternating-updates`). Neither the non-saturating generator loss (which shares the same linearization $J$ at the origin) nor the relativistic pairing loss ($\ell(D_\psi(0) - D_\psi(\theta)) = \ell(-\psi\theta)$, which has the identical gradient field) alters these local eigenvalues.
 
-The two repairs of the earlier sections leave these dynamics in place. The non-saturating generator has the same Jacobian $J$ at the equilibrium; away from it the field gains a slow inward drift, which discrete steps stop on a cycle of radius about $\sqrt{2h}$ (exercise :exref:`ex_convergence-non-saturating-dynamics`). The pairing objective of :numref:`sec_gan_relativistic` scores the pair by $\ell\big(D_\psi(0) - D_\psi(\theta)\big) = \ell(-\psi\theta)$, which differs from :eqref:`eq_gan_dirac_value` only by the constant $\ell(0)$, so its gradient field, its circles and its spirals are the classical ones. A cure has to change the field near the equilibrium, and both repairs leave it as it was.
+## Zero-Centered Gradient Penalties
 
-## Zero-Centered Penalties
+To make the equilibrium $(\theta, \psi) = (0, 0)$ locally asymptotically stable, we must shift the eigenvalues of the Jacobian from the imaginary axis into the open left half-plane $\operatorname{Re}(\nu) < 0$. Because the equilibrium critic must be flat ($\nabla_x D^\star(x) = 0$ when $q = p$), penalizing the squared norm of the critic's input gradient adds damping to the critic without shifting the equilibrium $q = p$.
 
-The linearization test tells us what to aim for: move both eigenvalues of $J$ off the imaginary axis into the left half-plane, and nearby trajectories converge at a linear rate. (This is sufficient, not necessary: the non-saturating flow converges with imaginary eigenvalues, but only at the rate $r^2 \approx 8/t$ of exercise :exref:`ex_convergence-non-saturating-dynamics`.) The rotation needs friction. Which player should feel it? We do not know where the generator must end, since that is the unknown data distribution. We do know where the critic must end: at the equilibrium it cannot tell $p$ from $q$, so it is flat. Friction that pulls the critic's slope toward zero therefore leaves the equilibrium where it is, and on the Dirac-GAN the critic's slope is $\psi$, the very quantity that keeps the rotation going. Define the two *zero-centered gradient penalties*
+:citet:`Mescheder.Geiger.Nowozin.2018` define the two *zero-centered gradient penalties* $R_1$ (evaluated on real data $x \sim p$) and $R_2$ (evaluated on generated samples $x' \sim q$):
 
 $$
 R_1 \;=\; \frac{\gamma}{2}\, \mathbb{E}_{x \sim p}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big],
@@ -111,21 +99,17 @@ R_2 \;=\; \frac{\gamma}{2}\, \mathbb{E}_{x' \sim q}\Big[ \big\| \nabla_{x'} D(x'
 $$
 :eqlabel:`eq_gan_r1r2`
 
-with weight $\gamma > 0$, and let the critic maximize $V_\ell(D) - R_1 - R_2$ while the generator's objective stays unchanged. The penalties act on the critic's gradient with respect to its input, not its parameters: $R_1$ limits how steeply the critic varies at data samples and $R_2$ at generated samples. They are called zero-centered because the flat critic $\nabla_x D = 0$ minimizes both. At $q = p$ the optimal critic $\log(p/q)$ of :numref:`sec_basic_gan` is the constant zero, so the penalties vanish at the equilibrium they are meant to stabilize. Since $\tfrac12(\mathbb{E}_p + \mathbb{E}_q) = \mathbb{E}_m$, their sum is
+with penalty weight $\gamma > 0$. The critic maximizes $V_\ell(D) - R_1 - R_2$, while the generator objective is unchanged. Writing $m = (p + q)/2$, their sum is the expected squared gradient norm under the mixture distribution:
 
 $$
 R_1 + R_2 \;=\; \gamma\, \mathbb{E}_{x \sim m}\Big[ \big\| \nabla_x D(x) \big\|^2 \Big],
-\qquad m = \frac{p + q}{2},
+\qquad m = \frac{p + q}{2}.
 $$
 :eqlabel:`eq_gan_r1r2_sum`
 
-one smoothness penalty under the mixture $m$, which constrains the critic wherever either distribution puts mass, and nowhere else.
-
-The penalty did not start as a cure for rotation. :citet:`Roth.Lucchi.Nowozin.ea.2017` derived a penalty of this kind as the local effect of adding Gaussian noise to both distributions, with the weights $(1 - \sigma(D))^2$ on real and $\sigma(D)^2$ on generated samples. :citet:`Mescheder.Geiger.Nowozin.2018` dropped the weights, named the two halves $R_1$ and $R_2$, and showed what they do to the dynamics.
-
 ### Damping the Dirac-GAN
 
-For the linear critic, $\nabla_x D_\psi = \psi$ at every $x$, so both penalties equal $\tfrac{\gamma}{2}\psi^2$. Subtracting one of them from the critic's objective adds $-\gamma\psi$ to the critic's update:
+For the linear critic $D_\psi(x) = \psi x$, we have $\nabla_x D_\psi(x) = \psi$ everywhere, so $R_1 = R_2 = \tfrac{\gamma}{2}\psi^2$. Subtracting $\tfrac{\gamma}{2}\psi^2$ from the critic objective adds a linear damping term $-\gamma\psi$ to $\dot\psi$ (or $-2\gamma\psi$ if both $R_1$ and $R_2$ are included):
 
 $$
 \dot\theta = \psi\,\ell'(-\psi\theta),
@@ -133,7 +117,7 @@ $$
 \dot\psi = -\theta\,\ell'(-\psi\theta) - \gamma\psi .
 $$
 
-Using both penalties replaces $\gamma$ by $2\gamma$. Only the lower-right entry of the Jacobian changes:
+The Jacobian at $(0, 0)$ and its eigenvalues become:
 
 $$
 J_\gamma = \begin{pmatrix} 0 & \ell'(0) \\ -\ell'(0) & -\gamma \end{pmatrix},
@@ -142,11 +126,14 @@ J_\gamma = \begin{pmatrix} 0 & \ell'(0) \\ -\ell'(0) & -\gamma \end{pmatrix},
 $$
 :eqlabel:`eq_gan_dirac_pen`
 
-Both eigenvalues have negative real parts for every $\gamma > 0$. The equilibrium of the Dirac-GAN attracts, and small enough simultaneous or alternating steps converge to it at a linear rate. The characteristic polynomial $\nu^2 + \gamma\nu + \ell'(0)^2$ is that of a damped spring, the damped pendulum of :numref:`subsec_mdl-ode-linearization` with friction $\gamma$, and it has the spring's three regimes. For $\gamma < 2\ell'(0)$, the *underdamped* regime, the square root is imaginary and trajectories spiral inward; there the simultaneous step converges exactly when $h < \gamma/\ell'(0)^2$ (exercise :exref:`ex_convergence-discrete-simultaneous-update-dirac`). At $\gamma = 2\ell'(0)$, which is $\gamma = 1$ for the logistic loss, the repeated real eigenvalue gives critical damping, the fastest approach without oscillation. Larger values overdamp the dynamics: the slower eigenvalue, close to $-\ell'(0)^2/\gamma$, makes convergence slower as $\gamma$ grows. More friction is not always better.
+For every $\gamma > 0$, both eigenvalues have strictly negative real part ($\operatorname{Re}(\nu_{1,2}) < 0$), so the equilibrium $(0, 0)$ is locally exponentially stable! The characteristic polynomial $\nu^2 + \gamma\nu + \ell'(0)^2 = 0$ is identical to that of a damped harmonic oscillator (:numref:`subsec_mdl-ode-linearization`) with three regimes:
+1. *Underdamped* ($\gamma < 2\ell'(0)$): complex-conjugate eigenvalues with real part $-\gamma/2$; trajectories spiral inward (converging under simultaneous Euler steps when $h < \gamma / \ell'(0)^2$, Exercise :exref:`ex_convergence-discrete-simultaneous-update-dirac`).
+2. *Critically damped* ($\gamma = 2\ell'(0)$, i.e., $\gamma = 1$ for the logistic loss): repeated real eigenvalue $\nu = -\ell'(0)$, yielding the fastest non-oscillatory decay.
+3. *Overdamped* ($\gamma > 2\ell'(0)$): two negative real eigenvalues, where the slow mode $\nu \approx -\ell'(0)^2/\gamma$ decays more slowly as $\gamma$ increases.
 
 ### Phase Portraits
 
-Four predictions are now on the table. The flow keeps its distance from the equilibrium, simultaneous steps move away from it at every step, alternating steps stay in a band around it, and the penalty brings the iterates in. We check them by simulating the two equations for the logistic loss. The function `trajectory` repeats one update of step size $h$: `rk4_step` integrates the flow with a fourth-order Runge--Kutta step, `euler_step` takes one simultaneous gradient step, and `alt_step` updates the critic first and then the generator against the new critic.
+We verify these four regimes by integrating :eqref:`eq_gan_dirac_flow` from $(\theta_0, \psi_0) = (1, 1)$ (initial radius $\sqrt{2} \approx 1.41$) using fourth-order Runge–Kutta (`rk4_step`), simultaneous forward Euler (`euler_step`), and alternating gradient updates (`alt_step`).
 
 ```{.python .input #convergence-phase-portraits}
 %%tab pytorch, jax
@@ -207,61 +194,36 @@ for ax, (title, paths) in zip(axes, panels.items()):
 fig.tight_layout()
 ```
 
-The integrated flow stays on its circle at 1.41, although it too takes discrete steps. The stability disc $|1 + h\nu| < 1$ of a forward Euler step touches the imaginary axis only at the origin, while RK4's stability region contains a stretch of it, up to $|h\nu| = 2\sqrt2$, so RK4 can follow a rotation that Euler cannot (:numref:`sec_mdl-stiffness-implicit`). The simultaneous iterates move outward at every step; after 300 steps their distance from the equilibrium has doubled, from 1.41 to 2.87. The alternating iterates circle in a band: over their last 1,000 steps the distance stays between 1.34 and 1.42, bounded and not convergent. Both penalized paths converge, the underdamped one along a shrinking spiral to a distance of $6.5 \cdot 10^{-4}$ after 300 steps and the critically damped one directly, to $7 \cdot 10^{-12}$. The penalty turns divergence into convergence and leaves the equilibrium where it was.
+The phase portraits confirm all four predictions: the continuous flow (`RK4`) orbits on the circle of radius $1.41$, simultaneous Euler steps spiral outward to radius $2.87$ after 300 steps, alternating steps orbit inside $[1.34, 1.42]$, and adding the zero-centered penalty drives simultaneous Euler steps directly to the origin ($6.5 \times 10^{-4}$ at underdamped $\gamma = 0.3$, and $7 \times 10^{-12}$ at critically damped $\gamma = 1$).
 
-### Local Convergence beyond Two Parameters
+### Local Convergence for General Networks and Comparison of Penalties
 
-What carries over to networks? :citet:`Mescheder.Geiger.Nowozin.2018` proved a local theorem for the classical per-sample objective with $R_1$, $R_2$ or any mixture of the two: small enough simultaneous or alternating steps converge at a linear rate to the set of equilibria, if training starts close enough to it and four conditions hold.
+:citet:`Mescheder.Geiger.Nowozin.2018` extended this local stability analysis from the two-parameter Dirac-GAN to general neural networks: near an equilibrium where the generator represents the data distribution $p$ and the critic is flat on $\operatorname{supp}(p)$, simultaneous and alternating gradient updates with $R_1$ or $R_2$ (and a strictly concave loss satisfying $\ell'(0) \neq 0, \ell''(0) < 0$) converge exponentially to the equilibrium manifold, provided the critic has sufficient local capacity to detect first-order generator perturbations (:citet:`Huang.Gokaslan.Kuleshov.ea.2024` establish an analogous local theorem for the relativistic pairing objective).
 
-1. The generator can represent the data exactly, and at the equilibrium the critic is zero in a neighbourhood of the data's support.
-2. $\ell'(0) \neq 0$ and $\ell''(0) < 0$, as for the logistic loss.
-3. The critic class detects every first-order departure of the generator from the data, and every change of the critic's parameters that leaves the equilibrium changes the critic or its slope on the data. This is the one place where the critic's expressiveness enters.
-4. The parameters that realize the equilibrium form smooth manifolds, since many weight settings represent the same function.
+This analysis also explains two practical design choices:
+- **Zero-centered ($R_1, R_2$) vs. one-centered (WGAN-GP) penalties:** WGAN-GP penalizes $(\|\nabla_x D\| - 1)^2$, forcing the critic to maintain unit slope even when $q = p$. On the Dirac-GAN with linear payoff $\ell(t) = t$, the one-centered penalty prevents convergence to $\theta = 0$, instead parking the generator at $|\theta| = \gamma$ where the Wasserstein gradient balances the penalty (Exercise :exref:`ex_convergence-one-centered-dynamics`).
+- **Using both $R_1$ and $R_2$ vs. $R_1$ alone:** Near $q = p$, $R_1$ and $R_2$ are equivalent. Far from equilibrium, however, $R_1$ penalizes the critic's slope only at real data points $x \sim p$, leaving its slope at generated points $x' \sim q$ unconstrained (for example, $D_c(x) = -cx^2$ has zero slope at $p = \delta_0$ so $R_1 = 0$, allowing $c \to \infty$ and exploding generator gradients at $x' = 1$; Exercise :exref:`ex_convergence-one-sided-penalty`). Adding $R_2$ bounds the critic's gradient at generated samples as well.
 
-We do not prove this. The theorem is local: it says nothing about how training reaches the neighbourhood, and its first condition is bold, since no finite network reproduces real data exactly. It also covers the classical loss, not the pairing loss of R3GAN; :citet:`Huang.Gokaslan.Kuleshov.ea.2024` prove a local result of the same kind for the pairing loss with $R_1$ or $R_2$ under similar assumptions, which we do not reproduce either. On two parameters we proved convergence; for networks, "the penalties make the equilibrium locally attracting" is a theorem under these conditions and a hope outside them.
+## Effect of Gradient Penalties on the Value Function
 
-### One-Centered versus Zero-Centered
+How do the zero-centered penalties $R_1 + R_2 = \gamma\,\mathbb{E}_m[\|\nabla_x D\|^2]$ modify the divergence that the generator minimizes near equilibrium?
 
-WGAN-GP centers its penalty differently :cite:`Gulrajani.Ahmed.Arjovsky.ea.2017`. To enforce the Lipschitz constraint of :numref:`sec_gan_objectives`, it penalizes $\mathbb{E}\big[(\|\nabla_x D\| - 1)^2\big]$ at points between real and generated samples, because an optimal $W_1$ critic has unit slope along the straight paths on which the optimal transport moves mass. At $q = p$, however, every critic scores zero under the $W_1$ objective, so the penalty alone chooses the critic, and it chooses unit slope. A penalty that prefers unit slope keeps pushing a generator that already matches the data, and on the Dirac-GAN these dynamics do not converge to the data :cite:`Mescheder.Geiger.Nowozin.2018`. With the linear score $\ell(t) = t$ of the Wasserstein critic and $\gamma = 3$, the generator parks at $\theta = 3$, three units from the data. There the critic's drive to tilt against the generated point, of size $\theta$, cancels the penalty's push toward unit slope, of size $\gamma$. The critic stays flat, and a flat critic gives the generator no push (exercise :exref:`ex_convergence-one-centered-dynamics`).
+### Local Quadratic Approximation and Gaussian Shift
 
-### One Penalty or Two
-
-The Dirac-GAN cannot tell $R_1$ from $R_2$, because a linear critic has the same slope everywhere, and the theorem above holds for either penalty alone. Far from equilibrium the two differ. Keep the data at $0$, put a generated point at $x' = 1$, and consider the critics $D_c(x) = -c\,x^2$, flat at the data and steep at the generated point. $R_1$ measures the slope only at the data, where it is zero, so the critic objective $V_\ell(D_c) - R_1$ keeps rising as $c$ grows, toward a supremum that no finite $c$ attains, while the non-saturating generator's gradient at $x'$ grows with $c$ (exercise :exref:`ex_convergence-one-sided-penalty`). $R_2$ charges the slope $2c$ at the generated point and caps $c$. With $R_1$ alone the critic is free exactly where the generator's samples lie.
-
-Whether that freedom matters in practice depends on the problem. In the StackedMNIST ablation of :numref:`sec_gan_relativistic`, training with $R_1$ alone diverged for both losses, and only with both penalties did either recover most of the modes :cite:`Huang.Gokaslan.Kuleshov.ea.2024`. StyleGAN2, on the other hand, trains faces well with $R_1$ alone :cite:`Karras.Laine.Aittala.ea.2020`, so one ablation does not settle whether one penalty suffices. We use both.
-
-## The Penalized Value Near Equilibrium
-
-The one-centered penalty moved the point where training comes to rest. Does the zero-centered one change what the generator is chasing? At the equilibrium it vanishes, so the target $q = p$ stays where it was. Near the equilibrium, however, the penalty changes the critic's best response, and with it the value the generator descends. Without the penalty that value was a divergence of the density ratio, blind to how far apart separated supports are. What does the penalized game measure?
-
-This is the hardest part of the section. A reader who wants only the recipe can take two facts from it: the penalty shrinks the critic's slope by the factor $1 + 4\gamma$, and $\gamma$ is a squared length, set by the scale of the data. The general formula and its dual Sobolev norm explain the experiments and the exercises. General critics are hard to study, so let us start with a case where a straight line is the best critic, and generalize afterwards.
-
-### A Gaussian Shift
-
-Near $q = p$ the best critic is small, so we expand the payoff to second order in the critic. Write $\langle p - q, D \rangle = \mathbb{E}_p[D] - \mathbb{E}_q[D]$ for the difference of the critic's mean scores. Expanding $\ell(t) \approx \ell(0) + \ell'(0)\,t + \tfrac12 \ell''(0)\,t^2$ in both terms of $V_\ell$ and using $\ell''(0) < 0$ gives
+Near $q = p$, the optimal critic $D$ is small. Expanding $\ell(t) \approx \ell(0) + \ell'(0)t - \tfrac12|\ell''(0)|t^2$ to second order in $D$ inside $V_\ell(D)$ gives:
 
 $$
-V_\ell(D) \approx 2\ell(0) + \ell'(0)\, \langle p - q,\, D \rangle - |\ell''(0)| \int m\, D^2 .
+V_\ell(D) \approx 2\ell(0) + \ell'(0)\, \langle p - q,\, D \rangle - |\ell''(0)| \int m\, D^2 ,
 $$
 
-The first-order term rewards a critic that is high where $p$ exceeds $q$; the second-order term charges its size. The quadratic term is not negligible: the best critic has size proportional to $p - q$, so all terms are of the same order at the optimum.
-
-Now let $p = \mathcal{N}(0, 1)$, $q = \mathcal{N}(\mu, 1)$ with a small shift $\mu$, and try the linear critic $D(x) = c\,x$. Then $\langle p - q, D\rangle = -c\mu$, the penalty $\gamma \int m\, \|\nabla_x D\|^2$ is $\gamma c^2$, and $\int m\, D^2 = c^2(1 + \mu^2/2)$ is $c^2$ to leading order in $\mu$. The penalized objective is a concave parabola in the slope,
-
-$$
--\ell'(0)\,\mu\, c - \big(|\ell''(0)| + \gamma\big)\, c^2 ,
-$$
-
-maximized at $c = -\ell'(0)\mu / \big(2(|\ell''(0)| + \gamma)\big)$ with the value
+where $\langle p - q, D \rangle = \mathbb{E}_p[D] - \mathbb{E}_q[D]$. Consider two unit-variance Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ separated by a small shift $\mu$, and a linear critic $D(x) = cx$. To leading order in $\mu$, $\langle p - q, D \rangle = -c\mu$, $\int m\,D^2 \approx c^2$, and the penalty is $\gamma\int m\,\|\nabla_x D\|^2 = \gamma c^2$. Maximizing the concave quadratic $-\ell'(0)\mu c - (|\ell''(0)| + \gamma)c^2$ over $c$ yields the optimal slope $c^\star = -\frac{\ell'(0)\mu}{2(|\ell''(0)| + \gamma)}$ and value:
 
 $$
 \frac{\ell'(0)^2 \mu^2}{4\,(|\ell''(0)| + \gamma)} \;=\; \frac{\mu^2}{4 + 16\gamma}
-\quad \text{for the logistic loss, at the slope } c = -\frac{\mu}{1 + 4\gamma} .
+\quad \text{for the logistic loss, at slope } c^\star = -\frac{\mu}{1 + 4\gamma} .
 $$
 
-The log ratio $\log(p/q)$ has slope $-\mu$. The penalty shrinks the critic's slope by the factor $1 + 4\gamma$, and the value with it. At $\gamma = 0$ the value is $\mu^2/4 = 2\,\mathrm{JS}(p, q)$ to leading order, the unpenalized value of :numref:`sec_basic_gan`. For large $\gamma$ it is $\mu^2/(16\gamma) = \tfrac{\ell'(0)^2}{4\gamma} W_2(p, q)^2$, since the Wasserstein-2 distance, the $W_1$ of :numref:`sec_gan_objectives` with the squared distance $\|x - x'\|^2$ as the transport cost and the square root taken of the cheapest cost, is $|\mu|$ for two Gaussians that differ by a shift: a heavily penalized critic measures how far the mass has to move.
-
-We check the formula against the full penalized problem, solved by Newton's method for a critic tabulated on a grid, with no expansion and no assumption on its shape. At $\mu = 0.2$ the formula predicts $0.01$ at $\gamma = 0$, $0.002$ at $\gamma = 1$ and $2.4 \cdot 10^{-4}$ at $\gamma = 10$. The larger shifts test where "near" ends.
+Thus, the penalty shrinks both the critic's slope and the local value by the factor $1 + 4\gamma$. At $\gamma = 0$, we recover $\mu^2/4 \approx 2\,\mathrm{JS}(p, q)$; for large $\gamma$, the value scales as $\mu^2/(16\gamma) = \tfrac{\ell'(0)^2}{4\gamma} W_2(p, q)^2$. Below, we verify this closed-form approximation against the exact penalized optimum computed via Newton's method on a 1D grid.
 
 ```{.python .input #convergence-a-gaussian-shift}
 %%tab pytorch, jax
@@ -291,11 +253,11 @@ for mu in (0.2, 1, 3):
               f'({large / exact:.2f}x)')
 ```
 
-The printed ratios say three things. First, for a small shift the formula is right: at $\mu = 0.2$ it matches the exact value to within one percent at every $\gamma$. Its large-$\gamma$ form, though, holds only when the penalty dominates: at $\gamma = 0.01$ it gives $0.25$ against the exact $0.0096$, 26 times too large, while at $\gamma = 10$ it is within three percent. Second, a large shift breaks the formula. At $\mu = 3$ without a penalty it is 2.1 times too large: it grows like $\mu^2$, but the game's value can never exceed $2\log 2 \approx 1.39$, and the exact value, 1.05, is already bending toward that ceiling. Saturation is what ends the approximation. The penalty postpones it by keeping the critic small: at $\mu = 3$, $\gamma = 1$ the formula is again within 15%, and $\mu = 1$ lies in between. Third, at $\mu = 3$, $\gamma = 10$ the formula errs the other way, at 0.80 times the exact value, for a reason we meet below.
+For small shifts ($\mu = 0.2$), the quadratic formula $\mu^2/(4 + 16\gamma)$ matches the exact numerical solution to within 1% across all $\gamma$.
 
-### The Local Value in General
+### Dual Sobolev Norm and Low-Pass Filtering
 
-Nothing in the calculation needed a Gaussian except the shape of the best critic. For general $p$ and $q$, write $\mathcal{L}_m D = -\nabla \cdot (m \nabla D)$, a weighted second derivative; integrating by parts, $\int m\,\|\nabla_x D\|^2 = \langle D, \mathcal{L}_m D\rangle$. For the quadratic approximation the best critic solves the linear equation $\big(|\ell''(0)|\, m + \gamma \mathcal{L}_m\big) D = \tfrac{\ell'(0)}{2}(p - q)$, and the value is
+For general distributions $p$ and $q$ near equilibrium, integrating by parts writes the gradient penalty as $\int m\,\|\nabla_x D\|^2 = \langle D, \mathcal{L}_m D \rangle$, where $\mathcal{L}_m D = -\nabla \cdot (m \nabla D)$ is the $m$-weighted Laplacian. Maximizing the local quadratic approximation over all functions $D$ yields (Exercise :exref:`ex_convergence-prove-eqref-eq-gan`):
 
 $$
 \sup_{D} \Big\{ \ell'(0)\, \langle p - q,\, D \rangle - |\ell''(0)| \int m\, D^2 - \gamma \int m\, \| \nabla_x D \|^2 \Big\}
@@ -303,39 +265,24 @@ $$
 $$
 :eqlabel:`eq_gan_local_value`
 
-The proof is the parabola of the Gaussian shift taken along every direction of critics at once (exercise :exref:`ex_convergence-prove-eqref-eq-gan`). For the Gaussian shift, $p - q \approx -\mu\, x\, m(x)$ and, with $m$ the standard normal density to leading order, $\mathcal{L}_m x = x\, m(x)$, so the straight line solves the equation and no other critic does better. The pairing objective has $\textrm{Var}_m[D]$ in place of $\int m\, D^2$, which gives the same supremum once the critic's free constant is chosen best.
-
-The value is a weighted squared size of $p - q$. As $\gamma \to 0$ it becomes $\tfrac{\ell'(0)^2}{4|\ell''(0)|}\int (p - q)^2/m$, which for the logistic loss is $\tfrac14 \int (p-q)^2/m$, the local form of $2\,\mathrm{JS}(p, q)$. When $\gamma$ is large, the penalty dominates and the value approaches
+As $\gamma \to 0$, this reduces to $\tfrac{\ell'(0)^2}{4|\ell''(0)|} \int (p - q)^2/m \approx 2\,\mathrm{JS}(p, q)$. As $\gamma \to \infty$, it approaches a multiple of the squared *dual Sobolev norm* $\dot H^{-1}(m)$:
 
 $$
 \frac{\ell'(0)^2}{4\gamma}\, \big\| p - q \big\|^2_{\dot H^{-1}(m)},
 \qquad
-\|v\|_{\dot H^{-1}(m)} = \sup\Big\{ \langle v, D\rangle : \int m \|\nabla_x D\|^2 \leq 1 \Big\},
+\|v\|_{\dot H^{-1}(m)} = \sup\Big\{ \langle v, D\rangle : \int m \|\nabla_x D\|^2 \leq 1 \Big\}.
 $$
 :eqlabel:`eq_gan_sobolev`
 
-the largest correlation with $p - q$ that a critic of unit mean squared slope under $m$ can reach; adding a constant to the critic changes neither the correlation nor the slope. This is a *dual Sobolev norm*. For the Gaussian shift it is $|\mu|$, the transport distance found above. Where $m$ is thin, a critic may rise steeply at little cost, so the norm grows when mass must cross such a region. Two bumps three units apart leave $m$ thin in the middle, which is why the formula, built on a single bump, is too small at $\mu = 3$, $\gamma = 10$.
-
-### A Low-Pass Filter
-
-A general $p - q$ has many length scales. Where $m$ is roughly constant, $\mathcal{L}_m$ multiplies a Fourier component $e^{i \omega x}$ by $m \omega^2$, so in :eqref:`eq_gan_local_value` the component with wavenumber $\omega$ enters with weight
-
-$$
-\frac{1}{|\ell''(0)| + \gamma \omega^2}
-\qquad \text{instead of} \qquad \frac{1}{|\ell''(0)|}.
-$$
-
-Components whose length scale $1/\omega$ exceeds $\sqrt{\gamma / |\ell''(0)|}$, which is $2\sqrt\gamma$ for the logistic loss, keep nearly their unpenalized weight; shorter ones are damped by about the factor $|\ell''(0)|/(\gamma \omega^2)$. The penalty is a low-pass filter on $p - q$ with cutoff length $2\sqrt\gamma$: above the cutoff the game measures $2\,\mathrm{JS}$, below it the dual Sobolev norm. Because the critic's input gradient has units of one over length, $\gamma$ is a squared length, set by the scale of the data. R3GAN starts $\gamma$ at 0.05 on CIFAR-10 and at 150 on FFHQ faces at $256 \times 256$ pixels. Part of that factor of 3,000 is resolution, since squared distances between images grow with the number of pixels; the rest is tuned per dataset, and ImageNet at $32 \times 32$, the resolution of CIFAR-10, starts at 0.5.
-
-The filter has one limit that matters more than its cutoff. It acts only where $m$ has mass. Across a gap in $m$ the penalty costs nothing, so a critic free to take any shape can jump there, saturate as in the Dirac-GAN, and leave a generator on the far side with no gradient. For two point masses, the best response of such a critic is worth $2\sup_t \ell(t)$ for every $\theta \neq 0$ and every $\gamma$, exactly as without the penalty (exercise :exref:`ex_convergence-penalized-best-response`). What keeps a gradient across a gap is that a network whose input gradient is small at the samples is usually smooth between them as well. That is an assumption about the critic, not a consequence of the penalty, and it is the same smoothness that gave a generator six units from the data a direction in :numref:`subsec_gan_objectives_separated_start`.
+In regions where $m$ is approximately uniform, $\mathcal{L}_m$ multiplies a Fourier mode of wavenumber $\omega$ by $m\omega^2$, weighting that mode by $(|\ell''(0)| + \gamma\omega^2)^{-1}$ instead of $|\ell''(0)|^{-1}$. Thus, $R_1 + R_2$ acts as a spatial *low-pass filter* on $p - q$ with cutoff length scale $\sqrt{\gamma / |\ell''(0)|}$ ($2\sqrt{\gamma}$ for the logistic loss). Because $\nabla_x D$ has units of inverse length, $\gamma$ has units of squared length and scales with data resolution and norm. Note also that $R_1 + R_2$ penalizes $\nabla_x D$ only on the support of $m = (p+q)/2$; across empty space between disjoint supports, the gradient still relies on the smoothness of the neural network critic (Exercise :exref:`ex_convergence-penalized-best-response`).
 
 ## The R3GAN Recipe
 
-R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024` puts the pieces together. Its critic minimizes the pairing loss of :numref:`sec_gan_relativistic` plus both zero-centered penalties, and its generator minimizes the non-saturating form of that loss. Huang et al. report that with this recipe a minimalist convolutional network trains without most of the stabilizers that earlier GANs needed; :numref:`sec_dcgan` tests part of that claim. The penalties damp the rotation, and the non-saturating generator keeps a gradient for rejected samples. Whether pairing also improves mode coverage is the question that :numref:`sec_gan_relativistic` left open, and the grid at the end of this section asks it again.
+R3GAN :cite:`Huang.Gokaslan.Kuleshov.ea.2024` combines the relativistic pairing loss (`d2l.rpgan_loss_D` and `d2l.rpgan_loss_G` from :numref:`sec_gan_relativistic`) with both zero-centered gradient penalties $R_1$ and $R_2$.
 
-### The Loss in Code
+### Implementation of the Losses and Penalties
 
-The implementation keeps the losses and the penalties apart, and writes everything as a loss to minimize: the critic minimizes its loss, which is $-V_\ell$ for the classical game, plus $R_1 + R_2$. The pairing losses are `d2l.rpgan_loss_D` and `d2l.rpgan_loss_G` of :numref:`sec_gan_relativistic`, whose critic loss equals $\log 2$ at the equilibrium. `gan_loss_D` and `gan_loss_G` give the logistic critic loss and the non-saturating generator loss of :numref:`sec_basic_gan` with the same arguments, so a training loop can take either pair; `gan_loss_D` is the sum of two batch means, on the same scale as `update_D`, and equals $2\log 2$ at the equilibrium.
+For comparison, we also save `gan_loss_D` and `gan_loss_G` implementing the classic logistic discriminator loss and non-saturating generator loss of :numref:`sec_basic_gan` with the same `(critic, real, fake)` signature.
 
 ```{.python .input #convergence-the-loss-in-code}
 %%tab pytorch
@@ -465,12 +412,14 @@ def generator_step(net_G, opt_G, loss_G, net_D, real, z, y=None):
 The loss functions are static arguments of the compiled steps, so each pair of losses compiles once, while $\gamma$ is traced and can change without recompiling.
 :end_tab:
 
-### Mode Coverage on 25 Gaussians
+### Mode Coverage on a 25-Gaussian Grid
 :label:`subsec_gan_25_gaussians`
 
-Does the damping survive in networks? We test it on 25 Gaussians whose centers form a $5 \times 5$ grid with spacing 2, each with standard deviation $0.05$: 25 islands of mass with almost nothing between them. This is the gap case of the low-pass filter. Between the islands the penalty does not act, so any gradient that leads the generator to an empty mode comes from the smoothness of the critic network, not from the penalty.
-
-We score 10,000 generated samples with four statistics. A sample is *on a mode* if it lies within three widths, $0.15$, of the nearest center, where a 2-D Gaussian puts $1 - e^{-9/2} \approx 98.9\%$ of its mass. A mode counts as *covered* if it holds at least a fifth of its fair share of the on-mode samples. We report the number of covered modes, the fraction of samples on a mode, their mean distance to the nearest center (about $0.06$ for a perfect fit), and the critic's steepness $\mathbb{E}_q\|\nabla_x D\|^2$ at the generated samples. Both networks are MLPs with two hidden layers of 256 units, built by `d2l.make_mlp` of :numref:`sec_basic_gan`; the generator maps a 64-dimensional latent vector to the plane, and the critic uses leaky ReLU and no normalization.
+To test how $R_1 + R_2$ and pairwise ranking affect mode coverage in neural networks, we train a 3-layer MLP generator (64D latent, two hidden layers of 256 ReLU units) and a 3-layer leaky-ReLU MLP critic on a $5 \times 5$ grid of 2D Gaussians (spacing $2.0$, standard deviation $\sigma = 0.05$). We evaluate 10,000 generated samples by four metrics:
+1. *Covered modes*: number of modes receiving at least $1/5$ of an equal share ($1/25$) of on-mode samples.
+2. *On-mode fraction*: fraction of samples within $3\sigma = 0.15$ of the nearest mode center ($98.9\%$ for the true distribution).
+3. *Mean distance* to the nearest center ($\approx 0.06$ for the true distribution).
+4. *Critic steepness* $\mathbb{E}_q[\|\nabla_x D(x')\|^2]$ at generated samples.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-1}
 %%tab pytorch
@@ -497,8 +446,6 @@ def sample_modes(key, centers, n, width=0.05):
     return centers[idx] + width * jax.random.normal(k2, (n, 2))
 ```
 
-The function `mode_stats` computes the three sample statistics.
-
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-5}
 %%tab pytorch, jax
 def mode_stats(x, centers, width=0.05):
@@ -512,7 +459,7 @@ def mode_stats(x, centers, width=0.05):
     return covered, on.mean(), near.mean()
 ```
 
-The training function takes the two losses and $\gamma$ as arguments and alternates `critic_step` and `generator_step`, each on a fresh batch, for 10,000 steps with batches of 1,024. Both networks use Adam with a learning rate that decays from $2 \cdot 10^{-3}$ to $2 \cdot 10^{-4}$ along a cosine, and with $\beta_1 = 0$, as R3GAN does. The reason is the rotation: momentum averages the field over past steps, and when the field turns, the average points where it used to point, which on the underdamped Dirac-GAN shrinks the range of stable step sizes (exercise :exref:`ex_convergence-momentum-rotating-game`). `train_grid` returns the generator and a trace with eight checkpoints, one every 1,250 steps: the on-mode fraction of 2,000 samples, and the critic loss and $\mathbb{E}_q\|\nabla_x D\|^2$ averaged over the steps since the previous checkpoint.
+`train_grid` alternates `critic_step` and `generator_step` for 10,000 steps (batch size 1,024) using Adam with $\beta_1 = 0$ (following R3GAN, since positive first-moment momentum in a rotating vector field can reduce the stability region) and cosine learning-rate decay from $2 \times 10^{-3}$ to $2 \times 10^{-4}$.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-3}
 %%tab pytorch
@@ -596,15 +543,7 @@ def train_grid(centers, loss_D, loss_G, gamma, steps=10000, lr=2e-3,
     return net_G, trace
 ```
 
-:begin_tab:`pytorch`
-`d2l.cuda_graphed` replays each step on the GPU as one CUDA graph, because issuing the few hundred short kernels of these small networks from Python takes longer than running them (:numref:`subsec_comp-overhead`), and the optimizers keep their learning rate and step count on the device (`capturable`) so that the replay can update them.
-:end_tab:
-
-:begin_tab:`jax`
-One compiled function draws the batches and calls both saved steps. `nnx.cached_partial` binds the networks and optimizers to it once, so the loop does not split and merge the model state at every step.
-:end_tab:
-
-The experiment separates the two ingredients of the recipe. It crosses two losses, the logistic critic with the non-saturating generator ("NS") and the pairing loss, with two penalties, none and $R_1 + R_2$ at $\gamma = 1$. Each arm trains with seeds 0, 1 and 2, and a seed gives the same initialization in every arm. One further run asks whether more friction helps: the pairing loss with both penalties at $\gamma = 10$. What should we expect? Under alternating steps the slope $\psi$ of the unpenalized Dirac-GAN neither grew nor shrank; it stayed on its band. If that carries over, the unpenalized critics should stay steep at the generated samples, and the penalized ones flat.
+We run a $2 \times 2$ factorial experiment crossing the two objectives (classic non-saturating `NS` vs. `pairing`) with $\gamma = 0$ (unpenalized) and $\gamma = 1$ ($R_1 + R_2$), over three seeds each, plus an overdamped run at $\gamma = 10$.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-4}
 %%tab pytorch
@@ -642,8 +581,6 @@ for name, (loss_D, loss_G, gamma, n_runs) in arms.items():
 grid = np.asarray(centers)
 ```
 
-Each run gets one row: the covered modes, the on-mode fraction and the mean distance for 10,000 samples of the trained generator, and the critic's steepness averaged over its last 1,250 steps.
-
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-2}
 %%tab pytorch, jax
 print(f'{"arm":28} run  modes  on-mode  distance  E_q|grad D|^2')
@@ -653,8 +590,6 @@ for name, results in runs.items():
         print(f'{name:28} {seed:3}  {modes:2}/25  {on:7.2f}  {dist:8.2f}'
               f'  {trace[-1][2]:13.1e}')
 ```
-
-Numbers alone hide where the off-mode samples go, so we also draw run 0 of each of the four arms: 3,000 generated samples in orange, the 25 centers as blue crosses.
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-7}
 %%tab pytorch, jax
@@ -668,11 +603,11 @@ for ax, name in zip(axes, list(runs)[:4]):
 fig.tight_layout()
 ```
 
-The prediction about the critic holds by a wide margin. With the penalty, $\mathbb{E}_q\|\nabla_x D\|^2$ ends at a few thousandths at most in every run; without it, between about 0.7 and 17. The unpenalized critic stays steep at the generated samples, like the undamped slope $\psi$ of the Dirac-GAN. Coverage follows the penalty, not the loss. Every run at $\gamma = 1$ covers 24 or 25 modes (all 25 in the runs printed here), while the unpenalized runs range from about a dozen modes to all 25: without the penalty, coverage is a matter of luck. Pairing makes no difference beyond this run-to-run range, with or without the penalty: the coverage benefit that R3GAN measured on StackedMNIST is not visible in our runs. Nor does the penalty make the fit sharper. In all four arms about two thirds to nine tenths of the samples lie on a mode, against 98.9% for a perfect fit, at a mean distance of 0.08 to 0.24 from the nearest center, against about 0.06. The scatter plots show where the rest go: mostly on lines between neighbouring centers, with a few strays elsewhere. A continuous generator cannot jump from one island to the next, so it draws the bridges. In the unpenalized NS panel some interior modes are nearly empty.
+The results isolate the roles of the gradient penalties and the pairing loss:
+- **Gradient penalties drive mode coverage:** Without penalties ($\gamma = 0$), critic gradients remain steep ($\mathbb{E}_q\|\nabla_x D\|^2 \in [0.7, 17]$) and mode coverage is unreliable (dropping to 12–25 modes depending on the seed). With $R_1 + R_2$ at $\gamma = 1$, critic gradients are damped by three orders of magnitude ($\sim 10^{-3}$) and every run reliably covers 24–25 modes under both `NS` and `pairing`.
+- **Overdamping at large $\gamma$:** Increasing $\gamma$ to $10$ over-flattens the critic ($\sim 10^{-4}$), slowing convergence so that only ~20–25% of samples land within $3\sigma$ of a mode after 10,000 steps.
 
-At $\gamma = 10$ the fit is much looser: only about a fifth to a quarter of the samples lie on a mode, at a mean distance two to five times that at $\gamma = 1$, though 23 to 25 modes still hold some mass. The larger penalty flattens the critic further, to about $10^{-4}$, and the fit is slower. More friction is not always better, and the section has offered two reasons why: the overdamped spring approaches its equilibrium more slowly, at a rate near $\ell'(0)^2/\gamma$, and the low-pass filter damps short length scales more. Both give the direction of the effect, neither its size, since both assumed a generator near the data and the filter also a slowly varying $m$ (exercise :exref:`ex_convergence-penalty-length`).
-
-Does the unpenalized game circle, as the Dirac-GAN does? The trace prints, for run 0 of every arm, the on-mode fraction and the critic loss at each checkpoint. The critic loss equals $2\log 2 \approx 1.39$ at the equilibrium for NS and $\log 2 \approx 0.69$ for pairing. Each value averages the critic loss over 1,250 steps, so the trace can show slow swings but not fast ones.
+Finally, inspecting the checkpoint traces shows why a calm critic loss curve must be interpreted with care:
 
 ```{.python .input #convergence-mode-coverage-on-25-gaussians-6}
 %%tab pytorch, jax
@@ -683,171 +618,47 @@ for col, stat in enumerate(['on-mode fraction', 'critic loss']):
         print(f'  {name:28}', ' '.join(f'{v:4.2f}' for v in trace[:, col]))
 ```
 
-The on-mode fraction rises over training in every arm, with at most a dip of a hundredth, and no slow swing is visible. The critic losses tell the difference between the arms. Without the penalty the critic wins: its loss falls below the equilibrium value, from about 1.35 to about 1.0 for NS and from 0.68 to about 0.6 for pairing, and stays there. With the penalty it sits at the equilibrium value throughout, 1.36 to 1.38 and 0.67 to 0.69, even at 2,500 steps, when 3% or less of the samples lie on a mode. A critic loss at its equilibrium value therefore certifies nothing about the samples: a flat critic cannot separate $p$ from $q$, whether or not they agree. Keep this in mind whenever a GAN's loss curve looks reassuringly calm.
-
-We can now return to the garment generator of :numref:`subsec_gan_fashion_mnist`. Its critic pulled ahead in the first epoch and then drifted slowly back toward $2\log 2$, ending at about 1.05. The unpenalized NS critic of run 0 on the grid takes much the same course: it falls below $2\log 2$ early, then levels off or creeps back, and ends at about 1.0. On the grid that course goes with samples that improve steadily and with a critic that stays steep at them. The grid therefore suggests that the unsettled garment losses meant slow progress against a critic that stayed ahead, not a visible circle; the garment run did not measure whether its critic was also steep. Whether the parameters also rotate on a faster time scale, as on two points, averages over many steps cannot tell.
-
-On the grid the penalty flattened the critic and made coverage reliable. The rotation of the Dirac-GAN did not show at the resolution of these runs, and the samples were no sharper with the penalty than without it. Two dimensions say little about how either effect scales. Whether this recipe trains an image generator, and how to score the images it produces, is the question of :numref:`sec_dcgan`.
+In the penalized runs, the critic loss sits near its equilibrium value ($2\log 2 \approx 1.39$ for `NS`, $\log 2 \approx 0.69$ for `pairing`) from the very first checkpoint—even when only 1–3% of generated samples lie on a mode—because the gradient penalty keeps $D(x)$ small everywhere. An equilibrium critic loss indicates a flat critic, not necessarily a converged generator.
 
 ## Summary
 
-Gradient training of an adversarial game need not reach its equilibrium. On the Dirac-GAN, a bilinear game in disguise, the flow circles the solution, every simultaneous step moves away from it, and alternating steps stay in a band around it, for every increasing loss and with or without pairing; the non-saturating generator adds only a slow inward drift, which discrete steps stop on a cycle of radius about $\sqrt{2h}$. The zero-centered penalties $R_1$ and $R_2$ on the critic's input gradient at data and generated samples damp the rotation for every $\gamma > 0$, like friction on a spring, and a local theorem extends this to networks under conditions that include a generator that reproduces the data exactly. Near equilibrium the penalized game measures $p - q$ through a low-pass filter with cutoff length $2\sqrt\gamma$, but only where the samples are; across a gap the gradient comes from the critic's smoothness. On 25 Gaussians the penalties keep the critic flat at the generated samples and make every run at $\gamma = 1$ cover 24 or 25 of the 25 modes, while pairing shows no effect beyond the spread between runs, no arm fits the modes sharply, and a penalized critic's loss sits at its equilibrium value whatever the samples look like.
+- On the two-parameter Dirac-GAN ($p = \delta_0, q_\theta = \delta_\theta, D_\psi(x) = \psi x$), continuous-time gradient flow orbits on circles of constant radius, simultaneous discrete steps spiral outward, and alternating discrete steps orbit within a bounded band.
+- Adding the zero-centered gradient penalties $R_1 = \frac{\gamma}{2}\mathbb{E}_p[\|\nabla_x D(x)\|^2]$ and $R_2 = \frac{\gamma}{2}\mathbb{E}_q[\|\nabla_{x'} D(x')\|^2]$ shifts the Jacobian eigenvalues into the open left half-plane ($\operatorname{Re}(\nu_{1,2}) < 0$) for any $\gamma > 0$, making the equilibrium locally exponentially stable.
+- Near equilibrium, $R_1 + R_2$ acts as a low-pass filter on $p - q$ with cutoff length scale $2\sqrt{\gamma}$ (for the logistic loss), transitioning from $2\,\mathrm{JS}(p, q)$ at large scales to the squared dual Sobolev norm $\|p - q\|_{\dot H^{-1}(m)}^2$ at small scales.
+- On the 25-Gaussian grid, $R_1 + R_2$ ($\gamma = 1$) damps critic steepness by three orders of magnitude and ensures reliable mode coverage across both classic and relativistic pairing losses.
 
 ## Exercises
 
-1. [code] **Discrete-time stability.** A simultaneous step of size $h$
-   maps $(\theta, \psi)$ to $(\theta, \psi) + h\, \mathbf{u}(\theta, \psi)$,
-   with $\mathbf{u}$ from :eqref:`eq_gan_dirac_flow` plus $-\gamma\psi$ in
-   its second component for a penalized critic.
-    1. Show that at $\gamma = 0$ the Jacobian of the map at the
-       equilibrium has eigenvalues $1 \pm i\, h\, \ell'(0)$, so no step
-       size makes the unpenalized game locally convergent.
-    1. For $\gamma > 0$ the eigenvalues are $1 + h\nu$, with $\nu$
-       from :eqref:`eq_gan_dirac_pen`. Show that in the underdamped regime
-       $\gamma < 2\ell'(0)$ the iteration converges locally if and only if
-       $h < \gamma / \ell'(0)^2$.
-    1. Check the threshold of (b) at $\gamma = 0.3$: run
-       `trajectory(euler_step, (0.1, 0.1), h, 3000, gamma=0.3)` for $h = 1.1$ and
-       $h = 1.3$ and plot the distance from the equilibrium. What does the
-       iteration do above the threshold?
+1. [code] **Discrete-time stability of the Dirac-GAN.** Simultaneous gradient descent with step size $h$ maps $(\theta, \psi) \mapsto (\theta, \psi) + h\,\mathbf{u}(\theta, \psi)$.
+    1. Show that at $\gamma = 0$, the Jacobian of the discrete update at $(0, 0)$ has eigenvalues $1 \pm i\,h\,\ell'(0)$, which have modulus $\sqrt{1 + h^2\ell'(0)^2} > 1$ for every $h > 0$.
+    1. For $\gamma > 0$, the eigenvalues are $1 + h\nu_{1,2}$ with $\nu_{1,2}$ from :eqref:`eq_gan_dirac_pen`. Show that in the underdamped regime $\gamma < 2\ell'(0)$, the discrete update is locally stable ($|1 + h\nu_{1,2}| < 1$) if and only if $h < \gamma / \ell'(0)^2$.
+    1. Verify this threshold at $\gamma = 0.3$ ($\ell'(0) = \tfrac12$, threshold $h = 1.2$) by running `trajectory(euler_step, (0.1, 0.1), h, 3000, gamma=0.3)` at $h = 1.1$ and $h = 1.3$.
    :exlabel:`ex_convergence-discrete-simultaneous-update-dirac`
-1. **Penalized best response.** Let the critic of the Dirac-GAN subtract
-   both penalties of :eqref:`eq_gan_r1r2`, which for the linear critic sum
-   to $\gamma\psi^2$, take $\ell = \log\sigma$, and write
-   $V_\gamma(\theta) = \sup_\psi \big\{ V(\theta, \psi) - \gamma\psi^2 \big\}$.
-    1. Show that the supremum is attained for every $\theta$, and that for
-       small $\theta$ the maximizer is
-       $\psi^\star \approx -\ell'(0)\,\theta / (2\gamma)$ and
-       $V_\gamma(\theta) = 2\ell(0) + \tfrac{\ell'(0)^2}{4\gamma}\, \theta^2 + O(\theta^4)$.
-    1. Compare (a) with :eqref:`eq_gan_sobolev`, using
-       $W_2(\delta_0, \delta_\theta) = |\theta|$. Why does the curvature
-       term of :eqref:`eq_gan_local_value` not appear at order $\theta^2$?
-       What gradient does the generator receive near $\theta = 0$, and how
-       does it depend on $\gamma$?
-    1. Now let the critic be any differentiable function, penalized by
-       $\gamma \int m\, \|\nabla_x D\|^2$. Prove the claim of the text that
-       the penalized best-response value is $2\sup_t \ell(t)$ for every
-       $\theta \neq 0$. Which assumption behind :eqref:`eq_gan_local_value`
-       fails here, and which property of a trained network restores a
-       gradient?
+
+1. **Penalized best response on the Dirac-GAN.** Consider $V_\gamma(\theta) = \sup_\psi \{V(\theta, \psi) - \gamma\psi^2\}$ on the Dirac-GAN with $\ell = \log \sigma$.
+    1. Show that for small $\theta$, the maximizing slope is $\psi^\star \approx -\ell'(0)\theta / (2\gamma)$ and $V_\gamma(\theta) = 2\ell(0) + \frac{\ell'(0)^2}{4\gamma}\theta^2 + O(\theta^4)$, matching :eqref:`eq_gan_sobolev` with $W_2(\delta_0, \delta_\theta) = |\theta|$.
+    1. Now let $D$ range over all differentiable functions penalized by $\gamma\int m\,\|\nabla_x D\|^2$. Show that for point masses $p = \delta_0$ and $q_\theta = \delta_\theta$ ($\theta \neq 0$), $\sup_D \{V_\ell(D) - R_1 - R_2\} = 2\sup_t \ell(t)$ is independent of $\theta$. Why does a finite neural network critic still provide a nonzero gradient across the gap?
    :exlabel:`ex_convergence-penalized-best-response`
-1. **Penalizing one side only.** Let $p = \delta_0$, put the generated
-   point at $x' = 1$, take $\ell = \log\sigma$, and consider the critics
-   $D_c(x) = -c\, x^2$ with $c \geq 0$, flat at the data and steep at the
-   generated point.
-    1. Evaluate $R_1$ and $R_2$ for $D_c$. Show that the critic objective
-       $V_\ell(D_c) - R_1$ increases with $c$ and has no maximizer.
-    1. Show that the gradient of the non-saturating generator loss
-       $-\log\sigma(D(x'))$ with respect to $x'$ at $x' = 1$ grows without
-       bound in $c$. What does the saturating loss $\log\sigma(-D(x'))$
-       give instead? Which observation of
-       :citet:`Huang.Gokaslan.Kuleshov.ea.2024` does this reproduce?
-    1. Subtract $R_1 + R_2$ instead. Show that the maximizing $c^\star$ is
-       finite with $c^\star < 1/(8\gamma)$, and bound the generator's
-       gradient at $c^\star$.
+
+1. **Penalizing $R_1$ alone versus $R_1 + R_2$.** Let $p = \delta_0$, $q = \delta_1$, $\ell = \log \sigma$, and consider the quadratic critics $D_c(x) = -cx^2$ ($c \geq 0$).
+    1. Evaluate $R_1$ and $R_2$ for $D_c$, and show that $V_\ell(D_c) - R_1$ increases without bound as $c \to \infty$.
+    1. Show that under the non-saturating generator loss $-\log \sigma(D_c(x'))$, the generator gradient magnitude at $x' = 1$ grows unboundedly with $c$, whereas subtracting $R_1 + R_2$ yields a finite maximizer $c^\star < 1/(8\gamma)$.
    :exlabel:`ex_convergence-one-sided-penalty`
-1. [code] **The penalty weight as a length.** In
-   :numref:`subsec_gan_25_gaussians`, the pairing loss with the penalties
-   at $\gamma = 10$ puts far fewer samples on a mode than at $\gamma = 1$.
-    1. For data scaled by $c > 0$ and the critic $D_c(x) = D(x / c)$, show
-       that the penalized game at weight $c^2\gamma$ has the same value as
-       the original game at weight $\gamma$.
-    1. With the low-pass weight and $|\ell''(0)| = \tfrac14$, compute by
-       what factor the penalty damps a component whose wavelength is the
-       grid spacing 2, and one whose wavelength is the mode width $0.05$,
-       at $\gamma = 1$ and at $\gamma = 10$. The $\gamma = 1$ runs put most
-       samples within three widths of a center nonetheless. Which
-       hypotheses of the Fourier argument does the grid violate?
-    1. Train the $\gamma = 10$ run for two and four times as many steps,
-       with the cosine schedule stretched to match. Does the on-mode
-       fraction approach that of $\gamma = 1$?
-   :exlabel:`ex_convergence-penalty-length`
-1. [code] **Alternating updates.** ● `train_grid` updates the critic first
-   and then the generator against the updated critic. On the Dirac-GAN
-   this reads
 
-   $$\psi_{k+1} = \psi_k + h\, u_\psi(\theta_k, \psi_k), \qquad \theta_{k+1} = \theta_k + h\, u_\theta(\theta_k, \psi_{k+1}),$$
-
-   with $(u_\theta, u_\psi)$ the field of :eqref:`eq_gan_dirac_flow`.
-    1. Linearize at the equilibrium for $\gamma = 0$ and show that the
-       Jacobian of the combined update has determinant one, with
-       eigenvalues on the unit circle if and only if $h\, \ell'(0) \leq 2$.
-       What does this imply about linear convergence and divergence?
-    1. Run the alternating update at $\gamma = 0$,
-       `trajectory(alt_step, (0.1, 0.1), h, 10**5)`, with
-       $h \in \{0.2, 1, 3, 5\}$. Record the smallest and largest distance
-       from the equilibrium over the last $10^4$ steps, and explain the
-       wide spread at $h = 3$. Repeat at $h = 0.2$ with $\gamma = 0.3$.
+1. [code] **Alternating updates on the Dirac-GAN.** ● Alternating updates apply $\psi_{k+1} = \psi_k + h\,u_\psi(\theta_k, \psi_k)$ followed by $\theta_{k+1} = \theta_k + h\,u_\theta(\theta_k, \psi_{k+1})$.
+    1. Linearize the combined update at $(0, 0)$ for $\gamma = 0$ and show that its Jacobian has determinant $1$, with eigenvalues on the unit circle if and only if $h\,\ell'(0) \leq 2$.
+    1. Run `trajectory(alt_step, (0.1, 0.1), h, 10**5)` at $\gamma = 0$ for $h \in \{0.2, 1, 3, 5\}$, record the minimum and maximum radius over the final $10^4$ steps, and compare with $\gamma = 0.3$ at $h = 0.2$.
    :exlabel:`ex_convergence-alternating-updates`
-1. [code] **The local value.** ● Write
-   $\mathcal{A} = |\ell''(0)|\, m + \gamma \mathcal{L}_m$ with
-   $\mathcal{L}_m D = -\nabla \cdot (m \nabla D)$.
-    1. Integrate by parts, assuming that boundary terms vanish, to show
-       that $|\ell''(0)| \int m\, D^2 + \gamma \int m\, \|\nabla_x D\|^2 = \langle D, \mathcal{A} D\rangle$,
-       and that $\mathcal{A}$ is symmetric and positive.
-    1. Along a ray $\{t D_0 : t \in \mathbb{R}\}$ the objective of
-       :eqref:`eq_gan_local_value` is a concave parabola in $t$. Find its
-       maximum, then maximize over directions $D_0$ with the
-       Cauchy--Schwarz inequality in the inner product
-       $\langle \cdot, \mathcal{A}\, \cdot \rangle$ to prove
-       :eqref:`eq_gan_local_value`, and show that the maximizer solves
-       $\mathcal{A} D = \tfrac{\ell'(0)}{2}(p - q)$.
-    1. Let $p = \mathcal{N}(0, 1)$ and $q = p\,(1 + 0.1 \sin \omega x)$. Use
-       `penalized_value` to compute the ratio of the values at $\gamma$
-       and at $\gamma = 0$ for $\omega \in \{0.5, 2, 8\}$ and
-       $\gamma \in \{0.01, 0.1, 1\}$, and compare it with the low-pass
-       weight $1/(1 + 4\gamma \omega^2)$. For which $\omega$ does the
-       prediction fail, and which assumption of the Fourier argument breaks
-       there?
+
+1. [code] **Local quadratic value and low-pass filtering.** ● Write $\mathcal{A} = |\ell''(0)|\,m + \gamma\mathcal{L}_m$ with $\mathcal{L}_m D = -\nabla \cdot (m \nabla D)$.
+    1. Using integration by parts, show that $|\ell''(0)|\int m\,D^2 + \gamma\int m\,\|\nabla_x D\|^2 = \langle D, \mathcal{A}D \rangle$ and derive :eqref:`eq_gan_local_value` by maximizing along rays $t D_0$ and applying Cauchy–Schwarz.
+    1. Let $p = \mathcal{N}(0, 1)$ and $q(x) = p(x)(1 + 0.1\sin(\omega x))$. Using `penalized_value`, compute the ratio of the penalized value at $\gamma \in \{0.01, 0.1, 1\}$ to the unpenalized value at $\gamma = 0$ for $\omega \in \{0.5, 2, 8\}$, and compare against the uniform-$m$ Fourier attenuation factor $(1 + 4\gamma\omega^2)^{-1}$.
    :exlabel:`ex_convergence-prove-eqref-eq-gan`
-1. [code] **One-centered penalty dynamics.** ● Take the linear score
-   $\ell(t) = t$ of the Wasserstein critic, so $\ell'(0) = 1$. On the
-   Dirac-GAN the one-centered penalty becomes
-   $\tfrac{\gamma}{2}(|\psi| - 1)^2$, which the critic subtracts.
-    1. Show that the simultaneous gradient field vanishes at no point
-       with $\psi \neq 0$, and find where its one-sided limits as
-       $\psi \to 0^\pm$ vanish. Where is the generator there?
-    1. On $\psi > 0$ the field is affine. Compare its Jacobian with
-       $J_\gamma$ of :eqref:`eq_gan_dirac_pen`; for which $\gamma$ are its
-       eigenvalues real?
-    1. Modify `dirac_field` and run `trajectory` from $(1, 1)$ with
-       $h = 0.01$ for 40,000 steps at $\gamma = 1$ and $\gamma = 3$.
-       Confirm that at $\gamma = 3$ the generated point comes to rest at
-       $\theta = 3$, and describe what happens at $\gamma = 1$. Explain
-       both outcomes with (a) and (b).
+
+1. [code] **One-centered penalty dynamics on the Dirac-GAN.** ● Consider the WGAN linear payoff $\ell(t) = t$ ($\ell'(0) = 1$) with the one-centered penalty $\frac{\gamma}{2}(|\psi| - 1)^2$ subtracted from the critic objective.
+    1. Show that the simultaneous gradient field never vanishes for $\psi \neq 0$, and find the generator positions $\theta$ where its one-sided limits as $\psi \to 0^\pm$ vanish.
+    1. Modify `dirac_field` to use the one-centered penalty and run `trajectory` from $(1, 1)$ with $h = 0.01$ for 40,000 steps at $\gamma = 1$ and $\gamma = 3$, verifying that at $\gamma = 3$ the generator stalls at $\theta = 3$.
    :exlabel:`ex_convergence-one-centered-dynamics`
-1. [code] **Momentum in a rotating game.** ● `train_grid`, like R3GAN,
-   trains with Adam at $\beta_1 = 0$. To isolate the first moment, average
-   the field of the penalized Dirac-GAN with the logistic loss,
-   $\bar{\mathbf{u}}_k = \beta\, \bar{\mathbf{u}}_{k-1} + (1 - \beta)\, \mathbf{u}(\mathbf{x}_k)$
-   and $\mathbf{x}_{k+1} = \mathbf{x}_k + h\, \bar{\mathbf{u}}_k$, with
-   $\mathbf{x}_k = (\theta_k, \psi_k)$ and $\bar{\mathbf{u}}_{-1} = \mathbf{0}$.
-   Linearize at the equilibrium, write one step as a linear map of
-   $(\mathbf{x}_k, \bar{\mathbf{u}}_{k-1}) \in \mathbb{R}^4$, and compute
-   numerically the largest stable step size for $\beta \in \{0, 0.5, 0.9\}$
-   at $\gamma = 0.3$ and $\gamma = 1$. Check $\beta = 0$ against problem
-   :exref:`ex_convergence-discrete-simultaneous-update-dirac`b. In which
-   damping regime does momentum shrink the range of stable step sizes?
-   :exlabel:`ex_convergence-momentum-rotating-game`
-1. [code] **Non-saturating Dirac dynamics.** ●● The non-saturating
-   generator replaces $\ell'(-\psi\theta)$ by $\ell'(\psi\theta)$ in the
-   first component of :eqref:`eq_gan_dirac_flow`. Take
-   $\ell = \log\sigma$, $\gamma = 0$ and $r^2 = \theta^2 + \psi^2$.
-    1. Show that
-       $\tfrac{d}{dt} r^2 = 2\psi\theta\,\big(\ell'(\psi\theta) - \ell'(-\psi\theta)\big) \leq 0$
-       for a concave $\ell$. Why can the approach not be linear?
-    1. Average $\tfrac{d}{dt} r^2$ over one turn, at angular rate
-       $\ell'(0)$, to leading order in $r$, and show that
-       $r(t)^2 \approx 8/t$ for large $t$.
-    1. One simultaneous step changes $r^2$ by
-       $2h\, \langle \mathbf{x}, \mathbf{u} \rangle + h^2 \|\mathbf{u}\|^2$.
-       Average this over one turn and show that it vanishes at
-       $(r^\star)^2 = 2h$. Is this cycle stable?
-    1. Redefine `dirac_field` with the non-saturating weight, run
-       `trajectory` from $(1, 1)$ and from $(0.05, 0.05)$ for $4000/h$
-       steps with $h \in \{0.01, 0.05, 0.2\}$, and compare the late
-       distance with $r^\star$. Check (b) with `trajectory(rk4_step, ...)`.
-   :exlabel:`ex_convergence-non-saturating-dynamics`
 
 [Discussions](https://d2l.discourse.group/t/36811)
 

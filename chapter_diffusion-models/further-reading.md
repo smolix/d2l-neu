@@ -87,3 +87,5 @@ Five primary papers are particularly foundational: :citet:`Karras.Aittala.Aila.e
 **Reinforcement learning and preference optimization.** DDPO :cite:`Black.Janner.Du.ea.2024` and Flow-GRPO :cite:`Liu.Liu.Liang.ea.2025` apply policy-gradient updates (:numref:`sec_rl_sequences`) to the stochastic reverse transitions of diffusion and flow models. Diffusion-DPO :cite:`Wallace.Dang.Rafailov.ea.2024` adapts direct preference optimization by substituting the diffusion ELBO for the intractable model log-likelihood.
 
 **Audio, robotics and proteins.** DiffWave :cite:`Kong.Ping.Huang.ea.2021` applies diffusion to raw audio waveforms. Diffusion policies :cite:`Chi.Feng.Du.ea.2023` model multimodal robot action trajectories conditioned on visual observations, avoiding the mode-averaging failure of direct MSE policy regression. Multimodal protein models :cite:`Campbell.Yim.Barzilay.ea.2024` jointly diffuse continuous 3D atomic coordinates and discrete amino-acid sequences.
+
+[Discussions](https://d2l.discourse.group/t/36894)

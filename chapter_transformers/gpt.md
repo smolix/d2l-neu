@@ -763,6 +763,8 @@ Comparing the 2019 `load_gpt2()` configuration against our default `GPT` highlig
 6. **Learning-rate stability with QK-Norm.** Train our 6-block byte-level `GPT` across peak learning rates $\eta \in \{2\times 10^{-3}, 6\times 10^{-3}, 1.5\times 10^{-2}\}$ with standard `CausalAttention` versus a variant that applies `RMSNorm(d_h)` to `q` and `k` inside `CausalAttention.qkv` (:numref:`subsec_qk-norm`). How does QK-Norm shift the maximum stable learning rate?
 :exlabel:`ex_gpt-qk-norm-sensitivity`
 
+[Discussions](https://d2l.discourse.group/t/36775)
+
 <!-- slides -->
 
 ::: {.slide}

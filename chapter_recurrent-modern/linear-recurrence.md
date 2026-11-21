@@ -534,6 +534,8 @@ Removing the previous state $\mathbf{h}_{t-1}$ from a recurrent layer's gates yi
 
 [Discussions](https://d2l.discourse.group/)
 
+[Discussions](https://d2l.discourse.group/t/36885)
+
 <!-- slides -->
 
 ::: {.slide}

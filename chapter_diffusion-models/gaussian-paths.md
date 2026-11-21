@@ -723,6 +723,8 @@ Both trained networks reach their theoretical floors: the mean squared error aga
     1. Which field reproduces the training set, and which produces new points? Bertrand et al. argue that the noise in the regression targets is not what makes the network generalize. Repeat the first two parts with $1{,}024$ training points, and describe how the two histograms change.
    :exlabel:`ex_gaussian-paths-memorization`
 
+[Discussions](https://d2l.discourse.group/t/36888)
+
 <!-- slides -->
 
 ::: {.slide}

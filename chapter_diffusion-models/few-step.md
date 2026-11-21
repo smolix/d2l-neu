@@ -1128,6 +1128,8 @@ sequence of tokens, the subject of :numref:`sec_diffusion-discrete`.
        Gaussian generator, and what can no weighting gain for it?
    :exlabel:`ex_few-step-matching-noised`
 
+[Discussions](https://d2l.discourse.group/t/36893)
+
 <!-- slides -->
 
 ::: {.slide}

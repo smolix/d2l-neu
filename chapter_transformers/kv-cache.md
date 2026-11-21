@@ -846,6 +846,8 @@ print(f'full attention:            loss {full:.2f}, '
 7. **Implementing a fixed-size streaming ring-buffer cache.** Write a `StreamingCache` variant of `init_cache` and `forward_cached` that pre-allocates only $s + w$ token slots per layer (retaining the first $s = 4$ sink positions in slots $0 \dots s-1$ and overwriting slots $s + ((t - s) \bmod w)$ in a circular buffer for $t \ge s$), and verify that it generates 2,048 tokens from `gpt2` using constant $O(s + w)$ cache memory.
 :exlabel:`ex_kv-cache-streaming`
 
+[Discussions](https://d2l.discourse.group/t/36776)
+
 <!-- slides -->
 
 ::: {.slide}

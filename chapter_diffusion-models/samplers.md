@@ -1367,6 +1367,8 @@ weighting change.
     (Fall 2025), Section 1.7.3.*
    :exlabel:`ex_samplers-class-edit`
 
+[Discussions](https://d2l.discourse.group/t/36890)
+
 <!-- slides -->
 
 ::: {.slide}

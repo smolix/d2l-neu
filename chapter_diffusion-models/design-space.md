@@ -1007,6 +1007,8 @@ The chapter's default—velocity regression on the linear path with uniform $t$,
     1. With $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$, show that EDM's weighting is $w(\lambda) \propto \mathcal{N}(\lambda; 2.4, 2.4^2)\, (e^{-\lambda} + \sigma_{\mathrm{data}}^2)$. Where is its peak? :citet:`Kingma.Gao.2023` make it monotone by holding it at its peak value for all $\lambda$ below the peak. By the theorem of the text, what does the change make of EDM's objective?
    :exlabel:`ex_design-space-edm-preconditioning`
 
+[Discussions](https://d2l.discourse.group/t/36891)
+
 <!-- slides -->
 
 ::: {.slide}

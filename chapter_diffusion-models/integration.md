@@ -553,6 +553,8 @@ In :numref:`sec_diffusion-images` we move from two dimensions to $28 \times 28$ 
     1. What does the probability-flow ODE of the cosine path do to data distributed as $\mathcal{N}(\mathbf{0}, \mathbf{I})$, and why? What does that of the linear path do to the same data?
    :exlabel:`ex_gaussian-paths-same-ratio-same-flow`
 
+[Discussions](https://d2l.discourse.group/t/36889)
+
 <!-- slides -->
 
 ::: {.slide}

@@ -1021,6 +1021,8 @@ with entropic regularization.
 
 <!-- Discussions: forum topic to be created at deploy -->
 
+[Discussions](https://d2l.discourse.group/t/36895)
+
 <!-- slides -->
 
 ::: {.slide}

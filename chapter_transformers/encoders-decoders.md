@@ -710,6 +710,8 @@ class PerceiverEncoder(nnx.Module):
 6. **Perceiver IO for sequence-to-sequence reversal.** Perceiver IO :cite:`Jaegle.Borgeaud.Alayrac.ea.2022` pairs a `PerceiverEncoder` ($M$ learned latent queries attending to the $N$-token input) with a cross-attention **decoder** in which $N_{\textrm{out}}$ target position embeddings $\mathbf{Q}_{\textrm{out}} \in \mathbb{R}^{N_{\textrm{out}} \times d}$ cross-attend to the $M$ latent vectors $\mathbf{Z}^{(L)} \in \mathbb{R}^{B \times M \times d}$. Build a `PerceiverAutoencoder` that encodes a 12-letter string into $M \in \{2, 4, 8, 12\}$ latents ($d = 128$) and decodes the reversed string in one parallel cross-attention readout pass. How does reversal accuracy vary with the bottleneck size $M$?
 :exlabel:`ex_encdec-perceiver-reversal`
 
+[Discussions](https://d2l.discourse.group/t/36777)
+
 <!-- slides -->
 
 ::: {.slide}

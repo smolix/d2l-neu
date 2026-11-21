@@ -6,37 +6,13 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Backpropagation
 :label:`sec_backprop`
 
-In :numref:`sec_mlp-implementation`, we trained a 203,530-parameter MLP
-without writing a single line of calculus: the framework computed every
-gradient automatically. Before automatic differentiation, even a minor
-architectural tweak meant deriving pages of update rules by hand. While we
-will gladly keep relying on autograd in day-to-day work, understanding what
-happens under the hood is indispensable if you want more than a surface-level
-grasp of deep learning. How can a single backward sweep through a network
-deliver hundreds of thousands of partial derivatives for only a small
-multiple of the cost of one forward pass?
+In :numref:`sec_mlp-implementation`, we trained all $203{,}530$ parameters of our Fashion-MNIST MLP without writing a single derivative by hand: calling `backward()` computed every gradient automatically. In :numref:`sec_autograd`, we saw the general principle—reverse-mode automatic differentiation records the forward pass as a computational graph and walks the chain rule backward from the scalar loss.
 
-In :numref:`sec_autograd`, we introduced the high-level mechanism: the
-framework records the forward pass as a computational graph and walks the
-chain rule backward through it, applying one local rule per operation while
-reusing intermediate values saved along the way. Here we crack that black
-box wide open for neural networks. Very little new calculus is required;
-what changes is the setting—our parameters are matrices, nonlinearities sit
-between layers, and error signals must travel *through* upper layers to
-reach lower ones. Remarkably, an entire MLP requires just three local
-rules—matrix multiplication, bias addition, and elementwise activation.
-Applying them sequentially from the loss back to the first layer is
-*backpropagation*.
+In this section, we open that black box for multilayer perceptrons. An entire MLP requires just **three local matrix-calculus rules**: matrix multiplication, broadcasted bias addition, and elementwise activation. Walking through them answers three essential engineering questions:
 
-Opening the hood also answers three pressing practical questions: why does
-training consume far more memory than inference, and why does that memory
-scale with batch size? Why does a permanently inactive ReLU unit freeze and
-stop learning? And why do gradients in deep stacks tend to vanish or
-explode—the central problem of the next section? After a quick warm-up on a
-three-scalar graph, we derive the three matrix rules, interpret the backward
-pass as error signals flowing downward through the network, verify our
-hand-coded backward pass against automatic differentiation to 14 digits of
-precision, and tally its exact cost in memory and arithmetic.
+1. How does a single backward pass compute hundreds of thousands of partial derivatives for only $\sim 2\times$ the arithmetic cost of one forward pass?
+2. Why does training consume so much more GPU memory than inference—and why does that memory scale linearly with minibatch size $n$ and depth $K$?
+3. How do dead ReLU units and vanishing/exploding gradients arise mechanically from the backward recurrence?
 
 ```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
 %%tab mxnet
@@ -77,162 +53,59 @@ import optax
 from d2l import jax as d2l
 ```
 
+
 ## Computational Graphs
 
 ### A Small Graph
 
-To refresh the mechanics of reverse-mode differentiation from
-:numref:`sec_autograd`, consider the simplest nontrivial graph of three
-scalars: $e = (a + b)\,c$ evaluated at $a = 2$, $b = 1$, and $c = -3$. The
-*forward pass* computes $u = a + b = 3$ and then $e = u\,c = -9$. The
-*backward pass* seeds the output with $\partial e / \partial e = 1$ and
-multiplies by local derivatives on the way back to the inputs. At the
-multiplication node, $\partial e / \partial u = c = -3$ and
-$\partial e / \partial c = u = 3$; at the addition node,
-$\partial u / \partial a = \partial u / \partial b = 1$. Chaining them
-together yields
+To review reverse-mode differentiation in its barest form, consider the three-scalar expression $e = (a + b)\,c$ at $a = 2, b = 1, c = -3$ (:numref:`fig_mdl-mlp-backprop-small`). The *forward pass* (left to right) computes $u = a + b = 3$ and $e = u\,c = -9$. The *backward pass* (right to left) seeds $\partial e / \partial e = 1$ and applies one local derivative per node:
+- At the multiplication node $e = u\,c$: $\partial e / \partial u = c = -3$ and $\partial e / \partial c = u = 3$.
+- At the addition node $u = a + b$: $\partial u / \partial a = \partial u / \partial b = 1$, so $\partial e / \partial a = \partial e / \partial b = -3$.
 
-$$
-\frac{\partial e}{\partial a} = \frac{\partial e}{\partial u}\,\frac{\partial u}{\partial a} = -3, \qquad
-\frac{\partial e}{\partial b} = \frac{\partial e}{\partial u}\,\frac{\partial u}{\partial b} = -3, \qquad
-\frac{\partial e}{\partial c} = u = 3.
-$$
-
-Notice the two elemental behaviors: an addition simply copies its incoming
-gradient untouched to every input, whereas a multiplication scales the
-incoming gradient by the value of the *other* input
-(:numref:`fig_mdl-mlp-backprop-small`).
-
-![The graph of $e = (a + b)\,c$ at $a = 2$, $b = 1$, $c = -3$. Each node shows its value (black) and the derivative of $e$ with respect to it (red). The forward pass (blue) runs from left to right; the backward pass (red) starts from 1 at $e$ and multiplies by the local derivative written on each red arrow.](../img/mdl-mlp-backprop-small.svg)
+![Computational graph of $e = (a + b)\,c$ at $a = 2, b = 1, c = -3$, showing forward values (black) and reverse-mode derivatives $\partial e / \partial (\cdot)$ (red).](../img/mdl-mlp-backprop-small.svg)
 :label:`fig_mdl-mlp-backprop-small`
 
-Even this tiny graph exhibits the two defining features of backpropagation.
-First, the backward pass depends on values *saved during the forward
-pass*: the multiplication node needed both $c$ (to compute $u$'s gradient)
-and $u$ (to compute $c$'s gradient), whereas addition needed neither.
-Second, execution runs strictly in reverse topological order ($e$, then
-$u$ and $c$, then $a$ and $b$), because a node's gradient is complete only
-after every downstream consumer has returned its contribution.
+Notice two universal rules already visible here: (i) an addition node copies its incoming gradient unchanged to each summand, whereas a multiplication node multiplies the incoming gradient by the *other* factor (requiring the forward pass to cache $u$ and $c$); and (ii) the backward pass traverses the graph in *reverse topological order*.
 
 ### The Graph of an MLP
 
-Now let us scale up to the one-hidden-layer MLP of :numref:`sec_mlp`. For a
-minibatch $\mathbf{X} \in \mathbb{R}^{n \times d}$, hidden weights and
-biases $\mathbf{W}^{(1)} \in \mathbb{R}^{d \times h}$,
-$\mathbf{b}^{(1)} \in \mathbb{R}^{h}$, activation $\phi$, and output
-weights and biases $\mathbf{W}^{(2)} \in \mathbb{R}^{h \times q}$,
-$\mathbf{b}^{(2)} \in \mathbb{R}^{q}$, we name the pre-activations
-$\mathbf{Z}$ explicitly so the backward pass can refer to them:
+Now consider our one-hidden-layer MLP (:numref:`fig_forward`) on a minibatch $\mathbf{X} \in \mathbb{R}^{n \times d}$ with parameters $\mathbf{W}^{(1)} \in \mathbb{R}^{d \times h}$, $\mathbf{b}^{(1)} \in \mathbb{R}^h$, $\mathbf{W}^{(2)} \in \mathbb{R}^{h \times q}$, $\mathbf{b}^{(2)} \in \mathbb{R}^q$, and $\ell_2$ weight-decay penalty $s = \frac{\lambda}{2}(\|\mathbf{W}^{(1)}\|_{\textrm{F}}^2 + \|\mathbf{W}^{(2)}\|_{\textrm{F}}^2)$:
 
 $$
 \begin{aligned}
 \mathbf{Z} &= \mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}, \\
 \mathbf{H} &= \phi(\mathbf{Z}), \\
-\mathbf{O} &= \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}.
+\mathbf{O} &= \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}, \\
+J &= L(\mathbf{O}, \mathbf{Y}) + s,
 \end{aligned}
 $$
 :eqlabel:`eq_backprop-forward`
 
-From the logits $\mathbf{O}$, softmax produces predicted class
-probabilities $\hat{\mathbf{Y}} = \mathrm{softmax}(\mathbf{O})$, and
-averaging the per-example cross-entropy losses
-$l_i = -\log \hat{y}_{i, y_i}$ yields the minibatch loss $L$. Let us also
-include $\ell_2$ weight decay (:numref:`sec_weight_decay`),
+where $L$ is the mean cross-entropy loss over the minibatch and $\|\mathbf{W}\|_{\textrm{F}}^2 = \sum_{r,j} w_{rj}^2$ is the squared Frobenius norm.
 
-$$s = \frac{\lambda}{2}\left(\|\mathbf{W}^{(1)}\|_\textrm{F}^2 + \|\mathbf{W}^{(2)}\|_\textrm{F}^2\right),$$
-
-where the squared Frobenius norm $\|\mathbf{W}\|_\textrm{F}^2$ simply sums
-the squares of all entries of $\mathbf{W}$. Including $s$ serves a dual
-purpose: it reflects real training *and* forces each weight matrix to feed
-two branches of the graph, showing how gradients from multiple paths add
-up. Together, training minimizes the regularized *objective* $J = L + s$.
-
-:numref:`fig_forward` lays out the full computational graph. Along the
-bottom spine sit the forward tensors—$\mathbf{X}$, $\mathbf{Z}$,
-$\mathbf{H}$, $\mathbf{O}$, and $L$—annotated with their exact shapes for
-our Fashion-MNIST MLP ($d = 784, h = 256, q = 10$). Above sit the
-trainable weight matrices, each branching downward into its layer and
-upward into the regularization penalty $s$.
-
-![The forward pass of an MLP with one hidden layer and weight decay. Nodes are values, labeled with their shapes for $d = 784$, $h = 256$, and $q = 10$; parameters are shaded. The biases are omitted: they enter $\mathbf{Z}$ and $\mathbf{O}$ like the weights, but not the penalty $s$.](../img/mdl-mlp-forward-graph.svg)
+![Computational graph of the forward pass of a one-hidden-layer MLP with weight decay ($d = 784, h = 256, q = 10$). Parameter nodes are shaded; each weight matrix feeds both its affine layer and the regularization penalty $s$.](../img/mdl-mlp-forward-graph.svg)
 :label:`fig_forward`
 
 ## Backpropagation through an MLP
 
 ### Local Rules for Matrices
 
-Our goal is to differentiate the scalar objective $J$ with respect to every
-parameter matrix and vector, writing $\partial J / \partial \mathbf{W}$ for
-the matrix of partial derivatives $\partial J / \partial w_{rj}$ (always
-matching the shape of $\mathbf{W}$). Each operation in :numref:`fig_forward`
-needs a local rule that converts an incoming upstream gradient into
-gradients for its inputs.
+For any matrix $\mathbf{A}$, we write $\partial J / \partial \mathbf{A}$ for the matrix of partial derivatives $(\partial J / \partial a_{ij})$ of the *exact same shape* as $\mathbf{A}$. Three local vector--Jacobian rules (:numref:`subsec_mdl-layer-vjp`) handle every layer of an MLP:
 
-Matrix multiplication is the one rule that merits careful derivation.
-Suppose $\mathbf{A} = \mathbf{X}\mathbf{W}$ with
-$\mathbf{X} \in \mathbb{R}^{n \times d}$ and
-$\mathbf{W} \in \mathbb{R}^{d \times h}$, and suppose we already know the
-upstream gradient $\mathbf{G} = \partial J / \partial \mathbf{A} \in \mathbb{R}^{n \times h}$.
-Since $a_{ij} = \sum_r x_{ir} w_{rj}$, the weight entry $w_{rj}$ feeds into
-every element of column $j$ of $\mathbf{A}$ with local derivative $x_{ir}$.
-Summing over all paths via the multivariable chain rule
-(:numref:`sec_calculus`) gives
-$\partial J / \partial w_{rj} = \sum_i x_{ir} g_{ij}$, which is entry
-$(r, j)$ of $\mathbf{X}^\top \mathbf{G}$. Symmetrically, $x_{ir}$ feeds
-into every element of row $i$ of $\mathbf{A}$, giving
-$\partial J / \partial x_{ir} = \sum_j g_{ij} w_{rj}$, or entry $(i, r)$ of
-$\mathbf{G}\mathbf{W}^\top$. In compact matrix form:
-
-$$
-\frac{\partial J}{\partial \mathbf{W}} = \mathbf{X}^\top \mathbf{G}, \qquad
-\frac{\partial J}{\partial \mathbf{X}} = \mathbf{G}\,\mathbf{W}^\top.
-$$
-:eqlabel:`eq_backprop-matmul`
-
-A quick dimensional check makes these formulas almost impossible to
-misremember: $\mathbf{X}^\top \mathbf{G}$ has shape $d \times h$ (matching
-$\mathbf{W}$) and $\mathbf{G}\mathbf{W}^\top$ has shape $n \times d$
-(matching $\mathbf{X}$)—whenever $n, d, h$ are distinct, no other matrix
-product even fits! Writing row $i$ of $\mathbf{X}$ as $\mathbf{x}_i^\top$
-and row $i$ of $\mathbf{G}$ as $\mathbf{g}_i^\top$, note that
-$\mathbf{X}^\top\mathbf{G} = \sum_i \mathbf{x}_i \mathbf{g}_i^\top$ is
-simply a sum of per-example outer products. Just like scalar multiplication
-in our warm-up graph, each factor's gradient multiplies the upstream
-gradient by the *other* factor—explaining why the forward pass must cache
-$\mathbf{X}$ to differentiate $\mathbf{W}$, while $\mathbf{G}\mathbf{W}^\top$
-transmits the error signal down to the layer below.
-
-The remaining two local rules are immediate. Broadcasting a bias vector,
-$\mathbf{Z} = \mathbf{A} + \mathbf{b}$, adds $b_j$ to every row in column
-$j$: just like scalar addition, it passes
-$\mathbf{G} = \partial J / \partial \mathbf{Z}$ straight back to
-$\mathbf{A}$ unchanged ($\partial J / \partial \mathbf{A} = \mathbf{G}$),
-while accumulating the gradient for $b_j$ by summing down column $j$ (all
-$n$ rows of $\mathbf{G}$). Finally, an elementwise activation
-$\mathbf{H} = \phi(\mathbf{Z})$ couples each entry $(i, j)$ exclusively to
-itself, yielding the elementwise (Hadamard) product
-
-$$\frac{\partial J}{\partial \mathbf{Z}} = \frac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z}).$$
-
-Each gradient entry is simply gated by the local slope of $\phi$ at its
-pre-activation. For ReLU, $\phi'(z) = \mathbf{1}(z > 0)$ passes the
-gradient of every active unit untouched and blocks every inactive one—and
-conveniently, since $[\mathbf{H}]_{ij} > 0$ if and only if
-$[\mathbf{Z}]_{ij} > 0$, ReLU can even infer the mask from $\mathbf{H}$
-alone without keeping $\mathbf{Z}$. All three rules are concrete instances
-of the vector--Jacobian products introduced in :numref:`sec_autograd` (and
-derived for general tensor operations in :numref:`subsec_mdl-layer-vjp`).
+1. **Matrix multiplication ($\mathbf{A} = \mathbf{X}\mathbf{W}$ with $\mathbf{X} \in \mathbb{R}^{n \times d}, \mathbf{W} \in \mathbb{R}^{d \times h}$):** Given upstream gradient $\mathbf{G} = \partial J / \partial \mathbf{A} \in \mathbb{R}^{n \times h}$, since $a_{ij} = \sum_r x_{ir} w_{rj}$, the chain rule yields $\partial J / \partial w_{rj} = \sum_i x_{ir} g_{ij}$ and $\partial J / \partial x_{ir} = \sum_j g_{ij} w_{rj}$, or in matrix form:
+   $$
+   \frac{\partial J}{\partial \mathbf{W}} = \mathbf{X}^\top \mathbf{G}, \qquad
+   \frac{\partial J}{\partial \mathbf{X}} = \mathbf{G}\,\mathbf{W}^\top.
+   $$
+   :eqlabel:`eq_backprop-matmul`
+   Notice how the shapes lock into place: $\mathbf{X}^\top\mathbf{G}$ is $(d \times n)(n \times h) = d \times h$ (matching $\mathbf{W}$), and $\mathbf{G}\mathbf{W}^\top$ is $(n \times h)(h \times d) = n \times d$ (matching $\mathbf{X}$). Just like scalar multiplication, computing $\partial J / \partial \mathbf{W}$ requires the cached input $\mathbf{X}$, while computing $\partial J / \partial \mathbf{X}$ propagates the error signal backward through $\mathbf{W}^\top$.
+2. **Broadcasted bias addition ($\mathbf{Z} = \mathbf{A} + \mathbf{b}$ with $\mathbf{b} \in \mathbb{R}^h$):** Since $b_j$ is added to every row $i$ of column $j$, $\partial J / \partial \mathbf{A} = \mathbf{G}$ passes straight through unchanged, while $\partial J / \partial \mathbf{b} = \mathbf{G}^\top\mathbf{1}_n$ sums $\mathbf{G}$ across the $n$ examples (rows).
+3. **Elementwise activation ($\mathbf{H} = \phi(\mathbf{Z})$):** Since $h_{ij} = \phi(z_{ij})$ depends only on entry $(i, j)$, the upstream gradient is gated entrywise (Hadamard product $\odot$) by the local activation slope:
+   $$\frac{\partial J}{\partial \mathbf{Z}} = \frac{\partial J}{\partial \mathbf{H}} \odot \phi'(\mathbf{Z}).$$
 
 ### The Backward Pass
 
-Those three rules give us the entire backward pass of our MLP. Starting at
-the objective with $\partial J / \partial J = 1$, addition $J = L + s$
-sends gradient 1 to both $L$ and $s$. From :numref:`sec_softmax`, the
-gradient of the mean cross-entropy loss over $n$ examples with one-hot
-label matrix $\mathbf{Y} \in \{0, 1\}^{n \times q}$ is
-$\frac{1}{n}(\hat{\mathbf{Y}} - \mathbf{Y})$. Walking backward right to
-left along :numref:`fig_forward` and applying our three rules line by line
-yields:
+Starting from $\partial J / \partial \mathbf{O} = \frac{1}{n}(\hat{\mathbf{Y}} - \mathbf{Y})$ (:numref:`subsec_softmax_and_derivatives`, where $\hat{\mathbf{Y}} = \mathrm{softmax}(\mathbf{O})$ and $\mathbf{Y} \in \{0, 1\}^{n \times q}$ is the one-hot label matrix) and $\partial s / \partial \mathbf{W}^{(k)} = \lambda \mathbf{W}^{(k)}$, applying our three rules in reverse topological order from output to input gives the complete MLP backward pass:
 
 $$
 \begin{aligned}
@@ -247,61 +120,16 @@ $$
 $$
 :eqlabel:`eq_backprop-mlp`
 
-Here $\mathbf{1} \in \mathbb{R}^n$ is a column of ones, so
-$\mathbf{G}^\top \mathbf{1}$ simply sums the rows of $\mathbf{G}$ into a
-vector matching the bias. Reading :eqref:`eq_backprop-mlp` top to bottom
-traces the exact execution order: output-layer gradients come first,
-hidden-layer gradients come last, and we skip $\partial J / \partial \mathbf{X}$
-altogether because inputs are fixed data rather than trainable parameters.
-It also gives us the exact shopping list of forward-pass tensors that must
-stay alive in memory until the backward sweep finishes: $\hat{\mathbf{Y}}$,
-$\mathbf{H}$, $\mathbf{W}^{(2)}$, $\mathbf{Z}$, and $\mathbf{X}$.
-
-Pause to appreciate the intuition behind line 3—it is literally why the
-algorithm is called *backpropagation*. Line 1 computes the prediction error
-at the outputs ($\hat{\mathbf{Y}} - \mathbf{Y}$). Line 3 propagates that
-error *backward* through the transpose of the very same weights
-$\mathbf{W}^{(2)}$ that carried hidden activations forward: hidden unit $j$
-receives a weighted blend of every output error it contributed to. Because
-hidden units have no ground-truth labels of their own, this backpropagated
-error signal is their sole teacher—telling each unit how wrong the outputs
-above it were and which direction to move—while line 4 gates that message
-by each unit's activation slope $\phi'(\mathbf{Z})$.
-
-Notice also how branching works on the weight gradients: because
-$\mathbf{W}^{(2)}$ feeds both $\mathbf{O}$ (via $L$) and the weight-decay
-term $s$ in :numref:`fig_forward`, the chain rule *sums* the two paths—
-$\mathbf{H}^\top \partial J / \partial \mathbf{O}$ plus
-$\lambda \mathbf{W}^{(2)}$. A notorious bug in hand-written backward passes
-is overwriting instead of accumulating (`=` where `+=` belongs), which
-silently corrupts gradients without raising any runtime error.
-
-Extending from one hidden layer to an arbitrary $K$-layer MLP is effortless.
-With $\mathbf{H}^{(0)} = \mathbf{X}$,
-$\mathbf{Z}^{(k)} = \mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}$,
-hidden activations $\mathbf{H}^{(k)} = \phi(\mathbf{Z}^{(k)})$, and logits
-$\mathbf{O} = \mathbf{Z}^{(K)}$, we seed
-$\partial J / \partial \mathbf{Z}^{(K)} = \frac{1}{n}(\hat{\mathbf{Y}} - \mathbf{Y})$
-and iterate one modular recurrence from the top layer down to the first:
+For a general $K$-layer MLP ($\mathbf{Z}^{(k)} = \mathbf{H}^{(k-1)}\mathbf{W}^{(k)} + \mathbf{b}^{(k)}, \mathbf{H}^{(k)} = \phi(\mathbf{Z}^{(k)})$), each layer $k = K-1, \ldots, 1$ executes the exact same two-step module:
 
 $$
 \frac{\partial J}{\partial \mathbf{Z}^{(k)}} = \Bigl(\frac{\partial J}{\partial \mathbf{Z}^{(k+1)}}\, \mathbf{W}^{(k+1)\top}\Bigr) \odot \phi'\bigl(\mathbf{Z}^{(k)}\bigr), \qquad
 \frac{\partial J}{\partial \mathbf{W}^{(k)}} = \mathbf{H}^{(k-1)\top} \frac{\partial J}{\partial \mathbf{Z}^{(k)}} + \lambda \mathbf{W}^{(k)}.
 $$
 
-Every layer is completely self-contained: it receives the upstream error
-from the layer above, computes its own parameter gradients, and passes the
-error downward—multiplying by one transposed weight matrix and one matrix
-of activation slopes at every hop. Keep that repeated matrix product in
-mind: in :numref:`sec_numerical_stability`, it will explain why deep
-networks are so vulnerable to vanishing and exploding gradients.
-
 ### A Worked Example
 
-Let us step through :eqref:`eq_backprop-mlp` by hand on a tiny network
-where every number is transparent: $d = h = 2$, $q = 1$, a single example
-($n = 1$), ReLU hidden activation, zero biases, no weight decay, and
-squared loss $L = \frac{1}{2}(o - y)^2$. Take
+Let us trace :eqref:`eq_backprop-mlp` by hand on a tiny network ($n = 1, d = h = 2, q = 1$, ReLU activation, zero biases, $\lambda = 0$, and squared loss $L = \frac{1}{2}(o - y)^2$):
 
 $$
 \mathbf{X} = \begin{bmatrix} 1 & 2 \end{bmatrix},\quad
@@ -311,13 +139,7 @@ y = 0.
 $$
 :eqlabel:`eq_backprop-example`
 
-Treating the example as a $1$-row minibatch, forward propagation gives
-$\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} = \begin{bmatrix} -1 & 2 \end{bmatrix}$
-and $\mathbf{H} = \mathrm{ReLU}(\mathbf{Z}) = \begin{bmatrix} 0 & 2 \end{bmatrix}$—notice
-that the first hidden unit is switched off—followed by
-$o = \mathbf{H}\mathbf{W}^{(2)} = -2$ and $L = \frac{1}{2}(-2)^2 = 2$. For
-squared loss, the seed gradient is simply $\partial L / \partial o = o - y = -2$.
-Walking through the remaining lines of :eqref:`eq_backprop-mlp` yields:
+In the forward pass (:numref:`fig_mdl-mlp-backprop-graph`), $\mathbf{Z} = \mathbf{X}\mathbf{W}^{(1)} = \begin{bmatrix} -1 & 2 \end{bmatrix}$, $\mathbf{H} = \mathrm{ReLU}(\mathbf{Z}) = \begin{bmatrix} 0 & 2 \end{bmatrix}$ (unit 1 is inactive!), $o = \mathbf{H}\mathbf{W}^{(2)} = -2$, and $L = \frac{1}{2}(-2)^2 = 2$. In the backward pass, $\partial L / \partial o = o - y = -2$, and
 
 $$
 \begin{aligned}
@@ -328,29 +150,14 @@ $$
 \end{aligned}
 $$
 
-Look right at the first column of $\partial L / \partial \mathbf{W}^{(1)}$:
-it is identically zero! Even though $\partial L / \partial h_1 = -4$ was
-sizable, ReLU's zero slope at $z_1 = -1$ slammed the gate shut, blocking
-every gradient into unit 1. If a ReLU unit stays negative across *every*
-training example, its incoming weights never receive a nonzero gradient
-again—the exact anatomy of a *dead* ReLU unit from :numref:`sec_mlp`.
-Meanwhile, for a single example the bias gradients equal the row gradients
-themselves: $\partial L / \partial \mathbf{b}^{(1)} = (0, 2)$ and
-$\partial L / \partial \mathbf{b}^{(2)} = -2$. :numref:`fig_mdl-mlp-backprop-graph`
-summarizes both passes side by side.
+Notice that the entire first column of $\partial L / \partial \mathbf{W}^{(1)}$ is zero: because $z_1 = -1 < 0$, $\phi'(z_1) = 0$ blocks the upstream gradient $\partial L / \partial h_1 = -4$ from reaching any weight feeding unit 1.
 
-![The worked example as a graph. Each node shows its value (black) and the gradient of $L$ with respect to it (red); the biases are zero and omitted. The forward pass (blue) runs left to right and down into each layer; the backward pass (red) applies the rule written on each red arrow. The inactive first hidden unit, $z_1 = -1$, receives no gradient, which zeros the first column of $\partial L / \partial \mathbf{W}^{(1)}$.](../img/mdl-mlp-backprop-graph.svg)
+![Forward values (black) and backward gradients (red) for the worked example :eqref:`eq_backprop-example}. Because $z_1 = -1 < 0$, the ReLU gate zeroes out $\partial L / \partial z_1$ and the first column of $\partial L / \partial \mathbf{W}^{(1)}$.](../img/mdl-mlp-backprop-graph.svg)
 :label:`fig_mdl-mlp-backprop-graph`
 
 ### Checking the Backward Pass on a Minibatch
 
-Our by-hand example used a single sample, squared loss, and no weight
-decay. To put every single line of :eqref:`eq_backprop-mlp` through its
-paces, `mlp_backward` runs the forward pass :eqref:`eq_backprop-forward`
-(caching the intermediate tensors needed on the way back) and then
-executes the full minibatch ReLU MLP backward pass with cross-entropy
-and weight decay, so we can check it head-to-head against automatic
-differentiation.
+Let us implement :eqref:`eq_backprop-mlp` in `mlp_backward` and verify it in 64-bit floating point against each framework's `autograd` on a random $256 \times 784$ minibatch ($h = 256, q = 10, \lambda = 10^{-3}$):
 
 ```{.python .input #backprop-checking-the-backward-pass-on-a-minibatch-1}
 %%tab mxnet
@@ -504,74 +311,27 @@ for name, a, g in zip(['W1', 'b1', 'W2', 'b2'], auto, grads):
     print(f'{name}: relative difference {float(rel):.1e}')
 ```
 
-Every relative discrepancy sits below $10^{-14}$—pure double-precision
-rounding noise—confirming that :eqref:`eq_backprop-mlp` matches what
-automatic differentiation computes under the hood.
+
+Every parameter gradient matches `autograd` to within $10^{-14}$ relative error (double-precision machine epsilon).
 
 ## Memory and Computation
 
-### Stored Values
+### Stored Activations vs. Parameter Memory
 
-Because backpropagation reuses intermediate activations saved during the
-forward pass, training consumes substantially more memory than inference
-(:numref:`sec_autograd`). Our Fashion-MNIST MLP
-(:numref:`sec_mlp-implementation`) lets us put exact byte counts on this
-gap. Evaluating :eqref:`eq_backprop-mlp` requires holding onto $\mathbf{X}$,
-$\mathbf{H}$, and $\hat{\mathbf{Y}}$ (for ReLU, $\mathbf{H}$ already tells
-us where $\mathbf{Z} > 0$, so $\mathbf{Z}$ can be freed). For a minibatch
-of $n = 256$ examples, those cached activations total
+Looking at :eqref:`eq_backprop-mlp`, computing $\partial J / \partial \mathbf{W}^{(2)}$ and $\partial J / \partial \mathbf{W}^{(1)}$ during the backward pass requires the forward pass to retain $\mathbf{X}$, $\mathbf{H}$ (which for ReLU also encodes the mask $\mathbf{Z} > 0$), and $\hat{\mathbf{Y}}$. On our Fashion-MNIST MLP ($d = 784, h = 256, q = 10$) with minibatch size $n = 256$, these cached tensors hold
 
-$$256 \times 784 + 256 \times 256 + 256 \times 10 = 200{,}704 + 65{,}536 + 2{,}560 = 268{,}800$$
+$$256 \times 784 + 256 \times 256 + 256 \times 10 = 268{,}800\textrm{ floats} \approx 1.1\textrm{ MB},$$
 
-numbers—1.1 MB in 32-bit float, already *larger* than the entire model's
-203,530 parameters (0.8 MB)! Worse still, while parameter memory is fixed,
-activation memory scales linearly with *both* minibatch size $n$ and
-network depth (every extra 256-unit hidden layer adds another
-$256 \times 256$ matrix per batch). During inference, by contrast, each
-layer's input can be discarded the instant its output is computed. That is
-why deeper networks and larger minibatches trigger GPU out-of-memory errors
-so readily: saved activations, not weights, usually fill the GPU first.
+already exceeding the $203{,}530$ parameters ($\approx 0.8\textrm{ MB}$)! In a $K$-layer network, activation memory grows linearly with *both* batch size $n$ and depth $K$, whereas inference can discard each layer's activations immediately after computing the next layer.
 
-### Computation
+### Arithmetic Cost
 
-What about arithmetic cost? Almost all compute sits inside the matrix
-multiplications. Per example, the forward pass executes
-$784 \times 256 + 256 \times 10 = 203{,}264$ multiply-adds. By
-:eqref:`eq_backprop-matmul`, every forward matrix multiply spawns *two*
-equally sized backward multiplies—one for the weight gradient and one for
-the input gradient—except at the very first layer, which skips
-$\partial J / \partial \mathbf{X}$. The backward pass thus executes
-$784 \times 256 + 2 \times 256 \times 10 = 205{,}824$ multiply-adds per
-example: roughly 2$\times$ the cost of a forward pass here, and roughly
-3$\times$ in deeper architectures where most layers sit in the interior.
-
-Now we have the full answer to our opening puzzle. Computing 203,530
-derivatives by finite differences would demand 203,530 extra forward passes
-per gradient step. Backpropagation computes the shared layer-level error
-signals $\partial J / \partial \mathbf{O}$ and
-$\partial J / \partial \mathbf{Z}$ *once* and reads every single parameter
-gradient off them with one matrix product or sum—the hallmark efficiency of
-reverse-mode differentiation (:numref:`sec_autograd`). In deep networks,
-however, those error signals must pass through long chains of transposed
-weight matrices and activation slopes. What happens to their magnitude over
-ten or a hundred layers? That brings us directly to the next section.
+In the forward pass, each example performs $d h + h q = 784 \times 256 + 256 \times 10 = 203{,}264$ multiply-adds. In the backward pass, each interior matrix multiply $\mathbf{H}^{(k-1)}\mathbf{W}^{(k)}$ spawns *two* backward matrix multiplies of the same size ($\mathbf{H}^{(k-1)\top}\mathbf{G}$ for the weights and $\mathbf{G}\mathbf{W}^{(k)\top}$ for the activations below), while the first layer needs only $\mathbf{X}^\top\mathbf{G}_Z$ (since $\partial J / \partial \mathbf{X}$ is not needed). Thus one backward pass costs $\sim 2\times$ a forward pass for a two-layer MLP (and $\sim 2\times$ the forward matrix multiplies, making a full forward-plus-backward training step roughly $3\times$ the cost of forward inference in deep networks)—computing all $203{,}530$ derivatives in the time finite differences would spend on *two* scalar parameters!
 
 ## Summary
 
-Backpropagation is reverse-mode automatic differentiation
-(:numref:`sec_autograd`) specialized to neural networks. Three local matrix
-rules suffice for any MLP: addition passes gradients through unchanged
-(summing across the batch for biases), matrix multiplication
-$\mathbf{X}\mathbf{W}$ returns $\mathbf{X}^\top\mathbf{G}$ for weights and
-$\mathbf{G}\mathbf{W}^\top$ for inputs, and an elementwise activation
-multiplies by its local slope $\phi'(\mathbf{Z})$ (blocking gradients
-through inactive ReLU units). Whenever a parameter feeds multiple branches
-such as the loss and weight decay, incoming gradients add. Because each
-layer computes its parameter gradients from a single shared error signal
-propagated downward from the layer above, one backward pass computes every
-gradient for roughly 2–3$\times$ the cost of a forward pass—while requiring
-the forward pass to retain intermediate activations whose memory grows with
-both batch size and depth.
+- **Three local matrix rules:** Backpropagation through any MLP reduces to (i) $\partial J / \partial \mathbf{W} = \mathbf{X}^\top\mathbf{G}$ and $\partial J / \partial \mathbf{X} = \mathbf{G}\mathbf{W}^\top$ for $\mathbf{A} = \mathbf{X}\mathbf{W}$, (ii) row summation $\mathbf{G}^\top\mathbf{1}$ for bias vectors, and (iii) elementwise gating $\mathbf{G} \odot \phi'(\mathbf{Z})$ for activations (plus summing gradients wherever a tensor branches into both data loss and weight decay).
+- **Memory and compute scaling:** Because $\mathbf{X}^\top\mathbf{G}$ reads forward activations, training must cache intermediate layer outputs across the forward pass (scaling as $O(n K h)$ in memory) while requiring roughly $2\times$ the FLOPs of the forward pass for the backward sweep.
 
 ## Exercises
 
@@ -591,26 +351,7 @@ both batch size and depth.
        take in 32-bit floating point for the MLP of
        :numref:`sec_mlp-implementation` with $n = 256$? Explain why
        backpropagation never forms it.
-1. **Modified activation.** The first hidden unit of the network in
-   :eqref:`eq_backprop-example` receives the pre-activation $z_1 = -1$, so
-   the ReLU derivative $\phi'(z_1) = 0$ blocks the gradient of every weight
-   into this unit. Replace the activation of this unit alone by the leaky
-   variant $\phi_1(z) = \max(0, z) + 0.1 \min(0, z)$; the second unit keeps
-   its ReLU.
-    1. Write the backward rule for $\partial J / \partial \mathbf{Z}$ when
-       hidden unit $j$ has its own activation $\phi_j$.
-    1. Redo the forward and backward passes, and give
-       $\partial L / \partial \mathbf{W}^{(2)}$,
-       $\partial L / \partial \mathbf{Z}$, and
-       $\partial L / \partial \mathbf{W}^{(1)}$. Which of these gradients
-       differ from the all-ReLU case even though the rules that produce
-       them are unchanged, and why?
 
-    *Adapted from Michael Nielsen,
-    [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap2.html),
-    Chapter 2, and Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 7.10.*
 1. **Memory of a deeper network.** Consider an MLP with $d$ inputs, $q$
    outputs, and $K$ layers, of which the $K - 1$ hidden ones are ReLU layers
    of width $h$, trained on minibatches of $n$ examples.
@@ -650,11 +391,7 @@ both batch size and depth.
     *Adapted from Simon Prince,
     [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
     Problems 7.12 and 7.13.*
-1. **Hessian of a ReLU network.** ● ReLU has $\phi''(z) = 0$ for
-   $z \neq 0$. For the network in :eqref:`eq_backprop-example`, derive the
-   $4 \times 4$ Hessian of $L$ with respect to the entries of
-   $\mathbf{W}^{(1)}$, show that it has rank at most one, and evaluate it at
-   the given values.
+
 1. [extended] **Autograd engine.** ● Build a miniature automatic
    differentiation engine and use it to recompute the gradients of the
    network in :eqref:`eq_backprop-example`.

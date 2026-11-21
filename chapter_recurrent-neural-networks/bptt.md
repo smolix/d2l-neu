@@ -413,3 +413,337 @@ required to preserve gradients over long horizons.
        now keep improving beyond the third token of context?
 
 [Discussions](https://d2l.discourse.group/t/334)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §8.6]{.kicker}
+
+Backpropagation Through Time<br>**unrolled graphs · products of Jacobians · vanishing and exploding gradients · truncation**
+:::
+:::
+
+::: {.slide title="Forty Steps Shrink a Gradient to 1.5% or Inflate It 45-Fold"}
+[The problem]{.kicker}
+
+- Scalar recurrence $h_t = w_\textrm{h} h_{t-1} + x_t$ unrolls to
+  $h_t = \sum_{s \leq t} w_\textrm{h}^{t-s} x_s$.
+- So $\partial h_t / \partial h_{t-k} = w_\textrm{h}^k$.
+- $w_\textrm{h} = 0.9$: $\;0.9^{40} \approx 0.015$.
+  $\quad w_\textrm{h} = 1.1$: $\;1.1^{40} \approx 45$.
+- Without clipping, most runs of our RNN language model fell apart; with
+  it, the model used only about three tokens of context. Both effects
+  start here.
+
+::: {.d2l-note .warn}
+Where do these factors come from in a real RNN, and which of them can we fix?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- unroll a recurrence and write its gradient as a sum of Jacobian products;
+- write the backward recursion of a linear RNN and read off powers of
+  $\mathbf{W}_\textrm{hh}^\top$;
+- predict vanishing or explosion from the spectral radius $\rho$, and say
+  what a $\tanh$ changes;
+- measure the gradient against the lag in a trained model;
+- say why clipping fixes explosion but not vanishing;
+- explain what truncation saves and what it gives up.
+
+**Running example:** the RNN language model on *The Time Machine*
+(BPE-1024, 128 hidden units, windows of 32 tokens, clipping at norm 1).
+:::
+
+::: {.slide title="The Gradient of the Recurrence Behind the Language Model"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Working with Sequences | autoregression, latent state, rollout error |
+| From Text to Tokens | characters, words, bytes, BPE |
+| Language Models | $n$-grams, perplexity, bits per byte |
+| Recurrent Neural Networks | a hidden state updated at every step |
+| Implementing RNNs | an RNN language model, scratch and concise |
+| **Backpropagation Through Time** | **gradients through time, truncation** |
+| Decoding and Generation | greedy decoding, beam search, sampling |
+:::
+
+::: {.col .narrow}
+- **Uses:** the chain rule, the RNN update, gradient clipping.
+- **Skips:** gated and linear-recurrent cells (State Space Models chapter).
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The Unrolled Graph]{.dtitle}
+
+[a deep network with shared weights]{.dsub}
+:::
+:::
+
+::: {.slide title="Unrolling Turns a Recurrence Into a Deep Network With Shared Weights"}
+[Setup]{.kicker}
+
+$$h_t = g(h_{t-1}, x_t, w_\textrm{h}), \qquad o_t = f(h_t, w_\textrm{o}),
+\qquad L = \tfrac{1}{T}\textstyle\sum_{t=1}^T l(y_t, o_t)$$
+
+- One layer per time step; every layer uses the **same** $w_\textrm{h}$.
+- A weight used in many places gets the **sum** of its gradients there,
+  as a convolution kernel sums over positions.
+- $w_\textrm{o}$ is easy: it reaches $L$ through each $o_t$ directly.
+- $w_\textrm{h}$ is hard: it acts at step $t$ **and** through every earlier
+  state.
+:::
+
+::: {.slide title="I. The Chain Rule Gives a Recursion Over Time"}
+[Derivation]{.kicker}
+
+Write $g_t = g(h_{t-1}, x_t, w_\textrm{h})$:
+
+$$\frac{\partial h_t}{\partial w_\textrm{h}} =
+\frac{\partial g_t}{\partial w_\textrm{h}} +
+\frac{\partial g_t}{\partial h_{t-1}}\,
+\frac{\partial h_{t-1}}{\partial w_\textrm{h}}$$
+
+Same form as $a_t = u_t + c_t a_{t-1}$, $a_0 = 0$, which unrolls to
+
+$$a_t = u_t + \sum_{i=1}^{t-1}\Big(\prod_{j=i+1}^{t} c_j\Big) u_i.$$
+:::
+
+::: {.slide title="II. Each Earlier Step Arrives Through a Product of Jacobians"}
+[Derivation]{.kicker}
+
+$$\frac{\partial h_t}{\partial w_\textrm{h}} =
+\frac{\partial g_t}{\partial w_\textrm{h}} +
+\sum_{i=1}^{t-1}\Big(\prod_{j=i+1}^{t}\frac{\partial g_j}{\partial h_{j-1}}\Big)
+\frac{\partial g_i}{\partial w_\textrm{h}}$$
+
+- Term $i$: the effect of $w_\textrm{h}$ at step $i$, carried to step $t$
+  by $t - i$ state Jacobians.
+- For $g = w_\textrm{h} h_{t-1} + x_t$ every Jacobian is $w_\textrm{h}$:
+  the term is scaled by $w_\textrm{h}^{t-i}$.
+:::
+
+::: {.slide title="Check: How Much of the Gradient Survives Three Steps?"}
+[Check]{.kicker}
+
+For $h_t = 0.5\, h_{t-1} + x_t$, what is $\partial h_5 / \partial h_2$?
+And for $h_t = 2\, h_{t-1} + x_t$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Three Jacobians of $0.5$: $0.5^3 = 0.125$. With $2$:
+$2^3 = 8$. After 20 steps the two would be $10^{-6}$ and $10^{6}$.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Vanishing and Exploding Gradients]{.dtitle}
+
+[the linear RNN, where the product is a matrix power]{.dsub}
+:::
+:::
+
+::: {.slide title="Each State Collects Gradient From Its Output and From the Next State"}
+[Linear RNN]{.kicker}
+
+$\mathbf{H}_t = \mathbf{X}_t\mathbf{W}_\textrm{xh} + \mathbf{H}_{t-1}\mathbf{W}_\textrm{hh}$,
+$\;\mathbf{O}_t = \mathbf{H}_t\mathbf{W}_\textrm{hq}$,
+$\;\mathbf{G}_t = \partial L/\partial\mathbf{H}_t$:
+
+![Forward pass (grey) and backward pass (red) of a linear RNN over three steps.](../img/mdl-rnn-bptt.svg){width=50%}
+
+$$\mathbf{G}_t = \tfrac{\partial L}{\partial \mathbf{O}_t}\mathbf{W}_\textrm{hq}^\top +
+\mathbf{G}_{t+1}\mathbf{W}_\textrm{hh}^\top$$
+:::
+
+::: {.slide title="The Loss $k$ Steps Ahead Arrives Through $(\mathbf{W}_\textrm{hh}^\top)^k$"}
+[Unrolled]{.kicker}
+
+$$\mathbf{G}_t = \sum_{j=t}^{T} \frac{\partial L}{\partial \mathbf{O}_j}\,
+\mathbf{W}_\textrm{hq}^\top\big(\mathbf{W}_\textrm{hh}^\top\big)^{j-t}$$
+
+The weight gradients add one term per step, each containing $\mathbf{G}_t$:
+
+$$\frac{\partial L}{\partial \mathbf{W}_\textrm{hh}} = \sum_{t}
+\mathbf{H}_{t-1}^\top \mathbf{G}_t, \qquad
+\frac{\partial L}{\partial \mathbf{W}_\textrm{xh}} = \sum_{t}
+\mathbf{X}_t^\top \mathbf{G}_t$$
+:::
+
+::: {.slide title="The Spectral Radius Decides: $\rho < 1$ Vanishes, $\rho > 1$ Explodes"}
+[Eigenvalues]{.kicker}
+
+$\rho$ = largest $|\lambda|$ over the eigenvalues of $\mathbf{W}_\textrm{hh}$
+(the same for $\mathbf{W}_\textrm{hh}^\top$).
+
+- Along an eigenvector, the $k^\textrm{th}$ power multiplies by
+  $\lambda^k$.
+- $\rho < 1$: every distant contribution **vanishes** like $\rho^k$.
+- $\rho > 1$: the top eigen-direction **explodes** like $\rho^k$.
+- $\rho = 1$: the boundary between the two.
+
+::: {.d2l-note .rule}
+The scalar $w_\textrm{h}^k$ again, with $\rho$ in the role of $|w_\textrm{h}|$.
+:::
+:::
+
+::: {.slide title="A tanh Multiplies Every Step by a Factor Between 0 and 1"}
+[The real model]{.kicker}
+
+With $\mathbf{H}_t = \tanh(\cdots)$, one step back multiplies entrywise
+($\odot$) by the $\tanh$ derivative, then by the weights:
+
+$$\mathbf{G}_{t-1} \leftarrow
+\big(\mathbf{G}_t \odot (1 - \mathbf{H}_t^2)\big)\,\mathbf{W}_\textrm{hh}^\top$$
+
+- $1 - h^2 \in (0, 1]$: never lengthens a gradient; near 0 for a saturated
+  unit.
+- It pushes toward vanishing. Explosion remains possible when
+  $\mathbf{W}_\textrm{hh}$ is large and the states are near zero.
+- A nonsymmetric $\mathbf{W}_\textrm{hh}$: powers can grow for a while even
+  when $\rho < 1$; $\rho^k$ wins for large $k$.
+:::
+
+::: {.slide title="Trained Model: $\rho \approx 1.8$, Yet the Gradient Falls Below 1% in Eight Steps"}
+[Experiment]{.kicker}
+
+Loss at the last of 64 validation tokens, backpropagated by hand; gradient
+norm at lag $k$ relative to lag 0:
+
+@!bptt-vanishing-and-exploding-gradients-6
+
+- $\rho > 1$: a linear recurrence would explode. The mean $\tanh$
+  derivative, about 0.27, leaves about half of the gradient per step.
+- It agrees with the loss by position: no gain beyond about three tokens
+  of context.
+:::
+
+::: {.slide title="Check: What Reaches the Start of a 32-Token Window?"}
+[Check]{.kicker}
+
+Our language model backpropagates through windows of 32 tokens. If the
+recurrence had $\rho = 0.9$ or $\rho = 1.1$, by roughly what factor would the
+loss at the end of a window reach the first state?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 31 Jacobians lie between them: about $0.9^{31} \approx 0.04$
+or $1.1^{31} \approx 19$. Moving $\rho$ from 10% below 1 to 10% above
+changes the factor by almost three orders of magnitude.
+:::
+:::
+:::
+
+::: {.slide title="Clipping Bounds the Step but Cannot Fix Vanishing"}
+[Remedies]{.kicker}
+
+- **Explosion:** one huge update can wreck the parameters. Clipping bounds
+  the step: $\mathbf{g} \leftarrow \min(1, \theta/\|\mathbf{g}\|)\,\mathbf{g}$.
+- The gradient is a sum over lags; rescaling multiplies every term by the
+  same factor, so the balance between near and far lags stays.
+- **Vanishing:** the distant terms are tiny next to the recent ones, and
+  there is no large step to limit.
+
+::: {.d2l-note .warn}
+Vanishing needs a different recurrence, not a different update rule.
+:::
+:::
+
+::: {.slide title="Vanishing Needs a Recurrence Whose Jacobians Stay Near One"}
+[Remedies]{.kicker}
+
+- **Gating (LSTM, GRU):** the state is copied from step to step, scaled by a
+  gate set near 1 when the model must remember; Jacobian $\approx$ identity.
+- **Linear recurrences:** no nonlinearity in the state update; the state
+  matrix is parameterized so its eigenvalues have magnitude at most 1.
+  No explosion, and eigenvalues near 1 keep a long memory.
+
+Both are the subject of the State Space Models chapter.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Truncation]{.dtitle}
+
+[bounded cost, bounded memory]{.dsub}
+:::
+:::
+
+::: {.slide title="Full BPTT on The Time Machine Would Store 66,000 States per Update"}
+[Cost]{.kicker}
+
+- The backward recursion needs every state $\mathbf{H}_1, \ldots,
+  \mathbf{H}_T$ of the forward pass: memory grows linearly with $T$.
+- Each update needs a forward and a backward pass over the whole sequence.
+- *The Time Machine* is about 66,000 BPE tokens: one sequence means one
+  update per pass through the book.
+:::
+
+::: {.slide title="Truncation Cuts the Gradient at Segment Boundaries, Not the State"}
+[Truncated BPTT]{.kicker}
+
+![Full (top) and truncated (bottom) backpropagation: the state crosses each boundary forward, the gradient does not.](../img/mdl-rnn-truncated-bptt.svg){width=88%}
+
+Carry the state across each boundary and **detach** it: same values, no
+gradient. Without the detach the graph grows with every segment.
+:::
+
+::: {.slide title="Truncation Cuts Each Loss Off at the Start of Its Segment"}
+[What it gives up]{.kicker}
+
+- In a 32-token segment, the loss at position $j$ reaches back $j - 1$
+  steps: at most 31, about 16 on average.
+- No gradient ever connects two segments: no dependency longer than a
+  segment can be learned.
+- Our model: 32-token windows from a zero state. Its gradient fades
+  below 1% after about eight steps, so the fading, not the window, sets
+  its limit.
+:::
+
+::: {.slide title="Check: Can a 32-Token Window Learn to Close a Quote Opened 50 Tokens Ago?"}
+[Check]{.kicker}
+
+The model sees windows of 32 tokens, each from a zero state. A quotation
+opens 50 tokens before it closes. Can training teach the model to close it?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Not from that dependency: the opening and the closing quote are
+never in the same window, so no gradient links them. The model can only
+learn cues that appear inside one window.
+:::
+:::
+:::
+
+::: {.slide title="Gradients Through Time Are Products of Jacobians"}
+[Wrap-up]{.kicker}
+
+- BPTT = backpropagation on the unrolled recurrence; shared weights sum
+  their gradients over steps.
+- The gradient from $k$ steps away carries $k$ Jacobians; in a linear RNN,
+  $(\mathbf{W}_\textrm{hh}^\top)^k \sim \rho^k$: $0.9^{40} \approx 0.015$,
+  $1.1^{40} \approx 45$.
+- Trained model: $\rho \approx 1.8$, mean $\tanh$ derivative 0.27, gradient
+  below 1% within about eight steps.
+- Clipping tames explosion; vanishing needs gates or stable linear
+  recurrences.
+- Truncation bounds memory and compute; no dependency longer than a segment.
+
+**Next:** turning the trained model's next-token distributions into text.
+:::

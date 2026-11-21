@@ -764,3 +764,464 @@ Both the validation loss curves and the recovered weight norms match our from-sc
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17979)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.7]{.kicker}
+
+A penalty on large weights<br>
+**the ℓ2 penalty · the decay step · lasso and the Gaussian prior · shrinkage along eigenvectors**
+:::
+:::
+
+::: {.slide title="Near-Duplicate Features Admit Weights (1, 1) and (501, −499)"}
+[The problem]{.kicker}
+
+Two features measure the same quantity; the label is
+$y \approx x_1 + x_2$.
+
+- $(1, 1)$ and $(501, -499)$ both fit the training data: the second adds
+  $500\,(x_1 - x_2)$, and $x_1 \approx x_2$ there.
+- On a new example with $x_1 - x_2 = 2$, their predictions differ by
+  **1,000**.
+- Dropping features is coarse: 20 variables give 20, 210, and 1,540
+  monomials of degree 1, 2, and 3.
+
+::: {.d2l-note}
+Keep every feature; penalize large weights, with a strength $\lambda$ we
+can set continuously.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- write the penalized loss and its SGD update, and say why it is called
+  weight decay;
+- tell ridge from lasso by the shape of the constraint region;
+- derive $\lambda$ from a Gaussian prior on the weights;
+- compute the shrinkage factor $\mu/(\mu + \lambda)$ of every direction
+  and the effective number of parameters;
+- set up weight decay in a framework optimizer.
+
+**Running example:** 200 features, 300 training examples,
+$\mathbf{w}^* = (0.1, \ldots, 0.1)$, $b^* = 0.05$, noise $\sigma = 1$;
+and two near-duplicate features.
+:::
+
+::: {.slide title="Weight Decay Controls Capacity Continuously"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Linear Regression | model, loss, closed form, minibatch SGD |
+| Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
+| Implementation from Scratch | SGD and the training loop by hand |
+| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
+| Concise Implementation | framework layers and losses |
+| Generalization | training vs. test error |
+| **Weight Decay** | **a penalty on large weights** |
+:::
+
+::: {.col .narrow}
+- **Uses:** normal equations, eigenvectors of a symmetric matrix,
+  Gaussian noise and maximum likelihood, validation sets.
+- **Skips:** lasso solvers, the proof that penalty and constraint agree,
+  and weight decay with adaptive optimizers.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The Penalty]{.dtitle}
+
+[the loss · the update · the geometry · the prior]{.dsub}
+:::
+:::
+
+::: {.slide title="The Penalty Prefers the Smallest of Equally Good Fits"}
+[The penalty]{.kicker}
+
+$$L(\mathbf{w}, b) + \frac{\lambda}{2}\,\|\mathbf{w}\|^2, \qquad L = \frac{1}{n}\sum_{i=1}^n \frac{1}{2}\big(\mathbf{w}^\top\mathbf{x}^{(i)} + b - y^{(i)}\big)^2$$
+
+- $\lambda = 0$: plain loss. Large $\lambda$: $\mathbf{w} \to \mathbf{0}$.
+  Choose $\lambda$ on validation data.
+- The bias is not penalized.
+- Why small weights: by Cauchy–Schwarz,
+  $|\mathbf{w}^\top\mathbf{x} - \mathbf{w}^\top\mathbf{x}'| \leq \|\mathbf{w}\|\,\|\mathbf{x} - \mathbf{x}'\|$.
+  Norms: $(1, 1) \to 1.4$, $(501, -499) \to 707$.
+
+::: {.d2l-note .warn}
+This bound needs a linear model, whose weights are its slopes.
+:::
+:::
+
+::: {.slide title="Each SGD Step Multiplies the Weights by 1 − ηλ"}
+[The penalty]{.kicker}
+
+The gradient of $\frac{\lambda}{2}\|\mathbf{w}\|^2$ is $\lambda\mathbf{w}$:
+
+$$\mathbf{w} \leftarrow (1 - \eta\lambda)\,\mathbf{w} - \frac{\eta}{|\mathcal{B}|}\sum_{i \in \mathcal{B}_t} \mathbf{x}^{(i)}\big(\mathbf{w}^\top\mathbf{x}^{(i)} + b - y^{(i)}\big)$$
+
+- Without data the weights **decay**: $(1 - \eta\lambda)^t$ after $t$
+  steps.
+- $\eta = 0.05$, $\lambda = \frac{1}{3}$: $1 - \frac{1}{60} \approx 0.983$
+  per step; an epoch of 15 steps keeps $0.983^{15} \approx 0.78$.
+
+::: {.d2l-note}
+Under SGD, penalty in the loss = shrink factor in the step. Frameworks
+apply the decay inside the optimizer, not in the loss.
+:::
+:::
+
+::: {.slide title="Ridge Shrinks, Lasso Selects"}
+[The penalty]{.kicker}
+
+Penalty ⇔ constraint: the smallest loss ellipse around $\hat{\mathbf{w}}$
+touches the $\ell_2$ ball (left) or the $\ell_1$ diamond (right) at
+$\hat{\mathbf{w}}_\lambda$.
+
+![](../img/mdl-linreg-ridge-geometry.svg){width=80%}
+
+Lasso ($\lambda\|\mathbf{w}\|_1$): no preference between $(1, 1)$ and
+$(2, 0)$; ridge prefers $(1, 1)$.
+:::
+
+::: {.slide title="Weight Decay Is MAP Estimation With a Gaussian Prior"}
+[The penalty]{.kicker}
+
+Noise $\epsilon \sim \mathcal{N}(0, \sigma^2)$ gives the squared loss;
+add a prior $w_j \sim \mathcal{N}(0, \tau^2)$:
+
+$$-\log p(\mathbf{w} \mid \mathbf{X}, \mathbf{y}) = \frac{1}{2\sigma^2}\sum_{i=1}^n \big(y^{(i)} - \mathbf{w}^\top\mathbf{x}^{(i)} - b\big)^2 + \frac{1}{2\tau^2}\|\mathbf{w}\|^2 + \textrm{const}$$
+
+Multiply by $\sigma^2/n$:
+
+$$L(\mathbf{w}, b) + \frac{\lambda}{2}\|\mathbf{w}\|^2 \quad \textrm{with} \quad \lambda = \frac{\sigma^2}{n\tau^2}$$
+
+::: {.d2l-note}
+Stronger penalty for noisier labels and narrower priors; weaker as $n$
+grows.
+:::
+:::
+
+::: {.slide title="Check: Which λ Does the Prior Suggest?"}
+[Check]{.kicker}
+
+Our running example: label noise $\sigma = 1$, true weights of size
+$\tau = 0.1$, and $n = 300$ examples. What is $\lambda$? What does it
+become with ten times the data, and with noise $\sigma = 0.5$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\lambda = 1/(300 \cdot 0.01) = \frac{1}{3}$. With $3{,}000$
+examples it is $\frac{1}{30}$: the data outweigh the prior. With
+$\sigma = 0.5$ it is $0.25/3 = \frac{1}{12}$, four times weaker.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[The Experiment]{.dtitle}
+
+[200 features · 300 noisy examples · with and without the penalty]{.dsub}
+:::
+:::
+
+::: {.slide title="A Useful Model Must Beat the Constant b*, Which Scores 1.5"}
+[The experiment]{.kicker}
+
+$y = 0.05 + \sum_{j=1}^{200} 0.1\,x_j + \epsilon$, with $x_j$ and
+$\epsilon$ standard normal; 300 training and 1,000 validation examples,
+minibatches of 20, 50 epochs at $\eta = 0.05$.
+
+- Expected loss $\frac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + \frac{1}{2}\sigma^2$
+  (at $b = b^*$).
+- Constant $b^*$: $\frac{1}{2}(2 + 1) = 1.5$. True parameters: $0.5$.
+
+@weight-decay-defining-ell-2-norm-penalty
+
+::: {.d2l-note}
+Training minimizes the penalized loss; validation reports the plain
+squared loss, comparable across $\lambda$.
+:::
+:::
+
+::: {.slide title="Without the Penalty the Model Does No Better Than the Constant"}
+[The experiment]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- $\lambda = 0$, 750 SGD steps.
+- Training loss 0.2 to 0.3, below the truth's 0.5: it fits noise.
+- Validation loss lowest after two or three epochs (about 0.9), then climbs to about
+  **1.2 to 1.9** (constant: 1.5).
+- Norm of $\mathbf{w}$: about 2 ($\|\mathbf{w}^*\| \approx 1.4$).
+:::
+
+::: {.col .fig .big}
+@!weight-decay-training-without-regularization
+:::
+:::
+:::
+
+::: {.slide title="The Prior's λ = 1/3 Cuts the Validation Loss by a Quarter to a Half"}
+[The experiment]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- The training curve shows the penalized loss, above 0.5.
+- Validation loss settles at about **0.8 to 1.0**.
+- Norm of $\mathbf{w}$: about 1.2, below
+  $\|\mathbf{w}^*\| \approx 1.4$.
+
+::: {.d2l-note}
+Shorter than the truth, and still far better.
+:::
+:::
+
+::: {.col .fig .big}
+@!weight-decay-using-weight-decay
+:::
+:::
+:::
+
+::: {.slide title="Check: What Does Shrinking the Truth Cost?"}
+[Check]{.kicker}
+
+The expected validation loss is
+$\frac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + 0.5$, with
+$\|\mathbf{w}^*\|^2 = 2$. What does $\mathbf{w} = 0.8\,\mathbf{w}^*$
+score? Which squared distance $\|\mathbf{w} - \mathbf{w}^*\|^2$ gives the
+constant's 1.5?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\frac{1}{2} \cdot 0.04 \cdot 2 + 0.5 = 0.54$. A loss of 1.5
+needs $\|\mathbf{w} - \mathbf{w}^*\|^2 = 2$, as far as $\mathbf{w} = \mathbf{0}$.
+Shrinking costs little; fitting noise costs much.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Why It Works]{.dtitle}
+
+[shrinkage along the eigenvectors of XᵀX/n]{.dsub}
+:::
+:::
+
+::: {.slide title="Ridge Multiplies Each Eigen-Coordinate by μ/(μ + λ)"}
+[Why it works]{.kicker}
+
+No bias (or centered data). $\frac{1}{n}\mathbf{X}^\top\mathbf{X}$ has eigenvectors
+$\mathbf{v}_j$, eigenvalues $\mu_j = \frac{1}{n}\|\mathbf{X}\mathbf{v}_j\|^2$.
+Write $\mathbf{w} = \sum_j c_j\mathbf{v}_j$ and
+$\frac{1}{n}\mathbf{X}^\top\mathbf{y} = \sum_j g_j\mathbf{v}_j$:
+
+$$\Big(\tfrac{1}{n}\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I}\Big)\mathbf{w} = \tfrac{1}{n}\mathbf{X}^\top\mathbf{y} \;\Longrightarrow\; c_j = \frac{\mu_j}{\mu_j + \lambda}\cdot\frac{g_j}{\mu_j}$$
+
+- $\mu_j \gg \lambda$: kept. $\mu_j \ll \lambda$: suppressed.
+  $\mu_j = 0$: set to 0.
+- $\textrm{df}(\lambda) = \sum_j \mu_j/(\mu_j + \lambda)$: the effective
+  number of parameters.
+
+::: {.d2l-note}
+Least squares divides by $\mu_j$, so a small $\mu_j$ amplifies label noise.
+:::
+:::
+
+::: {.slide title="A Direction Is Kept While λ Is Below Its Eigenvalue"}
+[Why it works]{.kicker}
+
+![Shrinkage factor μ/(μ + λ) against λ for μ = 0.01, 1, 100; it is 1/2 at λ = μ. Directions with μ = 0 are set to zero.](../img/mdl-linreg-ridge-shrinkage.svg){width=60%}
+
+Duplicated features: the sum direction has $\mu$ between 1 and 3, the
+difference $\mu < 10^{-6}$.
+:::
+
+::: {.slide title="Least Squares Splits the Sum at Random; Ridge Returns (1, 1)"}
+[Why it works]{.kicker}
+
+$x_2 = x_1 + 0.001\,z$, $y = x_1 + x_2 + \epsilon$,
+$\sigma = 0.1$, $n = 100$, $\lambda = 0.01$; tests with
+$x_2 = x_1 + 0.001\,z$ and with $x_2 = x_1 + 0.1\,z$:
+
+@!weight-decay-two-duplicated-features-2
+
+- Least-squares weights always sum to about 2; their split varies widely.
+- Disagreeing features: error $\approx 0.01\,(w_1 - 1)^2 + 0.01$ for least
+  squares, about 0.01 for ridge.
+:::
+
+::: {.slide title="300 Examples Determine Every Direction, Some Poorly"}
+[Why it works]{.kicker}
+
+@!weight-decay-why-shrinkage-helps-the-spectral-view
+
+- No eigenvalue is zero; they run from a few hundredths to about 3.2.
+- About a quarter, 50 to 60, lie below $\lambda = \frac{1}{3}$.
+- Shrinkage factors from 0.1 to 0.9: **about 127 effective parameters**
+  out of 200 weights.
+:::
+
+::: {.slide title="The Poorly Determined Quarter Holds Most of the Error"}
+[Why it works]{.kicker}
+
+Label noise moves the least-squares coordinate by
+$\sigma/\sqrt{n\mu_j}$: 0.06 at $\mu_j = 1$, 0.3 at $\mu_j = 0.04$,
+against true coordinates of about 0.1.
+
+@!weight-decay-the-directions-our-data-determine-1
+
+- $\lambda = 0$: about 0.9 to 2.2 in that quarter, about 0.5 in the rest.
+- $\lambda = \frac{1}{3}$: that part cut two to six times, the rest a
+  little.
+- Half the total, plus 0.5, comes close to the validation loss.
+:::
+
+::: {.slide title="Check: Why Is the Unpenalized Loss Lowest So Early?"}
+[Check]{.kicker}
+
+Gradient descent closes the gap between a coordinate and its
+least-squares value by a factor $1 - \eta\mu_j$ per step. After one epoch,
+15 steps at $\eta = 0.05$, how much of the gap is closed along
+$\mu = 3.2$, and along $\mu = 0.04$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $1 - 0.84^{15} \approx 93\%$, but only
+$1 - 0.998^{15} \approx 3\%$. The well-determined directions are fit
+first, the noisy ones barely move: stopping here acts like a penalty, and
+in our run does about as well as $\lambda = \frac{1}{3}$.
+:::
+:::
+:::
+
+::: {.slide title="PyTorch Decays One Parameter Group" only="pytorch"}
+[Concise]{.kicker}
+
+`WeightDecay` extends the concise `LinearRegression` and replaces only its
+optimizer:
+
+```{.python #weight-decay-exercises-1}
+def configure_optimizers(self):
+    return torch.optim.SGD([
+        {'params': self.net.weight, 'weight_decay': self.wd},
+        {'params': self.net.bias}], lr=self.lr)
+```
+
+`weight_decay` adds `weight_decay` · $\mathbf{w}$ to the gradient of the
+weight group; the bias group has none.
+:::
+
+::: {.slide title="Gluon Decays Every Parameter With wd_mult > 0" only="mxnet"}
+[Concise]{.kicker}
+
+`WeightDecay` extends the concise `LinearRegression` and replaces only its
+optimizer:
+
+```{.python #weight-decay-exercises-2}
+def configure_optimizers(self):
+    for p in self.collect_params('.*bias').values():
+        p.wd_mult = 0
+    return gluon.Trainer(self.collect_params(), 'sgd',
+                         {'learning_rate': self.lr, 'wd': self.wd})
+```
+
+`wd` adds `wd` · $\mathbf{w}$ to the gradient, times `wd_mult`; the bias
+gets `wd_mult = 0`.
+:::
+
+::: {.slide title="Keras Shrinks Every Variable Except the Bias" only="tensorflow"}
+[Concise]{.kicker}
+
+`WeightDecay` extends the concise `LinearRegression` and replaces only its
+optimizer:
+
+```{.python #weight-decay-exercises-3}
+def configure_optimizers(self):
+    optimizer = tf.keras.optimizers.SGD(self.lr, weight_decay=self.wd)
+    optimizer.exclude_from_weight_decay(var_names=['bias'])
+    return optimizer
+```
+
+`weight_decay` multiplies each variable by $1 - \eta\,\cdot$
+`weight_decay` before the step; for SGD that equals adding it to the
+gradient.
+:::
+
+::: {.slide title="Optax Chains a Masked Decay Before SGD" only="jax"}
+[Concise]{.kicker}
+
+`WeightDecay` extends the concise `LinearRegression` and replaces only its
+optimizer:
+
+```{.python #weight-decay-exercises-4}
+def is_matrix(params):
+    return jax.tree.map(lambda p: p.ndim > 1, params)
+
+def configure_optimizers(self):
+    return optax.chain(
+        optax.masked(optax.add_decayed_weights(self.wd), is_matrix),
+        optax.sgd(self.lr))
+```
+
+`add_decayed_weights` adds `wd` · $\mathbf{w}$ to the gradient; `masked`
+restricts it to parameters with more than one dimension (the kernel).
+:::
+
+::: {.slide title="Halve η, Double the Decay, and the Steps Match"}
+[Concise]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Library losses omit the $\frac{1}{2}$: their gradient is twice ours.
+
+- `lr=0.025` restores our data step at $\eta = 0.05$.
+- The decay $\lambda\mathbf{w}$ is not doubled, so `wd=2 * lambd`
+  $= \frac{2}{3}$: $1 - 0.025 \cdot \frac{2}{3} = 1 - \frac{1}{60}$.
+
+::: {.d2l-note}
+Norm about 1.2, as from scratch; validation MSE 1.6 to 1.9, which is
+twice our loss.
+:::
+:::
+
+::: {.col .fig .big}
+@!weight-decay-concise-implementation-2
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **Penalty:** $L + \frac{\lambda}{2}\|\mathbf{w}\|^2$; among equal fits,
+  the smallest weights win; $\lambda$ chosen on validation data.
+- **Update:** multiply by $1 - \eta\lambda$ each step (0.983 here).
+- **Lasso** selects (corners); **ridge** shrinks (round ball).
+- **MAP:** Gaussian prior, $\lambda = \sigma^2/(n\tau^2)$, $\frac{1}{3}$
+  for our data.
+- **Shrinkage:** $\mu_j/(\mu_j + \lambda)$ per eigenvector. For duplicated
+  features, ridge returns about $(1, 1)$ where least squares splits the
+  sum at random. Our data: $\textrm{df}(\frac{1}{3}) \approx 127$ of 200.
+- **Experiment:** validation loss 1.2–1.9 → 0.8–1.0; the penalty damped
+  the poorly determined quarter of the directions.
+
+**Next:** classification, with the same `Module`, `DataModule`, and
+`Trainer`.
+:::

@@ -1,33 +1,22 @@
 # From Fully Connected Layers to Convolutions
 :label:`sec_why-conv`
 
-As we noted in the chapter introduction, the multilayer perceptrons of
-:numref:`chap_perceptrons` flatten every image into an unordered vector of
-numbers. For tabular data—where columns have no intrinsic spatial layout—that
-symmetry is completely appropriate. For images, however, flattening throws away
-the single richest structural clue we have: which pixels sit next to one
-another.
+The multilayer perceptrons of :numref:`chap_perceptrons` flatten every image
+into an unordered vector of numbers—appropriate for tabular data, but wasteful
+for images because flattening discards which pixels sit next to one another.
+On a one-megapixel ($1000 \times 1000$) grayscale photograph, even a modest
+1,000-unit hidden layer demands $10^6 \times 10^3 = 10^9$ weights (4 GB in
+fp32), and a full-resolution $1000 \times 1000$ hidden map demands $10^{12}$
+weights! Yet natural images are nothing like arbitrary million-dimensional
+vectors: neighboring pixels are strongly correlated (*locality*), and a visual
+feature such as a whisker carries the same meaning wherever it appears in the
+frame (*translation equivariance*).
 
-The cost shows up immediately in parameter counts. Imagine building a cat-versus-dog
-classifier on one-megapixel grayscale photographs. Each input vector has $10^6$
-entries, so even a modest hidden layer of 1,000 units demands
-$10^6 \times 10^3 = 10^9$ weights—4 GB in fp32—and far more parameters than any
-realistic dataset of pet photos could pin down. Yet humans tell cats from dogs
-effortlessly because natural images are nothing like arbitrary million-dimensional
-vectors: neighboring pixels are strongly correlated, and a whisker looks like a
-whisker wherever it sits in the frame.
-
-What architecture emerges if we build those two observations directly into a
-fully connected layer? Because standard MLP hidden units carry no spatial
-coordinates, let's first arrange the hidden layer as a two-dimensional map
-matching the image's resolution—one hidden unit per pixel. On a
-$1000 \times 1000$ image, an unconstrained dense map requires $10^{12}$ weights,
-which at first looks like a massive leap in the *wrong* direction! Yet enforcing
-that a shifted input produce a shifted output slashes those $10^{12}$ weights
-down to roughly $4 \times 10^6$, and restricting each hidden unit to look only
-at a small neighborhood cuts them further to a few hundred. What survives both
-constraints is a *convolutional layer*.
-
+What happens if we impose those two geometric principles directly on a dense
+layer mapping a 2D pixel grid to a 2D hidden grid? Translation equivariance
+alone slashes $10^{12}$ weights down to roughly $4 \times 10^6$, and restricting
+each hidden unit to a small local neighborhood cuts them further to a few
+hundred. What survives both constraints is a *convolutional layer*.
 
 ## Equivariance and Invariance
 
@@ -206,19 +195,14 @@ temporal weight sharing included time-delay neural networks for speech
 recognition :cite:`Waibel.Hanazawa.Hinton.ea.1989` and the shift-invariant
 networks of :citet:`Zhang.ea.1988`.
 
-Keep in mind *why* the parameter count shrank from $10^{12}$ to a handful: not
-through lossless compression of an arbitrary linear map, but by restricting the
-hypothesis class to local, translation-equivariant mappings. This built-in
-*inductive bias* (:numref:`sec_generalization_deep`) is a huge win whenever it
-matches the domain—edges and textures in natural photos—delivering dramatic
-gains in sample efficiency and generalization. When the assumption fails, the
-layer can struggle even on the training set: in a tightly cropped passport
-photo, a dark circle near the top is an eye while a similar circle lower down is
-a nostril, yet a single translation-equivariant layer must treat both patches
-identically. And while one layer sees only a $(2\Delta + 1)$-wide patch,
-stacking multiple convolutional layers with nonlinearities allows deeper units
-to integrate information across progressively wider regions of the image.
-
+Crucially, the parameter count shrank from $10^{12}$ to $(2\Delta + 1)^2$ by
+restricting the hypothesis class to local, translation-equivariant mappings.
+This built-in *inductive bias* (:numref:`sec_generalization_deep`) dramatically
+improves sample efficiency whenever features are local and position-independent
+(such as edges and textures), though a single layer cannot distinguish identical
+patches by absolute position alone (e.g., an eye near the top of a passport
+photo versus a nostril lower down). Stacking multiple layers with nonlinearities
+allows deeper units to integrate context across progressively wider regions.
 
 ## Convolution and Cross-Correlation
 
@@ -321,7 +305,7 @@ mappings for strong generalization on spatially structured data.
     1. Impose locality with offsets $-1$, $0$, and $1$. Which entries of
        the matrix are nonzero, and which of them have no counterpart in
        panel (c) of the figure?
-1. **Commutativity of convolution.**
+2. **Commutativity of convolution.**
     1. Prove that the convolution of :eqref:`eq_2d-conv-discrete` is
        commutative, i.e., $f * g = g * f$.
     1. Define the cross-correlation
@@ -329,7 +313,7 @@ mappings for strong generalization on spatially structured data.
        operation of :eqref:`eq_conv-layer` with input $f$ and kernel $g$. Express $(g \star f)(i, j)$
        through values of $f \star g$, and decide from this expression
        whether cross-correlation is commutative.
-1. **Convolutions for audio.** Audio data is often represented as a
+3. **Convolutions for audio.** Audio data is often represented as a
    one-dimensional sequence of samples.
     1. Derive the one-dimensional analog of :eqref:`eq_conv-layer`.
     1. Name one audio task for which a layer that is local and
@@ -341,23 +325,7 @@ mappings for strong generalization on spatially structured data.
        equivariance is a reasonable assumption, and justify your answer
        from what a shift along that axis does to the sound. Then answer
        the same question for a frequency axis on a logarithmic scale.
-1. **Convolutions on text.** Represent a sentence as a sequence of word
-   vectors, so that each word occupies one position and the entries of
-   its vector act as channels. Apply one-dimensional convolutional
-   layers, the analog of :eqref:`eq_conv-layer-channels`, with
-   nonlinearities in between.
-    1. Take $\Delta = 1$. In the sentence "The movie that my friends
-       recommended last week was not good," the verb "was" agrees with
-       "movie." How many stacked layers are needed before a single output
-       depends on both words? How does this number grow with the distance
-       between two words?
-    1. Apply a single layer followed by a ReLU and sum its output over
-       all positions to obtain a sentence representation. State whether
-       "the dog bit the man" and "the man bit the dog" receive the same
-       representation for $\Delta = 0$ and for $\Delta = 1$. Which
-       word-order information does this representation keep, and which
-       does it discard?
-1. **Equivariance versus invariance.** A convolutional classifier computes
+4. **Equivariance versus invariance.** A convolutional classifier computes
    feature maps $h(\mathsf{X})$ with stacked layers of
    :eqref:`eq_conv-layer-channels` and nonlinearities in between, and then
    a prediction $g(h(\mathsf{X}))$ with a head $g$.
@@ -371,20 +339,7 @@ mappings for strong generalization on spatially structured data.
        the classifier of the first part cannot solve this task. Describe
        a head $g$ that solves it from the same feature maps
        $h(\mathsf{X})$.
-1. **Boundary effects.** A $\Delta = 1$ kernel, i.e., a $3 \times 3$
-   kernel, is applied to an $n \times n$ image only at the positions where
-   the whole window lies inside the image, so the output has $(n-2)^2$
-   positions.
-    1. Count the output positions to which each of three input pixels
-       contributes: the corner pixel $(0, 0)$, a boundary pixel $(0, j)$
-       with $2 \leq j \leq n-3$, and an interior pixel $(i, j)$ with
-       $2 \leq i, j \leq n-3$, where indices run from $0$ to $n-1$. Which
-       fraction of the output positions uses at least one pixel of the
-       outermost ring, for $n = 28$ and for $n = 5$?
-    1. Stack $L$ such layers on an image with odd $n \geq 4L + 1$. To how
-       many outputs of the last layer does a corner pixel of the input
-       contribute, and to how many does the center pixel contribute?
-1. **Rotation equivariance.** ● The proposition of this section derived
+5. **Rotation equivariance.** ● The proposition of this section derived
    weight sharing from equivariance to shifts. Ask the same of rotations.
    On the infinite grid of the proposition, let $R$ rotate an image by
    $90^\circ$ about the origin,

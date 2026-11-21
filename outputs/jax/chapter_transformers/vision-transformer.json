@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-first-run-2-1.svg",
-          "bytes": 30567,
-          "sha256": "sha256:f534daec3ceb62639222a6aa1ae896dff2bdb9f6c2dd9ae8e60b61df78b17025"
+          "bytes": 31169,
+          "sha256": "sha256:dbd17ab55bf170529de8cf2fbfda23e7e4ac3fee64c024d96eae1157b274c62a"
         },
         {
           "type": "stream",
@@ -73,87 +73,66 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trained ViT: 0.890 as is, 0.30 to 0.47 with its patches shuffled\n"
-        }
-      ]
-    },
-    "vision-transformer-does-the-vit-use-position-3": {
-      "code_fingerprint": "sha256:0b36eaf64c6f2ec8d45f0defa156d29e8e0bad34920a60f9cae17fab4f4a776a",
-      "kind": "text",
-      "outputs": []
-    },
-    "vision-transformer-does-the-vit-use-position-4": {
-      "code_fingerprint": "sha256:43b1757bad46bfbee939b61cd9c0013de8facec23b6d3a729249c93274f67775",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "learned positions: 0.890, 0.889\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "zero positions:    0.876, 0.875 (shuffled: 0.876)\n"
+          "text": "trained ViT: 0.887 as is, 0.36 to 0.45 with its patches shuffled\n"
         }
       ]
     },
     "vision-transformer-do-the-position-embeddings-discover-the-grid": {
-      "code_fingerprint": "sha256:af1b5f35b1155208abfc34abea843d2921f6867b2177abb10ba1a4d897a4c858",
+      "code_fingerprint": "sha256:765c2bf11fa8c4f63d7a9d72f724a0fa09d947a24179849210b7ea8c7ddd2b43",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          learned: +0.05  -0.06  -0.07  -0.04  +0.04\nlearned - initial: +0.11  -0.08  -0.09  -0.04  +0.14\n   2-D sinusoidal: +0.76  +0.21  -0.30  -0.46  -0.36\n           random: -0.03  -0.03  -0.03  -0.03  -0.03\n"
+          "text": "          learned: +0.05  -0.06  -0.06  -0.05  +0.04\nlearned - initial: +0.09  -0.09  -0.07  -0.04  +0.13\n   2-D sinusoidal: +0.76  +0.21  -0.30  -0.46  -0.36\n           random: -0.02  -0.03  -0.03  -0.03  -0.02\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
-          "bytes": 28628,
-          "sha256": "sha256:c9137de39f5266d5ac56838f500825b4ab8122e5bf2207d67063ad4208099573"
+          "bytes": 28630,
+          "sha256": "sha256:406f47e7ab2f7060abea599b41014a5b8d06247f7fd89654b4aa621b63a1b3e7"
         }
       ]
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-1": {
-      "code_fingerprint": "sha256:89e5e588c21746ec1ca92b506d12036bdbd13a833e4c0013ba29a0a5a9dd9a37",
+      "code_fingerprint": "sha256:fc982ffd85482e268ab9edf26c7aeff46b8160967a9970f6c06236a5bc085ab5",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-4": {
-      "code_fingerprint": "sha256:2e3761865228fa26a6aa87568448c23f527244fccf34d4ea352b0b8a352b2c04",
+      "code_fingerprint": "sha256:94f24635c7d6ced65d0ad1f7238fee617bdc2b734cc5cc497057881e1fadce38",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-2": {
-      "code_fingerprint": "sha256:3e2b436e3e4ee65acef4b9b806be4b0cbb50562e51693b194d6cae696bb1ebae",
+      "code_fingerprint": "sha256:f41f9e6a61587889c3024b90f429de66165ba1cbd539131f7ddaa947767352cd",
       "kind": "mixed",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
-          "bytes": 33922,
-          "sha256": "sha256:3e918f22511e2b18158753fdd55194628ea89a2d6ddfe8150d4f998060dfe84e"
+          "bytes": 33326,
+          "sha256": "sha256:18594630ac48bdd6b64acffd4568c3c98e253a96d7470d79937c2f651664d831"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "CNN: 6.5M parameters, validation accuracy 0.938, 0.937\nViT: 6.5M parameters, validation accuracy 0.890, 0.889\n"
+          "text": "CNN: 6.5M parameters, validation accuracy 0.940, 0.938\nViT: 6.5M parameters, validation accuracy 0.887, 0.892\n"
         }
       ]
     },
     "vision-transformer-a-convolutional-baseline-at-the-same-budget-3": {
-      "code_fingerprint": "sha256:5f2d10437558a6ef94b4fcf99298da4e5699b7c547b20ad8b67db8b2ee79d03e",
+      "code_fingerprint": "sha256:277a5030875317f4ae03b24288daf7a571f8ad0233fe77a303478d5d65bf657c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-3-1.svg",
-          "bytes": 25387,
-          "sha256": "sha256:66b71978069fdabf7452210036b5d31690db89029b1d0f4281f50cae303c6bc0"
+          "bytes": 23216,
+          "sha256": "sha256:5d0d20b199c3a9897d330bdcdf9cf43190b869f40bfa5d74053ee01fc3b013d2"
         }
       ]
     }

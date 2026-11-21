@@ -6,32 +6,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Implementation
 :label:`sec_mlp-implementation`
 
-In :numref:`sec_mlp`, we hand-crafted the weights of a two-unit hidden
-layer to solve XOR—a trick that works for four corners of a square and
-little else. Now it is time to let gradient descent learn the hidden
-features from real images. On Fashion-MNIST, softmax regression reached
-roughly 83% validation accuracy in ten epochs, with most of its errors
-coming from look-alike garments such as shirts, pullovers, and coats
-(:numref:`sec_softmax_scratch`). Separating those categories requires
-combining pixels into higher-level patterns—exactly what a hidden layer is
-built to do. How many mistakes does a single hidden layer eliminate, which
-classes benefit, and what price do we pay? On paper the bill looks steep:
-adding 256 hidden units multiplies both parameter count and arithmetic by
-26 (:numref:`sec_mlp`). Only an experiment can tell whether the accuracy
-jump earns its keep.
+In :numref:`sec_mlp`, we hand-crafted the weights of a two-unit ReLU network to solve XOR. Now let us let minibatch SGD learn hidden features directly from Fashion-MNIST images. Inserting a single hidden layer of $h = 256$ ReLU units between the $d = 784$ input pixels and the $q = 10$ class logits multiplies our parameter count and per-image FLOPs 26-fold ($203{,}530$ parameters vs. $7{,}850$ for softmax regression).
 
-Implementing an MLP turns out to be scarcely harder than implementing
-softmax regression—the main conceptual step is chaining layers together.
-We build the network twice: first from scratch using raw parameter arrays,
-a hand-written ReLU, and quick pre-training sanity checks, and then
-concisely using each framework's built-in layers. Because the dataset,
-cross-entropy loss, minibatch SGD optimizer, and `Trainer` carry over
-unchanged, any performance shift isolates the effect of the hidden layer
-itself. We then pit our MLP head to head against softmax regression on
-accuracy, per-class recall, and wall-clock training time, and peer inside
-the hidden weights to see what features SGD actually invented. Automatic
-differentiation handles every gradient here; in the next section we open
-the hood to see how.
+In this section, we implement this two-layer MLP both from scratch (`MLPScratch`) and concisely (`MLP`) using framework `Sequential` containers, verify our untrained network with three quick pre-training sanity checks, compare its learning curve and GPU epoch time head-to-head against softmax regression, and visualize the localized garment-part detectors that emerge inside $\mathbf{W}^{(1)}$.
 
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab mxnet
@@ -78,50 +55,16 @@ import time
 
 ## Implementation from Scratch
 
-### The Parameters
+### The Parameters and Forward Pass
 
-Each Fashion-MNIST image flattens into $d = 784$ grayscale pixel features
-mapped to $q = 10$ classes. We insert a single hidden layer of $h = 256$
-units (:numref:`fig_mdl-mlp-arch`)—choosing a power of two is a common
-practical habit because it aligns cleanly with hardware memory layouts,
-though width itself is an adjustable hyperparameter (explored in Exercise
-:exref:`ex_mlp-implementation-width`). Following the layout of
-:numref:`sec_mlp`, each layer pairs a weight matrix (inputs $\times$
-outputs) with a bias vector:
+Flattening each $28 \times 28$ image to $d = 784$ features, a one-hidden-layer MLP with $h = 256$ hidden units and $q = 10$ outputs (:numref:`fig_mdl-mlp-arch`) allocates four parameter tensors:
 
 $$\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}, \quad \mathbf{b}^{(1)} \in \mathbb{R}^{256}, \quad \mathbf{W}^{(2)} \in \mathbb{R}^{256 \times 10}, \quad \mathbf{b}^{(2)} \in \mathbb{R}^{10}.$$
 
-Together these four arrays hold all 203,530 parameters we counted in
-:numref:`sec_mlp`, with all but 2,570 belonging to the hidden layer.
-
-![The MLP of this section. A minibatch of $n$ images is flattened to an $n \times 784$ matrix $\mathbf{X}$, an affine map followed by the ReLU computes the $n \times 256$ hidden representation $\mathbf{H}$, and a second affine map computes the $n \times 10$ logits $\mathbf{O}$.](../img/mdl-mlp-arch.svg)
+![Architecture of our Fashion-MNIST MLP: a minibatch of $n$ images is flattened to $n \times 784$, mapped through an affine layer and ReLU to an $n \times 256$ hidden representation $\mathbf{H}$, and projected to $n \times 10$ class logits $\mathbf{O}$.](../img/mdl-mlp-arch.svg)
 :label:`fig_mdl-mlp-arch`
 
-How should we initialize these four arrays? As in softmax regression, we
-sample weights from $\mathcal{N}(0, 0.01^2)$ and set biases to zero.
-Randomness is strictly mandatory here: if two hidden units start with
-identical weights, they receive identical gradients and stay locked
-together forever, a symmetry trap we examine in
-:numref:`sec_numerical_stability`. Small weights keep the initial logits
-near zero so the untrained network assigns roughly $1/10$ probability to
-every class. Note, however, that `std=0.01` is simply borrowed from
-softmax regression to keep our comparison clean—it is actually a poor scale
-for a multi-layer network, and the sluggish opening epochs will make that
-plain.
-
-Just as in :numref:`sec_softmax_scratch`, registering all four arrays with
-the framework lets `Classifier`'s inherited SGD optimizer track and update
-them automatically, with no custom `configure_optimizers` needed.
-
-:begin_tab:`mxnet`
-Calling `initialize()` allocates storage for the four registered parameters,
-whose tensors we read via `data()`.
-:end_tab:
-
-:begin_tab:`jax`
-As in :numref:`sec_softmax_scratch`, `rngs` supplies the PRNG key used to
-draw the initial weights.
-:end_tab:
+To keep our head-to-head comparison with softmax regression controlled, we initialize both weight matrices from $\mathcal{N}(0, 0.01^2)$ and both biases to $0$ (in :numref:`sec_numerical_stability`, we will see why random initialization is mandatory to break symmetry between hidden units, and how He initialization improves upon `std=0.01`). We write `relu(X)` from scratch via boolean masking `X * (X > 0)` and factor the hidden activation into `hidden(X)` so `forward(X)` returns the raw class logits $\mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)}$:
 
 ```{.python .input #mlp-implementation-initializing-model-parameters}
 %%tab mxnet
@@ -192,15 +135,6 @@ class MLPScratch(d2l.Classifier):
         self.b2 = nnx.Param(jnp.zeros(num_outputs))
 ```
 
-### The Forward Pass
-
-First, let us implement the ReLU activation by hand rather than calling a
-built-in op. Multiplying `X` by the boolean mask `X > 0` keeps positive
-entries intact and zeroes out the rest—and cleanly produces derivative 0 at
-$z = 0$ under automatic differentiation, matching every framework's
-built-in ReLU (whereas taking a maximum with 0 can yield 1 or $1/2$
-depending on the library, though as :numref:`subsec_activation-functions`
-noted, exact zeros rarely occur in practice).
 
 ```{.python .input #mlp-implementation-model-1}
 %%tab mxnet
@@ -226,17 +160,6 @@ def relu(X):
     return X * (X > 0)
 ```
 
-Given a minibatch of $n$ images flattened into $\mathbf{X} \in \mathbb{R}^{n \times 784}$,
-the network evaluates
-
-$$\mathbf{H} = \mathrm{ReLU}\left(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}\right), \qquad \mathbf{O} = \mathbf{H}\mathbf{W}^{(2)} + \mathbf{b}^{(2)},$$
-
-with each bias broadcast across rows. We factor the hidden layer into a
-`hidden` method (handy for inspecting activations) and let `forward` map
-$\mathbf{H}$ to the raw logits $\mathbf{O}$—remembering that `Classifier`'s
-inherited cross-entropy loss expects logits, not probabilities
-(:numref:`sec_softmax_concise`).
-
 ```{.python .input #mlp-implementation-model-2}
 %%tab mxnet
 @d2l.add_to_class(MLPScratch)
@@ -261,22 +184,13 @@ def forward(self, X):
     return d2l.matmul(self.hidden(X), self.W2) + self.b2  # The logits
 ```
 
+
 ### Checks before Training
 
-Training a deep network can take minutes—or hours on larger datasets—and a
-subtle wiring bug often reveals itself only as puzzlingly poor accuracy at
-the very end. Running a single forward pass through the *untrained* model
-on a handful of images lets us verify three theoretical predictions in a
-fraction of a second:
-
-1. **Shapes:** Every image should produce a 256-dimensional hidden vector
-   and 10 class logits.
-1. **Initial loss:** Near-zero logits yield near-uniform probabilities
-   ($\approx 1/10$), so cross-entropy should start right around
-   $\log 10 \approx 2.30$.
-1. **Active ReLU fraction:** Because biases start at zero and weights are
-   symmetric around zero, roughly half of all hidden pre-activations should
-   be positive, leaving ~50% of ReLU units active.
+Before launching a long training run, passing a tiny 8-image slice through the *untrained* network verifies three invariants in milliseconds:
+1. **Shapes:** `H` has shape `(8, 256)` and `O` has shape `(8, 10)`.
+2. **Initial loss:** Near-zero weights produce near-zero logits ($\hat{y}_j \approx 1/10$), so the initial cross-entropy loss sits right near $\log 10 \approx 2.303$.
+3. **Active ReLU fraction:** With zero biases and symmetric weights, roughly $50\%$ of hidden pre-activations are positive.
 
 ```{.python .input #mlp-implementation-checks-before-training}
 data = d2l.FashionMNIST(batch_size=256)
@@ -290,67 +204,18 @@ print(f'loss {d2l.numpy(model.loss(O, y)):.3f}, '
       f'fraction of active units {d2l.numpy(active):.2f}')
 ```
 
-All three checks pass: shapes are $8 \times 256$ and $8 \times 10$, the
-initial loss sits right near $2.30$, and roughly half of the hidden units
-fire. A transposed weight matrix would have crashed immediately, wrong
-dimensions would jump out of the shapes, and an initial loss far from 2.30
-would immediately betray mis-scaled weights or a broken loss function.
-
 ### Training
 
-Our training loop is identical to softmax regression's
-(:numref:`sec_softmax_scratch`): minibatches of 256 images and learning
-rate 0.1, now run for 30 epochs instead of 10 because our small `std=0.01`
-initialization makes the hidden layer warm up slowly (as we will see
-momentarily). Passing `num_gpus=1` instructs `Trainer` to run on a GPU if
-available and fall back to the CPU otherwise (:numref:`sec_use_gpu`).
+Now we train `MLPScratch` for $30$ epochs on Fashion-MNIST with minibatch size $256$ and learning rate $\eta = 0.1$ (passing `num_gpus=1` so `Trainer` uses a GPU when available):
 
 ```{.python .input #mlp-implementation-training}
 trainer = d2l.Trainer(max_epochs=30, num_gpus=1)
 trainer.fit(model, data)
 ```
 
-Training loss drops steadily across all 30 epochs, while validation loss
-sits modestly above it and validation accuracy climbs through most of the
-run. Notice that the validation curve jitters noticeably from epoch to
-epoch—sometimes dipping several points in a single epoch. Nothing is wrong:
-minibatch SGD with a fixed learning rate keeps bouncing around the minimum,
-and each epoch's validation point simply captures a snapshot of wherever
-the final minibatch step left the weights.
-
 ## Concise Implementation
 
-Registering weight matrices manually gets tedious fast—imagine maintaining
-a 50-layer network by hand and wanting to insert a new layer between layers
-42 and 43! Using each framework's high-level APIs, building an MLP is just
-as concise as softmax regression (:numref:`sec_softmax_concise`): we simply
-stack *two* fully connected layers instead of one inside a `Sequential`
-container—flattening, a 256-unit hidden layer, ReLU, and a 10-unit output
-layer. As before, we explicitly match our scratch initialization
-($\mathcal{N}(0, 0.01^2)$ weights and zero biases) so every framework runs
-the exact same experiment.
-
-:begin_tab:`mxnet`
-Gluon's `Dense` layer flattens its input automatically and applies ReLU
-directly via its `activation='relu'` argument.
-:end_tab:
-
-:begin_tab:`pytorch`
-As in `SoftmaxRegression`, PyTorch's `LazyLinear` layers defer parameter
-allocation until the first forward pass, after which `Trainer` runs
-`weight_init`.
-:end_tab:
-
-:begin_tab:`tensorflow`
-Keras's first `Dense` layer fuses the ReLU activation directly via
-`activation='relu'`.
-:end_tab:
-
-:begin_tab:`jax`
-Flax NNX accepts `nnx.relu` directly as a callable stage inside
-`nnx.Sequential`; each `nnx.Linear` declares its input width explicitly,
-and `forward` flattens the input batch before calling `self.net`.
-:end_tab:
+Using each framework's `Sequential` container and built-in linear and ReLU layers, we can express the exact same architecture in a few lines without manual parameter arrays (initializing weights from $\mathcal{N}(0, 0.01^2)$ and biases to $0$ to match `MLPScratch`):
 
 ```{.python .input #mlp-implementation-model-2-2}
 %%tab mxnet
@@ -419,27 +284,12 @@ class MLP(d2l.Classifier):
         return self.net(X.reshape((X.shape[0], -1)))  # Flatten each image
 ```
 
-:begin_tab:`mxnet, pytorch, tensorflow`
-Notice that `MLP` defines no `forward` method of its own: it inherits
-`Module.forward` (:numref:`subsec_oo-design-models`), which simply pipes
-`X` straight through `self.net(X)`. We unpack how `Sequential` works under
-the hood in :numref:`subsec_model-construction-sequential`.
-:end_tab:
-
-Where the scratch version spelled out every matrix and operation by hand,
-here the layers own their parameters and `Sequential` orchestrates the
-pipeline—making it effortless to deepen, widen, or rearrange architectures
-without renaming a single variable.
 
 ## Comparison with Softmax Regression
 
 ### Accuracy
 
-Let us now run a controlled head-to-head comparison: train both the concise
-`MLP` and `d2l.SoftmaxRegression` (:numref:`sec_softmax_concise`) under
-identical settings—30 epochs, batch size 256, learning rate 0.1, and the
-same `std=0.01` initialization—timing each run and plotting all three
-validation accuracy curves (including our scratch MLP) on the same axes.
+Let us train both the concise `MLP` and `d2l.SoftmaxRegression` for $30$ epochs under identical settings, timing each epoch and plotting all three validation accuracy curves together:
 
 ```{.python .input #mlp-implementation-accuracy-1}
 curves, seconds = {'MLP from scratch': trainer.history['val_acc']}, {}
@@ -466,79 +316,13 @@ train_acc = trainer.evaluate(model, data, train=True)['acc']
 print(f'training accuracy of the MLP from scratch: {train_acc:.3f}')
 ```
 
-As expected, the scratch and concise MLPs trace the exact same trajectory
-up to run-to-run randomness. Interestingly, *both* MLPs lag behind softmax
-regression after the first epoch! Our `std=0.01` initialization is the
-culprit: tiny first-layer weights produce tiny hidden activations, and
-every gradient flowing back into $\mathbf{W}^{(1)}$ gets multiplied by
-equally tiny entries of $\mathbf{W}^{(2)}$, putting the hidden layer into
-slow motion at the start. Even at epoch 10 (where we stopped in
-:numref:`sec_softmax_scratch`), the MLP leads by barely a percentage
-point—easy to mistake for noise. By epochs 26–30, however, the gap is
-unmistakable: averaging the last five epochs to smooth out single-epoch
-jitter, softmax regression plateaus around 84% whereas the MLP climbs to
-about 87%. Three percentage points might sound small until you flip them
-into *error rates*: dropping from 16% error to 13% error cuts away roughly
-one-fifth of all mistakes! And on the training set the MLP scores around
-89%—only a couple of points above validation, showing virtually no severe
-overfitting despite its 203,530 parameters.
-
-### Errors by Class
-
-Where did that one-fifth reduction in errors come from? Naturally we might
-hope it fixed the shirts confused with pullovers and coats, yet headline
-accuracy cannot tell us. Let us compute the per-class *recall* (the
-diagonal of the confusion matrix from :numref:`sec_softmax_scratch`) for
-softmax regression alongside *both* identically configured MLPs—having two
-independent MLP runs side by side immediately shows how much per-class
-scores fluctuate from run to run.
-
-```{.python .input #mlp-implementation-errors-by-class}
-def recall(net):
-    """Fraction of the validation images of each class that net gets right."""
-    correct, total = np.zeros(10), np.zeros(10)
-    for X, y in map(trainer.prepare_batch, data.val_dataloader()):
-        y_hat = d2l.numpy(d2l.argmax(net(X), axis=1))
-        y = d2l.numpy(y).astype(int)
-        total += np.bincount(y, minlength=10)
-        correct += np.bincount(y, weights=y_hat == y, minlength=10)
-    return correct / total
-
-recalls = {'softmax': recall(models['softmax regression']),
-           'MLP, scratch': recall(model),
-           'MLP, concise': recall(models['concise MLP'])}
-names = data.text_labels(range(10))
-print(f'{"class":11s}' + ''.join(f'{name:>14s}' for name in recalls))
-for j, name in enumerate(names):
-    print(f'{name:11s}' + ''.join(f'{r[j]:14.2f}' for r in recalls.values()))
-```
-
-The breakdown reveals a subtler picture than a simple "shirts got fixed."
-Across the six classes softmax regression already handled well (trousers,
-dresses, bags, and the three shoe categories), recall nudges up slightly
-and combined errors drop. Across the four tops (T-shirts, pullovers, coats,
-and shirts), however, the two identical MLPs can swing by ten percentage
-points or more against *each other* on an individual class! What you are
-seeing is a decision boundary still in motion: at a constant learning rate,
-the final minibatch steps nudge the boundaries between look-alike tops back
-and forth, so whatever recall one top gains, a neighboring top temporarily
-loses. Only their combined total stabilizes: summed across all four tops,
-the MLP generally cuts errors by a few hundred (providing the bulk of its
-overall gain), though an unlucky final epoch can momentarily reverse even
-that. No single top owns the victory—the four tops remain the hardest part
-of Fashion-MNIST.
+Notice two instructive patterns in the learning curves:
+1. **Slow warmup from `std=0.01`:** On epoch 1, both MLPs actually trail softmax regression! Because both $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$ start with entries around $0.01$, the hidden activations $\mathbf{H}$ and the backpropagated gradients into $\mathbf{W}^{(1)}$ are suppressed by a factor of $0.01$ until $\mathbf{W}^{(2)}$ grows—a bottleneck we eliminate with He initialization in :numref:`sec_numerical_stability`.
+2. **Cutting a fifth of the classification errors:** By epochs 26–30, softmax regression plateaus around $84\%$ validation accuracy ($16\%$ error rate), whereas both MLPs reach $\sim 87\%$ validation accuracy ($\sim 13\%$ error rate, and $\sim 89\%$ training accuracy)—eliminating roughly $20\%$ of softmax regression's mistakes, primarily by reducing confusions among the four look-alike upper-body tops.
 
 ### The Learned Features
 
-In :numref:`sec_softmax_scratch`, reshaping the ten columns of $\mathbf{W}$
-revealed ten whole-garment templates. Now let us peek inside the MLP's
-hidden layer to see what features gradient descent discovered. Each column
-$j$ of $\mathbf{W}^{(1)}$ holds the 784 pixel weights feeding hidden unit
-$j$: reshaped to $28 \times 28$, bright garment pixels landing on red
-weights excite unit $j$ while those on blue weights inhibit it. Let us
-visualize the ten hidden units with the largest weight norms (each on its
-own symmetric color scale), labeled by whichever class logit they boost
-most strongly in $\mathbf{W}^{(2)}$.
+In :numref:`sec_softmax_scratch`, the 10 columns of softmax regression's weight matrix $\mathbf{W}$ had to act as whole-garment templates. What did our MLP's 256 hidden units learn? Let us reshape the 10 columns of $\mathbf{W}^{(1)} \in \mathbb{R}^{784 \times 256}$ with the largest Euclidean norms into $28 \times 28$ images, titling each hidden unit by the garment class to which $\mathbf{W}^{(2)}$ assigns its largest positive outgoing weight:
 
 ```{.python .input #mlp-implementation-what-the-hidden-units-compute-1}
 %%tab pytorch, tensorflow
@@ -563,71 +347,29 @@ d2l.show_images(images, 2, 5, titles=[names[k] for k in W2[units].argmax(1)],
                 cmap='RdBu_r', vmin=-1, vmax=1);
 ```
 
-These look strikingly different from whole-garment templates. Rather than
-matching an entire silhouette, most high-norm hidden units specialize in
-localized *parts and contrasts*—a collar opening, the outline of a sleeve,
-or the dark gap between trouser legs—with vivid red and blue regions
-sitting side by side to detect local edges and contrasts rather than raw
-brightness. While a linear template asks one global question ("does this
-whole image look like a shirt?"), the hidden layer asks 256 focused
-questions about distinct garment features, and the output layer weighs
-those answers together. Notice the titles too: most of these heaviest-moving
-units feed into the four tops (especially shirts), suggesting that gradient
-descent invested its greatest representational effort right where softmax
-regression struggled most.
+
+Instead of blurring an entire garment into one template, high-norm hidden units specialize in **localized parts, edges, and pixel contrasts**—collar cutouts, sleeve boundaries, and the dark vertical gap between trouser legs—with adjacent red (excitatory) and blue (inhibitory) lobes that fire on local shape transitions rather than uniform brightness.
 
 ### Parameters, Computation, and Time
 
-Let us put the two models side by side. Forward-pass multiply-adds per
-image jump from $784 \cdot 10 = 7{,}840$ for softmax regression to
-$784 \cdot 256 + 256 \cdot 10 = 203{,}264$ for our MLP:
-
-| model | parameters | multiply-adds per image | validation accuracy, epochs 26–30 |
+| Model | Parameters | Multiply-adds / image | Validation accuracy (epochs 26–30) |
 |:--|--:|--:|--:|
-| softmax regression | 7,850 | 7,840 | about 84% |
-| MLP, 256 hidden units | 203,530 | 203,264 | about 87% |
+| Softmax regression | $7{,}850$ | $7{,}840$ | $\sim 84\%$ |
+| MLP ($h = 256$ ReLU units) | $203{,}530$ | $203{,}264$ | $\sim 87\%$ |
 
-With 26 times as many parameters and floating-point operations, does the
-MLP take 26 times as long per epoch? Let us check our timings:
+Even though our MLP performs 26 times as many multiply-adds per image as softmax regression, let us compare their wall-clock times per epoch:
 
 ```{.python .input #mlp-implementation-parameters-computation-and-time}
 for name, s in seconds.items():
     print(f'{name}: {s:.1f} s per epoch')
 ```
 
-Surprisingly, on a GPU the two epoch times are nearly identical! For
-networks this compact, data loading and per-step kernel launch overhead
-completely dominate wall-clock time, so multiplying the matrix arithmetic
-by 26 comes virtually for free (Exercise
-:exref:`ex_mlp-implementation-width` probes where compute finally overtakes
-overhead).
-
-This single experiment puts the three deep-learning questions from our
-chapter introduction squarely on the table. First, automatic
-differentiation computed all 203,530 gradients effortlessly behind the
-scenes—how does it do so in a single backward pass (:numref:`sec_backprop`)?
-Second, our `std=0.01` initialization noticeably slowed the opening epochs,
-and in deeper stacks it stalls learning completely
-(:numref:`sec_numerical_stability`). Third, with 3.4 parameters per
-training image, our MLP had ample capacity to memorize Fashion-MNIST—yet it
-generalized within a couple of points of its training accuracy
-(:numref:`sec_generalization_deep`).
+On modern hardware (especially a GPU), both models take almost the exact same wall-clock time per epoch! At width $h = 256$, data loading and Python/kernel launch overhead dominate the runtime, so the 26-fold increase in dense matrix arithmetic runs virtually for free (Exercise :exref:`ex_mlp-implementation-width` explores the width at which matrix arithmetic finally overtakes data-loading overhead).
 
 ## Summary
 
-Stepping from softmax regression to a one-hidden-layer MLP requires adding
-just one affine layer and a nonlinearity while reusing the exact same data
-loader, loss, and `Trainer`—putting us roughly at the state of the art of
-late-1980s neural network modeling. Before training, a quick forward pass
-on a few images catches shape bugs, verifies the $\log 10 \approx 2.30$
-initial loss, and confirms that roughly half of ReLU units activate. Using
-each framework's `Sequential` container eliminates manual parameter
-bookkeeping and makes deeper architectures trivial to assemble. On
-Fashion-MNIST over 30 epochs, 256 ReLU hidden units trim roughly a fifth of
-softmax regression's errors (~87% vs. ~84% validation accuracy) at
-virtually identical GPU time per epoch, with the strongest hidden units
-specializing in localized garment parts and pixel contrasts rather than
-whole-image templates.
+- **Pre-training checks:** A single forward pass on a small batch before training verifies tensor shapes, confirms that the initial cross-entropy loss sits near $\log q \approx 2.30$, and checks that roughly half of ReLU hidden units activate.
+- **Empirical gain over linear classification:** Adding one 256-unit ReLU hidden layer lifts Fashion-MNIST validation accuracy from $\sim 84\%$ to $\sim 87\%$ (cutting error rate by nearly a fifth) at virtually identical per-epoch wall-clock time, as hidden units learn localized part and edge detectors.
 
 ## Exercises
 
@@ -645,20 +387,7 @@ whole-image templates.
        the hidden width. Explain why this restriction costs nothing here,
        and state below which hidden width it would reduce what the model
        can represent on Fashion-MNIST.
-1. [code] **Recall across runs.** The recall table of this section holds
-   one run of softmax regression and two runs of the MLP, too few to say
-   which differences between the models are real.
-    1. Train each model five times and report, for every class, the mean and
-       the range of its recall. For which classes is the difference between
-       the two models larger than the spread within either of them?
-    1. Compute the column-normalized confusion matrix $\mathbf{C}$ of
-       :numref:`sec_softmax_scratch` for one run of each model. Which
-       confusions among the four tops does the hidden layer reduce, and
-       which does it only move from one pair of classes to another?
-    1. Keep a copy of the parameters of the MLP after each of its last five
-       epochs, and classify each validation image by the average of the five
-       predicted probabilities. Does the recall of the tops vary less
-       between runs than that of a single epoch?
+
 1. [code] **Single hidden unit.** Set `num_hiddens=1` in `MLPScratch`, so
    that its hidden layer has a single ReLU unit with weights
    $\mathbf{w}^{(1)} \in \mathbb{R}^{784 \times 1}$ and bias
@@ -698,27 +427,6 @@ whole-image templates.
        $\{0.03, 0.1, 0.3\}$. Does the best learning rate depend on the
        width?
    :exlabel:`ex_mlp-implementation-width`
-1. [code] **Initialization scale and depth.** ● `MLPScratch` draws its
-   weights with standard deviation 0.01, which its argument `std` sets.
-    1. Train the one-hidden-layer model with standard deviations 0.001,
-       0.01, and 0.1, and plot the training and validation curves for each.
-       How much do the curves differ, and does the difference persist as
-       training continues? Relate your observation to the scale of the
-       hidden activations and the logits on the first forward pass.
-    1. Extend `MLPScratch` to two and to four hidden layers, each of
-       width 256. Before running anything, predict which depth is more
-       sensitive to the standard deviation, and why.
-    1. Sweep the standard deviation over
-       $\{0.001, 0.003, 0.01, 0.03, 0.1\}$ for both depths. For each depth,
-       report the range for which the network reaches at least 70%
-       validation accuracy within five epochs.
-       :numref:`sec_numerical_stability` explains the pattern and trains a
-       network with ten hidden layers.
-
-    *Adapted from Stanford CS231n,
-    [Assignment 2](https://cs231n.github.io/assignments2023/assignment2/),
-    FullyConnectedNets Inline Question 1.*
-   :exlabel:`ex_mlp-implementation-initialization-scale-depth`
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/92)

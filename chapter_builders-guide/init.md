@@ -31,10 +31,9 @@ taken.
 
 Sound initialization therefore depends on the *architecture's wiring*, not just
 individual layer types, and we need clean mechanisms for applying custom rules
-across a module tree. The first half of this section is practical and can be
-read quickly: inspecting framework defaults, applying He initialization across a
-deep stack, bounding extreme draws with truncated normals, writing custom
-initializers, and editing weights directly. Slow down for the second half, where
+across a module tree. The first half of this section covers the mechanics: applying initializers
+across an entire module tree, bounding extreme draws with truncated normals,
+writing custom initializers, and editing weights in place. Slow down for the second half, where
 we analyze variance growth across residual blocks and fix it by scaling down or
 zeroing each block's output projection.
 
@@ -77,179 +76,34 @@ import optax
 from d2l import jax as d2l
 ```
 
-## Library Defaults
-
-Every framework supplies a built-in default initializer, and—as noted in
-:numref:`sec_numerical_stability`—none of the four frameworks defaults to He
-initialization for linear layers. Rather than taking documentation on faith,
-let's verify each framework directly on a linear layer with 512 inputs and 256
-outputs. Whenever the default draws uniformly from $[-b, b]$, the theoretical
-standard deviation is $b/\sqrt{3}$.
-
-:begin_tab:`mxnet`
-Gluon draws every weight from $U(-0.07, 0.07)$, a constant rather than a bound
-that depends on the size of the layer, and starts the bias at zero. Passing
-`in_units` fixes the input width, so `initialize` draws at once instead of
-waiting for the first forward pass (:numref:`sec_lazy_init`):
-:end_tab:
-
-:begin_tab:`pytorch`
-PyTorch draws the weight and the bias of an `nn.Linear` from $U(-b, b)$ with
-$b = 1/\sqrt{n_\textrm{in}}$. (The documentation describes the weight rule as
-`kaiming_uniform_` with `a=math.sqrt(5)`, a variant of He initialization. The
-name should not mislead: the algebra reduces to the bound above, and to one
-sixth of the variance that He initialization prescribes.)
-:end_tab:
-
-:begin_tab:`tensorflow`
-Keras creates the kernel at build time, when the layer learns its input shape
-(:numref:`sec_lazy_init`), so we call `build` ourselves. It draws Xavier
-uniform, which Keras calls Glorot uniform after the first author of
-:citet:`Glorot.Bengio.2010`, and starts the bias at zero:
-:end_tab:
-
-:begin_tab:`jax`
-NNX draws LeCun normal: a normal distribution with standard deviation
-$1/\sqrt{n_\textrm{in}}$, truncated at two standard deviations and then
-rescaled to restore the standard deviation, which puts the largest possible
-entry near $2.3/\sqrt{n_\textrm{in}}$. The bias starts at zero:
-:end_tab:
-
-```{.python .input #init-defaults-and-when-to-override-them}
-%%tab mxnet
-layer = nn.Dense(256, in_units=512)
-layer.initialize()
-w = layer.weight.data()
-print(f'range [{float(w.min()):.4f}, {float(w.max()):.4f}], '
-      f'predicted bound 0.0700')
-print(f'std {float(w.std()):.4f}, predicted {0.07 / math.sqrt(3):.4f}')
-print(f'bias all zero: {bool((layer.bias.data() == 0).all())}')
-```
-
-```{.python .input #init-defaults-and-when-to-override-them}
-%%tab pytorch
-layer = nn.Linear(512, 256)
-bound = 1 / math.sqrt(layer.in_features)
-w = layer.weight
-print(f'range [{w.min():.4f}, {w.max():.4f}], predicted bound {bound:.4f}')
-print(f'std {w.std():.4f}, predicted {bound / math.sqrt(3):.4f}')
-```
-
-```{.python .input #init-defaults-and-when-to-override-them}
-%%tab tensorflow
-layer = tf.keras.layers.Dense(256)
-layer.build((None, 512))
-w = layer.kernel.numpy()
-bound = math.sqrt(6 / (512 + 256))
-print(f'range [{w.min():.4f}, {w.max():.4f}], predicted bound {bound:.4f}')
-print(f'std {w.std():.4f}, predicted {bound / math.sqrt(3):.4f}')
-print(f'bias all zero: {bool((layer.bias.numpy() == 0).all())}')
-```
-
-```{.python .input #init-defaults-and-when-to-override-them}
-%%tab jax
-layer = nnx.Linear(512, 256, rngs=nnx.Rngs(d2l.get_key()))
-w = layer.kernel
-print(f'std {w.std():.4f}, predicted {1 / math.sqrt(512):.4f}')
-print(f'max |w| {jnp.abs(w).max():.4f}, '
-      f'bias all zero: {bool((layer.bias == 0).all())}')
-```
-
-The empirical numbers match each framework's documented formula. Shallow
-networks with one or two hidden layers tolerate these defaults easily, but deep
-networks often cannot. Four situations call for overriding the defaults: deep
-stacks without normalization layers (where small per-layer scale mismatches
-compound exponentially), topologies like residual networks whose skip paths
-break single-layer assumptions, faithful reproductions of published recipes, and
-custom parameters created manually outside built-in layers.
-
-:begin_tab:`mxnet`
-For Gluon the first candidate is the default itself: $\pm 0.07$ ignores the
-number of inputs, so it matches He initialization at one width only, and
-layers much wider or much narrower start with too much or too little variance.
-:end_tab:
-
-:begin_tab:`pytorch`
-The last case needs particular care in PyTorch:
-`nn.Parameter(torch.empty(...))` holds whatever bytes the allocator happened
-to return.
-:end_tab:
-
-:begin_tab:`tensorflow`
-In the last case Keras supplies a default too: `add_weight` falls back to
-Glorot uniform unless we pass an `initializer`, a sensible scale for a weight
-matrix and an unsuitable one for a parameter with another role.
-:end_tab:
-
-:begin_tab:`jax`
-In the last case NNX supplies no default: we construct the value ourselves and
-wrap it in `nnx.Param`.
-:end_tab:
 
 ## Applying Initializers
 
-Defaults enforce one fixed rule per layer class. To apply He initialization—or
-the depth-dependent residual scaling we derive shortly—we need to override
-initialization across an entire model or on specific layers. Let's test this on
-a ten-layer ReLU stack of width 256 (omitting biases so weights alone determine
-activation scale), fed 1,024 inputs drawn from $\mathcal{N}(0, 1)$. We compare
-the output mean square under the framework's default initialization against He
-initialization.
+As we saw in :numref:`sec_numerical_stability`, no framework defaults to He
+initialization (:numref:`subsec_he_init`) for linear layers: Gluon draws from
+$U(-0.07, 0.07)$, PyTorch from $U(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$
+(one-sixth of He's variance), Keras from Glorot uniform, and NNX from LeCun
+normal (half of He's variance). To apply He initialization—or the
+depth-dependent residual scaling we derive shortly—across an entire model, we
+walk the module tree (:numref:`sec_model_construction`). Let's compare default
+versus He initialization on a 10-layer ReLU stack of width 256 (without biases)
+fed 1,024 standard-normal inputs.
 
 :begin_tab:`mxnet`
-`net.initialize(init=...)` hands an `Initializer` object to every parameter of
-the block tree of :numref:`sec_model_construction`, and `force_reinit=True`
-lets it overwrite values that already exist. The object is a default, not a
-decree: a parameter constructed with its own initializer keeps it. Gluon calls
-He initialization `MSRAPrelu`; `factor_type='in'` counts the inputs of a
-layer, and `slope=0` selects the gain $\sqrt{2}$ of the ReLU. The default
-$U(-0.07, 0.07)$ has variance $0.07^2/3$, so at width 256 each layer with its
-ReLU multiplies the mean square by $256 \cdot 0.07^2/6 \approx 0.21$, and ten
-layers by about $10^{-7}$.
+`net.initialize(init.MSRAPrelu(factor_type='in', slope=0), force_reinit=True)` applies He initialization ($g = \sqrt{2}$) across the block tree, overwriting existing weights:
 :end_tab:
 
 :begin_tab:`pytorch`
-`net.apply(fn)` calls `fn` on every submodule of the tree, children first
-(:numref:`sec_lazy_init`), and the function decides by the type of each module
-what, if anything, to do with it. The routines in `torch.nn.init` follow
-PyTorch's convention that a trailing underscore means *in place*:
-`nn.init.kaiming_normal_(w)` overwrites `w` rather than returning a new tensor.
-This matters: were we to replace the tensor that the module registered, an
-existing optimizer would go on updating a tensor that the model no longer
-uses. PyTorch names He initialization after
-its first author, Kaiming He, and `nonlinearity='relu'` selects the gain
-$\sqrt{2}$. The default has one sixth of He's variance, so each layer with its
-ReLU multiplies the mean square by $1/6$, and ten layers by
-$6^{-10} \approx 1.7 \times 10^{-8}$.
+`net.apply(init_he)` invokes `init_he` on every submodule, using the in-place `nn.init.kaiming_normal_` (trailing underscore) so existing `nn.Parameter` references remain intact:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Every Keras layer accepts `kernel_initializer` and `bias_initializer`
-arguments, objects that map a shape and a dtype to a tensor, and
-`tf.keras.initializers` supplies the standard ones. For a model that already
-exists, we iterate over `model.layers` and `assign` a fresh draw to each
-kernel, which overwrites the variable in place, so that it remains the
-variable that the model and any optimizer track. There is one trap. An
-initializer object created without a seed returns the same values every time
-it is called, so two layers of equal shape that share one such object start
-with identical weights, and nothing warns us. The function below therefore
-receives an initializer *class* and creates one object per layer. Glorot
-uniform gives a square layer variance $1/n_\textrm{in}$, half of He's, so each
-layer with its ReLU halves the mean square, and ten layers multiply it by
-$2^{-10} \approx 10^{-3}$.
+To reinitialize an existing Keras model, we loop over `model.layers` and `assign` a fresh draw in place—instantiating a new `initializer_class()` per layer because an unseeded Keras initializer instance replays the same numbers if reused:
 :end_tab:
 
 :begin_tab:`jax`
-NNX layers such as `Linear` and `Conv` accept `kernel_init` and `bias_init`,
-each a function `(key, shape, dtype) -> array`, and `nnx.initializers`
-supplies the standard ones. These functions run in the constructor. For a
-model that already exists, we walk the object graph: `nnx.iter_modules` yields
-each submodule with its path, and one fresh key per matching layer keeps the
-draws independent. LeCun normal has half of He's variance, so each layer with
-its ReLU halves the mean square, and ten layers multiply it by
-$2^{-10} \approx 10^{-3}$.
+We walk `nnx.iter_modules(model)`, split a fresh random key per `nnx.Linear` layer, and update `layer.kernel[...]` in place with `nnx.initializers.he_normal()`:
 :end_tab:
-
 ```{.python .input #init-applying-initializers-1}
 %%tab mxnet
 net = nn.Sequential()
@@ -345,34 +199,20 @@ the tails also trims the variance slightly, which some framework implementations
 compensate for by rescaling and others leave as is.
 
 :begin_tab:`mxnet`
-`mxnet.init` provides no truncated normal, so we write the drawing function.
-It draws normal values and redraws every entry that lands outside two standard
-deviations until none does. Wrapped in an `init.Initializer` subclass, as in
-the next section, it becomes an initializer:
+Because `mxnet.init` has no built-in truncated normal, we redraw any entries outside $\pm 2\sigma$ in a loop:
 :end_tab:
 
 :begin_tab:`pytorch`
-`nn.init.trunc_normal_` takes absolute cutoffs `a` and `b`, which default to
-$\pm 2$ and so mean $\pm 2$ standard deviations only when `std=1`. With
-`std=0.02` the defaults would cut at 100 standard deviations, which is to say
-not at all. A cut at two standard deviations must state the bounds:
+`nn.init.trunc_normal_` takes *absolute* cutoffs `a` and `b` (defaulting to $\pm 2$), so truncating at $\pm 2\sigma$ for `std=0.02` requires passing `a=-0.04, b=0.04`:
 :end_tab:
 
 :begin_tab:`tensorflow`
-`tf.keras.initializers.TruncatedNormal` cuts at two standard deviations: draws
-outside the bound are discarded and redrawn, and no rescaling follows. The
-factory behind `HeNormal` and its relatives draws a truncated normal too and
-then rescales it so that the standard deviation lands on target:
+`tf.keras.initializers.TruncatedNormal` truncates at $\pm 2\sigma$ without rescaling (whereas `HeNormal` truncates and rescales to hit target variance):
 :end_tab:
 
 :begin_tab:`jax`
-`nnx.initializers.truncated_normal` states its cutoffs in units of the
-standard deviation (`lower=-2.0`, `upper=2.0` by default), so the cut at two
-standard deviations needs no extra arguments. Flax truncates by default: the
-`variance_scaling` factory behind `lecun_normal`, `xavier_normal`, and
-`he_normal` draws its normal variants truncated and rescaled:
+`nnx.initializers.truncated_normal` takes cutoffs in multiples of $\sigma$ (`lower=-2.0, upper=2.0` by default):
 :end_tab:
-
 ```{.python .input #init-truncated-normals}
 %%tab mxnet
 def trunc_normal(sigma, shape):
@@ -526,30 +366,20 @@ activation and should therefore reduce the output mean square by a factor of
 four.
 
 :begin_tab:`mxnet`
-`weight.data()` hands back the array that the parameter holds. No guard is
-needed, because gradients are recorded only inside an `autograd.record()`
-block: outside one, indexed assignment is a plain array write.
+`weight.data()[:] *= 0.5` edits the underlying array in place outside `autograd.record()`.
 :end_tab:
 
 :begin_tab:`pytorch`
-The edit needs `torch.no_grad()`: parameters are leaf tensors that track
-gradients, and PyTorch rejects in-place arithmetic on them unless we declare
-that the change is not part of any computation to differentiate. (The
-`nn.init` routines run under their own `no_grad` internally, which is why
-`init_he` needed none.)
+Wrap in-place edits on leaf `nn.Parameter` tensors in `with torch.no_grad():` so autograd does not reject them.
 :end_tab:
 
 :begin_tab:`tensorflow`
-No guard is needed, because `assign` writes to the variable without recording
-anything on a `GradientTape`:
+`w.assign(0.5 * w)` updates the `tf.Variable` in place outside any `GradientTape`.
 :end_tab:
 
 :begin_tab:`jax`
-NNX parameters are mutable variables. Indexed assignment updates the value
-owned by the layer while keeping the `nnx.Param` object that optimizers and
-checkpoints track:
+`kernel[...] *= 0.5` mutates the array inside the tracked `nnx.Param` variable.
 :end_tab:
-
 ```{.python .input #init-custom-initializers-2}
 %%tab mxnet
 before = float((net(X) ** 2).mean())
@@ -841,13 +671,7 @@ symmetry.
    fraction by counting the entries of its plain normal draw that lie
    beyond $\pm 2\sigma$.
 
-2. **Zero initialization.** Zero-initialize *both* layers of every body,
-   weights and biases, instead of just the output projection. The forward
-   pass still returns the input. Which parameters receive a nonzero gradient
-   on the first backward pass, and on any later one? Is this the same failure
-   as in the symmetry argument of :numref:`sec_numerical_stability`?
-
-3. [code] **Normalized inputs.** Many residual networks normalize the
+2. [code] **Normalized inputs.** Many residual networks normalize the
    input of each body: the body reads $\mathbf{x}_k / r_k$, where $r_k$
    is the root mean square of the entries of $\mathbf{x}_k$ for each
    example, instead of $\mathbf{x}_k$.
@@ -862,7 +686,7 @@ symmetry.
        and compare with your predictions and with the
        measured plot in :numref:`subsec_variance_across_depth`.
 
-4. [code] **Kaiming initialization.** Implement the Kaiming (He)
+3. [code] **Kaiming initialization.** Implement the Kaiming (He)
    initializers of :numref:`subsec_he_init`, uniform and normal, with an
    explicit `nonlinearity` argument that switches the gain between `'relu'`
    and `'linear'`.
@@ -881,7 +705,7 @@ symmetry.
     *Adapted from CMU 10-714, [Homework 2](https://github.com/dlsyscourse/hw2)
     and [Homework 4](https://github.com/dlsyscourse/hw4).*
 
-5. [code] **Gradients across depth.** ● The backward pass through a block
+4. [code] **Gradients across depth.** ● The backward pass through a block
    multiplies the gradient by the transposed Jacobian of
    $\mathbf{x} \mapsto \mathbf{x} + f(\mathbf{x})$.
     1. Repeat the argument of this section for the backward pass. Show that
@@ -894,7 +718,7 @@ symmetry.
        respect to its input, and compare its mean square with that of the
        gradient at the output.
 
-6. [code] **Data-driven calibration.** ● Initialize the stack of
+5. [code] **Data-driven calibration.** ● Initialize the stack of
    :numref:`subsec_variance_across_depth` with the unscaled choice of
    gain, then calibrate it block by block on one minibatch of
    unit-variance inputs.
@@ -912,15 +736,6 @@ symmetry.
        Plot the calibrated depth-versus-standard-deviation curve next to
        that of the scaled choice of gain, and explain the difference.
 
-:begin_tab:`pytorch`
-7. [code] **Default biases.** The stack of ten ReLU layers in this section
-   left out the biases, and under PyTorch's default weights its mean square
-   fell by a factor of 6 per layer. Restore the biases, which PyTorch draws
-   from the same $U(-1/\sqrt{n_\textrm{in}}, 1/\sqrt{n_\textrm{in}})$ as the
-   weights, and print the mean square after every layer. Explain why it stops
-   shrinking after a few layers, and predict the value at which it levels
-   off.
-:end_tab:
 
 [Discussions](https://d2l.discourse.group/t/36754)
 

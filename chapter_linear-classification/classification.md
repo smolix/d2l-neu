@@ -319,3 +319,243 @@ Consistent with our slightly underconfident reliability curve, the fitted temper
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17981)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §3.5]{.kicker}
+
+Measuring Classifiers<br>**imbalance · costs · calibration**
+:::
+:::
+
+::: {.slide title="A Higher Accuracy Is Not Always the Better Classifier"}
+[The problem]{.kicker}
+
+Softmax regression labels about **83%** of the Fashion-MNIST validation
+images correctly. Would 85% be better? Accuracy counts every example once
+and every mistake alike, and three common situations break that:
+
+. . .
+
+- **A rare class.** 1% of people have a disease: "always healthy" scores
+  **99%** and finds nobody; a test that finds 90% of the sick scores
+  **95%**.
+- **Unequal costs.** A missed patient may be worth 100 false alarms.
+- **Decisions on probabilities.** A threshold on $p(\textrm{sick})$ is only
+  as good as $p(\textrm{sick})$.
+
+::: {.d2l-note}
+Each needs a measurement of its own: recall and precision, costs, and
+calibration.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- read a confusion matrix: recall, precision, and the cost of mistakes;
+- derive the decision threshold that costs imply;
+- check calibration with a reliability diagram and fit a temperature.
+
+**Running examples:** screening 100,000 people for a disease that 1% have;
+the softmax regression of the previous decks on the 10,000 Fashion-MNIST
+validation images.
+:::
+
+::: {.slide title="How to Measure the Classifiers of This Chapter"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Softmax Regression | probabilities over classes, cross-entropy |
+| Image Classification Data | Fashion-MNIST in minibatches |
+| Softmax Regression from Scratch | softmax regression by hand, the `Classifier` class |
+| Concise Implementation | framework layers, a stable loss |
+| **Measuring Classifiers** | **precision, recall, costs, calibration** |
+| Generalization in Classification | error bars, test-set reuse, VC dimension |
+| Environment and Distribution Shift | correcting for shifted data |
+:::
+
+::: {.col .narrow}
+- **Uses:** the trained softmax regression; the confusion matrix; Bayes'
+  theorem.
+- **Skips:** ROC curves (exercises), several labels per example, ranking
+  metrics.
+:::
+:::
+:::
+
+::: {.slide title="A Useless Screener Scores 99%, a Useful One 95%"}
+[Class imbalance]{.kicker}
+
+1% of 100,000 people are sick. A test finds 90% of them and flags 5% of the
+healthy:
+
+| | sick | healthy |
+|:--|--:|--:|
+| **predicted sick** | 900 (TP) | 4,950 (FP) |
+| **predicted healthy** | 100 (FN) | 94,050 (TN) |
+
+- Test: accuracy $94{,}950 / 100{,}000 = 0.95$.
+- Always *healthy*: accuracy $0.99$, and it finds nobody.
+
+::: {.d2l-note .warn}
+Each person counts once: the 1,000 sick are 1% of the accuracy.
+:::
+:::
+
+::: {.slide title="Recall and Precision Look at the Sick Separately"}
+[Class imbalance]{.kicker}
+
+$$\textrm{recall} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FN}} \;\;(\textrm{sick found}), \qquad \textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}} \;\;(\textrm{flags right})$$
+
+@!classification-beyond-accuracy
+
+- Precision is $P(\textrm{sick} \mid \textrm{flagged})$: Bayes' theorem
+  again. The rare disease makes false positives outnumber true ones.
+:::
+
+::: {.slide title="Check: A Test With Fewer False Alarms"}
+[Check]{.kicker}
+
+The test now flags only **1%** of the healthy and still finds 90% of the
+sick. Compute its accuracy and precision. Does it beat *always healthy* on
+accuracy?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answers.** FP $= 990$, TN $= 98{,}010$. Accuracy
+$(900 + 98{,}010)/100{,}000 = 0.989$: still below $0.99$. Precision
+$900 / 1{,}890 \approx 0.48$.
+:::
+:::
+:::
+
+::: {.slide title="Costs Move the Decision Threshold From ½ to 1%"}
+[Asymmetric costs]{.kicker}
+
+A missed patient costs 100 false alarms: $\kappa_\textrm{FN} = 100$,
+$\kappa_\textrm{FP} = 1$.
+
+- Cost per person: always *healthy* $1.0$; the test $0.15$.
+- With $p = P(\textrm{sick} \mid \mathbf{x})$, flag the patient if
+
+$$p\, \kappa_\textrm{FN} > (1 - p)\, \kappa_\textrm{FP} \quad\Longleftrightarrow\quad p > \frac{\kappa_\textrm{FP}}{\kappa_\textrm{FP} + \kappa_\textrm{FN}} = \frac{1}{101}.$$
+
+::: {.d2l-note .rule}
+Equal costs give $\frac{1}{2}$, the argmax. A lower threshold raises recall
+and lowers precision.
+:::
+:::
+
+::: {.slide title="Confidence Is the Largest Predicted Probability"}
+[Calibration]{.kicker}
+
+Softmax regression of the previous deck, trained again; confidence: the
+largest entry of $\mathrm{softmax}(\mathbf{o})$.
+
+Ten bins by confidence; in each, $n_b$ predictions, mean confidence
+$\bar{c}_b$, accuracy $a_b$:
+
+$$\textrm{ECE} = \sum_b \frac{n_b}{n}\, \bigl|a_b - \bar{c}_b\bigr|$$
+
+::: {.d2l-note}
+The first bin, $[0, 0.1)$, stays empty, since 10 probabilities cannot all
+be below $1/10$.
+:::
+:::
+
+::: {.slide title="In Every Well-Filled Bin, Accuracy Tracks Confidence"}
+[Calibration]{.kicker}
+
+@!softmax-regression-concise-calibration-2
+
+- The two lowest bins hold at most about 70 predictions: their accuracy is
+  noise.
+- From 0.3 up, hundreds of predictions per bin; accuracy near the
+  confidence, in most bins slightly above it.
+:::
+
+::: {.slide title="Softmax Regression Is Nearly Calibrated: ECE Below 0.03"}
+[Calibration]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+- About half of the predictions have confidence above 0.9; 97% to 98% of
+  them are right.
+- Overall: mean confidence about 81%, accuracy about 83%, slightly
+  underconfident.
+- Bins with at least 100 predictions shown.
+:::
+
+::: {.col .fig .big}
+@!softmax-regression-concise-calibration-3
+:::
+:::
+:::
+
+::: {.slide title="Check: Dividing the Logits by T = 2"}
+[Check]{.kicker}
+
+We divide all logits of the trained model by $T = 2$ before the softmax.
+What happens to the accuracy, to the confidences, and to the expected
+calibration error?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The order of the logits is unchanged, so every prediction and
+the accuracy stay the same. All confidences move toward $1/10$. The model
+was already slightly underconfident, so the gap to the accuracy grows, and
+so does the ECE.
+:::
+:::
+:::
+
+::: {.slide title="Temperature Scaling Changes Confidence, Not Decisions"}
+[Calibration]{.kicker}
+
+- **Temperature scaling:** softmax of $\mathbf{o} / T$, with one $T > 0$
+  fitted by minimizing cross-entropy on held-out data; $T > 1$ lowers
+  every confidence, the repair most deep networks need.
+- Fitted on half of the validation images, checked on the other half:
+
+@!classification-temperature-scaling
+
+::: {.d2l-note .rule}
+Dividing by $T$ keeps the order of the logits: the same predictions, the
+same accuracy. Our model gets $T \approx 0.9$ and an ECE that barely moves:
+little to repair.
+:::
+:::
+
+::: {.slide title="Check: Calibrated but Useless?"}
+[Check]{.kicker}
+
+Ten balanced classes. A classifier ignores its input and outputs $0.1$ for
+every class, breaking ties at random. Is it calibrated? What is its
+accuracy?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Confidence $0.1$ on every example, and right on 10% of them:
+perfectly calibrated, accuracy $0.1$. Calibration and accuracy measure
+different things.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+| idea | running example |
+|---|---|
+| imbalance: recall and precision | always *healthy* $0.99$, test $0.95$; test recall $0.9$, precision $0.15$ |
+| costs set the threshold | $\kappa_\textrm{FN} = 100$, $\kappa_\textrm{FP} = 1$: flag if $p > 1/101$ |
+| calibration | mean confidence about 81%, accuracy about 83%, ECE below 0.03; $T \approx 0.9$ changes little |
+
+**Next:** how far a number measured on 10,000 images can be trusted.
+:::

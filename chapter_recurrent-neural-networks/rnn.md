@@ -1288,8 +1288,8 @@ class RNNLM(d2l.RNNLMScratch):  #@save
 ```
 
 Training `RNNLM` with the same hyperparameters reproduces the validation
-perplexity and greedy generation of our from-scratch implementation at a
-fraction of the wall-clock time.
+perplexity of our from-scratch implementation at a fraction of the wall-clock
+time.
 
 ```{.python .input #rnn-implementation-concise-implementation-3}
 %%tab pytorch, mxnet, jax
@@ -1514,3 +1514,647 @@ the last three tokens of context, a limitation we explain mathematically in
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/18014)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §8.4]{.kicker}
+
+Recurrent Neural Networks<br>**hidden state · shared weights · constant memory · RNN language model · teacher forcing**
+:::
+:::
+
+::: {.slide title="A Window Forgets Everything Older Than Its Width"}
+[The problem]{.kicker}
+
+- The trigram model predicts from the last **2** words; the 3rd word back
+  is invisible.
+- A count table over 20 BPE tokens of context: $1024^{20} \approx 10^{60}$
+  contexts.
+- A neural $n$-gram over $m$ tokens (embedding size $d$, hidden width
+  $h$): each extra token adds $d h$ weights (8,192 at $d = 64$,
+  $h = 128$), and token $m+1$ is still invisible.
+
+::: {.d2l-note .warn}
+Can a summary of fixed size replace the window, with constant work per step?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- compute one RNN step and give the shape of every term;
+- show that the two products of a step equal one product on
+  $[\mathbf{X}_t, \mathbf{H}_{t-1}]$;
+- count the parameters and per-token work of an RNN language model;
+- explain teacher forcing and why generation differs from training.
+
+**Running example:** the first RNN language model of the next deck, on
+*The Time Machine*: BPE vocabulary 1,027 ids, embeddings $d = 64$, state
+$h = 128$.
+:::
+
+::: {.slide title="A Hidden State Replaces the Window"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Working with Sequences | autoregression, latent state, rollout error |
+| From Text to Tokens | characters, words, bytes, BPE |
+| Language Models | $n$-grams, perplexity, bits per byte |
+| **Recurrent Neural Networks** | **a hidden state updated at every step** |
+| Implementing RNNs | an RNN language model, scratch and concise |
+| Backpropagation Through Time | gradients through time, truncation |
+| Decoding and Generation | greedy decoding, beam search, sampling |
+:::
+
+::: {.col .narrow}
+- **Uses:** MLP, softmax and cross-entropy, BPE windows with shifted
+  targets.
+- **Skips:** training (next deck), gradients through time.
+:::
+:::
+:::
+
+::: {.slide title="One Update Rule, the Same Weights at Every Step"}
+[The recurrence]{.kicker}
+
+$$\underbrace{\mathbf{H}_t}_{b \times h} = \phi\big(
+\underbrace{\mathbf{X}_t}_{b \times d}\,\underbrace{\mathbf{W}_\textrm{xh}}_{d \times h}
++ \underbrace{\mathbf{H}_{t-1}}_{b \times h}\,\underbrace{\mathbf{W}_\textrm{hh}}_{h \times h}
++ \underbrace{\mathbf{b}_\textrm{h}}_{1 \times h}\big).$$
+
+- $b$ sequences in the minibatch (not the bias $\mathbf{b}_\textrm{h}$),
+  $d$ inputs, $h$ hidden units,
+  $\mathbf{H}_0 = \mathbf{0}$; output
+  $\mathbf{O}_t = \mathbf{H}_t \mathbf{W}_\textrm{hq} + \mathbf{b}_\textrm{q}$.
+- Compared with an MLP layer, the only new term is
+  $\mathbf{H}_{t-1}\mathbf{W}_\textrm{hh}$.
+- The parameter count does not depend on the sequence length.
+:::
+
+::: {.slide title="Inputs 1, 0, 0 Leave the States 0.76, 0.36, 0.18"}
+[Smallest case]{.kicker}
+
+One input, one hidden unit: $h_t = \tanh(x_t + 0.5\, h_{t-1})$,
+$h_0 = 0$.
+
+| step | $x_t$ | $h_t$ |
+|---|--:|--:|
+| 1 | 1 | $\tanh(1) = 0.76$ |
+| 2 | 0 | $\tanh(0.38) = 0.36$ |
+| 3 | 0 | $\tanh(0.18) = 0.18$ |
+
+The first input persists, scaled by about $w_\textrm{hh} = 0.5$ per step.
+**The recurrent weight sets how long the past persists.**
+:::
+
+::: {.slide title="A State Can Track Parity; No Window Can"}
+[What a state can do]{.kicker}
+
+Task: read bits one at a time; after each, say whether the number of ones
+so far is even or odd.
+
+- **Window of the last $m$ inputs:** flip a bit that has left the window.
+  The answer flips; the model's input does not. It fails for every $m$.
+- **State:** hold one bit, the parity so far, and flip it whenever the
+  input is 1. Two hidden units with a threshold activation suffice, for
+  sequences of any length.
+
+::: {.d2l-note}
+A fixed-size state can depend on arbitrarily old inputs. A window cannot.
+:::
+:::
+
+::: {.slide title="Unrolled, an RNN Is a Deep Network with Tied Weights"}
+[Unrolling]{.kicker}
+
+![An RNN unrolled across three time steps; the same weights are reused at every step.](../img/mdl-rnn-unfolded.svg){width=62%}
+
+$T$ steps: a network $T$ layers deep, every layer with the same weights.
+:::
+
+::: {.slide title="Two Products Equal One Product on the Concatenation"}
+[One matrix multiplication]{.kicker}
+
+$$[\mathbf{X}_t, \mathbf{H}_{t-1}]
+\begin{bmatrix} \mathbf{W}_\textrm{xh} \\ \mathbf{W}_\textrm{hh} \end{bmatrix}
+= \mathbf{X}_t \mathbf{W}_\textrm{xh} + \mathbf{H}_{t-1} \mathbf{W}_\textrm{hh}.$$
+
+- Each entry is a sum over $d + h$ terms: the first $d$ come from
+  $\mathbf{X}_t$, the last $h$ from $\mathbf{H}_{t-1}$.
+- The recurrent layer is a fully connected layer on
+  $[\mathbf{X}_t, \mathbf{H}_{t-1}]$.
+:::
+
+::: {.slide title="Check: Shapes of One Step"}
+[Check]{.kicker}
+
+$b = 32$ sequences, $d = 64$, $h = 128$. What are the shapes of
+$\mathbf{X}_t \mathbf{W}_\textrm{xh}$, of $[\mathbf{X}_t, \mathbf{H}_{t-1}]$,
+and of the stacked weight matrix?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\mathbf{X}_t \mathbf{W}_\textrm{xh}$: $32 \times 128$.
+$[\mathbf{X}_t, \mathbf{H}_{t-1}]$: $32 \times 192$. Stacked weights:
+$192 \times 128$, and the product is again $32 \times 128$.
+:::
+:::
+:::
+
+::: {.slide title="The State Is 512 Bytes for Any Prefix Length"}
+[Constant memory]{.kicker}
+
+- $\mathbf{H}_t$ needs only $\mathbf{H}_{t-1}$ and $\mathbf{X}_t$; older
+  inputs can be discarded.
+- $h = 128$ float32 numbers: **512 bytes** per sequence, after ten tokens
+  or a million.
+- The drawback: a **lossy** summary. To record something new, the network
+  must overwrite something old.
+- Attention (later) keeps every past token instead; its memory grows with
+  the sequence.
+:::
+
+::: {.slide title="An RNN Language Model Is Embedding, Recurrence, Output Layer"}
+[RNN language model]{.kicker}
+
+| stage | shape per step |
+|---|---|
+| token ids | $b$ |
+| embedding rows of $\mathbf{E}$ ($1{,}027 \times 64$) | $b \times 64$ |
+| state $\mathbf{H}_t$ | $b \times 128$ |
+| logits $\mathbf{O}_t$ | $b \times 1{,}027$ |
+| softmax | $P(x_{t+1} \mid x_1, \ldots, x_t)$ |
+
+- Ids are arbitrary labels. Learned rows of $\mathbf{E}$ can give "cat"
+  and "feline" similar vectors, which no count table can.
+- No Markov cutoff: $\mathbf{H}_t$ depends on the entire prefix.
+:::
+
+::: {.slide title="89% of the 222,915 Parameters Sit in the Embedding and Output Layers"}
+[Model size]{.kicker}
+
+| part | shape | parameters |
+|---|---|--:|
+| embedding $\mathbf{E}$ | $1{,}027 \times 64$ | 65,728 |
+| $\mathbf{W}_\textrm{xh}$, $\mathbf{W}_\textrm{hh}$, $\mathbf{b}_\textrm{h}$ | $64 \times 128$, $128 \times 128$, $128$ | 24,704 |
+| $\mathbf{W}_\textrm{hq}$, $\mathbf{b}_\textrm{q}$ | $128 \times 1{,}027$, $1{,}027$ | 132,483 |
+
+The recurrent layer, which does the remembering, is 11% of the model.
+The rest scales with the vocabulary.
+:::
+
+::: {.slide title="Per Token, the Output Layer Does 5× the Work of the Recurrence"}
+[Work per token]{.kicker}
+
+- Recurrence: $64 \cdot 128 + 128 \cdot 128 = 24{,}576$ multiply-adds.
+- Output layer: $128 \cdot 1{,}027 = 131{,}456$ multiply-adds.
+- Embedding: a row copy.
+
+Neither depends on the sequence length. A larger vocabulary makes the
+model larger and slower without enlarging the state.
+:::
+
+::: {.slide title="Check: Which Terms Grow 4× When the Hidden Size Doubles?"}
+[Check]{.kicker}
+
+Double $h$ from 128 to 256, keep $d = 64$ and $|\mathcal{V}| = 1{,}027$.
+Which parameter blocks and per-token multiply-adds grow 4×, 2×, or not at all?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** 4×: $\mathbf{W}_\textrm{hh}$ ($h^2$: 16,384 → 65,536). 2×:
+$\mathbf{W}_\textrm{xh}$, $\mathbf{b}_\textrm{h}$, $\mathbf{W}_\textrm{hq}$
+and the output-layer work. Recurrence work: 3.3× (24,576 → 81,920; its
+$h^2$ part 4×, its $dh$ part 2×). Unchanged: $\mathbf{E}$,
+$\mathbf{b}_\textrm{q}$.
+:::
+:::
+:::
+
+::: {.slide title="Training Predicts Every Next Token from the True Prefix"}
+[Teacher forcing]{.kicker}
+
+![Input tokens of "thing that struck me"; each target is the next token.](../img/mdl-rnn-lm-shift.svg){width=48%}
+
+Loss: cross-entropy at every step, averaged. Its exponential is the
+perplexity.
+:::
+
+::: {.slide title="An Untrained Model Starts at Perplexity 1,027"}
+[Teacher forcing]{.kicker}
+
+- A near-uniform prediction over 1,027 ids: loss
+  $\log 1{,}027 \approx 6.93$ nats per token, perplexity $\approx 1{,}027$.
+- Check it before training: an initial loss far above
+  $\log |\mathcal{V}|$ means the initial logits are too large.
+- All targets of a window are known in advance: one pass computes the
+  loss of all $T$ steps.
+:::
+
+::: {.slide title="Generation Feeds Back the Model's Own Outputs"}
+[Generation]{.kicker}
+
+- Training: the input at step $t$ is the **true** token $x_t$.
+- Generation: the input is the token the model **itself** produced.
+- A slightly wrong token changes the state the model continues from, and
+  errors can compound.
+
+Training never shows the model its own mistakes.
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **RNN:** $\mathbf{H}_t = \phi(\mathbf{X}_t\mathbf{W}_\textrm{xh} +
+  \mathbf{H}_{t-1}\mathbf{W}_\textrm{hh} + \mathbf{b}_\textrm{h})$, the
+  same weights at every step; one product on $[\mathbf{X}_t, \mathbf{H}_{t-1}]$.
+- **Constant memory:** 512 bytes of state per sequence, at any length;
+  the summary is lossy.
+- **Language model:** embedding, recurrence, output layer: 222,915
+  parameters, 89% of them in the embedding table and the output layer.
+- **Teacher forcing:** true prefixes in training, own outputs in
+  generation.
+
+**Next:** we implement and train this model, with a limit on the size of
+its gradient, and measure how much of the prefix the trained state uses.
+:::
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §8.5]{.kicker}
+
+Implementing RNNs<br>**one step for any length · embeddings · gradient clipping · bits per byte · context used · framework layers**
+:::
+:::
+
+::: {.slide title="Three Equations Are Not Yet a Trained Language Model"}
+[The problem]{.kicker}
+
+- The RNN of the previous deck: embed a token, update the state, map the
+  state to $|\mathcal{V}| = 1{,}027$ logits.
+- To learn from the 65,741 BPE tokens of *The Time Machine*, the equations
+  need code, and training needs a safeguard: an occasional gradient is
+  many times longer than the typical one.
+- A validation perplexity of 90: good or bad, and against which baseline?
+- The state *may* hold the whole prefix. How much does the trained state
+  hold?
+
+::: {.d2l-note .warn}
+What keeps one update from undoing training, and does the hidden state
+beat a count table?
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- implement one recurrent step and give the shape of every tensor;
+- clip the gradient norm, and show what happens without clipping;
+- see why SGD leaves the embeddings almost untouched, and work around it;
+- compare the model with Kneser–Ney in bits per byte on the same text;
+- measure how many tokens of context the trained model uses;
+- generate text, and wrap a framework layer with the same initialization.
+
+**Running example:** *The Time Machine*, BPE-1024, $h = 128$; $d = 64$,
+then $d = 512$ with dropout.
+:::
+
+::: {.slide title="Training Turns the RNN Into a Language Model"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Working with Sequences | autoregression, latent state, rollout error |
+| From Text to Tokens | characters, words, bytes, BPE |
+| Language Models | $n$-grams, perplexity, bits per byte |
+| Recurrent Neural Networks | a hidden state updated at every step |
+| **Implementing RNNs** | **an RNN language model, scratch and concise** |
+| Backpropagation Through Time | gradients through time, truncation |
+| Decoding and Generation | greedy decoding, beam search, sampling |
+:::
+
+::: {.col .narrow}
+- **Uses:** `Module`, `Trainer`, the cross-entropy loss, BPE windows with
+  shifted targets.
+- **Skips:** the gradient computation (next deck), decoding beyond greedy
+  (last deck).
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The Model from Scratch]{.dtitle}
+
+[one step, applied to any length]{.dsub}
+:::
+:::
+
+::: {.slide title="Each Step Maps a Token and a State to Logits and a New State"}
+[The step]{.kicker}
+
+$$\mathbf{H}_t = \tanh(\mathbf{X}_t \mathbf{W}_\textrm{xh} +
+\mathbf{H}_{t-1} \mathbf{W}_\textrm{hh} + \mathbf{b}_\textrm{h}), \qquad
+\mathbf{O}_t = \mathbf{H}_t \mathbf{W}_\textrm{hq} + \mathbf{b}_\textrm{q}$$
+
+| tensor | shape |
+|---|---|
+| token ids | $(b, T)$ = (1,024, 32) |
+| embeddings $\mathbf{X}_t$, stacked | $(T, b, d)$ |
+| states $\mathbf{H}_t$, stacked | $(T, b, h)$ |
+| logits $\mathbf{O}_t$, stacked | $(b, T, \lvert\mathcal{V}\rvert)$ |
+
+The state keeps its shape, so the same step runs for any $T$.
+:::
+
+::: {.slide title="The Cell Is a Loop over the Time Axis"}
+[The step]{.kicker}
+
+@-rnn-implementation-the-recurrent-cell-2
+
+Weights start from $\mathcal{N}(0, 0.01^2)$: the untrained cell forgets
+its state within a few steps, and training has to grow them.
+:::
+
+::: {.slide title="An Embedding Lookup Is a One-Hot Product Without the Zeros"}
+[Embeddings]{.kicker}
+
+- One-hot input $\mathbf{e}_i$: a 1,027-wide vector with a single 1, at
+  position $i$, times a matrix.
+- $\mathbf{e}_i^\top \mathbf{E}$ = row $i$ of
+  $\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d}$: index instead of
+  multiply.
+- The one-hot product is the same lookup, computed the expensive way.
+- Rows start at unit scale, output weights at 0.01: the untrained model is
+  close to uniform, perplexity close to 1,027.
+:::
+
+::: {.slide title="Check: Where Do the 222,915 Parameters Sit?"}
+[Check]{.kicker}
+
+$|\mathcal{V}| = 1{,}027$, $d = 64$, $h = 128$. Which part is largest?
+
+. . .
+
+| part | parameters |
+|---|--:|
+| $\mathbf{E}$ | 65,728 |
+| $\mathbf{W}_\textrm{xh}$, $\mathbf{W}_\textrm{hh}$, $\mathbf{b}_\textrm{h}$ | 24,704 |
+| $\mathbf{W}_\textrm{hq}$, $\mathbf{b}_\textrm{q}$ | 132,483 |
+
+The recurrent layer holds 11%; the embedding table and the output layer
+hold 89%.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Gradient Clipping]{.dtitle}
+
+[bound the size of every update]{.dsub}
+:::
+:::
+
+::: {.slide title="One Large Gradient Can Undo Training in a Single Update"}
+[Gradient clipping]{.kicker}
+
+- Backprop through $T$ steps multiplies $T$ Jacobians of the same
+  transition: the product can grow exponentially in $T$.
+- One step moves the parameters by $\eta\|\mathbf{g}\|$; a long step
+  leaves the region where the loss is close to linear.
+- Shrinking $\eta$ for the rare spike slows every step.
+
+$$\mathbf{g} \leftarrow \min\left(1, \frac{\theta}{\|\mathbf{g}\|}\right)
+\mathbf{g}$$
+
+$\theta = 1$, $\|\mathbf{g}\| = 10$: the update shrinks tenfold and keeps
+its direction. $\|\mathbf{g}\|$ is the norm over all parameters at once.
+:::
+
+::: {.slide title="The Clip Runs Between the Backward Pass and the Update" except="jax"}
+[Gradient clipping]{.kicker}
+
+@rnn-implementation-gradient-clipping
+
+A crude device: whenever it acts, training no longer follows the
+gradient. It is standard all the same.
+:::
+
+::: {.slide title="The Clip Runs Inside the Compiled Training Step" only="jax"}
+[Gradient clipping]{.kicker}
+
+```{.python #rnn-implementation-exercises}
+def clip_gradients(grad_clip_val, grads):
+    norm = jnp.sqrt(sum(jnp.vdot(x, x) for x in jax.tree.leaves(grads)))
+    return jax.tree.map(lambda g: jnp.where(
+        norm < grad_clip_val, g, g * (grad_clip_val / norm)), grads)
+
+# In Trainer.prepare_optimizer, when gradient_clip_val > 0:
+clip = lambda grads, params: clip_gradients(val, grads)
+tx = optax.chain(optax.stateless(clip), tx)
+```
+
+The clip is chained in front of the model's optimizer.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Training and Evaluation]{.dtitle}
+
+[clipping, bits per byte, baselines, and the context used]{.dsub}
+:::
+:::
+
+::: {.slide title="A Zero State per 32-Token Window Truncates Backpropagation"}
+[Training]{.kicker}
+
+- 50,000 training windows, 5,000 validation windows, $T = 32$, batch 1,024.
+- Ten epochs of SGD at learning rate $\eta = 4$, clipping at $\theta = 1$,
+  teacher forcing. A clipped update has length $\eta\theta = 4$.
+- Plain model first: $d = 64$, $h = 128$, no dropout.
+- Every window starts from $\mathbf{H}_0 = \mathbf{0}$: gradients reach at
+  most 32 steps back (*truncated* backpropagation through time).
+:::
+
+::: {.slide title="The Training Loss Keeps Falling; the Validation Loss Stops Improving"}
+[Training]{.kicker}
+
+@!rnn-implementation-training-3
+
+Plain model, $d = 64$: 222,915 parameters for 50,000 training tokens; the
+final training perplexity is less than half the validation perplexity.
+:::
+
+::: {.slide title="Without Clipping, Most Runs Jump and End Well Above the Clipped Model"}
+[Training]{.kicker}
+
+Three fresh copies of the plain model, same learning rate 4, no clipping;
+highest and final validation perplexity of each run:
+
+@!rnn-implementation-a-plain-model-3
+
+- With clipping: about 90 to 100, run after run.
+- 32 unclipped runs per framework: more than 8 in 10 end above twice the
+  clipped perplexity. Now and then a run escapes and matches it.
+:::
+
+::: {.slide title="The Clipped Curve Falls; Most Unclipped Curves Spike"}
+[Training]{.kicker}
+
+@!rnn-implementation-a-plain-model-4
+
+- At some epoch the perplexity jumps, in some runs past the untrained
+  model's 1,027, and falls back only part of the way.
+
+::: {.d2l-note}
+Clipping is what makes a learning rate of 4 usable.
+:::
+:::
+
+::: {.slide title="Bits per Byte Makes Perplexities Comparable Across Tokenizers"}
+[Evaluation]{.kicker}
+
+$$\textrm{bits per byte} = \frac{\log_2 \textrm{ppl}}{\textrm{bytes per token}}$$
+
+@!rnn-implementation-training-4
+
+@!rnn-implementation-training-5
+
+A character model chooses among 27 symbols, ours among 1,027 tokens: only
+bits per byte compares them.
+:::
+
+::: {.slide title="Check: Perplexity 90 at 2.78 Bytes per Token"}
+[Check]{.kicker}
+
+How many bits per byte is that?
+
+. . .
+
+$\log_2 90 \approx 6.49$ bits per token, $6.49 / 2.78 \approx 2.34$ bits
+per byte.
+:::
+
+::: {.slide title="Under SGD the Embedding Rows Barely Move"}
+[Evaluation]{.kicker}
+
+@!rnn-implementation-embeddings-under-sgd-2
+
+- A row gets gradient only where its token occurs: a few of the 32,768
+  positions of a minibatch.
+- SGD's one learning rate is far too small for unit-scale rows; unseen
+  tokens' rows do not move at all. The table is little more than a fixed
+  random projection.
+- Workaround: a wider random table ($d = 512$) for
+  $\mathbf{W}_\textrm{xh}$ to read, plus dropout 0.1 on embeddings and 0.5
+  on states.
+:::
+
+::: {.slide title="A Wider Embedding with Dropout Reaches About 2.1 Bits per Byte"}
+[Evaluation]{.kicker}
+
+@!rnn-implementation-a-wider-embedding-with-dropout-3
+
+- 740,355 parameters, same SGD, learning rate, clipping and epochs.
+- Validation perplexity: about 90 to 100 $\to$ about 60.
+:::
+
+::: {.slide title="The RNN Ties the Kneser–Ney Trigram, and Their Average Beats Both"}
+[Evaluation]{.kicker}
+
+Same training tokens, same validation tokens, same tokenizer:
+
+@!rnn-implementation-training-6
+
+@!rnn-implementation-comparison-with-kneser-ney-3
+
+$P = \tfrac12 P_\textrm{RNN} + \tfrac12 P_\textrm{KN}$ (Mikolov et al.,
+2011). Each model is the more confident one on about half of the tokens:
+equally good, wrong in different places.
+:::
+
+::: {.slide title="The Trained RNN Uses About Three Tokens of Its 32-Token Window"}
+[Evaluation]{.kicker}
+
+Validation bits per byte by position in the window: the target at
+position $k$ is predicted from $k$ tokens of context.
+
+@!rnn-implementation-comparison-with-kneser-ney-4
+
+- One token of context: about 2.3. Three: 2.12. Thirty-two: still about
+  2.12. The trigram, with two: 2.09.
+
+::: {.d2l-note .warn}
+The state could carry 32 tokens; training did not teach it to. That is
+why the RNN ties the trigram.
+:::
+:::
+
+::: {.slide title="Greedy Decoding Tends to Loop"}
+[Generation]{.kicker}
+
+Warm up the state on the prefix, then feed each chosen token back in.
+Greedy takes $\arg\max_i o_i$, the highest logit.
+
+@!rnn-implementation-generating-text-2
+
+Nothing in it is random: once the state returns to a phrase it has
+produced, the phrase repeats.
+:::
+
+::: {.slide title="The Framework Layer Keeps the Interface and the Initialization"}
+[Framework layers]{.kicker}
+
+- `RNN` wraps the framework's recurrent layer: (`num_steps`, `batch_size`,
+  `num_inputs`) in, all states and the final state out.
+- Weights $\mathcal{N}(0, \sigma^2)$, biases zero, as in `RNNScratch`.
+- `RNNLM` inherits training, evaluation and `predict` from `RNNLMScratch`;
+  only the embedding and output layers change.
+
+@!rnn-implementation-concise-implementation-6
+:::
+
+::: {.slide title="Check: Why Does Averaging Help?"}
+[Check]{.kicker}
+
+On one token the RNN assigns probability 0.5 and Kneser–Ney 0.02; on
+another, 0.02 and 0.5. Bits for each model, and for the average?
+
+. . .
+
+- Each model alone: $-\log_2 0.5 - \log_2 0.02 \approx 1 + 5.6 = 6.6$ bits.
+- The average assigns 0.26 to both: $2 \times 1.94 \approx 3.9$ bits.
+
+The mixture gives each token at least half the better model's probability,
+so it never costs more than one bit above the better model.
+:::
+
+::: {.slide title="An RNN Matches Kneser–Ney, and Their Average Beats Both"}
+
+[Wrap-up]{.kicker}
+
+- One step: token and state in, 1,027 logits and a same-shaped state out.
+- Clipping to $\theta = 1$ bounds every update; without it most runs at
+  learning rate 4 jump and end well above the clipped model. A zero state
+  per window truncates backpropagation at 32 steps.
+- Plain model about 2.3 to 2.4 bits per byte; $d = 512$ with dropout about
+  2.1, level with Kneser–Ney; their average about 2.0.
+- Loss by position: the trained RNN uses about three tokens of context.
+- The framework layer: same interface, same initialization, same
+  perplexity.
+
+**Next:** the gradients through time, measured on this model: why they
+exploded without clipping, and why the state remembers so little.
+:::

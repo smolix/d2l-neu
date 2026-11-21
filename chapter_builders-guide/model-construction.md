@@ -89,34 +89,20 @@ layer of 256 ReLU units and 10 outputs—matching :numref:`sec_mlp-implementatio
 pass in a minibatch of two examples with 20 features each.
 
 :begin_tab:`mxnet`
-In Gluon the module class is `nn.Block`. The container `nn.Sequential`
-receives its layers through `add`, the argument `activation` attaches the
-ReLU to the first `Dense` layer, and `in_units` states the number of inputs
-of each layer. The call `initialize` comes between
-construction and the first forward pass; we return to it in
-:numref:`sec_lazy_init`.
+In Gluon the base class is `nn.Block`, `nn.Sequential` adds layers via `add`, and `initialize()` prepares parameters before the first call (:numref:`sec_lazy_init`).
 :end_tab:
 
 :begin_tab:`pytorch`
-In PyTorch the module class is `nn.Module`, and the container
-`nn.Sequential` takes its layers as arguments. Each `nn.Linear` receives
-its number of inputs and of outputs.
+In PyTorch the base class is `nn.Module` and `nn.Sequential` chains layers passed as arguments.
 :end_tab:
 
 :begin_tab:`tensorflow`
-In Keras the module class is `tf.keras.layers.Layer`; a `tf.keras.Model` is
-a layer with training methods added. The container `tf.keras.Sequential`
-takes a list of layers, and the argument `activation` attaches the ReLU to
-the first `Dense` layer.
+In Keras the base class is `tf.keras.layers.Layer` (with training methods on `tf.keras.Model`) and `tf.keras.Sequential` chains a list of layers.
 :end_tab:
 
 :begin_tab:`jax`
-In Flax NNX the module class is `nnx.Module`, and the container
-`nnx.Sequential` takes its layers as arguments. NNX layers create their
-parameters in the constructor, so each `nnx.Linear` needs its number of
-inputs and `rngs`, the source of random keys for its initial weights.
+In Flax NNX the base class is `nnx.Module`, `nnx.Sequential` chains its arguments, and layers allocate parameters at construction using `rngs`.
 :end_tab:
-
 ```{.python .input #model-construction-the-module-abstraction-1}
 %%tab mxnet
 net = nn.Sequential()
@@ -160,27 +146,20 @@ mapping names to child modules, and its forward pass iterates through that table
 in insertion order.
 
 :begin_tab:`mxnet`
-Printing the block lists the registry. The names are the positions `0` and
-`1`.
+Printing the block displays its children keyed by index (`0`, `1`).
 :end_tab:
 
 :begin_tab:`pytorch`
-`named_children` lists the registry. The names are the positions `'0'`,
-`'1'`, and `'2'`; the ReLU is a module without parameters.
+`named_children` yields `(name, module)` pairs (`'0'`, `'1'`, `'2'`).
 :end_tab:
 
 :begin_tab:`tensorflow`
-Keras keeps the children in a tracked list, `layers`. The names are
-generated from the class names.
+Keras stores children in `net.layers` with auto-generated names.
 :end_tab:
 
 :begin_tab:`jax`
-In NNX the module and its attributes form a graph of Python objects, and
-`nnx.state(net, nnx.Param)` lists every parameter by its path through that
-graph. The container keeps its children under `layers`, at the positions 0,
-1, and 2; the ReLU at position 1 is a plain function and owns nothing.
+`nnx.state(net, nnx.Param)` lists every parameter by its path through `layers`.
 :end_tab:
-
 ```{.python .input #model-construction-the-module-abstraction-2}
 %%tab mxnet
 net
@@ -216,18 +195,6 @@ subclass the framework's base module and implement two methods: a constructor
 that creates child modules and a forward method that specifies how data flows
 through them (`forward` in PyTorch and Gluon, `call` in Keras, and `__call__` in
 NNX).
-
-:begin_tab:`tensorflow`
-The `d2l.Module` of earlier chapters defines `call` to run `forward`, which
-is why its subclasses wrote `forward`; a plain Keras layer implements `call`
-directly.
-:end_tab:
-
-:begin_tab:`jax`
-The `d2l.Module` of earlier chapters defines `__call__` to run `forward`,
-which is why its subclasses wrote `forward`; a plain NNX module implements
-`__call__` directly.
-:end_tab:
 
 Here is the same MLP once more:
 
@@ -312,32 +279,9 @@ Second, we never have to write a backward method: automatic differentiation
 (:numref:`sec_autograd`) derives the gradients directly from the operations
 performed during the forward pass.
 
-:begin_tab:`mxnet`
-We call the model as `net(X)`, never as `net.forward(X)`: `Block.__call__`
-runs `forward` and, around it, any *hooks* registered on the block,
-functions that see its inputs and outputs (:numref:`sec_repro`).
-:end_tab:
-
-:begin_tab:`pytorch`
-We call the model as `net(X)`, never as `net.forward(X)`:
-`nn.Module.__call__` runs `forward` and, around it, any *hooks* registered
-on the module, functions that see its inputs and outputs
-(:numref:`sec_repro`).
-:end_tab:
-
-:begin_tab:`tensorflow`
-We call the model as `net(X)`, never as `net.call(X)`: Keras's `__call__`
-creates the layer's variables from the shape of the input on the first call
-(:numref:`sec_lazy_init`) and then runs `call`.
-:end_tab:
-
-:begin_tab:`jax`
-In NNX, `net(X)` runs `__call__` directly; the model needs no extra
-dictionary of parameters, because the parameters are attributes of the
-layers. The transformations `nnx.grad` and `nnx.jit` follow the same
-attributes.
-:end_tab:
-
+Always invoke a module as `net(X)` rather than calling `forward` or `call`
+directly: `__call__` executes framework hooks (:numref:`sec_repro`) and, in
+Keras, builds deferred variables on the first call (:numref:`sec_lazy_init`).
 ## Module Containers
 :label:`subsec_model-construction-sequential`
 
@@ -405,29 +349,20 @@ class MySequential(nnx.Module):
 ```
 
 :begin_tab:`mxnet`
-`register_child` enters a block into the registry under its position in the
-sequence; attribute assignment calls it with the attribute name instead.
-Gluon's registry holds weak references, so our class also keeps the blocks
-in a list of its own, which keeps them alive.
+`register_child` adds a block to the registry (which stores weak references, so `self._layers` keeps the blocks alive).
 :end_tab:
 
 :begin_tab:`pytorch`
-`add_module` enters a child into the registry under a name, here its
-position as a string, and `children()` runs through the registry in the
-order of insertion.
+`add_module` registers each child by string index, and `children()` iterates over the registry in insertion order.
 :end_tab:
 
 :begin_tab:`tensorflow`
-`self.modules = args` looks like an ordinary assignment. Keras's
-`__setattr__` looks inside lists, tuples, and dictionaries, so both `Dense`
-layers are tracked.
+Keras's `__setattr__` automatically scans inside Python lists, tuples, and dicts, tracking every layer in `self.modules`.
 :end_tab:
 
 :begin_tab:`jax`
-`nnx.List` is a list that NNX treats as part of the module graph, so the
-parameters of both `Linear` layers appear under the path `modules`.
+`nnx.List` wraps a sequence of modules as a graph-tracked container under `modules`.
 :end_tab:
-
 Our custom `MySequential` behaves just like the built-in container:
 
 ```{.python .input #model-construction-sequential-and-friends-containers-2}
@@ -547,57 +482,20 @@ except ValueError as e:
 ```
 
 :begin_tab:`mxnet`
-The model computes, yet it owns zero parameters, and `save_parameters`
-would write an empty file. (Had we skipped the initialization by hand, the
-first forward pass would have stopped with the error that the parameters
-are not initialized.)
-
-How would we notice? Here the mistake is loud: the `Trainer` fails when it
-is constructed from the empty parameter dictionary, although with a
-`TypeError` that does not name the cause. The dangerous block is the one
-that registers some layers as attributes and keeps others in a list. In the
-block below the outer layers are attributes, and the two layers between
-them sit in a plain list, initialized by hand as before. We take one step
-of gradient descent and ask which weights changed:
+The forward pass succeeds, yet `collect_params()` is empty! While an completely empty parameter dict makes `Trainer` fail immediately, a *partly* registered model—where outer layers are attributes and inner layers sit in a plain list—fails silently during training. Let's take one SGD step on such a model and check which weights move:
 :end_tab:
 
 :begin_tab:`pytorch`
-The model computes, yet it owns zero parameters. A plain Python list is not
-a module, so `__setattr__` stores it like any other value and registers
-nothing inside it. The layers still hold their own weights, which is why
-the forward pass runs. But `net.parameters()` is empty, `net.to(device)`
-leaves every layer on the CPU, and `net.state_dict()` saves an empty model.
-
-How would we notice? Here the mistake is loud: `torch.optim.SGD` refuses an
-empty list of parameters, so this model cannot even be handed to an
-optimizer. The dangerous model is the one that is only partly registered.
-In the model below the outer layers are attributes, and the two layers
-between them sit in a plain list. We take one step of gradient descent and
-ask which weights changed:
+The forward pass succeeds, yet `net.parameters()` is empty because `__setattr__` treats a plain Python `list` as an ordinary attribute rather than a module container. Worse than a completely empty model (which `torch.optim.SGD` rejects) is a *partly* registered model whose outer layers are attributes and inner layers sit in a plain list. Let's take one SGD step and check which weights move:
 :end_tab:
 
 :begin_tab:`tensorflow`
-All 7,946 parameters are present: 20 · 256 + 256 in the hidden layer and
-256 · 10 + 10 in the output layer. (We named the list `blocks` because
-Keras reserves the attribute `layers` for its own tracked list.) A model
-that keeps only some of its layers in a list is therefore complete as well,
-so a partly registered model cannot arise this way. The mistake
-that Keras guards against is a different one: adding a layer to a model
-whose variables already exist. Creating the variables fixes the structure
-of the model, and a later assignment fails at once:
+Because Keras scans inside Python lists assigned to attributes, all 7,946 parameters ($20 \cdot 256 + 256 + 256 \cdot 10 + 10$) are tracked automatically. Instead, the structural bug Keras forbids is attaching a new layer *after* the model has already been built:
 :end_tab:
 
 :begin_tab:`jax`
-NNX rejects the plain list when the model is constructed. It would
-otherwise treat the list as fixed configuration and hide the parameters
-inside it. The first line of the error, which is all we print, names the
-problem, and the rest of the message lists the repairs, among them
-`nnx.List` and `nnx.data`. The same error stops a model that registers its
-outer layers as attributes and keeps only the layers between them in a
-plain list, so a partly registered model cannot be built. With the
-graph-aware `nnx.List`, the model is complete:
+NNX immediately raises a `ValueError` at construction when a plain Python list holds modules, naming `nnx.List` as the fix so a partly registered model can never be constructed silently:
 :end_tab:
-
 ```{.python .input #model-construction-layers-in-a-plain-list-1}
 %%tab mxnet
 class PartlyRegisteredMLP(nn.Block):
@@ -659,31 +557,12 @@ optimizer.step()
 ```
 
 :begin_tab:`mxnet`
-Only the weights of the outer layers changed, and nothing failed.
-Backpropagation passed through the two layers in the list to reach the
-first one, but the `Trainer` never received their parameters. Gluon does
-warn, though. Each time `collect_params()` runs, here in `initialize` and
-again for the `Trainer`, it prints a warning that names the unregistered
-attribute and the repair. On a GPU the mistake is loud as well:
-`Trainer(num_gpus=1)` moves only the registered layers, and the first
-forward pass stops with the error that a parameter was not initialized on
-the GPU.
-
-The repair is to register each child, as `MySequential.add` did:
+Only the outer weights updated! Backpropagation flowed through `self.blocks` to reach `self.first`, but `Trainer` never received the list's parameters (though `collect_params()` does print a warning). Registering each child via `register_child` fixes the bug:
 :end_tab:
 
 :begin_tab:`pytorch`
-Only the weights of the outer layers changed, and nothing failed.
-Backpropagation passed through the two layers in the list to reach the
-first one, but the optimizer never received their parameters. On the CPU
-the only sign is a model that learns less than it should, which is the kind
-of bug that survives for months. On a GPU the mistake is loud again:
-`Trainer(num_gpus=1)` moves only the registered layers, and the first
-forward pass stops with an error about tensors on different devices.
-
-The registered container for a list of children is `nn.ModuleList`:
+Only the outer weights updated, without a single warning or error! Backpropagation flowed through `self.blocks` to reach `self.first`, but the optimizer never saw the middle layers. Wrapping the list in `nn.ModuleList` (or `nn.ModuleDict` for dictionaries) registers every child properly:
 :end_tab:
-
 ```{.python .input #model-construction-sequential-and-friends-containers-4}
 %%tab mxnet
 class RegisteredListMLP(PlainListMLP):
@@ -728,42 +607,20 @@ net(X).shape, sum(x.size for _, x in state.flat_state())
 ```
 
 :begin_tab:`mxnet`
-Same forward pass, and now all 7,946 parameters are registered: 20 · 256 +
-256 in the hidden layer and 256 · 10 + 10 in the output layer. Gluon has no
-list container. Children are registered through attributes, through
-`nn.Sequential`, or one at a time with `register_child`, which suits a loop
-that is not a plain chain, such as blocks that take an extra argument.
+All 7,946 parameters are now registered. In Gluon, register children via attribute assignment, `nn.Sequential`, or `register_child`.
 :end_tab:
 
 :begin_tab:`pytorch`
-Same forward pass, and now all 7,946 parameters are registered: 20 · 256 +
-256 in the hidden layer and 256 · 10 + 10 in the output layer.
-
-Which container, then? `nn.Sequential` registers its children and supplies
-a forward method that chains them. `nn.ModuleList` registers a list of
-children and supplies no forward method, so we write the loop ourselves,
-which is what we want when the loop is not a plain chain: blocks that take
-an extra argument, or a computation between blocks. `nn.ModuleDict` does
-the same for children indexed by name. A model that repeats one block many
-times, such as the 32-block 8B model of the introduction, keeps the blocks
-in an `nn.ModuleList`.
+All 7,946 parameters are now registered. Use `nn.Sequential` for straight chains, and `nn.ModuleList` or `nn.ModuleDict` whenever your `forward` method loops or indexes over children manually.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The message states the rule: all state is created in `__init__` or in
-`build`, never afterwards. Keras therefore needs no special list or
-dictionary containers. Any layer reachable from an attribute is tracked,
-and a late change to the structure fails when it is made, not when the
-model silently ignores it.
+Keras requires all layers to be attached in `__init__` or `build`; any layer reachable from an attribute (including inside lists or dicts) is tracked automatically.
 :end_tab:
 
 :begin_tab:`jax`
-All 7,946 parameters are present: 20 · 256 + 256 in the hidden layer and
-256 · 10 + 10 in the output layer. NNX supplies `nnx.List` and `nnx.Dict`
-for collections of modules. A misdeclared child fails when the model is
-constructed, not after a training run that updated nothing.
+With `nnx.List` (or `nnx.Dict` for mappings), all 7,946 parameters are registered cleanly.
 :end_tab:
-
 ## Forward Computation
 
 Because a module's forward method is just Python, it can invoke arbitrary tensor
@@ -893,43 +750,17 @@ frameworks can trace a computation once and replay the compiled graph on future
 calls. That speedup comes with a trade-off: compiled execution restricts
 data-dependent Python control flow inside the forward pass.
 
-:begin_tab:`mxnet`
-Gluon runs `forward` as written, one operation at a time, a mode called
-*eager execution*, and so does our `Trainer`. A loop whose condition
-depends on the values of arrays therefore works just as it does in NumPy.
-A `HybridBlock` can instead compile its forward method into a graph, which
-forbids such loops; this chapter uses `Block` throughout.
-:end_tab:
-
-:begin_tab:`pytorch`
-PyTorch runs `forward` as written, one operation at a time, a mode called
-*eager execution*, and so does our `Trainer`. A loop whose condition depends
-on the values of tensors therefore works just as it does in NumPy.
-Compilers for PyTorch models exist, and :numref:`chap_performance` uses
-them.
+:begin_tab:`mxnet, pytorch`
+Both Gluon `Block` and PyTorch `nn.Module` run *eagerly* by default—executing Python statement by statement—so data-dependent control flow works just like NumPy (we cover graph compilation in :numref:`chap_performance`).
 :end_tab:
 
 :begin_tab:`tensorflow`
-Called directly, `call` runs as written, one operation at a time, a mode
-called *eager execution*. The `Trainer` of :numref:`sec_oo-design`
-compiles each training step with `tf.function` instead: it runs the step
-once with symbolic tensors that have shapes but no values, records the
-operations, and from then on executes the recording. In a plain
-`tf.function`, a converter called AutoGraph rewrites a Python loop whose
-condition depends on the values of tensors into a graph loop. Keras does
-not apply AutoGraph to the `call` method of a layer, however, so in a model
-such a loop cannot be recorded:
+Direct calls run eagerly, but `d2l.Trainer` compiles training steps with `tf.function` by tracing `call` once on symbolic tensors without concrete values. Because Keras does not apply AutoGraph inside `Layer.call`, a Python `while` loop conditioned on tensor values fails during tracing:
 :end_tab:
 
 :begin_tab:`jax`
-Called directly, `__call__` runs as written, one operation at a time, a
-mode called *eager execution*. The `Trainer` of :numref:`sec_oo-design`
-compiles each training step with `nnx.jit` instead: it runs the step once
-with *tracers*, placeholder arrays that have shapes but no values, records
-the operations, and from then on executes the recording. A loop whose
-condition depends on the values of arrays cannot be recorded this way:
+Direct calls run eagerly, but `d2l.Trainer` compiles training steps with `nnx.jit` by tracing `__call__` once on abstract *tracers* that carry shapes and dtypes but no values. Branching on a tracer in a Python `while` loop raises an error:
 :end_tab:
-
 ```{.python .input #model-construction-forward-is-just-python-4}
 %%tab tensorflow
 class HalvingNet(tf.keras.Model):
@@ -971,66 +802,33 @@ except jax.errors.TracerBoolConversionError as e:
     print(type(e).__name__)
 ```
 
-:begin_tab:`tensorflow`
-Eager execution runs the loop and returns a number. Under `tf.function` the
-condition in `call` is a symbolic tensor without a value, and TensorFlow
-refuses to turn it into a Python `bool`. Inside a layer, a loop that
-depends on values must be written with `tf.while_loop`, which becomes part
-of the recorded program. Loops over the structure of the model, such as the
-loop over the children in `MySequential`, cause no trouble: they run once
-while the step is recorded.
+:begin_tab:`tensorflow, jax`
+Eager execution runs the data-dependent loop, whereas tracing rejects converting a symbolic tensor/tracer into a Python `bool` (requiring `tf.while_loop` or `jax.lax.while_loop`). Loops over static model structure—such as iterating over `self.modules`—unroll cleanly at trace time.
 :end_tab:
-
-:begin_tab:`jax`
-Eager execution runs the loop and returns a number. Under `nnx.jit` the
-condition is a tracer without a value, and JAX refuses to turn it into a
-Python `bool`. A loop that depends on values must be written with
-`jax.lax.while_loop`, which becomes part of the compiled program. Loops over
-the structure of the model, such as the loop over the children in
-`MySequential`, cause no trouble: they run once while the step is traced.
-:end_tab:
-
 ## Lazy Initialization
 :label:`sec_lazy_init`
 
 ### Shapes from Data
 
+Since :numref:`sec_linear_concise`, many of our layers have specified only
+their output dimension, deferring input-shape inference until the first
+minibatch arrives.
+
 :begin_tab:`mxnet`
-Since :numref:`sec_linear_concise`, our Gluon layers such as
-`nn.Dense(256)` have named only their output width. The weight has shape
-`(256, in_units)`, and we never said what `in_units` is: the layer reads it
-from the first minibatch. Gluon works this way in every layer, and
-`in_units` is an optional argument. Here is the mechanism. Before the first
-forward pass the parameter objects exist, but the input width is marked as
-unknown, $-1$:
+Before the first forward pass, `nn.Dense(256)` creates parameter placeholders with unknown input dimension `-1`:
 :end_tab:
 
 :begin_tab:`pytorch`
-Since :numref:`sec_linear_concise`, our PyTorch models have used lazy
-layers such as `nn.LazyLinear(256)`, which name only their output width.
-The weight has shape `(256, in_features)`, and we never said what
-`in_features` is: the layer reads it from the first minibatch. Here is the
-mechanism. Before the first forward pass the weight is a placeholder
-without a shape:
+Before the first forward pass, `nn.LazyLinear(256)` holds an `UninitializedParameter` without a shape:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Since :numref:`sec_linear_concise`, our Keras layers such as `Dense(256)`
-have named only their output width. The kernel has shape
-`(in_features, 256)`, and we never said what `in_features` is: the layer
-reads it from the first minibatch. Every Keras layer works this way. Here
-is the mechanism. Before the first call the layer has no variables at all:
+Before the first call, `Dense(256)` has not allocated any variables at all:
 :end_tab:
 
 :begin_tab:`jax`
-NNX makes a different choice from the other three frameworks, whose layers
-can leave the input width open until the first minibatch arrives. An
-`nnx.Linear` takes both widths and creates its parameters in the
-constructor, so the model is complete at once: an optimizer or a checkpoint
-can see every parameter without a forward pass, and the shapes can be read
-as soon as construction returns:
+Unlike the other three frameworks, NNX layers require explicit input and output widths and allocate their parameters immediately in `__init__`.
 :end_tab:
-
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-1}
 %%tab mxnet
 net = nn.Sequential()
@@ -1052,27 +850,9 @@ net = tf.keras.Sequential([tf.keras.layers.Dense(256, activation='relu'),
 net.weights
 ```
 
-:begin_tab:`mxnet`
-Even `initialize()` allocates nothing yet; it records which initializer to
-use once the shapes are known. The first forward pass reads the input width
-from the minibatch and creates the weight. The output width of each layer
-is the input width of the next, so the shapes cascade through the model:
+:begin_tab:`mxnet, pytorch, tensorflow`
+Passing the first minibatch `X` through the network cascades shapes from layer to layer and materializes every weight tensor:
 :end_tab:
-
-:begin_tab:`pytorch`
-The first forward pass reads the input width from the minibatch, creates
-the weight, and turns the layer into an ordinary `nn.Linear`. The output
-width of each layer is the input width of the next, so the shapes cascade
-through the model:
-:end_tab:
-
-:begin_tab:`tensorflow`
-Reading `net.layers[0].kernel` now would raise an error. The first call
-runs each layer's `build`, which reads the input width from the minibatch
-and creates the kernel. The output width of each layer is the input width
-of the next, so the shapes cascade through the model:
-:end_tab:
-
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-2}
 %%tab mxnet
 net.initialize()
@@ -1112,36 +892,20 @@ model cleanly before training, we first perform a *dry run*—a single forward
 pass on a dummy minibatch whose output is discarded—to materialize every shape.
 
 :begin_tab:`mxnet`
-Gluon builds this order into its interface. `initialize` takes the
-initializer as an argument and records it for every parameter, and the
-first forward pass applies it once the shapes are known. Xavier's uniform
-initializer is `init.Xavier()`:
+`net.initialize(init.Xavier())` records the initializer upfront and applies it automatically on the first forward pass.
 :end_tab:
 
 :begin_tab:`pytorch`
-The `Trainer` has done this before every training run since
-:numref:`sec_linear_concise`, whenever the model still had lazy parameters:
-a dry run, then the model's `weight_init`. The method behind it,
-`apply_init` of `d2l.Module`, we have not shown so far. It runs the model
-once without recording gradients, then calls the given function on every
-submodule:
+`d2l.Module.apply_init` runs one forward pass without tracking gradients to materialize lazy shapes, then applies an initializer callback across the module tree via `self.apply`:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Keras attaches the initializer to the layer: each layer accepts a
-`kernel_initializer`, and `build` uses it when it creates the kernel. The
-dry run can also be replaced by `build` with the input shape, which
-propagates shapes through the model without data (`None` stands for the
-size of the minibatch). Xavier's uniform initializer is the Keras default,
-`GlorotUniform`; we spell it out:
+Keras layers take `kernel_initializer` at construction and apply it when `build` runs (either on the first data call or via `net.build((None, 20))`).
 :end_tab:
 
 :begin_tab:`jax`
-The initializer is an argument of the layer: `nnx.Linear` accepts a
-`kernel_init` function and calls it in the constructor. Xavier's uniform
-initializer is `nnx.initializers.xavier_uniform()`:
+`nnx.Linear` takes `kernel_init` and draws weights immediately in the constructor.
 :end_tab:
-
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-3}
 %%tab pytorch
 @d2l.add_to_class(d2l.Module)  #@save
@@ -1212,26 +976,6 @@ model = TinyMLP(nnx.Rngs(d2l.get_key()))
 [(path, value.shape)
  for path, value in nnx.state(model, nnx.Param).flat_state()]
 ```
-
-:begin_tab:`mxnet`
-The dry run created every weight and drew the first one from the Xavier
-initializer that `initialize` had recorded.
-:end_tab:
-
-:begin_tab:`pytorch`
-The dry run turned every lazy layer into an `nn.Linear`, after which
-`init_xavier` could recognize the layers and redraw their weights.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`build` created every variable and drew the first kernel from the Xavier
-initializer, without any data.
-:end_tab:
-
-:begin_tab:`jax`
-The constructor created every parameter and drew the first kernel from the
-Xavier initializer.
-:end_tab:
 
 When should we use lazy layers versus explicit dimensions? For rapid prototyping
 on unfamiliar datasets, lazy layers are handy. For production models whose
@@ -1333,30 +1077,6 @@ completely safe here because unpacking it into the sequential container
 registers every block immediately. Because every layer specifies both its input
 and output widths, we can inspect and count parameters right away without a dry
 run.
-
-:begin_tab:`mxnet`
-The names of the first parameters are the paths of :numref:`fig_blocks`,
-joined by dots. (Gluon folds the ReLU into the first dense layer, so the
-second dense layer of a block is child 1 of its body.)
-:end_tab:
-
-:begin_tab:`pytorch`
-The names of the first parameters are the paths of :numref:`fig_blocks`,
-joined by dots:
-:end_tab:
-
-:begin_tab:`tensorflow`
-`tf.keras.Input` declares the input width, so `Sequential` builds the whole
-model at construction. Keras names variables by the generated names of the
-layers rather than by attribute names, but the path still runs from the
-model through the block and its body to the variable:
-:end_tab:
-
-:begin_tab:`jax`
-The paths of the first parameters are those of :numref:`fig_blocks`. NNX
-lists each path as a tuple, and a sequential container keeps its children
-under `layers`:
-:end_tab:
 
 ```{.python .input #model-construction-building-from-a-config-2}
 %%tab mxnet
@@ -1467,12 +1187,6 @@ config, and the matching `build` function and block definitions. In
 :numref:`sec_read_write`, we save the weights and config together, while version
 control takes care of the code.
 
-:begin_tab:`tensorflow`
-Keras offers the same idea in its own form: every layer has a method
-`get_config` that returns its constructor arguments, which Keras saves with
-the model and uses to rebuild it, provided the layer classes are available.
-:end_tab:
-
 So far we have only located and counted parameters without inspecting what lives
 inside them. In :numref:`sec_parameters`, we open up the tensors a model owns,
 account for how much memory training consumes, and see how to share or freeze
@@ -1490,30 +1204,6 @@ architectures easy to log, scale, and reproduce. On top of these fundamentals,
 custom forward methods give us full Python flexibility (subject to tracing
 constraints under compiled execution), while lazy layers offer convenience for
 quick experiments at the cost of deferring shape creation until a dry run.
-
-:begin_tab:`mxnet`
-In Gluon, children are registered by attribute assignment, by
-`nn.Sequential`, and by `register_child`. Blocks in a plain list stay
-unregistered, and `collect_params()` warns about them.
-:end_tab:
-
-:begin_tab:`pytorch`
-In PyTorch, children are registered by attribute assignment and by the
-containers `nn.Sequential`, `nn.ModuleList`, and `nn.ModuleDict`. Modules in
-a plain list stay unregistered, without any warning.
-:end_tab:
-
-:begin_tab:`tensorflow`
-In Keras, every layer reachable from an attribute is tracked, inside lists
-and dictionaries too. Once the variables exist, the structure of the model
-is fixed.
-:end_tab:
-
-:begin_tab:`jax`
-In NNX, the attributes of a module form its graph. Collections of modules
-go into `nnx.List` or `nnx.Dict`; a plain list of modules is rejected when
-the model is constructed.
-:end_tab:
 
 ## Exercises
 
@@ -1579,19 +1269,7 @@ the model is constructed.
    parameters and one without. For each, count the extra parameters and
    state which output coordinates still receive the identity path.
 
-3. [code] **Config boundaries.** Extend `MLPConfig` with a field
-   `act: str = 'relu'` that selects the activation inside every
-   `ResidualBlock`, and make `build` honor it.
-    1. Build one model with `act='tanh'` and one from the default config,
-       and compare their parameter shapes. Could a checkpoint that holds
-       only the weights tell the two models apart? State what the answer
-       implies for the config.
-    1. A plain feed-forward block has the same `body` as `ResidualBlock`
-       but no skip connection. Apply the same test to the choice between
-       the two block types, and decide whether that choice belongs in the
-       config or in code.
-
-4. [code] **A module from scratch.** ● In plain Python and NumPy, without any
+3. [code] **A module from scratch.** ● In plain Python and NumPy, without any
    framework base class, write a `Parameter` class that wraps an array and
    a minimal `Module` class whose `__setattr__` registers every assigned
    `Parameter` or `Module`. Give `Module` a `parameters()` method that
@@ -1606,7 +1284,7 @@ the model is constructed.
     [Homework 2](https://github.com/dlsyscourse/hw2), Question 2.*
 
 :begin_tab:`mxnet`
-5. [code] **Lazy input width.** Build an `nn.Sequential` holding
+4. [code] **Lazy input width.** Build an `nn.Sequential` holding
    `nn.Dense(256, activation='relu')` and `nn.Dense(10)`, call
    `initialize()`, and pass a batch with 20 features through it, then a
    batch with 30 features. Explain the outcome from what the first forward
@@ -1615,7 +1293,7 @@ the model is constructed.
 :end_tab:
 
 :begin_tab:`pytorch`
-5. [code] **Lazy input width.** Build
+4. [code] **Lazy input width.** Build
    `net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))`
    and pass a batch with 20 features through it, then a batch with 30
    features. Explain the outcome from what the first forward pass did to
@@ -1624,7 +1302,7 @@ the model is constructed.
 :end_tab:
 
 :begin_tab:`tensorflow`
-5. [code] **Lazy input width.** Build a `tf.keras.Sequential` holding
+4. [code] **Lazy input width.** Build a `tf.keras.Sequential` holding
    `tf.keras.layers.Dense(256, activation='relu')` and
    `tf.keras.layers.Dense(10)`, and pass a batch with 20 features through
    it, then a batch with 30 features. Explain the outcome from what the
@@ -1633,7 +1311,7 @@ the model is constructed.
 :end_tab:
 
 :begin_tab:`jax`
-5. [code] **Shared children.** Reusing one child module at several sites
+4. [code] **Shared children.** Reusing one child module at several sites
    turns the module tree of :numref:`fig_blocks` into a graph. Build a
    small network that uses the same child at two sites. Predict, then
    verify: does the shared child's parameter set appear once or twice in

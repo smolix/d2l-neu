@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.79M parameters; loss before training 5.53 nats per byte, log 256 = 5.55\n"
+          "text": "4.79M parameters; loss before training 5.48 nats per byte, log 256 = 5.55\n"
         }
       ]
     },
@@ -83,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: train 1.36, validation 1.34 nats per byte; 30 s of training\n"
+          "text": "step 1000: train 1.37, validation 1.34 nats per byte; 27 s of training\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 23685,
-          "sha256": "sha256:d5fbe74c29c30a8a88abef6664e14268cfe962e53215437f20566dcabcb948d2"
+          "bytes": 24598,
+          "sha256": "sha256:1959de5227b4272bda29c7ed20b788365785f643757e8881fb24a19d878d139a"
         }
       ]
     },
@@ -112,12 +112,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "swiglu (4,788,992 parameters): validation 1.342, 1.342, 1.344; mean 1.343, range 0.002\n"
+          "text": "swiglu (4,788,992 parameters): validation 1.340, 1.345, 1.340; mean 1.342, range 0.005\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  gelu (4,787,456 parameters): validation 1.404, 1.405, 1.399; mean 1.403, range 0.007\n"
+          "text": "  gelu (4,787,456 parameters): validation 1.400, 1.397, 1.401; mean 1.400, range 0.004\n"
         }
       ]
     },
@@ -133,128 +133,58 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN (4,737,152 parameters), peak rate 0.001: validation 1.459, 1.455\n"
+          "text": "RNN (4,737,152 parameters), peak rate 0.001: validation 1.467, 1.454\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN (4,737,152 parameters), peak rate 0.002: validation 1.441, 1.411\n"
+          "text": "RNN (4,737,152 parameters), peak rate 0.002: validation 1.448, 1.421\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "RNN (4,737,152 parameters), peak rate 0.004: validation 1.639, 1.519\nvalidation loss at positions 0, 1, 4, 16, 64, 127\n"
+          "text": "RNN (4,737,152 parameters), peak rate 0.004: validation 1.702, 1.622\nvalidation loss at positions 0, 1, 4, 16, 64, 127\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     GPT: 2.47 2.15 1.51 1.35 1.32 1.31; 11.1 ms per training step\n"
+          "text": "     GPT: 2.47 2.15 1.49 1.34 1.33 1.31; 12.6 ms per training step\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "best RNN: 2.49 2.14 1.52 1.40 1.40 1.38; 11.4 ms per training step\n"
-        }
-      ]
-    },
-    "gpt-normalization-placement-in-training-1": {
-      "code_fingerprint": "sha256:4a393f92ad42a10b5c9b0c387177670b53bd4303153aa20bdf6509004839094f",
-      "kind": "text",
-      "outputs": []
-    },
-    "gpt-breaking-it-with-one-flag": {
-      "code_fingerprint": "sha256:985999c91d281c11732dba1754899ac5c08c26514eaf7633ebff74df665b1e1f",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "         pre-norm: loss at step 100/200/400/800: 2.58/2.15/1.76/1.51\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "         pre-norm: loss at step 100/200/400/800: 2.91/2.32/1.90/1.56\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "        post-norm: loss at step 100/200/400/800: 3.17/3.17/3.17/3.17\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "        post-norm: loss at step 100/200/400/800: 3.17/3.17/3.17/3.17\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "post-norm, warmup: loss at step 100/200/400/800: 3.34/2.55/1.93/1.57\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "post-norm, warmup: loss at step 100/200/400/800: 3.34/2.54/1.90/1.55\n"
-        }
-      ]
-    },
-    "gpt-placement-mechanism-1": {
-      "code_fingerprint": "sha256:dfca6d4b4c9e724ab43c3a42e345fe628ef2851c054fb06c9519aa8e837f9be1",
-      "kind": "text",
-      "outputs": []
-    },
-    "gpt-placement-mechanism": {
-      "code_fingerprint": "sha256:0fea7f91ad877bac99ae987f2efc3375adca978f2f1d88b950b6b5cec214147b",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "gpt/gpt-placement-mechanism-1.svg",
-          "bytes": 31062,
-          "sha256": "sha256:c5dc32bf9c00aea627e7d4c16374d2aaac226630611fc0b4ee0609280f0d24fd"
-        }
-      ]
-    },
-    "gpt-placement-mechanism-2": {
-      "code_fingerprint": "sha256:3266bd3ef2e7586f8dba3c09c2b9b44c89241fd49851f55c460c693cde16adfc",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "                         step     0    10    20    40    60   100   140   200\n         pre-norm      spread 0.501 0.011 0.022 0.583 0.705 0.740 0.765 0.790\n         pre-norm  grad first 7.970 0.035 0.077 0.478 0.710 0.791 0.866 1.229\n         pre-norm   grad last 4.905 0.049 0.028 0.069 0.074 0.087 0.144 0.218\n        post-norm      spread 0.960 0.031 0.001 0.001 0.000 0.000 0.000 0.000\n        post-norm  grad first 0.126 0.001 0.000 0.001 0.000 0.000 0.000 0.000\n        post-norm   grad last 0.128 0.104 0.062 0.048 0.050 0.044 0.047 0.037\npost-norm, warmup      spread 0.957 0.952 0.927 0.236 0.035 0.029 0.610 0.710\npost-norm, warmup  grad first 0.133 0.143 0.197 0.063 0.009 0.005 0.087 0.110\npost-norm, warmup   grad last 0.135 0.146 0.213 0.228 0.096 0.060 0.078 0.181\n"
+          "text": "best RNN: 2.49 2.15 1.53 1.41 1.42 1.39; 11.2 ms per training step\n"
         }
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:1da53fb11b5eb4c7c56faad445106cb12ac4dce49dd7d2ea820fe8a3bab74272",
+      "code_fingerprint": "sha256:919082da5f4611531db9d6b7c82fc30814caadb1254b81008ee377ef7161a0cd",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:40902e70ba3b6b1ffbc497833b93d27753494447da3b421025316f1cf483b53b",
+      "code_fingerprint": "sha256:5239537141e9d1a3ab991c4bf80775918da6203493c8edc1b788c7be428f58eb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'The history of the Anthony Roupeaning . On the end of\n    the tovernor , a tropical direction of anime from the yield had\n    difficulty . \\n After '\n"
+          "text": "T=1.0, top_k=None: \"The history of the first @-@ amidS ' goes which condibes\n    an United States , which saved in 1942 in Brioff , forcing a breaks to\n    residential\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'The history of the United Kennedy , a secure to see that in\n    the course of his playing at the there . The song was also carried on\n    Australia'\n"
+          "text": "T=0.7, top_k=8: 'The history of the Sheeran Committee , the first season ,\n    and it was an emblementary share . \\n = = = Dead = = \\n = = = = Picture\n    = = \\n The p'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'The history of the chehrroptiSAvwyymoicvd Shr Znemocear\n    Gyarn and Tipnitio AP\\uf426t �\\n ] Mo\\x1f�椐�\\x19ϥ��U [ j; Shųkzelof 3d\\n\n    37 90.O7tpotuwi'\n"
+          "text": "T=2.0, top_k=None: 'The history of the Sh�ûcá�ѿ\\x1b��)�\\x0ed arٓ�ri . Ct\n    Azalezahiovatly wildleokViszoETE.fazh donsTolsrunin R7RchaemwasjuaW �\n    9145f� , anexyi\\x19f�'\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:b1a15c3c96d5947ea57a65c65b47dbe7a578d4bffc2f6e3faa394d14a0f450aa",
+      "code_fingerprint": "sha256:6ba970f01d3f9c6c3f0f33079c0d9dbf89dd9cf083f7e74f1214ea61c99750c8",
       "kind": "text",
       "outputs": [
         {
@@ -265,7 +195,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:3663ddc9cf57e676f2b5cdea1911a9974f090a4c1d7a9c713a2faedf2ac79a3e",
+      "code_fingerprint": "sha256:d44149c16f1f47c3c20ed968ee3581ae318ff8888cbc7642cd91e9cf1824298d",
       "kind": "text",
       "outputs": [
         {
@@ -276,7 +206,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:f482c1ebcee14d98f5a42d52b5f16be42a1f68a502f23dc6f3ba60d42c416137",
+      "code_fingerprint": "sha256:36361f71c6606c8ec9309f0ae066e87270524a7f3b4ccfee87a4ab13cb85e3ce",
       "kind": "text",
       "outputs": [
         {
@@ -287,7 +217,7 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:ce2ebb77789d4caac7eab3f9c95aef6e23ef880abf46bbf7e9230f58fb8c4c88",
+      "code_fingerprint": "sha256:e851341f681b5901b574015a69f3f6814fe774960de45f2657f7fbdecb61f674",
       "kind": "text",
       "outputs": [
         {
@@ -298,13 +228,13 @@
       ]
     },
     "gpt-loading-gpt-2-5": {
-      "code_fingerprint": "sha256:3162913e33a4155647af708d637c451c2ee96e7e7fcdc2dcf94dfac39de988a2",
+      "code_fingerprint": "sha256:82feee05b48c2bcc89ccaf69cdc3dcf84cb7fbab0944e32d94c2c6aea30a46b5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is how the computer learns.\n\nThe problem lies in the fact that deep learning algorithms can be turned on\n    and off only when the program is programmed to do so. It is possible for\n    an algorithm to\n"
+          "text": "The secret of a good deep learning textbook is that there's a lot going on:\n\nSo, which is the best deep learning textbook? For me, the best one is the\n    one that I personally took out of the box and found useful\n"
         }
       ]
     }

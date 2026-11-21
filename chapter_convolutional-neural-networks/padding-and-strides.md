@@ -6,39 +6,21 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Padding, Stride, and Dilation
 :label:`sec_padding`
 
-In :numref:`sec_conv_layer`, our convolutional layer evaluated its kernel only
-at positions where the entire kernel fits inside the input. As a result, the
-output shrinks by one less than the kernel size along each axis. For a single
-layer, losing a pixel or two barely registers, but in a deep network the
-spatial dimensions of every feature map become a central design choice, with
-two competing demands pulling in opposite directions. On the one hand, we want
-to prevent a deep stack of layers from steadily whittling away the borders of
-the image. On the other hand, we often want to shrink the spatial resolution
-deliberately so that units near the top of the network can see the whole image
-without requiring hundreds of layers.
+An unpadded $k \times k$ convolution shrinks its input by $k - 1$ pixels along
+each axis (:numref:`sec_conv_layer`). Across ten $5 \times 5$ layers, a
+$240 \times 240$ image shrinks to $200 \times 200$, discarding 30% of its area
+along the borders. Yet keeping every layer at full resolution with stride 1 has
+the opposite problem: each $3 \times 3$ layer widens a unit's receptive field by
+only two pixels, requiring over a hundred layers to span a $224 \times 224$
+image. And in dense prediction tasks like semantic segmentation, we want *both*
+a wide field of view and full spatial resolution without the quadratic cost of
+huge kernels.
 
-To see the first issue concretely, consider starting with a $240\times 240$
-image and passing it through ten layers of $5\times 5$ convolutions. Because
-each layer shaves two pixels off every side, the feature map shrinks to
-$200\times 200$---slicing away roughly 30% of the image area and discarding
-any useful information near the borders. The second issue is the mirror image:
-if a network keeps every layer at full resolution, it must evaluate the kernel
-at every pixel in every layer, while each unit's view expands by only a few
-pixels per layer. In yet other settings, such as pixel-level labeling, we want
-both a wide field of view and a full-resolution output, without paying the
-parameter cost of a huge kernel.
-
-Three geometric controls on a convolutional layer let us navigate these
-tradeoffs. *Padding* adds a border of extra pixels around the input so that
-the kernel can be centered even on edge pixels. *Stride* advances the sliding
-window by more than one pixel at a time, downsampling the output. *Dilation*
-spaces the kernel's weights apart so a small kernel spans a wider footprint.
-Deriving the resulting output shapes is largely a matter of counting valid
-window positions; the deeper consequence is how quickly the receptive field
-grows with depth, where these three mechanisms behave quite differently. As in
-:numref:`sec_conv_layer`, we focus here on single-channel inputs and introduce
-multiple channels in :numref:`sec_channels`.
-
+Three geometric controls navigate these trade-offs: *padding* surrounds the
+input with a border so kernels can center on edge pixels and preserve spatial
+dimensions; *stride* steps the window by more than one pixel to downsample
+feature maps and accelerate receptive-field growth; and *dilation* spaces kernel
+weights apart so a small kernel spans a wider footprint at full resolution.
 ```{.python .input #padding-and-strides-padding-and-stride}
 %%tab mxnet
 import math
@@ -209,23 +191,12 @@ comp_conv2d(conv2d, X).shape
 ```
 
 :begin_tab:`tensorflow`
-Keras `Conv2D` accepts only `padding='valid'`, which means no padding, and
-`padding='same'`, which pads so that the output has $\lceil n/s\rceil$ rows
-and columns for stride $s$. At stride 1 and odd kernel sizes this is the
-symmetric padding $(k-1)/2$ used above. Other amounts of padding take a
-separate `ZeroPadding2D` layer, which pads each side by a given amount,
-followed by `padding='valid'`, as in the stride examples below. Keras layers
-take channels-last inputs: (example, height, width, channel).
+Keras `Conv2D` takes `padding='valid'` (no padding) or `padding='same'` (output size $\lceil n/s \rceil$, which equals symmetric padding $(k-1)/2$ at stride 1 for odd $k$); custom padding widths use `ZeroPadding2D` before `padding='valid'`. Inputs are channels-last: `(batch, height, width, channel)`.
 :end_tab:
 
 :begin_tab:`jax`
-`nnx.Conv` accepts `'SAME'`, `'VALID'`, one integer for every side, as used
-above, or one integer per spatial axis. It also accepts `'REFLECT'` and
-`'CIRCULAR'`, which pad with mirrored or wrapped-around values. Its default
-is `padding='SAME'`, so the code passes `'VALID'` wherever no padding is
-wanted. Its inputs are channels-last: (example, height, width, channel).
+`nnx.Conv` defaults to `padding='SAME'` and also accepts `'VALID'`, an integer (or per-axis tuple), `'REFLECT'`, or `'CIRCULAR'`. Inputs are channels-last: `(batch, height, width, channel)`.
 :end_tab:
-
 ### Padding Values
 :label:`subsec_padding_values`
 
@@ -557,30 +528,7 @@ output-shape formula, :eqref:`eq_conv_output_shape`.
        columns under zero padding and under mirror padding, and find a way
        to pad that reproduces the ramp exactly.
 
-1. **Benefits of stride.** A $3 \times 3$ convolution with one pixel of
-   padding on every side is applied to a single-channel $64 \times 64$
-   input.
-    1. Count the multiplications this layer performs at stride 1 and at
-       stride 2. By what factor does stride 2 reduce the cost of a second,
-       stride-1 layer of the same kind placed after this one?
-    1. Four such layers are stacked. Use :eqref:`eq_receptive_field` to compute
-       the receptive field of one output element when all four layers have
-       stride 1 and when the first two have stride 2. An object in the
-       image is 20 pixels wide. Which of the two stacks has units that can
-       see all of it at once?
-
-1. **Stride as sampling.** For a length-6 one-dimensional input, write the
-   $4 \times 6$ weight matrix of a stride-1, kernel-3 convolution in the
-   banded-matrix form of :numref:`subsec_conv_matmul`, and the
-   $2 \times 4$ zero--one matrix that keeps every other entry of a
-   length-4 vector. Show that composing the two reproduces the matrix of
-   the stride-2, kernel-3 convolution.
-
-    *Adapted from Simon Prince,
-    [Understanding Deep Learning](https://udlbook.github.io/udlbook/),
-    Problem 10.15.*
-
-1. **Dilation and gridding.** A network stacks four $3 \times 3$
+2. **Dilation and gridding.** A network stacks four $3 \times 3$
    convolutions with stride 1. The doubling dilation schedule
    $(1, 2, 4, 8)$ gives one output element a receptive field of side $31$.
    Compare it with the constant schedule $(4, 4, 4, 4)$.
@@ -598,7 +546,7 @@ output-shape formula, :eqref:`eq_conv_output_shape`.
        output depends on every pixel of its receptive field, and show that
        the condition suffices.
 
-1. **Strides versus dilations.** Consider the two one-dimensional stacks of
+3. **Strides versus dilations.** Consider the two one-dimensional stacks of
    :numref:`fig_conv_rf_towers`, without padding, with kernels
    $\mathbf{w}_1, \mathbf{w}_2, \mathbf{w}_3$ of size 3 shared by both
    stacks and an elementwise nonlinearity after every layer.
@@ -610,18 +558,7 @@ output-shape formula, :eqref:`eq_conv_output_shape`.
     1. Generalize the first part: which dilations reproduce a stack with
        strides $s_1, \ldots, s_L$?
 
-1. **Fractional stride.** ● Read a stride of $\frac{1}{2}$ as moving the
-   convolution window by half an input element per output element.
-    1. Evaluate :eqref:`eq_conv_output_shape` at $d = 1$,
-       $s = \frac{1}{2}$, and $p = (k - 1)/2$ for an odd kernel size $k$.
-       How does the output height compare with the input height?
-    1. Describe how to compute this output with an ordinary stride-1
-       convolution applied to a modified input, and check that your
-       construction gives the same output height.
-    1. Name a task in which a network needs this operation, and say where
-       in the network it would be placed.
-
-1. **Shapes through a stem.** A $224\times 224$ image passes through four
+4. **Shapes through a stem.** A $224\times 224$ image passes through four
    layers: a $7\times 7$ convolution with padding 3 and stride 2, a
    $3\times 3$ convolution with padding 1 and stride 2, and two
    $3\times 3$ convolutions with padding 1 and stride 1.

@@ -676,3 +676,360 @@ A scalar loss function has $m = 1$ output and $n$ parameters, so its Jacobian is
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17970)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.5]{.kicker}
+
+Gradients from a recorded forward pass<br>
+**the backward pass · detaching · control flow · forward and reverse mode**
+:::
+:::
+
+::: {.slide title="Hand-Written Backward Passes Do Not Scale to Deep Networks"}
+[The problem]{.kicker}
+
+Line model: rows $(1, \textrm{input})$ of $\mathbf{X}$, labels $\mathbf{y}$,
+loss $L(\mathbf{w}) = \|\mathbf{X}\mathbf{w} - \mathbf{y}\|^2$.
+
+- By hand: $\nabla L = \mathbf{X}^\top (2\mathbf{r})$, with errors
+  $\mathbf{r} = \mathbf{X}\mathbf{w} - \mathbf{y}$. At $\mathbf{w} = (1, 0)$:
+  $\nabla L = (2, 4)$.
+- A deep network: one Jacobian per layer to derive, code, and test, again
+  after every change to the model.
+- Finite differences: $10^8$ loss evaluations per step for $10^8$
+  parameters, and 3–4 correct digits in float32.
+
+::: {.d2l-note}
+Autograd records the forward pass and applies the chain rule backward: the
+gradient, exact up to rounding, for a small multiple of the cost of the loss.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- compute a gradient in your framework and check it against one derived by
+  hand;
+- predict what accumulation, detaching, and disabling recording do;
+- differentiate programs with loops and branches, and say what autograd
+  returns where a program jumps;
+- count the passes through the graph that forward and reverse mode need
+  for a Jacobian.
+
+**Running example:** the line model at $\mathbf{w} = (1, 0)$, where
+$\nabla L = (2, 4)$.
+:::
+
+::: {.slide title="Autograd Gets Derivatives Without Algebra"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | tool |
+|---|---|
+| Data Manipulation | tensors |
+| Data Preprocessing | pandas |
+| Linear Algebra | matrix products, norms, eigenvalues |
+| Calculus | derivatives, gradients, chain rule |
+| **Automatic Differentiation** | **autograd** |
+| Probability and Statistics | standard error, Bayes' theorem |
+| Documentation | `help`, small tests |
+:::
+
+::: {.col .narrow}
+- **Uses:** the chain rule and the line model of the calculus deck.
+- **Skips:** backpropagation through a multilayer network (a later
+  chapter) and the proofs (the mathematics appendix).
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Computing gradients]{.dtitle}
+
+[record forward · sweep backward]{.dsub}
+:::
+:::
+
+::: {.slide title="We Write Only the Forward Pass"}
+[Gradients]{.kicker}
+
+Rows of $\mathbf{X}$ are $(1, \textrm{input})$ for the inputs $0, 1, 2$;
+the labels are $\mathbf{y} = (1, 1, 0)$.
+
+@-autograd-a-simple-function-1
+
+No derivative appears anywhere in the code.
+:::
+
+::: {.slide title="Mark w, and the Framework Records Every Operation on It" except="jax"}
+[Gradients]{.kicker}
+
+Recording costs memory, so only operations on marked tensors are recorded:
+
+@autograd-a-simple-function-2
+
+@autograd-a-simple-function-3
+:::
+
+::: {.slide title="jax.grad Turns loss Into a Function That Returns (2, 4)" only="jax"}
+[Gradients]{.kicker}
+
+Nothing is marked, and the call `loss(w)` records nothing. JAX records the
+operations of `loss` only while `jax.grad` runs it:
+
+@autograd-a-simple-function-3
+
+@autograd-a-simple-function-4
+
+This is $\nabla L = 2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$ at
+$\mathbf{w} = (1, 0)$, without a derivative written by hand.
+:::
+
+::: {.slide title="The Backward Pass Applies One Local Rule per Operation"}
+[Gradients]{.kicker}
+
+@fig:autograd-comp-graph
+
+Start from $1$ at $L$. The sum copies it, the square multiplies by
+$2\mathbf{r}$, subtracting $\mathbf{y}$ passes it on, and the product with
+$\mathbf{X}$ multiplies by $\mathbf{X}^\top$.
+:::
+
+::: {.slide title="One Backward Pass Returns (2, 4), the Gradient Derived by Hand" except="jax"}
+[Gradients]{.kicker}
+
+@autograd-a-simple-function-4
+
+This is $\nabla L = 2\mathbf{X}^\top(\mathbf{X}\mathbf{w} - \mathbf{y})$ at
+$\mathbf{w} = (1, 0)$, without a derivative written by hand.
+:::
+
+::: {.slide title="PyTorch Adds Each New Gradient to w.grad" only="pytorch"}
+[Gradients]{.kicker}
+
+A second forward and backward pass at the same $\mathbf{w}$:
+
+@autograd-a-simple-function-6
+
+::: {.d2l-note .warn}
+Reset with `w.grad.zero_()` before every backward pass that needs a fresh
+gradient.
+:::
+:::
+
+::: {.slide title="Each Backward Pass Returns a Fresh Gradient" only="mxnet,tensorflow"}
+[Gradients]{.kicker}
+
+A second forward and backward pass at the same $\mathbf{w}$ gives $(2, 4)$
+again:
+
+@autograd-a-simple-function-6
+:::
+
+::: {.slide title="For Vector Outputs, the Backward Pass Returns Jᵀv"}
+[Gradients]{.kicker}
+
+$m$ outputs $\mathbf{u}$ of $n$ inputs $\mathbf{x}$, with Jacobian
+$J_{ji} = \partial u_j / \partial x_i$. The backward pass starts from
+$\mathbf{v}$ and returns $\mathbf{J}^\top\mathbf{v} =
+\nabla_{\mathbf{x}}(\mathbf{v}^\top\mathbf{u})$; $\mathbf{v} = \mathbf{1}$,
+the vector of all ones, gives the gradient of the sum.
+
+Per-example squared errors, passing $\mathbf{v} = \mathbf{1}$:
+
+@autograd-backward-for-non-scalar-variables
+:::
+
+::: {.slide title="Check: The Mean Instead of the Sum"}
+[Check]{.kicker}
+
+The loss becomes the mean of the three squared errors instead of their sum.
+Which local rule of the backward pass changes, and what gradient does it
+return at $\mathbf{w} = (1, 0)$?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Only the rule of the last operation: the mean passes $1/3$ to
+each input, where the sum passed $1$. The other rules are unchanged, so
+$\nabla L = (2, 4)/3 = (2/3, 4/3)$.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Controlling the graph]{.dtitle}
+
+[detached values · unrecorded updates]{.dsub}
+:::
+:::
+
+::: {.slide title="Detaching Keeps the Value and Cuts the Edge"}
+[Controlling the graph]{.kicker}
+
+@fig:autograd-detach
+
+Why: a target that the model computes must stay fixed while the prediction moves.
+:::
+
+::: {.slide title="Detached, ∂z/∂x = x² = (0, 1, 4, 9); Attached, 3x²"}
+[Controlling the graph]{.kicker}
+
+@autograd-detaching-computation-1
+
+Without the detach, both paths carry gradient:
+
+@!autograd-detaching-computation-2
+:::
+
+::: {.slide title="A Gradient Step Runs Unrecorded and Lowers the Loss From 1 to 0.4"}
+[Controlling the graph]{.kicker}
+
+The update $\mathbf{w} \leftarrow \mathbf{w} - 0.1\, \nabla L(\mathbf{w})$
+is not part of any loss, so it is not recorded:
+
+@autograd-turning-off-gradient-tracking-1
+
+$\mathbf{w} = (0.8, -0.4)$, as computed by hand in the calculus deck.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Differentiating programs]{.dtitle}
+
+[loops and branches: the graph is what ran]{.dsub}
+:::
+:::
+
+::: {.slide title="A Loop and a Branch That Depend on the Input"}
+[Programs]{.kicker}
+
+`f` doubles its input until the norm reaches 1000, then multiplies by 100
+unless the entries have a positive sum:
+
+@-autograd-gradients-and-python-control-flow-1
+:::
+
+::: {.slide title="Each Input Records Its Own Graph, With Its Own Slope"}
+[Programs]{.kicker}
+
+@fig:autograd-dynamic
+
+@!autograd-gradients-and-python-control-flow-2
+
+Where the number of doublings changes, $f$ jumps; autograd still reports
+the slope of the piece that ran.
+:::
+
+::: {.slide title="Check: The Gradient of f at a = 0.1"}
+[Check]{.kicker}
+
+How many times does `f` double $a = 0.1$, which branch runs, and what
+gradient does autograd return?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $0.1 \cdot 2^{13} = 819.2 < 1000$ and
+$0.1 \cdot 2^{14} = 1638.4$: 14 doublings, the first branch, and gradient
+$2^{14} = 16384$.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Forward and reverse mode]{.dtitle}
+
+[columns or rows of the Jacobian]{.dsub}
+:::
+:::
+
+::: {.slide title="A Forward Sweep Fills a Column of J, a Reverse Sweep a Row"}
+[Forward and reverse mode]{.kicker}
+
+@fig:autograd-fwd-vs-rev
+
+A sweep is one traversal of the graph, costing a small multiple of one
+evaluation of the function. Forward: $\mathbf{d} \mapsto
+\mathbf{J}\mathbf{d}$. Reverse:
+$\mathbf{v} \mapsto \mathbf{J}^\top\mathbf{v}$.
+:::
+
+::: {.slide title="The Errors' Jacobian Is X: Three Reverse or Two Forward Sweeps"}
+[Forward and reverse mode]{.kicker}
+
+$\mathbf{r}(\mathbf{w}) = \mathbf{X}\mathbf{w} - \mathbf{y}$ has $m = 3$
+outputs and $n = 2$ inputs, and its Jacobian is
+
+$$\mathbf{J} = \mathbf{X} = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{bmatrix}.$$
+
+- Reverse sweep from $\mathbf{v} = \mathbf{e}_j$: $\mathbf{J}^\top \mathbf{e}_j$,
+  the gradient of error $j$, is **row** $j$. Three sweeps fill $\mathbf{J}$.
+- Forward sweep along $\mathbf{d} = \mathbf{e}_i$: $\mathbf{J}\mathbf{e}_i$,
+  how all three errors change with $w_i$, is **column** $i$. Two sweeps
+  fill $\mathbf{J}$.
+
+::: {.d2l-note}
+Few inputs, many outputs: forward mode. Many inputs, one output, as for a
+loss: reverse mode.
+:::
+:::
+
+::: {.slide title="One Reverse Sweep Computes the Gradient of 10⁸ Parameters"}
+[Forward and reverse mode]{.kicker}
+
+A loss has $m = 1$ output and, say, $n = 10^8$ parameters. Its Jacobian is
+one row, the transposed gradient.
+
+| method | work for the whole gradient |
+|---|---|
+| reverse mode | 1 sweep |
+| forward mode | $10^8$ sweeps |
+| finite differences | $10^8 + 1$ loss evaluations |
+
+::: {.d2l-note}
+Backpropagation is reverse mode. Its cost in memory: forward values are kept
+until the backward pass has used them.
+:::
+:::
+
+::: {.slide title="Check: Which Mode for 3 Inputs and 10⁶ Outputs?"}
+[Check]{.kicker}
+
+A simulation maps 3 parameters to $10^6$ outputs. How many sweeps does each
+mode need for the full Jacobian?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** Forward mode: 3 sweeps, one per column. Reverse mode: $10^6$
+sweeps, one per row. Forward mode wins.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **Record, then sweep backward:** line model, $\nabla L = (2, 4)$.
+- **Vector outputs:** the backward pass returns $\mathbf{J}^\top\mathbf{v}$.
+- **Detach:** $\partial z/\partial x = x^2$ instead of $3x^2$.
+- **Unrecorded step:** loss $1 \to 0.4$.
+- **Programs:** the graph is what ran; slopes 4096 and 204,800.
+- **Modes:** reverse fills a row per sweep, forward a column; a loss needs
+  one reverse sweep.
+
+**Next:** probability, to tell a pattern in the data from noise.
+:::

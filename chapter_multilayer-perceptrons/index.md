@@ -1,61 +1,19 @@
-# Multilayer Perceptron
+# Multilayer Perceptrons
 :label:`chap_perceptrons`
 
-In this chapter, we introduce your first truly *deep* neural networks. In
-:numref:`chap_classification`, softmax regression simply assigned a fixed
-weight to each of the 784 pixels of a garment image and summed the
-evidence—meaning every pixel contributed the exact same vote toward a
-class regardless of what surrounded it. Yet a bright pixel might belong to
-a sleeve, a handbag strap, or a collar, and only its neighbors can reveal
-which. How do we build models where the meaning of one input depends on the
-others, and how do we train them effectively?
+In this chapter, we introduce your first truly *deep* neural networks. In :numref:`chap_classification`, softmax regression assigned a fixed weight to each of the 784 pixels of a Fashion-MNIST garment image and summed the evidence—meaning every pixel contributed the exact same vote toward a class regardless of what surrounded it. Yet a bright pixel might belong to a sleeve, a handbag strap, or a collar, and only its neighbors can reveal which. Even simpler, no straight line—no single linear layer—can compute the exclusive-OR (XOR) of two binary bits, a barrier Marvin Minsky and Seymour Papert famously highlighted in 1969 for Frank Rosenblatt's single-layer *perceptron*.
 
-The failure of linear models shows up long before sleeves and collars: no
-straight line—no thresholded weighted sum—can compute even the simple
-exclusive-OR (XOR) of two bits. Marvin Minsky and Seymour Papert famously
-highlighted this barrier in 1969 for Frank Rosenblatt's 1958 *perceptron*,
-a single-layer linear classifier. Hand-crafting derived features such as
-the product of the two bits sidesteps the barrier, yet for decades no
-widely practical algorithm could *learn* useful features automatically.
-*Multilayer perceptrons* (MLPs)—the simplest deep networks—solve this by
-stacking fully connected *hidden layers*, each pairing an affine
-transformation with a fixed nonlinear activation function. In 1986,
-Rumelhart, Hinton, and Williams popularized *backpropagation* to train all
-layers jointly by gradient descent, allowing hidden layers to discover
-useful internal representations directly from data
-:cite:`Rumelhart.Hinton.Williams.ea.1988`.
+*Multilayer perceptrons* (MLPs) break through this linear barrier by stacking one or more fully connected *hidden layers*—each pairing an affine transformation with a nonlinear activation function—before the output layer, and training all layers jointly end to end via *backpropagation* :cite:`Rumelhart.Hinton.Williams.ea.1988`. While the cross-entropy loss, minibatch SGD optimizer, and `Trainer` loop from :numref:`chap_classification` carry straight over, adding hidden layers introduces three fundamental deep-learning challenges: computing gradients efficiently across hundreds of thousands of parameters, choosing initial weight scales so signals and gradients neither vanish nor explode across depth, and understanding why heavily overparameterized networks generalize instead of merely memorizing their training data.
 
-Happily, the cross-entropy loss, minibatch SGD optimizer, and training loop
-of softmax regression carry straight over unchanged. Adding hidden layers,
-however, confronts us with three fundamentally new challenges: computing
-gradients efficiently across hundreds of thousands of parameters, choosing
-parameter initializations carefully so signals neither vanish nor explode
-across layers, and understanding why heavily overparameterized networks—capable
-of memorizing their entire training set—still generalize so well in
-practice. The first two challenges have clean, well-understood solutions;
-the third remains one of the deepest open puzzles in modern machine
-learning.
+This chapter unfolds in seven sections:
 
-We start by building the architecture: :numref:`sec_mlp` explains why
-nonlinearity is indispensable and explores the expressive power of hidden
-layers, while :numref:`sec_mlp-implementation` implements and trains an MLP
-on Fashion-MNIST to measure exactly what it gains over softmax regression
-and at what computational cost. Next, we tackle our three deep-learning
-challenges in turn—backpropagation (:numref:`sec_backprop`), numerical
-stability and weight initialization (:numref:`sec_numerical_stability`), and
-generalization in deep networks (:numref:`sec_generalization_deep`). We
-then introduce *dropout* (:numref:`sec_dropout`), a regularization method
-tailored to hidden units, testing it on a noisy-label memorization
-experiment. Finally, :numref:`sec_kaggle_house` puts the entire toolkit to
-work end to end on a real-world tabular dataset: predicting house prices in
-a Kaggle competition.
-
-This chapter builds on the foundations of overfitting and regularization
-from :numref:`sec_generalization_basics` and :numref:`sec_weight_decay`,
-focusing exclusively on fully connected layers. Specialized architectures
-that exploit spatial or sequential structure—together with advanced
-optimizers, normalization layers, and scalability techniques—await in the
-chapters ahead.
+- **Multilayer Perceptrons (:numref:`sec_mlp`):** We show why linear models fail on feature interactions like XOR, solve XOR with a two-unit ReLU hidden layer, examine universal approximation and the exponential piece-multiplying power of depth, and compare standard activation functions (ReLU, GELU, sigmoid, and $\tanh$).
+- **Implementation (:numref:`sec_mlp-implementation`):** We implement a 256-unit ReLU MLP both from scratch and concisely on Fashion-MNIST, cutting roughly a fifth of softmax regression's classification errors ($\sim 87\%$ vs. $\sim 84\%$ accuracy) at virtually identical GPU epoch time and visualizing the localized garment-part detectors learned by the hidden units.
+- **Backpropagation (:numref:`sec_backprop`):** We derive the three matrix-calculus local rules of reverse-mode differentiation through an MLP, verify our hand-coded backward pass against `autograd` to $10^{-14}$ relative error, and tally the exact activation memory and FLOP cost of training versus inference.
+- **Numerical Stability and Initialization (:numref:`sec_numerical_stability`):** We analyze how activations and gradients scale across $K$ layers, derive *Xavier* and *He* initialization to prevent vanishing and exploding gradients in a 10-layer MLP, and prove why random initialization is required to break hidden-unit permutation symmetry.
+- **Generalization in Deep Learning (:numref:`sec_generalization_deep`):** We demonstrate random-label memorization, *double descent* past the interpolation threshold, the *implicit bias* of gradient descent (minimum-norm least squares and maximum-margin classification), and *early stopping* under label noise.
+- **Dropout (:numref:`sec_dropout`):** We introduce inverted dropout masking and rescaling, implement it from scratch and concisely in a two-hidden-layer MLP, and test how it slows the memorization of corrupted labels.
+- **Predicting House Prices on Kaggle (:numref:`sec_kaggle_house`):** We put the entire toolkit to work end to end on a real tabular regression competition (Ames Housing), covering leakage-free preprocessing, log-RMSE evaluation, and 5-fold cross-validated model selection.
 
 ```toc
 :maxdepth: 2
@@ -68,36 +26,6 @@ generalization-deep
 dropout
 kaggle-house-price
 ```
-
-## Resources and Further Reading {.unnumbered}
-
-The resources below accompany the sections of this chapter; each names the
-section it goes with. All are freely accessible online except where noted.
-
-**Books and notes**
-
-- [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 6 covers hidden units, activation functions, universal approximation, and backpropagation (:numref:`sec_mlp`, :numref:`sec_backprop`), and Chapter 7 covers dropout (:numref:`sec_dropout`).
-- [Neural Networks and Deep Learning, Chapter 2 — Michael Nielsen](http://neuralnetworksanddeeplearning.com/chap2.html) — free online; derives backpropagation step by step from the chain rule (:numref:`sec_backprop`).
-- [Understanding Deep Learning — Simon J. D. Prince](https://udlbook.github.io/udlbook/) — free PDF with notebooks; its chapters on shallow and deep networks, gradients and initialization, and generalization accompany :numref:`sec_mlp`, :numref:`sec_numerical_stability`, and :numref:`sec_generalization_deep`.
-- Matrix calculus and automatic differentiation in this book's mathematics appendix (:numref:`sec_mdl-matrix-calculus` and :numref:`sec_mdl-matrix-calculus-autodiff`) — reverse-mode differentiation with proofs, the background of :numref:`sec_backprop`.
-- Concentration and generalization in the mathematics appendix (:numref:`sec_mdl-generalization-bounds`) — uniform convergence, the minimum-norm mechanism behind double descent, and a numerical double-descent example with random features (:numref:`sec_generalization_deep`).
-
-**Courses and tutorials**
-
-- [CS231n notes: Neural Networks, Parts 1 and 2 — Stanford](https://cs231n.github.io/neural-networks-1/) — free; activation functions, weight initialization, and dropout in practice (:numref:`sec_mlp`, :numref:`sec_numerical_stability`, :numref:`sec_dropout`); the companion note [Backpropagation, Intuitions](https://cs231n.github.io/optimization-2/) works through gradients on small graphs (:numref:`sec_backprop`).
-- [micrograd — Andrej Karpathy](https://github.com/karpathy/micrograd) — free; a scalar automatic-differentiation engine in about 100 lines, with a [video walkthrough](https://www.youtube.com/watch?v=VMj-3S1tku0) that builds it from scratch (:numref:`sec_backprop`).
-- [TensorFlow Playground — Smilkov & Carter](https://playground.tensorflow.org/) — free, in the browser; vary depth, width, and activation and watch a decision boundary form (:numref:`sec_mlp`).
-- [Double Descent — MLU-Explain](https://mlu-explain.github.io/double-descent/) — free, interactive; animates the second descent past the interpolation threshold (:numref:`sec_generalization_deep`).
-
-**Papers**
-
-- [Approximation by Superpositions of a Sigmoidal Function — Cybenko (1989)](https://doi.org/10.1007/BF02551274) — the universal approximation theorem for one hidden layer of sigmoid units (:numref:`sec_mlp`; paywalled).
-- [Learning Representations by Back-propagating Errors — Rumelhart, Hinton & Williams (1986)](https://www.nature.com/articles/323533a0) — the paper that made backpropagation and learned hidden representations widely known (:numref:`sec_backprop`; paywalled).
-- [Understanding the Difficulty of Training Deep Feedforward Networks — Glorot & Bengio (2010)](https://proceedings.mlr.press/v9/glorot10a.html) and [Delving Deep into Rectifiers — He, Zhang, Ren & Sun (2015)](https://arxiv.org/abs/1502.01852) — derive Xavier and He initialization from keeping the variance of signals constant across layers (:numref:`sec_numerical_stability`).
-- [Understanding Deep Learning Requires Rethinking Generalization — Zhang, Bengio, Hardt, Recht & Vinyals (2017)](https://arxiv.org/abs/1611.03530) — networks that fit random labels, the experiment that opens :numref:`sec_generalization_deep`.
-- [Reconciling Modern Machine-Learning Practice and the Bias–Variance Trade-off — Belkin, Hsu, Ma & Mandal (2019)](https://arxiv.org/abs/1812.11118) — the double-descent curve (:numref:`sec_generalization_deep`).
-- [Dropout: A Simple Way to Prevent Neural Networks from Overfitting — Srivastava et al. (2014)](https://jmlr.org/papers/v15/srivastava14a.html) — the dropout paper (:numref:`sec_dropout`).
-- [Ames, Iowa: Alternative to the Boston Housing Data — De Cock (2011)](https://doi.org/10.1080/10691898.2011.11889627) — the dataset behind the house-price competition, and how it was assembled (:numref:`sec_kaggle_house`).
 
 <!-- slides -->
 

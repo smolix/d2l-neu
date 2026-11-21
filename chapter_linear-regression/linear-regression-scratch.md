@@ -814,3 +814,686 @@ $10^{-4}$, matching our scratch run because the dominant error sources (label
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17977)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.3]{.kicker}
+
+Linear regression with tensors and autograd<br>
+**parameters · the gradient by hand · minibatch SGD · a dozen-line loop · a known answer**
+:::
+:::
+
+::: {.slide title="A Wrong Training Loop Can Still Lower the Loss"}
+[The problem]{.kicker}
+
+- Labels of shape $(32,)$ minus predictions of shape $(32, 1)$: no error.
+  Broadcasting forms a $32 \times 32$ matrix of differences.
+- Ten epochs on that loss lower it steadily, while $\mathbf{w}$ ends far
+  from $(2, -3.4)$.
+- Nothing in the loss curve says that the program is wrong.
+
+::: {.d2l-note}
+Train on data with a **known answer**:
+$\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, noise $\sigma = 0.01$. A correct
+program must reach the loss floor $\sigma^2/2 = 5 \times 10^{-5}$ and
+recover $\mathbf{w}^*$ and $b^*$ to within about $10^{-3}$.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- write parameters, forward pass, loss, minibatch SGD, and a dozen-line
+  training loop with tensors and autograd;
+- derive the gradient by hand and check it against autograd;
+- put the four operations of a training step in the right order;
+- predict the loss curve and the parameter error before training;
+- say which learning rates converge and which diverge.
+
+**Running example:** $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$,
+$\sigma = 0.01$; 1,000 training examples in minibatches of 32.
+:::
+
+::: {.slide title="Every Part of Training, Written by Hand"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Linear Regression | model, loss, closed form, minibatch SGD |
+| Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
+| **Implementation from Scratch** | **SGD and the training loop by hand** |
+| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
+| Concise Implementation | framework layers and losses |
+| Generalization | training vs. test error |
+| Weight Decay | a penalty on large weights |
+:::
+
+::: {.col .narrow}
+- **Uses:** the squared loss and the SGD update, autograd, the synthetic
+  data and its threshold of $10^{-3}$.
+- **Skips:** the classes that package this code (the next deck) and
+  framework layers.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The model and its gradient]{.dtitle}
+
+[parameters · forward pass · loss · the gradient by hand]{.dsub}
+:::
+:::
+
+::: {.slide title="A Prediction Is One (32×2)(2×1) Product; the Loss a Mean"}
+[The model]{.kicker}
+
+Start from $\mathbf{w} \sim \mathcal{N}(0, 0.01^2)$, $b = 0$; a minibatch
+$\mathcal{B}$ of 32 examples:
+
+$$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b, \qquad L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\sum_{i \in \mathcal{B}} \tfrac{1}{2}\bigl(\hat{y}^{(i)} - y^{(i)}\bigr)^2$$
+
+@linear-regression-scratch-the-forward-pass
+
+@linear-regression-scratch-the-loss
+
+::: {.d2l-note}
+The loss first reshapes $\mathbf{y}$ into a $(32, 1)$ column: a $(32,)$
+vector would broadcast to $32 \times 32$.
+:::
+:::
+
+::: {.slide title="The Gradient Is the Error-Weighted Input"}
+[The gradient]{.kicker}
+
+One example, error $r = \hat{y} - y$:
+
+$$\frac{\partial l}{\partial \mathbf{w}} = r\, \mathbf{x}, \qquad \frac{\partial l}{\partial b} = r$$
+
+. . .
+
+A minibatch $\mathcal{B}$: features $\mathbf{X}$, labels $\mathbf{y}$,
+errors $\mathbf{r} = \mathbf{X}\mathbf{w} + b - \mathbf{y}$:
+
+$$\nabla_{\mathbf{w}} L_{\mathcal{B}} = \frac{1}{|\mathcal{B}|}\mathbf{X}^\top \mathbf{r}, \qquad \frac{\partial L_{\mathcal{B}}}{\partial b} = \frac{1}{|\mathcal{B}|}\sum_{i \in \mathcal{B}} r^{(i)}$$
+
+::: {.d2l-note .rule}
+One matrix–vector product per minibatch.
+:::
+:::
+
+::: {.slide title="Autograd Returns the Gradient Derived by Hand"}
+[The gradient]{.kicker}
+
+One minibatch of 32 examples, fresh parameters:
+
+@linear-regression-scratch-the-gradient-2
+
+The largest difference is zero or at most about $10^{-6}$: float32 rounding.
+:::
+
+::: {.slide title="Check: The Gradient at w = 0, b = 0"}
+[Check]{.kicker}
+
+Start from $\mathbf{w} = \mathbf{0}$, $b = 0$. Averaged over many examples,
+what is the gradient, and where does its negative point? The features are
+independent standard normal.
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The errors are $r = -y$, so the gradient is
+$\mathbb{E}[\mathbf{x}\, r] = -\mathbb{E}[\mathbf{x}\mathbf{x}^\top]\mathbf{w}^* = -\mathbf{w}^* = (-2, 3.4)$
+for $\mathbf{w}$ and $\mathbb{E}[r] = -b^* = -4.2$ for $b$. The negative gradient
+points straight at the true parameters.
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Minibatch SGD and the loop]{.dtitle}
+
+[one step, in order · random minibatches · a dozen lines]{.dsub}
+:::
+:::
+
+::: {.slide title="Four Operations per Step, in a Fixed Order"}
+[One step]{.kicker}
+
+1. **Forward pass and loss** $L_{\mathcal{B}}$, recorded for
+   differentiation.
+2. **Backward pass**: the gradient of this minibatch's loss.
+3. **Update** $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta\, \nabla L_{\mathcal{B}}$,
+   *not* recorded.
+4. **Clear** any gradient the framework keeps.
+
+::: {.d2l-note .rule}
+The next backward pass must see only its own minibatch, so kept gradients
+are cleared before it. The update is not part of the loss, so it is never
+recorded.
+:::
+:::
+
+::: {.slide title="Check: Forgetting to Clear the Gradients"}
+[Check]{.kicker}
+
+Suppose `backward` added each new gradient to the stored one, and nothing
+ever cleared it. What does step $t$ subtract, and what happens to the
+parameters?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** $\eta(\mathbf{g}_1 + \cdots + \mathbf{g}_t)$: every earlier
+gradient is applied again at every step. The parameters run past the
+minimum, and on a quadratic they oscillate around it without settling.
+:::
+:::
+:::
+
+::: {.slide title="A Random Minibatch Points the Right Way; a Sorted One Need Not"}
+[Minibatches]{.kicker}
+
+At $\mathbf{w} = \mathbf{0}$, $b = 0$ a minibatch's gradient for the bias is
+$\partial L_{\mathcal{B}} / \partial b = -(\text{mean label})$. The labels
+have mean 4.2 and standard deviation $\sqrt{2^2 + 3.4^2} \approx 3.9$.
+
+| minibatch of 32 | mean label | $\partial L_{\mathcal{B}} / \partial b$ | step on $b$ |
+|---|---|---|---|
+| drawn at random | $4.2 \pm 0.7$ | $\approx -4.2$ | up, toward 4.2 |
+| the 32 smallest labels | $\approx -4.6$ | $\approx +4.6$ | down, away from 4.2 |
+
+::: {.d2l-note}
+A random minibatch's gradient is an unbiased estimate of the full
+gradient. Minibatches in a fixed order, sorted by label, bias every step.
+:::
+
+[The lowest 3.2% of a normal distribution average 2.2 standard deviations below its mean.]{.dgm-cap}
+:::
+
+::: {.slide title="A Minibatch Loader Shuffles, Then Cuts Into Pieces of 32"}
+[Minibatches]{.kicker}
+
+@linear-regression-scratch-minibatches-1
+
+- A new random order on every call; each example is used once per epoch.
+- `yield` makes the function a **generator**: it hands the loop one
+  minibatch at a time.
+:::
+
+::: {.slide title="32 Minibatches per Epoch, and a Generator Runs Out After One"}
+[Minibatches]{.kicker}
+
+$\lceil 1000/32 \rceil = 32$ minibatches: $31 \times 32 + 8$.
+
+@synthetic-regression-data-reading-the-data-in-minibatches-1
+
+::: {.d2l-note .warn}
+A generator is exhausted after one pass, without an error, so the training
+loop calls `minibatches` anew in every epoch.
+:::
+:::
+
+::: {.slide title="A Dozen Lines Train Linear Regression"}
+[The loop]{.kicker}
+
+@linear-regression-scratch-the-training-loop
+
+::: {.d2l-note}
+The comments mark the operations of a step; the other lines run the two
+loops and record the validation loss after every epoch.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Checking the result]{.dtitle}
+
+[a prediction · the run · the parameters · the learning rate]{.dsub}
+:::
+:::
+
+::: {.slide title="The Expected Loss Is Half the Squared Parameter Error Plus σ²/2"}
+[A prediction]{.kicker}
+
+Standard normal features, independent of the noise:
+
+$$\mathbb{E}\bigl[\tfrac{1}{2} r^2\bigr] = \tfrac{1}{2}\|\mathbf{w} - \mathbf{w}^*\|^2 + \tfrac{1}{2}(b - b^*)^2 + \tfrac{1}{2}\sigma^2$$
+
+- Floor: $\sigma^2/2 = 5 \times 10^{-5}$; nothing gets below it.
+- Gradient $= (\mathbf{w} - \mathbf{w}^*, b - b^*)$: a step multiplies the
+  parameter error by $1 - \eta$, the excess loss by $(1 - \eta)^2$.
+- Start: $\tfrac{1}{2}(2^2 + 3.4^2 + 4.2^2) \approx 16.6$ above the floor.
+
+At $\eta = 0.03$, by how much should one epoch of 32 steps lower the excess?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+$0.97^{64} \approx 0.14$: a factor of about 7 per epoch.
+:::
+:::
+:::
+
+::: {.slide title="The Loss Falls 7× per Epoch to the Floor of 5×10⁻⁵"}
+[The run]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Ten epochs at $\eta = 0.03$; the validation loss on a log scale.
+
+A straight line, then the floor after seven or eight epochs, as predicted.
+:::
+
+::: {.col .fig .big}
+@!linear-regression-scratch-training-3
+:::
+:::
+:::
+
+::: {.slide title="Measured Excess Tracks the Prediction for Seven Epochs"}
+[The run]{.kicker}
+
+Validation loss minus $\sigma^2/2$, against $16.6 \times 0.97^{64k}$ after
+epoch $k$:
+
+@!linear-regression-scratch-the-training-run-1
+
+::: {.d2l-note}
+The two drift apart by at most a factor of 3 or 4. The prediction takes
+$\mathbf{H}$, the average of $(\mathbf{x}, 1)(\mathbf{x}, 1)^\top$, to be
+$\mathbf{I}$; its eigenvalues lie within about 10% of 1, and the smallest
+sets the late rate.
+:::
+:::
+
+::: {.slide title="The Parameters Come Within About 10⁻³ of (2, −3.4) and 4.2"}
+[The parameters]{.kicker}
+
+Parameter errors $\hat{\mathbf{w}} - \mathbf{w}^*$ and $\hat{b} - b^*$:
+
+@!linear-regression-scratch-training-4
+
+- Even exact least squares misses by $\sigma/\sqrt{n} = 0.01/\sqrt{1000} \approx 3 \times 10^{-4}$.
+- The loss cannot see this: $\tfrac{1}{2} \cdot 3 \cdot (5 \times 10^{-4})^2 \approx 4 \times 10^{-7}$,
+  under 1% of the floor.
+
+::: {.d2l-note .rule}
+Comparing parameters catches bugs that a loss curve hides.
+:::
+:::
+
+::: {.slide title="η = 0.003 Crawls, η = 3 Diverges"}
+[The learning rate]{.kicker}
+
+Along the averaged gradient, the parameter error is multiplied by
+$1 - \eta$ per step: it shrinks for $0 < \eta < 2$ and grows for
+$\eta > 2$. With minibatches the limit is somewhat lower.
+
+@linear-regression-scratch-the-learning-rate
+
+::: {.d2l-note}
+At $\eta = 3$ the parameter error is multiplied by about $-2$ per step, and
+the loss overflows.
+:::
+:::
+
+::: {.slide title="Check: Ten Times More Noise"}
+[Check]{.kicker}
+
+Generate the data with $\sigma = 0.1$ instead of $0.01$ and train the same
+way. Where does the loss level off, how large are the parameter errors, and
+how fast does the loss fall?
+
+::: {.fragment .fade-up}
+::: {.d2l-note}
+**Answer.** The floor $\sigma^2/2$ rises 100-fold, to $5 \times 10^{-3}$.
+The parameter errors grow 10-fold, to about
+$\sigma/\sqrt{n} \approx 3 \times 10^{-3}$.
+The rate, a factor of 7 per epoch, is unchanged: the noise does not change
+the gradient of the expected loss.
+:::
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **Model:** $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$; loss
+  $L_{\mathcal{B}}$, the mean of $\tfrac{1}{2}(\hat{y} - y)^2$.
+- **Gradient:** the error-weighted input, $\frac{1}{|\mathcal{B}|}\mathbf{X}^\top\mathbf{r}$;
+  autograd agrees up to float32 rounding.
+- **Step:** forward and loss, backward, unrecorded update, clear kept
+  gradients; a dozen lines train the model.
+- **Check:** loss $16.6 \to 5 \times 10^{-5}$ at 7× per epoch; parameter
+  errors a few times $10^{-4}$, within $10^{-3}$.
+- **Learning rate:** the averaged gradient converges for $0 < \eta < 2$;
+  with minibatches the limit is somewhat lower; $\eta = 3$ diverges.
+
+**Next:** object-oriented design, the same code as `Module`,
+`DataModule`, `Trainer`, trained once more.
+:::
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.5]{.kicker}
+
+Linear regression from framework parts<br>**layer · loss · optimizer · the same trainer**
+:::
+:::
+
+::: {.slide title="Hand-Written Parts Do Not Scale to 25 Million Parameters"}
+[The problem]{.kicker}
+
+- From scratch: we created, initialized, and updated **3 numbers**, `w`
+  and `b`, with our own code, then packed that code into classes.
+- ResNet-50, a standard image classifier: **25.6 million** parameters in
+  **161 tensors**, trained with update rules that keep a running average
+  of past gradients for every parameter.
+- A slip in a hand-written part rarely raises an error. The model trains,
+  only less well.
+
+::: {.d2l-note}
+Frameworks ship layers, losses, and optimizers: tested by many users, fast
+on every device, and swapped by changing one line.
+:::
+:::
+
+::: {.slide title="By the End of This Deck You Can"}
+[Goals]{.kicker}
+
+- name the framework part that replaces each hand-written part;
+- build linear regression from a layer, a loss, and an optimizer;
+- convert a learning rate between losses that differ by a constant factor;
+- say what each framework loss does with labels of the wrong shape;
+- predict where the loss levels off, and judge the trained parameters.
+
+**Running example:** $\mathbf{w}^* = (2, -3.4)$, $b^* = 4.2$, noise
+$\sigma = 0.01$; 1,000 training examples in minibatches of 32.
+:::
+
+::: {.slide title="The Concise Version Reuses Everything but the Model's Parts"}
+[Where this fits]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+| section | adds |
+|---|---|
+| Linear Regression | model, loss, closed form, minibatch SGD |
+| Synthetic Data | data with known $\mathbf{w}^*, b^*$ |
+| Implementation from Scratch | SGD and the training loop by hand |
+| Object-Oriented Design | `Module`, `DataModule`, `Trainer` |
+| **Concise Implementation** | **framework layers and losses** |
+| Generalization | training vs. test error |
+| Weight Decay | a penalty on large weights |
+:::
+
+::: {.col .narrow}
+- **Uses:** `Module`, `Trainer`, `SyntheticRegressionData`, the scratch
+  model.
+- **Skips:** how layers infer shapes and initialize (the Computation
+  chapter); other update rules (the Optimization chapter).
+:::
+:::
+:::
+
+::: {.slide title="Each Hand-Written Part Has a Framework Counterpart"}
+[Overview]{.kicker}
+
+| from scratch | framework |
+|---|---|
+| `w`, `b`, and `X @ w + b` | one fully connected **layer** |
+| $\tfrac{1}{2}$ squared error, averaged | built-in **mean squared error** |
+| our `SGD` class | an **optimizer** object |
+| `Module`, `DataModule`, `Trainer` | unchanged |
+
+::: {.d2l-note}
+The trainer calls only the methods that every `Module` has. It cannot tell
+the two models apart.
+:::
+:::
+
+::: {.slide title="LazyLinear(1) Is the Whole Model" only="pytorch"}
+[Layer]{.kicker}
+
+A *fully connected* layer computes $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$
+and holds $\mathbf{w}$ and $b$ itself. Our model's constructor
+creates it:
+
+```{.python #linear-regression-concise-exercises-1}
+self.net = nn.LazyLinear(1)  # 1 output
+```
+
+- `LazyLinear` takes the number of inputs from its first input.
+- Its parameters do not exist before that first call, so we initialize
+  them after it, from $\mathcal{N}(0, 0.01^2)$ and with bias 0.
+:::
+
+::: {.slide title="Dense(1) Is the Whole Model" only="mxnet"}
+[Layer]{.kicker}
+
+A *fully connected* layer computes $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$
+and holds $\mathbf{w}$ and $b$ itself. Our model's constructor
+creates it:
+
+```{.python #linear-regression-concise-exercises-2}
+self.net = nn.Dense(1)  # 1 output
+self.net.initialize(init.Normal(sigma=0.01))
+```
+
+- `Dense` takes the number of inputs from its first input.
+- `initialize` records the initializer; the parameters are created at the
+  first forward pass, the bias as 0.
+:::
+
+::: {.slide title="Dense(1) Is the Whole Model" only="tensorflow"}
+[Layer]{.kicker}
+
+A *fully connected* layer computes $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$
+and holds $\mathbf{w}$ and $b$ itself. Our model's constructor
+creates it:
+
+```{.python #linear-regression-concise-exercises-3}
+init = tf.initializers.RandomNormal(stddev=0.01)
+self.net = tf.keras.layers.Dense(1, kernel_initializer=init)
+```
+
+- `Dense` takes the number of inputs from its first input.
+- `kernel_initializer` draws the weights; the bias starts at 0.
+:::
+
+::: {.slide title="nnx.Linear(2, 1) Is the Whole Model" only="jax"}
+[Layer]{.kicker}
+
+A *fully connected* layer computes $\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b$
+and holds $\mathbf{w}$ and $b$ itself. Our model's constructor
+creates it:
+
+```{.python #linear-regression-concise-exercises-4}
+self.net = nnx.Linear(
+    num_inputs, 1, kernel_init=nnx.initializers.normal(0.01),
+    rngs=rngs)
+```
+
+- NNX has no lazy layers: we pass the number of inputs.
+- `rngs` supplies the random keys; the parameters exist as soon as the
+  constructor returns. The bias starts at 0.
+:::
+
+::: {.slide title="The Framework Loss Is Twice Ours, So η Halves" except="mxnet"}
+[Loss]{.kicker}
+
+@linear-regression-concise-defining-the-loss-function
+
+| | loss | gradient |
+|---|---|---|
+| ours | $\frac{1}{2\vert\mathcal{B}\vert}\sum_i (\hat{y}^{(i)} - y^{(i)})^2$ | $g$ |
+| framework | $\frac{1}{\vert\mathcal{B}\vert}\sum_i (\hat{y}^{(i)} - y^{(i)})^2$ | $2g$ |
+
+Same minimizer, but every gradient doubles. A step is $\eta$ times the
+gradient, so $\eta = 0.03/2 = 0.015$ takes the scratch steps.
+:::
+
+::: {.slide title="The Framework Loss Is Twice Ours, So η Halves" only="mxnet"}
+[Loss]{.kicker}
+
+@linear-regression-concise-defining-the-loss-function
+
+| | loss | gradient |
+|---|---|---|
+| ours | $\frac{1}{2\vert\mathcal{B}\vert}\sum_i (\hat{y}^{(i)} - y^{(i)})^2$ | $g$ |
+| doubled `L2Loss` | $\frac{1}{\vert\mathcal{B}\vert}\sum_i (\hat{y}^{(i)} - y^{(i)})^2$ | $2g$ |
+
+`L2Loss` includes the $\frac{1}{2}$; doubled, it is the mean squared
+error. Every gradient doubles, so $\eta = 0.03/2 = 0.015$ takes the
+scratch steps.
+:::
+
+::: {.slide title="Check: A Summed Loss"}
+[Check]{.kicker}
+
+A library's loss **sums** $(\hat{y} - y)^2$ over the minibatch of 32,
+with no $\frac{1}{2}$. Which $\eta$ reproduces the scratch steps at
+$\eta = 0.03$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer.** The sum is 32 times the mean, and the mean is twice our loss:
+the gradient is $64g$. So $\eta = 0.03/64 \approx 4.7 \times 10^{-4}$.
+:::
+:::
+
+::: {.slide title="MSELoss Warns About a Shape Mismatch, Then Trains on the Wrong Loss" only="pytorch"}
+[Loss · shapes]{.kicker}
+
+Labels of shape $(32,)$ against predictions of shape $(32, 1)$ broadcast
+to a $32 \times 32$ matrix of differences.
+
+- `nn.MSELoss` prints a warning, then averages all 1,024 entries.
+- That loss pulls every prediction toward the mean of the 32 labels.
+
+::: {.d2l-note .warn}
+Read the warnings. Reshape the labels to the predictions' shape.
+:::
+:::
+
+::: {.slide title="L2Loss Reshapes the Labels, So the Shape Bug Cannot Occur" only="mxnet"}
+[Loss · shapes]{.kicker}
+
+Labels of shape $(32,)$ against predictions of shape $(32, 1)$ would
+broadcast to a $32 \times 32$ matrix of differences.
+
+- `L2Loss` first reshapes the labels to the shape of the predictions.
+- The difference has shape $(32, 1)$, as intended.
+:::
+
+::: {.slide title="Keras Aligns the Shapes, So the Shape Bug Cannot Occur" only="tensorflow"}
+[Loss · shapes]{.kicker}
+
+Labels of shape $(32,)$ against predictions of shape $(32, 1)$ would
+broadcast to a $32 \times 32$ matrix of differences.
+
+- `MeanSquaredError` brings both to one shape before subtracting.
+- Note the order: label first, prediction second.
+:::
+
+::: {.slide title="optax.squared_error Refuses Mismatched Shapes" only="jax"}
+[Loss · shapes]{.kicker}
+
+Labels of shape $(32,)$ against predictions of shape $(32, 1)$ would
+broadcast to a $32 \times 32$ matrix of differences.
+
+- `optax.squared_error` raises an error instead.
+- The bug is no longer silent: fix the shape and run again.
+:::
+
+::: {.slide title="An Optimizer Object Replaces Our SGD Class"}
+[Optimizer]{.kicker}
+
+@linear-regression-concise-defining-the-optimization-algorithm
+
+- Each step: $\theta \leftarrow \theta - \eta\, \nabla_\theta L$ for every
+  parameter $\theta$ of every layer.
+- Another update rule from the same module: change this one line.
+:::
+
+::: {.slide title="The Same Trainer Fits the Framework Model"}
+[Training]{.kicker}
+
+@-linear-regression-concise-training-1
+
+- Data drawn as before; a new model class at $\eta = 0.015$.
+- `Trainer` and `fit` are unchanged: they call only the methods that
+  every `Module` has.
+:::
+
+::: {.slide title="The Loss Falls About 7× per Epoch, Then Levels Off at σ² = 10⁻⁴"}
+[Training]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Ten epochs at $\eta = 0.015$, log scale.
+
+A straight line, the per-epoch factor of the scratch run, then the floor:
+the noise variance $\sigma^2$.
+:::
+
+::: {.col .fig .big}
+@!linear-regression-concise-training-1
+:::
+:::
+:::
+
+::: {.slide title="Ten Epochs Recover w* and b* to Within About 10⁻³"}
+[Parameters]{.kicker}
+
+The parameters live inside the layer; `get_w_b` reads them out of `net`:
+
+@linear-regression-concise-training-2
+
+@!linear-regression-concise-training-3
+
+::: {.d2l-note}
+Errors of a few times $10^{-4}$, the size the scratch run left, from the
+same sources: the noise in the training labels and what ten epochs leave
+of the initial error.
+:::
+:::
+
+::: {.slide title="Check: Why Does This Loss Level Off Twice as High?"}
+[Check]{.kicker}
+
+The scratch run levels off near $5 \times 10^{-5}$, this run near
+$10^{-4}$, on data from the same generator. Why the factor 2? And what
+does the square root of this run's floor tell us about the predictions?
+
+::: {.d2l-note .fragment .fade-up}
+**Answer.** Even the true parameters leave the noise, of variance
+$\sigma^2$. The mean squared error levels off at $\sigma^2$; our loss
+carries the $\frac{1}{2}$ and levels off at $\sigma^2/2$. And
+$\sqrt{10^{-4}} = 0.01 = \sigma$: a typical prediction misses its label by
+the noise level, in the units of the label.
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+| | from scratch | framework |
+|---|---|---|
+| parameters, forward | `w`, `b`, `X @ w + b` | fully connected layer |
+| loss | $\frac{1}{2}$ mean squared error | mean squared error |
+| update | our `SGD`, $\eta = 0.03$ | optimizer, $\eta = 0.015$ |
+| training loop | `Trainer` | the same `Trainer` |
+| loss floor | $\sigma^2/2 = 5 \times 10^{-5}$ | $\sigma^2 = 10^{-4}$ |
+
+**Next:** how well does a trained model predict examples it has not seen?
+:::

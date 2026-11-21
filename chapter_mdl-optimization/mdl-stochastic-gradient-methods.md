@@ -384,8 +384,7 @@ On our scalar quadratic, convergence in mean square actually needs less.
 Unrolling the recursion shows that $e_k \to 0$ whenever $\eta_k \to 0$ and
 $\sum_k \eta_k = \infty$ (with $\eta_k < 2/\lambda$); in particular,
 $\eta_k = c/\sqrt{k}$ yields $e_k \approx c\sigma^2/(2\lambda\sqrt{k})$, which
-simply tracks the instantaneous floor of the current step
-(exercise :exref:`ex_mdl-stochastic-gradient-methods-robbins-monro-quadratic`).
+simply tracks the instantaneous floor of the current step.
 The stronger square-summability condition is what the general theorem requires
 to guarantee convergence along almost every individual sample path.
 
@@ -620,8 +619,7 @@ mind that this ranking is exact for these quadratic parameters and need not
 transfer directly to neural networks. On the quadratic itself, holding a
 constant plateau does not improve the final loss: lengthening WSD's decay phase
 reduces the final loss monotonically, reaching $2.7 \times 10^{-3}$ for a
-linear decay across the entire run (exercise
-:exref:`ex_mdl-stochastic-gradient-methods-wsd-fraction`).
+linear decay across the entire run.
 
 ## Rates for a Fixed Budget
 :label:`subsec_mdl-fixed-budget-rates`
@@ -710,8 +708,7 @@ a constant multiple of $DG/\sqrt{K}$ :cite:`Nemirovski.Yudin.1983`.
 
 Adding strong convexity changes the scaling dramatically. On our scalar
 quadratic, the optimal constant step for a budget $K$ achieves
-$e_K = \Theta(\log K / K)$ (exercise
-:exref:`ex_mdl-stochastic-gradient-methods-best-constant-step`), because strong
+$e_K = \Theta(\log K / K)$, because strong
 convexity shrinks the transient geometrically like $\rho^{2K}$ rather than
 algebraically like $1/(\eta K)$.
 
@@ -725,8 +722,7 @@ with bounded features (such as unregularized logistic regression) or whenever
 the iterates remain inside a bounded set. Because it is a worst-case bound, it
 can also be conservative on benign problems: on our logistic-regression task
 restricted to a ball, it overestimates the true gap by roughly an order of
-magnitude (exercise
-:exref:`ex_mdl-stochastic-gradient-methods-convex-bound-logistic`).
+magnitude.
 
 ### Random Iterates on Nonconvex Losses
 :label:`subsec_mdl-nonconvex-sgd`
@@ -1265,26 +1261,6 @@ to converge linearly on strongly convex problems.
        iterate of $\tau$ steps earlier, as in asynchronous training?
    :exlabel:`ex_mdl-stochastic-gradient-methods-biased-estimators`
 
-1. [code] **The best constant step for a budget.** ● On the scalar model with
-   $\lambda = \sigma = 1$ and $e_0 = 1$,
-   :eqref:`eq_mdl-opt-noise-floor-trajectory` gives
-   $e_K = (1 - \eta)^{2K}(1 - V) + V$ with $V = \eta/(2 - \eta)$.
-    1. Show that the minimizing step satisfies $\eta^\star = \Theta(\log K/K)$
-       and that $\min_\eta e_K = \Theta(\log K/K)$. (Hint: use
-       $(1 - \eta)^{2K} \approx e^{-2\eta K}$ and $V \approx \eta/2$, and set the
-       derivative to zero.)
-    1. Minimize numerically for $K = 10^2, 10^3, 10^4$ (you should find
-       $\eta^\star \approx 0.030, 0.0041, 0.0005$ and
-       $e_K \approx 1.7 \times 10^{-2}, 2.3 \times 10^{-3}, 2.9 \times 10^{-4}$),
-       and check that $\eta^\star K/\log K$ and $e_K K/\log K$ stay of order one.
-    1. Apply the budget rule $\eta = 1/\sqrt{K}$ of the convex bound to this
-       quadratic anyway. Show that $e_K \approx 1/(2\sqrt{K})$, worse than (b)
-       by a factor $\Theta(\sqrt{K}/\log K)$.
-    1. Which term of the bound :eqref:`eq_mdl-opt-convex-averaged` does strong
-       convexity improve, and why does that change the best step from
-       $\propto 1/\sqrt{K}$ to $\propto \log K/K$?
-   :exlabel:`ex_mdl-stochastic-gradient-methods-best-constant-step`
-
 1. [code] **Iterate averaging.** ● :citet:`Polyak.Juditsky.1992` showed that
    averaging the iterates of a slowly decaying or constant-step run reaches
    the best possible constant. Consider the scalar model with a constant step
@@ -1308,38 +1284,6 @@ to converge linearly on strongly convex problems.
        $\sigma^2/(\mu^2 K)$ require?
    :exlabel:`ex_mdl-stochastic-gradient-methods-iterate-averaging`
 
-1. **Which Robbins--Monro condition does the quadratic need?** ● On the scalar
-   model with steps $\eta_k$ and $\rho_j = 1 - \eta_j\lambda$:
-    1. Unroll the recursion to
-       $e_k = \prod_{j<k}\rho_j^2\, e_0 + \sigma^2 \sum_{j<k} \eta_j^2 \prod_{j<i<k} \rho_i^2$.
-    1. Show that $e_k \to 0$ whenever $\eta_k \to 0$,
-       $\sum_k \eta_k = \infty$ and $0 < \eta_k < 2/\lambda$: the square-summable
-       condition is not needed for convergence in mean square on this model.
-       (Hint: split the sum at an index $m$ beyond which $\eta_j \le \epsilon$,
-       and compare the tail with the floor of the step $\epsilon$.)
-    1. For $\eta_k = c/\sqrt{k}$, show that
-       $e_k \approx c\sigma^2/(2\lambda\sqrt{k})$, and check numerically with
-       $\lambda = \sigma = 1$ and $c = 0.5$ ($2.5 \times 10^{-3}$ at $k = 10^4$,
-       $2.5 \times 10^{-4}$ at $10^6$).
-    1. In words: what does $\sum_k \eta_k^2 < \infty$ provide in the general
-       theorem, which claims convergence for almost every run with noise that
-       need not be additive? (Consider the accumulated noise
-       $\sum_k \eta_k \xi_k$.)
-   :exlabel:`ex_mdl-stochastic-gradient-methods-robbins-monro-quadratic`
-
-1. [code] **The decay fraction of WSD.** Use the exact recursion of the
-   schedule cell ($\lambda = \sigma = 1$, $K = 2000$, $\eta_0 = 0.3$, $x_0 = 3$).
-    1. Tabulate the final expected loss of WSD for the decay fractions
-       $0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9, 1$. (It falls steadily from
-       $1.24 \times 10^{-2}$ to $2.73 \times 10^{-3}$.)
-    1. A linear decay over the whole run ends at $2.73 \times 10^{-3}$, cosine at
-       $1.68 \times 10^{-3}$. Explain the difference from the shapes of the two
-       schedules near the end of the run.
-    1. On this model the plateau gives no advantage in final loss. State what
-       it gives in practice, and why a model with one fixed curvature and
-       stationary noise cannot show it.
-   :exlabel:`ex_mdl-stochastic-gradient-methods-wsd-fraction`
-
 1. [code] **Interpolation and linear convergence.** ●● Suppose each $f_i$ is
    convex with an $L_i$-Lipschitz gradient, $f$ is $\mu$-strongly convex, and
    every $f_i$ is minimized at the same point $\mathbf{x}^\star$, as when a
@@ -1362,20 +1306,6 @@ to converge linearly on strongly convex problems.
     1. Repeat with $n = 200$ and $d = 100$. Now the noisy labels bring the
        floor back. Why?
    :exlabel:`ex_mdl-stochastic-gradient-methods-interpolation`
-
-1. [code] **The convex bound on the logistic problem.** For the
-   logistic-regression problem of this section:
-    1. Set $D = \|\mathbf{x}^\star\|$ for the reference optimum `x_star`, and
-       bound $G^2$ on the ball of radius $2D$ around the origin from
-       $\|\nabla f_i(\mathbf{x})\| \le \|\mathbf{a}_i\| + 0.1\,\|\mathbf{x}\|$.
-    1. Run SGD with $b = 1$, $\eta = D/(G\sqrt{K})$ and $K = 4000$, check that
-       the iterates stay in the ball, and compare the gap of the averaged
-       iterate with the bound $DG/\sqrt{K}$. By what factor is the bound loose?
-    1. Which inequalities of the proof are loose here? The regularizer makes
-       $f$ strongly convex with $\mu \ge 0.1$; what rate does that allow
-       instead?
-    1. Compare the last iterate with the average at the same $\eta$.
-   :exlabel:`ex_mdl-stochastic-gradient-methods-convex-bound-logistic`
 
 [Discussions](https://d2l.discourse.group/t/36859)
 

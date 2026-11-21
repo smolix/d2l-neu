@@ -285,8 +285,7 @@ $$
 
 Thus $\hat{\mathbf{v}}_t$ is an unbiased estimate of $\overline{\mathbf{g}^2}$
 at every step $t$ under stationarity, and the same calculation with $\beta_1$
-shows that $\hat{\mathbf{m}}_t$ is unbiased for the mean gradient (Exercise
-:exref:`ex_mdl-adaptive-stochastic-methods-bias-correction-first-moment`).
+shows that $\hat{\mathbf{m}}_t$ is unbiased for the mean gradient.
 
 Without this correction, the initialization deficit is both large and
 long-lived: at the default $\beta_2 = 0.999$, $\mathbf{v}_{10}$ captures
@@ -374,8 +373,7 @@ checks both predictions directly.
 In short, Adam measures every coordinate in units of its own gradient size,
 making coordinate-wise scaling invisible to it. Three caveats bound this
 invariance. First, $\epsilon > 0$ breaks the symmetry once a coordinate's
-gradients shrink to the order of $\epsilon$ (Exercise
-:exref:`ex_mdl-adaptive-stochastic-methods-epsilon`). Second, the
+gradients shrink to the order of $\epsilon$. Second, the
 proposition says nothing about a change of basis that mixes coordinates,
 which we test next on the rotated valley. Third, Adam is not in general sign
 descent: its update reduces to the **sign step**
@@ -903,11 +901,9 @@ exact-gradient fixed points, the roles flip: coupled Adam preserves the
 maximum a posteriori (MAP) solution of a Gaussian prior on the weights
 (:numref:`sec_mdl-maximum_likelihood`), whereas AdamW turns $\lambda$ into
 the radius $1/\lambda$ of an $\ell_\infty$ constraint box
-:cite:`Xie.Li.2024`. Exercises
-:exref:`ex_mdl-adaptive-stochastic-methods-coupled-decoupled-fixed-points`
-and :exref:`ex_mdl-adaptive-stochastic-methods-adamw-linf` test this
-proposition on a quadratic and connect the box directly to constrained
-optimization.
+:cite:`Xie.Li.2024`. Exercise
+:exref:`ex_mdl-adaptive-stochastic-methods-adamw-linf` connects this box
+directly to constrained optimization.
 
 ## Warmup
 :label:`subsec_mdl-schedules-warmup`
@@ -972,9 +968,7 @@ coordinates). The fourfold inflation comes from the *momentum* average,
 which needs roughly $1/(1 - \beta_1) = 10$ steps to average out independent
 noise. What the preconditioner actually does at $t = 1$ is equalize
 coordinates of different scales, an effect hidden when every coordinate
-shares $\sigma = 1$ (Exercise
-:exref:`ex_mdl-adaptive-stochastic-methods-first-steps-noise` tests unequal
-scales).
+shares $\sigma = 1$.
 
 Bias correction matters far more. Without it, the opening update jumps to
 $3.16\,\eta$—matching the $(1 - \beta_1)/\sqrt{1 - \beta_2}$ factor in
@@ -1210,28 +1204,6 @@ equalizing the singular directions of a layer's update.
        obtain all of it?
    :exlabel:`ex_mdl-adaptive-stochastic-methods-concentrated-gradients`
 
-1. **Bias correction and step inflation.** Let
-   $\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1-\beta_1)\mathbf{g}_t$
-   with $\mathbf{m}_0 = \mathbf{0}$.
-    1. Repeat the computation of :eqref:`eq_mdl-opt-bias-correction` under
-       $\mathbb{E}[\mathbf{g}_\tau] = \bar{\mathbf{g}}$ and show
-       $\mathbb{E}[\mathbf{m}_t] = (1 - \beta_1^t)\,\bar{\mathbf{g}}$.
-    1. Without both corrections, Adam scales step $t$ by the factor
-       $(1-\beta_1^t)/\sqrt{1-\beta_2^t}$
-       of :numref:`fig_mdl-opt-bias-correction`. For $t \ll 1/(1-\beta_2)$,
-       replace $1-\beta_2^t$ by $t\,(1-\beta_2)$. Show that the maximizer
-       of the approximate factor satisfies $e^u = 1 + 2u$ with
-       $u = -t\log\beta_1$, and solve this equation numerically.
-    1. Express the location and the height of the peak through
-       $1-\beta_1$ and $1-\beta_2$. How does each of the two depend on
-       $\beta_1$ and on $\beta_2$? What does the result imply for running
-       uncorrected Adam with a longer second-moment memory?
-    1. Compare your approximation with the exact factor for
-       $\beta_1 \in \{0.9, 0.99\}$ and
-       $\beta_2 \in \{0.99, 0.999, 0.9999\}$. For which pair does the
-       approximation fail, and why?
-   :exlabel:`ex_mdl-adaptive-stochastic-methods-bias-correction-first-moment`
-
 1. **The Reddi example by hand.** Take $C = 4$, $\beta_1 = 0$, the
    proposition's $\beta_2 = 1/(1 + C^2) = 1/17$, and no bias correction, as
    in `online`.
@@ -1252,48 +1224,6 @@ equalizing the singular directions of a layer's update.
        that the first step of the period lands in $(0, 1)$, so that the
        projection does not act on it.
    :exlabel:`ex_mdl-adaptive-stochastic-methods-reddi-by-hand`
-
-1. [code] **Where $\epsilon$ matters.** Use `run` and `adam` of the
-   `#adaptive-stochastic-methods-adam-vs-gd` cell with $\beta_1 = 0$ and
-   $\eta = 0.1$ on the aligned valley.
-    1. Sweep
-       $\epsilon \in \{10^{-12}, 10^{-8}, 10^{-4}, 10^{-2}, 10^{-1}, 1\}$,
-       record the step at which $f < 10^{-8}$, and print
-       $\sqrt{\hat{\mathbf{v}}_t}$ at that step (let `run` also return the
-       state). Explain the pattern of step counts with the printed values.
-    1. Multiply both curvatures `h` and the tolerance by a common scale
-       $s \in \{1, 10^{-4}, 10^{-8}, 10^{-10}\}$, raise the cap `K` to
-       $10^5$, and compare $\epsilon = 0$ with $\epsilon = 10^{-8}$. Which
-       statement of the scale-invariance proposition does $\epsilon$ break,
-       and below which gradient scale?
-    1. In a deep network, some layers receive gradients several orders of
-       magnitude smaller than others. What does the gradient scale you found
-       imply for the updates of those layers under the default $\epsilon$?
-   :exlabel:`ex_mdl-adaptive-stochastic-methods-epsilon`
-
-1. [code] **Adam's first steps on noise.** Let every coordinate of the
-   gradient be i.i.d. zero-mean noise with variance $\sigma^2$, as for a
-   parameter that the loss does not yet constrain.
-    1. Show that the bias-corrected first moment has variance
-
-       $$\textrm{Var}(\hat{m}_t) = \sigma^2\, \frac{(1-\beta_1)(1+\beta_1^t)}{(1+\beta_1)(1-\beta_1^t)}.$$
-
-       If $\hat{v}_t$ were replaced by the exact $\sigma^2$, what would the
-       root-mean-square update be, in units of $\eta$, at $t = 1$ and as
-       $t \to \infty$ at the default $\beta_1$? Compare with the warmup cell.
-    1. The warmup cell gives every coordinate the same scale, which hides
-       what the preconditioner does. Draw the scales $\sigma_i$
-       log-uniformly from $[10^{-3}, 1]$ instead, and compare, across
-       coordinates, the root-mean-square displacement
-       $\eta\,\hat{m}_{t,i}/\sqrt{\hat{v}_{t,i}}$ at $t = 1$ and $t = 1000$
-       with that of SGD, $\eta\, g_{t,i}$. Which optimizer moves the
-       small-scale coordinates as far as the large-scale ones, from which
-       step on, and is that what you want for a coordinate that the loss does
-       not constrain?
-    1. Which timescale, $1/(1-\beta_1)$ or $1/(1-\beta_2)$, governs the
-       transient of the warmup cell? Relate the answer to the two reasons for
-       warmup given in :numref:`subsec_mdl-schedules-warmup`.
-   :exlabel:`ex_mdl-adaptive-stochastic-methods-first-steps-noise`
 
 1. **Regret of online gradient descent.** ● Projected online gradient
    descent plays
@@ -1346,27 +1276,6 @@ equalizing the singular directions of a layer's update.
        $2 \times 2$ example in which the sign map does not. What does this
        suggest about the rotation sensitivity of Muon compared with Adam?
    :exlabel:`ex_mdl-adaptive-stochastic-methods-rotation-sensitivity`
-
-1. [code] **Coupled versus decoupled fixed points.** ● Let
-   $\ell(\mathbf{w}) = \tfrac12 (\mathbf{w} - \mathbf{w}_0)^\top
-   \mathrm{diag}(h_1, h_2) (\mathbf{w} - \mathbf{w}_0)$ with $h = (100, 1)$,
-   $\mathbf{w}_0 = (1, 3)$, and exact gradients.
-    1. For $\lambda = 0.1$, compute the fixed point of coupled Adam from the
-       proposition of :numref:`subsec_mdl-decoupled-weight-decay`.
-    1. For $\lambda = 0.1$ and $\epsilon = 10^{-8}$, solve the AdamW condition
-       :eqref:`eq_mdl-opt-adamw-fixed-point` and show that the solution
-       differs from $\mathbf{w}_0$ by less than $10^{-8}$. What does weight
-       decay contribute at this fixed point, and why?
-    1. Choose $\lambda$ so that the box $|w_i| \le 1/\lambda$ binds for
-       coordinate 2 but not for coordinate 1. Predict both fixed points, and
-       confirm all four predictions of parts (a)–(c) by running each method
-       for $2 \times 10^5$ steps, with $\eta$ decaying from $0.01$ to $0$ by
-       a cosine schedule.
-    1. Reconcile these fixed points with the `decay` cell. In the
-       noise-dominated regime, which of the two updates applies the same
-       per-step shrinkage to every coordinate, and why is that the property
-       that matters during training?
-   :exlabel:`ex_mdl-adaptive-stochastic-methods-coupled-decoupled-fixed-points`
 
 1. [extended] **AdamW's implicit $\ell_\infty$ constraint.** ●● The
    proposition of :numref:`subsec_mdl-decoupled-weight-decay` found that the

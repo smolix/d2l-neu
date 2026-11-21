@@ -384,8 +384,6 @@ gradient vanishes, both constraints are inactive, and setting both multipliers
 to zero satisfies all four KKT conditions—yet $x = 0$ is the *maximum*. The
 true minima $x = \pm 1$ are KKT points too, each with multiplier $2$ on its
 active boundary constraint.
-Exercise :exref:`ex_mdl-constrained-optimization-duality-write-all-four-kkt`
-explores a two-dimensional example of the same phenomenon.
 
 ### Constraint Qualifications and Sufficiency
 :label:`subsec_mdl-constraint-qualifications`
@@ -1182,7 +1180,7 @@ optimum: for $f(x, y) = \max(|x|, |y|)$ at $(1, 1)$, moving along $x$ alone or
 along $y$ alone cannot decrease $f$, even though the global minimum $0$ sits at
 the origin. Coordinate descent succeeds on the lasso specifically because its
 nonsmooth penalty $\lambda\sum_j |w_j|$ is separable across coordinates
-:cite:`Tseng.2001` (Exercise :exref:`ex_mdl-constrained-cd-stall`). For sparse
+:cite:`Tseng.2001`. For sparse
 linear models and block-alternating minimization, it remains the method of
 choice. For training dense neural networks, however, it plays no role, because
 modern accelerators are engineered for parallel matrix multiplications rather
@@ -1252,24 +1250,6 @@ lasso with exact zeros that subgradient descent cannot attain.
        takes the place of the relation
        $\boldsymbol{\lambda}^\star = -\nabla p^\star(\mathbf{0})$?
    :exlabel:`ex_mdl-constrained-degenerate-constraints`
-
-1. **KKT points that are not minima.** The KKT conditions
-   :eqref:`eq_mdl-opt-kkt` are necessary at a local minimum under a
-   constraint qualification, but a nonconvex problem can satisfy them at other
-   points.
-    1. Minimize $f(\mathbf{x}) = x_1^2 - x_2^2$ over the box
-       $-1 \le x_1 \le 1$, $-1 \le x_2 \le 1$, written as four inequality
-       constraints. Find all KKT points and their multipliers. Classify each
-       KKT point as a local minimum, a local maximum, or neither.
-    1. The maximum of $f$ on the box is attained at $(\pm 1, 0)$. Which KKT
-       condition fails at these points, and what value would the multiplier
-       of the active constraint need?
-    1. Give a problem in one variable with a single inequality constraint
-       $g(x) \le 0$ that has a KKT point $x^\star$ which is a strict local
-       maximum. Can the multiplier at such a point be positive when
-       $g'(x^\star) \neq 0$? Compare with $\min -x^2$ on $[-1, 1]$ from the
-       text.
-   :exlabel:`ex_mdl-constrained-optimization-duality-write-all-four-kkt`
 
 1. **Projected fixed points.** For a closed convex set $C$, the fixed points
    of projected gradient descent :eqref:`eq_mdl-opt-pgd` are the constrained
@@ -1364,26 +1344,6 @@ lasso with exact zeros that subgradient descent cannot attain.
        From a random start, what do the iterates $\mathbf{x}_k$ and the values
        $f(\mathbf{x}_k)$ do? How does the answer depend on $\eta > 0$?
 
-1. [code] **Projection onto an ellipse.** Clip $\mathbf{y} = (3, 4)$ to the
-   ellipse $\{\mathbf{x} : x_1^2/4 + x_2^2 \le 1\}$, with semi-axes $a_1 = 2$
-   and $a_2 = 1$, written as
-   $g(\mathbf{x}) = \tfrac12(x_1^2/4 + x_2^2 - 1) \le 0$.
-    1. Show from stationarity that $x_i^\star = y_i/(1 + \lambda/a_i^2)$. Each
-       coordinate is rescaled by its own factor, so the projection is not on
-       the ray through $\mathbf{y}$.
-    1. Show that $\lambda \mapsto g(\mathbf{x}(\lambda))$ is strictly
-       decreasing on $\lambda > 0$, tends to $-\tfrac12$ as
-       $\lambda \to \infty$, and is positive at $\lambda = 0$. Solve
-       $g(\mathbf{x}(\lambda)) = 0$ by bisection; you should find
-       $\lambda^\star \approx 4.59$ and
-       $\mathbf{x}^\star \approx (1.40, 0.72)$. Compare with the point of the
-       ellipse on the ray through $\mathbf{y}$, about $(0.70, 0.94)$, and
-       check that it is farther from $\mathbf{y}$.
-    1. Explain why the ball, the simplex, and the ellipse projections all
-       reduce to one scalar equation in a multiplier, and why the projection
-       onto a general polytope does not.
-   :exlabel:`ex_mdl-constrained-ellipse-projection`
-
 1. **Block soft-thresholding (the group lasso).** The penalty
    $\lambda\|\mathbf{w}\|_2$ on a whole vector is kinked only at
    $\mathbf{w} = \mathbf{0}$. Its subgradients are $\mathbf{w}/\|\mathbf{w}\|$
@@ -1455,33 +1415,6 @@ lasso with exact zeros that subgradient descent cannot attain.
        with a fast linear phase, although $\mathbf{A}^\top\mathbf{A}$ is
        singular?
    :exlabel:`ex_mdl-convexity-accelerated-proximal-gradient`
-
-1. [code] **Stalls of coordinate descent and separable penalties.** ●
-    1. Let $f(x, y) = \max(|x|, |y|)$. Show that at $(1, 1)$ no change of $x$
-       alone and no change of $y$ alone lowers $f$, although the minimum $0$
-       lies at the origin. Conclude that exact coordinate descent started at
-       $(1, 1)$ never moves.
-    1. Let $F(\mathbf{w}) = s(\mathbf{w}) + \sum_j \psi_j(w_j)$ with $s$ convex
-       and differentiable and each $\psi_j$ convex. Show that a point at which
-       $F$ is minimal along every coordinate separately is a global minimizer.
-       Hint: minimality along coordinate $j$ means
-       $0 \in \partial_j s(\mathbf{w}) + \partial\psi_j(w_j)$, and the set of
-       subgradients of a separable sum is the product of the one-dimensional
-       sets. Why does (a) not contradict this?
-    1. On the quadratic
-       $\tfrac12\mathbf{x}^\top\mathbf{A}\mathbf{x} - \mathbf{1}^\top\mathbf{x}$
-       with the $40 \times 40$ tridiagonal matrix
-       $\mathbf{A} = 2\mathbf{I} - 0.95(\mathbf{E}_{+1} + \mathbf{E}_{-1})$,
-       where $\mathbf{E}_{\pm1}$ have ones on the first super- and
-       subdiagonal, a cyclic sweep of exact coordinate steps
-       :eqref:`eq_mdl-quadratic-coordinate` is the Gauss--Seidel iteration.
-       Theory predicts that its error shrinks per sweep by the square of the
-       Jacobi factor $0.95\cos(\pi/41) \approx 0.947$, that is by about
-       $0.897$, while gradient descent with $\eta = 1/L$ shrinks it by
-       $1 - \mu/L \approx 0.973$ per step, with $\mu \approx 0.106$ and
-       $L \approx 3.89$ the extreme eigenvalues of $\mathbf{A}$. Run both for
-       100 sweeps or steps and measure the late factors.
-   :exlabel:`ex_mdl-constrained-cd-stall`
 
 [Discussions](https://d2l.discourse.group/t/36831)
 

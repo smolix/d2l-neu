@@ -334,9 +334,7 @@ vanishes at $y = 0$. The algorithm halts at $(0, 0)$ with $f = 1$—a saddle
 point where $f$ curves upward along $x$ and downward along $y$, far from the
 true minimum value $-1$ at $(0, \pi)$. The theorem still holds, because the
 gradient vanishes at the saddle, yet it cannot tell us which kind of stationary
-point we reached. Exercise
-:exref:`ex_mdl-gradient-based-optimization-saddle-attracts` investigates how
-long trajectories starting near $(1, 0)$ linger near this saddle. For convex
+point we reached. For convex
 objectives, this pathology disappears: every stationary point is automatically
 a global minimum (:numref:`sec_mdl-convexity`).
 
@@ -401,8 +399,7 @@ The fixed step explodes immediately: after just six iterations,
 $|x_6| \approx 6.5 \times 10^{103}$. Because the update
 $x \mapsto x(1 - \eta x^2)$ shrinks $|x|$ if and only if $\eta x^2 < 2$, a
 fixed step from $x_0 = 3$ converges for $\eta < 2/9 \approx 0.22$ and diverges
-above it (exercise
-:exref:`ex_mdl-gradient-based-optimization-f-mathbfx-tfrac12-lambda`b). Notice
+above it. Notice
 that this stability threshold is $2/9$, not $2/f''(x_0) = 2/27$; the
 $2/f''(x_0)$ rule belongs to quadratics. A step toward the origin experiences
 the average of $f''$ between $0$ and $x$—which is $x^2$—rather than its peak
@@ -529,9 +526,7 @@ $1 - \eta\lambda_i$:
   **stability ceiling**. On quadratics, the bound $2/L$ that the descent lemma
   guaranteed as sufficient is also strictly necessary. Push $\eta$ past it, and
   the stiffest mode's factor drops below $-1$: that coordinate oscillates with
-  growing amplitude even while all other modes decay cleanly (exercise
-  :exref:`ex_mdl-gradient-based-optimization-f-mathbfx-tfrac12-lambda`b explores
-  such a half-converging, half-exploding trajectory).
+  growing amplitude even while all other modes decay cleanly.
 * **Speed** is governed by the slowest mode. The error norm decays as
   $\rho(\eta)^k$, where $\rho(\eta) = \max_i |1 - \eta\lambda_i|$ is the
   **spectral radius** of $\mathbf{I} - \eta\mathbf{A}$—the largest eigenvalue
@@ -1020,45 +1015,6 @@ what changes when gradients are noisy
        to reach $\|\nabla f(\mathbf{w})\| \le 10^{-10}$. Which is faster, and
        does $\eta = 0.5$ stay below $2/L$?
    :exlabel:`ex_mdl-gradient-based-optimization-smoothness-constants`
-
-1. [code] **A saddle that attracts.** The stationarity guarantee
-   :eqref:`eq_mdl-opt-stationarity-rate` does not distinguish minima from
-   saddle points. Consider $f(x, y) = \tfrac12 x^2 + \cos y$, which we ran
-   from $(1, 0)$ straight into the saddle $(0, 0)$.
-    1. Show that $f$ is bounded below and $L$-smooth with $L = 1$. Find all
-       stationary points and classify each as a minimum or a saddle point.
-    1. Run gradient descent :eqref:`eq_mdl-opt-gd-step` with $\eta = 1/L$ from
-       $(1, \delta)$ for $\delta \in \{10^{-2}, 10^{-4}, 10^{-8}, 10^{-12}\}$
-       and count the iterations until $f < -0.99$. Linearize the update
-       $y_{k+1} = y_k + \sin y_k \approx 2y_k$ near $y = 0$ to predict how
-       this count grows as $\delta$ shrinks, and compare your prediction with
-       the measured counts.
-    1. What do these runs suggest about whether gradient descent from a random
-       initialization converges to a saddle point? What do they suggest about
-       how long it can linger near one?
-   :exlabel:`ex_mdl-gradient-based-optimization-saddle-attracts`
-
-1. [code] **Step size and the ceiling.** Let
-   $f(\mathbf{x}) = \tfrac12\mathbf{x}^\top \mathbf{A}\,\mathbf{x}$ with
-   $\mathbf{A}$ symmetric positive definite and condition number $\kappa$.
-   Suppose the step $\eta = 1/\hat{L}$ is set from an estimate $\hat{L}$ of
-   the smoothness constant $L = \lambda_{\max}$, and write
-   $\alpha = L/\hat{L}$ so that $\eta = \alpha/\lambda_{\max}$.
-    1. Use :eqref:`eq_mdl-opt-per-mode` to express the convergence factor
-       $\rho(\eta) = \max_i |1 - \eta\lambda_i|$ in terms of $\alpha$ and
-       $\kappa$. Show that for $0 < \alpha \le 1$, shrinking the error by a
-       factor of $\epsilon$ takes roughly $(\kappa/\alpha)\log(1/\epsilon)$
-       steps. What does overestimating $L$ by a factor of two cost? What does
-       underestimating it by a factor of two cost?
-    1. On the quartic $f(x) = \tfrac14 x^4$ starting from $x_0 = 3$, find the
-       largest fixed step for which gradient descent converges. Show that
-       $|x_{k+1}| < |x_k|$ if and only if $0 < \eta x_k^2 < 2$, conclude that
-       every $\eta < 2/9$ converges, and show that at $\eta = 2/9$ the iterate
-       oscillates between $3$ and $-3$ forever. Confirm both numerically.
-       Backtracking accepted $0.031$ on the first step and $1.0$ later; explain
-       why a fixed step must respect the curvature at the starting point for
-       the entire run.
-   :exlabel:`ex_mdl-gradient-based-optimization-f-mathbfx-tfrac12-lambda`
 
 1. **Steepest descent in other norms.** ● Problem
    :exref:`ex_mdl-gradient-based-optimization-show-that-is-de`b measures length

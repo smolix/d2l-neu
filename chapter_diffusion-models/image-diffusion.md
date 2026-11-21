@@ -1198,467 +1198,279 @@ the question of :numref:`sec_diffusion-samplers`.
 ::: {.cover}
 [Dive into Deep Learning · §17.4]{.kicker}
 
-Diffusion for Images<br>
-**a U-Net with time and label · label dropout · the weight average · the Fréchet distance and its reference value · classifier-free guidance**
+Image Diffusion Architectures, Evaluation, and Guidance<br>**multi-scale U-Net · time & class conditioning · EMA weights · Fréchet distance & 1/n floor · classifier-free guidance (CFG)**
 :::
 :::
 
-::: {.slide title="The Regression Never Used the Number Two; a Garment Has 784"}
-[The problem]{.kicker}
+::: {.slide title="Scaling Diffusion from the 2D Plane to 784-D Images"}
+[Motivation]{.kicker}
 
-- The velocity regression, Euler steps and the ancestral chain apply
-  unchanged to a $28 \times 28$ image.
-- Four things change: the network, the training recipe, steering by a label,
-  and a number for sample quality.
-- At high noise, telling a shoe from a bag takes the whole image; a
-  $3 \times 3$ convolution sees 9 pixels.
+The velocity regression $\mathbb{E}\|\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t) - (\boldsymbol\epsilon - \mathbf{x}_0)\|^2$ and probability-flow ODE carry over unchanged from $\mathbb{R}^2$ to $28 \times 28$ images ($\mathbb{R}^{784}$), but require four new systems components:
 
-::: {.d2l-note}
-Which network sees the whole image, and which number says whether 5,000
-samples are right?
-:::
+- **1. Multi-resolution spatial architecture (U-Net):** At high noise ($t \to 1$), deciding whether a blurry blob is a sneaker or a coat requires a global $28 \times 28$ receptive field, whereas at low noise ($t \to 0$) sharpening a collar edge requires pixel-level resolution.
+- **2. Stable parameter averaging & dual conditioning:** Exponential moving averaging (EMA) damps minibatch SGD noise, while $10\%$ random label dropout trains conditional and unconditional fields in one network.
+- **3. Calibrated distributional evaluation (FD):** Comparing $5{,}000$ generated and real images in classifier feature space against the finite-sample $1/n$ reference floor.
+- **4. Classifier-Free Guidance (CFG):** Extrapolating from the unconditional to the conditional prediction to trade sample diversity for class fidelity.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Time- and Class-Conditioned Denoising U-Net"}
+[Multi-Resolution Backbone]{.kicker}
 
-- build a U-Net that takes a noisy image, a time and a label;
-- train it with label dropout and sample from a weight average;
-- compute a Fréchet distance and read it against two real sets of equal size;
-- derive classifier-free guidance from Bayes' rule on scores;
-- predict what the guidance scale does to variety and typicality, and say
-  why practice guides anyway.
-
-**Running example:** Fashion-MNIST in $[-1, 1]$; a U-Net of 1.2 million
-parameters, 15,000 updates. **Idea:** the two-dimensional model with a U-Net
-in place of the MLP.
-:::
-
-::: {.slide title="This Deck Takes the Regression from Points to Images"}
-[Where this fits]{.kicker}
+A stack of full-resolution $3 \times 3$ convolutions would need $14$ layers just for one pixel's receptive field to span $28$ pixels. The **U-Net** (Ronneberger et al., 2015; Ho et al., 2020) combines coarse global context with fine spatial skip connections:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | asks |
-|---|---|
-| Denoising and the Score | what a denoiser knows about the data |
-| Gaussian Paths | what trains a walk from noise to data |
-| Sampling by Integration | how to take the walk |
-| **Diffusion for Images** | **network, guidance, a quality score** |
-| Samplers, Inversion and Editing | which steps to skip; running backwards |
-| Likelihood, Weighting, Design Space | which choices of the regression matter |
-| Latent Diffusion and Transformers | diffusing a compressed code |
-| Few-Step Generation | why one step fails, and the fixes |
-| Discrete Diffusion | what noise is for a token |
+- **Encoder–decoder hierarchy:** Two stride-2 convolutions halve resolution twice ($28 \times 28 \to 14 \times 14 \to 7 \times 7$) while doubling channels ($64 \to 128$), so a $3 \times 3$ kernel at the bottleneck sees most of the image.
+- **Full-resolution skip connections:** Concatenating encoder feature maps to decoder stages preserves sharp edges that the $7 \times 7$ bottleneck would blur.
+- **Per-block conditioning (`UNetBlock`):** GroupNorm (8 groups, avoiding cross-noise-level batch mixing) + SiLU + $3 \times 3$ conv, adding a linear projection of the time-plus-label embedding as a per-channel bias.
 :::
 
-::: {.col .narrow}
-- **Uses:** the linear path, the velocity regression, Euler and ancestral
-  samplers.
-- **Skips:** fast samplers, latent spaces, transformers, text prompts.
+::: {.col .fig}
+![](../img/mdl-diffusion-unet.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Skip Connections Carry Detail Past a 7×7 Bottleneck"}
-[The U-Net]{.kicker}
+::: {.slide title="Where Parameters Live vs. Where FLOPs Are Spent"}
+[Systems Profile of the U-Net]{.kicker}
 
-![](../img/mdl-diffusion-unet.svg){width=75%}
+A $3 \times 3$ convolution with $C_{\textrm{in}} \times C_{\textrm{out}}$ channels has $9\,C_{\textrm{in}}C_{\textrm{out}}$ weights regardless of spatial resolution, but executes once per pixel ($H \times W$):
 
-- Down $28 \to 14 \to 7$, channels $64 \to 128$: a $3 \times 3$ convolution
-  at $7 \times 7$ sees most of the image.
-- Skips concatenate encoder features to the decoder: the edge of a sleeve
-  survives the bottleneck.
-- Time: sines and cosines at 1 to 64 rad per unit $t$, plus the label
-  vector, through an MLP, added in every block as one bias per channel.
+@image-diffusion-skips-resolutions-and-the-time-embedding-3
+
+- **Low resolution holds the capacity:** The $14 \times 14$ and $7 \times 7$ stages hold **$83\%$ of the $1.20\text{M}$ parameters** ($38\%$ in the $7 \times 7$ bottleneck alone for just $8\%$ of the compute).
+- **Full resolution dominates the arithmetic:** The $28 \times 28$ blocks hold only $17\%$ of the weights but consume **$59\%$ of the $247\text{M}$ multiply-adds** per forward pass ($16\times$ more compute per parameter than at $7 \times 7$).
 :::
 
-::: {.slide title="Parameters Sit at Low Resolution, Arithmetic at 28×28"}
-A $3 \times 3$ convolution has $9cc'$ weights at any resolution but runs once
-per pixel: the same layer costs 16 times more at $28 \times 28$ than at
-$7 \times 7$.
+::: {.slide title="Joint Conditioning via Random Label Dropout"}
+[One Network, Two Vector Fields]{.kicker}
 
-@!image-diffusion-skips-resolutions-and-the-time-embedding-3
+To steer generation by garment class $c \in \{0, \ldots, 9\}$ and support classifier-free guidance, we add an embedding table `nn.Embedding(num_classes + 1, emb_dim)` whose extra row (index $10$) represents the **null label** $\varnothing$:
 
-- $14 \times 14$ and $7 \times 7$: four fifths of the parameters, two fifths
-  of the multiply-adds.
-- $28 \times 28$: a sixth of the parameters, more than half of the
-  multiply-adds.
-
-[Bare on purpose: DDPM's CIFAR-10 U-Net has 35.7M parameters, four resolutions, attention at 16×16, dropout.]{.small}
+- **Random label dropout ($p_{\textrm{drop}} = 0.1$):** In every training minibatch of $128$ images, $10\%$ of the class labels are randomly replaced with $\varnothing = 10$ before evaluating the velocity regression loss:
+  $$\mathcal{L}(\boldsymbol\theta) = \mathbb{E}_{\mathbf{x}_0, c, t, \boldsymbol\epsilon}\Big[\big\|\mathbf{u}_{\boldsymbol\theta}\big((1-t)\mathbf{x}_0 + t\boldsymbol\epsilon,\; t,\; \tilde{c}\big) - (\boldsymbol\epsilon - \mathbf{x}_0)\big\|^2\Big]$$
+- **Shared representation:** One network learns both the class-conditional velocity $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, c)$ ($90\%$ of updates) and the unconditional velocity $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ ($10\%$ of updates) with negligible parameter or training overhead.
 :::
 
-::: {.slide title="Check: How Deep Must a Plain Convolution Stack Be?"}
-[Check]{.kicker}
+::: {.slide title="Training Cost vs. Sampling Cost in Image Diffusion"}
+[Training Dynamics & Compute Budget]{.kicker}
 
-Each $3 \times 3$ convolution widens a pixel's view by 2 pixels. How many are
-needed to span 28 pixels at full resolution, and to span the 7 positions of
-the bottleneck?
+We train our $1.2\text{M}$-parameter U-Net with Adam ($\text{lr} = 10^{-3}$, batch size $128$, EMA half-life $1{,}000$) for $15{,}000$ updates:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $1 + 2k \geq 28$: $k = 14$ at $28 \times 28$. $1 + 2k \geq 7$:
-$k = 3$ at $7 \times 7$, where each position stands for a $4 \times 4$ patch.
-Two halvings let a shallow network decide from the whole image.
+::: {.cols .vc}
+::: {.col}
+- **Rapid convergence to the velocity floor:** Per-pixel velocity MSE drops from $\approx 0.50$ to $\approx 0.20$ within the first $1{,}000$ steps and plateaus at the conditional variance floor.
+- **Why sampling can cost more than training:** $15{,}000$ updates process $1.92\text{M}$ training images ($\approx 5.8\text{M}$ forward-equivalent passes), whereas generating the $5{,}000$-image evaluation suites in this section takes **$\approx 20\text{M}$ U-Net evaluations** ($3.5\times$ the training arithmetic)!
+:::
+
+::: {.col .fig}
+@!image-diffusion-one-trainer-2
 :::
 :::
 :::
 
-::: {.slide title="Label Dropout Trains the Conditional and Unconditional Field Together" only="pytorch"}
-[Conditioning]{.kicker}
+::: {.slide title="Class-Conditional Garment Generation in 50 Steps"}
+[Euler ODE Samples]{.kicker}
 
-A label table with ten classes and a null label $\varnothing$ (index 10);
-each training label becomes $\varnothing$ with probability 0.1:
+Integrating the EMA U-Net velocity field with $50$ Euler steps (`ode_sample` on the linear path) generates $40$ class-conditioned garments (one class per column):
 
-```
-drop = torch.rand(128, device=X.device) < 0.1   # label dropout
-return X[i], torch.where(drop, 10, y[i])        # 10 is the null label
-```
-
-One network, two fields: $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, c)$,
-and $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ trained on
-one example in ten. Guidance needs the second as its base.
-
-[Rates of 0.1 and 0.2 worked better than 0.5 (Ho and Salimans, 2022).]{.small}
-:::
-
-::: {.slide title="Label Dropout Trains the Conditional and Unconditional Field Together" only="jax"}
-[Conditioning]{.kicker}
-
-A label table with ten classes and a null label $\varnothing$ (index 10);
-each training label becomes $\varnothing$ with probability 0.1:
-
-```
-drop = jax.random.uniform(k2, (128,)) < 0.1   # label dropout
-return X[i], jnp.where(drop, 10, y[i])        # 10 is the null label
-```
-
-One network, two fields: $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, c)$,
-and $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ trained on
-one example in ten. Guidance needs the second as its base.
-
-[Rates of 0.1 and 0.2 worked better than 0.5 (Ho and Salimans, 2022).]{.small}
-:::
-
-::: {.slide title="A Small Recipe, and Sampling Still Costs More Than Training"}
-[The recipe]{.kicker}
-
-| | here | Ho et al. (2020) |
-|:--|:--|:--|
-| path, target | linear, velocity $\boldsymbol{\epsilon} - \mathbf{x}_0$ | VP, noise $\boldsymbol{\epsilon}$ |
-| network | U-Net, 1.2M parameters | U-Net, 35.7M |
-| Adam | $10^{-3}$, constant | $2 \cdot 10^{-4}$ |
-| updates | 15,000, batch 128 | 800,000 |
-| weight average | half-life 1,000 updates | half-life about 7,000 |
-
-- Training: 1.9M images forward and backward.
-- Sampling in this section: about 20M network evaluations, three and a half
-  times the arithmetic of training.
-:::
-
-::: {.slide title="Fifty Euler Steps Draw Garments of the Requested Class"}
 @!image-diffusion-one-trainer-3
-
-Each column: four samples of one class, from the weight average. Varied
-shapes, prints and shades; some malformed; shirts, pullovers and coats hard
-to tell apart, as among real images.
 :::
 
-::: {.slide title="Check: What Does the Network Predict from Pure Noise?"}
-[Check]{.kicker}
+::: {.slide title="Coarse-to-Fine Trajectory: Shape Early, Detail Late"}
+[Inspecting the Implied Clean Image Along Time]{.kicker}
 
-At $t = 1$ the input $\mathbf{x}_1$ is pure noise. The network was trained
-with squared error and is told the label "ankle boot". What clean image
-$\hat{\mathbf{x}}_0$ does it return?
+At any time $t \in [0, 1]$, the network's velocity implies a clean-image posterior mean $\hat{\mathbf{x}}_0(\mathbf{x}_t) = \mathbf{x}_t - t\,\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, c)$. Comparing forward noising (rows 1–2) against a 50-step reverse sampling trajectory (row 3) reveals when spatial structure forms:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The posterior mean given what it knows, which is only the label:
-the average training image of ankle boots, a blurred boot.
-:::
-:::
-:::
-
-::: {.slide title="The Prediction Keeps the Outline Long after the Noise Hides It"}
 ::: {.cols .vc}
 ::: {.col}
+- **At pure noise ($t = 1.0$):** Knowing only the label *"Ankle boot"*, the MSE-optimal prediction $\hat{\mathbf{x}}_0$ is the blurred class-mean boot ($\textrm{RMS} = 0.07$ from class mean).
+- **Outline commits by $t = 0.6$:** Even when the state $\mathbf{x}_{0.6}$ is $60\%$ Gaussian noise, $\hat{\mathbf{x}}_0$ has already locked onto the final sample's silhouette ($\textrm{RMS} \le 0.14$ from the finished $t = 0$ sample).
+- **Late steps ($t < 0.4$):** Refine high-frequency edges, shading, and texture.
+:::
+
+::: {.col .fig}
 @!image-diffusion-one-trainer-4
 :::
-
-::: {.col .narrow}
-- Rows: a test image noised to $t = 0, \ldots, 1$; the clean image the
-  network implies; the same along one 50-step sample (sample at $t = 0$).
-- Noising: at $t = 1$ within 0.07 of the class average; detail goes first,
-  the outline last.
-- Sampling: by $t = 0.6$ within 0.12–0.14 of the sample, outline in place.
-  Shape early, surface late.
-:::
 :::
 :::
 
-::: {.slide title="The Weight Average Sits Nearer the Center of the Wandering Iterates"}
-$$\bar{\boldsymbol\theta} \leftarrow \bar{\boldsymbol\theta} + \big(1 - 2^{-1/n_{1/2}}\big)\, (\boldsymbol\theta - \bar{\boldsymbol\theta})$$
+::: {.slide title="Exponential Moving Average (EMA) of Model Weights"}
+[Stabilizing Stochastic Gradient Iterates]{.kicker}
 
-- At a constant learning rate, minibatch noise keeps Adam's iterates in a
-  cloud; their average lies nearer its center.
-- Half-life $n_{1/2}$: the weights of $n_{1/2}$ updates ago count half. Here
-  $n_{1/2} = 1000$, a decay $2^{-1/n_{1/2}} = 0.9993$ in library terms.
-- Too short keeps the noise; too long remembers early weights. Ho et al.:
-  decay 0.9999, a half-life of about 7,000 in 800,000 updates.
+Because each minibatch of $128$ images draws random times $t$ and noise $\boldsymbol\epsilon$, Adam iterates $\boldsymbol\theta_k$ at a constant learning rate wander in a noisy cloud around the optimum (Polyak & Juditsky, 1992):
 
-[Polyak and Juditsky, 1992]{.small}
+$$\bar{\boldsymbol\theta}_k = \beta_{\textrm{EMA}}\,\bar{\boldsymbol\theta}_{k-1} + (1 - \beta_{\textrm{EMA}})\,\boldsymbol\theta_k, \qquad \beta_{\textrm{EMA}} = 2^{-1 / n_{1/2}}$$
+
+- **Half-life parameterization ($n_{1/2}$):** Setting $n_{1/2} = 1{,}000$ updates means weights from $1{,}000$ steps ago carry half the weight of the current iterate ($\beta_{\textrm{EMA}} = 2^{-1/1000} \approx 0.9993$, closing $0.07\%$ of the gap per step).
+- **Sizing $n_{1/2}$ to the training budget:** Too short a half-life retains minibatch jitter; too long drags in underfit early weights (DDPM used $\beta_{\textrm{EMA}} = 0.9999$, or $n_{1/2} \approx 7{,}000$, across $800{,}000$ updates).
 :::
 
-::: {.slide title="Compare Image Sets as Gaussians in a Classifier's Features"}
-[Measuring quality]{.kicker}
+::: {.slide title="Evaluating Sample Distributions: Fréchet Distance"}
+[Wasserstein-2 Distance in Classifier Features]{.kicker}
 
-Pixels fail: a sneaker shifted by two pixels is far away. Fit
-$\mathcal{N}(\boldsymbol\mu_p, \boldsymbol\Sigma_p)$ and
-$\mathcal{N}(\boldsymbol\mu_q, \boldsymbol\Sigma_q)$ to features of real and
-generated images:
+Pixel-space Euclidean distance fails to measure perceptual quality (shifting a sneaker by 2 pixels produces a huge $L_2$ error). The **Fréchet distance (FD)** (Heusel et al., 2017) fits Gaussians $\mathcal{N}(\boldsymbol\mu_p, \boldsymbol\Sigma_p)$ and $\mathcal{N}(\boldsymbol\mu_q, \boldsymbol\Sigma_q)$ to $128$-D features extracted by a domain classifier (`FeatureCNN`, $93.1\%$ test accuracy):
 
-$$\mathrm{FD} = \|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2 + \mathrm{tr}\Big(\boldsymbol\Sigma_p + \boldsymbol\Sigma_q - 2\big(\boldsymbol\Sigma_p^{1/2} \boldsymbol\Sigma_q \boldsymbol\Sigma_p^{1/2}\big)^{1/2}\Big)$$
+$$\mathrm{FD}(p, q) = \underbrace{\|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2}_{\text{mean shift (e.g., class skew)}} + \underbrace{\operatorname{tr}\!\Big(\boldsymbol\Sigma_p + \boldsymbol\Sigma_q - 2\big(\boldsymbol\Sigma_p^{1/2}\boldsymbol\Sigma_q\boldsymbol\Sigma_p^{1/2}\big)^{1/2}\Big)}_{\text{covariance mismatch (e.g., mode collapse or blur)}}$$
 
-- Mean term: e.g. a wrong mix of classes. Trace term: e.g. a wrong spread,
-  all coats alike.
-- Features of our own 128-feature CNN: we call it FD and never compare it
-  with published FID.
-
-@!image-diffusion-fr-chet-distance-in-learned-features-1
+@image-diffusion-fr-chet-distance-in-learned-features-2
 :::
 
-::: {.slide title="Two Real Sets Already Differ: Under 0.9 at 1,000 Images, Under 0.2 at 5,000"}
-@!image-diffusion-reading-the-number-1
+::: {.slide title="Calibrating FD: The 1/n Finite-Sample Floor"}
+[Why Raw FD Numbers Require a Reference Scale]{.kicker}
 
-- Five disjoint real sets per size. The plug-in FD is biased upward, and the
-  bias shrinks roughly as $1/n$: five times the images, a fifth of the value.
-- KID, an unbiased squared MMD with a cubic kernel, scatters around zero, by
-  as much as a few hundredths at 1,000 images.
+Even two disjoint sets of $n$ **real** images have a strictly positive plug-in FD because sample covariances fluctuate by $O(1/\sqrt{n})$, creating an upward trace bias proportional to $1/n$:
 
-::: {.d2l-note}
-Compare FDs only at equal $n$. At 5,000 images, differences below about
-0.05 cannot be read.
+@image-diffusion-reading-the-number-1
+
+::: {.d2l-note .warn}
+**Two iron laws of Fréchet distance evaluation:**
+
+1. **Never compare FDs across different sample sizes $n$:** Real-vs.-real FD drops $5\times$ from $\mathbf{0.87}$ at $n = 1{,}000$ to $\mathbf{0.17}$ at $n = 5{,}000$ (so our model's FD of $0.82$ at $n = 5{,}000$ is $\approx 5\times$ the real floor, whereas at $n = 1{,}000$ it would equal the real floor!).
+2. **Respect the run-to-run noise floor:** At $n = 5{,}000$, disjoint real sets vary by $\pm 0.05$ ($\pm 0.18$ at $n = 1{,}000$); differences smaller than this range are statistical noise.
 :::
 :::
 
-::: {.slide title="The Weight Average Wins in Every Draw; 1,000 Steps Gain 0.1 to 0.2"}
-@!image-diffusion-reading-the-number-3
+::: {.slide title="Paired Ablation: EMA Weights vs. 1,000-Step Chain"}
+[Measuring EMA and Step Count on Shared Noise]{.kicker}
 
-- Same initial noise for all three samplers; three draws.
-- Our samples: about 0.8, five times the reference value of about 0.17.
-- Last weights: 0.4 to 0.6 worse; the average moves by a few hundredths
-  between draws.
-- 1,000 ancestral steps (VP path, through `make_pred`): lower in every draw,
-  for twenty times the evaluations.
+Using three shared draws of $5{,}000$ initial noise tensors, we compare 50 Euler steps on the EMA weights (`ema`), 50 Euler steps on the raw final Adam iterate (`net`), and 1,000 ancestral steps on the VP path (via `make_pred` log-SNR translation):
+
+@image-diffusion-reading-the-number-3
+
+- **EMA provides a massive $+0.45$ to $+0.55$ FD win:** In every draw, raw final weights score $1.25$–$1.38$ vs. $0.80$–$0.83$ for EMA, while EMA varies by only $\pm 0.02$ across noise seeds.
+- **1,000-step ancestral chain gains $0.13$–$0.19$ FD:** Achieves $\approx 0.65$ FD at **$20\times$ the compute cost** of 50 Euler steps (motivating the fast higher-order solvers of §17.5).
 :::
 
-::: {.slide title="Check: Which Model Is Better?"}
-[Check]{.kicker}
+::: {.slide title="Bayes' Rule on Scores and Classifier Guidance"}
+[Steering Generation Toward a Class]{.kicker}
 
-Same feature network. Model A scores an FD of 0.85 on 1,000 samples; model B
-scores 0.8 on 5,000 samples. Which is closer to the data?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** A sits at the reference value of 1,000 real images (a little
-under 0.9): at that size it cannot be told from real data. B is five times its
-reference value of about 0.17. A is likely better; to be sure, score both at the
-same size. B is our model.
-:::
-:::
-:::
-
-::: {.slide title="Bayes' Rule Turns a Class Condition into a Sum of Scores"}
-[Guidance]{.kicker}
+How can we push samples more strongly toward class $c$ than the standard conditional distribution $p_t(\mathbf{x} \mid c)$? Writing Bayes' rule at noise level $t$, $p_t(\mathbf{x} \mid c) = p_t(\mathbf{x})\,p_t(c \mid \mathbf{x}) / p(c)$, and taking $\nabla_{\mathbf{x}} \log(\cdot)$ eliminates the prior $p(c)$:
 
 $$\nabla_{\mathbf{x}} \log p_t(\mathbf{x} \mid c) = \nabla_{\mathbf{x}} \log p_t(\mathbf{x}) + \nabla_{\mathbf{x}} \log p_t(c \mid \mathbf{x})$$
 
-The prior $p(c)$ drops out of the gradient. *Classifier guidance* uses a
-classifier of noisy images, scaled by $\gamma$:
-
-$$\tilde{\mathbf{s}}(\mathbf{x}, t) = \nabla_{\mathbf{x}} \log p_t(\mathbf{x}) + \gamma\, \nabla_{\mathbf{x}} \log p_{\boldsymbol\phi}(c \mid \mathbf{x}, t)$$
-
-- $\gamma = 1$ is Bayes' rule; $\gamma > 1$ matched classes much better.
-- Cost: a second network, trained on noisy images.
-
-[Dhariwal and Nichol, 2021]{.small}
+- **Classifier guidance (Dhariwal & Nichol, 2021):** Amplifies the log-likelihood gradient of an external noise-aware classifier $p_{\boldsymbol\phi}(c \mid \mathbf{x}, t)$ by a **guidance scale** $\gamma \ge 0$:
+  $$\tilde{\mathbf{s}}(\mathbf{x}, t, c) = \nabla_{\mathbf{x}} \log p_t(\mathbf{x}) + \gamma\,\nabla_{\mathbf{x}} \log p_{\boldsymbol\phi}(c \mid \mathbf{x}, t)$$
+- **Drawback of external classifier guidance:** Requires training a separate noise-conditioned classifier $p_{\boldsymbol\phi}(c \mid \mathbf{x}_t, t)$ across all $t \in [0, 1]$, and ascending $\nabla_{\mathbf{x}} \log p_{\boldsymbol\phi}$ can exploit adversarial classifier directions.
 :::
 
-::: {.slide title="Classifier-Free Guidance Reads Bayes' Rule Backwards"}
-$$\nabla \log p_t(c \mid \mathbf{x}) = \mathbf{s}_c - \mathbf{s}_\varnothing
-\quad \Longrightarrow \quad
-\tilde{\mathbf{s}} = \mathbf{s}_\varnothing + \gamma\, (\mathbf{s}_c - \mathbf{s}_\varnothing)$$
+::: {.slide title="Classifier-Free Guidance (CFG): Implicit Steering"}
+[Eliminating the External Classifier]{.kicker}
 
-- Label dropout supplies both scores; the classifier is implicit.
-- On the linear path $\mathbf{u}_t = -(\mathbf{x} + t\, \mathbf{s}) / (1 - t)$.
-  The weights $1 - \gamma$ and $\gamma$ sum to one, so $-\mathbf{x}/(1 - t)$
-  passes through:
+**Classifier-Free Guidance (CFG)** (Ho & Salimans, 2022) inverts Bayes' score identity to express the classifier gradient as the difference between the conditional and unconditional scores:
 
-$$\tilde{\mathbf{u}}(\mathbf{x}, t) = \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing) + \gamma\, \big(\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, c) - \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing)\big)$$
+$$\nabla_{\mathbf{x}} \log p_t(c \mid \mathbf{x}) = \nabla_{\mathbf{x}} \log p_t(\mathbf{x} \mid c) - \nabla_{\mathbf{x}} \log p_t(\mathbf{x}) = \mathbf{s}_c(\mathbf{x}, t) - \mathbf{s}_\varnothing(\mathbf{x}, t)$$
 
-[Ho and Salimans (2022) write $(1 + w)\, \mathbf{u}_c - w\, \mathbf{u}_\varnothing$, so $w = \gamma - 1$.]{.small}
+- **Linear extrapolation in score and velocity space:** Because velocity $\mathbf{u}_t(\mathbf{x}) = -(\mathbf{x} + t\,\mathbf{s}_t(\mathbf{x}))/(1 - t)$ is affine in the score and the weights $(1 - \gamma) + \gamma = 1$ sum to one, the $-\mathbf{x}/(1 - t)$ offset passes through unchanged:
+  $$\tilde{\mathbf{u}}(\mathbf{x}, t, c) = \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing) + \gamma\,\big(\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, c) - \mathbf{u}_{\boldsymbol\theta}(\mathbf{x}, t, \varnothing)\big)$$
+- **Universal dictionary invariance:** The exact same linear combination $(1 - \gamma)\hat{\mathbf{y}}_\varnothing + \gamma\hat{\mathbf{y}}_c$ applies identically to $\hat{\mathbf{x}}_0$, $\hat{\boldsymbol\epsilon}$, $\hat{\mathbf{v}}$, score, and velocity predictions!
 :::
 
-::: {.slide title="The Guided Prediction Overshoots the Conditional One" only="pytorch"}
+::: {.slide title="Geometry and Batched Implementation of CFG"}
+[Extrapolating Beyond the Conditional Mean]{.kicker}
+
+For $\gamma > 1$, the guided prediction $\hat{\mathbf{x}}_0^\gamma = \hat{\mathbf{x}}_0^\varnothing + \gamma(\hat{\mathbf{x}}_0^c - \hat{\mathbf{x}}_0^\varnothing)$ extrapolates along the ray from the unconditional posterior mean through the class posterior mean:
+
 ::: {.cols .vc}
 ::: {.col}
-```
-if gamma == 1:  # the conditional field
-    return d2l.conditional(net, c)
-null = torch.full_like(c, net.num_classes)
-cat = torch.cat
-def guided(x, t):  # one doubled batch
-    out = net(cat([x, x]), cat([t, t]),
-              cat([c, null]))
-    out_c, out = out.chunk(2)
-    return out + gamma * (out_c - out)
-```
+@image-diffusion-classifier-free-guidance
 
-Three-mode mixture, $\gamma = 2$: the guided clean-point estimate lies on the
-line through $\hat{\mathbf{x}}_0^{\varnothing}$ and
-$\hat{\mathbf{x}}_0^{c}$, beyond $\hat{\mathbf{x}}_0^{c}$.
+- **Doubled batch per step:** For $\gamma \neq 1$, `cfg` concatenates $[\mathbf{x}, \mathbf{x}]$ with labels $[c, \varnothing]$, doubling per-step compute ($100$ U-Net passes for $50$ Euler steps).
 :::
 
-::: {.col .narrow}
-![](../img/mdl-diffusion-guidance.svg)
+::: {.col .fig}
+![](../img/mdl-diffusion-guidance.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="The Guided Prediction Overshoots the Conditional One" only="jax"}
-::: {.cols .vc}
-::: {.col}
-```
-if gamma == 1:  # the conditional field
-    return d2l.conditional(net, c)
-null = jnp.full_like(c, net.num_classes)
-cat = jnp.concatenate
-def guided(x, t):  # one doubled batch
-    out = net(cat([x, x]), cat([t, t]),
-              cat([c, null]))
-    out_c, out = jnp.split(out, 2)
-    return out + gamma * (out_c - out)
-```
+::: {.slide title="The Guidance Trade-Off: Diversity vs. Typicality"}
+[Empirical Sweep Across Guidance Scales γ]{.kicker}
 
-Three-mode mixture, $\gamma = 2$: the guided clean-point estimate lies on the
-line through $\hat{\mathbf{x}}_0^{\varnothing}$ and
-$\hat{\mathbf{x}}_0^{c}$, beyond $\hat{\mathbf{x}}_0^{c}$.
-:::
+Generating $5{,}000$ images from shared initial noise across seven guidance scales $\gamma \in [0.0, 4.0]$ reveals the trade-off between distributional coverage (FD) and class adherence:
 
-::: {.col .narrow}
-![](../img/mdl-diffusion-guidance.svg)
-:::
-:::
-:::
-
-::: {.slide title="Check: Predict the Guidance Sweep"}
-[Check]{.kicker}
-
-We sample 5,000 images at $\gamma = 0, 1, 1.25, 1.5, 2, 3, 4$ and record
-the FD and the *class agreement*: the share the feature network assigns to
-the requested class. What is the agreement at $\gamma = 0$? Does the FD keep
-falling as $\gamma$ grows?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** At $\gamma = 0$ the label plays no part: chance, 10%. The FD is
-lowest at $\gamma = 1$ and $1.25$, a tie, and rises from $1.5$ on:
-overshooting removes variety.
-:::
-:::
-:::
-
-::: {.slide title="Guidance Trades Variety for Typicality"}
 ::: {.cols .vc}
 ::: {.col}
 @!image-diffusion-classifier-free-guidance-1
 :::
 
 ::: {.col}
-- $\gamma = 1$: FD about 0.8, agreement nearly 90% (real images: 93%).
-  $\gamma = 1.25$: same FD, agreement 93–94%.
-- $\gamma = 1.5$: agreement 96%, FD up by about 0.3. $\gamma \geq 3$: above
-  99%, FD 4 to 6: prototypes, without the ambiguous examples of real data.
-- Why guide hard anyway? The FD judges the set and rewards variety; a person
-  judges one picture and rewards a clear instance of the request.
-:::
-:::
-
-[Ho and Salimans (2022): $w$ of 0.1 to 0.3 lowered ImageNet's FID; our $\gamma = 1.25$ keeps it level.]{.small}
-:::
-
-::: {.slide title="Without the Label, the FD Triples and the Class Mix Drifts"}
-FD of 5,000 samples, split into its two terms:
-
-| | $\gamma = 1$ | $\gamma = 0$ |
-|:--|:--|:--|
-| whole FD | about 0.8 | 2.7 to 2.8 |
-| mean term | about 0.3 | 0.7 to 0.9 |
-| trace term | about 0.5 | about 2 |
-
-- Unguided: pullovers 13 to 14% of samples, sandals 6 to 7%; real: 10% each.
-- Real images in that mix: FD 0.2 to 0.3 higher, a tenth to a sixth of the
-  rise. The rest is how the unguided images look.
-- Guidance extrapolates from $\mathbf{u}_\varnothing$: its errors enter
-  every guided sample with weight $1 - \gamma$.
-:::
-
-::: {.slide title="The Tilt Halves the Class at γ = 4; the Sampler Shrinks It Twentyfold"}
-Class $\mathcal{N}(\mu_c, s^2)$ among all images $\mathcal{N}(0, S^2)$; the
-tilt $p^{1-\gamma}\, p(\cdot \mid c)^{\gamma}$ is Gaussian:
-
-$$\frac{1}{v} = \frac{\gamma}{s^2} - \frac{\gamma - 1}{S^2}, \qquad \textrm{mean} = \frac{\gamma v}{s^2}\, \mu_c$$
-
-- $\gamma > 1$: narrower than the class, pushed away from the other images.
-- $\mu_c = 1$, $s = 0.5$, $S^2 = 2$, $\gamma = 4$: width 0.5 to 0.26, mean
-  1 to 1.10.
-- The guided probability-flow ODE, integrated exactly from pure noise, ends
-  at width 0.02 and mean 1.23: far narrower than the tilt.
-:::
-
-::: {.slide title="Guided Densities Curve More Sharply Than Noise Allows"}
-- Noise of variance $\sigma_t^2$ caps curvature: no eigenvalue of
-  $-\nabla^2 \log p_t$ exceeds $1/\sigma_t^2$ (linear path: $\sigma_t = t$).
-- Gaussian classes: the tilt breaks the cap near $t = 1$ once
-  $\gamma > S^2 / (S^2 - s^2) = 8/7$; at $\gamma = 4$ for all $t > 0.24$.
-- So the sampler follows fields that pull harder than any noised
-  distribution can, and the pull compounds.
-- Remedies: switch guidance off at high noise; or guide away from a weaker
-  version of the model instead of the unconditional prediction.
-
-[Kynkäänniemi et al., 2024; Karras et al., 2024]{.small}
-:::
-
-::: {.slide title="Check: Guidance on Gaussian Classes at γ = 2"}
-[Check]{.kicker}
-
-Class $\mathcal{N}(1, 0.5^2)$, all images $\mathcal{N}(0, 2)$, $\gamma = 2$.
-Is the tilted class wider or narrower than 0.5? Is its mean above or below
-1? And where does the guided sampler end?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $1/v = 2/0.25 - 1/2 = 7.5$: width 0.37, narrower. Mean
-$2v/0.25 = 1.07$, pushed away from 0. The sampler ends narrower still, at
-width 0.18 and mean 1.23.
+- **Unconditional ($\gamma = 0.0$):** Agreement is random chance ($10.0\%$) and FD triples to $\approx 2.75$.
+- **Mild guidance sweet spot ($\gamma = 1.25$):** Boosts class agreement by $+4.5\%$ (from $89.3\%$ to **$93.8\%$**, matching real test data!) with **zero FD penalty** ($\approx 0.82$).
+- **Strong guidance ($\gamma \ge 2.0$):** Pushes class agreement past **$99.4\%$**, but FD climbs to $5.5$–$6.0$ as within-class diversity collapses onto canonical prototypes.
 :::
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Visualizing Unconditional (γ = 0) vs. Guided (γ = 4)"}
+[Canonical Prototypes vs. Ambiguous Samples]{.kicker}
 
-- **Network:** a U-Net, $28 \to 14 \to 7$ with skips; time and label added
-  in every block; 1.2 million parameters.
-- **Recipe:** linear path, velocity target, label dropout 0.1, Adam at
-  $10^{-3}$ for 15,000 updates, weight average with half-life 1,000.
-- **Measure:** FD in our classifier's features; samples about 0.8 against
-  about 0.17 for real sets of 5,000; last weights 0.4 to 0.6 worse.
-- **Guidance:** $\mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$;
-  agreement 10% at $\gamma = 0$, nearly 90% at 1, 93–94% at 1.25 for the
-  same FD, above 99% from 3; on Gaussian classes the sampler ends narrower
-  than the tilt.
+Comparing the $40$ samples generated from the exact same initial noise at $\gamma = 0.0$ (top) and $\gamma = 4.0$ (bottom) shows why human users often prefer high $\gamma$ despite worse FD:
 
-**Next:** fifty steps came close to a thousand. Which steps can a sampler skip, and
-how few are enough?
+@!image-diffusion-classifier-free-guidance-2
+:::
+
+::: {.slide title="Diagnosing the Unconditional (γ = 0) FD Degradation"}
+[Class Skew vs. Within-Class Sample Quality]{.kicker}
+
+Why is the unconditional FD ($\gamma = 0$, $\mathrm{FD} \approx 2.75$) more than three times higher than the conditional FD ($\gamma = 1$, $\mathrm{FD} \approx 0.82$)? We test whether skewed class proportions explain the gap:
+
+@!image-diffusion-classifier-free-guidance-3
+
+- **Class skew accounts for $< 15\%$ of the gap:** Although $\gamma = 0$ overproduces pullovers ($13.5\%$) and underproduces sandals ($6.5\%$), resampling $5{,}000$ real images to that exact skewed histogram raises real FD by only $+0.25$ (from $0.19$ to $0.44$).
+- **The true cause ($> 85\%$ of the gap):** Trained on only $10\%$ of minibatches without class hints, $\mathbf{u}_{\boldsymbol\theta}(\mathbf{x}_t, t, \varnothing)$ produces more ambiguous, blended garments—and its errors enter every guided step with weight $(1 - \gamma)$!
+:::
+
+::: {.slide title="Theory: Why Guided ODE Trajectories Overshoot the Tilt"}
+[Exact Analysis on Gaussian Classes]{.kicker}
+
+At any fixed $t$, the guided score $\nabla \log p_t(\mathbf{x}) + \gamma\nabla \log p_t(c \mid \mathbf{x})$ is the score of the **tilted density** $\tilde{p}_t(\mathbf{x}) \propto p_t(\mathbf{x})^{1-\gamma}\,p_t(\mathbf{x} \mid c)^\gamma$. For a Gaussian class $\mathcal{N}(\boldsymbol\mu_c, s^2\mathbf{I})$ inside a broader prior $\mathcal{N}(\mathbf{0}, S^2\mathbf{I})$ ($S^2 > s^2$), the $t = 0$ tilted Gaussian has variance $v$ and mean:
+
+$$\frac{1}{v} = \frac{\gamma}{s^2} - \frac{\gamma - 1}{S^2} > \frac{1}{s^2}, \qquad \boldsymbol\mu_{\textrm{tilt}} = \frac{\gamma v}{s^2}\,\boldsymbol\mu_c$$
+
+- **Static tilt vs. dynamic ODE overshoot ($\mu_c = 1, s = 0.5, S^2 = 2, \gamma = 4$):**
+  - The static $t = 0$ tilted distribution narrows width by $2\times$ ($s = 0.50 \to \sqrt{v} = 0.26$) and shifts the mean to $1.10$.
+  - Integrating the guided probability-flow ODE from $t = 1$ to $0$ shrinks the final width **$25\times$ to $0.02$** and shifts the mean to $1.23$!
+:::
+
+::: {.slide title="Why High-Noise Guidance Breaks the Curvature Bound"}
+[Path Inconsistency & Modern Remedies]{.kicker}
+
+Why does integrating the guided field from $t = 1$ to $0$ contract variance so much more violently than the $t = 0$ tilted density?
+
+- **The Gaussian convolution curvature ceiling:** Any valid marginal density $p_t = p_0 * \mathcal{N}(\mathbf{0}, \sigma_t^2\mathbf{I})$ obeys $-\nabla^2 \log p_t(\mathbf{x}) \preceq \frac{1}{\sigma_t^2}\mathbf{I}$ (a density blurred by variance $\sigma_t^2$ cannot curve more sharply than the noise kernel itself).
+- **Violation at high noise:** On our Gaussian example ($\sigma_t = t$), the tilted precision $1/v_t$ exceeds $1/t^2$ near $t = 1$ whenever $\gamma > S^2/(S^2 - s^2) = 8/7$ (for $\gamma = 4$, it violates the bound across all $t \in (0.24, 1]$!).
+- **Two practical remedies in modern image generators:**
+  1. **Guidance intervals (Kynkäänniemi et al., 2024):** Disable guidance ($\gamma = 1$) at high noise and low noise, applying $\gamma > 1$ only in the middle band where class structure commits.
+  2. **Autoguidance (Karras et al., 2024):** Extrapolate away from a smaller/undertrained conditional model rather than $\mathbf{u}_\varnothing$, removing model errors without destroying class diversity.
+:::
+
+::: {.slide title="Concept Check: Receptive Fields, FD Floors & CFG"}
+[Check Your Understanding]{.kicker}
+
+Test your grasp of U-Net design, Fréchet distance calibration, and classifier-free guidance:
+
+1. **U-Net downsampling vs. receptive field:** Each $3 \times 3$ convolution expands a pixel's receptive field by $2$ pixels ($1 + 2k$ after $k$ layers). How many layers $k$ are needed to span $28$ pixels at full resolution vs. the $7 \times 7$ bottleneck?
+2. **Comparing FDs across sample sizes:** Model A achieves $\mathrm{FD} = 0.85$ evaluated on $n = 1{,}000$ images; Model B achieves $\mathrm{FD} = 0.80$ evaluated on $n = 5{,}000$ images (using the same `FeatureCNN`). Which model is closer to the real distribution?
+3. **Gaussian guidance calculation:** For class $\mathcal{N}(1, 0.5^2)$ inside $\mathcal{N}(0, 2)$ at guidance scale $\gamma = 2$, what are the static tilted variance $v$, standard deviation $\sqrt{v}$, and mean?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. At $28 \times 28$, $1 + 2k \ge 28 \implies \mathbf{k = 14}$ layers. At $7 \times 7$ (where each site covers a $4 \times 4$ patch), $1 + 2k \ge 7 \implies \mathbf{k = 3}$ layers!
+2. **Model A is much better:** At $n = 1{,}000$, the real-vs.-real reference floor is $\approx 0.87$, so Model A ($0.85$) is indistinguishable from real data. At $n = 5{,}000$, the real floor is $\approx 0.17$, so Model B ($0.80$) is nearly $5\times$ above the floor.
+3. $1/v = \gamma/s^2 - (\gamma - 1)/S^2 = 2/0.25 - 1/2 = 7.5 \implies v = 2/15 \approx 0.133$ (**width $\sqrt{v} \approx \mathbf{0.37} < 0.5$**), and **$\text{mean} = \gamma v / s^2 = 2(2/15)/0.25 \approx \mathbf{1.07} > 1$**.
+:::
+:::
+
+::: {.slide title="Summary: Image Diffusion, Evaluation, and Guidance"}
+[Key Takeaways]{.kicker}
+
+| Component | Mechanism / Formula | Quantitative Finding on Fashion-MNIST | Best-Practice Guideline |
+| :--- | :--- | :--- | :--- |
+| **Denoising U-Net** | $28 \to 14 \to 7$ encoder–decoder + skips | $83\%$ params at low res; $59\%$ FLOPs at $28 \times 28$ | Put channel capacity at low resolution; use GroupNorm |
+| **Weight EMA** | $\bar{\boldsymbol\theta} \leftarrow \bar{\boldsymbol\theta} + (1 - 2^{-1/n_{1/2}})(\boldsymbol\theta - \bar{\boldsymbol\theta})$ | Lowers FD by **$0.45$–$0.55$** vs. final iterate | Always sample from EMA weights ($n_{1/2} \approx 10^3$–$10^4$) |
+| **Fréchet Distance (FD)** | $\|\boldsymbol\mu_p - \boldsymbol\mu_q\|^2 + \operatorname{tr}(\boldsymbol\Sigma_p + \boldsymbol\Sigma_q - 2(\boldsymbol\Sigma_p^{1/2}\boldsymbol\Sigma_q\boldsymbol\Sigma_p^{1/2})^{1/2})$ | Real floor drops $5\times$ from $0.87$ ($1\text{k}$) to $0.17$ ($5\text{k}$) | Always report sample size $n$ and real-vs.-real floor |
+| **Label Dropout** | Replace label $c \leftarrow \varnothing$ with $p_{\textrm{drop}} = 0.1$ | Trains $\mathbf{u}_c$ ($90\%$) and $\mathbf{u}_\varnothing$ ($10\%$) jointly | $p_{\textrm{drop}} \in [0.1, 0.2]$ suffices for the unconditional baseline |
+| **Classifier-Free Guidance** | $\tilde{\mathbf{u}} = \mathbf{u}_\varnothing + \gamma(\mathbf{u}_c - \mathbf{u}_\varnothing)$ | $\gamma = 1.25$ lifts agreement $89\% \to 94\%$ at flat FD | Mild $\gamma \approx 1.25$ for distribution FD; $\gamma > 2$ for typicality |
 :::

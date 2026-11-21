@@ -880,412 +880,303 @@ Per $8{,}192$ tokens, the final step spends about $7\text{ ms}$ in matrix produc
 ::: {.cover}
 [Dive into Deep Learning · §13.8]{.kicker}
 
-Case Study: Optimizing a Transformer<br>
-**profile · predict · host work and fusion · bf16 · larger minibatches · checkpointing · data parallelism · account**
+Case Study: Making a Transformer Fast Step by Step<br>**profile-guided Amdahl bounds · fusion & CUDA graphs · bf16 & FlashAttention · batch sizing · multi-GPU scaling · MFU**
 :::
 :::
 
-::: {.slide title="A GPT Step Needs 6 ms of Arithmetic and Takes about 25 ms"}
-[The problem]{.kicker}
+::: {.slide title="A GPT Step Needs 6 ms of Math but Takes 25 ms"}
+[Motivation]{.kicker}
 
-GPT, width 512, 19M parameters; 64 windows × 128 bytes = 8,192 tokens.
+Every preceding section isolated one performance bottleneck; in a real training loop, multiple bottlenecks coexist and removing one shifts the limit to the next. Consider our 6-block, width-512 GPT ($N = 19\text{M}$ parameters) trained on $64$ windows of $128$ bytes ($n = 8{,}192$ tokens/step):
 
-- Arithmetic: $6 \times 1.9 \times 10^7 \times 8192 \approx 0.9$ TFLOP
-  per step.
-- RTX 4090: 165 TFLOP/s in bf16, **under 6 ms**; 83 TFLOP/s in tf32,
-  11 ms.
-- Plain fp32 step with AdamW: **about 25 ms**.
-
-::: {.d2l-note .warn}
-One factor of two is the number format; the other is time in which the
-tensor cores run below peak or not at all.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- read a kernel profile: waiting for the host, busy in short kernels, or
-  busy in matrix products;
-- bound the gain of each change from the last profile, before measuring;
-- check correctness before timing, and measure on top of earlier changes;
-- predict a data-parallel speedup from the step time and the link rate;
-- account for the milliseconds of the final step.
-
-**Running example:** the GPT of the Transformers chapter at width 512,
-WikiText-103 bytes, one RTX 4090, then two and four.
-:::
-
-::: {.slide title="The Case Study Applies the Whole Chapter to One Model"}
-[Where this fits]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-| section | adds |
-|---|---|
-| The Performance Model | roofline, three regimes, timing, profiling |
-| Hardware | where peak arithmetic and bandwidth come from |
-| Computation Graphs and Compilation | fusion and kernel replay |
-| Memory and Precision | bytes per parameter and token, bf16, checkpointing |
-| Multi-GPU from First Principles | data parallelism by hand, its cost model |
-| Data Parallelism in Practice | production libraries, the link rate |
-| Sharding the Training State | a state that no GPU holds |
-| **Case Study: Optimizing a Transformer** | **the whole method on one GPT** |
-:::
-
-::: {.col .narrow}
-- **Uses:** every section but sharding; the training state is 0.3 GiB.
-- **Skips:** fp8 training, custom kernels, more than one machine.
-:::
-:::
-:::
-
-::: {.slide title="At Width 512 the Products Clear the Ridge Point in Both Formats"}
-Product of $n \times d$ activations with a $d \times d'$ weight, $b$ bytes
-per number:
-
-$$I = \frac{2ndd'}{b\,(nd + dd' + nd')}$$
-
-| $n = 8192$, width 512 | intensity | ridge point |
-|---|---|---|
-| tf32, $b = 4$ | 125 to 185 FLOP/byte | 82 |
-| bf16, $b = 2$ | 250 to 370 FLOP/byte | 164 |
-
-Ridge point = peak FLOP/s ÷ memory bandwidth.
+- **Arithmetic per step:** $6 N n \approx 6 \times (1.9 \times 10^7) \times 8{,}192 \approx \mathbf{0.93\text{ TFLOP}}$ ($2N$ forward + $4N$ backward per token).
+- **Hardware speed limit on one RTX 4090:** At $165.2\text{ TFLOP/s}$ in `bfloat16`, the arithmetic requires only **$5.7\text{ ms}$** (or $11.3\text{ ms}$ at $82.6\text{ TFLOP/s}$ in `tf32`).
+- **Measured `float32` baseline with AdamW:** Takes **$\sim 25\text{ ms/step}$**—over $4\times$ longer than the `bfloat16` compute floor!
 
 ::: {.d2l-note}
-Compute-bound products: a faster format shortens them directly. At width
-256 they sit around the ridge.
+Half of the $4\times$ gap comes from the number format (`tf32` vs. `bf16`); the other half comes from bandwidth-bound kernels and dispatch gaps that we will diagnose and eliminate one rung at a time.
 :::
 :::
 
-::: {.slide title="Throughput Is Measured End to End, One Change at a Time"}
-- Tokens per second: sampling, forward, backward, update.
-- Training text on the GPU (270 MB); fresh windows every step.
-- 20 warm-up steps, then three windows of 50 steps: median and spread.
-- tf32 products until bf16; every change checked before it is timed.
+::: {.slide title="Choosing Model Width 512: Placing Matmuls Above I*"}
+[Roofline Positioning]{.kicker}
 
-::: {.d2l-note}
-Without host work, windows agree within 0.2%; runs differ more. Read ratios to
-one decimal.
-:::
-:::
+Why did we double the GPT width from $d = 256$ to $d = 512$ for this case study? Let us check the arithmetic intensity of multiplying $n = 8{,}192$ token rows by a $d \times d'$ block projection weight matrix ($d' \in [d, 4d]$, $b$ bytes per element):
 
-::: {.slide title="The Last Profile Bounds What the Next Change Can Gain"}
-[Predict first]{.kicker}
+$$I \;=\; \frac{2 n d d'}{b\,(n d + d d' + n d')}$$
 
-| change | gain at most |
-|---|---|
-| less host work | step ÷ busy device time |
-| fusion | step ÷ time in matrix products |
-| bf16, products a share $f$ | between $1/(1 - f/2)$ and 2 |
-| larger minibatch | step ÷ (step − fixed cost) |
-| checkpointing | a loss: $6/8 = 0.75$ by FLOPs, step ÷ (step + forward) by time |
+| Number Format ($b$ Bytes) | Matmul Intensity at $d = 512$ ($n = 8192$) | RTX 4090 Ridge Point $I^* = P/\beta$ | Roofline Regime at $d = 512$ |
+| :--- | :---: | :---: | :--- |
+| **`tf32` Tensor Cores ($b = 4\text{ B}$)** | $125\text{--}185\text{ FLOP/byte}$ | $82\text{ FLOP/byte}$ | **Compute-bound** ($I > I^*$) |
+| **`bfloat16` Tensor Cores ($b = 2\text{ B}$)** | $250\text{--}370\text{ FLOP/byte}$ | $164\text{ FLOP/byte}$ | **Compute-bound** ($I > I^*$) |
 
-::: {.d2l-note}
-The measurement then tests the diagnosis, not only the change.
-:::
+- **Consequence:** Because all block projections clear the ridge point at width $512$, doubling Tensor Core throughput from `tf32` to `bfloat16` shortens the matrix products directly (whereas at $d = 256$ they straddle the ridge).
 :::
 
-::: {.slide title="The Eager Step Is Busy, with a Third of Its Time Outside the Products" only="pytorch"}
-[Baseline]{.kicker}
+::: {.slide title="End-to-End Experimental Setup and Timing Protocol"}
+[Benchmark Discipline]{.kicker}
+
+To ensure every optimization is judged on equal footing, our benchmark holds the model, data pipeline, and timing protocol fixed across all rungs:
+
+- **Zero host-transfer noise:** The entire $270\text{ MB}$ WikiText-103 byte corpus resides in GPU DRAM; each step samples random $128$-byte windows directly on the device.
+- **Compact parameter state:** At $16\text{ B/param}$, the $19\text{M}$-parameter AdamW state occupies only $0.3\text{ GiB}$, requiring neither gradient accumulation nor FSDP sharding.
+- **Synchronized multi-window measurement (`tokens_per_second`):** Runs $20$ warm-up steps followed by $3$ timed windows of $50$ steps between device barriers, reporting median $\text{tokens/s}$, incremental speedup, and window spread ($\textrm{range}/\textrm{median}$).
+- **Correctness gate before timing:** Every rung asserts numerical agreement (`allclose` on logits or weight updates) before entering the benchmark.
+:::
+
+::: {.slide title="Using the Previous Profile to Bound the Next Speedup"}
+[Predictive Method]{.kicker}
+
+Before applying any optimization, the kernel profile of the *current* step gives an Amdahl upper bound on what the *next* optimization can gain:
+
+| Optimization Candidate | Target Share of Current Step | Maximum Possible Speedup Bound |
+| :--- | :--- | :--- |
+| **1. Eliminating host dispatch overhead** | Idle gap $t_{\textrm{step}} - t_{\textrm{busy}}$ | $\le \dfrac{t_{\textrm{step}}}{t_{\textrm{busy}}}$ |
+| **2. Operator fusion (`torch.compile` / XLA)** | Non-matmul kernel time $t_{\textrm{other}}$ | $\le \dfrac{t_{\textrm{step}}}{t_{\textrm{products}}}$ (if $t_{\textrm{other}} \to 0$) |
+| **3. Switching `tf32` $\to$ `bf16` (matmul share $f$)** | Matmul time $f \cdot t_{\textrm{step}}$ (plus activation bytes) | Between $\dfrac{1}{1 - f/2}$ (matmuls only) and $2.0\times$ |
+| **4. Enlarging minibatch ($B \to 8B$)** | Fixed per-step parameter work $t_{\textrm{fixed}}$ | $\le \dfrac{t_{\textrm{step}}}{t_{\textrm{step}} - \frac{7}{8}t_{\textrm{fixed}}}$ |
+| **5. Activation checkpointing** | Extra block forward pass ($+2N$ FLOPs/tok) | **Slowdown:** $\ge \dfrac{6}{8} = 0.75\times$ (or $\dfrac{t_{\textrm{step}}}{t_{\textrm{step}} + t_{\textrm{fwd}}}$) |
+:::
+
+::: {.slide title="Rung 0 (Baseline): Profiling the Eager fp32 Step" only="pytorch"}
+[Baseline Profile]{.kicker}
+
+Profiling the eager `float32` baseline (`tf32` matmuls, fused AdamW) at batch size $64$ ($8{,}192$ tokens/step) establishes where the $\sim 25\text{ ms}$ goes:
 
 @!fast-transformer-the-baseline-2
 
-- Device busy for nearly the whole step: the host keeps up.
-- The third outside the products: short elementwise and normalization
-  kernels, bandwidth-bound.
-- Fusion can gain at most step ÷ products $\approx 25 / 15.6 \approx 1.6$.
+- **Diagnosis:** The GPU is busy for nearly $100\%$ of the $25\text{ ms}$ step (not overhead-bound), with matrix products taking $\sim 64\%$ ($15.6\text{ ms}$) and short bandwidth-bound elementwise/norm kernels taking the remaining $\sim 36\%$ ($8.8\text{ ms}$).
+- **Amdahl bound for compilation:** Even if fusion and CUDA graphs eliminated *all* non-matmul kernels and launch gaps, the step could shrink at most from $25\text{ ms} \to 15.6\text{ ms}$ (**$\le 1.6\times$ speedup**).
 :::
 
-::: {.slide title="The Jitted Step Is Busy, and XLA Has Fused It Already" only="jax"}
-[Baseline]{.kicker}
+::: {.slide title="Rung 0 (Baseline): Profiling the Jitted fp32 Step" only="jax"}
+[Baseline Profile]{.kicker}
+
+In JAX, our baseline `train_step` is already compiled with `nnx.jit`, so XLA has already fused the elementwise chains:
 
 @!fast-transformer-the-baseline-2
 
-- One compiled program per step; elementwise operations fused.
-- The device waits 2% of the step: less host work can gain at most 2%.
-- The third outside the products: XLA fusions, bandwidth-bound.
+- **Diagnosis:** The GPU is busy for $98\%$ of the $\sim 24\text{ ms}$ step, with matrix products taking $\sim 65\%$ and XLA's fused kernels (plus non-fused XLA attention) taking $\sim 35\%$.
+- **Amdahl bound for host-overhead removal:** Because the device waits for the host for only $2\%$ of the step right now, reducing Python dispatch work can gain **at most $2\%$** on this rung—though removing it prevents host dispatch from bottlenecking later rungs once device time shrinks!
 :::
 
-::: {.slide title="Compilation Gains Over a Tenth of a Possible 1.6" only="pytorch"}
-[Small kernels]{.kicker}
+::: {.slide title="Rung 1: Inductor Fusion and CUDA Graph Replay" only="pytorch"}
+[Compiler & Replay]{.kicker}
+
+We compile the model with `torch.compile(model, dynamic=False, mode='reduce-overhead')`, combining Inductor operator fusion with static-shape CUDA graph replay:
 
 ```{.python #fast-transformer-exercises}
 compiled = torch.compile(model, dynamic=False, mode='reduce-overhead')
 high = model(X)
 error = ((compiled(X) - high).norm() / high.norm()).item()
-assert error < 1e-4      # same answer first
+assert error < 1e-4      # verify numerical equivalence before timing!
 step = make_step(model, compiled)
 ```
 
 @!fast-transformer-rungs-each-one-measured-1
 
-- Fusion: device time 24.5 → 22.3 ms. CUDA graphs: idle gaps closed.
-
-::: {.d2l-note}
-The products, two thirds of the step, are untouched.
-:::
+- **Result ($\sim 1.13\times$ speedup):** Logits match to $10^{-4}$; fusion shaves $2.2\text{ ms}$ off non-matmul kernels ($24.5 \to 22.3\text{ ms}$) and CUDA graphs close $\sim 1\text{ ms}$ of inter-kernel launch gaps.
 :::
 
-::: {.slide title="nnx.jit Spends Almost 9 ms per Call Walking the Model; Binding Removes It" only="jax"}
-[Host overhead]{.kicker}
+::: {.slide title="Rung 1: Eliminating PyTree Traversal with jit_partial" only="jax"}
+[Host Dispatch Removal]{.kicker}
+
+Timing a no-op call through `nnx.jit` reveals that traversing the Python `nnx.Module` and `nnx.Optimizer` reference graph takes nearly **$9\text{ ms}$ of CPU time per step**—hidden only because the GPU step takes $24\text{ ms}$:
 
 @!fast-transformer-rungs-each-one-measured-1
 
-- `nnx.jit` walks model and optimizer on every call; `graph=False`
-  treats them as trees; `jit_partial` binds them once.
-- Checked first: equal losses and weights. Gain about 1%: the walk was
-  hidden behind a 24 ms device step.
-- Removed anyway: every later change shortens the device's step.
-
-::: {.d2l-note}
-The cost belongs to the convenience of walking Python objects, not to
-JAX.
-:::
+- **`nnx.jit_partial(..., graph=False)`:** Binds the model and optimizer state once in tree mode so each step passes only the minibatch `(X, Y)`, cutting host dispatch from $\sim 9\text{ ms}$ to $< 0.1\text{ ms}$ (gaining $\sim 1\%$ throughput now and removing the $9\text{ ms}$ host floor for all later rungs).
 :::
 
-::: {.slide title="After the Second Change the Products Take About Two Thirds"}
+::: {.slide title="Profile After Rung 1: Matrix Products Take Two-Thirds"}
+[Second Profile]{.kicker}
+
+Profiling the step after Rung 1 shows the GPU busy for $99\text{--}100\%$ of the step, with matrix products consuming $f \approx 65\text{--}71\%$ of device time:
+
 @!fast-transformer-rungs-each-one-measured-5
 
-- Device busy for nearly the whole step: the host is not the limit.
-- The rest is memory traffic between the products.
-
-::: {.d2l-note}
-The arithmetic of the matrix products is now the main limit: make the
-products faster, with a faster number format.
-:::
+- **Predicting Rung 2 (`bfloat16` mixed precision):** Switching Tensor Core GEMMs from `tf32` ($82.6\text{ TFLOP/s}$) to `bfloat16` ($165.2\text{ TFLOP/s}$) halves matrix-product time.
+- **Theoretical bounds:** If *only* matrix products ($f \approx 0.68$) double in speed, the speedup is $\frac{1}{1 - f/2} \approx \mathbf{1.52\times}$; if non-matmul kernels also halve their memory traffic by moving 2-byte activations, the speedup approaches **$2.0\times$**.
 :::
 
-::: {.slide title="Check: Which Change Comes Next, and How Much Can It Gain?"}
-[Check]{.kicker}
+::: {.slide title="Rung 2: Mixed-Precision bf16 Speeds Up the Step 1.75×" only="pytorch"}
+[Reduced Precision]{.kicker}
 
-The device is busy; matrix products take a share $f$ of two thirds to
-seven tenths of the step. Candidates: bf16, a larger minibatch,
-activation checkpointing.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** bf16. If only the products halve: $1/(1 - f/2) \approx 1.5$;
-if every kernel also halves its bytes: 2. Checkpointing costs time, and
-memory is not short.
-:::
-:::
-:::
-
-::: {.slide title="bf16 Speeds Up the Step About 1.75 Times: Not 1.55, Not 2" only="pytorch"}
-[Reduced precision]{.kicker}
+Enabling `torch.autocast('cuda', torch.bfloat16)` runs linear layers and fused FlashAttention (`F.scaled_dot_product_attention`) in `bfloat16` while keeping master weights, norms, the residual stream, and the loss in `float32`:
 
 @!fast-transformer-rungs-each-one-measured-2
 
-- bf16 products and activations; fp32 weights, gradients, Adam moments,
-  norms, residual stream, loss. No loss scaling.
-- Above 1.55: bf16 products run nearer their peak; fewer bytes between
-  them.
-- Below 2: norms, stream, casts, and the update still move fp32.
-
-::: {.d2l-note}
-Inside the bounds that the second profile set before the run.
-:::
+- **Why $1.75\times$ sits cleanly inside $[1.55\times, 2.0\times]$:** Logits agree within $0.4\%$ ($< 1\%$ gate). The speedup exceeds the $1.55\times$ matmul-only bound because `bfloat16` GEMMs achieve higher Tensor Core efficiency than `tf32` and intermediate fused kernels move 2-byte `bfloat16` tensors instead of 4-byte `float32` tensors.
 :::
 
-::: {.slide title="bf16 Alone Gains About 1.45; Halving the Products Predicts 1.48" only="jax"}
-[Reduced precision]{.kicker}
+::: {.slide title="Why bf16 Beat the Matmul-Only Amdahl Bound" only="pytorch"}
+[Precision & Bandwidth]{.kicker}
+
+Decomposing the $1.75\times$ speedup from `torch.autocast('cuda', torch.bfloat16)` highlights how reduced precision accelerates both roofline regimes simultaneously:
+
+- **Compute-bound kernels (GEMMs & FlashAttention):** Tensor Core peak throughput doubles from $82.6 \to 165.2\text{ TFLOP/s}$, and smaller 16-bit operands reduce register-file pressure and shared-memory bank conflicts.
+- **Bandwidth-bound kernels (SwiGLU, rotary embeddings, views):** Halving activation element size from $4\text{ B} \to 2\text{ B}$ cuts DRAM read/write traffic in half for every intermediate tensor between linear projections.
+- **What stays in `float32` (preventing a full $2.0\times$):** Master weights, gradients, AdamW moments ($28\text{ B/param}$), RMSNorm reductions, residual-stream additions, and cross-entropy log-probabilities remain 32-bit for numerical stability.
+:::
+
+::: {.slide title="Rung 2a: Mixed-Precision bf16 Speeds Up Matmuls 1.45×" only="jax"}
+[Reduced Precision]{.kicker}
+
+Applying `d2l.to_bf16` sets `dtype=jnp.bfloat16` on all linear projections while keeping master parameters, norms, embeddings, and the residual stream in `float32`:
 
 @!fast-transformer-rungs-each-one-measured-2
 
-- `d2l.to_bf16`: bf16 compute in the linear layers; norms, embedding,
-  stream in fp32.
-- Products at 65%: $1/(1 - 0.325) \approx 1.48$.
-- Among the kernels between them: XLA's attention writes all
-  $T \times T$ weights to memory ($T$ = 128 positions).
-
-::: {.d2l-note}
-The kernels between the products got no faster.
-:::
+- **Why `bf16` alone gave $1.45\times$ (matching the $1.48\times$ matmul-only bound):** Unlike PyTorch (whose `scaled_dot_product_attention` already called FlashAttention), default `jax.nn.dot_product_attention` uses an XLA implementation that materializes the full $T \times T$ attention matrix in DRAM!
 :::
 
-::: {.slide title="cuDNN's Fused Attention Gains About a Third More" only="jax"}
-[Reduced precision]{.kicker}
+::: {.slide title="Rung 2b: cuDNN Fused FlashAttention Adds Another 1.3×" only="jax"}
+[On-Chip Attention]{.kicker}
+
+Now that Q, K, and V are in 16-bit `bfloat16`, we can switch `jax.nn.dot_product_attention` to cuDNN's fused FlashAttention kernel (`implementation='cudnn'`), which tiles attention in on-chip SRAM without writing the $T \times T$ score matrix to DRAM:
 
 @!fast-transformer-fused-attention
 
-- Same arithmetic; the attention weights never reach device memory.
-- Takes 16-bit inputs only, so it comes after bf16.
-- The profile counted XLA's attention among the other kernels, so it
-  could not foresee this gain.
-
-::: {.d2l-note}
-The bandwidth-bound part responds. Together with bf16: nearly 2×.
-:::
+- **Combined `bf16` + FlashAttention gain ($\approx 1.93\times$):** Eliminating the off-chip attention matrix traffic speeds up the step by another **$1.33\times$**, bringing the cumulative precision + attention speedup close to $2\times$!
 :::
 
-::: {.slide title="512 Windows per Step Gain a Few Percent at Most"}
-[Larger minibatches]{.kicker}
+::: {.slide title="Rung 3: Growing the Minibatch to 512 Windows"}
+[Amortizing Fixed Work]{.kicker}
+
+Because the GPU is already $100\%$ busy, growing the batch $8\times$ from $64 \to 512$ windows ($65{,}536$ tokens/step) can only amortize device work that scales with parameter count $N = 19\text{M}$ rather than token count $n$:
+
+- **Fixed per-step memory traffic ($40\text{ B/param} = 0.76\text{ GB}$):** Fused AdamW reads/writes $28\text{ B/param}$ (`fp32` weight, grad, two moments) and mixed precision casts weights/gradients between `fp32` and `bf16` ($12\text{ B/param}$), taking $\sim 0.75\text{ ms}$ at $1\text{ TB/s}$ ($\sim 6\%$ of a $12.5\text{ ms}$ batch-64 step).
+- **Prediction ($\le 5\%$ gain):** Amortizing $7/8$ of $0.75\text{ ms}$ predicts a few percent throughput gain, while lengthening the step to $\sim 95\text{ ms}$ so multi-GPU allreduce can scale.
 
 @!fast-transformer-rungs-each-one-measured-3
-
-- Busy device: only fixed work can be spread. AdamW 28 B, weight and
-  gradient casts 12 B: $40\,\textrm{B} \times 19\textrm{M} = 0.76$ GB
-  per step.
-- 0.75 ms of a 12 to 13 ms step: about 5% if nothing else is fixed.
-
-::: {.d2l-note}
-Kept because data parallelism needs long steps; not free for training.
-:::
 :::
 
-::: {.slide title="At Batch 512, Two Fifths of the Step Lie Between the Products"}
-[Third profile]{.kicker}
+::: {.slide title="Profile at Batch 512: 60% Matmuls, 40% Memory Traffic"}
+[Third Profile]{.kicker}
+
+At batch size $512$, activation memory consumes $\sim 8\text{ GiB}$ (leaving two-thirds of the $24\text{ GiB}$ GPU free), and the profile shows the step's final single-GPU balance:
 
 @!fast-transformer-larger-minibatches-1
 
-- Busy throughout; the largest kernels are matrix products.
-- The rest: norms, SwiGLU, rotary embeddings, casts. They move bytes and
-  leave the tensor cores idle.
-
-::: {.d2l-note}
-Two fifths of the step moves bytes, not FLOPs.
-:::
+- **Where the time goes:** The GPU is busy for $100\%$ of the $\sim 93\text{--}98\text{ ms}$ step; matrix products and fused attention take **$\sim 57\text{--}60\%$** of the step, while fused bandwidth-bound kernels (RMSNorm, SwiGLU, RoPE, and `fp32`/`bf16` casts) take the remaining **$\sim 40\%$**.
 :::
 
-::: {.slide title="Checkpointing Costs Less Than the Predicted Quarter"}
-[Activation checkpointing]{.kicker}
+::: {.slide title="Branch Test: Predicting Activation Checkpointing Cost"}
+[Checkpointing Prediction]{.kicker}
+
+Even though batch size $512$ easily fits in $24\text{ GiB}$, what happens if we turn on per-block activation checkpointing (`kept=False` branch)? We can bound the throughput retention in two ways:
+
+1. **By FLOP count:** Recomputing each block's forward pass during backpropagation increases block arithmetic from $6N \to 8N\text{ FLOPs/token}$, predicting $6/8 = \mathbf{0.75\times}$ throughput.
+2. **By standalone forward-pass time ($t_{\textrm{fwd}}$):** Timing the forward pass alone predicts $\frac{1}{1 + t_{\textrm{fwd}} / t_{\textrm{step}}} \approx \mathbf{0.76\text{--}0.77\times}$ throughput.
 
 @!fast-transformer-activation-checkpointing-2
+:::
+
+::: {.slide title="Measuring Checkpointing: Fused Remat Beats the Floor"}
+[Checkpointing Measured]{.kicker}
+
+Wrapping all 6 Transformer blocks in `Checkpointed` (`checkpoint` / `nnx.remat`) cuts activation memory by two-thirds ($8\text{ GiB} \to 2.5\text{--}3.1\text{ GiB}$) while retaining **$0.79\text{--}0.85\times$** of throughput—beating both the $0.75\times$ FLOP bound and the $0.77\times$ forward-timing bound:
 
 @!fast-transformer-rungs-each-one-measured-4
 
-- FLOPs: the blocks run forward twice, 8 per parameter and token, not 6:
-  ratio 0.75.
-- Clock: the forward pass takes about a third of the step, so at least
-  three quarters remain.
-- Measured: above both estimates; memory falls to about a third.
-
-::: {.d2l-note}
-The right change only for a model or minibatch that does not fit.
-:::
+- **Why recomputation costs less than a standalone forward pass:** While the block matrix products must be re-executed in full ($+14\text{ ms}$), the compiler fuses the recomputed elementwise kernels (SwiGLU, RoPE, norms) directly into the backward kernels that consume them, saving most of their $13\text{ ms}$ of standalone DRAM traffic!
 :::
 
-::: {.slide title="Each Change Is Measured on Top of the Last"}
+::: {.slide title="Cumulative Single-GPU Waterfall: ~2× Speedup, 50% MFU"}
+[Single-GPU Results]{.kicker}
+
+Summarizing all single-GPU rungs side by side converts token throughput into achieved `TFLOP/s` ($6N\text{ FLOPs/token}$) and **Model FLOPs Utilization** ($\textrm{MFU} = \textrm{achieved FLOP/s} / 165.2\text{ TFLOP/s}$):
+
 @!fast-transformer-the-waterfall
 
-- About 2× in total, nearly all from faster products and less traffic
-  around them.
-- MFU = FLOPs per second at 6 per parameter and token ÷ bf16 peak: about
-  half.
-- Checkpointing: a branch, outside the total.
-
-::: {.d2l-note}
-A change gains only where the limit lies: order matters.
-:::
+- **Takeaway:** Cumulative single-GPU optimizations **double throughput ($\sim 2.0\text{--}2.1\times$)**, reaching **$\sim 48\text{--}51\%$ MFU** on the RTX 4090—driven overwhelmingly by `bfloat16` Tensor Cores and operator/attention fusion.
 :::
 
-::: {.slide title="The Allreduce Should Take 31 ms on Two GPUs and 47 ms on Four"}
-[Data parallelism]{.kicker}
+::: {.slide title="Predicting Multi-GPU Scaling From Step and Link Times"}
+[Data-Parallel Cost Model]{.kicker}
 
-$$t_{\textrm{step}}(k) \approx t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k),
-\quad t_{\textrm{allreduce}} = \tfrac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}$$
+Now we scale across $k \in \{1, 2, 4\}$ RTX 4090s using weak scaling (fixing the per-GPU batch size so total tokens scale as $k$). Without overlap, our §13.5 cost model gives a lower bound on weak-scaling speedup:
 
-- $S$ = 76 MB of fp32 gradients; $\beta_{\textrm{link}} \approx 0.42$ ns per
-  byte (bus bandwidth about 2.4 GB/s) through host memory.
-- Weak scaling (fixed minibatch per GPU): speedup
-  $k\,t_{\textrm{step}}(1) / (t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k))$.
+$$t_{\textrm{step}}(k) \;\approx\; t_{\textrm{step}}(1) \;+\; \frac{2(k-1)}{k}\,S\,\beta_{\textrm{link}}, \qquad \textrm{Speedup}(k) \;\gtrsim\; \frac{k\, t_{\textrm{step}}(1)}{t_{\textrm{step}}(1) + t_{\textrm{allreduce}}(k)}$$
 
-::: {.d2l-note}
-No overlap assumed, so the prediction is a floor.
-:::
-:::
-
-::: {.slide title="Check: Do Two GPUs Help?"}
-[Check]{.kicker}
-
-The allreduce takes 31 ms on two GPUs. Predict the speedup of two GPUs
-for a 22 ms step (fp32, batch 64) and for a 95 ms step (bf16, batch 512).
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $2 \cdot 22 / (22 + 31) \approx 0.83$: slower than one GPU.
-$2 \cdot 95 / (95 + 31) \approx 1.5$: three quarters of linear. A
-second GPU helps only if the allreduce is shorter than a step.
-:::
-:::
+- **Allreduce time for $N = 19\text{M}$ `float32` gradients ($S = 76\text{ MB}$, $\beta_{\textrm{link}} \approx 0.42\text{ ns/B}$):**
+  - **$k = 2$ GPUs:** $t_{\textrm{allreduce}}(2) = S\beta_{\textrm{link}} \approx \mathbf{31\text{ ms}}$.
+  - **$k = 4$ GPUs:** $t_{\textrm{allreduce}}(4) = 1.5\,S\beta_{\textrm{link}} \approx \mathbf{47\text{ ms}}$.
+- **Two opposite predictions:**
+  1. **Compiled `fp32` at batch 64/GPU ($t_{\textrm{step}}(1) \approx 22\text{ ms} < 31\text{ ms}$):** The allreduce takes longer than the step! Equation predicts a **slowdown on 2 GPUs ($\sim 0.85\times$)** and only $\sim 1.3\times$ on 4 GPUs.
+  2. **Compiled `bf16` at batch 512/GPU ($t_{\textrm{step}}(1) \approx 95\text{ ms} \gg 31\text{ ms}$):** Predicts **$\ge 1.5\times$ on 2 GPUs** and **$\ge 2.6\text{--}2.7\times$ on 4 GPUs**.
 :::
 
-::: {.slide title="Measured Speedups Follow the Cost Model"}
-[Data parallelism]{.kicker}
+::: {.slide title="Measured Scaling: Batch 64 Loses, Batch 512 Hits 3×"}
+[Multi-GPU Measured]{.kicker}
+
+Running production data parallelism (`DDP` / sharded `nnx.jit_partial`) on $k = 1, 2, 4$ GPUs tests both predictions of opposite sign:
 
 @!fast-transformer-rungs-each-one-measured-8
 
-- Allreduce within a millisecond of the prediction.
-- Batch 64: two GPUs lose, four gain little.
-- Batch 512 in bf16: four GPUs about 3× one GPU.
-- Distance above the floor: overlap with the backward pass.
-
-::: {.d2l-note}
-Two predictions of opposite sign, a loss and a gain; both held.
+::: {.d2l-note .rule}
+**Both predictions hold:** The standalone $76\text{ MB}$ allreduce measures $31\text{ ms}$ ($k=2$) and $48\text{ ms}$ ($k=4$). At batch $64$, adding a second GPU slows training down ($\sim 0.85\text{--}0.95\times$); at batch $512$ in `bfloat16`, $4$ GPUs achieve **$\sim 2.9\text{--}3.1\times$ single-GPU throughput** ($\sim 2.1\text{M tokens/s}$, or **$6\times$ our single-GPU baseline**), with backward-pass bucket overlap providing the margin above the no-overlap floor!
 :::
 :::
 
-::: {.slide title="The Final Step Trains Like the Baseline"}
-[Training check]{.kicker}
+::: {.slide title="End-to-End Training Gate: Matching Baseline Convergence"}
+[Numerical Verification]{.kicker}
+
+A $2\times$ faster single-GPU step is only valid if it learns the same representation as the `float32` baseline. We train two identically initialized models—one using `baseline` and one using `final` (`+ batch 512` in `bf16`)—on the exact same $200$ minibatches of $512$ windows ($\sim 13\text{M}$ tokens, with a 50-step linear LR warm-up):
 
 @!fast-transformer-training-check
 
-- One initialization, the same 200 minibatches of 512 windows.
-- Learning rate warmed up over 50 steps: without it the loss can jump
-  late. Timing needs none; a step's time ignores its learning rate.
-- Asserted: mean of the last 20 steps and validation within 0.15 nats
-  (bf16 paths drift by up to a tenth); both below the bigram's 2.45.
-- A coarse check: a dropped weight decay would pass it.
-
-::: {.d2l-note .warn}
-13M tokens, yet above the 1.35 the Transformers chapter reached after
-8M: throughput is not progress.
-:::
+- **Passed gate:** Both curves start at $\ln 256 \approx 5.55$, track within $0.05\text{ nats/byte}$ across all $200$ steps, and reach the same validation loss ($\sim 2.08 < 2.45$ bigram threshold).
 :::
 
-::: {.slide title="Two Fifths of the Final Step Is Still Memory Traffic"}
-[Account]{.kicker}
+::: {.slide title="Throughput vs. Time-to-Target-Loss"}
+[Optimization Caveat]{.kicker}
+
+Why did $200$ steps at batch size $512$ ($13.1\text{M}$ tokens, validation loss $\sim 2.08$) finish at a higher loss than $1{,}000$ steps at batch size $64$ ($8.2\text{M}$ tokens, validation loss $\sim 1.35$ in Chapter 11)?
+
+- **The critical batch size ($b_{\textrm{noise}}$):** By the gradient-noise-scale model, training at batch size $b$ requires $E(b) = E_{\min}(1 + b / b_{\textrm{noise}})$ total tokens to reach a target loss.
+- **Diminishing statistical returns past $b_{\textrm{noise}}$:** When $b \ll b_{\textrm{noise}}$, doubling batch size halves the steps needed; when $b \gg b_{\textrm{noise}}$, larger batches compute cleaner gradient estimates that make nearly the same parameter progress per step as a smaller batch— requiring more total tokens $E(b)$.
+- **Systems takeaway:** Systems optimizations that preserve batch size (`compile`, `bf16`, FlashAttention, strong-scaling DP) reduce time-to-target-loss unconditionally; batch-enlarging changes (`+ batch 512`, weak-scaling DP) reduce time-to-target-loss only while global batch size remains near or below $b_{\textrm{noise}}$.
+:::
+
+::: {.slide title="Millisecond Accounting of the Final Step"}
+[Final Accounting]{.kicker}
+
+Normalizing our kernel profiles to milliseconds per $8{,}192$ tokens accounts for every millisecond of the baseline and final steps against ideal Tensor Core peak time ($5.7\text{ ms}$ in `bf16`, $11.3\text{ ms}$ in `tf32`):
 
 @!fast-transformer-account
 
-- Per 8,192 tokens: arithmetic at peak 5.7 ms; products about 7 ms, at
-  four fifths of peak or more; the kernels between them about 5 ms.
+- **Why the final step runs at $\sim 50\%$ MFU ($11.5\text{--}12\text{ ms}$ vs. $5.7\text{ ms}$ ideal):**
+  - **Matrix products ($\sim 7\text{ ms}$):** Run at **$> 80\%$ of the $5.7\text{ ms}$ hardware peak** while performing $> 99\%$ of all arithmetic.
+  - **Bandwidth-bound kernels ($\sim 5\text{ ms}$):** Norms, SwiGLU, RoPE, casts, and AdamW perform $< 1\%$ of the FLOPs but consume **$\sim 40\%$ of the step time** moving bytes through DRAM.
+:::
 
-::: {.d2l-note}
-Against the baseline: products more than twice as fast, the kernels
-between them about two fifths shorter.
+::: {.slide title="Concept Check: Amdahl Bounds, Scaling, and Next Steps"}
+[Check Your Understanding]{.kicker}
+
+Use the final millisecond accounting ($7\text{ ms}$ in matrix products near `bf16` peak + $5\text{ ms}$ in bandwidth-bound non-matmul kernels $= 12\text{ ms}$ per $8{,}192$ tokens) to answer three questions:
+
+1. Suppose we switch the matrix products from `bfloat16` ($165\text{ TFLOP/s}$) to `fp8` ($330\text{ TFLOP/s}$), halving matrix-product time from $7\text{ ms} \to 3.5\text{ ms}$ while leaving the $5\text{ ms}$ of non-matmul kernels unchanged. What is the step speedup?
+2. Conversely, suppose custom hand-written mega-kernels fuse away *all* $5\text{ ms}$ of non-matmul memory traffic while `bfloat16` matrix products stay at $7\text{ ms}$. What is the step speedup?
+3. What would it take to achieve another **$2\times$ single-GPU speedup** ($12\text{ ms} \to 6\text{ ms}$)?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **`fp8` matmuls alone:** Step time drops from $12\text{ ms} \to 3.5 + 5.0 = 8.5\text{ ms}$, a speedup of **$12 / 8.5 \approx 1.41\times$** (far below $2\times$!).
+2. **Eliminating all non-matmul kernels alone:** Step time drops from $12\text{ ms} \to 7.0\text{ ms}$, a speedup of **$12 / 7.0 \approx 1.71\times$** (also below $2\times$!).
+3. **Both are required simultaneously:** Because the $12\text{ ms}$ step is split $58\%$ compute-bound ($7\text{ ms}$) and $42\%$ bandwidth-bound ($5\text{ ms}$), halving it to $6\text{ ms}$ requires **both** faster `fp8` matrix products ($7 \to 3.5\text{ ms}$) **and** narrower/fused activation memory traffic ($5 \to 2.5\text{ ms}$).
 :::
 :::
 
-::: {.slide title="Check: Where Would the Next Factor of Two Come From?"}
-[Check]{.kicker}
+::: {.slide title="Summary: Step-by-Step Transformer Optimization"}
+[Key Takeaways]{.kicker}
 
-Per 8,192 tokens the final step spends about 7 ms in products near their
-peak and about 5 ms in other kernels. fp8 doubles the tensor-core rate.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** fp8 shortens only the products: about 1.4×, at most 1.5×.
-No kernels between the products at all: 1.7 to 1.8×. Two needs both:
-fused norms and activations, narrower activations, kernels for one model,
-and faster products. On four GPUs: a faster link.
-:::
-:::
-:::
-
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
-
-- Count, predict, measure, explain the difference.
-- Bounds from the profile: idle share; time outside the products;
-  $1/(1 - f/2)$ to 2 for bf16.
-- Faster products and less traffic did nearly all of the 2×; batch 512 a
-  few percent; checkpointing a loss, smaller than the predicted quarter.
-- Over host memory, two GPUs slow a 22 ms step and speed up a 95 ms one.
-- Final step: products near peak, two fifths memory traffic.
-
-**Next:** fp8, kernels for one model, many machines: the Language Models
-part.
+| Optimization Rung | Bottleneck Targeted | Amdahl Prediction | Measured Gain | Cumulative Speedup / MFU |
+| :--- | :--- | :---: | :---: | :---: |
+| **0. Baseline (`fp32`/`tf32`)** | Reference ($24\text{--}25\text{ ms}$ / $8192$ tok) | — | $1.00\times$ | $1.00\times$ ($\sim 23\text{--}24\%$ MFU) |
+| **1. Compile / `jit_partial`** | Non-matmul traffic & host dispatch | $\le 1.6\times$ (PT) / $1.02\times$ (JAX) | $1.13\times$ / $1.01\times$ | $1.01\text{--}1.13\times$ ($\sim 25\text{--}27\%$ MFU) |
+| **2. `bf16` + FlashAttention** | Tensor Core GEMMs & $T \times T$ attn | $1.5\text{--}2.0\times$ | $1.75\times$ / $1.93\times$ | $\approx 1.95\text{--}1.98\times$ ($\sim 46\text{--}49\%$ MFU) |
+| **3. Batch $64 \to 512$** | Fixed $40\text{ B/param}$ step work ($0.75\text{ ms}$) | $\approx 1.05\times$ | $1.03\text{--}1.06\times$ | **$\approx 2.0\text{--}2.1\times$ ($\sim 48\text{--}51\%$ MFU)** |
+| **Branch: Checkpointing** | Activation memory ($8 \to 2.5\text{ GiB}$) | $\ge 0.75\text{--}0.77\times$ | $0.79\text{--}0.85\times$ | Memory saver (not kept) |
+| **4. 4-GPU Data Parallel** | Single-GPU ceiling ($48\text{ ms}$ allreduce) | $\ge 2.65\times$ (batch 512) | **$\approx 3.0\times$** over 1 GPU | **$\approx 6\times$ over 1-GPU baseline** |
 :::

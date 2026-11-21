@@ -1015,432 +1015,269 @@ The chapter's default—velocity regression on the linear path with uniform $t$,
 ::: {.cover}
 [Dive into Deep Learning · §17.6]{.kicker}
 
-Likelihood, Weighting and the Design Space<br>
-**the bound is weighted noise regression · a likelihood for the mixture · every loss is a weighting · EDM's preconditioning · noise levels as scales · one factor at a time**
+Likelihood, Weighting, and the Diffusion Design Space<br>**variational bound (ELBO) · log-SNR weightings w(λ) · probability-flow ODE likelihood · EDM preconditioning · resolution scaling**
 :::
 :::
 
-::: {.slide title="We Never Asked What Probability the Model Assigns"}
-[The problem]{.kicker}
+::: {.slide title="How Does Noise Regression Relate to Maximum Likelihood?"}
+[Motivation]{.kicker}
 
-- Five sections of regression onto a target: modes land, garments look
-  like garments.
-- The three-mode mixture has a true negative log-likelihood of about
-  2.5 nats per point. What does the trained network give?
+Unlike GANs, diffusion models assign explicit probability densities to data points in two distinct ways—and unify all standard training losses under one log-SNR integral:
 
-::: {.d2l-note .warn}
-Is "predict the noise" a form of maximum likelihood? Which choices
-(target, weight per noise level, schedule) matter?
-:::
+- **1. Variational bound (ELBO) of the reverse Markov chain:** Sohl-Dickstein et al. (2015) and Ho et al. (2020) showed that the reverse chain is a latent-variable model whose negative log-likelihood is bounded by a weighted sum of noise-prediction errors across noise levels.
+- **2. Exact log-likelihood via the probability-flow ODE:** Song et al. (2021) showed that integrating the divergence $-\nabla \cdot \mathbf{u}_t(\mathbf{x}_t)$ along the deterministic ODE trajectory gives the exact log-density $\log p_{\boldsymbol\theta}(\mathbf{x}_0)$ by instantaneous change of variables.
+- **3. Unification via log-SNR weighting $w(\lambda)$:** Kingma & Gao (2023) proved that every diffusion and flow-matching objective reduces to $\frac{1}{2}\int w(\lambda)\,\mathbb{E}\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \boldsymbol\epsilon\|^2\,d\lambda$.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Reverse Chain as a Latent-Variable Model (ELBO)"}
+[Variational Upper Bound on Negative Log-Likelihood]{.kicker}
 
-- derive the likelihood bound and read each step's weight as a drop in
-  log-SNR;
-- compute the bound of a two-step chain by hand;
-- measure a model's likelihood by the flow and by the bound;
-- write any diffusion loss as a weighting $w(\lambda)$;
-- choose a target, a path and training levels for a new model.
+The forward chain $q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) = \prod_{k=1}^T q(\mathbf{x}_k \mid \mathbf{x}_{k-1})$ has no learnable parameters, while the reverse chain $p_{\boldsymbol\theta}(\mathbf{x}_{0:T}) = p(\mathbf{x}_T)\prod_{k=1}^T \mathcal{N}(\mathbf{x}_{k-1}; \boldsymbol\mu_{\boldsymbol\theta}(\mathbf{x}_k, k), \nu_k\mathbf{I})$ starts from $p(\mathbf{x}_T) = \mathcal{N}(\mathbf{0}, \mathbf{I})$:
 
-**Running examples:** the mixture (2.5 nats); Fashion-MNIST, one factor
-at a time.
+$$-\log p_{\boldsymbol\theta}(\mathbf{x}_0) = -\log \mathbb{E}_{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\!\left[\frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right] \le \mathbb{E}_{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\!\left[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\right] =: L(\mathbf{x}_0)$$
+
+- **Exact gap via Jensen's inequality:** The bound gap is $D_{\textrm{KL}}\big(q(\mathbf{x}_{1:T} \mid \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{1:T} \mid \mathbf{x}_0)\big)$, which vanishes when the reverse chain matches the true time-reversed posterior.
+- **Mode-dropping penalty:** Averaged over the true data distribution $p(\mathbf{x}_0)$, $\mathbb{E}_p[L(\mathbf{x}_0)] \ge H(p) + D_{\textrm{KL}}(p \,\|\, p_{\boldsymbol\theta})$, charging an infinite or large penalty for any mode assigned negligible mass.
 :::
 
-::: {.slide title="This Deck Asks Why the Loss Is Right"}
-[Where this fits]{.kicker}
+::: {.slide title="Telescoping the ELBO into Per-Step KL Divergences"}
+[Prior, Denoising, and Reconstruction Terms]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | asks |
-|---|---|
-| Denoising and the Score | what a denoiser knows about the data |
-| Gaussian Paths | which regression trains the walk to data |
-| Sampling by Integration | how to walk from noise to data |
-| Diffusion for Images | what changes for images |
-| Samplers, Inversion and Editing | which steps to skip |
-| **Likelihood, Weighting and the Design Space** | **is the regression maximum likelihood?** |
-| Latent Diffusion and Transformers | why diffuse a compressed code |
-| Few-Step Generation | why one step fails |
-| Discrete Diffusion | what noise is for a token |
+Using Bayes' rule on the Markov forward step, $q(\mathbf{x}_k \mid \mathbf{x}_{k-1}, \mathbf{x}_0) = q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0)\,q(\mathbf{x}_k \mid \mathbf{x}_0) / q(\mathbf{x}_{k-1} \mid \mathbf{x}_0)$, telescopes the marginal ratios across $k = 2, \ldots, T$:
+
+$$L(\mathbf{x}_0) = \underbrace{D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big)}_{L_T \text{ (prior matching)}} + \sum_{k=2}^T \underbrace{\mathbb{E}_q\big[D_{\textrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big)\big]}_{L_{k-1} \text{ (denoising steps)}} + \underbrace{\mathbb{E}_q\big[-\log p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)\big]}_{L_0 \text{ (reconstruction)}}$$
+
+- **Tractable Gaussian forward posterior:** Conditioning on both endpoints $(\mathbf{x}_0, \mathbf{x}_k)$ makes $q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) = \mathcal{N}(\tilde{\boldsymbol\mu}_k, \tilde\beta_k\mathbf{I})$ an exact Gaussian with precision-weighted mean and variance:
+  $$\tilde{\boldsymbol\mu}_k = \frac{\alpha_{k-1}\beta_k}{\sigma_k^2}\,\mathbf{x}_0 + \frac{\sqrt{1 - \beta_k}\,\sigma_{k-1}^2}{\sigma_k^2}\,\mathbf{x}_k, \qquad \tilde\beta_k = \frac{\beta_k\,\sigma_{k-1}^2}{\sigma_k^2} < \beta_k$$
 :::
 
-::: {.col .narrow}
-- **Uses:** $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \sigma_t
-  \boldsymbol\epsilon$ (data $t = 0$, noise $t = 1$); log-SNR
-  $\lambda = \log(\alpha^2/\sigma^2)$; the probability-flow ODE; FD.
-- **Skips:** latent spaces, distillation.
-:::
-:::
-:::
+::: {.slide title="Worked Example: Exact Two-Step ELBO on N(0, 1) Data"}
+[Verifying Every Term by Hand]{.kicker}
 
-::: {.slide title="Read Backward, the Noising Chain Is a Latent-Variable Model"}
-Forward: $\mathbf{x}_k = \sqrt{1 - \beta_k}\, \mathbf{x}_{k-1} +
-\sqrt{\beta_k}\, \boldsymbol\epsilon_k$. Backward, learned:
-$p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k) =
-\mathcal{N}(\boldsymbol\mu_{\boldsymbol\theta}(\mathbf{x}_k, k), \nu_k
-\mathbf{I})$, from $\mathbf{x}_T \sim \mathcal{N}(\mathbf{0},
-\mathbf{I})$.
+Consider $1\text{D}$ standard normal data $x_0 \sim \mathcal{N}(0, 1)$, a $T = 2$ chain with $\beta_1 = \beta_2 = \frac{1}{2}$ ($\alpha_1^2 = \frac{1}{2}, \alpha_2^2 = \frac{1}{4}$), optimal posterior-mean predictors, and reverse variance $\nu_k = \beta_k$:
 
-Average over the forward chain $q$; the log is concave (Jensen):
+$$\mathbb{E}_{x_0}[L(x_0)] = \underbrace{0.144}_{L_2 \text{ (prior)}} + \underbrace{0.203}_{L_1 \text{ (denoising)}} + \underbrace{1.072}_{L_0 \text{ (reconstruction)}} = \mathbf{1.419\text{ nats}} = \frac{1}{2}\log(2\pi e)$$
 
-$$-\log p_{\boldsymbol\theta}(\mathbf{x}_0) = -\log \mathbb{E}_q\Big[\frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\Big] \le \mathbb{E}_{q}\Big[-\log \frac{p_{\boldsymbol\theta}(\mathbf{x}_{0:T})}{q(\mathbf{x}_{1:T} \mid \mathbf{x}_0)}\Big] =: L(\mathbf{x}_0)$$
-
-::: {.d2l-note}
-The forward chain is the variational posterior, and nothing about it is
-learned.
+- **Exactness in two steps:** Even with giant steps $\beta_k = 0.5$, the sum equals the exact differential entropy $\frac{1}{2}\log(2\pi e) \approx 1.419$ nats of $\mathcal{N}(0, 1)$!
+- **Why $\nu_2 = \beta_2 = \frac{1}{2}$ beats $\nu_2 = \tilde\beta_2 = \frac{1}{3}$ here:** The forward posterior $q(x_1 \mid x_2, x_0)$ knows $x_0$ (so its conditional variance is $\tilde\beta_2 = \frac{1}{3}$), whereas the reverse step $p_{\boldsymbol\theta}(x_1 \mid x_2)$ does *not* know $x_0$—setting $\nu_2 = \tilde\beta_2$ underestimates the true reverse variance and inflates the bound to $1.466$ nats.
 :::
 
-[Sohl-Dickstein et al., 2015; Ho et al., 2020]{.small}
+::: {.slide title="From Gaussian KL to Log-SNR Weighted Regression"}
+[Deriving the Continuous-Time ELBO Integral]{.kicker}
+
+Substituting $\mathbf{x}_0 = (\mathbf{x}_k - \sigma_k\boldsymbol\epsilon)/\alpha_k$ into $\tilde{\boldsymbol\mu}_k$ writes the posterior mean in terms of the noise $\boldsymbol\epsilon$, turning each Gaussian KL term $L_{k-1}$ into a weighted noise-prediction error:
+
+$$L_{k-1} = \mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\!\left[\frac{\beta_k^2}{2\nu_k(1 - \beta_k)\sigma_k^2}\,\big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_k, k)\big\|^2\right] + \text{const}$$
+
+- **The ELBO weight is half the log-SNR drop:** For $\nu_k = \tilde\beta_k$, the weight simplifies to $\frac{\beta_k}{2(1-\beta_k)\sigma_{k-1}^2} = \frac{1}{2}\big(e^{\lambda_{k-1} - \lambda_k} - 1\big) \approx \frac{1}{2}(\lambda_{k-1} - \lambda_k)$.
+- **Continuous-time limit ($T \to \infty$, Kingma et al., 2021):** The Riemann sum over log-SNR increments $\Delta\lambda_k = \lambda_{k-1} - \lambda_k$ converges to a schedule-invariant integral over $\lambda \in [\lambda_{\min}, \lambda_{\max}]$:
+  $$L(\mathbf{x}_0) \xrightarrow{T \to \infty} \frac{1}{2}\int_{\lambda_{\min}}^{\lambda_{\max}} \mathbb{E}_{\boldsymbol\epsilon}\big[\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda)\|^2\big]\,d\lambda + L_T + L_0$$
 :::
 
-::: {.slide title="The Bound Splits into Prior, Denoising and Reconstruction Terms"}
-Reverse each forward step by Bayes' rule with $\mathbf{x}_0$ fixed; the
-marginals telescope:
+::: {.slide title="Inspecting the Discrete ELBO Weights Along the VP Chain"}
+[Why DDPM Dropped the Variational Weights]{.kicker}
 
-$$
-\begin{aligned}
-L &= L_T + \textstyle\sum_{k=2}^{T} L_{k-1} + L_0,\\
-L_T &= D_{\textrm{KL}}\big(q(\mathbf{x}_T \mid \mathbf{x}_0) \,\|\, p(\mathbf{x}_T)\big) \quad \textrm{(prior)},\\
-L_{k-1} &= \mathbb{E}_q\, D_{\textrm{KL}}\big(q(\mathbf{x}_{k-1} \mid \mathbf{x}_k, \mathbf{x}_0) \,\|\, p_{\boldsymbol\theta}(\mathbf{x}_{k-1} \mid \mathbf{x}_k)\big) \quad \textrm{(denoising)}
-\end{aligned}
-$$
-
-$L_0 = -\mathbb{E}_q \log p_{\boldsymbol\theta}(\mathbf{x}_0 \mid \mathbf{x}_1)$
-(reconstruction). Forward posterior: $\mathcal{N}(\tilde{\boldsymbol\mu}_k, \tilde\beta_k
-\mathbf{I})$ with $\tilde\beta_k = \beta_k \sigma_{k-1}^2 / \sigma_k^2 <
-\beta_k$: knowing both ends pins the middle down.
-:::
-
-::: {.slide title="Two Steps and Gaussian Data Already Make the Bound Exact"}
-One coordinate, $x_0 \sim \mathcal{N}(0, 1)$, $T = 2$, $\beta_1 = \beta_2
-= \tfrac12$, the best learned means, $\nu_k = \beta_k$:
-
-$$\mathbb{E}\, L = \underbrace{0.144}_{\textrm{prior}} + \underbrace{0.203}_{\textrm{denoising}} + \underbrace{1.072}_{\textrm{reconstruction}} = 1.419 = \tfrac12 \log(2\pi e)$$
-
-- With $\nu_2 = \tilde\beta_2 = \tfrac13$ instead: $L_1 = 0.25$, bound
-  1.466.
-
-::: {.d2l-note}
-The learned step does not know $x_0$; its variance must include that
-uncertainty.
-:::
-:::
-
-::: {.slide title="Predicting the Noise Turns Each Term into a Weighted Regression"}
-Substituting $\mathbf{x}_0 = (\mathbf{x}_k - \sigma_k
-\boldsymbol\epsilon)/\alpha_k$:
-
-$$\tilde{\boldsymbol\mu}_k = \frac{1}{\sqrt{1 - \beta_k}}\Big(\mathbf{x}_k - \frac{\beta_k}{\sigma_k}\, \boldsymbol\epsilon\Big), \qquad \boldsymbol\mu_{\boldsymbol\theta} = \frac{1}{\sqrt{1 - \beta_k}}\Big(\mathbf{x}_k - \frac{\beta_k}{\sigma_k}\, \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}\Big)$$
-
-$$L_{k-1} = \mathbb{E}\Big[\frac{\beta_k^2}{2\nu_k (1 - \beta_k)\sigma_k^2}\, \big\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_k, k)\big\|^2\Big] + \textrm{const}$$
-
-::: {.d2l-note}
-The bound is the noise regression at every level, each with its own weight.
-:::
-:::
-
-::: {.slide title="Each Step's Weight Is Half Its Drop in Log-SNR"}
-With $\lambda_k = \log(\alpha_k^2/\sigma_k^2)$ and $\nu_k = \tilde\beta_k$:
-weight $= \tfrac12(e^{\lambda_{k-1} - \lambda_k} - 1) \approx
-\tfrac12(\lambda_{k-1} - \lambda_k)$. Along our VP chain, $T = 1000$:
+Evaluating the discrete ELBO weights $\omega_k$ for $\nu_k = \beta_k$ and $\nu_k = \tilde\beta_k$ alongside $\frac{1}{2}(\lambda_{k-1} - \lambda_k)$ on our $T = 1{,}000$ VP chain reveals an extreme skew toward $k \to 0$:
 
 @!design-space-from-the-bound-to-weighted-regression
 
-- About 0.6 at the second step, near 0.01 or below after a few dozen.
-- The simple loss sets every weight to one and still gives better
-  samples.
-
-::: {.d2l-note}
-The bound charges every step by how much it lowers the log-SNR.
+- **Massive weight spike near clean data ($k \le 10$):** Because $\sigma_k^2$ starts near zero, the log-SNR drops by $\approx 0.78$ at $k = 2$ and $\approx 0.16$ at $k = 10$, vs. $\le 0.01$ for $k \ge 100$.
+- **Why $L_{\textrm{simple}}$ sets all weights to $1$:** The true ELBO spends most of its gradient budget on imperceptible low-noise pixel perturbations ($k \le 20$), whereas uniform step weighting focuses capacity on intermediate noise levels where global image structure forms.
 :::
 
-[Ho et al., 2020; Kingma et al., 2021]{.small}
-:::
+::: {.slide title="Exact Flow Likelihood vs. Continuous ELBO"}
+[Measuring Learned Density Against the 2.47-Nat Truth]{.kicker}
 
-::: {.slide title="Check: Predict How the Mixture's Bound Splits"}
-[Check]{.kicker}
+Along any trajectory of the probability-flow ODE $d\mathbf{x}/dt = \mathbf{u}_t(\mathbf{x})$, the log-density evolves by the instantaneous change-of-variables formula $d\log p_t(\mathbf{x}_t)/dt = -\nabla \cdot \mathbf{u}_t(\mathbf{x}_t)$:
 
-At $t_{\min}$ the noise is $1\%$ of the signal, $e^{-\lambda_{\max}}
-\approx 10^{-4}$, and no network can predict it. In 2-D,
-
-$$L_0 = \tfrac{d}{2}\log\big(2\pi e^{-\lambda_{\max}}\big) + \tfrac12 \mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}\|^2 \approx\ ?$$
-
-If the whole bound is 2.5 nats, how large is the integral over $\lambda$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $L_0 \approx -7.3 + 1 = -6.3$ nats, so the integral is about
-$2.5 + 6.3 \approx 8.8$ nats. Neither part is a likelihood; only the sum
-bounds one.
-:::
-:::
-:::
-
-::: {.slide title="Flow and Bound Put the Network within Half a Hundredth of a Nat"}
-Flow: $d \log p/dt = -\nabla \cdot \mathbf{u}_t$ along the trajectory, from
-the data to $t = 1$. Bound: Monte Carlo over $\lambda$, with points, levels
-and noise shared by both predictors.
+$$\log p_{\boldsymbol\theta}(\mathbf{x}_{t_{\min}}) = \log \mathcal{N}(\mathbf{x}_1; \mathbf{0}, \mathbf{I}) + \int_{t_{\min}}^1 \nabla \cdot \mathbf{u}_t(\mathbf{x}_t)\,dt$$
 
 @!design-space-a-number-for-the-mixture-2
 
 @!design-space-a-number-for-the-mixture-3
 
 ::: {.d2l-note}
-The exact field gives the true 2.5 nats to four decimals; the network is
-within half a hundredth of a nat by both measures.
+**Within $0.005$ nats of maximum likelihood:** Integrating `pf_nll` via 100-step RK4 and estimating the stratified continuous ELBO `bound` confirm that our trained MLP matches the exact analytical mixture field within **$0.002$–$0.005$ nats**!
 :::
 :::
 
-::: {.slide title="Each Weighting Wins on Its Own Measure"}
-Noise predictors, simple loss against the bound's weighting ($\lambda$
-uniform), two widths, two seeds. Strays: samples more than three standard
-deviations from every mode.
+::: {.slide title="Capacity Bottleneck: ELBO Weighting vs. Simple Loss"}
+[When Does the Loss Weighting Matter?]{.kicker}
+
+With abundant capacity (`width = 256`), any positive weighting reaches the exact oracle. When capacity is constrained (`width = 32`), the weighting decides where approximation error goes:
 
 @!design-space-a-number-for-the-mixture-5
 
-- 32 units: bound weighting, lower bound; simple loss, lower flow NLL and
-  fewer strays (256 units: all within two hundredths of a nat).
-- Uniform $\lambda$ puts over a third of its draws at $\lambda > 2$, nearly
-  clean; uniform $t$ about a tenth.
-
-::: {.d2l-note}
-Training on the bound does not give a small network its best likelihood.
-:::
+- **At `width = 32`, each weighting wins on its own objective:** Uniform-$\lambda$ (`bound`) achieves a lower ELBO by $0.01$–$0.02$ nats because it places $>35\%$ of training draws at $\lambda > 2$ (nearly clean data).
+- **Simple loss wins on flow likelihood and samples:** Uniform-$t$ (`simple`) places $90\%$ of draws in the noisy transport regime ($\lambda < 2$), yielding better exact ODE likelihoods (`flow - exact`) and fewer stray samples ($1.6\%$ vs. $2.2\%$).
 :::
 
-::: {.slide title="Every Loss Is One Integral with Its Own Weighting"}
-Every target is affine in $\hat{\boldsymbol\epsilon}$ with a scalar slope,
-so each loss is $c(t)\,\|\hat{\boldsymbol\epsilon} -
-\boldsymbol\epsilon\|^2$. With training times of density $p(t)$:
+::: {.slide title="Unifying All Objectives via Log-SNR Weighting w(λ)"}
+[The Canonical Integral Form (Kingma & Gao, 2023)]{.kicker}
 
-$$\mathcal{L}_w = \frac12 \int w(\lambda)\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\, d\lambda, \qquad w(\lambda) = 2\, c(t)\, p(t) \left|\frac{dt}{d\lambda}\right|$$
+At fixed $\mathbf{x}_t$, every target in our dictionary is an affine function of $\hat{\boldsymbol\epsilon}$ with scalar slope $\sqrt{c(t)}$, so $\|\text{net} - \text{target}\|^2 = c(t)\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta} - \boldsymbol\epsilon\|^2$. Changing variables from $t \sim p(t)$ to $\lambda_t = \log(\alpha_t^2/\sigma_t^2)$ unifies all losses:
 
-- The bound is $w \equiv 1$.
-- A schedule enters only through $w$ and the endpoints of $\lambda$.
+$$\mathcal{L}_w(\boldsymbol\theta) = \frac{1}{2}\int_{\lambda_{\min}}^{\lambda_{\max}} w(\lambda)\,\mathbb{E}_{\mathbf{x}_0, \boldsymbol\epsilon}\big[\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\|^2\big]\,d\lambda, \qquad w(\lambda) = 2\,c(t)\,p(t)\,\left|\frac{dt}{d\lambda}\right|$$
 
-::: {.d2l-note}
-A loss is described completely by how much it cares about the noise error
-at each log-SNR.
+| Published Objective | Forward Path & Time Sampling | Implied Log-SNR Weighting $w(\lambda)$ | Likelihood Bound Status |
+| :--- | :--- | :--- | :--- |
+| **Continuous ELBO** (VDM) | Any path, $\lambda \sim U(\lambda_{\min}, \lambda_{\max})$ | $w(\lambda) = \mathbf{1}$ (flat across all scales) | Exact ELBO on clean data |
+| **DDPM Simple Loss** | VP (linear $\beta$), $t \sim U(0, 1)$ | $|dt/d\lambda|$ (peaks near $\lambda \approx -0.9$) | Non-monotone (not a bound) |
+| **Linear-Path Noise** | Linear $(1-t, t)$, $t \sim U(0, 1)$ | $\operatorname{sech}^2(\lambda/4)$ (bell bump at $\lambda = 0$) | Non-monotone (not a bound) |
+| **Cosine-Path $\mathbf{v}$-Prediction** | Cosine VP, $t \sim U(0, 1)$ | **$e^{-\lambda / 2}$** ($c(t) = 1/\alpha_t^2 = 1 + e^{-\lambda}$) | **Monotone:** ELBO on noised data |
+| **Flow Matching Velocity** | Linear $(1-t, t)$, $t \sim U(0, 1)$ | **$e^{-\lambda / 2}$** ($c(t) = 1/(1-t)^2$) | **Monotone:** ELBO on noised data |
+| **EDM Preconditioned Loss** | $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$ | $\mathcal{N}(\lambda; 2.4, 2.4^2)\big(e^{-\lambda} + \sigma_{\mathrm{data}}^2\big)$ | Peaked bump (not a bound) |
 :::
 
-[Kingma and Gao, 2023]{.small}
-:::
+::: {.slide title="Verifying the Flow-Matching and v-Prediction Identity"}
+[Automatic Differentiation Check of w(λ)]{.kicker}
 
-::: {.slide title="v-Prediction on the Cosine Path and Flow Matching Are One Objective"}
-| objective | path and noise levels | $w(\lambda)$ |
-|---|---|---|
-| bound (ELBO) | any path | $1$ |
-| noise, DDPM | VP, linear $\beta$, $t$ uniform | $\lvert dt/d\lambda\rvert$ |
-| noise | linear, $t$ uniform | $\operatorname{sech}^2(\lambda/4)$, a bump at $\lambda = 0$ |
-| noise | cosine, $t$ uniform | $\operatorname{sech}(\lambda/2)$ |
-| $\mathbf{v}$ | cosine, $t$ uniform | $e^{-\lambda/2}$ |
-| velocity (flow matching) | linear, $t$ uniform | $e^{-\lambda/2}$ |
-| EDM | $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$ | $\mathcal{N}(\lambda; 2.4, 2.4^2)\,(e^{-\lambda} + \sigma_{\mathrm{data}}^2)$ |
+Computing $w(\lambda) = 2\,c(t)\,|dt/d\lambda|$ numerically via forward-mode AD confirms that linear-path velocity regression and cosine-path $\mathbf{v}$-prediction share the exact same $e^{-\lambda/2}$ weighting:
 
-Each up to a constant factor; $\bar\sigma = \sigma/\alpha$, $\sigma_{\mathrm{data}}$
-the data's scale. Computed: $\mathbf{v}$ over velocity is $0.64$ from
-$\lambda = -8$ to $4$.
-
-::: {.d2l-note}
-Velocity and noise models differ in their weighting, not in what they learn
-(Gao et al., 2025).
-:::
-:::
-
-::: {.slide title="Monotone Weightings Are Bounds for Noise-Augmented Data"}
-![](../img/mdl-diffusion-weightings.svg){width=90%}
-
-- Weight one below a level $\mu$, zero above: the bound for data noised to
-  log-SNR $\mu$, whose path starts at $\mu$. Monotone $w$ mixes such steps.
-- $e^{-\lambda/2}$ mixes mostly heavy noise. Peaked weightings (DDPM, EDM)
-  are not bounds.
-
-::: {.d2l-note}
-$\mathbf{v}$-prediction and flow matching are likelihood training of data
-noised to a random level, mostly a heavy one.
-:::
-:::
-
-::: {.slide title="The Time Distribution Is a Weighting in Disguise"}
-For any density $p(\lambda)$ covering the range (importance sampling):
-
-$$\mathcal{L}_w = \mathbb{E}_{\lambda \sim p}\Big[\frac{w(\lambda)}{2\, p(\lambda)}\, \mathbb{E}\big\|\hat{\boldsymbol\epsilon}_{\boldsymbol\theta}(\mathbf{x}_\lambda, \lambda) - \boldsymbol\epsilon\big\|^2\Big]$$
-
-- In principle $p$ changes only the variance.
-- Logit-normal times: $t = 1/(1 + e^{-(m + s n)})$, $n \sim
-  \mathcal{N}(0, 1)$; at $m = 0$ a bump around $t = \tfrac12$.
-
-::: {.d2l-note}
-Nobody divides by $p(\lambda)$, so the time distribution multiplies the
-weighting.
-:::
-:::
-
-::: {.slide title="Check: Which Losses Are Bounds?"}
-[Check]{.kicker}
-
-On the linear path with $t$ uniform, the noise loss has $w \propto
-\operatorname{sech}^2(\lambda/4)$ and the velocity loss $w \propto
-e^{-\lambda/2}$. Which one is a likelihood bound for noise-augmented data?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The velocity loss: $e^{-\lambda/2}$ falls monotonically in
-$\lambda$. The noise loss peaks at $\lambda = 0$, so it is not a mixture of
-step weightings.
-:::
-:::
-:::
-
-::: {.slide title="EDM Separates the Choices a Diffusion Paper Makes"}
-| method | training: path, levels, weighting | output | sampler |
-|---|---|---|---|
-| DDPM | VP, $t$ uniform, simple loss | noise | ancestral, 1,000 steps |
-| NCSN | $\mathbf{x}_0 + \sigma\boldsymbol\epsilon$, geometric $\sigma$, weight $\sigma^2$ | score | annealed Langevin |
-| flow matching | linear, $t$ uniform | velocity | Euler or adaptive ODE |
-| EDM | $\log \bar\sigma \sim \mathcal{N}(-1.2, 1.2^2)$, weight $1/c_{\mathrm{out}}^2$ | preconditioned clean image | Heun, $\rho = 7$ grid |
-
-::: {.d2l-note}
-Most choices can be made independently, so they can be compared one at a
-time. The target still matters: equal weightings, different outputs.
-:::
-
-[Karras et al., 2022]{.small}
-:::
-
-::: {.slide title="Preconditioning Gives the Network Unit Variance In and Out"}
-In $\bar{\mathbf{x}} = \mathbf{x}/\alpha$, for zero-mean data of standard
-deviation $\sigma_{\mathrm{data}}$ (otherwise the root mean square):
-
-$$D(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}\, \bar{\mathbf{x}} + c_{\mathrm{out}}\, F(c_{\mathrm{in}}\, \bar{\mathbf{x}};\, \bar\sigma)$$
-
-$$c_{\mathrm{in}} = \frac{1}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}},\; c_{\mathrm{skip}} = \frac{\sigma_{\mathrm{data}}^2}{\bar\sigma^2 + \sigma_{\mathrm{data}}^2},\; c_{\mathrm{out}} = \frac{\bar\sigma\, \sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}$$
-
-- Our pixels: mean $-0.43$, so $\sigma_{\mathrm{data}}$ = root mean square
-  $0.83$.
-- A noise predictor divides by $\alpha_1 \approx 0.007$: 150-fold error.
-
-::: {.d2l-note}
-EDM never divides by a small number.
-:::
-:::
-
-::: {.slide title="Noise of Level σ Hides Every Frequency above a Cutoff"}
 ::: {.cols .vc}
 ::: {.col}
+@!design-space-weightings-of-published-objectives
+:::
+
+::: {.col .fig}
+![](../img/mdl-diffusion-weightings.svg){.nostretch width=100%}
+:::
+:::
+:::
+
+::: {.slide title="Why Monotone Weightings Are Likelihood Bounds"}
+[Noise-Augmented Data Interpretation & Time Sampling]{.kicker}
+
+Which weightings $w(\lambda)$ correspond to valid variational bounds?
+
+- **Step-function basis:** A step weighting $w_\mu(\lambda) = \mathbf{1}\{\lambda \le \mu\}$ is the exact continuous ELBO for data pre-corrupted to log-SNR level $\mu$ (since its reverse path stops at $\mu$).
+- **Monotone decreasing $w(\lambda)$ = mixture of bounds (Kingma & Gao, 2023):** Any monotonically decreasing weighting ($w'(\lambda) \le 0$) decomposes as $\int w_\mu(\lambda)\,(-w'(\mu))\,d\mu$—an average of ELBOs over data augmented with random Gaussian noise!
+  - Flow matching and $\mathbf{v}$-prediction ($w(\lambda) = e^{-\lambda/2}$) weight coarse structure heavily and fine detail lightly.
+- **Time distribution $p(t)$ as an implicit multiplier:** When training draws $t \sim p(t)$ (e.g., Esser et al.'s **logit-normal** $\operatorname{logit}(t) \sim \mathcal{N}(m, s^2)$) without dividing the loss by $p(t)$, $p(t)$ directly multiplies $w(\lambda)$ by a bell curve centered at $m$.
+:::
+
+::: {.slide title="The EDM Design Space and Network Preconditioning"}
+[Unit-Variance Inputs, Skip Connections, and Targets]{.kicker}
+
+Karras et al. (2022) observed that training a raw neural network $F_{\boldsymbol\theta}$ directly across $\bar\sigma \in [0.002, 80]$ forces it to handle inputs and targets whose variances change by four orders of magnitude. **EDM preconditioning** wraps $F_{\boldsymbol\theta}$ in analytic scaling coefficients for data of RMS scale $\sigma_{\mathrm{data}}$:
+
+$$D_{\boldsymbol\theta}(\bar{\mathbf{x}}; \bar\sigma) = c_{\mathrm{skip}}(\bar\sigma)\,\bar{\mathbf{x}} + c_{\mathrm{out}}(\bar\sigma)\,F_{\boldsymbol\theta}\big(c_{\mathrm{in}}(\bar\sigma)\,\bar{\mathbf{x}};\; \bar\sigma\big)$$
+
+$$c_{\mathrm{in}} = \frac{1}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}, \qquad c_{\mathrm{skip}} = \frac{\sigma_{\mathrm{data}}^2}{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}, \qquad c_{\mathrm{out}} = \frac{\bar\sigma\,\sigma_{\mathrm{data}}}{\sqrt{\bar\sigma^2 + \sigma_{\mathrm{data}}^2}}$$
+
+- **Exact unit-variance normalization:** $c_{\mathrm{in}}$ scales the noisy input $\bar{\mathbf{x}} = \mathbf{x}_0 + \bar\sigma\boldsymbol\epsilon$ to unit variance; $c_{\mathrm{skip}}$ minimizes target variance; and $c_{\mathrm{out}}$ (paired with loss weight $1/c_{\mathrm{out}}^2$) gives $F_{\boldsymbol\theta}$ a unit-variance training target at every $\bar\sigma$.
+- **Adaptive target interpolation:** As $\bar\sigma \to \infty$ ($c_{\mathrm{skip}} \to 0$), $F_{\boldsymbol\theta}$ predicts the clean image $\mathbf{x}_0/\sigma_{\mathrm{data}}$ without dividing by $\alpha_t \to 0$; as $\bar\sigma \to 0$ ($c_{\mathrm{skip}} \to 1$), $F_{\boldsymbol\theta}$ predicts the added noise $-\boldsymbol\epsilon$.
+:::
+
+::: {.slide title="Implementing EDM Preconditioning and Log-Normal Loss"}
+[Wrapping Any Path in Unit-Variance Coordinates]{.kicker}
+
+In path coordinates $\mathbf{x} = \alpha\mathbf{x}_0 + \sigma\boldsymbol\epsilon$, the normalizing denominator $n = \sqrt{\sigma^2 + (\alpha\sigma_{\mathrm{data}})^2}$ stays strictly positive even when $\alpha_1 = 0$:
+
+@design-space-edm-s-table
+:::
+
+::: {.slide title="Why White Noise Acts as a Spatial Low-Pass Filter"}
+[Fourier Power Spectrum of Natural Images]{.kicker}
+
+Under an orthonormal 2D Fourier transform (`fft2`), isotropic Gaussian noise $\sigma\boldsymbol\epsilon$ has flat expected power $\sigma^2$ across all spatial frequencies $k$, whereas natural and garment images follow a steep power-law decay:
+
+::: {.cols .vc}
+::: {.col}
+- **Three orders of magnitude spectral decay:** From $k = 1$ to $14$ cycles per image on Fashion-MNIST, signal power drops $1{,}000\times$.
+- **Frequency-dependent SNR cutoff:**
+  - At $\sigma = 1.0$, noise buries all frequencies $k \ge 4$ cycles/image (leaving only coarse global silhouette).
+  - At $\sigma = 0.3$, frequencies $k \ge 9$ cycles/image are hidden.
+  - At $\sigma = 0.1$, signal dominates across all $14$ frequency rings.
+:::
+
+::: {.col .fig}
 @!design-space-noise-levels-are-scales
 :::
-
-::: {.col .narrow}
-White noise has power $\sigma^2$ at every frequency; the test images'
-power falls a thousandfold from 1 to 14 cycles per image.
-
-- $\sigma = 0.3$ hides from about 9 cycles, $\sigma = 1$ from about 4.
-
-::: {.d2l-note}
-Noise is a low-pass filter: sampling decides the silhouette first, the
-texture last.
-:::
 :::
 :::
 
-[Dieleman, 2024]{.small}
-:::
+::: {.slide title="Resolution Scaling and Schedule Endpoint Leakage"}
+[Shifting Log-SNR by 2 log r at Higher Resolutions]{.kicker}
 
-::: {.slide title="A Schedule Tuned at One Resolution Is Too Easy at a Higher One"}
+Because neighboring pixels are strongly correlated, increasing image resolution from $H \times W$ to $(rH) \times (rW)$ fundamentally changes the effective SNR of coarse spatial structure:
+
 ::: {.cols .vc}
 ::: {.col}
-- $56 \times 56$, same per-pixel noise: averaging $2 \times 2$ blocks
-  divides the noise variance by 4, so the coarse SNR grows fourfold.
-- Leftover signal, averaged: VP at $\lambda \approx -10$, $784\,e^{-10}
-  \approx 0.04$; Stable Diffusion at $-5$, $4096\,e^{-5} \approx 28$, so
-  very bright or dark images are out of reach.
-
-::: {.d2l-note}
-Shift $\lambda_t$ down by the log of the pixel-count ratio.
-:::
+- **Block-averaging SNR boost ($r^2\times$):** Averaging an $r \times r$ pixel block preserves the coarse signal while dividing independent per-pixel noise variance by $r^2$—shifting the coarse log-SNR upward by $+2\log r$!
+- **Resolution schedule shift (Hoogeboom et al., 2023):** To keep coarse structure forming at the same time $t$, shift the schedule downward by $\lambda_t^{(r)} = \lambda_t^{(1)} - 2\log r$ (e.g., $-\log 16 \approx -2.77$ for $4\times$ side length).
+- **Endpoint brightness leakage (Lin et al., 2024):** Stopping a schedule at $\lambda_1 = -5$ on a $64 \times 64$ grid leaves channel-mean $\mathrm{SNR} = 4096\,e^{-5} \approx 28$, preventing zero-mean noise starts from generating very dark or bright images!
 :::
 
-::: {.col .fig .big}
-![](../img/mdl-diffusion-schedules.svg)
-:::
-:::
-
-[Hoogeboom et al., 2023; Lin et al., 2024]{.small}
-:::
-
-::: {.slide title="Check: How Far Should the Schedule Shift at 56 × 56?"}
-[Check]{.kicker}
-
-A schedule works at $28 \times 28$. By how much should $\lambda_t$ shift
-for $56 \times 56$, and for $112 \times 112$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Down by the log of the pixel-count ratio: $\log 4 \approx 1.4$
-at $56 \times 56$, $\log 16 \approx 2.8$ at $112 \times 112$ (the dashed
-curve of the schedule figure).
+::: {.col .fig}
+![](../img/mdl-diffusion-schedules.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Centered Times Lose; EDM Wins Only on Its Own Grid"}
-Base: velocity, linear path, $t$ uniform; one change per row; 64-channel
-U-Net, 5,000 updates; Heun on two grids. FD: Fréchet distance of classifier
-features, 5,000 samples against test images (two real sets: 0.17).
+::: {.slide title="Controlled One-Factor Ablation on Fashion-MNIST"}
+[Testing Time Distributions, Targets, and Grids]{.kicker}
+
+Starting from our baseline recipe (linear-path velocity, $t \sim U(0, 1)$, 64-channel U-Net, $5{,}000$ updates), we vary one design axis per row across 2–4 training seeds and evaluate 5,000-sample Heun FD on both the EDM ($\rho = 7$) and linear grids:
 
 @!design-space-a-recipe-ablation-2
-
-- Every velocity model scores lower on the linear grid on average; EDM's is
-  indifferent. On the linear grid EDM and the base overlap.
-- Centered times: worse than the base on EDM's grid by 1.1 to 1.3 on average.
-- $m = -0.5$, EDM's levels, $\mathbf{v}$: within or below the base.
 :::
 
-::: {.slide title="Logit-Normal Times Starve the Levels near the Data"}
-Test loss at single levels, base against centered logit-normal times:
+::: {.slide title="Diagnosing the Logit-Normal Low-Noise Starvation"}
+[Why Centered Logit-Normal Times Hurt 28×28 Garments]{.kicker}
 
+Why did centering logit-normal training times at $m = 0$ ($t = 0.5$) degrade FD by $+0.5$ to $+1.3$, whereas shifting the center to $m = -0.5$ ($t \approx 0.38$) or EDM's $m = -1.2$ ($t \approx 0.23$) restored top quality?
+
+::: {.cols .vc}
+::: {.col}
 @!design-space-a-recipe-ablation-4
 
-- Fewer than 1 in 3,000 training times below $t = 0.03$.
-
-::: {.d2l-note}
-The sampler's last steps fix the fine detail at the levels these times
-skip.
-:::
+- **Starving the fine-detail regime ($t \le 0.03$):** A standard logit-normal ($m = 0, s = 1$) places $< 1/3000$ of its training draws below $t = 0.03$ (vs. $3\%$ for uniform $t$), inflating test velocity loss at $t = 0.01$ from **$430$ to $690$**!
+- **Resolution dependence:** Large $512^2$ latent models need $m = 0$ because high resolution boosts coarse SNR; small $28 \times 28$ images form structure at lower noise ($m < 0$).
 :::
 
-::: {.slide title="Choose the Target, the Path and Where to Train"}
-- **Target:** velocity, $\mathbf{v}$, or EDM's preconditioned clean image
-  ($\sigma_{\mathrm{data}}$ measured); a bare noise predictor needs a path
-  that stops short of pure noise.
-- **Path:** reaching pure noise.
-- **Levels:** where structure forms; nearer the data at $28 \times 28$,
-  shifted by the log pixel ratio when larger.
-- **Weighting:** the bound's for the bound; less on clean points for
-  samples.
-- **Sampler:** more than one; EDM's grid cost the base about 0.6 FD.
-
-::: {.d2l-note}
-The book's default, velocity on the linear path with $t$ uniform, is the
-plainest of the good recipes.
+::: {.col .fig}
+@!design-space-a-recipe-ablation-3
+:::
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Choosing a Diffusion Recipe: Three Design Rules"}
+[Synthesizing Our Empirical and Theoretical Findings]{.kicker}
 
-- **Bound:** noise regressions weighted by half the log-SNR drop; exact
-  for two steps and Gaussian data (1.419 nats).
-- **Mixture:** flow and bound within half a hundredth of a nat of the
-  exact field's 2.5.
-- **Weightings:** one integral; monotone ones are bounds; each wins on its
-  own measure.
-- **Images:** centered logit-normal times cost 0.5 to 1.3 FD, by grid;
-  EDM's recipe beats the base on its own grid, the grid every velocity
-  model scores worse on; on the linear grid their runs overlap.
+When configuring a diffusion or flow-matching recipe on a new domain or resolution, three rules govern the design space:
 
-**Next:** why diffuse the pixels at all, rather than a smaller code?
+1. **Choose a well-conditioned target on a path reaching pure noise ($\alpha_1 = 0$):** Velocity prediction on the linear path, $\mathbf{v}$-prediction on the cosine path, and EDM preconditioning stay well scaled at both endpoints $[0, 1]$, avoiding both $\alpha_1 \to 0$ division blow-up and brightness leakage ($\lambda_1 > -\infty$).
+2. **Place training noise levels where spatial structure forms:** Small $28 \times 28$ images need uniform $t$ or a logit-normal shifted toward low noise ($m < 0$); as side resolution scales by $r$, shift the log-SNR schedule downward by $2\log r$.
+3. **Match the loss weighting $w(\lambda)$ to your evaluation metric:** Use flat $w(\lambda) \equiv 1$ (`bound`) when optimizing exact log-likelihood (bits/dim), and monotone decaying $w(\lambda) = e^{-\lambda/2}$ (flow matching or $\mathbf{v}$-prediction) when optimizing perceptual sample quality (FD).
+:::
+
+::: {.slide title="Concept Check: ELBO Splits, Weightings & Resolution"}
+[Check Your Understanding]{.kicker}
+
+Test your command of the diffusion likelihood bound and design space:
+
+1. **Why $L_0$ can be negative in continuous space:** For 2D data ($d = 2$) at minimum noise ratio $e^{-\lambda_{\max}} = \sigma_{\min}^2/\alpha_{\min}^2 = 10^{-4}$ where irreducible noise error is $\mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}\|^2 \approx 2$, what is the reconstruction term $L_0 = \frac{d}{2}\log(2\pi e^{-\lambda_{\max}}) + \frac{1}{2}\mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}\|^2$?
+2. **Identifying valid likelihood bounds:** On the linear path with $t \sim U(0, 1)$, the noise loss has $w(\lambda) \propto \operatorname{sech}^2(\lambda/4)$ while the velocity loss has $w(\lambda) \propto e^{-\lambda/2}$. Which one is a valid likelihood bound on noise-augmented data, and why?
+3. **Shifting schedules across resolutions:** If a log-SNR schedule $\lambda_t$ is tuned for $28 \times 28$ images, by how many log-SNR units must $\lambda_t$ be shifted for $56 \times 56$ images and for $112 \times 112$ images?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $L_0 = \log(2\pi \times 10^{-4}) + \frac{1}{2}(2) \approx -7.37 + 1.00 = \mathbf{-6.37\text{ nats}}$ (a differential log-density term!). Added to the log-SNR integral ($\approx +8.84$ nats), the total bound is $\approx \mathbf{+2.47\text{ nats}}$.
+2. **The velocity loss ($w(\lambda) \propto e^{-\lambda/2}$):** Because $e^{-\lambda/2}$ is **monotonically decreasing** in $\lambda$, it is a positive mixture of step-function ELBOs on noise-augmented data; $\operatorname{sech}^2(\lambda/4)$ peaks at $\lambda = 0$.
+3. Shift downward by $\log(r^2) = 2\log r$: for $56 \times 56$ ($r = 2$), shift by **$-\log 4 \approx -1.39$**; for $112 \times 112$ ($r = 4$), shift by **$-\log 16 \approx -2.77$**.
+:::
+:::
+
+::: {.slide title="Summary: Likelihood, Weighting, and Design Space"}
+[Key Takeaways]{.kicker}
+
+| Design Axis | Mathematical Formulation | Key Theoretical / Empirical Result | Practical Design Rule |
+| :--- | :--- | :--- | :--- |
+| **Discrete & Continuous ELBO** | $\frac{1}{2}\int_{\lambda_{\min}}^{\lambda_{\max}} \mathbb{E}\|\boldsymbol\epsilon - \hat{\boldsymbol\epsilon}_{\boldsymbol\theta}\|^2\,d\lambda + L_T + L_0$ | Per-step weight is $\frac{1}{2}(\lambda_{k-1} - \lambda_k)$; $w(\lambda) \equiv 1$ | Tight within $0.005$ nats of exact NLL on 2D mixture |
+| **Probability-Flow ODE NLL** | $\log p_1(\mathbf{x}_1) + \int_{t_{\min}}^1 \nabla \cdot \mathbf{u}_t(\mathbf{x}_t)\,dt$ | Exact log-density via Jacobian trace ($\text{RK4}$) | Use Hutchinson trace estimator $\mathbf{r}^\top(\nabla\mathbf{u}_t)\mathbf{r}$ in high-$d$ |
+| **Canonical $w(\lambda)$ Weighting** | $w(\lambda) = 2\,c(t)\,p(t)\,|dt/d\lambda|$ | Flow matching & cosine $\mathbf{v}$ share $w(\lambda) \propto e^{-\lambda/2}$ | Monotone decreasing $w(\lambda)$ favors perceptual sample FD |
+| **EDM Preconditioning** | $c_{\mathrm{skip}}\bar{\mathbf{x}} + c_{\mathrm{out}}F_{\boldsymbol\theta}(c_{\mathrm{in}}\bar{\mathbf{x}}; \bar\sigma)$ | Normalizes input and target variance to $1$ across $\bar\sigma$ | Measure dataset RMS $\sigma_{\mathrm{data}}$ ($0.83$ on Fashion-MNIST) |
+| **Resolution Schedule Shift** | $\lambda_t^{(r)} = \lambda_t^{(1)} - 2\log r$ | $r \times r$ pooling boosts coarse SNR by $r^2$ | Shift training noise levels higher as resolution grows |
 :::

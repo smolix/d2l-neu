@@ -71,119 +71,95 @@ further-reading
 ::: {.cover}
 [Dive into Deep Learning · §10]{.kicker}
 
-Reading every position<br>
-**soft lookup · scoring and masks · self-attention and heads · positions · cost · windows and linear attention · circuits**
+Attention Mechanisms: Differentiable Content-Based Retrieval<br>**queries, keys & values · scaled dot-product · multi-head & GQA · RoPE & ALiBi · FlashAttention · linear attention · circuits**
 :::
 :::
 
-::: {.slide title="A Fixed-Size State Must Guess What Will Be Asked"}
-[The problem]{.kicker}
+::: {.slide title="From Fixed-Size State Bottlenecks to Direct Lookup"}
+[Motivation]{.kicker}
 
-- A recurrent model as wide as GPT-2 small (768) that has read 1,024
-  tokens keeps 768 numbers about all of them.
-- It writes them before anyone knows which token a later prediction
-  needs.
-- A reader who forgot a name on page one turns back and looks.
+Recurrent networks compress an entire sequence into a single fixed-width hidden vector before knowing which early details a future prediction will require:
+
+::: {.cols .vc}
+::: {.col}
+- **The Recurrent Bottleneck:** A model of width $d = 768$ (GPT-2 small) reading $n = 1{,}024$ tokens must squeeze $1{,}024 \times 768 \approx 786{,}000$ numbers of history into $768$ floats.
+- **Premature Compression:** Details from paragraph one must be written into $\mathbf{h}_t$ long before the final query arrives, across an $O(n)$-step gradient chain.
+:::
+
+::: {.col}
+- **Content-Based Retrieval:** Instead of summarizing history into one vector, keep one representation at every position and retrieve relevant context on demand.
+- **Differentiable Soft Lookup:** Replace discontinuous database matching with a softmax-weighted average of stored values, trainable end to end by backpropagation.
+:::
+:::
 
 ::: {.d2l-note}
-Attention lets a network look back: keep one vector per position and read
-only what the current prediction needs.
+Introduced for neural machine translation (Bahdanau et al., 2014), attention became the sole token-mixing operator in the Transformer (Vaswani et al., 2017).
 :::
 :::
 
-::: {.slide title="Attention Scores Every Key and Averages the Values"}
-[The idea]{.kicker}
+::: {.slide title="The Core Primitive: Queries, Keys, and Values"}
+[Core Mechanism]{.kicker}
 
-![A query scored against three keys; the weights sum to one, and the output is the weighted average of the values.](../img/mdl-attention-soft-lookup.svg){width=70%}
-
-- **query**: what a position looks for; **key**: what a position offers;
-  **value**: what it hands back.
-- A weighted average is differentiable, so the network learns what to
-  look for.
-- One such lookup is a **head**; a layer runs several side by side.
+::: {.cols .vc}
+::: {.col}
+- **Three Distinct Roles:** Each lookup compares a **query** $\mathbf{q} \in \mathbb{R}^d$ (what the current position seeks) against $m$ **keys** $\mathbf{k}_i \in \mathbb{R}^d$ (what each candidate position offers).
+- **Convex Value Mixing:** Compatibility scores $a(\mathbf{q}, \mathbf{k}_i)$ pass through a softmax to form nonnegative weights $\alpha_i$ summing to $1$:
+  $$\textrm{Attention}(\mathbf{q}, \mathcal{D}) = \sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i)\,\mathbf{v}_i$$
+- **Parallel Heads:** One lookup forms an attention **head**; running $H$ heads side by side lets a token retrieve multiple arguments at once.
 :::
 
-::: {.slide title="Looking Back Creates Three Problems a Recurrent Network Never Had"}
-[The problem]{.kicker}
-
-| problem | why |
-|---|---|
-| **order** | a weighted average is the same for any order of its inputs |
-| **cost** | all pairs of positions: time and memory grow as $n^2$ for $n$ tokens |
-| **meaning** | a map of weights shows where a head looks, not what it computes |
-
-**Check:** how many scores does one head compute over 1,024 tokens?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-One per pair of positions: $1{,}024^2 \approx 10^6$, about half of them
-hidden when each token may look only backward. Doubling the context
-quadruples the count.
+::: {.col .fig}
+![Soft lookup scores a query against keys and returns a convex combination of values.](../img/mdl-attention-soft-lookup.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="Three Challenges Created by All-Pairs Lookup"}
+[Architectural Trade-Offs]{.kicker}
 
-- compute scaled dot-product attention by hand, with masks for padding and
-  for the future;
-- run one head of self-attention on a sentence, and prove what one set of
-  weights per query cannot express;
-- encode position by rotating queries and keys (RoPE) or by a penalty on
-  distance (ALiBi), and extend a trained context;
-- compute exact attention without storing its scores, and say what a
-  window of recent keys and linear attention (a state of fixed size) give
-  up;
-- read from the weights where a head looks (QK) and what it moves (OV),
-  and test the reading by removing heads.
+Replacing sequential recurrence with all-pairs content lookup eliminates the $O(n)$ path length but creates three new engineering and theoretical challenges:
 
-**Running example:** one head of GPT-2 small, width 64 in a model of width
-768, reading 1,024 tokens.
-:::
-
-::: {.slide title="Four Sections Lead to the Transformer, Two on Cost Can Wait"}
-[Scope and place]{.kicker}
-
-- **Assumes:** softmax, matrix products, the recurrent language model.
-- **Core:** the first four sections, and the opening of the last: how
-  every layer adds its output to one running vector per position, the
-  residual stream.
-- **Can wait:** the two sections on cost, until the transformer chapter's
-  cache of keys and values or the state space model chapter builds on
-  them.
-- **Leaves out:** feed-forward layers, normalization, and the training
-  recipe, which the next chapter adds to make a transformer.
-:::
-
-::: {.slide title="Build the Layer, Then Solve What It Breaks"}
-[Chapter map]{.kicker}
-
-| | section | question |
-|---|---|---|
-| **build** | Queries, Keys, and Values | how can a lookup be made differentiable? |
-| | Attention Scoring and Masking | which score can a network learn, and which pairs may count? |
-| | Self-Attention and Multiple Heads | what does a sentence reading itself compute, and what can one head not express? |
-| **order** | Positional Information | how does an order-blind layer learn where a token stands? |
-| **cost** | The Cost of Attention | what does exact attention cost, and how much of it is avoidable? |
-| | Windowed and Linear Attention | what is given up for a cost linear in the length? |
-| **meaning** | Attention Circuits | what do trained heads compute, and how can we tell? |
-:::
-
-::: {.slide title="Every Section Tests Its Claims on an Example Small Enough to Run"}
-[Running examples]{.kicker}
-
-| section | example |
-|---|---|
-| Queries, Keys, and Values | a table of two records; kernel regression on noisy 1-D data |
-| Attention Scoring and Masking | two queries and three keys by hand; the letters of two words; a learned permutation |
-| Self-Attention and Multiple Heads | "Alice gave Bob the book"; a task that needs two values per query |
-| Positional Information | `TinyCharLM` on WikiText-103 bytes, five position schemes |
-| The Cost of Attention | one GPT-2-small head, up to 16,384 tokens |
-| Windowed and Linear Attention | GPT-2-sized heads with a window of 128 keys, up to 32,768 tokens; 1,000 queries against 8 keys |
-| Attention Circuits | `TinyCharLM` on repeated random patterns |
+| Challenge | Why It Happens in Attention | Solutions Developed in Chapter 10 |
+| :--- | :--- | :--- |
+| **1. Order Blindness** | A weighted sum $\sum_i \alpha_i \mathbf{v}_i$ is permutation equivariant and ignores word order | Absolute tables, rotary embeddings (**RoPE**), and distance penalties (**ALiBi**) in **§10.4** |
+| **2. Quadratic Cost** | Scoring all pairs of $n$ tokens costs $\Theta(n^2 d)$ FLOPs and $O(n^2)$ naive memory | Tiled **online softmax** (**FlashAttention**, **§10.5**), sliding windows, and **linear attention** (**§10.6**) |
+| **3. Mechanistic Opacity** | Attention weights show *where* a head looks, not *what* function it computes | Residual stream, **QK/OV circuit** decomposition, and two-layer **induction heads** (**§10.7**) |
 
 ::: {.d2l-note}
-The first five sections also count their costs on the GPT-2 head.
+At $n = 1{,}024$, a single head evaluates $1{,}024^2 \approx 1.05 \times 10^6$ pairs; at $n = 131{,}072$, a naive `float32` score matrix for one head requires $64\text{ GiB}$.
+:::
+:::
+
+::: {.slide title="Architecture and Roadmap of Chapter 10"}
+[Chapter Roadmap]{.kicker}
+
+We first construct the multi-head self-attention layer (§10.1–10.3), then restore sequence order (§10.4), scale to long contexts (§10.5–10.6), and analyze trained circuits (§10.7):
+
+| Part | Section | Central Mathematical & Systems Question |
+| :--- | :--- | :--- |
+| **1. Build the Layer** | **§10.1 Queries, Keys, and Values** | How does soft key–value lookup unify database retrieval and kernel regression? |
+| **1. Build the Layer** | **§10.2 Attention Scoring & Masking** | Why scale dot products by $1/\sqrt{d}$, and how do boolean masks compose? |
+| **1. Build the Layer** | **§10.3 Self-Attention & Multi-Head** | Why does a single head lose half of two values, and how does GQA shrink caches? |
+| **2. Sequence Order** | **§10.4 Positional Information** | How does RoPE enforce relative-offset scores and extrapolate beyond training length? |
+| **3. Scale & Speed** | **§10.5 The Cost of Attention** | How does blockwise online softmax compute exact attention in $O(n)$ memory? |
+| **3. Scale & Speed** | **§10.6 Windowed & Linear Attention** | What do sliding windows and factorized kernel recurrences trade for $O(n)$ time? |
+| **4. Interpretation** | **§10.7 Attention Circuits** | How do QK and OV circuits compose across two layers to form an induction head? |
+:::
+
+::: {.slide title="Running Benchmarks and Study Guide"}
+[Pedagogical Thread]{.kicker}
+
+Every section tests its claims on an executable benchmark and counts exact FLOPs and bytes on a reference GPT-2 small head ($d = 768, H = 12, d_h = 64$):
+
+| Section | Executable Benchmark / Model | Key Quantitative Takeaway |
+| :--- | :--- | :--- |
+| **§10.1–10.2** | Nadaraya–Watson 1D regression; `ToyAligner` permutation task | Bandwidth $\sigma$ and $1/\sqrt{d}$ act as softmax temperatures preventing gradient saturation |
+| **§10.3** | *"Alice gave Bob the book"*; Gaussian **copy-both** task | One head incurs $\ge 1/2$ relative MSE; two heads reach $\sim 10^{-7}$ at identical $4d^2$ params |
+| **§10.4** | `TinyCharLM` on WikiText-103 bytes ($n = 128$ $\to$ $512$) | RoPE gives lowest in-range perplexity ($7.3$); slow-pair interpolation repairs $4\times$ context |
+| **§10.5–10.6** | Chunked online softmax; fused Flash/FlexAttention up to $n = 32\text{K}$ | Online softmax cuts memory from $O(n^2)$ to $O(n)$; window $w = 128$ gives $> 30\times$ speedup |
+| **§10.7** | `TinyCharLM` on variable-period repeated random patterns | Two blocks learn in-context induction ($\sim 90\%$ accuracy); one block stalls at $\sim 10\%$ |
+
+::: {.d2l-note}
+**Fast track to Chapter 11 (Transformers):** Read **§10.1–10.4** and the residual-stream opening of **§10.7**; study **§10.5–10.6** alongside KV caching and modern RNNs.
 :::
 :::

@@ -64,118 +64,80 @@ further-reading
 ::: {.cover}
 [Dive into Deep Learning · §13]{.kicker}
 
-Where the time and memory of training go<br>
-**performance model · hardware · compilation · memory and precision · multiple GPUs · sharding · a case study**
+Computational Performance: Roofline Models, Hardware, Compilers, and Multi-GPU Scaling<br>**arithmetic intensity · roofline & dispatch bounds · memory & precision · fusion & CUDA graphs · collectives & FSDP**
 :::
 :::
 
-::: {.slide title="Arithmetic, Memory Traffic, the Host, and Capacity Each Limit Some Steps"}
-[The problem]{.kicker}
+::: {.slide title="Four Bottlenecks Govern Training Time and Capacity"}
+[The Central Problem]{.kicker}
 
-- **Arithmetic:** an 8,192-wide bf16 product does about 2,700 FLOPs per
-  byte and runs at the RTX 4090's peak of about 165 TFLOP/s.
-- **Memory traffic:** adding 1 to a bf16 matrix reads 2 bytes and writes 2
-  per FLOP; at 1 TB/s that is at most 0.25 TFLOP/s, a six-hundredth of the
-  peak.
-- **Host:** every operation issued from Python costs microseconds before
-  the GPU starts it.
-- **Capacity:** a 1B-parameter GPT with Adam in fp32 fills 15 GiB of the
-  card's 24 GiB before it stores a single activation.
+Dividing a training step's FLOPs by peak GPU throughput rarely predicts wall-clock time because four distinct resources can limit a step:
+
+- **Arithmetic Throughput ($P$):** An $8192 \times 8192$ `bfloat16` matrix product performs $\sim 2{,}700\text{ FLOP/byte}$ and saturates the RTX 4090's Tensor Cores near $165\text{ TFLOP/s}$.
+- **Memory Bandwidth ($\beta$):** Adding $1$ to a `bfloat16` matrix reads $2\text{ B}$ and writes $2\text{ B}$ per FLOP ($I = 0.25\text{ FLOP/byte}$), capping throughput at $0.25\text{ TFLOP/s}$ ($1/660$ of peak).
+- **Host Dispatch Overhead ($h$):** Launching an eager GPU kernel from Python costs $10\text{--}100\,\mu\text{s}$ on the CPU, leaving the accelerator idle between microsecond kernels.
+- **Memory Capacity ($C$):** Training a 1B-parameter GPT with `float32` Adam consumes $16N \approx 15.1\text{ GiB}$ of a $24\text{ GiB}$ card before storing a single token's activations.
 
 ::: {.d2l-note}
-Which limit holds a step back, on one GPU and on several, decides which
-change speeds it up.
+**The Systems Method:** Count FLOPs and bytes $\to$ predict the binding regime and step time $\to$ measure with synchronized benchmarks and kernel profilers $\to$ explain the gap.
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Three-Floor Time Model and the Roofline Ridge"}
+[Unifying Analytical Model]{.kicker}
 
-- predict an operation's time from its FLOPs and bytes, and time GPU code
-  correctly;
-- speed up one GPU with compilation and bf16, and fit larger minibatches
-  with checkpointing and gradient accumulation;
-- predict when a second GPU shortens a step, and measure what overlap
-  hides;
-- train a model that no card holds by dividing its weights, gradients, and
-  optimizer state among the GPUs;
-- account for a GPT's training step in milliseconds.
+Every dispatched operation or training step is bounded below by the slowest of three physical floors—host launch latency, arithmetic compute, and memory traffic:
 
-**Method:** count FLOPs and bytes, predict the time, measure, explain the
-difference. **Running examples:** a 1B-parameter GPT for memory and
-sharding, a 19M-parameter GPT for the case study; one RTX 4090, then four
-in one host.
+$$t \;\gtrsim\; \max\!\left(h,\; \frac{\textrm{FLOPs}}{P},\; \frac{\textrm{bytes}}{\beta}\right), \qquad \textrm{Throughput} \;\le\; \min(P,\; I\beta)$$
+
+- **Arithmetic Intensity ($I = \textrm{FLOPs}/\textrm{bytes}$):** Counts how many floating-point operations are performed per byte transferred between off-chip DRAM and on-chip SRAM/registers.
+- **The Ridge Point ($I^* = P/\beta$):** The crossover intensity where the sloped bandwidth roof $I\beta$ meets the flat compute roof $P$ ($I^* \approx 164\text{ FLOP/byte}$ in `bfloat16` on the RTX 4090; $\sim 295$ on H100).
+- **Multi-GPU Scaling:** Distributing a batch across $k$ GPUs adds collective communication $\alpha + \frac{2(k-1)}{k} S \beta_{\textrm{link}}$, shortening a step only when compute savings exceed link latency and transfer time.
 :::
 
-::: {.slide title="Five Numbers Describe Our Machine" only="pytorch"}
-[Our machine in five numbers]{.kicker}
+::: {.slide title="Five Hardware Constants Characterize Our Benchmark Host"}
+[Reference Machine]{.kicker}
 
-| symbol | what it is | value | measured by |
-|---|---|---|---|
-| $P$ | peak tensor-core rate | 165 TFLOP/s bf16 (83 tf32, rated) | an 8,192-wide bf16 product reaches it |
-| $\beta$ | GPU memory bandwidth | 1.0 TB/s rated, about 0.9 measured | elementwise operations moving 512 MiB |
-| $h$ | host time per operation issued from Python | about 13 µs | tiny products the GPU runs in a few µs |
-| — | pinned host-to-GPU copy rate | about 23 GB/s | copying a pinned buffer |
-| $\beta_\textrm{link}$ | time per byte a GPU sends in an NCCL allreduce, GPUs 0 and 1 | about 0.42 ns per byte (bus bandwidth about 2.4 GB/s), through host memory | a bare 256 MB allreduce |
+Throughout Chapter 13, we test every analytical prediction against measurements on a single host equipped with four RTX 4090 GPUs ($24\text{ GiB}$ each):
+
+| Symbol | Hardware Parameter | Value on Our Workstation | How We Measure It |
+| :--- | :--- | :--- | :--- |
+| $P$ | Peak Tensor Core throughput | $165.2\text{ TFLOP/s}$ (`bf16`), $82.6$ (`tf32`) | Square $8192 \times 8192$ `bfloat16` matrix product |
+| $\beta$ | Off-chip GPU DRAM bandwidth | $1.01\text{ TB/s}$ rated ($\sim 0.9\text{ TB/s}$ achieved) | Streaming $512\text{ MiB}$ elementwise kernels (`x + 1`) |
+| $I^*$ | Roofline ridge point ($P / \beta$) | $164\text{ FLOP/byte}$ (`bf16`), $82$ (`tf32`) | Batch-size sweep $B \in [1, 1024]$ on a $16384^2$ weight |
+| $h$ | Host dispatch latency per call | $\sim 13\,\mu\text{s}$ (PyTorch op), $50\text{--}100\,\mu\text{s}$ (JAX JIT) | Tiny $256 \times 256$ ops where GPU busy time is $\sim 2\,\mu\text{s}$ |
+| $\beta_{\textrm{link}}$ | Inter-GPU collective time/byte | $\sim 0.42\text{ ns/B}$ ($\sim 2.4\text{ GB/s}$ bus bandwidth) | Bare $256\text{ MiB}$ NCCL allreduce staged via host PCIe DRAM |
+:::
+
+::: {.slide title="Architectural Roadmap of Chapter 13"}
+[Chapter Structure]{.kicker}
+
+The chapter progresses from single-kernel analytical bounds to single-GPU compiler and memory optimizations, and finally to multi-GPU scaling:
+
+| Section | Core Systems Question | GPUs | Concrete Running Benchmark |
+| :--- | :--- | :---: | :--- |
+| **§13.1 Performance Model** | Which resource binds an op, and how do we time it? | 1 | Skinny matmuls across $I^*$; `gelu_ish`; 3-layer MLP |
+| **§13.2 Hardware Anatomy** | Where do $P$, $\beta$, sector reads, and link rates come from? | 1 | 1B GPT decode bound; random gather; pinned PCIe copies |
+| **§13.3 Compilation** | How do graph capture, fusion, and CUDA graphs work? | 1 | 8-op `gelu_ish` ($9\times$ traffic cut); 60-layer thin stack |
+| **§13.4 Memory & Precision** | How many bytes per param and token fit in $24\text{ GiB}$? | 1 | 1B GPT (18 blocks, $d = 2048$): `bf16`, remat, accumulation |
+| **§13.5–13.6 Multi-GPU & DDP** | When does data parallelism scale, and what hides comm? | 2–4 | Ring allreduce; LeNet vs. ResNet-18 bucketing & overlap |
+| **§13.7–13.8 Sharding & Case Study** | How does FSDP shard $16N$, and how fast can a GPT run? | 1–4 | 1.9B GPT (36 blocks) via FSDP; 19M GPT step-by-step ($6\times$) |
+:::
+
+::: {.slide title="How to Study This Chapter"}
+[Study Guide]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Always predict before measuring:** Before running any benchmark cell, write down the FLOPs, bytes moved, and predicted floor $\max(h, \textrm{FLOPs}/P, \textrm{bytes}/\beta)$. When a measurement disagrees with your paper estimate, the discrepancy reveals an uncounted memory transfer, hidden host barrier, or SM contention.
+:::
+
+::: {.col}
+- **Verify numerical equivalence first:** An optimization that silently alters gradients, batch-norm statistics, or causal masking is a bug, not a speedup. Every section pairs timing benchmarks with one-step gradient checks (`allclose`) and end-to-end validation loss gates.
+:::
+:::
 
 ::: {.d2l-note}
-Ridge point, where the two roofs meet: $P/\beta \approx 164$ FLOP per byte
-at the rated $\beta$. $\beta$ is a rate, $\beta_\textrm{link}$ a time per
-byte, as in the literature on collectives: a message of $S$ bytes costs
-$\alpha + S\,\beta_\textrm{link}$. The link between the GPUs moves bytes
-about 400 times more slowly than the card's own memory.
+**Up next (§13.1 The Performance Model):** Defining arithmetic intensity, constructing the roofline bound, avoiding asynchronous timing traps, and profiling a complete MLP training step.
 :::
-:::
-
-::: {.slide title="Five Numbers Describe Our Machine" only="jax"}
-[Our machine in five numbers]{.kicker}
-
-| symbol | what it is | value | measured by |
-|---|---|---|---|
-| $P$ | peak tensor-core rate | 165 TFLOP/s bf16 (83 tf32, rated) | an 8,192-wide bf16 product reaches it |
-| $\beta$ | GPU memory bandwidth | 1.0 TB/s rated, about 0.9 measured | elementwise operations moving 512 MiB |
-| $h$ | host time per call of a jitted function | about 50–110 µs | tiny products the GPU runs in a few µs |
-| — | pinned host-to-GPU copy rate | about 23 GB/s | copying a pinned buffer |
-| $\beta_\textrm{link}$ | time per byte a GPU sends in an NCCL allreduce, GPUs 0 and 1 | about 0.42 ns per byte (bus bandwidth about 2.4 GB/s), through host memory | a bare 256 MB allreduce |
-
-::: {.d2l-note}
-Ridge point, where the two roofs meet: $P/\beta \approx 164$ FLOP per byte
-at the rated $\beta$. $\beta$ is a rate, $\beta_\textrm{link}$ a time per
-byte, as in the literature on collectives: a message of $S$ bytes costs
-$\alpha + S\,\beta_\textrm{link}$. The link between the GPUs moves bytes
-about 400 times more slowly than the card's own memory.
-:::
-:::
-
-::: {.slide title="Map of the Chapter"}
-[Chapter map]{.kicker}
-
-| section | question | GPUs |
-|-----------------------------------|---------------------------------------------------------|--------|
-| The Performance Model | which resource limits an operation, and how long does it take? | 1 |
-| Hardware | where do arithmetic rate and bandwidth come from? | 1 |
-| Computation Graphs and Compilation | how does a compiler cut memory traffic and overhead? | 1 |
-| Memory and Precision | where does a step's memory go, and how does a model fit? | 1 |
-| Multi-GPU from First Principles | when does a second GPU shorten a step? | 2 |
-| Data Parallelism in Practice | what do production tools and overlap gain? | 2–4 |
-| Sharding the Training State | what does a model that no card holds cost to train? | 2 |
-| Case Study: Optimizing a Transformer | where do the milliseconds of a GPT step go? | 1–4 |
-
-**Not here:** hand-written kernels; many machines, serving, and inference
-quantization (Language Models part).
-:::
-
-::: {.slide title="A 1B-Parameter GPT Returns in Hardware, Memory, and Sharding"}
-[Running examples]{.kicker}
-
-| section | running example |
-|---|---|
-| The Performance Model | a skinny product across the ridge; products of size 256 to 8,192; elementwise operations; an MLP step |
-| Hardware | **the decode bound of a 1B GPT**; sequential and random reads; copies between host and GPU |
-| Computation Graphs and Compilation | an eight-operation activation; an MLP step, compiled and replayed |
-| Memory and Precision | **the 1B GPT (18 blocks, width 2,048)** on one 24 GiB card |
-| Multi-GPU from First Principles | LeNet on Fashion-MNIST, on one and two GPUs |
-| Data Parallelism in Practice | ResNet-18 on one, two, and four GPUs |
-| Sharding the Training State | **the 1B GPT made twice as deep: 36 blocks, 1.9B parameters**, on two GPUs |
-| Case Study: Optimizing a Transformer | a 19M-parameter GPT (width 512), on one to four GPUs |
 :::

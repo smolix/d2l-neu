@@ -799,368 +799,230 @@ A table over continuous states would need a row for every visit, so the policy a
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §14.8]{.kicker}
+[Dive into Deep Learning · §14.9]{.kicker}
 
-Function Approximation in Reinforcement Learning<br>
-**tables as linear networks · the tangent kernel · the time-limit bootstrap · Gaussian policies · score and pathwise gradients**
+Function Approximation in Reinforcement Learning<br>**tables as one-hot linear nets · neural tangent kernel · ActorCritic MLPs · truncation bootstrap · Gaussian policies · score vs. pathwise gradients**
 :::
 :::
 
-::: {.slide title="No CartPole State Repeats in a Thousand Episodes"}
-[The problem]{.kicker}
+::: {.slide title="Why Continuous Control Requires Function Approximation"}
+[Motivation & Mental Model]{.kicker}
 
-CartPole: a cart balances a pole hinged on top of it.
+In tabular RL (§14.1–§14.8), every state had its own row in a lookup table, which breaks down as soon as observations are continuous vectors $\mathbf{s}_t \in \mathbb{R}^d$:
 
-- state: four real numbers, cart position and velocity, pole angle and
-  angular velocity; two actions, push left or push right
-- in 1,000 episodes the agent never sees the same four numbers twice
-- a table needs a new row at every visit, and what it learns there
-  says nothing about the next visit
-- Pendulum's action is a torque in $[-2, 2]$: a softmax has no finite
-  list of actions to put a probability on
-
-::: {.d2l-note .warn}
-We need a function that gives similar values to similar states.
-:::
+- **Zero state revisits on `CartPole-v1`:** The state $\mathbf{s}_t = (x_t, \dot{x}_t, \vartheta_t, \dot{\vartheta}_t)^\top \in \mathbb{R}^4$ consists of four floating-point numbers; across $1{,}000$ episodes an agent never visits the exact same state vector twice.
+- **No generalization in tables:** A lookup table learns nothing about $(x, \dot{x}, \vartheta + 10^{-4}, \dot{\vartheta})$ from an update at $(x, \dot{x}, \vartheta, \dot{\vartheta})$, whereas a neural network shares weights $\theta$ across the entire state space.
+- **Continuous action spaces (`Pendulum-v1`):** When the action is a continuous torque $u \in [-2, 2]$, a discrete softmax table cannot enumerate the actions.
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="Tables as One-Hot Linear Nets and the Tangent Kernel"}
+[How One Update Spreads Across States]{.kicker}
 
-- write a table as a linear network and predict how far one update spreads;
-- swap the policy and value tables for networks in REINFORCE, with value
-  regression and a bootstrap at the time limit;
-- tell what the policy loss measures and what it does not;
-- train a Gaussian policy on a continuous torque;
-- compare the score-function and pathwise gradients of one expectation.
+A lookup table $\hat{V}_w(s) = \mathbf{w}^\top\mathbf{e}_s$ is simply a linear network on one-hot features $\mathbf{e}_s$; replacing $\mathbf{e}_s$ with a neural network $\hat{V}_w(s)$ couples all states via the **neural tangent kernel** (Jacot et al., 2018):
 
-**Running example:** CartPole (4 numbers, 2 actions, ceiling 500), then
-Pendulum (a torque in $[-2, 2]$, 200 steps).
+$$\Delta \hat{V}_w(s) \approx \eta_V\big(y - \hat{V}_w(s_0)\big)\,k(s, s_0), \qquad k(s, s_0) = \nabla_w \hat{V}_w(s)^\top \nabla_w \hat{V}_w(s_0)$$
+
+- **Tabular isolation ($k(s, s_0) = \mathbf{1}(s = s_0)$):** Because $\nabla_w \hat{V}_w(s) = \mathbf{e}_s$, a gradient step at $s_0$ leaves every other state completely untouched.
+- **Neural generalization and interference:** For an MLP, $k(s, s_0)$ is large and positive for nearby states $s \approx s_0$ (generalization), but can be nonzero or negative at distant states $s$ (catastrophic interference).
 :::
 
-::: {.slide title="Networks Carry the Policy Gradient to Continuous States and Actions"}
-[Where this fits]{.kicker}
+::: {.slide title="The ActorCritic Container and Tanh MLPs"}
+[Replacing Policy and Value Tables with Networks]{.kicker}
+
+`ActorCritic` subclasses `d2l.Policy` to pair a policy network (*actor*, optimizer `opt_pi`) with a baseline value network (*critic*, optimizer `opt_v`), each built as a 64-unit `tanh` MLP:
+
+@deep-rl-the-swap-as-a-three-line-diff-1
+
+- **Why `tanh` activations:** Large-scale empirical benchmarks of on-policy RL (Andrychowicz et al., 2021) show `tanh` MLPs consistently outperform ReLU for smooth policy and value surfaces on low-dimensional control tasks.
+:::
+
+::: {.slide title="Multi-Step Value Regression per Batch"}
+[Keeping the Critic Baseline Accurate]{.kicker}
+
+Whereas our tabular baseline updated $\hat{V}(s_t)$ in place with step size $\eta_V = 0.1$, a neural value network must regress onto return targets $y_t$ of magnitude $\sim 100$ using Adam steps of size $10^{-2}$:
+
+@deep-rl-the-swap-as-a-three-line-diff-2
+
+- **Why 1 gradient step per batch lags behind:** On Pendulum, taking `num_steps=1` per batch explains only $40\%$–$80\%$ of return variance ($1 - \textrm{Var}(y - \hat{V})/\textrm{Var}(y)$), leaving massive noise in the policy weights; `num_steps=40` raises explained variance to $\approx 99\%$.
+:::
+
+::: {.slide title="Bootstrapping Time-Limit Truncations"}
+[Preventing Artificial Penalties on Long Episodes]{.kicker}
+
+`CartPole-v1` truncates episodes at $T = 500$ steps and `Pendulum-v1` at $T = 200$ steps; treating a clock cutoff as terminal (`reward_to_go` alone) corrupts the last steps of every successful episode:
+
+$$y_t = \hat{G}_t + (1 - \textrm{term}_T)\,\gamma^{T - t}\,\hat{V}_w(s_T)$$
+
+@deep-rl-replacing-the-table-with-a-network-2
+
+- **Numerical severity on CartPole ($\gamma = 0.99$):** A balanced pole has true value $\hat{V}(s) \approx 1/(1-\gamma) = 100$; at step $t = 490$ of a 500-step win, unbootstrapped $\hat{G}_{490} \approx 9.6$ gives a weight of $9.6 - 100 = -90.4$, punishing the exact actions that kept the pole upright!
+:::
+
+::: {.slide title="The Neural REINFORCE Training Loop"}
+[Combining Rollouts, Truncation Bootstrap, and Value Regression]{.kicker}
+
+`train_reinforce` collects 8 episodes per update, adds `truncation_bootstrap` to `reward_to_go`, standardizes the empirical advantages $y_t - \hat{V}_w(s_t)$, updates the actor once, and fits the critic for 40 steps:
+
+@deep-rl-the-swap-as-a-three-line-diff-3
+
+- **Four practical departures from exact $\nabla_\theta J$:** (1) Dropping $\gamma^t$ weights all steps equally; (2) bootstrapping $s_T$ injects critic bias at cutoffs; (3) batch centering couples samples; and (4) dividing by batch $\sigma$ and $N$ rescales gradients before Adam's coordinate normalization.
+:::
+
+::: {.slide title="REINFORCE with a Learned Baseline on CartPole"}
+[Reaching the 500-Step Ceiling]{.kicker}
+
+Training 3 seeds of `ActorCritic.mlp(4, 2)` on `CartPole-v1` with $\gamma = 0.99$ (effective horizon 100 steps) solves the task within 50 updates ($\approx 120{,}000$ environment steps):
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Markov Decision Processes | states, actions, returns, values |
-| Dynamic Programming | exact values from a known model |
-| Temporal-Difference Learning | values from sampled transitions |
-| Exploration | bandits, UCB, Thompson sampling |
-| Learning from Demonstrations | behavior cloning, DAgger |
-| Policy Gradient | the score function, REINFORCE |
-| Baselines and Variance Reduction | reward-to-go, baselines, RLOO |
-| **Function Approximation** | **networks, continuous states and actions** |
+- **Rapid climb from random play:** Untrained MLPs drop the pole after $\approx 20$ steps; all 3 seeds reach the $500$-step ceiling by update 50.
+- **Role of truncation bootstrap:** Without `truncation_bootstrap`, late updates frequently dip below $500$ as successful trajectories penalize their final steps.
 :::
 
-::: {.col .narrow}
-- **Uses:** REINFORCE, reward-to-go, the learned baseline, `Policy`,
-  `rollout`, `policy_step`.
-- **Skips:** bootstrapped critics, batch reuse, replay (the next
-  chapter).
-:::
-:::
-:::
-
-::: {.slide title="A Table Is a Linear Network Whose Kernel Is the Indicator"}
-Row $s$ of a $16 \times 4$ preference table $\theta$ is
-$\theta^\top \mathbf{e}_s$, with $\mathbf{e}_s$ the one-hot vector of $s$.
-A hidden layer learns the features instead:
-$\mathbf{W}_2 \tanh(\mathbf{W}_1 \mathbf{s} + \mathbf{b}_1) + \mathbf{b}_2$.
-
-One gradient step of size $\eta_V$ that moves $\hat V(s_0)$ toward a
-target $y$ changes every state, to first order:
-
-$$\Delta \hat{V}(s) = \eta_V \big(y - \hat{V}(s_0)\big)\, k(s, s_0), \qquad k(s, s_0) = \nabla_w \hat{V}(s)^\top \nabla_w \hat{V}(s_0)$$
-
-- table: $\nabla_w \hat V(s) = \mathbf{e}_s$, so $k = 1$ at $s = s_0$ and $0$ elsewhere
-- network: $k$ varies smoothly with both states, the *tangent kernel*
-:::
-
-::: {.slide title="ActorCritic Is a Policy With a Value Network and Its Own Optimizer"}
-The learned baseline was a separate NumPy table; now it is a network in
-the container. `ActorCritic(policy, value, lr)` subclasses
-`Policy(policy, lr)`. *Actor* = the policy, *critic* = the value estimate.
-
-| | inherited from `Policy` | added by `ActorCritic` |
-|---|---|---|
-| modules | `policy` | `value` |
-| optimizers | `opt_pi` (Adam) | `opt_v` (Adam) |
-| methods | `log_prob`, `act`, `act_greedy` | `V` (framework array, for a loss), `value_np` (NumPy in and out) |
-| constructor | `tabular`: one zero table | `tabular`: both as zero tables |
-
-A table can stand in for either network.
-:::
-
-::: {.slide title="One Constructor Replaces Both Tables by One-Hidden-Layer Networks"}
-@deep-rl-the-swap-as-a-three-line-diff-1
-
-- 64 tanh units, the activation a large study of on-policy methods found
-  best for policy networks
-- the softmax acts on the network's outputs as it did on a table row;
-  automatic differentiation applies the extra chain rule
-
-[Andrychowicz et al. 2021]{.small}
-:::
-
-::: {.slide title="One Adam Step per Batch Leaves the Baseline Behind Its Targets"}
-`fit_value` takes `num_steps` optimizer steps on the mean squared error
-between $\hat V(s_t)$ and a fixed target vector.
-
-- targets: discounted returns of order 100; one Adam step moves each
-  parameter by about its learning rate, 0.01
-- share of the targets' variance explained on Pendulum,
-  $1 - \textrm{Var}(\hat G - \hat V)/\textrm{Var}(\hat G)$: one step per
-  batch, only 0.4 to 0.8 by the end of a run on most seeds; forty steps,
-  about 0.99
-
-::: {.d2l-note}
-Away from a time-limit cut the targets are observed returns, so this is
-ordinary regression. Targets that use $\hat V$ at every next state move
-with each update, and with networks or off-policy data they can diverge.
-:::
-
-[Tsitsiklis and Van Roy 1997]{.small}
-:::
-
-::: {.slide title="A Time-Limit Cut Is Not an Ending, So the Target Adds the Value at the Cut"}
-CartPole stops at 500 steps. Near the cut $\hat G_t$ shrinks toward 1
-while $\hat V \approx 1/(1-\gamma) = 100$, so the weights
-$\hat G_t - \hat V(s_t)$ push down the actions that kept the pole up.
-
-$$y_t = \hat{G}_t + (1 - \mathrm{term})\, \gamma^{T-t}\, \hat{V}(s_T), \qquad \mathrm{term} = 1 \textrm{ only if } s_T \textrm{ is terminal}$$
-
-@deep-rl-replacing-the-table-with-a-network-2
-:::
-
-::: {.slide title="Check: The Last Weights of a Perfect CartPole Episode"}
-[Check]{.kicker}
-
-An episode balances until the cut at $T = 500$, with $\gamma = 0.99$ and
-$\hat V \approx 100$ at every upright state. At $t = 490$, what are
-$\hat G_t$ and the weight $\hat G_t - \hat V(s_t)$ without the
-correction? What is the target $y_t$ with it?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\hat G_{490} = (1 - 0.99^{10})/0.01 \approx 9.6$, a weight
-of about $-90$. The correction adds $0.99^{10} \cdot 100 \approx 90.4$,
-so $y_{490} \approx 100$ and the weight is about $0$, as at every other
-step of the episode.
-:::
-:::
-:::
-
-::: {.slide title="The Loop Rolls Out, Bootstraps, Normalizes, Steps, and Fits"}
-@deep-rl-the-swap-as-a-three-line-diff-3
-
-`make_agent(seed)` builds any agent with the `ActorCritic` interface.
-Each update collects eight episodes, takes one policy step and then
-forty value-regression steps.
-:::
-
-::: {.slide title="The Update Is a Per-Step Surrogate, Not the Gradient of J"}
-$$\hat{g} = \frac{1}{N} \sum_{t} \tilde{w}_t\, \nabla_\theta \log \pi_\theta(a_t \mid s_t), \qquad \tilde{w} = \mathrm{standardize}\big(y - \hat{V}(s)\big)$$
-
-- $\gamma^t$ is dropped: a late step's score counts as much as an early one's
-- `standardize` subtracts the batch mean, which depends weakly on the
-  sampled actions, and divides by the batch standard deviation
-- Adam then takes steps of roughly fixed size; the centering acts as a
-  second baseline, computed from the batch itself
-- no stochastic-approximation theorem covers this combination: the
-  evidence that it works comes from runs
-
-[Nota and Thomas 2020]{.small}
-:::
-
-::: {.slide title="Every CartPole Seed Reaches the 500-Step Ceiling by About Update 50"}
-::: {.cols .vc}
 ::: {.col .fig}
 @!deep-rl-the-swap-as-a-three-line-diff-4
 :::
-
-::: {.col}
-- `ActorCritic.mlp(4, 2)` on `'CartPole-v1'`, $\gamma = 0.99$ (horizon
-  100 steps), three seeds
-- the untrained policy balances for about 20 steps
-- single batches still dip below the ceiling
-- without the time-limit correction the average barely changes (only
-  successful episodes are cut), but late batches leave 500 more often
-:::
 :::
 :::
 
-::: {.slide title="The Surrogate Loss Has the Right Gradient and an Uninformative Value"}
-$$L(\theta) = -\frac{1}{N} \sum_{t} \tilde{w}_t\, \log \pi_\theta(a_t \mid s_t), \quad \tilde{w}_t \textrm{ held fixed}, \quad \nabla_\theta L = -\hat g$$
+::: {.slide title="Why the Surrogate Policy Loss Value Is Uninformative"}
+[Monitoring RL Training Properly]{.kicker}
+
+Deep learning frameworks compute the policy gradient by differentiating the scalar **surrogate loss** $L(\theta) = -\frac{1}{N}\sum_t \tilde{w}_t \log \pi_\theta(a_t \mid s_t)$ with $\tilde{w}_t$ detached:
 
 ::: {.cols .vc}
+::: {.col}
+$$L(\theta) = -\frac{1}{N}\sum_{t=1}^N \tilde{w}_t\,\log \pi_\theta(a_t \mid s_t) = -s_{\log\pi}\,\textrm{corr}(\tilde{w}, \log\pi)$$
+
+- **Gradient matches, scalar value does not:** While CartPole return climbs from $20$ to $500$, $L(\theta)$ hovers near $-0.05$ because standardized weights $\tilde{w}_t$ have mean $0$ and unit variance.
+- **Debugging rule:** Always monitor episode returns, value explained variance, and policy entropy—never the scalar value of $L(\theta)$.
+:::
+
 ::: {.col .fig}
 @!deep-rl-the-estimator-written-as-a-loss
 :::
-
-::: {.col}
-While the return rises from 20 to 500, $L$ stays below 0.1 in size and
-negative on almost every update.
-
-To follow training, watch the return.
-:::
 :::
 :::
 
-::: {.slide title="Check: What Bounds the Size of L"}
-[Check]{.kicker}
+::: {.slide title="Continuous Actions: The Gaussian Policy"}
+[Parameterizing Real-Valued Torques]{.kicker}
 
-The weights $\tilde w_t$ have mean 0 and standard deviation 1 over the
-batch. Write $L$ through the standard deviation $s$ of
-$\log \pi_\theta(a_t \mid s_t)$ over the batch and the correlation $c$
-between weights and log-probabilities. What happens to $L$ as the policy
-becomes nearly deterministic?
+For continuous control (`Pendulum-v1`, torque $u \in [-2, 2]$), `GaussianPolicy` models $\pi_\theta(a \mid s) = \mathcal{N}(a;\; \mu_\theta(s), \sigma^2)$ using an MLP mean head $\mu_\theta(s)$ and a learnable log-standard-deviation parameter $\log\sigma$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** With mean-zero weights, $L$ is minus a covariance:
-$L = -s\,c$, so $|L| \leq s$. Under a nearly deterministic policy almost
-every taken action has $\log \pi \approx 0$ and the rare other one
-$\log \epsilon$, so $s^2 \approx \epsilon (\log \epsilon)^2 \to 0$ and
-$L \to 0$, whatever the return.
-:::
-:::
-:::
+$$\log \pi_\theta(a \mid s) = -\frac{1}{2}z^2 - \log\sigma - \frac{1}{2}\log(2\pi), \qquad \frac{\partial \log \pi_\theta}{\partial \mu} = \frac{z}{\sigma}, \qquad \frac{\partial \log \pi_\theta}{\partial \log\sigma} = z^2 - 1$$
 
-::: {.slide title="Pendulum's Action Is a Real-Valued Torque, Which a Softmax Cannot Choose"}
-A pendulum hangs from a motorized pivot; $\vartheta$ is its angle from
-upright ($\theta$ stays the policy parameters).
-
-- observation $(\cos\vartheta, \sin\vartheta, \dot\vartheta)$; action: a
-  torque $u \in [-2, 2]$
-- reward $-(\vartheta^2 + 0.1\,\dot\vartheta^2 + 0.001\,u^2)$: highest
-  when the pendulum stands still at the top
-- every episode is truncated after 200 steps
-- hanging uncontrolled: a return near $-1200$; swinging up and
-  balancing: about $-200$ or better
-
-The score-function derivation needs only a differentiable
-$\log \pi_\theta(a \mid s)$, not a finite list of actions.
-:::
-
-::: {.slide title="A Gaussian Policy Changes Three Methods and Nothing Else"}
-$\pi_\theta(a \mid s) = \mathcal{N}\big(a; \mu_\theta(s), \sigma^2\big)$:
-`GaussianHead` maps the state through a tanh layer to $\mu_\theta(s)$, and
-$\log\sigma$ is one learned vector. `GaussianPolicy(ActorCritic)`
-overrides `log_prob`, `act` and `act_greedy`; `train_reinforce` is
-unchanged. With $z = (a - \mu)/\sigma$ the score is
-
-$$\frac{\partial \log \pi}{\partial \mu} = \frac{z}{\sigma}, \qquad \frac{\partial \log \pi}{\partial \log \sigma} = z^2 - 1$$
-
-Checked against the density and automatic differentiation at
-$\sigma = 0.5$:
+where $z = (a - \mu_\theta(s))/\sigma$.
 
 @!deep-rl-the-gaussian-policy-2
+
+- **How $\mu$ and $\sigma$ adapt:** A positive advantage weight $\tilde{w}_t > 0$ pulls the mean $\mu_\theta(s)$ toward $a_t$ (via $z/\sigma$), widens $\sigma$ when an outlier $|z| > 1$ succeeds, and shrinks $\sigma$ when near-mean actions $|z| < 1$ succeed.
 :::
 
-::: {.slide title="Every Pendulum Run Swings Up and Balances, After a Few Hundred Thousand Steps"}
+::: {.slide title="Swinging Up Pendulum with Neural REINFORCE"}
+[Zero-Mean Initialization and Sample Complexity]{.kicker}
+
+Training `GaussianPolicy(3, 1, zero_mean=True)` on `Pendulum-v1` over 300 updates of 8 episodes ($480{,}000$ total steps) swings up and balances the pendulum across all seeds:
+
 ::: {.cols .vc}
+::: {.col}
+- **Why `zero_mean=True` matters:** Initializing the final mean layer to zero ($\mu_0(s) = 0, \sigma_0 = 1$) prevents early torques from saturating the $[-2, 2]$ clip bounds where reward feedback vanishes.
+- **High on-policy sample cost:** Crossing the $-200$ balancing threshold takes $150$–$300$ updates ($\sim 300{,}000$ steps) because each 1,600-step batch is used once and discarded; off-policy SAC (§15.4) solves Pendulum in $5{,}000$–$11{,}000$ steps.
+:::
+
 ::: {.col .fig}
 @!deep-rl-the-score-does-not-care-that-the-action-is-real
 :::
-
-::: {.col}
-- $\gamma = 0.95$; 300 updates of eight episodes
-- the mean layer starts at zero, so every seed starts at $\mu = 0$,
-  $\sigma = 1$
-- the ten-update average crosses $-200$ after roughly 150 to 300 updates
-- $\sigma$ falls to about half; the best lies between about $-150$ and
-  $-200$
-- without the time-limit correction only about half the seeds reached
-  $-200$
-:::
 :::
 :::
 
-::: {.slide title="Check: Why Does σ Fall as the Policy Improves?"}
-[Check]{.kicker}
+::: {.slide title="Score-Function vs. Pathwise Action Gradients"}
+[Two Ways to Differentiate Through Continuous Actions]{.kicker}
 
-Two samples receive a positive weight, one at $z = 0.2$ and one at
-$z = 2$. Which way does each push $\sigma$? Near a good action, which
-samples tend to receive the positive weights?
+When the return or critic $Q(a)$ is a differentiable function of a continuous action $a = \mu + \sigma z$ with $z \sim \mathcal{N}(0, 1)$, we can compare the score-function gradient against the **pathwise gradient** (Kingma & Welling, 2014):
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $z^2 - 1 = -0.96$ pushes $\sigma$ down; $z^2 - 1 = +3$ pushes
-it up. Near the best action, samples close to the mean score highest,
-so the positive weights sit at small $|z|$ and $\sigma$ shrinks:
-exploration fades as the mean approaches the best action.
-:::
-:::
-:::
-
-::: {.slide title="Two Unbiased Gradients of One Expectation Differ Twentyfold in Variance"}
-$$\nabla_\mu\, \mathbb{E}\big[ Q(a) \big] = \mathbb{E}\Big[ Q(a)\, \frac{a - \mu}{\sigma^2} \Big] = \mathbb{E}\big[ Q'(\mu + \sigma z) \big], \qquad z \sim \mathcal{N}(0, 1)$$
-
-Score function on the left; pathwise on the right, through
-$a = \mu + \sigma z$. For $Q(a) = -(a-1)^2$ at $\mu = 0$, $\sigma = 0.5$
-(exact gradient 2), 100,000 samples:
+$$\nabla_\mu\,\mathbb{E}_{a \sim \mathcal{N}(\mu, \sigma^2)}\big[Q(a)\big] = \underbrace{\mathbb{E}\Big[Q(a)\,\frac{a - \mu}{\sigma^2}\Big]}_{\text{score-function estimator}} = \underbrace{\mathbb{E}_{z \sim \mathcal{N}(0, 1)}\big[Q'(\mu + \sigma z)\big]}_{\text{pathwise (reparameterization) estimator}}$$
 
 @!deep-rl-score-function-versus-pathwise-gradients
 
-Exact variances: 21.75 against 1.0, and 281.75 for the score function
-when $Q$ gains $+10$. The price: $Q$ must be differentiable in $a$.
-
-[Kingma and Welling 2014]{.small}
+- **20× lower variance and shift invariance:** On $Q(a) = -(a-1)^2$ at $\mu = 0, \sigma = 0.5$, the pathwise estimator has variance $1.00$ vs. $21.75$ for the score function, and is completely invariant to adding $+10$ to $Q(a)$ (which bloats score-function variance to $282$).
 :::
 
-::: {.slide title="The Pathwise Gradient Runs Through a Differentiable Critic"}
-![](../img/mdl-rl-score-vs-pathwise.svg){width=98%}
+::: {.slide title="Information Flow: Score Function vs. Pathwise Critic"}
+[Trade-Off Between Black-Box Rewards and Critic Bias]{.kicker}
 
-- (a) uses the environment only through rewards; (b) needs a critic
-  $Q_w$, whose error in $\partial Q_w / \partial a$ becomes bias
-- it avoids $\max_a Q(s, a)$ over $a \in \mathbb{R}^d$: the deterministic
-  policy gradient trains an actor along $\partial Q_w / \partial a$
+Comparing the computational graphs shows why on-policy REINFORCE uses the score function while off-policy continuous actor-critics (DDPG, TD3, SAC) use pathwise gradients:
 
-[Silver et al. 2014]{.small}
+![](../img/mdl-rl-score-vs-pathwise.svg){.nostretch width=95%}
+
+- **Score function (a):** Treats the environment as a non-differentiable black box returning scalar numbers $R$, so it works for discrete actions and unknown dynamics without bias from a critic's slope.
+- **Pathwise gradient (b):** Differentiates $\partial Q_w / \partial a \cdot \partial a / \partial \theta$ through a learned neural critic $Q_w(s, a)$, trading massive variance reduction for sensitivity to errors in $\partial Q_w / \partial a$.
 :::
 
-::: {.slide title="One Value Step Raises Near States and Lowers Far Ones"}
-![](../img/mdl-rl-table-vs-network.svg){width=98%}
+::: {.slide title="Measuring State Coupling via the Tangent Kernel"}
+[Generalization and Interference in a Value MLP]{.kicker}
 
-On the CartPole value network, one plain SGD step raising one of 256
-random states in $[-1, 1]^4$: the ten nearest rise by over 80% as much;
-the farthest barely move, and some fall.
+Applying a single plain-SGD step to raise $\hat{V}_w(s_0)$ at one state $s_0 \in [-1, 1]^4$ by $+0.50$ measures how the 64-unit `tanh` MLP moves 255 other random states sorted by Euclidean distance $\|s - s_0\|$:
+
+@!deep-rl-generalization-couples-states-measured
+
+- **Local generalization vs. far-field drift:** The 10 nearest states in $\mathbb{R}^4$ rise by $+0.43$ ($>80\%$ of $s_0$'s move), whereas the 10 farthest states drop by $-0.07$ ($81$ of $255$ states move *down*), while the lookup table moves $+0.50$ at $s_0$ and $0.000000$ everywhere else.
 :::
 
-::: {.slide title="The Positive Bump Generalizes; the Negative Far Field Interferes"}
-- **generalization:** experience at one state informs the estimates at
-  similar states, so a network learns CartPole without a hand-made
-  partition of its state space
-- **interference:** fitting one region moves the estimates in regions the
-  batch does not contain
-- a CartPole policy that balances well collects nearly upright states;
-  fitting them moves the estimates at large pole angles it never visits
-- so a training curve can dip even when every update fits its own batch
+::: {.slide title="Visualizing Table Isolation vs. Network Coupling"}
+[The Double-Edged Sword of Function Approximation]{.kicker}
+
+Plotting a 1D slice of the value function before and after a single $+0.50$ update at $x_0$ illustrates why neural RL is both powerful and fragile:
+
+![](../img/mdl-rl-table-vs-network.svg){.nostretch width=95%}
+
+- **Generalization (the positive bump around $x_0$):** Experience at $x_0$ immediately informs nearby states without visiting them.
+- **Interference and the deadly triad:** Fitting batches of upright CartPole states alters $\hat{V}_w(s)$ at large tilt angles; when combined with bootstrapping and off-policy data (the **deadly triad** of Tsitsiklis & Van Roy, 1997), global parameter coupling can cause value iteration to diverge.
 :::
 
-::: {.slide title="Two Questions Place Every Method: What It Learns and Which Data Drives It"}
-![](../img/mdl-rl-roadmap.svg){width=72%}
+::: {.slide title="Synthesis: Roadmap of Chapter 14 and Chapter 15"}
+[What Each Method Learns and Which Data It Consumes]{.kicker}
 
-Solid boxes: this chapter; dashed: the next. This deck's agent is
-REINFORCE with a learned baseline: on-policy, learning the policy.
-Reusing recent batches needs a correction, since the policy has changed.
+Every algorithm across Chapters 14 and 15 is positioned by two axes: **what object it parameterizes** (values, policy, or dynamics model) and **which data distribution drives its update**:
+
+::: {.cols .vc}
+::: {.col}
+- **Solid boxes (Chapter 14):** Exact DP on $P$, tabular TD (Q-learning/SARSA), bandits (UCB/Thompson), imitation (BC/DAgger), optimal control (LQR/iLQR/MPC), and on-policy Monte Carlo policy gradients (REINFORCE/RLOO/GRPO).
+- **Dashed boxes (Chapter 15):** Bootstrapped actor-critics (A2C), clipped batch reuse (PPO), replay-buffer value nets (DQN, SAC), learned dynamics models, and pessimistic offline RL.
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
-
-- A table is a linear network; a network's kernel spreads each update.
-- `ActorCritic.mlp(4, 2)` with forty value steps brings every CartPole
-  seed to 500 by about update 50.
-- The update is a per-step surrogate; its loss value is not the return.
-- A Gaussian policy swings Pendulum up to between $-150$ and $-200$.
-- Score function against pathwise: variance 21.75 against 1.0.
-- One value step raises near states and lowers far ones.
-
-**Next:** this agent waits for whole episodes, uses each batch once and
-does not limit its steps; the next chapter removes all three, and soft
-actor-critic reaches $-200$ after about 5,000 to 11,000 steps.
+::: {.col .fig}
+![](../img/mdl-rl-roadmap.svg){.nostretch width=100%}
 :::
+:::
+:::
+
+::: {.slide title="Concept Check: Function Approximation in RL"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of time-limit bootstrapping, Gaussian scores, and pathwise gradients:
+
+1. **Truncation bootstrap:** At step $t = 490$ of a 500-step CartPole episode ($\gamma = 0.99$) where $\hat{V}_w(s) \approx 100$ for all upright states, what is the unbootstrapped reward-to-go $\hat{G}_{490}$, and what is the bootstrapped target $y_{490}$?
+2. **Gaussian exploration decay:** Under the Gaussian score $\partial_{\log\sigma} \log \pi_\theta(a \mid s) = z^2 - 1$, why does $\sigma$ automatically shrink as the mean network $\mu_\theta(s)$ converges toward the optimal action $a^*(s)$?
+3. **Score vs. pathwise on discontinuous rewards:** If a verifier pays a step-function reward $Q(a) = \mathbf{1}(a > 1)$, what gradient does the pathwise estimator $\mathbb{E}[Q'(\mu + \sigma z)]$ return, and why does the score-function estimator still work?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Without bootstrapping, $\hat{G}_{490} = \sum_{k=0}^9 0.99^k = (1 - 0.99^{10})/0.01 \approx 9.56$, giving a false negative advantage $9.56 - 100 = -90.44$. Adding $\gamma^{10}\hat{V}_w(s_{500}) = 0.99^{10}(100) \approx 90.44$ restores $y_{490} \approx 100.0$ and zero advantage.
+2. Once $\mu_\theta(s) \approx a^*(s)$, samples close to the mean ($|z| < 1$, where $z^2 - 1 < 0$) achieve the highest return and receive positive advantage weights $\tilde{w}_t > 0$, while far samples ($|z| > 1$) receive negative weights—both pushing $\log\sigma$ downward.
+3. Because $Q'(a) = 0$ everywhere except the jump at $a = 1$, the pathwise estimator returns $0$ for every sample and fails completely; the score-function estimator differentiates $\log \pi_\theta(a)$ instead of $Q(a)$ and remains unbiased for discontinuous rewards.
+:::
+:::
+
+::: {.slide title="Summary: From Tabular RL to Function Approximation"}
+[Key Takeaways]{.kicker}
+
+| Component | Mathematical Form | Purpose & Systems Behavior |
+|:--|:--|:--|
+| **Tangent kernel** | $k(s, s_0) = \nabla_w \hat{V}_w(s)^\top \nabla_w \hat{V}_w(s_0)$ | Governs how a step at $s_0$ generalizes to nearby $s$ and interferes far away |
+| **Truncation bootstrap** | $y_t = \hat{G}_t + (1 - \textrm{term}_T)\gamma^{T-t}\hat{V}_w(s_T)$ | Restores unrecorded future value when an episode hits a clock limit |
+| **Surrogate loss** | $L(\theta) = -\frac{1}{N}\sum_t \tilde{w}_t \log \pi_\theta(a_t \mid s_t)$ | Generates $-\hat{g}$ via autograd; its scalar value $-s_{\log\pi}\textrm{corr}$ does not track return |
+| **Gaussian policy** | $\pi_\theta(a \mid s) = \mathcal{N}(a;\; \mu_\theta(s), \sigma^2)$ | Scores continuous actions via $\partial_\mu \log\pi = z/\sigma$ and $\partial_{\log\sigma}\log\pi = z^2 - 1$ |
+| **Pathwise gradient** | $\nabla_\mu \mathbb{E}[Q(a)] = \mathbb{E}_{z \sim \mathcal{N}(0, 1)}[Q'(\mu + \sigma z)]$ | $20\times$ lower variance than score function, but requires a differentiable critic $Q_w$ |
+:::
+

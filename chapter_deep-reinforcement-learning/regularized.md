@@ -538,255 +538,246 @@ A reward fitted to comparisons is accurate only where the comparisons are. Compa
 ::: {.cover}
 [Dive into Deep Learning · §15.3]{.kicker}
 
-KL-Regularized Policy Optimization<br>
-**rewards fitted to comparisons · reward hacking · a closed-form optimum · the soft backup**
+KL-Regularized Policy Optimization and Reward Hacking<br>**Bradley–Terry preferences · potential shaping invariance · Goodhart's law · exponentially tilted optimum · soft value iteration**
 :::
 :::
 
-::: {.slide title="Planning on a Fitted Reward Scores −0.03 and Earns −2.11"}
-[The problem]{.kicker}
+::: {.slide title="When the Reward Must Be Learned from Comparisons"}
+[Motivation]{.kicker}
 
-![](../img/mdl-rl-reward-gridworld.svg){width=90%}
+In tasks like helpful dialogue, safe driving, or mathematical exposition, no hand-written formula scores quality—yet humans can reliably compare two candidate trajectories $\tau$ and $\tau'$:
 
-Fit a reward to 6000 comparisons, plan on it, grade with the hidden true reward.
-
-::: {.d2l-note .warn}
-The plan walks through the hazard cells the comparisons never measured.
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- fit a reward to pairwise comparisons by logistic regression;
-- say what comparisons cannot see, and where a fitted reward is wrong;
-- derive the optimum of reward minus $\beta$ times KL from a reference;
-- extend it to many steps with a soft Bellman backup;
-- read the rise and fall of the true return as the penalty weakens.
-
-**Running example:** a $4 \times 4$ gridworld with a known reward, hidden
-from the learner. **Idea:** stay close to the policy that produced the data.
+::: {.cols}
+::: {.col}
+- **The RLHF Pipeline (Christiano et al., 2017; Ouyang et al., 2022):** Collect trajectories from a reference policy $\pi_{\textrm{ref}}$, fit a reward model $\hat{r}$ to pairwise human preferences, and optimize a policy against $\hat{r}$.
+- **Out-of-Support Extrapolation:** The fitted reward $\hat{r}$ is accurate only where $\pi_{\textrm{ref}}$ generated comparison data; elsewhere it guesses.
 :::
 
-::: {.slide title="A Learned Reward Needs a Leash to Its Data"}
-[Where this fits]{.kicker}
+::: {.col}
+- **Reward Hacking (Goodhart's Law):** An unconstrained optimizer searches the entire state-action space, inevitably finding unvisited regions where $\hat{r}$ happens to be erroneously high.
+- **The KL Leash:** Adding a penalty $-\beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ directly to the objective anchors the optimal policy near the reference distribution's support.
+:::
+:::
+:::
+
+::: {.slide title="A 4x4 Gridworld Benchmark with a Hidden True Reward"}
+[Experimental Testbed]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Actor-Critic Methods | a critic in place of the full return |
-| Trust Regions and PPO | several bounded steps on one batch |
-| **KL-Regularized Policy Optimization** | **a learned reward, a leash to a reference** |
-| Deep Q-Networks | replay and a target network |
-| Soft Actor-Critic | continuous actions, entropy |
-| Learned Models and Planning | a model to plan in |
-| Offline Reinforcement Learning | a fixed log, no new trials |
-| RL for Sequence Generation | a checker's verdict on a response |
+- To audit reward learning and exploitation against ground truth, we construct a deterministic $4 \times 4$ gridworld ($\gamma = 0.95$) from start state $0$ (S) to absorbing goal $15$ (G, $+1.0$):
+  - Ordinary moves cost $-0.04$; entering the two **hazard cells** ($5$ and $6$) costs **$-1.50$**.
+- The reference policy $\pi_{\textrm{ref}}(a \mid s) \propto \exp(Q^*(s, a)/0.25)$ is competent but hesitant: it avoids the hazard lane ($p \approx e^{-6}$), visiting hazard entries in only $2$–$4$ of $1{,}000$ rollouts.
 :::
 
-::: {.col .narrow}
-- **Uses:** value iteration and exact policy values on a known model;
-  shaping; the trust region of PPO.
-- **Skips:** neural reward models; per-token KL estimates.
+::: {.col .fig}
+![](../img/mdl-rl-reward-gridworld.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Comparisons Fit a Reward by Logistic Regression"}
-Bradley-Terry: a comparison is a noisy look at a return difference.
+::: {.slide title="Fitting a Reward Model via Bradley–Terry Regression"}
+[Preference Learning]{.kicker}
 
-$$P(\tau \succ \tau') = \sigma\big( r(\tau) - r(\tau') \big)$$
+The **Bradley–Terry model** (1952) treats a pairwise preference $\tau \succ \tau'$ as a logistic observation of the difference in trajectory returns $r(\tau) - r(\tau')$:
 
-- $\mathbf{c}(\tau)$: discounted count of each state-action pair, so
-  $r(\tau) = \mathbf{c}(\tau)^\top r$.
-- Features $\mathbf{c}(\tau) - \mathbf{c}(\tau')$, weights $r$: logistic
-  regression.
-- 1000 trajectories of a hesitant reference $\pi_{\textrm{ref}}$, 6000
-  labeled pairs, weight decay $0.02$.
+$$P(\tau \succ \tau') = \sigma\big(r(\tau) - r(\tau')\big) = \frac{1}{1 + \exp\big(-(r(\tau) - r(\tau'))\big)}$$
+
+- **Linearity in Discounted Counts:** Defining the discounted state-action visit vector $\mathbf{c}(\tau) \in \mathbb{R}^{64}$ with entries $c_{s,a}(\tau) = \sum_{t: (s_t, a_t)=(s,a)} \gamma^t$, the return is $r(\tau) = \mathbf{c}(\tau)^\top \mathbf{r}$.
+- **Logistic Regression:** Fitting $\hat{\mathbf{r}}$ on $6{,}000$ binary comparisons between $1{,}000$ reference trajectories is standard $L_2$-regularized logistic regression ($\lambda_{\textrm{wd}} = 0.02$) on feature differences $\mathbf{c}(\tau) - \mathbf{c}(\tau')$.
 :::
 
-::: {.slide title="The Fit Puts the Hazard Near Zero Because the Data Rarely Go There"}
+::: {.slide title="Where the Fitted Reward Is Accurate—and Where It Fails"}
+[Support Coverage]{.kicker}
+
+Inspecting the fitted reward $\hat{r}$ across all 64 state-action pairs reveals a sharp divide between well-sampled and thin regions:
+
 @!regularized-preferences-and-bradley-terry-2
 
-- Moves into the hazards: truly $-1.5$, seen in 2 to 4 of 1000 episodes.
-- Unseen or rare pairs stay near the initial value and the decay's pull: zero.
+::: {.d2l-note .warn}
+**The Thin-Data Blind Spot:** Because moves into the hazard cells ($5$ and $6$) appear in only $2$–$4$ episodes out of $1{,}000$, weight decay keeps their fitted rewards near **$0.00$** instead of their true cost **$-1.50$**!
+:::
 :::
 
-::: {.slide title="Most of the Fit Error Is a Shaping Term No Comparison Sees"}
-Add $\gamma \Phi(s') - \Phi(s)$ to every move, $\Phi(\textrm{goal}) = 0$:
-every return from state 0 shifts by $-\Phi(0)$.
+::: {.slide title="Why Comparisons Cannot See Potential-Based Shaping"}
+[Identifiability & Shaping]{.kicker}
+
+Why is the RMS error on the 46 well-visited `core` pairs $0.191$ when ordinary step costs are only $0.04$?
+
+- **Potential Shaping Invariance:** Adding $\gamma \Phi(s') - \Phi(s)$ (with $\Phi(\textrm{goal}) = 0$) telescopes along every goal-reaching trajectory from $s_0$, shifting every return $r(\tau)$ by the same constant $-\Phi(s_0)$.
+- In any comparison $r(\tau) - r(\tau')$, the constant shift $-\Phi(s_0)$ cancels completely, so pairwise preferences identify $r$ only up to a potential $\Phi$:
 
 @!regularized-what-the-comparisons-cannot-see
 
-- The fit moved most of the goal's $+1$ into larger step costs.
-- A hazard move priced at $0$ is now cheaper than an ordinary step.
+- Weight decay picks the minimum-norm representative ($\Phi(0) \approx 0.78$), pricing ordinary moves at $\approx -0.08$—making the unmeasured hazard moves ($\hat{r} \approx 0$) look *cheaper* than normal steps!
 :::
 
-::: {.slide title="The Optimizer Walks Through the Hazard Lane"}
+::: {.slide title="Reward Hacking in Action: Walking Through the Hazards"}
+[Goodhart's Law]{.kicker}
+
+When we run exact value iteration (`plan`) on the fitted reward $\hat{r}$ and evaluate the resulting deterministic policy under both $\hat{r}$ and the hidden true reward $r^*$:
+
 @!regularized-reward-hacking-and-goodhart
 
-- The true optimum's fitted score sits $0.83$ low, near $\Phi(0) = 0.78$: compare differences.
-- Plan on $\hat r$: $0 \to 1 \to 5 \to 6 \to 7 \to 11 \to 15$.
-- 24 datasets: 19 cross the hazards, 4 circle forever, 1 is optimal.
+- **Exploiting the Blind Spot:** Under $\hat{r}$, the shortest path $0 \to 1 \to 5 \to 6 \to 7 \to 11 \to 15$ straight through both hazard cells scores $-0.03$ (beating the true optimal path's $-0.24$), but earns a catastrophic **$-2.11$** under $r^*$!
+- Over 24 independent preference datasets, planning on $\hat{r}$ walks through the hazards on 19 datasets and loops forever on 4.
 :::
 
-::: {.slide title="Check: Why Take the Hazards When Both Routes Have Six Moves?"}
-[Check]{.kicker}
+::: {.slide title="The Single-Decision KL-Regularized Objective"}
+[KL Regularization]{.kicker}
 
-Under $\hat r$ the safe route along the border and the hazard route both
-reach the goal in six moves. Why does the planner prefer the hazards?
+To prevent the optimizer from leaving the reference policy's support, we subtract $\beta$ units of reward for every nat of reverse KL divergence from $\pi_{\textrm{ref}}$:
 
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Under $\hat r$ an ordinary move costs $\approx 0.08$, while the
-two hazard moves, never measured by the data, cost $\approx 0$. The route
-through the hazards looks cheaper by about $0.2$.
+$$\max_{\pi}\ \mathbb{E}_{a \sim \pi}\big[r(a)\big] - \beta\, D_{\textrm{KL}}\big(\pi \Vert \pi_{\textrm{ref}}\big) = \sum_{a} \pi(a)\, r(a) - \beta \sum_{a} \pi(a) \log \frac{\pi(a)}{\pi_{\textrm{ref}}(a)}$$
+
+- **Proposition (Closed-Form Optimum):** For any $\beta > 0$, the unique global maximizer is the **exponentially tilted reference policy**:
+  $$\pi^\star(a) = \frac{1}{Z}\, \pi_{\textrm{ref}}(a)\, e^{r(a)/\beta}, \qquad Z = \sum_{a'} \pi_{\textrm{ref}}(a')\, e^{r(a')/\beta}$$
+- **Exact Optimal Value (Gibbs' Inequality):** Substituting $r(a) = \beta \log(\pi^\star(a) Z / \pi_{\textrm{ref}}(a))$ rewrites the objective for any $\pi$ as $\beta \log Z - \beta D_{\textrm{KL}}(\pi \Vert \pi^\star) \le \beta \log Z$.
+:::
+
+::: {.slide title="Visualizing the Exponential Tilt Across Temperatures"}
+[Geometry of the Tilt]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- The optimal policy $\pi^\star(a) \propto \pi_{\textrm{ref}}(a) e^{r(a)/\beta}$ **reweights** the reference distribution rather than ranking actions by reward alone:
+  - **Support Preservation:** Any action with $\pi_{\textrm{ref}}(a) = 0$ keeps $\pi^\star(a) = 0$ regardless of $r(a)$.
+  - **Mild Tilt ($\beta = 2$):** $\pi_{\textrm{ref}}$'s dip at $a_2$ survives into $\pi^\star$ ($D_{\textrm{KL}} = 0.15\text{ nats}$).
+  - **Strong Tilt ($\beta = 0.2$):** Mass concentrates on the highest-reward action $a_5$ ($D_{\textrm{KL}} = 1.84\text{ nats}$).
+:::
+
+::: {.col .fig}
+![](../img/mdl-rl-kl-tilting.svg){.nostretch width=100%}
 :::
 :::
 :::
 
-::: {.slide title="Penalize Divergence from the Reference"}
-One decision, reward $r(a)$, reference $\pi_{\textrm{ref}}$, weight $\beta > 0$:
+::: {.slide title="Numerical Verification Against Exponentiated Gradient"}
+[Verification]{.kicker}
 
-$$\max_{\pi}\ \mathbb{E}_{a \sim \pi}\big[ r(a) \big] - \beta\,
-D_{\textrm{KL}}\big( \pi \Vert \pi_{\textrm{ref}} \big)$$
+Running iterative exponentiated gradient ascent $\pi \leftarrow \pi \odot \exp\big(\eta(r - \beta \log(\pi/\pi_{\textrm{ref}}))\big)$ confirms the closed form $\pi^\star$ and log-partition value $\beta \log Z$ to machine precision:
 
-- $\beta$ units of reward per nat of divergence.
-- Infinite for an action the reference never takes.
-- Part of the objective: it moves the optimum, not just the path.
+@!regularized-the-proposition-1
+
+@!regularized-the-proposition-2
 :::
 
-::: {.slide title="The Optimum Is the Reference Tilted by exp(r/β)"}
-**Proposition.**
-$\ \pi^\star(a) = \pi_{\textrm{ref}}(a)\, e^{r(a)/\beta} / Z$,
-$\ Z = \sum_a \pi_{\textrm{ref}}(a)\, e^{r(a)/\beta}$, value $\beta \log Z$.
+::: {.slide title="Four Structural Consequences of the Closed Form"}
+[Unifying Properties]{.kicker}
 
-**Proof.** Substitute $r = \beta \log(\pi^\star Z / \pi_{\textrm{ref}})$:
-
-$$\mathbb{E}_\pi[r] - \beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})
-= \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star)$$
-
-Gibbs: the last term is $\geq 0$, zero only at $\pi^\star$. $\blacksquare$
-
-Exponentiated gradient ascent agrees to $\approx 10^{-16}$.
+| Property / Limit | Mathematical Specialization of $\pi^\star(a) = \pi_{\textrm{ref}}(a) e^{r(a)/\beta} / Z$ | Implication for Reinforcement Learning |
+| :--- | :--- | :--- |
+| **1. Unregularized Limit ($\beta \to 0$)** | Concentrates on $\operatorname{argmax}_{a \in \textrm{supp}(\pi_{\textrm{ref}})} r(a)$ | Without a penalty, the optimal policy is deterministic |
+| **2. Heavy Penalty ($\beta \to \infty$)** | $\pi^\star(a) \to \pi_{\textrm{ref}}(a)$ with $D_{\textrm{KL}} \to 0$ | $\beta$ smoothly interpolates from $\pi_{\textrm{ref}}$ to greedy argmax |
+| **3. Uniform Reference ($\pi_{\textrm{ref}} = 1/|\mathcal{A}|$)** | $-D_{\textrm{KL}}(\pi \Vert \textrm{unif}) = H(\pi) - \log |\mathcal{A}| \implies \pi^\star = \textrm{softmax}(r/\beta)$ | Maximum-entropy RL (§15.5 SAC) and Boltzmann exploration |
+| **4. Bayesian Variational Form** | Prior $\pi_{\textrm{ref}}(a) \times$ Likelihood $e^{r(a)/\beta} / Z = \textrm{Posterior } \pi^\star(a)$ | Control-as-inference and Direct Preference Optimization (§15.8) |
 :::
 
-::: {.slide title="The Tilt Reweights the Reference; It Does Not Rank Rewards"}
-![](../img/mdl-rl-kl-tilting.svg){width=96%}
+::: {.slide title="The Concave Reward–Divergence Frontier"}
+[Pareto Frontier]{.kicker}
 
-- $\beta = 2$: the reference's dip at $a_2$ survives; KL $0.15$ nats.
-- $\beta = 0.2$: nearly all mass on the best action; KL $1.84$ nats.
+::: {.cols .vc}
+::: {.col}
+- Sweeping $\beta$ from $10^{1.5}$ down to $10^{-1.5}$ traces the **reward–divergence frontier**: the maximum expected reward achievable at each KL budget $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$.
+- The frontier is strictly increasing and concave with slope $\beta$, ending at $\log(1/\pi_{\textrm{ref}}(a^*)) = \log(1/0.15) = 1.90\text{ nats}$.
+- **Best-of-$N$ Sampling:** Drawing $N$ samples from $\pi_{\textrm{ref}}$ and keeping the highest-scored one moves along this same axis with $D_{\textrm{KL}} \le \log N - (N-1)/N$ ($\approx 1.83\text{ nats}$ at $N=16$).
 :::
 
-::: {.slide title="β Slides the Optimum from the Reference to the Argmax"}
-- $\beta \to \infty$: the reference. $\beta \to 0$: the best action in
-  the reference's support (ties: the reference over the tied set).
-- No penalty, point mass: PPO's entropy falls toward a near-deterministic
-  optimum.
-- Uniform reference: penalty $= \log|\mathcal A| - H(\pi)$, an entropy
-  bonus; $\pi^\star = \mathrm{softmax}(r/\beta)$, Boltzmann exploration.
-- Bayes: prior $\pi_{\textrm{ref}}$, likelihood $e^{r/\beta}$,
-  posterior $\pi^\star$.
-:::
-
-::: {.slide title="Each Extra Nat Yields Less Reward"}
+::: {.col .fig}
 @!regularized-four-consequences-3
-
-- Concave and increasing, slope $\beta$ at the optimum for $\beta$.
-- Best-of-$N$ moves along the same axis: KL $\leq \log N - (N-1)/N$.
-:::
-
-::: {.slide title="Check: When Does the Hedge Stop Paying?"}
-[Check]{.kicker}
-
-A reference prefers the correct answer to a hedged one by log-odds $4$. A
-sloppy grader pays the hedge $1$ more. Above which $\beta$ does the tilted
-optimum prefer the correct answer?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The odds of hedge to correct are $e^{-4} \cdot e^{1/\beta}$,
-below 1 when $1/\beta < 4$: for $\beta > 1/4$.
 :::
 :::
 :::
 
-::: {.slide title="A Trust Region Alone Still Converges to the Argmax"}
-Solve each step exactly:
-$\pi_{k+1} = \operatorname{argmax}_\pi \mathbb{E}_\pi[r] - \tilde{\beta}
-D_{\textrm{KL}}(\pi \Vert \pi_k)$, $\pi_0 = \pi_{\textrm{ref}}$.
+::: {.slide title="Trust Region vs. Fixed-Reference Penalty & KL Direction"}
+[Critical Distinctions]{.kicker}
 
-$$\pi_k \propto \pi_{\textrm{ref}}\, e^{k\, r/\tilde{\beta}}: \textrm{ the tilt with coefficient } \tilde{\beta}/k \to 0$$
-
-- **Trust region:** against the previous iterate; shapes the path.
-- **Fixed penalty:** against a frozen reference; sets the destination.
-- PPO fine-tuning of language models uses both [Ouyang et al., 2022]{.small}.
+::: {.cols}
+::: {.col}
+- **Moving Trust Region (§15.2) vs. Fixed Penalty (§15.3):**
+  - If each step $k$ solves $\pi_{k+1} = \operatorname{argmax}_\pi \mathbb{E}_\pi[r] - \tilde{\beta} D_{\textrm{KL}}(\pi \Vert \pi_k)$ relative to the *previous iterate*, then:
+    $$\pi_k(a) \propto \pi_{\textrm{ref}}(a)\, e^{k\, r(a)/\tilde{\beta}}$$
+  - As $k \to \infty$, the effective temperature $\tilde{\beta}/k \to 0$ and $\pi_k$ still converges to the greedy argmax! A trust region bounds the *path*; only a **frozen** $\pi_{\textrm{ref}}$ changes the *destination*.
 :::
 
-::: {.slide title="Reverse KL Suppresses Poor Actions Exponentially; Forward KL Keeps a Floor"}
-Action $a$ falls short of the best by $\Delta(a)$:
-
-| penalty | $\pi^\star(a)/\pi_{\textrm{ref}}(a)$ as $\beta \to 0$ |
-|---|---|
-| reverse $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ | $\propto e^{-\Delta(a)/\beta}$: exponential |
-| forward $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$ | $\approx \beta/\Delta(a)$: linear |
-
-Both keep every action the reference takes at positive probability.
+::: {.col}
+- **Reverse KL vs. Forward KL Penalty:**
+  - For an action falling short of the best by $\Delta(a) > 0$ as $\beta \to 0$:
+  - **Reverse KL $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$:** suppresses poor actions **exponentially**, $\pi^\star(a)/\pi_{\textrm{ref}}(a) \propto e^{-\Delta(a)/\beta}$.
+  - **Forward KL $D_{\textrm{KL}}(\pi_{\textrm{ref}} \Vert \pi)$:** mode-covering; keeps a heavy **linear floor** $\pi^\star(a)/\pi_{\textrm{ref}}(a) \approx \beta / \Delta(a)$.
+:::
+:::
 :::
 
-::: {.slide title="One Step Earlier, the Next Decision Is Worth β log Z, Not Its Best Reward"}
-Last step: the five-action decision at $\beta = 2$, value $\beta \log Z = 1.44$,
-best reward $3$. Before it: enter (pays 0) or stop (pays 2), reference 50/50.
+::: {.slide title="Multi-Step Decisions: Why Tilt by the Soft Value?"}
+[From Bandits to MDPs]{.kicker}
+
+In a sequential MDP where $-\beta D_{\textrm{KL}}(\pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t))$ is charged at every step, how much is the next state $s'$ worth?
+
+- **Two-Step Demonstration:** Suppose the 5-action decision at $\beta = 2$ is the final step: its best action pays $r_{\max} = 3.0$, but the penalized optimal policy there earns soft value $V_{\textrm{next}} = \beta \log Z = 1.44$.
+- One step earlier, the agent chooses between entering that state ($r=0$) or stopping ($r=2$):
 
 @!regularized-one-step-before-the-end
 
-Tilt by the value that includes every later penalty.
+- **Takeaway:** Tilting the first decision by the hard max $3.0$ enters too often and loses objective value ($1.838 < 1.986$). Each step must tilt by the **soft value** $\beta \log Z$ that accounts for all future rewards *and* future KL penalties.
 :::
 
-::: {.slide title="Soft Value Iteration Replaces the Max by a Log-Sum-Exp"}
-$$V_\beta(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\,
-e^{Q_\beta(s, a)/\beta}$$
+::: {.slide title="Soft Value Iteration in Markov Decision Processes"}
+[The Soft Bellman Backup]{.kicker}
 
-$$Q_\beta(s, a) = r(s, a) + \gamma \textstyle\sum_{s'} P(s' \mid s, a)\, V_\beta(s')$$
+Applying the single-decision closed form at every state replaces the hard $\max_a$ of classical value iteration with a reference-weighted **log-sum-exp (soft maximum)**:
 
-- Optimal policy: $\pi_\beta \propto \pi_{\textrm{ref}}\, e^{Q_\beta/\beta}$.
-- Monotone and shift-equivariant, like the max: a $\gamma$-contraction.
-- $\beta \to 0$: value iteration. Uniform reference: maximum-entropy RL.
+$$V_\beta(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}, \qquad Q_\beta(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V_\beta(s')$$
+
+@regularized-soft-value-iteration
+
+::: {.d2l-note .rule}
+Because $m_\beta(Q) = \beta \log \sum_a \pi_{\textrm{ref}}(a) e^{Q(a)/\beta}$ is monotone and shift-equivariant ($m_\beta(Q + c) = m_\beta(Q) + c$), the soft Bellman operator is a **$\gamma$-contraction** in $\|\cdot\|_\infty$ for every $\beta > 0$.
+:::
 :::
 
-::: {.slide title="The True Return Peaks at a Few Nats, Then Falls"}
+::: {.slide title="True Return vs. Fitted Return Across the KL Budget"}
+[Overoptimization Curve]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- Solving `soft_v` on the fitted reward $\hat{r}$ across 36 temperatures $\beta \in [10^{-2.5}, 10^1]$ traces the classic **RLHF overoptimization curve** (Gao et al., 2023):
+  - **Fitted return (orange):** rises monotonically as $\beta$ decreases and trajectory KL grows.
+  - **True return (blue):** climbs from $-0.12$ ($\pi_{\textrm{ref}}$) to a peak of **$+0.53$ at $3.7\text{ nats}$** (near $V^* = +0.59$), then plunges to **$-1.83$** as the policy enters the unmeasured hazard lane!
+:::
+
+::: {.col .fig}
 @!regularized-the-measurement-true-return-against-the-kl-budget
-
-Fitted return rises monotonically; over 24 datasets the true return peaks at
-$+0.5$ to $+0.59$ within a few nats and then falls in 21.
-:::
-
-::: {.slide title="Check: How Far Does Best-of-16 Move from the Reference?"}
-[Check]{.kicker}
-
-Draw 16 samples from the reference and keep the best (continuous rewards,
-no ties). What is the KL from the reference? Compare with the five-action
-frontier, which ends at $1.90$ nats.
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** $\log 16 - 15/16 \approx 1.83$ nats: as far as a strong
-penalty, without any training.
 :::
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Concept Check: Shaping, Thresholds, and Best-of-N"}
+[Check Your Understanding]{.kicker}
 
-- Comparisons fit a reward up to shaping: rms $0.19$, $0.03$ after shaping.
-- Unmeasured hazard moves: the plan on $\hat r$ scores $-0.03$, earns $-2.11$.
-- Optimum of reward minus $\beta$ KL: $\pi_{\textrm{ref}}\, e^{r/\beta}/Z$, value $\beta \log Z$.
-- Many steps: tilt by $Q_\beta$, solved by soft value iteration.
-- True return: $-0.12 \to +0.53$ at $3.7$ nats, then $-1.83$.
+Work out these three questions from the section's theory:
 
-**Next:** values learned by a network from replayed transitions. Later,
-with a uniform reference, the penalty becomes soft actor-critic's entropy
-bonus.
+1. **Prompt Baseline Invariance:** In LLM preference learning, why does replacing $r(x, y)$ with $r(x, y) + f(x)$ for any function $f(x)$ of the prompt leave both the Bradley–Terry likelihood and the tilted policy $\pi^\star(y \mid x)$ completely unchanged?
+2. **Loophole Threshold:** On a prompt $x$, the reference policy prefers a normal answer over a "hedged" answer by log-odds $4$ ($\pi_{\textrm{ref}}(\textrm{hedge})/\pi_{\textrm{ref}}(\textrm{normal}) = e^{-4}$), but a flawed reward model pays the hedge $+1$ more reward. For which $\beta$ does $\pi^\star$ prefer the normal answer?
+3. **Selecting $\beta$:** Why can an algorithm optimizing $\hat{r}(s,a) - \beta D_{\textrm{KL}}$ never detect the peak of the true return from its own training metrics?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Both responses in a comparison share the same prompt $x$, so $f(x)$ cancels in $r(x,y) - r(x,y')$; in $\pi^\star(y \mid x)$, $e^{f(x)/\beta}$ factors out into the partition function $Z(x)$.
+2. The tilted odds are $e^{-4} e^{1/\beta} < 1 \iff 1/\beta < 4 \iff \mathbf{\beta > 0.25}$.
+3. The fitted return $\hat{J}(\pi_\beta)$ is mathematically guaranteed to increase monotonically as $\beta$ decreases; detecting the true peak requires an independent held-out evaluator or verifier.
+:::
+:::
+
+::: {.slide title="Summary: KL Regularization and Preference Optimization"}
+[Key Takeaways]{.kicker}
+
+| Concept / Component | Mathematical Form | Primary Role & Practical Behavior |
+| :--- | :--- | :--- |
+| **Bradley–Terry Model** | $P(\tau \succ \tau') = \sigma(r(\tau) - r(\tau'))$ | Fits reward $\hat{r}$ from pairwise comparisons up to potential shaping $\Phi$ |
+| **Reward Hacking** | $\operatorname{argmax}_\pi J_{\hat{r}}(\pi)$ | Exploits low-support state-action pairs where $\hat{r}$ failed to measure penalties |
+| **Tilted Optimum ($\pi^\star$)** | $\pi^\star(a) = \pi_{\textrm{ref}}(a) e^{r(a)/\beta} / Z$ | Exact maximizer of $\mathbb{E}_\pi[r] - \beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ with value $\beta \log Z$ |
+| **Soft Bellman Backup** | $V_\beta(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s) e^{Q_\beta(s,a)/\beta}$ | $\gamma$-contraction extending KL regularization to sequential multi-step MDPs |
+| **KL Budget Trade-off** | Moderate $\beta$ ($3.7\text{ nats}$ on gridworld) | Captures true improvement ($+0.53$) before out-of-distribution collapse ($-1.83$) |
 :::

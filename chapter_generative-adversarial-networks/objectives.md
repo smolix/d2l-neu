@@ -892,318 +892,261 @@ All five objectives reduce $\mathrm{JS}(p, q_t)$ from $0.53$ nats to a few thous
 ::: {.cover}
 [Dive into Deep Learning · §16.2]{.kicker}
 
-Adversarial Objectives and Divergences<br>
-**the loss menu · every classification loss is a divergence · restricting the critic · which critics move a far generator**
+Adversarial Objectives and Divergences<br>**classification payoffs & $f$-divergences · optimal critic links · Fenchel–Young $f$-GAN dual · MMD & Wasserstein-1 IPMs · gradients on separated supports**
 :::
 :::
 
-::: {.slide title="GAN Codebases Offer a Menu of Losses"}
-[The problem]{.kicker}
+::: {.slide title="Why GAN Codebases Offer a Menu of Objectives"}
+[Motivation]{.kicker}
 
-`non-saturating | least squares | hinge | Wasserstein`: practitioners
-switch entries like optimizers.
+Standard GAN repositories treat training objectives (`logistic`, `least squares`, `hinge`, `Wasserstein`, `MMD`) as interchangeable configuration flags. When a generator stalls far from the data distribution $p$, three distinct mechanisms could be responsible:
 
-- The log-loss game measures Jensen--Shannon (JS); its critic learns
-  $\lambda = \log(p/q)$.
-- $\mathcal{N}(0, 1)$ against $\mathcal{N}(7, 1)$: JS is within 0.1% of
-  its ceiling $\log 2$, and its slope is 0.0013.
+- **1. Population divergence saturation:** In §16.1, $\mathrm{JS}(p, q)$ flattened once supports separated—for $p = \mathcal{N}(0, 1)$ vs. $q = \mathcal{N}(7, 1)$, $\mathrm{JS}(p, q)$ lies within $0.1\%$ of $\log 2$ with derivative $0.0013$.
+- **2. Critic function-class geometry ($\mathcal{T}$):** Does the critic $D \in \mathcal{T}$ jump abruptly between the supports of $p$ and $q$, or does it maintain a nonzero spatial gradient $\nabla_x D(x')$ across the empty gap?
+- **3. Generator loss weighting:** Does the generator objective transmit the critic's spatial slope $\nabla_x D(x')$ or multiply it by an exponentially vanishing weight?
+:::
+
+::: {.slide title="A General Template for Adversarial Discrepancies"}
+[Unifying Formulation]{.kicker}
+
+Replacing the log-likelihood terms of §16.1 with general real and generated payoff functions $(\ell_p, \ell_q)$ over a critic function class $\mathcal{T}$ defines a unified family of adversarial discrepancies:
+
+$$d(p, q) = \sup_{T \in \mathcal{T}} \Big\{ \mathbb{E}_{x \sim p}\big[\ell_p(T(x))\big] + \mathbb{E}_{x' \sim q}\big[\ell_q(T(x'))\big] \Big\}$$
+
+| Critic Input Arity | Unconstrained Critic Class $\mathcal{T}$ | Constrained or Penalized Critic Class $\mathcal{T}$ |
+| :--- | :--- | :--- |
+| **Single sample $x$** | Classification losses (logistic, LSGAN, hinge) $\to$ **$f$-divergences** of $p/q$ | Linear payoffs on RKHS unit ball (**MMD**) or 1-Lipschitz ball (**$W_1$**); hinge + spectral norm |
+| **Ordered pair $(x, x')$** | Relativistic pairing (**RpGAN**, §16.3) $\to$ $\mathrm{JS}(p \otimes q, q \otimes p)$ | Pairing + zero-centered penalties $R_1 + R_2$ (**R3GAN**, §16.4–16.6) |
 
 ::: {.d2l-note}
-What do the other entries compute, and which of them still move a far
-generator?
+**Convexity in measure space vs. parameter space:** For any fixed critic $T$, the expectation is linear in the probability measure $q$, so the supremum $d(p, q)$ is always convex in $q$—even though it is nonconvex in the neural generator weights $\theta$.
 :::
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="From Posterior Probability to Bayes-Risk Gaps"}
+[Two-Outcome Intuition]{.kicker}
 
-- compute the divergence of any classification loss from its Bayes risk;
-- read off what its optimal critic reports about $p/q$ (the *link*);
-- build a game for any f-divergence from tangent lines;
-- say what clipping, gradient penalties and spectral normalization enforce;
-- predict which trained critics move a generator far from the data.
+Consider a binary outcome space (heads and tails) with $p = (\frac{3}{4}, \frac{1}{4})$ and $q = (\frac{1}{4}, \frac{3}{4})$ under equal priors $\frac{1}{2}$. Observing an outcome gives the Bayes posterior $\eta(x) = P(y = 1 \mid x) = \frac{p(x)}{p(x) + q(x)}$ ($\frac{3}{4}$ on heads, $\frac{1}{4}$ on tails), whereas a blind guess ($D = 0$) predicts $\frac{1}{2}$:
 
-**Running examples:** two unit Gaussians on the line; a three-mode
-Gaussian mixture in the plane with known densities.
+| Classification Loss | Blind Risk $L(\tfrac{1}{2})$ | Optimal Bayes Risk $\mathbb{E}_m[L(\eta)]$ | Bayes-Risk Gap $\Delta_\ell(p, q)$ | Induced Divergence |
+| :--- | :--- | :--- | :--- | :--- |
+| **Logistic (log loss)** | $\log 2 \approx 0.693$ | $H_b(\tfrac{3}{4}) \approx 0.562$ | **$0.131\text{ nats}$** | Jensen–Shannon $\mathrm{JS}(p, q)$ |
+| **Squared error (LSGAN)** | $\tfrac{1}{4} = 0.250$ | $\tfrac{3}{4} \cdot \tfrac{1}{4} = \tfrac{3}{16}$ | **$\tfrac{1}{16} = 0.0625$** | $\tfrac{1}{4}$ Vincze–Le Cam $\chi^2(p \,\|\, m)$ |
+| **Hinge loss** | $1.000$ | $2 \cdot \tfrac{1}{4} = \tfrac{1}{2}$ | **$\tfrac{1}{2} = 0.500$** | Total variation $\mathrm{TV}(p, q) = \tfrac{1}{2}\sum |p - q|$ |
+
+::: {.d2l-note}
+Every classification loss scores the exact same posterior $\eta(x) = p(x)/(p(x) + q(x))$, mapping $(p, q)$ to a different nonnegative divergence that vanishes if and only if $q = p$.
+:::
 :::
 
-::: {.slide title="Two Knobs on One Game"}
-[Where this fits]{.kicker}
+::: {.slide title="Theorem: Every Classification Loss Is an f-Divergence"}
+[The Bayes-Risk Gap]{.kicker}
+
+Symmetric classification losses apply a margin payoff $\ell(t)$ to $+D(x)$ on real data and $-D(x')$ on generated samples:
+
+$$V_\ell(D) = \mathbb{E}_{x \sim p}\big[\ell(D(x))\big] + \mathbb{E}_{x' \sim q}\big[\ell(-D(x'))\big]$$
+
+- **Conditional Bayes risk $L(\eta)$:** At posterior $\eta(x) = p(x)/(2m(x))$, the minimum pointwise expected loss is $L(\eta) = \inf_t \{-\eta\,\ell(t) - (1 - \eta)\,\ell(-t)\}$, which is concave on $[0, 1]$ as an infimum of affine functions of $\eta$.
+- **Bayes-risk gap $\Delta_\ell(p, q) = L(\frac{1}{2}) - \mathbb{E}_{x \sim m}[L(\eta(x))]$:** Substituting $u = \rho(x) = p(x)/q(x)$ (so $m = q(u+1)/2$ and $\eta = u/(u+1)$) expresses $\Delta_\ell(p, q)$ as an **$f$-divergence** $D_f(p \,\|\, q) = \mathbb{E}_{x \sim q}[f(p(x)/q(x))]$:
+  $$\Delta_\ell(p, q) = D_f(p \,\|\, q) \qquad \text{with} \qquad f(u) = L(\tfrac{1}{2}) - \frac{u + 1}{2}\,L\!\left(\frac{u}{u + 1}\right)$$
+  where concavity of $L$ guarantees that $f(u)$ is convex on $[0, \infty)$ with $f(1) = 0$.
+:::
+
+::: {.slide title="Standard Classification Losses and Critic Links"}
+[Taxonomy of Margin Losses]{.kicker}
+
+Each margin loss $-\ell(t)$ defines a specific $f$-divergence gap $\Delta_\ell(p, q)$ and an optimal critic $D^\star(x)$ that is a monotone **link function** of $\lambda(x) = \log(p(x)/q(x))$:
+
+| Objective | Margin Loss $-\ell(t)$ | Bayes Risk $L(\eta)$ | Gap $\Delta_\ell(p, q)$ | Optimal Link $D^\star(\lambda)$ | Practical $G$ Loss |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Logistic** | $\log(1 + e^{-t})$ | $H_b(\eta)$ | $\mathrm{JS}(p, q)$ | $\lambda$ | $-\log \sigma(D)$ |
+| **Least squares** | $\tfrac{1}{4}(1 - t)^2$ ($t = 2D - 1$) | $\eta(1 - \eta)$ | $\tfrac{1}{8}\int \frac{(p-q)^2}{p+q}$ | $\sigma(\lambda)$ | $\tfrac{1}{2}(D - 1)^2$ |
+| **Squared hinge** | $\max(0, 1 - t)^2$ | $4\eta(1 - \eta)$ | $\tfrac{1}{2}\int \frac{(p-q)^2}{p+q}$ | $\tanh(\lambda / 2)$ | $-D$ |
+| **Hinge** | $\max(0, 1 - t)$ | $2\min(\eta, 1 - \eta)$ | $\mathrm{TV}(p, q)$ | $\operatorname{sign}(\lambda)$ | $-D$ |
+
+@objectives-loss-pairs
+:::
+
+::: {.slide title="The Fenchel–Young Variational Bound (f-GAN)"}
+[Asymmetric & Unbounded Divergences]{.kicker}
+
+Because symmetric margin losses satisfy $L(\eta) = L(1 - \eta)$, their gap $\Delta_\ell(p, q)$ is always symmetric and bounded above by $L(\frac{1}{2})$. Reaching asymmetric or unbounded $f$-divergences—such as forward KL $D_{\textrm{KL}}(p \,\|\, q)$—requires asymmetric payoffs $\ell_p \neq \ell_q$:
+
+- **Convex conjugate $f^*(t) = \sup_u \{ut - f(u)\}$:** By the Fenchel–Young inequality, $f(u) \ge ut - f^*(t)$ for all $u, t$, with equality when $t = f'(u)$.
+- **$f$-GAN variational lower bound (Nowozin et al., 2016):** Setting $u = \rho(x) = p(x)/q(x)$ and $t = T(x)$ and taking expectations under $q$ (using $\mathbb{E}_q[\rho\,T] = \mathbb{E}_p[T]$) gives:
+  $$D_f(p \,\|\, q) \ge \mathbb{E}_{x \sim p}\big[T(x)\big] - \mathbb{E}_{x' \sim q}\big[f^*(T(x'))\big]$$
+- **Tightness:** Attained at the optimal critic $T^\star(x) = f'(p(x)/q(x))$. For forward KL ($f(u) = u\log u$), $f^*(t) = e^{t - 1}$ and $T^\star(x) = 1 + \log(p(x)/q(x)) = 1 + \lambda(x)$.
+:::
+
+::: {.slide title="Empirical Verification of Critic Link Functions"}
+[2D Gaussian Mixture Testbed]{.kicker}
+
+We train fresh 3-layer leaky-ReLU MLP critics ($2 \to 64 \to 64 \to 1$) for $3{,}000$ steps against a fixed 3-component 2D Gaussian mixture $q$ ($\mathrm{JS}(p, q) = 0.033$ nats) where $\lambda(x) = \log(p(x)/q(x))$ is known in closed form:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | adds |
-|---|---|
-| Generative Adversarial Networks | the log-loss game, $D^\star = \lambda$ |
-| **Adversarial Objectives** | **other losses, restricted critics** |
-| Relativistic Objectives | critics that rank pairs |
-| Gradient Penalties and Convergence | dynamics and penalties |
+- **Exact link recovery:** Evaluated on $300$ real and $300$ generated draws, all four trained networks track their theoretical link functions of $\lambda$:
+  - **Logistic:** Identity $D^\star(\lambda) = \lambda$
+  - **Least squares:** Sigmoid $D^\star(\lambda) = \sigma(\lambda)$
+  - **Hinge:** Step function $D^\star(\lambda) = \operatorname{sign}(\lambda)$ (with wider scatter near $\lambda = 0$, where any $D \in [-1, 1]$ achieves optimal risk)
+  - **Forward KL:** Shifted line $T^\star(\lambda) = 1 + \lambda$
 :::
 
-::: {.col .narrow}
-- **Uses:** the log-loss game, JS, KL.
-- **Skips:** architectures, image experiments.
-:::
-:::
-:::
-
-::: {.slide title="Every Objective Chooses Payoffs and a Critic Class"}
-$$d(p, q) = \sup_{T \in \mathcal{T}} \big\{ \mathbb{E}_{p}[\ell_p(T(x))] + \mathbb{E}_{q}[\ell_q(T(x'))] \big\}$$
-
-Payoffs $\ell_p$ (real), $\ell_q$ (generated); the critic $T$ maximizes.
-
-| | free critic | restricted critic |
-|:--|:--|:--|
-| **one sample** | classification losses: f-divergences | linear payoffs: MMD, $W_1$; hinge + spectral norm |
-| **a pair** | pairing loss (next deck) | pairing + zero-centered penalties |
-
-::: {.d2l-note}
-Fixed critic: linear in $(p, q)$. So convex in $q$, not in the network's
-parameters.
-:::
-:::
-
-::: {.slide title="Looking at the Sample Saves Loss: Two Outcomes"}
-A coin: $p = (\tfrac34, \tfrac14)$, $q = (\tfrac14, \tfrac34)$ on heads and
-tails; each source with probability $\tfrac12$. Seeing heads, the posterior of
-"real" is $\eta = \tfrac34$.
-
-| loss | blind critic | best critic | saving |
-|:--|:--|:--|:--|
-| log loss | $\log 2 = 0.693$ | $H_b(\tfrac34) = 0.562$ | $0.131 = \mathrm{JS}$ |
-| squared error | $\tfrac14$ | $\tfrac{3}{16}$ | $\tfrac{1}{16}$ |
-| hinge | $1$ | $\tfrac12$ | $\tfrac12 = \mathrm{TV}$ |
-
-::: {.d2l-note}
-One posterior, three numbers; each is zero when $p = q$.
-:::
-:::
-
-::: {.slide title="Every Classification Loss Measures an f-Divergence"}
-Bayes risk $L(\eta)$: the smallest expected loss at posterior
-$\eta = p/(p+q)$. The **Bayes-risk gap** is what looking saves:
-
-$$\Delta_\ell(p, q) = L(\tfrac12) - \mathbb{E}_{x \sim m}\big[L(\eta(x))\big], \quad m = \tfrac{p+q}{2}$$
-
-**Proposition** ($L$ finite on $[0,1]$). $\Delta_\ell = \mathbb{E}_q[f(p/q)]$ with
-$f(u) = L(\tfrac12) - \tfrac{u+1}{2} L\big(\tfrac{u}{u+1}\big)$, convex,
-$f(1) = 0$.
-
-Proof: substitute $u = p/q$; $L$ is concave, so $f$ is convex.
-:::
-
-::: {.slide title="Each Loss Picks a Divergence and a Link"}
-Margin $t$: $D(x)$ on real, $-D(x')$ on generated samples.
-
-| loss | loss at $t$ | gap $\Delta_\ell$ | link | coin |
-|:---|:---|:---|:---|:--|
-| logistic | $\log(1+e^{-t})$ | $\mathrm{JS}$ | $\lambda$ | $0.131$ |
-| square | $\tfrac14(1-t)^2$ | $\tfrac18 \int \frac{(p-q)^2}{p+q}$ | $\sigma(\lambda)$ | $\tfrac1{16}$ |
-| sq. hinge | $\max(0,1-t)^2$ | $\tfrac12 \int \frac{(p-q)^2}{p+q}$ | $\tanh\frac{\lambda}{2}$ | $\tfrac14$ |
-| hinge | $\max(0,1-t)$ | $\mathrm{TV}$ | $\operatorname{sign}\lambda$ | $\tfrac12$ |
-
-::: {.d2l-note}
-Same posterior, different **links**: the hinge critic keeps only the sign.
-:::
-:::
-
-::: {.slide title="Check: Two Divergences No Table Row Gives"}
-[Check]{.kicker}
-
-1. The zero--one loss has Bayes risk $\min(\eta, 1-\eta)$. Which gap?
-2. Why can no nonnegative loss give the forward KL $D_{\textrm{KL}}(p\|q)$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** (1) $\tfrac12\mathrm{TV}$, half the hinge's. (2) A nonnegative
-loss has $L \geq 0$, so $\Delta_\ell \leq L(\tfrac12)$ is bounded; forward
-KL is not.
-:::
-:::
-:::
-
-::: {.slide title="Tangent Lines Build a Game for Any Divergence"}
-- The highest line of slope $t$ below a convex $f$ has intercept
-  $-f^*(t)$, so $f(u) \geq ut - f^*(t)$.
-- Put $u = p(x)/q(x)$, $t = T(x)$, average under $q$:
-
-$$D_f(p \,\|\, q) \;\geq\; \mathbb{E}_p[T] - \mathbb{E}_q[f^*(T)]
-\quad \text{for every critic } T$$
-
-- Tight at $T^\star = f'(p/q)$. Forward KL: $f^*(t) = e^{t-1}$,
-  $T^\star = 1 + \lambda$.
-
-::: {.d2l-note}
-An imperfect critic only **underestimates** the divergence.
-:::
-:::
-
-::: {.slide title="Trained Critics Recover Their Links"}
-Fresh critics against a fixed $q$ (JS 0.033 nats) with known densities:
-
+::: {.col .fig .big}
 @!objectives-critic-links-1
-
-Identity, sigmoid, step, $1 + \lambda$; all drift where $|\lambda|$ is large
-and samples are rare.
-:::
-
-::: {.slide title="Linear Payoffs Need a Restricted Critic"}
-$$d_{\mathcal{F}}(p, q) = \sup_{T \in \mathcal{F}} \big\{ \mathbb{E}_p[T] - \mathbb{E}_q[T] \big\}$$
-
-A free $T$ makes this infinite whenever $p \neq q$.
-
-- **Kernel ball, MMD** (similarity $k$):
-  $\mathrm{MMD}^2 = \mathbb{E}\,k(x, \tilde x) + \mathbb{E}\,k(x', \tilde x') - 2\,\mathbb{E}\,k(x, x')$;
-  witness $w(x) = \mathbb{E}_p k(x,\cdot) - \mathbb{E}_q k(x,\cdot)$.
-- **1-Lipschitz ball, $W_1$:** by Kantorovich--Rubinstein (finite first
-  moments), the least average distance to move $p$ onto $q$.
-:::
-
-::: {.slide title="No Practical Critic Is Exactly 1-Lipschitz"}
-| device | what it enforces |
-|:--|:--|
-| weight clipping | some unknown $\kappa$: estimates at most $\kappa W_1$ |
-| gradient penalty | slope pulled toward 1, softly, at sampled points |
-| spectral normalization | every layer about 1-Lipschitz: sufficient, not necessary |
-
-Hinge loss with a $\kappa$-Lipschitz critic, point masses $\mu$ apart:
-value $\min(\kappa\mu, 2) - 2$, a slope out to $\mu = 2/\kappa$, where
-total variation has none.
-:::
-
-::: {.slide title="Samples Pin Down MMD in Any Dimension, W1 Slowly"}
-- MMD: error $O(n^{-1/2})$ in any dimension.
-- $W_1$: error $n^{-1/d_x}$ in dimension $d_x > 2$; halving it can take
-  $2^{d_x}$ times the samples.
-- A WGAN critic never computes $W_1$ between minibatches: a small network
-  supplies a direction.
-- Forward-KL critic: each term has variance $\chi^2(p\|q)$, possibly
-  infinite when KL is finite.
-:::
-
-::: {.slide title="Check: Where Does MMD Give the Most Gradient?"}
-[Check]{.kicker}
-
-For unit Gaussians $\mu$ apart and an RBF kernel of bandwidth $s$,
-$\mathrm{MMD}^2 \propto 1 - \exp\big(-\mu^2 / (2(s^2+2))\big)$. At which
-separation $\mu$ is its slope largest when $s = 4$?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** The slope $\propto \mu\, e^{-\mu^2/(2(s^2+2))}$ peaks at
-$\mu = \sqrt{s^2 + 2} = \sqrt{18} \approx 4.2$.
 :::
 :::
 :::
 
-::: {.slide title="JS Loses Its Slope as Supports Separate; W1 Keeps It"}
-$p = \mathcal{N}(0, 1)$, $q = \mathcal{N}(\mu, 1)$; slope of each
-objective in $\mu$, bandwidth $s = 4$:
+::: {.slide title="Integral Probability Metrics (IPMs) and MMD"}
+[Constraining the Critic Class]{.kicker}
 
+Whereas $f$-divergences pair an unconstrained critic with nonlinear payoffs, **integral probability metrics (IPMs)** use linear payoffs $\ell_p(t) = t$ and $\ell_q(t) = -t$ over a constrained symmetric function class $\mathcal{F}$:
+
+::: {.cols .vc}
+::: {.col}
+- **IPM definition:**
+  $$d_{\mathcal{F}}(p, q) = \sup_{T \in \mathcal{F}} \Big\{ \mathbb{E}_{x \sim p}\big[T(x)\big] - \mathbb{E}_{x' \sim q}\big[T(x')\big] \Big\}$$
+- **Maximum Mean Discrepancy (MMD; Gretton et al., 2012):** Choosing $\mathcal{F}$ as the unit ball of an RKHS with positive-definite kernel $k(x, x')$ (e.g., Gaussian RBF $e^{-\|x - x'\|^2 / (2s^2)}$) yields a closed-form squared distance requiring no critic network:
+  $$\mathrm{MMD}^2(p, q) = \mathbb{E}_{p,p}[k(x, \tilde{x})] + \mathbb{E}_{q,q}[k(x', \tilde{x}')] - 2\mathbb{E}_{p,q}[k(x, x')]$$
+:::
+
+::: {.col .fig}
+@objectives-maximum-mean-discrepancy
+:::
+:::
+:::
+
+::: {.slide title="Wasserstein-1 Distance and Lipschitz Critics"}
+[Optimal Transport Duality]{.kicker}
+
+Choosing $\mathcal{F}$ to be the class of **1-Lipschitz functions** ($|T(x) - T(y)| \le \|x - y\|$ for all $x, y$) yields the **Wasserstein-1 (Earth Mover's) distance** via Kantorovich–Rubinstein duality:
+
+$$W_1(p, q) = \sup_{\|T\|_{\mathrm{Lip}} \le 1} \Big\{ \mathbb{E}_{x \sim p}\big[T(x)\big] - \mathbb{E}_{x' \sim q}\big[T(x')\big] \Big\} = \inf_{\pi \in \Pi(p, q)} \mathbb{E}_{(x, x') \sim \pi}\big[\|x - x'\|\big]$$
+
+| Lipschitz Enforcement Mechanism | How It Constrains the Neural Critic $T$ | Practical Trade-Off |
+| :--- | :--- | :--- |
+| **Weight clipping (WGAN, 2017)** | Clamps every weight to $[-c, c]$ after each step | Enforces $\kappa$-Lipschitzness for unknown $\kappa$, but severely restricts capacity |
+| **Gradient penalty (WGAN-GP, 2017)** | Adds $\gamma\,\mathbb{E}[(\|\nabla_x T(\tilde{x})\| - 1)^2]$ at interpolants $\tilde{x} = ux + (1-u)x'$ | Soft constraint along rays; two-sided penalty creates a zero-slope barrier at $q = p$ |
+| **Spectral normalization (SN-GAN, 2018)** | Divides each weight matrix by its largest singular value $\sigma_{\max}(W)$ | Bounds each linear layer's Lipschitz constant by $1$; widely paired with hinge loss |
+:::
+
+::: {.slide title="Sample Complexity in High Dimensions: MMD vs. W₁"}
+[Statistical Scaling Pitfalls]{.kicker}
+
+How reliably can finite minibatches of size $n$ estimate these population discrepancies in dimension $d_x$?
+
+- **Fixed-kernel MMD ($O(n^{-1/2})$ in any dimension):** Because $\mathrm{MMD}^2$ averages pairwise kernel evaluations, the unbiased U-statistic estimator `mmd2_unbiased` converges at the parametric rate $O(n^{-1/2})$ independent of $d_x$.
+- **Empirical $W_1$ ($O(n^{-1/d_x})$ for $d_x > 2$):** Plug-in empirical optimal transport suffers from the curse of dimensionality (Weed & Bach, 2019)—halving estimation error requires $2^{d_x}$ times more samples! In practice, a WGAN critic never computes true $W_1$ between minibatches; its smooth network architecture acts as a parametric witness providing a descent direction.
+- **Variational $f$-GAN variance explosion:** In the forward-KL dual $\mathbb{E}_p[T] - \mathbb{E}_q[e^{T - 1}]$, the exponential term $e^{T^\star(x') - 1} = p(x')/q(x')$ has variance $\chi^2(p \,\|\, q)$ under $q$, which can diverge even when $D_{\textrm{KL}}(p \,\|\, q) < \infty$.
+:::
+
+::: {.slide title="Population Divergence Slope vs. Separation"}
+[Gradients Far from the Data]{.kicker}
+
+Comparing 1D unit-variance Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ across separation $\mu > 0$ shows how each population divergence responds when distributions separate:
+
+::: {.cols .vc}
+::: {.col}
+- **Wasserstein-1 ($W_1(p, q) = \mu$):** Maintains a constant unit derivative $\frac{d}{d\mu}W_1 = 1$ at every separation $\mu$.
+- **Gaussian-kernel $\mathrm{MMD}^2$ (bandwidth $s = 4$):**
+  $$\mathrm{MMD}^2(\mu) = \frac{2s}{\sqrt{s^2 + 2}}\!\left(1 - \exp\!\left(-\frac{\mu^2}{2(s^2 + 2)}\right)\right)$$
+  Its slope peaks at $\mu = \sqrt{s^2 + 2} \approx 4.2$ before decaying in the Gaussian tail.
+- **Jensen–Shannon $\mathrm{JS}(p, q)$:** Its slope drops from $0.20$ at $\mu = 1$ to $0.0013$ at $\mu = 7$ and $1.5 \times 10^{-22}$ at $\mu = 20$.
+:::
+
+::: {.col .fig}
 @!objectives-divergence-against-separation
-
-JS: 0.20 at $\mu = 1$, 0.0013 at $\mu = 7$. $W_1$: always 1. MMD: peak
-at $\mu = 4.2$.
+:::
+:::
 :::
 
-::: {.slide title="Optimal Critics: Only Those That Slope across the Gap Help"}
-![](../img/mdl-gan-critics-separated.svg){width=100%}
+::: {.slide title="Geometry of Optimal Critics on Disjoint Supports"}
+[Why Smooth Critics Provide Gradients]{.kicker}
 
-- Disjoint supports: JS critic flat $\pm\infty$ on each, no direction.
-- Unit Gaussians: $\lambda$ is a line of slope $-\mu$; what flattens is
-  the posterior $\sigma(\lambda)$, and with it JS.
-- $W_1$ critic: unit-slope ramp. MMD witness: smooth kernel bumps.
-- Hinge critic $\operatorname{sign}\lambda$: a step, level at both clouds.
+![](../img/mdl-gan-critics-separated.svg){.nostretch width=100%}
+
+- **Left (Unconstrained JS critic $\log(p/q)$):** Evaluates to $+\infty$ on $\operatorname{supp}(p)$ and $-\infty$ on $\operatorname{supp}(q)$, with zero spatial slope on both clouds.
+- **Middle ($W_1$ Kantorovich potential):** A linear ramp of unit slope connecting $q$ to $p$, providing a constant restoring gradient across the gap.
+- **Right (MMD witness $w(x) = \mathbb{E}_p[k(x, \cdot)] - \mathbb{E}_q[k(x, \cdot)]$):** A smooth difference of kernel bumps whose tail slopes toward $p$ over distances comparable to the bandwidth $s$.
 :::
 
-::: {.slide title="A Far Generator Moves unless Its Loss Saturates"}
-Data $\mathcal{N}(0,1)$; generator $x' = \theta + z$ from $\theta = 6$;
-plain gradient steps; three runs per arm.
+::: {.slide title="Implementing MMD and WGAN-GP Gradient Penalties"}
+[Code Primitives]{.kicker}
 
-| arm | gradient | arrival, $\lvert\theta\rvert < 0.5$ | farthest after |
-|:--|:--|:--|:--|
-| logistic, saturating | 0.006--0.015 | not in 1,500 steps | |
-| logistic, non-saturating | about 3 | before step 400 | 0.5 |
-| hinge | 1.1--1.7 | steps 700--950 | 0.5 |
-| $W_1$, two-sided penalty | 1.25--1.26 | near step 500 | above 1.1 |
-| $W_1$, one-sided penalty | about 1.26 | near step 500 | 0.5 |
-| MMD, median bandwidth | 0.21 | $\theta = 1.32$ at step 1,500 | |
+`mmd2_median` sets the RBF bandwidth to the median pairwise distance of the pooled minibatch, while `gradient_penalty` evaluates either the two-sided WGAN-GP penalty $(|D'(x)| - 1)^2$ or the one-sided Lipschitz penalty $\max(0, |D'(x)| - 1)^2$ at random interpolants $\tilde{x} = uX + (1 - u)X'$:
+
+@objectives-separated-start-losses
+:::
+
+::: {.slide title="Trained Neural Critics from a Separated Start"}
+[Theory vs. Neural Practice]{.kicker}
+
+We fit a 1D location generator $q_\theta = \mathcal{N}(\theta, 1)$ ($x' = \theta + z$) starting at $\theta_0 = 6.0$ to $p = \mathcal{N}(0, 1)$ using vanilla SGD on $\theta$ (so step sizes directly reflect gradient magnitudes) against a 2-layer ReLU MLP critic updated $5$ times per generator step:
+
+@!objectives-separated-start-runs
 
 ::: {.d2l-note}
-Same critic, two generator losses: gradients hundreds apart. Hinge: the
-optimal step is level, the trained critic slopes. Two-sided penalty:
-every run overshoots; one-sided: none.
+**Why finite neural critics move even under logistic and hinge loss:** Although the *unconstrained* optimal hinge critic $\operatorname{sign}(\lambda)$ is flat on both clouds, a finite ReLU MLP interpolates linearly across the gap with slope $1.1\text{--}1.7$. A distant generator moves whenever its trained critic has a nonzero slope at $x'$ **and** the generator loss does not saturate (`logistic, NS` arrives before step $400$; `logistic, sat.` stalls at $5.76$).
 :::
 :::
 
-::: {.slide title="Every Loss Fits the Mixture; the Hinge Fit Is the Loosest Here"}
-@!objectives-one-testbed-four-losses-6
+::: {.slide title="Why Two-Sided WGAN-GP Overshoots at Equilibrium"}
+[The Unit-Slope Barrier Pitfall]{.kicker}
 
-From 0.529 nats to a few thousandths; three untuned runs per loss do not
-rank the losses.
-:::
-
-::: {.slide title="Practice Pairs a Non-Saturating Generator with a Smooth Critic"}
-- BigGAN generation: hinge loss, spectrally normalized critic.
-- HiFi-GAN vocoders: least squares.
-- StyleGAN line: non-saturating logistic loss, zero-centered penalty on
-  real samples.
-
-::: {.d2l-note}
-With equal tuning, losses score alike; all three use a generator loss that
-does not saturate.
-:::
-
-[Lucic et al., 2018; Miyato et al., 2018; Brock et al., 2019; Kong et al., 2020; Karras et al., 2020]{.small}
-:::
-
-::: {.slide title="Check: Why Does the W1 Generator Not Settle?"}
-[Check]{.kicker}
-
-The non-saturating generator settles at the data. The $W_1$ generator
-with the penalty $\gamma(|T'| - 1)^2$ arrives at nearly full speed and
-overshoots in every run; with $\gamma \max(0, |T'| - 1)^2$ it stays. Why?
-
-::: {.fragment .fade-up}
-::: {.d2l-note}
-**Answer.** Past the data the critic must reverse its slope. The two-sided
-penalty charges $\gamma$ at slope zero, a barrier: a critic left on the old
-side pushes the generator out. The one-sided penalty charges nothing below
-slope one, so its critic turns freely.
-:::
-:::
-:::
-
-::: {.slide title="Each W1 Critic at Step 1,500 Is Dead, Pushing, or Pulling"}
-Slope $D'$ at $\theta$ and at $0$; units on per hidden layer, of 32;
-$d = \lvert\theta\rvert$:
+Both $W_1$ arms pull the generator to $|\theta| < 0.5$ near step $500$, yet every two-sided `W1 + GP` run subsequently overshoots ($|\theta| > 1.1$, up to $> 7$), whereas every one-sided `W1 + 1-sided GP` run settles within $0.06$ of the origin:
 
 @!objectives-separated-start-w1-critics
 
-- $0.00$ at both, layer 2 off: **dead**, constant output, no gradient.
-- Sign of $\theta$, size near $1 - d/20$: old side, pushes out.
-- Against $\theta$, size near $1 + d/20$: crossed, pulls back.
+- **The zero-slope barrier:** Once $\theta$ crosses $0$, the critic must reverse its slope $D'$ from negative to positive. Because the two-sided penalty $\gamma(|D'| - 1)^2$ charges $\gamma$ at $D' = 0$, the critic either remains trapped on its old slope sign (pushing $\theta$ outward!) or kills all hidden ReLU units (`active = 0`).
+- **One-sided remedy:** Penalizing $\gamma\max(0, |D'| - 1)^2$ charges nothing when $|D'| \le 1$, allowing the critic slope to pass freely through zero as $q$ reaches $p$.
+:::
 
-::: {.d2l-note}
-One-sided critics at the data slope by less than 1, which costs nothing.
+::: {.slide title="Comparing Five Objectives on a 2D Gaussian Mixture"}
+[Overlapping Supports Benchmark]{.kicker}
+
+When the initial generator already overlaps the data ($\mathrm{JS}(p, q_0) = 0.529$ nats on our 3-component 2D Gaussian mixture), we compare five objectives over $6{,}000$ alternating steps across three seeds each:
+
+::: {.cols .vc}
+::: {.col}
+- **All five non-saturating objectives converge:** Every arm reduces $\mathrm{JS}(p, q_t)$ from $0.529$ nats to a few thousandths of a nat or less.
+- **Direct multi-bandwidth MMD ($s \in \{0.5, 1, 2\}$):** Needs no critic network and achieves the tightest final fit ($0.0001$ nats).
+- **Smooth links vs. hinge step link:** Logistic, least squares, and squared hinge all reach $\le 0.0024$ nats, whereas the discontinuous hinge link ($\operatorname{sign}\lambda$) plateaus slightly higher ($0.003\text{--}0.007$ nats).
+:::
+
+::: {.col .fig}
+@!objectives-one-testbed-four-losses-6
+:::
+:::
+:::
+
+::: {.slide title="Concept Check: Divergences, Links, and Critics"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of adversarial objectives and integral probability metrics:
+
+1. **Zero–one loss vs. forward KL:** The $0\text{--}1$ classification loss has conditional Bayes risk $L(\eta) = \min(\eta, 1 - \eta)$. What is its Bayes-risk gap $\Delta_\ell(p, q)$, and why can no symmetric nonnegative classification loss evaluate the forward KL divergence $D_{\textrm{KL}}(p \,\|\, q)$?
+2. **Peak MMD gradient distance:** For 1D unit Gaussians $p = \mathcal{N}(0, 1)$ and $q = \mathcal{N}(\mu, 1)$ under a Gaussian RBF kernel of bandwidth $s = 4$, at what separation $\mu$ is the gradient $\frac{d}{d\mu}\mathrm{MMD}^2(p, q)$ largest?
+3. **Why hinge critics still move a separated generator:** At the theoretical optimum $D^\star(x) = \operatorname{sign}(\lambda(x))$, the hinge critic has derivative $0$ everywhere except on the decision boundary. Why did our trained hinge critic still drive $\theta_0 = 6 \to 0$?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. $L(\frac{1}{2}) - \mathbb{E}_m[\min(\eta, 1 - \eta)]$ $= \frac{1}{2}\int |p - q|\,\frac{dx}{2}$ $= \mathbf{\frac{1}{2}\mathrm{TV}(p, q)}$ (half the hinge gap). Any nonnegative loss has $L(\eta) \ge 0$, so its gap is bounded above by $\Delta_\ell(p, q) \le L(\frac{1}{2}) < \infty$, whereas $D_{\textrm{KL}}(p \,\|\, q)$ is unbounded and asymmetric.
+2. Differentiating $1 - \exp(-\mu^2 / (2(s^2 + 2)))$ with respect to $\mu$ yields $\propto \mu\exp(-\mu^2 / (2(s^2 + 2)))$, which peaks at $\mu = \sqrt{s^2 + 2} = \sqrt{18} \approx \mathbf{4.24}$.
+3. A finite piecewise-linear ReLU network trained with finite steps does not jump discontinuously from $+1$ to $-1$; it interpolates linearly across the gap between the two clouds with slope $\approx 1.1\text{--}1.7$, and the linear generator loss $-D(x')$ passes that slope directly to $\theta$.
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Adversarial Objectives and Divergences"}
+[Key Takeaways]{.kicker}
 
-- **Template:** payoffs added, critic maximizes; convex in $q$.
-- **Free critic:** each loss gives an f-divergence and a link of
-  $\lambda$; coin: 0.131 (JS), $\tfrac1{16}$, $\tfrac14$, $\tfrac12$ (TV).
-- **Tangent lines:** any $f$, critic $f'(p/q)$; KL via $1 + \lambda$.
-- **Restricted critic:** MMD, $W_1$; JS slope 0.20 → 0.0013 from
-  $\mu = 1$ to 7.
-- **Far start:** saturating gradient 0.01, non-saturating about 3. The
-  generator moves when its critic slopes at its samples and its loss
-  passes the slope on; the divergence decides neither. $W_1$: both
-  penalties arrive near step 500; the two-sided one overshoots, the
-  one-sided one stays.
-- **Mixture:** all five losses from 0.529 nats to a few thousandths.
-
-**Next:** a critic that compares a real sample with a generated one.
+| Objective Family | Critic Loss / Constraint | Population Discrepancy | Optimal Critic $D^\star$ | Behavior on Separated Supports |
+| :--- | :--- | :--- | :--- | :--- |
+| **Logistic (Non-Sat.)** | $\operatorname{softplus}(-D(x)) + \operatorname{softplus}(D(x'))$ | $\mathrm{JS}(p, q)$ ($G$ descends $2\,D_{\textrm{KL}}(m \,\|\, p)$) | $\lambda(x) = \log \frac{p(x)}{q(x)}$ | Population $\mathrm{JS}$ saturates; neural critic + $w_{\textrm{ns}}$ moves $G$ |
+| **Least Squares (LSGAN)** | $\frac{1}{2}(D(x) - 1)^2 + \frac{1}{2}D(x')^2$ | $\frac{1}{8}\int \frac{(p - q)^2}{p + q}$ ($\frac{1}{4}\chi^2(p \,\|\, m)$) | $\sigma(\lambda(x)) = \frac{p(x)}{p(x) + q(x)}$ | Bounded link $\sigma(\lambda) \in (0, 1)$ flattens far in tails |
+| **Hinge / Squared Hinge** | $\max(0, 1 - D(x)) + \max(0, 1 + D(x'))$ | $\mathrm{TV}(p, q)$ (or $\chi^2(p \,\|\, m)$ for sq. hinge) | $\operatorname{sign}(\lambda(x))$ (or $\tanh \frac{\lambda}{2}$) | Linear slope out to $2/\kappa$ when paired with $\kappa$-Lipschitz critic |
+| **$f$-GAN Dual Bound** | $-\mathbb{E}_p[T(x)] + \mathbb{E}_q[f^*(T(x'))]$ | Any $f$-divergence $D_f(p \,\|\, q)$ | $f'(p(x)/q(x))$ | Can target forward KL ($1 + \lambda$), but high estimator variance |
+| **Kernel MMD** | Closed-form U-statistic (no critic net) | $\mathrm{MMD}^2(p, q)$ in RKHS ball | Witness $\mathbb{E}_p[k(x, \cdot)] - \mathbb{E}_q[k(x, \cdot)]$ | $O(n^{-1/2})$ in any dimension; strong slope up to bandwidth $s$ |
+| **Wasserstein-1 ($W_1$)** | $\mathbb{E}_q[T(x')] - \mathbb{E}_p[T(x)]$ + Lipschitz reg. | $W_1(p, q)$ (Earth Mover's distance) | Kantorovich potential ($\|\nabla T^\star\| = 1$) | Unit slope at all distances; two-sided GP overshoots at $q = p$ |
 :::

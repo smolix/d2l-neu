@@ -451,404 +451,225 @@ Compared to iterative diffusion and flow models (:numref:`chap_diffusion`), adve
 ::: {.cover}
 [Dive into Deep Learning · §16.7]{.kicker}
 
-Adversarial losses beyond GANs<br>
-**conditional means · two bands · distillation · tokenizers and vocoders · where GANs stand**
+Adversarial Losses Beyond Standalone GANs<br>**conditional-mean blurring · perception–distortion trade-off · diffusion distillation (ADD & DMD2) · VQGAN patch critics · HiFi-GAN speech vocoders**
 :::
 :::
 
-::: {.slide title="Squared Error Turns Many Sharp Answers into One Blur"}
-[The problem]{.kicker}
+::: {.slide title="Why Pixelwise Regression Blurs Multimodal Targets"}
+[Motivation]{.kicker}
 
-- Enlarge a thumbnail: many sharp photographs shrink to the same thumbnail.
-- Squared error rewards the prediction closest to all of them on average,
-  their pixelwise mean: a blur that matches none of them.
-- Two bands $x = c \pm 1$: the squared-error fit runs between them, about
-  **one unit** from every data point.
+On conditional image and audio generation tasks—such as super-resolution (thumbnail $c \to$ high-res photo $x$), sketch-to-photo translation (pix2pix), or spectrogram-to-waveform inversion—many sharp outputs $x$ are compatible with the same input $c$:
 
-::: {.d2l-note .warn}
-Regression now trains most image and video generators. Why do one-step
-students, tokenizers and vocoders still keep a critic?
-:::
+- **The averaging failure of pointwise losses:** Minimizing pixelwise squared error ($L_2$) or absolute error ($L_1$) forces a predictor $g(c)$ to output the **conditional mean** (or median) across all plausible textures—a blur that belongs to none of them.
+- **Why adversarial critics outlived standalone GANs:** Even though multi-step diffusion and flow-matching models (§17) dominate general image pretraining, learned discriminators remain essential in:
+  1. **One-step diffusion distillation** (ADD / SDXL-Turbo, DMD2),
+  2. **Latent image autoencoders / tokenizers** (VQGAN, Stable Diffusion VAE), and
+  3. **Neural audio vocoders** (HiFi-GAN).
 :::
 
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
+::: {.slide title="The Conditional-Mean Orthogonal Decomposition"}
+[Why L₂ Averages Ambiguity]{.kicker}
 
-- derive the conditional-mean decomposition of squared error;
-- predict where a squared-error and an adversarial student land on two bands;
-- derive a denoising teacher in closed form and predict where regression
-  onto it lands;
-- explain why autoencoders and vocoders keep a critic;
-- say what GANs still offer, and name their four limits.
+For any deterministic predictor $g(c)$ of target $x$ given condition $c$, let $\mu(c) = \mathbb{E}[x \mid c]$ denote the conditional mean. Adding and subtracting $\mu(c)$ inside $\mathbb{E}[(x - g(c))^2]$ eliminates the cross term $2\,\mathbb{E}[(x - \mu(c))(\mu(c) - g(c))] = 0$ by iterated expectation:
 
-**The idea:** a pointwise loss averages over ambiguity, a learned comparison
-does not. **Running example:** two bands, one input, two answers.
+$$\mathbb{E}\big[(x - g(c))^2\big] = \underbrace{\mathbb{E}\big[(x - \mu(c))^2\big]}_{\textrm{irreducible }\mathrm{Var}(x \mid c)} + \underbrace{\mathbb{E}\big[(\mu(c) - g(c))^2\big]}_{\textrm{minimized at }g(c) = \mu(c)}$$
+
+- **Unique $L_2$ minimizer:** $g^\star(c) = \mu(c) = \mathbb{E}[x \mid c]$ (evaluated independently pixel by pixel).
+- **When $p(x \mid c)$ is multimodal:** The center of mass $\mu(c)$ falls in the low-density void *between* modes.
+- **What about $L_1$ loss $\mathbb{E}[|x - g(c)|]$?** Minimized by the coordinate-wise conditional median—which for any symmetric bimodal distribution still lies in the empty corridor between the two modes!
 :::
 
-::: {.slide title="The Last Deck Asks Where the Comparison Survives"}
-[Where this fits]{.kicker}
+::: {.slide title="The Bimodal Two-Band Benchmark"}
+[Minimal Analytical Testbed]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-| section | asks |
-|---|---|
-| Generative Adversarial Networks | what a classifier of samples computes |
-| Adversarial Objectives and Divergences | which loss gives which distance |
-| Relativistic Objectives | what changes when the critic ranks pairs |
-| Gradient Penalties and Convergence | why training circles, and what stops it |
-| Adversarial Image Generation | which network, and how to score images |
-| Conditional Generation | how to ask for a class |
-| **Adversarial Losses Beyond GANs** | **where a learned comparison remains** |
+Consider $c \sim \textrm{Uniform}[-1, 1]$ and two parallel data bands separated by an empty corridor of width $2$:
+
+$$x = c + b + 0.05\,\xi, \qquad b \in \{-1, +1\}\text{ with probability }\tfrac{1}{2}\text{ each}, \quad \xi \sim \mathcal{N}(0, 1)$$
+
+- **Conditional mean $\mu(c) = c$ (empty corridor):** Lies $1$ unit away from every data point ($20$ noise standard deviations!), yet achieves the minimum possible squared error $\mathbb{E}[(x - \mu(c))^2] = 1^2 + 0.05^2 = \mathbf{1.0025}$.
+- **Single-band predictor $g(c) = c + 1$ (on-manifold):** Always lands on valid data, yet incurs squared error $\frac{1}{2}(0^2) + \frac{1}{2}(2^2) + 0.05^2 = \mathbf{2.0025}$—**twice as large** as the empty corridor!
+- **Adversarial critic $D(x, c)$:** Estimates $D^\star(x, c) = \log \frac{p(x, c)}{q(x, c)}$, which is strongly negative in the empty corridor ($p(x, c) \approx 0$) and pushes $\hat{x} = g(c)$ onto one of the valid data bands.
 :::
 
-::: {.col .narrow}
-- **Uses:** $D^\star = \log(p/q)$; the non-saturating loss; the games of
-  the chapter.
-- **Skips:** how diffusion models are trained; architectures.
-:::
-:::
-:::
+::: {.slide title="Training Squared-Error vs. Adversarial Predictors"}
+[Controlled Code Comparison]{.kicker}
 
-::: {.slide title="Squared Error Grades Distance to the Conditional Mean"}
-[Conditional means]{.kicker}
-
-For any predictor $g$ of a sample $x$ from a condition $c$, with
-$\mu(c) = \mathbb{E}[x \mid c]$, the cross term vanishes given $c$:
-
-$$\mathbb{E}\big[(x - g(c))^2\big]
-= \underbrace{\mathbb{E}\big[(x - \mu(c))^2\big]}_{\textrm{no } g \textrm{ removes it}}
-+ \mathbb{E}\big[(\mu(c) - g(c))^2\big]$$
-
-- The best predictor is $g = \mu$; for images, pixel by pixel.
-- Several answers: $\mu$ is their average, which need not be an answer.
-- Absolute error ($L_1$, pix2pix) gives a median: no sharper.
-:::
-
-::: {.slide title="On Two Bands the Mean Lies Where No Data Is"}
-[Two bands]{.kicker}
-
-$c \sim U[-1, 1]$, $\;x = c + b + 0.05\,\xi$, $\;b = \pm 1$ with
-probability $\tfrac12$ each, independent of $c$.
-
-- Bands $x = c \pm 1$, forty noise widths apart; $\mu(c) = c$, in the corridor.
-- Expected squared error of $\mu$: $1 + 0.05^2 \approx 1.0025$.
-- Of the band $x = c + 1$: $\tfrac12 \cdot 4 + 0.05^2 \approx 2.0025$.
-
-::: {.d2l-note}
-Squared error prefers the corridor, where no data point lies.
-:::
-:::
-
-::: {.slide title="A Critic Scores Whether a Prediction Lies among the Data"}
-[Two bands]{.kicker}
-
-Critic $D(x, c)$, trained by logistic regression on data pairs against
-predicted pairs $(\hat x, c)$:
-
-$$D^\star(x, c) = \log \frac{p(x, c)}{q(x, c)}$$
-
-- In the corridor $p \approx 0$: $D^\star$ is strongly negative.
-- The student minimizes $-\log \sigma\big(D(\hat x, c)\big)$, the
-  non-saturating loss.
-- $\hat x = g(c) + 0.05\,\xi'$: the data's noise, so only the location of
-  mass differs.
-:::
-
-::: {.slide title="One Step of the Game: Critic First, Then the Student" only="pytorch"}
-[Two bands]{.kicker}
-
-```
-c, x = make_bands(batch_size)                   # a fresh batch
-x_hat = g(c) + 0.05 * torch.randn(batch_size, 1)
-real, fake = torch.cat([c, x], 1), torch.cat([c, x_hat], 1)
-loss_D = softplus(-D(real)) + softplus(D(fake.detach()))
-opt_D.zero_grad(); loss_D.mean().backward(); opt_D.step()   # critic
-loss_G = softplus(-D(fake)).mean()
-opt_G.zero_grad(); loss_G.backward(); opt_G.step()          # student
-```
-
-Same 32-unit network for both students, same initial weights;
-$\mathrm{softplus}(-t) = -\log \sigma(t)$.
-:::
-
-::: {.slide title="One Step of the Game: Critic First, Then the Student" only="jax"}
-[Two bands]{.kicker}
-
-```
-c, x = make_bands(k_data, batch_size)               # a fresh batch
-xi = jax.random.normal(k_xi, (batch_size, 1))
-real = jnp.concatenate([c, x], 1)
-fake = lambda g_: jnp.concatenate([c, g_(c) + 0.05 * xi], 1)
-loss_D = lambda D_: (softplus(-D_(real))
-                     + softplus(D_(fake(g)))).mean()
-opt_D.update(D, nnx.grad(loss_D)(D))
-loss_G = lambda g_: softplus(-D(fake(g_))).mean()
-opt_G.update(g, nnx.grad(loss_G)(g))
-```
-
-Same 32-unit network for both students, same initial weights;
-$\mathrm{softplus}(-t) = -\log \sigma(t)$.
-:::
-
-::: {.slide title="The Adversarial Student Commits to a Band"}
-[Two bands]{.kicker}
-
-@!adversarial-losses-the-capacity-argument-3
-
-Squared error: on average within about 0.02 of $x = c$, one unit from every band.
-Adversarial: a few hundredths from a band; at most 2% of inputs off the bands,
-where the curve crosses. Where it crosses is left to the run.
-:::
-
-::: {.slide title="Check: Which Predictor Fools the Critic?"}
-[Check]{.kicker}
-
-Three predictors on the two bands: the mean $\mu(c) = c$, the band
-$x = c + 1$, and an exact sampler $\hat x \sim p(x \mid c)$. Rank them by
-squared error. Which one can an optimal critic not tell from the data?
-
-. . .
-
-- Mean $\approx 1.0025$ $<$ band $\approx 2.0025$ $<$ sampler $\approx 2.005$.
-- The sampler's error is twice the mean's, $10 \log_{10} 2 \approx 3$ dB less
-  peak signal-to-noise ratio.
-- Only the sampler matches the data; squared error ranks it last. In
-  general, realism costs at most a factor of two in squared error.
-
-[Blau and Michaeli 2018]{.small}
-:::
-
-::: {.slide title="A Bigger Network Cannot Pick a Band; a Latent Bit Can"}
-[Ambiguity and capacity]{.kicker}
-
-- $c$ carries no information about the band: no deterministic $g(c)$, of any
-  size, picks the right band more than half the time.
-- Add a random latent bit $z = \pm 1$: $g(c, z)$ can send each value to one
-  band.
-- **Ambiguity:** the input does not fix the output (thumbnail, bands, phase).
-- **Capacity:** it does, but one pass cannot compute the map (a one-step
-  network imitating a many-step sampler, whose map jumps).
-
-::: {.d2l-note}
-Squared error averages over what the model cannot tell apart. More capacity
-fixes only the second case.
-:::
-:::
-
-::: {.slide title="A Squared-Error Denoiser Returns the Mean of the Clean Image"}
-[Distillation]{.kicker}
-
-Train $g(x_\tau) \approx x_0$ by squared error, $x_\tau = x_0$ plus noise of
-level $\tau$. With $(c, x) = (x_\tau, x_0)$:
-
-$$g^\star(x_\tau) = \mathbb{E}[x_0 \mid x_\tau]$$
-
-- Low noise: $x_\tau$ nearly fixes $x_0$, the mean is sharp.
-- High noise: many images fit $x_\tau$, the mean is a blur, the corridor.
-- A sampler steps a little toward the mean and asks again: many evaluations.
-- **Distillation:** a one-step student learns from this teacher.
-:::
-
-::: {.slide title="On Two Bands the Teacher Is a Tanh"}
-[Distillation]{.kicker}
-
-A denoiser trained on data reads every input as noised data,
-$\tilde x = x + \tau \xi$, including a noised student output
-$\hat x + \tau \xi$. Given $b$, data give
-$\tilde x \sim \mathcal{N}(c + b, \tau^2 + 0.05^2)$; odds of $b = +1$:
-$\exp\big(2(\tilde x - c)/(\tau^2 + 0.05^2)\big)$.
-
-$$\mathbb{E}[c + b \mid \tilde x, c] = c + \tanh\Big(\frac{\tilde x - c}{\tau^2 + 0.05^2}\Big)$$
-
-- The exact posterior mean of the band center.
-- Small $\tau$: a step, snaps to the nearer band.
-- $\tau = 2$: slope at most $\tfrac14$, leans only gently.
-:::
-
-::: {.slide title="A High-Noise Teacher Pulls Every Output into the Corridor"}
-[Distillation]{.kicker}
-
-Students now take a latent $z \sim \mathcal{N}(0, 1)$ besides $c$. Student
-(i) regresses onto the teacher at $\tau = 2$, gradient stopped. The offset
-$u = g(c, z) - c$ settles where
-
-$$u = \mathbb{E}_\xi\Big[\tanh\Big(\frac{u + \sqrt{\tau^2 + 0.05^2}\,\xi}{\tau^2 + 0.05^2}\Big)\Big]$$
-
-- Right side: slope at most $\tfrac14$, so one solution, $u = 0$.
-- Prediction: every output in the corridor, whatever the latent $z$.
-
-::: {.d2l-note}
-A teacher that returns averages teaches averages.
-:::
-:::
-
-::: {.slide title="A Critic, with or without the Teacher, Puts the Student on Both Bands"}
-[Distillation]{.kicker}
-
-Students $g(c, z)$, $z \sim \mathcal{N}(0, 1)$; 4,000 steps; three seeds each.
-
-| student | from nearer band | on each band | off the bands |
-|:--|--:|--:|--:|
-| (i) regression onto the teacher | about 1 | 0% | 100% |
-| (ii) critic | a few hundredths | about half | 1--2% |
-| (iii) critic + regression | a few hundredths | about half | 1--2% |
-
-Why (iii) stays: the regression pulls with about $2(1 - 0.2) = 1.6$ at a
-band; a shift $\delta$ draws a critic push of about
-$\tfrac12 \delta / 0.05^2 = 200\,\delta$; they balance at $\delta \approx 0.008$.
-
-::: {.d2l-note}
-(ii) and (iii) differ by less than the run-to-run range: with a latent, the
-critic covers both bands.
-:::
-:::
-
-::: {.slide title="At Scale, ADD Is Student (iii)"}
-[Distillation]{.kicker}
-
-- One-step text-to-image student, two losses: regression onto a frozen
-  teacher's denoised estimate of its own noised output, and a critic against
-  real images.
-- The critic reads frozen DINOv2 features and trains only small heads.
-- The paper's ablation has our ordering: regression alone unusable, critic
-  alone good, both about as good, the regression adding prompt agreement.
-
-[Sauer et al. 2023]{.small}
-:::
-
-::: {.slide title="DMD Follows the Optimal Critic's Gradient without Training a Classifier"}
-[Distillation]{.kicker}
-
-Score: $\nabla_x \log$ density. $p_\tau$, $q_\tau$: data and student
-samples, noised to level $\tau$.
-
-- Teacher supplies $\nabla_x \log p_\tau$; a second diffusion model, trained
-  on the student's samples, supplies $\nabla_x \log q_\tau$.
-- Move each sample along
-  $\nabla_x \log p_\tau - \nabla_x \log q_\tau = \nabla_x \log(p_\tau/q_\tau)$,
-  the optimal log-loss critic's input gradient.
-- It descends $D_{\textrm{KL}}(q_\tau \,\|\, p_\tau)$, cheap on missing
-  modes; DMD2 adds a critic on real images.
-
-[Yin et al. 2024, DMD and DMD2]{.small}
-:::
-
-::: {.slide title="Texture Is Ambiguous, So Autoencoders Keep a Patch Critic"}
-[Tokenizers and vocoders]{.kicker}
-
-The code fixes the layout, not the texture. The decoder trains on three terms:
-
-| decoder loss | what it does |
-|:--|:--|
-| pixel | layout right; alone a blur |
-| perceptual (LPIPS: features of a pretrained classifier) | matches the mean feature; a sharp image fits, a bad texture too |
-| patch critic | rejects what still looks smeared |
-
-[Esser et al. 2021; Rombach et al. 2022]{.small}
-:::
-
-::: {.slide title="Check: What Does a Squared-Error Vocoder Output?"}
-[Check]{.kicker}
-
-A vocoder turns a spectrogram into a waveform. Model a frame as
-$x_n = \sin(\omega n + \vartheta)$: the spectrogram fixes $\omega$, not the
-phase $\vartheta$. With $\vartheta$ uniform on $[-\pi, \pi]$, what does the
-squared-error prediction sound like? And for $[-\pi/2, \pi/2]$?
-
-. . .
-
-- $\mathbb{E}_\vartheta[x_n] = \frac{\sin a}{a}\sin(\omega n)$ for $\vartheta$ uniform on $[-a, a]$.
-- $a = \pi$: silence. $a = \pi/2$: $2/\pi \approx 0.64$ of the amplitude.
-- HiFi-GAN: a spectrogram loss for the content, critics on the waveform
-  against the shrunken frame and broken frame boundaries.
-
-[Kong et al. 2020]{.small}
-:::
-
-::: {.slide title="Three Independent Choices Describe Every Game of the Chapter"}
-[The games]{.kicker}
-
-| objective | critic estimates | does | constrained by | disjoint supports |
-|:--|:--|:--|:--|:--|
-| log loss | $\log(p/q)$ | classifies | nothing | saturates |
-| hinge | sign of $\log(p/q)$ | classifies | nothing | saturates |
-| MMD | smoothed $p - q$ | witnesses | kernel ball | slope, up to bandwidth |
-| $W_1$ | potential | witnesses | Lipschitz ball | slope one |
-| RpGAN | $\log(p/q)$ + const | ranks | nothing | saturates |
-| R3GAN | $\log(p/q)$ above $2\sqrt\gamma$ | ranks | input-gradient penalty | only via critic smoothness |
-
-[Potential, witness: the critics of the $W_1$ and MMD games; $\gamma$: weight
-of the $R_1$ and $R_2$ penalties. Last column: best critic of its class.]{.small}
-:::
-
-::: {.slide title="GANs Lost Broad Image Synthesis but Keep One-Step Sampling"}
-[Where GANs stand]{.kicker}
+We train two identical 2-hidden-layer $\tanh$ MLPs (`g_mse` and `g_adv`, $1 \to 32 \to 32 \to 1$) from the same initial weights. `g_adv` adds the data's observation noise $0.05\,\xi'$ and trains against a leaky-ReLU critic $D(x, c)$ via `gan_loss_D` and `gan_loss_G`:
 
 ::: {.cols}
 ::: {.col}
-**Why regression won broad targets**
-
-- covered the distribution
-- improved steadily with data and size
-- little tuning
+@adversarial-losses-two-bands-1
 :::
 
 ::: {.col}
-**What the game still offers**
+@adversarial-losses-two-bands-2
+:::
+:::
+:::
 
-- a sample in one network evaluation
-- sharp where the output is ambiguous
-- competitive on narrow domains
+::: {.slide title="Two-Band Results: Corridor vs. Mode Commitment"}
+[Empirical Verification]{.kicker}
+
+Evaluating both trained predictors across $201$ inputs $c \in [-1, 1]$ confirms our analytical prediction:
+
+::: {.cols .vc}
+::: {.col}
+@!adversarial-losses-the-capacity-argument-2
+
+- **Squared-error student (`g_mse`):** Tracks the conditional mean $x = c$ down the empty corridor ($1.00$ unit from either band; $100\%$ of predictions off the bands).
+- **Adversarial student (`g_adv`):** Commits to a valid data band (mean distance $0.03$ from the nearer band; only $1\text{--}2\%$ of points off the bands where the continuous curve switches branches).
+:::
+
+::: {.col .fig}
+@!adversarial-losses-the-capacity-argument-3
 :::
 :::
+:::
+
+::: {.slide title="The Perception–Distortion Trade-Off"}
+[Blau and Michaeli Theorem]{.kicker}
+
+Suppose an **ideal stochastic sampler** draws $\hat{x} \sim p(x \mid c)$ independently of the test observation $x \sim p(x \mid c)$, matching the true conditional distribution $p(x \mid c)$ **perfectly** ($D^\star(x, c) = 0$ everywhere). By the conditional-mean decomposition:
+
+$$\mathbb{E}\big[(x - \hat{x})^2\big] = \mathbb{E}\big[(x - \mu(c))^2\big] + \mathbb{E}\big[(\mu(c) - \hat{x})^2\big] = 2\,\mathbb{E}\big[(x - \mu(c))^2\big]$$
+
+| Predictor on the Two-Band Benchmark | Expected Squared Error (MSE) | PSNR vs. $\mu(c)$ | Optimal Critic Verdict |
+| :--- | :--- | :--- | :--- |
+| **Conditional mean $\mu(c) = c$** | **$1.0025$** (minimum MSE) | $0.00\text{ dB}$ | Rejected ($100\%$ in empty corridor) |
+| **Deterministic upper band $g(c) = c + 1$** | $2.0025$ | $-3.00\text{ dB}$ | Half of data distribution (drops lower band) |
+| **Ideal sampler $\hat{x} \sim p(x \mid c)$** | **$2.0050$** ($2\times$ the mean!) | **$-3.01\text{ dB}$** ($10\log_{10} 2$) | **Indistinguishable from real data ($q = p$)** |
 
 ::: {.d2l-note}
-Train one today for a one-pass decoder or vocoder, a one- to four-step
-student, or a narrow domain under a real-time budget.
+**Blau & Michaeli (2018):** Perfect perceptual realism ($q(x \mid c) = p(x \mid c)$) inherently costs up to a factor of $2$ in squared error ($3\text{ dB}$ lower PSNR) compared to the blurry conditional mean.
 :::
 :::
 
-::: {.slide title="Four Limits of the Game Remain after the Repairs"}
-[Where GANs stand]{.kicker}
+::: {.slide title="Target Ambiguity vs. Model Capacity"}
+[Why a Latent Variable Is Required]{.kicker}
 
-1. **No density:** the generator cannot say how likely an image is.
-2. **Two networks and a tuned penalty:** convergence needs a penalty weight
-   chosen for the data.
-3. **No push toward a missing mode:** a dropped half costs about a quarter
-   of a nat; the pairing guarantee holds only for a fixed coupling, which
-   none of our image runs used.
-4. **Instability at scale:** BigGAN runs collapse late, results come from
-   checkpoints before it; GigaGAN and StyleGAN-T needed new architecture.
+Why did the deterministic adversarial predictor `g_adv(c)` cover only one band at each input $c$?
 
-[Brock et al. 2019; Kang et al. 2023; Sauer et al. 2023]{.small}
+- **1. Target ambiguity (aleatoric uncertainty):** Because $c$ carries zero information about the band sign $b \in \{-1, +1\}$, *no* deterministic function $g(c)$—regardless of network width or depth—can output two distinct values at the same $c$.
+- **2. Model capacity limit (approximating complex maps):** Even when a deterministic mapping exists (such as the multi-step probability-flow ODE of a diffusion model), a small one-step network may lack the capacity to follow sharp jumps and instead average across them under $L_2$ regression.
+- **Remedy for multimodal coverage:** Equip the predictor with a stochastic latent variable $z \sim \mathcal{N}(0, 1)$ alongside $c$ so that $\hat{x} = g(c, z)$ can route different latent quantiles to different data bands at every $c$.
 :::
 
-::: {.slide title="Check: Which of These Would You Train with a Critic Today?"}
-[Check]{.kicker}
+::: {.slide title="Diffusion Denoisers and One-Step Distillation"}
+[Why High-Noise Teachers Blur]{.kicker}
 
-A text-to-image model from scratch; a vocoder; a one-step student of a
-diffusion model; a sprite generator for a game that must run at 60 frames
-per second.
+Diffusion and flow-matching models (§17) corrupt clean data $x_0$ into noisy observations $x_\tau = x_0 + \tau\xi$ ($\xi \sim \mathcal{N}(0, I)$) and train a denoiser network by squared error to predict $x_0$ from $x_\tau$:
 
-. . .
+$$D_\tau^\star(x_\tau) = \arg\min_g \mathbb{E}\big[\|x_0 - g(x_\tau)\|^2\big] = \mathbb{E}\big[x_0 \mid x_\tau\big]$$
 
-- Text-to-image from scratch: regression; broad targets favor it.
-- Vocoder, one-step student: a critic, beside a regression term.
-- Sprite generator: a GAN is a good fit; narrow domain, one evaluation.
+- **Low noise ($\tau \ll 1$):** $x_\tau$ nearly fixes $x_0$, so the posterior mean $\mathbb{E}[x_0 \mid x_\tau]$ is sharp.
+- **High noise ($\tau \gg 1$):** Many clean images are consistent with $x_\tau$, so $\mathbb{E}[x_0 \mid x_\tau]$ is a blurry average. Multi-step samplers avoid returning this blur by taking many small steps down to $\tau \to 0$.
+- **One-step distillation hazard:** If a fast one-step student $\hat{x} = g(c, z)$ is trained by adding high noise $\tau\xi$ to $\hat{x}$ and regressing toward the frozen teacher's denoised estimate $\mathbb{E}[x_0 \mid \hat{x} + \tau\xi]$, the teacher pulls the student straight toward the conditional average!
 :::
 
-::: {.slide title="What Remains after the Repairs"}
-[Wrap-up]{.kicker}
+::: {.slide title="Closed-Form Denoising Teacher on the Two Bands"}
+[Analytical Distillation Model]{.kicker}
 
-- Two bands: squared error within about 0.02 of $x = c$, a unit from the
-  data; the critic keeps the student on a band.
-- Teacher at $\tau = 2$: regression alone about one unit from a band; with
-  a critic a few hundredths, about half on each band, regression term or not.
-- Autoencoders and vocoders keep a critic for texture and phase.
-- GANs keep one-step sampling; four limits remain: no density, two
-  networks and a tuned penalty, no push toward a missing mode, instability
-  at scale.
+On the two-band benchmark, a noisy observation $\tilde{x} = x + \tau\xi$ of band $b \in \{-1, +1\}$ follows $\tilde{x} \mid c, b \sim \mathcal{N}(c + b, \tau^2 + 0.05^2)$. By Bayes' rule, the posterior log-odds of $b = +1$ vs. $b = -1$ equal $\frac{2(\tilde{x} - c)}{\tau^2 + 0.05^2}$, giving the exact optimal denoising teacher:
 
-**Next:** diffusion and flow models give up the game and train by regression
-on a target computed from each training example.
+$$\mathbb{E}\big[c + b \mid \tilde{x}, c\big] = c + \tanh\!\left(\frac{\tilde{x} - c}{\tau^2 + 0.05^2}\right)$$
+
+- **Contraction to the empty corridor at high noise ($\tau = 2$):** When a student $\hat{x} = g(c, z)$ regresses directly onto $\operatorname{stop\_grad}(\text{teacher}(\hat{x} + \tau\xi, c, \tau))$, the offset $u = g(c, z) - c$ must satisfy the stationary fixed-point equation:
+  $$u = \mathbb{E}_\xi\!\left[\tanh\!\left(\frac{u + \sqrt{\tau^2 + 0.05^2}\,\xi}{\tau^2 + 0.05^2}\right)\right]$$
+  At $\tau = 2$, the right-hand side has derivative $\le (\tau^2 + 0.05^2)^{-1} \approx \frac{1}{4} < 1$ everywhere, so $u = 0$ (the empty corridor!) is the **unique global fixed point** for every latent $z$.
+:::
+
+::: {.slide title="Implementing One-Step Distillation with a Critic"}
+[Code Experiment]{.kicker}
+
+`train_student` trains a stochastic student $g(c, z)$ ($z \sim \mathcal{N}(0, 1)$) using either the frozen denoising teacher regression loss ($\tau = 2.0$), an adversarial critic $D(x, c)$, or both combined (`critic + regression`):
+
+@adversarial-losses-distillation-on-two-bands-1
+:::
+
+::: {.slide title="Distillation Results: Critic Restores Both Bands"}
+[Three-Seed Comparison]{.kicker}
+
+Evaluating all three student configurations across $201$ inputs $c$ and $64$ latent quantiles $z$ over three random seeds confirms our fixed-point analysis:
+
+@!adversarial-losses-distillation-on-two-bands-3
+
+- **1. Teacher regression only:** Collapses $100\%$ of outputs into the empty corridor ($1.00$ unit from either band), ignoring $z$.
+- **2. Critic only & Critic + regression:** Both place **$98\text{--}99\%$** of outputs directly on the two data bands ($0.03\text{--}0.04$ distance), splitting probability mass evenly ($\sim 49\% / 49\%$) between the upper and lower bands via $z$. Because the band width is $\sigma = 0.05$, the critic's sharp restoring force ($\sim \delta / 0.05^2 = 400\delta$) easily dominates the gentle inward pull of the high-noise teacher ($\delta \approx 0.008$).
+:::
+
+::: {.slide title="Adversarial Diffusion Distillation (ADD & DMD2)"}
+[One-Step Foundation Model Distillation]{.kicker}
+
+Modern one-step text-to-image generators distilled from multi-step diffusion teachers directly scale up our two-band distillation recipe:
+
+- **Adversarial Diffusion Distillation (ADD / SDXL-Turbo; Sauer et al., 2023):** Trains a one-step student by combining (i) squared-error regression toward a frozen diffusion teacher's denoised estimate of the noised student output with (ii) a conditional discriminator built on frozen **DINOv2** vision features. Just as on our two bands, teacher regression alone yields blurry images, whereas adding the critic produces sharp one-step samples while the teacher anchors prompt alignment.
+- **Distribution Matching Distillation (DMD & DMD2; Yin et al., 2024):**
+  - **DMD** uses a frozen teacher score network $\nabla_x \log p_\tau$ minus a fake-distribution diffusion score network $\nabla_x \log q_\tau$ to move student samples along $\nabla_x \log(p_\tau / q_\tau)$—the exact input gradient of an optimal log-loss critic!
+  - **DMD2** adds a learned adversarial discriminator against real images so the one-step student avoids mode-dropping artifacts and surpasses the teacher.
+:::
+
+::: {.slide title="Latent Image Tokenizers (VQGAN) and PatchGAN"}
+[Autoencoders for Latent Diffusion]{.kicker}
+
+Latent diffusion models (Stable Diffusion, Flux) compress $H \times W \times 3$ images by $8\times$ spatially into a lower-dimensional latent grid via an autoencoder (VQGAN or KL-VAE; Esser et al., 2021; Rombach et al., 2022). Because the compressed latent code fixes coarse layout but leaves fine texture underdetermined, the decoder combines three losses:
+
+| Decoder Loss Component | Mathematical Form | Role & Why It Is Insufficient Alone |
+| :--- | :--- | :--- |
+| **1. Pixelwise reconstruction ($L_1$ / $L_2$)** | $\|\hat{x} - x\|_1$ or $\|\hat{x} - x\|_2^2$ | Anchors low-frequency color and layout; averages fine textures into a blur |
+| **2. Perceptual loss (LPIPS)** | $\sum_\ell \|\phi_\ell(\hat{x}) - \phi_\ell(x)\|_2^2$ (pretrained VGG/AlexNet) | Matches mid-level feature statistics; still permits repetitive grid/texture artifacts |
+| **3. PatchGAN discriminator** | Convolutional critic scoring $N \times N$ local patches | Enforces sharp, realistic high-frequency textures across every local receptive field |
+:::
+
+::: {.slide title="Speech Vocoders (HiFi-GAN) and Phase Ambiguity"}
+[Why Waveform Regression Collapses to Silence]{.kicker}
+
+Text-to-speech pipelines predict a **mel-spectrogram** (which specifies frame-level frequency magnitudes $|\hat{x}_m|$ but discards phase) and use a neural vocoder such as **HiFi-GAN** (Kong et al., 2020) to invert the spectrogram into a time-domain audio waveform $x_n$:
+
+- **Why time-domain $L_2$ waveform regression fails:** Model a single audio frame as a sinusoid $x_n = \sin(\omega n + \vartheta)$ where the frequency $\omega$ is fixed by the spectrogram and the phase $\vartheta \sim \textrm{Uniform}[-a, a]$ ($0 < a \le \pi$) is unknown. The conditional mean waveform is:
+  $$\mathbb{E}_\vartheta\big[\sin(\omega n + \vartheta)\big] = \frac{\sin a}{a}\,\sin(\omega n)$$
+- When phase is uniform on $[-\pi, \pi]$ ($a = \pi$), $\frac{\sin \pi}{\pi} = 0$: **the $L_2$-optimal waveform prediction is complete silence!**
+- **HiFi-GAN solution:** Pairs a multi-resolution mel-spectrogram $L_1$ loss (anchoring frequency magnitudes) with **multi-period** and **multi-scale** time-domain waveform discriminators that force the generator to commit to coherent phases across frame boundaries.
+:::
+
+::: {.slide title="Synthesis: Every Adversarial Game of Chapter 16"}
+[Comparing the Six Formulations]{.kicker}
+
+| Adversarial Formulation | Optimal Critic Estimate | Scoring Mechanism | Critic Constraint / Penalty | Disjoint-Support Gradient (at $D^\star$) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Logistic / $f$-GAN (§16.1–16.2)** | $\log(p/q)$ or $f'(p/q)$ | Single-sample classification | Unconstrained | Saturates ($\mathrm{JS} = \log 2$) |
+| **Hinge (§16.2)** | $\operatorname{sign}(\log(p/q))$ | Margin classification | Unconstrained or spectral norm | Saturates (linear to $2/\kappa$ with $\kappa$-Lip) |
+| **MMD (§16.2)** | Kernel-smoothed $p - q$ | Difference of means | RKHS unit ball (no critic net) | Nonzero within kernel bandwidth $s$ |
+| **Wasserstein-1 (§16.2)** | Kantorovich potential | Difference of means | 1-Lipschitz ball (WGAN-GP) | Constant unit slope at all distances |
+| **RpGAN (§16.3)** | $\log(p/q) + c$ | Pairwise Bradley–Terry ranking | Unconstrained | Saturates ($d_{\mathrm{Rp}} = \log 2$) |
+| **R3GAN (§16.4–16.6)** | $\log(p/q)$ filtered above $2\sqrt{\gamma}$ | Pairwise Bradley–Terry ranking | Zero-centered $R_1 + R_2$ on $p, q$ | Smooth interpolation via damped critic |
+:::
+
+::: {.slide title="Concept Check: Blurring, Distillation, and Phase"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of conditional-mean blurring and adversarial losses in modern generative pipelines:
+
+1. **PSNR cost of exact sampling:** Using Blau and Michaeli's identity $\mathbb{E}[\|x - \hat{x}\|^2] = 2\,\mathbb{E}[\|x - \mu(c)\|^2]$ for an ideal sampler $\hat{x} \sim p(x \mid c)$, how many decibels of Peak Signal-to-Noise Ratio ($\mathrm{PSNR} = 10\log_{10}(x_{\max}^2 / \mathrm{MSE})$) does a perfectly realistic generator lose relative to the blurry conditional mean $\mu(c)$?
+2. **Partial phase uncertainty in vocoders:** In the sinusoidal audio frame model $x_n = \sin(\omega n + \vartheta)$ with phase $\vartheta \sim \textrm{Uniform}[-\pi/2, \pi/2]$, to what fraction of the true amplitude does $L_2$ waveform regression shrink the signal? What artifact occurs if a vocoder minimizes only frame-level DFT magnitude error without a time-domain waveform critic?
+3. **Selecting the right training paradigm:** Among (a) pretraining a general text-to-image foundation model from scratch, (b) distilling a 50-step diffusion model into a 1-step generator, and (c) training a latent diffusion image tokenizer decoder, which tasks use an adversarial critic today?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Doubling the MSE reduces $\mathrm{PSNR} = 10\log_{10}(x_{\max}^2 / \mathrm{MSE})$ by $10\log_{10}(2) \approx \mathbf{3.01\text{ dB}}$.
+2. At $a = \pi / 2$, the amplitude shrinks by $\frac{\sin(\pi/2)}{\pi/2} = \mathbf{\frac{2}{\pi} \approx 0.637}$. Minimizing only frame-level DFT magnitude error leaves each frame's phase $\vartheta_k$ independent, creating **phase-discontinuity clicks** at every frame boundary that a time-domain waveform discriminator immediately penalizes.
+3. **(a)** uses multi-step diffusion/flow regression (for broad coverage and stable scaling), whereas **(b)** one-step diffusion distillation (ADD/DMD2) and **(c)** latent autoencoder decoders (VQGAN/SD-VAE) both pair regression/perceptual anchors with an **adversarial critic** to prevent conditional-mean blurring.
+:::
+:::
+
+::: {.slide title="Summary: Adversarial Losses Beyond GANs"}
+[Key Takeaways]{.kicker}
+
+| Application / Concept | Core Mathematical Identity | Why Regression Alone Fails | Role of the Adversarial Critic |
+| :--- | :--- | :--- | :--- |
+| **Conditional-Mean Decomposition** | $\mathbb{E}[(x - g(c))^2] = \mathrm{Var}(x \mid c)$ $+ \mathbb{E}[(\mu(c) - g(c))^2]$ | Unique $L_2$ minimizer $\mu(c) = \mathbb{E}[x \mid c]$ averages across distinct modes | Penalizes low-density corridors ($D^\star = \log\frac{p}{q} \ll 0$) to force mode commitment |
+| **Perception–Distortion Trade-Off** | $\mathrm{MSE}(\hat{x} \sim p(\cdot \mid c)) = 2\,\mathrm{MSE}(\mu(c))$ | Optimizing PSNR/MSE ($-3\text{ dB}$ for exact samples) rewards blurry averages | Trades pointwise distortion for distributional realism ($q(x \mid c) = p(x \mid c)$) |
+| **One-Step Diffusion Distillation** | $D_\tau^\star(x_\tau) = \mathbb{E}[x_0 \mid x_\tau]$ (teacher posterior mean) | High-noise teacher targets contract one-step students into the conditional mean | ADD & DMD2 pair teacher/score regression with a feature critic on real images |
+| **Image Tokenizers (VQGAN / VAE)** | $\mathcal{L}_{L_1} + \lambda_{\textrm{perc}}\mathcal{L}_{\textrm{LPIPS}}$ $+ \lambda_{\textrm{adv}}\mathcal{L}_{\textrm{PatchGAN}}$ | $8\times$ latent bottleneck leaves fine local textures ambiguous under $L_1$/LPIPS | PatchGAN critic enforces crisp high-frequency textures across local patches |
+| **Speech Vocoders (HiFi-GAN)** | $\mathbb{E}_\vartheta[\sin(\omega n + \vartheta)] = \frac{\sin a}{a}\sin(\omega n)$ | Unknown phase ($a = \pi$) collapses $L_2$ waveform predictions to silence ($0$) | Multi-period & multi-scale waveform critics enforce amplitude and phase continuity |
 :::

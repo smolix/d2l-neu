@@ -603,354 +603,234 @@ As predicted in :numref:`tab_gan_cond_failures`, the nearest-centroid prototypes
 ::: {.cover}
 [Dive into Deep Learning · §16.6]{.kicker}
 
-Conditional generation<br>
-**the game on pairs · modulation and the projection head · class-conditional CIFAR-10 · which number sees which failure**
+Conditional Generation and Projection Discriminators<br>**conditional minimax game · slice-wise JS divergence · feature modulation · Miyato–Koyama projection head · alignment vs. diversity evaluation**
 :::
 :::
 
-::: {.slide title="Perfect Images with Every Label Wrong Fool the Unconditional Game"}
-[The problem]{.kicker}
+::: {.slide title="Why Unconditional GANs Cannot Obey Class Requests"}
+[Motivation]{.kicker}
 
-- The garment and sprite generators return random samples; neither can
-  be asked for a class.
-- Suppose a CIFAR-10 generator takes the request but shifts every label:
-  asked for a bird, it returns a perfect cat.
-- The classes are equally frequent, so the image distribution is exactly
-  the data's: unconditional value $-2\log 2$, its **minimum**.
-
-::: {.d2l-note .warn}
-To ask for a bird, both players must see the request. What does the game
-then optimize, and how do we check that the generator obeys?
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- derive the optimal conditional critic and the value of the game on
-  sample--condition pairs;
-- derive the projection head from Bayes' rule, and build a modulation layer;
-- train class-conditional CIFAR-10 with same-class pairs;
-- say which failure alignment, FD, precision and recall each detect.
-
-**The idea:** play the chapter's game once per condition.
-**Running example:** CIFAR-10, ten classes; ask for a bird, check for a bird.
-:::
-
-::: {.slide title="Every Image GAN So Far Ignored Requests"}
-[Where this fits]{.kicker}
+Unconditional generators draw random samples from the marginal image distribution $p(x)$ without any mechanism to request a specific class $c$ (e.g., *"bird"* or *"ship"*), text caption, or source image:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | asks |
-|---|---|
-| Generative Adversarial Networks | what a classifier of samples computes |
-| Adversarial Objectives and Divergences | which loss gives which distance |
-| Relativistic Objectives | what changes when the critic ranks pairs |
-| Gradient Penalties and Convergence | why training circles, and what stops it |
-| Adversarial Image Generation | which network, and how to score images |
-| **Conditional Generation** | **how to ask for a class** |
-| Adversarial Losses Beyond GANs | where a learned comparison remains |
+- **Marginal matching $\neq$ conditional alignment:** Suppose a 10-class CIFAR-10 generator produces realistic images but shifts every label cyclically: $q(x \mid c) = p(x \mid c + 1 \bmod 10)$.
+- Because all $10$ classes have equal prior $p(c) = \frac{1}{10}$, its marginal distribution $q(x) = \sum_c p(c)q(x \mid c) = p(x)$ matches the data **perfectly** ($\mathrm{JS}(p(x), q(x)) = 0$), even though every class request returns the wrong object!
+- **Solution (Mirza & Osindero, 2014):** Feed the condition $c$ to **both** the generator $G(z, c)$ and the discriminator $D(x, c)$.
 :::
 
-::: {.col .narrow}
-- **Uses:** the optimal critic $\log(p/q)$; the pairing loss and its
-  shift invariance; $R_1$, $R_2$; the image backbone; FD, precision and
-  recall.
-- **Skips:** text-to-image systems; images as conditions (next deck).
+::: {.col .fig}
+@!conditional-class-conditional-cifar-10
 :::
 :::
 :::
 
-::: {.slide title="The Critic Scores Sample–Condition Pairs"}
-[The conditional game]{.kicker}
+::: {.slide title="The Conditional Minimax Game on (x, c) Pairs"}
+[Formulation & Optimal Critic]{.kicker}
 
-Data: pairs $(x, c) \sim p(x, c)$. Generator: $c \sim p(c)$, then
-$x' = G(z, c) \sim q(\cdot \mid c)$. Critic: $D(x, c)$.
+Let real data–condition pairs $(x, c) \sim p(x, c)$ be compared against generated pairs where $c \sim p(c)$ is drawn from the real data marginal and $x' = G(z, c) \sim q(\cdot \mid c)$:
 
-$$V(D) = \mathbb{E}_{(x,c) \sim p}[\log \sigma(D(x, c))]
-+ \mathbb{E}_{c,\, x' \sim q(\cdot \mid c)}[\log \sigma(-D(x', c))]$$
+$$V(D) = \mathbb{E}_{(x, c) \sim p}\big[\log \sigma(D(x, c))\big] + \mathbb{E}_{c \sim p(c),\; x' \sim q(\cdot \mid c)}\big[\log \sigma(-D(x', c))\big]$$
 
-- The log-loss game, with the pair $(x, c)$ in place of $x$.
-- Both joint distributions share the label marginal $p(c)$: each
-  generated batch reuses the labels of its real batch.
+- **Cancellation of the shared prior $p(c)$:** Because the real joint density is $p(x, c) = p(c)p(x \mid c)$ and the generated joint density is $q(x, c) = p(c)q(x \mid c)$, pointwise optimization over $D(x, c)$ on $\mathcal{X} \times \mathcal{C}$ recovers the slice-wise log density ratio:
+  $$D^\star(x, c) = \log \frac{p(x, c)}{q(x, c)} = \log \frac{p(c)\,p(x \mid c)}{p(c)\,q(x \mid c)} = \log \frac{p(x \mid c)}{q(x \mid c)}$$
 :::
 
-::: {.slide title="The Optimal Critic Compares Real and Generated Birds Only"}
-[The conditional game]{.kicker}
+::: {.slide title="Expected Conditional JS Divergence and Rare Classes"}
+[Population Value & Class Imbalance]{.kicker}
 
-$$D^\star(x, c) = \log \frac{p(c)\, p(x \mid c)}{p(c)\, q(x \mid c)}
-= \log \frac{p(x \mid c)}{q(x \mid c)}$$
+Substituting $D^\star(x, c)$ back into $V(D)$ shows that the conditional objective plays an independent GAN game inside each condition slice $c$, weighted by $p(c)$:
 
-$$\max_D V = \mathbb{E}_c\big[2\, \mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))\big]
-- 2 \log 2$$
+$$\max_D V(D) = \mathbb{E}_{c \sim p(c)}\Big[2\,\mathrm{JS}\big(p(\cdot \mid c),\; q(\cdot \mid c)\big)\Big] - 2\log 2$$
 
-- One game per condition, weighted by $p(c)$; minimum iff
-  $q(\cdot \mid c) = p(\cdot \mid c)$ for **every** $c$.
-- A class of weight $\epsilon$ costs at most $2\epsilon \log 2$: one image
-  in a thousand is worth 0.0014 nats.
+- **Global minimum ($-2\log 2$):** Attained if and only if $q(\cdot \mid c) = p(\cdot \mid c)$ for **every** condition $c$ with $p(c) > 0$. On the cyclic label-shift example ($q(\cdot \mid c) = p(\cdot \mid c + 1)$ with disjoint class supports), every slice has $\mathrm{JS} = \log 2$, giving $\max_D V(D) = 0$ (the worst possible value!).
+- **Rare-class pitfall:** Because slice $c$ is weighted by its prior frequency $p(c)$, a rare condition with probability $p(c) = \epsilon = 10^{-3}$ contributes at most $2\epsilon\log 2 \approx 0.0014$ nats to the total objective—so imbalanced datasets require class-balanced minibatch sampling.
 :::
 
-::: {.slide title="Check: What Is the Conditional Value of the Label Shift?"}
-[Check]{.kicker}
+::: {.slide title="Three Architectural Mechanisms for Conditioning"}
+[Generator & Critic Conditioning]{.kicker}
 
-$q(\cdot \mid c) = p(\cdot \mid c{+}1)$. Suppose the ten classes had
-disjoint supports. Unconditional value? Conditional value?
+![](../img/mdl-gan-conditioning.svg){.nostretch width=100%}
 
-. . .
-
-- Unconditional: the image distributions match, value $-2\log 2$, the
-  minimum.
-- Conditional: every slice has $\mathrm{JS} = \log 2$, so
-  $2\log 2 - 2\log 2 = 0$: the critic wins outright.
-- The perfect image generator that ignores requests is nearly the worst
-  conditional generator.
+1. **Concatenation (Mirza & Osindero, 2014):** Embed $c \mapsto e_c$ and concatenate with the latent vector $z$ or broadcast across spatial feature maps (e.g., $4 \times 4 \times d_e$).
+2. **Feature modulation (Conditional BatchNorm / AdaIN / FiLM):** Apply a condition-dependent channelwise scale and shift $a(c) \odot h + b(c)$ after convolutions across the generator.
+3. **Projection discriminator head (Miyato & Koyama, 2018):** Compute the inner product $e_c^\top \phi(x) + \psi_0(x)$ between a class embedding $e_c$ and the critic's pooled feature vector $\phi(x)$.
 :::
 
-::: {.slide title="A Condition Enters Once, at Every Block, or Only Through the Critic"}
-[Conditioning mechanisms]{.kicker}
+::: {.slide title="Channelwise Feature Modulation Layer"}
+[Identity Init & Sparse Gradients]{.kicker}
 
-![](../img/mdl-gan-conditioning.svg)
+`Modulate` stores per-class scale $a(c)$ and shift $b(c)$ embedding tables initialized to the identity transform $a(c) = \mathbf{1}, b(c) = \mathbf{0}$. Because an embedding lookup backpropagates gradients only to the rows read in the minibatch, a step on class $3$ updates only row $3$:
 
-Concatenation (once, at the input) · modulation $a(c) \odot h + b(c)$
-(after a convolution in every generator block) · projection head (critic).
+::: {.cols}
+::: {.col}
+@conditional-three-ways-in-1
 :::
 
-::: {.slide title="Modulation Starts as the Identity and Trains One Class at a Time"}
-[Conditioning mechanisms]{.kicker}
-
-$$\mathrm{Modulate}(h, c) = a(c) \odot h + b(c)$$
-
-$a$, $b$: embedding tables, one row per class, one entry per channel,
-started at $a = 1$, $b = 0$.
-
+::: {.col}
 @!conditional-three-ways-in-2
-
-- One step on a batch of class 3 (cat) moves only row 3.
-- Each class owns its row, so a rare class trains its row rarely.
-- Captions, and diffusion noise levels, enter by the same scale and shift.
+:::
+:::
 :::
 
-::: {.slide title="Bayes' Rule Splits the Optimal Critic in Two"}
-[The projection head]{.kicker}
+::: {.slide title="Deriving the Projection Head via Bayes' Rule"}
+[Miyato & Koyama Decomposition]{.kicker}
 
-$$\log \frac{p(x \mid c)}{q(x \mid c)}
-= \underbrace{\log \frac{p(c \mid x)}{q(c \mid x)}}_{\textrm{label term}}
-+ \underbrace{\log \frac{p(x)}{q(x)}}_{\textrm{realness term}}$$
+Applying Bayes' rule $p(x \mid c) = \frac{p(c \mid x)p(x)}{p(c)}$ to the numerator and denominator of $D^\star(x, c) = \log \frac{p(x \mid c)}{q(x \mid c)}$ decomposes the optimal conditional critic into two additive terms:
 
-- Wrong labels on good images: the label term is off.
-- Poor images of the right class: the realness term is off.
+$$\log \frac{p(x \mid c)}{q(x \mid c)} = \underbrace{\log \frac{p(c \mid x)}{q(c \mid x)}}_{\textrm{class alignment}} + \underbrace{\log \frac{p(x)}{q(x)}}_{\textrm{unconditional realism}}$$
+
+- **Softmax posteriors over shared features $\phi(x)$:** Modeling $p(c \mid x) \propto \exp(u_c^\top \phi(x))$ and $q(c \mid x) \propto \exp(w_c^\top \phi(x))$ makes their log ratio linear in $\phi(x)$ up to a $c$-independent log-partition difference, which we absorb together with $\log(p(x)/q(x))$ into the scalar head $\psi_0(x)$:
+  $$D(x, c) = e_c^\top \phi(x) + \psi_0(x), \qquad e_c = u_c - w_c$$
 :::
 
-::: {.slide title="Softmax Posteriors on Shared Features Give an Inner Product"}
-[The projection head]{.kicker}
+::: {.slide title="Projection Discriminator vs. Auxiliary Classifier"}
+[Why Not Force Low Class Entropy?]{.kicker}
 
-$p(c \mid x) \propto e^{u_c^\top \phi(x)}$ and
-$q(c \mid x) \propto e^{w_c^\top \phi(x)}$; the normalizers do not depend
-on $c$:
+Why use the projection head $e_c^\top \phi(x) + \psi_0(x)$ instead of training an **Auxiliary Classifier GAN (AC-GAN; Odena et al., 2017)** that adds cross-entropy $-\mathbb{E}_{c, x' \sim q(\cdot \mid c)}[\log C(c \mid x')]$ to the generator loss?
 
-$$D(x, c) = e_c^\top \phi(x) + \psi_0(x), \qquad e_c = u_c - w_c$$
-
-- One embedding per class, one inner product, one unconditional head.
-- The shared feature map $\phi$ is a modeling assumption.
-- A caption embedding in place of $e_c$: the text-conditioned critic of
-  StyleGAN-T.
+- **Entropy-reduction bias of AC-GAN:** The auxiliary classifier loss on generated samples decomposes into:
+  $$-\mathbb{E}_{c,\; x' \sim q(\cdot \mid c)}\big[\log C(c \mid x')\big] = \mathbb{E}_{x' \sim q}\Big[H\big(q(\cdot \mid x')\big) + D_{\textrm{KL}}\big(q(\cdot \mid x') \,\|\, C(\cdot \mid x')\big)\Big]$$
+  Even when $C(c \mid x) = p(c \mid x)$, minimizing $H(q(\cdot \mid x'))$ penalizes the generator for placing samples in regions where true classes overlap ($H(p(\cdot \mid x)) > 0$), artificially shrinking within-class diversity toward exaggerated canonical prototypes!
+- **Unbiased projection critic:** The projection head estimates the log ratio $\log \frac{p(c \mid x)}{q(c \mid x)}$, which vanishes at $q(\cdot \mid c) = p(\cdot \mid c)$ without forcing $H(q(\cdot \mid x))$ to zero.
 :::
 
-::: {.slide title="The Projection Head Is Three Lines of the Forward Pass" only="pytorch"}
-[The projection head]{.kicker}
+::: {.slide title="Implementing CondGenerator and ProjectionCritic"}
+[32×32 CIFAR-10 Backbone]{.kicker}
 
-```{.python #conditional-exercises}
-phi = self.phi(x).sum(dim=(2, 3))         # phi(x): 4x4 map summed
-label = (self.embed(y) * phi).sum(dim=1)  # e_c . phi(x), c = y
-return label + self.head(phi).squeeze(-1) # + psi_0(x)
-```
-
-- The class table starts at zero: the critic starts unconditional.
-- $\phi(x)$ has 512 dimensions, far more than the ten classes need.
+::: {.cols}
+::: {.col}
+@conditional-a-conditional-backbone-at-32-by-32-1
 :::
 
-::: {.slide title="The Projection Head Is Three Lines of the Forward Pass" only="jax"}
-[The projection head]{.kicker}
-
-```{.python #conditional-exercises-1}
-phi = self.phi(x).sum(axis=(1, 2))         # phi(x): 4x4 map summed
-label = (self.embed(y) * phi).sum(axis=1)  # e_c . phi(x), c = y
-return label + self.head(phi).squeeze(-1)  # + psi_0(x)
-```
-
-- The class table starts at zero: the critic starts unconditional.
-- $\phi(x)$ has 512 dimensions, far more than the ten classes need.
+::: {.col}
+@conditional-a-conditional-backbone-at-32-by-32-2
+:::
+:::
 :::
 
-::: {.slide title="Pair a Real Bird with a Generated Bird"}
-[Same-class pairs]{.kicker}
+::: {.slide title="Same-Class Relativistic Pairing on CIFAR-10"}
+[Training Protocol & Shift Invariance]{.kicker}
 
-Pairing loss within class $c$:
-$\log \sigma\big(D(x, c) - D(x', c)\big)$, with
-$x \sim p(\cdot \mid c)$, $x' \sim q(\cdot \mid c)$.
+We train `CondGenerator` and `ProjectionCritic` on $50{,}000$ CIFAR-10 images ($32 \times 32$) for $15{,}000$ steps via `train_r3gan` (batch size $128$, $\gamma = 0.5$), pairing each real image with a generated image of the **same class $c$**:
 
-- Fixed point: every class matched, as in the game on pairs.
-- **One free constant per class:** $D(x, c) + \zeta_c$ has the same loss.
-- So monitor the held-out pair accuracy
-  $\hat P(D(x, c) > D(x', c))$, in which $\zeta_c$ cancels.
+::: {.cols .vc}
+::: {.col}
+@!conditional-training-with-the-chapter-s-loss-3
+
+- **Same-class pairing loss:** $-\mathbb{E}_{c}[\log \sigma(D(x, c) - D(x', c))]$ stabilizes near $0.52$ (below $\log 2 \approx 0.69$), with held-out same-class ranking accuracy settling around $0.80$.
+- **Per-class shift invariance:** Because comparisons occur only within each class $c$, shifting $D(x, c) \mapsto D(x, c) + \zeta_c$ by an arbitrary class-dependent constant $\zeta_c$ leaves the pairing loss unchanged!
 :::
 
-::: {.slide title="Check: Does the Critic Find Cats More Real Than Trucks?"}
-[Check]{.kicker}
-
-After training, the critic's mean score on real cats is far above its mean
-score on real trucks. Does it judge cats more realistic?
-
-. . .
-
-- No. The pairing loss is unchanged by $D(x, c) + \zeta_c$, one free
-  constant per class, so scores of different classes are not comparable.
-- Only differences within a class mean anything: the pair accuracy
-  $\hat P(D(x, c) > D(x', c))$, in which $\zeta_c$ cancels.
-:::
-
-::: {.slide title="The Recipe Is the Chapter's, with Labels Shared Across Each Pair"}
-[Class-conditional CIFAR-10]{.kicker}
-
-- Backbone: the image backbone at $32 \times 32$; the generator
-  concatenates a class embedding at $4 \times 4$, the smallest change.
-- Loss: pairing loss for both players, $R_1 + R_2$ at $\gamma = 0.5$.
-- The penalty smooths the critic below distances of $2\sqrt\gamma$; a
-  quarter of the pixels halves image distances: $10 \to 2.5$. The last
-  factor of five was set at this budget.
-- Adam $\beta_1 = 0$, batch 128, flips, EMA half-life 500 steps;
-  15,000 steps; the whole notebook 20 to 40 minutes on one GPU.
-:::
-
-::: {.slide title="The Critic Still Orders About 80% of Same-Class Pairs"}
-[Class-conditional CIFAR-10]{.kicker}
-
+::: {.col .fig}
 @!conditional-training-with-the-chapter-s-loss-4
-
-- Pair accuracy: near 1 at the first check, 83 to 92% over the first
-  2,000 steps, about 80% over the last 5,000, flat for the last 10,000.
-- The sprite critics, without labels, order more than 90% at most checks:
-  a winning critic is normal here.
+:::
+:::
 :::
 
-::: {.slide title="Each Panel Is a Request; Animals Lean on Palette"}
-[Class-conditional CIFAR-10]{.kicker}
+::: {.slide title="Class-Conditioned CIFAR-10 Samples"}
+[Visualizing 10 Requested Classes]{.kicker}
+
+Generating $9$ random latent draws for each of the $10$ requested CIFAR-10 classes from the EMA generator `ema_G`:
 
 @!conditional-training-with-the-chapter-s-loss-5
-
-- Pose, color and background vary within every panel.
-- Deer, frogs, cats and dogs are told apart by palette and background
-  as much as by shape: a shortcut a classifier may accept.
 :::
 
-::: {.slide title="Check: Which Measurement Catches Which Failure?"}
-[Check]{.kicker}
+::: {.slide title="Three Orthogonal Failure Axes in Evaluation"}
+[Evaluation Taxonomy]{.kicker}
 
-A generator returns (a) the wrong class, (b) poor images of the right
-class, (c) only a few typical images per class. Which of alignment,
-FD/MMD$^2$ (labels ignored), per-class precision, per-class recall
-flags each?
+A conditional generator can fail along three distinct axes, and no single scalar metric captures all three:
 
-. . .
+| Failure Mode | Class Alignment (Referee Acc.) | Marginal FD & $\mathrm{MMD}^2$ (Labels Ignored) | Per-Class $K$-NN Precision | Per-Class $K$-NN Recall |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Wrong class ($q(\cdot \mid c) = p(\cdot \mid c')$)** | **Detects** (drops to chance) | **Blind** (marginals match) | **Detects** | **Detects** |
+| **2. Poor image fidelity (artifacts)** | Partial | **Detects** | **Detects** | Partial |
+| **3. Low intra-class diversity (prototypes)** | **Blind** (often *rewards*!) | **Detects** (covariance shrinks) | **Blind** (often *rewards*!) | **Detects** (collapses) |
 
-| | alignment | FD, MMD$^2$ | precision | recall |
-|---|---|---|---|---|
-| (a) | yes | no | yes | yes |
-| (b) | partly | yes | yes | partly |
-| (c) | no, may reward | yes | no, may reward | yes |
+::: {.d2l-note}
+We therefore combine an independent **referee classifier** (for condition alignment) with marginal feature distances (FD, $\mathrm{MMD}^2$) and **per-class** $3$-NN precision and recall.
+:::
 :::
 
-::: {.slide title="An Augmented CNN Referee Reaches 78% on CIFAR-10"}
-[Measuring a conditional generator]{.kicker}
+::: {.slide title="Measuring Class Alignment with a Referee CNN"}
+[Axis 1: Condition Alignment]{.kicker}
 
+We train our 3-block CIFAR-10 classifier `FeatureCNN` (with horizontal flips and 4-pixel shifts) for $15$ epochs as an independent referee ($78\%$ test accuracy) and evaluate its accuracy on $500$ generated images per class:
+
+::: {.cols .vc}
+::: {.col}
 @!conditional-measuring-condition-alignment-1
 
-- Alignment: the fraction of generated images the referee labels as
-  requested.
-- Flips, 4-pixel shifts and a rising-then-annealed rate: without them,
-  in trials not repeated here, accuracy on one class moved by tens of
-  points between seeds.
-- Reference: the referee's accuracy on real images of the same class.
-
-::: {.d2l-note .warn}
-The referee learned from the same images as the generator: a palette
-shortcut can fool both.
-:::
+- **Close match to real photographs:** Mean class alignment across the $10$ classes is **$0.72\text{--}0.74$**, only $4\text{--}6$ percentage points below the referee's accuracy on real CIFAR-10 test images ($0.78$).
+- Both real and generated images find *cat* ($0.58\text{--}0.60$) hardest and *automobile/ship/truck* ($\ge 0.80$) easiest.
 :::
 
-::: {.slide title="Generated Images Are Recognized Almost as Often as Photographs"}
-[Measuring a conditional generator]{.kicker}
-
+::: {.col}
 @!conditional-measuring-condition-alignment-2
-
-- Mean alignment 0.72 to 0.74 against 0.78 on real images.
-- Cat is the hardest class in both columns.
-- One training run cannot rank the classes.
+:::
+:::
 :::
 
-::: {.slide title="The Generated Set Sits Ten to Twelve Times Farther Out Than a Real Floor"}
-[Measuring a conditional generator]{.kicker}
+::: {.slide title="Marginal Feature Distances vs. Real Test Floor"}
+[Axis 2: Marginal Distribution Match]{.kicker}
+
+Splitting the $10{,}000$ CIFAR-10 test images into a $5{,}000$-image reference set (`f_real`, $500$ per class) and a $5{,}000$-image real floor (`f_real2`, $500$ per class) benchmarks our $5{,}000$ generated images in the referee's 128D feature space:
 
 @!conditional-measuring-condition-alignment-4
 
-- Floor: test images 500 to 999 of each class against images 0 to 499.
-- A second generated draw moves FD by less than 0.1.
-- FD and MMD$^2$ never see a label.
+- The generated set scores $\mathrm{FD} \approx 1.6\text{--}2.0$ ($10\text{--}12\times$ the finite-sample real floor of $0.16$) and $\mathrm{MMD}^2 \approx 0.11$, with a second latent draw shifting FD by $< 0.1$. Less than $1\%$ of raw generator outputs fall outside $[-1, 1]$ before clamping.
 :::
 
-::: {.slide title="Generated Images Stay Inside the Data but Cover Less of It"}
-[Measuring a conditional generator]{.kicker}
+::: {.slide title="Per-Class Precision and Recall on CIFAR-10"}
+[Axis 3: Within-Class Coverage]{.kicker}
+
+Computing 3-NN precision and recall **separately within each class $c$** against the $500$ reference test images of class $c$ separates sample realism from within-class diversity:
 
 @!conditional-fidelity-and-within-class-diversity-2
 
-**Precision:** generated images inside a real 3-NN ball of their class.
-**Recall:** real images inside a generated ball of their class.
-
-- Precision 0.90 against 0.85: generated images lie among the real ones.
-- Recall about 0.58 against 0.83: two in five real images have no
-  generated neighbor. The generator covers part of each class.
+- **Higher precision than the real floor ($0.90$ vs. $0.85$):** Generated features lie well inside the high-density core of each real class cluster.
+- **Lower recall ($0.58$ vs. $0.83$) and $20\%$ lower intra-class variance:** Roughly $42\%$ of real test images have no generated neighbor within their 3-NN ball—showing that the generator concentrates near canonical class modes rather than covering the full diversity of each class.
 :::
 
-::: {.slide title="Alignment Rewards Prototypes; Recall Catches Them"}
-[Measuring a conditional generator]{.kicker}
+::: {.slide title="The Prototype Trap: Alignment Rewards Collapse"}
+[Centroid-Prototype Baseline]{.kicker}
+
+To prove that high classifier alignment and high precision can mask a collapse in diversity, we construct a **prototype baseline** by selecting the $100$ real floor images per class nearest their class feature centroid:
 
 @!conditional-a-prototype-baseline
 
-- Prototypes: the 100 real images per class nearest the class centroid.
-- Alignment about 0.9 and precision 0.97, above random real images.
-- Recall less than half that of random real images.
-- FD about 3: real photographs ranked below the generator (1.6 to 2.0).
-- Compare recall and FD only at equal set sizes.
+::: {.d2l-note .warn}
+**The prototype paradox:** Selecting only the $100$ most canonical real images per class boosts **class alignment** to $0.90$ (beating random real images at $0.78$!) and **precision** to $0.98$, while collapsing **recall** from $0.83 \to 0.40$ and worsening **FD** sevenfold ($0.43 \to 3.03$). BigGAN's *truncation trick* deliberately exploits this trade-off by truncating $z \in [-\tau, \tau]$.
+:::
 :::
 
-::: {.slide title="Check: Where Does Truncation Move the Measurements?"}
-[Check]{.kicker}
+::: {.slide title="Concept Check: Conditional Critics and Metrics"}
+[Check Your Understanding]{.kicker}
 
-BigGAN's truncation trick draws latent codes from a truncated Gaussian, so
-samples move toward typical images. Which way should alignment, precision,
-recall and FD move?
+Test your understanding of conditional GAN architectures and evaluation:
 
-. . .
+1. **Comparing critic scores across classes:** After same-class RpGAN training on CIFAR-10, your projection critic has mean score $+4.2$ on real cats and $-1.5$ on real trucks. Does this mean the critic finds cats more realistic than trucks?
+2. **Effect of latent truncation ($\tau \downarrow$):** BigGAN's truncation trick samples each latent coordinate from a standard normal truncated to $[-\tau, \tau]$. As $\tau$ decreases from $\infty$ toward $0.5$, in which direction will class alignment, per-class precision, per-class recall, and FD move?
+3. **Using the critic as a post-hoc classifier:** Why must a shift-corrected optimal conditional critic $D^\star(x, c) = \log(p(x \mid c)/q(x \mid c))$ drop to random-guessing classification accuracy ($1/10$) as the generator converges ($q(\cdot \mid c) \to p(\cdot \mid c)$)?
 
-- Expect the prototype row's pattern: alignment and precision up, recall
-  down, FD up.
-- Exercise: sweep $\tau$ and place each truncated generator against the
-  prototypes.
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. **No.** Because same-class pairing only ever evaluates differences $D(x, c) - D(x', c)$ within the same class $c$, adding an arbitrary per-class offset $\zeta_c$ leaves the objective unchanged. Scores across different classes are not on a shared scale.
+2. Truncating $z$ pulls generated samples toward the high-density centroid of each class, mimicking the **nearest-centroid prototype baseline**: **class alignment and precision increase**, while **per-class recall drops** and **FD worsens (increases)**.
+3. By Bayes' rule, $D^\star(x, c) - D^\star(x, c')$ $= \log \frac{p(c \mid x)}{p(c' \mid x)} - \log \frac{q(c \mid x)}{q(c' \mid x)}$. As $q(\cdot \mid c) \to p(\cdot \mid c)$, the generated posterior matches the true posterior and $D^\star(x, c) \to 0$ for every class $c$!
+:::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Summary: Conditional GANs and Evaluation"}
+[Key Takeaways]{.kicker}
 
-- Conditioning plays the game per class: $D^\star = \log(p(x \mid c)/q(x \mid c))$,
-  value $\mathbb{E}_c[2\,\mathrm{JS}] - 2\log 2$; a label shift is near the
-  worst value, a rare class costs little.
-- Bayes' rule gives the projection head $e_c^\top \phi(x) + \psi_0(x)$;
-  modulation $a(c) \odot h + b(c)$ conditions every generator block.
-- CIFAR-10, 15,000 steps: alignment 0.72 to 0.74 against 0.78; precision
-  0.90 against 0.85; recall about 0.58 against 0.83.
-- Alignment and precision reward prototypes; recall catches them; FD is a
-  distance between feature clouds, not a score of image quality.
-
-**Next:** what squared error does when the condition is a whole image.
+| Component / Metric | Mathematical Form | Key Invariant or Blind Spot | Practical Role in Conditional GANs |
+| :--- | :--- | :--- | :--- |
+| **Conditional Log-Loss Game** | $\max_D V = \mathbb{E}_c[2\,\mathrm{JS}(p(\cdot \mid c), q(\cdot \mid c))] - 2\log 2$ | Optimal critic $D^\star(x, c) = \log \frac{p(x \mid c)}{q(x \mid c)}$ | Matches every conditional slice $q(\cdot \mid c) = p(\cdot \mid c)$ |
+| **Feature Modulation Layer** | $\mathrm{Modulate}(h, c) = a(c) \odot h + b(c)$ | Init $a = \mathbf{1}, b = \mathbf{0}$ (identity); sparse row grads | Injects class/caption/timestep at every generator block |
+| **Projection Critic Head** | $D(x, c) = e_c^\top \phi(x) + \psi_0(x)$, $\;e_c = u_c - w_c$ | Derived from $\log\frac{p(c \mid x)}{q(c \mid x)} + \log\frac{p(x)}{q(x)}$ | Unbiased conditional critic (avoids AC-GAN entropy bias) |
+| **Same-Class RpGAN Pairing** | $-\mathbb{E}_c[\log\sigma(D(x, c) - D(x', c))]$ | Invariant to per-class shifts $D(x, c) + \zeta_c$ | Monitor held-out within-class pair accuracy $\hat{P}(D(x,c) > D(x',c))$ |
+| **Referee Alignment & Precision** | $\hat{P}(\text{referee}(G(z, c)) = c)$ & 3-NN real-ball coverage | Blind to intra-class collapse (rewards prototypes!) | Measures class obedience and per-sample realism |
+| **Per-Class 3-NN Recall & FD** | Fraction of real class-$c$ test set in generated balls | Sensitive to sample set size $n$ | Detects intra-class mode dropping and prototype collapse |
 :::

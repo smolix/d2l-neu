@@ -1138,366 +1138,273 @@ With $1.6\text{M}$ parameters and $36{,}538$ training sprites, the critic sees e
 ::: {.cover}
 [Dive into Deep Learning · §16.5]{.kicker}
 
-Adversarial Image Generation<br>
-**transposed convolutions · DCGAN · a backbone without normalization · three losses, one change at a time · FID, KID, precision and recall**
+Deep Convolutional GANs and Architectural Stabilization<br>**transposed convolutions · DCGAN conventions · EMA & BatchNorm recalibration · normalization-free R3GAN backbone · FID, KID & precision/recall**
 :::
 :::
 
-::: {.slide title="An MLP Drew Grainy Garments; an Image Has 12,288 Values"}
-[The problem]{.kicker}
+::: {.slide title="Scaling from Flat Vectors to 64×64 RGB Images"}
+[Motivation]{.kicker}
 
-- An MLP GAN on Fashion-MNIST: recognizable tops and shoes, but grainy.
-  It does not know which pixels are neighbors.
-- A $64 \times 64$ RGB image has $12{,}288$ values. The generator must
-  produce all of them from 100 random numbers.
-- A grid of samples shows a collapse; between two good generators the eye
-  gives an opinion, not a number.
-
-::: {.d2l-note}
-**Which network turns noise into an image, and which number says how
-close its samples are to the data?**
-:::
-:::
-
-::: {.slide title="By the End of This Deck You Can"}
-[Goals]{.kicker}
-
-- compute the output size of a transposed convolution;
-- build the 2015 DCGAN and a backbone without normalization;
-- read a loss comparison that changes one ingredient at a time;
-- read a critic's steepness, ranking accuracy, and rank weight;
-- derive FID and KID, and read them with precision and recall against a
-  real-versus-real floor.
-
-**Running example:** 40,597 Pokemon sprites at $64 \times 64$, 36,538 for
-training and 4,059 held out. **Idea:** with a penalized loss a plain
-network trains without normalization; a score means something only
-against a floor.
-:::
-
-::: {.slide title="This Deck Moves the Chapter's Loss from Scatter Plots to Images"}
-[Where this fits]{.kicker}
+In §16.1, a fully connected MLP generator produced grainy $28 \times 28$ Fashion-MNIST silhouettes because dense layers ignore 2D spatial locality. Scaling to $64 \times 64$ RGB images raises two fundamental challenges:
 
 ::: {.cols .vc}
 ::: {.col}
-| section | asks |
-|---|---|
-| Generative Adversarial Networks | what a classifier of samples computes |
-| Adversarial Objectives and Divergences | which loss gives which distance |
-| Relativistic Objectives | what changes when the critic ranks pairs |
-| Gradient Penalties and Convergence | why training circles, and what stops it |
-| **Adversarial Image Generation** | **which network, and how to score images** |
-| Conditional Generation | how to ask for a class |
-| Adversarial Losses Beyond GANs | where a learned comparison remains |
+- **High-dimensional spatial synthesis:** A $64 \times 64$ RGB image contains $3 \times 64 \times 64 = 12{,}288$ correlated pixel values generated from a $100$-dimensional latent draw $z \sim \mathcal{N}(0, I_{100})$.
+- **Benchmark dataset ($40{,}597$ Pokémon sprites):** Resized to $64 \times 64$ and scaled to $[-1, 1]$, split into $36{,}538$ training sprites and $4{,}059$ held-out test sprites for quantitative evaluation.
+- **Two guiding questions:** (1) Do zero-centered gradient penalties ($R_1 + R_2$) replace BatchNorm and architectural stabilizers? (2) How do we score image fidelity and mode coverage without a likelihood?
 :::
 
-::: {.col .narrow}
-- **Uses:** the classic and pairing losses, the two zero-centered
-  penalties $R_1$, $R_2$.
-- **Skips:** architecture zoos, large-scale training, conditioning.
+::: {.col .fig}
+@!dcgan-the-pokemon-sprites-2
 :::
 :::
 :::
 
-::: {.slide title="A Transposed Convolution Stamps the Kernel and Adds the Overlaps"}
-Each input pixel stamps a scaled copy of the kernel; stamps start one
-stride apart; overlaps add.
+::: {.slide title="Spatial Upsampling via Transposed Convolutions"}
+[Resolution Doubling]{.kicker}
 
-Input $(1, 2)$, kernel $(1, 1, 1, 1)$, stride 2: stamps $(1, 1, 1, 1)$ and
-$(2, 2, 2, 2)$, two apart, give $(1, 1, 3, 3, 2, 2)$.
+To expand a $1 \times 1 \times 100$ latent tensor into a $64 \times 64 \times 3$ image, DCGAN chains **transposed convolutions** (fractional-strided convolutions):
 
-$$\text{side} = \text{stride}\cdot(n - 1) + \text{kernel} - 2\cdot\text{pad}$$
+- **Stamping mechanism:** Each input pixel stamps a weighted $k \times k$ kernel onto the output grid at stride $s$, summing overlapping stamps. An $n \times n$ input with kernel $k$, stride $s$, and padding $p$ produces output spatial width:
+  $$n_{\textrm{out}} = s(n - 1) + k - 2p$$
+- **Stage 1 ($1 \times 1 \to 4 \times 4$):** $k = 4, s = 1, p = 0$ maps $n = 1 \to 1(0) + 4 - 0 = 4$.
+- **Stages 2–5 ($n \to 2n$):** $k = 4, s = 2, p = 1$ doubles the spatial side ($2(n - 1) + 4 - 2 = 2n$) across $4 \to 8 \to 16 \to 32 \to 64$, while strided convolutions ($k = 4, s = 2, p = 1$) in the critic halve resolution from $64 \to 1$.
 
-Kernel 4, stride 2, padding 1: side $2n$.
-
-::: {.d2l-note}
-Five such layers grow $1 \times 1$ into $64 \times 64$.
+::: {.d2l-note .warn}
+**Checkerboard overlap pitfall (Odena et al., 2016):** When kernel size $k$ is not divisible by stride $s$ (e.g., $k = 3, s = 2$), adjacent output positions receive an alternating number of overlapping stamps ($2, 1, 2, 1, \ldots$), imprinting a high-frequency checkerboard pattern.
 :::
 :::
 
-::: {.slide title="DCGAN Builds Images with Transposed Convolutions and Batch Norm"}
-![](../img/mdl-gan-dcgan.svg){width=85%}
+::: {.slide title="The 2015 DCGAN Architecture and Stabilizers"}
+[Architectural Conventions]{.kicker}
 
-Batch norm everywhere except the critic's input and the generator's
-output; ReLU and tanh in $G$, leaky ReLU in the critic (DCGAN's
-discriminator); weights from $\mathcal{N}(0, 0.02^2)$; Adam $\beta_1 = 0.5$;
-batch 256.
+![](../img/mdl-gan-dcgan.svg){.nostretch width=100%}
 
-::: {.d2l-note}
-One simple device per problem: batch norm for scale, tanh for range,
-leaky ReLU for gradient flow, $\beta_1 = 0.5$ for a moving target.
-:::
+Radford, Metz, and Chintala (2015) stabilized the unpenalized non-saturating logistic loss via five architectural conventions:
+
+1. **All-convolutional hierarchy:** Replace all pooling and fully connected layers with transposed convolutions in $G$ ($512 \to 256 \to 128 \to 64 \to 3$) and strided convolutions in $D$.
+2. **Batch normalization:** Normalize activations after every convolution *except* the generator output layer and the discriminator input block.
+3. **Activations, initialization & Adam:** ReLU + output $\tanh$ in $G$; leaky ReLU ($\text{slope} = 0.2$) throughout $D$; weights drawn from $\mathcal{N}(0, 0.02^2)$; Adam with reduced momentum $\beta_1 = 0.5$.
 :::
 
-::: {.slide title="DCGAN Trains the Classic Loss to Diverse Sprites"}
+::: {.slide title="Implementing DCGAN Generator and Critic Blocks"}
+[Code Construction]{.kicker}
+
+::: {.cols}
+::: {.col}
+@dcgan-generator-1
+:::
+
+::: {.col}
+@dcgan-generator-3
+:::
+:::
+:::
+
+::: {.slide title="EMA Weight Averaging and BatchNorm Recalibration"}
+[Damping Rotational Orbits]{.kicker}
+
+Because minimax gradient iterates orbit around equilibrium (§16.4), their center of mass sits closer to the solution than the last iterate. We therefore sample from an **exponential moving average (EMA)** of the generator parameters:
+
 ::: {.cols .vc}
+::: {.col}
+- **Half-life parameterization ($n_{1/2}$ steps, $\beta = 2^{-1/n_{1/2}}$):**
+  $$\bar{\theta} \leftarrow \beta\,\bar{\theta} + (1 - \beta)\,\theta$$
+  We set the half-life to $32{,}000$ images ($n_{1/2} = 125$ steps at batch size $256$; $500$ steps at batch size $64$).
+- **Pitfall — Stale BatchNorm statistics:** Copying running mean/variance buffers from the live network mismatches the averaged weights $\bar{\theta}$! After training, we run $100$ fresh forward batches in `train()` mode ($0.9^{100} \approx 3 \times 10^{-5}$) to recalibrate BatchNorm buffers for $\bar{\theta}$.
+:::
+
+::: {.col .fig}
+@dcgan-training-with-the-classic-loss-4
+:::
+:::
+:::
+
+::: {.slide title="DCGAN Training Results on Pokémon Sprites"}
+[20-Epoch Baseline]{.kicker}
+
+Training DCGAN for $20$ epochs ($2{,}840$ steps at batch size $256$, $\text{lr} = 2 \times 10^{-4}, \beta_1 = 0.5$) with the classic non-saturating logistic loss produces recognizable, diverse sprites:
+
+::: {.cols .vc}
+::: {.col}
+@!dcgan-training-with-the-classic-loss-2
+
+- **Visual inspection:** Generated sprites exhibit diverse silhouettes and color palettes on white backgrounds, though with high-frequency blotchy textures.
+- **Sub-equilibrium critic loss:** Even though `loss_D` ($\sim 0.45$) remains well below the random-guessing level $2\log 2 \approx 1.39$, batch normalization and $\mathcal{N}(0, 0.02^2)$ initialization prevent mode collapse.
+:::
+
 ::: {.col .fig}
 @!dcgan-training-with-the-classic-loss-3
 :::
-
-::: {.col}
-- Diverse but blotchy shapes; critic loss far below its equilibrium
-  $2 \log 2 \approx 1.39$, yet no collapse.
-- Sampled from a moving average of the weights (half-life 32,000
-  images): the iterates circle the equilibrium, their average sits
-  closer. Batch-norm statistics re-estimated for the average.
 :::
 :::
 
-::: {.d2l-note}
-Why it trains is not isolated: our plain backbone differs in almost
-everything (normalization, initialization, resampling, activations and
-tanh, input, Adam's $\beta_1$ and $\beta_2$, batch, width, flips).
-:::
-:::
+::: {.slide title="Why Strip BatchNorm? The R3GAN Minimalist Backbone"}
+[From Heuristics to Penalized Objectives]{.kicker}
 
-::: {.slide title="Check: What Does a Size-3, Stride-2 Transposed Convolution Do to a Constant?"}
-[Check]{.kicker}
+![](../img/mdl-gan-backbone.svg){.nostretch width=100%}
 
-All-ones kernel of length 3, stride 2, constant input. How many stamps
-cover each output position away from the borders?
-
-::: {.fragment .fade-up}
-Alternately 2 and 1: the output alternates between two values, a
-checkerboard. With kernel size 4 every position is covered twice.
-R3GAN avoids the question: it upsamples bilinearly instead.
-:::
+- **Why remove BatchNorm for $R_1 + R_2$?** Batch normalization couples all samples in a minibatch, which invalidates the independent per-sample input gradients $\nabla_{x_i} D(x_i)$ penalized by $R_1$ and $R_2$!
+- **Minimalist normalization-free architecture (inspired by R3GAN, Huang et al., 2024):**
+  - **Bilinear resampling + $3 \times 3$ convolutions:** Replaces $4 \times 4$ transposed/strided convolutions to avoid checkerboard artifacts.
+  - **No normalization layers & no output $\tanh$:** Both $G$ ($2.8\text{M}$ params, starting from a learned $4 \times 4 \times 128$ constant + projected $z$) and $D$ ($1.6\text{M}$ params) use leaky ReLU ($\text{slope} = 0.2$) with He fan-in initialization $\mathrm{Var}(w) = \frac{2}{(1 + 0.2^2)\,n_{\mathrm{in}}}$.
 :::
 
-::: {.slide title="R3GAN Stripped StyleGAN2's Ten Devices and Kept a Penalized Loss"}
-**Asked:** with a convergent loss, are StyleGAN2's ten devices needed?
-**Found:** no; stripped, then rebuilt with pairing + $R_1$ + $R_2$ and
-modern blocks, it scored slightly better on faces. The stripped network:
+::: {.slide title="Implementing the Normalization-Free Generator"}
+[Code Architecture]{.kicker}
 
-- **needed to train:** the classic loss with $R_1$; Adam with
-  $\beta_1 = 0$ at a small learning rate; no normalization layers;
-- **needed for quality:** bilinear resampling; leaky ReLU and no tanh;
-- also a $4 \times 4$ constant input, output skips, a residual critic.
+`Generator` concatenates a learned $4 \times 4 \times 128$ constant tensor with a projected latent vector (plus optional conditioning channels for §16.6) and applies four stages of bilinear upsampling + $3 \times 3$ convolution + leaky ReLU:
 
-::: {.d2l-note}
-Our question is narrower: does a network with none of DCGAN's devices
-train at all once the loss is penalized?
+@dcgan-a-modern-minimal-backbone-1
 :::
 
-[Huang et al., 2024]{.small}
+::: {.slide title="Implementing the Normalization-Free Critic"}
+[Code Architecture]{.kicker}
+
+`Discriminator` mirrors the generator with four stages of $3 \times 3$ convolution, leaky ReLU, and antialiased bilinear downsampling down to a $4 \times 4$ feature map $\phi(x)$ followed by a linear head:
+
+@dcgan-a-modern-minimal-backbone-2
 :::
 
-::: {.slide title="Our Backbone Resamples Bilinearly and Has No Normalization"}
-![](../img/mdl-gan-backbone.svg)
+::: {.slide title="A Controlled Three-Arm Objective Ablation"}
+[Experimental Design]{.kicker}
 
-No normalization, bilinear resampling, leaky ReLU and no tanh, a
-constant input, Adam at $\beta_1 = 0$ but DCGAN's learning rate; no output
-skips or residual blocks; $G$ 2.8 M, critic 1.6 M parameters. No batch norm: it would couple
-the per-sample input gradients that the penalties measure. No layer
-rescales activations, so the weights keep the variance:
-$\textrm{Var}\, w = 2 / ((1 + 0.2^2)\, n_{\mathrm{in}})$.
+We train the normalization-free backbone three times from identical initial weights (Adam $\beta_1 = 0$, $\beta_2 = 0.99$, $\text{lr} = 2 \times 10^{-4}$, batch size $64$, horizontal flips, EMA half-life $500$ steps), changing one objective ingredient at a time:
+
+| Experimental Arm | Critic Loss $L(D)$ | Gradient Penalty $\frac{\gamma}{2}(R_1 + R_2)$ | Training Steps | Hypothesis Tested |
+| :--- | :--- | :--- | :--- | :--- |
+| **`NS`** | Classic logistic (`gan_loss_D`) | $\gamma = 0$ (none) | $6{,}000$ | Does the plain backbone train without BatchNorm or penalties? |
+| **`NS + R1 + R2`** | Classic logistic (`gan_loss_D`) | $\gamma = 10$ | $12{,}000$ | Do zero-centered penalties $R_1 + R_2$ replace BatchNorm? |
+| **`RpGAN + R1 + R2`** | Relativistic pairing (`rpgan_loss_D`) | $\gamma = 10$ | $12{,}000$ | Does pairwise ranking improve upon penalized classic log loss? |
+
+@!dcgan-loss-a-b-on-one-backbone-2
 :::
 
-::: {.slide title="One Backbone, Three Losses, One Change at a Time"}
-| arm | critic loss | penalty | steps |
-|:--|:--|:--|--:|
-| NS | classic logistic | none | 6,000 |
-| NS + $R_1$ + $R_2$ | classic logistic | $\gamma = 10$ | 12,000 |
-| RpGAN + $R_1$ + $R_2$ | pairing | $\gamma = 10$ | 12,000 |
+::: {.slide title="Critic Steepness, Pair Accuracy, and Rank Weights"}
+[Training Dynamics Traces]{.kicker}
 
-Same seed, optimizer (Adam, $\beta_1 = 0$), batch 64, flips, weight average;
-only the objective changes (critic loss and penalty, matching $G$ loss).
-Rows 1 and 2 isolate the penalty (and the budget); rows 2 and 3 isolate
-pairing.
+Logging $\mathbb{E}_x[\|\nabla_x D(x)\|^2]$, pairwise ranking accuracy $\hat{P}(D(x) > D(x'))$, and the relativistic rank weight $w_{\mathrm{Rp}} = \mathbb{E}[\sigma(D(x') - D(x))]$ every $250$ steps explains why the unpenalized run collapses:
 
-::: {.d2l-note}
-$\gamma$ is a squared length: the penalty smooths over $\approx 2\sqrt\gamma
-\approx 6$ units, while two sprites lie tens of units apart. Its job here:
-keep the critic flat at the samples.
-:::
-:::
-
-::: {.slide title="The Critic Step: Loss Plus $\gamma/2$ Times Both Squared Input Gradients" only="pytorch"}
-```{.python #dcgan-exercises}
-X, _ = sample_real(images, 64)                 # flipped reals
-fake = net_G(noise(64)).detach()
-r1, r2 = d2l.r1_r2_penalty(net_D, X, fake)     # per sample
-loss = loss_D(net_D, X, fake)                  # classic or pairing
-opt_D.zero_grad()
-(loss + gamma / 2 * (r1 + r2).mean()).backward()
-opt_D.step()                                   # critic
-X2, _ = sample_real(images, 64)
-opt_G.zero_grad()
-loss_G(net_D, X2, net_G(noise(64))).backward()
-opt_G.step()                                   # generator
-ema.update(net_G)                              # average for sampling
-```
-
-$R_1 = \|\nabla_x D(x)\|^2$ on real images, $R_2$ on generated ones.
-`d2l.critic_step` and `d2l.generator_step` take these two steps.
-:::
-
-::: {.slide title="The Critic Step: Loss Plus $\gamma/2$ Times Both Squared Input Gradients" only="jax"}
-```{.python #dcgan-exercises-1}
-(X, _), fake = sample_real(kx, images, 64), net_G(noise(kz, 64))
-def critic_objective(net_D):
-    r1, r2 = d2l.r1_r2_penalty(net_D, X, fake)    # per sample
-    loss = loss_D(net_D, X, fake)                 # classic or pairing
-    return loss + gamma / 2 * (r1 + r2).mean()
-opt_D.update(net_D, nnx.grad(critic_objective)(net_D))       # critic
-(X2, _), z2 = sample_real(kx2, images, 64), noise(kz2, 64)
-gen_objective = lambda net_G: loss_G(net_D, X2, net_G(z2))
-opt_G.update(net_G, nnx.grad(gen_objective)(net_G))          # generator
-ema.update(net_G)                                 # average for sampling
-```
-
-$R_1 = \|\nabla_x D(x)\|^2$ on real images, $R_2$ on generated ones.
-`d2l.critic_step` and `d2l.generator_step` take these two steps.
-:::
-
-::: {.slide title="Without a Penalty the Critic Is 100× Steeper; All Three Still Rank"}
 @!dcgan-loss-a-b-on-one-backbone-4
 
-- Steepness $\mathbb{E}\|\nabla_x D\|^2$: without $R_1$ it climbs to about
-  100× the penalized value within 2,000 steps.
-- Ranking accuracy: above 0.9 at most checks in all three arms.
-- Rank weight $w_{\mathrm{Rp}} = \mathbb{E}_x\,\sigma(D(x') - D(x))$:
-  low from the first check without the penalty, mostly below 0.15; 0.25
-  to 0.4 with it (margin about 0.7, since $\sigma(-0.7) \approx 0.33$).
+- **Critic steepness ($\mathbb{E}_x\|\nabla_x D\|^2$, left):** Without $R_1 + R_2$, critic gradient norm climbs $100\times$ higher ($1\text{--}8$ vs. $\sim 0.01$ for both penalized arms).
+- **Accuracy vs. rank weight (middle & right):** All three critics order $> 90\%$ of pairs correctly, so ranking accuracy alone does not warn of collapse! However, the unpenalized critic drives $w_{\mathrm{Rp}}$ below $0.15$, whereas penalized critics maintain a small logit margin ($w_{\mathrm{Rp}} \in [0.25, 0.40]$, median difference $\approx 0.7$).
 :::
 
-::: {.slide title="The Unpenalized Arm Collapses; Both Penalized Arms Stay Diverse"}
+::: {.slide title="Visual Comparison: Penalties Prevent Collapse"}
+[Generated Sprite Grids]{.kicker}
+
+Evaluating all four EMA generators on the same $64$ latent vectors `z_show`:
+
 @!dcgan-loss-a-b-on-one-backbone-3
 
-- No penalty: one or two grey textures after 6,000 steps.
-- Penalized: alike, diverse sprite-like shapes; none nameable after
-  0.77 M images.
-- To the eye closer to real sprites than DCGAN's blotchy figures (first
-  panel).
-
-::: {.d2l-note}
-Seen together: a steep critic, a rank weight near 0, a collapse. The
-traces show the first two but not the diversity, so they cannot say when
-the collapse came or what causes what.
-:::
+- Without BatchNorm or $R_1 + R_2$, the unpenalized `NS` arm collapses completely to a uniform gray texture, whereas both penalized arms (`NS + R1 + R2` and `RpGAN + R1 + R2`) produce crisp, diverse sprite silhouettes on clean white backgrounds.
 :::
 
-::: {.slide title="Check: Which Run Would You Stop, from the Traces Alone?"}
-[Check]{.kicker}
+::: {.slide title="Feature-Space Evaluation: FID and KID"}
+[Quantitative Quality Metrics]{.kicker}
 
-Three runs, all with ranking accuracy near 0.98. One has
-$\mathbb{E}\|\nabla_x D\|^2$ near 1 and rank weight near 0; two sit at
-0.01 and 0.3.
+To compare generators quantitatively, we embed real and generated images through a pretrained feature extractor $\phi(x) \in \mathbb{R}^d$ and compute closed-form distances between the feature distributions:
 
-::: {.fragment .fade-up}
-The first: a steep critic that ranks every pair by a wide margin. In our
-runs it is the arm that collapsed. Ranking accuracy alone would not have
-told you.
+::: {.cols .vc}
+::: {.col}
+- **Fréchet Inception Distance (FID; Heusel et al., 2017):** Fits Gaussians $\mathcal{N}(\mu_p, \Sigma_p)$ and $\mathcal{N}(\mu_q, \Sigma_q)$ to the real and generated features and computes their squared $W_2$ distance:
+  $$\mathrm{FID} = \|\mu_p - \mu_q\|^2 + \operatorname{tr}\!\Big(\Sigma_p + \Sigma_q - 2\big(\Sigma_p^{1/2}\Sigma_q\Sigma_p^{1/2}\big)^{1/2}\Big)$$
+  Captures first two moments; exhibits positive $O(1/n)$ finite-sample covariance bias.
+- **Kernel Inception Distance (KID; Bińkowski et al., 2018):** Unbiased $\widehat{\mathrm{MMD}}^2$ with cubic polynomial kernel $k(u, v) = (u^\top v / d + 1)^3$ (compares up to 3rd moments; unbiased at any sample size $n$).
+:::
+
+::: {.col .fig}
+@dcgan-measuring-sample-quality
+:::
 :::
 :::
 
-::: {.slide title="FID Is the Wasserstein-2 Distance between Two Gaussians"}
-Fit $\mathcal{N}(\mu_p, \Sigma_p)$ to real features and
-$\mathcal{N}(\mu_q, \Sigma_q)$ to generated ones:
+::: {.slide title="Fidelity vs. Coverage: k-NN Precision and Recall"}
+[k-NN Support Estimation]{.kicker}
 
-$$\mathrm{FID} = \|\mu_p - \mu_q\|^2 + \operatorname{tr}\big(\Sigma_p +
-\Sigma_q - 2(\Sigma_p^{1/2} \Sigma_q \Sigma_p^{1/2})^{1/2}\big)$$
+A single distance like FID or KID conflates **poor sample fidelity** (unrealistic artifacts) with **poor mode coverage** (mode dropping). Kynkäänniemi et al. (2019) separate them using $K$-nearest-neighbor balls ($K = 3$) in feature space:
 
-- 1-D, standard deviations $\tau_p, \tau_q$: $(\mu_p - \mu_q)^2 + (\tau_p - \tau_q)^2$.
-- $\mathcal{N}(0, 1)$ vs. $\mathcal{N}(0.5, 1.1^2)$: $0.25 + 0.01 = 0.26$.
-- Two moments only; biased upward at finite $n$.
+::: {.cols .vc}
+::: {.col}
+- Around each real feature $\phi(x_i)$, draw the Euclidean ball $B(\phi(x_i), r_i)$ reaching its $K$-th nearest real neighbor; define $B(\phi(x'_j), r'_j)$ analogously among generated features:
+  $$\mathrm{precision} = \frac{1}{n_q}\sum_{j=1}^{n_q}\mathbb{1}\!\left[\phi(x'_j) \in \bigcup_i B\big(\phi(x_i), r_i\big)\right]$$
+  $$\mathrm{recall} = \frac{1}{n_p}\sum_{i=1}^{n_p}\mathbb{1}\!\left[\phi(x_i) \in \bigcup_j B\big(\phi(x'_j), r'_j\big)\right]$$
+- When a generator collapses to one output, its radii $r'_j \to 0$, driving **$\mathrm{recall} \to 0$**.
 :::
 
-::: {.slide title="KID Is the Unbiased MMD with a Cubic Kernel"}
-$k(u, v) = (u^\top v / d + 1)^3$ on real features $\phi_i$ and generated
-features $\phi'_j$; drop the self-pairs:
-
-$$\widehat{\mathrm{MMD}}^2 = \tfrac{1}{n_p(n_p-1)}\textstyle\sum_{i \neq i'} k(\phi_i, \phi_{i'})
-+ \tfrac{1}{n_q(n_q-1)}\sum_{j \neq j'} k(\phi'_j, \phi'_{j'}) - \tfrac{2}{n_p n_q}\sum_{i, j} k(\phi_i, \phi'_j)$$
-
-- Within-set similarity minus across-set similarity.
-- Cubic kernel: compares moments up to the third.
-- Unbiased: real vs. real fluctuates around 0, may be negative.
+::: {.col .fig}
+@dcgan-precision-and-recall
+:::
+:::
 :::
 
-::: {.slide title="Precision Asks Whether Samples Land on the Data, Recall Whether They Cover It"}
-Around each feature vector, a ball reaching to its 3rd nearest neighbor
-in its own set.
+::: {.slide title="Scoring Runs Against a Real-vs.-Real Floor"}
+[Scoring 4,059 Sprites]{.kicker}
 
-- **Precision:** fraction of generated features inside some real ball
-  (fidelity).
-- **Recall:** fraction of real features inside some generated ball
-  (coverage).
-- Collapse: identical samples, balls shrink to points, recall $\approx 0$.
-- Two real samples score 0.95, not 1: a fresh point can fall between
-  the balls.
+Using 128D features from our 3-block CIFAR-10 classifier `FeatureCNN` ($64 \times 64$ sprites average-pooled to $32 \times 32$), we score $n = 4{,}059$ generated samples against the $4{,}059$ held-out sprites across two independent latent draws:
 
-[Kynkäänniemi et al., 2019]{.small}
-:::
-
-::: {.slide title="Against the Real Floor, the Collapsed Arm Scores Hundreds of Times Higher"}
 @!dcgan-scoring-the-two-runs
 
-4,059 samples against 4,059 held-out sprites; every generator from its
-weight average, on two latent draws. The last two columns: raw pixel
-values above $+1$ and below $-1$ (the backbone has no tanh; the
-overflow sits on the white side).
+- **1. Real-vs.-real floor:** Two disjoint real sets score $\mathrm{FD} \approx 0.18$ (finite-sample covariance bias), $\widehat{\mathrm{MMD}}^2 \approx 0.000$, and precision/recall $0.95$.
+- **2. Collapse vs. penalized arms:** Unpenalized `NS` scores $\mathrm{FD} \approx 64\text{--}72$ with $\mathrm{recall} = 0.00$; adding $R_1 + R_2$ reduces FD tenfold ($\sim 3.5\text{--}5.4$) and restores precision/recall to $\sim 0.4\text{--}0.5$.
+- **3. Feature-network invariance:** Because $2 \times 2$ pooling into $32 \times 32$ `FeatureCNN` smooths out DCGAN's high-frequency blotches, DCGAN achieves the lowest FD ($\sim 2.0$) despite looking blotchier at $64 \times 64$.
 :::
 
-::: {.slide title="By These Scores the 2015 Network Is at Least as Good as the Penalized Backbone"}
-| run | FD | $\widehat{\mathrm{MMD}}^2$ | recall |
-|:--|--:|--:|--:|
-| real vs. real | 0.17 to 0.19 | about 0 | 0.95 |
-| DCGAN | about 2 | 0.08 to 0.12 | about 0.5 |
-| penalized arms | 3.5 to 5.4 | 0.6 to 1.1 | about 0.4 |
-| unpenalized | 64 to 72 | 7.5 to 7.6 | 0.00 |
+::: {.slide title="Latent Space Interpolation vs. Pixel Cross-Fades"}
+[Testing Manifold Smoothness]{.kicker}
 
-- The penalties rescue the plain backbone: the firm result.
-- Classic vs. pairing: one training run each; the second draw shows only
-  sampling noise. Not separated.
-- DCGAN: lowest FD and $\widehat{\mathrm{MMD}}^2$, equal precision and
-  recall, yet the eye prefers the penalized samples. A score sees only
-  what its feature network sees.
+To check that `RpGAN + R1 + R2` learns a smooth image manifold rather than memorizing discrete templates, we linearly interpolate between $64$ pairs of latent codes, $z_t = (1 - t)z_0 + t z_1$ ($t \in [0, 1]$), and compare $G(z_t)$ against pixelwise cross-fades $(1 - t)G(z_0) + t G(z_1)$:
+
+::: {.cols .vc}
+::: {.col}
+- **On-manifold transitions:** Intermediate latent steps maintain the generator's full 3-NN feature precision ($\sim 0.35\text{--}0.38$) and transition smoothly in shape and color without discrete jumps.
+- **Off-manifold cross-fades:** Pixelwise blends create ghosted double exposures whose feature precision drops in half ($\sim 0.18\text{--}0.21$).
 :::
 
-::: {.slide title="A Latent Walk Stays among Sprites; a Pixel Cross-Fade Does Not"}
+::: {.col .fig .big}
 @!dcgan-latent-interpolation
-
-$z_t = (1 - t)\, z_0 + t\, z_1$ at eight evenly spaced points for 64
-pairs. Inner points: precision 0.35 to 0.38, like the arm's own samples;
-cross-fade 0.18 to 0.21, about half. Shape and color change gradually: no jumps, as a
-lookup table would show.
 :::
-
-::: {.slide title="On Small Datasets, Augment Both Inputs of the Critic"}
-- A critic with 1.6 M parameters sees each sprite about 20 times; with
-  the penalty its train–holdout gap stays at +0.02 to +0.05, small
-  against its real–generated margin of about 0.7.
-- With tens of thousands of images and long training the gap opens and
-  FID worsens.
-- Augment **both** inputs of $D$, differentiably; real-only augmentation
-  teaches $G$ the augmented distribution.
-- Non-leaking: the augmentation must not map two distributions to one.
-
-[Zhao et al., 2020; Karras et al., 2020]{.small}
-:::
-
-::: {.slide title="Check: Flip Only the Real Images. What Does $G$ Learn?"}
-[Check]{.kicker}
-
-A fraction $\alpha$ of the sprites faces left and has no mirror image in
-the data; every other sprite is its own mirror image. Real images are
-flipped with probability 1/2.
-
-::: {.fragment .fade-up}
-The flipped distribution: $\alpha/2$ of the samples face right. Flipping
-only the reals is safe only if $p$ is mirror-symmetric.
 :::
 :::
 
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
+::: {.slide title="Critic Overfitting and Non-Leaking Augmentation"}
+[Small-Data Generalization Pitfall]{.kicker}
 
-- Transposed convolution: side $\text{stride}\cdot(n-1) + \text{kernel} - 2\cdot\text{pad}$; five layers grow $1 \to 64$.
-- DCGAN trains the classic loss on 36,538 sprites: FD about 2 against a floor of about 0.2, lowest of all generators, though its samples look blotchier.
-- No normalization, no penalty: collapse, FD 64 to 72, recall 0.
-- $R_1 + R_2$ at $\gamma = 10$: critic about 100× flatter, diverse sprites; classic and pairing not separated.
-- FID = Gaussian $W_2^2$, KID = unbiased cubic-kernel MMD, precision and recall = fidelity and coverage; all read against the floor.
+With $1.6\text{M}$ parameters and $36{,}538$ training sprites, our critic sees each sprite $\sim 20$ times over $12{,}000$ steps. Under $R_1 + R_2$, the train–holdout score gap $\mathbb{E}[D_{\textrm{train}}] - \mathbb{E}[D_{\textrm{holdout}}]$ stays tiny ($+0.02$ to $+0.05$ vs. a real–fake margin of $\sim 0.7$):
 
-**Next:** ask for a class, and check that the generator obeys.
+- **Small-dataset overfitting hazard:** On smaller datasets or longer runs, critic memorization widens the train–holdout gap and degrades FID.
+- **Why augmenting only real images leaks:** Applying a random transformation $T_\rho$ (such as flipping with probability $\rho$) *only* to real images trains $G$ to match the transformed distribution $T_\rho p$ (e.g., generating right-facing copies of strictly left-facing sprites).
+- **Non-leaking augmentation (ADA / DiffAugment; Karras et al., 2020; Zhao et al., 2020):** Apply invertible $T_\rho$ ($\rho \neq \frac{1}{2}$ for flips) to **both** real and generated images inside the differentiable critic path so that $T_\rho q = T_\rho p \implies q = p$.
+:::
+
+::: {.slide title="Concept Check: Convolutions, Metrics, and Flips"}
+[Check Your Understanding]{.kicker}
+
+Test your understanding of convolutional GAN architectures and evaluation metrics:
+
+1. **Resolution scaling of $\gamma$:** Suppose a $64 \times 64$ image $x$ is upsampled to $128 \times 128$ by replicating each pixel into a $2 \times 2$ block ($Ux$), and a $128 \times 128$ critic $D'(Ux) = D(x)$ averages each $2 \times 2$ block back. How does $\|\nabla D'(Ux)\|^2$ compare to $\|\nabla D(x)\|^2$, and how must $\gamma'$ scale with resolution $r$ to keep the penalty invariant?
+2. **Diagnosing failure modes from Precision and Recall:** Generator A achieves $(\text{precision}, \text{recall}) = (0.78, 0.01)$, whereas Generator B achieves $(\text{precision}, \text{recall}) = (0.12, 0.68)$. Which failure mode does each generator exhibit?
+3. **Leaking horizontal flips:** Suppose a fraction $\alpha$ of true sprites face left with no right-facing counterpart, while all other sprites are mirror-symmetric. If only real training images are flipped with probability $\frac{1}{2}$, what fraction of generated samples from an optimal generator will face right?
+
+::: {.d2l-note .fragment .fade-up}
+**Answers:**
+
+1. Because each pixel of $x$ is split across $4$ pixels of $Ux$ with weight $\frac{1}{4}$ each, $\|\nabla D'(Ux)\|^2 = 4 \cdot \frac{1}{16}\|\nabla D(x)\|^2$ $= \mathbf{\frac{1}{4}\|\nabla D(x)\|^2}$. To keep the penalty invariant when resolution doubles, the weight must quadrupled: **$\gamma' = 4\gamma \propto r^2$**.
+2. **Generator A** has high precision but near-zero recall: it suffers from **mode collapse** (emitting realistic samples from only one or a few modes). **Generator B** has low precision but high recall: it covers the data support broadly but produces many **low-fidelity / noisy outlier images**.
+3. The generator matches the flip-symmetrized distribution $T_{1/2}p$, in which half of the asymmetric left-facing mass $\alpha$ is flipped to face right—so a fraction **$\alpha / 2$** of generated samples will face right.
+:::
+:::
+
+::: {.slide title="Summary: Convolutional GANs and Image Evaluation"}
+[Key Takeaways]{.kicker}
+
+| Component / Metric | Mathematical or Architectural Form | Key Property / Bias | Practical Role in Image Synthesis |
+| :--- | :--- | :--- | :--- |
+| **Transposed Conv.** | $n_{\textrm{out}} = s(n - 1) + k - 2p$ ($k=4, s=2, p=1 \implies 2n$) | Uneven $k/s$ causes checkerboard artifacts | Spatial upsampling in 2015 DCGAN generator |
+| **EMA + BN Recalibration** | $\bar{\theta} \leftarrow \beta\bar{\theta} + (1-\beta)\theta$, $\;\beta = 2^{-1/n_{1/2}}$ | Averages out rotational minimax orbits | Requires $100$ fresh `train()` passes if BatchNorm is used |
+| **Normalization-Free Backbone** | Bilinear resampling + $3 \times 3$ conv + He fan-in init | Omits BatchNorm so rows $D(x_i)$ are independent | Enables exact per-sample $R_1 + R_2$ gradient penalties |
+| **Fréchet Distance (FID)** | $\|\mu_p - \mu_q\|^2 + \operatorname{tr}(\Sigma_p + \Sigma_q - 2(\Sigma_p^{1/2}\Sigma_q\Sigma_p^{1/2})^{1/2})$ | Gaussian $W_2^2$ (first 2 moments); $+O(1/n)$ bias | Standard overall feature-distribution distance |
+| **Kernel Distance (KID)** | Unbiased $\widehat{\mathrm{MMD}}^2$ with $k(u, v) = (u^\top v/d + 1)^3$ | Compares up to 3rd moments; zero finite-$n$ bias | Reliable comparison at small evaluation sample sizes |
+| **$K$-NN Precision & Recall** | Fraction of $q$ in $p$-balls vs. fraction of $p$ in $q$-balls | Separates fidelity (precision) from coverage (recall) | Detects mode collapse ($\mathrm{recall} \to 0$) vs. blur/noise |
 :::

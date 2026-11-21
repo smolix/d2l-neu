@@ -29,220 +29,111 @@ further-reading
 ::: {.cover}
 [Dive into Deep Learning · §15]{.kicker}
 
-Getting more from each sample<br>
-**actor-critic · PPO · KL penalties · DQN · SAC · learned models · offline data · post-training**
+Deep Reinforcement Learning: Sample Efficiency and Function Approximation<br>**bootstrapped critics · trust regions · KL penalties · replay buffers · world models · offline logs · LLM post-training**
 :::
 :::
 
-::: {.slide title="The Pendulum Took a Few Hundred Thousand Steps to Swing Up"}
-[The problem]{.kicker}
+::: {.slide title="Why Naive Policy Gradients Waste Interactions"}
+[Motivation]{.kicker}
 
-- Pendulum: a torque in $[-2, 2]$; doing nothing scores about $-1200$ per
-  episode, and $-200$ or better holds the pendulum up.
-- REINFORCE with a learned baseline crosses $-200$ after 150 to 300 updates
-  of 1,600 steps each: a few hundred thousand steps.
-- It waits for whole episodes, uses each batch once, and never limits how
-  far an update moves the policy.
-- A robot arm wears out first; a language model cannot resample its
-  training set after every update.
+In Chapter 14, swinging up the continuous Pendulum ($u \in [-2, 2]$, where random actions score $-1{,}200$ and upright balance scores $-200$) required $150$–$300$ batches of $1{,}600$ steps each:
+
+::: {.cols}
+::: {.col}
+- **Full-Episode Waiting:** Monte Carlo returns $\hat{G}_t$ cannot be evaluated until an episode terminates or hits a truncation limit, stalling learning during long rollouts.
+- **Single-Use Experience:** Every batch of $1{,}600$ environment transitions drives one gradient step and is immediately discarded because the policy distribution has shifted.
+:::
+
+::: {.col}
+- **Unguarded Parameter Steps:** Nothing bounds how far a single noisy gradient update shifts the action probabilities, risking irreversible policy collapse.
+- **Real-World Bottlenecks:** A physical robot arm wears out long before $300{,}000$ steps, and an LLM post-training run cannot afford to waste sampled completions after one update.
+:::
+:::
 
 ::: {.d2l-note}
-How much can one sample teach, and what goes wrong when we make it teach
-more?
+**Central question of Chapter 15:** How much information can we extract from a single transition, and what new failure modes appear when we force each sample to teach more?
 :::
 :::
 
-::: {.slide title="By the End of This Chapter You Can"}
-[Goals]{.kicker}
+::: {.slide title="Four Mechanisms to Extract More from Every Sample"}
+[Core Ideas]{.kicker}
 
-- update a policy after one transition, and choose how far to trust a critic;
-- reuse a batch for several clipped updates, and read when to stop;
-- train a value network from replay, and detect when it overestimates;
-- learn the pendulum in thousands of steps, or hundreds with a model;
-- learn from a fixed log, and assemble the update that post-trains
-  language models.
+Every major algorithm in deep reinforcement learning trades raw sampling cost for a learned approximation that carries its own statistical error:
 
-**Running examples:** CartPole and Pendulum; two gridworlds; four prompts
-and a verifier.
+| Mechanism | What It Replaces | New Approximation Error Introduced | Chapter Sections |
+| :--- | :--- | :--- | :--- |
+| **1. Bootstrap a Critic** | Waiting for the episode tail $\hat{G}_{t+1}$ | **Critic bias** while $\hat{V}_w(s')$ is inaccurate | **§15.1, §15.4, §15.5** |
+| **2. Reuse Old Transitions** | Fresh on-policy rollouts at every step | **Distribution shift** and moving regression targets | **§15.2, §15.4–15.7** |
+| **3. Bound Policy Shifts** | Unconstrained parameter steps $\Delta \theta$ | **Local step constraint** (or KL bias toward $\pi_{\textrm{ref}}$) | **§15.2, §15.3, §15.8** |
+| **4. Plan in a World Model** | Trial-and-error in the real environment | **Compounding rollout error** and high per-step compute | **§15.6** |
+
+::: {.d2l-note}
+Each mechanism eliminates a reason to collect fresh environment steps while introducing an estimator whose errors must be actively controlled.
+:::
 :::
 
-::: {.slide title="This Chapter Puts Networks Inside the Update and Reuses Data"}
-[Where this fits]{.kicker}
+::: {.slide title="The Deadly Triad: When Value Networks Diverge"}
+[Fundamental Hazard]{.kicker}
+
+Tabular backups contract in the supremum norm and always converge, but combining three ingredients in deep RL can cause value estimates to diverge to infinity:
 
 ::: {.cols .vc}
 ::: {.col}
-| part or chapter | the learner learns from |
-|---|---|
-| Basics | a fixed dataset, a label for every example |
-| Reinforcement Learning | its own attempts, on problems solved exactly |
-| **Deep Reinforcement Learning** | **value networks in the update; reused, modeled and fixed data** |
-| Language Models | post-training at scale, preferences |
+- **1. Bootstrapping:** The regression target $y = r + \gamma \hat{V}_w(s')$ depends on the network's own current predictions rather than fixed labels.
+- **2. Function Approximation:** Shared network parameters $w$ couple all states, so reducing error at visited states can inflate predictions at unvisited states.
 :::
 
-::: {.col .narrow}
-- **Uses:** policy gradient with a baseline, Q-learning, the Bellman
-  backup, the Gaussian policy.
-- **Skips:** several agents, hidden state, meta- and hierarchical
-  learning.
+::: {.col}
+- **3. Off-Policy Data:** Training transitions come from an older behavior policy or replay buffer rather than the policy currently being evaluated.
+- **Baird's Counterexample (§15.4):** Even with linear features, zero noise, and exact expectations, all three together can drive weights $\|\mathbf{w}\|_\infty \to \infty$.
 :::
 :::
-:::
-
-::: {.slide title="Four Ideas Get More from Each Sample, Each with Its Own Error"}
-| idea | what it changes | the new error |
-|---|---|---|
-| trust a learned value | update after one transition | the critic's bias while it is young |
-| reuse old data | reweight by a ratio, or replay | stale data, moving targets |
-| bound the step | limit the change in behavior | limits each step, not the destination |
-| learn a model, plan in it | experience trains a model | model error, computation per step |
-
-::: {.d2l-note}
-Each idea removes a reason to collect new data, and adds an estimate that
-can be wrong.
-:::
-
-[Samuel 1959 · Sutton 1988 · Lin 1992 · Kakade and Langford 2002 · Schulman et al. 2017 · Sutton 1990]{.small}
-:::
-
-::: {.slide title="A Learned Target, a Network and Another Policy's Data Can Diverge"}
-- **Bootstrapping:** the target $r + \gamma \hat{V}(s')$ contains the
-  estimate being fitted.
-- **Function approximation:** one update moves the estimate at every state.
-- **Off-policy data:** the states come from a policy other than the one
-  evaluated.
-- All three together can diverge even with exact expectations and a linear
-  model: Baird's seven-state example.
-- A table fitted to exact backups always converges.
 
 ::: {.d2l-note .warn}
-A value loss can fall while the values diverge: check the values, not the
-loss.
+**Diagnostic imperative:** A falling temporal-difference loss only means the network fits its *current* moving targets—always monitor the predicted values $\hat{V}(s_0)$ or $\hat{Q}(s_0, a)$ directly!
 :::
 :::
 
-::: {.slide title="Check: Which Idea Explains Each Symptom?"}
-[Check]{.kicker}
+::: {.slide title="Taxonomic Roadmap of Deep Reinforcement Learning"}
+[Algorithmic Map]{.kicker}
 
-1. Early on CartPole, a policy trained on one-step TD errors lags behind one
-   trained on whole returns.
-2. Reusing each batch for twenty epochs of the unclipped ratio objective at
-   a large step size, the return collapses to about 9.
-3. A Q-network's estimate at the start state climbs past the best return
-   any policy can earn.
+::: {.cols .vc}
+::: {.col}
+- **Two organizing axes:** Every method in Chapters 14 and 15 is positioned by *what it learns* (policy, action-value, or dynamics model) and *which data drive the update* (on-policy, off-policy replay, or fixed offline logs).
+- **Left to right progression:** We move from strict on-policy rollouts (§15.1) to bounded multi-epoch batch reuse (§15.2), off-policy replay buffers (§15.4–15.6), and purely offline datasets (§15.7–15.8).
+:::
 
-::: {.fragment .fade-up}
-1. Trusting a learned value: the young critic is biased.
-2. An unbounded step: nothing limits how far the policy moves.
-3. A learned target fitted on replayed data, plus a maximum over noisy
-   estimates.
+::: {.col .fig .big}
+![](../img/mdl-rl-roadmap.svg){.nostretch width=100%}
+:::
 :::
 :::
 
-::: {.slide title="Two Questions Place Every Method: What It Learns, Which Data Drives It"}
-![](../img/mdl-rl-roadmap.svg){width=86%}
+::: {.slide title="Running Benchmarks and Sample-Efficiency Gains"}
+[Experimental Suite]{.kicker}
 
-- Solid boxes: the previous chapter; dashed boxes: this one.
-- Left to right, the update may use older data, then no new data at all.
+We measure sample efficiency and value calibration across five self-contained testbeds that run in CPU minutes:
+
+| Benchmark | State / Action Space | Exact Ceiling or Goal | Method & Environment Steps to Goal |
+| :--- | :--- | :--- | :--- |
+| **CartPole-v1** | $\mathbb{R}^4$, $2$ discrete pushes | Return $500$ ($V^\infty = 100$ at $\gamma=0.99$) | Actor-Critic: $\sim 60\text{k}$ · PPO (4 epochs): $\sim 25\text{k}$ · DQN: $\sim 40\text{k}$ |
+| **Pendulum-v1** | $\mathbb{R}^3$, torque $u \in [-2, 2]$ | Return $\ge -200$ ($200$-step episodes) | REINFORCE: $\sim 300\text{k}$ · SAC: $2.4\text{k}$–$11\text{k}$ · MPC Model: $200$–$600$ |
+| **$4 \times 4$ Hazard Grid** | $16$ states, $4$ moves | True optimal return $V^*(s_0) = +0.59$ | Unregularized plan hacks hazard ($-2.11$); KL penalty peaks at $+0.53$ |
+| **Slippery FrozenLake** | $16$ states, $4$ slippery moves | Exact optimum $V^*(s_0) = 0.180$ | Naive offline Q overestimates ($0.25$); pessimistic LCB restores $0.14$ |
+| **4-Prompt Verifier** | $4$ prompts, $9$ replies | Exact match ceiling $0.50$ (ref $0.062$) | Closed-form KL threshold $\beta = 1/4$ suppresses the lenient hedge |
 :::
 
-::: {.slide title="CartPole and Pendulum Measure What Each Method Costs in Steps"}
-[Running examples]{.kicker}
+::: {.slide title="Chapter 15 Roadmap: Eight Core Questions"}
+[Study Guide]{.kicker}
 
-- CartPole: four numbers of state, two actions, reward 1 per step while the
-  pole is up, cut at 500 steps.
-- At $\gamma = 0.99$, balancing forever is worth $1/(1-\gamma) = 100$; the
-  500-step cut leaves $99.3$.
-- Actor-critic, PPO and DQN all run on CartPole, so their step counts
-  compare.
-- Pendulum: three numbers of state, a torque in $[-2, 2]$, 200 steps per
-  episode.
-- Soft actor-critic and the learned model run on Pendulum.
-:::
-
-::: {.slide title="Three Small Problems Have Exact Answers"}
-[Running examples]{.kicker}
-
-- A $4 \times 4$ grid with a costly lane the reference policy rarely visits:
-  a reward fitted from comparisons cannot see the cost.
-- The slippery lake: logs of past episodes, judged against the exact
-  optimum.
-- Four prompts and a verifier: the reference passes 6.2% of the time, the
-  ceiling is 50%.
-
-::: {.d2l-note}
-An exact answer turns "the curve looks good" into "the promise exceeds
-the optimum".
-:::
-:::
-
-::: {.slide title="Eight Sections, One Question Each"}
-[Chapter map]{.kicker}
-
-| section | question |
-|---|---|
-| Actor-Critic Methods | must a policy wait for the episode to end? |
-| Proximal Policy Optimization | can one batch drive several updates, and how far? |
-| KL-Regularized Policy Optimization | how far may a policy stray from a learned reward's data? |
-| Deep Q-Networks | can a network learn values from any transition? |
-| Soft Actor-Critic | how is the pendulum learned in a few thousand steps? |
-| Learned Models and Planning | can a model from a few hundred steps plan the swing-up? |
-| Offline Reinforcement Learning | what can be learned when no action may be tried? |
-| Sequence Generation | what survives when actions are tokens and a checker pays? |
-:::
-
-::: {.slide title="From Hundreds of Thousands of Steps to a Few Hundred"}
-| method | task, goal | environment steps |
-|---|---|---|
-| REINFORCE, learned baseline | Pendulum, $-200$ | a few hundred thousand |
-| PPO, 1 or 4 epochs per batch | CartPole, 475 | 50,000 or more, or about 25,000 |
-| DQN | CartPole, 500 | 35,000 to 45,000 |
-| SAC, 1 or 10 updates per step | Pendulum, $-200$ | 5,400 to 11,200, or 2,400 to 4,000 |
-| a learned model and a planner | Pendulum, swing-up | 200 to 600 |
-
-::: {.d2l-note}
-Fewer environment steps cost more computation per step: ten gradient
-steps, or 12,500 model evaluations per action.
-:::
-:::
-
-::: {.slide title="Check: Which Section Answers Each Finding?"}
-[Check]{.kicker}
-
-1. With each action offered nine times, a Q-network ends above the best
-   possible return on every seed.
-2. A planner whose data never left the bottom of the swing fails until its
-   own failed attempts collect new states.
-3. A table learned from a narrow log promises more than the optimum on
-   almost every dataset.
-
-::: {.fragment .fade-up}
-1. Deep Q-Networks: the maximum picks the luckiest of nine noisy estimates.
-2. Learned Models: a model is accurate only where the data went.
-3. Offline: the best-looking actions are the rarely tried ones.
-:::
-:::
-
-::: {.slide title="The Chapter Ends Where Post-Training Begins"}
-- A response is a trajectory whose actions are tokens; a checker's verdict
-  arrives once, at the end.
-- The update that post-trains language models combines a group baseline, a
-  clipped probability ratio and a KL penalty to a reference.
-- Each piece comes from this chapter or the previous one.
-- The Language Models part treats post-training at scale, including
-  learning from human preferences, in more depth.
-:::
-
-::: {.slide title="Wrap-up"}
-[Wrap-up]{.kicker}
-
-- The previous chapter's pendulum needed a few hundred thousand steps.
-- Four ideas: trust a critic, reuse data, bound the step, learn a model;
-  each adds an error.
-- A learned target, a network and another policy's data can diverge
-  together.
-- Steps fall to tens of thousands on CartPole, a few thousand with SAC and
-  a few hundred with a model.
-- Small problems with exact answers expose overestimation.
-
-**Next:** a learned critic in place of the rest of the episode.
+| Section | Central Question | Core Mathematical Mechanism |
+| :--- | :--- | :--- |
+| **§15.1 Actor-Critic & GAE** | Must a policy wait for the episode to end? | TD error $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ and backward scan $\sum_l (\gamma\lambda)^l \delta_{t+l}$ |
+| **§15.2 Trust Regions & PPO** | How many updates can one batch safely drive? | Per-step importance ratio $\rho_t(\theta)$ and clipped surrogate $\min(\rho_t \hat{A}_t, \textrm{clip}(\rho_t)\hat{A}_t)$ |
+| **§15.3 KL-Regularized RL** | How far may a policy stray from preference data? | Reference tilt $\pi^\star(a) \propto \pi_{\textrm{ref}}(a) e^{r(a)/\beta}$ and soft backup $V_\beta = \beta \log \sum_a \pi_{\textrm{ref}} e^{Q_\beta/\beta}$ |
+| **§15.4 Deep Q-Networks** | Can a network learn values from any transition? | Uniform experience replay, frozen target network $Q_{w^-}$, and Double DQN decoupling |
+| **§15.5 Soft Actor-Critic** | How do we learn continuous control in $3{,}000$ steps? | Maximum-entropy target $-\beta \log \pi$, squashed Gaussian Jacobian, twin critics $\min_j Q_j$ |
+| **§15.6 World Models & MPC** | Can a learned physics model plan a swing-up? | State-delta regression $\hat{f}_\phi(s,a)$, warm-started random shooting, policy distillation |
+| **§15.7 Offline RL** | What can be learned when no new trial is allowed? | Empirical MDP stitching and pessimistic penalty $-\kappa/\sqrt{n(s,a)}$ (CQL / TD3+BC) |
+| **§15.8 RL for Sequences** | What survives when actions are tokens? | Token credit decomposition, verifiable rewards, GRPO with $k_3$ KL loss, and DPO |
 :::
